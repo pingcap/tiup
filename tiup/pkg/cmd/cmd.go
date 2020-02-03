@@ -7,12 +7,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rootCmd *cobra.Command
+type baseCmd struct {
+	cmd *cobra.Command
+}
+
+func newBaseCmd(cmd *cobra.Command) *baseCmd {
+	return &baseCmd{cmd: cmd}
+}
+
+func (c *baseCmd) Execute() error {
+	return c.cmd.Execute()
+}
+
+var rootCmd *baseCmd
 
 func init() {
 	var printVersion bool
 
-	rootCmd = &cobra.Command{
+	rootCmd = newBaseCmd(&cobra.Command{
 		Use:   "tiup",
 		Short: "Download and install TiDB components from command line",
 		Long: `The tiup utility is a command line tool that can help downloading
@@ -23,13 +35,16 @@ and installing TiDB components to the local system.`,
 			}
 			return nil
 		},
-	}
+	})
 
-	rootCmd.Flags().BoolVarP(&printVersion, "version", "V", false, "Show tiup version and quit")
+	rootCmd.cmd.Flags().BoolVarP(&printVersion, "version", "V", false, "Show tiup version and quit")
 
-	rootCmd.AddCommand(newShowCmd())
+	rootCmd.cmd.AddCommand(newShowCmd().cmd)
+	rootCmd.cmd.AddCommand(newInstCmd().cmd)
+	rootCmd.cmd.AddCommand(newUnInstCmd().cmd)
 }
 
+// Execute parses the command line argumnts and calls proper functions
 func Execute() error {
 	return rootCmd.Execute()
 }
