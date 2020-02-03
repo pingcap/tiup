@@ -4,14 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	cmd "github.com/AstroProfundis/tiup-demo/tiup/pkg/commands"
-	"github.com/AstroProfundis/tiup-demo/tiup/pkg/version"
+	"github.com/AstroProfundis/tiup-demo/tiup/pkg/cmd"
 )
 
 func main() {
-	args := cmd.Init()
-	if args.Version {
-		fmt.Println(version.NewTiUPVersion())
-		os.Exit(0)
+	if err := cmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
