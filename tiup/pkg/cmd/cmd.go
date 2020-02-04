@@ -32,6 +32,7 @@ and installing TiDB components to the local system.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if printVersion {
 				fmt.Println(version.NewTiUPVersion())
+				fmt.Println(version.NewTiUPBuildInfo())
 			}
 			return nil
 		},

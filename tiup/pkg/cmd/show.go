@@ -27,7 +27,7 @@ func newShowCmd() *showCmd {
 			Long:  `Show available and installed TiDB components and their versions.`,
 			RunE: func(cmd *cobra.Command, args []string) error {
 				if showAll {
-					return showComponent()
+					return showOnlineComponentList()
 				}
 				fmt.Println("TODO: show installed list...")
 				return nil
@@ -40,12 +40,17 @@ func newShowCmd() *showCmd {
 	return cmdShow
 }
 
-func showComponent() error {
+func showOnlineComponentList() error {
 	onlineList, err := fetchComponentList(componentListURL)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s\n", onlineList)
+	for _, comp := range onlineList.Components {
+		fmt.Println(comp.Description)
+		for _, ver := range comp.VersionList {
+			fmt.Printf("%s\t%s\n", comp.Name, ver.Version)
+		}
+	}
 	return nil
 }
 

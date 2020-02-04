@@ -72,3 +72,8 @@ func NewTiUPBuildInfo() *TiUPBuild {
 		GoVersion: runtime.Version(),
 	}
 }
+
+// String converts TiUPBuild to a string
+func (v *TiUPBuild) String() string {
+	return fmt.Sprintf("%s %s(%s) %s", v.GoVersion, v.GitBranch, v.GitHash, v.BuildTime)
+}
