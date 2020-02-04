@@ -1,6 +1,4 @@
 {
-  "description": "List of TiDB related components.",
-  "modified": "2020-02-04T11:46:25+08:00",
   "components": [
     {
       "name": "tidb",
@@ -26,7 +24,9 @@
           "url": "https://download.pingcap.org/tidb-v3.0.9-linux-amd64.tar.gz"
         }
       ],
-      "description": "Core TiDB components, include TiDB, PD and TiKV servers and essential tools."
+      "description": "Core TiDB components, include TiDB, PD, TiKV servers and essential tools."
     }
-  ]
+  ],
+  "description": "List of TiDB related components.",
+  "modified": "2020-02-04T11:46:25+08:00"
 }

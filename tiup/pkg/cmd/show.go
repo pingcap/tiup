@@ -11,6 +11,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	componentFileName = "components.json"
+)
+
 type showCmd struct {
 	*baseCmd
 }
@@ -26,10 +30,21 @@ func newShowCmd() *showCmd {
 			Short: "Show the available TiDB components",
 			Long:  `Show available and installed TiDB components and their versions.`,
 			RunE: func(cmd *cobra.Command, args []string) error {
+				var compList *compMeta
+				var err error
 				if showAll {
-					return showOnlineComponentList()
+					compList, err = fetchComponentList(componentListURL)
+					if err != nil {
+						return err
+					}
+					// save latest component list to local
+					if err := saveComponentList(compList); err != nil {
+						return err
+					}
+				} else {
+					fmt.Println("TODO: show installed list...")
 				}
-				fmt.Println("TODO: show installed list...")
+				showComponentList(compList)
 				return nil
 			},
 		}),
@@ -40,12 +55,8 @@ func newShowCmd() *showCmd {
 	return cmdShow
 }
 
-func showOnlineComponentList() error {
-	onlineList, err := fetchComponentList(componentListURL)
-	if err != nil {
-		return err
-	}
-	for _, comp := range onlineList.Components {
+func showComponentList(compList *compMeta) {
+	for _, comp := range compList.Components {
 		fmt.Println("Available components:")
 		var cmpTable [][]string
 		cmpTable = append(cmpTable, []string{"Name", "Version", "Description"})
@@ -54,7 +65,6 @@ func showOnlineComponentList() error {
 		}
 		utils.PrintTable(cmpTable, true)
 	}
-	return nil
 }
 
 type compVer struct {
@@ -83,6 +93,10 @@ func fetchComponentList(url string) (*compMeta, error) {
 		return nil, err
 	}
 	return decodeComponentList(resp)
+}
+
+func saveComponentList(comp *compMeta) error {
+	return utils.WriteJSON(componentFileName, comp)
 }
 
 // decodeComponentList decode the http response data to a JSON object
