@@ -6,6 +6,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	componentListURL = "https://repo.hoshi.at/tmp/components.json"
+)
+
 type installCmd struct {
 	*baseCmd
 }
@@ -34,6 +38,6 @@ func newInstCmd() *installCmd {
 }
 
 func installComponent(ver string, list []string) error {
-	fmt.Printf("%s, %v\n", ver, list)
+	fmt.Printf("TODO: install %v %s\n", list, ver)
 	return nil
 }

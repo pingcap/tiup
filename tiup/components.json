@@ -1,29 +1,32 @@
 {
-  "tidb": {
-    "versions": [
-      {
-        "version": "tidb-v3.0.6-linux-amd64.tar.gz",
-        "sha256": "6d590e147a2925e0dda4a62911e0eb9ad1bab094b7cb6e96e061fae707b9df54",
-        "url": "https://download.pingcap.org/tidb-v3.0.6-linux-amd64.tar.gz"
-      },
-      {
-        "version": "tidb-v3.0.7-linux-amd64.tar.gz",
-        "sha256": "38237dcb2e99545ded388966873fd2da52d5f0a5d6556e08a9067698220ccd7f",
-        "url": "https://download.pingcap.org/tidb-v3.0.7-linux-amd64.tar.gz"
-      },
-      {
-        "version": "tidb-v3.0.8-linux-amd64.tar.gz",
-        "sha256": "3f053c7632090c42043eb9b33d027c962639571e2fce1f312f44f885290c6474",
-        "url": "https://download.pingcap.org/tidb-v3.0.8-linux-amd64.tar.gz"
-      },
-      {
-        "version": "tidb-v3.0.9-linux-amd64.tar.gz",
-        "sha256": "12a580b23c3dc2ee2a45dc0813efe3498b262cdee12cea87daddf783341f946f",
-        "url": "https://download.pingcap.org/tidb-v3.0.9-linux-amd64.tar.gz"
-      }
-    ],
-    "description": "Core TiDB components, include TiDB, PD and TiKV servers and essential tools."
-  },
   "description": "List of TiDB related components.",
-  "modified": "1580725460.4483485"
+  "modified": "2020-02-04T11:46:25+08:00",
+  "components": [
+    {
+      "name": "tidb",
+      "versions": [
+        {
+          "version": "v3.0.6",
+          "sha256": "6d590e147a2925e0dda4a62911e0eb9ad1bab094b7cb6e96e061fae707b9df54",
+          "url": "https://download.pingcap.org/tidb-v3.0.6-linux-amd64.tar.gz"
+        },
+        {
+          "version": "v3.0.7",
+          "sha256": "38237dcb2e99545ded388966873fd2da52d5f0a5d6556e08a9067698220ccd7f",
+          "url": "https://download.pingcap.org/tidb-v3.0.7-linux-amd64.tar.gz"
+        },
+        {
+          "version": "v3.0.8",
+          "sha256": "3f053c7632090c42043eb9b33d027c962639571e2fce1f312f44f885290c6474",
+          "url": "https://download.pingcap.org/tidb-v3.0.8-linux-amd64.tar.gz"
+        },
+        {
+          "version": "v3.0.9",
+          "sha256": "12a580b23c3dc2ee2a45dc0813efe3498b262cdee12cea87daddf783341f946f",
+          "url": "https://download.pingcap.org/tidb-v3.0.9-linux-amd64.tar.gz"
+        }
+      ],
+      "description": "Core TiDB components, include TiDB, PD and TiKV servers and essential tools."
+    }
+  ]
 }
