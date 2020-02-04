@@ -46,10 +46,13 @@ func showOnlineComponentList() error {
 		return err
 	}
 	for _, comp := range onlineList.Components {
-		fmt.Println(comp.Description)
+		fmt.Println("Available components:")
+		var cmpTable [][]string
+		cmpTable = append(cmpTable, []string{"Name", "Version", "Description"})
 		for _, ver := range comp.VersionList {
-			fmt.Printf("%s\t%s\n", comp.Name, ver.Version)
+			cmpTable = append(cmpTable, []string{comp.Name, ver.Version, comp.Description})
 		}
+		utils.PrintTable(cmpTable, true)
 	}
 	return nil
 }
@@ -73,8 +76,10 @@ type compMeta struct {
 }
 
 func fetchComponentList(url string) (*compMeta, error) {
+	fmt.Println("Fetching latest component list online...")
 	resp, err := utils.NewClient(url, nil).Get()
 	if err != nil {
+		fmt.Println("Error fetching component list.")
 		return nil, err
 	}
 	return decodeComponentList(resp)
