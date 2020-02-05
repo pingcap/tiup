@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/AstroProfundis/tiup-demo/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -38,6 +39,38 @@ func newInstCmd() *installCmd {
 }
 
 func installComponent(ver string, list []string) error {
-	fmt.Printf("TODO: install %v %s\n", list, ver)
+	meta, err := readComponentList()
+	if err != nil {
+		return err
+	}
+
+	var installCnt int
+	for _, comp := range list {
+		url, checksum := getComponentURL(meta.Components, ver, comp)
+		if len(url) > 0 {
+			err := utils.DownloadFile(url, checksum)
+			if err != nil {
+				return err
+			}
+			// TODO: save installed list to file
+			fmt.Printf("Installed %s %s.\n", comp, ver)
+			installCnt += 1
+		}
+	}
+	fmt.Printf("Installed %d component(s).\n", installCnt)
 	return nil
+}
+
+func getComponentURL(list []compItem, ver string, comp string) (string, string) {
+	for _, compMetaItem := range list {
+		if comp != compMetaItem.Name {
+			continue
+		}
+		for _, item := range compMetaItem.VersionList {
+			if ver == item.Version {
+				return item.URL, item.SHA256
+			}
+		}
+	}
+	return "", ""
 }
