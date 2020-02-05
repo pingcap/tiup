@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/AstroProfundis/tiup-demo/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +23,7 @@ func newUnInstCmd() *unInstCmd {
 			Short: "Uninstall TiDB component(s) of specific version",
 			Long:  `Uninstall some or all components of TiDB of specific version.`,
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return unInstallComponent(version, componentList)
+				return uninstallComponent(version, componentList)
 			},
 		}),
 	}
@@ -33,7 +34,38 @@ func newUnInstCmd() *unInstCmd {
 	return cmdUnInst
 }
 
-func unInstallComponent(ver string, list []string) error {
-	fmt.Printf("%s, %v\n", ver, list)
+func uninstallComponent(ver string, list []string) error {
+	for _, comp := range list {
+		installed, err := checkInstalledComponent(comp, ver)
+		if err != nil {
+			return err
+		}
+		if !installed {
+			fmt.Printf("%s %s is not installed, skip.\n", comp, ver)
+			continue
+		}
+		// do actual removal here
+		if err = removeFromInstalledList(comp, ver); err != nil {
+			return err
+		}
+		fmt.Printf("%s %v uninstalled.\n", comp, ver)
+	}
 	return nil
+}
+
+func removeFromInstalledList(name string, ver string) error {
+	currList, err := getInstalledList()
+	if err != nil {
+		return err
+	}
+
+	var newList []installedComp
+	for i, instComp := range currList {
+		if instComp.Name == name &&
+			instComp.Version == ver {
+			newList = append(currList[:i], currList[i+1:]...)
+			break
+		}
+	}
+	return utils.WriteJSON(installedListFilename, newList)
 }

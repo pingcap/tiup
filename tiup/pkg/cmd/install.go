@@ -55,6 +55,15 @@ func installComponent(ver string, list []string) error {
 
 	var installCnt int
 	for _, comp := range list {
+		installed, err := checkInstalledComponent(comp, ver)
+		if err != nil {
+			return err
+		}
+		if installed {
+			fmt.Printf("%s %s already installed, skip.\n", comp, ver)
+			return nil
+		}
+
 		url, checksum := getComponentURL(meta.Components, ver, comp)
 		if len(url) > 0 {
 			if err := utils.DownloadFile(url, checksum); err != nil {
@@ -67,7 +76,7 @@ func installComponent(ver string, list []string) error {
 				return err
 			}
 			fmt.Printf("Installed %s %s.\n", comp, ver)
-			installCnt += 1
+			installCnt++
 		}
 	}
 	fmt.Printf("Installed %d component(s).\n", installCnt)
