@@ -62,9 +62,22 @@ func showComponentList(compList *compMeta) {
 	for _, comp := range compList.Components {
 		fmt.Println("Available components:")
 		var cmpTable [][]string
-		cmpTable = append(cmpTable, []string{"Name", "Version", "Description"})
+		cmpTable = append(cmpTable, []string{"Name", "Version", "Installed", "Description"})
 		for _, ver := range comp.VersionList {
-			cmpTable = append(cmpTable, []string{comp.Name, ver.Version, comp.Description})
+			installStatus := ""
+			installed, err := checkInstalledComponent(comp.Name, ver.Version)
+			if err != nil {
+				fmt.Printf("Unable to check for installed components: %s\n", err)
+				return
+			}
+			if installed {
+				installStatus = "yes"
+			}
+			cmpTable = append(cmpTable, []string{
+				comp.Name,
+				ver.Version,
+				installStatus,
+				comp.Description})
 		}
 		utils.PrintTable(cmpTable, true)
 	}

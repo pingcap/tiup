@@ -122,3 +122,18 @@ func saveInstalledList(comp *installedComp) error {
 	newList := append(currList, *comp)
 	return utils.WriteJSON(installedListFilename, newList)
 }
+
+func checkInstalledComponent(name string, ver string) (bool, error) {
+	currList, err := getInstalledList()
+	if err != nil {
+		return false, err
+	}
+
+	for _, instComp := range currList {
+		if instComp.Name == name &&
+			instComp.Version == ver {
+			return true, nil
+		}
+	}
+	return false, nil
+}
