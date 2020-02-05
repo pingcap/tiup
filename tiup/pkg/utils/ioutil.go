@@ -38,6 +38,16 @@ func WriteJSON(path string, data interface{}) error {
 	return SaveToProfile(path, jsonData, 0644)
 }
 
+// ReadFile reads data from a file in the profile directory
+func ReadFile(path string) ([]byte, error) {
+	profilePath, err := createProfileDir()
+	if err != nil {
+		return nil, err
+	}
+	filePath := filepath.Join(profilePath, path)
+	return ioutil.ReadFile(filePath)
+}
+
 // getHomeDir get the home directory of current user (if they have one).
 // The result path might be empty.
 func getHomeDir() (string, error) {

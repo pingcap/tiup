@@ -42,7 +42,10 @@ func newShowCmd() *showCmd {
 						return err
 					}
 				} else {
-					fmt.Println("TODO: show installed list...")
+					compList, err = readComponentList()
+					if err != nil {
+						return err
+					}
 				}
 				showComponentList(compList)
 				return nil
@@ -99,6 +102,15 @@ func saveComponentList(comp *compMeta) error {
 	return utils.WriteJSON(componentFileName, comp)
 }
 
+func readComponentList() (*compMeta, error) {
+	data, err := utils.ReadFile(componentFileName)
+	if err != nil {
+		return nil, err
+	}
+
+	return unmarshalComponentList(data)
+}
+
 // decodeComponentList decode the http response data to a JSON object
 func decodeComponentList(resp *http.Response) (*compMeta, error) {
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
@@ -106,11 +118,13 @@ func decodeComponentList(resp *http.Response) (*compMeta, error) {
 		return nil, err
 	}
 
-	var body compMeta
-	err = json.Unmarshal(bodyBytes, &body)
-	if err != nil {
+	return unmarshalComponentList(bodyBytes)
+}
+
+func unmarshalComponentList(data []byte) (*compMeta, error) {
+	var meta compMeta
+	if err := json.Unmarshal(data, &meta); err != nil {
 		return nil, err
 	}
-
-	return &body, nil
+	return &meta, nil
 }
