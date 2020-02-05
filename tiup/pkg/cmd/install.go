@@ -1,14 +1,17 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/AstroProfundis/tiup-demo/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 var (
-	componentListURL = "https://repo.hoshi.at/tmp/components.json"
+	componentListURL      = "https://repo.hoshi.at/tmp/components.json"
+	installedListFilename = "installed.json"
 )
 
 type installCmd struct {
@@ -38,6 +41,12 @@ func newInstCmd() *installCmd {
 	return cmdInst
 }
 
+type installedComp struct {
+	Name    string `json:"name,omitempty"`
+	Version string `json:"version,omitempty"`
+	//Path string `json:"path,omitempty"`
+}
+
 func installComponent(ver string, list []string) error {
 	meta, err := readComponentList()
 	if err != nil {
@@ -48,11 +57,15 @@ func installComponent(ver string, list []string) error {
 	for _, comp := range list {
 		url, checksum := getComponentURL(meta.Components, ver, comp)
 		if len(url) > 0 {
-			err := utils.DownloadFile(url, checksum)
-			if err != nil {
+			if err := utils.DownloadFile(url, checksum); err != nil {
 				return err
 			}
-			// TODO: save installed list to file
+			if err := saveInstalledList(&installedComp{
+				Name:    comp,
+				Version: ver,
+			}); err != nil {
+				return err
+			}
 			fmt.Printf("Installed %s %s.\n", comp, ver)
 			installCnt += 1
 		}
@@ -73,4 +86,39 @@ func getComponentURL(list []compItem, ver string, comp string) (string, string) 
 		}
 	}
 	return "", ""
+}
+
+func getInstalledList() ([]installedComp, error) {
+	var list []installedComp
+	var err error
+
+	data, err := utils.ReadFile(installedListFilename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return list, nil
+		}
+		return nil, err
+	}
+	if err = json.Unmarshal(data, &list); err != nil {
+		return nil, err
+	}
+
+	return list, err
+}
+
+func saveInstalledList(comp *installedComp) error {
+	currList, err := getInstalledList()
+	if err != nil {
+		return err
+	}
+
+	for _, instComp := range currList {
+		if instComp.Name == comp.Name &&
+			instComp.Version == comp.Version {
+			return fmt.Errorf("%s %s is already installed",
+				instComp.Name, instComp.Version)
+		}
+	}
+	newList := append(currList, *comp)
+	return utils.WriteJSON(installedListFilename, newList)
 }
