@@ -44,7 +44,7 @@ func newInstCmd() *installCmd {
 type installedComp struct {
 	Name    string `json:"name,omitempty"`
 	Version string `json:"version,omitempty"`
-	//Path string `json:"path,omitempty"`
+	Path    string `json:"path,omitempty"`
 }
 
 func installComponent(ver string, list []string) error {
@@ -69,9 +69,11 @@ func installComponent(ver string, list []string) error {
 			if err := utils.DownloadFile(url, checksum); err != nil {
 				return err
 			}
+			// TODO: decompress tarballs and install files
 			if err := saveInstalledList(&installedComp{
 				Name:    comp,
 				Version: ver,
+				Path:    "/path/to/binary",
 			}); err != nil {
 				return err
 			}

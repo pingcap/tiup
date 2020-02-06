@@ -113,7 +113,7 @@ func showInstalledList() error {
 		instTable = append(instTable, []string{
 			item.Name,
 			item.Version,
-			"/path/to/binary",
+			item.Path,
 		})
 	}
 
