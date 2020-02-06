@@ -22,6 +22,7 @@ type showCmd struct {
 func newShowCmd() *showCmd {
 	var (
 		showAll bool
+		refresh bool
 	)
 
 	cmdShow := &showCmd{
@@ -30,10 +31,8 @@ func newShowCmd() *showCmd {
 			Short: "Show the available TiDB components",
 			Long:  `Show available and installed TiDB components and their versions.`,
 			RunE: func(cmd *cobra.Command, args []string) error {
-				var compList *compMeta
-				var err error
-				if showAll {
-					compList, err = fetchComponentList(componentListURL)
+				if refresh {
+					compList, err := fetchComponentList(componentListURL)
 					if err != nil {
 						return err
 					}
@@ -41,19 +40,26 @@ func newShowCmd() *showCmd {
 					if err := saveComponentList(compList); err != nil {
 						return err
 					}
-				} else {
-					compList, err = readComponentList()
+					showComponentList(compList)
+					return nil
+				}
+
+				if showAll {
+					compList, err := readComponentList()
 					if err != nil {
 						return err
 					}
+					showComponentList(compList)
+				} else {
+					return showInstalledList()
 				}
-				showComponentList(compList)
 				return nil
 			},
 		}),
 	}
 
-	cmdShow.cmd.Flags().BoolVar(&showAll, "all", false, "Show all available components and versions (refresh online).")
+	cmdShow.cmd.Flags().BoolVar(&showAll, "all", false, "Show all available components and versions (from local cache).")
+	cmdShow.cmd.Flags().BoolVar(&refresh, "refresh", false, "Refresh online list of components and versions.")
 
 	return cmdShow
 }
@@ -77,10 +83,31 @@ func showComponentList(compList *compMeta) {
 				comp.Name,
 				ver.Version,
 				installStatus,
-				comp.Description})
+				comp.Description,
+			})
 		}
 		utils.PrintTable(cmpTable, true)
 	}
+}
+
+func showInstalledList() error {
+	list, err := getInstalledList()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Installed components:")
+	var instTable [][]string
+	instTable = append(instTable, []string{"Name", "Version"})
+	for _, item := range list {
+		instTable = append(instTable, []string{
+			item.Name,
+			item.Version,
+		})
+	}
+
+	utils.PrintTable(instTable, true)
+	return nil
 }
 
 type compVer struct {
