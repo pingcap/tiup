@@ -45,6 +45,7 @@ func uninstallComponent(ver string, list []string) error {
 			continue
 		}
 		// do actual removal here
+		// removeFromSystem()
 		if err = removeFromInstalledList(comp, ver); err != nil {
 			return err
 		}

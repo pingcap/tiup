@@ -33,6 +33,8 @@ and installing TiDB components to the local system.`,
 			if printVersion {
 				fmt.Println(version.NewTiUPVersion())
 				fmt.Println(version.NewTiUPBuildInfo())
+			} else {
+				cmd.Help()
 			}
 			return nil
 		},
