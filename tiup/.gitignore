@@ -1,4 +1,7 @@
 bin/
+*.tar
+*.gz
+*.xz
 
 # ---> Go
 # Binaries for programs and plugins

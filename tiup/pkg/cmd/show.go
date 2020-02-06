@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/AstroProfundis/tiup-demo/tiup/pkg/utils"
@@ -47,6 +48,10 @@ func newShowCmd() *showCmd {
 				if showAll {
 					compList, err := readComponentList()
 					if err != nil {
+						if os.IsNotExist(err) {
+							fmt.Println("no available component list, try `tiup show --refresh` to get latest online list.")
+							return nil
+						}
 						return err
 					}
 					showComponentList(compList)
