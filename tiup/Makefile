@@ -19,7 +19,7 @@ LDFLAGS += -X "$(REPO)/pkg/version.BuildTime=$(BUILDTIME)"
 default: cmd
 
 cmd: check
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup cmd/tiup.go
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-$(GOOS)-$(GOARCH) cmd/tiup.go
 
 lint:
 	@golint ./...
