@@ -58,7 +58,7 @@ func newShowCmd() *showCmd {
 		}),
 	}
 
-	cmdShow.cmd.Flags().BoolVar(&showAll, "all", false, "Show all available components and versions (from local cache).")
+	cmdShow.cmd.Flags().BoolVar(&showAll, "all", false, "List all available components and versions (from local cache).")
 	cmdShow.cmd.Flags().BoolVar(&refresh, "refresh", false, "Refresh online list of components and versions.")
 
 	return cmdShow
@@ -96,13 +96,19 @@ func showInstalledList() error {
 		return err
 	}
 
+	if len(list) < 1 {
+		fmt.Println("no installed component, try `tiup show --all` to see all available components.")
+		return nil
+	}
+
 	fmt.Println("Installed components:")
 	var instTable [][]string
-	instTable = append(instTable, []string{"Name", "Version"})
+	instTable = append(instTable, []string{"Name", "Version", "Path"})
 	for _, item := range list {
 		instTable = append(instTable, []string{
 			item.Name,
 			item.Version,
+			"/path/to/binary",
 		})
 	}
 
