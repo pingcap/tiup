@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/user"
 	"path"
@@ -23,10 +24,22 @@ func SaveToProfile(path string, data []byte, perm os.FileMode) error {
 	}
 	filePath := filepath.Join(profilePath, path)
 	// create sub directory if needed
-	if err := createDir(filepath.Dir(filePath)); err != nil {
+	if err := CreateDir(filepath.Dir(filePath)); err != nil {
 		return err
 	}
 	return ioutil.WriteFile(filePath, data, perm)
+}
+
+// ProfileDir returns profile directory, create it if
+// the directory is not already exist.
+// Fatal when the directory is not exist and fail to create.
+func ProfileDir() string {
+	dir, err := GetOrCreateProfileDir()
+	if err != nil {
+		log.Fatal(err)
+		return ""
+	}
+	return dir
 }
 
 // WriteJSON writes struct to a file (in the profile directory) in JSON format
@@ -71,14 +84,14 @@ func GetOrCreateProfileDir() (string, error) {
 	}
 
 	profilePath := path.Join(homeDir, profileDirName)
-	if err := createDir(profilePath); err != nil {
+	if err := CreateDir(profilePath); err != nil {
 		return "", err
 	}
 	return profilePath, nil
 }
 
-// createDir creates the directory if it not alerady exist.
-func createDir(path string) error {
+// CreateDir creates the directory if it not alerady exist.
+func CreateDir(path string) error {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			err = os.MkdirAll(path, 0755)
