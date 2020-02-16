@@ -22,7 +22,7 @@ func newUnInstCmd() *unInstCmd {
 			Use:     "uninstall <component1> [component2...N] <version>",
 			Short:   "Uninstall TiDB component(s) of specific version",
 			Long:    `Uninstall some or all components of TiDB of specific version.`,
-			Example: "tiup component uninstall tidb-core v3.0.8",
+			Example: "tiup component uninstall tidb-core 3.0.8",
 			Args: func(cmd *cobra.Command, args []string) error {
 				argsLen := len(args)
 				if argsLen < 2 {

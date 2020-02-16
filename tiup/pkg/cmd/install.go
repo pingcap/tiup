@@ -79,26 +79,28 @@ func installComponent(ver string, list []string) error {
 
 		url, checksum := getComponentURL(meta.Components, ver, comp)
 		if len(url) > 0 {
-
 			// make sure we have correct download path
-			toDir := os.Getenv("TIUP_DOWNLOAD_PATH")
-			if len(toDir) == 0 {
-				// default download path $PROFILE/download
-				toDir = path.Join(utils.ProfileDir(), "download/")
+			profileDir := os.Getenv("TIUP_HOME")
+			if len(profileDir) == 0 {
+				profileDir = utils.ProfileDir()
 			}
-			// make sure path exists
-			if err := utils.CreateDir(toDir); err != nil {
+
+			toDir := utils.MustDir(path.Join(profileDir, "download/"))
+			tarball := ""
+			if tarball, err = utils.DownloadFileWithProgress(url, toDir, checksum); err != nil {
 				return err
 			}
 
-			if err := utils.DownloadFileWithProgress(url, toDir, checksum); err != nil {
+			toDir = utils.MustDir(path.Join(profileDir, "bin/"))
+			fmt.Printf("Decompressing...\n")
+			if err = utils.Untar(tarball, toDir); err != nil {
 				return err
 			}
-			// TODO: decompress tarballs and install files
+
 			if err := saveInstalledList(&installedComp{
 				Name:    comp,
 				Version: ver,
-				Path:    "/path/to/binary",
+				Path:    toDir,
 			}); err != nil {
 				return err
 			}

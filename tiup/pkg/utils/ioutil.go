@@ -1,8 +1,11 @@
 package utils
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -100,6 +103,57 @@ func CreateDir(path string) error {
 			}
 		}
 		return err
+	}
+	return nil
+}
+
+// MustDir makes sure dir exists and return the path name
+func MustDir(path string) string {
+	if err := CreateDir(path); err != nil {
+		log.Fatal(err)
+		return ""
+	}
+	return path
+}
+
+// Untar decompresses the tarball
+func Untar(file, to string) error {
+	f, err := os.Open(file)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	gr, err := gzip.NewReader(f)
+	if err != nil {
+		return err
+	}
+	defer gr.Close()
+
+	tr := tar.NewReader(gr)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		}
+		if hdr.FileInfo().IsDir() {
+			os.MkdirAll(path.Join(to, hdr.Name),
+				hdr.FileInfo().Mode())
+		} else {
+			fw, err := os.OpenFile(path.Join(to, hdr.Name),
+				os.O_CREATE|os.O_WRONLY|os.O_TRUNC,
+				hdr.FileInfo().Mode())
+			if err != nil {
+				return err
+			}
+			defer fw.Close()
+			_, err = io.Copy(fw, tr)
+			if err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

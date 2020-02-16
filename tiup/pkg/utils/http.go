@@ -27,11 +27,9 @@ func NewClient(url string, tlsConfig *tls.Config, timeout ...time.Duration) *Cli
 			Transport: &http.Transport{TLSClientConfig: tlsConfig},
 		},
 	}
-
 	if len(timeout) > 0 {
 		client.timeout = timeout[0]
 	}
-
 	return client
 }
 
@@ -40,23 +38,15 @@ func (c *Client) Get() (*http.Response, error) {
 	return c.client.Get(c.URL)
 }
 
-// DownloadFile downloads a file and check for its SHA256 checksum
-func DownloadFile(url string, checksum string) error {
-	if len(url) < 1 {
-		return fmt.Errorf("url is empty")
-	}
-	fmt.Printf("DEMO: download %s with SHA256 checksum %s\n", url, checksum)
-	return nil
-}
-
 // DownloadFileWithProgress downloads a file and check its checksum with a progress output
-func DownloadFileWithProgress(url string, to string, checksum string) error {
+// returns download file
+func DownloadFileWithProgress(url string, to string, checksum string) (string, error) {
 	client := grab.NewClient()
 
 	req, err := grab.NewRequest(to, url)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Download failed: %v\n", err)
-		return err
+		return "", err
 	}
 
 	fmt.Printf("Downloading %v...\n\n", req.URL())
@@ -83,9 +73,10 @@ L:
 	// check for errors
 	if err := resp.Err(); err != nil {
 		fmt.Fprintf(os.Stderr, "Download failed: %v\n", err)
-		return err
+		return "", err
 	}
 
-	fmt.Printf("Download saved to %v \n", to)
-	return nil
+	fmt.Printf("Download saved to %v \n", resp.Filename)
+
+	return resp.Filename, nil
 }
