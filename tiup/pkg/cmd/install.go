@@ -36,7 +36,11 @@ func newInstCmd() *installCmd {
 					cmd.Help()
 					return nil
 				}
-				version = args[argsLen-1]
+				var err error
+				version, err = utils.FmtVer(args[argsLen-1])
+				if err != nil {
+					return err
+				}
 				componentList = args[:argsLen-1]
 				return nil
 			},
