@@ -12,6 +12,7 @@ import (
 	"os/user"
 	"path"
 	"path/filepath"
+	"strings"
 )
 
 var (
@@ -60,7 +61,11 @@ func ReadFile(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	filePath := filepath.Join(profilePath, path)
+
+	filePath := path
+	if !strings.HasPrefix(filePath, profilePath) {
+		filePath = filepath.Join(profilePath, path)
+	}
 	return ioutil.ReadFile(filePath)
 }
 

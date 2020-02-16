@@ -87,12 +87,23 @@ func installComponent(ver string, list []string) error {
 
 			toDir := utils.MustDir(path.Join(profileDir, "download/"))
 			tarball := ""
-			if tarball, err = utils.DownloadFileWithProgress(url, toDir, checksum); err != nil {
+			if tarball, err = utils.DownloadFileWithProgress(url, toDir); err != nil {
 				return err
 			}
 
+			// validate checksum of downloaded tarball
+			fmt.Printf("Validating checksum of downloaded file...")
+			valid, err := utils.ValidateSHA256(tarball, checksum)
+			if err != nil {
+				return err
+			}
+			if !valid {
+				return fmt.Errorf("checksum validation failed for %s", tarball)
+			}
+			fmt.Printf("done.\n")
+
 			toDir = utils.MustDir(path.Join(profileDir, "bin/"))
-			fmt.Printf("Decompressing...\n")
+			fmt.Printf("Decompressing...")
 			if err = utils.Untar(tarball, toDir); err != nil {
 				return err
 			}
@@ -104,6 +115,8 @@ func installComponent(ver string, list []string) error {
 			}); err != nil {
 				return err
 			}
+			fmt.Printf("done.\n")
+
 			fmt.Printf("Installed %s %s.\n", comp, ver)
 			installCnt++
 		}
