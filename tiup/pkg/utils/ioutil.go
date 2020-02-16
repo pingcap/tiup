@@ -17,7 +17,7 @@ var (
 // SaveToProfile saves file to the profile directory, path is relative to the
 // profile directory of current user
 func SaveToProfile(path string, data []byte, perm os.FileMode) error {
-	profilePath, err := createProfileDir()
+	profilePath, err := GetOrCreateProfileDir()
 	if err != nil {
 		return err
 	}
@@ -40,7 +40,7 @@ func WriteJSON(path string, data interface{}) error {
 
 // ReadFile reads data from a file in the profile directory
 func ReadFile(path string) ([]byte, error) {
-	profilePath, err := createProfileDir()
+	profilePath, err := GetOrCreateProfileDir()
 	if err != nil {
 		return nil, err
 	}
@@ -58,10 +58,10 @@ func getHomeDir() (string, error) {
 	return u.HomeDir, nil
 }
 
-// createProfileDir check for profile directory for the current user, and create
+// GetOrCreateProfileDir check for profile directory for the current user, and create
 // the directory if not already exist.
 // Error may be returned if the directory is not exist and fail to create.
-func createProfileDir() (string, error) {
+func GetOrCreateProfileDir() (string, error) {
 	homeDir, err := getHomeDir()
 	if err != nil {
 		return "", err
