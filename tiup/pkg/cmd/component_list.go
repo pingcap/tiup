@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"code.cloudfoundry.org/bytefmt"
 	"github.com/AstroProfundis/tiup-demo/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -49,7 +50,7 @@ func newListComponentCmd() *listComponentCmd {
 					compList, err := readComponentList()
 					if err != nil {
 						if os.IsNotExist(err) {
-							fmt.Println("no available component list, try `tiup show --refresh` to get latest online list.")
+							fmt.Println("no available component list, try `tiup component list --refresh` to get latest online list.")
 							return nil
 						}
 						return err
@@ -72,8 +73,9 @@ func newListComponentCmd() *listComponentCmd {
 func showComponentList(compList *compMeta) {
 	for _, comp := range compList.Components {
 		fmt.Println("Available components:")
+		fmt.Printf("(%s)\n", comp.Description)
 		var cmpTable [][]string
-		cmpTable = append(cmpTable, []string{"Name", "Version", "Installed", "Description"})
+		cmpTable = append(cmpTable, []string{"Name", "Version", "Size", "Installed"})
 		for _, ver := range comp.VersionList {
 			installStatus := ""
 			installed, err := checkInstalledComponent(comp.Name, ver.Version)
@@ -87,8 +89,8 @@ func showComponentList(compList *compMeta) {
 			cmpTable = append(cmpTable, []string{
 				comp.Name,
 				ver.Version,
+				bytefmt.ByteSize(ver.Size),
 				installStatus,
-				comp.Description,
 			})
 		}
 		utils.PrintTable(cmpTable, true)
@@ -102,7 +104,7 @@ func showInstalledList() error {
 	}
 
 	if len(list) < 1 {
-		fmt.Println("no installed component, try `tiup show --all` to see all available components.")
+		fmt.Println("no installed component, try `tiup component list --all` to see all available components.")
 		return nil
 	}
 
@@ -124,6 +126,7 @@ func showInstalledList() error {
 type compVer struct {
 	Version string `json:"version,omitempty"`
 	SHA256  string `json:"sha256,omitempty"`
+	Size    uint64 `json:"size,omitempty"`
 	URL     string `json:"url,omitempty"`
 }
 
@@ -133,6 +136,7 @@ type compItem struct {
 	Description string    `json:"description,omitempty"`
 }
 
+// Component meta list
 type compMeta struct {
 	Components  []compItem `json:"components,omitempty"`
 	Description string     `json:"description,omitempty"`
