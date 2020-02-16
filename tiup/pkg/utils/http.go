@@ -4,7 +4,10 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
+
+	"github.com/cavaliercoder/grab"
 )
 
 // Client is a wrap of http.Client to fit our usage
@@ -42,5 +45,46 @@ func DownloadFile(url string, checksum string) error {
 		return fmt.Errorf("url is empty")
 	}
 	fmt.Printf("DEMO: download %s with SHA256 checksum %s\n", url, checksum)
+	return nil
+}
+
+// DownloadFileWithProgress downloads a file and check its checksum with a progress output
+func DownloadFileWithProgress(url string, to string, checksum string) error {
+	client := grab.NewClient()
+
+	req, err := grab.NewRequest(to, url)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Download failed: %v\n", err)
+		return err
+	}
+
+	fmt.Printf("Downloading %v...\n\n", req.URL())
+	resp := client.Do(req)
+
+	// start progress output loop
+	t := time.NewTicker(200 * time.Millisecond)
+	defer t.Stop()
+
+L:
+	for {
+		select {
+		case <-t.C:
+			fmt.Printf("\033[1AProgress %d / %d bytes (%.2f%%)\033[K\n",
+				resp.BytesComplete(),
+				resp.Size,
+				100*resp.Progress())
+
+		case <-resp.Done:
+			break L
+		}
+	}
+
+	// check for errors
+	if err := resp.Err(); err != nil {
+		fmt.Fprintf(os.Stderr, "Download failed: %v\n", err)
+		return err
+	}
+
+	fmt.Printf("Download saved to %v \n", to)
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/user"
 	"path"
@@ -27,6 +28,18 @@ func SaveToProfile(path string, data []byte, perm os.FileMode) error {
 		return err
 	}
 	return ioutil.WriteFile(filePath, data, perm)
+}
+
+// ProfileDir returns profile directory, create it if
+// the directory if not already exist.
+// Fatal when the directory is not exist and fail to create.
+func ProfileDir() string {
+	dir, err := createProfileDir()
+	if err != nil {
+		log.Fatal(err)
+		return ""
+	}
+	return dir
 }
 
 // WriteJSON writes struct to a file (in the profile directory) in JSON format

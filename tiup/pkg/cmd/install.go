@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/AstroProfundis/tiup-demo/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -66,7 +67,19 @@ func installComponent(ver string, list []string) error {
 
 		url, checksum := getComponentURL(meta.Components, ver, comp)
 		if len(url) > 0 {
-			if err := utils.DownloadFile(url, checksum); err != nil {
+
+			// make sure we have correct download path
+			toDir := os.Getenv("TIUP_DOWNLOAD_PATH")
+			if len(toDir) == 0 {
+				// default download path $PROFILE/download
+				toDir = path.Join(utils.ProfileDir(), "download/")
+			}
+			// make sure path exists
+			if err := os.MkdirAll(toDir, 0755); err != nil {
+				return err
+			}
+
+			if err := utils.DownloadFileWithProgress(url, toDir, checksum); err != nil {
 				return err
 			}
 			// TODO: decompress tarballs and install files
@@ -136,6 +149,7 @@ func saveInstalledList(comp *installedComp) error {
 
 func checkInstalledComponent(name string, ver string) (bool, error) {
 	currList, err := getInstalledList()
+
 	if err != nil {
 		return false, err
 	}
