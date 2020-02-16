@@ -19,17 +19,25 @@ func newUnInstCmd() *unInstCmd {
 
 	cmdUnInst := &unInstCmd{
 		newBaseCmd(&cobra.Command{
-			Use:   "uninstall",
-			Short: "Uninstall TiDB component(s) of specific version",
-			Long:  `Uninstall some or all components of TiDB of specific version.`,
+			Use:     "uninstall <component1> [component2...N] <version>",
+			Short:   "Uninstall TiDB component(s) of specific version",
+			Long:    `Uninstall some or all components of TiDB of specific version.`,
+			Example: "tiup component uninstall tidb-core v3.0.8",
+			Args: func(cmd *cobra.Command, args []string) error {
+				argsLen := len(args)
+				if argsLen < 2 {
+					cmd.Help()
+					return nil
+				}
+				version = args[argsLen-1]
+				componentList = args[:argsLen-1]
+				return nil
+			},
 			RunE: func(cmd *cobra.Command, args []string) error {
 				return uninstallComponent(version, componentList)
 			},
 		}),
 	}
-
-	cmdUnInst.cmd.Flags().StringVarP(&version, "version", "v", "", "Specify the version of component(s) to uninstall.")
-	cmdUnInst.cmd.Flags().StringSliceVarP(&componentList, "component", "c", []string{}, "List of component(s) to uninstall.")
 
 	return cmdUnInst
 }

@@ -26,17 +26,25 @@ func newInstCmd() *installCmd {
 
 	cmdInst := &installCmd{
 		newBaseCmd(&cobra.Command{
-			Use:   "install",
-			Short: "Install TiDB component(s) of specific version",
-			Long:  `Install some or all components of TiDB of specific version.`,
+			Use:     "install <component1> [component2...N] <version>",
+			Short:   "Install TiDB component(s) of specific version",
+			Long:    `Install some or all components of TiDB of specific version.`,
+			Example: "tiup component install tidb-core v3.0.8",
+			Args: func(cmd *cobra.Command, args []string) error {
+				argsLen := len(args)
+				if argsLen < 2 {
+					cmd.Help()
+					return nil
+				}
+				version = args[argsLen-1]
+				componentList = args[:argsLen-1]
+				return nil
+			},
 			RunE: func(cmd *cobra.Command, args []string) error {
 				return installComponent(version, componentList)
 			},
 		}),
 	}
-
-	cmdInst.cmd.Flags().StringVarP(&version, "version", "v", "", "Specify the version of component(s) to install.")
-	cmdInst.cmd.Flags().StringSliceVarP(&componentList, "component", "c", []string{}, "List of component(s) to install.")
 
 	return cmdInst
 }
