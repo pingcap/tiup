@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"code.cloudfoundry.org/bytefmt"
 	"github.com/cavaliercoder/grab"
 )
 
@@ -69,9 +70,9 @@ L:
 	for {
 		select {
 		case <-t.C:
-			fmt.Printf("\033[1AProgress %d / %d bytes (%.2f%%)\033[K\n",
-				resp.BytesComplete(),
-				resp.Size,
+			fmt.Printf("\033[1AProgress %s / %s bytes (%.2f%%)\033[K\n",
+				bytefmt.ByteSize(uint64(resp.BytesComplete())),
+				bytefmt.ByteSize(uint64(resp.Size)),
 				100*resp.Progress())
 
 		case <-resp.Done:
