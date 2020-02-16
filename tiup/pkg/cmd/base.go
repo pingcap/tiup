@@ -42,9 +42,7 @@ and installing TiDB components to the local system.`,
 
 	rootCmd.cmd.Flags().BoolVarP(&printVersion, "version", "V", false, "Show tiup version and quit")
 
-	rootCmd.cmd.AddCommand(newShowCmd().cmd)
-	rootCmd.cmd.AddCommand(newInstCmd().cmd)
-	rootCmd.cmd.AddCommand(newUnInstCmd().cmd)
+	rootCmd.cmd.AddCommand(newComponentCmd().cmd)
 }
 
 // Execute parses the command line argumnts and calls proper functions

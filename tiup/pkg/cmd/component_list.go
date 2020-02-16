@@ -16,21 +16,21 @@ var (
 	componentFileName = "components.json"
 )
 
-type showCmd struct {
+type listComponentCmd struct {
 	*baseCmd
 }
 
-func newShowCmd() *showCmd {
+func newListComponentCmd() *listComponentCmd {
 	var (
 		showAll bool
 		refresh bool
 	)
 
-	cmdShow := &showCmd{
+	cmdListComponent := &listComponentCmd{
 		newBaseCmd(&cobra.Command{
-			Use:   "show",
-			Short: "Show the available TiDB components",
-			Long:  `Show available and installed TiDB components and their versions.`,
+			Use:   "list",
+			Short: "List the available TiDB components",
+			Long:  `List available and installed TiDB components and their versions.`,
 			RunE: func(cmd *cobra.Command, args []string) error {
 				if refresh {
 					compList, err := fetchComponentList(componentListURL)
@@ -63,10 +63,10 @@ func newShowCmd() *showCmd {
 		}),
 	}
 
-	cmdShow.cmd.Flags().BoolVar(&showAll, "all", false, "List all available components and versions (from local cache).")
-	cmdShow.cmd.Flags().BoolVar(&refresh, "refresh", false, "Refresh online list of components and versions.")
+	cmdListComponent.cmd.Flags().BoolVar(&showAll, "all", false, "List all available components and versions (from local cache).")
+	cmdListComponent.cmd.Flags().BoolVar(&refresh, "refresh", false, "Refresh online list of components and versions.")
 
-	return cmdShow
+	return cmdListComponent
 }
 
 func showComponentList(compList *compMeta) {
