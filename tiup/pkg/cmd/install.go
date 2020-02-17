@@ -123,6 +123,7 @@ func installComponent(ver string, list []string) error {
 			if err := utils.Rename(tmpBin, toDir); err != nil {
 				return err
 			}
+			// remove the temp dir (should be empty)
 			if err := os.RemoveAll(tmpDir); err != nil {
 				fmt.Printf("fail to remove temp directory %s\n", tmpDir)
 				return err

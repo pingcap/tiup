@@ -17,16 +17,24 @@ var (
 // CompVer is the version metadata of a component
 type CompVer struct {
 	Version string `json:"version,omitempty"`
-	SHA256  string `json:"sha256,omitempty"`
-	Size    uint64 `json:"size,omitempty"`
-	URL     string `json:"url,omitempty"`
+	SHA256  string `json:"sha256,omitempty"` // checksum of the tarball
+	Size    uint64 `json:"size,omitempty"`   // size of the tarball in bytes
+	URL     string `json:"url,omitempty"`    // URL to the tarball
+	OS      string `json:"os,omitempty"`     // OS matching the binary
+	Arch    string `json:"arch,omitempty"`   // Arch matching the binary
 }
 
 // CompItem is the metadata of a component
 type CompItem struct {
 	Name        string    `json:"name,omitempty"`
-	VersionList []CompVer `json:"versions,omitempty"`
 	Description string    `json:"description,omitempty"`
+	VersionList []CompVer `json:"versions,omitempty"` // list of available versions
+	Latest      string    `json:"latest,omitempty"`   // the latest GA version
+	Beta        string    `json:"beta,omitempty"`     // the latest Beta version
+	// TODO: nightly should have a special config, using something like "-nightly"
+	// as version and store the date on disk, so only one URL is needed for the
+	// nightly channel
+	//Nightly     string    `json:"nightly,omitempty"`  // the last nightly version
 }
 
 // CompMeta is the component metadata list

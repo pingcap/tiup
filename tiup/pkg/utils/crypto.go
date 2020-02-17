@@ -6,7 +6,12 @@ import (
 )
 
 // ValidateSHA256 generate SHA256 checksum of a file and compare with given value
-func ValidateSHA256(file string, checksum string) (bool, error) {
+func ValidateSHA256(file, checksum string) (bool, error) {
+	// always return true if validating is not needed
+	if checksum == "SKIP" {
+		return true, nil
+	}
+
 	hash, err := calFileSHA256(file)
 	if err != nil {
 		return false, err
