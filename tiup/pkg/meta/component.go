@@ -29,12 +29,6 @@ type CompItem struct {
 	Name        string    `json:"name,omitempty"`
 	Description string    `json:"description,omitempty"`
 	VersionList []CompVer `json:"versions,omitempty"` // list of available versions
-	Latest      string    `json:"latest,omitempty"`   // the latest GA version
-	Beta        string    `json:"beta,omitempty"`     // the latest Beta version
-	// TODO: nightly should have a special config, using something like "-nightly"
-	// as version and store the date on disk, so only one URL is needed for the
-	// nightly channel
-	//Nightly     string    `json:"nightly,omitempty"`  // the last nightly version
 }
 
 // CompMeta is the component metadata list
@@ -42,6 +36,13 @@ type CompMeta struct {
 	Components  []CompItem `json:"components,omitempty"`
 	Description string     `json:"description,omitempty"`
 	Modified    time.Time  `json:"modified,omitempty"`
+	Stable      string     `json:"stable,omitempty"` // the latest GA version
+	Beta        string     `json:"beta,omitempty"`   // the latest Beta version
+	// TODO: nightly should have a special config, using something like "-nightly"
+	// as version and store the date on disk, so only one URL is needed for the
+	// nightly channel
+	//Nightly     string    `json:"nightly,omitempty"`  // the last nightly version
+
 }
 
 // FetchComponentList request and get latest component metadata list online
