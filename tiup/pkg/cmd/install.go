@@ -109,7 +109,6 @@ func installComponent(ver string, list []string) error {
 			if err = utils.Untar(tarball, toDir); err != nil {
 				return err
 			}
-
 			if err := saveInstalledList(&installedComp{
 				Name:    comp,
 				Version: ver,
@@ -117,10 +116,7 @@ func installComponent(ver string, list []string) error {
 			}); err != nil {
 				return err
 			}
-<<<<<<< HEAD
-=======
 			fmt.Printf("done.\n")
->>>>>>> 257a2553ff97cae8f6563b96fad993b22197e672
 
 			fmt.Printf("Installed %s %s.\n", comp, ver)
 			installCnt++

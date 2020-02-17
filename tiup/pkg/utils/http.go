@@ -38,16 +38,9 @@ func (c *Client) Get() (*http.Response, error) {
 	return c.client.Get(c.URL)
 }
 
-<<<<<<< HEAD
-// DownloadFileWithProgress downloads a file and check its checksum with a progress output
-// returns download file
-// TODO: checksum
-func DownloadFileWithProgress(url string, to string, checksum string) (string, error) {
-=======
 // DownloadFileWithProgress downloads a file with a progress output
 // returns downloaded file
 func DownloadFileWithProgress(url string, to string) (string, error) {
->>>>>>> 257a2553ff97cae8f6563b96fad993b22197e672
 	client := grab.NewClient()
 
 	req, err := grab.NewRequest(to, url)
