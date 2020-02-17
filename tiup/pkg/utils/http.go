@@ -40,6 +40,7 @@ func (c *Client) Get() (*http.Response, error) {
 
 // DownloadFileWithProgress downloads a file and check its checksum with a progress output
 // returns download file
+// TODO: checksum
 func DownloadFileWithProgress(url string, to string, checksum string) (string, error) {
 	client := grab.NewClient()
 
@@ -75,6 +76,7 @@ L:
 		fmt.Fprintf(os.Stderr, "Download failed: %v\n", err)
 		return "", err
 	}
+	// TODO: checksum
 
 	fmt.Printf("Download saved to %v \n", resp.Filename)
 

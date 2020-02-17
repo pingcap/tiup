@@ -13,6 +13,8 @@ import (
 var (
 	componentListURL      = "https://repo.hoshi.at/tmp/components.json"
 	installedListFilename = "installed.json"
+
+	specifiedHomeEnvKey = "TIUP_HOME"
 )
 
 type installCmd struct {
@@ -80,7 +82,7 @@ func installComponent(ver string, list []string) error {
 		url, checksum := getComponentURL(meta.Components, ver, comp)
 		if len(url) > 0 {
 			// make sure we have correct download path
-			profileDir := os.Getenv("TIUP_HOME")
+			profileDir := os.Getenv(specifiedHomeEnvKey)
 			if len(profileDir) == 0 {
 				profileDir = utils.ProfileDir()
 			}
@@ -104,6 +106,7 @@ func installComponent(ver string, list []string) error {
 			}); err != nil {
 				return err
 			}
+
 			fmt.Printf("Installed %s %s.\n", comp, ver)
 			installCnt++
 		}
