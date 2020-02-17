@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 
+	"github.com/AstroProfundis/tiup-demo/tiup/pkg/meta"
 	"github.com/AstroProfundis/tiup-demo/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 var (
-	componentListURL      = "https://repo.hoshi.at/tmp/components.json"
 	installedListFilename = "installed.json"
 )
 
@@ -61,7 +63,7 @@ type installedComp struct {
 }
 
 func installComponent(ver string, list []string) error {
-	meta, err := readComponentList()
+	meta, err := meta.ReadComponentList()
 	if err != nil {
 		return err
 	}
@@ -102,11 +104,24 @@ func installComponent(ver string, list []string) error {
 			}
 			fmt.Printf("done.\n")
 
-			toDir = utils.MustDir(path.Join(profileDir, "bin/"))
+			// decompress files to a temp dir, and try to keep it unique
+			tmpDir := utils.MustDir(path.Join(profileDir, "tmp/", checksum))
 			fmt.Printf("Decompressing...")
-			if err = utils.Untar(tarball, toDir); err != nil {
+			if err = utils.Untar(tarball, tmpDir); err != nil {
 				return err
 			}
+
+			// move binaries to final path
+			tmpBin := path.Join(tmpDir,
+				strings.TrimSuffix(filepath.Base(tarball), ".tar.gz"),
+				"bin")
+			toDir = path.Join(
+				utils.MustDir(path.Join(profileDir, ver)),
+				comp)
+			if err := utils.Rename(tmpBin, toDir); err != nil {
+				return err
+			}
+			os.RemoveAll(tmpDir)
 
 			if err := saveInstalledList(&installedComp{
 				Name:    comp,
@@ -125,7 +140,7 @@ func installComponent(ver string, list []string) error {
 	return nil
 }
 
-func getComponentURL(list []compItem, ver string, comp string) (string, string) {
+func getComponentURL(list []meta.CompItem, ver string, comp string) (string, string) {
 	for _, compMetaItem := range list {
 		if comp != compMetaItem.Name {
 			continue

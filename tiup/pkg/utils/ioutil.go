@@ -162,3 +162,8 @@ func Untar(file, to string) error {
 	}
 	return nil
 }
+
+// Rename moves file from src location to dst location, as well as change the name
+func Rename(src, dst string) error {
+	return os.Rename(src, filepath.Clean(dst))
+}
