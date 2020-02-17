@@ -3,12 +3,18 @@ package meta
 import (
 	"encoding/json"
 	"os"
+	"strings"
 
 	"github.com/AstroProfundis/tiup-demo/tiup/pkg/utils"
 )
 
 var (
-	versionFileName = "version.json"
+	versionFileName   = "version.json"
+	availableChannels = []string{
+		"stable",
+		"beta",
+		//"nightly",
+	}
 )
 
 // CurrVer stores user defined current update channel and default version
@@ -70,4 +76,15 @@ func unmarshalCurrVer(data []byte) (*CurrVer, error) {
 		return nil, err
 	}
 	return &ver, nil
+}
+
+// IsValidChannel checks if the input is a valid channel of TiDB components
+func IsValidChannel(input string) bool {
+	inChan := strings.ToLower(input)
+	for _, c := range availableChannels {
+		if inChan == strings.ToLower(c) {
+			return true
+		}
+	}
+	return false
 }
