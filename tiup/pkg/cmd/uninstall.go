@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/AstroProfundis/tiup-demo/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -56,9 +57,7 @@ func uninstallComponent(ver string, list []string) error {
 			fmt.Printf("%s %s is not installed, skip.\n", comp, ver)
 			continue
 		}
-		// do actual removal here
-		// removeFromSystem()
-		if err = removeFromInstalledList(comp, ver); err != nil {
+		if err = removeInstalledComponent(comp, ver); err != nil {
 			return err
 		}
 		fmt.Printf("%s %v uninstalled.\n", comp, ver)
@@ -66,7 +65,7 @@ func uninstallComponent(ver string, list []string) error {
 	return nil
 }
 
-func removeFromInstalledList(name string, ver string) error {
+func removeInstalledComponent(name string, ver string) error {
 	currList, err := getInstalledList()
 	if err != nil {
 		return err
@@ -76,6 +75,11 @@ func removeFromInstalledList(name string, ver string) error {
 	for i, instComp := range currList {
 		if instComp.Name == name &&
 			instComp.Version == ver {
+			// actual removal
+			if err := os.RemoveAll(instComp.Path); err != nil {
+				return err
+			}
+			// remove from list
 			newList = append(currList[:i], currList[i+1:]...)
 			break
 		}
