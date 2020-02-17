@@ -10,7 +10,7 @@ import (
 // FmtVer converts a version string to SemVer format, if the string is not a valid
 // SemVer and fails to parse and convert it, an error is raised.
 func FmtVer(ver string) (string, error) {
-	var v string
+	v := ver
 	if !strings.HasPrefix(ver, "v") {
 		v = fmt.Sprintf("v%s", ver)
 	}
