@@ -37,16 +37,35 @@ func newInstCmd() *installCmd {
 			Example: "tiup component install tidb-core v3.0.8",
 			Args: func(cmd *cobra.Command, args []string) error {
 				argsLen := len(args)
-				if argsLen < 2 {
+				var err error
+				switch argsLen {
+				case 0:
 					cmd.Help()
 					return nil
+				case 1: // version unspecified, use stable latest as default
+					currChan, err := meta.ReadVersionFile()
+					if os.IsNotExist(err) {
+						fmt.Println("default version not set, using latest stable.")
+						compMeta, err := meta.ReadComponentList()
+						if os.IsNotExist(err) {
+							fmt.Println("no available component list, try `tiup component list --refresh` to get latest online list.")
+							return nil
+						} else if err != nil {
+							return err
+						}
+						version = compMeta.Stable
+					} else if err != nil {
+						return err
+					}
+					version = currChan.Ver
+					componentList = args
+				default:
+					version, err = utils.FmtVer(args[argsLen-1])
+					if err != nil {
+						return err
+					}
+					componentList = args[:argsLen-1]
 				}
-				var err error
-				version, err = utils.FmtVer(args[argsLen-1])
-				if err != nil {
-					return err
-				}
-				componentList = args[:argsLen-1]
 				return nil
 			},
 			RunE: func(cmd *cobra.Command, args []string) error {
