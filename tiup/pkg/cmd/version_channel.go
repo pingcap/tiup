@@ -40,41 +40,7 @@ func newChanList() *cobra.Command {
 		Use:   "list",
 		Short: "List available update channels",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			compMeta, err := meta.ReadComponentList()
-			if err != nil {
-				if os.IsNotExist(err) {
-					fmt.Println("no available component list, try `tiup component list --refresh` to get latest online list.")
-					return nil
-				}
-				return err
-			}
-			fmt.Println("Available update channels:")
-			var chanTable [][]string
-			chanTable = append(chanTable, []string{"Channel", "Latest Version", "Current"})
-
-			currChan, err := meta.ReadVersionFile()
-			if err != nil && !os.IsNotExist(err) {
-				return err
-			}
-			if len(compMeta.Stable) > 0 {
-				line := []string{"stable", compMeta.Stable}
-				if currChan.Chan == "stable" {
-					line = append(line, currChan.Ver)
-				}
-				chanTable = append(chanTable, line)
-			}
-			if len(compMeta.Beta) > 0 {
-				line := []string{"beta", compMeta.Beta}
-				if currChan.Chan == "beta" {
-					line = append(line, "*")
-				}
-				chanTable = append(chanTable, line)
-			}
-			//if len(compMeta.Nightly) > 0 {
-			//	chanTable = append(chanTable, []string{"nightly", compMeta.Nightly})
-			//}
-			utils.PrintTable(chanTable, true)
-			return nil
+			return listCurrentChannel()
 		},
 	}
 
@@ -134,4 +100,42 @@ func newChanUse() *cobra.Command {
 	}
 
 	return chanUseCmd
+}
+
+func listCurrentChannel() error {
+	compMeta, err := meta.ReadComponentList()
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Println("no available component list, try `tiup component list --refresh` to get latest online list.")
+			return nil
+		}
+		return err
+	}
+	fmt.Println("Available update channels:")
+	var chanTable [][]string
+	chanTable = append(chanTable, []string{"Channel", "Latest Version", "Current"})
+
+	currChan, err := meta.ReadVersionFile()
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	if len(compMeta.Stable) > 0 {
+		line := []string{"stable", compMeta.Stable}
+		if currChan.Chan == "stable" {
+			line = append(line, currChan.Ver)
+		}
+		chanTable = append(chanTable, line)
+	}
+	if len(compMeta.Beta) > 0 {
+		line := []string{"beta", compMeta.Beta}
+		if currChan.Chan == "beta" {
+			line = append(line, "*")
+		}
+		chanTable = append(chanTable, line)
+	}
+	//if len(compMeta.Nightly) > 0 {
+	//	chanTable = append(chanTable, []string{"nightly", compMeta.Nightly})
+	//}
+	utils.PrintTable(chanTable, true)
+	return nil
 }

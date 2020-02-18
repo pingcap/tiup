@@ -26,13 +26,7 @@ func newShowCmd() *showCmd {
 				}
 				fmt.Printf("TiUP home: %s\n", profileDir)
 
-				// TODO: read current default version
-				curOS, curArch := utils.GetPlatform()
-				fmt.Printf("\nCurrent Version: %s (%s-%s)\n",
-					"vx.y.z",
-					curOS,
-					curArch)
-				return nil
+				return showCurrentVersion()
 			},
 		}),
 	}
