@@ -4,7 +4,7 @@ GOOS    := $(if $(GOOS),$(GOOS),linux)
 GOARCH  := $(if $(GOARCH),$(GOARCH),amd64)
 GOENV   := GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH)
 GO      := $(GOENV) go
-GOBUILD := $(GO) build
+GOBUILD := $(GO) build $(BUILD_FLAG)
 
 COMMIT    := $(shell git describe --no-match --always --dirty)
 BRANCH    := $(shell git rev-parse --abbrev-ref HEAD)
