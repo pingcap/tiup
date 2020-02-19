@@ -49,6 +49,7 @@ and installing TiDB components to the local system.`,
 	rootCmd.cmd.AddCommand(
 		newComponentCmd().getCmd(),
 		newVersionCmd().getCmd(),
+		newLaunchCmd().getCmd(),
 		newShowCmd().getCmd(),
 	)
 }
