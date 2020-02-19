@@ -15,6 +15,10 @@ func newBaseCmd(cmd *cobra.Command) *baseCmd {
 	return &baseCmd{cmd: cmd}
 }
 
+func (c *baseCmd) getCmd() *cobra.Command {
+	return c.cmd
+}
+
 func (c *baseCmd) Execute() error {
 	return c.cmd.Execute()
 }
@@ -42,9 +46,11 @@ and installing TiDB components to the local system.`,
 
 	rootCmd.cmd.Flags().BoolVarP(&printVersion, "version", "V", false, "Show tiup version and quit")
 
-	rootCmd.cmd.AddCommand(newComponentCmd().cmd)
-	rootCmd.cmd.AddCommand(newVersionCmd().cmd)
-	rootCmd.cmd.AddCommand(newShowCmd().cmd)
+	rootCmd.cmd.AddCommand(
+		newComponentCmd().getCmd(),
+		newVersionCmd().getCmd(),
+		newShowCmd().getCmd(),
+	)
 }
 
 // Execute parses the command line argumnts and calls proper functions
