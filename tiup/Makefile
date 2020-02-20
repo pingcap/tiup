@@ -10,7 +10,7 @@ COMMIT    := $(shell git describe --no-match --always --dirty)
 BRANCH    := $(shell git rev-parse --abbrev-ref HEAD)
 BUILDTIME := $(shell date '+%Y-%m-%d %T %z')
 
-REPO := github.com/AstroProfundis/tiup-demo/tiup
+REPO := github.com/c4pt0r/tiup-demo/tiup
 LDFLAGS := -w -s
 LDFLAGS += -X "$(REPO)/pkg/version.GitHash=$(COMMIT)"
 LDFLAGS += -X "$(REPO)/pkg/version.GitBranch=$(BRANCH)"
