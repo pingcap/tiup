@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"code.cloudfoundry.org/bytefmt"
-	"github.com/AstroProfundis/tiup-demo/tiup/pkg/meta"
-	"github.com/AstroProfundis/tiup-demo/tiup/pkg/utils"
+	"github.com/c4pt0r/tiup/pkg/meta"
+	"github.com/c4pt0r/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 

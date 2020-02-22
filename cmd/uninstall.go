@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/AstroProfundis/tiup-demo/tiup/pkg/utils"
+	"github.com/c4pt0r/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 

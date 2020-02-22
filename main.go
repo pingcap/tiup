@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/AstroProfundis/tiup-demo/tiup/pkg/cmd"
+	"github.com/c4pt0r/tiup/cmd"
 )
 
 func main() {
