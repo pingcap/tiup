@@ -1,49 +1,32 @@
+// Copyright 2020 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package cmd
 
 import (
 	"fmt"
-	"os"
-
-	"github.com/c4pt0r/tiup/pkg/meta"
-	"github.com/c4pt0r/tiup/pkg/utils"
+	"github.com/c4pt0r/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
 
-type versionCmd struct {
-	*baseCmd
-}
-
-func newVersionCmd() *versionCmd {
-	cmdVersion := &versionCmd{
-		newBaseCmd(&cobra.Command{
-			Use:   "version",
-			Short: "Manage versions of TiDB components",
-			Long: `Manage the global version of TiDB components, if unset, the
-latest version of 'stable' channel is used.`,
-			RunE: func(cmd *cobra.Command, args []string) error {
-				return showCurrentVersion()
-			},
-		}),
+func newVersionCmd() *cobra.Command {
+	cmdVersion := &cobra.Command{
+		Use:   "version",
+		Short: "Show tiup version and quit",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println(version.NewTiUPVersion())
+			fmt.Println(version.NewTiUPBuildInfo())
+		},
 	}
-
-	cmdVersion.cmd.AddCommand(newChannelCmd().cmd)
 	return cmdVersion
-}
-
-func showCurrentVersion() error {
-	currChan, err := meta.ReadVersionFile()
-	if err != nil {
-		if os.IsNotExist(err) {
-			fmt.Println("default version not set, try `tiup version channel use` to set a update channel.")
-			return nil
-		}
-		return err
-	}
-	curOS, curArch := utils.GetPlatform()
-	fmt.Printf("Current Version: %s %s-%s (%s)\n",
-		currChan.Ver,
-		curOS,
-		curArch,
-		currChan.Chan)
-	return nil
 }
