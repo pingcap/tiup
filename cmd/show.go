@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/AstroProfundis/tiup-demo/tiup/pkg/utils"
-	"github.com/AstroProfundis/tiup-demo/tiup/pkg/version"
+	"github.com/c4pt0r/tiup/pkg/utils"
+	"github.com/c4pt0r/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
 

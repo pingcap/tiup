@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/AstroProfundis/tiup-demo/tiup/pkg/utils"
+	"github.com/c4pt0r/tiup/pkg/utils"
 )
 
 var (

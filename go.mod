@@ -1,4 +1,4 @@
-module github.com/AstroProfundis/tiup-demo/tiup
+module github.com/c4pt0r/tiup
 
 go 1.13
 
