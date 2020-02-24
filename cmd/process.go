@@ -13,12 +13,25 @@ const (
 )
 
 type compProcess struct {
-	Pid  int    `json:"pid,omitempty"`
-	Exec string `json:"exec,omitempty"`
-	Args string `json:"args,omitempty"`
+	Pid  int      `json:"pid,omitempty"`  // PID of the process
+	Exec string   `json:"exec,omitempty"` // Path to the binary
+	Args []string `json:"args,omitempty"` // Command line arguments
+	Dir  string   `json:"dir,omitempty"`  // Working directory
 }
 
 type compProcessList []compProcess
+
+// Launch executes the process
+func (p *compProcess) Launch() error {
+	var err error
+
+	dir := utils.MustDir(p.Dir)
+	p.Pid, err = utils.Exec(nil, nil, dir, p.Exec, p.Args...)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func getProcessList() (compProcessList, error) {
 	var list compProcessList
