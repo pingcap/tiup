@@ -19,8 +19,8 @@ func newComponentCmd() *componentCmd {
 		}),
 	}
 
-	cmdComponent.cmd.AddCommand(newListComponentCmd().cmd)
-	cmdComponent.cmd.AddCommand(newInstCmd().cmd)
-	cmdComponent.cmd.AddCommand(newUnInstCmd().cmd)
+	cmdComponent.cmd.AddCommand(newListComponentCmd().getCmd())
+	cmdComponent.cmd.AddCommand(newInstCmd().getCmd())
+	cmdComponent.cmd.AddCommand(newUnInstCmd().getCmd())
 	return cmdComponent
 }

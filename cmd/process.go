@@ -6,11 +6,31 @@ import (
 	"os"
 
 	"github.com/c4pt0r/tiup/pkg/utils"
+	"github.com/spf13/cobra"
 )
 
 const (
 	processListFilename = "processes.json"
 )
+
+type procCmd struct {
+	*baseCmd
+}
+
+func newProcCmd() *procCmd {
+	cmdProc := &procCmd{
+		newBaseCmd(&cobra.Command{
+			Use:   "process",
+			Short: "Manage processes of components",
+			Run: func(cmd *cobra.Command, args []string) {
+				cmd.Help()
+			},
+		}),
+	}
+
+	cmdProc.cmd.AddCommand(newProcListCmd().getCmd())
+	return cmdProc
+}
 
 type compProcess struct {
 	Pid  int      `json:"pid,omitempty"`  // PID of the process
