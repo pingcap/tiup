@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/c4pt0r/tiup/pkg/utils"
@@ -14,7 +15,7 @@ const (
 type compProcess struct {
 	Pid  int    `json:"pid,omitempty"`
 	Exec string `json:"exec,omitempty"`
-	Port int    `json:"port,omitempty"`
+	Args string `json:"args,omitempty"`
 }
 
 type compProcessList []compProcess
@@ -47,7 +48,12 @@ func saveProcessToList(p *compProcess) error {
 		return err
 	}
 
-	// TODO: check for duplication
+	for _, currProc := range currList {
+		if currProc.Pid == p.Pid {
+			return fmt.Errorf("process %d already exist", p.Pid)
+		}
+	}
+
 	newList := append(currList, *p)
 	return saveProcessList(&newList)
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/c4pt0r/tiup/pkg/meta"
 	"github.com/c4pt0r/tiup/pkg/utils"
+	"github.com/phayes/freeport"
 	"github.com/spf13/cobra"
 )
 
@@ -86,11 +87,25 @@ There are 3 types of component in "tidb-core":
 func launchComponentProcess(ver, compType string) (int, error) {
 	binPath, err := getServerBinPath(ver, compType)
 	if err != nil {
-		return -1, err
+		return 0, err
 	}
 
-	fmt.Printf("%s\n", binPath)
-	return utils.Exec(nil, nil, binPath)
+	args, err := getServerArguments(compType)
+	if err != nil {
+		return 0, err
+	}
+
+	fmt.Printf("%s %s\n", binPath, args)
+	pid, err := utils.Exec(nil, nil, binPath, args...)
+	if err != nil {
+		return pid, err
+	}
+
+	return pid, saveProcessToList(&compProcess{
+		Pid:  pid,
+		Exec: binPath,
+		Args: strings.Join(args, " "),
+	})
 }
 
 func getServerBinPath(ver, compType string) (string, error) {
@@ -121,4 +136,30 @@ func getServerBinPath(ver, compType string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("can not find binary for %s %s", compType, ver)
+}
+
+func getServerArguments(compType string) ([]string, error) {
+	// get unused ports
+	ports, err := freeport.GetFreePorts(2)
+	if err != nil {
+		return nil, err
+	}
+
+	var args []string
+	switch compType {
+	case "compute":
+		args = []string{
+			"-P", fmt.Sprint(ports[0]),
+			"-status", fmt.Sprint(ports[1]),
+		}
+	case "meta":
+		fmt.Println("TODO: Support custom ports for PD, now use the default port number")
+	case "storage":
+		args = []string{
+			"--addr", fmt.Sprintf("0.0.0.0:%d", ports[0]),
+			"--status-addr", fmt.Sprintf("0.0.0.0:%d", ports[1]),
+		}
+	}
+
+	return args, nil
 }
