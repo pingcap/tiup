@@ -8,8 +8,11 @@ import (
 	"github.com/c4pt0r/tiup/pkg/utils"
 )
 
+const (
+	versionFileName = "version.json"
+)
+
 var (
-	versionFileName   = "version.json"
 	availableChannels = []string{
 		"stable",
 		"beta",

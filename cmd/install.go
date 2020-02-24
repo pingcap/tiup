@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
+const (
 	installedListFilename = "installed.json"
 
 	specifiedHomeEnvKey = "TIUP_HOME"
