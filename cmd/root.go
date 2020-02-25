@@ -14,27 +14,37 @@
 package cmd
 
 import (
-	"fmt"
-	"github.com/c4pt0r/tiup/pkg/utils"
-	"github.com/c4pt0r/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
 
-func newShowCmd() *cobra.Command {
-	cmdShow := &cobra.Command{
-		Use:   "show",
-		Short: "Display global information",
+var rootCmd *cobra.Command
+
+func init() {
+	rootCmd = &cobra.Command{
+		Use:   "tiup",
+		Short: "Download and install TiDB components from command line",
+		Long: `The tiup utility is a command line tool that can help to download
+and installing TiDB components to the local system.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Printf("TiUP Version: %s\n", version.NewTiUPVersion())
-			fmt.Printf("TiUP Build: %s\n", version.NewTiUPBuildInfo())
-			profileDir, err := utils.GetOrCreateProfileDir()
-			if err != nil {
-				return err
-			}
-			fmt.Printf("TiUP home: %s\n", profileDir)
-			return nil
+			return cmd.Help()
 		},
 	}
 
-	return cmdShow
+	rootCmd.AddCommand(
+		newSelfCmd(),
+		newComponentCmd(),
+		newUpdateCmd(),
+		newRunCmd(),
+		newStatusCmd(),
+		newLogCmd(),
+		newStopCmd(),
+		newShowCmd(),
+		newVersionCmd(),
+		newCompletionsCmd(),
+	)
+}
+
+// Execute parses the command line argumnts and calls proper functions
+func Execute() error {
+	return rootCmd.Execute()
 }

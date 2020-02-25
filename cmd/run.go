@@ -1,3 +1,16 @@
+// Copyright 2020 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package cmd
 
 import (
@@ -13,77 +26,70 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type launchCmd struct {
-	*baseCmd
-}
-
 const (
 	compTypeMeta    = "pd"
 	compTypeStorage = "tikv"
 	compTypeCompute = "tidb"
 )
 
-func newLaunchCmd() *launchCmd {
+func newRunCmd() *cobra.Command {
 	var (
 		version   string
 		component string
 	)
 
-	cmdLaunch := &launchCmd{
-		newBaseCmd(&cobra.Command{
-			Use:   "launch <component1> [version]",
-			Short: "Launch a TiDB component of specific version",
-			Long: `Launch a TiDB component process of specific version.
+	cmdLaunch := &cobra.Command{
+		Use:   "run <component1>:[version]",
+		Short: "Run a component of specific version",
+		Long: `Launch a TiDB component process of specific version.
 There are 3 types of component in "tidb-core":
   meta:     Metadata nodes of the cluster, the PD server
   storage:  Storage nodes, the TiKV server
   compute:  SQL layer and compute nodes, the TiDB server`,
-			Example: "tiup launch meta v3.0.8",
-			Args: func(cmd *cobra.Command, args []string) error {
-				var err error
-				switch len(args) {
-				case 0:
-					cmd.Help()
-					return nil
-				case 1: // version unspecified, use stable latest as default
-					currChan, err := meta.ReadVersionFile()
+		Example: "tiup launch meta v3.0.8",
+		Args: func(cmd *cobra.Command, args []string) error {
+			var err error
+			switch len(args) {
+			case 0:
+				return cmd.Help()
+			case 1: // version unspecified, use stable latest as default
+				currChan, err := meta.ReadVersionFile()
+				if os.IsNotExist(err) {
+					fmt.Println("default version not set, using latest stable.")
+					compMeta, err := meta.ReadComponentList()
 					if os.IsNotExist(err) {
-						fmt.Println("default version not set, using latest stable.")
-						compMeta, err := meta.ReadComponentList()
-						if os.IsNotExist(err) {
-							fmt.Println("no available component list, try `tiup component list --refresh` to get latest online list.")
-							return nil
-						} else if err != nil {
-							return err
-						}
-						version = compMeta.Stable
+						fmt.Println("no available component list, try `tiup component list --refresh` to get latest online list.")
+						return nil
 					} else if err != nil {
 						return err
 					}
-					version = currChan.Ver
-				default:
-					version, err = utils.FmtVer(args[1])
-					if err != nil {
-						return err
-					}
-				}
-				component = strings.ToLower(args[0])
-				return nil
-			},
-			RunE: func(cmd *cobra.Command, args []string) error {
-				fmt.Printf("Launching process of %s %s\n", component, version)
-				p, err := launchComponentProcess(version, component)
-				if err != nil {
-					if p.Pid != 0 {
-						fmt.Printf("Error occured, but the process may be already started with PID %d\n", p.Pid)
-					}
+					version = compMeta.Stable
+				} else if err != nil {
 					return err
 				}
-				fmt.Printf("Started %s %s...\n", p.Exec, strings.Join(p.Args, " "))
-				fmt.Printf("Process %d started for %s %s\n", p.Pid, component, version)
-				return nil
-			},
-		}),
+				version = currChan.Ver
+			default:
+				version, err = utils.FmtVer(args[1])
+				if err != nil {
+					return err
+				}
+			}
+			component = strings.ToLower(args[0])
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Printf("Launching process of %s %s\n", component, version)
+			p, err := launchComponentProcess(version, component)
+			if err != nil {
+				if p.Pid != 0 {
+					fmt.Printf("Error occured, but the process may be already started with PID %d\n", p.Pid)
+				}
+				return err
+			}
+			fmt.Printf("Started %s %s...\n", p.Exec, strings.Join(p.Args, " "))
+			fmt.Printf("Process %d started for %s %s\n", p.Pid, component, version)
+			return nil
+		},
 	}
 
 	return cmdLaunch

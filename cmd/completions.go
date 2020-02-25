@@ -13,28 +13,21 @@
 
 package cmd
 
-import (
-	"fmt"
-	"github.com/c4pt0r/tiup/pkg/utils"
-	"github.com/c4pt0r/tiup/pkg/version"
-	"github.com/spf13/cobra"
-)
+import "github.com/spf13/cobra"
 
-func newShowCmd() *cobra.Command {
-	cmdShow := &cobra.Command{
-		Use:   "show",
-		Short: "Display global information",
+func newCompletionsCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "completions",
+		Short: "Generate tab-completion scripts for your shell",
+		Long: `Enable tab completion for Bash, Zsh, The script is
+output on stdout, allowing one to re-direct the output to the
+file of their choosing. Where you place the file will depend
+on which shell, and which operating system you are using. Your
+particular configuration may also determine where these scripts
+need to be placed.
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Printf("TiUP Version: %s\n", version.NewTiUPVersion())
-			fmt.Printf("TiUP Build: %s\n", version.NewTiUPBuildInfo())
-			profileDir, err := utils.GetOrCreateProfileDir()
-			if err != nil {
-				return err
-			}
-			fmt.Printf("TiUP home: %s\n", profileDir)
-			return nil
+			return cmd.Help()
 		},
 	}
-
-	return cmdShow
 }

@@ -8,5 +8,7 @@ require (
 	github.com/cheynewallace/tabby v1.1.0
 	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
 	github.com/spf13/cobra v0.0.5
+	golang.org/x/lint v0.0.0-20200130185559-910be7a94367 // indirect
 	golang.org/x/mod v0.2.0
+	golang.org/x/tools v0.0.0-20200225022059-a0ec867d517c // indirect
 )

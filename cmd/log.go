@@ -13,20 +13,14 @@
 
 package cmd
 
-import (
-	"fmt"
-	"github.com/c4pt0r/tiup/pkg/version"
-	"github.com/spf13/cobra"
-)
+import "github.com/spf13/cobra"
 
-func newVersionCmd() *cobra.Command {
-	cmdVersion := &cobra.Command{
-		Use:   "version",
-		Short: "Show tiup version and quit",
-		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println(version.NewTiUPVersion())
-			fmt.Println(version.NewTiUPBuildInfo())
+func newLogCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "log",
+		Short: "View logs by component names",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
 		},
 	}
-	return cmdVersion
 }
