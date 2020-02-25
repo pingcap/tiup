@@ -23,7 +23,7 @@ import (
 	"github.com/c4pt0r/tiup/pkg/utils"
 )
 
-var (
+const (
 	componentFileName = "components.json"
 )
 

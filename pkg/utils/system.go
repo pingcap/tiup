@@ -25,10 +25,23 @@ func GetPlatform() (string, string) {
 }
 
 // Exec creates a process in background and return the PID of it
-func Exec(stdout, stderr *io.Writer, name string, arg ...string) (int, error) {
+func Exec(
+	stdout, stderr *io.Writer,
+	dir string,
+	name string,
+	arg ...string) (int, error) {
+
+	// init the command
 	c := exec.Command(name, arg...)
-	c.Stdout = *stdout
-	c.Stderr = *stderr
+	if stdout != nil {
+		c.Stdout = *stdout
+	}
+	if stderr != nil {
+		c.Stderr = *stderr
+	}
+	if dir != "" {
+		c.Dir = dir
+	}
 	err := c.Start()
 	return c.Process.Pid, err
 }

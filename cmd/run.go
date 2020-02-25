@@ -16,11 +16,13 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/c4pt0r/tiup/pkg/meta"
 	"github.com/c4pt0r/tiup/pkg/utils"
+	"github.com/phayes/freeport"
 	"github.com/spf13/cobra"
 )
 
@@ -77,11 +79,15 @@ There are 3 types of component in "tidb-core":
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Printf("Launching process of %s %s\n", component, version)
-			pid, err := launchComponentProcess(version, component)
+			p, err := launchComponentProcess(version, component)
 			if err != nil {
+				if p.Pid != 0 {
+					fmt.Printf("Error occured, but the process may be already started with PID %d\n", p.Pid)
+				}
 				return err
 			}
-			fmt.Printf("Process %d started for %s %s\n", pid, component, version)
+			fmt.Printf("Started %s %s...\n", p.Exec, strings.Join(p.Args, " "))
+			fmt.Printf("Process %d started for %s %s\n", p.Pid, component, version)
 			return nil
 		},
 	}
@@ -89,14 +95,30 @@ There are 3 types of component in "tidb-core":
 	return cmdLaunch
 }
 
-func launchComponentProcess(ver, compType string) (int, error) {
+func launchComponentProcess(ver, compType string) (*compProcess, error) {
 	binPath, err := getServerBinPath(ver, compType)
 	if err != nil {
-		return -1, err
+		return nil, err
 	}
 
-	fmt.Printf("%s\n", binPath)
-	return utils.Exec(nil, nil, binPath)
+	args, ports, err := getServerArguments(compType)
+	if err != nil {
+		return nil, err
+	}
+
+	p := &compProcess{
+		Exec: binPath,
+		Args: args,
+		Dir: path.Join(utils.ProfileDir(),
+			fmt.Sprintf("run/%s/%d", compType, ports[0])),
+	}
+
+	//fmt.Printf("%s %s\n", binPath, args)
+	if err := p.Launch(); err != nil {
+		return p, err
+	}
+
+	return p, saveProcessToList(p)
 }
 
 func getServerBinPath(ver, compType string) (string, error) {
@@ -127,4 +149,33 @@ func getServerBinPath(ver, compType string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("can not find binary for %s %s", compType, ver)
+}
+
+func getServerArguments(compType string) ([]string, []int, error) {
+	// get unused ports
+	ports, err := freeport.GetFreePorts(2)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var args []string
+	switch compType {
+	case "compute":
+		args = []string{
+			"-P", fmt.Sprint(ports[0]),
+			"-status", fmt.Sprint(ports[1]),
+		}
+	case "meta":
+		args = []string{
+			"-client-urls", fmt.Sprintf("http://0.0.0.0:%d", ports[0]),
+			"-peer-urls", fmt.Sprintf("http://0.0.0.0:%d", ports[1]),
+		}
+	case "storage":
+		args = []string{
+			"--addr", fmt.Sprintf("0.0.0.0:%d", ports[0]),
+			"--status-addr", fmt.Sprintf("0.0.0.0:%d", ports[1]),
+		}
+	}
+
+	return args, ports, nil
 }
