@@ -13,29 +13,14 @@
 
 package cmd
 
-import (
-	"fmt"
+import "github.com/spf13/cobra"
 
-	"github.com/c4pt0r/tiup/pkg/utils"
-	"github.com/c4pt0r/tiup/pkg/version"
-	"github.com/spf13/cobra"
-)
-
-func newShowCmd() *cobra.Command {
-	cmdShow := &cobra.Command{
-		Use:   "show",
-		Short: "Display global information",
+func newSelfCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "self",
+		Short: "Modify the tiup installation",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Printf("TiUP Version: %s\n", version.NewTiUPVersion())
-			fmt.Printf("TiUP Build: %s\n", version.NewTiUPBuildInfo())
-			profileDir, err := utils.GetOrCreateProfileDir()
-			if err != nil {
-				return err
-			}
-			fmt.Printf("TiUP home: %s\n", profileDir)
-			return nil
+			return cmd.Help()
 		},
 	}
-
-	return cmdShow
 }

@@ -1,6 +1,6 @@
 GOVER := $(shell go version)
 
-GOOS    := $(if $(GOOS),$(GOOS),linux)
+GOOS    := $(if $(GOOS),$(GOOS),$(shell go env GOOS))
 GOARCH  := $(if $(GOARCH),$(GOARCH),amd64)
 GOENV   := GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH)
 GO      := $(GOENV) go
@@ -19,7 +19,7 @@ LDFLAGS += -X "$(REPO)/pkg/version.BuildTime=$(BUILDTIME)"
 default: cmd
 
 cmd: check
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-$(GOOS)-$(GOARCH)
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
 
 lint:
 	@golint ./...
