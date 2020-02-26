@@ -59,7 +59,9 @@ type (
 
 	// VersionManifest represents the all versions information of specific component
 	VersionManifest struct {
-		Versions []VersionInfo
+		Description string        `json:"description"`
+		Modified    string        `json:"modified"`
+		Versions    []VersionInfo `json:"versions"`
 	}
 )
 
@@ -107,12 +109,12 @@ func (r *Repository) ComponentVersions(component string) (*VersionManifest, erro
 	}
 	defer file.Close()
 
-	var vers []VersionInfo
+	var vers VersionManifest
 	err = json.NewDecoder(file).Decode(&vers)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	return &VersionManifest{Versions: vers}, nil
+	return &vers, nil
 }
 
 // Download downloads a component with specific version from repository

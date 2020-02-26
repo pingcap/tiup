@@ -7,9 +7,13 @@ import (
 	"github.com/c4pt0r/tiup/cmd"
 )
 
+const DEBUG = true
+
 func main() {
 	if err := cmd.Execute(); err != nil {
-		fmt.Println(err)
+		if DEBUG {
+			fmt.Printf("%+v\n", err)
+		}
 		os.Exit(1)
 	}
 }

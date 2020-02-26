@@ -53,6 +53,10 @@ func newComponentCmd() *cobra.Command {
 	return cmdComponent
 }
 
+func versionManifestFile(component string) string {
+	return fmt.Sprintf("manifest/tiup-component-%s.index", component)
+}
+
 func newListComponentCmd() *cobra.Command {
 	var (
 		showInstalled bool
@@ -62,17 +66,37 @@ func newListComponentCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List the available TiDB components",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			maniPath, err := profile.Path(manifestPath)
-			if err != nil {
-				return err
-			}
-			if refresh || utils.IsNotExist(maniPath) {
-				err := refreshComponentList()
+			switch len(args) {
+			case 0:
+				// tiup component list
+				path, err := profile.Path(manifestPath)
 				if err != nil {
 					return err
 				}
+				if refresh || utils.IsNotExist(path) {
+					err := refreshComponentList()
+					if err != nil {
+						return err
+					}
+				}
+				return showComponentList(showInstalled)
+			case 1:
+				// tiup component list [component]
+				component := args[0]
+				path, err := profile.Path(versionManifestFile(component))
+				if err != nil {
+					return err
+				}
+				if refresh || utils.IsNotExist(path) {
+					err := refreshComponentVersions(component)
+					if err != nil {
+						return err
+					}
+				}
+				return showComponentVersions(component, showInstalled)
+			default:
+				return cmd.Help()
 			}
-			return showComponentList(showInstalled)
 		},
 	}
 
@@ -96,6 +120,23 @@ func refreshComponentList() error {
 	}
 
 	return profile.WriteJSON(manifestPath, manifest)
+}
+
+func refreshComponentVersions(component string) error {
+	// TODO: use mirror from configuration or command-line args
+	mirror := meta.NewMirror(defaultMirror)
+	if err := mirror.Open(); err != nil {
+		return errors.Trace(err)
+	}
+	defer mirror.Close()
+
+	repo := meta.NewRepository(mirror)
+	manifest, err := repo.ComponentVersions(component)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return profile.WriteJSON(versionManifestFile(component), manifest)
 }
 
 func loadCachedManifest() (*meta.ComponentManifest, error) {
@@ -123,6 +164,9 @@ func showComponentList(onlyInstalled bool) error {
 
 	localComponents := set.NewStringSet(installed...)
 	for _, comp := range manifest.Components {
+		if onlyInstalled && !localComponents.Exist(comp.Name) {
+			continue
+		}
 		installStatus := ""
 		if localComponents.Exist(comp.Name) {
 			installStatus = "yes"
@@ -136,6 +180,71 @@ func showComponentList(onlyInstalled bool) error {
 	}
 
 	fmt.Printf("Available components (Last Modified: %s):\n", manifest.Modified)
+	tui.PrintTable(cmpTable, true)
+	return nil
+}
+
+func loadInstalledVersions(component string) (set.StringSet, error) {
+	path, err := profile.Path(fmt.Sprintf("components/" + component))
+	if err != nil {
+		return nil, err
+	}
+	if utils.IsNotExist(path) {
+		return set.StringSet{}, nil
+	}
+
+	fileInfos, err := ioutil.ReadDir(path)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	versions := set.StringSet{}
+	for _, fi := range fileInfos {
+		versions.Insert(fi.Name())
+	}
+	return versions, nil
+}
+
+func loadComponentVersions(component string) (*meta.VersionManifest, error) {
+	var manifest meta.VersionManifest
+	err := profile.ReadJSON(versionManifestFile(component), &manifest)
+	if err != nil {
+		return nil, err
+	}
+	return &manifest, nil
+}
+
+func showComponentVersions(component string, onlyInstalled bool) error {
+	versions, err := loadInstalledVersions(component)
+	if err != nil {
+		return err
+	}
+
+	manifest, err := loadComponentVersions(component)
+	if err != nil {
+		return err
+	}
+
+	var cmpTable [][]string
+	cmpTable = append(cmpTable, []string{"Version", "Installed", "Date", "Platforms"})
+
+	for _, ver := range manifest.Versions {
+		if onlyInstalled && !versions.Exist(ver.Version) {
+			continue
+		}
+		installStatus := ""
+		if versions.Exist(ver.Version) {
+			installStatus = "yes"
+		}
+		cmpTable = append(cmpTable, []string{
+			ver.Version,
+			installStatus,
+			ver.Date,
+			strings.Join(ver.Platforms, ","),
+		})
+	}
+
+	fmt.Printf("Available versions for %s (Last Modified: %s):\n", component, manifest.Modified)
 	tui.PrintTable(cmpTable, true)
 	return nil
 }
