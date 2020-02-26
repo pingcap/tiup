@@ -13,38 +13,127 @@
 
 package meta
 
-type Manifest struct {
+import (
+	"fmt"
+	"math/rand"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+
+	"code.cloudfoundry.org/bytefmt"
+	"github.com/cavaliercoder/grab"
+	"github.com/pingcap/errors"
+)
+
+// Mirror represents a repository mirror, which can be remote HTTP
+// server or a local file system directory
+type Mirror interface {
+	// Open initialize the mirror
+	Open() error
+	// Fetch fetches a resource
+	Fetch(resource string) (path string, err error)
+	// Close closes the mirror and release local stashed files
+	Close() error
 }
 
-type Mirror interface {
-	FetchManifest() *Manifest
-	DownloadResource(uri string) (path string, err error)
+// NewMirror returns a mirror instance base on the schema of mirror
+func NewMirror(mirror string) Mirror {
+	if strings.HasPrefix(mirror, "http") {
+		return &httpMirror{server: mirror}
+	}
+	return &localFilesystem{rootPath: mirror}
 }
 
 type localFilesystem struct {
 	rootPath string
 }
 
-// FetchManifest implements Mirror
-func (l localFilesystem) FetchManifest() *Manifest {
-	panic("implement me")
+// Open implements the Mirror interface
+func (l *localFilesystem) Open() error {
+	fi, err := os.Stat(l.rootPath)
+	if err != nil {
+		errors.Trace(err)
+	}
+	if !fi.IsDir() {
+		return errors.Errorf("local system mirror `%s` should be a directory", l.rootPath)
+	}
+	return nil
 }
 
-// DownloadResource implements Mirror
-func (l localFilesystem) DownloadResource(uri string) (path string, err error) {
-	panic("implement me")
+// Fetch implements the Mirror interface
+func (l *localFilesystem) Fetch(resource string) (path string, err error) {
+	return filepath.Join(l.rootPath, resource), nil
+}
+
+// Close implements the Mirror interface
+func (l *localFilesystem) Close() error {
+	return nil
 }
 
 type httpMirror struct {
-	remote string
+	server string
+	tmpDir string
 }
 
-// FetchManifest implements Mirror
-func (l httpMirror) FetchManifest() *Manifest {
-	panic("implement me")
+// Open implements the Mirror interface
+func (l *httpMirror) Open() error {
+	tmpDir := filepath.Join(os.TempDir(), strconv.Itoa(rand.Int()))
+	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
+		return errors.Trace(err)
+	}
+	l.tmpDir = tmpDir
+	return nil
 }
 
-// DownloadResource implements Mirror
-func (l httpMirror) DownloadResource(uri string) (path string, err error) {
-	panic("implement me")
+func (l *httpMirror) download(url string, to string) (string, error) {
+	client := grab.NewClient()
+	req, err := grab.NewRequest(to, url)
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+
+	fmt.Printf("Downloading %v\n\n", req.URL())
+	resp := client.Do(req)
+
+	// start progress output loop
+	t := time.NewTicker(200 * time.Millisecond)
+	defer t.Stop()
+
+L:
+	for {
+		select {
+		case <-t.C:
+			fmt.Printf("\033[1AProgress %s / %s bytes (%.2f%%)\033[K\n",
+				bytefmt.ByteSize(uint64(resp.BytesComplete())),
+				bytefmt.ByteSize(uint64(resp.Size)),
+				100*resp.Progress())
+
+		case <-resp.Done:
+			break L
+		}
+	}
+
+	// check for errors
+	if err := resp.Err(); err != nil {
+		return "", errors.Trace(err)
+	}
+
+	return resp.Filename, nil
+}
+
+// Fetch implements the Mirror interface
+func (l *httpMirror) Fetch(resource string) (path string, err error) {
+	url := strings.TrimSuffix(l.server, "/") + "/" + resource
+	tmp := filepath.Join(l.tmpDir, strconv.Itoa(int(time.Now().UnixNano())))
+	return l.download(url, tmp)
+}
+
+// Close implements the Mirror interface
+func (l *httpMirror) Close() error {
+	if err := os.RemoveAll(l.tmpDir); err != nil {
+		return errors.Trace(err)
+	}
+	return nil
 }

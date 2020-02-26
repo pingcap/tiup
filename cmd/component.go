@@ -14,22 +14,29 @@
 package cmd
 
 import (
-	"code.cloudfoundry.org/bytefmt"
-	"encoding/json"
 	"fmt"
-	"github.com/c4pt0r/tiup/pkg/meta"
-	"github.com/c4pt0r/tiup/pkg/utils"
-	"github.com/spf13/cobra"
+	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
+	"sort"
 	"strings"
+
+	"github.com/c4pt0r/tiup/pkg/meta"
+	"github.com/c4pt0r/tiup/pkg/profile"
+	"github.com/c4pt0r/tiup/pkg/set"
+	"github.com/c4pt0r/tiup/pkg/tui"
+	"github.com/c4pt0r/tiup/pkg/utils"
+	"github.com/pingcap/errors"
+	"github.com/spf13/cobra"
 )
 
 var (
 	componentListURL      = "https://repo.hoshi.at/tmp/components.json"
+	defaultMirror         = "http://118.24.4.54/tiup/"
 	installedListFilename = "installed.json"
 	specifiedHomeEnvKey   = "TIUP_HOME"
+
+	manifestPath = "manifest/tiup-manifest.index"
 )
 
 func newComponentCmd() *cobra.Command {
@@ -48,108 +55,95 @@ func newComponentCmd() *cobra.Command {
 
 func newListComponentCmd() *cobra.Command {
 	var (
-		showAll bool
-		refresh bool
+		showInstalled bool
+		refresh       bool
 	)
-
 	cmdListComponent := &cobra.Command{
 		Use:   "list",
 		Short: "List the available TiDB components",
-		Long:  `List available and installed TiDB components and their versions.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if refresh {
-				compList, err := meta.FetchComponentList(componentListURL)
+			maniPath, err := profile.Path(manifestPath)
+			if err != nil {
+				return err
+			}
+			if refresh || utils.IsNotExist(maniPath) {
+				err := refreshComponentList()
 				if err != nil {
 					return err
 				}
-				// save latest component list to local
-				if err := meta.SaveComponentList(compList); err != nil {
-					return err
-				}
-				showComponentList(compList)
-				return nil
 			}
-
-			if showAll {
-				compList, err := meta.ReadComponentList()
-				if err != nil {
-					if os.IsNotExist(err) {
-						fmt.Println("no available component list, try `tiup component list --refresh` to get latest online list.")
-						return nil
-					}
-					return err
-				}
-				showComponentList(compList)
-			} else {
-				return showInstalledList()
-			}
-			return nil
+			return showComponentList(showInstalled)
 		},
 	}
 
-	cmdListComponent.Flags().BoolVar(&showAll, "all", false, "List all available components and versions (from local cache).")
-	cmdListComponent.Flags().BoolVar(&refresh, "refresh", false, "Refresh online list of components and versions.")
-
+	cmdListComponent.Flags().BoolVar(&showInstalled, "installed", false, "List installed components only.")
+	cmdListComponent.Flags().BoolVar(&refresh, "refresh", false, "Refresh local components list cache.")
 	return cmdListComponent
 }
 
-func showComponentList(compList *meta.CompMeta) {
-	for _, comp := range compList.Components {
-		fmt.Println("Available components:")
-		fmt.Printf("(%s)\n", comp.Description)
-		var cmpTable [][]string
-		cmpTable = append(cmpTable, []string{"Name", "Version", "Size", "Installed"})
-		for _, ver := range comp.VersionList {
-			installStatus := ""
-			installed, err := checkInstalledComponent(comp.Name, ver.Version)
-			if err != nil {
-				fmt.Printf("Unable to check for installed components: %s\n", err)
-				return
-			}
-			if installed {
-				installStatus = "yes"
-			}
-			cmpTable = append(cmpTable, []string{
-				comp.Name,
-				ver.Version,
-				bytefmt.ByteSize(ver.Size),
-				installStatus,
-			})
-		}
-		utils.PrintTable(cmpTable, true)
+func refreshComponentList() error {
+	// TODO: use mirror from configuration or command-line args
+	mirror := meta.NewMirror(defaultMirror)
+	if err := mirror.Open(); err != nil {
+		return errors.Trace(err)
 	}
+	defer mirror.Close()
+
+	repo := meta.NewRepository(mirror)
+	manifest, err := repo.Components()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return profile.WriteJSON(manifestPath, manifest)
 }
 
-func showInstalledList() error {
-	list, err := getInstalledList()
+func loadCachedManifest() (*meta.ComponentManifest, error) {
+	var manifest meta.ComponentManifest
+	if err := profile.ReadJSON(manifestPath, &manifest); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &manifest, nil
+}
+
+func showComponentList(onlyInstalled bool) error {
+	installed, err := getInstalledList()
 	if err != nil {
 		return err
 	}
 
-	if len(list) < 1 {
-		fmt.Println("no installed component, try `tiup component list --all` to see all available components.")
-		return nil
+	manifest, err := loadCachedManifest()
+	if err != nil {
+		return err
 	}
 
-	fmt.Println("Installed components:")
-	var instTable [][]string
-	instTable = append(instTable, []string{"Name", "Version", "Path"})
-	for _, item := range list {
-		instTable = append(instTable, []string{
-			item.Name,
-			item.Version,
-			item.Path,
+	var cmpTable [][]string
+	cmpTable = append(cmpTable, []string{"Name", "Installed", "Platforms", "Desc"})
+
+	localComponents := set.NewStringSet(installed...)
+	for _, comp := range manifest.Components {
+		installStatus := ""
+		if localComponents.Exist(comp.Name) {
+			installStatus = "yes"
+		}
+		cmpTable = append(cmpTable, []string{
+			comp.Name,
+			installStatus,
+			strings.Join(comp.Platforms, ","),
+			comp.Desc,
 		})
 	}
 
-	utils.PrintTable(instTable, true)
+	fmt.Printf("Available components (Last Modified: %s):\n", manifest.Modified)
+	tui.PrintTable(cmpTable, true)
 	return nil
 }
 
 func newInstCmd() *cobra.Command {
 	var (
-		version       string
-		componentList []string
+	//version       string
+	//componentList []string
 	)
 
 	cmdInst := &cobra.Command{
@@ -159,194 +153,65 @@ func newInstCmd() *cobra.Command {
 		Example: "tiup component install tidb-core v3.0.8",
 		Args: func(cmd *cobra.Command, args []string) error {
 			argsLen := len(args)
-			var err error
+			//var err error
 			switch argsLen {
 			case 0:
 				return cmd.Help()
 			case 1: // version unspecified, use stable latest as default
-				currChan, err := meta.ReadVersionFile()
-				if os.IsNotExist(err) {
-					fmt.Println("default version not set, using latest stable.")
-					compMeta, err := meta.ReadComponentList()
-					if os.IsNotExist(err) {
-						fmt.Println("no available component list, try `tiup component list --refresh` to get latest online list.")
-						return nil
-					} else if err != nil {
-						return err
-					}
-					version = compMeta.Stable
-				} else if err != nil {
-					return err
-				}
-				version = currChan.Ver
-				componentList = args
+				//currChan, err := meta.ReadVersionFile()
+				//if os.IsNotExist(err) {
+				//	fmt.Println("default version not set, using latest stable.")
+				//	compMeta, err := meta.ReadComponentList()
+				//	if os.IsNotExist(err) {
+				//		fmt.Println("no available component list, try `tiup component list --refresh` to get latest online list.")
+				//		return nil
+				//	} else if err != nil {
+				//		return err
+				//	}
+				//	version = compMeta.Stable
+				//} else if err != nil {
+				//	return err
+				//}
+				//version = currChan.Ver
+				//componentList = args
 			default:
-				version, err = utils.FmtVer(args[argsLen-1])
-				if err != nil {
-					return err
-				}
-				componentList = args[:argsLen-1]
+				//version, err = utils.FmtVer(args[argsLen-1])
+				//if err != nil {
+				//	return err
+				//}
+				//componentList = args[:argsLen-1]
 			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return installComponent(version, componentList)
+			return errors.New("not implement")
 		},
 	}
 	return cmdInst
 }
 
-type installedComp struct {
-	Name    string `json:"name,omitempty"`
-	Version string `json:"version,omitempty"`
-	Path    string `json:"path,omitempty"`
-}
-
-func installComponent(ver string, list []string) error {
-	meta, err := meta.ReadComponentList()
+func getInstalledList() ([]string, error) {
+	profDir, err := profile.Dir()
 	if err != nil {
-		return err
+		return nil, errors.Trace(err)
 	}
-
-	var installCnt int
-	for _, comp := range list {
-		installed, err := checkInstalledComponent(comp, ver)
-		if err != nil {
-			return err
-		}
-		if installed {
-			fmt.Printf("%s %s already installed, skip.\n", comp, ver)
-			return nil
-		}
-
-		url, checksum := getComponentURL(meta.Components, ver, comp)
-		if len(url) > 0 {
-			// make sure we have correct download path
-			profileDir := os.Getenv(specifiedHomeEnvKey)
-			if len(profileDir) == 0 {
-				profileDir = utils.ProfileDir()
-			}
-
-			toDir := utils.MustDir(path.Join(profileDir, "download/"))
-			tarball := ""
-			if tarball, err = utils.DownloadFileWithProgress(url, toDir); err != nil {
-				return err
-			}
-
-			// validate checksum of downloaded tarball
-			fmt.Printf("Validating checksum of downloaded file...")
-			valid, err := utils.ValidateSHA256(tarball, checksum)
-			if err != nil {
-				return err
-			}
-			if !valid {
-				return fmt.Errorf("checksum validation failed for %s", tarball)
-			}
-			fmt.Printf("done.\n")
-
-			// decompress files to a temp dir, and try to keep it unique
-			tmpDir := utils.MustDir(path.Join(profileDir, "tmp/", checksum))
-			fmt.Printf("Decompressing...")
-			if err = utils.Untar(tarball, tmpDir); err != nil {
-				return err
-			}
-
-			// move binaries to final path
-			tmpBin := path.Join(tmpDir,
-				strings.TrimSuffix(filepath.Base(tarball), ".tar.gz"),
-				"bin")
-			toDir = path.Join(
-				utils.MustDir(path.Join(profileDir, ver)),
-				comp)
-			if err := utils.Rename(tmpBin, toDir); err != nil {
-				return err
-			}
-			// remove the temp dir (should be empty)
-			if err := os.RemoveAll(tmpDir); err != nil {
-				fmt.Printf("fail to remove temp directory %s\n", tmpDir)
-				return err
-			}
-
-			if err := saveInstalledList(&installedComp{
-				Name:    comp,
-				Version: ver,
-				Path:    toDir,
-			}); err != nil {
-				return err
-			}
-			fmt.Printf("done.\n")
-
-			fmt.Printf("Installed %s %s.\n", comp, ver)
-			installCnt++
-		}
+	compDir := filepath.Join(profDir, "components")
+	fileInfos, err := ioutil.ReadDir(compDir)
+	if err != nil && os.IsNotExist(err) {
+		return nil, nil
 	}
-	fmt.Printf("Installed %d component(s).\n", installCnt)
-	return nil
-}
-
-func getComponentURL(list []meta.CompItem, ver string, comp string) (string, string) {
-	for _, compMetaItem := range list {
-		if comp != compMetaItem.Name {
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	var components []string
+	for _, fi := range fileInfos {
+		if !fi.IsDir() {
 			continue
 		}
-		for _, item := range compMetaItem.VersionList {
-			if ver == item.Version {
-				return item.URL, item.SHA256
-			}
-		}
+		components = append(components, fi.Name())
 	}
-	return "", ""
-}
-
-func getInstalledList() ([]installedComp, error) {
-	var list []installedComp
-	var err error
-
-	data, err := utils.ReadFile(installedListFilename)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return list, nil
-		}
-		return nil, err
-	}
-	if err = json.Unmarshal(data, &list); err != nil {
-		return nil, err
-	}
-
-	return list, err
-}
-
-func saveInstalledList(comp *installedComp) error {
-	currList, err := getInstalledList()
-	if err != nil {
-		return err
-	}
-
-	for _, instComp := range currList {
-		if instComp.Name == comp.Name &&
-			instComp.Version == comp.Version {
-			return fmt.Errorf("%s %s is already installed",
-				instComp.Name, instComp.Version)
-		}
-	}
-	newList := append(currList, *comp)
-	return utils.WriteJSON(installedListFilename, newList)
-}
-
-func checkInstalledComponent(name string, ver string) (bool, error) {
-	currList, err := getInstalledList()
-
-	if err != nil {
-		return false, err
-	}
-
-	for _, instComp := range currList {
-		if instComp.Name == name &&
-			instComp.Version == ver {
-			return true, nil
-		}
-	}
-	return false, nil
+	sort.Strings(components)
+	return components, nil
 }
 
 func newUnInstCmd() *cobra.Command {
@@ -375,49 +240,11 @@ func newUnInstCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return uninstallComponent(version, componentList)
+			_ = version
+			_ = componentList
+			return errors.New("not implement")
 		},
 	}
 
 	return cmdUnInst
-}
-
-func uninstallComponent(ver string, list []string) error {
-	for _, comp := range list {
-		installed, err := checkInstalledComponent(comp, ver)
-		if err != nil {
-			return err
-		}
-		if !installed {
-			fmt.Printf("%s %s is not installed, skip.\n", comp, ver)
-			continue
-		}
-		if err = removeInstalledComponent(comp, ver); err != nil {
-			return err
-		}
-		fmt.Printf("%s %v uninstalled.\n", comp, ver)
-	}
-	return nil
-}
-
-func removeInstalledComponent(name string, ver string) error {
-	currList, err := getInstalledList()
-	if err != nil {
-		return err
-	}
-
-	var newList []installedComp
-	for i, instComp := range currList {
-		if instComp.Name == name &&
-			instComp.Version == ver {
-			// actual removal
-			if err := os.RemoveAll(instComp.Path); err != nil {
-				return err
-			}
-			// remove from list
-			newList = append(currList[:i], currList[i+1:]...)
-			break
-		}
-	}
-	return utils.WriteJSON(installedListFilename, newList)
 }
