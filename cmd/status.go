@@ -16,11 +16,14 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/c4pt0r/tiup/pkg/utils"
-	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/c4pt0r/tiup/pkg/profile"
+	"github.com/c4pt0r/tiup/pkg/tui"
+	"github.com/c4pt0r/tiup/pkg/utils"
+	"github.com/spf13/cobra"
 )
 
 func newStatusCmd() *cobra.Command {
@@ -75,7 +78,7 @@ func getProcessList() (compProcessList, error) {
 	var list compProcessList
 	var err error
 
-	data, err := utils.ReadFile(processListFilename)
+	data, err := profile.ReadFile(processListFilename)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return list, nil
@@ -90,7 +93,7 @@ func getProcessList() (compProcessList, error) {
 }
 
 func saveProcessList(pl *compProcessList) error {
-	return utils.WriteJSON(processListFilename, pl)
+	return profile.WriteJSON(processListFilename, pl)
 }
 
 func saveProcessToList(p *compProcess) error {
@@ -138,6 +141,6 @@ func showProcessList(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	utils.PrintTable(procTable, true)
+	tui.PrintTable(procTable, true)
 	return nil
 }

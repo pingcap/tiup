@@ -16,6 +16,9 @@ LDFLAGS += -X "$(REPO)/pkg/version.GitHash=$(COMMIT)"
 LDFLAGS += -X "$(REPO)/pkg/version.GitBranch=$(BRANCH)"
 LDFLAGS += -X "$(REPO)/pkg/version.BuildTime=$(BUILDTIME)"
 
+FAILPOINT_ENABLE  := $$(find $$PWD/ -type d | grep -vE "(\.git|tools)" | xargs tools/bin/failpoint-ctl enable)
+FAILPOINT_DISABLE := $$(find $$PWD/ -type d | grep -vE "(\.git|tools)" | xargs tools/bin/failpoint-ctl disable)
+
 default: cmd
 
 cmd: check
@@ -31,5 +34,14 @@ check: lint vet
 
 clean:
 	@rm -rf bin
+
+failpoint-enable: tools/bin/failpoint-ctl
+	@$(FAILPOINT_ENABLE)
+
+failpoint-disable: tools/bin/failpoint-ctl
+	@$(FAILPOINT_DISABLE)
+
+tools/bin/failpoint-ctl: go.mod
+	$(GO) build -o $@ github.com/pingcap/failpoint/failpoint-ctl
 
 .PHONY: cmd

@@ -15,12 +15,10 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"path"
-	"path/filepath"
 	"strings"
 
-	"github.com/c4pt0r/tiup/pkg/meta"
+	"github.com/c4pt0r/tiup/pkg/profile"
 	"github.com/c4pt0r/tiup/pkg/utils"
 	"github.com/phayes/freeport"
 	"github.com/spf13/cobra"
@@ -53,21 +51,21 @@ There are 3 types of component in "tidb-core":
 			case 0:
 				return cmd.Help()
 			case 1: // version unspecified, use stable latest as default
-				currChan, err := meta.ReadVersionFile()
-				if os.IsNotExist(err) {
-					fmt.Println("default version not set, using latest stable.")
-					compMeta, err := meta.ReadComponentList()
-					if os.IsNotExist(err) {
-						fmt.Println("no available component list, try `tiup component list --refresh` to get latest online list.")
-						return nil
-					} else if err != nil {
-						return err
-					}
-					version = compMeta.Stable
-				} else if err != nil {
-					return err
-				}
-				version = currChan.Ver
+				//currChan, err := meta.ReadVersionFile()
+				//if os.IsNotExist(err) {
+				//	fmt.Println("default version not set, using latest stable.")
+				//	compMeta, err := meta.ReadComponentList()
+				//	if os.IsNotExist(err) {
+				//		fmt.Println("no available component list, try `tiup component list --refresh` to get latest online list.")
+				//		return nil
+				//	} else if err != nil {
+				//		return err
+				//	}
+				//	version = compMeta.Stable
+				//} else if err != nil {
+				//	return err
+				//}
+				//version = currChan.Ver
 			default:
 				version, err = utils.FmtVer(args[1])
 				if err != nil {
@@ -109,7 +107,7 @@ func launchComponentProcess(ver, compType string) (*compProcess, error) {
 	p := &compProcess{
 		Exec: binPath,
 		Args: args,
-		Dir: path.Join(utils.ProfileDir(),
+		Dir: path.Join(profile.MustDir(),
 			fmt.Sprintf("run/%s/%d", compType, ports[0])),
 	}
 
@@ -130,24 +128,24 @@ func getServerBinPath(ver, compType string) (string, error) {
 		return "", fmt.Errorf("no component installed")
 	}
 
-	for _, comp := range instComp {
-		if comp.Version != ver {
-			continue
-		}
-		switch compType {
-		case "compute":
-			return filepath.Join(comp.Path,
-				fmt.Sprintf("%s-server", compTypeCompute)), nil
-		case "meta":
-			return filepath.Join(comp.Path,
-				fmt.Sprintf("%s-server", compTypeMeta)), nil
-		case "storage":
-			return filepath.Join(comp.Path,
-				fmt.Sprintf("%s-server", compTypeStorage)), nil
-		default:
-			continue
-		}
-	}
+	//for _, comp := range instComp {
+	//	if comp.Version != ver {
+	//		continue
+	//	}
+	//	switch compType {
+	//	case "compute":
+	//		return filepath.Join(comp.Path,
+	//			fmt.Sprintf("%s-server", compTypeCompute)), nil
+	//	case "meta":
+	//		return filepath.Join(comp.Path,
+	//			fmt.Sprintf("%s-server", compTypeMeta)), nil
+	//	case "storage":
+	//		return filepath.Join(comp.Path,
+	//			fmt.Sprintf("%s-server", compTypeStorage)), nil
+	//	default:
+	//		continue
+	//	}
+	//}
 	return "", fmt.Errorf("can not find binary for %s %s", compType, ver)
 }
 

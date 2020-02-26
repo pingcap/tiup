@@ -16,13 +16,7 @@ package utils
 import (
 	"io"
 	"os/exec"
-	"runtime"
 )
-
-// GetPlatform returns the current OS and Arch
-func GetPlatform() (string, string) {
-	return runtime.GOOS, runtime.GOARCH
-}
 
 // Exec creates a process in background and return the PID of it
 func Exec(
