@@ -94,7 +94,7 @@ func (l *httpMirror) download(url string, to string) (string, error) {
 		return "", errors.Trace(err)
 	}
 
-	fmt.Printf("Downloading %v\n\n", req.URL())
+	fmt.Printf("Downloading %v\n", req.URL())
 	resp := client.Do(req)
 
 	// start progress output loop

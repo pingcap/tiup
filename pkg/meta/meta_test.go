@@ -87,6 +87,8 @@ func (s *metaSuite) TestRepository(c *C) {
 	for _, cas := range cases {
 		vers, err := repo.ComponentVersions(cas.comp)
 		c.Assert(err, IsNil)
+		c.Assert(vers.Description, Equals, cas.comp)
+		c.Assert(vers.Modified, Equals, "2020-02-26T15:20:35+08:00")
 		c.Assert(vers.Versions, DeepEquals, cas.vers)
 	}
 
