@@ -23,11 +23,13 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 
 	"github.com/c4pt0r/tiup/pkg/profile"
 	"github.com/c4pt0r/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/failpoint"
+	"golang.org/x/mod/semver"
 )
 
 const (
@@ -114,6 +116,9 @@ func (r *Repository) ComponentVersions(component string) (*VersionManifest, erro
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
+	sort.Slice(vers.Versions, func(i, j int) bool {
+		return semver.Compare(vers.Versions[i].Version, vers.Versions[j].Version) < 0
+	})
 	return &vers, nil
 }
 
@@ -152,15 +157,15 @@ func (r *Repository) Download(component, version string) error {
 	}
 
 	// decompress to target path
-	profileDir, err := profile.Dir()
+	compsDir, err := profile.Path("components")
 	failpoint.Inject("MockProfileDir", func(val failpoint.Value) {
 		err = nil
-		profileDir = val.(string)
+		compsDir = val.(string)
 	})
 	if err != nil {
 		return errors.Trace(err)
 	}
-	targetDir := filepath.Join(profileDir, component, version)
+	targetDir := filepath.Join(compsDir, component, version)
 
 	if err := utils.CreateDir(targetDir); err != nil {
 		return errors.Trace(err)
