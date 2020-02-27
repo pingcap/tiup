@@ -25,6 +25,7 @@ type (
 	ComponentManifest struct {
 		Description string          `json:"description"`
 		Modified    string          `json:"modified"`
+		TiUPVersion Version         `json:"tiup_version"`
 		Components  []ComponentInfo `json:"components"`
 	}
 )

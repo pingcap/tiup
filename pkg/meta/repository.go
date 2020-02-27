@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/c4pt0r/tiup/pkg/profile"
 	"github.com/c4pt0r/tiup/pkg/utils"
@@ -120,7 +121,7 @@ func (r *Repository) Download(component string, version Version) error {
 	}
 
 	checksum := hex.EncodeToString(sha1Writter.Sum(nil))
-	if checksum != string(sha1Content) {
+	if checksum != strings.TrimSpace(string(sha1Content)) {
 		return errors.Errorf("checksum mismatch, expect: %v, got: %v", string(sha1Content), checksum)
 	}
 

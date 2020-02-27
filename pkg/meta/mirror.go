@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/bytefmt"
+	"github.com/c4pt0r/tiup/pkg/utils"
 	"github.com/cavaliercoder/grab"
 	"github.com/pingcap/errors"
 )
@@ -64,7 +65,11 @@ func (l *localFilesystem) Open() error {
 
 // Fetch implements the Mirror interface
 func (l *localFilesystem) Fetch(resource string) (path string, err error) {
-	return filepath.Join(l.rootPath, resource), nil
+	path = filepath.Join(l.rootPath, resource)
+	if utils.IsNotExist(path) {
+		return "", errors.Errorf("resource `%s` not found", resource)
+	}
+	return path, nil
 }
 
 // Close implements the Mirror interface
@@ -94,7 +99,6 @@ func (l *httpMirror) download(url string, to string) (string, error) {
 		return "", errors.Trace(err)
 	}
 
-	fmt.Printf("Downloading %v\n", req.URL())
 	resp := client.Do(req)
 
 	// start progress output loop
@@ -105,7 +109,8 @@ L:
 	for {
 		select {
 		case <-t.C:
-			fmt.Printf("\033[1AProgress %s / %s bytes (%.2f%%)\033[K\n",
+			fmt.Printf("\033[1A Download %s Progress %s / %s bytes (%.2f%%)\033[K\n",
+				req.URL(),
 				bytefmt.ByteSize(uint64(resp.BytesComplete())),
 				bytefmt.ByteSize(uint64(resp.Size)),
 				100*resp.Progress())
