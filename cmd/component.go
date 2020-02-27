@@ -279,28 +279,30 @@ func newAddCmd() *cobra.Command {
 func installComponents(specs []string) error {
 	return runWithRepo(func(repo *meta.Repository) error {
 		for _, spec := range specs {
+			var version meta.Version
+			var component string
 			if strings.Contains(spec, ":") {
 				parts := strings.SplitN(spec, ":", 2)
-				if err := repo.Download(parts[0], meta.Version(parts[1])); err != nil {
-					return err
-				}
+				component = parts[0]
+				version = meta.Version(parts[1])
 			} else {
-				manifest, err := repo.ComponentVersions(spec)
-				if err != nil {
-					return errors.Trace(err)
-				}
-				if len(manifest.Versions) < 1 {
-					return errors.Errorf("component %s does not exist", spec)
-				}
+				component = spec
+			}
+			manifest, err := repo.ComponentVersions(component)
+			if err != nil {
+				return errors.Trace(err)
+			}
 
-				// cache the version manifest and ignore the error
-				_ = profile.WriteJSON(versionManifestFile(spec), manifest)
+			// cache the version manifest and ignore the error
+			_ = profile.WriteJSON(versionManifestFile(component), manifest)
+			if version == "" {
+				version = manifest.LatestStable()
+			}
 
-				// download the latest version
-				err = repo.Download(spec, manifest.LatestStable())
-				if err != nil {
-					return errors.Trace(err)
-				}
+			// download the latest version
+			err = repo.Download(component, version)
+			if err != nil {
+				return errors.Trace(err)
 			}
 		}
 		return nil
