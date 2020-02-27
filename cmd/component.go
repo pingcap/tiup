@@ -104,37 +104,23 @@ func newListComponentCmd() *cobra.Command {
 }
 
 func refreshComponentList() error {
-	// TODO: use mirror from configuration or command-line args
-	mirror := meta.NewMirror(defaultMirror)
-	if err := mirror.Open(); err != nil {
-		return errors.Trace(err)
-	}
-	defer mirror.Close()
-
-	repo := meta.NewRepository(mirror)
-	manifest, err := repo.Components()
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	return profile.WriteJSON(manifestPath, manifest)
+	return runWithRepo(func(repo *meta.Repository) error {
+		manifest, err := repo.Components()
+		if err != nil {
+			return errors.Trace(err)
+		}
+		return profile.WriteJSON(manifestPath, manifest)
+	})
 }
 
 func refreshComponentVersions(component string) error {
-	// TODO: use mirror from configuration or command-line args
-	mirror := meta.NewMirror(defaultMirror)
-	if err := mirror.Open(); err != nil {
-		return errors.Trace(err)
-	}
-	defer mirror.Close()
-
-	repo := meta.NewRepository(mirror)
-	manifest, err := repo.ComponentVersions(component)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	return profile.WriteJSON(versionManifestFile(component), manifest)
+	return runWithRepo(func(repo *meta.Repository) error {
+		manifest, err := repo.ComponentVersions(component)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		return profile.WriteJSON(versionManifestFile(component), manifest)
+	})
 }
 
 func loadCachedManifest() (*meta.ComponentManifest, error) {
@@ -251,15 +237,16 @@ func showComponentVersions(component string, onlyInstalled bool) error {
 
 	installed := set.NewStringSet(versions...)
 	for _, ver := range manifest.Versions {
-		if onlyInstalled && !installed.Exist(ver.Version) {
+		version := ver.Version.String()
+		if onlyInstalled && !installed.Exist(version) {
 			continue
 		}
 		installStatus := ""
-		if installed.Exist(ver.Version) {
+		if installed.Exist(version) {
 			installStatus = "yes"
 		}
 		cmpTable = append(cmpTable, []string{
-			ver.Version,
+			version,
 			installStatus,
 			ver.Date,
 			strings.Join(ver.Platforms, ","),
@@ -288,40 +275,34 @@ func newAddCmd() *cobra.Command {
 }
 
 func installComponents(specs []string) error {
-	// TODO: use mirror from configuration or command-line args
-	mirror := meta.NewMirror(defaultMirror)
-	if err := mirror.Open(); err != nil {
-		return errors.Trace(err)
-	}
-	defer mirror.Close()
+	return runWithRepo(func(repo *meta.Repository) error {
+		for _, spec := range specs {
+			if strings.Contains(spec, ":") {
+				parts := strings.SplitN(spec, ":", 2)
+				if err := repo.Download(parts[0], meta.Version(parts[1])); err != nil {
+					return err
+				}
+			} else {
+				manifest, err := repo.ComponentVersions(spec)
+				if err != nil {
+					return errors.Trace(err)
+				}
+				if len(manifest.Versions) < 1 {
+					return errors.Errorf("component %s does not exist", spec)
+				}
 
-	repo := meta.NewRepository(mirror)
-	for _, spec := range specs {
-		if strings.Contains(spec, ":") {
-			parts := strings.SplitN(spec, ":", 2)
-			if err := repo.Download(parts[0], parts[1]); err != nil {
-				return err
-			}
-		} else {
-			manifest, err := repo.ComponentVersions(spec)
-			if err != nil {
-				return errors.Trace(err)
-			}
-			if len(manifest.Versions) < 1 {
-				return errors.Errorf("component %s does not exist", spec)
-			}
+				// cache the version manifest and ignore the error
+				_ = profile.WriteJSON(versionManifestFile(spec), manifest)
 
-			// cache the version manifest and ignore the error
-			_ = profile.WriteJSON(versionManifestFile(spec), manifest)
-
-			// download the latest version
-			err = repo.Download(spec, manifest.Versions[len(manifest.Versions)-1].Version)
-			if err != nil {
-				return errors.Trace(err)
+				// download the latest version
+				err = repo.Download(spec, manifest.LatestStable())
+				if err != nil {
+					return errors.Trace(err)
+				}
 			}
 		}
-	}
-	return nil
+		return nil
+	})
 }
 
 func newRemoveCmd() *cobra.Command {
@@ -408,7 +389,7 @@ func newBinaryCmd() *cobra.Command {
 			}
 			var entry string
 			for _, v := range manifest.Versions {
-				if v.Version == version {
+				if v.Version == meta.Version(version) {
 					entry = v.Entry
 				}
 			}

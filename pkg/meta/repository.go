@@ -23,48 +23,15 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 
 	"github.com/c4pt0r/tiup/pkg/profile"
 	"github.com/c4pt0r/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/failpoint"
-	"golang.org/x/mod/semver"
 )
 
 const (
 	manifestFile = "tiup-manifest.index"
-)
-
-type (
-	// ComponentInfo represents the information of component
-	ComponentInfo struct {
-		Name      string   `json:"name"`
-		Desc      string   `json:"desc"`
-		Platforms []string `json:"platforms"`
-	}
-
-	// VersionInfo represents the version information of component
-	VersionInfo struct {
-		Version   string   `json:"version"`
-		Date      string   `json:"date"`
-		Entry     string   `json:"entry"`
-		Platforms []string `json:"platforms"`
-	}
-
-	// ComponentManifest represents the all components information of tiup supported
-	ComponentManifest struct {
-		Description string          `json:"description"`
-		Modified    string          `json:"modified"`
-		Components  []ComponentInfo `json:"components"`
-	}
-
-	// VersionManifest represents the all versions information of specific component
-	VersionManifest struct {
-		Description string        `json:"description"`
-		Modified    string        `json:"modified"`
-		Versions    []VersionInfo `json:"versions"`
-	}
 )
 
 // Repository represents a components repository
@@ -116,14 +83,15 @@ func (r *Repository) ComponentVersions(component string) (*VersionManifest, erro
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	sort.Slice(vers.Versions, func(i, j int) bool {
-		return semver.Compare(vers.Versions[i].Version, vers.Versions[j].Version) < 0
-	})
+	vers.sort()
 	return &vers, nil
 }
 
 // Download downloads a component with specific version from repository
-func (r *Repository) Download(component, version string) error {
+func (r *Repository) Download(component string, version Version) error {
+	if !version.IsValid() {
+		return errors.Errorf("invalid version `%s`", version)
+	}
 	resName := fmt.Sprintf("%s-%s-%s-%s", component, version, runtime.GOOS, runtime.GOARCH)
 	localPath, err := r.mirror.Fetch(resName + ".tar.gz")
 	if err != nil {
@@ -165,7 +133,7 @@ func (r *Repository) Download(component, version string) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
-	targetDir := filepath.Join(compsDir, component, version)
+	targetDir := filepath.Join(compsDir, component, version.String())
 
 	if err := utils.CreateDir(targetDir); err != nil {
 		return errors.Trace(err)
