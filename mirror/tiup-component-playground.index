@@ -1,0 +1,12 @@
+{
+    "description": "playground",
+    "modified": "2020-02-26T15:20:35+08:00",
+    "versions": [
+        {
+            "version": "v0.0.1",
+            "entry": "playground",
+            "date": "2020-02-27 10:10:10",
+            "platforms": ["darwin/amd64", "linux/amd64"]
+        }
+    ]
+}

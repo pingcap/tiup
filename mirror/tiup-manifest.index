@@ -17,6 +17,11 @@
             "name": "pd",
             "desc": "PD is the abbreviation for Placement Driver. It is used to manage and schedule the TiKV cluster",
             "platforms": ["darwin/amd64", "linux/amd64"]
+        },
+        {
+         "name": "playground",
+         "desc": "Bootstrap a local TiDB cluster",
+         "platforms": ["darwin/amd64", "linux/amd64"]
         }
     ]
 }
