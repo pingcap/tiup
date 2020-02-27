@@ -47,7 +47,7 @@ There are 3 types of component in "tidb-core":
   meta:     Metadata nodes of the cluster, the PD server
   storage:  Storage nodes, the TiKV server
   compute:  SQL layer and compute nodes, the TiDB server`,
-		Example: "tiup launch meta v3.0.8",
+		Example: "tiup run playground",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return cmd.Help()
