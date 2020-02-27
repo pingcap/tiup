@@ -20,6 +20,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/pingcap/errors"
 )
@@ -70,9 +71,14 @@ func Untar(file, to string) error {
 	tr := tar.NewReader(gr)
 
 	decFile := func(hdr *tar.Header) error {
-		fw, err := os.OpenFile(path.Join(to, hdr.Name),
-			os.O_CREATE|os.O_WRONLY|os.O_TRUNC,
-			hdr.FileInfo().Mode())
+		file := path.Join(to, hdr.Name)
+		if dir := filepath.Dir(file); IsNotExist(dir) {
+			err := os.MkdirAll(dir, 0755)
+			if err != nil {
+				return err
+			}
+		}
+		fw, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, hdr.FileInfo().Mode())
 		if err != nil {
 			return errors.Trace(err)
 		}
