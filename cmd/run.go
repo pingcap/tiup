@@ -101,7 +101,7 @@ func launchComponentProcess(ver, comp string, args []string) (*compProcess, erro
 
 func getServerBinPath(ver, comp string) (string, error) {
 	if ver != "" {
-		return path.Join(profile.MustDir(), "components", comp, ver, comp), nil
+		return getBinPath(comp, ver)
 	}
 
 	files, err := ioutil.ReadDir(path.Join(profile.MustDir(), "components", comp))
@@ -114,7 +114,7 @@ func getServerBinPath(ver, comp string) (string, error) {
 		if ver, err := downloadNewestComponent(comp); err != nil {
 			return "", errors.Trace(err)
 		} else {
-			return path.Join(profile.MustDir(), "components", comp, ver, comp), nil
+			return getBinPath(comp, string(ver))
 		}
 	}
 
@@ -124,10 +124,10 @@ func getServerBinPath(ver, comp string) (string, error) {
 			ver = file.Name()
 		}
 	}
-	return path.Join(profile.MustDir(), "components", comp, ver, comp), nil
+	return getBinPath(comp, ver)
 }
 
-func downloadNewestComponent(comp string) (string, error) {
+func downloadNewestComponent(comp string) (meta.Version, error) {
 	mirror := meta.NewMirror(defaultMirror)
 	if err := mirror.Open(); err != nil {
 		return "", errors.Trace(err)

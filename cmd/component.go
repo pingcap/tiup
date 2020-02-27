@@ -383,28 +383,36 @@ func newBinaryCmd() *cobra.Command {
 				component, version = args[0], installed[len(installed)-1]
 			}
 
-			manifest, err := loadComponentVersions(component)
-			if err != nil {
+			if p, err := getBinPath(component, version); err != nil {
 				return err
+			} else {
+				fmt.Println(p)
 			}
-			var entry string
-			for _, v := range manifest.Versions {
-				if v.Version == meta.Version(version) {
-					entry = v.Entry
-				}
-			}
-			if entry == "" {
-				return errors.Errorf("Cannot found entry for %s:%s", component, version)
-			}
-			path, err := profile.Path(filepath.Join("components", component, version))
-			if err != nil {
-				return err
-			}
-			fmt.Println(filepath.Join(path, entry))
 			return nil
 		},
 	}
 
 	cmdUnInst.Flags().BoolVar(&all, "all", false, "Remove all components or versions.")
 	return cmdUnInst
+}
+
+func getBinPath(component, version string) (string, error) {
+	manifest, err := loadComponentVersions(component)
+	if err != nil {
+		return "", err
+	}
+	var entry string
+	for _, v := range manifest.Versions {
+		if v.Version == meta.Version(version) {
+			entry = v.Entry
+		}
+	}
+	if entry == "" {
+		return "", errors.Errorf("Cannot found entry for %s:%s", component, version)
+	}
+	path, err := profile.Path(filepath.Join("components", component, version))
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(path, entry), nil
 }
