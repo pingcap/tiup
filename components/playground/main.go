@@ -15,6 +15,22 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+func check(component string) {
+	if _, err := os.Stat(path.Join(os.Getenv("TIUP_HOME"), "components", component)); err != nil {
+		if err := exec.Command("tiup", "add", component).Run(); err != nil {
+			panic("add " + component + " failed")
+		}
+	}
+}
+
+func checkTiDBServer() {
+	if _, err := os.Stat(path.Join(os.Getenv("TIUP_HOME"), "components", "tidb")); err != nil {
+		if err := exec.Command("tiup", "add", "tidb"); err != nil {
+			panic("add tidb failed")
+		}
+	}
+}
+
 func startPDServer() int {
 	pd := exec.Command("tiup", "run", "pd")
 	pd.Stdout = os.Stdout
@@ -27,9 +43,6 @@ func startPDServer() int {
 
 func startTiKVServer() int {
 	tiupHome := os.Getenv("TIUP_HOME")
-	if tiupHome == "" {
-		panic("TIUP_HOME not set")
-	}
 	if utils.MustDir(path.Join(tiupHome, "data", "playground")) == "" {
 		panic("create data directory for playground failed")
 	}
@@ -64,6 +77,10 @@ func startTiDBServer() int {
 }
 
 func main() {
+	check("pd")
+	check("tikv")
+	check("tidb")
+
 	pids := []int{}
 	pids = append(pids, startPDServer())
 	pids = append(pids, startTiKVServer())
