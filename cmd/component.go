@@ -32,8 +32,10 @@ import (
 )
 
 var (
-	defaultMirror = "http://118.24.4.54/tiup/"
-	manifestPath  = "manifest/tiup-manifest.index"
+	//defaultMirror = "http://118.24.4.54/tiup/"
+	defaultMirror = "http://95.179.185.123/mirror/"
+	//defaultMirror = "/Users/lonng/devel/pingcap/tiup/mirror/"
+	manifestPath = "manifest/tiup-manifest.index"
 )
 
 func newComponentCmd() *cobra.Command {
