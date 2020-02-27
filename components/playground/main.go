@@ -16,8 +16,9 @@ import (
 )
 
 func startPDServer() int {
-	fmt.Println("starting pd server...")
 	pd := exec.Command("tiup", "run", "pd")
+	pd.Stdout = os.Stdout
+	pd.Stderr = os.Stderr
 	if err := pd.Start(); err != nil {
 		panic(fmt.Sprintf("start pd server failed: %s", err.Error()))
 	}
@@ -42,8 +43,9 @@ func startTiKVServer() int {
 		panic(err)
 	}
 
-	fmt.Println("starting tikv server...")
 	tikv := exec.Command("tiup", "run", "tikv", "--", "--pd=127.0.0.1:2379", fmt.Sprintf("--config=%s", configPath))
+	tikv.Stdout = os.Stdout
+	tikv.Stderr = os.Stderr
 	if err := tikv.Start(); err != nil {
 		panic(fmt.Sprintf("start tikv server failed: %s", err.Error()))
 	}
@@ -52,12 +54,12 @@ func startTiKVServer() int {
 }
 
 func startTiDBServer() int {
-	fmt.Println("starting tidb server...")
 	tidb := exec.Command("tiup", "run", "tidb", "--", "--store=tikv", "--path=127.0.0.1:2379")
+	tidb.Stdout = os.Stdout
+	tidb.Stderr = os.Stderr
 	if err := tidb.Start(); err != nil {
 		panic(fmt.Sprintf("run tidb: %s", err.Error()))
 	}
-
 	return tidb.Process.Pid
 }
 
@@ -68,7 +70,7 @@ func main() {
 	pids = append(pids, startTiDBServer())
 
 	var err error
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 50; i++ {
 		if err = tryConnect("root:@tcp(127.0.0.1:4000)/"); err != nil {
 			time.Sleep(time.Second * time.Duration(i*3))
 		} else {
@@ -85,15 +87,11 @@ func main() {
 }
 
 func tryConnect(dsn string) error {
-	fmt.Println("try connect: ", dsn)
 	if cli, err := sql.Open("mysql", "root:@tcp(127.0.0.1:4000)/"); err != nil {
-		fmt.Println(err)
 		return err
 	} else if _, err := cli.Conn(context.Background()); err != nil {
-		fmt.Println(err)
 		return err
 	}
-	fmt.Println("connect success on", dsn)
 	return nil
 }
 
