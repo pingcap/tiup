@@ -15,13 +15,16 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 
+	"github.com/c4pt0r/tiup/pkg/meta"
 	"github.com/c4pt0r/tiup/pkg/profile"
-	"github.com/c4pt0r/tiup/pkg/utils"
-	"github.com/phayes/freeport"
+	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
+	"golang.org/x/mod/semver"
 )
 
 const (
@@ -46,40 +49,21 @@ There are 3 types of component in "tidb-core":
   compute:  SQL layer and compute nodes, the TiDB server`,
 		Example: "tiup launch meta v3.0.8",
 		Args: func(cmd *cobra.Command, args []string) error {
-			var err error
-			switch len(args) {
-			case 0:
+			if len(args) == 0 {
 				return cmd.Help()
-			case 1: // version unspecified, use stable latest as default
-				//currChan, err := meta.ReadVersionFile()
-				//if os.IsNotExist(err) {
-				//	fmt.Println("default version not set, using latest stable.")
-				//	compMeta, err := meta.ReadComponentList()
-				//	if os.IsNotExist(err) {
-				//		fmt.Println("no available component list, try `tiup component list --refresh` to get latest online list.")
-				//		return nil
-				//	} else if err != nil {
-				//		return err
-				//	}
-				//	version = compMeta.Stable
-				//} else if err != nil {
-				//	return err
-				//}
-				//version = currChan.Ver
-			default:
-				version, err = utils.FmtVer(args[1])
-				if err != nil {
-					return err
-				}
 			}
-			component = strings.ToLower(args[0])
+			ss := strings.Split(args[0], ":")
+			component = ss[0]
+			if len(ss) > 1 {
+				version = ss[1]
+			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Printf("Launching process of %s %s\n", component, version)
-			p, err := launchComponentProcess(version, component)
+			p, err := launchComponentProcess(version, component, args[1:])
 			if err != nil {
-				if p.Pid != 0 {
+				if p != nil && p.Pid != 0 {
 					fmt.Printf("Error occured, but the process may be already started with PID %d\n", p.Pid)
 				}
 				return err
@@ -93,87 +77,73 @@ There are 3 types of component in "tidb-core":
 	return cmdLaunch
 }
 
-func launchComponentProcess(ver, compType string) (*compProcess, error) {
-	binPath, err := getServerBinPath(ver, compType)
+func launchComponentProcess(ver, comp string, args []string) (*compProcess, error) {
+	binPath, err := getServerBinPath(ver, comp)
 	if err != nil {
 		return nil, err
 	}
 
-	args, ports, err := getServerArguments(compType)
-	if err != nil {
-		return nil, err
-	}
-
+	profileDir := profile.MustDir()
 	p := &compProcess{
 		Exec: binPath,
 		Args: args,
-		Dir: path.Join(profile.MustDir(),
-			fmt.Sprintf("run/%s/%d", compType, ports[0])),
+		Dir:  path.Join(profileDir, "data", comp),
+		Env:  []string{"TIUP_HOME=" + profileDir},
 	}
 
 	//fmt.Printf("%s %s\n", binPath, args)
-	if err := p.Launch(); err != nil {
+	if err := p.Launch(false); err != nil {
 		return p, err
 	}
 
 	return p, saveProcessToList(p)
 }
 
-func getServerBinPath(ver, compType string) (string, error) {
-	instComp, err := getInstalledList()
-	if err != nil {
-		return "", err
-	}
-	if len(instComp) < 1 {
-		return "", fmt.Errorf("no component installed")
+func getServerBinPath(ver, comp string) (string, error) {
+	if ver != "" {
+		return path.Join(profile.MustDir(), "components", comp, ver, comp), nil
 	}
 
-	//for _, comp := range instComp {
-	//	if comp.Version != ver {
-	//		continue
-	//	}
-	//	switch compType {
-	//	case "compute":
-	//		return filepath.Join(comp.Path,
-	//			fmt.Sprintf("%s-server", compTypeCompute)), nil
-	//	case "meta":
-	//		return filepath.Join(comp.Path,
-	//			fmt.Sprintf("%s-server", compTypeMeta)), nil
-	//	case "storage":
-	//		return filepath.Join(comp.Path,
-	//			fmt.Sprintf("%s-server", compTypeStorage)), nil
-	//	default:
-	//		continue
-	//	}
-	//}
-	return "", fmt.Errorf("can not find binary for %s %s", compType, ver)
+	files, err := ioutil.ReadDir(path.Join(profile.MustDir(), "components", comp))
+	if err != nil && !os.IsNotExist(err) {
+		return "", fmt.Errorf("can't find binary for %s", comp)
+	}
+
+	// If this component is not installed, we should install the last version of it
+	if len(files) == 0 {
+		if ver, err := downloadNewestComponent(comp); err != nil {
+			return "", errors.Trace(err)
+		} else {
+			return path.Join(profile.MustDir(), "components", comp, ver, comp), nil
+		}
+	}
+
+	// Choose the latest
+	for _, file := range files {
+		if semver.Compare(file.Name(), ver) > 0 {
+			ver = file.Name()
+		}
+	}
+	return path.Join(profile.MustDir(), "components", comp, ver, comp), nil
 }
 
-func getServerArguments(compType string) ([]string, []int, error) {
-	// get unused ports
-	ports, err := freeport.GetFreePorts(2)
+func downloadNewestComponent(comp string) (string, error) {
+	mirror := meta.NewMirror(defaultMirror)
+	if err := mirror.Open(); err != nil {
+		return "", errors.Trace(err)
+	}
+	defer mirror.Close()
+
+	repo := meta.NewRepository(mirror)
+	v, err := repo.ComponentVersions(comp)
 	if err != nil {
-		return nil, nil, err
+		return "", errors.Trace(err)
 	}
 
-	var args []string
-	switch compType {
-	case "compute":
-		args = []string{
-			"-P", fmt.Sprint(ports[0]),
-			"-status", fmt.Sprint(ports[1]),
-		}
-	case "meta":
-		args = []string{
-			"-client-urls", fmt.Sprintf("http://0.0.0.0:%d", ports[0]),
-			"-peer-urls", fmt.Sprintf("http://0.0.0.0:%d", ports[1]),
-		}
-	case "storage":
-		args = []string{
-			"--addr", fmt.Sprintf("0.0.0.0:%d", ports[0]),
-			"--status-addr", fmt.Sprintf("0.0.0.0:%d", ports[1]),
-		}
+	lastVer := v.Versions[len(v.Versions)-1]
+	if err := repo.Download(comp, lastVer.Version); err != nil {
+		return "", errors.Trace(err)
 	}
 
-	return args, ports, nil
+	return lastVer.Version, nil
 }
