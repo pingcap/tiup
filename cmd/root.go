@@ -14,6 +14,8 @@
 package cmd
 
 import (
+	"github.com/c4pt0r/tiup/pkg/meta"
+	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -47,4 +49,14 @@ and installing TiDB components to the local system.`,
 // Execute parses the command line argumnts and calls proper functions
 func Execute() error {
 	return rootCmd.Execute()
+}
+
+func runWithRepo(fn func(repo *meta.Repository) error) error {
+	mirror := meta.NewMirror(defaultMirror)
+	if err := mirror.Open(); err != nil {
+		return errors.Trace(err)
+	}
+	defer mirror.Close()
+	repo := meta.NewRepository(mirror)
+	return fn(repo)
 }
