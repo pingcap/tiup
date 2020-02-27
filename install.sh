@@ -1,6 +1,6 @@
 #! /bin/sh
 
-repo='http://tidb.tnthub.com:81/mirror'
+repo='http://tnthub.com/mirror'
 os=$(uname | tr '[:upper:]' '[:lower:]')
 
 TIUP_HOME=${HOME}/.tiup
@@ -16,7 +16,7 @@ then
 fi
 if echo "$SHELL" | grep -Eq "zsh"
 then
-    PROFILE=${HOME}/.zsh_profile
+    PROFILE=${HOME}/.zshrc
 fi
 
 cat >> ${PROFILE} << EOF
