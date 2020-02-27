@@ -57,19 +57,22 @@ type compProcess struct {
 	Pid  int      `json:"pid,omitempty"`  // PID of the process
 	Exec string   `json:"exec,omitempty"` // Path to the binary
 	Args []string `json:"args,omitempty"` // Command line arguments
+	Env  []string `json:"env,omitempty"`  // Enviroment variables
 	Dir  string   `json:"dir,omitempty"`  // Working directory
 }
 
 type compProcessList []compProcess
 
 // Launch executes the process
-func (p *compProcess) Launch() error {
-	var err error
-
+func (p *compProcess) Launch(async bool) error {
 	dir := utils.MustDir(p.Dir)
-	p.Pid, err = utils.Exec(nil, nil, dir, p.Exec, p.Args...)
+	c, err := utils.Exec(os.Stdout, os.Stderr, dir, p.Exec, p.Args, p.Env)
 	if err != nil {
 		return err
+	}
+	p.Pid = c.Process.Pid
+	if !async {
+		return c.Wait()
 	}
 	return nil
 }
