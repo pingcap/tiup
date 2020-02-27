@@ -217,7 +217,7 @@ max-open-files = 256
 [raftdb]
 # max-background-jobs = 4
 # max-sub-compactions = 2
-# max-open-files = 40960
+max-open-files = 256
 # max-manifest-file-size = "20MB"
 # create-if-missing = true
 # enable-statistics = true
