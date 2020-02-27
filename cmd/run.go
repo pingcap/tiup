@@ -140,10 +140,13 @@ func downloadNewestComponent(comp string) (meta.Version, error) {
 		return "", errors.Trace(err)
 	}
 
-	lastVer := v.Versions[len(v.Versions)-1]
-	if err := repo.Download(comp, lastVer.Version); err != nil {
+	// cache the version manifest and ignore the error
+	_ = profile.WriteJSON(versionManifestFile(comp), v)
+
+	lastVer := v.LatestStable()
+	if err := repo.Download(comp, lastVer); err != nil {
 		return "", errors.Trace(err)
 	}
 
-	return lastVer.Version, nil
+	return lastVer, nil
 }
