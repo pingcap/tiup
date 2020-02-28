@@ -15,13 +15,13 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/c4pt0r/tiup/pkg/meta"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/c4pt0r/tiup/pkg/localdata"
+	"github.com/c4pt0r/tiup/pkg/meta"
 	"github.com/c4pt0r/tiup/pkg/set"
 	"github.com/c4pt0r/tiup/pkg/tui"
 	"github.com/pingcap/errors"

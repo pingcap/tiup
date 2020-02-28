@@ -1,11 +1,11 @@
 #! /bin/sh
 
-repo='http://tnthub.com/mirror'
+repo='https://tiup-mirrors.pingcap.com'
 os=$(uname | tr '[:upper:]' '[:lower:]')
 
 TIUP_HOME=${HOME}/.tiup
 mkdir -p ${TIUP_HOME}/bin/
-curl ${repo}/tiup-${os} -o ${TIUP_HOME}/bin/tiup
+curl ${repo}/tiup-${os}-amd64.tar.gz | tar x -C ${TIUP_HOME}/bin/
 
 chmod 755 ${TIUP_HOME}/bin/tiup
 
