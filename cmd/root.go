@@ -14,17 +14,27 @@
 package cmd
 
 import (
+	"log"
+	"os/user"
+	"path/filepath"
+
+	"github.com/c4pt0r/tiup/pkg/localdata"
 	"github.com/c4pt0r/tiup/pkg/meta"
-	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
 
-var rootCmd *cobra.Command
+const profileDirName = ".tiup"
+
+var (
+	profile    *localdata.Profile
+	rootCmd    *cobra.Command
+	repository *meta.Repository
+)
 
 func init() {
 	rootCmd = &cobra.Command{
 		Use:   "tiup",
-		Short: "Download and install TiDB components from command line",
+		Short: "Manifest manager for TiDB",
 		Long: `The tiup utility is a command line tool that can help to download
 and installing TiDB components to the local system.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -37,26 +47,36 @@ and installing TiDB components to the local system.`,
 		newComponentCmd(),
 		newUpdateCmd(),
 		newRunCmd(),
-		newStatusCmd(),
-		newLogCmd(),
-		newStopCmd(),
 		newShowCmd(),
 		newVersionCmd(),
 		newCompletionsCmd(),
 	)
 }
 
-// Execute parses the command line argumnts and calls proper functions
-func Execute() error {
+func execute() error {
+	u, err := user.Current()
+	if err != nil {
+		return err
+	}
+
+	// Initialize the global profile
+	profile = localdata.NewProfile(filepath.Join(u.HomeDir, profileDirName))
+
+	// Initialize the repository
+	// Replace the mirror if some subcommands use different mirror address
+	mirror := meta.NewMirror(defaultMirror)
+	if err := mirror.Open(); err != nil {
+		return err
+	}
+	repository = meta.NewRepository(mirror)
+	defer func() { _ = repository.Mirror().Close() }()
+
 	return rootCmd.Execute()
 }
 
-func runWithRepo(fn func(repo *meta.Repository) error) error {
-	mirror := meta.NewMirror(defaultMirror)
-	if err := mirror.Open(); err != nil {
-		return errors.Trace(err)
+// Execute parses the command line argumnts and calls proper functions
+func Execute() {
+	if err := execute(); err != nil {
+		log.Fatal(err)
 	}
-	defer mirror.Close()
-	repo := meta.NewRepository(mirror)
-	return fn(repo)
 }

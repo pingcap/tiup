@@ -17,7 +17,6 @@ import (
 	"errors"
 	"os"
 
-	"github.com/c4pt0r/tiup/pkg/profile"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +28,6 @@ func newSelfCmd() *cobra.Command {
 			return cmd.Help()
 		},
 	}
-
 	cmd.AddCommand(
 		&cobra.Command{
 			Use:   "update",
@@ -42,14 +40,9 @@ func newSelfCmd() *cobra.Command {
 			Use:   "uninstall",
 			Short: "Uninstall tiup and clean all data",
 			RunE: func(cmd *cobra.Command, args []string) error {
-				profileDir, err := profile.Dir()
-				if err != nil {
-					return err
-				}
-				return os.RemoveAll(profileDir)
+				return os.RemoveAll(profile.Root())
 			},
 		},
 	)
-
 	return cmd
 }

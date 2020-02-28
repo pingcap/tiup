@@ -16,26 +16,20 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/c4pt0r/tiup/pkg/profile"
 	"github.com/c4pt0r/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
 
 func newShowCmd() *cobra.Command {
-	cmdShow := &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "show",
 		Short: "Display global information",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Printf("TiUP Version: %s\n", version.NewTiUPVersion())
 			fmt.Printf("TiUP Build: %s\n", version.NewTiUPBuildInfo())
-			profileDir, err := profile.Dir()
-			if err != nil {
-				return err
-			}
-			fmt.Printf("TiUP home: %s\n", profileDir)
+			fmt.Printf("TiUP home: %s\n", profile.Root())
 			return nil
 		},
 	}
-
-	return cmdShow
+	return cmd
 }

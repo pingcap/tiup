@@ -15,46 +15,38 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
+	"github.com/c4pt0r/tiup/pkg/meta"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
-	"github.com/c4pt0r/tiup/pkg/meta"
-	"github.com/c4pt0r/tiup/pkg/profile"
+	"github.com/c4pt0r/tiup/pkg/localdata"
 	"github.com/c4pt0r/tiup/pkg/set"
 	"github.com/c4pt0r/tiup/pkg/tui"
-	"github.com/c4pt0r/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
 )
 
-var (
-	//defaultMirror = "http://118.24.4.54/tiup/"
-	defaultMirror = "http://tidb.tnthub.com:81/mirror/"
-	//defaultMirror = "/Users/lonng/devel/pingcap/tiup/mirror/"
-	manifestPath = "manifest/tiup-manifest.index"
-)
+var defaultMirror = "http://tidb.tnthub.com:81/mirror/"
 
 func newComponentCmd() *cobra.Command {
-	cmdComponent := &cobra.Command{
-		Use:   "component",
-		Short: "Manage TiDB related components",
+	cmd := &cobra.Command{
+		Use:     "component",
+		Short:   "Manage TiDB related components",
+		Aliases: []string{"comp"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
 	}
-	cmdComponent.AddCommand(newListComponentCmd())
-	cmdComponent.AddCommand(newAddCmd())
-	cmdComponent.AddCommand(newRemoveCmd())
-	cmdComponent.AddCommand(newBinaryCmd())
-	return cmdComponent
-}
-
-func versionManifestFile(component string) string {
-	return fmt.Sprintf("manifest/tiup-component-%s.index", component)
+	cmd.AddCommand(
+		newListComponentCmd(),
+		newAddCmd(),
+		newRemoveCmd(),
+		newBinaryCmd(),
+	)
+	return cmd
 }
 
 func newListComponentCmd() *cobra.Command {
@@ -68,27 +60,25 @@ func newListComponentCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch len(args) {
 			case 0:
-				// tiup component list
-				path, err := profile.Path(manifestPath)
-				if err != nil {
-					return err
-				}
-				if refresh || utils.IsNotExist(path) {
-					err := refreshComponentList()
+				if refresh || profile.Manifest() == nil {
+					manifest, err := repository.Manifest()
+					if err != nil {
+						return err
+					}
+					err = profile.SaveManifest(manifest)
 					if err != nil {
 						return err
 					}
 				}
 				return showComponentList(showInstalled)
 			case 1:
-				// tiup component list [component]
 				component := args[0]
-				path, err := profile.Path(versionManifestFile(component))
-				if err != nil {
-					return err
-				}
-				if refresh || utils.IsNotExist(path) {
-					err := refreshComponentVersions(component)
+				if refresh || profile.Versions(component) == nil {
+					manifest, err := repository.ComponentVersions(component)
+					if err != nil {
+						return errors.Trace(err)
+					}
+					err = profile.SaveVersions(component, manifest)
 					if err != nil {
 						return err
 					}
@@ -105,72 +95,14 @@ func newListComponentCmd() *cobra.Command {
 	return cmdListComponent
 }
 
-func refreshComponentList() error {
-	return runWithRepo(func(repo *meta.Repository) error {
-		manifest, err := repo.Components()
-		if err != nil {
-			return errors.Trace(err)
-		}
-		return profile.WriteJSON(manifestPath, manifest)
-	})
-}
-
-func refreshComponentVersions(component string) error {
-	return runWithRepo(func(repo *meta.Repository) error {
-		manifest, err := repo.ComponentVersions(component)
-		if err != nil {
-			return errors.Trace(err)
-		}
-		return profile.WriteJSON(versionManifestFile(component), manifest)
-	})
-}
-
-func loadCachedManifest() (*meta.ComponentManifest, error) {
-	var manifest meta.ComponentManifest
-	if err := profile.ReadJSON(manifestPath, &manifest); err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	return &manifest, nil
-}
-
-func getInstalledList() ([]string, error) {
-	profDir, err := profile.Dir()
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	compDir := filepath.Join(profDir, "components")
-	fileInfos, err := ioutil.ReadDir(compDir)
-	if err != nil && os.IsNotExist(err) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	var components []string
-	for _, fi := range fileInfos {
-		if !fi.IsDir() {
-			continue
-		}
-		components = append(components, fi.Name())
-	}
-	sort.Strings(components)
-	return components, nil
-}
-
 func showComponentList(onlyInstalled bool) error {
-	installed, err := getInstalledList()
+	installed, err := profile.InstalledComponents()
 	if err != nil {
 		return err
 	}
-
-	manifest, err := loadCachedManifest()
-	if err != nil {
-		return err
-	}
-
+	manifest := profile.Manifest()
 	var cmpTable [][]string
-	cmpTable = append(cmpTable, []string{"Name", "Installed", "Platforms", "Desc"})
+	cmpTable = append(cmpTable, []string{"Name", "Installed", "Platforms", "Description"})
 
 	localComponents := set.NewStringSet(installed...)
 	for _, comp := range manifest.Components {
@@ -179,7 +111,7 @@ func showComponentList(onlyInstalled bool) error {
 		}
 		installStatus := ""
 		if localComponents.Exist(comp.Name) {
-			installStatus = "yes"
+			installStatus = "YES"
 		}
 		cmpTable = append(cmpTable, []string{
 			comp.Name,
@@ -194,48 +126,15 @@ func showComponentList(onlyInstalled bool) error {
 	return nil
 }
 
-func loadInstalledVersions(component string) ([]string, error) {
-	path, err := profile.Path(fmt.Sprintf("components/" + component))
-	if err != nil {
-		return nil, err
-	}
-	if utils.IsNotExist(path) {
-		return nil, nil
-	}
-
-	fileInfos, err := ioutil.ReadDir(path)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	var versions []string
-	for _, fi := range fileInfos {
-		versions = append(versions, fi.Name())
-	}
-	return versions, nil
-}
-
-func loadComponentVersions(component string) (*meta.VersionManifest, error) {
-	var manifest meta.VersionManifest
-	err := profile.ReadJSON(versionManifestFile(component), &manifest)
-	if err != nil {
-		return nil, err
-	}
-	return &manifest, nil
-}
-
 func showComponentVersions(component string, onlyInstalled bool) error {
-	versions, err := loadInstalledVersions(component)
+	versions, err := profile.InstalledVersions(component)
 	if err != nil {
 		return err
 	}
-
-	manifest, err := loadComponentVersions(component)
-	if err != nil {
-		return err
-	}
+	manifest := profile.Versions(component)
 
 	var cmpTable [][]string
-	cmpTable = append(cmpTable, []string{"Version", "Installed", "Date", "Platforms"})
+	cmpTable = append(cmpTable, []string{"Version", "Installed", "Release:", "Platforms"})
 
 	installed := set.NewStringSet(versions...)
 	for _, ver := range manifest.Versions {
@@ -245,7 +144,7 @@ func showComponentVersions(component string, onlyInstalled bool) error {
 		}
 		installStatus := ""
 		if installed.Exist(version) {
-			installStatus = "yes"
+			installStatus = "YES"
 		}
 		cmpTable = append(cmpTable, []string{
 			version,
@@ -277,36 +176,37 @@ func newAddCmd() *cobra.Command {
 }
 
 func installComponents(specs []string) error {
-	return runWithRepo(func(repo *meta.Repository) error {
-		for _, spec := range specs {
-			var version meta.Version
-			var component string
-			if strings.Contains(spec, ":") {
-				parts := strings.SplitN(spec, ":", 2)
-				component = parts[0]
-				version = meta.Version(parts[1])
-			} else {
-				component = spec
-			}
-			manifest, err := repo.ComponentVersions(component)
-			if err != nil {
-				return errors.Trace(err)
-			}
-
-			// cache the version manifest and ignore the error
-			_ = profile.WriteJSON(versionManifestFile(component), manifest)
-			if version == "" {
-				version = manifest.LatestStable()
-			}
-
-			// download the latest version
-			err = repo.Download(component, version)
-			if err != nil {
-				return errors.Trace(err)
-			}
+	for _, spec := range specs {
+		var version meta.Version
+		var component string
+		if strings.Contains(spec, ":") {
+			parts := strings.SplitN(spec, ":", 2)
+			component = parts[0]
+			version = meta.Version(parts[1])
+		} else {
+			component = spec
 		}
-		return nil
-	})
+		manifest, err := repository.ComponentVersions(component)
+		if err != nil {
+			return err
+		}
+
+		err = profile.SaveVersions(component, manifest)
+		if err != nil {
+			return err
+		}
+
+		if version == "" {
+			version = manifest.LatestStable()
+		}
+
+		// download the latest version
+		err = repository.Download(profile.ComponentsDir(), component, version)
+		if err != nil {
+			return errors.Trace(err)
+		}
+	}
+	return nil
 }
 
 func newRemoveCmd() *cobra.Command {
@@ -321,17 +221,12 @@ func newRemoveCmd() *cobra.Command {
 			case len(args) > 0:
 				return removeComponents(args, all)
 			case len(args) == 0 && all:
-				compsDir, err := profile.Path("components")
-				if err != nil {
-					return err
-				}
-				return os.RemoveAll(compsDir)
+				return os.RemoveAll(profile.Path(localdata.ComponentParentDir))
 			default:
 				return cmd.Help()
 			}
 		},
 	}
-
 	cmdUnInst.Flags().BoolVar(&all, "all", false, "Remove all components or versions.")
 	return cmdUnInst
 }
@@ -339,21 +234,18 @@ func newRemoveCmd() *cobra.Command {
 func removeComponents(specs []string, all bool) error {
 	for _, spec := range specs {
 		var path string
-		var err error
 		if strings.Contains(spec, ":") {
 			parts := strings.SplitN(spec, ":", 2)
-			path, err = profile.Path(filepath.Join("components", parts[0], parts[1]))
+			path = profile.Path(filepath.Join(localdata.ComponentParentDir, parts[0], parts[1]))
 		} else {
 			if !all {
 				fmt.Printf("Use `tiup remove %s --all` if you want to remove all versions.\n", spec)
 				continue
 			}
-			path, err = profile.Path(filepath.Join("components", spec))
+			path = profile.Path(filepath.Join(localdata.ComponentParentDir, spec))
 		}
+		err := os.RemoveAll(path)
 		if err != nil {
-			return err
-		}
-		if err := os.RemoveAll(path); err != nil {
 			return err
 		}
 	}
@@ -361,8 +253,7 @@ func removeComponents(specs []string, all bool) error {
 }
 
 func newBinaryCmd() *cobra.Command {
-	var all bool
-	cmdUnInst := &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "binary <component1>:[version]",
 		Short: "Print the binary path of component of specific version",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -374,49 +265,26 @@ func newBinaryCmd() *cobra.Command {
 				parts := strings.SplitN(args[0], ":", 2)
 				component, version = parts[0], parts[1]
 			} else {
-				installed, err := loadInstalledVersions(args[0])
+				component = args[0]
+				installed, err := profile.InstalledVersions(component)
 				if err != nil {
 					return err
 				}
 				if len(installed) < 1 {
-					return errors.Errorf("Component `%s` not installed", args[0])
+					return errors.Errorf("component `%s` not installed", args[0])
 				}
 				sort.Slice(installed, func(i, j int) bool {
 					return semver.Compare(installed[i], installed[j]) < 0
 				})
-				component, version = args[0], installed[len(installed)-1]
+				version = installed[len(installed)-1]
 			}
-
-			if p, err := getBinPath(component, version); err != nil {
+			binaryPath, err := profile.BinaryPath(component, version)
+			if err != nil {
 				return err
-			} else {
-				fmt.Println(p)
 			}
+			fmt.Println(binaryPath)
 			return nil
 		},
 	}
-
-	cmdUnInst.Flags().BoolVar(&all, "all", false, "Remove all components or versions.")
-	return cmdUnInst
-}
-
-func getBinPath(component, version string) (string, error) {
-	manifest, err := loadComponentVersions(component)
-	if err != nil {
-		return "", err
-	}
-	var entry string
-	for _, v := range manifest.Versions {
-		if v.Version == meta.Version(version) {
-			entry = v.Entry
-		}
-	}
-	if entry == "" {
-		return "", errors.Errorf("Cannot found entry for %s:%s", component, version)
-	}
-	path, err := profile.Path(filepath.Join("components", component, version))
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(path, entry), nil
+	return cmd
 }

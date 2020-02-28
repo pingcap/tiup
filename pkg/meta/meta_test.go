@@ -40,7 +40,7 @@ func currentDir() string {
 func (s *metaSuite) TestRepository(c *C) {
 	testDir := filepath.Join(currentDir(), "testdata")
 	repo := NewRepository(NewMirror(testDir))
-	comps, err := repo.Components()
+	comps, err := repo.Manifest()
 	c.Assert(err, IsNil)
 
 	expected := &ComponentManifest{
@@ -99,7 +99,7 @@ func (s *metaSuite) TestRepository(c *C) {
 	defer func() { c.Assert(failpoint.Disable(fpName), IsNil) }()
 	defer os.RemoveAll(tmpDir)
 
-	err = repo.Download("test1", "v1.1.1")
+	err = repo.Download(tmpDir, "test1", "v1.1.1")
 	c.Assert(err, IsNil, Commentf("error: %+v", err))
 
 	exp, err := ioutil.ReadFile(filepath.Join(testDir, "test1.bin"))

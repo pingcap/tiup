@@ -31,51 +31,48 @@ func newUpdateCmd() *cobra.Command {
 			return updateComponents(components, nightly)
 		},
 	}
-
 	cmd.Flags().BoolVar(&all, "all", false, "Update all components")
 	cmd.Flags().BoolVar(&nightly, "nightly", false, "Update the components to nightly version")
 	return cmd
 }
 
 func updateComponents(components []string, nightly bool) error {
-	return runWithRepo(func(repo *meta.Repository) error {
-		if len(components) == 0 {
-			installed, err := getInstalledList()
-			if err != nil {
-				return err
-			}
-			components = installed
+	if len(components) == 0 {
+		installed, err := profile.InstalledComponents()
+		if err != nil {
+			return err
 		}
-		for _, component := range components {
-			manifest, err := repo.ComponentVersions(component)
-			if err != nil {
-				return err
-			}
-			var latestVer meta.Version
-			if nightly {
-				latestVer = manifest.LatestNightly()
-			} else {
-				latestVer = manifest.LatestStable()
-			}
-			installed, err := loadInstalledVersions(component)
-			if err != nil {
-				return err
-			}
-			var found bool
-			for _, v := range installed {
-				if meta.Version(v) == latestVer {
-					found = true
-					break
-				}
-			}
-			if found {
-				continue
-			}
-			err = repo.Download(component, latestVer)
-			if err != nil {
-				return err
+		components = installed
+	}
+	for _, component := range components {
+		manifest, err := repository.ComponentVersions(component)
+		if err != nil {
+			return err
+		}
+		var latestVer meta.Version
+		if nightly {
+			latestVer = manifest.LatestNightly()
+		} else {
+			latestVer = manifest.LatestStable()
+		}
+		versions, err := profile.InstalledVersions(component)
+		if err != nil {
+			return err
+		}
+		var found bool
+		for _, v := range versions {
+			if meta.Version(v) == latestVer {
+				found = true
+				break
 			}
 		}
-		return nil
-	})
+		if found {
+			continue
+		}
+		err = repository.Download(profile.ComponentsDir(), component, latestVer)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

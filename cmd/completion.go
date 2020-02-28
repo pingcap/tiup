@@ -15,10 +15,17 @@ package cmd
 
 import "github.com/spf13/cobra"
 
-func newStopCmd() *cobra.Command {
+func newCompletionsCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "stop",
-		Short: "Stop the running component specified by `name`",
+		Use:   "completion",
+		Short: "Generate tab-completion scripts for your shell",
+		Long: `Enable tab completion for Bash, Zsh, The script is
+output on stdout, allowing one to re-direct the output to the
+file of their choosing. Where you place the file will depend
+on which shell, and which operating system you are using. Your
+particular configuration may also determine where these scripts
+need to be placed.
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},

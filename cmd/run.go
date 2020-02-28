@@ -15,22 +15,21 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
+	"github.com/c4pt0r/tiup/pkg/tui"
+	"github.com/c4pt0r/tiup/pkg/utils"
 	"os"
 	"path"
+	"path/filepath"
+	"sort"
 	"strings"
 
-	"github.com/c4pt0r/tiup/pkg/meta"
-	"github.com/c4pt0r/tiup/pkg/profile"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
 )
 
 const (
-	compTypeMeta    = "pd"
-	compTypeStorage = "tikv"
-	compTypeCompute = "tidb"
+	processListFilename = "processes.json"
 )
 
 func newRunCmd() *cobra.Command {
@@ -61,7 +60,7 @@ There are 3 types of component in "tidb-core":
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Printf("Launching process of %s %s\n", component, version)
-			p, err := launchComponentProcess(version, component, args[1:])
+			p, err := launchComponentProcess(component, version, args[1:])
 			if err != nil {
 				if p != nil && p.Pid != 0 {
 					fmt.Printf("Error occured, but the process may be already started with PID %d\n", p.Pid)
@@ -77,17 +76,17 @@ There are 3 types of component in "tidb-core":
 	return cmdLaunch
 }
 
-func launchComponentProcess(ver, comp string, args []string) (*compProcess, error) {
-	binPath, err := getServerBinPath(ver, comp)
+func launchComponentProcess(component, version string, args []string) (*compProcess, error) {
+	binPath, err := getServerBinPath(component, version)
 	if err != nil {
 		return nil, err
 	}
 
-	profileDir := profile.MustDir()
+	profileDir := profile.Root()
 	p := &compProcess{
 		Exec: binPath,
 		Args: args,
-		Dir:  path.Join(profileDir, "data", comp),
+		Dir:  path.Join(profileDir, "data", component),
 		Env:  []string{"TIUP_HOME=" + profileDir},
 	}
 
@@ -99,54 +98,115 @@ func launchComponentProcess(ver, comp string, args []string) (*compProcess, erro
 	return p, saveProcessToList(p)
 }
 
-func getServerBinPath(ver, comp string) (string, error) {
-	if ver != "" {
-		return getBinPath(comp, ver)
-	}
-
-	files, err := ioutil.ReadDir(path.Join(profile.MustDir(), "components", comp))
-	if err != nil && !os.IsNotExist(err) {
-		return "", fmt.Errorf("can't find binary for %s", comp)
-	}
-
-	// If this component is not installed, we should install the last version of it
-	if len(files) == 0 {
-		if ver, err := downloadNewestComponent(comp); err != nil {
-			return "", errors.Trace(err)
+func getServerBinPath(component, version string) (string, error) {
+	// Use the latest version if user doesn't specify a specific version and
+	// download the latest version if the specific component doesn't be installed
+	if version == "" {
+		versions, err := profile.InstalledVersions(component)
+		if err != nil {
+			return "", err
+		}
+		if len(versions) > 0 {
+			sort.Slice(versions, func(i, j int) bool {
+				return semver.Compare(versions[i], versions[j]) < 0
+			})
+			version = versions[len(versions)-1]
 		} else {
-			return getBinPath(comp, string(ver))
+			manifest, err := repository.ComponentVersions(component)
+			if err != nil {
+				return "", errors.Trace(err)
+			}
+			err = profile.SaveVersions(component, manifest)
+			if err != nil {
+				return "", errors.Trace(err)
+			}
+			version = manifest.LatestStable().String()
 		}
 	}
-
-	// Choose the latest
-	for _, file := range files {
-		if semver.Compare(file.Name(), ver) > 0 {
-			ver = file.Name()
-		}
-	}
-	return getBinPath(comp, ver)
+	return profile.BinaryPath(component, version)
 }
 
-func downloadNewestComponent(comp string) (meta.Version, error) {
-	mirror := meta.NewMirror(defaultMirror)
-	if err := mirror.Open(); err != nil {
-		return "", errors.Trace(err)
-	}
-	defer mirror.Close()
+type compProcess struct {
+	Pid  int      `json:"pid,omitempty"`  // PID of the process
+	Exec string   `json:"exec,omitempty"` // Path to the binary
+	Args []string `json:"args,omitempty"` // Command line arguments
+	Env  []string `json:"env,omitempty"`  // Enviroment variables
+	Dir  string   `json:"dir,omitempty"`  // Working directory
+}
 
-	repo := meta.NewRepository(mirror)
-	v, err := repo.ComponentVersions(comp)
+type compProcessList []compProcess
+
+// Launch executes the process
+func (p *compProcess) Launch(async bool) error {
+	dir := utils.MustDir(p.Dir)
+	c, err := utils.Exec(os.Stdout, os.Stderr, dir, p.Exec, p.Args, p.Env)
 	if err != nil {
-		return "", errors.Trace(err)
+		return err
+	}
+	p.Pid = c.Process.Pid
+	if !async {
+		return c.Wait()
+	}
+	return nil
+}
+
+func getProcessList() (compProcessList, error) {
+	var list compProcessList
+	var err error
+
+	profile.ReadJSON(processListFilename, &list)
+	return list, err
+}
+
+func saveProcessList(pl *compProcessList) error {
+	return profile.WriteJSON(processListFilename, pl)
+}
+
+func saveProcessToList(p *compProcess) error {
+	currList, err := getProcessList()
+	if err != nil {
+		return err
 	}
 
-	// cache the version manifest and ignore the error
-	_ = profile.WriteJSON(versionManifestFile(comp), v)
-
-	lastVer := v.LatestStable()
-	if err := repo.Download(comp, lastVer); err != nil {
-		return "", errors.Trace(err)
+	for _, currProc := range currList {
+		if currProc.Pid == p.Pid {
+			return fmt.Errorf("process %d already exist", p.Pid)
+		}
 	}
 
-	return lastVer, nil
+	newList := append(currList, *p)
+	return saveProcessList(&newList)
+}
+
+func newProcListCmd() *cobra.Command {
+	cmdProcList := &cobra.Command{
+		Use:   "list",
+		Short: "Show process list",
+		Long: `Show current process list, note that this is the list saved when
+the process launched, the actual process might already exited and no longer running.`,
+		RunE: showProcessList,
+	}
+	return cmdProcList
+}
+
+func showProcessList(cmd *cobra.Command, args []string) error {
+	procList, err := getProcessList()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Launched processes:")
+	var procTable [][]string
+	procTable = append(procTable, []string{"Process", "PID", "Working Dir", "Argument"})
+	for _, proc := range procList {
+		procTable = append(procTable, []string{
+			filepath.Base(proc.Exec),
+			fmt.Sprint(proc.Pid),
+			proc.Dir,
+			strings.Join(proc.Args, " "),
+		})
+	}
+
+	tui.PrintTable(procTable, true)
+	return nil
 }
