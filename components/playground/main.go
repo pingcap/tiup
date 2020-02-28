@@ -17,7 +17,10 @@ import (
 
 func check(component string) {
 	if _, err := os.Stat(path.Join(os.Getenv("TIUP_HOME"), "components", component)); err != nil {
-		if err := exec.Command("tiup", "component", "add", component).Run(); err != nil {
+		c := exec.Command("tiup", "component", "add", component)
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		if err := c.Run(); err != nil {
 			panic("add " + component + " failed")
 		}
 	}
@@ -33,8 +36,6 @@ func checkTiDBServer() {
 
 func startPDServer() int {
 	pd := exec.Command("tiup", "run", "pd")
-	pd.Stdout = os.Stdout
-	pd.Stderr = os.Stderr
 	if err := pd.Start(); err != nil {
 		panic(fmt.Sprintf("start pd server failed: %s", err.Error()))
 	}
@@ -57,8 +58,6 @@ func startTiKVServer() int {
 	}
 
 	tikv := exec.Command("tiup", "run", "tikv", "--", "--pd=127.0.0.1:2379", fmt.Sprintf("--config=%s", configPath))
-	tikv.Stdout = os.Stdout
-	tikv.Stderr = os.Stderr
 	if err := tikv.Start(); err != nil {
 		panic(fmt.Sprintf("start tikv server failed: %s", err.Error()))
 	}
@@ -68,8 +67,6 @@ func startTiKVServer() int {
 
 func startTiDBServer() int {
 	tidb := exec.Command("tiup", "run", "tidb", "--", "--store=tikv", "--path=127.0.0.1:2379")
-	tidb.Stdout = os.Stdout
-	tidb.Stderr = os.Stderr
 	if err := tidb.Start(); err != nil {
 		panic(fmt.Sprintf("run tidb: %s", err.Error()))
 	}
@@ -87,6 +84,7 @@ func main() {
 	pids = append(pids, startTiDBServer())
 
 	var err error
+	fmt.Println("bootstraping...")
 	for i := 0; i < 50; i++ {
 		if err = tryConnect("root:@tcp(127.0.0.1:4000)/"); err != nil {
 			time.Sleep(time.Second * time.Duration(i*3))
@@ -116,8 +114,15 @@ func wait(pids []int) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	<-sigs
-	for _, pid := range pids {
-		fmt.Println("kill process", pid)
+	pidsLen := len(pids)
+	for idx := range pids {
+		pid := pids[pidsLen-1-idx]
+		p, err := os.FindProcess(pid)
+		if err != nil {
+			fmt.Println("find process:", err)
+			continue
+		}
 		syscall.Kill(pid, 9)
+		p.Wait()
 	}
 }
