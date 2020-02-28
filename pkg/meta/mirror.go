@@ -133,7 +133,7 @@ func (l *httpMirror) Fetch(resource string) (path string, err error) {
 	// refresh CDN forcely if the resource is start with `tiup`
 	nano := time.Now().UnixNano()
 	url := strings.TrimSuffix(l.server, "/") + "/" + resource
-	if strings.HasSuffix(resource, "tiup") {
+	if strings.HasPrefix(resource, "tiup") {
 		url = fmt.Sprintf("%s?v=%d", url, nano)
 	}
 	tmp := filepath.Join(l.tmpDir, strconv.Itoa(int(nano)))
