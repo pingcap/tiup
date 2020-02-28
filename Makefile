@@ -59,5 +59,6 @@ package: playground
     mv tiup* package/ ; \
     mv components/playground/playground* package/ ; \
     cp mirror/*.index package/
+	cp install.sh package/
 
 .PHONY: cmd package
