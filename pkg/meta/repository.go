@@ -25,10 +25,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/c4pt0r/tiup/pkg/profile"
 	"github.com/c4pt0r/tiup/pkg/utils"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/failpoint"
 )
 
 const (
@@ -45,8 +43,24 @@ func NewRepository(mirror Mirror) *Repository {
 	return &Repository{mirror: mirror}
 }
 
-// Components returns the component manifest fetched from repository
-func (r *Repository) Components() (*ComponentManifest, error) {
+// Mirror returns the mirror which is used by repository
+func (r *Repository) Mirror() Mirror {
+	return r.mirror
+}
+
+// ReplaceMirror replaces the mirror
+func (r *Repository) ReplaceMirror(mirror Mirror) error {
+	err := r.mirror.Close()
+	if err != nil {
+		return err
+	}
+
+	r.mirror = mirror
+	return r.mirror.Open()
+}
+
+// Manifest returns the component manifest fetched from repository
+func (r *Repository) Manifest() (*ComponentManifest, error) {
 	local, err := r.mirror.Fetch(manifestFile)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -89,7 +103,7 @@ func (r *Repository) ComponentVersions(component string) (*VersionManifest, erro
 }
 
 // Download downloads a component with specific version from repository
-func (r *Repository) Download(component string, version Version) error {
+func (r *Repository) Download(compsDir, component string, version Version) error {
 	if !version.IsValid() {
 		return errors.Errorf("invalid version `%s`", version)
 	}
@@ -125,17 +139,7 @@ func (r *Repository) Download(component string, version Version) error {
 		return errors.Errorf("checksum mismatch, expect: %v, got: %v", string(sha1Content), checksum)
 	}
 
-	// decompress to target path
-	compsDir, err := profile.Path("components")
-	failpoint.Inject("MockProfileDir", func(val failpoint.Value) {
-		err = nil
-		compsDir = val.(string)
-	})
-	if err != nil {
-		return errors.Trace(err)
-	}
 	targetDir := filepath.Join(compsDir, component, version.String())
-
 	if err := utils.CreateDir(targetDir); err != nil {
 		return errors.Trace(err)
 	}

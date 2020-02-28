@@ -25,7 +25,6 @@ func newVersionCmd() *cobra.Command {
 		Short: "Show tiup version and quit",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(version.NewTiUPVersion())
-			fmt.Println(version.NewTiUPBuildInfo())
 		},
 	}
 	return cmdVersion

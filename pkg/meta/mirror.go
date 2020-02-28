@@ -109,7 +109,7 @@ L:
 	for {
 		select {
 		case <-t.C:
-			fmt.Printf("\033[1A Download %s Progress %s / %s bytes (%.2f%%)\033[K\n",
+			fmt.Printf("\033[1ADownload %s Progress %s / %s bytes (%.2f%%)\033[K\n",
 				req.URL(),
 				bytefmt.ByteSize(uint64(resp.BytesComplete())),
 				bytefmt.ByteSize(uint64(resp.Size)),
