@@ -29,7 +29,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-var defaultMirror = "http://tidb.tnthub.com:81/mirror/"
+var defaultMirror = "https://tiup-mirrors.pingcap.com/"
 
 func newComponentCmd() *cobra.Command {
 	cmd := &cobra.Command{

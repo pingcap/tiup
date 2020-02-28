@@ -44,4 +44,20 @@ failpoint-disable: tools/bin/failpoint-ctl
 tools/bin/failpoint-ctl: go.mod
 	$(GO) build -o $@ github.com/pingcap/failpoint/failpoint-ctl
 
-.PHONY: cmd
+playground:
+	make -C components/playground package
+
+package: playground
+	mkdir -p package ; \
+	GOOS=darwin $(GO) build ; \
+    tar -czf tiup-darwin-amd64.tar.gz tiup ; \
+    shasum tiup-darwin-amd64.tar.gz | awk '{print $1}' > tiup-darwin-amd64.sha1 ; \
+    GOOS=linux $(GO) build ; \
+    tar -czf tiup-linux-amd64.tar.gz tiup ; \
+    shasum tiup-linux-amd64.tar.gz | awk '{print $1}' > tiup-linux-amd64.sha1 ; \
+    rm tiup ; \
+    mv tiup* package/ ; \
+    mv components/playground/playground* package/ ; \
+    cp mirror/*.index package/
+
+.PHONY: cmd package
