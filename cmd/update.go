@@ -21,22 +21,24 @@ import (
 func newUpdateCmd() *cobra.Command {
 	var all bool
 	var nightly bool
+	var force bool
 	cmd := &cobra.Command{
 		Use:   "update [component1] [component2..N]",
 		Short: "Update tiup components to the latest version",
 		RunE: func(cmd *cobra.Command, components []string) error {
-			if (len(components) == 0 && !all) || (len(components) > 0 && all) {
+			if (len(components) == 0 && !all && !force) || (len(components) > 0 && all) {
 				return cmd.Help()
 			}
-			return updateComponents(components, nightly)
+			return updateComponents(components, nightly, force)
 		},
 	}
 	cmd.Flags().BoolVar(&all, "all", false, "Update all components")
 	cmd.Flags().BoolVar(&nightly, "nightly", false, "Update the components to nightly version")
+	cmd.Flags().BoolVar(&force, "force", false, "Force update a component to the latest version")
 	return cmd
 }
 
-func updateComponents(components []string, nightly bool) error {
+func updateComponents(components []string, nightly, force bool) error {
 	if len(components) == 0 {
 		installed, err := profile.InstalledComponents()
 		if err != nil {
@@ -59,16 +61,20 @@ func updateComponents(components []string, nightly bool) error {
 		if err != nil {
 			return err
 		}
-		var found bool
-		for _, v := range versions {
-			if meta.Version(v) == latestVer {
-				found = true
-				break
+
+		if !force {
+			var found bool
+			for _, v := range versions {
+				if meta.Version(v) == latestVer {
+					found = true
+					break
+				}
+			}
+			if found {
+				continue
 			}
 		}
-		if found {
-			continue
-		}
+
 		err = repository.DownloadComponent(profile.ComponentsDir(), component, latestVer)
 		if err != nil {
 			return err

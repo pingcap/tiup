@@ -130,7 +130,7 @@ func getServerBinPath(component, version string) (string, error) {
 		return "", err
 	} else if _, err := os.Stat(binPath); os.IsNotExist(err) {
 		// download the target version
-		if err := repository.Download(profile.ComponentsDir(), component, meta.Version(version)); err != nil {
+		if err := repository.DownloadComponent(profile.ComponentsDir(), component, meta.Version(version)); err != nil {
 			return "", errors.Trace(err)
 		} else {
 			return binPath, nil
