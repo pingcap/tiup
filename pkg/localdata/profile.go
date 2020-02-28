@@ -178,21 +178,21 @@ func (p *Profile) InstalledVersions(component string) ([]string, error) {
 }
 
 // BinaryPath returns the binary path of component specific version
-func (p *Profile) BinaryPath(component, version string) (string, error) {
+func (p *Profile) BinaryPath(component string, version meta.Version) (string, error) {
 	manifest := p.Versions(component)
 	if manifest == nil {
 		return "", errors.Errorf("component `%s` doesn't install", component)
 	}
 	var entry string
 	for _, v := range manifest.Versions {
-		if v.Version == meta.Version(version) {
+		if v.Version == version {
 			entry = v.Entry
 		}
 	}
 	if entry == "" {
 		return "", errors.Errorf("cannot found entry for %s:%s", component, version)
 	}
-	return filepath.Join(p.root, ComponentParentDir, component, version, entry), nil
+	return filepath.Join(p.root, ComponentParentDir, component, version.String(), entry), nil
 }
 
 // ComponentsDir returns the absolute path of components directory

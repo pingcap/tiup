@@ -15,6 +15,7 @@ package meta
 
 import (
 	"sort"
+	"strings"
 
 	"golang.org/x/mod/semver"
 )
@@ -45,6 +46,12 @@ func (v Version) IsValid() bool {
 	return v != "" && semver.IsValid(string(v))
 }
 
+// IsEmpty returns true if the `Version` is a empty string
+func (v Version) IsEmpty() bool {
+	return v == ""
+}
+
+// String implements the fmt.Stringer interface
 func (v Version) String() string {
 	return string(v)
 }
@@ -75,4 +82,13 @@ func (manifest *VersionManifest) LatestNightly() Version {
 		}
 	}
 	return ""
+}
+
+// ParseComponent parses component part from <component>[:version] specification
+func ParseCompVersion(spec string) (string, Version) {
+	if strings.Contains(spec, ":") {
+		parts := strings.SplitN(spec, ":", 2)
+		return parts[0], Version(parts[1])
+	}
+	return spec, ""
 }

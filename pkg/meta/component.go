@@ -13,6 +13,8 @@
 
 package meta
 
+import "strings"
+
 type (
 	// ComponentInfo represents the information of component
 	ComponentInfo struct {
@@ -29,3 +31,13 @@ type (
 		Components  []ComponentInfo `json:"components"`
 	}
 )
+
+// HasComponent checks whether the manifest contains the specific component
+func (m *ComponentManifest) HasComponent(component string) bool {
+	for _, c := range m.Components {
+		if strings.ToLower(c.Name) == strings.ToLower(component) {
+			return true
+		}
+	}
+	return false
+}

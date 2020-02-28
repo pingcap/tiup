@@ -35,11 +35,6 @@ const (
 )
 
 func newRunCmd() *cobra.Command {
-	var (
-		version   string
-		component string
-	)
-
 	cmdLaunch := &cobra.Command{
 		Use:   "run <component1>:[version]",
 		Short: "Run a component of specific version",
@@ -49,20 +44,14 @@ There are 3 types of component in "tidb-core":
   storage:  Storage nodes, the TiKV server
   compute:  SQL layer and compute nodes, the TiDB server`,
 		Example: "tiup run playground",
-		Args: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return cmd.Help()
 			}
-			ss := strings.Split(args[0], ":")
-			component = ss[0]
-			if len(ss) > 1 {
-				version = ss[1]
-			}
-			return nil
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Printf("Launching process of %s %s\n", component, version)
-			p, err := launchComponentProcess(component, version, args[1:])
+
+			component := args[0]
+			fmt.Printf("Launching process of %s\n", component)
+			p, err := launchComponentProcess(component, args[1:])
 			if err != nil {
 				if p != nil && p.Pid != 0 {
 					fmt.Printf("Error occured, but the process may be already started with PID %d\n", p.Pid)
@@ -70,7 +59,7 @@ There are 3 types of component in "tidb-core":
 				return err
 			}
 			fmt.Printf("Started %s %s...\n", p.Exec, strings.Join(p.Args, " "))
-			fmt.Printf("Process %d started for %s %s\n", p.Pid, component, version)
+			fmt.Printf("Process %d started for %s\n", p.Pid, component)
 			return nil
 		},
 	}
@@ -78,7 +67,8 @@ There are 3 types of component in "tidb-core":
 	return cmdLaunch
 }
 
-func launchComponentProcess(component, version string, args []string) (*compProcess, error) {
+func launchComponentProcess(spec string, args []string) (*compProcess, error) {
+	component, version := meta.ParseCompVersion(spec)
 	binPath, err := getServerBinPath(component, version)
 	if err != nil {
 		return nil, err
@@ -100,43 +90,56 @@ func launchComponentProcess(component, version string, args []string) (*compProc
 	return p, saveProcessToList(p)
 }
 
-func getServerBinPath(component, version string) (string, error) {
+func getServerBinPath(component string, version meta.Version) (string, error) {
+	versions, err := profile.InstalledVersions(component)
+	if err != nil {
+		return "", err
+	}
+
 	// Use the latest version if user doesn't specify a specific version and
 	// download the latest version if the specific component doesn't be installed
-	if version == "" {
-		versions, err := profile.InstalledVersions(component)
-		if err != nil {
-			return "", err
+
+	// Check whether the specific version exist in local
+	if version.IsEmpty() && len(versions) > 0 {
+		sort.Slice(versions, func(i, j int) bool {
+			return semver.Compare(versions[i], versions[j]) < 0
+		})
+		version = meta.Version(versions[len(versions)-1])
+	}
+
+	needDownload := false
+	if !version.IsEmpty() {
+		installed := false
+		for _, v := range versions {
+			if meta.Version(v) == version {
+				installed = true
+				break
+			}
 		}
-		if len(versions) > 0 {
-			sort.Slice(versions, func(i, j int) bool {
-				return semver.Compare(versions[i], versions[j]) < 0
-			})
-			version = versions[len(versions)-1]
-		} else {
-			manifest, err := repository.ComponentVersions(component)
-			if err != nil {
-				return "", errors.Trace(err)
-			}
-			err = profile.SaveVersions(component, manifest)
-			if err != nil {
-				return "", errors.Trace(err)
-			}
-			version = manifest.LatestStable().String()
+		needDownload = !installed
+	}
+
+	if needDownload {
+		manifest, err := repository.ComponentVersions(component)
+		if err != nil {
+			return "", errors.Trace(err)
+		}
+		err = profile.SaveVersions(component, manifest)
+		if err != nil {
+			return "", errors.Trace(err)
+		}
+		if version.IsEmpty() {
+			version = manifest.LatestStable()
+		}
+		compDir := profile.ComponentsDir()
+		spec := fmt.Sprintf("%s:%s", component, version)
+		err = repository.DownloadComponent(compDir, spec, false)
+		if err != nil {
+			return "", errors.Trace(err)
 		}
 	}
 
-	if binPath, err := profile.BinaryPath(component, version); err != nil {
-		return "", err
-	} else if _, err := os.Stat(binPath); os.IsNotExist(err) {
-		// download the target version
-		if err := repository.DownloadComponent(profile.ComponentsDir(), component, meta.Version(version)); err != nil {
-			return "", errors.Trace(err)
-		}
-		return binPath, nil
-	} else {
-		return binPath, nil
-	}
+	return profile.BinaryPath(component, version)
 }
 
 type compProcess struct {

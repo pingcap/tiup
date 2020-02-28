@@ -177,33 +177,19 @@ func newAddCmd() *cobra.Command {
 
 func installComponents(specs []string) error {
 	for _, spec := range specs {
-		var version meta.Version
-		var component string
-		if strings.Contains(spec, ":") {
-			parts := strings.SplitN(spec, ":", 2)
-			component = parts[0]
-			version = meta.Version(parts[1])
-		} else {
-			component = spec
+		compDir := profile.ComponentsDir()
+		err := repository.DownloadComponent(compDir, spec, false)
+		if err != nil {
+			return errors.Trace(err)
 		}
+		component, _ := meta.ParseCompVersion(spec)
 		manifest, err := repository.ComponentVersions(component)
 		if err != nil {
 			return err
 		}
-
 		err = profile.SaveVersions(component, manifest)
 		if err != nil {
 			return err
-		}
-
-		if version == "" {
-			version = manifest.LatestStable()
-		}
-
-		// download the latest version
-		err = repository.DownloadComponent(profile.ComponentsDir(), component, version)
-		if err != nil {
-			return errors.Trace(err)
 		}
 	}
 	return nil
@@ -260,23 +246,29 @@ func newBinaryCmd() *cobra.Command {
 			if len(args) == 0 {
 				return cmd.Help()
 			}
-			var component, version string
-			if strings.Contains(args[0], ":") {
-				parts := strings.SplitN(args[0], ":", 2)
-				component, version = parts[0], parts[1]
-			} else {
-				component = args[0]
-				installed, err := profile.InstalledVersions(component)
-				if err != nil {
-					return err
-				}
-				if len(installed) < 1 {
-					return errors.Errorf("component `%s` not installed", args[0])
-				}
+			component, version := meta.ParseCompVersion(args[0])
+			installed, err := profile.InstalledVersions(component)
+			if err != nil {
+				return err
+			}
+			if len(installed) < 1 {
+				return errors.Errorf("component `%s` not installed", args[0])
+			}
+			if version.IsEmpty() {
 				sort.Slice(installed, func(i, j int) bool {
 					return semver.Compare(installed[i], installed[j]) < 0
 				})
-				version = installed[len(installed)-1]
+				version = meta.Version(installed[len(installed)-1])
+			}
+			found := false
+			for _, v := range installed {
+				if meta.Version(v) == version {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return errors.Errorf("component `%s` not installed", args[0])
 			}
 			binaryPath, err := profile.BinaryPath(component, version)
 			if err != nil {

@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"github.com/c4pt0r/tiup/pkg/meta"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -46,26 +47,42 @@ func updateComponents(components []string, nightly, force bool) error {
 		}
 		components = installed
 	}
-	for _, component := range components {
+
+	compDir := profile.ComponentsDir()
+	manifest, err := repository.Manifest()
+	if err != nil {
+		return err
+	}
+	for _, comp := range components {
+		component, version := meta.ParseCompVersion(comp)
+		if !manifest.HasComponent(component) {
+			return errors.Errorf("component `%s` not found", component)
+		}
 		manifest, err := repository.ComponentVersions(component)
 		if err != nil {
 			return err
 		}
-		var latestVer meta.Version
-		if nightly {
-			latestVer = manifest.LatestNightly()
-		} else {
-			latestVer = manifest.LatestStable()
-		}
-		versions, err := profile.InstalledVersions(component)
+		err = profile.SaveVersions(component, manifest)
 		if err != nil {
 			return err
 		}
 
+		// Ignore if the version has been installed
 		if !force {
+			versions, err := profile.InstalledVersions(component)
+			if err != nil {
+				return err
+			}
+			if version.IsEmpty() {
+				if nightly {
+					version = manifest.LatestNightly()
+				} else {
+					version = manifest.LatestStable()
+				}
+			}
 			var found bool
 			for _, v := range versions {
-				if meta.Version(v) == latestVer {
+				if meta.Version(v) == version {
 					found = true
 					break
 				}
@@ -74,8 +91,7 @@ func updateComponents(components []string, nightly, force bool) error {
 				continue
 			}
 		}
-
-		err = repository.DownloadComponent(profile.ComponentsDir(), component, latestVer)
+		err = repository.DownloadComponent(compDir, comp, nightly)
 		if err != nil {
 			return err
 		}
