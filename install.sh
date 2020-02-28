@@ -28,4 +28,4 @@ source ${HOME}/.bash_profile
 
 echo "tiup is installed in ${TIUP_HOME}/bin/tiup"
 echo "we have modify ${PROFILE} to add tiup to PATH"
-echo "you can open a new terminal or source ${PROFILE} to use it"
+echo "you can open a new terminal or \033[1msource ${PROFILE}\033[0m to use it"
