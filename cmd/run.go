@@ -35,7 +35,7 @@ const (
 )
 
 func newRunCmd() *cobra.Command {
-	cmdLaunch := &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "run <component1>:[version]",
 		Short: "Run a component of specific version",
 		Long: `Launch a TiDB component process of specific version.
@@ -43,7 +43,8 @@ There are 3 types of component in "tidb-core":
   meta:     Metadata nodes of the cluster, the PD server
   storage:  Storage nodes, the TiKV server
   compute:  SQL layer and compute nodes, the TiDB server`,
-		Example: "tiup run playground",
+		Example:            "tiup run playground",
+		DisableFlagParsing: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return cmd.Help()
@@ -63,8 +64,7 @@ There are 3 types of component in "tidb-core":
 			return nil
 		},
 	}
-
-	return cmdLaunch
+	return cmd
 }
 
 func launchComponentProcess(spec string, args []string) (*compProcess, error) {
