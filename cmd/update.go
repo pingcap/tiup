@@ -69,7 +69,7 @@ func updateComponents(components []string, nightly bool) error {
 		if found {
 			continue
 		}
-		err = repository.Download(profile.ComponentsDir(), component, latestVer)
+		err = repository.DownloadComponent(profile.ComponentsDir(), component, latestVer)
 		if err != nil {
 			return err
 		}

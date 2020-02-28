@@ -14,7 +14,6 @@
 package cmd
 
 import (
-	"errors"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -33,7 +32,7 @@ func newSelfCmd() *cobra.Command {
 			Use:   "update",
 			Short: "Update tiup to the latest version",
 			RunE: func(cmd *cobra.Command, args []string) error {
-				return errors.New("not supported")
+				return repository.DownloadFile(profile.Path("bin"), "tiup")
 			},
 		},
 		&cobra.Command{

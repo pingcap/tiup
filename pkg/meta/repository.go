@@ -102,12 +102,19 @@ func (r *Repository) ComponentVersions(component string) (*VersionManifest, erro
 	return &vers, nil
 }
 
-// Download downloads a component with specific version from repository
-func (r *Repository) Download(compsDir, component string, version Version) error {
+// DownloadComponent downloads a component with specific version from repository
+func (r *Repository) DownloadComponent(compsDir, component string, version Version) error {
 	if !version.IsValid() {
 		return errors.Errorf("invalid version `%s`", version)
 	}
-	resName := fmt.Sprintf("%s-%s-%s-%s", component, version, runtime.GOOS, runtime.GOARCH)
+	resName := fmt.Sprintf("%s-%s", component, version)
+	targetDir := filepath.Join(compsDir, component, version.String())
+	return r.DownloadFile(targetDir, resName)
+}
+
+// DownloadFile downloads a file from repository
+func (r Repository) DownloadFile(targetDir, resName string) error {
+	resName = fmt.Sprintf("%s-%s-%s", resName, runtime.GOOS, runtime.GOARCH)
 	localPath, err := r.mirror.Fetch(resName + ".tar.gz")
 	if err != nil {
 		return errors.Trace(err)
@@ -139,7 +146,6 @@ func (r *Repository) Download(compsDir, component string, version Version) error
 		return errors.Errorf("checksum mismatch, expect: %v, got: %v", string(sha1Content), checksum)
 	}
 
-	targetDir := filepath.Join(compsDir, component, version.String())
 	if err := utils.CreateDir(targetDir); err != nil {
 		return errors.Trace(err)
 	}

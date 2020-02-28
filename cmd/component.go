@@ -201,7 +201,7 @@ func installComponents(specs []string) error {
 		}
 
 		// download the latest version
-		err = repository.Download(profile.ComponentsDir(), component, version)
+		err = repository.DownloadComponent(profile.ComponentsDir(), component, version)
 		if err != nil {
 			return errors.Trace(err)
 		}
