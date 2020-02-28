@@ -15,13 +15,15 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/c4pt0r/tiup/pkg/tui"
-	"github.com/c4pt0r/tiup/pkg/utils"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/c4pt0r/tiup/pkg/meta"
+	"github.com/c4pt0r/tiup/pkg/tui"
+	"github.com/c4pt0r/tiup/pkg/utils"
 
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
@@ -123,7 +125,19 @@ func getServerBinPath(component, version string) (string, error) {
 			version = manifest.LatestStable().String()
 		}
 	}
-	return profile.BinaryPath(component, version)
+
+	if binPath, err := profile.BinaryPath(component, version); err != nil {
+		return "", err
+	} else if _, err := os.Stat(binPath); os.IsNotExist(err) {
+		// download the target version
+		if err := repository.Download(profile.ComponentsDir(), component, meta.Version(version)); err != nil {
+			return "", errors.Trace(err)
+		} else {
+			return binPath, nil
+		}
+	} else {
+		return binPath, nil
+	}
 }
 
 type compProcess struct {

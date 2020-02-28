@@ -17,7 +17,7 @@ import (
 
 func check(component string) {
 	if _, err := os.Stat(path.Join(os.Getenv("TIUP_HOME"), "components", component)); err != nil {
-		if err := exec.Command("tiup", "add", component).Run(); err != nil {
+		if err := exec.Command("tiup", "component", "add", component).Run(); err != nil {
 			panic("add " + component + " failed")
 		}
 	}
