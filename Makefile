@@ -49,10 +49,10 @@ playground:
 
 package: playground
 	mkdir -p package ; \
-	GOOS=darwin $(GO) build ; \
+	GOOS=darwin GOARCH=amd64 go build ; \
     tar -czf tiup-darwin-amd64.tar.gz tiup ; \
     shasum tiup-darwin-amd64.tar.gz | awk '{print $$1}' > tiup-darwin-amd64.sha1 ; \
-    GOOS=linux $(GO) build ; \
+    GOOS=linux GOARCH=amd64 go build ; \
     tar -czf tiup-linux-amd64.tar.gz tiup ; \
     shasum tiup-linux-amd64.tar.gz | awk '{print $$1}' > tiup-linux-amd64.sha1 ; \
     rm tiup ; \
