@@ -1,31 +1,55 @@
-#! /bin/sh
+#!/bin/sh
 
 repo='https://tiup-mirrors.pingcap.com'
-os=$(uname | tr '[:upper:]' '[:lower:]')
+case $(uname -s) in
+    Linux|linux) os=linux ;;
+    Darwin|darwin) os=darwin ;;
+    *) os= ;;
+esac
 
-TIUP_HOME=${HOME}/.tiup
-mkdir -p ${TIUP_HOME}/bin/
-curl ${repo}/tiup-${os}-amd64.tar.gz | tar x -C ${TIUP_HOME}/bin/
-
-chmod 755 ${TIUP_HOME}/bin/tiup
-
-PROFILE=${HOME}/.profile
-if echo "$SHELL" | grep -Eq "bash"
-then
-    PROFILE=${HOME}/.bash_profile
-fi
-if echo "$SHELL" | grep -Eq "zsh"
-then
-    PROFILE=${HOME}/.zshrc
+if [ -z "$os" ]; then
+    echo "OS $(uname -s) not supported." >&2
+    exit 1
 fi
 
-cat >> ${PROFILE} << EOF
+case $(uname -m) in
+    amd64|x86_64) arch=amd64 ;;
+    *) arch= ;;
+esac
 
-export PATH=${TIUP_HOME}/bin:\${PATH}
-EOF
+if [ -z "$arch" ]; then
+    echo "Architecture  $(uname -m) not supported." >&2
+    exit 1
+fi
 
-source ${HOME}/.bash_profile
+if [ -z "$TIUP_HOME" ]; then
+    TIUP_HOME=$HOME/.tiup
+fi
+bin_dir=$TIUP_HOME/bin
+mkdir -p "$bin_dir"
+if ! curl "$repo/tiup-$os-$arch.tar.gz" | tar -zx -C "$bin_dir"; then
+    echo "Failed to download and/or extract tiup archive."
+    exit 1
+fi
 
-echo "tiup is installed in ${TIUP_HOME}/bin/tiup"
-echo "we have modify ${PROFILE} to add tiup to PATH"
-echo "you can open a new terminal or \033[1msource ${PROFILE}\033[0m to use it"
+chmod 755 "$bin_dir/tiup"
+
+echo "$SHELL"
+case $SHELL in
+    *bash*) PROFILE=$HOME/.bash_profile;;
+     *zsh*) PROFILE=$HOME/.zshrc;;
+         *) PROFILE=$HOME/.profile;;
+esac
+
+bold=$(tput bold 2>/dev/null)
+sgr0=$(tput sgr0 2>/dev/null)
+
+case :$PATH: in
+    *:$bin_dir:*) : "PATH already contains $bin_dir" ;;
+    *) printf 'export PATH=%s:$PATH\n' "$bin_dir" >> "$PROFILE"
+        echo "$PROFILE has been modified to to add tiup to PATH"
+        echo "open a new terminal or ${bold}source ${PROFILE}${sgr0} to use it"
+        ;;
+esac
+
+echo "tiup is installed in $bin_dir/tiup"
