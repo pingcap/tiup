@@ -27,7 +27,15 @@ if [ -z "$TIUP_HOME" ]; then
 fi
 bin_dir=$TIUP_HOME/bin
 mkdir -p "$bin_dir"
-if ! curl "$repo/tiup-$os-$arch.tar.gz" | tar -zx -C "$bin_dir"; then
+
+function install_binary() {
+    curl "$repo/tiup-$os-$arch.tar.gz" -o "/tmp/tiup-$os-$arch.tar.gz" || return 1
+    tar -zxf "/tmp/tiup-$os-$arch.tar.gz" -C "$bin_dir" || return 1
+    rm "/tmp/tiup-$os-$arch.tar.gz"
+    return 0
+}
+
+if ! install_binary; then
     echo "Failed to download and/or extract tiup archive."
     exit 1
 fi
