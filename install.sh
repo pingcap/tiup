@@ -28,7 +28,7 @@ fi
 bin_dir=$TIUP_HOME/bin
 mkdir -p "$bin_dir"
 
-function install_binary() {
+install_binary() {
     curl "$repo/tiup-$os-$arch.tar.gz" -o "/tmp/tiup-$os-$arch.tar.gz" || return 1
     tar -zxf "/tmp/tiup-$os-$arch.tar.gz" -C "$bin_dir" || return 1
     rm "/tmp/tiup-$os-$arch.tar.gz"
@@ -42,15 +42,17 @@ fi
 
 chmod 755 "$bin_dir/tiup"
 
-echo "$SHELL"
+bold=$(tput bold 2>/dev/null)
+sgr0=$(tput sgr0 2>/dev/null)
+
+echo "Detected shell: ${bold}$SHELL${sgr0}"
 case $SHELL in
     *bash*) PROFILE=$HOME/.bash_profile;;
      *zsh*) PROFILE=$HOME/.zshrc;;
          *) PROFILE=$HOME/.profile;;
 esac
 
-bold=$(tput bold 2>/dev/null)
-sgr0=$(tput sgr0 2>/dev/null)
+echo "Shell profile:  ${bold}$PROFILE${sgr0}"
 
 case :$PATH: in
     *:$bin_dir:*) : "PATH already contains $bin_dir" ;;
@@ -60,4 +62,7 @@ case :$PATH: in
         ;;
 esac
 
-echo "tiup is installed in $bin_dir/tiup"
+echo "Installed path: ${bold}$bin_dir/tiup${sgr0}"
+echo "==============================================="
+echo "Have a try:     ${bold}tiup run playground${sgr0}"
+echo "==============================================="
