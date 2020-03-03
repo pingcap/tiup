@@ -22,9 +22,9 @@ import (
 	"strings"
 	"time"
 
-	"code.cloudfoundry.org/bytefmt"
 	"github.com/c4pt0r/tiup/pkg/utils"
 	"github.com/cavaliercoder/grab"
+	"github.com/cheggaaa/pb"
 	"github.com/pingcap/errors"
 )
 
@@ -102,20 +102,26 @@ func (l *httpMirror) download(url string, to string) (string, error) {
 	resp := client.Do(req)
 
 	// start progress output loop
-	t := time.NewTicker(200 * time.Millisecond)
+	t := time.NewTicker(time.Millisecond)
 	defer t.Stop()
 
+	var bar *pb.ProgressBar
+	if strings.HasSuffix(url, ".tar.gz") {
+		fmt.Printf("download %s:\n", url)
+		bar = pb.StartNew(int(resp.Size))
+	}
 L:
 	for {
 		select {
 		case <-t.C:
-			fmt.Printf("\033[1ADownload %s Progress %s / %s bytes (%.2f%%)\033[K\n",
-				req.URL(),
-				bytefmt.ByteSize(uint64(resp.BytesComplete())),
-				bytefmt.ByteSize(uint64(resp.Size)),
-				100*resp.Progress())
-
+			if bar != nil {
+				bar.SetCurrent(resp.BytesComplete())
+			}
 		case <-resp.Done:
+			if bar != nil {
+				bar.SetCurrent(bar.Total())
+				bar.Finish()
+			}
 			break L
 		}
 	}
