@@ -16,11 +16,11 @@ import (
 
 func check(component string) {
 	if _, err := os.Stat(path.Join(os.Getenv("TIUP_HOME"), "components", component)); err != nil {
-		c := exec.Command("tiup", "component", "add", component)
+		c := exec.Command("tiup", "install", component)
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
 		if err := c.Run(); err != nil {
-			panic("add " + component + " failed")
+			panic("install " + component + " failed")
 		}
 	}
 }
