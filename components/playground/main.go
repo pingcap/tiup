@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/c4pt0r/tiup/components/playground/instance"
@@ -69,8 +70,7 @@ func main() {
 			}
 
 			fmt.Println("bootstraping...")
-			dsn := fmt.Sprintf("root:@tcp(%s)/", dbs[0].Addr())
-			bootstrap(dsn)
+			bootstrap(dbs[0].Addr())
 
 			for _, inst := range insts {
 				inst.Wait()
@@ -102,12 +102,14 @@ func tryConnect(dsn string) error {
 	return nil
 }
 
-func bootstrap(dsn string) {
+func bootstrap(addr string) {
+	dsn := fmt.Sprintf("root:@tcp(%s)/", addr)
 	for i := 0; i < 60; i++ {
 		if err := tryConnect(dsn); err != nil {
 			time.Sleep(time.Second)
 		} else {
-			fmt.Println("now you can connect tidb with dsn:", dsn)
+			ss := strings.Split(addr, ":")
+			fmt.Printf("now you can connect tidb with mysql --host %s --port %s -u root\n", ss[0], ss[1])
 			break
 		}
 	}
