@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/c4pt0r/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )

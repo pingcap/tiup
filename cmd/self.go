@@ -37,7 +37,7 @@ func newSelfCmd() *cobra.Command {
 		},
 		&cobra.Command{
 			Use:   "uninstall",
-			Short: "Uninstall tiup and clean all data",
+			Short: "Uninstall tiup and clean all downloaded data",
 			RunE: func(cmd *cobra.Command, args []string) error {
 				return os.RemoveAll(profile.Root())
 			},
