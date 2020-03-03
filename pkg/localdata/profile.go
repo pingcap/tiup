@@ -184,9 +184,13 @@ func (p *Profile) BinaryPath(component string, version meta.Version) (string, er
 		return "", errors.Errorf("component `%s` doesn't install", component)
 	}
 	var entry string
-	for _, v := range manifest.Versions {
-		if v.Version == version {
-			entry = v.Entry
+	if version.IsNightly() && manifest.Nightly != nil {
+		entry = manifest.Nightly.Entry
+	} else {
+		for _, v := range manifest.Versions {
+			if v.Version == version {
+				entry = v.Entry
+			}
 		}
 	}
 	if entry == "" {

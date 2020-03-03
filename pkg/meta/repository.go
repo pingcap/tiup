@@ -104,20 +104,20 @@ func (r *Repository) ComponentVersions(component string) (*VersionManifest, erro
 
 // DownloadComponent downloads a component with specific version from repository
 // support `<component>[:version]` format
-func (r *Repository) DownloadComponent(compsDir, spec string, nightly bool) error {
+func (r *Repository) DownloadComponent(compsDir, spec string) error {
 	component, version := ParseCompVersion(spec)
+	versions, err := r.ComponentVersions(component)
+	if err != nil {
+		return err
+	}
 	if version.IsEmpty() {
-		versions, err := r.ComponentVersions(component)
-		if err != nil {
-			return err
-		}
-		if nightly {
-			version = versions.LatestNightly()
-		} else {
-			version = versions.LatestStable()
+		version = versions.LatestVersion()
+	} else if !version.IsNightly() {
+		if !versions.ContainsVersion(version) {
+			return fmt.Errorf("component `%s` doesn't release the version `%s`", component, version)
 		}
 	}
-	if !version.IsValid() {
+	if !version.IsNightly() && !version.IsValid() {
 		return errors.Errorf("invalid version `%s`", version)
 	}
 	resName := fmt.Sprintf("%s-%s", component, version)

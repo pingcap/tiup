@@ -26,7 +26,7 @@ func newUpdateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update [component1]:[version] [component2..N]",
 		Short: "Update tiup components to the latest version",
-		Long:  `Update some components to the latest version, you must use --nightly
+		Long: `Update some components to the latest version, you must use --nightly
 explicitly to update to the latest nightly version. You can use --all
 to update all components installed locally. And you can specify a version
 like <component>:<version> to update to the specified version. Some components
@@ -82,18 +82,18 @@ func updateComponents(components []string, nightly, force bool) error {
 			return err
 		}
 
+		if nightly {
+			version = meta.NightlyVersion
+		}
+
 		// Ignore if the version has been installed
-		if !force {
+		if !nightly && !force {
 			versions, err := profile.InstalledVersions(component)
 			if err != nil {
 				return err
 			}
 			if version.IsEmpty() {
-				if nightly {
-					version = manifest.LatestNightly()
-				} else {
-					version = manifest.LatestStable()
-				}
+				version = manifest.LatestVersion()
 			}
 			var found bool
 			for _, v := range versions {
@@ -106,7 +106,7 @@ func updateComponents(components []string, nightly, force bool) error {
 				continue
 			}
 		}
-		err = repository.DownloadComponent(compDir, comp, nightly)
+		err = repository.DownloadComponent(compDir, comp)
 		if err != nil {
 			return err
 		}

@@ -31,7 +31,7 @@ func newListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list [component]",
 		Short: "List the available TiDB components or versions",
-		Long:`List the available TiDB components if you don't specify any component name.
+		Long: `List the available TiDB components if you don't specify any component name.
 Or list the available versions of specific component. Display a list of
 local caches by default. You must use --refresh to force the tiup to fetch
 the latest list from the mirror server. And you can use --installed flag
@@ -125,7 +125,11 @@ func showComponentVersions(component string, onlyInstalled bool) error {
 	cmpTable = append(cmpTable, []string{"Version", "Installed", "Release:", "Platforms"})
 
 	installed := set.NewStringSet(versions...)
-	for _, ver := range manifest.Versions {
+	released := manifest.Versions
+	if manifest.Nightly != nil {
+		released = append(released, *manifest.Nightly)
+	}
+	for _, ver := range released {
 		version := ver.Version.String()
 		if onlyInstalled && !installed.Exist(version) {
 			continue

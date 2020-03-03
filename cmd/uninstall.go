@@ -26,9 +26,9 @@ import (
 func newUninstallCmd() *cobra.Command {
 	var all bool
 	cmdUnInst := &cobra.Command{
-		Use:     "uninstall <component1>:<version>",
-		Short:   "Uninstall components or versions of a component",
-		Long:    `If you specify a version number, uninstall the specified version of
+		Use:   "uninstall <component1>:<version>",
+		Short: "Uninstall components or versions of a component",
+		Long: `If you specify a version number, uninstall the specified version of
 the component. You must use --all explicitly if you want to remove all
 components or versions which are installed. You can uninstall multiple
 component or multiple version of a component at once`,
