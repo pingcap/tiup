@@ -24,8 +24,23 @@ func newUpdateCmd() *cobra.Command {
 	var nightly bool
 	var force bool
 	cmd := &cobra.Command{
-		Use:   "update [component1] [component2..N]",
+		Use:   "update [component1]:[version] [component2..N]",
 		Short: "Update tiup components to the latest version",
+		Long:  `Update some components to the latest version, you must use --nightly
+explicitly to update to the latest nightly version. You can use --all
+to update all components installed locally. And you can specify a version
+like <component>:<version> to update to the specified version. Some components
+will be ignored if the latest version has been installed locally. But you can
+use the flag --force explicitly to overwrite local installation
+
+  # Update all components to the latest stable version
+  tiup update --all
+
+  # Update all components to the latest nightly version
+  tiup update --nightly --all
+
+  # Overwrite the local installation
+  tiup update playground:v0.0.1 --force`,
 		RunE: func(cmd *cobra.Command, components []string) error {
 			if (len(components) == 0 && !all && !force) || (len(components) > 0 && all) {
 				return cmd.Help()

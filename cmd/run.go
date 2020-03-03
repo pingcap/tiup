@@ -25,7 +25,6 @@ import (
 	"github.com/c4pt0r/tiup/pkg/meta"
 	"github.com/c4pt0r/tiup/pkg/tui"
 	"github.com/c4pt0r/tiup/pkg/utils"
-
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
@@ -39,12 +38,14 @@ func newRunCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run <component1>:[version]",
 		Short: "Run a component of specific version",
-		Long: `Launch a TiDB component process of specific version.
-There are 3 types of component in "tidb-core":
-  meta:     Metadata nodes of the cluster, the PD server
-  storage:  Storage nodes, the TiKV server
-  compute:  SQL layer and compute nodes, the TiDB server`,
-		Example:            "tiup run playground",
+		Long: `Run a specific version of a component. If no version number is specified,
+the latest version installed locally will be run. If the specified
+component does not have any version installed locally, the latest stable
+version will be downloaded from the server. You can run the following
+command if you want to have a try.
+
+  # Quick start
+  tiup run playground`,
 		DisableFlagParsing: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fs := flag.NewFlagSet("run", flag.ContinueOnError)
@@ -117,7 +118,7 @@ func getServerBinPath(component string, version meta.Version) (string, error) {
 		version = meta.Version(versions[len(versions)-1])
 	}
 
-	needDownload := false
+	needDownload := version.IsEmpty()
 	if !version.IsEmpty() {
 		installed := false
 		for _, v := range versions {

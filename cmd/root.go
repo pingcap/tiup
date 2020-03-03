@@ -14,7 +14,7 @@
 package cmd
 
 import (
-	"log"
+	"os"
 	"os/user"
 	"path/filepath"
 
@@ -31,25 +31,38 @@ var (
 	repository *meta.Repository
 )
 
+var defaultMirror = "https://tiup-mirrors.pingcap.com/"
+
 func init() {
 	rootCmd = &cobra.Command{
-		Use:   "tiup",
-		Short: "Manifest manager for TiDB",
-		Long: `The tiup utility is a command line tool that can help to download
-and installing TiDB components to the local system.`,
+		Use: "tiup",
+		Long: `The tiup is a component management CLI utility tool that can help
+to download and install the TiDB components to the local system.
+
+In addition, there is a sub-command tiup run <component>:[version]
+to help us start a component quickly. The tiup will download the
+component which doesn't be installed or the specified version is
+missing.
+
+  # Quick start
+  tiup run playground
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
+		SilenceUsage: true,
 	}
 
 	rootCmd.AddCommand(
 		newSelfCmd(),
-		newComponentCmd(),
+		newInstallCmd(),
+		newListCmd(),
+		newUninstallCmd(),
+		newBinaryCmd(),
 		newUpdateCmd(),
 		newRunCmd(),
 		newShowCmd(),
 		newVersionCmd(),
-		newCompletionsCmd(),
 	)
 }
 
@@ -77,6 +90,6 @@ func execute() error {
 // Execute parses the command line argumnts and calls proper functions
 func Execute() {
 	if err := execute(); err != nil {
-		log.Fatal(err)
+		os.Exit(1)
 	}
 }
