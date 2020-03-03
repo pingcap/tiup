@@ -63,12 +63,14 @@ func (inst *TiKVInstance) Start() error {
 	for _, pd := range inst.pds {
 		endpoints = append(endpoints, fmt.Sprintf("http://127.0.0.1:%d", pd.clientPort))
 	}
+	uid := fmt.Sprintf("%s-tikv-%d", os.Getenv("TIUP_INSTANCE"), inst.id)
 	inst.cmd = exec.Command(
-		"tiup", "run", fmt.Sprintf("--name=%s-tikv-%d", os.Getenv("TIUP_INSTANCE"), inst.id), "tikv",
+		"tiup", "run", "--name="+uid, "tikv",
 		fmt.Sprintf("--addr=127.0.0.1:%d", inst.port),
 		fmt.Sprintf("--status-addr=127.0.0.1:%d", inst.status),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--config=%s", configPath),
+		fmt.Sprintf("--log-file=%s.log", uid),
 	)
 	return inst.cmd.Start()
 }
