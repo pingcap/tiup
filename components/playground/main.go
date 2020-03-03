@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path"
-	"syscall"
 	"time"
 
-	"github.com/c4pt0r/tiup/pkg/utils"
+	"github.com/c4pt0r/tiup/components/playground/instance"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/spf13/cobra"
 )
 
 func check(component string) {
@@ -26,103 +25,90 @@ func check(component string) {
 	}
 }
 
-func checkTiDBServer() {
-	if _, err := os.Stat(path.Join(os.Getenv("TIUP_HOME"), "components", "tidb")); err != nil {
-		if err := exec.Command("tiup", "add", "tidb"); err != nil {
-			panic("add tidb failed")
-		}
-	}
-}
-
-func startPDServer() int {
-	pd := exec.Command("tiup", "run", "pd")
-	if err := pd.Start(); err != nil {
-		panic(fmt.Sprintf("start pd server failed: %s", err.Error()))
-	}
-	return pd.Process.Pid
-}
-
-func startTiKVServer() int {
-	tiupHome := os.Getenv("TIUP_HOME")
-	if utils.MustDir(path.Join(tiupHome, "data", "playground")) == "" {
-		panic("create data directory for playground failed")
-	}
-	configPath := path.Join(tiupHome, "data", "playground", "tikv.toml")
-	cf, err := os.Create(configPath)
-	if err != nil {
-		panic(err)
-	}
-	defer cf.Close()
-	if err := writeConfig(cf); err != nil {
-		panic(err)
-	}
-
-	tikv := exec.Command("tiup", "run", "tikv", "--", "--pd=127.0.0.1:2379", fmt.Sprintf("--config=%s", configPath))
-	if err := tikv.Start(); err != nil {
-		panic(fmt.Sprintf("start tikv server failed: %s", err.Error()))
-	}
-
-	return tikv.Process.Pid
-}
-
-func startTiDBServer() int {
-	tidb := exec.Command("tiup", "run", "tidb", "--", "--store=tikv", "--path=127.0.0.1:2379")
-	if err := tidb.Start(); err != nil {
-		panic(fmt.Sprintf("run tidb: %s", err.Error()))
-	}
-	return tidb.Process.Pid
-}
-
 func main() {
-	check("pd")
-	check("tikv")
-	check("tidb")
+	tidbNum := 1
+	tikvNum := 1
+	pdNum := 1
 
-	pids := []int{}
-	pids = append(pids, startPDServer())
-	pids = append(pids, startTiKVServer())
-	pids = append(pids, startTiDBServer())
-
-	var err error
-	fmt.Println("bootstraping...")
-	for i := 0; i < 50; i++ {
-		if err = tryConnect("root:@tcp(127.0.0.1:4000)/"); err != nil {
-			time.Sleep(time.Second * time.Duration(i*3))
-		} else {
-			break
-		}
-	}
-	if err != nil {
-		panic("connect tidb failed")
-	} else {
-		fmt.Println("now you can connect tidb with dns: root:@tcp(127.0.0.1:4000)/")
+	if os.Getenv("TIUP_INSTANCE") == "" {
+		os.Setenv("TIUP_INSTANCE", "default")
 	}
 
-	wait(pids)
+	for _, comp := range []string{"pd", "tikv", "tidb"} {
+		check(comp)
+	}
+
+	rootCmd := &cobra.Command{
+		Use:   "playground",
+		Short: "Bootstrap a TiDB cluster in your local host",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			insts := []instance.Instance{}
+			pds := []*instance.PDInstance{}
+			kvs := []*instance.TiKVInstance{}
+			dbs := []*instance.TiDBInstance{}
+			for i := 0; i < pdNum; i++ {
+				pds = append(pds, instance.NewPDInstance(i))
+				insts = append(insts, pds[i])
+			}
+			for _, pd := range pds {
+				pd.Join(pds)
+			}
+			for i := 0; i < tikvNum; i++ {
+				kvs = append(kvs, instance.NewTiKVInstance(i, pds))
+				insts = append(insts, kvs[i])
+			}
+			for i := 0; i < tidbNum; i++ {
+				dbs = append(dbs, instance.NewTiDBInstance(i, pds))
+				insts = append(insts, dbs[i])
+			}
+
+			for _, inst := range insts {
+				if err := inst.Start(); err != nil {
+					return err
+				}
+			}
+
+			fmt.Println("bootstraping...")
+			dsn := fmt.Sprintf("root:@tcp(%s)/", dbs[0].Addr())
+			bootstrap(dsn)
+
+			for _, inst := range insts {
+				inst.Wait()
+			}
+
+			return nil
+		},
+	}
+
+	rootCmd.Flags().IntVarP(&tidbNum, "db", "", 1, "TiDB instance number")
+	rootCmd.Flags().IntVarP(&tikvNum, "kv", "", 1, "TiKV instance number")
+	rootCmd.Flags().IntVarP(&pdNum, "pd", "", 1, "PD instance number")
+	rootCmd.Execute()
 }
 
 func tryConnect(dsn string) error {
-	if cli, err := sql.Open("mysql", "root:@tcp(127.0.0.1:4000)/"); err != nil {
-		return err
-	} else if _, err := cli.Conn(context.Background()); err != nil {
+	cli, err := sql.Open("mysql", dsn)
+	if err != nil {
 		return err
 	}
+	defer cli.Close()
+
+	conn, err := cli.Conn(context.Background())
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
 	return nil
 }
 
-func wait(pids []int) {
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	<-sigs
-	pidsLen := len(pids)
-	for idx := range pids {
-		pid := pids[pidsLen-1-idx]
-		p, err := os.FindProcess(pid)
-		if err != nil {
-			fmt.Println("find process:", err)
-			continue
+func bootstrap(dsn string) {
+	for i := 0; i < 60; i++ {
+		if err := tryConnect(dsn); err != nil {
+			time.Sleep(time.Second)
+		} else {
+			fmt.Println("now you can connect tidb with dsn:", dsn)
+			break
 		}
-		syscall.Kill(pid, 9)
-		p.Wait()
 	}
 }

@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path"
@@ -46,13 +47,19 @@ There are 3 types of component in "tidb-core":
 		Example:            "tiup run playground",
 		DisableFlagParsing: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			fs := flag.NewFlagSet("run", flag.ContinueOnError)
+			name := fs.String("name", "default", "--name=<name>")
+			if err := fs.Parse(args); err != nil {
+				return err
+			}
+			args = fs.Args()
 			if len(args) == 0 {
 				return cmd.Help()
 			}
 
 			component := args[0]
 			fmt.Printf("Launching process of %s\n", component)
-			p, err := launchComponentProcess(component, args[1:])
+			p, err := launchComponentProcess(*name, component, args[1:])
 			if err != nil {
 				if p != nil && p.Pid != 0 {
 					fmt.Printf("Error occured, but the process may be already started with PID %d\n", p.Pid)
@@ -67,7 +74,7 @@ There are 3 types of component in "tidb-core":
 	return cmd
 }
 
-func launchComponentProcess(spec string, args []string) (*compProcess, error) {
+func launchComponentProcess(name, spec string, args []string) (*compProcess, error) {
 	component, version := meta.ParseCompVersion(spec)
 	binPath, err := getServerBinPath(component, version)
 	if err != nil {
@@ -78,8 +85,11 @@ func launchComponentProcess(spec string, args []string) (*compProcess, error) {
 	p := &compProcess{
 		Exec: binPath,
 		Args: args,
-		Dir:  path.Join(profileDir, "data", component),
-		Env:  []string{"TIUP_HOME=" + profileDir},
+		Dir:  path.Join(profileDir, "data", component, name),
+		Env: []string{
+			"TIUP_HOME=" + profileDir,
+			"TIUP_INSTANCE=" + name,
+		},
 	}
 
 	//fmt.Printf("%s %s\n", binPath, args)

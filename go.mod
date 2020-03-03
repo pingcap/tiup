@@ -6,6 +6,7 @@ require (
 	code.cloudfoundry.org/bytefmt v0.0.0-20200131002437-cf55d5288a48
 	github.com/cavaliercoder/grab v2.0.0+incompatible
 	github.com/cheynewallace/tabby v1.1.0
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/onsi/ginkgo v1.12.0 // indirect
 	github.com/onsi/gomega v1.9.0 // indirect
 	github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712
