@@ -48,13 +48,15 @@ func (inst *TiDBInstance) Start() error {
 	for _, pd := range inst.pds {
 		endpoints = append(endpoints, fmt.Sprintf("127.0.0.1:%d", pd.clientPort))
 	}
+	uid := fmt.Sprintf("%s-tidb-%d", os.Getenv("TIUP_INSTANCE"), inst.id)
 	args := []string{
-		"tiup", "run", fmt.Sprintf("--name=%s-tidb-%d", os.Getenv("TIUP_INSTANCE"), inst.id), "tidb",
+		"tiup", "run", "--name=" + uid, "tidb",
 		"-P", strconv.Itoa(inst.port),
 		fmt.Sprintf("--status=%d", inst.status),
 		"--host=127.0.0.1",
 		"--store=tikv",
 		fmt.Sprintf("--path=%s", strings.Join(endpoints, ",")),
+		fmt.Sprintf("--log-file=%s.log", uid),
 	}
 	inst.cmd = exec.Command(args[0], args[1:]...)
 	return inst.cmd.Start()
