@@ -5,6 +5,7 @@ GOARCH  := $(if $(GOARCH),$(GOARCH),amd64)
 GOENV   := GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH)
 GO      := $(GOENV) go
 GOBUILD := $(GO) build $(BUILD_FLAG)
+VERSION := "v0.0.2"
 
 default: package
 
@@ -30,11 +31,11 @@ tools/bin/failpoint-ctl: go.mod
 
 package: check
 	GOOS=darwin GOARCH=amd64 go build ; \
-	tar -czf playground-v0.0.1-darwin-amd64.tar.gz playground ; \
-	shasum playground-v0.0.1-darwin-amd64.tar.gz | awk '{print $$1}' > playground-v0.0.1-darwin-amd64.sha1 ; \
+	tar -czf playground-$(VERSION)-darwin-amd64.tar.gz playground ; \
+	shasum playground-$(VERSION)-darwin-amd64.tar.gz | awk '{print $$1}' > playground-$(VERSION)-darwin-amd64.sha1 ; \
 	GOOS=linux GOARCH=amd64 go build ; \
-	tar -czf playground-v0.0.1-linux-amd64.tar.gz playground ; \
-	shasum playground-v0.0.1-linux-amd64.tar.gz | awk '{print $$1}' > playground-v0.0.1-linux-amd64.sha1 ; \
+	tar -czf playground-$(VERSION)-linux-amd64.tar.gz playground ; \
+	shasum playground-$(VERSION)-linux-amd64.tar.gz | awk '{print $$1}' > playground-$(VERSION)-linux-amd64.sha1 ; \
 	rm playground
 
 .PHONY: cmd package

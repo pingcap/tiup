@@ -99,7 +99,11 @@ func showComponentList(onlyInstalled bool) error {
 		}
 		installStatus := ""
 		if localComponents.Exist(comp.Name) {
-			installStatus = "YES"
+			versions, err := profile.InstalledVersions(comp.Name)
+			if err != nil {
+				return err
+			}
+			installStatus = fmt.Sprintf("YES(%s)",strings.Join(versions,",`"))
 		}
 		cmpTable = append(cmpTable, []string{
 			comp.Name,
