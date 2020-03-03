@@ -20,6 +20,8 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+const NightlyVersion = "nightly"
+
 type (
 	// Version represents a version string, like: v3.1.2
 	Version string
@@ -29,7 +31,6 @@ type (
 		Version   Version  `json:"version"`
 		Date      string   `json:"date"`
 		Entry     string   `json:"entry"`
-		Nightly   bool     `json:"nightly"`
 		Platforms []string `json:"platforms"`
 	}
 
@@ -37,6 +38,7 @@ type (
 	VersionManifest struct {
 		Description string        `json:"description"`
 		Modified    string        `json:"modified"`
+		Nightly     *VersionInfo  `json:"nightly"`
 		Versions    []VersionInfo `json:"versions"`
 	}
 )
@@ -49,6 +51,12 @@ func (v Version) IsValid() bool {
 // IsEmpty returns true if the `Version` is a empty string
 func (v Version) IsEmpty() bool {
 	return v == ""
+}
+
+// IsNightly returns true if the version is nightly
+func (v Version) IsNightly() bool {
+	return string(v) == NightlyVersion
+
 }
 
 // String implements the fmt.Stringer interface
@@ -64,24 +72,22 @@ func (manifest *VersionManifest) sort() {
 	})
 }
 
-// LatestStable returns the latest stable version
-func (manifest *VersionManifest) LatestStable() Version {
-	for i := len(manifest.Versions) - 1; i >= 0; i-- {
-		if !manifest.Versions[i].Nightly {
-			return manifest.Versions[i].Version
-		}
+// LatestVersion returns the latest stable version
+func (manifest *VersionManifest) LatestVersion() Version {
+	if len(manifest.Versions) > 0 {
+		return manifest.Versions[len(manifest.Versions)-1].Version
 	}
 	return ""
 }
 
-// LatestNightly returns the latest nightly version
-func (manifest *VersionManifest) LatestNightly() Version {
-	for i := len(manifest.Versions) - 1; i >= 0; i-- {
-		if manifest.Versions[i].Nightly {
-			return manifest.Versions[i].Version
+// ContainsVersion returns if the versions contain the specific version
+func (manifest *VersionManifest) ContainsVersion(version Version) bool {
+	for _, v := range manifest.Versions {
+		if v.Version == version {
+			return true
 		}
 	}
-	return ""
+	return false
 }
 
 // ParseComponent parses component part from <component>[:version] specification

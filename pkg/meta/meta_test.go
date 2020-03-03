@@ -99,7 +99,7 @@ func (s *metaSuite) TestRepository(c *C) {
 	defer func() { c.Assert(failpoint.Disable(fpName), IsNil) }()
 	defer os.RemoveAll(tmpDir)
 
-	err = repo.DownloadComponent(tmpDir, "test1:v1.1.1", false)
+	err = repo.DownloadComponent(tmpDir, "test1:v1.1.1")
 	c.Assert(err, IsNil, Commentf("error: %+v", err))
 
 	exp, err := ioutil.ReadFile(filepath.Join(testDir, "test1.bin"))

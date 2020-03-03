@@ -26,7 +26,7 @@ func newBinaryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "binary <component>:[version]",
 		Short: "Print the binary path of a specific version of a component",
-		Long:`Print the binary path of a specific version of a component, and the
+		Long: `Print the binary path of a specific version of a component, and the
 latest version installed will be selected if no version specified.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {

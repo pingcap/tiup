@@ -140,11 +140,11 @@ func getServerBinPath(component string, version meta.Version) (string, error) {
 			return "", errors.Trace(err)
 		}
 		if version.IsEmpty() {
-			version = manifest.LatestStable()
+			version = manifest.LatestVersion()
 		}
 		compDir := profile.ComponentsDir()
 		spec := fmt.Sprintf("%s:%s", component, version)
-		err = repository.DownloadComponent(compDir, spec, false)
+		err = repository.DownloadComponent(compDir, spec)
 		if err != nil {
 			return "", errors.Trace(err)
 		}
