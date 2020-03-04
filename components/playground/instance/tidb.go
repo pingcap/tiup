@@ -14,6 +14,7 @@
 package instance
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -47,7 +48,7 @@ func NewTiDBInstance(dir string, id int, pds []*PDInstance) *TiDBInstance {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiDBInstance) Start() error {
+func (inst *TiDBInstance) Start(ctx context.Context) error {
 	if err := os.MkdirAll(inst.dir, 0755); err != nil {
 		return err
 	}
@@ -58,17 +59,19 @@ func (inst *TiDBInstance) Start() error {
 	args := []string{
 		"tiup", "run", "tidb", "--",
 		"-P", strconv.Itoa(inst.port),
-		fmt.Sprintf("--status=%d", inst.status),
 		"--host=127.0.0.1",
 		"--store=tikv",
+		fmt.Sprintf("--status=%d", inst.status),
 		fmt.Sprintf("--path=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", filepath.Join(inst.dir, "tidb.log")),
 	}
-	inst.cmd = exec.Command(args[0], args[1:]...)
+	inst.cmd = exec.CommandContext(ctx, args[0], args[1:]...)
 	inst.cmd.Env = append(
 		os.Environ(),
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, inst.dir),
 	)
+	inst.cmd.Stderr = os.Stderr
+	inst.cmd.Stdout = os.Stdout
 	return inst.cmd.Start()
 }
 

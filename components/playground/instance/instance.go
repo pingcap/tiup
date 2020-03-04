@@ -13,9 +13,11 @@
 
 package instance
 
+import "context"
+
 // Instance represent running component
 type Instance interface {
 	Pid() int
-	Start() error
+	Start(ctx context.Context) error
 	Wait() error
 }

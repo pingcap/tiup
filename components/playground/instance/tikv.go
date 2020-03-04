@@ -14,6 +14,7 @@
 package instance
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -48,7 +49,7 @@ func NewTiKVInstance(dir string, id int, pds []*PDInstance) *TiKVInstance {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiKVInstance) Start() error {
+func (inst *TiKVInstance) Start(ctx context.Context) error {
 	if err := os.MkdirAll(inst.dir, 0755); err != nil {
 		return err
 	}
@@ -66,7 +67,7 @@ func (inst *TiKVInstance) Start() error {
 	for _, pd := range inst.pds {
 		endpoints = append(endpoints, fmt.Sprintf("http://127.0.0.1:%d", pd.clientPort))
 	}
-	inst.cmd = exec.Command(
+	inst.cmd = exec.CommandContext(ctx,
 		"tiup", "run", "tikv", "--",
 		fmt.Sprintf("--addr=127.0.0.1:%d", inst.port),
 		fmt.Sprintf("--status-addr=127.0.0.1:%d", inst.status),
@@ -79,6 +80,8 @@ func (inst *TiKVInstance) Start() error {
 		os.Environ(),
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, inst.dir),
 	)
+	inst.cmd.Stderr = os.Stderr
+	inst.cmd.Stdout = os.Stdout
 	return inst.cmd.Start()
 }
 

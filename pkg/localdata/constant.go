@@ -27,5 +27,5 @@ const (
 	EnvNameHome = "TIUP_HOME"
 
 	// MetaFilename represents the process meta file name
-	MetaFilename = "meta"
+	MetaFilename = "tiup_process_meta"
 )
