@@ -27,11 +27,6 @@ import (
 	"github.com/pingcap/errors"
 )
 
-const (
-	// ComponentParentDir represent the parent directory of all downloaded components
-	ComponentParentDir = "components"
-)
-
 // Profile represents the `tiup` profile
 type Profile struct {
 	root string
@@ -57,7 +52,7 @@ func (p *Profile) Root() string {
 func (p *Profile) SaveTo(path string, data []byte, perm os.FileMode) error {
 	fullPath := filepath.Join(p.root, path)
 	// create sub directory if needed
-	if err := utils.CreateDir(filepath.Dir(fullPath)); err != nil {
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
 		return errors.Trace(err)
 	}
 	return ioutil.WriteFile(fullPath, data, perm)

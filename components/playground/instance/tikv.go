@@ -18,8 +18,10 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 
+	"github.com/c4pt0r/tiup/pkg/localdata"
 	"github.com/c4pt0r/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 )
@@ -27,6 +29,7 @@ import (
 // TiKVInstance represent a running tikv-server
 type TiKVInstance struct {
 	id     int
+	dir    string
 	port   int
 	status int
 	pds    []*PDInstance
@@ -34,9 +37,10 @@ type TiKVInstance struct {
 }
 
 // NewTiKVInstance return a TiKVInstance
-func NewTiKVInstance(id int, pds []*PDInstance) *TiKVInstance {
+func NewTiKVInstance(dir string, id int, pds []*PDInstance) *TiKVInstance {
 	return &TiKVInstance{
 		id:     id,
+		dir:    dir,
 		port:   utils.MustGetFreePort(20160),
 		status: utils.MustGetFreePort(20180),
 		pds:    pds,
@@ -45,11 +49,10 @@ func NewTiKVInstance(id int, pds []*PDInstance) *TiKVInstance {
 
 // Start calls set inst.cmd and Start
 func (inst *TiKVInstance) Start() error {
-	tiupHome := os.Getenv("TIUP_HOME")
-	if utils.MustDir(path.Join(tiupHome, "data", "playground")) == "" {
-		panic("create data directory for playground failed")
+	if err := os.MkdirAll(inst.dir, 0755); err != nil {
+		return err
 	}
-	configPath := path.Join(tiupHome, "data", "playground", "tikv.toml")
+	configPath := path.Join(inst.dir, "tikv.toml")
 	cf, err := os.Create(configPath)
 	if err != nil {
 		return errors.Trace(err)
@@ -59,18 +62,22 @@ func (inst *TiKVInstance) Start() error {
 		return errors.Trace(err)
 	}
 
-	endpoints := []string{}
+	endpoints := make([]string, 0, len(inst.pds))
 	for _, pd := range inst.pds {
 		endpoints = append(endpoints, fmt.Sprintf("http://127.0.0.1:%d", pd.clientPort))
 	}
-	uid := fmt.Sprintf("%s-tikv-%d", os.Getenv("TIUP_INSTANCE"), inst.id)
 	inst.cmd = exec.Command(
-		"tiup", "run", "--name="+uid, "tikv",
+		"tiup", "run", "tikv", "--",
 		fmt.Sprintf("--addr=127.0.0.1:%d", inst.port),
 		fmt.Sprintf("--status-addr=127.0.0.1:%d", inst.status),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--config=%s", configPath),
-		fmt.Sprintf("--log-file=%s.log", uid),
+		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.dir, "data")),
+		fmt.Sprintf("--log-file=g%s", filepath.Join(inst.dir, "tikv.log")),
+	)
+	inst.cmd.Env = append(
+		os.Environ(),
+		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, inst.dir),
 	)
 	return inst.cmd.Start()
 }

@@ -7,75 +7,87 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/c4pt0r/tiup/components/playground/instance"
+	"github.com/c4pt0r/tiup/pkg/localdata"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/spf13/cobra"
 )
 
-func check(component string) {
-	if _, err := os.Stat(path.Join(os.Getenv("TIUP_HOME"), "components", component)); err != nil {
-		c := exec.Command("tiup", "install", component)
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
-		if err := c.Run(); err != nil {
-			panic("install " + component + " failed")
-		}
+func installIfMissing(profile *localdata.Profile, component string) error {
+	versions, err := profile.InstalledVersions(component)
+	if err != nil {
+		return err
 	}
+	if len(versions) > 0 {
+		return nil
+	}
+	c := exec.Command("tiup", "install", component)
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	return c.Run()
 }
 
-func main() {
-	if os.Getenv("TIUP_INSTANCE") == "" {
-		os.Setenv("TIUP_INSTANCE", "default")
-	}
-
-	for _, comp := range []string{"pd", "tikv", "tidb"} {
-		check(comp)
-	}
-
-	rootCmd := rootCommand()
-	rootCmd.Execute()
-}
-
-func rootCommand() *cobra.Command {
+func execute() error {
 	tidbNum := 1
 	tikvNum := 1
 	pdNum := 1
+
+	// Initialize the profile
+	profileRoot := os.Getenv(localdata.EnvNameHome)
+	if profileRoot == "" {
+		return fmt.Errorf("cannot read environment variable %s", localdata.EnvNameHome)
+	}
+	profile := localdata.NewProfile(profileRoot)
+	for _, comp := range []string{"pd", "tikv", "tidb"} {
+		if err := installIfMissing(profile, comp); err != nil {
+			return err
+		}
+	}
+
+	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
+	if dataDir == "" {
+		return fmt.Errorf("cannot read environment variable %s", localdata.EnvNameInstanceDataDir)
+	}
 
 	rootCmd := &cobra.Command{
 		Use:   "playground",
 		Short: "Bootstrap a TiDB cluster in your local host",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			insts := []instance.Instance{}
-			pds := []*instance.PDInstance{}
-			kvs := []*instance.TiKVInstance{}
-			dbs := []*instance.TiDBInstance{}
+			insts := make([]instance.Instance, 0, pdNum+tikvNum+tidbNum)
+			pds := make([]*instance.PDInstance, 0, pdNum)
+			kvs := make([]*instance.TiKVInstance, 0, tikvNum)
+			dbs := make([]*instance.TiDBInstance, 0, tidbNum)
+
 			for i := 0; i < pdNum; i++ {
-				pds = append(pds, instance.NewPDInstance(i))
+				dir := filepath.Join(dataDir, fmt.Sprintf("pd-%d", i))
+				pds = append(pds, instance.NewPDInstance(dir, i))
 				insts = append(insts, pds[i])
 			}
 			for _, pd := range pds {
 				pd.Join(pds)
 			}
 			for i := 0; i < tikvNum; i++ {
-				kvs = append(kvs, instance.NewTiKVInstance(i, pds))
+				dir := filepath.Join(dataDir, fmt.Sprintf("tikv-%d", i))
+				kvs = append(kvs, instance.NewTiKVInstance(dir, i, pds))
 				insts = append(insts, kvs[i])
 			}
 			for i := 0; i < tidbNum; i++ {
-				dbs = append(dbs, instance.NewTiDBInstance(i, pds))
+				dir := filepath.Join(dataDir, fmt.Sprintf("tidb-%d", i))
+				dbs = append(dbs, instance.NewTiDBInstance(dir, i, pds))
 				insts = append(insts, dbs[i])
 			}
+
+			fmt.Println("Bootstrapping...")
 
 			for _, inst := range insts {
 				if err := inst.Start(); err != nil {
 					return err
 				}
 			}
-
-			fmt.Println("bootstraping...")
 			bootstrap(dbs[0].Addr(), pds[0].Addr())
 
 			for _, inst := range insts {
@@ -89,7 +101,15 @@ func rootCommand() *cobra.Command {
 	rootCmd.Flags().IntVarP(&tidbNum, "db", "", 1, "TiDB instance number")
 	rootCmd.Flags().IntVarP(&tikvNum, "kv", "", 1, "TiKV instance number")
 	rootCmd.Flags().IntVarP(&pdNum, "pd", "", 1, "PD instance number")
-	return rootCmd
+
+	return rootCmd.Execute()
+}
+
+func main() {
+	if err := execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
 
 func tryConnect(dsn string) error {
