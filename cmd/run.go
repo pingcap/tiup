@@ -63,17 +63,19 @@ command if you want to have a try.
 
 			fmt.Printf("Preparing to launch the component `%s`\n", component)
 			p, err := launchComponentProcess(component, version, name, args[1:])
+			// If the process has been launched, we must save the process info to meta directory
+			if err == nil || (p != nil && p.Pid != 0) {
+				metaFile := filepath.Join(p.Dir, localdata.MetaFilename)
+				file, err := os.OpenFile(metaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
+				if err == nil {
+					defer file.Close()
+					encoder := json.NewEncoder(file)
+					encoder.SetIndent("", "    ")
+					_ = encoder.Encode(p)
+				}
+			}
 			if err != nil {
 				fmt.Printf("Failed start component `%s`\n", component)
-				// If the process has been launched, we must save the process info to meta directory
-				if p != nil && p.Pid != 0 {
-					metaFile := filepath.Join(p.Dir, localdata.MetaFilename)
-					file, err := os.OpenFile(metaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
-					if err == nil {
-						defer file.Close()
-						_ = json.NewEncoder(file).Encode(p)
-					}
-				}
 				return err
 			}
 
