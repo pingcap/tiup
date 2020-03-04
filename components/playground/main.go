@@ -81,7 +81,7 @@ func execute() error {
 				insts = append(insts, dbs[i])
 			}
 
-			fmt.Println("Bootstrapping...")
+			fmt.Println("Playground Bootstrapping...")
 
 			for _, inst := range insts {
 				if err := inst.Start(); err != nil {

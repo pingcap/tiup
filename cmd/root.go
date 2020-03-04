@@ -63,6 +63,8 @@ missing.
 		newRunCmd(),
 		newShowCmd(),
 		newVersionCmd(),
+		newStatusCmd(),
+		newCleanCmd(),
 	)
 }
 

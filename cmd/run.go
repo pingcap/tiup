@@ -61,7 +61,7 @@ command if you want to have a try.
 				return fmt.Errorf("unkonwn component `%s` (see supported components via `tiup list --refresh`)", component)
 			}
 
-			fmt.Printf("Preparing to launch the component `%s`\n", component)
+			fmt.Printf("+ Preparing to launch the component `%s`\n", component)
 			p, err := launchComponentProcess(component, version, name, args[1:])
 			// If the process has been launched, we must save the process info to meta directory
 			if err == nil || (p != nil && p.Pid != 0) {
@@ -75,12 +75,16 @@ command if you want to have a try.
 				}
 			}
 			if err != nil {
-				fmt.Printf("Failed start component `%s`\n", component)
+				fmt.Printf("+ Failed to start component `%s`\n", component)
 				return err
 			}
 
-			fmt.Printf("Starting %s %s...\n", p.Exec, strings.Join(p.Args, " "))
-			return p.cmd.Wait()
+			fmt.Printf(" - Starting %s %s \n", p.Exec, strings.Join(p.Args, " "))
+			err = p.cmd.Wait()
+			if err != nil {
+				fmt.Printf(" - Failed to start `%s`: %s\n", p.Exec, err)
+			}
+			return err
 		},
 	}
 	cmd.Flags().StringVarP(&name, "name", "n", "", "Specify a name for this task")
@@ -97,21 +101,21 @@ func isSupportedComponent(component string) bool {
 
 	manifest, err := repository.Manifest()
 	if err != nil {
-		fmt.Println("Fetch latest manifest error:", err)
+		fmt.Println(" - Fetch latest manifest error:", err)
 		return false
 	}
 	return manifest.HasComponent(component)
 }
 
 type process struct {
-	Component string       `json:"component"`
-	Version   meta.Version `json:"version"`
-	Pid       int          `json:"pid"`            // PID of the process
-	Exec      string       `json:"exec"`           // Path to the binary
-	Args      []string     `json:"args,omitempty"` // Command line arguments
-	Env       []string     `json:"env,omitempty"`  // Environment variables
-	Dir       string       `json:"dir,omitempty"`  // Working directory
-	cmd       *exec.Cmd
+	Component   string   `json:"component"`
+	CreatedTime string   `json:"created_time"`
+	Pid         int      `json:"pid"`            // PID of the process
+	Exec        string   `json:"exec"`           // Path to the binary
+	Args        []string `json:"args,omitempty"` // Command line arguments
+	Env         []string `json:"env,omitempty"`  // Environment variables
+	Dir         string   `json:"dir,omitempty"`  // Working directory
+	cmd         *exec.Cmd
 }
 
 func base62Name() string {
@@ -143,18 +147,18 @@ func launchComponentProcess(component string, version meta.Version, name string,
 	}
 
 	p := &process{
-		Component: component,
-		Version:   version,
-		Exec:      binPath,
-		Args:      args,
-		Dir:       wd,
+		Component:   component,
+		CreatedTime: time.Now().Format(time.RFC3339),
+		Exec:        binPath,
+		Args:        args,
+		Dir:         wd,
 		Env: []string{
 			fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
 			fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, wd),
 		},
 	}
 
-	fmt.Println("Data directory", wd)
+	fmt.Println(" - Data directory", wd)
 	if err := os.MkdirAll(wd, 0755); err != nil {
 		return p, err
 	}

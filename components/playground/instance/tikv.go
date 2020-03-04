@@ -79,6 +79,8 @@ func (inst *TiKVInstance) Start() error {
 		os.Environ(),
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, inst.dir),
 	)
+	inst.cmd.Stderr = os.Stderr
+	inst.cmd.Stdout = os.Stdout
 	return inst.cmd.Start()
 }
 
