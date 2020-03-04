@@ -41,7 +41,7 @@ func newStatusCmd() *cobra.Command {
 
 func showStatus() error {
 	var table [][]string
-	table = append(table, []string{"Name", "PID", "Status", "Created Time", "Component", "Directory", "Binary"})
+	table = append(table, []string{"Name", "Component", "PID", "Status", "Created Time", "Directory", "Binary"})
 	if dataDir := profile.Path(localdata.DataParentDir); utils.IsExist(dataDir) {
 		dirs, err := ioutil.ReadDir(dataDir)
 		if err != nil {
@@ -63,10 +63,10 @@ func showStatus() error {
 			}
 			table = append(table, []string{
 				dir.Name(),
+				process.Component,
 				strconv.Itoa(process.Pid),
 				status,
 				process.CreatedTime,
-				process.Component,
 				process.Dir,
 				process.Exec,
 			})

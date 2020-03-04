@@ -36,65 +36,11 @@ func execute() error {
 	tikvNum := 1
 	pdNum := 1
 
-	// Initialize the profile
-	profileRoot := os.Getenv(localdata.EnvNameHome)
-	if profileRoot == "" {
-		return fmt.Errorf("cannot read environment variable %s", localdata.EnvNameHome)
-	}
-	profile := localdata.NewProfile(profileRoot)
-	for _, comp := range []string{"pd", "tikv", "tidb"} {
-		if err := installIfMissing(profile, comp); err != nil {
-			return err
-		}
-	}
-
-	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
-	if dataDir == "" {
-		return fmt.Errorf("cannot read environment variable %s", localdata.EnvNameInstanceDataDir)
-	}
-
 	rootCmd := &cobra.Command{
 		Use:   "playground",
 		Short: "Bootstrap a TiDB cluster in your local host",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			insts := make([]instance.Instance, 0, pdNum+tikvNum+tidbNum)
-			pds := make([]*instance.PDInstance, 0, pdNum)
-			kvs := make([]*instance.TiKVInstance, 0, tikvNum)
-			dbs := make([]*instance.TiDBInstance, 0, tidbNum)
-
-			for i := 0; i < pdNum; i++ {
-				dir := filepath.Join(dataDir, fmt.Sprintf("pd-%d", i))
-				pds = append(pds, instance.NewPDInstance(dir, i))
-				insts = append(insts, pds[i])
-			}
-			for _, pd := range pds {
-				pd.Join(pds)
-			}
-			for i := 0; i < tikvNum; i++ {
-				dir := filepath.Join(dataDir, fmt.Sprintf("tikv-%d", i))
-				kvs = append(kvs, instance.NewTiKVInstance(dir, i, pds))
-				insts = append(insts, kvs[i])
-			}
-			for i := 0; i < tidbNum; i++ {
-				dir := filepath.Join(dataDir, fmt.Sprintf("tidb-%d", i))
-				dbs = append(dbs, instance.NewTiDBInstance(dir, i, pds))
-				insts = append(insts, dbs[i])
-			}
-
-			fmt.Println("Playground Bootstrapping...")
-
-			for _, inst := range insts {
-				if err := inst.Start(); err != nil {
-					return err
-				}
-			}
-			bootstrap(dbs[0].Addr(), pds[0].Addr())
-
-			for _, inst := range insts {
-				inst.Wait()
-			}
-
-			return nil
+			return bootCluster(tidbNum, tikvNum, pdNum)
 		},
 	}
 
@@ -103,13 +49,6 @@ func execute() error {
 	rootCmd.Flags().IntVarP(&pdNum, "pd", "", 1, "PD instance number")
 
 	return rootCmd.Execute()
-}
-
-func main() {
-	if err := execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
 }
 
 func tryConnect(dsn string) error {
@@ -146,7 +85,7 @@ func bootstrap(dbAddr, pdAddr string) {
 }
 
 func hasDashboard(pdAddr string) bool {
-	resp, err := http.Get("http://%s/dashboard")
+	resp, err := http.Get(fmt.Sprintf("http://%s/dashboard", pdAddr))
 	if err != nil {
 		return false
 	}
@@ -155,6 +94,85 @@ func hasDashboard(pdAddr string) bool {
 	if resp.StatusCode == 200 {
 		return true
 	}
-
 	return false
+}
+
+func bootCluster(pdNum, tidbNum, tikvNum int) error {
+	if pdNum < 1 || tidbNum < 1 || tikvNum < 1 {
+		return fmt.Errorf("all components count must be great than 0 (tidb=%v, tikv=%v, pd=%v)",
+			tidbNum, tikvNum, pdNum)
+	}
+
+	// Initialize the profile
+	profileRoot := os.Getenv(localdata.EnvNameHome)
+	if profileRoot == "" {
+		return fmt.Errorf("cannot read environment variable %s", localdata.EnvNameHome)
+	}
+	profile := localdata.NewProfile(profileRoot)
+	for _, comp := range []string{"pd", "tikv", "tidb"} {
+		if err := installIfMissing(profile, comp); err != nil {
+			return err
+		}
+	}
+
+	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
+	if dataDir == "" {
+		return fmt.Errorf("cannot read environment variable %s", localdata.EnvNameInstanceDataDir)
+	}
+
+	all := make([]instance.Instance, 0, pdNum+tikvNum+tidbNum)
+	pds := make([]*instance.PDInstance, 0, pdNum)
+	kvs := make([]*instance.TiKVInstance, 0, tikvNum)
+	dbs := make([]*instance.TiDBInstance, 0, tidbNum)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	for i := 0; i < pdNum; i++ {
+		dir := filepath.Join(dataDir, fmt.Sprintf("pd-%d", i))
+		inst := instance.NewPDInstance(dir, i)
+		pds = append(pds, inst)
+		all = append(all, inst)
+	}
+	for _, pd := range pds {
+		pd.Join(pds)
+	}
+
+	for i := 0; i < tikvNum; i++ {
+		dir := filepath.Join(dataDir, fmt.Sprintf("tikv-%d", i))
+		inst := instance.NewTiKVInstance(dir, i, pds)
+		kvs = append(kvs, inst)
+		all = append(all, inst)
+	}
+
+	for i := 0; i < tidbNum; i++ {
+		dir := filepath.Join(dataDir, fmt.Sprintf("tidb-%d", i))
+		inst := instance.NewTiDBInstance(dir, i, pds)
+		dbs = append(dbs, inst)
+		all = append(all, inst)
+	}
+
+	fmt.Println("Playground Bootstrapping...")
+
+	for _, inst := range all {
+		if err := inst.Start(ctx); err != nil {
+			return err
+		}
+	}
+
+	bootstrap(dbs[0].Addr(), pds[0].Addr())
+
+	for _, inst := range all {
+		if err := inst.Wait(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func main() {
+	if err := execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
