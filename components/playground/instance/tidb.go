@@ -36,8 +36,8 @@ type TiDBInstance struct {
 func NewTiDBInstance(id int, pds []*PDInstance) *TiDBInstance {
 	return &TiDBInstance{
 		id:     id,
-		port:   utils.MustGetFreePort("127.0.0.1", 4000),
-		status: utils.MustGetFreePort("127.0.0.1", 10080),
+		port:   utils.MustGetFreePort(4000),
+		status: utils.MustGetFreePort(10080),
 		pds:    pds,
 	}
 }
