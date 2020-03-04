@@ -35,8 +35,8 @@ type PDInstance struct {
 func NewPDInstance(id int) *PDInstance {
 	return &PDInstance{
 		id:         id,
-		clientPort: utils.MustGetFreePort("127.0.0.1", 2379),
-		peerPort:   utils.MustGetFreePort("127.0.0.1", 2380),
+		clientPort: utils.MustGetFreePort(2379),
+		peerPort:   utils.MustGetFreePort(2380),
 	}
 }
 
@@ -78,4 +78,9 @@ func (inst *PDInstance) Wait() error {
 // Pid return the PID of the instance
 func (inst *PDInstance) Pid() int {
 	return inst.cmd.Process.Pid
+}
+
+// Addr return the listen address of PD
+func (inst *PDInstance) Addr() string {
+	return fmt.Sprintf("127.0.0.1:%d", inst.clientPort)
 }

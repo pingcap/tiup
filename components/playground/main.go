@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -27,10 +28,6 @@ func check(component string) {
 }
 
 func main() {
-	tidbNum := 1
-	tikvNum := 1
-	pdNum := 1
-
 	if os.Getenv("TIUP_INSTANCE") == "" {
 		os.Setenv("TIUP_INSTANCE", "default")
 	}
@@ -38,6 +35,15 @@ func main() {
 	for _, comp := range []string{"pd", "tikv", "tidb"} {
 		check(comp)
 	}
+
+	rootCmd := rootCommand()
+	rootCmd.Execute()
+}
+
+func rootCommand() *cobra.Command {
+	tidbNum := 1
+	tikvNum := 1
+	pdNum := 1
 
 	rootCmd := &cobra.Command{
 		Use:   "playground",
@@ -70,7 +76,7 @@ func main() {
 			}
 
 			fmt.Println("bootstraping...")
-			bootstrap(dbs[0].Addr())
+			bootstrap(dbs[0].Addr(), pds[0].Addr())
 
 			for _, inst := range insts {
 				inst.Wait()
@@ -83,7 +89,7 @@ func main() {
 	rootCmd.Flags().IntVarP(&tidbNum, "db", "", 1, "TiDB instance number")
 	rootCmd.Flags().IntVarP(&tikvNum, "kv", "", 1, "TiKV instance number")
 	rootCmd.Flags().IntVarP(&pdNum, "pd", "", 1, "PD instance number")
-	rootCmd.Execute()
+	return rootCmd
 }
 
 func tryConnect(dsn string) error {
@@ -102,15 +108,33 @@ func tryConnect(dsn string) error {
 	return nil
 }
 
-func bootstrap(addr string) {
-	dsn := fmt.Sprintf("root:@tcp(%s)/", addr)
+func bootstrap(dbAddr, pdAddr string) {
+	dsn := fmt.Sprintf("root:@tcp(%s)/", dbAddr)
 	for i := 0; i < 60; i++ {
 		if err := tryConnect(dsn); err != nil {
 			time.Sleep(time.Second)
 		} else {
-			ss := strings.Split(addr, ":")
-			fmt.Printf("now you can connect tidb with mysql --host %s --port %s -u root\n", ss[0], ss[1])
+			fmt.Println("TiDB cluster has run successfully")
+			ss := strings.Split(dbAddr, ":")
+			fmt.Printf("To connect TiDB: mysql --host %s --port %s -u root\n", ss[0], ss[1])
+			if hasDashboard(pdAddr) {
+				fmt.Printf("To view the dashboard: http://%s/dashboard\n", pdAddr)
+			}
 			break
 		}
 	}
+}
+
+func hasDashboard(pdAddr string) bool {
+	resp, err := http.Get("http://%s/dashboard")
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 200 {
+		return true
+	}
+
+	return false
 }
