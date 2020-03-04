@@ -20,6 +20,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+// NightlyVersion represents latest build of master branch
 const NightlyVersion = "nightly"
 
 type (
@@ -90,7 +91,7 @@ func (manifest *VersionManifest) ContainsVersion(version Version) bool {
 	return false
 }
 
-// ParseComponent parses component part from <component>[:version] specification
+// ParseCompVersion parses component part from <component>[:version] specification
 func ParseCompVersion(spec string) (string, Version) {
 	if strings.Contains(spec, ":") {
 		parts := strings.SplitN(spec, ":", 2)

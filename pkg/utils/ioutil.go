@@ -17,7 +17,6 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"io"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -35,23 +34,6 @@ func IsExist(path string) bool {
 func IsNotExist(path string) bool {
 	_, err := os.Stat(path)
 	return os.IsNotExist(err)
-}
-
-// CreateDir creates the directory if it not alerady exist.
-func CreateDir(path string) error {
-	if IsExist(path) {
-		return nil
-	}
-	return errors.Trace(os.MkdirAll(path, 0755))
-}
-
-// MustDir makes sure dir exists and return the path name
-func MustDir(path string) string {
-	if err := CreateDir(path); err != nil {
-		log.Fatal(err)
-		return ""
-	}
-	return path
 }
 
 // Untar decompresses the tarball

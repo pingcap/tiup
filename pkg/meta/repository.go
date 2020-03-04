@@ -159,7 +159,7 @@ func (r Repository) DownloadFile(targetDir, resName string) error {
 		return errors.Errorf("checksum mismatch, expect: %v, got: %v", string(sha1Content), checksum)
 	}
 
-	if err := utils.CreateDir(targetDir); err != nil {
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		return errors.Trace(err)
 	}
 

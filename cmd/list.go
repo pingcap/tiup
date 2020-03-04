@@ -103,7 +103,7 @@ func showComponentList(onlyInstalled bool) error {
 			if err != nil {
 				return err
 			}
-			installStatus = fmt.Sprintf("YES(%s)",strings.Join(versions,",`"))
+			installStatus = fmt.Sprintf("YES(%s)", strings.Join(versions, ",`"))
 		}
 		cmpTable = append(cmpTable, []string{
 			comp.Name,

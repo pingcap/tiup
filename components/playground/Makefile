@@ -7,7 +7,10 @@ GO      := $(GOENV) go
 GOBUILD := $(GO) build $(BUILD_FLAG)
 VERSION := "v0.0.2"
 
-default: package
+default: build
+
+build: check
+	$(GO) build -o bin/playground
 
 lint:
 	@golint ./...

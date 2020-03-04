@@ -14,27 +14,26 @@
 package cmd
 
 import (
-	"flag"
+	"encoding/json"
 	"fmt"
+	"math"
 	"os"
-	"path"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/c4pt0r/tiup/pkg/localdata"
 	"github.com/c4pt0r/tiup/pkg/meta"
-	"github.com/c4pt0r/tiup/pkg/tui"
 	"github.com/c4pt0r/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
 )
 
-const (
-	processListFilename = "processes.json"
-)
-
 func newRunCmd() *cobra.Command {
+	var name string
 	cmd := &cobra.Command{
 		Use:   "run <component1>:[version]",
 		Short: "Run a component of specific version",
@@ -45,63 +44,129 @@ version will be downloaded from the server. You can run the following
 command if you want to have a try.
 
   # Quick start
-  tiup run playground`,
-		DisableFlagParsing: true,
+  tiup run playground
+
+  # Start a playground with a specified name
+  tiup run playground --name p1`,
+		FParseErrWhitelist: cobra.FParseErrWhitelist{
+			UnknownFlags: true,
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fs := flag.NewFlagSet("run", flag.ContinueOnError)
-			name := fs.String("name", "default", "--name=<name>")
-			if err := fs.Parse(args); err != nil {
-				return err
-			}
-			args = fs.Args()
 			if len(args) == 0 {
 				return cmd.Help()
 			}
 
-			component := args[0]
-			fmt.Printf("Launching process of %s\n", component)
-			p, err := launchComponentProcess(*name, component, args[1:])
+			component, version := meta.ParseCompVersion(args[0])
+			if !isSupportedComponent(component) {
+				return fmt.Errorf("unkonwn component `%s` (see supported components via `tiup list --refresh`)", component)
+			}
+
+			fmt.Printf("Preparing to launch the component `%s`\n", component)
+			p, err := launchComponentProcess(component, version, name, args[1:])
 			if err != nil {
+				fmt.Printf("Failed start component `%s`\n", component)
+				// If the process has been launched, we must save the process info to meta directory
 				if p != nil && p.Pid != 0 {
-					fmt.Printf("Error occured, but the process may be already started with PID %d\n", p.Pid)
+					metaFile := filepath.Join(p.Dir, localdata.MetaFilename)
+					file, err := os.OpenFile(metaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
+					if err == nil {
+						defer file.Close()
+						_ = json.NewEncoder(file).Encode(p)
+					}
 				}
 				return err
 			}
-			fmt.Printf("Started %s %s...\n", p.Exec, strings.Join(p.Args, " "))
-			fmt.Printf("Process %d started for %s\n", p.Pid, component)
-			return nil
+
+			fmt.Printf("Starting %s %s...\n", p.Exec, strings.Join(p.Args, " "))
+			return p.cmd.Wait()
 		},
 	}
+	cmd.Flags().StringVarP(&name, "name", "n", "", "Specify a name for this task")
+
 	return cmd
 }
 
-func launchComponentProcess(name, spec string, args []string) (*compProcess, error) {
-	component, version := meta.ParseCompVersion(spec)
-	binPath, err := getServerBinPath(component, version)
+func isSupportedComponent(component string) bool {
+	// check local manifest
+	manifest := profile.Manifest()
+	if manifest != nil && manifest.HasComponent(component) {
+		return true
+	}
+
+	manifest, err := repository.Manifest()
+	if err != nil {
+		fmt.Println("Fetch latest manifest error:", err)
+		return false
+	}
+	return manifest.HasComponent(component)
+}
+
+type process struct {
+	Component string       `json:"component"`
+	Version   meta.Version `json:"version"`
+	Pid       int          `json:"pid"`            // PID of the process
+	Exec      string       `json:"exec"`           // Path to the binary
+	Args      []string     `json:"args,omitempty"` // Command line arguments
+	Env       []string     `json:"env,omitempty"`  // Environment variables
+	Dir       string       `json:"dir,omitempty"`  // Working directory
+	cmd       *exec.Cmd
+}
+
+func base62Name() string {
+	const base = 62
+	const sets = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	b := make([]byte, 0)
+	num := time.Now().UnixNano()
+	for num > 0 {
+		r := math.Mod(float64(num), float64(base))
+		num /= base
+		b = append([]byte{sets[int(r)]}, b...)
+	}
+	return string(b)
+}
+
+func launchComponentProcess(component string, version meta.Version, name string, args []string) (*process, error) {
+	binPath, err := downloadIfMissing(component, version)
 	if err != nil {
 		return nil, err
 	}
 
-	profileDir := profile.Root()
-	p := &compProcess{
-		Exec: binPath,
-		Args: args,
-		Dir:  path.Join(profileDir, "data", component, name),
+	wd := os.Getenv(localdata.EnvNameInstanceDataDir)
+	if wd == "" {
+		// Generate a name for current instance if the name doesn't specified
+		if name == "" {
+			name = base62Name()
+		}
+		wd = profile.Path(filepath.Join(localdata.DataParentDir, name))
+	}
+
+	p := &process{
+		Component: component,
+		Version:   version,
+		Exec:      binPath,
+		Args:      args,
+		Dir:       wd,
 		Env: []string{
-			"TIUP_HOME=" + profileDir,
-			"TIUP_INSTANCE=" + name,
+			fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
+			fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, wd),
 		},
 	}
 
-	//fmt.Printf("%s %s\n", binPath, args)
-	if err := p.Launch(false); err != nil {
+	fmt.Println("Data directory", wd)
+	if err := os.MkdirAll(wd, 0755); err != nil {
 		return p, err
 	}
 
-	return p, saveProcessToList(p)
+	c, err := utils.Exec(os.Stdout, os.Stderr, wd, p.Exec, p.Args, p.Env)
+	if c != nil && c.Process != nil {
+		p.cmd = c
+		p.Pid = c.Process.Pid
+	}
+
+	return p, err
 }
 
-func getServerBinPath(component string, version meta.Version) (string, error) {
+func downloadIfMissing(component string, version meta.Version) (string, error) {
 	versions, err := profile.InstalledVersions(component)
 	if err != nil {
 		return "", err
@@ -131,6 +196,7 @@ func getServerBinPath(component string, version meta.Version) (string, error) {
 	}
 
 	if needDownload {
+		fmt.Printf("The component `%s` doesn't installed, download from repository\n", component)
 		manifest, err := repository.ComponentVersions(component)
 		if err != nil {
 			return "", errors.Trace(err)
@@ -151,89 +217,4 @@ func getServerBinPath(component string, version meta.Version) (string, error) {
 	}
 
 	return profile.BinaryPath(component, version)
-}
-
-type compProcess struct {
-	Pid  int      `json:"pid,omitempty"`  // PID of the process
-	Exec string   `json:"exec,omitempty"` // Path to the binary
-	Args []string `json:"args,omitempty"` // Command line arguments
-	Env  []string `json:"env,omitempty"`  // Enviroment variables
-	Dir  string   `json:"dir,omitempty"`  // Working directory
-}
-
-type compProcessList []compProcess
-
-// Launch executes the process
-func (p *compProcess) Launch(async bool) error {
-	dir := utils.MustDir(p.Dir)
-	c, err := utils.Exec(os.Stdout, os.Stderr, dir, p.Exec, p.Args, p.Env)
-	if err != nil {
-		return err
-	}
-	p.Pid = c.Process.Pid
-	if !async {
-		return c.Wait()
-	}
-	return nil
-}
-
-func getProcessList() (compProcessList, error) {
-	var list compProcessList
-	var err error
-
-	profile.ReadJSON(processListFilename, &list)
-	return list, err
-}
-
-func saveProcessList(pl *compProcessList) error {
-	return profile.WriteJSON(processListFilename, pl)
-}
-
-func saveProcessToList(p *compProcess) error {
-	currList, err := getProcessList()
-	if err != nil {
-		return err
-	}
-
-	for _, currProc := range currList {
-		if currProc.Pid == p.Pid {
-			return fmt.Errorf("process %d already exist", p.Pid)
-		}
-	}
-
-	newList := append(currList, *p)
-	return saveProcessList(&newList)
-}
-
-func newProcListCmd() *cobra.Command {
-	cmdProcList := &cobra.Command{
-		Use:   "list",
-		Short: "Show process list",
-		Long: `Show current process list, note that this is the list saved when
-the process launched, the actual process might already exited and no longer running.`,
-		RunE: showProcessList,
-	}
-	return cmdProcList
-}
-
-func showProcessList(cmd *cobra.Command, args []string) error {
-	procList, err := getProcessList()
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("Launched processes:")
-	var procTable [][]string
-	procTable = append(procTable, []string{"Process", "PID", "Working Dir", "Argument"})
-	for _, proc := range procList {
-		procTable = append(procTable, []string{
-			filepath.Base(proc.Exec),
-			fmt.Sprint(proc.Pid),
-			proc.Dir,
-			strings.Join(proc.Args, " "),
-		})
-	}
-
-	tui.PrintTable(procTable, true)
-	return nil
 }

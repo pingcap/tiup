@@ -17,14 +17,17 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
+	"github.com/c4pt0r/tiup/pkg/localdata"
 	"github.com/c4pt0r/tiup/pkg/utils"
 )
 
 // PDInstance represent a running pd-server
 type PDInstance struct {
 	id         int
+	dir        string
 	peerPort   int
 	clientPort int
 	endpoints  []*PDInstance
@@ -32,9 +35,10 @@ type PDInstance struct {
 }
 
 // NewPDInstance return a PDInstance
-func NewPDInstance(id int) *PDInstance {
+func NewPDInstance(dir string, id int) *PDInstance {
 	return &PDInstance{
 		id:         id,
+		dir:        dir,
 		clientPort: utils.MustGetFreePort(2379),
 		peerPort:   utils.MustGetFreePort(2380),
 	}
@@ -48,25 +52,33 @@ func (inst *PDInstance) Join(pds []*PDInstance) *PDInstance {
 
 // Start calls set inst.cmd and Start
 func (inst *PDInstance) Start() error {
-	uid := fmt.Sprintf("%s-pd-%d", os.Getenv("TIUP_INSTANCE"), inst.id)
+	if err := os.MkdirAll(inst.dir, 0755); err != nil {
+		return err
+	}
+	uid := fmt.Sprintf("pd-%d", inst.id)
 	args := []string{
-		"tiup", "run", "--name=" + uid, "pd",
+		"tiup", "run", "pd", "--",
 		"--name=" + uid,
+		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.dir, "data")),
 		fmt.Sprintf("--peer-urls=http://127.0.0.1:%d", inst.peerPort),
 		fmt.Sprintf("--advertise-peer-urls=http://127.0.0.1:%d", inst.peerPort),
 		fmt.Sprintf("--client-urls=http://127.0.0.1:%d", inst.clientPort),
 		fmt.Sprintf("--advertise-client-urls=http://127.0.0.1:%d", inst.clientPort),
-		fmt.Sprintf("--log-file=%s.log", uid),
+		fmt.Sprintf("--log-file=%s", filepath.Join(inst.dir, "pd.log")),
 	}
-	endpoints := []string{}
+	endpoints := make([]string, 0, len(inst.endpoints))
 	for _, pd := range inst.endpoints {
-		uid := fmt.Sprintf("%s-pd-%d", os.Getenv("TIUP_INSTANCE"), pd.id)
+		uid := fmt.Sprintf("pd-%d", pd.id)
 		endpoints = append(endpoints, fmt.Sprintf("%s=http://127.0.0.1:%d", uid, pd.peerPort))
 	}
 	if len(endpoints) > 0 {
 		args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(endpoints, ",")))
 	}
 	inst.cmd = exec.Command(args[0], args[1:]...)
+	inst.cmd.Env = append(
+		os.Environ(),
+		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, inst.dir),
+	)
 	return inst.cmd.Start()
 }
 
