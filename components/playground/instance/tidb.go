@@ -41,8 +41,8 @@ func NewTiDBInstance(dir string, id int, pds []*PDInstance) *TiDBInstance {
 	return &TiDBInstance{
 		id:     id,
 		dir:    dir,
-		port:   utils.MustGetFreePort(4000),
-		status: utils.MustGetFreePort(10080),
+		port:   utils.MustGetFreePort("127.0.0.1", 4000),
+		status: utils.MustGetFreePort("0.0.0.0", 10080),
 		pds:    pds,
 	}
 }

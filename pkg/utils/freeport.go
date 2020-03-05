@@ -24,10 +24,10 @@ import (
 var portCache sync.Map
 
 // GetFreePort asks the kernel for a free open port that is ready to use.
-func GetFreePort(priority int) (int, error) {
-	if port, err := getPort(priority); err == nil {
+func GetFreePort(host string, priority int) (int, error) {
+	if port, err := getPort(host, priority); err == nil {
 		return port, nil
-	} else if port, err := getPort(0); err == nil {
+	} else if port, err := getPort(host, 0); err == nil {
 		return port, nil
 	} else {
 		return 0, err
@@ -35,15 +35,15 @@ func GetFreePort(priority int) (int, error) {
 }
 
 // MustGetFreePort asks the kernel for a free open port that is ready to use, if fail, panic
-func MustGetFreePort(priority int) int {
-	if port, err := GetFreePort(priority); err == nil {
+func MustGetFreePort(host string, priority int) int {
+	if port, err := GetFreePort(host, priority); err == nil {
 		return port
 	}
 	panic("can't get a free port")
 }
 
-func getPort(port int) (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("0.0.0.0:%d", port))
+func getPort(host string, port int) (int, error) {
+	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		return 0, err
 	}
@@ -56,9 +56,10 @@ func getPort(port int) (int, error) {
 	port = l.Addr().(*net.TCPAddr).Port
 	l.Close()
 
-	if t, ok := portCache.Load(port); ok && t.(time.Time).Add(time.Minute).After(time.Now()) {
-		return getPort((port + 1) % 65536)
+	key := fmt.Sprintf("%s:%d", host, port)
+	if t, ok := portCache.Load(key); ok && t.(time.Time).Add(time.Minute).After(time.Now()) {
+		return getPort(host, (port+1)%65536)
 	}
-	portCache.Store(port, time.Now())
+	portCache.Store(key, time.Now())
 	return port, nil
 }
