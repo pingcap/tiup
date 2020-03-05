@@ -162,7 +162,7 @@ func bootCluster(pdNum, tidbNum, tikvNum int) error {
 
 	fmt.Println("TiDB cluster has run successfully")
 
-	if pdAddr := pds[0].Addr();hasDashboard(pdAddr) {
+	if pdAddr := pds[0].Addr(); hasDashboard(pdAddr) {
 		fmt.Printf("To view the dashboard: http://%s/dashboard\n", pdAddr)
 	}
 
