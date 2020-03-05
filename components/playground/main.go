@@ -16,19 +16,36 @@ import (
 
 	"github.com/c4pt0r/tiup/components/playground/instance"
 	"github.com/c4pt0r/tiup/pkg/localdata"
+	"github.com/c4pt0r/tiup/pkg/meta"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/spf13/cobra"
 )
 
-func installIfMissing(profile *localdata.Profile, component string) error {
+func installIfMissing(profile *localdata.Profile, component, version string) error {
 	versions, err := profile.InstalledVersions(component)
 	if err != nil {
 		return err
 	}
 	if len(versions) > 0 {
-		return nil
+		if meta.Version(version).IsEmpty() {
+			return nil
+		}
+		found := false
+		for _, v := range versions {
+			if v == version {
+				found = true
+				break
+			}
+		}
+		if found {
+			return nil
+		}
 	}
-	c := exec.Command("tiup", "install", component)
+	spec := component
+	if !meta.Version(version).IsEmpty() {
+		spec = fmt.Sprintf("%s:%s", component, version)
+	}
+	c := exec.Command("tiup", "install", spec)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	return c.Run()
@@ -44,7 +61,11 @@ func execute() error {
 		Short:        "Bootstrap a TiDB cluster in your local host",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return bootCluster(pdNum, tidbNum, tikvNum)
+			version := ""
+			if len(args) > 0 {
+				version = args[0]
+			}
+			return bootCluster(version, pdNum, tidbNum, tikvNum)
 		},
 	}
 
@@ -97,7 +118,7 @@ func hasDashboard(pdAddr string) bool {
 	return false
 }
 
-func bootCluster(pdNum, tidbNum, tikvNum int) error {
+func bootCluster(version string, pdNum, tidbNum, tikvNum int) error {
 	if pdNum < 1 || tidbNum < 1 || tikvNum < 1 {
 		return fmt.Errorf("all components count must be great than 0 (tidb=%v, tikv=%v, pd=%v)",
 			tidbNum, tikvNum, pdNum)
@@ -110,7 +131,7 @@ func bootCluster(pdNum, tidbNum, tikvNum int) error {
 	}
 	profile := localdata.NewProfile(profileRoot)
 	for _, comp := range []string{"pd", "tikv", "tidb"} {
-		if err := installIfMissing(profile, comp); err != nil {
+		if err := installIfMissing(profile, comp, version); err != nil {
 			return err
 		}
 	}
