@@ -14,19 +14,21 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/c4pt0r/tiup/pkg/localdata"
 	"github.com/c4pt0r/tiup/pkg/meta"
-	"github.com/c4pt0r/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
@@ -62,7 +64,11 @@ command if you want to have a try.
 			}
 
 			fmt.Printf("+ Preparing to launch the component `%s`\n", component)
-			p, err := launchComponentProcess(component, version, name, args[1:])
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			p, err := launchComponent(ctx, component, version, name, args[1:])
 			// If the process has been launched, we must save the process info to meta directory
 			if err == nil || (p != nil && p.Pid != 0) {
 				metaFile := filepath.Join(p.Dir, localdata.MetaFilename)
@@ -79,12 +85,31 @@ command if you want to have a try.
 				return err
 			}
 
-			fmt.Printf(" - Starting %s %s \n", p.Exec, strings.Join(p.Args, " "))
-			err = p.cmd.Wait()
-			if err != nil {
-				fmt.Printf(" - Failed to start `%s`: %s\n", p.Exec, err)
+			ch := make(chan error)
+			go func() {
+				defer close(ch)
+
+				fmt.Printf(" - Starting %s %s \n", p.Exec, strings.Join(p.Args, " "))
+				ch <- p.cmd.Wait()
+			}()
+
+			sig := make(chan os.Signal, 1)
+			signal.Notify(sig, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT)
+
+			select {
+			case s := <-sig:
+				fmt.Printf(" - Got signal %v (Component: %v. PID: %v)\n", s, component, p.Pid)
+				if component == "tidb" {
+					return syscall.Kill(p.Pid, syscall.SIGKILL)
+				}
+				return syscall.Kill(p.Pid, s.(syscall.Signal))
+
+			case err := <-ch:
+				if err != nil {
+					fmt.Printf(" - Failed to start `%s`: %s\n", p.Exec, err)
+				}
+				return err
 			}
-			return err
 		},
 	}
 	cmd.Flags().StringVarP(&name, "name", "n", "", "Specify a name for this task")
@@ -131,7 +156,7 @@ func base62Name() string {
 	return string(b)
 }
 
-func launchComponentProcess(component string, version meta.Version, name string, args []string) (*process, error) {
+func launchComponent(ctx context.Context, component string, version meta.Version, name string, args []string) (*process, error) {
 	binPath, err := downloadIfMissing(component, version)
 	if err != nil {
 		return nil, err
@@ -146,29 +171,40 @@ func launchComponentProcess(component string, version meta.Version, name string,
 		wd = profile.Path(filepath.Join(localdata.DataParentDir, name))
 	}
 
+	fmt.Println(" - Data directory", wd)
+	if err := os.MkdirAll(wd, 0755); err != nil {
+		return nil, err
+	}
+
+	envs := []string{
+		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
+		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, wd),
+	}
+
+	// init the command
+	c := exec.CommandContext(ctx, binPath, args...)
+	c.Env = append(
+		os.Environ(),
+		envs...,
+	)
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	c.Dir = wd
+
 	p := &process{
 		Component:   component,
 		CreatedTime: time.Now().Format(time.RFC3339),
 		Exec:        binPath,
 		Args:        args,
 		Dir:         wd,
-		Env: []string{
-			fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
-			fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, wd),
-		},
+		Env:         envs,
+		cmd:         c,
 	}
 
-	fmt.Println(" - Data directory", wd)
-	if err := os.MkdirAll(wd, 0755); err != nil {
-		return p, err
+	err = p.cmd.Start()
+	if p.cmd.Process != nil {
+		p.Pid = p.cmd.Process.Pid
 	}
-
-	c, err := utils.Exec(os.Stdout, os.Stderr, wd, p.Exec, p.Args, p.Env)
-	if c != nil && c.Process != nil {
-		p.cmd = c
-		p.Pid = c.Process.Pid
-	}
-
 	return p, err
 }
 
