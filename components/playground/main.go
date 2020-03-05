@@ -40,7 +40,7 @@ func execute() error {
 		Use:   "playground",
 		Short: "Bootstrap a TiDB cluster in your local host",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return bootCluster(tidbNum, tikvNum, pdNum)
+			return bootCluster(pdNum, tidbNum, tikvNum)
 		},
 	}
 
@@ -67,18 +67,14 @@ func tryConnect(dsn string) error {
 	return nil
 }
 
-func bootstrap(dbAddr, pdAddr string) {
+func checkDB(dbAddr string) {
 	dsn := fmt.Sprintf("root:@tcp(%s)/", dbAddr)
 	for i := 0; i < 60; i++ {
 		if err := tryConnect(dsn); err != nil {
 			time.Sleep(time.Second)
 		} else {
-			fmt.Println("TiDB cluster has run successfully")
 			ss := strings.Split(dbAddr, ":")
 			fmt.Printf("To connect TiDB: mysql --host %s --port %s -u root\n", ss[0], ss[1])
-			if hasDashboard(pdAddr) {
-				fmt.Printf("To view the dashboard: http://%s/dashboard\n", pdAddr)
-			}
 			break
 		}
 	}
@@ -160,7 +156,15 @@ func bootCluster(pdNum, tidbNum, tikvNum int) error {
 		}
 	}
 
-	bootstrap(dbs[0].Addr(), pds[0].Addr())
+	for _, db := range dbs {
+		checkDB(db.Addr())
+	}
+
+	fmt.Println("TiDB cluster has run successfully")
+
+	if pdAddr := pds[0].Addr();hasDashboard(pdAddr) {
+		fmt.Printf("To view the dashboard: http://%s/dashboard\n", pdAddr)
+	}
 
 	for _, inst := range all {
 		if err := inst.Wait(); err != nil {
