@@ -14,6 +14,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/c4pt0r/tiup/pkg/meta"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -82,8 +84,14 @@ func updateComponents(components []string, nightly, force bool) error {
 			return err
 		}
 
+		if nightly && manifest.Nightly == nil {
+			fmt.Printf("The component `%s` have not nightly version, skiped\n", component)
+			continue
+		}
+
 		if nightly {
 			version = meta.NightlyVersion
+			comp = fmt.Sprintf("%v:%v", component, version)
 		}
 
 		// Ignore if the version has been installed

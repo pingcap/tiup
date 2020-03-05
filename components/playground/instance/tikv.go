@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/c4pt0r/tiup/pkg/localdata"
+	"github.com/c4pt0r/tiup/pkg/meta"
 	"github.com/c4pt0r/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 )
@@ -49,7 +50,7 @@ func NewTiKVInstance(dir string, id int, pds []*PDInstance) *TiKVInstance {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiKVInstance) Start(ctx context.Context) error {
+func (inst *TiKVInstance) Start(ctx context.Context, version meta.Version) error {
 	if err := os.MkdirAll(inst.dir, 0755); err != nil {
 		return err
 	}
@@ -68,7 +69,7 @@ func (inst *TiKVInstance) Start(ctx context.Context) error {
 		endpoints = append(endpoints, fmt.Sprintf("http://127.0.0.1:%d", pd.clientPort))
 	}
 	inst.cmd = exec.CommandContext(ctx,
-		"tiup", "run", "tikv", "--",
+		"tiup", "run", compVersion("tikv", version), "--",
 		fmt.Sprintf("--addr=127.0.0.1:%d", inst.port),
 		fmt.Sprintf("--status-addr=127.0.0.1:%d", inst.status),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),

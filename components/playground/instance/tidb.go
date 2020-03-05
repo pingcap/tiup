@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/c4pt0r/tiup/pkg/localdata"
+	"github.com/c4pt0r/tiup/pkg/meta"
 	"github.com/c4pt0r/tiup/pkg/utils"
 )
 
@@ -48,7 +49,7 @@ func NewTiDBInstance(dir string, id int, pds []*PDInstance) *TiDBInstance {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiDBInstance) Start(ctx context.Context) error {
+func (inst *TiDBInstance) Start(ctx context.Context, version meta.Version) error {
 	if err := os.MkdirAll(inst.dir, 0755); err != nil {
 		return err
 	}
@@ -57,7 +58,7 @@ func (inst *TiDBInstance) Start(ctx context.Context) error {
 		endpoints = append(endpoints, fmt.Sprintf("127.0.0.1:%d", pd.clientPort))
 	}
 	args := []string{
-		"tiup", "run", "tidb", "--",
+		"tiup", "run", compVersion("tidb", version), "--",
 		"-P", strconv.Itoa(inst.port),
 		"--host=127.0.0.1",
 		"--store=tikv",

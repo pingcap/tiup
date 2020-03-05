@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/c4pt0r/tiup/pkg/localdata"
+	"github.com/c4pt0r/tiup/pkg/meta"
 	"github.com/c4pt0r/tiup/pkg/utils"
 )
 
@@ -52,13 +53,13 @@ func (inst *PDInstance) Join(pds []*PDInstance) *PDInstance {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *PDInstance) Start(ctx context.Context) error {
+func (inst *PDInstance) Start(ctx context.Context, version meta.Version) error {
 	if err := os.MkdirAll(inst.dir, 0755); err != nil {
 		return err
 	}
 	uid := fmt.Sprintf("pd-%d", inst.id)
 	args := []string{
-		"tiup", "run", "pd", "--",
+		"tiup", "run", compVersion("pd", version), "--",
 		"--name=" + uid,
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.dir, "data")),
 		fmt.Sprintf("--peer-urls=http://127.0.0.1:%d", inst.peerPort),

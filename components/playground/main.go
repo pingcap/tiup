@@ -176,7 +176,7 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int) error {
 	fmt.Println("Playground Bootstrapping...")
 
 	for _, inst := range all {
-		if err := inst.Start(ctx); err != nil {
+		if err := inst.Start(ctx, meta.Version(version)); err != nil {
 			return err
 		}
 	}

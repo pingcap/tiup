@@ -13,11 +13,23 @@
 
 package instance
 
-import "context"
+import (
+	"context"
+	"fmt"
+
+	"github.com/c4pt0r/tiup/pkg/meta"
+)
 
 // Instance represent running component
 type Instance interface {
 	Pid() int
-	Start(ctx context.Context) error
+	Start(ctx context.Context, version meta.Version) error
 	Wait() error
+}
+
+func compVersion(comp string, version meta.Version) string {
+	if version.IsEmpty() {
+		return comp
+	}
+	return fmt.Sprintf("%v:%v", comp, version)
 }
