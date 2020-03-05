@@ -6,27 +6,42 @@
         {
             "name": "tidb",
             "desc": "TiDB is an open source distributed HTAP database compatible with the MySQL protocol",
-            "platforms": ["darwin/amd64", "linux/amd64"]
+            "platforms": [
+                "darwin/amd64",
+                "linux/amd64"
+            ]
         },
         {
             "name": "tikv",
             "desc": "Distributed transactional key-value database, originally created to complement TiDB",
-            "platforms": ["darwin/amd64", "linux/amd64"]
+            "platforms": [
+                "darwin/amd64",
+                "linux/amd64"
+            ]
         },
         {
             "name": "pd",
             "desc": "PD is the abbreviation for Placement Driver. It is used to manage and schedule the TiKV cluster",
-            "platforms": ["darwin/amd64", "linux/amd64"]
+            "platforms": [
+                "darwin/amd64",
+                "linux/amd64"
+            ]
         },
         {
-         "name": "playground",
-         "desc": "Bootstrap a local TiDB cluster",
-         "platforms": ["darwin/amd64", "linux/amd64"]
+            "name": "playground",
+            "desc": "Bootstrap a local TiDB cluster",
+            "platforms": [
+                "darwin/amd64",
+                "linux/amd64"
+            ]
         },
         {
-         "name": "client",
-         "desc": "A simple mysql client to connect TiDB",
-         "platforms": ["darwin/amd64", "linux/amd64"]
+            "name": "client",
+            "desc": "A simple mysql client to connect TiDB",
+            "platforms": [
+                "darwin/amd64",
+                "linux/amd64"
+            ]
         }
     ]
 }

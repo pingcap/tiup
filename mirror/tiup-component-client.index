@@ -6,7 +6,10 @@
             "version": "v0.0.2",
             "entry": "client",
             "date": "2020-03-03 19:38:00",
-            "platforms": ["darwin/amd64", "linux/amd64"]
+            "platforms": [
+                "darwin/amd64",
+                "linux/amd64"
+            ]
         }
     ]
 }

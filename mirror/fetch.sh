@@ -1,5 +1,14 @@
 #!/bin/bash
 
+checksum() {
+  echo "checksum $1"
+  if hash sha1sum 2>/dev/null; then
+      sha1sum $1.tar.gz | awk '{print $1}' > $1.sha1
+  else
+      shasum $1.tar.gz | awk '{print $1}' > $1.sha1
+  fi
+}
+
 for x in tidb tikv pd
 do
 	for v in $@
@@ -8,7 +17,7 @@ do
 		tar -xzf $x-$v-darwin-amd64.tar.gz
 		tar -C $x-$v-darwin-amd64 -czf $x-$v-darwin-amd64.tar.gz bin/$x-server
 		rm -rf $x-$v-darwin-amd64
-		sha1sum $x-$v-darwin-amd64.tar.gz | awk '{print $1}' > $x-$v-darwin-amd64.sha1
+		checksum "$x-$v-darwin-amd64"
 	done
 done
 
@@ -19,7 +28,7 @@ do
 	for x in tidb tikv pd
 	do
 		tar -C tidb-$v-linux-amd64 -czf  $x-$v-linux-amd64.tar.gz bin/$x-server
-		sha1sum $x-$v-linux-amd64.tar.gz | awk '{print $1}' > $x-$v-linux-amd64.sha1
+		checksum "$x-$v-linux-amd64"
 	done
 	rm -rf tidb-$v-linux-amd64
 done

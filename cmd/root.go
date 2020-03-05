@@ -94,7 +94,7 @@ func execute() error {
 // Execute parses the command line argumnts and calls proper functions
 func Execute() {
 	if err := execute(); err != nil {
-		fmt.Printf("\x1b[0;31mError: %s\x1b[0m\n",err)
+		fmt.Printf("\x1b[0;31mError: %s\x1b[0m\n", err)
 		os.Exit(1)
 	}
 }
