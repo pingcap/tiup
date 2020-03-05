@@ -49,7 +49,10 @@ tools/bin/failpoint-ctl: go.mod
 playground:
 	make -C components/playground package
 
-package: playground
+client:
+	make -C components/client package
+
+package: playground client
 	mkdir -p package ; \
 	GOOS=darwin GOARCH=amd64 go build ; \
     tar -czf tiup-darwin-amd64.tar.gz tiup ; \
@@ -60,6 +63,7 @@ package: playground
     rm tiup ; \
     mv tiup* package/ ; \
     mv components/playground/playground* package/ ; \
+	mv components/client/client* package/ ; \
     cp mirror/*.index package/
 	cp install.sh package/
 
