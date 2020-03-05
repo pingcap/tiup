@@ -4,11 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/c4pt0r/tiup/components/playground/instance"
@@ -165,12 +168,45 @@ func bootCluster(pdNum, tidbNum, tikvNum int) error {
 		fmt.Printf("To view the dashboard: http://%s/dashboard\n", pdAddr)
 	}
 
+	dumpDSN(dbs)
+	setupSignalHandler(func(bool) {
+		cleanDSN()
+	})
+
 	for _, inst := range all {
 		if err := inst.Wait(); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func dumpDSN(dbs []*instance.TiDBInstance) {
+	dsn := []string{}
+	for _, db := range dbs {
+		dsn = append(dsn, fmt.Sprintf("mysql://root@%s", db.Addr()))
+	}
+	ioutil.WriteFile("dsn", []byte(strings.Join(dsn, "\n")), 0644)
+}
+
+func cleanDSN() {
+	os.Remove("dsn")
+}
+
+// SetupSignalHandler setup signal handler for TiDB Server
+func setupSignalHandler(shutdownFunc func(bool)) {
+	//todo deal with dump goroutine stack on windows
+	closeSignalChan := make(chan os.Signal, 1)
+	signal.Notify(closeSignalChan,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+
+	go func() {
+		sig := <-closeSignalChan
+		shutdownFunc(sig == syscall.SIGQUIT)
+	}()
 }
 
 func main() {
