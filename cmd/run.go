@@ -57,59 +57,89 @@ command if you want to have a try.
 			if len(args) == 0 {
 				return cmd.Help()
 			}
-
-			component, version := meta.ParseCompVersion(args[0])
-			if !isSupportedComponent(component) {
-				return fmt.Errorf("unkonwn component `%s` (see supported components via `tiup list --refresh`)", component)
-			}
-
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
-			p, err := launchComponent(ctx, component, version, name, args[1:])
-			// If the process has been launched, we must save the process info to meta directory
-			if err == nil || (p != nil && p.Pid != 0) {
-				metaFile := filepath.Join(p.Dir, localdata.MetaFilename)
-				file, err := os.OpenFile(metaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
-				if err == nil {
-					defer file.Close()
-					encoder := json.NewEncoder(file)
-					encoder.SetIndent("", "    ")
-					_ = encoder.Encode(p)
-				}
-			}
-			if err != nil {
-				fmt.Printf("Failed to start component `%s`\n", component)
-				return err
-			}
-
-			ch := make(chan error)
-			go func() {
-				defer close(ch)
-
-				fmt.Printf("Starting %s %s \n", p.Exec, strings.Join(p.Args, " "))
-				ch <- p.cmd.Wait()
-			}()
-
-			sig := make(chan os.Signal, 1)
-			signal.Notify(sig, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT)
-
-			select {
-			case s := <-sig:
-				fmt.Printf("Got signal %v (Component: %v. PID: %v)\n", s, component, p.Pid)
-				if component == "tidb" {
-					return syscall.Kill(p.Pid, syscall.SIGKILL)
-				}
-				return syscall.Kill(p.Pid, s.(syscall.Signal))
-
-			case err := <-ch:
-				return errors.Annotatef(err, "start `%s` (wd:%s) failed", p.Exec, p.Dir)
-			}
+			return runComponent(name, args)
 		},
 	}
+
+	helpFunc := cmd.HelpFunc()
 	cmd.Flags().StringVarP(&name, "name", "n", "", "Specify a name for this task")
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		if len(args) <= 2{
+			helpFunc(cmd, args)
+			return
+		}
+		spec := args[1]
+		if spec == "-h" || spec == "--help" {
+			spec = args[2]
+		}
+		binaryPath, err := binaryPath(spec)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		comp := exec.Command(binaryPath, "-h")
+		comp.Stdout = os.Stdout
+		comp.Stderr = os.Stderr
+		if err := comp.Start(); err != nil {
+			fmt.Printf("Cannot fetch help message from %s failed: %v\n", binaryPath, err)
+			return
+		}
+		if err := comp.Wait(); err != nil {
+			fmt.Printf("Cannot fetch help message from %s failed: %v\n", binaryPath, err)
+		}
+	})
 
 	return cmd
+}
+
+func runComponent(name string, args []string) error {
+	component, version := meta.ParseCompVersion(args[0])
+	if !isSupportedComponent(component) {
+		return fmt.Errorf("unkonwn component `%s` (see supported components via `tiup list --refresh`)", component)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	p, err := launchComponent(ctx, component, version, name, args[1:])
+	// If the process has been launched, we must save the process info to meta directory
+	if err == nil || (p != nil && p.Pid != 0) {
+		metaFile := filepath.Join(p.Dir, localdata.MetaFilename)
+		file, err := os.OpenFile(metaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
+		if err == nil {
+			defer file.Close()
+			encoder := json.NewEncoder(file)
+			encoder.SetIndent("", "    ")
+			_ = encoder.Encode(p)
+		}
+	}
+	if err != nil {
+		fmt.Printf("Failed to start component `%s`\n", component)
+		return err
+	}
+
+	ch := make(chan error)
+	go func() {
+		defer close(ch)
+
+		fmt.Printf("Starting %s %s \n", p.Exec, strings.Join(p.Args, " "))
+		ch <- p.cmd.Wait()
+	}()
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT)
+
+	select {
+	case s := <-sig:
+		fmt.Printf("Got signal %v (Component: %v. PID: %v)\n", s, component, p.Pid)
+		if component == "tidb" {
+			return syscall.Kill(p.Pid, syscall.SIGKILL)
+		}
+		return syscall.Kill(p.Pid, s.(syscall.Signal))
+
+	case err := <-ch:
+		return errors.Annotatef(err, "start `%s` (wd:%s) failed", p.Exec, p.Dir)
+	}
 }
 
 func isSupportedComponent(component string) bool {

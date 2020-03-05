@@ -32,33 +32,7 @@ latest version installed will be selected if no version specified.`,
 			if len(args) != 1 {
 				return cmd.Help()
 			}
-			component, version := meta.ParseCompVersion(args[0])
-			installed, err := profile.InstalledVersions(component)
-			if err != nil {
-				return err
-			}
-
-			errInstallFirst := fmt.Errorf("use `tiup install %[1]s` to install `%[1]s` first", args[0])
-			if len(installed) < 1 {
-				return errInstallFirst
-			}
-			if version.IsEmpty() {
-				sort.Slice(installed, func(i, j int) bool {
-					return semver.Compare(installed[i], installed[j]) < 0
-				})
-				version = meta.Version(installed[len(installed)-1])
-			}
-			found := false
-			for _, v := range installed {
-				if meta.Version(v) == version {
-					found = true
-					break
-				}
-			}
-			if !found {
-				return errInstallFirst
-			}
-			binaryPath, err := profile.BinaryPath(component, version)
+			binaryPath, err := binaryPath(args[0])
 			if err != nil {
 				return err
 			}
@@ -67,4 +41,34 @@ latest version installed will be selected if no version specified.`,
 		},
 	}
 	return cmd
+}
+
+func binaryPath(spec string) (string,error){
+	component, version := meta.ParseCompVersion(spec)
+	installed, err := profile.InstalledVersions(component)
+	if err != nil {
+		return "", err
+	}
+
+	errInstallFirst := fmt.Errorf("use `tiup install %[1]s` to install `%[1]s` first", spec)
+	if len(installed) < 1 {
+		return "", errInstallFirst
+	}
+	if version.IsEmpty() {
+		sort.Slice(installed, func(i, j int) bool {
+			return semver.Compare(installed[i], installed[j]) < 0
+		})
+		version = meta.Version(installed[len(installed)-1])
+	}
+	found := false
+	for _, v := range installed {
+		if meta.Version(v) == version {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return "", errInstallFirst
+	}
+	return profile.BinaryPath(component, version)
 }
