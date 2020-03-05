@@ -22,6 +22,11 @@
          "name": "playground",
          "desc": "Bootstrap a local TiDB cluster",
          "platforms": ["darwin/amd64", "linux/amd64"]
+        },
+        {
+         "name": "client",
+         "desc": "A simple mysql client to connect TiDB",
+         "platforms": ["darwin/amd64", "linux/amd64"]
         }
     ]
 }
