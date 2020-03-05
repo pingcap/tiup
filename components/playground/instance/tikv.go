@@ -42,8 +42,8 @@ func NewTiKVInstance(dir string, id int, pds []*PDInstance) *TiKVInstance {
 	return &TiKVInstance{
 		id:     id,
 		dir:    dir,
-		port:   utils.MustGetFreePort(20160),
-		status: utils.MustGetFreePort(20180),
+		port:   utils.MustGetFreePort("127.0.0.1", 20160),
+		status: utils.MustGetFreePort("127.0.0.1", 20180),
 		pds:    pds,
 	}
 }
