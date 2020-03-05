@@ -175,7 +175,7 @@ func base62Name() string {
 	const base = 62
 	const sets = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	b := make([]byte, 0)
-	num := time.Now().UnixNano()
+	num := time.Now().UnixNano()/int64(time.Millisecond)
 	for num > 0 {
 		r := math.Mod(float64(num), float64(base))
 		num /= base
