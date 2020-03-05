@@ -37,8 +37,9 @@ func execute() error {
 	pdNum := 1
 
 	rootCmd := &cobra.Command{
-		Use:   "playground",
-		Short: "Bootstrap a TiDB cluster in your local host",
+		Use:          "playground",
+		Short:        "Bootstrap a TiDB cluster in your local host",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return bootCluster(pdNum, tidbNum, tikvNum)
 		},
@@ -174,7 +175,7 @@ func bootCluster(pdNum, tidbNum, tikvNum int) error {
 
 func main() {
 	if err := execute(); err != nil {
-		fmt.Println(err)
+		fmt.Println("Playground bootstrapping failed:", err)
 		os.Exit(1)
 	}
 }

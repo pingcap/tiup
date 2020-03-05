@@ -74,7 +74,7 @@ func (inst *TiKVInstance) Start(ctx context.Context) error {
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--config=%s", configPath),
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.dir, "data")),
-		fmt.Sprintf("--log-file=g%s", filepath.Join(inst.dir, "tikv.log")),
+		fmt.Sprintf("--log-file=%s", filepath.Join(inst.dir, "tikv.log")),
 	)
 	inst.cmd.Env = append(
 		os.Environ(),

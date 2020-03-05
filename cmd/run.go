@@ -63,8 +63,6 @@ command if you want to have a try.
 				return fmt.Errorf("unkonwn component `%s` (see supported components via `tiup list --refresh`)", component)
 			}
 
-			fmt.Printf("+ Preparing to launch the component `%s`\n", component)
-
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
@@ -81,7 +79,7 @@ command if you want to have a try.
 				}
 			}
 			if err != nil {
-				fmt.Printf("+ Failed to start component `%s`\n", component)
+				fmt.Printf("Failed to start component `%s`\n", component)
 				return err
 			}
 
@@ -89,7 +87,7 @@ command if you want to have a try.
 			go func() {
 				defer close(ch)
 
-				fmt.Printf(" - Starting %s %s \n", p.Exec, strings.Join(p.Args, " "))
+				fmt.Printf("Starting %s %s \n", p.Exec, strings.Join(p.Args, " "))
 				ch <- p.cmd.Wait()
 			}()
 
@@ -98,17 +96,14 @@ command if you want to have a try.
 
 			select {
 			case s := <-sig:
-				fmt.Printf(" - Got signal %v (Component: %v. PID: %v)\n", s, component, p.Pid)
+				fmt.Printf("Got signal %v (Component: %v. PID: %v)\n", s, component, p.Pid)
 				if component == "tidb" {
 					return syscall.Kill(p.Pid, syscall.SIGKILL)
 				}
 				return syscall.Kill(p.Pid, s.(syscall.Signal))
 
 			case err := <-ch:
-				if err != nil {
-					fmt.Printf(" - Failed to start `%s`: %s\n", p.Exec, err)
-				}
-				return err
+				return errors.Annotatef(err, "start `%s` (wd:%s) failed", p.Exec, p.Dir)
 			}
 		},
 	}
@@ -126,8 +121,11 @@ func isSupportedComponent(component string) bool {
 
 	manifest, err := repository.Manifest()
 	if err != nil {
-		fmt.Println(" - Fetch latest manifest error:", err)
+		fmt.Println("Fetch latest manifest error:", err)
 		return false
+	}
+	if err := profile.SaveManifest(manifest); err != nil {
+		fmt.Println("Save latest manifest error:", err)
 	}
 	return manifest.HasComponent(component)
 }
@@ -171,7 +169,6 @@ func launchComponent(ctx context.Context, component string, version meta.Version
 		wd = profile.Path(filepath.Join(localdata.DataParentDir, name))
 	}
 
-	fmt.Println(" - Data directory", wd)
 	if err := os.MkdirAll(wd, 0755); err != nil {
 		return nil, err
 	}

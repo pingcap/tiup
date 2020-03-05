@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -47,6 +48,7 @@ missing.
   # Quick start
   tiup run playground
 `,
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
@@ -92,6 +94,7 @@ func execute() error {
 // Execute parses the command line argumnts and calls proper functions
 func Execute() {
 	if err := execute(); err != nil {
+		fmt.Printf("\x1b[0;31mError: %s\x1b[0m\n",err)
 		os.Exit(1)
 	}
 }
