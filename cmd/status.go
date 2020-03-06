@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -52,6 +53,13 @@ func showStatus() error {
 				continue
 			}
 			metaFile := filepath.Join(localdata.DataParentDir, dir.Name(), localdata.MetaFilename)
+
+			// If the path doesn't contain the meta file, which means startup interrupted
+			if utils.IsNotExist(profile.Path(metaFile)) {
+				_ = os.RemoveAll(profile.Path(filepath.Join(localdata.DataParentDir, dir.Name())))
+				continue
+			}
+
 			var process process
 			err := profile.ReadJSON(metaFile, &process)
 			if err != nil {

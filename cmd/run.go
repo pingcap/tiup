@@ -35,7 +35,7 @@ import (
 )
 
 func newRunCmd() *cobra.Command {
-	var name string
+	var tag string
 	cmd := &cobra.Command{
 		Use:   "run <component1>:[version]",
 		Short: "Run a component of specific version",
@@ -48,8 +48,8 @@ command if you want to have a try.
   # Quick start
   tiup run playground
 
-  # Start a playground with a specified name
-  tiup run playground --name p1`,
+  # Start a playground with a specified tag
+  tiup run playground --tag p1`,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			UnknownFlags: true,
 		},
@@ -57,12 +57,12 @@ command if you want to have a try.
 			if len(args) == 0 {
 				return cmd.Help()
 			}
-			return runComponent(name, args)
+			return runComponent(tag, args)
 		},
 	}
 
 	helpFunc := cmd.HelpFunc()
-	cmd.Flags().StringVarP(&name, "name", "n", "", "Specify a name for this task")
+	cmd.Flags().StringVarP(&tag, "tag", "n", "", "Specify a tag for this task")
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		if len(args) <= 2 {
 			helpFunc(cmd, args)
@@ -92,7 +92,7 @@ command if you want to have a try.
 	return cmd
 }
 
-func runComponent(name string, args []string) error {
+func runComponent(tag string, args []string) error {
 	component, version := meta.ParseCompVersion(args[0])
 	if !isSupportedComponent(component) {
 		return fmt.Errorf("unkonwn component `%s` (see supported components via `tiup list --refresh`)", component)
@@ -101,7 +101,7 @@ func runComponent(name string, args []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	p, err := launchComponent(ctx, component, version, name, args[1:])
+	p, err := launchComponent(ctx, component, version, tag, args[1:])
 	// If the process has been launched, we must save the process info to meta directory
 	if err == nil || (p != nil && p.Pid != 0) {
 		metaFile := filepath.Join(p.Dir, localdata.MetaFilename)
@@ -171,7 +171,7 @@ type process struct {
 	cmd         *exec.Cmd
 }
 
-func base62Name() string {
+func base62Tag() string {
 	const base = 62
 	const sets = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	b := make([]byte, 0)
@@ -184,7 +184,7 @@ func base62Name() string {
 	return string(b)
 }
 
-func launchComponent(ctx context.Context, component string, version meta.Version, name string, args []string) (*process, error) {
+func launchComponent(ctx context.Context, component string, version meta.Version, tag string, args []string) (*process, error) {
 	binPath, err := downloadIfMissing(component, version)
 	if err != nil {
 		return nil, err
@@ -192,11 +192,11 @@ func launchComponent(ctx context.Context, component string, version meta.Version
 
 	wd := os.Getenv(localdata.EnvNameInstanceDataDir)
 	if wd == "" {
-		// Generate a name for current instance if the name doesn't specified
-		if name == "" {
-			name = base62Name()
+		// Generate a tag for current instance if the tag doesn't specified
+		if tag == "" {
+			tag = base62Tag()
 		}
-		wd = profile.Path(filepath.Join(localdata.DataParentDir, name))
+		wd = profile.Path(filepath.Join(localdata.DataParentDir, tag))
 	}
 
 	if err := os.MkdirAll(wd, 0755); err != nil {
