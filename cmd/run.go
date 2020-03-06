@@ -30,8 +30,68 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap/errors"
+	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
 )
+
+func newRunCmd() *cobra.Command {
+	var tag string
+	cmd := &cobra.Command{
+		Use:   "run <component1>:[version]",
+		Short: "Run a component of specific version",
+		Long: `Run a specific version of a component. If no version number is specified,
+the latest version installed locally will be run. If the specified
+component does not have any version installed locally, the latest stable
+version will be downloaded from the server. You can run the following
+command if you want to have a try.
+
+  # Quick start
+  tiup run playground
+
+  # Start a playground with a specified tag
+  tiup run playground --tag p1`,
+		FParseErrWhitelist: cobra.FParseErrWhitelist{
+			UnknownFlags: true,
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return cmd.Help()
+			}
+			return runComponent(tag, args)
+		},
+	}
+
+	helpFunc := cmd.HelpFunc()
+	cmd.Flags().StringVarP(&tag, "tag", "n", "", "Specify a tag for this task")
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		if len(args) <= 2 {
+			helpFunc(cmd, args)
+			return
+		}
+		spec := args[1]
+		if spec == "-h" || spec == "--help" {
+			spec = args[2]
+		}
+		binaryPath, err := binaryPath(spec)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		comp := exec.Command(binaryPath, "-h")
+		comp.Stdin = os.Stdin
+		comp.Stdout = os.Stdout
+		comp.Stderr = os.Stderr
+		if err := comp.Start(); err != nil {
+			fmt.Printf("Cannot fetch help message from %s failed: %v\n", binaryPath, err)
+			return
+		}
+		if err := comp.Wait(); err != nil {
+			fmt.Printf("Cannot fetch help message from %s failed: %v\n", binaryPath, err)
+		}
+	})
+
+	return cmd
+}
 
 func runComponent(tag string, args []string) error {
 	component, version := meta.ParseCompVersion(args[0])
