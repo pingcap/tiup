@@ -78,7 +78,6 @@ command if you want to have a try.
 			return
 		}
 		comp := exec.Command(binaryPath, "-h")
-		comp.Stdin = os.Stdin
 		comp.Stdout = os.Stdout
 		comp.Stderr = os.Stderr
 		if err := comp.Start(); err != nil {
