@@ -155,6 +155,7 @@ func launchComponent(ctx context.Context, component string, version meta.Version
 		envs,
 		os.Environ()...,
 	)
+	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	c.Dir = wd
