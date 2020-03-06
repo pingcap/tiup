@@ -34,9 +34,16 @@ var (
 	repository *meta.Repository
 )
 
-var defaultMirror = "https://tiup-mirrors.pingcap.com/"
+const defaultMirror = "https://tiup-mirrors.pingcap.com/"
+
+var mirrorRepository = ""
 
 func init() {
+	var mirror = defaultMirror
+	if m := os.Getenv("TIUP_MIRRORS"); m != "" {
+		mirror = m
+	}
+
 	var binary string
 	rootCmd = &cobra.Command{
 		Use: "tiup",
@@ -65,6 +72,7 @@ missing.
 		SilenceUsage: true,
 	}
 
+	rootCmd.Flags().StringVarP(&mirrorRepository, "mirror", "", mirror, "Overwrite default `mirror` or TIUP_MIRRORS environment variable")
 	rootCmd.Flags().StringVarP(&binary, "bin", "", "", "Print binary path of a specific version of a component `<component>:[version]`\n"+
 		"and the latest version installed will be selected if no version specified.")
 
@@ -121,7 +129,7 @@ func execute() error {
 
 	// Initialize the repository
 	// Replace the mirror if some subcommands use different mirror address
-	mirror := meta.NewMirror(defaultMirror)
+	mirror := meta.NewMirror(mirrorRepository)
 	if err := mirror.Open(); err != nil {
 		return err
 	}
