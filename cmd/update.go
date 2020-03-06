@@ -92,7 +92,7 @@ func updateComponents(components []string, nightly, force bool) error {
 		}
 
 		if nightly && manifest.Nightly == nil {
-			fmt.Printf("The component `%s` have not nightly version, skiped\n", component)
+			fmt.Printf("The component `%s` has not nightly version, skiped\n", component)
 			continue
 		}
 
