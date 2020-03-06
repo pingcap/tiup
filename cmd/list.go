@@ -17,8 +17,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/c4pt0r/tiup/pkg/set"
-	"github.com/c4pt0r/tiup/pkg/tui"
+	"github.com/pingcap-incubator/tiup/pkg/set"
+	"github.com/pingcap-incubator/tiup/pkg/tui"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )

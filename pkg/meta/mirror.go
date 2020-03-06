@@ -22,9 +22,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/c4pt0r/tiup/pkg/utils"
 	"github.com/cavaliercoder/grab"
 	"github.com/cheggaaa/pb"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 )
 

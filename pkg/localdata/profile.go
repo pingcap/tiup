@@ -16,14 +16,14 @@ package localdata
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/c4pt0r/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
 
-	"github.com/c4pt0r/tiup/pkg/utils"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 )
 

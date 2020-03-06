@@ -93,7 +93,7 @@ func (s *metaSuite) TestRepository(c *C) {
 	}
 
 	tmpDir := filepath.Join(currentDir(), "tmp-profile")
-	fpName := "github.com/c4pt0r/tiup/pkg/meta/MockProfileDir"
+	fpName := "github.com/pingcap-incubator/tiup/pkg/meta/MockProfileDir"
 	fpExpr := `return("` + tmpDir + `")`
 	c.Assert(failpoint.Enable(fpName, fpExpr), IsNil)
 	defer func() { c.Assert(failpoint.Disable(fpName), IsNil) }()

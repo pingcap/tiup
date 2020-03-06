@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/c4pt0r/tiup/pkg/localdata"
-	"github.com/c4pt0r/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
 )

@@ -19,9 +19,9 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/c4pt0r/tiup/pkg/localdata"
-	"github.com/c4pt0r/tiup/pkg/tui"
-	"github.com/c4pt0r/tiup/pkg/utils"
+	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup/pkg/tui"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	gops "github.com/shirou/gopsutil/process"
 	"github.com/spf13/cobra"
 )

@@ -22,9 +22,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/c4pt0r/tiup/pkg/localdata"
-	"github.com/c4pt0r/tiup/pkg/meta"
-	"github.com/c4pt0r/tiup/pkg/utils"
+	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 )
 
 // TiDBInstance represent a running tidb-server

@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/c4pt0r/tiup/components/playground/instance"
-	"github.com/c4pt0r/tiup/pkg/localdata"
-	"github.com/c4pt0r/tiup/pkg/meta"
-	"github.com/c4pt0r/tiup/pkg/utils"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/pingcap-incubator/tiup/components/playground/instance"
+	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 

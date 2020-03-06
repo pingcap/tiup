@@ -1,4 +1,4 @@
-module github.com/c4pt0r/tiup
+module github.com/pingcap-incubator/tiup
 
 go 1.13
 

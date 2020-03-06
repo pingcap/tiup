@@ -16,7 +16,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/c4pt0r/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )

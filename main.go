@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/c4pt0r/tiup/cmd"
+	"github.com/pingcap-incubator/tiup/cmd"
 )
 
 func main() {

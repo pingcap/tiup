@@ -25,7 +25,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/c4pt0r/tiup/pkg/utils"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 )
 

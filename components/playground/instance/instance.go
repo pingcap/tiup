@@ -17,7 +17,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/c4pt0r/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/meta"
 )
 
 type instance struct {

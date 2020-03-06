@@ -9,9 +9,9 @@ import (
 	"os/user"
 	"path"
 
-	"github.com/c4pt0r/tiup/pkg/localdata"
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
+	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	_ "github.com/xo/usql/drivers/mysql"
 	"github.com/xo/usql/env"
 	"github.com/xo/usql/handler"
