@@ -29,7 +29,7 @@ bin_dir=$TIUP_HOME/bin
 mkdir -p "$bin_dir"
 
 install_binary() {
-    curl "$repo/tiup-$os-$arch.tar.gz" -o "/tmp/tiup-$os-$arch.tar.gz" || return 1
+    curl "$repo/tiup-$os-$arch.tar.gz?$(date "+%Y%m%d%H%M%S")" -o "/tmp/tiup-$os-$arch.tar.gz" || return 1
     tar -zxf "/tmp/tiup-$os-$arch.tar.gz" -C "$bin_dir" || return 1
     rm "/tmp/tiup-$os-$arch.tar.gz"
     return 0
