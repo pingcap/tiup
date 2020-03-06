@@ -30,33 +30,31 @@ import (
 
 // TiKVInstance represent a running tikv-server
 type TiKVInstance struct {
-	id     int
-	dir    string
-	host   string
-	port   int
-	status int
-	pds    []*PDInstance
-	cmd    *exec.Cmd
+	instance
+	pds []*PDInstance
+	cmd *exec.Cmd
 }
 
 // NewTiKVInstance return a TiKVInstance
 func NewTiKVInstance(dir, host string, id int, pds []*PDInstance) *TiKVInstance {
 	return &TiKVInstance{
-		id:     id,
-		dir:    dir,
-		host:   host,
-		port:   utils.MustGetFreePort(host, 20160),
-		status: utils.MustGetFreePort(host, 20180),
-		pds:    pds,
+		instance: instance{
+			ID:         id,
+			Dir:        dir,
+			Host:       host,
+			Port:       utils.MustGetFreePort(host, 20160),
+			StatusPort: utils.MustGetFreePort(host, 20180),
+		},
+		pds: pds,
 	}
 }
 
 // Start calls set inst.cmd and Start
 func (inst *TiKVInstance) Start(ctx context.Context, version meta.Version) error {
-	if err := os.MkdirAll(inst.dir, 0755); err != nil {
+	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
-	configPath := path.Join(inst.dir, "tikv.toml")
+	configPath := path.Join(inst.Dir, "tikv.toml")
 	cf, err := os.Create(configPath)
 	if err != nil {
 		return errors.Trace(err)
@@ -68,20 +66,20 @@ func (inst *TiKVInstance) Start(ctx context.Context, version meta.Version) error
 
 	endpoints := make([]string, 0, len(inst.pds))
 	for _, pd := range inst.pds {
-		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", inst.host, pd.clientPort))
+		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", inst.Host, pd.StatusPort))
 	}
 	inst.cmd = exec.CommandContext(ctx,
 		"tiup", "run", compVersion("tikv", version), "--",
-		fmt.Sprintf("--addr=%s:%d", inst.host, inst.port),
-		fmt.Sprintf("--status-addr=%s:%d", inst.host, inst.status),
+		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
+		fmt.Sprintf("--status-addr=%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--config=%s", configPath),
-		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.dir, "data")),
-		fmt.Sprintf("--log-file=%s", filepath.Join(inst.dir, "tikv.log")),
+		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
+		fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "tikv.log")),
 	)
 	inst.cmd.Env = append(
 		os.Environ(),
-		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, inst.dir),
+		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, inst.Dir),
 	)
 	inst.cmd.Stderr = os.Stderr
 	inst.cmd.Stdout = os.Stdout

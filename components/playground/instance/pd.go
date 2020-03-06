@@ -28,23 +28,21 @@ import (
 
 // PDInstance represent a running pd-server
 type PDInstance struct {
-	id         int
-	dir        string
-	host       string
-	peerPort   int
-	clientPort int
-	endpoints  []*PDInstance
-	cmd        *exec.Cmd
+	instance
+	endpoints []*PDInstance
+	cmd       *exec.Cmd
 }
 
 // NewPDInstance return a PDInstance
 func NewPDInstance(dir, host string, id int) *PDInstance {
 	return &PDInstance{
-		id:         id,
-		dir:        dir,
-		host:       host,
-		clientPort: utils.MustGetFreePort(host, 2379),
-		peerPort:   utils.MustGetFreePort(host, 2380),
+		instance: instance{
+			ID:         id,
+			Dir:        dir,
+			Host:       host,
+			Port:       utils.MustGetFreePort(host, 2379),
+			StatusPort: utils.MustGetFreePort(host, 2380),
+		},
 	}
 }
 
@@ -56,24 +54,24 @@ func (inst *PDInstance) Join(pds []*PDInstance) *PDInstance {
 
 // Start calls set inst.cmd and Start
 func (inst *PDInstance) Start(ctx context.Context, version meta.Version) error {
-	if err := os.MkdirAll(inst.dir, 0755); err != nil {
+	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
-	uid := fmt.Sprintf("pd-%d", inst.id)
+	uid := fmt.Sprintf("pd-%d", inst.ID)
 	args := []string{
 		"tiup", "run", compVersion("pd", version), "--",
 		"--name=" + uid,
-		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.dir, "data")),
-		fmt.Sprintf("--peer-urls=http://%s:%d", inst.host, inst.peerPort),
-		fmt.Sprintf("--advertise-peer-urls=http://%s:%d", inst.host, inst.peerPort),
-		fmt.Sprintf("--client-urls=http://%s:%d", inst.host, inst.clientPort),
-		fmt.Sprintf("--advertise-client-urls=http://%s:%d", inst.host, inst.clientPort),
-		fmt.Sprintf("--log-file=%s", filepath.Join(inst.dir, "pd.log")),
+		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
+		fmt.Sprintf("--peer-urls=http://%s:%d", inst.Host, inst.Port),
+		fmt.Sprintf("--advertise-peer-urls=http://%s:%d", inst.Host, inst.Port),
+		fmt.Sprintf("--client-urls=http://%s:%d", inst.Host, inst.StatusPort),
+		fmt.Sprintf("--advertise-client-urls=http://%s:%d", inst.Host, inst.StatusPort),
+		fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "pd.log")),
 	}
 	endpoints := make([]string, 0, len(inst.endpoints))
 	for _, pd := range inst.endpoints {
-		uid := fmt.Sprintf("pd-%d", pd.id)
-		endpoints = append(endpoints, fmt.Sprintf("%s=http://%s:%d", uid, inst.host, pd.peerPort))
+		uid := fmt.Sprintf("pd-%d", pd.ID)
+		endpoints = append(endpoints, fmt.Sprintf("%s=http://%s:%d", uid, inst.Host, pd.StatusPort))
 	}
 	if len(endpoints) > 0 {
 		args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(endpoints, ",")))
@@ -81,7 +79,7 @@ func (inst *PDInstance) Start(ctx context.Context, version meta.Version) error {
 	inst.cmd = exec.CommandContext(ctx, args[0], args[1:]...)
 	inst.cmd.Env = append(
 		os.Environ(),
-		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, inst.dir),
+		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, inst.Dir),
 	)
 	inst.cmd.Stderr = os.Stderr
 	inst.cmd.Stdout = os.Stdout
@@ -100,5 +98,5 @@ func (inst *PDInstance) Pid() int {
 
 // Addr return the listen address of PD
 func (inst *PDInstance) Addr() string {
-	return fmt.Sprintf("%s:%d", inst.host, inst.clientPort)
+	return fmt.Sprintf("%s:%d", inst.Host, inst.StatusPort)
 }

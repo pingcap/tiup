@@ -29,49 +29,47 @@ import (
 
 // TiDBInstance represent a running tidb-server
 type TiDBInstance struct {
-	id     int
-	dir    string
-	host   string
-	port   int
-	status int
-	pds    []*PDInstance
-	cmd    *exec.Cmd
+	instance
+	pds []*PDInstance
+	cmd *exec.Cmd
 }
 
 // NewTiDBInstance return a TiDBInstance
 func NewTiDBInstance(dir, host string, id int, pds []*PDInstance) *TiDBInstance {
 	return &TiDBInstance{
-		id:     id,
-		dir:    dir,
-		host:   host,
-		port:   utils.MustGetFreePort(host, 4000),
-		status: utils.MustGetFreePort("0.0.0.0", 10080),
-		pds:    pds,
+		instance: instance{
+			ID:         id,
+			Dir:        dir,
+			Host:       host,
+			Port:       utils.MustGetFreePort(host, 4000),
+			StatusPort: utils.MustGetFreePort("0.0.0.0", 10080),
+		},
+		pds: pds,
 	}
 }
 
 // Start calls set inst.cmd and Start
 func (inst *TiDBInstance) Start(ctx context.Context, version meta.Version) error {
-	if err := os.MkdirAll(inst.dir, 0755); err != nil {
+	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
 	endpoints := make([]string, 0, len(inst.pds))
 	for _, pd := range inst.pds {
-		endpoints = append(endpoints, fmt.Sprintf("%s:%d", inst.host, pd.clientPort))
+		endpoints = append(endpoints, fmt.Sprintf("%s:%d", inst.Host, pd.StatusPort))
 	}
 	args := []string{
 		"tiup", "run", compVersion("tidb", version), "--",
-		"-P", strconv.Itoa(inst.port),
+		"-P", strconv.Itoa(inst.Port),
 		"--store=tikv",
-		fmt.Sprintf("--host=%s", inst.host),
-		fmt.Sprintf("--status=%d", inst.status),
+		fmt.Sprintf("--host=%s", inst.Host),
+		fmt.Sprintf("--status=%d", inst.StatusPort),
 		fmt.Sprintf("--path=%s", strings.Join(endpoints, ",")),
-		fmt.Sprintf("--log-file=%s", filepath.Join(inst.dir, "tidb.log")),
+		fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "tidb.log")),
 	}
 	inst.cmd = exec.CommandContext(ctx, args[0], args[1:]...)
 	inst.cmd.Env = append(
 		os.Environ(),
-		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, inst.dir),
+		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, inst.Dir),
 	)
 	inst.cmd.Stderr = os.Stderr
 	inst.cmd.Stdout = os.Stdout
@@ -90,5 +88,5 @@ func (inst *TiDBInstance) Pid() int {
 
 // Addr return the listen address of TiDB
 func (inst *TiDBInstance) Addr() string {
-	return fmt.Sprintf("%s:%d", inst.host, inst.port)
+	return fmt.Sprintf("%s:%d", inst.Host, inst.Port)
 }

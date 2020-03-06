@@ -42,6 +42,14 @@
                 "darwin/amd64",
                 "linux/amd64"
             ]
+        },
+        {
+            "name": "prometheus",
+            "desc": "An open-source systems monitoring and alerting toolkit",
+            "platforms": [
+                "darwin/amd64",
+                "linux/amd64"
+            ]
         }
     ]
 }

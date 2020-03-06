@@ -20,6 +20,14 @@ import (
 	"github.com/c4pt0r/tiup/pkg/meta"
 )
 
+type instance struct {
+	ID         int
+	Dir        string
+	Host       string
+	Port       int
+	StatusPort int // client port for PD
+}
+
 // Instance represent running component
 type Instance interface {
 	Pid() int
