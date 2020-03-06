@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,6 +14,8 @@ import (
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
+	gops "github.com/shirou/gopsutil/process"
 	"github.com/spf13/cobra"
 	_ "github.com/xo/usql/drivers/mysql"
 	"github.com/xo/usql/env"
@@ -91,15 +94,47 @@ func connect(target string) error {
 func scanEndpoint(tiupHome string) ([]*Endpoint, error) {
 	endpoints := []*Endpoint{}
 
-	files, err := ioutil.ReadDir(path.Join(tiupHome, "data"))
+	files, err := ioutil.ReadDir(path.Join(tiupHome, localdata.DataParentDir))
 	if err != nil {
 		return nil, err
 	}
 
 	for _, file := range files {
-		endpoints = append(endpoints, readDsn(path.Join(tiupHome, "data", file.Name()), file.Name())...)
+		if !isInstanceAlive(tiupHome, file.Name()) {
+			continue
+		}
+		endpoints = append(endpoints, readDsn(path.Join(tiupHome, localdata.DataParentDir, file.Name()), file.Name())...)
 	}
 	return endpoints, nil
+}
+
+func isInstanceAlive(tiupHome, instance string) bool {
+	metaFile := path.Join(tiupHome, localdata.DataParentDir, instance, localdata.MetaFilename)
+
+	// If the path doesn't contain the meta file, which means startup interrupted
+	if utils.IsNotExist(metaFile) {
+		return false
+	}
+
+	file, err := os.Open(metaFile)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+	var process map[string]interface{}
+	if err := json.NewDecoder(file).Decode(&process); err != nil {
+		return false
+	}
+
+	if v, ok := process["pid"]; !ok {
+		return false
+	} else if pid, ok := v.(float64); !ok {
+		return false
+	} else if exist, err := gops.PidExists(int32(pid)); err != nil {
+		return false
+	} else {
+		return exist
+	}
 }
 
 func readDsn(dir, component string) []*Endpoint {
