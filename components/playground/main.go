@@ -95,17 +95,16 @@ func tryConnect(dsn string) error {
 	return nil
 }
 
-func checkDB(dbAddr string) {
+func checkDB(dbAddr string) bool {
 	dsn := fmt.Sprintf("root:@tcp(%s)/", dbAddr)
 	for i := 0; i < 60; i++ {
 		if err := tryConnect(dsn); err != nil {
 			time.Sleep(time.Second)
 		} else {
-			ss := strings.Split(dbAddr, ":")
-			fmt.Printf("To connect TiDB: mysql --host %s --port %s -u root\n", ss[0], ss[1])
-			break
+			return true
 		}
 	}
+	return false
 }
 
 func hasDashboard(pdAddr string) bool {
@@ -228,8 +227,19 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 		}
 	}
 
+	var succ []string
 	for _, db := range dbs {
-		checkDB(db.Addr())
+		if s := checkDB(db.Addr()); s {
+			succ = append(succ, db.Addr())
+		}
+	}
+
+	if len(succ) > 0 {
+		fmt.Println("\x1b[032mCLUSTER START SUCCESSFULLY, Enjoy it ^-^\x1b[0m")
+		for _, dbAddr := range succ {
+			ss := strings.Split(dbAddr, ":")
+			fmt.Printf("\x1b[032mTo connect TiDB: mysql --host %s --port %s -u root\x1b[0m\n", ss[0], ss[1])
+		}
 	}
 
 	if pdAddr := pds[0].Addr(); hasDashboard(pdAddr) {
@@ -237,13 +247,16 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 	}
 
 	if monitorAddr != "" {
+		addr := fmt.Sprintf("http://%s/pd/api/v1/config", pds[0].Addr())
+		cfg := fmt.Sprintf(`{"metric-storage":"http://%s"}`, monitorAddr)
+		resp, err := http.Post(addr, "", strings.NewReader(cfg))
+		if err != nil || resp.StatusCode != http.StatusOK {
+			fmt.Println("Set the PD metrics storage failed")
+		}
 		fmt.Printf("To view the monitor: http://%s\n", monitorAddr)
 	}
 
 	dumpDSN(dbs)
-	setupSignalHandler(func(bool) {
-		cleanDSN()
-	})
 
 	for _, inst := range all {
 		if err := inst.Wait(); err != nil {
@@ -258,11 +271,7 @@ func dumpDSN(dbs []*instance.TiDBInstance) {
 	for _, db := range dbs {
 		dsn = append(dsn, fmt.Sprintf("mysql://root@%s", db.Addr()))
 	}
-	ioutil.WriteFile("dsn", []byte(strings.Join(dsn, "\n")), 0644)
-}
-
-func cleanDSN() {
-	os.Remove("dsn")
+	_ = ioutil.WriteFile("dsn", []byte(strings.Join(dsn, "\n")), 0644)
 }
 
 func startMonitor(ctx context.Context, host, dir string, dbs, kvs, pds []string) (string, *exec.Cmd, error) {
@@ -328,22 +337,6 @@ scrape_configs:
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, dir),
 	)
 	return addr, cmd, nil
-}
-
-// SetupSignalHandler setup signal handler for TiDB Server
-func setupSignalHandler(shutdownFunc func(bool)) {
-	////todo deal with dump goroutine stack on windows
-	//closeSignalChan := make(chan os.Signal, 1)
-	//signal.Notify(closeSignalChan,
-	//	syscall.SIGHUP,
-	//	syscall.SIGINT,
-	//	syscall.SIGTERM,
-	//	syscall.SIGQUIT)
-	//
-	//go func() {
-	//	sig := <-closeSignalChan
-	//	shutdownFunc(sig == syscall.SIGQUIT)
-	//}()
 }
 
 func main() {

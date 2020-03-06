@@ -71,7 +71,7 @@ func (inst *PDInstance) Start(ctx context.Context, version meta.Version) error {
 	endpoints := make([]string, 0, len(inst.endpoints))
 	for _, pd := range inst.endpoints {
 		uid := fmt.Sprintf("pd-%d", pd.ID)
-		endpoints = append(endpoints, fmt.Sprintf("%s=http://%s:%d", uid, inst.Host, pd.StatusPort))
+		endpoints = append(endpoints, fmt.Sprintf("%s=http://%s:%d", uid, inst.Host, pd.Port))
 	}
 	if len(endpoints) > 0 {
 		args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(endpoints, ",")))
