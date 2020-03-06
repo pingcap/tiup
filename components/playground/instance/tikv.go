@@ -32,6 +32,7 @@ import (
 type TiKVInstance struct {
 	id     int
 	dir    string
+	host   string
 	port   int
 	status int
 	pds    []*PDInstance
@@ -39,12 +40,13 @@ type TiKVInstance struct {
 }
 
 // NewTiKVInstance return a TiKVInstance
-func NewTiKVInstance(dir string, id int, pds []*PDInstance) *TiKVInstance {
+func NewTiKVInstance(dir, host string, id int, pds []*PDInstance) *TiKVInstance {
 	return &TiKVInstance{
 		id:     id,
 		dir:    dir,
-		port:   utils.MustGetFreePort("127.0.0.1", 20160),
-		status: utils.MustGetFreePort("127.0.0.1", 20180),
+		host:   host,
+		port:   utils.MustGetFreePort(host, 20160),
+		status: utils.MustGetFreePort(host, 20180),
 		pds:    pds,
 	}
 }
@@ -66,12 +68,12 @@ func (inst *TiKVInstance) Start(ctx context.Context, version meta.Version) error
 
 	endpoints := make([]string, 0, len(inst.pds))
 	for _, pd := range inst.pds {
-		endpoints = append(endpoints, fmt.Sprintf("http://127.0.0.1:%d", pd.clientPort))
+		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", inst.host, pd.clientPort))
 	}
 	inst.cmd = exec.CommandContext(ctx,
 		"tiup", "run", compVersion("tikv", version), "--",
-		fmt.Sprintf("--addr=127.0.0.1:%d", inst.port),
-		fmt.Sprintf("--status-addr=127.0.0.1:%d", inst.status),
+		fmt.Sprintf("--addr=%s:%d", inst.host, inst.port),
+		fmt.Sprintf("--status-addr=%s:%d", inst.host, inst.status),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--config=%s", configPath),
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.dir, "data")),

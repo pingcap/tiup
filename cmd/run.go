@@ -64,7 +64,7 @@ command if you want to have a try.
 	helpFunc := cmd.HelpFunc()
 	cmd.Flags().StringVarP(&name, "name", "n", "", "Specify a name for this task")
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		if len(args) <= 2{
+		if len(args) <= 2 {
 			helpFunc(cmd, args)
 			return
 		}
@@ -175,7 +175,7 @@ func base62Name() string {
 	const base = 62
 	const sets = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	b := make([]byte, 0)
-	num := time.Now().UnixNano()/int64(time.Millisecond)
+	num := time.Now().UnixNano() / int64(time.Millisecond)
 	for num > 0 {
 		r := math.Mod(float64(num), float64(base))
 		num /= base

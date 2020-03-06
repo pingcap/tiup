@@ -30,6 +30,7 @@ import (
 type PDInstance struct {
 	id         int
 	dir        string
+	host       string
 	peerPort   int
 	clientPort int
 	endpoints  []*PDInstance
@@ -37,12 +38,13 @@ type PDInstance struct {
 }
 
 // NewPDInstance return a PDInstance
-func NewPDInstance(dir string, id int) *PDInstance {
+func NewPDInstance(dir, host string, id int) *PDInstance {
 	return &PDInstance{
 		id:         id,
 		dir:        dir,
-		clientPort: utils.MustGetFreePort("127.0.0.1", 2379),
-		peerPort:   utils.MustGetFreePort("127.0.0.1", 2380),
+		host:       host,
+		clientPort: utils.MustGetFreePort(host, 2379),
+		peerPort:   utils.MustGetFreePort(host, 2380),
 	}
 }
 
@@ -62,16 +64,16 @@ func (inst *PDInstance) Start(ctx context.Context, version meta.Version) error {
 		"tiup", "run", compVersion("pd", version), "--",
 		"--name=" + uid,
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.dir, "data")),
-		fmt.Sprintf("--peer-urls=http://127.0.0.1:%d", inst.peerPort),
-		fmt.Sprintf("--advertise-peer-urls=http://127.0.0.1:%d", inst.peerPort),
-		fmt.Sprintf("--client-urls=http://127.0.0.1:%d", inst.clientPort),
-		fmt.Sprintf("--advertise-client-urls=http://127.0.0.1:%d", inst.clientPort),
+		fmt.Sprintf("--peer-urls=http://%s:%d", inst.host, inst.peerPort),
+		fmt.Sprintf("--advertise-peer-urls=http://%s:%d", inst.host, inst.peerPort),
+		fmt.Sprintf("--client-urls=http://%s:%d", inst.host, inst.clientPort),
+		fmt.Sprintf("--advertise-client-urls=http://%s:%d", inst.host, inst.clientPort),
 		fmt.Sprintf("--log-file=%s", filepath.Join(inst.dir, "pd.log")),
 	}
 	endpoints := make([]string, 0, len(inst.endpoints))
 	for _, pd := range inst.endpoints {
 		uid := fmt.Sprintf("pd-%d", pd.id)
-		endpoints = append(endpoints, fmt.Sprintf("%s=http://127.0.0.1:%d", uid, pd.peerPort))
+		endpoints = append(endpoints, fmt.Sprintf("%s=http://%s:%d", uid, inst.host, pd.peerPort))
 	}
 	if len(endpoints) > 0 {
 		args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(endpoints, ",")))
@@ -98,5 +100,5 @@ func (inst *PDInstance) Pid() int {
 
 // Addr return the listen address of PD
 func (inst *PDInstance) Addr() string {
-	return fmt.Sprintf("127.0.0.1:%d", inst.clientPort)
+	return fmt.Sprintf("%s:%d", inst.host, inst.clientPort)
 }

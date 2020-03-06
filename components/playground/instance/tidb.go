@@ -31,6 +31,7 @@ import (
 type TiDBInstance struct {
 	id     int
 	dir    string
+	host   string
 	port   int
 	status int
 	pds    []*PDInstance
@@ -38,11 +39,12 @@ type TiDBInstance struct {
 }
 
 // NewTiDBInstance return a TiDBInstance
-func NewTiDBInstance(dir string, id int, pds []*PDInstance) *TiDBInstance {
+func NewTiDBInstance(dir, host string, id int, pds []*PDInstance) *TiDBInstance {
 	return &TiDBInstance{
 		id:     id,
 		dir:    dir,
-		port:   utils.MustGetFreePort("127.0.0.1", 4000),
+		host:   host,
+		port:   utils.MustGetFreePort(host, 4000),
 		status: utils.MustGetFreePort("0.0.0.0", 10080),
 		pds:    pds,
 	}
@@ -55,13 +57,13 @@ func (inst *TiDBInstance) Start(ctx context.Context, version meta.Version) error
 	}
 	endpoints := make([]string, 0, len(inst.pds))
 	for _, pd := range inst.pds {
-		endpoints = append(endpoints, fmt.Sprintf("127.0.0.1:%d", pd.clientPort))
+		endpoints = append(endpoints, fmt.Sprintf("%s:%d", inst.host, pd.clientPort))
 	}
 	args := []string{
 		"tiup", "run", compVersion("tidb", version), "--",
 		"-P", strconv.Itoa(inst.port),
-		"--host=127.0.0.1",
 		"--store=tikv",
+		fmt.Sprintf("--host=%s", inst.host),
 		fmt.Sprintf("--status=%d", inst.status),
 		fmt.Sprintf("--path=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", filepath.Join(inst.dir, "tidb.log")),
@@ -88,5 +90,5 @@ func (inst *TiDBInstance) Pid() int {
 
 // Addr return the listen address of TiDB
 func (inst *TiDBInstance) Addr() string {
-	return fmt.Sprintf("127.0.0.1:%d", inst.port)
+	return fmt.Sprintf("%s:%d", inst.host, inst.port)
 }

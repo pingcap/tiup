@@ -55,6 +55,7 @@ func execute() error {
 	tidbNum := 1
 	tikvNum := 1
 	pdNum := 1
+	host := "127.0.0.1"
 
 	rootCmd := &cobra.Command{
 		Use:          "playground",
@@ -65,13 +66,14 @@ func execute() error {
 			if len(args) > 0 {
 				version = args[0]
 			}
-			return bootCluster(version, pdNum, tidbNum, tikvNum)
+			return bootCluster(version, pdNum, tidbNum, tikvNum, host)
 		},
 	}
 
 	rootCmd.Flags().IntVarP(&tidbNum, "db", "", 1, "TiDB instance number")
 	rootCmd.Flags().IntVarP(&tikvNum, "kv", "", 1, "TiKV instance number")
 	rootCmd.Flags().IntVarP(&pdNum, "pd", "", 1, "PD instance number")
+	rootCmd.Flags().StringVarP(&host, "host", "", host, "Playground cluster host")
 
 	return rootCmd.Execute()
 }
@@ -118,7 +120,7 @@ func hasDashboard(pdAddr string) bool {
 	return false
 }
 
-func bootCluster(version string, pdNum, tidbNum, tikvNum int) error {
+func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string) error {
 	if pdNum < 1 || tidbNum < 1 || tikvNum < 1 {
 		return fmt.Errorf("all components count must be great than 0 (tidb=%v, tikv=%v, pd=%v)",
 			tidbNum, tikvNum, pdNum)
@@ -151,7 +153,7 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int) error {
 
 	for i := 0; i < pdNum; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("pd-%d", i))
-		inst := instance.NewPDInstance(dir, i)
+		inst := instance.NewPDInstance(dir, host, i)
 		pds = append(pds, inst)
 		all = append(all, inst)
 	}
@@ -161,14 +163,14 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int) error {
 
 	for i := 0; i < tikvNum; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("tikv-%d", i))
-		inst := instance.NewTiKVInstance(dir, i, pds)
+		inst := instance.NewTiKVInstance(dir, host, i, pds)
 		kvs = append(kvs, inst)
 		all = append(all, inst)
 	}
 
 	for i := 0; i < tidbNum; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("tidb-%d", i))
-		inst := instance.NewTiDBInstance(dir, i, pds)
+		inst := instance.NewTiDBInstance(dir, host, i, pds)
 		dbs = append(dbs, inst)
 		all = append(all, inst)
 	}
