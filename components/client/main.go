@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"github.com/c4pt0r/tiup/pkg/localdata"
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
+	"github.com/spf13/cobra"
 	_ "github.com/xo/usql/drivers/mysql"
 	"github.com/xo/usql/env"
 	"github.com/xo/usql/handler"
@@ -19,35 +21,71 @@ import (
 )
 
 func main() {
+	if err := execute(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func execute() error {
+	rootCmd := &cobra.Command{
+		Use:          "client",
+		Short:        "Connect a TiDB cluster in your local host",
+		SilenceUsage: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			target := ""
+			if len(args) > 0 {
+				target = args[0]
+			}
+			return connect(target)
+		},
+	}
+
+	return rootCmd.Execute()
+}
+
+func connect(target string) error {
 	tiupHome := os.Getenv(localdata.EnvNameHome)
 	if tiupHome == "" {
-		panic("the env variable " + localdata.EnvNameHome + " not set")
+		return fmt.Errorf("env variable %s not set, are you running client out of tiup?", localdata.EnvNameHome)
 	}
 	endpoints, err := scanEndpoint(tiupHome)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("error on read files: %s", err.Error())
 	}
 	if len(endpoints) == 0 {
-		fmt.Println("No endpoints found, please check if your playground is running")
-		os.Exit(0)
+		return fmt.Errorf("It seems no playground is running, execute `tiup run playground` to start one")
 	}
-	endpoint := selectEndpoint(endpoints)
-	if endpoint == nil {
-		os.Exit(0)
+	var endpoint *Endpoint
+	if target == "" {
+		if endpoint = selectEndpoint(endpoints); endpoint == nil {
+			os.Exit(0)
+		}
+	} else {
+		for _, end := range endpoints {
+			if end.component == target {
+				endpoint = end
+			}
+		}
+		if endpoint == nil {
+			return fmt.Errorf("specified instance %s not found, maybe it's not alive now, execute `tiup status` to see instance list", target)
+		}
 	}
 	u, err := user.Current()
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("can't get current user: %s", err.Error())
 	}
 	l, err := rline.New(false, "", env.HistoryFile(u))
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("can't open history file: %s", err.Error())
 	}
 	h := handler.New(l, u, os.Getenv(localdata.EnvNameInstanceDataDir), true)
 	if err = h.Open(endpoint.dsn); err != nil {
-		panic(err)
+		return fmt.Errorf("can't open connection to %s: %s", endpoint.dsn, err.Error())
 	}
-	h.Run()
+	if err = h.Run(); err != io.EOF {
+		return err
+	}
+	return nil
 }
 
 func scanEndpoint(tiupHome string) ([]*Endpoint, error) {

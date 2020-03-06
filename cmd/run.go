@@ -78,6 +78,7 @@ command if you want to have a try.
 			return
 		}
 		comp := exec.Command(binaryPath, "-h")
+		comp.Stdin = os.Stdin
 		comp.Stdout = os.Stdout
 		comp.Stderr = os.Stderr
 		if err := comp.Start(); err != nil {
@@ -214,6 +215,7 @@ func launchComponent(ctx context.Context, component string, version meta.Version
 		os.Environ(),
 		envs...,
 	)
+	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	c.Dir = wd
