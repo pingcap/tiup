@@ -36,6 +36,7 @@ import (
 
 func newRunCmd() *cobra.Command {
 	var tag string
+	var rm bool
 	cmd := &cobra.Command{
 		Use:   "run <component1>:[version]",
 		Short: "Run a component of specific version",
@@ -57,12 +58,13 @@ command if you want to have a try.
 			if len(args) == 0 {
 				return cmd.Help()
 			}
-			return runComponent(tag, args)
+			return runComponent(tag, args, rm)
 		},
 	}
 
 	helpFunc := cmd.HelpFunc()
 	cmd.Flags().StringVarP(&tag, "tag", "n", "", "Specify a tag for this task")
+	cmd.Flags().BoolVar(&rm, "rm", false, "Remove data directory on finish")
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		if len(args) <= 2 {
 			helpFunc(cmd, args)
@@ -92,7 +94,7 @@ command if you want to have a try.
 	return cmd
 }
 
-func runComponent(tag string, args []string) error {
+func runComponent(tag string, args []string, rm bool) error {
 	component, version := meta.ParseCompVersion(args[0])
 	if !isSupportedComponent(component) {
 		return fmt.Errorf("unkonwn component `%s` (see supported components via `tiup list --refresh`)", component)
@@ -104,6 +106,7 @@ func runComponent(tag string, args []string) error {
 	p, err := launchComponent(ctx, component, version, tag, args[1:])
 	// If the process has been launched, we must save the process info to meta directory
 	if err == nil || (p != nil && p.Pid != 0) {
+		defer cleanDataDir(rm, p.Dir)
 		metaFile := filepath.Join(p.Dir, localdata.MetaFilename)
 		file, err := os.OpenFile(metaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
 		if err == nil {
@@ -139,6 +142,15 @@ func runComponent(tag string, args []string) error {
 
 	case err := <-ch:
 		return errors.Annotatef(err, "start `%s` (wd:%s) failed", p.Exec, p.Dir)
+	}
+}
+
+func cleanDataDir(rm bool, dir string) {
+	if !rm {
+		return
+	}
+	if err := os.RemoveAll(dir); err != nil {
+		fmt.Println("clean data directory failed: ", err.Error())
 	}
 }
 
