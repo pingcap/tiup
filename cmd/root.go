@@ -18,10 +18,12 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"sort"
 
 	"github.com/c4pt0r/tiup/pkg/localdata"
 	"github.com/c4pt0r/tiup/pkg/meta"
 	"github.com/spf13/cobra"
+	"golang.org/x/mod/semver"
 )
 
 const profileDirName = ".tiup"
@@ -35,6 +37,7 @@ var (
 var defaultMirror = "https://tiup-mirrors.pingcap.com/"
 
 func init() {
+	var binary string
 	rootCmd = &cobra.Command{
 		Use: "tiup",
 		Long: `The tiup is a component management CLI utility tool that can help
@@ -46,28 +49,65 @@ component which doesn't be installed or the specified version is
 missing.
 
   # Quick start
-  tiup run playground
-`,
+  tiup run playground`,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if binary != "" {
+				binaryPath, err := binaryPath(binary)
+				if err != nil {
+					return err
+				}
+				fmt.Println(binaryPath)
+				return nil
+			}
 			return cmd.Help()
 		},
 		SilenceUsage: true,
 	}
 
+	rootCmd.Flags().StringVarP(&binary, "bin", "", "", "Print binary path of a specific version of a component `<component>:[version]`\n"+
+		"and the latest version installed will be selected if no version specified.")
+
 	rootCmd.AddCommand(
-		newSelfCmd(),
 		newInstallCmd(),
 		newListCmd(),
 		newUninstallCmd(),
-		newBinaryCmd(),
 		newUpdateCmd(),
 		newRunCmd(),
-		newShowCmd(),
 		newVersionCmd(),
 		newStatusCmd(),
 		newCleanCmd(),
 	)
+}
+
+func binaryPath(spec string) (string, error) {
+	component, version := meta.ParseCompVersion(spec)
+	installed, err := profile.InstalledVersions(component)
+	if err != nil {
+		return "", err
+	}
+
+	errInstallFirst := fmt.Errorf("use `tiup install %[1]s` to install `%[1]s` first", spec)
+	if len(installed) < 1 {
+		return "", errInstallFirst
+	}
+	if version.IsEmpty() {
+		sort.Slice(installed, func(i, j int) bool {
+			return semver.Compare(installed[i], installed[j]) < 0
+		})
+		version = meta.Version(installed[len(installed)-1])
+	}
+	found := false
+	for _, v := range installed {
+		if meta.Version(v) == version {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return "", errInstallFirst
+	}
+	return profile.BinaryPath(component, version)
 }
 
 func execute() error {

@@ -24,15 +24,31 @@ import (
 )
 
 func newUninstallCmd() *cobra.Command {
-	var all bool
+	var all, self bool
 	cmdUnInst := &cobra.Command{
 		Use:   "uninstall <component1>:<version>",
 		Short: "Uninstall components or versions of a component",
 		Long: `If you specify a version number, uninstall the specified version of
 the component. You must use --all explicitly if you want to remove all
 components or versions which are installed. You can uninstall multiple
-component or multiple version of a component at once`,
+component or multiple version of a component at once. There is a flag
+--self, which is used to uninstall tiup.
+
+  # Uninstall tiup
+  tiup uninstall --self
+
+  # Uninstall the specific version a component
+  tiup uninstall tidb:v3.0.10
+
+  # Uninstall all version of specific component
+  tiup uninstall tidb --all
+
+  # Uninstall all installed components
+  tiup uninstall --all`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if self {
+				return os.RemoveAll(profile.Root())
+			}
 			switch {
 			case len(args) > 0:
 				return removeComponents(args, all)
@@ -44,6 +60,7 @@ component or multiple version of a component at once`,
 		},
 	}
 	cmdUnInst.Flags().BoolVar(&all, "all", false, "Remove all components or versions.")
+	cmdUnInst.Flags().BoolVar(&self, "self", false, "Uninstall tiup and clean all local data")
 	return cmdUnInst
 }
 

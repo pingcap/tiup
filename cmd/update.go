@@ -22,9 +22,7 @@ import (
 )
 
 func newUpdateCmd() *cobra.Command {
-	var all bool
-	var nightly bool
-	var force bool
+	var all, nightly, force, self bool
 	cmd := &cobra.Command{
 		Use:   "update [component1]:[version] [component2..N]",
 		Short: "Update tiup components to the latest version",
@@ -33,7 +31,9 @@ explicitly to update to the latest nightly version. You can use --all
 to update all components installed locally. And you can specify a version
 like <component>:<version> to update to the specified version. Some components
 will be ignored if the latest version has been installed locally. But you can
-use the flag --force explicitly to overwrite local installation
+use the flag --force explicitly to overwrite local installation. There is a
+a flag --self, which is used to update the tiup to the latest version. All
+other flags will be ignored if the flag --self specified.
 
   # Update all components to the latest stable version
   tiup update --all
@@ -42,8 +42,14 @@ use the flag --force explicitly to overwrite local installation
   tiup update --nightly --all
 
   # Overwrite the local installation
-  tiup update playground:v0.0.1 --force`,
+  tiup update playground:v0.0.3 --force
+
+  # Update the tiup to the latest version
+  tiup update --self`,
 		RunE: func(cmd *cobra.Command, components []string) error {
+			if self {
+				return repository.DownloadFile(profile.Path("bin"), "tiup")
+			}
 			if (len(components) == 0 && !all && !force) || (len(components) > 0 && all) {
 				return cmd.Help()
 			}
@@ -53,6 +59,7 @@ use the flag --force explicitly to overwrite local installation
 	cmd.Flags().BoolVar(&all, "all", false, "Update all components")
 	cmd.Flags().BoolVar(&nightly, "nightly", false, "Update the components to nightly version")
 	cmd.Flags().BoolVar(&force, "force", false, "Force update a component to the latest version")
+	cmd.Flags().BoolVar(&self, "self", false, "Update tiup to the latest version")
 	return cmd
 }
 
