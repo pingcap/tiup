@@ -28,4 +28,12 @@ const (
 
 	// MetaFilename represents the process meta file name
 	MetaFilename = "tiup_process_meta"
+
+	// ProfileDirName is the name of the profile directory to be used
+	ProfileDirName = ".tiup"
+
+	// DefaultTiupHome represents the default home directory for this build of tiup
+	// If this is left empty, the default will be thee combination of the running
+	// user's home directory and ProfileDirName
+	DefaultTiupHome = ""
 )
