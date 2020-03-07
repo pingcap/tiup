@@ -39,12 +39,15 @@ const defaultMirror = "https://tiup-mirrors.pingcap.com/"
 var mirrorRepository = ""
 
 func init() {
-	var mirror = defaultMirror
+	var (
+		mirror   = defaultMirror
+		binary   string
+		repoOpts meta.RepositoryOptions
+	)
 	if m := os.Getenv("TIUP_MIRRORS"); m != "" {
 		mirror = m
 	}
 
-	var binary string
 	rootCmd = &cobra.Command{
 		Use: "tiup",
 		Long: `The tiup is a component management CLI utility tool that can help
@@ -69,10 +72,33 @@ missing.
 			}
 			return cmd.Help()
 		},
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			u, err := user.Current()
+			if err != nil {
+				return err
+			}
+
+			// Initialize the global profile
+			profile = localdata.NewProfile(filepath.Join(u.HomeDir, profileDirName))
+
+			// Initialize the repository
+			// Replace the mirror if some sub-commands use different mirror address
+			mirror := meta.NewMirror(mirrorRepository)
+			if err := mirror.Open(); err != nil {
+				return err
+			}
+			repository = meta.NewRepository(mirror, repoOpts)
+
+			return nil
+		},
+		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+			return repository.Mirror().Close()
+		},
 		SilenceUsage: true,
 	}
 
-	rootCmd.Flags().StringVarP(&mirrorRepository, "mirror", "", mirror, "Overwrite default `mirror` or TIUP_MIRRORS environment variable")
+	rootCmd.PersistentFlags().StringVarP(&mirrorRepository, "mirror", "", mirror, "Overwrite default `mirror` or TIUP_MIRRORS environment variable.")
+	rootCmd.PersistentFlags().BoolVarP(&repoOpts.SkipVersionCheck, "skip-version-check", "", false, "Skip the strict version check, by default a version must be a valid semver string.")
 	rootCmd.Flags().StringVarP(&binary, "bin", "", "", "Print binary path of a specific version of a component `<component>:[version]`\n"+
 		"and the latest version installed will be selected if no version specified.")
 
@@ -118,30 +144,9 @@ func binaryPath(spec string) (string, error) {
 	return profile.BinaryPath(component, version)
 }
 
-func execute() error {
-	u, err := user.Current()
-	if err != nil {
-		return err
-	}
-
-	// Initialize the global profile
-	profile = localdata.NewProfile(filepath.Join(u.HomeDir, profileDirName))
-
-	// Initialize the repository
-	// Replace the mirror if some subcommands use different mirror address
-	mirror := meta.NewMirror(mirrorRepository)
-	if err := mirror.Open(); err != nil {
-		return err
-	}
-	repository = meta.NewRepository(mirror)
-	defer func() { _ = repository.Mirror().Close() }()
-
-	return rootCmd.Execute()
-}
-
 // Execute parses the command line argumnts and calls proper functions
 func Execute() {
-	if err := execute(); err != nil {
+	if err := rootCmd.Execute(); err != nil {
 		fmt.Printf("\x1b[0;31mError: %s\x1b[0m\n", err)
 		os.Exit(1)
 	}

@@ -39,7 +39,7 @@ func currentDir() string {
 
 func (s *metaSuite) TestRepository(c *C) {
 	testDir := filepath.Join(currentDir(), "testdata")
-	repo := NewRepository(NewMirror(testDir))
+	repo := NewRepository(NewMirror(testDir), RepositoryOptions{})
 	comps, err := repo.Manifest()
 	c.Assert(err, IsNil)
 
