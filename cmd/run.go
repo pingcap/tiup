@@ -211,8 +211,8 @@ func launchComponent(ctx context.Context, component string, version meta.Version
 	// init the command
 	c := exec.CommandContext(ctx, binPath, args...)
 	c.Env = append(
-		os.Environ(),
-		envs...,
+		envs,
+		os.Environ()...,
 	)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
