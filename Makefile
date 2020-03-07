@@ -15,6 +15,7 @@ LDFLAGS := -w -s
 LDFLAGS += -X "$(REPO)/pkg/version.GitHash=$(COMMIT)"
 LDFLAGS += -X "$(REPO)/pkg/version.GitBranch=$(BRANCH)"
 LDFLAGS += -X "$(REPO)/pkg/version.BuildTime=$(BUILDTIME)"
+LDFLAGS += $(EXTRA_LDFLAGS)
 
 FILES     := $$(find . -name "*.go")
 
