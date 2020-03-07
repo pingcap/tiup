@@ -26,8 +26,6 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-const profileDirName = ".tiup"
-
 var (
 	profile    *localdata.Profile
 	rootCmd    *cobra.Command
@@ -79,7 +77,16 @@ missing.
 			}
 
 			// Initialize the global profile
-			profile = localdata.NewProfile(filepath.Join(u.HomeDir, profileDirName))
+			var profileDir string
+			switch {
+			case os.Getenv(localdata.EnvNameHome) != "":
+				profileDir = os.Getenv(localdata.EnvNameHome)
+			case localdata.DefaultTiupHome != "":
+				profileDir = localdata.DefaultTiupHome
+			default:
+				profileDir = filepath.Join(u.HomeDir, localdata.ProfileDirName)
+			}
+			profile = localdata.NewProfile(profileDir)
 
 			// Initialize the repository
 			// Replace the mirror if some sub-commands use different mirror address

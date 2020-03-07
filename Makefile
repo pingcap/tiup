@@ -15,15 +15,16 @@ LDFLAGS := -w -s
 LDFLAGS += -X "$(REPO)/pkg/version.GitHash=$(COMMIT)"
 LDFLAGS += -X "$(REPO)/pkg/version.GitBranch=$(BRANCH)"
 LDFLAGS += -X "$(REPO)/pkg/version.BuildTime=$(BUILDTIME)"
+LDFLAGS += $(EXTRA_LDFLAGS)
 
 FILES     := $$(find . -name "*.go")
 
 FAILPOINT_ENABLE  := $$(find $$PWD/ -type d | grep -vE "(\.git|tools)" | xargs tools/bin/failpoint-ctl enable)
 FAILPOINT_DISABLE := $$(find $$PWD/ -type d | grep -vE "(\.git|tools)" | xargs tools/bin/failpoint-ctl disable)
 
-default: cmd
+default: check cmd
 
-cmd: check
+cmd:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
 
 lint:
