@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/tui"
@@ -42,7 +43,7 @@ func newStatusCmd() *cobra.Command {
 
 func showStatus() error {
 	var table [][]string
-	table = append(table, []string{"Name", "Component", "PID", "Status", "Created Time", "Directory", "Binary"})
+	table = append(table, []string{"Name", "Component", "PID", "Status", "Created Time", "Directory", "Binary", "Args"})
 	if dataDir := profile.Path(localdata.DataParentDir); utils.IsExist(dataDir) {
 		dirs, err := ioutil.ReadDir(dataDir)
 		if err != nil {
@@ -77,6 +78,7 @@ func showStatus() error {
 				process.CreatedTime,
 				process.Dir,
 				process.Exec,
+				strings.Join(process.Args, " "),
 			})
 		}
 	}
