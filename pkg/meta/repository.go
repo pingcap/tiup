@@ -36,11 +36,17 @@ const (
 // Repository represents a components repository
 type Repository struct {
 	mirror Mirror
+	opts   RepositoryOptions
+}
+
+// RepositoryOptions represents options for a repository
+type RepositoryOptions struct {
+	SkipVersionCheck bool
 }
 
 // NewRepository returns a repository instance base on mirror
-func NewRepository(mirror Mirror) *Repository {
-	return &Repository{mirror: mirror}
+func NewRepository(mirror Mirror, opts RepositoryOptions) *Repository {
+	return &Repository{mirror: mirror, opts: opts}
 }
 
 // Mirror returns the mirror which is used by repository
@@ -117,7 +123,7 @@ func (r *Repository) DownloadComponent(compsDir, spec string) error {
 			return fmt.Errorf("component `%s` doesn't release the version `%s`", component, version)
 		}
 	}
-	if !version.IsNightly() && !version.IsValid() {
+	if !r.opts.SkipVersionCheck && !version.IsNightly() && !version.IsValid() {
 		return errors.Errorf("invalid version `%s`", version)
 	}
 	resName := fmt.Sprintf("%s-%s", component, version)
