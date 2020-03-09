@@ -71,23 +71,6 @@ missing.
 			return cmd.Help()
 		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			u, err := user.Current()
-			if err != nil {
-				return err
-			}
-
-			// Initialize the global profile
-			var profileDir string
-			switch {
-			case os.Getenv(localdata.EnvNameHome) != "":
-				profileDir = os.Getenv(localdata.EnvNameHome)
-			case localdata.DefaultTiupHome != "":
-				profileDir = localdata.DefaultTiupHome
-			default:
-				profileDir = filepath.Join(u.HomeDir, localdata.ProfileDirName)
-			}
-			profile = localdata.NewProfile(profileDir)
-
 			// Initialize the repository
 			// Replace the mirror if some sub-commands use different mirror address
 			mirror := meta.NewMirror(mirrorRepository)
@@ -151,9 +134,29 @@ func binaryPath(spec string) (string, error) {
 	return profile.BinaryPath(component, version)
 }
 
+func execute() error {
+	u, err := user.Current()
+	if err != nil {
+		return err
+	}
+
+	// Initialize the global profile
+	var profileDir string
+	switch {
+	case os.Getenv(localdata.EnvNameHome) != "":
+		profileDir = os.Getenv(localdata.EnvNameHome)
+	case localdata.DefaultTiupHome != "":
+		profileDir = localdata.DefaultTiupHome
+	default:
+		profileDir = filepath.Join(u.HomeDir, localdata.ProfileDirName)
+	}
+	profile = localdata.NewProfile(profileDir)
+	return rootCmd.Execute()
+}
+
 // Execute parses the command line argumnts and calls proper functions
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := execute(); err != nil {
 		fmt.Printf("\x1b[0;31mError: %s\x1b[0m\n", err)
 		os.Exit(1)
 	}
