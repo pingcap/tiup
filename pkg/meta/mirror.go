@@ -128,7 +128,7 @@ L:
 
 	// check for errors
 	if err := resp.Err(); err != nil {
-		return "", errors.Trace(err)
+		return "", errors.Annotatef(err, "download from %s failed", url)
 	}
 
 	return resp.Filename, nil
