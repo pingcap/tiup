@@ -50,6 +50,14 @@
                 "darwin/amd64",
                 "linux/amd64"
             ]
+        },
+        {
+            "name": "tpc",
+            "desc": "A toolbox to benchmark workloads in TPC",
+            "platforms": [
+                "darwin/amd64",
+                "linux/amd64"
+            ]
         }
     ]
 }
