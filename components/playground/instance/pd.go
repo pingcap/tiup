@@ -40,8 +40,8 @@ func NewPDInstance(dir, host string, id int) *PDInstance {
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, 2379),
-			StatusPort: utils.MustGetFreePort(host, 2380),
+			Port:       utils.MustGetFreePort(host, 2380),
+			StatusPort: utils.MustGetFreePort(host, 2379),
 		},
 	}
 }
