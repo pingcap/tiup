@@ -22,6 +22,7 @@ import (
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
 )
@@ -37,9 +38,12 @@ const defaultMirror = "https://tiup-mirrors.pingcap.com/"
 var mirrorRepository = ""
 
 func init() {
+	cobra.EnableCommandSorting = false
+
 	var (
 		mirror   = defaultMirror
 		binary   string
+		tag      string
 		repoOpts meta.RepositoryOptions
 	)
 	if m := os.Getenv("TIUP_MIRRORS"); m != "" {
@@ -47,18 +51,22 @@ func init() {
 	}
 
 	rootCmd = &cobra.Command{
-		Use: "tiup",
-		Long: `The tiup is a component management CLI utility tool that can help
-to download and install the TiDB components to the local system.
-
-In addition, there is a sub-command tiup run <component>:[version]
-to help us start a component quickly. The tiup will download the
-component which doesn't be installed or the specified version is
-missing.
-
-  # Quick start
-  tiup run playground`,
+		Use: "tiup [component]|[command]",
+		Long: `The tiup is a component management CLI utility tool that can help to download and install
+the TiDB components to the local system. You can run a specific version of a component via
+"tiup <component>:[version]" If no version number is specified, the latest version installed
+locally will be run. If the specified component does not have any version installed locally,
+the latest stable version will be downloaded from the repository. You can run the following
+commands if you want to have a try.
+  
+  $ tiup playground            # Quick start
+  $ tiup playground --tag p1   # Start a playground with a specified tag`,
 		SilenceErrors: true,
+		Version:       version.NewTiUPVersion().SemVer(),
+		Args: func(cmd *cobra.Command, args []string) error {
+			// Support `tiup <component>`
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if binary != "" {
 				binaryPath, err := binaryPath(binary)
@@ -67,6 +75,9 @@ missing.
 				}
 				fmt.Println(binaryPath)
 				return nil
+			}
+			if len(args) > 0 {
+				return runComponent(tag, args)
 			}
 			return cmd.Help()
 		},
@@ -78,7 +89,6 @@ missing.
 				return err
 			}
 			repository = meta.NewRepository(mirror, repoOpts)
-
 			return nil
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
@@ -89,19 +99,32 @@ missing.
 
 	rootCmd.PersistentFlags().StringVarP(&mirrorRepository, "mirror", "", mirror, "Overwrite default `mirror` or TIUP_MIRRORS environment variable.")
 	rootCmd.PersistentFlags().BoolVarP(&repoOpts.SkipVersionCheck, "skip-version-check", "", false, "Skip the strict version check, by default a version must be a valid semver string.")
-	rootCmd.Flags().StringVarP(&binary, "bin", "", "", "Print binary path of a specific version of a component `<component>:[version]`\n"+
+	rootCmd.Flags().StringVarP(&binary, "binary", "B", "", "Print binary path of a specific version of a component `<component>:[version]`\n"+
 		"and the latest version installed will be selected if no version specified.")
+	rootCmd.Flags().StringVarP(&tag, "tag", "T", "", "Specify a tag for component instance")
 
 	rootCmd.AddCommand(
 		newInstallCmd(),
 		newListCmd(),
 		newUninstallCmd(),
 		newUpdateCmd(),
-		newRunCmd(),
-		newVersionCmd(),
 		newStatusCmd(),
 		newCleanCmd(),
 	)
+
+	originHelpFunc := rootCmd.HelpFunc()
+	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		if len(args) < 2 {
+			originHelpFunc(cmd, args)
+			return
+		}
+		spec := args[0]
+		if spec == "-h" || spec == "--help" {
+			spec = args[1]
+		}
+		externalHelp(spec)
+	})
+	rootCmd.SetHelpCommand(newHelpCmd())
 }
 
 func binaryPath(spec string) (string, error) {
@@ -151,6 +174,8 @@ func execute() error {
 		profileDir = filepath.Join(u.HomeDir, localdata.ProfileDirName)
 	}
 	profile = localdata.NewProfile(profileDir)
+
+	rootCmd.SetUsageTemplate(usageTemplate())
 	return rootCmd.Execute()
 }
 
