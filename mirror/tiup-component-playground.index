@@ -25,6 +25,12 @@
             "entry": "playground",
             "date": "2020-03-06 14:33:00",
             "platforms": ["darwin/amd64", "linux/amd64"]
+        },
+        {
+            "version": "v0.0.5",
+            "entry": "playground",
+            "date": "2020-03-10 14:33:00",
+            "platforms": ["darwin/amd64", "linux/amd64"]
         }
     ]
 }

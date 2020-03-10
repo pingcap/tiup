@@ -58,6 +58,14 @@
                 "darwin/amd64",
                 "linux/amd64"
             ]
+        },
+        {
+            "name": "package",
+            "desc": "A toolbox to package tiup component",
+            "platforms": [
+                "darwin/amd64",
+                "linux/amd64"
+            ]
         }
     ]
 }

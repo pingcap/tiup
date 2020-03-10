@@ -62,7 +62,10 @@ playground:
 client:
 	make -C components/client package
 
-package: playground client
+pack:
+	make -C components/package package
+
+package: playground client pack
 	mkdir -p package ; \
 	GOOS=darwin GOARCH=amd64 go build ; \
     tar -czf tiup-darwin-amd64.tar.gz tiup ; \
@@ -74,6 +77,7 @@ package: playground client
     mv tiup* package/ ; \
     mv components/playground/playground* package/ ; \
 	mv components/client/client* package/ ; \
+	mv components/package/package* package/ ; \
     cp mirror/*.index package/
 	cp install.sh package/
 
