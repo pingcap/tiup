@@ -19,3 +19,5 @@ bin/
 
 /.idea/
 /package/
+/tests/_tmp/
+/tests/tiup_home/

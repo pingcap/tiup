@@ -5,6 +5,7 @@ GOARCH  := $(if $(GOARCH),$(GOARCH),amd64)
 GOENV   := GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH)
 GO      := $(GOENV) go
 GOBUILD := $(GO) build $(BUILD_FLAG)
+GOTEST  := GO111MODULE=on CGO_ENABLED=1 $(GO) test -p 3
 
 COMMIT    := $(shell git describe --no-match --always --dirty)
 BRANCH    := $(shell git rev-parse --abbrev-ref HEAD)
@@ -71,5 +72,12 @@ package: playground client
 fmt:
 	@echo "gofmt (simplify)"
 	@gofmt -s -l -w $(FILES) 2>&1
+
+integration_test:
+	$(GOTEST) -c -cover -covermode=count \
+		-coverpkg=github.com/pingcap-incubator/tiup/... \
+		-o tests/tiup_home/bin/tiup \
+		github.com/pingcap-incubator/tiup/ ; \
+	cd tests && sh run.sh
 
 .PHONY: cmd package
