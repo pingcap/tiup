@@ -15,6 +15,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pkg/errors"
@@ -48,7 +50,22 @@ other flags will be ignored if the flag --self specified.
   tiup update --self`,
 		RunE: func(cmd *cobra.Command, components []string) error {
 			if self {
-				return repository.DownloadFile(profile.Path("bin"), "tiup")
+				originFile := filepath.Join(profile.Path("bin"), "tiup")
+				renameFile := filepath.Join(profile.Path("bin"), "tiup.tmp")
+				if err := os.Rename(originFile, renameFile); err != nil {
+					return err
+				}
+
+				var err error
+				defer func() {
+					if err != nil {
+						if err := os.Rename(renameFile, originFile); err != nil {
+							fmt.Printf("Please rename `%s` to `%s` maunally\n", renameFile, originFile)
+						}
+					}
+				}()
+				err = repository.DownloadFile(profile.Path("bin"), "tiup")
+				return err
 			}
 			if (len(components) == 0 && !all && !force) || (len(components) > 0 && all) {
 				return cmd.Help()
