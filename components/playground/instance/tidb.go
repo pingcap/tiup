@@ -58,7 +58,7 @@ func (inst *TiDBInstance) Start(ctx context.Context, version meta.Version) error
 		endpoints = append(endpoints, fmt.Sprintf("%s:%d", inst.Host, pd.StatusPort))
 	}
 	args := []string{
-		"tiup", "run", compVersion("tidb", version), "--",
+		"tiup", compVersion("tidb", version), "--",
 		"-P", strconv.Itoa(inst.Port),
 		"--store=tikv",
 		fmt.Sprintf("--host=%s", inst.Host),

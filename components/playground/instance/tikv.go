@@ -69,7 +69,7 @@ func (inst *TiKVInstance) Start(ctx context.Context, version meta.Version) error
 		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", inst.Host, pd.StatusPort))
 	}
 	inst.cmd = exec.CommandContext(ctx,
-		"tiup", "run", compVersion("tikv", version), "--",
+		"tiup", compVersion("tikv", version), "--",
 		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
 		fmt.Sprintf("--status-addr=%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
