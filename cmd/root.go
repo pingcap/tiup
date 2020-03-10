@@ -44,6 +44,7 @@ func init() {
 		mirror   = defaultMirror
 		binary   string
 		tag      string
+		rm       bool
 		repoOpts meta.RepositoryOptions
 	)
 	if m := os.Getenv("TIUP_MIRRORS"); m != "" {
@@ -77,7 +78,7 @@ commands if you want to have a try.
 				return nil
 			}
 			if len(args) > 0 {
-				return runComponent(tag, args)
+				return runComponent(tag, args, rm)
 			}
 			return cmd.Help()
 		},
@@ -102,6 +103,7 @@ commands if you want to have a try.
 	rootCmd.Flags().StringVarP(&binary, "binary", "B", "", "Print binary path of a specific version of a component `<component>:[version]`\n"+
 		"and the latest version installed will be selected if no version specified.")
 	rootCmd.Flags().StringVarP(&tag, "tag", "T", "", "Specify a tag for component instance")
+	rootCmd.Flags().BoolVar(&rm, "rm", false, "Remove data directory on finish")
 
 	rootCmd.AddCommand(
 		newInstallCmd(),

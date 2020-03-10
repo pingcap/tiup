@@ -7,18 +7,17 @@ import (
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
 	. "github.com/pingcap/check"
 )
 
-var _ = Suite(&TestInstallSuite{})
+var _ = Suite(&TestListSuite{})
 
-type TestInstallSuite struct {
+type TestListSuite struct {
 	mirror  meta.Mirror
 	testDir string
 }
 
-func (s *TestInstallSuite) SetUpSuite(c *C) {
+func (s *TestListSuite) SetUpSuite(c *C) {
 	s.testDir = filepath.Join(currentDir(), "testdata")
 	s.mirror = meta.NewMirror(s.testDir)
 	c.Assert(s.mirror.Open(), IsNil)
@@ -28,15 +27,15 @@ func (s *TestInstallSuite) SetUpSuite(c *C) {
 	profile = localdata.NewProfile(path.Join(s.testDir, "profile"))
 }
 
-func (s *TestInstallSuite) TearDownSuite(c *C) {
+func (s *TestListSuite) TearDownSuite(c *C) {
 	s.mirror.Close()
 	os.RemoveAll(path.Join(s.testDir, "profile"))
 }
 
-func (s *TestInstallSuite) TestInstall(c *C) {
-	cmd := newInstallCmd()
+func (s *TestListSuite) TestListComponent(c *C) {
+	cmd := newListCmd()
 
-	c.Assert(utils.IsNotExist(path.Join(s.testDir, "profile", "components", "test")), IsTrue)
-	c.Assert(cmd.RunE(cmd, []string{"test"}), IsNil)
-	c.Assert(utils.IsExist(path.Join(s.testDir, "profile", "components", "test")), IsTrue)
+	//c.Assert(utils.IsNotExist(path.Join(s.testDir, "profile", "components", "test")), IsTrue)
+	c.Assert(cmd.RunE(cmd, []string{}), IsNil)
+	//c.Assert(utils.IsExist(path.Join(s.testDir, "profile", "components", "test")), IsTrue)
 }

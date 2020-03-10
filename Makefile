@@ -47,6 +47,11 @@ test: failpoint-enable
 	cat cover.out.tmp | grep -v "_generated.deepcopy.go" > cover.out
 	@$(FAILPOINT_DISABLE)
 
+coverage:
+ifeq ("$(JenkinsCI)", "1")
+	@bash <(curl -s https://codecov.io/bash) -f cover.out -t $(CODECOV_TOKEN)
+endif
+
 failpoint-enable: tools/bin/failpoint-ctl
 	@$(FAILPOINT_ENABLE)
 
