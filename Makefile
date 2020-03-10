@@ -5,6 +5,7 @@ GOARCH  := $(if $(GOARCH),$(GOARCH),amd64)
 GOENV   := GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH)
 GO      := $(GOENV) go
 GOBUILD := $(GO) build $(BUILD_FLAG)
+GOTEST := $(GO) test
 
 COMMIT    := $(shell git describe --no-match --always --dirty)
 BRANCH    := $(shell git rev-parse --abbrev-ref HEAD)
@@ -37,6 +38,14 @@ check: lint vet
 
 clean:
 	@rm -rf bin
+
+# Run tests
+test: failpoint-enable
+	rm -rf cover.* cover
+	mkdir -p cover
+	$(GOTEST) ./... -coverprofile cover.out.tmp
+	cat cover.out.tmp | grep -v "_generated.deepcopy.go" > cover.out
+	@$(FAILPOINT_DISABLE)
 
 failpoint-enable: tools/bin/failpoint-ctl
 	@$(FAILPOINT_ENABLE)

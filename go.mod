@@ -9,6 +9,7 @@ require (
 	github.com/cheynewallace/tabby v1.1.0
 	github.com/gizak/termui/v3 v3.1.0
 	github.com/go-sql-driver/mysql v1.5.0
+	github.com/google/uuid v1.1.1
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712
 	github.com/pingcap/errors v0.11.5-0.20190809092503-95897b64e011
