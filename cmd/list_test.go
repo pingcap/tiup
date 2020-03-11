@@ -1,12 +1,27 @@
+// Copyright 2020 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package cmd
 
 import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/mock"
 	. "github.com/pingcap/check"
 )
 
@@ -34,8 +49,28 @@ func (s *TestListSuite) TearDownSuite(c *C) {
 
 func (s *TestListSuite) TestListComponent(c *C) {
 	cmd := newListCmd()
+	defer mock.With("PrintTable", func(rows [][]string, header bool) {
+		c.Assert(header, IsTrue)
+		c.Assert(len(rows), Greater, 1)
+		c.Assert(rows[1][0], Equals, "test")
+	})()
 
-	//c.Assert(utils.IsNotExist(path.Join(s.testDir, "profile", "components", "test")), IsTrue)
 	c.Assert(cmd.RunE(cmd, []string{}), IsNil)
-	//c.Assert(utils.IsExist(path.Join(s.testDir, "profile", "components", "test")), IsTrue)
+}
+
+func (s *TestListSuite) TestListVersion(c *C) {
+	cmd := newListCmd()
+	defer mock.With("PrintTable", func(rows [][]string, header bool) {
+		c.Assert(header, IsTrue)
+		c.Assert(len(rows), Greater, 1)
+		for idx := 1; idx < len(rows); idx++ {
+			success := false
+			if strings.HasPrefix(rows[idx][0], "v") || rows[idx][0] == "nightly" {
+				success = true
+			}
+			c.Assert(success, IsTrue)
+		}
+	})()
+
+	c.Assert(cmd.RunE(cmd, []string{"test"}), IsNil)
 }
