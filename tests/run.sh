@@ -79,12 +79,15 @@ do
    | sed "s+${TIUP_HOME}+TIUP_HOME_INTEGRATION_TEST+")
 
   # delete coverage output
-  if [[ $actual == *"coverage:"* ]]; then
-    echo "$actual" | tail -n 2
-    echo "$actual" | sed -e "$ d"  | sed -e "$ d" > "$TMP_DIR/$path"
-  else
-    echo "$actual" > "$TMP_DIR/$path"
-  fi
+  case "$actual" in
+    *coverage:*)
+      echo "$actual" | tail -n 2
+      echo "$actual" | sed -e "$ d"  | sed -e "$ d" > "$TMP_DIR/$path"
+      ;;
+    *)
+      echo "$actual" > "$TMP_DIR/$path"
+      ;;
+  esac
 
   actual=$(cat "$TMP_DIR/$path" )
   expected=$(cat "$TIUP_EXPECTED/$path")
