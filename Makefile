@@ -5,8 +5,8 @@ GOARCH  := $(if $(GOARCH),$(GOARCH),amd64)
 GOENV   := GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH)
 GO      := $(GOENV) go
 GOBUILD := $(GO) build $(BUILD_FLAG)
-GOTEST := $(GO) test
-SHELL    := /usr/bin/env bash
+GOTEST  := GO111MODULE=on CGO_ENABLED=1 $(GO) test -p 3
+SHELL   := /usr/bin/env bash
 
 COMMIT    := $(shell git describe --no-match --always --dirty)
 BRANCH    := $(shell git rev-parse --abbrev-ref HEAD)
@@ -40,17 +40,30 @@ check: lint vet
 clean:
 	@rm -rf bin
 
-# Run tests
-test: failpoint-enable
-	rm -rf cover.* cover
+cover-dir:
+	rm -rf cover
 	mkdir -p cover
-	$(GOTEST) ./... -coverprofile cover.out.tmp
-	cat cover.out.tmp | grep -v "_generated.deepcopy.go" > cover.out
+
+# Run tests
+unit-test:
+	$(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
+
+integration_test:
+	$(GOTEST) -c -cover -covermode=count \
+		-coverpkg=github.com/pingcap-incubator/tiup/... \
+		-o tests/tiup_home/bin/tiup \
+		github.com/pingcap-incubator/tiup/ ; \
+	cd tests && sh run.sh ; \
+
+
+test: cover-dir failpoint-enable unit-test integration_test
 	@$(FAILPOINT_DISABLE)
 
 coverage:
+	GO111MODULE=off go get github.com/wadey/gocovmerge
+	gocovmerge cover/cov.* | grep -vE ".*.pb.go|.*__failpoint_binding__.go" > "cover/all_cov.out"
 ifeq ("$(JenkinsCI)", "1")
-	@bash <(curl -s https://codecov.io/bash) -f cover.out -t $(CODECOV_TOKEN)
+	@bash <(curl -s https://codecov.io/bash) -f cover/all_cov.out -t $(CODECOV_TOKEN)
 endif
 
 failpoint-enable: tools/bin/failpoint-ctl
