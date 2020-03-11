@@ -16,13 +16,14 @@ package localdata
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pingcap-incubator/tiup/pkg/meta"
+
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
 
+	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 )
@@ -74,6 +75,7 @@ func (p *Profile) ReadJSON(path string, data interface{}) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
+	defer file.Close()
 
 	return json.NewDecoder(file).Decode(data)
 }

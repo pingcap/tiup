@@ -5,7 +5,7 @@
 # Installation
 
 ```sh
-curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/c4pt0r/tiup/master/install.sh | sh
+curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/pingcap-incubator/tiup/master/install.sh | sh
 ```
 
 # Usage

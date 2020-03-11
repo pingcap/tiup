@@ -61,25 +61,25 @@ func (s *metaSuite) TestRepository(c *C) {
 		{
 			comp: "test1",
 			vers: []VersionInfo{
-				{Version: "v1.1.1", Date: "2020-02-27 10:10:10", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
-				{Version: "v1.1.2", Date: "2020-02-27 10:10:10", Platforms: []string{"darwin/amd64", "linux/amd64"}},
-				{Version: "v1.1.3", Date: "2020-02-27 10:10:10", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
+				{Version: "v1.1.1", Date: "2020-02-27 10:10:10", Entry: "test1.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
+				{Version: "v1.1.2", Date: "2020-02-27 10:10:10", Entry: "test1.bin", Platforms: []string{"darwin/amd64", "linux/amd64"}},
+				{Version: "v1.1.3", Date: "2020-02-27 10:10:10", Entry: "test1.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
 			},
 		},
 		{
 			comp: "test2",
 			vers: []VersionInfo{
-				{Version: "v2.1.1", Date: "2020-02-27 10:20:10", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
-				{Version: "v2.1.2", Date: "2020-02-27 10:20:10", Platforms: []string{"darwin/amd64", "linux/amd64"}},
-				{Version: "v2.1.3", Date: "2020-02-27 10:20:10", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
+				{Version: "v2.1.1", Date: "2020-02-27 10:20:10", Entry: "test2.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
+				{Version: "v2.1.2", Date: "2020-02-27 10:20:10", Entry: "test2.bin", Platforms: []string{"darwin/amd64", "linux/amd64"}},
+				{Version: "v2.1.3", Date: "2020-02-27 10:20:10", Entry: "test2.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
 			},
 		},
 		{
 			comp: "test3",
 			vers: []VersionInfo{
-				{Version: "v3.1.1", Date: "2020-02-27 10:30:10", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
-				{Version: "v3.1.2", Date: "2020-02-27 10:30:10", Platforms: []string{"darwin/amd64", "linux/amd64"}},
-				{Version: "v3.1.3", Date: "2020-02-27 10:30:10", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
+				{Version: "v3.1.1", Date: "2020-02-27 10:30:10", Entry: "test3.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
+				{Version: "v3.1.2", Date: "2020-02-27 10:30:10", Entry: "test3.bin", Platforms: []string{"darwin/amd64", "linux/amd64"}},
+				{Version: "v3.1.3", Date: "2020-02-27 10:30:10", Entry: "test3.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
 			},
 		},
 	}
