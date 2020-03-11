@@ -22,6 +22,9 @@ TIUP_MIRRORS=$TEST_DIR/tiup_mirrors
 TIUP_EXPECTED=$TEST_DIR/expected
 
 mkdir -p "$TMP_DIR"
+rm -rf "$TIUP_HOME/manifest"
+rm -rf "$TIUP_HOME/components"
+rm -rf "$TIUP_HOME/data"
 
 if command -v tput &>/dev/null && tty -s; then
   RED=$(tput setaf 1)
@@ -51,8 +54,16 @@ do
   cmd=$(jq < "$TEST_DIR/cases.json" -r ".[$index-1]|.command")
   path=$(jq < "$TEST_DIR/cases.json" -r ".[$index-1]|.path")
 
+  if [ "$path" = "" ]; then
+    echo "${MAGENTA}✖ Directly output case: cmd='$cmd' ${NORMAL}"
+    TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd
+    continue
+  fi
+
   mkdir -p $(dirname "$TMP_DIR/$path")
-  TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd | sed "s+${TIUP_MIRRORS}+TIUP_MIRRORS_INTEGRATION_TEST+" > "$TMP_DIR/$path"
+  TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd \
+   | sed "s+${TIUP_MIRRORS}+TIUP_MIRRORS_INTEGRATION_TEST+" \
+   | sed "s+${TIUP_HOME}+TIUP_HOME_INTEGRATION_TEST+" > "$TMP_DIR/$path"
 
   actual=$(cat "$TMP_DIR/$path" )
   expected=$(cat "$TIUP_EXPECTED/$path")

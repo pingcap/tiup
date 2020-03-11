@@ -30,7 +30,7 @@ func newHelpCmd() *cobra.Command {
 Simply type tiup help <command>|<component> for full details.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd, n, e := cmd.Root().Find(args)
-			if cmd == rootCmd || e != nil {
+			if (cmd == rootCmd || e != nil) && len(n) > 0 {
 				externalHelp(n[0])
 			} else {
 				cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown

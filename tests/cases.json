@@ -1,10 +1,70 @@
 [
-  {
-    "command": "tiup",
-    "path": "tiup/tiup.output"
-  },
-  {
-    "command": "tiup -h",
-    "path": "tiup/tiup.output"
-  }
+    {
+        "command": "tiup list --refresh",
+        "path": "tiup/tiup-list-refresh.output"
+    },
+    {
+        "command": "tiup",
+        "path": "tiup/tiup.output"
+    },
+    {
+        "command": "tiup -h",
+        "path": "tiup/tiup.output"
+    },
+    {
+        "command": "tiup help",
+        "path": "tiup/tiup-help.output"
+    },
+    {
+        "command": "tiup install not-exists",
+        "path": "tiup/tiup-install-not-exists.output"
+    },
+    {
+        "command": "tiup install test:v1.1.1",
+        "path": "tiup/tiup-install-test.output"
+    },
+    {
+        "command": "tiup update test",
+        "path": "tiup/tiup-update-test.output"
+    },
+    {
+        "command": "tiup update not-exists",
+        "path": "tiup/tiup-update-not-exists.output"
+    },
+    {
+        "command": "tiup list",
+        "path": "tiup/tiup-list.output"
+    },
+    {
+        "command": "tiup list test",
+        "path": "tiup/tiup-list-test.output"
+    },
+    {
+        "command": "tiup test --tag test",
+        "path": "tiup/tiup-run-test.output"
+    },
+    {
+        "command": "tiup test:v1.1.1 -T test-1",
+        "path": "tiup/tiup-run-test-v1.1.1.output"
+    },
+    {
+        "command": "tiup uninstall test:v1.1.2",
+        "path": "tiup/tiup-uninstall-test-v1.1.2.output"
+    },
+    {
+        "command": "tiup test -T test-2",
+        "path": "tiup/tiup-run-test2.output"
+    },
+    {
+        "command": "tiup status",
+        "path": ""
+    },
+    {
+        "command": "tiup clean --all",
+        "path": "tiup/tiup-clean-all.output"
+    },
+    {
+        "command": "tiup help install",
+        "path": "tiup/tiup-help-install.output"
+    }
 ]

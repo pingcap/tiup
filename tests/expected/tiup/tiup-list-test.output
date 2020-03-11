@@ -1,0 +1,5 @@
+Available versions for test (Last Modified: 2020-02-26T15:20:35+08:00):
+Version  Installed  Release:             Platforms
+-------  ---------  --------             ---------
+v1.1.1   YES        2020-02-27 10:10:10  darwin/amd64,linux/x84_64
+v1.1.2   YES        2020-02-27 10:10:10  darwin/amd64,linux/amd64
