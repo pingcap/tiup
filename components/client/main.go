@@ -31,8 +31,8 @@ func main() {
 		fmt.Println("No endpoints found, please check if your playground is running")
 		os.Exit(0)
 	}
-	endpoint := selectEndpoint(endpoints)
-	if endpoint == nil {
+	ep := selectEndpoint(endpoints)
+	if ep == nil {
 		os.Exit(0)
 	}
 	u, err := user.Current()
@@ -44,14 +44,14 @@ func main() {
 		panic(err)
 	}
 	h := handler.New(l, u, os.Getenv(localdata.EnvNameInstanceDataDir), true)
-	if err = h.Open(endpoint.dsn); err != nil {
+	if err = h.Open(ep.dsn); err != nil {
 		panic(err)
 	}
 	h.Run()
 }
 
-func scanEndpoint(tiupHome string) ([]*Endpoint, error) {
-	endpoints := []*Endpoint{}
+func scanEndpoint(tiupHome string) ([]*endpoint, error) {
+	endpoints := []*endpoint{}
 
 	files, err := ioutil.ReadDir(path.Join(tiupHome, "data"))
 	if err != nil {
@@ -64,8 +64,8 @@ func scanEndpoint(tiupHome string) ([]*Endpoint, error) {
 	return endpoints, nil
 }
 
-func readDsn(dir, component string) []*Endpoint {
-	endpoints := []*Endpoint{}
+func readDsn(dir, component string) []*endpoint {
+	endpoints := []*endpoint{}
 
 	file, err := os.Open(path.Join(dir, "dsn"))
 	if err != nil {
@@ -75,7 +75,7 @@ func readDsn(dir, component string) []*Endpoint {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		endpoints = append(endpoints, &Endpoint{
+		endpoints = append(endpoints, &endpoint{
 			component: component,
 			dsn:       scanner.Text(),
 		})
@@ -84,7 +84,7 @@ func readDsn(dir, component string) []*Endpoint {
 	return endpoints
 }
 
-func selectEndpoint(endpoints []*Endpoint) *Endpoint {
+func selectEndpoint(endpoints []*endpoint) *endpoint {
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
 	}
@@ -94,14 +94,14 @@ func selectEndpoint(endpoints []*Endpoint) *Endpoint {
 	l.Title = "Choose a endpoint to connect"
 
 	ml := 0
-	for _, endpoint := range endpoints {
-		if ml < len(endpoint.component) {
-			ml = len(endpoint.component)
+	for _, ep := range endpoints {
+		if ml < len(ep.component) {
+			ml = len(ep.component)
 		}
 	}
 	fmtStr := fmt.Sprintf(" %%-%ds %%s", ml)
-	for _, endpoint := range endpoints {
-		l.Rows = append(l.Rows, fmt.Sprintf(fmtStr, endpoint.component, endpoint.dsn))
+	for _, ep := range endpoints {
+		l.Rows = append(l.Rows, fmt.Sprintf(fmtStr, ep.component, ep.dsn))
 	}
 	l.TextStyle = ui.NewStyle(ui.ColorWhite)
 	l.SelectedRowStyle = ui.NewStyle(ui.ColorGreen)
