@@ -10,7 +10,7 @@ VERSION := "v0.0.5"
 default: build
 
 build: check
-	$(GO) build -o bin/playground
+	$(GO) build -o bin/package
 
 lint:
 	@golint ./...
@@ -34,11 +34,11 @@ tools/bin/failpoint-ctl: go.mod
 
 package: check
 	GOOS=darwin GOARCH=amd64 go build ; \
-	tar -czf playground-$(VERSION)-darwin-amd64.tar.gz playground ; \
-	shasum playground-$(VERSION)-darwin-amd64.tar.gz | awk '{print $$1}' > playground-$(VERSION)-darwin-amd64.sha1 ; \
+	tar -czf package-$(VERSION)-darwin-amd64.tar.gz package ; \
+	shasum package-$(VERSION)-darwin-amd64.tar.gz | awk '{print $$1}' > package-$(VERSION)-darwin-amd64.sha1 ; \
 	GOOS=linux GOARCH=amd64 go build ; \
-	tar -czf playground-$(VERSION)-linux-amd64.tar.gz playground ; \
-	shasum playground-$(VERSION)-linux-amd64.tar.gz | awk '{print $$1}' > playground-$(VERSION)-linux-amd64.sha1 ; \
-	rm playground
+	tar -czf package-$(VERSION)-linux-amd64.tar.gz package ; \
+	shasum package-$(VERSION)-linux-amd64.tar.gz | awk '{print $$1}' > package-$(VERSION)-linux-amd64.sha1 ; \
+	rm package
 
 .PHONY: cmd package

@@ -33,7 +33,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-func runComponent(tag string, args []string) error {
+func runComponent(tag string, args []string, rm bool) error {
 	component, version := meta.ParseCompVersion(args[0])
 	if !isSupportedComponent(component) {
 		return fmt.Errorf("unkonwn component `%s` (see supported components via `tiup list --refresh`)", component)
@@ -45,6 +45,7 @@ func runComponent(tag string, args []string) error {
 	p, err := launchComponent(ctx, component, version, tag, args[1:])
 	// If the process has been launched, we must save the process info to meta directory
 	if err == nil || (p != nil && p.Pid != 0) {
+		defer cleanDataDir(rm, p.Dir)
 		metaFile := filepath.Join(p.Dir, localdata.MetaFilename)
 		file, err := os.OpenFile(metaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
 		if err == nil {
@@ -80,6 +81,15 @@ func runComponent(tag string, args []string) error {
 
 	case err := <-ch:
 		return errors.Annotatef(err, "start `%s` (wd:%s) failed", p.Exec, p.Dir)
+	}
+}
+
+func cleanDataDir(rm bool, dir string) {
+	if !rm {
+		return
+	}
+	if err := os.RemoveAll(dir); err != nil {
+		fmt.Println("clean data directory failed: ", err.Error())
 	}
 }
 
@@ -155,6 +165,7 @@ func launchComponent(ctx context.Context, component string, version meta.Version
 		envs,
 		os.Environ()...,
 	)
+	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	c.Dir = wd
