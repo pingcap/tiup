@@ -40,6 +40,14 @@
         "path": "tiup/tiup-list-test.output"
     },
     {
+        "command": "tiup update test --nightly",
+        "path": "tiup/tiup-update-test-nightly.output"
+    },
+    {
+        "command": "tiup list test",
+        "path": "tiup/tiup-list-test-nightly.output"
+    },
+    {
         "command": "tiup test --tag test",
         "path": "tiup/tiup-run-test.output"
     },

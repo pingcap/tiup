@@ -49,13 +49,16 @@ echo "EXPTECTED RESULT: ${BOLD} $TIUP_EXPECTED ${NORMAL}"
 
 case=$(jq < "$TEST_DIR/cases.json" '. | length')
 
+success=0
+failed=0
+
 for index in $(seq 1 $case)
 do
   cmd=$(jq < "$TEST_DIR/cases.json" -r ".[$index-1]|.command")
   path=$(jq < "$TEST_DIR/cases.json" -r ".[$index-1]|.path")
 
   if [ "$path" = "" ]; then
-    echo "${MAGENTA}✖ Directly output case: cmd='$cmd' ${NORMAL}"
+    echo "${MAGENTA}✔ Directly output case: cmd='$cmd' ${NORMAL}"
     TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd
     continue
   fi
@@ -73,6 +76,8 @@ do
     echo " + expected path:   ${BOLD} $TIUP_EXPECTED/$path ${NORMAL}"
     echo " + actual got path: ${BOLD} $TMP_DIR/$path ${NORMAL}"
 
+    failed=$((failed+1))
+
     echo "${BOLD}-----------------------------------DIFF START-----------------------------------------${NORMAL}" >&2
     diff --old-group-format="${RED}%<${NORMAL}" \
      --new-group-format="${GREEN}%>${NORMAL}" \
@@ -80,8 +85,13 @@ do
      "$TIUP_EXPECTED/$path" "$TMP_DIR/$path"
     echo "${BOLD}-----------------------------------DIFF END-------------------------------------------${NORMAL}" >&2
   else
-    echo "${MAGENTA}✖ Passed case: cmd='$cmd' ${NORMAL}"
+    success=$((success+1))
+    echo "${MAGENTA}✔ Passed case: cmd='$cmd' ${NORMAL}"
   fi
 done
 
+echo "${BOLD}SUMMARY: total case: $((success+failed)), success: $success, failed: $failed${NORMAL}"
 
+if [ $failed -gt 0 ]; then
+  exit 1
+fi
