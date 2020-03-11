@@ -8,10 +8,6 @@
         "path": "tiup/tiup.output"
     },
     {
-        "command": "tiup -h",
-        "path": "tiup/tiup.output"
-    },
-    {
         "command": "tiup help",
         "path": "tiup/tiup-help.output"
     },

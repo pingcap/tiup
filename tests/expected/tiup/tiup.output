@@ -34,6 +34,7 @@ Flags:
                                        and the latest version installed will be selected if no version specified.
   -h, --help                           help for tiup
       --mirror mirror                  Overwrite default mirror or TIUP_MIRRORS environment variable. (default "TIUP_MIRRORS_INTEGRATION_TEST")
+      --rm                             Remove data directory on finish
       --skip-version-check             Skip the strict version check, by default a version must be a valid semver string.
   -T, --tag string                     Specify a tag for component instance
       --version                        version for tiup

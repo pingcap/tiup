@@ -16,10 +16,10 @@
 # Initialize the directory variables
 TEST_DIR=$(cd "$(dirname "$0")"; pwd)
 TMP_DIR=$TEST_DIR/_tmp
-PATH=$TEST_DIR/bin:$PATH
 TIUP_HOME=$TEST_DIR/tiup_home
 TIUP_MIRRORS=$TEST_DIR/tiup_mirrors
 TIUP_EXPECTED=$TEST_DIR/expected
+PATH=$TIUP_HOME/bin:$PATH
 
 mkdir -p "$TMP_DIR"
 rm -rf "$TIUP_HOME/manifest"
@@ -54,19 +54,33 @@ failed=0
 
 for index in $(seq 1 $case)
 do
+  echo ""
+
   cmd=$(jq < "$TEST_DIR/cases.json" -r ".[$index-1]|.command")
   path=$(jq < "$TEST_DIR/cases.json" -r ".[$index-1]|.path")
+  cov="$TEST_DIR/../cover/cov.integration-test.$index.out"
+
+  echo "Coverage file: $cov for cmd: '$cmd'"
 
   if [ "$path" = "" ]; then
     echo "${MAGENTA}✔ Directly output case: cmd='$cmd' ${NORMAL}"
-    TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd
+    TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd -test.coverprofile="$cov" DEVEL
     continue
   fi
 
+  # delete the last two lines
   mkdir -p $(dirname "$TMP_DIR/$path")
-  TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd \
+  actual=$(TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd -test.coverprofile="$cov" DEVEL \
    | sed "s+${TIUP_MIRRORS}+TIUP_MIRRORS_INTEGRATION_TEST+" \
-   | sed "s+${TIUP_HOME}+TIUP_HOME_INTEGRATION_TEST+" > "$TMP_DIR/$path"
+   | sed "s+${TIUP_HOME}+TIUP_HOME_INTEGRATION_TEST+")
+
+  # delete coverage output
+  if [[ $actual == *"coverage:"* ]]; then
+    echo "$actual" | tail -n 2
+    echo "$actual" | sed -e "$ d"  | sed -e "$ d" > "$TMP_DIR/$path"
+  else
+    echo "$actual" > "$TMP_DIR/$path"
+  fi
 
   actual=$(cat "$TMP_DIR/$path" )
   expected=$(cat "$TIUP_EXPECTED/$path")

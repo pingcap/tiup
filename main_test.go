@@ -16,11 +16,23 @@ package main
 // Reference: https://dzone.com/articles/measuring-integration-test-coverage-rate-in-pouchc
 
 import (
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/pingcap-incubator/tiup/cmd"
 )
 
 func TestRunMain(t *testing.T) {
+	var args []string
+	for _, arg := range os.Args {
+		switch {
+		case strings.HasPrefix(arg, "DEVEL"):
+		case strings.HasPrefix(arg, "-test"):
+		default:
+			args = append(args, arg)
+		}
+	}
+	os.Args = args
 	cmd.Execute()
 }

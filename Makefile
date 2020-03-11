@@ -40,17 +40,30 @@ check: lint vet
 clean:
 	@rm -rf bin
 
-# Run tests
-test: failpoint-enable
-	rm -rf cover.* cover
+cover-dir:
+	rm -rf cover
 	mkdir -p cover
-	$(GOTEST) ./... -coverprofile cover.out.tmp
-	cat cover.out.tmp | grep -v "_generated.deepcopy.go" > cover.out
+
+# Run tests
+unit-test:
+	$(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
+
+integration_test:
+	$(GOTEST) -c -cover -covermode=count \
+		-coverpkg=github.com/pingcap-incubator/tiup/... \
+		-o tests/tiup_home/bin/tiup \
+		github.com/pingcap-incubator/tiup/ ; \
+	cd tests && sh run.sh ; \
+
+
+test: cover-dir failpoint-enable unit-test integration_test
 	@$(FAILPOINT_DISABLE)
 
 coverage:
+	GO111MODULE=off go get github.com/wadey/gocovmerge
+	gocovmerge cover/cov.* | grep -vE ".*.pb.go|.*__failpoint_binding__.go" > "cover/all_cov.out"
 ifeq ("$(JenkinsCI)", "1")
-	@bash <(curl -s https://codecov.io/bash) -f cover.out -t $(CODECOV_TOKEN)
+	@bash <(curl -s https://codecov.io/bash) -f cover/all_cov.out -t $(CODECOV_TOKEN)
 endif
 
 failpoint-enable: tools/bin/failpoint-ctl
@@ -90,12 +103,5 @@ package: playground client pack
 fmt:
 	@echo "gofmt (simplify)"
 	@gofmt -s -l -w $(FILES) 2>&1
-
-integration_test:
-	$(GOTEST) -c -cover -covermode=count \
-		-coverpkg=github.com/pingcap-incubator/tiup/... \
-		-o tests/tiup_home/bin/tiup \
-		github.com/pingcap-incubator/tiup/ ; \
-	cd tests && sh run.sh
 
 .PHONY: cmd package
