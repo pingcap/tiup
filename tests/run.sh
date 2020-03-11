@@ -47,6 +47,10 @@ echo "TIUP HOME DIR:    ${BOLD} $TIUP_HOME ${NORMAL}"
 echo "TIUP MIRRORS:     ${BOLD} $TIUP_MIRRORS ${NORMAL}"
 echo "EXPTECTED RESULT: ${BOLD} $TIUP_EXPECTED ${NORMAL}"
 
+cd "$TIUP_MIRRORS"
+sh generate.sh
+cd "$TEST_DIR"
+
 case=$(jq < "$TEST_DIR/cases.json" '. | length')
 
 success=0
