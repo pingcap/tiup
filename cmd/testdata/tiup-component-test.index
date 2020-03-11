@@ -18,7 +18,7 @@
             "version": "v1.1.1",
             "entry": "bin/test",
             "date": "2020-02-27T10:10:10+08:00",
-            "platforms": ["darwin/amd64", "linux/x84_64"]
+            "platforms": ["darwin/amd64", "linux/x84_64"] 
         }
     ]
 }
