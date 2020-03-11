@@ -58,18 +58,18 @@ func connect(target string) error {
 	if len(endpoints) == 0 {
 		return fmt.Errorf("It seems no playground is running, execute `tiup run playground` to start one")
 	}
-	var endpoint *Endpoint
+	var ep *endpoint
 	if target == "" {
-		if endpoint = selectEndpoint(endpoints); endpoint == nil {
+		if ep = selectEndpoint(endpoints); ep == nil {
 			os.Exit(0)
 		}
 	} else {
 		for _, end := range endpoints {
 			if end.component == target {
-				endpoint = end
+				ep = end
 			}
 		}
-		if endpoint == nil {
+		if ep == nil {
 			return fmt.Errorf("specified instance %s not found, maybe it's not alive now, execute `tiup status` to see instance list", target)
 		}
 	}
@@ -82,8 +82,8 @@ func connect(target string) error {
 		return fmt.Errorf("can't open history file: %s", err.Error())
 	}
 	h := handler.New(l, u, os.Getenv(localdata.EnvNameInstanceDataDir), true)
-	if err = h.Open(endpoint.dsn); err != nil {
-		return fmt.Errorf("can't open connection to %s: %s", endpoint.dsn, err.Error())
+	if err = h.Open(ep.dsn); err != nil {
+		return fmt.Errorf("can't open connection to %s: %s", ep.dsn, err.Error())
 	}
 	if err = h.Run(); err != io.EOF {
 		return err
@@ -91,8 +91,8 @@ func connect(target string) error {
 	return nil
 }
 
-func scanEndpoint(tiupHome string) ([]*Endpoint, error) {
-	endpoints := []*Endpoint{}
+func scanEndpoint(tiupHome string) ([]*endpoint, error) {
+	endpoints := []*endpoint{}
 
 	files, err := ioutil.ReadDir(path.Join(tiupHome, localdata.DataParentDir))
 	if err != nil {
@@ -137,8 +137,8 @@ func isInstanceAlive(tiupHome, instance string) bool {
 	}
 }
 
-func readDsn(dir, component string) []*Endpoint {
-	endpoints := []*Endpoint{}
+func readDsn(dir, component string) []*endpoint {
+	endpoints := []*endpoint{}
 
 	file, err := os.Open(path.Join(dir, "dsn"))
 	if err != nil {
@@ -148,7 +148,7 @@ func readDsn(dir, component string) []*Endpoint {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		endpoints = append(endpoints, &Endpoint{
+		endpoints = append(endpoints, &endpoint{
 			component: component,
 			dsn:       scanner.Text(),
 		})
@@ -157,7 +157,7 @@ func readDsn(dir, component string) []*Endpoint {
 	return endpoints
 }
 
-func selectEndpoint(endpoints []*Endpoint) *Endpoint {
+func selectEndpoint(endpoints []*endpoint) *endpoint {
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
 	}
@@ -167,14 +167,14 @@ func selectEndpoint(endpoints []*Endpoint) *Endpoint {
 	l.Title = "Choose a endpoint to connect"
 
 	ml := 0
-	for _, endpoint := range endpoints {
-		if ml < len(endpoint.component) {
-			ml = len(endpoint.component)
+	for _, ep := range endpoints {
+		if ml < len(ep.component) {
+			ml = len(ep.component)
 		}
 	}
 	fmtStr := fmt.Sprintf(" %%-%ds %%s", ml)
-	for _, endpoint := range endpoints {
-		l.Rows = append(l.Rows, fmt.Sprintf(fmtStr, endpoint.component, endpoint.dsn))
+	for _, ep := range endpoints {
+		l.Rows = append(l.Rows, fmt.Sprintf(fmtStr, ep.component, ep.dsn))
 	}
 	l.TextStyle = ui.NewStyle(ui.ColorWhite)
 	l.SelectedRowStyle = ui.NewStyle(ui.ColorGreen)

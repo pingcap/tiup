@@ -1,6 +1,6 @@
 package main
 
-type Endpoint struct {
+type endpoint struct {
 	component string
 	dsn       string
 }

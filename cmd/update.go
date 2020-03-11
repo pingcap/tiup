@@ -53,6 +53,7 @@ other flags will be ignored if the flag --self specified.
 				originFile := filepath.Join(profile.Path("bin"), "tiup")
 				renameFile := filepath.Join(profile.Path("bin"), "tiup.tmp")
 				if err := os.Rename(originFile, renameFile); err != nil {
+					fmt.Printf("Backup `%s` to `%s` failed\n", originFile, renameFile)
 					return err
 				}
 
@@ -62,8 +63,13 @@ other flags will be ignored if the flag --self specified.
 						if err := os.Rename(renameFile, originFile); err != nil {
 							fmt.Printf("Please rename `%s` to `%s` maunally\n", renameFile, originFile)
 						}
+					} else {
+						if err := os.Remove(renameFile); err != nil {
+							fmt.Printf("Please delete `%s` maunally\n", renameFile)
+						}
 					}
 				}()
+
 				err = repository.DownloadFile(profile.Path("bin"), "tiup")
 				return err
 			}
