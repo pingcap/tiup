@@ -61,9 +61,9 @@ func (s *metaSuite) TestRepository(c *C) {
 		{
 			comp: "test1",
 			vers: []VersionInfo{
-				{Version: "v1.1.1", Date: "2020-02-27 10:10:10", Entry: "test1.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
-				{Version: "v1.1.2", Date: "2020-02-27 10:10:10", Entry: "test1.bin", Platforms: []string{"darwin/amd64", "linux/amd64"}},
-				{Version: "v1.1.3", Date: "2020-02-27 10:10:10", Entry: "test1.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
+				{Version: "v1.1.1", Date: "2020-02-27T10:10:10+08:00", Entry: "test1.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
+				{Version: "v1.1.2", Date: "2020-02-27T10:10:10+08:00", Entry: "test1.bin", Platforms: []string{"darwin/amd64", "linux/amd64"}},
+				{Version: "v1.1.3", Date: "2020-02-27T10:10:10+08:00", Entry: "test1.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
 			},
 		},
 		{

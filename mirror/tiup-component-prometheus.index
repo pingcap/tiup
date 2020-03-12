@@ -5,7 +5,7 @@
         {
             "version": "v2.16.0",
             "entry": "prometheus/prometheus",
-            "date": "2020-03-06 16:44:00",
+            "date": "2020-03-03T19:39:35+08:00",
             "platforms": [
                 "darwin/amd64",
                 "linux/amd64"

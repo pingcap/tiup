@@ -4,7 +4,7 @@
     "nightly": {
         "version": "nightly",
         "entry": "bin/pd-server",
-        "date": "2020-02-27 10:10:10",
+        "date": "2020-02-27T10:10:10+08:00",
         "platforms": [
             "darwin/amd64",
             "linux/amd64"
@@ -14,7 +14,7 @@
         {
             "version": "v3.0.0",
             "entry": "bin/pd-server",
-            "date": "2020-02-27 10:10:10",
+            "date": "2020-02-27T10:10:10+08:00",
             "platforms": [
                 "darwin/amd64",
                 "linux/amd64"
@@ -23,7 +23,7 @@
         {
             "version": "v3.0.1",
             "entry": "bin/pd-server",
-            "date": "2020-02-27 10:10:10",
+            "date": "2020-02-27T10:10:10+08:00",
             "platforms": [
                 "darwin/amd64",
                 "linux/amd64"
@@ -32,7 +32,7 @@
         {
             "version": "v3.0.2",
             "entry": "bin/pd-server",
-            "date": "2020-02-27 10:10:10",
+            "date": "2020-02-27T10:10:10+08:00",
             "platforms": [
                 "darwin/amd64",
                 "linux/amd64"
@@ -41,7 +41,7 @@
         {
             "version": "v3.0.3",
             "entry": "bin/pd-server",
-            "date": "2020-02-27 10:10:10",
+            "date": "2020-02-27T10:10:10+08:00",
             "platforms": [
                 "darwin/amd64",
                 "linux/amd64"
@@ -50,7 +50,7 @@
         {
             "version": "v3.0.4",
             "entry": "bin/pd-server",
-            "date": "2020-02-27 10:10:10",
+            "date": "2020-02-27T10:10:10+08:00",
             "platforms": [
                 "darwin/amd64",
                 "linux/amd64"
@@ -59,7 +59,7 @@
         {
             "version": "v3.0.5",
             "entry": "bin/pd-server",
-            "date": "2020-02-27 10:10:10",
+            "date": "2020-02-27T10:10:10+08:00",
             "platforms": [
                 "darwin/amd64",
                 "linux/amd64"
@@ -68,7 +68,7 @@
         {
             "version": "v3.0.6",
             "entry": "bin/pd-server",
-            "date": "2020-02-27 10:10:10",
+            "date": "2020-02-27T10:10:10+08:00",
             "platforms": [
                 "darwin/amd64",
                 "linux/amd64"
@@ -77,7 +77,7 @@
         {
             "version": "v3.0.7",
             "entry": "bin/pd-server",
-            "date": "2020-02-27 10:10:10",
+            "date": "2020-02-27T10:10:10+08:00",
             "platforms": [
                 "darwin/amd64",
                 "linux/amd64"
@@ -86,7 +86,7 @@
         {
             "version": "v3.0.8",
             "entry": "bin/pd-server",
-            "date": "2020-02-27 10:10:10",
+            "date": "2020-02-27T10:10:10+08:00",
             "platforms": [
                 "darwin/amd64",
                 "linux/amd64"
@@ -95,7 +95,7 @@
         {
             "version": "v3.0.9",
             "entry": "bin/pd-server",
-            "date": "2020-02-27 10:10:10",
+            "date": "2020-02-27T10:10:10+08:00",
             "platforms": [
                 "darwin/amd64",
                 "linux/amd64"
@@ -104,7 +104,7 @@
         {
             "version": "v3.0.10",
             "entry": "bin/pd-server",
-            "date": "2020-02-27 10:10:10",
+            "date": "2020-02-27T10:10:10+08:00",
             "platforms": [
                 "darwin/amd64",
                 "linux/amd64"
