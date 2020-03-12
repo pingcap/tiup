@@ -64,5 +64,5 @@ esac
 
 echo "Installed path: ${bold}$bin_dir/tiup${sgr0}"
 echo "==============================================="
-echo "Have a try:     ${bold}tiup run playground${sgr0}"
+echo "Have a try:     ${bold}tiup playground${sgr0}"
 echo "==============================================="

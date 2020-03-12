@@ -186,17 +186,16 @@ func componentIndex(name, desc, entry, version, goos, goarch string) error {
 		if cIndex.Nightly == nil {
 			cIndex.Nightly = &v
 			return write("package/"+fname, cIndex)
-		} else {
-			cIndex.Nightly.Date = time.Now()
-			cIndex.Nightly.Entry = entry
-			for _, p := range cIndex.Nightly.Platforms {
-				if p == pair {
-					return write("package/"+fname, cIndex)
-				}
-			}
-			cIndex.Nightly.Platforms = append(cIndex.Nightly.Platforms, pair)
-			return write("package/"+fname, cIndex)
 		}
+		cIndex.Nightly.Date = time.Now()
+		cIndex.Nightly.Entry = entry
+		for _, p := range cIndex.Nightly.Platforms {
+			if p == pair {
+				return write("package/"+fname, cIndex)
+			}
+		}
+		cIndex.Nightly.Platforms = append(cIndex.Nightly.Platforms, pair)
+		return write("package/"+fname, cIndex)
 	}
 
 	cIndex.Versions = append(cIndex.Versions, v)
@@ -206,9 +205,8 @@ func componentIndex(name, desc, entry, version, goos, goarch string) error {
 func join(url, file string) string {
 	if strings.HasSuffix(url, "/") {
 		return url + file
-	} else {
-		return url + "/" + file
 	}
+	return url + "/" + file
 }
 
 func write(file string, data interface{}) error {
