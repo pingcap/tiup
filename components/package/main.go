@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -103,7 +104,7 @@ func current(fname string, target interface{}) error {
 		return err
 	}
 	if os.IsNotExist(err) {
-		url := join(mirror, fname)
+		url := join(mirror, fname+"?t="+strconv.Itoa(int(time.Now().Unix())))
 		if err := get(url, target); err != nil {
 			return err
 		}
