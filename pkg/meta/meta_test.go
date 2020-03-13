@@ -15,7 +15,6 @@ package meta
 
 import (
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -69,17 +68,17 @@ func (s *metaSuite) TestRepository(c *C) {
 		{
 			comp: "test2",
 			vers: []VersionInfo{
-				{Version: "v2.1.1", Date: "2020-02-27 10:20:10", Entry: "test2.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
-				{Version: "v2.1.2", Date: "2020-02-27 10:20:10", Entry: "test2.bin", Platforms: []string{"darwin/amd64", "linux/amd64"}},
-				{Version: "v2.1.3", Date: "2020-02-27 10:20:10", Entry: "test2.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
+				{Version: "v2.1.1", Date: "2020-02-27T10:20:10+08:00", Entry: "test2.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
+				{Version: "v2.1.2", Date: "2020-02-27T10:20:10+08:00", Entry: "test2.bin", Platforms: []string{"darwin/amd64", "linux/amd64"}},
+				{Version: "v2.1.3", Date: "2020-02-27T10:20:10+08:00", Entry: "test2.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
 			},
 		},
 		{
 			comp: "test3",
 			vers: []VersionInfo{
-				{Version: "v3.1.1", Date: "2020-02-27 10:30:10", Entry: "test3.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
-				{Version: "v3.1.2", Date: "2020-02-27 10:30:10", Entry: "test3.bin", Platforms: []string{"darwin/amd64", "linux/amd64"}},
-				{Version: "v3.1.3", Date: "2020-02-27 10:30:10", Entry: "test3.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
+				{Version: "v3.1.1", Date: "2020-02-27T10:30:10+08:00", Entry: "test3.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
+				{Version: "v3.1.2", Date: "2020-02-27T10:30:10+08:00", Entry: "test3.bin", Platforms: []string{"darwin/amd64", "linux/amd64"}},
+				{Version: "v3.1.3", Date: "2020-02-27T10:30:10+08:00", Entry: "test3.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
 			},
 		},
 	}
@@ -97,7 +96,7 @@ func (s *metaSuite) TestRepository(c *C) {
 	fpExpr := `return("` + tmpDir + `")`
 	c.Assert(failpoint.Enable(fpName, fpExpr), IsNil)
 	defer func() { c.Assert(failpoint.Disable(fpName), IsNil) }()
-	defer os.RemoveAll(tmpDir)
+	//defer os.RemoveAll(tmpDir)
 
 	err = repo.DownloadComponent(tmpDir, "test1:v1.1.1")
 	c.Assert(err, IsNil, Commentf("error: %+v", err))
@@ -106,5 +105,5 @@ func (s *metaSuite) TestRepository(c *C) {
 	got, err := ioutil.ReadFile(filepath.Join(tmpDir, "test1", "v1.1.1", "test1.bin"))
 	c.Assert(err, IsNil)
 
-	c.Assert(got, DeepEquals, exp)
+	c.Assert(string(got), DeepEquals, string(exp))
 }
