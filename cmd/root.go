@@ -120,11 +120,13 @@ commands if you want to have a try.
 			originHelpFunc(cmd, args)
 			return
 		}
-		spec := args[0]
-		if spec == "-h" || spec == "--help" {
-			spec = args[1]
+		cmd, n, e := cmd.Root().Find(args)
+		if (cmd == rootCmd || e != nil) && len(n) > 0 {
+			externalHelp(n[0])
+		} else {
+			cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
+			cmd.Help()
 		}
-		externalHelp(spec)
 	})
 	rootCmd.SetHelpCommand(newHelpCmd())
 }
