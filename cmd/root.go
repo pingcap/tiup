@@ -63,7 +63,7 @@ commands if you want to have a try.
   $ tiup playground            # Quick start
   $ tiup playground --tag p1   # Start a playground with a specified tag`,
 		SilenceErrors: true,
-		Version:       version.NewTiUPVersion().SemVer(),
+		Version:       fmt.Sprintf("%s+%s(%s)", version.NewTiUPVersion().SemVer(), version.GitBranch, version.GitHash),
 		Args: func(cmd *cobra.Command, args []string) error {
 			// Support `tiup <component>`
 			return nil
