@@ -25,3 +25,4 @@ bin/
 /package/
 /tests/_tmp/
 /tests/tiup_home/
+/tests/tiup_mirrors/*.sha1
