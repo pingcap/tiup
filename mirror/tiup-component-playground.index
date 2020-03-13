@@ -5,31 +5,31 @@
         {
             "version": "v0.0.1",
             "entry": "playground",
-            "date": "2020-02-27 10:10:10",
+            "date": "2020-02-27T10:10:10+08:00",
             "platforms": ["darwin/amd64", "linux/amd64"]
         },
         {
             "version": "v0.0.2",
             "entry": "playground",
-            "date": "2020-03-03 19:38:00",
+            "date": "2020-03-03T19:39:35+08:00",
             "platforms": ["darwin/amd64", "linux/amd64"]
         },
         {
             "version": "v0.0.3",
             "entry": "playground",
-            "date": "2020-03-05 16:44:00",
+            "date": "2020-03-03T19:39:35+08:00",
             "platforms": ["darwin/amd64", "linux/amd64"]
         },
         {
             "version": "v0.0.4",
             "entry": "playground",
-            "date": "2020-03-06 14:33:00",
+            "date": "2020-03-03T19:39:35+08:00",
             "platforms": ["darwin/amd64", "linux/amd64"]
         },
         {
             "version": "v0.0.5",
             "entry": "playground",
-            "date": "2020-03-10 14:33:00",
+            "date": "2020-03-03T19:39:35+08:00",
             "platforms": ["darwin/amd64", "linux/amd64"]
         }
     ]

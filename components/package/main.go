@@ -1,8 +1,11 @@
 package main
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -11,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/juju/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -255,13 +259,20 @@ func packTarget(target, name, version, goos, goarch string) error {
 }
 
 func checksum(name, version, goos, goarch string) error {
-	cmd := exec.Command("shasum", fmt.Sprintf("package/%s-%s-%s-%s.tar.gz", name, version, goos, goarch))
-	out, err := cmd.Output()
+	tarball, err := os.OpenFile(fmt.Sprintf("package/%s-%s-%s-%s.tar.gz", name, version, goos, goarch), os.O_RDONLY, 0)
 	if err != nil {
-		return fmt.Errorf("checksum: %s", err.Error())
+		return errors.Trace(err)
 	}
+	defer tarball.Close()
+
+	sha1Writter := sha1.New()
+	if _, err := io.Copy(sha1Writter, tarball); err != nil {
+		return errors.Trace(err)
+	}
+
+	checksum := hex.EncodeToString(sha1Writter.Sum(nil))
 	file := fmt.Sprintf("package/%s-%s-%s-%s.sha1", name, version, goos, goarch)
-	if err := ioutil.WriteFile(file, out, 0664); err != nil {
+	if err := ioutil.WriteFile(file, []byte(checksum), 0664); err != nil {
 		return err
 	}
 	return nil

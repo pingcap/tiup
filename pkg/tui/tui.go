@@ -15,10 +15,16 @@ package tui
 
 import (
 	"github.com/cheynewallace/tabby"
+	"github.com/pingcap-incubator/tiup/pkg/mock"
 )
 
 // PrintTable accepts a matrix of strings and print them as ASCII table to terminal
 func PrintTable(rows [][]string, header bool) {
+	if f := mock.On("PrintTable"); f != nil {
+		f.(func([][]string, bool))(rows, header)
+		return
+	}
+
 	// Print the table
 	t := tabby.New()
 	if header {
