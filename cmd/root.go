@@ -62,7 +62,7 @@ the latest stable version will be downloaded from the repository.
 
   # *HOW TO* reuse instance data instead of generating a new data directory each time?
   # The instances which have the same "TAG" will share the data directory: $TIUP_HOME/data/$TAG.
-  $ tiup playground --tag mycluster`,
+  $ tiup  --tag mycluster playground`,
 		SilenceErrors:      true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
 		Version:            fmt.Sprintf("%s+%s(%s)", version.NewTiUPVersion().SemVer(), version.GitBranch, version.GitHash),
