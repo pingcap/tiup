@@ -9,7 +9,7 @@ the latest stable version will be downloaded from the repository.
   $ tiup  --tag mycluster playground
 
 Usage:
-  tiup [component]|[command] [flags]
+  tiup [flags] [component]|[command] [args...]
 
 Available Commands:
   install     Install a specific version of a component

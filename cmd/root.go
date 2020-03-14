@@ -53,7 +53,7 @@ func init() {
 	}
 
 	rootCmd = &cobra.Command{
-		Use: "tiup [component]|[command]",
+		Use: "tiup [flags] [component]|[command] [args...]",
 		Long: `The tiup is a component management CLI utility tool that can help to download and install
 the TiDB components to the local system. You can run a specific version of a component via
 "tiup <component>:[version]". If no version number is specified, the latest version installed
