@@ -59,8 +59,14 @@ func execute() error {
 	monitor := false
 
 	rootCmd := &cobra.Command{
-		Use:          "playground",
-		Short:        "Bootstrap a TiDB cluster in your local host",
+		Use: "tiup playground [version]",
+		Long: `Bootstrap a TiDB cluster in your local host, the latest release version will be chosen
+if you don't specified a version.
+
+Examples:
+  $ tiup playground nightly                         # Start a TiDB nightly version local cluster
+  $ tiup playground v3.0.10 --db 3 --pd 3 --kv 3    # Start a local cluster with 10 nodes
+  $ tiup playground nightly --monitor               # Start a local cluster with monitor system`,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			version := ""
