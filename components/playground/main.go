@@ -22,6 +22,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type ValicationFunc func(interface{}) error
+
+func defaultTextValidator(interface{}) error { return nil }
+
 func installIfMissing(profile *localdata.Profile, component, version string) error {
 	versions, err := profile.InstalledVersions(component)
 	if err != nil {
@@ -52,18 +56,24 @@ func installIfMissing(profile *localdata.Profile, component, version string) err
 	return c.Run()
 }
 
-func promptText(text, defaultValue string) string {
+func promptText(text, defaultValue string, valid ValicationFunc) string {
 	fmt.Print(text)
 	reader := bufio.NewReader(os.Stdin)
-	ret, _ := reader.ReadString('\n')
-	ret = strings.TrimSpace(ret)
-	if ret == "" {
-		return defaultValue
+	for {
+		ret, _ := reader.ReadString('\n')
+		ret = strings.TrimSpace(ret)
+		if ret == "" {
+			return defaultValue
+		}
+		if err := valid(ret); err != nil {
+			fmt.Println(err)
+			continue
+		}
+		return ret
 	}
-	return ret
 }
 
-func promptNum(text string, defaultValue int) int {
+func promptNum(text string, defaultValue int, valid ValicationFunc) int {
 	fmt.Print(text)
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -74,7 +84,11 @@ func promptNum(text string, defaultValue int) int {
 		}
 		r, err := strconv.Atoi(ret)
 		if err != nil {
-			fmt.Println("Please enter valid number!")
+			fmt.Println("Parse number error!")
+			continue
+		}
+		if err := valid(r); err != nil {
+			fmt.Println(err)
 			continue
 		}
 		return r
@@ -100,10 +114,22 @@ func execute() error {
 
 			// wizard
 			fmt.Println("Current playground options:")
-			host = promptText(fmt.Sprintf("Host (default:%s): ", host), host)
-			tidbNum = promptNum(fmt.Sprintf("TiDB Num (default:%d): ", tidbNum), tidbNum)
-			tikvNum = promptNum(fmt.Sprintf("TiKV Num (default:%d): ", tikvNum), tikvNum)
-			pdNum = promptNum(fmt.Sprintf("PD Num (default:%d): ", pdNum), pdNum)
+			host = promptText(fmt.Sprintf("Host (default:%s): ", host), host, defaultTextValidator)
+
+			nodeNumberValidator := func(num interface{}) error {
+				if n, ok := num.(int); ok {
+					if n < 1 || n > 100 {
+						return fmt.Errorf("Node number should be in range (0, 100]")
+					}
+				} else {
+					return fmt.Errorf("Please enter a valid number")
+				}
+				return nil
+			}
+
+			tidbNum = promptNum(fmt.Sprintf("TiDB Num (default:%d): ", tidbNum), tidbNum, nodeNumberValidator)
+			tikvNum = promptNum(fmt.Sprintf("TiKV Num (default:%d): ", tikvNum), tikvNum, nodeNumberValidator)
+			pdNum = promptNum(fmt.Sprintf("PD Num (default:%d): ", pdNum), pdNum, nodeNumberValidator)
 
 			return bootCluster(version, pdNum, tidbNum, tikvNum, host, monitor)
 		},
