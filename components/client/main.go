@@ -31,7 +31,7 @@ func main() {
 
 func execute() error {
 	rootCmd := &cobra.Command{
-		Use:          "client",
+		Use:          "tiup client",
 		Short:        "Connect a TiDB cluster in your local host",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

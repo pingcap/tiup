@@ -45,7 +45,7 @@ After installing `tiup`, you can use it to install binaries of TiDB components.
 ```
 The tiup is a component management CLI utility tool that can help to download and install
 the TiDB components to the local system. You can run a specific version of a component via
-"tiup <component>:[version]". If no version number is specified, the latest version installed
+"tiup <component>[:version]". If no version number is specified, the latest version installed
 locally will be run. If the specified component does not have any version installed locally,
 the latest stable version will be downloaded from the repository. You can run the following
 commands if you want to have a try.
@@ -76,7 +76,7 @@ Available Components:
   package      A toolbox to package tiup component
 
 Flags:
-  -B, --binary <component>:[version]   Print binary path of a specific version of a component <component>:[version]
+  -B, --binary <component>[:version]   Print binary path of a specific version of a component <component>[:version]
                                        and the latest version installed will be selected if no version specified
   -h, --help                           help for tiup
       --mirror mirror                  Overwrite default mirror or TIUP_MIRRORS environment variable (default "https://tiup-mirrors.pingcap.com/")

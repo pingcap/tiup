@@ -44,7 +44,7 @@ func execute() error {
 	desc := ""
 
 	rootCmd := &cobra.Command{
-		Use:          "package target",
+		Use:          "tiup package target",
 		Short:        "Package a tiup component and generate package directory",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

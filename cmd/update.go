@@ -26,7 +26,7 @@ import (
 func newUpdateCmd() *cobra.Command {
 	var all, nightly, force, self bool
 	cmd := &cobra.Command{
-		Use:   "update [component1]:[version] [component2..N]",
+		Use:   "update [component1][:version] [component2..N]",
 		Short: "Update tiup components to the latest version",
 		Long: `Update some components to the latest version, you must use --nightly
 explicitly to update to the latest nightly version. You can use --all
@@ -37,17 +37,10 @@ use the flag --force explicitly to overwrite local installation. There is a
 a flag --self, which is used to update the tiup to the latest version. All
 other flags will be ignored if the flag --self specified.
 
-  # Update all components to the latest stable version
-  tiup update --all
-
-  # Update all components to the latest nightly version
-  tiup update --nightly --all
-
-  # Overwrite the local installation
-  tiup update playground:v0.0.3 --force
-
-  # Update the tiup to the latest version
-  tiup update --self`,
+  $ tiup update --all                     # Update all components to the latest stable version
+  $ tiup update --nightly --all           # Update all components to the latest nightly version
+  $ tiup update playground:v0.0.3 --force # Overwrite the local installation
+  $ tiup update --self                    # Update the tiup to the latest version`,
 		RunE: func(cmd *cobra.Command, components []string) error {
 			if self {
 				originFile := filepath.Join(profile.Path("bin"), "tiup")

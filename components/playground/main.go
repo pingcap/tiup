@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pingcap-incubator/tiup/components/playground/instance"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
@@ -58,8 +59,14 @@ func execute() error {
 	monitor := false
 
 	rootCmd := &cobra.Command{
-		Use:          "playground",
-		Short:        "Bootstrap a TiDB cluster in your local host",
+		Use: "tiup playground [version]",
+		Long: `Bootstrap a TiDB cluster in your local host, the latest release version will be chosen
+if you don't specified a version.
+
+Examples:
+  $ tiup playground nightly                         # Start a TiDB nightly version local cluster
+  $ tiup playground v3.0.10 --db 3 --pd 3 --kv 3    # Start a local cluster with 10 nodes
+  $ tiup playground nightly --monitor               # Start a local cluster with monitor system`,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			version := ""
@@ -235,15 +242,15 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 	}
 
 	if len(succ) > 0 {
-		fmt.Println("\x1b[032mCLUSTER START SUCCESSFULLY, Enjoy it ^-^\x1b[0m")
+		fmt.Println(color.GreenString("CLUSTER START SUCCESSFULLY, Enjoy it ^-^"))
 		for _, dbAddr := range succ {
 			ss := strings.Split(dbAddr, ":")
-			fmt.Printf("\x1b[032mTo connect TiDB: mysql --host %s --port %s -u root\x1b[0m\n", ss[0], ss[1])
+			fmt.Println(color.GreenString("To connect TiDB: mysql --host %s --port %s -u root", ss[0], ss[1]))
 		}
 	}
 
 	if pdAddr := pds[0].Addr(); hasDashboard(pdAddr) {
-		fmt.Printf("To view the dashboard: http://%s/dashboard\n", pdAddr)
+		fmt.Println(color.GreenString("To view the dashboard: http://%s/dashboard", pdAddr))
 	}
 
 	if monitorAddr != "" {
