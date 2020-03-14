@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"database/sql"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -50,6 +52,35 @@ func installIfMissing(profile *localdata.Profile, component, version string) err
 	return c.Run()
 }
 
+func promptText(text, defaultValue string) string {
+	fmt.Print(text)
+	reader := bufio.NewReader(os.Stdin)
+	ret, _ := reader.ReadString('\n')
+	ret = strings.TrimSpace(ret)
+	if ret == "" {
+		return defaultValue
+	}
+	return ret
+}
+
+func promptNum(text string, defaultValue int) int {
+	fmt.Print(text)
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		ret, _ := reader.ReadString('\n')
+		ret = strings.TrimSpace(ret)
+		if ret == "" {
+			return defaultValue
+		}
+		r, err := strconv.Atoi(ret)
+		if err != nil {
+			fmt.Println("Please enter valid number!")
+			continue
+		}
+		return r
+	}
+}
+
 func execute() error {
 	tidbNum := 1
 	tikvNum := 1
@@ -66,6 +97,14 @@ func execute() error {
 			if len(args) > 0 {
 				version = args[0]
 			}
+
+			// wizard
+			fmt.Println("Current playground options:")
+			host = promptText(fmt.Sprintf("Host (default:%s): ", host), host)
+			tidbNum = promptNum(fmt.Sprintf("TiDB Num (default:%d): ", tidbNum), tidbNum)
+			tikvNum = promptNum(fmt.Sprintf("TiKV Num (default:%d): ", tikvNum), tikvNum)
+			pdNum = promptNum(fmt.Sprintf("PD Num (default:%d): ", pdNum), pdNum)
+
 			return bootCluster(version, pdNum, tidbNum, tikvNum, host, monitor)
 		},
 	}
