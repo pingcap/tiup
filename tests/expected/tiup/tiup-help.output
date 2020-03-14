@@ -6,7 +6,7 @@ the latest stable version will be downloaded from the repository.
 
   # *HOW TO* reuse instance data instead of generating a new data directory each time?
   # The instances which have the same "TAG" will share the data directory: $TIUP_HOME/data/$TAG.
-  $ tiup  --tag mycluster playground
+  $ tiup --tag mycluster playground
 
 Usage:
   tiup [flags] <command> [args...]
@@ -17,8 +17,8 @@ Available Commands:
   list        List the available TiDB components or versions
   uninstall   Uninstall components or versions of a component
   update      Update tiup components to the latest version
-  status      List the status of running components
-  clean       Clean the data of the instantiated component
+  status      List the status of instantiated components
+  clean       Clean the data of instantiated components
   help        Help about any command or component
 
 Available Components:

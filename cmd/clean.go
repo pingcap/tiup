@@ -30,7 +30,7 @@ func newCleanCmd() *cobra.Command {
 	var all bool
 	cmd := &cobra.Command{
 		Use:   "clean",
-		Short: "Clean the data of the instantiated component",
+		Short: "Clean the data of instantiated components",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 && !all {
 				return cmd.Help()
