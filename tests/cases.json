@@ -74,5 +74,9 @@
     {
         "command": "tiup help install",
         "path": "tiup/tiup-help-install.output"
+    },
+    {
+        "command": "tiup test --flag value --flag2 values",
+        "path": "tiup/tiup-run-test-flag.output"
     }
 ]
