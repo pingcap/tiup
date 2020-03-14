@@ -1,6 +1,6 @@
 The tiup is a component management CLI utility tool that can help to download and install
 the TiDB components to the local system. You can run a specific version of a component via
-"tiup <component>:[version]". If no version number is specified, the latest version installed
+"tiup <component>[:version]". If no version number is specified, the latest version installed
 locally will be run. If the specified component does not have any version installed locally,
 the latest stable version will be downloaded from the repository.
 
@@ -9,7 +9,8 @@ the latest stable version will be downloaded from the repository.
   $ tiup  --tag mycluster playground
 
 Usage:
-  tiup [flags] [component]|[command] [args...]
+  tiup [flags] <command> [args...]
+  tiup [flags] <component> [args...]
 
 Available Commands:
   install     Install a specific version of a component
@@ -30,7 +31,7 @@ Available Components:
   prometheus   An open-source systems monitoring and alerting toolkit
 
 Flags:
-  -B, --binary <component>:[version]   Print binary path of a specific version of a component <component>:[version]
+  -B, --binary <component>[:version]   Print binary path of a specific version of a component <component>[:version]
                                        and the latest version installed will be selected if no version specified
   -h, --help                           help for tiup
       --mirror mirror                  Overwrite default mirror or TIUP_MIRRORS environment variable (default "TIUP_MIRRORS_INTEGRATION_TEST")
@@ -41,13 +42,13 @@ Flags:
 Examples:
   $ tiup playground                    # Quick start
   $ tiup playground nightly            # Start a playground with the latest nightly version
-  $ tiup install <component>:[version] # Install a component of specific version
+  $ tiup install <component>[:version] # Install a component of specific version
   $ tiup update --all                  # Update all installed components to the latest version
   $ tiup update --nightly              # Update all installed components to the nightly version
   $ tiup update --self                 # Update the "tiup" to the latest version
-  $ tiup list --refresh                # Fetch the latest support components list
-  $ tiup status                        # Display all running instances
-  $ tiup clean <name>                  # Clean the data of running instance (Kill process if it's running)
-  $ tiup clean --all                   # Clean the data of all running instances
+  $ tiup list --refresh                # Fetch the latest supported components list
+  $ tiup status                        # Display all running/terminated instances
+  $ tiup clean <name>                  # Clean the data of running/terminated instance (Kill process if it's running)
+  $ tiup clean --all                   # Clean the data of all running/terminated instances
 
 Use "tiup [command] --help" for more information about a command.

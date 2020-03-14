@@ -38,6 +38,7 @@ func newCleanCmd() *cobra.Command {
 			return cleanData(args, all)
 		},
 	}
+	cmd.SetHelpTemplate(cmd.HelpTemplate())
 	cmd.Flags().BoolVar(&all, "all", false, "Clean all data of instantiated components")
 	return cmd
 }
