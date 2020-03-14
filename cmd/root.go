@@ -57,21 +57,19 @@ func init() {
 the TiDB components to the local system. You can run a specific version of a component via
 "tiup <component>:[version]". If no version number is specified, the latest version installed
 locally will be run. If the specified component does not have any version installed locally,
-the latest stable version will be downloaded from the repository. You can run the following
-commands if you want to have a try.
-  
-  $ tiup playground                 # Quick start
-  $ tiup playground --tag p1        # Start a playground with a specified tag
-  $ tiup playground nightly         # Start a playground with the latest nightly version
-  $ tiup playground:v0.0.3 nightly  # Use the v0.0.3 of playground to run a nightly cluster
-  
+the latest stable version will be downloaded from the repository.
+
   # *HOW TO* transparently pass the parameters to the component?
   # The parameters that pass to the running component should be in the following forms:
   #   1. "--flag=value --flag2=value2"
   #   2. explicitly use "--" to indicate the following parameters is "transparent parameters" 
-  # eg: start a playground with 3 PD instances and 3 TiDB instances and 4 TiKV instances
+  # eg: start a playground with 3 PD instances and 3 TiDB instances and 4 TiKV instances.
   $ tiup playground --pd=3 --db=3 --kv=4
-  $ tiup playground -- --pd 3 --db 3 --kv 4`,
+  $ tiup playground -- --pd 3 --db 3 --kv 4
+
+  # *HOW TO* reuse instance data instead of generating a new data directory each time?
+  # The instances which have the same "TAG" will share the data directory: $TIUP_HOME/data/$TAG.
+  $ tiup playground --tag mycluster`,
 		SilenceErrors:      true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
 		Version:            fmt.Sprintf("%s+%s(%s)", version.NewTiUPVersion().SemVer(), version.GitBranch, version.GitHash),

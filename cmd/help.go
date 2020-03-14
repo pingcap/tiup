@@ -102,6 +102,18 @@ Global Flags:
 Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
   {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
 
+Examples:
+  $ tiup playground                    # Quick start
+  $ tiup playground nightly            # Start a playground with the latest nightly version
+  $ tiup install <component>:[version] # Install a component of specific version
+  $ tiup update --all                  # Update all installed components to the latest version
+  $ tiup update --nightly              # Update all installed components to the nightly version
+  $ tiup update --self                 # Update the "tiup" to the latest version
+  $ tiup list --refresh                # Fetch the latest support components list
+  $ tiup status                        # Display all running instances
+  $ tiup clean <name>                  # Clean the data of running instance (Kill process if it's running)
+  $ tiup clean --all                   # Clean the data of all running instances
+
 Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
 `
 }

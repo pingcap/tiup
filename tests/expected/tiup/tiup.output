@@ -2,21 +2,19 @@ The tiup is a component management CLI utility tool that can help to download an
 the TiDB components to the local system. You can run a specific version of a component via
 "tiup <component>:[version]". If no version number is specified, the latest version installed
 locally will be run. If the specified component does not have any version installed locally,
-the latest stable version will be downloaded from the repository. You can run the following
-commands if you want to have a try.
-  
-  $ tiup playground                 # Quick start
-  $ tiup playground --tag p1        # Start a playground with a specified tag
-  $ tiup playground nightly         # Start a playground with the latest nightly version
-  $ tiup playground:v0.0.3 nightly  # Use the v0.0.3 of playground to run a nightly cluster
-  
+the latest stable version will be downloaded from the repository.
+
   # *HOW TO* transparently pass the parameters to the component?
   # The parameters that pass to the running component should be in the following forms:
   #   1. "--flag=value --flag2=value2"
   #   2. explicitly use "--" to indicate the following parameters is "transparent parameters" 
-  # eg: start a playground with 3 PD instances and 3 TiDB instances and 4 TiKV instances
+  # eg: start a playground with 3 PD instances and 3 TiDB instances and 4 TiKV instances.
   $ tiup playground --pd=3 --db=3 --kv=4
   $ tiup playground -- --pd 3 --db 3 --kv 4
+
+  # *HOW TO* reuse instance data instead of generating a new data directory each time?
+  # The instances which have the same "TAG" will share the data directory: $TIUP_HOME/data/$TAG.
+  $ tiup playground --tag mycluster
 
 Usage:
   tiup [component]|[command] [flags]
@@ -48,5 +46,17 @@ Flags:
       --skip-version-check             Skip the strict version check, by default a version must be a valid SemVer string
   -T, --tag string                     Specify a tag for component instance
       --version                        version for tiup
+
+Examples:
+  $ tiup playground                    # Quick start
+  $ tiup playground nightly            # Start a playground with the latest nightly version
+  $ tiup install <component>:[version] # Install a component of specific version
+  $ tiup update --all                  # Update all installed components to the latest version
+  $ tiup update --nightly              # Update all installed components to the nightly version
+  $ tiup update --self                 # Update the "tiup" to the latest version
+  $ tiup list --refresh                # Fetch the latest support components list
+  $ tiup status                        # Display all running instances
+  $ tiup clean <name>                  # Clean the data of running instance (Kill process if it's running)
+  $ tiup clean --all                   # Clean the data of all running instances
 
 Use "tiup [command] --help" for more information about a command.
