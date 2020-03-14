@@ -49,10 +49,12 @@ unit-test:
 	$(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
 
 integration_test:
-	$(GOTEST) -c -cover -covermode=count \
-		-coverpkg=github.com/pingcap-incubator/tiup/... \
-		-o tests/tiup_home/bin/tiup \
-		github.com/pingcap-incubator/tiup/ ; \
+	# FIXME: the go test binary cann't support flag correctly
+	#$(GOTEST) -c -cover -covermode=count \
+	#	-coverpkg=github.com/pingcap-incubator/tiup/... \
+	#	-o tests/tiup_home/bin/tiup \
+	#	github.com/pingcap-incubator/tiup/ ;
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/tiup
 	cd tests && sh run.sh ; \
 
 

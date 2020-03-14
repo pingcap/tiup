@@ -8,6 +8,10 @@
         "path": "tiup/tiup.output"
     },
     {
+        "command": "tiup -h",
+        "path": "tiup/tiup-h.output"
+    },
+    {
         "command": "tiup help",
         "path": "tiup/tiup-help.output"
     },
@@ -44,11 +48,11 @@
         "path": "tiup/tiup-list-test-nightly.output"
     },
     {
-        "command": "tiup test --tag test",
+        "command": "tiup --tag test-0 test",
         "path": "tiup/tiup-run-test.output"
     },
     {
-        "command": "tiup test:v1.1.1 -T test-1",
+        "command": "tiup -T test-1 test:v1.1.1",
         "path": "tiup/tiup-run-test-v1.1.1.output"
     },
     {
@@ -56,7 +60,7 @@
         "path": "tiup/tiup-uninstall-test-v1.1.2.output"
     },
     {
-        "command": "tiup test -T test-2",
+        "command": "tiup -T test-2 test",
         "path": "tiup/tiup-run-test2.output"
     },
     {

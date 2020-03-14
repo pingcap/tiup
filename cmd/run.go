@@ -33,8 +33,8 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-func runComponent(tag string, args []string, rm bool) error {
-	component, version := meta.ParseCompVersion(args[0])
+func runComponent(tag, spec string, args []string, rm bool) error {
+	component, version := meta.ParseCompVersion(spec)
 	if !isSupportedComponent(component) {
 		return fmt.Errorf("unkonwn component `%s` (see supported components via `tiup list --refresh`)", component)
 	}
@@ -42,7 +42,7 @@ func runComponent(tag string, args []string, rm bool) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	p, err := launchComponent(ctx, component, version, tag, args[1:])
+	p, err := launchComponent(ctx, component, version, tag, args)
 	// If the process has been launched, we must save the process info to meta directory
 	if err == nil || (p != nil && p.Pid != 0) {
 		defer cleanDataDir(rm, p.Dir)

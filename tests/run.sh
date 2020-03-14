@@ -68,13 +68,15 @@ do
 
   if [ "$path" = "" ]; then
     echo "${MAGENTA}✔ Directly output case: cmd='$cmd' ${NORMAL}"
-    TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd -test.coverprofile="$cov" DEVEL
+      # FIXME: -test.coverprofile="$cov" DEVEL
+TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd
     continue
   fi
 
   # delete the last two lines
   mkdir -p $(dirname "$TMP_DIR/$path")
-  actual=$(TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd -test.coverprofile="$cov" DEVEL \
+  # FIXME: -test.coverprofile="$cov" DEVEL
+  actual=$(TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd \
    | sed "s+${TIUP_MIRRORS}+TIUP_MIRRORS_INTEGRATION_TEST+" \
    | sed "s+${TIUP_HOME}+TIUP_HOME_INTEGRATION_TEST+")
 
