@@ -332,7 +332,7 @@ scrape_configs:
 	}
 
 	args := []string{
-		"tiup", "prometheus", "--",
+		"tiup", "prometheus",
 		fmt.Sprintf("--config.file=%s", filepath.Join(dir, "prometheus.yml")),
 		fmt.Sprintf("--web.external-url=http://%s", addr),
 		fmt.Sprintf("--web.listen-address=0.0.0.0:%d", port),
