@@ -107,7 +107,11 @@ func checkDB(dbAddr string) bool {
 	for i := 0; i < 60; i++ {
 		if err := tryConnect(dsn); err != nil {
 			time.Sleep(time.Second)
+			fmt.Print(".")
 		} else {
+			if i != 0 {
+				fmt.Println()
+			}
 			return true
 		}
 	}
@@ -260,7 +264,7 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 		if err != nil || resp.StatusCode != http.StatusOK {
 			fmt.Println("Set the PD metrics storage failed")
 		}
-		fmt.Printf("To view the monitor: http://%s\n", monitorAddr)
+		fmt.Printf(color.GreenString("To view the monitor: http://%s\n", monitorAddr))
 	}
 
 	dumpDSN(dbs)
@@ -332,7 +336,7 @@ scrape_configs:
 	}
 
 	args := []string{
-		"tiup", "prometheus", "--",
+		"tiup", "prometheus",
 		fmt.Sprintf("--config.file=%s", filepath.Join(dir, "prometheus.yml")),
 		fmt.Sprintf("--web.external-url=http://%s", addr),
 		fmt.Sprintf("--web.listen-address=0.0.0.0:%d", port),
