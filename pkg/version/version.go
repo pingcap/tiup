@@ -19,74 +19,62 @@ import (
 )
 
 var (
-	// TiUPVerMajor is the major version of TiUP
-	TiUPVerMajor = 0
-	// TiUPVerMinor is the minor version of TiUP
-	TiUPVerMinor = 0
-	// TiUPVerPatch is the patch version of TiUP
-	TiUPVerPatch = 2
-	// TiUPVerName is alternative name of the version
-	TiUPVerName = "tiup"
-	// BuildTime is the time when binary is built
-	BuildTime = "Unknown"
+	// TiOpsVerMajor is the major version of TiOps
+	TiOpsVerMajor = 0
+	// TiOpsVerMinor is the minor version of TiOps
+	TiOpsVerMinor = 3
+	// TiOpsVerPatch is the patch version of TiOps
+	TiOpsVerPatch = 0
 	// GitHash is the current git commit hash
 	GitHash = "Unknown"
 	// GitBranch is the current git branch name
 	GitBranch = "Unknown"
 )
 
-// TiUPVersion is the semver of TiUP
-type TiUPVersion struct {
+// TiOpsVersion is the semver of TiOps
+type TiOpsVersion struct {
 	major int
 	minor int
 	patch int
 	name  string
 }
 
-// NewTiUPVersion creates a TiUPVersion object
-func NewTiUPVersion() *TiUPVersion {
-	return &TiUPVersion{
-		major: TiUPVerMajor,
-		minor: TiUPVerMinor,
-		patch: TiUPVerPatch,
-		name:  TiUPVerName,
+// NewTiOpsVersion creates a TiOpsVersion object
+func NewTiOpsVersion() *TiOpsVersion {
+	return &TiOpsVersion{
+		major: TiOpsVerMajor,
+		minor: TiOpsVerMinor,
+		patch: TiOpsVerPatch,
 	}
 }
 
-// Name returns the alternave name of TiUPVersion
-func (v *TiUPVersion) Name() string {
-	return v.name
-}
-
-// SemVer returns TiUPVersion in semver format
-func (v *TiUPVersion) SemVer() string {
+// SemVer returns TiOpsVersion in semver format
+func (v *TiOpsVersion) SemVer() string {
 	return fmt.Sprintf("v%d.%d.%d", v.major, v.minor, v.patch)
 }
 
-// String converts TiUPVersion to a string
-func (v *TiUPVersion) String() string {
-	return fmt.Sprintf("v%d.%d.%d %s", v.major, v.minor, v.patch, v.name)
+// String converts TiOpsVersion to a string
+func (v *TiOpsVersion) String() string {
+	return fmt.Sprintf("v%d.%d.%d", v.major, v.minor, v.patch)
 }
 
-// TiUPBuild is the info of building environment
-type TiUPBuild struct {
-	BuildTime string `json:"buildTime"`
+// TiOpsBuild is the info of building environment
+type TiOpsBuild struct {
 	GitHash   string `json:"gitHash"`
 	GitBranch string `json:"gitBranch"`
 	GoVersion string `json:"goVersion"`
 }
 
-// NewTiUPBuildInfo creates a TiUPBuild object
-func NewTiUPBuildInfo() *TiUPBuild {
-	return &TiUPBuild{
-		BuildTime: BuildTime,
+// NewTiOpsBuildInfo creates a TiOpsBuild object
+func NewTiOpsBuildInfo() *TiOpsBuild {
+	return &TiOpsBuild{
 		GitHash:   GitHash,
 		GitBranch: GitBranch,
 		GoVersion: runtime.Version(),
 	}
 }
 
-// String converts TiUPBuild to a string
-func (v *TiUPBuild) String() string {
-	return fmt.Sprintf("%s %s(%s) %s", v.GoVersion, v.GitBranch, v.GitHash, v.BuildTime)
+// String converts TiOpsBuild to a string
+func (v *TiOpsBuild) String() string {
+	return fmt.Sprintf("%s %s(%s)", v.GoVersion, v.GitBranch, v.GitHash)
 }
