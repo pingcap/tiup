@@ -31,6 +31,12 @@ const (
 	// EnvNameInstanceDataDir represents the working directory of specific instance
 	EnvNameInstanceDataDir = "TIUP_INSTANCE_DATA_DIR"
 
+	// EnvNameComponentInstallDir represents the install directory of specific component
+	EnvNameComponentInstallDir = "TIUP_COMPONENT_INSTALL_DIR"
+
+	// EnvNameWorkDir represents the work directory of TiUP where user type the command `tiup xxx`
+	EnvNameWorkDir = "TIUP_WORK_DIR"
+
 	// EnvNameHome represents the environment name of tiup home directory
 	EnvNameHome = "TIUP_HOME"
 

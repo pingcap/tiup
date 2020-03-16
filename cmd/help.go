@@ -19,6 +19,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/spf13/cobra"
 )
 
@@ -46,7 +47,22 @@ func externalHelp(spec string) {
 		fmt.Println(err)
 		return
 	}
+	installPath, err := installPath(spec)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	envs := []string{
+		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
+		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
+	}
+
 	comp := exec.Command(binaryPath, "-h")
+	comp.Env = append(
+		envs,
+		os.Environ()...,
+	)
 	comp.Stdout = os.Stdout
 	comp.Stderr = os.Stderr
 	if err := comp.Start(); err != nil {

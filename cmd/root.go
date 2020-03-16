@@ -147,16 +147,16 @@ the latest stable version will be downloaded from the repository.
 	rootCmd.SetHelpCommand(newHelpCmd())
 }
 
-func binaryPath(spec string) (string, error) {
+func componentAndVersion(spec string) (string, meta.Version, error) {
 	component, version := meta.ParseCompVersion(spec)
 	installed, err := profile.InstalledVersions(component)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	errInstallFirst := fmt.Errorf("use `tiup install %[1]s` to install `%[1]s` first", spec)
 	if len(installed) < 1 {
-		return "", errInstallFirst
+		return "", "", errInstallFirst
 	}
 	if version.IsEmpty() {
 		sort.Slice(installed, func(i, j int) bool {
@@ -172,9 +172,25 @@ func binaryPath(spec string) (string, error) {
 		}
 	}
 	if !found {
-		return "", errInstallFirst
+		return "", "", errInstallFirst
+	}
+	return component, version, nil
+}
+
+func binaryPath(spec string) (string, error) {
+	component, version, err := componentAndVersion(spec)
+	if err != nil {
+		return "", err
 	}
 	return profile.BinaryPath(component, version)
+}
+
+func installPath(spec string) (string, error) {
+	component, version, err := componentAndVersion(spec)
+	if err != nil {
+		return "", err
+	}
+	return profile.ComponentInstallPath(component, version)
 }
 
 func execute() error {

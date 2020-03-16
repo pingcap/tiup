@@ -86,7 +86,10 @@ client:
 pack:
 	make -C components/package package
 
-package: playground client pack
+tiops:
+	make -C components/tiops package
+
+package: playground client pack tiops
 	mkdir -p package ; \
 	GOOS=darwin GOARCH=amd64 go build ; \
     tar -czf tiup-darwin-amd64.tar.gz tiup ; \
@@ -96,9 +99,10 @@ package: playground client pack
     shasum tiup-linux-amd64.tar.gz | awk '{print $$1}' > tiup-linux-amd64.sha1 ; \
     rm tiup ; \
     mv tiup* package/ ; \
-    mv components/playground/playground* package/ ; \
-	mv components/client/client* package/ ; \
-	mv components/package/package* package/ ; \
+    mv components/playground/playground-* package/ ; \
+	mv components/client/client-* package/ ; \
+	mv components/package/package-* package/ ; \
+	mv components/tiops/tiops-* package/ ; \
     cp mirror/*.index package/
 	cp install.sh package/
 

@@ -140,6 +140,10 @@ func launchComponent(ctx context.Context, component string, version meta.Version
 	if err != nil {
 		return nil, err
 	}
+	installPath, err := profile.ComponentInstallPath(component, version)
+	if err != nil {
+		return nil, err
+	}
 
 	wd := os.Getenv(localdata.EnvNameInstanceDataDir)
 	if wd == "" {
@@ -149,14 +153,20 @@ func launchComponent(ctx context.Context, component string, version meta.Version
 		}
 		wd = profile.Path(filepath.Join(localdata.DataParentDir, tag))
 	}
-
 	if err := os.MkdirAll(wd, 0755); err != nil {
+		return nil, err
+	}
+
+	tiupWd, err := os.Getwd()
+	if err != nil {
 		return nil, err
 	}
 
 	envs := []string{
 		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
+		fmt.Sprintf("%s=%s", localdata.EnvNameWorkDir, tiupWd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, wd),
+		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
 	}
 
 	// init the command

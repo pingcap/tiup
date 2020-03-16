@@ -26,6 +26,7 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"golang.org/x/mod/semver"
 )
 
 // Profile represents the `tiup` profile
@@ -193,7 +194,33 @@ func (p *Profile) BinaryPath(component string, version meta.Version) (string, er
 	if entry == "" {
 		return "", errors.Errorf("cannot found entry for %s:%s", component, version)
 	}
-	return filepath.Join(p.root, ComponentParentDir, component, version.String(), entry), nil
+	installPath, err := p.ComponentInstallPath(component, version)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(installPath, entry), nil
+}
+
+// ComponentInstallPath returns the path where the component installed
+func (p *Profile) ComponentInstallPath(component string, version meta.Version) (string, error) {
+	versions, err := p.InstalledVersions(component)
+	if err != nil {
+		return "", err
+	}
+
+	// Use the latest version if user doesn't specify a specific version
+	// report an error if the specific component doesn't be installed
+
+	// Check whether the specific version exist in local
+	if version.IsEmpty() && len(versions) > 0 {
+		sort.Slice(versions, func(i, j int) bool {
+			return semver.Compare(versions[i], versions[j]) < 0
+		})
+		version = meta.Version(versions[len(versions)-1])
+	} else if version.IsEmpty() {
+		return "", fmt.Errorf("Component not installed, please try `tiup install %s` to install it", component)
+	}
+	return filepath.Join(p.root, ComponentParentDir, component, version.String()), nil
 }
 
 // ComponentsDir returns the absolute path of components directory
