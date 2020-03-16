@@ -64,7 +64,7 @@ func runComponent(tag, spec string, args []string, rm bool) error {
 	go func() {
 		defer close(ch)
 
-		fmt.Printf("Starting %s %s \n", p.Exec, strings.Join(p.Args, " "))
+		fmt.Printf("Starting %s %s\n", p.Exec, strings.Join(p.Args, " "))
 		ch <- p.cmd.Wait()
 	}()
 
@@ -73,7 +73,7 @@ func runComponent(tag, spec string, args []string, rm bool) error {
 
 	select {
 	case s := <-sig:
-		fmt.Printf("Got signal %v (Component: %v. PID: %v)\n", s, component, p.Pid)
+		fmt.Printf("Got signal %v (Component: %v ; PID: %v)\n", s, component, p.Pid)
 		if component == "tidb" {
 			return syscall.Kill(p.Pid, syscall.SIGKILL)
 		}
