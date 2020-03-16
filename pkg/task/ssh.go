@@ -11,32 +11,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package task
 
-import (
-	"fmt"
-	"os"
-
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
-)
-
-var rootCmd *cobra.Command
-
-func init() {
-	rootCmd = &cobra.Command{
-		Use:   "tiops",
-		Short: "Deploy a TiDB cluster for production",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Help()
-		},
-	}
+// SSH is used to establish a SSH connection to the target host with specific key
+type SSH struct {
+	host    string
+	keypath string
 }
 
-// Execute executes the root command
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(color.RedString("Error: %v", err))
-		os.Exit(1)
-	}
+// Execute implements the Task interface
+func (S SSH) Execute(ctx *Context) error {
+	panic("implement me")
+}
+
+// Rollback implements the Task interface
+func (S SSH) Rollback(ctx *Context) error {
+	panic("implement me")
 }

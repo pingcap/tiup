@@ -11,32 +11,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package task
 
-import (
-	"fmt"
-	"os"
+import "sync"
 
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
-)
-
-var rootCmd *cobra.Command
-
-func init() {
-	rootCmd = &cobra.Command{
-		Use:   "tiops",
-		Short: "Deploy a TiDB cluster for production",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Help()
-		},
-	}
-}
-
-// Execute executes the root command
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(color.RedString("Error: %v", err))
-		os.Exit(1)
-	}
+// Wait will block execution util all tasks in wg done
+type Wait struct {
+	Task
+	wg sync.WaitGroup
 }

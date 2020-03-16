@@ -14,29 +14,24 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
+	"github.com/pingcap-incubator/tiops/pkg/task"
+	"github.com/pingcap-incubator/tiops/pkg/topology"
 )
 
-var rootCmd *cobra.Command
-
-func init() {
-	rootCmd = &cobra.Command{
-		Use:   "tiops",
-		Short: "Deploy a TiDB cluster for production",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Help()
-		},
+func runDeploy(topo *topology.Specification) error {
+	var tasks []task.Task
+	for _, db := range topo.TiDBServers {
+		t := task.NewBuilder().
+			SSH(db.IP, "keypath").
+			Parallel(
+				&task.CopyFile{ /*binary*/ },
+				&task.CopyFile{ /*configuration*/ },
+			).
+			CopyFile("x", db.IP, "xx").
+			Build()
+		tasks = append(tasks, t)
 	}
-}
+	// PD/KVProm/Grafana...
 
-// Execute executes the root command
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(color.RedString("Error: %v", err))
-		os.Exit(1)
-	}
+	return task.Parallel(tasks).Execute(&task.Context{})
 }
