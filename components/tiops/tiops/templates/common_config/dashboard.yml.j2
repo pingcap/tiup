@@ -1,0 +1,10 @@
+apiVersion: 1
+providers:
+  - name: {{ cluster_name }}
+    folder: {{ cluster_name }}
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 30
+    options:
+      path: {{ full_deploy_dir }}/grafana-6.1.6/dashboards/{{ cluster_name }}

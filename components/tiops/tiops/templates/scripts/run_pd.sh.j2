@@ -1,0 +1,42 @@
+#!/bin/bash
+set -e
+ulimit -n 1000000
+
+# WARNING: This file was auto-generated. Do not edit!
+#          All your edit might be overwritten!
+DEPLOY_DIR={{ full_deploy_dir }}
+
+cd "${DEPLOY_DIR}" || exit 1
+
+{% set my_ip = hostvars[inventory_hostname].ansible_host -%}
+{%  set pd_name = hostvars[inventory_hostname].inventory_hostname %}
+{% if enable_tls|default(false) -%}
+  {% set pd_scheme = 'https' -%}
+{% else -%}
+  {% set pd_scheme = 'http' -%}
+{% endif -%}
+{% if 'pd_servers' in groups -%}
+  {% if groups.pd_servers | length > 0 -%}
+    {% set all_pd = [] -%}
+    {% for host in groups.pd_servers -%}
+      {% set other_ip = hostvars[host].ansible_host -%}
+      {% set other_port = hostvars[host]['peer_port'] -%}
+      {% set other_pd_name = hostvars[host].inventory_hostname -%}
+      {% set _ = all_pd.append("%s=%s://%s:%s" % (other_pd_name, pd_scheme, other_ip, other_port)) -%}
+    {% endfor -%}
+  {% endif -%}
+{% endif -%}
+{% if numa_node | string != 'False' -%}
+exec numactl --cpunodebind={{ numa_node }} --membind={{ numa_node }} bin/pd-server \
+{% else -%}
+exec bin/pd-server \
+{% endif %}
+    --name="{{ pd_name }}" \
+    --client-urls="{{ pd_scheme }}://{{ my_ip }}:{{ client_port }}" \
+    --advertise-client-urls="{{ pd_scheme }}://{{ my_ip }}:{{ client_port }}" \
+    --peer-urls="{{ pd_scheme }}://{{ my_ip }}:{{ peer_port }}" \
+    --advertise-peer-urls="{{ pd_scheme }}://{{ my_ip }}:{{ peer_port }}" \
+    --data-dir="{{ full_data_dir }}" \
+    --initial-cluster="{{ all_pd | join(',') }}" \
+    --config=conf/pd.toml \
+    --log-file="log/pd.log" 2>> "log/pd_stderr.log"

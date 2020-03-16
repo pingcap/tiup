@@ -1,0 +1,112 @@
+---
+
+# Global variables are set to a group of servers, if you need to customize the value of argument
+# for a whole group with the same value, this make it easier.
+#global:
+#  pd_servers:
+#    client_port: 2379
+#    peer_port: 2380
+#    deploy_dir: /home/tidb/deploy
+#    data_dir: /home/tidb/deploy
+#  tidb_servers:
+#    port: 4000
+#    status_port: 10080
+#    deploy_dir: /home/tidb/deploy
+#    ssh_port: 2022
+#  tikv_servers:
+#    port: 20160
+#    status_port: 20180
+#    deploy_dir: /home/tidb/deploy
+#    data_dir: /home/tidb/deploy
+#  pump_servers:
+#    port: 8250
+#    data_dir: /home/tidb/data
+#    deploy_dir: /home/tidb/deploy
+#  drainer_servers:
+#    port: 8249
+#    data_dir: /home/tidb/data
+#    deploy_dir: /home/tidb/deploy
+
+pd_servers:
+  - ip: 10.0.1.11
+    # client_port: 2379
+    # peer_port: 2380
+    # data_dir: /home/tidb/data      # default: /home/$user/deploy/, the same as follow
+    # deploy_dir: /home/tidb/deploy  # default: /home/$user/deploy/, the same as follow
+    ## Bind NUMA node, need set specified node id
+    # numa_node: 0
+  - ip: 10.0.1.12
+    client_port: 2379
+  - ip: 10.0.1.13
+
+tidb_servers:
+  - ip: 10.0.1.11
+    # port: 4000
+    # status_port: 10080
+    # deploy_dir: /home/tidb/deploy
+    # numa_node: 0
+    # ssh_port: 2022
+  - ip: 10.0.1.12
+
+tikv_servers:
+  - ip: 10.0.1.14
+    # port: 20160
+    # status_port: 20180
+    # data_dir: /data1
+    # deploy_dir: /home/tidb/deploy
+    # numa_node: 0
+    ## The value of label can be customized, for example: 'zone=z1,rack=r1,host=h1' or 'a=a1,b=b1,c=c1', etc
+    ## Can only set in tikv_servers
+    # label: host=h1
+  - ip: 10.0.1.15
+  - ip: 10.0.1.16
+
+# pump_servers:
+#   - ip: 10.0.1.17
+#     port: 8250
+#     data_dir: /home/tidb/data
+#     deploy_dir: /home/tidb/deploy
+#     numa_node: 0
+#   - ip: 10.0.1.18
+#  - ip: 10.0.1.19
+
+# drainer_servers:
+#   - ip: 10.0.1.17
+#     port: 8249
+#     data_dir: /home/tidb/data
+#     commit_ts: 402899541671542785
+#     deploy_dir: /home/tidb/deploy
+#     numa_node: 0
+
+# If not set, the list of monitored_servers will be automatically generated, including every
+# dedicate IP address in other groups.
+# If some of the hosts do not need to be monitored, fill this list manually with all the hosts
+# that need to be monitored.
+#monitored_servers:
+#  - ip: 10.0.1.11
+#    # node_exporter_port: 9100
+#    # blackbox_exporter_port: 9115
+#    # deploy_dir: /home/tidb/deploy
+#  - ip: 10.0.1.12
+#  - ip: 10.0.1.13
+#  - ip: 10.0.1.14
+#  - ip: 10.0.1.15
+#  - ip: 10.0.1.16
+
+monitoring_server:
+  - ip: 10.0.1.11
+    # prometheus_port: 9090
+    # pushgateway_port: 9091
+    # deploy_dir: /home/tidb/deploy
+
+grafana_server:
+  - ip: 10.0.1.11
+    # port: 3000
+    # deploy_dir: /home/tidb/deploy
+
+# alertmanager_server:
+#   - ip: 10.0.1.11
+#     port: 9093
+#     cluster_port: 9094
+#     deploy_dir: /home/tidb/deploy
+#     data_dir: /home/tidb/data

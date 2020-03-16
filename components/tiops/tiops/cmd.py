@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import sys
+import os
 import getpass
 import argparse
 
@@ -151,7 +152,8 @@ class TiOPSParser(object):
         _subcmd = self.__get_last_subcmd(tidb_parser)
 
         tidb_parser.add_argument('-T', '--topology', dest='topology', default=None,
-                                 help='Cluster topology file (example: "/usr/share/tiops/topology.yaml.example")')
+                                 help='Cluster topology file (example: "{}/tiops/templates/topology.yaml.example")'
+                                 .format(os.environ['TIUP_COMPONENT_INSTALL_DIR']))
         tidb_parser.add_argument('--enable-check-cpu', dest='enable_check_cpu', default=False, action='store_true',
                                  help='Check cpu vcores number (default: disable)')
         tidb_parser.add_argument('--enable-check-mem', dest='enable_check_mem', default=False, action='store_true',

@@ -167,14 +167,14 @@ class TopologyBase(object):
         self.user_home = utils.home()
         self.ticache_dir = utils.profile_dir()
         self.tidown_dir = utils.profile_path('downloads')
-        self.titemplate_dir = '/usr/share/tiops'
+        self.titemplate_dir = '{}/tiops/templates'.format(os.environ['TIUP_COMPONENT_INSTALL_DIR'])
         try:
             self.cache_template_dir = utils.profile_path(
                 self.cluster_dir, 'templates')
         except Exception as e:
             pass
-        self.ticheck_dir = '{}/check/'.format(
-            '/usr/lib/python2.7/site-packages/tiops')
+        self.ticheck_dir = '{}/tiops/check/'.format(
+            os.environ['TIUP_COMPONENT_INSTALL_DIR'])
         self.ticluster_dir = utils.profile_path('clusters')
         self.cluster_configs = utils.profile_path(self.cluster_dir, 'configs')
         self.tiversion_dir = utils.profile_path(

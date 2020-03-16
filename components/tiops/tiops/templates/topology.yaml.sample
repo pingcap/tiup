@@ -1,0 +1,22 @@
+---
+
+pd_servers:
+  - ip: 10.0.1.11
+  - ip: 10.0.1.12
+  - ip: 10.0.1.13
+
+tidb_servers:
+  - ip: 10.0.1.11
+  - ip: 10.0.1.12
+
+tikv_servers:
+  - ip: 10.0.1.14
+  - ip: 10.0.1.15
+  - ip: 10.0.1.16
+
+monitoring_server:
+  - ip: 10.0.1.11
+
+grafana_server:
+  - ip: 10.0.1.11
+

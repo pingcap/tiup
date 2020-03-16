@@ -2,6 +2,7 @@
 
 
 import re
+import os
 import json
 import logging
 
@@ -198,7 +199,8 @@ class ANSRunner(object):
     def __initializeData(self):
         """ 初始化ansible """
 
-        C.DEFAULT_FILTER_PLUGIN_PATH.append('/usr/lib/python2.7/site-packages/tiops/ansibleapi/plugins/filter')
+        C.DEFAULT_FILTER_PLUGIN_PATH.append(
+            '{}/tiops/ansibleapi/plugins/filter'.format(os.environ['TIUP_COMPONENT_INSTALL_DIR']))
         C.HOST_KEY_CHECKING = False
         C.ANSIBLE_SSH_ARGS = '-C -o ControlMaster=auto -o ControlPersist=1d'
         C.PIPELINING = True
@@ -527,7 +529,7 @@ class ANSRunner(object):
 
     def __ansible_host(self, hostname=None):
         _ansible_host = self.variable_manager.get_vars(host=hostname)[
-                'ansible_host'] if 'ansible_host' in self.variable_manager.get_vars(host=hostname) else \
+            'ansible_host'] if 'ansible_host' in self.variable_manager.get_vars(host=hostname) else \
             self.variable_manager.get_vars(host=hostname)['inventory_hostname']
         return _ansible_host
 

@@ -85,7 +85,7 @@ class Init(object):
             self.timezone = args.timezone
         except AttributeError:
             pass
-        self.script_path = '{}/check/'.format('/usr/lib/python2.7/site-packages/tiops')
+        self.script_path = '{}/tiops/check/'.format(os.environ['TIUP_COMPONENT_INSTALL_DIR'])
         self.check_dir = '/tmp/tidb_check'
         self.host_vars = utils.profile_path('host_vars')
 

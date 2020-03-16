@@ -1,0 +1,25 @@
+#!/bin/bash
+set -e
+ulimit -n 1000000
+
+# WARNING: This file was auto-generated. Do not edit!
+#          All your edit might be overwritten!
+DEPLOY_DIR={{ full_deploy_dir }}
+cd "${DEPLOY_DIR}" || exit 1
+
+exec > >(tee -i -a "log/node_exporter.log")
+exec 2>&1
+
+{% if numa_node | string != 'False' -%}
+exec numactl --cpunodebind={{ numa_node }} --membind={{ numa_node }} bin/node_exporter \
+{% else -%}
+exec bin/node_exporter \
+{% endif %}
+    --web.listen-address=":{{ node_exporter_port }}" \
+    --collector.tcpstat \
+    --collector.systemd \
+    --collector.mountstats \
+    --collector.meminfo_numa \
+    --collector.interrupts \
+    --collector.vmstat.fields="^.*" \
+    --log.level="info"

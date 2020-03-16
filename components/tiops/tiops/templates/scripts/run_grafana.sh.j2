@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+ulimit -n 1000000
+
+# WARNING: This file was auto-generated. Do not edit!
+#          All your edit might be overwritten!
+DEPLOY_DIR={{ full_deploy_dir }}
+cd "${DEPLOY_DIR}" || exit 1
+
+LANG=en_US.UTF-8 \
+{% if numa_node | string != 'False' -%}
+    exec numactl --cpunodebind={{ numa_node }} --membind={{ numa_node }} grafana-6.1.6/bin/grafana-server \
+{% else -%}
+    exec grafana-6.1.6/bin/grafana-server \
+{% endif %}
+    --homepath="{{ full_deploy_dir }}/grafana-6.1.6" \
+    --config="{{ full_deploy_dir }}/grafana-6.1.6/conf/grafana.ini"
