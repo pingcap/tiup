@@ -28,8 +28,14 @@ const (
 	// DataParentDir represent the parent directory of all running instances
 	DataParentDir = "data"
 
+	// StorageParentDir represent the parent directory of running component
+	StorageParentDir = "storage"
+
 	// EnvNameInstanceDataDir represents the working directory of specific instance
 	EnvNameInstanceDataDir = "TIUP_INSTANCE_DATA_DIR"
+
+	// EnvNameComponentDataDir represents the working directory of specific component
+	EnvNameComponentDataDir = "TIUP_COMPONENT_DATA_DIR"
 
 	// EnvNameComponentInstallDir represents the install directory of specific component
 	EnvNameComponentInstallDir = "TIUP_COMPONENT_INSTALL_DIR"

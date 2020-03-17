@@ -157,6 +157,11 @@ func launchComponent(ctx context.Context, component string, version meta.Version
 		return nil, err
 	}
 
+	sd := profile.Path(filepath.Join(localdata.StorageParentDir, component))
+	if err := os.MkdirAll(sd, 0755); err != nil {
+		return nil, err
+	}
+
 	tiupWd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -166,6 +171,7 @@ func launchComponent(ctx context.Context, component string, version meta.Version
 		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameWorkDir, tiupWd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, wd),
+		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
 	}
 

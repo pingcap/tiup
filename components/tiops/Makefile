@@ -22,6 +22,9 @@ check: lint vet
 
 clean:
 	@rm -rf bin
+	@rm -rf deps
+	@rm -rf sshpass-1.0.6-darwin-amd64
+	@rm -rf sshpass-1.0.6-linux-amd64
 
 failpoint-enable: tools/bin/failpoint-ctl
 	@$(FAILPOINT_ENABLE)
@@ -35,9 +38,13 @@ tools/bin/failpoint-ctl: go.mod
 package: check
 	pip install -r requirements.txt --target=deps
 	GOOS=darwin GOARCH=amd64 go build -o bin/tiops ; \
+	curl https://download.pingcap.org/sshpass-1.0.6-darwin-amd64.tar.gz | tar xz
+	cp sshpass-1.0.6-darwin-amd64/sshpass bin/
 	tar -czf tiops-$(VERSION)-darwin-amd64.tar.gz bin tiops deps tiops.py ; \
 	shasum tiops-$(VERSION)-darwin-amd64.tar.gz | awk '{print $$1}' > tiops-$(VERSION)-darwin-amd64.sha1 ; \
 	GOOS=linux GOARCH=amd64 go build -o bin/tiops ; \
+	curl https://download.pingcap.org/sshpass-1.0.6-linux-amd64.tar.gz | tar xz
+	cp sshpass-1.0.6-linux-amd64/sshpass bin/
 	tar -czf tiops-$(VERSION)-linux-amd64.tar.gz bin tiops deps tiops.py ; \
 	shasum tiops-$(VERSION)-linux-amd64.tar.gz | awk '{print $$1}' > tiops-$(VERSION)-linux-amd64.sha1 ; \
 	rm bin/tiops

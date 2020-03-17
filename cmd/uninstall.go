@@ -72,8 +72,11 @@ func removeComponents(specs []string, all bool) error {
 			path = profile.Path(filepath.Join(localdata.ComponentParentDir, parts[0], parts[1]))
 		} else {
 			if !all {
-				fmt.Printf("Use `tiup remove %s --all` if you want to remove all versions.\n", spec)
+				fmt.Printf("Use `tiup uninstall %s --all` if you want to remove all versions.\n", spec)
 				continue
+			}
+			if err := os.RemoveAll(profile.Path(filepath.Join(localdata.StorageParentDir, spec))); err != nil {
+				return err
 			}
 			path = profile.Path(filepath.Join(localdata.ComponentParentDir, spec))
 		}

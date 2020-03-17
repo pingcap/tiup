@@ -35,6 +35,7 @@ func main() {
 	cmd.Env = append(
 		os.Environ(),
 		fmt.Sprintf("PYTHONPATH=%s", path.Join(installDir, "deps")),
+		fmt.Sprintf("PATH=%s", path.Join(installDir, "bin")+":"+os.Getenv("PATH")),
 	)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
