@@ -87,7 +87,7 @@ class TiOPSParser(object):
         bootstrap_parser.add_argument('-f', '--forks', dest='forks', default=5, type=int,
                                       help='Concurrency number (default: 5)')
         bootstrap_parser.add_argument('--private-key', dest='private_key',
-                                      default='{}id_rsa'.format(utils.profile_path('.ssh')),
+                                      default='{}/id_rsa'.format(utils.profile_path('.ssh')),
                                       help='Specify the private key, usually no need to specify and the default private key will be used')
 
     def _bootstrap_args_ssh(self, ssh_parser):
