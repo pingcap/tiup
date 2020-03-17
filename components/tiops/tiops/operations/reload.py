@@ -58,6 +58,8 @@ class OprReload(OperationBase):
                     if _uuid == _cluster.pd_leader():
                         _cluster.evict_pd_leader(uuid=_uuid)
 
+                    self.act.deploy_component(
+                        component=component, pattern=pattern, node=_uuid)
                     self.act.stop_component(
                         component=component, pattern=pattern, node=_uuid)
                     self.act.start_component(
@@ -67,6 +69,8 @@ class OprReload(OperationBase):
             if pattern in ['monitored_servers', 'monitoring_server', 'grafana_server', 'alertmanager_server']:
                 if not node:
                     term.normal('Reload {}.'.format(component))
+                    self.act.deploy_component(
+                        component=component, pattern=pattern)
                     self.act.stop_component(
                         component=component, pattern=pattern)
                     self.act.start_component(
@@ -75,6 +79,8 @@ class OprReload(OperationBase):
                     _uuid = [x['uuid'] for x in _topology[pattern]]
                     term.normal('Reload {}, node list: {}.'.format(
                         component, ','.join(_uuid)))
+                    self.act.deploy_component(
+                        component=component, pattern=pattern, node=','.join(_uuid))
                     self.act.stop_component(
                         component=component, pattern=pattern, node=','.join(_uuid))
                     self.act.start_component(
@@ -88,7 +94,8 @@ class OprReload(OperationBase):
                 if pattern == 'tikv_servers':
                     _port = _node['port']
                     _cluster.evict_store_leaders(host=_host, port=_port)
-
+                self.act.deploy_component(
+                    component=component, pattern=pattern, node=_uuid)
                 self.act.stop_component(
                     component=component, pattern=pattern, node=_uuid)
                 self.act.start_component(

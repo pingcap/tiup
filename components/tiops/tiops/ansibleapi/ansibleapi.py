@@ -178,6 +178,10 @@ class ANSRunner(object):
             self.cluster_name = tiargs.cluster_name
         except AttributeError:
             pass
+        try:
+            self.private_key = tiargs.private_key
+        except AttributeError:
+            self.private_key = None
         self.__initializeData()
 
     def list_ip_check(self):
@@ -239,7 +243,7 @@ class ANSRunner(object):
                                timeout=60,
                                remote_user=self.user,
                                ask_pass=False,
-                               private_key_file=None,
+                               private_key_file=self.private_key,
                                ssh_common_args=None,
                                ssh_extra_args=None,
                                sftp_extra_args=None,

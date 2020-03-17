@@ -13,7 +13,7 @@ from tiops.tui import term
 
 
 class OperationBase(object):
-    def __init__(self, args=None, topology=None, demo=False):
+    def __init__(self, args=None, topology=None, demo=False, action=None):
         try:
             self._lock_profile()
         except NotImplementedError:
@@ -24,7 +24,7 @@ class OperationBase(object):
         self.topology = topology
         self._args = args
 
-        if not demo and os.path.exists(self.topology.topology_file):
+        if not demo and os.path.exists(self.topology.topology_file) and not action:
             term.warn('Check TiDB cluster {} status, it may take a few minutes.'.format(
                 self.topology.cluster_name))
             self.check_tombstone()
@@ -85,14 +85,18 @@ class OperationBase(object):
             return False, False
         return component, pattern
 
-    def check_tombstone(self):
+    def check_tombstone(self, topology=None, args=None):
+        if not topology:
+            topology = self.topology
+        if not args:
+            args = self._args
         _remove_uuid = []
-        _cluster = ClusterAPI(self.topology)
-        _binlog = BinlogAPI(self.topology)
+        _cluster = ClusterAPI(topology)
+        _binlog = BinlogAPI(topology)
 
         if _cluster.tikv_stores() and _cluster.tikv_tombstone():
             # get tombstone tikv node
-            for _node in self.topology()['tikv_servers']:
+            for _node in topology()['tikv_servers']:
                 _tombstone = False
                 if not _node['offline']:
                     continue
@@ -115,7 +119,7 @@ class OperationBase(object):
 
         if _binlog.pump_status:
             # get tombstone pump node
-            for _node in self.topology()['pump_servers']:
+            for _node in topology()['pump_servers']:
                 _tombstone = False
                 if not _node['offline']:
                     continue
@@ -130,7 +134,7 @@ class OperationBase(object):
                 elif _node['uuid'] in _tombstone_list:
                     _remove_uuid.append(_node['uuid'])
 
-            for _node in self.topology()['drainer_servers']:
+            for _node in topology()['drainer_servers']:
                 _tombstone = False
                 if not _node['offline']:
                     continue
@@ -148,11 +152,11 @@ class OperationBase(object):
         if not _remove_uuid:
             return
 
-        _new_topo, _diff = self.topology.remove(
+        _new_topo, _diff = topology.remove(
             ','.join(_remove_uuid), delete=True)
         ans = ansibleapi.ANSRunner(
-            user=self.topology.user, topology=_diff, tiargs=self._args)
-        act = Action(ans=ans, topo=self.topology)
+            user=topology.user, topology=_diff, tiargs=args)
+        act = Action(ans=ans, topo=topology)
         for service in [{'drainer': 'drainer_servers'}, {'pump': 'pump_servers'}, {'tikv': 'tikv_servers'}]:
             component, pattern = self.check_exist(service, _diff)
             if not component and not pattern:
@@ -160,4 +164,4 @@ class OperationBase(object):
             act.stop_component(component=component, pattern=pattern)
             act.destroy_component(component=component, pattern=pattern)
 
-        self.topology.replace(_new_topo)
+        topology.replace(_new_topo)

@@ -33,7 +33,8 @@ def main(args=None):
         exit(0)
 
     if action == 'quickdeploy':
-        term.warn('The quick deploy mode is for demo and testing, do NOT use in production!')
+        term.warn(
+            'The quick deploy mode is for demo and testing, do NOT use in production!')
 
         # do init
         _init = init.Init(args)
@@ -43,8 +44,9 @@ def main(args=None):
             _init.init_host(demo=True)
         except TiOPSRuntimeError as e:
             tierror(e)
-        except TiOPSException:
-            term.error(traceback.format_exc())
+        except TiOPSException as e:
+            term.debug(traceback.format_exc())
+            term.fatal(str(e))
             sys.exit(1)
 
         # do deploy
@@ -60,8 +62,9 @@ def main(args=None):
                 e.msg, e.url, e.code)
             term.error(msg)
             sys.exit(1)
-        except TiOPSException:
-            term.error(traceback.format_exc())
+        except TiOPSException as e:
+            term.debug(traceback.format_exc())
+            term.fatal(str(e))
             sys.exit(1)
 
     elif action == 'bootstrap-local':
@@ -70,8 +73,9 @@ def main(args=None):
             _init.init()
         except TiOPSRuntimeError as e:
             tierror(e)
-        except TiOPSException:
-            term.error(traceback.format_exc())
+        except TiOPSException as e:
+            term.debug(traceback.format_exc())
+            term.fatal(str(e))
             sys.exit(1)
     elif action == 'bootstrap-ssh':
         _init = init.Init(args)
@@ -79,8 +83,9 @@ def main(args=None):
             _init.init_network()
         except TiOPSRuntimeError as e:
             tierror(e)
-        except TiOPSException:
-            term.error(traceback.format_exc())
+        except TiOPSException as e:
+            term.debug(traceback.format_exc())
+            term.fatal(str(e))
             sys.exit(1)
     elif action == 'bootstrap-host':
         _init = init.Init(args)
@@ -88,8 +93,9 @@ def main(args=None):
             _init.init_host()
         except TiOPSRuntimeError as e:
             tierror(e)
-        except TiOPSException:
-            term.error(traceback.format_exc())
+        except TiOPSException as e:
+            term.debug(traceback.format_exc())
+            term.fatal(str(e))
             sys.exit(1)
     else:
         try:
@@ -97,8 +103,9 @@ def main(args=None):
                 topo = topology.Topology(args)
         except TiOPSRuntimeError as e:
             tierror(e)
-        except TiOPSException:
-            term.error(traceback.format_exc())
+        except TiOPSException as e:
+            term.debug(traceback.format_exc())
+            term.fatal(str(e))
             sys.exit(1)
 
         if action == 'display':
@@ -116,8 +123,9 @@ def main(args=None):
                 tm.TUIModule(topo, args=args).display(_list)
             except TiOPSRuntimeError as e:
                 tierror(e)
-            except TiOPSException:
-                term.error(traceback.format_exc())
+            except TiOPSException as e:
+                term.debug(traceback.format_exc())
+                term.fatal(str(e))
                 sys.exit(1)
         elif action == 'deploy':
             topo = topology.Topology(args=args, merge=True)
@@ -131,8 +139,9 @@ def main(args=None):
                     e.msg, e.url, e.code)
                 term.error(msg)
                 sys.exit(1)
-            except TiOPSException:
-                term.error(traceback.format_exc())
+            except TiOPSException as e:
+                term.debug(traceback.format_exc())
+                term.fatal(str(e))
                 sys.exit(1)
         elif action == 'start':
             try:
@@ -140,32 +149,36 @@ def main(args=None):
                 tm.TUIModule(topo, args=args, status=True).display()
             except TiOPSRuntimeError as e:
                 tierror(e)
-            except TiOPSException:
-                term.error(traceback.format_exc())
+            except TiOPSException as e:
+                term.debug(traceback.format_exc())
+                term.fatal(str(e))
                 sys.exit(1)
         elif action == 'stop':
             try:
                 op.OprStop(args, topo).do(node=args.node_id, role=args.role)
             except TiOPSRuntimeError as e:
                 tierror(e)
-            except TiOPSException:
-                term.error(traceback.format_exc())
+            except TiOPSException as e:
+                term.debug(traceback.format_exc())
+                term.fatal(str(e))
                 sys.exit(1)
         elif action == 'restart':
             try:
                 op.OprRestart(args, topo).do(node=args.node_id, role=args.role)
             except TiOPSRuntimeError as e:
                 tierror(e)
-            except TiOPSException:
-                term.error(traceback.format_exc())
+            except TiOPSException as e:
+                term.debug(traceback.format_exc())
+                term.fatal(str(e))
                 sys.exit(1)
         elif action == 'reload':
             try:
                 op.OprReload(args, topo).do(node=args.node_id, role=args.role)
             except TiOPSRuntimeError as e:
                 tierror(e)
-            except TiOPSException:
-                term.error(traceback.format_exc())
+            except TiOPSException as e:
+                term.debug(traceback.format_exc())
+                term.fatal(str(e))
                 sys.exit(1)
         elif action == 'upgrade':
             try:
@@ -177,24 +190,27 @@ def main(args=None):
                     e.msg, e.url, e.code)
                 term.error(msg)
                 sys.exit(1)
-            except TiOPSException:
-                term.error(traceback.format_exc())
+            except TiOPSException as e:
+                term.debug(traceback.format_exc())
+                term.fatal(str(e))
                 sys.exit(1)
         elif action == 'destroy':
             try:
                 op.OprDestroy(args, topo).do()
             except TiOPSRuntimeError as e:
                 tierror(e)
-            except TiOPSException:
-                term.error(traceback.format_exc())
+            except TiOPSException as e:
+                term.debug(traceback.format_exc())
+                term.fatal(str(e))
                 sys.exit(1)
         elif action == 'edit-config':
             try:
                 Action(topo=topo).edit_file()
             except TiOPSRuntimeError as e:
                 tierror(e)
-            except TiOPSException:
-                term.error(traceback.format_exc())
+            except TiOPSException as e:
+                term.debug(traceback.format_exc())
+                term.fatal(str(e))
                 sys.exit(1)
         elif action == 'scale-out':
             addTopo = utils.read_yaml(args.topology)
@@ -202,24 +218,27 @@ def main(args=None):
                 op.OprScaleOut(args, topo, addTopo).do()
             except TiOPSRuntimeError as e:
                 tierror(e)
-            except TiOPSException:
-                term.error(traceback.format_exc())
+            except TiOPSException as e:
+                term.debug(traceback.format_exc())
+                term.fatal(str(e))
                 sys.exit(1)
         elif action == 'scale-in':
             try:
                 op.OprScaleIn(args, topo, args.node_id).do(node=args.node_id)
             except TiOPSRuntimeError as e:
                 tierror(e)
-            except TiOPSException:
-                term.error(traceback.format_exc())
+            except TiOPSException as e:
+                term.debug(traceback.format_exc())
+                term.fatal(str(e))
                 sys.exit(1)
         elif action == 'exec':
             try:
                 op.OprExec(args, topo).do(node=args.node_id, role=args.role)
             except TiOPSRuntimeError as e:
                 tierror(e)
-            except TiOPSException:
-                term.error(traceback.format_exc())
+            except TiOPSException as e:
+                term.debug(traceback.format_exc())
+                term.fatal(str(e))
                 sys.exit(1)
 
 

@@ -126,21 +126,19 @@ class Init(object):
 
     def init(self, demo=False):
         term.notice('Start init management machine.')
-        user_home = utils.home()
-        if not os.path.exists('{}/.ssh'.format(user_home)):
-            utils.create_dir(os.path.join(user_home, '.ssh'))
-            os.chmod(os.path.join(user_home, '.ssh'), 0o700)
-        if not os.path.isfile(os.path.join(user_home, '.ssh/id_rsa')) and \
-                not os.path.isfile(os.path.join(user_home, '.ssh/id_rsa.pub')):
+        key_home = utils.profile_path('.ssh')
+        if not os.path.exists(key_home):
+            utils.create_dir(key_home)
+            os.chmod(os.path.join(key_home), 0o700)
+        if not os.path.isfile(os.path.join(key_home, 'id_rsa')) or \
+                not os.path.isfile(os.path.join(key_home, 'id_rsa.pub')):
             term.info(
-                '{} does not have SSH key. Start generating.'.format(getpass.getuser()))
+                'There is not SSH key. Start generating.'.format(getpass.getuser()))
             os.system(
-                '/usr/bin/ssh-keygen -t rsa -N \'\' -f ~/.ssh/id_rsa -q'.format(getpass.getuser()))
+                '/usr/bin/ssh-keygen -t rsa -N \'\' -f {}/id_rsa -q'.format(key_home))
         else:
             term.normal(
-                '{} already have SSH key, skip create'.format(getpass.getuser()))
-
-        utils.ansible_config()
+                'Already have SSH key, skip create.'.format(getpass.getuser()))
 
         if demo:
             term.notice('Finished init management machine.')
@@ -173,8 +171,8 @@ class Init(object):
             'Set authorized_keys for {} on cluster machine.'.format(self.user))
         initnet.run_model('authorized_key',
                           'user=%s '
-                          'key={{ lookup("file", "%s/.ssh/id_rsa.pub") }}'
-                          % (self.user, utils.home()),
+                          'key={{ lookup("file", "%s/id_rsa.pub") }}'
+                          % (self.user, utils.profile_path('.ssh')),
                           become=True)
         term.info(
             'Add sudo permissions for {} on cluster machine.'.format(self.user))

@@ -13,9 +13,13 @@ from tiops.operations.action import Action
 
 class OprScaleOut(OperationBase):
     def __init__(self, args=None, topology=None, new_srvs=None):
+        if os.path.exists(topology.topology_file):
+            term.warn('Check TiDB cluster {} status, it may take a few minutes.'.format(
+                topology.cluster_name))
+            self.check_tombstone(topology, args)
         self._new_topo, self._diff = topology.add(new_srvs)
         topology.replace(self._new_topo, write=False)
-        super(OprScaleOut, self).__init__(args, topology)
+        super(OprScaleOut, self).__init__(args, topology, action='deploy')
         self.act = Action(ans=self.ans, topo=self.topology)
 
     def _prepare(self, component=None, pattern=None, node=None, role=None):

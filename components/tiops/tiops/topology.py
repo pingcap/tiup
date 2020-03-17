@@ -15,7 +15,7 @@ from tiops.tui import term
 
 # the base config of topology config
 class TopologyBase(object):
-    cluster_name = 'tidb-cluster'
+    cluster_name = None
     enable_tls = False
     ssh_port = 22
     server = {}
@@ -35,9 +35,9 @@ class TopologyBase(object):
             if args.cluster_name and len(args.cluster_name) > 0:
                 self.cluster_name = args.cluster_name
         except AttributeError:
-            logging.info('Cluster name not set, using {} as default.'.format(
-                self.cluster_name))
-            pass
+            raise exceptions.TiOPSArgumentError('Cluster name must be set.')
+        if not self.cluster_name:
+            raise exceptions.TiOPSArgumentError('Cluster name must be set.')
 
         try:
             self.ntp_server = args.ntp_server
@@ -76,6 +76,14 @@ class TopologyBase(object):
 
         self.cluster_dir = utils.profile_path(
             'clusters/{}'.format(self.cluster_name))
+        # use isfile() here, as it's ok if the directory does not exist
+        if os.path.isfile(self.cluster_dir):
+            term.debug('Can not read cluster, {} is not a directory.'.format(
+                self.cluster_dir))
+            msg = 'Can not read metadata of cluster {}, the name might be wrong.'.format(
+                self.cluster_name)
+            raise exceptions.TiOPSArgumentError(msg)
+
         # try to read metadata from profile directory
         self.meta_file = utils.profile_path(self.cluster_dir, 'meta.yaml')
         try:
@@ -84,7 +92,10 @@ class TopologyBase(object):
             import errno
             # only pass when the error is file not found
             if e.errno != errno.ENOENT:
-                raise
+                term.debug('Can not read {}, {}'.format(self.meta_file, e))
+                msg = 'Can not read metadata of cluster {}, the name might be wrong or the cluster was not deployed properly.'.format(
+                    self.cluster_name)
+                raise exceptions.TiOPSArgumentError(msg)
             _meta = None
             pass
 
@@ -1093,27 +1104,32 @@ class Topology(TopologyBase):
 
         # try to generate monitored_servers
         if _input_config:
-            _input_config['monitored_servers'] = self.__auto_monitored(args, _input_config)
+            _input_config['monitored_servers'] = self.__auto_monitored(
+                args, _input_config)
 
         if not os.path.exists(self.meta_file):
             # read current full topology in profile directory (if exist)
             if not os.path.exists(self.topology_file):
-                term.info('No exist config for {}, tring to generate metadata for the new cluster from input.'.format(
+                term.debug('No exist config for {}, tring to generate metadata for the new cluster from input.'.format(
                     self.cluster_name))
                 _overwrite = False
             elif not os.path.isfile(self.topology_file):
-                msg = 'Check profile directory failed, {} is not a file.'.format(
+                msg = 'Check profile directory failed, {} does not exist or is not a file.'.format(
                     self.topology_file)
                 raise exceptions.TiOPSRuntimeError(msg=msg)
             else:
                 _overwrite = True
-                merge = False # force overwrite, do not try to merge
+                merge = False  # force overwrite, do not try to merge
                 term.debug('No metadata found, force overwritting topology.')
             try:
                 self.topology = self._format(
                     _input_config, self.cluster_name, args)
             except Exception as e:
-                msg = 'Can not parse input topology config: {}'.format(e)
+                if _input_config:
+                    msg = 'Can not parse input topology config: {}'.format(e)
+                else:
+                    msg = 'Can not parse config for {}, does the cluster exist?'.format(
+                        self.cluster_name)
                 raise exceptions.TiOPSConfigError(_input_config, msg=msg)
         else:
             # read exist topology file from cluster
@@ -1291,9 +1307,10 @@ class Topology(TopologyBase):
         if not config:
             raise exceptions.TiOPSArgumentError('config must not be None')
         if not isinstance(config, dict):
-            raise exceptions.TiOPSArgumentError('config is in unsupported format')
+            raise exceptions.TiOPSArgumentError(
+                'config is in unsupported format')
         if 'monitored_servers' in config.items() \
-            and len(config['monitored_servers']) > 0:
+                and len(config['monitored_servers']) > 0:
             return config['monitored_servers']
 
         _monitored = set()
@@ -1305,7 +1322,8 @@ class Topology(TopologyBase):
                     _monitored.add(_srv['ip'])
                 except KeyError:
                     pass
-        term.debug('Automatically generated monitored_servers from input: {}'.format(_monitored))
+        term.debug(
+            'Automatically generated monitored_servers from input: {}'.format(_monitored))
 
         _result = []
         for _ip in _monitored:
@@ -1487,8 +1505,13 @@ class Topology(TopologyBase):
                     TopologyGrafanaServer(args).format(srv))
         else:
             # Grafana is optional
-            term.warn(
-                'Grafana is not set, no monitoring dashboard will be deployed.')
+            try:
+                # not checking Grafana for other actions
+                if 'deploy' in args.action:
+                    term.warn(
+                        'Grafana is not set, no monitoring dashboard will be deployed.')
+            except AttributeError:
+                pass
 
         return full_config
 

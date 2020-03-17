@@ -4,6 +4,7 @@ import sys
 import os
 import getpass
 import argparse
+from tiops import utils
 
 
 class TiOPSParser(object):
@@ -85,6 +86,9 @@ class TiOPSParser(object):
                                       help='the port for ssh. (default: 22)')
         bootstrap_parser.add_argument('-f', '--forks', dest='forks', default=5, type=int,
                                       help='Concurrency number (default: 5)')
+        bootstrap_parser.add_argument('--private-key', dest='private_key',
+                                      default='{}id_rsa'.format(utils.profile_path('.ssh')),
+                                      help='Specify the private key, usually no need to specify and the default private key will be used')
 
     def _bootstrap_args_ssh(self, ssh_parser):
         if not self.__check_parser(ssh_parser, 'bootstrap-ssh')[1]:
@@ -127,6 +131,9 @@ class TiOPSParser(object):
         else:
             tidb_parser.add_argument(
                 '-c', '--cluster-name', dest='cluster_name', required=True, help='Cluster name')
+            tidb_parser.add_argument('--private-key', dest='private_key',
+                                     default='{}id_rsa'.format(utils.profile_path('.ssh')),
+                                     help='Specify the private key, usually no need to specify and the default private key will be used')
 
         if _subcmd in ['deploy', 'upgrade', 'quickdeploy']:
             tidb_parser.add_argument('-t', '--tidb-version', dest='tidb_version', default='3.0.9',
@@ -152,8 +159,8 @@ class TiOPSParser(object):
         _subcmd = self.__get_last_subcmd(tidb_parser)
 
         tidb_parser.add_argument('-T', '--topology', dest='topology', default=None,
-                                 help='Cluster topology file (example: "{}/tiops/templates/topology.yaml.example")'
-                                 .format(os.environ['TIUP_COMPONENT_INSTALL_DIR']))
+                                 help='Cluster topology file (example: "{}/tiops/templates/topology.yaml.example")'.format(
+                                     os.environ['TIUP_COMPONENT_INSTALL_DIR']))
         tidb_parser.add_argument('--enable-check-cpu', dest='enable_check_cpu', default=False, action='store_true',
                                  help='Check cpu vcores number (default: disable)')
         tidb_parser.add_argument('--enable-check-mem', dest='enable_check_mem', default=False, action='store_true',
