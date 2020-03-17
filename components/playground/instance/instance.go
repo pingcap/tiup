@@ -17,7 +17,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/repository"
 )
 
 type instance struct {
@@ -31,11 +31,11 @@ type instance struct {
 // Instance represent running component
 type Instance interface {
 	Pid() int
-	Start(ctx context.Context, version meta.Version) error
+	Start(ctx context.Context, version repository.Version) error
 	Wait() error
 }
 
-func compVersion(comp string, version meta.Version) string {
+func compVersion(comp string, version repository.Version) string {
 	if version.IsEmpty() {
 		return comp
 	}

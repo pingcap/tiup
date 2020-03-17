@@ -11,11 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package meta
+package repository
 
 import (
 	"sort"
-	"strings"
 
 	"golang.org/x/mod/semver"
 )
@@ -89,13 +88,4 @@ func (manifest *VersionManifest) ContainsVersion(version Version) bool {
 		}
 	}
 	return false
-}
-
-// ParseCompVersion parses component part from <component>[:version] specification
-func ParseCompVersion(spec string) (string, Version) {
-	if strings.Contains(spec, ":") {
-		parts := strings.SplitN(spec, ":", 2)
-		return parts[0], Version(parts[1])
-	}
-	return spec, ""
 }

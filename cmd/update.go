@@ -16,9 +16,9 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -43,8 +43,8 @@ other flags will be ignored if the flag --self specified.
   $ tiup update --self                    # Update the tiup to the latest version`,
 		RunE: func(cmd *cobra.Command, components []string) error {
 			if self {
-				originFile := filepath.Join(profile.Path("bin"), "tiup")
-				renameFile := filepath.Join(profile.Path("bin"), "tiup.tmp")
+				originFile := meta.LocalPath("bin", "tiup")
+				renameFile := meta.LocalPath("bin", "tiup.tmp")
 				if err := os.Rename(originFile, renameFile); err != nil {
 					fmt.Printf("Backup `%s` to `%s` failed\n", originFile, renameFile)
 					return err
@@ -63,7 +63,7 @@ other flags will be ignored if the flag --self specified.
 					}
 				}()
 
-				err = repository.DownloadFile(profile.Path("bin"), "tiup")
+				err = meta.Repository().DownloadFile(meta.LocalPath("bin"), "tiup")
 				return err
 			}
 			if (len(components) == 0 && !all && !force) || (len(components) > 0 && all) {
@@ -81,15 +81,14 @@ other flags will be ignored if the flag --self specified.
 
 func updateComponents(components []string, nightly, force bool) error {
 	if len(components) == 0 {
-		installed, err := profile.InstalledComponents()
+		installed, err := meta.Profile().InstalledComponents()
 		if err != nil {
 			return err
 		}
 		components = installed
 	}
 
-	compDir := profile.ComponentsDir()
-	manifest, err := repository.Manifest()
+	manifest, err := meta.LatestManifest()
 	if err != nil {
 		return err
 	}
@@ -98,46 +97,10 @@ func updateComponents(components []string, nightly, force bool) error {
 		if !manifest.HasComponent(component) {
 			return errors.Errorf("component `%s` not found", component)
 		}
-		manifest, err := repository.ComponentVersions(component)
-		if err != nil {
-			return err
-		}
-		err = profile.SaveVersions(component, manifest)
-		if err != nil {
-			return err
-		}
-
-		if nightly && manifest.Nightly == nil {
-			fmt.Printf("The component `%s` has not nightly version, skiped\n", component)
-			continue
-		}
-
 		if nightly {
-			version = meta.NightlyVersion
-			comp = fmt.Sprintf("%v:%v", component, version)
+			version = repository.NightlyVersion
 		}
-
-		// Ignore if the version has been installed
-		if !nightly && !force {
-			versions, err := profile.InstalledVersions(component)
-			if err != nil {
-				return err
-			}
-			if version.IsEmpty() {
-				version = manifest.LatestVersion()
-			}
-			var found bool
-			for _, v := range versions {
-				if meta.Version(v) == version {
-					found = true
-					break
-				}
-			}
-			if found {
-				continue
-			}
-		}
-		err = repository.DownloadComponent(compDir, comp)
+		err = meta.DownloadComponent(component, version, nightly || force)
 		if err != nil {
 			return err
 		}

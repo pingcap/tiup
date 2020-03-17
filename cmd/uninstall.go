@@ -16,10 +16,10 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/spf13/cobra"
 )
 
@@ -47,13 +47,13 @@ component or multiple version of a component at once. There is a flag
   tiup uninstall --all`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if self {
-				return os.RemoveAll(profile.Root())
+				return os.RemoveAll(meta.LocalRoot())
 			}
 			switch {
 			case len(args) > 0:
 				return removeComponents(args, all)
 			case len(args) == 0 && all:
-				return os.RemoveAll(profile.Path(localdata.ComponentParentDir))
+				return os.RemoveAll(meta.LocalPath(localdata.ComponentParentDir))
 			default:
 				return cmd.Help()
 			}
@@ -69,16 +69,16 @@ func removeComponents(specs []string, all bool) error {
 		var path string
 		if strings.Contains(spec, ":") {
 			parts := strings.SplitN(spec, ":", 2)
-			path = profile.Path(filepath.Join(localdata.ComponentParentDir, parts[0], parts[1]))
+			path = meta.LocalPath(localdata.ComponentParentDir, parts[0], parts[1])
 		} else {
 			if !all {
 				fmt.Printf("Use `tiup uninstall %s --all` if you want to remove all versions.\n", spec)
 				continue
 			}
-			if err := os.RemoveAll(profile.Path(filepath.Join(localdata.StorageParentDir, spec))); err != nil {
+			if err := os.RemoveAll(meta.LocalPath(localdata.StorageParentDir, spec)); err != nil {
 				return err
 			}
-			path = profile.Path(filepath.Join(localdata.ComponentParentDir, spec))
+			path = meta.LocalPath(localdata.ComponentParentDir, spec)
 		}
 		err := os.RemoveAll(path)
 		if err != nil {

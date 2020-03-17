@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap-incubator/tiup/pkg/tui"
 	"github.com/pingcap/errors"
@@ -48,12 +49,12 @@ to hide components or version which don't install.
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch len(args) {
 			case 0:
-				if refresh || profile.Manifest() == nil {
-					manifest, err := repository.Manifest()
+				if refresh || meta.Profile().Manifest() == nil {
+					manifest, err := meta.Repository().Manifest()
 					if err != nil {
 						return err
 					}
-					err = profile.SaveManifest(manifest)
+					err = meta.Profile().SaveManifest(manifest)
 					if err != nil {
 						return err
 					}
@@ -61,12 +62,12 @@ to hide components or version which don't install.
 				return showComponentList(showInstalled)
 			case 1:
 				component := args[0]
-				if refresh || profile.Versions(component) == nil {
-					manifest, err := repository.ComponentVersions(component)
+				if refresh || meta.Profile().Versions(component) == nil {
+					manifest, err := meta.Repository().ComponentVersions(component)
 					if err != nil {
 						return errors.Trace(err)
 					}
-					err = profile.SaveVersions(component, manifest)
+					err = meta.Profile().SaveVersions(component, manifest)
 					if err != nil {
 						return err
 					}
@@ -84,11 +85,11 @@ to hide components or version which don't install.
 }
 
 func showComponentList(onlyInstalled bool) error {
-	installed, err := profile.InstalledComponents()
+	installed, err := meta.Profile().InstalledComponents()
 	if err != nil {
 		return err
 	}
-	manifest := profile.Manifest()
+	manifest := meta.Profile().Manifest()
 	var cmpTable [][]string
 	cmpTable = append(cmpTable, []string{"Name", "Installed", "Platforms", "Description"})
 
@@ -99,7 +100,7 @@ func showComponentList(onlyInstalled bool) error {
 		}
 		installStatus := ""
 		if localComponents.Exist(comp.Name) {
-			versions, err := profile.InstalledVersions(comp.Name)
+			versions, err := meta.Profile().InstalledVersions(comp.Name)
 			if err != nil {
 				return err
 			}
@@ -119,11 +120,11 @@ func showComponentList(onlyInstalled bool) error {
 }
 
 func showComponentVersions(component string, onlyInstalled bool) error {
-	versions, err := profile.InstalledVersions(component)
+	versions, err := meta.Profile().InstalledVersions(component)
 	if err != nil {
 		return err
 	}
-	manifest := profile.Versions(component)
+	manifest := meta.Profile().Versions(component)
 
 	var cmpTable [][]string
 	cmpTable = append(cmpTable, []string{"Version", "Installed", "Release:", "Platforms"})

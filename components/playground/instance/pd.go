@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 )
 
@@ -53,7 +53,7 @@ func (inst *PDInstance) Join(pds []*PDInstance) *PDInstance {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *PDInstance) Start(ctx context.Context, version meta.Version) error {
+func (inst *PDInstance) Start(ctx context.Context, version repository.Version) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}

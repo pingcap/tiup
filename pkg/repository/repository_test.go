@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package meta
+package repository
 
 import (
 	"io/ioutil"
@@ -23,9 +23,9 @@ import (
 	"github.com/pingcap/failpoint"
 )
 
-type metaSuite struct{}
+type repositorySuite struct{}
 
-var _ = Suite(&metaSuite{})
+var _ = Suite(&repositorySuite{})
 
 func TestMeta(t *testing.T) {
 	TestingT(t)
@@ -36,9 +36,9 @@ func currentDir() string {
 	return filepath.Dir(file)
 }
 
-func (s *metaSuite) TestRepository(c *C) {
+func (s *repositorySuite) TestRepository(c *C) {
 	testDir := filepath.Join(currentDir(), "testdata")
-	repo := NewRepository(NewMirror(testDir), RepositoryOptions{})
+	repo := NewRepository(NewMirror(testDir), Options{})
 	comps, err := repo.Manifest()
 	c.Assert(err, IsNil)
 
@@ -92,13 +92,13 @@ func (s *metaSuite) TestRepository(c *C) {
 	}
 
 	tmpDir := filepath.Join(currentDir(), "tmp-profile")
-	fpName := "github.com/pingcap-incubator/tiup/pkg/meta/MockProfileDir"
+	fpName := "github.com/pingcap-incubator/tiup/pkg/repository/MockProfileDir"
 	fpExpr := `return("` + tmpDir + `")`
 	c.Assert(failpoint.Enable(fpName, fpExpr), IsNil)
 	defer func() { c.Assert(failpoint.Disable(fpName), IsNil) }()
 	//defer os.RemoveAll(tmpDir)
 
-	err = repo.DownloadComponent(tmpDir, "test1:v1.1.1")
+	err = repo.DownloadComponent(tmpDir, "test1", "v1.1.1")
 	c.Assert(err, IsNil, Commentf("error: %+v", err))
 
 	exp, err := ioutil.ReadFile(filepath.Join(testDir, "test1.bin"))

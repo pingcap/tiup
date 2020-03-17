@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 )
@@ -50,7 +50,7 @@ func NewTiKVInstance(dir, host string, id int, pds []*PDInstance) *TiKVInstance 
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiKVInstance) Start(ctx context.Context, version meta.Version) error {
+func (inst *TiKVInstance) Start(ctx context.Context, version repository.Version) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}

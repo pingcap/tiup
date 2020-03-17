@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/tui"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	gops "github.com/shirou/gopsutil/process"
@@ -44,7 +45,7 @@ func newStatusCmd() *cobra.Command {
 func showStatus() error {
 	var table [][]string
 	table = append(table, []string{"Name", "Component", "PID", "Status", "Created Time", "Directory", "Binary", "Args"})
-	if dataDir := profile.Path(localdata.DataParentDir); utils.IsExist(dataDir) {
+	if dataDir := meta.LocalPath(localdata.DataParentDir); utils.IsExist(dataDir) {
 		dirs, err := ioutil.ReadDir(dataDir)
 		if err != nil {
 			return err
@@ -56,13 +57,13 @@ func showStatus() error {
 			metaFile := filepath.Join(localdata.DataParentDir, dir.Name(), localdata.MetaFilename)
 
 			// If the path doesn't contain the meta file, which means startup interrupted
-			if utils.IsNotExist(profile.Path(metaFile)) {
-				_ = os.RemoveAll(profile.Path(filepath.Join(localdata.DataParentDir, dir.Name())))
+			if utils.IsNotExist(meta.LocalPath(metaFile)) {
+				_ = os.RemoveAll(meta.LocalPath(filepath.Join(localdata.DataParentDir, dir.Name())))
 				continue
 			}
 
 			var process process
-			err := profile.ReadJSON(metaFile, &process)
+			err := meta.Profile().ReadJSON(metaFile, &process)
 			if err != nil {
 				return err
 			}

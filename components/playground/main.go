@@ -30,17 +30,18 @@ import (
 	"github.com/pingcap-incubator/tiup/components/playground/instance"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 func installIfMissing(profile *localdata.Profile, component, version string) error {
-	versions, err := profile.InstalledVersions(component)
+	versions, err := meta.Profile().InstalledVersions(component)
 	if err != nil {
 		return err
 	}
 	if len(versions) > 0 {
-		if meta.Version(version).IsEmpty() {
+		if repository.Version(version).IsEmpty() {
 			return nil
 		}
 		found := false
@@ -55,7 +56,7 @@ func installIfMissing(profile *localdata.Profile, component, version string) err
 		}
 	}
 	spec := component
-	if !meta.Version(version).IsEmpty() {
+	if !repository.Version(version).IsEmpty() {
 		spec = fmt.Sprintf("%s:%s", component, version)
 	}
 	c := exec.Command("tiup", "install", spec)
@@ -246,7 +247,7 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 	}
 
 	for _, inst := range all {
-		if err := inst.Start(ctx, meta.Version(version)); err != nil {
+		if err := inst.Start(ctx, repository.Version(version)); err != nil {
 			return err
 		}
 	}
