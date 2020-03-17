@@ -1,0 +1,39 @@
+#!/bin/bash
+set -e
+ulimit -n 1000000
+
+DEPLOY_DIR={{ full_deploy_dir }}
+
+cd "${DEPLOY_DIR}" || exit 1
+
+# WARNING: This file was auto-generated. Do not edit!
+#          All your edit might be overwritten!
+{% set my_ip = hostvars[inventory_hostname].ansible_host -%}
+{% if enable_tls|default(false) -%}
+  {% set pd_scheme = 'https' -%}
+{% else -%}
+  {% set pd_scheme = 'http' %}
+{% endif -%}
+{% if 'pd_servers' in groups -%}
+  {% if groups.pd_servers | length > 0 -%}
+    {% set all_pd = [] -%}
+    {% set pd_hosts = groups.pd_servers -%}
+    {% for host in pd_hosts -%}
+      {% set pd_ip = hostvars[host].ansible_host -%}
+      {% set pd_port = hostvars[host].client_port -%}
+      {% set _ = all_pd.append("%s://%s:%s" % (pd_scheme, pd_ip, pd_port)) -%}
+    {% endfor -%}
+  {% endif -%}
+{% endif -%}
+{% if numa_node | string != 'False' -%}
+exec numactl --cpunodebind={{ numa_node }} --membind={{ numa_node }} bin/pump \
+{% else -%}
+exec bin/pump \
+{% endif %}
+    --node-id="{{ inventory_hostname }}" \
+    --addr="0.0.0.0:{{ port }}" \
+    --advertise-addr="{{ my_ip }}:{{ port }}" \
+    --pd-urls="{{ all_pd | join(',') }}" \
+    --data-dir="{{ full_data_dir }}" \
+    --log-file="log/pump.log" \
+    --config=conf/pump.toml 2>> "log/pump_stderr.log"

@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+ulimit -n 1000000
+
+# WARNING: This file was auto-generated. Do not edit!
+#          All your edit might be overwritten!
+DEPLOY_DIR={{ full_deploy_dir }}
+cd "${DEPLOY_DIR}" || exit 1
+
+exec > >(tee -i -a "log/blackbox_exporter.log")
+exec 2>&1
+
+{% if numa_node | string != 'False' -%}
+exec numactl --cpunodebind={{ numa_node }} --membind={{ numa_node }} bin/blackbox_exporter \
+{% else -%}
+exec bin/blackbox_exporter \
+{% endif %}
+    --web.listen-address=":{{ blackbox_exporter_port }}" \
+    --log.level="info" \
+    --config.file="conf/blackbox.yml"

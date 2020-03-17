@@ -1,0 +1,39 @@
+#!/bin/bash
+set -e
+ulimit -n 1000000
+
+# WARNING: This file was auto-generated. Do not edit!
+#          All your edit might be overwritten!
+cd "{{ full_deploy_dir }}" || exit 1
+
+{% set my_ip = hostvars[inventory_hostname].ansible_host -%}
+{% if 'pd_servers' in groups -%}
+  {% if groups.pd_servers | length > 0 -%}
+    {% set all_pd = [] -%}
+    {% set pd_hosts = groups.pd_servers %}
+    {% for host in pd_hosts -%}
+      {% set pd_ip = hostvars[host].ansible_host -%}
+      {% set pd_port = hostvars[host].client_port -%}
+      {% set _ = all_pd.append("%s:%s" % (pd_ip, pd_port)) -%}
+    {% endfor -%}
+  {% endif -%}
+{% endif -%}
+export RUST_BACKTRACE=1
+
+echo -n 'sync ... '
+stat=$(time sync)
+echo ok
+echo $stat
+
+{% if numa_node | string != 'False' -%}
+exec numactl --cpunodebind={{ numa_node }} --membind={{ numa_node }} bin/tikv-server \
+{% else -%}
+exec bin/tikv-server \
+{% endif %}
+    --addr "0.0.0.0:{{ port }}" \
+    --advertise-addr "{{ my_ip }}:{{ port }}" \
+    --status-addr "{{ my_ip }}:{{ status_port }}" \
+    --pd "{{ all_pd | join(',') }}" \
+    --data-dir "{{ full_data_dir }}" \
+    --config conf/tikv.toml \
+    --log-file "log/tikv.log" 2>> "log/tikv_stderr.log"

@@ -1,0 +1,4 @@
+deps/
+*.pyc
+.idea/
+sshpass-*

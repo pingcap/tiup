@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e
+ulimit -n 1000000
+
+DEPLOY_DIR={{ full_deploy_dir }}
+cd "${DEPLOY_DIR}" || exit 1
+
+# WARNING: This file was auto-generated. Do not edit!
+#          All your edit might be overwritten!
+exec > >(tee -i -a "log/alertmanager.log")
+exec 2>&1
+
+{% if numa_node | string != 'False' -%}
+exec numactl --cpunodebind={{ numa_node }} --membind={{ numa_node }} bin/alertmanager \
+{% else -%}
+exec bin/alertmanager \
+{% endif %}
+    --config.file="conf/alertmanager.yml" \
+    --storage.path="{{ full_data_dir }}" \
+    --data.retention=120h \
+    --log.level="info" \
+    --web.listen-address=":{{ web_port }}" \
+    --cluster.listen-address=":{{ cluster_port }}"

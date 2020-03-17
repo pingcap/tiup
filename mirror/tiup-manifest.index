@@ -66,6 +66,14 @@
                 "darwin/amd64",
                 "linux/amd64"
             ]
+        },
+        {
+            "name": "tiops",
+            "desc": "Bootstrap a remote TiDB cluster",
+            "platforms": [
+                "darwin/amd64",
+                "linux/amd64"
+            ]
         }
     ]
 }

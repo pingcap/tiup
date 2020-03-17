@@ -1,0 +1,36 @@
+#!/bin/bash
+set -e
+
+ulimit -n 1000000
+
+# WARNING: This file was auto-generated. Do not edit!
+#          All your edit might be overwritten!
+DEPLOY_DIR={{ full_deploy_dir }}
+
+cd "${DEPLOY_DIR}" || exit 1
+
+{% set my_ip = hostvars[inventory_hostname].ansible_host -%}
+{% if 'pd_servers' in groups -%}
+  {% if groups.pd_servers | length > 0 -%}
+    {% set all_pd = [] -%}
+    {% set pd_hosts = groups.pd_servers -%}
+    {% for host in pd_hosts -%}
+      {% set pd_ip = hostvars[host].ansible_host -%}
+      {% set pd_port = hostvars[host].client_port -%}
+      {% set _ = all_pd.append("%s:%s" % (pd_ip, pd_port)) -%}
+    {% endfor -%}
+  {% endif -%}
+{% endif -%}
+{% if numa_node | string != 'False' -%}
+exec numactl --cpunodebind={{ numa_node }} --membind={{ numa_node }} bin/tidb-server \
+{% else -%}
+exec bin/tidb-server \
+{% endif %}
+    -P {{ port }} \
+    --status="{{ status_port }}" \
+    --advertise-address="{{ my_ip }}" \
+    --store="tikv" \
+    --path="{{ all_pd | join(',') }}" \
+    --config=conf/tidb.toml \
+    --log-slow-query="log/tidb_slow_query.log" \
+    --log-file="log/tidb.log" 2>> "log/tidb_stderr.log"

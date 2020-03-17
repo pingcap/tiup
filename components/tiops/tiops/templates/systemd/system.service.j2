@@ -1,0 +1,28 @@
+[Unit]
+Description={{ service_name }} service
+After=syslog.target network.target remote-fs.target nss-lookup.target
+
+[Service]
+{% if MemoryLimit|default("") %}
+MemoryLimit={{ MemoryLimit }}
+{% endif %}
+{% if CPUQuota|default("") %}
+CPUQuota={{ CPUQuota }}
+{% endif %}
+{% if IOReadBandwidthMax|default("") %}
+IOReadBandwidthMax={{ IOReadBandwidthMax }}
+{% endif %}
+{% if IOWriteBandwidthMax|default("") %}
+IOWriteBandwidthMax={{ IOWriteBandwidthMax }}
+{% endif %}
+LimitNOFILE=1000000
+#LimitCORE=infinity
+LimitSTACK=10485760
+User={{ ansible_user }}
+ExecStart={{ full_deploy_dir }}/scripts/run_{{ service }}.sh
+Restart=on-failure
+RestartSec=15s
+SendSIGKILL=no
+
+[Install]
+WantedBy=multi-user.target
