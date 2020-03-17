@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
@@ -32,7 +33,7 @@ Simply type tiup help <command>|<component> for full details.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd, n, e := cmd.Root().Find(args)
 			if (cmd == rootCmd || e != nil) && len(n) > 0 {
-				externalHelp(n[0])
+				externalHelp(n[0], n[1:]...)
 			} else {
 				cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
 				cmd.HelpFunc()(cmd, args)
@@ -41,7 +42,7 @@ Simply type tiup help <command>|<component> for full details.`,
 	}
 }
 
-func externalHelp(spec string) {
+func externalHelp(spec string, args ...string) {
 	binaryPath, err := binaryPath(spec)
 	if err != nil {
 		fmt.Println(err)
@@ -53,12 +54,14 @@ func externalHelp(spec string) {
 		return
 	}
 
+	sd := profile.Path(filepath.Join(localdata.StorageParentDir, strings.Split(spec, ":")[0]))
 	envs := []string{
 		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
+		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 	}
 
-	comp := exec.Command(binaryPath, "-h")
+	comp := exec.Command(binaryPath, rebuildArgs(args)...)
 	comp.Env = append(
 		envs,
 		os.Environ()...,
@@ -72,6 +75,20 @@ func externalHelp(spec string) {
 	if err := comp.Wait(); err != nil {
 		fmt.Printf("Cannot fetch help message from %s failed: %v\n", binaryPath, err)
 	}
+}
+
+func rebuildArgs(args []string) []string {
+	helpFlag := "--help"
+	argList := []string{}
+	for _, arg := range args {
+		if arg == "-h" || arg == "--help" {
+			helpFlag = arg
+		} else {
+			argList = append(argList, arg)
+		}
+	}
+	argList = append(argList, helpFlag)
+	return argList
 }
 
 func usageTemplate() string {
