@@ -55,7 +55,7 @@ def home():
 
 # return the profile directory of current user
 def profile_dir():
-    dir_path = os.path.join(home(), ".tiops")
+    dir_path = os.environ['TIUP_COMPONENT_DATA_DIR']
     # create the profile dir if it not exists
     # not checking if dir_path exists but is not a dir, do it at access time
     if not os.path.exists(dir_path):

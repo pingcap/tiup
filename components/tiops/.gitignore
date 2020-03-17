@@ -1,2 +1,3 @@
 deps/
 *.pyc
+.idea/
