@@ -17,6 +17,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
+	"google.golang.org/grpc/keepalive"
+	"honnef.co/go/tools/config"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -32,6 +37,7 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/spf13/cobra"
+	"go.etcd.io/etcd/clientv3"
 )
 
 func installIfMissing(profile *localdata.Profile, component, version string) error {
@@ -287,6 +293,12 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 			return err
 		}
 	}
+	if monitor && len(pds) != 0 {
+		client, err := NewEtcdClient(pds[0].Addr())
+		if err != nil {
+			_, _ = client.Put(context.TODO(), "/topology/prometheus", monitorAddr)
+		}
+	}
 	return nil
 }
 
@@ -362,6 +374,43 @@ scrape_configs:
 	)
 	return addr, cmd, nil
 }
+
+func NewEtcdClient(endpoint string) (*clientv3.Client, error) {
+	// Because etcd client does not support setting logger directly,
+	// the configuration of pingcap/log is copied here.
+	zapCfg := zap.NewProductionConfig()
+	zapCfg.Encoding = "etcd-client"
+	zapCfg.OutputPaths = []string{"stderr"}
+	zapCfg.ErrorOutputPaths = []string{"stderr"}
+
+	client, err := clientv3.New(clientv3.Config{
+		Endpoints:        []string{endpoint},
+		AutoSyncInterval: 30 * time.Second,
+		DialTimeout:      5 * time.Second,
+		DialOptions: []grpc.DialOption{
+			grpc.WithConnectParams(grpc.ConnectParams{
+				Backoff: backoff.Config{
+					BaseDelay:  1.0 * time.Second,
+					Multiplier: 1.6,
+					Jitter:     0.2,
+					MaxDelay:   3 * time.Second,
+				},
+				MinConnectTimeout: 20 * time.Second,
+			}),
+			grpc.WithKeepaliveParams(keepalive.ClientParameters{
+				Time:                10 * time.Second,
+				Timeout:             3 * time.Second,
+				PermitWithoutStream: true,
+			}),
+		},
+		LogConfig: &zapCfg,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
+}
+
 
 func main() {
 	if err := execute(); err != nil {
