@@ -62,9 +62,9 @@ func NewUserModule(config UserModuleConfig) *UserModule {
 		}
 		// set user's login shell
 		if config.Shell != "" {
-			cmd = fmt.Sprintf("%s -s %s", config.Shell)
+			cmd = fmt.Sprintf("%s -s %s", cmd, config.Shell)
 		} else {
-			cmd = fmt.Sprintf("%s -s %s", defaultShell)
+			cmd = fmt.Sprintf("%s -s %s", cmd, defaultShell)
 		}
 
 		cmd = fmt.Sprintf("%s %s", cmd, config.Name)
@@ -77,6 +77,7 @@ func NewUserModule(config UserModuleConfig) *UserModule {
 			sudoLine := fmt.Sprintf("%s ALL=(ALL) NOPASSWD:ALL",
 				config.Name)
 			cmd = fmt.Sprintf("%s && %s",
+				cmd,
 				buildBashInsertLine(sudoLine, "/etc/suduers"))
 		}
 	case UserActionDel:

@@ -20,8 +20,8 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/executor"
 )
 
+// scope can be either "system", "user" or "global"
 const (
-	// scope can be either "system", "user" or "global"
 	SystemdScopeSystem = "system"
 	SystemdScopeUser   = "user"
 	SystemdScopeGlobal = "global"
@@ -58,7 +58,7 @@ func NewSystemdModule(config SystemdModuleConfig) *SystemdModule {
 		sudo = false // `--user` scope does not need root priviledge
 		fallthrough
 	case SystemdScopeGlobal:
-		systemctl = fmt.Sprintf("%s --%s", config.Scope)
+		systemctl = fmt.Sprintf("%s --%s", systemctl, config.Scope)
 	}
 
 	cmd := fmt.Sprintf("%s %s %s",

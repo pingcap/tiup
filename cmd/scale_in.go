@@ -15,10 +15,10 @@ package cmd
 
 import "github.com/spf13/cobra"
 
-func newDeploy() *cobra.Command {
+func newScaleInCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "deploy",
-		Short: "Deploy a cluster for production",
+		Use:   "scale-in",
+		Short: "Scale in a TiDB cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
