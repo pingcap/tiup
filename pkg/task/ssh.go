@@ -13,18 +13,38 @@
 
 package task
 
+import (
+	"github.com/pingcap-incubator/tiops/pkg/executor"
+	"github.com/pingcap/errors"
+)
+
 // SSH is used to establish a SSH connection to the target host with specific key
 type SSH struct {
 	host    string
 	keypath string
+	user    string
 }
 
 // Execute implements the Task interface
-func (S SSH) Execute(ctx *Context) error {
-	panic("implement me")
+func (s SSH) Execute(ctx *Context) error {
+	e, err := executor.NewSSHExecutor(executor.SSHConfig{
+		Host:    s.host,
+		KeyFile: s.keypath,
+		User:    s.user,
+	})
+
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	ctx.SetExecutor(s.host, e)
+	return nil
 }
 
 // Rollback implements the Task interface
-func (S SSH) Rollback(ctx *Context) error {
-	panic("implement me")
+func (s SSH) Rollback(ctx *Context) error {
+	ctx.exec.Lock()
+	delete(ctx.exec.executors, s.host)
+	ctx.exec.Unlock()
+	return nil
 }

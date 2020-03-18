@@ -24,10 +24,11 @@ func NewBuilder() *Builder {
 }
 
 // SSH appends a SSH task to the current task collection
-func (b *Builder) SSH(host, keypath string) *Builder {
+func (b *Builder) SSH(host, keypath, user string) *Builder {
 	b.tasks = append(b.tasks, SSH{
 		host:    host,
 		keypath: keypath,
+		user:    user,
 	})
 	return b
 }

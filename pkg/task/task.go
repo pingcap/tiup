@@ -14,10 +14,19 @@
 package task
 
 import (
+	stderrors "errors"
 	"fmt"
-	"io"
 	"strings"
 	"sync"
+
+	"github.com/pingcap-incubator/tiops/pkg/executor"
+)
+
+var (
+	// ErrUnsupportRollback means the task do not support rollback.
+	ErrUnsupportRollback = stderrors.New("unsupport rollback")
+	// ErrNoExecutor means can get the executor.
+	ErrNoExecutor = stderrors.New("no executor")
 )
 
 type (
@@ -29,7 +38,10 @@ type (
 
 	// Context is used to share state while multiple tasks execution
 	Context struct {
-		SSHConnection io.ReadWriter
+		exec struct {
+			sync.Mutex
+			executors map[string]executor.TiOpsExecutor
+		}
 	}
 
 	// Serial will execute a bundle of task in serialized way
@@ -38,6 +50,34 @@ type (
 	// Parallel will execute a bundle of task in parallelism way
 	Parallel []Task
 )
+
+// NewContext create a context instance.
+func NewContext() *Context {
+	return &Context{
+		exec: struct {
+			sync.Mutex
+			executors map[string]executor.TiOpsExecutor
+		}{
+			executors: make(map[string]executor.TiOpsExecutor),
+		},
+	}
+}
+
+// GetExecutor get the executor.
+func (ctx *Context) GetExecutor(host string) (e executor.TiOpsExecutor, ok bool) {
+	ctx.exec.Lock()
+	e, ok = ctx.exec.executors[host]
+	ctx.exec.Unlock()
+	return
+}
+
+// SetExecutor set the executor.
+func (ctx *Context) SetExecutor(host string, e executor.TiOpsExecutor) {
+	ctx.exec.Lock()
+	ctx.exec.executors[host] = e
+	ctx.exec.Unlock()
+	return
+}
 
 // Execute implements the Task interface
 func (s Serial) Execute(ctx *Context) error {
@@ -61,10 +101,10 @@ func (s Serial) Rollback(ctx *Context) error {
 	return nil
 }
 
-type errors []error
+type errs []error
 
 // Error implements the error interface
-func (es errors) Error() string {
+func (es errs) Error() string {
 	ss := make([]string, 0, len(es))
 	for _, e := range es {
 		ss = append(ss, fmt.Sprintf("%+v", e))
@@ -74,7 +114,7 @@ func (es errors) Error() string {
 
 // Execute implements the Task interface
 func (pt Parallel) Execute(ctx *Context) error {
-	var es errors
+	var es errs
 	var mu sync.Mutex
 	wg := sync.WaitGroup{}
 	for _, t := range pt {
@@ -94,7 +134,7 @@ func (pt Parallel) Execute(ctx *Context) error {
 
 // Rollback implements the Task interface
 func (pt Parallel) Rollback(ctx *Context) error {
-	var es errors
+	var es errs
 	var mu sync.Mutex
 	wg := sync.WaitGroup{}
 	for _, t := range pt {

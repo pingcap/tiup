@@ -15,9 +15,11 @@ package executor
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/appleboy/easyssh-proxy"
+	"github.com/pingcap/errors"
 )
 
 type (
@@ -37,12 +39,30 @@ type (
 	}
 )
 
+var _ TiOpsExecutor = &SSHExecutor{}
+
+// NewSSHExecutor create a ssh executor.
+func NewSSHExecutor(c SSHConfig) (e *SSHExecutor, err error) {
+	e = new(SSHExecutor)
+	err = e.Initialize(c)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return
+}
+
 // Initialize builds and initializes a SSHExecutor
 func (sshExec *SSHExecutor) Initialize(config SSHConfig) error {
+	// set default values
+	if config.Port <= 0 {
+		config.Port = 22
+	}
+
 	// build easyssh config
 	sshExec.Config = &easyssh.MakeConfig{
 		Server:  config.Host,
-		Port:    fmt.Sprintf("%d", config.Port),
+		Port:    strconv.Itoa(config.Port),
 		User:    config.User,
 		Timeout: time.Second * 5, // default timeout is 5 sec
 	}

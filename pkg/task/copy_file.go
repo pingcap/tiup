@@ -13,6 +13,8 @@
 
 package task
 
+import "github.com/pingcap/errors"
+
 // CopyFile will copy a local file to the target host
 type CopyFile struct {
 	src     string
@@ -22,10 +24,20 @@ type CopyFile struct {
 
 // Execute implements the Task interface
 func (c *CopyFile) Execute(ctx *Context) error {
-	panic("implement me")
+	e, ok := ctx.GetExecutor(c.dstHost)
+	if !ok {
+		return ErrNoExecutor
+	}
+
+	err := e.Transfer(c.src, c.dstPath)
+	if err != nil {
+		return errors.Annotate(err, "failed to transfer file")
+	}
+
+	return nil
 }
 
 // Rollback implements the Task interface
 func (c *CopyFile) Rollback(ctx *Context) error {
-	panic("implement me")
+	return ErrUnsupportRollback
 }
