@@ -13,15 +13,32 @@
 
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/pingcap-incubator/tiops/pkg/task"
+	"github.com/spf13/cobra"
+)
 
 func newDeploy() *cobra.Command {
+	// for test
+	var (
+		user string
+		host string
+		key  string
+	)
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy a cluster for production",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Help()
+			t := task.NewBuilder().
+				RootSSH(host, key, user).
+				EnvInit(host).
+				Build()
+			return t.Execute(&task.Context{})
 		},
 	}
+
+	cmd.Flags().StringVar(&key, "key", ".ssh/id_rsa", "keypath")
+	cmd.Flags().StringVar(&host, "host", "", "deploy to host")
+	cmd.Flags().StringVar(&user, "user", "root", "system user root")
 	return cmd
 }

@@ -18,15 +18,17 @@ import (
 	"github.com/pingcap/errors"
 )
 
-// SSH is used to establish a SSH connection to the target host with specific key
-type SSH struct {
+const generatedUserName = "tidb"
+
+// RootSSH is used to establish a SSH connection to the target host with specific key
+type RootSSH struct {
 	host    string
 	keypath string
 	user    string
 }
 
 // Execute implements the Task interface
-func (s SSH) Execute(ctx *Context) error {
+func (s RootSSH) Execute(ctx *Context) error {
 	e, err := executor.NewSSHExecutor(executor.SSHConfig{
 		Host:    s.host,
 		KeyFile: s.keypath,
@@ -42,7 +44,36 @@ func (s SSH) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (s SSH) Rollback(ctx *Context) error {
+func (s RootSSH) Rollback(ctx *Context) error {
+	ctx.exec.Lock()
+	delete(ctx.exec.executors, s.host)
+	ctx.exec.Unlock()
+	return nil
+}
+
+// UserSSH is used to establish a SSH connection to the target host with generated key
+type UserSSH struct {
+	host string
+}
+
+// Execute implements the Task interface
+func (s UserSSH) Execute(ctx *Context) error {
+	e, err := executor.NewSSHExecutor(executor.SSHConfig{
+		Host:    s.host,
+		KeyFile: ctx.PrivateKeyPath,
+		User:    generatedUserName,
+	})
+
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	ctx.SetExecutor(s.host, e)
+	return nil
+}
+
+// Rollback implements the Task interface
+func (s UserSSH) Rollback(ctx *Context) error {
 	ctx.exec.Lock()
 	delete(ctx.exec.executors, s.host)
 	ctx.exec.Unlock()

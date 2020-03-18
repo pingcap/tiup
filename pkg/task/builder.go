@@ -13,6 +13,8 @@
 
 package task
 
+import "github.com/pingcap-incubator/tiup/pkg/repository"
+
 // Builder is used to build TiOps task
 type Builder struct {
 	tasks []Task
@@ -23,12 +25,20 @@ func NewBuilder() *Builder {
 	return &Builder{}
 }
 
-// SSH appends a SSH task to the current task collection
-func (b *Builder) SSH(host, keypath, user string) *Builder {
-	b.tasks = append(b.tasks, SSH{
+// RootSSH appends a RootSSH task to the current task collection
+func (b *Builder) RootSSH(host, keypath, user string) *Builder {
+	b.tasks = append(b.tasks, RootSSH{
 		host:    host,
 		keypath: keypath,
 		user:    user,
+	})
+	return b
+}
+
+// UserSSH append a UserSSH task to the current task collection
+func (b *Builder) UserSSH(host string) *Builder {
+	b.tasks = append(b.tasks, UserSSH{
+		host: host,
 	})
 	return b
 }
@@ -39,6 +49,40 @@ func (b *Builder) CopyFile(src, dstHost, dstPath string) *Builder {
 		src:     src,
 		dstHost: dstHost,
 		dstPath: dstPath,
+	})
+	return b
+}
+
+// Download appends a Downloader task to the current task collection
+func (b *Builder) Download(component string, version repository.Version) *Builder {
+	b.tasks = append(b.tasks, &Downloader{
+		component: component,
+		version:   version,
+	})
+	return b
+}
+
+// SSHKeyGen appends a SSHKeyGen task to the current task collection
+func (b *Builder) SSHKeyGen(keypath string) *Builder {
+	b.tasks = append(b.tasks, &SSHKeyGen{
+		keypath: keypath,
+	})
+	return b
+}
+
+// SSHKeySet appends a SSHKeySet task to the current task collection
+func (b *Builder) SSHKeySet(privKeyPath, pubKeyPath string) *Builder {
+	b.tasks = append(b.tasks, &SSHKeySet{
+		privateKeyPath: privKeyPath,
+		publicKeyPath:  pubKeyPath,
+	})
+	return b
+}
+
+// EnvInit appends a EnvInit task to the current task collection
+func (b *Builder) EnvInit(host string) *Builder {
+	b.tasks = append(b.tasks, &EnvInit{
+		host: host,
 	})
 	return b
 }

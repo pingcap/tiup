@@ -36,12 +36,18 @@ type (
 		Rollback(ctx *Context) error
 	}
 
-	// Context is used to share state while multiple tasks execution
+	// Context is used to share state while multiple tasks execution.
+	// We should use mutex to prevent concurrent R/W for some fields
+	// because of the same context can be shared in parallel tasks.
 	Context struct {
 		exec struct {
 			sync.Mutex
 			executors map[string]executor.TiOpsExecutor
 		}
+
+		// The public/private key is used to access remote server via the user `tidb`
+		PrivateKeyPath string
+		PublicKeyPath  string
 	}
 
 	// Serial will execute a bundle of task in serialized way
