@@ -159,7 +159,7 @@ class TiOPSParser(object):
         _subcmd = self.__get_last_subcmd(tidb_parser)
 
         tidb_parser.add_argument('-T', '--topology', dest='topology', default=None,
-                                 help='Cluster topology file (example: "{}/tiops/templates/topology.yaml.example")'.format(
+                                 help='Cluster topology file (example: "{}/tiops/templates/topology.yaml.sample")'.format(
                                      os.environ['TIUP_COMPONENT_INSTALL_DIR']))
         tidb_parser.add_argument('--enable-check-cpu', dest='enable_check_cpu', default=False, action='store_true',
                                  help='Check cpu vcores number (default: disable)')
