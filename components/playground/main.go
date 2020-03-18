@@ -17,11 +17,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/backoff"
-	"google.golang.org/grpc/keepalive"
-	"honnef.co/go/tools/config"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -38,6 +33,10 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"go.etcd.io/etcd/clientv3"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
+	"google.golang.org/grpc/keepalive"
 )
 
 func installIfMissing(profile *localdata.Profile, component, version string) error {
@@ -294,7 +293,7 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 		}
 	}
 	if monitor && len(pds) != 0 {
-		client, err := NewEtcdClient(pds[0].Addr())
+		client, err := newEtcdClient(pds[0].Addr())
 		if err != nil {
 			_, _ = client.Put(context.TODO(), "/topology/prometheus", monitorAddr)
 		}
@@ -375,7 +374,7 @@ scrape_configs:
 	return addr, cmd, nil
 }
 
-func NewEtcdClient(endpoint string) (*clientv3.Client, error) {
+func newEtcdClient(endpoint string) (*clientv3.Client, error) {
 	// Because etcd client does not support setting logger directly,
 	// the configuration of pingcap/log is copied here.
 	zapCfg := zap.NewProductionConfig()
@@ -410,7 +409,6 @@ func NewEtcdClient(endpoint string) (*clientv3.Client, error) {
 	}
 	return client, nil
 }
-
 
 func main() {
 	if err := execute(); err != nil {
