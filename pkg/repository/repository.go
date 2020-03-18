@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package meta
+package repository
 
 import (
 	"crypto/sha1"
@@ -36,16 +36,16 @@ const (
 // Repository represents a components repository
 type Repository struct {
 	mirror Mirror
-	opts   RepositoryOptions
+	opts   Options
 }
 
-// RepositoryOptions represents options for a repository
-type RepositoryOptions struct {
+// Options represents options for a repository
+type Options struct {
 	SkipVersionCheck bool
 }
 
 // NewRepository returns a repository instance base on mirror
-func NewRepository(mirror Mirror, opts RepositoryOptions) *Repository {
+func NewRepository(mirror Mirror, opts Options) *Repository {
 	return &Repository{mirror: mirror, opts: opts}
 }
 
@@ -110,8 +110,7 @@ func (r *Repository) ComponentVersions(component string) (*VersionManifest, erro
 
 // DownloadComponent downloads a component with specific version from repository
 // support `<component>[:version]` format
-func (r *Repository) DownloadComponent(compsDir, spec string) error {
-	component, version := ParseCompVersion(spec)
+func (r *Repository) DownloadComponent(compsDir, component string, version Version) error {
 	versions, err := r.ComponentVersions(component)
 	if err != nil {
 		return err

@@ -15,12 +15,13 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/pingcap-incubator/tiup/pkg/set"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	gops "github.com/shirou/gopsutil/process"
 	"github.com/spf13/cobra"
@@ -43,7 +44,7 @@ func newCleanCmd() *cobra.Command {
 }
 
 func cleanData(names []string, all bool) error {
-	dataDir := profile.Path(localdata.DataParentDir)
+	dataDir := meta.LocalPath(localdata.DataParentDir)
 	if utils.IsNotExist(dataDir) {
 		return nil
 	}
@@ -61,7 +62,7 @@ func cleanData(names []string, all bool) error {
 		}
 		metaFile := filepath.Join(localdata.DataParentDir, dir.Name(), localdata.MetaFilename)
 		var process process
-		err := profile.ReadJSON(metaFile, &process)
+		err := meta.Profile().ReadJSON(metaFile, &process)
 		if err != nil {
 			return err
 		}

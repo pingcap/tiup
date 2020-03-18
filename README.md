@@ -79,7 +79,6 @@ Flags:
   -B, --binary <component>[:version]   Print binary path of a specific version of a component <component>[:version]
                                        and the latest version installed will be selected if no version specified
   -h, --help                           help for tiup
-      --mirror mirror                  Overwrite default mirror or TIUP_MIRRORS environment variable (default "https://tiup-mirrors.pingcap.com/")
       --rm                             Remove the data directory when the component instance finishes its run
       --skip-version-check             Skip the strict version check, by default a version must be a valid SemVer string
   -T, --tag string                     Specify a tag for component instance

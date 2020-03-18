@@ -17,10 +17,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/spf13/cobra"
 )
 
@@ -43,20 +43,27 @@ Simply type tiup help <command>|<component> for full details.`,
 }
 
 func externalHelp(spec string, args ...string) {
-	binaryPath, err := binaryPath(spec)
+	component, version := meta.ParseCompVersion(spec)
+	selectVer, err := meta.SelectInstalledVersion(component, version)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	installPath, err := installPath(spec)
+	binaryPath, err := meta.BinaryPath(component, selectVer)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	sd := profile.Path(filepath.Join(localdata.StorageParentDir, strings.Split(spec, ":")[0]))
+	installPath, err := meta.ComponentInstalledDir(component, selectVer)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	sd := meta.LocalPath(localdata.StorageParentDir, strings.Split(spec, ":")[0])
 	envs := []string{
-		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
+		fmt.Sprintf("%s=%s", localdata.EnvNameHome, meta.LocalRoot()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 	}
@@ -93,7 +100,7 @@ func rebuildArgs(args []string) []string {
 
 func usageTemplate() string {
 	var installComps string
-	if repo := profile.Manifest(); repo != nil && len(repo.Components) > 0 {
+	if repo := meta.Profile().Manifest(); repo != nil && len(repo.Components) > 0 {
 		installComps = `
 Available Components:
 `

@@ -16,17 +16,15 @@ package localdata
 import (
 	"encoding/json"
 	"fmt"
-
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
 
-	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
-	"golang.org/x/mod/semver"
 )
 
 // Profile represents the `tiup` profile
@@ -94,12 +92,12 @@ func (p *Profile) isNotExist(path string) bool {
 }
 
 // Manifest returns the components manifest
-func (p *Profile) Manifest() *meta.ComponentManifest {
+func (p *Profile) Manifest() *repository.ComponentManifest {
 	if p.isNotExist(p.manifestFileName()) {
 		return nil
 	}
 
-	var manifest meta.ComponentManifest
+	var manifest repository.ComponentManifest
 	if err := p.ReadJSON(p.manifestFileName(), &manifest); err != nil {
 		// The manifest was marshaled and stored by `tiup`, it should
 		// be a valid JSON file
@@ -110,18 +108,18 @@ func (p *Profile) Manifest() *meta.ComponentManifest {
 }
 
 // SaveManifest saves the latest components manifest to local profile
-func (p *Profile) SaveManifest(manifest *meta.ComponentManifest) error {
+func (p *Profile) SaveManifest(manifest *repository.ComponentManifest) error {
 	return p.WriteJSON(p.manifestFileName(), manifest)
 }
 
 // Versions returns the version manifest of specific component
-func (p *Profile) Versions(component string) *meta.VersionManifest {
+func (p *Profile) Versions(component string) *repository.VersionManifest {
 	file := p.versionFileName(component)
 	if p.isNotExist(file) {
 		return nil
 	}
 
-	var manifest meta.VersionManifest
+	var manifest repository.VersionManifest
 	if err := p.ReadJSON(file, &manifest); err != nil {
 		// The manifest was marshaled and stored by `tiup`, it should
 		// be a valid JSON file
@@ -132,7 +130,7 @@ func (p *Profile) Versions(component string) *meta.VersionManifest {
 }
 
 // SaveVersions saves the latest version manifest to local profile of specific component
-func (p *Profile) SaveVersions(component string, manifest *meta.VersionManifest) error {
+func (p *Profile) SaveVersions(component string, manifest *repository.VersionManifest) error {
 	return p.WriteJSON(p.versionFileName(component), manifest)
 }
 
@@ -173,57 +171,4 @@ func (p *Profile) InstalledVersions(component string) ([]string, error) {
 		versions = append(versions, fi.Name())
 	}
 	return versions, nil
-}
-
-// BinaryPath returns the binary path of component specific version
-func (p *Profile) BinaryPath(component string, version meta.Version) (string, error) {
-	manifest := p.Versions(component)
-	if manifest == nil {
-		return "", errors.Errorf("component `%s` doesn't install", component)
-	}
-	var entry string
-	if version.IsNightly() && manifest.Nightly != nil {
-		entry = manifest.Nightly.Entry
-	} else {
-		for _, v := range manifest.Versions {
-			if v.Version == version {
-				entry = v.Entry
-			}
-		}
-	}
-	if entry == "" {
-		return "", errors.Errorf("cannot found entry for %s:%s", component, version)
-	}
-	installPath, err := p.ComponentInstallPath(component, version)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(installPath, entry), nil
-}
-
-// ComponentInstallPath returns the path where the component installed
-func (p *Profile) ComponentInstallPath(component string, version meta.Version) (string, error) {
-	versions, err := p.InstalledVersions(component)
-	if err != nil {
-		return "", err
-	}
-
-	// Use the latest version if user doesn't specify a specific version
-	// report an error if the specific component doesn't be installed
-
-	// Check whether the specific version exist in local
-	if version.IsEmpty() && len(versions) > 0 {
-		sort.Slice(versions, func(i, j int) bool {
-			return semver.Compare(versions[i], versions[j]) < 0
-		})
-		version = meta.Version(versions[len(versions)-1])
-	} else if version.IsEmpty() {
-		return "", fmt.Errorf("Component not installed, please try `tiup install %s` to install it", component)
-	}
-	return filepath.Join(p.root, ComponentParentDir, component, version.String()), nil
-}
-
-// ComponentsDir returns the absolute path of components directory
-func (p *Profile) ComponentsDir() string {
-	return p.Path(ComponentParentDir)
 }

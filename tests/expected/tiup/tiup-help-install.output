@@ -15,5 +15,4 @@ Flags:
   -h, --help   help for install
 
 Global Flags:
-      --mirror mirror        Overwrite default mirror or TIUP_MIRRORS environment variable (default "TIUP_MIRRORS_INTEGRATION_TEST")
       --skip-version-check   Skip the strict version check, by default a version must be a valid SemVer string

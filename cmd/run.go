@@ -22,15 +22,14 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"sort"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap/errors"
-	"golang.org/x/mod/semver"
 )
 
 func runComponent(tag, spec string, args []string, rm bool) error {
@@ -95,17 +94,17 @@ func cleanDataDir(rm bool, dir string) {
 
 func isSupportedComponent(component string) bool {
 	// check local manifest
-	manifest := profile.Manifest()
+	manifest := meta.Profile().Manifest()
 	if manifest != nil && manifest.HasComponent(component) {
 		return true
 	}
 
-	manifest, err := repository.Manifest()
+	manifest, err := meta.Repository().Manifest()
 	if err != nil {
 		fmt.Println("Fetch latest manifest error:", err)
 		return false
 	}
-	if err := profile.SaveManifest(manifest); err != nil {
+	if err := meta.Profile().SaveManifest(manifest); err != nil {
 		fmt.Println("Save latest manifest error:", err)
 	}
 	return manifest.HasComponent(component)
@@ -135,12 +134,17 @@ func base62Tag() string {
 	return string(b)
 }
 
-func launchComponent(ctx context.Context, component string, version meta.Version, tag string, args []string) (*process, error) {
-	binPath, err := downloadIfMissing(component, version)
+func launchComponent(ctx context.Context, component string, version repository.Version, tag string, args []string) (*process, error) {
+	selectVer, err := meta.DownloadComponentIfMissing(component, version)
 	if err != nil {
 		return nil, err
 	}
-	installPath, err := profile.ComponentInstallPath(component, version)
+	binPath, err := meta.BinaryPath(component, selectVer)
+	if err != nil {
+		return nil, err
+	}
+
+	installPath, err := meta.ComponentInstalledDir(component, selectVer)
 	if err != nil {
 		return nil, err
 	}
@@ -151,13 +155,13 @@ func launchComponent(ctx context.Context, component string, version meta.Version
 		if tag == "" {
 			tag = base62Tag()
 		}
-		wd = profile.Path(filepath.Join(localdata.DataParentDir, tag))
+		wd = meta.LocalPath(localdata.DataParentDir, tag)
 	}
 	if err := os.MkdirAll(wd, 0755); err != nil {
 		return nil, err
 	}
 
-	sd := profile.Path(filepath.Join(localdata.StorageParentDir, component))
+	sd := meta.LocalPath(localdata.StorageParentDir, component)
 	if err := os.MkdirAll(sd, 0755); err != nil {
 		return nil, err
 	}
@@ -168,7 +172,7 @@ func launchComponent(ctx context.Context, component string, version meta.Version
 	}
 
 	envs := []string{
-		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
+		fmt.Sprintf("%s=%s", localdata.EnvNameHome, meta.LocalRoot()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameWorkDir, tiupWd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, wd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
@@ -201,57 +205,4 @@ func launchComponent(ctx context.Context, component string, version meta.Version
 		p.Pid = p.cmd.Process.Pid
 	}
 	return p, err
-}
-
-func downloadIfMissing(component string, version meta.Version) (string, error) {
-	versions, err := profile.InstalledVersions(component)
-	if err != nil {
-		return "", err
-	}
-
-	// Use the latest version if user doesn't specify a specific version and
-	// download the latest version if the specific component doesn't be installed
-
-	// Check whether the specific version exist in local
-	if version.IsEmpty() && len(versions) > 0 {
-		sort.Slice(versions, func(i, j int) bool {
-			return semver.Compare(versions[i], versions[j]) < 0
-		})
-		version = meta.Version(versions[len(versions)-1])
-	}
-
-	needDownload := version.IsEmpty()
-	if !version.IsEmpty() {
-		installed := false
-		for _, v := range versions {
-			if meta.Version(v) == version {
-				installed = true
-				break
-			}
-		}
-		needDownload = !installed
-	}
-
-	if needDownload {
-		fmt.Printf("The component `%s` doesn't installed, download from repository\n", component)
-		manifest, err := repository.ComponentVersions(component)
-		if err != nil {
-			return "", errors.Trace(err)
-		}
-		err = profile.SaveVersions(component, manifest)
-		if err != nil {
-			return "", errors.Trace(err)
-		}
-		if version.IsEmpty() {
-			version = manifest.LatestVersion()
-		}
-		compDir := profile.ComponentsDir()
-		spec := fmt.Sprintf("%s:%s", component, version)
-		err = repository.DownloadComponent(compDir, spec)
-		if err != nil {
-			return "", errors.Trace(err)
-		}
-	}
-
-	return profile.BinaryPath(component, version)
 }
