@@ -13,7 +13,12 @@
 
 package task
 
-import "github.com/pingcap-incubator/tiup/pkg/repository"
+import (
+	"os"
+
+	"github.com/pingcap-incubator/tiops/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/repository"
+)
 
 // Builder is used to build TiOps task
 type Builder struct {
@@ -40,6 +45,22 @@ func (b *Builder) UserSSH(host string) *Builder {
 	b.tasks = append(b.tasks, UserSSH{
 		host: host,
 	})
+	return b
+}
+
+// ClusterSSH init all UserSSH need for the cluster.
+func (b *Builder) ClusterSSH(spec *meta.Specification) *Builder {
+	var tasks []Task
+	for _, com := range spec.ComponentsByStartOrder() {
+		for _, in := range com.Instances() {
+			tasks = append(tasks, UserSSH{
+				host: in.GetIP(),
+			})
+		}
+	}
+
+	b.tasks = append(b.tasks, Parallel(tasks))
+
 	return b
 }
 
@@ -84,6 +105,25 @@ func (b *Builder) EnvInit(host string) *Builder {
 	b.tasks = append(b.tasks, &EnvInit{
 		host: host,
 	})
+	return b
+}
+
+// ClusterOperate appends a cluster operation task.
+// All the UserSSH needed must be init first.
+func (b *Builder) ClusterOperate(
+	spec *meta.Specification,
+	op string,
+	role string,
+	nodeID string,
+) *Builder {
+	b.tasks = append(b.tasks, &ClusterOperate{
+		spec:   spec,
+		op:     op,
+		role:   role,
+		nodeID: nodeID,
+		w:      os.Stdout,
+	})
+
 	return b
 }
 

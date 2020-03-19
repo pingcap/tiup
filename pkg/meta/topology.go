@@ -131,14 +131,14 @@ type TopologyGlobalOptions struct {
 // TopologySpecification represents the specification of topology.yaml
 type TopologySpecification struct {
 	//GlobalOptions TopologyGlobalOptions `yaml:"global,omitempty"`
-	TiDBServers  []TiDBSpec       `yaml:"tidb_servers"`
-	TiKVServers  []TiKVSpec       `yaml:"tikv_servers"`
-	PDServers    []PDSpec         `yaml:"pd_servers"`
-	PumpServers  []PumpSpec       `yaml:"pump_servers,omitempty"`
-	Drainers     []DrainerSpec    `yaml:"drainer_servers,omitempty"`
-	MonitorSpec  PrometheusSpec   `yaml:"monitoring_server"`
-	Grafana      GrafanaSpec      `yaml:"grafana_server,omitempty"`
-	Alertmanager AlertManagerSpec `yaml:"alertmanager_server,omitempty"`
+	TiDBServers  []TiDBSpec         `yaml:"tidb_servers"`
+	TiKVServers  []TiKVSpec         `yaml:"tikv_servers"`
+	PDServers    []PDSpec           `yaml:"pd_servers"`
+	PumpServers  []PumpSpec         `yaml:"pump_servers,omitempty"`
+	Drainers     []DrainerSpec      `yaml:"drainer_servers,omitempty"`
+	MonitorSpec  []PrometheusSpec   `yaml:"monitoring_server"`
+	Grafana      []GrafanaSpec      `yaml:"grafana_server,omitempty"`
+	Alertmanager []AlertManagerSpec `yaml:"alertmanager_server,omitempty"`
 }
 
 // UnmarshalYAML sets default values when unmarshaling the topology file

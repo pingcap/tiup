@@ -13,15 +13,39 @@
 
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/pingcap-incubator/tiops/pkg/task"
+	"github.com/pingcap-incubator/tiops/pkg/topology"
+	"github.com/spf13/cobra"
+)
 
 func newStartCmd() *cobra.Command {
+	var (
+		clusterName string
+		role        string
+		node        string
+	)
+
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Start a TiDB cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Help()
+
+			var spec *topology.Specification
+			// TODO get by cluster name
+
+			t := task.NewBuilder().
+				ClusterSSH(spec).
+				ClusterOperate(spec, "start", role, node).
+				Build()
+
+			return t.Execute(task.NewContext())
+
 		},
 	}
+
+	cmd.Flags().StringVar(&clusterName, "cluster_name", "", "cluster name")
+	cmd.Flags().StringVar(&role, "role", "", "role name")
+	cmd.Flags().StringVar(&node, "node-id", "", "node id")
 	return cmd
 }

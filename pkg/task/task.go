@@ -69,6 +69,18 @@ func NewContext() *Context {
 	}
 }
 
+// Get implements operation ExecutorGetter interface.
+func (ctx *Context) Get(host string) (e executor.TiOpsExecutor) {
+	ctx.exec.Lock()
+	e, ok := ctx.exec.executors[host]
+	ctx.exec.Unlock()
+
+	if !ok {
+		panic("no init executor for " + host)
+	}
+	return
+}
+
 // GetExecutor get the executor.
 func (ctx *Context) GetExecutor(host string) (e executor.TiOpsExecutor, ok bool) {
 	ctx.exec.Lock()
