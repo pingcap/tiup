@@ -55,7 +55,7 @@ func init() {
 	profile = localdata.NewProfile(profileDir)
 }
 
-func mirror() string {
+func Mirror() string {
 	if m := os.Getenv("TIUP_MIRRORS"); m != "" {
 		return m
 	}
@@ -66,7 +66,7 @@ func mirror() string {
 func InitRepository(options repository.Options) error {
 	// Initialize the repository
 	// Replace the mirror if some sub-commands use different mirror address
-	mirror := repository.NewMirror(mirror())
+	mirror := repository.NewMirror(Mirror())
 	if err := mirror.Open(); err != nil {
 		return err
 	}

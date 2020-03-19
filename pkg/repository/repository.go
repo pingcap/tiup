@@ -41,11 +41,20 @@ type Repository struct {
 
 // Options represents options for a repository
 type Options struct {
-	SkipVersionCheck bool
+	SkipVersionCheck  bool
+	GOOS              string
+	GOARCH            string
+	DisableDecompress bool
 }
 
 // NewRepository returns a repository instance base on mirror
 func NewRepository(mirror Mirror, opts Options) *Repository {
+	if opts.GOOS == "" {
+		opts.GOOS = runtime.GOOS
+	}
+	if opts.GOARCH == "" {
+		opts.GOARCH = runtime.GOARCH
+	}
 	return &Repository{mirror: mirror, opts: opts}
 }
 
@@ -131,8 +140,8 @@ func (r *Repository) DownloadComponent(compsDir, component string, version Versi
 }
 
 // DownloadFile downloads a file from repository
-func (r Repository) DownloadFile(targetDir, resName string) error {
-	resName = fmt.Sprintf("%s-%s-%s", resName, runtime.GOOS, runtime.GOARCH)
+func (r *Repository) DownloadFile(targetDir, resName string) error {
+	resName = fmt.Sprintf("%s-%s-%s", resName, r.opts.GOOS, r.opts.GOARCH)
 	localPath, err := r.mirror.Fetch(resName + ".tar.gz")
 	if err != nil {
 		return errors.Trace(err)
@@ -166,6 +175,38 @@ func (r Repository) DownloadFile(targetDir, resName string) error {
 
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		return errors.Trace(err)
+	}
+
+	// Copy file to target directory
+	if r.opts.DisableDecompress {
+		buf := make([]byte, 4096)
+		if _, err := tarball.Seek(0, io.SeekStart); err != nil {
+			return errors.Trace(err)
+		}
+		fi, err := tarball.Stat()
+		if err != nil {
+			return errors.Trace(err)
+		}
+		destination, err := os.OpenFile(filepath.Join(targetDir, fi.Name()), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		defer destination.Close()
+
+		for {
+			n, err := tarball.Read(buf)
+			if err != nil && err != io.EOF {
+				return err
+			}
+			if n == 0 {
+				break
+			}
+
+			if _, err := destination.Write(buf[:n]); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 
 	return utils.Untar(localPath, targetDir)
