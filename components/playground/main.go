@@ -22,7 +22,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type ValicationFunc func(interface{}) error
+type validationFunc func(interface{}) error
 
 func defaultTextValidator(interface{}) error { return nil }
 
@@ -56,7 +56,7 @@ func installIfMissing(profile *localdata.Profile, component, version string) err
 	return c.Run()
 }
 
-func promptText(text, defaultValue string, valid ValicationFunc) string {
+func promptText(text, defaultValue string, valid validationFunc) string {
 	fmt.Print(text)
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -73,7 +73,7 @@ func promptText(text, defaultValue string, valid ValicationFunc) string {
 	}
 }
 
-func promptNum(text string, defaultValue int, valid ValicationFunc) int {
+func promptNum(text string, defaultValue int, valid validationFunc) int {
 	fmt.Print(text)
 	reader := bufio.NewReader(os.Stdin)
 	for {
