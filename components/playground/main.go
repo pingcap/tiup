@@ -34,9 +34,6 @@ import (
 	"github.com/spf13/cobra"
 	"go.etcd.io/etcd/clientv3"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/backoff"
-	"google.golang.org/grpc/keepalive"
 )
 
 func installIfMissing(profile *localdata.Profile, component, version string) error {
@@ -383,26 +380,9 @@ func newEtcdClient(endpoint string) (*clientv3.Client, error) {
 	zapCfg.ErrorOutputPaths = []string{"stderr"}
 
 	client, err := clientv3.New(clientv3.Config{
-		Endpoints:        []string{endpoint},
-		AutoSyncInterval: 30 * time.Second,
-		DialTimeout:      5 * time.Second,
-		DialOptions: []grpc.DialOption{
-			grpc.WithConnectParams(grpc.ConnectParams{
-				Backoff: backoff.Config{
-					BaseDelay:  1.0 * time.Second,
-					Multiplier: 1.6,
-					Jitter:     0.2,
-					MaxDelay:   3 * time.Second,
-				},
-				MinConnectTimeout: 20 * time.Second,
-			}),
-			grpc.WithKeepaliveParams(keepalive.ClientParameters{
-				Time:                10 * time.Second,
-				Timeout:             3 * time.Second,
-				PermitWithoutStream: true,
-			}),
-		},
-		LogConfig: &zapCfg,
+		Endpoints:   []string{endpoint},
+		DialTimeout: 5 * time.Second,
+		LogConfig:   &zapCfg,
 	})
 	if err != nil {
 		return nil, err
