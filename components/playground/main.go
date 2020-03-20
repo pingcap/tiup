@@ -33,6 +33,8 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/spf13/cobra"
+	"go.etcd.io/etcd/clientv3"
+	"go.uber.org/zap"
 )
 
 func installIfMissing(profile *localdata.Profile, component, version string) error {
@@ -271,14 +273,15 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 		fmt.Println(color.GreenString("To view the dashboard: http://%s/dashboard", pdAddr))
 	}
 
-	if monitorAddr != "" {
-		addr := fmt.Sprintf("http://%s/pd/api/v1/config", pds[0].Addr())
-		cfg := fmt.Sprintf(`{"metric-storage":"http://%s"}`, monitorAddr)
-		resp, err := http.Post(addr, "", strings.NewReader(cfg))
-		if err != nil || resp.StatusCode != http.StatusOK {
-			fmt.Println("Set the PD metrics storage failed")
+	if monitor && len(pds) != 0 {
+		client, err := newEtcdClient(pds[0].Addr())
+		if err != nil {
+			_, err = client.Put(context.TODO(), "/topology/prometheus", monitorAddr)
+			if err != nil {
+				fmt.Println("Set the PD metrics storage failed")
+			}
+			fmt.Printf(color.GreenString("To view the monitor: http://%s\n", monitorAddr))
 		}
-		fmt.Printf(color.GreenString("To view the monitor: http://%s\n", monitorAddr))
 	}
 
 	dumpDSN(dbs)
@@ -362,6 +365,25 @@ scrape_configs:
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, dir),
 	)
 	return addr, cmd, nil
+}
+
+func newEtcdClient(endpoint string) (*clientv3.Client, error) {
+	// Because etcd client does not support setting logger directly,
+	// the configuration of pingcap/log is copied here.
+	zapCfg := zap.NewProductionConfig()
+	zapCfg.Encoding = "etcd-client"
+	zapCfg.OutputPaths = []string{"stderr"}
+	zapCfg.ErrorOutputPaths = []string{"stderr"}
+
+	client, err := clientv3.New(clientv3.Config{
+		Endpoints:   []string{endpoint},
+		DialTimeout: 5 * time.Second,
+		LogConfig:   &zapCfg,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
 }
 
 func main() {
