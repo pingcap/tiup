@@ -31,11 +31,14 @@ func NewBuilder() *Builder {
 }
 
 // RootSSH appends a RootSSH task to the current task collection
-func (b *Builder) RootSSH(host, keypath, user string) *Builder {
+func (b *Builder) RootSSH(host string, port int, user, password, keyFile, passphrase string) *Builder {
 	b.tasks = append(b.tasks, RootSSH{
-		host:    host,
-		keypath: keypath,
-		user:    user,
+		host:       host,
+		port:       port,
+		user:       user,
+		password:   password,
+		keyFile:    keyFile,
+		passphrase: passphrase,
 	})
 	return b
 }
@@ -83,6 +86,17 @@ func (b *Builder) Download(component string, version repository.Version) *Builde
 	return b
 }
 
+// CopyComponent appends a CopyComponent task to the current task collection
+func (b *Builder) CopyComponent(component string, version repository.Version, dstHost, dstDir string) *Builder {
+	b.tasks = append(b.tasks, &CopyComponent{
+		component: component,
+		version:   version,
+		host:      dstHost,
+		dstDir:    dstDir,
+	})
+	return b
+}
+
 // SSHKeyGen appends a SSHKeyGen task to the current task collection
 func (b *Builder) SSHKeyGen(keypath string) *Builder {
 	b.tasks = append(b.tasks, &SSHKeyGen{
@@ -124,6 +138,15 @@ func (b *Builder) ClusterOperate(
 		w:      os.Stdout,
 	})
 
+	return b
+}
+
+// Mkdir appends a Mkdir task to the current task collection
+func (b *Builder) Mkdir(host string, dirs ...string) *Builder {
+	b.tasks = append(b.tasks, &Mkdir{
+		host: host,
+		dirs: dirs,
+	})
 	return b
 }
 

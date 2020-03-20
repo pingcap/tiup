@@ -22,17 +22,23 @@ const generatedUserName = "tidb"
 
 // RootSSH is used to establish a SSH connection to the target host with specific key
 type RootSSH struct {
-	host    string
-	keypath string
-	user    string
+	host       string // hostname of the SSH server
+	port       int    // port of the SSH server
+	user       string // username to login to the SSH server
+	password   string // password of the user
+	keyFile    string // path to the private key file
+	passphrase string // passphrase of the private key file
 }
 
 // Execute implements the Task interface
 func (s RootSSH) Execute(ctx *Context) error {
 	e, err := executor.NewSSHExecutor(executor.SSHConfig{
-		Host:    s.host,
-		KeyFile: s.keypath,
-		User:    s.user,
+		Host:       s.host,
+		Port:       s.port,
+		User:       s.user,
+		Password:   s.password,
+		KeyFile:    s.keyFile,
+		Passphrase: s.passphrase,
 	})
 
 	if err != nil {

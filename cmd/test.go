@@ -24,7 +24,7 @@ func newTestCmd() *cobra.Command {
 		Short:  "Run shell command on host in the tidb cluster",
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			t := task.NewBuilder().RootSSH("127.0.0.1", "/Users/huangjiahao/.ssh/id_rsa", "huangjiahao").
+			t := task.NewBuilder().RootSSH("127.0.0.1", 22, "root", "", "/Users/huangjiahao/.ssh/id_rsa", "").
 				CopyFile("/tmp/a", "127.0.0.1", "/tmp/b").
 				Build()
 			ctx := task.NewContext()

@@ -13,6 +13,14 @@
 
 package task
 
+import (
+	"fmt"
+	"io/ioutil"
+
+	"github.com/pingcap-incubator/tiops/pkg/module"
+	"github.com/pingcap/errors"
+)
+
 // EnvInit is used to initialize the remote environment, e.g:
 // 1. Generate SSH key
 // 2. ssh-copy-id
@@ -22,7 +30,50 @@ type EnvInit struct {
 
 // Execute implements the Task interface
 func (e *EnvInit) Execute(ctx *Context) error {
-	return ErrUnsupportRollback
+	exec, found := ctx.GetExecutor(e.host)
+	if !found {
+		return ErrNoExecutor
+	}
+
+	um := module.NewUserModule(module.UserModuleConfig{
+		Action: module.UserActionAdd,
+		Name:   generatedUserName,
+	})
+
+	stdout, stderr, err := um.Execute(exec)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	fmt.Println("Create user stdout: ", string(stdout))
+	fmt.Println("Create user stderr: ", string(stderr))
+
+	pubKey, err := ioutil.ReadFile(ctx.PublicKeyPath)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// Authorize
+	cmd := `su - ` + generatedUserName + ` -c 'test -d ~/.ssh || mkdir -p ~/.ssh && chmod 700 ~/.ssh'`
+	stdout, stderr, err = exec.Execute(cmd, false)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	fmt.Println("Create ssh directory stdout: ", string(stdout))
+	fmt.Println("Create ssh directory stderr: ", string(stderr))
+
+	// TODO: don't append pubkey if exists
+	cmd = `su - ` + generatedUserName + ` -c 'echo "` + string(pubKey) + `" >> .ssh/authorized_keys && chmod 700 ~/.ssh/authorized_keys'`
+	stdout, stderr, err = exec.Execute(cmd, false)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	fmt.Println("Add pubkey to `.ssh/authorized_keys` stdout: ", string(stdout))
+	fmt.Println("Add pubkey to `.ssh/authorized_keys` stderr: ", string(stderr))
+
+	return nil
 }
 
 // Rollback implements the Task interface

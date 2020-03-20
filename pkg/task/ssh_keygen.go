@@ -20,6 +20,7 @@ import (
 	"encoding/pem"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/pingcap/errors"
 	"golang.org/x/crypto/ssh"
@@ -109,6 +110,9 @@ func (s *SSHKeyGen) generatePublicKey(privatekey *rsa.PublicKey) ([]byte, error)
 
 // writePemToFile writes keys to a file
 func (s *SSHKeyGen) writeKeyToFile(keyBytes []byte, saveFileTo string) error {
+	if err := os.MkdirAll(filepath.Dir(saveFileTo), 0700); err != nil {
+		return err
+	}
 	return ioutil.WriteFile(saveFileTo, keyBytes, 0600)
 }
 

@@ -191,7 +191,9 @@ func setCustomDefaults(field reflect.Value) error {
 		}
 		field.Set(ref.Elem())
 	case reflect.Ptr:
-		setCustomDefaults(field.Elem())
+		if err := setCustomDefaults(field.Elem()); err != nil {
+			return err
+		}
 	}
 
 	if field.Kind() != reflect.Struct {

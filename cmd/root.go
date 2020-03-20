@@ -28,9 +28,11 @@ func init() {
 	cobra.EnableCommandSorting = false
 
 	rootCmd = &cobra.Command{
-		Use:     "tiops",
-		Short:   "Deploy a TiDB cluster for production",
-		Version: version.NewTiOpsVersion().String(),
+		Use:           "tiops",
+		Short:         "Deploy a TiDB cluster for production",
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		Version:       version.NewTiOpsVersion().String(),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
@@ -54,7 +56,7 @@ func init() {
 // Execute executes the root command
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(color.RedString("Error: %v", err))
+		fmt.Println(color.RedString("Error: %+v", err))
 		os.Exit(1)
 	}
 }

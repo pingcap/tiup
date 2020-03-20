@@ -100,6 +100,7 @@ func (ctx *Context) SetExecutor(host string, e executor.TiOpsExecutor) {
 // Execute implements the Task interface
 func (s Serial) Execute(ctx *Context) error {
 	for _, t := range s {
+		fmt.Println("+", fmt.Sprintf("%T => %+v", t, t))
 		err := t.Execute(ctx)
 		if err != nil {
 			return err
@@ -138,6 +139,7 @@ func (pt Parallel) Execute(ctx *Context) error {
 	for _, t := range pt {
 		wg.Add(1)
 		go func(t Task) {
+			defer wg.Done()
 			err := t.Execute(ctx)
 			if err != nil {
 				mu.Lock()
@@ -147,7 +149,10 @@ func (pt Parallel) Execute(ctx *Context) error {
 		}(t)
 	}
 	wg.Wait()
-	return es
+	if len(es) > 0 {
+		return es
+	}
+	return nil
 }
 
 // Rollback implements the Task interface
@@ -158,6 +163,7 @@ func (pt Parallel) Rollback(ctx *Context) error {
 	for _, t := range pt {
 		wg.Add(1)
 		go func(t Task) {
+			defer wg.Done()
 			err := t.Rollback(ctx)
 			if err != nil {
 				mu.Lock()

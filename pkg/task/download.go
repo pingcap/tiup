@@ -14,8 +14,13 @@
 package task
 
 import (
+	"fmt"
+	"path/filepath"
+
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap/errors"
 )
 
 // Downloader is used to download the specific version of a component from
@@ -27,7 +32,31 @@ type Downloader struct {
 
 // Execute implements the Task interface
 func (d *Downloader) Execute(_ *Context) error {
-	return meta.DownloadComponent(d.component, d.version, false)
+	resName := fmt.Sprintf("%s-%s", d.component, d.version)
+	fileName := fmt.Sprintf("%s-linux-amd64.tar.gz", resName)
+	srcPath := filepath.Join(cacheTarballDir, fileName)
+
+	// Download from repository if not exists
+	if utils.IsNotExist(srcPath) {
+		mirror := repository.NewMirror(meta.Mirror())
+		if err := mirror.Open(); err != nil {
+			return errors.Trace(err)
+		}
+		defer mirror.Close()
+
+		repo := repository.NewRepository(mirror, repository.Options{
+			GOOS:              "linux",
+			GOARCH:            "amd64",
+			DisableDecompress: true,
+		})
+
+		err := repo.DownloadFile(cacheTarballDir, resName)
+		if err != nil {
+			return errors.Trace(err)
+		}
+	}
+
+	return nil
 }
 
 // Rollback implements the Task interface

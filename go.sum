@@ -140,6 +140,8 @@ github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi
 github.com/pierrec/lz4 v2.2.6+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
 github.com/pingcap-incubator/tiup v0.0.0-20200319053350-d863b746175e h1:C+Kawl6PmDFm380QgJGzjzBsU0LXzcsxwR/1LAY9m/0=
 github.com/pingcap-incubator/tiup v0.0.0-20200319053350-d863b746175e/go.mod h1:0k67A97rJJp9qsA0KpBMnyybuVgvhL7Imdmlo0w+DCU=
+github.com/pingcap-incubator/tiup v0.0.2-0.20200319053350-d863b746175e h1:R8lTjf5ttyUVWCPlzSkAp5Tu8m6WTTujVZOhDb4BWfY=
+github.com/pingcap-incubator/tiup v0.0.2-0.20200319053350-d863b746175e/go.mod h1:0k67A97rJJp9qsA0KpBMnyybuVgvhL7Imdmlo0w+DCU=
 github.com/pingcap/check v0.0.0-20190102082844-67f458068fc8/go.mod h1:B1+S9LNcuMyLH/4HMTViQOJevkGiik3wW2AN9zb2fNQ=
 github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712 h1:R8gStypOBmpnHEx1qi//SaqxJVI4inOqljg/Aj5/390=
 github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712/go.mod h1:PYMCGwN0JHjoqGr3HrZoD+b8Tgx8bKnArhSq8YVzUMc=

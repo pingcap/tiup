@@ -70,7 +70,7 @@ func NewUserModule(config UserModuleConfig) *UserModule {
 		cmd = fmt.Sprintf("%s %s", cmd, config.Name)
 
 		// prevent errors when username already in use
-		cmd = fmt.Sprintf("%s || [ $? -eq 9]", cmd)
+		cmd = fmt.Sprintf("id -u %s 2>&1 > /dev/null || %s", config.Name, cmd)
 
 		// add user to sudoers list
 		if config.Sudoer {
