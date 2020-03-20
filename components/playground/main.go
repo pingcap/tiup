@@ -273,9 +273,9 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 		fmt.Println(color.GreenString("To view the dashboard: http://%s/dashboard", pdAddr))
 	}
 
-	if monitor && len(pds) != 0 {
+	if monitorAddr != "" && len(pds) != 0 {
 		client, err := newEtcdClient(pds[0].Addr())
-		if err != nil {
+		if err == nil {
 			_, err = client.Put(context.TODO(), "/topology/prometheus", monitorAddr)
 			if err != nil {
 				fmt.Println("Set the PD metrics storage failed")
