@@ -272,14 +272,15 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 		fmt.Println(color.GreenString("To view the dashboard: http://%s/dashboard", pdAddr))
 	}
 
-	if monitorAddr != "" {
-		addr := fmt.Sprintf("http://%s/pd/api/v1/config", pds[0].Addr())
-		cfg := fmt.Sprintf(`{"metric-storage":"http://%s"}`, monitorAddr)
-		resp, err := http.Post(addr, "", strings.NewReader(cfg))
-		if err != nil || resp.StatusCode != http.StatusOK {
-			fmt.Println("Set the PD metrics storage failed")
+	if monitor && len(pds) != 0 {
+		client, err := newEtcdClient(pds[0].Addr())
+		if err != nil {
+			_, err = client.Put(context.TODO(), "/topology/prometheus", monitorAddr)
+			if err != nil {
+				fmt.Println("Set the PD metrics storage failed")
+			}
+			fmt.Printf(color.GreenString("To view the monitor: http://%s\n", monitorAddr))
 		}
-		fmt.Printf(color.GreenString("To view the monitor: http://%s\n", monitorAddr))
 	}
 
 	dumpDSN(dbs)
@@ -287,12 +288,6 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 	for _, inst := range all {
 		if err := inst.Wait(); err != nil {
 			return err
-		}
-	}
-	if monitor && len(pds) != 0 {
-		client, err := newEtcdClient(pds[0].Addr())
-		if err != nil {
-			_, _ = client.Put(context.TODO(), "/topology/prometheus", monitorAddr)
 		}
 	}
 	return nil
