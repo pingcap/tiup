@@ -14,10 +14,15 @@
 package meta
 
 import (
-	//"fmt"
+	"fmt"
+	"io/ioutil"
 	"reflect"
+	"strings"
 
 	"github.com/creasty/defaults"
+	"github.com/pingcap-incubator/tiops/pkg/utils"
+	"github.com/pingcap/errors"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -26,7 +31,7 @@ const (
 
 // TiDBSpec represents the TiDB topology specification in topology.yaml
 type TiDBSpec struct {
-	IP         string `yaml:"ip"`
+	Host       string `yaml:"host"`
 	Port       int    `yaml:"port" default:"4000"`
 	StatusPort int    `yaml:"status_port" default:"10080"`
 	UUID       string `yaml:"uuid,omitempty"`
@@ -37,7 +42,7 @@ type TiDBSpec struct {
 
 // TiKVSpec represents the TiKV topology specification in topology.yaml
 type TiKVSpec struct {
-	IP         string   `yaml:"ip"`
+	Host       string   `yaml:"host"`
 	Port       int      `yaml:"port" default:"20160"`
 	StatusPort int      `yaml:"status_port" default:"20180"`
 	UUID       string   `yaml:"uuid,omitempty"`
@@ -51,7 +56,7 @@ type TiKVSpec struct {
 
 // PDSpec represents the PD topology specification in topology.yaml
 type PDSpec struct {
-	IP         string `yaml:"ip"`
+	Host       string `yaml:"host"`
 	ClientPort int    `yaml:"client_port" default:"2379"`
 	PeerPort   int    `yaml:"peer_port" default:"2380"`
 	UUID       string `yaml:"uuid,omitempty"`
@@ -63,7 +68,7 @@ type PDSpec struct {
 
 // PumpSpec represents the Pump topology specification in topology.yaml
 type PumpSpec struct {
-	IP        string `yaml:"ip"`
+	Host      string `yaml:"host"`
 	Port      int    `yaml:"port" default:"8250"`
 	UUID      string `yaml:"uuid,omitempty"`
 	SSHPort   int    `yaml:"ssh_port,omitempty" default:"22"`
@@ -75,7 +80,7 @@ type PumpSpec struct {
 
 // DrainerSpec represents the Drainer topology specification in topology.yaml
 type DrainerSpec struct {
-	IP        string `yaml:"ip"`
+	Host      string `yaml:"host"`
 	Port      int    `yaml:"port" default:"8249"`
 	UUID      string `yaml:"uuid,omitempty"`
 	SSHPort   int    `yaml:"ssh_port,omitempty" default:"22"`
@@ -88,7 +93,7 @@ type DrainerSpec struct {
 
 // PrometheusSpec represents the Prometheus Server topology specification in topology.yaml
 type PrometheusSpec struct {
-	IP        string `yaml:"ip"`
+	Host      string `yaml:"host"`
 	Port      int    `yaml:"port" default:"9090"`
 	UUID      string `yaml:"uuid,omitempty"`
 	SSHPort   int    `yaml:"ssh_port,omitempty" default:"22"`
@@ -98,7 +103,7 @@ type PrometheusSpec struct {
 
 // GrafanaSpec represents the Grafana topology specification in topology.yaml
 type GrafanaSpec struct {
-	IP        string `yaml:"ip"`
+	Host      string `yaml:"host"`
 	Port      int    `yaml:"port" default:"3000"`
 	UUID      string `yaml:"uuid,omitempty"`
 	SSHPort   int    `yaml:"ssh_port,omitempty" default:"22"`
@@ -107,7 +112,7 @@ type GrafanaSpec struct {
 
 // AlertManagerSpec represents the AlertManager topology specification in topology.yaml
 type AlertManagerSpec struct {
-	IP          string `yaml:"ip"`
+	Host        string `yaml:"host"`
 	WebPort     int    `yaml:"web_port" default:"9093"`
 	ClusterPort int    `yaml:"cluster_port" default:"9094"`
 	UUID        string `yaml:"uuid,omitempty"`
@@ -202,23 +207,67 @@ func setCustomDefaults(field reflect.Value) error {
 
 	for j := 0; j < field.NumField(); j++ {
 		switch field.Type().Field(j).Name {
-		case "IP":
+		case "Host":
 			if field.Field(j).String() == "" {
 				// TODO: remove empty server from topology
 			}
 		case "UUID":
-			// TODO: generate UUID if not set
-		case "DeployDir":
-			// fill default path for empty value
-			if defaults.CanUpdate(field.Field(j).Interface()) {
-				field.Field(j).Set(reflect.ValueOf("/home/tidb/deploy"))
+			if field.Field(j).String() == "" {
+				field.Field(j).Set(reflect.ValueOf(getNodeID(field)))
 			}
-		case "DataDir":
+		case "DeployDir", "DataDir":
+			if field.Field(j).String() != "" {
+				continue
+			}
+
+			// fill default path for empty value, default paths are reletive
+			// ones, when using the value, remember to check and fill base
+			// paths of them.
 			if defaults.CanUpdate(field.Field(j).Interface()) {
-				field.Field(j).Set(reflect.ValueOf("/home/tidb/data"))
+				role := strings.TrimSuffix(field.Type().Name(), "Spec")
+				dir := fmt.Sprintf("%s-%s",
+					strings.ToLower(role),
+					getNodeID(field))
+				field.Field(j).Set(reflect.ValueOf(dir))
 			}
 		}
 	}
 
 	return nil
+}
+
+// getNodeID tries to build an UUID from the node's Host and service port
+func getNodeID(v reflect.Value) string {
+	host := ""
+	port := ""
+
+	for i := 0; i < v.NumField(); i++ {
+		switch v.Type().Field(i).Name {
+		case "UUID": // return if UUID is already set
+			if v.Field(i).String() != "" {
+				return v.Field(i).String()
+			}
+		case "Host":
+			host = v.Field(i).String()
+		case "Port", "ClientPort", "WebPort":
+			port = v.Field(i).String()
+		}
+	}
+	return utils.UUID(fmt.Sprintf("%s:%s", host, port))
+}
+
+// ClusterTopology tries to read the topology of a cluster from file
+func ClusterTopology(clusterName string) (*TopologySpecification, error) {
+	var topo TopologySpecification
+	topoFile := utils.GetClusterPath(clusterName, TopologyFileName)
+
+	yamlFile, err := ioutil.ReadFile(topoFile)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if err = yaml.Unmarshal(yamlFile, &topo); err != nil {
+		return nil, errors.Trace(err)
+	}
+	return &topo, nil
 }

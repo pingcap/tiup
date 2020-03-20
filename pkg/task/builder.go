@@ -57,7 +57,7 @@ func (b *Builder) ClusterSSH(spec *meta.Specification) *Builder {
 	for _, com := range spec.ComponentsByStartOrder() {
 		for _, in := range com.Instances() {
 			tasks = append(tasks, UserSSH{
-				host: in.GetIP(),
+				host: in.GetHost(),
 			})
 		}
 	}

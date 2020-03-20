@@ -115,23 +115,23 @@ func deploy(name, topoFile string, opt deployOptions) error {
 			}
 
 			// Initialize environment
-			if !uniqueHosts.Exist(inst.GetIP()) {
-				uniqueHosts.Insert(inst.GetIP())
+			if !uniqueHosts.Exist(inst.GetHost()) {
+				uniqueHosts.Insert(inst.GetHost())
 				t := task.NewBuilder().
-					RootSSH(inst.GetIP(), inst.GetSSHPort(), opt.user, opt.password, opt.keyFile, opt.passphrase).
-					EnvInit(inst.GetIP()).
-					UserSSH(inst.GetIP()).
+					RootSSH(inst.GetHost(), inst.GetSSHPort(), opt.user, opt.password, opt.keyFile, opt.passphrase).
+					EnvInit(inst.GetHost()).
+					UserSSH(inst.GetHost()).
 					Build()
 				envInitTasks = append(envInitTasks, t)
 			}
 
 			// Deploy component
 			t := task.NewBuilder().
-				Mkdir(inst.GetIP(),
+				Mkdir(inst.GetHost(),
 					filepath.Join("~/deply", inst.InstanceName(), "bin"),
 					filepath.Join("~/deply", inst.InstanceName(), "data"),
 					filepath.Join("~/deply", inst.InstanceName(), "logs")).
-				CopyComponent(inst.ComponentName(), version, inst.GetIP(),
+				CopyComponent(inst.ComponentName(), version, inst.GetHost(),
 					filepath.Join("~/deply", inst.InstanceName(), "bin")).
 				Build()
 			copyCompTasks = append(copyCompTasks, t)

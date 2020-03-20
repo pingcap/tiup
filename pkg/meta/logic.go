@@ -65,8 +65,8 @@ func (i *instanceBase) ServiceName() string {
 	return fmt.Sprintf("%s.service", i.name)
 }
 
-// GetIP implements Instance interface
-func (i *instanceBase) GetIP() string {
+// GetHost implements Instance interface
+func (i *instanceBase) GetHost() string {
 	return i.host
 }
 
@@ -92,7 +92,7 @@ func (c TiDBComponent) Instances() []Instance {
 	for _, s := range c {
 		ins = append(ins, &instanceBase{
 			name: c.Name(),
-			host: s.IP,
+			host: s.Host,
 			port: s.Port,
 			sshp: s.SSHPort,
 			spec: s,
@@ -115,7 +115,7 @@ func (c TiKVComponent) Instances() []Instance {
 	for _, s := range c {
 		ins = append(ins, &instanceBase{
 			name: c.Name(),
-			host: s.IP,
+			host: s.Host,
 			port: s.Port,
 			sshp: s.SSHPort,
 			spec: s,
@@ -138,7 +138,7 @@ func (c PDComponent) Instances() []Instance {
 	for _, s := range c {
 		ins = append(ins, &instanceBase{
 			name: c.Name(),
-			host: s.IP,
+			host: s.Host,
 			port: s.ClientPort,
 			sshp: s.SSHPort,
 			spec: s,
@@ -161,7 +161,7 @@ func (c PumpComponent) Instances() []Instance {
 	for _, s := range c {
 		ins = append(ins, &instanceBase{
 			name: c.Name(),
-			host: s.IP,
+			host: s.Host,
 			port: s.Port,
 			sshp: s.SSHPort,
 			spec: s,
@@ -184,7 +184,7 @@ func (c DrainerComponent) Instances() []Instance {
 	for _, s := range c {
 		ins = append(ins, &instanceBase{
 			name: c.Name(),
-			host: s.IP,
+			host: s.Host,
 			port: s.Port,
 			sshp: s.SSHPort,
 			spec: s,
@@ -207,7 +207,7 @@ func (c MonitorComponent) Instances() []Instance {
 	for _, s := range c {
 		ins = append(ins, &instanceBase{
 			name: c.Name(),
-			host: s.IP,
+			host: s.Host,
 			port: s.Port,
 			sshp: s.SSHPort,
 			spec: s,
@@ -230,7 +230,7 @@ func (c GrafanaComponent) Instances() []Instance {
 	for _, s := range c {
 		ins = append(ins, &instanceBase{
 			name: c.Name(),
-			host: s.IP,
+			host: s.Host,
 			port: s.Port,
 			sshp: s.SSHPort,
 			spec: s,
@@ -253,7 +253,7 @@ func (c AlertmanagerComponent) Instances() []Instance {
 	for _, s := range c {
 		ins = append(ins, &instanceBase{
 			name: c.Name(),
-			host: s.IP,
+			host: s.Host,
 			sshp: s.SSHPort,
 			spec: s,
 		})
@@ -283,7 +283,7 @@ type Component interface {
 	Instances() []Instance
 }
 
-// pd may need check this
+// pd may need to check this
 // url="http://{{ ansible_host }}:{{ client_port }}/health"
 // other just check pont is listen
 
@@ -293,6 +293,6 @@ type Instance interface {
 	ComponentName() string
 	InstanceName() string
 	ServiceName() string
-	GetIP() string
+	GetHost() string
 	GetSSHPort() int
 }

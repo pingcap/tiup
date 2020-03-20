@@ -49,6 +49,7 @@ func init() {
 		newUpgradeCmd(),
 		newReloadCmd(),
 		newExecCmd(),
+		newDisplayCmd(),
 		newTestCmd(),
 	)
 }

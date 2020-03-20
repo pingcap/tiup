@@ -14,15 +14,12 @@
 package utils
 
 import (
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path"
 
-	"github.com/pingcap-incubator/tiops/pkg/meta"
 	tiuplocaldata "github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap/errors"
-	"gopkg.in/yaml.v2"
 )
 
 // GetProfileDir returns the full profile directory path of TiOps. If the
@@ -83,36 +80,4 @@ func getHomeDir() (string, error) {
 		return "", errors.Trace(err)
 	}
 	return u.HomeDir, nil
-}
-
-// ReadClusterTopology tries to read the topology of a cluster from file
-func ReadClusterTopology(cluster string) (*meta.TopologySpecification, error) {
-	var topo meta.TopologySpecification
-	topoFile := GetClusterPath(cluster, meta.TopologyFileName)
-
-	yamlFile, err := ioutil.ReadFile(topoFile)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	if err = yaml.Unmarshal(yamlFile, &topo); err != nil {
-		return nil, errors.Trace(err)
-	}
-	return &topo, nil
-}
-
-// ReadClusterMeta tries to read the metadata of a cluster from file
-func ReadClusterMeta(cluster string) (*meta.ClusterMeta, error) {
-	var cm meta.ClusterMeta
-	topoFile := GetClusterPath(cluster, meta.MetaFileName)
-
-	yamlFile, err := ioutil.ReadFile(topoFile)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	if err = yaml.Unmarshal(yamlFile, &cm); err != nil {
-		return nil, errors.Trace(err)
-	}
-	return &cm, nil
 }

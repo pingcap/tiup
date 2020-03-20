@@ -13,6 +13,14 @@
 
 package meta
 
+import (
+	"io/ioutil"
+
+	"github.com/pingcap-incubator/tiops/pkg/utils"
+	"github.com/pingcap/errors"
+	"gopkg.in/yaml.v2"
+)
+
 const (
 	MetaFileName = "meta.yaml"
 )
@@ -23,4 +31,20 @@ type ClusterMeta struct {
 	Version string `yaml:"tidb_version"` // the version of TiDB cluster
 	//EnableTLS      bool   `yaml:"enable_tls"`
 	//EnableFirewall bool   `yaml:"firewall"`
+}
+
+// ClusterMetadata tries to read the metadata of a cluster from file
+func ClusterMetadata(clusterName string) (*ClusterMeta, error) {
+	var cm ClusterMeta
+	topoFile := utils.GetClusterPath(clusterName, MetaFileName)
+
+	yamlFile, err := ioutil.ReadFile(topoFile)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if err = yaml.Unmarshal(yamlFile, &cm); err != nil {
+		return nil, errors.Trace(err)
+	}
+	return &cm, nil
 }
