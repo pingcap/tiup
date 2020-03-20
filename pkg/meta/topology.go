@@ -26,6 +26,7 @@ import (
 )
 
 const (
+	// TopologyFileName is the file name of the topology file.
 	TopologyFileName = "topology.yaml"
 )
 

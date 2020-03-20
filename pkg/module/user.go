@@ -22,7 +22,9 @@ import (
 const (
 	defaultShell = "/bin/bash"
 
+	// UserActionAdd add user.
 	UserActionAdd = "add"
+	// UserActionDel delete user.
 	UserActionDel = "del"
 	//UserActionModify = "modify"
 

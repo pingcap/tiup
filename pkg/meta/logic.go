@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	"github.com/pingcap-incubator/tiops/pkg/executor"
+	"github.com/pingcap-incubator/tiops/pkg/module"
 )
 
 const (
@@ -31,6 +32,24 @@ const (
 	ComponentPrometheus   = "prometheus"
 )
 
+func portStarted(e executor.TiOpsExecutor, port int) error {
+	c := module.WaitForConfig{
+		Port:  port,
+		State: "started",
+	}
+	w := module.NewWaitFor(c)
+	return w.Execute(e)
+}
+
+func portStopped(e executor.TiOpsExecutor, port int) error {
+	c := module.WaitForConfig{
+		Port:  port,
+		State: "stopped",
+	}
+	w := module.NewWaitFor(c)
+	return w.Execute(e)
+}
+
 type instanceBase struct {
 	name string
 	host string
@@ -40,8 +59,13 @@ type instanceBase struct {
 }
 
 // Ready implements Instance interface
-func (i *instanceBase) Ready(executor.TiOpsExecutor) error {
-	return nil
+func (i *instanceBase) Ready(e executor.TiOpsExecutor) error {
+	return portStarted(e, i.port)
+}
+
+// WaitForDown implements Instance interface
+func (i *instanceBase) WaitForDown(e executor.TiOpsExecutor) error {
+	return portStopped(e, i.port)
 }
 
 // ComponentName implements Instance interface
@@ -283,13 +307,10 @@ type Component interface {
 	Instances() []Instance
 }
 
-// pd may need to check this
-// url="http://{{ ansible_host }}:{{ client_port }}/health"
-// other just check pont is listen
-
 // Instance represents the instance.
 type Instance interface {
 	Ready(executor.TiOpsExecutor) error
+	WaitForDown(executor.TiOpsExecutor) error
 	ComponentName() string
 	InstanceName() string
 	ServiceName() string

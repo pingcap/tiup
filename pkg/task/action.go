@@ -43,16 +43,19 @@ func (c *ClusterOperate) Execute(ctx *Context) error {
 		if err != nil {
 			return errors.Annotate(err, "failed to start")
 		}
+		operator.PrintClusterStatus(ctx, c.w, c.spec)
 	case "stop":
 		err := operator.Stop(ctx, c.w, c.spec, c.role, c.nodeID)
 		if err != nil {
 			return errors.Annotate(err, "failed to stop")
 		}
+		operator.PrintClusterStatus(ctx, c.w, c.spec)
 	case "restart":
 		err := operator.Restart(ctx, c.w, c.spec, c.role, c.nodeID)
 		if err != nil {
 			return errors.Annotate(err, "failed to restart")
 		}
+		operator.PrintClusterStatus(ctx, c.w, c.spec)
 	case "destroy":
 		fallthrough
 	default:

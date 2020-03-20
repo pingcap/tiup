@@ -14,8 +14,8 @@
 package cmd
 
 import (
+	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiops/pkg/task"
-	"github.com/pingcap-incubator/tiops/pkg/topology"
 	"github.com/spf13/cobra"
 )
 
@@ -31,8 +31,10 @@ func newStopCmd() *cobra.Command {
 		Short: "Stop a TiDB cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			var spec *topology.Specification
-			// TODO get by cluster name
+			spec, err := meta.ClusterTopology(clusterName)
+			if err != nil {
+				return err
+			}
 
 			t := task.NewBuilder().
 				ClusterSSH(spec).
