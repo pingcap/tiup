@@ -164,7 +164,6 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 			return err
 		}
 	}
-
 	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
 	if dataDir == "" {
 		return fmt.Errorf("cannot read environment variable %s", localdata.EnvNameInstanceDataDir)
@@ -371,7 +370,6 @@ func newEtcdClient(endpoint string) (*clientv3.Client, error) {
 	// Because etcd client does not support setting logger directly,
 	// the configuration of pingcap/log is copied here.
 	zapCfg := zap.NewProductionConfig()
-	zapCfg.Encoding = "etcd-client"
 	zapCfg.OutputPaths = []string{"stderr"}
 	zapCfg.ErrorOutputPaths = []string{"stderr"}
 
