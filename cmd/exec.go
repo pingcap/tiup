@@ -13,15 +13,53 @@
 
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"os"
+
+	"github.com/pingcap-incubator/tiops/pkg/meta"
+	"github.com/pingcap-incubator/tiops/pkg/task"
+	"github.com/spf13/cobra"
+)
+
+type execOptions struct {
+	command string
+	sudo    bool
+	//role string
+	//node string
+}
 
 func newExecCmd() *cobra.Command {
+	opt := execOptions{}
 	cmd := &cobra.Command{
-		Use:   "exec",
+		Use:   "exec <cluster-name>",
 		Short: "Run shell command on host in the tidb cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Help()
+			if len(args) != 1 {
+				return cmd.Help()
+			}
+			spec, err := meta.ClusterTopology(os.Args[1])
+			if err != nil {
+				return err
+			}
+
+			var shellTasks []task.Task
+			for _, comp := range spec.ComponentsByStartOrder() {
+				for _, inst := range comp.Instances() {
+					t := task.NewBuilder().
+						UserSSH(inst.GetHost()).
+						Shell(inst.GetHost(), opt.command, opt.sudo).
+						Build()
+					shellTasks = append(shellTasks, t)
+				}
+			}
+			t := task.NewBuilder().
+				Parallel(shellTasks...).
+				Build()
+			return t.Execute(task.NewContext())
 		},
 	}
+
+	cmd.Flags().StringVar(&opt.command, "command", "ls", "the command run on cluster host")
+	cmd.Flags().BoolVar(&opt.sudo, "sudo", false, "use root permissions (default false)")
 	return cmd
 }

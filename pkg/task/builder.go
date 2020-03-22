@@ -150,6 +150,16 @@ func (b *Builder) Mkdir(host string, dirs ...string) *Builder {
 	return b
 }
 
+// Run command on cluster host
+func (b *Builder) Shell(host, command string, sudo bool) *Builder {
+	b.tasks = append(b.tasks, &Shell{
+		host:    host,
+		command: command,
+		sudo:    false,
+	})
+	return b
+}
+
 // Parallel appends a parallel task to the current task collection
 func (b *Builder) Parallel(tasks ...Task) *Builder {
 	b.tasks = append(b.tasks, Parallel(tasks))
