@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"golang.org/x/crypto/ssh"
 )
@@ -35,6 +36,14 @@ type SSHKeyGen struct {
 func (s *SSHKeyGen) Execute(ctx *Context) error {
 	savePrivateFileTo := s.keypath
 	savePublicFileTo := s.keypath + ".pub"
+
+	// Skip ssh key generate
+	if utils.IsExist(savePrivateFileTo) && utils.IsExist(savePublicFileTo) {
+		ctx.PublicKeyPath = savePublicFileTo
+		ctx.PrivateKeyPath = savePrivateFileTo
+		return nil
+	}
+
 	bitSize := 4096
 
 	privateKey, err := s.generatePrivateKey(bitSize)

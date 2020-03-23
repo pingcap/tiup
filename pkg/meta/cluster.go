@@ -16,7 +16,6 @@ package meta
 import (
 	"io/ioutil"
 
-	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/pingcap/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -37,7 +36,7 @@ type ClusterMeta struct {
 // ClusterMetadata tries to read the metadata of a cluster from file
 func ClusterMetadata(clusterName string) (*ClusterMeta, error) {
 	var cm ClusterMeta
-	topoFile := utils.GetClusterPath(clusterName, MetaFileName)
+	topoFile := ClusterPath(clusterName, MetaFileName)
 
 	yamlFile, err := ioutil.ReadFile(topoFile)
 	if err != nil {

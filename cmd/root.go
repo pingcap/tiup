@@ -18,6 +18,7 @@ import (
 	"os"
 
 	"github.com/fatih/color"
+	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiops/pkg/version"
 	"github.com/spf13/cobra"
 )
@@ -33,6 +34,9 @@ func init() {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       version.NewTiOpsVersion().String(),
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			return meta.Initialize()
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},

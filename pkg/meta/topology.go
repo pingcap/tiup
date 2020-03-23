@@ -222,20 +222,31 @@ func setCustomDefaults(field reflect.Value) error {
 				continue
 			}
 
-			// fill default path for empty value, default paths are reletive
+			// fill default path for empty value, default paths are relative
 			// ones, when using the value, remember to check and fill base
 			// paths of them.
 			if defaults.CanUpdate(field.Field(j).Interface()) {
 				role := strings.TrimSuffix(field.Type().Name(), "Spec")
 				dir := fmt.Sprintf("%s-%s",
 					strings.ToLower(role),
-					getNodeID(field))
+					getPort(field))
 				field.Field(j).Set(reflect.ValueOf(dir))
 			}
 		}
 	}
 
 	return nil
+}
+
+// getNodeID tries to build an UUID from the node's Host and service port
+func getPort(v reflect.Value) string {
+	for i := 0; i < v.NumField(); i++ {
+		switch v.Type().Field(i).Name {
+		case "Port", "ClientPort", "WebPort":
+			return fmt.Sprintf("%d", v.Field(i).Int())
+		}
+	}
+	return ""
 }
 
 // getNodeID tries to build an UUID from the node's Host and service port
@@ -261,7 +272,7 @@ func getNodeID(v reflect.Value) string {
 // ClusterTopology tries to read the topology of a cluster from file
 func ClusterTopology(clusterName string) (*TopologySpecification, error) {
 	var topo TopologySpecification
-	topoFile := utils.GetClusterPath(clusterName, TopologyFileName)
+	topoFile := ClusterPath(clusterName, TopologyFileName)
 
 	yamlFile, err := ioutil.ReadFile(topoFile)
 	if err != nil {

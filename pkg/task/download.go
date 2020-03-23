@@ -15,9 +15,9 @@ package task
 
 import (
 	"fmt"
-	"path/filepath"
 
-	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiops/pkg/meta"
+	tiupmeta "github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
@@ -34,11 +34,11 @@ type Downloader struct {
 func (d *Downloader) Execute(_ *Context) error {
 	resName := fmt.Sprintf("%s-%s", d.component, d.version)
 	fileName := fmt.Sprintf("%s-linux-amd64.tar.gz", resName)
-	srcPath := filepath.Join(cacheTarballDir, fileName)
+	srcPath := meta.ProfilePath(meta.TiOpsPackageCacheDir, fileName)
 
 	// Download from repository if not exists
 	if utils.IsNotExist(srcPath) {
-		mirror := repository.NewMirror(meta.Mirror())
+		mirror := repository.NewMirror(tiupmeta.Mirror())
 		if err := mirror.Open(); err != nil {
 			return errors.Trace(err)
 		}
@@ -50,7 +50,7 @@ func (d *Downloader) Execute(_ *Context) error {
 			DisableDecompress: true,
 		})
 
-		err := repo.DownloadFile(cacheTarballDir, resName)
+		err := repo.DownloadFile(meta.ProfilePath(meta.TiOpsPackageCacheDir), resName)
 		if err != nil {
 			return errors.Trace(err)
 		}

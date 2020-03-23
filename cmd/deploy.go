@@ -151,14 +151,15 @@ func deploy(name, topoFile string, opt deployOptions) error {
 					filepath.Join(deployDir, "config"),
 					filepath.Join(deployDir, "scripts"),
 					filepath.Join(deployDir, "logs")).
-				CopyComponent(topo, inst.ComponentName(), version, inst.GetHost(), deployDir).
+				CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
+				CopyConfig(name, &topo, inst.ComponentName(), inst.GetHost(), deployDir).
 				Build()
 			copyCompTasks = append(copyCompTasks, t)
 		}
 	}
 
 	t := task.NewBuilder().
-		SSHKeyGen(filepath.Join("ssh", name, "id_rsa")).
+		SSHKeyGen(meta.ClusterPath(name, "ssh", "id_rsa")).
 		Parallel(envInitTasks...).
 		Parallel(downloadCompTasks...).
 		Parallel(copyCompTasks...).
