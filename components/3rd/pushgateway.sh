@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-COMPONENT="node_exporter"
-VERSION="0.18.1"
+COMPONENT="pushgateway"
+VERSION="1.2.0"
 DIRECTORY=$(cd $(dirname "$0") && pwd)
 
 echo "==> $DIRECTORY"
@@ -13,7 +13,7 @@ do
   wget https://github.com/prometheus/$COMPONENT/releases/download/v$VERSION/$COMPONENT-$VERSION.$p-amd64.tar.gz
   tar -zxf $COMPONENT-$VERSION.$p-amd64.tar.gz
   mv $COMPONENT-$VERSION.$p-amd64 $COMPONENT
-  tiup package "$COMPONENT" --arch amd64 --os "$p" --desc "Exporter for machine metrics" --entry "$COMPONENT/$COMPONENT" --name $COMPONENT --release "v$VERSION"
+  tiup package "$COMPONENT" --arch amd64 --os "$p" --desc "Push acceptor for ephemeral and batch jobs" --entry "$COMPONENT/$COMPONENT" --name $COMPONENT --release "v$VERSION"
 
   cd "$DIRECTORY"
   rm -rf "$COMPONENT"
