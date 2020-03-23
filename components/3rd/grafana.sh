@@ -15,7 +15,7 @@ do
   tiup package "." --arch amd64 --os "$p" --desc "Grafana is the open source analytics & monitoring solution for every database" --entry "bin/grafana" --name grafana --release "v$VERSION"
 
   # Update to CDN
-  rm -f ~/.qshell/qupload/
+  rm -rf ~/.qshell/qupload/
   qshell account $ACCESSKEY $SECRETKEY $QINIUNAME
   qshell qupload2 --src-dir=package/ --bucket=tiup-mirrors --overwrite
 
