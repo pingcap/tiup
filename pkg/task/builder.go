@@ -87,8 +87,9 @@ func (b *Builder) Download(component string, version repository.Version) *Builde
 }
 
 // CopyComponent appends a CopyComponent task to the current task collection
-func (b *Builder) CopyComponent(component string, version repository.Version, dstHost, dstDir string) *Builder {
+func (b *Builder) CopyComponent(topo meta.TopologySpecification, component string, version repository.Version, dstHost, dstDir string) *Builder {
 	b.tasks = append(b.tasks, &CopyComponent{
+		topology:  topo,
 		component: component,
 		version:   version,
 		host:      dstHost,

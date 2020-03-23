@@ -67,6 +67,10 @@ func getComponentVersion(comp, version string) repository.Version {
 	switch comp {
 	case meta.ComponentPrometheus: // TODO: other components
 		return "v2.16.0"
+	case meta.ComponentMonitor:
+		return ""
+	case meta.ComponentGrafana:
+		return ""
 	default:
 		return repository.Version(version)
 	}
@@ -100,6 +104,9 @@ func deploy(name, topoFile string, opt deployOptions) error {
 	for _, comp := range topo.ComponentsByStartOrder() {
 		for _, inst := range comp.Instances() {
 			version := getComponentVersion(inst.ComponentName(), opt.version)
+			if version == "" {
+				continue
+			}
 			compInfo := componentInfo{
 				component: inst.ComponentName(),
 				version:   version,
@@ -130,9 +137,11 @@ func deploy(name, topoFile string, opt deployOptions) error {
 				Mkdir(inst.GetHost(),
 					filepath.Join("~/deply", inst.InstanceName(), "bin"),
 					filepath.Join("~/deply", inst.InstanceName(), "data"),
+					filepath.Join("~/deply", inst.InstanceName(), "config"),
+					filepath.Join("~/deply", inst.InstanceName(), "scripts"),
 					filepath.Join("~/deply", inst.InstanceName(), "logs")).
-				CopyComponent(inst.ComponentName(), version, inst.GetHost(),
-					filepath.Join("~/deply", inst.InstanceName(), "bin")).
+				CopyComponent(topo, inst.ComponentName(), version, inst.GetHost(),
+					filepath.Join("~/deply", inst.InstanceName())).
 				Build()
 			copyCompTasks = append(copyCompTasks, t)
 		}

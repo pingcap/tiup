@@ -1,0 +1,77 @@
+// Copyright 2020 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package scripts
+
+import (
+	"bytes"
+	"io/ioutil"
+	"os"
+	"path"
+	"text/template"
+
+	"github.com/pingcap-incubator/tiup/pkg/localdata"
+)
+
+// BlackboxExporterScript represent the data to generate BlackboxExporter config
+type BlackboxExporterScript struct {
+	Port      uint64
+	DeployDir string
+	NumaNode  string
+}
+
+// NewBlackboxExporterScript returns a BlackboxExporterScript with given arguments
+func NewBlackboxExporterScript(deployDir string) *BlackboxExporterScript {
+	return &BlackboxExporterScript{
+		Port:      9099,
+		DeployDir: deployDir,
+	}
+}
+
+// WithPort set WebPort field of BlackboxExporterScript
+func (c *BlackboxExporterScript) WithPort(port uint64) *BlackboxExporterScript {
+	c.Port = port
+	return c
+}
+
+// WithNumaNode set NumaNode field of BlackboxExporterScript
+func (c *BlackboxExporterScript) WithNumaNode(numa string) *BlackboxExporterScript {
+	c.NumaNode = numa
+	return c
+}
+
+// Config read ${localdata.EnvNameComponentInstallDir}/templates/scripts/run_blackbox_exporter.sh.tpl as template
+// and generate the config by ConfigWithTemplate
+func (c *BlackboxExporterScript) Config() (string, error) {
+	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "scripts", "run_blackbox_exporter.sh.tpl")
+	tpl, err := ioutil.ReadFile(fp)
+	if err != nil {
+		return "", err
+	}
+	return c.ConfigWithTemplate(string(tpl))
+}
+
+// ConfigWithTemplate generate the BlackboxExporter config content by tpl
+func (c *BlackboxExporterScript) ConfigWithTemplate(tpl string) (string, error) {
+	tmpl, err := template.New("BlackboxExporter").Parse(tpl)
+	if err != nil {
+		return "", err
+	}
+
+	content := bytes.NewBufferString("")
+	if err := tmpl.Execute(content, c); err != nil {
+		return "", err
+	}
+
+	return content.String(), nil
+}

@@ -57,6 +57,7 @@ type TiKVSpec struct {
 
 // PDSpec represents the PD topology specification in topology.yaml
 type PDSpec struct {
+	Name       string `yaml:"name"`
 	Host       string `yaml:"host"`
 	ClientPort int    `yaml:"client_port" default:"2379"`
 	PeerPort   int    `yaml:"peer_port" default:"2380"`
