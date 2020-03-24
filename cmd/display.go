@@ -15,44 +15,160 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
+	"reflect"
+	"strings"
 
-	//"github.com/pingcap-incubator/tiops/pkg/task"
+	"github.com/fatih/color"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
+	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 )
 
 func newDisplayCmd() *cobra.Command {
 	var (
-		//clusterName  string
-		topologyFile string
+		clusterName string
+		showStatus  bool
 	)
 
 	cmd := &cobra.Command{
-		Use:    "display",
+		Use:    "display <cluster> [OPTIONS]",
 		Short:  "Display information of a TiDB cluster",
 		Hidden: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			var topo meta.TopologySpecification
-
-			yamlFile, err := ioutil.ReadFile(topologyFile)
-			if err != nil {
-				return err
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) < 1 {
+				cmd.Help()
+				return fmt.Errorf("cluster name not specified")
 			}
-
-			if err = yaml.Unmarshal(yamlFile, &topo); err != nil {
-				return err
-			}
-
-			topoData, err := yaml.Marshal(topo)
-			fmt.Printf("%s", topoData)
+			clusterName = args[0]
 			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := displayClusterMeta(clusterName); err != nil {
+				return err
+			}
+			return displayClusterTopology(clusterName, showStatus)
 		},
 	}
 
-	//cmd.Flags().StringVar(&clusterName, "name", "", "name of TiDB cluster")
-	cmd.Flags().StringVar(&topologyFile, "topology", "", "path to the topology file")
+	cmd.Flags().BoolVarP(&showStatus, "status", "s", false, "test and show current node status")
 
 	return cmd
+}
+func displayClusterMeta(name string) error {
+	clsMeta, err := meta.ClusterMetadata(name)
+	if err != nil {
+		return err
+	}
+
+	cyan := color.New(color.FgCyan, color.Bold)
+
+	fmt.Printf("TiDB Cluster: %s\n", cyan.Sprint(name))
+	fmt.Printf("TiDB Version: %s\n", cyan.Sprint(clsMeta.Version))
+
+	return nil
+}
+
+func displayClusterTopology(name string, showStatus bool) error {
+	clsTopo, err := meta.ClusterTopology(name)
+	if err != nil {
+		return err
+	}
+
+	var clusterTable [][]string
+	if showStatus {
+		clusterTable = append(clusterTable,
+			[]string{"ID",
+				"Role",
+				"Host",
+				"Ports",
+				"Status",
+				"Data Dir",
+				"Deploy Dir"})
+	} else {
+		clusterTable = append(clusterTable,
+			[]string{"ID",
+				"Role",
+				"Host",
+				"Ports",
+				"Data Dir",
+				"Deploy Dir"})
+	}
+
+	v := reflect.ValueOf(*clsTopo)
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		subTable, err := buildTable(v.Field(i), showStatus)
+		if err != nil {
+			continue
+		}
+		clusterTable = append(clusterTable, subTable...)
+	}
+
+	utils.PrintTable(clusterTable, true)
+
+	return nil
+}
+
+func buildTable(field reflect.Value, showStatus bool) ([][]string, error) {
+	var resTable [][]string
+
+	switch field.Kind() {
+	case reflect.Slice:
+		for i := 0; i < field.Len(); i++ {
+			subTable, err := buildTable(field.Index(i), showStatus)
+			if err != nil {
+				return nil, err
+			}
+			resTable = append(resTable, subTable...)
+		}
+	case reflect.Ptr:
+		subTable, err := buildTable(field.Elem(), showStatus)
+		if err != nil {
+			return nil, err
+		}
+		resTable = append(resTable, subTable...)
+	case reflect.Struct:
+		ins := field.Interface().(meta.InstanceSpec)
+
+		dataDir := "-"
+		insDirs := ins.GetDir()
+		deployDir := insDirs[0]
+		if len(insDirs) > 1 {
+			dataDir = insDirs[1]
+		}
+
+		if showStatus {
+			resTable = append(resTable, []string{
+				color.CyanString(ins.GetID()),
+				ins.Role(),
+				ins.GetHost(),
+				utils.JoinInt(ins.GetPort(), "/"),
+				formatInstanceStatus(ins.GetStatus()),
+				dataDir,
+				deployDir,
+			})
+		} else {
+			resTable = append(resTable, []string{
+				color.CyanString(ins.GetID()),
+				ins.Role(),
+				ins.GetHost(),
+				utils.JoinInt(ins.GetPort(), "/"),
+				dataDir,
+				deployDir,
+			})
+		}
+	}
+
+	return resTable, nil
+}
+
+func formatInstanceStatus(status string) string {
+	switch strings.ToLower(status) {
+	case "up":
+		return color.GreenString(status)
+	case "down", "offline", "tombstone":
+		return color.RedString(status)
+	default:
+		return status
+	}
 }

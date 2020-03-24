@@ -23,8 +23,10 @@ import (
 	"github.com/pingcap/errors"
 )
 
+// sub directory names
 const (
 	TiOpsPackageCacheDir = "packages"
+	TiOpsClusterDir      = "clusters"
 )
 
 var profileDir string
@@ -39,7 +41,10 @@ func getHomeDir() (string, error) {
 	return u.HomeDir, nil
 }
 
-// Initialize initializes the global variables of meta package
+// Initialize initializes the global variables of meta package. If the
+// environment variable TIUP_COMPONENT_DATA_DIR is set, it is used as root of
+// the profile directory, otherwise the `$HOME/.tiops` of current user is used.
+// The directory will be created before return if it does not already exist.
 func Initialize() error {
 	tiupData := os.Getenv(tiuplocaldata.EnvNameComponentDataDir)
 	if tiupData == "" {
@@ -56,14 +61,12 @@ func Initialize() error {
 	return utils.CreateDir(profileDir)
 }
 
-// ProfileDir returns the full profile directory path of TiOps. If the
-// environment variable TIUP_COMPONENT_DATA_DIR is set, it is used as root of
-// the profile directory, otherwise the `$HOME/.tiops` of current user is used.
-// The directory will be created before return if it does not already exist.
+// ProfileDir returns the full profile directory path of TiOps.
 func ProfileDir() string {
 	return profileDir
 }
 
+// ProfilePath joins a path under the profile dir
 func ProfilePath(subpath ...string) string {
 	return path.Join(append([]string{profileDir}, subpath...)...)
 }
@@ -79,5 +82,9 @@ func ClusterPath(cluster string, subpath ...string) string {
 		cluster = "default-cluster"
 	}
 
-	return path.Join(append([]string{profileDir, cluster}, subpath...)...)
+	return path.Join(append([]string{
+		profileDir,
+		TiOpsClusterDir,
+		cluster,
+	}, subpath...)...)
 }

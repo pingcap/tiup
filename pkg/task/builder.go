@@ -162,7 +162,7 @@ func (b *Builder) Mkdir(host string, dirs ...string) *Builder {
 	return b
 }
 
-// Run command on cluster host
+// Shell command on cluster host
 func (b *Builder) Shell(host, command string, sudo bool) *Builder {
 	b.tasks = append(b.tasks, &Shell{
 		host:    host,

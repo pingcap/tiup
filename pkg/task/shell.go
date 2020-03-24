@@ -15,15 +15,15 @@ package task
 
 import (
 	"fmt"
-	
+
 	"github.com/pingcap/errors"
 )
 
-// Mkdir is used to create directory on the target host
+// Shell is used to create directory on the target host
 type Shell struct {
-	host string
+	host    string
 	command string
-	sudo bool
+	sudo    bool
 }
 
 // Execute implements the Task interface

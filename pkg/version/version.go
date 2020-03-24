@@ -33,18 +33,23 @@ var (
 
 // TiOpsVersion is the semver of TiOps
 type TiOpsVersion struct {
-	major int
-	minor int
-	patch int
-	name  string
+	major     int
+	minor     int
+	patch     int
+	gitBranch string
+	gitHash   string
+	goVersion string
 }
 
 // NewTiOpsVersion creates a TiOpsVersion object
 func NewTiOpsVersion() *TiOpsVersion {
 	return &TiOpsVersion{
-		major: TiOpsVerMajor,
-		minor: TiOpsVerMinor,
-		patch: TiOpsVerPatch,
+		major:     TiOpsVerMajor,
+		minor:     TiOpsVerMinor,
+		patch:     TiOpsVerPatch,
+		gitBranch: GitBranch,
+		gitHash:   GitHash,
+		goVersion: runtime.Version(),
 	}
 }
 
@@ -55,26 +60,14 @@ func (v *TiOpsVersion) SemVer() string {
 
 // String converts TiOpsVersion to a string
 func (v *TiOpsVersion) String() string {
-	return fmt.Sprintf("v%d.%d.%d", v.major, v.minor, v.patch)
+	return v.SemVer()
 }
 
-// TiOpsBuild is the info of building environment
-type TiOpsBuild struct {
-	GitHash   string `json:"gitHash"`
-	GitBranch string `json:"gitBranch"`
-	GoVersion string `json:"goVersion"`
-}
-
-// NewTiOpsBuildInfo creates a TiOpsBuild object
-func NewTiOpsBuildInfo() *TiOpsBuild {
-	return &TiOpsBuild{
-		GitHash:   GitHash,
-		GitBranch: GitBranch,
-		GoVersion: runtime.Version(),
-	}
-}
-
-// String converts TiOpsBuild to a string
-func (v *TiOpsBuild) String() string {
-	return fmt.Sprintf("%s %s(%s)", v.GoVersion, v.GitBranch, v.GitHash)
+// FullInfo returns full version and build info
+func (v *TiOpsVersion) FullInfo() string {
+	return fmt.Sprintf("%s (%s/%s) %s",
+		v.String(),
+		v.gitBranch,
+		v.gitHash,
+		v.goVersion)
 }

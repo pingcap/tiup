@@ -33,7 +33,7 @@ func init() {
 		Short:         "Deploy a TiDB cluster for production",
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		Version:       version.NewTiOpsVersion().String(),
+		Version:       version.NewTiOpsVersion().FullInfo(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			return meta.Initialize()
 		},
