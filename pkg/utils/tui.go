@@ -14,9 +14,6 @@
 package utils
 
 import (
-	"strconv"
-	"strings"
-
 	"github.com/AstroProfundis/tabby"
 )
 
@@ -47,14 +44,4 @@ func addRow(t *tabby.Tabby, rawLine []string, header bool) {
 	} else {
 		t.AddLine(row...)
 	}
-}
-
-// JoinInt joins a slice of int to string
-func JoinInt(nums []int, delim string) string {
-	result := ""
-	for _, i := range nums {
-		result += strconv.Itoa(i)
-		result += delim
-	}
-	return strings.TrimSuffix(result, delim)
 }

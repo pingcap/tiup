@@ -16,14 +16,14 @@ package task
 import (
 	"io"
 
+	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
-	"github.com/pingcap-incubator/tiops/pkg/topology"
 	"github.com/pingcap/errors"
 )
 
 // ClusterOperate represents the cluster operation task.
 type ClusterOperate struct {
-	spec *topology.Specification
+	spec *meta.Specification
 	// valid op:
 	// start
 	// stop

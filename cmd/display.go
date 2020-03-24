@@ -24,58 +24,63 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type displayOption struct {
+	clusterName string
+	showStatus  bool
+	filterRole  []string
+	filterNode  []string
+}
+
 func newDisplayCmd() *cobra.Command {
-	var (
-		clusterName string
-		showStatus  bool
-	)
+	opt := displayOption{}
 
 	cmd := &cobra.Command{
-		Use:    "display <cluster> [OPTIONS]",
-		Short:  "Display information of a TiDB cluster",
-		Hidden: true,
+		Use:   "display <cluster> [OPTIONS]",
+		Short: "Display information of a TiDB cluster",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
 				cmd.Help()
 				return fmt.Errorf("cluster name not specified")
 			}
-			clusterName = args[0]
+			opt.clusterName = args[0]
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := displayClusterMeta(clusterName); err != nil {
+			if err := displayClusterMeta(&opt); err != nil {
 				return err
 			}
-			return displayClusterTopology(clusterName, showStatus)
+			return displayClusterTopology(&opt)
 		},
 	}
 
-	cmd.Flags().BoolVarP(&showStatus, "status", "s", false, "test and show current node status")
+	cmd.Flags().BoolVarP(&opt.showStatus, "status", "s", false, "test and show current node status")
+	cmd.Flags().StringSliceVar(&opt.filterRole, "role", nil, "only display nodes of specific roles")
+	cmd.Flags().StringSliceVar(&opt.filterNode, "node", nil, "only display nodes of specific IDs")
 
 	return cmd
 }
-func displayClusterMeta(name string) error {
-	clsMeta, err := meta.ClusterMetadata(name)
+func displayClusterMeta(opt *displayOption) error {
+	clsMeta, err := meta.ClusterMetadata(opt.clusterName)
 	if err != nil {
 		return err
 	}
 
 	cyan := color.New(color.FgCyan, color.Bold)
 
-	fmt.Printf("TiDB Cluster: %s\n", cyan.Sprint(name))
+	fmt.Printf("TiDB Cluster: %s\n", cyan.Sprint(opt.clusterName))
 	fmt.Printf("TiDB Version: %s\n", cyan.Sprint(clsMeta.Version))
 
 	return nil
 }
 
-func displayClusterTopology(name string, showStatus bool) error {
-	clsTopo, err := meta.ClusterTopology(name)
+func displayClusterTopology(opt *displayOption) error {
+	clsTopo, err := meta.ClusterTopology(opt.clusterName)
 	if err != nil {
 		return err
 	}
 
 	var clusterTable [][]string
-	if showStatus {
+	if opt.showStatus {
 		clusterTable = append(clusterTable,
 			[]string{"ID",
 				"Role",
@@ -95,9 +100,9 @@ func displayClusterTopology(name string, showStatus bool) error {
 	}
 
 	v := reflect.ValueOf(*clsTopo)
-	t := v.Type()
-	for i := 0; i < t.NumField(); i++ {
-		subTable, err := buildTable(v.Field(i), showStatus)
+	pdList := clsTopo.GetPDList()
+	for i := 0; i < v.NumField(); i++ {
+		subTable, err := buildTable(v.Field(i), opt, pdList)
 		if err != nil {
 			continue
 		}
@@ -109,26 +114,35 @@ func displayClusterTopology(name string, showStatus bool) error {
 	return nil
 }
 
-func buildTable(field reflect.Value, showStatus bool) ([][]string, error) {
+func buildTable(field reflect.Value, opt *displayOption, pdList []string) ([][]string, error) {
 	var resTable [][]string
 
 	switch field.Kind() {
 	case reflect.Slice:
 		for i := 0; i < field.Len(); i++ {
-			subTable, err := buildTable(field.Index(i), showStatus)
+			subTable, err := buildTable(field.Index(i), opt, pdList)
 			if err != nil {
 				return nil, err
 			}
 			resTable = append(resTable, subTable...)
 		}
 	case reflect.Ptr:
-		subTable, err := buildTable(field.Elem(), showStatus)
+		subTable, err := buildTable(field.Elem(), opt, pdList)
 		if err != nil {
 			return nil, err
 		}
 		resTable = append(resTable, subTable...)
 	case reflect.Struct:
 		ins := field.Interface().(meta.InstanceSpec)
+
+		// filter by role
+		if opt.filterRole != nil && !utils.InSlice(ins.Role(), opt.filterRole) {
+			return nil, nil
+		}
+		// filter by node
+		if opt.filterNode != nil && !utils.InSlice(ins.GetID(), opt.filterNode) {
+			return nil, nil
+		}
 
 		dataDir := "-"
 		insDirs := ins.GetDir()
@@ -137,13 +151,13 @@ func buildTable(field reflect.Value, showStatus bool) ([][]string, error) {
 			dataDir = insDirs[1]
 		}
 
-		if showStatus {
+		if opt.showStatus {
 			resTable = append(resTable, []string{
 				color.CyanString(ins.GetID()),
 				ins.Role(),
 				ins.GetHost(),
 				utils.JoinInt(ins.GetPort(), "/"),
-				formatInstanceStatus(ins.GetStatus()),
+				formatInstanceStatus(ins.GetStatus(pdList...)),
 				dataDir,
 				deployDir,
 			})
@@ -164,9 +178,11 @@ func buildTable(field reflect.Value, showStatus bool) ([][]string, error) {
 
 func formatInstanceStatus(status string) string {
 	switch strings.ToLower(status) {
-	case "up":
+	case "up", "healthy":
 		return color.GreenString(status)
-	case "down", "offline", "tombstone":
+	case "healthy|l": // PD leader
+		return color.HiGreenString(status)
+	case "down", "unhealthy", "offline", "tombstone", "err":
 		return color.RedString(status)
 	default:
 		return status
