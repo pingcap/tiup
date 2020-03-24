@@ -55,6 +55,8 @@ func init() {
 	profile = localdata.NewProfile(profileDir)
 }
 
+// Mirror return mirror of tiup.
+// If it's not defined, it will use "https://tiup-mirrors.pingcap.com/".
 func Mirror() string {
 	if m := os.Getenv("TIUP_MIRRORS"); m != "" {
 		return m
