@@ -477,9 +477,9 @@ type TopologySpecification struct {
 	PDServers    []PDSpec           `yaml:"pd_servers"`
 	PumpServers  []PumpSpec         `yaml:"pump_servers,omitempty"`
 	Drainers     []DrainerSpec      `yaml:"drainer_servers,omitempty"`
-	MonitorSpec  []PrometheusSpec   `yaml:"monitoring_server"`
-	Grafana      []GrafanaSpec      `yaml:"grafana_server,omitempty"`
-	Alertmanager []AlertManagerSpec `yaml:"alertmanager_server,omitempty"`
+	MonitorSpec  []PrometheusSpec   `yaml:"monitoring_servers"`
+	Grafana      []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
+	Alertmanager []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
 }
 
 // UnmarshalYAML sets default values when unmarshaling the topology file
