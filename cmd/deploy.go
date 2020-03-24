@@ -27,9 +27,15 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type componentInfo struct {
+	component string
+	version   repository.Version
+}
+
 type deployOptions struct {
 	version    string // version of the cluster
 	user       string // username to login to the SSH server
+	deployUser string // username of deploy tidb
 	password   string // password of the user
 	keyFile    string // path to the private key file
 	passphrase string // passphrase of the private key file
@@ -53,6 +59,7 @@ func newDeploy() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&opt.user, "user", "root", "Specify the system user name")
+	cmd.Flags().StringVarP(&opt.deployUser, "deploy-user", "d", "tidb", "Specify the user name of deploy cluster")
 	cmd.Flags().StringVar(&opt.password, "password", "", "Specify the password of system user")
 	cmd.Flags().StringVar(&opt.keyFile, "key", "", "Specify the key path of system user")
 	cmd.Flags().StringVar(&opt.passphrase, "passphrase", "", "Specify the passphrase of the key")
@@ -94,11 +101,6 @@ func deploy(name, topoFile string, opt deployOptions) error {
 		return errors.Trace(err)
 	}
 
-	type componentInfo struct {
-		component string
-		version   repository.Version
-	}
-
 	var (
 		envInitTasks      []task.Task // tasks which are used to initialize environment
 		downloadCompTasks []task.Task // tasks which are used to download components
@@ -133,15 +135,15 @@ func deploy(name, topoFile string, opt deployOptions) error {
 				uniqueHosts.Insert(inst.GetHost())
 				t := task.NewBuilder().
 					RootSSH(inst.GetHost(), inst.GetSSHPort(), opt.user, opt.password, opt.keyFile, opt.passphrase).
-					EnvInit(inst.GetHost()).
-					UserSSH(inst.GetHost()).
+					EnvInit(inst.GetHost(), opt.deployUser).
+					UserSSH(inst.GetHost(), opt.deployUser).
 					Build()
 				envInitTasks = append(envInitTasks, t)
 			}
 
 			deployDir := inst.DeployDir()
 			if !strings.HasPrefix(deployDir, "/") {
-				deployDir = filepath.Join("/home/tidb/deploy", deployDir)
+				deployDir = filepath.Join("/home/"+opt.deployUser+"/deploy", deployDir)
 			}
 			// Deploy component
 			t := task.NewBuilder().
@@ -165,5 +167,13 @@ func deploy(name, topoFile string, opt deployOptions) error {
 		Parallel(copyCompTasks...).
 		Build()
 
-	return t.Execute(task.NewContext())
+	if err := t.Execute(task.NewContext()); err != nil {
+		return errors.Trace(err)
+	}
+
+	return meta.SaveClusterMeta(name, &meta.ClusterMeta{
+		User:     opt.deployUser,
+		Version:  opt.version,
+		Topology: &topo,
+	})
 }

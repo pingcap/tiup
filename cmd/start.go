@@ -30,14 +30,14 @@ func newStartCmd() *cobra.Command {
 		Use:   "start",
 		Short: "Start a TiDB cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			spec, err := meta.ClusterTopology(clusterName)
+			metadata, err := meta.ClusterMetadata(clusterName)
 			if err != nil {
 				return err
 			}
 
 			t := task.NewBuilder().
-				ClusterSSH(spec).
-				ClusterOperate(spec, "start", role, node).
+				ClusterSSH(metadata.Topology, metadata.User).
+				ClusterOperate(metadata.Topology, "start", role, node).
 				Build()
 
 			return t.Execute(task.NewContext())

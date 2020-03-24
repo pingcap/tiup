@@ -15,7 +15,9 @@ package meta
 
 import (
 	"io/ioutil"
+	"os"
 
+	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/pingcap/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -31,6 +33,28 @@ type ClusterMeta struct {
 	Version string `yaml:"tidb_version"` // the version of TiDB cluster
 	//EnableTLS      bool   `yaml:"enable_tls"`
 	//EnableFirewall bool   `yaml:"firewall"`
+
+	Topology *TopologySpecification `yaml:"topology"`
+}
+
+func SaveClusterMeta(clusterName string, meta *ClusterMeta) error {
+	metaFile := ClusterPath(clusterName, MetaFileName)
+
+	// Make sure the cluster path exists
+	if err := utils.CreateDir(ClusterPath(clusterName)); err != nil {
+		return errors.Trace(err)
+	}
+
+	f, err := os.OpenFile(metaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	defer f.Close()
+
+	if err := yaml.NewEncoder(f).Encode(meta); err != nil {
+		return errors.Trace(err)
+	}
+	return nil
 }
 
 // ClusterMetadata tries to read the metadata of a cluster from file
@@ -47,4 +71,13 @@ func ClusterMetadata(clusterName string) (*ClusterMeta, error) {
 		return nil, errors.Trace(err)
 	}
 	return &cm, nil
+}
+
+// ClusterTopology tries to read the topology of a cluster from file
+func ClusterTopology(clusterName string) (*TopologySpecification, error) {
+	meta, err := ClusterMetadata(clusterName)
+	if err != nil {
+		return nil, err
+	}
+	return meta.Topology, nil
 }

@@ -37,16 +37,16 @@ func newExecCmd() *cobra.Command {
 			if len(args) != 1 {
 				return cmd.Help()
 			}
-			spec, err := meta.ClusterTopology(os.Args[1])
+			metadata, err := meta.ClusterMetadata(os.Args[1])
 			if err != nil {
 				return err
 			}
 
 			var shellTasks []task.Task
-			for _, comp := range spec.ComponentsByStartOrder() {
+			for _, comp := range metadata.Topology.ComponentsByStartOrder() {
 				for _, inst := range comp.Instances() {
 					t := task.NewBuilder().
-						UserSSH(inst.GetHost()).
+						UserSSH(inst.GetHost(), metadata.User).
 						Shell(inst.GetHost(), opt.command, opt.sudo).
 						Build()
 					shellTasks = append(shellTasks, t)

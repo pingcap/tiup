@@ -18,8 +18,6 @@ import (
 	"github.com/pingcap/errors"
 )
 
-const generatedUserName = "tidb"
-
 // RootSSH is used to establish a SSH connection to the target host with specific key
 type RootSSH struct {
 	host       string // hostname of the SSH server
@@ -59,7 +57,8 @@ func (s RootSSH) Rollback(ctx *Context) error {
 
 // UserSSH is used to establish a SSH connection to the target host with generated key
 type UserSSH struct {
-	host string
+	host       string
+	deployUser string
 }
 
 // Execute implements the Task interface
@@ -67,7 +66,7 @@ func (s UserSSH) Execute(ctx *Context) error {
 	e, err := executor.NewSSHExecutor(executor.SSHConfig{
 		Host:    s.host,
 		KeyFile: ctx.PrivateKeyPath,
-		User:    generatedUserName,
+		User:    s.deployUser,
 	})
 
 	if err != nil {

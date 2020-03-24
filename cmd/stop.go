@@ -30,15 +30,14 @@ func newStopCmd() *cobra.Command {
 		Use:   "stop",
 		Short: "Stop a TiDB cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			spec, err := meta.ClusterTopology(clusterName)
+			metadata, err := meta.ClusterMetadata(clusterName)
 			if err != nil {
 				return err
 			}
 
 			t := task.NewBuilder().
-				ClusterSSH(spec).
-				ClusterOperate(spec, "stop", role, node).
+				ClusterSSH(metadata.Topology, metadata.User).
+				ClusterOperate(metadata.Topology, "stop", role, node).
 				Build()
 
 			return t.Execute(task.NewContext())

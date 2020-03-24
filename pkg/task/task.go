@@ -20,6 +20,7 @@ import (
 	"sync"
 
 	"github.com/pingcap-incubator/tiops/pkg/executor"
+	"github.com/pingcap-incubator/tiup/pkg/repository"
 )
 
 var (
@@ -36,18 +37,25 @@ type (
 		Rollback(ctx *Context) error
 	}
 
+	manifestCache struct {
+		sync.RWMutex
+		manifests map[string]*repository.VersionManifest
+	}
+
 	// Context is used to share state while multiple tasks execution.
 	// We should use mutex to prevent concurrent R/W for some fields
 	// because of the same context can be shared in parallel tasks.
 	Context struct {
 		exec struct {
-			sync.Mutex
+			sync.RWMutex
 			executors map[string]executor.TiOpsExecutor
 		}
 
 		// The public/private key is used to access remote server via the user `tidb`
 		PrivateKeyPath string
 		PublicKeyPath  string
+
+		manifestCache manifestCache
 	}
 
 	// Serial will execute a bundle of task in serialized way
@@ -61,10 +69,13 @@ type (
 func NewContext() *Context {
 	return &Context{
 		exec: struct {
-			sync.Mutex
+			sync.RWMutex
 			executors map[string]executor.TiOpsExecutor
 		}{
 			executors: make(map[string]executor.TiOpsExecutor),
+		},
+		manifestCache: manifestCache{
+			manifests: map[string]*repository.VersionManifest{},
 		},
 	}
 }
@@ -83,9 +94,9 @@ func (ctx *Context) Get(host string) (e executor.TiOpsExecutor) {
 
 // GetExecutor get the executor.
 func (ctx *Context) GetExecutor(host string) (e executor.TiOpsExecutor, ok bool) {
-	ctx.exec.Lock()
+	ctx.exec.RLock()
 	e, ok = ctx.exec.executors[host]
-	ctx.exec.Unlock()
+	ctx.exec.RUnlock()
 	return
 }
 
@@ -94,6 +105,22 @@ func (ctx *Context) SetExecutor(host string, e executor.TiOpsExecutor) {
 	ctx.exec.Lock()
 	ctx.exec.executors[host] = e
 	ctx.exec.Unlock()
+	return
+}
+
+// GetManifest get the manifest of specific component.
+func (ctx *Context) GetManifest(comp string) (m *repository.VersionManifest, ok bool) {
+	ctx.manifestCache.RLock()
+	m, ok = ctx.manifestCache.manifests[comp]
+	ctx.manifestCache.RUnlock()
+	return
+}
+
+// SetManifest set the manifest of specific component
+func (ctx *Context) SetManifest(comp string, m *repository.VersionManifest) {
+	ctx.manifestCache.Lock()
+	ctx.manifestCache.manifests[comp] = m
+	ctx.manifestCache.Unlock()
 	return
 }
 

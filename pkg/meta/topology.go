@@ -15,18 +15,10 @@ package meta
 
 import (
 	"fmt"
-	"io/ioutil"
 	"reflect"
 
 	"github.com/creasty/defaults"
 	"github.com/pingcap-incubator/tiops/pkg/utils"
-	"github.com/pingcap/errors"
-	"gopkg.in/yaml.v2"
-)
-
-const (
-	// TopologyFileName is the file name of the topology file.
-	TopologyFileName = "topology.yaml"
 )
 
 // Roles of components
@@ -608,20 +600,4 @@ func getNodeID(v reflect.Value) string {
 		}
 	}
 	return utils.UUID(fmt.Sprintf("%s:%s", host, port))
-}
-
-// ClusterTopology tries to read the topology of a cluster from file
-func ClusterTopology(clusterName string) (*TopologySpecification, error) {
-	var topo TopologySpecification
-	topoFile := ClusterPath(clusterName, TopologyFileName)
-
-	yamlFile, err := ioutil.ReadFile(topoFile)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	if err = yaml.Unmarshal(yamlFile, &topo); err != nil {
-		return nil, errors.Trace(err)
-	}
-	return &topo, nil
 }

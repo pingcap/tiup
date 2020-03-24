@@ -44,20 +44,22 @@ func (b *Builder) RootSSH(host string, port int, user, password, keyFile, passph
 }
 
 // UserSSH append a UserSSH task to the current task collection
-func (b *Builder) UserSSH(host string) *Builder {
+func (b *Builder) UserSSH(host, deployUser string) *Builder {
 	b.tasks = append(b.tasks, UserSSH{
-		host: host,
+		host:       host,
+		deployUser: deployUser,
 	})
 	return b
 }
 
 // ClusterSSH init all UserSSH need for the cluster.
-func (b *Builder) ClusterSSH(spec *meta.Specification) *Builder {
+func (b *Builder) ClusterSSH(spec *meta.Specification, deployUser string) *Builder {
 	var tasks []Task
 	for _, com := range spec.ComponentsByStartOrder() {
 		for _, in := range com.Instances() {
 			tasks = append(tasks, UserSSH{
-				host: in.GetHost(),
+				host:       in.GetHost(),
+				deployUser: deployUser,
 			})
 		}
 	}
@@ -97,6 +99,17 @@ func (b *Builder) CopyComponent(component string, version repository.Version, ds
 	return b
 }
 
+// BackupComponent appends a BackupComponent task to the current task collection
+func (b *Builder) BackupComponent(component, fromVer string, dstHost, dstDir string) *Builder {
+	b.tasks = append(b.tasks, &BackupComponent{
+		component: component,
+		fromVer:   fromVer,
+		host:      dstHost,
+		dstDir:    dstDir,
+	})
+	return b
+}
+
 // CopyConfig appends a CopyComponent task to the current task collection
 func (b *Builder) CopyConfig(name string, topo *meta.TopologySpecification, component, dstHost string, srvPort int, dstDir string) *Builder {
 	b.tasks = append(b.tasks, &CopyConfig{
@@ -128,9 +141,10 @@ func (b *Builder) SSHKeySet(privKeyPath, pubKeyPath string) *Builder {
 }
 
 // EnvInit appends a EnvInit task to the current task collection
-func (b *Builder) EnvInit(host string) *Builder {
+func (b *Builder) EnvInit(host, deployUser string) *Builder {
 	b.tasks = append(b.tasks, &EnvInit{
-		host: host,
+		host:       host,
+		deployUser: deployUser,
 	})
 	return b
 }

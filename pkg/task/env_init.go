@@ -25,7 +25,8 @@ import (
 // 1. Generate SSH key
 // 2. ssh-copy-id
 type EnvInit struct {
-	host string
+	host       string
+	deployUser string
 }
 
 // Execute implements the Task interface
@@ -37,7 +38,7 @@ func (e *EnvInit) Execute(ctx *Context) error {
 
 	um := module.NewUserModule(module.UserModuleConfig{
 		Action: module.UserActionAdd,
-		Name:   generatedUserName,
+		Name:   e.deployUser,
 		Sudoer: true,
 	})
 
@@ -55,7 +56,7 @@ func (e *EnvInit) Execute(ctx *Context) error {
 	}
 
 	// Authorize
-	cmd := `su - ` + generatedUserName + ` -c 'test -d ~/.ssh || mkdir -p ~/.ssh && chmod 700 ~/.ssh'`
+	cmd := `su - ` + e.deployUser + ` -c 'test -d ~/.ssh || mkdir -p ~/.ssh && chmod 700 ~/.ssh'`
 	stdout, stderr, err = exec.Execute(cmd, false)
 	if err != nil {
 		return errors.Trace(err)
@@ -65,7 +66,7 @@ func (e *EnvInit) Execute(ctx *Context) error {
 	fmt.Println("Create ssh directory stderr: ", string(stderr))
 
 	// TODO: don't append pubkey if exists
-	cmd = `su - ` + generatedUserName + ` -c 'echo "` + string(pubKey) + `" >> .ssh/authorized_keys && chmod 700 ~/.ssh/authorized_keys'`
+	cmd = `su - ` + e.deployUser + ` -c 'echo "` + string(pubKey) + `" >> .ssh/authorized_keys && chmod 700 ~/.ssh/authorized_keys'`
 	stdout, stderr, err = exec.Execute(cmd, false)
 	if err != nil {
 		return errors.Trace(err)

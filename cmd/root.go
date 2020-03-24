@@ -20,6 +20,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiops/pkg/version"
+	tiupmeta "github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/spf13/cobra"
 )
 
@@ -35,10 +37,19 @@ func init() {
 		SilenceErrors: true,
 		Version:       version.NewTiOpsVersion().FullInfo(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			return meta.Initialize()
+			if err := meta.Initialize(); err != nil {
+				return err
+			}
+			return tiupmeta.InitRepository(repository.Options{
+				GOOS:   "linux",
+				GOARCH: "amd64",
+			})
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
+		},
+		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+			return tiupmeta.Repository().Mirror().Close()
 		},
 	}
 
