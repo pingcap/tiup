@@ -73,6 +73,9 @@ func execute() error {
 	pdNum := 1
 	host := "127.0.0.1"
 	monitor := false
+	dbConfigPath := ""
+	kvConfigPath := ""
+	pdConfigPath := ""
 
 	rootCmd := &cobra.Command{
 		Use: "tiup playground [version]",
@@ -80,16 +83,17 @@ func execute() error {
 if you don't specified a version.
 
 Examples:
-  $ tiup playground nightly                         # Start a TiDB nightly version local cluster
-  $ tiup playground v3.0.10 --db 3 --pd 3 --kv 3    # Start a local cluster with 10 nodes
-  $ tiup playground nightly --monitor               # Start a local cluster with monitor system`,
+  $ tiup playground nightly                                                           # Start a TiDB nightly version local cluster
+  $ tiup playground v3.0.10 --db 3 --pd 3 --kv 3                                      # Start a local cluster with 10 nodes
+  $ tiup playground nightly --monitor                                                 # Start a local cluster with monitor system
+  $ tiup playground --pd.config ./pd.toml --db.config ./db.toml --kv.config ./kv.toml # Start a local cluster with specified configuration file`,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			version := ""
 			if len(args) > 0 {
 				version = args[0]
 			}
-			return bootCluster(version, pdNum, tidbNum, tikvNum, host, monitor)
+			return bootCluster(version, pdConfigPath, dbConfigPath, kvConfigPath, pdNum, tidbNum, tikvNum, host, monitor)
 		},
 	}
 
@@ -98,6 +102,9 @@ Examples:
 	rootCmd.Flags().IntVarP(&pdNum, "pd", "", 1, "PD instance number")
 	rootCmd.Flags().StringVarP(&host, "host", "", host, "Playground cluster host")
 	rootCmd.Flags().BoolVar(&monitor, "monitor", false, "Start prometheus component")
+	rootCmd.Flags().StringVarP(&dbConfigPath, "db.config", "", "", "TiDB instance configuration file")
+	rootCmd.Flags().StringVarP(&kvConfigPath, "kv.config", "", "", "TiKV instance configuration file")
+	rootCmd.Flags().StringVarP(&pdConfigPath, "pd.config", "", "", "PD instance configuration file")
 
 	return rootCmd.Execute()
 }
@@ -147,7 +154,7 @@ func hasDashboard(pdAddr string) bool {
 	return false
 }
 
-func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monitor bool) error {
+func bootCluster(version, pdConfigPath, dbConfigPath, kvConfigPath string, pdNum, tidbNum, tikvNum int, host string, monitor bool) error {
 	if pdNum < 1 || tidbNum < 1 || tikvNum < 1 {
 		return fmt.Errorf("all components count must be great than 0 (tidb=%v, tikv=%v, pd=%v)",
 			tidbNum, tikvNum, pdNum)
@@ -179,7 +186,7 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 
 	for i := 0; i < pdNum; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("pd-%d", i))
-		inst := instance.NewPDInstance(dir, host, i)
+		inst := instance.NewPDInstance(dir, pdConfigPath, host, i)
 		pds = append(pds, inst)
 		all = append(all, inst)
 	}
@@ -189,14 +196,14 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 
 	for i := 0; i < tikvNum; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("tikv-%d", i))
-		inst := instance.NewTiKVInstance(dir, host, i, pds)
+		inst := instance.NewTiKVInstance(dir, host, kvConfigPath, i, pds)
 		kvs = append(kvs, inst)
 		all = append(all, inst)
 	}
 
 	for i := 0; i < tidbNum; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("tidb-%d", i))
-		inst := instance.NewTiDBInstance(dir, host, i, pds)
+		inst := instance.NewTiDBInstance(dir, host, dbConfigPath, i, pds)
 		dbs = append(dbs, inst)
 		all = append(all, inst)
 	}
