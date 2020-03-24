@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-ulimit -n 1000000
 
 # WARNING: This file was auto-generated. Do not edit!
 #          All your edit might be overwritten!
@@ -30,6 +29,5 @@ exec bin/pd-server \
     --advertise-peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
     --data-dir="{{.DataDir}}" \
     --initial-cluster="{{template "PDList" .Endpoints}}" \
-    --config=conf/pd.toml \
-    --log-file="log/pd.log" 2>> "log/pd_stderr.log"
+    --log-file="logs/pd.log" 2>> "logs/pd_stderr.log"
   

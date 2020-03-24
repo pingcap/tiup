@@ -2,8 +2,6 @@
 #!/bin/bash
 set -e
 
-ulimit -n 1000000
-
 # WARNING: This file was auto-generated. Do not edit!
 #          All your edit might be overwritten!
 DEPLOY_DIR={{.DeployDir}}
@@ -30,6 +28,5 @@ exec bin/tidb-server \
     --advertise-address="{{.IP}}" \
     --store="tikv" \
     --path="{{template "PDList" .Endpoints}}" \
-    --config=conf/tidb.toml \
-    --log-slow-query="log/tidb_slow_query.log" \
-    --log-file="log/tidb.log" 2>> "log/tidb_stderr.log"
+    --log-slow-query="logs/tidb_slow_query.log" \
+    --log-file="logs/tidb.log" 2>> "logs/tidb_stderr.log"

@@ -106,6 +106,10 @@ func (i *instanceBase) DeployDir() string {
 	return reflect.ValueOf(i.spec).FieldByName("DeployDir").Interface().(string)
 }
 
+func (i *instanceBase) GetPort() int {
+	return i.port
+}
+
 // Specification of cluster
 type Specification = TopologySpecification
 
@@ -322,6 +326,7 @@ type Instance interface {
 	InstanceName() string
 	ServiceName() string
 	GetHost() string
+	GetPort() int
 	GetSSHPort() int
 	DeployDir() string
 }

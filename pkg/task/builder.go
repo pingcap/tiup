@@ -97,13 +97,14 @@ func (b *Builder) CopyComponent(component string, version repository.Version, ds
 	return b
 }
 
-// CopyComponent appends a CopyComponent task to the current task collection
-func (b *Builder) CopyConfig(name string, topo *meta.TopologySpecification, component, dstHost, dstDir string) *Builder {
+// CopyConfig appends a CopyComponent task to the current task collection
+func (b *Builder) CopyConfig(name string, topo *meta.TopologySpecification, component, dstHost string, srvPort int, dstDir string) *Builder {
 	b.tasks = append(b.tasks, &CopyConfig{
 		name:      name,
 		topology:  topo,
 		component: component,
 		host:      dstHost,
+		port:      srvPort,
 		dstDir:    dstDir,
 	})
 	return b

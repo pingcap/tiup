@@ -45,7 +45,7 @@ func newStartCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "cluster_name", "", "cluster name")
+	cmd.Flags().StringVar(&clusterName, "cluster", "", "cluster name")
 	cmd.Flags().StringVar(&role, "role", "", "role name")
 	cmd.Flags().StringVar(&node, "node-id", "", "node id")
 	return cmd

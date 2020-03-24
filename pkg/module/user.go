@@ -80,7 +80,7 @@ func NewUserModule(config UserModuleConfig) *UserModule {
 				config.Name)
 			cmd = fmt.Sprintf("%s && %s",
 				cmd,
-				buildBashInsertLine(sudoLine, "/etc/suduers"))
+				fmt.Sprintf("echo '%s' > /etc/sudoers.d/%s", sudoLine, config.Name))
 		}
 	case UserActionDel:
 		cmd = fmt.Sprintf("%s -r %s", userdelCmd, config.Name)
@@ -100,12 +100,4 @@ func NewUserModule(config UserModuleConfig) *UserModule {
 // should be already initialized.
 func (mod *UserModule) Execute(exec executor.TiOpsExecutor) ([]byte, []byte, error) {
 	return exec.Execute(mod.cmd, true)
-}
-
-func buildBashInsertLine(line string, file string) string {
-	if line == "" || file == "" {
-		return ""
-	}
-	return fmt.Sprintf("grep -qxF '%s' %s || echo '%s' >> %s",
-		line, file, line, file)
 }

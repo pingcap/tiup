@@ -18,9 +18,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/google/uuid"
 	"github.com/pingcap-incubator/tiops/pkg/executor"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
+	"github.com/pingcap-incubator/tiops/pkg/template/config"
 	"github.com/pingcap-incubator/tiops/pkg/template/scripts"
+	system "github.com/pingcap-incubator/tiops/pkg/template/systemd"
 )
 
 // CopyConfig is used to copy all configurations to the target directory of path
@@ -29,6 +32,7 @@ type CopyConfig struct {
 	topology  *meta.TopologySpecification
 	component string
 	host      string
+	port      int
 	dstDir    string
 }
 
@@ -40,16 +44,25 @@ func (c *CopyConfig) Execute(ctx *Context) error {
 		return ErrNoExecutor
 	}
 
-	/*
-		sysCfg := filepath.Join(cacheConfigDir, c.component+".service")
-		if err := system.NewSystemConfig(c.component, "tidb", c.dstDir).ConfigToFile(sysCfg); err != nil {
-			return err
-		}
-		if err := exec.Transfer(sysCfg, filepath.Join("/etc/systemd/system", c.component+"./service")); err != nil {
-			return err
-		}
-	*/
 	cacheConfigDir := meta.ClusterPath(c.name, "config")
+	if err := os.MkdirAll(cacheConfigDir, 0755); err != nil {
+		return err
+	}
+
+	sysCfg := filepath.Join(cacheConfigDir, fmt.Sprintf("%s-%d.service", c.component, c.port))
+	if err := system.NewSystemConfig(c.component, "tidb", c.dstDir).ConfigToFile(sysCfg); err != nil {
+		return err
+	}
+	fmt.Println("config path:", sysCfg)
+	tgt := filepath.Join("/tmp", c.component+"_"+uuid.New().String()+".service")
+	if err := exec.Transfer(sysCfg, tgt); err != nil {
+		return err
+	}
+	if outp, errp, err := exec.Execute(fmt.Sprintf("cp %s /etc/systemd/system/%s-%d.service", tgt, c.component, c.port), true); err != nil {
+		fmt.Println(string(outp), string(errp))
+		return err
+	}
+
 	if err := os.MkdirAll(cacheConfigDir, 0755); err != nil {
 		return err
 	}
@@ -69,7 +82,7 @@ func (c *CopyConfig) endpoints() []*scripts.PDScript {
 	ends := []*scripts.PDScript{}
 	for _, spec := range c.topology.PDServers {
 		ends = append(ends, scripts.NewPDScript(
-			"pd"+spec.Host,
+			"pd-"+spec.Host,
 			spec.Host,
 			spec.DeployDir,
 			spec.DataDir,
@@ -85,7 +98,11 @@ func (c *CopyConfig) transferPDConfig(exec executor.TiOpsExecutor, cacheConfigDi
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
-	return exec.Transfer(fp, filepath.Join(c.dstDir, "scripts", "run_pd.sh"))
+	dst := filepath.Join(c.dstDir, "scripts", "run_pd.sh")
+	if err := exec.Transfer(fp, dst); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *CopyConfig) transferTiDBConfig(exec executor.TiOpsExecutor, cacheConfigDir string) error {
@@ -94,16 +111,36 @@ func (c *CopyConfig) transferTiDBConfig(exec executor.TiOpsExecutor, cacheConfig
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
-	return exec.Transfer(fp, filepath.Join(c.dstDir, "scripts", "run_tidb.sh"))
+	dst := filepath.Join(c.dstDir, "scripts", "run_tidb.sh")
+	if err := exec.Transfer(fp, dst); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *CopyConfig) transferTiKVConfig(exec executor.TiOpsExecutor, cacheConfigDir string) error {
+	// transfer run script
 	cfg := scripts.NewTiKVScript(c.host, c.dstDir, filepath.Join(c.dstDir, "data")).AppendEndpoints(c.endpoints()...)
 	fp := filepath.Join(cacheConfigDir, fmt.Sprintf("run_tikv_%s.sh", c.host))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
-	return exec.Transfer(fp, filepath.Join(c.dstDir, "scripts", "run_tikv.sh"))
+	dst := filepath.Join(c.dstDir, "scripts", "run_tikv.sh")
+	if err := exec.Transfer(fp, dst); err != nil {
+		return err
+	}
+
+	// transfer config
+	fp = filepath.Join(cacheConfigDir, fmt.Sprintf("tikv_%s.toml", c.host))
+	if err := config.NewTiKVConfig().ConfigToFile(fp); err != nil {
+		return err
+	}
+	dst = filepath.Join(c.dstDir, "config", "tikv.toml")
+	if err := exec.Transfer(fp, dst); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Rollback implements the Task interface

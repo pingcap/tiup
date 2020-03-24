@@ -38,6 +38,7 @@ func (e *EnvInit) Execute(ctx *Context) error {
 	um := module.NewUserModule(module.UserModuleConfig{
 		Action: module.UserActionAdd,
 		Name:   generatedUserName,
+		Sudoer: true,
 	})
 
 	stdout, stderr, err := um.Execute(exec)

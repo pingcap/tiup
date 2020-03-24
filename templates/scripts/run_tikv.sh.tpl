@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-ulimit -n 1000000
 
 # WARNING: This file was auto-generated. Do not edit!
 #          All your edit might be overwritten!
@@ -31,5 +30,5 @@ exec bin/tikv-server \
     --status-addr "{{.IP}}:{{.StatusPort}}" \
     --pd "{{template "PDList" .Endpoints}}" \
     --data-dir "{{.DataDir}}" \
-    --config conf/tikv.toml \
-    --log-file "log/tikv.log" 2>> "log/tikv_stderr.log"
+    --config config/tikv.toml \
+    --log-file "logs/tikv.log" 2>> "logs/tikv_stderr.log"
