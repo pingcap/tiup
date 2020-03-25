@@ -138,8 +138,9 @@ func (s Serial) Execute(ctx *Context) error {
 
 // Rollback implements the Task interface
 func (s Serial) Rollback(ctx *Context) error {
-	for _, t := range s {
-		err := t.Rollback(ctx)
+	// Rollback in reverse order
+	for i := len(s) - 1; i >= 0; i-- {
+		err := s[i].Rollback(ctx)
 		if err != nil {
 			return err
 		}

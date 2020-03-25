@@ -29,6 +29,9 @@ type BackupComponent struct {
 	fromVer   string
 	host      string
 	dstDir    string
+
+	mvFrom string
+	mvTo   string
 }
 
 // Execute implements the Task interface
@@ -67,7 +70,10 @@ func (c *BackupComponent) Execute(ctx *Context) error {
 	dstPathOld := filepath.Join(dstDir, versionInfo.Entry+".old")
 	dstPath := filepath.Join(dstDir, versionInfo.Entry)
 
-	cmd := fmt.Sprintf(`cp %s %s`, dstPath, dstPathOld)
+	c.mvFrom = dstPath
+	c.mvTo = dstPathOld
+
+	cmd := fmt.Sprintf(`mv %s %s`, dstPath, dstPathOld)
 	stdout, stderr, err := exec.Execute(cmd, false)
 	if err != nil {
 		return errors.Annotate(err, cmd)
@@ -81,5 +87,21 @@ func (c *BackupComponent) Execute(ctx *Context) error {
 
 // Rollback implements the Task interface
 func (c *BackupComponent) Rollback(ctx *Context) error {
-	return ErrUnsupportRollback
+	// Copy to remote server
+	exec, found := ctx.GetExecutor(c.host)
+	if !found {
+		return ErrNoExecutor
+	}
+
+	// restore old file
+	cmd := fmt.Sprintf(`mv %s %s`, c.mvTo, c.mvFrom)
+	stdout, stderr, err := exec.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotate(err, cmd)
+	}
+
+	fmt.Println("Restore component stdout: ", string(stdout))
+	fmt.Println("Restore component stderr: ", string(stderr))
+
+	return nil
 }
