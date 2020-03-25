@@ -24,13 +24,13 @@ type HTTPClient struct {
 }
 
 // NewHTTPClient returns a new HTTP client with timeout and HTTPS support
-func NewHTTPClient(timeout int, tlsConfig *tls.Config) *HTTPClient {
-	if timeout < 1 {
-		timeout = 10 // default timeout is 10s
+func NewHTTPClient(timeout time.Duration, tlsConfig *tls.Config) *HTTPClient {
+	if timeout < time.Second {
+		timeout = 10 * time.Second // default timeout is 10s
 	}
 	return &HTTPClient{
 		client: &http.Client{
-			Timeout: time.Second * time.Duration(timeout),
+			Timeout: timeout,
 			Transport: &http.Transport{
 				TLSClientConfig: tlsConfig,
 			},

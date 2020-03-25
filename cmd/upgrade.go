@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/pingcap-incubator/tiops/pkg/meta"
+	operator "github.com/pingcap-incubator/tiops/pkg/operation"
 	"github.com/pingcap-incubator/tiops/pkg/task"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
@@ -26,6 +27,7 @@ import (
 type upgradeOptions struct {
 	cluster string
 	version string
+	options operator.Options
 }
 
 func newUpgradeCmd() *cobra.Command {
@@ -40,6 +42,7 @@ func newUpgradeCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&opt.cluster, "cluster", "c", "", "Specify the cluster name")
 	cmd.Flags().StringVarP(&opt.version, "target-version", "t", "", "Specify the target version")
+	cmd.Flags().BoolVar(&opt.options.Force, "force", false, "Force upgrade won't transfer leader")
 
 	_ = cmd.MarkFlagRequired("cluster")
 	_ = cmd.MarkFlagRequired("target-version")
@@ -100,6 +103,7 @@ func upgrade(opt upgradeOptions) error {
 		ClusterSSH(metadata.Topology, metadata.User).
 		Parallel(downloadCompTasks...).
 		Parallel(copyCompTasks...).
+		ClusterOperate(metadata.Topology, operator.UpgradeOperation, opt.options).
 		Build()
 
 	return t.Execute(task.NewContext())

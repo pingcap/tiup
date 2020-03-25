@@ -37,6 +37,7 @@ type ClusterMeta struct {
 	Topology *TopologySpecification `yaml:"topology"`
 }
 
+// SaveClusterMeta saves the cluster meta information to profile directory
 func SaveClusterMeta(clusterName string, meta *ClusterMeta) error {
 	metaFile := ClusterPath(clusterName, MetaFileName)
 

@@ -21,6 +21,7 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/module"
 )
 
+// Components names supported by TiOps
 const (
 	ComponentTiDB             = "tidb"
 	ComponentTiKV             = "tikv"
@@ -108,6 +109,10 @@ func (i *instanceBase) DeployDir() string {
 
 func (i *instanceBase) GetPort() int {
 	return i.port
+}
+
+func (i *instanceBase) UUID() string {
+	return reflect.ValueOf(i.spec).FieldByName("UUID").Interface().(string)
 }
 
 // Specification of cluster
@@ -329,4 +334,5 @@ type Instance interface {
 	GetPort() int
 	GetSSHPort() int
 	DeployDir() string
+	UUID() string
 }

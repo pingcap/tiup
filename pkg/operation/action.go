@@ -18,54 +18,12 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"time"
 
 	"github.com/pingcap-incubator/tiops/pkg/executor"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiops/pkg/module"
 	"github.com/pingcap/errors"
 )
-
-var defaultTimeoutForReady = time.Second * 60
-
-func filterComponent(comps []meta.Component, component string) (res []meta.Component) {
-	if component == "" {
-		res = comps
-		return
-	}
-
-	for _, c := range comps {
-		if c.Name() != component {
-			continue
-		}
-
-		res = append(res, c)
-	}
-
-	return
-}
-
-func filterInstance(instances []meta.Instance, node string) (res []meta.Instance) {
-	if node == "" {
-		res = instances
-		return
-	}
-
-	for _, c := range instances {
-		if c.GetHost() != node {
-			continue
-		}
-
-		res = append(res, c)
-	}
-
-	return
-}
-
-// ExecutorGetter get the executor by host.
-type ExecutorGetter interface {
-	Get(host string) (e executor.TiOpsExecutor)
-}
 
 // Start the cluster.
 func Start(

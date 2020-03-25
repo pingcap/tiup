@@ -23,40 +23,40 @@ import (
 
 // ClusterOperate represents the cluster operation task.
 type ClusterOperate struct {
-	spec *meta.Specification
-	// valid op:
-	// start
-	// stop
-	// restart
-	// destroy
-	op     string
-	role   string
-	nodeID string
-	w      io.Writer
+	spec    *meta.Specification
+	op      operator.Operation
+	options operator.Options
+	w       io.Writer
 }
 
 // Execute implements the Task interface
 func (c *ClusterOperate) Execute(ctx *Context) error {
 	switch c.op {
-	case "start":
-		err := operator.Start(ctx, c.w, c.spec, c.role, c.nodeID)
+	case operator.StartOperation:
+		err := operator.Start(ctx, c.w, c.spec, c.options.Role, c.options.Node)
 		if err != nil {
 			return errors.Annotate(err, "failed to start")
 		}
 		operator.PrintClusterStatus(ctx, c.w, c.spec)
-	case "stop":
-		err := operator.Stop(ctx, c.w, c.spec, c.role, c.nodeID)
+	case operator.StopOperation:
+		err := operator.Stop(ctx, c.w, c.spec, c.options.Role, c.options.Node)
 		if err != nil {
 			return errors.Annotate(err, "failed to stop")
 		}
 		operator.PrintClusterStatus(ctx, c.w, c.spec)
-	case "restart":
-		err := operator.Restart(ctx, c.w, c.spec, c.role, c.nodeID)
+	case operator.RestartOperation:
+		err := operator.Restart(ctx, c.w, c.spec, c.options.Role, c.options.Node)
 		if err != nil {
 			return errors.Annotate(err, "failed to restart")
 		}
 		operator.PrintClusterStatus(ctx, c.w, c.spec)
-	case "destroy":
+	case operator.UpgradeOperation:
+		err := operator.Upgrade(ctx, c.w, c.spec, c.options)
+		if err != nil {
+			return errors.Annotate(err, "failed to upgrade")
+		}
+		operator.PrintClusterStatus(ctx, c.w, c.spec)
+	case operator.DestroyOperation:
 		fallthrough
 	default:
 		return errors.Errorf("nonsupport %s", c.op)

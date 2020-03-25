@@ -50,7 +50,7 @@ func (c *CopyConfig) Execute(ctx *Context) error {
 	}
 
 	sysCfg := filepath.Join(cacheConfigDir, fmt.Sprintf("%s-%d.service", c.component, c.port))
-	if err := system.NewSystemConfig(c.component, "tidb", c.dstDir).ConfigToFile(sysCfg); err != nil {
+	if err := system.NewConfig(c.component, "tidb", c.dstDir).ConfigToFile(sysCfg); err != nil {
 		return err
 	}
 	fmt.Println("config path:", sysCfg)

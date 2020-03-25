@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"github.com/pingcap-incubator/tiops/pkg/meta"
+	operator "github.com/pingcap-incubator/tiops/pkg/operation"
 	"github.com/pingcap-incubator/tiops/pkg/task"
 	"github.com/spf13/cobra"
 )
@@ -22,8 +23,7 @@ import (
 func newRestartCmd() *cobra.Command {
 	var (
 		clusterName string
-		role        string
-		node        string
+		options     operator.Options
 	)
 
 	cmd := &cobra.Command{
@@ -37,7 +37,7 @@ func newRestartCmd() *cobra.Command {
 
 			t := task.NewBuilder().
 				ClusterSSH(metadata.Topology, metadata.User).
-				ClusterOperate(metadata.Topology, "restart", role, node).
+				ClusterOperate(metadata.Topology, operator.RestartOperation, options).
 				Build()
 
 			return t.Execute(task.NewContext())
@@ -46,7 +46,7 @@ func newRestartCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&clusterName, "cluster_name", "", "cluster name")
-	cmd.Flags().StringVar(&role, "role", "", "role name")
-	cmd.Flags().StringVar(&node, "node-id", "", "node id")
+	cmd.Flags().StringVar(&options.Role, "role", "", "role name")
+	cmd.Flags().StringVar(&options.Node, "node-id", "", "node id")
 	return cmd
 }

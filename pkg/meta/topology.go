@@ -16,6 +16,7 @@ package meta
 import (
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/creasty/defaults"
 	"github.com/pingcap-incubator/tiops/pkg/api"
@@ -24,7 +25,7 @@ import (
 
 const (
 	// Timeout in second when quering node status
-	statusQueryTimeout = 2
+	statusQueryTimeout = 2 * time.Second
 )
 
 // Roles of components

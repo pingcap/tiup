@@ -23,8 +23,8 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 )
 
-// SystemConfig represent the data to generate systemd config
-type SystemConfig struct {
+// Config represent the data to generate systemd config
+type Config struct {
 	ServiceName         string
 	User                string
 	MemoryLimit         uint
@@ -34,41 +34,41 @@ type SystemConfig struct {
 	DeployDir           string
 }
 
-// NewSystemConfig returns a SystemConfig with given arguments
-func NewSystemConfig(service, user, deployDir string) *SystemConfig {
-	return &SystemConfig{
+// NewConfig returns a Config with given arguments
+func NewConfig(service, user, deployDir string) *Config {
+	return &Config{
 		ServiceName: service,
 		User:        user,
 		DeployDir:   deployDir,
 	}
 }
 
-// WithMemoryLimit set the MemoryLimit field of SystemConfig
-func (c *SystemConfig) WithMemoryLimit(mem uint) *SystemConfig {
+// WithMemoryLimit set the MemoryLimit field of Config
+func (c *Config) WithMemoryLimit(mem uint) *Config {
 	c.MemoryLimit = mem
 	return c
 }
 
-// WithCPUQuota set the CPUQuota field of SystemConfig
-func (c *SystemConfig) WithCPUQuota(cpu uint) *SystemConfig {
+// WithCPUQuota set the CPUQuota field of Config
+func (c *Config) WithCPUQuota(cpu uint) *Config {
 	c.CPUQuota = cpu
 	return c
 }
 
-// WithIOReadBandwidthMax set the IOReadBandwidthMax field of SystemConfig
-func (c *SystemConfig) WithIOReadBandwidthMax(io uint) *SystemConfig {
+// WithIOReadBandwidthMax set the IOReadBandwidthMax field of Config
+func (c *Config) WithIOReadBandwidthMax(io uint) *Config {
 	c.IOReadBandwidthMax = io
 	return c
 }
 
-// WithIOWriteBandwidthMax set the IOWriteBandwidthMax field of SystemConfig
-func (c *SystemConfig) WithIOWriteBandwidthMax(io uint) *SystemConfig {
+// WithIOWriteBandwidthMax set the IOWriteBandwidthMax field of Config
+func (c *Config) WithIOWriteBandwidthMax(io uint) *Config {
 	c.IOWriteBandwidthMax = io
 	return c
 }
 
 // ConfigToFile write config content to specific path
-func (c *SystemConfig) ConfigToFile(file string) error {
+func (c *Config) ConfigToFile(file string) error {
 	config, err := c.Config()
 	if err != nil {
 		return err
@@ -78,7 +78,7 @@ func (c *SystemConfig) ConfigToFile(file string) error {
 
 // Config read ${localdata.EnvNameComponentInstallDir}/templates/systemd/system.service.tpl as template
 // and generate the config by ConfigWithTemplate
-func (c *SystemConfig) Config() ([]byte, error) {
+func (c *Config) Config() ([]byte, error) {
 	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "systemd", "system.service.tpl")
 	tpl, err := ioutil.ReadFile(fp)
 	if err != nil {
@@ -88,7 +88,7 @@ func (c *SystemConfig) Config() ([]byte, error) {
 }
 
 // ConfigWithTemplate generate the system config content by tpl
-func (c *SystemConfig) ConfigWithTemplate(tpl string) ([]byte, error) {
+func (c *Config) ConfigWithTemplate(tpl string) ([]byte, error) {
 	tmpl, err := template.New("system").Parse(tpl)
 	if err != nil {
 		return nil, err

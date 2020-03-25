@@ -13,7 +13,9 @@ package api
 import (
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/pingcap/kvproto/pkg/pdpb"
@@ -28,15 +30,15 @@ type PDClient struct {
 }
 
 // NewPDClient returns a new PDClient
-func NewPDClient(host string, timeout int, tlsConfig *tls.Config) *PDClient {
-	enableTls := false
+func NewPDClient(host string, timeout time.Duration, tlsConfig *tls.Config) *PDClient {
+	enableTLS := false
 	if tlsConfig != nil {
-		enableTls = true
+		enableTLS = true
 	}
 
 	return &PDClient{
 		Host:       host,
-		tlsEnabled: enableTls,
+		tlsEnabled: enableTLS,
 		httpClient: utils.NewHTTPClient(timeout, tlsConfig),
 	}
 }
@@ -110,4 +112,14 @@ func (pc *PDClient) GetLeader() (*pdpb.Member, error) {
 		return nil, err
 	}
 	return &leader, nil
+}
+
+// EvictPDLeader evicts the PD leader
+func (pc *PDClient) EvictPDLeader() error {
+	return errors.New("not implement")
+}
+
+// EvictStoreLeader evicts the store leaders
+func (pc *PDClient) EvictStoreLeader(host string) error {
+	return errors.New("not implement")
 }
