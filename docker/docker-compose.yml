@@ -1,0 +1,45 @@
+version: '3.7'
+x-node:
+  &default-node
+  build: ./node
+  env_file: ./secret/node.env
+  privileged: true
+  networks:
+    - tiops
+  ports:
+    - ${TIOPS_PORT:-22}
+
+services:
+  control:
+    container_name: tiops-control
+    hostname: control
+    build: ./control
+    env_file: ./secret/control.env
+    privileged: true
+    ports:
+      - "8080"
+    networks:
+      - tiops
+  n1:
+    << : *default-node
+    container_name: tiops-n1
+    hostname: n1
+  n2:
+    << : *default-node
+    container_name: tiops-n2
+    hostname: n2
+  n3:
+    << : *default-node
+    container_name: tiops-n3
+    hostname: n3
+  n4:
+    << : *default-node
+    container_name: tiops-n4
+    hostname: n4
+  n5:
+    << : *default-node
+    container_name: tiops-n5
+    hostname: n5
+
+networks:
+  tiops:

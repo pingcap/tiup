@@ -1,0 +1,5 @@
+version: '3.7'
+services:
+  control:
+    volumes:
+      - ${TIOPS_ROOT}:/tiops # Mounts $TIOPS_ROOT on host to /tiops control container
