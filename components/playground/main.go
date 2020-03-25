@@ -186,7 +186,7 @@ func bootCluster(version, pdConfigPath, dbConfigPath, kvConfigPath string, pdNum
 
 	for i := 0; i < pdNum; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("pd-%d", i))
-		inst := instance.NewPDInstance(dir, pdConfigPath, host, i)
+		inst := instance.NewPDInstance(dir, host, pdConfigPath, i)
 		pds = append(pds, inst)
 		all = append(all, inst)
 	}

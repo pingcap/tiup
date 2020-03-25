@@ -60,15 +60,16 @@ func (inst *TiDBInstance) Start(ctx context.Context, version repository.Version)
 	}
 	args := []string{
 		"tiup", compVersion("tidb", version),
-		"-P", strconv.Itoa(inst.Port),
-		"--store=tikv",
-		fmt.Sprintf("--host=%s", inst.Host),
-		fmt.Sprintf("--status=%d", inst.StatusPort),
-		fmt.Sprintf("--path=%s", strings.Join(endpoints, ",")),
-		fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "tidb.log")),
 	}
 	if inst.ConfigPath != "" {
 		args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
+	} else {
+		args = append(args, "-P", strconv.Itoa(inst.Port),
+			"--store=tikv",
+			fmt.Sprintf("--host=%s", inst.Host),
+			fmt.Sprintf("--status=%d", inst.StatusPort),
+			fmt.Sprintf("--path=%s", strings.Join(endpoints, ",")),
+			fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "tidb.log")))
 	}
 	inst.cmd = exec.CommandContext(ctx, args[0], args[1:]...)
 	inst.cmd.Env = append(
