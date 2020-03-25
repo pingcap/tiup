@@ -434,6 +434,20 @@ func (c *AlertmanagerComponent) Instances() []Instance {
 	return ins
 }
 
+// ComponentsByStopOrder return component in the order need to stop.
+func (s *Specification) ComponentsByStopOrder() (comps []Component) {
+	comps = s.ComponentsByStartOrder()
+	// revert order
+	i := 0
+	j := len(comps) - 1
+	for i < j {
+		comps[i], comps[j] = comps[j], comps[i]
+		i++
+		j--
+	}
+	return
+}
+
 // ComponentsByStartOrder return component in the order need to start.
 func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 	// "pd", "tikv", "pump", "tidb", "drainer", "prometheus", "grafana", "alertmanager"

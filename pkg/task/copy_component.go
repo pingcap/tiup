@@ -54,7 +54,7 @@ func (c *CopyComponent) Execute(ctx *Context) error {
 
 	stdout, stderr, err := exec.Execute(cmd, false)
 	if err != nil {
-		return errors.Trace(err)
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
 	fmt.Println("Decompress tarball stdout: ", string(stdout))

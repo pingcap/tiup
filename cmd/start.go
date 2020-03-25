@@ -36,6 +36,9 @@ func newStartCmd() *cobra.Command {
 			}
 
 			t := task.NewBuilder().
+				SSHKeySet(
+					meta.ClusterPath(clusterName, "ssh", "id_rsa"),
+					meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
 				ClusterSSH(metadata.Topology, metadata.User).
 				ClusterOperate(metadata.Topology, operator.StartOperation, options).
 				Build()

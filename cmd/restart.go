@@ -36,6 +36,9 @@ func newRestartCmd() *cobra.Command {
 			}
 
 			t := task.NewBuilder().
+				SSHKeySet(
+					meta.ClusterPath(clusterName, "ssh", "id_rsa"),
+					meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
 				ClusterSSH(metadata.Topology, metadata.User).
 				ClusterOperate(metadata.Topology, operator.RestartOperation, options).
 				Build()
@@ -45,7 +48,7 @@ func newRestartCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&clusterName, "cluster_name", "", "cluster name")
+	cmd.Flags().StringVar(&clusterName, "cluster", "", "cluster name")
 	cmd.Flags().StringVar(&options.Role, "role", "", "role name")
 	cmd.Flags().StringVar(&options.Node, "node-id", "", "node id")
 	return cmd

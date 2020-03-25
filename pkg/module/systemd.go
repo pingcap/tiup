@@ -46,7 +46,7 @@ type SystemdModule struct {
 // NewSystemdModule builds and returns a SystemdModule object base on
 // given config.
 func NewSystemdModule(config SystemdModuleConfig) *SystemdModule {
-	systemctl := "/usr/bin/systemctl" // TODO: find binary in $PATH
+	systemctl := "systemctl"
 	sudo := true
 
 	if config.Force {

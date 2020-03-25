@@ -59,7 +59,7 @@ func (e *EnvInit) Execute(ctx *Context) error {
 	cmd := `su - ` + e.deployUser + ` -c 'test -d ~/.ssh || mkdir -p ~/.ssh && chmod 700 ~/.ssh'`
 	stdout, stderr, err = exec.Execute(cmd, false)
 	if err != nil {
-		return errors.Trace(err)
+		return errors.Annotatef(err, "cmd: %s", cmd)
 	}
 
 	fmt.Println("Create ssh directory stdout: ", string(stdout))

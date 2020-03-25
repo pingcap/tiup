@@ -6,7 +6,7 @@ set -e
 cd "{{.DeployDir}}" || exit 1
 
 echo -n 'sync ... '
-stat=$(time sync)
+stat=$(time sync || sync)
 echo ok
 echo $stat
 
