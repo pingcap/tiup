@@ -73,6 +73,9 @@ func execute() error {
 	pdNum := 1
 	host := "127.0.0.1"
 	monitor := false
+	tidbBinPath := ""
+	tikvBinPath := ""
+	pdBinPath := ""
 
 	rootCmd := &cobra.Command{
 		Use: "tiup playground [version]",
@@ -82,14 +85,16 @@ if you don't specified a version.
 Examples:
   $ tiup playground nightly                         # Start a TiDB nightly version local cluster
   $ tiup playground v3.0.10 --db 3 --pd 3 --kv 3    # Start a local cluster with 10 nodes
-  $ tiup playground nightly --monitor               # Start a local cluster with monitor system`,
+  $ tiup playground nightly --monitor               # Start a local cluster with monitor system
+  $ tiup playground --db.binpath /xx/tidb-server --pd.binpath /xx/pd-server --kv.binpath /xx/tikv-server
+													# Start a local cluster with component binary path`,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			version := ""
 			if len(args) > 0 {
 				version = args[0]
 			}
-			return bootCluster(version, pdNum, tidbNum, tikvNum, host, monitor)
+			return bootCluster(version, pdNum, tidbNum, tikvNum, host, monitor, tidbBinPath, tikvBinPath, pdBinPath)
 		},
 	}
 
@@ -98,6 +103,9 @@ Examples:
 	rootCmd.Flags().IntVarP(&pdNum, "pd", "", 1, "PD instance number")
 	rootCmd.Flags().StringVarP(&host, "host", "", host, "Playground cluster host")
 	rootCmd.Flags().BoolVar(&monitor, "monitor", false, "Start prometheus component")
+	rootCmd.Flags().StringVarP(&tidbBinPath, "db.binpath", "", tidbBinPath, "TiDB instance binary path")
+	rootCmd.Flags().StringVarP(&tikvBinPath, "kv.binpath", "", tikvBinPath, "TiKV instance binary path")
+	rootCmd.Flags().StringVarP(&pdBinPath, "pd.binpath", "", pdBinPath, "PD instance binary path")
 
 	return rootCmd.Execute()
 }
@@ -147,10 +155,21 @@ func hasDashboard(pdAddr string) bool {
 	return false
 }
 
-func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monitor bool) error {
+func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monitor bool, tidbBinPath, tikvBinPath, pdBinPath string) error {
 	if pdNum < 1 || tidbNum < 1 || tikvNum < 1 {
 		return fmt.Errorf("all components count must be great than 0 (tidb=%v, tikv=%v, pd=%v)",
 			tidbNum, tikvNum, pdNum)
+	}
+
+	var pathMap = make(map[string]string)
+	if tidbBinPath != "" {
+		pathMap["tidb"] = tidbBinPath
+	}
+	if tikvBinPath != "" {
+		pathMap["tikv"] = tikvBinPath
+	}
+	if pdBinPath != "" {
+		pathMap["pd"] = pdBinPath
 	}
 
 	// Initialize the profile
@@ -160,6 +179,9 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 	}
 	profile := localdata.NewProfile(profileRoot)
 	for _, comp := range []string{"pd", "tikv", "tidb"} {
+		if pathMap[comp] != "" {
+			continue
+		}
 		if err := installIfMissing(profile, comp, version); err != nil {
 			return err
 		}
@@ -171,6 +193,7 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 	}
 
 	all := make([]instance.Instance, 0, pdNum+tikvNum+tidbNum)
+	allRole := make([]string, 0, pdNum+tikvNum+tidbNum)
 	pds := make([]*instance.PDInstance, 0, pdNum)
 	kvs := make([]*instance.TiKVInstance, 0, tikvNum)
 	dbs := make([]*instance.TiDBInstance, 0, tidbNum)
@@ -183,6 +206,7 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 		inst := instance.NewPDInstance(dir, host, i)
 		pds = append(pds, inst)
 		all = append(all, inst)
+		allRole = append(allRole, "pd")
 	}
 	for _, pd := range pds {
 		pd.Join(pds)
@@ -193,6 +217,7 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 		inst := instance.NewTiKVInstance(dir, host, i, pds)
 		kvs = append(kvs, inst)
 		all = append(all, inst)
+		allRole = append(allRole, "tikv")
 	}
 
 	for i := 0; i < tidbNum; i++ {
@@ -200,6 +225,7 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 		inst := instance.NewTiDBInstance(dir, host, i, pds)
 		dbs = append(dbs, inst)
 		all = append(all, inst)
+		allRole = append(allRole, "tidb")
 	}
 
 	fmt.Println("Playground Bootstrapping...")
@@ -248,8 +274,8 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 		}()
 	}
 
-	for _, inst := range all {
-		if err := inst.Start(ctx, repository.Version(version)); err != nil {
+	for i, inst := range all {
+		if err := inst.Start(ctx, repository.Version(version), pathMap[allRole[i]]); err != nil {
 			return err
 		}
 	}

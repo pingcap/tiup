@@ -52,21 +52,24 @@ the latest stable version will be downloaded from the repository.
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
 		Version:            fmt.Sprintf("%s+%s(%s)", version.NewTiUPVersion().SemVer(), version.GitBranch, version.GitHash),
 		Args: func(cmd *cobra.Command, args []string) error {
-			// Support `tiup <component>`
+			// Support `tiup <component>:[<version>]:[<binpath>]`
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if binary != "" {
-				component, ver := meta.ParseCompVersion(binary)
+				component, ver, binPath := meta.ParseBinary(binary)
 				selectedVer, err := meta.SelectInstalledVersion(component, ver)
 				if err != nil {
 					return err
 				}
-				binaryPath, err := meta.BinaryPath(component, selectedVer)
-				if err != nil {
-					return err
+				if binPath == "" {
+					binPath, err = meta.BinaryPath(component, selectedVer)
+					if err != nil {
+						return err
+					}
 				}
-				fmt.Println(binaryPath)
+
+				fmt.Println(binPath)
 				return nil
 			}
 			if len(args) > 0 {

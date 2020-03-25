@@ -31,13 +31,10 @@ type instance struct {
 // Instance represent running component
 type Instance interface {
 	Pid() int
-	Start(ctx context.Context, version repository.Version) error
+	Start(ctx context.Context, version repository.Version, binPath string) error
 	Wait() error
 }
 
-func compVersion(comp string, version repository.Version) string {
-	if version.IsEmpty() {
-		return comp
-	}
-	return fmt.Sprintf("%v:%v", comp, version)
+func specifyBinary(comp string, version repository.Version, binPath string) string {
+	return fmt.Sprintf("%v:%v:%v", comp, version, binPath)
 }

@@ -33,7 +33,7 @@ import (
 )
 
 func runComponent(tag, spec string, args []string, rm bool) error {
-	component, version := meta.ParseCompVersion(spec)
+	component, version, binPath := meta.ParseBinary(spec)
 	if !isSupportedComponent(component) {
 		return fmt.Errorf("unkonwn component `%s` (see supported components via `tiup list --refresh`)", component)
 	}
@@ -41,7 +41,7 @@ func runComponent(tag, spec string, args []string, rm bool) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	p, err := launchComponent(ctx, component, version, tag, args)
+	p, err := launchComponent(ctx, component, version, binPath, tag, args)
 	// If the process has been launched, we must save the process info to meta directory
 	if err == nil || (p != nil && p.Pid != 0) {
 		defer cleanDataDir(rm, p.Dir)
@@ -134,19 +134,26 @@ func base62Tag() string {
 	return string(b)
 }
 
-func launchComponent(ctx context.Context, component string, version repository.Version, tag string, args []string) (*process, error) {
-	selectVer, err := meta.DownloadComponentIfMissing(component, version)
-	if err != nil {
-		return nil, err
-	}
-	binPath, err := meta.BinaryPath(component, selectVer)
-	if err != nil {
-		return nil, err
-	}
+func launchComponent(ctx context.Context, component string, version repository.Version, binPath string, tag string, args []string) (*process, error) {
+	var selectVer repository.Version
+	var installPath string
+	var err error
 
-	installPath, err := meta.ComponentInstalledDir(component, selectVer)
-	if err != nil {
-		return nil, err
+	if binPath == "" {
+		selectVer, err = meta.DownloadComponentIfMissing(component, version)
+		if err != nil {
+			return nil, err
+		}
+
+		binPath, err = meta.BinaryPath(component, selectVer)
+		if err != nil {
+			return nil, err
+		}
+
+		installPath, err = meta.ComponentInstalledDir(component, selectVer)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	wd := os.Getenv(localdata.EnvNameInstanceDataDir)
