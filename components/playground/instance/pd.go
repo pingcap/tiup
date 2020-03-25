@@ -62,16 +62,15 @@ func (inst *PDInstance) Start(ctx context.Context, version repository.Version) e
 	args := []string{
 		"tiup", compVersion("pd", version),
 		"--name=" + uid,
+		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
+		fmt.Sprintf("--peer-urls=http://%s:%d", inst.Host, inst.Port),
+		fmt.Sprintf("--advertise-peer-urls=http://%s:%d", inst.Host, inst.Port),
+		fmt.Sprintf("--client-urls=http://%s:%d", inst.Host, inst.StatusPort),
+		fmt.Sprintf("--advertise-client-urls=http://%s:%d", inst.Host, inst.StatusPort),
+		fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "pd.log")),
 	}
 	if inst.ConfigPath != "" {
 		args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
-	} else {
-		args = append(args, fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
-			fmt.Sprintf("--peer-urls=http://%s:%d", inst.Host, inst.Port),
-			fmt.Sprintf("--advertise-peer-urls=http://%s:%d", inst.Host, inst.Port),
-			fmt.Sprintf("--client-urls=http://%s:%d", inst.Host, inst.StatusPort),
-			fmt.Sprintf("--advertise-client-urls=http://%s:%d", inst.Host, inst.StatusPort),
-			fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "pd.log")))
 	}
 	endpoints := make([]string, 0, len(inst.endpoints))
 	for _, pd := range inst.endpoints {
