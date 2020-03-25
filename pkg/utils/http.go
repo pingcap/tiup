@@ -13,6 +13,7 @@ package utils
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -46,13 +47,29 @@ func (c *HTTPClient) Get(url string) ([]byte, error) {
 	}
 	defer res.Body.Close()
 
+	return checkHTTPResponse(res)
+}
+
+// Post send a POST request to the url and returns the response
+func (c *HTTPClient) Post(url string, body io.Reader) ([]byte, error) {
+	res, err := c.client.Post(url, "application/json", body)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	return checkHTTPResponse(res)
+}
+
+// checkHTTPResponse checks if an HTTP response is with normal status codes
+func checkHTTPResponse(res *http.Response) ([]byte, error) {
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
 	if res.StatusCode < 200 || res.StatusCode >= 400 {
 		return body, fmt.Errorf("error requesting %s, response: %s, code %d",
-			url, string(body[:]), res.StatusCode)
+			res.Request.URL, string(body[:]), res.StatusCode)
 	}
 	return body, nil
 }

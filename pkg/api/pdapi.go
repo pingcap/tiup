@@ -11,6 +11,7 @@
 package api
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -114,12 +115,142 @@ func (pc *PDClient) GetLeader() (*pdpb.Member, error) {
 	return &leader, nil
 }
 
+// GetMembers queries for member list from the PD server
+func (pc *PDClient) GetMembers() (*pdpb.GetMembersResponse, error) {
+	url := fmt.Sprintf("%s/%s", pc.GetURL(), pdMembersURI)
+	body, err := pc.httpClient.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	members := pdpb.GetMembersResponse{}
+	if err := json.Unmarshal(body, &members); err != nil {
+		return nil, err
+	}
+	return &members, nil
+}
+
 // EvictPDLeader evicts the PD leader
 func (pc *PDClient) EvictPDLeader() error {
-	return errors.New("not implement")
+	// get current members
+	members, err := pc.GetMembers()
+	if err != nil {
+		return err
+	}
+	if len(members.Members) == 1 {
+		// TODO: add a warning log here say:
+		// "Only 1 member in the PD cluster, skip leader evicting"
+		return nil
+	}
+
+	// try to evict the leader
+	url := fmt.Sprintf("%s/%s/resign", pc.GetURL(), pdLeaderURI)
+	_, err = pc.httpClient.Post(url, bytes.NewBuffer([]byte("")))
+	if err != nil {
+		return err
+	}
+
+	// wait for the transfer to complete
+	retryOpt := utils.RetryOption{
+		Attempts: 60,
+		Delay:    time.Second * 5,
+		Timeout:  time.Second * 300,
+	}
+	if err := utils.Retry(func() error {
+		currLeader, err := pc.GetLeader()
+		if err != nil {
+			return err
+		}
+
+		// check if current leader is the leader to evict
+		if currLeader.Name != members.Leader.Name {
+			return nil
+		}
+
+		// return error by default, to make the retry work
+		return errors.New("still waitting for the PD leader to transfer")
+	}, retryOpt); err != nil {
+		return fmt.Errorf("error evicting PD leader, %v", err)
+	}
+	return nil
+}
+
+const (
+	// pdEvictLeaderName is evict leader scheduler name.
+	pdEvictLeaderName = "evict-leader-scheduler"
+)
+
+// pdSchedulerRequest is the request body when evicting store leader
+type pdSchedulerRequest struct {
+	Name    string `json:"name"`
+	StoreID uint64 `json:"store_id"`
 }
 
 // EvictStoreLeader evicts the store leaders
+// The host parameter should be in format of IP:Port, that matches store's address
 func (pc *PDClient) EvictStoreLeader(host string) error {
-	return errors.New("not implement")
+	// get info of current stores
+	stores, err := pc.GetStores()
+	if err != nil {
+		return err
+	}
+
+	// get store ID of host
+	var storeID uint64
+	for _, storeInfo := range stores.Stores {
+		if storeInfo.Store.Address != host {
+			continue
+		}
+		storeID = storeInfo.Store.Id
+
+		if storeInfo.Status.LeaderCount == 0 {
+			// no store leader on the host, just skip
+			return nil
+		}
+		// TODO: add a log say
+		// Evicting leader from storeInfo.Status.LeaderCount stores
+	}
+
+	// set scheduler for stores
+	scheduler, err := json.Marshal(pdSchedulerRequest{
+		Name:    pdEvictLeaderName,
+		StoreID: storeID,
+	})
+	if err != nil {
+		return nil
+	}
+	url := fmt.Sprintf("%s/%s", pc.GetURL(), pdSchedulersURI)
+	_, err = pc.httpClient.Post(url, bytes.NewBuffer(scheduler))
+	if err != nil {
+		return err
+	}
+
+	// wait for the transfer to complete
+	retryOpt := utils.RetryOption{
+		Attempts: 72,
+		Delay:    time.Second * 5,
+		Timeout:  time.Second * 360,
+	}
+	if err := utils.Retry(func() error {
+		currStores, err := pc.GetStores()
+		if err != nil {
+			return err
+		}
+
+		// check if all leaders are evicted
+		for _, currStoreInfo := range currStores.Stores {
+			if currStoreInfo.Store.Address != host {
+				continue
+			}
+			if currStoreInfo.Status.LeaderCount == 0 {
+				return nil
+			}
+		}
+
+		// return error by default, to make the retry work
+		return errors.New("still waitting for the store leaders to transfer")
+	}, retryOpt); err != nil {
+		return fmt.Errorf("error evicting store leader from %s, %v", host, err)
+	}
+	return nil
 }
