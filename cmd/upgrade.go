@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -22,10 +23,10 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/task"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
+	"golang.org/x/mod/semver"
 )
 
 type upgradeOptions struct {
-	cluster string
 	version string
 	options operator.Options
 }
@@ -33,14 +34,16 @@ type upgradeOptions struct {
 func newUpgradeCmd() *cobra.Command {
 	opt := upgradeOptions{}
 	cmd := &cobra.Command{
-		Use:   "upgrade",
-		Short: "Upgrade a TiDB cluster",
+		Use:   "upgrade <cluster-name>",
+		Short: "Upgrade a specified TiDB cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return upgrade(opt)
+			if len(args) != 1 {
+				return cmd.Help()
+			}
+			return upgrade(args[0], opt)
 		},
 	}
 
-	cmd.Flags().StringVarP(&opt.cluster, "cluster", "c", "", "Specify the cluster name")
 	cmd.Flags().StringVarP(&opt.version, "target-version", "t", "", "Specify the target version")
 	cmd.Flags().BoolVar(&opt.options.Force, "force", false, "Force upgrade won't transfer leader")
 
@@ -50,8 +53,24 @@ func newUpgradeCmd() *cobra.Command {
 	return cmd
 }
 
-func upgrade(opt upgradeOptions) error {
-	metadata, err := meta.ClusterMetadata(opt.cluster)
+func versionCompare(curVersion, newVersion string) error {
+
+	switch semver.Compare(curVersion, newVersion) {
+	case -1:
+		return nil
+	case 1:
+		if newVersion == "nightly" {
+			return nil
+		} else {
+			return errors.New(fmt.Sprintf("unsupport upgrade from %s to %s", curVersion, newVersion))
+		}
+	default:
+		return errors.New("unkown error")
+	}
+}
+
+func upgrade(name string, opt upgradeOptions) error {
+	metadata, err := meta.ClusterMetadata(name)
 	if err != nil {
 		return err
 	}
@@ -62,6 +81,10 @@ func upgrade(opt upgradeOptions) error {
 
 		uniqueComps = map[componentInfo]struct{}{}
 	)
+
+	if err := versionCompare(metadata.Version, opt.version); err != nil {
+		return err
+	}
 
 	for _, comp := range metadata.Topology.ComponentsByStartOrder() {
 		for _, inst := range comp.Instances() {
@@ -98,8 +121,8 @@ func upgrade(opt upgradeOptions) error {
 
 	t := task.NewBuilder().
 		SSHKeySet(
-			meta.ClusterPath(opt.cluster, "ssh", "id_rsa"),
-			meta.ClusterPath(opt.cluster, "ssh", "id_rsa.pub")).
+			meta.ClusterPath(name, "ssh", "id_rsa"),
+			meta.ClusterPath(name, "ssh", "id_rsa.pub")).
 		ClusterSSH(metadata.Topology, metadata.User).
 		Parallel(downloadCompTasks...).
 		Parallel(copyCompTasks...).
