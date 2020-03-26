@@ -16,6 +16,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
@@ -31,6 +32,7 @@ func init() {
 
 	var (
 		binary   string
+		binPath  string
 		tag      string
 		rm       bool
 		repoOpts repository.Options
@@ -52,24 +54,21 @@ the latest stable version will be downloaded from the repository.
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
 		Version:            fmt.Sprintf("%s+%s(%s)", version.NewTiUPVersion().SemVer(), version.GitBranch, version.GitHash),
 		Args: func(cmd *cobra.Command, args []string) error {
-			// Support `tiup <component>:[<version>]:[<binpath>]`
+			// Support `tiup <component>`
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if binary != "" {
-				component, ver, binPath := meta.ParseBinary(binary)
+				component, ver := meta.ParseCompVersion(binary)
 				selectedVer, err := meta.SelectInstalledVersion(component, ver)
 				if err != nil {
 					return err
 				}
-				if binPath == "" {
-					binPath, err = meta.BinaryPath(component, selectedVer)
-					if err != nil {
-						return err
-					}
+				binaryPath, err := meta.BinaryPath(component, selectedVer)
+				if err != nil {
+					return err
 				}
-
-				fmt.Println(binPath)
+				fmt.Println(binaryPath)
 				return nil
 			}
 			if len(args) > 0 {
@@ -78,15 +77,24 @@ the latest stable version will be downloaded from the repository.
 				// will be parsed correctly.
 				// e.g: tiup --tag mytag --rm playground --db 3 --pd 3 --kv 4
 				//   => run "playground" with parameters "--db 3 --pd 3 --kv 4"
+				// tiup --tag mytag --binpath /xxx/tikv-server tikv
 				var transparentParams []string
 				componentSpec := args[0]
 				for i, arg := range os.Args {
 					if arg == componentSpec {
-						transparentParams = os.Args[i+1:]
+						var num = 1
+						if len(os.Args) > i+1 && strings.HasPrefix(os.Args[i+1], "--binpath=") {
+							num += 1
+							flagLen := len("--binpath=")
+							if len(os.Args[i+1]) > flagLen {
+								binPath = os.Args[i+1][flagLen:]
+							}
+						}
+						transparentParams = os.Args[i+num:]
 						break
 					}
 				}
-				return runComponent(tag, componentSpec, transparentParams, rm)
+				return runComponent(tag, componentSpec, binPath, transparentParams, rm)
 			}
 			return cmd.Help()
 		},
@@ -104,6 +112,7 @@ the latest stable version will be downloaded from the repository.
 		"and the latest version installed will be selected if no version specified")
 	rootCmd.Flags().StringVarP(&tag, "tag", "T", "", "Specify a tag for component instance")
 	rootCmd.Flags().BoolVar(&rm, "rm", false, "Remove the data directory when the component instance finishes its run")
+	rootCmd.Flags().StringVar(&binPath, "binpath", "", "Specify the binary path of component instance")
 
 	rootCmd.AddCommand(
 		newInstallCmd(),

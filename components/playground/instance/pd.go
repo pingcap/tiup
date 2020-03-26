@@ -59,7 +59,8 @@ func (inst *PDInstance) Start(ctx context.Context, version repository.Version, b
 	}
 	uid := fmt.Sprintf("pd-%d", inst.ID)
 	args := []string{
-		"tiup", specifyBinary("pd", version, binPath),
+		"tiup", compVersion("pd", version),
+		fmt.Sprintf("--binpath=%s", binPath),
 		"--name=" + uid,
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
 		fmt.Sprintf("--peer-urls=http://%s:%d", inst.Host, inst.Port),

@@ -69,7 +69,8 @@ func (inst *TiKVInstance) Start(ctx context.Context, version repository.Version,
 		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", inst.Host, pd.StatusPort))
 	}
 	inst.cmd = exec.CommandContext(ctx,
-		"tiup", specifyBinary("tikv", version, binPath),
+		"tiup", compVersion("tikv", version),
+		fmt.Sprintf("--binpath=%s", binPath),
 		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
 		fmt.Sprintf("--status-addr=%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),

@@ -104,19 +104,6 @@ func LocalRoot() string {
 	return profile.Root()
 }
 
-// ParseBinary parses component part from <component>:<version>:<binpath> specification
-func ParseBinary(spec string) (string, repository.Version, string) {
-	if strings.Contains(spec, ":") {
-		parts := strings.Split(spec, ":")
-		var binPath = ""
-		if len(parts) == 3 {
-			binPath = parts[2]
-		}
-		return parts[0], repository.Version(parts[1]), binPath
-	}
-	return spec, "", ""
-}
-
 // ParseCompVersion parses component part from <component>[:version] specification
 func ParseCompVersion(spec string) (string, repository.Version) {
 	if strings.Contains(spec, ":") {

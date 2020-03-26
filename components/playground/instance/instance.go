@@ -35,6 +35,9 @@ type Instance interface {
 	Wait() error
 }
 
-func specifyBinary(comp string, version repository.Version, binPath string) string {
-	return fmt.Sprintf("%v:%v:%v", comp, version, binPath)
+func compVersion(comp string, version repository.Version) string {
+	if version.IsEmpty() {
+		return comp
+	}
+	return fmt.Sprintf("%v:%v", comp, version)
 }

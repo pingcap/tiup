@@ -32,8 +32,8 @@ import (
 	"github.com/pingcap/errors"
 )
 
-func runComponent(tag, spec string, args []string, rm bool) error {
-	component, version, binPath := meta.ParseBinary(spec)
+func runComponent(tag, spec, binPath string, args []string, rm bool) error {
+	component, version := meta.ParseCompVersion(spec)
 	if !isSupportedComponent(component) {
 		return fmt.Errorf("unkonwn component `%s` (see supported components via `tiup list --refresh`)", component)
 	}
