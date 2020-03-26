@@ -90,18 +90,6 @@ func Restart(
 	return nil
 }
 
-// Destroy the cluster.
-func Destroy(
-	getter ExecutorGetter,
-	w io.Writer,
-	spec *meta.Specification,
-	component string,
-	node string,
-) error {
-
-	return nil
-}
-
 // StartComponent start the instances.
 func StartComponent(getter ExecutorGetter, w io.Writer, instances []meta.Instance) error {
 	if len(instances) <= 0 {
