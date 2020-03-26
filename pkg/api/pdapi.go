@@ -289,7 +289,7 @@ func (pc *PDClient) DelPD(name string) error {
 		// check if the deleted member still present
 		for _, member := range currMembers.Members {
 			if member.Name == name {
-				return errors.New("still waitting for the member to be deleted")
+				return errors.New("still waitting for the PD node to be deleted")
 			}
 		}
 
@@ -344,14 +344,14 @@ func (pc *PDClient) DelStore(host string) error {
 		// check if the deleted member still present
 		for _, store := range currStores.Stores {
 			if store.Store.Id == storeID {
-				// deleting store may take long time to transfer data, so we
-				// return once it get to "Offline" status and not waiting the
-				// whole process to complete.
+				// deleting a store may take long time to transfer data, so we
+				// return sucess once it get to "Offline" status and not waiting
+				// for the whole process to complete.
 				// When finished, the store's state will be "Tombstone".
 				if store.Store.StateName != metapb.StoreState_name[0] {
 					return nil
 				}
-				return errors.New("still waitting for the member to be deleted")
+				return errors.New("still waitting for the store to be deleted")
 			}
 		}
 

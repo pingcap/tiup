@@ -175,11 +175,6 @@ func StopComponent(getter ExecutorGetter, w io.Writer, instances []meta.Instance
 	return nil
 }
 
-// DestroyComponent is used to destroy instance
-func DestroyComponent(getter ExecutorGetter, w io.Writer, instances []meta.Instance) error {
-	return errors.New("not implement")
-}
-
 /*
 [tidb@ip-172-16-5-70 deploy]$ sudo systemctl status drainer-8249.service
 ● drainer-8249.service - drainer-8249 service
