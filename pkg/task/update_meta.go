@@ -34,55 +34,54 @@ func (u *UpdateMeta) Execute(ctx *Context) error {
 
 	deleted := set.NewStringSet(u.deletedNodesID...)
 	topo := u.metadata.Topology
-	for _, instance := range topo.TiDBServers {
-		if deleted.Exist(instance.UUID) {
+	for i, instance := range (&meta.TiDBComponent{Specification: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.TiDBServers = append(newMeta.Topology.TiDBServers, instance)
+		newMeta.Topology.TiDBServers = append(newMeta.Topology.TiDBServers, topo.TiDBServers[i])
 	}
-	for _, instance := range topo.TiKVServers {
-		if deleted.Exist(instance.UUID) {
+	for i, instance := range (&meta.TiKVComponent{Specification: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.TiKVServers = append(newMeta.Topology.TiKVServers, instance)
+		newMeta.Topology.TiKVServers = append(newMeta.Topology.TiKVServers, topo.TiKVServers[i])
 	}
-	for _, instance := range topo.PDServers {
-		if deleted.Exist(instance.UUID) {
+	for i, instance := range (&meta.PDComponent{Specification: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.PDServers = append(newMeta.Topology.PDServers, instance)
+		newMeta.Topology.PDServers = append(newMeta.Topology.PDServers, topo.PDServers[i])
 	}
-	for _, instance := range topo.PumpServers {
-		if deleted.Exist(instance.UUID) {
+	for i, instance := range (&meta.PumpComponent{Specification: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.PumpServers = append(newMeta.Topology.PumpServers, instance)
+		newMeta.Topology.PumpServers = append(newMeta.Topology.PumpServers, topo.PumpServers[i])
 	}
-	for _, instance := range topo.Drainers {
-		if deleted.Exist(instance.UUID) {
+	for i, instance := range (&meta.DrainerComponent{Specification: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Drainers = append(newMeta.Topology.Drainers, instance)
+		newMeta.Topology.Drainers = append(newMeta.Topology.Drainers, topo.Drainers[i])
 	}
-	for _, instance := range topo.MonitorSpec {
-		if deleted.Exist(instance.UUID) {
+	for i, instance := range (&meta.MonitorComponent{Specification: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.MonitorSpec = append(newMeta.Topology.MonitorSpec, instance)
+		newMeta.Topology.Monitors = append(newMeta.Topology.Monitors, topo.Monitors[i])
 	}
-	for _, instance := range topo.Grafana {
-		if deleted.Exist(instance.UUID) {
+	for i, instance := range (&meta.GrafanaComponent{Specification: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Grafana = append(newMeta.Topology.Grafana, instance)
+		newMeta.Topology.Grafana = append(newMeta.Topology.Grafana, topo.Grafana[i])
 	}
-	for _, instance := range topo.Alertmanager {
-		if deleted.Exist(instance.UUID) {
+	for i, instance := range (&meta.AlertmanagerComponent{Specification: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Alertmanager = append(newMeta.Topology.Alertmanager, instance)
+		newMeta.Topology.Alertmanager = append(newMeta.Topology.Alertmanager, topo.Alertmanager[i])
 	}
-
 	return meta.SaveClusterMeta(u.cluster, newMeta)
 }
 

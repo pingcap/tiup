@@ -21,6 +21,7 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
 	"github.com/pingcap-incubator/tiops/pkg/task"
+	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
@@ -59,11 +60,10 @@ func versionCompare(curVersion, newVersion string) error {
 	case -1:
 		return nil
 	case 1:
-		if newVersion == "nightly" {
+		if repository.Version(newVersion).IsNightly() {
 			return nil
-		} else {
-			return errors.New(fmt.Sprintf("unsupport upgrade from %s to %s", curVersion, newVersion))
 		}
+		return errors.New(fmt.Sprintf("unsupport upgrade from %s to %s", curVersion, newVersion))
 	default:
 		return errors.New("unkown error")
 	}

@@ -86,10 +86,9 @@ func filterInstance(instances []meta.Instance, node string) (res []meta.Instance
 	}
 
 	for _, c := range instances {
-		if c.GetHost() != node {
+		if c.ID() != node {
 			continue
 		}
-
 		res = append(res, c)
 	}
 

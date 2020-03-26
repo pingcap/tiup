@@ -39,14 +39,8 @@ const (
 	RoleMonitor = "monitor"
 )
 
-// InstanceSpec is the interface for any instance
+// InstanceSpec represent a instance specification
 type InstanceSpec interface {
-	GetID() string
-	GetHost() string
-	GetPort() []int
-	GetSSHPort() int
-	GetDir() []string
-	GetStatus(pdList ...string) string
 	Role() string
 }
 
@@ -55,43 +49,13 @@ type TiDBSpec struct {
 	Host       string `yaml:"host"`
 	Port       int    `yaml:"port" default:"4000"`
 	StatusPort int    `yaml:"status_port" default:"10080"`
-	UUID       string `yaml:"uuid,omitempty"`
 	SSHPort    int    `yaml:"ssh_port,omitempty" default:"22"`
 	DeployDir  string `yaml:"deploy_dir,omitempty"`
 	NumaNode   bool   `yaml:"numa_node,omitempty"`
 }
 
-// GetID returns the UUID of the instance
-func (s TiDBSpec) GetID() string {
-	return s.UUID
-}
-
-// GetHost returns the hostname of the instance
-func (s TiDBSpec) GetHost() string {
-	return s.Host
-}
-
-// GetPort returns the port(s) of instance
-func (s TiDBSpec) GetPort() []int {
-	return []int{
-		s.Port,
-	}
-}
-
-// GetSSHPort returns the SSH port of the instance
-func (s TiDBSpec) GetSSHPort() int {
-	return s.SSHPort
-}
-
-// GetDir returns the directory(ies) of the instance
-func (s TiDBSpec) GetDir() []string {
-	return []string{
-		s.DeployDir,
-	}
-}
-
-// GetStatus queries current status of the instance
-func (s TiDBSpec) GetStatus(pdList ...string) string {
+// Status queries current status of the instance
+func (s TiDBSpec) Status(pdList ...string) string {
 	client := utils.NewHTTPClient(statusQueryTimeout, nil)
 	url := fmt.Sprintf("http://%s:%d/status", s.Host, s.StatusPort)
 
@@ -116,7 +80,6 @@ type TiKVSpec struct {
 	Host       string   `yaml:"host"`
 	Port       int      `yaml:"port" default:"20160"`
 	StatusPort int      `yaml:"status_port" default:"20180"`
-	UUID       string   `yaml:"uuid,omitempty"`
 	SSHPort    int      `yaml:"ssh_port,omitempty" default:"22"`
 	DeployDir  string   `yaml:"deploy_dir,omitempty"`
 	DataDir    string   `yaml:"data_dir,omitempty"`
@@ -125,39 +88,8 @@ type TiKVSpec struct {
 	NumaNode   bool     `yaml:"numa_node,omitempty"`
 }
 
-// GetID returns the UUID of the instance
-func (s TiKVSpec) GetID() string {
-	return s.UUID
-}
-
-// GetHost returns the hostname of the instance
-func (s TiKVSpec) GetHost() string {
-	return s.Host
-}
-
-// GetPort returns the port(s) of instance
-func (s TiKVSpec) GetPort() []int {
-	return []int{
-		s.Port,
-		s.StatusPort,
-	}
-}
-
-// GetSSHPort returns the SSH port of the instance
-func (s TiKVSpec) GetSSHPort() int {
-	return s.SSHPort
-}
-
-// GetDir returns the directory(ies) of the instance
-func (s TiKVSpec) GetDir() []string {
-	return []string{
-		s.DeployDir,
-		s.DataDir,
-	}
-}
-
-// GetStatus queries current status of the instance
-func (s TiKVSpec) GetStatus(pdList ...string) string {
+// Status queries current status of the instance
+func (s TiKVSpec) Status(pdList ...string) string {
 	if len(pdList) < 1 {
 		return "N/A"
 	}
@@ -183,61 +115,19 @@ func (s TiKVSpec) Role() string {
 
 // PDSpec represents the PD topology specification in topology.yaml
 type PDSpec struct {
-	// Use GetName() to get the name with a default value if it's empty.
-	ConfigName string `yaml:"name"`
+	// Use Name to get the name with a default value if it's empty.
+	Name       string `yaml:"name"`
 	Host       string `yaml:"host"`
 	ClientPort int    `yaml:"client_port" default:"2379"`
 	PeerPort   int    `yaml:"peer_port" default:"2380"`
-	UUID       string `yaml:"uuid,omitempty"`
 	SSHPort    int    `yaml:"ssh_port,omitempty" default:"22"`
 	DeployDir  string `yaml:"deploy_dir,omitempty"`
 	DataDir    string `yaml:"data_dir,omitempty"`
 	NumaNode   bool   `yaml:"numa_node,omitempty"`
 }
 
-// GetName return the name.
-// return "pd-{host}-{port} if it's not setted.
-func (s PDSpec) GetName() string {
-	if s.ConfigName != "" {
-		return s.ConfigName
-	}
-
-	return fmt.Sprintf("pd-%s-%d", s.Host, s.ClientPort)
-}
-
-// GetID returns the UUID of the instance
-func (s PDSpec) GetID() string {
-	return s.UUID
-}
-
-// GetHost returns the hostname of the instance
-func (s PDSpec) GetHost() string {
-	return s.Host
-}
-
-// GetPort returns the port(s) of instance
-func (s PDSpec) GetPort() []int {
-	return []int{
-		s.ClientPort,
-		s.PeerPort,
-	}
-}
-
-// GetSSHPort returns the SSH port of the instance
-func (s PDSpec) GetSSHPort() int {
-	return s.SSHPort
-}
-
-// GetDir returns the directory(ies) of the instance
-func (s PDSpec) GetDir() []string {
-	return []string{
-		s.DeployDir,
-		s.DataDir,
-	}
-}
-
-// GetStatus queries current status of the instance
-func (s PDSpec) GetStatus(pdList ...string) string {
+// Status queries current status of the instance
+func (s PDSpec) Status(pdList ...string) string {
 	pdapi := api.NewPDClient(fmt.Sprintf("%s:%d", s.Host, s.ClientPort),
 		statusQueryTimeout, nil)
 	healths, err := pdapi.GetHealth()
@@ -253,10 +143,10 @@ func (s PDSpec) GetStatus(pdList ...string) string {
 
 	for _, member := range healths.Healths {
 		suffix := ""
-		if s.UUID != member.Name {
+		if s.Name != member.Name {
 			continue
 		}
-		if s.UUID == leader.Name {
+		if s.Name == leader.Name {
 			suffix = "|L"
 		}
 		if member.Health {
@@ -276,47 +166,11 @@ func (s PDSpec) Role() string {
 type PumpSpec struct {
 	Host      string `yaml:"host"`
 	Port      int    `yaml:"port" default:"8250"`
-	UUID      string `yaml:"uuid,omitempty"`
 	SSHPort   int    `yaml:"ssh_port,omitempty" default:"22"`
 	DeployDir string `yaml:"deploy_dir,omitempty"`
 	DataDir   string `yaml:"data_dir,omitempty"`
 	Offline   bool   `yaml:"offline,omitempty"`
 	NumaNode  bool   `yaml:"numa_node,omitempty"`
-}
-
-// GetID returns the UUID of the instance
-func (s PumpSpec) GetID() string {
-	return s.UUID
-}
-
-// GetHost returns the hostname of the instance
-func (s PumpSpec) GetHost() string {
-	return s.Host
-}
-
-// GetPort returns the port(s) of instance
-func (s PumpSpec) GetPort() []int {
-	return []int{
-		s.Port,
-	}
-}
-
-// GetSSHPort returns the SSH port of the instance
-func (s PumpSpec) GetSSHPort() int {
-	return s.SSHPort
-}
-
-// GetDir returns the directory(ies) of the instance
-func (s PumpSpec) GetDir() []string {
-	return []string{
-		s.DeployDir,
-		s.DataDir,
-	}
-}
-
-// GetStatus queries current status of the instance
-func (s PumpSpec) GetStatus(pdList ...string) string {
-	return "N/A"
 }
 
 // Role returns the component role of the instance
@@ -328,48 +182,12 @@ func (s PumpSpec) Role() string {
 type DrainerSpec struct {
 	Host      string `yaml:"host"`
 	Port      int    `yaml:"port" default:"8249"`
-	UUID      string `yaml:"uuid,omitempty"`
 	SSHPort   int    `yaml:"ssh_port,omitempty" default:"22"`
 	DeployDir string `yaml:"deploy_dir,omitempty"`
 	DataDir   string `yaml:"data_dir,omitempty"`
 	CommitTS  string `yaml:"commit_ts,omitempty"`
 	Offline   bool   `yaml:"offline,omitempty"`
 	NumaNode  bool   `yaml:"numa_node,omitempty"`
-}
-
-// GetID returns the UUID of the instance
-func (s DrainerSpec) GetID() string {
-	return s.UUID
-}
-
-// GetHost returns the hostname of the instance
-func (s DrainerSpec) GetHost() string {
-	return s.Host
-}
-
-// GetPort returns the port(s) of instance
-func (s DrainerSpec) GetPort() []int {
-	return []int{
-		s.Port,
-	}
-}
-
-// GetSSHPort returns the SSH port of the instance
-func (s DrainerSpec) GetSSHPort() int {
-	return s.SSHPort
-}
-
-// GetDir returns the directory(ies) of the instance
-func (s DrainerSpec) GetDir() []string {
-	return []string{
-		s.DeployDir,
-		s.DataDir,
-	}
-}
-
-// GetStatus queries current status of the instance
-func (s DrainerSpec) GetStatus(pdList ...string) string {
-	return "N/A"
 }
 
 // Role returns the component role of the instance
@@ -381,45 +199,9 @@ func (s DrainerSpec) Role() string {
 type PrometheusSpec struct {
 	Host      string `yaml:"host"`
 	Port      int    `yaml:"port" default:"9090"`
-	UUID      string `yaml:"uuid,omitempty"`
 	SSHPort   int    `yaml:"ssh_port,omitempty" default:"22"`
 	DeployDir string `yaml:"deploy_dir,omitempty"`
 	DataDir   string `yaml:"data_dir,omitempty"`
-}
-
-// GetID returns the UUID of the instance
-func (s PrometheusSpec) GetID() string {
-	return s.UUID
-}
-
-// GetHost returns the hostname of the instance
-func (s PrometheusSpec) GetHost() string {
-	return s.Host
-}
-
-// GetPort returns the port(s) of instance
-func (s PrometheusSpec) GetPort() []int {
-	return []int{
-		s.Port,
-	}
-}
-
-// GetSSHPort returns the SSH port of the instance
-func (s PrometheusSpec) GetSSHPort() int {
-	return s.SSHPort
-}
-
-// GetDir returns the directory(ies) of the instance
-func (s PrometheusSpec) GetDir() []string {
-	return []string{
-		s.DeployDir,
-		s.DataDir,
-	}
-}
-
-// GetStatus queries current status of the instance
-func (s PrometheusSpec) GetStatus(pdList ...string) string {
-	return "-"
 }
 
 // Role returns the component role of the instance
@@ -431,43 +213,8 @@ func (s PrometheusSpec) Role() string {
 type GrafanaSpec struct {
 	Host      string `yaml:"host"`
 	Port      int    `yaml:"port" default:"3000"`
-	UUID      string `yaml:"uuid,omitempty"`
 	SSHPort   int    `yaml:"ssh_port,omitempty" default:"22"`
 	DeployDir string `yaml:"deploy_dir,omitempty"`
-}
-
-// GetID returns the UUID of the instance
-func (s GrafanaSpec) GetID() string {
-	return s.UUID
-}
-
-// GetHost returns the hostname of the instance
-func (s GrafanaSpec) GetHost() string {
-	return s.Host
-}
-
-// GetPort returns the port(s) of instance
-func (s GrafanaSpec) GetPort() []int {
-	return []int{
-		s.Port,
-	}
-}
-
-// GetSSHPort returns the SSH port of the instance
-func (s GrafanaSpec) GetSSHPort() int {
-	return s.SSHPort
-}
-
-// GetDir returns the directory(ies) of the instance
-func (s GrafanaSpec) GetDir() []string {
-	return []string{
-		s.DeployDir,
-	}
-}
-
-// GetStatus queries current status of the instance
-func (s GrafanaSpec) GetStatus(pdList ...string) string {
-	return "-"
 }
 
 // Role returns the component role of the instance
@@ -480,46 +227,9 @@ type AlertManagerSpec struct {
 	Host        string `yaml:"host"`
 	WebPort     int    `yaml:"web_port" default:"9093"`
 	ClusterPort int    `yaml:"cluster_port" default:"9094"`
-	UUID        string `yaml:"uuid,omitempty"`
 	SSHPort     int    `yaml:"ssh_port,omitempty" default:"22"`
 	DeployDir   string `yaml:"deploy_dir,omitempty"`
 	DataDir     string `yaml:"data_dir,omitempty"`
-}
-
-// GetID returns the UUID of the instance
-func (s AlertManagerSpec) GetID() string {
-	return s.UUID
-}
-
-// GetHost returns the hostname of the instance
-func (s AlertManagerSpec) GetHost() string {
-	return s.Host
-}
-
-// GetPort returns the port(s) of instance
-func (s AlertManagerSpec) GetPort() []int {
-	return []int{
-		s.WebPort,
-		s.ClusterPort,
-	}
-}
-
-// GetSSHPort returns the SSH port of the instance
-func (s AlertManagerSpec) GetSSHPort() int {
-	return s.SSHPort
-}
-
-// GetDir returns the directory(ies) of the instance
-func (s AlertManagerSpec) GetDir() []string {
-	return []string{
-		s.DeployDir,
-		s.DataDir,
-	}
-}
-
-// GetStatus queries current status of the instance
-func (s AlertManagerSpec) GetStatus(pdList ...string) string {
-	return "-"
 }
 
 // Role returns the component role of the instance
@@ -547,7 +257,7 @@ type TopologySpecification struct {
 	PDServers    []PDSpec           `yaml:"pd_servers"`
 	PumpServers  []PumpSpec         `yaml:"pump_servers,omitempty"`
 	Drainers     []DrainerSpec      `yaml:"drainer_servers,omitempty"`
-	MonitorSpec  []PrometheusSpec   `yaml:"monitoring_servers"`
+	Monitors     []PrometheusSpec   `yaml:"monitoring_servers"`
 	Grafana      []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
 	Alertmanager []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
 }
@@ -628,9 +338,11 @@ func setCustomDefaults(field reflect.Value) error {
 			if field.Field(j).String() == "" {
 				// TODO: remove empty server from topology
 			}
-		case "UUID":
+		case "Name":
 			if field.Field(j).String() == "" {
-				field.Field(j).Set(reflect.ValueOf(getNodeID(field)))
+				host := field.FieldByName("Host").Interface().(string)
+				clientPort := field.FieldByName("ClientPort").Interface().(int)
+				field.Field(j).Set(reflect.ValueOf(fmt.Sprintf("pd-%s-%d", host, clientPort)))
 			}
 		case "DeployDir", "DataDir":
 			if field.Field(j).String() != "" {
@@ -652,7 +364,6 @@ func setCustomDefaults(field reflect.Value) error {
 	return nil
 }
 
-// getNodeID tries to build an UUID from the node's Host and service port
 func getPort(v reflect.Value) string {
 	for i := 0; i < v.NumField(); i++ {
 		switch v.Type().Field(i).Name {
@@ -661,24 +372,4 @@ func getPort(v reflect.Value) string {
 		}
 	}
 	return ""
-}
-
-// getNodeID tries to build an UUID from the node's Host and service port
-func getNodeID(v reflect.Value) string {
-	host := ""
-	port := ""
-
-	for i := 0; i < v.NumField(); i++ {
-		switch v.Type().Field(i).Name {
-		case "UUID": // return if UUID is already set
-			if v.Field(i).String() != "" {
-				return v.Field(i).String()
-			}
-		case "Host":
-			host = v.Field(i).String()
-		case "Port", "ClientPort", "WebPort":
-			port = v.Field(i).String()
-		}
-	}
-	return utils.UUID(fmt.Sprintf("%s:%s", host, port))
 }

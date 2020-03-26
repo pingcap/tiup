@@ -34,7 +34,7 @@ func ScaleIn(
 	// make sure all nodeIds exists in topology
 	for _, component := range spec.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
-			instances[instance.UUID()] = instance
+			instances[instance.ID()] = instance
 		}
 	}
 
@@ -70,9 +70,9 @@ func ScaleIn(
 
 			switch component.Name() {
 			case meta.ComponentTiKV:
-				// pdapi delete store
+				// TODO: pdapi delete store
 			case meta.ComponentPD:
-				// pdapi.delete pd
+				// TODO: delete pd
 			case meta.ComponentDrainer:
 				// TODO: binlog api
 			case meta.ComponentPump:

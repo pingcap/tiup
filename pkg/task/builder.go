@@ -183,7 +183,7 @@ func (b *Builder) Mkdir(host string, dirs ...string) *Builder {
 	return b
 }
 
-// Mkdir appends a Mkdir task to the current task collection
+// Rmdir appends a Rmdir task to the current task collection
 func (b *Builder) Rmdir(host string, dirs ...string) *Builder {
 	b.tasks = append(b.tasks, &Mkdir{
 		host: host,

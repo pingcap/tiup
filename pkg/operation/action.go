@@ -175,6 +175,7 @@ func StopComponent(getter ExecutorGetter, w io.Writer, instances []meta.Instance
 	return nil
 }
 
+// DestroyComponent is used to destroy instance
 func DestroyComponent(getter ExecutorGetter, w io.Writer, instances []meta.Instance) error {
 	return errors.New("not implement")
 }
