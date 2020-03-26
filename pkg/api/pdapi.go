@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/pingcap-incubator/tiops/pkg/utils"
+	"github.com/pingcap/kvproto/pkg/metapb"
 	"github.com/pingcap/kvproto/pkg/pdpb"
 	pdserverapi "github.com/pingcap/pd/v4/server/api"
 )
@@ -145,7 +146,7 @@ func (pc *PDClient) EvictPDLeader() error {
 
 	// try to evict the leader
 	url := fmt.Sprintf("%s/%s/resign", pc.GetURL(), pdLeaderURI)
-	_, err = pc.httpClient.Post(url, bytes.NewBuffer([]byte("")))
+	_, err = pc.httpClient.Post(url, nil)
 	if err != nil {
 		return err
 	}
@@ -251,6 +252,112 @@ func (pc *PDClient) EvictStoreLeader(host string) error {
 		return errors.New("still waitting for the store leaders to transfer")
 	}, retryOpt); err != nil {
 		return fmt.Errorf("error evicting store leader from %s, %v", host, err)
+	}
+	return nil
+}
+
+// DelPD deletes a PD node from the cluster, name is the Name of the PD member
+func (pc *PDClient) DelPD(name string) error {
+	// get current members
+	members, err := pc.GetMembers()
+	if err != nil {
+		return err
+	}
+	if len(members.Members) == 1 {
+		return errors.New("at least 1 PD node must be online, can not delete")
+	}
+
+	// try to delete the node
+	url := fmt.Sprintf("%s/%s/name/%s", pc.GetURL(), pdMembersURI, name)
+	_, err = pc.httpClient.Delete(url, nil)
+	if err != nil {
+		return err
+	}
+
+	// wait for the deletion to complete
+	retryOpt := utils.RetryOption{
+		Attempts: 30,
+		Delay:    time.Second * 2,
+		Timeout:  time.Second * 60,
+	}
+	if err := utils.Retry(func() error {
+		currMembers, err := pc.GetMembers()
+		if err != nil {
+			return err
+		}
+
+		// check if the deleted member still present
+		for _, member := range currMembers.Members {
+			if member.Name == name {
+				return errors.New("still waitting for the member to be deleted")
+			}
+		}
+
+		return nil
+	}, retryOpt); err != nil {
+		return fmt.Errorf("error deleting PD node, %v", err)
+	}
+	return nil
+}
+
+// DelStore deletes stores from a (TiKV) host
+// The host parameter should be in format of IP:Port, that matches store's address
+func (pc *PDClient) DelStore(host string) error {
+	// get info of current stores
+	stores, err := pc.GetStores()
+	if err != nil {
+		return err
+	}
+
+	// get store ID of host
+	var storeID uint64
+	for _, storeInfo := range stores.Stores {
+		if storeInfo.Store.Address != host {
+			continue
+		}
+		storeID = storeInfo.Store.Id
+	}
+	if storeID == 0 {
+		// TODO: add a log say
+		// "The store doesn't exist, skip deletion"
+		return nil
+	}
+
+	url := fmt.Sprintf("%s/%s/%d", pc.GetURL(), pdStoreURI, storeID)
+	_, err = pc.httpClient.Delete(url, nil)
+	if err != nil {
+		return err
+	}
+
+	// wait for the deletion to complete
+	retryOpt := utils.RetryOption{
+		Attempts: 30,
+		Delay:    time.Second * 2,
+		Timeout:  time.Second * 60,
+	}
+	if err := utils.Retry(func() error {
+		currStores, err := pc.GetStores()
+		if err != nil {
+			return err
+		}
+
+		// check if the deleted member still present
+		for _, store := range currStores.Stores {
+			if store.Store.Id == storeID {
+				// deleting store may take long time to transfer data, so we
+				// return once it get to "Offline" status and not waiting the
+				// whole process to complete.
+				// When finished, the store's state will be "Tombstone".
+				if store.Store.StateName != metapb.StoreState_name[0] {
+					return nil
+				}
+				return errors.New("still waitting for the member to be deleted")
+			}
+		}
+
+		return nil
+	}, retryOpt); err != nil {
+		return fmt.Errorf("error deleting store, %v", err)
 	}
 	return nil
 }

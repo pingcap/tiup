@@ -61,6 +61,22 @@ func (c *HTTPClient) Post(url string, body io.Reader) ([]byte, error) {
 	return checkHTTPResponse(res)
 }
 
+// Delete send a DELETE request to the url and returns the response
+func (c *HTTPClient) Delete(url string, body io.Reader) ([]byte, error) {
+	req, err := http.NewRequest("DELETE", url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	return checkHTTPResponse(res)
+}
+
 // checkHTTPResponse checks if an HTTP response is with normal status codes
 func checkHTTPResponse(res *http.Response) ([]byte, error) {
 	body, err := ioutil.ReadAll(res.Body)
