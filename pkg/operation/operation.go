@@ -23,9 +23,10 @@ import (
 
 // Options represents the operation options
 type Options struct {
-	Role  string
-	Node  string
-	Force bool // Just effiect the upgrade
+	Role         string
+	Node         string
+	Force        bool // Option for upgrade subcommand
+	DeletedNodes []string
 }
 
 // Operation represents the type of cluster operation
