@@ -212,16 +212,17 @@ func getServiceStatus(e executor.TiOpsExecutor, name string) (active string, err
 	}
 	systemd := module.NewSystemdModule(c)
 	stdout, _, err := systemd.Execute(e)
+
+	lines := strings.Split(string(stdout), "\n")
+	if len(lines) >= 3 {
+		return lines[2], nil
+	}
+
 	if err != nil {
 		return
 	}
 
-	lines := strings.Split(string(stdout), "\n")
-	if len(lines) < 3 {
-		return "", errors.Errorf("unexpected output: %s", string(stdout))
-	}
-
-	return lines[2], nil
+	return "", errors.Errorf("unexpected output: %s", string(stdout))
 }
 
 // PrintClusterStatus print cluster status into the io.Writer.

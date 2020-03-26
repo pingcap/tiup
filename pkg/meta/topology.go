@@ -183,7 +183,8 @@ func (s TiKVSpec) Role() string {
 
 // PDSpec represents the PD topology specification in topology.yaml
 type PDSpec struct {
-	Name       string `yaml:"name"`
+	// Use GetName() to get the name with a default value if it's empty.
+	ConfigName string `yaml:"name"`
 	Host       string `yaml:"host"`
 	ClientPort int    `yaml:"client_port" default:"2379"`
 	PeerPort   int    `yaml:"peer_port" default:"2380"`
@@ -192,6 +193,16 @@ type PDSpec struct {
 	DeployDir  string `yaml:"deploy_dir,omitempty"`
 	DataDir    string `yaml:"data_dir,omitempty"`
 	NumaNode   bool   `yaml:"numa_node,omitempty"`
+}
+
+// GetName return the name.
+// return "pd-{host}-{port} if it's not setted.
+func (s PDSpec) GetName() string {
+	if s.ConfigName != "" {
+		return s.ConfigName
+	}
+
+	return fmt.Sprintf("pd-%s-%d", s.Host, s.ClientPort)
 }
 
 // GetID returns the UUID of the instance

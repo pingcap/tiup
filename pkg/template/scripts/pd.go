@@ -15,7 +15,7 @@ package scripts
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path"
@@ -108,8 +108,14 @@ func (c *PDScript) ConfigWithTemplate(tpl string) ([]byte, error) {
 	}
 
 	if c.Name == "" {
-		c.Name = fmt.Sprintf("pd-%s-%d", c.IP, c.ClientPort)
+		return nil, errors.New("empty name")
 	}
+	for _, s := range c.Endpoints {
+		if s.Name == "" {
+			return nil, errors.New("empty name")
+		}
+	}
+
 	content := bytes.NewBufferString("")
 	if err := tmpl.Execute(content, c); err != nil {
 		return nil, err

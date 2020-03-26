@@ -32,6 +32,10 @@ type Config struct {
 	IOReadBandwidthMax  uint
 	IOWriteBandwidthMax uint
 	DeployDir           string
+	DisableSendSigkill  bool
+	// Takes one of no, on-success, on-failure, on-abnormal, on-watchdog, on-abort, or always.
+	// The Template set as always if this is not setted.
+	Restart string
 }
 
 // NewConfig returns a Config with given arguments

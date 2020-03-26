@@ -82,7 +82,15 @@ func (i *instanceBase) InitConfig(e executor.TiOpsExecutor, cacheDir, deployDir 
 	comp := i.ComponentName()
 	port := i.GetPort()
 	sysCfg := filepath.Join(cacheDir, fmt.Sprintf("%s-%d.service", comp, port))
-	if err := system.NewConfig(comp, "tidb", deployDir).ConfigToFile(sysCfg); err != nil {
+
+	systemCfg := system.NewConfig(comp, "tidb", deployDir)
+	// For not auto start if using binlogctl to offline.
+	// bad design
+	if comp == ComponentPump || comp == ComponentDrainer {
+		systemCfg.Restart = "on-failure"
+	}
+
+	if err := systemCfg.ConfigToFile(sysCfg); err != nil {
 		return err
 	}
 	fmt.Println("config path:", sysCfg)
@@ -180,7 +188,7 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, cacheDir, deployDir 
 	}
 	ends := []*scripts.PDScript{}
 	for _, spec := range i.instanceBase.topo.PDServers {
-		ends = append(ends, scripts.NewPDScript(spec.Name, spec.Host, spec.DeployDir, spec.DataDir))
+		ends = append(ends, scripts.NewPDScript(spec.GetName(), spec.Host, spec.DeployDir, spec.DataDir))
 	}
 	cfg := scripts.NewTiDBScript(i.GetHost(), deployDir).AppendEndpoints(ends...)
 	fp := filepath.Join(cacheDir, fmt.Sprintf("run_tidb_%s.sh", i.GetHost()))
@@ -191,6 +199,11 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, cacheDir, deployDir 
 	if err := e.Transfer(fp, dst); err != nil {
 		return err
 	}
+
+	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -234,7 +247,7 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, cacheDir, deployDir 
 	// transfer run script
 	ends := []*scripts.PDScript{}
 	for _, spec := range i.instanceBase.topo.PDServers {
-		ends = append(ends, scripts.NewPDScript(spec.Name, spec.Host, spec.DeployDir, spec.DataDir))
+		ends = append(ends, scripts.NewPDScript(spec.GetName(), spec.Host, spec.DeployDir, spec.DataDir))
 	}
 	cfg := scripts.NewTiKVScript(i.GetHost(), deployDir, filepath.Join(deployDir, "data")).AppendEndpoints(ends...)
 	fp := filepath.Join(cacheDir, fmt.Sprintf("run_tikv_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -243,6 +256,10 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, cacheDir, deployDir 
 	}
 	dst := filepath.Join(deployDir, "scripts", "run_tikv.sh")
 	if err := e.Transfer(fp, dst); err != nil {
+		return err
+	}
+
+	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
 		return err
 	}
 
@@ -297,10 +314,10 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, cacheDir, deployDir st
 	ends := []*scripts.PDScript{}
 	name := ""
 	for _, spec := range i.instanceBase.topo.PDServers {
-		if spec.Host == i.GetHost() {
-			name = spec.Name
+		if spec.Host == i.GetHost() && spec.ClientPort == i.GetPort() {
+			name = spec.GetName()
 		}
-		ends = append(ends, scripts.NewPDScript(spec.Name, spec.Host, spec.DeployDir, spec.DataDir))
+		ends = append(ends, scripts.NewPDScript(spec.GetName(), spec.Host, spec.DeployDir, spec.DataDir))
 	}
 
 	cfg := scripts.NewPDScript(name, i.GetHost(), deployDir, filepath.Join(deployDir, "data")).AppendEndpoints(ends...)
@@ -312,6 +329,11 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, cacheDir, deployDir st
 	if err := e.Transfer(fp, dst); err != nil {
 		return err
 	}
+
+	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+		return err
+	}
+
 	return nil
 }
 
