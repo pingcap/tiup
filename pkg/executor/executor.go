@@ -13,6 +13,8 @@
 
 package executor
 
+import "time"
+
 // TiOpsExecutor is the executor interface for TiOps, all tasks will in the end
 // be passed to a executor and then be actually performed.
 type TiOpsExecutor interface {
@@ -20,7 +22,8 @@ type TiOpsExecutor interface {
 	// NOTE: stdin is not supported as it seems we don't need it (for now). If
 	// at some point in the future we need to pass stdin to a command, we'll
 	// need to refactor this function and its implementations.
-	Execute(cmd string, sudo bool) (stdout []byte, stderr []byte, err error)
+	// If the cmd can't quit in timeout, it will return error, the default timeout is 60 seconds.
+	Execute(cmd string, sudo bool, timeout ...time.Duration) (stdout []byte, stderr []byte, err error)
 
 	// Transfer copies files from or to a target
 	Transfer(src string, dst string) error

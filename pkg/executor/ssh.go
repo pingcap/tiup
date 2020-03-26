@@ -61,9 +61,10 @@ func (sshExec *SSHExecutor) Initialize(config SSHConfig) error {
 
 	// build easyssh config
 	sshExec.Config = &easyssh.MakeConfig{
-		Server:  config.Host,
-		Port:    strconv.Itoa(config.Port),
-		User:    config.User,
+		Server: config.Host,
+		Port:   strconv.Itoa(config.Port),
+		User:   config.User,
+		// Timeout is the maximum amount of time for the TCP connection to establish.
 		Timeout: time.Second * 5, // default timeout is 5 sec
 	}
 
@@ -79,20 +80,28 @@ func (sshExec *SSHExecutor) Initialize(config SSHConfig) error {
 }
 
 // Execute run the command via SSH, it's not invoking any specific shell by default.
-func (sshExec *SSHExecutor) Execute(cmd string, sudo bool) ([]byte, []byte, error) {
+func (sshExec *SSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
 	// try to acquire root permission
 	if sudo {
 		cmd = fmt.Sprintf("sudo -H -u root %s", cmd)
 	}
 
 	// run command on remote host
-	stdout, stderr, done, err := sshExec.Config.Run(cmd)
-	if !done {
-		return nil, nil, fmt.Errorf("connection timed out to %s:%s",
-			sshExec.Config.Server,
-			sshExec.Config.Port)
+	// default timeout is 60s in easyssh-proxy
+	stdout, stderr, done, err := sshExec.Config.Run(cmd, timeout...)
+	if err != nil {
+		return []byte(stdout), []byte(stderr), err
 	}
-	return []byte(stdout), []byte(stderr), err
+
+	if !done { // timeout case,
+		return []byte(stdout), []byte(stderr),
+			fmt.Errorf("timeout to run: %s on %s:%s",
+				cmd,
+				sshExec.Config.Server,
+				sshExec.Config.Port)
+	}
+
+	return []byte(stdout), []byte(stderr), nil
 }
 
 // Transfer copies files via SCP
