@@ -77,16 +77,14 @@ func Restart(
 	coms := spec.ComponentsByStartOrder()
 	coms = filterComponent(coms, component)
 
-	for _, com := range coms {
-		err := StopComponent(getter, w, filterInstance(com.Instances(), node))
-		if err != nil {
-			return errors.Annotatef(err, "failed to stop %s", com.Name())
-		}
+	err := Stop(getter, w, spec, component, node)
+	if err != nil {
+		return errors.Annotatef(err, "failed to stop")
+	}
 
-		err = StartComponent(getter, w, filterInstance(com.Instances(), node))
-		if err != nil {
-			return errors.Annotatef(err, "failed to start %s", com.Name())
-		}
+	err = Start(getter, w, spec, component, node)
+	if err != nil {
+		return errors.Annotatef(err, "failed to start")
 	}
 
 	return nil
@@ -115,7 +113,7 @@ func StartComponent(getter ExecutorGetter, w io.Writer, instances []meta.Instanc
 
 	for _, ins := range instances {
 		e := getter.Get(ins.GetHost())
-		fmt.Fprintf(w, "Starting instance %s\n", ins.GetHost())
+		fmt.Fprintf(w, "\tStarting instance %s\n", ins.GetHost())
 
 		// Start by systemd.
 		c := module.SystemdModuleConfig{
@@ -136,12 +134,12 @@ func StartComponent(getter ExecutorGetter, w io.Writer, instances []meta.Instanc
 		// Check ready.
 		err = ins.Ready(e)
 		if err != nil {
-			str := fmt.Sprintf("%s failed to start: %s", ins.GetHost(), err)
+			str := fmt.Sprintf("\t%s failed to start: %s", ins.GetHost(), err)
 			fmt.Fprintln(w, str)
 			return errors.Annotatef(err, str)
 		}
 
-		fmt.Fprintf(w, "Start %s success\n", ins.GetHost())
+		fmt.Fprintf(w, "\tStart %s success\n", ins.GetHost())
 	}
 
 	return nil
@@ -158,7 +156,7 @@ func StopComponent(getter ExecutorGetter, w io.Writer, instances []meta.Instance
 
 	for _, ins := range instances {
 		e := getter.Get(ins.GetHost())
-		fmt.Fprintf(w, "Stopping instance %s\n", ins.GetHost())
+		fmt.Fprintf(w, "\tStopping instance %s\n", ins.GetHost())
 
 		// Stop by systemd.
 		c := module.SystemdModuleConfig{
@@ -178,12 +176,12 @@ func StopComponent(getter ExecutorGetter, w io.Writer, instances []meta.Instance
 
 		err = ins.WaitForDown(e)
 		if err != nil {
-			str := fmt.Sprintf("%s failed to stop: %s", ins.GetHost(), err)
+			str := fmt.Sprintf("\t%s failed to stop: %s", ins.GetHost(), err)
 			fmt.Fprintln(w, str)
 			return errors.Annotatef(err, str)
 		}
 
-		fmt.Fprintf(w, "Stop %s success\n", ins.GetHost())
+		fmt.Fprintf(w, "\tStop %s success\n", ins.GetHost())
 	}
 
 	return nil
