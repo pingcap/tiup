@@ -15,6 +15,7 @@ RUN sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
          dos2unix \
          git \
          wget \
+         default-mysql-client \
 	     vim pssh # not required by tiops itself, just for ease of use
 
 
