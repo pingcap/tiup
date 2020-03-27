@@ -105,8 +105,9 @@ func StartComponent(getter ExecutorGetter, w io.Writer, instances []meta.Instanc
 
 		// Start by systemd.
 		c := module.SystemdModuleConfig{
-			Unit:   ins.ServiceName(),
-			Action: "start",
+			Unit:         ins.ServiceName(),
+			ReloadDaemon: true,
+			Action:       "start",
 			// Scope: "",
 		}
 		systemd := module.NewSystemdModule(c)

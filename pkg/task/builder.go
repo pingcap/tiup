@@ -132,6 +132,18 @@ func (b *Builder) InitConfig(name string, inst meta.Instance, deployUser, deploy
 	return b
 }
 
+// ScaleConfig generate temporary config on scaling
+func (b *Builder) ScaleConfig(name string, base *meta.TopologySpecification, inst meta.Instance, deployUser, deployDir string) *Builder {
+	b.tasks = append(b.tasks, &ScaleConfig{
+		name:       name,
+		base:       base,
+		instance:   inst,
+		deployUser: deployUser,
+		deployDir:  deployDir,
+	})
+	return b
+}
+
 // SSHKeyGen appends a SSHKeyGen task to the current task collection
 func (b *Builder) SSHKeyGen(keypath string) *Builder {
 	b.tasks = append(b.tasks, &SSHKeyGen{

@@ -288,6 +288,20 @@ func (topo *TopologySpecification) GetPDList() []string {
 	return pdList
 }
 
+// Merge returns a new TopologySpecification which sum old ones
+func (topo *TopologySpecification) Merge(that *TopologySpecification) *TopologySpecification {
+	return &TopologySpecification{
+		TiDBServers:  append(topo.TiDBServers, that.TiDBServers...),
+		TiKVServers:  append(topo.TiKVServers, that.TiKVServers...),
+		PDServers:    append(topo.PDServers, that.PDServers...),
+		PumpServers:  append(topo.PumpServers, that.PumpServers...),
+		Drainers:     append(topo.Drainers, that.Drainers...),
+		Monitors:     append(topo.Monitors, that.Monitors...),
+		Grafana:      append(topo.Grafana, that.Grafana...),
+		Alertmanager: append(topo.Alertmanager, that.Alertmanager...),
+	}
+}
+
 // fillDefaults tries to fill custom fields to their default values
 func fillCustomDefaults(data interface{}) error {
 	v := reflect.ValueOf(data).Elem()

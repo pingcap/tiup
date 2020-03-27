@@ -54,6 +54,7 @@ type Instance interface {
 	Ready(executor.TiOpsExecutor) error
 	WaitForDown(executor.TiOpsExecutor) error
 	InitConfig(executor.TiOpsExecutor, string, string, string) error
+	ScaleConfig(executor.TiOpsExecutor, *Specification, string, string, string) error
 	ComponentName() string
 	InstanceName() string
 	ServiceName() string
@@ -135,6 +136,11 @@ func (i *instance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDi
 	}
 
 	return nil
+}
+
+// ScaleConfig deploy temporary config on scaling
+func (i *instance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, user, cacheDir, deployDir string) error {
+	return i.InitConfig(e, user, cacheDir, deployDir)
 }
 
 // ID returns the identifier of this instance, the ID is constructed by host:port
@@ -256,12 +262,21 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, depl
 	if err := e.Transfer(fp, dst); err != nil {
 		return err
 	}
-
 	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// ScaleConfig deploy temporary config on scaling
+func (i *TiDBInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, user, cacheDir, deployDir string) error {
+	s := i.instance.topo
+	defer func() {
+		i.instance.topo = s
+	}()
+	i.instance.topo = b
+	return i.InitConfig(e, user, cacheDir, deployDir)
 }
 
 // TiKVComponent represents TiKV component.
@@ -343,6 +358,16 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, depl
 	return nil
 }
 
+// ScaleConfig deploy temporary config on scaling
+func (i *TiKVInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, user, cacheDir, deployDir string) error {
+	s := i.instance.topo
+	defer func() {
+		i.instance.topo = s
+	}()
+	i.instance.topo = b
+	return i.InitConfig(e, user, cacheDir, deployDir)
+}
+
 // PDComponent represents PD component.
 type PDComponent struct{ *Specification }
 
@@ -410,11 +435,36 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deploy
 	if err := e.Transfer(fp, dst); err != nil {
 		return err
 	}
-
 	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
 		return err
 	}
+	return nil
+}
 
+// ScaleConfig deploy temporary config on scaling
+func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, user, cacheDir, deployDir string) error {
+	if err := i.instance.ScaleConfig(e, b, user, cacheDir, deployDir); err != nil {
+		return err
+	}
+	ends := []*scripts.PDScript{}
+	name := ""
+	for _, spec := range b.PDServers {
+		if spec.Host == i.GetHost() {
+			name = spec.Name
+		}
+		ends = append(ends, scripts.NewPDScript(spec.Name, spec.Host, spec.DeployDir, spec.DataDir))
+	}
+
+	cfg := scripts.NewPDScaleScript(name, i.GetHost(), deployDir, filepath.Join(deployDir, "data")).AppendEndpoints(ends...)
+	fp := filepath.Join(cacheDir, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
+	fmt.Println("script path:", fp)
+	if err := cfg.ConfigToFile(fp); err != nil {
+		return err
+	}
+	dst := filepath.Join(deployDir, "scripts", "run_pd.sh")
+	if err := e.Transfer(fp, dst); err != nil {
+		return err
+	}
 	return nil
 }
 

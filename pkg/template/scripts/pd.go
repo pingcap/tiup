@@ -16,6 +16,7 @@ package scripts
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -122,4 +123,65 @@ func (c *PDScript) ConfigWithTemplate(tpl string) ([]byte, error) {
 	}
 
 	return content.Bytes(), nil
+}
+
+// PDScaleScript represent the data to generate pd config on scaling
+type PDScaleScript struct {
+	PDScript
+}
+
+// NewPDScaleScript return a new PDScaleScript
+func NewPDScaleScript(name, ip, deployDir, dataDir string) *PDScaleScript {
+	return &PDScaleScript{*NewPDScript(name, ip, deployDir, dataDir)}
+}
+
+// WithScheme set Scheme field of PDScaleScript
+func (c *PDScaleScript) WithScheme(scheme string) *PDScaleScript {
+	c.Scheme = scheme
+	return c
+}
+
+// WithClientPort set ClientPort field of PDScaleScript
+func (c *PDScaleScript) WithClientPort(port uint64) *PDScaleScript {
+	c.ClientPort = port
+	return c
+}
+
+// WithPeerPort set PeerPort field of PDScript
+func (c *PDScaleScript) WithPeerPort(port uint64) *PDScaleScript {
+	c.PeerPort = port
+	return c
+}
+
+// WithNumaNode set NumaNode field of PDScaleScript
+func (c *PDScaleScript) WithNumaNode(numa string) *PDScaleScript {
+	c.NumaNode = numa
+	return c
+}
+
+// AppendEndpoints add new PDScaleScript to Endpoints field
+func (c *PDScaleScript) AppendEndpoints(ends ...*PDScript) *PDScaleScript {
+	c.Endpoints = append(c.Endpoints, ends...)
+	return c
+}
+
+// Config read ${localdata.EnvNameComponentInstallDir}/templates/scripts/run_pd.sh.tpl as template
+// and generate the config by ConfigWithTemplate
+func (c *PDScaleScript) Config() ([]byte, error) {
+	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "scripts", "run_pd_scale.sh.tpl")
+	fmt.Println("script path:", fp)
+	tpl, err := ioutil.ReadFile(fp)
+	if err != nil {
+		return nil, err
+	}
+	return c.ConfigWithTemplate(string(tpl))
+}
+
+// ConfigToFile write config content to specific path
+func (c *PDScaleScript) ConfigToFile(file string) error {
+	config, err := c.Config()
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(file, config, 0755)
 }

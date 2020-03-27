@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/pingcap-incubator/tiops/pkg/meta"
+	operator "github.com/pingcap-incubator/tiops/pkg/operation"
 	"github.com/pingcap-incubator/tiops/pkg/task"
 	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/set"
@@ -28,7 +29,6 @@ import (
 type scaleOutOptions struct {
 	version    string // version of the cluster
 	user       string // username to login to the SSH server
-	deployUser string // username of deploy tidb
 	password   string // password of the user
 	keyFile    string // path to the private key file
 	passphrase string // passphrase of the private key file
@@ -52,7 +52,6 @@ func newScaleOutCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&opt.user, "user", "root", "Specify the system user name")
-	cmd.Flags().StringVarP(&opt.deployUser, "deploy-user", "d", "tidb", "Specify the user name of deploy cluster")
 	cmd.Flags().StringVar(&opt.password, "password", "", "Specify the password of system user")
 	cmd.Flags().StringVar(&opt.keyFile, "key", "", "Specify the key path of system user")
 	cmd.Flags().StringVar(&opt.passphrase, "passphrase", "", "Specify the passphrase of the key")
@@ -64,15 +63,35 @@ func newScaleOutCmd() *cobra.Command {
 }
 
 func scaleOut(name, topoFile string, opt scaleOutOptions) error {
-	var oldPart meta.TopologySpecification
 	var newPart meta.TopologySpecification
-	if err := utils.ParseYaml(meta.ClusterPath(name, "topology.yaml"), &oldPart); err != nil {
-		return err
-	}
 	if err := utils.ParseYaml(topoFile, &newPart); err != nil {
 		return err
 	}
 
+	t, err := bootstrapNewPart(name, opt, &newPart)
+	if err != nil {
+		return err
+	}
+	if err := t.Execute(task.NewContext()); err != nil {
+		return err
+	}
+	t, err = refreshConfig(name, opt, &newPart)
+	if err != nil {
+		return err
+	}
+	if err := t.Execute(task.NewContext()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func bootstrapNewPart(name string, opt scaleOutOptions, newPart *meta.TopologySpecification) (task.Task, error) {
+	metadata, err := meta.ClusterMetadata(name)
+	if err != nil {
+		return nil, err
+	}
+	oldPart := metadata.Topology
 	var (
 		envInitTasks      []task.Task // tasks which are used to initialize environment
 		downloadCompTasks []task.Task // tasks which are used to download components
@@ -80,12 +99,11 @@ func scaleOut(name, topoFile string, opt scaleOutOptions) error {
 
 		uniqueHosts = set.NewStringSet()
 	)
-
 	for _, comp := range newPart.ComponentsByStartOrder() {
 		for idx, inst := range comp.Instances() {
 			version := getComponentVersion(inst.ComponentName(), opt.version)
 			if version == "" {
-				return errors.Errorf("unsupported component: %v", inst.ComponentName())
+				return nil, errors.Errorf("unsupported component: %v", inst.ComponentName())
 			}
 
 			// Download component from repository
@@ -101,18 +119,18 @@ func scaleOut(name, topoFile string, opt scaleOutOptions) error {
 				uniqueHosts.Insert(inst.GetHost())
 				t := task.NewBuilder().
 					RootSSH(inst.GetHost(), inst.GetSSHPort(), opt.user, opt.password, opt.keyFile, opt.passphrase).
-					EnvInit(inst.GetHost(), opt.deployUser).
-					UserSSH(inst.GetHost(), opt.deployUser).
+					EnvInit(inst.GetHost(), metadata.User).
 					Build()
 				envInitTasks = append(envInitTasks, t)
 			}
 
 			deployDir := inst.DeployDir()
 			if !strings.HasPrefix(deployDir, "/") {
-				deployDir = filepath.Join("/home/"+opt.deployUser+"/deploy", deployDir)
+				deployDir = filepath.Join("/home/"+metadata.User+"/deploy", deployDir)
 			}
 			// Deploy component
 			t := task.NewBuilder().
+				UserSSH(inst.GetHost(), metadata.User).
 				Mkdir(inst.GetHost(),
 					filepath.Join(deployDir, "bin"),
 					filepath.Join(deployDir, "data"),
@@ -120,18 +138,42 @@ func scaleOut(name, topoFile string, opt scaleOutOptions) error {
 					filepath.Join(deployDir, "scripts"),
 					filepath.Join(deployDir, "logs")).
 				CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
-				// ScaleConfig(name, &oldPart, inst, deployDir)
+				ScaleConfig(name, oldPart, inst, opt.user, deployDir).
 				Build()
 			copyCompTasks = append(copyCompTasks, t)
 		}
 	}
 
-	t := task.NewBuilder().
-		SSHKeyGen(meta.ClusterPath(name, "ssh", "id_rsa")).
+	return task.NewBuilder().
+		SSHKeySet(
+			meta.ClusterPath(name, "ssh", "id_rsa"),
+			meta.ClusterPath(name, "ssh", "id_rsa.pub")).
 		Parallel(envInitTasks...).
 		Parallel(downloadCompTasks...).
 		Parallel(copyCompTasks...).
-		Build()
+		ClusterOperate(newPart, operator.StartOperation, operator.Options{}).
+		Build(), nil
+}
 
-	return t.Execute(task.NewContext())
+func refreshConfig(name string, opt scaleOutOptions, newPart *meta.Specification) (task.Task, error) {
+	metadata, err := meta.ClusterMetadata(name)
+	if err != nil {
+		return nil, err
+	}
+	topo := metadata.Topology.Merge(newPart)
+	tasks := []task.Task{}
+	for _, comp := range topo.ComponentsByStartOrder() {
+		for _, inst := range comp.Instances() {
+			deployDir := inst.DeployDir()
+			if !strings.HasPrefix(deployDir, "/") {
+				deployDir = filepath.Join("/home/"+metadata.User+"/deploy", deployDir)
+			}
+			t := task.NewBuilder().
+				UserSSH(inst.GetHost(), metadata.User).
+				InitConfig(name, inst, metadata.User, deployDir).
+				Build()
+			tasks = append(tasks, t)
+		}
+	}
+	return task.NewBuilder().Parallel(tasks...).Build(), nil
 }
