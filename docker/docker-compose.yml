@@ -57,8 +57,10 @@ services:
          tiops:
            ipv4_address: 172.19.0.105
 
+# docker network create --gateway 172.19.0.1 --subnet 172.19.0.0/16 tiops
 networks:
   tiops:
+    external: true
     ipam:
       config:
         - subnet: 172.19.0.0/16
