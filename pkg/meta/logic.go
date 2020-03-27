@@ -446,7 +446,7 @@ func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, use
 		return err
 	}
 	ends := []*scripts.PDScript{}
-	name := ""
+	name := i.Name
 	for _, spec := range b.PDServers {
 		if spec.Host == i.GetHost() {
 			name = spec.Name
