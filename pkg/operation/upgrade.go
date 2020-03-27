@@ -15,6 +15,7 @@ package operator
 
 import (
 	"io"
+	"strconv"
 	"time"
 
 	"github.com/pingcap-incubator/tiops/pkg/api"
@@ -35,12 +36,12 @@ func Upgrade(
 
 	leaderAware := set.NewStringSet(meta.ComponentPD, meta.ComponentTiKV)
 
-	var pdHosts []string
+	var pdAddrs []string
 
 	for _, component := range components {
 		if component.Name() == meta.ComponentPD {
 			for _, instance := range component.Instances() {
-				pdHosts = append(pdHosts, instance.GetHost())
+				pdAddrs = append(pdAddrs, addr(instance))
 			}
 		}
 
@@ -54,7 +55,7 @@ func Upgrade(
 			switch component.Name() {
 			case meta.ComponentPD:
 				for _, instance := range instances {
-					pdClient := api.NewPDClient(instance.GetHost(), 5*time.Second, nil)
+					pdClient := api.NewPDClient(addr(instance), 5*time.Second, nil)
 					leader, err := pdClient.GetLeader()
 					if err != nil {
 						return errors.Annotatef(err, "failed to get PD leader %s", instance.GetHost())
@@ -73,13 +74,13 @@ func Upgrade(
 				}
 
 			case meta.ComponentTiKV:
-				if pdHosts == nil || len(pdHosts) <= 0 {
-					return errors.New("cannot find pd host")
+				if pdAddrs == nil || len(pdAddrs) <= 0 {
+					return errors.New("cannot find pd addr")
 				}
 
 				for _, instance := range instances {
-					pdClient := api.NewPDClient(pdHosts[0], 5*time.Second, nil)
-					if err := pdClient.EvictStoreLeader(instance.GetHost()); err != nil {
+					pdClient := api.NewPDClient(pdAddrs[0], 5*time.Second, nil)
+					if err := pdClient.EvictStoreLeader(addr(instance)); err != nil {
 						return errors.Annotatef(err, "failed to evict store leader %s", instance.GetHost())
 					}
 					if err := StopComponent(getter, w, []meta.Instance{instance}); err != nil {
@@ -101,4 +102,11 @@ func Upgrade(
 		}
 	}
 	return nil
+}
+
+func addr(ins meta.Instance) string {
+	if ins.GetPort() == 0 || ins.GetPort() == 80 {
+		panic(ins)
+	}
+	return ins.GetHost() + ":" + strconv.Itoa(ins.GetPort())
 }

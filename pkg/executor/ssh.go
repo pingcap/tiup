@@ -93,7 +93,8 @@ func (sshExec *SSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 	// default timeout is 60s in easyssh-proxy
 	stdout, stderr, done, err := sshExec.Config.Run(cmd, timeout...)
 	if err != nil {
-		return []byte(stdout), []byte(stderr), err
+		return []byte(stdout), []byte(stderr),
+			errors.Annotatef(err, "cmd: '%s' on %s:%s", cmd, sshExec.Config.Server, sshExec.Config.Port)
 	}
 
 	if !done { // timeout case,

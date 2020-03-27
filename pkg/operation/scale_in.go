@@ -67,7 +67,7 @@ func ScaleIn(
 	var pdClient *api.PDClient
 	for _, instance := range (&meta.PDComponent{Specification: spec}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
-			pdClient = api.NewPDClient(instance.GetHost(), 10*time.Second, nil)
+			pdClient = api.NewPDClient(addr(instance), 10*time.Second, nil)
 			break
 		}
 	}

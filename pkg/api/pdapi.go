@@ -24,22 +24,22 @@ import (
 	pdserverapi "github.com/pingcap/pd/v4/server/api"
 )
 
-// PDClient is an HTTP client of the PD server "Host"
+// PDClient is an HTTP client of the PD server
 type PDClient struct {
-	Host       string
+	addr       string
 	tlsEnabled bool
 	httpClient *utils.HTTPClient
 }
 
 // NewPDClient returns a new PDClient
-func NewPDClient(host string, timeout time.Duration, tlsConfig *tls.Config) *PDClient {
+func NewPDClient(addr string, timeout time.Duration, tlsConfig *tls.Config) *PDClient {
 	enableTLS := false
 	if tlsConfig != nil {
 		enableTLS = true
 	}
 
 	return &PDClient{
-		Host:       host,
+		addr:       addr,
 		tlsEnabled: enableTLS,
 		httpClient: utils.NewHTTPClient(timeout, tlsConfig),
 	}
@@ -51,7 +51,7 @@ func (pc *PDClient) GetURL() string {
 	if pc.tlsEnabled {
 		httpPrefix = "https"
 	}
-	return fmt.Sprintf("%s://%s", httpPrefix, pc.Host)
+	return fmt.Sprintf("%s://%s", httpPrefix, pc.addr)
 }
 
 var (
