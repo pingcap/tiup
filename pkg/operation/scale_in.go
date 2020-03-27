@@ -15,7 +15,9 @@ package operator
 
 import (
 	"io"
+	"time"
 
+	"github.com/pingcap-incubator/tiops/pkg/api"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
@@ -61,18 +63,35 @@ func ScaleIn(
 
 	asyncOfflineComps := set.NewStringSet(meta.ComponentPump, meta.ComponentTiKV, meta.ComponentDrainer)
 
+	// At least a PD server exists
+	var pdClient *api.PDClient
+	for _, instance := range (&meta.PDComponent{Specification: spec}).Instances() {
+		if !deletedNodes.Exist(instance.ID()) {
+			pdClient = api.NewPDClient(instance.GetHost(), 10*time.Second, nil)
+			break
+		}
+	}
+
+	if pdClient == nil {
+		return errors.New("cannot find available PD instance")
+	}
+
 	// Delete member from cluster
 	for _, component := range spec.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
-			if !deletedNodes.Exist(instance.GetHost()) {
+			if !deletedNodes.Exist(instance.ID()) {
 				continue
 			}
 
 			switch component.Name() {
 			case meta.ComponentTiKV:
-				// TODO: pdapi delete store
+				if err := pdClient.DelStore(instance.GetHost()); err != nil {
+					return err
+				}
 			case meta.ComponentPD:
-				// TODO: delete pd
+				if err := pdClient.DelPD(instance.(*meta.PDInstance).Name); err != nil {
+					return err
+				}
 			case meta.ComponentDrainer:
 				// TODO: binlog api
 			case meta.ComponentPump:
