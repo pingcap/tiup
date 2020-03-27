@@ -34,19 +34,19 @@ func (m *Mkdir) Execute(ctx *Context) error {
 	}
 
 	cmd := fmt.Sprintf(`mkdir -p {%s}`, strings.Join(m.dirs, ","))
-	fmt.Println("Create directories cmd: ", cmd)
-
-	stdout, stderr, err := exec.Execute(cmd, false)
+	_, _, err := exec.Execute(cmd, false)
 	if err != nil {
 		return errors.Trace(err)
 	}
-
-	fmt.Println("Create directories stdout: ", string(stdout))
-	fmt.Println("Create directories stderr: ", string(stderr))
 	return nil
 }
 
 // Rollback implements the Task interface
 func (m *Mkdir) Rollback(ctx *Context) error {
 	return ErrUnsupportRollback
+}
+
+// String implements the fmt.Stringer interface
+func (m *Mkdir) String() string {
+	return fmt.Sprintf("Mkdir: host=%s, directories='%s'", m.host, strings.Join(m.dirs, "','"))
 }

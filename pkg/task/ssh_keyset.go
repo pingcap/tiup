@@ -13,6 +13,8 @@
 
 package task
 
+import "fmt"
+
 // SSHKeySet is used to set the Context private/public key path
 type SSHKeySet struct {
 	privateKeyPath string
@@ -31,4 +33,9 @@ func (s *SSHKeySet) Rollback(ctx *Context) error {
 	ctx.PublicKeyPath = ""
 	ctx.PrivateKeyPath = ""
 	return nil
+}
+
+// String implements the fmt.Stringer interface
+func (s *SSHKeySet) String() string {
+	return fmt.Sprintf("SSHKeySet: privateKey=%s, publicKey=%s", s.privateKeyPath, s.publicKeyPath)
 }

@@ -74,18 +74,20 @@ func (c *BackupComponent) Execute(ctx *Context) error {
 	c.cpTo = dstPathOld
 
 	cmd := fmt.Sprintf(`cp %s %s`, dstPath, dstPathOld)
-	stdout, stderr, err := exec.Execute(cmd, false)
+	_, _, err := exec.Execute(cmd, false)
 	if err != nil {
 		return errors.Annotate(err, cmd)
 	}
-
-	fmt.Println("Backup component stdout: ", string(stdout))
-	fmt.Println("Backup component stderr: ", string(stderr))
-
 	return nil
 }
 
 // Rollback implements the Task interface
 func (c *BackupComponent) Rollback(ctx *Context) error {
 	return nil
+}
+
+// String implements the fmt.Stringer interface
+func (c *BackupComponent) String() string {
+	return fmt.Sprintf("BackupComponent: component=%s, currentVersion=%s, remote=%s:%s",
+		c.component, c.fromVer, c.host, c.dstDir)
 }

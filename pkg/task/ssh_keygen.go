@@ -18,6 +18,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -128,4 +129,9 @@ func (s *SSHKeyGen) writeKeyToFile(keyBytes []byte, saveFileTo string) error {
 // Rollback implements the Task interface
 func (s *SSHKeyGen) Rollback(ctx *Context) error {
 	return os.Remove(s.keypath)
+}
+
+// String implements the fmt.Stringer interface
+func (s *SSHKeyGen) String() string {
+	return fmt.Sprintf("SSHKeyGen: path=%s", s.keypath)
 }

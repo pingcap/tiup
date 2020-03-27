@@ -42,13 +42,10 @@ func (e *EnvInit) Execute(ctx *Context) error {
 		Sudoer: true,
 	})
 
-	stdout, stderr, err := um.Execute(exec)
+	_, _, err := um.Execute(exec)
 	if err != nil {
 		return errors.Trace(err)
 	}
-
-	fmt.Println("Create user stdout: ", string(stdout))
-	fmt.Println("Create user stderr: ", string(stderr))
 
 	pubKey, err := ioutil.ReadFile(ctx.PublicKeyPath)
 	if err != nil {
@@ -57,23 +54,17 @@ func (e *EnvInit) Execute(ctx *Context) error {
 
 	// Authorize
 	cmd := `su - ` + e.deployUser + ` -c 'test -d ~/.ssh || mkdir -p ~/.ssh && chmod 700 ~/.ssh'`
-	stdout, stderr, err = exec.Execute(cmd, false)
+	_, _, err = exec.Execute(cmd, false)
 	if err != nil {
 		return errors.Annotatef(err, "cmd: %s", cmd)
 	}
 
-	fmt.Println("Create ssh directory stdout: ", string(stdout))
-	fmt.Println("Create ssh directory stderr: ", string(stderr))
-
 	// TODO: don't append pubkey if exists
 	cmd = `su - ` + e.deployUser + ` -c 'echo "` + string(pubKey) + `" >> .ssh/authorized_keys && chmod 700 ~/.ssh/authorized_keys'`
-	stdout, stderr, err = exec.Execute(cmd, false)
+	_, _, err = exec.Execute(cmd, false)
 	if err != nil {
 		return errors.Trace(err)
 	}
-
-	fmt.Println("Add pubkey to `.ssh/authorized_keys` stdout: ", string(stdout))
-	fmt.Println("Add pubkey to `.ssh/authorized_keys` stderr: ", string(stderr))
 
 	return nil
 }
@@ -81,4 +72,9 @@ func (e *EnvInit) Execute(ctx *Context) error {
 // Rollback implements the Task interface
 func (e *EnvInit) Rollback(ctx *Context) error {
 	return ErrUnsupportRollback
+}
+
+// String implements the fmt.Stringer interface
+func (e *EnvInit) String() string {
+	return fmt.Sprintf("EnvInit: user=%s, host=%s", e.deployUser, e.host)
 }

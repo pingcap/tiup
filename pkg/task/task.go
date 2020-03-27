@@ -19,6 +19,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/fatih/color"
 	"github.com/pingcap-incubator/tiops/pkg/executor"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 )
@@ -33,6 +34,7 @@ var (
 type (
 	// Task represents a operation while TiOps execution
 	Task interface {
+		fmt.Stringer
 		Execute(ctx *Context) error
 		Rollback(ctx *Context) error
 	}
@@ -124,10 +126,22 @@ func (ctx *Context) SetManifest(comp string, m *repository.VersionManifest) {
 	return
 }
 
+func (ctx *Context) Info(format string, args ...interface{}) {
+	fmt.Println(color.GreenString(format, args...))
+}
+
+func isSingleTask(t Task) bool {
+	_, isS := t.(Serial)
+	_, isP := t.(Parallel)
+	return !isS && !isP
+}
+
 // Execute implements the Task interface
 func (s Serial) Execute(ctx *Context) error {
 	for _, t := range s {
-		fmt.Println("+", fmt.Sprintf("%T => %+v", t, t))
+		if isSingleTask(t) {
+			ctx.Info("+ %s", t.String())
+		}
 		err := t.Execute(ctx)
 		if err != nil {
 			return err
@@ -146,6 +160,15 @@ func (s Serial) Rollback(ctx *Context) error {
 		}
 	}
 	return nil
+}
+
+// String implements the fmt.Stringer interface
+func (s Serial) String() string {
+	var ss []string
+	for _, t := range s {
+		ss = append(ss, t.String())
+	}
+	return strings.Join(ss, "\n")
 }
 
 type errs []error
@@ -202,4 +225,13 @@ func (pt Parallel) Rollback(ctx *Context) error {
 	}
 	wg.Wait()
 	return es
+}
+
+// String implements the fmt.Stringer interface
+func (pt Parallel) String() string {
+	var ss []string
+	for _, t := range pt {
+		ss = append(ss, t.String())
+	}
+	return strings.Join(ss, "\n")
 }

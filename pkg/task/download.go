@@ -64,3 +64,8 @@ func (d *Downloader) Rollback(ctx *Context) error {
 	// We cannot delete the component because of some versions maybe exists before
 	return nil
 }
+
+// String implements the fmt.Stringer interface
+func (d *Downloader) String() string {
+	return fmt.Sprintf("Download: component=%s, version=%s", d.component, d.version)
+}

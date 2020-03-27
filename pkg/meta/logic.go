@@ -125,7 +125,6 @@ func (i *instance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDi
 	if err := systemCfg.ConfigToFile(sysCfg); err != nil {
 		return err
 	}
-	fmt.Println("config path:", sysCfg)
 	tgt := filepath.Join("/tmp", comp+"_"+uuid.New().String()+".service")
 	if err := e.Transfer(sysCfg, tgt); err != nil {
 		return err

@@ -14,6 +14,7 @@
 package task
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/pingcap-incubator/tiops/pkg/meta"
@@ -77,4 +78,9 @@ func (c *ClusterOperate) Execute(ctx *Context) error {
 // Rollback implements the Task interface
 func (c *ClusterOperate) Rollback(ctx *Context) error {
 	return ErrUnsupportRollback
+}
+
+// String implements the fmt.Stringer interface
+func (c *ClusterOperate) String() string {
+	return fmt.Sprintf("EnvInit: operation=%s, options=%+v", c.op, c.options)
 }

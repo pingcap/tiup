@@ -14,6 +14,9 @@
 package task
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 )
@@ -88,4 +91,9 @@ func (u *UpdateMeta) Execute(ctx *Context) error {
 // Rollback implements the Task interface
 func (u *UpdateMeta) Rollback(ctx *Context) error {
 	return meta.SaveClusterMeta(u.cluster, u.metadata)
+}
+
+// String implements the fmt.Stringer interface
+func (u *UpdateMeta) String() string {
+	return fmt.Sprintf("UpdateMeta: cluster=%s, deleted=`'%s'`", u.cluster, strings.Join(u.deletedNodesID, "','"))
 }

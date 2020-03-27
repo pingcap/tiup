@@ -33,7 +33,7 @@ func NewBuilder() *Builder {
 
 // RootSSH appends a RootSSH task to the current task collection
 func (b *Builder) RootSSH(host string, port int, user, password, keyFile, passphrase string) *Builder {
-	b.tasks = append(b.tasks, RootSSH{
+	b.tasks = append(b.tasks, &RootSSH{
 		host:       host,
 		port:       port,
 		user:       user,
@@ -46,7 +46,7 @@ func (b *Builder) RootSSH(host string, port int, user, password, keyFile, passph
 
 // UserSSH append a UserSSH task to the current task collection
 func (b *Builder) UserSSH(host, deployUser string) *Builder {
-	b.tasks = append(b.tasks, UserSSH{
+	b.tasks = append(b.tasks, &UserSSH{
 		host:       host,
 		deployUser: deployUser,
 	})
@@ -58,7 +58,7 @@ func (b *Builder) ClusterSSH(spec *meta.Specification, deployUser string) *Build
 	var tasks []Task
 	for _, com := range spec.ComponentsByStartOrder() {
 		for _, in := range com.Instances() {
-			tasks = append(tasks, UserSSH{
+			tasks = append(tasks, &UserSSH{
 				host:       in.GetHost(),
 				deployUser: deployUser,
 			})
@@ -200,15 +200,6 @@ func (b *Builder) ClusterOperate(
 
 // Mkdir appends a Mkdir task to the current task collection
 func (b *Builder) Mkdir(host string, dirs ...string) *Builder {
-	b.tasks = append(b.tasks, &Mkdir{
-		host: host,
-		dirs: dirs,
-	})
-	return b
-}
-
-// Rmdir appends a Rmdir task to the current task collection
-func (b *Builder) Rmdir(host string, dirs ...string) *Builder {
 	b.tasks = append(b.tasks, &Mkdir{
 		host: host,
 		dirs: dirs,

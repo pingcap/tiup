@@ -52,18 +52,19 @@ func (c *CopyComponent) Execute(ctx *Context) error {
 
 	cmd := fmt.Sprintf(`tar -xzf %s -C %s && rm %s`, dstPath, dstDir, dstPath)
 
-	stdout, stderr, err := exec.Execute(cmd, false)
+	_, stderr, err := exec.Execute(cmd, false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
-
-	fmt.Println("Decompress tarball stdout: ", string(stdout))
-	fmt.Println("Decompress tarball stderr: ", string(stderr))
-
 	return nil
 }
 
 // Rollback implements the Task interface
 func (c *CopyComponent) Rollback(ctx *Context) error {
 	return ErrUnsupportRollback
+}
+
+// String implements the fmt.Stringer interface
+func (c *CopyComponent) String() string {
+	return fmt.Sprintf("CopyComponent: component=%s, version=%s, remote=%s:%s", c.component, c.version, c.host, c.dstDir)
 }

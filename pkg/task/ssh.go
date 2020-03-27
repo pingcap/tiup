@@ -14,6 +14,8 @@
 package task
 
 import (
+	"fmt"
+
 	"github.com/pingcap-incubator/tiops/pkg/executor"
 	"github.com/pingcap/errors"
 )
@@ -29,7 +31,7 @@ type RootSSH struct {
 }
 
 // Execute implements the Task interface
-func (s RootSSH) Execute(ctx *Context) error {
+func (s *RootSSH) Execute(ctx *Context) error {
 	e, err := executor.NewSSHExecutor(executor.SSHConfig{
 		Host:       s.host,
 		Port:       s.port,
@@ -48,11 +50,19 @@ func (s RootSSH) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (s RootSSH) Rollback(ctx *Context) error {
+func (s *RootSSH) Rollback(ctx *Context) error {
 	ctx.exec.Lock()
 	delete(ctx.exec.executors, s.host)
 	ctx.exec.Unlock()
 	return nil
+}
+
+// String implements the fmt.Stringer interface
+func (s RootSSH) String() string {
+	if len(s.keyFile) > 0 {
+		return fmt.Sprintf("RootSSH: user=%s, host=%s, port=%d, key=%s", s.user, s.host, s.port, s.keyFile)
+	}
+	return fmt.Sprintf("RootSSH: user=%s, host=%s, port=%d", s.user, s.host, s.port)
 }
 
 // UserSSH is used to establish a SSH connection to the target host with generated key
@@ -62,7 +72,7 @@ type UserSSH struct {
 }
 
 // Execute implements the Task interface
-func (s UserSSH) Execute(ctx *Context) error {
+func (s *UserSSH) Execute(ctx *Context) error {
 	e, err := executor.NewSSHExecutor(executor.SSHConfig{
 		Host:    s.host,
 		KeyFile: ctx.PrivateKeyPath,
@@ -78,9 +88,14 @@ func (s UserSSH) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (s UserSSH) Rollback(ctx *Context) error {
+func (s *UserSSH) Rollback(ctx *Context) error {
 	ctx.exec.Lock()
 	delete(ctx.exec.executors, s.host)
 	ctx.exec.Unlock()
 	return nil
+}
+
+// String implements the fmt.Stringer interface
+func (s UserSSH) String() string {
+	return fmt.Sprintf("UserSSH: user=%s, host=%s", s.deployUser, s.host)
 }

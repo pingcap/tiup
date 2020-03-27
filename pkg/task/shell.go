@@ -43,17 +43,20 @@ func (m *Shell) Execute(ctx *Context) error {
 
 	fmt.Println("Run command: ", cmd)
 
-	stdout, stderr, err := exec.Execute(cmd, false)
+	_, _, err := exec.Execute(cmd, false)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	fmt.Println("Run command stdout: ", string(stdout))
-	fmt.Println("Run command stderr: ", string(stderr))
 	return nil
 }
 
 // Rollback implements the Task interface
 func (m *Shell) Rollback(ctx *Context) error {
 	return ErrUnsupportRollback
+}
+
+// String implements the fmt.Stringer interface
+func (m *Shell) String() string {
+	return fmt.Sprintf("Shell: host=%s, sudo=%v, command=`%s`", m.host, m.sudo, m.command)
 }

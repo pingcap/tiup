@@ -13,7 +13,11 @@
 
 package task
 
-import "github.com/pingcap/errors"
+import (
+	"fmt"
+
+	"github.com/pingcap/errors"
+)
 
 // CopyFile will copy a local file to the target host
 type CopyFile struct {
@@ -40,4 +44,9 @@ func (c *CopyFile) Execute(ctx *Context) error {
 // Rollback implements the Task interface
 func (c *CopyFile) Rollback(ctx *Context) error {
 	return ErrUnsupportRollback
+}
+
+// String implements the fmt.Stringer interface
+func (c *CopyFile) String() string {
+	return fmt.Sprintf("CopyFile: local=%s, remote=%s:%s", c.src, c.dstHost, c.dstPath)
 }

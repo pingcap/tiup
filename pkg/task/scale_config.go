@@ -14,6 +14,7 @@
 package task
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/pingcap-incubator/tiops/pkg/meta"
@@ -47,4 +48,10 @@ func (c *ScaleConfig) Execute(ctx *Context) error {
 // Rollback implements the Task interface
 func (c *ScaleConfig) Rollback(ctx *Context) error {
 	return ErrUnsupportRollback
+}
+
+// String implements the fmt.Stringer interface
+func (c *ScaleConfig) String() string {
+	return fmt.Sprintf("ScaleConfig: cluster=%s, user=%s, host=%s, service=%s, dir=%s",
+		c.name, c.deployUser, c.instance.GetHost(), c.instance.ServiceName(), c.deployDir)
 }

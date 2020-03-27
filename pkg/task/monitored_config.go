@@ -34,3 +34,9 @@ func (m *MonitoredConfig) Execute(ctx *Context) error {
 func (m *MonitoredConfig) Rollback(ctx *Context) error {
 	return ErrUnsupportRollback
 }
+
+// String implements the fmt.Stringer interface
+func (m *MonitoredConfig) String() string {
+	return fmt.Sprintf("MonitoredConfig: cluster=%s, user=%s, dir=%s, node_exporter_port=%d, blackbox_exporter_port=%d",
+		m.name, m.deployUser, m.deployDir, m.options.NodeExporterPort, m.options.BlackboxExporterPort)
+}
