@@ -119,11 +119,12 @@ fi
 rm -rf ./control/tiops
 mkdir -p ./control/tiops/tiops
 # Copy the tiops directory if we're not mounting the TIOPS_ROOT
-if [ -n "${DEV}" ]; then
+if [ -z "${DEV}" ]; then
     # Dockerfile does not allow `ADD ..`. So we need to copy it here in setup.
     INFO "Copying .. to control/tiops"
     (
-		# TODO support exclude-ignore(MAC don't support this.
+		# TODO support exclude-ignore, check version of tar support this.
+		# https://www.gnu.org/software/tar/manual/html_section/tar_48.html#IDX408
         # (cd ..; tar --exclude=./docker --exclude=./.git --exclude-ignore=.gitignore -cf - .)  | tar Cxf ./control/tiops -
         (cd ..; tar --exclude=./docker --exclude=./.git -cf - .)  | tar Cxf ./control/tiops -
     )
