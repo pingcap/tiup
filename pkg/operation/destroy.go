@@ -51,7 +51,7 @@ func DestroyComponent(getter ExecutorGetter, w io.Writer, instances []meta.Insta
 		command = command + fmt.Sprintf("rm -rf %s;", ins.DeployDir()) + fmt.Sprintf("rm -rf /etc/systemd/system/%s;", ins.ServiceName())
 		c := module.ShellModuleConfig{
 			Command:  command,
-			Sudo:     false,
+			Sudo:     true, // the .service files are in a directory owned by root
 			Chdir:    "",
 			UseShell: false,
 		}

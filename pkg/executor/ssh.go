@@ -83,7 +83,7 @@ func (sshExec *SSHExecutor) Initialize(config SSHConfig) error {
 func (sshExec *SSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
 	// try to acquire root permission
 	if sudo {
-		cmd = fmt.Sprintf("sudo -H -u root %s", cmd)
+		cmd = fmt.Sprintf("sudo -H -u root bash -c \"%s\"", cmd)
 	}
 
 	// set a basic PATH in case it's empty on login
