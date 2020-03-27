@@ -128,6 +128,9 @@ if [ -z "${DEV}" ]; then
         # (cd ..; tar --exclude=./docker --exclude=./.git --exclude-ignore=.gitignore -cf - .)  | tar Cxf ./control/tiops -
         (cd ..; tar --exclude=./docker --exclude=./.git -cf - .)  | tar Cxf ./control/tiops -
     )
+else
+	INFO "Build tiops in $TIOPS_ROOT"
+	(cd $TIOPS_ROOT;GOOS=linux GOARCH=amd64 make build)
 fi
 
 if [ "${INIT_ONLY}" -eq 1 ]; then

@@ -1,9 +1,11 @@
-FROM ubuntu:16.04
+FROM golang:1.14
 
 
 # Use mirrors for poor network...
 RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
 RUN sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
+RUN sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
 
 
 # tiops dependencies
@@ -15,8 +17,6 @@ RUN sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
          wget \
 	     vim pssh # not required by tiops itself, just for ease of use
 
-RUN wget https://dl.google.com/go/go1.14.1.linux-amd64.tar.gz && \
-	tar -C /usr/local -xzf go1.14.1.linux-amd64.tar.gz
 
 # without --dev flag up.sh copies tiops to these subfolders
 # with --dev flag they are empty until mounted
@@ -27,5 +27,9 @@ ADD ./bashrc /root/.bashrc
 ADD ./init.sh /init.sh
 RUN dos2unix /init.sh /root/.bashrc \
     && chmod +x /init.sh
+
+# build tiops in without --dev flag
+WORKDIR /tiops
+RUN (test Makefile && make build) || true
 
 CMD /init.sh

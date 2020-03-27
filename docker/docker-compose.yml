@@ -19,27 +19,46 @@ services:
     ports:
       - "8080"
     networks:
-      - tiops
+       tiops:
+         ipv4_address: 172.19.0.100
   n1:
     << : *default-node
     container_name: tiops-n1
     hostname: n1
+    networks:
+         tiops:
+           ipv4_address: 172.19.0.101
   n2:
     << : *default-node
     container_name: tiops-n2
     hostname: n2
+    networks:
+         tiops:
+           ipv4_address: 172.19.0.102
   n3:
     << : *default-node
     container_name: tiops-n3
     hostname: n3
+    networks:
+         tiops:
+           ipv4_address: 172.19.0.103
   n4:
     << : *default-node
     container_name: tiops-n4
     hostname: n4
+    networks:
+       tiops:
+         ipv4_address: 172.19.0.104
   n5:
     << : *default-node
     container_name: tiops-n5
     hostname: n5
+    networks:
+         tiops:
+           ipv4_address: 172.19.0.105
 
 networks:
   tiops:
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16

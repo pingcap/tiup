@@ -2,6 +2,7 @@ eval $(ssh-agent) &> /dev/null
 ssh-add /root/.ssh/id_rsa &> /dev/null
 
 export PATH=$PATH:/usr/local/go/bin
+export PATH=$PATH:/tiops/bin
 
 cat <<EOF
 Welcome to tiops on Docker
@@ -10,6 +11,8 @@ Welcome to tiops on Docker
 This container runs the tiops tests in sub-containers.
 
 You are currently in the base dir of the git repo for tiops.
+
+Run `tiops` to play with tiops.
 
 To run a test:
    TODO
