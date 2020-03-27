@@ -144,6 +144,17 @@ func (b *Builder) ScaleConfig(name string, base *meta.TopologySpecification, ins
 	return b
 }
 
+// MonitoredConfig appends a CopyComponent task to the current task collection
+func (b *Builder) MonitoredConfig(name string, options meta.MonitoredOptions, deployUser, deployDir string) *Builder {
+	b.tasks = append(b.tasks, &MonitoredConfig{
+		name:       name,
+		options:    options,
+		deployUser: deployUser,
+		deployDir:  deployDir,
+	})
+	return b
+}
+
 // SSHKeyGen appends a SSHKeyGen task to the current task collection
 func (b *Builder) SSHKeyGen(keypath string) *Builder {
 	b.tasks = append(b.tasks, &SSHKeyGen{

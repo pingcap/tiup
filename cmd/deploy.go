@@ -24,6 +24,7 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/task"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/set"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -93,13 +94,19 @@ func getComponentVersion(comp, version string) repository.Version {
 }
 
 func deploy(name, topoFile string, opt deployOptions) error {
-	// TODO: detect name conflicts
+	if utils.IsExist(meta.ClusterPath(name)) {
+		return errors.Errorf("cluster name '%s' exists, please choose another cluster name", name)
+	}
+
 	var topo meta.TopologySpecification
 	yamlFile, err := ioutil.ReadFile(topoFile)
 	if err != nil {
 		return errors.Trace(err)
 	}
 	if err = yaml.Unmarshal(yamlFile, &topo); err != nil {
+		return errors.Trace(err)
+	}
+	if err := topo.Validate(); err != nil {
 		return errors.Trace(err)
 	}
 	if err := os.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
@@ -163,11 +170,45 @@ func deploy(name, topoFile string, opt deployOptions) error {
 		}
 	}
 
+	var monitoredCompTasks []task.Task
+	for _, comp := range []string{meta.ComponentNodeExporter, meta.ComponentBlackboxExporter} {
+		version := getComponentVersion(comp, opt.version)
+		if version == "" {
+			return errors.Errorf("unsupported component: %v", comp)
+		}
+
+		t := task.NewBuilder().
+			Download(comp, version).
+			Build()
+		downloadCompTasks = append(downloadCompTasks, t)
+
+		for host := range uniqueHosts {
+			deployDir := topo.MonitoredOptions.DeployDir
+			if !strings.HasPrefix(deployDir, "/") {
+				deployDir = filepath.Join("/home/"+opt.deployUser+"/deploy", deployDir)
+			}
+
+			// Deploy component
+			t := task.NewBuilder().
+				Mkdir(host,
+					filepath.Join(deployDir, "bin"),
+					filepath.Join(deployDir, "data"),
+					filepath.Join(deployDir, "config"),
+					filepath.Join(deployDir, "scripts"),
+					filepath.Join(deployDir, "logs")).
+				CopyComponent(comp, version, host, deployDir).
+				MonitoredConfig(name, topo.MonitoredOptions, opt.deployUser, deployDir).
+				Build()
+			monitoredCompTasks = append(monitoredCompTasks, t)
+		}
+	}
+
 	t := task.NewBuilder().
 		SSHKeyGen(meta.ClusterPath(name, "ssh", "id_rsa")).
 		Parallel(envInitTasks...).
 		Parallel(downloadCompTasks...).
 		Parallel(copyCompTasks...).
+		Parallel(monitoredCompTasks...).
 		Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {

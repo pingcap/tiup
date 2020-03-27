@@ -237,29 +237,31 @@ func (s AlertManagerSpec) Role() string {
 	return RoleMonitor
 }
 
-/*
 // TopologyGlobalOptions represents the global options for all groups in topology
 // pecification in topology.yaml
 type TopologyGlobalOptions struct {
-	SSHPort              int    `yaml:"ssh_port,omitempty" default:"22"`
-	DeployDir            string `yaml:"deploy_dir,omitempty"`
-	DataDir              string `yaml:"data_dir,omitempty"`
+	SSHPort int `yaml:"ssh_port,omitempty" default:"22"`
+}
+
+type MonitoredOptions struct {
+	DeployDir            string `yaml:"deploy_dir,omitempty" default:"monitored"`
+	DataDir              string `yaml:"data_dir,omitempty"  default:"monitored/data"`
 	NodeExporterPort     int    `yaml:"node_exporter_port,omitempty" default:"9100"`
 	BlackboxExporterPort int    `yaml:"blackbox_exporter_port,omitempty" default:"9115"`
 }
-*/
 
 // TopologySpecification represents the specification of topology.yaml
 type TopologySpecification struct {
-	//GlobalOptions TopologyGlobalOptions `yaml:"global,omitempty"`
-	TiDBServers  []TiDBSpec         `yaml:"tidb_servers"`
-	TiKVServers  []TiKVSpec         `yaml:"tikv_servers"`
-	PDServers    []PDSpec           `yaml:"pd_servers"`
-	PumpServers  []PumpSpec         `yaml:"pump_servers,omitempty"`
-	Drainers     []DrainerSpec      `yaml:"drainer_servers,omitempty"`
-	Monitors     []PrometheusSpec   `yaml:"monitoring_servers"`
-	Grafana      []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
-	Alertmanager []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
+	GlobalOptions    TopologyGlobalOptions `yaml:"global,omitempty"`
+	MonitoredOptions MonitoredOptions      `yaml:"monitored,omitempty"`
+	TiDBServers      []TiDBSpec            `yaml:"tidb_servers"`
+	TiKVServers      []TiKVSpec            `yaml:"tikv_servers"`
+	PDServers        []PDSpec              `yaml:"pd_servers"`
+	PumpServers      []PumpSpec            `yaml:"pump_servers,omitempty"`
+	Drainers         []DrainerSpec         `yaml:"drainer_servers,omitempty"`
+	Monitors         []PrometheusSpec      `yaml:"monitoring_servers"`
+	Grafana          []GrafanaSpec         `yaml:"grafana_servers,omitempty"`
+	Alertmanager     []AlertManagerSpec    `yaml:"alertmanager_servers,omitempty"`
 }
 
 // UnmarshalYAML sets default values when unmarshaling the topology file
@@ -300,6 +302,12 @@ func (topo *TopologySpecification) Merge(that *TopologySpecification) *TopologyS
 		Grafana:      append(topo.Grafana, that.Grafana...),
 		Alertmanager: append(topo.Alertmanager, that.Alertmanager...),
 	}
+}
+
+// Validate validates the topology specification and produce error if
+// the specification invalid
+func (topo *TopologySpecification) Validate() error {
+	return nil
 }
 
 // fillDefaults tries to fill custom fields to their default values
