@@ -75,7 +75,14 @@ func scaleOut(name, topoFile string, opt scaleOutOptions) error {
 	if err := t.Execute(task.NewContext()); err != nil {
 		return err
 	}
-	t, err = refreshConfig(name, opt, &newPart)
+
+	metadata, err := meta.ClusterMetadata(name)
+	if err != nil {
+		return err
+	}
+	topo := metadata.Topology.Merge(&newPart)
+
+	t, err = refreshConfig(name, metadata, topo)
 	if err != nil {
 		return err
 	}
@@ -83,7 +90,8 @@ func scaleOut(name, topoFile string, opt scaleOutOptions) error {
 		return err
 	}
 
-	return nil
+	metadata.Topology = topo
+	return meta.SaveClusterMeta(name, metadata)
 }
 
 func bootstrapNewPart(name string, opt scaleOutOptions, newPart *meta.TopologySpecification) (task.Task, error) {
@@ -138,7 +146,7 @@ func bootstrapNewPart(name string, opt scaleOutOptions, newPart *meta.TopologySp
 					filepath.Join(deployDir, "scripts"),
 					filepath.Join(deployDir, "logs")).
 				CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
-				ScaleConfig(name, oldPart, inst, opt.user, deployDir).
+				ScaleConfig(name, oldPart, inst, metadata.User, deployDir).
 				Build()
 			copyCompTasks = append(copyCompTasks, t)
 		}
@@ -155,12 +163,7 @@ func bootstrapNewPart(name string, opt scaleOutOptions, newPart *meta.TopologySp
 		Build(), nil
 }
 
-func refreshConfig(name string, opt scaleOutOptions, newPart *meta.Specification) (task.Task, error) {
-	metadata, err := meta.ClusterMetadata(name)
-	if err != nil {
-		return nil, err
-	}
-	topo := metadata.Topology.Merge(newPart)
+func refreshConfig(name string, metadata *meta.ClusterMeta, topo *meta.Specification) (task.Task, error) {
 	tasks := []task.Task{}
 	for _, comp := range topo.ComponentsByStartOrder() {
 		for _, inst := range comp.Instances() {

@@ -129,5 +129,11 @@ func upgrade(name string, opt upgradeOptions) error {
 		ClusterOperate(metadata.Topology, operator.UpgradeOperation, opt.options).
 		Build()
 
-	return t.Execute(task.NewContext())
+	err = t.Execute(task.NewContext())
+	if err != nil {
+		return err
+	}
+
+	metadata.Version = opt.version
+	return meta.SaveClusterMeta(name, metadata)
 }
