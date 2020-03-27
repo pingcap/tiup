@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -30,8 +31,13 @@ func newScaleInCmd() *cobra.Command {
 		Use:   "scale-in <cluster-name>",
 		Short: "Scale in a TiDB cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(nodes) < 1 || len(args) != 1 {
-				return cmd.Help()
+			if len(args) != 1 {
+				cmd.Help()
+				return fmt.Errorf("cluster name not specified")
+			}
+			if len(nodes) < 1 {
+				cmd.Help()
+				return fmt.Errorf("node not specified")
 			}
 			return scaleIn(args[0], nodes)
 		},

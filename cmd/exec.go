@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/pingcap-incubator/tiops/pkg/meta"
@@ -35,7 +36,8 @@ func newExecCmd() *cobra.Command {
 		Short: "Run shell command on host in the tidb cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				return cmd.Help()
+				cmd.Help()
+				return fmt.Errorf("cluster name not specified")
 			}
 			metadata, err := meta.ClusterMetadata(os.Args[1])
 			if err != nil {

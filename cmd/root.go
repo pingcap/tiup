@@ -65,7 +65,6 @@ func init() {
 		newReloadCmd(),
 		newExecCmd(),
 		newDisplayCmd(),
-		newTestCmd(),
 	)
 }
 
