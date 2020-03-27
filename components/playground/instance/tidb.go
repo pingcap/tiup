@@ -58,8 +58,8 @@ func (inst *TiDBInstance) Start(ctx context.Context, version repository.Version,
 		endpoints = append(endpoints, fmt.Sprintf("%s:%d", inst.Host, pd.StatusPort))
 	}
 	args := []string{
-		"tiup", compVersion("tidb", version),
-		fmt.Sprintf("--binpath=%s", binPath),
+		"tiup", fmt.Sprintf("--binpath=%s", binPath),
+		compVersion("tidb", version),
 		"-P", strconv.Itoa(inst.Port),
 		"--store=tikv",
 		fmt.Sprintf("--host=%s", inst.Host),

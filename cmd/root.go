@@ -15,14 +15,12 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"strings"
-
 	"github.com/fatih/color"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 var rootCmd *cobra.Command
@@ -82,15 +80,7 @@ the latest stable version will be downloaded from the repository.
 				componentSpec := args[0]
 				for i, arg := range os.Args {
 					if arg == componentSpec {
-						var num = 1
-						if len(os.Args) > i+1 && strings.HasPrefix(os.Args[i+1], "--binpath=") {
-							num += 1
-							flagLen := len("--binpath=")
-							if len(os.Args[i+1]) > flagLen {
-								binPath = os.Args[i+1][flagLen:]
-							}
-						}
-						transparentParams = os.Args[i+num:]
+						transparentParams = os.Args[i+1:]
 						break
 					}
 				}

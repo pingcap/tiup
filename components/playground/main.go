@@ -155,6 +155,13 @@ func hasDashboard(pdAddr string) bool {
 	return false
 }
 
+func getAbsolutePath(binPath string) string {
+	if !strings.HasPrefix(binPath, "/") {
+		binPath = filepath.Join(os.Getenv(localdata.EnvNameWorkDir), binPath)
+	}
+	return binPath
+}
+
 func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monitor bool, tidbBinPath, tikvBinPath, pdBinPath string) error {
 	if pdNum < 1 || tidbNum < 1 || tikvNum < 1 {
 		return fmt.Errorf("all components count must be great than 0 (tidb=%v, tikv=%v, pd=%v)",
@@ -163,13 +170,13 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 
 	var pathMap = make(map[string]string)
 	if tidbBinPath != "" {
-		pathMap["tidb"] = tidbBinPath
+		pathMap["tidb"] = getAbsolutePath(tidbBinPath)
 	}
 	if tikvBinPath != "" {
-		pathMap["tikv"] = tikvBinPath
+		pathMap["tikv"] = getAbsolutePath(tikvBinPath)
 	}
 	if pdBinPath != "" {
-		pathMap["pd"] = pdBinPath
+		pathMap["pd"] = getAbsolutePath(pdBinPath)
 	}
 
 	// Initialize the profile
