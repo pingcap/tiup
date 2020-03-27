@@ -19,12 +19,12 @@ import (
 
 func newImportCmd() *cobra.Command {
 	var (
-		ansible 	string
+		ansible string
 	)
 
 	cmd := &cobra.Command{
-		Use:   "import",
-		Short: "Import a TiDB cluster from tidb-ansible",
+		Use:    "import",
+		Short:  "Import a TiDB cluster from tidb-ansible",
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()

@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var options     operator.Options
+var options operator.Options
 
 func newDestroyCmd() *cobra.Command {
 	cmd := &cobra.Command{

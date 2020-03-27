@@ -175,5 +175,9 @@ func refreshConfig(name string, opt scaleOutOptions, newPart *meta.Specification
 			tasks = append(tasks, t)
 		}
 	}
-	return task.NewBuilder().Parallel(tasks...).Build(), nil
+	return task.NewBuilder().
+		SSHKeySet(
+			meta.ClusterPath(name, "ssh", "id_rsa"),
+			meta.ClusterPath(name, "ssh", "id_rsa.pub")).
+		Parallel(tasks...).Build(), nil
 }
