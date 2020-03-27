@@ -21,9 +21,10 @@ import (
 
 // InitConfig is used to copy all configurations to the target directory of path
 type InitConfig struct {
-	name      string
-	instance  meta.Instance
-	deployDir string
+	name       string
+	instance   meta.Instance
+	deployUser string
+	deployDir  string
 }
 
 // Execute implements the Task interface
@@ -39,7 +40,7 @@ func (c *InitConfig) Execute(ctx *Context) error {
 		return err
 	}
 
-	return c.instance.InitConfig(exec, cacheConfigDir, c.deployDir)
+	return c.instance.InitConfig(exec, c.deployUser, cacheConfigDir, c.deployDir)
 }
 
 // Rollback implements the Task interface

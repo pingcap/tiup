@@ -75,30 +75,28 @@ func Retry(doFunc func() error, opts ...RetryOption) error {
 		}
 	}
 
-	timeoutChan := make(chan string, 1)
+	// attempts must be greater than 0
+	if cfg.Attempts <= 0 {
+		cfg.Attempts = defaultAttempts
+	}
+
+	timeoutChan := time.After(cfg.Timeout)
 
 	// call the function
 	var attemptCount int
 	for attemptCount = 0; attemptCount < cfg.Attempts; attemptCount++ {
-		go func() {
-			err := doFunc()
-			if err == nil {
-				timeoutChan <- "done"
-			}
-		}()
-		time.Sleep(cfg.Delay)
+		if err := doFunc(); err == nil {
+			return nil
+		}
+
+		// check for timeout
+		select {
+		case <-timeoutChan:
+			return fmt.Errorf("operation timed out after %s", cfg.Timeout)
+		default:
+			time.Sleep(cfg.Delay)
+		}
 	}
 
-	// check for attempts
-	if attemptCount >= cfg.Attempts {
-		return fmt.Errorf("operation exceeds the max retry attempts %d", cfg.Attempts)
-	}
-
-	// check for timeout
-	select {
-	case <-timeoutChan:
-		return nil
-	case <-time.After(cfg.Timeout):
-		return fmt.Errorf("operation timed out after %s", cfg.Timeout)
-	}
+	return fmt.Errorf("operation exceeds the max retry attempts of %d", cfg.Attempts)
 }

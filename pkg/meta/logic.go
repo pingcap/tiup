@@ -53,7 +53,7 @@ type Instance interface {
 	ID() string
 	Ready(executor.TiOpsExecutor) error
 	WaitForDown(executor.TiOpsExecutor) error
-	InitConfig(executor.TiOpsExecutor, string, string) error
+	InitConfig(executor.TiOpsExecutor, string, string, string) error
 	ComponentName() string
 	InstanceName() string
 	ServiceName() string
@@ -109,12 +109,12 @@ func (i *instance) WaitForDown(e executor.TiOpsExecutor) error {
 	return portStopped(e, i.port)
 }
 
-func (i *instance) InitConfig(e executor.TiOpsExecutor, cacheDir, deployDir string) error {
+func (i *instance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDir string) error {
 	comp := i.ComponentName()
 	port := i.GetPort()
 	sysCfg := filepath.Join(cacheDir, fmt.Sprintf("%s-%d.service", comp, port))
 
-	systemCfg := system.NewConfig(comp, "tidb", deployDir)
+	systemCfg := system.NewConfig(comp, user, deployDir)
 	// For not auto start if using binlogctl to offline.
 	// bad design
 	if comp == ComponentPump || comp == ComponentDrainer {
@@ -239,8 +239,8 @@ type TiDBInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, cacheDir, deployDir string) error {
-	if err := i.instance.InitConfig(e, cacheDir, deployDir); err != nil {
+func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDir string) error {
+	if err := i.instance.InitConfig(e, user, cacheDir, deployDir); err != nil {
 		return err
 	}
 	ends := []*scripts.PDScript{}
@@ -306,8 +306,8 @@ type TiKVInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, cacheDir, deployDir string) error {
-	if err := i.instance.InitConfig(e, cacheDir, deployDir); err != nil {
+func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDir string) error {
+	if err := i.instance.InitConfig(e, user, cacheDir, deployDir); err != nil {
 		return err
 	}
 
@@ -387,8 +387,8 @@ type PDInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, cacheDir, deployDir string) error {
-	if err := i.instance.InitConfig(e, cacheDir, deployDir); err != nil {
+func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDir string) error {
+	if err := i.instance.InitConfig(e, user, cacheDir, deployDir); err != nil {
 		return err
 	}
 

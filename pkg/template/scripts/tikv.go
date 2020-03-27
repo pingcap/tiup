@@ -72,7 +72,7 @@ func (c *TiKVScript) AppendEndpoints(ends ...*PDScript) *TiKVScript {
 // Config read ${localdata.EnvNameComponentInstallDir}/templates/scripts/run_TiKV.sh.tpl as template
 // and generate the config by ConfigWithTemplate
 func (c *TiKVScript) Config() ([]byte, error) {
-	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "scripts", "run_TiKV.sh.tpl")
+	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "scripts", "run_tikv.sh.tpl")
 	tpl, err := ioutil.ReadFile(fp)
 	if err != nil {
 		return nil, err

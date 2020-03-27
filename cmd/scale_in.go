@@ -58,7 +58,7 @@ func scaleIn(cluster string, nodeIds []string) error {
 			if !strings.HasPrefix(deployDir, "/") {
 				deployDir = filepath.Join("/home/"+metadata.User+"/deploy", deployDir)
 			}
-			t := task.NewBuilder().InitConfig(cluster, instance, deployDir).Build()
+			t := task.NewBuilder().InitConfig(cluster, instance, metadata.User, deployDir).Build()
 			regenConfigTasks = append(regenConfigTasks, t)
 		}
 	}

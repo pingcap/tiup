@@ -157,7 +157,7 @@ func deploy(name, topoFile string, opt deployOptions) error {
 					filepath.Join(deployDir, "scripts"),
 					filepath.Join(deployDir, "logs")).
 				CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
-				InitConfig(name, inst, deployDir).
+				InitConfig(name, inst, opt.deployUser, deployDir).
 				Build()
 			copyCompTasks = append(copyCompTasks, t)
 		}
