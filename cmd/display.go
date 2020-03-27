@@ -26,7 +26,6 @@ import (
 
 type displayOption struct {
 	clusterName string
-	showStatus  bool
 	filterRole  []string
 	filterNode  []string
 }
@@ -53,7 +52,6 @@ func newDisplayCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVarP(&opt.showStatus, "status", "s", false, "test and show current node status")
 	cmd.Flags().StringSliceVar(&opt.filterRole, "role", nil, "only display nodes of specific roles")
 	cmd.Flags().StringSliceVar(&opt.filterNode, "node", nil, "only display nodes of specific IDs")
 
@@ -79,24 +77,9 @@ func displayClusterTopology(opt *displayOption) error {
 		return err
 	}
 
-	var clusterTable [][]string
-	if opt.showStatus {
-		clusterTable = append(clusterTable,
-			[]string{"ID",
-				"Role",
-				"Host",
-				"Ports",
-				"Status",
-				"Data Dir",
-				"Deploy Dir"})
-	} else {
-		clusterTable = append(clusterTable,
-			[]string{"ID",
-				"Role",
-				"Host",
-				"Ports",
-				"Data Dir",
-				"Deploy Dir"})
+	clusterTable := [][]string{
+		// Header
+		{"ID", "Role", "Host", "Ports", "Status", "Data Dir", "Deploy Dir"},
 	}
 
 	filterRoles := set.NewStringSet(opt.filterRole...)
@@ -120,26 +103,16 @@ func displayClusterTopology(opt *displayOption) error {
 				dataDir = insDirs[1]
 			}
 
-			if opt.showStatus {
-				clusterTable = append(clusterTable, []string{
-					color.CyanString(ins.ID()),
-					ins.Role(),
-					ins.GetHost(),
-					utils.JoinInt(ins.UsedPorts(), "/"),
-					formatInstanceStatus(ins.Status(pdList...)),
-					dataDir,
-					deployDir,
-				})
-			} else {
-				clusterTable = append(clusterTable, []string{
-					color.CyanString(ins.ID()),
-					ins.Role(),
-					ins.GetHost(),
-					utils.JoinInt(ins.UsedPorts(), "/"),
-					dataDir,
-					deployDir,
-				})
-			}
+			clusterTable = append(clusterTable, []string{
+				color.CyanString(ins.ID()),
+				ins.Role(),
+				ins.GetHost(),
+				utils.JoinInt(ins.UsedPorts(), "/"),
+				formatInstanceStatus(ins.Status(pdList...)),
+				dataDir,
+				deployDir,
+			})
+
 		}
 	}
 
