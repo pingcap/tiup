@@ -464,6 +464,9 @@ func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, use
 	if err := e.Transfer(fp, dst); err != nil {
 		return err
 	}
+	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+		return err
+	}
 	return nil
 }
 
