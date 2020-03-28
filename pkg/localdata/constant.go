@@ -46,6 +46,9 @@ const (
 	// EnvNameHome represents the environment name of tiup home directory
 	EnvNameHome = "TIUP_HOME"
 
+	// EnvTag is the tag of the running component
+	EnvTag = "TIUP_TAG"
+
 	// MetaFilename represents the process meta file name
 	MetaFilename = "tiup_process_meta"
 )
