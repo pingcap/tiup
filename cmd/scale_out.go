@@ -27,7 +27,6 @@ import (
 )
 
 type scaleOutOptions struct {
-	version    string // version of the cluster
 	user       string // username to login to the SSH server
 	password   string // password of the user
 	keyFile    string // path to the private key file
@@ -55,7 +54,6 @@ func newScaleOutCmd() *cobra.Command {
 	cmd.Flags().StringVar(&opt.password, "password", "", "Specify the password of system user")
 	cmd.Flags().StringVar(&opt.keyFile, "key", "", "Specify the key path of system user")
 	cmd.Flags().StringVar(&opt.passphrase, "passphrase", "", "Specify the passphrase of the key")
-	cmd.Flags().StringVar(&opt.version, "version", "", "Specify the deploy version of new nodes")
 
 	_ = cmd.MarkFlagRequired("version")
 
@@ -109,7 +107,7 @@ func bootstrapNewPart(name string, opt scaleOutOptions, newPart *meta.TopologySp
 	)
 	for _, comp := range newPart.ComponentsByStartOrder() {
 		for idx, inst := range comp.Instances() {
-			version := getComponentVersion(inst.ComponentName(), opt.version)
+			version := getComponentVersion(inst.ComponentName(), metadata.Version)
 			if version == "" {
 				return nil, errors.Errorf("unsupported component: %v", inst.ComponentName())
 			}
@@ -134,15 +132,14 @@ func bootstrapNewPart(name string, opt scaleOutOptions, newPart *meta.TopologySp
 
 			deployDir := inst.DeployDir()
 			if !strings.HasPrefix(deployDir, "/") {
-				deployDir = filepath.Join("/home/"+metadata.User+"/deploy", deployDir)
+				deployDir = filepath.Join("/home/", metadata.User, deployDir)
 			}
 			// Deploy component
 			t := task.NewBuilder().
 				UserSSH(inst.GetHost(), metadata.User).
 				Mkdir(inst.GetHost(),
 					filepath.Join(deployDir, "bin"),
-					filepath.Join(deployDir, "data"),
-					filepath.Join(deployDir, "config"),
+					filepath.Join(deployDir, "conf"),
 					filepath.Join(deployDir, "scripts"),
 					filepath.Join(deployDir, "logs")).
 				CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
@@ -169,7 +166,7 @@ func refreshConfig(name string, metadata *meta.ClusterMeta, topo *meta.Specifica
 		for _, inst := range comp.Instances() {
 			deployDir := inst.DeployDir()
 			if !strings.HasPrefix(deployDir, "/") {
-				deployDir = filepath.Join("/home/"+metadata.User+"/deploy", deployDir)
+				deployDir = filepath.Join("/home/", metadata.User, deployDir)
 			}
 			t := task.NewBuilder().
 				UserSSH(inst.GetHost(), metadata.User).

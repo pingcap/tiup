@@ -5,6 +5,7 @@ tidb_servers:
 
 pd_servers:
   - host: 172.16.4.190
+    data_dir: "/data"
   - host: 172.16.5.158
   - host: 172.16.5.53
 

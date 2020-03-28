@@ -28,29 +28,22 @@ import (
 )
 
 type upgradeOptions struct {
-	version string
 	options operator.Options
 }
 
 func newUpgradeCmd() *cobra.Command {
 	opt := upgradeOptions{}
 	cmd := &cobra.Command{
-		Use:   "upgrade <cluster-name>",
+		Use:   "upgrade <cluster-name> <version>",
 		Short: "Upgrade a specified TiDB cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
+			if len(args) != 2 {
 				return cmd.Help()
 			}
-			return upgrade(args[0], opt)
+			return upgrade(args[0], args[1], opt)
 		},
 	}
-
-	cmd.Flags().StringVarP(&opt.version, "target-version", "t", "", "Specify the target version")
 	cmd.Flags().BoolVar(&opt.options.Force, "force", false, "Force upgrade won't transfer leader")
-
-	_ = cmd.MarkFlagRequired("cluster")
-	_ = cmd.MarkFlagRequired("target-version")
-
 	return cmd
 }
 
@@ -69,7 +62,7 @@ func versionCompare(curVersion, newVersion string) error {
 	}
 }
 
-func upgrade(name string, opt upgradeOptions) error {
+func upgrade(name, version string, opt upgradeOptions) error {
 	metadata, err := meta.ClusterMetadata(name)
 	if err != nil {
 		return err
@@ -82,13 +75,13 @@ func upgrade(name string, opt upgradeOptions) error {
 		uniqueComps = map[componentInfo]struct{}{}
 	)
 
-	if err := versionCompare(metadata.Version, opt.version); err != nil {
+	if err := versionCompare(metadata.Version, version); err != nil {
 		return err
 	}
 
 	for _, comp := range metadata.Topology.ComponentsByStartOrder() {
 		for _, inst := range comp.Instances() {
-			version := getComponentVersion(inst.ComponentName(), opt.version)
+			version := getComponentVersion(inst.ComponentName(), version)
 			if version == "" {
 				return errors.Errorf("unsupported component: %v", inst.ComponentName())
 			}
@@ -108,7 +101,7 @@ func upgrade(name string, opt upgradeOptions) error {
 
 			deployDir := inst.DeployDir()
 			if !strings.HasPrefix(deployDir, "/") {
-				deployDir = filepath.Join("/home/"+metadata.User+"/deploy", deployDir)
+				deployDir = filepath.Join("/home/", metadata.User, deployDir)
 			}
 			// Deploy component
 			t := task.NewBuilder().

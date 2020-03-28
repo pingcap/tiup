@@ -30,5 +30,5 @@ exec bin/tikv-server \
     --status-addr "{{.IP}}:{{.StatusPort}}" \
     --pd "{{template "PDList" .Endpoints}}" \
     --data-dir "{{.DataDir}}" \
-    --config config/tikv.toml \
+    --config conf/tikv.toml \
     --log-file "logs/tikv.log" 2>> "logs/tikv_stderr.log"

@@ -20,9 +20,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var options operator.Options
-
 func newDestroyCmd() *cobra.Command {
+	var options operator.Options
+
 	cmd := &cobra.Command{
 		Use:   "destroy <cluster-name>",
 		Short: "Destroy a specified cluster",

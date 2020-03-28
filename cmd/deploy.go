@@ -14,7 +14,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -36,9 +35,7 @@ type componentInfo struct {
 }
 
 type deployOptions struct {
-	version    string // version of the cluster
 	user       string // username to login to the SSH server
-	deployUser string // username of deploy tidb
 	password   string // password of the user
 	keyFile    string // path to the private key file
 	passphrase string // passphrase of the private key file
@@ -47,28 +44,24 @@ type deployOptions struct {
 func newDeploy() *cobra.Command {
 	opt := deployOptions{}
 	cmd := &cobra.Command{
-		Use:          "deploy <cluster-name> <topology.yaml>",
+		Use:          "deploy <cluster-name> <version> <topology.yaml>",
 		Short:        "Deploy a cluster for production",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 2 {
+			if len(args) != 3 {
 				return cmd.Help()
 			}
 			if len(opt.keyFile) == 0 && len(opt.password) == 0 {
 				return errors.New("password and key need to specify at least one")
 			}
-			return deploy(args[0], args[1], opt)
+			return deploy(args[0], args[1], args[2], opt)
 		},
 	}
 
 	cmd.Flags().StringVar(&opt.user, "user", "root", "Specify the system user name")
-	cmd.Flags().StringVarP(&opt.deployUser, "deploy-user", "d", "tidb", "Specify the user name of deploy cluster")
 	cmd.Flags().StringVar(&opt.password, "password", "", "Specify the password of system user")
 	cmd.Flags().StringVar(&opt.keyFile, "key", "", "Specify the key path of system user")
 	cmd.Flags().StringVar(&opt.passphrase, "passphrase", "", "Specify the passphrase of the key")
-	cmd.Flags().StringVar(&opt.version, "version", "", "Specify the deploy version of cluster")
-
-	_ = cmd.MarkFlagRequired("version")
 
 	return cmd
 }
@@ -93,7 +86,7 @@ func getComponentVersion(comp, version string) repository.Version {
 	}
 }
 
-func deploy(name, topoFile string, opt deployOptions) error {
+func deploy(name, version, topoFile string, opt deployOptions) error {
 	if utils.IsExist(meta.ClusterPath(name)) {
 		return errors.Errorf("cluster name '%s' exists, please choose another cluster name", name)
 	}
@@ -124,10 +117,10 @@ func deploy(name, topoFile string, opt deployOptions) error {
 		uniqueHosts = set.NewStringSet()
 	)
 
-	// topo.NormalizeDeployDir("/home/" + opt.deployUser + "/deploy")
+	// topo.NormalizeDeployDir("/home/" + topo.GlobalOptions.User + "/deploy")
 	for _, comp := range topo.ComponentsByStartOrder() {
 		for idx, inst := range comp.Instances() {
-			version := getComponentVersion(inst.ComponentName(), opt.version)
+			version := getComponentVersion(inst.ComponentName(), version)
 			if version == "" {
 				return errors.Errorf("unsupported component: %v", inst.ComponentName())
 			}
@@ -145,26 +138,25 @@ func deploy(name, topoFile string, opt deployOptions) error {
 				uniqueHosts.Insert(inst.GetHost())
 				t := task.NewBuilder().
 					RootSSH(inst.GetHost(), inst.GetSSHPort(), opt.user, opt.password, opt.keyFile, opt.passphrase).
-					EnvInit(inst.GetHost(), opt.deployUser).
-					UserSSH(inst.GetHost(), opt.deployUser).
+					EnvInit(inst.GetHost(), topo.GlobalOptions.User).
+					UserSSH(inst.GetHost(), topo.GlobalOptions.User).
 					Build()
 				envInitTasks = append(envInitTasks, t)
 			}
 
 			deployDir := inst.DeployDir()
 			if !strings.HasPrefix(deployDir, "/") {
-				deployDir = filepath.Join("/home/"+opt.deployUser+"/deploy", deployDir)
+				deployDir = filepath.Join("/home/", topo.GlobalOptions.User, deployDir)
 			}
 			// Deploy component
 			t := task.NewBuilder().
 				Mkdir(inst.GetHost(),
 					filepath.Join(deployDir, "bin"),
-					filepath.Join(deployDir, "data"),
-					filepath.Join(deployDir, "config"),
+					filepath.Join(deployDir, "conf"),
 					filepath.Join(deployDir, "scripts"),
 					filepath.Join(deployDir, "logs")).
 				CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
-				InitConfig(name, inst, opt.deployUser, deployDir).
+				InitConfig(name, inst, topo.GlobalOptions.User, deployDir).
 				Build()
 			copyCompTasks = append(copyCompTasks, t)
 		}
@@ -172,7 +164,7 @@ func deploy(name, topoFile string, opt deployOptions) error {
 
 	var monitoredCompTasks []task.Task
 	for _, comp := range []string{meta.ComponentNodeExporter, meta.ComponentBlackboxExporter} {
-		version := getComponentVersion(comp, opt.version)
+		version := getComponentVersion(comp, version)
 		if version == "" {
 			return errors.Errorf("unsupported component: %v", comp)
 		}
@@ -185,19 +177,18 @@ func deploy(name, topoFile string, opt deployOptions) error {
 		for host := range uniqueHosts {
 			deployDir := topo.MonitoredOptions.DeployDir
 			if !strings.HasPrefix(deployDir, "/") {
-				deployDir = filepath.Join("/home/"+opt.deployUser+"/deploy", deployDir)
+				deployDir = filepath.Join("/home/", topo.GlobalOptions.User, deployDir)
 			}
 
 			// Deploy component
 			t := task.NewBuilder().
 				Mkdir(host,
 					filepath.Join(deployDir, "bin"),
-					filepath.Join(deployDir, "data"),
-					filepath.Join(deployDir, "config"),
+					filepath.Join(deployDir, "conf"),
 					filepath.Join(deployDir, "scripts"),
 					filepath.Join(deployDir, "logs")).
 				CopyComponent(comp, version, host, deployDir).
-				MonitoredConfig(name, topo.MonitoredOptions, opt.deployUser, deployDir).
+				MonitoredConfig(name, topo.MonitoredOptions, topo.GlobalOptions.User, deployDir).
 				Build()
 			monitoredCompTasks = append(monitoredCompTasks, t)
 		}
@@ -212,13 +203,12 @@ func deploy(name, topoFile string, opt deployOptions) error {
 		Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
-		fmt.Println(err)
 		return errors.Trace(err)
 	}
 
 	return meta.SaveClusterMeta(name, &meta.ClusterMeta{
-		User:     opt.deployUser,
-		Version:  opt.version,
+		User:     topo.GlobalOptions.User,
+		Version:  version,
 		Topology: &topo,
 	})
 }

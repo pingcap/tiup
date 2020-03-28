@@ -52,8 +52,8 @@ func newDisplayCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringSliceVar(&opt.filterRole, "role", nil, "only display nodes of specific roles")
-	cmd.Flags().StringSliceVar(&opt.filterNode, "node", nil, "only display nodes of specific IDs")
+	cmd.Flags().StringSliceVarP(&opt.filterRole, "role", "R", nil, "Only display specified roles")
+	cmd.Flags().StringSliceVarP(&opt.filterNode, "node", "N", nil, "Only display specified nodes")
 
 	return cmd
 }

@@ -42,7 +42,7 @@ func newScaleInCmd() *cobra.Command {
 			return scaleIn(args[0], nodes)
 		},
 	}
-	cmd.Flags().StringSliceVar(&nodes, "node-id", nil, "Specify the node ids")
+	cmd.Flags().StringSliceVarP(&nodes, "node", "N", nil, "Specify the nodes")
 	return cmd
 }
 
@@ -62,7 +62,7 @@ func scaleIn(cluster string, nodeIds []string) error {
 			}
 			deployDir := instance.DeployDir()
 			if !strings.HasPrefix(deployDir, "/") {
-				deployDir = filepath.Join("/home/"+metadata.User+"/deploy", deployDir)
+				deployDir = filepath.Join("/home/", metadata.User, deployDir)
 			}
 			t := task.NewBuilder().InitConfig(cluster, instance, metadata.User, deployDir).Build()
 			regenConfigTasks = append(regenConfigTasks, t)
