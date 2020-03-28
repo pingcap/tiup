@@ -27,7 +27,7 @@ func Destroy(
 	return nil
 }
 
-// StopComponent stop the instances.
+// DestroyComponent destroy the instances.
 func DestroyComponent(getter ExecutorGetter, w io.Writer, instances []meta.Instance) error {
 	if len(instances) <= 0 {
 		return nil

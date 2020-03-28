@@ -52,7 +52,7 @@ func newRestartCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&options.Role, "role", "R", "", "Only restart specified roles")
-	cmd.Flags().StringVarP(&options.Node, "node", "N", "", "Only restart specified nodes")
+	cmd.Flags().StringSliceVarP(&options.Roles, "role", "R", nil, "Only restart specified roles")
+	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Only restart specified nodes")
 	return cmd
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/executor"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiops/pkg/module"
+	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
 )
 
@@ -30,14 +31,15 @@ func Start(
 	getter ExecutorGetter,
 	w io.Writer,
 	spec *meta.Specification,
-	component string,
-	node string,
+	options Options,
 ) error {
-	coms := spec.ComponentsByStartOrder()
-	coms = filterComponent(coms, component)
+	roleFilter := set.NewStringSet(options.Roles...)
+	nodeFilter := set.NewStringSet(options.Nodes...)
+	components := spec.ComponentsByStartOrder()
+	components = filterComponent(components, roleFilter)
 
-	for _, com := range coms {
-		err := StartComponent(getter, w, filterInstance(com.Instances(), node))
+	for _, com := range components {
+		err := StartComponent(getter, w, filterInstance(com.Instances(), nodeFilter))
 		if err != nil {
 			return errors.Annotatef(err, "failed to start %s", com.Name())
 		}
@@ -51,14 +53,15 @@ func Stop(
 	getter ExecutorGetter,
 	w io.Writer,
 	spec *meta.Specification,
-	component string,
-	node string,
+	options Options,
 ) error {
-	coms := spec.ComponentsByStopOrder()
-	coms = filterComponent(coms, component)
+	roleFilter := set.NewStringSet(options.Roles...)
+	nodeFilter := set.NewStringSet(options.Nodes...)
+	components := spec.ComponentsByStopOrder()
+	components = filterComponent(components, roleFilter)
 
-	for _, com := range coms {
-		err := StopComponent(getter, w, filterInstance(com.Instances(), node))
+	for _, com := range components {
+		err := StopComponent(getter, w, filterInstance(com.Instances(), nodeFilter))
 		if err != nil {
 			return errors.Annotatef(err, "failed to stop %s", com.Name())
 		}
@@ -71,18 +74,18 @@ func Restart(
 	getter ExecutorGetter,
 	w io.Writer,
 	spec *meta.Specification,
-	component string,
-	node string,
+	options Options,
 ) error {
-	coms := spec.ComponentsByStartOrder()
-	coms = filterComponent(coms, component)
+	roleFilter := set.NewStringSet(options.Roles...)
+	components := spec.ComponentsByStartOrder()
+	components = filterComponent(components, roleFilter)
 
-	err := Stop(getter, w, spec, component, node)
+	err := Stop(getter, w, spec, options)
 	if err != nil {
 		return errors.Annotatef(err, "failed to stop")
 	}
 
-	err = Start(getter, w, spec, component, node)
+	err = Start(getter, w, spec, options)
 	if err != nil {
 		return errors.Annotatef(err, "failed to start")
 	}

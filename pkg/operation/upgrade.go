@@ -31,8 +31,10 @@ func Upgrade(
 	spec *meta.Specification,
 	options Options,
 ) error {
+	roleFilter := set.NewStringSet(options.Roles...)
+	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := spec.ComponentsByStartOrder()
-	components = filterComponent(components, options.Role)
+	components = filterComponent(components, roleFilter)
 
 	leaderAware := set.NewStringSet(meta.ComponentPD, meta.ComponentTiKV)
 
@@ -45,7 +47,7 @@ func Upgrade(
 			}
 		}
 
-		instances := filterInstance(component.Instances(), options.Node)
+		instances := filterInstance(component.Instances(), nodeFilter)
 		if len(instances) < 1 {
 			continue
 		}

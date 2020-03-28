@@ -56,6 +56,7 @@ type (
 		DataDir   string `yaml:"data_dir,omitempty"  default:"data"`
 	}
 
+	// MonitoredOptions represents the monitored node configuration
 	MonitoredOptions struct {
 		NodeExporterPort     int    `yaml:"node_exporter_port,omitempty" default:"9100"`
 		BlackboxExporterPort int    `yaml:"blackbox_exporter_port,omitempty" default:"9115"`

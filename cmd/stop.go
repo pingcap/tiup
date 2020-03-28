@@ -52,7 +52,7 @@ func newStopCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&options.Role, "role", "R", "", "Only stop specified roles")
-	cmd.Flags().StringVarP(&options.Node, "node", "N", "", "Only stop specified nodes")
+	cmd.Flags().StringSliceVarP(&options.Roles, "role", "R", nil, "Only stop specified roles")
+	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Only stop specified nodes")
 	return cmd
 }

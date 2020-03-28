@@ -19,6 +19,7 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 )
 
+// MonitoredConfig is used to generate the monitor node configuration
 type MonitoredConfig struct {
 	name       string
 	options    meta.MonitoredOptions
@@ -26,11 +27,13 @@ type MonitoredConfig struct {
 	deployDir  string
 }
 
+// Execute implements the Task interface
 func (m *MonitoredConfig) Execute(ctx *Context) error {
-	fmt.Println("TODO: ====> MonitoredConfig")
+	ctx.Warnf("MonitoredConfig not implement")
 	return nil
 }
 
+// Rollback implements the Task interface
 func (m *MonitoredConfig) Rollback(ctx *Context) error {
 	return ErrUnsupportRollback
 }

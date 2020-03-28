@@ -19,14 +19,14 @@ import (
 
 	"github.com/pingcap-incubator/tiops/pkg/executor"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/set"
 )
 
 // Options represents the operation options
 type Options struct {
-	Role         string
-	Node         string
-	Force        bool // Option for upgrade subcommand
-	DeletedNodes []string
+	Roles []string
+	Nodes []string
+	Force bool // Option for upgrade subcommand
 }
 
 // Operation represents the type of cluster operation
@@ -62,14 +62,14 @@ func (op Operation) String() string {
 	return fmt.Sprintf("unknonw-op(%d)", op)
 }
 
-func filterComponent(comps []meta.Component, component string) (res []meta.Component) {
-	if component == "" {
+func filterComponent(comps []meta.Component, components set.StringSet) (res []meta.Component) {
+	if len(components) == 0 {
 		res = comps
 		return
 	}
 
 	for _, c := range comps {
-		if c.Name() != component {
+		if !components.Exist(c.Name()) {
 			continue
 		}
 
@@ -79,14 +79,14 @@ func filterComponent(comps []meta.Component, component string) (res []meta.Compo
 	return
 }
 
-func filterInstance(instances []meta.Instance, node string) (res []meta.Instance) {
-	if node == "" {
+func filterInstance(instances []meta.Instance, nodes set.StringSet) (res []meta.Instance) {
+	if len(nodes) == 0 {
 		res = instances
 		return
 	}
 
 	for _, c := range instances {
-		if c.ID() != node {
+		if !nodes.Exist(c.ID()) {
 			continue
 		}
 		res = append(res, c)

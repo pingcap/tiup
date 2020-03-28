@@ -127,6 +127,6 @@ func upgrade(name, version string, opt upgradeOptions) error {
 		return err
 	}
 
-	metadata.Version = opt.version
+	metadata.Version = version
 	return meta.SaveClusterMeta(name, metadata)
 }

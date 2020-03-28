@@ -26,27 +26,27 @@ import (
 )
 
 func newScaleInCmd() *cobra.Command {
-	var nodes []string
+	var options operator.Options
 	cmd := &cobra.Command{
 		Use:   "scale-in <cluster-name>",
 		Short: "Scale in a TiDB cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
+			if len(args) < 1 {
 				cmd.Help()
 				return fmt.Errorf("cluster name not specified")
 			}
-			if len(nodes) < 1 {
+			if len(options.Nodes) < 1 {
 				cmd.Help()
 				return fmt.Errorf("node not specified")
 			}
-			return scaleIn(args[0], nodes)
+			return scaleIn(args[0], options)
 		},
 	}
-	cmd.Flags().StringSliceVarP(&nodes, "node", "N", nil, "Specify the nodes")
+	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Specify the nodes")
 	return cmd
 }
 
-func scaleIn(cluster string, nodeIds []string) error {
+func scaleIn(cluster string, options operator.Options) error {
 	metadata, err := meta.ClusterMetadata(cluster)
 	if err != nil {
 		return err
@@ -54,10 +54,10 @@ func scaleIn(cluster string, nodeIds []string) error {
 
 	// Regenerate configuration
 	var regenConfigTasks []task.Task
-	deletedNodes := set.NewStringSet(nodeIds...)
+	deletedNodes := set.NewStringSet(options.Nodes...)
 	for _, component := range metadata.Topology.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
-			if deletedNodes.Exist(instance.GetHost()) {
+			if deletedNodes.Exist(instance.ID()) {
 				continue
 			}
 			deployDir := instance.DeployDir()
@@ -74,10 +74,8 @@ func scaleIn(cluster string, nodeIds []string) error {
 			meta.ClusterPath(cluster, "ssh", "id_rsa"),
 			meta.ClusterPath(cluster, "ssh", "id_rsa.pub")).
 		ClusterSSH(metadata.Topology, metadata.User).
-		ClusterOperate(metadata.Topology, operator.ScaleInOperation, operator.Options{
-			DeletedNodes: nodeIds,
-		}).
-		UpdateMeta(cluster, metadata, nodeIds).
+		ClusterOperate(metadata.Topology, operator.ScaleInOperation, options).
+		UpdateMeta(cluster, metadata, options.Nodes).
 		Parallel(regenConfigTasks...).
 		Build()
 

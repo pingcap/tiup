@@ -34,19 +34,19 @@ type ClusterOperate struct {
 func (c *ClusterOperate) Execute(ctx *Context) error {
 	switch c.op {
 	case operator.StartOperation:
-		err := operator.Start(ctx, c.w, c.spec, c.options.Role, c.options.Node)
+		err := operator.Start(ctx, c.w, c.spec, c.options)
 		if err != nil {
 			return errors.Annotate(err, "failed to start")
 		}
 		operator.PrintClusterStatus(ctx, c.w, c.spec)
 	case operator.StopOperation:
-		err := operator.Stop(ctx, c.w, c.spec, c.options.Role, c.options.Node)
+		err := operator.Stop(ctx, c.w, c.spec, c.options)
 		if err != nil {
 			return errors.Annotate(err, "failed to stop")
 		}
 		operator.PrintClusterStatus(ctx, c.w, c.spec)
 	case operator.RestartOperation:
-		err := operator.Restart(ctx, c.w, c.spec, c.options.Role, c.options.Node)
+		err := operator.Restart(ctx, c.w, c.spec, c.options)
 		if err != nil {
 			return errors.Annotate(err, "failed to restart")
 		}

@@ -42,7 +42,7 @@ func ScaleIn(
 
 	// Clean components
 	deletedDiff := map[string][]meta.Instance{}
-	deletedNodes := set.NewStringSet(options.DeletedNodes...)
+	deletedNodes := set.NewStringSet(options.Nodes...)
 	for nodeID := range deletedNodes {
 		inst, found := instances[nodeID]
 		if !found {

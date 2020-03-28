@@ -53,7 +53,7 @@ func newStartCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&options.Role, "role", "R", "", "Only start specified roles")
-	cmd.Flags().StringVarP(&options.Node, "node", "N", "", "Only start specified nodes")
+	cmd.Flags().StringSliceVarP(&options.Roles, "role", "R", nil, "Only start specified roles")
+	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Only start specified nodes")
 	return cmd
 }
