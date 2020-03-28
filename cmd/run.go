@@ -177,6 +177,7 @@ func launchComponent(ctx context.Context, component string, version repository.V
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, wd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
+		fmt.Sprintf("%s=%s", localdata.EnvTag, tag),
 	}
 
 	// init the command
