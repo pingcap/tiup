@@ -73,26 +73,35 @@ func (c *DrainerScript) AppendEndpoints(ends ...*PDScript) *DrainerScript {
 
 // Config read ${localdata.EnvNameComponentInstallDir}/templates/scripts/run_drainer.sh.tpl as template
 // and generate the config by ConfigWithTemplate
-func (c *DrainerScript) Config() (string, error) {
+func (c *DrainerScript) Config() ([]byte, error) {
 	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "scripts", "run_drainer.sh.tpl")
 	tpl, err := ioutil.ReadFile(fp)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return c.ConfigWithTemplate(string(tpl))
 }
 
+// ConfigToFile write config content to specific file.
+func (c *DrainerScript) ConfigToFile(file string) error {
+	config, err := c.Config()
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(file, config, 0755)
+}
+
 // ConfigWithTemplate generate the Drainer config content by tpl
-func (c *DrainerScript) ConfigWithTemplate(tpl string) (string, error) {
+func (c *DrainerScript) ConfigWithTemplate(tpl string) ([]byte, error) {
 	tmpl, err := template.New("Drainer").Parse(tpl)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	content := bytes.NewBufferString("")
 	if err := tmpl.Execute(content, c); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return content.String(), nil
+	return content.Bytes(), nil
 }

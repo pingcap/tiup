@@ -11,9 +11,9 @@ cd "${DEPLOY_DIR}" || exit 1
 {{- define "PDList"}}
   {{- range $idx, $pd := .}}
     {{- if eq $idx 0}}
-      {{- $pd.Scheme}}://{{$pd.IP}}:{{$pd.PeerPort}}
+      {{- $pd.Scheme}}://{{$pd.IP}}:{{$pd.ClientPort}}
     {{- else -}}
-      ,{{- $pd.Scheme}}://{{$pd.IP}}:{{$pd.PeerPort}}
+      ,{{- $pd.Scheme}}://{{$pd.IP}}:{{$pd.ClientPort}}
     {{- end}}
   {{- end}}
 {{- end}}

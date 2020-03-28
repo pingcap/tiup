@@ -26,7 +26,7 @@ import (
 // PumpScript represent the data to generate Pump config
 type PumpScript struct {
 	NodeID    string
-	IP        string
+	Host      string
 	Port      uint64
 	DeployDir string
 	DataDir   string
@@ -36,10 +36,10 @@ type PumpScript struct {
 }
 
 // NewPumpScript returns a PumpScript with given arguments
-func NewPumpScript(nodeID, ip, deployDir, dataDir string) *PumpScript {
+func NewPumpScript(nodeID, host, deployDir, dataDir string) *PumpScript {
 	return &PumpScript{
 		NodeID:    nodeID,
-		IP:        ip,
+		Host:      host,
 		Port:      8250,
 		DeployDir: deployDir,
 		DataDir:   dataDir,
@@ -66,26 +66,35 @@ func (c *PumpScript) AppendEndpoints(ends ...*PDScript) *PumpScript {
 
 // Config read ${localdata.EnvNameComponentInstallDir}/templates/scripts/run_pump.sh.tpl as template
 // and generate the config by ConfigWithTemplate
-func (c *PumpScript) Config() (string, error) {
+func (c *PumpScript) Config() ([]byte, error) {
 	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "scripts", "run_pump.sh.tpl")
 	tpl, err := ioutil.ReadFile(fp)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return c.ConfigWithTemplate(string(tpl))
 }
 
+// ConfigToFile write config content to specific file.
+func (c *PumpScript) ConfigToFile(file string) error {
+	config, err := c.Config()
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(file, config, 0755)
+}
+
 // ConfigWithTemplate generate the Pump config content by tpl
-func (c *PumpScript) ConfigWithTemplate(tpl string) (string, error) {
+func (c *PumpScript) ConfigWithTemplate(tpl string) ([]byte, error) {
 	tmpl, err := template.New("Pump").Parse(tpl)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	content := bytes.NewBufferString("")
 	if err := tmpl.Execute(content, c); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return content.String(), nil
+	return content.Bytes(), nil
 }

@@ -154,7 +154,7 @@ func deploy(name, version, topoFile string, opt deployOptions) error {
 					filepath.Join(deployDir, "bin"),
 					filepath.Join(deployDir, "conf"),
 					filepath.Join(deployDir, "scripts"),
-					filepath.Join(deployDir, "logs")).
+					filepath.Join(deployDir, "log")).
 				CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
 				InitConfig(name, inst, topo.GlobalOptions.User, deployDir).
 				Build()
@@ -186,7 +186,7 @@ func deploy(name, version, topoFile string, opt deployOptions) error {
 					filepath.Join(deployDir, "bin"),
 					filepath.Join(deployDir, "conf"),
 					filepath.Join(deployDir, "scripts"),
-					filepath.Join(deployDir, "logs")).
+					filepath.Join(deployDir, "log")).
 				CopyComponent(comp, version, host, deployDir).
 				MonitoredConfig(name, topo.MonitoredOptions, topo.GlobalOptions.User, deployDir).
 				Build()

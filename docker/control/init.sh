@@ -14,6 +14,7 @@ if [ ! -f ~/.ssh/known_hosts ]; then
     done
 fi
 
+
 # TODO: assert that SSH_PRIVATE_KEY==~/.ssh/id_rsa
 
 cat <<EOF 

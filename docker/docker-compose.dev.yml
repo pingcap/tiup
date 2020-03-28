@@ -3,3 +3,4 @@ services:
   control:
     volumes:
       - ${TIOPS_ROOT}:/tiops # Mounts $TIOPS_ROOT on host to /tiops control container
+      - ${TIUP_MIRRORS:-/dev/null}:/mirrors

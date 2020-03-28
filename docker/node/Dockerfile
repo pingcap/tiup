@@ -14,6 +14,7 @@ sed -i "s/PermitRootLogin without-password/PermitRootLogin yes/g" /etc/ssh/sshd_
 
 ENV AUTHORIZED_KEYS **None**
 
+ADD ./bashrc /root/.bashrc
 ADD run.sh /run.sh
 RUN dos2unix /run.sh \
     && chmod +x /*.sh

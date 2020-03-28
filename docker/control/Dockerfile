@@ -5,7 +5,7 @@ FROM golang:1.14
 RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
 RUN sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
 RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
-RUN sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
+# RUN sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
 
 
 # tiops dependencies

@@ -27,5 +27,5 @@ exec bin/tidb-server \
     --advertise-address="{{.IP}}" \
     --store="tikv" \
     --path="{{template "PDList" .Endpoints}}" \
-    --log-slow-query="logs/tidb_slow_query.log" \
-    --log-file="logs/tidb.log" 2>> "logs/tidb_stderr.log"
+    --log-slow-query="log/tidb_slow_query.log" \
+    --log-file="log/tidb.log" 2>> "log/tidb_stderr.log"
