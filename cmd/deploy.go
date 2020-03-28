@@ -99,9 +99,6 @@ func deploy(name, version, topoFile string, opt deployOptions) error {
 	if err = yaml.Unmarshal(yamlFile, &topo); err != nil {
 		return errors.Trace(err)
 	}
-	if err := topo.Validate(); err != nil {
-		return errors.Trace(err)
-	}
 	if err := os.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
 		return err
 	}
