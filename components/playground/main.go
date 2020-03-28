@@ -37,6 +37,18 @@ import (
 	"go.uber.org/zap"
 )
 
+type bootOptions struct {
+	version      string
+	pdConfigPath string
+	dbConfigPath string
+	kvConfigPath string
+	pdNum        int
+	tidbNum      int
+	tikvNum      int
+	host         string
+	monitor      bool
+}
+
 func installIfMissing(profile *localdata.Profile, component, version string) error {
 	versions, err := meta.Profile().InstalledVersions(component)
 	if err != nil {
@@ -93,7 +105,18 @@ Examples:
 			if len(args) > 0 {
 				version = args[0]
 			}
-			return bootCluster(version, pdConfigPath, dbConfigPath, kvConfigPath, pdNum, tidbNum, tikvNum, host, monitor)
+			options := &bootOptions{
+				version:      version,
+				pdConfigPath: pdConfigPath,
+				dbConfigPath: dbConfigPath,
+				kvConfigPath: kvConfigPath,
+				pdNum:        pdNum,
+				tidbNum:      tidbNum,
+				tikvNum:      tikvNum,
+				host:         host,
+				monitor:      monitor,
+			}
+			return bootCluster(options)
 		},
 	}
 
@@ -154,10 +177,10 @@ func hasDashboard(pdAddr string) bool {
 	return false
 }
 
-func bootCluster(version, pdConfigPath, dbConfigPath, kvConfigPath string, pdNum, tidbNum, tikvNum int, host string, monitor bool) error {
-	if pdNum < 1 || tidbNum < 1 || tikvNum < 1 {
+func bootCluster(options *bootOptions) error {
+	if options.pdNum < 1 || options.tidbNum < 1 || options.tikvNum < 1 {
 		return fmt.Errorf("all components count must be great than 0 (tidb=%v, tikv=%v, pd=%v)",
-			tidbNum, tikvNum, pdNum)
+			options.tidbNum, options.tikvNum, options.pdNum)
 	}
 
 	// Initialize the profile
@@ -167,7 +190,7 @@ func bootCluster(version, pdConfigPath, dbConfigPath, kvConfigPath string, pdNum
 	}
 	profile := localdata.NewProfile(profileRoot)
 	for _, comp := range []string{"pd", "tikv", "tidb"} {
-		if err := installIfMissing(profile, comp, version); err != nil {
+		if err := installIfMissing(profile, comp, options.version); err != nil {
 			return err
 		}
 	}
@@ -176,17 +199,17 @@ func bootCluster(version, pdConfigPath, dbConfigPath, kvConfigPath string, pdNum
 		return fmt.Errorf("cannot read environment variable %s", localdata.EnvNameInstanceDataDir)
 	}
 
-	all := make([]instance.Instance, 0, pdNum+tikvNum+tidbNum)
-	pds := make([]*instance.PDInstance, 0, pdNum)
-	kvs := make([]*instance.TiKVInstance, 0, tikvNum)
-	dbs := make([]*instance.TiDBInstance, 0, tidbNum)
+	all := make([]instance.Instance, 0, options.pdNum+options.tikvNum+options.tidbNum)
+	pds := make([]*instance.PDInstance, 0, options.pdNum)
+	kvs := make([]*instance.TiKVInstance, 0, options.tikvNum)
+	dbs := make([]*instance.TiDBInstance, 0, options.tidbNum)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	for i := 0; i < pdNum; i++ {
+	for i := 0; i < options.pdNum; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("pd-%d", i))
-		inst := instance.NewPDInstance(dir, host, pdConfigPath, i)
+		inst := instance.NewPDInstance(dir, options.host, options.pdConfigPath, i)
 		pds = append(pds, inst)
 		all = append(all, inst)
 	}
@@ -194,16 +217,16 @@ func bootCluster(version, pdConfigPath, dbConfigPath, kvConfigPath string, pdNum
 		pd.Join(pds)
 	}
 
-	for i := 0; i < tikvNum; i++ {
+	for i := 0; i < options.tikvNum; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("tikv-%d", i))
-		inst := instance.NewTiKVInstance(dir, host, kvConfigPath, i, pds)
+		inst := instance.NewTiKVInstance(dir, options.host, options.kvConfigPath, i, pds)
 		kvs = append(kvs, inst)
 		all = append(all, inst)
 	}
 
-	for i := 0; i < tidbNum; i++ {
+	for i := 0; i < options.tidbNum; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("tidb-%d", i))
-		inst := instance.NewTiDBInstance(dir, host, dbConfigPath, i, pds)
+		inst := instance.NewTiDBInstance(dir, options.host, options.dbConfigPath, i, pds)
 		dbs = append(dbs, inst)
 		all = append(all, inst)
 	}
@@ -211,7 +234,7 @@ func bootCluster(version, pdConfigPath, dbConfigPath, kvConfigPath string, pdNum
 	fmt.Println("Playground Bootstrapping...")
 
 	var monitorAddr string
-	if monitor {
+	if options.monitor {
 		if err := installIfMissing(profile, "prometheus", ""); err != nil {
 			return err
 		}
@@ -227,7 +250,7 @@ func bootCluster(version, pdConfigPath, dbConfigPath, kvConfigPath string, pdNum
 		}
 
 		promDir := filepath.Join(dataDir, "prometheus")
-		addr, cmd, err := startMonitor(ctx, host, promDir, tidbAddrs, tikvAddrs, pdAddrs)
+		addr, cmd, err := startMonitor(ctx, options.host, promDir, tidbAddrs, tikvAddrs, pdAddrs)
 		if err != nil {
 			return err
 		}
@@ -255,7 +278,7 @@ func bootCluster(version, pdConfigPath, dbConfigPath, kvConfigPath string, pdNum
 	}
 
 	for _, inst := range all {
-		if err := inst.Start(ctx, repository.Version(version)); err != nil {
+		if err := inst.Start(ctx, repository.Version(options.version)); err != nil {
 			return err
 		}
 	}
