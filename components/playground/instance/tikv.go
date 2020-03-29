@@ -36,7 +36,7 @@ type TiKVInstance struct {
 }
 
 // NewTiKVInstance return a TiKVInstance
-func NewTiKVInstance(dir, host string, id int, pds []*PDInstance) *TiKVInstance {
+func NewTiKVInstance(dir, host, configPath string, id int, pds []*PDInstance) *TiKVInstance {
 	return &TiKVInstance{
 		instance: instance{
 			ID:         id,
@@ -44,6 +44,7 @@ func NewTiKVInstance(dir, host string, id int, pds []*PDInstance) *TiKVInstance 
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, 20160),
 			StatusPort: utils.MustGetFreePort(host, 20180),
+			ConfigPath: configPath,
 		},
 		pds: pds,
 	}
@@ -55,6 +56,9 @@ func (inst *TiKVInstance) Start(ctx context.Context, version repository.Version,
 		return err
 	}
 	configPath := path.Join(inst.Dir, "tikv.toml")
+	if inst.ConfigPath != "" {
+		configPath = inst.ConfigPath
+	}
 	cf, err := os.Create(configPath)
 	if err != nil {
 		return errors.Trace(err)

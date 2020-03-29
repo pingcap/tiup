@@ -34,7 +34,7 @@ type PDInstance struct {
 }
 
 // NewPDInstance return a PDInstance
-func NewPDInstance(dir, host string, id int) *PDInstance {
+func NewPDInstance(dir, host, configPath string, id int) *PDInstance {
 	return &PDInstance{
 		instance: instance{
 			ID:         id,
@@ -42,6 +42,7 @@ func NewPDInstance(dir, host string, id int) *PDInstance {
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, 2380),
 			StatusPort: utils.MustGetFreePort(host, 2379),
+			ConfigPath: configPath,
 		},
 	}
 }
@@ -68,6 +69,9 @@ func (inst *PDInstance) Start(ctx context.Context, version repository.Version, b
 		fmt.Sprintf("--client-urls=http://%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--advertise-client-urls=http://%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "pd.log")),
+	}
+	if inst.ConfigPath != "" {
+		args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
 	}
 	endpoints := make([]string, 0, len(inst.endpoints))
 	for _, pd := range inst.endpoints {
