@@ -49,7 +49,7 @@ func NewTiDBInstance(dir, host string, id int, pds []*PDInstance) *TiDBInstance 
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiDBInstance) Start(ctx context.Context, version repository.Version) error {
+func (inst *TiDBInstance) Start(ctx context.Context, version repository.Version, binPath string) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
@@ -58,7 +58,8 @@ func (inst *TiDBInstance) Start(ctx context.Context, version repository.Version)
 		endpoints = append(endpoints, fmt.Sprintf("%s:%d", inst.Host, pd.StatusPort))
 	}
 	args := []string{
-		"tiup", compVersion("tidb", version),
+		"tiup", fmt.Sprintf("--binpath=%s", binPath),
+		compVersion("tidb", version),
 		"-P", strconv.Itoa(inst.Port),
 		"--store=tikv",
 		fmt.Sprintf("--host=%s", inst.Host),

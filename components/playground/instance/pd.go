@@ -53,13 +53,14 @@ func (inst *PDInstance) Join(pds []*PDInstance) *PDInstance {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *PDInstance) Start(ctx context.Context, version repository.Version) error {
+func (inst *PDInstance) Start(ctx context.Context, version repository.Version, binPath string) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
 	uid := fmt.Sprintf("pd-%d", inst.ID)
 	args := []string{
-		"tiup", compVersion("pd", version),
+		"tiup", fmt.Sprintf("--binpath=%s", binPath),
+		compVersion("pd", version),
 		"--name=" + uid,
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
 		fmt.Sprintf("--peer-urls=http://%s:%d", inst.Host, inst.Port),

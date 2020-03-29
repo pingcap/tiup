@@ -31,7 +31,7 @@ type instance struct {
 // Instance represent running component
 type Instance interface {
 	Pid() int
-	Start(ctx context.Context, version repository.Version) error
+	Start(ctx context.Context, version repository.Version, binPath string) error
 	Wait() error
 }
 
