@@ -53,7 +53,7 @@ func (m *Shell) Execute(ctx *Context) error {
 
 // Rollback implements the Task interface
 func (m *Shell) Rollback(ctx *Context) error {
-	return ErrUnsupportRollback
+	return ErrUnsupportedRollback
 }
 
 // String implements the fmt.Stringer interface

@@ -61,7 +61,7 @@ func (c *CopyComponent) Execute(ctx *Context) error {
 
 // Rollback implements the Task interface
 func (c *CopyComponent) Rollback(ctx *Context) error {
-	return ErrUnsupportRollback
+	return ErrUnsupportedRollback
 }
 
 // String implements the fmt.Stringer interface

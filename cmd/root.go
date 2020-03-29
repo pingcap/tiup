@@ -18,6 +18,8 @@ import (
 	"os"
 
 	"github.com/fatih/color"
+	"github.com/pingcap-incubator/tiops/pkg/flags"
+
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiops/pkg/version"
 	tiupmeta "github.com/pingcap-incubator/tiup/pkg/meta"
@@ -72,8 +74,13 @@ func init() {
 
 // Execute executes the root command
 func Execute() {
+	flags.ShowBacktrace = len(os.Getenv("TIUP_BACKTRACE")) > 0
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(color.RedString("Error: %+v", err))
+		if flags.ShowBacktrace {
+			fmt.Println(color.RedString("Error: %+v", err))
+		} else {
+			fmt.Println(color.RedString("Error: %v", err))
+		}
 		os.Exit(1)
 	}
 }

@@ -77,7 +77,7 @@ func (c *ClusterOperate) Execute(ctx *Context) error {
 
 // Rollback implements the Task interface
 func (c *ClusterOperate) Rollback(ctx *Context) error {
-	return ErrUnsupportRollback
+	return ErrUnsupportedRollback
 }
 
 // String implements the fmt.Stringer interface

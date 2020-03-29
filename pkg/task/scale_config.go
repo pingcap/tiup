@@ -47,7 +47,7 @@ func (c *ScaleConfig) Execute(ctx *Context) error {
 
 // Rollback implements the Task interface
 func (c *ScaleConfig) Rollback(ctx *Context) error {
-	return ErrUnsupportRollback
+	return ErrUnsupportedRollback
 }
 
 // String implements the fmt.Stringer interface

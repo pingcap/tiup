@@ -600,3 +600,19 @@ func (topo *Specification) ComponentsByStartOrder() (comps []Component) {
 	comps = append(comps, &AlertmanagerComponent{topo})
 	return
 }
+
+// IterComponent iterates all components in component starting order
+func (topo *Specification) IterComponent(fn func(comp Component)) {
+	for _, comp := range topo.ComponentsByStartOrder() {
+		fn(comp)
+	}
+}
+
+// IterInstance iterates all instances in component starting order
+func (topo *Specification) IterInstance(fn func(instance Instance)) {
+	for _, comp := range topo.ComponentsByStartOrder() {
+		for _, inst := range comp.Instances() {
+			fn(inst)
+		}
+	}
+}

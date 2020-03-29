@@ -16,6 +16,7 @@ package task
 import (
 	"fmt"
 
+	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 )
 
@@ -29,13 +30,13 @@ type MonitoredConfig struct {
 
 // Execute implements the Task interface
 func (m *MonitoredConfig) Execute(ctx *Context) error {
-	ctx.Warnf("MonitoredConfig not implement")
+	log.Warnf("MonitoredConfig not implement")
 	return nil
 }
 
 // Rollback implements the Task interface
 func (m *MonitoredConfig) Rollback(ctx *Context) error {
-	return ErrUnsupportRollback
+	return ErrUnsupportedRollback
 }
 
 // String implements the fmt.Stringer interface

@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/pingcap-incubator/tiops/pkg/api"
+	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
@@ -105,6 +106,9 @@ func ScaleIn(
 				if err := DestroyComponent(getter, w, []meta.Instance{instance}); err != nil {
 					return errors.Annotatef(err, "failed to destroy %s", component.Name())
 				}
+			} else {
+				log.Warnf("The component `%s` will be destroyed in background, maybe exists in several minutes or hours",
+					component.Name())
 			}
 		}
 	}

@@ -47,7 +47,7 @@ func (c *InitConfig) Execute(ctx *Context) error {
 
 // Rollback implements the Task interface
 func (c *InitConfig) Rollback(ctx *Context) error {
-	return ErrUnsupportRollback
+	return ErrUnsupportedRollback
 }
 
 // String implements the fmt.Stringer interface
