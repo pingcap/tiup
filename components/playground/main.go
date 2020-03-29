@@ -214,6 +214,16 @@ func bootCluster(options *bootOptions) error {
 		pathMap["pd"] = getAbsolutePath(options.pdBinPath)
 	}
 
+	if options.tidbConfigPath != "" {
+		options.tidbConfigPath = getAbsolutePath(options.tidbConfigPath)
+	}
+	if options.tikvConfigPath != "" {
+		options.tikvConfigPath = getAbsolutePath(options.tikvConfigPath)
+	}
+	if options.pdConfigPath != "" {
+		options.pdConfigPath = getAbsolutePath(options.pdConfigPath)
+	}
+
 	// Initialize the profile
 	profileRoot := os.Getenv(localdata.EnvNameHome)
 	if profileRoot == "" {
