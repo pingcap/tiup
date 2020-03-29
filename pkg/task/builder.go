@@ -223,6 +223,12 @@ func (b *Builder) Parallel(tasks ...Task) *Builder {
 	return b
 }
 
+// Serial appends the tasks to the tail of queue
+func (b *Builder) Serial(tasks ...Task) *Builder {
+	b.tasks = append(b.tasks, tasks...)
+	return b
+}
+
 // Build returns a task that contains all tasks appended by previous operation
 func (b *Builder) Build() Task {
 	if len(b.tasks) == 1 {

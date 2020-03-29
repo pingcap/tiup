@@ -88,7 +88,7 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 }
 
 func buildScaleOutTask(
-	name string,
+	clusterName string,
 	metadata *meta.ClusterMeta,
 	topo *meta.Specification,
 	opt scaleOutOptions,
@@ -96,7 +96,7 @@ func buildScaleOutTask(
 	var (
 		envInitTasks       []task.Task // tasks which are used to initialize environment
 		downloadCompTasks  []task.Task // tasks which are used to download components
-		copyCompTasks      []task.Task // tasks which are used to copy components to remote host
+		deployCompTasks    []task.Task // tasks which are used to copy components to remote host
 		refreshConfigTasks []task.Task // tasks which are used to refresh configuration
 	)
 
@@ -118,18 +118,7 @@ func buildScaleOutTask(
 	})
 
 	// Download missing component
-	newComponents := set.NewStringSet()
-	newPart.IterComponent(func(comp meta.Component) {
-		newComponents.Insert(comp.Name())
-	})
-	for compName := range newComponents {
-		version := getComponentVersion(compName, metadata.Version)
-		if version == "" {
-			return nil, errors.Errorf("unsupported component: %v", compName)
-		}
-		t := task.NewBuilder().Download(compName, version).Build()
-		downloadCompTasks = append(downloadCompTasks, t)
-	}
+	downloadCompTasks = buildDownloadCompTasks(metadata.Version, newPart)
 
 	// Deploy the new topology and refresh the configuration
 	newPart.IterInstance(func(inst meta.Instance) {
@@ -147,25 +136,35 @@ func buildScaleOutTask(
 				filepath.Join(deployDir, "scripts"),
 				filepath.Join(deployDir, "log")).
 			CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
-			ScaleConfig(name, metadata.Topology, inst, metadata.User, deployDir).
+			ScaleConfig(clusterName, metadata.Topology, inst, metadata.User, deployDir).
 			Build()
-		copyCompTasks = append(copyCompTasks, t)
+		deployCompTasks = append(deployCompTasks, t)
 
 		// Refresh the configuration
 		t = task.NewBuilder().
 			UserSSH(inst.GetHost(), metadata.User).
-			InitConfig(name, inst, metadata.User, deployDir).
+			InitConfig(clusterName, inst, metadata.User, deployDir).
 			Build()
 		refreshConfigTasks = append(refreshConfigTasks, t)
 	})
 
+	// Deploy monitor relevant components to remote
+	dlTasks, dpTasks := buildMonitoredDeployTask(
+		clusterName,
+		uninitializedHosts,
+		metadata.Topology.GlobalOptions,
+		metadata.Topology.MonitoredOptions,
+		metadata.Version)
+	downloadCompTasks = append(downloadCompTasks, dlTasks...)
+	deployCompTasks = append(deployCompTasks, dpTasks...)
+
 	return task.NewBuilder().
 		SSHKeySet(
-			meta.ClusterPath(name, "ssh", "id_rsa"),
-			meta.ClusterPath(name, "ssh", "id_rsa.pub")).
+			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
+			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
 		Parallel(envInitTasks...).
 		Parallel(downloadCompTasks...).
-		Parallel(copyCompTasks...).
+		Parallel(deployCompTasks...).
 		ClusterOperate(newPart, operator.StartOperation, operator.Options{}).
 		Parallel(refreshConfigTasks...).
 		Build(), nil

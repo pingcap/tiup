@@ -32,6 +32,13 @@ type Downloader struct {
 
 // Execute implements the Task interface
 func (d *Downloader) Execute(_ *Context) error {
+	if d.component == "" {
+		return errors.New("component name not specified")
+	}
+	if d.version.IsEmpty() {
+		return errors.Errorf("version not specified for component '%s'", d.component)
+	}
+
 	resName := fmt.Sprintf("%s-%s", d.component, d.version)
 	fileName := fmt.Sprintf("%s-linux-amd64.tar.gz", resName)
 	srcPath := meta.ProfilePath(meta.TiOpsPackageCacheDir, fileName)

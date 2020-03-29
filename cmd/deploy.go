@@ -101,94 +101,56 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 	var (
 		envInitTasks      []task.Task // tasks which are used to initialize environment
 		downloadCompTasks []task.Task // tasks which are used to download components
-		copyCompTasks     []task.Task // tasks which are used to copy components to remote host
-
-		uniqueHosts = set.NewStringSet()
+		deployCompTasks   []task.Task // tasks which are used to copy components to remote host
 	)
 
-	// topo.NormalizeDeployDir("/home/" + topo.GlobalOptions.User + "/deploy")
-	for _, comp := range topo.ComponentsByStartOrder() {
-		for idx, inst := range comp.Instances() {
-			version := getComponentVersion(inst.ComponentName(), version)
-			if version == "" {
-				return errors.Errorf("unsupported component: %v", inst.ComponentName())
-			}
-
-			// Download component from repository
-			if idx == 0 {
-				t := task.NewBuilder().
-					Download(inst.ComponentName(), version).
-					Build()
-				downloadCompTasks = append(downloadCompTasks, t)
-			}
-
-			// Initialize environment
-			if !uniqueHosts.Exist(inst.GetHost()) {
-				uniqueHosts.Insert(inst.GetHost())
-				t := task.NewBuilder().
-					RootSSH(inst.GetHost(), inst.GetSSHPort(), opt.user, opt.password, opt.keyFile, opt.passphrase).
-					EnvInit(inst.GetHost(), topo.GlobalOptions.User).
-					UserSSH(inst.GetHost(), topo.GlobalOptions.User).
-					Build()
-				envInitTasks = append(envInitTasks, t)
-			}
-
-			deployDir := inst.DeployDir()
-			if !strings.HasPrefix(deployDir, "/") {
-				deployDir = filepath.Join("/home/", topo.GlobalOptions.User, deployDir)
-			}
-			// Deploy component
+	// Initialize environment
+	uniqueHosts := set.NewStringSet()
+	topo.IterInstance(func(inst meta.Instance) {
+		if !uniqueHosts.Exist(inst.GetHost()) {
+			uniqueHosts.Insert(inst.GetHost())
 			t := task.NewBuilder().
-				Mkdir(inst.GetHost(),
-					filepath.Join(deployDir, "bin"),
-					filepath.Join(deployDir, "conf"),
-					filepath.Join(deployDir, "scripts"),
-					filepath.Join(deployDir, "log")).
-				CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
-				InitConfig(clusterName, inst, topo.GlobalOptions.User, deployDir).
+				RootSSH(inst.GetHost(), inst.GetSSHPort(), opt.user, opt.password, opt.keyFile, opt.passphrase).
+				EnvInit(inst.GetHost(), topo.GlobalOptions.User).
+				UserSSH(inst.GetHost(), topo.GlobalOptions.User).
 				Build()
-			copyCompTasks = append(copyCompTasks, t)
+			envInitTasks = append(envInitTasks, t)
 		}
-	}
+	})
 
-	var monitoredCompTasks []task.Task
-	for _, comp := range []string{meta.ComponentNodeExporter, meta.ComponentBlackboxExporter} {
-		version := getComponentVersion(comp, version)
-		if version == "" {
-			return errors.Errorf("unsupported component: %v", comp)
+	// Download missing component
+	downloadCompTasks = buildDownloadCompTasks(version, &topo)
+
+	// Deploy components to remote
+	topo.IterInstance(func(inst meta.Instance) {
+		version := getComponentVersion(inst.ComponentName(), version)
+		deployDir := inst.DeployDir()
+		if !strings.HasPrefix(deployDir, "/") {
+			deployDir = filepath.Join("/home/", topo.GlobalOptions.User, deployDir)
 		}
-
+		// Deploy component
 		t := task.NewBuilder().
-			Download(comp, version).
+			Mkdir(inst.GetHost(),
+				filepath.Join(deployDir, "bin"),
+				filepath.Join(deployDir, "conf"),
+				filepath.Join(deployDir, "scripts"),
+				filepath.Join(deployDir, "log")).
+			CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
+			InitConfig(clusterName, inst, topo.GlobalOptions.User, deployDir).
 			Build()
-		downloadCompTasks = append(downloadCompTasks, t)
+		deployCompTasks = append(deployCompTasks, t)
+	})
 
-		for host := range uniqueHosts {
-			deployDir := topo.MonitoredOptions.DeployDir
-			if !strings.HasPrefix(deployDir, "/") {
-				deployDir = filepath.Join("/home/", topo.GlobalOptions.User, deployDir)
-			}
-
-			// Deploy component
-			t := task.NewBuilder().
-				Mkdir(host,
-					filepath.Join(deployDir, "bin"),
-					filepath.Join(deployDir, "conf"),
-					filepath.Join(deployDir, "scripts"),
-					filepath.Join(deployDir, "log")).
-				CopyComponent(comp, version, host, deployDir).
-				MonitoredConfig(clusterName, topo.MonitoredOptions, topo.GlobalOptions.User, deployDir).
-				Build()
-			monitoredCompTasks = append(monitoredCompTasks, t)
-		}
-	}
+	// Deploy monitor relevant components to remote
+	dlTasks, dpTasks := buildMonitoredDeployTask(clusterName, uniqueHosts, topo.GlobalOptions, topo.MonitoredOptions, version)
+	downloadCompTasks = append(downloadCompTasks, dlTasks...)
+	deployCompTasks = append(deployCompTasks, dpTasks...)
 
 	t := task.NewBuilder().
 		SSHKeyGen(meta.ClusterPath(clusterName, "ssh", "id_rsa")).
 		Parallel(envInitTasks...).
 		Parallel(downloadCompTasks...).
-		Parallel(copyCompTasks...).
-		Parallel(monitoredCompTasks...).
+		Parallel(deployCompTasks...).
 		Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
@@ -200,4 +162,49 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 		Version:  version,
 		Topology: &topo,
 	})
+}
+
+func buildDownloadCompTasks(version string, topo *meta.Specification) []task.Task {
+	var tasks []task.Task
+	topo.IterComponent(func(comp meta.Component) {
+		version := getComponentVersion(comp.Name(), version)
+		t := task.NewBuilder().Download(comp.Name(), version).Build()
+		tasks = append(tasks, t)
+	})
+	return tasks
+}
+
+func buildMonitoredDeployTask(
+	clusterName string,
+	uniqueHosts set.StringSet,
+	globalOptions meta.GlobalOptions,
+	monitoredOptions meta.MonitoredOptions,
+	version string) (downloadCompTasks, deployCompTasks []task.Task) {
+	for _, comp := range []string{meta.ComponentNodeExporter, meta.ComponentBlackboxExporter} {
+		version := getComponentVersion(comp, version)
+		t := task.NewBuilder().
+			Download(comp, version).
+			Build()
+		downloadCompTasks = append(downloadCompTasks, t)
+
+		for host := range uniqueHosts {
+			deployDir := monitoredOptions.DeployDir
+			if !strings.HasPrefix(deployDir, "/") {
+				deployDir = filepath.Join("/home/", globalOptions.User, deployDir)
+			}
+
+			// Deploy component
+			t := task.NewBuilder().
+				Mkdir(host,
+					filepath.Join(deployDir, "bin"),
+					filepath.Join(deployDir, "conf"),
+					filepath.Join(deployDir, "scripts"),
+					filepath.Join(deployDir, "log")).
+				CopyComponent(comp, version, host, deployDir).
+				MonitoredConfig(clusterName, monitoredOptions, globalOptions.User, deployDir).
+				Build()
+			deployCompTasks = append(deployCompTasks, t)
+		}
+	}
+	return
 }
