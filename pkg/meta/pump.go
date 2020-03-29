@@ -38,7 +38,8 @@ func (c *PumpComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			statusFn: func(_ ...string) string {
-				return "N/A"
+				url := fmt.Sprintf("http://%s:%d/status", s.Host, s.Port)
+				return statusByURL(url)
 			},
 		}})
 	}
@@ -48,6 +49,17 @@ func (c *PumpComponent) Instances() []Instance {
 // PumpInstance represent the Pump instance.
 type PumpInstance struct {
 	instance
+}
+
+// ScaleConfig deploy temporary config on scaling
+func (i *PumpInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, user, cacheDir, deployDir string) error {
+	s := i.instance.topo
+	defer func() {
+		i.instance.topo = s
+	}()
+	i.instance.topo = b
+
+	return i.InitConfig(e, user, cacheDir, deployDir)
 }
 
 // InitConfig implements Instance interface.

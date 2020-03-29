@@ -91,10 +91,9 @@ type TiDBSpec struct {
 	NumaNode   bool   `yaml:"numa_node,omitempty"`
 }
 
-// Status queries current status of the instance
-func (s TiDBSpec) Status(pdList ...string) string {
+// statusByURL queries current status of the instance by http status api.
+func statusByURL(url string) string {
 	client := utils.NewHTTPClient(statusQueryTimeout, nil)
-	url := fmt.Sprintf("http://%s:%d/status", s.Host, s.StatusPort)
 
 	// body doesn't have any status section needed
 	body, err := client.Get(url)
@@ -105,6 +104,13 @@ func (s TiDBSpec) Status(pdList ...string) string {
 		return "Down"
 	}
 	return "Up"
+
+}
+
+// Status queries current status of the instance
+func (s TiDBSpec) Status(pdList ...string) string {
+	url := fmt.Sprintf("http://%s:%d/status", s.Host, s.StatusPort)
+	return statusByURL(url)
 }
 
 // Role returns the component role of the instance

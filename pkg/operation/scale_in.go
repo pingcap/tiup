@@ -15,6 +15,7 @@ package operator
 
 import (
 	"io"
+	"strconv"
 	"time"
 
 	"github.com/pingcap-incubator/tiops/pkg/api"
@@ -66,6 +67,7 @@ func ScaleIn(
 
 	// At least a PD server exists
 	var pdClient *api.PDClient
+	binlogClient := api.NewBinlogClient(nil /* tls.Config */)
 	for _, instance := range (&meta.PDComponent{Specification: spec}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
 			pdClient = api.NewPDClient(addr(instance), 10*time.Second, nil)
@@ -94,9 +96,17 @@ func ScaleIn(
 					return err
 				}
 			case meta.ComponentDrainer:
-				// TODO: binlog api
+				addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
+				err := binlogClient.OfflineDrainer(addr, addr)
+				if err != nil {
+					return errors.AddStack(err)
+				}
 			case meta.ComponentPump:
-				// TODO: binlog api
+				addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
+				err := binlogClient.OfflineDrainer(addr, addr)
+				if err != nil {
+					return errors.AddStack(err)
+				}
 			}
 
 			if !asyncOfflineComps.Exist(instance.ComponentName()) {
