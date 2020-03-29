@@ -51,6 +51,7 @@ func main() {
 func execute() error {
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH
+	dir := ""
 	name := ""
 	version := ""
 	entry := ""
@@ -68,12 +69,13 @@ func execute() error {
 				return cmd.Help()
 			}
 
-			return pack(args[0], name, version, entry, goos, goarch, desc)
+			return pack(args, dir, name, version, entry, goos, goarch, desc)
 		},
 	}
 
 	rootCmd.Flags().StringVarP(&goos, "os", "", goos, "Target OS of the package")
 	rootCmd.Flags().StringVarP(&goarch, "arch", "", goarch, "Target ARCH of the package")
+	rootCmd.Flags().StringVarP(&dir, "", "C", goos, "Change directory before compress")
 	rootCmd.Flags().StringVarP(&name, "name", "", name, "Name of the package")
 	rootCmd.Flags().StringVarP(&version, "release", "", version, "Version of the package")
 	rootCmd.Flags().StringVarP(&entry, "entry", "", entry, "Entry point of the package")
@@ -86,13 +88,13 @@ func execute() error {
 	return rootCmd.Execute()
 }
 
-func pack(target, name, version, entry, goos, goarch, desc string) error {
+func pack(targets []string, dir, name, version, entry, goos, goarch, desc string) error {
 	if err := os.MkdirAll("package", 0755); err != nil {
 		return err
 	}
 
 	// tar -czf package/{name}-{version}-{goos}-{goarch}.tar.gz target
-	if err := packTarget(target, name, version, goos, goarch); err != nil {
+	if err := packTarget(targets, dir, name, version, goos, goarch); err != nil {
 		return err
 	}
 
@@ -263,9 +265,14 @@ func get(url string, target interface{}) error {
 	return json.NewDecoder(r.Body).Decode(target)
 }
 
-func packTarget(target, name, version, goos, goarch string) error {
+func packTarget(targets []string, dir, name, version, goos, goarch string) error {
 	file := fmt.Sprintf("package/%s-%s-%s-%s.tar.gz", name, version, goos, goarch)
-	cmd := exec.Command("tar", "-czf", file, target)
+	args := []string{"-czf", file}
+	if dir != "" {
+		args = append(args, "-C", dir)
+	}
+	cmd := exec.Command("tar", append(args, targets...)...)
+	fmt.Println(cmd.Args)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("package target: %s", err.Error())
 	}
