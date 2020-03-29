@@ -33,6 +33,7 @@ func newDestroyCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
+			auditConfig.enable = true
 			clusterName := args[0]
 			metadata, err := meta.ClusterMetadata(clusterName)
 			if err != nil {

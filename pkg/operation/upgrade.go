@@ -14,7 +14,6 @@
 package operator
 
 import (
-	"io"
 	"strconv"
 	"time"
 
@@ -27,7 +26,6 @@ import (
 // Upgrade the cluster.
 func Upgrade(
 	getter ExecutorGetter,
-	w io.Writer,
 	spec *meta.Specification,
 	options Options,
 ) error {
@@ -67,10 +65,10 @@ func Upgrade(
 							return errors.Annotatef(err, "failed to evict PD leader %s", instance.GetHost())
 						}
 					}
-					if err := StopComponent(getter, w, []meta.Instance{instance}); err != nil {
+					if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
 						return errors.Annotatef(err, "failed to stop %s", component.Name())
 					}
-					if err := StartComponent(getter, w, []meta.Instance{instance}); err != nil {
+					if err := StartComponent(getter, []meta.Instance{instance}); err != nil {
 						return errors.Annotatef(err, "failed to start %s", component.Name())
 					}
 				}
@@ -85,10 +83,10 @@ func Upgrade(
 					if err := pdClient.EvictStoreLeader(addr(instance)); err != nil {
 						return errors.Annotatef(err, "failed to evict store leader %s", instance.GetHost())
 					}
-					if err := StopComponent(getter, w, []meta.Instance{instance}); err != nil {
+					if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
 						return errors.Annotatef(err, "failed to stop %s", component.Name())
 					}
-					if err := StartComponent(getter, w, []meta.Instance{instance}); err != nil {
+					if err := StartComponent(getter, []meta.Instance{instance}); err != nil {
 						return errors.Annotatef(err, "failed to start %s", component.Name())
 					}
 				}
@@ -96,10 +94,10 @@ func Upgrade(
 			continue
 		}
 
-		if err := StopComponent(getter, w, instances); err != nil {
+		if err := StopComponent(getter, instances); err != nil {
 			return errors.Annotatef(err, "failed to stop %s", component.Name())
 		}
-		if err := StartComponent(getter, w, instances); err != nil {
+		if err := StartComponent(getter, instances); err != nil {
 			return errors.Annotatef(err, "failed to start %s", component.Name())
 		}
 	}

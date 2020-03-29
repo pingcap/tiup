@@ -40,6 +40,8 @@ func newUpgradeCmd() *cobra.Command {
 			if len(args) != 2 {
 				return cmd.Help()
 			}
+
+			auditConfig.enable = true
 			return upgrade(args[0], args[1], opt)
 		},
 	}

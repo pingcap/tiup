@@ -14,7 +14,6 @@
 package operator
 
 import (
-	"io"
 	"strconv"
 	"time"
 
@@ -28,7 +27,6 @@ import (
 // ScaleIn scales in the cluster
 func ScaleIn(
 	getter ExecutorGetter,
-	w io.Writer,
 	spec *meta.Specification,
 	options Options,
 ) error {
@@ -110,10 +108,10 @@ func ScaleIn(
 			}
 
 			if !asyncOfflineComps.Exist(instance.ComponentName()) {
-				if err := StopComponent(getter, w, []meta.Instance{instance}); err != nil {
+				if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
 					return errors.Annotatef(err, "failed to stop %s", component.Name())
 				}
-				if err := DestroyComponent(getter, w, []meta.Instance{instance}); err != nil {
+				if err := DestroyComponent(getter, []meta.Instance{instance}); err != nil {
 					return errors.Annotatef(err, "failed to destroy %s", component.Name())
 				}
 			} else {

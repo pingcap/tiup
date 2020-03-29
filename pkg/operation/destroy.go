@@ -1,10 +1,9 @@
 package operator
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 
+	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiops/pkg/module"
 	"github.com/pingcap/errors"
@@ -13,13 +12,12 @@ import (
 // Destroy the cluster.
 func Destroy(
 	getter ExecutorGetter,
-	w io.Writer,
 	spec *meta.Specification,
 ) error {
 	coms := spec.ComponentsByStopOrder()
 
 	for _, com := range coms {
-		err := DestroyComponent(getter, w, com.Instances())
+		err := DestroyComponent(getter, com.Instances())
 		if err != nil {
 			return errors.Annotatef(err, "failed to stop %s", com.Name())
 		}
@@ -28,17 +26,17 @@ func Destroy(
 }
 
 // DestroyComponent destroy the instances.
-func DestroyComponent(getter ExecutorGetter, w io.Writer, instances []meta.Instance) error {
+func DestroyComponent(getter ExecutorGetter, instances []meta.Instance) error {
 	if len(instances) <= 0 {
 		return nil
 	}
 
 	name := instances[0].ComponentName()
-	fmt.Fprintf(w, "Destroying component %s\n", name)
+	log.Infof("Destroying component %s", name)
 
 	for _, ins := range instances {
 		e := getter.Get(ins.GetHost())
-		fmt.Fprintf(w, "Destroying instance %s\n", ins.GetHost())
+		log.Infof("Destroying instance %s", ins.GetHost())
 
 		// Stop by systemd.
 		var command string
@@ -58,8 +56,12 @@ func DestroyComponent(getter ExecutorGetter, w io.Writer, instances []meta.Insta
 		shell := module.NewShellModule(c)
 		stdout, stderr, err := shell.Execute(e)
 
-		io.Copy(w, bytes.NewReader(stdout))
-		io.Copy(w, bytes.NewReader(stderr))
+		if len(stdout) > 0 {
+			log.Output(string(stdout))
+		}
+		if len(stderr) > 0 {
+			log.Errorf(string(stderr))
+		}
 
 		if err != nil {
 			return errors.Annotatef(err, "failed to destroy: %s", ins.GetHost())
@@ -68,11 +70,11 @@ func DestroyComponent(getter ExecutorGetter, w io.Writer, instances []meta.Insta
 		err = ins.WaitForDown(e)
 		if err != nil {
 			str := fmt.Sprintf("%s failed to destroy: %s", ins.GetHost(), err)
-			fmt.Fprintln(w, str)
+			log.Errorf(str)
 			return errors.Annotatef(err, str)
 		}
 
-		fmt.Fprintf(w, "Destroy %s success\n", ins.GetHost())
+		log.Infof("Destroy %s success", ins.GetHost())
 	}
 
 	return nil

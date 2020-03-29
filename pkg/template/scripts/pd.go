@@ -16,12 +16,12 @@ package scripts
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"text/template"
 
+	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 )
 
@@ -169,7 +169,7 @@ func (c *PDScaleScript) AppendEndpoints(ends ...*PDScript) *PDScaleScript {
 // and generate the config by ConfigWithTemplate
 func (c *PDScaleScript) Config() ([]byte, error) {
 	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "scripts", "run_pd_scale.sh.tpl")
-	fmt.Println("script path:", fp)
+	log.Infof("script path: %s", fp)
 	tpl, err := ioutil.ReadFile(fp)
 	if err != nil {
 		return nil, err

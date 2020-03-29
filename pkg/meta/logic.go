@@ -20,10 +20,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pingcap-incubator/tiops/pkg/executor"
+	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/module"
 	"github.com/pingcap-incubator/tiops/pkg/template/config"
 	"github.com/pingcap-incubator/tiops/pkg/template/scripts"
 	system "github.com/pingcap-incubator/tiops/pkg/template/systemd"
+	"github.com/pingcap/errors"
 )
 
 // Components names supported by TiOps
@@ -129,9 +131,9 @@ func (i *instance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDi
 	if err := e.Transfer(sysCfg, tgt); err != nil {
 		return err
 	}
-	if outp, errp, err := e.Execute(fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port), true); err != nil {
-		fmt.Println(string(outp), string(errp))
-		return err
+	cmd := fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port)
+	if _, _, err := e.Execute(cmd, true); err != nil {
+		return errors.Annotatef(err, "execute: %s", cmd)
 	}
 
 	return nil
@@ -455,7 +457,7 @@ func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, use
 
 	cfg := scripts.NewPDScaleScript(name, i.GetHost(), deployDir, i.instance.DataDir()).AppendEndpoints(ends...)
 	fp := filepath.Join(cacheDir, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
-	fmt.Println("script path:", fp)
+	log.Infof("script path: %s", fp)
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}

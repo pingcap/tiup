@@ -53,6 +53,8 @@ func newDeploy() *cobra.Command {
 			if len(opt.keyFile) == 0 && len(opt.password) == 0 {
 				return errPasswordKeyAtLeastOne
 			}
+
+			auditConfig.enable = true
 			return deploy(args[0], args[1], args[2], opt)
 		},
 	}
@@ -167,6 +169,9 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 func buildDownloadCompTasks(version string, topo *meta.Specification) []task.Task {
 	var tasks []task.Task
 	topo.IterComponent(func(comp meta.Component) {
+		if len(comp.Instances()) < 1 {
+			return
+		}
 		version := getComponentVersion(comp.Name(), version)
 		t := task.NewBuilder().Download(comp.Name(), version).Build()
 		tasks = append(tasks, t)

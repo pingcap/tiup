@@ -48,6 +48,8 @@ func newScaleOutCmd() *cobra.Command {
 			if len(opt.keyFile) == 0 && len(opt.password) == 0 {
 				return errPasswordKeyAtLeastOne
 			}
+
+			auditConfig.enable = true
 			return scaleOut(args[0], args[1], opt)
 		},
 	}

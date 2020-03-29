@@ -14,22 +14,39 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/fatih/color"
+	"github.com/pingcap-incubator/tiops/pkg/base52"
 	"github.com/pingcap-incubator/tiops/pkg/flags"
-
+	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
+	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/pingcap-incubator/tiops/pkg/version"
 	tiupmeta "github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/spf13/cobra"
 )
 
+var auditConfig struct {
+	buffer *bytes.Buffer
+	enable bool
+}
+
 var rootCmd *cobra.Command
 
 func init() {
+	// Initialize the audit configuration
+	auditConfig.buffer = bytes.NewBufferString(strings.Join(os.Args, " ") + "\n")
+
+	// Initialize the global variables
+	flags.ShowBacktrace = len(os.Getenv("TIUP_BACKTRACE")) > 0
 	cobra.EnableCommandSorting = false
 
 	rootCmd = &cobra.Command{
@@ -42,6 +59,7 @@ func init() {
 			if err := meta.Initialize(); err != nil {
 				return err
 			}
+			log.SetOutput(io.MultiWriter(os.Stdout, auditConfig.buffer))
 			return tiupmeta.InitRepository(repository.Options{
 				GOOS:   "linux",
 				GOARCH: "amd64",
@@ -64,23 +82,34 @@ func init() {
 		newScaleOutCmd(),
 		newDestroyCmd(),
 		newUpgradeCmd(),
-		newReloadCmd(),
 		newExecCmd(),
 		newDisplayCmd(),
 		newListCmd(),
+		newAuditCmd(),
 		newImportCmd(),
 	)
 }
 
 // Execute executes the root command
 func Execute() {
-	flags.ShowBacktrace = len(os.Getenv("TIUP_BACKTRACE")) > 0
-	if err := rootCmd.Execute(); err != nil {
+	var code int
+	err := rootCmd.Execute()
+	if err != nil {
 		if flags.ShowBacktrace {
-			fmt.Println(color.RedString("Error: %+v", err))
+			log.Output(color.RedString("Error: %+v", err))
 		} else {
-			fmt.Println(color.RedString("Error: %v", err))
+			log.Output(color.RedString("Error: %v", err))
 		}
-		os.Exit(1)
+		code = 1
 	}
+	if auditConfig.enable {
+		auditDir := meta.ProfilePath(meta.TiOpsAuditDir)
+		if err := utils.CreateDir(auditDir); err != nil {
+			fmt.Println(color.RedString("Create audit directory error: %v", err))
+		} else {
+			auditFilePath := meta.ProfilePath(meta.TiOpsAuditDir, base52.Encode(time.Now().Unix()))
+			_ = ioutil.WriteFile(auditFilePath, auditConfig.buffer.Bytes(), os.ModePerm)
+		}
+	}
+	os.Exit(code)
 }

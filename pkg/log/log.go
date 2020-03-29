@@ -15,26 +15,40 @@ package log
 
 import (
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/fatih/color"
 )
 
+var output io.Writer = os.Stdout
+
+// SetOutput overwrites the default output writer
+func SetOutput(w io.Writer) {
+	output = w
+}
+
+// Output print the message to output
+func Output(s string) {
+	fmt.Fprintln(output, s)
+}
+
 // Debugf output the debug message to console
 func Debugf(format string, args ...interface{}) {
-	fmt.Println(color.CyanString(format, args...))
+	Output(color.CyanString(format, args...))
 }
 
 // Infof output the log message to console
 func Infof(format string, args ...interface{}) {
-	fmt.Println(color.GreenString(format, args...))
+	Output(color.GreenString(format, args...))
 }
 
 // Warnf output the warning message to console
 func Warnf(format string, args ...interface{}) {
-	fmt.Println(color.YellowString(format, args...))
+	Output(color.YellowString(format, args...))
 }
 
 // Errorf output the error message to console
 func Errorf(format string, args ...interface{}) {
-	fmt.Println(color.RedString(format, args...))
+	Output(color.RedString(format, args...))
 }

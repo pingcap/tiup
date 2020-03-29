@@ -14,8 +14,6 @@
 package task
 
 import (
-	"os"
-
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
@@ -192,7 +190,6 @@ func (b *Builder) ClusterOperate(
 		spec:    spec,
 		op:      op,
 		options: options,
-		w:       os.Stdout,
 	})
 
 	return b

@@ -27,6 +27,7 @@ import (
 const (
 	TiOpsPackageCacheDir = "packages"
 	TiOpsClusterDir      = "clusters"
+	TiOpsAuditDir        = "audit"
 )
 
 var profileDir string
