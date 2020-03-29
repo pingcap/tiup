@@ -15,13 +15,12 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-
 	"github.com/fatih/color"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 var rootCmd *cobra.Command
@@ -31,6 +30,7 @@ func init() {
 
 	var (
 		binary   string
+		binPath  string
 		tag      string
 		rm       bool
 		repoOpts repository.Options
@@ -75,6 +75,7 @@ the latest stable version will be downloaded from the repository.
 				// will be parsed correctly.
 				// e.g: tiup --tag mytag --rm playground --db 3 --pd 3 --kv 4
 				//   => run "playground" with parameters "--db 3 --pd 3 --kv 4"
+				// tiup --tag mytag --binpath /xxx/tikv-server tikv
 				var transparentParams []string
 				componentSpec := args[0]
 				for i, arg := range os.Args {
@@ -83,7 +84,7 @@ the latest stable version will be downloaded from the repository.
 						break
 					}
 				}
-				return runComponent(tag, componentSpec, transparentParams, rm)
+				return runComponent(tag, componentSpec, binPath, transparentParams, rm)
 			}
 			return cmd.Help()
 		},
@@ -101,6 +102,7 @@ the latest stable version will be downloaded from the repository.
 		"and the latest version installed will be selected if no version specified")
 	rootCmd.Flags().StringVarP(&tag, "tag", "T", "", "Specify a tag for component instance")
 	rootCmd.Flags().BoolVar(&rm, "rm", false, "Remove the data directory when the component instance finishes its run")
+	rootCmd.Flags().StringVar(&binPath, "binpath", "", "Specify the binary path of component instance")
 
 	rootCmd.AddCommand(
 		newInstallCmd(),

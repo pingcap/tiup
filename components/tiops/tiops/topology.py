@@ -1309,7 +1309,7 @@ class Topology(TopologyBase):
         if not isinstance(config, dict):
             raise exceptions.TiOPSArgumentError(
                 'config is in unsupported format')
-        if 'monitored_servers' in config.items() \
+        if 'monitored_servers' in config \
                 and len(config['monitored_servers']) > 0:
             return config['monitored_servers']
 
@@ -1546,10 +1546,10 @@ class Topology(TopologyBase):
 
             try:
                 # data_dir is not necessary for all components
-                _paths.append(srv()['full_data_dir'])
+                _paths.append('{}_data'.format(srv()['full_data_dir']))
             except KeyError:
                 pass
-            _paths.append(srv()['full_deploy_dir'])
+            _paths.append('{}_deploy'.format(srv()['full_deploy_dir']))
             try:
                 # labels is only setting in tikv
                 _labels.append(utils.format_labels(srv()['label'])[0])

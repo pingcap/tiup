@@ -38,15 +38,18 @@ import (
 )
 
 type bootOptions struct {
-	version      string
-	pdConfigPath string
-	dbConfigPath string
-	kvConfigPath string
-	pdNum        int
-	tidbNum      int
-	tikvNum      int
-	host         string
-	monitor      bool
+	version        string
+	pdConfigPath   string
+	tidbConfigPath string
+	tikvConfigPath string
+	pdBinPath      string
+	tidbBinPath    string
+	tikvBinPath    string
+	pdNum          int
+	tidbNum        int
+	tikvNum        int
+	host           string
+	monitor        bool
 }
 
 func installIfMissing(profile *localdata.Profile, component, version string) error {
@@ -85,9 +88,12 @@ func execute() error {
 	pdNum := 1
 	host := "127.0.0.1"
 	monitor := false
-	dbConfigPath := ""
-	kvConfigPath := ""
+	tidbConfigPath := ""
+	tikvConfigPath := ""
 	pdConfigPath := ""
+	tidbBinPath := ""
+	tikvBinPath := ""
+	pdBinPath := ""
 
 	rootCmd := &cobra.Command{
 		Use: "tiup playground [version]",
@@ -98,7 +104,8 @@ Examples:
   $ tiup playground nightly                         # Start a TiDB nightly version local cluster
   $ tiup playground v3.0.10 --db 3 --pd 3 --kv 3    # Start a local cluster with 10 nodes
   $ tiup playground nightly --monitor               # Start a local cluster with monitor system
-  $ tiup playground --pd.config ~/config/pd.toml    # Start a local cluster with specified configuration file`,
+  $ tiup playground --pd.config ~/config/pd.toml    # Start a local cluster with specified configuration file,
+  $ tiup playground --db.binpath /xx/tidb-server    # Start a local cluster with component binary path`,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			version := ""
@@ -106,15 +113,18 @@ Examples:
 				version = args[0]
 			}
 			options := &bootOptions{
-				version:      version,
-				pdConfigPath: pdConfigPath,
-				dbConfigPath: dbConfigPath,
-				kvConfigPath: kvConfigPath,
-				pdNum:        pdNum,
-				tidbNum:      tidbNum,
-				tikvNum:      tikvNum,
-				host:         host,
-				monitor:      monitor,
+				version:        version,
+				pdConfigPath:   pdConfigPath,
+				tidbConfigPath: tidbConfigPath,
+				tikvConfigPath: tikvConfigPath,
+				pdBinPath:      pdBinPath,
+				tidbBinPath:    tidbBinPath,
+				tikvBinPath:    tikvBinPath,
+				pdNum:          pdNum,
+				tidbNum:        tidbNum,
+				tikvNum:        tikvNum,
+				host:           host,
+				monitor:        monitor,
 			}
 			return bootCluster(options)
 		},
@@ -125,9 +135,12 @@ Examples:
 	rootCmd.Flags().IntVarP(&pdNum, "pd", "", 1, "PD instance number")
 	rootCmd.Flags().StringVarP(&host, "host", "", host, "Playground cluster host")
 	rootCmd.Flags().BoolVar(&monitor, "monitor", false, "Start prometheus component")
-	rootCmd.Flags().StringVarP(&dbConfigPath, "db.config", "", "", "TiDB instance configuration file")
-	rootCmd.Flags().StringVarP(&kvConfigPath, "kv.config", "", "", "TiKV instance configuration file")
+	rootCmd.Flags().StringVarP(&tidbConfigPath, "db.config", "", "", "TiDB instance configuration file")
+	rootCmd.Flags().StringVarP(&tikvConfigPath, "kv.config", "", "", "TiKV instance configuration file")
 	rootCmd.Flags().StringVarP(&pdConfigPath, "pd.config", "", "", "PD instance configuration file")
+	rootCmd.Flags().StringVarP(&tidbBinPath, "db.binpath", "", tidbBinPath, "TiDB instance binary path")
+	rootCmd.Flags().StringVarP(&tikvBinPath, "kv.binpath", "", tikvBinPath, "TiKV instance binary path")
+	rootCmd.Flags().StringVarP(&pdBinPath, "pd.binpath", "", pdBinPath, "PD instance binary path")
 
 	return rootCmd.Execute()
 }
@@ -177,10 +190,28 @@ func hasDashboard(pdAddr string) bool {
 	return false
 }
 
+func getAbsolutePath(binPath string) string {
+	if !strings.HasPrefix(binPath, "/") && !strings.HasPrefix(binPath, "~") {
+		binPath = filepath.Join(os.Getenv(localdata.EnvNameWorkDir), binPath)
+	}
+	return binPath
+}
+
 func bootCluster(options *bootOptions) error {
 	if options.pdNum < 1 || options.tidbNum < 1 || options.tikvNum < 1 {
 		return fmt.Errorf("all components count must be great than 0 (tidb=%v, tikv=%v, pd=%v)",
 			options.tidbNum, options.tikvNum, options.pdNum)
+	}
+
+	var pathMap = make(map[string]string)
+	if options.tidbBinPath != "" {
+		pathMap["tidb"] = getAbsolutePath(options.tidbBinPath)
+	}
+	if options.tikvBinPath != "" {
+		pathMap["tikv"] = getAbsolutePath(options.tikvBinPath)
+	}
+	if options.pdBinPath != "" {
+		pathMap["pd"] = getAbsolutePath(options.pdBinPath)
 	}
 
 	// Initialize the profile
@@ -190,6 +221,9 @@ func bootCluster(options *bootOptions) error {
 	}
 	profile := localdata.NewProfile(profileRoot)
 	for _, comp := range []string{"pd", "tikv", "tidb"} {
+		if pathMap[comp] != "" {
+			continue
+		}
 		if err := installIfMissing(profile, comp, options.version); err != nil {
 			return err
 		}
@@ -200,6 +234,7 @@ func bootCluster(options *bootOptions) error {
 	}
 
 	all := make([]instance.Instance, 0, options.pdNum+options.tikvNum+options.tidbNum)
+	allRole := make([]string, 0, options.pdNum+options.tikvNum+options.tidbNum)
 	pds := make([]*instance.PDInstance, 0, options.pdNum)
 	kvs := make([]*instance.TiKVInstance, 0, options.tikvNum)
 	dbs := make([]*instance.TiDBInstance, 0, options.tidbNum)
@@ -212,6 +247,7 @@ func bootCluster(options *bootOptions) error {
 		inst := instance.NewPDInstance(dir, options.host, options.pdConfigPath, i)
 		pds = append(pds, inst)
 		all = append(all, inst)
+		allRole = append(allRole, "pd")
 	}
 	for _, pd := range pds {
 		pd.Join(pds)
@@ -219,16 +255,18 @@ func bootCluster(options *bootOptions) error {
 
 	for i := 0; i < options.tikvNum; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("tikv-%d", i))
-		inst := instance.NewTiKVInstance(dir, options.host, options.kvConfigPath, i, pds)
+		inst := instance.NewTiKVInstance(dir, options.host, options.tikvConfigPath, i, pds)
 		kvs = append(kvs, inst)
 		all = append(all, inst)
+		allRole = append(allRole, "tikv")
 	}
 
 	for i := 0; i < options.tidbNum; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("tidb-%d", i))
-		inst := instance.NewTiDBInstance(dir, options.host, options.dbConfigPath, i, pds)
+		inst := instance.NewTiDBInstance(dir, options.host, options.tidbConfigPath, i, pds)
 		dbs = append(dbs, inst)
 		all = append(all, inst)
+		allRole = append(allRole, "tidb")
 	}
 
 	fmt.Println("Playground Bootstrapping...")
@@ -277,8 +315,8 @@ func bootCluster(options *bootOptions) error {
 		}()
 	}
 
-	for _, inst := range all {
-		if err := inst.Start(ctx, repository.Version(options.version)); err != nil {
+	for i, inst := range all {
+		if err := inst.Start(ctx, repository.Version(options.version), pathMap[allRole[i]]); err != nil {
 			return err
 		}
 	}
@@ -295,6 +333,10 @@ func bootCluster(options *bootOptions) error {
 		for _, dbAddr := range succ {
 			ss := strings.Split(dbAddr, ":")
 			fmt.Println(color.GreenString("To connect TiDB: mysql --host %s --port %s -u root", ss[0], ss[1]))
+		}
+		tag := os.Getenv(localdata.EnvTag)
+		if len(tag) > 0 {
+			fmt.Println(color.GreenString("Cluster tag: %s, you can restore this cluster via: tiup -T %s playground", tag, tag))
 		}
 	}
 

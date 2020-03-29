@@ -17,9 +17,9 @@ do
   do
     VERSION=$(jq < "tiup-component-$NAME.index" -r ".versions[$(($v-1))] | .version")
     echo "$NAME => $VERSION"
-    wget "$OFFICICAL_MIRRORS/$NAME-$VERSION-darwin-amd64.tar.gz" "$NAME-$VERSION-darwin-amd64.tar.gz"
-    wget "$OFFICICAL_MIRRORS/$NAME-$VERSION-darwin-amd64.sha1" "$NAME-$VERSION-darwin-amd64.sha1"
-    wget "$OFFICICAL_MIRRORS/$NAME-$VERSION-linux-amd64.tar.gz" "$NAME-$VERSION-linux-amd64.tar.gz"
-    wget "$OFFICICAL_MIRRORS/$NAME-$VERSION-linux-amd64.sha1" "$NAME-$VERSION-linux-amd64.sha1"
+    wget "$OFFICICAL_MIRRORS/$NAME-$VERSION-darwin-amd64.tar.gz" -O "$NAME-$VERSION-darwin-amd64.tar.gz"
+    wget "$OFFICICAL_MIRRORS/$NAME-$VERSION-darwin-amd64.sha1" -O "$NAME-$VERSION-darwin-amd64.sha1"
+    wget "$OFFICICAL_MIRRORS/$NAME-$VERSION-linux-amd64.tar.gz" -O "$NAME-$VERSION-linux-amd64.tar.gz"
+    wget "$OFFICICAL_MIRRORS/$NAME-$VERSION-linux-amd64.sha1" -O "$NAME-$VERSION-linux-amd64.sha1"
   done
 done
