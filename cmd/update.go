@@ -64,12 +64,21 @@ other flags will be ignored if the flag --self specified.
 				}()
 
 				err = meta.Repository().DownloadFile(meta.LocalPath("bin"), "tiup")
-				return err
+				if err != nil {
+					return err
+				}
+				fmt.Println("Update successfully!")
+				return nil
 			}
 			if (len(components) == 0 && !all && !force) || (len(components) > 0 && all) {
 				return cmd.Help()
 			}
-			return updateComponents(components, nightly, force)
+			err := updateComponents(components, nightly, force)
+			if err != nil {
+				return err
+			}
+			fmt.Println("Update successfully!")
+			return nil
 		},
 	}
 	cmd.Flags().BoolVar(&all, "all", false, "Update all components")

@@ -20,6 +20,7 @@ import (
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -47,13 +48,21 @@ component or multiple version of a component at once. There is a flag
   tiup uninstall --all`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if self {
-				return os.RemoveAll(meta.LocalRoot())
+				if err := os.RemoveAll(meta.LocalRoot()); err != nil {
+					return errors.Trace(err)
+				}
+				fmt.Println("Uninstall self successfully!")
+				return nil
 			}
 			switch {
 			case len(args) > 0:
 				return removeComponents(args, all)
 			case len(args) == 0 && all:
-				return os.RemoveAll(meta.LocalPath(localdata.ComponentParentDir))
+				if err := os.RemoveAll(meta.LocalPath(localdata.ComponentParentDir)); err != nil {
+					return errors.Trace(err)
+				}
+				fmt.Println("Uninstall all components successfully!")
+				return nil
 			default:
 				return cmd.Help()
 			}
@@ -84,6 +93,7 @@ func removeComponents(specs []string, all bool) error {
 		if err != nil {
 			return err
 		}
+		fmt.Printf("Uninstall component '%s' successfully!\n", spec)
 	}
 	return nil
 }
