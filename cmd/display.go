@@ -22,6 +22,8 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/set"
+	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -35,7 +37,7 @@ func newDisplayCmd() *cobra.Command {
 	opt := displayOption{}
 
 	cmd := &cobra.Command{
-		Use:   "display <cluster> [OPTIONS]",
+		Use:   "display <cluster-name>",
 		Short: "Display information of a TiDB cluster",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
@@ -59,6 +61,10 @@ func newDisplayCmd() *cobra.Command {
 }
 
 func displayClusterMeta(opt *displayOption) error {
+	if tiuputils.IsNotExist(meta.ClusterPath(opt.clusterName, meta.MetaFileName)) {
+		return errors.Errorf("cluster '%s' not exists", opt.clusterName)
+	}
+
 	clsMeta, err := meta.ClusterMetadata(opt.clusterName)
 	if err != nil {
 		return err

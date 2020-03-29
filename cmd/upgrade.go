@@ -60,7 +60,7 @@ func versionCompare(curVersion, newVersion string) error {
 		}
 		return errors.New(fmt.Sprintf("unsupport upgrade from %s to %s", curVersion, newVersion))
 	default:
-		return errors.New("unkown error")
+		return errors.Errorf("please specify a higher version than %s", curVersion)
 	}
 }
 

@@ -57,7 +57,15 @@ func (d *Downloader) Execute(_ *Context) error {
 			DisableDecompress: true,
 		})
 
-		err := repo.DownloadFile(meta.ProfilePath(meta.TiOpsPackageCacheDir), resName)
+		versions, err := repo.ComponentVersions(d.component)
+		if err != nil {
+			return err
+		}
+		if !versions.ContainsVersion(d.version) {
+			return errors.Errorf("component '%s' doesn't contains version '%s'", d.component, d.version)
+		}
+
+		err = repo.DownloadFile(meta.ProfilePath(meta.TiOpsPackageCacheDir), resName)
 		if err != nil {
 			return errors.Trace(err)
 		}

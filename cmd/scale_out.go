@@ -167,6 +167,8 @@ func buildScaleOutTask(
 		Parallel(envInitTasks...).
 		Parallel(downloadCompTasks...).
 		Parallel(deployCompTasks...).
+		// TODO: find another way to make sure current cluster started
+		ClusterOperate(metadata.Topology, operator.StartOperation, operator.Options{}).
 		ClusterOperate(newPart, operator.StartOperation, operator.Options{}).
 		Parallel(refreshConfigTasks...).
 		Build(), nil
