@@ -86,8 +86,7 @@ Examples:
   $ tiup playground nightly                         # Start a TiDB nightly version local cluster
   $ tiup playground v3.0.10 --db 3 --pd 3 --kv 3    # Start a local cluster with 10 nodes
   $ tiup playground nightly --monitor               # Start a local cluster with monitor system
-  $ tiup playground --db.binpath /xx/tidb-server --pd.binpath /xx/pd-server --kv.binpath /xx/tikv-server
-													# Start a local cluster with component binary path`,
+  $ tiup playground --db.binpath /xx/tidb-server    # Start a local cluster with component binary path`,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			version := ""
@@ -156,7 +155,7 @@ func hasDashboard(pdAddr string) bool {
 }
 
 func getAbsolutePath(binPath string) string {
-	if !strings.HasPrefix(binPath, "/") {
+	if !strings.HasPrefix(binPath, "/") && !strings.HasPrefix(binPath, "~") {
 		binPath = filepath.Join(os.Getenv(localdata.EnvNameWorkDir), binPath)
 	}
 	return binPath
