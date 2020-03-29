@@ -64,6 +64,10 @@
         "path": "tiup/tiup-run-test2.output"
     },
     {
+        "command": "tiup test",
+        "path": "tiup/tiup-run-test3.output"
+    },
+    {
         "command": "tiup status",
         "path": ""
     },

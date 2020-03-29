@@ -32,7 +32,6 @@ func init() {
 		binary   string
 		binPath  string
 		tag      string
-		rm       bool
 		repoOpts repository.Options
 	)
 
@@ -84,7 +83,7 @@ the latest stable version will be downloaded from the repository.
 						break
 					}
 				}
-				return runComponent(tag, componentSpec, binPath, transparentParams, rm)
+				return runComponent(tag, componentSpec, binPath, transparentParams)
 			}
 			return cmd.Help()
 		},
@@ -101,7 +100,6 @@ the latest stable version will be downloaded from the repository.
 	rootCmd.Flags().StringVarP(&binary, "binary", "B", "", "Print binary path of a specific version of a component `<component>[:version]`\n"+
 		"and the latest version installed will be selected if no version specified")
 	rootCmd.Flags().StringVarP(&tag, "tag", "T", "", "Specify a tag for component instance")
-	rootCmd.Flags().BoolVar(&rm, "rm", false, "Remove the data directory when the component instance finishes its run")
 	rootCmd.Flags().StringVar(&binPath, "binpath", "", "Specify the binary path of component instance")
 
 	rootCmd.AddCommand(
