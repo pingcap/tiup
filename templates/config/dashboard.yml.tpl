@@ -7,4 +7,4 @@ providers:
     editable: true
     updateIntervalSeconds: 30
     options:
-      path: {{.DeployDir}}/grafana-6.1.6/dashboards/{{.ClusterName}}
+      path: {{.DeployDir}}/dashboards

@@ -31,16 +31,25 @@ func NewBlackboxConfig() *BlackboxConfig {
 
 // Config read ${localdata.EnvNameComponentInstallDir}/templates/config/alertmanager.yml
 // and generate the config by ConfigWithTemplate
-func (c *BlackboxConfig) Config() (string, error) {
+func (c *BlackboxConfig) Config() ([]byte, error) {
 	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "config", "blackbox.yml")
 	tpl, err := ioutil.ReadFile(fp)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return c.ConfigWithTemplate(string(tpl))
 }
 
+// ConfigToFile write config content to specific path
+func (c *BlackboxConfig) ConfigToFile(file string) error {
+	config, err := c.Config()
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(file, config, 0755)
+}
+
 // ConfigWithTemplate generate the AlertManager config content by tpl
-func (c *BlackboxConfig) ConfigWithTemplate(tpl string) (string, error) {
-	return tpl, nil
+func (c *BlackboxConfig) ConfigWithTemplate(tpl string) ([]byte, error) {
+	return []byte(tpl), nil
 }

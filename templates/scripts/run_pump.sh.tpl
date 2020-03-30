@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-ulimit -n 1000000
 
 # WARNING: This file was auto-generated. Do not edit!
 #          All your edit might be overwritten!

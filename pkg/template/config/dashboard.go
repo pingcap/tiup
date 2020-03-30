@@ -39,26 +39,35 @@ func NewDashboardConfig(cluster, deployDir string) *DashboardConfig {
 
 // Config read ${localdata.EnvNameComponentInstallDir}/templates/config/dashboard.yml
 // and generate the config by ConfigWithTemplate
-func (c *DashboardConfig) Config() (string, error) {
+func (c *DashboardConfig) Config() ([]byte, error) {
 	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "config", "dashboard.yml.tpl")
 	tpl, err := ioutil.ReadFile(fp)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return c.ConfigWithTemplate(string(tpl))
 }
 
 // ConfigWithTemplate generate the Dashboard config content by tpl
-func (c *DashboardConfig) ConfigWithTemplate(tpl string) (string, error) {
+func (c *DashboardConfig) ConfigWithTemplate(tpl string) ([]byte, error) {
 	tmpl, err := template.New("dashboard").Parse(tpl)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	content := bytes.NewBufferString("")
 	if err := tmpl.Execute(content, c); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return content.String(), nil
+	return content.Bytes(), nil
+}
+
+// ConfigToFile write config content to specific path
+func (c *DashboardConfig) ConfigToFile(file string) error {
+	config, err := c.Config()
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(file, config, 0755)
 }

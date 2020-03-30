@@ -73,7 +73,7 @@ func getComponentVersion(comp, version string) repository.Version {
 	case meta.ComponentPrometheus:
 		return "v2.16.0"
 	case meta.ComponentGrafana:
-		return "v6.7.1"
+		return "v6.1.6"
 	case meta.ComponentAlertManager:
 		return "v0.20.0"
 	case meta.ComponentBlackboxExporter:
@@ -206,7 +206,7 @@ func buildMonitoredDeployTask(
 					filepath.Join(deployDir, "scripts"),
 					filepath.Join(deployDir, "log")).
 				CopyComponent(comp, version, host, deployDir).
-				MonitoredConfig(clusterName, monitoredOptions, globalOptions.User, deployDir).
+				MonitoredConfig(clusterName, comp, host, monitoredOptions, globalOptions.User, deployDir).
 				Build()
 			deployCompTasks = append(deployCompTasks, t)
 		}

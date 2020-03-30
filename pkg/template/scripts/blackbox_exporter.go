@@ -33,7 +33,7 @@ type BlackboxExporterScript struct {
 // NewBlackboxExporterScript returns a BlackboxExporterScript with given arguments
 func NewBlackboxExporterScript(deployDir string) *BlackboxExporterScript {
 	return &BlackboxExporterScript{
-		Port:      9099,
+		Port:      9115,
 		DeployDir: deployDir,
 	}
 }
@@ -52,26 +52,35 @@ func (c *BlackboxExporterScript) WithNumaNode(numa string) *BlackboxExporterScri
 
 // Config read ${localdata.EnvNameComponentInstallDir}/templates/scripts/run_blackbox_exporter.sh.tpl as template
 // and generate the config by ConfigWithTemplate
-func (c *BlackboxExporterScript) Config() (string, error) {
+func (c *BlackboxExporterScript) Config() ([]byte, error) {
 	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "scripts", "run_blackbox_exporter.sh.tpl")
 	tpl, err := ioutil.ReadFile(fp)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return c.ConfigWithTemplate(string(tpl))
 }
 
+// ConfigToFile write config content to specific path
+func (c *BlackboxExporterScript) ConfigToFile(file string) error {
+	config, err := c.Config()
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(file, config, 0755)
+}
+
 // ConfigWithTemplate generate the BlackboxExporter config content by tpl
-func (c *BlackboxExporterScript) ConfigWithTemplate(tpl string) (string, error) {
+func (c *BlackboxExporterScript) ConfigWithTemplate(tpl string) ([]byte, error) {
 	tmpl, err := template.New("BlackboxExporter").Parse(tpl)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	content := bytes.NewBufferString("")
 	if err := tmpl.Execute(content, c); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return content.String(), nil
+	return content.Bytes(), nil
 }

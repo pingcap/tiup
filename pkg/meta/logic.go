@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/template/config"
 	"github.com/pingcap-incubator/tiops/pkg/template/scripts"
 	system "github.com/pingcap-incubator/tiops/pkg/template/systemd"
+	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
 )
 
@@ -70,7 +71,8 @@ type Instance interface {
 	DataDir() string
 }
 
-func portStarted(e executor.TiOpsExecutor, port int) error {
+// PortStarted wait until a port is being listened
+func PortStarted(e executor.TiOpsExecutor, port int) error {
 	c := module.WaitForConfig{
 		Port:  port,
 		State: "started",
@@ -79,7 +81,7 @@ func portStarted(e executor.TiOpsExecutor, port int) error {
 	return w.Execute(e)
 }
 
-func portStopped(e executor.TiOpsExecutor, port int) error {
+func PortStopped(e executor.TiOpsExecutor, port int) error {
 	c := module.WaitForConfig{
 		Port:  port,
 		State: "stopped",
@@ -104,12 +106,12 @@ type instance struct {
 
 // Ready implements Instance interface
 func (i *instance) Ready(e executor.TiOpsExecutor) error {
-	return portStarted(e, i.port)
+	return PortStarted(e, i.port)
 }
 
 // WaitForDown implements Instance interface
 func (i *instance) WaitForDown(e executor.TiOpsExecutor) error {
-	return portStopped(e, i.port)
+	return PortStopped(e, i.port)
 }
 
 func (i *instance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDir string) error {
@@ -406,7 +408,7 @@ func (c *PDComponent) Instances() []Instance {
 	return ins
 }
 
-// PDInstance represent the TiDB instance
+// PDInstance represent the PD instance
 type PDInstance struct {
 	Name string
 	instance
@@ -483,7 +485,7 @@ func (c *MonitorComponent) Name() string {
 func (c *MonitorComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Monitors))
 	for _, s := range c.Monitors {
-		ins = append(ins, &instance{
+		ins = append(ins, &MonitorInstance{c.Specification, instance{
 			InstanceSpec: s,
 			name:         c.Name(),
 			host:         s.Host,
@@ -501,9 +503,82 @@ func (c *MonitorComponent) Instances() []Instance {
 			statusFn: func(_ ...string) string {
 				return "-"
 			},
-		})
+		}})
 	}
 	return ins
+}
+
+// MonitorInstance represent the monitor instance
+type MonitorInstance struct {
+	topo *Specification
+	instance
+}
+
+// InitConfig implement Instance interface
+func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDir string) error {
+	if err := i.instance.InitConfig(e, user, cacheDir, deployDir); err != nil {
+		return err
+	}
+
+	// transfer run script
+	cfg := scripts.NewPrometheusScript(i.GetHost(), deployDir, filepath.Join(deployDir, "data")).WithPort(uint64(i.GetPort()))
+	fp := filepath.Join(cacheDir, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
+	if err := cfg.ConfigToFile(fp); err != nil {
+		return err
+	}
+	dst := filepath.Join(deployDir, "scripts", "run_prometheus.sh")
+	if err := e.Transfer(fp, dst); err != nil {
+		return err
+	}
+
+	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+		return err
+	}
+
+	// transfer config
+	fp = filepath.Join(cacheDir, fmt.Sprintf("tikv_%s.yml", i.GetHost()))
+	// TODO: use real cluster name
+	cfig := config.NewPrometheusConfig("test-cluster")
+	uniqueHosts := set.NewStringSet()
+	for _, pd := range i.topo.PDServers {
+		uniqueHosts.Insert(pd.Host)
+		cfig.AddPD(pd.Host, uint64(pd.ClientPort))
+	}
+	for _, kv := range i.topo.TiKVServers {
+		uniqueHosts.Insert(kv.Host)
+		cfig.AddTiKV(kv.Host, uint64(kv.StatusPort))
+	}
+	for _, db := range i.topo.TiDBServers {
+		uniqueHosts.Insert(db.Host)
+		cfig.AddTiDB(db.Host, uint64(db.StatusPort))
+	}
+	for _, pump := range i.topo.PumpServers {
+		uniqueHosts.Insert(pump.Host)
+		cfig.AddPump(pump.Host, uint64(pump.Port))
+	}
+	for _, drainer := range i.topo.Drainers {
+		uniqueHosts.Insert(drainer.Host)
+		cfig.AddDrainer(drainer.Host, uint64(drainer.Port))
+	}
+	for _, grafana := range i.topo.Grafana {
+		uniqueHosts.Insert(grafana.Host)
+		cfig.AddGrafana(grafana.Host, uint64(grafana.Port))
+	}
+	for host := range uniqueHosts {
+		cfig.AddNodeExpoertor(host, uint64(i.topo.MonitoredOptions.NodeExporterPort))
+		cfig.AddBlackboxExporter(host, uint64(i.topo.MonitoredOptions.BlackboxExporterPort))
+		cfig.AddMonitoredServer(host)
+	}
+
+	if err := cfig.ConfigToFile(fp); err != nil {
+		return err
+	}
+	dst = filepath.Join(deployDir, "conf", "prometheus.yml")
+	if err := e.Transfer(fp, dst); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GrafanaComponent represents Grafana component.
@@ -518,26 +593,89 @@ func (c *GrafanaComponent) Name() string {
 func (c *GrafanaComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Grafana))
 	for _, s := range c.Grafana {
-		ins = append(ins, &instance{
-			InstanceSpec: s,
-			name:         c.Name(),
-			host:         s.Host,
-			port:         s.Port,
-			sshp:         s.SSHPort,
-			topo:         c.Specification,
+		ins = append(ins, &GrafanaInstance{
+			topo: c.Specification,
+			instance: instance{
+				InstanceSpec: s,
+				name:         c.Name(),
+				host:         s.Host,
+				port:         s.Port,
+				sshp:         s.SSHPort,
+				topo:         c.Specification,
 
-			usedPorts: []int{
-				s.Port,
-			},
-			usedDirs: []string{
-				s.DeployDir,
-			},
-			statusFn: func(_ ...string) string {
-				return "-"
+				usedPorts: []int{
+					s.Port,
+				},
+				usedDirs: []string{
+					s.DeployDir,
+				},
+				statusFn: func(_ ...string) string {
+					return "-"
+				},
 			},
 		})
 	}
 	return ins
+}
+
+// GrafanaInstance represent the grafana instance
+type GrafanaInstance struct {
+	topo *Specification
+	instance
+}
+
+// InitConfig implement Instance interface
+func (i *GrafanaInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDir string) error {
+	if err := i.instance.InitConfig(e, user, cacheDir, deployDir); err != nil {
+		return err
+	}
+
+	// transfer run script
+	cfg := scripts.NewGrafanaScript(deployDir)
+	fp := filepath.Join(cacheDir, fmt.Sprintf("run_grafana_%s_%d.sh", i.GetHost(), i.GetPort()))
+	if err := cfg.ConfigToFile(fp); err != nil {
+		return err
+	}
+	dst := filepath.Join(deployDir, "scripts", "run_grafana.sh")
+	if err := e.Transfer(fp, dst); err != nil {
+		return err
+	}
+
+	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+		return err
+	}
+
+	// transfer config
+	fp = filepath.Join(cacheDir, fmt.Sprintf("grafana_%s.ini", i.GetHost()))
+	if err := config.NewGrafanaConfig(i.GetHost(), deployDir).ConfigToFile(fp); err != nil {
+		return err
+	}
+	dst = filepath.Join(deployDir, "conf", "grafana.ini")
+	if err := e.Transfer(fp, dst); err != nil {
+		return err
+	}
+
+	// transfer dashboard.yml
+	fp = filepath.Join(cacheDir, fmt.Sprintf("dashboard_%s.yml", i.GetHost()))
+	if err := config.NewDashboardConfig("test-cluster", deployDir).ConfigToFile(fp); err != nil {
+		return err
+	}
+	dst = filepath.Join(deployDir, "conf", "dashboard.yml")
+	if err := e.Transfer(fp, dst); err != nil {
+		return err
+	}
+
+	// transfer datasource.yml
+	fp = filepath.Join(cacheDir, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
+	if err := config.NewDatasourceConfig("test-cluster", i.GetHost()).ConfigToFile(fp); err != nil {
+		return err
+	}
+	dst = filepath.Join(deployDir, "conf", "datasource.yml")
+	if err := e.Transfer(fp, dst); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // AlertmanagerComponent represents Alertmanager component.

@@ -1,19 +1,18 @@
 #!/bin/bash
 set -e
-ulimit -n 1000000
 
 DEPLOY_DIR={{.DeployDir}}
 cd "${DEPLOY_DIR}" || exit 1
 
 # WARNING: This file was auto-generated. Do not edit!
 #          All your edit might be overwritten!
-exec > >(tee -i -a "log/prometheus.log")
-exec 2>&1
+
+cp {{.DeployDir}}/bin/prometheus/*.rules.yml {{.DeployDir}}/conf/
 
 {{- if .NumaNode}}
-exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/prometheus \
+exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/prometheus/prometheus \
 {{- else}}
-exec bin/prometheus \
+exec bin/prometheus/prometheus \
 {{- end}}
     --config.file="{{.DeployDir}}/conf/prometheus.yml" \
     --web.listen-address=":{{.Port}}" \

@@ -13,18 +13,18 @@
 [paths]
 # Path to where grafana can store temp files, sessions, and the sqlite3 db (if that is used)
 #
-data = {{.DeployDir}}/data.grafana
+data = {{.DeployDir}}/data
 #
 # Directory where grafana can store logs
 #
-logs = {{.DeployDir}}/log
+logs = {{.DeployDir}}/logs
 #
 # Directory where grafana will automatically scan and look for plugins
 #
-plugins = {{.DeployDir}}/grafana-6.1.6/plugins
+plugins = {{.DeployDir}}/plugins
 #
 # folder that contains provisioning config files that grafana will apply on startup and while running.
-provisioning = {{.DeployDir}}/grafana-6.1.6/provisioning
+provisioning = {{.DeployDir}}/provisioning
 
 #
 #################################### Server ####################################
@@ -262,7 +262,7 @@ format = text
 ;#################################### Dashboard JSON files ##########################
 [dashboards.json]
 enabled = false
-path = {{.DeployDir}}/grafana-6.1.6/dashboards
+path = {{.DeployDir}}/dashboards
 
 #################################### Internal Grafana Metrics ##########################
 # Metrics available at HTTP API Url /api/metrics

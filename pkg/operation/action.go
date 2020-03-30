@@ -31,15 +31,25 @@ func Start(
 	spec *meta.Specification,
 	options Options,
 ) error {
+	uniqueHosts := set.NewStringSet()
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := spec.ComponentsByStartOrder()
 	components = filterComponent(components, roleFilter)
 
 	for _, com := range components {
-		err := StartComponent(getter, filterInstance(com.Instances(), nodeFilter))
+		insts := filterInstance(com.Instances(), nodeFilter)
+		err := StartComponent(getter, insts)
 		if err != nil {
 			return errors.Annotatef(err, "failed to start %s", com.Name())
+		}
+		for _, inst := range insts {
+			if !uniqueHosts.Exist(inst.GetHost()) {
+				uniqueHosts.Insert(inst.GetHost())
+				if err := StartMonitored(getter, inst, spec.MonitoredOptions); err != nil {
+					return err
+				}
+			}
 		}
 	}
 
@@ -52,15 +62,25 @@ func Stop(
 	spec *meta.Specification,
 	options Options,
 ) error {
+	uniqueHosts := set.NewStringSet()
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := spec.ComponentsByStopOrder()
 	components = filterComponent(components, roleFilter)
 
 	for _, com := range components {
-		err := StopComponent(getter, filterInstance(com.Instances(), nodeFilter))
+		insts := filterInstance(com.Instances(), nodeFilter)
+		err := StopComponent(getter, insts)
 		if err != nil {
 			return errors.Annotatef(err, "failed to stop %s", com.Name())
+		}
+		for _, inst := range insts {
+			if !uniqueHosts.Exist(inst.GetHost()) {
+				uniqueHosts.Insert(inst.GetHost())
+				if err := StopMonitored(getter, inst, spec.MonitoredOptions); err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil
@@ -84,6 +104,48 @@ func Restart(
 	err = Start(getter, spec, options)
 	if err != nil {
 		return errors.Annotatef(err, "failed to start")
+	}
+
+	return nil
+}
+
+// StartMonitored start BlackboxExporter and NodeExporter
+func StartMonitored(getter ExecutorGetter, instance meta.Instance, options meta.MonitoredOptions) error {
+	ports := map[string]int{
+		meta.ComponentNodeExporter:     options.NodeExporterPort,
+		meta.ComponentBlackboxExporter: options.BlackboxExporterPort,
+	}
+	e := getter.Get(instance.GetHost())
+	for _, comp := range []string{meta.ComponentNodeExporter, meta.ComponentBlackboxExporter} {
+		log.Infof("Starting component %s", comp)
+		log.Infof("\tStarting instance %s", instance.GetHost())
+		c := module.SystemdModuleConfig{
+			Unit:         fmt.Sprintf("%s-%d.service", comp, ports[comp]),
+			ReloadDaemon: true,
+			Action:       "start",
+		}
+		systemd := module.NewSystemdModule(c)
+		stdout, stderr, err := systemd.Execute(e)
+
+		if len(stdout) > 0 {
+			log.Output(string(stdout))
+		}
+		if len(stderr) > 0 {
+			log.Errorf(string(stderr))
+		}
+
+		if err != nil {
+			return errors.Annotatef(err, "failed to start: %s", instance.GetHost())
+		}
+
+		// Check ready.
+		if err := meta.PortStarted(e, ports[comp]); err != nil {
+			str := fmt.Sprintf("\t%s failed to start: %s", instance.GetHost(), err)
+			log.Errorf(str)
+			return errors.Annotatef(err, str)
+		}
+
+		log.Infof("\tStart %s success", instance.GetHost())
 	}
 
 	return nil
@@ -131,6 +193,44 @@ func StartComponent(getter ExecutorGetter, instances []meta.Instance) error {
 		}
 
 		log.Infof("\tStart %s success", ins.GetHost())
+	}
+
+	return nil
+}
+
+// StopMonitored stop BlackboxExporter and NodeExporter
+func StopMonitored(getter ExecutorGetter, instance meta.Instance, options meta.MonitoredOptions) error {
+	ports := map[string]int{
+		meta.ComponentNodeExporter:     options.NodeExporterPort,
+		meta.ComponentBlackboxExporter: options.BlackboxExporterPort,
+	}
+	e := getter.Get(instance.GetHost())
+	for _, comp := range []string{meta.ComponentNodeExporter, meta.ComponentBlackboxExporter} {
+		log.Infof("Stopping component %s", comp)
+
+		c := module.SystemdModuleConfig{
+			Unit:   fmt.Sprintf("%s-%d.service", comp, ports[comp]),
+			Action: "stop",
+		}
+		systemd := module.NewSystemdModule(c)
+		stdout, stderr, err := systemd.Execute(e)
+
+		if len(stdout) > 0 {
+			log.Output(string(stdout))
+		}
+		if len(stderr) > 0 {
+			log.Errorf(string(stderr))
+		}
+
+		if err != nil {
+			return errors.Annotatef(err, "failed to stop: %s", instance.GetHost())
+		}
+
+		if err := meta.PortStopped(e, ports[comp]); err != nil {
+			str := fmt.Sprintf("\t%s failed to stop: %s", instance.GetHost(), err)
+			log.Errorf(str)
+			return errors.Annotatef(err, str)
+		}
 	}
 
 	return nil

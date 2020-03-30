@@ -47,26 +47,35 @@ func (c *GrafanaConfig) WithPort(port uint64) *GrafanaConfig {
 
 // Config read ${localdata.EnvNameComponentInstallDir}/templates/config/grafana.ini.tpl
 // and generate the config by ConfigWithTemplate
-func (c *GrafanaConfig) Config() (string, error) {
+func (c *GrafanaConfig) Config() ([]byte, error) {
 	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "config", "grafana.ini.tpl")
 	tpl, err := ioutil.ReadFile(fp)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return c.ConfigWithTemplate(string(tpl))
 }
 
 // ConfigWithTemplate generate the Grafana config content by tpl
-func (c *GrafanaConfig) ConfigWithTemplate(tpl string) (string, error) {
+func (c *GrafanaConfig) ConfigWithTemplate(tpl string) ([]byte, error) {
 	tmpl, err := template.New("Grafana").Parse(tpl)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	content := bytes.NewBufferString("")
 	if err := tmpl.Execute(content, c); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return content.String(), nil
+	return content.Bytes(), nil
+}
+
+// ConfigToFile write config content to specific path
+func (c *GrafanaConfig) ConfigToFile(file string) error {
+	config, err := c.Config()
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(file, config, 0755)
 }

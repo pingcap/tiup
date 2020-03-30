@@ -143,9 +143,11 @@ func (b *Builder) ScaleConfig(name string, base *meta.TopologySpecification, ins
 }
 
 // MonitoredConfig appends a CopyComponent task to the current task collection
-func (b *Builder) MonitoredConfig(name string, options meta.MonitoredOptions, deployUser, deployDir string) *Builder {
+func (b *Builder) MonitoredConfig(name, comp, host string, options meta.MonitoredOptions, deployUser, deployDir string) *Builder {
 	b.tasks = append(b.tasks, &MonitoredConfig{
 		name:       name,
+		component:  comp,
+		host:       host,
 		options:    options,
 		deployUser: deployUser,
 		deployDir:  deployDir,

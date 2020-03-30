@@ -1,17 +1,27 @@
 #!/bin/bash
 set -e
-ulimit -n 1000000
 
 # WARNING: This file was auto-generated. Do not edit!
 #          All your edit might be overwritten!
 DEPLOY_DIR={{.DeployDir}}
 cd "${DEPLOY_DIR}" || exit 1
 
+mkdir -p {{.DeployDir}}/plugins
+mkdir -p {{.DeployDir}}/dashboards
+mkdir -p {{.DeployDir}}/provisioning/dashboards
+mkdir -p {{.DeployDir}}/provisioning/datasources
+
+cp {{.DeployDir}}/bin/*.json {{.DeployDir}}/dashboards/
+cp {{.DeployDir}}/conf/datasource.yml {{.DeployDir}}/provisioning/datasources
+cp {{.DeployDir}}/conf/dashboard.yml {{.DeployDir}}/provisioning/dashboards
+
+find {{.DeployDir}}/dashboards/ -type f -exec sed -i "s/\${DS_.*-CLUSTER}/test-cluster/g" {} \;
+
 LANG=en_US.UTF-8 \
 {{- if .NumaNode}}
-exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} grafana-6.1.6/bin/grafana-server \
+exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/bin/grafana-server \
 {{- else}}
-exec grafana-6.1.6/bin/grafana-server \
+exec bin/bin/grafana-server \
 {{- end}}
-    --homepath="{{.DeployDir}}/grafana-6.1.6" \
-    --config="{{.DeployDir}}/grafana-6.1.6/conf/grafana.ini"
+    --homepath="{{.DeployDir}}/bin" \
+    --config="{{.DeployDir}}/conf/grafana.ini"

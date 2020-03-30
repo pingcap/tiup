@@ -44,26 +44,35 @@ func (c *GrafanaScript) WithNumaNode(numa string) *GrafanaScript {
 
 // Config read ${localdata.EnvNameComponentInstallDir}/templates/scripts/run_Grafana.sh.tpl as template
 // and generate the config by ConfigWithTemplate
-func (c *GrafanaScript) Config() (string, error) {
+func (c *GrafanaScript) Config() ([]byte, error) {
 	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "scripts", "run_grafana.sh.tpl")
 	tpl, err := ioutil.ReadFile(fp)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return c.ConfigWithTemplate(string(tpl))
 }
 
 // ConfigWithTemplate generate the Grafana config content by tpl
-func (c *GrafanaScript) ConfigWithTemplate(tpl string) (string, error) {
+func (c *GrafanaScript) ConfigWithTemplate(tpl string) ([]byte, error) {
 	tmpl, err := template.New("Grafana").Parse(tpl)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	content := bytes.NewBufferString("")
 	if err := tmpl.Execute(content, c); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return content.String(), nil
+	return content.Bytes(), nil
+}
+
+// ConfigToFile write config content to specific path
+func (c *GrafanaScript) ConfigToFile(file string) error {
+	config, err := c.Config()
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(file, config, 0755)
 }

@@ -185,14 +185,18 @@ scrape_configs:
     {{- end}}
       labels:
         group: 'pd'
+{{- if .PushgatewayAddr}}
     - targets:
       - '{{.PushgatewayAddr}}'
       labels:
         group: 'pushgateway'
+{{- end}}
+{{- if .GrafanaAddr}}
     - targets:
       - '{{.GrafanaAddr}}'
       labels:
         group: 'grafana'
+{{- end}}
     - targets:
     {{- range .NodeExporterAddrs}}
       - '{{.}}'
@@ -220,7 +224,7 @@ scrape_configs:
       module: [icmp]
     static_configs:
     - targets:
-    {{- range .MonitoredServers}}
+    {{- range $.MonitoredServers}}
       - '{{.}}'
     {{- end}}
     relabel_configs:

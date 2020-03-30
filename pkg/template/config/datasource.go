@@ -47,26 +47,35 @@ func (c *DatasourceConfig) WithPort(port uint64) *DatasourceConfig {
 
 // Config read ${localdata.EnvNameComponentInstallDir}/templates/config/datasource.yml
 // and generate the config by ConfigWithTemplate
-func (c *DatasourceConfig) Config() (string, error) {
+func (c *DatasourceConfig) Config() ([]byte, error) {
 	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "config", "datasource.yml.tpl")
 	tpl, err := ioutil.ReadFile(fp)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return c.ConfigWithTemplate(string(tpl))
 }
 
 // ConfigWithTemplate generate the Datasource config content by tpl
-func (c *DatasourceConfig) ConfigWithTemplate(tpl string) (string, error) {
+func (c *DatasourceConfig) ConfigWithTemplate(tpl string) ([]byte, error) {
 	tmpl, err := template.New("Datasource").Parse(tpl)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	content := bytes.NewBufferString("")
 	if err := tmpl.Execute(content, c); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return content.String(), nil
+	return content.Bytes(), nil
+}
+
+// ConfigToFile write config content to specific path
+func (c *DatasourceConfig) ConfigToFile(file string) error {
+	config, err := c.Config()
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(file, config, 0755)
 }

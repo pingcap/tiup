@@ -52,26 +52,35 @@ func (c *NodeExporterScript) WithNumaNode(numa string) *NodeExporterScript {
 
 // Config read ${localdata.EnvNameComponentInstallDir}/templates/scripts/run_node_exporter.sh.tpl as template
 // and generate the config by ConfigWithTemplate
-func (c *NodeExporterScript) Config() (string, error) {
+func (c *NodeExporterScript) Config() ([]byte, error) {
 	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "scripts", "run_node_exporter.sh.tpl")
 	tpl, err := ioutil.ReadFile(fp)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return c.ConfigWithTemplate(string(tpl))
 }
 
+// ConfigToFile write config content to specific path
+func (c *NodeExporterScript) ConfigToFile(file string) error {
+	config, err := c.Config()
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(file, config, 0755)
+}
+
 // ConfigWithTemplate generate the NodeExporter config content by tpl
-func (c *NodeExporterScript) ConfigWithTemplate(tpl string) (string, error) {
+func (c *NodeExporterScript) ConfigWithTemplate(tpl string) ([]byte, error) {
 	tmpl, err := template.New("NodeExporter").Parse(tpl)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	content := bytes.NewBufferString("")
 	if err := tmpl.Execute(content, c); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return content.String(), nil
+	return content.Bytes(), nil
 }
