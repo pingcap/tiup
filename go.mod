@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/AstroProfundis/tabby v1.1.0-color
+	github.com/BurntSushi/toml v0.3.1
 	github.com/appleboy/easyssh-proxy v1.3.0
 	github.com/creasty/defaults v1.3.0
 	github.com/fatih/color v1.9.0

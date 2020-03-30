@@ -72,12 +72,20 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 	if err != nil {
 		return err
 	}
+
+	// Abort scale out operation if the merged topology is invalid
 	mergedTopo := metadata.Topology.Merge(&newPart)
 	if err := mergedTopo.Validate(); err != nil {
 		return err
 	}
 
-	t, err := buildScaleOutTask(clusterName, metadata, mergedTopo, opt, &newPart)
+	// Inherit existing global configuration
+	newPart.GlobalOptions = metadata.Topology.GlobalOptions
+	newPart.MonitoredOptions = metadata.Topology.MonitoredOptions
+	newPart.ServerConfigs = metadata.Topology.ServerConfigs
+
+	// Build the scale out tasks
+	t, err := buildScaleOutTask(clusterName, metadata, opt, &newPart)
 	if err != nil {
 		return err
 	}
@@ -92,7 +100,6 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 func buildScaleOutTask(
 	clusterName string,
 	metadata *meta.ClusterMeta,
-	topo *meta.Specification,
 	opt scaleOutOptions,
 	newPart *meta.TopologySpecification) (task.Task, error) {
 	var (

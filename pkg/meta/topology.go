@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -47,12 +48,12 @@ type (
 	}
 
 	// GlobalOptions represents the global options for all groups in topology
-	// pecification in topology.yaml
+	// specification in topology.yaml
 	GlobalOptions struct {
 		User      string `yaml:"user,omitempty" default:"tidb"`
 		SSHPort   int    `yaml:"ssh_port,omitempty" default:"22"`
 		DeployDir string `yaml:"deploy_dir,omitempty" default:"deploy"`
-		DataDir   string `yaml:"data_dir,omitempty"  default:"data"`
+		DataDir   string `yaml:"data_dir,omitempty" default:"data"`
 		LogDir    string `yaml:"log_dir,omitempty"`
 	}
 
@@ -65,10 +66,18 @@ type (
 		LogDir               string `yaml:"log_dir,omitempty"`
 	}
 
+	// ServerConfigs represents the server runtime configuration
+	ServerConfigs struct {
+		TiDB yaml.MapSlice `yaml:"tidb"`
+		TiKV yaml.MapSlice `yaml:"tikv"`
+		PD   yaml.MapSlice `yaml:"pd"`
+	}
+
 	// TopologySpecification represents the specification of topology.yaml
 	TopologySpecification struct {
 		GlobalOptions    GlobalOptions      `yaml:"global,omitempty"`
 		MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty"`
+		ServerConfigs    ServerConfigs      `yaml:"server_configs,omitempty"`
 		TiDBServers      []TiDBSpec         `yaml:"tidb_servers"`
 		TiKVServers      []TiKVSpec         `yaml:"tikv_servers"`
 		PDServers        []PDSpec           `yaml:"pd_servers"`
@@ -82,14 +91,15 @@ type (
 
 // TiDBSpec represents the TiDB topology specification in topology.yaml
 type TiDBSpec struct {
-	Host       string `yaml:"host"`
-	SSHPort    int    `yaml:"ssh_port,omitempty"`
-	Imported   bool   `yaml:"imported,omitempty"`
-	Port       int    `yaml:"port" default:"4000"`
-	StatusPort int    `yaml:"status_port" default:"10080"`
-	DeployDir  string `yaml:"deploy_dir,omitempty"`
-	LogDir     string `yaml:"log_dir,omitempty"`
-	NumaNode   bool   `yaml:"numa_node,omitempty"`
+	Host       string        `yaml:"host"`
+	SSHPort    int           `yaml:"ssh_port,omitempty"`
+	Imported   bool          `yaml:"imported,omitempty"`
+	Port       int           `yaml:"port" default:"4000"`
+	StatusPort int           `yaml:"status_port" default:"10080"`
+	DeployDir  string        `yaml:"deploy_dir,omitempty"`
+	LogDir     string        `yaml:"log_dir,omitempty"`
+	NumaNode   bool          `yaml:"numa_node,omitempty"`
+	Config     yaml.MapSlice `yaml:"config,omitempty"`
 }
 
 // statusByURL queries current status of the instance by http status api.
@@ -136,17 +146,18 @@ func (s TiDBSpec) IsImported() bool {
 
 // TiKVSpec represents the TiKV topology specification in topology.yaml
 type TiKVSpec struct {
-	Host       string   `yaml:"host"`
-	SSHPort    int      `yaml:"ssh_port,omitempty"`
-	Imported   bool     `yaml:"imported,omitempty"`
-	Port       int      `yaml:"port" default:"20160"`
-	StatusPort int      `yaml:"status_port" default:"20180"`
-	DeployDir  string   `yaml:"deploy_dir,omitempty"`
-	DataDir    string   `yaml:"data_dir,omitempty"`
-	LogDir     string   `yaml:"log_dir,omitempty"`
-	Offline    bool     `yaml:"offline,omitempty"`
-	Labels     []string `yaml:"labels,omitempty"`
-	NumaNode   bool     `yaml:"numa_node,omitempty"`
+	Host       string        `yaml:"host"`
+	SSHPort    int           `yaml:"ssh_port,omitempty"`
+	Imported   bool          `yaml:"imported,omitempty"`
+	Port       int           `yaml:"port" default:"20160"`
+	StatusPort int           `yaml:"status_port" default:"20180"`
+	DeployDir  string        `yaml:"deploy_dir,omitempty"`
+	DataDir    string        `yaml:"data_dir,omitempty"`
+	LogDir     string        `yaml:"log_dir,omitempty"`
+	Offline    bool          `yaml:"offline,omitempty"`
+	Labels     []string      `yaml:"labels,omitempty"`
+	NumaNode   bool          `yaml:"numa_node,omitempty"`
+	Config     yaml.MapSlice `yaml:"config,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -195,13 +206,14 @@ type PDSpec struct {
 	SSHPort  int    `yaml:"ssh_port,omitempty"`
 	Imported bool   `yaml:"imported,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
-	Name       string `yaml:"name"`
-	ClientPort int    `yaml:"client_port" default:"2379"`
-	PeerPort   int    `yaml:"peer_port" default:"2380"`
-	DeployDir  string `yaml:"deploy_dir,omitempty"`
-	DataDir    string `yaml:"data_dir,omitempty"`
-	LogDir     string `yaml:"log_dir,omitempty"`
-	NumaNode   bool   `yaml:"numa_node,omitempty"`
+	Name       string        `yaml:"name"`
+	ClientPort int           `yaml:"client_port" default:"2379"`
+	PeerPort   int           `yaml:"peer_port" default:"2380"`
+	DeployDir  string        `yaml:"deploy_dir,omitempty"`
+	DataDir    string        `yaml:"data_dir,omitempty"`
+	LogDir     string        `yaml:"log_dir,omitempty"`
+	NumaNode   bool          `yaml:"numa_node,omitempty"`
+	Config     yaml.MapSlice `yaml:"config,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -257,15 +269,16 @@ func (s PDSpec) IsImported() bool {
 
 // PumpSpec represents the Pump topology specification in topology.yaml
 type PumpSpec struct {
-	Host      string `yaml:"host"`
-	SSHPort   int    `yaml:"ssh_port,omitempty"`
-	Imported  bool   `yaml:"imported,omitempty"`
-	Port      int    `yaml:"port" default:"8250"`
-	DeployDir string `yaml:"deploy_dir,omitempty"`
-	DataDir   string `yaml:"data_dir,omitempty"`
-	LogDir    string `yaml:"log_dir,omitempty"`
-	Offline   bool   `yaml:"offline,omitempty"`
-	NumaNode  bool   `yaml:"numa_node,omitempty"`
+	Host      string        `yaml:"host"`
+	SSHPort   int           `yaml:"ssh_port,omitempty"`
+	Imported  bool          `yaml:"imported,omitempty"`
+	Port      int           `yaml:"port" default:"8250"`
+	DeployDir string        `yaml:"deploy_dir,omitempty"`
+	DataDir   string        `yaml:"data_dir,omitempty"`
+	LogDir    string        `yaml:"log_dir,omitempty"`
+	Offline   bool          `yaml:"offline,omitempty"`
+	NumaNode  bool          `yaml:"numa_node,omitempty"`
+	Config    yaml.MapSlice `yaml:"config,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -290,16 +303,17 @@ func (s PumpSpec) IsImported() bool {
 
 // DrainerSpec represents the Drainer topology specification in topology.yaml
 type DrainerSpec struct {
-	Host      string `yaml:"host"`
-	SSHPort   int    `yaml:"ssh_port,omitempty"`
-	Imported  bool   `yaml:"imported,omitempty"`
-	Port      int    `yaml:"port" default:"8249"`
-	DeployDir string `yaml:"deploy_dir,omitempty"`
-	DataDir   string `yaml:"data_dir,omitempty"`
-	LogDir    string `yaml:"log_dir,omitempty"`
-	CommitTS  string `yaml:"commit_ts,omitempty"`
-	Offline   bool   `yaml:"offline,omitempty"`
-	NumaNode  bool   `yaml:"numa_node,omitempty"`
+	Host      string        `yaml:"host"`
+	SSHPort   int           `yaml:"ssh_port,omitempty"`
+	Imported  bool          `yaml:"imported,omitempty"`
+	Port      int           `yaml:"port" default:"8249"`
+	DeployDir string        `yaml:"deploy_dir,omitempty"`
+	DataDir   string        `yaml:"data_dir,omitempty"`
+	LogDir    string        `yaml:"log_dir,omitempty"`
+	CommitTS  string        `yaml:"commit_ts,omitempty"`
+	Offline   bool          `yaml:"offline,omitempty"`
+	NumaNode  bool          `yaml:"numa_node,omitempty"`
+	Config    yaml.MapSlice `yaml:"config,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -611,6 +625,7 @@ func (topo *TopologySpecification) Merge(that *TopologySpecification) *TopologyS
 	return &TopologySpecification{
 		GlobalOptions:    topo.GlobalOptions,
 		MonitoredOptions: topo.MonitoredOptions,
+		ServerConfigs:    topo.ServerConfigs,
 		TiDBServers:      append(topo.TiDBServers, that.TiDBServers...),
 		TiKVServers:      append(topo.TiKVServers, that.TiKVServers...),
 		PDServers:        append(topo.PDServers, that.PDServers...),
@@ -640,12 +655,13 @@ func fillCustomDefaults(globalOptions *GlobalOptions, data interface{}) error {
 var (
 	globalOptionTypeName  = reflect.TypeOf(GlobalOptions{}).Name()
 	monitorOptionTypeName = reflect.TypeOf(MonitoredOptions{}).Name()
+	serverConfigsTypeName = reflect.TypeOf(ServerConfigs{}).Name()
 )
 
 // Skip global/monitored options
 func isSkipField(field reflect.Value) bool {
 	tp := field.Type().Name()
-	return tp == globalOptionTypeName || tp == monitorOptionTypeName
+	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName
 }
 
 func setDefaultDir(parent, role, port string, field reflect.Value) {

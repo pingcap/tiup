@@ -79,7 +79,7 @@ func (u *UpdateMeta) Execute(ctx *Context) error {
 		}
 		newMeta.Topology.Grafana = append(newMeta.Topology.Grafana, topo.Grafana[i])
 	}
-	for i, instance := range (&meta.AlertmanagerComponent{Specification: topo}).Instances() {
+	for i, instance := range (&meta.AlertManagerComponent{Specification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}

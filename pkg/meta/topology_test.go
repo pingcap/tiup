@@ -14,9 +14,12 @@
 package meta
 
 import (
+	"bytes"
+	"testing"
+
+	"github.com/BurntSushi/toml"
 	. "github.com/pingcap/check"
 	"gopkg.in/yaml.v2"
-	"testing"
 )
 
 type metaSuite struct {
@@ -120,4 +123,242 @@ tikv_servers:
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "port '1234' conflicts between 'tidb_servers:172.16.5.138.port' and 'monitored:172.16.5.138.node_exporter_port'")
 
+}
+
+func (s *metaSuite) TestGlobalConfig(c *C) {
+	topo := TopologySpecification{}
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+  data_dir: "test-data"
+
+server_configs:
+  tidb:
+    status.address: 10
+    port: 1230
+    latch.capacity: 20480
+    log.file.rotate: "123445.xxx"
+  tikv:
+    status.address: 10
+    port: 1230
+    latch.capacity: 20480
+  pd:
+    status.address: 10
+    port: 1230
+    scheduler.max_limit: 20480
+
+tidb_servers:
+  - host: 172.16.5.138
+    port: 1234
+    config:
+      latch.capacity: 3000
+      log.file.rotate: "44444.xxx"
+  - host: 172.16.5.139
+    port: 1234
+    config:
+      latch.capacity: 5000
+      log.file.rotate: "55555.xxx"
+`), &topo)
+	c.Assert(err, IsNil)
+	equal := func(ms yaml.MapSlice, expected map[string]interface{}) {
+		got := map[string]interface{}{}
+		for _, item := range ms {
+			got[item.Key.(string)] = item.Value
+		}
+		c.Assert(got, DeepEquals, expected)
+	}
+	equal(topo.ServerConfigs.TiDB, map[string]interface{}{
+		"status.address":  10,
+		"port":            1230,
+		"latch.capacity":  20480,
+		"log.file.rotate": "123445.xxx",
+	})
+	expected := map[string]interface{}{
+		"status": map[string]interface{}{
+			"address": 10,
+		},
+		"port": 1230,
+		"latch": map[string]interface{}{
+			"capacity": 20480,
+		},
+		"log": map[string]interface{}{
+			"file": map[string]interface{}{
+				"rotate": "123445.xxx",
+			},
+		},
+	}
+	got, err := toMap(topo.ServerConfigs.TiDB)
+	c.Assert(err, IsNil)
+	c.Assert(got, DeepEquals, expected)
+	buf := &bytes.Buffer{}
+	err = toml.NewEncoder(buf).Encode(expected)
+	c.Assert(err, IsNil)
+	c.Assert(buf.String(), Equals, `port = 1230
+
+[latch]
+  capacity = 20480
+
+[log]
+  [log.file]
+    rotate = "123445.xxx"
+
+[status]
+  address = 10
+`)
+
+	expected = map[string]interface{}{
+		"latch": map[string]interface{}{
+			"capacity": 3000,
+		},
+		"log": map[string]interface{}{
+			"file": map[string]interface{}{
+				"rotate": "44444.xxx",
+			},
+		},
+	}
+	got, err = toMap(topo.TiDBServers[0].Config)
+	c.Assert(err, IsNil)
+	c.Assert(got, DeepEquals, expected)
+
+	expected = map[string]interface{}{
+		"latch": map[string]interface{}{
+			"capacity": 5000,
+		},
+		"log": map[string]interface{}{
+			"file": map[string]interface{}{
+				"rotate": "55555.xxx",
+			},
+		},
+	}
+	got, err = toMap(topo.TiDBServers[1].Config)
+	c.Assert(err, IsNil)
+	c.Assert(got, DeepEquals, expected)
+}
+
+func (s *metaSuite) TestGlobalConfigPatch(c *C) {
+	topo := TopologySpecification{}
+	err := yaml.Unmarshal([]byte(`
+tikv_sata_config: &tikv_sata_config
+  config.item1: 100
+  config.item2: 300
+  config.item3.item5: 500
+  config.item3.item6: 600
+
+tikv_servers:
+  - host: 172.16.5.138
+    config: *tikv_sata_config
+
+`), &topo)
+	c.Assert(err, IsNil)
+	expected := map[string]interface{}{
+		"config": map[string]interface{}{
+			"item1": 100,
+			"item2": 300,
+			"item3": map[string]interface{}{
+				"item5": 500,
+				"item6": 600,
+			},
+		},
+	}
+	got, err := toMap(topo.TiKVServers[0].Config)
+	c.Assert(err, IsNil)
+	c.Assert(got, DeepEquals, expected)
+}
+
+func (s *metaSuite) TestMerge2Toml(c *C) {
+	topo := TopologySpecification{}
+	err := yaml.Unmarshal([]byte(`
+server_configs:
+  tikv:
+    config.item1: 100
+    config.item2: 300
+    config.item3.item5: 500
+    config.item3.item6: 600
+
+tikv_servers:
+  - host: 172.16.5.138
+    config:
+      config.item2: 500
+      config.item3.item5: 700
+
+`), &topo)
+	c.Assert(err, IsNil)
+	expected := `[config]
+item1 = 100
+item2 = 500
+[config.item3]
+item5 = 700
+item6 = 600
+`
+	got, err := merge2Toml(topo.ServerConfigs.TiKV, topo.TiKVServers[0].Config)
+	c.Assert(err, IsNil)
+	c.Assert(string(got), DeepEquals, expected)
+}
+
+func (s *metaSuite) TestMerge2Toml2(c *C) {
+	topo := TopologySpecification{}
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: test4
+
+monitored:
+  node_exporter_port: 9100
+  blackbox_exporter_port: 9110
+
+server_configs:
+  tidb:
+    repair-mode: true
+    log.level: debug
+    log.slow-query-file: tidb-slow.log
+    log.file.filename: tidb-test.log
+  tikv:
+    readpool.storage.use-unified-pool: true
+    readpool.storage.low-concurrency: 8
+  pd:
+    schedule.max-merge-region-size: 20
+    schedule.max-merge-region-keys: 200000
+    schedule.split-merge-interval: 1h
+    schedule.max-snapshot-count: 3
+    schedule.max-pending-peer-count: 16
+    schedule.max-store-down-time: 30m
+    schedule.leader-schedule-limit: 4
+    schedule.region-schedule-limit: 2048
+    schedule.replica-schedule-limit: 64
+    schedule.merge-schedule-limit: 8
+    schedule.hot-region-schedule-limit: 4
+
+tidb_servers:
+  - host: 172.19.0.101
+
+pd_servers:
+  - host: 172.19.0.102
+  - host: 172.19.0.104
+    config:
+      schedule.replica-schedule-limit: 164
+      schedule.merge-schedule-limit: 18
+      schedule.hot-region-schedule-limit: 14
+  - host: 172.19.0.105
+
+tikv_servers:
+  - host: 172.19.0.103
+`), &topo)
+	c.Assert(err, IsNil)
+	expected := `[schedule]
+hot-region-schedule-limit = 14
+leader-schedule-limit = 4
+max-merge-region-keys = 200000
+max-merge-region-size = 20
+max-pending-peer-count = 16
+max-snapshot-count = 3
+max-store-down-time = "30m"
+merge-schedule-limit = 18
+region-schedule-limit = 2048
+replica-schedule-limit = 164
+split-merge-interval = "1h"
+`
+	got, err := merge2Toml(topo.ServerConfigs.PD, topo.PDServers[1].Config)
+	c.Assert(err, IsNil)
+	c.Assert(string(got), DeepEquals, expected)
 }
