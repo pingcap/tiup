@@ -16,6 +16,7 @@ require (
 	github.com/pingcap/errors v0.11.5-0.20190809092503-95897b64e011
 	github.com/pingcap/kvproto v0.0.0-20200317095539-c42a1d8db7d3
 	github.com/pingcap/pd/v4 v4.0.0-beta.2
+	github.com/relex/aini v1.1.3
 	github.com/spf13/cobra v0.0.6
 	github.com/twinj/uuid v1.0.0
 	golang.org/x/crypto v0.0.0-20200109152110-61a87790db17

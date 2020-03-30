@@ -21,19 +21,20 @@ import (
 
 // CopyFile will copy a local file to the target host
 type CopyFile struct {
-	src     string
-	dstHost string
-	dstPath string
+	src      string
+	dst      string
+	remote   string
+	download bool
 }
 
 // Execute implements the Task interface
 func (c *CopyFile) Execute(ctx *Context) error {
-	e, ok := ctx.GetExecutor(c.dstHost)
+	e, ok := ctx.GetExecutor(c.remote)
 	if !ok {
 		return ErrNoExecutor
 	}
 
-	err := e.Transfer(c.src, c.dstPath)
+	err := e.Transfer(c.src, c.dst, c.download)
 	if err != nil {
 		return errors.Annotate(err, "failed to transfer file")
 	}
@@ -48,5 +49,8 @@ func (c *CopyFile) Rollback(ctx *Context) error {
 
 // String implements the fmt.Stringer interface
 func (c *CopyFile) String() string {
-	return fmt.Sprintf("CopyFile: local=%s, remote=%s:%s", c.src, c.dstHost, c.dstPath)
+	if c.download {
+		return fmt.Sprintf("CopyFile: remote=%s:%s, local=%s", c.remote, c.src, c.dst)
+	}
+	return fmt.Sprintf("CopyFile: local=%s, remote=%s:%s", c.src, c.remote, c.dst)
 }

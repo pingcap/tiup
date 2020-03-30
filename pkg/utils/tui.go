@@ -14,6 +14,11 @@
 package utils
 
 import (
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
+
 	"github.com/AstroProfundis/tabby"
 )
 
@@ -44,4 +49,19 @@ func addRow(t *tabby.Tabby, rawLine []string, header bool) {
 	} else {
 		t.AddLine(row...)
 	}
+}
+
+// Prompt accepts input from console by user
+func Prompt(prompt string) string {
+	if prompt != "" {
+		prompt += " " // append a whitespace
+	}
+	fmt.Printf(prompt)
+
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSuffix(input, "\n")
 }

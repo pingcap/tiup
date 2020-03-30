@@ -45,7 +45,7 @@ func (c *CopyComponent) Execute(ctx *Context) error {
 	dstDir := filepath.Join(c.dstDir, "bin")
 	dstPath := filepath.Join(dstDir, fileName)
 
-	err := exec.Transfer(srcPath, dstPath)
+	err := exec.Transfer(srcPath, dstPath, false)
 	if err != nil {
 		return errors.Trace(err)
 	}

@@ -87,7 +87,7 @@ func (i *DrainerInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, d
 		return err
 	}
 	dst := filepath.Join(deployDir, "scripts", "run_drainer.sh")
-	if err := e.Transfer(fp, dst); err != nil {
+	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
 
@@ -101,7 +101,7 @@ func (i *DrainerInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, d
 		return err
 	}
 	dst = filepath.Join(deployDir, "conf", "drainer.toml")
-	if err := e.Transfer(fp, dst); err != nil {
+	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
 

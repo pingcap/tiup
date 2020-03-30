@@ -26,5 +26,5 @@ type TiOpsExecutor interface {
 	Execute(cmd string, sudo bool, timeout ...time.Duration) (stdout []byte, stderr []byte, err error)
 
 	// Transfer copies files from or to a target
-	Transfer(src string, dst string) error
+	Transfer(src string, dst string, download bool) error
 }

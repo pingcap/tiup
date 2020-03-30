@@ -87,7 +87,7 @@ func (i *PumpInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, depl
 		return err
 	}
 	dst := filepath.Join(deployDir, "scripts", "run_pump.sh")
-	if err := e.Transfer(fp, dst); err != nil {
+	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
 
@@ -101,7 +101,7 @@ func (i *PumpInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, depl
 		return err
 	}
 	dst = filepath.Join(deployDir, "conf", "pump.toml")
-	if err := e.Transfer(fp, dst); err != nil {
+	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
 

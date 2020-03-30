@@ -14,23 +14,68 @@
 package cmd
 
 import (
+	"fmt"
+
+	"github.com/fatih/color"
+	"github.com/pingcap-incubator/tiops/pkg/ansible"
+	"github.com/pingcap-incubator/tiops/pkg/log"
+	"github.com/pingcap-incubator/tiops/pkg/meta"
+	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 func newImportCmd() *cobra.Command {
 	var (
-		ansible string
+		ansibleDir string
 	)
 
 	cmd := &cobra.Command{
-		Use:    "import",
-		Short:  "Import a TiDB cluster from tidb-ansible",
-		Hidden: true,
+		Use:   "import [Flags]",
+		Short: "Import an exist TiDB cluster from TiDB-Ansible",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Help()
+			// migrate cluster metadata from Ansible inventory
+			clsName, clsMeta, err := ansible.ImportAnsible(ansibleDir)
+			if err != nil {
+				return err
+			}
+
+			// TODO: check cluster name with other clusters managed by us for conflicts
+			// TODO: prompt user for a chance to set a new cluster name
+
+			// copy SSH key to TiOps profile directory
+			if err = utils.CreateDir(meta.ClusterPath(clsName, "ssh")); err != nil {
+				return err
+			}
+			srcKeyPathPriv := ansible.SSHKeyPath()
+			srcKeyPathPub := srcKeyPathPriv + ".pub"
+			dstKeyPathPriv := meta.ClusterPath(clsName, "ssh", "id_rsa")
+			dstKeyPathPub := dstKeyPathPriv + ".pub"
+			if err = utils.CopyFile(srcKeyPathPriv, dstKeyPathPriv); err != nil {
+				return err
+			}
+			if err = utils.CopyFile(srcKeyPathPub, dstKeyPathPub); err != nil {
+				return err
+			}
+
+			// copy config files form deployment servers
+			if err = ansible.ImportConfig(clsName, clsMeta); err != nil {
+				return err
+			}
+
+			if err = meta.SaveClusterMeta(clsName, clsMeta); err != nil {
+				return err
+			}
+
+			// TODO: move original TiDB-Ansible directory to a staged location
+
+			log.Infof("Cluster %s imported.", clsName)
+			log.Output(fmt.Sprintf("Try `%s` to see the cluster.",
+				color.HiYellowString("tiops display %s", clsName)))
+			return nil
 		},
 	}
 
-	cmd.Flags().StringVarP(&ansible, "ansible-path", "A", "", "the path for tidb-ansible")
+	cmd.Flags().StringVarP(&ansibleDir, "dir", "d", "", "The path to TiDB-Ansible directory")
+
 	return cmd
 }

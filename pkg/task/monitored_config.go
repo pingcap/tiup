@@ -82,7 +82,7 @@ func (m *MonitoredConfig) syncMonitoredSystemConfig(exec executor.TiOpsExecutor,
 		return err
 	}
 	tgt := filepath.Join("/tmp", comp+"_"+uuid.New().String()+".service")
-	if err := exec.Transfer(sysCfg, tgt); err != nil {
+	if err := exec.Transfer(sysCfg, tgt, false); err != nil {
 		return err
 	}
 	if outp, errp, err := exec.Execute(fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port), true); err != nil {
@@ -103,7 +103,7 @@ func (m *MonitoredConfig) syncMonitoredScript(exec executor.TiOpsExecutor, cache
 		return err
 	}
 	dst := filepath.Join(m.deployDir, "scripts", fmt.Sprintf("run_%s.sh", comp))
-	if err := exec.Transfer(fp, dst); err != nil {
+	if err := exec.Transfer(fp, dst, false); err != nil {
 		return err
 	}
 	if _, _, err := exec.Execute("chmod +x "+dst, false); err != nil {
@@ -119,7 +119,7 @@ func (m *MonitoredConfig) syncBlackboxConfig(exec executor.TiOpsExecutor, cacheD
 		return err
 	}
 	dst := filepath.Join(m.deployDir, "conf", "blackbox.yml")
-	if err := exec.Transfer(fp, dst); err != nil {
+	if err := exec.Transfer(fp, dst, false); err != nil {
 		return err
 	}
 	return nil

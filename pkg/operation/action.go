@@ -319,7 +319,7 @@ func PrintClusterStatus(getter ExecutorGetter, spec *meta.Specification) (health
 			continue
 		}
 
-		log.Infof(com.Name())
+		log.Infof("Checking service state of %s", com.Name())
 		for _, ins := range com.Instances() {
 			log.Infof("\t%s", ins.GetHost())
 			e := getter.Get(ins.GetHost())

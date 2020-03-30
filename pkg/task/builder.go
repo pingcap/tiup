@@ -79,11 +79,12 @@ func (b *Builder) UpdateMeta(cluster string, metadata *meta.ClusterMeta, deleted
 }
 
 // CopyFile appends a CopyFile task to the current task collection
-func (b *Builder) CopyFile(src, dstHost, dstPath string) *Builder {
+func (b *Builder) CopyFile(src, dst, server string, download bool) *Builder {
 	b.tasks = append(b.tasks, &CopyFile{
-		src:     src,
-		dstHost: dstHost,
-		dstPath: dstPath,
+		src:      src,
+		dst:      dst,
+		remote:   server,
+		download: download,
 	})
 	return b
 }
