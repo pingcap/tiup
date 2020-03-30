@@ -20,12 +20,6 @@ import (
 	"github.com/pingcap/errors"
 )
 
-var (
-	pumpStatusURI    = "/status"
-	drainerStatusURI = "/drainers"
-	binlogStateURI   = "/state"
-)
-
 // BinlogClient is the client of binlog.
 type BinlogClient struct {
 	tls        *tls.Config
@@ -82,6 +76,9 @@ func (c *BinlogClient) offline(addr string, nodeID string) error {
 
 	defer resp.Body.Close()
 	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.AddStack(err)
+	}
 
 	var status StatusResp
 	err = json.Unmarshal(data, &status)

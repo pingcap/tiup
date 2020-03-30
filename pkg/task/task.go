@@ -108,7 +108,6 @@ func (ctx *Context) SetExecutor(host string, e executor.TiOpsExecutor) {
 	ctx.exec.Lock()
 	ctx.exec.executors[host] = e
 	ctx.exec.Unlock()
-	return
 }
 
 // GetManifest get the manifest of specific component.
@@ -124,7 +123,6 @@ func (ctx *Context) SetManifest(comp string, m *repository.VersionManifest) {
 	ctx.manifestCache.Lock()
 	ctx.manifestCache.manifests[comp] = m
 	ctx.manifestCache.Unlock()
-	return
 }
 
 func isSingleTask(t Task) bool {

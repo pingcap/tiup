@@ -54,6 +54,7 @@ func (pc *PDClient) GetURL() string {
 	return fmt.Sprintf("%s://%s", httpPrefix, pc.addr)
 }
 
+// nolint (some is unused now)
 var (
 	pdHealthURI         = "pd/health"
 	pdMembersURI        = "pd/api/v1/members"

@@ -15,7 +15,6 @@ package operator
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/pingcap-incubator/tiops/pkg/executor"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
@@ -42,8 +41,6 @@ const (
 	ScaleInOperation
 	ScaleOutOperation
 )
-
-var defaultTimeoutForReady = time.Second * 60
 
 var opStringify = [...]string{
 	"StartOperation",

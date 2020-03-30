@@ -92,10 +92,6 @@ func Restart(
 	spec *meta.Specification,
 	options Options,
 ) error {
-	roleFilter := set.NewStringSet(options.Roles...)
-	components := spec.ComponentsByStartOrder()
-	components = filterComponent(components, roleFilter)
-
 	err := Stop(getter, spec, options)
 	if err != nil {
 		return errors.Annotatef(err, "failed to stop")

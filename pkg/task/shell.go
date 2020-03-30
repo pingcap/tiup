@@ -39,7 +39,7 @@ func (m *Shell) Execute(ctx *Context) error {
 	if m.sudo {
 		cmd = fmt.Sprintf(`sudo %s`, m.command)
 	} else {
-		cmd = fmt.Sprintf(`%s`, m.command)
+		cmd = m.command
 	}
 
 	log.Infof("Run command: %s", cmd)
