@@ -200,6 +200,7 @@ func buildMonitoredDeployTask(
 
 			// Deploy component
 			t := task.NewBuilder().
+				UserSSH(host, globalOptions.User).
 				Mkdir(host,
 					filepath.Join(deployDir, "bin"),
 					filepath.Join(deployDir, "conf"),

@@ -175,7 +175,9 @@ func buildScaleOutTask(
 		Parallel(downloadCompTasks...).
 		Parallel(deployCompTasks...).
 		// TODO: find another way to make sure current cluster started
+		ClusterSSH(metadata.Topology, metadata.User).
 		ClusterOperate(metadata.Topology, operator.StartOperation, operator.Options{}).
+		ClusterSSH(newPart, metadata.User).
 		ClusterOperate(newPart, operator.StartOperation, operator.Options{}).
 		Parallel(refreshConfigTasks...).
 		Build(), nil
