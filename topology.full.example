@@ -1,0 +1,138 @@
+# Global variables are applied to all deployments and as the default value of
+# them if the specific deployment value missing.
+# global:
+#   user: "tidb"
+#   ssh_port: 22
+#   deploy_dir: "deploy"
+#   data_dir: "data"
+
+# Monitored variables are used to 
+# monitored:
+#   node_exporter_port: 9100
+#   blackbox_exporter_port: 9115
+#   deploy_dir: "deploy/monitored-9100"
+#   data_dir: "data/monitored-9100"
+#   log_dir: "log/monitored-9100"
+
+# Server configs are used to specify the runtime configuration of TiDB components
+# All configuration items can be found in TiDB docs:
+# - TiDB: https://pingcap.com/docs/stable/reference/configuration/tidb-server/configuration-file/
+# - TiKV: https://pingcap.com/docs/stable/reference/configuration/tikv-server/configuration-file/
+# - PD: https://pingcap.com/docs/stable/reference/configuration/pd-server/configuration-file/
+# All configuration items use points to represent the hierarchy, e.g:
+#   readpool.storage.use-unified-pool
+#           ^       ^
+# You can overwrite this configuration via instance-level `config` field
+# server_configs:
+#   tidb:
+#     log.level: debug
+#     log.slow-query-file: tidb-slow.log
+#     log.file.filename: tidb-test.log
+#   tikv:
+#     readpool.storage.use-unified-pool: true
+#     readpool.storage.low-concurrency: 8
+#   pd:
+#     schedule.max-merge-region-size: 20
+#     schedule.max-merge-region-keys: 200000
+#     schedule.split-merge-interval: 1h
+#     schedule.max-snapshot-count: 3
+#     schedule.max-pending-peer-count: 16
+#     schedule.max-store-down-time: 30m
+#     schedule.leader-schedule-limit: 4
+#     schedule.region-schedule-limit: 2048
+#     schedule.replica-schedule-limit: 64
+#     schedule.merge-schedule-limit: 8
+#     schedule.hot-region-schedule-limit: 4
+
+pd_servers:
+  - host: 10.0.1.11
+    # ssh_port: 22
+    # name: "pd-1"
+    # client_port: 2379
+    # peer_port: 2380
+    # deploy_dir: "deploy/pd-2379"
+    # data_dir: "data/pd-2379"
+    # log_dir: "log/pd-2379"
+    # numa_node: false
+    # Config is used to overwrite the `server_configs.pd` values
+    # config:
+    #   schedule.max-merge-region-size: 20
+    #   schedule.max-merge-region-keys: 200000
+  - host: 10.0.1.12
+  - host: 10.0.1.13
+
+tidb_servers:
+  - host: 10.0.1.11
+    # ssh_port: 22
+    # port: 4000
+    # status_port: 10080
+    # deploy_dir: "deploy/tidb-4000"
+    # log_dir: "log/tidb-4000"
+    # numa_node: false
+    # Config is used to overwrite the `server_configs.tidb` values
+    # config:
+    #   log.level: warn
+    #   log.slow-query-file: tidb-slow-overwrited.log
+  - host: 10.0.1.12
+
+tikv_servers:
+  - host: 10.0.1.14
+      # ssh_port: 22
+      # port: 20160
+      # deploy_dir: "deploy/tikv-20160"
+      # data_dir: "data/tikv-20160"
+      # log_dir: "deploy/tikv-20160/log"
+      # offline: false
+      # labels:
+      #   - host=a
+      # numa_node: false
+      # Config is used to overwrite the `server_configs.tikv` values
+      # config:
+      #   readpool.storage.use-unified-pool: true
+      #   readpool.storage.low-concurrency: 10
+  - host: 10.0.1.15
+  - host: 10.0.1.16
+
+# pump_servers:
+#   - host: 10.0.1.17
+#     ssh_port: 22
+#     port: 8250
+#     deploy_dir: /home/tidb/deploy/pump-8249
+#     data_dir: /home/tidb/data/pump-8249
+#     log_dir: ""
+#     offline: false
+#     numa_node: false
+#   - host: 10.0.1.18
+#   - host: 10.0.1.19
+
+# drainer_servers:
+#   - host: 10.0.1.17
+#     port: 8249
+#     data_dir: /home/tidb/data/drainer-8249
+#     commit_ts: 402899541671542785
+#     deploy_dir: /home/tidb/deploy/drainer-8249
+#     log_dir: /home/tidb/deploy/drainer-8249/log
+#     numa_node: 0
+#   - host: 10.0.1.19
+
+# monitoring_servers:
+#   - host: 10.0.1.11
+#     ssh_port: 22
+#     port: 9090
+#     deploy_dir: "/home/tidb/deploy/prometheus-8249"
+#     data_dir: "/home/tidb/data/prometheus-8249"
+#     log_dir: "/home/tidb/deploy/prometheus-8249/log"
+
+# grafana_servers:
+#   - host: 10.0.1.11
+#     # port: 3000
+#     # deploy_dir: /home/tidb/deploy/grafana-3000
+
+# alertmanager_servers:
+#   - host: 10.0.1.11
+#     ssh_port: 22
+#     web_port: 9093
+#     cluster_port: 9094
+#     deploy_dir: "/home/tidb/deploy/alertmanager-9093"
+#     data_dir: "/home/tidb/data/alertmanager-9093"
+#     log_dir: "/home/tidb/deploy/alertmanager-9093/log"
