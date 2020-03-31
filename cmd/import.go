@@ -39,9 +39,6 @@ func newImportCmd() *cobra.Command {
 				return err
 			}
 
-			// TODO: check cluster name with other clusters managed by us for conflicts
-			// TODO: prompt user for a chance to set a new cluster name
-
 			// copy SSH key to TiOps profile directory
 			if err = utils.CreateDir(meta.ClusterPath(clsName, "ssh")); err != nil {
 				return err
