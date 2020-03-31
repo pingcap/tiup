@@ -707,7 +707,7 @@ func (i *GrafanaInstance) InitConfig(e executor.TiOpsExecutor, cluster, user str
 
 	// transfer config
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("grafana_%s.ini", i.GetHost()))
-	if err := config.NewGrafanaConfig(i.GetHost(), paths.Deploy).ConfigToFile(fp); err != nil {
+	if err := config.NewGrafanaConfig(i.GetHost(), paths.Deploy).WithPort(uint64(i.GetPort())).ConfigToFile(fp); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "grafana.ini")
