@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -89,6 +90,10 @@ func showAuditList() error {
 			cmd,
 		})
 	}
+
+	sort.Slice(clusterTable[1:], func(i, j int) bool {
+		return clusterTable[i+1][1] > clusterTable[j+1][1]
+	})
 
 	utils.PrintTable(clusterTable, true)
 	return nil
