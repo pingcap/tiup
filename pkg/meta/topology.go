@@ -155,7 +155,6 @@ type TiKVSpec struct {
 	DataDir    string        `yaml:"data_dir,omitempty"`
 	LogDir     string        `yaml:"log_dir,omitempty"`
 	Offline    bool          `yaml:"offline,omitempty"`
-	Labels     []string      `yaml:"labels,omitempty"`
 	NumaNode   bool          `yaml:"numa_node,omitempty"`
 	Config     yaml.MapSlice `yaml:"config,omitempty"`
 }

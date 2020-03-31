@@ -12,7 +12,7 @@
 #   blackbox_exporter_port: 9115
 #   deploy_dir: "deploy/monitored-9100"
 #   data_dir: "data/monitored-9100"
-#   log_dir: "log/monitored-9100"
+#   log_dir: "deploy/monitored-9100/log"
 
 # Server configs are used to specify the runtime configuration of TiDB components
 # All configuration items can be found in TiDB docs:
@@ -52,7 +52,7 @@ pd_servers:
     # peer_port: 2380
     # deploy_dir: "deploy/pd-2379"
     # data_dir: "data/pd-2379"
-    # log_dir: "log/pd-2379"
+    # log_dir: "deploy/pd-2379/log"
     # numa_node: false
     # Config is used to overwrite the `server_configs.pd` values
     # config:
@@ -67,7 +67,7 @@ tidb_servers:
     # port: 4000
     # status_port: 10080
     # deploy_dir: "deploy/tidb-4000"
-    # log_dir: "log/tidb-4000"
+    # log_dir: "deploy/tidb-4000/log"
     # numa_node: false
     # Config is used to overwrite the `server_configs.tidb` values
     # config:
@@ -82,12 +82,10 @@ tikv_servers:
       # deploy_dir: "deploy/tikv-20160"
       # data_dir: "data/tikv-20160"
       # log_dir: "deploy/tikv-20160/log"
-      # offline: false
-      # labels:
-      #   - host=a
       # numa_node: false
       # Config is used to overwrite the `server_configs.tikv` values
       # config:
+      #   labels: "{ zone = "us-west-1", disk = "ssd" }"
       #   readpool.storage.use-unified-pool: true
       #   readpool.storage.low-concurrency: 10
   - host: 10.0.1.15
@@ -97,9 +95,9 @@ tikv_servers:
 #   - host: 10.0.1.17
 #     ssh_port: 22
 #     port: 8250
-#     deploy_dir: /home/tidb/deploy/pump-8249
-#     data_dir: /home/tidb/data/pump-8249
-#     log_dir: ""
+#     deploy_dir: "deploy/pump-8249"
+#     data_dir: "data/pump-8249"
+#     log_dir: "deploy/pump-8249/log"
 #     offline: false
 #     numa_node: false
 #   - host: 10.0.1.18
@@ -108,10 +106,10 @@ tikv_servers:
 # drainer_servers:
 #   - host: 10.0.1.17
 #     port: 8249
-#     data_dir: /home/tidb/data/drainer-8249
+#     data_dir: "data/drainer-8249"
 #     commit_ts: 402899541671542785
-#     deploy_dir: /home/tidb/deploy/drainer-8249
-#     log_dir: /home/tidb/deploy/drainer-8249/log
+#     deploy_dir: "deploy/drainer-8249"
+#     log_dir: "deploy/drainer-8249/log"
 #     numa_node: 0
 #   - host: 10.0.1.19
 
@@ -119,20 +117,20 @@ tikv_servers:
 #   - host: 10.0.1.11
 #     ssh_port: 22
 #     port: 9090
-#     deploy_dir: "/home/tidb/deploy/prometheus-8249"
-#     data_dir: "/home/tidb/data/prometheus-8249"
-#     log_dir: "/home/tidb/deploy/prometheus-8249/log"
+#     deploy_dir: "deploy/prometheus-8249"
+#     data_dir: "data/prometheus-8249"
+#     log_dir: "deploy/prometheus-8249/log"
 
 # grafana_servers:
 #   - host: 10.0.1.11
 #     # port: 3000
-#     # deploy_dir: /home/tidb/deploy/grafana-3000
+#     # deploy_dir: deploy/grafana-3000
 
 # alertmanager_servers:
 #   - host: 10.0.1.11
 #     ssh_port: 22
 #     web_port: 9093
 #     cluster_port: 9094
-#     deploy_dir: "/home/tidb/deploy/alertmanager-9093"
-#     data_dir: "/home/tidb/data/alertmanager-9093"
-#     log_dir: "/home/tidb/deploy/alertmanager-9093/log"
+#     deploy_dir: "deploy/alertmanager-9093"
+#     data_dir: "data/alertmanager-9093"
+#     log_dir: "deploy/alertmanager-9093/log"
