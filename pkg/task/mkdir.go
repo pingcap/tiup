@@ -34,8 +34,11 @@ func (m *Mkdir) Execute(ctx *Context) error {
 	}
 
 	cmd := fmt.Sprintf(`mkdir -p {%s}`, strings.Join(m.dirs, ","))
-	_, _, err := exec.Execute(cmd, false)
+	_, stderr, err := exec.Execute(cmd, false)
 	if err != nil {
+		if len(stderr) > 0 {
+			return errors.Annotatef(err, "stderr: %s", string(stderr))
+		}
 		return errors.Trace(err)
 	}
 	return nil

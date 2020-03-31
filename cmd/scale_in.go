@@ -14,12 +14,16 @@
 package cmd
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
+	"github.com/fatih/color"
+	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
 	"github.com/pingcap-incubator/tiops/pkg/task"
+	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
@@ -28,6 +32,7 @@ import (
 
 func newScaleInCmd() *cobra.Command {
 	var options operator.Options
+	var skipConfirm bool
 	cmd := &cobra.Command{
 		Use:   "scale-in <cluster-name>",
 		Short: "Scale in a TiDB cluster",
@@ -36,11 +41,24 @@ func newScaleInCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
+			clusterName := args[0]
+			if !skipConfirm {
+				promptMsg := fmt.Sprintf("This operation will delete the %s cluster nodes`%s` and delete those data, do you want to continue?\n[Y]es/[N]o:",
+					strings.Join(options.Nodes, ","), color.HiYellowString(clusterName))
+				if input, confirm := utils.Confirm(promptMsg); confirm {
+					log.Infof("Scale-in nodes...")
+				} else {
+					return errors.Errorf("operation cancelled by user (input: %s)", input)
+				}
+			}
+
 			auditConfig.enable = true
-			return scaleIn(args[0], options)
+			return scaleIn(clusterName, options)
 		},
 	}
+
 	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Specify the nodes")
+	cmd.Flags().BoolVar(&skipConfirm, "noconfirm", false, "Skip the confirmation of destroying")
 	_ = cmd.MarkFlagRequired("node")
 
 	return cmd

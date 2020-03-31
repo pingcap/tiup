@@ -58,6 +58,7 @@ func newDeploy() *cobra.Command {
 			}
 			if opt.usePasswd {
 				opt.password = utils.GetPasswd("Password:")
+				log.Output("\n")
 			}
 			if len(opt.keyFile) == 0 && len(opt.password) == 0 {
 				return errPasswordKeyAtLeastOne
