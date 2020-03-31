@@ -41,14 +41,12 @@ func newDisplayCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "display <cluster-name>",
 		Short: "Display information of a TiDB cluster",
-		Args: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
 			}
+
 			opt.clusterName = args[0]
-			return nil
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := displayClusterMeta(&opt); err != nil {
 				return err
 			}
