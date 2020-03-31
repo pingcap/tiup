@@ -129,7 +129,7 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 
 	// Deploy components to remote
 	topo.IterInstance(func(inst meta.Instance) {
-		//version := getComponentVersion(inst.ComponentName(), version)
+		version := getComponentVersion(inst.ComponentName(), version)
 		deployDir := inst.DeployDir()
 		if !strings.HasPrefix(deployDir, "/") {
 			deployDir = filepath.Join("/home/", topo.GlobalOptions.User, deployDir)
@@ -152,7 +152,7 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 				filepath.Join(deployDir, "scripts"),
 				dataDir,
 				logDir).
-			CopyComponent(inst.ComponentName(), repository.Version(version), inst.GetHost(), deployDir).
+			CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
 			InitConfig(
 				clusterName,
 				inst,
