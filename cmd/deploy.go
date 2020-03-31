@@ -14,10 +14,13 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/fatih/color"
+	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiops/pkg/task"
 	"github.com/pingcap-incubator/tiops/pkg/utils"
@@ -91,6 +94,40 @@ func getComponentVersion(comp, version string) repository.Version {
 	}
 }
 
+func confirmTopology(clusterName, version string, topo *meta.Specification) error {
+	log.Infof("Please confirm your topology:")
+
+	cyan := color.New(color.FgCyan, color.Bold)
+	log.Output(fmt.Sprintf("TiDB Cluster: %s", cyan.Sprint(clusterName)))
+	log.Output(fmt.Sprintf("TiDB Version: %s", cyan.Sprint(version)))
+
+	clusterTable := [][]string{
+		// Header
+		{"Type", "Host", "Ports", "Directories"},
+	}
+
+	topo.IterInstance(func(instance meta.Instance) {
+		clusterTable = append(clusterTable, []string{
+			instance.ComponentName(),
+			instance.GetHost(),
+			utils.JoinInt(instance.UsedPorts(), "/"),
+			strings.Join(instance.UsedDirs(), ","),
+		})
+	})
+
+	utils.PrintTable(clusterTable, true)
+
+	log.Warnf("Attention:")
+	log.Warnf("    1. If the topology is not what you expected, check your yaml file.")
+	log.Warnf("    1. Please confirm there is no port/directory conflicts in same host.")
+
+	input, confirmed := utils.Confirm(fmt.Sprintf("Do you want to continue?[Y]es/[N]o:"))
+	if !confirmed {
+		return errors.Errorf("operation cancelled: %s", input)
+	}
+	return nil
+}
+
 func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 	if tiuputils.IsExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
 		return errors.Errorf("cluster name '%s' exists, please choose another cluster name", clusterName)
@@ -100,6 +137,11 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 	if err := utils.ParseYaml(topoFile, &topo); err != nil {
 		return err
 	}
+
+	if err := confirmTopology(clusterName, version, &topo); err != nil {
+		return err
+	}
+
 	if err := os.MkdirAll(meta.ClusterPath(clusterName), 0755); err != nil {
 		return err
 	}
