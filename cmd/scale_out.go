@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pingcap-incubator/tiops/pkg/bindversion"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
 	"github.com/pingcap-incubator/tiops/pkg/task"
@@ -137,7 +138,7 @@ func buildScaleOutTask(
 
 	// Deploy the new topology and refresh the configuration
 	newPart.IterInstance(func(inst meta.Instance) {
-		version := getComponentVersion(inst.ComponentName(), metadata.Version)
+		version := bindversion.ComponentVersion(inst.ComponentName(), metadata.Version)
 		deployDir := inst.DeployDir()
 		if !strings.HasPrefix(deployDir, "/") {
 			deployDir = filepath.Join("/home/", metadata.User, deployDir)

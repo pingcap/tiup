@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/pingcap-incubator/tiops/pkg/bindversion"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiops/pkg/task"
@@ -74,26 +75,6 @@ func newDeploy() *cobra.Command {
 	cmd.Flags().BoolVar(&opt.skipConfirm, "noconfirm", false, "Skip the confirmation of topology")
 
 	return cmd
-}
-
-// getComponentVersion maps the TiDB version to the third components binding version
-func getComponentVersion(comp, version string) repository.Version {
-	switch comp {
-	case meta.ComponentPrometheus:
-		return "v2.16.0"
-	case meta.ComponentGrafana:
-		return "v6.1.6"
-	case meta.ComponentAlertManager:
-		return "v0.20.0"
-	case meta.ComponentBlackboxExporter:
-		return "v0.16.0"
-	case meta.ComponentNodeExporter:
-		return "v0.18.1"
-	case meta.ComponentPushwaygate:
-		return "v1.2.0"
-	default:
-		return repository.Version(version)
-	}
 }
 
 func confirmTopology(clusterName, version string, topo *meta.Specification) error {
@@ -175,7 +156,7 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 
 	// Deploy components to remote
 	topo.IterInstance(func(inst meta.Instance) {
-		version := getComponentVersion(inst.ComponentName(), version)
+		version := bindversion.ComponentVersion(inst.ComponentName(), version)
 		deployDir := inst.DeployDir()
 		if !strings.HasPrefix(deployDir, "/") {
 			deployDir = filepath.Join("/home/", topo.GlobalOptions.User, deployDir)
@@ -242,7 +223,7 @@ func buildDownloadCompTasks(version string, topo *meta.Specification) []task.Tas
 		if len(comp.Instances()) < 1 {
 			return
 		}
-		version := getComponentVersion(comp.Name(), version)
+		version := bindversion.ComponentVersion(comp.Name(), version)
 		t := task.NewBuilder().Download(comp.Name(), version).Build()
 		tasks = append(tasks, t)
 	})
@@ -256,7 +237,7 @@ func buildMonitoredDeployTask(
 	monitoredOptions meta.MonitoredOptions,
 	version string) (downloadCompTasks, deployCompTasks []task.Task) {
 	for _, comp := range []string{meta.ComponentNodeExporter, meta.ComponentBlackboxExporter} {
-		version := getComponentVersion(comp, version)
+		version := bindversion.ComponentVersion(comp, version)
 		t := task.NewBuilder().
 			Download(comp, version).
 			Build()

@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/pingcap-incubator/tiops/pkg/bindversion"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap/errors"
@@ -55,15 +56,16 @@ func (c *BackupComponent) Execute(ctx *Context) error {
 	// backup old version
 	var versionInfo repository.VersionInfo
 	var foundVersion bool
+	fromVer := bindversion.ComponentVersion(c.component, c.fromVer)
 	for _, vi := range m.Versions {
-		if vi.Version == repository.Version(c.fromVer) {
+		if vi.Version == fromVer {
 			versionInfo = vi
 			foundVersion = true
 			break
 		}
 	}
 	if !foundVersion {
-		return errors.Errorf("cannot found previous version %v in manifest", c.fromVer)
+		return errors.Errorf("cannot found previous version %v in %s manifest", c.fromVer, c.component)
 	}
 
 	dstDir := filepath.Join(c.dstDir, "bin")

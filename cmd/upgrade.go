@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pingcap-incubator/tiops/pkg/bindversion"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
 	"github.com/pingcap-incubator/tiops/pkg/task"
@@ -88,7 +89,7 @@ func upgrade(name, version string, opt upgradeOptions) error {
 
 	for _, comp := range metadata.Topology.ComponentsByStartOrder() {
 		for _, inst := range comp.Instances() {
-			version := getComponentVersion(inst.ComponentName(), version)
+			version := bindversion.ComponentVersion(inst.ComponentName(), version)
 			if version == "" {
 				return errors.Errorf("unsupported component: %v", inst.ComponentName())
 			}
