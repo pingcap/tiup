@@ -15,7 +15,7 @@ cp {{.DeployDir}}/bin/*.json {{.DeployDir}}/dashboards/
 cp {{.DeployDir}}/conf/datasource.yml {{.DeployDir}}/provisioning/datasources
 cp {{.DeployDir}}/conf/dashboard.yml {{.DeployDir}}/provisioning/dashboards
 
-find {{.DeployDir}}/dashboards/ -type f -exec sed -i "s/\${DS_.*-CLUSTER}/test-cluster/g" {} \;
+find {{.DeployDir}}/dashboards/ -type f -exec sed -i "s/\${DS_.*-CLUSTER}/{{.ClusterName}}/g" {} \;
 
 LANG=en_US.UTF-8 \
 {{- if .NumaNode}}

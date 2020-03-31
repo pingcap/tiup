@@ -42,7 +42,7 @@ func (c *InitConfig) Execute(ctx *Context) error {
 		return err
 	}
 
-	return c.instance.InitConfig(exec, c.deployUser, c.paths)
+	return c.instance.InitConfig(exec, c.name, c.deployUser, c.paths)
 }
 
 // Rollback implements the Task interface

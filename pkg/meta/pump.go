@@ -52,19 +52,19 @@ type PumpInstance struct {
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *PumpInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, user string, paths DirPaths) error {
+func (i *PumpInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, cluster, user string, paths DirPaths) error {
 	s := i.instance.topo
 	defer func() {
 		i.instance.topo = s
 	}()
 	i.instance.topo = b
 
-	return i.InitConfig(e, user, paths)
+	return i.InitConfig(e, cluster, user, paths)
 }
 
 // InitConfig implements Instance interface.
-func (i *PumpInstance) InitConfig(e executor.TiOpsExecutor, user string, paths DirPaths) error {
-	if err := i.instance.InitConfig(e, user, paths); err != nil {
+func (i *PumpInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, cluster, user, paths); err != nil {
 		return err
 	}
 

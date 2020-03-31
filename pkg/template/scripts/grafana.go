@@ -25,14 +25,16 @@ import (
 
 // GrafanaScript represent the data to generate Grafana config
 type GrafanaScript struct {
-	DeployDir string
-	NumaNode  string
+	ClusterName string
+	DeployDir   string
+	NumaNode    string
 }
 
 // NewGrafanaScript returns a GrafanaScript with given arguments
-func NewGrafanaScript(deployDir string) *GrafanaScript {
+func NewGrafanaScript(cluster, deployDir string) *GrafanaScript {
 	return &GrafanaScript{
-		DeployDir: deployDir,
+		ClusterName: cluster,
+		DeployDir:   deployDir,
 	}
 }
 

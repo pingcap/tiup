@@ -42,7 +42,7 @@ func (c *ScaleConfig) Execute(ctx *Context) error {
 		return err
 	}
 
-	return c.instance.ScaleConfig(exec, c.base, c.deployUser, c.paths)
+	return c.instance.ScaleConfig(exec, c.base, c.name, c.deployUser, c.paths)
 }
 
 // Rollback implements the Task interface
