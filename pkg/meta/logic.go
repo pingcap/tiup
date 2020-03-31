@@ -217,7 +217,13 @@ func (i *instance) DataDir() string {
 }
 
 func (i *instance) LogDir() string {
-	logDir := reflect.ValueOf(i.InstanceSpec).FieldByName("LogDir").Interface().(string)
+	logDir := ""
+
+	field := reflect.ValueOf(i.InstanceSpec).FieldByName("LogDir")
+	if field.IsValid() {
+		logDir = field.Interface().(string)
+	}
+
 	if logDir == "" {
 		logDir = "log"
 	}
@@ -782,7 +788,7 @@ func (i *AlertManagerInstance) InitConfig(e executor.TiOpsExecutor, cluster, use
 	}
 
 	spec := i.InstanceSpec.(AlertManagerSpec)
-	cfg := scripts.NewAlertManagerScript(i.GetHost(), paths.Deploy, paths.Log).
+	cfg := scripts.NewAlertManagerScript(paths.Deploy, paths.Data, paths.Log).
 		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_alertmanager_%s-%d.sh", i.GetHost(), i.GetPort()))

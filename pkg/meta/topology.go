@@ -718,6 +718,10 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 			setDefaultDir(globalOptions.DataDir, field.Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
 		case "DeployDir":
 			setDefaultDir(globalOptions.DeployDir, field.Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
+		case "LogDir":
+			if field.Field(j).String() == "" && defaults.CanUpdate(field.Field(j).Interface()) {
+				field.Field(j).Set(reflect.ValueOf(globalOptions.LogDir))
+			}
 		}
 	}
 

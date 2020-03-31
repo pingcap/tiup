@@ -13,7 +13,7 @@ exec 2>&1
 {{- if .NumaNode}}
 exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/alertmanager \
 {{- else}}
-exec bin/alertmanager \
+exec bin/alertmanager/alertmanager \
 {{- end}}
     --config.file="conf/alertmanager.yml" \
     --storage.path="{{.DataDir}}" \

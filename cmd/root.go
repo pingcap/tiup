@@ -71,6 +71,7 @@ func init() {
 			return cmd.Help()
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Println(color.Reset)
 			return tiupmeta.Repository().Mirror().Close()
 		},
 	}

@@ -81,6 +81,8 @@ func Confirm(prompt string) (string, bool) {
 
 // GetPasswd reads a password input from console
 func GetPasswd(prompt string) string {
+	defer fmt.Println("") // print a new line after reading input
+
 	if prompt != "" {
 		prompt += " " // append a whitespace
 	}
