@@ -37,11 +37,12 @@ type componentInfo struct {
 }
 
 type deployOptions struct {
-	user       string // username to login to the SSH server
-	usePasswd  bool   // use password for authentication
-	password   string // password of the user
-	keyFile    string // path to the private key file
-	passphrase string // passphrase of the private key file
+	user        string // username to login to the SSH server
+	usePasswd   bool   // use password for authentication
+	password    string // password of the user
+	keyFile     string // path to the private key file
+	passphrase  string // passphrase of the private key file
+	skipConfirm bool   // skip the confirmation of topology
 }
 
 func newDeploy() *cobra.Command {
@@ -70,6 +71,7 @@ func newDeploy() *cobra.Command {
 	cmd.Flags().BoolVar(&opt.usePasswd, "password", false, "Specify the password of system user")
 	cmd.Flags().StringVar(&opt.keyFile, "key", "", "Specify the key path of system user")
 	cmd.Flags().StringVar(&opt.passphrase, "passphrase", "", "Specify the passphrase of the key")
+	cmd.Flags().BoolVar(&opt.skipConfirm, "noconfirm", false, "Skip the confirmation of topology")
 
 	return cmd
 }
@@ -123,7 +125,7 @@ func confirmTopology(clusterName, version string, topo *meta.Specification) erro
 
 	input, confirmed := utils.Confirm(fmt.Sprintf("Do you want to continue?[Y]es/[N]o:"))
 	if !confirmed {
-		return errors.Errorf("operation cancelled: %s", input)
+		return errors.Errorf("operation cancelled by user (input: %s)", input)
 	}
 	return nil
 }
@@ -138,8 +140,10 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 		return err
 	}
 
-	if err := confirmTopology(clusterName, version, &topo); err != nil {
-		return err
+	if !opt.skipConfirm {
+		if err := confirmTopology(clusterName, version, &topo); err != nil {
+			return err
+		}
 	}
 
 	if err := os.MkdirAll(meta.ClusterPath(clusterName), 0755); err != nil {
