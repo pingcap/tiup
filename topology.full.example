@@ -90,7 +90,7 @@ tikv_servers:
       # numa_node: false
       # Config is used to overwrite the `server_configs.tikv` values
       # config:
-      #   labels: "{ zone = "us-west-1", disk = "ssd" }"
+      #   labels: '{ zone = "us-west-1", disk = "ssd" }'
       #   readpool.storage.use-unified-pool: true
       #   readpool.storage.low-concurrency: 10
   - host: 10.0.1.15
@@ -127,7 +127,7 @@ tikv_servers:
 #       syncer.to.host: "127.0.0.1"
 #       syncer.to.user: "root"
 #       syncer.to.password: ""
-#       syncer.to.port: "3306"
+#       syncer.to.port: 3306
 #   - host: 10.0.1.19
 
 # monitoring_servers:
