@@ -90,6 +90,7 @@ func init() {
 		newListCmd(),
 		newAuditCmd(),
 		newImportCmd(),
+		newEditConfigCmd(),
 	)
 }
 
