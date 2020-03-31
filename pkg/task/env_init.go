@@ -59,8 +59,8 @@ func (e *EnvInit) Execute(ctx *Context) error {
 		return errors.Annotatef(err, "cmd: %s", cmd)
 	}
 
-	// TODO: don't append pubkey if exists
-	cmd = `su - ` + e.deployUser + ` -c 'echo "` + string(pubKey) + `" >> .ssh/authorized_keys && chmod 700 ~/.ssh/authorized_keys'`
+	cmd = fmt.Sprintf(`su - %[1]s -c 'grep "%[2]s" %[3]s || echo "%[2]s" >> %[3]s && chmod 700 %[3]s'`,
+		e.deployUser, string(pubKey), "~/.ssh/authorized_keys")
 	_, _, err = exec.Execute(cmd, false)
 	if err != nil {
 		return errors.Trace(err)
