@@ -73,7 +73,7 @@ func scaleIn(cluster string, options operator.Options) error {
 			meta.ClusterPath(cluster, "ssh", "id_rsa.pub")).
 		ClusterSSH(metadata.Topology, metadata.User).
 		ClusterOperate(metadata.Topology, operator.ScaleInOperation, options).
-		UpdateMeta(cluster, metadata, options.Nodes).
+		UpdateMeta(cluster, metadata, operator.AsyncNodes(metadata.Topology, options.Nodes, false)).
 		Parallel(regenConfigTasks...).
 		Build()
 

@@ -20,6 +20,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
+	operator "github.com/pingcap-incubator/tiops/pkg/operation"
+	"github.com/pingcap-incubator/tiops/pkg/task"
 	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
@@ -50,7 +52,11 @@ func newDisplayCmd() *cobra.Command {
 			if err := displayClusterMeta(&opt); err != nil {
 				return err
 			}
-			return displayClusterTopology(&opt)
+			if err := displayClusterTopology(&opt); err != nil {
+				return err
+			}
+
+			return destroyTombsome(opt.clusterName)
 		},
 	}
 
@@ -78,11 +84,41 @@ func displayClusterMeta(opt *displayOption) error {
 	return nil
 }
 
-func displayClusterTopology(opt *displayOption) error {
-	topo, err := meta.ClusterTopology(opt.clusterName)
+func destroyTombsome(clusterName string) error {
+	metadata, err := meta.ClusterMetadata(clusterName)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	topo := metadata.Topology
+
+	if !operator.NeedCheckTomebsome(topo) {
+		return nil
+	}
+
+	ctx := task.NewContext()
+	t := task.NewBuilder().
+		SSHKeySet(
+			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
+			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
+		ClusterSSH(topo, metadata.User).
+		ClusterOperate(metadata.Topology, operator.DestroyTombsomeOperation, operator.Options{}).Build()
+
+	err = t.Execute(ctx)
 	if err != nil {
 		return err
 	}
+
+	return meta.SaveClusterMeta(clusterName, metadata)
+}
+
+func displayClusterTopology(opt *displayOption) error {
+	metadata, err := meta.ClusterMetadata(opt.clusterName)
+	if err != nil {
+		return err
+	}
+
+	topo := metadata.Topology
 
 	clusterTable := [][]string{
 		// Header

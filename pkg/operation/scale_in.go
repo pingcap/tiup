@@ -24,6 +24,44 @@ import (
 	"github.com/pingcap/errors"
 )
 
+// TODO: We can make drainer not async.
+var asyncOfflineComps = set.NewStringSet(meta.ComponentPump, meta.ComponentTiKV, meta.ComponentDrainer)
+
+// AsyncNodes return all nodes async destroy or not.
+func AsyncNodes(spec *meta.Specification, nodes []string, async bool) []string {
+	var asyncNodes []string
+	var notAsyncNodes []string
+
+	inNodes := func(n string) bool {
+		for _, e := range nodes {
+			if n == e {
+				return true
+			}
+		}
+		return false
+	}
+
+	for _, c := range spec.ComponentsByStartOrder() {
+		for _, ins := range c.Instances() {
+			if !inNodes(ins.ID()) {
+				continue
+			}
+
+			if asyncOfflineComps.Exist(ins.ComponentName()) {
+				asyncNodes = append(asyncNodes, ins.ID())
+			} else {
+				notAsyncNodes = append(notAsyncNodes, ins.ID())
+			}
+		}
+	}
+
+	if async {
+		return asyncNodes
+	}
+
+	return notAsyncNodes
+}
+
 // ScaleIn scales in the cluster
 func ScaleIn(
 	getter ExecutorGetter,
@@ -61,20 +99,26 @@ func ScaleIn(
 		return errors.New("cannot delete all TiKV servers")
 	}
 
-	asyncOfflineComps := set.NewStringSet(meta.ComponentPump, meta.ComponentTiKV, meta.ComponentDrainer)
+	// TODO if binlog is switch on, cannot delete all pump servers.
 
 	// At least a PD server exists
 	var pdClient *api.PDClient
-	binlogClient := api.NewBinlogClient(nil /* tls.Config */)
+	var pdEndpoint []string
 	for _, instance := range (&meta.PDComponent{Specification: spec}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
 			pdClient = api.NewPDClient(addr(instance), 10*time.Second, nil)
+			pdEndpoint = append(pdEndpoint, addr(instance))
 			break
 		}
 	}
 
 	if pdClient == nil {
 		return errors.New("cannot find available PD instance")
+	}
+
+	binlogClient, err := api.NewBinlogClient(pdEndpoint, nil /* tls.Config */)
+	if err != nil {
+		return err
 	}
 
 	// Delete member from cluster
@@ -86,7 +130,7 @@ func ScaleIn(
 
 			switch component.Name() {
 			case meta.ComponentTiKV:
-				if err := pdClient.DelStore(instance.GetHost()); err != nil {
+				if err := pdClient.DelStore(instance.ID()); err != nil {
 					return err
 				}
 			case meta.ComponentPD:
@@ -119,6 +163,36 @@ func ScaleIn(
 					component.Name())
 			}
 		}
+	}
+
+	for i := 0; i < len(spec.TiKVServers); i++ {
+		s := spec.TiKVServers[i]
+		id := s.Host + ":" + strconv.Itoa(s.Port)
+		if !deletedNodes.Exist(id) {
+			continue
+		}
+		s.Offline = true
+		spec.TiKVServers[i] = s
+	}
+
+	for i := 0; i < len(spec.PumpServers); i++ {
+		s := spec.PumpServers[i]
+		id := s.Host + ":" + strconv.Itoa(s.Port)
+		if !deletedNodes.Exist(id) {
+			continue
+		}
+		s.Offline = true
+		spec.PumpServers[i] = s
+	}
+
+	for i := 0; i < len(spec.Drainers); i++ {
+		s := spec.Drainers[i]
+		id := s.Host + ":" + strconv.Itoa(s.Port)
+		if !deletedNodes.Exist(id) {
+			continue
+		}
+		s.Offline = true
+		spec.Drainers[i] = s
 	}
 
 	return nil

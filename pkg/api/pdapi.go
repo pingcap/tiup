@@ -14,11 +14,12 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
+	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/utils"
+	"github.com/pingcap/errors"
 	"github.com/pingcap/kvproto/pkg/metapb"
 	"github.com/pingcap/kvproto/pkg/pdpb"
 	pdserverapi "github.com/pingcap/pd/v4/server/api"
@@ -90,6 +91,10 @@ func (pc *PDClient) GetHealth() (*PDHealthInfo, error) {
 // GetStores queries the stores info from PD server
 func (pc *PDClient) GetStores() (*pdserverapi.StoresInfo, error) {
 	url := fmt.Sprintf("%s/%s", pc.GetURL(), pdStoresURI)
+
+	// Return all stores
+	url += fmt.Sprintf("?state=0&state=1&state=2")
+
 	body, err := pc.httpClient.Get(url)
 	if err != nil {
 		return nil, err
@@ -301,6 +306,35 @@ func (pc *PDClient) DelPD(name string) error {
 	return nil
 }
 
+// IsTombStone check if the node is Tombstone.
+// The host parameter should be in format of IP:Port, that matches store's address
+func (pc *PDClient) IsTombStone(host string) (bool, error) {
+	// get info of current stores
+	stores, err := pc.GetStores()
+	if err != nil {
+		return false, errors.AddStack(err)
+	}
+
+	for _, storeInfo := range stores.Stores {
+		log.Debugf("addr: %s, state: %v", storeInfo.Store.Address, storeInfo.Store.State)
+
+		if storeInfo.Store.Address != host {
+			continue
+		}
+
+		if storeInfo.Store.State == metapb.StoreState_Tombstone {
+			return true, nil
+		}
+		return false, nil
+
+	}
+
+	return false, errors.New("node not exists")
+}
+
+// ErrStoreNotExists represents the store not exists.
+var ErrStoreNotExists = errors.New("store not exists")
+
 // DelStore deletes stores from a (TiKV) host
 // The host parameter should be in format of IP:Port, that matches store's address
 func (pc *PDClient) DelStore(host string) error {
@@ -319,9 +353,7 @@ func (pc *PDClient) DelStore(host string) error {
 		storeID = storeInfo.Store.Id
 	}
 	if storeID == 0 {
-		// TODO: add a log say
-		// "The store doesn't exist, skip deletion"
-		return nil
+		return errors.Annotatef(ErrStoreNotExists, "id: %s", host)
 	}
 
 	url := fmt.Sprintf("%s/%s/%d", pc.GetURL(), pdStoreURI, storeID)
@@ -329,6 +361,8 @@ func (pc *PDClient) DelStore(host string) error {
 	if err != nil {
 		return err
 	}
+
+	log.Infof("delete store by: %s", url)
 
 	// wait for the deletion to complete
 	retryOpt := utils.RetryOption{

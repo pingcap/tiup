@@ -15,8 +15,11 @@ package operator
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/pingcap-incubator/tiops/pkg/api"
 	"github.com/pingcap-incubator/tiops/pkg/executor"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
@@ -83,6 +86,156 @@ func Stop(
 			}
 		}
 	}
+	return nil
+}
+
+// NeedCheckTomebsome return true if we need to check and destroy some node.
+func NeedCheckTomebsome(spec *meta.Specification) bool {
+	for _, s := range spec.TiKVServers {
+		if s.Offline {
+			return true
+		}
+	}
+	for _, s := range spec.PumpServers {
+		if s.Offline {
+			return true
+		}
+	}
+	for _, s := range spec.Drainers {
+		if s.Offline {
+			return true
+		}
+	}
+	return false
+}
+
+// DestroyTombstone remove the tombstone node in spec and destroy them.
+func DestroyTombstone(
+	getter ExecutorGetter,
+	spec *meta.Specification,
+) error {
+	var pdClient = api.NewPDClient(spec.GetPDList()[0], 10*time.Second, nil)
+
+	binlogClient, err := api.NewBinlogClient(spec.GetPDList(), nil)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	filterID := func(instance []meta.Instance, id string) (res []meta.Instance) {
+		for _, ins := range instance {
+			if ins.ID() == id {
+				res = append(res, ins)
+			}
+		}
+		return
+	}
+
+	var kvServers []meta.TiKVSpec
+	for _, s := range spec.TiKVServers {
+		if !s.Offline {
+			kvServers = append(kvServers, s)
+			continue
+		}
+
+		id := s.Host + ":" + strconv.Itoa(s.Port)
+
+		tombstone, err := pdClient.IsTombStone(id)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+
+		if !tombstone {
+			kvServers = append(kvServers, s)
+			continue
+		}
+
+		if tombstone {
+			instances := (&meta.TiKVComponent{Specification: spec}).Instances()
+			instances = filterID(instances, id)
+
+			err = StopComponent(getter, instances)
+			if err != nil {
+				return errors.AddStack(err)
+			}
+
+			err = DestroyComponent(getter, instances)
+			if err != nil {
+				return errors.AddStack(err)
+			}
+		}
+	}
+
+	var pumpServers []meta.PumpSpec
+	for _, s := range spec.PumpServers {
+		if !s.Offline {
+			pumpServers = append(pumpServers, s)
+			continue
+		}
+
+		id := s.Host + ":" + strconv.Itoa(s.Port)
+
+		tombstone, err := binlogClient.IsPumpTombstone(id)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+
+		if !tombstone {
+			pumpServers = append(pumpServers, s)
+		}
+
+		if tombstone {
+			instances := (&meta.PumpComponent{Specification: spec}).Instances()
+			instances = filterID(instances, id)
+			err = StopComponent(getter, instances)
+			if err != nil {
+				return errors.AddStack(err)
+			}
+
+			err = DestroyComponent(getter, instances)
+			if err != nil {
+				return errors.AddStack(err)
+			}
+		}
+	}
+
+	var drainerServers []meta.DrainerSpec
+	for _, s := range spec.Drainers {
+		if !s.Offline {
+			drainerServers = append(drainerServers, s)
+			continue
+		}
+
+		id := s.Host + ":" + strconv.Itoa(s.Port)
+
+		tombstone, err := binlogClient.IsDrainerTombstone(id)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+
+		if !tombstone {
+			drainerServers = append(drainerServers, s)
+		}
+
+		if tombstone {
+			instances := (&meta.DrainerComponent{Specification: spec}).Instances()
+			instances = filterID(instances, id)
+
+			err = StopComponent(getter, (&meta.DrainerComponent{Specification: spec}).Instances())
+			if err != nil {
+				return errors.AddStack(err)
+			}
+
+			err = DestroyComponent(getter, (&meta.DrainerComponent{Specification: spec}).Instances())
+			if err != nil {
+				return errors.AddStack(err)
+			}
+		}
+	}
+
+	spec.TiKVServers = kvServers
+	spec.PumpServers = pumpServers
+	spec.Drainers = drainerServers
+
 	return nil
 }
 
