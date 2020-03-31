@@ -31,16 +31,25 @@ func NewAlertManagerConfig() *AlertManagerConfig {
 
 // Config read ${localdata.EnvNameComponentInstallDir}/templates/config/alertmanager.yml
 // and generate the config by ConfigWithTemplate
-func (c *AlertManagerConfig) Config() (string, error) {
+func (c *AlertManagerConfig) Config() ([]byte, error) {
 	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "config", "alertmanager.yml")
 	tpl, err := ioutil.ReadFile(fp)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return c.ConfigWithTemplate(string(tpl))
 }
 
 // ConfigWithTemplate generate the AlertManager config content by tpl
-func (c *AlertManagerConfig) ConfigWithTemplate(tpl string) (string, error) {
-	return tpl, nil
+func (c *AlertManagerConfig) ConfigWithTemplate(tpl string) ([]byte, error) {
+	return []byte(tpl), nil
+}
+
+// ConfigToFile write config content to specific path
+func (c *AlertManagerConfig) ConfigToFile(file string) error {
+	config, err := c.Config()
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(file, config, 0755)
 }

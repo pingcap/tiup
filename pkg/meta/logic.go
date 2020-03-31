@@ -787,6 +787,7 @@ func (i *AlertManagerInstance) InitConfig(e executor.TiOpsExecutor, cluster, use
 		return err
 	}
 
+	// Transfer start script
 	spec := i.InstanceSpec.(AlertManagerSpec)
 	cfg := scripts.NewAlertManagerScript(paths.Deploy, paths.Data, paths.Log).
 		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort)
@@ -801,6 +802,16 @@ func (i *AlertManagerInstance) InitConfig(e executor.TiOpsExecutor, cluster, use
 		return err
 	}
 	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+		return err
+	}
+
+	// transfer config
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("alertmanager_%s.yml", i.GetHost()))
+	if err := config.NewAlertManagerConfig().ConfigToFile(fp); err != nil {
+		return err
+	}
+	dst = filepath.Join(paths.Deploy, "conf", "alertmanager.yml")
+	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
 	return nil
