@@ -30,6 +30,7 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/pingcap-incubator/tiops/pkg/version"
+	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	tiupmeta "github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/spf13/cobra"
@@ -93,6 +94,13 @@ func init() {
 
 // Execute executes the root command
 func Execute() {
+	// Switch current work directory if running in TiUP component mode
+	if wd := os.Getenv(localdata.EnvNameWorkDir); wd != "" {
+		if err := os.Chdir(wd); err != nil {
+			log.Warnf("Switch work directory to %s failed: %v", wd, err)
+		}
+	}
+
 	var code int
 	err := rootCmd.Execute()
 	if err != nil {
