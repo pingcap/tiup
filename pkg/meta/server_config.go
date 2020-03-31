@@ -15,6 +15,7 @@ package meta
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -64,7 +65,7 @@ func toMap(ms yaml.MapSlice) (map[string]interface{}, error) {
 	return result, nil
 }
 
-func merge2Toml(global, overwrite yaml.MapSlice) ([]byte, error) {
+func merge2Toml(comp string, global, overwrite yaml.MapSlice) ([]byte, error) {
 	lhs, err := toMap(global)
 	if err != nil {
 		return nil, err
@@ -77,7 +78,14 @@ func merge2Toml(global, overwrite yaml.MapSlice) ([]byte, error) {
 		patch(lhs, k, v)
 	}
 
-	buf := &bytes.Buffer{}
+	buf := bytes.NewBufferString(fmt.Sprintf(`# WARNING: This file was auto-generated. Do not edit! All your edit might be overwritten!
+# You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
+# All configuration items you want to change can be added to:
+# server_configs:
+#   %s:
+#     aa.b1.c3: value
+#     aa.b2.c4: value
+`, comp))
 	enc := toml.NewEncoder(buf)
 	enc.Indent = ""
 	err = enc.Encode(lhs)

@@ -285,14 +285,21 @@ tikv_servers:
 
 `), &topo)
 	c.Assert(err, IsNil)
-	expected := `[config]
+	expected := `# WARNING: This file was auto-generated. Do not edit! All your edit might be overwritten!
+# You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
+# All configuration items you want to change can be added to:
+# server_configs:
+#   tikv:
+#     aa.b1.c3: value
+#     aa.b2.c4: value
+[config]
 item1 = 100
 item2 = 500
 [config.item3]
 item5 = 700
 item6 = 600
 `
-	got, err := merge2Toml(topo.ServerConfigs.TiKV, topo.TiKVServers[0].Config)
+	got, err := merge2Toml("tikv", topo.ServerConfigs.TiKV, topo.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(got), DeepEquals, expected)
 }
@@ -345,7 +352,14 @@ tikv_servers:
   - host: 172.19.0.103
 `), &topo)
 	c.Assert(err, IsNil)
-	expected := `[schedule]
+	expected := `# WARNING: This file was auto-generated. Do not edit! All your edit might be overwritten!
+# You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
+# All configuration items you want to change can be added to:
+# server_configs:
+#   pd:
+#     aa.b1.c3: value
+#     aa.b2.c4: value
+[schedule]
 hot-region-schedule-limit = 14
 leader-schedule-limit = 4
 max-merge-region-keys = 200000
@@ -358,7 +372,7 @@ region-schedule-limit = 2048
 replica-schedule-limit = 164
 split-merge-interval = "1h"
 `
-	got, err := merge2Toml(topo.ServerConfigs.PD, topo.PDServers[1].Config)
+	got, err := merge2Toml("pd", topo.ServerConfigs.PD, topo.PDServers[1].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(got), DeepEquals, expected)
 }

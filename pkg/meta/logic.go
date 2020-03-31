@@ -150,7 +150,7 @@ func (i *instance) InitConfig(e executor.TiOpsExecutor, cluster, user string, pa
 // mergeServerConfig merges the server configuration and overwrite the global configuration
 func (i *instance) mergeServerConfig(e executor.TiOpsExecutor, globalConf, instanceConf yaml.MapSlice, paths DirPaths) error {
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s_%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
-	conf, err := merge2Toml(globalConf, instanceConf)
+	conf, err := merge2Toml(i.ComponentName(), globalConf, instanceConf)
 	if err != nil {
 		return err
 	}

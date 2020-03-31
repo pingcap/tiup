@@ -52,7 +52,6 @@ func newUpgradeCmd() *cobra.Command {
 }
 
 func versionCompare(curVersion, newVersion string) error {
-
 	switch semver.Compare(curVersion, newVersion) {
 	case -1:
 		return nil

@@ -16,6 +16,7 @@ package task
 import (
 	"fmt"
 	"io/ioutil"
+	"strings"
 
 	"github.com/pingcap-incubator/tiops/pkg/module"
 	"github.com/pingcap/errors"
@@ -59,8 +60,9 @@ func (e *EnvInit) Execute(ctx *Context) error {
 		return errors.Annotatef(err, "cmd: %s", cmd)
 	}
 
+	pk := strings.TrimSpace(string(pubKey))
 	cmd = fmt.Sprintf(`su - %[1]s -c 'grep "%[2]s" %[3]s || echo "%[2]s" >> %[3]s && chmod 700 %[3]s'`,
-		e.deployUser, string(pubKey), "~/.ssh/authorized_keys")
+		e.deployUser, pk, "~/.ssh/authorized_keys")
 	_, _, err = exec.Execute(cmd, false)
 	if err != nil {
 		return errors.Trace(err)
