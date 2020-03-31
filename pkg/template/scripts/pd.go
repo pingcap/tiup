@@ -30,8 +30,8 @@ type PDScript struct {
 	Name       string
 	Scheme     string
 	IP         string
-	ClientPort uint64
-	PeerPort   uint64
+	ClientPort int
+	PeerPort   int
 	DeployDir  string
 	DataDir    string
 	LogDir     string
@@ -60,13 +60,13 @@ func (c *PDScript) WithScheme(scheme string) *PDScript {
 }
 
 // WithClientPort set ClientPort field of PDScript
-func (c *PDScript) WithClientPort(port uint64) *PDScript {
+func (c *PDScript) WithClientPort(port int) *PDScript {
 	c.ClientPort = port
 	return c
 }
 
 // WithPeerPort set PeerPort field of PDScript
-func (c *PDScript) WithPeerPort(port uint64) *PDScript {
+func (c *PDScript) WithPeerPort(port int) *PDScript {
 	c.PeerPort = port
 	return c
 }
@@ -144,13 +144,13 @@ func (c *PDScaleScript) WithScheme(scheme string) *PDScaleScript {
 }
 
 // WithClientPort set ClientPort field of PDScaleScript
-func (c *PDScaleScript) WithClientPort(port uint64) *PDScaleScript {
+func (c *PDScaleScript) WithClientPort(port int) *PDScaleScript {
 	c.ClientPort = port
 	return c
 }
 
 // WithPeerPort set PeerPort field of PDScript
-func (c *PDScaleScript) WithPeerPort(port uint64) *PDScaleScript {
+func (c *PDScaleScript) WithPeerPort(port int) *PDScaleScript {
 	c.PeerPort = port
 	return c
 }

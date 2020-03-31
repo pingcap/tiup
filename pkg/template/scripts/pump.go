@@ -27,7 +27,7 @@ import (
 type PumpScript struct {
 	NodeID    string
 	Host      string
-	Port      uint64
+	Port      int
 	DeployDir string
 	DataDir   string
 	LogDir    string
@@ -49,7 +49,7 @@ func NewPumpScript(nodeID, host, deployDir, dataDir, logDir string) *PumpScript 
 }
 
 // WithPort set Port field of PumpScript
-func (c *PumpScript) WithPort(port uint64) *PumpScript {
+func (c *PumpScript) WithPort(port int) *PumpScript {
 	c.Port = port
 	return c
 }

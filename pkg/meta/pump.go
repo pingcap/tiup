@@ -68,28 +68,16 @@ func (i *PumpInstance) InitConfig(e executor.TiOpsExecutor, user string, paths D
 		return err
 	}
 
-	// transfer run script
-	ends := []*scripts.PDScript{}
-	for _, spec := range i.instance.topo.PDServers {
-		ends = append(ends, scripts.NewPDScript(
-			spec.Name,
-			spec.Host,
-			spec.DeployDir,
-			spec.DataDir,
-			spec.LogDir,
-		))
-	}
-
+	spec := i.InstanceSpec.(PumpSpec)
 	cfg := scripts.NewPumpScript(
 		i.GetHost()+":"+strconv.Itoa(i.GetPort()),
 		i.GetHost(),
 		paths.Deploy,
 		paths.Data,
 		paths.Log,
-	).AppendEndpoints(ends...)
+	).WithPort(spec.Port).AppendEndpoints(i.instance.topo.Endpoints(user)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pump_%s_%d.sh", i.GetHost(), i.GetPort()))
-
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}

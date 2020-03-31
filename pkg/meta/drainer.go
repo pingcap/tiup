@@ -68,25 +68,14 @@ func (i *DrainerInstance) InitConfig(e executor.TiOpsExecutor, user string, path
 		return err
 	}
 
-	// transfer run script
-	ends := []*scripts.PDScript{}
-	for _, spec := range i.instance.topo.PDServers {
-		ends = append(ends, scripts.NewPDScript(
-			spec.Name,
-			spec.Host,
-			spec.DeployDir,
-			spec.DataDir,
-			spec.LogDir,
-		))
-	}
-
+	spec := i.InstanceSpec.(DrainerSpec)
 	cfg := scripts.NewDrainerScript(
 		i.GetHost()+":"+strconv.Itoa(i.GetPort()),
 		i.GetHost(),
 		paths.Deploy,
 		paths.Data,
 		paths.Log,
-	).AppendEndpoints(ends...)
+	).WithPort(spec.Port).AppendEndpoints(i.instance.topo.Endpoints(user)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_drainer_%s_%d.sh", i.GetHost(), i.GetPort()))
 

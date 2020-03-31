@@ -209,7 +209,11 @@ func (i *instance) DeployDir() string {
 }
 
 func (i *instance) DataDir() string {
-	return reflect.ValueOf(i.InstanceSpec).FieldByName("DataDir").Interface().(string)
+	dataDir := reflect.ValueOf(i.InstanceSpec).FieldByName("DataDir")
+	if !dataDir.IsValid() {
+		return ""
+	}
+	return dataDir.Interface().(string)
 }
 
 func (i *instance) LogDir() string {
@@ -285,25 +289,19 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, user string, paths D
 	if err := i.instance.InitConfig(e, user, paths); err != nil {
 		return err
 	}
-	var ends []*scripts.PDScript
-	for _, spec := range i.instance.topo.PDServers {
-		ends = append(ends, scripts.NewPDScript(
-			spec.Name,
-			spec.Host,
-			spec.DeployDir,
-			spec.DataDir,
-			spec.LogDir,
-		))
-	}
+
+	spec := i.InstanceSpec.(TiDBSpec)
 	cfg := scripts.NewTiDBScript(
 		i.GetHost(),
 		paths.Deploy,
 		paths.Log,
-	).AppendEndpoints(ends...)
+	).WithPort(spec.Port).
+		WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(user)...)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s.sh", i.GetHost()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
+
 	dst := filepath.Join(paths.Deploy, "scripts", "run_tidb.sh")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
@@ -311,7 +309,6 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, user string, paths D
 	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
 		return err
 	}
-	spec := i.InstanceSpec.(TiDBSpec)
 	return i.mergeServerConfig(e, i.topo.ServerConfigs.TiDB, spec.Config, paths)
 }
 
@@ -370,28 +367,20 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, user string, paths D
 		return err
 	}
 
-	// transfer run script
-	var ends []*scripts.PDScript
-	for _, spec := range i.instance.topo.PDServers {
-		ends = append(ends, scripts.NewPDScript(
-			spec.Name,
-			spec.Host,
-			spec.DeployDir,
-			spec.DataDir,
-			spec.LogDir,
-		))
-	}
+	spec := i.InstanceSpec.(TiKVSpec)
 	cfg := scripts.NewTiKVScript(
 		i.GetHost(),
 		paths.Deploy,
 		paths.Data,
 		paths.Log,
-	).AppendEndpoints(ends...)
+	).WithPort(spec.Port).
+		WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(user)...)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tikv_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
 	dst := filepath.Join(paths.Deploy, "scripts", "run_tikv.sh")
+
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
@@ -400,7 +389,6 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, user string, paths D
 		return err
 	}
 
-	spec := i.InstanceSpec.(TiKVSpec)
 	return i.mergeServerConfig(e, i.topo.ServerConfigs.TiKV, spec.Config, paths)
 }
 
@@ -463,27 +451,22 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, user string, paths Dir
 		return err
 	}
 
-	var ends []*scripts.PDScript
-	name := ""
+	var name string
 	for _, spec := range i.instance.topo.PDServers {
 		if spec.Host == i.GetHost() && spec.ClientPort == i.GetPort() {
 			name = spec.Name
 		}
-		ends = append(ends, scripts.NewPDScript(
-			spec.Name,
-			spec.Host,
-			spec.DeployDir,
-			spec.DataDir,
-			spec.LogDir,
-		))
 	}
+
+	spec := i.InstanceSpec.(PDSpec)
 	cfg := scripts.NewPDScript(
 		name,
 		i.GetHost(),
 		paths.Deploy,
 		paths.Data,
 		paths.Log,
-	).AppendEndpoints(ends...)
+	).WithClientPort(spec.ClientPort).WithPeerPort(spec.PeerPort).AppendEndpoints(i.instance.topo.Endpoints(user)...)
+
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s.sh", i.GetHost()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -495,7 +478,6 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, user string, paths Dir
 	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
 		return err
 	}
-	spec := i.InstanceSpec.(PDSpec)
 	return i.mergeServerConfig(e, i.topo.ServerConfigs.PD, spec.Config, paths)
 }
 
@@ -504,33 +486,29 @@ func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, use
 	if err := i.instance.ScaleConfig(e, b, user, paths); err != nil {
 		return err
 	}
-	ends := []*scripts.PDScript{}
+
 	name := i.Name
 	for _, spec := range b.PDServers {
 		if spec.Host == i.GetHost() {
 			name = spec.Name
 		}
-		ends = append(ends, scripts.NewPDScript(
-			spec.Name,
-			spec.Host,
-			spec.DeployDir,
-			spec.DataDir,
-			spec.LogDir,
-		))
 	}
 
+	spec := i.InstanceSpec.(PDSpec)
 	cfg := scripts.NewPDScaleScript(
 		name,
 		i.GetHost(),
 		paths.Deploy,
 		paths.Data,
 		paths.Log,
-	).AppendEndpoints(ends...)
+	).WithPeerPort(spec.PeerPort).WithClientPort(spec.ClientPort).AppendEndpoints(b.Endpoints(user)...)
+
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	log.Infof("script path: %s", fp)
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
+
 	dst := filepath.Join(paths.Deploy, "scripts", "run_pd.sh")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
@@ -589,16 +567,18 @@ func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, user string, path
 	}
 
 	// transfer run script
+	spec := i.InstanceSpec.(PrometheusSpec)
 	cfg := scripts.NewPrometheusScript(
 		i.GetHost(),
 		paths.Deploy,
 		paths.Data,
 		paths.Log,
-	).WithPort(uint64(i.GetPort()))
+	).WithPort(spec.Port)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
+
 	dst := filepath.Join(paths.Deploy, "scripts", "run_prometheus.sh")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
@@ -709,6 +689,7 @@ func (i *GrafanaInstance) InitConfig(e executor.TiOpsExecutor, user string, path
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
+
 	dst := filepath.Join(paths.Deploy, "scripts", "run_grafana.sh")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
@@ -763,28 +744,60 @@ func (c *AlertManagerComponent) Name() string {
 func (c *AlertManagerComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Alertmanager))
 	for _, s := range c.Alertmanager {
-		ins = append(ins, &instance{
-			InstanceSpec: s,
-			name:         c.Name(),
-			host:         s.Host,
-			port:         s.WebPort,
-			sshp:         s.SSHPort,
-			topo:         c.Specification,
+		ins = append(ins, &AlertManagerInstance{
+			instance: instance{
+				InstanceSpec: s,
+				name:         c.Name(),
+				host:         s.Host,
+				port:         s.WebPort,
+				sshp:         s.SSHPort,
+				topo:         c.Specification,
 
-			usedPorts: []int{
-				s.WebPort,
-				s.ClusterPort,
-			},
-			usedDirs: []string{
-				s.DeployDir,
-				s.DataDir,
-			},
-			statusFn: func(_ ...string) string {
-				return "-"
+				usedPorts: []int{
+					s.WebPort,
+					s.ClusterPort,
+				},
+				usedDirs: []string{
+					s.DeployDir,
+					s.DataDir,
+				},
+				statusFn: func(_ ...string) string {
+					return "-"
+				},
 			},
 		})
 	}
 	return ins
+}
+
+// AlertManagerInstance represent the alert manager instance
+type AlertManagerInstance struct {
+	instance
+}
+
+// InitConfig implement Instance interface
+func (i *AlertManagerInstance) InitConfig(e executor.TiOpsExecutor, user string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, user, paths); err != nil {
+		return err
+	}
+
+	spec := i.InstanceSpec.(AlertManagerSpec)
+	cfg := scripts.NewAlertManagerScript(i.GetHost(), paths.Deploy, paths.Log).
+		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort)
+
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_alertmanager_%s-%d.sh", i.GetHost(), i.GetPort()))
+	if err := cfg.ConfigToFile(fp); err != nil {
+		return err
+	}
+
+	dst := filepath.Join(paths.Deploy, "scripts", "run_alertmanager.sh")
+	if err := e.Transfer(fp, dst, false); err != nil {
+		return err
+	}
+	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+		return err
+	}
+	return nil
 }
 
 // ComponentsByStopOrder return component in the order need to stop.
@@ -829,4 +842,36 @@ func (topo *Specification) IterInstance(fn func(instance Instance)) {
 			fn(inst)
 		}
 	}
+}
+
+// Endpoints returns the PD endpoints configurations
+func (topo *Specification) Endpoints(user string) []*scripts.PDScript {
+	var ends []*scripts.PDScript
+	for _, spec := range topo.PDServers {
+		deployDir := spec.DeployDir
+		if !strings.HasPrefix(deployDir, "/") {
+			deployDir = filepath.Join("/home/", user, deployDir)
+		}
+		// data dir would be empty for components which don't need it
+		dataDir := spec.DataDir
+		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
+			dataDir = filepath.Join("/home/", user, dataDir)
+		}
+		// log dir will always be with values, but might not used by the component
+		logDir := spec.LogDir
+		if !strings.HasPrefix(logDir, "/") {
+			logDir = filepath.Join("/home/", user, logDir)
+		}
+		// TODO: path
+		script := scripts.NewPDScript(
+			spec.Name,
+			spec.Host,
+			deployDir,
+			dataDir,
+			logDir).
+			WithClientPort(spec.ClientPort).
+			WithPeerPort(spec.PeerPort)
+		ends = append(ends, script)
+	}
+	return ends
 }

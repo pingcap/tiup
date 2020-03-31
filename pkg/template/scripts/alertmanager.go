@@ -25,8 +25,8 @@ import (
 
 // AlertManagerScript represent the data to generate AlertManager start script
 type AlertManagerScript struct {
-	WebPort     uint64
-	ClusterPort uint64
+	WebPort     int
+	ClusterPort int
 	DeployDir   string
 	DataDir     string
 	LogDir      string
@@ -45,13 +45,13 @@ func NewAlertManagerScript(deployDir, dataDir, logDir string) *AlertManagerScrip
 }
 
 // WithWebPort set WebPort field of AlertManagerScript
-func (c *AlertManagerScript) WithWebPort(port uint64) *AlertManagerScript {
+func (c *AlertManagerScript) WithWebPort(port int) *AlertManagerScript {
 	c.WebPort = port
 	return c
 }
 
 // WithClusterPort set WebPort field of AlertManagerScript
-func (c *AlertManagerScript) WithClusterPort(port uint64) *AlertManagerScript {
+func (c *AlertManagerScript) WithClusterPort(port int) *AlertManagerScript {
 	c.ClusterPort = port
 	return c
 }

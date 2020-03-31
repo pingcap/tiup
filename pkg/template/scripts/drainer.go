@@ -27,7 +27,7 @@ import (
 type DrainerScript struct {
 	NodeID    string
 	IP        string
-	Port      uint64
+	Port      int
 	DeployDir string
 	DataDir   string
 	LogDir    string
@@ -50,7 +50,7 @@ func NewDrainerScript(nodeID, ip, deployDir, dataDir, logDir string) *DrainerScr
 }
 
 // WithPort set Port field of DrainerScript
-func (c *DrainerScript) WithPort(port uint64) *DrainerScript {
+func (c *DrainerScript) WithPort(port int) *DrainerScript {
 	c.Port = port
 	return c
 }
