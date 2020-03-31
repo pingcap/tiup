@@ -17,6 +17,8 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
 	"github.com/pingcap-incubator/tiops/pkg/task"
+	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -31,8 +33,12 @@ func newRestartCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			auditConfig.enable = true
 			clusterName := args[0]
+			if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+				return errors.Errorf("cannot restart non-exists cluster %s", clusterName)
+			}
+
+			auditConfig.enable = true
 			metadata, err := meta.ClusterMetadata(clusterName)
 			if err != nil {
 				return err

@@ -22,6 +22,7 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/task"
 	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/set"
+	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
@@ -63,6 +64,10 @@ func newScaleOutCmd() *cobra.Command {
 }
 
 func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
+	if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+		return errors.Errorf("cannot scale-out non-exists cluster %s", clusterName)
+	}
+
 	var newPart meta.TopologySpecification
 	if err := utils.ParseYaml(topoFile, &newPart); err != nil {
 		return err
@@ -85,7 +90,7 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 	newPart.ServerConfigs = metadata.Topology.ServerConfigs
 
 	// Build the scale out tasks
-	t, err := buildScaleOutTask(clusterName, metadata, opt, &newPart)
+	t, err := buildScaleOutTask(clusterName, metadata, mergedTopo, opt, &newPart)
 	if err != nil {
 		return err
 	}
@@ -100,6 +105,7 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 func buildScaleOutTask(
 	clusterName string,
 	metadata *meta.ClusterMeta,
+	mergedTopo *meta.Specification,
 	opt scaleOutOptions,
 	newPart *meta.TopologySpecification) (task.Task, error) {
 	var (
@@ -148,9 +154,15 @@ func buildScaleOutTask(
 			ScaleConfig(clusterName, metadata.Topology, inst, metadata.User, deployDir).
 			Build()
 		deployCompTasks = append(deployCompTasks, t)
+	})
 
-		// Refresh the configuration
-		t = task.NewBuilder().
+	mergedTopo.IterInstance(func(inst meta.Instance) {
+		deployDir := inst.DeployDir()
+		if !strings.HasPrefix(deployDir, "/") {
+			deployDir = filepath.Join("/home/", metadata.User, deployDir)
+		}
+		// Refresh all configuration
+		t := task.NewBuilder().
 			UserSSH(inst.GetHost(), metadata.User).
 			InitConfig(clusterName, inst, metadata.User, deployDir).
 			Build()
@@ -171,8 +183,8 @@ func buildScaleOutTask(
 		SSHKeySet(
 			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-		Parallel(envInitTasks...).
 		Parallel(downloadCompTasks...).
+		Parallel(envInitTasks...).
 		Parallel(deployCompTasks...).
 		// TODO: find another way to make sure current cluster started
 		ClusterSSH(metadata.Topology, metadata.User).

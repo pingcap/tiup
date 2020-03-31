@@ -22,6 +22,7 @@ import (
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
 	"github.com/pingcap-incubator/tiops/pkg/task"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
@@ -65,6 +66,10 @@ func versionCompare(curVersion, newVersion string) error {
 }
 
 func upgrade(name, version string, opt upgradeOptions) error {
+	if utils.IsNotExist(meta.ClusterPath(name, meta.MetaFileName)) {
+		return errors.Errorf("cannot upgrade non-exists cluster %s", name)
+	}
+
 	metadata, err := meta.ClusterMetadata(name)
 	if err != nil {
 		return err

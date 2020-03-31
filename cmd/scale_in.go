@@ -21,6 +21,8 @@ import (
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
 	"github.com/pingcap-incubator/tiops/pkg/task"
 	"github.com/pingcap-incubator/tiup/pkg/set"
+	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -45,6 +47,10 @@ func newScaleInCmd() *cobra.Command {
 }
 
 func scaleIn(cluster string, options operator.Options) error {
+	if tiuputils.IsNotExist(meta.ClusterPath(cluster, meta.MetaFileName)) {
+		return errors.Errorf("cannot scale-in non-exists cluster %s", cluster)
+	}
+
 	metadata, err := meta.ClusterMetadata(cluster)
 	if err != nil {
 		return err

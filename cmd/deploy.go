@@ -150,8 +150,8 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 
 	t := task.NewBuilder().
 		SSHKeyGen(meta.ClusterPath(clusterName, "ssh", "id_rsa")).
-		Parallel(envInitTasks...).
 		Parallel(downloadCompTasks...).
+		Parallel(envInitTasks...).
 		Parallel(deployCompTasks...).
 		Build()
 

@@ -68,7 +68,7 @@ func newDisplayCmd() *cobra.Command {
 
 func displayClusterMeta(opt *displayOption) error {
 	if tiuputils.IsNotExist(meta.ClusterPath(opt.clusterName, meta.MetaFileName)) {
-		return errors.Errorf("cluster '%s' not exists", opt.clusterName)
+		return errors.Errorf("cannot display non-exists cluster %s", opt.clusterName)
 	}
 
 	clsMeta, err := meta.ClusterMetadata(opt.clusterName)
