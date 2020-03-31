@@ -776,8 +776,8 @@ type AlertManagerInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *AlertManagerInstance) InitConfig(e executor.TiOpsExecutor, user string, paths DirPaths) error {
-	if err := i.instance.InitConfig(e, user, paths); err != nil {
+func (i *AlertManagerInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, cluster, user, paths); err != nil {
 		return err
 	}
 
