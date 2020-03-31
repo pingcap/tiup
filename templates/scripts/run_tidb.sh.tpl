@@ -26,6 +26,7 @@ exec bin/tidb-server \
     --status="{{.StatusPort}}" \
     --advertise-address="{{.IP}}" \
     --store="tikv" \
+    --config="conf/tidb.toml" \
     --path="{{template "PDList" .Endpoints}}" \
     --log-slow-query="log/tidb_slow_query.log" \
     --log-file="{{.LogDir}}/tidb.log" 2>> "{{.LogDir}}/tidb_stderr.log"

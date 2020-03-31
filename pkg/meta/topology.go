@@ -68,9 +68,11 @@ type (
 
 	// ServerConfigs represents the server runtime configuration
 	ServerConfigs struct {
-		TiDB yaml.MapSlice `yaml:"tidb"`
-		TiKV yaml.MapSlice `yaml:"tikv"`
-		PD   yaml.MapSlice `yaml:"pd"`
+		TiDB    yaml.MapSlice `yaml:"tidb"`
+		TiKV    yaml.MapSlice `yaml:"tikv"`
+		PD      yaml.MapSlice `yaml:"pd"`
+		Pump    yaml.MapSlice `yaml:"pump"`
+		Drainer yaml.MapSlice `yaml:"drainer"`
 	}
 
 	// TopologySpecification represents the specification of topology.yaml
@@ -309,7 +311,7 @@ type DrainerSpec struct {
 	DeployDir string        `yaml:"deploy_dir,omitempty"`
 	DataDir   string        `yaml:"data_dir,omitempty"`
 	LogDir    string        `yaml:"log_dir,omitempty"`
-	CommitTS  string        `yaml:"commit_ts,omitempty"`
+	CommitTS  int64         `yaml:"commit_ts,omitempty"`
 	Offline   bool          `yaml:"offline,omitempty"`
 	NumaNode  bool          `yaml:"numa_node,omitempty"`
 	Config    yaml.MapSlice `yaml:"config,omitempty"`

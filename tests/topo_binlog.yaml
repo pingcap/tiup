@@ -1,3 +1,8 @@
+server_configs:
+    tidb:
+        binlog.enable: true
+        binlog.ignore-error: false
+
 tidb_servers:
   - host: 172.19.0.101
   - host: 172.19.0.102
@@ -19,4 +24,9 @@ pump_servers:
   - host: 172.19.0.105
 
 drainer_servers:
-  # - host: 172.19.0.101
+  - host: 172.19.0.101
+    data_dir: /home/tidb/data/drainer-8249/data
+    commit_ts: 402899541671542785
+    config:
+        syncer.db-type: "file"
+

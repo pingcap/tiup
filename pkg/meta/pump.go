@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/pingcap-incubator/tiops/pkg/executor"
-	"github.com/pingcap-incubator/tiops/pkg/template/config"
 	"github.com/pingcap-incubator/tiops/pkg/template/scripts"
 )
 
@@ -90,15 +89,5 @@ func (i *PumpInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string
 		return err
 	}
 
-	// transfer config
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("pump_%s.toml", i.GetHost()))
-	if err := config.NewPumpConfig().ConfigToFile(fp); err != nil {
-		return err
-	}
-	dst = filepath.Join(paths.Deploy, "conf", "pump.toml")
-	if err := e.Transfer(fp, dst, false); err != nil {
-		return err
-	}
-
-	return nil
+	return i.mergeServerConfig(e, i.topo.ServerConfigs.Pump, spec.Config, paths)
 }
