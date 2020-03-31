@@ -61,7 +61,7 @@ func (d *Downloader) Execute(_ *Context) error {
 		if err != nil {
 			return err
 		}
-		if !versions.ContainsVersion(d.version) {
+		if !d.version.IsNightly() && !versions.ContainsVersion(d.version) {
 			return errors.Errorf("component '%s' doesn't contains version '%s'", d.component, d.version)
 		}
 
