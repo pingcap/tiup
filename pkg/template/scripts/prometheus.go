@@ -29,16 +29,18 @@ type PrometheusScript struct {
 	Port      uint64
 	DeployDir string
 	DataDir   string
+	LogDir    string
 	NumaNode  string
 }
 
 // NewPrometheusScript returns a PrometheusScript with given arguments
-func NewPrometheusScript(ip, deployDir, dataDir string) *PrometheusScript {
+func NewPrometheusScript(ip, deployDir, dataDir, logDir string) *PrometheusScript {
 	return &PrometheusScript{
 		IP:        ip,
 		Port:      9090,
 		DeployDir: deployDir,
 		DataDir:   dataDir,
+		LogDir:    logDir,
 	}
 }
 

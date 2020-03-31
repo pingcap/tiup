@@ -20,10 +20,10 @@ import (
 
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiops/pkg/task"
-	tiopsutils "github.com/pingcap-incubator/tiops/pkg/utils"
+	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/set"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
+	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
@@ -35,6 +35,7 @@ type componentInfo struct {
 
 type deployOptions struct {
 	user       string // username to login to the SSH server
+	usePasswd  bool   // use password for authentication
 	password   string // password of the user
 	keyFile    string // path to the private key file
 	passphrase string // passphrase of the private key file
@@ -50,6 +51,9 @@ func newDeploy() *cobra.Command {
 			if len(args) != 3 {
 				return cmd.Help()
 			}
+			if opt.usePasswd {
+				opt.password = utils.GetPasswd("Password:")
+			}
 			if len(opt.keyFile) == 0 && len(opt.password) == 0 {
 				return errPasswordKeyAtLeastOne
 			}
@@ -60,7 +64,7 @@ func newDeploy() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&opt.user, "user", "root", "Specify the system user name")
-	cmd.Flags().StringVar(&opt.password, "password", "", "Specify the password of system user")
+	cmd.Flags().BoolVar(&opt.usePasswd, "password", false, "Specify the password of system user")
 	cmd.Flags().StringVar(&opt.keyFile, "key", "", "Specify the key path of system user")
 	cmd.Flags().StringVar(&opt.passphrase, "passphrase", "", "Specify the passphrase of the key")
 
@@ -88,12 +92,12 @@ func getComponentVersion(comp, version string) repository.Version {
 }
 
 func deploy(clusterName, version, topoFile string, opt deployOptions) error {
-	if utils.IsExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+	if tiuputils.IsExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
 		return errors.Errorf("cluster name '%s' exists, please choose another cluster name", clusterName)
 	}
 
 	var topo meta.TopologySpecification
-	if err := tiopsutils.ParseYaml(topoFile, &topo); err != nil {
+	if err := utils.ParseYaml(topoFile, &topo); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(meta.ClusterPath(clusterName), 0755); err != nil {
@@ -130,15 +134,35 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 		if !strings.HasPrefix(deployDir, "/") {
 			deployDir = filepath.Join("/home/", topo.GlobalOptions.User, deployDir)
 		}
+		// data dir would be empty for components which don't need it
+		dataDir := inst.DataDir()
+		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
+			dataDir = filepath.Join("/home/", topo.GlobalOptions.User, dataDir)
+		}
+		// log dir will always be with values, but might not used by the component
+		logDir := inst.LogDir()
+		if !strings.HasPrefix(logDir, "/") {
+			logDir = filepath.Join("/home/", topo.GlobalOptions.User, logDir)
+		}
 		// Deploy component
 		t := task.NewBuilder().
 			Mkdir(inst.GetHost(),
 				filepath.Join(deployDir, "bin"),
 				filepath.Join(deployDir, "conf"),
 				filepath.Join(deployDir, "scripts"),
-				filepath.Join(deployDir, "log")).
+				dataDir,
+				logDir).
 			CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
-			InitConfig(clusterName, inst, topo.GlobalOptions.User, deployDir).
+			InitConfig(
+				clusterName,
+				inst,
+				topo.GlobalOptions.User,
+				meta.DirPaths{
+					Deploy: deployDir,
+					Data:   dataDir,
+					Log:    logDir,
+				},
+			).
 			Build()
 		deployCompTasks = append(deployCompTasks, t)
 	})
@@ -197,6 +221,15 @@ func buildMonitoredDeployTask(
 			if !strings.HasPrefix(deployDir, "/") {
 				deployDir = filepath.Join("/home/", globalOptions.User, deployDir)
 			}
+			// data dir would be empty for components which don't need it
+			dataDir := monitoredOptions.DataDir
+			if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
+				dataDir = filepath.Join("/home/", globalOptions.User, dataDir)
+			}
+			logDir := monitoredOptions.LogDir
+			if !strings.HasPrefix(logDir, "/") {
+				logDir = filepath.Join("/home/", globalOptions.User, logDir)
+			}
 
 			// Deploy component
 			t := task.NewBuilder().
@@ -205,10 +238,21 @@ func buildMonitoredDeployTask(
 					filepath.Join(deployDir, "bin"),
 					filepath.Join(deployDir, "conf"),
 					filepath.Join(deployDir, "scripts"),
-					filepath.Join(deployDir, "log")).
+					dataDir,
+					logDir).
 				CopyComponent(comp, version, host, deployDir).
-				MonitoredConfig(clusterName, comp, host, monitoredOptions, globalOptions.User, deployDir).
-				Build()
+				MonitoredConfig(
+					clusterName,
+					comp,
+					host,
+					monitoredOptions,
+					globalOptions.User,
+					meta.DirPaths{
+						Deploy: deployDir,
+						Data:   dataDir,
+						Log:    logDir,
+					},
+				).Build()
 			deployCompTasks = append(deployCompTasks, t)
 		}
 	}

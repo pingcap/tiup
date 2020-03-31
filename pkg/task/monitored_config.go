@@ -35,7 +35,7 @@ type MonitoredConfig struct {
 	host       string
 	options    meta.MonitoredOptions
 	deployUser string
-	deployDir  string
+	paths      meta.DirPaths
 }
 
 // Execute implements the Task interface
@@ -49,35 +49,41 @@ func (m *MonitoredConfig) Execute(ctx *Context) error {
 	if !found {
 		return ErrNoExecutor
 	}
-	cacheDir := meta.ClusterPath(m.name, "config")
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	m.paths.Cache = meta.ClusterPath(m.name, "config")
+	if err := os.MkdirAll(m.paths.Cache, 0755); err != nil {
 		return err
 	}
 
-	if err := m.syncMonitoredSystemConfig(exec, cacheDir, m.component, ports[m.component]); err != nil {
+	if err := m.syncMonitoredSystemConfig(exec, m.component, ports[m.component]); err != nil {
 		return err
 	}
 
 	var cfg template.ConfigGenerator
 	if m.component == meta.ComponentNodeExporter {
-		if err := m.syncBlackboxConfig(exec, cacheDir, config.NewBlackboxConfig()); err != nil {
+		if err := m.syncBlackboxConfig(exec, config.NewBlackboxConfig()); err != nil {
 			return err
 		}
-		cfg = scripts.NewNodeExporterScript(m.deployDir).WithPort(uint64(m.options.NodeExporterPort))
+		cfg = scripts.NewNodeExporterScript(
+			m.paths.Deploy,
+			m.paths.Log,
+		).WithPort(uint64(m.options.NodeExporterPort))
 	} else if m.component == meta.ComponentBlackboxExporter {
-		cfg = scripts.NewBlackboxExporterScript(m.deployDir).WithPort(uint64(m.options.BlackboxExporterPort))
+		cfg = scripts.NewBlackboxExporterScript(
+			m.paths.Deploy,
+			m.paths.Log,
+		).WithPort(uint64(m.options.BlackboxExporterPort))
 	} else {
 		return fmt.Errorf("unknown monitored component %s", m.component)
 	}
-	if err := m.syncMonitoredScript(exec, cacheDir, m.component, cfg); err != nil {
+	if err := m.syncMonitoredScript(exec, m.component, cfg); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (m *MonitoredConfig) syncMonitoredSystemConfig(exec executor.TiOpsExecutor, cacheDir, comp string, port int) error {
-	sysCfg := filepath.Join(cacheDir, fmt.Sprintf("%s-%d.service", comp, port))
-	systemCfg := system.NewConfig(comp, m.deployUser, m.deployDir)
+func (m *MonitoredConfig) syncMonitoredSystemConfig(exec executor.TiOpsExecutor, comp string, port int) error {
+	sysCfg := filepath.Join(m.paths.Cache, fmt.Sprintf("%s-%d.service", comp, port))
+	systemCfg := system.NewConfig(comp, m.deployUser, m.paths.Deploy)
 	if err := systemCfg.ConfigToFile(sysCfg); err != nil {
 		return err
 	}
@@ -97,12 +103,12 @@ func (m *MonitoredConfig) syncMonitoredSystemConfig(exec executor.TiOpsExecutor,
 	return nil
 }
 
-func (m *MonitoredConfig) syncMonitoredScript(exec executor.TiOpsExecutor, cacheDir, comp string, cfg template.ConfigGenerator) error {
-	fp := filepath.Join(cacheDir, fmt.Sprintf("run_%s_%s.sh", comp, m.host))
+func (m *MonitoredConfig) syncMonitoredScript(exec executor.TiOpsExecutor, comp string, cfg template.ConfigGenerator) error {
+	fp := filepath.Join(m.paths.Cache, fmt.Sprintf("run_%s_%s.sh", comp, m.host))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst := filepath.Join(m.deployDir, "scripts", fmt.Sprintf("run_%s.sh", comp))
+	dst := filepath.Join(m.paths.Deploy, "scripts", fmt.Sprintf("run_%s.sh", comp))
 	if err := exec.Transfer(fp, dst, false); err != nil {
 		return err
 	}
@@ -113,12 +119,12 @@ func (m *MonitoredConfig) syncMonitoredScript(exec executor.TiOpsExecutor, cache
 	return nil
 }
 
-func (m *MonitoredConfig) syncBlackboxConfig(exec executor.TiOpsExecutor, cacheDir string, cfg template.ConfigGenerator) error {
-	fp := filepath.Join(cacheDir, fmt.Sprintf("blackbox_%s.yaml", m.host))
+func (m *MonitoredConfig) syncBlackboxConfig(exec executor.TiOpsExecutor, cfg template.ConfigGenerator) error {
+	fp := filepath.Join(m.paths.Cache, fmt.Sprintf("blackbox_%s.yaml", m.host))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst := filepath.Join(m.deployDir, "conf", "blackbox.yml")
+	dst := filepath.Join(m.paths.Deploy, "conf", "blackbox.yml")
 	if err := exec.Transfer(fp, dst, false); err != nil {
 		return err
 	}
@@ -132,6 +138,6 @@ func (m *MonitoredConfig) Rollback(ctx *Context) error {
 
 // String implements the fmt.Stringer interface
 func (m *MonitoredConfig) String() string {
-	return fmt.Sprintf("MonitoredConfig: cluster=%s, user=%s, dir=%s, node_exporter_port=%d, blackbox_exporter_port=%d",
-		m.name, m.deployUser, m.deployDir, m.options.NodeExporterPort, m.options.BlackboxExporterPort)
+	return fmt.Sprintf("MonitoredConfig: cluster=%s, user=%s, node_exporter_port=%d, blackbox_exporter_port=%d, %s",
+		m.name, m.deployUser, m.options.NodeExporterPort, m.options.BlackboxExporterPort, m.paths)
 }

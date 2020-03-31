@@ -52,41 +52,48 @@ type DrainerInstance struct {
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DrainerInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, user, cacheDir, deployDir string) error {
+func (i *DrainerInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, user string, paths DirPaths) error {
 	s := i.instance.topo
 	defer func() {
 		i.instance.topo = s
 	}()
 	i.instance.topo = b
 
-	return i.InitConfig(e, user, cacheDir, deployDir)
+	return i.InitConfig(e, user, paths)
 }
 
 // InitConfig implements Instance interface.
-func (i *DrainerInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDir string) error {
-	if err := i.instance.InitConfig(e, user, cacheDir, deployDir); err != nil {
+func (i *DrainerInstance) InitConfig(e executor.TiOpsExecutor, user string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, user, paths); err != nil {
 		return err
 	}
 
 	// transfer run script
 	ends := []*scripts.PDScript{}
 	for _, spec := range i.instance.topo.PDServers {
-		ends = append(ends, scripts.NewPDScript(spec.Name, spec.Host, spec.DeployDir, spec.DataDir))
+		ends = append(ends, scripts.NewPDScript(
+			spec.Name,
+			spec.Host,
+			spec.DeployDir,
+			spec.DataDir,
+			spec.LogDir,
+		))
 	}
 
 	cfg := scripts.NewDrainerScript(
 		i.GetHost()+":"+strconv.Itoa(i.GetPort()),
 		i.GetHost(),
-		deployDir,
-		filepath.Join(deployDir, "data"),
+		paths.Deploy,
+		paths.Data,
+		paths.Log,
 	).AppendEndpoints(ends...)
 
-	fp := filepath.Join(cacheDir, fmt.Sprintf("run_drainer_%s_%d.sh", i.GetHost(), i.GetPort()))
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_drainer_%s_%d.sh", i.GetHost(), i.GetPort()))
 
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst := filepath.Join(deployDir, "scripts", "run_drainer.sh")
+	dst := filepath.Join(paths.Deploy, "scripts", "run_drainer.sh")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
@@ -96,11 +103,11 @@ func (i *DrainerInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, d
 	}
 
 	// transfer config
-	fp = filepath.Join(cacheDir, fmt.Sprintf("drainer_%s.toml", i.GetHost()))
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("drainer_%s.toml", i.GetHost()))
 	if err := config.NewDrainerConfig().ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst = filepath.Join(deployDir, "conf", "drainer.toml")
+	dst = filepath.Join(paths.Deploy, "conf", "drainer.toml")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}

@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/pingcap-incubator/tiops/pkg/executor"
@@ -59,8 +60,8 @@ type Instance interface {
 	ID() string
 	Ready(executor.TiOpsExecutor) error
 	WaitForDown(executor.TiOpsExecutor) error
-	InitConfig(executor.TiOpsExecutor, string, string, string) error
-	ScaleConfig(executor.TiOpsExecutor, *Specification, string, string, string) error
+	InitConfig(executor.TiOpsExecutor, string, DirPaths) error
+	ScaleConfig(executor.TiOpsExecutor, *Specification, string, DirPaths) error
 	ComponentName() string
 	InstanceName() string
 	ServiceName() string
@@ -72,6 +73,7 @@ type Instance interface {
 	UsedDirs() []string
 	Status(pdList ...string) string
 	DataDir() string
+	LogDir() string
 }
 
 // PortStarted wait until a port is being listened
@@ -118,12 +120,12 @@ func (i *instance) WaitForDown(e executor.TiOpsExecutor) error {
 	return PortStopped(e, i.port)
 }
 
-func (i *instance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDir string) error {
+func (i *instance) InitConfig(e executor.TiOpsExecutor, user string, paths DirPaths) error {
 	comp := i.ComponentName()
 	port := i.GetPort()
-	sysCfg := filepath.Join(cacheDir, fmt.Sprintf("%s-%d.service", comp, port))
+	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%d.service", comp, port))
 
-	systemCfg := system.NewConfig(comp, user, deployDir)
+	systemCfg := system.NewConfig(comp, user, paths.Deploy)
 	// For not auto start if using binlogctl to offline.
 	// bad design
 	if comp == ComponentPump || comp == ComponentDrainer {
@@ -146,8 +148,8 @@ func (i *instance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDi
 }
 
 // mergeServerConfig merges the server configuration and overwrite the global configuration
-func (i *instance) mergeServerConfig(e executor.TiOpsExecutor, globalConf, instanceConf yaml.MapSlice, cacheDir, deployDir string) error {
-	fp := filepath.Join(cacheDir, fmt.Sprintf("%s_%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
+func (i *instance) mergeServerConfig(e executor.TiOpsExecutor, globalConf, instanceConf yaml.MapSlice, paths DirPaths) error {
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s_%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
 	conf, err := merge2Toml(globalConf, instanceConf)
 	if err != nil {
 		return err
@@ -156,14 +158,14 @@ func (i *instance) mergeServerConfig(e executor.TiOpsExecutor, globalConf, insta
 	if err != nil {
 		return err
 	}
-	dst := filepath.Join(deployDir, "conf", fmt.Sprintf("%s.toml", i.ComponentName()))
+	dst := filepath.Join(paths.Deploy, "conf", fmt.Sprintf("%s.toml", i.ComponentName()))
 	// transfer config
 	return e.Transfer(fp, dst, false)
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *instance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, user, cacheDir, deployDir string) error {
-	return i.InitConfig(e, user, cacheDir, deployDir)
+func (i *instance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, user string, paths DirPaths) error {
+	return i.InitConfig(e, user, paths)
 }
 
 // ID returns the identifier of this instance, the ID is constructed by host:port
@@ -208,6 +210,17 @@ func (i *instance) DeployDir() string {
 
 func (i *instance) DataDir() string {
 	return reflect.ValueOf(i.InstanceSpec).FieldByName("DataDir").Interface().(string)
+}
+
+func (i *instance) LogDir() string {
+	logDir := reflect.ValueOf(i.InstanceSpec).FieldByName("LogDir").Interface().(string)
+	if logDir == "" {
+		logDir = "log"
+	}
+	if !strings.HasPrefix(logDir, "/") {
+		logDir = filepath.Join(i.DeployDir(), logDir)
+	}
+	return logDir
 }
 
 func (i *instance) GetPort() int {
@@ -268,20 +281,30 @@ type TiDBInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDir string) error {
-	if err := i.instance.InitConfig(e, user, cacheDir, deployDir); err != nil {
+func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, user string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, user, paths); err != nil {
 		return err
 	}
 	var ends []*scripts.PDScript
 	for _, spec := range i.instance.topo.PDServers {
-		ends = append(ends, scripts.NewPDScript(spec.Name, spec.Host, spec.DeployDir, spec.DataDir))
+		ends = append(ends, scripts.NewPDScript(
+			spec.Name,
+			spec.Host,
+			spec.DeployDir,
+			spec.DataDir,
+			spec.LogDir,
+		))
 	}
-	cfg := scripts.NewTiDBScript(i.GetHost(), deployDir).AppendEndpoints(ends...)
-	fp := filepath.Join(cacheDir, fmt.Sprintf("run_tidb_%s.sh", i.GetHost()))
+	cfg := scripts.NewTiDBScript(
+		i.GetHost(),
+		paths.Deploy,
+		paths.Log,
+	).AppendEndpoints(ends...)
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s.sh", i.GetHost()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst := filepath.Join(deployDir, "scripts", "run_tidb.sh")
+	dst := filepath.Join(paths.Deploy, "scripts", "run_tidb.sh")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
@@ -289,15 +312,15 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, depl
 		return err
 	}
 	spec := i.InstanceSpec.(TiDBSpec)
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.TiDB, spec.Config, cacheDir, deployDir)
+	return i.mergeServerConfig(e, i.topo.ServerConfigs.TiDB, spec.Config, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiDBInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, user, cacheDir, deployDir string) error {
+func (i *TiDBInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, user string, paths DirPaths) error {
 	s := i.instance.topo
 	defer func() { i.instance.topo = s }()
 	i.instance.topo = b
-	return i.InitConfig(e, user, cacheDir, deployDir)
+	return i.InitConfig(e, user, paths)
 }
 
 // TiKVComponent represents TiKV component.
@@ -342,22 +365,33 @@ type TiKVInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDir string) error {
-	if err := i.instance.InitConfig(e, user, cacheDir, deployDir); err != nil {
+func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, user string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, user, paths); err != nil {
 		return err
 	}
 
 	// transfer run script
 	var ends []*scripts.PDScript
 	for _, spec := range i.instance.topo.PDServers {
-		ends = append(ends, scripts.NewPDScript(spec.Name, spec.Host, spec.DeployDir, spec.DataDir))
+		ends = append(ends, scripts.NewPDScript(
+			spec.Name,
+			spec.Host,
+			spec.DeployDir,
+			spec.DataDir,
+			spec.LogDir,
+		))
 	}
-	cfg := scripts.NewTiKVScript(i.GetHost(), deployDir, i.instance.DataDir()).AppendEndpoints(ends...)
-	fp := filepath.Join(cacheDir, fmt.Sprintf("run_tikv_%s_%d.sh", i.GetHost(), i.GetPort()))
+	cfg := scripts.NewTiKVScript(
+		i.GetHost(),
+		paths.Deploy,
+		paths.Data,
+		paths.Log,
+	).AppendEndpoints(ends...)
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tikv_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst := filepath.Join(deployDir, "scripts", "run_tikv.sh")
+	dst := filepath.Join(paths.Deploy, "scripts", "run_tikv.sh")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
@@ -367,17 +401,17 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, depl
 	}
 
 	spec := i.InstanceSpec.(TiKVSpec)
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.TiKV, spec.Config, cacheDir, deployDir)
+	return i.mergeServerConfig(e, i.topo.ServerConfigs.TiKV, spec.Config, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiKVInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, user, cacheDir, deployDir string) error {
+func (i *TiKVInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, user string, paths DirPaths) error {
 	s := i.instance.topo
 	defer func() {
 		i.instance.topo = s
 	}()
 	i.instance.topo = b
-	return i.InitConfig(e, user, cacheDir, deployDir)
+	return i.InitConfig(e, user, paths)
 }
 
 // PDComponent represents PD component.
@@ -424,8 +458,8 @@ type PDInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDir string) error {
-	if err := i.instance.InitConfig(e, user, cacheDir, deployDir); err != nil {
+func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, user string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, user, paths); err != nil {
 		return err
 	}
 
@@ -435,14 +469,26 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deploy
 		if spec.Host == i.GetHost() && spec.ClientPort == i.GetPort() {
 			name = spec.Name
 		}
-		ends = append(ends, scripts.NewPDScript(spec.Name, spec.Host, spec.DeployDir, spec.DataDir))
+		ends = append(ends, scripts.NewPDScript(
+			spec.Name,
+			spec.Host,
+			spec.DeployDir,
+			spec.DataDir,
+			spec.LogDir,
+		))
 	}
-	cfg := scripts.NewPDScript(name, i.GetHost(), deployDir, i.instance.DataDir()).AppendEndpoints(ends...)
-	fp := filepath.Join(cacheDir, fmt.Sprintf("run_pd_%s.sh", i.GetHost()))
+	cfg := scripts.NewPDScript(
+		name,
+		i.GetHost(),
+		paths.Deploy,
+		paths.Data,
+		paths.Log,
+	).AppendEndpoints(ends...)
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s.sh", i.GetHost()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst := filepath.Join(deployDir, "scripts", "run_pd.sh")
+	dst := filepath.Join(paths.Deploy, "scripts", "run_pd.sh")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
@@ -450,12 +496,12 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deploy
 		return err
 	}
 	spec := i.InstanceSpec.(PDSpec)
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.PD, spec.Config, cacheDir, deployDir)
+	return i.mergeServerConfig(e, i.topo.ServerConfigs.PD, spec.Config, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, user, cacheDir, deployDir string) error {
-	if err := i.instance.ScaleConfig(e, b, user, cacheDir, deployDir); err != nil {
+func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, user string, paths DirPaths) error {
+	if err := i.instance.ScaleConfig(e, b, user, paths); err != nil {
 		return err
 	}
 	ends := []*scripts.PDScript{}
@@ -464,16 +510,28 @@ func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, use
 		if spec.Host == i.GetHost() {
 			name = spec.Name
 		}
-		ends = append(ends, scripts.NewPDScript(spec.Name, spec.Host, spec.DeployDir, spec.DataDir))
+		ends = append(ends, scripts.NewPDScript(
+			spec.Name,
+			spec.Host,
+			spec.DeployDir,
+			spec.DataDir,
+			spec.LogDir,
+		))
 	}
 
-	cfg := scripts.NewPDScaleScript(name, i.GetHost(), deployDir, i.instance.DataDir()).AppendEndpoints(ends...)
-	fp := filepath.Join(cacheDir, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
+	cfg := scripts.NewPDScaleScript(
+		name,
+		i.GetHost(),
+		paths.Deploy,
+		paths.Data,
+		paths.Log,
+	).AppendEndpoints(ends...)
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	log.Infof("script path: %s", fp)
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst := filepath.Join(deployDir, "scripts", "run_pd.sh")
+	dst := filepath.Join(paths.Deploy, "scripts", "run_pd.sh")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
@@ -525,18 +583,23 @@ type MonitorInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDir string) error {
-	if err := i.instance.InitConfig(e, user, cacheDir, deployDir); err != nil {
+func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, user string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, user, paths); err != nil {
 		return err
 	}
 
 	// transfer run script
-	cfg := scripts.NewPrometheusScript(i.GetHost(), deployDir, filepath.Join(deployDir, "data")).WithPort(uint64(i.GetPort()))
-	fp := filepath.Join(cacheDir, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
+	cfg := scripts.NewPrometheusScript(
+		i.GetHost(),
+		paths.Deploy,
+		paths.Data,
+		paths.Log,
+	).WithPort(uint64(i.GetPort()))
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst := filepath.Join(deployDir, "scripts", "run_prometheus.sh")
+	dst := filepath.Join(paths.Deploy, "scripts", "run_prometheus.sh")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
@@ -546,7 +609,7 @@ func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, d
 	}
 
 	// transfer config
-	fp = filepath.Join(cacheDir, fmt.Sprintf("tikv_%s.yml", i.GetHost()))
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("tikv_%s.yml", i.GetHost()))
 	// TODO: use real cluster name
 	cfig := config.NewPrometheusConfig("TiDB-Cluster")
 	uniqueHosts := set.NewStringSet()
@@ -583,7 +646,7 @@ func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, d
 	if err := cfig.ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst = filepath.Join(deployDir, "conf", "prometheus.yml")
+	dst = filepath.Join(paths.Deploy, "conf", "prometheus.yml")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
@@ -635,18 +698,18 @@ type GrafanaInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *GrafanaInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, deployDir string) error {
-	if err := i.instance.InitConfig(e, user, cacheDir, deployDir); err != nil {
+func (i *GrafanaInstance) InitConfig(e executor.TiOpsExecutor, user string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, user, paths); err != nil {
 		return err
 	}
 
 	// transfer run script
-	cfg := scripts.NewGrafanaScript(deployDir)
-	fp := filepath.Join(cacheDir, fmt.Sprintf("run_grafana_%s_%d.sh", i.GetHost(), i.GetPort()))
+	cfg := scripts.NewGrafanaScript(paths.Deploy)
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_grafana_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst := filepath.Join(deployDir, "scripts", "run_grafana.sh")
+	dst := filepath.Join(paths.Deploy, "scripts", "run_grafana.sh")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
@@ -656,31 +719,31 @@ func (i *GrafanaInstance) InitConfig(e executor.TiOpsExecutor, user, cacheDir, d
 	}
 
 	// transfer config
-	fp = filepath.Join(cacheDir, fmt.Sprintf("grafana_%s.ini", i.GetHost()))
-	if err := config.NewGrafanaConfig(i.GetHost(), deployDir).ConfigToFile(fp); err != nil {
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("grafana_%s.ini", i.GetHost()))
+	if err := config.NewGrafanaConfig(i.GetHost(), paths.Deploy).ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst = filepath.Join(deployDir, "conf", "grafana.ini")
+	dst = filepath.Join(paths.Deploy, "conf", "grafana.ini")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
 
 	// transfer dashboard.yml
-	fp = filepath.Join(cacheDir, fmt.Sprintf("dashboard_%s.yml", i.GetHost()))
-	if err := config.NewDashboardConfig("test-cluster", deployDir).ConfigToFile(fp); err != nil {
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("dashboard_%s.yml", i.GetHost()))
+	if err := config.NewDashboardConfig("test-cluster", paths.Deploy).ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst = filepath.Join(deployDir, "conf", "dashboard.yml")
+	dst = filepath.Join(paths.Deploy, "conf", "dashboard.yml")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
 
 	// transfer datasource.yml
-	fp = filepath.Join(cacheDir, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
 	if err := config.NewDatasourceConfig("test-cluster", i.GetHost()).ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst = filepath.Join(deployDir, "conf", "datasource.yml")
+	dst = filepath.Join(paths.Deploy, "conf", "datasource.yml")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}

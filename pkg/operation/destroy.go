@@ -2,6 +2,7 @@ package operator
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
@@ -19,7 +20,7 @@ func Destroy(
 	for _, com := range coms {
 		err := DestroyComponent(getter, com.Instances())
 		if err != nil {
-			return errors.Annotatef(err, "failed to stop %s", com.Name())
+			return errors.Annotatef(err, "failed to destroy %s", com.Name())
 		}
 	}
 	return nil
@@ -39,16 +40,28 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance) error {
 		log.Infof("Destroying instance %s", ins.GetHost())
 
 		// Stop by systemd.
-		var command string
+		delPaths := make([]string, 0)
 		switch name {
 		case meta.ComponentTiKV, meta.ComponentPD, meta.ComponentPump, meta.ComponentDrainer, meta.ComponentPrometheus, meta.ComponentAlertManager:
-			command = command + fmt.Sprintf("rm -rf %s;", ins.DataDir())
+			delPaths = append(delPaths, ins.DataDir())
+			fallthrough
 		default:
-			command = ""
+			delPaths = append(delPaths, ins.LogDir())
 		}
-		command = command + fmt.Sprintf("rm -rf %s;", ins.DeployDir()) + fmt.Sprintf("rm -rf /etc/systemd/system/%s;", ins.ServiceName())
+
+		// In TiDB-Ansible, deploy dir are shared by all components on the same
+		// host, so not deleting it.
+		// TODO: this may leave undeleted files when destroying the cluster, fix
+		// that later.
+		if !ins.IsImported() {
+			delPaths = append(delPaths, ins.DeployDir())
+		} else {
+			log.Warnf("Deploy dir %s not deleted for TiDB-Ansible imported instance %s.",
+				ins.DeployDir(), ins.InstanceName())
+		}
+		delPaths = append(delPaths, fmt.Sprintf("/etc/systemd/system/%s", ins.ServiceName()))
 		c := module.ShellModuleConfig{
-			Command:  command,
+			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delPaths, " ")),
 			Sudo:     true, // the .service files are in a directory owned by root
 			Chdir:    "",
 			UseShell: false,

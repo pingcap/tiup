@@ -14,12 +14,16 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
+	"github.com/fatih/color"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
 	"github.com/pingcap-incubator/tiops/pkg/task"
+	"github.com/pingcap-incubator/tiops/pkg/utils"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
@@ -44,6 +48,19 @@ func newDestroyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			promptMsg := fmt.Sprintf("This operation will destroy TiDB %s cluster %s and its data, do you want to continue?\n[Y]es/[N]o:",
+				color.HiYellowString(metadata.Version), color.HiYellowString(clusterName))
+			ans := utils.Prompt(promptMsg)
+			switch strings.ToLower(ans) {
+			case "y", "yes":
+				log.Infof("Destrying cluster...")
+			case "n", "no":
+				return errors.New("operation cancelled by user")
+			default:
+				return errors.New("unknown input, abort")
+			}
+
 			t := task.NewBuilder().
 				SSHKeySet(
 					meta.ClusterPath(clusterName, "ssh", "id_rsa"),

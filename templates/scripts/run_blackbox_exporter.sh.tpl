@@ -6,6 +6,9 @@ set -e
 DEPLOY_DIR={{.DeployDir}}
 cd "${DEPLOY_DIR}" || exit 1
 
+exec > >(tee -i -a "{{.LogDir}}/blackbox_exporter.log")
+exec 2>&1
+
 {{- if .NumaNode}}
 exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/blackbox_exporter/blackbox_exporter \
 {{- else}}

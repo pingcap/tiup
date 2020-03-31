@@ -27,14 +27,16 @@ import (
 type BlackboxExporterScript struct {
 	Port      uint64
 	DeployDir string
+	LogDir    string
 	NumaNode  string
 }
 
 // NewBlackboxExporterScript returns a BlackboxExporterScript with given arguments
-func NewBlackboxExporterScript(deployDir string) *BlackboxExporterScript {
+func NewBlackboxExporterScript(deployDir, logDir string) *BlackboxExporterScript {
 	return &BlackboxExporterScript{
 		Port:      9115,
 		DeployDir: deployDir,
+		LogDir:    logDir,
 	}
 }
 

@@ -29,16 +29,18 @@ type AlertManagerScript struct {
 	ClusterPort uint64
 	DeployDir   string
 	DataDir     string
+	LogDir      string
 	NumaNode    string
 }
 
 // NewAlertManagerScript returns a AlertManagerScript with given arguments
-func NewAlertManagerScript(deployDir, dataDir string) *AlertManagerScript {
+func NewAlertManagerScript(deployDir, dataDir, logDir string) *AlertManagerScript {
 	return &AlertManagerScript{
 		WebPort:     8888,
 		ClusterPort: 9999,
 		DeployDir:   deployDir,
 		DataDir:     dataDir,
+		LogDir:      logDir,
 	}
 }
 

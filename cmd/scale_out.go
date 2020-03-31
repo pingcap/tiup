@@ -142,6 +142,17 @@ func buildScaleOutTask(
 		if !strings.HasPrefix(deployDir, "/") {
 			deployDir = filepath.Join("/home/", metadata.User, deployDir)
 		}
+		// data dir would be empty for components which don't need it
+		dataDir := inst.DataDir()
+		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
+			dataDir = filepath.Join("/home/", metadata.User, dataDir)
+		}
+		// log dir will always be with values, but might not used by the component
+		logDir := inst.LogDir()
+		if !strings.HasPrefix(logDir, "/") {
+			logDir = filepath.Join("/home/", metadata.User, logDir)
+		}
+
 		// Deploy component
 		t := task.NewBuilder().
 			UserSSH(inst.GetHost(), metadata.User).
@@ -149,10 +160,19 @@ func buildScaleOutTask(
 				filepath.Join(deployDir, "bin"),
 				filepath.Join(deployDir, "conf"),
 				filepath.Join(deployDir, "scripts"),
-				filepath.Join(deployDir, "log")).
+				dataDir,
+				logDir).
 			CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
-			ScaleConfig(clusterName, metadata.Topology, inst, metadata.User, deployDir).
-			Build()
+			ScaleConfig(clusterName,
+				metadata.Topology,
+				inst,
+				metadata.User,
+				meta.DirPaths{
+					Deploy: deployDir,
+					Data:   dataDir,
+					Log:    logDir,
+				},
+			).Build()
 		deployCompTasks = append(deployCompTasks, t)
 	})
 
@@ -161,10 +181,22 @@ func buildScaleOutTask(
 		if !strings.HasPrefix(deployDir, "/") {
 			deployDir = filepath.Join("/home/", metadata.User, deployDir)
 		}
+		dataDir := inst.DataDir()
+		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
+			dataDir = filepath.Join("/home/", metadata.User, dataDir)
+		}
+		logDir := inst.LogDir()
+		if !strings.HasPrefix(logDir, "/") {
+			logDir = filepath.Join("/home/", metadata.User, logDir)
+		}
 		// Refresh all configuration
 		t := task.NewBuilder().
 			UserSSH(inst.GetHost(), metadata.User).
-			InitConfig(clusterName, inst, metadata.User, deployDir).
+			InitConfig(clusterName, inst, metadata.User, meta.DirPaths{
+				Deploy: deployDir,
+				Data:   dataDir,
+				Log:    logDir,
+			}).
 			Build()
 		refreshConfigTasks = append(refreshConfigTasks, t)
 	})

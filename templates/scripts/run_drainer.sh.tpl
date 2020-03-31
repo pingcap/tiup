@@ -26,6 +26,6 @@ exec bin/drainer \
     --addr="{{.IP}}:{{.Port}}" \
     --pd-urls="{{template "PDList" .Endpoints}}" \
     --data-dir="{{.DataDir}}" \
-    --log-file="log/drainer.log" \
+    --log-file="{{.LogDir}}/drainer.log" \
     --config=conf/drainer.toml \
-    --initial-commit-ts="{{.CommitTs}}" 2>> "log/drainer_stderr.log"
+    --initial-commit-ts="{{.CommitTs}}" 2>> "{{.LogDir}}/drainer_stderr.log"

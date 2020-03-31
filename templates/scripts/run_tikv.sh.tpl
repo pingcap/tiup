@@ -31,4 +31,4 @@ exec bin/tikv-server \
     --pd "{{template "PDList" .Endpoints}}" \
     --data-dir "{{.DataDir}}" \
     --config conf/tikv.toml \
-    --log-file "log/tikv.log" 2>> "log/tikv_stderr.log"
+    --log-file "{{.LogDir}}/tikv.log" 2>> "{{.LogDir}}/tikv_stderr.log"

@@ -34,12 +34,13 @@ type PDScript struct {
 	PeerPort   uint64
 	DeployDir  string
 	DataDir    string
+	LogDir     string
 	NumaNode   string
 	Endpoints  []*PDScript
 }
 
 // NewPDScript returns a PDScript with given arguments
-func NewPDScript(name, ip, deployDir, dataDir string) *PDScript {
+func NewPDScript(name, ip, deployDir, dataDir, logDir string) *PDScript {
 	return &PDScript{
 		Name:       name,
 		Scheme:     "http",
@@ -48,6 +49,7 @@ func NewPDScript(name, ip, deployDir, dataDir string) *PDScript {
 		PeerPort:   2380,
 		DeployDir:  deployDir,
 		DataDir:    dataDir,
+		LogDir:     logDir,
 	}
 }
 
@@ -131,8 +133,8 @@ type PDScaleScript struct {
 }
 
 // NewPDScaleScript return a new PDScaleScript
-func NewPDScaleScript(name, ip, deployDir, dataDir string) *PDScaleScript {
-	return &PDScaleScript{*NewPDScript(name, ip, deployDir, dataDir)}
+func NewPDScaleScript(name, ip, deployDir, dataDir, logDir string) *PDScaleScript {
+	return &PDScaleScript{*NewPDScript(name, ip, deployDir, dataDir, logDir)}
 }
 
 // WithScheme set Scheme field of PDScaleScript

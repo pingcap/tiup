@@ -29,5 +29,5 @@ exec bin/pd-server \
     --advertise-peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
     --data-dir="{{.DataDir}}" \
     --initial-cluster="{{template "PDList" .Endpoints}}" \
-    --log-file="log/pd.log" 2>> "log/pd_stderr.log"
+    --log-file="{{.LogDir}}/pd.log" 2>> "{{.LogDir}}/pd_stderr.log"
   

@@ -26,7 +26,7 @@ type ScaleConfig struct {
 	instance   meta.Instance
 	base       *meta.TopologySpecification
 	deployUser string
-	deployDir  string
+	paths      meta.DirPaths
 }
 
 // Execute implements the Task interface
@@ -37,12 +37,12 @@ func (c *ScaleConfig) Execute(ctx *Context) error {
 		return ErrNoExecutor
 	}
 
-	cacheConfigDir := meta.ClusterPath(c.name, "config")
-	if err := os.MkdirAll(cacheConfigDir, 0755); err != nil {
+	c.paths.Cache = meta.ClusterPath(c.name, "config")
+	if err := os.MkdirAll(c.paths.Cache, 0755); err != nil {
 		return err
 	}
 
-	return c.instance.ScaleConfig(exec, c.base, c.deployUser, cacheConfigDir, c.deployDir)
+	return c.instance.ScaleConfig(exec, c.base, c.deployUser, c.paths)
 }
 
 // Rollback implements the Task interface
@@ -52,6 +52,6 @@ func (c *ScaleConfig) Rollback(ctx *Context) error {
 
 // String implements the fmt.Stringer interface
 func (c *ScaleConfig) String() string {
-	return fmt.Sprintf("ScaleConfig: cluster=%s, user=%s, host=%s, service=%s, dir=%s",
-		c.name, c.deployUser, c.instance.GetHost(), c.instance.ServiceName(), c.deployDir)
+	return fmt.Sprintf("ScaleConfig: cluster=%s, user=%s, host=%s, service=%s, %s",
+		c.name, c.deployUser, c.instance.GetHost(), c.instance.ServiceName(), c.paths)
 }

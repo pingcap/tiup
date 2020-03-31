@@ -101,10 +101,10 @@ func parseInventory(dir string, inv *aini.InventoryData) (string, *meta.ClusterM
 		return "", nil, err
 	}
 	if port, ok := grpVarsAll["blackbox_exporter_port"]; ok {
-		clsMeta.Topology.MonitoredOptions.BlackboxExporterPort, _ = strconv.Atoi(port)
+		topo.MonitoredOptions.BlackboxExporterPort, _ = strconv.Atoi(port)
 	}
 	if port, ok := grpVarsAll["node_exporter_port"]; ok {
-		clsMeta.Topology.MonitoredOptions.NodeExporterPort, _ = strconv.Atoi(port)
+		topo.MonitoredOptions.NodeExporterPort, _ = strconv.Atoi(port)
 	}
 
 	// set hosts

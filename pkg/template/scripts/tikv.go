@@ -30,18 +30,20 @@ type TiKVScript struct {
 	StatusPort uint64
 	DeployDir  string
 	DataDir    string
+	LogDir     string
 	NumaNode   string
 	Endpoints  []*PDScript
 }
 
 // NewTiKVScript returns a TiKVScript with given arguments
-func NewTiKVScript(ip, deployDir, dataDir string) *TiKVScript {
+func NewTiKVScript(ip, deployDir, dataDir, logDir string) *TiKVScript {
 	return &TiKVScript{
 		IP:         ip,
 		Port:       20160,
 		StatusPort: 20180,
 		DeployDir:  deployDir,
 		DataDir:    dataDir,
+		LogDir:     logDir,
 	}
 }
 

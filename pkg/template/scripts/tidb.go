@@ -29,17 +29,19 @@ type TiDBScript struct {
 	Port       uint64
 	StatusPort uint64
 	DeployDir  string
+	LogDir     string
 	NumaNode   string
 	Endpoints  []*PDScript
 }
 
 // NewTiDBScript returns a TiDBScript with given arguments
-func NewTiDBScript(ip, deployDir string) *TiDBScript {
+func NewTiDBScript(ip, deployDir, logDir string) *TiDBScript {
 	return &TiDBScript{
 		IP:         ip,
 		Port:       4000,
 		StatusPort: 10080,
 		DeployDir:  deployDir,
+		LogDir:     logDir,
 	}
 }
 

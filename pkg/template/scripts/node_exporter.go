@@ -25,16 +25,18 @@ import (
 
 // NodeExporterScript represent the data to generate NodeExporter config
 type NodeExporterScript struct {
-	DeployDir string
-	NumaNode  string
 	Port      uint64
+	DeployDir string
+	LogDir    string
+	NumaNode  string
 }
 
 // NewNodeExporterScript returns a NodeExporterScript with given arguments
-func NewNodeExporterScript(deployDir string) *NodeExporterScript {
+func NewNodeExporterScript(deployDir, logDir string) *NodeExporterScript {
 	return &NodeExporterScript{
-		DeployDir: deployDir,
 		Port:      9100,
+		DeployDir: deployDir,
+		LogDir:    logDir,
 	}
 }
 

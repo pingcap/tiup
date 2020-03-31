@@ -26,7 +26,7 @@ type InitConfig struct {
 	name       string
 	instance   meta.Instance
 	deployUser string
-	deployDir  string
+	paths      meta.DirPaths
 }
 
 // Execute implements the Task interface
@@ -37,12 +37,12 @@ func (c *InitConfig) Execute(ctx *Context) error {
 		return ErrNoExecutor
 	}
 
-	cacheConfigDir := meta.ClusterPath(c.name, "config")
-	if err := os.MkdirAll(cacheConfigDir, 0755); err != nil {
+	c.paths.Cache = meta.ClusterPath(c.name, "config")
+	if err := os.MkdirAll(c.paths.Cache, 0755); err != nil {
 		return err
 	}
 
-	return c.instance.InitConfig(exec, c.deployUser, cacheConfigDir, c.deployDir)
+	return c.instance.InitConfig(exec, c.deployUser, c.paths)
 }
 
 // Rollback implements the Task interface
@@ -52,7 +52,7 @@ func (c *InitConfig) Rollback(ctx *Context) error {
 
 // String implements the fmt.Stringer interface
 func (c *InitConfig) String() string {
-	return fmt.Sprintf("InitConfig: cluster=%s, user=%s, host=%s, path=%s, targetDir=%s",
+	return fmt.Sprintf("InitConfig: cluster=%s, user=%s, host=%s, path=%s, %s",
 		c.name, c.deployUser, c.instance.GetHost(),
-		filepath.Join(meta.ClusterPath(c.name, "config", c.instance.ServiceName())), c.deployDir)
+		filepath.Join(meta.ClusterPath(c.name, "config", c.instance.ServiceName())), c.paths)
 }

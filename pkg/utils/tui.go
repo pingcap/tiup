@@ -18,8 +18,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"syscall"
 
 	"github.com/AstroProfundis/tabby"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // PrintTable accepts a matrix of strings and print them as ASCII table to terminal
@@ -64,4 +66,18 @@ func Prompt(prompt string) string {
 		return ""
 	}
 	return strings.TrimSuffix(input, "\n")
+}
+
+// GetPasswd reads a password input from console
+func GetPasswd(prompt string) string {
+	if prompt != "" {
+		prompt += " " // append a whitespace
+	}
+	fmt.Printf(prompt)
+
+	input, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(strings.Trim(string(input), "\n"))
 }

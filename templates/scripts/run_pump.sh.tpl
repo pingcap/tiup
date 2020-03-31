@@ -27,5 +27,5 @@ exec bin/pump \
     --advertise-addr="{{.Host}}:{{.Port}}" \
     --pd-urls="{{template "PDList" .Endpoints}}" \
     --data-dir="{{.DataDir}}" \
-    --log-file="log/pump.log" \
-    --config=conf/pump.toml 2>> "log/pump_stderr.log"
+    --log-file="{{.LogDir}}/pump.log" \
+    --config=conf/pump.toml 2>> "{{.LogDir}}/pump_stderr.log"

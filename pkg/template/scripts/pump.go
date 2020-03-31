@@ -30,19 +30,21 @@ type PumpScript struct {
 	Port      uint64
 	DeployDir string
 	DataDir   string
+	LogDir    string
 	NumaNode  string
 	CommitTs  int64
 	Endpoints []*PDScript
 }
 
 // NewPumpScript returns a PumpScript with given arguments
-func NewPumpScript(nodeID, host, deployDir, dataDir string) *PumpScript {
+func NewPumpScript(nodeID, host, deployDir, dataDir, logDir string) *PumpScript {
 	return &PumpScript{
 		NodeID:    nodeID,
 		Host:      host,
 		Port:      8250,
 		DeployDir: deployDir,
 		DataDir:   dataDir,
+		LogDir:    logDir,
 	}
 }
 

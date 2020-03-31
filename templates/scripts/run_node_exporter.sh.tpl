@@ -6,6 +6,9 @@ set -e
 DEPLOY_DIR={{.DeployDir}}
 cd "${DEPLOY_DIR}" || exit 1
 
+exec > >(tee -i -a "{{.LogDir}}/node_exporter.log")
+exec 2>&1
+
 {{- if .NumaNode}}
 exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/node_exporter/node_exporter \
 {{- else}}

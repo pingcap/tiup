@@ -28,4 +28,4 @@ exec bin/tidb-server \
     --store="tikv" \
     --path="{{template "PDList" .Endpoints}}" \
     --log-slow-query="log/tidb_slow_query.log" \
-    --log-file="log/tidb.log" 2>> "log/tidb_stderr.log"
+    --log-file="{{.LogDir}}/tidb.log" 2>> "{{.LogDir}}/tidb_stderr.log"

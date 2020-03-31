@@ -9,6 +9,9 @@ cd "${DEPLOY_DIR}" || exit 1
 
 cp {{.DeployDir}}/bin/prometheus/*.rules.yml {{.DeployDir}}/conf/
 
+exec > >(tee -i -a "{{.LogDir}}/prometheus.log")
+exec 2>&1
+
 {{- if .NumaNode}}
 exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/prometheus/prometheus \
 {{- else}}
