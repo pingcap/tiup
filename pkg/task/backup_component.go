@@ -64,8 +64,14 @@ func (c *BackupComponent) Execute(ctx *Context) error {
 			break
 		}
 	}
-	if !foundVersion {
+	if !fromVer.IsNightly() && !foundVersion {
 		return errors.Errorf("cannot found previous version %v in %s manifest", c.fromVer, c.component)
+	}
+	if fromVer.IsNightly() && m.Nightly == nil {
+		return errors.Errorf("nightly version unsupported for component %s", c.component)
+	}
+	if fromVer.IsNightly() {
+		versionInfo = *m.Nightly
 	}
 
 	dstDir := filepath.Join(c.dstDir, "bin")
