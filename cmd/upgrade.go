@@ -114,12 +114,43 @@ func upgrade(name, version string, opt upgradeOptions) error {
 			if !strings.HasPrefix(deployDir, "/") {
 				deployDir = filepath.Join("/home/", metadata.User, deployDir)
 			}
+			// data dir would be empty for components which don't need it
+			dataDir := inst.DataDir()
+			if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
+				dataDir = filepath.Join("/home/", metadata.User, dataDir)
+			}
+			// log dir will always be with values, but might not used by the component
+			logDir := inst.LogDir()
+			if !strings.HasPrefix(logDir, "/") {
+				logDir = filepath.Join("/home/", metadata.User, logDir)
+			}
 			// Deploy component
-			t := task.NewBuilder().
-				BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
-				CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
-				Build()
-			copyCompTasks = append(copyCompTasks, t)
+			t := task.NewBuilder()
+
+			if inst.IsImported() {
+				switch inst.ComponentName() {
+				case meta.ComponentPrometheus, meta.ComponentGrafana:
+					t.CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
+				default:
+					t.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
+						CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
+				}
+				t.InitConfig(
+						name,
+						inst,
+						metadata.User,
+						meta.DirPaths{
+							Deploy: deployDir,
+							Data:   dataDir,
+							Log:    logDir,
+							Cache:  meta.ClusterPath(name, "config"),
+						},
+					)
+			} else {
+				t.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
+					CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
+			}
+			copyCompTasks = append(copyCompTasks, t.Build())
 		}
 	}
 
