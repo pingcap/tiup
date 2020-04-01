@@ -21,6 +21,7 @@ func (c *PumpComponent) Name() string {
 func (c *PumpComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.PumpServers))
 	for _, s := range c.PumpServers {
+		s := s
 		ins = append(ins, &PumpInstance{instance{
 			InstanceSpec: s,
 			name:         c.Name(),

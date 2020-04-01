@@ -264,6 +264,7 @@ func (c *TiDBComponent) Name() string {
 func (c *TiDBComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.TiDBServers))
 	for _, s := range c.TiDBServers {
+		s := s
 		ins = append(ins, &TiDBInstance{instance{
 			InstanceSpec: s,
 			name:         c.Name(),
@@ -340,6 +341,7 @@ func (c *TiKVComponent) Name() string {
 func (c *TiKVComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.TiKVServers))
 	for _, s := range c.TiKVServers {
+		s := s
 		ins = append(ins, &TiKVInstance{instance{
 			InstanceSpec: s,
 			name:         c.Name(),
@@ -420,6 +422,7 @@ func (c *PDComponent) Name() string {
 func (c *PDComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.PDServers))
 	for _, s := range c.PDServers {
+		s := s
 		ins = append(ins, &PDInstance{
 			Name: s.Name,
 			instance: instance{
