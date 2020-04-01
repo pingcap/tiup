@@ -94,13 +94,11 @@ func Upgrade(
 			continue
 		}
 
-		if err := StopComponent(getter, instances); err != nil {
-			return errors.Annotatef(err, "failed to stop %s", component.Name())
-		}
-		if err := StartComponent(getter, instances); err != nil {
-			return errors.Annotatef(err, "failed to start %s", component.Name())
+		if err := RestartComponent(getter, instances); err != nil {
+			return errors.Annotatef(err, "failed to restart %s", component.Name())
 		}
 	}
+
 	return nil
 }
 
