@@ -359,13 +359,17 @@ func StartComponent(getter ExecutorGetter, instances []meta.Instance) error {
 
 	for _, ins := range instances {
 		e := getter.Get(ins.GetHost())
-		log.Infof("\tStarting instance %s", ins.GetHost())
+		log.Infof("\tStarting instance %s %s:%d",
+			ins.ComponentName(),
+			ins.GetHost(),
+			ins.GetPort())
 
 		// Start by systemd.
 		c := module.SystemdModuleConfig{
 			Unit:         ins.ServiceName(),
 			ReloadDaemon: true,
 			Action:       "start",
+			Enabled:      true,
 		}
 		systemd := module.NewSystemdModule(c)
 		stdout, stderr, err := systemd.Execute(e)
@@ -373,23 +377,32 @@ func StartComponent(getter ExecutorGetter, instances []meta.Instance) error {
 		if len(stdout) > 0 {
 			fmt.Println(string(stdout))
 		}
-		if len(stderr) > 0 {
+		if len(stderr) > 0 && !bytes.Contains(stderr, []byte("Created symlink ")) {
 			log.Errorf(string(stderr))
 		}
 
 		if err != nil {
-			return errors.Annotatef(err, "failed to start: %s", ins.GetHost())
+			return errors.Annotatef(err, "failed to start: %s %s:%d",
+				ins.ComponentName(),
+				ins.GetHost(),
+				ins.GetPort())
 		}
 
 		// Check ready.
 		err = ins.Ready(e)
 		if err != nil {
-			str := fmt.Sprintf("\t%s failed to start: %s", ins.GetHost(), err)
+			str := fmt.Sprintf("\t%s %s:%d failed to start: %s",
+				ins.ComponentName(),
+				ins.GetHost(),
+				ins.GetPort(), err)
 			log.Errorf(str)
 			return errors.Annotatef(err, str)
 		}
 
-		log.Infof("\tStart %s success", ins.GetHost())
+		log.Infof("\tStart %s %s:%d success",
+			ins.ComponentName(),
+			ins.GetHost(),
+			ins.GetPort())
 	}
 
 	return nil
@@ -406,8 +419,9 @@ func StopMonitored(getter ExecutorGetter, instance meta.Instance, options meta.M
 		log.Infof("Stopping component %s", comp)
 
 		c := module.SystemdModuleConfig{
-			Unit:   fmt.Sprintf("%s-%d.service", comp, ports[comp]),
-			Action: "stop",
+			Unit:         fmt.Sprintf("%s-%d.service", comp, ports[comp]),
+			Action:       "stop",
+			ReloadDaemon: true,
 		}
 		systemd := module.NewSystemdModule(c)
 		stdout, stderr, err := systemd.Execute(e)
@@ -420,11 +434,17 @@ func StopMonitored(getter ExecutorGetter, instance meta.Instance, options meta.M
 		}
 
 		if err != nil {
-			return errors.Annotatef(err, "failed to stop: %s", instance.GetHost())
+			return errors.Annotatef(err, "failed to stop: %s %s:%d",
+				instance.ComponentName(),
+				instance.GetHost(),
+				instance.GetPort())
 		}
 
 		if err := meta.PortStopped(e, ports[comp]); err != nil {
-			str := fmt.Sprintf("\t%s failed to stop: %s", instance.GetHost(), err)
+			str := fmt.Sprintf("\t%s %s:%d failed to stop: %s",
+				instance.ComponentName(),
+				instance.GetHost(),
+				instance.GetPort(), err)
 			log.Errorf(str)
 			return errors.Annotatef(err, str)
 		}
@@ -448,8 +468,9 @@ func StopComponent(getter ExecutorGetter, instances []meta.Instance) error {
 
 		// Stop by systemd.
 		c := module.SystemdModuleConfig{
-			Unit:   ins.ServiceName(),
-			Action: "stop",
+			Unit:         ins.ServiceName(),
+			Action:       "stop",
+			ReloadDaemon: true, // always reload before operate
 			// Scope: "",
 		}
 		systemd := module.NewSystemdModule(c)
@@ -472,17 +493,27 @@ func StopComponent(getter ExecutorGetter, instances []meta.Instance) error {
 		}
 
 		if err != nil {
-			return errors.Annotatef(err, "failed to stop: %s", ins.GetHost())
+			return errors.Annotatef(err, "failed to stop: %s %s:%d",
+				ins.ComponentName(),
+				ins.GetHost(),
+				ins.GetPort())
 		}
 
 		err = ins.WaitForDown(e)
 		if err != nil {
-			str := fmt.Sprintf("\t%s failed to stop: %s", ins.GetHost(), err)
+			str := fmt.Sprintf("\t%s %s:%d failed to stop: %s",
+				ins.ComponentName(),
+				ins.GetHost(),
+				ins.GetPort(),
+				err)
 			log.Errorf(str)
 			return errors.Annotatef(err, str)
 		}
 
-		log.Infof("\tStop %s success", ins.GetHost())
+		log.Infof("\tStop %s %s:%d success",
+			ins.ComponentName(),
+			ins.GetHost(),
+			ins.GetPort())
 	}
 
 	return nil

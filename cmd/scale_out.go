@@ -125,6 +125,7 @@ func buildScaleOutTask(
 	metadata.Topology.IterInstance(func(instance meta.Instance) {
 		initializedHosts.Insert(instance.GetHost())
 	})
+	// uninitializedHosts are hosts which haven't been initialized yet
 	uninitializedHosts := set.NewStringSet()
 	newPart.IterInstance(func(instance meta.Instance) {
 		if host := instance.GetHost(); !initializedHosts.Exist(host) {
