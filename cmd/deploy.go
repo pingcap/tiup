@@ -74,7 +74,7 @@ func newDeploy() *cobra.Command {
 
 			if opt.usePasswd {
 				// FIXME: We should prompt for password when necessary automatically.
-				opt.password = utils.GetPasswd("Password:")
+				opt.password = cliutil.PromptForPassword("Password: ")
 				fmt.Println("")
 			}
 
@@ -130,17 +130,13 @@ func confirmTopology(clusterName, version string, topo *meta.Specification) erro
 		})
 	})
 
-	utils.PrintTable(clusterTable, true)
+	cliutil.PrintTable(clusterTable, true)
 
 	log.Warnf("Attention:")
 	log.Warnf("    1. If the topology is not what you expected, check your yaml file.")
 	log.Warnf("    1. Please confirm there is no port/directory conflicts in same host.")
 
-	input, confirmed := utils.Confirm(fmt.Sprintf("Do you want to continue?[Y]es/[N]o:"))
-	if !confirmed {
-		return errors.Errorf("operation cancelled by user (input: %s)", input)
-	}
-	return nil
+	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 }
 
 func deploy(clusterName, version, topoFile string, opt deployOptions) error {

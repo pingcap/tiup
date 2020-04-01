@@ -17,8 +17,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/pingcap-incubator/tiops/pkg/cliutil"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
-	"github.com/pingcap-incubator/tiops/pkg/utils"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
@@ -63,6 +63,6 @@ func listCluster() error {
 		})
 	}
 
-	utils.PrintTable(clusterTable, true)
+	cliutil.PrintTable(clusterTable, true)
 	return nil
 }

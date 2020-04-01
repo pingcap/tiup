@@ -22,11 +22,11 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/pingcap-incubator/tiops/pkg/cliutil"
 	"github.com/pingcap-incubator/tiops/pkg/edit"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
-	"github.com/pingcap-incubator/tiops/pkg/utils"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
@@ -114,7 +114,7 @@ func editTopo(clusterName string, metadata *meta.ClusterMeta) error {
 
 	msg := fmt.Sprintf(color.HiYellowString("Please check change, do you want to apply the change?"))
 	msg = msg + "\n[Y]es/[N]o:"
-	ans := utils.Prompt(msg)
+	ans := cliutil.Prompt(msg)
 	switch strings.ToLower(ans) {
 	case "y", "yes":
 		log.Infof("Apply the change...")

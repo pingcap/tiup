@@ -24,8 +24,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/pingcap-incubator/tiops/pkg/base52"
+	"github.com/pingcap-incubator/tiops/pkg/cliutil"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
-	"github.com/pingcap-incubator/tiops/pkg/utils"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
@@ -95,7 +95,7 @@ func showAuditList() error {
 		return clusterTable[i+1][1] > clusterTable[j+1][1]
 	})
 
-	utils.PrintTable(clusterTable, true)
+	cliutil.PrintTable(clusterTable, true)
 	return nil
 }
 

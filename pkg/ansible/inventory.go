@@ -15,15 +15,13 @@ package ansible
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
-	"strings"
 
+	"github.com/pingcap-incubator/tiops/pkg/cliutil"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
-	"github.com/pingcap-incubator/tiops/pkg/utils"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/relex/aini"
 	"gopkg.in/yaml.v2"
@@ -91,26 +89,19 @@ func parseInventory(dir string, inv *aini.InventoryData) (string, *meta.ClusterM
 		log.Warnf("If you want to continue importing, you'll have to set a new name for the cluster.")
 
 		// prompt user for a chance to set a new cluster name
-		if ans, ok := utils.Confirm("Do you want to continue? [Y]es/[N]o:"); !ok {
-			fmt.Println(fmt.Sprintf("Your answer is %s, exit.", ans))
-			return "", nil, errors.New("operation cancelled by user")
+		if err := cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
+			return "", nil, err
 		}
-		clsName = utils.Prompt("New cluster name:")
+		clsName = cliutil.Prompt("New cluster name:")
 	}
 
-	promptMsg := fmt.Sprintf("Prepared to import TiDB %s cluster %s, do you want to continue?\n[Y]es/[N]o:",
-		clsMeta.Version, clsName)
-	ans, ok := utils.Confirm(promptMsg)
-	if ok {
-		log.Infof("Importing cluster...")
-	} else {
-		switch strings.ToLower(ans) {
-		case "n", "no":
-			return "", nil, errors.New("operation cancelled by user")
-		default:
-			return "", nil, errors.New("unknown input, abort")
-		}
+	if err := cliutil.PromptForConfirmOrAbortError(
+		"Prepared to import TiDB %s cluster %s.\nDo you want to continue? [y/N]:",
+		clsMeta.Version,
+		clsName); err != nil {
+		return "", nil, err
 	}
+	log.Infof("Importing cluster...")
 
 	// set global vars in group_vars/all.yml
 	grpVarsAll, err := readGroupVars(dir, groupVarsGlobal)

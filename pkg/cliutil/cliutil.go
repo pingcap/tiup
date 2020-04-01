@@ -28,8 +28,9 @@ import (
 )
 
 var (
-	errNS           = errorx.NewNamespace("cli")
-	errMismatchArgs = errNS.NewType("mismatch_args", errutil.ErrTraitPreCheck)
+	errNS             = errorx.NewNamespace("cli")
+	errMismatchArgs   = errNS.NewType("mismatch_args", errutil.ErrTraitPreCheck)
+	errOperationAbort = errNS.NewType("operation_aborted", errutil.ErrTraitPreCheck)
 )
 
 var templateFuncs = template.FuncMap{

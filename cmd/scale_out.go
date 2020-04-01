@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/pingcap-incubator/tiops/pkg/bindversion"
+	"github.com/pingcap-incubator/tiops/pkg/cliutil"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
@@ -51,7 +52,7 @@ func newScaleOutCmd() *cobra.Command {
 				return cmd.Help()
 			}
 			if opt.usePasswd {
-				opt.password = utils.GetPasswd("Password:")
+				opt.password = cliutil.PromptForPassword("Password: ")
 				fmt.Println("")
 			}
 			if len(opt.keyFile) == 0 && len(opt.password) == 0 {

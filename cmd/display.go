@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/pingcap-incubator/tiops/pkg/cliutil"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
 	"github.com/pingcap-incubator/tiops/pkg/task"
@@ -156,7 +157,7 @@ func displayClusterTopology(opt *displayOption) error {
 		}
 	}
 
-	utils.PrintTable(clusterTable, true)
+	cliutil.PrintTable(clusterTable, true)
 
 	return nil
 }
