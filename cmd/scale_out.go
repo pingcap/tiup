@@ -102,12 +102,8 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 	if err != nil {
 		return err
 	}
-	if err := t.Execute(task.NewContext()); err != nil {
-		return err
-	}
 
-	metadata.Topology = mergedTopo
-	return meta.SaveClusterMeta(clusterName, metadata)
+	return t.Execute(task.NewContext())
 }
 
 func buildScaleOutTask(
@@ -230,7 +226,12 @@ func buildScaleOutTask(
 		ClusterSSH(metadata.Topology, metadata.User).
 		ClusterOperate(metadata.Topology, operator.StartOperation, operator.Options{}).
 		ClusterSSH(newPart, metadata.User).
+		Func("save meta", func() error {
+			metadata.Topology = mergedTopo
+			return meta.SaveClusterMeta(clusterName, metadata)
+		}).
 		ClusterOperate(newPart, operator.StartOperation, operator.Options{}).
 		Parallel(refreshConfigTasks...).
 		Build(), nil
+
 }

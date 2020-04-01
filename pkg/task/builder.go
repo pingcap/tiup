@@ -51,6 +51,15 @@ func (b *Builder) UserSSH(host, deployUser string) *Builder {
 	return b
 }
 
+// Func append a func task.
+func (b *Builder) Func(name string, fn func() error) *Builder {
+	b.tasks = append(b.tasks, &Func{
+		name: name,
+		fn:   fn,
+	})
+	return b
+}
+
 // ClusterSSH init all UserSSH need for the cluster.
 func (b *Builder) ClusterSSH(spec *meta.Specification, deployUser string) *Builder {
 	var tasks []Task
