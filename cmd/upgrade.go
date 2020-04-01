@@ -49,6 +49,9 @@ func newUpgradeCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&opt.options.Force, "force", false, "Force upgrade won't transfer leader")
+	cmd.Flags().StringSliceVarP(&opt.options.Roles, "role", "R", nil, "Only restart specified roles")
+	cmd.Flags().StringSliceVarP(&opt.options.Nodes, "node", "N", nil, "Only restart specified nodes")
+
 	return cmd
 }
 
