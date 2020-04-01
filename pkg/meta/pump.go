@@ -75,7 +75,7 @@ func (i *PumpInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string
 		paths.Deploy,
 		paths.Data,
 		paths.Log,
-	).WithPort(spec.Port).AppendEndpoints(i.instance.topo.Endpoints(user)...)
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.instance.topo.Endpoints(user)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pump_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {

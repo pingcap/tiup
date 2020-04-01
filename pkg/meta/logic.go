@@ -303,8 +303,7 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string
 		i.GetHost(),
 		paths.Deploy,
 		paths.Log,
-	).WithPort(spec.Port).
-		WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(user)...)
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(user)...)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -382,8 +381,7 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string
 		paths.Deploy,
 		paths.Data,
 		paths.Log,
-	).WithPort(spec.Port).
-		WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(user)...)
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(user)...)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tikv_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -511,7 +509,7 @@ func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, clu
 		paths.Deploy,
 		paths.Data,
 		paths.Log,
-	).WithPeerPort(spec.PeerPort).WithClientPort(spec.ClientPort).AppendEndpoints(b.Endpoints(user)...)
+	).WithPeerPort(spec.PeerPort).WithNumaNode(spec.NumaNode).WithClientPort(spec.ClientPort).AppendEndpoints(b.Endpoints(user)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	log.Infof("script path: %s", fp)

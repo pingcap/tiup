@@ -20,6 +20,7 @@ import (
 
 	"github.com/pingcap-incubator/tiops/pkg/bindversion"
 	"github.com/pingcap-incubator/tiops/pkg/cliutil"
+	"github.com/pingcap-incubator/tiops/pkg/executor"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
@@ -56,7 +57,19 @@ func newScaleOutCmd() *cobra.Command {
 				fmt.Println("")
 			}
 			if len(opt.keyFile) == 0 && len(opt.password) == 0 {
-				return errPasswordKeyAtLeastOne
+				// FIXME: We should lookup identity key automatically.
+				return executor.ErrSSHRequireCredential.
+					New("Identity file and password is unspecified").
+					WithProperty(cliutil.SuggestionFromTemplate(`
+You should specify either SSH identity file or password.
+
+To SSH connect using identity file:
+  {{ColorCommand}}{{OsArgs}} -i <file>{{ColorReset}}
+
+To SSH connect using password:
+  {{ColorCommand}}{{OsArgs}} --password{{ColorReset}}
+
+`, nil))
 			}
 
 			logger.EnableAuditLog()

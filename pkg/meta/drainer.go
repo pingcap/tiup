@@ -75,7 +75,7 @@ func (i *DrainerInstance) InitConfig(e executor.TiOpsExecutor, cluster, user str
 		paths.Deploy,
 		paths.Data,
 		paths.Log,
-	).WithPort(spec.Port).AppendEndpoints(i.instance.topo.Endpoints(user)...)
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.instance.topo.Endpoints(user)...)
 
 	cfg.WithCommitTs(spec.CommitTS)
 

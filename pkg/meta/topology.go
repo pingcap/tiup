@@ -100,7 +100,7 @@ type TiDBSpec struct {
 	StatusPort int           `yaml:"status_port" default:"10080"`
 	DeployDir  string        `yaml:"deploy_dir,omitempty"`
 	LogDir     string        `yaml:"log_dir,omitempty"`
-	NumaNode   bool          `yaml:"numa_node,omitempty"`
+	NumaNode   string        `yaml:"numa_node,omitempty"`
 	Config     yaml.MapSlice `yaml:"config,omitempty"`
 }
 
@@ -157,7 +157,7 @@ type TiKVSpec struct {
 	DataDir    string        `yaml:"data_dir,omitempty"`
 	LogDir     string        `yaml:"log_dir,omitempty"`
 	Offline    bool          `yaml:"offline,omitempty"`
-	NumaNode   bool          `yaml:"numa_node,omitempty"`
+	NumaNode   string        `yaml:"numa_node,omitempty"`
 	Config     yaml.MapSlice `yaml:"config,omitempty"`
 }
 
@@ -213,7 +213,7 @@ type PDSpec struct {
 	DeployDir  string        `yaml:"deploy_dir,omitempty"`
 	DataDir    string        `yaml:"data_dir,omitempty"`
 	LogDir     string        `yaml:"log_dir,omitempty"`
-	NumaNode   bool          `yaml:"numa_node,omitempty"`
+	NumaNode   string        `yaml:"numa_node,omitempty"`
 	Config     yaml.MapSlice `yaml:"config,omitempty"`
 }
 
@@ -278,7 +278,7 @@ type PumpSpec struct {
 	DataDir   string        `yaml:"data_dir,omitempty"`
 	LogDir    string        `yaml:"log_dir,omitempty"`
 	Offline   bool          `yaml:"offline,omitempty"`
-	NumaNode  bool          `yaml:"numa_node,omitempty"`
+	NumaNode  string        `yaml:"numa_node,omitempty"`
 	Config    yaml.MapSlice `yaml:"config,omitempty"`
 }
 
@@ -313,7 +313,7 @@ type DrainerSpec struct {
 	LogDir    string        `yaml:"log_dir,omitempty"`
 	CommitTS  int64         `yaml:"commit_ts,omitempty"`
 	Offline   bool          `yaml:"offline,omitempty"`
-	NumaNode  bool          `yaml:"numa_node,omitempty"`
+	NumaNode  string        `yaml:"numa_node,omitempty"`
 	Config    yaml.MapSlice `yaml:"config,omitempty"`
 }
 
