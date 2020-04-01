@@ -37,7 +37,6 @@ func (c *InitConfig) Execute(ctx *Context) error {
 		return ErrNoExecutor
 	}
 
-	c.paths.Cache = meta.ClusterPath(c.name, "config")
 	if err := os.MkdirAll(c.paths.Cache, 0755); err != nil {
 		return err
 	}

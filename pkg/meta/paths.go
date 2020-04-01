@@ -26,7 +26,7 @@ type DirPaths struct {
 }
 
 // String implements the fmt.Stringer interface
-func (p *DirPaths) String() string {
+func (p DirPaths) String() string {
 	return fmt.Sprintf(
 		"deploy_dir=%s, data_dir=%s, log_dir=%s, cache_dir=%s",
 		p.Deploy,

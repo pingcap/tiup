@@ -64,12 +64,12 @@ func newScaleInCmd() *cobra.Command {
 	return cmd
 }
 
-func scaleIn(cluster string, options operator.Options) error {
-	if tiuputils.IsNotExist(meta.ClusterPath(cluster, meta.MetaFileName)) {
-		return errors.Errorf("cannot scale-in non-exists cluster %s", cluster)
+func scaleIn(clusterName string, options operator.Options) error {
+	if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+		return errors.Errorf("cannot scale-in non-exists cluster %s", clusterName)
 	}
 
-	metadata, err := meta.ClusterMetadata(cluster)
+	metadata, err := meta.ClusterMetadata(clusterName)
 	if err != nil {
 		return err
 	}
@@ -94,13 +94,14 @@ func scaleIn(cluster string, options operator.Options) error {
 			if !strings.HasPrefix(logDir, "/") {
 				logDir = filepath.Join("/home/", metadata.User, logDir)
 			}
-			t := task.NewBuilder().InitConfig(cluster,
+			t := task.NewBuilder().InitConfig(clusterName,
 				instance,
 				metadata.User,
 				meta.DirPaths{
 					Deploy: deployDir,
 					Data:   dataDir,
 					Log:    logDir,
+					Cache:  meta.ClusterPath(clusterName, "config"),
 				},
 			).Build()
 			regenConfigTasks = append(regenConfigTasks, t)
@@ -109,11 +110,11 @@ func scaleIn(cluster string, options operator.Options) error {
 
 	t := task.NewBuilder().
 		SSHKeySet(
-			meta.ClusterPath(cluster, "ssh", "id_rsa"),
-			meta.ClusterPath(cluster, "ssh", "id_rsa.pub")).
+			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
+			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(metadata.Topology, metadata.User).
 		ClusterOperate(metadata.Topology, operator.ScaleInOperation, options).
-		UpdateMeta(cluster, metadata, operator.AsyncNodes(metadata.Topology, options.Nodes, false)).
+		UpdateMeta(clusterName, metadata, operator.AsyncNodes(metadata.Topology, options.Nodes, false)).
 		Parallel(regenConfigTasks...).
 		Build()
 

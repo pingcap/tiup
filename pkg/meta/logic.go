@@ -122,8 +122,9 @@ func (i *instance) WaitForDown(e executor.TiOpsExecutor) error {
 
 func (i *instance) InitConfig(e executor.TiOpsExecutor, cluster, user string, paths DirPaths) error {
 	comp := i.ComponentName()
+	host := i.GetHost()
 	port := i.GetPort()
-	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%d.service", comp, port))
+	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
 
 	systemCfg := system.NewConfig(comp, user, paths.Deploy)
 	// For not auto start if using binlogctl to offline.
@@ -149,7 +150,7 @@ func (i *instance) InitConfig(e executor.TiOpsExecutor, cluster, user string, pa
 
 // mergeServerConfig merges the server configuration and overwrite the global configuration
 func (i *instance) mergeServerConfig(e executor.TiOpsExecutor, globalConf, instanceConf yaml.MapSlice, paths DirPaths) error {
-	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s_%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
 	conf, err := merge2Toml(i.ComponentName(), globalConf, instanceConf)
 	if err != nil {
 		return err
@@ -304,7 +305,7 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string
 		paths.Log,
 	).WithPort(spec.Port).
 		WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(user)...)
-	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s.sh", i.GetHost()))
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
@@ -795,7 +796,7 @@ func (i *AlertManagerInstance) InitConfig(e executor.TiOpsExecutor, cluster, use
 	cfg := scripts.NewAlertManagerScript(paths.Deploy, paths.Data, paths.Log).
 		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort)
 
-	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_alertmanager_%s-%d.sh", i.GetHost(), i.GetPort()))
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_alertmanager_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}

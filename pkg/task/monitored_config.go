@@ -49,7 +49,7 @@ func (m *MonitoredConfig) Execute(ctx *Context) error {
 	if !found {
 		return ErrNoExecutor
 	}
-	m.paths.Cache = meta.ClusterPath(m.name, "config")
+
 	if err := os.MkdirAll(m.paths.Cache, 0755); err != nil {
 		return err
 	}
@@ -138,6 +138,6 @@ func (m *MonitoredConfig) Rollback(ctx *Context) error {
 
 // String implements the fmt.Stringer interface
 func (m *MonitoredConfig) String() string {
-	return fmt.Sprintf("MonitoredConfig: cluster=%s, user=%s, node_exporter_port=%d, blackbox_exporter_port=%d, %s",
+	return fmt.Sprintf("MonitoredConfig: cluster=%s, user=%s, node_exporter_port=%d, blackbox_exporter_port=%d, %v",
 		m.name, m.deployUser, m.options.NodeExporterPort, m.options.BlackboxExporterPort, m.paths)
 }

@@ -223,6 +223,7 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 					Deploy: deployDir,
 					Data:   dataDir,
 					Log:    logDir,
+					Cache:  meta.ClusterPath(clusterName, "config"),
 				},
 			).
 			Build()
@@ -313,6 +314,7 @@ func buildMonitoredDeployTask(
 						Deploy: deployDir,
 						Data:   dataDir,
 						Log:    logDir,
+						Cache:  meta.ClusterPath(clusterName, "config"),
 					},
 				).Build()
 			deployCompTasks = append(deployCompTasks, t)
