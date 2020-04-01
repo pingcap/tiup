@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/fatih/color"
@@ -143,6 +144,10 @@ func confirmTopology(clusterName, version string, topo *meta.Specification) erro
 }
 
 func deploy(clusterName, version, topoFile string, opt deployOptions) error {
+	isValid := regexp.MustCompile(`^[a-zA-Z0-9\-]+$`).MatchString
+	if !isValid(clusterName) {
+		return errors.Errorf("cluster name should only contains alphabet and numbers and -")
+	}
 	if tiuputils.IsExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
 		// FIXME: When change to use args, the suggestion text need to be updated.
 		return errNameDuplicate.
