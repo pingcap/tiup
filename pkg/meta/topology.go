@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
+	pdserverapi "github.com/pingcap/pd/v4/server/api"
 	"gopkg.in/yaml.v2"
 )
 
@@ -173,10 +174,23 @@ func (s TiKVSpec) Status(pdList ...string) string {
 	}
 
 	name := fmt.Sprintf("%s:%d", s.Host, s.Port)
+
+	// only get status of the latest store, it is the store with lagest ID number
+	// older stores might be legacy ones that already offlined
+	var latestStore *pdserverapi.StoreInfo
 	for _, store := range stores.Stores {
 		if name == store.Store.Address {
-			return store.Store.StateName
+			if latestStore == nil {
+				latestStore = store
+				continue
+			}
+			if store.Store.Id > latestStore.Store.Id {
+				latestStore = store
+			}
 		}
+	}
+	if latestStore != nil {
+		return latestStore.Store.StateName
 	}
 	return "N/A"
 }
