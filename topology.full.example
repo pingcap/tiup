@@ -103,7 +103,6 @@ tikv_servers:
 #     deploy_dir: "deploy/pump-8249"
 #     data_dir: "data/pump-8249"
 #     log_dir: "deploy/pump-8249/log"
-#     offline: false
 #     numa_node: false
 #     Config is used to overwrite the `server_configs.drainer` values
 #     config:
