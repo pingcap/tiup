@@ -111,15 +111,17 @@ func NeedCheckTomebsome(spec *meta.Specification) bool {
 }
 
 // DestroyTombstone remove the tombstone node in spec and destroy them.
+// If returNodesOnly is true, it will only return the node id that can be destroy.
 func DestroyTombstone(
 	getter ExecutorGetter,
 	spec *meta.Specification,
-) error {
+	returNodesOnly bool,
+) (nodes []string, err error) {
 	var pdClient = api.NewPDClient(spec.GetPDList()[0], 10*time.Second, nil)
 
 	binlogClient, err := api.NewBinlogClient(spec.GetPDList(), nil)
 	if err != nil {
-		return errors.AddStack(err)
+		return nil, errors.AddStack(err)
 	}
 
 	filterID := func(instance []meta.Instance, id string) (res []meta.Instance) {
@@ -142,7 +144,7 @@ func DestroyTombstone(
 
 		tombstone, err := pdClient.IsTombStone(id)
 		if err != nil {
-			return errors.AddStack(err)
+			return nil, errors.AddStack(err)
 		}
 
 		if !tombstone {
@@ -150,20 +152,24 @@ func DestroyTombstone(
 			continue
 		}
 
-		if tombstone {
-			instances := (&meta.TiKVComponent{Specification: spec}).Instances()
-			instances = filterID(instances, id)
-
-			err = StopComponent(getter, instances)
-			if err != nil {
-				return errors.AddStack(err)
-			}
-
-			err = DestroyComponent(getter, instances)
-			if err != nil {
-				return errors.AddStack(err)
-			}
+		nodes = append(nodes, id)
+		if returNodesOnly {
+			continue
 		}
+
+		instances := (&meta.TiKVComponent{Specification: spec}).Instances()
+		instances = filterID(instances, id)
+
+		err = StopComponent(getter, instances)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+
+		err = DestroyComponent(getter, instances)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+
 	}
 
 	var pumpServers []meta.PumpSpec
@@ -177,26 +183,30 @@ func DestroyTombstone(
 
 		tombstone, err := binlogClient.IsPumpTombstone(id)
 		if err != nil {
-			return errors.AddStack(err)
+			return nil, errors.AddStack(err)
 		}
 
 		if !tombstone {
 			pumpServers = append(pumpServers, s)
 		}
 
-		if tombstone {
-			instances := (&meta.PumpComponent{Specification: spec}).Instances()
-			instances = filterID(instances, id)
-			err = StopComponent(getter, instances)
-			if err != nil {
-				return errors.AddStack(err)
-			}
-
-			err = DestroyComponent(getter, instances)
-			if err != nil {
-				return errors.AddStack(err)
-			}
+		nodes = append(nodes, id)
+		if returNodesOnly {
+			continue
 		}
+
+		instances := (&meta.PumpComponent{Specification: spec}).Instances()
+		instances = filterID(instances, id)
+		err = StopComponent(getter, instances)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+
+		err = DestroyComponent(getter, instances)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+
 	}
 
 	var drainerServers []meta.DrainerSpec
@@ -210,34 +220,42 @@ func DestroyTombstone(
 
 		tombstone, err := binlogClient.IsDrainerTombstone(id)
 		if err != nil {
-			return errors.AddStack(err)
+			return nil, errors.AddStack(err)
 		}
 
 		if !tombstone {
 			drainerServers = append(drainerServers, s)
 		}
 
-		if tombstone {
-			instances := (&meta.DrainerComponent{Specification: spec}).Instances()
-			instances = filterID(instances, id)
-
-			err = StopComponent(getter, (&meta.DrainerComponent{Specification: spec}).Instances())
-			if err != nil {
-				return errors.AddStack(err)
-			}
-
-			err = DestroyComponent(getter, (&meta.DrainerComponent{Specification: spec}).Instances())
-			if err != nil {
-				return errors.AddStack(err)
-			}
+		nodes = append(nodes, id)
+		if returNodesOnly {
+			continue
 		}
+
+		instances := (&meta.DrainerComponent{Specification: spec}).Instances()
+		instances = filterID(instances, id)
+
+		err = StopComponent(getter, (&meta.DrainerComponent{Specification: spec}).Instances())
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+
+		err = DestroyComponent(getter, (&meta.DrainerComponent{Specification: spec}).Instances())
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+
+	}
+
+	if returNodesOnly {
+		return
 	}
 
 	spec.TiKVServers = kvServers
 	spec.PumpServers = pumpServers
 	spec.Drainers = drainerServers
 
-	return nil
+	return
 }
 
 // Restart the cluster.

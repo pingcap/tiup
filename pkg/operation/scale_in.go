@@ -159,7 +159,7 @@ func ScaleIn(
 					return errors.Annotatef(err, "failed to destroy %s", component.Name())
 				}
 			} else {
-				log.Warnf("The component `%s` will be destroyed in background, maybe exists in several minutes or hours",
+				log.Warnf("The component `%s` will be destroyed when display cluster info when it become tombstone, maybe exists in several minutes or hours",
 					component.Name())
 			}
 		}

@@ -316,7 +316,7 @@ func (pc *PDClient) IsTombStone(host string) (bool, error) {
 	}
 
 	for _, storeInfo := range stores.Stores {
-		log.Debugf("addr: %s, state: %v", storeInfo.Store.Address, storeInfo.Store.State)
+		// log.Debugf("addr: %s, state: %v", storeInfo.Store.Address, storeInfo.Store.State)
 
 		if storeInfo.Store.Address != host {
 			continue
