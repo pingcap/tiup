@@ -458,26 +458,20 @@ func (topo *TopologySpecification) UnmarshalYAML(unmarshal func(interface{}) err
 	return topo.Validate()
 }
 
-// Validate validates the topology specification and produce error if the
-// specification invalid (e.g: port conflicts or directory conflicts)
-func (topo *TopologySpecification) Validate() error {
-	findField := func(v reflect.Value, fieldName string) (int, bool) {
-		for i := 0; i < v.NumField(); i++ {
-			if v.Type().Field(i).Name == fieldName {
-				return i, true
-			}
+func findField(v reflect.Value, fieldName string) (int, bool) {
+	for i := 0; i < v.NumField(); i++ {
+		if v.Type().Field(i).Name == fieldName {
+			return i, true
 		}
-		return -1, false
 	}
+	return -1, false
+}
 
+func (topo *TopologySpecification) portConflictsDetect() error {
 	type (
 		usedPort struct {
 			host string
 			port int
-		}
-		usedDir struct {
-			host string
-			dir  string
 		}
 		conflict struct {
 			tp  string
@@ -494,20 +488,11 @@ func (topo *TopologySpecification) Validate() error {
 		"ClusterPort",
 	}
 
-	dirTypes := []string{
-		"DataDir",
-		"DeployDir",
-	}
-
-	// usedInfo => type
-	var (
-		portStats   = map[usedPort]conflict{}
-		dirStats    = map[usedDir]conflict{}
-		uniqueHosts = set.NewStringSet()
-	)
-
+	portStats := map[usedPort]conflict{}
+	uniqueHosts := set.NewStringSet()
 	topoSpec := reflect.ValueOf(topo).Elem()
 	topoType := reflect.TypeOf(topo).Elem()
+
 	for i := 0; i < topoSpec.NumField(); i++ {
 		if isSkipField(topoSpec.Field(i)) {
 			continue
@@ -527,27 +512,6 @@ func (topo *TopologySpecification) Validate() error {
 				return errors.Errorf("`%s` contains empty host field", cfg)
 			}
 			uniqueHosts.Insert(host)
-
-			// Directory conflicts
-			for _, dirType := range dirTypes {
-				if j, found := findField(compSpec, dirType); found {
-					item := usedDir{
-						host: host,
-						dir:  compSpec.Field(j).String(),
-					}
-					// `yaml:"data_dir,omitempty"`
-					tp := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
-					prev, exist := dirStats[item]
-					if exist {
-						return errors.Errorf("directory '%s' conflicts between '%s:%s.%s' and '%s:%s.%s'",
-							item.dir, prev.cfg, item.host, prev.tp, cfg, item.host, tp)
-					}
-					dirStats[item] = conflict{
-						tp:  tp,
-						cfg: cfg,
-					}
-				}
-			}
 
 			// Ports conflicts
 			for _, portType := range portTypes {
@@ -604,6 +568,88 @@ func (topo *TopologySpecification) Validate() error {
 	}
 
 	return nil
+}
+
+func (topo *TopologySpecification) dirConflictsDetect() error {
+	type (
+		usedDir struct {
+			host string
+			dir  string
+		}
+		conflict struct {
+			tp  string
+			cfg string
+		}
+	)
+
+	dirTypes := []string{
+		"DataDir",
+		"DeployDir",
+	}
+
+	// usedInfo => type
+	var (
+		dirStats    = map[usedDir]conflict{}
+		uniqueHosts = set.NewStringSet()
+	)
+
+	topoSpec := reflect.ValueOf(topo).Elem()
+	topoType := reflect.TypeOf(topo).Elem()
+
+	for i := 0; i < topoSpec.NumField(); i++ {
+		if isSkipField(topoSpec.Field(i)) {
+			continue
+		}
+
+		compSpecs := topoSpec.Field(i)
+		for index := 0; index < compSpecs.Len(); index++ {
+			compSpec := compSpecs.Index(index)
+			// skip nodes imported from TiDB-Ansible
+			if compSpec.Interface().(InstanceSpec).IsImported() {
+				continue
+			}
+			// check hostname
+			host := compSpec.FieldByName("Host").String()
+			cfg := topoType.Field(i).Tag.Get("yaml")
+			if host == "" {
+				return errors.Errorf("`%s` contains empty host field", cfg)
+			}
+			uniqueHosts.Insert(host)
+
+			// Directory conflicts
+			for _, dirType := range dirTypes {
+				if j, found := findField(compSpec, dirType); found {
+					item := usedDir{
+						host: host,
+						dir:  compSpec.Field(j).String(),
+					}
+					// `yaml:"data_dir,omitempty"`
+					tp := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
+					prev, exist := dirStats[item]
+					if exist {
+						return errors.Errorf("directory '%s' conflicts between '%s:%s.%s' and '%s:%s.%s'",
+							item.dir, prev.cfg, item.host, prev.tp, cfg, item.host, tp)
+					}
+					dirStats[item] = conflict{
+						tp:  tp,
+						cfg: cfg,
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// Validate validates the topology specification and produce error if the
+// specification invalid (e.g: port conflicts or directory conflicts)
+func (topo *TopologySpecification) Validate() error {
+	if err := topo.portConflictsDetect(); err != nil {
+		return err
+	}
+
+	return topo.dirConflictsDetect()
 }
 
 // GetPDList returns a list of PD API hosts of the current cluster
