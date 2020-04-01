@@ -21,8 +21,19 @@ import (
 	"time"
 
 	"github.com/appleboy/easyssh-proxy"
-	"github.com/pingcap-incubator/tiops/pkg/utils"
+	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
+
+	"github.com/pingcap-incubator/tiops/pkg/errutil"
+	"github.com/pingcap-incubator/tiops/pkg/utils"
+)
+
+var (
+	errSSHNS = errorx.NewNamespace("executor.ssh")
+
+	// ErrSSHRequireCredential is ErrSSHRequireCredential.
+	// FIXME: This error should be removed since we should prompt for error if necessary.
+	ErrSSHRequireCredential = errSSHNS.NewType("credential_required", errutil.ErrTraitPreCheck)
 )
 
 type (

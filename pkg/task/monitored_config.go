@@ -93,7 +93,7 @@ func (m *MonitoredConfig) syncMonitoredSystemConfig(exec executor.TiOpsExecutor,
 	}
 	if outp, errp, err := exec.Execute(fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port), true); err != nil {
 		if len(outp) > 0 {
-			log.Output(string(outp))
+			fmt.Println(string(outp))
 		}
 		if len(errp) > 0 {
 			log.Errorf(string(errp))

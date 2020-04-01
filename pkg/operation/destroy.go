@@ -70,7 +70,7 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance) error {
 		stdout, stderr, err := shell.Execute(e)
 
 		if len(stdout) > 0 {
-			log.Output(string(stdout))
+			fmt.Println(string(stdout))
 		}
 		if len(stderr) > 0 {
 			log.Errorf(string(stderr))

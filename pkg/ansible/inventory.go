@@ -92,7 +92,7 @@ func parseInventory(dir string, inv *aini.InventoryData) (string, *meta.ClusterM
 
 		// prompt user for a chance to set a new cluster name
 		if ans, ok := utils.Confirm("Do you want to continue? [Y]es/[N]o:"); !ok {
-			log.Output(fmt.Sprintf("Your answer is %s, exit.", ans))
+			fmt.Println(fmt.Sprintf("Your answer is %s, exit.", ans))
 			return "", nil, errors.New("operation cancelled by user")
 		}
 		clsName = utils.Prompt("New cluster name:")

@@ -14,11 +14,12 @@
 package cmd
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/pingcap-incubator/tiops/pkg/bindversion"
-	"github.com/pingcap-incubator/tiops/pkg/log"
+	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
 	"github.com/pingcap-incubator/tiops/pkg/task"
@@ -51,20 +52,20 @@ func newScaleOutCmd() *cobra.Command {
 			}
 			if opt.usePasswd {
 				opt.password = utils.GetPasswd("Password:")
-				log.Output("\n")
+				fmt.Println("")
 			}
 			if len(opt.keyFile) == 0 && len(opt.password) == 0 {
 				return errPasswordKeyAtLeastOne
 			}
 
-			auditConfig.enable = true
+			logger.EnableAuditLog()
 			return scaleOut(args[0], args[1], opt)
 		},
 	}
 
 	cmd.Flags().StringVar(&opt.user, "user", "root", "Specify the system user name")
 	cmd.Flags().BoolVar(&opt.usePasswd, "password", false, "Specify the password of system user")
-	cmd.Flags().StringVar(&opt.keyFile, "key", "", "Specify the key path of system user")
+	cmd.Flags().StringVarP(&opt.keyFile, "identity_file", "i", "", "Specify the key path of system user")
 	cmd.Flags().StringVar(&opt.passphrase, "passphrase", "", "Specify the passphrase of the key")
 
 	return cmd
@@ -76,7 +77,7 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 	}
 
 	var newPart meta.TopologySpecification
-	if err := utils.ParseYaml(topoFile, &newPart); err != nil {
+	if err := utils.ParseTopologyYaml(topoFile, &newPart); err != nil {
 		return err
 	}
 

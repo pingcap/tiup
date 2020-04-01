@@ -20,8 +20,13 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/bindversion"
+	"github.com/pingcap-incubator/tiops/pkg/cliutil"
+	"github.com/pingcap-incubator/tiops/pkg/errutil"
+	"github.com/pingcap-incubator/tiops/pkg/executor"
 	"github.com/pingcap-incubator/tiops/pkg/log"
+	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiops/pkg/task"
 	"github.com/pingcap-incubator/tiops/pkg/utils"
@@ -30,6 +35,11 @@ import (
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
+)
+
+var (
+	errNS            = errorx.NewNamespace("cmd.deploy")
+	errNameDuplicate = errNS.NewType("name_dup", errutil.ErrTraitPreCheck)
 )
 
 type componentInfo struct {
@@ -53,27 +63,47 @@ func newDeploy() *cobra.Command {
 		Short:        "Deploy a cluster for production",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 3 {
-				return cmd.Help()
+			shouldContinue, err := cliutil.CheckCommandArgsAndMayPrintHelp(cmd, args, 3)
+			if err != nil {
+				return err
 			}
-			if opt.usePasswd {
-				opt.password = utils.GetPasswd("Password:")
-				log.Output("\n")
-			}
-			if len(opt.keyFile) == 0 && len(opt.password) == 0 {
-				return errPasswordKeyAtLeastOne
+			if !shouldContinue {
+				return nil
 			}
 
-			auditConfig.enable = true
+			if opt.usePasswd {
+				// FIXME: We should prompt for password when necessary automatically.
+				opt.password = utils.GetPasswd("Password:")
+				fmt.Println("")
+			}
+
+			if len(opt.keyFile) == 0 && !opt.usePasswd {
+				// FIXME: We should lookup identity key automatically.
+				return executor.ErrSSHRequireCredential.
+					New("Identity file and password is unspecified").
+					WithProperty(cliutil.SuggestionFromTemplate(`
+You should specify either SSH identity file or password.
+
+To SSH connect using identity file:
+  {{ColorCommand}}{{OsArgs}} -i <file>{{ColorReset}}
+
+To SSH connect using password:
+  {{ColorCommand}}{{OsArgs}} --password{{ColorReset}}
+
+`, nil))
+			}
+
+			logger.EnableAuditLog()
 			return deploy(args[0], args[1], args[2], opt)
 		},
 	}
 
 	cmd.Flags().StringVar(&opt.user, "user", "root", "Specify the system user name")
 	cmd.Flags().BoolVar(&opt.usePasswd, "password", false, "Specify the password of system user")
-	cmd.Flags().StringVar(&opt.keyFile, "key", "", "Specify the key path of system user")
-	cmd.Flags().StringVar(&opt.passphrase, "passphrase", "", "Specify the passphrase of the key")
-	cmd.Flags().BoolVar(&opt.skipConfirm, "noconfirm", false, "Skip the confirmation of topology")
+	cmd.Flags().StringVarP(&opt.keyFile, "identity_file", "i", "", "Specify the path of the SSH identity file")
+	// FIXME: We should prompt for passphrase automatically
+	cmd.Flags().StringVar(&opt.passphrase, "passphrase", "", "Specify the passphrase of the SSH identity file")
+	cmd.Flags().BoolVarP(&opt.skipConfirm, "yes", "y", false, "Skip the confirmation of topology")
 
 	return cmd
 }
@@ -82,8 +112,8 @@ func confirmTopology(clusterName, version string, topo *meta.Specification) erro
 	log.Infof("Please confirm your topology:")
 
 	cyan := color.New(color.FgCyan, color.Bold)
-	log.Output(fmt.Sprintf("TiDB Cluster: %s", cyan.Sprint(clusterName)))
-	log.Output(fmt.Sprintf("TiDB Version: %s", cyan.Sprint(version)))
+	fmt.Println(fmt.Sprintf("TiDB Cluster: %s", cyan.Sprint(clusterName)))
+	fmt.Println(fmt.Sprintf("TiDB Version: %s", cyan.Sprint(version)))
 
 	clusterTable := [][]string{
 		// Header
@@ -114,11 +144,14 @@ func confirmTopology(clusterName, version string, topo *meta.Specification) erro
 
 func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 	if tiuputils.IsExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-		return errors.Errorf("cluster name '%s' exists, please choose another cluster name", clusterName)
+		// FIXME: When change to use args, the suggestion text need to be updated.
+		return errNameDuplicate.
+			New("Cluster name '%s' is duplicated", clusterName).
+			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
 	}
 
 	var topo meta.TopologySpecification
-	if err := utils.ParseYaml(topoFile, &topo); err != nil {
+	if err := utils.ParseTopologyYaml(topoFile, &topo); err != nil {
 		return err
 	}
 

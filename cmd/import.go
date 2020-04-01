@@ -66,7 +66,7 @@ func newImportCmd() *cobra.Command {
 			// TODO: move original TiDB-Ansible directory to a staged location
 
 			log.Infof("Cluster %s imported.", clsName)
-			log.Output(fmt.Sprintf("Try `%s` to see the cluster.",
+			fmt.Println(fmt.Sprintf("Try `%s` to see the cluster.",
 				color.HiYellowString("tiops display %s", clsName)))
 			return nil
 		},

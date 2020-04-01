@@ -1,3 +1,5 @@
+tiup-cluster-debug-*.log
+
 bin/
 *.tar
 *.gz

@@ -20,6 +20,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/pingcap-incubator/tiops/pkg/log"
+	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
 	"github.com/pingcap-incubator/tiops/pkg/task"
@@ -52,13 +53,13 @@ func newScaleInCmd() *cobra.Command {
 				}
 			}
 
-			auditConfig.enable = true
+			logger.EnableAuditLog()
 			return scaleIn(clusterName, options)
 		},
 	}
 
 	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Specify the nodes")
-	cmd.Flags().BoolVar(&skipConfirm, "noconfirm", false, "Skip the confirmation of destroying")
+	cmd.Flags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip the confirmation of destroying")
 	_ = cmd.MarkFlagRequired("node")
 
 	return cmd

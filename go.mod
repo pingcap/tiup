@@ -8,7 +8,9 @@ require (
 	github.com/appleboy/easyssh-proxy v1.3.0
 	github.com/creasty/defaults v1.3.0
 	github.com/fatih/color v1.9.0
+	github.com/goccy/go-yaml v1.4.3
 	github.com/google/uuid v1.1.1
+	github.com/joomcode/errorx v1.0.1
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a // indirect
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
@@ -22,8 +24,11 @@ require (
 	github.com/sergi/go-diff v1.0.1-0.20180205163309-da645544ed44
 	github.com/spf13/cobra v0.0.6
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20191023171146-3cf2f69b5738
+	go.uber.org/atomic v1.6.0
+	go.uber.org/zap v1.14.1
 	golang.org/x/crypto v0.0.0-20200109152110-61a87790db17
 	golang.org/x/mod v0.2.0
 	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd // indirect
 	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v3 v3.0.0-20191120175047-4206685974f2
 )

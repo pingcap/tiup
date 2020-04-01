@@ -18,7 +18,6 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
 	"github.com/pingcap-incubator/tiops/pkg/task"
@@ -76,8 +75,8 @@ func displayClusterMeta(opt *displayOption) error {
 
 	cyan := color.New(color.FgCyan, color.Bold)
 
-	log.Output(fmt.Sprintf("TiDB Cluster: %s", cyan.Sprint(opt.clusterName)))
-	log.Output(fmt.Sprintf("TiDB Version: %s", cyan.Sprint(clsMeta.Version)))
+	fmt.Println(fmt.Sprintf("TiDB Cluster: %s", cyan.Sprint(opt.clusterName)))
+	fmt.Println(fmt.Sprintf("TiDB Version: %s", cyan.Sprint(clsMeta.Version)))
 
 	return nil
 }

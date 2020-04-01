@@ -15,40 +15,36 @@ package log
 
 import (
 	"fmt"
-	"io"
 	"os"
 
-	"github.com/fatih/color"
+	"github.com/pingcap-incubator/tiops/pkg/colorutil"
+	"go.uber.org/zap"
 )
 
-var output io.Writer = os.Stdout
-
-// SetOutput overwrites the default output writer
-func SetOutput(w io.Writer) {
-	output = w
-}
-
-// Output print the message to output
-func Output(s string) {
-	fmt.Fprintln(output, s)
-}
-
 // Debugf output the debug message to console
+// Deprecated: Use zap.L().Debug() instead
 func Debugf(format string, args ...interface{}) {
-	Output(color.CyanString(format, args...))
+	zap.L().Debug(fmt.Sprintf(format, args...))
+	_, _ = fmt.Fprintf(os.Stderr, format+"\n", args...)
 }
 
 // Infof output the log message to console
+// Deprecated: Use zap.L().Info() instead
 func Infof(format string, args ...interface{}) {
-	Output(color.GreenString(format, args...))
+	zap.L().Info(fmt.Sprintf(format, args...))
+	fmt.Printf(format+"\n", args...)
 }
 
 // Warnf output the warning message to console
+// Deprecated: Use zap.L().Warn() instead
 func Warnf(format string, args ...interface{}) {
-	Output(color.YellowString(format, args...))
+	zap.L().Warn(fmt.Sprintf(format, args...))
+	_, _ = colorutil.ColorWarningMsg.Fprintf(os.Stderr, format+"\n", args...)
 }
 
 // Errorf output the error message to console
+// Deprecated: Use zap.L().Error() instead
 func Errorf(format string, args ...interface{}) {
-	Output(color.RedString(format, args...))
+	zap.L().Error(fmt.Sprintf(format, args...))
+	_, _ = colorutil.ColorErrorMsg.Fprintf(os.Stderr, format+"\n", args...)
 }
