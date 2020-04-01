@@ -15,7 +15,9 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -109,7 +111,79 @@ To SSH connect using password:
 	return cmd
 }
 
+func fixDir(topo *meta.Specification) func(string) string {
+	return func(dir string) string {
+		if !strings.HasPrefix(dir, "/") {
+			return path.Join("/home/", topo.GlobalOptions.User, dir)
+		}
+		return dir
+	}
+}
+
+func checkClusterDirConflict(topo *meta.Specification) error {
+	dirs := []string{}
+	existDirs := []string{}
+
+	clusterDir := meta.ProfilePath(meta.TiOpsClusterDir)
+	fileInfos, err := ioutil.ReadDir(clusterDir)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	for _, fi := range fileInfos {
+		if tiuputils.IsNotExist(meta.ClusterPath(fi.Name(), meta.MetaFileName)) {
+			continue
+		}
+		metadata, err := meta.ClusterMetadata(fi.Name())
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		f := fixDir(metadata.Topology)
+		metadata.Topology.IterInstance(func(inst meta.Instance) {
+			existDirs = append(existDirs,
+				path.Join(inst.GetHost(), f(inst.DeployDir())),
+				path.Join(inst.GetHost(), f(inst.DataDir())),
+				path.Join(inst.GetHost(), f(inst.LogDir())),
+				path.Join(inst.GetHost(), f(metadata.Topology.MonitoredOptions.DeployDir)),
+				path.Join(inst.GetHost(), f(metadata.Topology.MonitoredOptions.DataDir)),
+				path.Join(inst.GetHost(), f(metadata.Topology.MonitoredOptions.LogDir)),
+			)
+		})
+	}
+	f := fixDir(topo)
+	topo.IterInstance(func(inst meta.Instance) {
+		dirs = append(dirs,
+			path.Join(inst.GetHost(), f(inst.DeployDir())),
+			path.Join(inst.GetHost(), f(inst.DataDir())),
+			path.Join(inst.GetHost(), f(inst.LogDir())),
+			path.Join(inst.GetHost(), f(topo.MonitoredOptions.DeployDir)),
+			path.Join(inst.GetHost(), f(topo.MonitoredOptions.DataDir)),
+			path.Join(inst.GetHost(), f(topo.MonitoredOptions.LogDir)),
+		)
+	})
+
+	for _, d1 := range dirs {
+		for _, d2 := range existDirs {
+			if !strings.HasSuffix(d1, "/") {
+				d1 += "/"
+			}
+			if !strings.HasSuffix(d2, "/") {
+				d2 += "/"
+			}
+			if strings.HasPrefix(d1, d2) || strings.HasPrefix(d2, d1) {
+				return errors.Errorf("directory %s already has been taken by other cluster", d1)
+			}
+		}
+	}
+
+	return nil
+}
+
 func confirmTopology(clusterName, version string, topo *meta.Specification) error {
+	if err := checkClusterDirConflict(topo); err != nil {
+		return err
+	}
 	log.Infof("Please confirm your topology:")
 
 	cyan := color.New(color.FgCyan, color.Bold)
@@ -208,7 +282,7 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 		}
 		// Deploy component
 		t := task.NewBuilder().
-			Mkdir(inst.GetHost(),
+			Mkdir(topo.GlobalOptions.User, inst.GetHost(),
 				filepath.Join(deployDir, "bin"),
 				filepath.Join(deployDir, "conf"),
 				filepath.Join(deployDir, "scripts"),
@@ -297,7 +371,7 @@ func buildMonitoredDeployTask(
 			// Deploy component
 			t := task.NewBuilder().
 				UserSSH(host, globalOptions.User).
-				Mkdir(host,
+				Mkdir(globalOptions.User, host,
 					filepath.Join(deployDir, "bin"),
 					filepath.Join(deployDir, "conf"),
 					filepath.Join(deployDir, "scripts"),

@@ -175,7 +175,7 @@ func buildScaleOutTask(
 		// Deploy component
 		t := task.NewBuilder().
 			UserSSH(inst.GetHost(), metadata.User).
-			Mkdir(inst.GetHost(),
+			Mkdir(metadata.User, inst.GetHost(),
 				filepath.Join(deployDir, "bin"),
 				filepath.Join(deployDir, "conf"),
 				filepath.Join(deployDir, "scripts"),
