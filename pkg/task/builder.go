@@ -222,7 +222,7 @@ func (b *Builder) Shell(host, command string, sudo bool) *Builder {
 	b.tasks = append(b.tasks, &Shell{
 		host:    host,
 		command: command,
-		sudo:    false,
+		sudo:    sudo,
 	})
 	return b
 }
