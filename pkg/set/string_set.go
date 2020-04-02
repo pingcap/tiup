@@ -46,3 +46,8 @@ func (s StringSet) Intersection(rhs StringSet) StringSet {
 	}
 	return newSet
 }
+
+// Remove removes `val` from `s`
+func (s StringSet) Remove(val string) {
+	delete(s, val)
+}
