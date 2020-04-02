@@ -89,6 +89,10 @@ func Upgrade(
 					if err := StartComponent(getter, []meta.Instance{instance}); err != nil {
 						return errors.Annotatef(err, "failed to start %s", component.Name())
 					}
+					// remove store leader evict scheduler after restart
+					if err := pdClient.RemoveStoreEvict(addr(instance)); err != nil {
+						return errors.Annotatef(err, "failed to remove evict store scheduler for %s", instance.GetHost())
+					}
 				}
 			}
 			continue

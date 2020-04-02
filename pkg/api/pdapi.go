@@ -202,26 +202,33 @@ func (pc *PDClient) EvictStoreLeader(host string) error {
 		return err
 	}
 
-	// get store ID of host
-	var storeID uint64
+	// get store info of host
+	var latestStore *pdserverapi.StoreInfo
 	for _, storeInfo := range stores.Stores {
 		if storeInfo.Store.Address != host {
 			continue
 		}
-		storeID = storeInfo.Store.Id
-
-		if storeInfo.Status.LeaderCount == 0 {
-			// no store leader on the host, just skip
-			return nil
+		if latestStore == nil {
+			latestStore = storeInfo
+			continue
 		}
-		// TODO: add a log say
-		// Evicting leader from storeInfo.Status.LeaderCount stores
+		if storeInfo.Store.Id > latestStore.Store.Id {
+			latestStore = storeInfo
+		}
 	}
+
+	if latestStore == nil || latestStore.Status.LeaderCount == 0 {
+		// no store leader on the host, just skip
+		return nil
+	}
+
+	// TODO: add a log say
+	// Evicting leader from storeInfo.Status.LeaderCount stores
 
 	// set scheduler for stores
 	scheduler, err := json.Marshal(pdSchedulerRequest{
 		Name:    pdEvictLeaderName,
-		StoreID: storeID,
+		StoreID: latestStore.Store.Id,
 	})
 	if err != nil {
 		return nil
@@ -258,6 +265,49 @@ func (pc *PDClient) EvictStoreLeader(host string) error {
 		return errors.New("still waitting for the store leaders to transfer")
 	}, retryOpt); err != nil {
 		return fmt.Errorf("error evicting store leader from %s, %v", host, err)
+	}
+	return nil
+}
+
+// RemoveStoreEvict removes a store leader evict scheduler, which allows following
+// leaders to be transffered to it again.
+func (pc *PDClient) RemoveStoreEvict(host string) error {
+	// get info of current stores
+	stores, err := pc.GetStores()
+	if err != nil {
+		return err
+	}
+
+	// get store info of host
+	var latestStore *pdserverapi.StoreInfo
+	for _, storeInfo := range stores.Stores {
+		if storeInfo.Store.Address != host {
+			continue
+		}
+		if latestStore == nil {
+			latestStore = storeInfo
+			continue
+		}
+		if storeInfo.Store.Id > latestStore.Store.Id {
+			latestStore = storeInfo
+		}
+	}
+
+	if latestStore == nil {
+		// no store matches, just skip
+		return nil
+	}
+
+	// remove scheduler for the store
+	url := fmt.Sprintf(
+		"%s/%s/%s",
+		pc.GetURL(),
+		pdSchedulersURI,
+		fmt.Sprintf("%s-%d", pdEvictLeaderName, latestStore.Store.Id),
+	)
+	_, err = pc.httpClient.Delete(url, nil)
+	if err != nil {
+		return err
 	}
 	return nil
 }
