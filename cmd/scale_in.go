@@ -19,6 +19,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
+	"github.com/pingcap-incubator/tiops/pkg/bindversion"
 	"github.com/pingcap-incubator/tiops/pkg/cliutil"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
@@ -95,7 +96,16 @@ func scaleIn(clusterName string, options operator.Options) error {
 			if !strings.HasPrefix(logDir, "/") {
 				logDir = filepath.Join("/home/", metadata.User, logDir)
 			}
-			t := task.NewBuilder().InitConfig(clusterName,
+			t := task.NewBuilder()
+			switch instance.ComponentName() {
+			case meta.ComponentGrafana,
+				meta.ComponentPrometheus:
+				if instance.IsImported() {
+					version := bindversion.ComponentVersion(instance.ComponentName(), metadata.Version)
+					t.CopyComponent(instance.ComponentName(), version, instance.GetHost(), deployDir)
+				}
+			}
+			t.InitConfig(clusterName,
 				instance,
 				metadata.User,
 				meta.DirPaths{
@@ -104,8 +114,8 @@ func scaleIn(clusterName string, options operator.Options) error {
 					Log:    logDir,
 					Cache:  meta.ClusterPath(clusterName, "config"),
 				},
-			).Build()
-			regenConfigTasks = append(regenConfigTasks, t)
+			)
+			regenConfigTasks = append(regenConfigTasks, t.Build())
 		}
 	}
 

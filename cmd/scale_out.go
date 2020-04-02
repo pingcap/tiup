@@ -80,7 +80,7 @@ To SSH connect using password:
 	}
 
 	cmd.Flags().StringVar(&opt.user, "user", "root", "Specify the system user name")
-	cmd.Flags().BoolVar(&opt.usePasswd, "password", false, "Specify the password of system user")
+	cmd.Flags().BoolVar(&opt.usePasswd, "password", false, "Use password")
 	cmd.Flags().StringVarP(&opt.keyFile, "identity_file", "i", "", "Specify the key path of system user")
 	cmd.Flags().StringVar(&opt.passphrase, "passphrase", "", "Specify the passphrase of the key")
 	cmd.Flags().BoolVarP(&opt.skipConfirm, "yes", "y", false, "Skip the confirmation of topology")
@@ -233,16 +233,26 @@ func buildScaleOutTask(
 			logDir = filepath.Join("/home/", metadata.User, logDir)
 		}
 		// Refresh all configuration
-		t := task.NewBuilder().
-			UserSSH(inst.GetHost(), metadata.User).
-			InitConfig(clusterName, inst, metadata.User, meta.DirPaths{
+		t := task.NewBuilder()
+		switch inst.ComponentName() {
+		case meta.ComponentGrafana,
+			meta.ComponentPrometheus:
+			if inst.IsImported() {
+				version := bindversion.ComponentVersion(inst.ComponentName(), metadata.Version)
+				t.CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
+			}
+		}
+		t.InitConfig(clusterName,
+			inst,
+			metadata.User,
+			meta.DirPaths{
 				Deploy: deployDir,
 				Data:   dataDir,
 				Log:    logDir,
 				Cache:  meta.ClusterPath(clusterName, "config"),
-			}).
-			Build()
-		refreshConfigTasks = append(refreshConfigTasks, t)
+			},
+		)
+		refreshConfigTasks = append(refreshConfigTasks, t.Build())
 	})
 
 	// Deploy monitor relevant components to remote

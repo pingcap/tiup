@@ -117,7 +117,7 @@ To SSH connect using password:
 	}
 
 	cmd.Flags().StringVar(&opt.user, "user", "root", "Specify the system user name")
-	cmd.Flags().BoolVar(&opt.usePasswd, "password", false, "Specify the password of system user")
+	cmd.Flags().BoolVar(&opt.usePasswd, "password", false, "Use password")
 	cmd.Flags().StringVarP(&opt.keyFile, "identity_file", "i", "", "Specify the path of the SSH identity file")
 	// FIXME: We should prompt for passphrase automatically
 	cmd.Flags().StringVar(&opt.passphrase, "passphrase", "", "Specify the passphrase of the SSH identity file")
