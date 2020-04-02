@@ -235,16 +235,15 @@ func DestroyTombstone(
 		instances := (&meta.DrainerComponent{Specification: spec}).Instances()
 		instances = filterID(instances, id)
 
-		err = StopComponent(getter, (&meta.DrainerComponent{Specification: spec}).Instances())
+		err = StopComponent(getter, instances)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
 
-		err = DestroyComponent(getter, (&meta.DrainerComponent{Specification: spec}).Instances())
+		err = DestroyComponent(getter, instances)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
-
 	}
 
 	if returNodesOnly {
