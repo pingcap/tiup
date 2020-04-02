@@ -42,7 +42,7 @@ func (m *Shell) Execute(ctx *Context) error {
 		cmd = m.command
 	}
 
-	log.Infof("Run command: %s", cmd)
+	log.Infof("Run command on %s(sudo:%v): %s", m.host, m.sudo, cmd)
 
 	_, _, err := exec.Execute(cmd, false)
 	if err != nil {

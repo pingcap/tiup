@@ -51,16 +51,19 @@ func newExecCmd() *cobra.Command {
 			}
 
 			var shellTasks []task.Task
-			for _, comp := range metadata.Topology.ComponentsByStartOrder() {
-				for _, inst := range comp.Instances() {
-					t := task.NewBuilder().
-						UserSSH(inst.GetHost(), metadata.User).
-						Shell(inst.GetHost(), opt.command, opt.sudo).
-						Build()
-					shellTasks = append(shellTasks, t)
-				}
-			}
+			metadata.Topology.IterInstance(func(inst meta.Instance) {
+				t := task.NewBuilder().
+					UserSSH(inst.GetHost(), metadata.User).
+					Shell(inst.GetHost(), opt.command, opt.sudo).
+					Build()
+				shellTasks = append(shellTasks, t)
+			})
+
 			t := task.NewBuilder().
+				SSHKeySet(
+					meta.ClusterPath(clusterName, "ssh", "id_rsa"),
+					meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
+				ClusterSSH(metadata.Topology, metadata.User).
 				Parallel(shellTasks...).
 				Build()
 			return t.Execute(task.NewContext())
