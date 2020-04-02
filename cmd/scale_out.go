@@ -213,11 +213,10 @@ func buildScaleOutTask(
 		// Refresh all configuration
 		t := task.NewBuilder()
 		switch inst.ComponentName() {
-		case meta.ComponentGrafana,
-			meta.ComponentPrometheus:
+		case meta.ComponentGrafana, meta.ComponentPrometheus:
 			if inst.IsImported() {
 				version := bindversion.ComponentVersion(inst.ComponentName(), metadata.Version)
-				t.CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
+				t.Download(inst.ComponentName(), version).CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
 			}
 		}
 		t.InitConfig(clusterName,

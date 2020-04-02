@@ -98,11 +98,10 @@ func scaleIn(clusterName string, options operator.Options) error {
 			}
 			t := task.NewBuilder()
 			switch instance.ComponentName() {
-			case meta.ComponentGrafana,
-				meta.ComponentPrometheus:
+			case meta.ComponentGrafana, meta.ComponentPrometheus:
 				if instance.IsImported() {
 					version := bindversion.ComponentVersion(instance.ComponentName(), metadata.Version)
-					t.CopyComponent(instance.ComponentName(), version, instance.GetHost(), deployDir)
+					t.Download(instance.ComponentName(), version).CopyComponent(instance.ComponentName(), version, instance.GetHost(), deployDir)
 				}
 			}
 			t.InitConfig(clusterName,
