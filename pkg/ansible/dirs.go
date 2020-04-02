@@ -20,6 +20,7 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/executor"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
+	"github.com/pingcap/errors"
 	"github.com/relex/aini"
 )
 
@@ -39,18 +40,13 @@ func parseDirs(host *aini.Host, ins meta.InstanceSpec) (meta.InstanceSpec, error
 	})
 	log.Debugf("Detecting deploy paths on %s...", hostName)
 
+	stdout, err := readStartScript(e, ins.ComponentName(), hostName, ins.GetMainPort())
+	if len(stdout) <= 1 || err != nil {
+		return ins, err
+	}
+
 	switch ins.Role() {
 	case meta.ComponentTiDB:
-		serviceFile := fmt.Sprintf("%s/%s-%d.service",
-			systemdUnitPath,
-			meta.ComponentTiDB,
-			ins.GetMainPort())
-		cmd := fmt.Sprintf("cat `grep 'ExecStart' %s | sed 's/ExecStart=//'`", serviceFile)
-		stdout, _, err := e.Execute(cmd, false)
-		if err != nil {
-			return ins, nil
-		}
-
 		// parse dirs
 		newIns := ins.(meta.TiDBSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
@@ -68,16 +64,6 @@ func parseDirs(host *aini.Host, ins meta.InstanceSpec) (meta.InstanceSpec, error
 		}
 		return newIns, nil
 	case meta.ComponentTiKV:
-		serviceFile := fmt.Sprintf("%s/%s-%d.service",
-			systemdUnitPath,
-			meta.ComponentTiKV,
-			ins.GetMainPort())
-		cmd := fmt.Sprintf("cat `grep 'ExecStart' %s | sed 's/ExecStart=//'`", serviceFile)
-		stdout, _, err := e.Execute(cmd, false)
-		if err != nil {
-			return ins, nil
-		}
-
 		// parse dirs
 		newIns := ins.(meta.TiKVSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
@@ -100,17 +86,6 @@ func parseDirs(host *aini.Host, ins meta.InstanceSpec) (meta.InstanceSpec, error
 		}
 		return newIns, nil
 	case meta.ComponentPD:
-		serviceFile := fmt.Sprintf("%s/%s-%d.service",
-			systemdUnitPath,
-			meta.ComponentPD,
-			ins.GetMainPort())
-		cmd := fmt.Sprintf("cat `grep 'ExecStart' %s | sed 's/ExecStart=//'`", serviceFile)
-		stdout, _, err := e.Execute(cmd, false)
-		if err != nil {
-			return ins, nil
-		}
-		//fmt.Printf("%s\n", stdout)
-
 		// parse dirs
 		newIns := ins.(meta.PDSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
@@ -140,16 +115,6 @@ func parseDirs(host *aini.Host, ins meta.InstanceSpec) (meta.InstanceSpec, error
 		}
 		return newIns, nil
 	case meta.ComponentPump:
-		serviceFile := fmt.Sprintf("%s/%s-%d.service",
-			systemdUnitPath,
-			meta.ComponentPump,
-			ins.GetMainPort())
-		cmd := fmt.Sprintf("cat `grep 'ExecStart' %s | sed 's/ExecStart=//'`", serviceFile)
-		stdout, _, err := e.Execute(cmd, false)
-		if err != nil {
-			return ins, nil
-		}
-
 		// parse dirs
 		newIns := ins.(meta.PumpSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
@@ -173,16 +138,6 @@ func parseDirs(host *aini.Host, ins meta.InstanceSpec) (meta.InstanceSpec, error
 		}
 		return newIns, nil
 	case meta.ComponentDrainer:
-		serviceFile := fmt.Sprintf("%s/%s-%d.service",
-			systemdUnitPath,
-			meta.ComponentDrainer,
-			ins.GetMainPort())
-		cmd := fmt.Sprintf("cat `grep 'ExecStart' %s | sed 's/ExecStart=//'`", serviceFile)
-		stdout, _, err := e.Execute(cmd, false)
-		if err != nil {
-			return ins, nil
-		}
-
 		// parse dirs
 		newIns := ins.(meta.DrainerSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
@@ -200,16 +155,6 @@ func parseDirs(host *aini.Host, ins meta.InstanceSpec) (meta.InstanceSpec, error
 		}
 		return newIns, nil
 	case meta.ComponentPrometheus:
-		serviceFile := fmt.Sprintf("%s/%s-%d.service",
-			systemdUnitPath,
-			meta.ComponentPrometheus,
-			ins.GetMainPort())
-		cmd := fmt.Sprintf("cat `grep 'ExecStart' %s | sed 's/ExecStart=//'`", serviceFile)
-		stdout, _, err := e.Execute(cmd, false)
-		if err != nil {
-			return ins, nil
-		}
-
 		// parse dirs
 		newIns := ins.(meta.PrometheusSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
@@ -233,16 +178,6 @@ func parseDirs(host *aini.Host, ins meta.InstanceSpec) (meta.InstanceSpec, error
 		}
 		return newIns, nil
 	case meta.ComponentAlertManager:
-		serviceFile := fmt.Sprintf("%s/%s-%d.service",
-			systemdUnitPath,
-			meta.ComponentAlertManager,
-			ins.GetMainPort())
-		cmd := fmt.Sprintf("cat `grep 'ExecStart' %s | sed 's/ExecStart=//'`", serviceFile)
-		stdout, _, err := e.Execute(cmd, false)
-		if err != nil {
-			return ins, nil
-		}
-
 		// parse dirs
 		newIns := ins.(meta.AlertManagerSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
@@ -266,16 +201,6 @@ func parseDirs(host *aini.Host, ins meta.InstanceSpec) (meta.InstanceSpec, error
 		}
 		return newIns, nil
 	case meta.ComponentGrafana:
-		serviceFile := fmt.Sprintf("%s/%s-%d.service",
-			systemdUnitPath,
-			meta.ComponentGrafana,
-			ins.GetMainPort())
-		cmd := fmt.Sprintf("cat `grep 'ExecStart' %s | sed 's/ExecStart=//'`", serviceFile)
-		stdout, _, err := e.Execute(cmd, false)
-		if err != nil {
-			return ins, nil
-		}
-
 		// parse dirs
 		newIns := ins.(meta.GrafanaSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
@@ -287,4 +212,26 @@ func parseDirs(host *aini.Host, ins meta.InstanceSpec) (meta.InstanceSpec, error
 		return newIns, nil
 	}
 	return ins, nil
+}
+
+func readStartScript(e *executor.SSHExecutor, component, host string, port int) (string, error) {
+	serviceFile := fmt.Sprintf("%s/%s-%d.service",
+		systemdUnitPath,
+		component,
+		port)
+	cmd := fmt.Sprintf("cat `grep 'ExecStart' %s | sed 's/ExecStart=//'`", serviceFile)
+	stdout, stderr, err := e.Execute(cmd, false)
+	if err != nil {
+		return string(stdout), err
+	}
+	if len(stderr) > 0 {
+		return string(stdout), errors.Errorf(
+			"can not detect dir paths of %s %s:%d, %s",
+			component,
+			host,
+			port,
+			stderr,
+		)
+	}
+	return string(stdout), nil
 }
