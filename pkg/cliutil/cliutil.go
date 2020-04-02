@@ -28,7 +28,7 @@ import (
 )
 
 var (
-	errNS             = errorx.NewNamespace("cli")
+	errNS             = errorx.NewNamespace("cliutil")
 	errMismatchArgs   = errNS.NewType("mismatch_args", errutil.ErrTraitPreCheck)
 	errOperationAbort = errNS.NewType("operation_aborted", errutil.ErrTraitPreCheck)
 )

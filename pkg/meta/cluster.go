@@ -17,6 +17,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/joomcode/errorx"
+	"github.com/pingcap-incubator/tiops/pkg/errutil"
 	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/pingcap/errors"
 	"gopkg.in/yaml.v2"
@@ -25,6 +27,14 @@ import (
 const (
 	// MetaFileName is the file name of the meta file.
 	MetaFileName = "meta.yaml"
+)
+
+var (
+	errNSCluster = errNS.NewSubNamespace("cluster")
+	// ErrClusterCreateDirFailed is ErrClusterCreateDirFailed
+	ErrClusterCreateDirFailed = errNSCluster.NewType("create_dir_failed")
+	// ErrClusterSaveMetaFailed is ErrClusterSaveMetaFailed
+	ErrClusterSaveMetaFailed = errNSCluster.NewType("save_meta_failed")
 )
 
 // ClusterMeta is the specification of generic cluster metadata
@@ -37,23 +47,36 @@ type ClusterMeta struct {
 	Topology *TopologySpecification `yaml:"topology"`
 }
 
+// EnsureClusterDir ensures that the cluster directory exists.
+func EnsureClusterDir(clusterName string) error {
+	if err := utils.CreateDir(ClusterPath(clusterName)); err != nil {
+		return ErrClusterCreateDirFailed.
+			Wrap(err, "Failed to create cluster metadata directory '%s'", ClusterPath(clusterName)).
+			WithProperty(errutil.ErrPropSuggestion, "Please check file system permissions and try again.")
+	}
+	return nil
+}
+
 // SaveClusterMeta saves the cluster meta information to profile directory
 func SaveClusterMeta(clusterName string, meta *ClusterMeta) error {
+	wrapError := func(err error) *errorx.Error {
+		return ErrClusterSaveMetaFailed.Wrap(err, "Failed to save cluster metadata")
+	}
+
 	metaFile := ClusterPath(clusterName, MetaFileName)
 
-	// Make sure the cluster path exists
-	if err := utils.CreateDir(ClusterPath(clusterName)); err != nil {
-		return errors.Trace(err)
+	if err := EnsureClusterDir(clusterName); err != nil {
+		return wrapError(err)
 	}
 
 	f, err := os.OpenFile(metaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
 	if err != nil {
-		return errors.Trace(err)
+		return wrapError(err)
 	}
 	defer f.Close()
 
 	if err := yaml.NewEncoder(f).Encode(meta); err != nil {
-		return errors.Trace(err)
+		return wrapError(err)
 	}
 	return nil
 }

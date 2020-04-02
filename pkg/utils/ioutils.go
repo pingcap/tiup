@@ -19,7 +19,7 @@ import (
 	"os"
 )
 
-// CreateDir creates the directory if it not alerady exist.
+// CreateDir creates the directory if it not exists.
 func CreateDir(path string) error {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {

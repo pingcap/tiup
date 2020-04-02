@@ -19,6 +19,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/joomcode/errorx"
+)
+
+var (
+	errNS = errorx.NewNamespace("utils")
 )
 
 // JoinInt joins a slice of int to string

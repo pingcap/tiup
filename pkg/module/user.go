@@ -36,6 +36,14 @@ const (
 	//usermodCmd = "/usr/sbin/usermod"
 )
 
+var (
+	errNSUser = errNS.NewSubNamespace("user")
+	// ErrUserAddFailed is ErrUserAddFailed
+	ErrUserAddFailed = errNSUser.NewType("user_add_failed")
+	// ErrUserDeleteFailed is ErrUserDeleteFailed
+	ErrUserDeleteFailed = errNSUser.NewType("user_delete_failed")
+)
+
 // UserModuleConfig is the configurations used to initialize a UserModule
 type UserModuleConfig struct {
 	Action string // add, del or modify user
@@ -47,7 +55,8 @@ type UserModuleConfig struct {
 
 // UserModule is the module used to control systemd units
 type UserModule struct {
-	cmd string // the built command
+	config UserModuleConfig
+	cmd    string // the built command
 }
 
 // NewUserModule builds and returns a UserModule object base on given config.
@@ -94,12 +103,24 @@ func NewUserModule(config UserModuleConfig) *UserModule {
 	}
 
 	return &UserModule{
-		cmd: cmd,
+		config: config,
+		cmd:    cmd,
 	}
 }
 
 // Execute passes the command to executor and returns its results, the executor
 // should be already initialized.
 func (mod *UserModule) Execute(exec executor.TiOpsExecutor) ([]byte, []byte, error) {
-	return exec.Execute(mod.cmd, true)
+	a, b, err := exec.Execute(mod.cmd, true)
+	if err != nil {
+		switch mod.config.Action {
+		case UserActionAdd:
+			return a, b, ErrUserAddFailed.
+				Wrap(err, "Failed to create new system user '%s' on remote host", mod.config.Name)
+		case UserActionDel:
+			return a, b, ErrUserDeleteFailed.
+				Wrap(err, "Failed to delete system user '%s' on remote host", mod.config.Name)
+		}
+	}
+	return a, b, nil
 }

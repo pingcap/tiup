@@ -16,8 +16,12 @@ package task
 import (
 	"fmt"
 
+	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/executor"
-	"github.com/pingcap/errors"
+)
+
+var (
+	errNS = errorx.NewNamespace("task")
 )
 
 // RootSSH is used to establish a SSH connection to the target host with specific key
@@ -32,7 +36,7 @@ type RootSSH struct {
 
 // Execute implements the Task interface
 func (s *RootSSH) Execute(ctx *Context) error {
-	e, err := executor.NewSSHExecutor(executor.SSHConfig{
+	e := executor.NewSSHExecutor(executor.SSHConfig{
 		Host:       s.host,
 		Port:       s.port,
 		User:       s.user,
@@ -40,10 +44,6 @@ func (s *RootSSH) Execute(ctx *Context) error {
 		KeyFile:    s.keyFile,
 		Passphrase: s.passphrase,
 	})
-
-	if err != nil {
-		return errors.Trace(err)
-	}
 
 	ctx.SetExecutor(s.host, e)
 	return nil
@@ -73,15 +73,11 @@ type UserSSH struct {
 
 // Execute implements the Task interface
 func (s *UserSSH) Execute(ctx *Context) error {
-	e, err := executor.NewSSHExecutor(executor.SSHConfig{
+	e := executor.NewSSHExecutor(executor.SSHConfig{
 		Host:    s.host,
 		KeyFile: ctx.PrivateKeyPath,
 		User:    s.deployUser,
 	})
-
-	if err != nil {
-		return errors.Trace(err)
-	}
 
 	ctx.SetExecutor(s.host, e)
 	return nil

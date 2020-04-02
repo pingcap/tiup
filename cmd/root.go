@@ -37,6 +37,10 @@ import (
 
 var rootCmd *cobra.Command
 
+var (
+	errNS = errorx.NewNamespace("cmd")
+)
+
 func init() {
 	logger.InitGlobalLogger()
 
@@ -102,24 +106,47 @@ func printErrorMessageForErrorX(err *errorx.Error) {
 		if ident > 0 {
 			msg += strings.Repeat("  ", ident) + "caused by: "
 		}
-		if ident == 0 {
-			// Print error code only for top level error
-			msg += fmt.Sprintf("%s (%s)\n", causeErrX.Message(), causeErrX.Type().FullName())
-		} else {
-			msg += fmt.Sprintf("%s\n", causeErrX.Message())
+		currentErrMsg := causeErrX.Message()
+		if len(currentErrMsg) > 0 {
+			if ident == 0 {
+				// Print error code only for top level error
+				msg += fmt.Sprintf("%s (%s)\n", currentErrMsg, causeErrX.Type().FullName())
+			} else {
+				msg += fmt.Sprintf("%s\n", currentErrMsg)
+			}
+			ident++
 		}
 		cause := causeErrX.Cause()
 		if c := errorx.Cast(cause); c != nil {
-			ident++
 			causeErrX = c
 		} else if cause != nil {
-			msg += strings.Repeat("  ", ident+1) + fmt.Sprintf("caused by: %s\n", cause.Error())
+			if ident > 0 {
+				// Out most error may have empty message. In this case we treat it as a transparent error.
+				// Thus `ident == 0` can be possible.
+				msg += strings.Repeat("  ", ident) + "caused by: "
+			}
+			msg += fmt.Sprintf("%s\n", cause.Error())
 			break
 		} else {
 			break
 		}
 	}
 	_, _ = colorutil.ColorErrorMsg.Fprintf(os.Stderr, "\nError: %s", msg)
+}
+
+func extractSuggestionFromErrorX(err *errorx.Error) string {
+	cause := err
+	for cause != nil {
+		v, ok := cause.Property(errutil.ErrPropSuggestion)
+		if ok {
+			if s, ok := v.(string); ok {
+				return s
+			}
+		}
+		cause = errorx.Cast(cause.Cause())
+	}
+
+	return ""
 }
 
 // Execute executes the root command
@@ -153,9 +180,9 @@ func Execute() {
 			logger.OutputDebugLog()
 		}
 
-		if suggestion, hasSuggestion := errorx.ExtractProperty(err, errutil.ErrPropSuggestion); hasSuggestion {
-			if suggestionStr, ok := suggestion.(string); ok {
-				_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", suggestionStr)
+		if errx := errorx.Cast(err); errx != nil {
+			if suggestion := extractSuggestionFromErrorX(errx); len(suggestion) > 0 {
+				_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", suggestion)
 			}
 		}
 	}

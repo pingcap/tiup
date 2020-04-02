@@ -19,7 +19,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/fatih/color"
@@ -41,8 +40,8 @@ import (
 )
 
 var (
-	errNS            = errorx.NewNamespace("cmd.deploy")
-	errNameDuplicate = errNS.NewType("name_dup", errutil.ErrTraitPreCheck)
+	errNSDeploy            = errNS.NewSubNamespace("deploy")
+	errDeployNameDuplicate = errNSDeploy.NewType("name_dup", errutil.ErrTraitPreCheck)
 )
 
 type componentInfo struct {
@@ -214,13 +213,12 @@ func confirmTopology(clusterName, version string, topo *meta.Specification) erro
 }
 
 func deploy(clusterName, version, topoFile string, opt deployOptions) error {
-	isValid := regexp.MustCompile(`^[a-zA-Z0-9\-]+$`).MatchString
-	if !isValid(clusterName) {
-		return errors.Errorf("cluster name should only contains alphabet and numbers and -")
+	if err := utils.ValidateClusterNameOrError(clusterName); err != nil {
+		return err
 	}
 	if tiuputils.IsExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
 		// FIXME: When change to use args, the suggestion text need to be updated.
-		return errNameDuplicate.
+		return errDeployNameDuplicate.
 			New("Cluster name '%s' is duplicated", clusterName).
 			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
 	}
@@ -237,7 +235,9 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 	}
 
 	if err := os.MkdirAll(meta.ClusterPath(clusterName), 0755); err != nil {
-		return err
+		return errorx.InitializationFailed.
+			Wrap(err, "Failed to create cluster metadata directory '%s'", meta.ClusterPath(clusterName)).
+			WithProperty(errutil.ErrPropSuggestion, "Please check file system permissions and try again.")
 	}
 
 	var (
@@ -317,6 +317,10 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 		Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
 		return errors.Trace(err)
 	}
 

@@ -3,7 +3,6 @@ package utils
 import (
 	"io/ioutil"
 
-	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/cliutil"
 	"github.com/pingcap-incubator/tiops/pkg/errutil"
 	"go.uber.org/zap"
@@ -11,11 +10,11 @@ import (
 )
 
 var (
-	errTopologyNS = errorx.NewNamespace("topology")
+	errNSTopolohy = errNS.NewSubNamespace("topology")
 	// ErrTopologyReadFailed is ErrTopologyReadFailed
-	ErrTopologyReadFailed = errTopologyNS.NewType("read_failed", errutil.ErrTraitPreCheck)
+	ErrTopologyReadFailed = errNSTopolohy.NewType("read_failed", errutil.ErrTraitPreCheck)
 	// ErrTopologyParseFailed is ErrTopologyParseFailed
-	ErrTopologyParseFailed = errTopologyNS.NewType("parse_failed", errutil.ErrTraitPreCheck)
+	ErrTopologyParseFailed = errNSTopolohy.NewType("parse_failed", errutil.ErrTraitPreCheck)
 )
 
 // ParseTopologyYaml read yaml content from `file` and unmarshal it to `out`

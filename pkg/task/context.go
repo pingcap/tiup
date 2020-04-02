@@ -27,12 +27,7 @@ func (ctx *Context) SetClusterSSH(topo *meta.Specification, deployUser string) e
 				User:    deployUser,
 			}
 
-			e, err := executor.NewSSHExecutor(cf)
-
-			if err != nil {
-				return errors.AddStack(err)
-			}
-
+			e := executor.NewSSHExecutor(cf)
 			ctx.SetExecutor(in.GetHost(), e)
 		}
 	}

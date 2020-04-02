@@ -20,7 +20,6 @@ import (
 	"sync"
 
 	"github.com/pingcap-incubator/tiops/pkg/executor"
-	"github.com/pingcap-incubator/tiops/pkg/flags"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 )
@@ -166,24 +165,9 @@ func (s Serial) String() string {
 	return strings.Join(ss, "\n")
 }
 
-type errs []error
-
-// Error implements the error interface
-func (es errs) Error() string {
-	ss := make([]string, 0, len(es))
-	for _, e := range es {
-		if flags.ShowBacktrace {
-			ss = append(ss, fmt.Sprintf("%+v", e))
-		} else {
-			ss = append(ss, fmt.Sprintf("%v", e))
-		}
-	}
-	return strings.Join(ss, "\n")
-}
-
 // Execute implements the Task interface
 func (pt Parallel) Execute(ctx *Context) error {
-	var es errs
+	var firstError error
 	var mu sync.Mutex
 	wg := sync.WaitGroup{}
 	for _, t := range pt {
@@ -196,21 +180,20 @@ func (pt Parallel) Execute(ctx *Context) error {
 			err := t.Execute(ctx)
 			if err != nil {
 				mu.Lock()
-				es = append(es, err)
+				if firstError == nil {
+					firstError = err
+				}
 				mu.Unlock()
 			}
 		}(t)
 	}
 	wg.Wait()
-	if len(es) > 0 {
-		return es
-	}
-	return nil
+	return firstError
 }
 
 // Rollback implements the Task interface
 func (pt Parallel) Rollback(ctx *Context) error {
-	var es errs
+	var firstError error
 	var mu sync.Mutex
 	wg := sync.WaitGroup{}
 	for _, t := range pt {
@@ -220,13 +203,15 @@ func (pt Parallel) Rollback(ctx *Context) error {
 			err := t.Rollback(ctx)
 			if err != nil {
 				mu.Lock()
-				es = append(es, err)
+				if firstError == nil {
+					firstError = err
+				}
 				mu.Unlock()
 			}
 		}(t)
 	}
 	wg.Wait()
-	return es
+	return firstError
 }
 
 // String implements the fmt.Stringer interface

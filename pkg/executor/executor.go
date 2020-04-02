@@ -13,7 +13,15 @@
 
 package executor
 
-import "time"
+import (
+	"time"
+
+	"github.com/joomcode/errorx"
+)
+
+var (
+	errNS = errorx.NewNamespace("executor")
+)
 
 // TiOpsExecutor is the executor interface for TiOps, all tasks will in the end
 // be passed to a executor and then be actually performed.

@@ -31,15 +31,12 @@ var (
 func parseDirs(host *aini.Host, ins meta.InstanceSpec) (meta.InstanceSpec, error) {
 	hostName, sshPort := ins.SSH()
 
-	e, err := executor.NewSSHExecutor(executor.SSHConfig{
+	e := executor.NewSSHExecutor(executor.SSHConfig{
 		Host:    hostName,
 		Port:    sshPort,
 		User:    host.Vars["ansible_user"],
 		KeyFile: SSHKeyPath(), // ansible generated keyfile
 	})
-	if err != nil {
-		return ins, err
-	}
 	log.Debugf("Detecting deploy paths on %s...", hostName)
 
 	switch ins.Role() {
