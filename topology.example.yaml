@@ -59,7 +59,7 @@ pd_servers:
     # deploy_dir: "deploy/pd-2379"
     # data_dir: "data/pd-2379"
     # log_dir: "deploy/pd-2379/log"
-    # numa_node: false
+    # numa_node: "0,1"
     # # Config is used to overwrite the `server_configs.pd` values
     # config:
     #   schedule.max-merge-region-size: 20
@@ -74,7 +74,7 @@ tidb_servers:
     # status_port: 10080
     # deploy_dir: "deploy/tidb-4000"
     # log_dir: "deploy/tidb-4000/log"
-    # numa_node: false
+    # numa_node: "0,1"
     # # Config is used to overwrite the `server_configs.tidb` values
     # config:
     #   log.level: warn
@@ -88,7 +88,7 @@ tikv_servers:
     # deploy_dir: "deploy/tikv-20160"
     # data_dir: "data/tikv-20160"
     # log_dir: "deploy/tikv-20160/log"
-    # numa_node: false
+    # numa_node: "0,1"
     # # Config is used to overwrite the `server_configs.tikv` values
     # config:
     #   labels: '{ zone = "us-west-1", disk = "ssd" }'
@@ -103,7 +103,7 @@ tikv_servers:
 #     deploy_dir: "deploy/pump-8249"
 #     data_dir: "data/pump-8249"
 #     log_dir: "deploy/pump-8249/log"
-#     numa_node: false
+#     numa_node: "0,1"
 #     # Config is used to overwrite the `server_configs.drainer` values
 #     config:
 #       gc: 7
@@ -119,7 +119,7 @@ tikv_servers:
 #     commit_ts: -1
 #     deploy_dir: "deploy/drainer-8249"
 #     log_dir: "deploy/drainer-8249/log"
-#     numa_node: false
+#     numa_node: "0,1"
 #     # Config is used to overwrite the `server_configs.drainer` values
 #     config:
 #       syncer.db-type: "mysql"
