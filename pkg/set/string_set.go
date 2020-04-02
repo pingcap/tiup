@@ -51,3 +51,14 @@ func (s StringSet) Intersection(rhs StringSet) StringSet {
 func (s StringSet) Remove(val string) {
 	delete(s, val)
 }
+
+// Difference returns the difference of two sets
+func (s StringSet) Difference(rhs StringSet) StringSet {
+	newSet := NewStringSet()
+	for elt := range s {
+		if !rhs.Exist(elt) {
+			newSet.Insert(elt)
+		}
+	}
+	return newSet
+}
