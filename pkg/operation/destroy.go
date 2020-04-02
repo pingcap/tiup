@@ -2,6 +2,7 @@ package operator
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/pingcap-incubator/tiops/pkg/log"
@@ -34,6 +35,52 @@ func Destroy(
 			}
 		}
 	}
+
+	// Delete all global deploy directory
+	for host := range uniqueHosts {
+		if err := DeleteGlobalDirs(getter, host, spec.GlobalOptions); err != nil {
+			return nil
+		}
+	}
+
+	return nil
+}
+
+// DeleteGlobalDirs deletes all global directory if them empty
+func DeleteGlobalDirs(getter ExecutorGetter, host string, options meta.GlobalOptions) error {
+	e := getter.Get(host)
+	log.Infof("Clean global directories %s", host)
+	for _, dir := range []string{options.LogDir, options.DeployDir, options.DataDir} {
+		if dir == "" {
+			continue
+		}
+		if !strings.HasPrefix(dir, "/") {
+			dir = filepath.Join("/home/", options.User, dir)
+		}
+
+		log.Infof("\tClean directory %s on instance %s", dir, host)
+
+		c := module.ShellModuleConfig{
+			Command:  fmt.Sprintf("rmdir %s > /dev/null 2>&1 || true", dir),
+			Chdir:    "",
+			UseShell: false,
+		}
+		shell := module.NewShellModule(c)
+		stdout, stderr, err := shell.Execute(e)
+
+		if len(stdout) > 0 {
+			fmt.Println(string(stdout))
+		}
+		if len(stderr) > 0 {
+			log.Errorf(string(stderr))
+		}
+
+		if err != nil {
+			return errors.Annotatef(err, "failed to clean directory %s on: %s", dir, host)
+		}
+	}
+
+	log.Infof("Clean global directories %s success", host)
 	return nil
 }
 
