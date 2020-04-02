@@ -103,7 +103,9 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 		return err
 	}
 
-	// TODO: check port conflict cross cluster
+	if err := checkClusterPortConflict(&newPart); err != nil {
+		return err
+	}
 	if err := checkClusterDirConflict(&newPart); err != nil {
 		return err
 	}

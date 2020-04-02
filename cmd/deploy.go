@@ -19,6 +19,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/ScaleFT/sshkeys"
@@ -46,6 +47,7 @@ var (
 	errNSDeploy            = errNS.NewSubNamespace("deploy")
 	errDeployNameDuplicate = errNSDeploy.NewType("name_dup", errutil.ErrTraitPreCheck)
 	errDeployDirConflict   = errNSDeploy.NewType("dir_conflict", errutil.ErrTraitPreCheck)
+	errDeployPortConflict  = errNSDeploy.NewType("port_conflict", errutil.ErrTraitPreCheck)
 )
 
 type componentInfo struct {
@@ -240,6 +242,87 @@ Please change to use another directory or another host.
 	return nil
 }
 
+func checkClusterPortConflict(topo *meta.Specification) error {
+	clusterDir := meta.ProfilePath(meta.TiOpsClusterDir)
+	fileInfos, err := ioutil.ReadDir(clusterDir)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	type Entry struct {
+		clusterName string
+		instance    meta.Instance
+		port        int
+	}
+
+	currentEntries := []Entry{}
+	existingEntries := []Entry{}
+
+	for _, fi := range fileInfos {
+		if tiuputils.IsNotExist(meta.ClusterPath(fi.Name(), meta.MetaFileName)) {
+			continue
+		}
+		metadata, err := meta.ClusterMetadata(fi.Name())
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		metadata.Topology.IterInstance(func(inst meta.Instance) {
+			for _, port := range inst.UsedPorts() {
+				existingEntries = append(existingEntries, Entry{
+					clusterName: fi.Name(),
+					instance:    inst,
+					port:        port,
+				})
+			}
+		})
+	}
+
+	topo.IterInstance(func(inst meta.Instance) {
+		for _, port := range inst.UsedPorts() {
+			currentEntries = append(currentEntries, Entry{
+				instance: inst,
+				port:     port,
+			})
+		}
+	})
+
+	for _, p1 := range currentEntries {
+		for _, p2 := range existingEntries {
+			if p1.instance.GetHost() != p2.instance.GetHost() {
+				return nil
+			}
+
+			if p1.port == p2.port {
+				properties := map[string]string{
+					"ThisPort":       strconv.Itoa(p1.port),
+					"ThisComponent":  p1.instance.ComponentName(),
+					"ThisHost":       p1.instance.GetHost(),
+					"ExistCluster":   p2.clusterName,
+					"ExistPort":      strconv.Itoa(p2.port),
+					"ExistComponent": p2.instance.ComponentName(),
+					"ExistHost":      p2.instance.GetHost(),
+				}
+				zap.L().Info("Meet deploy port conflict", zap.Any("info", properties))
+				return errDeployPortConflict.New("Deploy port conflicts to an existing cluster").WithProperty(cliutil.SuggestionFromTemplate(`
+The port you specified in the topology file is:
+  Port:      {{ColorKeyword}}{{.ThisPort}}{{ColorReset}}
+  Component: {{ColorKeyword}}{{.ThisComponent}} {{.ThisHost}}{{ColorReset}}
+
+It conflicts to a port in the existing cluster:
+  Existing Cluster Name: {{ColorKeyword}}{{.ExistCluster}}{{ColorReset}}
+  Existing Port:         {{ColorKeyword}}{{.ExistPort}}{{ColorReset}}
+  Existing Component:    {{ColorKeyword}}{{.ExistComponent}} {{.ExistHost}}{{ColorReset}}
+
+Please change to use another port or another host.
+`, properties))
+			}
+		}
+	}
+
+	return nil
+}
+
 func confirmTopology(clusterName, version string, topo *meta.Specification) error {
 	log.Infof("Please confirm your topology:")
 
@@ -286,7 +369,9 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 		return err
 	}
 
-	// TODO: check port conflict cross cluster
+	if err := checkClusterPortConflict(&topo); err != nil {
+		return err
+	}
 	if err := checkClusterDirConflict(&topo); err != nil {
 		return err
 	}
