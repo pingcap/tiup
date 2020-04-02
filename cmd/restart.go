@@ -14,6 +14,7 @@
 package cmd
 
 import (
+	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
@@ -53,8 +54,15 @@ func newRestartCmd() *cobra.Command {
 				ClusterOperate(metadata.Topology, operator.RestartOperation, options).
 				Build()
 
-			return t.Execute(task.NewContext())
+			if err := t.Execute(task.NewContext()); err != nil {
+				if errorx.Cast(err) != nil {
+					// FIXME: Map possible task errors and give suggestions.
+					return err
+				}
+				return errors.Trace(err)
+			}
 
+			return nil
 		},
 	}
 

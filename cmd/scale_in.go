@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/cliutil"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
@@ -118,5 +119,13 @@ func scaleIn(clusterName string, options operator.Options) error {
 		Parallel(regenConfigTasks...).
 		Build()
 
-	return t.Execute(task.NewContext())
+	if err := t.Execute(task.NewContext()); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return errors.Trace(err)
+	}
+
+	return nil
 }

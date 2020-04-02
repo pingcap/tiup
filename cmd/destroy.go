@@ -17,6 +17,7 @@ import (
 	"os"
 
 	"github.com/fatih/color"
+	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/cliutil"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
@@ -69,8 +70,13 @@ func newDestroyCmd() *cobra.Command {
 				Build()
 
 			if err := t.Execute(task.NewContext()); err != nil {
-				return err
+				if errorx.Cast(err) != nil {
+					// FIXME: Map possible task errors and give suggestions.
+					return err
+				}
+				return errors.Trace(err)
 			}
+
 			if err := os.RemoveAll(meta.ClusterPath(clusterName)); err != nil {
 				return errors.Trace(err)
 			}

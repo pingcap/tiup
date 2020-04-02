@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/bindversion"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
@@ -136,16 +137,16 @@ func upgrade(name, version string, opt upgradeOptions) error {
 						CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
 				}
 				t.InitConfig(
-						name,
-						inst,
-						metadata.User,
-						meta.DirPaths{
-							Deploy: deployDir,
-							Data:   dataDir,
-							Log:    logDir,
-							Cache:  meta.ClusterPath(name, "config"),
-						},
-					)
+					name,
+					inst,
+					metadata.User,
+					meta.DirPaths{
+						Deploy: deployDir,
+						Data:   dataDir,
+						Log:    logDir,
+						Cache:  meta.ClusterPath(name, "config"),
+					},
+				)
 			} else {
 				t.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
 					CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
@@ -164,9 +165,12 @@ func upgrade(name, version string, opt upgradeOptions) error {
 		ClusterOperate(metadata.Topology, operator.UpgradeOperation, opt.options).
 		Build()
 
-	err = t.Execute(task.NewContext())
-	if err != nil {
-		return err
+	if err := t.Execute(task.NewContext()); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return errors.Trace(err)
 	}
 
 	metadata.Version = version
