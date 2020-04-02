@@ -185,7 +185,7 @@ func formatInstanceStatus(status string) string {
 		return color.GreenString(status)
 	case "healthy|l": // PD leader
 		return color.HiGreenString(status)
-	case "offline", "tombstone":
+	case "offline", "tombstone", "disconnected":
 		return color.YellowString(status)
 	case "down", "unhealthy", "err":
 		return color.RedString(status)
