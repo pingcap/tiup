@@ -29,4 +29,5 @@ exec bin/tidb-server \
     --config="conf/tidb.toml" \
     --path="{{template "PDList" .Endpoints}}" \
     --log-slow-query="log/tidb_slow_query.log" \
+    --config=conf/tidb.toml \
     --log-file="{{.LogDir}}/tidb.log" 2>> "{{.LogDir}}/tidb_stderr.log"
