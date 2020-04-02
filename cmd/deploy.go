@@ -180,9 +180,6 @@ func checkClusterDirConflict(topo *meta.Specification) error {
 }
 
 func confirmTopology(clusterName, version string, topo *meta.Specification) error {
-	if err := checkClusterDirConflict(topo); err != nil {
-		return err
-	}
 	log.Infof("Please confirm your topology:")
 
 	cyan := color.New(color.FgCyan, color.Bold)
@@ -225,6 +222,11 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 
 	var topo meta.TopologySpecification
 	if err := utils.ParseTopologyYaml(topoFile, &topo); err != nil {
+		return err
+	}
+
+	// TODO: check port conflict cross cluster
+	if err := checkClusterDirConflict(&topo); err != nil {
 		return err
 	}
 

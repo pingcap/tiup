@@ -35,11 +35,12 @@ import (
 var errPasswordKeyAtLeastOne = errors.New("--password and --key need to specify at least one")
 
 type scaleOutOptions struct {
-	user       string // username to login to the SSH server
-	usePasswd  bool   // use password for authentication
-	password   string // password of the user
-	keyFile    string // path to the private key file
-	passphrase string // passphrase of the private key file
+	user        string // username to login to the SSH server
+	usePasswd   bool   // use password for authentication
+	password    string // password of the user
+	keyFile     string // path to the private key file
+	passphrase  string // passphrase of the private key file
+	skipConfirm bool   // skip the confirmation of topology
 }
 
 func newScaleOutCmd() *cobra.Command {
@@ -81,6 +82,7 @@ To SSH connect using password:
 	cmd.Flags().BoolVar(&opt.usePasswd, "password", false, "Specify the password of system user")
 	cmd.Flags().StringVarP(&opt.keyFile, "identity_file", "i", "", "Specify the key path of system user")
 	cmd.Flags().StringVar(&opt.passphrase, "passphrase", "", "Specify the passphrase of the key")
+	cmd.Flags().BoolVarP(&opt.skipConfirm, "yes", "y", false, "Skip the confirmation of topology")
 
 	return cmd
 }
@@ -98,6 +100,17 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 	metadata, err := meta.ClusterMetadata(clusterName)
 	if err != nil {
 		return err
+	}
+
+	// TODO: check port conflict cross cluster
+	if err := checkClusterDirConflict(&newPart); err != nil {
+		return err
+	}
+
+	if !opt.skipConfirm {
+		if err := confirmTopology(clusterName, metadata.Version, &newPart); err != nil {
+			return err
+		}
 	}
 
 	// Abort scale out operation if the merged topology is invalid
