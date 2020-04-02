@@ -89,11 +89,11 @@ func PromptForConfirmOrAbortError(format string, a ...interface{}) error {
 
 // PromptForPassword reads a password input from console
 func PromptForPassword(format string, a ...interface{}) string {
-	defer fmt.Println("") // print a new line after reading input
-
 	fmt.Printf(format, a...)
 
-	input, err := terminal.ReadPassword(int(syscall.Stdin))
+	input, err := terminal.ReadPassword(syscall.Stdin)
+	fmt.Println("")
+
 	if err != nil {
 		return ""
 	}

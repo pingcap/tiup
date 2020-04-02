@@ -14,14 +14,12 @@
 package cmd
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/bindversion"
 	"github.com/pingcap-incubator/tiops/pkg/cliutil"
-	"github.com/pingcap-incubator/tiops/pkg/executor"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
@@ -33,15 +31,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var errPasswordKeyAtLeastOne = errors.New("--password and --key need to specify at least one")
-
 type scaleOutOptions struct {
-	user        string // username to login to the SSH server
-	usePasswd   bool   // use password for authentication
-	password    string // password of the user
-	keyFile     string // path to the private key file
-	passphrase  string // passphrase of the private key file
-	skipConfirm bool   // skip the confirmation of topology
+	user         string // username to login to the SSH server
+	identityFile string // path to the private key file
+	skipConfirm  bool   // skip the confirmation of topology
 }
 
 func newScaleOutCmd() *cobra.Command {
@@ -54,36 +47,15 @@ func newScaleOutCmd() *cobra.Command {
 			if len(args) != 2 {
 				return cmd.Help()
 			}
-			if opt.usePasswd {
-				opt.password = cliutil.PromptForPassword("Password: ")
-				fmt.Println("")
-			}
-			if len(opt.keyFile) == 0 && len(opt.password) == 0 {
-				// FIXME: We should lookup identity key automatically.
-				return executor.ErrSSHRequireCredential.
-					New("Identity file and password is unspecified").
-					WithProperty(cliutil.SuggestionFromTemplate(`
-You should specify either SSH identity file or password.
-
-To SSH connect using identity file:
-  {{ColorCommand}}{{OsArgs}} -i <file>{{ColorReset}}
-
-To SSH connect using password:
-  {{ColorCommand}}{{OsArgs}} --password{{ColorReset}}
-
-`, nil))
-			}
 
 			logger.EnableAuditLog()
 			return scaleOut(args[0], args[1], opt)
 		},
 	}
 
-	cmd.Flags().StringVar(&opt.user, "user", "root", "Specify the system user name")
-	cmd.Flags().BoolVar(&opt.usePasswd, "password", false, "Use password")
-	cmd.Flags().StringVarP(&opt.keyFile, "identity_file", "i", "", "Specify the key path of system user")
-	cmd.Flags().StringVar(&opt.passphrase, "passphrase", "", "Specify the passphrase of the key")
-	cmd.Flags().BoolVarP(&opt.skipConfirm, "yes", "y", false, "Skip the confirmation of topology")
+	cmd.Flags().StringVar(&opt.user, "user", "root", "The user name to login via SSH. The user must has root (or sudo) privilege.")
+	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", "", "The path of the SSH identity file. If specified, public key authentication will be used.")
+	cmd.Flags().BoolVarP(&opt.skipConfirm, "yes", "y", false, "Skip confirming the topology")
 
 	return cmd
 }
@@ -127,8 +99,13 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 	newPart.MonitoredOptions = metadata.Topology.MonitoredOptions
 	newPart.ServerConfigs = metadata.Topology.ServerConfigs
 
+	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.identityFile)
+	if err != nil {
+		return err
+	}
+
 	// Build the scale out tasks
-	t, err := buildScaleOutTask(clusterName, metadata, mergedTopo, opt, &newPart)
+	t, err := buildScaleOutTask(clusterName, metadata, mergedTopo, opt, sshConnProps, &newPart)
 	if err != nil {
 		return err
 	}
@@ -149,6 +126,7 @@ func buildScaleOutTask(
 	metadata *meta.ClusterMeta,
 	mergedTopo *meta.Specification,
 	opt scaleOutOptions,
+	sshConnProps *cliutil.SSHConnectionProps,
 	newPart *meta.TopologySpecification) (task.Task, error) {
 	var (
 		envInitTasks       []task.Task // tasks which are used to initialize environment
@@ -168,7 +146,7 @@ func buildScaleOutTask(
 		if host := instance.GetHost(); !initializedHosts.Exist(host) {
 			uninitializedHosts.Insert(host)
 			t := task.NewBuilder().
-				RootSSH(instance.GetHost(), instance.GetSSHPort(), opt.user, opt.password, opt.keyFile, opt.passphrase).
+				RootSSH(instance.GetHost(), instance.GetSSHPort(), opt.user, sshConnProps.Password, sshConnProps.IdentityFile, sshConnProps.IdentityFilePassphrase).
 				EnvInit(instance.GetHost(), metadata.User).
 				Build()
 			envInitTasks = append(envInitTasks, t)

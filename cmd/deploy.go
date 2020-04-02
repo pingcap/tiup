@@ -22,13 +22,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ScaleFT/sshkeys"
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/bindversion"
 	"github.com/pingcap-incubator/tiops/pkg/cliutil"
 	"github.com/pingcap-incubator/tiops/pkg/errutil"
-	"github.com/pingcap-incubator/tiops/pkg/executor"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
@@ -40,7 +38,6 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
-	"golang.org/x/crypto/ssh"
 )
 
 var (
@@ -56,12 +53,9 @@ type componentInfo struct {
 }
 
 type deployOptions struct {
-	user        string // username to login to the SSH server
-	usePasswd   bool   // use password for authentication
-	password    string // password of the user
-	keyFile     string // path to the private key file
-	passphrase  string // passphrase of the private key file
-	skipConfirm bool   // skip the confirmation of topology
+	user         string // username to login to the SSH server
+	identityFile string // path to the private key file
+	skipConfirm  bool   // skip the confirmation of topology
 }
 
 func newDeploy() *cobra.Command {
@@ -69,6 +63,7 @@ func newDeploy() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "deploy <cluster-name> <version> <topology.yaml>",
 		Short:        "Deploy a cluster for production",
+		Long:         "Deploy a cluster for production. SSH connection will be used to deploy files, as well as creating system users for running the service.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			shouldContinue, err := cliutil.CheckCommandArgsAndMayPrintHelp(cmd, args, 3)
@@ -79,49 +74,14 @@ func newDeploy() *cobra.Command {
 				return nil
 			}
 
-			if opt.usePasswd {
-				// FIXME: We should prompt for password when necessary automatically.
-				opt.password = cliutil.PromptForPassword("Password: ")
-				fmt.Println("")
-			}
-
-			// https://github.com/appleboy/easyssh-proxy/blob/7594a28d719d7da8767c7b024043b261ea15796c/easyssh.go#L96
-			// If this not a correct file path, it will ignore and just print a log to stdout.
-			// So we check here first.
-			if opt.keyFile != "" {
-				err = checkKey(opt.keyFile, opt.passphrase)
-				if err != nil {
-					return err
-				}
-			}
-
-			if len(opt.keyFile) == 0 && !opt.usePasswd {
-				// FIXME: We should lookup identity key automatically.
-				return executor.ErrSSHRequireCredential.
-					New("Identity file and password is unspecified").
-					WithProperty(cliutil.SuggestionFromTemplate(`
-You should specify either SSH identity file or password.
-
-To SSH connect using identity file:
-  {{ColorCommand}}{{OsArgs}} -i <file>{{ColorReset}}
-
-To SSH connect using password:
-  {{ColorCommand}}{{OsArgs}} --password{{ColorReset}}
-
-`, nil))
-			}
-
 			logger.EnableAuditLog()
 			return deploy(args[0], args[1], args[2], opt)
 		},
 	}
 
-	cmd.Flags().StringVar(&opt.user, "user", "root", "Specify the system user name")
-	cmd.Flags().BoolVar(&opt.usePasswd, "password", false, "Use password")
-	cmd.Flags().StringVarP(&opt.keyFile, "identity_file", "i", "", "Specify the path of the SSH identity file")
-	// FIXME: We should prompt for passphrase automatically
-	cmd.Flags().StringVar(&opt.passphrase, "passphrase", "", "Specify the passphrase of the SSH identity file")
-	cmd.Flags().BoolVarP(&opt.skipConfirm, "yes", "y", false, "Skip the confirmation of topology")
+	cmd.Flags().StringVar(&opt.user, "user", "root", "The user name to login via SSH. The user must has root (or sudo) privilege.")
+	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", "", "The path of the SSH identity file. If specified, public key authentication will be used.")
+	cmd.Flags().BoolVarP(&opt.skipConfirm, "yes", "y", false, "Skip confirming the topology")
 
 	return cmd
 }
@@ -382,6 +342,11 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 		}
 	}
 
+	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.identityFile)
+	if err != nil {
+		return err
+	}
+
 	if err := os.MkdirAll(meta.ClusterPath(clusterName), 0755); err != nil {
 		return errorx.InitializationFailed.
 			Wrap(err, "Failed to create cluster metadata directory '%s'", meta.ClusterPath(clusterName)).
@@ -400,7 +365,7 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 		if !uniqueHosts.Exist(inst.GetHost()) {
 			uniqueHosts.Insert(inst.GetHost())
 			t := task.NewBuilder().
-				RootSSH(inst.GetHost(), inst.GetSSHPort(), opt.user, opt.password, opt.keyFile, opt.passphrase).
+				RootSSH(inst.GetHost(), inst.GetSSHPort(), opt.user, sshConnProps.Password, sshConnProps.IdentityFile, sshConnProps.IdentityFilePassphrase).
 				EnvInit(inst.GetHost(), topo.GlobalOptions.User).
 				UserSSH(inst.GetHost(), topo.GlobalOptions.User).
 				Build()
@@ -547,20 +512,4 @@ func buildMonitoredDeployTask(
 		}
 	}
 	return
-}
-
-func checkKey(keypath string, passphrase string) error {
-	var err error
-	buf, err := ioutil.ReadFile(keypath)
-	if err != nil {
-		return err
-	}
-
-	if passphrase != "" {
-		_, err = sshkeys.ParseEncryptedPrivateKey(buf, []byte(passphrase))
-	} else {
-		_, err = ssh.ParsePrivateKey(buf)
-	}
-
-	return err
 }
