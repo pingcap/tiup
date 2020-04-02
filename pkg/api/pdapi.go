@@ -15,6 +15,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/pingcap-incubator/tiops/pkg/log"
@@ -27,32 +28,32 @@ import (
 
 // PDClient is an HTTP client of the PD server
 type PDClient struct {
-	addr       string
+	addrs      []string
 	tlsEnabled bool
 	httpClient *utils.HTTPClient
 }
 
 // NewPDClient returns a new PDClient
-func NewPDClient(addr string, timeout time.Duration, tlsConfig *tls.Config) *PDClient {
+func NewPDClient(addrs []string, timeout time.Duration, tlsConfig *tls.Config) *PDClient {
 	enableTLS := false
 	if tlsConfig != nil {
 		enableTLS = true
 	}
 
 	return &PDClient{
-		addr:       addr,
+		addrs:      addrs,
 		tlsEnabled: enableTLS,
 		httpClient: utils.NewHTTPClient(timeout, tlsConfig),
 	}
 }
 
 // GetURL builds the the client URL of PDClient
-func (pc *PDClient) GetURL() string {
+func (pc *PDClient) GetURL(addr string) string {
 	httpPrefix := "http"
 	if pc.tlsEnabled {
 		httpPrefix = "https"
 	}
-	return fmt.Sprintf("%s://%s", httpPrefix, pc.addr)
+	return fmt.Sprintf("%s://%s", httpPrefix, addr)
 }
 
 // nolint (some is unused now)
@@ -68,72 +69,132 @@ var (
 	pdLeaderTransferURI = "pd/api/v1/leader/transfer"
 )
 
+type doFunc func(endpoint string) error
+
+func tryURLs(endpoints []string, f doFunc) error {
+	var err error
+	for _, endpoint := range endpoints {
+		var u *url.URL
+		u, err = url.Parse(endpoint)
+
+		if err != nil {
+			return errors.AddStack(err)
+		}
+
+		endpoint = u.String()
+
+		err = f(endpoint)
+		if err != nil {
+			continue
+		}
+		break
+	}
+	if len(endpoints) > 1 && err != nil {
+		err = errors.Errorf("after trying all endpoints, no endpoint is available, the last error we met: %s", err)
+	}
+	return err
+}
+
 // PDHealthInfo is the member health info from PD's API
 type PDHealthInfo struct {
 	Healths []pdserverapi.Health
 }
 
-// GetHealth queries the health info from PD server
-func (pc *PDClient) GetHealth() (*PDHealthInfo, error) {
-	url := fmt.Sprintf("%s/%s", pc.GetURL(), pdHealthURI)
-	body, err := pc.httpClient.Get(url)
-	if err != nil {
-		return nil, err
+func (pc *PDClient) getEndpoints(cmd string) (endpoints []string) {
+	for _, addr := range pc.addrs {
+		endpoint := fmt.Sprintf("%s/%s", pc.GetURL(addr), cmd)
+		endpoints = append(endpoints, endpoint)
 	}
 
+	return
+}
+
+// GetHealth queries the health info from PD server
+func (pc *PDClient) GetHealth() (*PDHealthInfo, error) {
+	endpoints := pc.getEndpoints(pdHealthURI)
+
 	healths := []pdserverapi.Health{}
-	if err := json.Unmarshal(body, &healths); err != nil {
-		return nil, err
+
+	err := tryURLs(endpoints, func(endpoint string) error {
+		body, err := pc.httpClient.Get(endpoint)
+		if err != nil {
+			return err
+		}
+
+		return json.Unmarshal(body, &healths)
+	})
+
+	if err != nil {
+		return nil, errors.AddStack(err)
 	}
+
 	return &PDHealthInfo{healths}, nil
 }
 
 // GetStores queries the stores info from PD server
 func (pc *PDClient) GetStores() (*pdserverapi.StoresInfo, error) {
-	url := fmt.Sprintf("%s/%s", pc.GetURL(), pdStoresURI)
-
 	// Return all stores
-	url += "?state=0&state=1&state=2"
-
-	body, err := pc.httpClient.Get(url)
-	if err != nil {
-		return nil, err
-	}
+	query := "?state=0&state=1&state=2"
+	endpoints := pc.getEndpoints(pdStoresURI + query)
 
 	storesInfo := pdserverapi.StoresInfo{}
-	if err := json.Unmarshal(body, &storesInfo); err != nil {
-		return nil, err
+
+	err := tryURLs(endpoints, func(endpoint string) error {
+		body, err := pc.httpClient.Get(endpoint)
+		if err != nil {
+			return err
+		}
+
+		return json.Unmarshal(body, &storesInfo)
+
+	})
+	if err != nil {
+		return nil, errors.AddStack(err)
 	}
+
 	return &storesInfo, nil
 }
 
 // GetLeader queries the leader node of PD cluster
 func (pc *PDClient) GetLeader() (*pdpb.Member, error) {
-	url := fmt.Sprintf("%s/%s", pc.GetURL(), pdLeaderURI)
-	body, err := pc.httpClient.Get(url)
-	if err != nil {
-		return nil, err
-	}
+	endpoints := pc.getEndpoints(pdLeaderURI)
 
 	leader := pdpb.Member{}
-	if err := json.Unmarshal(body, &leader); err != nil {
-		return nil, err
+
+	err := tryURLs(endpoints, func(endpoint string) error {
+		body, err := pc.httpClient.Get(endpoint)
+		if err != nil {
+			return err
+		}
+
+		return json.Unmarshal(body, &leader)
+	})
+
+	if err != nil {
+		return nil, errors.AddStack(err)
 	}
+
 	return &leader, nil
 }
 
 // GetMembers queries for member list from the PD server
 func (pc *PDClient) GetMembers() (*pdpb.GetMembersResponse, error) {
-	url := fmt.Sprintf("%s/%s", pc.GetURL(), pdMembersURI)
-	body, err := pc.httpClient.Get(url)
+	endpoints := pc.getEndpoints(pdMembersURI)
+	members := pdpb.GetMembersResponse{}
+
+	err := tryURLs(endpoints, func(endpoint string) error {
+		body, err := pc.httpClient.Get(endpoint)
+		if err != nil {
+			return err
+		}
+
+		return json.Unmarshal(body, &members)
+	})
+
 	if err != nil {
-		return nil, err
+		return nil, errors.AddStack(err)
 	}
 
-	members := pdpb.GetMembersResponse{}
-	if err := json.Unmarshal(body, &members); err != nil {
-		return nil, err
-	}
 	return &members, nil
 }
 
@@ -144,16 +205,26 @@ func (pc *PDClient) EvictPDLeader() error {
 	if err != nil {
 		return err
 	}
+
 	if len(members.Members) == 1 {
 		log.Warnf("Only 1 member in the PD cluster, skip leader evicting")
 		return nil
 	}
 
 	// try to evict the leader
-	url := fmt.Sprintf("%s/%s/resign", pc.GetURL(), pdLeaderURI)
-	_, err = pc.httpClient.Post(url, nil)
+	cmd := fmt.Sprintf("%s/resign", pdLeaderURI)
+	endpoints := pc.getEndpoints(cmd)
+
+	err = tryURLs(endpoints, func(endpoint string) error {
+		_, err = pc.httpClient.Post(endpoint, nil)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
 	if err != nil {
-		return err
+		return errors.AddStack(err)
 	}
 
 	// wait for the transfer to complete
@@ -233,10 +304,15 @@ func (pc *PDClient) EvictStoreLeader(host string) error {
 	if err != nil {
 		return nil
 	}
-	url := fmt.Sprintf("%s/%s", pc.GetURL(), pdSchedulersURI)
-	_, err = pc.httpClient.Post(url, bytes.NewBuffer(scheduler))
-	if err != nil {
+
+	endpoints := pc.getEndpoints(pdSchedulersURI)
+
+	err = tryURLs(endpoints, func(endpoint string) error {
+		_, err := pc.httpClient.Post(endpoint, bytes.NewBuffer(scheduler))
 		return err
+	})
+	if err != nil {
+		return errors.AddStack(err)
 	}
 
 	// wait for the transfer to complete
@@ -304,20 +380,27 @@ func (pc *PDClient) RemoveStoreEvict(host string) error {
 	}
 
 	// remove scheduler for the store
-	url := fmt.Sprintf(
-		"%s/%s/%s",
-		pc.GetURL(),
+	cmd := fmt.Sprintf(
+		"%s/%s",
 		pdSchedulersURI,
 		fmt.Sprintf("%s-%d", pdEvictLeaderName, latestStore.Store.Id),
 	)
-	body, err := pc.httpClient.Delete(url, nil)
-	if err != nil {
-		// TODO: also check HTTP status code
-		if bytes.Contains(body, []byte("scheduler not found")) {
-			log.Debugf("Store leader evicting scheduler does not exist, ignore.")
-			return nil
+	endpoints := pc.getEndpoints(cmd)
+
+	err = tryURLs(endpoints, func(endpoint string) error {
+		body, err := pc.httpClient.Delete(endpoint, nil)
+		if err != nil {
+			// TODO: also check HTTP status code
+			if bytes.Contains(body, []byte("scheduler not found")) {
+				log.Debugf("Store leader evicting scheduler does not exist, ignore.")
+				return nil
+			}
+			return err
 		}
-		return err
+		return nil
+	})
+	if err != nil {
+		return errors.AddStack(err)
 	}
 
 	log.Debugf("Removed store leader evicting scheduler from %s.", latestStore.Store.Address)
@@ -336,10 +419,15 @@ func (pc *PDClient) DelPD(name string) error {
 	}
 
 	// try to delete the node
-	url := fmt.Sprintf("%s/%s/name/%s", pc.GetURL(), pdMembersURI, name)
-	_, err = pc.httpClient.Delete(url, nil)
-	if err != nil {
+	cmd := fmt.Sprintf("%s/name/%s", pdMembersURI, name)
+	endpoints := pc.getEndpoints(cmd)
+
+	err = tryURLs(endpoints, func(endpoint string) error {
+		_, err := pc.httpClient.Delete(endpoint, nil)
 		return err
+	})
+	if err != nil {
+		return errors.AddStack(err)
 	}
 
 	// wait for the deletion to complete
@@ -418,13 +506,16 @@ func (pc *PDClient) DelStore(host string) error {
 		return errors.Annotatef(ErrStoreNotExists, "id: %s", host)
 	}
 
-	url := fmt.Sprintf("%s/%s/%d", pc.GetURL(), pdStoreURI, storeID)
-	_, err = pc.httpClient.Delete(url, nil)
-	if err != nil {
-		return err
-	}
+	cmd := fmt.Sprintf("%s/%d", pdStoreURI, storeID)
+	endpoints := pc.getEndpoints(cmd)
 
-	log.Infof("delete store by: %s", url)
+	err = tryURLs(endpoints, func(endpoint string) error {
+		_, err := pc.httpClient.Delete(endpoint, nil)
+		return err
+	})
+	if err != nil {
+		return errors.AddStack(err)
+	}
 
 	// wait for the deletion to complete
 	retryOpt := utils.RetryOption{

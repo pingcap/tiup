@@ -37,8 +37,6 @@ func Upgrade(
 
 	leaderAware := set.NewStringSet(meta.ComponentPD, meta.ComponentTiKV)
 
-	pdAddrs := spec.GetPDList()
-
 	for _, component := range components {
 		instances := filterInstance(component.Instances(), nodeFilter)
 		if len(instances) < 1 {
@@ -47,12 +45,12 @@ func Upgrade(
 
 		// Transfer leader of evict leader if the component is TiKV/PD in non-force mode
 		if !options.Force && leaderAware.Exist(component.Name()) {
+			pdClient := api.NewPDClient(spec.GetPDList(), 5*time.Second, nil)
 			switch component.Name() {
 			case meta.ComponentPD:
 				log.Infof("Restarting component %s", component.Name())
 
 				for _, instance := range instances {
-					pdClient := api.NewPDClient(addr(instance), 5*time.Second, nil)
 					leader, err := pdClient.GetLeader()
 					if err != nil {
 						return errors.Annotatef(err, "failed to get PD leader %s", instance.GetHost())
@@ -73,13 +71,9 @@ func Upgrade(
 
 			case meta.ComponentTiKV:
 				log.Infof("Restarting component %s", component.Name())
-
-				if pdAddrs == nil || len(pdAddrs) <= 0 {
-					return errors.New("cannot find pd addr")
-				}
+				pdClient := api.NewPDClient(spec.GetPDList(), 5*time.Second, nil)
 
 				for _, instance := range instances {
-					pdClient := api.NewPDClient(pdAddrs[0], 5*time.Second, nil)
 					if err := pdClient.EvictStoreLeader(addr(instance)); err != nil {
 						return errors.Annotatef(err, "failed to evict store leader %s", instance.GetHost())
 					}

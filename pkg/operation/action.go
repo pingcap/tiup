@@ -117,7 +117,7 @@ func DestroyTombstone(
 	spec *meta.Specification,
 	returNodesOnly bool,
 ) (nodes []string, err error) {
-	var pdClient = api.NewPDClient(spec.GetPDList()[0], 10*time.Second, nil)
+	var pdClient = api.NewPDClient(spec.GetPDList(), 10*time.Second, nil)
 
 	binlogClient, err := api.NewBinlogClient(spec.GetPDList(), nil)
 	if err != nil {

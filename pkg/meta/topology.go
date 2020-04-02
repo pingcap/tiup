@@ -166,7 +166,7 @@ func (s TiKVSpec) Status(pdList ...string) string {
 	if len(pdList) < 1 {
 		return "N/A"
 	}
-	pdapi := api.NewPDClient(pdList[0], statusQueryTimeout, nil)
+	pdapi := api.NewPDClient(pdList, statusQueryTimeout, nil)
 	stores, err := pdapi.GetStores()
 	if err != nil {
 		return "Down"
@@ -232,7 +232,7 @@ type PDSpec struct {
 
 // Status queries current status of the instance
 func (s PDSpec) Status(pdList ...string) string {
-	pdapi := api.NewPDClient(fmt.Sprintf("%s:%d", s.Host, s.ClientPort),
+	pdapi := api.NewPDClient([]string{fmt.Sprintf("%s:%d", s.Host, s.ClientPort)},
 		statusQueryTimeout, nil)
 	healths, err := pdapi.GetHealth()
 	if err != nil {

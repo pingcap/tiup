@@ -106,15 +106,15 @@ func ScaleIn(
 	var pdEndpoint []string
 	for _, instance := range (&meta.PDComponent{Specification: spec}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
-			pdClient = api.NewPDClient(addr(instance), 10*time.Second, nil)
 			pdEndpoint = append(pdEndpoint, addr(instance))
-			break
 		}
 	}
 
-	if pdClient == nil {
+	if len(pdEndpoint) == 0 {
 		return errors.New("cannot find available PD instance")
 	}
+
+	pdClient = api.NewPDClient(pdEndpoint, 10*time.Second, nil)
 
 	binlogClient, err := api.NewBinlogClient(pdEndpoint, nil /* tls.Config */)
 	if err != nil {
