@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ScaleFT/sshkeys"
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/bindversion"
@@ -37,6 +38,7 @@ import (
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
+	"golang.org/x/crypto/ssh"
 )
 
 var (
@@ -77,6 +79,16 @@ func newDeploy() *cobra.Command {
 				// FIXME: We should prompt for password when necessary automatically.
 				opt.password = cliutil.PromptForPassword("Password: ")
 				fmt.Println("")
+			}
+
+			// https://github.com/appleboy/easyssh-proxy/blob/7594a28d719d7da8767c7b024043b261ea15796c/easyssh.go#L96
+			// If this not a correct file path, it will ignore and just print a log to stdout.
+			// So we check here first.
+			if opt.keyFile != "" {
+				err = checkKey(opt.keyFile, opt.passphrase)
+				if err != nil {
+					return err
+				}
 			}
 
 			if len(opt.keyFile) == 0 && !opt.usePasswd {
@@ -401,4 +413,20 @@ func buildMonitoredDeployTask(
 		}
 	}
 	return
+}
+
+func checkKey(keypath string, passphrase string) error {
+	var err error
+	buf, err := ioutil.ReadFile(keypath)
+	if err != nil {
+		return err
+	}
+
+	if passphrase != "" {
+		_, err = sshkeys.ParseEncryptedPrivateKey(buf, []byte(passphrase))
+	} else {
+		_, err = ssh.ParsePrivateKey(buf)
+	}
+
+	return err
 }
