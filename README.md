@@ -75,8 +75,8 @@ Available Components:
   tiops               Bootstrap a remote TiDB cluster
   grafana             Grafana is the open source analytics & monitoring solution for every database
   alertmanager        Prometheus Alertmanager
-  blackbox\_exporter   Blackbox prober exporter
-  node\_exporter       Blackbox prober exporter
+  blackbox_exporter   Blackbox prober exporter
+  node_exporter       Blackbox prober exporter
   pushgateway         Blackbox prober exporter
   tiflash             
   drainer             The drainer componet of TiDB binlog service
@@ -92,7 +92,7 @@ Flags:
   -T, --tag string                     Specify a tag for component instance
       --version                        version for tiup
 
-Component instances with the same "tag" will share a data directory ($TIUP\_HOME/data/$tag):
+Component instances with the same "tag" will share a data directory ($TIUP_HOME/data/$tag):
   $ tiup --tag mycluster playground
 
 Examples:
