@@ -75,7 +75,7 @@ func execute() error {
 
 	rootCmd.Flags().StringVarP(&goos, "os", "", goos, "Target OS of the package")
 	rootCmd.Flags().StringVarP(&goarch, "arch", "", goarch, "Target ARCH of the package")
-	rootCmd.Flags().StringVarP(&dir, "", "C", goos, "Change directory before compress")
+	rootCmd.Flags().StringVarP(&dir, "", "C", "", "Change directory before compress")
 	rootCmd.Flags().StringVarP(&name, "name", "", name, "Name of the package")
 	rootCmd.Flags().StringVarP(&version, "release", "", version, "Version of the package")
 	rootCmd.Flags().StringVarP(&entry, "entry", "", entry, "Entry point of the package")
