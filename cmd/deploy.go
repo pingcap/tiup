@@ -38,12 +38,14 @@ import (
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
 
 var (
 	errNSDeploy            = errNS.NewSubNamespace("deploy")
 	errDeployNameDuplicate = errNSDeploy.NewType("name_dup", errutil.ErrTraitPreCheck)
+	errDeployDirConflict   = errNSDeploy.NewType("dir_conflict", errutil.ErrTraitPreCheck)
 )
 
 type componentInfo struct {
@@ -132,8 +134,35 @@ func fixDir(topo *meta.Specification) func(string) string {
 }
 
 func checkClusterDirConflict(topo *meta.Specification) error {
-	dirs := []string{}
-	existDirs := []string{}
+	type DirAccessor struct {
+		dirKind  string
+		accessor func(meta.Instance, *meta.TopologySpecification) string
+	}
+
+	dirAccessors := []DirAccessor{
+		{dirKind: "deploy directory", accessor: func(instance meta.Instance, topo *meta.TopologySpecification) string { return instance.DeployDir() }},
+		{dirKind: "data directory", accessor: func(instance meta.Instance, topo *meta.TopologySpecification) string { return instance.DataDir() }},
+		{dirKind: "log directory", accessor: func(instance meta.Instance, topo *meta.TopologySpecification) string { return instance.LogDir() }},
+		{dirKind: "monitor deploy directory", accessor: func(instance meta.Instance, topo *meta.TopologySpecification) string {
+			return topo.MonitoredOptions.DeployDir
+		}},
+		{dirKind: "monitor data directory", accessor: func(instance meta.Instance, topo *meta.TopologySpecification) string {
+			return topo.MonitoredOptions.DataDir
+		}},
+		{dirKind: "monitor log directory", accessor: func(instance meta.Instance, topo *meta.TopologySpecification) string {
+			return topo.MonitoredOptions.LogDir
+		}},
+	}
+
+	type Entry struct {
+		clusterName string
+		dirKind     string
+		dir         string
+		instance    meta.Instance
+	}
+
+	currentEntries := []Entry{}
+	existingEntries := []Entry{}
 
 	clusterDir := meta.ProfilePath(meta.TiOpsClusterDir)
 	fileInfos, err := ioutil.ReadDir(clusterDir)
@@ -152,38 +181,58 @@ func checkClusterDirConflict(topo *meta.Specification) error {
 
 		f := fixDir(metadata.Topology)
 		metadata.Topology.IterInstance(func(inst meta.Instance) {
-			existDirs = append(existDirs,
-				path.Join(inst.GetHost(), f(inst.DeployDir())),
-				path.Join(inst.GetHost(), f(inst.DataDir())),
-				path.Join(inst.GetHost(), f(inst.LogDir())),
-				path.Join(inst.GetHost(), f(metadata.Topology.MonitoredOptions.DeployDir)),
-				path.Join(inst.GetHost(), f(metadata.Topology.MonitoredOptions.DataDir)),
-				path.Join(inst.GetHost(), f(metadata.Topology.MonitoredOptions.LogDir)),
-			)
+			for _, dirAccessor := range dirAccessors {
+				existingEntries = append(existingEntries, Entry{
+					clusterName: fi.Name(),
+					dirKind:     dirAccessor.dirKind,
+					dir:         f(dirAccessor.accessor(inst, metadata.Topology)),
+					instance:    inst,
+				})
+			}
 		})
 	}
 	f := fixDir(topo)
 	topo.IterInstance(func(inst meta.Instance) {
-		dirs = append(dirs,
-			path.Join(inst.GetHost(), f(inst.DeployDir())),
-			path.Join(inst.GetHost(), f(inst.DataDir())),
-			path.Join(inst.GetHost(), f(inst.LogDir())),
-			path.Join(inst.GetHost(), f(topo.MonitoredOptions.DeployDir)),
-			path.Join(inst.GetHost(), f(topo.MonitoredOptions.DataDir)),
-			path.Join(inst.GetHost(), f(topo.MonitoredOptions.LogDir)),
-		)
+		for _, dirAccessor := range dirAccessors {
+			currentEntries = append(currentEntries, Entry{
+				dirKind:  dirAccessor.dirKind,
+				dir:      f(dirAccessor.accessor(inst, topo)),
+				instance: inst,
+			})
+		}
 	})
 
-	for _, d1 := range dirs {
-		for _, d2 := range existDirs {
-			if !strings.HasSuffix(d1, "/") {
-				d1 += "/"
+	for _, d1 := range currentEntries {
+		for _, d2 := range existingEntries {
+			if d1.instance.GetHost() != d2.instance.GetHost() {
+				return nil
 			}
-			if !strings.HasSuffix(d2, "/") {
-				d2 += "/"
-			}
-			if strings.HasPrefix(d1, d2) || strings.HasPrefix(d2, d1) {
-				return errors.Errorf("directory %s already has been taken by other cluster", d1)
+
+			if strings.HasPrefix(d1.dir, d2.dir) || strings.HasPrefix(d2.dir, d1.dir) {
+				properties := map[string]string{
+					"ThisDirKind":    d1.dirKind,
+					"ThisDir":        d1.dir,
+					"ThisComponent":  d1.instance.ComponentName(),
+					"ThisHost":       d1.instance.GetHost(),
+					"ExistCluster":   d2.clusterName,
+					"ExistDirKind":   d2.dirKind,
+					"ExistDir":       d2.dir,
+					"ExistComponent": d2.instance.ComponentName(),
+					"ExistHost":      d2.instance.GetHost(),
+				}
+				zap.L().Info("Meet deploy directory conflict", zap.Any("info", properties))
+				return errDeployDirConflict.New("Deploy directory conflicts to an existing cluster").WithProperty(cliutil.SuggestionFromTemplate(`
+The directory you specified in the topology file is:
+  Directory: {{ColorKeyword}}{{.ThisDirKind}} {{.ThisDir}}{{ColorReset}}
+  Component: {{ColorKeyword}}{{.ThisComponent}} {{.ThisHost}}{{ColorReset}}
+
+It conflicts to a directory in the existing cluster:
+  Existing Cluster Name: {{ColorKeyword}}{{.ExistCluster}}{{ColorReset}}
+  Existing Directory:    {{ColorKeyword}}{{.ExistDirKind}} {{.ExistDir}}{{ColorReset}}
+  Existing Component:    {{ColorKeyword}}{{.ExistComponent}} {{.ExistHost}}{{ColorReset}}
+
+Please change to use another directory or another host.
+`, properties))
 			}
 		}
 	}
@@ -251,7 +300,7 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 	if err := os.MkdirAll(meta.ClusterPath(clusterName), 0755); err != nil {
 		return errorx.InitializationFailed.
 			Wrap(err, "Failed to create cluster metadata directory '%s'", meta.ClusterPath(clusterName)).
-			WithProperty(errutil.ErrPropSuggestion, "Please check file system permissions and try again.")
+			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
 	}
 
 	var (

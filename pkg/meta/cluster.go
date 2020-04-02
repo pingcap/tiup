@@ -18,7 +18,7 @@ import (
 	"os"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiops/pkg/errutil"
+	"github.com/pingcap-incubator/tiops/pkg/cliutil"
 	"github.com/pingcap-incubator/tiops/pkg/utils"
 	"github.com/pingcap/errors"
 	"gopkg.in/yaml.v2"
@@ -52,7 +52,7 @@ func EnsureClusterDir(clusterName string) error {
 	if err := utils.CreateDir(ClusterPath(clusterName)); err != nil {
 		return ErrClusterCreateDirFailed.
 			Wrap(err, "Failed to create cluster metadata directory '%s'", ClusterPath(clusterName)).
-			WithProperty(errutil.ErrPropSuggestion, "Please check file system permissions and try again.")
+			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
 	}
 	return nil
 }

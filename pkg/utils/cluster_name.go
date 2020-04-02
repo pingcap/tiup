@@ -4,6 +4,7 @@ import (
 	"regexp"
 
 	"github.com/joomcode/errorx"
+	"github.com/pingcap-incubator/tiops/pkg/cliutil"
 	"github.com/pingcap-incubator/tiops/pkg/errutil"
 )
 
@@ -26,7 +27,7 @@ func ValidateClusterNameOrError(n string) error {
 	if !clusterNameRegexp.MatchString(n) {
 		return ErrInvalidClusterName.
 			New("Cluster name '%s' is invalid", n).
-			WithProperty(errutil.ErrPropSuggestion, "The cluster name should only contains alphabets, numbers, hyphen (-) and underscore (_).")
+			WithProperty(cliutil.SuggestionFromString("The cluster name should only contains alphabets, numbers, hyphen (-) and underscore (_)."))
 	}
 	return nil
 }
