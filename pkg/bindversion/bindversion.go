@@ -22,17 +22,17 @@ import (
 func ComponentVersion(comp, version string) repository.Version {
 	switch comp {
 	case meta.ComponentPrometheus:
-		return "v2.16.0"
+		return "v2.8.1"
 	case meta.ComponentGrafana:
 		return "v6.1.6"
 	case meta.ComponentAlertManager:
-		return "v0.20.0"
+		return "v0.17.0"
 	case meta.ComponentBlackboxExporter:
-		return "v0.16.0"
+		return "v0.12.0"
 	case meta.ComponentNodeExporter:
-		return "v0.18.1"
+		return "v0.17.0"
 	case meta.ComponentPushwaygate:
-		return "v1.2.0"
+		return "v0.7.0"
 	default:
 		return repository.Version(version)
 	}
