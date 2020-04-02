@@ -40,7 +40,7 @@ func parseDirs(host *aini.Host, ins meta.InstanceSpec) (meta.InstanceSpec, error
 	})
 	log.Debugf("Detecting deploy paths on %s...", hostName)
 
-	stdout, err := readStartScript(e, ins.ComponentName(), hostName, ins.GetMainPort())
+	stdout, err := readStartScript(e, ins.Role(), hostName, ins.GetMainPort())
 	if len(stdout) <= 1 || err != nil {
 		return ins, err
 	}
