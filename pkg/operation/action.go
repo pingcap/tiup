@@ -366,6 +366,56 @@ func RestartComponent(getter ExecutorGetter, instances []meta.Instance) error {
 	return nil
 }
 
+func startInstance(getter ExecutorGetter, ins meta.Instance) error {
+	e := getter.Get(ins.GetHost())
+	log.Infof("\tStarting instance %s %s:%d",
+		ins.ComponentName(),
+		ins.GetHost(),
+		ins.GetPort())
+
+	// Start by systemd.
+	c := module.SystemdModuleConfig{
+		Unit:         ins.ServiceName(),
+		ReloadDaemon: true,
+		Action:       "start",
+		Enabled:      true,
+	}
+	systemd := module.NewSystemdModule(c)
+	stdout, stderr, err := systemd.Execute(e)
+
+	if len(stdout) > 0 {
+		fmt.Println(string(stdout))
+	}
+	if len(stderr) > 0 && !bytes.Contains(stderr, []byte("Created symlink ")) {
+		log.Errorf(string(stderr))
+	}
+
+	if err != nil {
+		return errors.Annotatef(err, "failed to start: %s %s:%d",
+			ins.ComponentName(),
+			ins.GetHost(),
+			ins.GetPort())
+	}
+
+	// Check ready.
+	err = ins.Ready(e)
+	if err != nil {
+		str := fmt.Sprintf("\t%s %s:%d failed to start: %s",
+			ins.ComponentName(),
+			ins.GetHost(),
+			ins.GetPort(), err)
+		log.Errorf(str)
+		return errors.Annotatef(err, str)
+	}
+
+	log.Infof("\tStart %s %s:%d success",
+		ins.ComponentName(),
+		ins.GetHost(),
+		ins.GetPort())
+
+	return nil
+}
+
 // StartComponent start the instances.
 func StartComponent(getter ExecutorGetter, instances []meta.Instance) error {
 	if len(instances) <= 0 {
@@ -376,51 +426,10 @@ func StartComponent(getter ExecutorGetter, instances []meta.Instance) error {
 	log.Infof("Starting component %s", name)
 
 	for _, ins := range instances {
-		e := getter.Get(ins.GetHost())
-		log.Infof("\tStarting instance %s %s:%d",
-			ins.ComponentName(),
-			ins.GetHost(),
-			ins.GetPort())
-
-		// Start by systemd.
-		c := module.SystemdModuleConfig{
-			Unit:         ins.ServiceName(),
-			ReloadDaemon: true,
-			Action:       "start",
-			Enabled:      true,
-		}
-		systemd := module.NewSystemdModule(c)
-		stdout, stderr, err := systemd.Execute(e)
-
-		if len(stdout) > 0 {
-			fmt.Println(string(stdout))
-		}
-		if len(stderr) > 0 && !bytes.Contains(stderr, []byte("Created symlink ")) {
-			log.Errorf(string(stderr))
-		}
-
+		err := startInstance(getter, ins)
 		if err != nil {
-			return errors.Annotatef(err, "failed to start: %s %s:%d",
-				ins.ComponentName(),
-				ins.GetHost(),
-				ins.GetPort())
+			return errors.AddStack(err)
 		}
-
-		// Check ready.
-		err = ins.Ready(e)
-		if err != nil {
-			str := fmt.Sprintf("\t%s %s:%d failed to start: %s",
-				ins.ComponentName(),
-				ins.GetHost(),
-				ins.GetPort(), err)
-			log.Errorf(str)
-			return errors.Annotatef(err, str)
-		}
-
-		log.Infof("\tStart %s %s:%d success",
-			ins.ComponentName(),
-			ins.GetHost(),
-			ins.GetPort())
 	}
 
 	return nil
@@ -471,6 +480,62 @@ func StopMonitored(getter ExecutorGetter, instance meta.Instance, options meta.M
 	return nil
 }
 
+func stopInstance(getter ExecutorGetter, ins meta.Instance) error {
+	e := getter.Get(ins.GetHost())
+	log.Infof("\tStopping instance %s", ins.GetHost())
+
+	// Stop by systemd.
+	c := module.SystemdModuleConfig{
+		Unit:         ins.ServiceName(),
+		Action:       "stop",
+		ReloadDaemon: true, // always reload before operate
+		// Scope: "",
+	}
+	systemd := module.NewSystemdModule(c)
+	stdout, stderr, err := systemd.Execute(e)
+
+	if len(stdout) > 0 {
+		fmt.Println(string(stdout))
+	}
+	if len(stderr) > 0 {
+		// ignore "unit not loaded" error, as this means the unit is not
+		// exist, and that's exactly what we want
+		// NOTE: there will be a potential bug if the unit name is set
+		// wrong and the real unit still remains started.
+		if bytes.Contains(stderr, []byte(" not loaded.")) {
+			log.Warnf(string(stderr))
+			err = nil // reset the error to avoid exiting
+		} else {
+			log.Errorf(string(stderr))
+		}
+	}
+
+	if err != nil {
+		return errors.Annotatef(err, "failed to stop: %s %s:%d",
+			ins.ComponentName(),
+			ins.GetHost(),
+			ins.GetPort())
+	}
+
+	err = ins.WaitForDown(e)
+	if err != nil {
+		str := fmt.Sprintf("\t%s %s:%d failed to stop: %s",
+			ins.ComponentName(),
+			ins.GetHost(),
+			ins.GetPort(),
+			err)
+		log.Errorf(str)
+		return errors.Annotatef(err, str)
+	}
+
+	log.Infof("\tStop %s %s:%d success",
+		ins.ComponentName(),
+		ins.GetHost(),
+		ins.GetPort())
+
+	return nil
+}
+
 // StopComponent stop the instances.
 func StopComponent(getter ExecutorGetter, instances []meta.Instance) error {
 	if len(instances) <= 0 {
@@ -481,57 +546,10 @@ func StopComponent(getter ExecutorGetter, instances []meta.Instance) error {
 	log.Infof("Stopping component %s", name)
 
 	for _, ins := range instances {
-		e := getter.Get(ins.GetHost())
-		log.Infof("\tStopping instance %s", ins.GetHost())
-
-		// Stop by systemd.
-		c := module.SystemdModuleConfig{
-			Unit:         ins.ServiceName(),
-			Action:       "stop",
-			ReloadDaemon: true, // always reload before operate
-			// Scope: "",
-		}
-		systemd := module.NewSystemdModule(c)
-		stdout, stderr, err := systemd.Execute(e)
-
-		if len(stdout) > 0 {
-			fmt.Println(string(stdout))
-		}
-		if len(stderr) > 0 {
-			// ignore "unit not loaded" error, as this means the unit is not
-			// exist, and that's exactly what we want
-			// NOTE: there will be a potential bug if the unit name is set
-			// wrong and the real unit still remains started.
-			if bytes.Contains(stderr, []byte(" not loaded.")) {
-				log.Warnf(string(stderr))
-				err = nil // reset the error to avoid exiting
-			} else {
-				log.Errorf(string(stderr))
-			}
-		}
-
+		err := stopInstance(getter, ins)
 		if err != nil {
-			return errors.Annotatef(err, "failed to stop: %s %s:%d",
-				ins.ComponentName(),
-				ins.GetHost(),
-				ins.GetPort())
+			return errors.AddStack(err)
 		}
-
-		err = ins.WaitForDown(e)
-		if err != nil {
-			str := fmt.Sprintf("\t%s %s:%d failed to stop: %s",
-				ins.ComponentName(),
-				ins.GetHost(),
-				ins.GetPort(),
-				err)
-			log.Errorf(str)
-			return errors.Annotatef(err, str)
-		}
-
-		log.Infof("\tStop %s %s:%d success",
-			ins.ComponentName(),
-			ins.GetHost(),
-			ins.GetPort())
 	}
 
 	return nil
