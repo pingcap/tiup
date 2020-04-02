@@ -145,8 +145,7 @@ func (pc *PDClient) EvictPDLeader() error {
 		return err
 	}
 	if len(members.Members) == 1 {
-		// TODO: add a warning log here say:
-		// "Only 1 member in the PD cluster, skip leader evicting"
+		log.Warnf("Only 1 member in the PD cluster, skip leader evicting")
 		return nil
 	}
 
@@ -175,6 +174,7 @@ func (pc *PDClient) EvictPDLeader() error {
 		}
 
 		// return error by default, to make the retry work
+		log.Debugf("Still waitting for the PD leader to transfer")
 		return errors.New("still waitting for the PD leader to transfer")
 	}, retryOpt); err != nil {
 		return fmt.Errorf("error evicting PD leader, %v", err)
@@ -222,8 +222,8 @@ func (pc *PDClient) EvictStoreLeader(host string) error {
 		return nil
 	}
 
-	// TODO: add a log say
-	// Evicting leader from storeInfo.Status.LeaderCount stores
+	log.Infof("Evicting %d leaders from store %s...",
+		latestStore.Status.LeaderCount, latestStore.Store.Address)
 
 	// set scheduler for stores
 	scheduler, err := json.Marshal(pdSchedulerRequest{
@@ -241,9 +241,9 @@ func (pc *PDClient) EvictStoreLeader(host string) error {
 
 	// wait for the transfer to complete
 	retryOpt := utils.RetryOption{
-		Attempts: 72,
+		Attempts: 120,
 		Delay:    time.Second * 5,
-		Timeout:  time.Second * 360,
+		Timeout:  time.Second * 600,
 	}
 	if err := utils.Retry(func() error {
 		currStores, err := pc.GetStores()
@@ -259,6 +259,11 @@ func (pc *PDClient) EvictStoreLeader(host string) error {
 			if currStoreInfo.Status.LeaderCount == 0 {
 				return nil
 			}
+			log.Debugf(
+				"Still waitting for %d/%d store leaders to transfer...",
+				currStoreInfo.Status.LeaderCount,
+				latestStore.Status.LeaderCount,
+			)
 		}
 
 		// return error by default, to make the retry work
@@ -309,6 +314,8 @@ func (pc *PDClient) RemoveStoreEvict(host string) error {
 	if err != nil {
 		return err
 	}
+
+	log.Debugf("Removed store leader evicting scheduler from %s.", latestStore.Store.Address)
 	return nil
 }
 
