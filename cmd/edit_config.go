@@ -15,7 +15,6 @@ package cmd
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -112,7 +111,7 @@ func editTopo(clusterName string, metadata *meta.ClusterMeta) error {
 
 	edit.ShowDiff(string(data), string(newData), os.Stdout)
 
-	msg := fmt.Sprintf(color.HiYellowString("Please check change, do you want to apply the change?"))
+	msg := color.HiYellowString("Please check change, do you want to apply the change?")
 	msg = msg + "\n[Y]es/[N]o:"
 	ans := cliutil.Prompt(msg)
 	switch strings.ToLower(ans) {

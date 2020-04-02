@@ -81,8 +81,8 @@ func displayClusterMeta(opt *displayOption) error {
 
 	cyan := color.New(color.FgCyan, color.Bold)
 
-	fmt.Println(fmt.Sprintf("TiDB Cluster: %s", cyan.Sprint(opt.clusterName)))
-	fmt.Println(fmt.Sprintf("TiDB Version: %s", cyan.Sprint(clsMeta.Version)))
+	fmt.Printf("TiDB Cluster: %s\n", cyan.Sprint(opt.clusterName))
+	fmt.Printf("TiDB Version: %s\n", cyan.Sprint(clsMeta.Version))
 
 	return nil
 }
@@ -117,7 +117,7 @@ func destroyTombsomeIfNeed(clusterName string, metadata *meta.ClusterMeta) error
 
 	log.Infof("Start destroy Tombstone nodes: %v ...", nodes)
 
-	nodes, err = operator.DestroyTombstone(ctx, topo, false /* returnNodesOnly */)
+	_, err = operator.DestroyTombstone(ctx, topo, false /* returnNodesOnly */)
 	if err != nil {
 		return errors.AddStack(err)
 	}

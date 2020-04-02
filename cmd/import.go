@@ -88,8 +88,8 @@ func newImportCmd() *cobra.Command {
 				exeCmd = "tiup cluster" // called by TiUP
 			}
 
-			fmt.Println(fmt.Sprintf("Try `%s` to see the cluster.",
-				color.HiYellowString("%s display %s", exeCmd, clsName)))
+			fmt.Printf("Try `%s` to see the cluster.\n",
+				color.HiYellowString("%s display %s", exeCmd, clsName))
 			return nil
 		},
 	}

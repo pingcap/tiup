@@ -183,8 +183,8 @@ func confirmTopology(clusterName, version string, topo *meta.Specification) erro
 	log.Infof("Please confirm your topology:")
 
 	cyan := color.New(color.FgCyan, color.Bold)
-	fmt.Println(fmt.Sprintf("TiDB Cluster: %s", cyan.Sprint(clusterName)))
-	fmt.Println(fmt.Sprintf("TiDB Version: %s", cyan.Sprint(version)))
+	fmt.Printf("TiDB Cluster: %s\n", cyan.Sprint(clusterName))
+	fmt.Printf("TiDB Version: %s\n", cyan.Sprint(version))
 
 	clusterTable := [][]string{
 		// Header

@@ -93,7 +93,7 @@ func (pc *PDClient) GetStores() (*pdserverapi.StoresInfo, error) {
 	url := fmt.Sprintf("%s/%s", pc.GetURL(), pdStoresURI)
 
 	// Return all stores
-	url += fmt.Sprintf("?state=0&state=1&state=2")
+	url += "?state=0&state=1&state=2"
 
 	body, err := pc.httpClient.Get(url)
 	if err != nil {

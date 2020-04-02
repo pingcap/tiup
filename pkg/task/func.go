@@ -13,10 +13,6 @@
 
 package task
 
-import (
-	"fmt"
-)
-
 // Func wrap a closure.
 type Func struct {
 	name string
@@ -35,5 +31,5 @@ func (m *Func) Rollback(_ *Context) error {
 
 // String implements the fmt.Stringer interface
 func (m *Func) String() string {
-	return fmt.Sprintf("%s", m.name)
+	return m.name
 }

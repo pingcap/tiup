@@ -58,7 +58,7 @@ func Prompt(prompt string) string {
 	if prompt != "" {
 		prompt += " " // append a whitespace
 	}
-	fmt.Printf(prompt)
+	fmt.Print(prompt)
 
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
