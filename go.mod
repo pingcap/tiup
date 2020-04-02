@@ -8,7 +8,6 @@ require (
 	github.com/appleboy/easyssh-proxy v1.3.0
 	github.com/creasty/defaults v1.3.0
 	github.com/fatih/color v1.9.0
-	github.com/goccy/go-yaml v1.4.3
 	github.com/google/uuid v1.1.1
 	github.com/joomcode/errorx v1.0.1
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a // indirect
@@ -30,5 +29,4 @@ require (
 	golang.org/x/mod v0.2.0
 	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd // indirect
 	gopkg.in/yaml.v2 v2.2.8
-	gopkg.in/yaml.v3 v3.0.0-20191120175047-4206685974f2
 )

@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/appleboy/easyssh-proxy"
@@ -67,14 +68,14 @@ func NewSSHExecutor(c SSHConfig) (e *SSHExecutor, err error) {
 }
 
 // Initialize builds and initializes a SSHExecutor
-func (sshExec *SSHExecutor) Initialize(config SSHConfig) error {
+func (e *SSHExecutor) Initialize(config SSHConfig) error {
 	// set default values
 	if config.Port <= 0 {
 		config.Port = 22
 	}
 
 	// build easyssh config
-	sshExec.Config = &easyssh.MakeConfig{
+	e.Config = &easyssh.MakeConfig{
 		Server: config.Host,
 		Port:   strconv.Itoa(config.Port),
 		User:   config.User,
@@ -84,17 +85,17 @@ func (sshExec *SSHExecutor) Initialize(config SSHConfig) error {
 
 	// prefer private key authentication
 	if len(config.KeyFile) > 0 {
-		sshExec.Config.KeyPath = config.KeyFile
-		sshExec.Config.Passphrase = config.Passphrase
+		e.Config.KeyPath = config.KeyFile
+		e.Config.Passphrase = config.Passphrase
 	} else {
-		sshExec.Config.Password = config.Password
+		e.Config.Password = config.Password
 	}
 
 	return nil
 }
 
 // Execute run the command via SSH, it's not invoking any specific shell by default.
-func (sshExec *SSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
+func (e *SSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
 	// try to acquire root permission
 	if sudo {
 		cmd = fmt.Sprintf("sudo -H -u root bash -c \"%s\"", cmd)
@@ -105,22 +106,27 @@ func (sshExec *SSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 
 	// run command on remote host
 	// default timeout is 60s in easyssh-proxy
-	stdout, stderr, done, err := sshExec.Config.Run(cmd, timeout...)
+	stdout, stderr, done, err := e.Config.Run(cmd, timeout...)
 	if err != nil {
+		// Some error we can't run the cmd at remote.
+		if !strings.Contains(err.Error(), "Process exited with status") {
+			return []byte(stdout), []byte(stderr), errors.Annotatef(err, "%s:%s", e.Config.Server, e.Config.Port)
+		}
+
 		if stderr != "" {
 			return []byte(stdout), []byte(stderr),
-				errors.Annotatef(err, "cmd: '%s' on %s:%s, stderr: %s", cmd, sshExec.Config.Server, sshExec.Config.Port, stderr)
+				errors.Annotatef(err, "cmd: '%s' on %s:%s, stderr: %s", cmd, e.Config.Server, e.Config.Port, stderr)
 		}
 		return []byte(stdout), []byte(stderr),
-			errors.Annotatef(err, "cmd: '%s' on %s:%s", cmd, sshExec.Config.Server, sshExec.Config.Port)
+			errors.Annotatef(err, "cmd: '%s' on %s:%s", cmd, e.Config.Server, e.Config.Port)
 	}
 
 	if !done { // timeout case,
 		return []byte(stdout), []byte(stderr),
 			fmt.Errorf("timed out running \"%s\" on %s:%s",
 				cmd,
-				sshExec.Config.Server,
-				sshExec.Config.Port)
+				e.Config.Server,
+				e.Config.Port)
 	}
 
 	return []byte(stdout), []byte(stderr), nil
@@ -130,13 +136,13 @@ func (sshExec *SSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 // This function depends on `scp` (a tool from OpenSSH or other SSH implementation)
 // This function is based on easyssh.MakeConfig.Scp() but with support of copying
 // file from remote to local.
-func (sshExec *SSHExecutor) Transfer(src string, dst string, download bool) error {
+func (e *SSHExecutor) Transfer(src string, dst string, download bool) error {
 	if !download {
-		return sshExec.Config.Scp(src, dst)
+		return e.Config.Scp(src, dst)
 	}
 
 	// download file from remote
-	session, err := sshExec.Config.Connect()
+	session, err := e.Config.Connect()
 	if err != nil {
 		return err
 	}
