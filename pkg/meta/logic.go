@@ -30,7 +30,6 @@ import (
 	system "github.com/pingcap-incubator/tiops/pkg/template/systemd"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
-	"gopkg.in/yaml.v2"
 )
 
 // Components names supported by TiOps
@@ -149,7 +148,7 @@ func (i *instance) InitConfig(e executor.TiOpsExecutor, cluster, user string, pa
 }
 
 // mergeServerConfig merges the server configuration and overwrite the global configuration
-func (i *instance) mergeServerConfig(e executor.TiOpsExecutor, globalConf, instanceConf yaml.MapSlice, paths DirPaths) error {
+func (i *instance) mergeServerConfig(e executor.TiOpsExecutor, globalConf, instanceConf map[string]interface{}, paths DirPaths) error {
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
 	conf, err := merge2Toml(i.ComponentName(), globalConf, instanceConf)
 	if err != nil {

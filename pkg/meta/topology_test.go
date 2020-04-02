@@ -162,14 +162,7 @@ tidb_servers:
       log.file.rotate: "55555.xxx"
 `), &topo)
 	c.Assert(err, IsNil)
-	equal := func(ms yaml.MapSlice, expected map[string]interface{}) {
-		got := map[string]interface{}{}
-		for _, item := range ms {
-			got[item.Key.(string)] = item.Value
-		}
-		c.Assert(got, DeepEquals, expected)
-	}
-	equal(topo.ServerConfigs.TiDB, map[string]interface{}{
+	c.Assert(topo.ServerConfigs.TiDB, DeepEquals, map[string]interface{}{
 		"status.address":  10,
 		"port":            1230,
 		"latch.capacity":  20480,
@@ -189,7 +182,7 @@ tidb_servers:
 			},
 		},
 	}
-	got, err := toMap(topo.ServerConfigs.TiDB)
+	got, err := flattenMap(topo.ServerConfigs.TiDB)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 	buf := &bytes.Buffer{}
@@ -218,7 +211,7 @@ tidb_servers:
 			},
 		},
 	}
-	got, err = toMap(topo.TiDBServers[0].Config)
+	got, err = flattenMap(topo.TiDBServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 
@@ -232,7 +225,7 @@ tidb_servers:
 			},
 		},
 	}
-	got, err = toMap(topo.TiDBServers[1].Config)
+	got, err = flattenMap(topo.TiDBServers[1].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 }
@@ -262,7 +255,7 @@ tikv_servers:
 			},
 		},
 	}
-	got, err := toMap(topo.TiKVServers[0].Config)
+	got, err := flattenMap(topo.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 }
@@ -335,6 +328,12 @@ server_configs:
     schedule.replica-schedule-limit: 64
     schedule.merge-schedule-limit: 8
     schedule.hot-region-schedule-limit: 4
+    label-property:
+      reject-leader:
+        - key: "zone"
+          value: "cn1"
+        - key: "zone"
+          value: "cn1"
 
 tidb_servers:
   - host: 172.19.0.101
@@ -359,6 +358,16 @@ tikv_servers:
 #   pd:
 #     aa.b1.c3: value
 #     aa.b2.c4: value
+[label-property]
+
+[[label-property.reject-leader]]
+key = "zone"
+value = "cn1"
+
+[[label-property.reject-leader]]
+key = "zone"
+value = "cn1"
+
 [schedule]
 hot-region-schedule-limit = 14
 leader-schedule-limit = 4

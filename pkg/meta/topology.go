@@ -26,7 +26,6 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
 	pdserverapi "github.com/pingcap/pd/v4/server/api"
-	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -69,11 +68,11 @@ type (
 
 	// ServerConfigs represents the server runtime configuration
 	ServerConfigs struct {
-		TiDB    yaml.MapSlice `yaml:"tidb"`
-		TiKV    yaml.MapSlice `yaml:"tikv"`
-		PD      yaml.MapSlice `yaml:"pd"`
-		Pump    yaml.MapSlice `yaml:"pump"`
-		Drainer yaml.MapSlice `yaml:"drainer"`
+		TiDB    map[string]interface{} `yaml:"tidb"`
+		TiKV    map[string]interface{} `yaml:"tikv"`
+		PD      map[string]interface{} `yaml:"pd"`
+		Pump    map[string]interface{} `yaml:"pump"`
+		Drainer map[string]interface{} `yaml:"drainer"`
 	}
 
 	// TopologySpecification represents the specification of topology.yaml
@@ -94,15 +93,15 @@ type (
 
 // TiDBSpec represents the TiDB topology specification in topology.yaml
 type TiDBSpec struct {
-	Host       string        `yaml:"host"`
-	SSHPort    int           `yaml:"ssh_port,omitempty"`
-	Imported   bool          `yaml:"imported,omitempty"`
-	Port       int           `yaml:"port" default:"4000"`
-	StatusPort int           `yaml:"status_port" default:"10080"`
-	DeployDir  string        `yaml:"deploy_dir,omitempty"`
-	LogDir     string        `yaml:"log_dir,omitempty"`
-	NumaNode   string        `yaml:"numa_node,omitempty"`
-	Config     yaml.MapSlice `yaml:"config,omitempty"`
+	Host       string                 `yaml:"host"`
+	SSHPort    int                    `yaml:"ssh_port,omitempty"`
+	Imported   bool                   `yaml:"imported,omitempty"`
+	Port       int                    `yaml:"port" default:"4000"`
+	StatusPort int                    `yaml:"status_port" default:"10080"`
+	DeployDir  string                 `yaml:"deploy_dir,omitempty"`
+	LogDir     string                 `yaml:"log_dir,omitempty"`
+	NumaNode   string                 `yaml:"numa_node,omitempty"`
+	Config     map[string]interface{} `yaml:"config,omitempty"`
 }
 
 // statusByURL queries current status of the instance by http status api.
@@ -149,17 +148,17 @@ func (s TiDBSpec) IsImported() bool {
 
 // TiKVSpec represents the TiKV topology specification in topology.yaml
 type TiKVSpec struct {
-	Host       string        `yaml:"host"`
-	SSHPort    int           `yaml:"ssh_port,omitempty"`
-	Imported   bool          `yaml:"imported,omitempty"`
-	Port       int           `yaml:"port" default:"20160"`
-	StatusPort int           `yaml:"status_port" default:"20180"`
-	DeployDir  string        `yaml:"deploy_dir,omitempty"`
-	DataDir    string        `yaml:"data_dir,omitempty"`
-	LogDir     string        `yaml:"log_dir,omitempty"`
-	Offline    bool          `yaml:"offline,omitempty"`
-	NumaNode   string        `yaml:"numa_node,omitempty"`
-	Config     yaml.MapSlice `yaml:"config,omitempty"`
+	Host       string                 `yaml:"host"`
+	SSHPort    int                    `yaml:"ssh_port,omitempty"`
+	Imported   bool                   `yaml:"imported,omitempty"`
+	Port       int                    `yaml:"port" default:"20160"`
+	StatusPort int                    `yaml:"status_port" default:"20180"`
+	DeployDir  string                 `yaml:"deploy_dir,omitempty"`
+	DataDir    string                 `yaml:"data_dir,omitempty"`
+	LogDir     string                 `yaml:"log_dir,omitempty"`
+	Offline    bool                   `yaml:"offline,omitempty"`
+	NumaNode   string                 `yaml:"numa_node,omitempty"`
+	Config     map[string]interface{} `yaml:"config,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -221,14 +220,14 @@ type PDSpec struct {
 	SSHPort  int    `yaml:"ssh_port,omitempty"`
 	Imported bool   `yaml:"imported,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
-	Name       string        `yaml:"name"`
-	ClientPort int           `yaml:"client_port" default:"2379"`
-	PeerPort   int           `yaml:"peer_port" default:"2380"`
-	DeployDir  string        `yaml:"deploy_dir,omitempty"`
-	DataDir    string        `yaml:"data_dir,omitempty"`
-	LogDir     string        `yaml:"log_dir,omitempty"`
-	NumaNode   string        `yaml:"numa_node,omitempty"`
-	Config     yaml.MapSlice `yaml:"config,omitempty"`
+	Name       string                 `yaml:"name"`
+	ClientPort int                    `yaml:"client_port" default:"2379"`
+	PeerPort   int                    `yaml:"peer_port" default:"2380"`
+	DeployDir  string                 `yaml:"deploy_dir,omitempty"`
+	DataDir    string                 `yaml:"data_dir,omitempty"`
+	LogDir     string                 `yaml:"log_dir,omitempty"`
+	NumaNode   string                 `yaml:"numa_node,omitempty"`
+	Config     map[string]interface{} `yaml:"config,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -284,16 +283,16 @@ func (s PDSpec) IsImported() bool {
 
 // PumpSpec represents the Pump topology specification in topology.yaml
 type PumpSpec struct {
-	Host      string        `yaml:"host"`
-	SSHPort   int           `yaml:"ssh_port,omitempty"`
-	Imported  bool          `yaml:"imported,omitempty"`
-	Port      int           `yaml:"port" default:"8250"`
-	DeployDir string        `yaml:"deploy_dir,omitempty"`
-	DataDir   string        `yaml:"data_dir,omitempty"`
-	LogDir    string        `yaml:"log_dir,omitempty"`
-	Offline   bool          `yaml:"offline,omitempty"`
-	NumaNode  string        `yaml:"numa_node,omitempty"`
-	Config    yaml.MapSlice `yaml:"config,omitempty"`
+	Host      string                 `yaml:"host"`
+	SSHPort   int                    `yaml:"ssh_port,omitempty"`
+	Imported  bool                   `yaml:"imported,omitempty"`
+	Port      int                    `yaml:"port" default:"8250"`
+	DeployDir string                 `yaml:"deploy_dir,omitempty"`
+	DataDir   string                 `yaml:"data_dir,omitempty"`
+	LogDir    string                 `yaml:"log_dir,omitempty"`
+	Offline   bool                   `yaml:"offline,omitempty"`
+	NumaNode  string                 `yaml:"numa_node,omitempty"`
+	Config    map[string]interface{} `yaml:"config,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -318,17 +317,17 @@ func (s PumpSpec) IsImported() bool {
 
 // DrainerSpec represents the Drainer topology specification in topology.yaml
 type DrainerSpec struct {
-	Host      string        `yaml:"host"`
-	SSHPort   int           `yaml:"ssh_port,omitempty"`
-	Imported  bool          `yaml:"imported,omitempty"`
-	Port      int           `yaml:"port" default:"8249"`
-	DeployDir string        `yaml:"deploy_dir,omitempty"`
-	DataDir   string        `yaml:"data_dir,omitempty"`
-	LogDir    string        `yaml:"log_dir,omitempty"`
-	CommitTS  int64         `yaml:"commit_ts,omitempty"`
-	Offline   bool          `yaml:"offline,omitempty"`
-	NumaNode  string        `yaml:"numa_node,omitempty"`
-	Config    yaml.MapSlice `yaml:"config,omitempty"`
+	Host      string                 `yaml:"host"`
+	SSHPort   int                    `yaml:"ssh_port,omitempty"`
+	Imported  bool                   `yaml:"imported,omitempty"`
+	Port      int                    `yaml:"port" default:"8249"`
+	DeployDir string                 `yaml:"deploy_dir,omitempty"`
+	DataDir   string                 `yaml:"data_dir,omitempty"`
+	LogDir    string                 `yaml:"log_dir,omitempty"`
+	CommitTS  int64                  `yaml:"commit_ts,omitempty"`
+	Offline   bool                   `yaml:"offline,omitempty"`
+	NumaNode  string                 `yaml:"numa_node,omitempty"`
+	Config    map[string]interface{} `yaml:"config,omitempty"`
 }
 
 // Role returns the component role of the instance

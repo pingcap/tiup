@@ -16,28 +16,54 @@ package meta
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/pingcap/errors"
-	"gopkg.in/yaml.v2"
 )
+
+// strKeyMap tries to convert `map[interface{}]interface{}` to `map[string]interface{}`
+func strKeyMap(val interface{}) interface{} {
+	m, ok := val.(map[interface{}]interface{})
+	if ok {
+		ret := map[string]interface{}{}
+		for k, v := range m {
+			kk, ok := k.(string)
+			if !ok {
+				return val
+			}
+			ret[kk] = strKeyMap(v)
+		}
+		return ret
+	}
+
+	rv := reflect.ValueOf(val)
+	if rv.Kind() == reflect.Slice {
+		var ret []interface{}
+		for i := 0; i < rv.Len(); i++ {
+			ret = append(ret, strKeyMap(rv.Index(i).Interface()))
+		}
+		return ret
+	}
+
+	return val
+}
 
 func flattenKey(key string, val interface{}) (string, interface{}) {
 	parts := strings.SplitN(key, ".", 2)
 	if len(parts) == 1 {
-		return key, val
+		return key, strKeyMap(val)
 	}
 	subKey, subVal := flattenKey(parts[1], val)
 	return parts[0], map[string]interface{}{
-		subKey: subVal,
+		subKey: strKeyMap(subVal),
 	}
 }
 
 func patch(origin map[string]interface{}, key string, val interface{}) {
 	origVal, found := origin[key]
 	if !found {
-		origin[key] = val
+		origin[key] = strKeyMap(val)
 		return
 	}
 	origMap, lhsOk := origVal.(map[string]interface{})
@@ -48,29 +74,25 @@ func patch(origin map[string]interface{}, key string, val interface{}) {
 		}
 	} else {
 		// overwrite
-		origin[key] = val
+		origin[key] = strKeyMap(val)
 	}
 }
 
-func toMap(ms yaml.MapSlice) (map[string]interface{}, error) {
+func flattenMap(ms map[string]interface{}) (map[string]interface{}, error) {
 	result := map[string]interface{}{}
-	for _, item := range ms {
-		s, ok := item.Key.(string)
-		if !ok {
-			return nil, errors.Errorf("unrecognized key type: %T(%+v)", item.Key, item.Key)
-		}
-		key, val := flattenKey(s, item.Value)
+	for k, v := range ms {
+		key, val := flattenKey(k, v)
 		patch(result, key, val)
 	}
 	return result, nil
 }
 
-func merge2Toml(comp string, global, overwrite yaml.MapSlice) ([]byte, error) {
-	lhs, err := toMap(global)
+func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
+	lhs, err := flattenMap(global)
 	if err != nil {
 		return nil, err
 	}
-	rhs, err := toMap(overwrite)
+	rhs, err := flattenMap(overwrite)
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +108,7 @@ func merge2Toml(comp string, global, overwrite yaml.MapSlice) ([]byte, error) {
 #     aa.b1.c3: value
 #     aa.b2.c4: value
 `, comp))
+
 	enc := toml.NewEncoder(buf)
 	enc.Indent = ""
 	err = enc.Encode(lhs)
