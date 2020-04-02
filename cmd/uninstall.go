@@ -32,8 +32,8 @@ func newUninstallCmd() *cobra.Command {
 		Long: `If you specify a version number, uninstall the specified version of
 the component. You must use --all explicitly if you want to remove all
 components or versions which are installed. You can uninstall multiple
-component or multiple version of a component at once. There is a flag
---self, which is used to uninstall tiup.
+components or multiple versions of a component at once. The --self flag
+which is used to uninstall tiup.
 
   # Uninstall tiup
   tiup uninstall --self
@@ -51,7 +51,7 @@ component or multiple version of a component at once. There is a flag
 				if err := os.RemoveAll(meta.LocalRoot()); err != nil {
 					return errors.Trace(err)
 				}
-				fmt.Println("Uninstall self successfully!")
+				fmt.Println("Uninstalled self successfully!")
 				return nil
 			}
 			switch {
@@ -61,7 +61,7 @@ component or multiple version of a component at once. There is a flag
 				if err := os.RemoveAll(meta.LocalPath(localdata.ComponentParentDir)); err != nil {
 					return errors.Trace(err)
 				}
-				fmt.Println("Uninstall all components successfully!")
+				fmt.Println("Uninstalled all components successfully!")
 				return nil
 			default:
 				return cmd.Help()
@@ -93,7 +93,7 @@ func removeComponents(specs []string, all bool) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Uninstall component '%s' successfully!\n", spec)
+		fmt.Printf("Uninstalled component `%s` successfully!\n", spec)
 	}
 	return nil
 }

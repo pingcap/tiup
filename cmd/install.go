@@ -24,9 +24,9 @@ func newInstallCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "install <component1>[:version] [component2...N]",
 		Short: "Install a specific version of a component",
-		Long: `Install a specific version of a component, the component can be specified
-by <component> or <component>:<version> and the latest stable version will
-be installed if there is no version part specified.
+		Long: `Install a specific version of a component. The component can be specified
+by <component> or <component>:<version>. The latest stable version will
+be installed if there is no version specified.
 
 You can install multiple components at once, or install multiple versions
 of the same component:

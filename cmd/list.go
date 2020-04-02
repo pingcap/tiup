@@ -32,11 +32,11 @@ func newListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list [component]",
 		Short: "List the available TiDB components or versions",
-		Long: `List the available TiDB components if you don't specify any component name.
-Or list the available versions of specific component. Display a list of
-local caches by default. You must use --refresh to force the tiup to fetch
-the latest list from the mirror server. And you can use --installed flag
-to hide components or version which don't install.
+		Long: `List the available TiDB components if you don't specify any component name,
+or list the available versions of a specific component. Display a list of
+local caches by default. You must use --refresh to force TiUP to fetch
+the latest list from the mirror server. Use the --installed flag to hide 
+components or versions which have not been innstalled.
 
   # Refresh and list all available components
   tiup list --refresh

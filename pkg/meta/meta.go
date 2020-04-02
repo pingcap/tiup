@@ -158,7 +158,7 @@ func ComponentInstalledDir(component string, version repository.Version) (string
 		})
 		version = repository.Version(versions[len(versions)-1])
 	} else if version.IsEmpty() {
-		return "", fmt.Errorf("component not installed, please try `tiup install %s` to install it", component)
+		return "", fmt.Errorf("Component not installed, please try `tiup install %s` to install it.", component)
 	}
 	return filepath.Join(LocalPath(localdata.ComponentParentDir), component, version.String()), nil
 }
@@ -174,7 +174,7 @@ func DownloadComponent(component string, version repository.Version, overwrite b
 		return err
 	}
 	if version.IsNightly() && versions.Nightly == nil {
-		fmt.Printf("The component `%s` has not nightly version, skiped\n", component)
+		fmt.Printf("The component `%s` does not have a nightly version; skipped.\n", component)
 		return nil
 	}
 	if version.IsEmpty() {
@@ -194,7 +194,7 @@ func DownloadComponent(component string, version repository.Version, overwrite b
 			}
 		}
 		if found {
-			fmt.Printf("The `%s:%s` has been installed\n", component, version)
+			fmt.Printf("The component `%s:%s` has been installed.\n", component, version)
 			return nil
 		}
 	}
@@ -265,7 +265,7 @@ func DownloadComponentIfMissing(component string, version repository.Version) (r
 	}
 
 	if needDownload {
-		fmt.Printf("The component `%s` doesn't installed, download from repository\n", component)
+		fmt.Printf("The component `%s` is not installed; downloading from repository.\n", component)
 		err := DownloadComponent(component, version, false)
 		if err != nil {
 			return "", err

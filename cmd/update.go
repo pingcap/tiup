@@ -28,25 +28,24 @@ func newUpdateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update [component1][:version] [component2..N]",
 		Short: "Update tiup components to the latest version",
-		Long: `Update some components to the latest version, you must use --nightly
-explicitly to update to the latest nightly version. You can use --all
-to update all components installed locally. And you can specify a version
-like <component>:<version> to update to the specified version. Some components
-will be ignored if the latest version has been installed locally. But you can
-use the flag --force explicitly to overwrite local installation. There is a
-a flag --self, which is used to update the tiup to the latest version. All
-other flags will be ignored if the flag --self specified.
+		Long: `Update some components to the latest version. Use --nightly
+to update to the latest nightly version. Use --all to update all components 
+installed locally. Use <component>:<version> to update to the specified 
+version. Components will be ignored if the latest version has already been 
+installed locally, but you can use --force explicitly to overwrite an 
+existing installation. Use --self which is used to update TiUP to the 
+latest version. All other flags will be ignored if the flag --self is given.
 
   $ tiup update --all                     # Update all components to the latest stable version
   $ tiup update --nightly --all           # Update all components to the latest nightly version
-  $ tiup update playground:v0.0.3 --force # Overwrite the local installation
-  $ tiup update --self                    # Update the tiup to the latest version`,
+  $ tiup update playground:v0.0.3 --force # Overwrite an existing local installation
+  $ tiup update --self                    # Update TiUP to the latest version`,
 		RunE: func(cmd *cobra.Command, components []string) error {
 			if self {
 				originFile := meta.LocalPath("bin", "tiup")
 				renameFile := meta.LocalPath("bin", "tiup.tmp")
 				if err := os.Rename(originFile, renameFile); err != nil {
-					fmt.Printf("Backup `%s` to `%s` failed\n", originFile, renameFile)
+					fmt.Printf("Backup of `%s` to `%s` failed.\n", originFile, renameFile)
 					return err
 				}
 
@@ -54,11 +53,11 @@ other flags will be ignored if the flag --self specified.
 				defer func() {
 					if err != nil {
 						if err := os.Rename(renameFile, originFile); err != nil {
-							fmt.Printf("Please rename `%s` to `%s` maunally\n", renameFile, originFile)
+							fmt.Printf("Please rename `%s` to `%s` manually.\n", renameFile, originFile)
 						}
 					} else {
 						if err := os.Remove(renameFile); err != nil {
-							fmt.Printf("Please delete `%s` maunally\n", renameFile)
+							fmt.Printf("Please delete `%s` manually.\n", renameFile)
 						}
 					}
 				}()
