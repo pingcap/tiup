@@ -20,6 +20,11 @@ func Destroy(
 	uniqueHosts := set.NewStringSet()
 	coms := spec.ComponentsByStopOrder()
 
+	instCount := map[string]int{}
+	spec.IterInstance(func(inst meta.Instance) {
+		instCount[inst.GetHost()] = instCount[inst.GetHost()] + 1
+	})
+
 	for _, com := range coms {
 		insts := com.Instances()
 		err := DestroyComponent(getter, insts)
@@ -27,8 +32,8 @@ func Destroy(
 			return errors.Annotatef(err, "failed to destroy %s", com.Name())
 		}
 		for _, inst := range insts {
-			if !uniqueHosts.Exist(inst.GetHost()) {
-				uniqueHosts.Insert(inst.GetHost())
+			instCount[inst.GetHost()]--
+			if instCount[inst.GetHost()] == 0 {
 				if err := DestroyMonitored(getter, inst, spec.MonitoredOptions); err != nil {
 					return err
 				}

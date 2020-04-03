@@ -66,11 +66,15 @@ func Stop(
 	spec *meta.Specification,
 	options Options,
 ) error {
-	uniqueHosts := set.NewStringSet()
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := spec.ComponentsByStopOrder()
 	components = filterComponent(components, roleFilter)
+
+	instCount := map[string]int{}
+	spec.IterInstance(func(inst meta.Instance) {
+		instCount[inst.GetHost()] = instCount[inst.GetHost()] + 1
+	})
 
 	for _, com := range components {
 		insts := filterInstance(com.Instances(), nodeFilter)
@@ -79,8 +83,8 @@ func Stop(
 			return errors.Annotatef(err, "failed to stop %s", com.Name())
 		}
 		for _, inst := range insts {
-			if !uniqueHosts.Exist(inst.GetHost()) {
-				uniqueHosts.Insert(inst.GetHost())
+			instCount[inst.GetHost()]--
+			if instCount[inst.GetHost()] == 0 {
 				if err := StopMonitored(getter, inst, spec.MonitoredOptions); err != nil {
 					return err
 				}
