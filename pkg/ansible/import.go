@@ -25,8 +25,11 @@ import (
 )
 
 // ImportAnsible imports a TiDB cluster deployed by TiDB-Ansible
-func ImportAnsible(dir string) (string, *meta.ClusterMeta, error) {
-	inventoryFile, err := os.Open(filepath.Join(dir, ansibleInventoryFile))
+func ImportAnsible(dir, inventoryFileName string) (string, *meta.ClusterMeta, error) {
+	if inventoryFileName == "" {
+		inventoryFileName = AnsibleInventoryFile
+	}
+	inventoryFile, err := os.Open(filepath.Join(dir, inventoryFileName))
 	if err != nil {
 		return "", nil, err
 	}

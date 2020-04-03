@@ -28,8 +28,9 @@ import (
 
 func newImportCmd() *cobra.Command {
 	var (
-		ansibleDir string
-		rename     string
+		ansibleDir        string
+		inventoryFileName string
+		rename            string
 	)
 
 	cmd := &cobra.Command{
@@ -37,7 +38,7 @@ func newImportCmd() *cobra.Command {
 		Short: "Import an exist TiDB cluster from TiDB-Ansible",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// migrate cluster metadata from Ansible inventory
-			clsName, clsMeta, err := ansible.ImportAnsible(ansibleDir)
+			clsName, clsMeta, err := ansible.ImportAnsible(ansibleDir, inventoryFileName)
 			if err != nil {
 				return err
 			}
@@ -92,6 +93,7 @@ func newImportCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&ansibleDir, "dir", "d", "", "The path to TiDB-Ansible directory")
+	cmd.Flags().StringVar(&inventoryFileName, "inventory", ansible.AnsibleInventoryFile, "The name of inventory file")
 	cmd.Flags().StringVarP(&rename, "rename", "r", "", "Rename the imported cluster to `NAME`")
 
 	return cmd

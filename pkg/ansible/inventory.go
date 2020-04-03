@@ -28,7 +28,8 @@ import (
 )
 
 var (
-	ansibleInventoryFile  = "inventory.ini"
+	// AnsibleInventoryFile is the default inventory file name
+	AnsibleInventoryFile  = "inventory.ini"
 	groupVarsGlobal       = "group_vars/all.yml"
 	groupVarsTiDB         = "group_vars/tidb_servers.yml"
 	groupVarsTiKV         = "group_vars/tikv_servers.yml"
