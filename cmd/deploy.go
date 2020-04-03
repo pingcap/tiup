@@ -170,7 +170,7 @@ func checkClusterDirConflict(topo *meta.Specification) error {
 				continue
 			}
 
-			if strings.HasPrefix(d1.dir, d2.dir) || strings.HasPrefix(d2.dir, d1.dir) {
+			if d1.dir == d2.dir {
 				properties := map[string]string{
 					"ThisDirKind":    d1.dirKind,
 					"ThisDir":        d1.dir,

@@ -230,7 +230,7 @@ func buildScaleOutTask(
 				Log:    logDir,
 				Cache:  meta.ClusterPath(clusterName, "config"),
 			},
-		)
+		).Build()
 		refreshConfigTasks = append(refreshConfigTasks, t)
 	})
 
