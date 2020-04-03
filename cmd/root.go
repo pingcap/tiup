@@ -38,15 +38,12 @@ func init() {
 	rootCmd = &cobra.Command{
 		Use: `tiup [flags] <command> [args...]
   tiup [flags] <component> [args...]`,
-		Long: `The tiup is a component management CLI utility tool that can help to download and install
-the TiDB components to the local system. You can run a specific version of a component via
+		Long: `TiUP is a command-line component management tool that can help to download and install
+TiDB platform components to the local system. You can run a specific version of a component via
 "tiup <component>[:version]". If no version number is specified, the latest version installed
-locally will be run. If the specified component does not have any version installed locally,
-the latest stable version will be downloaded from the repository.
+locally will be used. If the specified component does not have any version installed locally,
+the latest stable version will be downloaded from the repository.`,
 
-  # *HOW TO* reuse instance data instead of generating a new data directory each time?
-  # The instances which have the same "TAG" will share the data directory: $TIUP_HOME/data/$TAG.
-  $ tiup --tag mycluster playground`,
 		SilenceErrors:      true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
 		Version:            fmt.Sprintf("%s+%s(%s)", version.NewTiUPVersion().SemVer(), version.GitBranch, version.GitHash),
