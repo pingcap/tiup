@@ -32,6 +32,7 @@ type PrometheusConfig struct {
 	TiDBStatusAddrs       []string
 	TiKVStatusAddrs       []string
 	PDAddrs               []string
+	TiFlashAddrs          []string
 	PumpAddrs             []string
 	DrainerAddrs          []string
 	ZookeeperAddrs        []string
@@ -79,6 +80,12 @@ func (c *PrometheusConfig) AddTiKV(ip string, port uint64) *PrometheusConfig {
 // AddPD add a PD address
 func (c *PrometheusConfig) AddPD(ip string, port uint64) *PrometheusConfig {
 	c.PDAddrs = append(c.PDAddrs, fmt.Sprintf("%s:%d", ip, port))
+	return c
+}
+
+// AddTiFlash add a TiFlash address
+func (c *PrometheusConfig) AddTiFlash(ip string, port uint64) *PrometheusConfig {
+	c.TiFlashAddrs = append(c.TiFlashAddrs, fmt.Sprintf("%s:%d", ip, port))
 	return c
 }
 

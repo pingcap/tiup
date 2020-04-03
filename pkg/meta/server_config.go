@@ -87,7 +87,7 @@ func flattenMap(ms map[string]interface{}) (map[string]interface{}, error) {
 	return result, nil
 }
 
-func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
+func merge(global, overwrite map[string]interface{}) (map[string]interface{}, error) {
 	lhs, err := flattenMap(global)
 	if err != nil {
 		return nil, err
@@ -99,6 +99,11 @@ func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, 
 	for k, v := range rhs {
 		patch(lhs, k, v)
 	}
+	return lhs, nil
+}
+
+func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
+	lhs, err := merge(global, overwrite)
 
 	buf := bytes.NewBufferString(fmt.Sprintf(`# WARNING: This file was auto-generated. Do not edit! All your edit might be overwritten!
 # You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration

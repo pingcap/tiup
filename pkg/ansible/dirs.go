@@ -114,6 +114,16 @@ func parseDirs(host *aini.Host, ins meta.InstanceSpec) (meta.InstanceSpec, error
 			}
 		}
 		return newIns, nil
+	case meta.ComponentTiFlash:
+		// parse dirs
+		newIns := ins.(meta.TiFlashSpec)
+		for _, line := range strings.Split(string(stdout), "\n") {
+			if strings.HasPrefix(line, "DEPLOY_DIR=") {
+				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
+				continue
+			}
+		}
+		return newIns, nil
 	case meta.ComponentPump:
 		// parse dirs
 		newIns := ins.(meta.PumpSpec)

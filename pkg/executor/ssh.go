@@ -88,7 +88,7 @@ func (e *SSHExecutor) Initialize(config SSHConfig) {
 		Port:   strconv.Itoa(config.Port),
 		User:   config.User,
 		// Timeout is the maximum amount of time for the TCP connection to establish.
-		Timeout: time.Second * 5, // default timeout is 5 sec
+		Timeout: time.Second * 50, // default timeout is 5 sec
 	}
 
 	// prefer private key authentication

@@ -54,6 +54,32 @@ func ImportConfig(name string, clsMeta *meta.ClusterMeta) error {
 						true).
 					Build()
 				copyFileTasks = append(copyFileTasks, t)
+			case meta.ComponentTiFlash:
+				t := task.NewBuilder().
+					SSHKeySet(
+						meta.ClusterPath(name, "ssh", "id_rsa"),
+						meta.ClusterPath(name, "ssh", "id_rsa.pub")).
+					UserSSH(inst.GetHost(), clsMeta.User).
+					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
+						meta.ClusterPath(name,
+							"config",
+							fmt.Sprintf("%s-%s-%d.toml",
+								inst.ComponentName(),
+								inst.GetHost(),
+								inst.GetPort())),
+						inst.GetHost(),
+						true).
+					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
+						meta.ClusterPath(name,
+							"config",
+							fmt.Sprintf("%s-learner-%s-%d.toml",
+								inst.ComponentName(),
+								inst.GetHost(),
+								inst.GetPort())),
+						inst.GetHost(),
+						true).
+					Build()
+				copyFileTasks = append(copyFileTasks, t)
 			default:
 				break
 			}

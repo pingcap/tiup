@@ -59,6 +59,12 @@ func (u *UpdateMeta) Execute(ctx *Context) error {
 		}
 		newMeta.Topology.PDServers = append(newMeta.Topology.PDServers, topo.PDServers[i])
 	}
+	for i, instance := range (&meta.TiFlashComponent{Specification: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
+			continue
+		}
+		newMeta.Topology.TiFlashServers = append(newMeta.Topology.TiFlashServers, topo.TiFlashServers[i])
+	}
 	for i, instance := range (&meta.PumpComponent{Specification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue

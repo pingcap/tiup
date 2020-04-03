@@ -68,11 +68,13 @@ type (
 
 	// ServerConfigs represents the server runtime configuration
 	ServerConfigs struct {
-		TiDB    map[string]interface{} `yaml:"tidb"`
-		TiKV    map[string]interface{} `yaml:"tikv"`
-		PD      map[string]interface{} `yaml:"pd"`
-		Pump    map[string]interface{} `yaml:"pump"`
-		Drainer map[string]interface{} `yaml:"drainer"`
+		TiDB           map[string]interface{} `yaml:"tidb"`
+		TiKV           map[string]interface{} `yaml:"tikv"`
+		PD             map[string]interface{} `yaml:"pd"`
+		TiFlash        map[string]interface{} `yaml:"tiflash"`
+		TiFlashLearner map[string]interface{} `yaml:"tiflash-learner"`
+		Pump           map[string]interface{} `yaml:"pump"`
+		Drainer        map[string]interface{} `yaml:"drainer"`
 	}
 
 	// TopologySpecification represents the specification of topology.yaml
@@ -82,6 +84,7 @@ type (
 		ServerConfigs    ServerConfigs      `yaml:"server_configs,omitempty"`
 		TiDBServers      []TiDBSpec         `yaml:"tidb_servers"`
 		TiKVServers      []TiKVSpec         `yaml:"tikv_servers"`
+		TiFlashServers   []TiFlashSpec      `yaml:"tiflash_servers"`
 		PDServers        []PDSpec           `yaml:"pd_servers"`
 		PumpServers      []PumpSpec         `yaml:"pump_servers,omitempty"`
 		Drainers         []DrainerSpec      `yaml:"drainer_servers,omitempty"`
@@ -278,6 +281,51 @@ func (s PDSpec) GetMainPort() int {
 
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s PDSpec) IsImported() bool {
+	return s.Imported
+}
+
+// TiFlashSpec represents the TiFlash topology specification in topology.yaml
+type TiFlashSpec struct {
+	Host                 string                 `yaml:"host"`
+	SSHPort              int                    `yaml:"ssh_port,omitempty" default:"22"`
+	Imported             bool                   `yaml:"imported,omitempty"`
+	TCPPort              int                    `yaml:"tcp_port" default:"9000"`
+	HTTPPort             int                    `yaml:"http_port" default:"8123"`
+	FlashServicePort     int                    `yaml:"flash_service_port" default:"3930"`
+	FlashProxyPort       int                    `yaml:"flash_proxy_port" default:"20170"`
+	FlashProxyStatusPort int                    `yaml:"flash_proxy_status_port" default:"20292"`
+	MetricsPort          int                    `yaml:"metrics_port" default:"8234"`
+	DeployDir            string                 `yaml:"deploy_dir,omitempty"`
+	DataDir              string                 `yaml:"data_dir,omitempty"`
+	LogDir               string                 `yaml:"log_dir,omitempty"`
+	NumaNode             bool                   `yaml:"numa_node,omitempty"`
+	Config               map[string]interface{} `yaml:"config,omitempty"`
+	LearnerConfig        map[string]interface{} `yaml:"learner_config,omitempty"`
+}
+
+// Status queries current status of the instance
+func (s TiFlashSpec) Status(flashList ...string) string {
+	url := fmt.Sprintf("http://%s:%d/?query=select%%20version()", s.Host, s.HTTPPort)
+	return statusByURL(url)
+}
+
+// Role returns the component role of the instance
+func (s TiFlashSpec) Role() string {
+	return ComponentTiFlash
+}
+
+// SSH returns the host and SSH port of the instance
+func (s TiFlashSpec) SSH() (string, int) {
+	return s.Host, s.SSHPort
+}
+
+// GetMainPort returns the main port of the instance
+func (s TiFlashSpec) GetMainPort() int {
+	return s.TCPPort
+}
+
+// IsImported returns if the node is imported from TiDB-Ansible
+func (s TiFlashSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -498,6 +546,8 @@ func (topo *TopologySpecification) portConflictsDetect() error {
 		"PeerPort",
 		"ClientPort",
 		"WebPort",
+		"TCPPort",
+		"HTTPPort",
 		"ClusterPort",
 	}
 
@@ -685,6 +735,7 @@ func (topo *TopologySpecification) Merge(that *TopologySpecification) *TopologyS
 		TiDBServers:      append(topo.TiDBServers, that.TiDBServers...),
 		TiKVServers:      append(topo.TiKVServers, that.TiKVServers...),
 		PDServers:        append(topo.PDServers, that.PDServers...),
+		TiFlashServers:   append(topo.TiFlashServers, that.TiFlashServers...),
 		PumpServers:      append(topo.PumpServers, that.PumpServers...),
 		Drainers:         append(topo.Drainers, that.Drainers...),
 		Monitors:         append(topo.Monitors, that.Monitors...),
@@ -790,7 +841,7 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 func getPort(v reflect.Value) string {
 	for i := 0; i < v.NumField(); i++ {
 		switch v.Type().Field(i).Name {
-		case "Port", "ClientPort", "WebPort", "NodeExporterPort":
+		case "Port", "ClientPort", "WebPort", "TCPPort", "NodeExporterPort":
 			return fmt.Sprintf("%d", v.Field(i).Int())
 		}
 	}

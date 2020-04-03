@@ -33,6 +33,7 @@ var (
 	groupVarsTiDB         = "group_vars/tidb_servers.yml"
 	groupVarsTiKV         = "group_vars/tikv_servers.yml"
 	groupVarsPD           = "group_vars/pd_servers.yml"
+	groupVarsTiFlash      = "group_vars/tiflash_servers.yml"
 	groupVarsPump         = "group_vars/pump_servers.yml"
 	groupVarsDrainer      = "group_vars/drainer_servers.yml"
 	groupVarsAlertManager = "group_vars/alertmanager_servers.yml"
@@ -51,6 +52,7 @@ func parseInventory(dir string, inv *aini.InventoryData) (string, *meta.ClusterM
 		TiDBServers:      make([]meta.TiDBSpec, 0),
 		TiKVServers:      make([]meta.TiKVSpec, 0),
 		PDServers:        make([]meta.PDSpec, 0),
+		TiFlashServers:   make([]meta.TiFlashSpec, 0),
 		PumpServers:      make([]meta.PumpSpec, 0),
 		Drainers:         make([]meta.DrainerSpec, 0),
 		Monitors:         make([]meta.PrometheusSpec, 0),
@@ -258,6 +260,46 @@ func parseInventory(dir string, inv *aini.InventoryData) (string, *meta.ClusterM
 			topo.PDServers = append(topo.PDServers, ins.(meta.PDSpec))
 		}
 		log.Infof("Imported %d PD node(s).", len(topo.PDServers))
+	}
+
+	// tiflash_servers
+	if grp, ok := inv.Groups["tiflash_servers"]; ok && len(grp.Hosts) > 0 {
+		grpVars, err := readGroupVars(dir, groupVarsTiFlash)
+		if err != nil {
+			return "", nil, err
+		}
+		for _, srv := range grp.Hosts {
+			host := srv.Vars["ansible_host"]
+			if host == "" {
+				host = srv.Name
+			}
+			tmpIns := meta.TiFlashSpec{
+				Host:     host,
+				SSHPort:  srv.Port,
+				Imported: true,
+			}
+
+			if tcpPort, ok := grpVars["tiflash_tcp_port"]; ok {
+				tmpIns.TCPPort, _ = strconv.Atoi(tcpPort)
+			}
+
+			// apply values from the host
+			if tcpPort, ok := srv.Vars["tiflash_tcp_port"]; ok {
+				tmpIns.TCPPort, _ = strconv.Atoi(tcpPort)
+			}
+			if logDir, ok := srv.Vars["tiflash_log_dir"]; ok {
+				tmpIns.LogDir = logDir
+			}
+
+			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
+			ins, err := parseDirs(srv, tmpIns)
+			if err != nil {
+				return "", nil, err
+			}
+
+			topo.TiFlashServers = append(topo.TiFlashServers, ins.(meta.TiFlashSpec))
+		}
+		log.Infof("Imported %d TiFlash node(s).", len(topo.TiFlashServers))
 	}
 
 	// spark_master
