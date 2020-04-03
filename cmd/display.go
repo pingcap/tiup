@@ -140,6 +140,18 @@ func displayClusterTopology(opt *displayOption) error {
 		{"ID", "Role", "Host", "Ports", "Status", "Data Dir", "Deploy Dir"},
 	}
 
+	ctx := task.NewContext()
+	err = ctx.SetSSHKeySet(meta.ClusterPath(opt.clusterName, "ssh", "id_rsa"),
+		meta.ClusterPath(opt.clusterName, "ssh", "id_rsa.pub"))
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	err = ctx.SetClusterSSH(topo, metadata.User)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
 	filterRoles := set.NewStringSet(opt.filterRole...)
 	filterNodes := set.NewStringSet(opt.filterNode...)
 	pdList := topo.GetPDList()
@@ -161,12 +173,27 @@ func displayClusterTopology(opt *displayOption) error {
 				dataDir = insDirs[1]
 			}
 
+			status := ins.Status(pdList...)
+			// Query the service status
+			if status == "-" {
+				e, found := ctx.GetExecutor(ins.GetHost())
+				if found {
+					active, _ := operator.GetServiceStatus(e, ins.ServiceName())
+					if parts := strings.Split(strings.TrimSpace(active), " "); len(parts) > 2 {
+						if parts[1] == "active" {
+							status = "Up"
+						} else {
+							status = parts[1]
+						}
+					}
+				}
+			}
 			clusterTable = append(clusterTable, []string{
 				color.CyanString(ins.ID()),
 				ins.Role(),
 				ins.GetHost(),
 				utils.JoinInt(ins.UsedPorts(), "/"),
-				formatInstanceStatus(ins.Status(pdList...)),
+				formatInstanceStatus(status),
 				dataDir,
 				deployDir,
 			})

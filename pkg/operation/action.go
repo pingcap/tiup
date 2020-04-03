@@ -575,8 +575,8 @@ func StopComponent(getter ExecutorGetter, instances []meta.Instance) error {
 
 Mar 09 13:56:19 ip-172-16-5-70 systemd[1]: Started drainer-8249 service.
 */
-// getServiceStatus return the Acitive line of status.
-func getServiceStatus(e executor.TiOpsExecutor, name string) (active string, err error) {
+// GetServiceStatus return the Acitive line of status.
+func GetServiceStatus(e executor.TiOpsExecutor, name string) (active string, err error) {
 	c := module.SystemdModuleConfig{
 		Unit:   name,
 		Action: "status",
@@ -609,7 +609,7 @@ func PrintClusterStatus(getter ExecutorGetter, spec *meta.Specification) (health
 		for _, ins := range com.Instances() {
 			log.Infof("\t%s", ins.GetHost())
 			e := getter.Get(ins.GetHost())
-			active, err := getServiceStatus(e, ins.ServiceName())
+			active, err := GetServiceStatus(e, ins.ServiceName())
 			if err != nil {
 				health = false
 				log.Errorf("\t\t%v", err)
