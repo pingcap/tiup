@@ -76,7 +76,7 @@ func execute() error {
 
 	rootCmd.Flags().StringVar(&options.goos, "os", runtime.GOOS, "Target OS of the package")
 	rootCmd.Flags().StringVar(&options.goarch, "arch", runtime.GOARCH, "Target ARCH of the package")
-	rootCmd.Flags().StringVar(&options.dir, "", "C", "Change directory before compress")
+	rootCmd.Flags().StringVarP(&options.dir, "", "C", "", "Change directory before compress")
 	rootCmd.Flags().StringVar(&options.name, "name", "", "Name of the package")
 	rootCmd.Flags().StringVar(&options.version, "release", "", "Version of the package")
 	rootCmd.Flags().StringVar(&options.entry, "entry", "", "Entry point of the package")
@@ -140,6 +140,9 @@ func manifestIndex(options packageOptions) error {
 		if mIndex.Components[idx].Name == options.name {
 			if options.desc != "" {
 				mIndex.Components[idx].Desc = options.desc
+			}
+			if mIndex.Components[idx].Standalone != options.standalone {
+				mIndex.Components[idx].Standalone = options.standalone
 			}
 			for _, p := range mIndex.Components[idx].Platforms {
 				if p == pair {
