@@ -162,7 +162,7 @@ func checkClusterDirConflict(clusterName string, topo *meta.Specification) error
 				existingEntries = append(existingEntries, Entry{
 					clusterName: fi.Name(),
 					dirKind:     dirAccessor.dirKind,
-					dir:         f(dirAccessor.accessor(inst, topo)),
+					dir:         f(dirAccessor.accessor(inst, metadata.Topology)),
 					instance:    inst,
 				})
 			}
