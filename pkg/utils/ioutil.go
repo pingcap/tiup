@@ -37,14 +37,8 @@ func IsNotExist(path string) bool {
 }
 
 // Untar decompresses the tarball
-func Untar(file, to string) error {
-	f, err := os.Open(file)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	gr, err := gzip.NewReader(f)
+func Untar(reader io.Reader, to string) error {
+	gr, err := gzip.NewReader(reader)
 	if err != nil {
 		return errors.Trace(err)
 	}

@@ -38,7 +38,8 @@ func currentDir() string {
 
 func (s *repositorySuite) TestRepository(c *C) {
 	testDir := filepath.Join(currentDir(), "testdata")
-	repo := NewRepository(NewMirror(testDir), Options{})
+	repo, err := NewRepository(NewMirror(testDir), Options{})
+	c.Assert(err, IsNil)
 	comps, err := repo.Manifest()
 	c.Assert(err, IsNil)
 

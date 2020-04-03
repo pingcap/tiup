@@ -62,7 +62,7 @@ latest version. All other flags will be ignored if the flag --self is given.
 					}
 				}()
 
-				err = meta.Repository().DownloadFile(meta.LocalPath("bin"), "tiup")
+				err = meta.Repository().DownloadTiup(meta.LocalPath("bin"))
 				if err != nil {
 					return err
 				}
