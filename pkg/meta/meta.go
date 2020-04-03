@@ -158,7 +158,7 @@ func ComponentInstalledDir(component string, version repository.Version) (string
 		})
 		version = repository.Version(versions[len(versions)-1])
 	} else if version.IsEmpty() {
-		return "", fmt.Errorf("Component not installed, please try `tiup install %s` to install it.", component)
+		return "", fmt.Errorf("component not installed, please try `tiup install %s` to install it", component)
 	}
 	return filepath.Join(LocalPath(localdata.ComponentParentDir), component, version.String()), nil
 }

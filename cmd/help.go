@@ -112,6 +112,9 @@ Available Components:
 		}
 
 		for _, comp := range repo.Components {
+			if !comp.Standalone {
+				continue
+			}
 			installComps = installComps + fmt.Sprintf("  %s%s   %s\n", comp.Name, strings.Repeat(" ", maxNameLen-len(comp.Name)), comp.Desc)
 		}
 	} else {

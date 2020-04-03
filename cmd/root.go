@@ -46,7 +46,7 @@ the latest stable version will be downloaded from the repository.`,
 
 		SilenceErrors:      true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
-		Version:            fmt.Sprintf("%s+%s(%s)", version.NewTiUPVersion().SemVer(), version.GitBranch, version.GitHash),
+		Version:            version.NewTiUPVersion().String(),
 		Args: func(cmd *cobra.Command, args []string) error {
 			// Support `tiup <component>`
 			return nil

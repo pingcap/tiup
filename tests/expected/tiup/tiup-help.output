@@ -19,12 +19,8 @@ Available Commands:
 
 Available Components:
   test         tiup integration test mock component
-  tidb         TiDB is an open source distributed HTAP database compatible with the MySQL protocol
-  tikv         Distributed transactional key-value database, originally created to complement TiDB
-  pd           PD is the abbreviation for Placement Driver. It is used to manage and schedule the TiKV cluster
   playground   Bootstrap a local TiDB cluster
   client       A simple mysql client to connect TiDB
-  prometheus   An open-source systems monitoring and alerting toolkit
 
 Flags:
   -B, --binary <component>[:version]   Print binary path of a specific version of a component <component>[:version]
