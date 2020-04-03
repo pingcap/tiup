@@ -34,8 +34,8 @@ func ImportConfig(name string, clsMeta *meta.ClusterMeta) error {
 	//}
 	var copyFileTasks []task.Task
 	for _, comp := range clsMeta.Topology.ComponentsByStartOrder() {
+		log.Infof("Copying config file(s) of %s...", comp.Name())
 		for _, inst := range comp.Instances() {
-			log.Infof("Copying config file of %s...", inst.ComponentName())
 			switch inst.ComponentName() {
 			case meta.ComponentPD, meta.ComponentTiKV, meta.ComponentPump, meta.ComponentTiDB, meta.ComponentDrainer:
 				t := task.NewBuilder().
