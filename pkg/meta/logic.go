@@ -599,21 +599,21 @@ server_configs:
     display_name: "TiFlash"
     listen_host: "0.0.0.0"
     mark_cache_size: 5368709120
-    tmp_path: "%[10]s/%[1]s/tmp"
-    path: "%[10]s/%[1]s/db"
+    tmp_path: "%[1]s/tmp"
+    path: "%[1]s/db"
     tcp_port: %[3]d
     http_port: %[4]d
     flash.tidb_status_addr: "%[5]s"
     flash.service_addr: "%[6]s:%[7]d"
     flash.flash_cluster.cluster_manager_path: "%[10]s/bin/tiflash/flash_cluster_manager"
-    flash.flash_cluster.log: "%[10]s/%[2]s/tiflash_cluster_manager.log"
+    flash.flash_cluster.log: "%[2]s/tiflash_cluster_manager.log"
     flash.flash_cluster.master_ttl: 60
     flash.flash_cluster.refresh_interval: 20
     flash.flash_cluster.update_rule_interval: 5
     flash.proxy.config: "%[10]s/conf/tiflash-learner.toml"
     status.metrics_port: %[8]d
     logger.errorlog: "%[2]s/tiflash_error.log"
-    logger.log: "%[10]s/%[2]s/tiflash.log"
+    logger.log: "%[2]s/tiflash.log"
     logger.count: 20
     logger.level: "debug"
     logger.size: "1000M"
@@ -659,17 +659,17 @@ func (i *TiFlashInstance) InitTiFlashLearnerConfig(cfg *scripts.TiFlashScript, s
 	err := yaml.Unmarshal([]byte(fmt.Sprintf(`
 server_configs:
   tiflash-learner:
-    log-file: "%[7]s/%[1]s/tiflash_tikv.log"
+    log-file: "%[1]s/tiflash_tikv.log"
     server.engine-addr: "%[2]s:%[3]d"
     server.addr: "0.0.0.0:%[4]d"
     server.advertise-addr: "%[2]s:%[4]d"
     server.status-addr: "%[2]s:%[5]d"
-    storage.data-dir: "%[7]s/%[6]s/tiflash"
+    storage.data-dir: "%[6]s/tiflash"
     rocksdb.wal-dir: ""
     security.ca-path: ""
     security.cert-path: ""
     security.key-path: ""
-`, cfg.LogDir, cfg.IP, cfg.FlashServicePort, cfg.FlashProxyPort, cfg.FlashProxyStatusPort, cfg.DataDir, cfg.DeployDir)), &topo)
+`, cfg.LogDir, cfg.IP, cfg.FlashServicePort, cfg.FlashProxyPort, cfg.FlashProxyStatusPort, cfg.DataDir)), &topo)
 
 	if err != nil {
 		return nil, err

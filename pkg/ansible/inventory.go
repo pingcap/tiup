@@ -283,10 +283,19 @@ func parseInventory(dir string, inv *aini.InventoryData) (string, *meta.ClusterM
 			if tcpPort, ok := grpVars["tiflash_tcp_port"]; ok {
 				tmpIns.TCPPort, _ = strconv.Atoi(tcpPort)
 			}
+			if httpPort, ok := grpVars["tiflash_http_port"]; ok {
+				tmpIns.HTTPPort, _ = strconv.Atoi(httpPort)
+			}
 
 			// apply values from the host
 			if tcpPort, ok := srv.Vars["tiflash_tcp_port"]; ok {
 				tmpIns.TCPPort, _ = strconv.Atoi(tcpPort)
+			}
+			if httpPort, ok := srv.Vars["tiflash_http_port"]; ok {
+				tmpIns.HTTPPort, _ = strconv.Atoi(httpPort)
+			}
+			if dataDir, ok := srv.Vars["tiflash_data_dir"]; ok {
+				tmpIns.DataDir = dataDir
 			}
 			if logDir, ok := srv.Vars["tiflash_log_dir"]; ok {
 				tmpIns.LogDir = logDir
