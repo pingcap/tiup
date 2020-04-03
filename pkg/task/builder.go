@@ -217,6 +217,19 @@ func (b *Builder) Mkdir(user, host string, dirs ...string) *Builder {
 	return b
 }
 
+// Chown appends a Chown task to the current task collection
+func (b *Builder) Chown(user, host string, dirs ...string) *Builder {
+	if len(dirs) == 0 {
+		return b
+	}
+	b.tasks = append(b.tasks, &Chown{
+		user: user,
+		host: host,
+		dirs: dirs,
+	})
+	return b
+}
+
 // Shell command on cluster host
 func (b *Builder) Shell(host, command string, sudo bool) *Builder {
 	b.tasks = append(b.tasks, &Shell{

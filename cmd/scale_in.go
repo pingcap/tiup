@@ -14,13 +14,13 @@
 package cmd
 
 import (
-	"path/filepath"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/bindversion"
 	"github.com/pingcap-incubator/tiops/pkg/cliutil"
+	"github.com/pingcap-incubator/tiops/pkg/clusterutil"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
@@ -84,18 +84,14 @@ func scaleIn(clusterName string, options operator.Options) error {
 			if deletedNodes.Exist(instance.ID()) {
 				continue
 			}
-			deployDir := instance.DeployDir()
-			if !strings.HasPrefix(deployDir, "/") {
-				deployDir = filepath.Join("/home/", metadata.User, deployDir)
-			}
+			deployDir := clusterutil.Abs(metadata.User, instance.DeployDir())
+			// data dir would be empty for components which don't need it
 			dataDir := instance.DataDir()
-			if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
-				dataDir = filepath.Join("/home/", metadata.User, dataDir)
+			if dataDir != "" {
+				clusterutil.Abs(metadata.User, dataDir)
 			}
-			logDir := instance.LogDir()
-			if !strings.HasPrefix(logDir, "/") {
-				logDir = filepath.Join("/home/", metadata.User, logDir)
-			}
+			// log dir will always be with values, but might not used by the component
+			logDir := clusterutil.Abs(metadata.User, instance.LogDir())
 
 			// Download and copy the latest component to remote if the cluster is imported from Ansible
 			tb := task.NewBuilder()

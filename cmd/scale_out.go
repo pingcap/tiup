@@ -15,11 +15,11 @@ package cmd
 
 import (
 	"path/filepath"
-	"strings"
 
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/bindversion"
 	"github.com/pingcap-incubator/tiops/pkg/cliutil"
+	"github.com/pingcap-incubator/tiops/pkg/clusterutil"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
@@ -151,6 +151,11 @@ func buildScaleOutTask(
 			t := task.NewBuilder().
 				RootSSH(instance.GetHost(), instance.GetSSHPort(), opt.user, sshConnProps.Password, sshConnProps.IdentityFile, sshConnProps.IdentityFilePassphrase).
 				EnvInit(instance.GetHost(), metadata.User).
+				UserSSH(instance.GetHost(), metadata.User).
+				Chown(metadata.User, instance.GetHost(),
+					clusterutil.Abs(metadata.User, metadata.Topology.GlobalOptions.DeployDir),
+					clusterutil.Abs(metadata.User, metadata.Topology.GlobalOptions.DataDir),
+					clusterutil.Abs(metadata.User, metadata.Topology.GlobalOptions.LogDir)).
 				Build()
 			envInitTasks = append(envInitTasks, t)
 		}
@@ -162,20 +167,14 @@ func buildScaleOutTask(
 	// Deploy the new topology and refresh the configuration
 	newPart.IterInstance(func(inst meta.Instance) {
 		version := bindversion.ComponentVersion(inst.ComponentName(), metadata.Version)
-		deployDir := inst.DeployDir()
-		if !strings.HasPrefix(deployDir, "/") {
-			deployDir = filepath.Join("/home/", metadata.User, deployDir)
-		}
+		deployDir := clusterutil.Abs(metadata.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDir := inst.DataDir()
-		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
-			dataDir = filepath.Join("/home/", metadata.User, dataDir)
+		if dataDir != "" {
+			clusterutil.Abs(metadata.User, dataDir)
 		}
 		// log dir will always be with values, but might not used by the component
-		logDir := inst.LogDir()
-		if !strings.HasPrefix(logDir, "/") {
-			logDir = filepath.Join("/home/", metadata.User, logDir)
-		}
+		logDir := clusterutil.Abs(metadata.User, inst.LogDir())
 
 		// Deploy component
 		t := task.NewBuilder().
@@ -200,18 +199,14 @@ func buildScaleOutTask(
 	})
 
 	mergedTopo.IterInstance(func(inst meta.Instance) {
-		deployDir := inst.DeployDir()
-		if !strings.HasPrefix(deployDir, "/") {
-			deployDir = filepath.Join("/home/", metadata.User, deployDir)
-		}
+		deployDir := clusterutil.Abs(metadata.User, inst.DeployDir())
+		// data dir would be empty for components which don't need it
 		dataDir := inst.DataDir()
-		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
-			dataDir = filepath.Join("/home/", metadata.User, dataDir)
+		if dataDir != "" {
+			clusterutil.Abs(metadata.User, dataDir)
 		}
-		logDir := inst.LogDir()
-		if !strings.HasPrefix(logDir, "/") {
-			logDir = filepath.Join("/home/", metadata.User, logDir)
-		}
+		// log dir will always be with values, but might not used by the component
+		logDir := clusterutil.Abs(metadata.User, inst.LogDir())
 
 		// Download and copy the latest component to remote if the cluster is imported from Ansible
 		tb := task.NewBuilder()

@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/pingcap-incubator/tiops/pkg/clusterutil"
 	"github.com/pingcap-incubator/tiops/pkg/executor"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/module"
@@ -886,21 +887,15 @@ func (topo *Specification) IterHost(fn func(instance Instance)) {
 func (topo *Specification) Endpoints(user string) []*scripts.PDScript {
 	var ends []*scripts.PDScript
 	for _, spec := range topo.PDServers {
-		deployDir := spec.DeployDir
-		if !strings.HasPrefix(deployDir, "/") {
-			deployDir = filepath.Join("/home/", user, deployDir)
-		}
+		deployDir := clusterutil.Abs(user, spec.DeployDir)
 		// data dir would be empty for components which don't need it
 		dataDir := spec.DataDir
-		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
-			dataDir = filepath.Join("/home/", user, dataDir)
+		if dataDir != "" {
+			clusterutil.Abs(user, dataDir)
 		}
 		// log dir will always be with values, but might not used by the component
-		logDir := spec.LogDir
-		if !strings.HasPrefix(logDir, "/") {
-			logDir = filepath.Join("/home/", user, logDir)
-		}
-		// TODO: path
+		logDir := clusterutil.Abs(user, spec.LogDir)
+
 		script := scripts.NewPDScript(
 			spec.Name,
 			spec.Host,

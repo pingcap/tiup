@@ -2,9 +2,9 @@ package operator
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 
+	"github.com/pingcap-incubator/tiops/pkg/clusterutil"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiops/pkg/module"
@@ -59,9 +59,7 @@ func DeleteGlobalDirs(getter ExecutorGetter, host string, options meta.GlobalOpt
 		if dir == "" {
 			continue
 		}
-		if !strings.HasPrefix(dir, "/") {
-			dir = filepath.Join("/home/", options.User, dir)
-		}
+		dir = clusterutil.Abs(options.User, dir)
 
 		log.Infof("\tClean directory %s on instance %s", dir, host)
 

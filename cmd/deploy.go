@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -26,6 +25,7 @@ import (
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/bindversion"
 	"github.com/pingcap-incubator/tiops/pkg/cliutil"
+	"github.com/pingcap-incubator/tiops/pkg/clusterutil"
 	"github.com/pingcap-incubator/tiops/pkg/errutil"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
@@ -88,8 +88,8 @@ func newDeploy() *cobra.Command {
 
 func fixDir(topo *meta.Specification) func(string) string {
 	return func(dir string) string {
-		if dir != "" && !strings.HasPrefix(dir, "/") {
-			return path.Join("/home/", topo.GlobalOptions.User, dir)
+		if dir != "" {
+			return clusterutil.Abs(topo.GlobalOptions.User, dir)
 		}
 		return dir
 	}
@@ -397,6 +397,10 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 				RootSSH(inst.GetHost(), inst.GetSSHPort(), opt.user, sshConnProps.Password, sshConnProps.IdentityFile, sshConnProps.IdentityFilePassphrase).
 				EnvInit(inst.GetHost(), topo.GlobalOptions.User).
 				UserSSH(inst.GetHost(), topo.GlobalOptions.User).
+				Chown(topo.GlobalOptions.User, inst.GetHost(),
+					clusterutil.Abs(topo.GlobalOptions.User, topo.GlobalOptions.DeployDir),
+					clusterutil.Abs(topo.GlobalOptions.User, topo.GlobalOptions.DataDir),
+					clusterutil.Abs(topo.GlobalOptions.User, topo.GlobalOptions.LogDir)).
 				Build()
 			envInitTasks = append(envInitTasks, t)
 		}
@@ -408,20 +412,14 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 	// Deploy components to remote
 	topo.IterInstance(func(inst meta.Instance) {
 		version := bindversion.ComponentVersion(inst.ComponentName(), version)
-		deployDir := inst.DeployDir()
-		if !strings.HasPrefix(deployDir, "/") {
-			deployDir = filepath.Join("/home/", topo.GlobalOptions.User, deployDir)
-		}
+		deployDir := clusterutil.Abs(topo.GlobalOptions.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDir := inst.DataDir()
-		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
-			dataDir = filepath.Join("/home/", topo.GlobalOptions.User, dataDir)
+		if dataDir != "" {
+			clusterutil.Abs(topo.GlobalOptions.User, dataDir)
 		}
 		// log dir will always be with values, but might not used by the component
-		logDir := inst.LogDir()
-		if !strings.HasPrefix(logDir, "/") {
-			logDir = filepath.Join("/home/", topo.GlobalOptions.User, logDir)
-		}
+		logDir := clusterutil.Abs(topo.GlobalOptions.User, inst.LogDir())
 		// Deploy component
 		t := task.NewBuilder().
 			Mkdir(topo.GlobalOptions.User, inst.GetHost(),
@@ -505,19 +503,14 @@ func buildMonitoredDeployTask(
 		downloadCompTasks = append(downloadCompTasks, t)
 
 		for host := range uniqueHosts {
-			deployDir := monitoredOptions.DeployDir
-			if !strings.HasPrefix(deployDir, "/") {
-				deployDir = filepath.Join("/home/", globalOptions.User, deployDir)
-			}
+			deployDir := clusterutil.Abs(globalOptions.User, monitoredOptions.DeployDir)
 			// data dir would be empty for components which don't need it
 			dataDir := monitoredOptions.DataDir
-			if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
-				dataDir = filepath.Join("/home/", globalOptions.User, dataDir)
+			if dataDir != "" {
+				clusterutil.Abs(globalOptions.User, dataDir)
 			}
-			logDir := monitoredOptions.LogDir
-			if !strings.HasPrefix(logDir, "/") {
-				logDir = filepath.Join("/home/", globalOptions.User, logDir)
-			}
+			// log dir will always be with values, but might not used by the component
+			logDir := clusterutil.Abs(globalOptions.User, monitoredOptions.LogDir)
 
 			// Deploy component
 			t := task.NewBuilder().

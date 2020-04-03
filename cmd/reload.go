@@ -14,11 +14,9 @@
 package cmd
 
 import (
-	"path/filepath"
-	"strings"
-
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/bindversion"
+	"github.com/pingcap-incubator/tiops/pkg/clusterutil"
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
@@ -86,18 +84,14 @@ func buildReloadTask(
 	topo := metadata.Topology
 
 	topo.IterInstance(func(inst meta.Instance) {
-		deployDir := inst.DeployDir()
-		if !strings.HasPrefix(deployDir, "/") {
-			deployDir = filepath.Join("/home/", metadata.User, deployDir)
-		}
+		deployDir := clusterutil.Abs(metadata.User, inst.DeployDir())
+		// data dir would be empty for components which don't need it
 		dataDir := inst.DataDir()
-		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
-			dataDir = filepath.Join("/home/", metadata.User, dataDir)
+		if dataDir != "" {
+			clusterutil.Abs(metadata.User, dataDir)
 		}
-		logDir := inst.LogDir()
-		if !strings.HasPrefix(logDir, "/") {
-			logDir = filepath.Join("/home/", metadata.User, logDir)
-		}
+		// log dir will always be with values, but might not used by the component
+		logDir := clusterutil.Abs(metadata.User, inst.LogDir())
 
 		// Download and copy the latest component to remote if the cluster is imported from Ansible
 		tb := task.NewBuilder().UserSSH(inst.GetHost(), metadata.User)
