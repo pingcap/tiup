@@ -24,7 +24,7 @@ var (
 	// TiUPVerMinor is the minor version of TiUP
 	TiUPVerMinor = 0
 	// TiUPVerPatch is the patch version of TiUP
-	TiUPVerPatch = 2
+	TiUPVerPatch = 3
 	// TiUPVerName is alternative name of the version
 	TiUPVerName = "tiup"
 	// BuildTime is the time when binary is built

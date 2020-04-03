@@ -29,17 +29,13 @@ import (
 	"time"
 
 	"github.com/juju/errors"
+	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/spf13/cobra"
 )
 
-var mirror = "https://tiup-mirrors.pingcap.com/"
+var mirror = meta.Mirror()
 var errNotFound = fmt.Errorf("resource not found")
-
-func init() {
-	if m := os.Getenv("TIUP_MIRRORS"); m != "" {
-		mirror = m
-	}
-}
 
 func main() {
 	if err := execute(); err != nil {
@@ -48,14 +44,19 @@ func main() {
 	}
 }
 
+type packageOptions struct {
+	goos       string
+	goarch     string
+	dir        string
+	name       string
+	version    string
+	entry      string
+	desc       string
+	standalone bool
+}
+
 func execute() error {
-	goos := runtime.GOOS
-	goarch := runtime.GOARCH
-	dir := ""
-	name := ""
-	version := ""
-	entry := ""
-	desc := ""
+	options := packageOptions{}
 
 	rootCmd := &cobra.Command{
 		Use:          "tiup package target",
@@ -69,44 +70,45 @@ func execute() error {
 				return cmd.Help()
 			}
 
-			return pack(args, dir, name, version, entry, goos, goarch, desc)
+			return pack(args, options)
 		},
 	}
 
-	rootCmd.Flags().StringVarP(&goos, "os", "", goos, "Target OS of the package")
-	rootCmd.Flags().StringVarP(&goarch, "arch", "", goarch, "Target ARCH of the package")
-	rootCmd.Flags().StringVarP(&dir, "", "C", "", "Change directory before compress")
-	rootCmd.Flags().StringVarP(&name, "name", "", name, "Name of the package")
-	rootCmd.Flags().StringVarP(&version, "release", "", version, "Version of the package")
-	rootCmd.Flags().StringVarP(&entry, "entry", "", entry, "Entry point of the package")
-	rootCmd.Flags().StringVarP(&desc, "desc", "", desc, "Description of the package")
+	rootCmd.Flags().StringVar(&options.goos, "os", runtime.GOOS, "Target OS of the package")
+	rootCmd.Flags().StringVar(&options.goarch, "arch", runtime.GOARCH, "Target ARCH of the package")
+	rootCmd.Flags().StringVar(&options.dir, "", "C", "Change directory before compress")
+	rootCmd.Flags().StringVar(&options.name, "name", "", "Name of the package")
+	rootCmd.Flags().StringVar(&options.version, "release", "", "Version of the package")
+	rootCmd.Flags().StringVar(&options.entry, "entry", "", "Entry point of the package")
+	rootCmd.Flags().StringVar(&options.desc, "desc", "", "Description of the package")
+	rootCmd.Flags().BoolVar(&options.standalone, "standalone", false, "Can the component run standalone")
 
-	rootCmd.MarkFlagRequired("name")
-	rootCmd.MarkFlagRequired("release")
-	rootCmd.MarkFlagRequired("entry")
+	_ = rootCmd.MarkFlagRequired("name")
+	_ = rootCmd.MarkFlagRequired("release")
+	_ = rootCmd.MarkFlagRequired("entry")
 
 	return rootCmd.Execute()
 }
 
-func pack(targets []string, dir, name, version, entry, goos, goarch, desc string) error {
+func pack(targets []string, options packageOptions) error {
 	if err := os.MkdirAll("package", 0755); err != nil {
 		return err
 	}
 
 	// tar -czf package/{name}-{version}-{goos}-{goarch}.tar.gz target
-	if err := packTarget(targets, dir, name, version, goos, goarch); err != nil {
+	if err := packTarget(targets, options); err != nil {
 		return err
 	}
 
-	if err := checksum(name, version, goos, goarch); err != nil {
+	if err := checksum(options); err != nil {
 		return err
 	}
 
-	if err := manifestIndex(name, desc, goos, goarch); err != nil {
+	if err := manifestIndex(options); err != nil {
 		return err
 	}
 
-	if err := componentIndex(name, desc, entry, version, goos, goarch); err != nil {
+	if err := componentIndex(options); err != nil {
 		return err
 	}
 
@@ -127,17 +129,17 @@ func current(fname string, target interface{}) error {
 	return nil
 }
 
-func manifestIndex(name, desc, goos, goarch string) error {
-	mIndex := ManifestIndex{}
+func manifestIndex(options packageOptions) error {
+	mIndex := repository.ComponentManifest{}
 	if err := current("tiup-manifest.index", &mIndex); err != nil {
 		return err
 	}
-	pair := goos + "/" + goarch
+	pair := options.goos + "/" + options.goarch
 
 	for idx := range mIndex.Components {
-		if mIndex.Components[idx].Name == name {
-			if desc != "" {
-				mIndex.Components[idx].Desc = desc
+		if mIndex.Components[idx].Name == options.name {
+			if options.desc != "" {
+				mIndex.Components[idx].Desc = options.desc
 			}
 			for _, p := range mIndex.Components[idx].Platforms {
 				if p == pair {
@@ -148,39 +150,42 @@ func manifestIndex(name, desc, goos, goarch string) error {
 			return write("package/tiup-manifest.index", mIndex)
 		}
 	}
-	mIndex.Components = append(mIndex.Components, Component{
-		Name:      name,
-		Desc:      desc,
-		Platforms: []string{pair},
+	mIndex.Components = append(mIndex.Components, repository.ComponentInfo{
+		Name:       options.name,
+		Desc:       options.desc,
+		Standalone: options.standalone,
+		Platforms:  []string{pair},
 	})
 
 	return write("package/tiup-manifest.index", mIndex)
 }
 
-func componentIndex(name, desc, entry, version, goos, goarch string) error {
-	fname := fmt.Sprintf("tiup-component-%s.index", name)
-	pair := goos + "/" + goarch
+func componentIndex(options packageOptions) error {
+	fname := fmt.Sprintf("tiup-component-%s.index", options.name)
+	pair := options.goos + "/" + options.goarch
 
-	cIndex := ComponentIndex{}
+	cIndex := repository.VersionManifest{}
 	err := current(fname, &cIndex)
 	if err != nil && err != errNotFound {
 		return err
 	}
 
-	v := Version{
+	version := repository.Version(options.version)
+
+	v := repository.VersionInfo{
 		Version:   version,
-		Date:      time.Now(),
-		Entry:     entry,
+		Date:      time.Now().Format(time.RFC3339),
+		Entry:     options.entry,
 		Platforms: []string{pair},
 	}
 
 	// Generate a new component index
 	if err == errNotFound {
-		cIndex = ComponentIndex{
-			Description: desc,
-			Modified:    time.Now(),
+		cIndex = repository.VersionManifest{
+			Description: options.desc,
+			Modified:    time.Now().Format(time.RFC3339),
 		}
-		if version == "nightly" {
+		if version.IsNightly() {
 			cIndex.Nightly = &v
 		} else {
 			cIndex.Versions = append(cIndex.Versions, v)
@@ -190,8 +195,8 @@ func componentIndex(name, desc, entry, version, goos, goarch string) error {
 
 	for idx := range cIndex.Versions {
 		if cIndex.Versions[idx].Version == version {
-			cIndex.Versions[idx].Date = time.Now()
-			cIndex.Versions[idx].Entry = entry
+			cIndex.Versions[idx].Date = time.Now().Format(time.RFC3339)
+			cIndex.Versions[idx].Entry = options.entry
 			for _, p := range cIndex.Versions[idx].Platforms {
 				if p == pair {
 					return write("package/"+fname, cIndex)
@@ -202,13 +207,13 @@ func componentIndex(name, desc, entry, version, goos, goarch string) error {
 		}
 	}
 
-	if version == "nightly" {
+	if version.IsNightly() {
 		if cIndex.Nightly == nil {
 			cIndex.Nightly = &v
 			return write("package/"+fname, cIndex)
 		}
-		cIndex.Nightly.Date = time.Now()
-		cIndex.Nightly.Entry = entry
+		cIndex.Nightly.Date = time.Now().Format(time.RFC3339)
+		cIndex.Nightly.Entry = options.entry
 		for _, p := range cIndex.Nightly.Platforms {
 			if p == pair {
 				return write("package/"+fname, cIndex)
@@ -265,11 +270,11 @@ func get(url string, target interface{}) error {
 	return json.NewDecoder(r.Body).Decode(target)
 }
 
-func packTarget(targets []string, dir, name, version, goos, goarch string) error {
-	file := fmt.Sprintf("package/%s-%s-%s-%s.tar.gz", name, version, goos, goarch)
+func packTarget(targets []string, options packageOptions) error {
+	file := fmt.Sprintf("package/%s-%s-%s-%s.tar.gz", options.name, options.version, options.goos, options.goarch)
 	args := []string{"-czf", file}
-	if dir != "" {
-		args = append(args, "-C", dir)
+	if options.dir != "" {
+		args = append(args, "-C", options.dir)
 	}
 	cmd := exec.Command("tar", append(args, targets...)...)
 	fmt.Println(cmd.Args)
@@ -279,8 +284,8 @@ func packTarget(targets []string, dir, name, version, goos, goarch string) error
 	return nil
 }
 
-func checksum(name, version, goos, goarch string) error {
-	tarball, err := os.OpenFile(fmt.Sprintf("package/%s-%s-%s-%s.tar.gz", name, version, goos, goarch), os.O_RDONLY, 0)
+func checksum(options packageOptions) error {
+	tarball, err := os.OpenFile(fmt.Sprintf("package/%s-%s-%s-%s.tar.gz", options.name, options.version, options.goos, options.goarch), os.O_RDONLY, 0)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -292,7 +297,7 @@ func checksum(name, version, goos, goarch string) error {
 	}
 
 	checksum := hex.EncodeToString(sha1Writter.Sum(nil))
-	file := fmt.Sprintf("package/%s-%s-%s-%s.sha1", name, version, goos, goarch)
+	file := fmt.Sprintf("package/%s-%s-%s-%s.sha1", options.name, options.version, options.goos, options.goarch)
 	if err := ioutil.WriteFile(file, []byte(checksum), 0664); err != nil {
 		return err
 	}
@@ -304,6 +309,5 @@ func chwd() error {
 	if pwd == "" {
 		return fmt.Errorf("Env PWD not set")
 	}
-
 	return os.Chdir(pwd)
 }

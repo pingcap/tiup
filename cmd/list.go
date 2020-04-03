@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
@@ -95,6 +96,7 @@ func showComponentList(onlyInstalled bool) error {
 
 	localComponents := set.NewStringSet(installed...)
 	for _, comp := range manifest.Components {
+		sort.Strings(comp.Platforms)
 		if onlyInstalled && !localComponents.Exist(comp.Name) {
 			continue
 		}

@@ -6,6 +6,7 @@
         {
             "name": "test",
             "desc": "tiup integration test mock component",
+            "standalone": true,
             "platforms": [
                 "darwin/amd64",
                 "linux/amd64"
@@ -38,6 +39,7 @@
         {
             "name": "playground",
             "desc": "Bootstrap a local TiDB cluster",
+            "standalone": true,
             "platforms": [
                 "darwin/amd64",
                 "linux/amd64"
@@ -46,6 +48,7 @@
         {
             "name": "client",
             "desc": "A simple mysql client to connect TiDB",
+            "standalone": true,
             "platforms": [
                 "darwin/amd64",
                 "linux/amd64"
