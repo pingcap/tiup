@@ -867,6 +867,21 @@ func (topo *Specification) IterInstance(fn func(instance Instance)) {
 	}
 }
 
+// IterHost iterates one instance for each host
+func (topo *Specification) IterHost(fn func(instance Instance)) {
+	hostMap := make(map[string]bool)
+	for _, comp := range topo.ComponentsByStartOrder() {
+		for _, inst := range comp.Instances() {
+			host := inst.GetHost()
+			_, ok := hostMap[host]
+			if !ok {
+				hostMap[host] = true
+				fn(inst)
+			}
+		}
+	}
+}
+
 // Endpoints returns the PD endpoints configurations
 func (topo *Specification) Endpoints(user string) []*scripts.PDScript {
 	var ends []*scripts.PDScript

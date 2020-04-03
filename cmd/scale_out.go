@@ -76,10 +76,16 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 		return err
 	}
 
-	if err := checkClusterPortConflict(&newPart); err != nil {
+	// Abort scale out operation if the merged topology is invalid
+	mergedTopo := metadata.Topology.Merge(&newPart)
+	if err := mergedTopo.Validate(); err != nil {
 		return err
 	}
-	if err := checkClusterDirConflict(&newPart); err != nil {
+
+	if err := checkClusterPortConflict(clusterName, mergedTopo); err != nil {
+		return err
+	}
+	if err := checkClusterDirConflict(clusterName, mergedTopo); err != nil {
 		return err
 	}
 
@@ -87,12 +93,6 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 		if err := confirmTopology(clusterName, metadata.Version, &newPart); err != nil {
 			return err
 		}
-	}
-
-	// Abort scale out operation if the merged topology is invalid
-	mergedTopo := metadata.Topology.Merge(&newPart)
-	if err := mergedTopo.Validate(); err != nil {
-		return err
 	}
 
 	// Inherit existing global configuration

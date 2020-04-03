@@ -88,23 +88,25 @@ func newDeploy() *cobra.Command {
 
 func fixDir(topo *meta.Specification) func(string) string {
 	return func(dir string) string {
-		if !strings.HasPrefix(dir, "/") {
+		if dir != "" && !strings.HasPrefix(dir, "/") {
 			return path.Join("/home/", topo.GlobalOptions.User, dir)
 		}
 		return dir
 	}
 }
 
-func checkClusterDirConflict(topo *meta.Specification) error {
+func checkClusterDirConflict(clusterName string, topo *meta.Specification) error {
 	type DirAccessor struct {
 		dirKind  string
 		accessor func(meta.Instance, *meta.TopologySpecification) string
 	}
 
-	dirAccessors := []DirAccessor{
+	instanceDirAccessor := []DirAccessor{
 		{dirKind: "deploy directory", accessor: func(instance meta.Instance, topo *meta.TopologySpecification) string { return instance.DeployDir() }},
 		{dirKind: "data directory", accessor: func(instance meta.Instance, topo *meta.TopologySpecification) string { return instance.DataDir() }},
 		{dirKind: "log directory", accessor: func(instance meta.Instance, topo *meta.TopologySpecification) string { return instance.LogDir() }},
+	}
+	hostDirAccessor := []DirAccessor{
 		{dirKind: "monitor deploy directory", accessor: func(instance meta.Instance, topo *meta.TopologySpecification) string {
 			return topo.MonitoredOptions.DeployDir
 		}},
@@ -131,8 +133,11 @@ func checkClusterDirConflict(topo *meta.Specification) error {
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-
 	for _, fi := range fileInfos {
+		if fi.Name() == clusterName {
+			continue
+		}
+
 		if tiuputils.IsNotExist(meta.ClusterPath(fi.Name(), meta.MetaFileName)) {
 			continue
 		}
@@ -143,7 +148,7 @@ func checkClusterDirConflict(topo *meta.Specification) error {
 
 		f := fixDir(metadata.Topology)
 		metadata.Topology.IterInstance(func(inst meta.Instance) {
-			for _, dirAccessor := range dirAccessors {
+			for _, dirAccessor := range instanceDirAccessor {
 				existingEntries = append(existingEntries, Entry{
 					clusterName: fi.Name(),
 					dirKind:     dirAccessor.dirKind,
@@ -152,10 +157,30 @@ func checkClusterDirConflict(topo *meta.Specification) error {
 				})
 			}
 		})
+		metadata.Topology.IterHost(func(inst meta.Instance) {
+			for _, dirAccessor := range hostDirAccessor {
+				existingEntries = append(existingEntries, Entry{
+					clusterName: fi.Name(),
+					dirKind:     dirAccessor.dirKind,
+					dir:         f(dirAccessor.accessor(inst, topo)),
+					instance:    inst,
+				})
+			}
+		})
 	}
+
 	f := fixDir(topo)
 	topo.IterInstance(func(inst meta.Instance) {
-		for _, dirAccessor := range dirAccessors {
+		for _, dirAccessor := range instanceDirAccessor {
+			currentEntries = append(currentEntries, Entry{
+				dirKind:  dirAccessor.dirKind,
+				dir:      f(dirAccessor.accessor(inst, topo)),
+				instance: inst,
+			})
+		}
+	})
+	topo.IterHost(func(inst meta.Instance) {
+		for _, dirAccessor := range hostDirAccessor {
 			currentEntries = append(currentEntries, Entry{
 				dirKind:  dirAccessor.dirKind,
 				dir:      f(dirAccessor.accessor(inst, topo)),
@@ -170,7 +195,7 @@ func checkClusterDirConflict(topo *meta.Specification) error {
 				continue
 			}
 
-			if d1.dir == d2.dir {
+			if d1.dir == d2.dir && d1.dir != "" {
 				properties := map[string]string{
 					"ThisDirKind":    d1.dirKind,
 					"ThisDir":        d1.dir,
@@ -202,7 +227,7 @@ Please change to use another directory or another host.
 	return nil
 }
 
-func checkClusterPortConflict(topo *meta.Specification) error {
+func checkClusterPortConflict(clusterName string, topo *meta.Specification) error {
 	clusterDir := meta.ProfilePath(meta.TiOpsClusterDir)
 	fileInfos, err := ioutil.ReadDir(clusterDir)
 	if err != nil && !os.IsNotExist(err) {
@@ -219,6 +244,10 @@ func checkClusterPortConflict(topo *meta.Specification) error {
 	existingEntries := []Entry{}
 
 	for _, fi := range fileInfos {
+		if fi.Name() == clusterName {
+			continue
+		}
+
 		if tiuputils.IsNotExist(meta.ClusterPath(fi.Name(), meta.MetaFileName)) {
 			continue
 		}
@@ -329,10 +358,10 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 		return err
 	}
 
-	if err := checkClusterPortConflict(&topo); err != nil {
+	if err := checkClusterPortConflict(clusterName, &topo); err != nil {
 		return err
 	}
-	if err := checkClusterDirConflict(&topo); err != nil {
+	if err := checkClusterDirConflict(clusterName, &topo); err != nil {
 		return err
 	}
 
