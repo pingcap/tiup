@@ -139,5 +139,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 		return errors.Trace(err)
 	}
 
+	log.Infof("Scaled cluster `%s` in successfully", clusterName)
+
 	return nil
 }

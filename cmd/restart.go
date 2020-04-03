@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"github.com/joomcode/errorx"
+	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
@@ -61,6 +62,8 @@ func newRestartCmd() *cobra.Command {
 				}
 				return errors.Trace(err)
 			}
+
+			log.Infof("Restarted cluster `%s` successfully", clusterName)
 
 			return nil
 		},

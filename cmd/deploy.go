@@ -436,11 +436,17 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 		return errors.Trace(err)
 	}
 
-	return meta.SaveClusterMeta(clusterName, &meta.ClusterMeta{
+	err = meta.SaveClusterMeta(clusterName, &meta.ClusterMeta{
 		User:     topo.GlobalOptions.User,
 		Version:  version,
 		Topology: &topo,
 	})
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	log.Infof("Deployed cluster `%s` successfully", clusterName)
+	return nil
 }
 
 func buildDownloadCompTasks(version string, topo *meta.Specification) []task.Task {

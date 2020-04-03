@@ -20,6 +20,7 @@ import (
 
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/bindversion"
+	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
@@ -70,12 +71,12 @@ func versionCompare(curVersion, newVersion string) error {
 	}
 }
 
-func upgrade(name, version string, opt upgradeOptions) error {
-	if utils.IsNotExist(meta.ClusterPath(name, meta.MetaFileName)) {
-		return errors.Errorf("cannot upgrade non-exists cluster %s", name)
+func upgrade(clusterName, version string, opt upgradeOptions) error {
+	if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+		return errors.Errorf("cannot upgrade non-exists cluster %s", clusterName)
 	}
 
-	metadata, err := meta.ClusterMetadata(name)
+	metadata, err := meta.ClusterMetadata(clusterName)
 	if err != nil {
 		return err
 	}
@@ -137,14 +138,14 @@ func upgrade(name, version string, opt upgradeOptions) error {
 						CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
 				}
 				tb.InitConfig(
-					name,
+					clusterName,
 					inst,
 					metadata.User,
 					meta.DirPaths{
 						Deploy: deployDir,
 						Data:   dataDir,
 						Log:    logDir,
-						Cache:  meta.ClusterPath(name, "config"),
+						Cache:  meta.ClusterPath(clusterName, "config"),
 					},
 				)
 			} else {
@@ -157,8 +158,8 @@ func upgrade(name, version string, opt upgradeOptions) error {
 
 	t := task.NewBuilder().
 		SSHKeySet(
-			meta.ClusterPath(name, "ssh", "id_rsa"),
-			meta.ClusterPath(name, "ssh", "id_rsa.pub")).
+			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
+			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(metadata.Topology, metadata.User).
 		Parallel(downloadCompTasks...).
 		Parallel(copyCompTasks...).
@@ -174,5 +175,11 @@ func upgrade(name, version string, opt upgradeOptions) error {
 	}
 
 	metadata.Version = version
-	return meta.SaveClusterMeta(name, metadata)
+	if err := meta.SaveClusterMeta(clusterName, metadata); err != nil {
+		return errors.Trace(err)
+	}
+
+	log.Infof("Upgraded cluster `%s` successfully", clusterName)
+
+	return nil
 }

@@ -19,6 +19,7 @@ import (
 
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/bindversion"
+	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
@@ -62,6 +63,8 @@ func newReloadCmd() *cobra.Command {
 				}
 				return errors.Trace(err)
 			}
+
+			log.Infof("Reloaded cluster `%s` successfully", clusterName)
 
 			return nil
 		},
@@ -116,7 +119,7 @@ func buildReloadTask(
 		refreshConfigTasks = append(refreshConfigTasks, t)
 	})
 
-	task := task.NewBuilder().
+	t := task.NewBuilder().
 		SSHKeySet(
 			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
@@ -125,5 +128,5 @@ func buildReloadTask(
 		ClusterOperate(metadata.Topology, operator.UpgradeOperation, options).
 		Build()
 
-	return task, nil
+	return t, nil
 }

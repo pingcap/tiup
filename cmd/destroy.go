@@ -80,7 +80,7 @@ func newDestroyCmd() *cobra.Command {
 			if err := os.RemoveAll(meta.ClusterPath(clusterName)); err != nil {
 				return errors.Trace(err)
 			}
-			log.Infof("Destroy cluster `%s` successfully", clusterName)
+			log.Infof("Destroyed cluster `%s` successfully", clusterName)
 			return nil
 		},
 	}

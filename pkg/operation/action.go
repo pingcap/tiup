@@ -564,6 +564,7 @@ func StopComponent(getter ExecutorGetter, instances []meta.Instance) error {
 	return nil
 }
 
+// GetServiceStatus return the Acitive line of status.
 /*
 [tidb@ip-172-16-5-70 deploy]$ sudo systemctl status drainer-8249.service
 ● drainer-8249.service - drainer-8249 service
@@ -575,7 +576,6 @@ func StopComponent(getter ExecutorGetter, instances []meta.Instance) error {
 
 Mar 09 13:56:19 ip-172-16-5-70 systemd[1]: Started drainer-8249 service.
 */
-// GetServiceStatus return the Acitive line of status.
 func GetServiceStatus(e executor.TiOpsExecutor, name string) (active string, err error) {
 	c := module.SystemdModuleConfig{
 		Unit:   name,

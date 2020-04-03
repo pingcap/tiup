@@ -20,6 +20,7 @@ import (
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiops/pkg/bindversion"
 	"github.com/pingcap-incubator/tiops/pkg/cliutil"
+	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
@@ -117,6 +118,8 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 		}
 		return errors.Trace(err)
 	}
+
+	log.Infof("Scaled cluster `%s` out successfully", clusterName)
 
 	return nil
 }
