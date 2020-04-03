@@ -37,7 +37,7 @@ To generate a sample topology file:
 `, suggestionProps))
 	}
 
-	if err = yaml.Unmarshal(yamlFile, out); err != nil {
+	if err = yaml.UnmarshalStrict(yamlFile, out); err != nil {
 		return ErrTopologyParseFailed.
 			Wrap(err, "Failed to parse topology file %s", file).
 			WithProperty(cliutil.SuggestionFromTemplate(`
