@@ -148,14 +148,20 @@ func buildScaleOutTask(
 	newPart.IterInstance(func(instance meta.Instance) {
 		if host := instance.GetHost(); !initializedHosts.Exist(host) {
 			uninitializedHosts.Insert(host)
+			var dirs []string
+			globalOptions := metadata.Topology.GlobalOptions
+			for _, dir := range []string{globalOptions.DeployDir, globalOptions.DataDir, globalOptions.LogDir} {
+				if dir == "" {
+					continue
+				}
+				dirs = append(dirs, clusterutil.Abs(globalOptions.User, dir))
+			}
 			t := task.NewBuilder().
 				RootSSH(instance.GetHost(), instance.GetSSHPort(), opt.user, sshConnProps.Password, sshConnProps.IdentityFile, sshConnProps.IdentityFilePassphrase).
 				EnvInit(instance.GetHost(), metadata.User).
 				UserSSH(instance.GetHost(), metadata.User).
-				Chown(metadata.User, instance.GetHost(),
-					clusterutil.Abs(metadata.User, metadata.Topology.GlobalOptions.DeployDir),
-					clusterutil.Abs(metadata.User, metadata.Topology.GlobalOptions.DataDir),
-					clusterutil.Abs(metadata.User, metadata.Topology.GlobalOptions.LogDir)).
+				Mkdir(globalOptions.User, instance.GetHost(), dirs...).
+				Chown(globalOptions.User, instance.GetHost(), dirs...).
 				Build()
 			envInitTasks = append(envInitTasks, t)
 		}

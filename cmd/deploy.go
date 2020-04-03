@@ -390,17 +390,23 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 
 	// Initialize environment
 	uniqueHosts := set.NewStringSet()
+	globalOptions := topo.GlobalOptions
 	topo.IterInstance(func(inst meta.Instance) {
 		if !uniqueHosts.Exist(inst.GetHost()) {
 			uniqueHosts.Insert(inst.GetHost())
+			var dirs []string
+			for _, dir := range []string{globalOptions.DeployDir, globalOptions.DataDir, globalOptions.LogDir} {
+				if dir == "" {
+					continue
+				}
+				dirs = append(dirs, clusterutil.Abs(globalOptions.User, dir))
+			}
 			t := task.NewBuilder().
 				RootSSH(inst.GetHost(), inst.GetSSHPort(), opt.user, sshConnProps.Password, sshConnProps.IdentityFile, sshConnProps.IdentityFilePassphrase).
-				EnvInit(inst.GetHost(), topo.GlobalOptions.User).
-				UserSSH(inst.GetHost(), topo.GlobalOptions.User).
-				Chown(topo.GlobalOptions.User, inst.GetHost(),
-					clusterutil.Abs(topo.GlobalOptions.User, topo.GlobalOptions.DeployDir),
-					clusterutil.Abs(topo.GlobalOptions.User, topo.GlobalOptions.DataDir),
-					clusterutil.Abs(topo.GlobalOptions.User, topo.GlobalOptions.LogDir)).
+				EnvInit(inst.GetHost(), globalOptions.User).
+				UserSSH(inst.GetHost(), globalOptions.User).
+				Mkdir(globalOptions.User, inst.GetHost(), dirs...).
+				Chown(globalOptions.User, inst.GetHost(), dirs...).
 				Build()
 			envInitTasks = append(envInitTasks, t)
 		}
@@ -412,17 +418,17 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 	// Deploy components to remote
 	topo.IterInstance(func(inst meta.Instance) {
 		version := bindversion.ComponentVersion(inst.ComponentName(), version)
-		deployDir := clusterutil.Abs(topo.GlobalOptions.User, inst.DeployDir())
+		deployDir := clusterutil.Abs(globalOptions.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDir := inst.DataDir()
 		if dataDir != "" {
-			clusterutil.Abs(topo.GlobalOptions.User, dataDir)
+			clusterutil.Abs(globalOptions.User, dataDir)
 		}
 		// log dir will always be with values, but might not used by the component
-		logDir := clusterutil.Abs(topo.GlobalOptions.User, inst.LogDir())
+		logDir := clusterutil.Abs(globalOptions.User, inst.LogDir())
 		// Deploy component
 		t := task.NewBuilder().
-			Mkdir(topo.GlobalOptions.User, inst.GetHost(),
+			Mkdir(globalOptions.User, inst.GetHost(),
 				deployDir, dataDir, logDir,
 				filepath.Join(deployDir, "bin"),
 				filepath.Join(deployDir, "conf"),
@@ -431,7 +437,7 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 			InitConfig(
 				clusterName,
 				inst,
-				topo.GlobalOptions.User,
+				globalOptions.User,
 				meta.DirPaths{
 					Deploy: deployDir,
 					Data:   dataDir,
@@ -444,7 +450,7 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 	})
 
 	// Deploy monitor relevant components to remote
-	dlTasks, dpTasks := buildMonitoredDeployTask(clusterName, uniqueHosts, topo.GlobalOptions, topo.MonitoredOptions, version)
+	dlTasks, dpTasks := buildMonitoredDeployTask(clusterName, uniqueHosts, globalOptions, topo.MonitoredOptions, version)
 	downloadCompTasks = append(downloadCompTasks, dlTasks...)
 	deployCompTasks = append(deployCompTasks, dpTasks...)
 
@@ -464,7 +470,7 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 	}
 
 	err = meta.SaveClusterMeta(clusterName, &meta.ClusterMeta{
-		User:     topo.GlobalOptions.User,
+		User:     globalOptions.User,
 		Version:  version,
 		Topology: &topo,
 	})
