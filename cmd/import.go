@@ -15,7 +15,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/fatih/color"
 	"github.com/pingcap-incubator/tiops/pkg/ansible"
@@ -23,7 +22,6 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/log"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	"github.com/pingcap-incubator/tiops/pkg/utils"
-	tiuplocaldata "github.com/pingcap-incubator/tiup/pkg/localdata"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -82,14 +80,8 @@ func newImportCmd() *cobra.Command {
 			// TODO: move original TiDB-Ansible directory to a staged location
 
 			log.Infof("Cluster %s imported.", clsName)
-
-			exeCmd := "tiops"
-			if os.Getenv(tiuplocaldata.EnvNameWorkDir) != "" {
-				exeCmd = "tiup cluster" // called by TiUP
-			}
-
 			fmt.Printf("Try `%s` to see the cluster.\n",
-				color.HiYellowString("%s display %s", exeCmd, clsName))
+				color.HiYellowString("%s display %s", cmd.Parent().Use, clsName))
 			return nil
 		},
 	}
