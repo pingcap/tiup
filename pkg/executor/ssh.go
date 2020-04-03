@@ -26,6 +26,7 @@ import (
 	"github.com/pingcap-incubator/tiops/pkg/cliutil"
 	"github.com/pingcap-incubator/tiops/pkg/errutil"
 	"github.com/pingcap-incubator/tiops/pkg/utils"
+	"go.uber.org/zap"
 )
 
 var (
@@ -111,6 +112,13 @@ func (e *SSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duration) (
 	// run command on remote host
 	// default timeout is 60s in easyssh-proxy
 	stdout, stderr, done, err := e.Config.Run(cmd, timeout...)
+
+	zap.L().Info("ssh command",
+		zap.String("host", e.Config.Server),
+		zap.String("port", e.Config.Port),
+		zap.String("cmd", cmd),
+		zap.String("stdout", stdout),
+		zap.String("stderr", stderr))
 
 	if err != nil {
 		baseErr := ErrSSHExecuteFailed.

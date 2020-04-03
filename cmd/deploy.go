@@ -396,11 +396,10 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 		// Deploy component
 		t := task.NewBuilder().
 			Mkdir(topo.GlobalOptions.User, inst.GetHost(),
+				deployDir, dataDir, logDir,
 				filepath.Join(deployDir, "bin"),
 				filepath.Join(deployDir, "conf"),
-				filepath.Join(deployDir, "scripts"),
-				dataDir,
-				logDir).
+				filepath.Join(deployDir, "scripts")).
 			CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
 			InitConfig(
 				clusterName,
@@ -489,11 +488,10 @@ func buildMonitoredDeployTask(
 			t := task.NewBuilder().
 				UserSSH(host, globalOptions.User).
 				Mkdir(globalOptions.User, host,
+					deployDir, dataDir, logDir,
 					filepath.Join(deployDir, "bin"),
 					filepath.Join(deployDir, "conf"),
-					filepath.Join(deployDir, "scripts"),
-					dataDir,
-					logDir).
+					filepath.Join(deployDir, "scripts")).
 				CopyComponent(comp, version, host, deployDir).
 				MonitoredConfig(
 					clusterName,

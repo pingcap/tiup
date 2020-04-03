@@ -178,11 +178,10 @@ func buildScaleOutTask(
 		t := task.NewBuilder().
 			UserSSH(inst.GetHost(), metadata.User).
 			Mkdir(metadata.User, inst.GetHost(),
+				deployDir, dataDir, logDir,
 				filepath.Join(deployDir, "bin"),
 				filepath.Join(deployDir, "conf"),
-				filepath.Join(deployDir, "scripts"),
-				dataDir,
-				logDir).
+				filepath.Join(deployDir, "scripts")).
 			CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
 			ScaleConfig(clusterName,
 				metadata.Topology,
