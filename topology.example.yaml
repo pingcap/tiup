@@ -80,6 +80,7 @@ tikv_servers:
   - host: 10.0.1.14
     # ssh_port: 22
     # port: 20160
+    # status_port: 20180
     # deploy_dir: "deploy/tikv-20160"
     # data_dir: "data/tikv-20160"
     # log_dir: "deploy/tikv-20160/log"
