@@ -294,7 +294,7 @@ type TiFlashSpec struct {
 	FlashServicePort     int                    `yaml:"flash_service_port" default:"3930"`
 	FlashProxyPort       int                    `yaml:"flash_proxy_port" default:"20170"`
 	FlashProxyStatusPort int                    `yaml:"flash_proxy_status_port" default:"20292"`
-	MetricsPort          int                    `yaml:"metrics_port" default:"8234"`
+	StatusPort           int                    `yaml:"metrics_port" default:"8234"`
 	DeployDir            string                 `yaml:"deploy_dir,omitempty"`
 	DataDir              string                 `yaml:"data_dir,omitempty"`
 	LogDir               string                 `yaml:"log_dir,omitempty"`

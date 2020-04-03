@@ -31,7 +31,7 @@ type TiFlashScript struct {
 	FlashServicePort     int
 	FlashProxyPort       int
 	FlashProxyStatusPort int
-	MetricsPort          int
+	StatusPort           int
 	DeployDir            string
 	DataDir              string
 	LogDir               string
@@ -50,7 +50,7 @@ func NewTiFlashScript(ip, deployDir, dataDir string, logDir string, tidbStatusAd
 		FlashServicePort:     3930,
 		FlashProxyPort:       20170,
 		FlashProxyStatusPort: 20292,
-		MetricsPort:          8234,
+		StatusPort:           8234,
 		DeployDir:            deployDir,
 		DataDir:              dataDir,
 		LogDir:               logDir,
@@ -90,8 +90,8 @@ func (c *TiFlashScript) WithFlashProxyStatusPort(port int) *TiFlashScript {
 }
 
 // WithMetricsPort set FlashProxyStatusPort field of TiFlashScript
-func (c *TiFlashScript) WithMetricsPort(port int) *TiFlashScript {
-	c.MetricsPort = port
+func (c *TiFlashScript) WithStatusPort(port int) *TiFlashScript {
+	c.StatusPort = port
 	return c
 }
 

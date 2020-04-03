@@ -16,6 +16,9 @@ rule_files:
   - 'tidb.rules.yml'
   - 'tikv.rules.yml'
   - 'tikv.accelerate.rules.yml'
+{{- if .TiFlashStatusAddrs}}
+  - 'tiflash.rules.yml'
+{{- end}}
 {{- if .PumpAddrs}}
   - 'binlog.rules.yml'
 {{- end}}
@@ -90,6 +93,18 @@ scrape_configs:
     - targets:
 {{- range .PDAddrs}}
       - '{{.}}'
+{{- end}}
+{{- if .TiFlashStatusAddrs}}
+  - job_name: "tiflash"
+    honor_labels: true # don't overwrite job & instance labels
+    static_configs:
+    - targets:
+    {{- range .TiFlashStatusAddrs}}
+       - '{{.}}'
+    {{- end}}
+    {{- range .TiFlashLearnerStatusAddrs}}
+       - '{{.}}'
+    {{- end}}
 {{- end}}
 {{- if .PumpAddrs}}
 {{- if .KafkaExporterAddr}}
@@ -185,6 +200,14 @@ scrape_configs:
     {{- end}}
       labels:
         group: 'pd'
+{{- if .TiFlashStatusAddrs}}
+    - targets:
+    {{- range .TiFlashStatusAddrs}}
+       - '{{.}}'
+    {{- end}}
+      labels:
+        group: 'tiflash'
+{{- end}}
 {{- if .PushgatewayAddr}}
     - targets:
       - '{{.PushgatewayAddr}}'
