@@ -727,8 +727,13 @@ func (i *GrafanaInstance) InitConfig(e executor.TiOpsExecutor, cluster, user str
 	}
 
 	// transfer datasource.yml
+	if len(i.topo.Monitors) == 0 {
+		return errors.New("not prometheus found in topology")
+	}
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
-	if err := config.NewDatasourceConfig(cluster, i.GetHost()).ConfigToFile(fp); err != nil {
+	if err := config.NewDatasourceConfig(cluster, i.topo.Monitors[0].Host).
+		WithPort(uint64(i.topo.Monitors[0].Port)).
+		ConfigToFile(fp); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "datasource.yml")
