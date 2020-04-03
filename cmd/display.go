@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/fatih/color"
@@ -200,6 +201,18 @@ func displayClusterTopology(opt *displayOption) error {
 
 		}
 	}
+
+	// Sort by role,host,ports
+	sort.Slice(clusterTable[1:], func(i, j int) bool {
+		lhs, rhs := clusterTable[i+1], clusterTable[j+1]
+		// column: 1 => role, 2 => host, 3 => ports
+		for _, col := range []int{1, 2} {
+			if lhs[col] != rhs[col] {
+				return lhs[col] < rhs[col]
+			}
+		}
+		return lhs[3] < rhs[3]
+	})
 
 	cliutil.PrintTable(clusterTable, true)
 
