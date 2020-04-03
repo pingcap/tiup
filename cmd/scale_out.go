@@ -209,16 +209,19 @@ func buildScaleOutTask(
 		if !strings.HasPrefix(logDir, "/") {
 			logDir = filepath.Join("/home/", metadata.User, logDir)
 		}
-		// Refresh all configuration
-		t := task.NewBuilder()
-		switch inst.ComponentName() {
-		case meta.ComponentGrafana, meta.ComponentPrometheus:
-			if inst.IsImported() {
-				version := bindversion.ComponentVersion(inst.ComponentName(), metadata.Version)
-				t.Download(inst.ComponentName(), version).CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
+
+		// Download and copy the latest component to remote if the cluster is imported from Ansible
+		tb := task.NewBuilder()
+		if inst.IsImported() {
+			switch compName := inst.ComponentName(); compName {
+			case meta.ComponentGrafana, meta.ComponentPrometheus:
+				version := bindversion.ComponentVersion(compName, metadata.Version)
+				tb.Download(compName, version).CopyComponent(compName, version, inst.GetHost(), deployDir)
 			}
 		}
-		t.InitConfig(clusterName,
+
+		// Refresh all configuration
+		t := tb.InitConfig(clusterName,
 			inst,
 			metadata.User,
 			meta.DirPaths{
@@ -228,7 +231,7 @@ func buildScaleOutTask(
 				Cache:  meta.ClusterPath(clusterName, "config"),
 			},
 		)
-		refreshConfigTasks = append(refreshConfigTasks, t.Build())
+		refreshConfigTasks = append(refreshConfigTasks, t)
 	})
 
 	// Deploy monitor relevant components to remote

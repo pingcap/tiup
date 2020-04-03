@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/joomcode/errorx"
+	"github.com/pingcap-incubator/tiops/pkg/bindversion"
 	"github.com/pingcap-incubator/tiops/pkg/logger"
 	"github.com/pingcap-incubator/tiops/pkg/meta"
 	operator "github.com/pingcap-incubator/tiops/pkg/operation"
@@ -94,16 +95,24 @@ func buildReloadTask(
 		if !strings.HasPrefix(logDir, "/") {
 			logDir = filepath.Join("/home/", metadata.User, logDir)
 		}
+
+		// Download and copy the latest component to remote if the cluster is imported from Ansible
+		tb := task.NewBuilder().UserSSH(inst.GetHost(), metadata.User)
+		if inst.IsImported() {
+			switch compName := inst.ComponentName(); compName {
+			case meta.ComponentGrafana, meta.ComponentPrometheus:
+				version := bindversion.ComponentVersion(compName, metadata.Version)
+				tb.Download(compName, version).CopyComponent(compName, version, inst.GetHost(), deployDir)
+			}
+		}
+
 		// Refresh all configuration
-		t := task.NewBuilder().
-			UserSSH(inst.GetHost(), metadata.User).
-			InitConfig(clusterName, inst, metadata.User, meta.DirPaths{
-				Deploy: deployDir,
-				Data:   dataDir,
-				Log:    logDir,
-				Cache:  meta.ClusterPath(clusterName, "config"),
-			}).
-			Build()
+		t := tb.InitConfig(clusterName, inst, metadata.User, meta.DirPaths{
+			Deploy: deployDir,
+			Data:   dataDir,
+			Log:    logDir,
+			Cache:  meta.ClusterPath(clusterName, "config"),
+		}).Build()
 		refreshConfigTasks = append(refreshConfigTasks, t)
 	})
 

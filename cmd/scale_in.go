@@ -96,15 +96,18 @@ func scaleIn(clusterName string, options operator.Options) error {
 			if !strings.HasPrefix(logDir, "/") {
 				logDir = filepath.Join("/home/", metadata.User, logDir)
 			}
-			t := task.NewBuilder()
-			switch instance.ComponentName() {
-			case meta.ComponentGrafana, meta.ComponentPrometheus:
-				if instance.IsImported() {
-					version := bindversion.ComponentVersion(instance.ComponentName(), metadata.Version)
-					t.Download(instance.ComponentName(), version).CopyComponent(instance.ComponentName(), version, instance.GetHost(), deployDir)
+
+			// Download and copy the latest component to remote if the cluster is imported from Ansible
+			tb := task.NewBuilder()
+			if instance.IsImported() {
+				switch compName := instance.ComponentName(); compName {
+				case meta.ComponentGrafana, meta.ComponentPrometheus:
+					version := bindversion.ComponentVersion(compName, metadata.Version)
+					tb.Download(compName, version).CopyComponent(compName, version, instance.GetHost(), deployDir)
 				}
 			}
-			t.InitConfig(clusterName,
+
+			t := tb.InitConfig(clusterName,
 				instance,
 				metadata.User,
 				meta.DirPaths{
@@ -113,8 +116,8 @@ func scaleIn(clusterName string, options operator.Options) error {
 					Log:    logDir,
 					Cache:  meta.ClusterPath(clusterName, "config"),
 				},
-			)
-			regenConfigTasks = append(regenConfigTasks, t.Build())
+			).Build()
+			regenConfigTasks = append(regenConfigTasks, t)
 		}
 	}
 

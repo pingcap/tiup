@@ -125,18 +125,18 @@ func upgrade(name, version string, opt upgradeOptions) error {
 			if !strings.HasPrefix(logDir, "/") {
 				logDir = filepath.Join("/home/", metadata.User, logDir)
 			}
-			// Deploy component
-			t := task.NewBuilder()
 
+			// Deploy component
+			tb := task.NewBuilder()
 			if inst.IsImported() {
 				switch inst.ComponentName() {
 				case meta.ComponentPrometheus, meta.ComponentGrafana:
-					t.CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
+					tb.CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
 				default:
-					t.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
+					tb.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
 						CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
 				}
-				t.InitConfig(
+				tb.InitConfig(
 					name,
 					inst,
 					metadata.User,
@@ -148,10 +148,10 @@ func upgrade(name, version string, opt upgradeOptions) error {
 					},
 				)
 			} else {
-				t.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
+				tb.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
 					CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
 			}
-			copyCompTasks = append(copyCompTasks, t.Build())
+			copyCompTasks = append(copyCompTasks, tb.Build())
 		}
 	}
 
