@@ -111,7 +111,7 @@ tiflash_servers:
     # # Config is used to overwrite the `server_configs.tiflash` values
     #  config:
     #    logger:
-    #      level: "info"
+    #      level: "information"
     #  learner_config:
     #    log-level: "info"
   - host: 10.0.1.15
