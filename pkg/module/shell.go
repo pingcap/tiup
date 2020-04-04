@@ -16,7 +16,7 @@ package module
 import (
 	"fmt"
 
-	"github.com/pingcap-incubator/tiops/pkg/executor"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/executor"
 )
 
 // ShellModuleConfig is the configurations used to initialize a TiOpsModuleSystemd

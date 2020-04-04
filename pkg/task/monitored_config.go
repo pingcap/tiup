@@ -19,13 +19,13 @@ import (
 	"path/filepath"
 
 	"github.com/google/uuid"
-	"github.com/pingcap-incubator/tiops/pkg/executor"
-	"github.com/pingcap-incubator/tiops/pkg/log"
-	"github.com/pingcap-incubator/tiops/pkg/meta"
-	"github.com/pingcap-incubator/tiops/pkg/template"
-	"github.com/pingcap-incubator/tiops/pkg/template/config"
-	"github.com/pingcap-incubator/tiops/pkg/template/scripts"
-	system "github.com/pingcap-incubator/tiops/pkg/template/systemd"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/executor"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/template"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/template/config"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/template/scripts"
+	system "github.com/pingcap-incubator/tiup-cluster/pkg/template/systemd"
 )
 
 // MonitoredConfig is used to generate the monitor node configuration

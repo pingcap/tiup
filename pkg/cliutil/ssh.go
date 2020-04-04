@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 
 	"github.com/ScaleFT/sshkeys"
-	"github.com/pingcap-incubator/tiops/pkg/errutil"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/errutil"
 	"golang.org/x/crypto/ssh"
 )
 

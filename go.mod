@@ -1,4 +1,4 @@
-module github.com/pingcap-incubator/tiops
+module github.com/pingcap-incubator/tiup-cluster
 
 go 1.14
 

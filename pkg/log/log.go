@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pingcap-incubator/tiops/pkg/colorutil"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/colorutil"
 	"go.uber.org/zap"
 )
 

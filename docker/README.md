@@ -11,9 +11,9 @@ To start run
 
 ````
     ./up.sh
-    docker exec -it tiops-control bash
+    docker exec -it tiup-cluster-control bash
 ````
 
-During development, it's convenient to run with `--dev` option, which mounts `$TIOPS_ROOT` dir as `/tiops` on tiops control container.
+During development, it's convenient to run with `--dev` option, which mounts `$TIUP_CLUSTER_ROOT` dir as `/tiops` on tiops control container.
 
 Run `./up.sh --help` for more info.

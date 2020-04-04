@@ -19,8 +19,8 @@ import (
 	"path/filepath"
 
 	"github.com/creasty/defaults"
-	"github.com/pingcap-incubator/tiops/pkg/log"
-	"github.com/pingcap-incubator/tiops/pkg/meta"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	"github.com/relex/aini"
 )
 

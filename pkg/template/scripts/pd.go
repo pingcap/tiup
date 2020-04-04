@@ -21,7 +21,7 @@ import (
 	"path"
 	"text/template"
 
-	"github.com/pingcap-incubator/tiops/pkg/log"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 )
 

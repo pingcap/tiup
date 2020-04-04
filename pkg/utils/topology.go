@@ -3,8 +3,8 @@ package utils
 import (
 	"io/ioutil"
 
-	"github.com/pingcap-incubator/tiops/pkg/cliutil"
-	"github.com/pingcap-incubator/tiops/pkg/errutil"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/errutil"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )

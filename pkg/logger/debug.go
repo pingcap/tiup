@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/pingcap-incubator/tiops/pkg/colorutil"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/colorutil"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

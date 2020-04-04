@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/creasty/defaults"
-	"github.com/pingcap-incubator/tiops/pkg/api"
-	"github.com/pingcap-incubator/tiops/pkg/utils"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/api"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
 	pdserverapi "github.com/pingcap/pd/v4/server/api"

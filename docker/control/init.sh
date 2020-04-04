@@ -18,10 +18,10 @@ fi
 # TODO: assert that SSH_PRIVATE_KEY==~/.ssh/id_rsa
 
 cat <<EOF 
-Welcome to tiops on Docker
+Welcome to tiup-cluster on Docker
 ===========================
 
-Please run \`docker exec -it tiops-control bash\` in another terminal to proceed.
+Please run \`docker exec -it tiup-cluster-control bash\` in another terminal to proceed.
 EOF
 
 # hack for keep this container running

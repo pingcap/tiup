@@ -18,7 +18,7 @@ import (
 	"os/user"
 	"path"
 
-	"github.com/pingcap-incubator/tiops/pkg/utils"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
 	tiuplocaldata "github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap/errors"
 )
@@ -53,7 +53,7 @@ func Initialize() error {
 		if err != nil {
 			return errors.Trace(err)
 		}
-		profileDir = path.Join(homeDir, ".tiops")
+		profileDir = path.Join(homeDir, ".tiup", tiuplocaldata.StorageParentDir, "cluster")
 	} else {
 		profileDir = tiupData
 	}

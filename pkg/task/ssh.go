@@ -17,7 +17,7 @@ import (
 	"fmt"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiops/pkg/executor"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/executor"
 )
 
 var (

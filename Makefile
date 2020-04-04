@@ -12,7 +12,7 @@ COMMIT    := $(shell git describe --no-match --always --dirty)
 BRANCH    := $(shell git rev-parse --abbrev-ref HEAD)
 BUILDTIME := $(shell date '+%Y-%m-%d %T %z')
 
-REPO := github.com/pingcap-incubator/tiops
+REPO := github.com/pingcap-incubator/tiup-cluster
 LDFLAGS := -w -s
 LDFLAGS += -X "$(REPO)/pkg/version.GitHash=$(COMMIT)"
 LDFLAGS += -X "$(REPO)/pkg/version.GitBranch=$(BRANCH)"
@@ -26,7 +26,7 @@ FAILPOINT_DISABLE := $$(find $$PWD/ -type d | grep -vE "(\.git|tools)" | xargs t
 default: check build
 
 build:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiops
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster
 
 lint:
 	@golint ./...
@@ -49,9 +49,9 @@ unit-test:
 
 integration_test:
 	$(GOTEST) -c -cover -covermode=count \
-		-coverpkg=github.com/pingcap-incubator/tiops/... \
-		-o tests/bin/tiops \
-		github.com/pingcap-incubator/tiops/ ; \
+		-coverpkg=github.com/pingcap-incubator/tiup-cluster/... \
+		-o tests/bin/tiup-cluster \
+		github.com/pingcap-incubator/tiup-cluster/ ; \
 	cd tests && sh run.sh ; \
 
 
