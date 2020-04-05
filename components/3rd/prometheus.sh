@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION="2.16.0"
+VERSION="2.17.1"
 DIRECTORY=$(cd $(dirname "$0") && pwd)
 
 echo "==> $DIRECTORY"
