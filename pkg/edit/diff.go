@@ -25,6 +25,7 @@ import (
 func ShowDiff(t1 string, t2 string, w io.Writer) {
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMain(t1, t2, false)
+	diffs = dmp.DiffCleanupSemantic(diffs)
 
 	fmt.Fprint(w, dmp.DiffPrettyText(diffs))
 }
