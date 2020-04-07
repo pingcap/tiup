@@ -44,7 +44,7 @@ func (d *Downloader) Execute(_ *Context) error {
 	srcPath := meta.ProfilePath(meta.TiOpsPackageCacheDir, fileName)
 
 	// Download from repository if not exists
-	if utils.IsNotExist(srcPath) {
+	if d.version.IsNightly() || utils.IsNotExist(srcPath) {
 		mirror := repository.NewMirror(tiupmeta.Mirror())
 		if err := mirror.Open(); err != nil {
 			return errors.Trace(err)
