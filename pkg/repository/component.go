@@ -18,9 +18,10 @@ import "strings"
 type (
 	// ComponentInfo represents the information of component
 	ComponentInfo struct {
-		Name      string   `json:"name"`
-		Desc      string   `json:"desc"`
-		Platforms []string `json:"platforms"`
+		Name       string   `json:"name"`
+		Desc       string   `json:"desc"`
+		Standalone bool     `json:"standalone"`
+		Platforms  []string `json:"platforms"`
 	}
 
 	// ComponentManifest represents the all components information of tiup supported

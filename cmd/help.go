@@ -112,6 +112,9 @@ Available Components:
 		}
 
 		for _, comp := range repo.Components {
+			if !comp.Standalone {
+				continue
+			}
 			installComps = installComps + fmt.Sprintf("  %s%s   %s\n", comp.Name, strings.Repeat(" ", maxNameLen-len(comp.Name)), comp.Desc)
 		}
 	} else {
@@ -141,6 +144,9 @@ Global Flags:
 
 Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
   {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if not .HasParent}}
+
+Component instances with the same "tag" will share a data directory ($TIUP_HOME/data/$tag):
+  $ tiup --tag mycluster playground
 
 Examples:
   $ tiup playground                    # Quick start

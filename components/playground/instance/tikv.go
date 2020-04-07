@@ -36,7 +36,7 @@ type TiKVInstance struct {
 }
 
 // NewTiKVInstance return a TiKVInstance
-func NewTiKVInstance(dir, host string, id int, pds []*PDInstance) *TiKVInstance {
+func NewTiKVInstance(dir, host, configPath string, id int, pds []*PDInstance) *TiKVInstance {
 	return &TiKVInstance{
 		instance: instance{
 			ID:         id,
@@ -44,17 +44,21 @@ func NewTiKVInstance(dir, host string, id int, pds []*PDInstance) *TiKVInstance 
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, 20160),
 			StatusPort: utils.MustGetFreePort(host, 20180),
+			ConfigPath: configPath,
 		},
 		pds: pds,
 	}
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiKVInstance) Start(ctx context.Context, version repository.Version) error {
+func (inst *TiKVInstance) Start(ctx context.Context, version repository.Version, binPath string) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
 	configPath := path.Join(inst.Dir, "tikv.toml")
+	if inst.ConfigPath != "" {
+		configPath = inst.ConfigPath
+	}
 	cf, err := os.Create(configPath)
 	if err != nil {
 		return errors.Trace(err)
@@ -69,7 +73,8 @@ func (inst *TiKVInstance) Start(ctx context.Context, version repository.Version)
 		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", inst.Host, pd.StatusPort))
 	}
 	inst.cmd = exec.CommandContext(ctx,
-		"tiup", compVersion("tikv", version),
+		"tiup", fmt.Sprintf("--binpath=%s", binPath),
+		compVersion("tikv", version),
 		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
 		fmt.Sprintf("--status-addr=%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),

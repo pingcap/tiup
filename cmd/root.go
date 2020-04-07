@@ -15,13 +15,12 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-
 	"github.com/fatih/color"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 var rootCmd *cobra.Command
@@ -31,26 +30,23 @@ func init() {
 
 	var (
 		binary   string
+		binPath  string
 		tag      string
-		rm       bool
 		repoOpts repository.Options
 	)
 
 	rootCmd = &cobra.Command{
 		Use: `tiup [flags] <command> [args...]
   tiup [flags] <component> [args...]`,
-		Long: `The tiup is a component management CLI utility tool that can help to download and install
-the TiDB components to the local system. You can run a specific version of a component via
+		Long: `TiUP is a command-line component management tool that can help to download and install
+TiDB platform components to the local system. You can run a specific version of a component via
 "tiup <component>[:version]". If no version number is specified, the latest version installed
-locally will be run. If the specified component does not have any version installed locally,
-the latest stable version will be downloaded from the repository.
+locally will be used. If the specified component does not have any version installed locally,
+the latest stable version will be downloaded from the repository.`,
 
-  # *HOW TO* reuse instance data instead of generating a new data directory each time?
-  # The instances which have the same "TAG" will share the data directory: $TIUP_HOME/data/$TAG.
-  $ tiup --tag mycluster playground`,
 		SilenceErrors:      true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
-		Version:            fmt.Sprintf("%s+%s(%s)", version.NewTiUPVersion().SemVer(), version.GitBranch, version.GitHash),
+		Version:            version.NewTiUPVersion().String(),
 		Args: func(cmd *cobra.Command, args []string) error {
 			// Support `tiup <component>`
 			return nil
@@ -75,6 +71,7 @@ the latest stable version will be downloaded from the repository.
 				// will be parsed correctly.
 				// e.g: tiup --tag mytag --rm playground --db 3 --pd 3 --kv 4
 				//   => run "playground" with parameters "--db 3 --pd 3 --kv 4"
+				// tiup --tag mytag --binpath /xxx/tikv-server tikv
 				var transparentParams []string
 				componentSpec := args[0]
 				for i, arg := range os.Args {
@@ -83,7 +80,7 @@ the latest stable version will be downloaded from the repository.
 						break
 					}
 				}
-				return runComponent(tag, componentSpec, transparentParams, rm)
+				return runComponent(tag, componentSpec, binPath, transparentParams)
 			}
 			return cmd.Help()
 		},
@@ -100,7 +97,7 @@ the latest stable version will be downloaded from the repository.
 	rootCmd.Flags().StringVarP(&binary, "binary", "B", "", "Print binary path of a specific version of a component `<component>[:version]`\n"+
 		"and the latest version installed will be selected if no version specified")
 	rootCmd.Flags().StringVarP(&tag, "tag", "T", "", "Specify a tag for component instance")
-	rootCmd.Flags().BoolVar(&rm, "rm", false, "Remove the data directory when the component instance finishes its run")
+	rootCmd.Flags().StringVar(&binPath, "binpath", "", "Specify the binary path of component instance")
 
 	rootCmd.AddCommand(
 		newInstallCmd(),

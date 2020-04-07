@@ -35,7 +35,7 @@ type TiDBInstance struct {
 }
 
 // NewTiDBInstance return a TiDBInstance
-func NewTiDBInstance(dir, host string, id int, pds []*PDInstance) *TiDBInstance {
+func NewTiDBInstance(dir, host, configPath string, id int, pds []*PDInstance) *TiDBInstance {
 	return &TiDBInstance{
 		instance: instance{
 			ID:         id,
@@ -43,13 +43,14 @@ func NewTiDBInstance(dir, host string, id int, pds []*PDInstance) *TiDBInstance 
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, 4000),
 			StatusPort: utils.MustGetFreePort("0.0.0.0", 10080),
+			ConfigPath: configPath,
 		},
 		pds: pds,
 	}
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiDBInstance) Start(ctx context.Context, version repository.Version) error {
+func (inst *TiDBInstance) Start(ctx context.Context, version repository.Version, binPath string) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
@@ -58,13 +59,17 @@ func (inst *TiDBInstance) Start(ctx context.Context, version repository.Version)
 		endpoints = append(endpoints, fmt.Sprintf("%s:%d", inst.Host, pd.StatusPort))
 	}
 	args := []string{
-		"tiup", compVersion("tidb", version),
+		"tiup", fmt.Sprintf("--binpath=%s", binPath),
+		compVersion("tidb", version),
 		"-P", strconv.Itoa(inst.Port),
 		"--store=tikv",
 		fmt.Sprintf("--host=%s", inst.Host),
 		fmt.Sprintf("--status=%d", inst.StatusPort),
 		fmt.Sprintf("--path=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "tidb.log")),
+	}
+	if inst.ConfigPath != "" {
+		args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
 	}
 	inst.cmd = exec.CommandContext(ctx, args[0], args[1:]...)
 	inst.cmd.Env = append(

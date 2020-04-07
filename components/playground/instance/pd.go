@@ -34,7 +34,7 @@ type PDInstance struct {
 }
 
 // NewPDInstance return a PDInstance
-func NewPDInstance(dir, host string, id int) *PDInstance {
+func NewPDInstance(dir, host, configPath string, id int) *PDInstance {
 	return &PDInstance{
 		instance: instance{
 			ID:         id,
@@ -42,6 +42,7 @@ func NewPDInstance(dir, host string, id int) *PDInstance {
 			Host:       host,
 			Port:       utils.MustGetFreePort(host, 2380),
 			StatusPort: utils.MustGetFreePort(host, 2379),
+			ConfigPath: configPath,
 		},
 	}
 }
@@ -53,13 +54,14 @@ func (inst *PDInstance) Join(pds []*PDInstance) *PDInstance {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *PDInstance) Start(ctx context.Context, version repository.Version) error {
+func (inst *PDInstance) Start(ctx context.Context, version repository.Version, binPath string) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
 	uid := fmt.Sprintf("pd-%d", inst.ID)
 	args := []string{
-		"tiup", compVersion("pd", version),
+		"tiup", fmt.Sprintf("--binpath=%s", binPath),
+		compVersion("pd", version),
 		"--name=" + uid,
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
 		fmt.Sprintf("--peer-urls=http://%s:%d", inst.Host, inst.Port),
@@ -67,6 +69,9 @@ func (inst *PDInstance) Start(ctx context.Context, version repository.Version) e
 		fmt.Sprintf("--client-urls=http://%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--advertise-client-urls=http://%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "pd.log")),
+	}
+	if inst.ConfigPath != "" {
+		args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
 	}
 	endpoints := make([]string, 0, len(inst.endpoints))
 	for _, pd := range inst.endpoints {

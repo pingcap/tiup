@@ -55,6 +55,8 @@ func init() {
 	profile = localdata.NewProfile(profileDir)
 }
 
+// Mirror return mirror of tiup.
+// If it's not defined, it will use "https://tiup-mirrors.pingcap.com/".
 func Mirror() string {
 	if m := os.Getenv("TIUP_MIRRORS"); m != "" {
 		return m
@@ -172,7 +174,7 @@ func DownloadComponent(component string, version repository.Version, overwrite b
 		return err
 	}
 	if version.IsNightly() && versions.Nightly == nil {
-		fmt.Printf("The component `%s` has not nightly version, skiped\n", component)
+		fmt.Printf("The component `%s` does not have a nightly version; skipped.\n", component)
 		return nil
 	}
 	if version.IsEmpty() {
@@ -192,7 +194,7 @@ func DownloadComponent(component string, version repository.Version, overwrite b
 			}
 		}
 		if found {
-			fmt.Printf("The `%s:%s` has been installed\n", component, version)
+			fmt.Printf("The component `%s:%s` has been installed.\n", component, version)
 			return nil
 		}
 	}
@@ -263,7 +265,7 @@ func DownloadComponentIfMissing(component string, version repository.Version) (r
 	}
 
 	if needDownload {
-		fmt.Printf("The component `%s` doesn't installed, download from repository\n", component)
+		fmt.Printf("The component `%s` is not installed; downloading from repository.\n", component)
 		err := DownloadComponent(component, version, false)
 		if err != nil {
 			return "", err

@@ -20,6 +20,7 @@ import (
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -31,8 +32,8 @@ func newUninstallCmd() *cobra.Command {
 		Long: `If you specify a version number, uninstall the specified version of
 the component. You must use --all explicitly if you want to remove all
 components or versions which are installed. You can uninstall multiple
-component or multiple version of a component at once. There is a flag
---self, which is used to uninstall tiup.
+components or multiple versions of a component at once. The --self flag
+which is used to uninstall tiup.
 
   # Uninstall tiup
   tiup uninstall --self
@@ -47,13 +48,21 @@ component or multiple version of a component at once. There is a flag
   tiup uninstall --all`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if self {
-				return os.RemoveAll(meta.LocalRoot())
+				if err := os.RemoveAll(meta.LocalRoot()); err != nil {
+					return errors.Trace(err)
+				}
+				fmt.Println("Uninstalled self successfully!")
+				return nil
 			}
 			switch {
 			case len(args) > 0:
 				return removeComponents(args, all)
 			case len(args) == 0 && all:
-				return os.RemoveAll(meta.LocalPath(localdata.ComponentParentDir))
+				if err := os.RemoveAll(meta.LocalPath(localdata.ComponentParentDir)); err != nil {
+					return errors.Trace(err)
+				}
+				fmt.Println("Uninstalled all components successfully!")
+				return nil
 			default:
 				return cmd.Help()
 			}
@@ -84,6 +93,7 @@ func removeComponents(specs []string, all bool) error {
 		if err != nil {
 			return err
 		}
+		fmt.Printf("Uninstalled component `%s` successfully!\n", spec)
 	}
 	return nil
 }

@@ -183,11 +183,8 @@ func (r *Repository) DownloadFile(targetDir, resName string) error {
 		if _, err := tarball.Seek(0, io.SeekStart); err != nil {
 			return errors.Trace(err)
 		}
-		fi, err := tarball.Stat()
-		if err != nil {
-			return errors.Trace(err)
-		}
-		destination, err := os.OpenFile(filepath.Join(targetDir, fi.Name()), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+		path := filepath.Join(targetDir, resName+".tar.gz")
+		destination, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 		if err != nil {
 			return errors.Trace(err)
 		}

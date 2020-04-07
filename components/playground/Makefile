@@ -5,7 +5,7 @@ GOARCH  := $(if $(GOARCH),$(GOARCH),amd64)
 GOENV   := GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH)
 GO      := $(GOENV) go
 GOBUILD := $(GO) build $(BUILD_FLAG)
-VERSION := "v0.0.5"
+VERSION := "v0.0.6"
 
 default: build
 

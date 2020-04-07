@@ -26,12 +26,13 @@ type instance struct {
 	Host       string
 	Port       int
 	StatusPort int // client port for PD
+	ConfigPath string
 }
 
 // Instance represent running component
 type Instance interface {
 	Pid() int
-	Start(ctx context.Context, version repository.Version) error
+	Start(ctx context.Context, version repository.Version, binPath string) error
 	Wait() error
 }
 
