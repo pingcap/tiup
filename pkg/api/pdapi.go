@@ -158,6 +158,22 @@ func (pc *PDClient) GetStores() (*pdserverapi.StoresInfo, error) {
 	return &storesInfo, nil
 }
 
+// WaitLeader wait until there's a leader or timeout.
+func (pc *PDClient) WaitLeader(timeout time.Duration) error {
+	start := time.Now()
+	for {
+		_, err := pc.GetLeader()
+		if err == nil {
+			return nil
+		}
+
+		if time.Since(start) >= timeout {
+			return err
+		}
+		time.Sleep(time.Second)
+	}
+}
+
 // GetLeader queries the leader node of PD cluster
 func (pc *PDClient) GetLeader() (*pdpb.Member, error) {
 	endpoints := pc.getEndpoints(pdLeaderURI)

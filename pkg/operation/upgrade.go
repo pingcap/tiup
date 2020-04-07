@@ -24,6 +24,8 @@ import (
 	"github.com/pingcap/errors"
 )
 
+var defaultWaitLeaderTimeout = time.Second * 30
+
 // Upgrade the cluster.
 func Upgrade(
 	getter ExecutorGetter,
@@ -55,7 +57,8 @@ func Upgrade(
 					if err != nil {
 						return errors.Annotatef(err, "failed to get PD leader %s", instance.GetHost())
 					}
-					if leader.Name == instance.(*meta.PDInstance).Name {
+
+					if len(spec.PDServers) > 1 && leader.Name == instance.(*meta.PDInstance).Name {
 						if err := pdClient.EvictPDLeader(); err != nil {
 							return errors.Annotatef(err, "failed to evict PD leader %s", instance.GetHost())
 						}
@@ -72,6 +75,13 @@ func Upgrade(
 			case meta.ComponentTiKV:
 				log.Infof("Restarting component %s", component.Name())
 				pdClient := api.NewPDClient(spec.GetPDList(), 5*time.Second, nil)
+				// Make sure there's leader of PD.
+				// Although we evict pd leader when restart pd,
+				// But when there's only one PD instance the pd might not serve request right away after restart.
+				err := pdClient.WaitLeader(defaultWaitLeaderTimeout)
+				if err != nil {
+					return errors.Annotate(err, "failed to wait leader")
+				}
 
 				for _, instance := range instances {
 					if err := pdClient.EvictStoreLeader(addr(instance)); err != nil {
