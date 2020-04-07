@@ -280,21 +280,21 @@ func parseInventory(dir string, inv *aini.InventoryData, sshTimeout int64) (stri
 				Imported: true,
 			}
 
-			if tcpPort, ok := grpVars["tiflash_tcp_port"]; ok {
+			if tcpPort, ok := grpVars["tcp_port"]; ok {
 				tmpIns.TCPPort, _ = strconv.Atoi(tcpPort)
 			}
-			if httpPort, ok := grpVars["tiflash_http_port"]; ok {
+			if httpPort, ok := grpVars["http_port"]; ok {
 				tmpIns.HTTPPort, _ = strconv.Atoi(httpPort)
 			}
 
 			// apply values from the host
-			if tcpPort, ok := srv.Vars["tiflash_tcp_port"]; ok {
+			if tcpPort, ok := srv.Vars["tcp_port"]; ok {
 				tmpIns.TCPPort, _ = strconv.Atoi(tcpPort)
 			}
-			if httpPort, ok := srv.Vars["tiflash_http_port"]; ok {
+			if httpPort, ok := srv.Vars["http_port"]; ok {
 				tmpIns.HTTPPort, _ = strconv.Atoi(httpPort)
 			}
-			if dataDir, ok := srv.Vars["tiflash_data_dir"]; ok {
+			if dataDir, ok := srv.Vars["data_dir"]; ok {
 				tmpIns.DataDir = dataDir
 			}
 			if logDir, ok := srv.Vars["tiflash_log_dir"]; ok {
