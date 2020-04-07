@@ -48,6 +48,8 @@ type (
 	// We should use mutex to prevent concurrent R/W for some fields
 	// because of the same context can be shared in parallel tasks.
 	Context struct {
+		ev EventBus
+
 		exec struct {
 			sync.RWMutex
 			executors map[string]executor.TiOpsExecutor
@@ -61,15 +63,22 @@ type (
 	}
 
 	// Serial will execute a bundle of task in serialized way
-	Serial []Task
+	Serial struct {
+		hideDetailDisplay bool
+		inner             []Task
+	}
 
 	// Parallel will execute a bundle of task in parallelism way
-	Parallel []Task
+	Parallel struct {
+		hideDetailDisplay bool
+		inner             []Task
+	}
 )
 
 // NewContext create a context instance.
 func NewContext() *Context {
 	return &Context{
+		ev: NewEventBus(),
 		exec: struct {
 			sync.RWMutex
 			executors map[string]executor.TiOpsExecutor
@@ -124,19 +133,33 @@ func (ctx *Context) SetManifest(comp string, m *repository.VersionManifest) {
 	ctx.manifestCache.Unlock()
 }
 
-func isSingleTask(t Task) bool {
-	_, isS := t.(Serial)
-	_, isP := t.(Parallel)
-	return !isS && !isP
+func isDisplayTask(t Task) bool {
+	if _, ok := t.(*Serial); ok {
+		return true
+	}
+	if _, ok := t.(*Parallel); ok {
+		return true
+	}
+	if _, ok := t.(*StepDisplay); ok {
+		return true
+	}
+	if _, ok := t.(*ParallelStepDisplay); ok {
+		return true
+	}
+	return false
 }
 
 // Execute implements the Task interface
-func (s Serial) Execute(ctx *Context) error {
-	for _, t := range s {
-		if isSingleTask(t) {
-			log.Infof("+ [ Serial ] - %s", t.String())
+func (s *Serial) Execute(ctx *Context) error {
+	for _, t := range s.inner {
+		if !isDisplayTask(t) {
+			if !s.hideDetailDisplay {
+				log.Infof("+ [ Serial ] - %s", t.String())
+			}
 		}
+		ctx.ev.PublishTaskBegin(t)
 		err := t.Execute(ctx)
+		ctx.ev.PublishTaskFinish(t, err)
 		if err != nil {
 			return err
 		}
@@ -145,10 +168,10 @@ func (s Serial) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (s Serial) Rollback(ctx *Context) error {
+func (s *Serial) Rollback(ctx *Context) error {
 	// Rollback in reverse order
-	for i := len(s) - 1; i >= 0; i-- {
-		err := s[i].Rollback(ctx)
+	for i := len(s.inner) - 1; i >= 0; i-- {
+		err := s.inner[i].Rollback(ctx)
 		if err != nil {
 			return err
 		}
@@ -157,27 +180,31 @@ func (s Serial) Rollback(ctx *Context) error {
 }
 
 // String implements the fmt.Stringer interface
-func (s Serial) String() string {
+func (s *Serial) String() string {
 	var ss []string
-	for _, t := range s {
+	for _, t := range s.inner {
 		ss = append(ss, t.String())
 	}
 	return strings.Join(ss, "\n")
 }
 
 // Execute implements the Task interface
-func (pt Parallel) Execute(ctx *Context) error {
+func (pt *Parallel) Execute(ctx *Context) error {
 	var firstError error
 	var mu sync.Mutex
 	wg := sync.WaitGroup{}
-	for _, t := range pt {
+	for _, t := range pt.inner {
 		wg.Add(1)
 		go func(t Task) {
 			defer wg.Done()
-			if isSingleTask(t) {
-				log.Debugf("+ [Parallel] - %s", t.String())
+			if !isDisplayTask(t) {
+				if !pt.hideDetailDisplay {
+					log.Infof("+ [Parallel] - %s", t.String())
+				}
 			}
+			ctx.ev.PublishTaskBegin(t)
 			err := t.Execute(ctx)
+			ctx.ev.PublishTaskFinish(t, err)
 			if err != nil {
 				mu.Lock()
 				if firstError == nil {
@@ -192,11 +219,11 @@ func (pt Parallel) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (pt Parallel) Rollback(ctx *Context) error {
+func (pt *Parallel) Rollback(ctx *Context) error {
 	var firstError error
 	var mu sync.Mutex
 	wg := sync.WaitGroup{}
-	for _, t := range pt {
+	for _, t := range pt.inner {
 		wg.Add(1)
 		go func(t Task) {
 			defer wg.Done()
@@ -215,9 +242,9 @@ func (pt Parallel) Rollback(ctx *Context) error {
 }
 
 // String implements the fmt.Stringer interface
-func (pt Parallel) String() string {
+func (pt *Parallel) String() string {
 	var ss []string
-	for _, t := range pt {
+	for _, t := range pt.inner {
 		ss = append(ss, t.String())
 	}
 	return strings.Join(ss, "\n")

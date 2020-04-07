@@ -11,11 +11,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package template
+package progress
 
-// ConfigGenerator is used to generate configuration for component
-type ConfigGenerator interface {
-	Config() ([]byte, error)
-	ConfigWithTemplate(tpl string) ([]byte, error)
-	ConfigToFile(file string) error
+import (
+	"time"
+
+	"github.com/fatih/color"
+)
+
+var (
+	spinnerText = []rune("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
+)
+
+var (
+	colorDone    = color.New(color.FgHiGreen)
+	colorError   = color.New(color.FgHiRed)
+	colorSpinner = color.New(color.FgHiCyan)
+)
+
+const (
+	refreshRate = time.Millisecond * 50
+	doneTail    = "Done"
+	errorTail   = "Error"
+)
+
+// Bar controls how a bar is displayed, for both single bar or multi bar item.
+type Bar interface {
+	UpdateDisplay(newDisplay *DisplayProps)
 }

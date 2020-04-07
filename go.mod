@@ -7,6 +7,7 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/ScaleFT/sshkeys v0.0.0-20181112160850-82451a803681
 	github.com/appleboy/easyssh-proxy v1.3.0
+	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
 	github.com/creasty/defaults v1.3.0
 	github.com/fatih/color v1.9.0
 	github.com/google/uuid v1.1.1
@@ -14,6 +15,7 @@ require (
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a // indirect
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
+	github.com/mattn/go-runewidth v0.0.7
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/pingcap-incubator/tiup v0.0.2-0.20200402062422-48bb80e47c43
 	github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712
@@ -28,6 +30,6 @@ require (
 	go.uber.org/zap v1.14.1
 	golang.org/x/crypto v0.0.0-20200109152110-61a87790db17
 	golang.org/x/mod v0.2.0
-	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd // indirect
+	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd
 	gopkg.in/yaml.v2 v2.2.8
 )

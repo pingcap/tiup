@@ -35,6 +35,8 @@ type SSHKeyGen struct {
 
 // Execute implements the Task interface
 func (s *SSHKeyGen) Execute(ctx *Context) error {
+	ctx.ev.PublishTaskProgress(s, "Generate SSH keys")
+
 	savePrivateFileTo := s.keypath
 	savePublicFileTo := s.keypath + ".pub"
 
@@ -47,11 +49,13 @@ func (s *SSHKeyGen) Execute(ctx *Context) error {
 
 	bitSize := 4096
 
+	ctx.ev.PublishTaskProgress(s, "Generate private key")
 	privateKey, err := s.generatePrivateKey(bitSize)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
+	ctx.ev.PublishTaskProgress(s, "Generate public key")
 	publicKeyBytes, err := s.generatePublicKey(&privateKey.PublicKey)
 	if err != nil {
 		return errors.Trace(err)
@@ -59,6 +63,7 @@ func (s *SSHKeyGen) Execute(ctx *Context) error {
 
 	privateKeyBytes := s.encodePrivateKeyToPEM(privateKey)
 
+	ctx.ev.PublishTaskProgress(s, "Persist keys")
 	err = s.writeKeyToFile(privateKeyBytes, savePrivateFileTo)
 	if err != nil {
 		return errors.Trace(err)

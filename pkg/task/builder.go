@@ -72,7 +72,7 @@ func (b *Builder) ClusterSSH(spec *meta.Specification, deployUser string) *Build
 		}
 	}
 
-	b.tasks = append(b.tasks, Parallel(tasks))
+	b.tasks = append(b.tasks, &Parallel{inner: tasks})
 
 	return b
 }
@@ -242,7 +242,7 @@ func (b *Builder) Shell(host, command string, sudo bool) *Builder {
 
 // Parallel appends a parallel task to the current task collection
 func (b *Builder) Parallel(tasks ...Task) *Builder {
-	b.tasks = append(b.tasks, Parallel(tasks))
+	b.tasks = append(b.tasks, &Parallel{inner: tasks})
 	return b
 }
 
@@ -254,8 +254,28 @@ func (b *Builder) Serial(tasks ...Task) *Builder {
 
 // Build returns a task that contains all tasks appended by previous operation
 func (b *Builder) Build() Task {
-	if len(b.tasks) == 1 {
-		return b.tasks[0]
-	}
-	return Serial(b.tasks)
+	// Serial handles event internally. So the following 3 lines are commented out.
+	//if len(b.tasks) == 1 {
+	//	return b.tasks[0]
+	//}
+	return &Serial{inner: b.tasks}
+}
+
+// Step appends a new StepDisplay task, which will print single line progress for inner tasks.
+func (b *Builder) Step(prefix string, inner Task) *Builder {
+	b.Serial(newStepDisplay(prefix, inner))
+	return b
+}
+
+// ParallelStep appends a new ParallelStepDisplay task, which will print multi line progress in parallel
+// for inner tasks. Inner tasks must be a StepDisplay task.
+func (b *Builder) ParallelStep(prefix string, tasks ...*StepDisplay) *Builder {
+	b.tasks = append(b.tasks, newParallelStepDisplay(prefix, tasks...))
+	return b
+}
+
+// BuildAsStep returns a task that is wrapped by a StepDisplay. The task will print single line progress.
+func (b *Builder) BuildAsStep(prefix string) *StepDisplay {
+	inner := b.Build()
+	return newStepDisplay(prefix, inner)
 }

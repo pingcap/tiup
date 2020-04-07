@@ -124,6 +124,15 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 	return nil
 }
 
+// Deprecated
+func convertStepDisplaysToTasks(t []*task.StepDisplay) []task.Task {
+	tasks := make([]task.Task, 0, len(t))
+	for _, sd := range t {
+		tasks = append(tasks, sd)
+	}
+	return tasks
+}
+
 func buildScaleOutTask(
 	clusterName string,
 	metadata *meta.ClusterMeta,
@@ -168,7 +177,7 @@ func buildScaleOutTask(
 	})
 
 	// Download missing component
-	downloadCompTasks = buildDownloadCompTasks(metadata.Version, newPart)
+	downloadCompTasks = convertStepDisplaysToTasks(buildDownloadCompTasks(metadata.Version, newPart))
 
 	// Deploy the new topology and refresh the configuration
 	newPart.IterInstance(func(inst meta.Instance) {
@@ -245,7 +254,7 @@ func buildScaleOutTask(
 		metadata.Topology.GlobalOptions,
 		metadata.Topology.MonitoredOptions,
 		metadata.Version)
-	downloadCompTasks = append(downloadCompTasks, dlTasks...)
+	downloadCompTasks = append(downloadCompTasks, convertStepDisplaysToTasks(dlTasks)...)
 	deployCompTasks = append(deployCompTasks, dpTasks...)
 
 	return task.NewBuilder().

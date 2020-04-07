@@ -383,9 +383,9 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 	}
 
 	var (
-		envInitTasks      []task.Task // tasks which are used to initialize environment
-		downloadCompTasks []task.Task // tasks which are used to download components
-		deployCompTasks   []task.Task // tasks which are used to copy components to remote host
+		envInitTasks      []task.Task         // tasks which are used to initialize environment
+		downloadCompTasks []*task.StepDisplay // tasks which are used to download components
+		deployCompTasks   []task.Task         // tasks which are used to copy components to remote host
 	)
 
 	// Initialize environment
@@ -455,10 +455,13 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 	deployCompTasks = append(deployCompTasks, dpTasks...)
 
 	t := task.NewBuilder().
-		SSHKeyGen(meta.ClusterPath(clusterName, "ssh", "id_rsa")).
-		Parallel(downloadCompTasks...).
-		Parallel(envInitTasks...).
-		Parallel(deployCompTasks...).
+		Step("+ Generate SSH keys",
+			task.NewBuilder().SSHKeyGen(meta.ClusterPath(clusterName, "ssh", "id_rsa")).Build()).
+		ParallelStep("+ Download TiDB components", downloadCompTasks...).
+		Step("+ Initialize target host environments",
+			task.NewBuilder().Parallel(envInitTasks...).Build()).
+		Step("+ Copy files",
+			task.NewBuilder().Parallel(deployCompTasks...).Build()).
 		Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
@@ -482,14 +485,17 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 	return nil
 }
 
-func buildDownloadCompTasks(version string, topo *meta.Specification) []task.Task {
-	var tasks []task.Task
+func buildDownloadCompTasks(version string, topo *meta.Specification) []*task.StepDisplay {
+	var tasks []*task.StepDisplay
 	topo.IterComponent(func(comp meta.Component) {
 		if len(comp.Instances()) < 1 {
 			return
 		}
 		version := bindversion.ComponentVersion(comp.Name(), version)
-		t := task.NewBuilder().Download(comp.Name(), version).Build()
+		t := task.
+			NewBuilder().
+			Download(comp.Name(), version).
+			BuildAsStep(fmt.Sprintf("  - Download %s:%s", comp.Name(), version))
 		tasks = append(tasks, t)
 	})
 	return tasks
@@ -500,12 +506,12 @@ func buildMonitoredDeployTask(
 	uniqueHosts set.StringSet,
 	globalOptions meta.GlobalOptions,
 	monitoredOptions meta.MonitoredOptions,
-	version string) (downloadCompTasks, deployCompTasks []task.Task) {
+	version string) (downloadCompTasks []*task.StepDisplay, deployCompTasks []task.Task) {
 	for _, comp := range []string{meta.ComponentNodeExporter, meta.ComponentBlackboxExporter} {
 		version := bindversion.ComponentVersion(comp, version)
 		t := task.NewBuilder().
 			Download(comp, version).
-			Build()
+			BuildAsStep(fmt.Sprintf("  - Download %s:%s", comp, version))
 		downloadCompTasks = append(downloadCompTasks, t)
 
 		for host := range uniqueHosts {
