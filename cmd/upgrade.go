@@ -50,6 +50,7 @@ func newUpgradeCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&opt.options.Force, "force", false, "Force upgrade won't transfer leader")
+	cmd.Flags().Int64Var(&opt.options.Timeout, "transfer-timeout", 300, "Timeout in seconds when transferring PD and TiKV store leaders")
 
 	return cmd
 }
@@ -151,7 +152,7 @@ func upgrade(clusterName, version string, opt upgradeOptions) error {
 		SSHKeySet(
 			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(metadata.Topology, metadata.User).
+		ClusterSSH(metadata.Topology, metadata.User, sshTimeout).
 		Parallel(downloadCompTasks...).
 		Parallel(copyCompTasks...).
 		ClusterOperate(metadata.Topology, operator.UpgradeOperation, opt.options).

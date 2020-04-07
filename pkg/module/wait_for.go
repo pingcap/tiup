@@ -64,9 +64,8 @@ func (w *WaitFor) Execute(e executor.TiOpsExecutor) (err error) {
 	pattern := []byte(fmt.Sprintf(":%d ", w.c.Port))
 
 	retryOpt := utils.RetryOption{
-		Attempts: 60,
-		Delay:    w.c.Sleep,
-		Timeout:  w.c.Timeout,
+		Delay:   w.c.Sleep,
+		Timeout: w.c.Timeout,
 	}
 	if err := utils.Retry(func() error {
 		// only listing TCP ports
@@ -87,7 +86,7 @@ func (w *WaitFor) Execute(e executor.TiOpsExecutor) (err error) {
 		return err
 	}, retryOpt); err != nil {
 		// TODO: add a debug log about the real err returned by utils.Retry()
-		return errors.Errorf("timed out waiting for port %d to be %s", w.c.Port, w.c.State)
+		return errors.Errorf("timed out waiting for port %d to be %s after %s", w.c.Port, w.c.State, w.c.Timeout)
 	}
 	return nil
 }

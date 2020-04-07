@@ -23,9 +23,10 @@ import (
 
 // Options represents the operation options
 type Options struct {
-	Roles []string
-	Nodes []string
-	Force bool // Option for upgrade subcommand
+	Roles   []string
+	Nodes   []string
+	Force   bool  // Option for upgrade subcommand
+	Timeout int64 // timeout in seconds for operations that support it, not to confuse with SSH timeout
 }
 
 // Operation represents the type of cluster operation

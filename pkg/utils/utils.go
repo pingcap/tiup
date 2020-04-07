@@ -15,7 +15,6 @@ package utils
 
 import (
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -37,34 +36,18 @@ func JoinInt(nums []int, delim string) string {
 	return strings.TrimSuffix(result, delim)
 }
 
-// InSlice checks if a element is present in a slice, returns false if slice is
-// empty, or any other error occurs
-func InSlice(elem interface{}, slice interface{}) bool {
-	s := reflect.ValueOf(slice)
-	if s.Kind() != reflect.Slice {
-		return false
-	}
-
-	for i := 0; i < s.Len(); i++ {
-		if elem == s.Index(i).Interface() {
-			return true
-		}
-	}
-	return false
-}
-
 // RetryOption is options for Retry()
 type RetryOption struct {
-	Attempts int
+	Attempts int64
 	Delay    time.Duration
 	Timeout  time.Duration
 }
 
 // default values for RetryOption
 var (
-	defaultAttempts = 10
-	defaultDelay    = time.Millisecond * 500 // 500ms
-	defaultTimeout  = time.Second * 10       // 10s
+	defaultAttempts int64 = 10
+	defaultDelay          = time.Millisecond * 500 // 500ms
+	defaultTimeout        = time.Second * 10       // 10s
 )
 
 // Retry retries the func until it returns no error or reaches attempts limit or
@@ -81,15 +64,22 @@ func Retry(doFunc func() error, opts ...RetryOption) error {
 		}
 	}
 
-	// attempts must be greater than 0
+	// timeout must be greater than 0
+	if cfg.Timeout <= 0 {
+		return fmt.Errorf("timeout (%s) must be greater than 0", cfg.Timeout)
+	}
+	// set options automatically for invalid value
+	if cfg.Delay <= 0 {
+		cfg.Delay = defaultDelay
+	}
 	if cfg.Attempts <= 0 {
-		cfg.Attempts = defaultAttempts
+		cfg.Attempts = cfg.Timeout.Milliseconds()/cfg.Delay.Milliseconds() + 1
 	}
 
 	timeoutChan := time.After(cfg.Timeout)
 
 	// call the function
-	var attemptCount int
+	var attemptCount int64
 	for attemptCount = 0; attemptCount < cfg.Attempts; attemptCount++ {
 		if err := doFunc(); err == nil {
 			return nil

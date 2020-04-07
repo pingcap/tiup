@@ -63,6 +63,8 @@ type (
 		Password   string // password of the user
 		KeyFile    string // path to the private key file
 		Passphrase string // passphrase of the private key file
+		// Timeout is the maximum amount of time for the TCP connection to establish.
+		Timeout time.Duration
 	}
 )
 
@@ -82,13 +84,16 @@ func (e *SSHExecutor) Initialize(config SSHConfig) {
 		config.Port = 22
 	}
 
+	if config.Timeout == 0 {
+		config.Timeout = time.Second * 5 // default timeout is 5 sec
+	}
+
 	// build easyssh config
 	e.Config = &easyssh.MakeConfig{
-		Server: config.Host,
-		Port:   strconv.Itoa(config.Port),
-		User:   config.User,
-		// Timeout is the maximum amount of time for the TCP connection to establish.
-		Timeout: time.Second * 5, // default timeout is 5 sec
+		Server:  config.Host,
+		Port:    strconv.Itoa(config.Port),
+		User:    config.User,
+		Timeout: config.Timeout, // timeout when connecting to remote
 	}
 
 	// prefer private key authentication

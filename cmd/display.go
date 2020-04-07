@@ -102,7 +102,7 @@ func destroyTombsomeIfNeed(clusterName string, metadata *meta.ClusterMeta) error
 		return errors.AddStack(err)
 	}
 
-	err = ctx.SetClusterSSH(topo, metadata.User)
+	err = ctx.SetClusterSSH(topo, metadata.User, sshTimeout)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -148,7 +148,7 @@ func displayClusterTopology(opt *displayOption) error {
 		return errors.AddStack(err)
 	}
 
-	err = ctx.SetClusterSSH(topo, metadata.User)
+	err = ctx.SetClusterSSH(topo, metadata.User, sshTimeout)
 	if err != nil {
 		return errors.AddStack(err)
 	}

@@ -46,7 +46,7 @@ var (
 )
 
 // parseInventory builds a basic ClusterMeta from the main Ansible inventory
-func parseInventory(dir string, inv *aini.InventoryData) (string, *meta.ClusterMeta, error) {
+func parseInventory(dir string, inv *aini.InventoryData, sshTimeout int64) (string, *meta.ClusterMeta, error) {
 	topo := &meta.TopologySpecification{
 		GlobalOptions:    meta.GlobalOptions{},
 		MonitoredOptions: meta.MonitoredOptions{},
@@ -155,7 +155,7 @@ func parseInventory(dir string, inv *aini.InventoryData) (string, *meta.ClusterM
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
-			ins, err := parseDirs(srv, tmpIns)
+			ins, err := parseDirs(srv, tmpIns, sshTimeout)
 			if err != nil {
 				return "", nil, err
 			}
@@ -204,7 +204,7 @@ func parseInventory(dir string, inv *aini.InventoryData) (string, *meta.ClusterM
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
-			ins, err := parseDirs(srv, tmpIns)
+			ins, err := parseDirs(srv, tmpIns, sshTimeout)
 			if err != nil {
 				return "", nil, err
 			}
@@ -253,7 +253,7 @@ func parseInventory(dir string, inv *aini.InventoryData) (string, *meta.ClusterM
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
-			ins, err := parseDirs(srv, tmpIns)
+			ins, err := parseDirs(srv, tmpIns, sshTimeout)
 			if err != nil {
 				return "", nil, err
 			}
@@ -302,7 +302,7 @@ func parseInventory(dir string, inv *aini.InventoryData) (string, *meta.ClusterM
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
-			ins, err := parseDirs(srv, tmpIns)
+			ins, err := parseDirs(srv, tmpIns, sshTimeout)
 			if err != nil {
 				return "", nil, err
 			}
@@ -344,7 +344,7 @@ func parseInventory(dir string, inv *aini.InventoryData) (string, *meta.ClusterM
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
-			ins, err := parseDirs(srv, tmpIns)
+			ins, err := parseDirs(srv, tmpIns, sshTimeout)
 			if err != nil {
 				return "", nil, err
 			}
@@ -382,7 +382,7 @@ func parseInventory(dir string, inv *aini.InventoryData) (string, *meta.ClusterM
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
-			ins, err := parseDirs(srv, tmpIns)
+			ins, err := parseDirs(srv, tmpIns, sshTimeout)
 			if err != nil {
 				return "", nil, err
 			}
@@ -414,7 +414,7 @@ func parseInventory(dir string, inv *aini.InventoryData) (string, *meta.ClusterM
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
-			ins, err := parseDirs(srv, tmpIns)
+			ins, err := parseDirs(srv, tmpIns, sshTimeout)
 			if err != nil {
 				return "", nil, err
 			}
@@ -461,7 +461,7 @@ func parseInventory(dir string, inv *aini.InventoryData) (string, *meta.ClusterM
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
-			ins, err := parseDirs(srv, tmpIns)
+			ins, err := parseDirs(srv, tmpIns, sshTimeout)
 			if err != nil {
 				return "", nil, err
 			}
@@ -496,7 +496,7 @@ func parseInventory(dir string, inv *aini.InventoryData) (string, *meta.ClusterM
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
-			ins, err := parseDirs(srv, tmpIns)
+			ins, err := parseDirs(srv, tmpIns, sshTimeout)
 			if err != nil {
 				return "", nil, err
 			}

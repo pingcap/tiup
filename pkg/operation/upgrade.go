@@ -20,11 +20,10 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/api"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
 )
-
-var defaultWaitLeaderTimeout = time.Second * 30
 
 // Upgrade the cluster.
 func Upgrade(
@@ -38,6 +37,11 @@ func Upgrade(
 	components = filterComponent(components, roleFilter)
 
 	leaderAware := set.NewStringSet(meta.ComponentPD, meta.ComponentTiKV)
+
+	timeoutOpt := &utils.RetryOption{
+		Timeout: time.Second * time.Duration(options.Timeout),
+		Delay:   time.Second * 2,
+	}
 
 	for _, component := range components {
 		instances := filterInstance(component.Instances(), nodeFilter)
@@ -59,7 +63,7 @@ func Upgrade(
 					}
 
 					if len(spec.PDServers) > 1 && leader.Name == instance.(*meta.PDInstance).Name {
-						if err := pdClient.EvictPDLeader(); err != nil {
+						if err := pdClient.EvictPDLeader(timeoutOpt); err != nil {
 							return errors.Annotatef(err, "failed to evict PD leader %s", instance.GetHost())
 						}
 					}
@@ -78,13 +82,13 @@ func Upgrade(
 				// Make sure there's leader of PD.
 				// Although we evict pd leader when restart pd,
 				// But when there's only one PD instance the pd might not serve request right away after restart.
-				err := pdClient.WaitLeader(defaultWaitLeaderTimeout)
+				err := pdClient.WaitLeader(timeoutOpt)
 				if err != nil {
 					return errors.Annotate(err, "failed to wait leader")
 				}
 
 				for _, instance := range instances {
-					if err := pdClient.EvictStoreLeader(addr(instance)); err != nil {
+					if err := pdClient.EvictStoreLeader(addr(instance), timeoutOpt); err != nil {
 						return errors.Annotatef(err, "failed to evict store leader %s", instance.GetHost())
 					}
 

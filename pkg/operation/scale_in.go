@@ -20,6 +20,7 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/api"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
 )
@@ -121,6 +122,11 @@ func ScaleIn(
 		return err
 	}
 
+	timeoutOpt := &utils.RetryOption{
+		Timeout: time.Second * time.Duration(options.Timeout),
+		Delay:   time.Second * 5,
+	}
+
 	// Delete member from cluster
 	for _, component := range spec.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
@@ -130,11 +136,11 @@ func ScaleIn(
 
 			switch component.Name() {
 			case meta.ComponentTiKV:
-				if err := pdClient.DelStore(instance.ID()); err != nil {
+				if err := pdClient.DelStore(instance.ID(), timeoutOpt); err != nil {
 					return err
 				}
 			case meta.ComponentPD:
-				if err := pdClient.DelPD(instance.(*meta.PDInstance).Name); err != nil {
+				if err := pdClient.DelPD(instance.(*meta.PDInstance).Name, timeoutOpt); err != nil {
 					return err
 				}
 			case meta.ComponentDrainer:

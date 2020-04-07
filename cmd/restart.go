@@ -51,7 +51,7 @@ func newRestartCmd() *cobra.Command {
 				SSHKeySet(
 					meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 					meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-				ClusterSSH(metadata.Topology, metadata.User).
+				ClusterSSH(metadata.Topology, metadata.User, sshTimeout).
 				ClusterOperate(metadata.Topology, operator.RestartOperation, options).
 				Build()
 

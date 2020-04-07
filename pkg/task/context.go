@@ -14,6 +14,8 @@
 package task
 
 import (
+	"time"
+
 	"github.com/pingcap-incubator/tiup-cluster/pkg/executor"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	"github.com/pingcap/errors"
@@ -27,7 +29,7 @@ func (ctx *Context) SetSSHKeySet(privateKeyPath string, publicKeyPath string) er
 }
 
 // SetClusterSSH set cluster user ssh executor in context.
-func (ctx *Context) SetClusterSSH(topo *meta.Specification, deployUser string) error {
+func (ctx *Context) SetClusterSSH(topo *meta.Specification, deployUser string, sshTimeout int64) error {
 	if len(ctx.PrivateKeyPath) == 0 {
 		return errors.Errorf("context has no PrivateKeyPath")
 	}
@@ -38,6 +40,7 @@ func (ctx *Context) SetClusterSSH(topo *meta.Specification, deployUser string) e
 				Host:    in.GetHost(),
 				KeyFile: ctx.PrivateKeyPath,
 				User:    deployUser,
+				Timeout: time.Second * time.Duration(sshTimeout),
 			}
 
 			e := executor.NewSSHExecutor(cf)

@@ -159,19 +159,27 @@ func (pc *PDClient) GetStores() (*pdserverapi.StoresInfo, error) {
 }
 
 // WaitLeader wait until there's a leader or timeout.
-func (pc *PDClient) WaitLeader(timeout time.Duration) error {
-	start := time.Now()
-	for {
+func (pc *PDClient) WaitLeader(retryOpt *utils.RetryOption) error {
+	if retryOpt == nil {
+		retryOpt = &utils.RetryOption{
+			Delay:   time.Second * 1,
+			Timeout: time.Second * 30,
+		}
+	}
+
+	if err := utils.Retry(func() error {
 		_, err := pc.GetLeader()
 		if err == nil {
 			return nil
 		}
 
-		if time.Since(start) >= timeout {
-			return err
-		}
-		time.Sleep(time.Second)
+		// return error by default, to make the retry work
+		log.Debugf("Still waitting for the PD leader to be elected")
+		return errors.New("still waitting for the PD leader to be elected")
+	}, *retryOpt); err != nil {
+		return fmt.Errorf("error getting PD leader, %v", err)
 	}
+	return nil
 }
 
 // GetLeader queries the leader node of PD cluster
@@ -218,7 +226,7 @@ func (pc *PDClient) GetMembers() (*pdpb.GetMembersResponse, error) {
 }
 
 // EvictPDLeader evicts the PD leader
-func (pc *PDClient) EvictPDLeader() error {
+func (pc *PDClient) EvictPDLeader(retryOpt *utils.RetryOption) error {
 	// get current members
 	members, err := pc.GetMembers()
 	if err != nil {
@@ -247,10 +255,11 @@ func (pc *PDClient) EvictPDLeader() error {
 	}
 
 	// wait for the transfer to complete
-	retryOpt := utils.RetryOption{
-		Attempts: 60,
-		Delay:    time.Second * 5,
-		Timeout:  time.Second * 300,
+	if retryOpt == nil {
+		retryOpt = &utils.RetryOption{
+			Delay:   time.Second * 5,
+			Timeout: time.Second * 300,
+		}
 	}
 	if err := utils.Retry(func() error {
 		currLeader, err := pc.GetLeader()
@@ -266,7 +275,7 @@ func (pc *PDClient) EvictPDLeader() error {
 		// return error by default, to make the retry work
 		log.Debugf("Still waitting for the PD leader to transfer")
 		return errors.New("still waitting for the PD leader to transfer")
-	}, retryOpt); err != nil {
+	}, *retryOpt); err != nil {
 		return fmt.Errorf("error evicting PD leader, %v", err)
 	}
 	return nil
@@ -285,7 +294,7 @@ type pdSchedulerRequest struct {
 
 // EvictStoreLeader evicts the store leaders
 // The host parameter should be in format of IP:Port, that matches store's address
-func (pc *PDClient) EvictStoreLeader(host string) error {
+func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption) error {
 	// get info of current stores
 	stores, err := pc.GetStores()
 	if err != nil {
@@ -335,10 +344,11 @@ func (pc *PDClient) EvictStoreLeader(host string) error {
 	}
 
 	// wait for the transfer to complete
-	retryOpt := utils.RetryOption{
-		Attempts: 120,
-		Delay:    time.Second * 5,
-		Timeout:  time.Second * 600,
+	if retryOpt == nil {
+		retryOpt = &utils.RetryOption{
+			Delay:   time.Second * 5,
+			Timeout: time.Second * 600,
+		}
 	}
 	if err := utils.Retry(func() error {
 		currStores, err := pc.GetStores()
@@ -355,15 +365,14 @@ func (pc *PDClient) EvictStoreLeader(host string) error {
 				return nil
 			}
 			log.Debugf(
-				"Still waitting for %d/%d store leaders to transfer...",
+				"Still waitting for %d store leaders to transfer...",
 				currStoreInfo.Status.LeaderCount,
-				latestStore.Status.LeaderCount,
 			)
 		}
 
 		// return error by default, to make the retry work
 		return errors.New("still waitting for the store leaders to transfer")
-	}, retryOpt); err != nil {
+	}, *retryOpt); err != nil {
 		return fmt.Errorf("error evicting store leader from %s, %v", host, err)
 	}
 	return nil
@@ -427,7 +436,7 @@ func (pc *PDClient) RemoveStoreEvict(host string) error {
 }
 
 // DelPD deletes a PD node from the cluster, name is the Name of the PD member
-func (pc *PDClient) DelPD(name string) error {
+func (pc *PDClient) DelPD(name string, retryOpt *utils.RetryOption) error {
 	// get current members
 	members, err := pc.GetMembers()
 	if err != nil {
@@ -450,10 +459,11 @@ func (pc *PDClient) DelPD(name string) error {
 	}
 
 	// wait for the deletion to complete
-	retryOpt := utils.RetryOption{
-		Attempts: 30,
-		Delay:    time.Second * 2,
-		Timeout:  time.Second * 60,
+	if retryOpt == nil {
+		retryOpt = &utils.RetryOption{
+			Delay:   time.Second * 2,
+			Timeout: time.Second * 60,
+		}
 	}
 	if err := utils.Retry(func() error {
 		currMembers, err := pc.GetMembers()
@@ -469,7 +479,7 @@ func (pc *PDClient) DelPD(name string) error {
 		}
 
 		return nil
-	}, retryOpt); err != nil {
+	}, *retryOpt); err != nil {
 		return fmt.Errorf("error deleting PD node, %v", err)
 	}
 	return nil
@@ -506,7 +516,7 @@ var ErrStoreNotExists = errors.New("store not exists")
 
 // DelStore deletes stores from a (TiKV) host
 // The host parameter should be in format of IP:Port, that matches store's address
-func (pc *PDClient) DelStore(host string) error {
+func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 	// get info of current stores
 	stores, err := pc.GetStores()
 	if err != nil {
@@ -537,10 +547,11 @@ func (pc *PDClient) DelStore(host string) error {
 	}
 
 	// wait for the deletion to complete
-	retryOpt := utils.RetryOption{
-		Attempts: 30,
-		Delay:    time.Second * 2,
-		Timeout:  time.Second * 60,
+	if retryOpt == nil {
+		retryOpt = &utils.RetryOption{
+			Delay:   time.Second * 2,
+			Timeout: time.Second * 60,
+		}
 	}
 	if err := utils.Retry(func() error {
 		currStores, err := pc.GetStores()
@@ -563,7 +574,7 @@ func (pc *PDClient) DelStore(host string) error {
 		}
 
 		return nil
-	}, retryOpt); err != nil {
+	}, *retryOpt); err != nil {
 		return fmt.Errorf("error deleting store, %v", err)
 	}
 	return nil

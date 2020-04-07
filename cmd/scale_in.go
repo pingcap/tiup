@@ -33,8 +33,10 @@ import (
 )
 
 func newScaleInCmd() *cobra.Command {
-	var options operator.Options
-	var skipConfirm bool
+	var (
+		options     operator.Options
+		skipConfirm bool
+	)
 	cmd := &cobra.Command{
 		Use:   "scale-in <cluster-name>",
 		Short: "Scale in a TiDB cluster",
@@ -61,6 +63,8 @@ func newScaleInCmd() *cobra.Command {
 
 	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Specify the nodes")
 	cmd.Flags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip the confirmation of destroying")
+	cmd.Flags().Int64Var(&options.Timeout, "transfer-timeout", 300, "Timeout in seconds when transferring PD and TiKV store leaders")
+
 	_ = cmd.MarkFlagRequired("node")
 
 	return cmd
@@ -121,7 +125,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 		SSHKeySet(
 			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(metadata.Topology, metadata.User).
+		ClusterSSH(metadata.Topology, metadata.User, sshTimeout).
 		ClusterOperate(metadata.Topology, operator.ScaleInOperation, options).
 		UpdateMeta(clusterName, metadata, operator.AsyncNodes(metadata.Topology, options.Nodes, false)).
 		Parallel(regenConfigTasks...).

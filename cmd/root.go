@@ -38,7 +38,8 @@ import (
 var rootCmd *cobra.Command
 
 var (
-	errNS = errorx.NewNamespace("cmd")
+	errNS      = errorx.NewNamespace("cmd")
+	sshTimeout int64 // timeout in seconds when connecting an SSH server
 )
 
 func init() {
@@ -74,6 +75,8 @@ func init() {
 	}
 
 	beautifyCobraUsageAndHelp(rootCmd)
+
+	rootCmd.PersistentFlags().Int64Var(&sshTimeout, "ssh-timeout", 5, "Timeout in seconds to connect host via SSH, ignored for operations that don't need an SSH connection.")
 
 	rootCmd.AddCommand(
 		newDeploy(),

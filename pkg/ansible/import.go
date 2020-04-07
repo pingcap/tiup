@@ -25,7 +25,7 @@ import (
 )
 
 // ImportAnsible imports a TiDB cluster deployed by TiDB-Ansible
-func ImportAnsible(dir, inventoryFileName string) (string, *meta.ClusterMeta, error) {
+func ImportAnsible(dir, inventoryFileName string, sshTimeout int64) (string, *meta.ClusterMeta, error) {
 	if inventoryFileName == "" {
 		inventoryFileName = AnsibleInventoryFile
 	}
@@ -41,7 +41,7 @@ func ImportAnsible(dir, inventoryFileName string) (string, *meta.ClusterMeta, er
 		return "", nil, err
 	}
 
-	clsName, clsMeta, err := parseInventory(dir, inventory)
+	clsName, clsMeta, err := parseInventory(dir, inventory, sshTimeout)
 	if err != nil {
 		return "", nil, err
 	}

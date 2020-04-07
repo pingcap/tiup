@@ -38,7 +38,7 @@ func newImportCmd() *cobra.Command {
 		Short: "Import an exist TiDB cluster from TiDB-Ansible",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// migrate cluster metadata from Ansible inventory
-			clsName, clsMeta, err := ansible.ImportAnsible(ansibleDir, inventoryFileName)
+			clsName, clsMeta, err := ansible.ImportAnsible(ansibleDir, inventoryFileName, sshTimeout)
 			if err != nil {
 				return err
 			}
@@ -70,7 +70,7 @@ func newImportCmd() *cobra.Command {
 			}
 
 			// copy config files form deployment servers
-			if err = ansible.ImportConfig(clsName, clsMeta); err != nil {
+			if err = ansible.ImportConfig(clsName, clsMeta, sshTimeout); err != nil {
 				return err
 			}
 

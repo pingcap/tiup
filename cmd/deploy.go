@@ -402,9 +402,17 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 				dirs = append(dirs, clusterutil.Abs(globalOptions.User, dir))
 			}
 			t := task.NewBuilder().
-				RootSSH(inst.GetHost(), inst.GetSSHPort(), opt.user, sshConnProps.Password, sshConnProps.IdentityFile, sshConnProps.IdentityFilePassphrase).
+				RootSSH(
+					inst.GetHost(),
+					inst.GetSSHPort(),
+					opt.user,
+					sshConnProps.Password,
+					sshConnProps.IdentityFile,
+					sshConnProps.IdentityFilePassphrase,
+					sshTimeout,
+				).
 				EnvInit(inst.GetHost(), globalOptions.User).
-				UserSSH(inst.GetHost(), globalOptions.User).
+				UserSSH(inst.GetHost(), globalOptions.User, sshTimeout).
 				Mkdir(globalOptions.User, inst.GetHost(), dirs...).
 				Chown(globalOptions.User, inst.GetHost(), dirs...).
 				Build()
@@ -450,7 +458,13 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 	})
 
 	// Deploy monitor relevant components to remote
-	dlTasks, dpTasks := buildMonitoredDeployTask(clusterName, uniqueHosts, globalOptions, topo.MonitoredOptions, version)
+	dlTasks, dpTasks := buildMonitoredDeployTask(
+		clusterName,
+		uniqueHosts,
+		globalOptions,
+		topo.MonitoredOptions,
+		version,
+	)
 	downloadCompTasks = append(downloadCompTasks, dlTasks...)
 	deployCompTasks = append(deployCompTasks, dpTasks...)
 
@@ -526,7 +540,7 @@ func buildMonitoredDeployTask(
 
 			// Deploy component
 			t := task.NewBuilder().
-				UserSSH(host, globalOptions.User).
+				UserSSH(host, globalOptions.User, sshTimeout).
 				Mkdir(globalOptions.User, host,
 					deployDir, dataDir, logDir,
 					filepath.Join(deployDir, "bin"),

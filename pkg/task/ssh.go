@@ -15,6 +15,7 @@ package task
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/executor"
@@ -32,6 +33,7 @@ type RootSSH struct {
 	password   string // password of the user
 	keyFile    string // path to the private key file
 	passphrase string // passphrase of the private key file
+	timeout    int64  // timeout in seconds when connecting via SSH
 }
 
 // Execute implements the Task interface
@@ -43,6 +45,7 @@ func (s *RootSSH) Execute(ctx *Context) error {
 		Password:   s.password,
 		KeyFile:    s.keyFile,
 		Passphrase: s.passphrase,
+		Timeout:    time.Second * time.Duration(s.timeout),
 	})
 
 	ctx.SetExecutor(s.host, e)
@@ -69,6 +72,7 @@ func (s RootSSH) String() string {
 type UserSSH struct {
 	host       string
 	deployUser string
+	timeout    int64
 }
 
 // Execute implements the Task interface
@@ -77,6 +81,7 @@ func (s *UserSSH) Execute(ctx *Context) error {
 		Host:    s.host,
 		KeyFile: ctx.PrivateKeyPath,
 		User:    s.deployUser,
+		Timeout: time.Second * time.Duration(s.timeout),
 	})
 
 	ctx.SetExecutor(s.host, e)

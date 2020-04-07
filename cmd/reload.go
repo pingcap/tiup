@@ -70,6 +70,7 @@ func newReloadCmd() *cobra.Command {
 
 	cmd.Flags().StringSliceVarP(&options.Roles, "role", "R", nil, "Only start specified roles")
 	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Only start specified nodes")
+
 	return cmd
 }
 
@@ -94,7 +95,7 @@ func buildReloadTask(
 		logDir := clusterutil.Abs(metadata.User, inst.LogDir())
 
 		// Download and copy the latest component to remote if the cluster is imported from Ansible
-		tb := task.NewBuilder().UserSSH(inst.GetHost(), metadata.User)
+		tb := task.NewBuilder().UserSSH(inst.GetHost(), metadata.User, sshTimeout)
 		if inst.IsImported() {
 			switch compName := inst.ComponentName(); compName {
 			case meta.ComponentGrafana, meta.ComponentPrometheus, meta.ComponentAlertManager:
@@ -117,7 +118,7 @@ func buildReloadTask(
 		SSHKeySet(
 			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(metadata.Topology, metadata.User).
+		ClusterSSH(metadata.Topology, metadata.User, sshTimeout).
 		Parallel(refreshConfigTasks...).
 		ClusterOperate(metadata.Topology, operator.UpgradeOperation, options).
 		Build()

@@ -30,7 +30,12 @@ func NewBuilder() *Builder {
 }
 
 // RootSSH appends a RootSSH task to the current task collection
-func (b *Builder) RootSSH(host string, port int, user, password, keyFile, passphrase string) *Builder {
+func (b *Builder) RootSSH(
+	host string,
+	port int,
+	user, password, keyFile, passphrase string,
+	sshTimeout int64,
+) *Builder {
 	b.tasks = append(b.tasks, &RootSSH{
 		host:       host,
 		port:       port,
@@ -38,15 +43,17 @@ func (b *Builder) RootSSH(host string, port int, user, password, keyFile, passph
 		password:   password,
 		keyFile:    keyFile,
 		passphrase: passphrase,
+		timeout:    sshTimeout,
 	})
 	return b
 }
 
 // UserSSH append a UserSSH task to the current task collection
-func (b *Builder) UserSSH(host, deployUser string) *Builder {
+func (b *Builder) UserSSH(host, deployUser string, sshTimeout int64) *Builder {
 	b.tasks = append(b.tasks, &UserSSH{
 		host:       host,
 		deployUser: deployUser,
+		timeout:    sshTimeout,
 	})
 	return b
 }
@@ -61,13 +68,14 @@ func (b *Builder) Func(name string, fn func() error) *Builder {
 }
 
 // ClusterSSH init all UserSSH need for the cluster.
-func (b *Builder) ClusterSSH(spec *meta.Specification, deployUser string) *Builder {
+func (b *Builder) ClusterSSH(spec *meta.Specification, deployUser string, sshTimeout int64) *Builder {
 	var tasks []Task
 	for _, com := range spec.ComponentsByStartOrder() {
 		for _, in := range com.Instances() {
 			tasks = append(tasks, &UserSSH{
 				host:       in.GetHost(),
 				deployUser: deployUser,
+				timeout:    sshTimeout,
 			})
 		}
 	}

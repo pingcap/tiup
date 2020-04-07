@@ -27,6 +27,7 @@ import (
 
 func newStopCmd() *cobra.Command {
 	var options operator.Options
+
 	cmd := &cobra.Command{
 		Use:   "stop <cluster-name>",
 		Short: "Stop a TiDB cluster",
@@ -50,7 +51,7 @@ func newStopCmd() *cobra.Command {
 				SSHKeySet(
 					meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 					meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-				ClusterSSH(metadata.Topology, metadata.User).
+				ClusterSSH(metadata.Topology, metadata.User, sshTimeout).
 				ClusterOperate(metadata.Topology, operator.StopOperation, options).
 				Build()
 

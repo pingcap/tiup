@@ -24,7 +24,7 @@ import (
 )
 
 // ImportConfig copies config files from cluster which deployed through tidb-ansible
-func ImportConfig(name string, clsMeta *meta.ClusterMeta) error {
+func ImportConfig(name string, clsMeta *meta.ClusterMeta, sshTimeout int64) error {
 	// there may be already cluster dir, skip create
 	//if err := os.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
 	//	return err
@@ -42,7 +42,7 @@ func ImportConfig(name string, clsMeta *meta.ClusterMeta) error {
 					SSHKeySet(
 						meta.ClusterPath(name, "ssh", "id_rsa"),
 						meta.ClusterPath(name, "ssh", "id_rsa.pub")).
-					UserSSH(inst.GetHost(), clsMeta.User).
+					UserSSH(inst.GetHost(), clsMeta.User, sshTimeout).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
 						meta.ClusterPath(name,
 							"config",
@@ -59,7 +59,7 @@ func ImportConfig(name string, clsMeta *meta.ClusterMeta) error {
 					SSHKeySet(
 						meta.ClusterPath(name, "ssh", "id_rsa"),
 						meta.ClusterPath(name, "ssh", "id_rsa.pub")).
-					UserSSH(inst.GetHost(), clsMeta.User).
+					UserSSH(inst.GetHost(), clsMeta.User, sshTimeout).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
 						meta.ClusterPath(name,
 							"config",

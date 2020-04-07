@@ -16,6 +16,7 @@ package ansible
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/pingcap-incubator/tiup-cluster/pkg/executor"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
@@ -29,7 +30,7 @@ var (
 )
 
 // parseDirs sets values of directories of component
-func parseDirs(host *aini.Host, ins meta.InstanceSpec) (meta.InstanceSpec, error) {
+func parseDirs(host *aini.Host, ins meta.InstanceSpec, sshTimeout int64) (meta.InstanceSpec, error) {
 	hostName, sshPort := ins.SSH()
 
 	e := executor.NewSSHExecutor(executor.SSHConfig{
@@ -37,6 +38,7 @@ func parseDirs(host *aini.Host, ins meta.InstanceSpec) (meta.InstanceSpec, error
 		Port:    sshPort,
 		User:    host.Vars["ansible_user"],
 		KeyFile: SSHKeyPath(), // ansible generated keyfile
+		Timeout: time.Second * time.Duration(sshTimeout),
 	})
 	log.Debugf("Detecting deploy paths on %s...", hostName)
 
