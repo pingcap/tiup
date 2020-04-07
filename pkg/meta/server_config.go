@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/pingcap/errors"
 )
 
 // strKeyMap tries to convert `map[interface{}]interface{}` to `map[string]interface{}`
@@ -104,6 +105,9 @@ func merge(global, overwrite map[string]interface{}) (map[string]interface{}, er
 
 func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
 	lhs, err := merge(global, overwrite)
+	if err != nil {
+		return nil, errors.AddStack(err)
+	}
 
 	buf := bytes.NewBufferString(fmt.Sprintf(`# WARNING: This file was auto-generated. Do not edit! All your edit might be overwritten!
 # You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
