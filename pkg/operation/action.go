@@ -15,6 +15,7 @@ package operator
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -27,6 +28,7 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/module"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
+	"golang.org/x/sync/errgroup"
 )
 
 // Start the cluster.
@@ -428,14 +430,21 @@ func StartComponent(getter ExecutorGetter, instances []meta.Instance) error {
 	name := instances[0].ComponentName()
 	log.Infof("Starting component %s", name)
 
+	errg, _ := errgroup.WithContext(context.Background())
+
 	for _, ins := range instances {
-		err := startInstance(getter, ins)
-		if err != nil {
-			return errors.AddStack(err)
-		}
+		ins := ins
+
+		errg.Go(func() error {
+			err := startInstance(getter, ins)
+			if err != nil {
+				return errors.AddStack(err)
+			}
+			return nil
+		})
 	}
 
-	return nil
+	return errg.Wait()
 }
 
 // StopMonitored stop BlackboxExporter and NodeExporter
@@ -558,14 +567,21 @@ func StopComponent(getter ExecutorGetter, instances []meta.Instance) error {
 	name := instances[0].ComponentName()
 	log.Infof("Stopping component %s", name)
 
+	errg, _ := errgroup.WithContext(context.Background())
+
 	for _, ins := range instances {
-		err := stopInstance(getter, ins)
-		if err != nil {
-			return errors.AddStack(err)
-		}
+		ins := ins
+		errg.Go(func() error {
+
+			err := stopInstance(getter, ins)
+			if err != nil {
+				return errors.AddStack(err)
+			}
+			return nil
+		})
 	}
 
-	return nil
+	return errg.Wait()
 }
 
 // GetServiceStatus return the Acitive line of status.
@@ -610,18 +626,23 @@ func PrintClusterStatus(getter ExecutorGetter, spec *meta.Specification) (health
 		}
 
 		log.Infof("Checking service state of %s", com.Name())
+		errg, _ := errgroup.WithContext(context.Background())
 		for _, ins := range com.Instances() {
-			log.Infof("\t%s", ins.GetHost())
-			e := getter.Get(ins.GetHost())
-			active, err := GetServiceStatus(e, ins.ServiceName())
-			if err != nil {
-				health = false
-				log.Errorf("\t\t%v", err)
-			} else {
-				log.Infof("\t\t%s", active)
-			}
-		}
+			ins := ins
 
+			errg.Go(func() error {
+				e := getter.Get(ins.GetHost())
+				active, err := GetServiceStatus(e, ins.ServiceName())
+				if err != nil {
+					health = false
+					log.Errorf("\t%s\t%v", ins.GetHost(), err)
+				} else {
+					log.Infof("\t%s\t%s", ins.GetHost(), active)
+				}
+				return nil
+			})
+		}
+		_ = errg.Wait()
 	}
 
 	return
