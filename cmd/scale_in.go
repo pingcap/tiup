@@ -108,6 +108,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 			}
 
 			t := tb.InitConfig(clusterName,
+				metadata.Version,
 				instance,
 				metadata.User,
 				meta.DirPaths{

@@ -105,12 +105,15 @@ func buildReloadTask(
 		}
 
 		// Refresh all configuration
-		t := tb.InitConfig(clusterName, inst, metadata.User, meta.DirPaths{
-			Deploy: deployDir,
-			Data:   dataDir,
-			Log:    logDir,
-			Cache:  meta.ClusterPath(clusterName, "config"),
-		}).Build()
+		t := tb.InitConfig(clusterName,
+			metadata.Version,
+			inst, metadata.User,
+			meta.DirPaths{
+				Deploy: deployDir,
+				Data:   dataDir,
+				Log:    logDir,
+				Cache:  meta.ClusterPath(clusterName, "config"),
+			}).Build()
 		refreshConfigTasks = append(refreshConfigTasks, t)
 	})
 

@@ -21,8 +21,8 @@ import (
 
 // ref: https://samrapdev.com/capturing-sensitive-input-with-editor-in-golang-from-the-cli/
 
-// DefaultEditor is vim because we're adults ;)
-const DefaultEditor = "vim"
+// DefaultEditor is vi because we're adults ;)
+const DefaultEditor = "vi"
 
 // OpenFileInEditor opens filename in a text editor.
 func OpenFileInEditor(filename string) error {

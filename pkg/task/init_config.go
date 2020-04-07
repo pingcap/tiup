@@ -23,10 +23,11 @@ import (
 
 // InitConfig is used to copy all configurations to the target directory of path
 type InitConfig struct {
-	name       string
-	instance   meta.Instance
-	deployUser string
-	paths      meta.DirPaths
+	clusterName    string
+	clusterVersion string
+	instance       meta.Instance
+	deployUser     string
+	paths          meta.DirPaths
 }
 
 // Execute implements the Task interface
@@ -41,7 +42,7 @@ func (c *InitConfig) Execute(ctx *Context) error {
 		return err
 	}
 
-	return c.instance.InitConfig(exec, c.name, c.deployUser, c.paths)
+	return c.instance.InitConfig(exec, c.clusterName, c.clusterVersion, c.deployUser, c.paths)
 }
 
 // Rollback implements the Task interface
@@ -52,6 +53,6 @@ func (c *InitConfig) Rollback(ctx *Context) error {
 // String implements the fmt.Stringer interface
 func (c *InitConfig) String() string {
 	return fmt.Sprintf("InitConfig: cluster=%s, user=%s, host=%s, path=%s, %s",
-		c.name, c.deployUser, c.instance.GetHost(),
-		filepath.Join(meta.ClusterPath(c.name, "config", c.instance.ServiceName())), c.paths)
+		c.clusterName, c.deployUser, c.instance.GetHost(),
+		filepath.Join(meta.ClusterPath(c.clusterName, "config", c.instance.ServiceName())), c.paths)
 }

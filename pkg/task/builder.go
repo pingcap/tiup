@@ -138,24 +138,26 @@ func (b *Builder) BackupComponent(component, fromVer string, dstHost, dstDir str
 }
 
 // InitConfig appends a CopyComponent task to the current task collection
-func (b *Builder) InitConfig(name string, inst meta.Instance, deployUser string, paths meta.DirPaths) *Builder {
+func (b *Builder) InitConfig(clusterName, clusterVersion string, inst meta.Instance, deployUser string, paths meta.DirPaths) *Builder {
 	b.tasks = append(b.tasks, &InitConfig{
-		name:       name,
-		instance:   inst,
-		deployUser: deployUser,
-		paths:      paths,
+		clusterName:    clusterName,
+		clusterVersion: clusterVersion,
+		instance:       inst,
+		deployUser:     deployUser,
+		paths:          paths,
 	})
 	return b
 }
 
 // ScaleConfig generate temporary config on scaling
-func (b *Builder) ScaleConfig(name string, base *meta.TopologySpecification, inst meta.Instance, deployUser string, paths meta.DirPaths) *Builder {
+func (b *Builder) ScaleConfig(clusterName, clusterVersion string, base *meta.TopologySpecification, inst meta.Instance, deployUser string, paths meta.DirPaths) *Builder {
 	b.tasks = append(b.tasks, &ScaleConfig{
-		name:       name,
-		base:       base,
-		instance:   inst,
-		deployUser: deployUser,
-		paths:      paths,
+		clusterName:    clusterName,
+		clusterVersion: clusterVersion,
+		base:           base,
+		instance:       inst,
+		deployUser:     deployUser,
+		paths:          paths,
 	})
 	return b
 }

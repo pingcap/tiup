@@ -69,7 +69,7 @@ func versionCompare(curVersion, newVersion string) error {
 	}
 }
 
-func upgrade(clusterName, version string, opt upgradeOptions) error {
+func upgrade(clusterName, clusterVersion string, opt upgradeOptions) error {
 	if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
 		return errors.Errorf("cannot upgrade non-exists cluster %s", clusterName)
 	}
@@ -86,13 +86,13 @@ func upgrade(clusterName, version string, opt upgradeOptions) error {
 		uniqueComps = map[componentInfo]struct{}{}
 	)
 
-	if err := versionCompare(metadata.Version, version); err != nil {
+	if err := versionCompare(metadata.Version, clusterVersion); err != nil {
 		return err
 	}
 
 	for _, comp := range metadata.Topology.ComponentsByStartOrder() {
 		for _, inst := range comp.Instances() {
-			version := bindversion.ComponentVersion(inst.ComponentName(), version)
+			version := bindversion.ComponentVersion(inst.ComponentName(), clusterVersion)
 			if version == "" {
 				return errors.Errorf("unsupported component: %v", inst.ComponentName())
 			}
@@ -131,6 +131,7 @@ func upgrade(clusterName, version string, opt upgradeOptions) error {
 				}
 				tb.InitConfig(
 					clusterName,
+					clusterVersion,
 					inst,
 					metadata.User,
 					meta.DirPaths{
@@ -166,7 +167,7 @@ func upgrade(clusterName, version string, opt upgradeOptions) error {
 		return errors.Trace(err)
 	}
 
-	metadata.Version = version
+	metadata.Version = clusterVersion
 	if err := meta.SaveClusterMeta(clusterName, metadata); err != nil {
 		return errors.Trace(err)
 	}

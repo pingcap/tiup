@@ -65,19 +65,19 @@ type DrainerInstance struct {
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DrainerInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, cluster, user string, paths DirPaths) error {
+func (i *DrainerInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, clusterName, clusterVersion, user string, paths DirPaths) error {
 	s := i.instance.topo
 	defer func() {
 		i.instance.topo = s
 	}()
 	i.instance.topo = b
 
-	return i.InitConfig(e, cluster, user, paths)
+	return i.InitConfig(e, clusterName, clusterVersion, user, paths)
 }
 
 // InitConfig implements Instance interface.
-func (i *DrainerInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string, paths DirPaths) error {
-	if err := i.instance.InitConfig(e, cluster, user, paths); err != nil {
+func (i *DrainerInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -88,7 +88,7 @@ func (i *DrainerInstance) InitConfig(e executor.TiOpsExecutor, cluster, user str
 		paths.Deploy,
 		paths.Data,
 		paths.Log,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.instance.topo.Endpoints(user)...)
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.instance.topo.Endpoints(deployUser)...)
 
 	cfg.WithCommitTs(spec.CommitTS)
 

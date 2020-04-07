@@ -65,19 +65,19 @@ type PumpInstance struct {
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *PumpInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, cluster, user string, paths DirPaths) error {
+func (i *PumpInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
 	s := i.instance.topo
 	defer func() {
 		i.instance.topo = s
 	}()
 	i.instance.topo = b
 
-	return i.InitConfig(e, cluster, user, paths)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
 // InitConfig implements Instance interface.
-func (i *PumpInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string, paths DirPaths) error {
-	if err := i.instance.InitConfig(e, cluster, user, paths); err != nil {
+func (i *PumpInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -88,7 +88,7 @@ func (i *PumpInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string
 		paths.Deploy,
 		paths.Data,
 		paths.Log,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.instance.topo.Endpoints(user)...)
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.instance.topo.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pump_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {

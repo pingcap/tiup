@@ -209,6 +209,7 @@ func buildScaleOutTask(
 				filepath.Join(deployDir, "scripts")).
 			CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
 			ScaleConfig(clusterName,
+				metadata.Version,
 				metadata.Topology,
 				inst,
 				metadata.User,
@@ -243,6 +244,7 @@ func buildScaleOutTask(
 
 		// Refresh all configuration
 		t := tb.InitConfig(clusterName,
+			metadata.Version,
 			inst,
 			metadata.User,
 			meta.DirPaths{

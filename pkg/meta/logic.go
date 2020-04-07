@@ -31,6 +31,7 @@ import (
 	system "github.com/pingcap-incubator/tiup-cluster/pkg/template/systemd"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
+	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v2"
 )
 
@@ -62,8 +63,8 @@ type Instance interface {
 	ID() string
 	Ready(executor.TiOpsExecutor) error
 	WaitForDown(executor.TiOpsExecutor) error
-	InitConfig(executor.TiOpsExecutor, string, string, DirPaths) error
-	ScaleConfig(executor.TiOpsExecutor, *Specification, string, string, DirPaths) error
+	InitConfig(e executor.TiOpsExecutor, clusterName string, clusterVersion string, deployUser string, paths DirPaths) error
+	ScaleConfig(e executor.TiOpsExecutor, topo *Specification, clusterName string, clusterVersion string, deployUser string, paths DirPaths) error
 	ComponentName() string
 	InstanceName() string
 	ServiceName() string
@@ -122,7 +123,7 @@ func (i *instance) WaitForDown(e executor.TiOpsExecutor) error {
 	return PortStopped(e, i.port)
 }
 
-func (i *instance) InitConfig(e executor.TiOpsExecutor, cluster, user string, paths DirPaths) error {
+func (i *instance) InitConfig(e executor.TiOpsExecutor, _, _, user string, paths DirPaths) error {
 	comp := i.ComponentName()
 	host := i.GetHost()
 	port := i.GetPort()
@@ -183,8 +184,8 @@ func (i *instance) mergeTiFlashLearnerServerConfig(e executor.TiOpsExecutor, glo
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *instance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, cluster, user string, paths DirPaths) error {
-	return i.InitConfig(e, cluster, user, paths)
+func (i *instance) ScaleConfig(e executor.TiOpsExecutor, _ *Specification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
 // ID returns the identifier of this instance, the ID is constructed by host:port
@@ -311,8 +312,8 @@ type TiDBInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string, paths DirPaths) error {
-	if err := i.instance.InitConfig(e, cluster, user, paths); err != nil {
+func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -321,7 +322,7 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string
 		i.GetHost(),
 		paths.Deploy,
 		paths.Log,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(user)...)
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(deployUser)...)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -338,11 +339,11 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiDBInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, cluster, user string, paths DirPaths) error {
+func (i *TiDBInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
 	s := i.instance.topo
 	defer func() { i.instance.topo = s }()
 	i.instance.topo = b
-	return i.InitConfig(e, cluster, user, paths)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
 // TiKVComponent represents TiKV component.
@@ -388,8 +389,8 @@ type TiKVInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string, paths DirPaths) error {
-	if err := i.instance.InitConfig(e, cluster, user, paths); err != nil {
+func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -399,7 +400,7 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string
 		paths.Deploy,
 		paths.Data,
 		paths.Log,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(user)...)
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(deployUser)...)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tikv_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -418,13 +419,13 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiKVInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, cluster, user string, paths DirPaths) error {
+func (i *TiKVInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
 	s := i.instance.topo
 	defer func() {
 		i.instance.topo = s
 	}()
 	i.instance.topo = b
-	return i.InitConfig(e, cluster, user, paths)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
 // PDComponent represents PD component.
@@ -472,8 +473,8 @@ type PDInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string, paths DirPaths) error {
-	if err := i.instance.InitConfig(e, cluster, user, paths); err != nil {
+func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -491,7 +492,7 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string, 
 		paths.Deploy,
 		paths.Data,
 		paths.Log,
-	).WithClientPort(spec.ClientPort).WithPeerPort(spec.PeerPort).AppendEndpoints(i.instance.topo.Endpoints(user)...)
+	).WithClientPort(spec.ClientPort).WithPeerPort(spec.PeerPort).AppendEndpoints(i.instance.topo.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s.sh", i.GetHost()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -504,12 +505,22 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string, 
 	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
 		return err
 	}
+
+	// Set the PD metrics storage address
+	if semver.Compare(clusterVersion, "v3.1.0") >= 0 && len(i.topo.Monitors) > 0 {
+		if spec.Config == nil {
+			spec.Config = map[string]interface{}{}
+		}
+		prom := i.topo.Monitors[0]
+		spec.Config["pd-server.metric-storage"] = fmt.Sprintf("http://%s:%d", prom.Host, prom.Port)
+	}
+
 	return i.mergeServerConfig(e, i.topo.ServerConfigs.PD, spec.Config, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, cluster, user string, paths DirPaths) error {
-	if err := i.instance.ScaleConfig(e, b, cluster, user, paths); err != nil {
+func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+	if err := i.instance.ScaleConfig(e, b, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -527,7 +538,7 @@ func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, clu
 		paths.Deploy,
 		paths.Data,
 		paths.Log,
-	).WithPeerPort(spec.PeerPort).WithNumaNode(spec.NumaNode).WithClientPort(spec.ClientPort).AppendEndpoints(b.Endpoints(user)...)
+	).WithPeerPort(spec.PeerPort).WithNumaNode(spec.NumaNode).WithClientPort(spec.ClientPort).AppendEndpoints(b.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	log.Infof("script path: %s", fp)
@@ -684,8 +695,8 @@ server_configs:
 }
 
 // InitConfig implement Instance interface
-func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string, paths DirPaths) error {
-	if err := i.instance.InitConfig(e, cluster, user, paths); err != nil {
+func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -710,7 +721,7 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, cluster, user str
 		paths.Log,
 		tidbStatusStr,
 		pdStr,
-	).WithTCPPort(spec.TCPPort).WithHTTPPort(spec.HTTPPort).WithFlashServicePort(spec.FlashServicePort).WithFlashProxyPort(spec.FlashProxyPort).WithFlashProxyStatusPort(spec.FlashProxyStatusPort).WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(user)...)
+	).WithTCPPort(spec.TCPPort).WithHTTPPort(spec.HTTPPort).WithFlashServicePort(spec.FlashServicePort).WithFlashProxyPort(spec.FlashProxyPort).WithFlashProxyStatusPort(spec.FlashProxyStatusPort).WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tiflash_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -745,13 +756,13 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, cluster, user str
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiFlashInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, cluster, user string, paths DirPaths) error {
+func (i *TiFlashInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
 	s := i.instance.topo
 	defer func() {
 		i.instance.topo = s
 	}()
 	i.instance.topo = b
-	return i.InitConfig(e, cluster, user, paths)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
 // MonitorComponent represents Monitor component.
@@ -796,8 +807,8 @@ type MonitorInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string, paths DirPaths) error {
-	if err := i.instance.InitConfig(e, cluster, user, paths); err != nil {
+func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -825,8 +836,7 @@ func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, cluster, user str
 
 	// transfer config
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("tikv_%s.yml", i.GetHost()))
-	// TODO: use real cluster name
-	cfig := config.NewPrometheusConfig("TiDB-Cluster")
+	cfig := config.NewPrometheusConfig(clusterName)
 	uniqueHosts := set.NewStringSet()
 	for _, pd := range i.topo.PDServers {
 		uniqueHosts.Insert(pd.Host)
@@ -918,13 +928,13 @@ type GrafanaInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *GrafanaInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string, paths DirPaths) error {
-	if err := i.instance.InitConfig(e, cluster, user, paths); err != nil {
+func (i *GrafanaInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
 
 	// transfer run script
-	cfg := scripts.NewGrafanaScript(cluster, paths.Deploy)
+	cfg := scripts.NewGrafanaScript(clusterName, paths.Deploy)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_grafana_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -951,7 +961,7 @@ func (i *GrafanaInstance) InitConfig(e executor.TiOpsExecutor, cluster, user str
 
 	// transfer dashboard.yml
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("dashboard_%s.yml", i.GetHost()))
-	if err := config.NewDashboardConfig(cluster, paths.Deploy).ConfigToFile(fp); err != nil {
+	if err := config.NewDashboardConfig(clusterName, paths.Deploy).ConfigToFile(fp); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "dashboard.yml")
@@ -964,7 +974,7 @@ func (i *GrafanaInstance) InitConfig(e executor.TiOpsExecutor, cluster, user str
 		return errors.New("not prometheus found in topology")
 	}
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
-	if err := config.NewDatasourceConfig(cluster, i.topo.Monitors[0].Host).
+	if err := config.NewDatasourceConfig(clusterName, i.topo.Monitors[0].Host).
 		WithPort(uint64(i.topo.Monitors[0].Port)).
 		ConfigToFile(fp); err != nil {
 		return err
@@ -1021,8 +1031,8 @@ type AlertManagerInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *AlertManagerInstance) InitConfig(e executor.TiOpsExecutor, cluster, user string, paths DirPaths) error {
-	if err := i.instance.InitConfig(e, cluster, user, paths); err != nil {
+func (i *AlertManagerInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
 

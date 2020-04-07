@@ -342,7 +342,7 @@ func confirmTopology(clusterName, version string, topo *meta.Specification) erro
 	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 }
 
-func deploy(clusterName, version, topoFile string, opt deployOptions) error {
+func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) error {
 	if err := utils.ValidateClusterNameOrError(clusterName); err != nil {
 		return err
 	}
@@ -366,7 +366,7 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 	}
 
 	if !opt.skipConfirm {
-		if err := confirmTopology(clusterName, version, &topo); err != nil {
+		if err := confirmTopology(clusterName, clusterVersion, &topo); err != nil {
 			return err
 		}
 	}
@@ -421,11 +421,11 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 	})
 
 	// Download missing component
-	downloadCompTasks = buildDownloadCompTasks(version, &topo)
+	downloadCompTasks = buildDownloadCompTasks(clusterVersion, &topo)
 
 	// Deploy components to remote
 	topo.IterInstance(func(inst meta.Instance) {
-		version := bindversion.ComponentVersion(inst.ComponentName(), version)
+		version := bindversion.ComponentVersion(inst.ComponentName(), clusterVersion)
 		deployDir := clusterutil.Abs(globalOptions.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDir := inst.DataDir()
@@ -444,6 +444,7 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 			CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
 			InitConfig(
 				clusterName,
+				clusterVersion,
 				inst,
 				globalOptions.User,
 				meta.DirPaths{
@@ -463,7 +464,7 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 		uniqueHosts,
 		globalOptions,
 		topo.MonitoredOptions,
-		version,
+		clusterVersion,
 	)
 	downloadCompTasks = append(downloadCompTasks, dlTasks...)
 	deployCompTasks = append(deployCompTasks, dpTasks...)
@@ -488,7 +489,7 @@ func deploy(clusterName, version, topoFile string, opt deployOptions) error {
 
 	err = meta.SaveClusterMeta(clusterName, &meta.ClusterMeta{
 		User:     globalOptions.User,
-		Version:  version,
+		Version:  clusterVersion,
 		Topology: &topo,
 	})
 	if err != nil {
