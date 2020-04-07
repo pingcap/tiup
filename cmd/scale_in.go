@@ -97,7 +97,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 			tb := task.NewBuilder()
 			if instance.IsImported() {
 				switch compName := instance.ComponentName(); compName {
-				case meta.ComponentGrafana, meta.ComponentPrometheus:
+				case meta.ComponentGrafana, meta.ComponentPrometheus, meta.ComponentAlertManager:
 					version := bindversion.ComponentVersion(compName, metadata.Version)
 					tb.Download(compName, version).CopyComponent(compName, version, instance.GetHost(), deployDir)
 				}

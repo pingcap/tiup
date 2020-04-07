@@ -122,7 +122,7 @@ func upgrade(clusterName, version string, opt upgradeOptions) error {
 			tb := task.NewBuilder()
 			if inst.IsImported() {
 				switch inst.ComponentName() {
-				case meta.ComponentPrometheus, meta.ComponentGrafana:
+				case meta.ComponentPrometheus, meta.ComponentGrafana, meta.ComponentAlertManager:
 					tb.CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
 				default:
 					tb.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).

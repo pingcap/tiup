@@ -97,7 +97,7 @@ func buildReloadTask(
 		tb := task.NewBuilder().UserSSH(inst.GetHost(), metadata.User)
 		if inst.IsImported() {
 			switch compName := inst.ComponentName(); compName {
-			case meta.ComponentGrafana, meta.ComponentPrometheus:
+			case meta.ComponentGrafana, meta.ComponentPrometheus, meta.ComponentAlertManager:
 				version := bindversion.ComponentVersion(compName, metadata.Version)
 				tb.Download(compName, version).CopyComponent(compName, version, inst.GetHost(), deployDir)
 			}
