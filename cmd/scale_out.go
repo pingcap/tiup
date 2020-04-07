@@ -266,7 +266,7 @@ func buildScaleOutTask(
 		metadata.Version,
 	)
 	downloadCompTasks = append(downloadCompTasks, convertStepDisplaysToTasks(dlTasks)...)
-	deployCompTasks = append(deployCompTasks, dpTasks...)
+	deployCompTasks = append(deployCompTasks, convertStepDisplaysToTasks(dpTasks)...)
 
 	return task.NewBuilder().
 		SSHKeySet(

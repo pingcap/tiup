@@ -83,24 +83,37 @@ func (b *MultiBar) preRender() {
 func (b *MultiBar) render() {
 	f := bufio.NewWriter(os.Stdout)
 
-	moveCursorUp(f, len(b.bars)+1)
+	y := int(termSizeHeight.Load()) - 1
+	movedY := 0
+	for i := len(b.bars) - 1; i >= 0; i-- {
+		moveCursorUp(f, 1)
+		y--
+		movedY++
 
-	// render multi bar prefix
-	moveCursorToLineStart(f)
-	clearLine(f)
-	width := int(termSizeWidth.Load())
-	prefix := runewidth.Truncate(b.prefix, width, "...")
-	_, _ = fmt.Fprint(f, prefix)
-	moveCursorDown(f, 1)
-
-	// render each bar
-	for _, bar := range b.bars {
+		bar := b.bars[i]
 		moveCursorToLineStart(f)
 		clearLine(f)
 		bar.core.renderTo(f)
-		moveCursorDown(f, 1)
+
+		if y == 0 {
+			break
+		}
 	}
 
+	// render multi bar prefix
+	if y > 0 {
+		moveCursorUp(f, 1)
+		movedY++
+
+		moveCursorToLineStart(f)
+		clearLine(f)
+		width := int(termSizeWidth.Load())
+		prefix := runewidth.Truncate(b.prefix, width, "...")
+		_, _ = fmt.Fprint(f, prefix)
+	}
+
+	moveCursorDown(f, movedY)
 	moveCursorToLineStart(f)
+	clearLine(f)
 	_ = f.Flush()
 }

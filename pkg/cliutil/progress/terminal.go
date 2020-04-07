@@ -25,7 +25,8 @@ import (
 )
 
 var (
-	termSizeWidth = atomic.Int32{}
+	termSizeWidth  = atomic.Int32{}
+	termSizeHeight = atomic.Int32{}
 )
 
 func updateTerminalSize() error {
@@ -34,6 +35,7 @@ func updateTerminalSize() error {
 		return err
 	}
 	termSizeWidth.Store(int32(ws.Col))
+	termSizeHeight.Store(int32(ws.Row))
 	return nil
 }
 
