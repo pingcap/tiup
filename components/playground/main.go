@@ -16,6 +16,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -275,12 +276,24 @@ func bootCluster(version string, pdNum, tidbNum, tikvNum int, host string, monit
 
 	if monitor && len(pds) != 0 {
 		client, err := newEtcdClient(pds[0].Addr())
-		if err != nil {
-			_, err = client.Put(context.TODO(), "/topology/prometheus", monitorAddr)
-			if err != nil {
-				fmt.Println("Set the PD metrics storage failed")
+		if err == nil && client != nil {
+			promInfo := struct {
+				IP         string `json:"ip"`
+				Port       int    `json:"port"`
+				BinaryPath string `json:"binary_path"`
+			}{
+				IP:         pds[0].Host,
+				Port:       pds[0].StatusPort,
+				BinaryPath: pds[0].Dir,
 			}
-			fmt.Printf(color.GreenString("To view the monitor: http://%s\n", monitorAddr))
+			promBinary, err := json.Marshal(promInfo)
+			if err == nil {
+				_, err = client.Put(context.TODO(), "/topology/prometheus", string(promBinary))
+				if err != nil {
+					fmt.Println("Set the PD metrics storage failed")
+				}
+				fmt.Printf(color.GreenString("To view the monitor: http://%s\n", monitorAddr))
+			}
 		}
 	}
 
