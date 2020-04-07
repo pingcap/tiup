@@ -89,7 +89,7 @@ func (c *TiFlashScript) WithFlashProxyStatusPort(port int) *TiFlashScript {
 	return c
 }
 
-// WithMetricsPort set FlashProxyStatusPort field of TiFlashScript
+// WithStatusPort set FlashProxyStatusPort field of TiFlashScript
 func (c *TiFlashScript) WithStatusPort(port int) *TiFlashScript {
 	c.StatusPort = port
 	return c
@@ -127,7 +127,7 @@ func (c *TiFlashScript) ConfigToFile(file string) error {
 	return ioutil.WriteFile(file, config, 0755)
 }
 
-// Config read ${localdata.EnvNameComponentInstallDir}/templates/conf/tiflash-learner.toml.tpl as template
+// ConfigTiFlashLearner read ${localdata.EnvNameComponentInstallDir}/templates/conf/tiflash-learner.toml.tpl as template
 // and generate the config by ConfigWithTemplate
 func (c *TiFlashScript) ConfigTiFlashLearner() ([]byte, error) {
 	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "config", "tiflash-learner.toml.tpl")
@@ -138,7 +138,7 @@ func (c *TiFlashScript) ConfigTiFlashLearner() ([]byte, error) {
 	return c.ConfigWithTemplate(string(tpl))
 }
 
-// ConfigToFile write config content to specific path
+// ConfigTiFlashLearnerToFile write config content to specific path
 func (c *TiFlashScript) ConfigTiFlashLearnerToFile(file string) error {
 	config, err := c.ConfigTiFlashLearner()
 	if err != nil {
@@ -147,7 +147,7 @@ func (c *TiFlashScript) ConfigTiFlashLearnerToFile(file string) error {
 	return ioutil.WriteFile(file, config, 0755)
 }
 
-// Config read ${localdata.EnvNameComponentInstallDir}/templates/conf/tiflash.toml.tpl as template
+// ConfigTiFlash read ${localdata.EnvNameComponentInstallDir}/templates/conf/tiflash.toml.tpl as template
 // and generate the config by ConfigWithTemplate
 func (c *TiFlashScript) ConfigTiFlash() ([]byte, error) {
 	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "config", "tiflash.toml.tpl")
@@ -158,7 +158,7 @@ func (c *TiFlashScript) ConfigTiFlash() ([]byte, error) {
 	return c.ConfigWithTemplate(string(tpl))
 }
 
-// ConfigToFile write config content to specific path
+// ConfigTiFlashToFile write config content to specific path
 func (c *TiFlashScript) ConfigTiFlashToFile(file string) error {
 	config, err := c.ConfigTiFlash()
 	if err != nil {
