@@ -30,6 +30,7 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/logger"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
+	operator "github.com/pingcap-incubator/tiup-cluster/pkg/operation"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/task"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
@@ -56,6 +57,7 @@ type deployOptions struct {
 	user         string // username to login to the SSH server
 	identityFile string // path to the private key file
 	skipConfirm  bool   // skip the confirmation of topology
+	startCluster bool   // start the cluster after deploy
 }
 
 func newDeploy() *cobra.Command {
@@ -75,13 +77,24 @@ func newDeploy() *cobra.Command {
 			}
 
 			logger.EnableAuditLog()
-			return deploy(args[0], args[1], args[2], opt)
+			if err = deploy(args[0], args[1], args[2], opt); err != nil {
+				return err
+			}
+			if !opt.startCluster {
+				if err := cliutil.PromptForConfirmOrAbortError("Do you want to start the cluster now? [y/N]: "); err != nil {
+					// not auto starting
+					log.Infof("You can use `%s start %s` to start the cluster manually.", cmd.Parent().Use, args[0])
+					return nil
+				}
+			}
+			return startCluster(args[0], operator.Options{})
 		},
 	}
 
 	cmd.Flags().StringVar(&opt.user, "user", "root", "The user name to login via SSH. The user must has root (or sudo) privilege.")
 	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", "", "The path of the SSH identity file. If specified, public key authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.skipConfirm, "yes", "y", false, "Skip confirming the topology")
+	cmd.Flags().BoolVar(&opt.startCluster, "start", false, "Start the cluster after deploy finished")
 
 	return cmd
 }
