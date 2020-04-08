@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -35,7 +36,7 @@ import (
 func runComponent(tag, spec, binPath string, args []string) error {
 	component, version := meta.ParseCompVersion(spec)
 	if !isSupportedComponent(component) {
-		return fmt.Errorf("unkonwn component `%s` (see supported components via `tiup list --refresh`)", component)
+		return fmt.Errorf("component `%s` does not support `%s/%s` (see `tiup list --refresh`)", component, runtime.GOOS, runtime.GOARCH)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -110,7 +111,11 @@ func isSupportedComponent(component string) bool {
 	if err := meta.Profile().SaveManifest(manifest); err != nil {
 		fmt.Println("Save latest manifest error:", err)
 	}
-	return manifest.HasComponent(component)
+	comp, found := manifest.FindComponent(component)
+	if !found {
+		return false
+	}
+	return comp.IsSupport(runtime.GOOS, runtime.GOARCH)
 }
 
 type process struct {
