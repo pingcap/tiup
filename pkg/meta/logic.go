@@ -835,6 +835,7 @@ func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 	// transfer config
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("tikv_%s.yml", i.GetHost()))
 	cfig := config.NewPrometheusConfig(clusterName)
+	cfig.AddBlackbox(i.GetHost(), uint64(i.topo.MonitoredOptions.BlackboxExporterPort))
 	uniqueHosts := set.NewStringSet()
 	for _, pd := range i.topo.PDServers {
 		uniqueHosts.Insert(pd.Host)

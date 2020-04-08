@@ -138,7 +138,7 @@ func (c *PrometheusConfig) AddAlertmanager(ip string, port uint64) *PrometheusCo
 	return c
 }
 
-// AddPushgateway add an alertmanager address
+// AddPushgateway add an pushgateway address
 func (c *PrometheusConfig) AddPushgateway(ip string, port uint64) *PrometheusConfig {
 	c.PushgatewayAddr = fmt.Sprintf("%s:%d", ip, port)
 	return c
@@ -146,7 +146,7 @@ func (c *PrometheusConfig) AddPushgateway(ip string, port uint64) *PrometheusCon
 
 // AddBlackbox add an blackbox address
 func (c *PrometheusConfig) AddBlackbox(ip string, port uint64) *PrometheusConfig {
-	c.PushgatewayAddr = fmt.Sprintf("%s:%d", ip, port)
+	c.BlackboxAddr = fmt.Sprintf("%s:%d", ip, port)
 	return c
 }
 
