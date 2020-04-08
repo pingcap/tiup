@@ -14,10 +14,13 @@
 package cmd
 
 import (
+	"sort"
+
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/logger"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/task"
+	"github.com/pingcap-incubator/tiup/pkg/set"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
@@ -26,8 +29,8 @@ import (
 type execOptions struct {
 	command string
 	sudo    bool
-	//role string
-	//node string
+	roles   []string
+	nodes   []string
 }
 
 func newExecCmd() *cobra.Command {
@@ -51,14 +54,31 @@ func newExecCmd() *cobra.Command {
 				return err
 			}
 
+			var hosts []string
+			filterRoles := set.NewStringSet(opt.roles...)
+			filterNodes := set.NewStringSet(opt.nodes...)
+
 			var shellTasks []task.Task
 			metadata.Topology.IterInstance(func(inst meta.Instance) {
-				t := task.NewBuilder().
-					UserSSH(inst.GetHost(), metadata.User, sshTimeout).
-					Shell(inst.GetHost(), opt.command, opt.sudo).
-					Build()
-				shellTasks = append(shellTasks, t)
+				h := inst.GetHost()
+				if len(opt.roles) > 0 && !filterRoles.Exist(inst.Role()) {
+					return
+				}
+
+				if len(opt.nodes) > 0 && !filterNodes.Exist(h) {
+					return
+				}
+
+				hosts = append(hosts, h)
 			})
+
+			sort.Strings(hosts)
+			for i := 0; i < len(hosts); i++ {
+				if i > 0 && hosts[i] == hosts[i-1] {
+					continue
+				}
+				shellTasks = append(shellTasks, task.NewBuilder().Shell(hosts[i], opt.command, opt.sudo).Build())
+			}
 
 			t := task.NewBuilder().
 				SSHKeySet(
@@ -81,6 +101,8 @@ func newExecCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&opt.command, "command", "ls", "the command run on cluster host")
 	cmd.Flags().BoolVar(&opt.sudo, "sudo", false, "use root permissions (default false)")
+	cmd.Flags().StringSliceVarP(&opt.roles, "role", "R", nil, "Only exec on host with specified roles")
+	cmd.Flags().StringSliceVarP(&opt.nodes, "node", "N", nil, "Only exec on host with specified nodes")
 
 	return cmd
 }
