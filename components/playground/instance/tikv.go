@@ -55,19 +55,9 @@ func (inst *TiKVInstance) Start(ctx context.Context, version repository.Version,
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
-	configPath := path.Join(inst.Dir, "tikv.toml")
-	if inst.ConfigPath != "" {
-		configPath = inst.ConfigPath
+	if err := inst.checkConfig(); err != nil {
+		return err
 	}
-	cf, err := os.Create(configPath)
-	if err != nil {
-		return errors.Trace(err)
-	}
-	defer cf.Close()
-	if err := writeConfig(cf); err != nil {
-		return errors.Trace(err)
-	}
-
 	endpoints := make([]string, 0, len(inst.pds))
 	for _, pd := range inst.pds {
 		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", inst.Host, pd.StatusPort))
@@ -78,7 +68,7 @@ func (inst *TiKVInstance) Start(ctx context.Context, version repository.Version,
 		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
 		fmt.Sprintf("--status-addr=%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
-		fmt.Sprintf("--config=%s", configPath),
+		fmt.Sprintf("--config=%s", inst.ConfigPath),
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
 		fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "tikv.log")),
 	)
@@ -99,4 +89,30 @@ func (inst *TiKVInstance) Wait() error {
 // Pid return the PID of the instance
 func (inst *TiKVInstance) Pid() int {
 	return inst.cmd.Process.Pid
+}
+
+func (inst *TiKVInstance) checkConfig() error {
+	if inst.ConfigPath == "" {
+		inst.ConfigPath = path.Join(inst.Dir, "tikv.toml")
+	}
+
+	_, err := os.Stat(inst.ConfigPath)
+	if err == nil || os.IsExist(err) {
+		return nil
+	}
+	if !os.IsNotExist(err) {
+		return errors.Trace(err)
+	}
+
+	cf, err := os.Create(inst.ConfigPath)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	defer cf.Close()
+	if err := writeConfig(cf); err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
 }
