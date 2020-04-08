@@ -584,10 +584,9 @@ func (c *TiFlashComponent) Instances() []Instance {
 				s.FlashProxyStatusPort,
 				s.StatusPort,
 			},
-			usedDirs: []string{
+			usedDirs: append([]string{
 				s.DeployDir,
-				s.DataDir,
-			},
+			}, strings.Split(s.DataDir, ",")...),
 			statusFn: s.Status,
 		}})
 	}
@@ -610,8 +609,8 @@ server_configs:
     display_name: "TiFlash"
     listen_host: "0.0.0.0"
     mark_cache_size: 5368709120
-    tmp_path: "%[1]s/tmp"
-    path: "%[1]s/db"
+    tmp_path: "%[10]s/tmp"
+    path: "%[1]s"
     tcp_port: %[3]d
     http_port: %[4]d
     flash.tidb_status_addr: "%[5]s"
@@ -648,8 +647,7 @@ server_configs:
     profiles.default.max_memory_usage: 10000000000
     profiles.default.use_uncompressed_cache: 0
     profiles.readonly.readonly: 1
-`, cfg.DataDir, cfg.LogDir, cfg.TCPPort, cfg.HTTPPort,
-		cfg.TiDBStatusAddrs, cfg.IP, cfg.FlashServicePort, cfg.StatusPort, cfg.PDAddrs, cfg.DeployDir)), &topo)
+`, cfg.DataDir, cfg.LogDir, cfg.TCPPort, cfg.HTTPPort, cfg.TiDBStatusAddrs, cfg.IP, cfg.FlashServicePort, cfg.StatusPort, cfg.PDAddrs, cfg.DeployDir)), &topo)
 
 	if err != nil {
 		return nil, err
@@ -680,7 +678,7 @@ server_configs:
     security.ca-path: ""
     security.cert-path: ""
     security.key-path: ""
-`, cfg.LogDir, cfg.IP, cfg.FlashServicePort, cfg.FlashProxyPort, cfg.FlashProxyStatusPort, cfg.DataDir)), &topo)
+`, cfg.LogDir, cfg.IP, cfg.FlashServicePort, cfg.FlashProxyPort, cfg.FlashProxyStatusPort, cfg.DeployDir)), &topo)
 
 	if err != nil {
 		return nil, err
