@@ -120,8 +120,8 @@ func parseDirs(host *aini.Host, ins meta.InstanceSpec, sshTimeout int64) (meta.I
 		// parse dirs
 		newIns := ins.(meta.TiFlashSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
-			if strings.HasPrefix(line, "DEPLOY_DIR=") {
-				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
+			if strings.HasPrefix(line, "cd \"") {
+				newIns.DeployDir = strings.Trim(strings.Split(line, " ")[1], "\"")
 				continue
 			}
 		}

@@ -849,10 +849,10 @@ func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		uniqueHosts.Insert(db.Host)
 		cfig.AddTiDB(db.Host, uint64(db.StatusPort))
 	}
-	for _, db := range i.topo.TiFlashServers {
-		uniqueHosts.Insert(db.Host)
-		cfig.AddTiFlashLearner(db.Host, uint64(db.FlashProxyStatusPort))
-		cfig.AddTiFlash(db.Host, uint64(db.StatusPort))
+	for _, flash := range i.topo.TiFlashServers {
+		uniqueHosts.Insert(flash.Host)
+		cfig.AddTiFlashLearner(flash.Host, uint64(flash.FlashProxyStatusPort))
+		cfig.AddTiFlash(flash.Host, uint64(flash.StatusPort))
 	}
 	for _, pump := range i.topo.PumpServers {
 		uniqueHosts.Insert(pump.Host)

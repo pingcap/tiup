@@ -69,7 +69,7 @@ func ImportConfig(name string, clsMeta *meta.ClusterMeta, sshTimeout int64) erro
 								inst.GetPort())),
 						inst.GetHost(),
 						true).
-					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
+					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+"-learner.toml"),
 						meta.ClusterPath(name,
 							"config",
 							fmt.Sprintf("%s-learner-%s-%d.toml",

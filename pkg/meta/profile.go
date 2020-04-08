@@ -75,10 +75,10 @@ func ProfilePath(subpath ...string) string {
 // ClusterPath returns the full path to a subpath (file or directory) of a
 // cluster, it is a subdir in the profile dir of the user, with the cluster name
 // as its name.
-// It is not garenteed the path already exist.
+// It is not guaranteed the path already exist.
 func ClusterPath(cluster string, subpath ...string) string {
 	if cluster == "" {
-		// keep the same behavior with legancy version of TiOps, we could change
+		// keep the same behavior with legacy version of TiOps, we could change
 		// it in the future if needed.
 		cluster = "default-cluster"
 	}
