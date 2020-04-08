@@ -37,7 +37,7 @@ func newListCmd() *cobra.Command {
 or list the available versions of a specific component. Display a list of
 local caches by default. You must use --refresh to force TiUP to fetch
 the latest list from the mirror server. Use the --installed flag to hide 
-components or versions which have not been innstalled.
+components or versions which have not been installed.
 
   # Refresh and list all available components
   tiup list --refresh
@@ -96,7 +96,9 @@ func showComponentList(onlyInstalled bool) error {
 
 	localComponents := set.NewStringSet(installed...)
 	for _, comp := range manifest.Components {
-		sort.Strings(comp.Platforms)
+		if comp.Hide {
+			continue
+		}
 		if onlyInstalled && !localComponents.Exist(comp.Name) {
 			continue
 		}
@@ -108,6 +110,7 @@ func showComponentList(onlyInstalled bool) error {
 			}
 			installStatus = fmt.Sprintf("YES(%s)", strings.Join(versions, ","))
 		}
+		sort.Strings(comp.Platforms)
 		cmpTable = append(cmpTable, []string{
 			comp.Name,
 			installStatus,
@@ -145,6 +148,7 @@ func showComponentVersions(component string, onlyInstalled bool) error {
 		if installed.Exist(version) {
 			installStatus = "YES"
 		}
+		sort.Strings(ver.Platforms)
 		cmpTable = append(cmpTable, []string{
 			version,
 			installStatus,

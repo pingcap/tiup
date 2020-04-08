@@ -53,6 +53,7 @@ type packageOptions struct {
 	entry      string
 	desc       string
 	standalone bool
+	hide       bool
 }
 
 func execute() error {
@@ -82,6 +83,7 @@ func execute() error {
 	rootCmd.Flags().StringVar(&options.entry, "entry", "", "Entry point of the package")
 	rootCmd.Flags().StringVar(&options.desc, "desc", "", "Description of the package")
 	rootCmd.Flags().BoolVar(&options.standalone, "standalone", false, "Can the component run standalone")
+	rootCmd.Flags().BoolVar(&options.hide, "hide", false, "Don't show the component in `tiup list`")
 
 	_ = rootCmd.MarkFlagRequired("name")
 	_ = rootCmd.MarkFlagRequired("release")
@@ -144,6 +146,9 @@ func manifestIndex(options packageOptions) error {
 			if mIndex.Components[idx].Standalone != options.standalone {
 				mIndex.Components[idx].Standalone = options.standalone
 			}
+			if mIndex.Components[idx].Hide != options.hide {
+				mIndex.Components[idx].Hide = options.hide
+			}
 			for _, p := range mIndex.Components[idx].Platforms {
 				if p == pair {
 					return write("package/tiup-manifest.index", mIndex)
@@ -157,6 +162,7 @@ func manifestIndex(options packageOptions) error {
 		Name:       options.name,
 		Desc:       options.desc,
 		Standalone: options.standalone,
+		Hide:       options.hide,
 		Platforms:  []string{pair},
 	})
 

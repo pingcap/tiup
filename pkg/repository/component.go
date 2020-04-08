@@ -13,7 +13,10 @@
 
 package repository
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type (
 	// ComponentInfo represents the information of component
@@ -21,6 +24,7 @@ type (
 		Name       string   `json:"name"`
 		Desc       string   `json:"desc"`
 		Standalone bool     `json:"standalone"`
+		Hide       bool     `json:"hide"` // don't show in component list
 		Platforms  []string `json:"platforms"`
 	}
 
@@ -37,6 +41,27 @@ type (
 func (m *ComponentManifest) HasComponent(component string) bool {
 	for _, c := range m.Components {
 		if strings.ToLower(c.Name) == strings.ToLower(component) {
+			return true
+		}
+	}
+	return false
+}
+
+// FindComponent find the component by name and returns component info and a bool to indicate whether it exists
+func (m *ComponentManifest) FindComponent(component string) (ComponentInfo, bool) {
+	for _, c := range m.Components {
+		if strings.ToLower(c.Name) == strings.ToLower(component) {
+			return c, true
+		}
+	}
+	return ComponentInfo{}, false
+}
+
+// IsSupport returns true if the component can be run in current OS and architecture
+func (c *ComponentInfo) IsSupport(goos, goarch string) bool {
+	s := fmt.Sprintf("%s/%s", goos, goarch)
+	for _, p := range c.Platforms {
+		if p == s {
 			return true
 		}
 	}
