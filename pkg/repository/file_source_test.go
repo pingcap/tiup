@@ -15,9 +15,10 @@ package repository
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCheckSHA(t *testing.T) {

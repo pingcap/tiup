@@ -15,9 +15,10 @@ package repository
 
 import (
 	"fmt"
-	"github.com/pingcap/errors"
 	"path/filepath"
 	"runtime"
+
+	"github.com/pingcap/errors"
 )
 
 // Repository represents a components repository. All logic concerning manifests and the locations of tarballs

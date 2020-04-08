@@ -17,13 +17,14 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
-	"github.com/pingcap/errors"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap/errors"
 )
 
 // fileSource is a high-level interface for providing file-like objects, either as objects in memory or purely on disk.
@@ -106,7 +107,7 @@ func (fs *mirrorSource) downloadTarFile(targetDir, resName string, expand bool) 
 
 	tarFile, ok := tarReader.(*os.File)
 	if !ok {
-		return errors.Errorf("Expected file, found %v", tarReader)
+		return errors.Errorf("expected file, found %v", tarReader)
 	}
 	_, err = tarFile.Seek(0, 0)
 	if err != nil {
