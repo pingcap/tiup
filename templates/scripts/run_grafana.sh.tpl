@@ -16,6 +16,7 @@ cp {{.DeployDir}}/conf/datasource.yml {{.DeployDir}}/provisioning/datasources
 cp {{.DeployDir}}/conf/dashboard.yml {{.DeployDir}}/provisioning/dashboards
 
 find {{.DeployDir}}/dashboards/ -type f -exec sed -i "s/\${DS_.*-CLUSTER}/{{.ClusterName}}/g" {} \;
+find {{.DeployDir}}/dashboards/ -type f -exec sed -i "s/\${DS_LIGHTNING}/{{.ClusterName}}/g" {} \;
 
 LANG=en_US.UTF-8 \
 {{- if .NumaNode}}

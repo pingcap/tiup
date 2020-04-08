@@ -21,10 +21,6 @@ import (
 // ComponentVersion maps the TiDB version to the third components binding version
 func ComponentVersion(comp, version string) repository.Version {
 	switch comp {
-	case meta.ComponentPrometheus:
-		return "v2.8.1"
-	case meta.ComponentGrafana:
-		return "v6.1.6"
 	case meta.ComponentAlertManager:
 		return "v0.17.0"
 	case meta.ComponentBlackboxExporter:
