@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/fatih/color"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/ansible"
@@ -43,15 +44,26 @@ func newImportCmd() *cobra.Command {
 				return err
 			}
 
+			// Use current directory as ansibleDir by default
+			if ansibleDir == "" {
+				if currentDir, err := os.Getwd(); err != nil {
+					return err
+				} else {
+					ansibleDir = currentDir
+				}
+			}
+
 			// Rename the imported cluster
-			if (tiuputils.IsExist(meta.ClusterPath(clsName, meta.MetaFileName)) && rename == "") ||
-				(rename != "" && tiuputils.IsExist(meta.ClusterPath(rename, meta.MetaFileName))) {
+			if rename != "" {
+				clsName = rename
+			}
+			if clsName == "" {
+				return fmt.Errorf("cluster name should not be empty")
+			}
+			if tiuputils.IsExist(meta.ClusterPath(clsName, meta.MetaFileName)) {
 				return errDeployNameDuplicate.
 					New("Cluster name '%s' is duplicated", clsName).
 					WithProperty(cliutil.SuggestionFromFormat("Please use --rename `NAME` to specify another name (You can use `tiup cluster list` to see all clusters)"))
-			}
-			if rename != "" {
-				clsName = rename
 			}
 
 			// copy SSH key to TiOps profile directory
