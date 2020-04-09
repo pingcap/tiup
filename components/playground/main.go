@@ -16,6 +16,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -283,7 +284,12 @@ func bootCluster(options *bootOptions) error {
 
 	fmt.Println("Playground Bootstrapping...")
 
-	var monitorAddr string
+	monitorInfo := struct {
+		IP         string `json:"ip"`
+		Port       int    `json:"port"`
+		BinaryPath string `json:"binary_path"`
+	}{}
+
 	var monitorCmd *exec.Cmd
 	if options.monitor {
 		if err := installIfMissing(profile, "prometheus", ""); err != nil {
@@ -301,12 +307,15 @@ func bootCluster(options *bootOptions) error {
 		}
 
 		promDir := filepath.Join(dataDir, "prometheus")
-		addr, cmd, err := startMonitor(ctx, options.host, promDir, tidbAddrs, tikvAddrs, pdAddrs)
+		port, cmd, err := startMonitor(ctx, options.host, promDir, tidbAddrs, tikvAddrs, pdAddrs)
 		if err != nil {
 			return err
 		}
 
-		monitorAddr = addr
+		monitorInfo.IP = options.host
+		monitorInfo.BinaryPath = promDir
+		monitorInfo.Port = port
+
 		monitorCmd = cmd
 		go func() {
 			log, err := os.OpenFile(filepath.Join(promDir, "prom.log"), os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
@@ -355,14 +364,17 @@ func bootCluster(options *bootOptions) error {
 		fmt.Println(color.GreenString("To view the dashboard: http://%s/dashboard", pdAddr))
 	}
 
-	if monitorAddr != "" && len(pds) != 0 {
+	if monitorInfo.IP != "" && len(pds) != 0 {
 		client, err := newEtcdClient(pds[0].Addr())
-		if err == nil {
-			_, err = client.Put(context.TODO(), "/topology/prometheus", monitorAddr)
-			if err != nil {
-				fmt.Println("Set the PD metrics storage failed")
+		if err == nil && client != nil {
+			promBinary, err := json.Marshal(monitorInfo)
+			if err == nil {
+				_, err = client.Put(context.TODO(), "/topology/prometheus", string(promBinary))
+				if err != nil {
+					fmt.Println("Set the PD metrics storage failed")
+				}
+				fmt.Printf(color.GreenString("To view the monitor: http://%s:%d\n", monitorInfo.IP, monitorInfo.Port))
 			}
-			fmt.Printf(color.GreenString("To view the monitor: http://%s\n", monitorAddr))
 		}
 	}
 
@@ -407,14 +419,14 @@ func dumpDSN(dbs []*instance.TiDBInstance) {
 	_ = ioutil.WriteFile("dsn", []byte(strings.Join(dsn, "\n")), 0644)
 }
 
-func startMonitor(ctx context.Context, host, dir string, dbs, kvs, pds []string) (string, *exec.Cmd, error) {
+func startMonitor(ctx context.Context, host, dir string, dbs, kvs, pds []string) (int, *exec.Cmd, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", nil, err
+		return 0, nil, err
 	}
 
 	port, err := utils.GetFreePort(host, 9090)
 	if err != nil {
-		return "", nil, err
+		return 0, nil, err
 	}
 	addr := fmt.Sprintf("%s:%d", host, port)
 
@@ -454,7 +466,7 @@ scrape_configs:
 `, addr, strings.Join(dbs, "','"), strings.Join(kvs, "','"), strings.Join(pds, "','"))
 
 	if err := ioutil.WriteFile(filepath.Join(dir, "prometheus.yml"), []byte(tmpl), os.ModePerm); err != nil {
-		return "", nil, err
+		return 0, nil, err
 	}
 
 	args := []string{
@@ -469,7 +481,7 @@ scrape_configs:
 		os.Environ(),
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, dir),
 	)
-	return addr, cmd, nil
+	return port, cmd, nil
 }
 
 func newEtcdClient(endpoint string) (*clientv3.Client, error) {
