@@ -304,12 +304,12 @@ func bootCluster(options *bootOptions) error {
 		}
 
 		promDir := filepath.Join(dataDir, "prometheus")
-		addr, port, cmd, err := startMonitor(ctx, options.host, promDir, tidbAddrs, tikvAddrs, pdAddrs)
+		port, cmd, err := startMonitor(ctx, options.host, promDir, tidbAddrs, tikvAddrs, pdAddrs)
 		if err != nil {
 			return err
 		}
 
-		monitorInfo.IP = addr
+		monitorInfo.IP = options.host
 		monitorInfo.BinaryPath = promDir
 		monitorInfo.Port = port
 
@@ -395,14 +395,14 @@ func dumpDSN(dbs []*instance.TiDBInstance) {
 	_ = ioutil.WriteFile("dsn", []byte(strings.Join(dsn, "\n")), 0644)
 }
 
-func startMonitor(ctx context.Context, host, dir string, dbs, kvs, pds []string) (string, int, *exec.Cmd, error) {
+func startMonitor(ctx context.Context, host, dir string, dbs, kvs, pds []string) (int, *exec.Cmd, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", 0, nil, err
+		return 0, nil, err
 	}
 
 	port, err := utils.GetFreePort(host, 9090)
 	if err != nil {
-		return "", 0, nil, err
+		return 0, nil, err
 	}
 	addr := fmt.Sprintf("%s:%d", host, port)
 
@@ -442,7 +442,7 @@ scrape_configs:
 `, addr, strings.Join(dbs, "','"), strings.Join(kvs, "','"), strings.Join(pds, "','"))
 
 	if err := ioutil.WriteFile(filepath.Join(dir, "prometheus.yml"), []byte(tmpl), os.ModePerm); err != nil {
-		return "", 0, nil, err
+		return 0, nil, err
 	}
 
 	args := []string{
@@ -457,7 +457,7 @@ scrape_configs:
 		os.Environ(),
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, dir),
 	)
-	return addr, port, cmd, nil
+	return port, cmd, nil
 }
 
 func newEtcdClient(endpoint string) (*clientv3.Client, error) {
