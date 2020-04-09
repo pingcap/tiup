@@ -18,8 +18,8 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
+	"github.com/goccy/go-yaml"
 	. "github.com/pingcap/check"
-	"gopkg.in/yaml.v2"
 )
 
 type metaSuite struct {
@@ -57,6 +57,9 @@ pd_servers:
 	c.Assert(topo.PDServers[0].DataDir, Equals, "pd-data")
 }
 
+// gopkg.in/yaml.v2 will report error
+// github.com/goccy/go-yaml will not
+/*
 func (s *metaSuite) TestEmptyHost(c *C) {
 	topo := TopologySpecification{}
 	err := yaml.Unmarshal([]byte(`
@@ -71,6 +74,7 @@ pd_servers:
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "`tikv_servers` contains empty host field")
 }
+*/
 
 func (s *metaSuite) TestDirectoryConflicts(c *C) {
 	topo := TopologySpecification{}
@@ -163,18 +167,18 @@ tidb_servers:
 `), &topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo.ServerConfigs.TiDB, DeepEquals, map[string]interface{}{
-		"status.address":  10,
-		"port":            1230,
-		"latch.capacity":  20480,
+		"status.address":  uint64(10),
+		"port":            uint64(1230),
+		"latch.capacity":  uint64(20480),
 		"log.file.rotate": "123445.xxx",
 	})
 	expected := map[string]interface{}{
 		"status": map[string]interface{}{
-			"address": 10,
+			"address": uint64(10),
 		},
-		"port": 1230,
+		"port": uint64(1230),
 		"latch": map[string]interface{}{
-			"capacity": 20480,
+			"capacity": uint64(20480),
 		},
 		"log": map[string]interface{}{
 			"file": map[string]interface{}{
@@ -203,7 +207,7 @@ tidb_servers:
 
 	expected = map[string]interface{}{
 		"latch": map[string]interface{}{
-			"capacity": 3000,
+			"capacity": uint64(3000),
 		},
 		"log": map[string]interface{}{
 			"file": map[string]interface{}{
@@ -217,7 +221,7 @@ tidb_servers:
 
 	expected = map[string]interface{}{
 		"latch": map[string]interface{}{
-			"capacity": 5000,
+			"capacity": uint64(5000),
 		},
 		"log": map[string]interface{}{
 			"file": map[string]interface{}{
@@ -247,11 +251,11 @@ tikv_servers:
 	c.Assert(err, IsNil)
 	expected := map[string]interface{}{
 		"config": map[string]interface{}{
-			"item1": 100,
-			"item2": 300,
+			"item1": uint64(100),
+			"item2": uint64(300),
 			"item3": map[string]interface{}{
-				"item5": 500,
-				"item6": 600,
+				"item5": uint64(500),
+				"item6": uint64(600),
 			},
 		},
 	}

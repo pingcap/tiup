@@ -19,12 +19,12 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/goccy/go-yaml"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/relex/aini"
-	"gopkg.in/yaml.v2"
 )
 
 var (

@@ -17,11 +17,11 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/goccy/go-yaml"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
 	"github.com/pingcap/errors"
-	"gopkg.in/yaml.v2"
 )
 
 const (

@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/goccy/go-yaml"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/edit"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
@@ -29,7 +30,6 @@ import (
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 )
 
 func newEditConfigCmd() *cobra.Command {

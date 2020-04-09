@@ -14,12 +14,13 @@
 package utils
 
 import (
+	"bytes"
 	"io/ioutil"
 
+	"github.com/goccy/go-yaml"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/errutil"
 	"go.uber.org/zap"
-	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -50,7 +51,9 @@ To generate a sample topology file:
 `, suggestionProps))
 	}
 
-	if err = yaml.UnmarshalStrict(yamlFile, out); err != nil {
+	decoder := yaml.NewDecoder(bytes.NewBuffer(yamlFile), yaml.DisallowUnknownField())
+
+	if err = decoder.Decode(out); err != nil {
 		return ErrTopologyParseFailed.
 			Wrap(err, "Failed to parse topology file %s", file).
 			WithProperty(cliutil.SuggestionFromTemplate(`
