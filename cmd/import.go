@@ -46,10 +46,8 @@ func newImportCmd() *cobra.Command {
 
 			// Use current directory as ansibleDir by default
 			if ansibleDir == "" {
-				if currentDir, err := os.Getwd(); err != nil {
+				if ansibleDir, err = os.Getwd(); err != nil {
 					return err
-				} else {
-					ansibleDir = currentDir
 				}
 			}
 
