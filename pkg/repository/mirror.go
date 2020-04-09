@@ -15,6 +15,7 @@ package repository
 
 import (
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -24,18 +25,19 @@ import (
 
 	"github.com/cavaliercoder/grab"
 	"github.com/cheggaaa/pb"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 )
 
 // Mirror represents a repository mirror, which can be remote HTTP
 // server or a local file system directory
 type Mirror interface {
-	// Open initialize the mirror
+	// Open initialize the mirror.
 	Open() error
-	// Fetch fetches a resource
-	Fetch(resource string) (path string, err error)
-	// Close closes the mirror and release local stashed files
+	// Download fetches a resource to disk.
+	Download(resource, targetDir string) error
+	// Fetch fetches a resource into memory. The caller must close the returned reader.
+	Fetch(resource string) (io.ReadCloser, error)
+	// Close closes the mirror and release local stashed files.
 	Close() error
 }
 
@@ -55,7 +57,7 @@ type localFilesystem struct {
 func (l *localFilesystem) Open() error {
 	fi, err := os.Stat(l.rootPath)
 	if err != nil {
-		errors.Trace(err)
+		return errors.Trace(err)
 	}
 	if !fi.IsDir() {
 		return errors.Errorf("local system mirror `%s` should be a directory", l.rootPath)
@@ -63,13 +65,29 @@ func (l *localFilesystem) Open() error {
 	return nil
 }
 
-// Fetch implements the Mirror interface
-func (l *localFilesystem) Fetch(resource string) (path string, err error) {
-	path = filepath.Join(l.rootPath, resource)
-	if utils.IsNotExist(path) {
-		return "", errors.Errorf("resource `%s` not found", resource)
+// Download implements the Mirror interface
+func (l *localFilesystem) Download(resource, targetDir string) error {
+	reader, err := l.Fetch(resource)
+	if err != nil {
+		return errors.Trace(err)
 	}
-	return path, nil
+	outPath := filepath.Join(targetDir, resource)
+	writer, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	_, err = io.Copy(writer, reader)
+	return err
+}
+
+// Fetch implements the Mirror interface
+func (l *localFilesystem) Fetch(resource string) (io.ReadCloser, error) {
+	path := filepath.Join(l.rootPath, resource)
+	file, err := os.OpenFile(path, os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	return file, nil
 }
 
 // Close implements the Mirror interface
@@ -92,11 +110,11 @@ func (l *httpMirror) Open() error {
 	return nil
 }
 
-func (l *httpMirror) download(url string, to string) (string, error) {
+func (l *httpMirror) download(url string, to string) error {
 	client := grab.NewClient()
 	req, err := grab.NewRequest(to, url)
 	if err != nil {
-		return "", errors.Trace(err)
+		return errors.Trace(err)
 	}
 
 	resp := client.Do(req)
@@ -128,22 +146,39 @@ L:
 
 	// check for errors
 	if err := resp.Err(); err != nil {
-		return "", errors.Annotatef(err, "download from %s failed", url)
+		return errors.Annotatef(err, "download from %s failed", url)
 	}
 
-	return resp.Filename, nil
+	return nil
+}
+
+// Download implements the Mirror interface
+func (l *httpMirror) Download(resource, targetDir string) error {
+	url := strings.TrimSuffix(l.server, "/") + "/" + resource
+
+	// Force CDN to refresh if the resource name starts with TiupBinaryName.
+	if strings.HasPrefix(resource, TiupBinaryName) {
+		nano := time.Now().UnixNano()
+		url = fmt.Sprintf("%s?v=%d", url, nano)
+	}
+
+	return l.download(url, filepath.Join(targetDir, resource))
 }
 
 // Fetch implements the Mirror interface
-func (l *httpMirror) Fetch(resource string) (path string, err error) {
-	// refresh CDN forcely if the resource is start with `tiup`
-	nano := time.Now().UnixNano()
-	url := strings.TrimSuffix(l.server, "/") + "/" + resource
-	if strings.HasPrefix(resource, "tiup") {
-		url = fmt.Sprintf("%s?v=%d", url, nano)
+func (l *httpMirror) Fetch(resource string) (io.ReadCloser, error) {
+	// FIXME This is inefficient because we write the file to disk, then we read it back in. It would be better
+	// for us to read the file straight from memory. This can be done using Request::NoStore and Response::Open.
+	err := l.Download(resource, l.tmpDir)
+	if err != nil {
+		return nil, errors.Trace(err)
 	}
-	tmp := filepath.Join(l.tmpDir, strconv.Itoa(int(nano)))
-	return l.download(url, tmp)
+	path := filepath.Join(l.tmpDir, resource)
+	file, err := os.OpenFile(path, os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	return file, nil
 }
 
 // Close implements the Mirror interface

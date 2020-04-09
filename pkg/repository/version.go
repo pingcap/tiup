@@ -19,9 +19,6 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// NightlyVersion represents latest build of master branch
-const NightlyVersion = "nightly"
-
 type (
 	// Version represents a version string, like: v3.1.2
 	Version string

@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"fmt"
+	"runtime"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/spf13/cobra"
@@ -50,9 +51,15 @@ func installComponents(specs []string) error {
 	}
 	for _, spec := range specs {
 		component, version := meta.ParseCompVersion(spec)
-		if !manifest.HasComponent(component) {
-			return fmt.Errorf("component `%s` does not support", component)
+		compInfo, found := manifest.FindComponent(component)
+		if !found {
+			return fmt.Errorf("component `%s` not exists", component)
 		}
+
+		if !compInfo.IsSupport(runtime.GOOS, runtime.GOARCH) {
+			return fmt.Errorf("component `%s` does not support `%s/%s`", component, runtime.GOOS, runtime.GOARCH)
+		}
+
 		err := meta.DownloadComponent(component, version, version.IsNightly())
 		if err != nil {
 			return err

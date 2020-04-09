@@ -15,12 +15,13 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/fatih/color"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 var rootCmd *cobra.Command
@@ -88,7 +89,7 @@ the latest stable version will be downloaded from the repository.`,
 			return meta.InitRepository(repoOpts)
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			return meta.Repository().Mirror().Close()
+			return meta.Repository().Close()
 		},
 		SilenceUsage: true,
 	}

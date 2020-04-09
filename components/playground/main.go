@@ -22,8 +22,10 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/fatih/color"
@@ -288,6 +290,7 @@ func bootCluster(options *bootOptions) error {
 		BinaryPath string `json:"binary_path"`
 	}{}
 
+	var monitorCmd *exec.Cmd
 	if options.monitor {
 		if err := installIfMissing(profile, "prometheus", ""); err != nil {
 			return err
@@ -313,6 +316,7 @@ func bootCluster(options *bootOptions) error {
 		monitorInfo.BinaryPath = promDir
 		monitorInfo.Port = port
 
+		monitorCmd = cmd
 		go func() {
 			log, err := os.OpenFile(filepath.Join(promDir, "prom.log"), os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
 			if err != nil {
@@ -327,9 +331,6 @@ func bootCluster(options *bootOptions) error {
 			if err := cmd.Start(); err != nil {
 				fmt.Println("Monitor system start failed", err)
 				return
-			}
-			if err := cmd.Wait(); err != nil {
-				fmt.Println("Monitor system wait failed", err)
 			}
 		}()
 	}
@@ -379,11 +380,34 @@ func bootCluster(options *bootOptions) error {
 
 	dumpDSN(dbs)
 
+	go func() {
+		sc := make(chan os.Signal, 1)
+		signal.Notify(sc,
+			syscall.SIGHUP,
+			syscall.SIGINT,
+			syscall.SIGTERM,
+			syscall.SIGQUIT)
+		sig := (<-sc).(syscall.Signal)
+		for _, inst := range all {
+			_ = syscall.Kill(inst.Pid(), sig)
+		}
+		if monitorCmd != nil {
+			_ = syscall.Kill(monitorCmd.Process.Pid, sig)
+		}
+	}()
+
 	for _, inst := range all {
 		if err := inst.Wait(); err != nil {
 			return err
 		}
 	}
+
+	if monitorCmd != nil {
+		if err := monitorCmd.Wait(); err != nil {
+			fmt.Println("Monitor system wait failed", err)
+		}
+	}
+
 	return nil
 }
 

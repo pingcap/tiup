@@ -27,8 +27,6 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-const defaultMirror = "https://tiup-mirrors.pingcap.com/"
-
 var (
 	// profile represents the TiUP local profile
 	profile *localdata.Profile
@@ -58,10 +56,10 @@ func init() {
 // Mirror return mirror of tiup.
 // If it's not defined, it will use "https://tiup-mirrors.pingcap.com/".
 func Mirror() string {
-	if m := os.Getenv("TIUP_MIRRORS"); m != "" {
+	if m := os.Getenv(repository.EnvMirrors); m != "" {
 		return m
 	}
-	return defaultMirror
+	return repository.DefaultMirror
 }
 
 // InitRepository initialize the repository
@@ -69,11 +67,9 @@ func InitRepository(options repository.Options) error {
 	// Initialize the repository
 	// Replace the mirror if some sub-commands use different mirror address
 	mirror := repository.NewMirror(Mirror())
-	if err := mirror.Open(); err != nil {
-		return err
-	}
-	repo = repository.NewRepository(mirror, options)
-	return nil
+	r, err := repository.NewRepository(mirror, options)
+	repo = r
+	return err
 }
 
 // Repository returns the initialized repository
