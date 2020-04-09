@@ -25,8 +25,8 @@ You are currently in the base dir of the git repo for tiup-cluster.
 
 Run `tiup-cluster` to play with tiup-cluster.
 
-To run a test:
-   TODO
+To run the test:
+   ./tests/run.sh
    ...
 EOF
 

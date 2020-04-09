@@ -12,6 +12,8 @@ pd_servers:
   - host: 172.19.0.104
   - host: 172.19.0.105
 
+# Note if only 3 instance, when scale-in one of it.
+# It may not be tombstone.
 tikv_servers:
   - host: 172.19.0.102
   - host: 172.19.0.103
@@ -26,7 +28,8 @@ pump_servers:
 drainer_servers:
   - host: 172.19.0.101
     data_dir: /home/tidb/data/drainer-8249/data
-    commit_ts: 402899541671542785
+    commit_ts: -1
     config:
         syncer.db-type: "file"
 
+# TODO ad tiflash & monitor
