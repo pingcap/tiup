@@ -48,8 +48,9 @@ type testCmdSuite struct {
 func (s *testCmdSuite) SetUpSuite(c *C) {
 	s.testDir = filepath.Join(currentDir(), "testdata")
 	s.mirror = repository.NewMirror(s.testDir)
-	c.Assert(s.mirror.Open(), IsNil)
-	meta.SetRepository(repository.NewRepository(s.mirror, repository.Options{}))
+	repo, err := repository.NewRepository(s.mirror, repository.Options{})
+	c.Assert(err, IsNil)
+	meta.SetRepository(repo)
 	c.Assert(os.RemoveAll(path.Join(s.testDir, "profile")), IsNil)
 	c.Assert(os.MkdirAll(path.Join(s.testDir, "profile"), 0755), IsNil)
 	meta.SetProfile(localdata.NewProfile(path.Join(s.testDir, "profile")))

@@ -41,7 +41,10 @@ func (s *TestIOUtilSuite) TestIsNotExist(c *C) {
 
 func (s *TestIOUtilSuite) TestUntar(c *C) {
 	c.Assert(IsNotExist(path.Join(currentDir(), "testdata", "parent")), IsTrue)
-	err := Untar(path.Join(currentDir(), "testdata", "test.tar.gz"), path.Join(currentDir(), "testdata"))
+	f, err := os.Open(path.Join(currentDir(), "testdata", "test.tar.gz"))
+	c.Assert(err, IsNil)
+	defer f.Close()
+	err = Untar(f, path.Join(currentDir(), "testdata"))
 	c.Assert(err, IsNil)
 	c.Assert(IsExist(path.Join(currentDir(), "testdata", "parent", "child", "content")), IsTrue)
 }
