@@ -71,6 +71,7 @@ func (s RootSSH) String() string {
 // UserSSH is used to establish a SSH connection to the target host with generated key
 type UserSSH struct {
 	host       string
+	port       int
 	deployUser string
 	timeout    int64
 }
@@ -79,6 +80,7 @@ type UserSSH struct {
 func (s *UserSSH) Execute(ctx *Context) error {
 	e := executor.NewSSHExecutor(executor.SSHConfig{
 		Host:    s.host,
+		Port:    s.port,
 		KeyFile: ctx.PrivateKeyPath,
 		User:    s.deployUser,
 		Timeout: time.Second * time.Duration(s.timeout),

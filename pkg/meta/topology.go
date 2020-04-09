@@ -287,7 +287,7 @@ func (s PDSpec) IsImported() bool {
 // TiFlashSpec represents the TiFlash topology specification in topology.yaml
 type TiFlashSpec struct {
 	Host                 string                 `yaml:"host"`
-	SSHPort              int                    `yaml:"ssh_port,omitempty" default:"22"`
+	SSHPort              int                    `yaml:"ssh_port,omitempty"`
 	Imported             bool                   `yaml:"imported,omitempty"`
 	TCPPort              int                    `yaml:"tcp_port" default:"9000"`
 	HTTPPort             int                    `yaml:"http_port" default:"8123"`

@@ -153,10 +153,10 @@ func buildScaleOutTask(
 		initializedHosts.Insert(instance.GetHost())
 	})
 	// uninitializedHosts are hosts which haven't been initialized yet
-	uninitializedHosts := set.NewStringSet()
+	uninitializedHosts := map[string]int{} // host -> ssh-port
 	newPart.IterInstance(func(instance meta.Instance) {
 		if host := instance.GetHost(); !initializedHosts.Exist(host) {
-			uninitializedHosts.Insert(host)
+			uninitializedHosts[host] = instance.GetSSHPort()
 			var dirs []string
 			globalOptions := metadata.Topology.GlobalOptions
 			for _, dir := range []string{globalOptions.DeployDir, globalOptions.DataDir, globalOptions.LogDir} {
@@ -176,7 +176,7 @@ func buildScaleOutTask(
 					sshTimeout,
 				).
 				EnvInit(instance.GetHost(), metadata.User).
-				UserSSH(instance.GetHost(), metadata.User, sshTimeout).
+				UserSSH(instance.GetHost(), instance.GetSSHPort(), metadata.User, sshTimeout).
 				Mkdir(globalOptions.User, instance.GetHost(), dirs...).
 				Chown(globalOptions.User, instance.GetHost(), dirs...).
 				Build()
@@ -201,7 +201,7 @@ func buildScaleOutTask(
 
 		// Deploy component
 		t := task.NewBuilder().
-			UserSSH(inst.GetHost(), metadata.User, sshTimeout).
+			UserSSH(inst.GetHost(), inst.GetSSHPort(), metadata.User, sshTimeout).
 			Mkdir(metadata.User, inst.GetHost(),
 				deployDir, dataDir, logDir,
 				filepath.Join(deployDir, "bin"),

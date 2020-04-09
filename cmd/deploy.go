@@ -33,7 +33,6 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/task"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
-	"github.com/pingcap-incubator/tiup/pkg/set"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
@@ -389,11 +388,11 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 	)
 
 	// Initialize environment
-	uniqueHosts := set.NewStringSet()
+	uniqueHosts := map[string]int{} // host -> ssh-port
 	globalOptions := topo.GlobalOptions
 	topo.IterInstance(func(inst meta.Instance) {
-		if !uniqueHosts.Exist(inst.GetHost()) {
-			uniqueHosts.Insert(inst.GetHost())
+		if _, found := uniqueHosts[inst.GetHost()]; !found {
+			uniqueHosts[inst.GetHost()] = inst.GetSSHPort()
 			var dirs []string
 			for _, dir := range []string{globalOptions.DeployDir, globalOptions.DataDir, globalOptions.LogDir} {
 				if dir == "" {
@@ -412,7 +411,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 					sshTimeout,
 				).
 				EnvInit(inst.GetHost(), globalOptions.User).
-				UserSSH(inst.GetHost(), globalOptions.User, sshTimeout).
+				UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, sshTimeout).
 				Mkdir(globalOptions.User, inst.GetHost(), dirs...).
 				Chown(globalOptions.User, inst.GetHost(), dirs...).
 				BuildAsStep(fmt.Sprintf("  - Prepare %s:%d", inst.GetHost(), inst.GetSSHPort()))
@@ -517,7 +516,7 @@ func buildDownloadCompTasks(version string, topo *meta.Specification) []*task.St
 
 func buildMonitoredDeployTask(
 	clusterName string,
-	uniqueHosts set.StringSet,
+	uniqueHosts map[string]int, // host -> ssh-port
 	globalOptions meta.GlobalOptions,
 	monitoredOptions meta.MonitoredOptions,
 	version string) (downloadCompTasks []*task.StepDisplay, deployCompTasks []*task.StepDisplay) {
@@ -528,7 +527,7 @@ func buildMonitoredDeployTask(
 			BuildAsStep(fmt.Sprintf("  - Download %s:%s", comp, version))
 		downloadCompTasks = append(downloadCompTasks, t)
 
-		for host := range uniqueHosts {
+		for host, sshPort := range uniqueHosts {
 			deployDir := clusterutil.Abs(globalOptions.User, monitoredOptions.DeployDir)
 			// data dir would be empty for components which don't need it
 			dataDir := monitoredOptions.DataDir
@@ -540,7 +539,7 @@ func buildMonitoredDeployTask(
 
 			// Deploy component
 			t := task.NewBuilder().
-				UserSSH(host, globalOptions.User, sshTimeout).
+				UserSSH(host, sshPort, globalOptions.User, sshTimeout).
 				Mkdir(globalOptions.User, host,
 					deployDir, dataDir, logDir,
 					filepath.Join(deployDir, "bin"),

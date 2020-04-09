@@ -38,6 +38,7 @@ func (ctx *Context) SetClusterSSH(topo *meta.Specification, deployUser string, s
 		for _, in := range com.Instances() {
 			cf := executor.SSHConfig{
 				Host:    in.GetHost(),
+				Port:    in.GetSSHPort(),
 				KeyFile: ctx.PrivateKeyPath,
 				User:    deployUser,
 				Timeout: time.Second * time.Duration(sshTimeout),

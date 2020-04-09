@@ -42,7 +42,7 @@ func ImportConfig(name string, clsMeta *meta.ClusterMeta, sshTimeout int64) erro
 					SSHKeySet(
 						meta.ClusterPath(name, "ssh", "id_rsa"),
 						meta.ClusterPath(name, "ssh", "id_rsa.pub")).
-					UserSSH(inst.GetHost(), clsMeta.User, sshTimeout).
+					UserSSH(inst.GetHost(), inst.GetSSHPort(), clsMeta.User, sshTimeout).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
 						meta.ClusterPath(name,
 							"config",
@@ -59,7 +59,7 @@ func ImportConfig(name string, clsMeta *meta.ClusterMeta, sshTimeout int64) erro
 					SSHKeySet(
 						meta.ClusterPath(name, "ssh", "id_rsa"),
 						meta.ClusterPath(name, "ssh", "id_rsa.pub")).
-					UserSSH(inst.GetHost(), clsMeta.User, sshTimeout).
+					UserSSH(inst.GetHost(), inst.GetSSHPort(), clsMeta.User, sshTimeout).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
 						meta.ClusterPath(name,
 							"config",

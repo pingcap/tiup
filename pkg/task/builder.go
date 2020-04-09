@@ -49,9 +49,10 @@ func (b *Builder) RootSSH(
 }
 
 // UserSSH append a UserSSH task to the current task collection
-func (b *Builder) UserSSH(host, deployUser string, sshTimeout int64) *Builder {
+func (b *Builder) UserSSH(host string, port int, deployUser string, sshTimeout int64) *Builder {
 	b.tasks = append(b.tasks, &UserSSH{
 		host:       host,
+		port:       port,
 		deployUser: deployUser,
 		timeout:    sshTimeout,
 	})
@@ -74,6 +75,7 @@ func (b *Builder) ClusterSSH(spec *meta.Specification, deployUser string, sshTim
 		for _, in := range com.Instances() {
 			tasks = append(tasks, &UserSSH{
 				host:       in.GetHost(),
+				port:       in.GetSSHPort(),
 				deployUser: deployUser,
 				timeout:    sshTimeout,
 			})
