@@ -91,7 +91,7 @@ func (s *repositorySuite) TestManifest(c *C) {
 		c.Assert(ok, IsTrue)
 		*manifest = *expManifest
 	}
-	repo := Repository{fs, Options{}}
+	repo := Repository{fileSource: fs}
 	manifest, err := repo.Manifest()
 	c.Assert(err, IsNil)
 	c.Assert(manifest, DeepEquals, expManifest)
@@ -113,7 +113,7 @@ var handleVersManifests = func(resource string, result interface{}) {
 func (s *repositorySuite) TestVerManifest(c *C) {
 	fs := &mockFileSource{}
 	fs.jsonFn = handleVersManifests
-	repo := Repository{fs, Options{}}
+	repo := Repository{fileSource: fs}
 	for comp, exVers := range cases {
 		vers, err := repo.ComponentVersions(comp)
 		c.Assert(err, IsNil)
@@ -131,7 +131,7 @@ func (s *repositorySuite) TestDownload(c *C) {
 		c.Assert(targetDir, Equals, "foo/test1/v1.1.1")
 		c.Assert(resName, Equals, "test1-v1.1.1-baz-bar")
 	}
-	repo := Repository{fs, Options{GOARCH: "bar", GOOS: "baz"}}
+	repo := Repository{fileSource: fs, Options: Options{GOARCH: "bar", GOOS: "baz"}}
 	err := repo.DownloadComponent("foo", "test1", "v1.1.1")
 	c.Assert(err, IsNil, Commentf("error: %+v", err))
 }
@@ -145,7 +145,7 @@ func (s *repositorySuite) TestDownloadTiup(c *C) {
 		c.Assert(targetDir, Equals, "foo")
 		c.Assert(resName, Equals, "tiup")
 	}
-	repo := Repository{fs, Options{GOARCH: "bar", GOOS: "baz"}}
+	repo := Repository{fileSource: fs, Options: Options{GOARCH: "bar", GOOS: "baz"}}
 	err := repo.DownloadTiup("foo")
 	c.Assert(err, IsNil, Commentf("error: %+v", err))
 }

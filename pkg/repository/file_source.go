@@ -14,14 +14,11 @@
 package repository
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
@@ -97,7 +94,7 @@ func (fs *mirrorSource) downloadTarFile(targetDir, resName string, expand bool) 
 	}
 	defer tarReader.Close()
 
-	if checkSHA(tarReader, string(sha1Content)) != nil {
+	if utils.CheckSHA(tarReader, string(sha1Content)) != nil {
 		return errors.Trace(err)
 	}
 
@@ -115,18 +112,4 @@ func (fs *mirrorSource) downloadTarFile(targetDir, resName string, expand bool) 
 	}
 
 	return utils.Untar(tarFile, targetDir)
-}
-
-func checkSHA(reader io.Reader, sha string) error {
-	sha1Writer := sha1.New()
-	if _, err := io.Copy(sha1Writer, reader); err != nil {
-		return errors.Trace(err)
-	}
-
-	checksum := hex.EncodeToString(sha1Writer.Sum(nil))
-	if checksum != strings.TrimSpace(sha) {
-		return errors.Errorf("checksum mismatch, expect: %v, got: %v", sha, checksum)
-	}
-
-	return nil
 }
