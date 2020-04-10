@@ -343,6 +343,15 @@ func parseInventory(dir string, inv *aini.InventoryData, sshTimeout int64) (stri
 				tmpIns.Retention = _retention
 			}
 
+			// apply values from the host
+			if port, ok := srv.Vars["prometheus_port"]; ok {
+				tmpIns.Port, _ = strconv.Atoi(port)
+			}
+			// NOTE: storage retention is not used at present, only for record
+			if _retention, ok := srv.Vars["prometheus_storage_retention"]; ok {
+				tmpIns.Retention = _retention
+			}
+
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
 			ins, err := parseDirs(srv, tmpIns, sshTimeout)
 			if err != nil {
@@ -381,6 +390,14 @@ func parseInventory(dir string, inv *aini.InventoryData, sshTimeout int64) (stri
 				tmpIns.ClusterPort, _ = strconv.Atoi(clusterPort)
 			}
 
+			// apply values from the host
+			if port, ok := srv.Vars["alertmanager_port"]; ok {
+				tmpIns.WebPort, _ = strconv.Atoi(port)
+			}
+			if clusterPort, ok := srv.Vars["alertmanager_cluster_port"]; ok {
+				tmpIns.ClusterPort, _ = strconv.Atoi(clusterPort)
+			}
+
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
 			ins, err := parseDirs(srv, tmpIns, sshTimeout)
 			if err != nil {
@@ -410,6 +427,11 @@ func parseInventory(dir string, inv *aini.InventoryData, sshTimeout int64) (stri
 			}
 
 			if port, ok := grpVars["grafana_port"]; ok {
+				tmpIns.Port, _ = strconv.Atoi(port)
+			}
+
+			// apply values from the host
+			if port, ok := srv.Vars["grafana_port"]; ok {
 				tmpIns.Port, _ = strconv.Atoi(port)
 			}
 
