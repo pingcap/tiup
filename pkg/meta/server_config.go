@@ -88,8 +88,8 @@ func flattenMap(ms map[string]interface{}) (map[string]interface{}, error) {
 	return result, nil
 }
 
-func merge(global, overwrite map[string]interface{}) (map[string]interface{}, error) {
-	lhs, err := flattenMap(global)
+func merge(orig, overwrite map[string]interface{}) (map[string]interface{}, error) {
+	lhs, err := flattenMap(orig)
 	if err != nil {
 		return nil, err
 	}
@@ -125,4 +125,18 @@ func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, 
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func mergeImported(importConfig []byte, specConfig map[string]interface{}) (map[string]interface{}, error) {
+	var configData map[string]interface{}
+	if err := toml.Unmarshal(importConfig, &configData); err != nil {
+		return specConfig, err
+	}
+
+	// overwrite topology specifieced configs to the imported configs
+	lhs, err := merge(configData, specConfig)
+	if err != nil {
+		return specConfig, err
+	}
+	return lhs, nil
 }

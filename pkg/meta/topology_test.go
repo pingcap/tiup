@@ -389,3 +389,71 @@ split-merge-interval = "1h"
 	c.Assert(err, IsNil)
 	c.Assert(string(got), DeepEquals, expected)
 }
+
+func (s *metaSuite) TestMergeImported(c *C) {
+	spec := TopologySpecification{}
+
+	// values set in topology specification of the cluster
+	err := yaml.Unmarshal([]byte(`
+server_configs:
+  tikv:
+    config.item1: 100
+    config.item2: 300
+    config.item3.item5: 500
+    config.item3.item6: 600
+    config2.item4.item7: 700
+
+tikv_servers:
+  - host: 172.16.5.138
+    config:
+      config.item2: 500
+      config.item3.item5: 700
+      config2.itemy: 1000
+
+`), &spec)
+	c.Assert(err, IsNil)
+
+	// values set in imported configs, this will be overritten by values from
+	// topology specification if present there
+	config := []byte(`
+[config]
+item2 = 501
+[config.item3]
+item5 = 701
+item6 = 600
+
+[config2]
+itemx = "valuex"
+itemy = 999
+[config2.item4]
+item7 = 780
+`)
+
+	expected := `# WARNING: This file was auto-generated. Do not edit! All your edit might be overwritten!
+# You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
+# All configuration items you want to change can be added to:
+# server_configs:
+#   tikv:
+#     aa.b1.c3: value
+#     aa.b2.c4: value
+[config]
+item1 = 100
+item2 = 500
+[config.item3]
+item5 = 700
+item6 = 600
+
+[config2]
+itemx = "valuex"
+itemy = 1000
+[config2.item4]
+item7 = 780
+`
+
+	merge1, err := mergeImported(config, spec.TiKVServers[0].Config)
+	c.Assert(err, IsNil)
+
+	merge2, err := merge2Toml(ComponentTiKV, spec.ServerConfigs.TiKV, merge1)
+	c.Assert(err, IsNil)
+	c.Assert(string(merge2), DeepEquals, expected)
+}
