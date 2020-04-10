@@ -29,18 +29,18 @@ import (
 
 var (
 	// AnsibleInventoryFile is the default inventory file name
-	AnsibleInventoryFile  = "inventory.ini"
-	groupVarsGlobal       = "group_vars/all.yml"
-	groupVarsTiDB         = "group_vars/tidb_servers.yml"
-	groupVarsTiKV         = "group_vars/tikv_servers.yml"
-	groupVarsPD           = "group_vars/pd_servers.yml"
-	groupVarsTiFlash      = "group_vars/tiflash_servers.yml"
-	groupVarsPump         = "group_vars/pump_servers.yml"
-	groupVarsDrainer      = "group_vars/drainer_servers.yml"
+	AnsibleInventoryFile = "inventory.ini"
+	groupVarsGlobal      = "group_vars/all.yml"
+	groupVarsTiDB        = "group_vars/tidb_servers.yml"
+	groupVarsTiKV        = "group_vars/tikv_servers.yml"
+	groupVarsPD          = "group_vars/pd_servers.yml"
+	groupVarsTiFlash     = "group_vars/tiflash_servers.yml"
+	// groupVarsPump         = "group_vars/pump_servers.yml"
+	// groupVarsDrainer      = "group_vars/drainer_servers.yml"
 	groupVarsAlertManager = "group_vars/alertmanager_servers.yml"
 	groupVarsGrafana      = "group_vars/grafana_servers.yml"
-	groupVarsMonitorAgent = "group_vars/monitored_servers.yml"
-	groupVarsPrometheus   = "group_vars/monitoring_servers.yml"
+	// groupVarsMonitorAgent = "group_vars/monitored_servers.yml"
+	groupVarsPrometheus = "group_vars/monitoring_servers.yml"
 	//groupVarsLightning    = "group_vars/lightning_server.yml"
 	//groupVarsImporter     = "group_vars/importer_server.yml"
 )

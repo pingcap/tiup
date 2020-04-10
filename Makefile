@@ -28,13 +28,16 @@ default: check build
 build:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster
 
-lint:
-	@golint ./...
+# lint:
+# 	@golint ./...
+lint:tools/bin/revive
+	@echo "linting"
+	@tools/bin/revive -formatter friendly -config tools/check/revive.toml $(FILES)
 
 vet:
 	$(GO) vet ./...
 
-check: lint vet
+check: lint vet fmt check-static
 
 clean:
 	@rm -rf bin
@@ -44,7 +47,7 @@ cover-dir:
 	mkdir -p cover
 
 # Run tests
-unit-test:
+unit-test: cover-dir
 	$(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
 
 integration_test:
@@ -55,8 +58,11 @@ integration_test:
 	cd tests && sh run.sh ; \
 
 
-test: cover-dir failpoint-enable unit-test #integration_test 
+test: failpoint-enable unit-test #integration_test
 	@$(FAILPOINT_DISABLE)
+
+check-static: tools/bin/golangci-lint
+	tools/bin/golangci-lint run ./...
 
 coverage:
 	GO111MODULE=off go get github.com/wadey/gocovmerge
@@ -73,6 +79,14 @@ failpoint-disable: tools/bin/failpoint-ctl
 
 tools/bin/failpoint-ctl: go.mod
 	$(GO) build -o $@ github.com/pingcap/failpoint/failpoint-ctl
+
+tools/bin/revive: tools/check/go.mod
+	cd tools/check; \
+	$(GO) build -o ../bin/revive github.com/mgechev/revive
+
+tools/bin/golangci-lint: tools/check/go.mod
+	cd tools/check; \
+	$(GO) build -o ../bin/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
 
 fmt:
 	@echo "gofmt (simplify)"

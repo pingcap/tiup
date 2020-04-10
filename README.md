@@ -79,10 +79,9 @@ You can build `tiup-cluster` on any platform that supports Go.
 Prerequisites:
 
 * Go (minimum version: 1.13; [installation instructions](https://golang.org/doc/install))
-* golint (`go get -u golang.org/x/lint/golint`)
 * make
 
-To build `tiup-cluster`, run `make`.
+To build `tiup-cluster`, run `make build`.
 
 ## Local mirrors
 

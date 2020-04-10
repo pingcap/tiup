@@ -112,10 +112,12 @@ func (c *BinlogClient) isTombstone(ty string, nodeID string) (bool, error) {
 	return false, errors.Errorf("node not exist: %s", nodeID)
 }
 
+// nolint (unused)
 func (c *BinlogClient) pumpNodeStatus() (status []*NodeStatus, err error) {
 	return c.nodeStatus("pumps")
 }
 
+// nolint (unused)
 func (c *BinlogClient) drainerNodeStatus() (status []*NodeStatus, err error) {
 	return c.nodeStatus("drainers")
 }
