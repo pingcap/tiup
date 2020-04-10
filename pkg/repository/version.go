@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"fmt"
 	"sort"
 
 	"golang.org/x/mod/semver"
@@ -79,8 +80,54 @@ func (manifest *VersionManifest) LatestVersion() Version {
 
 // ContainsVersion returns if the versions contain the specific version
 func (manifest *VersionManifest) ContainsVersion(version Version) bool {
+	if version.IsNightly() && manifest.Nightly != nil {
+		return true
+	}
 	for _, v := range manifest.Versions {
 		if v.Version == version {
+			return true
+		}
+	}
+	return false
+}
+
+// FindVersion returns the specific version info
+func (manifest *VersionManifest) FindVersion(version Version) (VersionInfo, bool) {
+	if version.IsNightly() {
+		if manifest.Nightly != nil {
+			return *manifest.Nightly, true
+		} else {
+			return VersionInfo{}, false
+		}
+	}
+	for _, v := range manifest.Versions {
+		if v.Version == version {
+			return v, true
+		}
+	}
+	return VersionInfo{}, false
+}
+
+// IterVersion iterates all versions
+func (manifest *VersionManifest) IterVersion(fn func(versionInfo VersionInfo) error) error {
+	if manifest.Nightly != nil {
+		if err := fn(*manifest.Nightly); err != nil {
+			return err
+		}
+	}
+	for _, v := range manifest.Versions {
+		if err := fn(v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// IsSupport returns true if the specific version can be run in specified OS and architecture
+func (c *VersionInfo) IsSupport(goos, goarch string) bool {
+	s := fmt.Sprintf("%s/%s", goos, goarch)
+	for _, p := range c.Platforms {
+		if p == s {
 			return true
 		}
 	}

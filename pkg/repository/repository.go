@@ -25,8 +25,9 @@ import (
 // is contained in the Repository object. Any IO is delegated to mirrorSource, which in turn will delegate fetching
 // files to a Mirror.
 type Repository struct {
+	Options
+	mirror     Mirror
 	fileSource fileSource
-	opts       Options
 }
 
 // Options represents options for a repository
@@ -50,7 +51,11 @@ func NewRepository(mirror Mirror, opts Options) (*Repository, error) {
 		return nil, err
 	}
 
-	return &Repository{fileSource: fileSource, opts: opts}, nil
+	return &Repository{
+		Options:    opts,
+		mirror:     mirror,
+		fileSource: fileSource,
+	}, nil
 }
 
 // Close shuts down the repository, including any open mirrors.
@@ -63,6 +68,11 @@ func (r *Repository) Manifest() (*ComponentManifest, error) {
 	var manifest ComponentManifest
 	err := r.fileSource.downloadJSON(ManifestFileName, &manifest)
 	return &manifest, err
+}
+
+// Mirror returns the mirror of the repository
+func (r *Repository) Mirror() Mirror {
+	return r.mirror
 }
 
 // ComponentVersions returns the version manifest of specific component
@@ -95,10 +105,10 @@ func (r *Repository) DownloadComponent(compsDir, component string, version Versi
 			return fmt.Errorf("component `%s` doesn't release the version `%s`", component, version)
 		}
 	}
-	if !r.opts.SkipVersionCheck && !version.IsNightly() && !version.IsValid() {
+	if !r.SkipVersionCheck && !version.IsNightly() && !version.IsValid() {
 		return errors.Errorf("invalid version `%s`", version)
 	}
 	resName := fmt.Sprintf("%s-%s", component, version)
 	targetDir := filepath.Join(compsDir, component, version.String())
-	return r.fileSource.downloadTarFile(targetDir, fmt.Sprintf("%s-%s-%s", resName, r.opts.GOOS, r.opts.GOARCH), !r.opts.DisableDecompress)
+	return r.fileSource.downloadTarFile(targetDir, fmt.Sprintf("%s-%s-%s", resName, r.GOOS, r.GOARCH), !r.DisableDecompress)
 }
