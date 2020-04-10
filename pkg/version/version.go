@@ -24,7 +24,7 @@ var (
 	// TiUPVerMinor is the minor version of TiUP
 	TiUPVerMinor = 0
 	// TiUPVerPatch is the patch version of TiUP
-	TiUPVerPatch = 3
+	TiUPVerPatch = 4
 	// TiUPVerName is alternative name of the version
 	TiUPVerName = "tiup"
 	// BuildTime is the time when binary is built
@@ -65,7 +65,7 @@ func (v *TiUPVersion) SemVer() string {
 
 // String converts TiUPVersion to a string
 func (v *TiUPVersion) String() string {
-	return fmt.Sprintf("v%d.%d.%d %s", v.major, v.minor, v.patch, v.name)
+	return fmt.Sprintf("v%d.%d.%d %s\n%s", v.major, v.minor, v.patch, v.name, NewTiUPBuildInfo())
 }
 
 // TiUPBuild is the info of building environment
@@ -88,5 +88,5 @@ func NewTiUPBuildInfo() *TiUPBuild {
 
 // String converts TiUPBuild to a string
 func (v *TiUPBuild) String() string {
-	return fmt.Sprintf("%s %s(%s) %s", v.GoVersion, v.GitBranch, v.GitHash, v.BuildTime)
+	return fmt.Sprintf("Go Version: %s\nGit Branch: %s\nGitHash: %s\nBuild Time: %s", v.GoVersion, v.GitBranch, v.GitHash, v.BuildTime)
 }
