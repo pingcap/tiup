@@ -416,10 +416,9 @@ func (pc *PDClient) RemoveStoreEvict(host string) error {
 	endpoints := pc.getEndpoints(cmd)
 
 	err = tryURLs(endpoints, func(endpoint string) error {
-		body, err := pc.httpClient.Delete(endpoint, nil)
+		body, statusCode, err := pc.httpClient.Delete(endpoint, nil)
 		if err != nil {
-			// TODO: also check HTTP status code
-			if bytes.Contains(body, []byte("scheduler not found")) {
+			if statusCode == 404 || bytes.Contains(body, []byte("scheduler not found")) {
 				log.Debugf("Store leader evicting scheduler does not exist, ignore.")
 				return nil
 			}
@@ -451,7 +450,7 @@ func (pc *PDClient) DelPD(name string, retryOpt *utils.RetryOption) error {
 	endpoints := pc.getEndpoints(cmd)
 
 	err = tryURLs(endpoints, func(endpoint string) error {
-		_, err := pc.httpClient.Delete(endpoint, nil)
+		_, _, err := pc.httpClient.Delete(endpoint, nil)
 		return err
 	})
 	if err != nil {
@@ -539,7 +538,7 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 	endpoints := pc.getEndpoints(cmd)
 
 	err = tryURLs(endpoints, func(endpoint string) error {
-		_, err := pc.httpClient.Delete(endpoint, nil)
+		_, _, err := pc.httpClient.Delete(endpoint, nil)
 		return err
 	})
 	if err != nil {

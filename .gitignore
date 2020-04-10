@@ -25,3 +25,6 @@ bin/
 
 /.idea/
 /bin
+
+# VSCode
+.vscode/
