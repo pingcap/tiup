@@ -785,6 +785,18 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 	}
 	pdStr := strings.Join(pdAddrs, ",")
 
+	// replication.enable-placement-rules should be set to true to enable TiFlash
+	// TODO: Move this logic to an independent checkConfig procedure
+	const key = "replication.enable-placement-rules"
+	globalEnabled, ok1 := i.topo.ServerConfigs.PD[key].(bool)
+	for _, pd := range i.topo.PDServers {
+		// if instance config exists AND the config is false, throw an error.
+		// if instance config does not exist, if global config does not exist OR the config is false, throw an error
+		if instanceEnabled, ok2 := pd.Config[key].(bool); (ok2 && !instanceEnabled) || (!ok2 && (!ok1 || !globalEnabled)) {
+			return fmt.Errorf("must set replication.enable-placement-rules to true in pd conf to enable TiFlash")
+		}
+	}
+
 	cfg := scripts.NewTiFlashScript(
 		i.GetHost(),
 		paths.Deploy,
@@ -808,7 +820,7 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		return err
 	}
 
-	confLearner, err := i.InitTiFlashLearnerConfig(cfg, i.topo.ServerConfigs.TiFlashLearner)
+	conf, err := i.InitTiFlashLearnerConfig(cfg, i.topo.ServerConfigs.TiFlashLearner)
 	if err != nil {
 		return err
 	}
@@ -820,8 +832,8 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 			clusterName,
 			"config",
 			fmt.Sprintf(
-				"%s-%s-%d.toml",
-				i.ComponentName()+"learner",
+				"%s-learner-%s-%d.toml",
+				i.ComponentName(),
 				i.GetHost(),
 				i.GetPort(),
 			),
@@ -837,12 +849,12 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		specLernerConfig = mergedConfig
 	}
 
-	err = i.mergeTiFlashLearnerServerConfig(e, confLearner, specLernerConfig, paths)
+	err = i.mergeTiFlashLearnerServerConfig(e, conf, specLernerConfig, paths)
 	if err != nil {
 		return err
 	}
 
-	conf, err := i.InitTiFlashConfig(cfg, i.topo.ServerConfigs.TiFlash)
+	conf, err = i.InitTiFlashConfig(cfg, i.topo.ServerConfigs.TiFlash)
 	if err != nil {
 		return err
 	}
