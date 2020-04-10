@@ -2,6 +2,8 @@ server_configs:
     tidb:
         binlog.enable: true
         binlog.ignore-error: false
+    pd:
+        replication.enable-placement-rules: true
 
 tidb_servers:
   - host: 172.19.0.101
@@ -20,6 +22,12 @@ tikv_servers:
   - host: 172.19.0.104
   - host: 172.19.0.105
 
+tiflash_servers:
+  - host: 172.19.0.103
+  - host: 172.19.0.104
+  - host: 172.19.0.105
+
+
 pump_servers:
   - host: 172.19.0.103
   - host: 172.19.0.104
@@ -32,4 +40,9 @@ drainer_servers:
     config:
         syncer.db-type: "file"
 
-# TODO ad tiflash & monitor
+monitoring_servers:
+  - host: 172.19.0.101
+grafana_servers:
+  - host: 172.19.0.101
+alertmanager_servers:
+  - host: 172.19.0.101
