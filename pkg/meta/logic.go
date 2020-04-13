@@ -738,6 +738,8 @@ server_configs:
 func (i *TiFlashInstance) InitTiFlashLearnerConfig(cfg *scripts.TiFlashScript, src map[string]interface{}) (map[string]interface{}, error) {
 	topo := TopologySpecification{}
 
+	firstDataDir := strings.Split(cfg.DataDir, ",")[0]
+
 	err := yaml.Unmarshal([]byte(fmt.Sprintf(`
 server_configs:
   tiflash-learner:
@@ -751,7 +753,7 @@ server_configs:
     security.ca-path: ""
     security.cert-path: ""
     security.key-path: ""
-`, cfg.LogDir, cfg.IP, cfg.FlashServicePort, cfg.FlashProxyPort, cfg.FlashProxyStatusPort, cfg.DeployDir)), &topo)
+`, cfg.LogDir, cfg.IP, cfg.FlashServicePort, cfg.FlashProxyPort, cfg.FlashProxyStatusPort, firstDataDir)), &topo)
 
 	if err != nil {
 		return nil, err
