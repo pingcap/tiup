@@ -19,12 +19,12 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/goccy/go-yaml"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/relex/aini"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -132,7 +132,7 @@ func parseInventory(dir string, inv *aini.InventoryData, sshTimeout int64) (stri
 			}
 			tmpIns := meta.TiDBSpec{
 				Host:     host,
-				SSHPort:  srv.Port,
+				SSHPort:  getHostPort(srv),
 				Imported: true,
 			}
 
@@ -178,7 +178,7 @@ func parseInventory(dir string, inv *aini.InventoryData, sshTimeout int64) (stri
 			}
 			tmpIns := meta.TiKVSpec{
 				Host:     host,
-				SSHPort:  srv.Port,
+				SSHPort:  getHostPort(srv),
 				Imported: true,
 			}
 
@@ -227,7 +227,7 @@ func parseInventory(dir string, inv *aini.InventoryData, sshTimeout int64) (stri
 			}
 			tmpIns := meta.PDSpec{
 				Host:     host,
-				SSHPort:  srv.Port,
+				SSHPort:  getHostPort(srv),
 				Imported: true,
 			}
 
@@ -276,7 +276,7 @@ func parseInventory(dir string, inv *aini.InventoryData, sshTimeout int64) (stri
 			}
 			tmpIns := meta.TiFlashSpec{
 				Host:     host,
-				SSHPort:  srv.Port,
+				SSHPort:  getHostPort(srv),
 				Imported: true,
 			}
 
@@ -330,7 +330,7 @@ func parseInventory(dir string, inv *aini.InventoryData, sshTimeout int64) (stri
 			}
 			tmpIns := meta.PrometheusSpec{
 				Host:     host,
-				SSHPort:  srv.Port,
+				SSHPort:  getHostPort(srv),
 				Imported: true,
 			}
 
@@ -379,7 +379,7 @@ func parseInventory(dir string, inv *aini.InventoryData, sshTimeout int64) (stri
 			}
 			tmpIns := meta.AlertManagerSpec{
 				Host:     host,
-				SSHPort:  srv.Port,
+				SSHPort:  getHostPort(srv),
 				Imported: true,
 			}
 
@@ -422,7 +422,7 @@ func parseInventory(dir string, inv *aini.InventoryData, sshTimeout int64) (stri
 			}
 			tmpIns := meta.GrafanaSpec{
 				Host:     host,
-				SSHPort:  srv.Port,
+				SSHPort:  getHostPort(srv),
 				Imported: true,
 			}
 
@@ -463,7 +463,7 @@ func parseInventory(dir string, inv *aini.InventoryData, sshTimeout int64) (stri
 			}
 			tmpIns := meta.PumpSpec{
 				Host:     host,
-				SSHPort:  srv.Port,
+				SSHPort:  getHostPort(srv),
 				Imported: true,
 			}
 
@@ -508,7 +508,7 @@ func parseInventory(dir string, inv *aini.InventoryData, sshTimeout int64) (stri
 			}
 			tmpIns := meta.DrainerSpec{
 				Host:     host,
-				SSHPort:  srv.Port,
+				SSHPort:  getHostPort(srv),
 				Imported: true,
 			}
 
@@ -549,4 +549,17 @@ func readGroupVars(dir, filename string) (map[string]string, error) {
 		return nil, err
 	}
 	return result, nil
+}
+
+// getHostPort tries to read the SSH port of the host
+func getHostPort(srv *aini.Host) int {
+	// aini parse the port inline with hostnames (e.g., something like `host:22`)
+	// but not handling the "ansible_port" variable
+	if port, ok := srv.Vars["ansible_port"]; ok {
+		intPort, err := strconv.Atoi(port)
+		if err == nil {
+			return intPort
+		} // else just return the srv.Port
+	}
+	return srv.Port
 }
