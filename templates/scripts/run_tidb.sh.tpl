@@ -18,9 +18,9 @@ cd "${DEPLOY_DIR}" || exit 1
 {{- end}}
 
 {{- if .NumaNode}}
-exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/tidb-server \
+exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} env GODEBUG=madvdontneed=1 bin/tidb-server \
 {{- else}}
-exec bin/tidb-server \
+exec env GODEBUG=madvdontneed=1 bin/tidb-server \
 {{- end}}
     -P {{.Port}} \
     --status="{{.StatusPort}}" \
