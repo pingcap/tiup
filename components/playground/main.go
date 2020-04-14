@@ -41,18 +41,21 @@ import (
 )
 
 type bootOptions struct {
-	version        string
-	pdConfigPath   string
-	tidbConfigPath string
-	tikvConfigPath string
-	pdBinPath      string
-	tidbBinPath    string
-	tikvBinPath    string
-	pdNum          int
-	tidbNum        int
-	tikvNum        int
-	host           string
-	monitor        bool
+	version           string
+	pdConfigPath      string
+	tidbConfigPath    string
+	tikvConfigPath    string
+	tiflashConfigPath string
+	pdBinPath         string
+	tidbBinPath       string
+	tikvBinPath       string
+	tiflashBinPath    string
+	pdNum             int
+	tidbNum           int
+	tikvNum           int
+	tiflashNum        int
+	host              string
+	monitor           bool
 }
 
 func installIfMissing(profile *localdata.Profile, component, version string) error {
@@ -89,14 +92,17 @@ func execute() error {
 	tidbNum := 1
 	tikvNum := 1
 	pdNum := 1
+	tiflashNum := 1
 	host := "127.0.0.1"
 	monitor := false
 	tidbConfigPath := ""
 	tikvConfigPath := ""
 	pdConfigPath := ""
+	tiflashConfigPath := ""
 	tidbBinPath := ""
 	tikvBinPath := ""
 	pdBinPath := ""
+	tiflashBinPath := ""
 
 	rootCmd := &cobra.Command{
 		Use: "tiup playground [version]",
@@ -116,18 +122,21 @@ Examples:
 				version = args[0]
 			}
 			options := &bootOptions{
-				version:        version,
-				pdConfigPath:   pdConfigPath,
-				tidbConfigPath: tidbConfigPath,
-				tikvConfigPath: tikvConfigPath,
-				pdBinPath:      pdBinPath,
-				tidbBinPath:    tidbBinPath,
-				tikvBinPath:    tikvBinPath,
-				pdNum:          pdNum,
-				tidbNum:        tidbNum,
-				tikvNum:        tikvNum,
-				host:           host,
-				monitor:        monitor,
+				version:           version,
+				pdConfigPath:      pdConfigPath,
+				tidbConfigPath:    tidbConfigPath,
+				tikvConfigPath:    tikvConfigPath,
+				tiflashConfigPath: tiflashConfigPath,
+				pdBinPath:         pdBinPath,
+				tidbBinPath:       tidbBinPath,
+				tikvBinPath:       tikvBinPath,
+				tiflashBinPath:    tiflashBinPath,
+				pdNum:             pdNum,
+				tidbNum:           tidbNum,
+				tikvNum:           tikvNum,
+				tiflashNum:        tiflashNum,
+				host:              host,
+				monitor:           monitor,
 			}
 			return bootCluster(options)
 		},
@@ -136,14 +145,17 @@ Examples:
 	rootCmd.Flags().IntVarP(&tidbNum, "db", "", 1, "TiDB instance number")
 	rootCmd.Flags().IntVarP(&tikvNum, "kv", "", 1, "TiKV instance number")
 	rootCmd.Flags().IntVarP(&pdNum, "pd", "", 1, "PD instance number")
+	rootCmd.Flags().IntVarP(&tiflashNum, "tiflash", "", 1, "TiFlash instance number")
 	rootCmd.Flags().StringVarP(&host, "host", "", host, "Playground cluster host")
 	rootCmd.Flags().BoolVar(&monitor, "monitor", false, "Start prometheus component")
 	rootCmd.Flags().StringVarP(&tidbConfigPath, "db.config", "", tidbConfigPath, "TiDB instance configuration file")
 	rootCmd.Flags().StringVarP(&tikvConfigPath, "kv.config", "", tikvConfigPath, "TiKV instance configuration file")
 	rootCmd.Flags().StringVarP(&pdConfigPath, "pd.config", "", pdConfigPath, "PD instance configuration file")
+	rootCmd.Flags().StringVarP(&tiflashConfigPath, "tiflash.config", "", tiflashConfigPath, "TiFlash instance configuration file")
 	rootCmd.Flags().StringVarP(&tidbBinPath, "db.binpath", "", tidbBinPath, "TiDB instance binary path")
 	rootCmd.Flags().StringVarP(&tikvBinPath, "kv.binpath", "", tikvBinPath, "TiKV instance binary path")
 	rootCmd.Flags().StringVarP(&pdBinPath, "pd.binpath", "", pdBinPath, "PD instance binary path")
+	rootCmd.Flags().StringVarP(&tiflashBinPath, "tiflash.binpath", "", tiflashBinPath, "TiFlash instance binary path")
 
 	return rootCmd.Execute()
 }
@@ -216,6 +228,9 @@ func bootCluster(options *bootOptions) error {
 	if options.pdBinPath != "" {
 		pathMap["pd"] = getAbsolutePath(options.pdBinPath)
 	}
+	if options.tiflashNum > 0 && options.tiflashBinPath != "" {
+		pathMap["tiflash"] = getAbsolutePath(options.tiflashBinPath)
+	}
 
 	if options.tidbConfigPath != "" {
 		options.tidbConfigPath = getAbsolutePath(options.tidbConfigPath)
@@ -226,6 +241,9 @@ func bootCluster(options *bootOptions) error {
 	if options.pdConfigPath != "" {
 		options.pdConfigPath = getAbsolutePath(options.pdConfigPath)
 	}
+	if options.tiflashNum > 0 && options.tiflashConfigPath != "" {
+		options.tiflashConfigPath = getAbsolutePath(options.tiflashConfigPath)
+	}
 
 	// Initialize the profile
 	profileRoot := os.Getenv(localdata.EnvNameHome)
@@ -233,8 +251,11 @@ func bootCluster(options *bootOptions) error {
 		return fmt.Errorf("cannot read environment variable %s", localdata.EnvNameHome)
 	}
 	profile := localdata.NewProfile(profileRoot)
-	for _, comp := range []string{"pd", "tikv", "tidb"} {
+	for _, comp := range []string{"pd", "tikv", "tidb", "tiflash"} {
 		if pathMap[comp] != "" {
+			continue
+		}
+		if comp == "tiflash" && options.tiflashNum == 0 {
 			continue
 		}
 		if err := installIfMissing(profile, comp, options.version); err != nil {
@@ -246,11 +267,12 @@ func bootCluster(options *bootOptions) error {
 		return fmt.Errorf("cannot read environment variable %s", localdata.EnvNameInstanceDataDir)
 	}
 
-	all := make([]instance.Instance, 0, options.pdNum+options.tikvNum+options.tidbNum)
-	allRole := make([]string, 0, options.pdNum+options.tikvNum+options.tidbNum)
+	all := make([]instance.Instance, 0, options.pdNum+options.tikvNum+options.tidbNum+options.tiflashNum)
+	allRole := make([]string, 0, options.pdNum+options.tikvNum+options.tidbNum+options.tiflashNum)
 	pds := make([]*instance.PDInstance, 0, options.pdNum)
 	kvs := make([]*instance.TiKVInstance, 0, options.tikvNum)
 	dbs := make([]*instance.TiDBInstance, 0, options.tidbNum)
+	flashs := make([]*instance.TiFlashInstance, 0, options.tiflashNum)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -282,6 +304,14 @@ func bootCluster(options *bootOptions) error {
 		allRole = append(allRole, "tidb")
 	}
 
+	for i := 0; i < options.tiflashNum; i++ {
+		dir := filepath.Join(dataDir, fmt.Sprintf("tiflash-%d", i))
+		inst := instance.NewTiFlashInstance(dir, options.host, options.tiflashConfigPath, i, pds, dbs)
+		flashs = append(flashs, inst)
+		all = append(all, inst)
+		allRole = append(allRole, "tiflash")
+	}
+
 	fmt.Println("Playground Bootstrapping...")
 
 	monitorInfo := struct {
@@ -295,7 +325,7 @@ func bootCluster(options *bootOptions) error {
 		if err := installIfMissing(profile, "prometheus", ""); err != nil {
 			return err
 		}
-		var pdAddrs, tidbAddrs, tikvAddrs []string
+		var pdAddrs, tidbAddrs, tikvAddrs, tiflashAddrs []string
 		for _, pd := range pds {
 			pdAddrs = append(pdAddrs, fmt.Sprintf("%s:%d", pd.Host, pd.StatusPort))
 		}
@@ -305,9 +335,13 @@ func bootCluster(options *bootOptions) error {
 		for _, kv := range kvs {
 			tikvAddrs = append(tikvAddrs, fmt.Sprintf("%s:%d", kv.Host, kv.StatusPort))
 		}
+		for _, flash := range flashs {
+			tiflashAddrs = append(tiflashAddrs, fmt.Sprintf("%s:%d", flash.Host, flash.StatusPort))
+			tiflashAddrs = append(tiflashAddrs, fmt.Sprintf("%s:%d", flash.Host, flash.ProxyStatusPort))
+		}
 
 		promDir := filepath.Join(dataDir, "prometheus")
-		port, cmd, err := startMonitor(ctx, options.host, promDir, tidbAddrs, tikvAddrs, pdAddrs)
+		port, cmd, err := startMonitor(ctx, options.host, promDir, tidbAddrs, tikvAddrs, pdAddrs, tiflashAddrs)
 		if err != nil {
 			return err
 		}
@@ -336,7 +370,7 @@ func bootCluster(options *bootOptions) error {
 	}
 
 	for i, inst := range all {
-		if err := inst.Start(ctx, repository.Version(options.version), pathMap[allRole[i]]); err != nil {
+		if err := inst.Start(context.WithValue(ctx, "has_tiflash", options.tiflashNum > 0), repository.Version(options.version), pathMap[allRole[i]]); err != nil {
 			return err
 		}
 	}
@@ -419,7 +453,11 @@ func dumpDSN(dbs []*instance.TiDBInstance) {
 	_ = ioutil.WriteFile("dsn", []byte(strings.Join(dsn, "\n")), 0644)
 }
 
-func startMonitor(ctx context.Context, host, dir string, dbs, kvs, pds []string) (int, *exec.Cmd, error) {
+func addrsToString(addrs []string) string {
+	return strings.Join(addrs, "','")
+}
+
+func startMonitor(ctx context.Context, host, dir string, dbs, kvs, pds, flashs []string) (int, *exec.Cmd, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return 0, nil, err
 	}
@@ -463,7 +501,10 @@ scrape_configs:
   - job_name: 'pd'
     static_configs:
     - targets: ['%s']
-`, addr, strings.Join(dbs, "','"), strings.Join(kvs, "','"), strings.Join(pds, "','"))
+  - job_name: 'tiflash'
+    static_configs:
+    - targets: ['%s']
+`, addr, addrsToString(dbs), addrsToString(kvs), addrsToString(pds), addrsToString(flashs))
 
 	if err := ioutil.WriteFile(filepath.Join(dir, "prometheus.yml"), []byte(tmpl), os.ModePerm); err != nil {
 		return 0, nil, err

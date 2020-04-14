@@ -18,12 +18,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap/errors"
 )
 
 // PDInstance represent a running pd-server
@@ -70,7 +72,10 @@ func (inst *PDInstance) Start(ctx context.Context, version repository.Version, b
 		fmt.Sprintf("--advertise-client-urls=http://%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "pd.log")),
 	}
-	if inst.ConfigPath != "" {
+	if v := ctx.Value("has_tiflash"); inst.ConfigPath != "" || (v != nil && v == true) {
+		if err := inst.checkConfig(); err != nil {
+			return err
+		}
 		args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
 	}
 	endpoints := make([]string, 0, len(inst.endpoints))
@@ -104,4 +109,30 @@ func (inst *PDInstance) Pid() int {
 // Addr return the listen address of PD
 func (inst *PDInstance) Addr() string {
 	return fmt.Sprintf("%s:%d", inst.Host, inst.StatusPort)
+}
+
+func (inst *PDInstance) checkConfig() error {
+	if inst.ConfigPath == "" {
+		inst.ConfigPath = path.Join(inst.Dir, "pd.toml")
+	}
+
+	_, err := os.Stat(inst.ConfigPath)
+	if err == nil || os.IsExist(err) {
+		return nil
+	}
+	if !os.IsNotExist(err) {
+		return errors.Trace(err)
+	}
+
+	cf, err := os.Create(inst.ConfigPath)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	defer cf.Close()
+	if err := writePDConfig(cf); err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
 }

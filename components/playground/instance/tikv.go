@@ -110,7 +110,7 @@ func (inst *TiKVInstance) checkConfig() error {
 	}
 
 	defer cf.Close()
-	if err := writeConfig(cf); err != nil {
+	if err := writeTiKVConfig(cf); err != nil {
 		return errors.Trace(err)
 	}
 
