@@ -77,7 +77,7 @@ func (e *EnvInit) execute(ctx *Context) error {
 	}
 
 	pk := strings.TrimSpace(string(pubKey))
-	cmd = fmt.Sprintf(`su - %[1]s -c 'grep $(echo %[2]s) %[3]s || echo %[2]s >> %[3]s && chmod 700 %[3]s'`,
+	cmd = fmt.Sprintf(`su - %[1]s -c 'grep $(echo %[2]s) %[3]s || echo %[2]s >> %[3]s && chmod 600 %[3]s'`,
 		e.deployUser, pk, "~/.ssh/authorized_keys")
 	_, _, err = exec.Execute(cmd, true)
 	if err != nil {
