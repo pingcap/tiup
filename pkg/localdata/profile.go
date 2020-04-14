@@ -168,6 +168,13 @@ func (p *Profile) InstalledVersions(component string) ([]string, error) {
 	}
 	var versions []string
 	for _, fi := range fileInfos {
+		if !fi.IsDir() {
+			continue
+		}
+		sub, err := ioutil.ReadDir(filepath.Join(path, fi.Name()))
+		if err != nil || len(sub) < 1 {
+			continue
+		}
 		versions = append(versions, fi.Name())
 	}
 	return versions, nil

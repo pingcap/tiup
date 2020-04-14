@@ -22,6 +22,7 @@ import (
 	"github.com/pingcap/errors"
 )
 
+// CheckSHA returns error if the hash of reader content mismatches `sha`
 func CheckSHA(reader io.Reader, sha string) error {
 	sha1Writer := sha1.New()
 	if _, err := io.Copy(sha1Writer, reader); err != nil {

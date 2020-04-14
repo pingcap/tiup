@@ -54,7 +54,7 @@ func execute() error {
 		comps: map[string]*[]string{},
 	}
 
-	mirror := repository.NewMirror(meta.Mirror())
+	mirror := repository.NewMirror(meta.Mirror(), repository.MirrorOptions{})
 	repo, err := repository.NewRepository(mirror, repository.Options{
 		SkipVersionCheck:  true,
 		DisableDecompress: true,
@@ -131,7 +131,7 @@ func download(targetDir string, repo *repository.Repository, manifest *repositor
 		return filepath.Join(targetDir, name)
 	}
 
-	writeJson := func(file string, data interface{}) error {
+	writeJSON := func(file string, data interface{}) error {
 		jsonData, err := json.MarshalIndent(data, "", "  ")
 		if err != nil {
 			return err
@@ -139,7 +139,7 @@ func download(targetDir string, repo *repository.Repository, manifest *repositor
 		return ioutil.WriteFile(file, jsonData, os.ModePerm)
 	}
 
-	if err := writeJson(filename(repository.ManifestFileName), manifest); err != nil {
+	if err := writeJSON(filename(repository.ManifestFileName), manifest); err != nil {
 		return err
 	}
 
@@ -203,7 +203,7 @@ func download(targetDir string, repo *repository.Repository, manifest *repositor
 			return err
 		}
 
-		if err := writeJson(filename(fmt.Sprintf("tiup-component-%s.index", name)), newCompInfo); err != nil {
+		if err := writeJSON(filename(fmt.Sprintf("tiup-component-%s.index", name)), newCompInfo); err != nil {
 			return err
 		}
 	}
