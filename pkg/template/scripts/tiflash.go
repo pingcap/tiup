@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 	"text/template"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
@@ -56,7 +57,7 @@ func NewTiFlashScript(ip, deployDir, dataDir string, logDir string, tidbStatusAd
 		DeployDir:            deployDir,
 		DataDir:              dataDir,
 		LogDir:               logDir,
-		TmpDir:               fmt.Sprintf("%s/tiflash/data/tmp", deployDir),
+		TmpDir:               fmt.Sprintf("%s/tmp", strings.Split(dataDir, ",")[0]),
 		TiDBStatusAddrs:      tidbStatusAddrs,
 		PDAddrs:              pdAddrs,
 	}
@@ -100,7 +101,9 @@ func (c *TiFlashScript) WithStatusPort(port int) *TiFlashScript {
 
 // WithTmpDir set TmpDir field of TiFlashScript
 func (c *TiFlashScript) WithTmpDir(tmpDir string) *TiFlashScript {
-	c.TmpDir = tmpDir
+	if tmpDir != "" {
+		c.TmpDir = tmpDir
+	}
 	return c
 }
 
