@@ -148,7 +148,7 @@ INFO "Running \`docker-compose build\`"
 # shellcheck disable=SC2086
 docker-compose -f docker-compose.yml ${COMPOSE} ${DEV} build
 
-docker network create --gateway 172.19.0.1 --subnet 172.19.0.0/16 tiup-cluster > /dev/null 2>&1 || echo "Skip create tiup-cluster network"
+docker network create --gateway 172.19.0.1 --subnet 172.19.0.0/16 tiops > /dev/null 2>&1 || echo "Skip create tiup-cluster network"
 
 INFO "Running \`docker-compose up\`"
 if [ "${RUN_AS_DAEMON}" -eq 1 ]; then

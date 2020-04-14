@@ -62,7 +62,7 @@ test: failpoint-enable unit-test #integration_test
 	@$(FAILPOINT_DISABLE)
 
 check-static: tools/bin/golangci-lint
-	tools/bin/golangci-lint run ./...
+	tools/bin/golangci-lint run --timeout 5m ./...
 
 coverage:
 	GO111MODULE=off go get github.com/wadey/gocovmerge

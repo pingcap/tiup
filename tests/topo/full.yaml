@@ -2,8 +2,12 @@ server_configs:
     tidb:
         binlog.enable: true
         binlog.ignore-error: false
+    tikv:
+        storage.reserve-space: 1K
     pd:
         replication.enable-placement-rules: true
+    pump:
+        storage.stop-write-at-available-space: 1 mib
 
 tidb_servers:
   - host: 172.19.0.101
@@ -22,10 +26,12 @@ tikv_servers:
   - host: 172.19.0.104
   - host: 172.19.0.105
 
+# tiflash eat too much memory
+# and binary is more than 1G..
 tiflash_servers:
   - host: 172.19.0.103
-  - host: 172.19.0.104
-  - host: 172.19.0.105
+#   - host: 172.19.0.104
+#   - host: 172.19.0.105
 
 
 pump_servers:

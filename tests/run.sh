@@ -6,6 +6,10 @@ set -eu
 # https://stackoverflow.com/a/246128/3858681
 pushd "$( cd "$( dirname "${BASH_SOURCE[0]}"  )" >/dev/null 2>&1 && pwd  )"
 
+PATH=$PATH:/tiup-cluster/bin
+export TIUP_CLUSTER_PROGRESS_REFRESH_RATE=10s
+export TIUP_CLUSTER_EXECUTE_DEFAULT_TIMEOUT=300s
+
 . ./script/util.sh
 
 # TODO remove this once embed the files in binary

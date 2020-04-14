@@ -49,6 +49,21 @@ var (
 	ErrSSHExecuteTimedout = errNSSSH.NewType("execute_timedout")
 )
 
+var executeDefaultTimeout = time.Second * 60
+
+func init() {
+	v := os.Getenv("TIUP_CLUSTER_EXECUTE_DEFAULT_TIMEOUT")
+	if v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			fmt.Println("ignore invalid TIUP_CLUSTER_EXECUTE_DEFAULT_TIMEOUT: ", v)
+			return
+		}
+
+		executeDefaultTimeout = d
+	}
+}
+
 type (
 	// SSHExecutor implements TiOpsExecutor with SSH as transportation layer.
 	SSHExecutor struct {
@@ -117,6 +132,9 @@ func (e *SSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duration) (
 
 	// run command on remote host
 	// default timeout is 60s in easyssh-proxy
+	if len(timeout) == 0 {
+		timeout = append(timeout, executeDefaultTimeout)
+	}
 	stdout, stderr, done, err := e.Config.Run(cmd, timeout...)
 
 	zap.L().Info("ssh command",

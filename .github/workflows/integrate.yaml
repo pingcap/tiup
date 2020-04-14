@@ -1,0 +1,79 @@
+---
+
+name: integrate
+
+on:
+  pull_request:
+    branches:
+      - master
+      - release-*
+
+
+jobs:
+
+  test_all:
+    runs-on: ubuntu-latest
+    env:
+      working-directory: ${{ github.workspace   }}/go/src/github.com/${{ github.repository   }}
+    steps:
+      - name: Set up Go 1.13
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.13
+        id: go
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha  }}
+          path: go/src/github.com/${{ github.repository  }}
+
+      - name: Build the docker-compose stack
+        working-directory: ${{env.working-directory}}
+        # with --dev the first run will fail for unknow reason, just retry it and will success now..
+        run: TIUP_CLUSTER_ROOT=${{env.working-directory}} ./docker/up.sh --daemon --dev || TIUP_CLUSTER_ROOT=${{env.working-directory}} ./docker/up.sh --daemon --dev
+
+      - name: Check running containers
+        run: |
+          docker ps
+          df -h
+          free -h
+
+      - name: Run test suite
+        id: test
+        working-directory: ${{env.working-directory}}
+        run: |
+          # should not use -it
+          # ref: https://stackoverflow.com/questions/43099116/error-the-input-device-is-not-a-tty
+          docker exec  tiup-cluster-control bash /tiup-cluster/tests/run.sh
+
+      - name: Collect component log
+        working-directory: ${{env.working-directory}}
+        # if: steps.test.outputs.exit_code != 0
+        if: always()
+        run: |
+          docker exec  tiup-cluster-control bash /tiup-cluster/tests/script/pull_log.sh /tiup-cluster/logs
+          ls ${{env.working-directory}}
+          tar czvf ${{env.working-directory}}/logs.tar.gz ${{env.working-directory}}/logs/
+
+      - name: Upload component log
+        # if: steps.test.outputs.exit_code != 0
+        if: always()
+        uses: actions/upload-artifact@v1
+        with:
+          name: component_logs
+          path: ${{env.working-directory}}/logs.tar.gz
+
+      - name: Output cluster debug log
+        working-directory: ${{env.working-directory}}
+        if: always()
+        run: |
+          pwd
+          docker ps
+          df -h
+          free -h
+          "cat ./tests/*.log" || true
+
+      # - name: Setup tmate session
+      #   if: always()
+      #   uses: mxschmitt/action-tmate@v2

@@ -14,6 +14,8 @@
 package progress
 
 import (
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/fatih/color"
@@ -29,11 +31,24 @@ var (
 	colorSpinner = color.New(color.FgHiCyan)
 )
 
+var refreshRate = time.Millisecond * 50
+
 const (
-	refreshRate = time.Millisecond * 50
-	doneTail    = "Done"
-	errorTail   = "Error"
+	doneTail  = "Done"
+	errorTail = "Error"
 )
+
+func init() {
+	v := os.Getenv("TIUP_CLUSTER_PROGRESS_REFRESH_RATE")
+	if v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			fmt.Println("ignore invalid refresh rate: ", v)
+			return
+		}
+		refreshRate = d
+	}
+}
 
 // Bar controls how a bar is displayed, for both single bar or multi bar item.
 type Bar interface {
