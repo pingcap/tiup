@@ -298,6 +298,7 @@ type TiFlashSpec struct {
 	DeployDir            string                 `yaml:"deploy_dir,omitempty"`
 	DataDir              string                 `yaml:"data_dir,omitempty"`
 	LogDir               string                 `yaml:"log_dir,omitempty"`
+	TmpDir               string                 `yaml:"tmp_path,omitempty"`
 	NumaNode             string                 `yaml:"numa_node,omitempty"`
 	Config               map[string]interface{} `yaml:"config,omitempty"`
 	LearnerConfig        map[string]interface{} `yaml:"learner_config,omitempty"`

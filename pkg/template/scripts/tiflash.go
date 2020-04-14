@@ -15,6 +15,7 @@ package scripts
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -35,6 +36,7 @@ type TiFlashScript struct {
 	DeployDir            string
 	DataDir              string
 	LogDir               string
+	TmpDir               string
 	NumaNode             string
 	Endpoints            []*PDScript
 	TiDBStatusAddrs      string
@@ -54,6 +56,7 @@ func NewTiFlashScript(ip, deployDir, dataDir string, logDir string, tidbStatusAd
 		DeployDir:            deployDir,
 		DataDir:              dataDir,
 		LogDir:               logDir,
+		TmpDir:               fmt.Sprintf("%s/tiflash/data/tmp", deployDir),
 		TiDBStatusAddrs:      tidbStatusAddrs,
 		PDAddrs:              pdAddrs,
 	}
@@ -92,6 +95,12 @@ func (c *TiFlashScript) WithFlashProxyStatusPort(port int) *TiFlashScript {
 // WithStatusPort set FlashProxyStatusPort field of TiFlashScript
 func (c *TiFlashScript) WithStatusPort(port int) *TiFlashScript {
 	c.StatusPort = port
+	return c
+}
+
+// WithTmpDir set TmpDir field of TiFlashScript
+func (c *TiFlashScript) WithTmpDir(tmpDir string) *TiFlashScript {
+	c.TmpDir = tmpDir
 	return c
 }
 
