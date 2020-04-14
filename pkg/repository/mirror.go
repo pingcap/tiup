@@ -30,7 +30,7 @@ import (
 type (
 	// DownloadProgress represents the download progress notifier
 	DownloadProgress interface {
-		SetTotal(size int64)
+		Start(url string, size int64)
 		SetCurrent(size int64)
 		Finish()
 	}
@@ -145,12 +145,11 @@ func (l *httpMirror) download(url string, to string) error {
 
 	var progress DownloadProgress
 	if strings.Contains(url, ".tar.gz") {
-		fmt.Printf("download %s:\n", url)
 		progress = l.options.Progress
 	} else {
 		progress = DisableProgress{}
 	}
-	progress.SetTotal(resp.Size)
+	progress.Start(url, resp.Size)
 
 L:
 	for {

@@ -14,14 +14,16 @@
 package repository
 
 import (
+	"fmt"
+
 	"github.com/cheggaaa/pb"
 )
 
 // DisableProgress implement the DownloadProgress interface and disable download progress
 type DisableProgress struct{}
 
-// SetTotal implement the DownloadProgress interface
-func (d DisableProgress) SetTotal(size int64) {}
+// Start implement the DownloadProgress interface
+func (d DisableProgress) Start(url string, size int64) {}
 
 // SetCurrent implement the DownloadProgress interface
 func (d DisableProgress) SetCurrent(size int64) {}
@@ -34,11 +36,11 @@ type ProgressBar struct {
 	bar *pb.ProgressBar
 }
 
-// SetTotal implement the DownloadProgress interface
-func (p *ProgressBar) SetTotal(size int64) {
+// Start implement the DownloadProgress interface
+func (p *ProgressBar) Start(url string, size int64) {
 	p.bar = pb.Start64(size)
 	p.bar.Set(pb.Bytes, true)
-	p.bar.SetTemplateString(`{{counters . }} {{percent . }} {{speed . }}`)
+	p.bar.SetTemplateString(fmt.Sprintf(`download %s {{counters . }} {{percent . }} {{speed . }}`, url))
 }
 
 // SetCurrent implement the DownloadProgress interface
