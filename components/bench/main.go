@@ -68,7 +68,7 @@ func openDB() {
 			tmpDB, _ = sql.Open(mysqlDriver, ds)
 			defer tmpDB.Close()
 			if _, err := tmpDB.Exec(createDBDDL + dbName); err != nil {
-				panic(fmt.Errorf("failed to create database, err %v\n", err))
+				panic(fmt.Errorf("failed to create database, err %v", err))
 			}
 		} else {
 			globalDB = nil

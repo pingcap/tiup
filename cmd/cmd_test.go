@@ -47,7 +47,7 @@ type testCmdSuite struct {
 
 func (s *testCmdSuite) SetUpSuite(c *C) {
 	s.testDir = filepath.Join(currentDir(), "testdata")
-	s.mirror = repository.NewMirror(s.testDir)
+	s.mirror = repository.NewMirror(s.testDir, repository.MirrorOptions{})
 	repo, err := repository.NewRepository(s.mirror, repository.Options{})
 	c.Assert(err, IsNil)
 	meta.SetRepository(repo)

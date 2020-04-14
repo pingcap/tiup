@@ -24,27 +24,46 @@ import (
 	"time"
 
 	"github.com/cavaliercoder/grab"
-	"github.com/cheggaaa/pb"
 	"github.com/pingcap/errors"
 )
 
-// Mirror represents a repository mirror, which can be remote HTTP
-// server or a local file system directory
-type Mirror interface {
-	// Open initialize the mirror.
-	Open() error
-	// Download fetches a resource to disk.
-	Download(resource, targetDir string) error
-	// Fetch fetches a resource into memory. The caller must close the returned reader.
-	Fetch(resource string) (io.ReadCloser, error)
-	// Close closes the mirror and release local stashed files.
-	Close() error
-}
+type (
+	// DownloadProgress represents the download progress notifier
+	DownloadProgress interface {
+		SetTotal(size int64)
+		SetCurrent(size int64)
+		Finish()
+	}
+
+	// MirrorOptions is used to customize the mirror download options
+	MirrorOptions struct {
+		Progress DownloadProgress
+	}
+
+	// Mirror represents a repository mirror, which can be remote HTTP
+	// server or a local file system directory
+	Mirror interface {
+		// Open initialize the mirror.
+		Open() error
+		// Download fetches a resource to disk.
+		Download(resource, targetDir string) error
+		// Fetch fetches a resource into memory. The caller must close the returned reader.
+		Fetch(resource string) (io.ReadCloser, error)
+		// Close closes the mirror and release local stashed files.
+		Close() error
+	}
+)
 
 // NewMirror returns a mirror instance base on the schema of mirror
-func NewMirror(mirror string) Mirror {
+func NewMirror(mirror string, options MirrorOptions) Mirror {
+	if options.Progress == nil {
+		options.Progress = &ProgressBar{}
+	}
 	if strings.HasPrefix(mirror, "http") {
-		return &httpMirror{server: mirror}
+		return &httpMirror{
+			server:  mirror,
+			options: options,
+		}
 	}
 	return &localFilesystem{rootPath: mirror}
 }
@@ -96,8 +115,9 @@ func (l *localFilesystem) Close() error {
 }
 
 type httpMirror struct {
-	server string
-	tmpDir string
+	server  string
+	tmpDir  string
+	options MirrorOptions
 }
 
 // Open implements the Mirror interface
@@ -123,23 +143,22 @@ func (l *httpMirror) download(url string, to string) error {
 	t := time.NewTicker(time.Millisecond)
 	defer t.Stop()
 
-	var bar *pb.ProgressBar
-	if strings.HasSuffix(url, ".tar.gz") {
+	var progress DownloadProgress
+	if strings.Contains(url, ".tar.gz") {
 		fmt.Printf("download %s:\n", url)
-		bar = pb.StartNew(int(resp.Size))
+		progress = l.options.Progress
+	} else {
+		progress = DisableProgress{}
 	}
+	progress.SetTotal(resp.Size)
+
 L:
 	for {
 		select {
 		case <-t.C:
-			if bar != nil {
-				bar.SetCurrent(resp.BytesComplete())
-			}
+			progress.SetCurrent(resp.BytesComplete())
 		case <-resp.Done:
-			if bar != nil {
-				bar.SetCurrent(bar.Total())
-				bar.Finish()
-			}
+			progress.Finish()
 			break L
 		}
 	}

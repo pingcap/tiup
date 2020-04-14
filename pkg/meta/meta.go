@@ -66,7 +66,7 @@ func Mirror() string {
 func InitRepository(options repository.Options) error {
 	// Initialize the repository
 	// Replace the mirror if some sub-commands use different mirror address
-	mirror := repository.NewMirror(Mirror())
+	mirror := repository.NewMirror(Mirror(), repository.MirrorOptions{})
 	r, err := repository.NewRepository(mirror, options)
 	repo = r
 	return err
