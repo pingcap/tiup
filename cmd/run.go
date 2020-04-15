@@ -66,7 +66,7 @@ func runComponent(tag, spec, binPath string, args []string) error {
 	ch := make(chan error)
 	defer func() {
 		for err := range ch {
-			if err != nil {
+			if err != nil && !strings.Contains(err.Error(), "signal") {
 				fmt.Printf("Component `%s` exit with error: %s\n", component, err.Error())
 				return
 			}
