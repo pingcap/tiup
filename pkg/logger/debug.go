@@ -48,7 +48,7 @@ func OutputDebugLog() {
 		filePath = fileName
 	}
 
-	err = ioutil.WriteFile(filePath, debugBuffer.Bytes(), os.ModePerm)
+	err = ioutil.WriteFile(filePath, debugBuffer.Bytes(), 0644)
 	if err != nil {
 		_, _ = colorutil.ColorWarningMsg.Fprint(os.Stderr, "\nWarn: Failed to write error debug log.\n")
 	} else {
