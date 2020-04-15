@@ -33,7 +33,7 @@ func main() {
 }
 
 func execute() error {
-	lang := "cn"
+	lang := "en"
 
 	rootCmd := &cobra.Command{
 		Use:          "tiup doc",
