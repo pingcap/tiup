@@ -124,7 +124,7 @@ func editTopo(clusterName string, metadata *meta.ClusterMeta) error {
 			return errors.Annotate(err, "failed to save")
 		}
 
-		log.Infof("Apply change successfully, please use `tiup cluster reload %s [-N <nodes>] [-R <roles>]` to reload config.", clusterName)
+		log.Infof("Apply change successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", cliutil.OsArgs0(), clusterName)
 
 		return nil
 	case "n", "no":

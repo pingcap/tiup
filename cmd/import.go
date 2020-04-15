@@ -16,6 +16,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/fatih/color"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/ansible"
@@ -32,23 +33,26 @@ func newImportCmd() *cobra.Command {
 		ansibleDir        string
 		inventoryFileName string
 		rename            string
+		noBackup          bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "import",
 		Short: "Import an exist TiDB cluster from TiDB-Ansible",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// migrate cluster metadata from Ansible inventory
-			clsName, clsMeta, err := ansible.ImportAnsible(ansibleDir, inventoryFileName, sshTimeout)
-			if err != nil {
-				return err
-			}
-
 			// Use current directory as ansibleDir by default
 			if ansibleDir == "" {
-				if ansibleDir, err = os.Getwd(); err != nil {
+				cwd, err := os.Getwd()
+				if err != nil {
 					return err
 				}
+				ansibleDir = cwd
+			}
+
+			// migrate cluster metadata from Ansible inventory
+			clsName, clsMeta, inv, err := ansible.ReadInventory(ansibleDir, inventoryFileName)
+			if err != nil {
+				return err
 			}
 
 			// Rename the imported cluster
@@ -61,7 +65,40 @@ func newImportCmd() *cobra.Command {
 			if tiuputils.IsExist(meta.ClusterPath(clsName, meta.MetaFileName)) {
 				return errDeployNameDuplicate.
 					New("Cluster name '%s' is duplicated", clsName).
-					WithProperty(cliutil.SuggestionFromFormat("Please use --rename `NAME` to specify another name (You can use `tiup cluster list` to see all clusters)"))
+					WithProperty(cliutil.SuggestionFromFormat(
+						fmt.Sprintf("Please use --rename `NAME` to specify another name (You can use `%s list` to see all clusters)", cliutil.OsArgs0())))
+			}
+
+			// prompt for backups
+			backupDir := meta.ClusterPath(clsName, "ansible-backup")
+			backupFile := filepath.Join(ansibleDir, fmt.Sprintf("tiup-%s.bak", inventoryFileName))
+			prompt := fmt.Sprintf("The ansible directory will be moved to %s after import.", backupDir)
+			if noBackup {
+				log.Infof("The '--no-backup' flag is set, the ansible directory will be kept at its current location.")
+				prompt = fmt.Sprintf("The inventory file will be renamed to %s after import.", backupFile)
+			}
+			log.Warnf("TiDB-Ansible and TiUP Cluster can NOT be used together, please DO NOT try to use ansible to manage the imported cluster anymore to avoid metadata conflict.")
+			log.Infof(prompt)
+			if !skipConfirm {
+				err = cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
+				if err != nil {
+					return err
+				}
+			}
+
+			if !skipConfirm {
+				err = cliutil.PromptForConfirmOrAbortError(
+					"Prepared to import TiDB %s cluster %s.\nDo you want to continue? [y/N]:",
+					clsMeta.Version,
+					clsName)
+				if err != nil {
+					return err
+				}
+			}
+
+			// parse config and import nodes
+			if err = ansible.ParseAndImportInventory(ansibleDir, clsMeta, inv, sshTimeout); err != nil {
+				return err
 			}
 
 			// copy SSH key to TiOps profile directory
@@ -88,16 +125,24 @@ func newImportCmd() *cobra.Command {
 				return err
 			}
 
-			// TODO: move original TiDB-Ansible directory to a staged location
-			backupDir := meta.ClusterPath(clsName, "ansible-backup")
-			if err = utils.Move(ansibleDir, backupDir); err != nil {
-				return err
+			// backup ansible files
+			if noBackup {
+				// rename original TiDB-Ansible inventory file
+				if err = utils.Move(filepath.Join(ansibleDir, inventoryFileName), backupFile); err != nil {
+					return err
+				}
+				log.Infof("Ansible inventory renamed to %s.", color.HiCyanString(backupFile))
+			} else {
+				// move original TiDB-Ansible directory to a staged location
+				if err = utils.Move(ansibleDir, backupDir); err != nil {
+					return err
+				}
+				log.Infof("Ansible inventory saved in %s.", color.HiCyanString(backupDir))
 			}
-			log.Infof("Ansible inventory saved in %s.", backupDir)
 
 			log.Infof("Cluster %s imported.", clsName)
-			fmt.Printf("Try `%s` to see the cluster.\n",
-				color.HiYellowString("%s display %s", cmd.Parent().Use, clsName))
+			fmt.Printf("Try `%s` to show node list and status of the cluster.\n",
+				color.HiYellowString("%s display %s", cliutil.OsArgs0(), clsName))
 			return nil
 		},
 	}
@@ -105,6 +150,7 @@ func newImportCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&ansibleDir, "dir", "d", "", "The path to TiDB-Ansible directory")
 	cmd.Flags().StringVar(&inventoryFileName, "inventory", ansible.AnsibleInventoryFile, "The name of inventory file")
 	cmd.Flags().StringVarP(&rename, "rename", "r", "", "Rename the imported cluster to `NAME`")
+	cmd.Flags().BoolVar(&noBackup, "no-backup", false, "Don't backup ansible dir, useful when there're multiple inventory files")
 
 	return cmd
 }

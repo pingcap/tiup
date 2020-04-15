@@ -30,9 +30,6 @@ import (
 )
 
 func newDestroyCmd() *cobra.Command {
-	var (
-		skipConfirm bool
-	)
 	cmd := &cobra.Command{
 		Use:   "destroy <cluster-name>",
 		Short: "Destroy a specified cluster",
@@ -86,8 +83,6 @@ func newDestroyCmd() *cobra.Command {
 			return nil
 		},
 	}
-
-	cmd.Flags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip the confirmation of destroying")
 
 	return cmd
 }

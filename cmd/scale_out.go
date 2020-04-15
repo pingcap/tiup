@@ -35,7 +35,6 @@ import (
 type scaleOutOptions struct {
 	user         string // username to login to the SSH server
 	identityFile string // path to the private key file
-	skipConfirm  bool   // skip the confirmation of topology
 }
 
 func newScaleOutCmd() *cobra.Command {
@@ -56,7 +55,6 @@ func newScaleOutCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&opt.user, "user", "root", "The user name to login via SSH. The user must has root (or sudo) privilege.")
 	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", "", "The path of the SSH identity file. If specified, public key authentication will be used.")
-	cmd.Flags().BoolVarP(&opt.skipConfirm, "yes", "y", false, "Skip confirming the topology")
 
 	return cmd
 }
@@ -95,7 +93,7 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 			patchedComponents.Insert(instance.ComponentName())
 		}
 	})
-	if !opt.skipConfirm {
+	if !skipConfirm {
 		// patchedComponents are components that have been patched and overwrited
 		if err := confirmTopology(clusterName, metadata.Version, &newPart, patchedComponents); err != nil {
 			return err

@@ -18,39 +18,67 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/creasty/defaults"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
+	"github.com/pingcap/errors"
 	"github.com/relex/aini"
 )
 
-// ImportAnsible imports a TiDB cluster deployed by TiDB-Ansible
-func ImportAnsible(dir, inventoryFileName string, sshTimeout int64) (string, *meta.ClusterMeta, error) {
+// ReadInventory reads the inventory files of a TiDB cluster deployed by TiDB-Ansible
+func ReadInventory(dir, inventoryFileName string) (string, *meta.ClusterMeta, *aini.InventoryData, error) {
 	if inventoryFileName == "" {
 		inventoryFileName = AnsibleInventoryFile
 	}
 	inventoryFile, err := os.Open(filepath.Join(dir, inventoryFileName))
 	if err != nil {
-		return "", nil, err
+		return "", nil, nil, err
 	}
 	defer inventoryFile.Close()
 
 	log.Infof("Found inventory file %s, parsing...", inventoryFile.Name())
 	inventory, err := aini.Parse(inventoryFile)
 	if err != nil {
-		return "", nil, err
+		return "", nil, inventory, err
 	}
 
-	clsName, clsMeta, err := parseInventory(dir, inventory, sshTimeout)
-	if err != nil {
-		return "", nil, err
+	clsMeta := &meta.ClusterMeta{
+		Topology: &meta.TopologySpecification{
+			GlobalOptions:    meta.GlobalOptions{},
+			MonitoredOptions: meta.MonitoredOptions{},
+			TiDBServers:      make([]meta.TiDBSpec, 0),
+			TiKVServers:      make([]meta.TiKVSpec, 0),
+			PDServers:        make([]meta.PDSpec, 0),
+			TiFlashServers:   make([]meta.TiFlashSpec, 0),
+			PumpServers:      make([]meta.PumpSpec, 0),
+			Drainers:         make([]meta.DrainerSpec, 0),
+			Monitors:         make([]meta.PrometheusSpec, 0),
+			Grafana:          make([]meta.GrafanaSpec, 0),
+			Alertmanager:     make([]meta.AlertManagerSpec, 0),
+		},
+	}
+	clsName := ""
+
+	// get global vars
+	if grp, ok := inventory.Groups["all"]; ok && len(grp.Hosts) > 0 {
+		for _, host := range grp.Hosts {
+			if host.Vars["process_supervision"] != "systemd" {
+				return "", nil, inventory, errors.New("only support cluster deployed with systemd")
+			}
+			clsMeta.User = host.Vars["ansible_user"]
+			clsMeta.Topology.GlobalOptions.User = clsMeta.User
+			clsMeta.Version = host.Vars["tidb_version"]
+			clsName = host.Vars["cluster_name"]
+
+			log.Infof("Found cluster \"%s\" (%s), deployed with user %s.",
+				clsName, clsMeta.Version, clsMeta.User)
+			// only read the first host, all global vars should be the same
+			break
+		}
+	} else {
+		return "", nil, inventory, errors.New("no available host in the inventory file")
 	}
 
-	// TODO: get values from templates of roles to overwrite defaults
-	if err := defaults.Set(clsMeta); err != nil {
-		return clsName, nil, err
-	}
-	return clsName, clsMeta, err
+	return clsName, clsMeta, inventory, err
 }
 
 // SSHKeyPath gets the path to default SSH private key, this is the key Ansible

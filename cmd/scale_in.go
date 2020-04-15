@@ -34,8 +34,7 @@ import (
 
 func newScaleInCmd() *cobra.Command {
 	var (
-		options     operator.Options
-		skipConfirm bool
+		options operator.Options
 	)
 	cmd := &cobra.Command{
 		Use:   "scale-in <cluster-name>",
@@ -62,7 +61,6 @@ func newScaleInCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Specify the nodes")
-	cmd.Flags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip the confirmation of destroying")
 	cmd.Flags().Int64Var(&options.Timeout, "transfer-timeout", 300, "Timeout in seconds when transferring PD and TiKV store leaders")
 
 	_ = cmd.MarkFlagRequired("node")

@@ -16,7 +16,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/fatih/color"
@@ -38,8 +37,9 @@ import (
 var rootCmd *cobra.Command
 
 var (
-	errNS      = errorx.NewNamespace("cmd")
-	sshTimeout int64 // timeout in seconds when connecting an SSH server
+	errNS       = errorx.NewNamespace("cmd")
+	sshTimeout  int64 // timeout in seconds when connecting an SSH server
+	skipConfirm bool
 )
 
 func init() {
@@ -52,7 +52,7 @@ func init() {
 	cobra.EnableCommandSorting = false
 
 	rootCmd = &cobra.Command{
-		Use:           filepath.Base(os.Args[0]),
+		Use:           cliutil.OsArgs0(),
 		Short:         "Deploy a TiDB cluster for production",
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -77,6 +77,7 @@ func init() {
 	beautifyCobraUsageAndHelp(rootCmd)
 
 	rootCmd.PersistentFlags().Int64Var(&sshTimeout, "ssh-timeout", 5, "Timeout in seconds to connect host via SSH, ignored for operations that don't need an SSH connection.")
+	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
 
 	rootCmd.AddCommand(
 		newDeploy(),
