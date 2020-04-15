@@ -48,9 +48,6 @@ func registerTpcc(root *cobra.Command) {
 	cmd.PersistentFlags().IntVar(&tpccConfig.Parts, "parts", 1, "Number to partition warehouses")
 	cmd.PersistentFlags().IntVar(&tpccConfig.Warehouses, "warehouses", 10, "Number of warehouses")
 	cmd.PersistentFlags().BoolVar(&tpccConfig.CheckAll, "check-all", false, "Run all consistency checks")
-	cmd.PersistentFlags().StringVar(&tpccConfig.OutputDir, "output", "", "Output directory for generating csv file when preparing data")
-	cmd.PersistentFlags().StringVar(&tpccConfig.SpecifiedTables, "tables", "", "Specified tables for "+
-		"generating file, separated by ','. Valid only if output is set. If this flag is not set, generate all tables by default.")
 
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",
@@ -59,6 +56,9 @@ func registerTpcc(root *cobra.Command) {
 			executeTpcc("prepare")
 		},
 	}
+	cmdPrepare.PersistentFlags().StringVar(&tpccConfig.OutputDir, "output", "", "Output directory for generating file if specified")
+	cmdPrepare.PersistentFlags().StringVar(&tpccConfig.SpecifiedTables, "tables", "", "Specified tables for "+
+		"generating file, separated by ','. Valid only if output is set. If this flag is not set, generate all tables by default")
 
 	var cmdRun = &cobra.Command{
 		Use:   "run",
