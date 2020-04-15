@@ -297,6 +297,7 @@ func buildScaleOutTask(
 		}).
 		ClusterOperate(newPart, operator.StartOperation, operator.Options{}).
 		Parallel(refreshConfigTasks...).
+		ClusterOperate(metadata.Topology, operator.RestartOperation, operator.Options{Roles: []string{meta.ComponentPrometheus}}).
 		Build(), nil
 
 }
