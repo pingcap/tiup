@@ -23,6 +23,7 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/skratchdot/open-golang/open"
+	"github.com/spf13/cobra"
 )
 
 func main() {
@@ -33,19 +34,36 @@ func main() {
 }
 
 func execute() error {
-	home := os.Getenv(localdata.EnvNameComponentInstallDir)
-	if home == "" {
-		return errors.New("component `book` cannot run in standalone mode")
+	showAuthor := false
+	rootCmd := &cobra.Command{
+		Use:          "tiup book",
+		Short:        "Open the offline copy of <TiDB in Action> in the browser",
+		SilenceUsage: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			home := os.Getenv(localdata.EnvNameComponentInstallDir)
+			if home == "" {
+				return errors.New("component `book` cannot run in standalone mode")
+			}
+
+			port, err := utils.GetFreePort("", 39989)
+			if err != nil {
+				return errors.New("cannot find free port")
+			}
+
+			http.Handle("/", http.FileServer(http.Dir(filepath.Join(home, "_book"))))
+
+			url := fmt.Sprintf("http://localhost:%d", port)
+			if showAuthor {
+				url = fmt.Sprintf("http://localhost:%d/writer.html", port)
+			}
+			if err := open.Run(url); err != nil {
+				return err
+			}
+			return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+		},
 	}
 
-	port, err := utils.GetFreePort("", 39989)
-	if err != nil {
-		return errors.New("cannot find free port")
-	}
+	rootCmd.Flags().BoolVar(&showAuthor, "authors", false, "Open the author page in the browser")
 
-	http.Handle("/", http.FileServer(http.Dir(filepath.Join(home, "_book"))))
-	if err := open.Run(fmt.Sprintf("http://localhost:%d", port)); err != nil {
-		return err
-	}
-	return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	return rootCmd.Execute()
 }
