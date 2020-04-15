@@ -67,11 +67,10 @@ func runComponent(tag, spec, binPath string, args []string) error {
 	defer func() {
 		for err := range ch {
 			if err != nil {
-				fmt.Printf("Failed to stop component `%s`: %s\n", component, err.Error())
+				fmt.Printf("Component `%s` exit with error: %s\n", component, err.Error())
 				return
 			}
 		}
-		fmt.Printf("Success to stop component `%s`\n", component)
 	}()
 	go func() {
 		defer close(ch)
@@ -91,7 +90,7 @@ func runComponent(tag, spec, binPath string, args []string) error {
 		return syscall.Kill(p.Pid, s.(syscall.Signal))
 
 	case err := <-ch:
-		return errors.Annotatef(err, "start `%s` (wd:%s) failed", p.Exec, p.Dir)
+		return errors.Annotatef(err, "run `%s` (wd:%s) failed", p.Exec, p.Dir)
 	}
 }
 
