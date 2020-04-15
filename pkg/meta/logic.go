@@ -796,7 +796,7 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		// if instance config exists AND the config is false, throw an error.
 		// if instance config does not exist, if global config does not exist OR the config is false, throw an error
 		if instanceEnabled, ok2 := pd.Config[key].(bool); (ok2 && !instanceEnabled) || (!ok2 && (!ok1 || !globalEnabled)) {
-			return fmt.Errorf("must set replication.enable-placement-rules to true in pd conf to enable TiFlash")
+			log.Warnf("should set replication.enable-placement-rules to true in pd conf to enable TiFlash")
 		}
 	}
 
