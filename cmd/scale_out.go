@@ -89,8 +89,15 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 		return err
 	}
 
+	patchedComponents := set.NewStringSet()
+	newPart.IterInstance(func(instance meta.Instance) {
+		if exists := tiuputils.IsExist(meta.ClusterPath(clusterName, meta.PatchDirName, instance.ComponentName()+".tar.gz")); exists {
+			patchedComponents.Insert(instance.ComponentName())
+		}
+	})
 	if !opt.skipConfirm {
-		if err := confirmTopology(clusterName, metadata.Version, &newPart); err != nil {
+		// patchedComponents are components that have been patched and overwrited
+		if err := confirmTopology(clusterName, metadata.Version, &newPart, patchedComponents); err != nil {
 			return err
 		}
 	}
@@ -106,7 +113,7 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 	}
 
 	// Build the scale out tasks
-	t, err := buildScaleOutTask(clusterName, metadata, mergedTopo, opt, sshConnProps, &newPart)
+	t, err := buildScaleOutTask(clusterName, metadata, mergedTopo, opt, sshConnProps, &newPart, patchedComponents)
 	if err != nil {
 		return err
 	}
@@ -139,7 +146,8 @@ func buildScaleOutTask(
 	mergedTopo *meta.Specification,
 	opt scaleOutOptions,
 	sshConnProps *cliutil.SSHConnectionProps,
-	newPart *meta.TopologySpecification) (task.Task, error) {
+	newPart *meta.TopologySpecification,
+	patchedComponents set.StringSet) (task.Task, error) {
 	var (
 		envInitTasks       []task.Task // tasks which are used to initialize environment
 		downloadCompTasks  []task.Task // tasks which are used to download components
@@ -200,25 +208,29 @@ func buildScaleOutTask(
 		logDir := clusterutil.Abs(metadata.User, inst.LogDir())
 
 		// Deploy component
-		t := task.NewBuilder().
+		tb := task.NewBuilder().
 			UserSSH(inst.GetHost(), inst.GetSSHPort(), metadata.User, sshTimeout).
 			Mkdir(metadata.User, inst.GetHost(),
 				deployDir, dataDir, logDir,
 				filepath.Join(deployDir, "bin"),
 				filepath.Join(deployDir, "conf"),
-				filepath.Join(deployDir, "scripts")).
-			CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
-			ScaleConfig(clusterName,
-				metadata.Version,
-				metadata.Topology,
-				inst,
-				metadata.User,
-				meta.DirPaths{
-					Deploy: deployDir,
-					Data:   dataDir,
-					Log:    logDir,
-				},
-			).Build()
+				filepath.Join(deployDir, "scripts"))
+		if patchedComponents.Exist(inst.ComponentName()) {
+			tb.InstallPackage(meta.ClusterPath(clusterName, meta.PatchDirName, inst.ComponentName()+".tar.gz"), inst.GetHost(), deployDir)
+		} else {
+			tb.CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
+		}
+		t := tb.ScaleConfig(clusterName,
+			metadata.Version,
+			metadata.Topology,
+			inst,
+			metadata.User,
+			meta.DirPaths{
+				Deploy: deployDir,
+				Data:   dataDir,
+				Log:    logDir,
+			},
+		).Build()
 		deployCompTasks = append(deployCompTasks, t)
 	})
 

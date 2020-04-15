@@ -62,7 +62,8 @@ func (op Operation) String() string {
 	return fmt.Sprintf("unknonw-op(%d)", op)
 }
 
-func filterComponent(comps []meta.Component, components set.StringSet) (res []meta.Component) {
+// FilterComponent filter components by set
+func FilterComponent(comps []meta.Component, components set.StringSet) (res []meta.Component) {
 	if len(components) == 0 {
 		res = comps
 		return
@@ -79,7 +80,8 @@ func filterComponent(comps []meta.Component, components set.StringSet) (res []me
 	return
 }
 
-func filterInstance(instances []meta.Instance, nodes set.StringSet) (res []meta.Instance) {
+// FilterInstance filter instances by set
+func FilterInstance(instances []meta.Instance, nodes set.StringSet) (res []meta.Instance) {
 	if len(nodes) == 0 {
 		res = instances
 		return

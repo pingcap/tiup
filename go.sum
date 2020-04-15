@@ -248,6 +248,7 @@ github.com/json-iterator/go v1.1.9 h1:9yzud/Ht36ygwatGx56VwCZtlI/2AD15T1X2sjSuGn
 github.com/json-iterator/go v1.1.9/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
 github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a h1:FaWFmfWdAUKbSCtOU2QjDaorUexogfaMgbipgYATUMU=
 github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a/go.mod h1:UJSiEoRfvx3hP73CvoARgeLjaIOjybY9vj8PUPPFGeU=
+github.com/juju/errors v0.0.0-20190930114154-d42613fe1ab9 h1:hJix6idebFclqlfZCHE7EUX7uqLCyb70nHNHH1XKGBg=
 github.com/juju/errors v0.0.0-20190930114154-d42613fe1ab9/go.mod h1:W54LbzXuIE0boCoNJfwqpmkKJ1O4TCTZMetAt6jGk7Q=
 github.com/juju/loggo v0.0.0-20190526231331-6e530bcce5d8/go.mod h1:vgyd7OREkbtVEN/8IXZe5Ooef3LQePvuBm9UWj6ZL8U=
 github.com/juju/ratelimit v1.0.1 h1:+7AIFJVQ0EQgq/K9+0Krm7m530Du7tIz0METWzN0RgY=
@@ -339,8 +340,6 @@ github.com/pierrec/lz4 v2.2.6+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi
 github.com/pingcap-incubator/tidb-dashboard v0.0.0-20200312155252-b741b1239146/go.mod h1:raUwV40mvXGzPt16ZczIDMHnRiXWCP8uakx/cDL/UyA=
 github.com/pingcap-incubator/tiup v0.0.2-0.20200402062422-48bb80e47c43 h1:q8NrSLS9mct/IP5zIynsxXBjYvvgZN7rM7XmXE4OiSA=
 github.com/pingcap-incubator/tiup v0.0.2-0.20200402062422-48bb80e47c43/go.mod h1:uO2G4qNNM3mHQKQ2bXi3rHrjtOKlF13iIOHzbbPtmIA=
-github.com/pingcap-incubator/tiup v0.0.2-0.20200414134151-08578c8837bf h1:z2is7CPD3+NYrwNaJ0Gy0RhnNtWoS6zUVgpDYaBow94=
-github.com/pingcap-incubator/tiup v0.0.2-0.20200414134151-08578c8837bf/go.mod h1:WM7VojBiNcN/USe5z0sjt1z8hTl/vA3TD2Y3kErbZho=
 github.com/pingcap-incubator/tiup v0.0.2-0.20200414234825-c398de2932f8 h1:wABlFQDDHzlAEucXMhB6+Emusq1DKlF4PgZs6kYdAFs=
 github.com/pingcap-incubator/tiup v0.0.2-0.20200414234825-c398de2932f8/go.mod h1:WM7VojBiNcN/USe5z0sjt1z8hTl/vA3TD2Y3kErbZho=
 github.com/pingcap/check v0.0.0-20190102082844-67f458068fc8/go.mod h1:B1+S9LNcuMyLH/4HMTViQOJevkGiik3wW2AN9zb2fNQ=

@@ -14,6 +14,8 @@
 package utils
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -68,4 +70,21 @@ func Move(src, dst string) error {
 	}
 
 	return os.Rename(src, dst)
+}
+
+// Checksum returns the sha1 sum of target file
+func Checksum(file string) (string, error) {
+	tarball, err := os.OpenFile(file, os.O_RDONLY, 0)
+	if err != nil {
+		return "", err
+	}
+	defer tarball.Close()
+
+	sha1Writter := sha1.New()
+	if _, err := io.Copy(sha1Writter, tarball); err != nil {
+		return "", err
+	}
+
+	checksum := hex.EncodeToString(sha1Writter.Sum(nil))
+	return checksum, nil
 }

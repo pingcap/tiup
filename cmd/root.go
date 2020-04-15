@@ -94,6 +94,7 @@ func init() {
 		newImportCmd(),
 		newEditConfigCmd(),
 		newReloadCmd(),
+		newPatchCmd(),
 	)
 }
 

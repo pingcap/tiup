@@ -15,11 +15,9 @@ package task
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
-	"github.com/pingcap/errors"
 )
 
 // CopyComponent is used to copy all files related the specific version a component
@@ -34,29 +32,17 @@ type CopyComponent struct {
 // Execute implements the Task interface
 func (c *CopyComponent) Execute(ctx *Context) error {
 	// Copy to remote server
-	exec, found := ctx.GetExecutor(c.host)
-	if !found {
-		return ErrNoExecutor
-	}
-
 	resName := fmt.Sprintf("%s-%s", c.component, c.version)
 	fileName := fmt.Sprintf("%s-linux-amd64.tar.gz", resName)
 	srcPath := meta.ProfilePath(meta.TiOpsPackageCacheDir, fileName)
-	dstDir := filepath.Join(c.dstDir, "bin")
-	dstPath := filepath.Join(dstDir, fileName)
 
-	err := exec.Transfer(srcPath, dstPath, false)
-	if err != nil {
-		return errors.Trace(err)
+	install := &InstallPackage{
+		srcPath: srcPath,
+		host:    c.host,
+		dstDir:  c.dstDir,
 	}
 
-	cmd := fmt.Sprintf(`tar -xzf %s -C %s && rm %s`, dstPath, dstDir, dstPath)
-
-	_, stderr, err := exec.Execute(cmd, false)
-	if err != nil {
-		return errors.Annotatef(err, "stderr: %s", string(stderr))
-	}
-	return nil
+	return install.Execute(ctx)
 }
 
 // Rollback implements the Task interface

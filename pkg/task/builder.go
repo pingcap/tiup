@@ -128,6 +128,16 @@ func (b *Builder) CopyComponent(component string, version repository.Version, ds
 	return b
 }
 
+// InstallPackage appends a InstallPackage task to the current task collection
+func (b *Builder) InstallPackage(srcPath, dstHost, dstDir string) *Builder {
+	b.tasks = append(b.tasks, &InstallPackage{
+		srcPath: srcPath,
+		host:    dstHost,
+		dstDir:  dstDir,
+	})
+	return b
+}
+
 // BackupComponent appends a BackupComponent task to the current task collection
 func (b *Builder) BackupComponent(component, fromVer string, dstHost, dstDir string) *Builder {
 	b.tasks = append(b.tasks, &BackupComponent{

@@ -33,6 +33,7 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/task"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
+	"github.com/pingcap-incubator/tiup/pkg/set"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
@@ -311,7 +312,7 @@ Please change to use another port or another host.
 	return nil
 }
 
-func confirmTopology(clusterName, version string, topo *meta.Specification) error {
+func confirmTopology(clusterName, version string, topo *meta.Specification, patchedRoles set.StringSet) error {
 	log.Infof("Please confirm your topology:")
 
 	cyan := color.New(color.FgCyan, color.Bold)
@@ -324,8 +325,12 @@ func confirmTopology(clusterName, version string, topo *meta.Specification) erro
 	}
 
 	topo.IterInstance(func(instance meta.Instance) {
+		comp := instance.ComponentName()
+		if patchedRoles.Exist(comp) {
+			comp = comp + " (patched)"
+		}
 		clusterTable = append(clusterTable, []string{
-			instance.ComponentName(),
+			comp,
 			instance.GetHost(),
 			utils.JoinInt(instance.UsedPorts(), "/"),
 			strings.Join(instance.UsedDirs(), ","),
@@ -336,7 +341,10 @@ func confirmTopology(clusterName, version string, topo *meta.Specification) erro
 
 	log.Warnf("Attention:")
 	log.Warnf("    1. If the topology is not what you expected, check your yaml file.")
-	log.Warnf("    1. Please confirm there is no port/directory conflicts in same host.")
+	log.Warnf("    2. Please confirm there is no port/directory conflicts in same host.")
+	if len(patchedRoles) != 0 {
+		log.Errorf("    3. The component marked as `patched` has been replaced by previours patch command.")
+	}
 
 	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 }
@@ -365,7 +373,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 	}
 
 	if !opt.skipConfirm {
-		if err := confirmTopology(clusterName, clusterVersion, &topo); err != nil {
+		if err := confirmTopology(clusterName, clusterVersion, &topo, set.NewStringSet()); err != nil {
 			return err
 		}
 	}

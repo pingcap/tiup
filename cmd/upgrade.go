@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/bindversion"
@@ -169,6 +170,9 @@ func upgrade(clusterName, clusterVersion string, opt upgradeOptions) error {
 
 	metadata.Version = clusterVersion
 	if err := meta.SaveClusterMeta(clusterName, metadata); err != nil {
+		return errors.Trace(err)
+	}
+	if err := os.RemoveAll(meta.ClusterPath(clusterName, "patch")); err != nil {
 		return errors.Trace(err)
 	}
 

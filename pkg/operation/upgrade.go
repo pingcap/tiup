@@ -34,7 +34,7 @@ func Upgrade(
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := spec.ComponentsByStartOrder()
-	components = filterComponent(components, roleFilter)
+	components = FilterComponent(components, roleFilter)
 
 	leaderAware := set.NewStringSet(meta.ComponentPD, meta.ComponentTiKV)
 
@@ -44,7 +44,7 @@ func Upgrade(
 	}
 
 	for _, component := range components {
-		instances := filterInstance(component.Instances(), nodeFilter)
+		instances := FilterInstance(component.Instances(), nodeFilter)
 		if len(instances) < 1 {
 			continue
 		}

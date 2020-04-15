@@ -27,6 +27,8 @@ import (
 const (
 	// MetaFileName is the file name of the meta file.
 	MetaFileName = "meta.yaml"
+	// PatchDirName is the directory to store patch file eg. {PatchDirName}/tidb-hotfix.tar.gz
+	PatchDirName = "patch"
 )
 
 var (

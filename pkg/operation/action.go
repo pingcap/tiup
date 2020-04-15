@@ -41,10 +41,10 @@ func Start(
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := spec.ComponentsByStartOrder()
-	components = filterComponent(components, roleFilter)
+	components = FilterComponent(components, roleFilter)
 
 	for _, com := range components {
-		insts := filterInstance(com.Instances(), nodeFilter)
+		insts := FilterInstance(com.Instances(), nodeFilter)
 		err := StartComponent(getter, insts)
 		if err != nil {
 			return errors.Annotatef(err, "failed to start %s", com.Name())
@@ -71,7 +71,7 @@ func Stop(
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := spec.ComponentsByStopOrder()
-	components = filterComponent(components, roleFilter)
+	components = FilterComponent(components, roleFilter)
 
 	instCount := map[string]int{}
 	spec.IterInstance(func(inst meta.Instance) {
@@ -79,7 +79,7 @@ func Stop(
 	})
 
 	for _, com := range components {
-		insts := filterInstance(com.Instances(), nodeFilter)
+		insts := FilterInstance(com.Instances(), nodeFilter)
 		err := StopComponent(getter, insts)
 		if err != nil {
 			return errors.Annotatef(err, "failed to stop %s", com.Name())
