@@ -388,11 +388,13 @@ func bootCluster(options *bootOptions) error {
 			syscall.SIGTERM,
 			syscall.SIGQUIT)
 		sig := (<-sc).(syscall.Signal)
-		for _, inst := range all {
-			_ = syscall.Kill(inst.Pid(), sig)
-		}
-		if monitorCmd != nil {
-			_ = syscall.Kill(monitorCmd.Process.Pid, sig)
+		if sig != syscall.SIGINT {
+			for _, inst := range all {
+				_ = syscall.Kill(inst.Pid(), sig)
+			}
+			if monitorCmd != nil {
+				_ = syscall.Kill(monitorCmd.Process.Pid, sig)
+			}
 		}
 	}()
 
