@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+    {{- partial "head/ga" . -}}
+    {{- block "headTpl" . -}}{{- end -}}
+    {{- $data_i18_cn := $.Scratch.Get "data_i18_cn" -}}
+    {{- $no_footer := $.Scratch.Get "no_footer" -}}
+    <title>{{ block "title" . }}{{- .Title -}}{{ end }} |&nbsp;{{- if and $data_i18_cn (ne ($.Scratch.Get "nav_active") "docs") -}}PingCAP {{- else -}} {{ $.Scratch.Get "metaTitle" }} {{- end -}}
+    </title>
+    {{- partial "head/meta-seo" . -}}
+    {{- partial "head/preload-assets" . -}}
+    {{- partial "head/preload-css" (dict "href" "/css/main.css") -}}
+    {{- partial "head/preload-css" (dict "href" "https://download.pingcap.com/style/docsearch.min.css") -}}
+    {{- partial "tracking-code/ga-events-js.html" -}}
+    <script type="text/javascript">
+    if (location.pathname === '/') {
+        if (location.hostname === 'pingcap.github.io') {
+            location.href = '/en/'
+        }
+    }
+    </script>
+</head>
+
+{{ $data_i18_cn := $.Scratch.Get "data_i18_cn" }}
+{{ $homepage := $.Scratch.Get "homepage" }}
+{{ $.Scratch.Set "tidb_stable_version" .Site.Params.versions.docs.tidb_stable_version }}
+{{ $.Scratch.Set "tidb_total_versions" .Site.Params.versions.docs.tidb_total_versions }}
+{{ $.Scratch.Set "operator_stable_version" .Site.Params.versions.docs.operator_stable_version }}
+{{ $.Scratch.Set "operator_total_versions" .Site.Params.versions.docs.operator_total_versions }}
+{{ $.Scratch.Set "dm_stable_version" .Site.Params.versions.docs.dm_stable_version }}
+{{ $.Scratch.Set "dm_total_versions" .Site.Params.versions.docs.dm_total_versions }}
+<body data-lang="{{- if $data_i18_cn -}}cn{{- else -}}en{{- end -}}" {{ if $homepage }}class="homepage"{{ end }}>
+    <!-- {{- partial "loaders/page-loader.html" -}} -->
+
+    <div id="page-content">
+        {{- block "main" . -}}{{- end -}}
+    </div>
+    <!-- <script type="text/javascript">
+        document.getElementById('page-loader').style.display='none';
+        document.getElementById('page-content').style.display='block';
+    </script> -->
+
+    <div class="overlay"></div>
+
+    <script src="https://download.pingcap.com/js/jquery.min.js"></script>
+    {{- block "footJS" . -}}{{- end -}}
+
+    <script src="https://cdn.jsdelivr.net/algoliasearch/3/algoliasearch.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.js"></script>
+
+    <!-- Add sentry scripts to track website errors -->
+    <script src="https://browser.sentry-cdn.com/5.11.0/bundle.min.js"
+        integrity="sha384-jbFinqIbKkHNg+QL+yxB4VrBC0EAPTuaLGeRT0T+NfEV89YC6u1bKxHLwoo+/xxY"
+        crossorigin="anonymous"></script>
+    <script type="text/javascript">
+        Sentry.init({
+            dsn: 'https://3f28ed393c5545daa74496b3cdb2e9ba@sentry.io/1887163'
+        });
+    </script>
+</body>
+
+</html>
