@@ -18,7 +18,7 @@ require (
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-runewidth v0.0.7
 	github.com/onsi/gomega v1.5.0 // indirect
-	github.com/pingcap-incubator/tiup v0.0.2-0.20200402062422-48bb80e47c43
+	github.com/pingcap-incubator/tiup v0.0.2-0.20200414234825-c398de2932f8
 	github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712
 	github.com/pingcap/errors v0.11.5-0.20190809092503-95897b64e011
 	github.com/pingcap/kvproto v0.0.0-20200317095539-c42a1d8db7d3
