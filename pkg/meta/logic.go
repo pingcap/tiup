@@ -782,7 +782,7 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 	}
 	tidbStatusStr := strings.Join(tidbStatusAddrs, ",")
 
-	pdAddrs := []string{}
+	var pdAddrs []string
 	for _, pd := range i.topo.PDServers {
 		pdAddrs = append(pdAddrs, fmt.Sprintf("%s:%d", pd.Host, uint64(pd.ClientPort)))
 	}
