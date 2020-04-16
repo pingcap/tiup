@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"time"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
@@ -94,6 +95,8 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version repository.Versi
 		}
 		binPath = dir
 	}
+	// Wait for PD
+	time.Sleep(10 * time.Second)
 	dirPath := path.Dir(binPath)
 	clusterManagerPath := fmt.Sprintf("%s/flash_cluster_manager", dirPath)
 	if err := inst.checkConfig(inst.Host, wd, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
