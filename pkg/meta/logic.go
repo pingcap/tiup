@@ -129,7 +129,13 @@ func (i *instance) InitConfig(e executor.TiOpsExecutor, _, _, user string, paths
 	port := i.GetPort()
 	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
 
-	systemCfg := system.NewConfig(comp, user, paths.Deploy)
+	resource := MergeResourceControl(i.topo.GlobalOptions.ResourceControl, i.resourceControl())
+	systemCfg := system.NewConfig(comp, user, paths.Deploy).
+		WithMemoryLimit(resource.MemoryLimit).
+		WithCPUQuota(resource.CPUQuota).
+		WithIOReadBandwidthMax(resource.IOReadBandwidthMax).
+		WithIOWriteBandwidthMax(resource.IOWriteBandwidthMax)
+
 	// For not auto start if using binlogctl to offline.
 	// bad design
 	if comp == ComponentPump || comp == ComponentDrainer {
@@ -234,6 +240,29 @@ func (i *instance) DataDir() string {
 		return ""
 	}
 	return dataDir.Interface().(string)
+}
+
+// MergeResourceControl merge the rhs into lhs and overwrite rhs if lhs has value for same field
+func MergeResourceControl(lhs, rhs ResourceControl) ResourceControl {
+	if rhs.MemoryLimit != "" {
+		lhs.MemoryLimit = rhs.MemoryLimit
+	}
+	if rhs.CPUQuota != "" {
+		lhs.CPUQuota = rhs.CPUQuota
+	}
+	if rhs.IOReadBandwidthMax != "" {
+		lhs.IOReadBandwidthMax = rhs.IOReadBandwidthMax
+	}
+	if rhs.IOWriteBandwidthMax != "" {
+		lhs.IOWriteBandwidthMax = rhs.IOWriteBandwidthMax
+	}
+	return lhs
+}
+
+func (i *instance) resourceControl() ResourceControl {
+	return reflect.ValueOf(i.InstanceSpec).
+		FieldByName("ResourceControl").
+		Interface().(ResourceControl)
 }
 
 func (i *instance) LogDir() string {

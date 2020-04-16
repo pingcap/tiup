@@ -556,6 +556,7 @@ func buildMonitoredDeployTask(
 					clusterName,
 					comp,
 					host,
+					globalOptions.ResourceControl,
 					monitoredOptions,
 					globalOptions.User,
 					meta.DirPaths{

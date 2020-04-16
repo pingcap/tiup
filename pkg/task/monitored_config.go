@@ -33,6 +33,7 @@ type MonitoredConfig struct {
 	name       string
 	component  string
 	host       string
+	globResCtl meta.ResourceControl
 	options    meta.MonitoredOptions
 	deployUser string
 	paths      meta.DirPaths
@@ -83,7 +84,14 @@ func (m *MonitoredConfig) Execute(ctx *Context) error {
 
 func (m *MonitoredConfig) syncMonitoredSystemConfig(exec executor.TiOpsExecutor, comp string, port int) error {
 	sysCfg := filepath.Join(m.paths.Cache, fmt.Sprintf("%s-%d.service", comp, port))
-	systemCfg := system.NewConfig(comp, m.deployUser, m.paths.Deploy)
+
+	resource := meta.MergeResourceControl(m.globResCtl, m.options.ResourceControl)
+	systemCfg := system.NewConfig(comp, m.deployUser, m.paths.Deploy).
+		WithMemoryLimit(resource.MemoryLimit).
+		WithCPUQuota(resource.CPUQuota).
+		WithIOReadBandwidthMax(resource.IOReadBandwidthMax).
+		WithIOWriteBandwidthMax(resource.IOWriteBandwidthMax)
+
 	if err := systemCfg.ConfigToFile(sysCfg); err != nil {
 		return err
 	}

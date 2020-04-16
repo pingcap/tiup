@@ -27,10 +27,10 @@ import (
 type Config struct {
 	ServiceName         string
 	User                string
-	MemoryLimit         uint
-	CPUQuota            uint
-	IOReadBandwidthMax  uint
-	IOWriteBandwidthMax uint
+	MemoryLimit         string
+	CPUQuota            string
+	IOReadBandwidthMax  string
+	IOWriteBandwidthMax string
 	DeployDir           string
 	DisableSendSigkill  bool
 	// Takes one of no, on-success, on-failure, on-abnormal, on-watchdog, on-abort, or always.
@@ -48,25 +48,25 @@ func NewConfig(service, user, deployDir string) *Config {
 }
 
 // WithMemoryLimit set the MemoryLimit field of Config
-func (c *Config) WithMemoryLimit(mem uint) *Config {
+func (c *Config) WithMemoryLimit(mem string) *Config {
 	c.MemoryLimit = mem
 	return c
 }
 
 // WithCPUQuota set the CPUQuota field of Config
-func (c *Config) WithCPUQuota(cpu uint) *Config {
+func (c *Config) WithCPUQuota(cpu string) *Config {
 	c.CPUQuota = cpu
 	return c
 }
 
 // WithIOReadBandwidthMax set the IOReadBandwidthMax field of Config
-func (c *Config) WithIOReadBandwidthMax(io uint) *Config {
+func (c *Config) WithIOReadBandwidthMax(io string) *Config {
 	c.IOReadBandwidthMax = io
 	return c
 }
 
 // WithIOWriteBandwidthMax set the IOWriteBandwidthMax field of Config
-func (c *Config) WithIOWriteBandwidthMax(io uint) *Config {
+func (c *Config) WithIOWriteBandwidthMax(io string) *Config {
 	c.IOWriteBandwidthMax = io
 	return c
 }

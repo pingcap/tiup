@@ -6,6 +6,17 @@ global:
   ssh_port: 22
   deploy_dir: "/tidb-deploy"
   data_dir: "/tidb-data"
+  # # Resource Control is used to limit the resource of instance
+  # # See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html
+  # # Supports using instance `resource_control` to override global `resource_control`
+  # resource_control:
+  #   # See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html#IOReadBandwidthMax=device%20bytes
+  #   memory_limit: "2G"
+  #   # See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html#IOReadBandwidthMax=device%20bytes
+  #   cpu_quota: "20%"
+  #   # See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html#IOReadBandwidthMax=device%20bytes
+  #   io_read_bandwidth_max: "/dev/disk/by-path/pci-0000:00:1f.2-scsi-0:0:0:0 100M"
+  #   io_write_bandwidth_max: "/dev/disk/by-path/pci-0000:00:1f.2-scsi-0:0:0:0 100M"
 
 # # Monitored variables are used to all the machine
 monitored:

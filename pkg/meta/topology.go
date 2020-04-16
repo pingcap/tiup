@@ -47,23 +47,34 @@ type (
 		IsImported() bool
 	}
 
+	// ResourceControl is used to control the system resource
+	// See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html
+	ResourceControl struct {
+		MemoryLimit         string `yaml:"memory_limit"`
+		CPUQuota            string `yaml:"cpu_quota"`
+		IOReadBandwidthMax  string `yaml:"io_read_bandwidth_max"`
+		IOWriteBandwidthMax string `yaml:"io_write_bandwidth_max"`
+	}
+
 	// GlobalOptions represents the global options for all groups in topology
 	// specification in topology.yaml
 	GlobalOptions struct {
-		User      string `yaml:"user,omitempty" default:"tidb"`
-		SSHPort   int    `yaml:"ssh_port,omitempty" default:"22"`
-		DeployDir string `yaml:"deploy_dir,omitempty" default:"deploy"`
-		DataDir   string `yaml:"data_dir,omitempty" default:"data"`
-		LogDir    string `yaml:"log_dir,omitempty"`
+		User            string          `yaml:"user,omitempty" default:"tidb"`
+		SSHPort         int             `yaml:"ssh_port,omitempty" default:"22"`
+		DeployDir       string          `yaml:"deploy_dir,omitempty" default:"deploy"`
+		DataDir         string          `yaml:"data_dir,omitempty" default:"data"`
+		LogDir          string          `yaml:"log_dir,omitempty"`
+		ResourceControl ResourceControl `yaml:"resource_control"`
 	}
 
 	// MonitoredOptions represents the monitored node configuration
 	MonitoredOptions struct {
-		NodeExporterPort     int    `yaml:"node_exporter_port,omitempty" default:"9100"`
-		BlackboxExporterPort int    `yaml:"blackbox_exporter_port,omitempty" default:"9115"`
-		DeployDir            string `yaml:"deploy_dir,omitempty"`
-		DataDir              string `yaml:"data_dir,omitempty"`
-		LogDir               string `yaml:"log_dir,omitempty"`
+		NodeExporterPort     int             `yaml:"node_exporter_port,omitempty" default:"9100"`
+		BlackboxExporterPort int             `yaml:"blackbox_exporter_port,omitempty" default:"9115"`
+		DeployDir            string          `yaml:"deploy_dir,omitempty"`
+		DataDir              string          `yaml:"data_dir,omitempty"`
+		LogDir               string          `yaml:"log_dir,omitempty"`
+		ResourceControl      ResourceControl `yaml:"resource_control"`
 	}
 
 	// ServerConfigs represents the server runtime configuration
@@ -96,15 +107,16 @@ type (
 
 // TiDBSpec represents the TiDB topology specification in topology.yaml
 type TiDBSpec struct {
-	Host       string                 `yaml:"host"`
-	SSHPort    int                    `yaml:"ssh_port,omitempty"`
-	Imported   bool                   `yaml:"imported,omitempty"`
-	Port       int                    `yaml:"port" default:"4000"`
-	StatusPort int                    `yaml:"status_port" default:"10080"`
-	DeployDir  string                 `yaml:"deploy_dir,omitempty"`
-	LogDir     string                 `yaml:"log_dir,omitempty"`
-	NumaNode   string                 `yaml:"numa_node,omitempty"`
-	Config     map[string]interface{} `yaml:"config,omitempty"`
+	Host            string                 `yaml:"host"`
+	SSHPort         int                    `yaml:"ssh_port,omitempty"`
+	Imported        bool                   `yaml:"imported,omitempty"`
+	Port            int                    `yaml:"port" default:"4000"`
+	StatusPort      int                    `yaml:"status_port" default:"10080"`
+	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
+	LogDir          string                 `yaml:"log_dir,omitempty"`
+	NumaNode        string                 `yaml:"numa_node,omitempty"`
+	Config          map[string]interface{} `yaml:"config,omitempty"`
+	ResourceControl ResourceControl        `yaml:"resource_control"`
 }
 
 // statusByURL queries current status of the instance by http status api.
@@ -151,17 +163,18 @@ func (s TiDBSpec) IsImported() bool {
 
 // TiKVSpec represents the TiKV topology specification in topology.yaml
 type TiKVSpec struct {
-	Host       string                 `yaml:"host"`
-	SSHPort    int                    `yaml:"ssh_port,omitempty"`
-	Imported   bool                   `yaml:"imported,omitempty"`
-	Port       int                    `yaml:"port" default:"20160"`
-	StatusPort int                    `yaml:"status_port" default:"20180"`
-	DeployDir  string                 `yaml:"deploy_dir,omitempty"`
-	DataDir    string                 `yaml:"data_dir,omitempty"`
-	LogDir     string                 `yaml:"log_dir,omitempty"`
-	Offline    bool                   `yaml:"offline,omitempty"`
-	NumaNode   string                 `yaml:"numa_node,omitempty"`
-	Config     map[string]interface{} `yaml:"config,omitempty"`
+	Host            string                 `yaml:"host"`
+	SSHPort         int                    `yaml:"ssh_port,omitempty"`
+	Imported        bool                   `yaml:"imported,omitempty"`
+	Port            int                    `yaml:"port" default:"20160"`
+	StatusPort      int                    `yaml:"status_port" default:"20180"`
+	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
+	DataDir         string                 `yaml:"data_dir,omitempty"`
+	LogDir          string                 `yaml:"log_dir,omitempty"`
+	Offline         bool                   `yaml:"offline,omitempty"`
+	NumaNode        string                 `yaml:"numa_node,omitempty"`
+	Config          map[string]interface{} `yaml:"config,omitempty"`
+	ResourceControl ResourceControl        `yaml:"resource_control"`
 }
 
 // Status queries current status of the instance
@@ -223,14 +236,15 @@ type PDSpec struct {
 	SSHPort  int    `yaml:"ssh_port,omitempty"`
 	Imported bool   `yaml:"imported,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
-	Name       string                 `yaml:"name"`
-	ClientPort int                    `yaml:"client_port" default:"2379"`
-	PeerPort   int                    `yaml:"peer_port" default:"2380"`
-	DeployDir  string                 `yaml:"deploy_dir,omitempty"`
-	DataDir    string                 `yaml:"data_dir,omitempty"`
-	LogDir     string                 `yaml:"log_dir,omitempty"`
-	NumaNode   string                 `yaml:"numa_node,omitempty"`
-	Config     map[string]interface{} `yaml:"config,omitempty"`
+	Name            string                 `yaml:"name"`
+	ClientPort      int                    `yaml:"client_port" default:"2379"`
+	PeerPort        int                    `yaml:"peer_port" default:"2380"`
+	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
+	DataDir         string                 `yaml:"data_dir,omitempty"`
+	LogDir          string                 `yaml:"log_dir,omitempty"`
+	NumaNode        string                 `yaml:"numa_node,omitempty"`
+	Config          map[string]interface{} `yaml:"config,omitempty"`
+	ResourceControl ResourceControl        `yaml:"resource_control"`
 }
 
 // Status queries current status of the instance
@@ -302,6 +316,7 @@ type TiFlashSpec struct {
 	NumaNode             string                 `yaml:"numa_node,omitempty"`
 	Config               map[string]interface{} `yaml:"config,omitempty"`
 	LearnerConfig        map[string]interface{} `yaml:"learner_config,omitempty"`
+	ResourceControl      ResourceControl        `yaml:"resource_control"`
 }
 
 // Status queries current status of the instance
@@ -332,16 +347,17 @@ func (s TiFlashSpec) IsImported() bool {
 
 // PumpSpec represents the Pump topology specification in topology.yaml
 type PumpSpec struct {
-	Host      string                 `yaml:"host"`
-	SSHPort   int                    `yaml:"ssh_port,omitempty"`
-	Imported  bool                   `yaml:"imported,omitempty"`
-	Port      int                    `yaml:"port" default:"8250"`
-	DeployDir string                 `yaml:"deploy_dir,omitempty"`
-	DataDir   string                 `yaml:"data_dir,omitempty"`
-	LogDir    string                 `yaml:"log_dir,omitempty"`
-	Offline   bool                   `yaml:"offline,omitempty"`
-	NumaNode  string                 `yaml:"numa_node,omitempty"`
-	Config    map[string]interface{} `yaml:"config,omitempty"`
+	Host            string                 `yaml:"host"`
+	SSHPort         int                    `yaml:"ssh_port,omitempty"`
+	Imported        bool                   `yaml:"imported,omitempty"`
+	Port            int                    `yaml:"port" default:"8250"`
+	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
+	DataDir         string                 `yaml:"data_dir,omitempty"`
+	LogDir          string                 `yaml:"log_dir,omitempty"`
+	Offline         bool                   `yaml:"offline,omitempty"`
+	NumaNode        string                 `yaml:"numa_node,omitempty"`
+	Config          map[string]interface{} `yaml:"config,omitempty"`
+	ResourceControl ResourceControl        `yaml:"resource_control"`
 }
 
 // Role returns the component role of the instance
@@ -366,17 +382,18 @@ func (s PumpSpec) IsImported() bool {
 
 // DrainerSpec represents the Drainer topology specification in topology.yaml
 type DrainerSpec struct {
-	Host      string                 `yaml:"host"`
-	SSHPort   int                    `yaml:"ssh_port,omitempty"`
-	Imported  bool                   `yaml:"imported,omitempty"`
-	Port      int                    `yaml:"port" default:"8249"`
-	DeployDir string                 `yaml:"deploy_dir,omitempty"`
-	DataDir   string                 `yaml:"data_dir,omitempty"`
-	LogDir    string                 `yaml:"log_dir,omitempty"`
-	CommitTS  int64                  `yaml:"commit_ts,omitempty"`
-	Offline   bool                   `yaml:"offline,omitempty"`
-	NumaNode  string                 `yaml:"numa_node,omitempty"`
-	Config    map[string]interface{} `yaml:"config,omitempty"`
+	Host            string                 `yaml:"host"`
+	SSHPort         int                    `yaml:"ssh_port,omitempty"`
+	Imported        bool                   `yaml:"imported,omitempty"`
+	Port            int                    `yaml:"port" default:"8249"`
+	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
+	DataDir         string                 `yaml:"data_dir,omitempty"`
+	LogDir          string                 `yaml:"log_dir,omitempty"`
+	CommitTS        int64                  `yaml:"commit_ts,omitempty"`
+	Offline         bool                   `yaml:"offline,omitempty"`
+	NumaNode        string                 `yaml:"numa_node,omitempty"`
+	Config          map[string]interface{} `yaml:"config,omitempty"`
+	ResourceControl ResourceControl        `yaml:"resource_control"`
 }
 
 // Role returns the component role of the instance
@@ -401,14 +418,15 @@ func (s DrainerSpec) IsImported() bool {
 
 // PrometheusSpec represents the Prometheus Server topology specification in topology.yaml
 type PrometheusSpec struct {
-	Host      string `yaml:"host"`
-	SSHPort   int    `yaml:"ssh_port,omitempty"`
-	Imported  bool   `yaml:"imported,omitempty"`
-	Port      int    `yaml:"port" default:"9090"`
-	DeployDir string `yaml:"deploy_dir,omitempty"`
-	DataDir   string `yaml:"data_dir,omitempty"`
-	LogDir    string `yaml:"log_dir,omitempty"`
-	Retention string `yaml:"storage_retention,omitempty"`
+	Host            string          `yaml:"host"`
+	SSHPort         int             `yaml:"ssh_port,omitempty"`
+	Imported        bool            `yaml:"imported,omitempty"`
+	Port            int             `yaml:"port" default:"9090"`
+	DeployDir       string          `yaml:"deploy_dir,omitempty"`
+	DataDir         string          `yaml:"data_dir,omitempty"`
+	LogDir          string          `yaml:"log_dir,omitempty"`
+	Retention       string          `yaml:"storage_retention,omitempty"`
+	ResourceControl ResourceControl `yaml:"resource_control"`
 }
 
 // Role returns the component role of the instance
@@ -433,11 +451,12 @@ func (s PrometheusSpec) IsImported() bool {
 
 // GrafanaSpec represents the Grafana topology specification in topology.yaml
 type GrafanaSpec struct {
-	Host      string `yaml:"host"`
-	SSHPort   int    `yaml:"ssh_port,omitempty"`
-	Imported  bool   `yaml:"imported,omitempty"`
-	Port      int    `yaml:"port" default:"3000"`
-	DeployDir string `yaml:"deploy_dir,omitempty"`
+	Host            string          `yaml:"host"`
+	SSHPort         int             `yaml:"ssh_port,omitempty"`
+	Imported        bool            `yaml:"imported,omitempty"`
+	Port            int             `yaml:"port" default:"3000"`
+	DeployDir       string          `yaml:"deploy_dir,omitempty"`
+	ResourceControl ResourceControl `yaml:"resource_control"`
 }
 
 // Role returns the component role of the instance
@@ -462,14 +481,15 @@ func (s GrafanaSpec) IsImported() bool {
 
 // AlertManagerSpec represents the AlertManager topology specification in topology.yaml
 type AlertManagerSpec struct {
-	Host        string `yaml:"host"`
-	SSHPort     int    `yaml:"ssh_port,omitempty"`
-	Imported    bool   `yaml:"imported,omitempty"`
-	WebPort     int    `yaml:"web_port" default:"9093"`
-	ClusterPort int    `yaml:"cluster_port" default:"9094"`
-	DeployDir   string `yaml:"deploy_dir,omitempty"`
-	DataDir     string `yaml:"data_dir,omitempty"`
-	LogDir      string `yaml:"log_dir,omitempty"`
+	Host            string          `yaml:"host"`
+	SSHPort         int             `yaml:"ssh_port,omitempty"`
+	Imported        bool            `yaml:"imported,omitempty"`
+	WebPort         int             `yaml:"web_port" default:"9093"`
+	ClusterPort     int             `yaml:"cluster_port" default:"9094"`
+	DeployDir       string          `yaml:"deploy_dir,omitempty"`
+	DataDir         string          `yaml:"data_dir,omitempty"`
+	LogDir          string          `yaml:"log_dir,omitempty"`
+	ResourceControl ResourceControl `yaml:"resource_control"`
 }
 
 // Role returns the component role of the instance
