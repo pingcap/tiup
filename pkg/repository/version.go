@@ -96,9 +96,8 @@ func (manifest *VersionManifest) FindVersion(version Version) (VersionInfo, bool
 	if version.IsNightly() {
 		if manifest.Nightly != nil {
 			return *manifest.Nightly, true
-		} else {
-			return VersionInfo{}, false
 		}
+		return VersionInfo{}, false
 	}
 	for _, v := range manifest.Versions {
 		if v.Version == version {

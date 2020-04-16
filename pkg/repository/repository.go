@@ -88,7 +88,7 @@ func (r *Repository) ComponentVersions(component string) (*VersionManifest, erro
 
 // DownloadTiup downloads the tiup tarball and expands it into targetDir
 func (r *Repository) DownloadTiup(targetDir string) error {
-	return r.fileSource.downloadTarFile(targetDir, TiupBinaryName, true)
+	return r.fileSource.downloadTarFile(targetDir, fmt.Sprintf("%s-%s-%s", TiupBinaryName, r.GOOS, r.GOARCH), true)
 }
 
 // DownloadComponent downloads a component with specific version from repository
