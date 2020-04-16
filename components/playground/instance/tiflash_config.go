@@ -90,12 +90,12 @@ quota = "default"
 ip = "::/0"
 `
 
-func writeTiFlashConfig(w io.Writer, tcpPort, HTTPPort, servicePort, metricsPort int, ip, deployDir string, tidbStatusAddrs, endpoints []string) error {
+func writeTiFlashConfig(w io.Writer, tcpPort, httpPort, servicePort, metricsPort int, ip, deployDir string, tidbStatusAddrs, endpoints []string) error {
 	pdAddrs := strings.Join(endpoints, ",")
 	dataDir := fmt.Sprintf("%s/data", deployDir)
 	tmpDir := fmt.Sprintf("%s/tmp", deployDir)
 	logDir := fmt.Sprintf("%s/log", deployDir)
-	conf := fmt.Sprintf(tiflashConfig, pdAddrs, HTTPPort, tcpPort,
+	conf := fmt.Sprintf(tiflashConfig, pdAddrs, httpPort, tcpPort,
 		deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
 		ip, strings.Join(tidbStatusAddrs, ","))
 	_, err := w.Write([]byte(conf))

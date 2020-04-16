@@ -32,7 +32,7 @@ import (
 // TiFlashInstance represent a running tikv-server
 type TiFlashInstance struct {
 	instance
-	HTTPPort        int
+	TCPPort         int
 	ProxyStatusPort int
 	ProxyConfigPath string
 	pds             []*PDInstance
@@ -47,11 +47,11 @@ func NewTiFlashInstance(dir, host, configPath string, id int, pds []*PDInstance,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, 9000),
+			Port:       utils.MustGetFreePort(host, 8123),
 			StatusPort: utils.MustGetFreePort(host, 8234),
 			ConfigPath: configPath,
 		},
-		HTTPPort:        utils.MustGetFreePort(host, 8123),
+		TCPPort:         utils.MustGetFreePort(host, 9000),
 		ProxyStatusPort: utils.MustGetFreePort(host, 20292),
 		ProxyConfigPath: configPath,
 		pds:             pds,
@@ -66,7 +66,7 @@ const proxyPort = 20170
 const proxyStatusPort = 20292
 const metricsPort = 8234
 
-func GetFlashClusterPath(dir string) string {
+func getFlashClusterPath(dir string) string {
 	return fmt.Sprintf("%s/flash_cluster_manager", dir)
 }
 
@@ -102,8 +102,8 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version repository.Versi
 	// Wait for PD
 	time.Sleep(10 * time.Second)
 	dirPath := path.Dir(binPath)
-	clusterManagerPath := GetFlashClusterPath(fmt.Sprintf("%s/flash_cluster_manager", dirPath))
-	destClusterManagerPath := GetFlashClusterPath(wd)
+	clusterManagerPath := getFlashClusterPath(fmt.Sprintf("%s/flash_cluster_manager", dirPath))
+	destClusterManagerPath := getFlashClusterPath(wd)
 	if err := utils.CopyFile(clusterManagerPath, destClusterManagerPath); err != nil {
 		return err
 	}
