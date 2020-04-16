@@ -15,6 +15,7 @@ package meta
 
 import (
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
 	"strconv"
 
@@ -103,5 +104,29 @@ func (i *PumpInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		return err
 	}
 
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.Pump, spec.Config, paths)
+	specConfig := spec.Config
+	// merge config files for imported instance
+	if i.IsImported() {
+		configPath := ClusterPath(
+			clusterName,
+			"config",
+			fmt.Sprintf(
+				"%s-%s-%d.toml",
+				i.ComponentName(),
+				i.GetHost(),
+				i.GetPort(),
+			),
+		)
+		importConfig, err := ioutil.ReadFile(configPath)
+		if err != nil {
+			return err
+		}
+		mergedConfig, err := mergeImported(importConfig, spec.Config)
+		if err != nil {
+			return err
+		}
+		specConfig = mergedConfig
+	}
+
+	return i.mergeServerConfig(e, i.topo.ServerConfigs.Pump, specConfig, paths)
 }
