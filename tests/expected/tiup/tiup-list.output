@@ -5,6 +5,7 @@ test        YES(v1.1.1,v1.1.2)  darwin/amd64,linux/amd64  tiup integration test 
 tidb                            darwin/amd64,linux/amd64  TiDB is an open source distributed HTAP database compatible with the MySQL protocol
 tikv                            darwin/amd64,linux/amd64  Distributed transactional key-value database, originally created to complement TiDB
 pd                              darwin/amd64,linux/amd64  PD is the abbreviation for Placement Driver. It is used to manage and schedule the TiKV cluster
+tiflash                         linux/amd64               TiFlash is the columnar storage engine compatible with TiDB/TiKV/PD.
 playground                      darwin/amd64,linux/amd64  Bootstrap a local TiDB cluster
 client                          darwin/amd64,linux/amd64  A simple mysql client to connect TiDB
 prometheus                      darwin/amd64,linux/amd64  An open-source systems monitoring and alerting toolkit
