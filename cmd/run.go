@@ -66,7 +66,7 @@ func runComponent(tag, spec, binPath string, args []string) error {
 	ch := make(chan error)
 	defer func() {
 		for err := range ch {
-			if err != nil {
+			if err != nil && !strings.Contains(err.Error(), "signal") {
 				fmt.Printf("Component `%s` exit with error: %s\n", component, err.Error())
 				return
 			}
@@ -86,8 +86,11 @@ func runComponent(tag, spec, binPath string, args []string) error {
 		fmt.Printf("Got signal %v (Component: %v ; PID: %v)\n", s, component, p.Pid)
 		if component == "tidb" {
 			return syscall.Kill(p.Pid, syscall.SIGKILL)
+		} else if s.(syscall.Signal) != syscall.SIGINT {
+			return syscall.Kill(p.Pid, s.(syscall.Signal))
+		} else {
+			return nil
 		}
-		return syscall.Kill(p.Pid, s.(syscall.Signal))
 
 	case err := <-ch:
 		return errors.Annotatef(err, "run `%s` (wd:%s) failed", p.Exec, p.Dir)
