@@ -36,7 +36,7 @@ runAsDaemon = true
 service_addr = "%[10]s:%[8]d"
 tidb_status_addr = "%[11]s"
 [flash.flash_cluster]
-cluster_manager_path = "%[4]s/flash_cluster_manager"
+cluster_manager_path = "%[4]s"
 log = "%[7]s/tiflash_cluster_manager.log"
 master_ttl = 60
 refresh_interval = 20
