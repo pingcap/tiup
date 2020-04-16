@@ -100,6 +100,28 @@ func ScaleIn(
 		return errors.New("cannot delete all TiKV servers")
 	}
 
+	if options.Force {
+		for _, component := range spec.ComponentsByStartOrder() {
+			for _, instance := range component.Instances() {
+				if !deletedNodes.Exist(instance.ID()) {
+					continue
+				}
+				// just try stop and destroy
+				if options.Force {
+					if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
+						log.Warnf("failed to stop %s: %v", component.Name(), err)
+					}
+					if err := DestroyComponent(getter, []meta.Instance{instance}); err != nil {
+						log.Warnf("failed to destroy %s: %v", component.Name(), err)
+					}
+
+					continue
+				}
+			}
+		}
+		return nil
+	}
+
 	// TODO if binlog is switch on, cannot delete all pump servers.
 
 	// At least a PD server exists
