@@ -64,30 +64,38 @@ func runComponent(tag, spec, binPath string, args []string) error {
 	}
 
 	ch := make(chan error)
+	var sig syscall.Signal
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+
 	defer func() {
 		for err := range ch {
-			if err != nil && !strings.Contains(err.Error(), "signal") {
-				fmt.Printf("Component `%s` exit with error: %s\n", component, err.Error())
+			if err != nil {
+				errs := err.Error()
+				if strings.Contains(errs, "signal") ||
+					(sig == syscall.SIGINT && strings.Contains(errs, "exit status 1")) {
+					continue
+				}
+				fmt.Printf("Component `%s` exit with error: %s\n", component, errs)
 				return
 			}
 		}
 	}()
+
 	go func() {
 		defer close(ch)
 		fmt.Printf("Starting component `%s`: %s %s\n", component, p.Exec, strings.Join(p.Args, " "))
 		ch <- p.cmd.Wait()
 	}()
 
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-
 	select {
-	case s := <-sig:
+	case s := <-sc:
+		sig = s.(syscall.Signal)
 		fmt.Printf("Got signal %v (Component: %v ; PID: %v)\n", s, component, p.Pid)
 		if component == "tidb" {
 			return syscall.Kill(p.Pid, syscall.SIGKILL)
-		} else if s.(syscall.Signal) != syscall.SIGINT {
-			return syscall.Kill(p.Pid, s.(syscall.Signal))
+		} else if sig != syscall.SIGINT {
+			return syscall.Kill(p.Pid, sig)
 		} else {
 			return nil
 		}
