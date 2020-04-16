@@ -83,10 +83,6 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version repository.Versi
 		return err
 	}
 
-	if err := inst.checkConfig(inst.Host, wd, tidbStatusAddrs, endpoints); err != nil {
-		return err
-	}
-
 	if binPath == "" {
 		installedVersion, err := meta.SelectInstalledVersion("tiflash", version)
 		if err != nil {
@@ -99,6 +95,11 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version repository.Versi
 		binPath = dir
 	}
 	dirPath := path.Dir(binPath)
+	clusterManagerPath := fmt.Sprintf("%s/flash_cluster_manager", dirPath)
+	if err := inst.checkConfig(inst.Host, wd, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
+		return err
+	}
+
 	if err := os.Setenv("LD_LIBRARY_PATH", fmt.Sprintf("%s:$LD_LIBRARY_PATH", dirPath)); err != nil {
 		return err
 	}
@@ -127,7 +128,7 @@ func (inst *TiFlashInstance) Pid() int {
 	return inst.cmd.Process.Pid
 }
 
-func (inst *TiFlashInstance) checkConfig(ip, deployDir string, tidbStatusAddrs, endpoints []string) error {
+func (inst *TiFlashInstance) checkConfig(ip, deployDir, clusterManagerPath string, tidbStatusAddrs, endpoints []string) error {
 	if inst.ConfigPath == "" {
 		inst.ConfigPath = path.Join(inst.Dir, "tiflash.toml")
 	}
@@ -165,7 +166,7 @@ func (inst *TiFlashInstance) checkConfig(ip, deployDir string, tidbStatusAddrs, 
 
 	defer cf2.Close()
 	if err := writeTiFlashConfig(cf, tcpPort, httpPort, servicePort, metricsPort,
-		ip, deployDir, tidbStatusAddrs, endpoints); err != nil {
+		ip, deployDir, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
 		return errors.Trace(err)
 	}
 	if err := writeTiFlashProxyConfig(cf2, ip, deployDir); err != nil {
