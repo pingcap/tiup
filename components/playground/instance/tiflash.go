@@ -66,6 +66,10 @@ const proxyPort = 20170
 const proxyStatusPort = 20292
 const metricsPort = 8234
 
+func GetFlashClusterPath(dir string) string {
+	return fmt.Sprintf("%s/flash_cluster_manager", dir)
+}
+
 // Start calls set inst.cmd and Start
 func (inst *TiFlashInstance) Start(ctx context.Context, version repository.Version, binPath string) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
@@ -99,7 +103,10 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version repository.Versi
 	time.Sleep(10 * time.Second)
 	dirPath := path.Dir(binPath)
 	clusterManagerPath := fmt.Sprintf("%s/flash_cluster_manager", dirPath)
-	if err := inst.checkConfig(inst.Host, wd, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
+	if err := utils.CopyFile(GetFlashClusterPath(dirPath), GetFlashClusterPath(clusterManagerPath)); err != nil {
+		return err
+	}
+	if err := inst.checkConfig(inst.Host, wd, tidbStatusAddrs, endpoints); err != nil {
 		return err
 	}
 
@@ -131,7 +138,7 @@ func (inst *TiFlashInstance) Pid() int {
 	return inst.cmd.Process.Pid
 }
 
-func (inst *TiFlashInstance) checkConfig(ip, deployDir, clusterManagerPath string, tidbStatusAddrs, endpoints []string) error {
+func (inst *TiFlashInstance) checkConfig(ip, deployDir string, tidbStatusAddrs, endpoints []string) error {
 	if inst.ConfigPath == "" {
 		inst.ConfigPath = path.Join(inst.Dir, "tiflash.toml")
 	}
@@ -169,7 +176,7 @@ func (inst *TiFlashInstance) checkConfig(ip, deployDir, clusterManagerPath strin
 
 	defer cf2.Close()
 	if err := writeTiFlashConfig(cf, tcpPort, httpPort, servicePort, metricsPort,
-		ip, deployDir, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
+		ip, deployDir, tidbStatusAddrs, endpoints); err != nil {
 		return errors.Trace(err)
 	}
 	if err := writeTiFlashProxyConfig(cf2, ip, deployDir); err != nil {
