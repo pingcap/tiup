@@ -10,11 +10,11 @@ require (
 	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
 	github.com/creasty/defaults v1.3.0
 	github.com/fatih/color v1.9.0
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/goccy/go-yaml v1.4.3
 	github.com/google/uuid v1.1.1
 	github.com/joomcode/errorx v1.0.1
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a // indirect
-	github.com/juju/errors v0.0.0-20190930114154-d42613fe1ab9
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-runewidth v0.0.7

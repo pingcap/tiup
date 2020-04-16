@@ -11,9 +11,13 @@ yes | tiup-cluster deploy $name $version $topo -i ~/.ssh/id_rsa
 
 yes | tiup-cluster start $name
 
+tiup-cluster _test $name writable
+
 yes | tiup-cluster stop $name
 
 yes | tiup-cluster restart $name
+
+tiup-cluster _test $name writable
 
 tiup-cluster display $name
 
@@ -43,7 +47,7 @@ wait_instance_num_reach $name $totol_sub_one
 echo "start scale out pump"
 yes | tiup-cluster scale-out $name ./topo/full_scale_in_pump.yaml
 
-
+tiup-cluster _test $name writable
 
 yes | tiup-cluster destroy $name
 
