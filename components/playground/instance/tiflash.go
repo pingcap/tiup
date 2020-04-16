@@ -102,10 +102,12 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version repository.Versi
 	// Wait for PD
 	time.Sleep(10 * time.Second)
 	dirPath := path.Dir(binPath)
-	clusterManagerPath := fmt.Sprintf("%s/flash_cluster_manager", dirPath)
-	fmt.Println(wd)
-	fmt.Println(clusterManagerPath)
-	if err := utils.CopyFile(GetFlashClusterPath(clusterManagerPath), GetFlashClusterPath(wd)); err != nil {
+	clusterManagerPath := GetFlashClusterPath(fmt.Sprintf("%s/flash_cluster_manager", dirPath))
+	destClusterManagerPath := GetFlashClusterPath(wd)
+	if err := utils.CopyFile(clusterManagerPath, destClusterManagerPath); err != nil {
+		return err
+	}
+	if err := os.Chmod(destClusterManagerPath, 0755); err != nil {
 		return err
 	}
 	if err := inst.checkConfig(inst.Host, wd, tidbStatusAddrs, endpoints); err != nil {
