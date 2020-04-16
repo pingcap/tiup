@@ -354,10 +354,6 @@ func bootCluster(options *bootOptions) error {
 			ss := strings.Split(dbAddr, ":")
 			fmt.Println(color.GreenString("To connect TiDB: mysql --host %s --port %s -u root", ss[0], ss[1]))
 		}
-		tag := os.Getenv(localdata.EnvTag)
-		if len(tag) > 0 {
-			fmt.Println(color.GreenString("Cluster tag: %s, you can restore this cluster via: tiup -T %s playground", tag, tag))
-		}
 	}
 
 	if pdAddr := pds[0].Addr(); hasDashboard(pdAddr) {
