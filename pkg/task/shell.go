@@ -34,20 +34,13 @@ func (m *Shell) Execute(ctx *Context) error {
 		return ErrNoExecutor
 	}
 
-	var cmd string
+	log.Infof("Run command on %s(sudo:%v): %s", m.host, m.sudo, m.command)
 
-	if m.sudo {
-		cmd = fmt.Sprintf(`sudo %s`, m.command)
-	} else {
-		cmd = m.command
-	}
-
-	log.Infof("Run command on %s(sudo:%v): %s", m.host, m.sudo, cmd)
-
-	_, _, err := exec.Execute(cmd, false)
+	stdout, stderr, err := exec.Execute(m.command, m.sudo)
 	if err != nil {
 		return errors.Trace(err)
 	}
+	ctx.SetOutputs(m.host, stdout, stderr)
 
 	return nil
 }

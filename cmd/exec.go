@@ -14,9 +14,9 @@
 package cmd
 
 import (
-	"sort"
-
+	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/logger"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/task"
@@ -54,30 +54,30 @@ func newExecCmd() *cobra.Command {
 				return err
 			}
 
-			var hosts []string
 			filterRoles := set.NewStringSet(opt.roles...)
 			filterNodes := set.NewStringSet(opt.nodes...)
 
 			var shellTasks []task.Task
+			uniqueHosts := map[string]int{} // host -> ssh-port
 			metadata.Topology.IterInstance(func(inst meta.Instance) {
-				h := inst.GetHost()
-				if len(opt.roles) > 0 && !filterRoles.Exist(inst.Role()) {
-					return
-				}
+				if _, found := uniqueHosts[inst.GetHost()]; !found {
+					if len(opt.roles) > 0 && !filterRoles.Exist(inst.Role()) {
+						return
+					}
 
-				if len(opt.nodes) > 0 && !filterNodes.Exist(h) {
-					return
-				}
+					if len(opt.nodes) > 0 && !filterNodes.Exist(inst.GetHost()) {
+						return
+					}
 
-				hosts = append(hosts, h)
+					uniqueHosts[inst.GetHost()] = inst.GetSSHPort()
+				}
 			})
 
-			sort.Strings(hosts)
-			for i := 0; i < len(hosts); i++ {
-				if i > 0 && hosts[i] == hosts[i-1] {
-					continue
-				}
-				shellTasks = append(shellTasks, task.NewBuilder().Shell(hosts[i], opt.command, opt.sudo).Build())
+			for host := range uniqueHosts {
+				shellTasks = append(shellTasks,
+					task.NewBuilder().
+						Shell(host, opt.command, opt.sudo).
+						Build())
 			}
 
 			t := task.NewBuilder().
@@ -88,13 +88,32 @@ func newExecCmd() *cobra.Command {
 				Parallel(shellTasks...).
 				Build()
 
-			if err := t.Execute(task.NewContext()); err != nil {
+			execCtx := task.NewContext()
+			if err := t.Execute(execCtx); err != nil {
 				if errorx.Cast(err) != nil {
 					// FIXME: Map possible task errors and give suggestions.
 					return err
 				}
 				return errors.Trace(err)
 			}
+
+			// print outputs
+			for host := range uniqueHosts {
+				stdout, stderr, ok := execCtx.GetOutputs(host)
+				if !ok {
+					continue
+				}
+				log.Infof("Outputs of %s on %s:",
+					color.CyanString(opt.command),
+					color.CyanString(host))
+				if len(stdout) > 0 {
+					log.Infof("%s:\n%s", color.GreenString("stdout"), stdout)
+				}
+				if len(stderr) > 0 {
+					log.Infof("%s:\n%s", color.RedString("stderr"), stderr)
+				}
+			}
+
 			return nil
 		},
 	}

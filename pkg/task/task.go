@@ -53,6 +53,8 @@ type (
 		exec struct {
 			sync.RWMutex
 			executors map[string]executor.TiOpsExecutor
+			stdouts   map[string][]byte
+			stderrs   map[string][]byte
 		}
 
 		// The public/private key is used to access remote server via the user `tidb`
@@ -82,8 +84,12 @@ func NewContext() *Context {
 		exec: struct {
 			sync.RWMutex
 			executors map[string]executor.TiOpsExecutor
+			stdouts   map[string][]byte
+			stderrs   map[string][]byte
 		}{
 			executors: make(map[string]executor.TiOpsExecutor),
+			stdouts:   make(map[string][]byte),
+			stderrs:   make(map[string][]byte),
 		},
 		manifestCache: manifestCache{
 			manifests: map[string]*repository.VersionManifest{},
@@ -115,6 +121,23 @@ func (ctx *Context) GetExecutor(host string) (e executor.TiOpsExecutor, ok bool)
 func (ctx *Context) SetExecutor(host string, e executor.TiOpsExecutor) {
 	ctx.exec.Lock()
 	ctx.exec.executors[host] = e
+	ctx.exec.Unlock()
+}
+
+// GetOutputs get the outputs of a host (if has any)
+func (ctx *Context) GetOutputs(host string) ([]byte, []byte, bool) {
+	ctx.exec.RLock()
+	stdout, ok1 := ctx.exec.stderrs[host]
+	stderr, ok2 := ctx.exec.stdouts[host]
+	ctx.exec.RUnlock()
+	return stdout, stderr, ok1 && ok2
+}
+
+// SetOutputs set the outputs of a host
+func (ctx *Context) SetOutputs(host string, stdout []byte, stderr []byte) {
+	ctx.exec.Lock()
+	ctx.exec.stderrs[host] = stdout
+	ctx.exec.stdouts[host] = stderr
 	ctx.exec.Unlock()
 }
 
