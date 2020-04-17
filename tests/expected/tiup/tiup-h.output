@@ -18,9 +18,6 @@ Available Commands:
   help        Help about any command or component
 
 Available Components:
-  test         tiup integration test mock component
-  playground   Bootstrap a local TiDB cluster
-  client       A simple mysql client to connect TiDB
 
 Flags:
   -B, --binary <component>[:version]   Print binary path of a specific version of a component <component>[:version]

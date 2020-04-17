@@ -48,69 +48,79 @@ echo "TIUP MIRRORS:     ${BOLD} $TIUP_MIRRORS ${NORMAL}"
 echo "EXPTECTED RESULT: ${BOLD} $TIUP_EXPECTED ${NORMAL}"
 
 cd "$TIUP_MIRRORS"
-sh generate.sh
+TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS TEST_DIR=$TEST_DIR sh prepare.sh
 cd "$TEST_DIR"
-
-case=$(jq < "$TEST_DIR/cases.json" '. | length')
 
 success=0
 failed=0
 
-for index in $(seq 1 $case)
+for file in "cases_cov.json" "cases.json"
 do
-  echo ""
+  case=$(jq < "$TEST_DIR/$file" '. | length')
+  for index in $(seq 1 $case)
+  do
+    echo ""
 
-  cmd=$(jq < "$TEST_DIR/cases.json" -r ".[$index-1]|.command")
-  path=$(jq < "$TEST_DIR/cases.json" -r ".[$index-1]|.path")
-  cov="$TEST_DIR/../cover/cov.integration-test.$index.out"
+    cmd=$(jq < "$TEST_DIR/$file" -r ".[$index-1]|.command")
+    path=$(jq < "$TEST_DIR/$file" -r ".[$index-1]|.path")
+    cov="$TEST_DIR/../cover/cov.integration-test.$file-$index.out"
 
-  echo "Coverage file: $cov for cmd: '$cmd'"
+    echo "Coverage file: $cov for cmd: '$cmd'"
 
-  if [ "$path" = "" ]; then
-    echo "${MAGENTA}✔ Directly output case: cmd='$cmd' ${NORMAL}"
-      # FIXME: -test.coverprofile="$cov" DEVEL
-TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd
-    continue
-  fi
+    if [ "$path" = "" ]; then
+      echo "${MAGENTA}✔ Directly output case: cmd='$cmd' ${NORMAL}"
+      if [ "$file" = "cases_cov.json" ]; then
+        TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd -test.coverprofile="$cov" DEVEL
+      else
+        TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd
+      fi
+      continue
+    fi
 
-  # delete the last two lines
-  mkdir -p $(dirname "$TMP_DIR/$path")
-  # FIXME: -test.coverprofile="$cov" DEVEL
-  actual=$(TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd \
-   | sed "s+${TIUP_MIRRORS}+TIUP_MIRRORS_INTEGRATION_TEST+" \
-   | sed "s+${TIUP_HOME}+TIUP_HOME_INTEGRATION_TEST+")
+    # delete the last two lines
+    mkdir -p $(dirname "$TMP_DIR/$path")
+    if [ "$file" = "cases_cov.json" ]; then
+      actual=$(TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd -test.coverprofile="$cov" DEVEL\
+       | sed "s+${TIUP_MIRRORS}+TIUP_MIRRORS_INTEGRATION_TEST+" \
+       | sed "s+${TIUP_HOME}+TIUP_HOME_INTEGRATION_TEST+")
+     else
+       actual=$(TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd \
+       | sed "s+${TIUP_MIRRORS}+TIUP_MIRRORS_INTEGRATION_TEST+" \
+       | sed "s+${TIUP_HOME}+TIUP_HOME_INTEGRATION_TEST+")
+     fi
 
-  # delete coverage output
-  case "$actual" in
-    *coverage:*)
-      echo "$actual" | tail -n 2
-      echo "$actual" | sed -e "$ d"  | sed -e "$ d" > "$TMP_DIR/$path"
-      ;;
-    *)
-      echo "$actual" > "$TMP_DIR/$path"
-      ;;
-  esac
+    # delete coverage output
+    case "$actual" in
+      *coverage:*)
+        echo "$actual" | tail -n 2
+        echo "$actual" | sed -e "$ d"  | sed -e "$ d" > "$TMP_DIR/$path"
+        ;;
+      *)
+        echo "$actual" > "$TMP_DIR/$path"
+        ;;
+    esac
 
-  actual=$(cat "$TMP_DIR/$path" )
-  expected=$(cat "$TIUP_EXPECTED/$path")
+    actual=$(cat "$TMP_DIR/$path" )
+    expected=$(cat "$TIUP_EXPECTED/$path")
 
-  if [ "$expected" != "$actual" ]; then
-    echo "${RED}✖ Failed case: cmd='$cmd'${NORMAL}"
-    echo " + expected path:   ${BOLD} $TIUP_EXPECTED/$path ${NORMAL}"
-    echo " + actual got path: ${BOLD} $TMP_DIR/$path ${NORMAL}"
+    if [ "$expected" != "$actual" ]; then
+      echo "${RED}✖ Failed case: cmd='$cmd'${NORMAL}"
+      echo " + expected path:   ${BOLD} $TIUP_EXPECTED/$path ${NORMAL}"
+      echo " + actual got path: ${BOLD} $TMP_DIR/$path ${NORMAL}"
 
-    failed=$((failed+1))
+      failed=$((failed+1))
 
-    echo "${BOLD}-----------------------------------DIFF START-----------------------------------------${NORMAL}" >&2
-    diff --old-group-format="${RED}%<${NORMAL}" \
-     --new-group-format="${GREEN}%>${NORMAL}" \
-     --unchanged-group-format="" \
-     "$TIUP_EXPECTED/$path" "$TMP_DIR/$path"
-    echo "${BOLD}-----------------------------------DIFF END-------------------------------------------${NORMAL}" >&2
-  else
-    success=$((success+1))
-    echo "${MAGENTA}✔ Passed case: cmd='$cmd' ${NORMAL}"
-  fi
+      echo "${BOLD}-----------------------------------DIFF START-----------------------------------------${NORMAL}" >&2
+      diff --old-group-format="${RED}%<${NORMAL}" \
+       --new-group-format="${GREEN}%>${NORMAL}" \
+       --unchanged-group-format="" \
+       "$TIUP_EXPECTED/$path" "$TMP_DIR/$path"
+      echo "${BOLD}-----------------------------------DIFF END-------------------------------------------${NORMAL}" >&2
+    else
+      success=$((success+1))
+      echo "${MAGENTA}✔ Passed case: cmd='$cmd' ${NORMAL}"
+    fi
+  done
 done
 
 echo "${BOLD}SUMMARY: total case: $((success+failed)), success: $success, failed: $failed${NORMAL}"
