@@ -97,7 +97,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version repository.Versi
 		binPath = dir
 	}
 	// Wait for PD
-	time.Sleep(30 * time.Second)
+	time.Sleep(10 * time.Second)
 	dirPath := path.Dir(binPath)
 	clusterManagerPath := getFlashClusterPath(dirPath)
 	if err := inst.checkConfig(wd, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
