@@ -19,8 +19,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/pingcap-incubator/tiup/cmd"
 )
 
 func TestRunMain(t *testing.T) {
@@ -34,5 +32,5 @@ func TestRunMain(t *testing.T) {
 		}
 	}
 	os.Args = args
-	cmd.Execute()
+	main()
 }
