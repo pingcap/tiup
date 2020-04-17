@@ -68,7 +68,7 @@ func externalHelp(spec string, args ...string) {
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 	}
 
-	comp := exec.Command(binaryPath, rebuildArgs(args)...)
+	comp := exec.Command(binaryPath, RebuildArgs(args)...)
 	comp.Env = append(
 		envs,
 		os.Environ()...,
@@ -84,7 +84,7 @@ func externalHelp(spec string, args ...string) {
 	}
 }
 
-func rebuildArgs(args []string) []string {
+func RebuildArgs(args []string) []string {
 	helpFlag := "--help"
 	argList := []string{}
 	for _, arg := range args {
