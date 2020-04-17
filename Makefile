@@ -46,15 +46,15 @@ cover-dir:
 
 # Run tests
 unit-test:
-	$(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
+	$(GOTEST) $(go list ./... | grep -v /components/package/) -covermode=count -coverprofile cover/cov.unit-test.out
 
 integration_test:
 	@$(GOTEST) -c -cover -covermode=count \
-		-coverpkg=github.com/pingcap-incubator/tiup/... \
+		-coverpkg=./... \
 		-o tests/tiup_home/bin/tiup \
 		github.com/pingcap-incubator/tiup/ ;
 	@$(GOTEST) -c -cover -covermode=count \
-			-coverpkg=github.com/pingcap-incubator/tiup/... \
+			-coverpkg=./... \
 			-o tests/tiup_home/bin/package ./components/package/ ;
 	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/tiup.2
 	cd tests && sh run.sh ; \

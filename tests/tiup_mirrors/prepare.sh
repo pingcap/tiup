@@ -20,8 +20,7 @@ rm -f "$DIR/tiup"
 
 # Prepare for mock test tarball
 mv "$DIR/../tiup_home/bin/package" "$DIR/pack"
-TIUP_WORK_DIR="$DIR" ./pack pack --release=v0.0.1 --entry=pack --arch=amd64 --os="$os" --name=package \
-  -test.coverprofile="$TEST_DIR/../cover/cov.integration-test.package.out"
+TIUP_WORK_DIR="$DIR" ./pack -test.coverprofile="$TEST_DIR/../cover/cov.integration-test.package.out" pack --release=v0.0.1 --entry=pack --arch=amd64 --os="$os" --name=package
 rm pack
 mv "./package"/* "./"
 
@@ -30,8 +29,7 @@ do
   echo "#!/bin/bash" > test.bin
   echo "echo 'integration test $v'" >> test.bin
   chmod +x test.bin
-  tiup package -- test.bin --release="$v" --entry=test.bin --arch=amd64 --os="$os" --name=test \
-    -test.coverprofile="$TEST_DIR/../cover/cov.integration-test.package-$v.out"
+  tiup package -- test.bin --release="$v" --entry=test.bin --arch=amd64 --os="$os" --name=test
 done
 mv "./package"/* "./"
 

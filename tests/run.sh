@@ -67,27 +67,21 @@ do
 
     echo "Coverage file: $cov for cmd: '$cmd'"
 
+    if [ "$file" = "cases_cov.json" ]; then
+      cmd="${cmd[@]:0:4} -test.coverprofile=$cov DEVEL ${cmd[@]:4}"
+    fi
+
     if [ "$path" = "" ]; then
       echo "${MAGENTA}✔ Directly output case: cmd='$cmd' ${NORMAL}"
-      if [ "$file" = "cases_cov.json" ]; then
-        TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd -test.coverprofile="$cov" DEVEL
-      else
-        TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd
-      fi
+      TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd
       continue
     fi
 
     # delete the last two lines
     mkdir -p $(dirname "$TMP_DIR/$path")
-    if [ "$file" = "cases_cov.json" ]; then
-      actual=$(TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd -test.coverprofile="$cov" DEVEL\
-       | sed "s+${TIUP_MIRRORS}+TIUP_MIRRORS_INTEGRATION_TEST+" \
-       | sed "s+${TIUP_HOME}+TIUP_HOME_INTEGRATION_TEST+")
-     else
-       actual=$(TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd \
-       | sed "s+${TIUP_MIRRORS}+TIUP_MIRRORS_INTEGRATION_TEST+" \
-       | sed "s+${TIUP_HOME}+TIUP_HOME_INTEGRATION_TEST+")
-     fi
+    actual=$(TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS $cmd \
+    | sed "s+${TIUP_MIRRORS}+TIUP_MIRRORS_INTEGRATION_TEST+" \
+    | sed "s+${TIUP_HOME}+TIUP_HOME_INTEGRATION_TEST+")
 
     # delete coverage output
     case "$actual" in
