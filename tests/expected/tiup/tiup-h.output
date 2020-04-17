@@ -18,8 +18,9 @@ Available Commands:
   help        Help about any command or component
 
 Available Components:
-  mirrors   
-  doc       
+  mirrors      
+  doc          
+  playground   
 
 Flags:
   -B, --binary <component>[:version]   Print binary path of a specific version of a component <component>[:version]
