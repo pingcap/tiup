@@ -119,6 +119,8 @@ done
 
 echo "${BOLD}SUMMARY: total case: $((success+failed)), success: $success, failed: $failed${NORMAL}"
 
+rm -rf testmirrors
+
 if [ $failed -gt 0 ]; then
   exit 1
 fi
