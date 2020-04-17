@@ -36,7 +36,7 @@ runAsDaemon = true
 service_addr = "%[10]s:%[8]d"
 tidb_status_addr = "%[11]s"
 [flash.flash_cluster]
-cluster_manager_path = "%[4]s"
+cluster_manager_path = "%[12]s"
 log = "%[7]s/tiflash_cluster_manager.log"
 master_ttl = 60
 refresh_interval = 20
@@ -90,14 +90,14 @@ quota = "default"
 ip = "::/0"
 `
 
-func writeTiFlashConfig(w io.Writer, tcpPort, httpPort, servicePort, metricsPort int, ip, deployDir string, tidbStatusAddrs, endpoints []string) error {
+func writeTiFlashConfig(w io.Writer, tcpPort, httpPort, servicePort, metricsPort int, ip, deployDir, clusterManagerPath string, tidbStatusAddrs, endpoints []string) error {
 	pdAddrs := strings.Join(endpoints, ",")
 	dataDir := fmt.Sprintf("%s/data", deployDir)
 	tmpDir := fmt.Sprintf("%s/tmp", deployDir)
 	logDir := fmt.Sprintf("%s/log", deployDir)
 	conf := fmt.Sprintf(tiflashConfig, pdAddrs, httpPort, tcpPort,
 		deployDir, dataDir, tmpDir, logDir, servicePort, metricsPort,
-		ip, strings.Join(tidbStatusAddrs, ","))
+		ip, strings.Join(tidbStatusAddrs, ","), clusterManagerPath)
 	_, err := w.Write([]byte(conf))
 	return err
 }
