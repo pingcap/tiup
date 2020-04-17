@@ -42,7 +42,7 @@ tiup update --all
 # Usage
 After installing `tiup`, you can use it to install binaries of TiDB components and create clusters.
 
-See our [docs](docs/user/README.md) for more information on how to use TiUp.
+See our [doc](doc/user/README.md) for more information on how to use TiUp.
 
 # Contributing to TiUp
 
