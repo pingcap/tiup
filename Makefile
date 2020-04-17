@@ -61,7 +61,7 @@ integration_test:
 			-o tests/tiup_home/bin/mirrors ./components/mirrors/ ;
 	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/doc ./components/doc/
 	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/tiup.2
-	cd tests && sh run.sh ; \
+	cd tests && bash run.sh ; \
 
 
 test: cover-dir failpoint-enable unit-test integration_test coverage
