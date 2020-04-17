@@ -18,7 +18,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/goccy/go-yaml"
@@ -111,26 +110,23 @@ func editTopo(clusterName string, metadata *meta.ClusterMeta) error {
 
 	edit.ShowDiff(string(data), string(newData), os.Stdout)
 
-	msg := color.HiYellowString("Please check change, do you want to apply the change?")
-	msg = msg + "\n[Y]es/[N]o:"
-	ans := cliutil.Prompt(msg)
-	switch strings.ToLower(ans) {
-	case "y", "yes":
-		log.Infof("Apply the change...")
-
-		metadata.Topology = newTopo
-		err = meta.SaveClusterMeta(clusterName, metadata)
-		if err != nil {
-			return errors.Annotate(err, "failed to save")
+	if !skipConfirm {
+		if err := cliutil.PromptForConfirmOrAbortError(
+			color.HiYellowString("Please check change, do you want to apply the change? [y/N]:"),
+		); err != nil {
+			return err
 		}
-
-		log.Infof("Apply change successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", cliutil.OsArgs0(), clusterName)
-
-		return nil
-	case "n", "no":
-		fallthrough
-	default:
-		log.Infof("Abandom the change")
-		return nil
 	}
+
+	log.Infof("Apply the change...")
+
+	metadata.Topology = newTopo
+	err = meta.SaveClusterMeta(clusterName, metadata)
+	if err != nil {
+		return errors.Annotate(err, "failed to save")
+	}
+
+	log.Infof("Apply change successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", cliutil.OsArgs0(), clusterName)
+
+	return nil
 }
