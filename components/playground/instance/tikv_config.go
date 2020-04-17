@@ -17,7 +17,7 @@ import (
 	"io"
 )
 
-const config = `
+const tikvConfig = `
 # log-level = "info"
 # log-file = ""
 # log-rotation-timespan = "24h"
@@ -285,7 +285,7 @@ max-open-files = 256
 # max-write-bytes-per-sec = "0"
 `
 
-func writeConfig(w io.Writer) error {
-	_, err := w.Write([]byte(config))
+func writeTiKVConfig(w io.Writer) error {
+	_, err := w.Write([]byte(tikvConfig))
 	return err
 }

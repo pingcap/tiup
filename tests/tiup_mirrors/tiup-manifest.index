@@ -37,6 +37,13 @@
             ]
         },
         {
+            "name": "tiflash",
+            "desc": "TiFlash is the columnar storage engine compatible with TiDB/TiKV/PD.",
+            "platforms": [
+                "linux/amd64"
+            ]
+        },
+        {
             "name": "playground",
             "desc": "Bootstrap a local TiDB cluster",
             "standalone": true,
