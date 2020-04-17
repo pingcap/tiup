@@ -23,14 +23,18 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/juju/errors"
+	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
 
@@ -123,9 +127,21 @@ func current(fname string, target interface{}) error {
 		return err
 	}
 	if os.IsNotExist(err) {
-		url := join(mirror, fname+"?t="+strconv.Itoa(int(time.Now().Unix())))
-		if err := get(url, target); err != nil {
-			return err
+		if strings.HasPrefix(mirror, "http") {
+			url := join(mirror, fname+"?t="+strconv.Itoa(int(time.Now().Unix())))
+			if err := get(url, target); err != nil {
+				return err
+			}
+		} else {
+			if utils.IsNotExist(filepath.Join(mirror, fname)) {
+				return errNotFound
+			}
+			f, err := os.Open(filepath.Join(mirror, fname))
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			return json.NewDecoder(f).Decode(target)
 		}
 	}
 	return nil
@@ -133,9 +149,16 @@ func current(fname string, target interface{}) error {
 
 func manifestIndex(options packageOptions) error {
 	mIndex := repository.ComponentManifest{}
-	if err := current("tiup-manifest.index", &mIndex); err != nil {
+	err := current("tiup-manifest.index", &mIndex)
+	if err != nil && err != errNotFound {
 		return err
 	}
+	if err == errNotFound {
+		mIndex.Modified = time.Now().Format(time.RFC3339)
+		mIndex.TiUPVersion = repository.Version(version.NewTiUPVersion().SemVer())
+		mIndex.Description = "TiDB components manager"
+	}
+
 	pair := options.goos + "/" + options.goarch
 
 	for idx := range mIndex.Components {
@@ -286,6 +309,8 @@ func packTarget(targets []string, options packageOptions) error {
 		args = append(args, "-C", options.dir)
 	}
 	cmd := exec.Command("tar", append(args, targets...)...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	fmt.Println(cmd.Args)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("package target: %s", err.Error())
@@ -314,9 +339,9 @@ func checksum(options packageOptions) error {
 }
 
 func chwd() error {
-	pwd := os.Getenv("PWD")
-	if pwd == "" {
-		return fmt.Errorf("Env PWD not set")
+	pwd, found := os.LookupEnv(localdata.EnvNameWorkDir)
+	if !found {
+		return fmt.Errorf("cannot get tiup work directory")
 	}
 	return os.Chdir(pwd)
 }

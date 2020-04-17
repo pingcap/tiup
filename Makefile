@@ -46,19 +46,21 @@ cover-dir:
 
 # Run tests
 unit-test:
-	$(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
+	$(GOTEST) $(go list ./... | grep -v /components/package/) -covermode=count -coverprofile cover/cov.unit-test.out
 
 integration_test:
-	# FIXME: the go test binary cann't support flag correctly
-	#$(GOTEST) -c -cover -covermode=count \
-	#	-coverpkg=github.com/pingcap-incubator/tiup/... \
-	#	-o tests/tiup_home/bin/tiup \
-	#	github.com/pingcap-incubator/tiup/ ;
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/tiup
+	@$(GOTEST) -c -cover -covermode=count \
+		-coverpkg=./... \
+		-o tests/tiup_home/bin/tiup \
+		github.com/pingcap-incubator/tiup/ ;
+	@$(GOTEST) -c -cover -covermode=count \
+			-coverpkg=./... \
+			-o tests/tiup_home/bin/package ./components/package/ ;
+	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/tiup.2
 	cd tests && sh run.sh ; \
 
 
-test: cover-dir failpoint-enable unit-test integration_test
+test: cover-dir failpoint-enable unit-test integration_test coverage
 	@$(FAILPOINT_DISABLE)
 
 coverage:
