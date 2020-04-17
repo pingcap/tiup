@@ -18,12 +18,17 @@ tar -czf "tiup-$os-amd64.tar.gz" tiup
 checksum "tiup-$os-amd64"
 rm -f "$DIR/tiup"
 
+# Prepare for package component
+mv "$DIR/../tiup_home/bin/package" "$DIR/pack"
+TIUP_WORK_DIR="$DIR" ./pack -test.coverprofile="$TEST_DIR/../cover/cov.integration-test.package.out" pack --release=v0.0.1 --entry=pack --arch=amd64 --os="$os" --name=package
+rm pack
+mv "./package"/* "./"
+
 # Prepare the mirrors component
 mv "$DIR/../tiup_home/bin/mirrors" "$DIR/mirrors"
 tiup package -- mirrors --release=v0.0.1 --entry=mirrors --arch=amd64 --os="$os" --name=mirrors --standalone
-rm pack
+rm mirrors
 mv "./package"/* "./"
-rm -f "$DIR/mirrors"
 
 # Prepare for mock test tarball
 for v in "v1.1.1" "v1.1.2" "nightly"
