@@ -52,7 +52,7 @@ func newPatchCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&overwrite, "overwrite", false, "Use this package in the futrue scale-out operations")
+	cmd.Flags().BoolVar(&overwrite, "overwrite", false, "Use this package in the future scale-out operations")
 	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Specify the nodes")
 	cmd.Flags().StringSliceVarP(&options.Roles, "role", "R", nil, "Specify the role")
 	cmd.Flags().Int64Var(&options.Timeout, "transfer-timeout", 300, "Timeout in seconds when transferring PD and TiKV store leaders")
