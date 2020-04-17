@@ -122,7 +122,7 @@ if [ $GITHUB_ACTION ]; then
   GO_FAILPOINTS=github.com/pingcap-incubator/tiup/components/playground/terminateEarly=return \
    TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS \
    tiup -T test-playground playground \
-   -test.coverprofile="$TEST_DIR/../cover/cov.integration-test.playground.out" v3.0.10 --monitor
+   -test.coverprofile="$TEST_DIR/../cover/cov.integration-test.playground.out" v3.0.10 --monitor --flash 0
 
   echo "${BOLD}SUMMARY: total case: $((success+failed)), success: $success, failed: $failed${NORMAL}"
 
