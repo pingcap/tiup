@@ -88,7 +88,7 @@
         "path": "tiup/tiup-binary-package.output"
     },
     {
-        "command": "tiup mirrors testmirrors --full",
+        "command": "tiup mirrors testmirrors --test 1.1.1 --package v0.0.1",
         "path": ""
     },
     {

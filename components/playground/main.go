@@ -36,6 +36,7 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap/failpoint"
 	"github.com/spf13/cobra"
 	"go.etcd.io/etcd/clientv3"
 	"go.uber.org/zap"
@@ -329,7 +330,7 @@ func bootCluster(options *bootOptions) error {
 
 	var monitorCmd *exec.Cmd
 	if options.monitor {
-		if err := installIfMissing(profile, "prometheus", ""); err != nil {
+		if err := installIfMissing(profile, "prometheus", options.version); err != nil {
 			return err
 		}
 		var pdAddrs, tidbAddrs, tikvAddrs, tiflashAddrs []string
@@ -416,6 +417,27 @@ func bootCluster(options *bootOptions) error {
 	}
 
 	dumpDSN(dbs)
+
+	failpoint.Inject("terminateEarly", func() error {
+		time.Sleep(20 * time.Second)
+
+		fmt.Println("Early terminated via failpoint")
+		for _, inst := range all {
+			_ = syscall.Kill(inst.Pid(), syscall.SIGKILL)
+		}
+		if monitorCmd != nil {
+			_ = syscall.Kill(monitorCmd.Process.Pid, syscall.SIGKILL)
+		}
+
+		fmt.Println("Wait all processes terminated")
+		for _, inst := range all {
+			_ = inst.Wait()
+		}
+		if monitorCmd != nil {
+			_ = monitorCmd.Wait()
+		}
+		return nil
+	})
 
 	go func() {
 		sc := make(chan os.Signal, 1)

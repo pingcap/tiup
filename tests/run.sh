@@ -117,8 +117,23 @@ do
   done
 done
 
-echo "${BOLD}SUMMARY: total case: $((success+failed)), success: $success, failed: $failed${NORMAL}"
+# Run playground integration test in github action environment
+if [ $GITHUB_ACTION ]; then
+  GO_FAILPOINTS=github.com/pingcap-incubator/tiup/components/playground/terminateEarly=return \
+   TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS \
+   tiup -T test-playground playground \
+   -test.coverprofile="$TEST_DIR/../cover/cov.integration-test.playground.out" v3.0.10 --monitor --tiflash 0
 
+  echo "${BOLD}SUMMARY: total case: $((success+failed)), success: $success, failed: $failed${NORMAL}"
+
+  if [ ! -f "$TIUP_HOME/data/test-playground/dsn" ]; then
+    echo "${RED}✖ Failed run playground${NORMAL}"
+    exit 1
+  fi
+fi
+
+# Clean data
+rm -rf "$TIUP_HOME"
 rm -rf testmirrors
 
 if [ $failed -gt 0 ]; then
