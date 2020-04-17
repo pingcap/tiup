@@ -64,7 +64,7 @@ integration_test:
 	cd tests && bash run.sh ; \
 
 
-test: cover-dir failpoint-enable unit-test integration_test coverage
+test: cover-dir failpoint-enable unit-test integration_test
 	@$(FAILPOINT_DISABLE)
 
 coverage:

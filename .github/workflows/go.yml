@@ -22,16 +22,20 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
 
-    - name: Get dependencies
-      run: |
-        go get -v -t -d ./...
-        if [ -f Gopkg.toml ]; then
-            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            dep ensure
-        fi
-
-    - name: Build
-      run: go build -v .
-    
-    - name: Build
+    - name: Test
       run: make test
+
+    - name: Merge Codecov
+      run: |
+        GO111MODULE=off go get github.com/wadey/gocovmerge
+        go build -o gocovmerge github.com/wadey/gocovmerge
+        ./gocovmerge cover/cov.* | grep -vE ".*.pb.go|.*__failpoint_binding__.go" > "cover/all_cov.out"
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: cover/all_cov.out
+        flags: coverage
+        name: codecov-umbrella
+        fail_ci_if_error: true

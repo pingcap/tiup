@@ -27,3 +27,4 @@ bin/
 /tests/_tmp/
 /tests/tiup_home/
 /tests/tiup_mirrors/*.sha1
+/tests/tiup_mirrors/
