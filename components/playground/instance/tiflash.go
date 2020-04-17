@@ -74,7 +74,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version repository.Versi
 	}
 	endpoints := make([]string, 0, len(inst.pds))
 	for _, pd := range inst.pds {
-		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", inst.Host, pd.StatusPort))
+		endpoints = append(endpoints, fmt.Sprintf("%s:%d", inst.Host, pd.StatusPort))
 	}
 	tidbStatusAddrs := make([]string, 0, len(inst.dbs))
 	for _, db := range inst.dbs {
@@ -97,17 +97,10 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version repository.Versi
 		binPath = dir
 	}
 	// Wait for PD
-	time.Sleep(10 * time.Second)
+	time.Sleep(30 * time.Second)
 	dirPath := path.Dir(binPath)
-	clusterManagerPath := getFlashClusterPath(fmt.Sprintf("%s/flash_cluster_manager", dirPath))
-	destClusterManagerPath := getFlashClusterPath(wd)
-	if err := utils.CopyFile(clusterManagerPath, destClusterManagerPath); err != nil {
-		return err
-	}
-	if err := os.Chmod(destClusterManagerPath, 0755); err != nil {
-		return err
-	}
-	if err := inst.checkConfig(wd, tidbStatusAddrs, endpoints); err != nil {
+	clusterManagerPath := getFlashClusterPath(dirPath)
+	if err := inst.checkConfig(wd, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
 		return err
 	}
 
@@ -139,7 +132,7 @@ func (inst *TiFlashInstance) Pid() int {
 	return inst.cmd.Process.Pid
 }
 
-func (inst *TiFlashInstance) checkConfig(deployDir string, tidbStatusAddrs, endpoints []string) error {
+func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string, tidbStatusAddrs, endpoints []string) error {
 	if inst.ConfigPath == "" {
 		inst.ConfigPath = path.Join(inst.Dir, "tiflash.toml")
 	}
@@ -173,7 +166,7 @@ func (inst *TiFlashInstance) checkConfig(deployDir string, tidbStatusAddrs, endp
 	}
 	defer cf2.Close()
 	if err := writeTiFlashConfig(cf, inst.TCPPort, inst.Port, inst.ServicePort, inst.StatusPort,
-		inst.Host, deployDir, tidbStatusAddrs, endpoints); err != nil {
+		inst.Host, deployDir, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
 		return errors.Trace(err)
 	}
 	if err := writeTiFlashProxyConfig(cf2, inst.Host, deployDir, inst.ServicePort, inst.ProxyPort, inst.ProxyStatusPort); err != nil {

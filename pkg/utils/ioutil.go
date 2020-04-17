@@ -16,7 +16,6 @@ package utils
 import (
 	"archive/tar"
 	"compress/gzip"
-	"fmt"
 	"io"
 	"os"
 	"path"
@@ -35,29 +34,6 @@ func IsExist(path string) bool {
 func IsNotExist(path string) bool {
 	_, err := os.Stat(path)
 	return os.IsNotExist(err)
-}
-
-// CopyFile copies a file from src to dst
-func CopyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	if _, err := os.Stat(dst); !os.IsNotExist(err) {
-		return fmt.Errorf("destination path %s already exist", dst)
-	}
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	if _, err = io.Copy(out, in); err != nil {
-		return err
-	}
-	return nil
 }
 
 // Untar decompresses the tarball
