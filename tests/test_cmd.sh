@@ -2,7 +2,7 @@
 
 set -eu
 
-version=${1-v4.0.0-rc}
+version=${version-v4.0.0-rc}
 name=test_cmd
 topo=./topo/full.yaml
 

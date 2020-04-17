@@ -371,7 +371,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption) e
 		}
 
 		// return error by default, to make the retry work
-		return errors.New("still waitting for the store leaders to transfer")
+		return errors.New("still waiting for the store leaders to transfer")
 	}, *retryOpt); err != nil {
 		return fmt.Errorf("error evicting store leader from %s, %v", host, err)
 	}
@@ -424,6 +424,7 @@ func (pc *PDClient) RemoveStoreEvict(host string) error {
 			}
 			return err
 		}
+		log.Debugf("Delete leader evicting scheduler of store %d success", latestStore.Store.Id)
 		return nil
 	})
 	if err != nil {

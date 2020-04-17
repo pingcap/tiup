@@ -11,8 +11,14 @@ on:
 
 jobs:
 
-  test_all:
+  case:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cases:
+          - "test_cmd"
+          - "test_upgrade"
     env:
       working-directory: ${{ github.workspace   }}/go/src/github.com/${{ github.repository   }}
     steps:
@@ -45,7 +51,7 @@ jobs:
         run: |
           # should not use -it
           # ref: https://stackoverflow.com/questions/43099116/error-the-input-device-is-not-a-tty
-          docker exec  tiup-cluster-control bash /tiup-cluster/tests/run.sh
+          docker exec  tiup-cluster-control bash /tiup-cluster/tests/run.sh ${{matrix.cases}}
 
       - name: Collect component log
         working-directory: ${{env.working-directory}}

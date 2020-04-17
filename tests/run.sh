@@ -10,13 +10,29 @@ PATH=$PATH:/tiup-cluster/bin
 export TIUP_CLUSTER_PROGRESS_REFRESH_RATE=10s
 export TIUP_CLUSTER_EXECUTE_DEFAULT_TIMEOUT=300s
 
+
+export version=${version-v4.0.0-rc}
+export old_version=${old_version-v3.0.12}
+
 . ./script/util.sh
 
 # TODO remove this once embed the files in binary
 # the work dir of tiup-cluster need this
 ln -s ../templates templates || true
 
-. ./test_cmd.sh v4.0.0-rc
+# use run.sh test_cmd test_upgrade to run specify cases
+do_cases=$*
 
+if [  "$do_cases" == "" ]; then
+	for script in ./test_*.sh; do
+		echo "run test: $script"
+		. $script
+	done
+else
+	for script in "${do_cases[@]}"; do
+		echo "run test: $script.sh"
+		. ./$script.sh
+	done
+fi
 
 echo "\033[0;36m<<< Run all test success >>>\033[0m"
