@@ -33,6 +33,8 @@ import (
 type TiFlashInstance struct {
 	instance
 	TCPPort         int
+	ServicePort     int
+	ProxyPort       int
 	ProxyStatusPort int
 	ProxyConfigPath string
 	pds             []*PDInstance
@@ -52,19 +54,14 @@ func NewTiFlashInstance(dir, host, configPath string, id int, pds []*PDInstance,
 			ConfigPath: configPath,
 		},
 		TCPPort:         utils.MustGetFreePort(host, 9000),
+		ServicePort:     utils.MustGetFreePort(host, 3930),
+		ProxyPort:       utils.MustGetFreePort(host, 20170),
 		ProxyStatusPort: utils.MustGetFreePort(host, 20292),
 		ProxyConfigPath: configPath,
 		pds:             pds,
 		dbs:             dbs,
 	}
 }
-
-const tcpPort = 9000
-const httpPort = 8123
-const servicePort = 3930
-const proxyPort = 20170
-const proxyStatusPort = 20292
-const metricsPort = 8234
 
 func getFlashClusterPath(dir string) string {
 	return fmt.Sprintf("%s/flash_cluster_manager", dir)
@@ -110,7 +107,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version repository.Versi
 	if err := os.Chmod(destClusterManagerPath, 0755); err != nil {
 		return err
 	}
-	if err := inst.checkConfig(inst.Host, wd, tidbStatusAddrs, endpoints); err != nil {
+	if err := inst.checkConfig(wd, tidbStatusAddrs, endpoints); err != nil {
 		return err
 	}
 
@@ -142,7 +139,7 @@ func (inst *TiFlashInstance) Pid() int {
 	return inst.cmd.Process.Pid
 }
 
-func (inst *TiFlashInstance) checkConfig(ip, deployDir string, tidbStatusAddrs, endpoints []string) error {
+func (inst *TiFlashInstance) checkConfig(deployDir string, tidbStatusAddrs, endpoints []string) error {
 	if inst.ConfigPath == "" {
 		inst.ConfigPath = path.Join(inst.Dir, "tiflash.toml")
 	}
@@ -157,12 +154,10 @@ func (inst *TiFlashInstance) checkConfig(ip, deployDir string, tidbStatusAddrs, 
 	if !os.IsNotExist(err) {
 		return errors.Trace(err)
 	}
-
 	cf, err := os.Create(inst.ConfigPath)
 	if err != nil {
 		return errors.Trace(err)
 	}
-
 	defer cf.Close()
 
 	_, err = os.Stat(inst.ProxyConfigPath)
@@ -172,18 +167,16 @@ func (inst *TiFlashInstance) checkConfig(ip, deployDir string, tidbStatusAddrs, 
 	if !os.IsNotExist(err) {
 		return errors.Trace(err)
 	}
-
 	cf2, err := os.Create(inst.ProxyConfigPath)
 	if err != nil {
 		return errors.Trace(err)
 	}
-
 	defer cf2.Close()
-	if err := writeTiFlashConfig(cf, tcpPort, httpPort, servicePort, metricsPort,
-		ip, deployDir, tidbStatusAddrs, endpoints); err != nil {
+	if err := writeTiFlashConfig(cf, inst.TCPPort, inst.Port, inst.ServicePort, inst.StatusPort,
+		inst.Host, deployDir, tidbStatusAddrs, endpoints); err != nil {
 		return errors.Trace(err)
 	}
-	if err := writeTiFlashProxyConfig(cf2, ip, deployDir); err != nil {
+	if err := writeTiFlashProxyConfig(cf2, inst.Host, deployDir, inst.ServicePort, inst.ProxyPort, inst.ProxyStatusPort); err != nil {
 		return errors.Trace(err)
 	}
 

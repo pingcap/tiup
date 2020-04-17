@@ -39,7 +39,7 @@ status-addr = "%[2]s:%[5]d"
 data-dir = "%[6]s"
 `
 
-func writeTiFlashProxyConfig(w io.Writer, ip, deployDir string) error {
+func writeTiFlashProxyConfig(w io.Writer, ip, deployDir string, servicePort, proxyPort, proxyStatusPort int) error {
 	// TODO: support multi-dir
 	dataDir := fmt.Sprintf("%s/flash", deployDir)
 	logDir := fmt.Sprintf("%s/log", deployDir)
