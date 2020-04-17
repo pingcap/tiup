@@ -59,9 +59,10 @@ mv "./package"/* "./"
 if [ $GITHUB_ACTION ]; then
   # Prepare playground
   OFFICICAL_MIRRORS="tiup-mirrors.pingcap.com"
-  VERSION=v3.0.10
-  for NAME in "tidb" "tikv" "pd" "prometheus"
+  VERSION=v4.0.0-rc
+  for NAME in "tidb" "tikv" "pd" "prometheus" "tiflash"
   do
+    echo "Download component $NAME, $VERSION"
     wget -nc --quiet "$OFFICICAL_MIRRORS/tiup-component-$NAME.index" -O "tiup-component-$NAME.index"
     wget -nc --quiet "$OFFICICAL_MIRRORS/$NAME-$VERSION-$os-amd64.tar.gz" -O "$NAME-$VERSION-$os-amd64.tar.gz"
     wget -nc --quiet "$OFFICICAL_MIRRORS/$NAME-$VERSION-$os-amd64.sha1" -O "$NAME-$VERSION-$os-amd64.sha1"
@@ -71,6 +72,7 @@ if [ $GITHUB_ACTION ]; then
   echo $(cat tiup-manifest.index | jq '.components += [{"name": "tikv", "platforms":["darwin/amd64","linux/amd64"]}]') > tiup-manifest.index
   echo $(cat tiup-manifest.index | jq '.components += [{"name": "pd", "platforms":["darwin/amd64","linux/amd64"]}]') > tiup-manifest.index
   echo $(cat tiup-manifest.index | jq '.components += [{"name": "prometheus", "platforms":["darwin/amd64","linux/amd64"]}]') > tiup-manifest.index
+  echo $(cat tiup-manifest.index | jq '.components += [{"name": "tiflash", "platforms":["darwin/amd64","linux/amd64"]}]') > tiup-manifest.index
 fi
 rmdir "./package"
 rm -f test.bin
