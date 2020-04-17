@@ -6,24 +6,12 @@
         "path": "tiup/tiup-self-update.output"
     },
     {
-        "command": "tiup --tag test-0 test",
-        "path": "tiup/tiup-run-test.output"
+        "command": "tiup install doc",
+        "path": "tiup/tiup-install-doc.output"
     },
     {
-        "command": "tiup -T test-1 test:v1.1.1",
-        "path": "tiup/tiup-run-test-v1.1.1.output"
-    },
-    {
-        "command": "tiup -T test-2 test:v1.1.2",
-        "path": "tiup/tiup-run-test2.output"
-    },
-    {
-        "command": "tiup status",
-        "path": ""
-    },
-    {
-        "command": "tiup clean --all",
-        "path": "tiup/tiup-clean-all.output"
+        "command": "tiup help doc",
+        "path": "tiup/tiup-help-doc.output"
     },
     {
         "command": "tiup -h",

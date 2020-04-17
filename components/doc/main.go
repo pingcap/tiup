@@ -32,7 +32,7 @@ func execute() error {
 
 	rootCmd := &cobra.Command{
 		Use:          "tiup doc",
-		Short:        "The document abount TiDB",
+		Short:        "The document about TiDB",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if lang == "en" {

@@ -56,6 +56,10 @@
         "path": "tiup/tiup-run-test-flag.output"
     },
     {
+        "command": "tiup -T test-2 test:v1.1.2",
+        "path": "tiup/tiup-run-test0.output"
+    },
+    {
         "command": "tiup status",
         "path": ""
     },
@@ -68,7 +72,43 @@
         "path": "tiup/tiup-help-install.output"
     },
     {
+        "command": "tiup uninstall test --all",
+        "path": "tiup/tiup-uninstall-test.output"
+    },
+    {
+        "command": "tiup uninstall --all",
+        "path": "tiup/tiup-uninstall-all.output"
+    },
+    {
+        "command": "tiup install package mirrors",
+        "path": "tiup/tiup-install-package.output"
+    },
+    {
+        "command": "tiup --binary package",
+        "path": "tiup/tiup-binary-package.output"
+    },
+    {
         "command": "tiup mirrors testmirrors --full",
         "path": ""
+    },
+    {
+        "command": "tiup --tag test-0 test",
+        "path": "tiup/tiup-run-test.output"
+    },
+    {
+        "command": "tiup -T test-1 test:v1.1.1",
+        "path": "tiup/tiup-run-test-v1.1.1.output"
+    },
+    {
+        "command": "tiup -T test-2 test:v1.1.2",
+        "path": "tiup/tiup-run-test2.output"
+    },
+    {
+        "command": "tiup status",
+        "path": ""
+    },
+    {
+        "command": "tiup clean --all",
+        "path": "tiup/tiup-clean-all.output"
     }
 ]

@@ -19,6 +19,7 @@ Available Commands:
 
 Available Components:
   mirrors   
+  doc       
 
 Flags:
   -B, --binary <component>[:version]   Print binary path of a specific version of a component <component>[:version]

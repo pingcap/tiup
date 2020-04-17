@@ -33,6 +33,12 @@ tiup package -- mirrors --release=v0.0.1 --entry=mirrors --arch=amd64 --os="$os"
 rm mirrors
 mv "./package"/* "./"
 
+# Prepare the doc component
+mv "$DIR/../tiup_home/bin/doc" "$DIR/doc"
+tiup package -- doc --release=v0.0.1 --entry=doc --arch=amd64 --os="$os" --name=doc --standalone
+rm doc
+mv "./package"/* "./"
+
 # Prepare for mock test tarball
 for v in "v1.1.1" "v1.1.2" "nightly"
 do
