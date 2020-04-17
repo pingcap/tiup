@@ -96,3 +96,19 @@ func Retry(doFunc func() error, opts ...RetryOption) error {
 
 	return fmt.Errorf("operation exceeds the max retry attempts of %d", cfg.Attempts)
 }
+
+// IsTimeoutOrMaxRetry return true if it's timeout or reach max retry.
+func IsTimeoutOrMaxRetry(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	s := err.Error()
+
+	if strings.Contains(s, "operation timed out after") ||
+		strings.Contains(s, "operation exceeds the max retry attempts of") {
+		return true
+	}
+
+	return false
+}

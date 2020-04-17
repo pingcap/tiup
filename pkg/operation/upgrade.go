@@ -89,7 +89,11 @@ func Upgrade(
 
 				for _, instance := range instances {
 					if err := pdClient.EvictStoreLeader(addr(instance), timeoutOpt); err != nil {
-						return errors.Annotatef(err, "failed to evict store leader %s", instance.GetHost())
+						if utils.IsTimeoutOrMaxRetry(err) {
+							log.Warnf("Ignore evicting store leader from %s, %v", instance.ID(), err)
+						} else {
+							return errors.Annotatef(err, "failed to evict store leader %s", instance.GetHost())
+						}
 					}
 
 					if err := stopInstance(getter, instance); err != nil {
