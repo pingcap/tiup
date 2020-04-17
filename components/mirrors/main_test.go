@@ -33,8 +33,5 @@ func TestRunMain(t *testing.T) {
 		}
 	}
 	os.Args = args
-	err := execute()
-	if err != nil {
-		t.Fatalf("error: %v", err)
-	}
+	main()
 }

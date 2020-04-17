@@ -21,6 +21,9 @@ rm -f "$DIR/tiup"
 # Prepare for package component
 mv "$DIR/../tiup_home/bin/package" "$DIR/pack"
 TIUP_WORK_DIR="$DIR" ./pack -test.coverprofile="$TEST_DIR/../cover/cov.integration-test.package.out" pack --release=v0.0.1 --entry=pack --arch=amd64 --os="$os" --name=package
+mv "./package"/* "./"
+# Coverage the manifest exists scenario
+TIUP_WORK_DIR="$DIR" ./pack -test.coverprofile="$TEST_DIR/../cover/cov.integration-test.package2.out" pack --release=v0.0.1 --entry=pack --arch=amd64 --os="$os" --name=package
 rm pack
 mv "./package"/* "./"
 

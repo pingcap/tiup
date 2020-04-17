@@ -56,6 +56,14 @@
         "path": "tiup/tiup-run-test-flag.output"
     },
     {
+        "command": "tiup status",
+        "path": ""
+    },
+    {
+        "command": "tiup clean --all",
+        "path": ""
+    },
+    {
         "command": "tiup help install",
         "path": "tiup/tiup-help-install.output"
     },
