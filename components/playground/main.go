@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -103,6 +104,12 @@ func execute() error {
 	tikvBinPath := ""
 	pdBinPath := ""
 	tiflashBinPath := ""
+	var defaultTiflashNum int
+	if runtime.GOOS == "linux" {
+		defaultTiflashNum = 1
+	} else {
+		defaultTiflashNum = 0
+	}
 
 	rootCmd := &cobra.Command{
 		Use: "tiup playground [version]",
@@ -145,7 +152,7 @@ Examples:
 	rootCmd.Flags().IntVarP(&tidbNum, "db", "", 1, "TiDB instance number")
 	rootCmd.Flags().IntVarP(&tikvNum, "kv", "", 1, "TiKV instance number")
 	rootCmd.Flags().IntVarP(&pdNum, "pd", "", 1, "PD instance number")
-	rootCmd.Flags().IntVarP(&tiflashNum, "tiflash", "", 1, "TiFlash instance number")
+	rootCmd.Flags().IntVarP(&tiflashNum, "tiflash", "", defaultTiflashNum, "TiFlash instance number")
 	rootCmd.Flags().StringVarP(&host, "host", "", host, "Playground cluster host")
 	rootCmd.Flags().BoolVar(&monitor, "monitor", false, "Start prometheus component")
 	rootCmd.Flags().StringVarP(&tidbConfigPath, "db.config", "", tidbConfigPath, "TiDB instance configuration file")
