@@ -23,7 +23,6 @@ import (
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
-	"github.com/pingcap-incubator/tiup/pkg/mock"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	. "github.com/pingcap/check"
@@ -51,6 +50,7 @@ func (s *testCmdSuite) SetUpSuite(c *C) {
 	repo, err := repository.NewRepository(s.mirror, repository.Options{})
 	c.Assert(err, IsNil)
 	meta.SetRepository(repo)
+
 	c.Assert(os.RemoveAll(path.Join(s.testDir, "profile")), IsNil)
 	c.Assert(os.MkdirAll(path.Join(s.testDir, "profile"), 0755), IsNil)
 	meta.SetProfile(localdata.NewProfile(path.Join(s.testDir, "profile")))
@@ -70,29 +70,22 @@ func (s *testCmdSuite) TestInstall(c *C) {
 }
 
 func (s *testCmdSuite) TestListComponent(c *C) {
-	cmd := newListCmd()
-	defer mock.With("PrintTable", func(rows [][]string, header bool) {
-		c.Assert(header, IsTrue)
-		c.Assert(len(rows), Greater, 1)
-		c.Assert(rows[1][0], Equals, "test")
-	})()
-
-	c.Assert(cmd.RunE(cmd, []string{}), IsNil)
+	result, err := showComponentList(false, false)
+	c.Assert(err, IsNil)
+	c.Assert(len(result.cmpTable), Greater, 1)
+	c.Assert(result.cmpTable[1][0], Equals, "test")
 }
 
 func (s *testCmdSuite) TestListVersion(c *C) {
-	cmd := newListCmd()
-	defer mock.With("PrintTable", func(rows [][]string, header bool) {
-		c.Assert(header, IsTrue)
-		c.Assert(len(rows), Greater, 1)
-		for idx := 1; idx < len(rows); idx++ {
-			success := false
-			if strings.HasPrefix(rows[idx][0], "v") || rows[idx][0] == "nightly" {
-				success = true
-			}
-			c.Assert(success, IsTrue)
+	result, err := showComponentVersions("test", false, false)
+	c.Assert(err, IsNil)
+	result.print()
+	c.Assert(len(result.cmpTable), Greater, 1)
+	for idx := 1; idx < len(result.cmpTable); idx++ {
+		success := false
+		if strings.HasPrefix(result.cmpTable[idx][0], "v") || result.cmpTable[idx][0] == "nightly" {
+			success = true
 		}
-	})()
-
-	c.Assert(cmd.RunE(cmd, []string{"test"}), IsNil)
+		c.Assert(success, IsTrue)
+	}
 }

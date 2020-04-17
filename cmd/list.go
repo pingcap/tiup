@@ -50,30 +50,13 @@ components or versions which have not been installed.
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch len(args) {
 			case 0:
-				if refresh || meta.Profile().Manifest() == nil {
-					manifest, err := meta.Repository().Manifest()
-					if err != nil {
-						return err
-					}
-					err = meta.Profile().SaveManifest(manifest)
-					if err != nil {
-						return err
-					}
-				}
-				return showComponentList(showInstalled)
+				result, err := showComponentList(showInstalled, refresh)
+				result.print()
+				return err
 			case 1:
-				component := args[0]
-				if refresh || meta.Profile().Versions(component) == nil {
-					manifest, err := meta.Repository().ComponentVersions(component)
-					if err != nil {
-						return errors.Trace(err)
-					}
-					err = meta.Profile().SaveVersions(component, manifest)
-					if err != nil {
-						return err
-					}
-				}
-				return showComponentVersions(component, showInstalled)
+				result, err := showComponentVersions(args[0], showInstalled, refresh)
+				result.print()
+				return err
 			default:
 				return cmd.Help()
 			}
@@ -85,10 +68,31 @@ components or versions which have not been installed.
 	return cmd
 }
 
-func showComponentList(onlyInstalled bool) error {
+type listResult struct {
+	header   string
+	cmpTable [][]string
+}
+
+func (lr *listResult) print() {
+	fmt.Printf(lr.header)
+	tui.PrintTable(lr.cmpTable, true)
+}
+
+func showComponentList(onlyInstalled bool, refresh bool) (*listResult, error) {
+	if refresh || meta.Profile().Manifest() == nil {
+		manifest, err := meta.Repository().Manifest()
+		if err != nil {
+			return nil, err
+		}
+		err = meta.Profile().SaveManifest(manifest)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	installed, err := meta.Profile().InstalledComponents()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	manifest := meta.Profile().Manifest()
 	var cmpTable [][]string
@@ -106,7 +110,7 @@ func showComponentList(onlyInstalled bool) error {
 		if localComponents.Exist(comp.Name) {
 			versions, err := meta.Profile().InstalledVersions(comp.Name)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			installStatus = fmt.Sprintf("YES(%s)", strings.Join(versions, ","))
 		}
@@ -119,15 +123,27 @@ func showComponentList(onlyInstalled bool) error {
 		})
 	}
 
-	fmt.Printf("Available components (Last Modified: %s):\n", manifest.Modified)
-	tui.PrintTable(cmpTable, true)
-	return nil
+	return &listResult{
+		header:   fmt.Sprintf("Available components (Last Modified: %s):\n", manifest.Modified),
+		cmpTable: cmpTable,
+	}, nil
 }
 
-func showComponentVersions(component string, onlyInstalled bool) error {
+func showComponentVersions(component string, onlyInstalled bool, refresh bool) (*listResult, error) {
+	if refresh || meta.Profile().Versions(component) == nil {
+		manifest, err := meta.Repository().ComponentVersions(component)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		err = meta.Profile().SaveVersions(component, manifest)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	versions, err := meta.Profile().InstalledVersions(component)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	manifest := meta.Profile().Versions(component)
 
@@ -157,7 +173,8 @@ func showComponentVersions(component string, onlyInstalled bool) error {
 		})
 	}
 
-	fmt.Printf("Available versions for %s (Last Modified: %s):\n", component, manifest.Modified)
-	tui.PrintTable(cmpTable, true)
-	return nil
+	return &listResult{
+		header:   fmt.Sprintf("Available versions for %s (Last Modified: %s):\n", component, manifest.Modified),
+		cmpTable: cmpTable,
+	}, nil
 }
