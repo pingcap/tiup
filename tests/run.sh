@@ -105,7 +105,8 @@ do
       failed=$((failed+1))
 
       echo "${BOLD}-----------------------------------DIFF START-----------------------------------------${NORMAL}" >&2
-      diff --old-group-format="${RED}%<${NORMAL}" \
+      diff --ignore-space-change \
+       --old-group-format="${RED}%<${NORMAL}" \
        --new-group-format="${GREEN}%>${NORMAL}" \
        --unchanged-group-format="" \
        "$TIUP_EXPECTED/$path" "$TMP_DIR/$path"
