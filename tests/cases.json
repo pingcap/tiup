@@ -5,14 +5,7 @@
         "command": "tiup update --self",
         "path": "tiup/tiup-self-update.output"
     },
-    {
-        "command": "tiup install doc",
-        "path": "tiup/tiup-install-doc.output"
-    },
-    {
-        "command": "tiup help doc",
-        "path": "tiup/tiup-help-doc.output"
-    },
+    
     {
         "command": "tiup -h",
         "path": "tiup/tiup-h.output"

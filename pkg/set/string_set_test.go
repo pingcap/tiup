@@ -15,6 +15,7 @@ package set
 
 import (
 	"fmt"
+	"testing"
 
 	"github.com/pingcap/check"
 )
@@ -22,6 +23,10 @@ import (
 var _ = check.Suite(&stringSetTestSuite{})
 
 type stringSetTestSuite struct{}
+
+func TestNewStringSet(t *testing.T) {
+	check.TestingT(t)
+}
 
 func (s *stringSetTestSuite) TestStringSet(c *check.C) {
 	set := NewStringSet()

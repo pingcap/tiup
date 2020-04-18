@@ -36,6 +36,10 @@
         "path": ""
     },
     {
+        "command": "tiup list test --refresh",
+        "path": ""
+    },
+    {
         "command": "tiup update test --nightly",
         "path": "tiup/tiup-update-test-nightly.output"
     },
@@ -72,8 +76,16 @@
         "path": "tiup/tiup-help-install.output"
     },
     {
-        "command": "tiup uninstall test --all",
+        "command": "tiup uninstall",
+        "path": "tiup/tiup-uninstall.output"
+    },
+    {
+        "command": "tiup uninstall test",
         "path": "tiup/tiup-uninstall-test.output"
+    },
+    {
+        "command": "tiup uninstall test --all",
+        "path": "tiup/tiup-uninstall-test-all.output"
     },
     {
         "command": "tiup uninstall --all",
@@ -110,6 +122,22 @@
     {
         "command": "tiup clean --all",
         "path": "tiup/tiup-clean-all.output"
+    },
+    {
+        "command": "tiup install",
+        "path": "tiup/tiup-install.output"
+    },
+    {
+        "command": "tiup install doc",
+        "path": "tiup/tiup-install-doc.output"
+    },
+    {
+        "command": "tiup help doc",
+        "path": "tiup/tiup-help-doc.output"
+    },
+    {
+        "command": "tiup clean --all",
+        "path": ""
     },
     {
         "1.comment": "------------- some flags will conflicts with test binary ----------",
