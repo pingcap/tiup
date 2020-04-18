@@ -56,7 +56,7 @@ func (inst *PDInstance) Join(pds []*PDInstance) *PDInstance {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *PDInstance) Start(ctx context.Context, version repository.Version, binPath string) error {
+func (inst *PDInstance) Start(ctx context.Context, version repository.Version, binPath string, _ *localdata.Profile) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}

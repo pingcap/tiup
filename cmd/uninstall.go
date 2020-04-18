@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newUninstallCmd() *cobra.Command {
+func newUninstallCmd(env *meta.Environment) *cobra.Command {
 	var all, self bool
 	cmdUnInst := &cobra.Command{
 		Use:   "uninstall <component1>:<version>",
@@ -48,7 +48,7 @@ which is used to uninstall tiup.
   tiup uninstall --all`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if self {
-				if err := os.RemoveAll(meta.LocalRoot()); err != nil {
+				if err := os.RemoveAll(env.Profile().Root()); err != nil {
 					return errors.Trace(err)
 				}
 				fmt.Println("Uninstalled self successfully!")
@@ -56,9 +56,9 @@ which is used to uninstall tiup.
 			}
 			switch {
 			case len(args) > 0:
-				return removeComponents(args, all)
+				return removeComponents(env, args, all)
 			case len(args) == 0 && all:
-				if err := os.RemoveAll(meta.LocalPath(localdata.ComponentParentDir)); err != nil {
+				if err := os.RemoveAll(env.LocalPath(localdata.ComponentParentDir)); err != nil {
 					return errors.Trace(err)
 				}
 				fmt.Println("Uninstalled all components successfully!")
@@ -73,21 +73,21 @@ which is used to uninstall tiup.
 	return cmdUnInst
 }
 
-func removeComponents(specs []string, all bool) error {
+func removeComponents(env *meta.Environment, specs []string, all bool) error {
 	for _, spec := range specs {
 		var path string
 		if strings.Contains(spec, ":") {
 			parts := strings.SplitN(spec, ":", 2)
-			path = meta.LocalPath(localdata.ComponentParentDir, parts[0], parts[1])
+			path = env.LocalPath(localdata.ComponentParentDir, parts[0], parts[1])
 		} else {
 			if !all {
 				fmt.Printf("Use `tiup uninstall %s --all` if you want to remove all versions.\n", spec)
 				continue
 			}
-			if err := os.RemoveAll(meta.LocalPath(localdata.StorageParentDir, spec)); err != nil {
+			if err := os.RemoveAll(env.LocalPath(localdata.StorageParentDir, spec)); err != nil {
 				return err
 			}
-			path = meta.LocalPath(localdata.ComponentParentDir, spec)
+			path = env.LocalPath(localdata.ComponentParentDir, spec)
 		}
 		err := os.RemoveAll(path)
 		if err != nil {

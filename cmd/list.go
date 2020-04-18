@@ -25,7 +25,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newListCmd() *cobra.Command {
+func newListCmd(env *meta.Environment) *cobra.Command {
 	var (
 		showInstalled bool
 		refresh       bool
@@ -50,11 +50,11 @@ components or versions which have not been installed.
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch len(args) {
 			case 0:
-				result, err := showComponentList(showInstalled, refresh)
+				result, err := showComponentList(env, showInstalled, refresh)
 				result.print()
 				return err
 			case 1:
-				result, err := showComponentVersions(args[0], showInstalled, refresh)
+				result, err := showComponentVersions(env, args[0], showInstalled, refresh)
 				result.print()
 				return err
 			default:
@@ -78,23 +78,23 @@ func (lr *listResult) print() {
 	tui.PrintTable(lr.cmpTable, true)
 }
 
-func showComponentList(onlyInstalled bool, refresh bool) (*listResult, error) {
-	if refresh || meta.Profile().Manifest() == nil {
-		manifest, err := meta.Repository().Manifest()
+func showComponentList(env *meta.Environment, onlyInstalled bool, refresh bool) (*listResult, error) {
+	if refresh || env.Profile().Manifest() == nil {
+		manifest, err := env.Repository().Manifest()
 		if err != nil {
 			return nil, err
 		}
-		err = meta.Profile().SaveManifest(manifest)
+		err = env.Profile().SaveManifest(manifest)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	installed, err := meta.Profile().InstalledComponents()
+	installed, err := env.Profile().InstalledComponents()
 	if err != nil {
 		return nil, err
 	}
-	manifest := meta.Profile().Manifest()
+	manifest := env.Profile().Manifest()
 	var cmpTable [][]string
 	cmpTable = append(cmpTable, []string{"Name", "Installed", "Platforms", "Description"})
 
@@ -108,7 +108,7 @@ func showComponentList(onlyInstalled bool, refresh bool) (*listResult, error) {
 		}
 		installStatus := ""
 		if localComponents.Exist(comp.Name) {
-			versions, err := meta.Profile().InstalledVersions(comp.Name)
+			versions, err := env.Profile().InstalledVersions(comp.Name)
 			if err != nil {
 				return nil, err
 			}
@@ -129,23 +129,23 @@ func showComponentList(onlyInstalled bool, refresh bool) (*listResult, error) {
 	}, nil
 }
 
-func showComponentVersions(component string, onlyInstalled bool, refresh bool) (*listResult, error) {
-	if refresh || meta.Profile().Versions(component) == nil {
-		manifest, err := meta.Repository().ComponentVersions(component)
+func showComponentVersions(env *meta.Environment, component string, onlyInstalled bool, refresh bool) (*listResult, error) {
+	if refresh || env.Profile().Versions(component) == nil {
+		manifest, err := env.Repository().ComponentVersions(component)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
-		err = meta.Profile().SaveVersions(component, manifest)
+		err = env.Profile().SaveVersions(component, manifest)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	versions, err := meta.Profile().InstalledVersions(component)
+	versions, err := env.Profile().InstalledVersions(component)
 	if err != nil {
 		return nil, err
 	}
-	manifest := meta.Profile().Versions(component)
+	manifest := env.Profile().Versions(component)
 
 	var cmpTable [][]string
 	cmpTable = append(cmpTable, []string{"Version", "Installed", "Release:", "Platforms"})

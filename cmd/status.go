@@ -28,7 +28,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newStatusCmd() *cobra.Command {
+func newStatusCmd(env *meta.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "List the status of instantiated components",
@@ -36,16 +36,16 @@ func newStatusCmd() *cobra.Command {
 			if len(args) > 0 {
 				return cmd.Help()
 			}
-			return showStatus()
+			return showStatus(env)
 		},
 	}
 	return cmd
 }
 
-func showStatus() error {
+func showStatus(env *meta.Environment) error {
 	var table [][]string
 	table = append(table, []string{"Name", "Component", "PID", "Status", "Created Time", "Directory", "Binary", "Args"})
-	if dataDir := meta.LocalPath(localdata.DataParentDir); utils.IsExist(dataDir) {
+	if dataDir := env.LocalPath(localdata.DataParentDir); utils.IsExist(dataDir) {
 		dirs, err := ioutil.ReadDir(dataDir)
 		if err != nil {
 			return err
@@ -57,13 +57,13 @@ func showStatus() error {
 			metaFile := filepath.Join(localdata.DataParentDir, dir.Name(), localdata.MetaFilename)
 
 			// If the path doesn't contain the meta file, which means startup interrupted
-			if utils.IsNotExist(meta.LocalPath(metaFile)) {
-				_ = os.RemoveAll(meta.LocalPath(filepath.Join(localdata.DataParentDir, dir.Name())))
+			if utils.IsNotExist(env.LocalPath(metaFile)) {
+				_ = os.RemoveAll(env.LocalPath(filepath.Join(localdata.DataParentDir, dir.Name())))
 				continue
 			}
 
 			var process process
-			err := meta.Profile().ReadJSON(metaFile, &process)
+			err := env.Profile().ReadJSON(metaFile, &process)
 			if err != nil {
 				return err
 			}

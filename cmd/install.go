@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newInstallCmd() *cobra.Command {
+func newInstallCmd(env *meta.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "install <component1>[:version] [component2...N]",
 		Short: "Install a specific version of a component",
@@ -38,14 +38,14 @@ of the same component:
 			if len(args) == 0 {
 				return cmd.Help()
 			}
-			return installComponents(args)
+			return installComponents(env, args)
 		},
 	}
 	return cmd
 }
 
-func installComponents(specs []string) error {
-	manifest, err := meta.LatestManifest()
+func installComponents(env *meta.Environment, specs []string) error {
+	manifest, err := env.LatestManifest()
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func installComponents(specs []string) error {
 			return fmt.Errorf("component `%s` does not support `%s/%s`", component, runtime.GOOS, runtime.GOARCH)
 		}
 
-		err := meta.DownloadComponent(component, version, version.IsNightly())
+		err := env.DownloadComponent(component, version, version.IsNightly())
 		if err != nil {
 			return err
 		}

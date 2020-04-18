@@ -47,13 +47,17 @@ type testCmdSuite struct {
 func (s *testCmdSuite) SetUpSuite(c *C) {
 	s.testDir = filepath.Join(currentDir(), "testdata")
 	s.mirror = repository.NewMirror(s.testDir, repository.MirrorOptions{})
+}
+
+func (s *testCmdSuite) newEnv(c *C) *meta.Environment {
 	repo, err := repository.NewRepository(s.mirror, repository.Options{})
 	c.Assert(err, IsNil)
-	meta.SetRepository(repo)
 
 	c.Assert(os.RemoveAll(path.Join(s.testDir, "profile")), IsNil)
 	c.Assert(os.MkdirAll(path.Join(s.testDir, "profile"), 0755), IsNil)
-	meta.SetProfile(localdata.NewProfile(path.Join(s.testDir, "profile")))
+	profile := localdata.NewProfile(path.Join(s.testDir, "profile"))
+
+	return meta.New(profile, repo)
 }
 
 func (s *testCmdSuite) TearDownSuite(c *C) {
@@ -62,7 +66,7 @@ func (s *testCmdSuite) TearDownSuite(c *C) {
 }
 
 func (s *testCmdSuite) TestInstall(c *C) {
-	cmd := newInstallCmd()
+	cmd := newInstallCmd(s.newEnv(c))
 
 	c.Assert(utils.IsNotExist(path.Join(s.testDir, "profile", "components", "test")), IsTrue)
 	c.Assert(cmd.RunE(cmd, []string{"test"}), IsNil)
@@ -70,14 +74,14 @@ func (s *testCmdSuite) TestInstall(c *C) {
 }
 
 func (s *testCmdSuite) TestListComponent(c *C) {
-	result, err := showComponentList(false, false)
+	result, err := showComponentList(s.newEnv(c), false, false)
 	c.Assert(err, IsNil)
 	c.Assert(len(result.cmpTable), Greater, 1)
 	c.Assert(result.cmpTable[1][0], Equals, "test")
 }
 
 func (s *testCmdSuite) TestListVersion(c *C) {
-	result, err := showComponentVersions("test", false, false)
+	result, err := showComponentVersions(s.newEnv(c), "test", false, false)
 	c.Assert(err, IsNil)
 	result.print()
 	c.Assert(len(result.cmpTable), Greater, 1)
