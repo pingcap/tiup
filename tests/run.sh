@@ -105,7 +105,7 @@ do
       failed=$((failed+1))
 
       echo "${BOLD}-----------------------------------DIFF START-----------------------------------------${NORMAL}" >&2
-      diff --ignore-space-change -E -Z \
+      diff --ignore-space-change -B -E -Z \
        --old-group-format="${RED}%<${NORMAL}" \
        --new-group-format="${GREEN}%>${NORMAL}" \
        --unchanged-group-format="" \
