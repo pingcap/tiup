@@ -76,3 +76,8 @@ if [ $GITHUB_ACTION ]; then
 fi
 rmdir "./package"
 rm -f test.bin
+
+# Mock wrong data file
+touch $TIUP_HOME/data/invalid-file
+mkdir $TIUP_HOME/data/invalid-dir
+chmod -r $TIUP_HOME/data/invalid-dir

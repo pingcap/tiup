@@ -1,1 +1,1 @@
-Uninstalled component `test` successfully!
+Use `tiup uninstall test --all` if you want to remove all versions.

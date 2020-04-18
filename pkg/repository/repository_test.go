@@ -95,6 +95,7 @@ func (s *repositorySuite) TestManifest(c *C) {
 	manifest, err := repo.Manifest()
 	c.Assert(err, IsNil)
 	c.Assert(manifest, DeepEquals, expManifest)
+	c.Assert(repo.Mirror(), IsNil)
 }
 
 var handleVersManifests = func(resource string, result interface{}) {
