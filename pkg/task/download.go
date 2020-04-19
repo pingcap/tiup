@@ -76,12 +76,12 @@ func (d *Downloader) Execute(_ *Context) error {
 
 		err = repo.Mirror().Download(fileName, meta.ProfilePath(meta.TiOpsPackageCacheDir))
 		if err != nil {
-			return nil
+			return errors.AddStack(err)
 		}
 
 		err = repo.Mirror().Download(sha1File, meta.ProfilePath(meta.TiOpsPackageCacheDir))
 		if err != nil {
-			return nil
+			return errors.AddStack(err)
 		}
 
 		shaPath := meta.ProfilePath(meta.TiOpsPackageCacheDir, sha1File)
@@ -94,6 +94,7 @@ func (d *Downloader) Execute(_ *Context) error {
 		if err != nil {
 			return errors.Trace(err)
 		}
+
 		err = utils.CheckSHA(file, string(sha))
 		_ = file.Close()
 
