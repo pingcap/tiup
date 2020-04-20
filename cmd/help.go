@@ -21,6 +21,7 @@ import (
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -68,7 +69,7 @@ func externalHelp(spec string, args ...string) {
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 	}
 
-	comp := exec.Command(binaryPath, RebuildArgs(args)...)
+	comp := exec.Command(binaryPath, utils.RebuildArgs(args)...)
 	comp.Env = append(
 		envs,
 		os.Environ()...,
@@ -82,20 +83,6 @@ func externalHelp(spec string, args ...string) {
 	if err := comp.Wait(); err != nil {
 		fmt.Printf("Cannot fetch help message from %s failed: %v\n", binaryPath, err)
 	}
-}
-
-func RebuildArgs(args []string) []string {
-	helpFlag := "--help"
-	argList := []string{}
-	for _, arg := range args {
-		if arg == "-h" || arg == "--help" {
-			helpFlag = arg
-		} else {
-			argList = append(argList, arg)
-		}
-	}
-	argList = append(argList, helpFlag)
-	return argList
 }
 
 func usageTemplate() string {

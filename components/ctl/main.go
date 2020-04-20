@@ -8,8 +8,8 @@ import (
 	"path"
 
 	"github.com/fatih/color"
-	c "github.com/pingcap-incubator/tiup/cmd"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +25,7 @@ func execute() error {
 		return errors.New("component `ctl` cannot run in standalone mode")
 	}
 	rootCmd := &cobra.Command{
-		Use:          "tiup ctl {tidb/pd/tikv/binlog}",
+		Use:          "tiup ctl {tidb/pd/tikv/binlog/etcd}",
 		Short:        "TiDB controllers",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -51,7 +51,7 @@ func execute() error {
 			originHelpFunc(cmd, args)
 			return
 		}
-		args = c.RebuildArgs(args)
+		args = utils.RebuildArgs(args)
 		bin, err := binaryPath(home, args[0])
 		if err != nil {
 			fmt.Println(color.RedString("Error: %v", err))
@@ -69,10 +69,10 @@ func binaryPath(home, cmd string) (string, error) {
 	switch cmd {
 	case "tidb", "tikv", "pd":
 		return path.Join(home, cmd+"-ctl"), nil
-	case "binlog":
+	case "binlog", "etcd":
 		return path.Join(home, cmd+"ctl"), nil
 	default:
-		return "", errors.New("ctl only supports tidb, tikv, pd and binlog currently")
+		return "", errors.New("ctl only supports tidb, tikv, pd, binlog and etcd currently")
 	}
 }
 
