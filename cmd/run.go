@@ -84,7 +84,6 @@ func runComponent(env *meta.Environment, tag, spec, binPath string, args []strin
 
 	go func() {
 		defer close(ch)
-		fmt.Printf("Starting component `%s`: %s %s\n", component, p.Exec, strings.Join(p.Args, " "))
 		ch <- p.cmd.Wait()
 	}()
 
@@ -237,6 +236,7 @@ func launchComponent(ctx context.Context, component string, version repository.V
 		cmd:         c,
 	}
 
+	fmt.Printf("Starting component `%s`: %s\n", component, strings.Join(append([]string{p.Exec}, p.Args...), " "))
 	err = p.cmd.Start()
 	if p.cmd.Process != nil {
 		p.Pid = p.cmd.Process.Pid
