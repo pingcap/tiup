@@ -62,6 +62,9 @@ integration_test:
 	@$(GOTEST) -c -cover -covermode=count \
 			-coverpkg=./... \
 			-o tests/tiup_home/bin/playground ./components/playground/ ;
+	@$(GOTEST) -c -cover -covermode=count \
+			-coverpkg=./... \
+			-o tests/tiup_home/bin/ctl ./components/ctl/ ;
 	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/doc ./components/doc/
 	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/tiup.2
 	cd tests && bash run.sh ; \
