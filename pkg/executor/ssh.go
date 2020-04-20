@@ -181,10 +181,11 @@ func (e *SSHExecutor) Transfer(src string, dst string, download bool) error {
 	}
 
 	// download file from remote
-	session, err := e.Config.Connect()
+	session, client, err := e.Config.Connect()
 	if err != nil {
 		return err
 	}
+	defer client.Close()
 	defer session.Close()
 
 	targetPath := filepath.Dir(dst)
