@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -33,6 +34,7 @@ import (
 type mirrorsOptions struct {
 	archs     []string
 	oss       []string
+	versions  []string
 	full      bool
 	comps     map[string]*[]string
 	overwrite bool
@@ -73,6 +75,7 @@ func execute() error {
 		Use: "tiup mirrors <target-dir>",
 		Example: `  tiup mirrors local-path --arch amd64,arm --os linux,darwin    # Specify the architectures and OSs
   tiup mirrors local-path --full                                # Build a full local mirrors
+  tiup mirrors local-path --core v4                             # Specify the version of all core components to bootstrap a cluster
   tiup mirrors local-path --tikv v4                             # Specify the version via prefix
   tiup mirrors local-path --tidb all --pd all                   # Download all version for specific component`,
 		Short:        "Build a local mirrors and download all selected components",
@@ -81,7 +84,31 @@ func execute() error {
 			if len(args) != 1 {
 				return cmd.Help()
 			}
-			return download(args[0], repo, manifest, options)
+			for _, v := range options.versions {
+				*options.comps["tidb"] = append(*options.comps["tidb"], v)
+				*options.comps["tikv"] = append(*options.comps["tikv"], v)
+				*options.comps["pd"] = append(*options.comps["pd"], v)
+				*options.comps["grafana"] = append(*options.comps["grafana"], v)
+				*options.comps["prometheus"] = append(*options.comps["prometheus"], v)
+				*options.comps["drainer"] = append(*options.comps["drainer"], v)
+				*options.comps["pump"] = append(*options.comps["pump"], v)
+				*options.comps["blackbox_exporter"] = append(*options.comps["blackbox_exporter"], "v0.12.0")
+				*options.comps["node_exporter"] = append(*options.comps["node_exporter"], "v0.17.0")
+				*options.comps["pushgateway"] = append(*options.comps["pushgateway"], "v0.7.0")
+				if *options.comps["cluster"] == nil {
+					*options.comps["cluster"] = []string{"v0.4.8"}
+				}
+				if *options.comps["playground"] == nil {
+					*options.comps["playground"] = []string{"v0.0.9"}
+				}
+			}
+			if err := download(args[0], repo, manifest, options); err != nil {
+				return err
+			}
+			if err := copyInstallScript(args[0]); err != nil {
+				return err
+			}
+			return nil
 		},
 	}
 
@@ -90,6 +117,7 @@ func execute() error {
 	rootCmd.Flags().BoolVarP(&options.full, "full", "f", false, "Build a full mirrors repository")
 	rootCmd.Flags().StringSliceVarP(&options.archs, "arch", "a", []string{"amd64"}, "Specify the downloading architecture")
 	rootCmd.Flags().StringSliceVarP(&options.oss, "os", "o", []string{"linux", "darwin"}, "Specify the downloading os")
+	rootCmd.Flags().StringSliceVarP(&options.versions, "core", "c", []string{}, "Specify the version of all core components")
 
 	for _, comp := range manifest.Components {
 		options.comps[comp.Name] = new([]string)
@@ -206,6 +234,26 @@ func download(targetDir string, repo *repository.Repository, manifest *repositor
 		if err := writeJSON(filename(fmt.Sprintf("tiup-component-%s.index", name)), newCompInfo); err != nil {
 			return err
 		}
+	}
+
+	// download tiup itself
+	for _, os := range options.oss {
+		name := fmt.Sprintf("tiup-%s-amd64", os)
+		if err := downloadResource(repo.Mirror(), targetDir, name, options.overwrite); err != nil {
+			return errors.Annotatef(err, "download resource: %s", name)
+		}
+	}
+
+	return nil
+}
+
+func copyInstallScript(targetDir string) error {
+	home := os.Getenv(localdata.EnvNameComponentInstallDir)
+	if err := utils.Copy(path.Join(home, "install.sh"), path.Join(targetDir, "install.sh")); err != nil {
+		return err
+	}
+	if err := utils.Copy(path.Join(home, "local_install.sh"), path.Join(targetDir, "local_install.sh")); err != nil {
+		return err
 	}
 	return nil
 }
