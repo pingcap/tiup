@@ -180,7 +180,7 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance) error {
 		// Stop by systemd.
 		delPaths := make([]string, 0)
 		switch name {
-		case meta.ComponentTiKV, meta.ComponentPD, meta.ComponentPump, meta.ComponentDrainer, meta.ComponentPrometheus, meta.ComponentAlertManager:
+		case meta.ComponentTiKV, meta.ComponentPD, meta.ComponentTiFlash, meta.ComponentPump, meta.ComponentDrainer, meta.ComponentPrometheus, meta.ComponentAlertManager:
 			delPaths = append(delPaths, ins.DataDir())
 		}
 
