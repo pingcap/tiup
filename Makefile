@@ -50,15 +50,14 @@ cover-dir:
 unit-test: cover-dir
 	$(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
 
-integration_test:
+build_integration_test:
 	$(GOTEST) -c -cover -covermode=count \
 		-coverpkg=github.com/pingcap-incubator/tiup-cluster/... \
-		-o tests/bin/tiup-cluster \
-		github.com/pingcap-incubator/tiup-cluster/ ; \
-	cd tests && sh run.sh ; \
+		-o tests/bin/tiup-cluster.test \
+		github.com/pingcap-incubator/tiup-cluster/
 
 
-test: failpoint-enable unit-test #integration_test
+test: failpoint-enable unit-test
 	@$(FAILPOINT_DISABLE)
 
 check-static: tools/bin/golangci-lint
@@ -66,9 +65,11 @@ check-static: tools/bin/golangci-lint
 
 coverage:
 	GO111MODULE=off go get github.com/wadey/gocovmerge
-	gocovmerge cover/cov.* | grep -vE ".*.pb.go|.*__failpoint_binding__.go" > "cover/all_cov.out"
+	gocovmerge cover/* | grep -vE ".*.pb.go|.*__failpoint_binding__.go" > "cover/all_cov.out"
 ifeq ("$(JenkinsCI)", "1")
 	@bash <(curl -s https://codecov.io/bash) -f cover/all_cov.out -t $(CODECOV_TOKEN)
+else
+	go tool cover -html "cover/all_cov.out" -o "cover/all_cov.html"
 endif
 
 failpoint-enable: tools/bin/failpoint-ctl

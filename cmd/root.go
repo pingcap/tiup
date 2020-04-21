@@ -197,7 +197,9 @@ func Execute() {
 
 	color.Unset()
 
-	os.Exit(code)
+	if code != 0 {
+		os.Exit(code)
+	}
 }
 
 func beautifyCobraUsageAndHelp(rootCmd *cobra.Command) {

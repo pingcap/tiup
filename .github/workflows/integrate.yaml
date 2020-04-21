@@ -33,6 +33,12 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha  }}
           path: go/src/github.com/${{ github.repository  }}
+      - name: Build build_integration_test
+        working-directory: ${{env.working-directory}}
+        run: |
+          export GOPATH=${GITHUB_WORKSPACE}/go
+          export PATH=$PATH:$GOPATH/bin
+          make build_integration_test
 
       - name: Build the docker-compose stack
         working-directory: ${{env.working-directory}}
@@ -80,6 +86,62 @@ jobs:
           free -h
           "cat ./tests/*.log" || true
 
+      - name: Upload cover files
+        uses: actions/upload-artifact@v1
+        with:
+          name: ${{matrix.cases}}-cover
+          path: ${{env.working-directory}}/tests/cover
+
+
       # - name: Setup tmate session
       #   if: always()
       #   uses: mxschmitt/action-tmate@v2
+  coverage:
+    needs: case
+    runs-on: ubuntu-latest
+    env:
+      working-directory: ${{ github.workspace   }}/go/src/github.com/${{ github.repository   }}
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha  }}
+          path: go/src/github.com/${{ github.repository  }}
+
+      - name: make unit-test
+        working-directory: ${{env.working-directory}}
+        run: |
+          export GOPATH=${GITHUB_WORKSPACE}/go
+          export PATH=$PATH:$GOPATH/bin
+          make unit-test
+
+      - uses: actions/download-artifact@v1
+        with:
+          name: test_cmd-cover
+          path: ${{env.working-directory}}/cover
+
+      - uses: actions/download-artifact@v1
+        with:
+          name: test_upgrade-cover
+          path: ${{env.working-directory}}/cover
+
+      - name: Make coverage
+        working-directory: ${{env.working-directory}}
+        run: |
+          export GOPATH=${GITHUB_WORKSPACE}/go
+          export PATH=$PATH:$GOPATH/bin
+          make coverage
+
+      - name: Upload all cover files
+        uses: actions/upload-artifact@v1
+        with:
+          name: all-cover
+          path: ${{env.working-directory}}/cover
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          file: ${{env.working-directory}}/cover/all_cov.out
+          flags: coverage
+          name: codecov-umbrella
+          fail_ci_if_error: true

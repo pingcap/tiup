@@ -4,9 +4,12 @@ set -eu
 
 # instance_num <name>
 # get the instance number of the cluster
+# filter the output of the go test
+# PASS
+# coverage: 12.7% of statements in github.com/pingcap-incubator/tiup-cluster/...
 function instance_num() {
 	name=$1
-	line=$(tiup-cluster display $name | wc -l)
+	line=$(tiup-cluster display $name | grep -v "PASS" | grep -v "coverage" | wc -l)
 	count=`expr $line - 4`
 
 	echo $count

@@ -14,6 +14,15 @@ export TIUP_CLUSTER_EXECUTE_DEFAULT_TIMEOUT=300s
 export version=${version-v4.0.0-rc}
 export old_version=${old_version-v3.0.12}
 
+function tiup-cluster() {
+	# echo "in function"
+	if [ -f "./bin/tiup-cluster.test" ]; then
+	  ./bin/tiup-cluster.test  -test.coverprofile=./cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests $@
+    else
+	  tiup-cluster $@
+	fi
+}
+
 . ./script/util.sh
 
 # TODO remove this once embed the files in binary
