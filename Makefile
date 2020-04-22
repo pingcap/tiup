@@ -29,13 +29,32 @@ default: check cmd
 cmd:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
 
-lint:
-	@golint ./...
+check: fmt errcheck lint tidy check-static vet staticcheck
+
+errcheck:tools/bin/errcheck
+	@echo "errcheck"
+	@GO111MODULE=on tools/bin/errcheck -exclude ./tools/check/errcheck_excludes.txt -ignoretests -blank $(PACKAGES)
+
+check-static: tools/bin/golangci-lint
+	tools/bin/golangci-lint run -v --disable-all --deadline=3m \
+	  --enable=misspell \
+	  --enable=ineffassign \
+	  $$($(PACKAGE_DIRECTORIES))
+
+lint:tools/bin/revive
+	@echo "linting"
+	@tools/bin/revive -formatter friendly -config tools/check/revive.toml $(FILES)
 
 vet:
 	$(GO) vet ./...
 
-check: lint vet
+staticcheck:
+	$(GO) get honnef.co/go/tools/cmd/staticcheck
+	GO111MODULE=on staticcheck ./...
+
+tidy:
+	@echo "go mod tidy"
+	./tools/check/check-tidy.sh
 
 clean:
 	@rm -rf bin
@@ -127,3 +146,15 @@ fmt:
 	$(shell gimports -w $(FILES) 2>/dev/null)
 
 .PHONY: cmd package
+
+tools/bin/errcheck: tools/check/go.mod
+	cd tools/check; \
+	$(GO) build -o ../bin/errcheck github.com/kisielk/errcheck
+
+tools/bin/revive: tools/check/go.mod
+	cd tools/check; \
+	$(GO) build -o ../bin/revive github.com/mgechev/revive
+
+tools/bin/golangci-lint:
+	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b ./tools/bin v1.21.0
+
