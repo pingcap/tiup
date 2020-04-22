@@ -24,7 +24,7 @@ import (
 )
 
 // DrainerComponent represents Drainer component.
-type DrainerComponent struct{ *Specification }
+type DrainerComponent struct{ *ClusterSpecification }
 
 // Name implements Component interface.
 func (c *DrainerComponent) Name() string {
@@ -42,7 +42,7 @@ func (c *DrainerComponent) Instances() []Instance {
 			host:         s.Host,
 			port:         s.Port,
 			sshp:         s.SSHPort,
-			topo:         c.Specification,
+			topo:         c.ClusterSpecification,
 
 			usedPorts: []int{
 				s.Port,
@@ -66,12 +66,12 @@ type DrainerInstance struct {
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DrainerInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, clusterName, clusterVersion, user string, paths DirPaths) error {
+func (i *DrainerInstance) ScaleConfig(e executor.TiOpsExecutor, b Specification, clusterName, clusterVersion, user string, paths DirPaths) error {
 	s := i.instance.topo
 	defer func() {
 		i.instance.topo = s
 	}()
-	i.instance.topo = b
+	i.instance.topo = b.GetClusterSpecification()
 
 	return i.InitConfig(e, clusterName, clusterVersion, user, paths)
 }

@@ -24,7 +24,7 @@ import (
 // To run:
 // tiup-cluster.test  -test.coverprofile={file} __DEVEL--i-heard-you-like-tests
 
-func TestMain(t *testing.T) {
+func TestMain(m *testing.M) {
 	var (
 		args []string
 		run  bool

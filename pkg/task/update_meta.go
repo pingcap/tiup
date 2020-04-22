@@ -41,55 +41,55 @@ func (u *UpdateMeta) Execute(ctx *Context) error {
 
 	deleted := set.NewStringSet(u.deletedNodesID...)
 	topo := u.metadata.Topology
-	for i, instance := range (&meta.TiDBComponent{Specification: topo}).Instances() {
+	for i, instance := range (&meta.TiDBComponent{ClusterSpecification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.TiDBServers = append(newMeta.Topology.TiDBServers, topo.TiDBServers[i])
 	}
-	for i, instance := range (&meta.TiKVComponent{Specification: topo}).Instances() {
+	for i, instance := range (&meta.TiKVComponent{ClusterSpecification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.TiKVServers = append(newMeta.Topology.TiKVServers, topo.TiKVServers[i])
 	}
-	for i, instance := range (&meta.PDComponent{Specification: topo}).Instances() {
+	for i, instance := range (&meta.PDComponent{ClusterSpecification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.PDServers = append(newMeta.Topology.PDServers, topo.PDServers[i])
 	}
-	for i, instance := range (&meta.TiFlashComponent{Specification: topo}).Instances() {
+	for i, instance := range (&meta.TiFlashComponent{ClusterSpecification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.TiFlashServers = append(newMeta.Topology.TiFlashServers, topo.TiFlashServers[i])
 	}
-	for i, instance := range (&meta.PumpComponent{Specification: topo}).Instances() {
+	for i, instance := range (&meta.PumpComponent{ClusterSpecification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.PumpServers = append(newMeta.Topology.PumpServers, topo.PumpServers[i])
 	}
-	for i, instance := range (&meta.DrainerComponent{Specification: topo}).Instances() {
+	for i, instance := range (&meta.DrainerComponent{ClusterSpecification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Drainers = append(newMeta.Topology.Drainers, topo.Drainers[i])
 	}
-	for i, instance := range (&meta.MonitorComponent{Specification: topo}).Instances() {
+	for i, instance := range (&meta.MonitorComponent{ClusterSpecification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Monitors = append(newMeta.Topology.Monitors, topo.Monitors[i])
 	}
-	for i, instance := range (&meta.GrafanaComponent{Specification: topo}).Instances() {
+	for i, instance := range (&meta.GrafanaComponent{ClusterSpecification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Grafana = append(newMeta.Topology.Grafana, topo.Grafana[i])
 	}
-	for i, instance := range (&meta.AlertManagerComponent{Specification: topo}).Instances() {
+	for i, instance := range (&meta.AlertManagerComponent{ClusterSpecification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}

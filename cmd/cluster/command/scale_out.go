@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package command
 
 import (
 	"path/filepath"
@@ -19,6 +19,7 @@ import (
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/bindversion"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil/prepare"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/clusterutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/logger"
@@ -80,10 +81,10 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 		return err
 	}
 
-	if err := checkClusterPortConflict(clusterName, mergedTopo); err != nil {
+	if err := prepare.CheckClusterPortConflict(clusterName, mergedTopo); err != nil {
 		return err
 	}
-	if err := checkClusterDirConflict(clusterName, mergedTopo); err != nil {
+	if err := prepare.CheckClusterDirConflict(clusterName, mergedTopo); err != nil {
 		return err
 	}
 
@@ -141,7 +142,7 @@ func convertStepDisplaysToTasks(t []*task.StepDisplay) []task.Task {
 func buildScaleOutTask(
 	clusterName string,
 	metadata *meta.ClusterMeta,
-	mergedTopo *meta.Specification,
+	mergedTopo *meta.ClusterSpecification,
 	opt scaleOutOptions,
 	sshConnProps *cliutil.SSHConnectionProps,
 	newPart *meta.TopologySpecification,
@@ -191,7 +192,7 @@ func buildScaleOutTask(
 	})
 
 	// Download missing component
-	downloadCompTasks = convertStepDisplaysToTasks(buildDownloadCompTasks(metadata.Version, newPart))
+	downloadCompTasks = convertStepDisplaysToTasks(prepare.BuildDownloadCompTasks(metadata.Version, newPart))
 
 	// Deploy the new topology and refresh the configuration
 	newPart.IterInstance(func(inst meta.Instance) {

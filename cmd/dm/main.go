@@ -13,8 +13,8 @@
 
 package main
 
-import "github.com/pingcap-incubator/tiup-cluster/cmd"
+import "github.com/pingcap-incubator/tiup-cluster/cmd/dm/command"
 
 func main() {
-	cmd.Execute()
+	command.Execute()
 }

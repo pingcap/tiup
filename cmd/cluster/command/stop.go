@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package command
 
 import (
 	"github.com/joomcode/errorx"
@@ -20,25 +20,25 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	operator "github.com/pingcap-incubator/tiup-cluster/pkg/operation"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/task"
-	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
 
-func newRestartCmd() *cobra.Command {
+func newStopCmd() *cobra.Command {
 	var options operator.Options
 
 	cmd := &cobra.Command{
-		Use:   "restart <cluster-name>",
-		Short: "Restart a TiDB cluster",
+		Use:   "stop <cluster-name>",
+		Short: "Stop a TiDB cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
 			}
 
 			clusterName := args[0]
-			if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-				return errors.Errorf("cannot restart non-exists cluster %s", clusterName)
+			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+				return errors.Errorf("cannot stop non-exists cluster %s", clusterName)
 			}
 
 			logger.EnableAuditLog()
@@ -52,7 +52,7 @@ func newRestartCmd() *cobra.Command {
 					meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 					meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
 				ClusterSSH(metadata.Topology, metadata.User, sshTimeout).
-				ClusterOperate(metadata.Topology, operator.RestartOperation, options).
+				ClusterOperate(metadata.Topology, operator.StopOperation, options).
 				Build()
 
 			if err := t.Execute(task.NewContext()); err != nil {
@@ -63,13 +63,13 @@ func newRestartCmd() *cobra.Command {
 				return errors.Trace(err)
 			}
 
-			log.Infof("Restarted cluster `%s` successfully", clusterName)
+			log.Infof("Stopped cluster `%s` successfully", clusterName)
 
 			return nil
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&options.Roles, "role", "R", nil, "Only restart specified roles")
-	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Only restart specified nodes")
+	cmd.Flags().StringSliceVarP(&options.Roles, "role", "R", nil, "Only stop specified roles")
+	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Only stop specified nodes")
 	return cmd
 }

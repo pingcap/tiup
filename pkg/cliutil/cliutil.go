@@ -109,3 +109,31 @@ func SuggestionFromFormat(format string, a ...interface{}) (errorx.Property, str
 	s := fmt.Sprintf(format, a...)
 	return SuggestionFromString(s)
 }
+
+// BeautifyCobraUsageAndHelp beautifies cobra usages and help.
+func BeautifyCobraUsageAndHelp(rootCmd *cobra.Command) {
+	rootCmd.SetUsageTemplate(`Usage:{{if .Runnable}}
+  {{ColorCommand}}{{.UseLine}}{{ColorReset}}{{end}}{{if .HasAvailableSubCommands}}
+  {{ColorCommand}}{{.CommandPath}} [command]{{ColorReset}}{{end}}{{if gt (len .Aliases) 0}}
+
+Aliases:
+  {{ColorCommand}}{{.NameAndAliases}}{{ColorReset}}{{end}}{{if .HasExample}}
+
+Examples:
+{{.Example}}{{end}}{{if .HasAvailableSubCommands}}
+
+Available Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+
+Flags:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
+
+Global Flags:
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
+
+Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
+
+Use "{{ColorCommand}}{{.CommandPath}} [command] --help{{ColorReset}}" for more information about a command.{{end}}
+`)
+}

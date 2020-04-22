@@ -34,7 +34,7 @@ import (
 // Start the cluster.
 func Start(
 	getter ExecutorGetter,
-	spec *meta.Specification,
+	spec meta.Specification,
 	options Options,
 ) error {
 	uniqueHosts := set.NewStringSet()
@@ -49,11 +49,13 @@ func Start(
 		if err != nil {
 			return errors.Annotatef(err, "failed to start %s", com.Name())
 		}
-		for _, inst := range insts {
-			if !uniqueHosts.Exist(inst.GetHost()) {
-				uniqueHosts.Insert(inst.GetHost())
-				if err := StartMonitored(getter, inst, spec.MonitoredOptions); err != nil {
-					return err
+		if clusterSpec := spec.GetClusterSpecification(); clusterSpec != nil {
+			for _, inst := range insts {
+				if !uniqueHosts.Exist(inst.GetHost()) {
+					uniqueHosts.Insert(inst.GetHost())
+					if err := StartMonitored(getter, inst, clusterSpec.MonitoredOptions); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -65,7 +67,7 @@ func Start(
 // Stop the cluster.
 func Stop(
 	getter ExecutorGetter,
-	spec *meta.Specification,
+	spec meta.Specification,
 	options Options,
 ) error {
 	roleFilter := set.NewStringSet(options.Roles...)
@@ -84,11 +86,13 @@ func Stop(
 		if err != nil {
 			return errors.Annotatef(err, "failed to stop %s", com.Name())
 		}
-		for _, inst := range insts {
-			instCount[inst.GetHost()]--
-			if instCount[inst.GetHost()] == 0 {
-				if err := StopMonitored(getter, inst, spec.MonitoredOptions); err != nil {
-					return err
+		if clusterSpec := spec.GetClusterSpecification(); clusterSpec != nil {
+			for _, inst := range insts {
+				instCount[inst.GetHost()]--
+				if instCount[inst.GetHost()] == 0 {
+					if err := StopMonitored(getter, inst, clusterSpec.MonitoredOptions); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -97,7 +101,7 @@ func Stop(
 }
 
 // NeedCheckTomebsome return true if we need to check and destroy some node.
-func NeedCheckTomebsome(spec *meta.Specification) bool {
+func NeedCheckTomebsome(spec *meta.ClusterSpecification) bool {
 	for _, s := range spec.TiKVServers {
 		if s.Offline {
 			return true
@@ -120,7 +124,20 @@ func NeedCheckTomebsome(spec *meta.Specification) bool {
 // If returNodesOnly is true, it will only return the node id that can be destroy.
 func DestroyTombstone(
 	getter ExecutorGetter,
-	spec *meta.Specification,
+	spec meta.Specification,
+	returNodesOnly bool,
+) (nodes []string, err error) {
+	if clusterSpec := spec.GetClusterSpecification(); clusterSpec != nil {
+		return DestroyClusterTombstone(getter, clusterSpec, returNodesOnly)
+	}
+	return nil, nil
+}
+
+// DestroyClusterTombstone remove the tombstone node in spec and destroy them.
+// If returNodesOnly is true, it will only return the node id that can be destroy.
+func DestroyClusterTombstone(
+	getter ExecutorGetter,
+	spec *meta.ClusterSpecification,
 	returNodesOnly bool,
 ) (nodes []string, err error) {
 	var pdClient = api.NewPDClient(spec.GetPDList(), 10*time.Second, nil)
@@ -163,7 +180,7 @@ func DestroyTombstone(
 			continue
 		}
 
-		instances := (&meta.TiKVComponent{Specification: spec}).Instances()
+		instances := (&meta.TiKVComponent{ClusterSpecification: spec}).Instances()
 		instances = filterID(instances, id)
 
 		err = StopComponent(getter, instances)
@@ -201,7 +218,7 @@ func DestroyTombstone(
 			continue
 		}
 
-		instances := (&meta.PumpComponent{Specification: spec}).Instances()
+		instances := (&meta.PumpComponent{ClusterSpecification: spec}).Instances()
 		instances = filterID(instances, id)
 		err = StopComponent(getter, instances)
 		if err != nil {
@@ -238,7 +255,7 @@ func DestroyTombstone(
 			continue
 		}
 
-		instances := (&meta.DrainerComponent{Specification: spec}).Instances()
+		instances := (&meta.DrainerComponent{ClusterSpecification: spec}).Instances()
 		instances = filterID(instances, id)
 
 		err = StopComponent(getter, instances)
@@ -266,7 +283,7 @@ func DestroyTombstone(
 // Restart the cluster.
 func Restart(
 	getter ExecutorGetter,
-	spec *meta.Specification,
+	spec meta.Specification,
 	options Options,
 ) error {
 	err := Stop(getter, spec, options)
@@ -617,7 +634,7 @@ func GetServiceStatus(e executor.TiOpsExecutor, name string) (active string, err
 }
 
 // PrintClusterStatus print cluster status into the io.Writer.
-func PrintClusterStatus(getter ExecutorGetter, spec *meta.Specification) (health bool) {
+func PrintClusterStatus(getter ExecutorGetter, spec meta.Specification) (health bool) {
 	health = true
 
 	for _, com := range spec.ComponentsByStartOrder() {

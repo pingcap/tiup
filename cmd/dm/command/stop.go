@@ -11,52 +11,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package command
 
 import (
-	"os"
-
-	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/logger"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	operator "github.com/pingcap-incubator/tiup-cluster/pkg/operation"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/task"
-	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
 
-func newDestroyCmd() *cobra.Command {
+func newStopCmd() *cobra.Command {
+	var options operator.Options
+
 	cmd := &cobra.Command{
-		Use:   "destroy <cluster-name>",
-		Short: "Destroy a specified cluster",
+		Use:   "stop <cluster-name>",
+		Short: "Stop a DM cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
 			}
 
 			clusterName := args[0]
-			if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-				return errors.Errorf("cannot destroy non-exists cluster %s", clusterName)
+			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+				return errors.Errorf("cannot stop non-exists cluster %s", clusterName)
 			}
 
 			logger.EnableAuditLog()
-			metadata, err := meta.ClusterMetadata(clusterName)
+			metadata, err := meta.DMMetadata(clusterName)
 			if err != nil {
 				return err
-			}
-
-			if !skipConfirm {
-				if err := cliutil.PromptForConfirmOrAbortError(
-					"This operation will destroy TiDB %s cluster %s and its data.\nDo you want to continue? [y/N]:",
-					color.HiYellowString(metadata.Version),
-					color.HiYellowString(clusterName)); err != nil {
-					return err
-				}
-				log.Infof("Destroying cluster...")
 			}
 
 			t := task.NewBuilder().
@@ -64,8 +52,7 @@ func newDestroyCmd() *cobra.Command {
 					meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 					meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
 				ClusterSSH(metadata.Topology, metadata.User, sshTimeout).
-				ClusterOperate(metadata.Topology, operator.StopOperation, operator.Options{}).
-				ClusterOperate(metadata.Topology, operator.DestroyOperation, operator.Options{}).
+				ClusterOperate(metadata.Topology, operator.StopOperation, options).
 				Build()
 
 			if err := t.Execute(task.NewContext()); err != nil {
@@ -76,13 +63,13 @@ func newDestroyCmd() *cobra.Command {
 				return errors.Trace(err)
 			}
 
-			if err := os.RemoveAll(meta.ClusterPath(clusterName)); err != nil {
-				return errors.Trace(err)
-			}
-			log.Infof("Destroyed cluster `%s` successfully", clusterName)
+			log.Infof("Stopped cluster `%s` successfully", clusterName)
+
 			return nil
 		},
 	}
 
+	cmd.Flags().StringSliceVarP(&options.Roles, "role", "R", nil, "Only stop specified roles")
+	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Only stop specified nodes")
 	return cmd
 }

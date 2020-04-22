@@ -781,15 +781,16 @@ func fillCustomDefaults(globalOptions *GlobalOptions, data interface{}) error {
 }
 
 var (
-	globalOptionTypeName  = reflect.TypeOf(GlobalOptions{}).Name()
-	monitorOptionTypeName = reflect.TypeOf(MonitoredOptions{}).Name()
-	serverConfigsTypeName = reflect.TypeOf(ServerConfigs{}).Name()
+	globalOptionTypeName    = reflect.TypeOf(GlobalOptions{}).Name()
+	monitorOptionTypeName   = reflect.TypeOf(MonitoredOptions{}).Name()
+	serverConfigsTypeName   = reflect.TypeOf(ServerConfigs{}).Name()
+	dmServerConfigsTypeName = reflect.TypeOf(DMServerConfigs{}).Name()
 )
 
 // Skip global/monitored options
 func isSkipField(field reflect.Value) bool {
 	tp := field.Type().Name()
-	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName
+	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName || tp == dmServerConfigsTypeName
 }
 
 func setDefaultDir(parent, role, port string, field reflect.Value) {

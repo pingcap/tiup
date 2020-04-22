@@ -24,7 +24,7 @@ import (
 )
 
 // PumpComponent represents Pump component.
-type PumpComponent struct{ *Specification }
+type PumpComponent struct{ *ClusterSpecification }
 
 // Name implements Component interface.
 func (c *PumpComponent) Name() string {
@@ -42,7 +42,7 @@ func (c *PumpComponent) Instances() []Instance {
 			host:         s.Host,
 			port:         s.Port,
 			sshp:         s.SSHPort,
-			topo:         c.Specification,
+			topo:         c.ClusterSpecification,
 
 			usedPorts: []int{
 				s.Port,
@@ -66,12 +66,12 @@ type PumpInstance struct {
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *PumpInstance) ScaleConfig(e executor.TiOpsExecutor, b *Specification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+func (i *PumpInstance) ScaleConfig(e executor.TiOpsExecutor, b Specification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
 	s := i.instance.topo
 	defer func() {
 		i.instance.topo = s
 	}()
-	i.instance.topo = b
+	i.instance.topo = b.GetClusterSpecification()
 
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }

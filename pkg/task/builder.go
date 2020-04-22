@@ -69,7 +69,7 @@ func (b *Builder) Func(name string, fn func() error) *Builder {
 }
 
 // ClusterSSH init all UserSSH need for the cluster.
-func (b *Builder) ClusterSSH(spec *meta.Specification, deployUser string, sshTimeout int64) *Builder {
+func (b *Builder) ClusterSSH(spec meta.Specification, deployUser string, sshTimeout int64) *Builder {
 	var tasks []Task
 	for _, com := range spec.ComponentsByStartOrder() {
 		for _, in := range com.Instances() {
@@ -217,7 +217,7 @@ func (b *Builder) EnvInit(host, deployUser string) *Builder {
 // ClusterOperate appends a cluster operation task.
 // All the UserSSH needed must be init first.
 func (b *Builder) ClusterOperate(
-	spec *meta.Specification,
+	spec meta.Specification,
 	op operator.Operation,
 	options operator.Options,
 ) *Builder {

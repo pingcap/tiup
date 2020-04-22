@@ -46,14 +46,14 @@ func getHomeDir() (string, error) {
 // environment variable TIUP_COMPONENT_DATA_DIR is set, it is used as root of
 // the profile directory, otherwise the `$HOME/.tiops` of current user is used.
 // The directory will be created before return if it does not already exist.
-func Initialize() error {
+func Initialize(base string) error {
 	tiupData := os.Getenv(tiuplocaldata.EnvNameComponentDataDir)
 	if tiupData == "" {
 		homeDir, err := getHomeDir()
 		if err != nil {
 			return errors.Trace(err)
 		}
-		profileDir = path.Join(homeDir, ".tiup", tiuplocaldata.StorageParentDir, "cluster")
+		profileDir = path.Join(homeDir, ".tiup", tiuplocaldata.StorageParentDir, base)
 	} else {
 		profileDir = tiupData
 	}

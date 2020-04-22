@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package command
 
 import (
 	"fmt"
@@ -58,7 +58,7 @@ func init() {
 		SilenceErrors: true,
 		Version:       version.NewTiOpsVersion().FullInfo(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if err := meta.Initialize(); err != nil {
+			if err := meta.Initialize("cluster"); err != nil {
 				return err
 			}
 			return tiupmeta.InitRepository(repository.Options{
@@ -74,7 +74,7 @@ func init() {
 		},
 	}
 
-	beautifyCobraUsageAndHelp(rootCmd)
+	cliutil.BeautifyCobraUsageAndHelp(rootCmd)
 
 	rootCmd.PersistentFlags().Int64Var(&sshTimeout, "ssh-timeout", 5, "Timeout in seconds to connect host via SSH, ignored for operations that don't need an SSH connection.")
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
@@ -200,31 +200,4 @@ func Execute() {
 	if code != 0 {
 		os.Exit(code)
 	}
-}
-
-func beautifyCobraUsageAndHelp(rootCmd *cobra.Command) {
-	rootCmd.SetUsageTemplate(`Usage:{{if .Runnable}}
-  {{ColorCommand}}{{.UseLine}}{{ColorReset}}{{end}}{{if .HasAvailableSubCommands}}
-  {{ColorCommand}}{{.CommandPath}} [command]{{ColorReset}}{{end}}{{if gt (len .Aliases) 0}}
-
-Aliases:
-  {{ColorCommand}}{{.NameAndAliases}}{{ColorReset}}{{end}}{{if .HasExample}}
-
-Examples:
-{{.Example}}{{end}}{{if .HasAvailableSubCommands}}
-
-Available Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
-
-Flags:
-{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
-
-Global Flags:
-{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
-
-Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
-  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
-
-Use "{{ColorCommand}}{{.CommandPath}} [command] --help{{ColorReset}}" for more information about a command.{{end}}
-`)
 }

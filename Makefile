@@ -25,8 +25,13 @@ FAILPOINT_DISABLE := $$(find $$PWD/ -type d | grep -vE "(\.git|tools)" | xargs t
 
 default: check build
 
-build:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster
+build: cluster dm
+
+cluster:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster ./cmd/cluster
+
+dm:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./cmd/dm
 
 # lint:
 # 	@golint ./...
@@ -54,7 +59,7 @@ build_integration_test:
 	$(GOTEST) -c -cover -covermode=count \
 		-coverpkg=github.com/pingcap-incubator/tiup-cluster/... \
 		-o tests/bin/tiup-cluster.test \
-		github.com/pingcap-incubator/tiup-cluster/
+		github.com/pingcap-incubator/tiup-cluster/cmd/cluster
 
 
 test: failpoint-enable unit-test

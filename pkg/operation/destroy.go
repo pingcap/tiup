@@ -28,7 +28,7 @@ import (
 // Destroy the cluster.
 func Destroy(
 	getter ExecutorGetter,
-	spec *meta.Specification,
+	spec meta.Specification,
 ) error {
 	uniqueHosts := set.NewStringSet()
 	coms := spec.ComponentsByStopOrder()
@@ -44,11 +44,13 @@ func Destroy(
 		if err != nil {
 			return errors.Annotatef(err, "failed to destroy %s", com.Name())
 		}
-		for _, inst := range insts {
-			instCount[inst.GetHost()]--
-			if instCount[inst.GetHost()] == 0 {
-				if err := DestroyMonitored(getter, inst, spec.MonitoredOptions); err != nil {
-					return err
+		if clusterSpec := spec.GetClusterSpecification(); clusterSpec != nil {
+			for _, inst := range insts {
+				instCount[inst.GetHost()]--
+				if instCount[inst.GetHost()] == 0 {
+					if err := DestroyMonitored(getter, inst, clusterSpec.MonitoredOptions); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -56,7 +58,7 @@ func Destroy(
 
 	// Delete all global deploy directory
 	for host := range uniqueHosts {
-		if err := DeleteGlobalDirs(getter, host, spec.GlobalOptions); err != nil {
+		if err := DeleteGlobalDirs(getter, host, spec.GetGlobalOptions()); err != nil {
 			return nil
 		}
 	}
@@ -180,7 +182,7 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance) error {
 		// Stop by systemd.
 		delPaths := make([]string, 0)
 		switch name {
-		case meta.ComponentTiKV, meta.ComponentPD, meta.ComponentTiFlash, meta.ComponentPump, meta.ComponentDrainer, meta.ComponentPrometheus, meta.ComponentAlertManager:
+		case meta.ComponentTiKV, meta.ComponentPD, meta.ComponentTiFlash, meta.ComponentPump, meta.ComponentDrainer, meta.ComponentPrometheus, meta.ComponentAlertManager, meta.ComponentDMMaster, meta.ComponentDMWorker:
 			delPaths = append(delPaths, ins.DataDir())
 		}
 
