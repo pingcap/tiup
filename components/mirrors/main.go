@@ -72,31 +72,23 @@ func execute() error {
 	}
 
 	rootCmd := &cobra.Command{
-		Use: "tiup mirrors <target-dir>",
+		Use: "tiup mirrors <target-dir> [global version]",
 		Example: `  tiup mirrors local-path --arch amd64,arm --os linux,darwin    # Specify the architectures and OSs
   tiup mirrors local-path --full                                # Build a full local mirrors
-  tiup mirrors local-path --core v4                             # Specify the version of all core components to bootstrap a cluster
   tiup mirrors local-path --tikv v4                             # Specify the version via prefix
   tiup mirrors local-path --tidb all --pd all                   # Download all version for specific component`,
 		Short:        "Build a local mirrors and download all selected components",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
+			if len(args) < 1 {
 				return cmd.Help()
 			}
-			for _, v := range options.versions {
-				*options.comps["tidb"] = append(*options.comps["tidb"], v)
-				*options.comps["tikv"] = append(*options.comps["tikv"], v)
-				*options.comps["pd"] = append(*options.comps["pd"], v)
-				*options.comps["grafana"] = append(*options.comps["grafana"], v)
-				*options.comps["prometheus"] = append(*options.comps["prometheus"], v)
-				*options.comps["drainer"] = append(*options.comps["drainer"], v)
-				*options.comps["pump"] = append(*options.comps["pump"], v)
-				*options.comps["blackbox_exporter"] = append(*options.comps["blackbox_exporter"], "v0.12.0")
-				*options.comps["node_exporter"] = append(*options.comps["node_exporter"], "v0.17.0")
-				*options.comps["pushgateway"] = append(*options.comps["pushgateway"], "v0.7.0")
-				setLastStableVersion(repo, "cluster", options.comps["cluster"])
-				setLastStableVersion(repo, "playground", options.comps["playground"])
+			for _, v := range args[1:] {
+				for _, comp := range manifest.Components {
+					if err := setVersion(repo, comp.Name, options.comps[comp.Name], v); err != nil {
+						return err
+					}
+				}
 			}
 			if err := download(args[0], repo, manifest, options); err != nil {
 				return err
@@ -113,7 +105,6 @@ func execute() error {
 	rootCmd.Flags().BoolVarP(&options.full, "full", "f", false, "Build a full mirrors repository")
 	rootCmd.Flags().StringSliceVarP(&options.archs, "arch", "a", []string{"amd64"}, "Specify the downloading architecture")
 	rootCmd.Flags().StringSliceVarP(&options.oss, "os", "o", []string{"linux", "darwin"}, "Specify the downloading os")
-	rootCmd.Flags().StringSliceVarP(&options.versions, "core", "c", []string{}, "Specify the version of all core components")
 
 	for _, comp := range manifest.Components {
 		options.comps[comp.Name] = new([]string)
@@ -123,15 +114,48 @@ func execute() error {
 	return rootCmd.Execute()
 }
 
-func setLastStableVersion(repo *repository.Repository, component string, versions *[]string) error {
+func setVersion(repo *repository.Repository, component string, versions *[]string, version string) error {
+	v, err := suggestVersion(repo, component, version)
+	if err != nil {
+		return err
+	}
 	if *versions == nil {
-		if v, err := repo.LatestStableVersion(component); err != nil {
-			return err
-		} else {
-			*versions = []string{string(v)}
+		*versions = []string{v}
+		return nil
+	}
+
+	for _, ver := range *versions {
+		if v == ver {
+			return nil
 		}
 	}
+	*versions = append(*versions, v)
 	return nil
+}
+
+func suggestVersion(repo *repository.Repository, component, version string) (string, error) {
+	switch component {
+	case "alertmanager":
+		return "v0.17.0", nil
+	case "blackbox_exporter":
+		return "v0.12.0", nil
+	case "node_exporter":
+		return "v0.17.0", nil
+	case "pushgateway":
+		return "v0.7.0", nil
+	}
+	vm, err := repo.ComponentVersions(component)
+	if err != nil {
+		return "", err
+	}
+	if v, found := vm.FindVersion(repository.Version(version)); found {
+		return v.Version.String(), nil
+	}
+	v, err := repo.LatestStableVersion(component)
+	if err != nil {
+		return "", err
+	}
+	return v.String(), nil
 }
 
 func downloadResource(mirror repository.Mirror, targetDir, name string, overwrite bool) error {
