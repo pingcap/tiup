@@ -34,6 +34,7 @@ func init() {
 		binPath  string
 		tag      string
 		repoOpts repository.Options
+		env      *meta.Environment
 	)
 
 	rootCmd = &cobra.Command{
@@ -55,11 +56,11 @@ the latest stable version will be downloaded from the repository.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if binary != "" {
 				component, ver := meta.ParseCompVersion(binary)
-				selectedVer, err := meta.SelectInstalledVersion(component, ver)
+				selectedVer, err := env.SelectInstalledVersion(component, ver)
 				if err != nil {
 					return err
 				}
-				binaryPath, err := meta.BinaryPath(component, selectedVer)
+				binaryPath, err := env.Profile().BinaryPath(component, selectedVer)
 				if err != nil {
 					return err
 				}
@@ -81,18 +82,22 @@ the latest stable version will be downloaded from the repository.`,
 						break
 					}
 				}
-				return runComponent(tag, componentSpec, binPath, transparentParams)
+				return runComponent(env, tag, componentSpec, binPath, transparentParams)
 			}
 			return cmd.Help()
 		},
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			return meta.InitRepository(repoOpts)
-		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			return meta.Repository().Close()
+			return env.Repository().Close()
 		},
 		SilenceUsage: true,
 	}
+
+	e, err := meta.InitEnv(repoOpts)
+	if err != nil {
+		fmt.Println(color.RedString("Error: %v", err))
+		os.Exit(1)
+	}
+	env = e
 
 	rootCmd.PersistentFlags().BoolVarP(&repoOpts.SkipVersionCheck, "skip-version-check", "", false, "Skip the strict version check, by default a version must be a valid SemVer string")
 	rootCmd.Flags().StringVarP(&binary, "binary", "B", "", "Print binary path of a specific version of a component `<component>[:version]`\n"+
@@ -101,12 +106,12 @@ the latest stable version will be downloaded from the repository.`,
 	rootCmd.Flags().StringVar(&binPath, "binpath", "", "Specify the binary path of component instance")
 
 	rootCmd.AddCommand(
-		newInstallCmd(),
-		newListCmd(),
-		newUninstallCmd(),
-		newUpdateCmd(),
-		newStatusCmd(),
-		newCleanCmd(),
+		newInstallCmd(env),
+		newListCmd(env),
+		newUninstallCmd(env),
+		newUpdateCmd(env),
+		newStatusCmd(env),
+		newCleanCmd(env),
 	)
 
 	originHelpFunc := rootCmd.HelpFunc()
@@ -117,18 +122,18 @@ the latest stable version will be downloaded from the repository.`,
 		}
 		cmd, n, e := cmd.Root().Find(args)
 		if (cmd == rootCmd || e != nil) && len(n) > 0 {
-			externalHelp(n[0], n[1:]...)
+			externalHelp(env.Profile(), n[0], n[1:]...)
 		} else {
 			cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
 			cmd.Help()
 		}
 	})
-	rootCmd.SetHelpCommand(newHelpCmd())
+	rootCmd.SetHelpCommand(newHelpCmd(env.Profile()))
+	rootCmd.SetUsageTemplate(usageTemplate(env.Profile()))
 }
 
 // Execute parses the command line arguments and calls proper functions
 func Execute() {
-	rootCmd.SetUsageTemplate(usageTemplate())
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(color.RedString("Error: %v", err))
 		os.Exit(1)

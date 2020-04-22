@@ -51,7 +51,7 @@ func NewTiKVInstance(dir, host, configPath string, id int, pds []*PDInstance) *T
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiKVInstance) Start(ctx context.Context, version repository.Version, binPath string) error {
+func (inst *TiKVInstance) Start(ctx context.Context, version repository.Version, binPath string, _ *localdata.Profile) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}

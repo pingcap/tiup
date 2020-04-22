@@ -121,5 +121,7 @@ package: playground client pack tiops
 fmt:
 	@echo "gofmt (simplify)"
 	@gofmt -s -l -w $(FILES) 2>&1
+	@echo "goimports (if installed)"
+	$(shell gimports -w $(FILES) 2>/dev/null)
 
 .PHONY: cmd package

@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
@@ -68,7 +67,7 @@ func getFlashClusterPath(dir string) string {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiFlashInstance) Start(ctx context.Context, version repository.Version, binPath string) error {
+func (inst *TiFlashInstance) Start(ctx context.Context, version repository.Version, binPath string, profile *localdata.Profile) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
@@ -86,11 +85,11 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version repository.Versi
 	}
 
 	if binPath == "" {
-		installedVersion, err := meta.SelectInstalledVersion("tiflash", version)
+		installedVersion, err := profile.SelectInstalledVersion("tiflash", version)
 		if err != nil {
 			return err
 		}
-		dir, err := meta.BinaryPath("tiflash", installedVersion)
+		dir, err := profile.BinaryPath("tiflash", installedVersion)
 		if err != nil {
 			return err
 		}
