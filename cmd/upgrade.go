@@ -14,7 +14,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/joomcode/errorx"
@@ -57,16 +56,18 @@ func newUpgradeCmd() *cobra.Command {
 }
 
 func versionCompare(curVersion, newVersion string) error {
+	// Can always upgrade to 'nightly' event the current version is 'nightly'
+	if repository.Version(newVersion).IsNightly() {
+		return nil
+	}
+
 	switch semver.Compare(curVersion, newVersion) {
 	case -1:
 		return nil
-	case 1:
-		if repository.Version(newVersion).IsNightly() {
-			return nil
-		}
-		return errors.New(fmt.Sprintf("unsupport upgrade from %s to %s", curVersion, newVersion))
-	default:
+	case 0, 1:
 		return errors.Errorf("please specify a higher version than %s", curVersion)
+	default:
+		return errors.Errorf("unreachable")
 	}
 }
 

@@ -712,3 +712,5 @@ sigs.k8s.io/yaml v1.2.0 h1:kr/MCeFWJWTwyaHoR9c8EjH9OumOmoF9YGiZd7lFm/Q=
 sigs.k8s.io/yaml v1.2.0/go.mod h1:yfXDCHCao9+ENCvLSE62v9VSji2MKu5jeNfTrofGhJc=
 vimagination.zapto.org/dos2unix v0.0.0-20180612133841-67e81384b402 h1:VSoZyPU4n67/D2emXBakFE4D5YdkBP9BjOKhobkDu0Y=
 vimagination.zapto.org/dos2unix v0.0.0-20180612133841-67e81384b402/go.mod h1:5EYvCdUGoQUVnD6lZxdYZ9AHFPyOpJx/x4HHwjT3GKk=
+vimagination.zapto.org/memio v0.0.0-20200222190306-588ebc67b97d h1:Mp6WiHHuiwHaknxTdxJ8pvC9/B4pOgW1PamKGexG7Fs=
+vimagination.zapto.org/memio v0.0.0-20200222190306-588ebc67b97d/go.mod h1:zHGDKp2tyvF4IAfLti4pKYqCJucXYmmKMb3UMrCHK/4=
