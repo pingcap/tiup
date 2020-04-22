@@ -129,7 +129,6 @@ if [ $GITHUB_ACTION ]; then
 
   if [ ! -f "$TIUP_HOME/data/test-playground/dsn" ]; then
     echo "${RED}✖ Failed run playground${NORMAL}"
-    exit 1
   fi
 fi
 
