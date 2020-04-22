@@ -81,13 +81,18 @@ integration_test:
 	@$(GOTEST) -c -cover -covermode=count \
 			-coverpkg=./... \
 			-o tests/tiup_home/bin/playground ./components/playground/ ;
+	@$(GOTEST) -c -cover -covermode=count \
+			-coverpkg=./... \
+			-o tests/tiup_home/bin/ctl ./components/ctl/ ;
 	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/doc ./components/doc/
 	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/tiup.2
 	cd tests && bash run.sh ; \
 
 
-test: cover-dir failpoint-enable unit-test integration_test
-	@$(FAILPOINT_DISABLE)
+test: cover-dir failpoint-enable
+	make run-tests; STATUS=$$?; $(FAILPOINT_DISABLE); exit $$STATUS
+
+run-tests: unit-test integration_test
 
 coverage:
 	GO111MODULE=off go get github.com/wadey/gocovmerge
@@ -137,6 +142,8 @@ package: playground client pack tiops
 fmt:
 	@echo "gofmt (simplify)"
 	@gofmt -s -l -w $(FILES) 2>&1
+	@echo "goimports (if installed)"
+	$(shell gimports -w $(FILES) 2>/dev/null)
 
 .PHONY: cmd package
 

@@ -21,6 +21,7 @@ Available Components:
   mirrors      
   doc          
   playground   
+  ctl          
 
 Flags:
   -B, --binary <component>[:version]   Print binary path of a specific version of a component <component>[:version]

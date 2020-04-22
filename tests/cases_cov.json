@@ -136,6 +136,14 @@
         "path": "tiup/tiup-help-doc.output"
     },
     {
+        "command": "tiup install ctl",
+        "path": "tiup/tiup-install-ctl.output"
+    },
+    {
+        "command": "tiup help ctl",
+        "path": "tiup/tiup-help-ctl.output"
+    },
+    {
         "command": "tiup clean --all",
         "path": ""
     },

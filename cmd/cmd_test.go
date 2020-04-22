@@ -23,7 +23,6 @@ import (
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
-	"github.com/pingcap-incubator/tiup/pkg/mock"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	. "github.com/pingcap/check"
@@ -48,12 +47,17 @@ type testCmdSuite struct {
 func (s *testCmdSuite) SetUpSuite(c *C) {
 	s.testDir = filepath.Join(currentDir(), "testdata")
 	s.mirror = repository.NewMirror(s.testDir, repository.MirrorOptions{})
+}
+
+func (s *testCmdSuite) newEnv(c *C) *meta.Environment {
 	repo, err := repository.NewRepository(s.mirror, repository.Options{})
 	c.Assert(err, IsNil)
-	meta.SetRepository(repo)
+
 	c.Assert(os.RemoveAll(path.Join(s.testDir, "profile")), IsNil)
 	c.Assert(os.MkdirAll(path.Join(s.testDir, "profile"), 0755), IsNil)
-	meta.SetProfile(localdata.NewProfile(path.Join(s.testDir, "profile")))
+	profile := localdata.NewProfile(path.Join(s.testDir, "profile"))
+
+	return meta.New(profile, repo)
 }
 
 func (s *testCmdSuite) TearDownSuite(c *C) {
@@ -62,7 +66,7 @@ func (s *testCmdSuite) TearDownSuite(c *C) {
 }
 
 func (s *testCmdSuite) TestInstall(c *C) {
-	cmd := newInstallCmd()
+	cmd := newInstallCmd(s.newEnv(c))
 
 	c.Assert(utils.IsNotExist(path.Join(s.testDir, "profile", "components", "test")), IsTrue)
 	c.Assert(cmd.RunE(cmd, []string{"test"}), IsNil)
@@ -70,29 +74,22 @@ func (s *testCmdSuite) TestInstall(c *C) {
 }
 
 func (s *testCmdSuite) TestListComponent(c *C) {
-	cmd := newListCmd()
-	defer mock.With("PrintTable", func(rows [][]string, header bool) {
-		c.Assert(header, IsTrue)
-		c.Assert(len(rows), Greater, 1)
-		c.Assert(rows[1][0], Equals, "test")
-	})()
-
-	c.Assert(cmd.RunE(cmd, []string{}), IsNil)
+	result, err := showComponentList(s.newEnv(c), false, false)
+	c.Assert(err, IsNil)
+	c.Assert(len(result.cmpTable), Greater, 1)
+	c.Assert(result.cmpTable[1][0], Equals, "test")
 }
 
 func (s *testCmdSuite) TestListVersion(c *C) {
-	cmd := newListCmd()
-	defer mock.With("PrintTable", func(rows [][]string, header bool) {
-		c.Assert(header, IsTrue)
-		c.Assert(len(rows), Greater, 1)
-		for idx := 1; idx < len(rows); idx++ {
-			success := false
-			if strings.HasPrefix(rows[idx][0], "v") || rows[idx][0] == "nightly" {
-				success = true
-			}
-			c.Assert(success, IsTrue)
+	result, err := showComponentVersions(s.newEnv(c), "test", false, false)
+	c.Assert(err, IsNil)
+	result.print()
+	c.Assert(len(result.cmpTable), Greater, 1)
+	for idx := 1; idx < len(result.cmpTable); idx++ {
+		success := false
+		if strings.HasPrefix(result.cmpTable[idx][0], "v") || result.cmpTable[idx][0] == "nightly" {
+			success = true
 		}
-	})()
-
-	c.Assert(cmd.RunE(cmd, []string{"test"}), IsNil)
+		c.Assert(success, IsTrue)
+	}
 }
