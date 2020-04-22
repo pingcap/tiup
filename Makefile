@@ -67,8 +67,10 @@ integration_test:
 	cd tests && bash run.sh ; \
 
 
-test: cover-dir failpoint-enable unit-test integration_test
-	@$(FAILPOINT_DISABLE)
+test: cover-dir failpoint-enable
+	make run-tests; STATUS=$$?; $(FAILPOINT_DISABLE); exit $$STATUS
+
+run-tests: unit-test integration_test
 
 coverage:
 	GO111MODULE=off go get github.com/wadey/gocovmerge
