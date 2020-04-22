@@ -95,12 +95,8 @@ func execute() error {
 				*options.comps["blackbox_exporter"] = append(*options.comps["blackbox_exporter"], "v0.12.0")
 				*options.comps["node_exporter"] = append(*options.comps["node_exporter"], "v0.17.0")
 				*options.comps["pushgateway"] = append(*options.comps["pushgateway"], "v0.7.0")
-				if *options.comps["cluster"] == nil {
-					*options.comps["cluster"] = []string{"v0.4.8"}
-				}
-				if *options.comps["playground"] == nil {
-					*options.comps["playground"] = []string{"v0.0.9"}
-				}
+				setLastStableVersion(repo, "cluster", options.comps["cluster"])
+				setLastStableVersion(repo, "playground", options.comps["playground"])
 			}
 			if err := download(args[0], repo, manifest, options); err != nil {
 				return err
@@ -125,6 +121,17 @@ func execute() error {
 	}
 
 	return rootCmd.Execute()
+}
+
+func setLastStableVersion(repo *repository.Repository, component string, versions *[]string) error {
+	if *versions == nil {
+		if v, err := repo.LatestStableVersion(component); err != nil {
+			return err
+		} else {
+			*versions = []string{string(v)}
+		}
+	}
+	return nil
 }
 
 func downloadResource(mirror repository.Mirror, targetDir, name string, overwrite bool) error {
