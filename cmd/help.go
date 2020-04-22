@@ -22,6 +22,7 @@ import (
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -69,7 +70,7 @@ func externalHelp(profile *localdata.Profile, spec string, args ...string) {
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 	}
 
-	comp := exec.Command(binaryPath, rebuildArgs(args)...)
+	comp := exec.Command(binaryPath, utils.RebuildArgs(args)...)
 	comp.Env = append(
 		envs,
 		os.Environ()...,

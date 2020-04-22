@@ -1,0 +1,7 @@
+TiDB controllers
+
+Usage:
+  tiup ctl {tidb/pd/tikv/binlog} [flags]
+
+Flags:
+  -h, --help   help for tiup

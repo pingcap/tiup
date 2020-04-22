@@ -46,6 +46,17 @@ tiup package -- playground --release=v0.0.1 --entry=playground --arch=amd64 --os
 rm playground
 mv "./package"/* "./"
 
+# Prepare the ctl component
+OFFICICAL_MIRRORS="tiup-mirrors.pingcap.com"
+VERSION=v3.0.1
+wget -nc --quiet "$OFFICICAL_MIRRORS/ctl-$VERSION-$os-amd64.tar.gz"
+mkdir -p ctls
+tar xf ctl-$VERSION-$os-amd64.tar.gz -C ctls
+mv "$DIR/../tiup_home/bin/ctl" "./ctls/ctl"
+tiup package -- $(ls ctls) --release=v0.0.1 --entry=ctl --arch=amd64 --os="$os" --name=ctl --standalone -C ctls
+rm -rf ./ctls
+mv "./package"/* "./"
+
 # Prepare for mock test tarball
 for v in "v1.1.1" "v1.1.2" "nightly"
 do
