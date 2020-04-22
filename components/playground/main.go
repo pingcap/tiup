@@ -33,7 +33,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pingcap-incubator/tiup/components/playground/instance"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/failpoint"
@@ -61,7 +60,7 @@ type bootOptions struct {
 }
 
 func installIfMissing(profile *localdata.Profile, component, version string) error {
-	versions, err := meta.Profile().InstalledVersions(component)
+	versions, err := profile.InstalledVersions(component)
 	if err != nil {
 		return err
 	}
@@ -253,12 +252,7 @@ func bootCluster(options *bootOptions) error {
 		options.tiflashConfigPath = getAbsolutePath(options.tiflashConfigPath)
 	}
 
-	// Initialize the profile
-	profileRoot := os.Getenv(localdata.EnvNameHome)
-	if profileRoot == "" {
-		return fmt.Errorf("cannot read environment variable %s", localdata.EnvNameHome)
-	}
-	profile := localdata.NewProfile(profileRoot)
+	profile := localdata.InitProfile()
 	for _, comp := range []string{"pd", "tikv", "tidb", "tiflash"} {
 		if pathMap[comp] != "" {
 			continue
@@ -378,7 +372,7 @@ func bootCluster(options *bootOptions) error {
 	}
 
 	for i, inst := range all {
-		if err := inst.Start(context.WithValue(ctx, "has_tiflash", options.tiflashNum > 0), repository.Version(options.version), pathMap[allRole[i]]); err != nil {
+		if err := inst.Start(context.WithValue(ctx, "has_tiflash", options.tiflashNum > 0), repository.Version(options.version), pathMap[allRole[i]], profile); err != nil {
 			return err
 		}
 	}

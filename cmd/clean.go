@@ -27,7 +27,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCleanCmd() *cobra.Command {
+func newCleanCmd(env *meta.Environment) *cobra.Command {
 	var all bool
 	cmd := &cobra.Command{
 		Use:   "clean",
@@ -36,15 +36,15 @@ func newCleanCmd() *cobra.Command {
 			if len(args) == 0 && !all {
 				return cmd.Help()
 			}
-			return cleanData(args, all)
+			return cleanData(env, args, all)
 		},
 	}
 	cmd.Flags().BoolVar(&all, "all", false, "Clean all data of instantiated components")
 	return cmd
 }
 
-func cleanData(names []string, all bool) error {
-	dataDir := meta.LocalPath(localdata.DataParentDir)
+func cleanData(env *meta.Environment, names []string, all bool) error {
+	dataDir := env.LocalPath(localdata.DataParentDir)
 	if utils.IsNotExist(dataDir) {
 		return nil
 	}
@@ -62,7 +62,7 @@ func cleanData(names []string, all bool) error {
 		}
 		metaFile := filepath.Join(localdata.DataParentDir, dir.Name(), localdata.MetaFilename)
 		var process process
-		err := meta.Profile().ReadJSON(metaFile, &process)
+		err := env.Profile().ReadJSON(metaFile, &process)
 		if err != nil {
 			return err
 		}

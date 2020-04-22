@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
@@ -24,7 +25,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newHelpCmd() *cobra.Command {
+func newHelpCmd(profile *localdata.Profile) *cobra.Command {
 	return &cobra.Command{
 		Use:   "help [command]",
 		Short: "Help about any command or component",
@@ -33,7 +34,7 @@ Simply type tiup help <command>|<component> for full details.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd, n, e := cmd.Root().Find(args)
 			if (cmd == rootCmd || e != nil) && len(n) > 0 {
-				externalHelp(n[0], n[1:]...)
+				externalHelp(profile, n[0], n[1:]...)
 			} else {
 				cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
 				cmd.HelpFunc()(cmd, args)
@@ -42,28 +43,28 @@ Simply type tiup help <command>|<component> for full details.`,
 	}
 }
 
-func externalHelp(spec string, args ...string) {
+func externalHelp(profile *localdata.Profile, spec string, args ...string) {
 	component, version := meta.ParseCompVersion(spec)
-	selectVer, err := meta.SelectInstalledVersion(component, version)
+	selectVer, err := profile.SelectInstalledVersion(component, version)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	binaryPath, err := meta.BinaryPath(component, selectVer)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	installPath, err := meta.ComponentInstalledDir(component, selectVer)
+	binaryPath, err := profile.BinaryPath(component, selectVer)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	sd := meta.LocalPath(localdata.StorageParentDir, strings.Split(spec, ":")[0])
+	installPath, err := profile.ComponentInstalledPath(component, selectVer)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	sd := profile.Path(filepath.Join(localdata.StorageParentDir, strings.Split(spec, ":")[0]))
 	envs := []string{
-		fmt.Sprintf("%s=%s", localdata.EnvNameHome, meta.LocalRoot()),
+		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 	}
@@ -98,9 +99,9 @@ func rebuildArgs(args []string) []string {
 	return argList
 }
 
-func usageTemplate() string {
+func usageTemplate(profile *localdata.Profile) string {
 	var installComps string
-	if repo := meta.Profile().Manifest(); repo != nil && len(repo.Components) > 0 {
+	if repo := profile.Manifest(); repo != nil && len(repo.Components) > 0 {
 		installComps = `
 Available Components:
 `

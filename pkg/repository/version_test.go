@@ -30,7 +30,7 @@ func (s *repositorySuite) TestVersions(c *C) {
 			},
 		},
 		Versions: []VersionInfo{
-			VersionInfo{
+			{
 				Version: "v0.0.1",
 				Date:    "data1",
 				Entry:   "entry",
@@ -38,7 +38,7 @@ func (s *repositorySuite) TestVersions(c *C) {
 					"linux/amd64", "darwin/amd64",
 				},
 			},
-			VersionInfo{
+			{
 				Version: "v0.0.3",
 				Date:    "date3",
 				Entry:   "entry",
@@ -46,7 +46,7 @@ func (s *repositorySuite) TestVersions(c *C) {
 					"linux/amd64", "darwin/amd64",
 				},
 			},
-			VersionInfo{
+			{
 				Version: "v0.0.2",
 				Date:    "date2",
 				Entry:   "entry",

@@ -33,9 +33,9 @@ import (
 	"github.com/pingcap/errors"
 )
 
-func runComponent(tag, spec, binPath string, args []string) error {
+func runComponent(env *meta.Environment, tag, spec, binPath string, args []string) error {
 	component, version := meta.ParseCompVersion(spec)
-	if !isSupportedComponent(component) {
+	if !isSupportedComponent(env, component) {
 		return fmt.Errorf("component `%s` does not support `%s/%s` (see `tiup list --refresh`)", component, runtime.GOOS, runtime.GOARCH)
 	}
 
@@ -45,7 +45,7 @@ func runComponent(tag, spec, binPath string, args []string) error {
 	// Clean data if current instance is a temporary
 	clean := tag == "" && os.Getenv(localdata.EnvNameInstanceDataDir) == ""
 
-	p, err := launchComponent(ctx, component, version, binPath, tag, args)
+	p, err := launchComponent(ctx, component, version, binPath, tag, args, env)
 	// If the process has been launched, we must save the process info to meta directory
 	if err == nil || (p != nil && p.Pid != 0) {
 		defer cleanDataDir(clean, p.Dir)
@@ -84,7 +84,6 @@ func runComponent(tag, spec, binPath string, args []string) error {
 
 	go func() {
 		defer close(ch)
-		fmt.Printf("Starting component `%s`: %s %s\n", component, p.Exec, strings.Join(p.Args, " "))
 		ch <- p.cmd.Wait()
 	}()
 
@@ -114,19 +113,19 @@ func cleanDataDir(rm bool, dir string) {
 	}
 }
 
-func isSupportedComponent(component string) bool {
+func isSupportedComponent(env *meta.Environment, component string) bool {
 	// check local manifest
-	manifest := meta.Profile().Manifest()
+	manifest := env.Profile().Manifest()
 	if manifest != nil && manifest.HasComponent(component) {
 		return true
 	}
 
-	manifest, err := meta.Repository().Manifest()
+	manifest, err := env.Repository().Manifest()
 	if err != nil {
 		fmt.Println("Fetch latest manifest error:", err)
 		return false
 	}
-	if err := meta.Profile().SaveManifest(manifest); err != nil {
+	if err := env.Profile().SaveManifest(manifest); err != nil {
 		fmt.Println("Save latest manifest error:", err)
 	}
 	comp, found := manifest.FindComponent(component)
@@ -160,13 +159,14 @@ func base62Tag() string {
 	return string(b)
 }
 
-func launchComponent(ctx context.Context, component string, version repository.Version, binPath string, tag string, args []string) (*process, error) {
-	selectVer, err := meta.DownloadComponentIfMissing(component, version)
+func launchComponent(ctx context.Context, component string, version repository.Version, binPath string, tag string, args []string, env *meta.Environment) (*process, error) {
+	selectVer, err := env.DownloadComponentIfMissing(component, version)
 	if err != nil {
 		return nil, err
 	}
 
-	installPath, err := meta.ComponentInstalledDir(component, selectVer)
+	profile := env.Profile()
+	installPath, err := profile.ComponentInstalledPath(component, selectVer)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func launchComponent(ctx context.Context, component string, version repository.V
 		}
 		binPath = p
 	} else {
-		binPath, err = meta.BinaryPath(component, selectVer)
+		binPath, err = profile.BinaryPath(component, selectVer)
 		if err != nil {
 			return nil, err
 		}
@@ -190,13 +190,13 @@ func launchComponent(ctx context.Context, component string, version repository.V
 		if tag == "" {
 			tag = base62Tag()
 		}
-		wd = meta.LocalPath(localdata.DataParentDir, tag)
+		wd = env.LocalPath(localdata.DataParentDir, tag)
 	}
 	if err := os.MkdirAll(wd, 0755); err != nil {
 		return nil, err
 	}
 
-	sd := meta.LocalPath(localdata.StorageParentDir, component)
+	sd := env.LocalPath(localdata.StorageParentDir, component)
 	if err := os.MkdirAll(sd, 0755); err != nil {
 		return nil, err
 	}
@@ -207,7 +207,7 @@ func launchComponent(ctx context.Context, component string, version repository.V
 	}
 
 	envs := []string{
-		fmt.Sprintf("%s=%s", localdata.EnvNameHome, meta.LocalRoot()),
+		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameWorkDir, tiupWd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, wd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
@@ -236,6 +236,7 @@ func launchComponent(ctx context.Context, component string, version repository.V
 		cmd:         c,
 	}
 
+	fmt.Printf("Starting component `%s`: %s\n", component, strings.Join(append([]string{p.Exec}, p.Args...), " "))
 	err = p.cmd.Start()
 	if p.cmd.Process != nil {
 		p.Pid = p.cmd.Process.Pid

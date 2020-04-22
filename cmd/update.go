@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newUpdateCmd() *cobra.Command {
+func newUpdateCmd(env *meta.Environment) *cobra.Command {
 	var all, nightly, force, self bool
 	cmd := &cobra.Command{
 		Use:   "update [component1][:version] [component2..N]",
@@ -42,8 +42,8 @@ latest version. All other flags will be ignored if the flag --self is given.
   $ tiup update --self                    # Update TiUP to the latest version`,
 		RunE: func(cmd *cobra.Command, components []string) error {
 			if self {
-				originFile := meta.LocalPath("bin", "tiup")
-				renameFile := meta.LocalPath("bin", "tiup.tmp")
+				originFile := env.LocalPath("bin", "tiup")
+				renameFile := env.LocalPath("bin", "tiup.tmp")
 				if err := os.Rename(originFile, renameFile); err != nil {
 					fmt.Printf("Backup of `%s` to `%s` failed.\n", originFile, renameFile)
 					return err
@@ -62,7 +62,7 @@ latest version. All other flags will be ignored if the flag --self is given.
 					}
 				}()
 
-				err = meta.Repository().DownloadTiup(meta.LocalPath("bin"))
+				err = env.Repository().DownloadTiup(env.LocalPath("bin"))
 				if err != nil {
 					return err
 				}
@@ -72,7 +72,7 @@ latest version. All other flags will be ignored if the flag --self is given.
 			if (len(components) == 0 && !all && !force) || (len(components) > 0 && all) {
 				return cmd.Help()
 			}
-			err := updateComponents(components, nightly, force)
+			err := updateComponents(env, components, nightly, force)
 			if err != nil {
 				return err
 			}
@@ -87,16 +87,16 @@ latest version. All other flags will be ignored if the flag --self is given.
 	return cmd
 }
 
-func updateComponents(components []string, nightly, force bool) error {
+func updateComponents(env *meta.Environment, components []string, nightly, force bool) error {
 	if len(components) == 0 {
-		installed, err := meta.Profile().InstalledComponents()
+		installed, err := env.Profile().InstalledComponents()
 		if err != nil {
 			return err
 		}
 		components = installed
 	}
 
-	manifest, err := meta.LatestManifest()
+	manifest, err := env.LatestManifest()
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func updateComponents(components []string, nightly, force bool) error {
 		if nightly {
 			version = repository.NightlyVersion
 		}
-		err = meta.DownloadComponent(component, version, nightly || force)
+		err = env.DownloadComponent(component, version, nightly || force)
 		if err != nil {
 			return err
 		}
