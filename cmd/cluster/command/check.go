@@ -177,6 +177,13 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecifica
 				CheckSys(
 					inst.GetHost(),
 					inst.DataDir(),
+					task.CheckTypePackage,
+					topo,
+					opt.opr,
+				).
+				CheckSys(
+					inst.GetHost(),
+					inst.DataDir(),
 					task.CheckTypeFIO,
 					topo,
 					opt.opr,
@@ -345,6 +352,7 @@ func fixFailedChecks(ctx *task.Context, host string, res *operator.CheckResult, 
 		operator.CheckNameDisks,
 		operator.CheckNameEpoll,
 		operator.CheckNameMem,
+		operator.CheckNameCommand,
 		operator.CheckNameFio:
 		// don't show unsupported message for checks that are impossible to fix by us
 		return "", nil

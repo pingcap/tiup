@@ -30,6 +30,7 @@ var (
 	CheckTypeSystemLimits = "limits"
 	CheckTypeSystemConfig = "system"
 	CheckTypeService      = "service"
+	CheckTypePackage      = "package"
 	CheckTypePartitions   = "partitions"
 	CheckTypeFIO          = "fio"
 )
@@ -77,12 +78,36 @@ func (c *CheckSys) Execute(ctx *Context) error {
 			return ErrNoExecutor
 		}
 		var results []*operator.CheckResult
+
+		// check services
 		results = append(
 			results,
 			operator.CheckServices(e, c.host, "irqbalance", false),
 			// FIXME: set firewalld rules in deploy, and not disabling it anymore
 			operator.CheckServices(e, c.host, "firewalld", true),
 		)
+		ctx.SetCheckResults(c.host, results)
+	case CheckTypePackage: // check if a command present, and if a package installed
+		e, ok := ctx.GetExecutor(c.host)
+		if !ok {
+			return ErrNoExecutor
+		}
+		var results []*operator.CheckResult
+
+		// check if numactl is installed
+		stdout, stderr, err := e.Execute("numactl --show", false)
+		if err != nil || len(stderr) > 0 {
+			results = append(results, &operator.CheckResult{
+				Name: operator.CheckNameCommand,
+				Err:  fmt.Errorf("numactl not usable, %s", strings.Trim(string(stderr), "\n")),
+				Msg:  "numactl is not installed properly",
+			})
+		} else {
+			results = append(results, &operator.CheckResult{
+				Name: operator.CheckNameCommand,
+				Msg:  strings.Split(string(stdout), "\n")[0],
+			})
+		}
 		ctx.SetCheckResults(c.host, results)
 	case CheckTypePartitions:
 		// check partition mount options for data_dir

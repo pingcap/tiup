@@ -56,6 +56,7 @@ var (
 	CheckNameLimits      = "limits"
 	CheckNameSysService  = "service"
 	CheckNameSELinux     = "selinux"
+	CheckNameCommand     = "command"
 	CheckNameFio         = "fio"
 )
 
