@@ -1,10 +1,5 @@
 #!/bin/sh
 
-repo='https://tiup-mirrors.pingcap.com'
-if [ -n "$TIUP_MIRRORS" ]; then
-    repo=$TIUP_MIRRORS
-fi
-
 case $(uname -s) in
     Linux|linux) os=linux ;;
     Darwin|darwin) os=darwin ;;
@@ -33,9 +28,7 @@ bin_dir=$TIUP_HOME/bin
 mkdir -p "$bin_dir"
 
 install_binary() {
-    curl "$repo/tiup-$os-$arch.tar.gz?$(date "+%Y%m%d%H%M%S")" -o "/tmp/tiup-$os-$arch.tar.gz" || return 1
-    tar -zxf "/tmp/tiup-$os-$arch.tar.gz" -C "$bin_dir" || return 1
-    rm "/tmp/tiup-$os-$arch.tar.gz"
+    tar -zxf "tiup-$os-$arch.tar.gz" -C "$bin_dir" || return 1
     return 0
 }
 

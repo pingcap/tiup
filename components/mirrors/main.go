@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -33,6 +34,7 @@ import (
 type mirrorsOptions struct {
 	archs     []string
 	oss       []string
+	versions  []string
 	full      bool
 	comps     map[string]*[]string
 	overwrite bool
@@ -70,7 +72,7 @@ func execute() error {
 	}
 
 	rootCmd := &cobra.Command{
-		Use: "tiup mirrors <target-dir>",
+		Use: "tiup mirrors <target-dir> [global version]",
 		Example: `  tiup mirrors local-path --arch amd64,arm --os linux,darwin    # Specify the architectures and OSs
   tiup mirrors local-path --full                                # Build a full local mirrors
   tiup mirrors local-path --tikv v4                             # Specify the version via prefix
@@ -78,10 +80,23 @@ func execute() error {
 		Short:        "Build a local mirrors and download all selected components",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
+			if len(args) < 1 {
 				return cmd.Help()
 			}
-			return download(args[0], repo, manifest, options)
+			for _, v := range args[1:] {
+				for _, comp := range manifest.Components {
+					if err := setVersion(repo, comp.Name, options.comps[comp.Name], v); err != nil {
+						return err
+					}
+				}
+			}
+			if err := download(args[0], repo, manifest, options); err != nil {
+				return err
+			}
+			if err := copyInstallScript(args[0]); err != nil {
+				return err
+			}
+			return nil
 		},
 	}
 
@@ -97,6 +112,50 @@ func execute() error {
 	}
 
 	return rootCmd.Execute()
+}
+
+func setVersion(repo *repository.Repository, component string, versions *[]string, version string) error {
+	v, err := suggestVersion(repo, component, version)
+	if err != nil {
+		return err
+	}
+	if *versions == nil {
+		*versions = []string{v}
+		return nil
+	}
+
+	for _, ver := range *versions {
+		if v == ver {
+			return nil
+		}
+	}
+	*versions = append(*versions, v)
+	return nil
+}
+
+func suggestVersion(repo *repository.Repository, component, version string) (string, error) {
+	switch component {
+	case "alertmanager":
+		return "v0.17.0", nil
+	case "blackbox_exporter":
+		return "v0.12.0", nil
+	case "node_exporter":
+		return "v0.17.0", nil
+	case "pushgateway":
+		return "v0.7.0", nil
+	}
+	vm, err := repo.ComponentVersions(component)
+	if err != nil {
+		return "", err
+	}
+	if v, found := vm.FindVersion(repository.Version(version)); found {
+		return v.Version.String(), nil
+	}
+	v, err := repo.LatestStableVersion(component)
+	if err != nil {
+		return "", err
+	}
+	return v.String(), nil
 }
 
 func downloadResource(mirror repository.Mirror, targetDir, name string, overwrite bool) error {
@@ -206,6 +265,26 @@ func download(targetDir string, repo *repository.Repository, manifest *repositor
 		if err := writeJSON(filename(fmt.Sprintf("tiup-component-%s.index", name)), newCompInfo); err != nil {
 			return err
 		}
+	}
+
+	// download tiup itself
+	for _, os := range options.oss {
+		name := fmt.Sprintf("tiup-%s-amd64", os)
+		if err := downloadResource(repo.Mirror(), targetDir, name, options.overwrite); err != nil {
+			return errors.Annotatef(err, "download resource: %s", name)
+		}
+	}
+
+	return nil
+}
+
+func copyInstallScript(targetDir string) error {
+	home := os.Getenv(localdata.EnvNameComponentInstallDir)
+	if err := utils.Copy(path.Join(home, "install.sh"), path.Join(targetDir, "install.sh")); err != nil {
+		return err
+	}
+	if err := utils.Copy(path.Join(home, "local_install.sh"), path.Join(targetDir, "local_install.sh")); err != nil {
+		return err
 	}
 	return nil
 }

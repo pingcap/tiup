@@ -86,6 +86,15 @@ func (r *Repository) ComponentVersions(component string) (*VersionManifest, erro
 	return &vers, nil
 }
 
+// LatestStableVersion returns the latest stable version of specific component
+func (r *Repository) LatestStableVersion(component string) (Version, error) {
+	ver, err := r.ComponentVersions(component)
+	if err != nil {
+		return "", err
+	}
+	return ver.LatestVersion(), nil
+}
+
 // DownloadTiup downloads the tiup tarball and expands it into targetDir
 func (r *Repository) DownloadTiup(targetDir string) error {
 	return r.fileSource.downloadTarFile(targetDir, fmt.Sprintf("%s-%s-%s", TiupBinaryName, r.GOOS, r.GOARCH), true)
