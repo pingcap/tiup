@@ -46,6 +46,10 @@ func (d *Downloader) Execute(_ *Context) error {
 	sha1File := fmt.Sprintf("%s-linux-amd64.sha1", resName)
 	srcPath := meta.ProfilePath(meta.TiOpsPackageCacheDir, fileName)
 
+	if err := os.MkdirAll(meta.ProfilePath(meta.TiOpsPackageCacheDir), 0755); err != nil {
+		return err
+	}
+
 	// Download from repository if not exists
 	if d.version.IsNightly() || utils.IsNotExist(srcPath) {
 		options := repository.MirrorOptions{
