@@ -3,8 +3,8 @@ package meta
 import (
 	"bytes"
 
-	goyaml "github.com/goccy/go-yaml"
 	"github.com/pingcap/check"
+	"gopkg.in/yaml.v2"
 )
 
 type configSuite struct {
@@ -21,10 +21,10 @@ server_configs:
 
 	topo := new(TopologySpecification)
 
-	err := goyaml.Unmarshal(yamlData, topo)
+	err := yaml.Unmarshal(yamlData, topo)
 	c.Assert(err, check.IsNil)
 
-	yamlData, err = goyaml.Marshal(topo)
+	yamlData, err = yaml.Marshal(topo)
 	c.Assert(err, check.IsNil)
 	decimal := bytes.Contains(yamlData, []byte("0.0"))
 	c.Assert(decimal, check.IsTrue)

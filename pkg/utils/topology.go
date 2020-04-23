@@ -14,15 +14,12 @@
 package utils
 
 import (
-	"bytes"
 	"io/ioutil"
 
-	"github.com/goccy/go-yaml"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/errutil"
-	"github.com/pingcap/errors"
 	"go.uber.org/zap"
-	"vimagination.zapto.org/dos2unix"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -53,19 +50,7 @@ To generate a sample topology file:
 `, suggestionProps))
 	}
 
-	// github.com/goccy/go-yaml will fail to marshal the topo file edit in windows with "CRCL" new line
-	// one example is in testdata/topology_err.yaml
-	// if we revert to use https://github.com/go-yaml/yaml we can avoid this.
-	// but we must find a way to address https://github.com/go-yaml/yaml/issues/430
-	// Note like 25 without decimal is not a valid float type for toml.
-	yamlFile, err = ioutil.ReadAll(dos2unix.DOS2Unix(bytes.NewBuffer(yamlFile)))
-	if err != nil {
-		return errors.AddStack(err)
-	}
-
-	decoder := yaml.NewDecoder(bytes.NewBuffer(yamlFile), yaml.DisallowUnknownField())
-
-	if err = decoder.Decode(out); err != nil {
+	if err = yaml.UnmarshalStrict(yamlFile, out); err != nil {
 		return ErrTopologyParseFailed.
 			Wrap(err, "Failed to parse topology file %s", file).
 			WithProperty(cliutil.SuggestionFromTemplate(`

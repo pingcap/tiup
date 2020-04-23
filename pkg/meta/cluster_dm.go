@@ -17,9 +17,9 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/goccy/go-yaml"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
+	"gopkg.in/yaml.v2"
 )
 
 // DMMeta is the specification of generic cluster metadata
