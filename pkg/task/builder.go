@@ -240,6 +240,16 @@ func (b *Builder) Mkdir(user, host string, dirs ...string) *Builder {
 	return b
 }
 
+// Rmdir appends a Rmdir task to the current task collection
+func (b *Builder) Rmdir(user, host string, dirs ...string) *Builder {
+	b.tasks = append(b.tasks, &Rmdir{
+		user: user,
+		host: host,
+		dirs: dirs,
+	})
+	return b
+}
+
 // Chown appends a Chown task to the current task collection
 func (b *Builder) Chown(user, host string, dirs ...string) *Builder {
 	if len(dirs) == 0 {
@@ -259,6 +269,50 @@ func (b *Builder) Shell(host, command string, sudo bool) *Builder {
 		host:    host,
 		command: command,
 		sudo:    sudo,
+	})
+	return b
+}
+
+// SystemCtl run systemctl on host
+func (b *Builder) SystemCtl(host, unit, action string) *Builder {
+	b.tasks = append(b.tasks, &SystemCtl{
+		host:   host,
+		unit:   unit,
+		action: action,
+	})
+	return b
+}
+
+// Sysctl set a kernel parameter
+func (b *Builder) Sysctl(host, key, val string) *Builder {
+	b.tasks = append(b.tasks, &Sysctl{
+		host: host,
+		key:  key,
+		val:  val,
+	})
+	return b
+}
+
+// Limit set a system limit
+func (b *Builder) Limit(host, domain, limit, item, value string) *Builder {
+	b.tasks = append(b.tasks, &Limit{
+		host:   host,
+		domain: domain,
+		limit:  limit,
+		item:   item,
+		value:  value,
+	})
+	return b
+}
+
+// CheckSys checks system information of deploy server
+func (b *Builder) CheckSys(host, dataDir, checkType string, topo *meta.TopologySpecification, opt *operator.CheckOptions) *Builder {
+	b.tasks = append(b.tasks, &CheckSys{
+		host:    host,
+		topo:    topo,
+		opt:     opt,
+		dataDir: dataDir,
+		check:   checkType,
 	})
 	return b
 }

@@ -15,40 +15,44 @@ package task
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/pingcap/errors"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/module"
 )
 
-// Chown is used to change the owner of directory on the target host
-type Chown struct {
-	user string
-	host string
-	dirs []string
+// SystemCtl run systemctl command on host
+type SystemCtl struct {
+	host   string
+	unit   string
+	action string
 }
 
 // Execute implements the Task interface
-func (m *Chown) Execute(ctx *Context) error {
-	exec, found := ctx.GetExecutor(m.host)
-	if !found {
+func (c *SystemCtl) Execute(ctx *Context) error {
+	e, ok := ctx.GetExecutor(c.host)
+	if !ok {
 		return ErrNoExecutor
 	}
 
-	cmd := fmt.Sprintf("chown -R %s:%s %s", m.user, m.user, strings.Join(m.dirs, " "))
-	_, _, err := exec.Execute(cmd, true)
+	cfg := module.SystemdModuleConfig{
+		Unit:   c.unit,
+		Action: c.action,
+	}
+	systemd := module.NewSystemdModule(cfg)
+	stdout, stderr, err := systemd.Execute(e)
+	ctx.SetOutputs(c.host, stdout, stderr)
 	if err != nil {
-		return errors.Trace(err)
+		return err
 	}
 
 	return nil
 }
 
 // Rollback implements the Task interface
-func (m *Chown) Rollback(ctx *Context) error {
+func (c *SystemCtl) Rollback(ctx *Context) error {
 	return ErrUnsupportedRollback
 }
 
 // String implements the fmt.Stringer interface
-func (m *Chown) String() string {
-	return fmt.Sprintf("Chown: host=%s, directories='%s'", m.host, strings.Join(m.dirs, "','"))
+func (c *SystemCtl) String() string {
+	return fmt.Sprintf("SystemCtl: host=%s action=%s %s", c.host, c.action, c.unit)
 }

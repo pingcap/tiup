@@ -18,11 +18,9 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/pingcap-incubator/tiup-cluster/pkg/api"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/executor"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/module"
@@ -528,7 +526,6 @@ func stopInstance(getter ExecutorGetter, ins meta.Instance) error {
 		Unit:         ins.ServiceName(),
 		Action:       "stop",
 		ReloadDaemon: true, // always reload before operate
-		// Scope: "",
 	}
 	systemd := module.NewSystemdModule(c)
 	stdout, stderr, err := systemd.Execute(e)
@@ -599,38 +596,6 @@ func StopComponent(getter ExecutorGetter, instances []meta.Instance) error {
 	}
 
 	return errg.Wait()
-}
-
-// GetServiceStatus return the Acitive line of status.
-/*
-[tidb@ip-172-16-5-70 deploy]$ sudo systemctl status drainer-8249.service
-● drainer-8249.service - drainer-8249 service
-   Loaded: loaded (/etc/systemd/system/drainer-8249.service; disabled; vendor preset: disabled)
-   Active: active (running) since Mon 2020-03-09 13:56:19 CST; 1 weeks 3 days ago
- Main PID: 36718 (drainer)
-   CGroup: /system.slice/drainer-8249.service
-           └─36718 bin/drainer --addr=172.16.5.70:8249 --pd-urls=http://172.16.5.70:2379 --data-dir=/data1/deploy/data.drainer --log-file=/data1/deploy/log/drainer.log --config=conf/drainer.toml --initial-commit-ts=408375872006389761
-
-Mar 09 13:56:19 ip-172-16-5-70 systemd[1]: Started drainer-8249 service.
-*/
-func GetServiceStatus(e executor.TiOpsExecutor, name string) (active string, err error) {
-	c := module.SystemdModuleConfig{
-		Unit:   name,
-		Action: "status",
-	}
-	systemd := module.NewSystemdModule(c)
-	stdout, _, err := systemd.Execute(e)
-
-	lines := strings.Split(string(stdout), "\n")
-	if len(lines) >= 3 {
-		return lines[2], nil
-	}
-
-	if err != nil {
-		return
-	}
-
-	return "", errors.Errorf("unexpected output: %s", string(stdout))
 }
 
 // PrintClusterStatus print cluster status into the io.Writer.

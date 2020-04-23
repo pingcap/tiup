@@ -20,22 +20,33 @@ import (
 	"github.com/pingcap/errors"
 )
 
-// Chown is used to change the owner of directory on the target host
-type Chown struct {
-	user string
+var (
+	sysctlFilePath = "/etc/sysctl.d/99-sysctl.conf"
+)
+
+// Sysctl set a kernel param on host
+type Sysctl struct {
 	host string
-	dirs []string
+	key  string
+	val  string
 }
 
 // Execute implements the Task interface
-func (m *Chown) Execute(ctx *Context) error {
-	exec, found := ctx.GetExecutor(m.host)
-	if !found {
+func (s *Sysctl) Execute(ctx *Context) error {
+	e, ok := ctx.GetExecutor(s.host)
+	if !ok {
 		return ErrNoExecutor
 	}
 
-	cmd := fmt.Sprintf("chown -R %s:%s %s", m.user, m.user, strings.Join(m.dirs, " "))
-	_, _, err := exec.Execute(cmd, true)
+	cmd := strings.Join([]string{
+		fmt.Sprintf("cp %s{,.bak} 2>/dev/null", sysctlFilePath),
+		fmt.Sprintf("sed -i '/%s/d' %s 2>/dev/null", s.key, sysctlFilePath),
+		fmt.Sprintf("echo '%s=%s' >> %s", s.key, s.val, sysctlFilePath),
+		fmt.Sprintf("sysctl -p %s", sysctlFilePath),
+	}, " && ")
+
+	stdout, stderr, err := e.Execute(cmd, true)
+	ctx.SetOutputs(s.host, stdout, stderr)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -44,11 +55,11 @@ func (m *Chown) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (m *Chown) Rollback(ctx *Context) error {
+func (s *Sysctl) Rollback(ctx *Context) error {
 	return ErrUnsupportedRollback
 }
 
 // String implements the fmt.Stringer interface
-func (m *Chown) String() string {
-	return fmt.Sprintf("Chown: host=%s, directories='%s'", m.host, strings.Join(m.dirs, "','"))
+func (s *Sysctl) String() string {
+	return fmt.Sprintf("Sysctl: host=%s %s = %s", s.host, s.key, s.val)
 }

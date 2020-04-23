@@ -18,6 +18,11 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 )
 
+// Some static values
+const (
+	ComponentCheckCollector = "insight"
+)
+
 // ComponentVersion maps the TiDB version to the third components binding version
 func ComponentVersion(comp, version string) repository.Version {
 	switch comp {
@@ -29,6 +34,8 @@ func ComponentVersion(comp, version string) repository.Version {
 		return "v0.17.0"
 	case meta.ComponentPushwaygate:
 		return "v0.7.0"
+	case ComponentCheckCollector:
+		return "v0.3.0-3"
 	default:
 		return repository.Version(version)
 	}

@@ -20,22 +20,22 @@ import (
 	"github.com/pingcap/errors"
 )
 
-// Chown is used to change the owner of directory on the target host
-type Chown struct {
+// Rmdir is used to delete directory on the target host
+type Rmdir struct {
 	user string
 	host string
 	dirs []string
 }
 
 // Execute implements the Task interface
-func (m *Chown) Execute(ctx *Context) error {
-	exec, found := ctx.GetExecutor(m.host)
+func (r *Rmdir) Execute(ctx *Context) error {
+	exec, found := ctx.GetExecutor(r.host)
 	if !found {
 		return ErrNoExecutor
 	}
 
-	cmd := fmt.Sprintf("chown -R %s:%s %s", m.user, m.user, strings.Join(m.dirs, " "))
-	_, _, err := exec.Execute(cmd, true)
+	cmd := fmt.Sprintf(`rm -rf %s`, strings.Join(r.dirs, " "))
+	_, _, err := exec.Execute(cmd, false)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -44,11 +44,11 @@ func (m *Chown) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (m *Chown) Rollback(ctx *Context) error {
+func (r *Rmdir) Rollback(ctx *Context) error {
 	return ErrUnsupportedRollback
 }
 
 // String implements the fmt.Stringer interface
-func (m *Chown) String() string {
-	return fmt.Sprintf("Chown: host=%s, directories='%s'", m.host, strings.Join(m.dirs, "','"))
+func (r *Rmdir) String() string {
+	return fmt.Sprintf("Rmdir: host=%s, directories='%s'", r.host, strings.Join(r.dirs, "','"))
 }

@@ -37,10 +37,10 @@ func (m *Shell) Execute(ctx *Context) error {
 	log.Infof("Run command on %s(sudo:%v): %s", m.host, m.sudo, m.command)
 
 	stdout, stderr, err := exec.Execute(m.command, m.sudo)
+	ctx.SetOutputs(m.host, stdout, stderr)
 	if err != nil {
 		return errors.Trace(err)
 	}
-	ctx.SetOutputs(m.host, stdout, stderr)
 
 	return nil
 }
