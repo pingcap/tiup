@@ -429,8 +429,8 @@ github.com/pingcap/pd/v4 v4.0.0-beta.2/go.mod h1:TWIuoypUsHkDnxiqRgcSFP6lTC+0PIm
 github.com/pingcap/sysutil v0.0.0-20200206130906-2bfa6dc40bcd/go.mod h1:EB/852NMQ+aRKioCpToQ94Wl7fktV+FNnxf3CX/TTXI=
 github.com/pingcap/sysutil v0.0.0-20200309085538-962fd285f3bb h1:bDbgLaNTRNK6Qw7KjvEqqfCQstY8WMEcXyXTU7yzYKg=
 github.com/pingcap/sysutil v0.0.0-20200309085538-962fd285f3bb/go.mod h1:EB/852NMQ+aRKioCpToQ94Wl7fktV+FNnxf3CX/TTXI=
-github.com/pingcap/tidb-insight v0.3.1-0.20200423033851-4e7d73179beb h1:jPf7b22vBp5UjlHOrUM9GvgQ4Kl8kvhxsKMpX6ZAIXo=
-github.com/pingcap/tidb-insight v0.3.1-0.20200423033851-4e7d73179beb/go.mod h1:HZ6cGBYxViftTKLbl/V4moRol79bifZzI9ImGavJms0=
+github.com/pingcap/tidb-insight v0.3.1-0.20200423065530-051a0e987419 h1:cq13XY0Zor+FkmWE4Z3CXj28A77H0c6E7g/ZwVkX1P8=
+github.com/pingcap/tidb-insight v0.3.1-0.20200423065530-051a0e987419/go.mod h1:HZ6cGBYxViftTKLbl/V4moRol79bifZzI9ImGavJms0=
 github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4/go.mod h1:4OwLy04Bl9Ef3GJJCoec+30X3LQs/0/m4HFRt/2LUSA=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

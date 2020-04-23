@@ -25,7 +25,7 @@ require (
 	github.com/pingcap/errors v0.11.5-0.20190809092503-95897b64e011
 	github.com/pingcap/kvproto v0.0.0-20200317095539-c42a1d8db7d3
 	github.com/pingcap/pd/v4 v4.0.0-beta.2
-	github.com/pingcap/tidb-insight v0.3.1-0.20200423033851-4e7d73179beb
+	github.com/pingcap/tidb-insight v0.3.1-0.20200423065530-051a0e987419
 	github.com/relex/aini v1.1.3
 	github.com/sergi/go-diff v1.0.1-0.20180205163309-da645544ed44
 	github.com/spf13/cobra v0.0.6

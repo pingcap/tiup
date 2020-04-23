@@ -145,6 +145,18 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecifica
 				).
 				Shell(
 					inst.GetHost(),
+					"ss -lnt",
+					false,
+				).
+				CheckSys(
+					inst.GetHost(),
+					inst.DataDir(),
+					task.CheckTypePort,
+					topo,
+					opt.opr,
+				).
+				Shell(
+					inst.GetHost(),
 					"cat /etc/security/limits.conf",
 					false,
 				).

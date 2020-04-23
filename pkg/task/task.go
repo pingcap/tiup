@@ -28,8 +28,10 @@ import (
 var (
 	// ErrUnsupportedRollback means the task do not support rollback.
 	ErrUnsupportedRollback = stderrors.New("unsupported rollback")
-	// ErrNoExecutor means can get the executor.
+	// ErrNoExecutor means not being able to get the executor.
 	ErrNoExecutor = stderrors.New("no executor")
+	// ErrNoOutput means not being able to get the output of host.
+	ErrNoOutput = stderrors.New("no outputs available")
 )
 
 type (

@@ -51,6 +51,7 @@ var (
 	CheckNameCPUThreads  = "cpu-cores"
 	CheckNameCPUGovernor = "cpu-governor"
 	CheckNameDisks       = "disk"
+	CheckNamePortListen  = "listening-port"
 	CheckNameEpoll       = "epoll-exclusive"
 	CheckNameMem         = "memory"
 	CheckNameLimits      = "limits"
@@ -440,6 +441,41 @@ func CheckSELinux(e executor.TiOpsExecutor) *CheckResult {
 		result.Err = fmt.Errorf("SELinux is not disabled, %d %s", lines, err)
 	}
 	return result
+}
+
+// CheckListeningPort checks if the ports are already binded by some process on host
+func CheckListeningPort(opt *CheckOptions, host string, topo *meta.TopologySpecification, rawData []byte) []*CheckResult {
+	var results []*CheckResult
+	ports := make(map[int]struct{})
+
+	topo.IterInstance(func(inst meta.Instance) {
+		if inst.GetHost() != host {
+			return
+		}
+		for _, up := range inst.UsedPorts() {
+			if _, found := ports[up]; !found {
+				ports[up] = struct{}{}
+			}
+		}
+	})
+
+	for _, line := range strings.Split(string(rawData), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 5 || fields[0] != "LISTEN" {
+			continue
+		}
+		addr := strings.Split(fields[3], ":")
+		lp, _ := strconv.Atoi(addr[len(addr)-1])
+		for p := range ports {
+			if p == lp {
+				results = append(results, &CheckResult{
+					Name: CheckNamePortListen,
+					Err:  fmt.Errorf("port %d is already in use", lp),
+				})
+			}
+		}
+	}
+	return results
 }
 
 // CheckPartitions checks partition info of data directories

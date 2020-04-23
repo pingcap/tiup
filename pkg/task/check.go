@@ -29,6 +29,7 @@ var (
 	CheckTypeSystemInfo   = "insight"
 	CheckTypeSystemLimits = "limits"
 	CheckTypeSystemConfig = "system"
+	CheckTypePort         = "port"
 	CheckTypeService      = "service"
 	CheckTypePackage      = "package"
 	CheckTypePartitions   = "partitions"
@@ -53,7 +54,7 @@ type CheckSys struct {
 func (c *CheckSys) Execute(ctx *Context) error {
 	stdout, stderr, _ := ctx.GetOutputs(c.host)
 	if len(stderr) > 0 && len(stdout) == 0 {
-		return fmt.Errorf("error getting output of %s: %s", c.host, stderr)
+		return ErrNoOutput
 	}
 
 	switch c.check {
@@ -72,6 +73,8 @@ func (c *CheckSys) Execute(ctx *Context) error {
 			operator.CheckSELinux(e),
 		)
 		ctx.SetCheckResults(c.host, results)
+	case CheckTypePort:
+		ctx.SetCheckResults(c.host, operator.CheckListeningPort(c.opt, c.host, c.topo, stdout))
 	case CheckTypeService:
 		e, ok := ctx.GetExecutor(c.host)
 		if !ok {
@@ -105,7 +108,7 @@ func (c *CheckSys) Execute(ctx *Context) error {
 		} else {
 			results = append(results, &operator.CheckResult{
 				Name: operator.CheckNameCommand,
-				Msg:  strings.Split(string(stdout), "\n")[0],
+				Msg:  "numactl: " + strings.Split(string(stdout), "\n")[0],
 			})
 		}
 		ctx.SetCheckResults(c.host, results)
