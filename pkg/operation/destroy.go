@@ -183,7 +183,7 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance) error {
 		delPaths := make([]string, 0)
 		switch name {
 		case meta.ComponentTiKV, meta.ComponentPD, meta.ComponentTiFlash, meta.ComponentPump, meta.ComponentDrainer, meta.ComponentPrometheus, meta.ComponentAlertManager, meta.ComponentDMMaster, meta.ComponentDMWorker:
-			delPaths = append(delPaths, ins.DataDir())
+			delPaths = append(delPaths, strings.Split(ins.DataDir(), ",")...)
 		}
 
 		// In TiDB-Ansible, deploy dir are shared by all components on the same
