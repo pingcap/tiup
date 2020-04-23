@@ -38,6 +38,10 @@ func newReloadCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
+			if err := validRoles(options.Roles); err != nil {
+				return err
+			}
+
 			clusterName := args[0]
 			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
 				return errors.Errorf("cannot start non-exists cluster %s", clusterName)
@@ -128,4 +132,22 @@ func buildReloadTask(
 		Build()
 
 	return t, nil
+}
+
+func validRoles(roles []string) error {
+	for _, r := range roles {
+		match := false
+		for _, has := range meta.AllComponentNames() {
+			if r == has {
+				match = true
+				break
+			}
+		}
+
+		if !match {
+			return errors.Errorf("not valid role: %s, should be one of: %v", r, meta.AllComponentNames())
+		}
+	}
+
+	return nil
 }

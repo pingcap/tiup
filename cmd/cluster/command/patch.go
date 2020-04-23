@@ -45,6 +45,11 @@ func newPatchCmd() *cobra.Command {
 			if len(args) != 2 {
 				return cmd.Help()
 			}
+
+			if err := validRoles(options.Roles); err != nil {
+				return err
+			}
+
 			if len(options.Nodes) == 0 && len(options.Roles) == 0 {
 				return errors.New("the flag -R or -N must be specified at least one")
 			}

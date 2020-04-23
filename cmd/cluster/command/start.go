@@ -36,6 +36,10 @@ func newStartCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
+			if err := validRoles(options.Roles); err != nil {
+				return nil
+			}
+
 			clusterName := args[0]
 			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
 				return errors.Errorf("cannot start non-exists cluster %s", clusterName)
