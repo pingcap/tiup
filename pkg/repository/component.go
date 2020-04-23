@@ -40,7 +40,7 @@ type (
 // HasComponent checks whether the manifest contains the specific component
 func (m *ComponentManifest) HasComponent(component string) bool {
 	for _, c := range m.Components {
-		if strings.ToLower(c.Name) == strings.ToLower(component) {
+		if strings.EqualFold(c.Name, component) {
 			return true
 		}
 	}
@@ -50,7 +50,7 @@ func (m *ComponentManifest) HasComponent(component string) bool {
 // FindComponent find the component by name and returns component info and a bool to indicate whether it exists
 func (m *ComponentManifest) FindComponent(component string) (ComponentInfo, bool) {
 	for _, c := range m.Components {
-		if strings.ToLower(c.Name) == strings.ToLower(component) {
+		if strings.EqualFold(c.Name, component) {
 			return c, true
 		}
 	}

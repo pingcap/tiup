@@ -114,11 +114,7 @@ func pack(targets []string, options packageOptions) error {
 		return err
 	}
 
-	if err := componentIndex(options); err != nil {
-		return err
-	}
-
-	return nil
+	return componentIndex(options)
 }
 
 func current(fname string, target interface{}) error {
@@ -332,10 +328,8 @@ func checksum(options packageOptions) error {
 
 	checksum := hex.EncodeToString(sha1Writter.Sum(nil))
 	file := fmt.Sprintf("package/%s-%s-%s-%s.sha1", options.name, options.version, options.goos, options.goarch)
-	if err := ioutil.WriteFile(file, []byte(checksum), 0664); err != nil {
-		return err
-	}
-	return nil
+
+	return ioutil.WriteFile(file, []byte(checksum), 0664)
 }
 
 func chwd() error {

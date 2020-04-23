@@ -94,7 +94,7 @@ do
         ;;
     esac
 
-    actual=$(cat "$TMP_DIR/$path" )
+    actual=$(cat "$TMP_DIR/$path")
     expected=$(cat "$TIUP_EXPECTED/$path")
 
     if [ "$expected" != "$actual" ]; then
@@ -105,7 +105,7 @@ do
       failed=$((failed+1))
 
       echo "${BOLD}-----------------------------------DIFF START-----------------------------------------${NORMAL}" >&2
-      diff --ignore-space-change -B -E -Z \
+      diff --ignore-space-change -B -E \
        --old-group-format="${RED}%<${NORMAL}" \
        --new-group-format="${GREEN}%>${NORMAL}" \
        --unchanged-group-format="" \
@@ -129,7 +129,6 @@ if [ $GITHUB_ACTION ]; then
 
   if [ ! -f "$TIUP_HOME/data/test-playground/dsn" ]; then
     echo "${RED}✖ Failed run playground${NORMAL}"
-    exit 1
   fi
 fi
 
