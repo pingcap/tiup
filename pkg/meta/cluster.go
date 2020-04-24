@@ -19,6 +19,7 @@ import (
 
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/file"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
 	"github.com/pingcap/errors"
 	"gopkg.in/yaml.v2"
@@ -29,6 +30,8 @@ const (
 	MetaFileName = "meta.yaml"
 	// PatchDirName is the directory to store patch file eg. {PatchDirName}/tidb-hotfix.tar.gz
 	PatchDirName = "patch"
+	// BackupDirName is the directory to save backup files.
+	BackupDirName = "backup"
 )
 
 var (
@@ -66,20 +69,26 @@ func SaveClusterMeta(clusterName string, meta *ClusterMeta) error {
 	}
 
 	metaFile := ClusterPath(clusterName, MetaFileName)
+	backupDir := ClusterPath(clusterName, BackupDirName)
 
 	if err := EnsureClusterDir(clusterName); err != nil {
 		return wrapError(err)
 	}
 
-	f, err := os.OpenFile(metaFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.ModePerm)
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		return wrapError(err)
+	}
+
+	data, err := yaml.Marshal(meta)
 	if err != nil {
 		return wrapError(err)
 	}
-	defer f.Close()
 
-	if err := yaml.NewEncoder(f).Encode(meta); err != nil {
+	err = file.SaveFileWithBackup(metaFile, data, backupDir)
+	if err != nil {
 		return wrapError(err)
 	}
+
 	return nil
 }
 
