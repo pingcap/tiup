@@ -2,10 +2,8 @@ FROM golang:1.14
 
 
 # Use mirrors for poor network...
-RUN sed -i 's/archive.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
-RUN sed -i 's/security.ubuntu.com/mirrors.aliyun.com/g' /etc/apt/sources.list
 RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
-# RUN sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
+RUN sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
 
 
 # tiup-cluster dependencies
@@ -13,10 +11,8 @@ RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
      apt-get -y -q install software-properties-common && \
      apt-get install -qqy \
          dos2unix \
-         git \
-         wget \
          default-mysql-client \
-	     vim pssh # not required by tiup-cluster itself, just for ease of use
+	     vim # not required by tiup-cluster itself, just for ease of use
 
 
 # without --dev flag up.sh copies tiup-cluster to these subfolders

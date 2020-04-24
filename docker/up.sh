@@ -52,7 +52,7 @@ do
             ;;
         --dev)
             if [ ! "$TIUP_CLUSTER_ROOT" ]; then
-                TIUP_CLUSTER_ROOT="$(cd ../ && pwd)"
+                export TIUP_CLUSTER_ROOT="$(cd ../ && pwd)"
                 INFO "TIUP_CLUSTER_ROOT is not set, defaulting to: $TIUP_CLUSTER_ROOT"
             fi
             INFO "Running docker-compose with dev config"
