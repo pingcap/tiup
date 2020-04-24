@@ -9,6 +9,15 @@ topo=./topo/full.yaml
 
 yes | tiup-cluster deploy $name $version $topo -i ~/.ssh/id_rsa
 
+tiup-cluster list | grep "$name"
+
+tiup-cluster audit | grep "deploy $name $version"
+
+# Get the audit id can check it just runnable
+id=`tiup-cluster audit | grep "deploy $name $version" | awk '{print $1}'`
+tiup-cluster audit $id
+
+
 yes | tiup-cluster start $name
 
 tiup-cluster _test $name writable
