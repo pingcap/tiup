@@ -95,7 +95,7 @@ func upgrade(clusterName, clusterVersion string, opt upgradeOptions) error {
 	for _, comp := range metadata.Topology.ComponentsByStartOrder() {
 		for _, inst := range comp.Instances() {
 			version := bindversion.ComponentVersion(inst.ComponentName(), clusterVersion)
-			if version == "" || inst.ComponentName() == "tiflash" {
+			if version == "" {
 				return errors.Errorf("unsupported component: %v", inst.ComponentName())
 			}
 			compInfo := componentInfo{
