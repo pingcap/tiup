@@ -63,9 +63,16 @@ func externalHelp(profile *localdata.Profile, spec string, args ...string) {
 		return
 	}
 
+	tiupWd, err := os.Getwd()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
 	sd := profile.Path(filepath.Join(localdata.StorageParentDir, strings.Split(spec, ":")[0]))
 	envs := []string{
 		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
+		fmt.Sprintf("%s=%s", localdata.EnvNameWorkDir, tiupWd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 	}

@@ -93,10 +93,7 @@ func execute() error {
 			if err := download(args[0], repo, manifest, options); err != nil {
 				return err
 			}
-			if err := copyInstallScript(args[0]); err != nil {
-				return err
-			}
-			return nil
+			return copyInstallScript(args[0])
 		},
 	}
 
@@ -283,8 +280,5 @@ func copyInstallScript(targetDir string) error {
 	if err := utils.Copy(path.Join(home, "install.sh"), path.Join(targetDir, "install.sh")); err != nil {
 		return err
 	}
-	if err := utils.Copy(path.Join(home, "local_install.sh"), path.Join(targetDir, "local_install.sh")); err != nil {
-		return err
-	}
-	return nil
+	return utils.Copy(path.Join(home, "local_install.sh"), path.Join(targetDir, "local_install.sh"))
 }

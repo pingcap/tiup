@@ -37,11 +37,7 @@ func execute() error {
 			if err != nil {
 				return err
 			}
-			if err := run(bin, args[1:]...); err != nil {
-				return err
-			}
-
-			return nil
+			return run(bin, args[1:]...)
 		},
 	}
 
