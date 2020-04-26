@@ -27,6 +27,8 @@ var (
 	errEnvInitSubCommandFailed = errNSEnvInit.NewType("sub_command_failed")
 	// ErrEnvInitFailed is ErrEnvInitFailed
 	ErrEnvInitFailed = errNSEnvInit.NewType("failed")
+	// SSH authorized_keys file
+	defaultSSHAuthorizedKeys = "~/.ssh/authorized_keys"
 )
 
 // EnvInit is used to initialize the remote environment, e.g:
@@ -76,13 +78,35 @@ func (e *EnvInit) execute(ctx *Context) error {
 			Wrap(err, "Failed to create '~/.ssh' directory for user '%s'", e.deployUser))
 	}
 
+	// detect if custom path of authorized keys file is set
+	// NOTE: we do not yet support:
+	//   - custom config for user (~/.ssh/config)
+	//   - sshd started with custom config (other than /etc/ssh/sshd_config)
+	//   - ssh server implementations other than OpenSSH (such as dropbear)
+	sshAuthorizedKeys := defaultSSHAuthorizedKeys
+	cmd = "grep -Ev '^#|^\\s*$' /etc/ssh/sshd_config"
+	stdout, _, _ := exec.Execute(cmd, true) // error ignored as we have default value
+	for _, line := range strings.Split(string(stdout), "\n") {
+		if !strings.Contains(line, "AuthorizedKeysFile") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) >= 2 {
+			sshAuthorizedKeys = fields[1]
+		}
+	}
+
+	if !strings.HasPrefix(sshAuthorizedKeys, "/") && !strings.HasPrefix(sshAuthorizedKeys, "~") {
+		sshAuthorizedKeys = fmt.Sprintf("~/%s", sshAuthorizedKeys)
+	}
+
 	pk := strings.TrimSpace(string(pubKey))
 	cmd = fmt.Sprintf(`su - %[1]s -c 'grep $(echo %[2]s) %[3]s || echo %[2]s >> %[3]s && chmod 600 %[3]s'`,
-		e.deployUser, pk, "~/.ssh/authorized_keys")
+		e.deployUser, pk, sshAuthorizedKeys)
 	_, _, err = exec.Execute(cmd, true)
 	if err != nil {
 		return wrapError(errEnvInitSubCommandFailed.
-			Wrap(err, "Failed to write public keys to '~/.ssh/authorized_keys' for user '%s'", e.deployUser))
+			Wrap(err, "Failed to write public keys to '%s' for user '%s'", sshAuthorizedKeys, e.deployUser))
 	}
 
 	return nil
