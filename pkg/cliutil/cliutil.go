@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -53,7 +54,10 @@ func OsArgs() string {
 
 // OsArgs0 return the command name that user inputs, e.g. tiops, or tiup cluster.
 func OsArgs0() string {
-	return args()[0]
+	if strings.Contains(args()[0], " ") {
+		return args()[0]
+	}
+	return filepath.Base(args()[0])
 }
 
 func init() {
@@ -112,9 +116,9 @@ func SuggestionFromFormat(format string, a ...interface{}) (errorx.Property, str
 
 // BeautifyCobraUsageAndHelp beautifies cobra usages and help.
 func BeautifyCobraUsageAndHelp(rootCmd *cobra.Command) {
-	rootCmd.SetUsageTemplate(`Usage:{{if .Runnable}}
-  {{ColorCommand}}{{.UseLine}}{{ColorReset}}{{end}}{{if .HasAvailableSubCommands}}
-  {{ColorCommand}}{{.CommandPath}} [command]{{ColorReset}}{{end}}{{if gt (len .Aliases) 0}}
+	s := `Usage:{{if .Runnable}}
+  {{ColorCommand}}{{tiupUseLine .UseLine}}{{ColorReset}}{{end}}{{if .HasAvailableSubCommands}}
+  {{ColorCommand}}{{tiupCmdPath .Use}} [command]{{ColorReset}}{{end}}{{if gt (len .Aliases) 0}}
 
 Aliases:
   {{ColorCommand}}{{.NameAndAliases}}{{ColorReset}}{{end}}{{if .HasExample}}
@@ -134,6 +138,27 @@ Global Flags:
 Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
   {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
 
-Use "{{ColorCommand}}{{.CommandPath}} [command] --help{{ColorReset}}" for more information about a command.{{end}}
-`)
+Use "{{ColorCommand}}{{tiupCmdPath .Use}} help [command]{{ColorReset}}" for more information about a command.{{end}}
+`
+	cobra.AddTemplateFunc("tiupUseLine", cmdUseLine)
+	cobra.AddTemplateFunc("tiupCmdPath", cmdPath)
+
+	rootCmd.SetUsageTemplate(s)
+}
+
+// cmdUseLine is a customized cobra.Command.UseLine()
+func cmdUseLine(useline string) string {
+	i := strings.Index(useline, " ")
+	if i > 0 {
+		return OsArgs0() + useline[i:]
+	}
+	return useline
+}
+
+// cmdPath is a customized cobra.Command.CommandPath()
+func cmdPath(use string) string {
+	if strings.Contains(use, " ") {
+		use = OsArgs0()
+	}
+	return use
 }

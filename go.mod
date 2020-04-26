@@ -27,7 +27,7 @@ require (
 	github.com/pingcap/tidb-insight v0.3.1-0.20200423065530-051a0e987419
 	github.com/relex/aini v1.1.3
 	github.com/sergi/go-diff v1.0.1-0.20180205163309-da645544ed44
-	github.com/spf13/cobra v0.0.6
+	github.com/spf13/cobra v1.0.0
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20191023171146-3cf2f69b5738
 	go.uber.org/atomic v1.6.0
 	go.uber.org/zap v1.14.1
