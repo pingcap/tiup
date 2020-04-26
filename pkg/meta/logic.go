@@ -399,7 +399,7 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		specConfig = mergedConfig
 	}
 
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.TiDB, specConfig, paths)
+	return i.mergeServerConfig(e, i.instance.topo.ServerConfigs.TiDB, specConfig, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -503,7 +503,7 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		specConfig = mergedConfig
 	}
 
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.TiKV, specConfig, paths)
+	return i.mergeServerConfig(e, i.instance.topo.ServerConfigs.TiKV, specConfig, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -595,11 +595,11 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVe
 	}
 
 	// Set the PD metrics storage address
-	if semver.Compare(clusterVersion, "v3.1.0") >= 0 && len(i.topo.Monitors) > 0 {
+	if semver.Compare(clusterVersion, "v3.1.0") >= 0 && len(i.instance.topo.Monitors) > 0 {
 		if spec.Config == nil {
 			spec.Config = map[string]interface{}{}
 		}
-		prom := i.topo.Monitors[0]
+		prom := i.instance.topo.Monitors[0]
 		spec.Config["pd-server.metric-storage"] = fmt.Sprintf("http://%s:%d", prom.Host, prom.Port)
 	}
 
@@ -627,7 +627,7 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVe
 		specConfig = mergedConfig
 	}
 
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.PD, specConfig, paths)
+	return i.mergeServerConfig(e, i.instance.topo.ServerConfigs.PD, specConfig, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -818,13 +818,13 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 	spec := i.InstanceSpec.(TiFlashSpec)
 
 	tidbStatusAddrs := []string{}
-	for _, tidb := range i.topo.TiDBServers {
+	for _, tidb := range i.instance.topo.TiDBServers {
 		tidbStatusAddrs = append(tidbStatusAddrs, fmt.Sprintf("%s:%d", tidb.Host, uint64(tidb.StatusPort)))
 	}
 	tidbStatusStr := strings.Join(tidbStatusAddrs, ",")
 
 	var pdAddrs []string
-	for _, pd := range i.topo.PDServers {
+	for _, pd := range i.instance.topo.PDServers {
 		pdAddrs = append(pdAddrs, fmt.Sprintf("%s:%d", pd.Host, uint64(pd.ClientPort)))
 	}
 	pdStr := strings.Join(pdAddrs, ",")
@@ -832,8 +832,8 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 	// replication.enable-placement-rules should be set to true to enable TiFlash
 	// TODO: Move this logic to an independent checkConfig procedure
 	const key = "replication.enable-placement-rules"
-	globalEnabled, ok1 := i.topo.ServerConfigs.PD[key].(bool)
-	for _, pd := range i.topo.PDServers {
+	globalEnabled, ok1 := i.instance.topo.ServerConfigs.PD[key].(bool)
+	for _, pd := range i.instance.topo.PDServers {
 		// if instance config exists AND the config is false, throw an error.
 		// if instance config does not exist, if global config does not exist OR the config is false, throw an error
 		if instanceEnabled, ok2 := pd.Config[key].(bool); (ok2 && !instanceEnabled) || (!ok2 && (!ok1 || !globalEnabled)) {
@@ -866,7 +866,7 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		return err
 	}
 
-	conf, err := i.InitTiFlashLearnerConfig(cfg, i.topo.ServerConfigs.TiFlashLearner)
+	conf, err := i.InitTiFlashLearnerConfig(cfg, i.instance.topo.ServerConfigs.TiFlashLearner)
 	if err != nil {
 		return err
 	}
@@ -900,7 +900,7 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		return err
 	}
 
-	conf, err = i.InitTiFlashConfig(cfg, i.topo.ServerConfigs.TiFlash)
+	conf, err = i.InitTiFlashConfig(cfg, i.instance.topo.ServerConfigs.TiFlash)
 	if err != nil {
 		return err
 	}
@@ -953,7 +953,7 @@ func (c *MonitorComponent) Name() string {
 func (c *MonitorComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Monitors))
 	for _, s := range c.Monitors {
-		ins = append(ins, &MonitorInstance{c.ClusterSpecification, instance{
+		ins = append(ins, &MonitorInstance{instance{
 			InstanceSpec: s,
 			name:         c.Name(),
 			host:         s.Host,
@@ -978,7 +978,6 @@ func (c *MonitorComponent) Instances() []Instance {
 
 // MonitorInstance represent the monitor instance
 type MonitorInstance struct {
-	topo *ClusterSpecification
 	instance
 }
 
@@ -1013,40 +1012,40 @@ func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 	// transfer config
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("tikv_%s.yml", i.GetHost()))
 	cfig := config.NewPrometheusConfig(clusterName)
-	cfig.AddBlackbox(i.GetHost(), uint64(i.topo.MonitoredOptions.BlackboxExporterPort))
+	cfig.AddBlackbox(i.GetHost(), uint64(i.instance.topo.MonitoredOptions.BlackboxExporterPort))
 	uniqueHosts := set.NewStringSet()
-	for _, pd := range i.topo.PDServers {
+	for _, pd := range i.instance.topo.PDServers {
 		uniqueHosts.Insert(pd.Host)
 		cfig.AddPD(pd.Host, uint64(pd.ClientPort))
 	}
-	for _, kv := range i.topo.TiKVServers {
+	for _, kv := range i.instance.topo.TiKVServers {
 		uniqueHosts.Insert(kv.Host)
 		cfig.AddTiKV(kv.Host, uint64(kv.StatusPort))
 	}
-	for _, db := range i.topo.TiDBServers {
+	for _, db := range i.instance.topo.TiDBServers {
 		uniqueHosts.Insert(db.Host)
 		cfig.AddTiDB(db.Host, uint64(db.StatusPort))
 	}
-	for _, flash := range i.topo.TiFlashServers {
+	for _, flash := range i.instance.topo.TiFlashServers {
 		uniqueHosts.Insert(flash.Host)
 		cfig.AddTiFlashLearner(flash.Host, uint64(flash.FlashProxyStatusPort))
 		cfig.AddTiFlash(flash.Host, uint64(flash.StatusPort))
 	}
-	for _, pump := range i.topo.PumpServers {
+	for _, pump := range i.instance.topo.PumpServers {
 		uniqueHosts.Insert(pump.Host)
 		cfig.AddPump(pump.Host, uint64(pump.Port))
 	}
-	for _, drainer := range i.topo.Drainers {
+	for _, drainer := range i.instance.topo.Drainers {
 		uniqueHosts.Insert(drainer.Host)
 		cfig.AddDrainer(drainer.Host, uint64(drainer.Port))
 	}
-	for _, grafana := range i.topo.Grafana {
+	for _, grafana := range i.instance.topo.Grafana {
 		uniqueHosts.Insert(grafana.Host)
 		cfig.AddGrafana(grafana.Host, uint64(grafana.Port))
 	}
 	for host := range uniqueHosts {
-		cfig.AddNodeExpoertor(host, uint64(i.topo.MonitoredOptions.NodeExporterPort))
-		cfig.AddBlackboxExporter(host, uint64(i.topo.MonitoredOptions.BlackboxExporterPort))
+		cfig.AddNodeExpoertor(host, uint64(i.instance.topo.MonitoredOptions.NodeExporterPort))
+		cfig.AddBlackboxExporter(host, uint64(i.instance.topo.MonitoredOptions.BlackboxExporterPort))
 		cfig.AddMonitoredServer(host)
 	}
 
@@ -1062,8 +1061,11 @@ func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *MonitorInstance) ScaleConfig(e executor.TiOpsExecutor, topo Specification,
+func (i *MonitorInstance) ScaleConfig(e executor.TiOpsExecutor, b Specification,
 	clusterName string, clusterVersion string, deployUser string, paths DirPaths) error {
+	s := i.instance.topo
+	defer func() { i.instance.topo = s }()
+	i.instance.topo = b.GetClusterSpecification()
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
@@ -1080,7 +1082,6 @@ func (c *GrafanaComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Grafana))
 	for _, s := range c.Grafana {
 		ins = append(ins, &GrafanaInstance{
-			topo: c.ClusterSpecification,
 			instance: instance{
 				InstanceSpec: s,
 				name:         c.Name(),
@@ -1106,7 +1107,6 @@ func (c *GrafanaComponent) Instances() []Instance {
 
 // GrafanaInstance represent the grafana instance
 type GrafanaInstance struct {
-	topo *ClusterSpecification
 	instance
 }
 
@@ -1153,12 +1153,12 @@ func (i *GrafanaInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 	}
 
 	// transfer datasource.yml
-	if len(i.topo.Monitors) == 0 {
-		return errors.New("not prometheus found in topology")
+	if len(i.instance.topo.Monitors) == 0 {
+		return errors.New("no prometheus found in topology")
 	}
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
-	if err := config.NewDatasourceConfig(clusterName, i.topo.Monitors[0].Host).
-		WithPort(uint64(i.topo.Monitors[0].Port)).
+	if err := config.NewDatasourceConfig(clusterName, i.instance.topo.Monitors[0].Host).
+		WithPort(uint64(i.instance.topo.Monitors[0].Port)).
 		ConfigToFile(fp); err != nil {
 		return err
 	}
@@ -1171,8 +1171,11 @@ func (i *GrafanaInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *GrafanaInstance) ScaleConfig(e executor.TiOpsExecutor, topo Specification,
+func (i *GrafanaInstance) ScaleConfig(e executor.TiOpsExecutor, b Specification,
 	clusterName string, clusterVersion string, deployUser string, paths DirPaths) error {
+	s := i.instance.topo
+	defer func() { i.instance.topo = s }()
+	i.instance.topo = b.GetClusterSpecification().Merge(i.instance.topo)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
@@ -1256,8 +1259,11 @@ func (i *AlertManagerInstance) InitConfig(e executor.TiOpsExecutor, clusterName,
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *AlertManagerInstance) ScaleConfig(e executor.TiOpsExecutor, topo Specification,
+func (i *AlertManagerInstance) ScaleConfig(e executor.TiOpsExecutor, b Specification,
 	clusterName string, clusterVersion string, deployUser string, paths DirPaths) error {
+	s := i.instance.topo
+	defer func() { i.instance.topo = s }()
+	i.instance.topo = b.GetClusterSpecification()
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 

@@ -56,6 +56,12 @@ wait_instance_num_reach $name $totol_sub_one
 echo "start scale out pump"
 yes | tiup-cluster scale-out $name ./topo/full_scale_in_pump.yaml
 
+echo "start scale in grafana"
+yes | tiup-cluster scale-in $name -N 172.19.0.101:3000
+wait_instance_num_reach $name $totol_sub_one
+echo "start scale out grafana"
+yes | tiup-cluster scale-out $name ./topo/full_scale_in_grafana.yaml
+
 tiup-cluster _test $name writable
 
 yes | tiup-cluster destroy $name
