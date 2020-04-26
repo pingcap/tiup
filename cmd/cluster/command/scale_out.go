@@ -14,6 +14,7 @@
 package command
 
 import (
+	"path"
 	"path/filepath"
 
 	"github.com/joomcode/errorx"
@@ -36,10 +37,13 @@ import (
 type scaleOutOptions struct {
 	user         string // username to login to the SSH server
 	identityFile string // path to the private key file
+	usePassword  bool   // use password instead of identity file for ssh connection
 }
 
 func newScaleOutCmd() *cobra.Command {
-	opt := scaleOutOptions{}
+	opt := scaleOutOptions{
+		identityFile: path.Join(utils.UserHome(), ".ssh", "id_rsa"),
+	}
 	cmd := &cobra.Command{
 		Use:          "scale-out <cluster-name> <topology.yaml>",
 		Short:        "Scale out a TiDB cluster",
@@ -54,8 +58,9 @@ func newScaleOutCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&opt.user, "user", "root", "The user name to login via SSH. The user must has root (or sudo) privilege.")
-	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", "", "The path of the SSH identity file. If specified, public key authentication will be used.")
+	cmd.Flags().StringVar(&opt.user, "user", utils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
+	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", opt.identityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
+	cmd.Flags().BoolVarP(&opt.usePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 
 	return cmd
 }
@@ -106,7 +111,7 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 	newPart.MonitoredOptions = metadata.Topology.MonitoredOptions
 	newPart.ServerConfigs = metadata.Topology.ServerConfigs
 
-	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.identityFile)
+	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.identityFile, opt.usePassword)
 	if err != nil {
 		return err
 	}

@@ -204,11 +204,6 @@ func (i *instance) mergeTiFlashLearnerServerConfig(e executor.TiOpsExecutor, glo
 	return e.Transfer(fp, dst, false)
 }
 
-// ScaleConfig deploy temporary config on scaling
-func (i *instance) ScaleConfig(e executor.TiOpsExecutor, _ Specification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
-}
-
 // ID returns the identifier of this instance, the ID is constructed by host:port
 func (i *instance) ID() string {
 	return fmt.Sprintf("%s:%d", i.host, i.port)
@@ -637,7 +632,7 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVe
 
 // ScaleConfig deploy temporary config on scaling
 func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b Specification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
-	if err := i.instance.ScaleConfig(e, b, clusterName, clusterVersion, deployUser, paths); err != nil {
+	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -1066,6 +1061,12 @@ func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 	return nil
 }
 
+// ScaleConfig deploy temporary config on scaling
+func (i *MonitorInstance) ScaleConfig(e executor.TiOpsExecutor, topo Specification,
+	clusterName string, clusterVersion string, deployUser string, paths DirPaths) error {
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+}
+
 // GrafanaComponent represents Grafana component.
 type GrafanaComponent struct{ *ClusterSpecification }
 
@@ -1169,6 +1170,12 @@ func (i *GrafanaInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 	return nil
 }
 
+// ScaleConfig deploy temporary config on scaling
+func (i *GrafanaInstance) ScaleConfig(e executor.TiOpsExecutor, topo Specification,
+	clusterName string, clusterVersion string, deployUser string, paths DirPaths) error {
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+}
+
 // AlertManagerComponent represents Alertmanager component.
 type AlertManagerComponent struct{ *ClusterSpecification }
 
@@ -1246,6 +1253,12 @@ func (i *AlertManagerInstance) InitConfig(e executor.TiOpsExecutor, clusterName,
 		return err
 	}
 	return nil
+}
+
+// ScaleConfig deploy temporary config on scaling
+func (i *AlertManagerInstance) ScaleConfig(e executor.TiOpsExecutor, topo Specification,
+	clusterName string, clusterVersion string, deployUser string, paths DirPaths) error {
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
 // GetGlobalOptions returns GlobalOptions

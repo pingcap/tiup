@@ -115,7 +115,7 @@ func (e *SSHExecutor) Initialize(config SSHConfig) {
 	if len(config.KeyFile) > 0 {
 		e.Config.KeyPath = config.KeyFile
 		e.Config.Passphrase = config.Passphrase
-	} else {
+	} else if len(config.Password) > 0 {
 		e.Config.Password = config.Password
 	}
 }
@@ -135,6 +135,7 @@ func (e *SSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duration) (
 	if len(timeout) == 0 {
 		timeout = append(timeout, executeDefaultTimeout)
 	}
+
 	stdout, stderr, done, err := e.Config.Run(cmd, timeout...)
 
 	zap.L().Info("ssh command",

@@ -34,9 +34,9 @@ type SSHConnectionProps struct {
 }
 
 // ReadIdentityFileOrPassword is ReadIdentityFileOrPassword
-func ReadIdentityFileOrPassword(identityFilePath string) (*SSHConnectionProps, error) {
+func ReadIdentityFileOrPassword(identityFilePath string, usePass bool) (*SSHConnectionProps, error) {
 	// If identity file is not specified, prompt to read password
-	if len(identityFilePath) == 0 {
+	if usePass {
 		password := PromptForPassword("Input SSH password: ")
 		return &SSHConnectionProps{
 			Password: password,

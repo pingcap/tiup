@@ -15,6 +15,7 @@ package command
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -26,7 +27,7 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/logger"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/operation"
+	operator "github.com/pingcap-incubator/tiup-cluster/pkg/operation"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/task"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
 	"github.com/pingcap/errors"
@@ -36,13 +37,15 @@ import (
 type checkOptions struct {
 	user         string // username to login to the SSH server
 	identityFile string // path to the private key file
+	usePassword  bool   // use password instead of identity file for ssh connection
 	opr          *operator.CheckOptions
 	applyFix     bool // try to apply fixes of failed checks
 }
 
 func newCheckCmd() *cobra.Command {
 	opt := checkOptions{
-		opr: &operator.CheckOptions{},
+		opr:          &operator.CheckOptions{},
+		identityFile: path.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
 		Use:   "check <topology.yml>",
@@ -66,7 +69,7 @@ func newCheckCmd() *cobra.Command {
 				return err
 			}
 
-			sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.identityFile)
+			sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.identityFile, opt.usePassword)
 			if err != nil {
 				return err
 			}
@@ -79,8 +82,9 @@ func newCheckCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&opt.user, "user", "root", "The user name to login via SSH. The user must has root (or sudo) privilege.")
-	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", "", "The path of the SSH identity file. If specified, public key authentication will be used.")
+	cmd.Flags().StringVar(&opt.user, "user", utils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
+	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", opt.identityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
+	cmd.Flags().BoolVarP(&opt.usePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 
 	cmd.Flags().BoolVar(&opt.opr.EnableCPU, "enable-cpu", false, "Enable CPU thread count check")
 	cmd.Flags().BoolVar(&opt.opr.EnableMem, "enable-mem", false, "Enable memory size check")

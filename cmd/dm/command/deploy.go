@@ -16,6 +16,7 @@ package command
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -45,10 +46,13 @@ var (
 type deployOptions struct {
 	user         string // username to login to the SSH server
 	identityFile string // path to the private key file
+	usePassword  bool   // use password instead of identity file for ssh connection
 }
 
 func newDeploy() *cobra.Command {
-	opt := deployOptions{}
+	opt := deployOptions{
+		identityFile: path.Join(utils.UserHome(), ".ssh", "id_rsa"),
+	}
 	cmd := &cobra.Command{
 		Use:          "deploy <cluster-name> <version> <topology.yaml>",
 		Short:        "Deploy a DM cluster for production",
@@ -68,8 +72,9 @@ func newDeploy() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&opt.user, "user", "root", "The user name to login via SSH. The user must has root (or sudo) privilege.")
-	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", "", "The path of the SSH identity file. If specified, public key authentication will be used.")
+	cmd.Flags().StringVar(&opt.user, "user", utils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
+	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", opt.identityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
+	cmd.Flags().BoolVarP(&opt.usePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 
 	return cmd
 }
@@ -140,7 +145,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 		}
 	}
 
-	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.identityFile)
+	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.identityFile, opt.usePassword)
 	if err != nil {
 		return err
 	}
