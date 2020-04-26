@@ -30,7 +30,7 @@ tiup-cluster _test $name writable
 
 tiup-cluster display $name
 
-totol_sub_one=16
+totol_sub_one=19
 
 echo "start scale in tidb"
 yes | tiup-cluster scale-in $name -N 172.19.0.101:4000
@@ -55,6 +55,12 @@ yes | tiup-cluster scale-in $name -N 172.19.0.103:8250
 wait_instance_num_reach $name $totol_sub_one
 echo "start scale out pump"
 yes | tiup-cluster scale-out $name ./topo/full_scale_in_pump.yaml
+
+echo "start scale in cdc"
+yes | tiup-cluster scale-in $name -N 172.19.0.103:8300
+wait_instance_num_reach $name $totol_sub_one
+echo "start scale out cdc"
+yes | tiup-cluster scale-out $name ./topo/full_scale_in_cdc.yaml
 
 echo "start scale in grafana"
 yes | tiup-cluster scale-in $name -N 172.19.0.101:3000

@@ -86,6 +86,7 @@ type (
 		TiFlashLearner map[string]interface{} `yaml:"tiflash-learner"`
 		Pump           map[string]interface{} `yaml:"pump"`
 		Drainer        map[string]interface{} `yaml:"drainer"`
+		CDC            map[string]interface{} `yaml:"cdc"`
 	}
 
 	// TopologySpecification represents the specification of topology.yaml
@@ -99,6 +100,7 @@ type (
 		PDServers        []PDSpec           `yaml:"pd_servers"`
 		PumpServers      []PumpSpec         `yaml:"pump_servers,omitempty"`
 		Drainers         []DrainerSpec      `yaml:"drainer_servers,omitempty"`
+		CDCServers       []CDCSpec          `yaml:"cdc_servers,omitempty"`
 		Monitors         []PrometheusSpec   `yaml:"monitoring_servers"`
 		Grafana          []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
 		Alertmanager     []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
@@ -424,6 +426,40 @@ func (s DrainerSpec) GetMainPort() int {
 
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s DrainerSpec) IsImported() bool {
+	return s.Imported
+}
+
+// CDCSpec represents the Drainer topology specification in topology.yaml
+type CDCSpec struct {
+	Host            string                 `yaml:"host"`
+	SSHPort         int                    `yaml:"ssh_port,omitempty"`
+	Imported        bool                   `yaml:"imported,omitempty"`
+	Port            int                    `yaml:"port" default:"8300"`
+	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
+	LogDir          string                 `yaml:"log_dir,omitempty"`
+	Offline         bool                   `yaml:"offline,omitempty"`
+	NumaNode        string                 `yaml:"numa_node,omitempty"`
+	Config          map[string]interface{} `yaml:"config,omitempty"`
+	ResourceControl ResourceControl        `yaml:"resource_control"`
+}
+
+// Role returns the component role of the instance
+func (s CDCSpec) Role() string {
+	return ComponentCDC
+}
+
+// SSH returns the host and SSH port of the instance
+func (s CDCSpec) SSH() (string, int) {
+	return s.Host, s.SSHPort
+}
+
+// GetMainPort returns the main port of the instance
+func (s CDCSpec) GetMainPort() int {
+	return s.Port
+}
+
+// IsImported returns if the node is imported from TiDB-Ansible
+func (s CDCSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -770,6 +806,7 @@ func (topo *TopologySpecification) Merge(that *TopologySpecification) *TopologyS
 		TiFlashServers:   append(topo.TiFlashServers, that.TiFlashServers...),
 		PumpServers:      append(topo.PumpServers, that.PumpServers...),
 		Drainers:         append(topo.Drainers, that.Drainers...),
+		CDCServers:       append(topo.CDCServers, that.CDCServers...),
 		Monitors:         append(topo.Monitors, that.Monitors...),
 		Grafana:          append(topo.Grafana, that.Grafana...),
 		Alertmanager:     append(topo.Alertmanager, that.Alertmanager...),

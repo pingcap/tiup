@@ -36,6 +36,7 @@ type PrometheusConfig struct {
 	TiFlashLearnerStatusAddrs []string
 	PumpAddrs                 []string
 	DrainerAddrs              []string
+	CDCAddrs                  []string
 	ZookeeperAddrs            []string
 	BlackboxExporterAddrs     []string
 	LightningAddrs            []string
@@ -105,6 +106,12 @@ func (c *PrometheusConfig) AddPump(ip string, port uint64) *PrometheusConfig {
 // AddDrainer add a drainer address
 func (c *PrometheusConfig) AddDrainer(ip string, port uint64) *PrometheusConfig {
 	c.DrainerAddrs = append(c.DrainerAddrs, fmt.Sprintf("%s:%d", ip, port))
+	return c
+}
+
+// AddCDC add a cdc address
+func (c *PrometheusConfig) AddCDC(ip string, port uint64) *PrometheusConfig {
+	c.CDCAddrs = append(c.CDCAddrs, fmt.Sprintf("%s:%d", ip, port))
 	return c
 }
 

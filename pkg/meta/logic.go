@@ -46,6 +46,7 @@ const (
 	ComponentGrafana          = "grafana"
 	ComponentDrainer          = "drainer"
 	ComponentPump             = "pump"
+	ComponentCDC              = "cdc"
 	ComponentAlertManager     = "alertmanager"
 	ComponentPrometheus       = "prometheus"
 	ComponentPushwaygate      = "pushgateway"
@@ -1039,6 +1040,10 @@ func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		uniqueHosts.Insert(drainer.Host)
 		cfig.AddDrainer(drainer.Host, uint64(drainer.Port))
 	}
+	for _, cdc := range i.instance.topo.CDCServers {
+		uniqueHosts.Insert(cdc.Host)
+		cfig.AddCDC(cdc.Host, uint64(cdc.Port))
+	}
 	for _, grafana := range i.instance.topo.Grafana {
 		uniqueHosts.Insert(grafana.Host)
 		cfig.AddGrafana(grafana.Host, uint64(grafana.Port))
@@ -1310,6 +1315,7 @@ func (topo *ClusterSpecification) ComponentsByStartOrder() (comps []Component) {
 	comps = append(comps, &TiDBComponent{topo})
 	comps = append(comps, &TiFlashComponent{topo})
 	comps = append(comps, &DrainerComponent{topo})
+	comps = append(comps, &CDCComponent{topo})
 	comps = append(comps, &MonitorComponent{topo})
 	comps = append(comps, &GrafanaComponent{topo})
 	comps = append(comps, &AlertManagerComponent{topo})

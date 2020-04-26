@@ -183,6 +183,16 @@ tiflash_servers:
 #       syncer.to.port: 3306
 #   - host: 10.0.1.19
 
+# cdc_servers:
+#   - host: 10.0.1.20
+#     ssh_port: 22
+#     port: 8300
+#     deploy_dir: "/tidb-deploy/cdc-8300"
+#     log_dir: "/tidb-deploy/cdc-8300/log"
+#     numa_node: "0,1"
+#   - host: 10.0.1.21
+#   - host: 10.0.1.22
+
 monitoring_servers:
   - host: 10.0.1.11
     # ssh_port: 22
