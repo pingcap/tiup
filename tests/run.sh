@@ -19,7 +19,7 @@ function tiup-cluster() {
 	if [ -f "./bin/tiup-cluster.test" ]; then
 	  ./bin/tiup-cluster.test  -test.coverprofile=./cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests $@
     else
-	  tiup-cluster $@
+	  ../bin/tiup-cluster $@
 	fi
 }
 
