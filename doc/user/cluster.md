@@ -118,7 +118,7 @@ Deployed cluster `prod-cluster` successfully
 Once the cluster is deployed we will be able to see it in the cluster list via the tiup cluster list:
 
 ```bash
-[root@localhost ~]# tiup cluster list
+[user@localhost ~]# tiup cluster list
 Starting /root/.tiup/components/cluster/v0.4.5/cluster list
 Name          User  Version    Path                                               PrivateKey
 ----          ----  -------    ----                                               ----------
@@ -138,7 +138,7 @@ tiup cluster start prod-cluster
 We often want to know the operating status of each component in a cluster, and it's obviously inefficient to look at it from machine to machine, so it's time for the tiup cluster display, which is used as follows:
 
 ```bash
-[root@localhost ~]# tiup cluster display prod-cluster
+[user@localhost ~]# tiup cluster display prod-cluster
 Starting /root/.tiup/components/cluster/v0.4.5/cluster display prod-cluster
 TiDB Cluster: prod-cluster
 TiDB Version: v3.0.12
@@ -182,7 +182,7 @@ tiup cluster-scale-in <cluster-name> -N <node-id>
 It needs to specify at least two parameters, one is the cluster name and the other is the node ID, which can be obtained using the tiup cluster display command with reference to the previous section. For example, I want to kill the TiKV on 172.16.5.140, so I can execute:
 
 ```bash
-[root@localhost ~]# tiup cluster display prod-cluster
+[user@localhost ~]# tiup cluster display prod-cluster
 Starting /root/.tiup/components/cluster/v0.4.5/cluster display prod-cluster
 TiDB Cluster: prod-cluster
 TiDB Version: v3.0.12
@@ -299,7 +299,7 @@ This action sends the configuration to the target machine, restarts the cluster,
 Regular upgrade clusters can use the upgrade command, but in some scenarios (e.g. Debug) it may be necessary to replace a running component with a temporary package, in which case you can use the patch command
 
 ```bash
-[root@localhost ~]# tiup cluster patch --help
+[user@localhost ~]# tiup cluster patch --help
 Replace the remote package with a specified package and restart the service
 
 Usage:
@@ -335,7 +335,7 @@ Before TiUP, clusters were generally deployed using TiDB-Ansible, and the import
 Use of the import command.
 
 ```bash
-[root@localhost ~]# tiup cluster import --help
+[user@localhost ~]# tiup cluster import --help
 Import an existing TiDB cluster from TiDB-Ansible
 
 Usage:
@@ -361,7 +361,6 @@ tiup cluster import
 ```
 
 perhaps
-
 
 ```bash
 tiup cluster import --dir=/path/to/tidb-ansible

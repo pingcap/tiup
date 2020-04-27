@@ -3,7 +3,7 @@
 To facilitate this, TiUP has integrated the bench component, which currently provides two workloads for pressure testing: tpcc and tpch, with the following command parameters:
 
 ```bash
-[root@localhost ~]# tiup bench
+[user@localhost ~]# tiup bench
 Starting component `bench`: /Users/joshua/.tiup/components/bench/v0.0.1/bench 
 Benchmark database with different workloads
 
@@ -11,31 +11,31 @@ Usage:
   tiup bench [command]
 
 Available Commands:
-  help        帮助信息
-  tpcc        以 TPC-C 作为 workload 压测
-  tpch        以 TPC-H 作为 workload 压测
+  help        Help about any command
+  tpcc        TPC-C workload
+  tpch        TPC-H workload
 
 Flags:
-      --count int           总执行次数, 0 表示无限次
-  -D, --db string           被压测数据库名称 (默认为 "test")
-  -d, --driver string       数据库驱动: mysql
-      --dropdata            在 prepare 之前清除历史数据
-  -h, --help                bench 命令自身的帮助信息
-  -H, --host string         数据库的主机地址 (默认 "127.0.0.1")
-      --ignore-error        忽略压测时数据库报出的错误
-      --interval duration   两次报告输出时间的间隔 (默认 10s)
-      --isolation int       隔离级别 0: Default, 1: ReadUncommitted, 
-                            2: ReadCommitted, 3: WriteCommitted, 4: RepeatableRead, 
+      --count int           Total execution count, 0 means infinite
+  -D, --db string           Database name (default "test")
+  -d, --driver string       Database driver: mysql
+      --dropdata            Cleanup data before prepare
+  -h, --help                help for /Users/joshua/.tiup/components/bench/v0.0.1/bench
+  -H, --host string         Database host (default "127.0.0.1")
+      --ignore-error        Ignore error when running workload
+      --interval duration   Output interval time (default 10s)
+      --isolation int       Isolation Level 0: Default, 1: ReadUncommitted,
+                            2: ReadCommitted, 3: WriteCommitted, 4: RepeatableRead,
                             5: Snapshot, 6: Serializable, 7: Linerizable
       --max-procs int       runtime.GOMAXPROCS
-  -p, --password string     数据库密码
-  -P, --port int            数据库端口 (默认 4000)
-      --pprof string        pprof 地址
-      --silence             压测过程中不打印错误信息
-      --summary             只打印 Summary
-  -T, --threads int         压测并发线程数 (默认 16)
-      --time duration       总执行时长 (默认 2562047h47m16.854775807s)
-  -U, --user string         压测时使用的数据库用户 (默认 "root")
+  -p, --password string     Database password
+  -P, --port int            Database port (default 4000)
+      --pprof string        Address of pprof endpoint
+      --silence             Don't print error when running workload
+      --summary             Print summary TPM only, or also print current TPM when running workload
+  -T, --threads int         Thread concurrency (default 16)
+      --time duration       Total execution time (default 2562047h47m16.854775807s)
+  -U, --user string         Database user (default "root")
 ```
 
 ## TPC-C

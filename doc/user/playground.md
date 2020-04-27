@@ -20,22 +20,25 @@ The simplest startup command `tiup playground` will start a cluster of 1 KV, 1 D
 The command line arguments for playground state:
 
 ```bash
+Usage:
+  tiup playground [version] [flags]
+
 Flags:
-      --db int                   设置集群中的 TiDB 数量（默认为1）
-      --db.binpath string        指定 TiDB 二进制文件的位置（开发调试用，可忽略）
-      --db.config string         指定 TiDB 的配置文件（开发调试用，可忽略）
-  -h, --help                     打印帮助信息
-      --host string              设置每个组件的监听地址（默认为 127.0.0.1），如果要提供给别的电脑访问，可设置为 0.0.0.0
-      --kv int                   设置集群中的 TiKV 数量（默认为1）
-      --kv.binpath string        指定 TiKV 二进制文件的位置（开发调试用，可忽略）
-      --kv.config string         指定 TiKV 的配置文件（开发调试用，可忽略）
-      --monitor                  是否启动监控
-      --pd int                   设置集群中的 PD 数量（默认为1）
-      --pd.binpath string        指定 PD 二进制文件的位置（开发调试用，可忽略）
-      --pd.config string         指定 PD 的配置文件（开发调试用，可忽略）
-      --tiflash int              设置集群中 TiFlash 数量（默认为0）
-      --tiflash.binpath string   指定 TiFlash 的二进制文件位置（开发调试用，可忽略）
-      --tiflash.config string    指定 TiFlash 的配置文件（开发调试用，可忽略）
+      --db int                   TiDB instance number (default 1)
+      --db.binpath string        TiDB instance binary path
+      --db.config string         TiDB instance configuration file
+  -h, --help                     help for tiup
+      --host string              Playground cluster host (default "127.0.0.1")
+      --kv int                   TiKV instance number (default 1)
+      --kv.binpath string        TiKV instance binary path
+      --kv.config string         TiKV instance configuration file
+      --monitor                  Start prometheus component
+      --pd int                   PD instance number (default 1)
+      --pd.binpath string        PD instance binary path
+      --pd.config string         PD instance configuration file
+      --tiflash int              TiFlash instance number
+      --tiflash.binpath string   TiFlash instance binary path
+      --tiflash.config string    TiFlash instance configuration file
 ```
 
 ## Example

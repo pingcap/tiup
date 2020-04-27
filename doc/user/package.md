@@ -3,23 +3,23 @@
 When you want to add a new component, or add a version of an existing component, you need to use tar to package the relevant file and then pass it to the mirror repository, using tar to package is not a difficult thing, the trouble is that you need to update the repository's meta-information, to avoid updating meta-information when corrupting the information of existing components. So the package component takes on this task.
 
 ```bash
-[root@localhost ~]# tiup package --help
+[user@localhost ~]# tiup package --help
 Package a tiup component and generate package directory
 
 Usage:
   tiup package target [flags]
 
 Flags:
-  -C, -- string          打 tar 包前先切换目录，等同于 tar 的 -C 参数
-      --arch string      组件运行的处理器架构 (默认为当前的 GOARCH)
-      --desc string      组件的描述信息
-      --entry string     组件的二进制文件位于包中的位置
-  -h, --help             帮助信息
-      --hide tiup list   在 tiup list 中隐藏该组件
-      --name string      组件名称
-      --os string        组件运行的操作系统 (默认为当前的 GOOS)
-      --release string   组件的版本
-      --standalone       该组件是否可以独立运行（例如 PD 不能独立运行，但是 playground 可以）
+  -C, -- string          Change directory before compress
+      --arch string      Target ARCH of the package (default "amd64")
+      --desc string      Description of the package
+      --entry string     Entry point of the package
+  -h, --help             help for tiup
+      --hide tiup list   Don't show the component in tiup list
+      --name string      Name of the package
+      --os string        Target OS of the package (default "darwin")
+      --release string   Version of the package
+      --standalone       Can the component run standalone
 ```
 
 ## Hello World
@@ -70,13 +70,13 @@ If the directory created in step 3 happens to be in the current directory and is
 6. Implementation
 
 ```bash
-[root@localhost ~]# tiup list hello --refresh
+[user@localhost ~]# tiup list hello --refresh
 Available versions for hello (Last Modified: 2020-04-23T16:45:53+08:00):
 Version  Installed  Release:                   Platforms
 -------  ---------  --------                   ---------
 v0.0.1              2020-04-23T16:51:41+08:00  darwin/amd64
 
-[root@localhost ~]# tiup hello
+[user@localhost ~]# tiup hello
 The component `hello` is not installed; downloading from repository.
 Starting component `hello`: /Users/joshua/.tiup/components/hello/v0.0.1/hello.sh
 Hello World

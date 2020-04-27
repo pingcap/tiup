@@ -140,9 +140,9 @@ where tag indicates the instance tag to be cleaned, and if `--all` is used, no t
 
 Example 1: Example of a component whose tag name is experiment
 
-```shell''
+```shell
 tiup clean experiment
-````
+```
 
 Example 2: Clean up all component examples
 
@@ -157,7 +157,7 @@ tiup clean --all
 TiUP supports uninstalling all or specific versions of a component, as well as uninstalling all components. The basic usage is as follows.
 
 ```bash
- tiup uninstall [component][:version] [flags]
+tiup uninstall [component][:version] [flags]
 ```
 
 Supported flags:
