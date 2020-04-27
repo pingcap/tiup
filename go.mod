@@ -39,3 +39,6 @@ require (
 )
 
 replace gopkg.in/yaml.v2 => github.com/july2993/yaml v0.0.0-20200423062752-adcfa5abe2ed
+
+// change to use upstream branch once https://github.com/appleboy/easyssh-proxy/pull/56 is merged
+replace github.com/appleboy/easyssh-proxy => github.com/july2993/easyssh-proxy v1.3.1-0.20200427060617-7aabfc4aa0bf

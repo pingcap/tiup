@@ -73,6 +73,7 @@ func writable(topo *meta.TopologySpecification) error {
 	errg, _ := errgroup.WithContext(context.Background())
 
 	for _, spec := range topo.TiDBServers {
+		spec := spec
 		errg.Go(func() error {
 			db, err := createDB(spec)
 			if err != nil {
