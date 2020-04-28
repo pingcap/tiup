@@ -22,7 +22,6 @@ import (
 
 // Rmdir is used to delete directory on the target host
 type Rmdir struct {
-	user string
 	host string
 	dirs []string
 }

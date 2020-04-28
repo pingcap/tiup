@@ -68,6 +68,7 @@ type (
 	// SSHExecutor implements TiOpsExecutor with SSH as transportation layer.
 	SSHExecutor struct {
 		Config *easyssh.MakeConfig
+		Sudo   bool // all commands run with this executor will be using sudo
 	}
 
 	// SSHConfig is the configuration needed to establish SSH connection.
@@ -86,9 +87,10 @@ type (
 var _ TiOpsExecutor = &SSHExecutor{}
 
 // NewSSHExecutor create a ssh executor.
-func NewSSHExecutor(c SSHConfig) *SSHExecutor {
+func NewSSHExecutor(c SSHConfig, sudo bool) *SSHExecutor {
 	e := new(SSHExecutor)
 	e.Initialize(c)
+	e.Sudo = sudo
 	return e
 }
 
@@ -123,7 +125,7 @@ func (e *SSHExecutor) Initialize(config SSHConfig) {
 // Execute run the command via SSH, it's not invoking any specific shell by default.
 func (e *SSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
 	// try to acquire root permission
-	if sudo {
+	if e.Sudo || sudo {
 		cmd = fmt.Sprintf("sudo -H -u root bash -c \"%s\"", cmd)
 	}
 

@@ -46,7 +46,7 @@ func (s *RootSSH) Execute(ctx *Context) error {
 		KeyFile:    s.keyFile,
 		Passphrase: s.passphrase,
 		Timeout:    time.Second * time.Duration(s.timeout),
-	})
+	}, s.user != "root") // using sudo by default if user is not root
 
 	ctx.SetExecutor(s.host, e)
 	return nil
@@ -84,7 +84,7 @@ func (s *UserSSH) Execute(ctx *Context) error {
 		KeyFile: ctx.PrivateKeyPath,
 		User:    s.deployUser,
 		Timeout: time.Second * time.Duration(s.timeout),
-	})
+	}, false) // not using sudo by default
 
 	ctx.SetExecutor(s.host, e)
 	return nil

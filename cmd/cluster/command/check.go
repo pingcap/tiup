@@ -120,7 +120,6 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecifica
 					sshTimeout,
 				).
 				Mkdir(opt.user, inst.GetHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
-				Chown(opt.user, inst.GetHost(), task.CheckToolsPathDir).
 				CopyComponent(meta.ComponentCheckCollector, insightVer, inst.GetHost(), task.CheckToolsPathDir).
 				Shell(
 					inst.GetHost(),
@@ -216,7 +215,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecifica
 					s.IdentityFilePassphrase,
 					sshTimeout,
 				).
-				Rmdir(opt.user, inst.GetHost(), task.CheckToolsPathDir).
+				Rmdir(inst.GetHost(), task.CheckToolsPathDir).
 				BuildAsStep(fmt.Sprintf("  - Cleanup check files on %s:%d", inst.GetHost(), inst.GetSSHPort()))
 			cleanTasks = append(cleanTasks, t3)
 		}

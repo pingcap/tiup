@@ -187,9 +187,7 @@ func buildScaleOutTask(
 					sshTimeout,
 				).
 				EnvInit(instance.GetHost(), metadata.User).
-				UserSSH(instance.GetHost(), instance.GetSSHPort(), metadata.User, sshTimeout).
 				Mkdir(globalOptions.User, instance.GetHost(), dirs...).
-				Chown(globalOptions.User, instance.GetHost(), dirs...).
 				Build()
 			envInitTasks = append(envInitTasks, t)
 		}

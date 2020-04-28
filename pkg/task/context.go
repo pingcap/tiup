@@ -44,7 +44,7 @@ func (ctx *Context) SetClusterSSH(topo meta.Specification, deployUser string, ss
 				Timeout: time.Second * time.Duration(sshTimeout),
 			}
 
-			e := executor.NewSSHExecutor(cf)
+			e := executor.NewSSHExecutor(cf, false /* sudo */)
 			ctx.SetExecutor(in.GetHost(), e)
 		}
 	}

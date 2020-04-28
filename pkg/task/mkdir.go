@@ -34,8 +34,12 @@ func (m *Mkdir) Execute(ctx *Context) error {
 		return ErrNoExecutor
 	}
 
-	cmd := fmt.Sprintf(`mkdir -p %s`, strings.Join(m.dirs, " "))
-	_, _, err := exec.Execute(cmd, false)
+	cmd := fmt.Sprintf(
+		`mkdir -p %[1]s && chown -R %[2]s:%[2]s %[1]s`,
+		strings.Join(m.dirs, " "),
+		m.user,
+	)
+	_, _, err := exec.Execute(cmd, true) // use root to create the dir
 	if err != nil {
 		return errors.Trace(err)
 	}
