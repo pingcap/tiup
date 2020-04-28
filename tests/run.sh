@@ -17,9 +17,9 @@ export old_version=${old_version-v3.0.12}
 function tiup-cluster() {
 	# echo "in function"
 	if [ -f "./bin/tiup-cluster.test" ]; then
-	  ./bin/tiup-cluster.test  -test.coverprofile=./cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests $@
+	  ./bin/tiup-cluster.test  -test.coverprofile=./cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
     else
-	  ../bin/tiup-cluster $@
+	  ../bin/tiup-cluster "$@"
 	fi
 }
 
