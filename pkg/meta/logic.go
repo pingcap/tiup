@@ -862,9 +862,15 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		paths.Log,
 		tidbStatusStr,
 		pdStr,
-	).WithTCPPort(spec.TCPPort).WithHTTPPort(spec.HTTPPort).WithFlashServicePort(spec.FlashServicePort).
-		WithFlashProxyPort(spec.FlashProxyPort).WithFlashProxyStatusPort(spec.FlashProxyStatusPort).
-		WithStatusPort(spec.StatusPort).WithTmpDir(spec.TmpDir).AppendEndpoints(i.instance.topo.Endpoints(deployUser)...)
+	).WithTCPPort(spec.TCPPort).
+		WithHTTPPort(spec.HTTPPort).
+		WithFlashServicePort(spec.FlashServicePort).
+		WithFlashProxyPort(spec.FlashProxyPort).
+		WithFlashProxyStatusPort(spec.FlashProxyStatusPort).
+		WithStatusPort(spec.StatusPort).
+		WithTmpDir(spec.TmpDir).
+		WithNumaNode(spec.NumaNode).
+		AppendEndpoints(i.instance.topo.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tiflash_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -1008,7 +1014,8 @@ func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		paths.Deploy,
 		paths.Data,
 		paths.Log,
-	).WithPort(spec.Port)
+	).WithPort(spec.Port).
+		WithNumaNode(spec.NumaNode)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -1253,7 +1260,7 @@ func (i *AlertManagerInstance) InitConfig(e executor.TiOpsExecutor, clusterName,
 	// Transfer start script
 	spec := i.InstanceSpec.(AlertManagerSpec)
 	cfg := scripts.NewAlertManagerScript(spec.Host, paths.Deploy, paths.Data, paths.Log).
-		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort).AppendEndpoints(i.instance.topo.AlertManagerEndpoints(deployUser))
+		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort).WithNumaNode(spec.NumaNode).AppendEndpoints(i.instance.topo.AlertManagerEndpoints(deployUser))
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_alertmanager_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {

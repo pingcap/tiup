@@ -67,7 +67,8 @@ func (m *MonitoredConfig) Execute(ctx *Context) error {
 		cfg = scripts.NewNodeExporterScript(
 			m.paths.Deploy,
 			m.paths.Log,
-		).WithPort(uint64(m.options.NodeExporterPort))
+		).WithPort(uint64(m.options.NodeExporterPort)).
+			WithNumaNode(m.options.NumaNode)
 	} else if m.component == meta.ComponentBlackboxExporter {
 		cfg = scripts.NewBlackboxExporterScript(
 			m.paths.Deploy,

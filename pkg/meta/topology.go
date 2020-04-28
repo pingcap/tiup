@@ -74,6 +74,7 @@ type (
 		DeployDir            string          `yaml:"deploy_dir,omitempty"`
 		DataDir              string          `yaml:"data_dir,omitempty"`
 		LogDir               string          `yaml:"log_dir,omitempty"`
+		NumaNode             string          `yaml:"numa_node,omitempty"`
 		ResourceControl      ResourceControl `yaml:"resource_control,omitempty"`
 	}
 
@@ -472,6 +473,7 @@ type PrometheusSpec struct {
 	DeployDir       string          `yaml:"deploy_dir,omitempty"`
 	DataDir         string          `yaml:"data_dir,omitempty"`
 	LogDir          string          `yaml:"log_dir,omitempty"`
+	NumaNode        string          `yaml:"numa_node,omitempty"`
 	Retention       string          `yaml:"storage_retention,omitempty"`
 	ResourceControl ResourceControl `yaml:"resource_control,omitempty"`
 }
@@ -536,6 +538,7 @@ type AlertManagerSpec struct {
 	DeployDir       string          `yaml:"deploy_dir,omitempty"`
 	DataDir         string          `yaml:"data_dir,omitempty"`
 	LogDir          string          `yaml:"log_dir,omitempty"`
+	NumaNode        string          `yaml:"numa_node,omitempty"`
 	ResourceControl ResourceControl `yaml:"resource_control,omitempty"`
 }
 
