@@ -71,12 +71,3 @@ func DMMetadata(clusterName string) (*DMMeta, error) {
 	}
 	return &cm, nil
 }
-
-// DMTopology tries to read the topology of a cluster from file
-func DMTopology(clusterName string) (*DMTopologySpecification, error) {
-	meta, err := DMMetadata(clusterName)
-	if err != nil {
-		return nil, err
-	}
-	return meta.Topology, nil
-}

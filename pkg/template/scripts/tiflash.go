@@ -139,46 +139,6 @@ func (c *TiFlashScript) ConfigToFile(file string) error {
 	return ioutil.WriteFile(file, config, 0755)
 }
 
-// ConfigTiFlashLearner read ${localdata.EnvNameComponentInstallDir}/templates/conf/tiflash-learner.toml.tpl as template
-// and generate the config by ConfigWithTemplate
-func (c *TiFlashScript) ConfigTiFlashLearner() ([]byte, error) {
-	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "config", "tiflash-learner.toml.tpl")
-	tpl, err := ioutil.ReadFile(fp)
-	if err != nil {
-		return nil, err
-	}
-	return c.ConfigWithTemplate(string(tpl))
-}
-
-// ConfigTiFlashLearnerToFile write config content to specific path
-func (c *TiFlashScript) ConfigTiFlashLearnerToFile(file string) error {
-	config, err := c.ConfigTiFlashLearner()
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(file, config, 0755)
-}
-
-// ConfigTiFlash read ${localdata.EnvNameComponentInstallDir}/templates/conf/tiflash.toml.tpl as template
-// and generate the config by ConfigWithTemplate
-func (c *TiFlashScript) ConfigTiFlash() ([]byte, error) {
-	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "config", "tiflash.toml.tpl")
-	tpl, err := ioutil.ReadFile(fp)
-	if err != nil {
-		return nil, err
-	}
-	return c.ConfigWithTemplate(string(tpl))
-}
-
-// ConfigTiFlashToFile write config content to specific path
-func (c *TiFlashScript) ConfigTiFlashToFile(file string) error {
-	config, err := c.ConfigTiFlash()
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(file, config, 0755)
-}
-
 // ConfigWithTemplate generate the TiFlash config content by tpl
 func (c *TiFlashScript) ConfigWithTemplate(tpl string) ([]byte, error) {
 	tmpl, err := template.New("TiFlash").Parse(tpl)

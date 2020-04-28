@@ -107,12 +107,3 @@ func ClusterMetadata(clusterName string) (*ClusterMeta, error) {
 	}
 	return &cm, nil
 }
-
-// ClusterTopology tries to read the topology of a cluster from file
-func ClusterTopology(clusterName string) (*TopologySpecification, error) {
-	meta, err := ClusterMetadata(clusterName)
-	if err != nil {
-		return nil, err
-	}
-	return meta.Topology, nil
-}

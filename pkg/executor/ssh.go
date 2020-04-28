@@ -25,7 +25,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/errutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
 	"go.uber.org/zap"
 )
@@ -40,9 +39,6 @@ var (
 	// ErrPropSSHStderr is ErrPropSSHStderr
 	ErrPropSSHStderr = errorx.RegisterPrintableProperty("ssh_stderr")
 
-	// ErrSSHRequireCredential is ErrSSHRequireCredential.
-	// FIXME: This error should be removed since we should prompt for error if necessary.
-	ErrSSHRequireCredential = errNSSSH.NewType("credential_required", errutil.ErrTraitPreCheck)
 	// ErrSSHExecuteFailed is ErrSSHExecuteFailed
 	ErrSSHExecuteFailed = errNSSSH.NewType("execute_failed")
 	// ErrSSHExecuteTimedout is ErrSSHExecuteTimedout

@@ -185,7 +185,7 @@ func ScaleInCluster(
 				}
 			case meta.ComponentPump:
 				addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
-				err := binlogClient.OfflineDrainer(addr, addr)
+				err := binlogClient.OfflinePump(addr, addr)
 				if err != nil {
 					return errors.AddStack(err)
 				}
