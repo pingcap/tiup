@@ -112,7 +112,7 @@ func editTopo(clusterName string, metadata *meta.ClusterMeta) error {
 
 	if !skipConfirm {
 		if err := cliutil.PromptForConfirmOrAbortError(
-			color.HiYellowString("Please check change, do you want to apply the change? [y/N]:"),
+			color.HiYellowString("Please check change highlight above, do you want to apply the change? [y/N]:"),
 		); err != nil {
 			return err
 		}

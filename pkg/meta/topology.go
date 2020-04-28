@@ -50,10 +50,10 @@ type (
 	// ResourceControl is used to control the system resource
 	// See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html
 	ResourceControl struct {
-		MemoryLimit         string `yaml:"memory_limit"`
-		CPUQuota            string `yaml:"cpu_quota"`
-		IOReadBandwidthMax  string `yaml:"io_read_bandwidth_max"`
-		IOWriteBandwidthMax string `yaml:"io_write_bandwidth_max"`
+		MemoryLimit         string `yaml:"memory_limit,omitempty"`
+		CPUQuota            string `yaml:"cpu_quota,omitempty"`
+		IOReadBandwidthMax  string `yaml:"io_read_bandwidth_max,omitempty"`
+		IOWriteBandwidthMax string `yaml:"io_write_bandwidth_max,omitempty"`
 	}
 
 	// GlobalOptions represents the global options for all groups in topology
@@ -64,7 +64,7 @@ type (
 		DeployDir       string          `yaml:"deploy_dir,omitempty" default:"deploy"`
 		DataDir         string          `yaml:"data_dir,omitempty" default:"data"`
 		LogDir          string          `yaml:"log_dir,omitempty"`
-		ResourceControl ResourceControl `yaml:"resource_control"`
+		ResourceControl ResourceControl `yaml:"resource_control,omitempty"`
 	}
 
 	// MonitoredOptions represents the monitored node configuration
@@ -74,7 +74,7 @@ type (
 		DeployDir            string          `yaml:"deploy_dir,omitempty"`
 		DataDir              string          `yaml:"data_dir,omitempty"`
 		LogDir               string          `yaml:"log_dir,omitempty"`
-		ResourceControl      ResourceControl `yaml:"resource_control"`
+		ResourceControl      ResourceControl `yaml:"resource_control,omitempty"`
 	}
 
 	// ServerConfigs represents the server runtime configuration
@@ -129,7 +129,7 @@ type TiDBSpec struct {
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
-	ResourceControl ResourceControl        `yaml:"resource_control"`
+	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
 }
 
 // statusByURL queries current status of the instance by http status api.
@@ -187,7 +187,7 @@ type TiKVSpec struct {
 	Offline         bool                   `yaml:"offline,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
-	ResourceControl ResourceControl        `yaml:"resource_control"`
+	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -257,7 +257,7 @@ type PDSpec struct {
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
-	ResourceControl ResourceControl        `yaml:"resource_control"`
+	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -329,7 +329,7 @@ type TiFlashSpec struct {
 	NumaNode             string                 `yaml:"numa_node,omitempty"`
 	Config               map[string]interface{} `yaml:"config,omitempty"`
 	LearnerConfig        map[string]interface{} `yaml:"learner_config,omitempty"`
-	ResourceControl      ResourceControl        `yaml:"resource_control"`
+	ResourceControl      ResourceControl        `yaml:"resource_control,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -406,7 +406,7 @@ type DrainerSpec struct {
 	Offline         bool                   `yaml:"offline,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
-	ResourceControl ResourceControl        `yaml:"resource_control"`
+	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -440,7 +440,7 @@ type CDCSpec struct {
 	Offline         bool                   `yaml:"offline,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
-	ResourceControl ResourceControl        `yaml:"resource_control"`
+	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -473,7 +473,7 @@ type PrometheusSpec struct {
 	DataDir         string          `yaml:"data_dir,omitempty"`
 	LogDir          string          `yaml:"log_dir,omitempty"`
 	Retention       string          `yaml:"storage_retention,omitempty"`
-	ResourceControl ResourceControl `yaml:"resource_control"`
+	ResourceControl ResourceControl `yaml:"resource_control,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -503,7 +503,7 @@ type GrafanaSpec struct {
 	Imported        bool            `yaml:"imported,omitempty"`
 	Port            int             `yaml:"port" default:"3000"`
 	DeployDir       string          `yaml:"deploy_dir,omitempty"`
-	ResourceControl ResourceControl `yaml:"resource_control"`
+	ResourceControl ResourceControl `yaml:"resource_control,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -536,7 +536,7 @@ type AlertManagerSpec struct {
 	DeployDir       string          `yaml:"deploy_dir,omitempty"`
 	DataDir         string          `yaml:"data_dir,omitempty"`
 	LogDir          string          `yaml:"log_dir,omitempty"`
-	ResourceControl ResourceControl `yaml:"resource_control"`
+	ResourceControl ResourceControl `yaml:"resource_control,omitempty"`
 }
 
 // Role returns the component role of the instance
