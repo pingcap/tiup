@@ -131,5 +131,9 @@ func (i *DrainerInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		specConfig = mergedConfig
 	}
 
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.Drainer, specConfig, paths)
+	if err := i.mergeServerConfig(e, i.topo.ServerConfigs.Drainer, specConfig, paths); err != nil {
+		return err
+	}
+
+	return checkConfig(e, i.ComponentName(), clusterVersion, i.ComponentName()+".toml", paths)
 }

@@ -20,7 +20,6 @@ import (
 	"path"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/bindversion"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/clusterutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	operator "github.com/pingcap-incubator/tiup-cluster/pkg/operation"
@@ -157,7 +156,7 @@ func checkPackage(clusterName, comp, packagePath string) error {
 	if err != nil {
 		return err
 	}
-	ver := bindversion.ComponentVersion(comp, metadata.Version)
+	ver := meta.ComponentVersion(comp, metadata.Version)
 	versionInfo, found := manifest.FindVersion(ver)
 	if !found {
 		return fmt.Errorf("cannot found version %v in %s manifest", ver, comp)

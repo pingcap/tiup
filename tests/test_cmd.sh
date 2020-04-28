@@ -41,11 +41,11 @@ wait_instance_num_reach $name $totol_sub_one
 echo "start scale out tidb"
 tiup-cluster --yes scale-out $name ./topo/full_scale_in_tidb.yaml
 
-echo "start scale in tikv"
-tiup-cluster --yes scale-in $name -N 172.19.0.103:20160
-wait_instance_num_reach $name $totol_sub_one
-echo "start scale out tikv"
-tiup-cluster --yes scale-out $name ./topo/full_scale_in_tikv.yaml
+# echo "start scale in tikv"
+# tiup-cluster --yes scale-in $name -N 172.19.0.103:20160
+# wait_instance_num_reach $name $totol_sub_one
+# echo "start scale out tikv"
+# tiup-cluster --yes scale-out $name ./topo/full_scale_in_tikv.yaml
 
 echo "start scale in pd"
 tiup-cluster --yes scale-in $name -N 172.19.0.103:2379

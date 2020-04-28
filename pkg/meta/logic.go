@@ -52,6 +52,7 @@ const (
 	ComponentPushwaygate      = "pushgateway"
 	ComponentBlackboxExporter = "blackbox_exporter"
 	ComponentNodeExporter     = "node_exporter"
+	ComponentCheckCollector   = "insight"
 )
 
 // Component represents a component of the cluster.
@@ -400,7 +401,11 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		specConfig = mergedConfig
 	}
 
-	return i.mergeServerConfig(e, i.instance.topo.ServerConfigs.TiDB, specConfig, paths)
+	if err := i.mergeServerConfig(e, i.instance.topo.ServerConfigs.TiDB, specConfig, paths); err != nil {
+		return err
+	}
+
+	return checkConfig(e, i.ComponentName(), clusterVersion, i.ComponentName()+".toml", paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -504,7 +509,11 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		specConfig = mergedConfig
 	}
 
-	return i.mergeServerConfig(e, i.instance.topo.ServerConfigs.TiKV, specConfig, paths)
+	if err := i.mergeServerConfig(e, i.instance.topo.ServerConfigs.TiKV, specConfig, paths); err != nil {
+		return err
+	}
+
+	return checkConfig(e, i.ComponentName(), clusterVersion, i.ComponentName()+".toml", paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -628,7 +637,11 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVe
 		specConfig = mergedConfig
 	}
 
-	return i.mergeServerConfig(e, i.instance.topo.ServerConfigs.PD, specConfig, paths)
+	if err := i.mergeServerConfig(e, i.instance.topo.ServerConfigs.PD, specConfig, paths); err != nil {
+		return err
+	}
+
+	return checkConfig(e, i.ComponentName(), clusterVersion, i.ComponentName()+".toml", paths)
 }
 
 // ScaleConfig deploy temporary config on scaling

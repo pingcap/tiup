@@ -20,7 +20,6 @@ import (
 	"strconv"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/bindversion"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/clusterutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/errutil"
@@ -273,7 +272,7 @@ func BuildDownloadCompTasks(version string, topo meta.Specification) []*task.Ste
 		if len(comp.Instances()) < 1 {
 			return
 		}
-		version := bindversion.ComponentVersion(comp.Name(), version)
+		version := meta.ComponentVersion(comp.Name(), version)
 		t := task.
 			NewBuilder().
 			Download(comp.Name(), version).

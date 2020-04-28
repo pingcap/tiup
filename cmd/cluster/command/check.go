@@ -21,7 +21,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/bindversion"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil/prepare"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
@@ -102,7 +101,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecifica
 		cleanTasks    []*task.StepDisplay
 		applyFixTasks []*task.StepDisplay
 	)
-	insightVer := bindversion.ComponentVersion(bindversion.ComponentCheckCollector, "")
+	insightVer := meta.ComponentVersion(meta.ComponentCheckCollector, "")
 
 	uniqueHosts := map[string]int{} // host -> ssh-port
 	topo.IterInstance(func(inst meta.Instance) {
@@ -122,7 +121,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecifica
 				).
 				Mkdir(opt.user, inst.GetHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
 				Chown(opt.user, inst.GetHost(), task.CheckToolsPathDir).
-				CopyComponent(bindversion.ComponentCheckCollector, insightVer, inst.GetHost(), task.CheckToolsPathDir).
+				CopyComponent(meta.ComponentCheckCollector, insightVer, inst.GetHost(), task.CheckToolsPathDir).
 				Shell(
 					inst.GetHost(),
 					filepath.Join(task.CheckToolsPathDir, "bin", "insight"),
@@ -224,7 +223,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecifica
 	})
 
 	t := task.NewBuilder().
-		Download(bindversion.ComponentCheckCollector, insightVer).
+		Download(meta.ComponentCheckCollector, insightVer).
 		ParallelStep("+ Collect basic system information", collectTasks...).
 		ParallelStep("+ Check system requirements", checkSysTasks...).
 		ParallelStep("+ Cleanup check files", cleanTasks...).

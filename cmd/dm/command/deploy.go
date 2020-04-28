@@ -22,7 +22,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/bindversion"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil/prepare"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/clusterutil"
@@ -199,7 +198,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 
 	// Deploy components to remote
 	topo.IterInstance(func(inst meta.Instance) {
-		version := bindversion.ComponentVersion(inst.ComponentName(), clusterVersion)
+		version := meta.ComponentVersion(inst.ComponentName(), clusterVersion)
 		deployDir := clusterutil.Abs(globalOptions.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDir := inst.DataDir()

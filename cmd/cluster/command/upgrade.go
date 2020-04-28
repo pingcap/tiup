@@ -17,7 +17,6 @@ import (
 	"os"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/bindversion"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/clusterutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/logger"
@@ -94,7 +93,7 @@ func upgrade(clusterName, clusterVersion string, opt upgradeOptions) error {
 
 	for _, comp := range metadata.Topology.ComponentsByStartOrder() {
 		for _, inst := range comp.Instances() {
-			version := bindversion.ComponentVersion(inst.ComponentName(), clusterVersion)
+			version := meta.ComponentVersion(inst.ComponentName(), clusterVersion)
 			if version == "" {
 				return errors.Errorf("unsupported component: %v", inst.ComponentName())
 			}

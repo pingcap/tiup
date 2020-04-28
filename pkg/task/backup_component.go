@@ -17,8 +17,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/pingcap-incubator/tiup-cluster/pkg/bindversion"
-	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
+	tiupmeta "github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap/errors"
 )
@@ -39,7 +39,7 @@ type BackupComponent struct {
 func (c *BackupComponent) Execute(ctx *Context) error {
 	m, found := ctx.GetManifest(c.component)
 	if !found {
-		manifest, err := meta.Repository().ComponentVersions(c.component)
+		manifest, err := tiupmeta.Repository().ComponentVersions(c.component)
 		if err != nil {
 			return err
 		}
@@ -56,7 +56,7 @@ func (c *BackupComponent) Execute(ctx *Context) error {
 	// backup old version
 	var versionInfo repository.VersionInfo
 	var foundVersion bool
-	fromVer := bindversion.ComponentVersion(c.component, c.fromVer)
+	fromVer := meta.ComponentVersion(c.component, c.fromVer)
 	for _, vi := range m.Versions {
 		if vi.Version == fromVer {
 			versionInfo = vi

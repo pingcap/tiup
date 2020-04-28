@@ -15,7 +15,6 @@ package command
 
 import (
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/bindversion"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/clusterutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/logger"
@@ -104,7 +103,7 @@ func buildReloadTask(
 		if inst.IsImported() {
 			switch compName := inst.ComponentName(); compName {
 			case meta.ComponentGrafana, meta.ComponentPrometheus, meta.ComponentAlertManager:
-				version := bindversion.ComponentVersion(compName, metadata.Version)
+				version := meta.ComponentVersion(compName, metadata.Version)
 				tb.Download(compName, version).CopyComponent(compName, version, inst.GetHost(), deployDir)
 			}
 		}

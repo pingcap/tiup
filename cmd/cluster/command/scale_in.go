@@ -18,7 +18,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/bindversion"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/clusterutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
@@ -101,7 +100,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 			if instance.IsImported() {
 				switch compName := instance.ComponentName(); compName {
 				case meta.ComponentGrafana, meta.ComponentPrometheus, meta.ComponentAlertManager:
-					version := bindversion.ComponentVersion(compName, metadata.Version)
+					version := meta.ComponentVersion(compName, metadata.Version)
 					tb.Download(compName, version).CopyComponent(compName, version, instance.GetHost(), deployDir)
 				}
 			}

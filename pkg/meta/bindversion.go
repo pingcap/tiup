@@ -11,28 +11,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bindversion
+package meta
 
 import (
-	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
-)
-
-// Some static values
-const (
-	ComponentCheckCollector = "insight"
 )
 
 // ComponentVersion maps the TiDB version to the third components binding version
 func ComponentVersion(comp, version string) repository.Version {
 	switch comp {
-	case meta.ComponentAlertManager:
+	case ComponentAlertManager:
 		return "v0.17.0"
-	case meta.ComponentBlackboxExporter:
+	case ComponentBlackboxExporter:
 		return "v0.12.0"
-	case meta.ComponentNodeExporter:
+	case ComponentNodeExporter:
 		return "v0.17.0"
-	case meta.ComponentPushwaygate:
+	case ComponentPushwaygate:
 		return "v0.7.0"
 	case ComponentCheckCollector:
 		return "v0.3.0-3"
