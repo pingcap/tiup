@@ -60,6 +60,8 @@ github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883/go.mod h1:rCTlJbsFo
 github.com/antihax/optional v0.0.0-20180407024304-ca021399b1a6/go.mod h1:V8iCPQYkqmusNa815XgQio277wI47sdRh1dUOLdyC6Q=
 github.com/apache/arrow/go/arrow v0.0.0-20191024131854-af6fa24be0db/go.mod h1:VTxUBvSJ3s3eHAg65PNgrsn5BtqCRPdmyXh6rAfdxN0=
 github.com/apache/calcite-avatica-go/v4 v4.0.0/go.mod h1:fg6MgnbY4Ta6JI0KuNaL9o/LrOMZdprQSMHWflcNs1c=
+github.com/appleboy/easyssh-proxy v1.3.2 h1:KDYZwYdGK8ciDXngtEmSfqb/YCMU2QfUgtEDxK59p6c=
+github.com/appleboy/easyssh-proxy v1.3.2/go.mod h1:Kk57I3w7OCafOjp5kgZFvxk2fO8Tca5CriBTOsbSbjY=
 github.com/appleboy/gin-jwt/v2 v2.6.3/go.mod h1:MfPYA4ogzvOcVkRwAxT7quHOtQmVKDpTwxyUrC2DNw0=
 github.com/appleboy/gofight/v2 v2.1.2/go.mod h1:frW+U1QZEdDgixycTj4CygQ48yLTUhplt43+Wczp3rw=
 github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5doyWs3UAsr3K4I6qtAmlQcZDesFNEHPZAzj8=
@@ -318,8 +320,6 @@ github.com/juju/ratelimit v1.0.1 h1:+7AIFJVQ0EQgq/K9+0Krm7m530Du7tIz0METWzN0RgY=
 github.com/juju/ratelimit v1.0.1/go.mod h1:qapgC/Gy+xNh9UxzV13HGGl/6UXNN+ct+vwSgWNm/qk=
 github.com/juju/testing v0.0.0-20191001232224-ce9dec17d28b/go.mod h1:63prj8cnj0tU0S9OHjGJn+b1h0ZghCndfnbQolrYTwA=
 github.com/julienschmidt/httprouter v1.2.0/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7VTCxuUUipMqKk8s4w=
-github.com/july2993/easyssh-proxy v1.3.1-0.20200427060617-7aabfc4aa0bf h1:FQSEBEeq5dgBaLz9dPR/Id19c1Z4E5Bo1NHw+k6EGPo=
-github.com/july2993/easyssh-proxy v1.3.1-0.20200427060617-7aabfc4aa0bf/go.mod h1:Kk57I3w7OCafOjp5kgZFvxk2fO8Tca5CriBTOsbSbjY=
 github.com/july2993/yaml v0.0.0-20200423062752-adcfa5abe2ed h1:4dMu41sJad3+E9AMc2hCimGhll184HfPKdu05R6YJtc=
 github.com/july2993/yaml v0.0.0-20200423062752-adcfa5abe2ed/go.mod h1:7FtNkxNa9xDptPhcc7mWT/Ov++hkuMU/NKtgkPZPUwo=
 github.com/jung-kurt/gofpdf v1.0.3-0.20190309125859-24315acbbda5/go.mod h1:7Id9E/uU8ce6rXgefFLlgrJj/GYY22cpxn+r32jIOes=

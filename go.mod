@@ -7,7 +7,7 @@ require (
 	github.com/AstroProfundis/tabby v1.1.0-color
 	github.com/BurntSushi/toml v0.3.1
 	github.com/ScaleFT/sshkeys v0.0.0-20181112160850-82451a803681
-	github.com/appleboy/easyssh-proxy v1.3.1
+	github.com/appleboy/easyssh-proxy v1.3.2
 	github.com/asaskevich/EventBus v0.0.0-20180315140547-d46933a94f05
 	github.com/creasty/defaults v1.3.0
 	github.com/fatih/color v1.9.0
@@ -39,6 +39,3 @@ require (
 )
 
 replace gopkg.in/yaml.v2 => github.com/july2993/yaml v0.0.0-20200423062752-adcfa5abe2ed
-
-// change to use upstream branch once https://github.com/appleboy/easyssh-proxy/pull/56 is merged
-replace github.com/appleboy/easyssh-proxy => github.com/july2993/easyssh-proxy v1.3.1-0.20200427060617-7aabfc4aa0bf
