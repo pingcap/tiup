@@ -1048,6 +1048,10 @@ func (i *MonitorInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		uniqueHosts.Insert(grafana.Host)
 		cfig.AddGrafana(grafana.Host, uint64(grafana.Port))
 	}
+	for _, alertmanager := range i.instance.topo.Alertmanager {
+		uniqueHosts.Insert(alertmanager.Host)
+		cfig.AddAlertmanager(alertmanager.Host, uint64(alertmanager.WebPort))
+	}
 	for host := range uniqueHosts {
 		cfig.AddNodeExpoertor(host, uint64(i.instance.topo.MonitoredOptions.NodeExporterPort))
 		cfig.AddBlackboxExporter(host, uint64(i.instance.topo.MonitoredOptions.BlackboxExporterPort))
@@ -1235,8 +1239,8 @@ func (i *AlertManagerInstance) InitConfig(e executor.TiOpsExecutor, clusterName,
 
 	// Transfer start script
 	spec := i.InstanceSpec.(AlertManagerSpec)
-	cfg := scripts.NewAlertManagerScript(paths.Deploy, paths.Data, paths.Log).
-		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort)
+	cfg := scripts.NewAlertManagerScript(spec.Host, paths.Deploy, paths.Data, paths.Log).
+		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort).AppendEndpoints(i.instance.topo.AlertManagerEndpoints(deployUser))
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_alertmanager_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -1374,6 +1378,31 @@ func (topo *ClusterSpecification) Endpoints(user string) []*scripts.PDScript {
 			logDir).
 			WithClientPort(spec.ClientPort).
 			WithPeerPort(spec.PeerPort)
+		ends = append(ends, script)
+	}
+	return ends
+}
+
+// AlertManagerEndpoints returns the AlertManager endpoints configurations
+func (topo *ClusterSpecification) AlertManagerEndpoints(user string) []*scripts.AlertManagerScript {
+	var ends []*scripts.AlertManagerScript
+	for _, spec := range topo.Alertmanager {
+		deployDir := clusterutil.Abs(user, spec.DeployDir)
+		// data dir would be empty for components which don't need it
+		dataDir := spec.DataDir
+		if dataDir != "" {
+			clusterutil.Abs(user, dataDir)
+		}
+		// log dir will always be with values, but might not used by the component
+		logDir := clusterutil.Abs(user, spec.LogDir)
+
+		script := scripts.NewAlertManagerScript(
+			spec.Host,
+			deployDir,
+			dataDir,
+			logDir).
+			WithWebPort(spec.WebPort).
+			WithClusterPort(spec.ClusterPort)
 		ends = append(ends, script)
 	}
 	return ends

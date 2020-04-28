@@ -25,19 +25,22 @@ import (
 
 // AlertManagerScript represent the data to generate AlertManager start script
 type AlertManagerScript struct {
+	IP          string
 	WebPort     int
 	ClusterPort int
 	DeployDir   string
 	DataDir     string
 	LogDir      string
 	NumaNode    string
+	EndPoints   []*AlertManagerScript
 }
 
 // NewAlertManagerScript returns a AlertManagerScript with given arguments
-func NewAlertManagerScript(deployDir, dataDir, logDir string) *AlertManagerScript {
+func NewAlertManagerScript(ip, deployDir, dataDir, logDir string) *AlertManagerScript {
 	return &AlertManagerScript{
-		WebPort:     8888,
-		ClusterPort: 9999,
+		IP:          ip,
+		WebPort:     9093,
+		ClusterPort: 9094,
 		DeployDir:   deployDir,
 		DataDir:     dataDir,
 		LogDir:      logDir,
@@ -59,6 +62,12 @@ func (c *AlertManagerScript) WithClusterPort(port int) *AlertManagerScript {
 // WithNumaNode set NumaNode field of AlertManagerScript
 func (c *AlertManagerScript) WithNumaNode(numa string) *AlertManagerScript {
 	c.NumaNode = numa
+	return c
+}
+
+// AppendEndpoints add new alert manager to Endpoints field
+func (c *AlertManagerScript) AppendEndpoints(ends []*AlertManagerScript) *AlertManagerScript {
+	c.EndPoints = append(c.EndPoints, ends...)
 	return c
 }
 

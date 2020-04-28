@@ -41,7 +41,7 @@ type PrometheusConfig struct {
 	BlackboxExporterAddrs     []string
 	LightningAddrs            []string
 	MonitoredServers          []string
-	AlertmanagerAddr          string
+	AlertmanagerAddrs         []string
 	PushgatewayAddr           string
 	BlackboxAddr              string
 	KafkaExporterAddr         string
@@ -141,7 +141,7 @@ func (c *PrometheusConfig) AddMonitoredServer(ip string) *PrometheusConfig {
 
 // AddAlertmanager add an alertmanager address
 func (c *PrometheusConfig) AddAlertmanager(ip string, port uint64) *PrometheusConfig {
-	c.AlertmanagerAddr = fmt.Sprintf("%s:%d", ip, port)
+	c.AlertmanagerAddrs = append(c.AlertmanagerAddrs, fmt.Sprintf("%s:%d", ip, port))
 	return c
 }
 

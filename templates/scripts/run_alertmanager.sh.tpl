@@ -19,5 +19,10 @@ exec bin/alertmanager/alertmanager \
     --storage.path="{{.DataDir}}" \
     --data.retention=120h \
     --log.level="info" \
-    --web.listen-address=":{{.WebPort}}" \
-    --cluster.listen-address=":{{.ClusterPort}}"
+    --web.listen-address="{{.IP}}:{{.WebPort}}" \
+{{- if .EndPoints}}
+{{- range $idx, $am := .EndPoints}}
+    --cluster.peer="{{$am.IP}}:{{$am.ClusterPort}}" \
+{{- end}}
+{{- end}}
+    --cluster.listen-address="{{.IP}}:{{.ClusterPort}}"

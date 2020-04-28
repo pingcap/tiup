@@ -32,12 +32,14 @@ rule_files:
   - 'lightning.rules.yml'
 {{- end}}
 
-{{- if .AlertmanagerAddr}}
+{{- if .AlertmanagerAddrs}}
 alerting:
  alertmanagers:
  - static_configs:
    - targets:
-     - '{{.AlertmanagerAddr}}'
+{{- range .AlertmanagerAddrs}}
+     - '{{.}}'
+{{- end}}
 {{- end}}
 
 scrape_configs:
