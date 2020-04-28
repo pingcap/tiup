@@ -420,7 +420,7 @@ func startInstance(getter ExecutorGetter, ins meta.Instance) error {
 	// Check ready.
 	err = ins.Ready(e)
 	if err != nil {
-		str := fmt.Sprintf("\t%s %s:%d failed to start: %s",
+		str := fmt.Sprintf("\t%s %s:%d failed to start: %s, please check the log of the instance",
 			ins.ComponentName(),
 			ins.GetHost(),
 			ins.GetPort(), err)
@@ -551,17 +551,6 @@ func stopInstance(getter ExecutorGetter, ins meta.Instance) error {
 			ins.ComponentName(),
 			ins.GetHost(),
 			ins.GetPort())
-	}
-
-	err = ins.WaitForDown(e)
-	if err != nil {
-		str := fmt.Sprintf("\t%s %s:%d failed to stop: %s",
-			ins.ComponentName(),
-			ins.GetHost(),
-			ins.GetPort(),
-			err)
-		log.Errorf(str)
-		return errors.Annotatef(err, str)
 	}
 
 	log.Infof("\tStop %s %s:%d success",
