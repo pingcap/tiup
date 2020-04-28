@@ -22,7 +22,7 @@ var (
 	// TiOpsVerMajor is the major version of TiOps
 	TiOpsVerMajor = 0
 	// TiOpsVerMinor is the minor version of TiOps
-	TiOpsVerMinor = 3
+	TiOpsVerMinor = 6
 	// TiOpsVerPatch is the patch version of TiOps
 	TiOpsVerPatch = 0
 	// GitHash is the current git commit hash
