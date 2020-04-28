@@ -2,6 +2,8 @@
 
 `tiup` is a tool to download and install TiDB components.
 
+For detailed documentation, see the manual which starts with an [overview](overview.md).
+
 ## Installation
 
 ```sh
