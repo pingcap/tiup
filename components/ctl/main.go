@@ -25,19 +25,29 @@ func execute() error {
 		return errors.New("component `ctl` cannot run in standalone mode")
 	}
 	rootCmd := &cobra.Command{
-		Use:          "tiup ctl {tidb/pd/tikv/binlog/etcd}",
-		Short:        "TiDB controllers",
-		SilenceUsage: true,
+		Use:                "tiup ctl {tidb/pd/tikv/binlog/etcd}",
+		Short:              "TiDB controllers",
+		SilenceUsage:       true,
+		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return cmd.Help()
 			}
 
-			bin, err := binaryPath(home, args[0])
+			var transparentParams []string
+			componentSpec := args[0]
+			for i, arg := range os.Args {
+				if arg == componentSpec {
+					transparentParams = os.Args[i+1:]
+					break
+				}
+			}
+
+			bin, err := binaryPath(home, componentSpec)
 			if err != nil {
 				return err
 			}
-			return run(bin, args[1:]...)
+			return run(bin, transparentParams...)
 		},
 	}
 
