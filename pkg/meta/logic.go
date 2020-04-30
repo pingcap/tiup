@@ -243,7 +243,7 @@ func (i *instance) GetSSHPort() int {
 }
 
 func (i *instance) DeployDir() string {
-	return reflect.ValueOf(i.InstanceSpec).FieldByName("DeployDir").Interface().(string)
+	return reflect.ValueOf(i.InstanceSpec).FieldByName("DeployDir").String()
 }
 
 func (i *instance) DataDir() string {
@@ -251,7 +251,13 @@ func (i *instance) DataDir() string {
 	if !dataDir.IsValid() {
 		return ""
 	}
-	return dataDir.Interface().(string)
+
+	// the default data_dir is relative to deploy_dir
+	if dataDir.String() != "" && !strings.HasPrefix(dataDir.String(), "/") {
+		return filepath.Join(i.DeployDir(), dataDir.String())
+	}
+
+	return dataDir.String()
 }
 
 // MergeResourceControl merge the rhs into lhs and overwrite rhs if lhs has value for same field
@@ -1384,8 +1390,9 @@ func (topo *ClusterSpecification) Endpoints(user string) []*scripts.PDScript {
 		deployDir := clusterutil.Abs(user, spec.DeployDir)
 		// data dir would be empty for components which don't need it
 		dataDir := spec.DataDir
-		if dataDir != "" {
-			clusterutil.Abs(user, dataDir)
+		// the default data_dir is relative to deploy_dir
+		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
+			dataDir = filepath.Join(deployDir, dataDir)
 		}
 		// log dir will always be with values, but might not used by the component
 		logDir := clusterutil.Abs(user, spec.LogDir)
@@ -1410,8 +1417,9 @@ func (topo *ClusterSpecification) AlertManagerEndpoints(user string) []*scripts.
 		deployDir := clusterutil.Abs(user, spec.DeployDir)
 		// data dir would be empty for components which don't need it
 		dataDir := spec.DataDir
-		if dataDir != "" {
-			clusterutil.Abs(user, dataDir)
+		// the default data_dir is relative to deploy_dir
+		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
+			dataDir = filepath.Join(deployDir, dataDir)
 		}
 		// log dir will always be with values, but might not used by the component
 		logDir := clusterutil.Abs(user, spec.LogDir)

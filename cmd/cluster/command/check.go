@@ -23,6 +23,7 @@ import (
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil/prepare"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/clusterutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/logger"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
@@ -129,18 +130,23 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecifica
 				BuildAsStep(fmt.Sprintf("  - Getting system info of %s:%d", inst.GetHost(), inst.GetSSHPort()))
 			collectTasks = append(collectTasks, t1)
 
+			// if the data dir set in topology is relative, and the home dir of deploy user
+			// and the user run the check command is on different partitions, the disk detection
+			// may be using incorrect partition for validations.
+			dataDir := clusterutil.Abs(opt.user, inst.DataDir())
+
 			// build checking tasks
 			t2 := task.NewBuilder().
 				CheckSys(
 					inst.GetHost(),
-					inst.DataDir(),
+					dataDir,
 					task.CheckTypeSystemInfo,
 					topo,
 					opt.opr,
 				).
 				CheckSys(
 					inst.GetHost(),
-					inst.DataDir(),
+					dataDir,
 					task.CheckTypePartitions,
 					topo,
 					opt.opr,
@@ -152,7 +158,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecifica
 				).
 				CheckSys(
 					inst.GetHost(),
-					inst.DataDir(),
+					dataDir,
 					task.CheckTypePort,
 					topo,
 					opt.opr,
@@ -164,7 +170,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecifica
 				).
 				CheckSys(
 					inst.GetHost(),
-					inst.DataDir(),
+					dataDir,
 					task.CheckTypeSystemLimits,
 					topo,
 					opt.opr,
@@ -176,28 +182,28 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecifica
 				).
 				CheckSys(
 					inst.GetHost(),
-					inst.DataDir(),
+					dataDir,
 					task.CheckTypeSystemConfig,
 					topo,
 					opt.opr,
 				).
 				CheckSys(
 					inst.GetHost(),
-					inst.DataDir(),
+					dataDir,
 					task.CheckTypeService,
 					topo,
 					opt.opr,
 				).
 				CheckSys(
 					inst.GetHost(),
-					inst.DataDir(),
+					dataDir,
 					task.CheckTypePackage,
 					topo,
 					opt.opr,
 				).
 				CheckSys(
 					inst.GetHost(),
-					inst.DataDir(),
+					dataDir,
 					task.CheckTypeFIO,
 					topo,
 					opt.opr,

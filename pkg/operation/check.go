@@ -496,11 +496,10 @@ func CheckPartitions(opt *CheckOptions, host string, topo *meta.TopologySpecific
 		if inst.GetHost() != host {
 			return
 		}
-		dataDir := inst.DataDir()
+		dataDir := clusterutil.Abs(topo.GlobalOptions.User, inst.DataDir())
 		if dataDir == "" {
 			return
 		}
-		dataDir = clusterutil.Abs(topo.GlobalOptions.User, dataDir)
 
 		blk := getDisk(parts, dataDir)
 		if blk == nil {

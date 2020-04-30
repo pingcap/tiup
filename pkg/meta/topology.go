@@ -757,6 +757,11 @@ func (topo *TopologySpecification) dirConflictsDetect() error {
 						host: host,
 						dir:  compSpec.Field(j).String(),
 					}
+					// data_dir is relative to deploy_dir by default, so they can be with
+					// same (sub) paths as long as the deploy_dirs are different
+					if item.dir != "" && !strings.HasPrefix(item.dir, "/") {
+						continue
+					}
 					// `yaml:"data_dir,omitempty"`
 					tp := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
 					prev, exist := dirStats[item]
@@ -898,7 +903,28 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 			clientPort := field.FieldByName("ClientPort").Int()
 			field.Field(j).Set(reflect.ValueOf(fmt.Sprintf("pd-%s-%d", host, clientPort)))
 		case "DataDir":
-			setDefaultDir(globalOptions.DataDir, field.Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
+			dataDir := field.Field(j).String()
+			if dataDir != "" { // already have a value, skip filling default values
+				continue
+			}
+			// If the data dir in global options is an obsolute path, it appends to
+			// the global and has a comp-port sub directory
+			if strings.HasPrefix(globalOptions.DataDir, "/") {
+				field.Field(j).Set(reflect.ValueOf(filepath.Join(
+					globalOptions.DataDir,
+					fmt.Sprintf("%s-%s", field.Interface().(InstanceSpec).Role(), getPort(field)),
+				)))
+				continue
+			}
+			// If the data dir in global options is empty or a relative path, keep it be relative
+			// Our run_*.sh start scripts are run inside deploy_path, so the final location
+			// will be deploy_path/global.data_dir
+			// (the default value of global.data_dir is "data")
+			if globalOptions.DataDir == "" {
+				field.Field(j).Set(reflect.ValueOf("data"))
+			} else {
+				field.Field(j).Set(reflect.ValueOf(globalOptions.DataDir))
+			}
 		case "DeployDir":
 			setDefaultDir(globalOptions.DeployDir, field.Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
 		case "LogDir":

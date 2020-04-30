@@ -18,6 +18,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
@@ -142,6 +143,11 @@ func CheckClusterDirConflict(clusterName string, topo meta.Specification) error 
 	})
 
 	for _, d1 := range currentEntries {
+		// data_dir is relative to deploy_dir by default, so they can be with
+		// same (sub) paths as long as the deploy_dirs are different
+		if d1.dirKind == "data directory" && !strings.HasPrefix(d1.dir, "/") {
+			continue
+		}
 		for _, d2 := range existingEntries {
 			if d1.instance.GetHost() != d2.instance.GetHost() {
 				continue

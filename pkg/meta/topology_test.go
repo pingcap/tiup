@@ -86,13 +86,28 @@ global:
   data_dir: "test-data" 
 tidb_servers:
   - host: 172.16.5.138
-    deploy_dir: "test-1"
+    deploy_dir: "/test-1"
+pd_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-1"
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "directory '/test-1' conflicts between 'tidb_servers:172.16.5.138.deploy_dir' and 'pd_servers:172.16.5.138.data_dir'")
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+  data_dir: "/test-data" 
+tikv_servers:
+  - host: 172.16.5.138
+    data_dir: "test-1"
 pd_servers:
   - host: 172.16.5.138
     data_dir: "test-1"
 `), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "directory 'test-1' conflicts between 'tidb_servers:172.16.5.138.deploy_dir' and 'pd_servers:172.16.5.138.data_dir'")
+	c.Assert(err, IsNil)
 }
 
 func (s *metaSuite) TestPortConflicts(c *C) {

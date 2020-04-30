@@ -21,6 +21,7 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/file"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/version"
 	"github.com/pingcap/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -48,6 +49,7 @@ type ClusterMeta struct {
 	Version string `yaml:"tidb_version"` // the version of TiDB cluster
 	//EnableTLS      bool   `yaml:"enable_tls"`
 	//EnableFirewall bool   `yaml:"firewall"`
+	OpsVer string `yaml:"last_ops_ver,omitempty"` // the version of ourself that updated the meta last time
 
 	Topology *TopologySpecification `yaml:"topology"`
 }
@@ -70,6 +72,9 @@ func SaveClusterMeta(clusterName string, meta *ClusterMeta) error {
 
 	metaFile := ClusterPath(clusterName, MetaFileName)
 	backupDir := ClusterPath(clusterName, BackupDirName)
+
+	// set the cmd version
+	meta.OpsVer = version.NewTiOpsVersion().FullInfo()
 
 	if err := EnsureClusterDir(clusterName); err != nil {
 		return wrapError(err)
