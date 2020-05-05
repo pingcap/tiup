@@ -25,6 +25,10 @@ tiup-cluster --yes start $name
 
 tiup-cluster _test $name writable
 
+# check the data dir of tikv
+tiup-cluster exec $name -N 172.19.0.102 --command "grep /home/tidb/deploy/tikv-20160/data /home/tidb/deploy/tikv-20160/scripts/run_tikv.sh"
+tiup-cluster exec $name -N 172.19.0.103 --command "grep /home/tidb/my_kv_data /home/tidb/deploy/tikv-20160/scripts/run_tikv.sh"
+
 tiup-cluster --yes stop $name
 
 tiup-cluster --yes restart $name
