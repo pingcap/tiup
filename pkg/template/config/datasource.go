@@ -16,11 +16,10 @@ package config
 import (
 	"bytes"
 	"io/ioutil"
-	"os"
 	"path"
 	"text/template"
 
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/embed"
 )
 
 // DatasourceConfig represent the data to generate Datasource config
@@ -45,11 +44,10 @@ func (c *DatasourceConfig) WithPort(port uint64) *DatasourceConfig {
 	return c
 }
 
-// Config read ${localdata.EnvNameComponentInstallDir}/templates/config/datasource.yml
-// and generate the config by ConfigWithTemplate
+// Config generate the config file data.
 func (c *DatasourceConfig) Config() ([]byte, error) {
-	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "config", "datasource.yml.tpl")
-	tpl, err := ioutil.ReadFile(fp)
+	fp := path.Join("/templates", "config", "datasource.yml.tpl")
+	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
 	}

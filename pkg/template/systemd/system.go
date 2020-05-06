@@ -16,11 +16,10 @@ package system
 import (
 	"bytes"
 	"io/ioutil"
-	"os"
 	"path"
 	"text/template"
 
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/embed"
 )
 
 // Config represent the data to generate systemd config
@@ -80,11 +79,10 @@ func (c *Config) ConfigToFile(file string) error {
 	return ioutil.WriteFile(file, config, 0755)
 }
 
-// Config read ${localdata.EnvNameComponentInstallDir}/templates/systemd/system.service.tpl as template
-// and generate the config by ConfigWithTemplate
+// Config generate the config file data.
 func (c *Config) Config() ([]byte, error) {
-	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "systemd", "system.service.tpl")
-	tpl, err := ioutil.ReadFile(fp)
+	fp := path.Join("/templates", "systemd", "system.service.tpl")
+	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
 	}

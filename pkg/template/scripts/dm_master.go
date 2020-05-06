@@ -17,11 +17,10 @@ import (
 	"bytes"
 	"errors"
 	"io/ioutil"
-	"os"
 	"path"
 	"text/template"
 
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/embed"
 )
 
 // DMMasterScript represent the data to generate TiDB config
@@ -82,11 +81,10 @@ func (c *DMMasterScript) AppendEndpoints(ends ...*DMMasterScript) *DMMasterScrip
 	return c
 }
 
-// Config read ${localdata.EnvNameComponentInstallDir}/templates/scripts/run_dm_master.sh.tpl as template
-// and generate the config by ConfigWithTemplate
+// Config generate the config file data.
 func (c *DMMasterScript) Config() ([]byte, error) {
-	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "scripts", "run_dm_master.sh.tpl")
-	tpl, err := ioutil.ReadFile(fp)
+	fp := path.Join("/templates", "scripts", "run_dm_master.sh.tpl")
+	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
 	}

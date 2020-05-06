@@ -16,11 +16,10 @@ package scripts
 import (
 	"bytes"
 	"io/ioutil"
-	"os"
 	"path"
 	"text/template"
 
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/embed"
 )
 
 // GrafanaScript represent the data to generate Grafana config
@@ -44,11 +43,10 @@ func (c *GrafanaScript) WithNumaNode(numa string) *GrafanaScript {
 	return c
 }
 
-// Config read ${localdata.EnvNameComponentInstallDir}/templates/scripts/run_Grafana.sh.tpl as template
-// and generate the config by ConfigWithTemplate
+// Config generate the config file data.
 func (c *GrafanaScript) Config() ([]byte, error) {
-	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "scripts", "run_grafana.sh.tpl")
-	tpl, err := ioutil.ReadFile(fp)
+	fp := path.Join("/templates", "scripts", "run_grafana.sh.tpl")
+	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
 	}

@@ -16,11 +16,10 @@ package scripts
 import (
 	"bytes"
 	"io/ioutil"
-	"os"
 	"path"
 	"text/template"
 
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/embed"
 )
 
 // PumpScript represent the data to generate Pump config
@@ -66,11 +65,10 @@ func (c *PumpScript) AppendEndpoints(ends ...*PDScript) *PumpScript {
 	return c
 }
 
-// Config read ${localdata.EnvNameComponentInstallDir}/templates/scripts/run_pump.sh.tpl as template
-// and generate the config by ConfigWithTemplate
+// Config generate the config file data.
 func (c *PumpScript) Config() ([]byte, error) {
-	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "scripts", "run_pump.sh.tpl")
-	tpl, err := ioutil.ReadFile(fp)
+	fp := path.Join("/templates", "scripts", "run_pump.sh.tpl")
+	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
 	}

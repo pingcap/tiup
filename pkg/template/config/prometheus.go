@@ -17,11 +17,10 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path"
 	"text/template"
 
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/embed"
 )
 
 // PrometheusConfig represent the data to generate Prometheus config
@@ -169,11 +168,10 @@ func (c *PrometheusConfig) AddGrafana(ip string, port uint64) *PrometheusConfig 
 	return c
 }
 
-// Config read ${localdata.EnvNameComponentInstallDir}/templates/config/prometheus.yml.tpl
-// and generate the config by ConfigWithTemplate
+// Config generate the config file data.
 func (c *PrometheusConfig) Config() ([]byte, error) {
-	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "config", "prometheus.yml.tpl")
-	tpl, err := ioutil.ReadFile(fp)
+	fp := path.Join("/templates", "config", "prometheus.yml.tpl")
+	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
 	}

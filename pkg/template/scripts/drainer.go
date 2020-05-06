@@ -16,11 +16,10 @@ package scripts
 import (
 	"bytes"
 	"io/ioutil"
-	"os"
 	"path"
 	"text/template"
 
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/embed"
 )
 
 // DrainerScript represent the data to generate drainer config
@@ -73,11 +72,10 @@ func (c *DrainerScript) AppendEndpoints(ends ...*PDScript) *DrainerScript {
 	return c
 }
 
-// Config read ${localdata.EnvNameComponentInstallDir}/templates/scripts/run_drainer.sh.tpl as template
-// and generate the config by ConfigWithTemplate
+// Config generate the config file data.
 func (c *DrainerScript) Config() ([]byte, error) {
-	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "scripts", "run_drainer.sh.tpl")
-	tpl, err := ioutil.ReadFile(fp)
+	fp := path.Join("/templates", "scripts", "run_drainer.sh.tpl")
+	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
 	}

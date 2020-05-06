@@ -25,10 +25,6 @@ function tiup-cluster() {
 
 . ./script/util.sh
 
-# TODO remove this once embed the files in binary
-# the work dir of tiup-cluster need this
-ln -s ../templates templates || true
-
 # use run.sh test_cmd test_upgrade to run specify cases
 do_cases=$*
 

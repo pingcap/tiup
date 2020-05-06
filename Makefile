@@ -68,6 +68,9 @@ test: failpoint-enable unit-test
 check-static: tools/bin/golangci-lint
 	tools/bin/golangci-lint run --timeout 5m ./...
 
+pkger: tools/bin/pkger
+	tools/bin/pkger -o ./pkg/embed
+
 coverage:
 	GO111MODULE=off go get github.com/wadey/gocovmerge
 	gocovmerge cover/* | grep -vE ".*.pb.go|.*__failpoint_binding__.go" > "cover/all_cov.out"
@@ -93,6 +96,10 @@ tools/bin/revive: tools/check/go.mod
 tools/bin/golangci-lint: tools/check/go.mod
 	cd tools/check; \
 	$(GO) build -o ../bin/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
+
+tools/bin/pkger: tools/check/go.mod
+	cd tools/check; \
+	$(GO) build -o ../bin/pkger github.com/markbates/pkger/cmd/pkger
 
 fmt:
 	@echo "gofmt (simplify)"

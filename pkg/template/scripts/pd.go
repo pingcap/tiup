@@ -17,12 +17,11 @@ import (
 	"bytes"
 	"errors"
 	"io/ioutil"
-	"os"
 	"path"
 	"text/template"
 
+	"github.com/pingcap-incubator/tiup-cluster/pkg/embed"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
 )
 
 // PDScript represent the data to generate pd config
@@ -83,11 +82,10 @@ func (c *PDScript) AppendEndpoints(ends ...*PDScript) *PDScript {
 	return c
 }
 
-// Config read ${localdata.EnvNameComponentInstallDir}/templates/scripts/run_pd.sh.tpl as template
-// and generate the config by ConfigWithTemplate
+// Config generate the config file data.
 func (c *PDScript) Config() ([]byte, error) {
-	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "scripts", "run_pd.sh.tpl")
-	tpl, err := ioutil.ReadFile(fp)
+	fp := path.Join("/templates", "scripts", "run_pd.sh.tpl")
+	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
 	}
@@ -167,12 +165,11 @@ func (c *PDScaleScript) AppendEndpoints(ends ...*PDScript) *PDScaleScript {
 	return c
 }
 
-// Config read ${localdata.EnvNameComponentInstallDir}/templates/scripts/run_pd.sh.tpl as template
-// and generate the config by ConfigWithTemplate
+// Config generate the config file data.
 func (c *PDScaleScript) Config() ([]byte, error) {
-	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "scripts", "run_pd_scale.sh.tpl")
+	fp := path.Join("/templates", "scripts", "run_pd_scale.sh.tpl")
 	log.Infof("script path: %s", fp)
-	tpl, err := ioutil.ReadFile(fp)
+	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
 	}

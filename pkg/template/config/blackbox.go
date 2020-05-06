@@ -15,10 +15,9 @@ package config
 
 import (
 	"io/ioutil"
-	"os"
 	"path"
 
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/embed"
 )
 
 // BlackboxConfig represent the data to generate AlertManager config
@@ -29,11 +28,10 @@ func NewBlackboxConfig() *BlackboxConfig {
 	return &BlackboxConfig{}
 }
 
-// Config read ${localdata.EnvNameComponentInstallDir}/templates/config/alertmanager.yml
-// and generate the config by ConfigWithTemplate
+// Config generate the config file data.
 func (c *BlackboxConfig) Config() ([]byte, error) {
-	fp := path.Join(os.Getenv(localdata.EnvNameComponentInstallDir), "templates", "config", "blackbox.yml")
-	tpl, err := ioutil.ReadFile(fp)
+	fp := path.Join("/templates", "config", "blackbox.yml")
+	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
 	}
