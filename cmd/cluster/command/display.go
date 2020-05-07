@@ -60,7 +60,7 @@ func newDisplayCmd() *cobra.Command {
 			if err != nil {
 				return errors.AddStack(err)
 			}
-			return destroyTombsomeIfNeed(opt.clusterName, metadata)
+			return destroyTombstoneIfNeed(opt.clusterName, metadata)
 		},
 	}
 
@@ -88,7 +88,7 @@ func displayClusterMeta(opt *displayOption) error {
 	return nil
 }
 
-func destroyTombsomeIfNeed(clusterName string, metadata *meta.ClusterMeta) error {
+func destroyTombstoneIfNeed(clusterName string, metadata *meta.ClusterMeta) error {
 	topo := metadata.Topology
 
 	if !operator.NeedCheckTomebsome(topo) {

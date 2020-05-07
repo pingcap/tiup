@@ -41,7 +41,7 @@ const (
 	UpgradeOperation
 	ScaleInOperation
 	ScaleOutOperation
-	DestroyTombsomeOperation
+	DestroyTombstoneOperation
 )
 
 var opStringify = [...]string{
@@ -52,11 +52,11 @@ var opStringify = [...]string{
 	"UpgradeOperation",
 	"ScaleInOperation",
 	"ScaleOutOperation",
-	"DestroyTombsomeOperation",
+	"DestroyTombstoneOperation",
 }
 
 func (op Operation) String() string {
-	if op <= DestroyTombsomeOperation {
+	if op <= DestroyTombstoneOperation {
 		return opStringify[op]
 	}
 	return fmt.Sprintf("unknonw-op(%d)", op)
