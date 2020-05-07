@@ -119,16 +119,14 @@ func ScaleInCluster(
 					continue
 				}
 				// just try stop and destroy
-				if options.Force {
-					if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
-						log.Warnf("failed to stop %s: %v", component.Name(), err)
-					}
-					if err := DestroyComponent(getter, []meta.Instance{instance}); err != nil {
-						log.Warnf("failed to destroy %s: %v", component.Name(), err)
-					}
-
-					continue
+				if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
+					log.Warnf("failed to stop %s: %v", component.Name(), err)
 				}
+				if err := DestroyComponent(getter, []meta.Instance{instance}); err != nil {
+					log.Warnf("failed to destroy %s: %v", component.Name(), err)
+				}
+
+				continue
 			}
 		}
 		return nil
