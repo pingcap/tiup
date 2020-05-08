@@ -74,6 +74,9 @@ type listResult struct {
 }
 
 func (lr *listResult) print() {
+	if lr == nil {
+		return
+	}
 	fmt.Printf(lr.header)
 	tui.PrintTable(lr.cmpTable, true)
 }
