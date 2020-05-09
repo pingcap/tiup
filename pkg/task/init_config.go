@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
+	"github.com/pingcap/errors"
 )
 
 // InitConfig is used to copy all configurations to the target directory of path
@@ -39,10 +40,14 @@ func (c *InitConfig) Execute(ctx *Context) error {
 	}
 
 	if err := os.MkdirAll(c.paths.Cache, 0755); err != nil {
-		return err
+		return errors.Annotatef(err, "create cache directory failed: %s", c.paths.Cache)
 	}
 
-	return c.instance.InitConfig(exec, c.clusterName, c.clusterVersion, c.deployUser, c.paths)
+	err := c.instance.InitConfig(exec, c.clusterName, c.clusterVersion, c.deployUser, c.paths)
+	if err != nil {
+		return errors.Annotatef(err, "init config failed: %s:%d", c.instance.GetHost(), c.instance.GetPort())
+	}
+	return nil
 }
 
 // Rollback implements the Task interface

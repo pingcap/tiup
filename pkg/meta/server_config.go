@@ -125,7 +125,7 @@ func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, 
 	enc.Indent = ""
 	err = enc.Encode(lhs)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 	return buf.Bytes(), nil
 }
@@ -133,13 +133,13 @@ func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, 
 func mergeImported(importConfig []byte, specConfig map[string]interface{}) (map[string]interface{}, error) {
 	var configData map[string]interface{}
 	if err := toml.Unmarshal(importConfig, &configData); err != nil {
-		return specConfig, err
+		return specConfig, errors.Trace(err)
 	}
 
 	// overwrite topology specifieced configs to the imported configs
 	lhs, err := merge(configData, specConfig)
 	if err != nil {
-		return specConfig, err
+		return specConfig, errors.Trace(err)
 	}
 	return lhs, nil
 }
@@ -165,13 +165,13 @@ func checkConfig(e executor.TiOpsExecutor, componentName, clusterVersion, config
 
 	// Hack tikv --pd flag
 	extra := ""
-	if strings.Contains(binPath, "tikv-server") {
+	if componentName == ComponentTiKV {
 		extra = `--pd=""`
 	}
 
 	configPath := path.Join(paths.Deploy, "conf", config)
 	_, _, err = e.Execute(fmt.Sprintf("%s --config-check --config=%s %s", binPath, configPath, extra), false)
-	return err
+	return errors.Annotatef(err, "check config failed: %s", componentName)
 }
 
 func hasConfigCheckFlag(e executor.TiOpsExecutor, binPath string) bool {

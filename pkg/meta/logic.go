@@ -160,11 +160,11 @@ func (i *instance) InitConfig(e executor.TiOpsExecutor, _, _, user string, paths
 	}
 
 	if err := systemCfg.ConfigToFile(sysCfg); err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	tgt := filepath.Join("/tmp", comp+"_"+uuid.New().String()+".service")
 	if err := e.Transfer(sysCfg, tgt, false); err != nil {
-		return err
+		return errors.Annotatef(err, "transfer from %s to %s failed", sysCfg, tgt)
 	}
 	cmd := fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port)
 	if _, _, err := e.Execute(cmd, true); err != nil {

@@ -136,10 +136,11 @@ func (e *SSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duration) (
 
 	stdout, stderr, done, err := e.Config.Run(cmd, timeout...)
 
-	zap.L().Info("ssh command",
+	zap.L().Info("SSHCommand",
 		zap.String("host", e.Config.Server),
 		zap.String("port", e.Config.Port),
 		zap.String("cmd", cmd),
+		zap.Error(err),
 		zap.String("stdout", stdout),
 		zap.String("stderr", stderr))
 
