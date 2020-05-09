@@ -139,12 +139,12 @@ func (b *Builder) InstallPackage(srcPath, dstHost, dstDir string) *Builder {
 }
 
 // BackupComponent appends a BackupComponent task to the current task collection
-func (b *Builder) BackupComponent(component, fromVer string, dstHost, dstDir string) *Builder {
+func (b *Builder) BackupComponent(component, fromVer string, host, deployDir string) *Builder {
 	b.tasks = append(b.tasks, &BackupComponent{
 		component: component,
 		fromVer:   fromVer,
-		host:      dstHost,
-		dstDir:    dstDir,
+		host:      host,
+		deployDir: deployDir,
 	})
 	return b
 }

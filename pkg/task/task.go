@@ -22,7 +22,6 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/executor"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/operation"
-	"github.com/pingcap-incubator/tiup/pkg/repository"
 )
 
 var (
@@ -42,11 +41,6 @@ type (
 		Rollback(ctx *Context) error
 	}
 
-	manifestCache struct {
-		sync.RWMutex
-		manifests map[string]*repository.VersionManifest
-	}
-
 	// Context is used to share state while multiple tasks execution.
 	// We should use mutex to prevent concurrent R/W for some fields
 	// because of the same context can be shared in parallel tasks.
@@ -64,8 +58,6 @@ type (
 		// The public/private key is used to access remote server via the user `tidb`
 		PrivateKeyPath string
 		PublicKeyPath  string
-
-		manifestCache manifestCache
 	}
 
 	// Serial will execute a bundle of task in serialized way
@@ -96,9 +88,6 @@ func NewContext() *Context {
 			stdouts:      make(map[string][]byte),
 			stderrs:      make(map[string][]byte),
 			checkResults: make(map[string][]*operator.CheckResult),
-		},
-		manifestCache: manifestCache{
-			manifests: map[string]*repository.VersionManifest{},
 		},
 	}
 }
@@ -145,21 +134,6 @@ func (ctx *Context) SetOutputs(host string, stdout []byte, stderr []byte) {
 	ctx.exec.stderrs[host] = stdout
 	ctx.exec.stdouts[host] = stderr
 	ctx.exec.Unlock()
-}
-
-// GetManifest get the manifest of specific component.
-func (ctx *Context) GetManifest(comp string) (m *repository.VersionManifest, ok bool) {
-	ctx.manifestCache.RLock()
-	m, ok = ctx.manifestCache.manifests[comp]
-	ctx.manifestCache.RUnlock()
-	return
-}
-
-// SetManifest set the manifest of specific component
-func (ctx *Context) SetManifest(comp string, m *repository.VersionManifest) {
-	ctx.manifestCache.Lock()
-	ctx.manifestCache.manifests[comp] = m
-	ctx.manifestCache.Unlock()
 }
 
 // GetCheckResults get the the check result of a host (if has any)
