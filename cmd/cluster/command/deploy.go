@@ -170,8 +170,19 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 	// Initialize environment
 	uniqueHosts := map[string]int{} // host -> ssh-port
 	globalOptions := topo.GlobalOptions
+	var iterErr error // error when itering over instances
+	iterErr = nil
 	topo.IterInstance(func(inst meta.Instance) {
 		if _, found := uniqueHosts[inst.GetHost()]; !found {
+			// check for "imported" parameter, it can not be true when scaling out
+			if inst.IsImported() {
+				iterErr = errors.New(
+					"'imported' is set to 'true' for new instance, this is only used " +
+						"for instances imported from tidb-ansible and make no sense when " +
+						"deploying new instances, please delete the line or set it to 'false' for new instances")
+				return // skip the host to avoid issues
+			}
+
 			uniqueHosts[inst.GetHost()] = inst.GetSSHPort()
 			var dirs []string
 			for _, dir := range []string{globalOptions.DeployDir, globalOptions.LogDir} {
@@ -200,6 +211,10 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 			envInitTasks = append(envInitTasks, t)
 		}
 	})
+
+	if iterErr != nil {
+		return iterErr
+	}
 
 	// Download missing component
 	downloadCompTasks = prepare.BuildDownloadCompTasks(clusterVersion, &topo)

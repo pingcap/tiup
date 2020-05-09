@@ -164,9 +164,21 @@ func buildScaleOutTask(
 	})
 	// uninitializedHosts are hosts which haven't been initialized yet
 	uninitializedHosts := map[string]int{} // host -> ssh-port
+	var iterErr error                      // error when itering over instances
+	iterErr = nil
 	newPart.IterInstance(func(instance meta.Instance) {
 		if host := instance.GetHost(); !initializedHosts.Exist(host) {
+			// check for "imported" parameter, it can not be true when scaling out
+			if instance.IsImported() {
+				iterErr = errors.New(
+					"'imported' is set to 'true' for new instance, this is only used " +
+						"for instances imported from tidb-ansible and make no sense when " +
+						"scaling out, please delete the line or set it to 'false' for new instances")
+				return // skip the host to avoid issues
+			}
+
 			uninitializedHosts[host] = instance.GetSSHPort()
+
 			var dirs []string
 			globalOptions := metadata.Topology.GlobalOptions
 			for _, dir := range []string{globalOptions.DeployDir, globalOptions.DataDir, globalOptions.LogDir} {
@@ -191,6 +203,10 @@ func buildScaleOutTask(
 			envInitTasks = append(envInitTasks, t)
 		}
 	})
+
+	if iterErr != nil {
+		return task.NewBuilder().Build(), iterErr
+	}
 
 	// Download missing component
 	downloadCompTasks = convertStepDisplaysToTasks(prepare.BuildDownloadCompTasks(metadata.Version, newPart))
