@@ -115,7 +115,7 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 	}
 
 	// Build the scale out tasks
-	t, err := buildScaleOutTask(clusterName, metadata, mergedTopo, opt, sshConnProps, &newPart, patchedComponents)
+	t, err := buildScaleOutTask(clusterName, metadata, mergedTopo, opt, sshConnProps, &newPart, patchedComponents, gOpt.OptTimeout)
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,9 @@ func buildScaleOutTask(
 	opt scaleOutOptions,
 	sshConnProps *cliutil.SSHConnectionProps,
 	newPart *meta.TopologySpecification,
-	patchedComponents set.StringSet) (task.Task, error) {
+	patchedComponents set.StringSet,
+	timeout int64,
+) (task.Task, error) {
 	var (
 		envInitTasks       []task.Task // tasks which are used to initialize environment
 		downloadCompTasks  []task.Task // tasks which are used to download components
@@ -195,7 +197,7 @@ func buildScaleOutTask(
 					sshConnProps.Password,
 					sshConnProps.IdentityFile,
 					sshConnProps.IdentityFilePassphrase,
-					sshTimeout,
+					gOpt.SSHTimeout,
 				).
 				EnvInit(instance.GetHost(), metadata.User).
 				Mkdir(globalOptions.User, instance.GetHost(), dirs...).
@@ -222,7 +224,7 @@ func buildScaleOutTask(
 
 		// Deploy component
 		tb := task.NewBuilder().
-			UserSSH(inst.GetHost(), inst.GetSSHPort(), metadata.User, sshTimeout).
+			UserSSH(inst.GetHost(), inst.GetSSHPort(), metadata.User, gOpt.SSHTimeout).
 			Mkdir(metadata.User, inst.GetHost(),
 				deployDir, dataDir, logDir,
 				filepath.Join(deployDir, "bin"),
@@ -298,16 +300,19 @@ func buildScaleOutTask(
 		Parallel(envInitTasks...).
 		Parallel(deployCompTasks...).
 		// TODO: find another way to make sure current cluster started
-		ClusterSSH(metadata.Topology, metadata.User, sshTimeout).
-		ClusterOperate(metadata.Topology, operator.StartOperation, operator.Options{}).
-		ClusterSSH(newPart, metadata.User, sshTimeout).
+		ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
+		ClusterOperate(metadata.Topology, operator.StartOperation, operator.Options{OptTimeout: timeout}).
+		ClusterSSH(newPart, metadata.User, gOpt.SSHTimeout).
 		Func("save meta", func() error {
 			metadata.Topology = mergedTopo
 			return meta.SaveClusterMeta(clusterName, metadata)
 		}).
-		ClusterOperate(newPart, operator.StartOperation, operator.Options{}).
+		ClusterOperate(newPart, operator.StartOperation, operator.Options{OptTimeout: timeout}).
 		Parallel(refreshConfigTasks...).
-		ClusterOperate(metadata.Topology, operator.RestartOperation, operator.Options{Roles: []string{meta.ComponentPrometheus}}).
+		ClusterOperate(metadata.Topology, operator.RestartOperation, operator.Options{
+			Roles:      []string{meta.ComponentPrometheus},
+			OptTimeout: timeout,
+		}).
 		Build(), nil
 
 }

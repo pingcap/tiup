@@ -122,7 +122,7 @@ func ScaleInCluster(
 				if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
 					log.Warnf("failed to stop %s: %v", component.Name(), err)
 				}
-				if err := DestroyComponent(getter, []meta.Instance{instance}); err != nil {
+				if err := DestroyComponent(getter, []meta.Instance{instance}, options.OptTimeout); err != nil {
 					log.Warnf("failed to destroy %s: %v", component.Name(), err)
 				}
 
@@ -155,7 +155,7 @@ func ScaleInCluster(
 	}
 
 	timeoutOpt := &utils.RetryOption{
-		Timeout: time.Second * time.Duration(options.Timeout),
+		Timeout: time.Second * time.Duration(options.APITimeout),
 		Delay:   time.Second * 5,
 	}
 
@@ -193,7 +193,7 @@ func ScaleInCluster(
 				if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
 					return errors.Annotatef(err, "failed to stop %s", component.Name())
 				}
-				if err := DestroyComponent(getter, []meta.Instance{instance}); err != nil {
+				if err := DestroyComponent(getter, []meta.Instance{instance}, options.OptTimeout); err != nil {
 					return errors.Annotatef(err, "failed to destroy %s", component.Name())
 				}
 			} else {

@@ -31,15 +31,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type displayOption struct {
-	clusterName string
-	filterRole  []string
-	filterNode  []string
-}
-
 func newDisplayCmd() *cobra.Command {
-	opt := displayOption{}
-
+	var (
+		clusterName string
+	)
 	cmd := &cobra.Command{
 		Use:   "display <cluster-name>",
 		Short: "Display information of a TiDB cluster",
@@ -48,47 +43,47 @@ func newDisplayCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			opt.clusterName = args[0]
-			if err := displayClusterMeta(&opt); err != nil {
+			clusterName = args[0]
+			if err := displayClusterMeta(clusterName, &gOpt); err != nil {
 				return err
 			}
-			if err := displayClusterTopology(&opt); err != nil {
+			if err := displayClusterTopology(clusterName, &gOpt); err != nil {
 				return err
 			}
 
-			metadata, err := meta.ClusterMetadata(opt.clusterName)
+			metadata, err := meta.ClusterMetadata(clusterName)
 			if err != nil {
 				return errors.AddStack(err)
 			}
-			return destroyTombstoneIfNeed(opt.clusterName, metadata)
+			return destroyTombstoneIfNeed(clusterName, metadata, gOpt)
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&opt.filterRole, "role", "R", nil, "Only display specified roles")
-	cmd.Flags().StringSliceVarP(&opt.filterNode, "node", "N", nil, "Only display specified nodes")
+	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only display specified roles")
+	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only display specified nodes")
 
 	return cmd
 }
 
-func displayClusterMeta(opt *displayOption) error {
-	if tiuputils.IsNotExist(meta.ClusterPath(opt.clusterName, meta.MetaFileName)) {
-		return errors.Errorf("cannot display non-exists cluster %s", opt.clusterName)
+func displayClusterMeta(clusterName string, opt *operator.Options) error {
+	if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+		return errors.Errorf("cannot display non-exists cluster %s", clusterName)
 	}
 
-	clsMeta, err := meta.ClusterMetadata(opt.clusterName)
+	clsMeta, err := meta.ClusterMetadata(clusterName)
 	if err != nil {
 		return err
 	}
 
 	cyan := color.New(color.FgCyan, color.Bold)
 
-	fmt.Printf("TiDB Cluster: %s\n", cyan.Sprint(opt.clusterName))
+	fmt.Printf("TiDB Cluster: %s\n", cyan.Sprint(clusterName))
 	fmt.Printf("TiDB Version: %s\n", cyan.Sprint(clsMeta.Version))
 
 	return nil
 }
 
-func destroyTombstoneIfNeed(clusterName string, metadata *meta.ClusterMeta) error {
+func destroyTombstoneIfNeed(clusterName string, metadata *meta.ClusterMeta, opt operator.Options) error {
 	topo := metadata.Topology
 
 	if !operator.NeedCheckTomebsome(topo) {
@@ -102,12 +97,12 @@ func destroyTombstoneIfNeed(clusterName string, metadata *meta.ClusterMeta) erro
 		return errors.AddStack(err)
 	}
 
-	err = ctx.SetClusterSSH(topo, metadata.User, sshTimeout)
+	err = ctx.SetClusterSSH(topo, metadata.User, gOpt.SSHTimeout)
 	if err != nil {
 		return errors.AddStack(err)
 	}
 
-	nodes, err := operator.DestroyTombstone(ctx, topo, true /* returnNodesOnly */)
+	nodes, err := operator.DestroyTombstone(ctx, topo, true /* returnNodesOnly */, opt)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -118,7 +113,7 @@ func destroyTombstoneIfNeed(clusterName string, metadata *meta.ClusterMeta) erro
 
 	log.Infof("Start destroy Tombstone nodes: %v ...", nodes)
 
-	_, err = operator.DestroyTombstone(ctx, topo, false /* returnNodesOnly */)
+	_, err = operator.DestroyTombstone(ctx, topo, false /* returnNodesOnly */, opt)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -128,8 +123,8 @@ func destroyTombstoneIfNeed(clusterName string, metadata *meta.ClusterMeta) erro
 	return meta.SaveClusterMeta(clusterName, metadata)
 }
 
-func displayClusterTopology(opt *displayOption) error {
-	metadata, err := meta.ClusterMetadata(opt.clusterName)
+func displayClusterTopology(clusterName string, opt *operator.Options) error {
+	metadata, err := meta.ClusterMetadata(clusterName)
 	if err != nil {
 		return err
 	}
@@ -142,19 +137,19 @@ func displayClusterTopology(opt *displayOption) error {
 	}
 
 	ctx := task.NewContext()
-	err = ctx.SetSSHKeySet(meta.ClusterPath(opt.clusterName, "ssh", "id_rsa"),
-		meta.ClusterPath(opt.clusterName, "ssh", "id_rsa.pub"))
+	err = ctx.SetSSHKeySet(meta.ClusterPath(clusterName, "ssh", "id_rsa"),
+		meta.ClusterPath(clusterName, "ssh", "id_rsa.pub"))
 	if err != nil {
 		return errors.AddStack(err)
 	}
 
-	err = ctx.SetClusterSSH(topo, metadata.User, sshTimeout)
+	err = ctx.SetClusterSSH(topo, metadata.User, gOpt.SSHTimeout)
 	if err != nil {
 		return errors.AddStack(err)
 	}
 
-	filterRoles := set.NewStringSet(opt.filterRole...)
-	filterNodes := set.NewStringSet(opt.filterNode...)
+	filterRoles := set.NewStringSet(opt.Roles...)
+	filterNodes := set.NewStringSet(opt.Nodes...)
 	pdList := topo.GetPDList()
 	for _, comp := range topo.ComponentsByStartOrder() {
 		for _, ins := range comp.Instances() {

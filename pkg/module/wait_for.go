@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/pingcap-incubator/tiup-cluster/pkg/executor"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
 	"github.com/pingcap/errors"
 )
@@ -85,7 +86,7 @@ func (w *WaitFor) Execute(e executor.TiOpsExecutor) (err error) {
 		}
 		return err
 	}, retryOpt); err != nil {
-		// TODO: add a debug log about the real err returned by utils.Retry()
+		log.Debugf("retry error: %s", err)
 		return errors.Errorf("timed out waiting for port %d to be %s after %s", w.c.Port, w.c.State, w.c.Timeout)
 	}
 	return nil

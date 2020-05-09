@@ -39,7 +39,7 @@ func Upgrade(
 	leaderAware := set.NewStringSet(meta.ComponentPD, meta.ComponentTiKV)
 
 	timeoutOpt := &utils.RetryOption{
-		Timeout: time.Second * time.Duration(options.Timeout),
+		Timeout: time.Second * time.Duration(options.APITimeout),
 		Delay:   time.Second * 2,
 	}
 
@@ -72,7 +72,7 @@ func Upgrade(
 						if err := stopInstance(getter, instance); err != nil {
 							return errors.Annotatef(err, "failed to stop %s", instance.GetHost())
 						}
-						if err := startInstance(getter, instance); err != nil {
+						if err := startInstance(getter, instance, options.OptTimeout); err != nil {
 							return errors.Annotatef(err, "failed to start %s", instance.GetHost())
 						}
 					}
@@ -100,7 +100,7 @@ func Upgrade(
 						if err := stopInstance(getter, instance); err != nil {
 							return errors.Annotatef(err, "failed to stop %s", instance.GetHost())
 						}
-						if err := startInstance(getter, instance); err != nil {
+						if err := startInstance(getter, instance, options.OptTimeout); err != nil {
 							return errors.Annotatef(err, "failed to start %s", instance.GetHost())
 						}
 						// remove store leader evict scheduler after restart
@@ -113,7 +113,7 @@ func Upgrade(
 			}
 		}
 
-		if err := RestartComponent(getter, instances); err != nil {
+		if err := RestartComponent(getter, instances, options.OptTimeout); err != nil {
 			return errors.Annotatef(err, "failed to restart %s", component.Name())
 		}
 	}

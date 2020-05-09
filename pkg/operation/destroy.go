@@ -29,6 +29,7 @@ import (
 func Destroy(
 	getter ExecutorGetter,
 	spec meta.Specification,
+	options Options,
 ) error {
 	uniqueHosts := set.NewStringSet()
 	coms := spec.ComponentsByStopOrder()
@@ -40,7 +41,7 @@ func Destroy(
 
 	for _, com := range coms {
 		insts := com.Instances()
-		err := DestroyComponent(getter, insts)
+		err := DestroyComponent(getter, insts, options.OptTimeout)
 		if err != nil {
 			return errors.Annotatef(err, "failed to destroy %s", com.Name())
 		}
@@ -48,7 +49,7 @@ func Destroy(
 			for _, inst := range insts {
 				instCount[inst.GetHost()]--
 				if instCount[inst.GetHost()] == 0 {
-					if err := DestroyMonitored(getter, inst, clusterSpec.MonitoredOptions); err != nil {
+					if err := DestroyMonitored(getter, inst, clusterSpec.MonitoredOptions, options.OptTimeout); err != nil {
 						return err
 					}
 				}
@@ -103,7 +104,7 @@ func DeleteGlobalDirs(getter ExecutorGetter, host string, options meta.GlobalOpt
 }
 
 // DestroyMonitored destroy the monitored service.
-func DestroyMonitored(getter ExecutorGetter, inst meta.Instance, options meta.MonitoredOptions) error {
+func DestroyMonitored(getter ExecutorGetter, inst meta.Instance, options meta.MonitoredOptions, timeout int64) error {
 	e := getter.Get(inst.GetHost())
 	log.Infof("Destroying monitored %s", inst.GetHost())
 
@@ -150,12 +151,12 @@ func DestroyMonitored(getter ExecutorGetter, inst meta.Instance, options meta.Mo
 		return errors.Annotatef(err, "failed to destroy monitored: %s", inst.GetHost())
 	}
 
-	if err := meta.PortStopped(e, options.NodeExporterPort); err != nil {
+	if err := meta.PortStopped(e, options.NodeExporterPort, timeout); err != nil {
 		str := fmt.Sprintf("%s failed to destroy node exportoer: %s", inst.GetHost(), err)
 		log.Errorf(str)
 		return errors.Annotatef(err, str)
 	}
-	if err := meta.PortStopped(e, options.BlackboxExporterPort); err != nil {
+	if err := meta.PortStopped(e, options.BlackboxExporterPort, timeout); err != nil {
 		str := fmt.Sprintf("%s failed to destroy blackbox exportoer: %s", inst.GetHost(), err)
 		log.Errorf(str)
 		return errors.Annotatef(err, str)
@@ -167,7 +168,7 @@ func DestroyMonitored(getter ExecutorGetter, inst meta.Instance, options meta.Mo
 }
 
 // DestroyComponent destroy the instances.
-func DestroyComponent(getter ExecutorGetter, instances []meta.Instance) error {
+func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, timeout int64) error {
 	if len(instances) <= 0 {
 		return nil
 	}
@@ -221,7 +222,7 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance) error {
 			return errors.Annotatef(err, "failed to destroy: %s", ins.GetHost())
 		}
 
-		err = ins.WaitForDown(e)
+		err = ins.WaitForDown(e, timeout)
 		if err != nil {
 			str := fmt.Sprintf("%s failed to destroy: %s", ins.GetHost(), err)
 			log.Errorf(str)

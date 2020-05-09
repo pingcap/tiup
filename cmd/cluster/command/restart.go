@@ -26,8 +26,6 @@ import (
 )
 
 func newRestartCmd() *cobra.Command {
-	var options operator.Options
-
 	cmd := &cobra.Command{
 		Use:   "restart <cluster-name>",
 		Short: "Restart a TiDB cluster",
@@ -36,7 +34,7 @@ func newRestartCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			if err := validRoles(options.Roles); err != nil {
+			if err := validRoles(gOpt.Roles); err != nil {
 				return err
 			}
 
@@ -55,8 +53,8 @@ func newRestartCmd() *cobra.Command {
 				SSHKeySet(
 					meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 					meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-				ClusterSSH(metadata.Topology, metadata.User, sshTimeout).
-				ClusterOperate(metadata.Topology, operator.RestartOperation, options).
+				ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
+				ClusterOperate(metadata.Topology, operator.RestartOperation, gOpt).
 				Build()
 
 			if err := t.Execute(task.NewContext()); err != nil {
@@ -73,7 +71,8 @@ func newRestartCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&options.Roles, "role", "R", nil, "Only restart specified roles")
-	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Only restart specified nodes")
+	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only restart specified roles")
+	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only restart specified nodes")
+
 	return cmd
 }

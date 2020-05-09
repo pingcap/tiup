@@ -43,7 +43,7 @@ func Start(
 
 	for _, com := range components {
 		insts := FilterInstance(com.Instances(), nodeFilter)
-		err := StartComponent(getter, insts)
+		err := StartComponent(getter, insts, options)
 		if err != nil {
 			return errors.Annotatef(err, "failed to start %s", com.Name())
 		}
@@ -51,7 +51,7 @@ func Start(
 			for _, inst := range insts {
 				if !uniqueHosts.Exist(inst.GetHost()) {
 					uniqueHosts.Insert(inst.GetHost())
-					if err := StartMonitored(getter, inst, clusterSpec.MonitoredOptions); err != nil {
+					if err := StartMonitored(getter, inst, clusterSpec.MonitoredOptions, options.OptTimeout); err != nil {
 						return err
 					}
 				}
@@ -88,7 +88,7 @@ func Stop(
 			for _, inst := range insts {
 				instCount[inst.GetHost()]--
 				if instCount[inst.GetHost()] == 0 {
-					if err := StopMonitored(getter, inst, clusterSpec.MonitoredOptions); err != nil {
+					if err := StopMonitored(getter, inst, clusterSpec.MonitoredOptions, options.OptTimeout); err != nil {
 						return err
 					}
 				}
@@ -124,9 +124,10 @@ func DestroyTombstone(
 	getter ExecutorGetter,
 	spec meta.Specification,
 	returNodesOnly bool,
+	options Options,
 ) (nodes []string, err error) {
 	if clusterSpec := spec.GetClusterSpecification(); clusterSpec != nil {
-		return DestroyClusterTombstone(getter, clusterSpec, returNodesOnly)
+		return DestroyClusterTombstone(getter, clusterSpec, returNodesOnly, options)
 	}
 	return nil, nil
 }
@@ -137,6 +138,7 @@ func DestroyClusterTombstone(
 	getter ExecutorGetter,
 	spec *meta.ClusterSpecification,
 	returNodesOnly bool,
+	options Options,
 ) (nodes []string, err error) {
 	var pdClient = api.NewPDClient(spec.GetPDList(), 10*time.Second, nil)
 
@@ -186,7 +188,7 @@ func DestroyClusterTombstone(
 			return nil, errors.AddStack(err)
 		}
 
-		err = DestroyComponent(getter, instances)
+		err = DestroyComponent(getter, instances, options.OptTimeout)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
@@ -223,7 +225,7 @@ func DestroyClusterTombstone(
 			return nil, errors.AddStack(err)
 		}
 
-		err = DestroyComponent(getter, instances)
+		err = DestroyComponent(getter, instances, options.OptTimeout)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
@@ -261,7 +263,7 @@ func DestroyClusterTombstone(
 			return nil, errors.AddStack(err)
 		}
 
-		err = DestroyComponent(getter, instances)
+		err = DestroyComponent(getter, instances, options.OptTimeout)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
@@ -298,7 +300,7 @@ func Restart(
 }
 
 // StartMonitored start BlackboxExporter and NodeExporter
-func StartMonitored(getter ExecutorGetter, instance meta.Instance, options meta.MonitoredOptions) error {
+func StartMonitored(getter ExecutorGetter, instance meta.Instance, options meta.MonitoredOptions, timeout int64) error {
 	ports := map[string]int{
 		meta.ComponentNodeExporter:     options.NodeExporterPort,
 		meta.ComponentBlackboxExporter: options.BlackboxExporterPort,
@@ -327,7 +329,7 @@ func StartMonitored(getter ExecutorGetter, instance meta.Instance, options meta.
 		}
 
 		// Check ready.
-		if err := meta.PortStarted(e, ports[comp]); err != nil {
+		if err := meta.PortStarted(e, ports[comp], timeout); err != nil {
 			str := fmt.Sprintf("\t%s failed to start: %s", instance.GetHost(), err)
 			log.Errorf(str)
 			return errors.Annotatef(err, str)
@@ -340,7 +342,7 @@ func StartMonitored(getter ExecutorGetter, instance meta.Instance, options meta.
 }
 
 // RestartComponent restarts the component.
-func RestartComponent(getter ExecutorGetter, instances []meta.Instance) error {
+func RestartComponent(getter ExecutorGetter, instances []meta.Instance, timeout int64) error {
 	if len(instances) <= 0 {
 		return nil
 	}
@@ -373,7 +375,7 @@ func RestartComponent(getter ExecutorGetter, instances []meta.Instance) error {
 		}
 
 		// Check ready.
-		err = ins.Ready(e)
+		err = ins.Ready(e, timeout)
 		if err != nil {
 			str := fmt.Sprintf("\t%s failed to restart: %s", ins.GetHost(), err)
 			log.Errorf(str)
@@ -386,7 +388,7 @@ func RestartComponent(getter ExecutorGetter, instances []meta.Instance) error {
 	return nil
 }
 
-func startInstance(getter ExecutorGetter, ins meta.Instance) error {
+func startInstance(getter ExecutorGetter, ins meta.Instance, timeout int64) error {
 	e := getter.Get(ins.GetHost())
 	log.Infof("\tStarting instance %s %s:%d",
 		ins.ComponentName(),
@@ -418,7 +420,7 @@ func startInstance(getter ExecutorGetter, ins meta.Instance) error {
 	}
 
 	// Check ready.
-	err = ins.Ready(e)
+	err = ins.Ready(e, timeout)
 	if err != nil {
 		str := fmt.Sprintf("\t%s %s:%d failed to start: %s, please check the log of the instance",
 			ins.ComponentName(),
@@ -437,7 +439,7 @@ func startInstance(getter ExecutorGetter, ins meta.Instance) error {
 }
 
 // StartComponent start the instances.
-func StartComponent(getter ExecutorGetter, instances []meta.Instance) error {
+func StartComponent(getter ExecutorGetter, instances []meta.Instance, options Options) error {
 	if len(instances) <= 0 {
 		return nil
 	}
@@ -451,7 +453,7 @@ func StartComponent(getter ExecutorGetter, instances []meta.Instance) error {
 		ins := ins
 
 		errg.Go(func() error {
-			err := startInstance(getter, ins)
+			err := startInstance(getter, ins, options.OptTimeout)
 			if err != nil {
 				return errors.AddStack(err)
 			}
@@ -463,7 +465,7 @@ func StartComponent(getter ExecutorGetter, instances []meta.Instance) error {
 }
 
 // StopMonitored stop BlackboxExporter and NodeExporter
-func StopMonitored(getter ExecutorGetter, instance meta.Instance, options meta.MonitoredOptions) error {
+func StopMonitored(getter ExecutorGetter, instance meta.Instance, options meta.MonitoredOptions, timeout int64) error {
 	ports := map[string]int{
 		meta.ComponentNodeExporter:     options.NodeExporterPort,
 		meta.ComponentBlackboxExporter: options.BlackboxExporterPort,
@@ -504,7 +506,7 @@ func StopMonitored(getter ExecutorGetter, instance meta.Instance, options meta.M
 				instance.GetPort())
 		}
 
-		if err := meta.PortStopped(e, ports[comp]); err != nil {
+		if err := meta.PortStopped(e, ports[comp], timeout); err != nil {
 			str := fmt.Sprintf("\t%s %s:%d failed to stop: %s",
 				instance.ComponentName(),
 				instance.GetHost(),

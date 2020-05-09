@@ -29,8 +29,6 @@ import (
 type execOptions struct {
 	command string
 	sudo    bool
-	roles   []string
-	nodes   []string
 }
 
 func newExecCmd() *cobra.Command {
@@ -54,18 +52,18 @@ func newExecCmd() *cobra.Command {
 				return err
 			}
 
-			filterRoles := set.NewStringSet(opt.roles...)
-			filterNodes := set.NewStringSet(opt.nodes...)
+			filterRoles := set.NewStringSet(gOpt.Roles...)
+			filterNodes := set.NewStringSet(gOpt.Nodes...)
 
 			var shellTasks []task.Task
 			uniqueHosts := map[string]int{} // host -> ssh-port
 			metadata.Topology.IterInstance(func(inst meta.Instance) {
 				if _, found := uniqueHosts[inst.GetHost()]; !found {
-					if len(opt.roles) > 0 && !filterRoles.Exist(inst.Role()) {
+					if len(gOpt.Roles) > 0 && !filterRoles.Exist(inst.Role()) {
 						return
 					}
 
-					if len(opt.nodes) > 0 && !filterNodes.Exist(inst.GetHost()) {
+					if len(gOpt.Nodes) > 0 && !filterNodes.Exist(inst.GetHost()) {
 						return
 					}
 
@@ -84,7 +82,7 @@ func newExecCmd() *cobra.Command {
 				SSHKeySet(
 					meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 					meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-				ClusterSSH(metadata.Topology, metadata.User, sshTimeout).
+				ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
 				Parallel(shellTasks...).
 				Build()
 
@@ -120,8 +118,8 @@ func newExecCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&opt.command, "command", "ls", "the command run on cluster host")
 	cmd.Flags().BoolVar(&opt.sudo, "sudo", false, "use root permissions (default false)")
-	cmd.Flags().StringSliceVarP(&opt.roles, "role", "R", nil, "Only exec on host with specified roles")
-	cmd.Flags().StringSliceVarP(&opt.nodes, "node", "N", nil, "Only exec on host with specified nodes")
+	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only exec on host with specified roles")
+	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only exec on host with specified nodes")
 
 	return cmd
 }

@@ -26,8 +26,6 @@ import (
 )
 
 func newStartCmd() *cobra.Command {
-	var options operator.Options
-
 	cmd := &cobra.Command{
 		Use:   "start <cluster-name>",
 		Short: "Start a DM cluster",
@@ -41,12 +39,13 @@ func newStartCmd() *cobra.Command {
 				return errors.Errorf("cannot start non-exists cluster %s", clusterName)
 			}
 
-			return startCluster(clusterName, options)
+			return startCluster(clusterName, gOpt)
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&options.Roles, "role", "R", nil, "Only start specified roles")
-	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Only start specified nodes")
+	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only start specified roles")
+	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only start specified nodes")
+
 	return cmd
 }
 
@@ -62,7 +61,7 @@ func startCluster(clusterName string, options operator.Options) error {
 		SSHKeySet(
 			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(metadata.Topology, metadata.User, sshTimeout).
+		ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
 		ClusterOperate(metadata.Topology, operator.StartOperation, options).
 		Build()
 

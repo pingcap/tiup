@@ -203,7 +203,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 					sshConnProps.Password,
 					sshConnProps.IdentityFile,
 					sshConnProps.IdentityFilePassphrase,
-					sshTimeout,
+					gOpt.SSHTimeout,
 				).
 				EnvInit(inst.GetHost(), globalOptions.User).
 				Mkdir(globalOptions.User, inst.GetHost(), dirs...).
@@ -229,7 +229,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 		logDir := clusterutil.Abs(globalOptions.User, inst.LogDir())
 		// Deploy component
 		t := task.NewBuilder().
-			UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, sshTimeout).
+			UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, gOpt.SSHTimeout).
 			Mkdir(globalOptions.User, inst.GetHost(),
 				deployDir, dataDir, logDir,
 				filepath.Join(deployDir, "bin"),
@@ -298,7 +298,8 @@ func buildMonitoredDeployTask(
 	uniqueHosts map[string]int, // host -> ssh-port
 	globalOptions meta.GlobalOptions,
 	monitoredOptions meta.MonitoredOptions,
-	version string) (downloadCompTasks []*task.StepDisplay, deployCompTasks []*task.StepDisplay) {
+	version string,
+) (downloadCompTasks []*task.StepDisplay, deployCompTasks []*task.StepDisplay) {
 	for _, comp := range []string{meta.ComponentNodeExporter, meta.ComponentBlackboxExporter} {
 		version := meta.ComponentVersion(comp, version)
 		t := task.NewBuilder().
@@ -319,7 +320,7 @@ func buildMonitoredDeployTask(
 
 			// Deploy component
 			t := task.NewBuilder().
-				UserSSH(host, sshPort, globalOptions.User, sshTimeout).
+				UserSSH(host, sshPort, globalOptions.User, gOpt.SSHTimeout).
 				Mkdir(globalOptions.User, host,
 					deployDir, dataDir, logDir,
 					filepath.Join(deployDir, "bin"),

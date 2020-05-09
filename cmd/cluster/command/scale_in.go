@@ -32,9 +32,6 @@ import (
 )
 
 func newScaleInCmd() *cobra.Command {
-	var (
-		options operator.Options
-	)
 	cmd := &cobra.Command{
 		Use:   "scale-in <cluster-name>",
 		Short: "Scale in a TiDB cluster",
@@ -47,7 +44,7 @@ func newScaleInCmd() *cobra.Command {
 			if !skipConfirm {
 				if err := cliutil.PromptForConfirmOrAbortError(
 					"This operation will delete the %s nodes in `%s` and all their data.\nDo you want to continue? [y/N]:",
-					strings.Join(options.Nodes, ","),
+					strings.Join(gOpt.Nodes, ","),
 					color.HiYellowString(clusterName)); err != nil {
 					return err
 				}
@@ -55,13 +52,13 @@ func newScaleInCmd() *cobra.Command {
 			}
 
 			logger.EnableAuditLog()
-			return scaleIn(clusterName, options)
+			return scaleIn(clusterName, gOpt)
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Specify the nodes")
-	cmd.Flags().Int64Var(&options.Timeout, "transfer-timeout", 300, "Timeout in seconds when transferring PD and TiKV store leaders")
-	cmd.Flags().BoolVar(&options.Force, "force", false, "Force just try stop and destroy instance before removing the instance from topo")
+	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Specify the nodes")
+	cmd.Flags().Int64Var(&gOpt.APITimeout, "transfer-timeout", 300, "Timeout in seconds when transferring PD and TiKV store leaders")
+	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force just try stop and destroy instance before removing the instance from topo")
 
 	_ = cmd.MarkFlagRequired("node")
 
@@ -121,7 +118,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 		SSHKeySet(
 			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(metadata.Topology, metadata.User, sshTimeout)
+		ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout)
 
 	if !options.Force {
 		b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, options).

@@ -63,7 +63,7 @@ func newDestroyCmd() *cobra.Command {
 				SSHKeySet(
 					meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 					meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-				ClusterSSH(metadata.Topology, metadata.User, sshTimeout).
+				ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
 				ClusterOperate(metadata.Topology, operator.StopOperation, operator.Options{}).
 				ClusterOperate(metadata.Topology, operator.DestroyOperation, operator.Options{}).
 				Build()

@@ -35,7 +35,6 @@ import (
 func newPatchCmd() *cobra.Command {
 	var (
 		overwrite bool
-		options   operator.Options
 	)
 	cmd := &cobra.Command{
 		Use:   "patch <cluster-name> <package-path>",
@@ -45,22 +44,21 @@ func newPatchCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			if err := validRoles(options.Roles); err != nil {
+			if err := validRoles(gOpt.Roles); err != nil {
 				return err
 			}
 
-			if len(options.Nodes) == 0 && len(options.Roles) == 0 {
+			if len(gOpt.Nodes) == 0 && len(gOpt.Roles) == 0 {
 				return errors.New("the flag -R or -N must be specified at least one")
 			}
-			return patch(args[0], args[1], options, overwrite)
+			return patch(args[0], args[1], gOpt, overwrite)
 		},
 	}
 
 	cmd.Flags().BoolVar(&overwrite, "overwrite", false, "Use this package in the future scale-out operations")
-	cmd.Flags().StringSliceVarP(&options.Nodes, "node", "N", nil, "Specify the nodes")
-	cmd.Flags().StringSliceVarP(&options.Roles, "role", "R", nil, "Specify the role")
-	cmd.Flags().Int64Var(&options.Timeout, "transfer-timeout", 300, "Timeout in seconds when transferring PD and TiKV store leaders")
-
+	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Specify the nodes")
+	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Specify the role")
+	cmd.Flags().Int64Var(&gOpt.APITimeout, "transfer-timeout", 300, "Timeout in seconds when transferring PD and TiKV store leaders")
 	return cmd
 }
 
@@ -99,7 +97,7 @@ func patch(clusterName, packagePath string, options operator.Options, overwrite 
 		SSHKeySet(
 			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(metadata.Topology, metadata.User, sshTimeout).
+		ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
 		Parallel(replacePackageTasks...).
 		ClusterOperate(metadata.Topology, operator.UpgradeOperation, options).
 		Build()

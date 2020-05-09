@@ -26,6 +26,7 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/flags"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/logger"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
+	operator "github.com/pingcap-incubator/tiup-cluster/pkg/operation"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/version"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	tiupmeta "github.com/pingcap-incubator/tiup/pkg/meta"
@@ -34,11 +35,10 @@ import (
 	"go.uber.org/zap"
 )
 
-var rootCmd *cobra.Command
-
 var (
 	errNS       = errorx.NewNamespace("cmd")
-	sshTimeout  int64 // timeout in seconds when connecting an SSH server
+	rootCmd     *cobra.Command
+	gOpt        operator.Options
 	skipConfirm bool
 )
 
@@ -76,7 +76,8 @@ func init() {
 
 	cliutil.BeautifyCobraUsageAndHelp(rootCmd)
 
-	rootCmd.PersistentFlags().Int64Var(&sshTimeout, "ssh-timeout", 5, "Timeout in seconds to connect host via SSH, ignored for operations that don't need an SSH connection.")
+	rootCmd.PersistentFlags().Int64Var(&gOpt.SSHTimeout, "ssh-timeout", 5, "Timeout in seconds to connect host via SSH, ignored for operations that don't need an SSH connection.")
+	rootCmd.PersistentFlags().Int64Var(&gOpt.OptTimeout, "wait-timeout", 60, "Timeout in seconds to wait for an operation to complete, ignored for operations that don't fit.")
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
 
 	rootCmd.AddCommand(

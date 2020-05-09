@@ -56,12 +56,12 @@ func (c *ClusterOperate) Execute(ctx *Context) error {
 		}
 		operator.PrintClusterStatus(ctx, c.spec)
 	case operator.DestroyOperation:
-		err := operator.Destroy(ctx, c.spec)
+		err := operator.Destroy(ctx, c.spec, c.options)
 		if err != nil {
 			return errors.Annotate(err, "failed to destroy")
 		}
 	case operator.DestroyTombstoneOperation:
-		_, err := operator.DestroyTombstone(ctx, c.spec, false)
+		_, err := operator.DestroyTombstone(ctx, c.spec, false, c.options)
 		if err != nil {
 			return errors.Annotate(err, "failed to destroy")
 		}

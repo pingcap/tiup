@@ -30,12 +30,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-type upgradeOptions struct {
-	options operator.Options
-}
-
 func newUpgradeCmd() *cobra.Command {
-	opt := upgradeOptions{}
 	cmd := &cobra.Command{
 		Use:   "upgrade <cluster-name> <version>",
 		Short: "Upgrade a specified TiDB cluster",
@@ -45,11 +40,11 @@ func newUpgradeCmd() *cobra.Command {
 			}
 
 			logger.EnableAuditLog()
-			return upgrade(args[0], args[1], opt)
+			return upgrade(args[0], args[1], gOpt)
 		},
 	}
-	cmd.Flags().BoolVar(&opt.options.Force, "force", false, "Force upgrade won't transfer leader")
-	cmd.Flags().Int64Var(&opt.options.Timeout, "transfer-timeout", 300, "Timeout in seconds when transferring PD and TiKV store leaders")
+	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force upgrade won't transfer leader")
+	cmd.Flags().Int64Var(&gOpt.APITimeout, "transfer-timeout", 300, "Timeout in seconds when transferring PD and TiKV store leaders")
 
 	return cmd
 }
@@ -70,7 +65,7 @@ func versionCompare(curVersion, newVersion string) error {
 	}
 }
 
-func upgrade(clusterName, clusterVersion string, opt upgradeOptions) error {
+func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 	if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
 		return errors.Errorf("cannot upgrade non-exists cluster %s", clusterName)
 	}
@@ -151,10 +146,10 @@ func upgrade(clusterName, clusterVersion string, opt upgradeOptions) error {
 		SSHKeySet(
 			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(metadata.Topology, metadata.User, sshTimeout).
+		ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
 		Parallel(downloadCompTasks...).
 		Parallel(copyCompTasks...).
-		ClusterOperate(metadata.Topology, operator.UpgradeOperation, opt.options).
+		ClusterOperate(metadata.Topology, operator.UpgradeOperation, opt).
 		Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
