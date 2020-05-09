@@ -428,7 +428,7 @@ func CheckSELinux(e executor.TiOpsExecutor) *CheckResult {
 	}
 	m := module.NewShellModule(module.ShellModuleConfig{
 		// ignore grep errors, the file may not exist for some systems
-		Command: "grep 'SELINUX=enforcing' /etc/selinux/config 2>/dev/null | wc -l",
+		Command: "grep -E '^\\s*SELINUX=enforcing' /etc/selinux/config 2>/dev/null | wc -l",
 		Sudo:    true,
 	})
 	stdout, stderr, err := m.Execute(e)
