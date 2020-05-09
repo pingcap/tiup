@@ -36,7 +36,7 @@ func registerTpch(root *cobra.Command) {
 
 	cmd.PersistentFlags().IntVar(&tpchConfig.ScaleFactor,
 		"sf",
-		0,
+		1,
 		"scale factor")
 
 	cmd.PersistentFlags().BoolVar(&tpchConfig.EnableOutputCheck,
