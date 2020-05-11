@@ -37,6 +37,7 @@ require (
 	gopkg.in/mattn/go-isatty.v0 v0.0.4 // indirect
 	gopkg.in/mattn/go-runewidth.v0 v0.0.4 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
+	gopkg.in/yaml.v2 v2.2.8
 	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
