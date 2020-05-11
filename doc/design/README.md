@@ -6,8 +6,7 @@ For our current status on design issues, see this [project](https://github.com/p
 Some important issues we should cover:
 
 * [Requirements and goals](requirements.md)
-* The manifest format [#120](https://github.com/pingcap-incubator/tiup/issues/120),
-* Server-side file layout
+* The [manifest format and server-side file layout](manifest.md)
 * Testing strategy ([project](https://github.com/pingcap-incubator/tiup/projects/2))
 * Support for overriding components with local versions (e.g., built from source).
 * Local mirrors
