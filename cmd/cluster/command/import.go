@@ -32,6 +32,7 @@ func newImportCmd() *cobra.Command {
 	var (
 		ansibleDir        string
 		inventoryFileName string
+		ansibleCfgFile    string
 		rename            string
 		noBackup          bool
 	)
@@ -97,7 +98,7 @@ func newImportCmd() *cobra.Command {
 			}
 
 			// parse config and import nodes
-			if err = ansible.ParseAndImportInventory(ansibleDir, clsMeta, inv, gOpt.SSHTimeout); err != nil {
+			if err = ansible.ParseAndImportInventory(ansibleDir, ansibleCfgFile, clsMeta, inv, gOpt.SSHTimeout); err != nil {
 				return err
 			}
 
@@ -149,6 +150,7 @@ func newImportCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&ansibleDir, "dir", "d", "", "The path to TiDB-Ansible directory")
 	cmd.Flags().StringVar(&inventoryFileName, "inventory", ansible.AnsibleInventoryFile, "The name of inventory file")
+	cmd.Flags().StringVar(&ansibleCfgFile, "ansible-config", ansible.AnsibleConfigFile, "The path to ansible.cfg")
 	cmd.Flags().StringVarP(&rename, "rename", "r", "", "Rename the imported cluster to `NAME`")
 	cmd.Flags().BoolVar(&noBackup, "no-backup", false, "Don't backup ansible dir, useful when there're multiple inventory files")
 

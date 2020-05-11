@@ -15,6 +15,7 @@ package ansible
 
 import (
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -22,17 +23,20 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	"github.com/relex/aini"
+	"gopkg.in/ini.v1"
 	"gopkg.in/yaml.v2"
 )
 
 var (
 	// AnsibleInventoryFile is the default inventory file name
 	AnsibleInventoryFile = "inventory.ini"
-	groupVarsGlobal      = "group_vars/all.yml"
-	groupVarsTiDB        = "group_vars/tidb_servers.yml"
-	groupVarsTiKV        = "group_vars/tikv_servers.yml"
-	groupVarsPD          = "group_vars/pd_servers.yml"
-	groupVarsTiFlash     = "group_vars/tiflash_servers.yml"
+	// AnsibleConfigFile is the default ansible config file name
+	AnsibleConfigFile = "ansible.cfg"
+	groupVarsGlobal   = "group_vars/all.yml"
+	groupVarsTiDB     = "group_vars/tidb_servers.yml"
+	groupVarsTiKV     = "group_vars/tikv_servers.yml"
+	groupVarsPD       = "group_vars/pd_servers.yml"
+	groupVarsTiFlash  = "group_vars/tiflash_servers.yml"
 	// groupVarsPump         = "group_vars/pump_servers.yml"
 	// groupVarsDrainer      = "group_vars/drainer_servers.yml"
 	groupVarsAlertManager = "group_vars/alertmanager_servers.yml"
@@ -44,7 +48,7 @@ var (
 )
 
 // ParseAndImportInventory builds a basic ClusterMeta from the main Ansible inventory
-func ParseAndImportInventory(dir string, clsMeta *meta.ClusterMeta, inv *aini.InventoryData, sshTimeout int64) error {
+func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *meta.ClusterMeta, inv *aini.InventoryData, sshTimeout int64) error {
 	log.Infof("Importing cluster...")
 	// set global vars in group_vars/all.yml
 	grpVarsAll, err := readGroupVars(dir, groupVarsGlobal)
@@ -56,6 +60,12 @@ func ParseAndImportInventory(dir string, clsMeta *meta.ClusterMeta, inv *aini.In
 	}
 	if port, ok := grpVarsAll["node_exporter_port"]; ok {
 		clsMeta.Topology.MonitoredOptions.NodeExporterPort, _ = strconv.Atoi(port)
+	}
+
+	// read ansible config
+	ansCfg, err := readAnsibleCfg(ansCfgFile)
+	if err != nil {
+		return err
 	}
 
 	// set hosts
@@ -72,7 +82,7 @@ func ParseAndImportInventory(dir string, clsMeta *meta.ClusterMeta, inv *aini.In
 			}
 			tmpIns := meta.TiDBSpec{
 				Host:     host,
-				SSHPort:  getHostPort(srv),
+				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 			}
 
@@ -118,7 +128,7 @@ func ParseAndImportInventory(dir string, clsMeta *meta.ClusterMeta, inv *aini.In
 			}
 			tmpIns := meta.TiKVSpec{
 				Host:     host,
-				SSHPort:  getHostPort(srv),
+				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 			}
 
@@ -167,7 +177,7 @@ func ParseAndImportInventory(dir string, clsMeta *meta.ClusterMeta, inv *aini.In
 			}
 			tmpIns := meta.PDSpec{
 				Host:     host,
-				SSHPort:  getHostPort(srv),
+				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 			}
 
@@ -216,7 +226,7 @@ func ParseAndImportInventory(dir string, clsMeta *meta.ClusterMeta, inv *aini.In
 			}
 			tmpIns := meta.TiFlashSpec{
 				Host:     host,
-				SSHPort:  getHostPort(srv),
+				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 			}
 
@@ -297,7 +307,7 @@ func ParseAndImportInventory(dir string, clsMeta *meta.ClusterMeta, inv *aini.In
 			}
 			tmpIns := meta.PrometheusSpec{
 				Host:     host,
-				SSHPort:  getHostPort(srv),
+				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 			}
 
@@ -346,7 +356,7 @@ func ParseAndImportInventory(dir string, clsMeta *meta.ClusterMeta, inv *aini.In
 			}
 			tmpIns := meta.AlertManagerSpec{
 				Host:     host,
-				SSHPort:  getHostPort(srv),
+				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 			}
 
@@ -389,7 +399,7 @@ func ParseAndImportInventory(dir string, clsMeta *meta.ClusterMeta, inv *aini.In
 			}
 			tmpIns := meta.GrafanaSpec{
 				Host:     host,
-				SSHPort:  getHostPort(srv),
+				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 			}
 
@@ -430,7 +440,7 @@ func ParseAndImportInventory(dir string, clsMeta *meta.ClusterMeta, inv *aini.In
 			}
 			tmpIns := meta.PumpSpec{
 				Host:     host,
-				SSHPort:  getHostPort(srv),
+				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 			}
 
@@ -475,7 +485,7 @@ func ParseAndImportInventory(dir string, clsMeta *meta.ClusterMeta, inv *aini.In
 			}
 			tmpIns := meta.DrainerSpec{
 				Host:     host,
-				SSHPort:  getHostPort(srv),
+				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
 			}
 
@@ -523,14 +533,49 @@ func readGroupVars(dir, filename string) (map[string]string, error) {
 }
 
 // getHostPort tries to read the SSH port of the host
-func getHostPort(srv *aini.Host) int {
+func getHostPort(srv *aini.Host, cfg *ini.File) int {
+	sshPort := srv.Port
+
+	// try to set value in global ansible config
+	if cfg != nil {
+		rPort, err := cfg.Section("defaults").Key("remote_port").Int()
+		if err == nil {
+			sshPort = rPort
+		}
+	}
+
+	// parse per host config
 	// aini parse the port inline with hostnames (e.g., something like `host:22`)
 	// but not handling the "ansible_port" variable
 	if port, ok := srv.Vars["ansible_port"]; ok {
 		intPort, err := strconv.Atoi(port)
 		if err == nil {
-			return intPort
-		} // else just return the srv.Port
+			sshPort = intPort
+		} // else just use the srv.Port
 	}
-	return srv.Port
+	return sshPort
+}
+
+// readAnsibleCfg tries to read global configs of ansible
+func readAnsibleCfg(cfgFile string) (*ini.File, error) {
+	var cfgData []byte // raw config ini data
+	var err error
+	// try to read from env if the file does not exist
+	if _, err = os.Stat(cfgFile); cfgFile == "" || err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+		data := os.Getenv("ANSIBLE_CONFIG")
+		if data == "" {
+			return nil, nil
+		}
+		cfgData = []byte(data)
+	} else {
+		cfgData, err = ioutil.ReadFile(cfgFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return ini.Load(cfgData)
 }
