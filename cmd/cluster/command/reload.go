@@ -99,7 +99,8 @@ func buildReloadTask(
 			switch compName := inst.ComponentName(); compName {
 			case meta.ComponentGrafana, meta.ComponentPrometheus, meta.ComponentAlertManager:
 				version := meta.ComponentVersion(compName, metadata.Version)
-				tb.Download(compName, version).CopyComponent(compName, version, inst.GetHost(), deployDir)
+				tb.Download(compName, inst.OS(), inst.Arch(), version).
+					CopyComponent(compName, inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
 			}
 		}
 

@@ -165,8 +165,8 @@ func buildScaleOutTask(
 		initializedHosts.Insert(instance.GetHost())
 	})
 	// uninitializedHosts are hosts which haven't been initialized yet
-	uninitializedHosts := map[string]int{} // host -> ssh-port
-	var iterErr error                      // error when itering over instances
+	uninitializedHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
+	var iterErr error                               // error when itering over instances
 	iterErr = nil
 	newPart.IterInstance(func(instance meta.Instance) {
 		if host := instance.GetHost(); !initializedHosts.Exist(host) {
@@ -179,7 +179,11 @@ func buildScaleOutTask(
 				return // skip the host to avoid issues
 			}
 
-			uninitializedHosts[host] = instance.GetSSHPort()
+			uninitializedHosts[host] = hostInfo{
+				ssh:  instance.GetSSHPort(),
+				os:   instance.OS(),
+				arch: instance.Arch(),
+			}
 
 			var dirs []string
 			globalOptions := metadata.Topology.GlobalOptions
@@ -233,7 +237,7 @@ func buildScaleOutTask(
 		if patchedComponents.Exist(inst.ComponentName()) {
 			tb.InstallPackage(meta.ClusterPath(clusterName, meta.PatchDirName, inst.ComponentName()+".tar.gz"), inst.GetHost(), deployDir)
 		} else {
-			tb.CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
+			tb.CopyComponent(inst.ComponentName(), inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
 		}
 		t := tb.ScaleConfig(clusterName,
 			metadata.Version,
@@ -262,7 +266,8 @@ func buildScaleOutTask(
 			switch compName := inst.ComponentName(); compName {
 			case meta.ComponentGrafana, meta.ComponentPrometheus, meta.ComponentAlertManager:
 				version := meta.ComponentVersion(compName, metadata.Version)
-				tb.Download(compName, version).CopyComponent(compName, version, inst.GetHost(), deployDir)
+				tb.Download(compName, inst.OS(), inst.Arch(), version).
+					CopyComponent(compName, inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
 			}
 		}
 

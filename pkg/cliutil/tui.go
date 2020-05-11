@@ -100,3 +100,19 @@ func PromptForPassword(format string, a ...interface{}) string {
 	}
 	return strings.TrimSpace(strings.Trim(string(input), "\n"))
 }
+
+// OsArch builds an "os/arch" string from input, it converts some similar strings
+// to different words to avoid misreading when displaying in terminal
+func OsArch(os, arch string) string {
+	osFmt := os
+	archFmt := arch
+
+	switch arch {
+	case "amd64":
+		archFmt = "x86_64"
+	case "arm64":
+		archFmt = "aarch64"
+	}
+
+	return fmt.Sprintf("%s/%s", osFmt, archFmt)
+}

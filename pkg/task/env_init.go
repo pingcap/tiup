@@ -84,7 +84,7 @@ func (e *EnvInit) execute(ctx *Context) error {
 	//   - sshd started with custom config (other than /etc/ssh/sshd_config)
 	//   - ssh server implementations other than OpenSSH (such as dropbear)
 	sshAuthorizedKeys := defaultSSHAuthorizedKeys
-	cmd = "grep -Ev '^#|^\\s*$' /etc/ssh/sshd_config"
+	cmd = "grep -Ev '^\\s*#|^\\s*$' /etc/ssh/sshd_config"
 	stdout, _, _ := exec.Execute(cmd, true) // error ignored as we have default value
 	for _, line := range strings.Split(string(stdout), "\n") {
 		if !strings.Contains(line, "AuthorizedKeysFile") {

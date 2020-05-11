@@ -183,6 +183,52 @@ tikv_servers:
 
 }
 
+func (s *metaSuite) TestPlatformConflicts(c *C) {
+	// aarch64 and arm64 are equal
+	topo := TopologySpecification{}
+	err := yaml.Unmarshal([]byte(`
+global:
+  os: "linux"
+  arch: "aarch64"
+tidb_servers:
+  - host: 172.16.5.138
+    arch: "arm64"
+tikv_servers:
+  - host: 172.16.5.138
+`), &topo)
+	c.Assert(err, IsNil)
+
+	// different arch defined for the same host
+	topo = TopologySpecification{}
+	err = yaml.Unmarshal([]byte(`
+global:
+  os: "linux"
+tidb_servers:
+  - host: 172.16.5.138
+    arch: "aarch64"
+tikv_servers:
+  - host: 172.16.5.138
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' as in 'tidb_servers:linux/arm64' and 'tikv_servers:linux/amd64'")
+
+	// different os defined for the same host
+	topo = TopologySpecification{}
+	err = yaml.Unmarshal([]byte(`
+global:
+  os: "linux"
+  arch: "aarch64"
+tidb_servers:
+  - host: 172.16.5.138
+    os: "darwin"
+tikv_servers:
+  - host: 172.16.5.138
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' as in 'tidb_servers:darwin/arm64' and 'tikv_servers:linux/arm64'")
+
+}
+
 func (s *metaSuite) TestGlobalConfig(c *C) {
 	topo := TopologySpecification{}
 	err := yaml.Unmarshal([]byte(`

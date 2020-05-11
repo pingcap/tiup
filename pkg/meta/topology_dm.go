@@ -59,6 +59,8 @@ type MasterSpec struct {
 	Offline   bool                   `yaml:"offline,omitempty"`
 	NumaNode  string                 `yaml:"numa_node,omitempty"`
 	Config    map[string]interface{} `yaml:"config,omitempty"`
+	Arch      string                 `yaml:"arch,omitempty"`
+	OS        string                 `yaml:"os,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -101,6 +103,8 @@ type WorkerSpec struct {
 	Offline   bool                   `yaml:"offline,omitempty"`
 	NumaNode  string                 `yaml:"numa_node,omitempty"`
 	Config    map[string]interface{} `yaml:"config,omitempty"`
+	Arch      string                 `yaml:"arch,omitempty"`
+	OS        string                 `yaml:"os,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -154,6 +158,64 @@ func (topo *DMTopologySpecification) UnmarshalYAML(unmarshal func(interface{}) e
 	}
 
 	return topo.Validate()
+}
+
+// platformConflictsDetect checks for conflicts in topology for different OS / Arch
+// for set to the same host / IP
+func (topo *DMTopologySpecification) platformConflictsDetect() error {
+	type (
+		conflict struct {
+			os   string
+			arch string
+			cfg  string
+		}
+	)
+
+	platformStats := map[string]conflict{}
+	topoSpec := reflect.ValueOf(topo).Elem()
+	topoType := reflect.TypeOf(topo).Elem()
+
+	for i := 0; i < topoSpec.NumField(); i++ {
+		if isSkipField(topoSpec.Field(i)) {
+			continue
+		}
+
+		compSpecs := topoSpec.Field(i)
+		for index := 0; index < compSpecs.Len(); index++ {
+			compSpec := compSpecs.Index(index)
+			// skip nodes imported from TiDB-Ansible
+			if compSpec.Interface().(InstanceSpec).IsImported() {
+				continue
+			}
+			// check hostname
+			host := compSpec.FieldByName("Host").String()
+			cfg := topoType.Field(i).Tag.Get("yaml")
+			if host == "" {
+				return errors.Errorf("`%s` contains empty host field", cfg)
+			}
+
+			// platform conflicts
+			stat := conflict{
+				cfg: cfg,
+			}
+			if j, found := findField(compSpec, "OS"); found {
+				stat.os = compSpec.Field(j).String()
+			}
+			if j, found := findField(compSpec, "Arch"); found {
+				stat.arch = compSpec.Field(j).String()
+			}
+
+			prev, exist := platformStats[host]
+			if exist {
+				if prev.os != stat.os || prev.arch != stat.arch {
+					return errors.Errorf("platform mismatch for '%s' as in '%s:%s/%s' and '%s:%s/%s'",
+						host, prev.cfg, prev.os, prev.arch, stat.cfg, stat.os, stat.arch)
+				}
+			}
+			platformStats[host] = stat
+		}
+	}
+	return nil
 }
 
 func (topo *DMTopologySpecification) portConflictsDetect() error {
@@ -314,6 +376,11 @@ func (topo *DMTopologySpecification) dirConflictsDetect() error {
 						host: host,
 						dir:  compSpec.Field(j).String(),
 					}
+					// data_dir is relative to deploy_dir by default, so they can be with
+					// same (sub) paths as long as the deploy_dirs are different
+					if item.dir != "" && !strings.HasPrefix(item.dir, "/") {
+						continue
+					}
 					// `yaml:"data_dir,omitempty"`
 					tp := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
 					prev, exist := dirStats[item]
@@ -336,6 +403,10 @@ func (topo *DMTopologySpecification) dirConflictsDetect() error {
 // Validate validates the topology specification and produce error if the
 // specification invalid (e.g: port conflicts or directory conflicts)
 func (topo *DMTopologySpecification) Validate() error {
+	if err := topo.platformConflictsDetect(); err != nil {
+		return err
+	}
+
 	if err := topo.portConflictsDetect(); err != nil {
 		return err
 	}
@@ -416,12 +487,62 @@ func setDMCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) erro
 			port := field.FieldByName("Port").Int()
 			field.Field(j).Set(reflect.ValueOf(fmt.Sprintf("dm-%s-%d", host, port)))
 		case "DataDir":
-			setDefaultDir(globalOptions.DataDir, field.Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
+			dataDir := field.Field(j).String()
+			if dataDir != "" { // already have a value, skip filling default values
+				continue
+			}
+			// If the data dir in global options is an obsolute path, it appends to
+			// the global and has a comp-port sub directory
+			if strings.HasPrefix(globalOptions.DataDir, "/") {
+				field.Field(j).Set(reflect.ValueOf(filepath.Join(
+					globalOptions.DataDir,
+					fmt.Sprintf("%s-%s", field.Interface().(InstanceSpec).Role(), getPort(field)),
+				)))
+				continue
+			}
+			// If the data dir in global options is empty or a relative path, keep it be relative
+			// Our run_*.sh start scripts are run inside deploy_path, so the final location
+			// will be deploy_path/global.data_dir
+			// (the default value of global.data_dir is "data")
+			if globalOptions.DataDir == "" {
+				field.Field(j).Set(reflect.ValueOf("data"))
+			} else {
+				field.Field(j).Set(reflect.ValueOf(globalOptions.DataDir))
+			}
 		case "DeployDir":
 			setDefaultDir(globalOptions.DeployDir, field.Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
 		case "LogDir":
 			if field.Field(j).String() == "" && defaults.CanUpdate(field.Field(j).Interface()) {
 				field.Field(j).Set(reflect.ValueOf(globalOptions.LogDir))
+			}
+		case "Arch":
+			// default values of globalOptions are set before fillCustomDefaults in Unmarshal
+			// so the globalOptions.Arch already has its default value set, no need to check again
+			if field.Field(j).String() == "" {
+				field.Field(j).Set(reflect.ValueOf(globalOptions.Arch))
+			}
+
+			switch strings.ToLower(field.Field(j).String()) {
+			// replace "x86_64" with amd64, they are the same in our repo
+			case "x86_64":
+				field.Field(j).Set(reflect.ValueOf("amd64"))
+			// replace "aarch64" with arm64
+			case "aarch64":
+				field.Field(j).Set(reflect.ValueOf("arm64"))
+			}
+
+			// convert to lower case
+			if field.Field(j).String() != "" {
+				field.Field(j).Set(reflect.ValueOf(strings.ToLower(field.Field(j).String())))
+			}
+		case "OS":
+			// default value of globalOptions.OS is already set, same as "Arch"
+			if field.Field(j).String() == "" {
+				field.Field(j).Set(reflect.ValueOf(globalOptions.OS))
+			}
+			// convert to lower case
+			if field.Field(j).String() != "" {
+				field.Field(j).Set(reflect.ValueOf(strings.ToLower(field.Field(j).String())))
 			}
 		}
 	}

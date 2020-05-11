@@ -82,6 +82,8 @@ type Instance interface {
 	Status(pdList ...string) string
 	DataDir() string
 	LogDir() string
+	OS() string // only linux supported now
+	Arch() string
 }
 
 // Specification represents the topology of cluster/dm
@@ -261,6 +263,14 @@ func (i *instance) DataDir() string {
 	}
 
 	return dataDir.String()
+}
+
+func (i *instance) OS() string {
+	return reflect.ValueOf(i.InstanceSpec).FieldByName("OS").Interface().(string)
+}
+
+func (i *instance) Arch() string {
+	return reflect.ValueOf(i.InstanceSpec).FieldByName("Arch").Interface().(string)
 }
 
 // MergeResourceControl merge the rhs into lhs and overwrite rhs if lhs has value for same field

@@ -14,6 +14,7 @@
 package command
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/joomcode/errorx"
@@ -79,7 +80,7 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 		downloadCompTasks []task.Task // tasks which are used to download components
 		copyCompTasks     []task.Task // tasks which are used to copy components to remote host
 
-		uniqueComps = map[componentInfo]struct{}{}
+		uniqueComps = map[string]struct{}{}
 	)
 
 	if err := versionCompare(metadata.Version, clusterVersion); err != nil {
@@ -98,10 +99,11 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 			}
 
 			// Download component from repository
-			if _, found := uniqueComps[compInfo]; !found {
-				uniqueComps[compInfo] = struct{}{}
+			key := fmt.Sprintf("%s-%s-%s-%s", compInfo.component, compInfo.version, inst.OS(), inst.Arch())
+			if _, found := uniqueComps[key]; !found {
+				uniqueComps[key] = struct{}{}
 				t := task.NewBuilder().
-					Download(inst.ComponentName(), version).
+					Download(inst.ComponentName(), inst.OS(), inst.Arch(), version).
 					Build()
 				downloadCompTasks = append(downloadCompTasks, t)
 			}
@@ -117,10 +119,10 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 			if inst.IsImported() {
 				switch inst.ComponentName() {
 				case meta.ComponentPrometheus, meta.ComponentGrafana, meta.ComponentAlertManager:
-					tb.CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
+					tb.CopyComponent(inst.ComponentName(), inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
 				default:
 					tb.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
-						CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
+						CopyComponent(inst.ComponentName(), inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
 				}
 				tb.InitConfig(
 					clusterName,
@@ -136,7 +138,7 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 				)
 			} else {
 				tb.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
-					CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir)
+					CopyComponent(inst.ComponentName(), inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
 			}
 			copyCompTasks = append(copyCompTasks, tb.Build())
 		}

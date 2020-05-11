@@ -162,6 +162,14 @@ func (i *dmInstance) LogDir() string {
 	return logDir
 }
 
+func (i *dmInstance) OS() string {
+	return reflect.ValueOf(i.InstanceSpec).FieldByName("OS").Interface().(string)
+}
+
+func (i *dmInstance) Arch() string {
+	return reflect.ValueOf(i.InstanceSpec).FieldByName("Arch").Interface().(string)
+}
+
 func (i *dmInstance) GetPort() int {
 	return i.port
 }

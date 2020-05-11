@@ -65,6 +65,8 @@ type (
 		DataDir         string          `yaml:"data_dir,omitempty" default:"data"`
 		LogDir          string          `yaml:"log_dir,omitempty"`
 		ResourceControl ResourceControl `yaml:"resource_control,omitempty"`
+		OS              string          `yaml:"os,omitempty" default:"linux"`
+		Arch            string          `yaml:"arch,omitempty" default:"amd64"`
 	}
 
 	// MonitoredOptions represents the monitored node configuration
@@ -131,6 +133,8 @@ type TiDBSpec struct {
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
 	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	Arch            string                 `yaml:"arch,omitempty"`
+	OS              string                 `yaml:"os,omitempty"`
 }
 
 // statusByURL queries current status of the instance by http status api.
@@ -189,6 +193,8 @@ type TiKVSpec struct {
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
 	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	Arch            string                 `yaml:"arch,omitempty"`
+	OS              string                 `yaml:"os,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -259,6 +265,8 @@ type PDSpec struct {
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
 	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	Arch            string                 `yaml:"arch,omitempty"`
+	OS              string                 `yaml:"os,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -331,6 +339,8 @@ type TiFlashSpec struct {
 	Config               map[string]interface{} `yaml:"config,omitempty"`
 	LearnerConfig        map[string]interface{} `yaml:"learner_config,omitempty"`
 	ResourceControl      ResourceControl        `yaml:"resource_control,omitempty"`
+	Arch                 string                 `yaml:"arch,omitempty"`
+	OS                   string                 `yaml:"os,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -372,6 +382,8 @@ type PumpSpec struct {
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
 	ResourceControl ResourceControl        `yaml:"resource_control"`
+	Arch            string                 `yaml:"arch,omitempty"`
+	OS              string                 `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -408,6 +420,8 @@ type DrainerSpec struct {
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
 	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	Arch            string                 `yaml:"arch,omitempty"`
+	OS              string                 `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -442,6 +456,8 @@ type CDCSpec struct {
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
 	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	Arch            string                 `yaml:"arch,omitempty"`
+	OS              string                 `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -476,6 +492,8 @@ type PrometheusSpec struct {
 	NumaNode        string          `yaml:"numa_node,omitempty"`
 	Retention       string          `yaml:"storage_retention,omitempty"`
 	ResourceControl ResourceControl `yaml:"resource_control,omitempty"`
+	Arch            string          `yaml:"arch,omitempty"`
+	OS              string          `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -506,6 +524,8 @@ type GrafanaSpec struct {
 	Port            int             `yaml:"port" default:"3000"`
 	DeployDir       string          `yaml:"deploy_dir,omitempty"`
 	ResourceControl ResourceControl `yaml:"resource_control,omitempty"`
+	Arch            string          `yaml:"arch,omitempty"`
+	OS              string          `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -540,6 +560,8 @@ type AlertManagerSpec struct {
 	LogDir          string          `yaml:"log_dir,omitempty"`
 	NumaNode        string          `yaml:"numa_node,omitempty"`
 	ResourceControl ResourceControl `yaml:"resource_control,omitempty"`
+	Arch            string          `yaml:"arch,omitempty"`
+	OS              string          `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -569,6 +591,7 @@ func (topo *TopologySpecification) UnmarshalYAML(unmarshal func(interface{}) err
 		return err
 	}
 
+	// set default values from tag
 	if err := defaults.Set(topo); err != nil {
 		return errors.Trace(err)
 	}
@@ -583,6 +606,7 @@ func (topo *TopologySpecification) UnmarshalYAML(unmarshal func(interface{}) err
 			fmt.Sprintf("%s-%d", RoleMonitor, topo.MonitoredOptions.NodeExporterPort))
 	}
 
+	// populate custom default values as needed
 	if err := fillCustomDefaults(&topo.GlobalOptions, topo); err != nil {
 		return err
 	}
@@ -597,6 +621,64 @@ func findField(v reflect.Value, fieldName string) (int, bool) {
 		}
 	}
 	return -1, false
+}
+
+// platformConflictsDetect checks for conflicts in topology for different OS / Arch
+// for set to the same host / IP
+func (topo *TopologySpecification) platformConflictsDetect() error {
+	type (
+		conflict struct {
+			os   string
+			arch string
+			cfg  string
+		}
+	)
+
+	platformStats := map[string]conflict{}
+	topoSpec := reflect.ValueOf(topo).Elem()
+	topoType := reflect.TypeOf(topo).Elem()
+
+	for i := 0; i < topoSpec.NumField(); i++ {
+		if isSkipField(topoSpec.Field(i)) {
+			continue
+		}
+
+		compSpecs := topoSpec.Field(i)
+		for index := 0; index < compSpecs.Len(); index++ {
+			compSpec := compSpecs.Index(index)
+			// skip nodes imported from TiDB-Ansible
+			if compSpec.Interface().(InstanceSpec).IsImported() {
+				continue
+			}
+			// check hostname
+			host := compSpec.FieldByName("Host").String()
+			cfg := topoType.Field(i).Tag.Get("yaml")
+			if host == "" {
+				return errors.Errorf("`%s` contains empty host field", cfg)
+			}
+
+			// platform conflicts
+			stat := conflict{
+				cfg: cfg,
+			}
+			if j, found := findField(compSpec, "OS"); found {
+				stat.os = compSpec.Field(j).String()
+			}
+			if j, found := findField(compSpec, "Arch"); found {
+				stat.arch = compSpec.Field(j).String()
+			}
+
+			prev, exist := platformStats[host]
+			if exist {
+				if prev.os != stat.os || prev.arch != stat.arch {
+					return errors.Errorf("platform mismatch for '%s' as in '%s:%s/%s' and '%s:%s/%s'",
+						host, prev.cfg, prev.os, prev.arch, stat.cfg, stat.os, stat.arch)
+				}
+			}
+			platformStats[host] = stat
+		}
+	}
+	return nil
 }
 
 func (topo *TopologySpecification) portConflictsDetect() error {
@@ -784,6 +866,10 @@ func (topo *TopologySpecification) dirConflictsDetect() error {
 // Validate validates the topology specification and produce error if the
 // specification invalid (e.g: port conflicts or directory conflicts)
 func (topo *TopologySpecification) Validate() error {
+	if err := topo.platformConflictsDetect(); err != nil {
+		return err
+	}
+
 	if err := topo.portConflictsDetect(); err != nil {
 		return err
 	}
@@ -930,6 +1016,35 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 		case "LogDir":
 			if field.Field(j).String() == "" && defaults.CanUpdate(field.Field(j).Interface()) {
 				field.Field(j).Set(reflect.ValueOf(globalOptions.LogDir))
+			}
+		case "Arch":
+			// default values of globalOptions are set before fillCustomDefaults in Unmarshal
+			// so the globalOptions.Arch already has its default value set, no need to check again
+			if field.Field(j).String() == "" {
+				field.Field(j).Set(reflect.ValueOf(globalOptions.Arch))
+			}
+
+			switch strings.ToLower(field.Field(j).String()) {
+			// replace "x86_64" with amd64, they are the same in our repo
+			case "x86_64":
+				field.Field(j).Set(reflect.ValueOf("amd64"))
+			// replace "aarch64" with arm64
+			case "aarch64":
+				field.Field(j).Set(reflect.ValueOf("arm64"))
+			}
+
+			// convert to lower case
+			if field.Field(j).String() != "" {
+				field.Field(j).Set(reflect.ValueOf(strings.ToLower(field.Field(j).String())))
+			}
+		case "OS":
+			// default value of globalOptions.OS is already set, same as "Arch"
+			if field.Field(j).String() == "" {
+				field.Field(j).Set(reflect.ValueOf(globalOptions.OS))
+			}
+			// convert to lower case
+			if field.Field(j).String() != "" {
+				field.Field(j).Set(reflect.ValueOf(strings.ToLower(field.Field(j).String())))
 			}
 		}
 	}

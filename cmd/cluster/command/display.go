@@ -133,7 +133,7 @@ func displayClusterTopology(clusterName string, opt *operator.Options) error {
 
 	clusterTable := [][]string{
 		// Header
-		{"ID", "Role", "Host", "Ports", "Status", "Data Dir", "Deploy Dir"},
+		{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Data Dir", "Deploy Dir"},
 	}
 
 	ctx := task.NewContext()
@@ -189,6 +189,7 @@ func displayClusterTopology(clusterName string, opt *operator.Options) error {
 				ins.Role(),
 				ins.GetHost(),
 				utils.JoinInt(ins.UsedPorts(), "/"),
+				cliutil.OsArch(ins.OS(), ins.Arch()),
 				formatInstanceStatus(status),
 				dataDir,
 				deployDir,

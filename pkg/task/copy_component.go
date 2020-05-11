@@ -24,6 +24,8 @@ import (
 // to the target directory of path
 type CopyComponent struct {
 	component string
+	os        string
+	arch      string
 	version   repository.Version
 	host      string
 	dstDir    string
@@ -33,7 +35,7 @@ type CopyComponent struct {
 func (c *CopyComponent) Execute(ctx *Context) error {
 	// Copy to remote server
 	resName := fmt.Sprintf("%s-%s", c.component, c.version)
-	fileName := fmt.Sprintf("%s-linux-amd64.tar.gz", resName)
+	fileName := fmt.Sprintf("%s-%s-%s.tar.gz", resName, c.os, c.arch)
 	srcPath := meta.ProfilePath(meta.TiOpsPackageCacheDir, fileName)
 
 	install := &InstallPackage{
@@ -52,5 +54,6 @@ func (c *CopyComponent) Rollback(ctx *Context) error {
 
 // String implements the fmt.Stringer interface
 func (c *CopyComponent) String() string {
-	return fmt.Sprintf("CopyComponent: component=%s, version=%s, remote=%s:%s", c.component, c.version, c.host, c.dstDir)
+	return fmt.Sprintf("CopyComponent: component=%s, version=%s, remote=%s:%s os=%s, arch=%s",
+		c.component, c.version, c.host, c.dstDir, c.os, c.arch)
 }

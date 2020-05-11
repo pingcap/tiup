@@ -29,6 +29,8 @@ import (
 // the repository, there is nothing to do if the specified version exists.
 type Downloader struct {
 	component string
+	os        string
+	arch      string
 	version   repository.Version
 }
 
@@ -42,8 +44,8 @@ func (d *Downloader) Execute(_ *Context) error {
 	}
 
 	resName := fmt.Sprintf("%s-%s", d.component, d.version)
-	fileName := fmt.Sprintf("%s-linux-amd64.tar.gz", resName)
-	sha1File := fmt.Sprintf("%s-linux-amd64.sha1", resName)
+	fileName := fmt.Sprintf("%s-%s-%s.tar.gz", resName, d.os, d.arch)
+	sha1File := fmt.Sprintf("%s-%s-%s.sha1", resName, d.os, d.arch)
 	srcPath := meta.ProfilePath(meta.TiOpsPackageCacheDir, fileName)
 
 	if err := os.MkdirAll(meta.ProfilePath(meta.TiOpsPackageCacheDir), 0755); err != nil {
@@ -62,12 +64,25 @@ func (d *Downloader) Execute(_ *Context) error {
 		defer mirror.Close()
 
 		repo, err := repository.NewRepository(mirror, repository.Options{
-			GOOS:              "linux",
-			GOARCH:            "amd64",
+			GOOS:              d.os,
+			GOARCH:            d.arch,
 			DisableDecompress: true,
 		})
 		if err != nil {
 			return err
+		}
+
+		// validate component and platform info
+		manifest, err := repo.Manifest()
+		if err != nil {
+			return err
+		}
+		compInfo, found := manifest.FindComponent(d.component)
+		if !found {
+			return errors.Errorf("component '%s' not supported", d.component)
+		}
+		if !compInfo.IsSupport(d.os, d.arch) {
+			return errors.Errorf("component '%s' does not support platform %s/%s", d.component, d.os, d.arch)
 		}
 
 		versions, err := repo.ComponentVersions(d.component)
@@ -75,7 +90,7 @@ func (d *Downloader) Execute(_ *Context) error {
 			return err
 		}
 		if !d.version.IsNightly() && !versions.ContainsVersion(d.version) {
-			return errors.Errorf("component '%s' doesn't contains version '%s'", d.component, d.version)
+			return errors.Errorf("component '%s' does not contain version '%s'", d.component, d.version)
 		}
 
 		err = repo.Mirror().Download(fileName, meta.ProfilePath(meta.TiOpsPackageCacheDir))
@@ -120,5 +135,6 @@ func (d *Downloader) Rollback(ctx *Context) error {
 
 // String implements the fmt.Stringer interface
 func (d *Downloader) String() string {
-	return fmt.Sprintf("Download: component=%s, version=%s", d.component, d.version)
+	return fmt.Sprintf("Download: component=%s, version=%s, os=%s, arch=%s",
+		d.component, d.version, d.os, d.arch)
 }

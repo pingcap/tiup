@@ -109,18 +109,25 @@ func (b *Builder) CopyFile(src, dst, server string, download bool) *Builder {
 }
 
 // Download appends a Downloader task to the current task collection
-func (b *Builder) Download(component string, version repository.Version) *Builder {
+func (b *Builder) Download(component, os, arch string, version repository.Version) *Builder {
 	b.tasks = append(b.tasks, &Downloader{
 		component: component,
+		os:        os,
+		arch:      arch,
 		version:   version,
 	})
 	return b
 }
 
 // CopyComponent appends a CopyComponent task to the current task collection
-func (b *Builder) CopyComponent(component string, version repository.Version, dstHost, dstDir string) *Builder {
+func (b *Builder) CopyComponent(component, os, arch string,
+	version repository.Version,
+	dstHost, dstDir string,
+) *Builder {
 	b.tasks = append(b.tasks, &CopyComponent{
 		component: component,
+		os:        os,
+		arch:      arch,
 		version:   version,
 		host:      dstHost,
 		dstDir:    dstDir,

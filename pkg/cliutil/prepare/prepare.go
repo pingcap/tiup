@@ -274,16 +274,20 @@ Please change to use another port or another host.
 // BuildDownloadCompTasks build download component tasks
 func BuildDownloadCompTasks(version string, topo meta.Specification) []*task.StepDisplay {
 	var tasks []*task.StepDisplay
-	topo.IterComponent(func(comp meta.Component) {
-		if len(comp.Instances()) < 1 {
-			return
+	uniqueTaskList := make(map[string]struct{}) // map["comp-os-arch"]{}
+	topo.IterInstance(func(inst meta.Instance) {
+		key := fmt.Sprintf("%s-%s-%s", inst.ComponentName(), inst.OS(), inst.Arch())
+		if _, found := uniqueTaskList[key]; !found {
+			uniqueTaskList[key] = struct{}{}
+
+			version := meta.ComponentVersion(inst.ComponentName(), version)
+			t := task.
+				NewBuilder().
+				Download(inst.ComponentName(), inst.OS(), inst.Arch(), version).
+				BuildAsStep(fmt.Sprintf("  - Download %s:%s (%s/%s)",
+					inst.ComponentName(), version, inst.OS(), inst.Arch()))
+			tasks = append(tasks, t)
 		}
-		version := meta.ComponentVersion(comp.Name(), version)
-		t := task.
-			NewBuilder().
-			Download(comp.Name(), version).
-			BuildAsStep(fmt.Sprintf("  - Download %s:%s", comp.Name(), version))
-		tasks = append(tasks, t)
 	})
 	return tasks
 }

@@ -214,7 +214,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 				filepath.Join(deployDir, "bin"),
 				filepath.Join(deployDir, "conf"),
 				filepath.Join(deployDir, "scripts")).
-			CopyComponent(inst.ComponentName(), version, inst.GetHost(), deployDir).
+			CopyComponent(inst.ComponentName(), inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir).
 			InitConfig(
 				clusterName,
 				clusterVersion,

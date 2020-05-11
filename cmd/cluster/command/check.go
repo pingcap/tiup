@@ -101,11 +101,26 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecifica
 		checkSysTasks []*task.StepDisplay
 		cleanTasks    []*task.StepDisplay
 		applyFixTasks []*task.StepDisplay
+		downloadTasks []*task.StepDisplay
 	)
 	insightVer := meta.ComponentVersion(meta.ComponentCheckCollector, "")
 
-	uniqueHosts := map[string]int{} // host -> ssh-port
+	uniqueHosts := map[string]int{}             // host -> ssh-port
+	uniqueArchList := make(map[string]struct{}) // map["os-arch"]{}
 	topo.IterInstance(func(inst meta.Instance) {
+		archKey := fmt.Sprintf("%s-%s", inst.OS(), inst.Arch())
+		if _, found := uniqueArchList[archKey]; !found {
+			uniqueArchList[archKey] = struct{}{}
+			t0 := task.NewBuilder().
+				Download(
+					meta.ComponentCheckCollector,
+					inst.OS(),
+					inst.Arch(),
+					insightVer,
+				).
+				BuildAsStep(fmt.Sprintf("  - Downloading check tools for %s/%s", inst.OS(), inst.Arch()))
+			downloadTasks = append(downloadTasks, t0)
+		}
 		if _, found := uniqueHosts[inst.GetHost()]; !found {
 			uniqueHosts[inst.GetHost()] = inst.GetSSHPort()
 
@@ -121,7 +136,14 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecifica
 					gOpt.SSHTimeout,
 				).
 				Mkdir(opt.user, inst.GetHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
-				CopyComponent(meta.ComponentCheckCollector, insightVer, inst.GetHost(), task.CheckToolsPathDir).
+				CopyComponent(
+					meta.ComponentCheckCollector,
+					inst.OS(),
+					inst.Arch(),
+					insightVer,
+					inst.GetHost(),
+					task.CheckToolsPathDir,
+				).
 				Shell(
 					inst.GetHost(),
 					filepath.Join(task.CheckToolsPathDir, "bin", "insight"),
@@ -228,7 +250,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecifica
 	})
 
 	t := task.NewBuilder().
-		Download(meta.ComponentCheckCollector, insightVer).
+		ParallelStep("+ Download necessary tools", downloadTasks...).
 		ParallelStep("+ Collect basic system information", collectTasks...).
 		ParallelStep("+ Check system requirements", checkSysTasks...).
 		ParallelStep("+ Cleanup check files", cleanTasks...).
