@@ -56,6 +56,7 @@ type bootOptions struct {
 	tikvNum           int
 	tiflashNum        int
 	host              string
+	tidbHost          string
 	monitor           bool
 }
 
@@ -95,6 +96,7 @@ func execute() error {
 	pdNum := 1
 	tiflashNum := 1
 	host := "127.0.0.1"
+	tidbHost := ""
 	monitor := false
 	tidbConfigPath := ""
 	tikvConfigPath := ""
@@ -143,6 +145,7 @@ Examples:
 				tikvNum:           tikvNum,
 				tiflashNum:        tiflashNum,
 				host:              host,
+				tidbHost:          tidbHost,
 				monitor:           monitor,
 			}
 			return bootCluster(options)
@@ -154,6 +157,7 @@ Examples:
 	rootCmd.Flags().IntVarP(&pdNum, "pd", "", 1, "PD instance number")
 	rootCmd.Flags().IntVarP(&tiflashNum, "tiflash", "", defaultTiflashNum, "TiFlash instance number")
 	rootCmd.Flags().StringVarP(&host, "host", "", host, "Playground cluster host")
+	rootCmd.Flags().StringVarP(&tidbHost, "db.host", "", "", "Playground TiDB host. If not provided, TiDB will still use `host` flag as its host")
 	rootCmd.Flags().BoolVar(&monitor, "monitor", false, "Start prometheus component")
 	rootCmd.Flags().StringVarP(&tidbConfigPath, "db.config", "", tidbConfigPath, "TiDB instance configuration file")
 	rootCmd.Flags().StringVarP(&tikvConfigPath, "kv.config", "", tikvConfigPath, "TiKV instance configuration file")
@@ -298,9 +302,14 @@ func bootCluster(options *bootOptions) error {
 		allRole = append(allRole, "tikv")
 	}
 
+	tidbHost := options.host
+	// If tidbHost flag is specified, use it instead.
+	if options.tidbHost != "" {
+		tidbHost = options.tidbHost
+	}
 	for i := 0; i < options.tidbNum; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("tidb-%d", i))
-		inst := instance.NewTiDBInstance(dir, options.host, options.tidbConfigPath, i, pds)
+		inst := instance.NewTiDBInstance(dir, tidbHost, options.tidbConfigPath, i, pds)
 		dbs = append(dbs, inst)
 		all = append(all, inst)
 		allRole = append(allRole, "tidb")
