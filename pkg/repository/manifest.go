@@ -26,7 +26,8 @@ type signature struct {
 	Sig   string `json:"sig"`
 }
 
-type signedBase struct {
+// SignedBase represents parts of a manifest's signed value which are shared by all manifests.
+type SignedBase struct {
 	Ty          string `json:"_type"`
 	SpecVersion string `json:"spec_version"`
 	Expires     string `json:"expires"`
@@ -34,22 +35,65 @@ type signedBase struct {
 	Version uint `json:"version"`
 }
 
-type manifest struct {
-	Signatures []signature   `json:"signatures"`
-	Signed     ValidManifest `json:"signed"`
+// Manifest representation for ser/de.
+type Manifest struct {
+	// Signatures value
+	Signatures []signature `json:"signatures"`
+	// Signed value; any value here must have the SignedBase base.
+	Signed ValidManifest `json:"signed"`
 }
 
-// ValidManifest is a manifest which includes signedBase and can be validated.
+// ValidManifest is a manifest which includes SignedBase and can be validated.
 type ValidManifest interface {
 	isValid() error
-	base() *signedBase
+	// Base returns this manifest's SignedBase which is values common to all manifests.
+	Base() *SignedBase
+	// Filename returns the unversioned name that the manifest should be saved as based on its Go type.
+	Filename() string
 }
 
-var types = map[string]struct{}{"root": {}, "index": {}, "component": {}, "snapshot": {}, "timestamp": {}}
+// ty is type information about a manifest
+type ty struct {
+	filename  string
+	versioned bool
+}
+
+var types = map[string]ty{
+	"root":      {"root.json", true},
+	"index":     {"index.json", true},
+	"component": {"", true},
+	"snapshot":  {"snapshot.json", false},
+	"timestamp": {"timestamp.json", false},
+}
 var knownVersions = map[string]struct{}{"0.1.0": {}}
 
-type timestamp struct {
-	signedBase
+// Root manifest
+type Root struct {
+	SignedBase
+	// TODO
+}
+
+// Index manifest
+type Index struct {
+	SignedBase
+	// TODO
+}
+
+// Component manifest
+type Component struct {
+	SignedBase
+	// TODO
+}
+
+// Snapshot manifest
+type Snapshot struct {
+	SignedBase
+	// TODO
+}
+
+// Timestamp manifest
+type Timestamp struct {
+	SignedBase
 	Meta map[string]fileHash `json:"meta"`
 }
 
@@ -59,17 +103,27 @@ type fileHash struct {
 }
 
 // verifySignature ensures that each signature in manifest::signatures is a valid signature of manifest::signed.
-func (manifest *manifest) verifySignature(keys *keyStore) error {
+func (manifest *Manifest) verifySignature(keys *KeyStore) error {
 	// TODO
 	return nil
 }
 
-func (s *signedBase) expiryTime() (time.Time, error) {
+// Filename returns the unversioned name that the manifest should be saved as based on the type in s.
+func (s *SignedBase) Filename() string {
+	return types[s.Ty].filename
+}
+
+// Versioned indicates whether versioned versions of a manifest are saved, e.g., 42.foo.json.
+func (s *SignedBase) Versioned() bool {
+	return types[s.Ty].versioned
+}
+
+func (s *SignedBase) expiryTime() (time.Time, error) {
 	return time.Parse(time.RFC3339, s.Expires)
 }
 
 // isValid checks if s is valid manifest metadata.
-func (s *signedBase) isValid() error {
+func (s *SignedBase) isValid() error {
 	if _, ok := types[s.Ty]; !ok {
 		return fmt.Errorf("unknown manifest type: `%s`", s.Ty)
 	}
@@ -90,12 +144,28 @@ func (s *signedBase) isValid() error {
 	return nil
 }
 
-func (ts *timestamp) isValid() error {
-	snapshot, ok := ts.Meta["snapshot.json"]
+func (manifest *Root) isValid() error {
+	return nil
+}
+
+func (manifest *Index) isValid() error {
+	return nil
+}
+
+func (manifest *Component) isValid() error {
+	return nil
+}
+
+func (manifest *Snapshot) isValid() error {
+	return nil
+}
+
+func (manifest *Timestamp) isValid() error {
+	snapshot, ok := manifest.Meta["snapshot.json"]
 	if !ok {
 		return errors.New("timestamp manifest is missing entry for snapshot.json")
 	}
-	if len(ts.Meta) > 1 {
+	if len(manifest.Meta) > 1 {
 		return errors.New("timestamp manifest has too many entries in `meta`")
 	}
 	if len(snapshot.Hashes) == 0 {
@@ -104,13 +174,60 @@ func (ts *timestamp) isValid() error {
 	return nil
 }
 
-func (ts *timestamp) base() *signedBase {
-	return &ts.signedBase
+// Base implements ValidManifest
+func (manifest *Root) Base() *SignedBase {
+	return &manifest.SignedBase
 }
 
-func readManifest(input io.Reader, role ValidManifest, keys *keyStore) error {
+// Base implements ValidManifest
+func (manifest *Index) Base() *SignedBase {
+	return &manifest.SignedBase
+}
+
+// Base implements ValidManifest
+func (manifest *Component) Base() *SignedBase {
+	return &manifest.SignedBase
+}
+
+// Base implements ValidManifest
+func (manifest *Snapshot) Base() *SignedBase {
+	return &manifest.SignedBase
+}
+
+// Base implements ValidManifest
+func (manifest *Timestamp) Base() *SignedBase {
+	return &manifest.SignedBase
+}
+
+// Filename implements ValidManifest
+func (manifest *Root) Filename() string {
+	return "root.json"
+}
+
+// Filename implements ValidManifest
+func (manifest *Index) Filename() string {
+	return "index.json"
+}
+
+// Filename implements ValidManifest
+func (manifest *Component) Filename() string {
+	panic("Unreachable")
+}
+
+// Filename implements ValidManifest
+func (manifest *Snapshot) Filename() string {
+	return "snapshot.json"
+}
+
+// Filename implements ValidManifest
+func (manifest *Timestamp) Filename() string {
+	return "timestamp.json"
+}
+
+// ReadManifest reads a manifest from input and validates it, the result is stored in role, which must be a pointer type.
+func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) error {
 	decoder := json.NewDecoder(input)
-	var m manifest
+	var m Manifest
 	m.Signed = role
 	err := decoder.Decode(&m)
 	if err != nil {
@@ -126,7 +243,7 @@ func readManifest(input io.Reader, role ValidManifest, keys *keyStore) error {
 		return err
 	}
 
-	err = m.Signed.base().isValid()
+	err = m.Signed.Base().isValid()
 	if err != nil {
 		return err
 	}
@@ -134,9 +251,9 @@ func readManifest(input io.Reader, role ValidManifest, keys *keyStore) error {
 	return m.Signed.isValid()
 }
 
-func readTimestampManifest(input io.Reader, keys *keyStore) (*timestamp, error) {
-	var ts timestamp
-	err := readManifest(input, &ts, keys)
+func readTimestampManifest(input io.Reader, keys *KeyStore) (*Timestamp, error) {
+	var ts Timestamp
+	err := ReadManifest(input, &ts, keys)
 	if err != nil {
 		return nil, err
 	}
@@ -144,15 +261,15 @@ func readTimestampManifest(input io.Reader, keys *keyStore) (*timestamp, error) 
 	return &ts, nil
 }
 
-// writeManifest creates a manifest and writes it to out.
-func writeManifest(out io.Writer, role ValidManifest) error {
+// signAndWrite creates a manifest and writes it to out.
+func signAndWrite(out io.Writer, role ValidManifest) error {
 	// TODO sign the result here and make signatures
 	_, err := json.Marshal(role)
 	if err != nil {
 		return err
 	}
 
-	manifest := manifest{
+	manifest := Manifest{
 		Signatures: []signature{{
 			KeyID: "TODO",
 			Sig:   "TODO",
