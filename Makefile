@@ -129,6 +129,9 @@ pack:
 tiops:
 	make -C components/tiops package
 
+bench:
+	make -C components/bench package
+
 package: playground client pack tiops
 	mkdir -p package ; \
 	GOOS=darwin GOARCH=amd64 go build ; \
