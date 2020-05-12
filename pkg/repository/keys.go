@@ -13,6 +13,7 @@
 
 package repository
 
-type keyStore struct {
+// KeyStore is the collection of all public keys available to TiUp.
+type KeyStore struct {
 	// TODO
 }

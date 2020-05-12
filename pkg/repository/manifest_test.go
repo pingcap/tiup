@@ -29,7 +29,7 @@ func TestReadTimestamp(t *testing.T) {
 			}
 		],
 		"signed": {
-			"_type": "timestamp",
+			"_type": "Timestamp",
 			"spec_version": "0.1.0",
 			"expires": "2220-05-11T04:51:08Z",
 			"version": 43,
@@ -47,24 +47,24 @@ func TestReadTimestamp(t *testing.T) {
 }
 
 func TestEmptyManifest(t *testing.T) {
-	var ts timestamp
-	err := readManifest(strings.NewReader(""), &ts, nil)
+	var ts Timestamp
+	err := ReadManifest(strings.NewReader(""), &ts, nil)
 	assert.NotNil(t, err)
 }
 
 func TestWriteManifest(t *testing.T) {
-	ts := timestamp{Meta: map[string]fileHash{"snapshot.json": {
+	ts := Timestamp{Meta: map[string]fileHash{"snapshot.json": {
 		Hashes: map[string]string{"TODO": "TODO"},
 		Length: 0,
 	}},
-		signedBase: signedBase{
-			Ty:          "timestamp",
+		SignedBase: SignedBase{
+			Ty:          "Timestamp",
 			SpecVersion: "0.1.0",
 			Expires:     "2220-05-11T04:51:08Z",
 			Version:     10,
 		}}
 	var out strings.Builder
-	err := writeManifest(&out, &ts)
+	err := signAndWrite(&out, &ts)
 	assert.Nil(t, err)
 	ts2, err := readTimestampManifest(strings.NewReader(out.String()), nil)
 	assert.Nil(t, err)
@@ -72,4 +72,4 @@ func TestWriteManifest(t *testing.T) {
 }
 
 // TODO test that invalid manifests trigger errors
-// TODO test writeManifest
+// TODO test signAndWrite

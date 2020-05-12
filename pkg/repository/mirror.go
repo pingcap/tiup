@@ -54,7 +54,7 @@ type (
 	}
 )
 
-// NewMirror returns a mirror instance base on the schema of mirror
+// NewMirror returns a mirror instance Base on the schema of mirror
 func NewMirror(mirror string, options MirrorOptions) Mirror {
 	if options.Progress == nil {
 		options.Progress = &ProgressBar{}
