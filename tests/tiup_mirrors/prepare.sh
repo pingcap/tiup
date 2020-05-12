@@ -30,19 +30,19 @@ mv "./package"/* "./"
 
 # Prepare the mirrors component
 mv "$DIR/../tiup_home/bin/mirrors" "$DIR/mirrors"
-tiup package -- mirrors --release=v0.0.1 --entry=mirrors --arch=amd64 --os="$os" --name=mirrors --standalone
+tiup package mirrors --release=v0.0.1 --entry=mirrors --arch=amd64 --os="$os" --name=mirrors --standalone
 rm mirrors
 mv "./package"/* "./"
 
 # Prepare the doc component
 mv "$DIR/../tiup_home/bin/doc" "$DIR/doc"
-tiup package -- doc --release=v0.0.1 --entry=doc --arch=amd64 --os="$os" --name=doc --standalone
+tiup package doc --release=v0.0.1 --entry=doc --arch=amd64 --os="$os" --name=doc --standalone
 rm doc
 mv "./package"/* "./"
 
 # Prepare the playground component
 mv "$DIR/../tiup_home/bin/playground" "$DIR/playground"
-tiup package -- playground --release=v0.0.1 --entry=playground --arch=amd64 --os="$os" --name=playground --standalone
+tiup package playground --release=v0.0.1 --entry=playground --arch=amd64 --os="$os" --name=playground --standalone
 rm playground
 mv "./package"/* "./"
 
@@ -53,7 +53,7 @@ wget -nc --quiet "$OFFICICAL_MIRRORS/ctl-$VERSION-$os-amd64.tar.gz"
 mkdir -p ctls
 tar xf ctl-$VERSION-$os-amd64.tar.gz -C ctls
 mv "$DIR/../tiup_home/bin/ctl" "./ctls/ctl"
-tiup package -- $(ls ctls) --release=v0.0.1 --entry=ctl --arch=amd64 --os="$os" --name=ctl --standalone -C ctls
+tiup package $(ls ctls) --release=v0.0.1 --entry=ctl --arch=amd64 --os="$os" --name=ctl --standalone -C ctls
 rm -rf ./ctls
 mv "./package"/* "./"
 
@@ -63,7 +63,7 @@ do
   echo "#!/bin/bash" > test.bin
   echo "echo 'integration test $v'" >> test.bin
   chmod +x test.bin
-  tiup package -- test.bin --release="$v" --entry=test.bin --arch=amd64 --os="$os" --name=test
+  tiup package test.bin --release="$v" --entry=test.bin --arch=amd64 --os="$os" --name=test
 done
 mv "./package"/* "./"
 
