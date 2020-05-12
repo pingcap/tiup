@@ -15,6 +15,7 @@ package ansible
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -36,7 +37,18 @@ func ReadInventory(dir, inventoryFileName string) (string, *meta.ClusterMeta, *a
 	defer inventoryFile.Close()
 
 	log.Infof("Found inventory file %s, parsing...", inventoryFile.Name())
-	inventory, err := aini.Parse(inventoryFile)
+	clsName, clsMeta, inventory, err := parseInventoryFile(inventoryFile)
+	if err != nil {
+		return "", nil, inventory, err
+	}
+
+	log.Infof("Found cluster \"%s\" (%s), deployed with user %s.",
+		clsName, clsMeta.Version, clsMeta.User)
+	return clsName, clsMeta, inventory, err
+}
+
+func parseInventoryFile(invFile io.Reader) (string, *meta.ClusterMeta, *aini.InventoryData, error) {
+	inventory, err := aini.Parse(invFile)
 	if err != nil {
 		return "", nil, inventory, err
 	}
@@ -69,15 +81,12 @@ func ReadInventory(dir, inventoryFileName string) (string, *meta.ClusterMeta, *a
 			clsMeta.Version = host.Vars["tidb_version"]
 			clsName = host.Vars["cluster_name"]
 
-			log.Infof("Found cluster \"%s\" (%s), deployed with user %s.",
-				clsName, clsMeta.Version, clsMeta.User)
 			// only read the first host, all global vars should be the same
 			break
 		}
 	} else {
 		return "", nil, inventory, errors.New("no available host in the inventory file")
 	}
-
 	return clsName, clsMeta, inventory, err
 }
 

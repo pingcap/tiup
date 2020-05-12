@@ -22,7 +22,6 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	"github.com/pingcap/errors"
-	"github.com/relex/aini"
 )
 
 var (
@@ -30,13 +29,13 @@ var (
 )
 
 // parseDirs sets values of directories of component
-func parseDirs(host *aini.Host, ins meta.InstanceSpec, sshTimeout int64) (meta.InstanceSpec, error) {
+func parseDirs(user string, ins meta.InstanceSpec, sshTimeout int64) (meta.InstanceSpec, error) {
 	hostName, sshPort := ins.SSH()
 
 	e := executor.NewSSHExecutor(executor.SSHConfig{
 		Host:    hostName,
 		Port:    sshPort,
-		User:    host.Vars["ansible_user"],
+		User:    user,
 		KeyFile: SSHKeyPath(), // ansible generated keyfile
 		Timeout: time.Second * time.Duration(sshTimeout),
 	}, false) // not using global sudo

@@ -989,11 +989,15 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 			clientPort := field.FieldByName("ClientPort").Int()
 			field.Field(j).Set(reflect.ValueOf(fmt.Sprintf("pd-%s-%d", host, clientPort)))
 		case "DataDir":
+			if field.FieldByName("Imported").Interface().(bool) {
+				setDefaultDir(globalOptions.DataDir, field.Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
+			}
+
 			dataDir := field.Field(j).String()
 			if dataDir != "" { // already have a value, skip filling default values
 				continue
 			}
-			// If the data dir in global options is an obsolute path, it appends to
+			// If the data dir in global options is an absolute path, it appends to
 			// the global and has a comp-port sub directory
 			if strings.HasPrefix(globalOptions.DataDir, "/") {
 				field.Field(j).Set(reflect.ValueOf(filepath.Join(
