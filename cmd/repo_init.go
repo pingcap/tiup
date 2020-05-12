@@ -17,10 +17,10 @@ import (
 	//"fmt"
 	"os"
 
+	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
-
-	//"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -67,5 +67,19 @@ current working directory (".") will be used.`,
 }
 
 func initRepo(path string) error {
-	return nil
+	newManifest := &repository.Manifest{
+		Signed: &repository.Root{
+			SignedBase: repository.SignedBase{
+				Ty:          "root",
+				SpecVersion: "TODO",
+				Expires:     "TODO",
+				Version:     1, // initial repo starts with version 1
+			},
+		},
+	}
+
+	repoManifests := localdata.NewManifests(path)
+	// TODO: set key store
+
+	return repoManifests.SaveManifest(newManifest)
 }
