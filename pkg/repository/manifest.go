@@ -50,6 +50,8 @@ type ValidManifest interface {
 	Base() *SignedBase
 	// Filename returns the unversioned name that the manifest should be saved as based on its Go type.
 	Filename() string
+	// GetRole returns the meta info of the manifest
+	GetRole() *RoleMeta
 }
 
 // ty is type information about a manifest
@@ -67,9 +69,17 @@ var types = map[string]ty{
 }
 var knownVersions = map[string]struct{}{"0.1.0": {}}
 
+// RoleMeta is the metadata of a manifest
+type RoleMeta struct {
+	URL       string    `json:"url"`
+	Keys      *KeyStore `json:"keys"`
+	Threshold uint      `json:"threshold"`
+}
+
 // Root manifest
 type Root struct {
 	SignedBase
+	Roles map[string]*RoleMeta `json:"roles"`
 	// TODO
 }
 
@@ -241,6 +251,51 @@ func (manifest *Snapshot) Filename() string {
 // Filename implements ValidManifest
 func (manifest *Timestamp) Filename() string {
 	return "timestamp.json"
+}
+
+// GetRole implements ValidManifest
+func (manifest *Root) GetRole() *RoleMeta {
+	return &RoleMeta{
+		URL:       fmt.Sprintf("/%s", manifest.Base().Ty),
+		Threshold: 3, // root manifest has higher threshold
+		//Keys:      &KeyStore{},
+	}
+}
+
+// GetRole implements ValidManifest
+func (manifest *Index) GetRole() *RoleMeta {
+	return &RoleMeta{
+		URL:       fmt.Sprintf("/%s", manifest.Base().Ty),
+		Threshold: 1,
+		//Keys:      &KeyStore{},
+	}
+}
+
+// GetRole implements ValidManifest
+func (manifest *Component) GetRole() *RoleMeta {
+	return &RoleMeta{
+		URL:       fmt.Sprintf("/%s", manifest.Base().Ty),
+		Threshold: 1,
+		//Keys:      &KeyStore{},
+	}
+}
+
+// GetRole implements ValidManifest
+func (manifest *Snapshot) GetRole() *RoleMeta {
+	return &RoleMeta{
+		URL:       fmt.Sprintf("/%s", manifest.Base().Ty),
+		Threshold: 1,
+		//Keys:      &KeyStore{},
+	}
+}
+
+// GetRole implements ValidManifest
+func (manifest *Timestamp) GetRole() *RoleMeta {
+	return &RoleMeta{
+		URL:       fmt.Sprintf("/%s", manifest.Base().Ty),
+		Threshold: 1,
+		//Keys:      &KeyStore{},
+	}
 }
 
 // SetVersions sets file versions to the snapshot

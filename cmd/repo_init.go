@@ -74,16 +74,20 @@ func initRepo(path string) error {
 	newManifests := make([]*repository.Manifest, 0)
 
 	// init the root manifest
-	newManifests = append(newManifests, &repository.Manifest{
-		Signed: &repository.Root{
-			SignedBase: repository.SignedBase{
-				Ty:          "root",
-				SpecVersion: "TODO",
-				Expires:     currTime.UTC().Add(time.Hour * 24 * 365).Format(time.RFC3339), // 1y
-				Version:     1,                                                             // initial repo starts with version 1
-			},
+	root := &repository.Root{
+		SignedBase: repository.SignedBase{
+			Ty:          "root",
+			SpecVersion: "TODO",
+			Expires:     currTime.UTC().Add(time.Hour * 24 * 365).Format(time.RFC3339), // 1y
+			Version:     1,                                                             // initial repo starts with version 1
 		},
-	})
+		Roles: make(map[string]*repository.RoleMeta),
+	}
+	rootManifest := &repository.Manifest{
+		Signed: root,
+	}
+	root.Roles[root.Filename()] = root.GetRole()
+	newManifests = append(newManifests, rootManifest)
 
 	// init snapshot
 	snapshot := &repository.Snapshot{
@@ -94,9 +98,11 @@ func initRepo(path string) error {
 			Version:     0,                                                       // not versioned
 		},
 	}
-	newManifests = append(newManifests, &repository.Manifest{
+	snapshotManifest := &repository.Manifest{
 		Signed: snapshot.SetVersions(newManifests),
-	})
+	}
+	root.Roles[snapshot.Filename()] = snapshot.GetRole()
+	newManifests = append(newManifests, snapshotManifest)
 
 	// init timestamp
 	timestamp := &repository.Timestamp{
@@ -111,9 +117,11 @@ func initRepo(path string) error {
 	if err != nil {
 		return err
 	}
-	newManifests = append(newManifests, &repository.Manifest{
+	timestampManifest := &repository.Manifest{
 		Signed: timestamp,
-	})
+	}
+	root.Roles[timestamp.Filename()] = timestamp.GetRole()
+	newManifests = append(newManifests, timestampManifest)
 
 	// write to files
 	for _, m := range newManifests {
