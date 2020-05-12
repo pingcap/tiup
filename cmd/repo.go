@@ -14,12 +14,7 @@
 package cmd
 
 import (
-	//"fmt"
-	//"os"
-
 	"github.com/pingcap-incubator/tiup/pkg/meta"
-	//"github.com/pingcap-incubator/tiup/pkg/repository"
-	//"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 

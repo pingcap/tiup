@@ -243,6 +243,39 @@ func (manifest *Timestamp) Filename() string {
 	return "timestamp.json"
 }
 
+// SetVersions sets file versions to the snapshot
+func (manifest *Snapshot) SetVersions(manifestList []*Manifest) *Snapshot {
+	if manifest.Meta == nil {
+		manifest.Meta = make(map[string]FileVersion)
+	}
+	for _, m := range manifestList {
+		manifest.Meta[m.Signed.Base().Filename()] = FileVersion{
+			Version: uint(m.Signed.Base().Version),
+		}
+	}
+	return manifest
+}
+
+// SetSnapshot hashes a snapshot manifest and update the timestamp manifest
+func (manifest *Timestamp) SetSnapshot(s *Snapshot) (*Timestamp, error) {
+	bytes, err := json.Marshal(s)
+	if err != nil {
+		return manifest, err
+	}
+
+	// TODO: hash the manifest
+
+	if manifest.Meta == nil {
+		manifest.Meta = make(map[string]FileHash)
+	}
+	manifest.Meta[s.Base().Filename()] = FileHash{
+		Hashes: map[string]string{"sha256": "TODO"},
+		Length: uint(len(bytes)),
+	}
+
+	return manifest, nil
+}
+
 // ReadManifest reads a manifest from input and validates it, the result is stored in role, which must be a pointer type.
 func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifest, error) {
 	decoder := json.NewDecoder(input)

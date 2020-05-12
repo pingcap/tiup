@@ -14,10 +14,9 @@
 package cmd
 
 import (
-	//"fmt"
 	"os"
+	"time"
 
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
@@ -67,19 +66,60 @@ current working directory (".") will be used.`,
 }
 
 func initRepo(path string) error {
-	newManifest := &repository.Manifest{
+	currTime := time.Now()
+	repoManifests := repository.NewManifests(path)
+	// TODO: set key store
+
+	// initial manifests
+	newManifests := make([]*repository.Manifest, 0)
+
+	// init the root manifest
+	newManifests = append(newManifests, &repository.Manifest{
 		Signed: &repository.Root{
 			SignedBase: repository.SignedBase{
 				Ty:          "root",
 				SpecVersion: "TODO",
-				Expires:     "TODO",
-				Version:     1, // initial repo starts with version 1
+				Expires:     currTime.UTC().Add(time.Hour * 24 * 365).Format(time.RFC3339), // 1y
+				Version:     1,                                                             // initial repo starts with version 1
 			},
 		},
+	})
+
+	// init snapshot
+	snapshot := &repository.Snapshot{
+		SignedBase: repository.SignedBase{
+			Ty:          "snapshot",
+			SpecVersion: "TODO",
+			Expires:     currTime.UTC().Add(time.Hour * 24).Format(time.RFC3339), // 1d
+			Version:     0,                                                       // not versioned
+		},
 	}
+	newManifests = append(newManifests, &repository.Manifest{
+		Signed: snapshot.SetVersions(newManifests),
+	})
 
-	repoManifests := localdata.NewManifests(path)
-	// TODO: set key store
+	// init timestamp
+	timestamp := &repository.Timestamp{
+		SignedBase: repository.SignedBase{
+			Ty:          "timestamp",
+			SpecVersion: "TODO",
+			Expires:     currTime.UTC().Add(time.Hour * 24).Format(time.RFC3339), // 1d
+			Version:     uint(currTime.Unix()),
+		},
+	}
+	timestamp, err := timestamp.SetSnapshot(snapshot)
+	if err != nil {
+		return err
+	}
+	newManifests = append(newManifests, &repository.Manifest{
+		Signed: timestamp,
+	})
 
-	return repoManifests.SaveManifest(newManifest)
+	// write to files
+	for _, m := range newManifests {
+		if err := repoManifests.SaveManifest(m); err != nil {
+			return err
+		}
+	}
+	return nil
 }
