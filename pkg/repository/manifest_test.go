@@ -29,7 +29,7 @@ func TestReadTimestamp(t *testing.T) {
 			}
 		],
 		"signed": {
-			"_type": "Timestamp",
+			"_type": "timestamp",
 			"spec_version": "0.1.0",
 			"expires": "2220-05-11T04:51:08Z",
 			"version": 43,
@@ -58,7 +58,7 @@ func TestWriteManifest(t *testing.T) {
 		Length: 0,
 	}},
 		SignedBase: SignedBase{
-			Ty:          "Timestamp",
+			Ty:          "timestamp",
 			SpecVersion: "0.1.0",
 			Expires:     "2220-05-11T04:51:08Z",
 			Version:     10,

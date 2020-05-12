@@ -65,7 +65,7 @@ cover-dir:
 
 # Run tests
 unit-test:
-	$(GOTEST) $(go list ./... | grep -v /components/package/) -covermode=count -coverprofile cover/cov.unit-test.out
+	$(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
 
 integration_test:
 	@$(GOTEST) -c -cover -covermode=count \
@@ -84,8 +84,15 @@ integration_test:
 	@$(GOTEST) -c -cover -covermode=count \
 			-coverpkg=./... \
 			-o tests/tiup_home/bin/ctl ./components/ctl/ ;
-	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/doc ./components/doc/
+	@$(GOTEST) -c -cover -covermode=count \
+			-coverpkg=./... \
+			-o tests/tiup_home/bin/doc ./components/doc/ ;
 	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/tiup.2
+	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/package ./components/package/
+	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/mirrors ./components/mirrors/
+	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/playground ./components/playground/
+	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/ctl ./components/ctl/
+	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/doc ./components/doc/
 	cd tests && bash run.sh ; \
 
 

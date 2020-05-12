@@ -76,7 +76,7 @@ func (s *repositorySuite) TestVersions(c *C) {
 
 	vi, found := vm.FindVersion("v0.0.3")
 	c.Assert(found, IsTrue)
-	c.Assert(vi, DeepEquals, vm.LatestVersion())
+	c.Assert(vi.Version, DeepEquals, vm.LatestVersion())
 
 	vi, found = vm.FindVersion("nightly")
 	c.Assert(found, IsTrue)
