@@ -65,7 +65,7 @@ cover-dir:
 
 # Run tests
 unit-test:
-	$(GOTEST) $(go list ./... | grep -v /components/package/) -covermode=count -coverprofile cover/cov.unit-test.out
+	$(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
 
 integration_test:
 	@$(GOTEST) -c -cover -covermode=count \
