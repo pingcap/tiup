@@ -151,7 +151,7 @@ func (p *Profile) versionFileName(component string) string {
 	return fmt.Sprintf("manifest/tiup-component-%s.index", component)
 }
 
-func (p *Profile) manifestFileName() string {
+func (p *Profile) v0ManifestFileName() string {
 	return "manifest/tiup-manifest.index"
 }
 
@@ -161,12 +161,12 @@ func (p *Profile) isNotExist(path string) bool {
 
 // Manifest returns the components manifest
 func (p *Profile) Manifest() *repository.ComponentManifest {
-	if p.isNotExist(p.manifestFileName()) {
+	if p.isNotExist(p.v0ManifestFileName()) {
 		return nil
 	}
 
 	var manifest repository.ComponentManifest
-	if err := p.ReadJSON(p.manifestFileName(), &manifest); err != nil {
+	if err := p.ReadJSON(p.v0ManifestFileName(), &manifest); err != nil {
 		// The manifest was marshaled and stored by `tiup`, it should
 		// be a valid JSON file
 		log.Fatal(err)
@@ -177,7 +177,7 @@ func (p *Profile) Manifest() *repository.ComponentManifest {
 
 // SaveManifest saves the latest components manifest to local profile
 func (p *Profile) SaveManifest(manifest *repository.ComponentManifest) error {
-	return p.WriteJSON(p.manifestFileName(), manifest)
+	return p.WriteJSON(p.v0ManifestFileName(), manifest)
 }
 
 // Versions returns the version manifest of specific component
