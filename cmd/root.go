@@ -112,6 +112,7 @@ the latest stable version will be downloaded from the repository.`,
 		newUpdateCmd(env),
 		newStatusCmd(env),
 		newCleanCmd(env),
+		newRepoCmd(env),
 		newTelemetryCmd(env),
 	)
 

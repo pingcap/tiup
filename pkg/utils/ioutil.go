@@ -36,6 +36,21 @@ func IsNotExist(path string) bool {
 	return os.IsNotExist(err)
 }
 
+// IsEmptyDir check whether a path is an empty directory
+func IsEmptyDir(path string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+
+	_, err = f.Readdirnames(1)
+	if err == io.EOF {
+		return true, nil
+	}
+	return false, err
+}
+
 // Untar decompresses the tarball
 func Untar(reader io.Reader, to string) error {
 	gr, err := gzip.NewReader(reader)
