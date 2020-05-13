@@ -78,6 +78,8 @@ server_configs:
     #
     path_realtime_mode: false
     logger.level: "info"
+  tiflash-learner:
+    log-level: "info"
   pump:
     gc: 7
 
@@ -145,6 +147,7 @@ tiflash_servers:
     # config:
     #   path_realtime_mode: false
     #   logger.level: "info"
+    # # The following configs are used to overwrite the `server_configs.tiflash-learner` values.
     # learner_config:
     #   log-level: "info"
   - host: 10.0.1.15
