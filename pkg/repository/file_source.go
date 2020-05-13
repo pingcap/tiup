@@ -46,7 +46,7 @@ func (fs *mirrorSource) close() error {
 
 // downloadJSON fetches a resource from m and parses it as json.
 func (fs *mirrorSource) downloadJSON(resource string, result interface{}) error {
-	reader, err := fs.mirror.Fetch(resource)
+	reader, err := fs.mirror.Fetch(resource, 0)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -69,7 +69,7 @@ func (fs *mirrorSource) downloadTarFile(targetDir, resName string, expand bool) 
 	shaName := resName + ".sha1"
 	resName = resName + ".tar.gz"
 
-	shaReader, err := fs.mirror.Fetch(shaName)
+	shaReader, err := fs.mirror.Fetch(shaName, 0)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -82,7 +82,7 @@ func (fs *mirrorSource) downloadTarFile(targetDir, resName string, expand bool) 
 
 	var tarReader io.ReadCloser
 	if expand {
-		tarReader, err = fs.mirror.Fetch(resName)
+		tarReader, err = fs.mirror.Fetch(resName, 0)
 	} else {
 		if err := fs.mirror.Download(resName, targetDir); err != nil {
 			return errors.Trace(err)

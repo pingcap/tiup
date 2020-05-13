@@ -16,10 +16,9 @@ package repository
 import (
 	"fmt"
 	"io"
-	"math/rand"
+	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -47,8 +46,9 @@ type (
 		Open() error
 		// Download fetches a resource to disk.
 		Download(resource, targetDir string) error
-		// Fetch fetches a resource into memory. The caller must close the returned reader.
-		Fetch(resource string) (io.ReadCloser, error)
+		// Fetch fetches a resource into memory. The caller must close the returned reader. Id the size of the resource
+		// is greater than maxSize, Fetch returns an error. Use maxSize == 0 for no limit.
+		Fetch(resource string, maxSize int64) (io.ReadCloser, error)
 		// Close closes the mirror and release local stashed files.
 		Close() error
 	}
@@ -86,7 +86,7 @@ func (l *localFilesystem) Open() error {
 
 // Download implements the Mirror interface
 func (l *localFilesystem) Download(resource, targetDir string) error {
-	reader, err := l.Fetch(resource)
+	reader, err := l.Fetch(resource, 0)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -100,12 +100,22 @@ func (l *localFilesystem) Download(resource, targetDir string) error {
 }
 
 // Fetch implements the Mirror interface
-func (l *localFilesystem) Fetch(resource string) (io.ReadCloser, error) {
+func (l *localFilesystem) Fetch(resource string, maxSize int64) (io.ReadCloser, error) {
 	path := filepath.Join(l.rootPath, resource)
 	file, err := os.OpenFile(path, os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
+	if maxSize > 0 {
+		info, err := file.Stat()
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		if info.Size() > maxSize {
+			return nil, errors.Annotatef(err, "local load from %s failed, maximum size exceeded", resource)
+		}
+	}
+
 	return file, nil
 }
 
@@ -116,25 +126,22 @@ func (l *localFilesystem) Close() error {
 
 type httpMirror struct {
 	server  string
-	tmpDir  string
 	options MirrorOptions
 }
 
 // Open implements the Mirror interface
 func (l *httpMirror) Open() error {
-	tmpDir := filepath.Join(os.TempDir(), strconv.Itoa(rand.Int()))
-	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
-		return errors.Trace(err)
-	}
-	l.tmpDir = tmpDir
 	return nil
 }
 
-func (l *httpMirror) download(url string, to string) error {
+func (l *httpMirror) download(url string, to string, maxSize int64) (io.ReadCloser, error) {
 	client := grab.NewClient()
 	req, err := grab.NewRequest(to, url)
 	if err != nil {
-		return errors.Trace(err)
+		return nil, errors.Trace(err)
+	}
+	if len(to) == 0 {
+		req.NoStore = true
 	}
 
 	resp := client.Do(req)
@@ -149,12 +156,16 @@ func (l *httpMirror) download(url string, to string) error {
 	} else {
 		progress = DisableProgress{}
 	}
-	progress.Start(url, resp.Size)
+	progress.Start(url, resp.Size())
 
 L:
 	for {
 		select {
 		case <-t.C:
+			if maxSize > 0 && resp.BytesComplete() > maxSize {
+				resp.Cancel()
+				return nil, errors.Annotatef(err, "download from %s failed, maximum size exceeded", url)
+			}
 			progress.SetCurrent(resp.BytesComplete())
 		case <-resp.Done:
 			progress.Finish()
@@ -164,14 +175,16 @@ L:
 
 	// check for errors
 	if err := resp.Err(); err != nil {
-		return errors.Annotatef(err, "download from %s failed", url)
+		return nil, errors.Annotatef(err, "download from %s failed", url)
+	}
+	if maxSize > 0 && resp.BytesComplete() > maxSize {
+		return nil, errors.Annotatef(err, "download from %s failed, maximum size exceeded", url)
 	}
 
-	return nil
+	return resp.Open()
 }
 
-// Download implements the Mirror interface
-func (l *httpMirror) Download(resource, targetDir string) error {
+func (l *httpMirror) prepareURL(resource string) string {
 	url := strings.TrimSuffix(l.server, "/") + "/" + resource
 
 	// Force CDN to refresh if the resource name starts with TiupBinaryName.
@@ -180,29 +193,55 @@ func (l *httpMirror) Download(resource, targetDir string) error {
 		url = fmt.Sprintf("%s?v=%d", url, nano)
 	}
 
-	return l.download(url, filepath.Join(targetDir, resource))
+	return url
+}
+
+// Download implements the Mirror interface
+func (l *httpMirror) Download(resource, targetDir string) error {
+	r, err := l.download(l.prepareURL(resource), filepath.Join(targetDir, resource), 0)
+	r.Close()
+	return err
 }
 
 // Fetch implements the Mirror interface
-func (l *httpMirror) Fetch(resource string) (io.ReadCloser, error) {
-	// FIXME This is inefficient because we write the file to disk, then we read it back in. It would be better
-	// for us to read the file straight from memory. This can be done using Request::NoStore and Response::Open.
-	err := l.Download(resource, l.tmpDir)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	path := filepath.Join(l.tmpDir, resource)
-	file, err := os.OpenFile(path, os.O_RDONLY, os.ModePerm)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	return file, nil
+func (l *httpMirror) Fetch(resource string, maxSize int64) (io.ReadCloser, error) {
+	return l.download(l.prepareURL(resource), "", maxSize)
 }
 
 // Close implements the Mirror interface
 func (l *httpMirror) Close() error {
-	if err := os.RemoveAll(l.tmpDir); err != nil {
-		return errors.Trace(err)
+	return nil
+}
+
+// MockMirror is a mirror for testing
+type MockMirror struct {
+	// Resources is a map from resource name to resource content.
+	Resources map[string]string
+}
+
+// Open implements Mirror.
+func (l *MockMirror) Open() error {
+	return nil
+}
+
+// Download implements Mirror.
+func (l *MockMirror) Download(resource, targetDir string) error {
+	return errors.New("MockMirror::Download not implemented")
+}
+
+// Fetch implements Mirror.
+func (l *MockMirror) Fetch(resource string, maxSize int64) (io.ReadCloser, error) {
+	content, ok := l.Resources[resource]
+	if !ok {
+		return nil, fmt.Errorf("No resource named %s in mock mirror", resource)
 	}
+	if maxSize > 0 && int64(len(content)) > maxSize {
+		return nil, fmt.Errorf("Oversized resource %s in mock mirror", resource)
+	}
+	return ioutil.NopCloser(strings.NewReader(content)), nil
+}
+
+// Close implements Mirror.
+func (l *MockMirror) Close() error {
 	return nil
 }

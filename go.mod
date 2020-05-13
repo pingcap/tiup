@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
-	github.com/cavaliercoder/grab v2.0.0+incompatible
+	github.com/cavaliercoder/grab v2.0.1-0.20200331080741-9f014744ee41+incompatible
 	github.com/cheggaaa/pb v2.0.7+incompatible
 	github.com/cheynewallace/tabby v1.1.0
 	github.com/fatih/color v1.9.0

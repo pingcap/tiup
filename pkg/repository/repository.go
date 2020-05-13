@@ -63,7 +63,7 @@ func (r *Repository) Close() error {
 	return r.fileSource.close()
 }
 
-// Manifest returns the component manifest fetched from repository
+// Manifest returns the v0 component manifest fetched from repository
 func (r *Repository) Manifest() (*ComponentManifest, error) {
 	var manifest ComponentManifest
 	err := r.fileSource.downloadJSON(ManifestFileName, &manifest)
