@@ -256,7 +256,7 @@ func (manifest *Timestamp) Filename() string {
 // GetRole implements ValidManifest
 func (manifest *Root) GetRole() *RoleMeta {
 	return &RoleMeta{
-		URL:       fmt.Sprintf("/%s", manifest.Base().Ty),
+		URL:       fmt.Sprintf("/%s", manifest.Base().Filename()),
 		Threshold: 3, // root manifest has higher threshold
 		//Keys:      &KeyStore{},
 	}
@@ -265,7 +265,7 @@ func (manifest *Root) GetRole() *RoleMeta {
 // GetRole implements ValidManifest
 func (manifest *Index) GetRole() *RoleMeta {
 	return &RoleMeta{
-		URL:       fmt.Sprintf("/%s", manifest.Base().Ty),
+		URL:       fmt.Sprintf("/%s", manifest.Base().Filename()),
 		Threshold: 1,
 		//Keys:      &KeyStore{},
 	}
@@ -274,7 +274,7 @@ func (manifest *Index) GetRole() *RoleMeta {
 // GetRole implements ValidManifest
 func (manifest *Component) GetRole() *RoleMeta {
 	return &RoleMeta{
-		URL:       fmt.Sprintf("/%s", manifest.Base().Ty),
+		URL:       fmt.Sprintf("/%s", manifest.Base().Filename()),
 		Threshold: 1,
 		//Keys:      &KeyStore{},
 	}
@@ -283,7 +283,7 @@ func (manifest *Component) GetRole() *RoleMeta {
 // GetRole implements ValidManifest
 func (manifest *Snapshot) GetRole() *RoleMeta {
 	return &RoleMeta{
-		URL:       fmt.Sprintf("/%s", manifest.Base().Ty),
+		URL:       fmt.Sprintf("/%s", manifest.Base().Filename()),
 		Threshold: 1,
 		//Keys:      &KeyStore{},
 	}
@@ -292,7 +292,7 @@ func (manifest *Snapshot) GetRole() *RoleMeta {
 // GetRole implements ValidManifest
 func (manifest *Timestamp) GetRole() *RoleMeta {
 	return &RoleMeta{
-		URL:       fmt.Sprintf("/%s", manifest.Base().Ty),
+		URL:       fmt.Sprintf("/%s", manifest.Base().Filename()),
 		Threshold: 1,
 		//Keys:      &KeyStore{},
 	}

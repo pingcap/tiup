@@ -25,6 +25,10 @@ import (
 )
 
 func newRepoInitCmd(env *meta.Environment) *cobra.Command {
+	var (
+		pubKey  string // public key of root
+		privKey string // private key of root
+	)
 	cmd := &cobra.Command{
 		Use:   "init [path]",
 		Short: "Initialise an empty repository",
@@ -35,11 +39,7 @@ current working directory (".") will be used.`,
 				repoPath string
 				err      error
 			)
-			if len(args) == 0 {
-				if repoPath, err = os.Getwd(); err != nil {
-					return err
-				}
-			} else {
+			if len(args) == 1 {
 				repoPath = args[0]
 			}
 
@@ -61,6 +61,9 @@ current working directory (".") will be used.`,
 			return initRepo(repoPath)
 		},
 	}
+
+	cmd.Flags().StringVar(&pubKey, "pubkey", "", "Path to the public key file")
+	cmd.Flags().StringVar(&privKey, "privkey", "", "Path to the private key file")
 
 	return cmd
 }

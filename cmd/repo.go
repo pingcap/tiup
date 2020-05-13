@@ -14,8 +14,14 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/spf13/cobra"
+)
+
+var (
+	repoPath string
 )
 
 func newRepoCmd(env *meta.Environment) *cobra.Command {
@@ -28,6 +34,16 @@ The repository can be used either online or offline.
 It also provides some useful utilities to help managing keys, users and versions
 of components or the repository itself.`,
 		Hidden: true, // WIP, remove when it becomes working and stable
+		Args: func(cmd *cobra.Command, args []string) error {
+			if repoPath == "" {
+				var err error
+				repoPath, err = os.Getwd()
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return cmd.Help()
@@ -36,8 +52,15 @@ of components or the repository itself.`,
 		},
 	}
 
+	cmd.PersistentFlags().StringVar(&repoPath, "repo", "", "Path to the repository")
+
 	cmd.AddCommand(
 		newRepoInitCmd(env),
+		newRepoOwnerCmd(env),
+		newRepoCompCmd(env),
+		newRepoAddCompCmd(env),
+		newRepoYankCompCmd(env),
+		newRepoDelCompCmd(env),
 	)
 	return cmd
 }
