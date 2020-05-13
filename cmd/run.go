@@ -30,7 +30,6 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
-	"github.com/pingcap-incubator/tiup/pkg/telemetry"
 	"github.com/pingcap/errors"
 )
 
@@ -207,12 +206,7 @@ func launchComponent(ctx context.Context, component string, version repository.V
 		return nil, err
 	}
 
-	fname, err := getTelemetryFname(env)
-	if err != nil {
-		return nil, err
-	}
-
-	teleMeta, err := telemetry.LoadFrom(fname)
+	teleMeta, _, err := getTelemetryMeta(env)
 	if err != nil {
 		return nil, err
 	}

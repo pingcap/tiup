@@ -15,14 +15,15 @@ var telemetryCmd *cobra.Command
 
 const telemetryFname = "meta.yaml"
 
-func getTelemetryFname(env *meta.Environment) (fname string, err error) {
+func getTelemetryMeta(env *meta.Environment) (meta *telemetry.Meta, fname string, err error) {
 	dir := env.Profile().Path(localdata.TelemetryDir)
 	err = os.MkdirAll(dir, 0755)
 	if err != nil {
 		return
 	}
-	fname = filepath.Join(dir, telemetryFname)
 
+	fname = filepath.Join(dir, telemetryFname)
+	meta, err = telemetry.LoadFrom(fname)
 	return
 }
 
@@ -36,12 +37,7 @@ func newTelemetryCmd(env *meta.Environment) *cobra.Command {
 		Use:   "reset",
 		Short: "Reset the uuid used for telemetry",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fname, err := getTelemetryFname(env)
-			if err != nil {
-				return err
-			}
-
-			teleMeta, err := telemetry.LoadFrom(fname)
+			teleMeta, fname, err := getTelemetryMeta(env)
 			if err != nil {
 				return err
 			}
@@ -61,12 +57,7 @@ func newTelemetryCmd(env *meta.Environment) *cobra.Command {
 		Use:   "enable",
 		Short: "Enable telemetry of tiup",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fname, err := getTelemetryFname(env)
-			if err != nil {
-				return err
-			}
-
-			teleMeta, err := telemetry.LoadFrom(fname)
+			teleMeta, fname, err := getTelemetryMeta(env)
 			if err != nil {
 				return err
 			}
@@ -86,12 +77,7 @@ func newTelemetryCmd(env *meta.Environment) *cobra.Command {
 		Use:   "disable",
 		Short: "Disable telemetry of tiup",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fname, err := getTelemetryFname(env)
-			if err != nil {
-				return err
-			}
-
-			teleMeta, err := telemetry.LoadFrom(fname)
+			teleMeta, fname, err := getTelemetryMeta(env)
 			if err != nil {
 				return err
 			}
@@ -111,12 +97,7 @@ func newTelemetryCmd(env *meta.Environment) *cobra.Command {
 		Use:   "status",
 		Short: "Display the current status of tiup telemetry",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fname, err := getTelemetryFname(env)
-			if err != nil {
-				return err
-			}
-
-			teleMeta, err := telemetry.LoadFrom(fname)
+			teleMeta, _, err := getTelemetryMeta(env)
 			if err != nil {
 				return err
 			}
