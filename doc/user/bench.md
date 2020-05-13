@@ -124,7 +124,10 @@ Flags:
 1. Data preparation
 
 ```shell
+# Prepare data with scale factor 1
 tiup bench tpch --sf=1 prepare
+# Or prepare data with scale factor 1, create tiflash replica, and analyze table after data loaded
+tiup bench tpch --sf=1 --analyze --tiflash prepare
 ```
 
 2. Benchmarking and checking results

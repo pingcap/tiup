@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/pingcap/go-tpc/pkg/workload"
 	"github.com/pingcap/go-tpc/tpcc"
 	"github.com/spf13/cobra"
 )
@@ -28,7 +29,21 @@ func executeTpcc(action string) {
 	tpccConfig.DBName = dbName
 	tpccConfig.Threads = threads
 	tpccConfig.Isolation = isolationLevel
-	w, err := tpcc.NewWorkloader(globalDB, &tpccConfig)
+	var (
+		w   workload.Workloader
+		err error
+	)
+	switch tpccConfig.OutputType {
+	case "csv", "CSV":
+		if tpccConfig.OutputDir == "" {
+			fmt.Printf("Output Directory cannot be empty when generating files")
+			os.Exit(1)
+		}
+		w, err = tpcc.NewCSVWorkloader(globalDB, &tpccConfig)
+	default:
+		w, err = tpcc.NewWorkloader(globalDB, &tpccConfig)
+	}
+
 	if err != nil {
 		fmt.Printf("Failed to init work loader: %v\n", err)
 		os.Exit(1)
@@ -51,12 +66,14 @@ func registerTpcc(root *cobra.Command) {
 
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",
-		Short: "Prepare data for the workload",
+		Short: "Prepare data for TPCC",
 		Run: func(cmd *cobra.Command, _ []string) {
 			executeTpcc("prepare")
 		},
 	}
-	cmdPrepare.PersistentFlags().StringVar(&tpccConfig.OutputDir, "output", "", "Output directory for generating file if specified")
+	cmdPrepare.PersistentFlags().StringVar(&tpccConfig.OutputType, "output-type", "", "Output file type."+
+		" If empty, then load data to db. Current only support csv")
+	cmdPrepare.PersistentFlags().StringVar(&tpccConfig.OutputDir, "output-dir", "", "Output directory for generating file if specified")
 	cmdPrepare.PersistentFlags().StringVar(&tpccConfig.SpecifiedTables, "tables", "", "Specified tables for "+
 		"generating file, separated by ','. Valid only if output is set. If this flag is not set, generate all tables by default")
 

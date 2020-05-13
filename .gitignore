@@ -23,6 +23,7 @@ bin/
 *.out
 
 /.idea/
+/.vscode/
 /package/
 /tests/_tmp/
 /tests/tiup_home/
