@@ -33,8 +33,7 @@ may still be available for them.`,
 			case 2:
 				compVer = args[1]
 			default:
-				cmd.Help()
-				return nil
+				return cmd.Help()
 			}
 
 			return delComp(repoPath, args[0], compVer)

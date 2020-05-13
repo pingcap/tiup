@@ -25,8 +25,7 @@ func newRepoAddCompCmd(env *meta.Environment) *cobra.Command {
 		Long:  `Add a file to a component, and set its metadata of platform ID and version.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 4 {
-				cmd.Help()
-				return nil
+				return cmd.Help()
 			}
 
 			return addCompFile(repoPath, args[0], args[1], args[2], args[3])

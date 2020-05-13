@@ -26,8 +26,7 @@ func newRepoOwnerCmd(env *meta.Environment) *cobra.Command {
 actions on authorized resources.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 2 {
-				cmd.Help()
-				return nil
+				return cmd.Help()
 			}
 
 			return createOwner(repoPath, args[0], args[1])

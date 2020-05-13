@@ -24,7 +24,7 @@ func newRepoYankCompCmd(env *meta.Environment) *cobra.Command {
 		Short: "Yank a component in the repository",
 		Long: `Yank a component in the repository. If version is not specified, all versions
 of the given component will be yanked.
-A yanked component is still in the repository, but not visible to client, and are
+A yanked component is still in the repository, but not visible to client, and is
 no longer considered stable to use. A yanked component is expected to be removed
 from the repository in the future.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -33,8 +33,7 @@ from the repository in the future.`,
 			case 2:
 				compVer = args[1]
 			default:
-				cmd.Help()
-				return nil
+				return cmd.Help()
 			}
 
 			return yankComp(repoPath, args[0], compVer)

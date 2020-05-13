@@ -25,8 +25,7 @@ func newRepoCompCmd(env *meta.Environment) *cobra.Command {
 		Long:  `Create a new component in the repository, and sign with the local owner key.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 2 {
-				cmd.Help()
-				return nil
+				return cmd.Help()
 			}
 
 			return createComp(repoPath, args[0], args[1])
