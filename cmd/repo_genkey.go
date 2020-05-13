@@ -14,29 +14,33 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/spf13/cobra"
 )
 
-func newRepoCompCmd(env *meta.Environment) *cobra.Command {
+func newRepoGenkeyCmd(env *meta.Environment) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "component <id> <description>",
-		Short: "Create a new component in the repository",
-		Long:  `Create a new component in the repository, and sign with the local owner key.`,
+		Use:   "genkey",
+		Short: "Generate a new key pair",
+		Long:  `Generate a new key pair that can be used to sign components.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) < 2 {
-				cmd.Help()
-				return nil
+			pubKey, privKey, err := genKeyPair()
+			if err != nil {
+				return err
 			}
-
-			return createComp(repoPath, args[0], args[1])
+			// TODO: save keys to files
+			fmt.Printf("Private key generated:\n%s\n", privKey)
+			fmt.Printf("Public key of the private key:\n%s\n", pubKey)
+			return nil
 		},
 	}
 
 	return cmd
 }
 
-func createComp(repo, id, name string) error {
+func genKeyPair() ([]byte, []byte, error) {
 	// TODO
-	return nil
+	return []byte("public key"), []byte("private key"), nil
 }

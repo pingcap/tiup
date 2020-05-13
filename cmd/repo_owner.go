@@ -19,9 +19,6 @@ import (
 )
 
 func newRepoOwnerCmd(env *meta.Environment) *cobra.Command {
-	var (
-		repoPath string
-	)
 	cmd := &cobra.Command{
 		Use:   "owner <id> <name>",
 		Short: "Create a new owner for the repository",
@@ -36,8 +33,6 @@ actions on authorized resources.`,
 			return createOwner(repoPath, args[0], args[1])
 		},
 	}
-
-	cmd.Flags().StringVar(&repoPath, "repo", "", "Path to the repository")
 
 	return cmd
 }

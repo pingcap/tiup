@@ -35,16 +35,13 @@ func newRepoInitCmd(env *meta.Environment) *cobra.Command {
 		Long: `Initialise an empty TiUP repository at given path. If path is not specified, the
 current working directory (".") will be used.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var (
-				repoPath string
-				err      error
-			)
 			if len(args) == 1 {
 				repoPath = args[0]
 			}
 
 			// create the target path if not exist
 			if utils.IsNotExist(repoPath) {
+				var err error
 				if err = os.Mkdir(repoPath, 0755); err != nil {
 					return err
 				}

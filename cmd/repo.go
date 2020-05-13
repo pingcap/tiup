@@ -61,6 +61,7 @@ of components or the repository itself.`,
 		newRepoAddCompCmd(env),
 		newRepoYankCompCmd(env),
 		newRepoDelCompCmd(env),
+		newRepoGenkeyCmd(env),
 	)
 	return cmd
 }
