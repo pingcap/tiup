@@ -11,6 +11,12 @@ import (
 )
 
 func checkPrepare(ctx context.Context, w workload.Workloader) {
+	// skip preparation check in csv case
+	if w.Name() == "tpcc-csv" {
+		fmt.Println("Skip preparing checking. Please load CSV data into database and check later.")
+		return
+	}
+
 	var wg sync.WaitGroup
 	wg.Add(threads)
 	for i := 0; i < threads; i++ {
@@ -38,7 +44,7 @@ func execute(ctx context.Context, w workload.Workloader, action string, index in
 	switch action {
 	case "prepare":
 		// Do cleanup only if dropData is set and not generate csv data.
-		if dropData && !w.DataGen() {
+		if dropData {
 			if err := w.Cleanup(ctx, index); err != nil {
 				return err
 			}
@@ -106,12 +112,8 @@ func executeWorkload(ctx context.Context, w workload.Workloader, action string) 
 	wg.Wait()
 
 	if action == "prepare" {
-		if !w.DataGen() {
-			// For prepare, we must check the data consistency after all prepare finished
-			checkPrepare(ctx, w)
-		} else {
-			fmt.Println("Skip preparing checking. Please load CSV data into database and check later.")
-		}
+		// For prepare, we must check the data consistency after all prepare finished
+		checkPrepare(ctx, w)
 	}
 	outputCancel()
 
