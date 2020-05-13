@@ -92,6 +92,24 @@ func initRepo(path string) error {
 	root.Roles[root.Filename()] = root.GetRole()
 	newManifests = append(newManifests, rootManifest)
 
+	// init index
+	index := &repository.Index{
+		SignedBase: repository.SignedBase{
+			Ty:          "index",
+			SpecVersion: "TODO",
+			Expires:     currTime.UTC().Add(time.Hour * 24 * 365).Format(time.RFC3339), // 1y
+			Version:     1,
+		},
+		Owners:            make(map[string]repository.Owner),
+		Components:        make(map[string]repository.Component),
+		DefaultComponents: make([]string, 0),
+	}
+	// TODO add initial owner to index.Owners
+	root.Roles[index.Filename()] = index.GetRole()
+	newManifests = append(newManifests, &repository.Manifest{
+		Signed: index,
+	})
+
 	// init snapshot
 	snapshot := &repository.Snapshot{
 		SignedBase: repository.SignedBase{

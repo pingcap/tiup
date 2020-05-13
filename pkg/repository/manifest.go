@@ -86,7 +86,17 @@ type Root struct {
 // Index manifest
 type Index struct {
 	SignedBase
+	Owners            map[string]Owner     `json:"owners"`
+	Components        map[string]Component `json:"components"`
+	DefaultComponents []string             `json:"default_components"`
 	// TODO
+}
+
+// Owner manifest (inline object, not dedicated files)
+type Owner struct {
+	//ID   string    `json:"id"`
+	Name string    `json:"name"`
+	Keys *KeyStore `json:"keys"`
 }
 
 // Component manifest
