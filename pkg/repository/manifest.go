@@ -50,8 +50,6 @@ type ValidManifest interface {
 	Base() *SignedBase
 	// Filename returns the unversioned name that the manifest should be saved as based on its Go type.
 	Filename() string
-	// GetRole returns the meta info of the manifest
-	GetRole() *Role
 }
 
 // ty is type information about a manifest
@@ -319,48 +317,17 @@ func (manifest *Timestamp) Filename() string {
 	return "timestamp.json"
 }
 
-// GetRole implements ValidManifest
-func (manifest *Root) GetRole() *Role {
-	return &Role{
-		URL:       fmt.Sprintf("/%s", manifest.Base().Filename()),
-		Threshold: 3, // root manifest has higher threshold
-		//Keys:      &KeyStore{},
+// SetRoles populates role list in the root manifest
+func (manifest *Root) SetRoles(manifestList []ValidManifest) {
+	if manifest.Roles == nil {
+		manifest.Roles = make(map[string]*Role)
 	}
-}
-
-// GetRole implements ValidManifest
-func (manifest *Index) GetRole() *Role {
-	return &Role{
-		URL:       fmt.Sprintf("/%s", manifest.Base().Filename()),
-		Threshold: 1,
-		//Keys:      &KeyStore{},
-	}
-}
-
-// GetRole implements ValidManifest
-func (manifest *Component) GetRole() *Role {
-	return &Role{
-		URL:       fmt.Sprintf("/%s", manifest.Base().Filename()),
-		Threshold: 1,
-		//Keys:      &KeyStore{},
-	}
-}
-
-// GetRole implements ValidManifest
-func (manifest *Snapshot) GetRole() *Role {
-	return &Role{
-		URL:       fmt.Sprintf("/%s", manifest.Base().Filename()),
-		Threshold: 1,
-		//Keys:      &KeyStore{},
-	}
-}
-
-// GetRole implements ValidManifest
-func (manifest *Timestamp) GetRole() *Role {
-	return &Role{
-		URL:       fmt.Sprintf("/%s", manifest.Base().Filename()),
-		Threshold: 1,
-		//Keys:      &KeyStore{},
+	for _, m := range manifestList {
+		manifest.Roles[m.Filename()] = &Role{
+			URL:       fmt.Sprintf("/%s", m.Filename()),
+			Threshold: types[m.Base().Ty].threshold,
+			//Keys:      make(map[string]KeyStore),
+		}
 	}
 }
 
@@ -370,7 +337,7 @@ func (manifest *Snapshot) SetVersions(manifestList []ValidManifest) *Snapshot {
 		manifest.Meta = make(map[string]FileVersion)
 	}
 	for _, m := range manifestList {
-		manifest.Meta[m.Base().Filename()] = FileVersion{
+		manifest.Meta[m.Filename()] = FileVersion{
 			Version: m.Base().Version,
 		}
 	}

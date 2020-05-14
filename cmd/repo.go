@@ -229,14 +229,10 @@ func initRepo(path string) error {
 
 	// init index
 	index := repository.NewIndex(currTime)
-	root.Roles[index.Filename()] = index.GetRole()
 	newManifests = append(newManifests, index)
 
 	// init snapshot
-	// root and snapshot has meta of each other inside themselves, but it's ok here
-	// as we are still during the init process, not version bump needed
 	snapshot := repository.NewSnapshot(currTime).SetVersions(newManifests)
-	root.Roles[snapshot.Filename()] = snapshot.GetRole()
 	newManifests = append(newManifests, snapshot)
 
 	// init timestamp
@@ -244,8 +240,12 @@ func initRepo(path string) error {
 	if err != nil {
 		return err
 	}
-	root.Roles[timestamp.Filename()] = timestamp.GetRole()
 	newManifests = append(newManifests, timestamp)
+
+	// root and snapshot has meta of each other inside themselves, but it's ok here
+	// as we are still during the init process, not version bump needed
+	root.SetRoles(newManifests)
+
 	fmt.Printf("%v\n", newManifests)
 
 	return nil
