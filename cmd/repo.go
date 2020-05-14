@@ -182,8 +182,8 @@ func newRepoInitCmd(env *meta.Environment) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "init [path]",
-		Short: "Initialise an empty repository",
-		Long: `Initialise an empty TiUP repository at given path. If path is not specified, the
+		Short: "Initialize an empty repository",
+		Long: `Initialize an empty TiUP repository at given path. If path is not specified, the
 current working directory (".") will be used.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 1 {
@@ -230,7 +230,7 @@ func initRepo(path string) error {
 	// init index
 	newManifests = append(newManifests, repository.NewIndex(currTime))
 
-	// snapshot and timestamp are the last two manifests to be initialised
+	// snapshot and timestamp are the last two manifests to be initialized
 	// init snapshot
 	snapshot := repository.NewSnapshot(currTime).SetVersions(newManifests)
 	newManifests = append(newManifests, snapshot)
