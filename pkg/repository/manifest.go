@@ -329,12 +329,12 @@ func (manifest *Timestamp) Base() *SignedBase {
 
 // Filename implements ValidManifest
 func (manifest *Root) Filename() string {
-	return manifest.Base().Filename()
+	return types[ManifestTypeRoot].filename
 }
 
 // Filename implements ValidManifest
 func (manifest *Index) Filename() string {
-	return manifest.Base().Filename()
+	return types[ManifestTypeIndex].filename
 }
 
 // Filename implements ValidManifest
@@ -344,12 +344,12 @@ func (manifest *Component) Filename() string {
 
 // Filename implements ValidManifest
 func (manifest *Snapshot) Filename() string {
-	return manifest.Base().Filename()
+	return types[ManifestTypeSnapshot].filename
 }
 
 // Filename implements ValidManifest
 func (manifest *Timestamp) Filename() string {
-	return manifest.Base().Filename()
+	return types[ManifestTypeTimestamp].filename
 }
 
 // SetRole populates role list in the root manifest
