@@ -206,12 +206,19 @@ func launchComponent(ctx context.Context, component string, version repository.V
 		return nil, err
 	}
 
+	teleMeta, _, err := getTelemetryMeta(env)
+	if err != nil {
+		return nil, err
+	}
+
 	envs := []string{
 		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameWorkDir, tiupWd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, wd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
+		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetryStatus, teleMeta.Status),
+		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetryUUID, teleMeta.UUID),
 		fmt.Sprintf("%s=%s", localdata.EnvTag, tag),
 	}
 

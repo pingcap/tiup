@@ -58,8 +58,8 @@ func InitProfile() *Profile {
 }
 
 // Path returns a full path which is related to profile root directory
-func (p *Profile) Path(relpath string) string {
-	return filepath.Join(p.root, relpath)
+func (p *Profile) Path(relpath ...string) string {
+	return filepath.Join(append([]string{p.root}, relpath...)...)
 }
 
 // Root returns the root path of the `tiup`
