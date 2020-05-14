@@ -17,3 +17,11 @@ package repository
 type KeyStore struct {
 	// TODO
 }
+
+// KeyInfo is the manifest structure of a single key
+type KeyInfo struct {
+	Algorithms []string          `json:"keyid_hash_algorithms"`
+	Type       string            `json:"keytype"`
+	Value      map[string]string `json:"keyval"`
+	Scheme     string            `json:"scheme"`
+}

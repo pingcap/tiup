@@ -217,36 +217,9 @@ current working directory (".") will be used.`,
 }
 
 func initRepo(path string) error {
-	currTime := time.Now().UTC()
 	// TODO: set key store
 
-	// initial manifests
-	newManifests := make([]repository.ValidManifest, 0)
-
-	// init the root manifest
-	root := repository.NewRoot(currTime)
-	newManifests = append(newManifests, root)
-
-	// init index
-	newManifests = append(newManifests, repository.NewIndex(currTime))
-
-	// snapshot and timestamp are the last two manifests to be initialized
-	// init snapshot
-	snapshot := repository.NewSnapshot(currTime).SetVersions(newManifests)
-	newManifests = append(newManifests, snapshot)
-
-	// init timestamp
-	timestamp, err := repository.NewTimestamp(currTime).SetSnapshot(snapshot)
-	if err != nil {
-		return err
-	}
-	newManifests = append(newManifests, timestamp)
-
-	// root and snapshot has meta of each other inside themselves, but it's ok here
-	// as we are still during the init process, not version bump needed
-	root.SetRoles(newManifests)
-
-	return repository.BatchSaveManifests(path, newManifests)
+	return repository.Init(path, time.Now().UTC())
 }
 
 // the `repo owner` sub command

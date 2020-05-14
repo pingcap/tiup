@@ -30,6 +30,9 @@ const (
 	ManifestTypeSnapshot  = "snapshot"
 	ManifestTypeTimestamp = "timestamp"
 	//ManifestTypeComponent = "component"
+
+	// SpecVersion of current, maybe we could expand it later
+	CurrentSpecVersion = "0.1.0"
 )
 
 type signature struct {
@@ -108,9 +111,9 @@ var knownVersions = map[string]struct{}{"0.1.0": {}}
 
 // Role is the metadata of a manifest
 type Role struct {
-	URL       string               `json:"url"`
-	Keys      map[string]*KeyStore `json:"keys"`
-	Threshold uint                 `json:"threshold"`
+	URL       string              `json:"url"`
+	Keys      map[string]*KeyInfo `json:"keys"`
+	Threshold uint                `json:"threshold"`
 }
 
 // Root manifest
@@ -124,7 +127,7 @@ func NewRoot(initTime time.Time) *Root {
 	return &Root{
 		SignedBase: SignedBase{
 			Ty:          ManifestTypeRoot,
-			SpecVersion: "TODO",
+			SpecVersion: CurrentSpecVersion,
 			Expires:     initTime.Add(types[ManifestTypeRoot].expire).Format(time.RFC3339),
 			Version:     1, // initial repo starts with version 1
 		},
@@ -145,7 +148,7 @@ func NewIndex(initTime time.Time) *Index {
 	return &Index{
 		SignedBase: SignedBase{
 			Ty:          ManifestTypeIndex,
-			SpecVersion: "TODO",
+			SpecVersion: CurrentSpecVersion,
 			Expires:     initTime.Add(types[ManifestTypeIndex].expire).Format(time.RFC3339),
 			Version:     1,
 		},
@@ -157,8 +160,8 @@ func NewIndex(initTime time.Time) *Index {
 
 // Owner manifest (inline object, not dedicated files)
 type Owner struct {
-	Name string               `json:"name"`
-	Keys map[string]*KeyStore `json:"keys"`
+	Name string              `json:"name"`
+	Keys map[string]*KeyInfo `json:"keys"`
 }
 
 // Component manifest
@@ -178,7 +181,7 @@ func NewSnapshot(initTime time.Time) *Snapshot {
 	return &Snapshot{
 		SignedBase: SignedBase{
 			Ty:          ManifestTypeSnapshot,
-			SpecVersion: "TODO",
+			SpecVersion: CurrentSpecVersion,
 			Expires:     initTime.Add(types[ManifestTypeSnapshot].expire).Format(time.RFC3339),
 			Version:     0, // not versioned
 		},
@@ -196,7 +199,7 @@ func NewTimestamp(initTime time.Time) *Timestamp {
 	return &Timestamp{
 		SignedBase: SignedBase{
 			Ty:          ManifestTypeTimestamp,
-			SpecVersion: "TODO",
+			SpecVersion: CurrentSpecVersion,
 			Expires:     initTime.Add(types[ManifestTypeTimestamp].expire).Format(time.RFC3339),
 			Version:     1,
 		},
@@ -349,22 +352,21 @@ func (manifest *Timestamp) Filename() string {
 	return manifest.Base().Filename()
 }
 
-// SetRoles populates role list in the root manifest
-func (manifest *Root) SetRoles(manifestList []ValidManifest) {
+// SetRole populates role list in the root manifest
+func (manifest *Root) SetRole(m ValidManifest) {
 	if manifest.Roles == nil {
 		manifest.Roles = make(map[string]*Role)
 	}
-	for _, m := range manifestList {
-		manifest.Roles[m.Filename()] = &Role{
-			URL:       fmt.Sprintf("/%s", m.Filename()),
-			Threshold: types[m.Base().Ty].threshold,
-			//Keys:      make(map[string]KeyStore),
-		}
+
+	manifest.Roles[m.Filename()] = &Role{
+		URL:       fmt.Sprintf("/%s", m.Filename()),
+		Threshold: types[m.Base().Ty].threshold,
+		Keys:      make(map[string]*KeyInfo),
 	}
 }
 
 // SetVersions sets file versions to the snapshot
-func (manifest *Snapshot) SetVersions(manifestList []ValidManifest) *Snapshot {
+func (manifest *Snapshot) SetVersions(manifestList map[string]ValidManifest) *Snapshot {
 	if manifest.Meta == nil {
 		manifest.Meta = make(map[string]FileVersion)
 	}
@@ -433,8 +435,8 @@ func readTimestampManifest(input io.Reader, keys *KeyStore) (*Timestamp, error) 
 	return &ts, nil
 }
 
-// BatchSaveManifests write a series of manifests to disk
-func BatchSaveManifests(dst string, manifestList []ValidManifest) error {
+// batchSaveManifests write a series of manifests to disk
+func batchSaveManifests(dst string, manifestList map[string]ValidManifest) error {
 	for _, m := range manifestList {
 		writer, err := os.OpenFile(filepath.Join(dst, m.Filename()), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 		if err != nil {
@@ -466,4 +468,44 @@ func signAndWrite(out io.Writer, role ValidManifest) error {
 
 	encoder := json.NewEncoder(out)
 	return encoder.Encode(manifest)
+}
+
+// Init creates and initializes an empty reposityro
+func Init(dst string, initTime time.Time) error {
+	// initial manifests
+	manifests := make(map[string]ValidManifest)
+
+	// init the root manifest
+	manifests[ManifestTypeRoot] = NewRoot(initTime)
+
+	// init index
+	manifests[ManifestTypeIndex] = NewIndex(initTime)
+
+	// snapshot and timestamp are the last two manifests to be initialized
+	// init snapshot
+	manifests[ManifestTypeSnapshot] = NewSnapshot(initTime).SetVersions(manifests)
+
+	// init timestamp
+	timestamp, err := NewTimestamp(initTime).SetSnapshot(manifests[ManifestTypeSnapshot].(*Snapshot))
+	if err != nil {
+		return err
+	}
+	manifests[ManifestTypeTimestamp] = timestamp
+
+	// root and snapshot has meta of each other inside themselves, but it's ok here
+	// as we are still during the init process, not version bump needed
+	for ty, val := range types {
+		if val.filename == "" {
+			// skip unsupported types such as component
+			continue
+		}
+		if m, ok := manifests[ty]; ok {
+			manifests[ManifestTypeRoot].(*Root).SetRole(m)
+			continue
+		}
+		// FIXME: log a warning about manifest not found instead of returning error
+		return fmt.Errorf("manifest '%s' not initialized porperly", ty)
+	}
+
+	return batchSaveManifests(dst, manifests)
 }
