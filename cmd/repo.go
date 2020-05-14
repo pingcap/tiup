@@ -228,9 +228,9 @@ func initRepo(path string) error {
 	newManifests = append(newManifests, root)
 
 	// init index
-	index := repository.NewIndex(currTime)
-	newManifests = append(newManifests, index)
+	newManifests = append(newManifests, repository.NewIndex(currTime))
 
+	// snapshot and timestamp are the last two manifests to be initialised
 	// init snapshot
 	snapshot := repository.NewSnapshot(currTime).SetVersions(newManifests)
 	newManifests = append(newManifests, snapshot)
@@ -246,9 +246,7 @@ func initRepo(path string) error {
 	// as we are still during the init process, not version bump needed
 	root.SetRoles(newManifests)
 
-	fmt.Printf("%v\n", newManifests)
-
-	return nil
+	return repository.BatchSaveManifests(path, newManifests)
 }
 
 // the `repo owner` sub command

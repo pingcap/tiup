@@ -18,6 +18,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -399,6 +401,20 @@ func readTimestampManifest(input io.Reader, keys *KeyStore) (*Timestamp, error) 
 	}
 
 	return &ts, nil
+}
+
+// BatchSaveManifests write a series of manifests to disk
+func BatchSaveManifests(dst string, manifestList []ValidManifest) error {
+	for _, m := range manifestList {
+		writer, err := os.OpenFile(filepath.Join(dst, m.Filename()), os.O_WRONLY|os.O_CREATE, 0644)
+		if err != nil {
+			return err
+		}
+		if err = signAndWrite(writer, m); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // signAndWrite creates a manifest and writes it to out.
