@@ -25,3 +25,12 @@ func Abs(user, path string) string {
 	}
 	return path
 }
+
+// MultiDirAbs returns the absolute path for multi-dir separated by comma
+func MultiDirAbs(user, paths string) []string {
+	var dirs []string
+	for _, path := range strings.Split(paths, ",") {
+		dirs = append(dirs, Abs(user, path))
+	}
+	return dirs
+}

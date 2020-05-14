@@ -85,7 +85,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 			}
 			deployDir := clusterutil.Abs(metadata.User, instance.DeployDir())
 			// data dir would be empty for components which don't need it
-			dataDir := clusterutil.Abs(metadata.User, instance.DataDir())
+			dataDirs := clusterutil.MultiDirAbs(metadata.User, instance.DataDir())
 			// log dir will always be with values, but might not used by the component
 			logDir := clusterutil.Abs(metadata.User, instance.LogDir())
 
@@ -106,7 +106,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 				metadata.User,
 				meta.DirPaths{
 					Deploy: deployDir,
-					Data:   dataDir,
+					Data:   dataDirs,
 					Log:    logDir,
 					Cache:  meta.ClusterPath(clusterName, "config"),
 				},

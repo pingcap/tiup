@@ -15,6 +15,7 @@ package command
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
@@ -188,10 +189,12 @@ func buildScaleOutTask(
 			var dirs []string
 			globalOptions := metadata.Topology.GlobalOptions
 			for _, dir := range []string{globalOptions.DeployDir, globalOptions.DataDir, globalOptions.LogDir} {
-				if dir == "" {
-					continue
+				for _, dirname := range strings.Split(dir, ",") {
+					if dirname == "" {
+						continue
+					}
+					dirs = append(dirs, clusterutil.Abs(globalOptions.User, dirname))
 				}
-				dirs = append(dirs, clusterutil.Abs(globalOptions.User, dir))
 			}
 			t := task.NewBuilder().
 				RootSSH(
@@ -222,7 +225,7 @@ func buildScaleOutTask(
 		version := meta.ComponentVersion(inst.ComponentName(), metadata.Version)
 		deployDir := clusterutil.Abs(metadata.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
-		dataDir := clusterutil.Abs(metadata.User, inst.DataDir())
+		dataDirs := clusterutil.MultiDirAbs(metadata.User, inst.DataDir())
 		// log dir will always be with values, but might not used by the component
 		logDir := clusterutil.Abs(metadata.User, inst.LogDir())
 
@@ -230,10 +233,11 @@ func buildScaleOutTask(
 		tb := task.NewBuilder().
 			UserSSH(inst.GetHost(), inst.GetSSHPort(), metadata.User, gOpt.SSHTimeout).
 			Mkdir(metadata.User, inst.GetHost(),
-				deployDir, dataDir, logDir,
+				deployDir, logDir,
 				filepath.Join(deployDir, "bin"),
 				filepath.Join(deployDir, "conf"),
-				filepath.Join(deployDir, "scripts"))
+				filepath.Join(deployDir, "scripts")).
+			Mkdir(metadata.User, inst.GetHost(), dataDirs...)
 		if patchedComponents.Exist(inst.ComponentName()) {
 			tb.InstallPackage(meta.ClusterPath(clusterName, meta.PatchDirName, inst.ComponentName()+".tar.gz"), inst.GetHost(), deployDir)
 		} else {
@@ -246,7 +250,7 @@ func buildScaleOutTask(
 			metadata.User,
 			meta.DirPaths{
 				Deploy: deployDir,
-				Data:   dataDir,
+				Data:   dataDirs,
 				Log:    logDir,
 			},
 		).Build()
@@ -256,7 +260,7 @@ func buildScaleOutTask(
 	mergedTopo.IterInstance(func(inst meta.Instance) {
 		deployDir := clusterutil.Abs(metadata.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
-		dataDir := clusterutil.Abs(metadata.User, inst.DataDir())
+		dataDirs := clusterutil.MultiDirAbs(metadata.User, inst.DataDir())
 		// log dir will always be with values, but might not used by the component
 		logDir := clusterutil.Abs(metadata.User, inst.LogDir())
 
@@ -278,7 +282,7 @@ func buildScaleOutTask(
 			metadata.User,
 			meta.DirPaths{
 				Deploy: deployDir,
-				Data:   dataDir,
+				Data:   dataDirs,
 				Log:    logDir,
 				Cache:  meta.ClusterPath(clusterName, "config"),
 			},

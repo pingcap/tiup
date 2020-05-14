@@ -247,7 +247,7 @@ func (i *DMMasterInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clu
 		name,
 		i.GetHost(),
 		paths.Deploy,
-		paths.Data,
+		paths.Data[0],
 		paths.Log,
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.dmInstance.topo.Endpoints(deployUser)...)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_dm_master_%s_%d.sh", i.GetHost(), i.GetPort()))

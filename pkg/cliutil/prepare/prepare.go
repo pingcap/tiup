@@ -102,22 +102,26 @@ func CheckClusterDirConflict(clusterName string, topo meta.Specification) error 
 		f := fixDir(metadata.Topology)
 		metadata.Topology.IterInstance(func(inst meta.Instance) {
 			for _, dirAccessor := range instanceDirAccessor {
-				existingEntries = append(existingEntries, Entry{
-					clusterName: fi.Name(),
-					dirKind:     dirAccessor.dirKind,
-					dir:         f(dirAccessor.accessor(inst, metadata.Topology)),
-					instance:    inst,
-				})
+				for _, dir := range strings.Split(f(dirAccessor.accessor(inst, metadata.Topology)), ",") {
+					existingEntries = append(existingEntries, Entry{
+						clusterName: fi.Name(),
+						dirKind:     dirAccessor.dirKind,
+						dir:         dir,
+						instance:    inst,
+					})
+				}
 			}
 		})
 		metadata.Topology.IterHost(func(inst meta.Instance) {
 			for _, dirAccessor := range hostDirAccessor {
-				existingEntries = append(existingEntries, Entry{
-					clusterName: fi.Name(),
-					dirKind:     dirAccessor.dirKind,
-					dir:         f(dirAccessor.accessor(inst, metadata.Topology)),
-					instance:    inst,
-				})
+				for _, dir := range strings.Split(f(dirAccessor.accessor(inst, metadata.Topology)), ",") {
+					existingEntries = append(existingEntries, Entry{
+						clusterName: fi.Name(),
+						dirKind:     dirAccessor.dirKind,
+						dir:         dir,
+						instance:    inst,
+					})
+				}
 			}
 		})
 	}
@@ -125,20 +129,24 @@ func CheckClusterDirConflict(clusterName string, topo meta.Specification) error 
 	f := fixDir(topo)
 	topo.IterInstance(func(inst meta.Instance) {
 		for _, dirAccessor := range instanceDirAccessor {
-			currentEntries = append(currentEntries, Entry{
-				dirKind:  dirAccessor.dirKind,
-				dir:      f(dirAccessor.accessor(inst, topo)),
-				instance: inst,
-			})
+			for _, dir := range strings.Split(f(dirAccessor.accessor(inst, topo)), ",") {
+				currentEntries = append(currentEntries, Entry{
+					dirKind:  dirAccessor.dirKind,
+					dir:      dir,
+					instance: inst,
+				})
+			}
 		}
 	})
 	topo.IterHost(func(inst meta.Instance) {
 		for _, dirAccessor := range hostDirAccessor {
-			currentEntries = append(currentEntries, Entry{
-				dirKind:  dirAccessor.dirKind,
-				dir:      f(dirAccessor.accessor(inst, topo)),
-				instance: inst,
-			})
+			for _, dir := range strings.Split(f(dirAccessor.accessor(inst, topo)), ",") {
+				currentEntries = append(currentEntries, Entry{
+					dirKind:  dirAccessor.dirKind,
+					dir:      dir,
+					instance: inst,
+				})
+			}
 		}
 	})
 

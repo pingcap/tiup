@@ -33,6 +33,11 @@ func (m *Mkdir) Execute(ctx *Context) error {
 	if !found {
 		return ErrNoExecutor
 	}
+	for _, dir := range m.dirs {
+		if strings.Contains(dir, ",") {
+			return fmt.Errorf("dir name contains invalid characters: %v", dir)
+		}
+	}
 
 	cmd := fmt.Sprintf(
 		`mkdir -p %[1]s && chown -R %[2]s:%[2]s %[1]s`,
