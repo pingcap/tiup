@@ -23,6 +23,15 @@ import (
 	"time"
 )
 
+// Names of manifest types
+const (
+	ManifestTypeRoot      = "root"
+	ManifestTypeIndex     = "index"
+	ManifestTypeSnapshot  = "snapshot"
+	ManifestTypeTimestamp = "timestamp"
+	//ManifestTypeComponent = "component"
+)
+
 type signature struct {
 	KeyID string `json:"keyid"`
 	Sig   string `json:"sig"`
@@ -65,13 +74,13 @@ type ty struct {
 // meta configs for different manifest types
 var types = map[string]ty{
 	"root": {
-		filename:  "root.json",
+		filename:  ManifestTypeRoot + ".json",
 		versioned: true,
 		expire:    time.Hour * 24 * 365, // 1y
 		threshold: 3,
 	},
 	"index": {
-		filename:  "index.json",
+		filename:  ManifestTypeIndex + ".json",
 		versioned: true,
 		expire:    time.Hour * 24 * 365, // 1y
 		threshold: 1,
@@ -83,13 +92,13 @@ var types = map[string]ty{
 		threshold: 1,
 	},
 	"snapshot": {
-		filename:  "snapshot.json",
+		filename:  ManifestTypeSnapshot + ".json",
 		versioned: false,
 		expire:    time.Hour * 24, // 1d
 		threshold: 1,
 	},
 	"timestamp": {
-		filename:  "timestamp.json",
+		filename:  ManifestTypeTimestamp + ".json",
 		versioned: false,
 		expire:    time.Hour * 24, // 1d
 		threshold: 1,
@@ -114,9 +123,9 @@ type Root struct {
 func NewRoot(initTime time.Time) *Root {
 	return &Root{
 		SignedBase: SignedBase{
-			Ty:          "root",
+			Ty:          ManifestTypeRoot,
 			SpecVersion: "TODO",
-			Expires:     initTime.Add(types["root"].expire).Format(time.RFC3339),
+			Expires:     initTime.Add(types[ManifestTypeRoot].expire).Format(time.RFC3339),
 			Version:     1, // initial repo starts with version 1
 		},
 		Roles: make(map[string]*Role),
@@ -135,9 +144,9 @@ type Index struct {
 func NewIndex(initTime time.Time) *Index {
 	return &Index{
 		SignedBase: SignedBase{
-			Ty:          "index",
+			Ty:          ManifestTypeIndex,
 			SpecVersion: "TODO",
-			Expires:     initTime.Add(types["index"].expire).Format(time.RFC3339),
+			Expires:     initTime.Add(types[ManifestTypeIndex].expire).Format(time.RFC3339),
 			Version:     1,
 		},
 		Owners:            make(map[string]Owner),
@@ -168,9 +177,9 @@ type Snapshot struct {
 func NewSnapshot(initTime time.Time) *Snapshot {
 	return &Snapshot{
 		SignedBase: SignedBase{
-			Ty:          "snapshot",
+			Ty:          ManifestTypeSnapshot,
 			SpecVersion: "TODO",
-			Expires:     initTime.Add(types["snapshot"].expire).Format(time.RFC3339),
+			Expires:     initTime.Add(types[ManifestTypeSnapshot].expire).Format(time.RFC3339),
 			Version:     0, // not versioned
 		},
 	}
@@ -186,9 +195,9 @@ type Timestamp struct {
 func NewTimestamp(initTime time.Time) *Timestamp {
 	return &Timestamp{
 		SignedBase: SignedBase{
-			Ty:          "timestamp",
+			Ty:          ManifestTypeTimestamp,
 			SpecVersion: "TODO",
-			Expires:     initTime.Add(types["timestamp"].expire).Format(time.RFC3339),
+			Expires:     initTime.Add(types[ManifestTypeTimestamp].expire).Format(time.RFC3339),
 			Version:     1,
 		},
 	}
@@ -287,7 +296,7 @@ func (manifest *Timestamp) isValid() error {
 
 // SnapshotHash returns the hashes of the snapshot manifest as specified in the timestamp manifest.
 func (manifest *Timestamp) SnapshotHash() FileHash {
-	return manifest.Meta[types["snapshot"].filename]
+	return manifest.Meta[types[ManifestTypeSnapshot].filename]
 }
 
 // Base implements ValidManifest
@@ -317,12 +326,12 @@ func (manifest *Timestamp) Base() *SignedBase {
 
 // Filename implements ValidManifest
 func (manifest *Root) Filename() string {
-	return "root.json"
+	return manifest.Base().Filename()
 }
 
 // Filename implements ValidManifest
 func (manifest *Index) Filename() string {
-	return "index.json"
+	return manifest.Base().Filename()
 }
 
 // Filename implements ValidManifest
@@ -332,12 +341,12 @@ func (manifest *Component) Filename() string {
 
 // Filename implements ValidManifest
 func (manifest *Snapshot) Filename() string {
-	return "snapshot.json"
+	return manifest.Base().Filename()
 }
 
 // Filename implements ValidManifest
 func (manifest *Timestamp) Filename() string {
-	return "timestamp.json"
+	return manifest.Base().Filename()
 }
 
 // SetRoles populates role list in the root manifest
@@ -427,10 +436,11 @@ func readTimestampManifest(input io.Reader, keys *KeyStore) (*Timestamp, error) 
 // BatchSaveManifests write a series of manifests to disk
 func BatchSaveManifests(dst string, manifestList []ValidManifest) error {
 	for _, m := range manifestList {
-		writer, err := os.OpenFile(filepath.Join(dst, m.Filename()), os.O_WRONLY|os.O_CREATE, 0644)
+		writer, err := os.OpenFile(filepath.Join(dst, m.Filename()), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 		if err != nil {
 			return err
 		}
+		defer writer.Close()
 		if err = signAndWrite(writer, m); err != nil {
 			return err
 		}
