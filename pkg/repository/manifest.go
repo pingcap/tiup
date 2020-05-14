@@ -58,15 +58,42 @@ type ValidManifest interface {
 type ty struct {
 	filename  string
 	versioned bool
+	expire    time.Duration
 	threshold uint
 }
 
+// meta configs for different manifest types
 var types = map[string]ty{
-	"root":      {"root.json", true, 3},
-	"index":     {"index.json", true, 1},
-	"component": {"", true, 1},
-	"snapshot":  {"snapshot.json", false, 1},
-	"timestamp": {"timestamp.json", false, 1},
+	"root": {
+		filename:  "root.json",
+		versioned: true,
+		expire:    time.Hour * 24 * 365, // 1y
+		threshold: 3,
+	},
+	"index": {
+		filename:  "index.json",
+		versioned: true,
+		expire:    time.Hour * 24 * 365, // 1y
+		threshold: 1,
+	},
+	"component": {
+		filename:  "",
+		versioned: true,
+		expire:    time.Hour * 24 * 365, // 1y
+		threshold: 1,
+	},
+	"snapshot": {
+		filename:  "snapshot.json",
+		versioned: false,
+		expire:    time.Hour * 24, // 1d
+		threshold: 1,
+	},
+	"timestamp": {
+		filename:  "timestamp.json",
+		versioned: false,
+		expire:    time.Hour * 24, // 1d
+		threshold: 1,
+	},
 }
 var knownVersions = map[string]struct{}{"0.1.0": {}}
 
@@ -85,21 +112,15 @@ type Root struct {
 
 // NewRoot creates a Root object
 func NewRoot(initTime time.Time) *Root {
-	root := &Root{
+	return &Root{
 		SignedBase: SignedBase{
 			Ty:          "root",
 			SpecVersion: "TODO",
-			Expires:     initTime.Add(time.Hour * 24 * 365).Format(time.RFC3339), // 1y
-			Version:     1,                                                       // initial repo starts with version 1
+			Expires:     initTime.Add(types["root"].expire).Format(time.RFC3339),
+			Version:     1, // initial repo starts with version 1
 		},
 		Roles: make(map[string]*Role),
 	}
-	root.Roles[root.Filename()] = &Role{
-		URL:       fmt.Sprintf("/%s", root.Filename()),
-		Threshold: types["root"].threshold, // root manifest has higher threshold
-		//Keys:      &KeyStore{},
-	}
-	return root
 }
 
 // Index manifest
@@ -116,7 +137,7 @@ func NewIndex(initTime time.Time) *Index {
 		SignedBase: SignedBase{
 			Ty:          "index",
 			SpecVersion: "TODO",
-			Expires:     initTime.Add(time.Hour * 24 * 365).Format(time.RFC3339), // 1y
+			Expires:     initTime.Add(types["index"].expire).Format(time.RFC3339),
 			Version:     1,
 		},
 		Owners:            make(map[string]Owner),
@@ -149,8 +170,8 @@ func NewSnapshot(initTime time.Time) *Snapshot {
 		SignedBase: SignedBase{
 			Ty:          "snapshot",
 			SpecVersion: "TODO",
-			Expires:     initTime.Add(time.Hour * 24).Format(time.RFC3339), // 1d
-			Version:     0,                                                 // not versioned
+			Expires:     initTime.Add(types["snapshot"].expire).Format(time.RFC3339),
+			Version:     0, // not versioned
 		},
 	}
 }
@@ -167,7 +188,7 @@ func NewTimestamp(initTime time.Time) *Timestamp {
 		SignedBase: SignedBase{
 			Ty:          "timestamp",
 			SpecVersion: "TODO",
-			Expires:     initTime.Add(time.Hour * 24).Format(time.RFC3339), // 1d
+			Expires:     initTime.Add(types["timestamp"].expire).Format(time.RFC3339),
 			Version:     1,
 		},
 	}
