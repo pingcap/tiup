@@ -85,27 +85,41 @@ type Component struct {
 	// TODO
 }
 
-// Snapshot manifest
+// Snapshot manifest.
 type Snapshot struct {
 	SignedBase
-	// TODO
+	Meta map[string]FileVersion `json:"meta"`
 }
 
-// Timestamp manifest
+// Timestamp manifest.
 type Timestamp struct {
 	SignedBase
-	Meta map[string]fileHash `json:"meta"`
+	Meta map[string]FileHash `json:"meta"`
 }
 
-type fileHash struct {
+// FileHash is the hashes and length of a file.
+type FileHash struct {
 	Hashes map[string]string `json:"hashes"`
 	Length uint              `json:"length"`
+}
+
+// FileVersion is just a version number.
+type FileVersion struct {
+	Version uint `json:"version"`
 }
 
 // verifySignature ensures that each signature in manifest::signatures is a valid signature of manifest::signed.
 func (manifest *Manifest) verifySignature(keys *KeyStore) error {
 	// TODO
 	return nil
+}
+
+// SignatureError the signature of a file is incorrect.
+type SignatureError struct{}
+
+func (err *SignatureError) Error() string {
+	// TODO include the filename
+	return "invalid signature for file"
 }
 
 // Filename returns the unversioned name that the manifest should be saved as based on the type in s.
@@ -174,6 +188,11 @@ func (manifest *Timestamp) isValid() error {
 	return nil
 }
 
+// SnapshotHash returns the hashes of the snapshot manifest as specified in the timestamp manifest.
+func (manifest *Timestamp) SnapshotHash() FileHash {
+	return manifest.Meta[types["snapshot"].filename]
+}
+
 // Base implements ValidManifest
 func (manifest *Root) Base() *SignedBase {
 	return &manifest.SignedBase
@@ -225,35 +244,35 @@ func (manifest *Timestamp) Filename() string {
 }
 
 // ReadManifest reads a manifest from input and validates it, the result is stored in role, which must be a pointer type.
-func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) error {
+func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifest, error) {
 	decoder := json.NewDecoder(input)
 	var m Manifest
 	m.Signed = role
 	err := decoder.Decode(&m)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if len(m.Signatures) == 0 {
-		return errors.New("no signatures supplied in manifest")
+		return nil, errors.New("no signatures supplied in manifest")
 	}
 
 	err = m.verifySignature(keys)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = m.Signed.Base().isValid()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return m.Signed.isValid()
+	return &m, m.Signed.isValid()
 }
 
 func readTimestampManifest(input io.Reader, keys *KeyStore) (*Timestamp, error) {
 	var ts Timestamp
-	err := ReadManifest(input, &ts, keys)
+	_, err := ReadManifest(input, &ts, keys)
 	if err != nil {
 		return nil, err
 	}

@@ -48,12 +48,12 @@ func TestReadTimestamp(t *testing.T) {
 
 func TestEmptyManifest(t *testing.T) {
 	var ts Timestamp
-	err := ReadManifest(strings.NewReader(""), &ts, nil)
+	_, err := ReadManifest(strings.NewReader(""), &ts, nil)
 	assert.NotNil(t, err)
 }
 
 func TestWriteManifest(t *testing.T) {
-	ts := Timestamp{Meta: map[string]fileHash{"snapshot.json": {
+	ts := Timestamp{Meta: map[string]FileHash{"snapshot.json": {
 		Hashes: map[string]string{"TODO": "TODO"},
 		Length: 0,
 	}},
