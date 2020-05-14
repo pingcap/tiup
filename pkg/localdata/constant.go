@@ -28,6 +28,9 @@ const (
 	// DataParentDir represent the parent directory of all running instances
 	DataParentDir = "data"
 
+	// TelemetryDir represent the parent directory of telemetry info
+	TelemetryDir = "telemetry"
+
 	// StorageParentDir represent the parent directory of running component
 	StorageParentDir = "storage"
 
@@ -45,6 +48,12 @@ const (
 
 	// EnvNameHome represents the environment name of tiup home directory
 	EnvNameHome = "TIUP_HOME"
+
+	// EnvNameTelemetryStatus represents the environment name of tiup telemetry status
+	EnvNameTelemetryStatus = "TIUP_TELEMETRY_STATUS"
+
+	// EnvNameTelemetryUUID represents the environment name of tiup telemetry uuid
+	EnvNameTelemetryUUID = "TIUP_TELEMETRY_UUID"
 
 	// EnvTag is the tag of the running component
 	EnvTag = "TIUP_TAG"
