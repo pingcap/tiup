@@ -21,6 +21,7 @@ exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/cdc server 
 {{- else}}
 exec bin/cdc server \
 {{- end}}
-    --status-addr "{{.IP}}:{{.Port}}" \
+    --addr "0.0.0.0:{{.Port}}" \
+    --advertise-addr "{{.IP}}:{{.Port}}" \
     --pd "{{template "PDList" .Endpoints}}" \
     --log-file "{{.LogDir}}/cdc.log" 2>> "{{.LogDir}}/cdc_stderr.log"
