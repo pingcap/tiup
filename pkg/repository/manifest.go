@@ -51,36 +51,55 @@ type ValidManifest interface {
 	// Filename returns the unversioned name that the manifest should be saved as based on its Go type.
 	Filename() string
 	// GetRole returns the meta info of the manifest
-	GetRole() *RoleMeta
+	GetRole() *Role
 }
 
 // ty is type information about a manifest
 type ty struct {
 	filename  string
 	versioned bool
+	threshold uint
 }
 
 var types = map[string]ty{
-	"root":      {"root.json", true},
-	"index":     {"index.json", true},
-	"component": {"", true},
-	"snapshot":  {"snapshot.json", false},
-	"timestamp": {"timestamp.json", false},
+	"root":      {"root.json", true, 3},
+	"index":     {"index.json", true, 1},
+	"component": {"", true, 1},
+	"snapshot":  {"snapshot.json", false, 1},
+	"timestamp": {"timestamp.json", false, 1},
 }
 var knownVersions = map[string]struct{}{"0.1.0": {}}
 
-// RoleMeta is the metadata of a manifest
-type RoleMeta struct {
-	URL       string    `json:"url"`
-	Keys      *KeyStore `json:"keys"`
-	Threshold uint      `json:"threshold"`
+// Role is the metadata of a manifest
+type Role struct {
+	URL       string               `json:"url"`
+	Keys      map[string]*KeyStore `json:"keys"`
+	Threshold uint                 `json:"threshold"`
 }
 
 // Root manifest
 type Root struct {
 	SignedBase
-	Roles map[string]*RoleMeta `json:"roles"`
-	// TODO
+	Roles map[string]*Role `json:"roles"`
+}
+
+// NewRoot creates a Root object
+func NewRoot(initTime time.Time) *Root {
+	root := &Root{
+		SignedBase: SignedBase{
+			Ty:          "root",
+			SpecVersion: "TODO",
+			Expires:     initTime.Add(time.Hour * 24 * 365).Format(time.RFC3339), // 1y
+			Version:     1,                                                       // initial repo starts with version 1
+		},
+		Roles: make(map[string]*Role),
+	}
+	root.Roles[root.Filename()] = &Role{
+		URL:       fmt.Sprintf("/%s", root.Filename()),
+		Threshold: types["root"].threshold, // root manifest has higher threshold
+		//Keys:      &KeyStore{},
+	}
+	return root
 }
 
 // Index manifest
@@ -89,14 +108,27 @@ type Index struct {
 	Owners            map[string]Owner     `json:"owners"`
 	Components        map[string]Component `json:"components"`
 	DefaultComponents []string             `json:"default_components"`
-	// TODO
+}
+
+// NewIndex creates a Index object
+func NewIndex(initTime time.Time) *Index {
+	return &Index{
+		SignedBase: SignedBase{
+			Ty:          "index",
+			SpecVersion: "TODO",
+			Expires:     initTime.Add(time.Hour * 24 * 365).Format(time.RFC3339), // 1y
+			Version:     1,
+		},
+		Owners:            make(map[string]Owner),
+		Components:        make(map[string]Component),
+		DefaultComponents: make([]string, 0),
+	}
 }
 
 // Owner manifest (inline object, not dedicated files)
 type Owner struct {
-	//ID   string    `json:"id"`
-	Name string    `json:"name"`
-	Keys *KeyStore `json:"keys"`
+	Name string               `json:"name"`
+	Keys map[string]*KeyStore `json:"keys"`
 }
 
 // Component manifest
@@ -111,10 +143,34 @@ type Snapshot struct {
 	Meta map[string]FileVersion `json:"meta"`
 }
 
+// NewSnapshot creates a Snapshot object.
+func NewSnapshot(initTime time.Time) *Snapshot {
+	return &Snapshot{
+		SignedBase: SignedBase{
+			Ty:          "snapshot",
+			SpecVersion: "TODO",
+			Expires:     initTime.Add(time.Hour * 24).Format(time.RFC3339), // 1d
+			Version:     0,                                                 // not versioned
+		},
+	}
+}
+
 // Timestamp manifest.
 type Timestamp struct {
 	SignedBase
 	Meta map[string]FileHash `json:"meta"`
+}
+
+// NewTimestamp creates a Timestamp object
+func NewTimestamp(initTime time.Time) *Timestamp {
+	return &Timestamp{
+		SignedBase: SignedBase{
+			Ty:          "timestamp",
+			SpecVersion: "TODO",
+			Expires:     initTime.Add(time.Hour * 24).Format(time.RFC3339), // 1d
+			Version:     1,
+		},
+	}
 }
 
 // FileHash is the hashes and length of a file.
@@ -264,8 +320,8 @@ func (manifest *Timestamp) Filename() string {
 }
 
 // GetRole implements ValidManifest
-func (manifest *Root) GetRole() *RoleMeta {
-	return &RoleMeta{
+func (manifest *Root) GetRole() *Role {
+	return &Role{
 		URL:       fmt.Sprintf("/%s", manifest.Base().Filename()),
 		Threshold: 3, // root manifest has higher threshold
 		//Keys:      &KeyStore{},
@@ -273,8 +329,8 @@ func (manifest *Root) GetRole() *RoleMeta {
 }
 
 // GetRole implements ValidManifest
-func (manifest *Index) GetRole() *RoleMeta {
-	return &RoleMeta{
+func (manifest *Index) GetRole() *Role {
+	return &Role{
 		URL:       fmt.Sprintf("/%s", manifest.Base().Filename()),
 		Threshold: 1,
 		//Keys:      &KeyStore{},
@@ -282,8 +338,8 @@ func (manifest *Index) GetRole() *RoleMeta {
 }
 
 // GetRole implements ValidManifest
-func (manifest *Component) GetRole() *RoleMeta {
-	return &RoleMeta{
+func (manifest *Component) GetRole() *Role {
+	return &Role{
 		URL:       fmt.Sprintf("/%s", manifest.Base().Filename()),
 		Threshold: 1,
 		//Keys:      &KeyStore{},
@@ -291,8 +347,8 @@ func (manifest *Component) GetRole() *RoleMeta {
 }
 
 // GetRole implements ValidManifest
-func (manifest *Snapshot) GetRole() *RoleMeta {
-	return &RoleMeta{
+func (manifest *Snapshot) GetRole() *Role {
+	return &Role{
 		URL:       fmt.Sprintf("/%s", manifest.Base().Filename()),
 		Threshold: 1,
 		//Keys:      &KeyStore{},
@@ -300,8 +356,8 @@ func (manifest *Snapshot) GetRole() *RoleMeta {
 }
 
 // GetRole implements ValidManifest
-func (manifest *Timestamp) GetRole() *RoleMeta {
-	return &RoleMeta{
+func (manifest *Timestamp) GetRole() *Role {
+	return &Role{
 		URL:       fmt.Sprintf("/%s", manifest.Base().Filename()),
 		Threshold: 1,
 		//Keys:      &KeyStore{},
@@ -309,13 +365,13 @@ func (manifest *Timestamp) GetRole() *RoleMeta {
 }
 
 // SetVersions sets file versions to the snapshot
-func (manifest *Snapshot) SetVersions(manifestList []*Manifest) *Snapshot {
+func (manifest *Snapshot) SetVersions(manifestList []ValidManifest) *Snapshot {
 	if manifest.Meta == nil {
 		manifest.Meta = make(map[string]FileVersion)
 	}
 	for _, m := range manifestList {
-		manifest.Meta[m.Signed.Base().Filename()] = FileVersion{
-			Version: uint(m.Signed.Base().Version),
+		manifest.Meta[m.Base().Filename()] = FileVersion{
+			Version: m.Base().Version,
 		}
 	}
 	return manifest
