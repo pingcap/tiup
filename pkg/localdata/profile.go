@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/pingcap-incubator/tiup/pkg/repository"
+	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"golang.org/x/mod/semver"
@@ -68,7 +68,7 @@ func (p *Profile) Root() string {
 }
 
 // BinaryPath returns the binary path of component specific version
-func (p *Profile) BinaryPath(component string, version repository.Version) (string, error) {
+func (p *Profile) BinaryPath(component string, version manifest.Version) (string, error) {
 	manifest := p.Versions(component)
 	if manifest == nil {
 		return "", errors.Errorf("component `%s` doesn't install", component)
@@ -94,7 +94,7 @@ func (p *Profile) BinaryPath(component string, version repository.Version) (stri
 }
 
 // ComponentInstalledPath returns the path where the component installed
-func (p *Profile) ComponentInstalledPath(component string, version repository.Version) (string, error) {
+func (p *Profile) ComponentInstalledPath(component string, version manifest.Version) (string, error) {
 	versions, err := p.InstalledVersions(component)
 	if err != nil {
 		return "", err
@@ -108,7 +108,7 @@ func (p *Profile) ComponentInstalledPath(component string, version repository.Ve
 		sort.Slice(versions, func(i, j int) bool {
 			return semver.Compare(versions[i], versions[j]) < 0
 		})
-		version = repository.Version(versions[len(versions)-1])
+		version = manifest.Version(versions[len(versions)-1])
 	} else if version.IsEmpty() {
 		return "", fmt.Errorf("component not installed, please try `tiup install %s` to install it", component)
 	}
@@ -160,12 +160,12 @@ func (p *Profile) isNotExist(path string) bool {
 }
 
 // Manifest returns the components manifest
-func (p *Profile) Manifest() *repository.ComponentManifest {
+func (p *Profile) Manifest() *manifest.ComponentManifest {
 	if p.isNotExist(p.v0ManifestFileName()) {
 		return nil
 	}
 
-	var manifest repository.ComponentManifest
+	var manifest manifest.ComponentManifest
 	if err := p.ReadJSON(p.v0ManifestFileName(), &manifest); err != nil {
 		// The manifest was marshaled and stored by `tiup`, it should
 		// be a valid JSON file
@@ -176,18 +176,18 @@ func (p *Profile) Manifest() *repository.ComponentManifest {
 }
 
 // SaveManifest saves the latest components manifest to local profile
-func (p *Profile) SaveManifest(manifest *repository.ComponentManifest) error {
+func (p *Profile) SaveManifest(manifest *manifest.ComponentManifest) error {
 	return p.WriteJSON(p.v0ManifestFileName(), manifest)
 }
 
 // Versions returns the version manifest of specific component
-func (p *Profile) Versions(component string) *repository.VersionManifest {
+func (p *Profile) Versions(component string) *manifest.VersionManifest {
 	file := p.versionFileName(component)
 	if p.isNotExist(file) {
 		return nil
 	}
 
-	var manifest repository.VersionManifest
+	var manifest manifest.VersionManifest
 	if err := p.ReadJSON(file, &manifest); err != nil {
 		// The manifest was marshaled and stored by `tiup`, it should
 		// be a valid JSON file
@@ -198,7 +198,7 @@ func (p *Profile) Versions(component string) *repository.VersionManifest {
 }
 
 // SaveVersions saves the latest version manifest to local profile of specific component
-func (p *Profile) SaveVersions(component string, manifest *repository.VersionManifest) error {
+func (p *Profile) SaveVersions(component string, manifest *manifest.VersionManifest) error {
 	return p.WriteJSON(p.versionFileName(component), manifest)
 }
 
@@ -250,7 +250,7 @@ func (p *Profile) InstalledVersions(component string) ([]string, error) {
 
 // SelectInstalledVersion selects the installed versions and the latest release version
 // will be chosen if there is an empty version
-func (p *Profile) SelectInstalledVersion(component string, version repository.Version) (repository.Version, error) {
+func (p *Profile) SelectInstalledVersion(component string, version manifest.Version) (manifest.Version, error) {
 	installed, err := p.InstalledVersions(component)
 	if err != nil {
 		return "", err
@@ -265,11 +265,11 @@ func (p *Profile) SelectInstalledVersion(component string, version repository.Ve
 		sort.Slice(installed, func(i, j int) bool {
 			return semver.Compare(installed[i], installed[j]) < 0
 		})
-		version = repository.Version(installed[len(installed)-1])
+		version = manifest.Version(installed[len(installed)-1])
 	}
 	found := false
 	for _, v := range installed {
-		if repository.Version(v) == version {
+		if manifest.Version(v) == version {
 			found = true
 			break
 		}

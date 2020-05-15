@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
+	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
@@ -145,7 +146,7 @@ func suggestVersion(repo *repository.Repository, component, version string) (str
 	if err != nil {
 		return "", err
 	}
-	if v, found := vm.FindVersion(repository.Version(version)); found {
+	if v, found := vm.FindVersion(manifest.Version(version)); found {
 		return v.Version.String(), nil
 	}
 	v, err := repo.LatestStableVersion(component)
@@ -169,7 +170,7 @@ func downloadResource(mirror repository.Mirror, targetDir, name string, overwrit
 	return mirror.Download(shaFile, targetDir)
 }
 
-func download(targetDir string, repo *repository.Repository, manifest *repository.ComponentManifest, options mirrorsOptions) error {
+func download(targetDir string, repo *repository.Repository, manifest *manifest.ComponentManifest, options mirrorsOptions) error {
 	if utils.IsNotExist(targetDir) {
 		if err := os.MkdirAll(targetDir, 0755); err != nil {
 			return err
@@ -206,14 +207,14 @@ func download(targetDir string, repo *repository.Repository, manifest *repositor
 		}
 
 		vs := set.NewStringSet(*versions...)
-		var newCompInfo *repository.VersionManifest
+		var newCompInfo *manifest.VersionManifest
 		if options.full {
 			newCompInfo = componentInfo
 		} else {
 			if len(vs) < 1 {
 				continue
 			}
-			newCompInfo = &repository.VersionManifest{
+			newCompInfo = &manifest.VersionManifest{
 				Description: componentInfo.Description,
 				Modified:    componentInfo.Modified,
 			}
@@ -222,7 +223,7 @@ func download(targetDir string, repo *repository.Repository, manifest *repositor
 			}
 		}
 
-		checkVersion := func(version repository.Version) bool {
+		checkVersion := func(version manifest.Version) bool {
 			if options.full || vs.Exist("all") || vs.Exist(version.String()) {
 				return true
 			}
@@ -234,7 +235,7 @@ func download(targetDir string, repo *repository.Repository, manifest *repositor
 			}
 			return false
 		}
-		err = componentInfo.IterVersion(func(versionInfo repository.VersionInfo) error {
+		err = componentInfo.IterVersion(func(versionInfo manifest.VersionInfo) error {
 			if !checkVersion(versionInfo.Version) {
 				return nil
 			}

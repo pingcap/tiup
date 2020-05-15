@@ -11,13 +11,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package repository
+package manifest
 
 import (
 	. "github.com/pingcap/check"
 )
 
-func (s *repositorySuite) TestVersions(c *C) {
+type manifestSuite struct{}
+
+var _ = Suite(&manifestSuite{})
+
+func (s *manifestSuite) TestVersions(c *C) {
 	vm := VersionManifest{
 		Description: "test",
 		Modified:    "test1",
@@ -65,7 +69,7 @@ func (s *repositorySuite) TestVersions(c *C) {
 
 	c.Assert(Version("v3.0.0").String(), Equals, "v3.0.0")
 
-	vm.sort()
+	vm.Sort()
 	c.Assert(vm.Versions[1].Version, Equals, Version("v0.0.2"))
 	c.Assert(vm.LatestVersion(), Equals, Version("v0.0.3"))
 	c.Assert(vm.ContainsVersion("v0.0.3"), IsTrue)

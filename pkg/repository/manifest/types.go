@@ -65,12 +65,22 @@ type KeyInfo struct {
 	Scheme     string            `json:"scheme"`
 }
 
+type ComponentItem struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Yanked      bool   `json:"yanked"`
+	Owner       string `json:"owner"`
+	URL         string `json:"url"`
+	Length      int64  `json:"length"`
+	Threshold   int    `json:"threshold"`
+}
+
 // Index manifest.
 type Index struct {
 	SignedBase
-	Owners            map[string]Owner     `json:"owners"`
-	Components        map[string]Component `json:"components"`
-	DefaultComponents []string             `json:"default_components"`
+	Owners            map[string]Owner         `json:"owners"`
+	Components        map[string]ComponentItem `json:"components"`
+	DefaultComponents []string                 `json:"default_components"`
 }
 
 // Owner object.
@@ -79,10 +89,22 @@ type Owner struct {
 	Keys map[string]*KeyInfo `json:"keys"`
 }
 
+type VersionItem struct {
+	Yanked       bool              `json:"yanked"`
+	URL          string            `json:"url"`
+	Hashes       map[string]string `json:"hashes"`
+	Entry        string            `json:"entry"`
+	Released     string            `json:"released"`
+	Length       int64             `json:"length"`
+	Dependencies []string          `json:"dependencies"`
+}
+
 // Component manifest.
 type Component struct {
 	SignedBase
-	// TODO
+	Name        string                            `json:"name"`
+	Description string                            `json:"description"`
+	Platforms   map[string]map[string]VersionItem `json:"platforms"`
 }
 
 // Snapshot manifest.
@@ -137,12 +159,12 @@ func (manifest *Timestamp) Base() *SignedBase {
 
 // Filename implements ValidManifest
 func (manifest *Root) Filename() string {
-	return types[ManifestTypeRoot].filename
+	return ManifestsConfig[ManifestTypeRoot].Filename
 }
 
 // Filename implements ValidManifest
 func (manifest *Index) Filename() string {
-	return types[ManifestTypeIndex].filename
+	return ManifestsConfig[ManifestTypeIndex].Filename
 }
 
 // Filename implements ValidManifest
@@ -152,10 +174,10 @@ func (manifest *Component) Filename() string {
 
 // Filename implements ValidManifest
 func (manifest *Snapshot) Filename() string {
-	return types[ManifestTypeSnapshot].filename
+	return ManifestsConfig[ManifestTypeSnapshot].Filename
 }
 
 // Filename implements ValidManifest
 func (manifest *Timestamp) Filename() string {
-	return types[ManifestTypeTimestamp].filename
+	return ManifestsConfig[ManifestTypeTimestamp].Filename
 }

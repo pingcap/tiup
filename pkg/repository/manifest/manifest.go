@@ -26,7 +26,7 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 )
 
-// Names of manifest types
+// Names of manifest ManifestsConfig
 const (
 	ManifestTypeRoot      = "root"
 	ManifestTypeIndex     = "index"
@@ -40,43 +40,43 @@ const (
 
 // ty is type information about a manifest
 type ty struct {
-	filename  string
-	versioned bool
-	expire    time.Duration
-	threshold uint
+	Filename  string
+	Versioned bool
+	Expire    time.Duration
+	Threshold uint
 }
 
-// meta configs for different manifest types
-var types = map[string]ty{
+// meta configs for different manifest ManifestsConfig
+var ManifestsConfig = map[string]ty{
 	ManifestTypeRoot: {
-		filename:  ManifestTypeRoot + ".json",
-		versioned: true,
-		expire:    time.Hour * 24 * 365, // 1y
-		threshold: 3,
+		Filename:  ManifestTypeRoot + ".json",
+		Versioned: true,
+		Expire:    time.Hour * 24 * 365, // 1y
+		Threshold: 3,
 	},
 	ManifestTypeIndex: {
-		filename:  ManifestTypeIndex + ".json",
-		versioned: true,
-		expire:    time.Hour * 24 * 365, // 1y
-		threshold: 1,
+		Filename:  ManifestTypeIndex + ".json",
+		Versioned: true,
+		Expire:    time.Hour * 24 * 365, // 1y
+		Threshold: 1,
 	},
 	ManifestTypeComponent: {
-		filename:  "",
-		versioned: true,
-		expire:    time.Hour * 24 * 365, // 1y
-		threshold: 1,
+		Filename:  "",
+		Versioned: true,
+		Expire:    time.Hour * 24 * 365, // 1y
+		Threshold: 1,
 	},
 	ManifestTypeSnapshot: {
-		filename:  ManifestTypeSnapshot + ".json",
-		versioned: false,
-		expire:    time.Hour * 24, // 1d
-		threshold: 1,
+		Filename:  ManifestTypeSnapshot + ".json",
+		Versioned: false,
+		Expire:    time.Hour * 24, // 1d
+		Threshold: 1,
 	},
 	ManifestTypeTimestamp: {
-		filename:  ManifestTypeTimestamp + ".json",
-		versioned: false,
-		expire:    time.Hour * 24, // 1d
-		threshold: 1,
+		Filename:  ManifestTypeTimestamp + ".json",
+		Versioned: false,
+		Expire:    time.Hour * 24, // 1d
+		Threshold: 1,
 	},
 }
 
@@ -116,12 +116,12 @@ func (err *SignatureError) Error() string {
 
 // Filename returns the unversioned name that the manifest should be saved as based on the type in s.
 func (s *SignedBase) Filename() string {
-	return types[s.Ty].filename
+	return ManifestsConfig[s.Ty].Filename
 }
 
 // Versioned indicates whether versioned versions of a manifest are saved, e.g., 42.foo.json.
 func (s *SignedBase) Versioned() bool {
-	return types[s.Ty].versioned
+	return ManifestsConfig[s.Ty].Versioned
 }
 
 func (s *SignedBase) expiryTime() (time.Time, error) {
@@ -130,7 +130,7 @@ func (s *SignedBase) expiryTime() (time.Time, error) {
 
 // isValid checks if s is valid manifest metadata.
 func (s *SignedBase) isValid() error {
-	if _, ok := types[s.Ty]; !ok {
+	if _, ok := ManifestsConfig[s.Ty]; !ok {
 		return fmt.Errorf("unknown manifest type: `%s`", s.Ty)
 	}
 
@@ -182,7 +182,7 @@ func (manifest *Timestamp) isValid() error {
 
 // SnapshotHash returns the hashes of the snapshot manifest as specified in the timestamp manifest.
 func (manifest *Timestamp) SnapshotHash() FileHash {
-	return manifest.Meta[types[ManifestTypeSnapshot].filename]
+	return manifest.Meta[ManifestsConfig[ManifestTypeSnapshot].Filename]
 }
 
 // ReadManifest reads a manifest from input and validates it, the result is stored in role, which must be a pointer type.
@@ -222,15 +222,16 @@ func readTimestampManifest(input io.Reader, keys crypto.KeyStore) (*Timestamp, e
 	return &ts, nil
 }
 
-// batchSaveManifests write a series of manifests to disk
-func batchSaveManifests(dst string, manifestList map[string]ValidManifest) error {
+// BatchSaveManifests write a series of manifests to disk
+func BatchSaveManifests(dst string, manifestList map[string]ValidManifest) error {
 	for _, m := range manifestList {
 		writer, err := os.OpenFile(filepath.Join(dst, m.Filename()), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 		if err != nil {
 			return err
 		}
 		defer writer.Close()
-		if err = SignAndWrite(writer, m); err != nil {
+		// TODO: support multiples keys
+		if err = SignAndWrite(writer, m, "", nil); err != nil {
 			return err
 		}
 	}

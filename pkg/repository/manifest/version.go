@@ -11,12 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package repository
+package manifest
 
 import (
 	"fmt"
 	"sort"
 
+	"github.com/pingcap-incubator/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
 
@@ -53,7 +54,7 @@ func (v Version) IsEmpty() bool {
 
 // IsNightly returns true if the version is nightly
 func (v Version) IsNightly() bool {
-	return string(v) == NightlyVersion
+	return string(v) == version.NightlyVersion
 
 }
 
@@ -62,7 +63,7 @@ func (v Version) String() string {
 	return string(v)
 }
 
-func (manifest *VersionManifest) sort() {
+func (manifest *VersionManifest) Sort() {
 	sort.Slice(manifest.Versions, func(i, j int) bool {
 		lhs := manifest.Versions[i].Version.String()
 		rhs := manifest.Versions[j].Version.String()
