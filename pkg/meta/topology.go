@@ -20,6 +20,8 @@ import (
 	"strings"
 	"time"
 
+	"go.etcd.io/etcd/clientv3"
+
 	"github.com/creasty/defaults"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/api"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
@@ -892,6 +894,13 @@ func (topo *TopologySpecification) GetPDList() []string {
 	}
 
 	return pdList
+}
+
+// GetEtcdClient load EtcdClient of current cluster
+func (topo *TopologySpecification) GetEtcdClient() (*clientv3.Client, error) {
+	return clientv3.New(clientv3.Config{
+		Endpoints: topo.GetPDList(),
+	})
 }
 
 // Merge returns a new TopologySpecification which sum old ones

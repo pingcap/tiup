@@ -322,6 +322,7 @@ func buildScaleOutTask(
 			Roles:      []string{meta.ComponentPrometheus},
 			OptTimeout: timeout,
 		}).
+		UpdateTopology(clusterName, metadata, nil).
 		Build(), nil
 
 }

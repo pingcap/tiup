@@ -123,10 +123,12 @@ func scaleIn(clusterName string, options operator.Options) error {
 
 	if !options.Force {
 		b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, options).
-			UpdateMeta(clusterName, metadata, operator.AsyncNodes(metadata.Topology, options.Nodes, false))
+			UpdateMeta(clusterName, metadata, operator.AsyncNodes(metadata.Topology, options.Nodes, false)).
+			UpdateTopology(clusterName, metadata, operator.AsyncNodes(metadata.Topology, options.Nodes, false))
 	} else {
 		b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, options).
-			UpdateMeta(clusterName, metadata, options.Nodes)
+			UpdateMeta(clusterName, metadata, options.Nodes).
+			UpdateTopology(clusterName, metadata, options.Nodes)
 	}
 
 	t := b.Parallel(regenConfigTasks...).Build()

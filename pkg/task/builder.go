@@ -97,6 +97,12 @@ func (b *Builder) UpdateMeta(cluster string, metadata *meta.ClusterMeta, deleted
 	return b
 }
 
+// UpdateTopology maintain the topology information
+func (b *Builder) UpdateTopology(cluster string, metadata *meta.ClusterMeta, deletedNodeIds []string) *Builder {
+	b.tasks = append(b.tasks, &UpdateTopology{metadata: metadata, cluster: cluster, deletedNodesID: deletedNodeIds})
+	return b
+}
+
 // CopyFile appends a CopyFile task to the current task collection
 func (b *Builder) CopyFile(src, dst, server string, download bool) *Builder {
 	b.tasks = append(b.tasks, &CopyFile{
