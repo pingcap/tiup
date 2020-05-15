@@ -100,7 +100,7 @@ func execute() error {
 	rootCmd.Flags().SortFlags = false
 	rootCmd.Flags().BoolVar(&options.overwrite, "overwrite", false, "Overwrite the exists tarball")
 	rootCmd.Flags().BoolVarP(&options.full, "full", "f", false, "Build a full mirrors repository")
-	rootCmd.Flags().StringSliceVarP(&options.archs, "arch", "a", []string{"amd64"}, "Specify the downloading architecture")
+	rootCmd.Flags().StringSliceVarP(&options.archs, "arch", "a", []string{"amd64", "arm64"}, "Specify the downloading architecture")
 	rootCmd.Flags().StringSliceVarP(&options.oss, "os", "o", []string{"linux", "darwin"}, "Specify the downloading os")
 
 	for _, comp := range manifest.Components {
@@ -266,9 +266,11 @@ func download(targetDir string, repo *repository.Repository, manifest *repositor
 
 	// download tiup itself
 	for _, os := range options.oss {
-		name := fmt.Sprintf("tiup-%s-amd64", os)
-		if err := downloadResource(repo.Mirror(), targetDir, name, options.overwrite); err != nil {
-			return errors.Annotatef(err, "download resource: %s", name)
+		for _, goarch := range options.archs {
+			name := fmt.Sprintf("tiup-%s-%s", os, goarch)
+			if err := downloadResource(repo.Mirror(), targetDir, name, options.overwrite); err != nil {
+				return errors.Annotatef(err, "download resource: %s", name)
+			}
 		}
 	}
 
