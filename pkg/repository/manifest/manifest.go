@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package repository
+package manifest
 
 import (
 	"encoding/json"
@@ -464,15 +464,15 @@ func batchSaveManifests(dst string, manifestList map[string]ValidManifest) error
 			return err
 		}
 		defer writer.Close()
-		if err = signAndWrite(writer, m); err != nil {
+		if err = SignAndWrite(writer, m); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// signAndWrite creates a manifest and writes it to out.
-func signAndWrite(out io.Writer, role ValidManifest) error {
+// SignAndWrite creates a manifest and writes it to out.
+func SignAndWrite(out io.Writer, role ValidManifest) error {
 	// TODO sign the result here and make signatures
 	_, err := json.Marshal(role)
 	if err != nil {

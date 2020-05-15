@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
 	"runtime"
 
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
@@ -45,9 +46,9 @@ const maxTimeStampSize uint = 1024
 
 // If the snapshot has been updated, we return the new snapshot, if not we return nil.
 // Postcondition: if returned error is nil, then the local snapshot and timestamp are up to date.
-func (r *V1Repository) updateLocalSnapshot(local LocalManifests) (*Snapshot, error) {
+func (r *V1Repository) updateLocalSnapshot(local manifest.LocalManifests) (*manifest.Snapshot, error) {
 	hash, err := r.checkTimestamp(local)
-	if _, ok := err.(*SignatureError); ok {
+	if _, ok := err.(*manifest.SignatureError); ok {
 		// The signature is wrong, update our signatures from the root manifest and try again.
 		err = r.updateLocalRoot(local)
 		if err != nil {
@@ -65,7 +66,7 @@ func (r *V1Repository) updateLocalSnapshot(local LocalManifests) (*Snapshot, err
 		return nil, nil
 	}
 
-	var snapshot Snapshot
+	var snapshot manifest.Snapshot
 	manifest, err := r.FetchManifest(snapshot.Filename(), &snapshot, local.Keys(), hash.Length)
 	if err != nil {
 		return nil, err
@@ -81,26 +82,26 @@ func (r *V1Repository) updateLocalSnapshot(local LocalManifests) (*Snapshot, err
 	return &snapshot, nil
 }
 
-func (r *V1Repository) updateLocalRoot(local LocalManifests) error {
+func (r *V1Repository) updateLocalRoot(local manifest.LocalManifests) error {
 	return nil
 }
 
-func (r *V1Repository) updateLocalIndex(local LocalManifests) error {
+func (r *V1Repository) updateLocalIndex(local manifest.LocalManifests) error {
 	return nil
 }
 
 // CheckTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash matches our local one.
 // If they match, then there is nothing to update and we return nil. If they do not match, we return the
 // snapshot's file info.
-func (r *V1Repository) checkTimestamp(local LocalManifests) (*FileHash, error) {
-	var ts Timestamp
+func (r *V1Repository) checkTimestamp(local manifest.LocalManifests) (*manifest.FileHash, error) {
+	var ts manifest.Timestamp
 	_, err := r.FetchManifest(ts.Filename(), &ts, local.Keys(), maxTimeStampSize)
 	if err != nil {
 		return nil, err
 	}
 	hash := ts.SnapshotHash()
 
-	var localTs Timestamp
+	var localTs manifest.Timestamp
 	err = local.LoadManifest(&localTs)
 	if err != nil {
 		// We can't find a local timestamp, so we're going to have to update
@@ -114,11 +115,11 @@ func (r *V1Repository) checkTimestamp(local LocalManifests) (*FileHash, error) {
 }
 
 // FetchManifest downloads and validates a manifest from this repo.
-func (r *V1Repository) FetchManifest(filename string, role ValidManifest, keys crypto.KeyStore, maxSize uint) (*Manifest, error) {
+func (r *V1Repository) FetchManifest(filename string, role manifest.ValidManifest, keys *crypto.KeyStore, maxSize uint) (*manifest.Manifest, error) {
 	reader, err := r.mirror.Fetch(filename, int64(maxSize))
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 	defer reader.Close()
-	return ReadManifest(reader, role, keys)
+	return manifest.ReadManifest(reader, role, keys)
 }
