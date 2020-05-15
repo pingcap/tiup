@@ -21,6 +21,9 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	cjson "github.com/gibson042/canonicaljson-go"
+	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 )
 
 // Names of manifest types
@@ -218,8 +221,26 @@ type FileVersion struct {
 }
 
 // verifySignature ensures that each signature in manifest::signatures is a valid signature of manifest::signed.
-func (manifest *Manifest) verifySignature(keys *KeyStore) error {
-	// TODO
+func (manifest *Manifest) verifySignature(keys crypto.KeyStore) error {
+	if keys == nil {
+		return nil
+	}
+
+	payload, err := cjson.Marshal(manifest.Signed)
+	if err != nil {
+		return nil
+	}
+
+	for _, sig := range manifest.Signatures {
+		key := keys.Get(sig.KeyID)
+		if key == nil {
+			return fmt.Errorf("signature key %s not found", sig.KeyID)
+		}
+		if err := key.Verify(payload, sig.Sig); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -399,7 +420,7 @@ func (manifest *Timestamp) SetSnapshot(s *Snapshot) (*Timestamp, error) {
 }
 
 // ReadManifest reads a manifest from input and validates it, the result is stored in role, which must be a pointer type.
-func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifest, error) {
+func ReadManifest(input io.Reader, role ValidManifest, keys crypto.KeyStore) (*Manifest, error) {
 	decoder := json.NewDecoder(input)
 	var m Manifest
 	m.Signed = role
@@ -425,7 +446,7 @@ func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifes
 	return &m, m.Signed.isValid()
 }
 
-func readTimestampManifest(input io.Reader, keys *KeyStore) (*Timestamp, error) {
+func readTimestampManifest(input io.Reader, keys crypto.KeyStore) (*Timestamp, error) {
 	var ts Timestamp
 	_, err := ReadManifest(input, &ts, keys)
 	if err != nil {

@@ -13,11 +13,6 @@
 
 package repository
 
-// KeyStore is the collection of all public keys available to TiUp.
-type KeyStore struct {
-	// TODO
-}
-
 // KeyInfo is the manifest structure of a single key
 type KeyInfo struct {
 	Algorithms []string          `json:"keyid_hash_algorithms"`

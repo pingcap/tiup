@@ -16,6 +16,7 @@ package repository
 import (
 	"runtime"
 
+	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap/errors"
 )
 
@@ -113,7 +114,7 @@ func (r *V1Repository) checkTimestamp(local LocalManifests) (*FileHash, error) {
 }
 
 // FetchManifest downloads and validates a manifest from this repo.
-func (r *V1Repository) FetchManifest(filename string, role ValidManifest, keys *KeyStore, maxSize uint) (*Manifest, error) {
+func (r *V1Repository) FetchManifest(filename string, role ValidManifest, keys crypto.KeyStore, maxSize uint) (*Manifest, error) {
 	reader, err := r.mirror.Fetch(filename, int64(maxSize))
 	if err != nil {
 		return nil, errors.Trace(err)
