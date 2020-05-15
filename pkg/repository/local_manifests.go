@@ -19,12 +19,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 )
 
 // FsManifests represents a collection of v1 manifests on disk.
 type FsManifests struct {
 	root string
-	keys *KeyStore
+	keys crypto.KeyStore
 }
 
 // FIXME implement garbage collection of old manifests
@@ -44,7 +46,7 @@ type LocalManifests interface {
 	// LoadComponentManifest loads and validates the most recent manifest for a component with the given id.
 	LoadComponentManifest(id string) (*Component, error)
 	// Keys returns the key store derived from these manifests.
-	Keys() *KeyStore
+	Keys() crypto.KeyStore
 }
 
 // SaveManifest implements LocalManifests.
@@ -91,7 +93,7 @@ func (ms *FsManifests) load(filename string, role ValidManifest) error {
 }
 
 // Keys implements LocalManifests.
-func (ms *FsManifests) Keys() *KeyStore {
+func (ms *FsManifests) Keys() crypto.KeyStore {
 	return ms.keys
 }
 
@@ -138,6 +140,6 @@ func (ms *MockManifests) LoadComponentManifest(id string) (*Component, error) {
 }
 
 // Keys implements LocalManifests.
-func (ms *MockManifests) Keys() *KeyStore {
+func (ms *MockManifests) Keys() crypto.KeyStore {
 	return nil
 }
