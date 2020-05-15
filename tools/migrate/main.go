@@ -222,8 +222,10 @@ func migrate(srcDir, dstDir string) error {
 					URL:      filename,
 					Entry:    v.Entry,
 					Released: v.Date,
-					Hashes:   hashes,
-					Length:   length,
+					FileHash: v1manifest.FileHash{
+						Hashes: hashes,
+						Length: uint(length),
+					},
 				}
 			}
 		}

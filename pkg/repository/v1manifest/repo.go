@@ -17,15 +17,13 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"io"
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
-	"github.com/pingcap/errors"
 )
 
-// Init creates and initializes an empty reposityro
+// Init creates and initializes an empty repository
 func Init(dst string, initTime time.Time) error {
 	// initial manifests
 	manifests := make(map[string]ValidManifest)
@@ -41,7 +39,12 @@ func Init(dst string, initTime time.Time) error {
 	manifests[ManifestTypeSnapshot] = NewSnapshot(initTime).SetVersions(manifests)
 
 	// init timestamp
+	timestamp, err := NewTimestamp(initTime).SetSnapshot(manifests[ManifestTypeSnapshot].(*Snapshot))
 	manifests[ManifestTypeTimestamp] = NewTimestamp(initTime)
+	if err != nil {
+		return err
+	}
+	manifests[ManifestTypeTimestamp] = timestamp
 
 	// root and snapshot has meta of each other inside themselves, but it's ok here
 	// as we are still during the init process, not version bump needed
@@ -59,6 +62,50 @@ func Init(dst string, initTime time.Time) error {
 	}
 
 	return BatchSaveManifests(dst, manifests)
+}
+
+// AddComponent adds a new component to an existing repository
+func AddComponent(id, name, desc, owner, repo string, isDefault bool) error {
+	// read manifest files from disk
+	manifests, err := ReadManifestDir(repo)
+	if err != nil {
+		return nil
+	}
+
+	// check id conflicts
+	if _, found := manifests[ManifestTypeIndex].(*Index).Components[id]; found {
+		return fmt.Errorf("component id '%s' already exist, please set another one", id)
+	}
+
+	// create new component manifest
+	currTime := time.Now().UTC()
+	comp := NewComponent(name, desc, currTime)
+
+	// update repository
+	compInfo := ComponentItem{
+		Owner:     owner,
+		URL:       fmt.Sprintf("/%s", comp.Filename()),
+		Threshold: 1, // TODO: make this configurable
+	}
+	index := manifests[ManifestTypeIndex].(*Index)
+	index.Components[id] = compInfo
+	if isDefault {
+		index.DefaultComponents = append(index.DefaultComponents, id)
+	}
+	index.Version += 1 // bump index version
+
+	// update snapshot
+	snapshot := manifests[ManifestTypeSnapshot].(*Snapshot).SetVersions(manifests)
+	snapshot.Expires = currTime.Add(ManifestsConfig[ManifestTypeSnapshot].Expire).Format(time.RFC3339)
+
+	// update timestamp
+	timestamp, err := manifests[ManifestTypeTimestamp].(*Timestamp).SetSnapshot(snapshot)
+	if err != nil {
+		return err
+	}
+	timestamp.Expires = currTime.Add(ManifestsConfig[ManifestTypeTimestamp].Expire).Format(time.RFC3339)
+
+	return BatchSaveManifests(repo, manifests)
 }
 
 // NewRoot creates a Root object
@@ -108,34 +155,24 @@ func NewTimestamp(initTime time.Time) *Timestamp {
 			Ty:          ManifestTypeTimestamp,
 			SpecVersion: CurrentSpecVersion,
 			Expires:     initTime.Add(ManifestsConfig[ManifestTypeTimestamp].Expire).Format(time.RFC3339),
-			Version:     1,
+			Version:     0, // not versioned
 		},
 	}
 }
 
-// SignAndWrite creates a manifest and writes it to out.
-func SignAndWrite(out io.Writer, role ValidManifest, keyID string, privKey *crypto.RSAPrivKey) error {
-	payload, err := cjson.Marshal(role)
-	if err != nil {
-		return err
+// NewComponent creates a Component object
+func NewComponent(name, desc string, initTime time.Time) *Component {
+	return &Component{
+		SignedBase: SignedBase{
+			Ty:          ManifestTypeComponent,
+			SpecVersion: CurrentSpecVersion,
+			Expires:     initTime.Add(ManifestsConfig[ManifestTypeComponent].Expire).Format(time.RFC3339),
+			Version:     1,
+		},
+		Name:        name,
+		Description: desc,
+		Platforms:   make(map[string]map[string]VersionItem),
 	}
-
-	sign, err := privKey.Signature(payload)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	manifest := Manifest{
-		Signatures: []signature{{
-			KeyID: keyID,
-			Sig:   sign,
-		}},
-		Signed: role,
-	}
-
-	encoder := json.NewEncoder(out)
-	encoder.SetIndent("", "\t")
-	return encoder.Encode(manifest)
 }
 
 // SetVersions sets file versions to the snapshot
@@ -150,6 +187,26 @@ func (manifest *Snapshot) SetVersions(manifestList map[string]ValidManifest) *Sn
 		}
 	}
 	return manifest
+}
+
+// SetSnapshot hashes a snapshot manifest and update the timestamp manifest
+func (manifest *Timestamp) SetSnapshot(s *Snapshot) (*Timestamp, error) {
+	bytes, err := json.Marshal(s)
+	if err != nil {
+		return manifest, err
+	}
+
+	// TODO: hash the manifest
+
+	if manifest.Meta == nil {
+		manifest.Meta = make(map[string]FileHash)
+	}
+	manifest.Meta[s.Base().Filename()] = FileHash{
+		Hashes: map[string]string{"sha256": "TODO"},
+		Length: uint(len(bytes)),
+	}
+
+	return manifest, nil
 }
 
 // SetRole populates role list in the root manifest

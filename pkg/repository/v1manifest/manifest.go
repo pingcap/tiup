@@ -15,7 +15,6 @@ package v1manifest
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -25,6 +24,7 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
+	"github.com/pingcap/errors"
 )
 
 // Names of manifest ManifestsConfig
@@ -135,7 +135,11 @@ func ComponentFilename(id string) string {
 
 // Filename returns the unversioned name that the manifest should be saved as based on the type in s.
 func (s *SignedBase) Filename() string {
-	return ManifestsConfig[s.Ty].Filename
+	fname := ManifestsConfig[s.Ty].Filename
+	if fname == "" {
+		panic("Unreachable")
+	}
+	return fname
 }
 
 // Versioned indicates whether versioned versions of a manifest are saved, e.g., 42.foo.json.
@@ -262,6 +266,28 @@ func ReadManifest(input io.Reader, role ValidManifest, keys crypto.KeyStore) (*M
 	return &m, m.Signed.isValid()
 }
 
+// ReadManifestDir reads manifests from a dir
+func ReadManifestDir(dir string) (map[string]ValidManifest, error) {
+	manifests := make(map[string]ValidManifest)
+	for ty, val := range ManifestsConfig {
+		if val.Filename == "" {
+			continue
+		}
+		reader, err := os.Open(filepath.Join(dir, val.Filename))
+		if err != nil {
+			return nil, err
+		}
+		defer reader.Close()
+		var role ValidManifest
+		m, err := ReadManifest(reader, role, crypto.NewKeyStore())
+		if err != nil {
+			return nil, err
+		}
+		manifests[ty] = m.Signed
+	}
+	return manifests, nil
+}
+
 func readTimestampManifest(input io.Reader, keys crypto.KeyStore) (*Timestamp, error) {
 	var ts Timestamp
 	_, err := ReadManifest(input, &ts, keys)
@@ -270,6 +296,31 @@ func readTimestampManifest(input io.Reader, keys crypto.KeyStore) (*Timestamp, e
 	}
 
 	return &ts, nil
+}
+
+// SignAndWrite creates a manifest and writes it to out.
+func SignAndWrite(out io.Writer, role ValidManifest, keyID string, privKey *crypto.RSAPrivKey) error {
+	payload, err := cjson.Marshal(role)
+	if err != nil {
+		return err
+	}
+
+	sign, err := privKey.Signature(payload)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	manifest := Manifest{
+		Signatures: []signature{{
+			KeyID: keyID,
+			Sig:   sign,
+		}},
+		Signed: role,
+	}
+
+	encoder := json.NewEncoder(out)
+	encoder.SetIndent("", "\t")
+	return encoder.Encode(manifest)
 }
 
 // BatchSaveManifests write a series of manifests to disk
