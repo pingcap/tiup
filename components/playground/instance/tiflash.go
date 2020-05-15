@@ -16,6 +16,7 @@ package instance
 import (
 	"context"
 	"fmt"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"os"
 	"os/exec"
 	"path"
@@ -23,7 +24,6 @@ import (
 	"time"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 )
@@ -67,7 +67,7 @@ func getFlashClusterPath(dir string) string {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiFlashInstance) Start(ctx context.Context, version manifest.Version, binPath string, profile *localdata.Profile) error {
+func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Version, binPath string, profile *localdata.Profile) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}

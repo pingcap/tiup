@@ -18,6 +18,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -33,7 +34,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pingcap-incubator/tiup/components/playground/instance"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/failpoint"
 	"github.com/spf13/cobra"
@@ -67,7 +67,7 @@ func installIfMissing(profile *localdata.Profile, component, version string) err
 		return err
 	}
 	if len(versions) > 0 {
-		if manifest.Version(version).IsEmpty() {
+		if v0manifest.Version(version).IsEmpty() {
 			return nil
 		}
 		found := false
@@ -82,7 +82,7 @@ func installIfMissing(profile *localdata.Profile, component, version string) err
 		}
 	}
 	spec := component
-	if !manifest.Version(version).IsEmpty() {
+	if !v0manifest.Version(version).IsEmpty() {
 		spec = fmt.Sprintf("%s:%s", component, version)
 	}
 	c := exec.Command("tiup", "install", spec)
@@ -390,7 +390,7 @@ func bootCluster(options *bootOptions) error {
 	}
 
 	for i, inst := range all {
-		if err := inst.Start(context.WithValue(ctx, "has_tiflash", options.tiflashNum > 0), manifest.Version(options.version), pathMap[allRole[i]], profile); err != nil {
+		if err := inst.Start(context.WithValue(ctx, "has_tiflash", options.tiflashNum > 0), v0manifest.Version(options.version), pathMap[allRole[i]], profile); err != nil {
 			return err
 		}
 	}

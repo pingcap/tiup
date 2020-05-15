@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
-	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -219,7 +219,7 @@ current working directory (".") will be used.`,
 func initRepo(path string) error {
 	// TODO: set key store
 
-	return manifest.Init(path, time.Now().UTC())
+	return v1manifest.Init(path, time.Now().UTC())
 }
 
 // the `repo owner` sub command

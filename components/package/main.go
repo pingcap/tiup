@@ -18,6 +18,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -32,7 +33,6 @@ import (
 	"github.com/juju/errors"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
-	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/spf13/cobra"
@@ -144,14 +144,14 @@ func current(fname string, target interface{}) error {
 }
 
 func manifestIndex(options packageOptions) error {
-	mIndex := manifest.ComponentManifest{}
+	mIndex := v0manifest.ComponentManifest{}
 	err := current("tiup-manifest.index", &mIndex)
 	if err != nil && err != errNotFound {
 		return err
 	}
 	if err == errNotFound {
 		mIndex.Modified = time.Now().Format(time.RFC3339)
-		mIndex.TiUPVersion = manifest.Version(version.NewTiUPVersion().SemVer())
+		mIndex.TiUPVersion = v0manifest.Version(version.NewTiUPVersion().SemVer())
 		mIndex.Description = "TiDB components manager"
 	}
 
@@ -177,7 +177,7 @@ func manifestIndex(options packageOptions) error {
 			return write("package/tiup-manifest.index", mIndex)
 		}
 	}
-	mIndex.Components = append(mIndex.Components, manifest.ComponentInfo{
+	mIndex.Components = append(mIndex.Components, v0manifest.ComponentInfo{
 		Name:       options.name,
 		Desc:       options.desc,
 		Standalone: options.standalone,
@@ -192,15 +192,15 @@ func componentIndex(options packageOptions) error {
 	fname := fmt.Sprintf("tiup-component-%s.index", options.name)
 	pair := options.goos + "/" + options.goarch
 
-	cIndex := manifest.VersionManifest{}
+	cIndex := v0manifest.VersionManifest{}
 	err := current(fname, &cIndex)
 	if err != nil && err != errNotFound {
 		return err
 	}
 
-	version := manifest.Version(options.version)
+	version := v0manifest.Version(options.version)
 
-	v := manifest.VersionInfo{
+	v := v0manifest.VersionInfo{
 		Version:   version,
 		Date:      time.Now().Format(time.RFC3339),
 		Entry:     options.entry,
@@ -209,7 +209,7 @@ func componentIndex(options packageOptions) error {
 
 	// Generate a new component index
 	if err == errNotFound {
-		cIndex = manifest.VersionManifest{
+		cIndex = v0manifest.VersionManifest{
 			Description: options.desc,
 			Modified:    time.Now().Format(time.RFC3339),
 		}

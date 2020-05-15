@@ -15,6 +15,7 @@ package meta
 
 import (
 	"fmt"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"os"
 	"path/filepath"
 	"sort"
@@ -22,7 +23,6 @@ import (
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
-	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
 	"golang.org/x/mod/semver"
 )
 
@@ -86,7 +86,7 @@ func (env *Environment) LocalPath(path ...string) string {
 }
 
 // DownloadComponent downloads the specific version of a component from repository
-func (env *Environment) DownloadComponent(component string, version manifest.Version, overwrite bool) error {
+func (env *Environment) DownloadComponent(component string, version v0manifest.Version, overwrite bool) error {
 	versions, err := env.repo.ComponentVersions(component)
 	if err != nil {
 		return err
@@ -110,7 +110,7 @@ func (env *Environment) DownloadComponent(component string, version manifest.Ver
 		}
 		found := false
 		for _, v := range installed {
-			if manifest.Version(v) == version {
+			if v0manifest.Version(v) == version {
 				found = true
 				break
 			}
@@ -126,12 +126,12 @@ func (env *Environment) DownloadComponent(component string, version manifest.Ver
 
 // SelectInstalledVersion selects the installed versions and the latest release version
 // will be chosen if there is an empty version
-func (env *Environment) SelectInstalledVersion(component string, version manifest.Version) (manifest.Version, error) {
+func (env *Environment) SelectInstalledVersion(component string, version v0manifest.Version) (v0manifest.Version, error) {
 	return env.profile.SelectInstalledVersion(component, version)
 }
 
 // DownloadComponentIfMissing downloads the specific version of a component if it is missing
-func (env *Environment) DownloadComponentIfMissing(component string, version manifest.Version) (manifest.Version, error) {
+func (env *Environment) DownloadComponentIfMissing(component string, version v0manifest.Version) (v0manifest.Version, error) {
 	versions, err := env.profile.InstalledVersions(component)
 	if err != nil {
 		return "", err
@@ -145,14 +145,14 @@ func (env *Environment) DownloadComponentIfMissing(component string, version man
 		sort.Slice(versions, func(i, j int) bool {
 			return semver.Compare(versions[i], versions[j]) < 0
 		})
-		version = manifest.Version(versions[len(versions)-1])
+		version = v0manifest.Version(versions[len(versions)-1])
 	}
 
 	needDownload := version.IsEmpty()
 	if !version.IsEmpty() {
 		installed := false
 		for _, v := range versions {
-			if manifest.Version(v) == version {
+			if v0manifest.Version(v) == version {
 				installed = true
 				break
 			}
@@ -176,7 +176,7 @@ func (env *Environment) DownloadComponentIfMissing(component string, version man
 }
 
 // LatestManifest returns the latest component manifest and refresh the local cache
-func (env *Environment) LatestManifest() (*manifest.ComponentManifest, error) {
+func (env *Environment) LatestManifest() (*v0manifest.ComponentManifest, error) {
 	manifest, err := env.repo.Manifest()
 	if err != nil {
 		return nil, err
@@ -188,10 +188,10 @@ func (env *Environment) LatestManifest() (*manifest.ComponentManifest, error) {
 }
 
 // ParseCompVersion parses component part from <component>[:version] specification
-func ParseCompVersion(spec string) (string, manifest.Version) {
+func ParseCompVersion(spec string) (string, v0manifest.Version) {
 	if strings.Contains(spec, ":") {
 		parts := strings.SplitN(spec, ":", 2)
-		return parts[0], manifest.Version(parts[1])
+		return parts[0], v0manifest.Version(parts[1])
 	}
 	return spec, ""
 }

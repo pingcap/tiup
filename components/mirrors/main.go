@@ -16,6 +16,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"io/ioutil"
 	"os"
 	"path"
@@ -25,7 +26,6 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
-	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/version"
@@ -147,7 +147,7 @@ func suggestVersion(repo *repository.Repository, component, version string) (str
 	if err != nil {
 		return "", err
 	}
-	if v, found := vm.FindVersion(manifest.Version(version)); found {
+	if v, found := vm.FindVersion(v0manifest.Version(version)); found {
 		return v.Version.String(), nil
 	}
 	v, err := repo.LatestStableVersion(component)
@@ -171,7 +171,7 @@ func downloadResource(mirror repository.Mirror, targetDir, name string, overwrit
 	return mirror.Download(shaFile, targetDir)
 }
 
-func download(targetDir string, repo *repository.Repository, m *manifest.ComponentManifest, options mirrorsOptions) error {
+func download(targetDir string, repo *repository.Repository, m *v0manifest.ComponentManifest, options mirrorsOptions) error {
 	if utils.IsNotExist(targetDir) {
 		if err := os.MkdirAll(targetDir, 0755); err != nil {
 			return err
@@ -208,14 +208,14 @@ func download(targetDir string, repo *repository.Repository, m *manifest.Compone
 		}
 
 		vs := set.NewStringSet(*versions...)
-		var newCompInfo *manifest.VersionManifest
+		var newCompInfo *v0manifest.VersionManifest
 		if options.full {
 			newCompInfo = componentInfo
 		} else {
 			if len(vs) < 1 {
 				continue
 			}
-			newCompInfo = &manifest.VersionManifest{
+			newCompInfo = &v0manifest.VersionManifest{
 				Description: componentInfo.Description,
 				Modified:    componentInfo.Modified,
 			}
@@ -224,7 +224,7 @@ func download(targetDir string, repo *repository.Repository, m *manifest.Compone
 			}
 		}
 
-		checkVersion := func(version manifest.Version) bool {
+		checkVersion := func(version v0manifest.Version) bool {
 			if options.full || vs.Exist("all") || vs.Exist(version.String()) {
 				return true
 			}
@@ -236,7 +236,7 @@ func download(targetDir string, repo *repository.Repository, m *manifest.Compone
 			}
 			return false
 		}
-		err = componentInfo.IterVersion(func(versionInfo manifest.VersionInfo) error {
+		err = componentInfo.IterVersion(func(versionInfo v0manifest.VersionInfo) error {
 			if !checkVersion(versionInfo.Version) {
 				return nil
 			}

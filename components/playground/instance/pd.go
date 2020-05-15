@@ -16,6 +16,7 @@ package instance
 import (
 	"context"
 	"fmt"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"os"
 	"os/exec"
 	"path"
@@ -23,7 +24,6 @@ import (
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 )
@@ -56,7 +56,7 @@ func (inst *PDInstance) Join(pds []*PDInstance) *PDInstance {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *PDInstance) Start(ctx context.Context, version manifest.Version, binPath string, _ *localdata.Profile) error {
+func (inst *PDInstance) Start(ctx context.Context, version v0manifest.Version, binPath string, _ *localdata.Profile) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
