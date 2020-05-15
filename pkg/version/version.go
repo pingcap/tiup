@@ -35,6 +35,9 @@ var (
 	GitBranch = "Unknown"
 )
 
+// NightlyVersion represents latest build of master branch.
+const NightlyVersion = "nightly"
+
 // TiUPVersion is the semver of TiUP
 type TiUPVersion struct {
 	major int

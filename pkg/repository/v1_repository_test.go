@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
 	"strings"
 	"testing"
@@ -137,7 +138,9 @@ func snapshotManifest() *manifest.Snapshot {
 
 func serialize(t *testing.T, role manifest.ValidManifest) string {
 	var out strings.Builder
-	err := manifest.SignAndWrite(&out, role)
+	_, priv, err := crypto.RsaPair()
+	assert.Nil(t, err)
+	err = manifest.SignAndWrite(&out, role, "KEYID", priv)
 	assert.Nil(t, err)
 	return out.String()
 }

@@ -32,7 +32,7 @@ import (
 	"github.com/juju/errors"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
-	"github.com/pingcap-incubator/tiup/pkg/repository"
+	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/spf13/cobra"
@@ -144,14 +144,14 @@ func current(fname string, target interface{}) error {
 }
 
 func manifestIndex(options packageOptions) error {
-	mIndex := repository.ComponentManifest{}
+	mIndex := manifest.ComponentManifest{}
 	err := current("tiup-manifest.index", &mIndex)
 	if err != nil && err != errNotFound {
 		return err
 	}
 	if err == errNotFound {
 		mIndex.Modified = time.Now().Format(time.RFC3339)
-		mIndex.TiUPVersion = repository.Version(version.NewTiUPVersion().SemVer())
+		mIndex.TiUPVersion = manifest.Version(version.NewTiUPVersion().SemVer())
 		mIndex.Description = "TiDB components manager"
 	}
 
@@ -177,7 +177,7 @@ func manifestIndex(options packageOptions) error {
 			return write("package/tiup-manifest.index", mIndex)
 		}
 	}
-	mIndex.Components = append(mIndex.Components, repository.ComponentInfo{
+	mIndex.Components = append(mIndex.Components, manifest.ComponentInfo{
 		Name:       options.name,
 		Desc:       options.desc,
 		Standalone: options.standalone,
@@ -192,15 +192,15 @@ func componentIndex(options packageOptions) error {
 	fname := fmt.Sprintf("tiup-component-%s.index", options.name)
 	pair := options.goos + "/" + options.goarch
 
-	cIndex := repository.VersionManifest{}
+	cIndex := manifest.VersionManifest{}
 	err := current(fname, &cIndex)
 	if err != nil && err != errNotFound {
 		return err
 	}
 
-	version := repository.Version(options.version)
+	version := manifest.Version(options.version)
 
-	v := repository.VersionInfo{
+	v := manifest.VersionInfo{
 		Version:   version,
 		Date:      time.Now().Format(time.RFC3339),
 		Entry:     options.entry,
@@ -209,7 +209,7 @@ func componentIndex(options packageOptions) error {
 
 	// Generate a new component index
 	if err == errNotFound {
-		cIndex = repository.VersionManifest{
+		cIndex = manifest.VersionManifest{
 			Description: options.desc,
 			Modified:    time.Now().Format(time.RFC3339),
 		}

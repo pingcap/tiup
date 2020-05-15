@@ -18,6 +18,10 @@ import (
 	"fmt"
 	"io"
 	"time"
+
+	cjson "github.com/gibson042/canonicaljson-go"
+	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
+	"github.com/pingcap/errors"
 )
 
 // Init creates and initializes an empty reposityro
@@ -36,17 +40,13 @@ func Init(dst string, initTime time.Time) error {
 	manifests[ManifestTypeSnapshot] = NewSnapshot(initTime).SetVersions(manifests)
 
 	// init timestamp
-	timestamp, err := NewTimestamp(initTime).SetSnapshot(manifests[ManifestTypeSnapshot].(*Snapshot))
-	if err != nil {
-		return err
-	}
-	manifests[ManifestTypeTimestamp] = timestamp
+	manifests[ManifestTypeTimestamp] = NewTimestamp(initTime)
 
 	// root and snapshot has meta of each other inside themselves, but it's ok here
 	// as we are still during the init process, not version bump needed
-	for ty, val := range types {
-		if val.filename == "" {
-			// skip unsupported types such as component
+	for ty, val := range ManifestsConfig {
+		if val.Filename == "" {
+			// skip unsupported ManifestsConfig such as component
 			continue
 		}
 		if m, ok := manifests[ty]; ok {
@@ -57,7 +57,7 @@ func Init(dst string, initTime time.Time) error {
 		return fmt.Errorf("manifest '%s' not initialized porperly", ty)
 	}
 
-	return batchSaveManifests(dst, manifests)
+	return BatchSaveManifests(dst, manifests)
 }
 
 // NewRoot creates a Root object
@@ -66,7 +66,7 @@ func NewRoot(initTime time.Time) *Root {
 		SignedBase: SignedBase{
 			Ty:          ManifestTypeRoot,
 			SpecVersion: CurrentSpecVersion,
-			Expires:     initTime.Add(types[ManifestTypeRoot].expire).Format(time.RFC3339),
+			Expires:     initTime.Add(ManifestsConfig[ManifestTypeRoot].Expire).Format(time.RFC3339),
 			Version:     1, // initial repo starts with version 1
 		},
 		Roles: make(map[string]*Role),
@@ -79,11 +79,11 @@ func NewIndex(initTime time.Time) *Index {
 		SignedBase: SignedBase{
 			Ty:          ManifestTypeIndex,
 			SpecVersion: CurrentSpecVersion,
-			Expires:     initTime.Add(types[ManifestTypeIndex].expire).Format(time.RFC3339),
+			Expires:     initTime.Add(ManifestsConfig[ManifestTypeIndex].Expire).Format(time.RFC3339),
 			Version:     1,
 		},
 		Owners:            make(map[string]Owner),
-		Components:        make(map[string]Component),
+		Components:        make(map[string]ComponentItem),
 		DefaultComponents: make([]string, 0),
 	}
 }
@@ -94,7 +94,7 @@ func NewSnapshot(initTime time.Time) *Snapshot {
 		SignedBase: SignedBase{
 			Ty:          ManifestTypeSnapshot,
 			SpecVersion: CurrentSpecVersion,
-			Expires:     initTime.Add(types[ManifestTypeSnapshot].expire).Format(time.RFC3339),
+			Expires:     initTime.Add(ManifestsConfig[ManifestTypeSnapshot].Expire).Format(time.RFC3339),
 			Version:     0, // not versioned
 		},
 	}
@@ -106,29 +106,34 @@ func NewTimestamp(initTime time.Time) *Timestamp {
 		SignedBase: SignedBase{
 			Ty:          ManifestTypeTimestamp,
 			SpecVersion: CurrentSpecVersion,
-			Expires:     initTime.Add(types[ManifestTypeTimestamp].expire).Format(time.RFC3339),
+			Expires:     initTime.Add(ManifestsConfig[ManifestTypeTimestamp].Expire).Format(time.RFC3339),
 			Version:     1,
 		},
 	}
 }
 
 // SignAndWrite creates a manifest and writes it to out.
-func SignAndWrite(out io.Writer, role ValidManifest) error {
-	// TODO sign the result here and make signatures
-	_, err := json.Marshal(role)
+func SignAndWrite(out io.Writer, role ValidManifest, keyID string, privKey *crypto.RSAPrivKey) error {
+	payload, err := cjson.Marshal(role)
 	if err != nil {
 		return err
 	}
 
+	sign, err := privKey.Signature(payload)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	manifest := Manifest{
 		Signatures: []signature{{
-			KeyID: "TODO",
-			Sig:   "TODO",
+			KeyID: keyID,
+			Sig:   sign,
 		}},
 		Signed: role,
 	}
 
 	encoder := json.NewEncoder(out)
+	encoder.SetIndent("", "\t")
 	return encoder.Encode(manifest)
 }
 
@@ -145,26 +150,6 @@ func (manifest *Snapshot) SetVersions(manifestList map[string]ValidManifest) *Sn
 	return manifest
 }
 
-// SetSnapshot hashes a snapshot manifest and update the timestamp manifest
-func (manifest *Timestamp) SetSnapshot(s *Snapshot) (*Timestamp, error) {
-	bytes, err := json.Marshal(s)
-	if err != nil {
-		return manifest, err
-	}
-
-	// TODO: hash the manifest
-
-	if manifest.Meta == nil {
-		manifest.Meta = make(map[string]FileHash)
-	}
-	manifest.Meta[s.Base().Filename()] = FileHash{
-		Hashes: map[string]string{"sha256": "TODO"},
-		Length: uint(len(bytes)),
-	}
-
-	return manifest, nil
-}
-
 // SetRole populates role list in the root manifest
 func (manifest *Root) SetRole(m ValidManifest) {
 	if manifest.Roles == nil {
@@ -173,7 +158,7 @@ func (manifest *Root) SetRole(m ValidManifest) {
 
 	manifest.Roles[m.Base().Ty] = &Role{
 		URL:       fmt.Sprintf("/%s", m.Filename()),
-		Threshold: types[m.Base().Ty].threshold,
+		Threshold: ManifestsConfig[m.Base().Ty].Threshold,
 		Keys:      make(map[string]*KeyInfo),
 	}
 }
