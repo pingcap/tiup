@@ -15,11 +15,13 @@ package crypto
 
 import (
 	"crypto"
+	"crypto/md5"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 )
 
@@ -83,6 +85,16 @@ func (k *RSAPubKey) Verify(payload []byte, sig string) error {
 	}
 
 	return rsa.VerifyPSS(k.key, crypto.SHA256, hashed, b64decSig, nil)
+}
+
+// Fingerprint returns the MD5 hash of the public key
+func (k *RSAPubKey) Fingerprint() (string, error) {
+	bytes, err := x509.MarshalPKIXPublicKey(k.key)
+	if err != nil {
+		return "", err
+	}
+	hash := md5.Sum(bytes)
+	return hex.EncodeToString(hash[:]), nil
 }
 
 // RSAPrivKey represents the private key of RSA

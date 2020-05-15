@@ -47,6 +47,8 @@ type PubKey interface {
 	Serializable
 	// Verify check the signature is right
 	Verify(payload []byte, sig string) error
+	// Fingerprint returns the MD5 hash of public key
+	Fingerprint() (string, error)
 }
 
 // PrivKey is the private key that provide signature method

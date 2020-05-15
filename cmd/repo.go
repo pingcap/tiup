@@ -206,7 +206,7 @@ current working directory (".") will be used.`,
 				return errors.Errorf("the target path '%s' is not an empty directory", repoPath)
 			}
 
-			return initRepo(repoPath)
+			return initRepo(repoPath, pubKey, privKey)
 		},
 	}
 
@@ -216,10 +216,10 @@ current working directory (".") will be used.`,
 	return cmd
 }
 
-func initRepo(path string) error {
+func initRepo(path, pub, priv string) error {
 	// TODO: set key store
 
-	return v1manifest.Init(path, time.Now().UTC())
+	return v1manifest.Init(path, time.Now().UTC(), pub, priv)
 }
 
 // the `repo owner` sub command

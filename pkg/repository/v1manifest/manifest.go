@@ -299,7 +299,7 @@ func readTimestampManifest(input io.Reader, keys crypto.KeyStore) (*Timestamp, e
 }
 
 // SignAndWrite creates a manifest and writes it to out.
-func SignAndWrite(out io.Writer, role ValidManifest, keyID string, privKey *crypto.RSAPrivKey) error {
+func SignAndWrite(out io.Writer, role ValidManifest, keyID string, privKey crypto.PrivKey) error {
 	payload, err := cjson.Marshal(role)
 	if err != nil {
 		return err
@@ -313,7 +313,7 @@ func SignAndWrite(out io.Writer, role ValidManifest, keyID string, privKey *cryp
 	manifest := Manifest{
 		Signatures: []signature{{
 			KeyID: keyID,
-			Sig:   sign,
+			Sig:   string(sign),
 		}},
 		Signed: role,
 	}
@@ -324,7 +324,7 @@ func SignAndWrite(out io.Writer, role ValidManifest, keyID string, privKey *cryp
 }
 
 // BatchSaveManifests write a series of manifests to disk
-func BatchSaveManifests(dst string, manifestList map[string]ValidManifest) error {
+func BatchSaveManifests(dst string, manifestList map[string]ValidManifest, pubKey crypto.PubKey, privKey crypto.PrivKey) error {
 	for _, m := range manifestList {
 		writer, err := os.OpenFile(filepath.Join(dst, m.Filename()), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 		if err != nil {
@@ -332,7 +332,11 @@ func BatchSaveManifests(dst string, manifestList map[string]ValidManifest) error
 		}
 		defer writer.Close()
 		// TODO: support multiples keys
-		if err = SignAndWrite(writer, m, "", nil); err != nil {
+		keyID, err := pubKey.Fingerprint()
+		if err != nil {
+			return err
+		}
+		if err = SignAndWrite(writer, m, keyID, privKey); err != nil {
 			return err
 		}
 	}

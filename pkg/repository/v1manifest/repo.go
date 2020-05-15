@@ -17,6 +17,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
@@ -24,7 +25,25 @@ import (
 )
 
 // Init creates and initializes an empty repository
-func Init(dst string, initTime time.Time) error {
+func Init(dst string, initTime time.Time, pub, priv string) error {
+	// read key files
+	privBytes, err := ioutil.ReadFile(priv)
+	if err != nil {
+		return err
+	}
+	privKey := &crypto.RSAPrivKey{}
+	if err = privKey.Deserialize(privBytes); err != nil {
+		return err
+	}
+	pubBytes, err := ioutil.ReadFile(pub)
+	if err != nil {
+		return err
+	}
+	pubKey := &crypto.RSAPubKey{}
+	if err = pubKey.Deserialize(pubBytes); err != nil {
+		return err
+	}
+
 	// initial manifests
 	manifests := make(map[string]ValidManifest)
 
@@ -61,11 +80,29 @@ func Init(dst string, initTime time.Time) error {
 		return fmt.Errorf("manifest '%s' not initialized porperly", ty)
 	}
 
-	return BatchSaveManifests(dst, manifests)
+	return BatchSaveManifests(dst, manifests, pubKey, privKey)
 }
 
 // AddComponent adds a new component to an existing repository
-func AddComponent(id, name, desc, owner, repo string, isDefault bool) error {
+func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv string) error {
+	// read key files
+	privBytes, err := ioutil.ReadFile(priv)
+	if err != nil {
+		return err
+	}
+	privKey := &crypto.RSAPrivKey{}
+	if err = privKey.Deserialize(privBytes); err != nil {
+		return err
+	}
+	pubBytes, err := ioutil.ReadFile(pub)
+	if err != nil {
+		return err
+	}
+	pubKey := &crypto.RSAPubKey{}
+	if err = pubKey.Deserialize(pubBytes); err != nil {
+		return err
+	}
+
 	// read manifest files from disk
 	manifests, err := ReadManifestDir(repo)
 	if err != nil {
@@ -105,7 +142,7 @@ func AddComponent(id, name, desc, owner, repo string, isDefault bool) error {
 	}
 	timestamp.Expires = currTime.Add(ManifestsConfig[ManifestTypeTimestamp].Expire).Format(time.RFC3339)
 
-	return BatchSaveManifests(repo, manifests)
+	return BatchSaveManifests(repo, manifests, pubKey, privKey)
 }
 
 // NewRoot creates a Root object
