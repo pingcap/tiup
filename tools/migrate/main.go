@@ -256,13 +256,12 @@ func migrate(srcDir, dstDir string) error {
 		}
 
 		index.Components[comp.Name] = v1manifest.ComponentItem{
-			Name:        comp.Name,
-			Description: comp.Desc,
-			Yanked:      false,
-			Owner:       "pingcap",
-			URL:         fmt.Sprintf("/%s", name),
-			Length:      stat.Size(),
-			Threshold:   0,
+			Name:      comp.Name,
+			Yanked:    false,
+			Owner:     "pingcap",
+			URL:       fmt.Sprintf("/%s", name),
+			Length:    stat.Size(),
+			Threshold: 0,
 		}
 
 		snapshot.Meta[name] = v1manifest.FileVersion{Version: 1}

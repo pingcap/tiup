@@ -67,13 +67,12 @@ type KeyInfo struct {
 
 // ComponentItem object
 type ComponentItem struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Yanked      bool   `json:"yanked"`
-	Owner       string `json:"owner"`
-	URL         string `json:"url"`
-	Length      int64  `json:"length"`
-	Threshold   int    `json:"threshold"`
+	Name      string `json:"name"`
+	Yanked    bool   `json:"yanked"`
+	Owner     string `json:"owner"`
+	URL       string `json:"url"`
+	Length    int64  `json:"length"`
+	Threshold int    `json:"threshold"`
 }
 
 // Index manifest.
