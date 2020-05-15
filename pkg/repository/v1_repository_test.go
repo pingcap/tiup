@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
 	"strings"
 	"testing"
 
@@ -25,8 +26,8 @@ func TestCheckTimestamp(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	repo := NewV1Repo(&mirror, Options{})
-	local := MockManifests{
-		Manifests: map[string]ValidManifest{},
+	local := manifest.MockManifests{
+		Manifests: map[string]manifest.ValidManifest{},
 	}
 
 	repoTimestamp := timestampManifest()
@@ -74,8 +75,8 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	repo := NewV1Repo(&mirror, Options{})
-	local := MockManifests{
-		Manifests: map[string]ValidManifest{},
+	local := manifest.MockManifests{
+		Manifests: map[string]manifest.ValidManifest{},
 	}
 
 	timestamp := timestampManifest()
@@ -107,36 +108,36 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 	// TODO test that signature error on timestamp causes root to be reloaded and timestamp to be rechecked
 }
 
-func timestampManifest() *Timestamp {
-	return &Timestamp{
-		SignedBase: SignedBase{
+func timestampManifest() *manifest.Timestamp {
+	return &manifest.Timestamp{
+		SignedBase: manifest.SignedBase{
 			Ty:          "timestamp",
 			SpecVersion: "0.1.0",
 			Expires:     "2220-05-11T04:51:08Z",
 			Version:     42,
 		},
-		Meta: map[string]FileHash{"snapshot.json": {
+		Meta: map[string]manifest.FileHash{"snapshot.json": {
 			Hashes: map[string]string{"sha256": "123456"},
 			Length: 1001,
 		}},
 	}
 }
 
-func snapshotManifest() *Snapshot {
-	return &Snapshot{
-		SignedBase: SignedBase{
+func snapshotManifest() *manifest.Snapshot {
+	return &manifest.Snapshot{
+		SignedBase: manifest.SignedBase{
 			Ty:          "snapshot",
 			SpecVersion: "0.1.0",
 			Expires:     "2220-05-11T04:51:08Z",
 			Version:     42,
 		},
-		Meta: map[string]FileVersion{"root": {56}},
+		Meta: map[string]manifest.FileVersion{"root": {Version: 56}},
 	}
 }
 
-func serialize(t *testing.T, role ValidManifest) string {
+func serialize(t *testing.T, role manifest.ValidManifest) string {
 	var out strings.Builder
-	err := signAndWrite(&out, role)
+	err := manifest.SignAndWrite(&out, role)
 	assert.Nil(t, err)
 	return out.String()
 }
