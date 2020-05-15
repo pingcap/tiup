@@ -605,6 +605,12 @@ func (topo *TopologySpecification) UnmarshalYAML(unmarshal func(interface{}) err
 		topo.MonitoredOptions.DataDir = filepath.Join(topo.GlobalOptions.DataDir,
 			fmt.Sprintf("%s-%d", RoleMonitor, topo.MonitoredOptions.NodeExporterPort))
 	}
+	if topo.MonitoredOptions.LogDir == "" {
+		topo.MonitoredOptions.LogDir = "log"
+	}
+	if !strings.HasPrefix(topo.MonitoredOptions.LogDir, "/") {
+		topo.MonitoredOptions.LogDir = filepath.Join(topo.MonitoredOptions.DeployDir, topo.MonitoredOptions.LogDir)
+	}
 
 	// populate custom default values as needed
 	if err := fillCustomDefaults(&topo.GlobalOptions, topo); err != nil {

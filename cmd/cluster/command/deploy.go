@@ -346,7 +346,6 @@ func buildMonitoredDeployTask(
 			}
 			// log dir will always be with values, but might not used by the component
 			logDir := clusterutil.Abs(globalOptions.User, monitoredOptions.LogDir)
-
 			// Deploy component
 			t := task.NewBuilder().
 				UserSSH(host, info.ssh, globalOptions.User, gOpt.SSHTimeout).
