@@ -171,7 +171,7 @@ func (manifest *Root) SetRole(m ValidManifest) {
 		manifest.Roles = make(map[string]*Role)
 	}
 
-	manifest.Roles[m.Filename()] = &Role{
+	manifest.Roles[m.Base().Ty] = &Role{
 		URL:       fmt.Sprintf("/%s", m.Filename()),
 		Threshold: types[m.Base().Ty].threshold,
 		Keys:      make(map[string]*KeyInfo),

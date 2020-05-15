@@ -32,7 +32,7 @@ const (
 	ManifestTypeIndex     = "index"
 	ManifestTypeSnapshot  = "snapshot"
 	ManifestTypeTimestamp = "timestamp"
-	//ManifestTypeComponent = "component"
+	ManifestTypeComponent = "component"
 
 	// SpecVersion of current, maybe we could expand it later
 	CurrentSpecVersion = "0.1.0"
@@ -48,31 +48,31 @@ type ty struct {
 
 // meta configs for different manifest types
 var types = map[string]ty{
-	"root": {
+	ManifestTypeRoot: {
 		filename:  ManifestTypeRoot + ".json",
 		versioned: true,
 		expire:    time.Hour * 24 * 365, // 1y
 		threshold: 3,
 	},
-	"index": {
+	ManifestTypeIndex: {
 		filename:  ManifestTypeIndex + ".json",
 		versioned: true,
 		expire:    time.Hour * 24 * 365, // 1y
 		threshold: 1,
 	},
-	"component": {
+	ManifestTypeComponent: {
 		filename:  "",
 		versioned: true,
 		expire:    time.Hour * 24 * 365, // 1y
 		threshold: 1,
 	},
-	"snapshot": {
+	ManifestTypeSnapshot: {
 		filename:  ManifestTypeSnapshot + ".json",
 		versioned: false,
 		expire:    time.Hour * 24, // 1d
 		threshold: 1,
 	},
-	"timestamp": {
+	ManifestTypeTimestamp: {
 		filename:  ManifestTypeTimestamp + ".json",
 		versioned: false,
 		expire:    time.Hour * 24, // 1d
