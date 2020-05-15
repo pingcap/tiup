@@ -46,7 +46,7 @@ type ty struct {
 	Threshold uint
 }
 
-// meta configs for different manifest ManifestsConfig
+// ManifestsConfig for different manifest ManifestsConfig
 var ManifestsConfig = map[string]ty{
 	ManifestTypeRoot: {
 		Filename:  ManifestTypeRoot + ".json",

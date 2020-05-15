@@ -104,8 +104,8 @@ var handleVersManifests = func(resource string, result interface{}) {
 		panic("bad resource string")
 	}
 	name := resource[len("tiup-component-") : len(resource)-len(".index")]
-	manifest, _ := result.(*manifest.VersionManifest)
-	*manifest = manifest.VersionManifest{
+	m, _ := result.(*manifest.VersionManifest)
+	*m = manifest.VersionManifest{
 		Description: name,
 		Modified:    "2020-02-26T15:20:35+08:00",
 		Versions:    cases[name],

@@ -63,6 +63,7 @@ func (v Version) String() string {
 	return string(v)
 }
 
+// Sort sorts all versions
 func (manifest *VersionManifest) Sort() {
 	sort.Slice(manifest.Versions, func(i, j int) bool {
 		lhs := manifest.Versions[i].Version.String()

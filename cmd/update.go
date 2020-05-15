@@ -18,7 +18,7 @@ import (
 	"os"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
-	"github.com/pingcap-incubator/tiup/pkg/repository"
+	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -101,14 +101,14 @@ func updateComponents(env *meta.Environment, components []string, nightly, force
 		return err
 	}
 	for _, comp := range components {
-		component, version := meta.ParseCompVersion(comp)
+		component, v := meta.ParseCompVersion(comp)
 		if !manifest.HasComponent(component) {
 			return errors.Errorf("component `%s` not found", component)
 		}
 		if nightly {
-			version = repository.NightlyVersion
+			v = version.NightlyVersion
 		}
-		err = env.DownloadComponent(component, version, nightly || force)
+		err = env.DownloadComponent(component, v, nightly || force)
 		if err != nil {
 			return err
 		}

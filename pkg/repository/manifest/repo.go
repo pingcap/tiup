@@ -113,7 +113,7 @@ func NewTimestamp(initTime time.Time) *Timestamp {
 }
 
 // SignAndWrite creates a manifest and writes it to out.
-func SignAndWrite(out io.Writer, role ValidManifest, keyId string, privKey *crypto.RSAPrivKey) error {
+func SignAndWrite(out io.Writer, role ValidManifest, keyID string, privKey *crypto.RSAPrivKey) error {
 	payload, err := cjson.Marshal(role)
 	if err != nil {
 		return err
@@ -126,7 +126,7 @@ func SignAndWrite(out io.Writer, role ValidManifest, keyId string, privKey *cryp
 
 	manifest := Manifest{
 		Signatures: []signature{{
-			KeyID: keyId,
+			KeyID: keyID,
 			Sig:   sign,
 		}},
 		Signed: role,

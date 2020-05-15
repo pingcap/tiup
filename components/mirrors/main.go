@@ -28,6 +28,7 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
@@ -170,7 +171,7 @@ func downloadResource(mirror repository.Mirror, targetDir, name string, overwrit
 	return mirror.Download(shaFile, targetDir)
 }
 
-func download(targetDir string, repo *repository.Repository, manifest *manifest.ComponentManifest, options mirrorsOptions) error {
+func download(targetDir string, repo *repository.Repository, m *manifest.ComponentManifest, options mirrorsOptions) error {
 	if utils.IsNotExist(targetDir) {
 		if err := os.MkdirAll(targetDir, 0755); err != nil {
 			return err
@@ -196,7 +197,7 @@ func download(targetDir string, repo *repository.Repository, manifest *manifest.
 		return ioutil.WriteFile(file, jsonData, os.ModePerm)
 	}
 
-	if err := writeJSON(filename(repository.ManifestFileName), manifest); err != nil {
+	if err := writeJSON(filename(repository.ManifestFileName), m); err != nil {
 		return err
 	}
 
@@ -218,7 +219,7 @@ func download(targetDir string, repo *repository.Repository, manifest *manifest.
 				Description: componentInfo.Description,
 				Modified:    componentInfo.Modified,
 			}
-			if vs.Exist(repository.NightlyVersion) {
+			if vs.Exist(version.NightlyVersion) {
 				newCompInfo.Nightly = componentInfo.Nightly
 			}
 		}

@@ -173,23 +173,23 @@ func migrate(srcDir, dstDir string) error {
 		}
 
 		hash := sha256.Sum256(key)
-		keyId := hex.EncodeToString(hash[:])
+		keyID := hex.EncodeToString(hash[:])
 
 		privKeys[name] = priv
-		keyNames[name] = keyId
+		keyNames[name] = keyID
 
-		return keyId, keyInfo, nil
+		return keyID, keyInfo, nil
 	}
 
 	// Initialize the index manifest
-	keyId, keyInfo, err := genkey("pingcap")
+	keyID, keyInfo, err := genkey("pingcap")
 	if err != nil {
 		return errors.Trace(err)
 	}
 	index.Owners["pingcap"] = manifest.Owner{
 		Name: "PingCAP",
 		Keys: map[string]*manifest.KeyInfo{
-			keyId: keyInfo,
+			keyID: keyInfo,
 		},
 	}
 
@@ -245,7 +245,7 @@ func migrate(srcDir, dstDir string) error {
 			return err
 		}
 		defer writer.Close()
-		if err = manifest.SignAndWrite(writer, component, keyId, privKeys["pingcap"]); err != nil {
+		if err = manifest.SignAndWrite(writer, component, keyID, privKeys["pingcap"]); err != nil {
 			return err
 		}
 
@@ -274,11 +274,11 @@ func migrate(srcDir, dstDir string) error {
 	// Initialize the root manifest
 	for _, m := range manifests {
 		root.SetRole(m)
-		keyId, keyInfo, err := genkey(m.Base().Ty)
+		keyID, keyInfo, err := genkey(m.Base().Ty)
 		if err != nil {
 			return errors.Trace(err)
 		}
-		root.Roles[m.Base().Ty].Keys[keyId] = keyInfo
+		root.Roles[m.Base().Ty].Keys[keyID] = keyInfo
 	}
 
 	for ty, m := range manifests {
@@ -301,8 +301,8 @@ func migrate(srcDir, dstDir string) error {
 		}
 		defer writer.Close()
 		// TODO: support multiples keys
-		keyId := keyNames[m.Base().Ty]
-		if err = manifest.SignAndWrite(writer, m, keyId, privKeys[m.Base().Ty]); err != nil {
+		keyID := keyNames[m.Base().Ty]
+		if err = manifest.SignAndWrite(writer, m, keyID, privKeys[m.Base().Ty]); err != nil {
 			return err
 		}
 	}

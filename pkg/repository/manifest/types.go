@@ -65,6 +65,7 @@ type KeyInfo struct {
 	Scheme     string            `json:"scheme"`
 }
 
+// ComponentItem object
 type ComponentItem struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -89,6 +90,7 @@ type Owner struct {
 	Keys map[string]*KeyInfo `json:"keys"`
 }
 
+// VersionItem object
 type VersionItem struct {
 	Yanked       bool              `json:"yanked"`
 	URL          string            `json:"url"`
