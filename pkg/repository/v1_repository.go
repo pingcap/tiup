@@ -115,7 +115,7 @@ func (r *V1Repository) checkTimestamp(local manifest.LocalManifests) (*manifest.
 }
 
 // FetchManifest downloads and validates a manifest from this repo.
-func (r *V1Repository) FetchManifest(filename string, role manifest.ValidManifest, keys *crypto.KeyStore, maxSize uint) (*manifest.Manifest, error) {
+func (r *V1Repository) FetchManifest(filename string, role manifest.ValidManifest, keys crypto.KeyStore, maxSize uint) (*manifest.Manifest, error) {
 	reader, err := r.mirror.Fetch(filename, int64(maxSize))
 	if err != nil {
 		return nil, errors.Trace(err)
