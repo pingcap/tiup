@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"fmt"
 	"runtime"
 
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
@@ -67,14 +68,14 @@ func (r *V1Repository) updateLocalSnapshot(local v1manifest.LocalManifests) (*v1
 	}
 
 	var snapshot v1manifest.Snapshot
-	manifest, err := r.FetchManifest(snapshot.Filename(), &snapshot, local.Keys(), hash.Length)
+	manifest, err := r.FetchManifest(v1manifest.ManifestURLSnapshot, &snapshot, local.Keys(), hash.Length)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO validate snapshot against hash
 
-	err = local.SaveManifest(manifest)
+	err = local.SaveManifest(manifest, v1manifest.ManifestFilenameSnapshot)
 	if err != nil {
 		return nil, err
 	}
@@ -83,11 +84,103 @@ func (r *V1Repository) updateLocalSnapshot(local v1manifest.LocalManifests) (*v1
 }
 
 func (r *V1Repository) updateLocalRoot(local v1manifest.LocalManifests) error {
+	// When we save to disk need to save twice:
+	//filename := v1manifest.ManifestFilenameRoot
+	//err := local.SaveManifest(manifest, filename)
+	//version := manifest.Signed.Base().Version
+	//filename =  fmt.Sprintf("%v.%s", version, filename)
+	//err = local.SaveManifest(manifest, filename)
 	return nil
 }
 
-func (r *V1Repository) updateLocalIndex(local v1manifest.LocalManifests) error {
-	return nil
+// Precondition: the index manifest actually requires updating, the root manifest has been updated if necessary.
+func (r *V1Repository) updateLocalIndex(local v1manifest.LocalManifests, length uint) (*v1manifest.Index, error) {
+	var root v1manifest.Root
+	_, err := local.LoadManifest(&root)
+	if err != nil {
+		return nil, err
+	}
+
+	var snapshot v1manifest.Snapshot
+	_, err = local.LoadManifest(&snapshot)
+	if err != nil {
+		return nil, err
+	}
+
+	url, err := snapshot.VersionedURL(root.Roles[v1manifest.ManifestTypeIndex].URL)
+	if err != nil {
+		return nil, err
+	}
+
+	var index v1manifest.Index
+	manifest, err := r.FetchManifest(url, &index, local.Keys(), length)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check version number against old manifest
+	var oldIndex v1manifest.Index
+	exists, err := local.LoadManifest(&oldIndex)
+	if exists {
+		if err != nil {
+			return nil, err
+		}
+		if index.Version <= oldIndex.Version {
+			fmt.Errorf("index manifest has a version number <= the old manifest (%v, %v)", index.Version, oldIndex.Version)
+		}
+	}
+
+	err = local.SaveManifest(manifest, v1manifest.ManifestFilenameIndex)
+	if err != nil {
+		return nil, err
+	}
+
+	return &index, nil
+}
+
+// Precondition: the snapshot manifest exists and is up to date
+func (r *V1Repository) updateComponentManifest(local v1manifest.LocalManifests, id string) (*v1manifest.Component, error) {
+	// Find the component's entry in the index and snapshot manifests.
+	var index v1manifest.Index
+	_, err := local.LoadManifest(&index)
+	if err != nil {
+		return nil, err
+	}
+	item := index.Components[id]
+	var snapshot v1manifest.Snapshot
+	_, err = local.LoadManifest(&snapshot)
+	if err != nil {
+		return nil, err
+	}
+
+	url, err := snapshot.VersionedURL(item.URL)
+	if err != nil {
+		return nil, err
+	}
+	var component v1manifest.Component
+	// TODO length should be in snapshot
+	manifest, err := r.FetchManifest(url, &component, local.Keys(), 0)
+	if err != nil {
+		return nil, err
+	}
+
+	filename := v1manifest.ComponentFilename(id)
+	oldManifest, err := local.LoadComponentManifest(filename)
+	if err != nil {
+		return nil, err
+	}
+	if oldManifest != nil {
+		if component.Version <= oldManifest.Version {
+			return nil, fmt.Errorf("component manifest for %s has a version number <= the old manifest (%v, %v)", id, component.Version, oldManifest.Version)
+		}
+	}
+
+	err = local.SaveComponentManifest(manifest, filename)
+	if err != nil {
+		return nil, err
+	}
+
+	return &component, nil
 }
 
 // CheckTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash matches our local one.
@@ -95,28 +188,30 @@ func (r *V1Repository) updateLocalIndex(local v1manifest.LocalManifests) error {
 // snapshot's file info.
 func (r *V1Repository) checkTimestamp(local v1manifest.LocalManifests) (*v1manifest.FileHash, error) {
 	var ts v1manifest.Timestamp
-	_, err := r.FetchManifest(ts.Filename(), &ts, local.Keys(), maxTimeStampSize)
+	manifest, err := r.FetchManifest(v1manifest.ManifestURLTimestamp, &ts, local.Keys(), maxTimeStampSize)
 	if err != nil {
 		return nil, err
 	}
 	hash := ts.SnapshotHash()
 
 	var localTs v1manifest.Timestamp
-	err = local.LoadManifest(&localTs)
-	if err != nil {
+	exists, err := local.LoadManifest(&localTs)
+	if !exists {
 		// We can't find a local timestamp, so we're going to have to update
-		return &hash, nil
+		return &hash, local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
+	} else if err != nil {
+		return nil, err
 	}
 	if hash.Hashes["sha256"] == localTs.SnapshotHash().Hashes["sha256"] {
 		return nil, nil
 	}
 
-	return &hash, nil
+	return &hash, local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
 }
 
 // FetchManifest downloads and validates a manifest from this repo.
-func (r *V1Repository) FetchManifest(filename string, role v1manifest.ValidManifest, keys crypto.KeyStore, maxSize uint) (*v1manifest.Manifest, error) {
-	reader, err := r.mirror.Fetch(filename, int64(maxSize))
+func (r *V1Repository) FetchManifest(url string, role v1manifest.ValidManifest, keys crypto.KeyStore, maxSize uint) (*v1manifest.Manifest, error) {
+	reader, err := r.mirror.Fetch(url, int64(maxSize))
 	if err != nil {
 		return nil, errors.Trace(err)
 	}

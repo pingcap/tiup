@@ -252,6 +252,8 @@ Example:
 ]
 ```
 
+TODO don't store length or name of components, 
+
 Each owner id and component id must be unique (TiUp should treat owner and component ids as distinct types, but ids must be unique within the union of the types). 
 
 ### n.xxx.json

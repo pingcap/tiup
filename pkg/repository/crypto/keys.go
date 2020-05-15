@@ -19,9 +19,9 @@ import (
 
 var (
 	// ErrorKeyUninitialized will be present when key is used before Deserialize called
-	ErrorKeyUninitialized = errors.New("Key not initialized, call Deserialize first")
+	ErrorKeyUninitialized = errors.New("key not initialized, call Deserialize first")
 	// ErrorDeserializeKey means the key format is not valid
-	ErrorDeserializeKey = errors.New("Error on deserialize key, check if the key is valid")
+	ErrorDeserializeKey = errors.New("error on deserialize key, check if the key is valid")
 )
 
 // KeyStore is the collection of all public keys available to TiUp.

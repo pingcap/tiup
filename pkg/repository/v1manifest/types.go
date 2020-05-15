@@ -65,6 +65,14 @@ type KeyInfo struct {
 	Scheme     string            `json:"scheme"`
 }
 
+// Index manifest.
+type Index struct {
+	SignedBase
+	Owners            map[string]Owner         `json:"owners"`
+	Components        map[string]ComponentItem `json:"components"`
+	DefaultComponents []string                 `json:"default_components"`
+}
+
 // ComponentItem object
 type ComponentItem struct {
 	Name      string `json:"name"`
@@ -73,14 +81,6 @@ type ComponentItem struct {
 	URL       string `json:"url"`
 	Length    int64  `json:"length"`
 	Threshold int    `json:"threshold"`
-}
-
-// Index manifest.
-type Index struct {
-	SignedBase
-	Owners            map[string]Owner         `json:"owners"`
-	Components        map[string]ComponentItem `json:"components"`
-	DefaultComponents []string                 `json:"default_components"`
 }
 
 // Owner object.
@@ -160,12 +160,12 @@ func (manifest *Timestamp) Base() *SignedBase {
 
 // Filename implements ValidManifest
 func (manifest *Root) Filename() string {
-	return ManifestsConfig[ManifestTypeRoot].Filename
+	return ManifestFilenameRoot
 }
 
 // Filename implements ValidManifest
 func (manifest *Index) Filename() string {
-	return ManifestsConfig[ManifestTypeIndex].Filename
+	return ManifestFilenameIndex
 }
 
 // Filename implements ValidManifest
@@ -175,10 +175,10 @@ func (manifest *Component) Filename() string {
 
 // Filename implements ValidManifest
 func (manifest *Snapshot) Filename() string {
-	return ManifestsConfig[ManifestTypeSnapshot].Filename
+	return ManifestFilenameSnapshot
 }
 
 // Filename implements ValidManifest
 func (manifest *Timestamp) Filename() string {
-	return ManifestsConfig[ManifestTypeTimestamp].Filename
+	return ManifestFilenameTimestamp
 }
