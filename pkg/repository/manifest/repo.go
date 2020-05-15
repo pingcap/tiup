@@ -40,11 +40,7 @@ func Init(dst string, initTime time.Time) error {
 	manifests[ManifestTypeSnapshot] = NewSnapshot(initTime).SetVersions(manifests)
 
 	// init timestamp
-	timestamp, err := NewTimestamp(initTime).SetSnapshot(manifests[ManifestTypeSnapshot].(*Snapshot))
-	if err != nil {
-		return err
-	}
-	manifests[ManifestTypeTimestamp] = timestamp
+	manifests[ManifestTypeTimestamp] = NewTimestamp(initTime)
 
 	// root and snapshot has meta of each other inside themselves, but it's ok here
 	// as we are still during the init process, not version bump needed
@@ -152,26 +148,6 @@ func (manifest *Snapshot) SetVersions(manifestList map[string]ValidManifest) *Sn
 		}
 	}
 	return manifest
-}
-
-// SetSnapshot hashes a snapshot manifest and update the timestamp manifest
-func (manifest *Timestamp) SetSnapshot(s *Snapshot) (*Timestamp, error) {
-	bytes, err := json.Marshal(s)
-	if err != nil {
-		return manifest, err
-	}
-
-	// TODO: hash the manifest
-
-	if manifest.Meta == nil {
-		manifest.Meta = make(map[string]FileHash)
-	}
-	manifest.Meta[s.Base().Filename()] = FileHash{
-		Hashes: map[string]string{"sha256": "TODO"},
-		Length: uint(len(bytes)),
-	}
-
-	return manifest, nil
 }
 
 // SetRole populates role list in the root manifest

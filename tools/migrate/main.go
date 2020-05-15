@@ -132,14 +132,7 @@ func migrate(srcDir, dstDir string) error {
 	// snapshot and timestamp are the last two manifests to be initialized
 	// init snapshot
 	snapshot := manifest.NewSnapshot(initTime).SetVersions(manifests)
-	// init timestamp
-	timestamp, err := manifest.NewTimestamp(initTime).SetSnapshot(snapshot)
-	if err != nil {
-		return err
-	}
-
 	manifests[manifest.ManifestTypeSnapshot] = snapshot
-	manifests[manifest.ManifestTypeTimestamp] = timestamp
 
 	privKeys := map[string]*crypto.RSAPrivKey{}
 	keyNames := map[string]string{}
@@ -186,16 +179,6 @@ func migrate(srcDir, dstDir string) error {
 		keyNames[name] = keyId
 
 		return keyId, keyInfo, nil
-	}
-
-	// Initialize the root manifest
-	for _, m := range manifests {
-		root.SetRole(m)
-		keyId, keyInfo, err := genkey(m.Base().Ty)
-		if err != nil {
-			return errors.Trace(err)
-		}
-		root.Roles[m.Base().Ty].Keys[keyId] = keyInfo
 	}
 
 	// Initialize the index manifest
@@ -280,9 +263,38 @@ func migrate(srcDir, dstDir string) error {
 			Length:      stat.Size(),
 			Threshold:   0,
 		}
+
+		snapshot.Meta[name] = manifest.FileVersion{Version: 1}
 	}
 
+	// Initialize timestamp
+	timestamp := manifest.NewTimestamp(initTime)
+	manifests[manifest.ManifestTypeTimestamp] = timestamp
+
+	// Initialize the root manifest
 	for _, m := range manifests {
+		root.SetRole(m)
+		keyId, keyInfo, err := genkey(m.Base().Ty)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		root.Roles[m.Base().Ty].Keys[keyId] = keyInfo
+	}
+
+	for ty, m := range manifests {
+		if ty == manifest.ManifestTypeTimestamp {
+			filename := manifest.ManifestTypeSnapshot + ".json"
+			hash, n, err := hashes(filepath.Join(dstDir, "manifests"), filename)
+			if err != nil {
+				return errors.Trace(err)
+			}
+			timestamp.Meta = map[string]manifest.FileHash{
+				filename: {
+					Hashes: hash,
+					Length: uint(n),
+				},
+			}
+		}
 		writer, err := os.OpenFile(filepath.Join(dstDir, "manifests", m.Filename()), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 		if err != nil {
 			return err
