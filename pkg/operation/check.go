@@ -496,8 +496,7 @@ func CheckPartitions(opt *CheckOptions, host string, topo *meta.TopologySpecific
 		if inst.GetHost() != host {
 			return
 		}
-		for _, dir := range strings.Split(inst.DataDir(), ",") {
-			dataDir := clusterutil.Abs(topo.GlobalOptions.User, dir)
+		for _, dataDir := range clusterutil.MultiDirAbs(topo.GlobalOptions.User, inst.DataDir()) {
 			if dataDir == "" {
 				continue
 			}

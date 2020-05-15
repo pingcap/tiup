@@ -58,25 +58,7 @@ server_configs:
     schedule.replica-schedule-limit: 64
     replication.enable-placement-rules: true
   tiflash:
-    # `path_realtime_mode` only works if `data_dir` is specified with multiple paths.
-    # TiFlash only uses the first path to store the latest data (i.e. "delta"). And for the older data (i.e. "stable". which is the majority of data),
-    #
-    # path_realtime_mode:
-    #   "true" means only other paths instead of first path can be used to store older data.
-    #   "false" means all paths can be used to store older data.
-    #
-    # E.g, if you intend to use an fast and smaller NVMe SSD (256GB) to speed up data ingestion speed in TiFlash,
-    # and 4 extra normal SSDs (512GB each) for main storage. Then your configurations should be look like:
-    #
-    #  data_dir: /nvme_ssd_256/data,/ssd1_512/data,/ssd2_512/data,/ssd3_512/data,/ssd4_512/data
-    #  path_realtime_mode: true
-    #
-    # And if your first disk is big enough, to fully use the capacity of it, use configurations look like:
-    #
-    #  data_dir: /nvme_ssd_512/data,/ssd1_512/data,/ssd2_512/data,/ssd3_512/data,/ssd4_512/data
-    #  path_realtime_mode: false
-    #
-    path_realtime_mode: false
+    # path_realtime_mode: false
     logger.level: "info"
   tiflash-learner:
     log-level: "info"
@@ -143,6 +125,30 @@ tiflash_servers:
     # data_dir: /tidb-data/tiflash-9000
     # log_dir: /tidb-deploy/tiflash-9000/log
     # numa_node: "0,1"
+    # #
+    # # `path_realtime_mode` only works if `data_dir` is specified with multiple paths.
+    # #
+    # #  path_realtime_mode:
+    # #    "true" means only other paths instead of first path can be used to store older data.
+    # #    "false" means all paths can be used to store older data.
+    # #
+    # # TiFlash only uses the first path to store the latest data (i.e. "delta"). And others for the older data (i.e. "stable". which is the majority of data),
+    # #
+    # # E.g, if you intend to use an fast and smaller NVMe SSD (256GB) to speed up data ingestion speed in TiFlash,
+    # # and 4 extra normal SSDs (512GB each) for main storage. Then your configurations should be look like:
+    # #
+    # # data_dir: /nvme_ssd_512/data,/ssd1_512/data,/ssd2_512/data,/ssd3_512/data,/ssd4_512/data
+    # # config:
+    # #   path_realtime_mode: true
+    # #
+    # #
+    # # And if your first disk is big enough, to fully use the capacity of it, use configurations look like:
+    # #
+    # # data_dir: /nvme_ssd_512/data,/ssd1_512/data,/ssd2_512/data,/ssd3_512/data,/ssd4_512/data
+    # # config:
+    # #   path_realtime_mode: false
+    # #
+    # #
     # # The following configs are used to overwrite the `server_configs.tiflash` values.
     # config:
     #   path_realtime_mode: false

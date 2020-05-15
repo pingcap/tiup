@@ -183,7 +183,9 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, timeout 
 		// Stop by systemd.
 		delPaths := make([]string, 0)
 		switch name {
-		case meta.ComponentTiKV, meta.ComponentPD, meta.ComponentTiFlash, meta.ComponentPump, meta.ComponentDrainer, meta.ComponentPrometheus, meta.ComponentAlertManager, meta.ComponentDMMaster, meta.ComponentDMWorker:
+		case meta.ComponentTiKV, meta.ComponentPD, meta.ComponentPump, meta.ComponentDrainer, meta.ComponentPrometheus, meta.ComponentAlertManager, meta.ComponentDMMaster, meta.ComponentDMWorker:
+			delPaths = append(delPaths, ins.DataDir())
+		case meta.ComponentTiFlash:
 			delPaths = append(delPaths, strings.Split(ins.DataDir(), ",")...)
 		}
 
@@ -230,6 +232,7 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, timeout 
 		}
 
 		log.Infof("Destroy %s success", ins.GetHost())
+		log.Infof("- Destroy %s paths: %v", ins.ComponentName(), delPaths)
 	}
 
 	return nil

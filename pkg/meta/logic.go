@@ -258,19 +258,11 @@ func (i *instance) DataDir() string {
 	}
 
 	// the default data_dir is relative to deploy_dir
-	var dirs []string
-	for _, dir := range strings.Split(dataDir.String(), ",") {
-		if dir == "" {
-			continue
-		}
-		if !strings.HasPrefix(dir, "/") {
-			dirs = append(dirs, filepath.Join(i.DeployDir(), dir))
-		} else {
-			dirs = append(dirs, dir)
-		}
+	if dataDir.String() != "" && !strings.HasPrefix(dataDir.String(), "/") {
+		return filepath.Join(i.DeployDir(), dataDir.String())
 	}
 
-	return strings.Join(dirs, ",")
+	return dataDir.String()
 }
 
 func (i *instance) OS() string {
@@ -753,6 +745,52 @@ type TiFlashInstance struct {
 	instance
 }
 
+// checkIncorrectDataDir checks TiFlash's key should not be set in config
+func (i *TiFlashInstance) checkIncorrectKey(key string) error {
+	errMsg := "NOTE: TiFlash `%s` is should NOT be set in topo's \"%s\" config, its value will be ignored, you should set `data_dir` in each host instead, please check your topology"
+	if dir, ok := i.InstanceSpec.(TiFlashSpec).Config[key].(string); ok && dir != "" {
+		return fmt.Errorf(errMsg, key, "host")
+	}
+	if dir, ok := i.instance.topo.ServerConfigs.TiFlash[key].(string); ok && dir != "" {
+		return fmt.Errorf(errMsg, key, "server_configs")
+	}
+	return nil
+}
+
+// checkIncorrectDataDir checks incorrect data_dir settings
+func (i *TiFlashInstance) checkIncorrectDataDir() error {
+	if err := i.checkIncorrectKey("data_dir"); err != nil {
+		return err
+	}
+	if err := i.checkIncorrectKey("path"); err != nil {
+		return err
+	}
+	return nil
+}
+
+// DataDir represents TiFlash's DataDir
+func (i *TiFlashInstance) DataDir() string {
+	if err := i.checkIncorrectDataDir(); err != nil {
+		log.Errorf(err.Error())
+	}
+	dataDir := reflect.ValueOf(i.InstanceSpec).FieldByName("DataDir")
+	if !dataDir.IsValid() {
+		return ""
+	}
+	var dirs []string
+	for _, dir := range strings.Split(dataDir.String(), ",") {
+		if dir == "" {
+			continue
+		}
+		if !strings.HasPrefix(dir, "/") {
+			dirs = append(dirs, filepath.Join(i.DeployDir(), dir))
+		} else {
+			dirs = append(dirs, dir)
+		}
+	}
+	return strings.Join(dirs, ",")
+}
+
 // InitTiFlashConfig initializes TiFlash config file
 func (i *TiFlashInstance) InitTiFlashConfig(cfg *scripts.TiFlashScript, src map[string]interface{}) (map[string]interface{}, error) {
 	topo := TopologySpecification{}
@@ -882,15 +920,10 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		}
 	}
 
-	dataDir := strings.Join(paths.Data, ",")
-	if dir, ok := i.instance.topo.ServerConfigs.TiFlash["data_dir"].(string); ok && dir != "" {
-		dataDir = dir
-	}
-
 	cfg := scripts.NewTiFlashScript(
 		i.GetHost(),
 		paths.Deploy,
-		dataDir,
+		strings.Join(paths.Data, ","),
 		paths.Log,
 		tidbStatusStr,
 		pdStr,
