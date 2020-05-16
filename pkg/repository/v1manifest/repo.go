@@ -146,6 +146,7 @@ func (manifest *Snapshot) SetVersions(manifestList map[string]ValidManifest) *Sn
 	for _, m := range manifestList {
 		manifest.Meta[m.Filename()] = FileVersion{
 			Version: m.Base().Version,
+			// TODO length
 		}
 	}
 	return manifest

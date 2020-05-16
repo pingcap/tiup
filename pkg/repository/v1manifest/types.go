@@ -75,11 +75,9 @@ type Index struct {
 
 // ComponentItem object
 type ComponentItem struct {
-	Name      string `json:"name"`
 	Yanked    bool   `json:"yanked"`
 	Owner     string `json:"owner"`
 	URL       string `json:"url"`
-	Length    int64  `json:"length"`
 	Threshold int    `json:"threshold"`
 }
 
@@ -129,6 +127,7 @@ type FileHash struct {
 // FileVersion is just a version number.
 type FileVersion struct {
 	Version uint `json:"version"`
+	Length  uint `json:"length"`
 }
 
 // Boilerplate implementations of ValidManifest.

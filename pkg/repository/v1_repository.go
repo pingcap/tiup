@@ -126,7 +126,7 @@ func (r *V1Repository) updateLocalIndex(local v1manifest.LocalManifests, length 
 			return nil, err
 		}
 		if index.Version <= oldIndex.Version {
-			fmt.Errorf("index manifest has a version number <= the old manifest (%v, %v)", index.Version, oldIndex.Version)
+			return nil, fmt.Errorf("index manifest has a version number <= the old manifest (%v, %v)", index.Version, oldIndex.Version)
 		}
 	}
 
@@ -158,8 +158,7 @@ func (r *V1Repository) updateComponentManifest(local v1manifest.LocalManifests, 
 		return nil, err
 	}
 	var component v1manifest.Component
-	// TODO length should be in snapshot
-	manifest, err := r.FetchManifest(url, &component, local.Keys(), 0)
+	manifest, err := r.FetchManifest(url, &component, local.Keys(), snapshot.Meta[item.URL].Length)
 	if err != nil {
 		return nil, err
 	}

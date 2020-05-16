@@ -250,21 +250,18 @@ func migrate(srcDir, dstDir string) error {
 			return err
 		}
 
+		index.Components[comp.Name] = v1manifest.ComponentItem{
+			Yanked:    false,
+			Owner:     "pingcap",
+			URL:       fmt.Sprintf("/%s", name),
+			Threshold: 0,
+		}
 		stat, err := writer.Stat()
 		if err != nil {
 			return errors.Trace(err)
 		}
 
-		index.Components[comp.Name] = v1manifest.ComponentItem{
-			Name:      comp.Name,
-			Yanked:    false,
-			Owner:     "pingcap",
-			URL:       fmt.Sprintf("/%s", name),
-			Length:    stat.Size(),
-			Threshold: 0,
-		}
-
-		snapshot.Meta[name] = v1manifest.FileVersion{Version: 1}
+		snapshot.Meta[name] = v1manifest.FileVersion{Version: 1, Length: uint(stat.Size())}
 	}
 
 	// Initialize timestamp

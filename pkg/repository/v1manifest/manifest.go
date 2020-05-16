@@ -128,6 +128,7 @@ func (err *SignatureError) Error() string {
 	return "invalid signature for file"
 }
 
+// ComponentFilename returns the expected filename for the component identified by id.
 func ComponentFilename(id string) string {
 	return fmt.Sprintf("%s.json", id)
 }

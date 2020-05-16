@@ -113,6 +113,7 @@ type MockManifests struct {
 	Saved     []string
 }
 
+// NewMockManifests creates an empty MockManifests.
 func NewMockManifests() *MockManifests {
 	return &MockManifests{
 		Manifests: map[string]ValidManifest{},

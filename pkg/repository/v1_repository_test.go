@@ -243,11 +243,9 @@ func indexManifest() *v1manifest.Index {
 			Keys: nil,
 		}},
 		Components: map[string]v1manifest.ComponentItem{"foo": {
-			Name:      "Foo",
 			Yanked:    false,
 			Owner:     "bar",
 			URL:       "/foo.json",
-			Length:    10000,
 			Threshold: 1,
 		}},
 		DefaultComponents: []string{},
