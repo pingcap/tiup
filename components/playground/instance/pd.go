@@ -16,7 +16,6 @@ package instance
 import (
 	"context"
 	"fmt"
-	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"os"
 	"os/exec"
 	"path"
@@ -24,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 )

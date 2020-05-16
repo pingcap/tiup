@@ -15,7 +15,6 @@ package meta
 
 import (
 	"fmt"
-	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"os"
 	"path/filepath"
 	"sort"
@@ -23,6 +22,7 @@ import (
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"golang.org/x/mod/semver"
 )
 

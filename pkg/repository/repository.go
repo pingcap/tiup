@@ -15,10 +15,10 @@ package repository
 
 import (
 	"fmt"
-	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"path/filepath"
 	"runtime"
 
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/errors"
 )
 

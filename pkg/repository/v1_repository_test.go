@@ -14,11 +14,11 @@
 package repository
 
 import (
-	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
-	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"strings"
 	"testing"
 
+	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/stretchr/testify/assert"
 )
 

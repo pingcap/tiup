@@ -16,7 +16,6 @@ package localdata
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"io/ioutil"
 	"log"
 	"os"
@@ -24,6 +23,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"golang.org/x/mod/semver"

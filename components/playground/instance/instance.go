@@ -16,9 +16,9 @@ package instance
 import (
 	"context"
 	"fmt"
-	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 )
 
 type instance struct {
