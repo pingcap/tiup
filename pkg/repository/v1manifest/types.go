@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package manifest
+package v1manifest
 
 // Manifest representation for ser/de.
 type Manifest struct {
@@ -67,13 +67,12 @@ type KeyInfo struct {
 
 // ComponentItem object
 type ComponentItem struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Yanked      bool   `json:"yanked"`
-	Owner       string `json:"owner"`
-	URL         string `json:"url"`
-	Length      int64  `json:"length"`
-	Threshold   int    `json:"threshold"`
+	Name      string `json:"name"`
+	Yanked    bool   `json:"yanked"`
+	Owner     string `json:"owner"`
+	URL       string `json:"url"`
+	Length    int64  `json:"length"`
+	Threshold int    `json:"threshold"`
 }
 
 // Index manifest.

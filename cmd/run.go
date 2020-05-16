@@ -29,7 +29,7 @@ import (
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
-	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/errors"
 )
 
@@ -159,7 +159,7 @@ func base62Tag() string {
 	return string(b)
 }
 
-func launchComponent(ctx context.Context, component string, version manifest.Version, binPath string, tag string, args []string, env *meta.Environment) (*process, error) {
+func launchComponent(ctx context.Context, component string, version v0manifest.Version, binPath string, tag string, args []string, env *meta.Environment) (*process, error) {
 	selectVer, err := env.DownloadComponentIfMissing(component, version)
 	if err != nil {
 		return nil, err

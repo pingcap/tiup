@@ -14,11 +14,11 @@
 package repository
 
 import (
-	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
-	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
 	"strings"
 	"testing"
 
+	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,8 +27,8 @@ func TestCheckTimestamp(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	repo := NewV1Repo(&mirror, Options{})
-	local := manifest.MockManifests{
-		Manifests: map[string]manifest.ValidManifest{},
+	local := v1manifest.MockManifests{
+		Manifests: map[string]v1manifest.ValidManifest{},
 	}
 
 	repoTimestamp := timestampManifest()
@@ -76,8 +76,8 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	repo := NewV1Repo(&mirror, Options{})
-	local := manifest.MockManifests{
-		Manifests: map[string]manifest.ValidManifest{},
+	local := v1manifest.MockManifests{
+		Manifests: map[string]v1manifest.ValidManifest{},
 	}
 
 	timestamp := timestampManifest()
@@ -109,38 +109,38 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 	// TODO test that signature error on timestamp causes root to be reloaded and timestamp to be rechecked
 }
 
-func timestampManifest() *manifest.Timestamp {
-	return &manifest.Timestamp{
-		SignedBase: manifest.SignedBase{
+func timestampManifest() *v1manifest.Timestamp {
+	return &v1manifest.Timestamp{
+		SignedBase: v1manifest.SignedBase{
 			Ty:          "timestamp",
 			SpecVersion: "0.1.0",
 			Expires:     "2220-05-11T04:51:08Z",
 			Version:     42,
 		},
-		Meta: map[string]manifest.FileHash{"snapshot.json": {
+		Meta: map[string]v1manifest.FileHash{"snapshot.json": {
 			Hashes: map[string]string{"sha256": "123456"},
 			Length: 1001,
 		}},
 	}
 }
 
-func snapshotManifest() *manifest.Snapshot {
-	return &manifest.Snapshot{
-		SignedBase: manifest.SignedBase{
+func snapshotManifest() *v1manifest.Snapshot {
+	return &v1manifest.Snapshot{
+		SignedBase: v1manifest.SignedBase{
 			Ty:          "snapshot",
 			SpecVersion: "0.1.0",
 			Expires:     "2220-05-11T04:51:08Z",
 			Version:     42,
 		},
-		Meta: map[string]manifest.FileVersion{"root": {Version: 56}},
+		Meta: map[string]v1manifest.FileVersion{"root": {Version: 56}},
 	}
 }
 
-func serialize(t *testing.T, role manifest.ValidManifest) string {
+func serialize(t *testing.T, role v1manifest.ValidManifest) string {
 	var out strings.Builder
 	_, priv, err := crypto.RsaPair()
 	assert.Nil(t, err)
-	err = manifest.SignAndWrite(&out, role, "KEYID", priv)
+	err = v1manifest.SignAndWrite(&out, role, "KEYID", priv)
 	assert.Nil(t, err)
 	return out.String()
 }

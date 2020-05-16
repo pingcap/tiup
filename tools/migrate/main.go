@@ -29,7 +29,8 @@ import (
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
-	"github.com/pingcap-incubator/tiup/pkg/repository/manifest"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
@@ -55,14 +56,14 @@ func main() {
 	}
 }
 
-func readManifest(srcDir string) (*manifest.ComponentManifest, error) {
+func readManifest(srcDir string) (*v0manifest.ComponentManifest, error) {
 	f, err := os.OpenFile(filepath.Join(srcDir, repository.ManifestFileName), os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 	defer f.Close()
 
-	m := &manifest.ComponentManifest{}
+	m := &v0manifest.ComponentManifest{}
 	if err := json.NewDecoder(f).Decode(m); err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -70,14 +71,14 @@ func readManifest(srcDir string) (*manifest.ComponentManifest, error) {
 	return m, nil
 }
 
-func readVersions(srcDir, comp string) (*manifest.VersionManifest, error) {
+func readVersions(srcDir, comp string) (*v0manifest.VersionManifest, error) {
 	f, err := os.OpenFile(filepath.Join(srcDir, fmt.Sprintf("tiup-component-%s.index", comp)), os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 	defer f.Close()
 
-	m := &manifest.VersionManifest{}
+	m := &v0manifest.VersionManifest{}
 	if err := json.NewDecoder(f).Decode(m); err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -119,25 +120,25 @@ func migrate(srcDir, dstDir string) error {
 
 	var (
 		initTime = time.Now()
-		root     = manifest.NewRoot(initTime)
-		index    = manifest.NewIndex(initTime)
+		root     = v1manifest.NewRoot(initTime)
+		index    = v1manifest.NewIndex(initTime)
 	)
 
 	// initial manifests
-	manifests := map[string]manifest.ValidManifest{
-		manifest.ManifestTypeRoot:  root,
-		manifest.ManifestTypeIndex: index,
+	manifests := map[string]v1manifest.ValidManifest{
+		v1manifest.ManifestTypeRoot:  root,
+		v1manifest.ManifestTypeIndex: index,
 	}
 
 	// snapshot and timestamp are the last two manifests to be initialized
 	// init snapshot
-	snapshot := manifest.NewSnapshot(initTime).SetVersions(manifests)
-	manifests[manifest.ManifestTypeSnapshot] = snapshot
+	snapshot := v1manifest.NewSnapshot(initTime).SetVersions(manifests)
+	manifests[v1manifest.ManifestTypeSnapshot] = snapshot
 
 	privKeys := map[string]*crypto.RSAPrivKey{}
 	keyNames := map[string]string{}
 
-	genkey := func(name string) (string, *manifest.KeyInfo, error) {
+	genkey := func(name string) (string, *v1manifest.KeyInfo, error) {
 		// Generate RSA pairs
 		pub, priv, err := crypto.RsaPair()
 		if err != nil {
@@ -158,7 +159,7 @@ func migrate(srcDir, dstDir string) error {
 			return "", nil, errors.Trace(err)
 		}
 
-		keyInfo := &manifest.KeyInfo{
+		keyInfo := &v1manifest.KeyInfo{
 			Algorithms: []string{"sha256"},
 			Type:       "rsa",
 			Value: map[string]string{
@@ -186,9 +187,9 @@ func migrate(srcDir, dstDir string) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
-	index.Owners["pingcap"] = manifest.Owner{
+	index.Owners["pingcap"] = v1manifest.Owner{
 		Name: "PingCAP",
-		Keys: map[string]*manifest.KeyInfo{
+		Keys: map[string]*v1manifest.KeyInfo{
 			keyID: keyInfo,
 		},
 	}
@@ -201,13 +202,13 @@ func migrate(srcDir, dstDir string) error {
 			return err
 		}
 
-		platforms := map[string]map[string]manifest.VersionItem{}
+		platforms := map[string]map[string]v1manifest.VersionItem{}
 		for _, v := range versions.Versions {
 			for _, p := range v.Platforms {
 				newp := strings.Replace(p, "/", "-", -1)
 				vs, found := platforms[newp]
 				if !found {
-					vs = map[string]manifest.VersionItem{}
+					vs = map[string]v1manifest.VersionItem{}
 					platforms[newp] = vs
 				}
 
@@ -216,7 +217,7 @@ func migrate(srcDir, dstDir string) error {
 				if err != nil {
 					return err
 				}
-				vs[v.Version.String()] = manifest.VersionItem{
+				vs[v.Version.String()] = v1manifest.VersionItem{
 					Yanked:   false,
 					URL:      filename,
 					Entry:    v.Entry,
@@ -227,11 +228,11 @@ func migrate(srcDir, dstDir string) error {
 			}
 		}
 
-		component := &manifest.Component{
-			SignedBase: manifest.SignedBase{
-				Ty:          manifest.ManifestTypeComponent,
-				SpecVersion: manifest.CurrentSpecVersion,
-				Expires:     initTime.Add(manifest.ManifestsConfig[manifest.ManifestTypeComponent].Expire).Format(time.RFC3339),
+		component := &v1manifest.Component{
+			SignedBase: v1manifest.SignedBase{
+				Ty:          v1manifest.ManifestTypeComponent,
+				SpecVersion: v1manifest.CurrentSpecVersion,
+				Expires:     initTime.Add(v1manifest.ManifestsConfig[v1manifest.ManifestTypeComponent].Expire).Format(time.RFC3339),
 				Version:     1, // initial repo starts with version 1
 			},
 			Name:        comp.Name,
@@ -245,7 +246,7 @@ func migrate(srcDir, dstDir string) error {
 			return err
 		}
 		defer writer.Close()
-		if err = manifest.SignAndWrite(writer, component, keyID, privKeys["pingcap"]); err != nil {
+		if err = v1manifest.SignAndWrite(writer, component, keyID, privKeys["pingcap"]); err != nil {
 			return err
 		}
 
@@ -254,22 +255,21 @@ func migrate(srcDir, dstDir string) error {
 			return errors.Trace(err)
 		}
 
-		index.Components[comp.Name] = manifest.ComponentItem{
-			Name:        comp.Name,
-			Description: comp.Desc,
-			Yanked:      false,
-			Owner:       "pingcap",
-			URL:         fmt.Sprintf("/%s", name),
-			Length:      stat.Size(),
-			Threshold:   0,
+		index.Components[comp.Name] = v1manifest.ComponentItem{
+			Name:      comp.Name,
+			Yanked:    false,
+			Owner:     "pingcap",
+			URL:       fmt.Sprintf("/%s", name),
+			Length:    stat.Size(),
+			Threshold: 0,
 		}
 
-		snapshot.Meta[name] = manifest.FileVersion{Version: 1}
+		snapshot.Meta[name] = v1manifest.FileVersion{Version: 1}
 	}
 
 	// Initialize timestamp
-	timestamp := manifest.NewTimestamp(initTime)
-	manifests[manifest.ManifestTypeTimestamp] = timestamp
+	timestamp := v1manifest.NewTimestamp(initTime)
+	manifests[v1manifest.ManifestTypeTimestamp] = timestamp
 
 	// Initialize the root manifest
 	for _, m := range manifests {
@@ -282,13 +282,13 @@ func migrate(srcDir, dstDir string) error {
 	}
 
 	for ty, m := range manifests {
-		if ty == manifest.ManifestTypeTimestamp {
-			filename := manifest.ManifestTypeSnapshot + ".json"
+		if ty == v1manifest.ManifestTypeTimestamp {
+			filename := v1manifest.ManifestTypeSnapshot + ".json"
 			hash, n, err := hashes(filepath.Join(dstDir, "manifests"), filename)
 			if err != nil {
 				return errors.Trace(err)
 			}
-			timestamp.Meta = map[string]manifest.FileHash{
+			timestamp.Meta = map[string]v1manifest.FileHash{
 				filename: {
 					Hashes: hash,
 					Length: uint(n),
@@ -302,7 +302,7 @@ func migrate(srcDir, dstDir string) error {
 		defer writer.Close()
 		// TODO: support multiples keys
 		keyID := keyNames[m.Base().Ty]
-		if err = manifest.SignAndWrite(writer, m, keyID, privKeys[m.Base().Ty]); err != nil {
+		if err = v1manifest.SignAndWrite(writer, m, keyID, privKeys[m.Base().Ty]); err != nil {
 			return err
 		}
 	}
