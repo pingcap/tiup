@@ -17,6 +17,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	. "github.com/pingcap/check"
 )
 
@@ -55,17 +56,17 @@ func (fs *mockFileSource) downloadTarFile(targetDir, resName string, expand bool
 	return nil
 }
 
-var expManifest = &ComponentManifest{
+var expManifest = &v0manifest.ComponentManifest{
 	Description: "TiDB components list",
 	Modified:    "2020-02-26T15:20:35+08:00",
-	Components: []ComponentInfo{
+	Components: []v0manifest.ComponentInfo{
 		{Name: "test1", Desc: "desc1", Platforms: []string{"darwin/amd64", "linux/amd64"}},
 		{Name: "test2", Desc: "desc2", Platforms: []string{"darwin/amd64", "linux/amd64"}},
 		{Name: "test3", Desc: "desc3", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
 	},
 }
 
-var cases = map[string][]VersionInfo{
+var cases = map[string][]v0manifest.VersionInfo{
 	"test1": {
 		{Version: "v1.1.1", Date: "2020-02-27T10:10:10+08:00", Entry: "test1.bin", Platforms: []string{"darwin/amd64", "linux/x84_64"}},
 		{Version: "v1.1.2", Date: "2020-02-27T10:10:10+08:00", Entry: "test1.bin", Platforms: []string{"darwin/amd64", "linux/amd64"}},
@@ -87,7 +88,7 @@ func (s *repositorySuite) TestManifest(c *C) {
 	fs := &mockFileSource{}
 	fs.jsonFn = func(resource string, result interface{}) {
 		c.Assert(resource, Equals, ManifestFileName)
-		manifest, ok := result.(*ComponentManifest)
+		manifest, ok := result.(*v0manifest.ComponentManifest)
 		c.Assert(ok, IsTrue)
 		*manifest = *expManifest
 	}
@@ -103,8 +104,8 @@ var handleVersManifests = func(resource string, result interface{}) {
 		panic("bad resource string")
 	}
 	name := resource[len("tiup-component-") : len(resource)-len(".index")]
-	manifest, _ := result.(*VersionManifest)
-	*manifest = VersionManifest{
+	m, _ := result.(*v0manifest.VersionManifest)
+	*m = v0manifest.VersionManifest{
 		Description: name,
 		Modified:    "2020-02-26T15:20:35+08:00",
 		Versions:    cases[name],

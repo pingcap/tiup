@@ -20,9 +20,6 @@ const (
 	// DefaultMirror is the location of the mirror to use if none is specified by the user via `EnvMirrors`.
 	DefaultMirror = "https://tiup-mirrors.pingcap.com/"
 
-	// NightlyVersion represents latest build of master branch.
-	NightlyVersion = "nightly"
-
 	// EnvMirrors is the name of an env var the user can set to specify a mirror.
 	EnvMirrors = "TIUP_MIRRORS"
 

@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
-	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -254,9 +254,9 @@ func initRepo(path, privKeyPath string) error {
 		return err
 	}
 
-	ki := repository.NewKeyInfo(b)
+	ki := v1manifest.NewKeyInfo(b)
 
-	return repository.Init(path, ki, time.Now().UTC())
+	return v1manifest.Init(path, ki, time.Now().UTC())
 }
 
 // the `repo owner` sub command

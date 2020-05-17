@@ -25,8 +25,10 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
@@ -100,7 +102,7 @@ func execute() error {
 	rootCmd.Flags().SortFlags = false
 	rootCmd.Flags().BoolVar(&options.overwrite, "overwrite", false, "Overwrite the exists tarball")
 	rootCmd.Flags().BoolVarP(&options.full, "full", "f", false, "Build a full mirrors repository")
-	rootCmd.Flags().StringSliceVarP(&options.archs, "arch", "a", []string{"amd64"}, "Specify the downloading architecture")
+	rootCmd.Flags().StringSliceVarP(&options.archs, "arch", "a", []string{"amd64", "arm64"}, "Specify the downloading architecture")
 	rootCmd.Flags().StringSliceVarP(&options.oss, "os", "o", []string{"linux", "darwin"}, "Specify the downloading os")
 
 	for _, comp := range manifest.Components {
@@ -145,7 +147,7 @@ func suggestVersion(repo *repository.Repository, component, version string) (str
 	if err != nil {
 		return "", err
 	}
-	if v, found := vm.FindVersion(repository.Version(version)); found {
+	if v, found := vm.FindVersion(v0manifest.Version(version)); found {
 		return v.Version.String(), nil
 	}
 	v, err := repo.LatestStableVersion(component)
@@ -169,7 +171,7 @@ func downloadResource(mirror repository.Mirror, targetDir, name string, overwrit
 	return mirror.Download(shaFile, targetDir)
 }
 
-func download(targetDir string, repo *repository.Repository, manifest *repository.ComponentManifest, options mirrorsOptions) error {
+func download(targetDir string, repo *repository.Repository, m *v0manifest.ComponentManifest, options mirrorsOptions) error {
 	if utils.IsNotExist(targetDir) {
 		if err := os.MkdirAll(targetDir, 0755); err != nil {
 			return err
@@ -195,7 +197,7 @@ func download(targetDir string, repo *repository.Repository, manifest *repositor
 		return ioutil.WriteFile(file, jsonData, os.ModePerm)
 	}
 
-	if err := writeJSON(filename(repository.ManifestFileName), manifest); err != nil {
+	if err := writeJSON(filename(repository.ManifestFileName), m); err != nil {
 		return err
 	}
 
@@ -206,23 +208,23 @@ func download(targetDir string, repo *repository.Repository, manifest *repositor
 		}
 
 		vs := set.NewStringSet(*versions...)
-		var newCompInfo *repository.VersionManifest
+		var newCompInfo *v0manifest.VersionManifest
 		if options.full {
 			newCompInfo = componentInfo
 		} else {
 			if len(vs) < 1 {
 				continue
 			}
-			newCompInfo = &repository.VersionManifest{
+			newCompInfo = &v0manifest.VersionManifest{
 				Description: componentInfo.Description,
 				Modified:    componentInfo.Modified,
 			}
-			if vs.Exist(repository.NightlyVersion) {
+			if vs.Exist(version.NightlyVersion) {
 				newCompInfo.Nightly = componentInfo.Nightly
 			}
 		}
 
-		checkVersion := func(version repository.Version) bool {
+		checkVersion := func(version v0manifest.Version) bool {
 			if options.full || vs.Exist("all") || vs.Exist(version.String()) {
 				return true
 			}
@@ -234,7 +236,7 @@ func download(targetDir string, repo *repository.Repository, manifest *repositor
 			}
 			return false
 		}
-		err = componentInfo.IterVersion(func(versionInfo repository.VersionInfo) error {
+		err = componentInfo.IterVersion(func(versionInfo v0manifest.VersionInfo) error {
 			if !checkVersion(versionInfo.Version) {
 				return nil
 			}
@@ -266,9 +268,11 @@ func download(targetDir string, repo *repository.Repository, manifest *repositor
 
 	// download tiup itself
 	for _, os := range options.oss {
-		name := fmt.Sprintf("tiup-%s-amd64", os)
-		if err := downloadResource(repo.Mirror(), targetDir, name, options.overwrite); err != nil {
-			return errors.Annotatef(err, "download resource: %s", name)
+		for _, goarch := range options.archs {
+			name := fmt.Sprintf("tiup-%s-%s", os, goarch)
+			if err := downloadResource(repo.Mirror(), targetDir, name, options.overwrite); err != nil {
+				return errors.Annotatef(err, "download resource: %s", name)
+			}
 		}
 	}
 

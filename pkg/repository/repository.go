@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/errors"
 )
 
@@ -64,8 +65,8 @@ func (r *Repository) Close() error {
 }
 
 // Manifest returns the v0 component manifest fetched from repository
-func (r *Repository) Manifest() (*ComponentManifest, error) {
-	var manifest ComponentManifest
+func (r *Repository) Manifest() (*v0manifest.ComponentManifest, error) {
+	var manifest v0manifest.ComponentManifest
 	err := r.fileSource.downloadJSON(ManifestFileName, &manifest)
 	return &manifest, err
 }
@@ -76,18 +77,18 @@ func (r *Repository) Mirror() Mirror {
 }
 
 // ComponentVersions returns the version manifest of specific component
-func (r *Repository) ComponentVersions(component string) (*VersionManifest, error) {
-	var vers VersionManifest
+func (r *Repository) ComponentVersions(component string) (*v0manifest.VersionManifest, error) {
+	var vers v0manifest.VersionManifest
 	err := r.fileSource.downloadJSON(fmt.Sprintf("tiup-component-%s.index", component), &vers)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	vers.sort()
+	vers.Sort()
 	return &vers, nil
 }
 
 // LatestStableVersion returns the latest stable version of specific component
-func (r *Repository) LatestStableVersion(component string) (Version, error) {
+func (r *Repository) LatestStableVersion(component string) (v0manifest.Version, error) {
 	ver, err := r.ComponentVersions(component)
 	if err != nil {
 		return "", err
@@ -102,7 +103,7 @@ func (r *Repository) DownloadTiup(targetDir string) error {
 
 // DownloadComponent downloads a component with specific version from repository
 // support `<component>[:version]` format
-func (r *Repository) DownloadComponent(compsDir, component string, version Version) error {
+func (r *Repository) DownloadComponent(compsDir, component string, version v0manifest.Version) error {
 	versions, err := r.ComponentVersions(component)
 	if err != nil {
 		return err

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package repository
+package v1manifest
 
 import (
 	"crypto/sha256"
@@ -24,14 +24,6 @@ import (
 
 // ErrorNotPrivateKey indicate that it need a private key, but the supplied is not.
 var ErrorNotPrivateKey = errors.New("not a private key")
-
-// KeyInfo is the manifest structure of a single key
-type KeyInfo struct {
-	Algorithms []string          `json:"keyid_hash_algorithms"`
-	Type       string            `json:"keytype"`
-	Value      map[string]string `json:"keyval"`
-	Scheme     string            `json:"scheme"`
-}
 
 // NewKeyInfo make KeyInfo from private key, public key should be load from json
 func NewKeyInfo(privKey []byte) *KeyInfo {
