@@ -249,7 +249,7 @@ func migrate(srcDir, dstDir string) error {
 			Yanked:    false,
 			Owner:     "pingcap",
 			URL:       fmt.Sprintf("/%s", name),
-			Threshold: 0,
+			Threshold: 1,
 		}
 		stat, err := writer.Stat()
 		if err != nil {

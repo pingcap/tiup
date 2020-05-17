@@ -17,8 +17,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -239,6 +237,16 @@ func (manifest *Snapshot) VersionedURL(url string) (string, error) {
 	return fmt.Sprintf("%s/%v.%s", url[:lastSlash], entry.Version, url[lastSlash+1:]), nil
 }
 
+func readTimestampManifest(input io.Reader, keys crypto.KeyStore) (*Timestamp, error) {
+	var ts Timestamp
+	_, err := ReadManifest(input, &ts, keys)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ts, nil
+}
+
 // ReadManifest reads a manifest from input and validates it, the result is stored in role, which must be a pointer type.
 func ReadManifest(input io.Reader, role ValidManifest, keys crypto.KeyStore) (*Manifest, error) {
 	decoder := json.NewDecoder(input)
@@ -264,87 +272,4 @@ func ReadManifest(input io.Reader, role ValidManifest, keys crypto.KeyStore) (*M
 	}
 
 	return &m, m.Signed.isValid()
-}
-
-// ReadManifestDir reads manifests from a dir
-func ReadManifestDir(dir string) (map[string]ValidManifest, error) {
-	manifests := make(map[string]ValidManifest)
-	for ty, val := range ManifestsConfig {
-		if val.Filename == "" {
-			continue
-		}
-		reader, err := os.Open(filepath.Join(dir, val.Filename))
-		if err != nil {
-			return nil, err
-		}
-		defer reader.Close()
-		var role ValidManifest
-		m, err := ReadManifest(reader, role, crypto.NewKeyStore())
-		if err != nil {
-			return nil, err
-		}
-		manifests[ty] = m.Signed
-	}
-	return manifests, nil
-}
-
-func readTimestampManifest(input io.Reader, keys crypto.KeyStore) (*Timestamp, error) {
-	var ts Timestamp
-	_, err := ReadManifest(input, &ts, keys)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ts, nil
-}
-
-// SignAndWrite creates a manifest and writes it to out.
-func SignAndWrite(out io.Writer, role ValidManifest, privKey crypto.PrivKey) error {
-	payload, err := cjson.Marshal(role)
-	if err != nil {
-		return err
-	}
-
-	sign, err := privKey.Signature(payload)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	keyInfo, err := NewKeyInfo(privKey)
-	if err != nil {
-		return err
-	}
-	keyID, err := keyInfo.ID()
-	if err != nil {
-		return err
-	}
-
-	manifest := Manifest{
-		Signatures: []signature{{
-			KeyID: keyID,
-			Sig:   string(sign),
-		}},
-		Signed: role,
-	}
-
-	encoder := json.NewEncoder(out)
-	encoder.SetIndent("", "\t")
-	return encoder.Encode(manifest)
-}
-
-// BatchSaveManifests write a series of manifests to disk
-func BatchSaveManifests(dst string, manifestList map[string]ValidManifest, privKey crypto.PrivKey) error {
-	for _, m := range manifestList {
-		writer, err := os.OpenFile(filepath.Join(dst, m.Filename()), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
-		if err != nil {
-			return err
-		}
-		defer writer.Close()
-		// TODO: support multiples keys
-
-		if err = SignAndWrite(writer, m, privKey); err != nil {
-			return err
-		}
-	}
-	return nil
 }

@@ -82,7 +82,6 @@ type Owner struct {
 // VersionItem is the manifest structure of a version of a component
 type VersionItem struct {
 	URL          string   `json:"url"`
-	Length       uint     `json:"length"`
 	Yanked       bool     `json:"yanked"`
 	Entry        string   `json:"entry"`
 	Released     string   `json:"released"`
@@ -94,6 +93,7 @@ type VersionItem struct {
 // Component manifest.
 type Component struct {
 	SignedBase
+	ID          string                            `json:"id"`
 	Name        string                            `json:"name"`
 	Description string                            `json:"description"`
 	Platforms   map[string]map[string]VersionItem `json:"platforms"`
@@ -170,7 +170,7 @@ func (manifest *Index) Filename() string {
 
 // Filename implements ValidManifest
 func (manifest *Component) Filename() string {
-	return manifest.Name + ".json"
+	return manifest.ID + ".json"
 }
 
 // Filename implements ValidManifest
