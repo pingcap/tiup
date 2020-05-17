@@ -492,7 +492,7 @@ func signAndWrite(out io.Writer, role ValidManifest) error {
 }
 
 // Init creates and initializes an empty reposityro
-func Init(dst string, initTime time.Time) error {
+func Init(dst string, key *KeyInfo initTime time.Time) error {
 	// initial manifests
 	manifests := make(map[string]ValidManifest)
 

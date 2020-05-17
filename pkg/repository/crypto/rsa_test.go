@@ -35,7 +35,7 @@ AL70wdUu5jMm2ex5cZGkZLRB50yE6rBiHCd5W1WdTFoe
 )
 
 func TestSignAndVerify(t *testing.T) {
-	pub, pri, err := RsaPair()
+	pub, pri, err := RSAPair()
 	assert.Nil(t, err)
 
 	for _, cas := range cases {

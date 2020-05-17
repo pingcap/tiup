@@ -15,11 +15,13 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"time"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
+	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -155,13 +157,28 @@ func newRepoGenkeyCmd(env *meta.Environment) *cobra.Command {
 		Short: "Generate a new key pair",
 		Long:  `Generate a new key pair that can be used to sign components.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			privPath := env.Profile().Path("private.pem")
+			pubPath := env.Profile().Path("public.pem")
+			if utils.IsExist(privPath) && utils.IsExist(pubPath) {
+				fmt.Println("Key already exists, skiped")
+				return nil
+			}
+
 			pubKey, privKey, err := genKeyPair()
 			if err != nil {
 				return err
 			}
-			// TODO: save keys to files
+
+			if err := ioutil.WriteFile(privPath, privKey, 0600); err != nil {
+				return err
+			}
+			if err := ioutil.WriteFile(pubPath, pubKey, 0600); err != nil {
+				return err
+			}
+
 			fmt.Printf("Private key generated:\n%s\n", privKey)
 			fmt.Printf("Public key of the private key:\n%s\n", pubKey)
+			fmt.Printf("Keys have been write to %s and %s\n", privPath, pubPath)
 			return nil
 		},
 	}
@@ -170,14 +187,24 @@ func newRepoGenkeyCmd(env *meta.Environment) *cobra.Command {
 }
 
 func genKeyPair() ([]byte, []byte, error) {
-	// TODO
-	return []byte("public key"), []byte("private key"), nil
+	pub, priv, err := crypto.RSAPair()
+	if err != nil {
+		return nil, nil, err
+	}
+	pubBytes, err := pub.Serialize()
+	if err != nil {
+		return nil, nil, err
+	}
+	privBytes, err := priv.Serialize()
+	if err != nil {
+		return nil, nil, err
+	}
+	return pubBytes, privBytes, nil
 }
 
 // the `repo init` sub command
 func newRepoInitCmd(env *meta.Environment) *cobra.Command {
 	var (
-		pubKey  string // public key of root
 		privKey string // private key of root
 	)
 	cmd := &cobra.Command{
@@ -206,20 +233,30 @@ current working directory (".") will be used.`,
 				return errors.Errorf("the target path '%s' is not an empty directory", repoPath)
 			}
 
-			return initRepo(repoPath)
+			return initRepo(repoPath, privKey)
 		},
 	}
 
-	cmd.Flags().StringVar(&pubKey, "pubkey", "", "Path to the public key file")
-	cmd.Flags().StringVar(&privKey, "privkey", "", "Path to the private key file")
+	cmd.Flags().StringVar(&privKey, "privkey", env.Profile().Path("private.pem"), "Path to the private key file")
 
 	return cmd
 }
 
-func initRepo(path string) error {
-	// TODO: set key store
+func initRepo(path, privKeyPath string) error {
+	file, err := os.Open(privKeyPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
 
-	return repository.Init(path, time.Now().UTC())
+	b, err := ioutil.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	ki := repository.NewKeyInfo(b)
+
+	return repository.Init(path, ki, time.Now().UTC())
 }
 
 // the `repo owner` sub command

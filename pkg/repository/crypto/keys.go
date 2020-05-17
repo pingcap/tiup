@@ -22,10 +22,25 @@ var (
 	ErrorKeyUninitialized = errors.New("Key not initialized, call Deserialize first")
 	// ErrorDeserializeKey means the key format is not valid
 	ErrorDeserializeKey = errors.New("Error on deserialize key, check if the key is valid")
+	// ErrorUnsupportedKeyType means we don't supported this type of key
+	ErrorUnsupportedKeyType = errors.New("Provided key type not supported")
+	// ErrorUnsupportedKeySchema means we don't support this schema
+	ErrorUnsupportedKeySchema = errors.New("Provided schema not supported")
+)
+
+const (
+	// KeyTypeRSA represents the RSA type of keys
+	KeyTypeRSA = "RSA"
+
+	// KeySchemeRSASSAPSSSHA256 represents rsassa-pss-sha256 scheme
+	KeySchemeRSASSAPSSSHA256 = "rsassa-pss-sha256"
 )
 
 // KeyStore is the collection of all public keys available to TiUp.
 type KeyStore interface {
+	// Keys returns all key ids
+	Keys() []string
+
 	// Add put new key into KeyStore
 	Put(string, PubKey) KeyStore
 
@@ -45,6 +60,10 @@ type Serializable interface {
 // PubKey is a public key available to TiUp
 type PubKey interface {
 	Serializable
+	// Type returns the type of the key, e.g. RSA
+	Type() string
+	// Scheme returns the scheme of  signature algorithm, e.g. rsassa-pss-sha256
+	Scheme() string
 	// Verify check the signature is right
 	Verify(payload []byte, sig string) error
 }
@@ -52,8 +71,14 @@ type PubKey interface {
 // PrivKey is the private key that provide signature method
 type PrivKey interface {
 	Serializable
+	// Type returns the type of the key, e.g. RSA
+	Type() string
+	// Scheme returns the scheme of  signature algorithm, e.g. rsassa-pss-sha256
+	Scheme() string
 	// Signature sign a signature with the key for payload
 	Signature(payload []byte) (string, error)
+	// Public returns another pair of the key
+	Public() PubKey
 }
 
 type keychain map[string]PubKey
@@ -72,4 +97,60 @@ func (s *keychain) Get(id string) PubKey {
 func (s *keychain) Put(id string, key PubKey) KeyStore {
 	(*s)[id] = key
 	return s
+}
+
+// Keys returns all key ids
+func (s *keychain) Keys() []string {
+	ids := []string{}
+	for id := range *s {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// NewKeyPair return a pair of key
+func NewKeyPair(keyType, keyScheme string) (PubKey, PrivKey, error) {
+	// We only support RSA now
+	if keyType != KeyTypeRSA {
+		return nil, nil, ErrorUnsupportedKeyType
+	}
+
+	// We only support rsassa-pss-sha256 now
+	if keyScheme != KeySchemeRSASSAPSSSHA256 {
+		return nil, nil, ErrorUnsupportedKeySchema
+	}
+
+	return RSAPair()
+}
+
+// NewPrivKey return PrivKey
+func NewPrivKey(keyType, keyScheme string, payload []byte) (PrivKey, error) {
+	// We only support RSA now
+	if keyType != KeyTypeRSA {
+		return nil, ErrorUnsupportedKeyType
+	}
+
+	// We only support rsassa-pss-sha256 now
+	if keyScheme != KeySchemeRSASSAPSSSHA256 {
+		return nil, ErrorUnsupportedKeySchema
+	}
+
+	priv := &RSAPrivKey{}
+	return priv, priv.Deserialize(payload)
+}
+
+// NewPubKey return PrivKey
+func NewPubKey(keyType, keyScheme string, payload []byte) (PubKey, error) {
+	// We only support RSA now
+	if keyType != KeyTypeRSA {
+		return nil, ErrorUnsupportedKeyType
+	}
+
+	// We only support rsassa-pss-sha256 now
+	if keyScheme != KeySchemeRSASSAPSSSHA256 {
+		return nil, ErrorUnsupportedKeySchema
+	}
+
+	pub := &RSAPubKey{}
+	return pub, pub.Deserialize(payload)
 }

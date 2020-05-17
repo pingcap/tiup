@@ -13,10 +13,129 @@
 
 package repository
 
+import (
+	"crypto/sha256"
+	"fmt"
+
+	cjson "github.com/gibson042/canonicaljson-go"
+	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
+	"github.com/pingcap/errors"
+)
+
+// ErrorNotPrivateKey indicate that it need a private key, but the supplied is not.
+var ErrorNotPrivateKey = errors.New("not a private key")
+
 // KeyInfo is the manifest structure of a single key
 type KeyInfo struct {
 	Algorithms []string          `json:"keyid_hash_algorithms"`
 	Type       string            `json:"keytype"`
 	Value      map[string]string `json:"keyval"`
 	Scheme     string            `json:"scheme"`
+}
+
+// NewKeyInfo make KeyInfo from private key, public key should be load from json
+func NewKeyInfo(privKey []byte) *KeyInfo {
+	// TODO: support other key type and scheme
+	return &KeyInfo{
+		Algorithms: []string{"sha256", "sha512"},
+		Type:       crypto.KeyTypeRSA,
+		Scheme:     crypto.KeySchemeRSASSAPSSSHA256,
+		Value: map[string]string{
+			"private": string(privKey),
+		},
+	}
+}
+
+// ID returns the hash id of the key
+func (ki *KeyInfo) ID() (string, error) {
+	// TODO: apply keyid_hash_algorithms
+	// Make sure private key and coresponed public key has the same id
+	pk, err := ki.publicKey()
+	if err != nil {
+		return "", err
+	}
+	data, err := pk.Serialize()
+	if err != nil {
+		return "", err
+	}
+	value := map[string]string{
+		"public": string(data),
+	}
+
+	payload, err := cjson.Marshal(KeyInfo{
+		Algorithms: ki.Algorithms,
+		Type:       ki.Type,
+		Scheme:     ki.Scheme,
+		Value:      value,
+	})
+	if err != nil {
+		// XXX: maybe we can assume that the error should always be nil since the KeyInfo struct is valid
+		return "", err
+	}
+	sum := sha256.Sum256(payload)
+	return fmt.Sprintf("%x", sum), nil
+}
+
+// IsPrivate detect if this is a private key
+func (ki *KeyInfo) IsPrivate() bool {
+	return len(ki.Value["private"]) > 0
+}
+
+// Signature sign a signature with the key for payload
+func (ki *KeyInfo) Signature(payload []byte) (string, error) {
+	pk, err := ki.privateKey()
+	if err != nil {
+		return "", err
+	}
+	return pk.Signature(payload)
+}
+
+// Verify check the signature is right
+func (ki *KeyInfo) Verify(payload []byte, sig string) error {
+	pk, err := ki.publicKey()
+	if err != nil {
+		return err
+	}
+	return pk.Verify(payload, sig)
+}
+
+// public returns the public keyInfo
+func (ki *KeyInfo) public() (*KeyInfo, error) {
+	pk, err := ki.publicKey()
+	if err != nil {
+		return nil, err
+	}
+	bytes, err := pk.Serialize()
+	if err != nil {
+		return nil, err
+	}
+	return &KeyInfo{
+		Algorithms: ki.Algorithms,
+		Type:       pk.Type(),
+		Scheme:     pk.Scheme(),
+		Value: map[string]string{
+			"public": string(bytes),
+		},
+	}, nil
+}
+
+// publicKey returns PubKey
+func (ki *KeyInfo) publicKey() (crypto.PubKey, error) {
+	if ki.IsPrivate() {
+		priv, err := ki.privateKey()
+		if err != nil {
+			return nil, err
+		}
+		return priv.Public(), nil
+	}
+	return crypto.NewPubKey(ki.Type, ki.Scheme, []byte(ki.Value["public"]))
+}
+
+// privateKey return PrivKey if the key is private key
+func (ki *KeyInfo) privateKey() (crypto.PrivKey, error) {
+	if !ki.IsPrivate() {
+		return nil, ErrorNotPrivateKey
+	}
+
+	return crypto.NewPrivKey(ki.Type, ki.Scheme, []byte(ki.Value["private"]))
 }

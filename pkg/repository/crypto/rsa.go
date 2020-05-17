@@ -18,7 +18,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/asn1"
 	"encoding/base64"
 	"encoding/pem"
 )
@@ -26,8 +25,8 @@ import (
 // RSAKeyLength define the length of RSA keys
 const RSAKeyLength = 2048
 
-// RsaPair generate a pair of rsa keys
-func RsaPair() (*RSAPubKey, *RSAPrivKey, error) {
+// RSAPair generate a pair of rsa keys
+func RSAPair() (*RSAPubKey, *RSAPrivKey, error) {
 	key, err := rsa.GenerateKey(rand.Reader, RSAKeyLength)
 	if err != nil {
 		return nil, nil, err
@@ -40,9 +39,19 @@ type RSAPubKey struct {
 	key *rsa.PublicKey
 }
 
+// Type returns the type of the key, e.g. RSA
+func (k *RSAPubKey) Type() string {
+	return KeyTypeRSA
+}
+
+// Scheme returns the scheme of  signature algorithm, e.g. rsassa-pss-sha256
+func (k *RSAPubKey) Scheme() string {
+	return KeySchemeRSASSAPSSSHA256
+}
+
 // Serialize generate the pem format for a key
 func (k *RSAPubKey) Serialize() ([]byte, error) {
-	asn1Bytes, err := asn1.Marshal(*k.key)
+	asn1Bytes, err := x509.MarshalPKIXPublicKey(k.key)
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +99,16 @@ type RSAPrivKey struct {
 	key *rsa.PrivateKey
 }
 
+// Type returns the type of the key, e.g. RSA
+func (k *RSAPrivKey) Type() string {
+	return KeyTypeRSA
+}
+
+// Scheme returns the scheme of  signature algorithm, e.g. rsassa-pss-sha256
+func (k *RSAPrivKey) Scheme() string {
+	return KeySchemeRSASSAPSSSHA256
+}
+
 // Serialize generate the pem format for a key
 func (k *RSAPrivKey) Serialize() ([]byte, error) {
 	pemKey := &pem.Block{
@@ -129,4 +148,9 @@ func (k *RSAPrivKey) Signature(payload []byte) (string, error) {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(sig), nil
+}
+
+// Public return the public key associate with the private one
+func (k *RSAPrivKey) Public() PubKey {
+	return &RSAPubKey{&k.key.PublicKey}
 }
