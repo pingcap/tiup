@@ -26,7 +26,6 @@ import (
 	"strings"
 	"time"
 
-	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
@@ -136,27 +135,26 @@ func migrate(srcDir, dstDir string) error {
 	manifests[v1manifest.ManifestTypeSnapshot] = snapshot
 
 	privKeys := map[string]*crypto.RSAPrivKey{}
-	keyNames := map[string]string{}
 
-	genkey := func(name string) (string, *v1manifest.KeyInfo, error) {
+	genkey := func(name string) (*v1manifest.KeyInfo, error) {
 		// Generate RSA pairs
-		pub, priv, err := crypto.RsaPair()
+		pub, priv, err := crypto.RSAPair()
 		if err != nil {
-			return "", nil, errors.Trace(err)
+			return nil, errors.Trace(err)
 		}
 
 		pubSer, err := pub.Serialize()
 		if err != nil {
-			return "", nil, errors.Trace(err)
+			return nil, errors.Trace(err)
 		}
 
 		privSer, err := priv.Serialize()
 		if err != nil {
-			return "", nil, errors.Trace(err)
+			return nil, errors.Trace(err)
 		}
 		err = ioutil.WriteFile(filepath.Join(dstDir, "keys", name), privSer, os.ModePerm)
 		if err != nil {
-			return "", nil, errors.Trace(err)
+			return nil, errors.Trace(err)
 		}
 
 		keyInfo := &v1manifest.KeyInfo{
@@ -168,22 +166,17 @@ func migrate(srcDir, dstDir string) error {
 			Scheme: "rsassa-pss-sha256",
 		}
 
-		key, err := cjson.Marshal(keyInfo)
-		if err != nil {
-			return "", nil, errors.Trace(err)
-		}
-
-		hash := sha256.Sum256(key)
-		keyID := hex.EncodeToString(hash[:])
-
 		privKeys[name] = priv
-		keyNames[name] = keyID
 
-		return keyID, keyInfo, nil
+		return keyInfo, nil
 	}
 
 	// Initialize the index manifest
-	keyID, keyInfo, err := genkey("pingcap")
+	keyInfo, err := genkey("pingcap")
+	if err != nil {
+		return errors.Trace(err)
+	}
+	keyID, err := keyInfo.ID()
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -248,7 +241,7 @@ func migrate(srcDir, dstDir string) error {
 			return err
 		}
 		defer writer.Close()
-		if err = v1manifest.SignAndWrite(writer, component, keyID, privKeys["pingcap"]); err != nil {
+		if err = v1manifest.SignAndWrite(writer, component, privKeys["pingcap"]); err != nil {
 			return err
 		}
 
@@ -273,7 +266,11 @@ func migrate(srcDir, dstDir string) error {
 	// Initialize the root manifest
 	for _, m := range manifests {
 		root.SetRole(m)
-		keyID, keyInfo, err := genkey(m.Base().Ty)
+		keyInfo, err := genkey(m.Base().Ty)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		keyID, err := keyInfo.ID()
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -300,8 +297,7 @@ func migrate(srcDir, dstDir string) error {
 		}
 		defer writer.Close()
 		// TODO: support multiples keys
-		keyID := keyNames[m.Base().Ty]
-		if err = v1manifest.SignAndWrite(writer, m, keyID, privKeys[m.Base().Ty]); err != nil {
+		if err = v1manifest.SignAndWrite(writer, m, privKeys[m.Base().Ty]); err != nil {
 			return err
 		}
 	}

@@ -15,6 +15,7 @@ package v1manifest
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -25,7 +26,7 @@ import (
 )
 
 // Init creates and initializes an empty repository
-func Init(dst string, initTime time.Time, pub, priv string) error {
+func Init(dst string, initTime time.Time, priv string) error {
 	// read key files
 	privBytes, err := ioutil.ReadFile(priv)
 	if err != nil {
@@ -33,14 +34,6 @@ func Init(dst string, initTime time.Time, pub, priv string) error {
 	}
 	privKey := &crypto.RSAPrivKey{}
 	if err = privKey.Deserialize(privBytes); err != nil {
-		return err
-	}
-	pubBytes, err := ioutil.ReadFile(pub)
-	if err != nil {
-		return err
-	}
-	pubKey := &crypto.RSAPubKey{}
-	if err = pubKey.Deserialize(pubBytes); err != nil {
 		return err
 	}
 
@@ -80,7 +73,7 @@ func Init(dst string, initTime time.Time, pub, priv string) error {
 		return fmt.Errorf("manifest '%s' not initialized porperly", ty)
 	}
 
-	return BatchSaveManifests(dst, manifests, pubKey, privKey)
+	return BatchSaveManifests(dst, manifests, privKey)
 }
 
 // AddComponent adds a new component to an existing repository
@@ -92,14 +85,6 @@ func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv 
 	}
 	privKey := &crypto.RSAPrivKey{}
 	if err = privKey.Deserialize(privBytes); err != nil {
-		return err
-	}
-	pubBytes, err := ioutil.ReadFile(pub)
-	if err != nil {
-		return err
-	}
-	pubKey := &crypto.RSAPubKey{}
-	if err = pubKey.Deserialize(pubBytes); err != nil {
 		return err
 	}
 
@@ -142,7 +127,7 @@ func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv 
 	}
 	timestamp.Expires = currTime.Add(ManifestsConfig[ManifestTypeTimestamp].Expire).Format(time.RFC3339)
 
-	return BatchSaveManifests(repo, manifests, pubKey, privKey)
+	return BatchSaveManifests(repo, manifests, privKey)
 }
 
 // NewRoot creates a Root object
@@ -212,6 +197,32 @@ func NewComponent(name, desc string, initTime time.Time) *Component {
 	}
 }
 
+// NewKeyInfo creates a KeyInfo object
+func NewKeyInfo(priv crypto.PrivKey) (*KeyInfo, error) {
+	pubBytes, err := priv.Public().Serialize()
+	if err != nil {
+		return nil, err
+	}
+	return &KeyInfo{
+		Algorithms: []string{"sha256"},
+		Type:       "rsa",
+		Value: map[string]string{
+			"public": string(pubBytes),
+		},
+		Scheme: "rsassa-pss-sha256",
+	}, nil
+}
+
+// ID returns the SH256 hash of the key
+func (k *KeyInfo) ID() (string, error) {
+	info, err := cjson.Marshal(k)
+	if err != nil {
+		return "", err
+	}
+	hash := sha256.Sum256(info)
+	return hex.EncodeToString(hash[:]), nil
+}
+
 // SetVersions sets file versions to the snapshot
 func (manifest *Snapshot) SetVersions(manifestList map[string]ValidManifest) *Snapshot {
 	if manifest.Meta == nil {
@@ -261,7 +272,7 @@ func (manifest *Root) SetRole(m ValidManifest) {
 
 // FreshKeyInfo generates a new key pair and wraps it in a KeyInfo. The returned string is the key id.
 func FreshKeyInfo() (*KeyInfo, string, crypto.PrivKey, error) {
-	pub, priv, err := crypto.RsaPair()
+	pub, priv, err := crypto.RSAPair()
 	if err != nil {
 		return nil, "", nil, err
 	}

@@ -15,21 +15,19 @@ package crypto
 
 import (
 	"crypto"
-	"crypto/md5"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/pem"
 )
 
 // RSAKeyLength define the length of RSA keys
 const RSAKeyLength = 2048
 
-// RsaPair generate a pair of rsa keys
-func RsaPair() (*RSAPubKey, *RSAPrivKey, error) {
+// RSAPair generate a pair of rsa keys
+func RSAPair() (*RSAPubKey, *RSAPrivKey, error) {
 	key, err := rsa.GenerateKey(rand.Reader, RSAKeyLength)
 	if err != nil {
 		return nil, nil, err
@@ -87,16 +85,6 @@ func (k *RSAPubKey) Verify(payload []byte, sig string) error {
 	return rsa.VerifyPSS(k.key, crypto.SHA256, hashed, b64decSig, nil)
 }
 
-// Fingerprint returns the MD5 hash of the public key
-func (k *RSAPubKey) Fingerprint() (string, error) {
-	bytes, err := x509.MarshalPKIXPublicKey(k.key)
-	if err != nil {
-		return "", err
-	}
-	hash := md5.Sum(bytes)
-	return hex.EncodeToString(hash[:]), nil
-}
-
 // RSAPrivKey represents the private key of RSA
 type RSAPrivKey struct {
 	key *rsa.PrivateKey
@@ -141,4 +129,11 @@ func (k *RSAPrivKey) Signature(payload []byte) (string, error) {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(sig), nil
+}
+
+// Public returns public key of the PrivKey
+func (k *RSAPrivKey) Public() PubKey {
+	return &RSAPubKey{
+		key: &k.key.PublicKey,
+	}
 }
