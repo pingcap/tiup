@@ -28,10 +28,11 @@ import (
 type V1Repository struct {
 	Options
 	mirror Mirror
+	local  v1manifest.LocalManifests
 }
 
 // NewV1Repo creates a new v1 repository from the given mirror
-func NewV1Repo(mirror Mirror, opts Options) *V1Repository {
+func NewV1Repo(mirror Mirror, opts Options, local v1manifest.LocalManifests) *V1Repository {
 	if opts.GOOS == "" {
 		opts.GOOS = runtime.GOOS
 	}
@@ -42,6 +43,7 @@ func NewV1Repo(mirror Mirror, opts Options) *V1Repository {
 	return &V1Repository{
 		Options: opts,
 		mirror:  mirror,
+		local:   local,
 	}
 }
 
@@ -49,15 +51,15 @@ const maxTimeStampSize uint = 1024
 
 // If the snapshot has been updated, we return the new snapshot, if not we return nil.
 // Postcondition: if returned error is nil, then the local snapshot and timestamp are up to date.
-func (r *V1Repository) updateLocalSnapshot(local v1manifest.LocalManifests) (*v1manifest.Snapshot, error) {
-	hash, err := r.checkTimestamp(local)
+func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
+	hash, err := r.checkTimestamp()
 	if _, ok := err.(*v1manifest.SignatureError); ok {
 		// The signature is wrong, update our signatures from the root manifest and try again.
-		err = r.updateLocalRoot(local)
+		err = r.updateLocalRoot()
 		if err != nil {
 			return nil, err
 		}
-		hash, err = r.checkTimestamp(local)
+		hash, err = r.checkTimestamp()
 		if err != nil {
 			return nil, err
 		}
@@ -70,14 +72,14 @@ func (r *V1Repository) updateLocalSnapshot(local v1manifest.LocalManifests) (*v1
 	}
 
 	var snapshot v1manifest.Snapshot
-	manifest, err := r.fetchManifest(v1manifest.ManifestURLSnapshot, &snapshot, local.Keys(), hash.Length)
+	manifest, err := r.fetchManifest(v1manifest.ManifestURLSnapshot, &snapshot, r.local.Keys(), hash.Length)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO validate snapshot against hash
 
-	err = local.SaveManifest(manifest, v1manifest.ManifestFilenameSnapshot)
+	err = r.local.SaveManifest(manifest, v1manifest.ManifestFilenameSnapshot)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +87,7 @@ func (r *V1Repository) updateLocalSnapshot(local v1manifest.LocalManifests) (*v1
 	return &snapshot, nil
 }
 
-func (r *V1Repository) updateLocalRoot(local v1manifest.LocalManifests) error {
+func (r *V1Repository) updateLocalRoot() error {
 	// When we save to disk need to save twice:
 	//filename := v1manifest.ManifestFilenameRoot
 	//err := local.SaveManifest(manifest, filename)
@@ -96,15 +98,15 @@ func (r *V1Repository) updateLocalRoot(local v1manifest.LocalManifests) error {
 }
 
 // Precondition: the index manifest actually requires updating, the root manifest has been updated if necessary.
-func (r *V1Repository) updateLocalIndex(local v1manifest.LocalManifests, length uint) (*v1manifest.Index, error) {
+func (r *V1Repository) updateLocalIndex(length uint) (*v1manifest.Index, error) {
 	var root v1manifest.Root
-	_, err := local.LoadManifest(&root)
+	_, err := r.local.LoadManifest(&root)
 	if err != nil {
 		return nil, err
 	}
 
 	var snapshot v1manifest.Snapshot
-	_, err = local.LoadManifest(&snapshot)
+	_, err = r.local.LoadManifest(&snapshot)
 	if err != nil {
 		return nil, err
 	}
@@ -115,14 +117,14 @@ func (r *V1Repository) updateLocalIndex(local v1manifest.LocalManifests, length 
 	}
 
 	var index v1manifest.Index
-	manifest, err := r.fetchManifest(url, &index, local.Keys(), length)
+	manifest, err := r.fetchManifest(url, &index, r.local.Keys(), length)
 	if err != nil {
 		return nil, err
 	}
 
 	// Check version number against old manifest
 	var oldIndex v1manifest.Index
-	exists, err := local.LoadManifest(&oldIndex)
+	exists, err := r.local.LoadManifest(&oldIndex)
 	if exists {
 		if err != nil {
 			return nil, err
@@ -132,7 +134,7 @@ func (r *V1Repository) updateLocalIndex(local v1manifest.LocalManifests, length 
 		}
 	}
 
-	err = local.SaveManifest(manifest, v1manifest.ManifestFilenameIndex)
+	err = r.local.SaveManifest(manifest, v1manifest.ManifestFilenameIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -141,16 +143,16 @@ func (r *V1Repository) updateLocalIndex(local v1manifest.LocalManifests, length 
 }
 
 // Precondition: the snapshot manifest exists and is up to date
-func (r *V1Repository) updateComponentManifest(local v1manifest.LocalManifests, id string) (*v1manifest.Component, error) {
+func (r *V1Repository) updateComponentManifest(id string) (*v1manifest.Component, error) {
 	// Find the component's entry in the index and snapshot manifests.
 	var index v1manifest.Index
-	_, err := local.LoadManifest(&index)
+	_, err := r.local.LoadManifest(&index)
 	if err != nil {
 		return nil, err
 	}
 	item := index.Components[id]
 	var snapshot v1manifest.Snapshot
-	_, err = local.LoadManifest(&snapshot)
+	_, err = r.local.LoadManifest(&snapshot)
 	if err != nil {
 		return nil, err
 	}
@@ -160,13 +162,13 @@ func (r *V1Repository) updateComponentManifest(local v1manifest.LocalManifests, 
 		return nil, err
 	}
 	var component v1manifest.Component
-	manifest, err := r.fetchManifest(url, &component, local.Keys(), snapshot.Meta[item.URL].Length)
+	manifest, err := r.fetchManifest(url, &component, r.local.Keys(), snapshot.Meta[item.URL].Length)
 	if err != nil {
 		return nil, err
 	}
 
 	filename := v1manifest.ComponentFilename(id)
-	oldManifest, err := local.LoadComponentManifest(filename)
+	oldManifest, err := r.local.LoadComponentManifest(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +178,7 @@ func (r *V1Repository) updateComponentManifest(local v1manifest.LocalManifests, 
 		}
 	}
 
-	err = local.SaveComponentManifest(manifest, filename)
+	err = r.local.SaveComponentManifest(manifest, filename)
 	if err != nil {
 		return nil, err
 	}
@@ -188,8 +190,8 @@ func (r *V1Repository) updateComponentManifest(local v1manifest.LocalManifests, 
 // downloadComponent downloads a component using the relevant manifest and checks its hash.
 // Precondition: the component's manifest is up to date and the version and platform are valid.
 // The caller is responsible for closing the returned reader.
-func (r *V1Repository) downloadComponent(local v1manifest.LocalManifests, id string, platform string, version string) (io.ReadCloser, error) {
-	manifest, err := local.LoadComponentManifest(id)
+func (r *V1Repository) downloadComponent(id string, platform string, version string) (io.ReadCloser, error) {
+	manifest, err := r.local.LoadComponentManifest(id)
 	if err != nil {
 		return nil, err
 	}
@@ -212,19 +214,19 @@ func (r *V1Repository) downloadComponent(local v1manifest.LocalManifests, id str
 // CheckTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash matches our local one.
 // If they match, then there is nothing to update and we return nil. If they do not match, we return the
 // snapshot's file info.
-func (r *V1Repository) checkTimestamp(local v1manifest.LocalManifests) (*v1manifest.FileHash, error) {
+func (r *V1Repository) checkTimestamp() (*v1manifest.FileHash, error) {
 	var ts v1manifest.Timestamp
-	manifest, err := r.fetchManifest(v1manifest.ManifestURLTimestamp, &ts, local.Keys(), maxTimeStampSize)
+	manifest, err := r.fetchManifest(v1manifest.ManifestURLTimestamp, &ts, r.local.Keys(), maxTimeStampSize)
 	if err != nil {
 		return nil, err
 	}
 	hash := ts.SnapshotHash()
 
 	var localTs v1manifest.Timestamp
-	exists, err := local.LoadManifest(&localTs)
+	exists, err := r.local.LoadManifest(&localTs)
 	if !exists {
 		// We can't find a local timestamp, so we're going to have to update
-		return &hash, local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
+		return &hash, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
 	} else if err != nil {
 		return nil, err
 	}
@@ -232,7 +234,7 @@ func (r *V1Repository) checkTimestamp(local v1manifest.LocalManifests) (*v1manif
 		return nil, nil
 	}
 
-	return &hash, local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
+	return &hash, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
 }
 
 // fetchManifest downloads and validates a manifest from this repo.
