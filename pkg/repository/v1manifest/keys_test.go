@@ -30,11 +30,11 @@ func TestKeyInfoIdentity(t *testing.T) {
 	priv := NewKeyInfo(privateTestKey)
 	assert.True(t, priv.IsPrivate())
 
-	pub1, err := priv.public()
+	pub1, err := priv.Public()
 	assert.Nil(t, err)
-	pub2, err := priv.public()
+	pub2, err := priv.Public()
 	assert.Nil(t, err)
-	pub3, err := pub2.public()
+	pub3, err := pub2.Public()
 	assert.Nil(t, err)
 
 	assert.Equal(t, pub1.Value["public"], pub2.Value["public"])
@@ -56,7 +56,7 @@ func TestKeyInfoID(t *testing.T) {
 	priv := NewKeyInfo(privateTestKey)
 	assert.True(t, priv.IsPrivate())
 
-	pub, err := priv.public()
+	pub, err := priv.Public()
 	assert.Nil(t, err)
 	assert.True(t, !pub.IsPrivate())
 
@@ -72,7 +72,7 @@ func TestKeyInfoSigAndVerify(t *testing.T) {
 	pri := NewKeyInfo(privateTestKey)
 	assert.True(t, pri.IsPrivate())
 
-	pub, err := pri.public()
+	pub, err := pri.Public()
 	assert.Nil(t, err)
 
 	for _, cas := range cryptoCases {

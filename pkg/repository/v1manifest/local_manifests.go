@@ -38,11 +38,13 @@ func NewManifests(root string) *FsManifests {
 
 // LocalManifests methods for accessing a store of manifests.
 type LocalManifests interface {
-	// SaveManifest saves a manifest to disk, it will overwrite any unversioned manifest of the same type
-	// and any existing manifest with the same type and version number.
-	SaveManifest(manifest *Manifest) error
-	// LoadManifest loads and validates the most recent manifest of role's type.
-	LoadManifest(role ValidManifest) error
+	// SaveManifest saves a manifest to disk, it will overwrite filename if it exists.
+	SaveManifest(manifest *Manifest, filename string) error
+	// SaveComponentManifest saves a component manifest to disk, it will overwrite filename if it exists.
+	SaveComponentManifest(manifest *Manifest, filename string) error
+	// LoadManifest loads and validates the most recent manifest of role's type. The returned bool is true if the file
+	// exists.
+	LoadManifest(role ValidManifest) (bool, error)
 	// LoadComponentManifest loads and validates the most recent manifest for a component with the given id.
 	LoadComponentManifest(id string) (*Component, error)
 	// Keys returns the key store derived from these manifests.
@@ -50,46 +52,54 @@ type LocalManifests interface {
 }
 
 // SaveManifest implements LocalManifests.
-func (ms *FsManifests) SaveManifest(manifest *Manifest) error {
-	filename := manifest.Signed.Base().Filename()
+func (ms *FsManifests) SaveManifest(manifest *Manifest, filename string) error {
 	bytes, err := json.Marshal(manifest)
 	if err != nil {
 		return err
 	}
 
-	if manifest.Signed.Base().Versioned() {
-		version := manifest.Signed.Base().Version
-		err = ioutil.WriteFile(filepath.Join(ms.root, fmt.Sprintf("%v.%s", version, filename)), bytes, 0644)
-		if err != nil {
-			return err
-		}
+	return ioutil.WriteFile(filepath.Join(ms.root, filename), bytes, 0644)
+}
+
+// SaveComponentManifest implements LocalManifests.
+func (ms *FsManifests) SaveComponentManifest(manifest *Manifest, filename string) error {
+	bytes, err := json.Marshal(manifest)
+	if err != nil {
+		return err
 	}
 
 	return ioutil.WriteFile(filepath.Join(ms.root, filename), bytes, 0644)
 }
 
 // LoadManifest implements LocalManifests.
-func (ms *FsManifests) LoadManifest(role ValidManifest) error {
+func (ms *FsManifests) LoadManifest(role ValidManifest) (bool, error) {
 	return ms.load(role.Filename(), role)
 }
 
 // LoadComponentManifest implements LocalManifests.
-func (ms *FsManifests) LoadComponentManifest(id string) (*Component, error) {
+func (ms *FsManifests) LoadComponentManifest(filename string) (*Component, error) {
 	var role Component
-	return &role, ms.load(fmt.Sprintf("%s.json", id), &role)
+	exists, err := ms.load(filename, &role)
+	if !exists {
+		return nil, nil
+	}
+	return &role, err
 }
 
-// load and validate a manifest from disk.
-func (ms *FsManifests) load(filename string, role ValidManifest) error {
+// load and validate a manifest from disk. The returned bool is true if the file exists.
+func (ms *FsManifests) load(filename string, role ValidManifest) (bool, error) {
 	fullPath := filepath.Join(ms.root, filename)
 	file, err := os.Open(fullPath)
 	if err != nil {
-		return err
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return true, err
 	}
 	defer file.Close()
 
 	_, err = ReadManifest(file, role, ms.keys)
-	return err
+	return true, err
 }
 
 // Keys implements LocalManifests.
@@ -100,43 +110,66 @@ func (ms *FsManifests) Keys() crypto.KeyStore {
 // MockManifests is a LocalManifests implementation for testing.
 type MockManifests struct {
 	Manifests map[string]ValidManifest
+	Saved     []string
+}
+
+// NewMockManifests creates an empty MockManifests.
+func NewMockManifests() *MockManifests {
+	return &MockManifests{
+		Manifests: map[string]ValidManifest{},
+		Saved:     []string{},
+	}
 }
 
 // SaveManifest implements LocalManifests.
-func (ms *MockManifests) SaveManifest(manifest *Manifest) error {
+func (ms *MockManifests) SaveManifest(manifest *Manifest, filename string) error {
+	ms.Saved = append(ms.Saved, filename)
+	return nil
+}
+
+// SaveComponentManifest implements LocalManifests.
+func (ms *MockManifests) SaveComponentManifest(manifest *Manifest, filename string) error {
+	ms.Saved = append(ms.Saved, filename)
 	return nil
 }
 
 // LoadManifest implements LocalManifests.
-func (ms *MockManifests) LoadManifest(role ValidManifest) error {
+func (ms *MockManifests) LoadManifest(role ValidManifest) (bool, error) {
 	manifest, ok := ms.Manifests[role.Filename()]
 	if !ok {
-		return fmt.Errorf("No manifest for %s in mock manifests", role.Filename())
+		return false, fmt.Errorf("No manifest for %s in mock manifests", role.Filename())
 	}
 
 	switch role.Filename() {
-	case "root.json":
+	case ManifestFilenameRoot:
 		ptr := role.(*Root)
 		*ptr = *manifest.(*Root)
-	case "index.json":
+	case ManifestFilenameIndex:
 		ptr := role.(*Index)
 		*ptr = *manifest.(*Index)
-	case "snapshot.json":
+	case ManifestFilenameSnapshot:
 		ptr := role.(*Snapshot)
 		*ptr = *manifest.(*Snapshot)
-	case "timestamp.json":
+	case ManifestFilenameTimestamp:
 		ptr := role.(*Timestamp)
 		*ptr = *manifest.(*Timestamp)
 	default:
-		return fmt.Errorf("Unknown manifest type: %s", role.Filename())
+		return true, fmt.Errorf("unknown manifest type: %s", role.Filename())
 	}
-	return nil
+	return true, nil
 }
 
 // LoadComponentManifest implements LocalManifests.
-func (ms *MockManifests) LoadComponentManifest(id string) (*Component, error) {
-	// TODO implement this
-	return nil, nil
+func (ms *MockManifests) LoadComponentManifest(filename string) (*Component, error) {
+	manifest, ok := ms.Manifests[filename]
+	if !ok {
+		return nil, nil
+	}
+	comp, ok := manifest.(*Component)
+	if !ok {
+		return nil, fmt.Errorf("manifest %s is not a component manifest", filename)
+	}
+	return comp, nil
 }
 
 // Keys implements LocalManifests.

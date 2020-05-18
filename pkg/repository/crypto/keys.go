@@ -19,7 +19,7 @@ import (
 
 var (
 	// ErrorKeyUninitialized will be present when key is used before Deserialize called
-	ErrorKeyUninitialized = errors.New("Key not initialized, call Deserialize first")
+	ErrorKeyUninitialized = errors.New("key not initialized, call Deserialize first")
 	// ErrorDeserializeKey means the key format is not valid
 	ErrorDeserializeKey = errors.New("Error on deserialize key, check if the key is valid")
 	// ErrorUnsupportedKeyType means we don't supported this type of key

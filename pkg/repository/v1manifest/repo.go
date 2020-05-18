@@ -14,6 +14,7 @@
 package v1manifest
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,6 +23,7 @@ import (
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
+	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap/errors"
 )
 
@@ -58,7 +60,7 @@ func Init(dst, keyDir string, initTime time.Time) error {
 		return fmt.Errorf("manifest '%s' not initialized porperly", ty)
 	}
 
-	keys, err := saveKeys(keyDir, manifests[ManifestTypeRoot].(*Root).Roles)
+	keys, err := SaveKeys(keyDir, manifests[ManifestTypeRoot].(*Root).Roles)
 	if err != nil {
 		return err
 	}
@@ -66,7 +68,8 @@ func Init(dst, keyDir string, initTime time.Time) error {
 	return BatchSaveManifests(dst, manifests, keys)
 }
 
-func saveKeys(keyDir string, roles map[string]*Role) (map[string][]*KeyInfo, error) {
+// SaveKeys set and save private keys for all roles
+func SaveKeys(keyDir string, roles map[string]*Role) (map[string][]*KeyInfo, error) {
 	privKeys := map[string][]*KeyInfo{}
 	for ty, role := range roles {
 		for i := 0; i < int(role.Threshold); i++ {
@@ -192,6 +195,7 @@ func (manifest *Snapshot) SetVersions(manifestList map[string]ValidManifest) *Sn
 	for _, m := range manifestList {
 		manifest.Meta[m.Filename()] = FileVersion{
 			Version: m.Base().Version,
+			// TODO length
 		}
 	}
 	return manifest
@@ -210,4 +214,29 @@ func (manifest *Root) SetRole(m ValidManifest) error {
 	}
 
 	return nil
+}
+
+// FreshKeyInfo generates a new key pair and wraps it in a KeyInfo. The returned string is the key id.
+func FreshKeyInfo() (*KeyInfo, string, crypto.PrivKey, error) {
+	pub, priv, err := crypto.RSAPair()
+	if err != nil {
+		return nil, "", nil, err
+	}
+	pubBytes, err := pub.Serialize()
+	if err != nil {
+		return nil, "", nil, err
+	}
+	info := KeyInfo{
+		Algorithms: []string{"sha256"},
+		Type:       "rsa",
+		Value:      map[string]string{"public": string(pubBytes)},
+		Scheme:     "rsassa-pss-sha256",
+	}
+	serInfo, err := cjson.Marshal(&info)
+	if err != nil {
+		return nil, "", nil, err
+	}
+	hash := sha256.Sum256(serInfo)
+
+	return &info, fmt.Sprintf("%x", hash), priv, nil
 }

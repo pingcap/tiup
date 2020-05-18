@@ -51,7 +51,7 @@ func TestReadTimestamp(t *testing.T) {
 		"signatures":[
 			{
 				"keyid": "test-key-id",
-				"sig": "rutNQJzwHv2SDkNWxmmOqXUZunDl0H+kQyX+s8AxLJL5KDxfaMZYFJIMLUK+RfyxCGvr6oJOYo4WEvx1IKiVOA=="
+				"sig": "rZJGhKtBxz1Hp3Fnz8ZO7DSqOgpVQSn3OhwyAFrWlbKTvCThBaE5Y2qYxkJcuckIaoDRp4smwEtwPX/GMpFmdg=="
 			}
 		],
 		"signed": {
@@ -60,7 +60,7 @@ func TestReadTimestamp(t *testing.T) {
 			"expires": "2220-05-11T04:51:08Z",
 			"version": 43,
 			"meta": {
-				"snapshot.json": {
+				"/snapshot.json": {
 					"hashes": {
 						"sha256": "TODO"
 					},
@@ -79,12 +79,12 @@ func TestEmptyManifest(t *testing.T) {
 }
 
 func TestWriteManifest(t *testing.T) {
-	ts := Timestamp{Meta: map[string]FileHash{"snapshot.json": {
+	ts := Timestamp{Meta: map[string]FileHash{ManifestURLSnapshot: {
 		Hashes: map[string]string{"TODO": "TODO"},
 		Length: 0,
 	}},
 		SignedBase: SignedBase{
-			Ty:          "timestamp",
+			Ty:          ManifestTypeTimestamp,
 			SpecVersion: "0.1.0",
 			Expires:     "2220-05-11T04:51:08Z",
 			Version:     10,
