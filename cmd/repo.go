@@ -159,7 +159,7 @@ func newRepoGenkeyCmd(env *meta.Environment) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			privPath := env.Profile().Path("private.pem")
 			if utils.IsExist(privPath) {
-				fmt.Println("Key already exists, skiped")
+				fmt.Println("Key already exists, skipped")
 				return nil
 			}
 
