@@ -96,8 +96,8 @@ func hashFile(srcDir, filename string) (map[string]string, int64, error) {
 	n, err := io.Copy(io.MultiWriter(s256, s512), file)
 
 	hashes := map[string]string{
-		"sha256": hex.EncodeToString(s256.Sum(nil)),
-		"sha512": hex.EncodeToString(s512.Sum(nil)),
+		v1manifest.SHA256: hex.EncodeToString(s256.Sum(nil)),
+		v1manifest.SHA512: hex.EncodeToString(s512.Sum(nil)),
 	}
 	return hashes, n, err
 }
@@ -112,8 +112,8 @@ func hashManifest(m *v1manifest.Manifest) (map[string]string, uint, error) {
 	s512 := sha512.Sum512(bytes)
 
 	return map[string]string{
-		"sha256": hex.EncodeToString(s256[:]),
-		"sha512": hex.EncodeToString(s512[:]),
+		v1manifest.SHA256: hex.EncodeToString(s256[:]),
+		v1manifest.SHA512: hex.EncodeToString(s512[:]),
 	}, uint(len(bytes)), nil
 }
 

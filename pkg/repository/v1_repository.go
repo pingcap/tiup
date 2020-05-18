@@ -203,7 +203,7 @@ func (r *V1Repository) downloadComponent(id string, platform string, version str
 		return nil, err
 	}
 
-	if utils.CheckSHA256(reader, item.Hashes["sha256"]) != nil {
+	if utils.CheckSHA256(reader, item.Hashes[v1manifest.SHA256]) != nil {
 		reader.Close()
 		return nil, err
 	}
@@ -230,7 +230,7 @@ func (r *V1Repository) checkTimestamp() (*v1manifest.FileHash, error) {
 	} else if err != nil {
 		return nil, err
 	}
-	if hash.Hashes["sha256"] == localTs.SnapshotHash().Hashes["sha256"] {
+	if hash.Hashes[v1manifest.SHA256] == localTs.SnapshotHash().Hashes[v1manifest.SHA256] {
 		return nil, nil
 	}
 

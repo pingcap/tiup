@@ -29,7 +29,7 @@ var ErrorNotPrivateKey = errors.New("not a private key")
 func NewKeyInfo(privKey []byte) *KeyInfo {
 	// TODO: support other key type and scheme
 	return &KeyInfo{
-		Algorithms: []string{"sha256", "sha512"},
+		Algorithms: []string{SHA256, SHA512},
 		Type:       crypto.KeyTypeRSA,
 		Scheme:     crypto.KeySchemeRSASSAPSSSHA256,
 		Value: map[string]string{

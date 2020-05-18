@@ -35,7 +35,7 @@ func TestCheckTimestamp(t *testing.T) {
 	hash, err := repo.checkTimestamp()
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1001), hash.Length)
-	assert.Equal(t, "123456", hash.Hashes["sha256"])
+	assert.Equal(t, "123456", hash.Hashes[v1manifest.SHA256])
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameTimestamp)
 
 	// Test that hashes match => return nil
@@ -50,11 +50,11 @@ func TestCheckTimestamp(t *testing.T) {
 	assert.Empty(t, local.Saved)
 
 	// Hashes don't match => return correct File hash
-	localManifest.Meta[v1manifest.ManifestURLSnapshot].Hashes["sha256"] = "023456"
+	localManifest.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = "023456"
 	hash, err = repo.checkTimestamp()
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1001), hash.Length)
-	assert.Equal(t, "123456", hash.Hashes["sha256"])
+	assert.Equal(t, "123456", hash.Hashes[v1manifest.SHA256])
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameTimestamp)
 
 	// Test that an expired manifest from the mirror causes an error
@@ -96,7 +96,7 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 	assert.Empty(t, local.Saved)
 
 	// test that out of date timestamp downloads and saves snapshot
-	timestamp.Meta[v1manifest.ManifestURLSnapshot].Hashes["sha256"] = "an old hash"
+	timestamp.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = "an old hash"
 	timestamp.Version -= 1
 	snapshot, err = repo.updateLocalSnapshot()
 	assert.Nil(t, err)
@@ -194,7 +194,7 @@ func timestampManifest() *v1manifest.Timestamp {
 			Version:     42,
 		},
 		Meta: map[string]v1manifest.FileHash{v1manifest.ManifestURLSnapshot: {
-			Hashes: map[string]string{"sha256": "123456"},
+			Hashes: map[string]string{v1manifest.SHA256: "123456"},
 			Length: 1001,
 		}},
 	}
