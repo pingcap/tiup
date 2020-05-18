@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,7 +27,6 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
-	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/errors"
@@ -146,45 +144,22 @@ func migrate(srcDir, dstDir string) error {
 	}
 	signedManifests := make(map[string]*v1manifest.Manifest)
 
-	privKeys := map[string]*crypto.RSAPrivKey{}
-
-	genkey := func(name string) (*v1manifest.KeyInfo, error) {
-		// Generate RSA pairs
-		pub, priv, err := crypto.RSAPair()
+	genkey := func() (string, *v1manifest.KeyInfo, error) {
+		priv, err := v1manifest.GenKeyInfo()
 		if err != nil {
-			return nil, errors.Trace(err)
+			return "", nil, err
 		}
 
-		pubSer, err := pub.Serialize()
+		id, err := priv.ID()
 		if err != nil {
-			return nil, errors.Trace(err)
+			return "", nil, err
 		}
 
-		privSer, err := priv.Serialize()
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-		err = ioutil.WriteFile(filepath.Join(dstDir, "keys", name), privSer, os.ModePerm)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-
-		keyInfo := &v1manifest.KeyInfo{
-			Algorithms: []string{"sha256"},
-			Type:       "rsa",
-			Value: map[string]string{
-				"public": string(pubSer),
-			},
-			Scheme: "rsassa-pss-sha256",
-		}
-
-		privKeys[name] = priv
-
-		return keyInfo, nil
+		return id, priv, nil
 	}
 
 	// Initialize the index manifest
-	keyInfo, err := genkey("pingcap")
+	ownerkeyID, ownerkeyInfo, err := genkey()
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -192,10 +167,10 @@ func migrate(srcDir, dstDir string) error {
 	index.Owners["pingcap"] = v1manifest.Owner{
 		Name: "PingCAP",
 		Keys: map[string]*v1manifest.KeyInfo{
-			keyInfo.ID(): keyInfo,
+			ownerkeyID: ownerkeyInfo,
 		},
 	}
-	signedManifests[v1manifest.ManifestTypeIndex], err = v1manifest.SignManifest(index, privKeys["pingcap"])
+	signedManifests[v1manifest.ManifestTypeIndex], err = v1manifest.SignManifest(index, ownerkeyInfo)
 	if err != nil {
 		return err
 	}
@@ -251,13 +226,13 @@ func migrate(srcDir, dstDir string) error {
 			Platforms:   platforms,
 		}
 
-		name := fmt.Sprintf("%s.json", comp.Name)
-		writer, err := os.OpenFile(filepath.Join(dstDir, "manifests", name), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+		name := fmt.Sprintf("%s-pingcap.json", ownerkeyID[:16])
+		writer, err := os.OpenFile(filepath.Join(dstDir, "keys", name), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 		if err != nil {
 			return err
 		}
 		defer writer.Close()
-		signedManifests[component.ID], err = v1manifest.SignManifest(component, privKeys["pingcap"])
+		signedManifests[component.ID], err = v1manifest.SignManifest(component, ownerkeyInfo)
 		if err != nil {
 			return err
 		}
@@ -277,7 +252,7 @@ func migrate(srcDir, dstDir string) error {
 	}
 
 	// sign index and snapshot
-	signedManifests[v1manifest.ManifestTypeIndex], err = v1manifest.SignManifest(index, privKeys["pingcap"])
+	signedManifests[v1manifest.ManifestTypeIndex], err = v1manifest.SignManifest(index, ownerkeyInfo)
 	if err != nil {
 		return err
 	}
@@ -288,7 +263,7 @@ func migrate(srcDir, dstDir string) error {
 	if err != nil {
 		return err
 	}
-	signedManifests[v1manifest.ManifestTypeSnapshot], err = v1manifest.SignManifest(snapshot, privKeys["pingcap"])
+	signedManifests[v1manifest.ManifestTypeSnapshot], err = v1manifest.SignManifest(snapshot, ownerkeyInfo)
 	if err != nil {
 		return err
 	}
@@ -300,14 +275,9 @@ func migrate(srcDir, dstDir string) error {
 	// Initialize the root manifest
 	for _, m := range manifests {
 		root.SetRole(m)
-		keyInfo, err := genkey(m.Base().Ty)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		root.Roles[m.Base().Ty].Keys[keyInfo.ID()] = keyInfo
 	}
-	signedManifests[v1manifest.ManifestTypeRoot], err = v1manifest.SignManifest(root, privKeys["pingcap"])
+
+	signedManifests[v1manifest.ManifestTypeRoot], err = v1manifest.SignManifest(root, ownerkeyInfo)
 	if err != nil {
 		return err
 	}
@@ -322,7 +292,7 @@ func migrate(srcDir, dstDir string) error {
 			Length: n,
 		},
 	}
-	signedManifests[v1manifest.ManifestTypeTimestamp], err = v1manifest.SignManifest(timestamp, privKeys["pingcap"])
+	signedManifests[v1manifest.ManifestTypeTimestamp], err = v1manifest.SignManifest(timestamp, ownerkeyInfo)
 	if err != nil {
 		return err
 	}
@@ -332,7 +302,7 @@ func migrate(srcDir, dstDir string) error {
 			return err
 		}
 		defer writer.Close()
-		// TODO: support multiples keys
+
 		if err = v1manifest.WriteManifest(writer, m); err != nil {
 			return err
 		}

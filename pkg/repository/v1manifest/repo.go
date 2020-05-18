@@ -32,21 +32,17 @@ import (
 	"github.com/pingcap/errors"
 )
 
-// Init creates and initializes an empty repository
-func Init(dst string, initTime time.Time, priv string) error {
-	// read key files
-	privBytes, err := ioutil.ReadFile(priv)
-	if err != nil {
-		return err
-	}
-	privKey := &crypto.RSAPrivKey{}
-	if err = privKey.Deserialize(privBytes); err != nil {
-		return err
-	}
-
+// Init creates and initializes an empty reposityro
+func Init(dst, keyDir string, initTime time.Time) (err error) {
 	// initial manifests
 	manifests := make(map[string]ValidManifest)
 	signedManifests := make(map[string]*Manifest)
+
+	// TODO: bootstrap a server instead of generating key
+	privKey, err := GenKeyInfo()
+	if err != nil {
+		return err
+	}
 
 	// init the root manifest
 	manifests[ManifestTypeRoot] = NewRoot(initTime)
@@ -110,8 +106,8 @@ func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv 
 	if err != nil {
 		return err
 	}
-	privKey := &crypto.RSAPrivKey{}
-	if err = privKey.Deserialize(privBytes); err != nil {
+	privKey := &KeyInfo{}
+	if err = json.Unmarshal(privBytes, &privKey); err != nil {
 		return err
 	}
 
@@ -251,30 +247,6 @@ func NewComponent(id, name, desc string, initTime time.Time) *Component {
 	}
 }
 
-// NewKeyInfo creates a KeyInfo object
-func NewKeyInfo(priv crypto.PrivKey) (*KeyInfo, error) {
-	pubBytes, err := priv.Public().Serialize()
-	if err != nil {
-		return nil, err
-	}
-	return &KeyInfo{
-		Algorithms: []string{"sha256"},
-		Type:       "rsa",
-		Value: map[string]string{
-			"public": string(pubBytes),
-		},
-		Scheme: "rsassa-pss-sha256",
-	}, nil
-}
-
-// ID returns the SH256 hash of the key
-func (k *KeyInfo) ID() string {
-	// It should never be an error, and it's impossible to recover from this
-	info, _ := cjson.Marshal(k)
-	hash := sha256.Sum256(info)
-	return hex.EncodeToString(hash[:])
-}
-
 // SetVersions sets file versions to the snapshot
 func (manifest *Snapshot) SetVersions(manifestList map[string]*Manifest) (*Snapshot, error) {
 	if manifest.Meta == nil {
@@ -318,7 +290,7 @@ func (manifest *Timestamp) SetSnapshot(s *Manifest) (*Timestamp, error) {
 }
 
 // SetRole populates role list in the root manifest
-func (manifest *Root) SetRole(m ValidManifest) {
+func (manifest *Root) SetRole(m ValidManifest) error {
 	if manifest.Roles == nil {
 		manifest.Roles = make(map[string]*Role)
 	}
@@ -328,6 +300,8 @@ func (manifest *Root) SetRole(m ValidManifest) {
 		Threshold: ManifestsConfig[m.Base().Ty].Threshold,
 		Keys:      make(map[string]*KeyInfo),
 	}
+
+	return nil
 }
 
 // FreshKeyInfo generates a new key pair and wraps it in a KeyInfo. The returned string is the key id.
@@ -382,28 +356,34 @@ func ReadManifestDir(dir string, roles ...string) (map[string]ValidManifest, err
 }
 
 // SignManifest signs a manifest with given private key
-func SignManifest(role ValidManifest, privKey crypto.PrivKey) (*Manifest, error) {
+func SignManifest(role ValidManifest, keys ...*KeyInfo) (*Manifest, error) {
 	payload, err := cjson.Marshal(role)
 	if err != nil {
 		return nil, err
 	}
 
-	sign, err := privKey.Signature(payload)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	keyInfo, err := NewKeyInfo(privKey)
-	if err != nil {
-		return nil, err
+	signs := []signature{}
+	for _, k := range keys {
+		id, err := k.ID()
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		sign, err := k.Signature(payload)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		signs = append(signs, signature{
+			KeyID: id,
+			Sig:   sign,
+		})
 	}
 
 	return &Manifest{
-		Signatures: []signature{{
-			KeyID: keyInfo.ID(),
-			Sig:   string(sign),
-		}},
-		Signed: role,
+		Signatures: signs,
+		Signed:     role,
 	}, nil
 }
 
@@ -415,8 +395,8 @@ func WriteManifest(out io.Writer, m *Manifest) error {
 }
 
 // SignAndWrite creates a manifest and writes it to out.
-func SignAndWrite(out io.Writer, role ValidManifest, privKey crypto.PrivKey) error {
-	manifest, err := SignManifest(role, privKey)
+func SignAndWrite(out io.Writer, role ValidManifest, keys ...*KeyInfo) error {
+	manifest, err := SignManifest(role, keys...)
 	if err != nil {
 		return errors.Trace(err)
 	}
