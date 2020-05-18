@@ -73,37 +73,38 @@ type Index struct {
 	DefaultComponents []string                 `json:"default_components"`
 }
 
-// ComponentItem object
-type ComponentItem struct {
-	Yanked    bool   `json:"yanked"`
-	Owner     string `json:"owner"`
-	URL       string `json:"url"`
-	Threshold int    `json:"threshold"`
-}
-
 // Owner object.
 type Owner struct {
 	Name string              `json:"name"`
 	Keys map[string]*KeyInfo `json:"keys"`
 }
 
-// VersionItem object
+// VersionItem is the manifest structure of a version of a component
 type VersionItem struct {
-	Yanked       bool              `json:"yanked"`
-	URL          string            `json:"url"`
-	Hashes       map[string]string `json:"hashes"`
-	Entry        string            `json:"entry"`
-	Released     string            `json:"released"`
-	Length       int64             `json:"length"`
-	Dependencies []string          `json:"dependencies"`
+	URL          string   `json:"url"`
+	Yanked       bool     `json:"yanked"`
+	Entry        string   `json:"entry"`
+	Released     string   `json:"released"`
+	Dependencies []string `json:"dependencies"`
+
+	FileHash
 }
 
 // Component manifest.
 type Component struct {
 	SignedBase
+	ID          string                            `json:"id"`
 	Name        string                            `json:"name"`
 	Description string                            `json:"description"`
 	Platforms   map[string]map[string]VersionItem `json:"platforms"`
+}
+
+// ComponentItem object
+type ComponentItem struct {
+	Yanked    bool   `json:"yanked"`
+	Owner     string `json:"owner"`
+	URL       string `json:"url"`
+	Threshold int    `json:"threshold"`
 }
 
 // Snapshot manifest.
@@ -169,7 +170,7 @@ func (manifest *Index) Filename() string {
 
 // Filename implements ValidManifest
 func (manifest *Component) Filename() string {
-	panic("Unreachable")
+	return manifest.ID + ".json"
 }
 
 // Filename implements ValidManifest

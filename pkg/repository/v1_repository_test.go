@@ -275,9 +275,9 @@ func rootManifest(t *testing.T) *v1manifest.Root {
 
 func serialize(t *testing.T, role v1manifest.ValidManifest) string {
 	var out strings.Builder
-	_, priv, err := crypto.RsaPair()
+	_, priv, err := crypto.RSAPair()
 	assert.Nil(t, err)
-	err = v1manifest.SignAndWrite(&out, role, "FOO", priv)
+	err = v1manifest.SignAndWrite(&out, role, priv)
 	assert.Nil(t, err)
 	return out.String()
 }

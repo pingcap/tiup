@@ -86,7 +86,7 @@ func readVersions(srcDir, comp string) (*v0manifest.VersionManifest, error) {
 	return m, nil
 }
 
-func hashes(srcDir, filename string) (map[string]string, int64, error) {
+func hashFile(srcDir, filename string) (map[string]string, int64, error) {
 	path := filepath.Join(srcDir, filename)
 	s256 := sha256.New()
 	s512 := sha512.New()
@@ -102,6 +102,21 @@ func hashes(srcDir, filename string) (map[string]string, int64, error) {
 		"sha512": hex.EncodeToString(s512.Sum(nil)),
 	}
 	return hashes, n, err
+}
+
+func hashManifest(m *v1manifest.Manifest) (map[string]string, uint, error) {
+	bytes, err := cjson.Marshal(m)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	s256 := sha256.Sum256(bytes)
+	s512 := sha512.Sum512(bytes)
+
+	return map[string]string{
+		"sha256": hex.EncodeToString(s256[:]),
+		"sha512": hex.EncodeToString(s512[:]),
+	}, uint(len(bytes)), nil
 }
 
 func migrate(srcDir, dstDir string) error {
@@ -129,34 +144,29 @@ func migrate(srcDir, dstDir string) error {
 		v1manifest.ManifestTypeRoot:  root,
 		v1manifest.ManifestTypeIndex: index,
 	}
-
-	// snapshot and timestamp are the last two manifests to be initialized
-	// init snapshot
-	snapshot := v1manifest.NewSnapshot(initTime).SetVersions(manifests)
-	manifests[v1manifest.ManifestTypeSnapshot] = snapshot
+	signedManifests := make(map[string]*v1manifest.Manifest)
 
 	privKeys := map[string]*crypto.RSAPrivKey{}
-	keyNames := map[string]string{}
 
-	genkey := func(name string) (string, *v1manifest.KeyInfo, error) {
+	genkey := func(name string) (*v1manifest.KeyInfo, error) {
 		// Generate RSA pairs
-		pub, priv, err := crypto.RsaPair()
+		pub, priv, err := crypto.RSAPair()
 		if err != nil {
-			return "", nil, errors.Trace(err)
+			return nil, errors.Trace(err)
 		}
 
 		pubSer, err := pub.Serialize()
 		if err != nil {
-			return "", nil, errors.Trace(err)
+			return nil, errors.Trace(err)
 		}
 
 		privSer, err := priv.Serialize()
 		if err != nil {
-			return "", nil, errors.Trace(err)
+			return nil, errors.Trace(err)
 		}
 		err = ioutil.WriteFile(filepath.Join(dstDir, "keys", name), privSer, os.ModePerm)
 		if err != nil {
-			return "", nil, errors.Trace(err)
+			return nil, errors.Trace(err)
 		}
 
 		keyInfo := &v1manifest.KeyInfo{
@@ -168,31 +178,29 @@ func migrate(srcDir, dstDir string) error {
 			Scheme: "rsassa-pss-sha256",
 		}
 
-		key, err := cjson.Marshal(keyInfo)
-		if err != nil {
-			return "", nil, errors.Trace(err)
-		}
-
-		hash := sha256.Sum256(key)
-		keyID := hex.EncodeToString(hash[:])
-
 		privKeys[name] = priv
-		keyNames[name] = keyID
 
-		return keyID, keyInfo, nil
+		return keyInfo, nil
 	}
 
 	// Initialize the index manifest
-	keyID, keyInfo, err := genkey("pingcap")
+	keyInfo, err := genkey("pingcap")
 	if err != nil {
 		return errors.Trace(err)
 	}
+
 	index.Owners["pingcap"] = v1manifest.Owner{
 		Name: "PingCAP",
 		Keys: map[string]*v1manifest.KeyInfo{
-			keyID: keyInfo,
+			keyInfo.ID(): keyInfo,
 		},
 	}
+	signedManifests[v1manifest.ManifestTypeIndex], err = v1manifest.SignManifest(index, privKeys["pingcap"])
+	if err != nil {
+		return err
+	}
+
+	snapshot := v1manifest.NewSnapshot(initTime)
 
 	// Initialize the components manifest
 	for _, comp := range m.Components {
@@ -213,7 +221,7 @@ func migrate(srcDir, dstDir string) error {
 				}
 
 				filename := fmt.Sprintf("/%s-%s-%s.tar.gz", comp.Name, v.Version, newp)
-				hashes, length, err := hashes(srcDir, filename)
+				hashes, length, err := hashFile(srcDir, filename)
 				if err != nil {
 					return err
 				}
@@ -222,8 +230,10 @@ func migrate(srcDir, dstDir string) error {
 					URL:      filename,
 					Entry:    v.Entry,
 					Released: v.Date,
-					Hashes:   hashes,
-					Length:   length,
+					FileHash: v1manifest.FileHash{
+						Hashes: hashes,
+						Length: uint(length),
+					},
 				}
 			}
 		}
@@ -235,6 +245,7 @@ func migrate(srcDir, dstDir string) error {
 				Expires:     initTime.Add(v1manifest.ManifestsConfig[v1manifest.ManifestTypeComponent].Expire).Format(time.RFC3339),
 				Version:     1, // initial repo starts with version 1
 			},
+			ID:          comp.Name,
 			Name:        comp.Name,
 			Description: comp.Desc,
 			Platforms:   platforms,
@@ -246,7 +257,8 @@ func migrate(srcDir, dstDir string) error {
 			return err
 		}
 		defer writer.Close()
-		if err = v1manifest.SignAndWrite(writer, component, keyID, privKeys["pingcap"]); err != nil {
+		signedManifests[component.ID], err = v1manifest.SignManifest(component, privKeys["pingcap"])
+		if err != nil {
 			return err
 		}
 
@@ -254,7 +266,7 @@ func migrate(srcDir, dstDir string) error {
 			Yanked:    false,
 			Owner:     "pingcap",
 			URL:       fmt.Sprintf("/%s", name),
-			Threshold: 0,
+			Threshold: 1,
 		}
 		stat, err := writer.Stat()
 		if err != nil {
@@ -264,6 +276,23 @@ func migrate(srcDir, dstDir string) error {
 		snapshot.Meta[name] = v1manifest.FileVersion{Version: 1, Length: uint(stat.Size())}
 	}
 
+	// sign index and snapshot
+	signedManifests[v1manifest.ManifestTypeIndex], err = v1manifest.SignManifest(index, privKeys["pingcap"])
+	if err != nil {
+		return err
+	}
+
+	// snapshot and timestamp are the last two manifests to be initialized
+	// init snapshot
+	snapshot, err = snapshot.SetVersions(signedManifests)
+	if err != nil {
+		return err
+	}
+	signedManifests[v1manifest.ManifestTypeSnapshot], err = v1manifest.SignManifest(snapshot, privKeys["pingcap"])
+	if err != nil {
+		return err
+	}
+
 	// Initialize timestamp
 	timestamp := v1manifest.NewTimestamp(initTime)
 	manifests[v1manifest.ManifestTypeTimestamp] = timestamp
@@ -271,35 +300,40 @@ func migrate(srcDir, dstDir string) error {
 	// Initialize the root manifest
 	for _, m := range manifests {
 		root.SetRole(m)
-		keyID, keyInfo, err := genkey(m.Base().Ty)
+		keyInfo, err := genkey(m.Base().Ty)
 		if err != nil {
 			return errors.Trace(err)
 		}
-		root.Roles[m.Base().Ty].Keys[keyID] = keyInfo
+
+		root.Roles[m.Base().Ty].Keys[keyInfo.ID()] = keyInfo
+	}
+	signedManifests[v1manifest.ManifestTypeRoot], err = v1manifest.SignManifest(root, privKeys["pingcap"])
+	if err != nil {
+		return err
 	}
 
-	for ty, m := range manifests {
-		if ty == v1manifest.ManifestTypeTimestamp {
-			filename := v1manifest.ManifestTypeSnapshot + ".json"
-			hash, n, err := hashes(filepath.Join(dstDir, "manifests"), filename)
-			if err != nil {
-				return errors.Trace(err)
-			}
-			timestamp.Meta = map[string]v1manifest.FileHash{
-				filename: {
-					Hashes: hash,
-					Length: uint(n),
-				},
-			}
-		}
-		writer, err := os.OpenFile(filepath.Join(dstDir, "manifests", m.Filename()), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	hash, n, err := hashManifest(signedManifests[v1manifest.ManifestTypeSnapshot])
+	if err != nil {
+		return errors.Trace(err)
+	}
+	timestamp.Meta = map[string]v1manifest.FileHash{
+		v1manifest.ManifestFilenameSnapshot: {
+			Hashes: hash,
+			Length: n,
+		},
+	}
+	signedManifests[v1manifest.ManifestTypeTimestamp], err = v1manifest.SignManifest(timestamp, privKeys["pingcap"])
+	if err != nil {
+		return err
+	}
+	for _, m := range signedManifests {
+		writer, err := os.OpenFile(filepath.Join(dstDir, "manifests", m.Signed.Filename()), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 		if err != nil {
 			return err
 		}
 		defer writer.Close()
 		// TODO: support multiples keys
-		keyID := keyNames[m.Base().Ty]
-		if err = v1manifest.SignAndWrite(writer, m, keyID, privKeys[m.Base().Ty]); err != nil {
+		if err = v1manifest.WriteManifest(writer, m); err != nil {
 			return err
 		}
 	}

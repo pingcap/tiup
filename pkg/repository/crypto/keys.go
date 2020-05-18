@@ -54,6 +54,8 @@ type PrivKey interface {
 	Serializable
 	// Signature sign a signature with the key for payload
 	Signature(payload []byte) (string, error)
+	// Public returns public key of the PrivKey
+	Public() PubKey
 }
 
 type keychain map[string]PubKey

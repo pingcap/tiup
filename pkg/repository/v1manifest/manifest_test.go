@@ -89,10 +89,10 @@ func TestWriteManifest(t *testing.T) {
 			Version:     10,
 		}}
 	var out strings.Builder
-	_, priv, err := crypto.RsaPair()
+	_, priv, err := crypto.RSAPair()
 	assert.Nil(t, err)
 
-	err = SignAndWrite(&out, &ts, "KEYID", priv)
+	err = SignAndWrite(&out, &ts, priv)
 	assert.Nil(t, err)
 	ts2, err := readTimestampManifest(strings.NewReader(out.String()), nil)
 	assert.Nil(t, err)

@@ -177,7 +177,6 @@ func genKeyPair() ([]byte, []byte, error) {
 // the `repo init` sub command
 func newRepoInitCmd(env *meta.Environment) *cobra.Command {
 	var (
-		pubKey  string // public key of root
 		privKey string // private key of root
 	)
 	cmd := &cobra.Command{
@@ -206,20 +205,19 @@ current working directory (".") will be used.`,
 				return errors.Errorf("the target path '%s' is not an empty directory", repoPath)
 			}
 
-			return initRepo(repoPath)
+			return initRepo(repoPath, privKey)
 		},
 	}
 
-	cmd.Flags().StringVar(&pubKey, "pubkey", "", "Path to the public key file")
 	cmd.Flags().StringVar(&privKey, "privkey", "", "Path to the private key file")
 
 	return cmd
 }
 
-func initRepo(path string) error {
+func initRepo(path, priv string) error {
 	// TODO: set key store
 
-	return v1manifest.Init(path, time.Now().UTC())
+	return v1manifest.Init(path, time.Now().UTC(), priv)
 }
 
 // the `repo owner` sub command

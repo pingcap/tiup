@@ -26,8 +26,8 @@ import (
 // RSAKeyLength define the length of RSA keys
 const RSAKeyLength = 2048
 
-// RsaPair generate a pair of rsa keys
-func RsaPair() (*RSAPubKey, *RSAPrivKey, error) {
+// RSAPair generate a pair of rsa keys
+func RSAPair() (*RSAPubKey, *RSAPrivKey, error) {
 	key, err := rsa.GenerateKey(rand.Reader, RSAKeyLength)
 	if err != nil {
 		return nil, nil, err
@@ -129,4 +129,11 @@ func (k *RSAPrivKey) Signature(payload []byte) (string, error) {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(sig), nil
+}
+
+// Public returns public key of the PrivKey
+func (k *RSAPrivKey) Public() PubKey {
+	return &RSAPubKey{
+		key: &k.key.PublicKey,
+	}
 }
