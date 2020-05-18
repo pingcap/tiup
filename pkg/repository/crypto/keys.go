@@ -124,7 +124,7 @@ func NewKeyPair(keyType, keyScheme string) (PubKey, PrivKey, error) {
 }
 
 // NewPrivKey return PrivKey
-func NewPrivKey(keyType, keyScheme string, payload []byte) (PrivKey, error) {
+func NewPrivKey(keyType, keyScheme string, key []byte) (PrivKey, error) {
 	// We only support RSA now
 	if keyType != KeyTypeRSA {
 		return nil, ErrorUnsupportedKeyType
@@ -140,7 +140,7 @@ func NewPrivKey(keyType, keyScheme string, payload []byte) (PrivKey, error) {
 }
 
 // NewPubKey return PrivKey
-func NewPubKey(keyType, keyScheme string, payload []byte) (PubKey, error) {
+func NewPubKey(keyType, keyScheme string, key []byte) (PubKey, error) {
 	// We only support RSA now
 	if keyType != KeyTypeRSA {
 		return nil, ErrorUnsupportedKeyType
