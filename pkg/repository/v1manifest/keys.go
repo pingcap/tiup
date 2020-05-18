@@ -137,7 +137,7 @@ func (ki *KeyInfo) publicKey() (crypto.PubKey, error) {
 	return crypto.NewPubKey(ki.Type, ki.Scheme, []byte(ki.Value["public"]))
 }
 
-// privateKey return PrivKey if the key is private key
+// privateKey returns PrivKey
 func (ki *KeyInfo) privateKey() (crypto.PrivKey, error) {
 	if !ki.IsPrivate() {
 		return nil, ErrorNotPrivateKey

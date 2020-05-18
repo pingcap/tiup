@@ -158,13 +158,12 @@ func newRepoGenkeyCmd(env *meta.Environment) *cobra.Command {
 		Long:  `Generate a new key pair that can be used to sign components.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			privPath := env.Profile().Path("private.pem")
-			pubPath := env.Profile().Path("public.pem")
-			if utils.IsExist(privPath) && utils.IsExist(pubPath) {
+			if utils.IsExist(privPath) {
 				fmt.Println("Key already exists, skiped")
 				return nil
 			}
 
-			pubKey, privKey, err := genKeyPair()
+			_, privKey, err := genKeyPair()
 			if err != nil {
 				return err
 			}
@@ -172,13 +171,9 @@ func newRepoGenkeyCmd(env *meta.Environment) *cobra.Command {
 			if err := ioutil.WriteFile(privPath, privKey, 0600); err != nil {
 				return err
 			}
-			if err := ioutil.WriteFile(pubPath, pubKey, 0600); err != nil {
-				return err
-			}
 
 			fmt.Printf("Private key generated:\n%s\n", privKey)
-			fmt.Printf("Public key of the private key:\n%s\n", pubKey)
-			fmt.Printf("Keys have been write to %s and %s\n", privPath, pubPath)
+			fmt.Printf("Key have been write to %s\n", privPath)
 			return nil
 		},
 	}
