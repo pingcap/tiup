@@ -15,6 +15,7 @@ package v1manifest
 
 import (
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -45,27 +46,40 @@ func Init(dst string, initTime time.Time, priv string) error {
 
 	// initial manifests
 	manifests := make(map[string]ValidManifest)
+	signedManifests := make(map[string]*Manifest)
 
 	// init the root manifest
 	manifests[ManifestTypeRoot] = NewRoot(initTime)
 
 	// init index
 	manifests[ManifestTypeIndex] = NewIndex(initTime)
+	signedManifests[ManifestTypeIndex], err = SignManifest(manifests[ManifestTypeIndex], privKey)
+	if err != nil {
+		return err
+	}
 
 	// snapshot and timestamp are the last two manifests to be initialized
 	// init snapshot
-	manifests[ManifestTypeSnapshot], err = NewSnapshot(initTime).SetVersions(manifests)
+	manifests[ManifestTypeSnapshot], err = NewSnapshot(initTime).SetVersions(signedManifests)
+	if err != nil {
+		return err
+	}
+	signedManifests[ManifestTypeSnapshot], err = SignManifest(manifests[ManifestTypeSnapshot], privKey)
 	if err != nil {
 		return err
 	}
 
 	// init timestamp
-	timestamp, err := NewTimestamp(initTime).SetSnapshot(manifests[ManifestTypeSnapshot].(*Snapshot))
+	timestamp, err := NewTimestamp(initTime).SetSnapshot(signedManifests[ManifestTypeSnapshot])
 	manifests[ManifestTypeTimestamp] = NewTimestamp(initTime)
 	if err != nil {
 		return err
 	}
 	manifests[ManifestTypeTimestamp] = timestamp
+	signedManifests[ManifestTypeTimestamp], err = SignManifest(manifests[ManifestTypeTimestamp], privKey)
+	if err != nil {
+		return err
+	}
 
 	// root and snapshot has meta of each other inside themselves, but it's ok here
 	// as we are still during the init process, not version bump needed
@@ -81,8 +95,12 @@ func Init(dst string, initTime time.Time, priv string) error {
 		// FIXME: log a warning about manifest not found instead of returning error
 		return fmt.Errorf("manifest '%s' not initialized porperly", ty)
 	}
+	signedManifests[ManifestTypeRoot], err = SignManifest(manifests[ManifestTypeRoot], privKey)
+	if err != nil {
+		return err
+	}
 
-	return BatchSaveManifests(dst, manifests, privKey)
+	return BatchSaveManifests(dst, signedManifests)
 }
 
 // AddComponent adds a new component to an existing repository
@@ -104,6 +122,7 @@ func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv 
 	if err != nil {
 		return err
 	}
+	signedManifests := make(map[string]*Manifest)
 
 	// check id conflicts
 	if _, found := ManifestsConfig[id]; found {
@@ -118,6 +137,10 @@ func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv 
 	currTime := time.Now().UTC()
 	comp := NewComponent(id, name, desc, currTime)
 	manifests[id] = comp
+	signedManifests[id], err = SignManifest(comp, privKey)
+	if err != nil {
+		return err
+	}
 
 	// update repository
 	compInfo := ComponentItem{
@@ -131,23 +154,35 @@ func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv 
 		index.DefaultComponents = append(index.DefaultComponents, id)
 	}
 	index.Version += 1 // bump index version
+	signedManifests[ManifestTypeIndex], err = SignManifest(index, privKey)
+	if err != nil {
+		return err
+	}
 
 	// update snapshot
-	snapshot, err := manifests[ManifestTypeSnapshot].(*Snapshot).SetVersions(manifests)
+	snapshot, err := manifests[ManifestTypeSnapshot].(*Snapshot).SetVersions(signedManifests)
 	if err != nil {
 		return err
 	}
 	snapshot.Expires = currTime.Add(ManifestsConfig[ManifestTypeSnapshot].Expire).Format(time.RFC3339)
+	snapshotSigned, err := SignManifest(snapshot, privKey)
+	if err != nil {
+		return err
+	}
 
 	// update timestamp
-	timestamp, err := NewTimestamp(currTime).SetSnapshot(snapshot)
+	timestamp, err := NewTimestamp(currTime).SetSnapshot(snapshotSigned)
 	if err != nil {
 		return err
 	}
 	timestamp.Version = manifests[ManifestTypeTimestamp].(*Timestamp).Version + 1
 	manifests[ManifestTypeTimestamp] = timestamp
+	signedManifests[ManifestTypeTimestamp], err = SignManifest(timestamp, privKey)
+	if err != nil {
+		return err
+	}
 
-	return BatchSaveManifests(repo, manifests, privKey)
+	return BatchSaveManifests(repo, signedManifests)
 }
 
 // NewRoot creates a Root object
@@ -245,7 +280,7 @@ func (k *KeyInfo) ID() (string, error) {
 }
 
 // SetVersions sets file versions to the snapshot
-func (manifest *Snapshot) SetVersions(manifestList map[string]ValidManifest) (*Snapshot, error) {
+func (manifest *Snapshot) SetVersions(manifestList map[string]*Manifest) (*Snapshot, error) {
 	if manifest.Meta == nil {
 		manifest.Meta = make(map[string]FileVersion)
 	}
@@ -254,8 +289,8 @@ func (manifest *Snapshot) SetVersions(manifestList map[string]ValidManifest) (*S
 		if err != nil {
 			return nil, err
 		}
-		manifest.Meta[m.Filename()] = FileVersion{
-			Version: m.Base().Version,
+		manifest.Meta[m.Signed.Filename()] = FileVersion{
+			Version: m.Signed.Base().Version,
 			Length:  uint(len(bytes)),
 		}
 	}
@@ -263,19 +298,23 @@ func (manifest *Snapshot) SetVersions(manifestList map[string]ValidManifest) (*S
 }
 
 // SetSnapshot hashes a snapshot manifest and update the timestamp manifest
-func (manifest *Timestamp) SetSnapshot(s *Snapshot) (*Timestamp, error) {
+func (manifest *Timestamp) SetSnapshot(s *Manifest) (*Timestamp, error) {
 	bytes, err := cjson.Marshal(s)
 	if err != nil {
 		return manifest, err
 	}
 
-	hash := sha256.Sum256(bytes)
+	hash256 := sha256.Sum256(bytes)
+	hash512 := sha512.Sum512(bytes)
 
 	if manifest.Meta == nil {
 		manifest.Meta = make(map[string]FileHash)
 	}
-	manifest.Meta[s.Base().Filename()] = FileHash{
-		Hashes: map[string]string{"sha256": hex.EncodeToString(hash[:])},
+	manifest.Meta[s.Signed.Base().Filename()] = FileHash{
+		Hashes: map[string]string{
+			"sha256": hex.EncodeToString(hash256[:]),
+			"sha512": hex.EncodeToString(hash512[:]),
+		},
 		Length: uint(len(bytes)),
 	}
 
@@ -346,51 +385,65 @@ func ReadManifestDir(dir string, roles ...string) (map[string]ValidManifest, err
 	return manifests, nil
 }
 
-// SignAndWrite creates a manifest and writes it to out.
-func SignAndWrite(out io.Writer, role ValidManifest, privKey crypto.PrivKey) error {
+// SignManifest signs a manifest with given private key
+func SignManifest(role ValidManifest, privKey crypto.PrivKey) (*Manifest, error) {
 	payload, err := cjson.Marshal(role)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	sign, err := privKey.Signature(payload)
 	if err != nil {
-		return errors.Trace(err)
+		return nil, errors.Trace(err)
 	}
 
 	keyInfo, err := NewKeyInfo(privKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	keyID, err := keyInfo.ID()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	manifest := Manifest{
+	return &Manifest{
 		Signatures: []signature{{
 			KeyID: keyID,
 			Sig:   string(sign),
 		}},
 		Signed: role,
-	}
+	}, nil
+}
 
+// WriteManifest writes a Manifest object to file in JSON format
+func WriteManifest(out io.Writer, m *Manifest) error {
 	encoder := json.NewEncoder(out)
 	encoder.SetIndent("", "\t")
-	return encoder.Encode(manifest)
+	return encoder.Encode(m)
+}
+
+// SignAndWrite creates a manifest and writes it to out.
+func SignAndWrite(out io.Writer, role ValidManifest, privKey crypto.PrivKey) error {
+	manifest, err := SignManifest(role, privKey)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return WriteManifest(out, manifest)
 }
 
 // BatchSaveManifests write a series of manifests to disk
-func BatchSaveManifests(dst string, manifestList map[string]ValidManifest, privKey crypto.PrivKey) error {
+// Manifest in the manifestList map should already be signed, they are not checked
+// for signature again.
+func BatchSaveManifests(dst string, manifestList map[string]*Manifest) error {
 	for _, m := range manifestList {
-		writer, err := os.OpenFile(filepath.Join(dst, m.Filename()), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+		writer, err := os.OpenFile(filepath.Join(dst, m.Signed.Filename()), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 		if err != nil {
 			return err
 		}
 		defer writer.Close()
-		// TODO: support multiples keys
 
-		if err = SignAndWrite(writer, m, privKey); err != nil {
+		if err = WriteManifest(writer, m); err != nil {
 			return err
 		}
 	}
