@@ -93,10 +93,11 @@ type VersionItem struct {
 // Component manifest.
 type Component struct {
 	SignedBase
-	ID          string                            `json:"id"`
-	Name        string                            `json:"name"`
-	Description string                            `json:"description"`
-	Platforms   map[string]map[string]VersionItem `json:"platforms"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	// platform -> version -> VersionItem
+	Platforms map[string]map[string]VersionItem `json:"platforms"`
 }
 
 // ComponentItem object
