@@ -188,14 +188,11 @@ func migrate(srcDir, dstDir string) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
-	keyID, err := keyInfo.ID()
-	if err != nil {
-		return errors.Trace(err)
-	}
+
 	index.Owners["pingcap"] = v1manifest.Owner{
 		Name: "PingCAP",
 		Keys: map[string]*v1manifest.KeyInfo{
-			keyID: keyInfo,
+			keyInfo.ID(): keyInfo,
 		},
 	}
 	signedManifests[v1manifest.ManifestTypeIndex], err = v1manifest.SignManifest(index, privKeys["pingcap"])
@@ -307,11 +304,8 @@ func migrate(srcDir, dstDir string) error {
 		if err != nil {
 			return errors.Trace(err)
 		}
-		keyID, err := keyInfo.ID()
-		if err != nil {
-			return errors.Trace(err)
-		}
-		root.Roles[m.Base().Ty].Keys[keyID] = keyInfo
+
+		root.Roles[m.Base().Ty].Keys[keyInfo.ID()] = keyInfo
 	}
 	signedManifests[v1manifest.ManifestTypeRoot], err = v1manifest.SignManifest(root, privKeys["pingcap"])
 	if err != nil {

@@ -105,8 +105,6 @@ func Init(dst string, initTime time.Time, priv string) error {
 
 // AddComponent adds a new component to an existing repository
 func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv string) error {
-	id = strings.ToLower(id)
-
 	// read key files
 	privBytes, err := ioutil.ReadFile(priv)
 	if err != nil {
@@ -125,7 +123,7 @@ func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv 
 	signedManifests := make(map[string]*Manifest)
 
 	// check id conflicts
-	if _, found := ManifestsConfig[id]; found {
+	if _, found := ManifestsConfig[strings.ToLower(id)]; found {
 		// reserved keywords
 		return fmt.Errorf("component id '%s' is not allowed, please use another one", id)
 	}
@@ -270,13 +268,11 @@ func NewKeyInfo(priv crypto.PrivKey) (*KeyInfo, error) {
 }
 
 // ID returns the SH256 hash of the key
-func (k *KeyInfo) ID() (string, error) {
-	info, err := cjson.Marshal(k)
-	if err != nil {
-		return "", err
-	}
+func (k *KeyInfo) ID() string {
+	// It should never be an error, and it's impossible to recover from this
+	info, _ := cjson.Marshal(k)
 	hash := sha256.Sum256(info)
-	return hex.EncodeToString(hash[:]), nil
+	return hex.EncodeToString(hash[:])
 }
 
 // SetVersions sets file versions to the snapshot
@@ -401,14 +397,10 @@ func SignManifest(role ValidManifest, privKey crypto.PrivKey) (*Manifest, error)
 	if err != nil {
 		return nil, err
 	}
-	keyID, err := keyInfo.ID()
-	if err != nil {
-		return nil, err
-	}
 
 	return &Manifest{
 		Signatures: []signature{{
-			KeyID: keyID,
+			KeyID: keyInfo.ID(),
 			Sig:   string(sign),
 		}},
 		Signed: role,
