@@ -205,7 +205,7 @@ func genKeyPair() ([]byte, []byte, error) {
 // the `repo init` sub command
 func newRepoInitCmd(env *meta.Environment) *cobra.Command {
 	var (
-		privKey string // private key of root
+		keyDir string // Directory to write genreated key files
 	)
 	cmd := &cobra.Command{
 		Use:   "init [path]",
@@ -233,30 +233,32 @@ current working directory (".") will be used.`,
 				return errors.Errorf("the target path '%s' is not an empty directory", repoPath)
 			}
 
-			return initRepo(repoPath, privKey)
+			return initRepo(repoPath, keyDir)
 		},
 	}
 
-	cmd.Flags().StringVar(&privKey, "privkey", env.Profile().Path("private.pem"), "Path to the private key file")
+	cmd.Flags().StringVar(&keyDir, "key-dir", "", "Path to write the private key file")
 
 	return cmd
 }
 
-func initRepo(path, privKeyPath string) error {
-	file, err := os.Open(privKeyPath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
+func initRepo(path, keyDir string) error {
+	/*
+		file, err := os.Open(privKeyPath)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
 
-	b, err := ioutil.ReadAll(file)
-	if err != nil {
-		return err
-	}
+		b, err := ioutil.ReadAll(file)
+		if err != nil {
+			return err
+		}
 
-	ki := v1manifest.NewKeyInfo(b)
+		ki := v1manifest.NewKeyInfo(b)
+	*/
 
-	return v1manifest.Init(path, ki, time.Now().UTC())
+	return v1manifest.Init(path, keyDir, time.Now().UTC())
 }
 
 // the `repo owner` sub command

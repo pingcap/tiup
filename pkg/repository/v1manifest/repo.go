@@ -17,15 +17,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"path"
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
-	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap/errors"
 )
 
 // Init creates and initializes an empty reposityro
-func Init(dst string, ki *KeyInfo, initTime time.Time) error {
+func Init(dst, keyDir string, initTime time.Time) error {
 	// initial manifests
 	manifests := make(map[string]ValidManifest)
 
@@ -57,7 +58,47 @@ func Init(dst string, ki *KeyInfo, initTime time.Time) error {
 		return fmt.Errorf("manifest '%s' not initialized porperly", ty)
 	}
 
-	return BatchSaveManifests(dst, manifests)
+	keys, err := saveKeys(keyDir, manifests[ManifestTypeRoot].(*Root).Roles)
+	if err != nil {
+		return err
+	}
+
+	return BatchSaveManifests(dst, manifests, keys)
+}
+
+func saveKeys(keyDir string, roles map[string]*Role) (map[string][]*KeyInfo, error) {
+	privKeys := map[string][]*KeyInfo{}
+	for ty, role := range roles {
+		for i := 0; i < int(role.Threshold); i++ {
+			priv, err := GenKeyInfo()
+			if err != nil {
+				return nil, err
+			}
+			privKeys[ty] = append(privKeys[ty], priv)
+			pub, err := priv.Public()
+			if err != nil {
+				return nil, err
+			}
+			id, err := pub.ID()
+			if err != nil {
+				// XXX: maybe we can assume no error will be throw here
+				return nil, err
+			}
+			role.Keys[id] = pub
+
+			// Write to key file
+			f, err := os.Create(path.Join(keyDir, id[:16]+"-"+ty+".json"))
+			if err != nil {
+				return nil, err
+			}
+			defer f.Close()
+
+			if err := json.NewEncoder(f).Encode(priv); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return privKeys, nil
 }
 
 // NewRoot creates a Root object
@@ -113,23 +154,29 @@ func NewTimestamp(initTime time.Time) *Timestamp {
 }
 
 // SignAndWrite creates a manifest and writes it to out.
-func SignAndWrite(out io.Writer, role ValidManifest, keyID string, privKey *crypto.RSAPrivKey) error {
+func SignAndWrite(out io.Writer, role ValidManifest, keys ...*KeyInfo) error {
 	payload, err := cjson.Marshal(role)
 	if err != nil {
 		return err
 	}
 
-	sign, err := privKey.Signature(payload)
-	if err != nil {
-		return errors.Trace(err)
+	signs := []signature{}
+	for _, k := range keys {
+		if sig, err := k.Signature(payload); err != nil {
+			return errors.Trace(err)
+		} else if id, err := k.ID(); err != nil {
+			return errors.Trace(err)
+		} else {
+			signs = append(signs, signature{
+				KeyID: id,
+				Sig:   sig,
+			})
+		}
 	}
 
 	manifest := Manifest{
-		Signatures: []signature{{
-			KeyID: keyID,
-			Sig:   sign,
-		}},
-		Signed: role,
+		Signatures: signs,
+		Signed:     role,
 	}
 
 	encoder := json.NewEncoder(out)
@@ -151,7 +198,7 @@ func (manifest *Snapshot) SetVersions(manifestList map[string]ValidManifest) *Sn
 }
 
 // SetRole populates role list in the root manifest
-func (manifest *Root) SetRole(m ValidManifest) {
+func (manifest *Root) SetRole(m ValidManifest) error {
 	if manifest.Roles == nil {
 		manifest.Roles = make(map[string]*Role)
 	}
@@ -161,4 +208,6 @@ func (manifest *Root) SetRole(m ValidManifest) {
 		Threshold: ManifestsConfig[m.Base().Ty].Threshold,
 		Keys:      make(map[string]*KeyInfo),
 	}
+
+	return nil
 }

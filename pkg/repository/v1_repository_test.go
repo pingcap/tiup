@@ -140,7 +140,9 @@ func serialize(t *testing.T, role v1manifest.ValidManifest) string {
 	var out strings.Builder
 	_, priv, err := crypto.RSAPair()
 	assert.Nil(t, err)
-	err = v1manifest.SignAndWrite(&out, role, "KEYID", priv)
+	bytes, err := priv.Serialize()
+	assert.Nil(t, err)
+	err = v1manifest.SignAndWrite(&out, role, v1manifest.NewKeyInfo(bytes))
 	assert.Nil(t, err)
 	return out.String()
 }

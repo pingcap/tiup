@@ -38,6 +38,20 @@ func NewKeyInfo(privKey []byte) *KeyInfo {
 	}
 }
 
+// GenKeyInfo generate a new private KeyInfo
+func GenKeyInfo() (*KeyInfo, error) {
+	// TODO: support other key type and scheme
+	_, priv, err := crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
+	if err != nil {
+		return nil, err
+	}
+	bytes, err := priv.Serialize()
+	if err != nil {
+		return nil, err
+	}
+	return NewKeyInfo(bytes), nil
+}
+
 // ID returns the hash id of the key
 func (ki *KeyInfo) ID() (string, error) {
 	// TODO: apply keyid_hash_algorithms
@@ -91,8 +105,8 @@ func (ki *KeyInfo) Verify(payload []byte, sig string) error {
 	return pk.Verify(payload, sig)
 }
 
-// public returns the public keyInfo
-func (ki *KeyInfo) public() (*KeyInfo, error) {
+// Public returns the public keyInfo
+func (ki *KeyInfo) Public() (*KeyInfo, error) {
 	pk, err := ki.publicKey()
 	if err != nil {
 		return nil, err

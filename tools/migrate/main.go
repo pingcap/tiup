@@ -140,7 +140,7 @@ func migrate(srcDir, dstDir string) error {
 
 	genkey := func(name string) (string, *v1manifest.KeyInfo, error) {
 		// Generate RSA pairs
-		pub, priv, err := crypto.RsaPair()
+		pub, priv, err := crypto.RSAPair()
 		if err != nil {
 			return "", nil, errors.Trace(err)
 		}
@@ -246,7 +246,7 @@ func migrate(srcDir, dstDir string) error {
 			return err
 		}
 		defer writer.Close()
-		if err = v1manifest.SignAndWrite(writer, component, keyID, privKeys["pingcap"]); err != nil {
+		if err = v1manifest.SignAndWrite(writer, component, v1manifest.NewKeyInfo(privKeys["pingcap"])); err != nil {
 			return err
 		}
 
@@ -302,7 +302,7 @@ func migrate(srcDir, dstDir string) error {
 		defer writer.Close()
 		// TODO: support multiples keys
 		keyID := keyNames[m.Base().Ty]
-		if err = v1manifest.SignAndWrite(writer, m, keyID, privKeys[m.Base().Ty]); err != nil {
+		if err = v1manifest.SignAndWrite(writer, m, v1manifest.NewKeyInfo(privKeys[m.Base().Ty])); err != nil {
 			return err
 		}
 	}

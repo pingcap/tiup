@@ -223,15 +223,15 @@ func readTimestampManifest(input io.Reader, keys crypto.KeyStore) (*Timestamp, e
 }
 
 // BatchSaveManifests write a series of manifests to disk
-func BatchSaveManifests(dst string, manifestList map[string]ValidManifest) error {
-	for _, m := range manifestList {
+func BatchSaveManifests(dst string, manifestList map[string]ValidManifest, keys map[string][]*KeyInfo) error {
+	for k, m := range manifestList {
 		writer, err := os.OpenFile(filepath.Join(dst, m.Filename()), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 		if err != nil {
 			return err
 		}
 		defer writer.Close()
 		// TODO: support multiples keys
-		if err = SignAndWrite(writer, m, "", nil); err != nil {
+		if err = SignAndWrite(writer, m, keys[k]...); err != nil {
 			return err
 		}
 	}
