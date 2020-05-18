@@ -27,6 +27,7 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
+	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
 )
 
@@ -98,10 +99,10 @@ func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv 
 		return err
 	}
 
-	// read manifest files from disk
-	manifests, err := ReadManifestDir(repo)
+	// read manifest index from disk
+	manifests, err := ReadManifestDir(repo, ManifestTypeIndex, ManifestTypeSnapshot)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	// check id conflicts
@@ -121,7 +122,7 @@ func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv 
 	// update repository
 	compInfo := ComponentItem{
 		Owner:     owner,
-		URL:       comp.Filename(),
+		URL:       fmt.Sprintf("/%s", comp.Filename()),
 		Threshold: 1,
 	}
 	index := manifests[ManifestTypeIndex].(*Index)
@@ -288,7 +289,7 @@ func (manifest *Root) SetRole(m ValidManifest) {
 	}
 
 	manifest.Roles[m.Base().Ty] = &Role{
-		URL:       m.Filename(),
+		URL:       fmt.Sprintf("/%s", m.Filename()),
 		Threshold: ManifestsConfig[m.Base().Ty].Threshold,
 		Keys:      make(map[string]*KeyInfo),
 	}
@@ -320,9 +321,13 @@ func FreshKeyInfo() (*KeyInfo, string, crypto.PrivKey, error) {
 }
 
 // ReadManifestDir reads manifests from a dir
-func ReadManifestDir(dir string) (map[string]ValidManifest, error) {
+func ReadManifestDir(dir string, roles ...string) (map[string]ValidManifest, error) {
 	manifests := make(map[string]ValidManifest)
+	roleSet := set.NewStringSet(roles...)
 	for ty, val := range ManifestsConfig {
+		if len(roles) > 0 && !roleSet.Exist(ty) {
+			continue // skip unlisted
+		}
 		if val.Filename == "" {
 			continue
 		}
