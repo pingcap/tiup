@@ -53,7 +53,10 @@ func Init(dst string, initTime time.Time, priv string) error {
 
 	// snapshot and timestamp are the last two manifests to be initialized
 	// init snapshot
-	manifests[ManifestTypeSnapshot] = NewSnapshot(initTime).SetVersions(manifests)
+	manifests[ManifestTypeSnapshot], err = NewSnapshot(initTime).SetVersions(manifests)
+	if err != nil {
+		return err
+	}
 
 	// init timestamp
 	timestamp, err := NewTimestamp(initTime).SetSnapshot(manifests[ManifestTypeSnapshot].(*Snapshot))
@@ -129,7 +132,10 @@ func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv 
 	index.Version += 1 // bump index version
 
 	// update snapshot
-	snapshot := manifests[ManifestTypeSnapshot].(*Snapshot).SetVersions(manifests)
+	snapshot, err := manifests[ManifestTypeSnapshot].(*Snapshot).SetVersions(manifests)
+	if err != nil {
+		return err
+	}
 	snapshot.Expires = currTime.Add(ManifestsConfig[ManifestTypeSnapshot].Expire).Format(time.RFC3339)
 
 	// update timestamp
@@ -238,33 +244,37 @@ func (k *KeyInfo) ID() (string, error) {
 }
 
 // SetVersions sets file versions to the snapshot
-func (manifest *Snapshot) SetVersions(manifestList map[string]ValidManifest) *Snapshot {
+func (manifest *Snapshot) SetVersions(manifestList map[string]ValidManifest) (*Snapshot, error) {
 	if manifest.Meta == nil {
 		manifest.Meta = make(map[string]FileVersion)
 	}
 	for _, m := range manifestList {
+		bytes, err := cjson.Marshal(m)
+		if err != nil {
+			return nil, err
+		}
 		manifest.Meta[m.Filename()] = FileVersion{
 			Version: m.Base().Version,
-			// TODO length
+			Length:  uint(len(bytes)),
 		}
 	}
-	return manifest
+	return manifest, nil
 }
 
 // SetSnapshot hashes a snapshot manifest and update the timestamp manifest
 func (manifest *Timestamp) SetSnapshot(s *Snapshot) (*Timestamp, error) {
-	bytes, err := json.Marshal(s)
+	bytes, err := cjson.Marshal(s)
 	if err != nil {
 		return manifest, err
 	}
 
-	// TODO: hash the manifest
+	hash := sha256.Sum256(bytes)
 
 	if manifest.Meta == nil {
 		manifest.Meta = make(map[string]FileHash)
 	}
 	manifest.Meta[s.Base().Filename()] = FileHash{
-		Hashes: map[string]string{"sha256": "TODO"},
+		Hashes: map[string]string{"sha256": hex.EncodeToString(hash[:])},
 		Length: uint(len(bytes)),
 	}
 

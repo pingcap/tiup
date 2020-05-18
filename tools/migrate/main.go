@@ -131,7 +131,10 @@ func migrate(srcDir, dstDir string) error {
 
 	// snapshot and timestamp are the last two manifests to be initialized
 	// init snapshot
-	snapshot := v1manifest.NewSnapshot(initTime).SetVersions(manifests)
+	snapshot, err := v1manifest.NewSnapshot(initTime).SetVersions(manifests)
+	if err != nil {
+		return err
+	}
 	manifests[v1manifest.ManifestTypeSnapshot] = snapshot
 
 	privKeys := map[string]*crypto.RSAPrivKey{}
