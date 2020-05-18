@@ -65,22 +65,20 @@ type KeyInfo struct {
 	Scheme     string            `json:"scheme"`
 }
 
-// ComponentItem object
-type ComponentItem struct {
-	Name      string `json:"name"`
-	Yanked    bool   `json:"yanked"`
-	Owner     string `json:"owner"`
-	URL       string `json:"url"`
-	Length    int64  `json:"length"`
-	Threshold int    `json:"threshold"`
-}
-
 // Index manifest.
 type Index struct {
 	SignedBase
 	Owners            map[string]Owner         `json:"owners"`
 	Components        map[string]ComponentItem `json:"components"`
 	DefaultComponents []string                 `json:"default_components"`
+}
+
+// ComponentItem object
+type ComponentItem struct {
+	Yanked    bool   `json:"yanked"`
+	Owner     string `json:"owner"`
+	URL       string `json:"url"`
+	Threshold int    `json:"threshold"`
 }
 
 // Owner object.
@@ -129,6 +127,7 @@ type FileHash struct {
 // FileVersion is just a version number.
 type FileVersion struct {
 	Version uint `json:"version"`
+	Length  uint `json:"length"`
 }
 
 // Boilerplate implementations of ValidManifest.
@@ -160,12 +159,12 @@ func (manifest *Timestamp) Base() *SignedBase {
 
 // Filename implements ValidManifest
 func (manifest *Root) Filename() string {
-	return ManifestsConfig[ManifestTypeRoot].Filename
+	return ManifestFilenameRoot
 }
 
 // Filename implements ValidManifest
 func (manifest *Index) Filename() string {
-	return ManifestsConfig[ManifestTypeIndex].Filename
+	return ManifestFilenameIndex
 }
 
 // Filename implements ValidManifest
@@ -175,10 +174,10 @@ func (manifest *Component) Filename() string {
 
 // Filename implements ValidManifest
 func (manifest *Snapshot) Filename() string {
-	return ManifestsConfig[ManifestTypeSnapshot].Filename
+	return ManifestFilenameSnapshot
 }
 
 // Filename implements ValidManifest
 func (manifest *Timestamp) Filename() string {
-	return ManifestsConfig[ManifestTypeTimestamp].Filename
+	return ManifestFilenameTimestamp
 }

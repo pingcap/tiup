@@ -237,11 +237,9 @@ Example:
 },
 "components": {
     "tidb": {
-        "name": "Name of the Component",
         "yanked": false,
         "owner": "pingcap",
         "url": "/name_of.json",
-        "length": 500,
         "threshold": 1,
     },
 },
@@ -305,15 +303,19 @@ Not versioned.
 "meta": {
     "root.json": {
         "version": 1
+        "length": 500
     },
     "index.json": {
         "version": 1
+        "length": 500
     },
     "name_of.json": {
-        "version": 1
+        "version": 1,
+        "length": 500
     },
     "foo.json": {
-        "version": 1
+        "version": 1,
+        "length": 240
     }
 },
 ```

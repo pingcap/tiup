@@ -14,6 +14,7 @@
 package v1manifest
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -145,6 +146,7 @@ func (manifest *Snapshot) SetVersions(manifestList map[string]ValidManifest) *Sn
 	for _, m := range manifestList {
 		manifest.Meta[m.Filename()] = FileVersion{
 			Version: m.Base().Version,
+			// TODO length
 		}
 	}
 	return manifest
@@ -161,4 +163,29 @@ func (manifest *Root) SetRole(m ValidManifest) {
 		Threshold: ManifestsConfig[m.Base().Ty].Threshold,
 		Keys:      make(map[string]*KeyInfo),
 	}
+}
+
+// FreshKeyInfo generates a new key pair and wraps it in a KeyInfo. The returned string is the key id.
+func FreshKeyInfo() (*KeyInfo, string, crypto.PrivKey, error) {
+	pub, priv, err := crypto.RsaPair()
+	if err != nil {
+		return nil, "", nil, err
+	}
+	pubBytes, err := pub.Serialize()
+	if err != nil {
+		return nil, "", nil, err
+	}
+	info := KeyInfo{
+		Algorithms: []string{"sha256"},
+		Type:       "rsa",
+		Value:      map[string]string{"public": string(pubBytes)},
+		Scheme:     "rsassa-pss-sha256",
+	}
+	serInfo, err := cjson.Marshal(&info)
+	if err != nil {
+		return nil, "", nil, err
+	}
+	hash := sha256.Sum256(serInfo)
+
+	return &info, fmt.Sprintf("%x", hash), priv, nil
 }

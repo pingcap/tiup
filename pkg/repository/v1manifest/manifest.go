@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
@@ -33,6 +34,16 @@ const (
 	ManifestTypeSnapshot  = "snapshot"
 	ManifestTypeTimestamp = "timestamp"
 	ManifestTypeComponent = "component"
+	// Manifest URLs in a repository.
+	ManifestURLRoot      = "/root.json"
+	ManifestURLIndex     = "/index.json"
+	ManifestURLSnapshot  = "/snapshot.json"
+	ManifestURLTimestamp = "/timestamp.json"
+	// Manifest filenames when stored locally.
+	ManifestFilenameRoot      = "root.json"
+	ManifestFilenameIndex     = "index.json"
+	ManifestFilenameSnapshot  = "snapshot.json"
+	ManifestFilenameTimestamp = "timestamp.json"
 
 	// SpecVersion of current, maybe we could expand it later
 	CurrentSpecVersion = "0.1.0"
@@ -49,13 +60,13 @@ type ty struct {
 // ManifestsConfig for different manifest ManifestsConfig
 var ManifestsConfig = map[string]ty{
 	ManifestTypeRoot: {
-		Filename:  ManifestTypeRoot + ".json",
+		Filename:  ManifestFilenameRoot,
 		Versioned: true,
 		Expire:    time.Hour * 24 * 365, // 1y
 		Threshold: 3,
 	},
 	ManifestTypeIndex: {
-		Filename:  ManifestTypeIndex + ".json",
+		Filename:  ManifestFilenameIndex,
 		Versioned: true,
 		Expire:    time.Hour * 24 * 365, // 1y
 		Threshold: 1,
@@ -67,13 +78,13 @@ var ManifestsConfig = map[string]ty{
 		Threshold: 1,
 	},
 	ManifestTypeSnapshot: {
-		Filename:  ManifestTypeSnapshot + ".json",
+		Filename:  ManifestFilenameSnapshot,
 		Versioned: false,
 		Expire:    time.Hour * 24, // 1d
 		Threshold: 1,
 	},
 	ManifestTypeTimestamp: {
-		Filename:  ManifestTypeTimestamp + ".json",
+		Filename:  ManifestFilenameTimestamp,
 		Versioned: false,
 		Expire:    time.Hour * 24, // 1d
 		Threshold: 1,
@@ -94,11 +105,14 @@ func (manifest *Manifest) verifySignature(keys crypto.KeyStore) error {
 	}
 
 	for _, sig := range manifest.Signatures {
+		// TODO check that KeyID belongs to a role which is authorised to sign this manifest
 		key := keys.Get(sig.KeyID)
 		if key == nil {
+			// TODO use SignatureError
 			return fmt.Errorf("signature key %s not found", sig.KeyID)
 		}
 		if err := key.Verify(payload, sig.Sig); err != nil {
+			// TODO use SignatureError
 			return err
 		}
 	}
@@ -112,6 +126,11 @@ type SignatureError struct{}
 func (err *SignatureError) Error() string {
 	// TODO include the filename
 	return "invalid signature for file"
+}
+
+// ComponentFilename returns the expected filename for the component identified by id.
+func ComponentFilename(id string) string {
+	return fmt.Sprintf("%s.json", id)
 }
 
 // Filename returns the unversioned name that the manifest should be saved as based on the type in s.
@@ -151,23 +170,40 @@ func (s *SignedBase) isValid() error {
 }
 
 func (manifest *Root) isValid() error {
+	// TODO
 	return nil
 }
 
 func (manifest *Index) isValid() error {
+	// Check every component's owner exists.
+	for k, c := range manifest.Components {
+		if _, ok := manifest.Owners[c.Owner]; !ok {
+			return fmt.Errorf("component %s has unknown owner %s", k, c.Owner)
+		}
+	}
+
+	// Check every default is in component.
+	for _, d := range manifest.DefaultComponents {
+		if _, ok := manifest.Components[d]; !ok {
+			return fmt.Errorf("default component %s is unknown", d)
+		}
+	}
+
 	return nil
 }
 
 func (manifest *Component) isValid() error {
+	// TODO
 	return nil
 }
 
 func (manifest *Snapshot) isValid() error {
+	// TODO
 	return nil
 }
 
 func (manifest *Timestamp) isValid() error {
-	snapshot, ok := manifest.Meta["snapshot.json"]
+	snapshot, ok := manifest.Meta[ManifestURLSnapshot]
 	if !ok {
 		return errors.New("timestamp manifest is missing entry for snapshot.json")
 	}
@@ -182,7 +218,21 @@ func (manifest *Timestamp) isValid() error {
 
 // SnapshotHash returns the hashes of the snapshot manifest as specified in the timestamp manifest.
 func (manifest *Timestamp) SnapshotHash() FileHash {
-	return manifest.Meta[ManifestsConfig[ManifestTypeSnapshot].Filename]
+	return manifest.Meta[ManifestURLSnapshot]
+}
+
+// VersionedURL looks up url in the snapshot and returns a modified url with the version prefix
+func (manifest *Snapshot) VersionedURL(url string) (string, error) {
+	entry, ok := manifest.Meta[url]
+	if !ok {
+		return "", fmt.Errorf("no entry in snapshot manifest for %s", url)
+	}
+	lastSlash := strings.LastIndex(url, "/")
+	if lastSlash < 0 {
+		return fmt.Sprintf("%v.%s", entry.Version, url), nil
+	}
+
+	return fmt.Sprintf("%s/%v.%s", url[:lastSlash], entry.Version, url[lastSlash+1:]), nil
 }
 
 // ReadManifest reads a manifest from input and validates it, the result is stored in role, which must be a pointer type.

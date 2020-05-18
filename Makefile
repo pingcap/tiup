@@ -24,7 +24,7 @@ FILES     := $$(find . -name "*.go")
 FAILPOINT_ENABLE  := $$(tools/bin/failpoint-ctl enable)
 FAILPOINT_DISABLE := $$(tools/bin/failpoint-ctl disable)
 
-default: check cmd
+default: cmd check
 
 cmd:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
