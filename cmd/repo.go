@@ -237,27 +237,12 @@ current working directory (".") will be used.`,
 		},
 	}
 
-	cmd.Flags().StringVar(&keyDir, "key-dir", "", "Path to write the private key file")
+	cmd.Flags().StringVarP(&keyDir, "", "i", "", "Path to write the private key file")
 
 	return cmd
 }
 
 func initRepo(path, keyDir string) error {
-	/*
-		file, err := os.Open(privKeyPath)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		b, err := ioutil.ReadAll(file)
-		if err != nil {
-			return err
-		}
-
-		ki := v1manifest.NewKeyInfo(b)
-	*/
-
 	return v1manifest.Init(path, keyDir, time.Now().UTC())
 }
 

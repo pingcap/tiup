@@ -21,16 +21,16 @@ var (
 	// ErrorKeyUninitialized will be present when key is used before Deserialize called
 	ErrorKeyUninitialized = errors.New("key not initialized, call Deserialize first")
 	// ErrorDeserializeKey means the key format is not valid
-	ErrorDeserializeKey = errors.New("Error on deserialize key, check if the key is valid")
+	ErrorDeserializeKey = errors.New("error on deserialize key, check if the key is valid")
 	// ErrorUnsupportedKeyType means we don't supported this type of key
-	ErrorUnsupportedKeyType = errors.New("Provided key type not supported")
+	ErrorUnsupportedKeyType = errors.New("provided key type not supported")
 	// ErrorUnsupportedKeySchema means we don't support this schema
-	ErrorUnsupportedKeySchema = errors.New("Provided schema not supported")
+	ErrorUnsupportedKeySchema = errors.New("provided schema not supported")
 )
 
 const (
 	// KeyTypeRSA represents the RSA type of keys
-	KeyTypeRSA = "RSA"
+	KeyTypeRSA = "rsa"
 
 	// KeySchemeRSASSAPSSSHA256 represents rsassa-pss-sha256 scheme
 	KeySchemeRSASSAPSSSHA256 = "rsassa-pss-sha256"
@@ -38,8 +38,8 @@ const (
 
 // KeyStore is the collection of all public keys available to TiUp.
 type KeyStore interface {
-	// Keys returns all key ids
-	Keys() []string
+	// KeyIDs returns all key ids
+	KeyIDs() []string
 
 	// Add put new key into KeyStore
 	Put(string, PubKey) KeyStore
@@ -100,7 +100,7 @@ func (s *keychain) Put(id string, key PubKey) KeyStore {
 }
 
 // Keys returns all key ids
-func (s *keychain) Keys() []string {
+func (s *keychain) KeyIDs() []string {
 	ids := []string{}
 	for id := range *s {
 		ids = append(ids, id)
