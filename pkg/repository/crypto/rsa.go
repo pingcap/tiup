@@ -150,7 +150,9 @@ func (k *RSAPrivKey) Signature(payload []byte) (string, error) {
 	return base64.StdEncoding.EncodeToString(sig), nil
 }
 
-// Public return the public key associate with the private one
+// Public returns public key of the PrivKey
 func (k *RSAPrivKey) Public() PubKey {
-	return &RSAPubKey{&k.key.PublicKey}
+	return &RSAPubKey{
+		key: &k.key.PublicKey,
+	}
 }

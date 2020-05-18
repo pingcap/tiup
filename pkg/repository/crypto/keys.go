@@ -77,7 +77,7 @@ type PrivKey interface {
 	Scheme() string
 	// Signature sign a signature with the key for payload
 	Signature(payload []byte) (string, error)
-	// Public returns another pair of the key
+	// Public returns public key of the PrivKey
 	Public() PubKey
 }
 
@@ -136,7 +136,7 @@ func NewPrivKey(keyType, keyScheme string, key []byte) (PrivKey, error) {
 	}
 
 	priv := &RSAPrivKey{}
-	return priv, priv.Deserialize(payload)
+	return priv, priv.Deserialize(key)
 }
 
 // NewPubKey return PrivKey
@@ -152,5 +152,5 @@ func NewPubKey(keyType, keyScheme string, key []byte) (PubKey, error) {
 	}
 
 	pub := &RSAPubKey{}
-	return pub, pub.Deserialize(payload)
+	return pub, pub.Deserialize(key)
 }

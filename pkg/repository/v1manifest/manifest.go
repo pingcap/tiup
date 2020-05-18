@@ -15,16 +15,14 @@ package v1manifest
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
+	"github.com/pingcap/errors"
 )
 
 // Names of manifest ManifestsConfig
@@ -135,7 +133,11 @@ func ComponentFilename(id string) string {
 
 // Filename returns the unversioned name that the manifest should be saved as based on the type in s.
 func (s *SignedBase) Filename() string {
-	return ManifestsConfig[s.Ty].Filename
+	fname := ManifestsConfig[s.Ty].Filename
+	if fname == "" {
+		panic("Unreachable")
+	}
+	return fname
 }
 
 // Versioned indicates whether versioned versions of a manifest are saved, e.g., 42.foo.json.
@@ -235,6 +237,16 @@ func (manifest *Snapshot) VersionedURL(url string) (string, error) {
 	return fmt.Sprintf("%s/%v.%s", url[:lastSlash], entry.Version, url[lastSlash+1:]), nil
 }
 
+func readTimestampManifest(input io.Reader, keys crypto.KeyStore) (*Timestamp, error) {
+	var ts Timestamp
+	_, err := ReadManifest(input, &ts, keys)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ts, nil
+}
+
 // ReadManifest reads a manifest from input and validates it, the result is stored in role, which must be a pointer type.
 func ReadManifest(input io.Reader, role ValidManifest, keys crypto.KeyStore) (*Manifest, error) {
 	decoder := json.NewDecoder(input)
@@ -260,30 +272,4 @@ func ReadManifest(input io.Reader, role ValidManifest, keys crypto.KeyStore) (*M
 	}
 
 	return &m, m.Signed.isValid()
-}
-
-func readTimestampManifest(input io.Reader, keys crypto.KeyStore) (*Timestamp, error) {
-	var ts Timestamp
-	_, err := ReadManifest(input, &ts, keys)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ts, nil
-}
-
-// BatchSaveManifests write a series of manifests to disk
-func BatchSaveManifests(dst string, manifestList map[string]ValidManifest, keys map[string][]*KeyInfo) error {
-	for k, m := range manifestList {
-		writer, err := os.OpenFile(filepath.Join(dst, m.Filename()), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
-		if err != nil {
-			return err
-		}
-		defer writer.Close()
-		// TODO: support multiples keys
-		if err = SignAndWrite(writer, m, keys[k]...); err != nil {
-			return err
-		}
-	}
-	return nil
 }
