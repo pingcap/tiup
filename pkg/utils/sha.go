@@ -15,6 +15,7 @@ package utils
 
 import (
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"io"
 	"strings"
@@ -34,4 +35,19 @@ func CheckSHA(reader io.Reader, sha string) error {
 		return errors.Errorf("checksum mismatch, expect: %v, got: %v", sha, checksum)
 	}
 	return nil
+}
+
+// CheckSHA256 returns an error if the hash of reader mismatches `sha`
+func CheckSHA256(reader io.Reader, sha string) error {
+	shaWriter := sha256.New()
+	if _, err := io.Copy(shaWriter, reader); err != nil {
+		return errors.Trace(err)
+	}
+
+	checksum := hex.EncodeToString(shaWriter.Sum(nil))
+	if checksum != strings.TrimSpace(sha) {
+		return errors.Errorf("checksum mismatch, expect: %v, got: %v", sha, checksum)
+	}
+	return nil
+
 }

@@ -109,7 +109,7 @@ func (manifest *Manifest) verifySignature(keys crypto.KeyStore) error {
 			// TODO use SignatureError
 			return fmt.Errorf("signature key %s not found", sig.KeyID)
 		}
-		if err := key.Verify(payload, sig.Sig); err != nil {
+		if err := key.VerifySignature(payload, sig.Sig); err != nil {
 			// TODO use SignatureError
 			return err
 		}
@@ -195,12 +195,12 @@ func (manifest *Index) isValid() error {
 }
 
 func (manifest *Component) isValid() error {
-	// TODO
+	// Nothing to do.
 	return nil
 }
 
 func (manifest *Snapshot) isValid() error {
-	// TODO
+	// Nothing to do.
 	return nil
 }
 

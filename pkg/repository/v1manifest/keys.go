@@ -102,7 +102,7 @@ func (ki *KeyInfo) Verify(payload []byte, sig string) error {
 	if err != nil {
 		return err
 	}
-	return pk.Verify(payload, sig)
+	return pk.VerifySignature(payload, sig)
 }
 
 // Public returns the public keyInfo

@@ -15,10 +15,12 @@ package repository
 
 import (
 	"fmt"
+	"io"
 	"runtime"
 
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 )
 
@@ -68,7 +70,7 @@ func (r *V1Repository) updateLocalSnapshot(local v1manifest.LocalManifests) (*v1
 	}
 
 	var snapshot v1manifest.Snapshot
-	manifest, err := r.FetchManifest(v1manifest.ManifestURLSnapshot, &snapshot, local.Keys(), hash.Length)
+	manifest, err := r.fetchManifest(v1manifest.ManifestURLSnapshot, &snapshot, local.Keys(), hash.Length)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +115,7 @@ func (r *V1Repository) updateLocalIndex(local v1manifest.LocalManifests, length 
 	}
 
 	var index v1manifest.Index
-	manifest, err := r.FetchManifest(url, &index, local.Keys(), length)
+	manifest, err := r.fetchManifest(url, &index, local.Keys(), length)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +160,7 @@ func (r *V1Repository) updateComponentManifest(local v1manifest.LocalManifests, 
 		return nil, err
 	}
 	var component v1manifest.Component
-	manifest, err := r.FetchManifest(url, &component, local.Keys(), snapshot.Meta[item.URL].Length)
+	manifest, err := r.fetchManifest(url, &component, local.Keys(), snapshot.Meta[item.URL].Length)
 	if err != nil {
 		return nil, err
 	}
@@ -182,12 +184,37 @@ func (r *V1Repository) updateComponentManifest(local v1manifest.LocalManifests, 
 	return &component, nil
 }
 
+// TODO test
+// downloadComponent downloads a component using the relevant manifest and checks its hash.
+// Precondition: the component's manifest is up to date and the version and platform are valid.
+// The caller is responsible for closing the returned reader.
+func (r *V1Repository) downloadComponent(local v1manifest.LocalManifests, id string, platform string, version string) (io.ReadCloser, error) {
+	manifest, err := local.LoadComponentManifest(id)
+	if err != nil {
+		return nil, err
+	}
+
+	item := manifest.Platforms[platform][version]
+
+	reader, err := r.mirror.Fetch(item.URL, int64(item.Length))
+	if err != nil {
+		return nil, err
+	}
+
+	if utils.CheckSHA256(reader, item.Hashes["sha256"]) != nil {
+		reader.Close()
+		return nil, err
+	}
+
+	return reader, nil
+}
+
 // CheckTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash matches our local one.
 // If they match, then there is nothing to update and we return nil. If they do not match, we return the
 // snapshot's file info.
 func (r *V1Repository) checkTimestamp(local v1manifest.LocalManifests) (*v1manifest.FileHash, error) {
 	var ts v1manifest.Timestamp
-	manifest, err := r.FetchManifest(v1manifest.ManifestURLTimestamp, &ts, local.Keys(), maxTimeStampSize)
+	manifest, err := r.fetchManifest(v1manifest.ManifestURLTimestamp, &ts, local.Keys(), maxTimeStampSize)
 	if err != nil {
 		return nil, err
 	}
@@ -208,8 +235,8 @@ func (r *V1Repository) checkTimestamp(local v1manifest.LocalManifests) (*v1manif
 	return &hash, local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
 }
 
-// FetchManifest downloads and validates a manifest from this repo.
-func (r *V1Repository) FetchManifest(url string, role v1manifest.ValidManifest, keys crypto.KeyStore, maxSize uint) (*v1manifest.Manifest, error) {
+// fetchManifest downloads and validates a manifest from this repo.
+func (r *V1Repository) fetchManifest(url string, role v1manifest.ValidManifest, keys crypto.KeyStore, maxSize uint) (*v1manifest.Manifest, error) {
 	reader, err := r.mirror.Fetch(url, int64(maxSize))
 	if err != nil {
 		return nil, errors.Trace(err)
