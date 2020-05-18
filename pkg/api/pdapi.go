@@ -18,6 +18,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/url"
 	"time"
 
@@ -70,6 +71,7 @@ var (
 	pdSchedulersURI     = "pd/api/v1/schedulers"
 	pdLeaderURI         = "pd/api/v1/leader"
 	pdLeaderTransferURI = "pd/api/v1/leader/transfer"
+	pdConfigReplicate   = "pd/api/v1/config/replicate"
 )
 
 type doFunc func(endpoint string) error
@@ -578,4 +580,16 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 		return fmt.Errorf("error deleting store, %v", err)
 	}
 	return nil
+}
+
+// UpdateReplicateConfig updates the PD replicate config
+func (pc *PDClient) UpdateReplicateConfig(body io.Reader) error {
+	endpoints := pc.getEndpoints(pdConfigReplicate)
+	return tryURLs(endpoints, func(endpoint string) error {
+		_, err := pc.httpClient.Post(endpoint, body)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 }

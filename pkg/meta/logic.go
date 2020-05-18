@@ -14,6 +14,8 @@
 package meta
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -23,6 +25,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/api"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/clusterutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/executor"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
@@ -70,6 +73,7 @@ type Instance interface {
 	WaitForDown(executor.TiOpsExecutor, int64) error
 	InitConfig(e executor.TiOpsExecutor, clusterName string, clusterVersion string, deployUser string, paths DirPaths) error
 	ScaleConfig(e executor.TiOpsExecutor, topo Specification, clusterName string, clusterVersion string, deployUser string, paths DirPaths) error
+	PrepareStart() error
 	ComponentName() string
 	InstanceName() string
 	ServiceName() string
@@ -271,6 +275,11 @@ func (i *instance) OS() string {
 
 func (i *instance) Arch() string {
 	return reflect.ValueOf(i.InstanceSpec).FieldByName("Arch").Interface().(string)
+}
+
+// PrepareStart checks instance requirements before starting
+func (i *instance) PrepareStart() error {
+	return nil
 }
 
 // MergeResourceControl merge the rhs into lhs and overwrite rhs if lhs has value for same field
@@ -902,23 +911,7 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 	}
 	tidbStatusStr := strings.Join(tidbStatusAddrs, ",")
 
-	var pdAddrs []string
-	for _, pd := range i.instance.topo.PDServers {
-		pdAddrs = append(pdAddrs, fmt.Sprintf("%s:%d", pd.Host, uint64(pd.ClientPort)))
-	}
-	pdStr := strings.Join(pdAddrs, ",")
-
-	// replication.enable-placement-rules should be set to true to enable TiFlash
-	// TODO: Move this logic to an independent checkConfig procedure
-	const key = "replication.enable-placement-rules"
-	globalEnabled, ok1 := i.instance.topo.ServerConfigs.PD[key].(bool)
-	for _, pd := range i.instance.topo.PDServers {
-		// if instance config exists AND the config is false, throw an error.
-		// if instance config does not exist, if global config does not exist OR the config is false, throw an error
-		if instanceEnabled, ok2 := pd.Config[key].(bool); (ok2 && !instanceEnabled) || (!ok2 && (!ok1 || !globalEnabled)) {
-			log.Warnf("should set replication.enable-placement-rules to true in pd conf to enable TiFlash")
-		}
-	}
+	pdStr := strings.Join(i.getEndpoints(), ",")
 
 	cfg := scripts.NewTiFlashScript(
 		i.GetHost(),
@@ -1024,6 +1017,35 @@ func (i *TiFlashInstance) ScaleConfig(e executor.TiOpsExecutor, b Specification,
 	}()
 	i.instance.topo = b.GetClusterSpecification()
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+}
+
+type replicateConfig struct {
+	EnablePlacementRules string `json:"enable-placement-rules"`
+}
+
+func (i *TiFlashInstance) getEndpoints() []string {
+	var endpoints []string
+	for _, pd := range i.instance.topo.PDServers {
+		endpoints = append(endpoints, fmt.Sprintf("%s:%d", pd.Host, uint64(pd.ClientPort)))
+	}
+	return endpoints
+}
+
+// PrepareStart checks TiFlash requirements before starting
+func (i *TiFlashInstance) PrepareStart() error {
+	endPoints := i.getEndpoints()
+	// set enable-placement-rules to true via PDClient
+	pdClient := api.NewPDClient(endPoints, 10*time.Second, nil)
+	enablePlacementRules, err := json.Marshal(replicateConfig{
+		EnablePlacementRules: "true",
+	})
+	if err != nil {
+		return nil
+	}
+	if err := pdClient.UpdateReplicateConfig(bytes.NewBuffer(enablePlacementRules)); err != nil {
+		return err
+	}
+	return nil
 }
 
 // MonitorComponent represents Monitor component.

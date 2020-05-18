@@ -15,7 +15,6 @@ package command
 
 import (
 	"fmt"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/clusterutil"
 	"path"
 	"path/filepath"
 	"strings"
@@ -24,6 +23,7 @@ import (
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil/prepare"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/clusterutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/logger"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"

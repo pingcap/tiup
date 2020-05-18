@@ -56,7 +56,6 @@ server_configs:
     schedule.leader-schedule-limit: 4
     schedule.region-schedule-limit: 2048
     schedule.replica-schedule-limit: 64
-    replication.enable-placement-rules: true
   tiflash:
     # path_realtime_mode: false
     logger.level: "info"

@@ -15,6 +15,8 @@ package command
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/clusterutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
@@ -27,7 +29,6 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
-	"os"
 )
 
 func newUpgradeCmd() *cobra.Command {

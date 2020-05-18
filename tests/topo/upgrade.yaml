@@ -4,8 +4,6 @@ server_configs:
         binlog.ignore-error: false
     tikv:
         storage.reserve-space: 1K
-    pd:
-        replication.enable-placement-rules: true
     pump:
         storage.stop-write-at-available-space: 1 mib
 
