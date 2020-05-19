@@ -49,5 +49,4 @@ func CheckSHA256(reader io.Reader, sha string) error {
 		return errors.Errorf("checksum mismatch, expect: %v, got: %v", sha, checksum)
 	}
 	return nil
-
 }

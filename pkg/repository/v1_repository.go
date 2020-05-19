@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"runtime"
@@ -186,12 +187,10 @@ func (r *V1Repository) updateComponentManifest(id string) (*v1manifest.Component
 	return &component, nil
 }
 
-// TODO test
 // downloadComponent downloads a component using the relevant manifest and checks its hash.
 // Precondition: the component's manifest is up to date and the version and platform are valid.
-// The caller is responsible for closing the returned reader.
-func (r *V1Repository) downloadComponent(id string, platform string, version string) (io.ReadCloser, error) {
-	manifest, err := r.local.LoadComponentManifest(id)
+func (r *V1Repository) downloadComponent(id string, platform string, version string) (io.Reader, error) {
+	manifest, err := r.local.LoadComponentManifest(v1manifest.ComponentFilename(id))
 	if err != nil {
 		return nil, err
 	}
@@ -202,13 +201,26 @@ func (r *V1Repository) downloadComponent(id string, platform string, version str
 	if err != nil {
 		return nil, err
 	}
+	defer reader.Close()
 
-	if utils.CheckSHA256(reader, item.Hashes[v1manifest.SHA256]) != nil {
-		reader.Close()
+	buffer := new(bytes.Buffer)
+	_, err = io.Copy(buffer, reader)
+	if err != nil {
 		return nil, err
 	}
 
-	return reader, nil
+	bufReader := bytes.NewReader(buffer.Bytes())
+	if err = utils.CheckSHA256(bufReader, item.Hashes[v1manifest.SHA256]); err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	_, err = bufReader.Seek(0, io.SeekStart)
+	if err != nil {
+		return nil, err
+	}
+
+	return bufReader, nil
 }
 
 // CheckTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash matches our local one.

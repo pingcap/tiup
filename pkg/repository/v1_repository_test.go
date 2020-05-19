@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"io"
 	"strings"
 	"testing"
 
@@ -185,6 +186,49 @@ func TestUpdateComponent(t *testing.T) {
 	// TODO test that invalid signature of component manifest causes an error
 }
 
+func TestDownloadManifest(t *testing.T) {
+	mirror := MockMirror{
+		Resources: map[string]string{},
+	}
+	someString := "just some string for testing"
+	mirror.Resources["/foo-2.0.1.tar.gz"] = someString
+	local := v1manifest.NewMockManifests()
+	foo := componentManifest()
+	local.Manifests["foo.json"] = foo
+	repo := NewV1Repo(&mirror, Options{}, local)
+
+	// Happy path file is as expected
+	reader, err := repo.downloadComponent("foo", "a_platform", "2.0.1")
+	assert.Nil(t, err)
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, reader)
+	assert.Nil(t, err)
+	assert.Equal(t, someString, buf.String())
+
+	// Sad paths
+	version1 := foo.Platforms["a_platform"]["2.0.1"]
+	version2 := foo.Platforms["a_platform"]["2.0.1"]
+	version3 := foo.Platforms["a_platform"]["2.0.1"]
+
+	// bad hash
+	version1.Hashes[v1manifest.SHA256] = "Not a hash"
+	foo.Platforms["a_platform"]["2.0.1"] = version1
+	reader, err = repo.downloadComponent("foo", "a_platform", "2.0.1")
+	assert.NotNil(t, err)
+
+	//  Too long
+	version2.Length = 26
+	foo.Platforms["a_platform"]["2.0.1"] = version2
+	reader, err = repo.downloadComponent("foo", "a_platform", "2.0.1")
+	assert.NotNil(t, err)
+
+	// missing tar ball/bad url
+	version3.URL = "/bar-2.0.1.tar.gz"
+	foo.Platforms["a_platform"]["2.0.1"] = version3
+	reader, err = repo.downloadComponent("foo", "a_platform", "2.0.1")
+	assert.NotNil(t, err)
+}
+
 func timestampManifest() *v1manifest.Timestamp {
 	return &v1manifest.Timestamp{
 		SignedBase: v1manifest.SignedBase{
@@ -226,7 +270,15 @@ func componentManifest() *v1manifest.Component {
 		},
 		Name:        "Foo",
 		Description: "foo does stuff",
-		Platforms:   nil,
+		Platforms: map[string]map[string]v1manifest.VersionItem{
+			"a_platform": {"2.0.1": {
+				URL: "/foo-2.0.1.tar.gz",
+				FileHash: v1manifest.FileHash{
+					Hashes: map[string]string{v1manifest.SHA256: "963ba8374bac92a8a00fc21ca458e0c2016bf8930519e5271f7b49d16762a184"},
+					Length: 28,
+				},
+			}},
+		},
 	}
 }
 

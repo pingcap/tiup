@@ -45,8 +45,8 @@ type LocalManifests interface {
 	// LoadManifest loads and validates the most recent manifest of role's type. The returned bool is true if the file
 	// exists.
 	LoadManifest(role ValidManifest) (bool, error)
-	// LoadComponentManifest loads and validates the most recent manifest for a component with the given id.
-	LoadComponentManifest(id string) (*Component, error)
+	// LoadComponentManifest loads and validates the most recent manifest at filename.
+	LoadComponentManifest(filename string) (*Component, error)
 	// Keys returns the key store derived from these manifests.
 	Keys() crypto.KeyStore
 }
