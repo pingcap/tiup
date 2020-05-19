@@ -315,8 +315,8 @@ func (manifest *Timestamp) SetSnapshot(s *Manifest) (*Timestamp, error) {
 	}
 	manifest.Meta[s.Signed.Base().Filename()] = FileHash{
 		Hashes: map[string]string{
-			"sha256": hex.EncodeToString(hash256[:]),
-			"sha512": hex.EncodeToString(hash512[:]),
+			SHA256: hex.EncodeToString(hash256[:]),
+			SHA512: hex.EncodeToString(hash512[:]),
 		},
 		Length: uint(len(bytes)),
 	}
@@ -366,7 +366,7 @@ func FreshKeyInfo() (*KeyInfo, string, crypto.PrivKey, error) {
 		return nil, "", nil, err
 	}
 	info := KeyInfo{
-		Algorithms: []string{"sha256"},
+		Algorithms: []string{SHA256},
 		Type:       "rsa",
 		Value:      map[string]string{"public": string(pubBytes)},
 		Scheme:     "rsassa-pss-sha256",

@@ -80,7 +80,7 @@ func TestEmptyManifest(t *testing.T) {
 
 func TestWriteManifest(t *testing.T) {
 	ts := Timestamp{Meta: map[string]FileHash{ManifestURLSnapshot: {
-		Hashes: map[string]string{"TODO": "TODO"},
+		Hashes: map[string]string{SHA256: "TODO"},
 		Length: 0,
 	}},
 		SignedBase: SignedBase{
