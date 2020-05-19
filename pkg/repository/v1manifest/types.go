@@ -13,6 +13,8 @@
 
 package v1manifest
 
+import "github.com/pingcap-incubator/tiup/pkg/repository/crypto"
+
 // Manifest representation for ser/de.
 type Manifest struct {
 	// Signatures value
@@ -137,6 +139,22 @@ type FileVersion struct {
 // Base implements ValidManifest
 func (manifest *Root) Base() *SignedBase {
 	return &manifest.SignedBase
+}
+
+// GetRootKeyStore create KeyStore of root keys.
+func (manifest *Root) GetRootKeyStore() (ks crypto.KeyStore, err error) {
+	ks = crypto.NewKeyStore()
+
+	role := manifest.Roles[ManifestTypeRoot]
+	for id, info := range role.Keys {
+		pub, err := info.publicKey()
+		if err != nil {
+			return nil, err
+		}
+		ks.Put(id, pub)
+	}
+
+	return
 }
 
 // Base implements ValidManifest
