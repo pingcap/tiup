@@ -63,6 +63,7 @@ of components or the repository itself.`,
 
 	cmd.AddCommand(
 		newRepoInitCmd(env),
+		newRepoSignCmd(env),
 		newRepoOwnerCmd(env),
 		newRepoCompCmd(env),
 		newRepoAddCompCmd(env),
@@ -70,6 +71,23 @@ of components or the repository itself.`,
 		newRepoDelCompCmd(env),
 		newRepoGenkeyCmd(env),
 	)
+	return cmd
+}
+
+// the `repo sign` sub command
+func newRepoSignCmd(env *meta.Environment) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "sign <manifest-file> [key-files]",
+		Short: "Add signatures to a manifest file",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) < 1 {
+				return cmd.Help()
+			}
+
+			return v1manifest.SignManifestFile(args[0], args[1:]...)
+		},
+	}
+
 	return cmd
 }
 
