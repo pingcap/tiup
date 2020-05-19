@@ -178,6 +178,10 @@ func migrate(srcDir, dstDir string) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
+	// save owner key
+	if err := v1manifest.SavePrivKey(ownerkeyInfo, "pingcap", keyDir); err != nil {
+		return errors.Trace(err)
+	}
 
 	index.Owners["pingcap"] = v1manifest.Owner{
 		Name: "PingCAP",
@@ -211,9 +215,10 @@ func migrate(srcDir, dstDir string) error {
 				if err != nil {
 					return err
 				}
+				// FIXME: The URL need to be confirmed, the /id/ part may not be needed
 				vs[v.Version.String()] = v1manifest.VersionItem{
 					Yanked:   false,
-					URL:      filename,
+					URL:      fmt.Sprintf("/%s%s", comp.Name, filename),
 					Entry:    v.Entry,
 					Released: v.Date,
 					FileHash: v1manifest.FileHash{
@@ -237,12 +242,7 @@ func migrate(srcDir, dstDir string) error {
 			Platforms:   platforms,
 		}
 
-		name := fmt.Sprintf("%s-pingcap.json", ownerkeyID[:16])
-		writer, err := os.OpenFile(filepath.Join(dstDir, "keys", name), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
-		if err != nil {
-			return err
-		}
-		defer writer.Close()
+		name := fmt.Sprintf("%s.json", component.ID)
 		signedManifests[component.ID], err = v1manifest.SignManifest(component, ownerkeyInfo)
 		if err != nil {
 			return err
@@ -254,12 +254,15 @@ func migrate(srcDir, dstDir string) error {
 			URL:       fmt.Sprintf("/%s", name),
 			Threshold: 1,
 		}
-		stat, err := writer.Stat()
-		if err != nil {
-			return errors.Trace(err)
-		}
 
-		snapshot.Meta[name] = v1manifest.FileVersion{Version: 1, Length: uint(stat.Size())}
+		bytes, err := cjson.Marshal(signedManifests[component.ID])
+		if err != nil {
+			return err
+		}
+		snapshot.Meta[name] = v1manifest.FileVersion{
+			Version: 1,
+			Length:  uint(len(bytes)),
+		}
 	}
 
 	// sign index and snapshot
@@ -285,7 +288,7 @@ func migrate(srcDir, dstDir string) error {
 
 	// Initialize the root manifest
 	for _, m := range manifests {
-		root.SetRole(m)
+		root.SetRole(m, keys[m.Base().Ty]...)
 	}
 
 	signedManifests[v1manifest.ManifestTypeRoot], err = v1manifest.SignManifest(root, keys[v1manifest.ManifestTypeRoot]...)
