@@ -136,7 +136,7 @@ tiflash_servers:
     # # E.g, if you intend to use an fast and smaller NVMe SSD (256GB) to speed up data ingestion speed in TiFlash,
     # # and 4 extra normal SSDs (512GB each) for main storage. Then your configurations should be look like:
     # #
-    # # data_dir: /nvme_ssd_512/data,/ssd1_512/data,/ssd2_512/data,/ssd3_512/data,/ssd4_512/data
+    # # data_dir: /nvme_ssd_256/data,/ssd1_512/data,/ssd2_512/data,/ssd3_512/data,/ssd4_512/data
     # # config:
     # #   path_realtime_mode: true
     # #
