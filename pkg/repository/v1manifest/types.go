@@ -141,6 +141,21 @@ func (manifest *Root) Base() *SignedBase {
 	return &manifest.SignedBase
 }
 
+// GetKeyStore get a KeyStore with all the keys of all roles.
+func (manifest *Root) GetKeyStore() (ks crypto.KeyStore, err error) {
+	ks = crypto.NewKeyStore()
+	for _, role := range manifest.Roles {
+		for id, info := range role.Keys {
+			pub, err := info.publicKey()
+			if err != nil {
+				return nil, err
+			}
+			ks.Put(id, pub)
+		}
+	}
+	return
+}
+
 // GetRootKeyStore create KeyStore of root keys.
 func (manifest *Root) GetRootKeyStore() (ks crypto.KeyStore, err error) {
 	ks = crypto.NewKeyStore()
