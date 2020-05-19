@@ -112,6 +112,7 @@ func (s *keychain) KeyIDs() []string {
 func NewKeyPair(keyType, keyScheme string) (PubKey, PrivKey, error) {
 	// We only support RSA now
 	if keyType != KeyTypeRSA {
+		panic(keyType)
 		return nil, nil, ErrorUnsupportedKeyType
 	}
 
@@ -127,6 +128,7 @@ func NewKeyPair(keyType, keyScheme string) (PubKey, PrivKey, error) {
 func NewPrivKey(keyType, keyScheme string, key []byte) (PrivKey, error) {
 	// We only support RSA now
 	if keyType != KeyTypeRSA {
+		panic(keyType)
 		return nil, ErrorUnsupportedKeyType
 	}
 
@@ -143,6 +145,7 @@ func NewPrivKey(keyType, keyScheme string, key []byte) (PrivKey, error) {
 func NewPubKey(keyType, keyScheme string, key []byte) (PubKey, error) {
 	// We only support RSA now
 	if keyType != KeyTypeRSA {
+		panic(keyType)
 		return nil, ErrorUnsupportedKeyType
 	}
 
