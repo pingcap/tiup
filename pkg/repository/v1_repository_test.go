@@ -142,16 +142,16 @@ func TestUpdateLocalRoot(t *testing.T) {
 	local := v1manifest.NewMockManifests()
 	repo := NewV1Repo(&mirror, Options{}, local)
 
-	root := rootManifest(t)
+	root, privKey := rootManifest(t)
 	local.Manifests[v1manifest.ManifestFilenameRoot] = root
 
 	// Should success if no new version root.
 	err := repo.updateLocalRoot()
 	assert.Nil(t, err)
 
-	root2 := rootManifest(t)
+	root2, privKey2 := rootManifest(t)
 	fname := fmt.Sprintf("/%d.root.json", root.Version+1)
-	mirror.Resources[fname] = serialize(t, root2)
+	mirror.Resources[fname] = serialize(t, root2, privKey, privKey2)
 
 	// Fail cause wrong version
 	err = repo.updateLocalRoot()
@@ -160,13 +160,13 @@ func TestUpdateLocalRoot(t *testing.T) {
 	// Fix Version but the new root expired.
 	root2.Version = root.Version + 1
 	root2.Expires = "2000-05-11T04:51:08Z"
-	mirror.Resources[fname] = serialize(t, root2)
+	mirror.Resources[fname] = serialize(t, root2, privKey, privKey2)
 	err = repo.updateLocalRoot()
 	assert.NotNil(t, err)
 
 	// Fix Expires, should success now.
 	root2.Expires = "2222-05-11T04:51:08Z"
-	mirror.Resources[fname] = serialize(t, root2)
+	mirror.Resources[fname] = serialize(t, root2, privKey, privKey2)
 	err = repo.updateLocalRoot()
 	assert.Nil(t, err)
 }
@@ -180,7 +180,7 @@ func TestUpdateIndex(t *testing.T) {
 	repo := NewV1Repo(&mirror, Options{}, local)
 
 	index := indexManifest()
-	root := rootManifest(t)
+	root, _ := rootManifest(t)
 	snapshot := snapshotManifest()
 	serIndex := serialize(t, index)
 	mirror.Resources["/5.index.json"] = serIndex
@@ -205,7 +205,7 @@ func TestUpdateComponent(t *testing.T) {
 	repo := NewV1Repo(&mirror, Options{}, local)
 
 	index := indexManifest()
-	root := rootManifest(t)
+	root, _ := rootManifest(t)
 	snapshot := snapshotManifest()
 	foo := componentManifest()
 	serFoo := serialize(t, foo)
@@ -267,19 +267,19 @@ func TestDownloadManifest(t *testing.T) {
 	// bad hash
 	version1.Hashes[v1manifest.SHA256] = "Not a hash"
 	foo.Platforms["a_platform"]["2.0.1"] = version1
-	reader, err = repo.downloadComponent("foo", "a_platform", "2.0.1")
+	_, err = repo.downloadComponent("foo", "a_platform", "2.0.1")
 	assert.NotNil(t, err)
 
 	//  Too long
 	version2.Length = 26
 	foo.Platforms["a_platform"]["2.0.1"] = version2
-	reader, err = repo.downloadComponent("foo", "a_platform", "2.0.1")
+	_, err = repo.downloadComponent("foo", "a_platform", "2.0.1")
 	assert.NotNil(t, err)
 
 	// missing tar ball/bad url
 	version3.URL = "/bar-2.0.1.tar.gz"
 	foo.Platforms["a_platform"]["2.0.1"] = version3
-	reader, err = repo.downloadComponent("foo", "a_platform", "2.0.1")
+	_, err = repo.downloadComponent("foo", "a_platform", "2.0.1")
 	assert.NotNil(t, err)
 }
 
@@ -358,10 +358,26 @@ func indexManifest() *v1manifest.Index {
 	}
 }
 
-func rootManifest(t *testing.T) *v1manifest.Root {
+func rootManifest(t *testing.T) (*v1manifest.Root, crypto.PrivKey) {
 	// TODO use the key id and private key to sign the index manifest
-	info, keyID, _, err := v1manifest.FreshKeyInfo()
+	info, keyID, priv, err := v1manifest.FreshKeyInfo()
 	assert.Nil(t, err)
+	id, err := info.ID()
+	assert.Nil(t, err)
+	bytes, err := priv.Serialize()
+	assert.Nil(t, err)
+	privKeyInfo := v1manifest.NewKeyInfo(bytes)
+	// The signed id will be priveID and it should be equal as keyID
+	privID, err := privKeyInfo.ID()
+	assert.Nil(t, err)
+	assert.Equal(t, keyID, privID)
+
+	t.Log("keyID: ", keyID)
+	t.Log("id: ", id)
+	t.Log("privKeyInfo id: ", privID)
+	// t.Logf("info: %+v\n", info)
+	// t.Logf("pinfo: %+v\n", privKeyInfo)
+
 	return &v1manifest.Root{
 		SignedBase: v1manifest.SignedBase{
 			Ty:          v1manifest.ManifestTypeRoot,
@@ -381,16 +397,33 @@ func rootManifest(t *testing.T) *v1manifest.Root {
 				Threshold: 1,
 			},
 		},
-	}
+	}, priv
 }
 
-func serialize(t *testing.T, role v1manifest.ValidManifest) string {
+func serialize(t *testing.T, role v1manifest.ValidManifest, privKeys ...crypto.PrivKey) string {
+	var keyInfos []*v1manifest.KeyInfo
+
+	var priv crypto.PrivKey
+	if len(privKeys) > 0 {
+		for _, priv := range privKeys {
+			bytes, err := priv.Serialize()
+			assert.Nil(t, err)
+			keyInfo := v1manifest.NewKeyInfo(bytes)
+			keyInfos = append(keyInfos, keyInfo)
+		}
+	} else {
+		// just use a generate one
+		var err error
+		_, priv, err = crypto.RSAPair()
+		assert.Nil(t, err)
+		bytes, err := priv.Serialize()
+		assert.Nil(t, err)
+		keyInfo := v1manifest.NewKeyInfo(bytes)
+		keyInfos = append(keyInfos, keyInfo)
+	}
+
 	var out strings.Builder
-	_, priv, err := crypto.RSAPair()
-	assert.Nil(t, err)
-	bytes, err := priv.Serialize()
-	assert.Nil(t, err)
-	err = v1manifest.SignAndWrite(&out, role, v1manifest.NewKeyInfo(bytes))
+	err := v1manifest.SignAndWrite(&out, role, keyInfos...)
 	assert.Nil(t, err)
 	return out.String()
 }

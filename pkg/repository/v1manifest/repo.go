@@ -366,7 +366,7 @@ func FreshKeyInfo() (*KeyInfo, string, crypto.PrivKey, error) {
 		return nil, "", nil, err
 	}
 	info := KeyInfo{
-		Algorithms: []string{SHA256},
+		Algorithms: []string{SHA256, SHA512},
 		Type:       "rsa",
 		Value:      map[string]string{"public": string(pubBytes)},
 		Scheme:     "rsassa-pss-sha256",
