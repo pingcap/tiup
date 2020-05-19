@@ -115,9 +115,11 @@ func (r *V1Repository) updateLocalRoot() error {
 
 		reader, err := r.mirror.Fetch(fname, int64(maxRootSize))
 		if err != nil {
-			// FIXME return error if the err means not means this manifest file?
-			// just some kind failed to download.
-			break
+			// Break if we have read the newest version.
+			if errors.Cause(err) == ErrNotFound {
+				break
+			}
+			return errors.AddStack(err)
 		}
 
 		decoder := json.NewDecoder(reader)
