@@ -157,7 +157,7 @@ func SignManifestFile(mfile string, kfiles ...string) error {
 	if err := json.Unmarshal(content, &m); err != nil {
 		return err
 	}
-	payload, err := json.Marshal(m.Signed)
+	payload, err := cjson.Marshal(m.Signed)
 	if err != nil {
 		return err
 	}
