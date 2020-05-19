@@ -86,7 +86,8 @@ func Download(component, nodeOS, arch string, version repository.Version) error 
 			return errors.Errorf("component '%s' does not contain version '%s'", component, version)
 		}
 
-		tmpDir := filepath.Join(os.TempDir(), "tiup-cluster")
+		// The /tmp maybe has different device from
+		tmpDir := meta.ProfilePath(meta.TiOpsPackageCacheDir, "tmp")
 		if err := os.MkdirAll(tmpDir, 0755); err != nil {
 			return errors.Trace(err)
 		}
