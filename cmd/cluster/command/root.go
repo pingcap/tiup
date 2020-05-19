@@ -14,19 +14,26 @@
 package command
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
+	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/colorutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/errutil"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/flags"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/logger"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	operator "github.com/pingcap-incubator/tiup-cluster/pkg/operation"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/report"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/telemetry"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/version"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	tiupmeta "github.com/pingcap-incubator/tiup/pkg/meta"
@@ -41,6 +48,15 @@ var (
 	gOpt        operator.Options
 	skipConfirm bool
 )
+
+func getParentNames(cmd *cobra.Command) []string {
+	if cmd == nil {
+		return nil
+	}
+
+	p := cmd.Parent()
+	return append(getParentNames(p), cmd.Name())
+}
 
 func init() {
 	logger.InitGlobalLogger()
@@ -58,19 +74,32 @@ func init() {
 		SilenceErrors: true,
 		Version:       version.NewTiOpsVersion().FullInfo(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if err := meta.Initialize("cluster"); err != nil {
+			var err error
+			var env *tiupmeta.Environment
+			if err = meta.Initialize("cluster"); err != nil {
 				return err
 			}
-			return tiupmeta.InitRepository(repository.Options{
+			// Running in other OS/ARCH Should be fine we only download manifest file.
+			env, err = tiupmeta.InitEnv(repository.Options{
 				GOOS:   "linux",
 				GOARCH: "amd64",
 			})
+			if err != nil {
+				return err
+			}
+			meta.SetTiupEnv(env)
+
+			cmds := append(getParentNames(cmd), args...)
+			clusterReport.Command = strings.Join(cmds, " ")
+
+			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			return tiupmeta.Repository().Mirror().Close()
+
+			return meta.TiupEnv().Repository().Mirror().Close()
 		},
 	}
 
@@ -99,6 +128,7 @@ func init() {
 		newReloadCmd(),
 		newPatchCmd(),
 		newTestCmd(), // hidden command for test internally
+		newTelemetryCmd(),
 	)
 }
 
@@ -169,6 +199,16 @@ func Execute() {
 		}
 	}
 
+	teleReport = new(telemetry.Report)
+	clusterReport = new(telemetry.ClusterReport)
+	teleReport.EventDetail = &telemetry.Report_Cluster{Cluster: clusterReport}
+	if report.Enable() {
+		teleReport.EventUUID = uuid.New().String()
+		teleReport.EventUnixTimestamp = time.Now().Unix()
+		clusterReport.UUID = report.UUID()
+	}
+
+	start := time.Now()
 	code := 0
 	err := rootCmd.Execute()
 	if err != nil {
@@ -176,6 +216,30 @@ func Execute() {
 	}
 
 	zap.L().Info("Execute command finished", zap.Int("code", code), zap.Error(err))
+
+	if report.Enable() {
+		clusterReport.ExitCode = int32(code)
+		clusterReport.Nodes = teleNodeInfos
+		if teleTopology != "" {
+			if data, err := telemetry.ScrubYaml([]byte(teleTopology), map[string]struct{}{"host": {}}); err == nil {
+				clusterReport.Topology = (string(data))
+			}
+		}
+		clusterReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
+		tele := telemetry.NewTelemetry()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+		err := tele.Report(ctx, teleReport)
+		if flags.DebugMode {
+			if err != nil {
+				log.Infof("report failed: %v", err)
+			}
+			fmt.Printf("report: %s\n", teleReport.String())
+			if data, err := json.Marshal(teleReport); err == nil {
+				fmt.Printf("report: %s\n", string(data))
+			}
+		}
+		cancel()
+	}
 
 	if err != nil {
 		if errx := errorx.Cast(err); errx != nil {

@@ -59,19 +59,26 @@ func init() {
 		SilenceErrors: true,
 		Version:       version.NewTiOpsVersion().FullInfo(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if err := meta.Initialize("dm"); err != nil {
+			var err error
+			if err = meta.Initialize("dm"); err != nil {
 				return err
 			}
-			return tiupmeta.InitRepository(repository.Options{
+			env, err := tiupmeta.InitEnv(repository.Options{
 				GOOS:   "linux",
 				GOARCH: "amd64",
 			})
+			if err != nil {
+				return err
+			}
+
+			meta.SetTiupEnv(env)
+			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			return tiupmeta.Repository().Mirror().Close()
+			return meta.TiupEnv().Repository().Mirror().Close()
 		},
 	}
 

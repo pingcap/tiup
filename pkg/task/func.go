@@ -16,12 +16,20 @@ package task
 // Func wrap a closure.
 type Func struct {
 	name string
-	fn   func() error
+	fn   func(ctx *Context) error
+}
+
+// NewFunc create a Func task
+func NewFunc(name string, fn func(ctx *Context) error) *Func {
+	return &Func{
+		name: name,
+		fn:   fn,
+	}
 }
 
 // Execute implements the Task interface
-func (m *Func) Execute(_ *Context) error {
-	return m.fn()
+func (m *Func) Execute(ctx *Context) error {
+	return m.fn(ctx)
 }
 
 // Rollback implements the Task interface

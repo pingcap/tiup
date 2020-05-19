@@ -21,6 +21,7 @@ import (
 
 // StepDisplay is a task that will display a progress bar for inner task.
 type StepDisplay struct {
+	hidden      bool
 	inner       Task
 	prefix      string
 	children    map[Task]struct{}
@@ -60,12 +61,22 @@ func newStepDisplay(prefix string, inner Task) *StepDisplay {
 	}
 }
 
+// SetHidden set step hidden or not.
+func (s *StepDisplay) SetHidden(h bool) *StepDisplay {
+	s.hidden = h
+	return s
+}
+
 func (s *StepDisplay) resetAsMultiBarItem(b *progress.MultiBar) {
 	s.progressBar = b.AddBar(s.prefix)
 }
 
 // Execute implements the Task interface
 func (s *StepDisplay) Execute(ctx *Context) error {
+	if s.hidden {
+		return s.inner.Execute(ctx)
+	}
+
 	if singleBar, ok := s.progressBar.(*progress.SingleBar); ok {
 		singleBar.StartRenderLoop()
 	}
@@ -133,7 +144,9 @@ func newParallelStepDisplay(prefix string, sdTasks ...*StepDisplay) *ParallelSte
 	bar := progress.NewMultiBar(prefix)
 	tasks := make([]Task, 0, len(sdTasks))
 	for _, t := range sdTasks {
-		t.resetAsMultiBarItem(bar)
+		if !t.hidden {
+			t.resetAsMultiBarItem(bar)
+		}
 		tasks = append(tasks, t)
 	}
 	return &ParallelStepDisplay{

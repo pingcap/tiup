@@ -55,7 +55,6 @@ func newTestCmd() *cobra.Command {
 				fmt.Println("unknown command: ", args[1])
 				return cmd.Help()
 			}
-
 		},
 	}
 

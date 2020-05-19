@@ -25,7 +25,6 @@ import (
 	operator "github.com/pingcap-incubator/tiup-cluster/pkg/operation"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/task"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
-	tiupmeta "github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
@@ -150,7 +149,7 @@ func checkPackage(clusterName, comp, packagePath string) error {
 	if err != nil {
 		return err
 	}
-	manifest, err := tiupmeta.Repository().ComponentVersions(comp)
+	manifest, err := meta.TiupEnv().Repository().ComponentVersions(comp)
 	if err != nil {
 		return err
 	}

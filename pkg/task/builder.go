@@ -60,7 +60,7 @@ func (b *Builder) UserSSH(host string, port int, deployUser string, sshTimeout i
 }
 
 // Func append a func task.
-func (b *Builder) Func(name string, fn func() error) *Builder {
+func (b *Builder) Func(name string, fn func(ctx *Context) error) *Builder {
 	b.tasks = append(b.tasks, &Func{
 		name: name,
 		fn:   fn,
@@ -116,12 +116,7 @@ func (b *Builder) CopyFile(src, dst, server string, download bool) *Builder {
 
 // Download appends a Downloader task to the current task collection
 func (b *Builder) Download(component, os, arch string, version repository.Version) *Builder {
-	b.tasks = append(b.tasks, &Downloader{
-		component: component,
-		os:        os,
-		arch:      arch,
-		version:   version,
-	})
+	b.tasks = append(b.tasks, NewDownloader(component, os, arch, version))
 	return b
 }
 

@@ -11,20 +11,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package flags
+package meta
 
 import (
-	"os"
+	tiupmeta "github.com/pingcap-incubator/tiup/pkg/meta"
 )
 
-// Global flags
-var (
-	ShowBacktrace = false
-	DebugMode     = true
-)
+var _env *tiupmeta.Environment
 
-func init() {
-	if s := os.Getenv("TIUP_CLUSTER_DEBUG"); s == "enable" {
-		DebugMode = true
-	}
+// SetTiupEnv the gloable env used.
+func SetTiupEnv(env *tiupmeta.Environment) {
+	_env = env
+}
+
+// TiupEnv Get the gloable env used.
+func TiupEnv() *tiupmeta.Environment {
+	return _env
 }

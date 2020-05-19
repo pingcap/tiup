@@ -14,7 +14,9 @@
 package command
 
 import (
+	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -29,13 +31,23 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/logger"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
+	operator "github.com/pingcap-incubator/tiup-cluster/pkg/operation"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/report"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/task"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/telemetry"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
+)
+
+var (
+	teleReport    *telemetry.Report
+	clusterReport *telemetry.ClusterReport
+	teleNodeInfos []*telemetry.NodeInfo
+	teleTopology  string
 )
 
 var (
@@ -145,6 +157,10 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 	var topo meta.TopologySpecification
 	if err := utils.ParseTopologyYaml(topoFile, &topo); err != nil {
 		return err
+	}
+
+	if data, err := ioutil.ReadFile(topoFile); err == nil {
+		teleTopology = string(data)
 	}
 
 	if err := prepare.CheckClusterPortConflict(clusterName, &topo); err != nil {
@@ -274,6 +290,14 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 		deployCompTasks = append(deployCompTasks, t)
 	})
 
+	nodeInfoTask := task.NewBuilder().Func("Check status", func(ctx *task.Context) error {
+		var err error
+		teleNodeInfos, err = operator.GetNodeInfo(context.Background(), ctx, &topo)
+		_ = err
+		// intend to never return error
+		return nil
+	}).BuildAsStep("Check status").SetHidden(true)
+
 	// Deploy monitor relevant components to remote
 	dlTasks, dpTasks := buildMonitoredDeployTask(
 		clusterName,
@@ -284,14 +308,22 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 	)
 	downloadCompTasks = append(downloadCompTasks, dlTasks...)
 	deployCompTasks = append(deployCompTasks, dpTasks...)
+	if report.Enable() {
+		deployCompTasks = append(deployCompTasks, nodeInfoTask)
+	}
 
-	t := task.NewBuilder().
+	builder := task.NewBuilder().
 		Step("+ Generate SSH keys",
 			task.NewBuilder().SSHKeyGen(meta.ClusterPath(clusterName, "ssh", "id_rsa")).Build()).
 		ParallelStep("+ Download TiDB components", downloadCompTasks...).
 		ParallelStep("+ Initialize target host environments", envInitTasks...).
-		ParallelStep("+ Copy files", deployCompTasks...).
-		Build()
+		ParallelStep("+ Copy files", deployCompTasks...)
+
+	if report.Enable() {
+		builder.ParallelStep("+ Check status", nodeInfoTask)
+	}
+
+	t := builder.Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {

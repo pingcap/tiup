@@ -22,7 +22,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/executor"
-	tiupmeta "github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap/errors"
 )
 
@@ -145,7 +144,7 @@ func mergeImported(importConfig []byte, specConfig map[string]interface{}) (map[
 }
 
 func checkConfig(e executor.TiOpsExecutor, componentName, clusterVersion, config string, paths DirPaths) error {
-	manifest, err := tiupmeta.Repository().ComponentVersions(componentName)
+	manifest, err := TiupEnv().Repository().ComponentVersions(componentName)
 	if err != nil {
 		return err
 	}

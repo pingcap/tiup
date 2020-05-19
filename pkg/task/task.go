@@ -21,7 +21,7 @@ import (
 
 	"github.com/pingcap-incubator/tiup-cluster/pkg/executor"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/operation"
+	operator "github.com/pingcap-incubator/tiup-cluster/pkg/operation"
 )
 
 var (
@@ -208,6 +208,14 @@ func (s *Serial) String() string {
 		ss = append(ss, t.String())
 	}
 	return strings.Join(ss, "\n")
+}
+
+// NewParallel create a Parallel task.
+func NewParallel(hideDetailDisplay bool, tasks ...Task) *Parallel {
+	return &Parallel{
+		hideDetailDisplay: hideDetailDisplay,
+		inner:             tasks,
+	}
 }
 
 // Execute implements the Task interface

@@ -12,6 +12,8 @@ require (
 	github.com/creasty/defaults v1.3.0
 	github.com/fatih/color v1.9.0
 	github.com/go-sql-driver/mysql v1.5.0
+	github.com/gogo/protobuf v1.3.1
+	github.com/golang/protobuf v1.3.2
 	github.com/google/uuid v1.1.1
 	github.com/joomcode/errorx v1.0.1
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a // indirect
@@ -20,7 +22,7 @@ require (
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-runewidth v0.0.7
 	github.com/onsi/gomega v1.5.0 // indirect
-	github.com/pingcap-incubator/tiup v0.0.2-0.20200414234825-c398de2932f8
+	github.com/pingcap-incubator/tiup v0.0.2-0.20200514061956-86ddb1168e44
 	github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712
 	github.com/pingcap/errors v0.11.5-0.20190809092503-95897b64e011
 	github.com/pingcap/kvproto v0.0.0-20200317095539-c42a1d8db7d3
@@ -28,6 +30,7 @@ require (
 	github.com/pingcap/tidb-insight v0.3.1-0.20200423065530-051a0e987419
 	github.com/relex/aini v1.1.3
 	github.com/sergi/go-diff v1.0.1-0.20180205163309-da645544ed44
+	github.com/shirou/gopsutil v2.20.3+incompatible
 	github.com/spf13/cobra v1.0.0
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20191023171146-3cf2f69b5738
 	go.uber.org/atomic v1.6.0
