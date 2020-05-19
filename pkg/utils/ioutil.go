@@ -120,3 +120,12 @@ func Copy(src, dst string) error {
 	}
 	return out.Close()
 }
+
+// Move moves a file from src to dst, this is done by copying the file and then
+// delete the old one. Use os.Rename() to rename file within the filesystem
+func Move(src, dst string) error {
+	if err := Copy(src, dst); err != nil {
+		return err
+	}
+	return os.Remove(src)
+}

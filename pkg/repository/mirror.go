@@ -17,13 +17,16 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cavaliercoder/grab"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 )
 
@@ -138,11 +141,17 @@ func (l *localFilesystem) Close() error {
 
 type httpMirror struct {
 	server  string
+	tmpDir  string
 	options MirrorOptions
 }
 
 // Open implements the Mirror interface
 func (l *httpMirror) Open() error {
+	tmpDir := filepath.Join(os.TempDir(), strconv.Itoa(rand.Int()))
+	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
+		return errors.Trace(err)
+	}
+	l.tmpDir = tmpDir
 	return nil
 }
 
@@ -216,9 +225,14 @@ func (l *httpMirror) prepareURL(resource string) string {
 
 // Download implements the Mirror interface
 func (l *httpMirror) Download(resource, targetDir string) error {
-	r, err := l.download(l.prepareURL(resource), filepath.Join(targetDir, resource), 0)
-	r.Close()
-	return err
+	tmpFilePath := filepath.Join(l.tmpDir, resource)
+	dstFilePath := filepath.Join(targetDir, resource)
+	r, err := l.download(l.prepareURL(resource), tmpFilePath, 0)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	defer r.Close()
+	return utils.Move(tmpFilePath, dstFilePath)
 }
 
 // Fetch implements the Mirror interface
@@ -228,6 +242,9 @@ func (l *httpMirror) Fetch(resource string, maxSize int64) (io.ReadCloser, error
 
 // Close implements the Mirror interface
 func (l *httpMirror) Close() error {
+	if err := os.RemoveAll(l.tmpDir); err != nil {
+		return errors.Trace(err)
+	}
 	return nil
 }
 
