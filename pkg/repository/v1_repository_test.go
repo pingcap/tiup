@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -21,6 +22,22 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestFnameWithVersion(t *testing.T) {
+	tests := []struct {
+		name        string
+		version     uint
+		versionName string
+	}{
+		{"root.json", 1, "1.root.json"},
+		{"/root.json", 1, "/1.root.json"},
+	}
+
+	for _, test := range tests {
+		fname := fnameWithVersion(test.name, test.version)
+		assert.Equal(t, test.versionName, fname)
+	}
+}
 
 func TestCheckTimestamp(t *testing.T) {
 	mirror := MockMirror{
@@ -114,6 +131,43 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 
 	// TODO test that invalid signature of snapshot causes an error
 	// TODO test that signature error on timestamp causes root to be reloaded and timestamp to be rechecked
+}
+
+func TestUpdateLocalRoot(t *testing.T) {
+	mirror := MockMirror{
+		Resources: map[string]string{},
+	}
+
+	repo := NewV1Repo(&mirror, Options{})
+	local := v1manifest.NewMockManifests()
+
+	root := rootManifest(t)
+	local.Manifests[v1manifest.ManifestFilenameRoot] = root
+
+	// Should success if no new version root.
+	err := repo.updateLocalRoot(local)
+	assert.Nil(t, err)
+
+	root2 := rootManifest(t)
+	fname := fmt.Sprintf("/%d.root.json", root.Version+1)
+	mirror.Resources[fname] = serialize(t, root2)
+
+	// Fail cause wrong version
+	err = repo.updateLocalRoot(local)
+	assert.NotNil(t, err)
+
+	// Fix Version but the new root expired.
+	root2.Version = root.Version + 1
+	root2.Expires = "2000-05-11T04:51:08Z"
+	mirror.Resources[fname] = serialize(t, root2)
+	err = repo.updateLocalRoot(local)
+	assert.NotNil(t, err)
+
+	// Fix Expires, should success now.
+	root2.Expires = "2222-05-11T04:51:08Z"
+	mirror.Resources[fname] = serialize(t, root2)
+	err = repo.updateLocalRoot(local)
+	assert.Nil(t, err)
 }
 
 func TestUpdateIndex(t *testing.T) {
@@ -266,6 +320,11 @@ func rootManifest(t *testing.T) *v1manifest.Root {
 		Roles: map[string]*v1manifest.Role{
 			v1manifest.ManifestTypeIndex: {
 				URL:       v1manifest.ManifestURLIndex,
+				Keys:      map[string]*v1manifest.KeyInfo{keyID: info},
+				Threshold: 1,
+			},
+			v1manifest.ManifestTypeRoot: {
+				URL:       v1manifest.ManifestURLRoot,
 				Keys:      map[string]*v1manifest.KeyInfo{keyID: info},
 				Threshold: 1,
 			},

@@ -119,6 +119,7 @@ func (manifest *Manifest) VerifySignature(threshold uint, keys crypto.KeyStore) 
 			// TODO use SignatureError
 			err := fmt.Errorf("signature key %s not found", sig.KeyID)
 			errs = append(errs, err)
+			continue
 		}
 		err := key.Verify(payload, sig.Sig)
 		if err != nil {

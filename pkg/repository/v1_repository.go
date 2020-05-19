@@ -174,7 +174,7 @@ func (r *V1Repository) updateLocalRoot(local v1manifest.LocalManifests) error {
 	}
 
 	for _, m := range newRoots {
-		filename := fmt.Sprintf("%v.%s", m.Signed.Base().Version, v1manifest.ManifestFilenameRoot)
+		filename := fnameWithVersion(v1manifest.ManifestTypeRoot, m.Signed.Base().Version)
 		err = local.SaveManifest(&m, filename)
 		if err != nil {
 			return errors.AddStack(err)
