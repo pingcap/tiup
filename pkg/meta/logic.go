@@ -604,16 +604,9 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVe
 		return err
 	}
 
-	var name string
-	for _, spec := range i.instance.topo.PDServers {
-		if spec.Host == i.GetHost() && spec.ClientPort == i.GetPort() {
-			name = spec.Name
-		}
-	}
-
 	spec := i.InstanceSpec.(PDSpec)
 	cfg := scripts.NewPDScript(
-		name,
+		spec.Name,
 		i.GetHost(),
 		paths.Deploy,
 		paths.Data[0],
@@ -679,16 +672,9 @@ func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b Specification, clus
 	}
 
 	c := b.GetClusterSpecification()
-	name := i.Name
-	for _, spec := range c.PDServers {
-		if spec.Host == i.GetHost() {
-			name = spec.Name
-		}
-	}
-
 	spec := i.InstanceSpec.(PDSpec)
 	cfg := scripts.NewPDScaleScript(
-		name,
+		i.Name,
 		i.GetHost(),
 		paths.Deploy,
 		paths.Data[0],

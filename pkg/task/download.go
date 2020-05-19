@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	tiupmeta "github.com/pingcap-incubator/tiup/pkg/meta"
@@ -93,23 +94,29 @@ func (d *Downloader) Execute(_ *Context) error {
 			return errors.Errorf("component '%s' does not contain version '%s'", d.component, d.version)
 		}
 
-		err = repo.Mirror().Download(fileName, meta.ProfilePath(meta.TiOpsPackageCacheDir))
+		tmpDir := filepath.Join(os.TempDir(), "tiup-cluster")
+		if err := os.MkdirAll(tmpDir, 0755); err != nil {
+			return errors.Trace(err)
+		}
+
+		err = repo.Mirror().Download(fileName, tmpDir)
 		if err != nil {
 			return errors.AddStack(err)
 		}
 
-		err = repo.Mirror().Download(sha1File, meta.ProfilePath(meta.TiOpsPackageCacheDir))
+		err = repo.Mirror().Download(sha1File, tmpDir)
 		if err != nil {
 			return errors.AddStack(err)
 		}
 
-		shaPath := meta.ProfilePath(meta.TiOpsPackageCacheDir, sha1File)
+		tarPath := filepath.Join(tmpDir, fileName)
+		shaPath := filepath.Join(tmpDir, sha1File)
 		sha, err := ioutil.ReadFile(shaPath)
 		if err != nil {
 			return errors.Trace(err)
 		}
 
-		file, err := os.Open(srcPath)
+		file, err := os.Open(tarPath)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -118,9 +125,17 @@ func (d *Downloader) Execute(_ *Context) error {
 		_ = file.Close()
 
 		if err != nil {
-			_ = os.Remove(srcPath)
+			_ = os.Remove(tarPath)
 			_ = os.Remove(shaPath)
 			return err
+		}
+
+		if err = os.Rename(tarPath, srcPath); err != nil {
+			return errors.Trace(err)
+		}
+
+		if err = os.Rename(shaPath, meta.ProfilePath(meta.TiOpsPackageCacheDir, sha1File)); err != nil {
+			return errors.Trace(err)
 		}
 	}
 
