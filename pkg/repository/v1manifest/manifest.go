@@ -45,6 +45,10 @@ const (
 
 	// SpecVersion of current, maybe we could expand it later
 	CurrentSpecVersion = "0.1.0"
+
+	// Acceptable values for hash kinds.
+	SHA256 = "sha256"
+	SHA512 = "sha512"
 )
 
 // ty is type information about a manifest
@@ -121,7 +125,8 @@ func (manifest *Manifest) VerifySignature(threshold uint, keys crypto.KeyStore) 
 			errs = append(errs, err)
 			continue
 		}
-		err := key.Verify(payload, sig.Sig)
+		err := key.VerifySignature(payload, sig.Sig)
+		// TODO use SignatureError
 		if err != nil {
 			errs = append(errs, err)
 		} else {
@@ -222,12 +227,12 @@ func (manifest *Index) isValid() error {
 }
 
 func (manifest *Component) isValid() error {
-	// TODO
+	// Nothing to do.
 	return nil
 }
 
 func (manifest *Snapshot) isValid() error {
-	// TODO
+	// Nothing to do.
 	return nil
 }
 

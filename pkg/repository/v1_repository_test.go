@@ -15,6 +15,7 @@ package repository
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"testing"
 
@@ -43,16 +44,16 @@ func TestCheckTimestamp(t *testing.T) {
 	mirror := MockMirror{
 		Resources: map[string]string{},
 	}
-	repo := NewV1Repo(&mirror, Options{})
 	local := v1manifest.NewMockManifests()
+	repo := NewV1Repo(&mirror, Options{}, local)
 
 	repoTimestamp := timestampManifest()
 	// Test that no local timestamp => return hash
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, repoTimestamp)
-	hash, err := repo.checkTimestamp(local)
+	hash, err := repo.checkTimestamp()
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1001), hash.Length)
-	assert.Equal(t, "123456", hash.Hashes["sha256"])
+	assert.Equal(t, "123456", hash.Hashes[v1manifest.SHA256])
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameTimestamp)
 
 	// Test that hashes match => return nil
@@ -61,17 +62,17 @@ func TestCheckTimestamp(t *testing.T) {
 	localManifest.Expires = "2220-05-13T04:51:08Z"
 	local.Manifests[v1manifest.ManifestFilenameTimestamp] = localManifest
 	local.Saved = []string{}
-	hash, err = repo.checkTimestamp(local)
+	hash, err = repo.checkTimestamp()
 	assert.Nil(t, err)
 	assert.Nil(t, hash)
 	assert.Empty(t, local.Saved)
 
 	// Hashes don't match => return correct File hash
-	localManifest.Meta[v1manifest.ManifestURLSnapshot].Hashes["sha256"] = "023456"
-	hash, err = repo.checkTimestamp(local)
+	localManifest.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = "023456"
+	hash, err = repo.checkTimestamp()
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1001), hash.Length)
-	assert.Equal(t, "123456", hash.Hashes["sha256"])
+	assert.Equal(t, "123456", hash.Hashes[v1manifest.SHA256])
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameTimestamp)
 
 	// Test that an expired manifest from the mirror causes an error
@@ -79,14 +80,14 @@ func TestCheckTimestamp(t *testing.T) {
 	expiredTimestamp.Expires = "2000-05-12T04:51:08Z"
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, expiredTimestamp)
 	local.Saved = []string{}
-	hash, err = repo.checkTimestamp(local)
+	hash, err = repo.checkTimestamp()
 	assert.NotNil(t, err)
 	assert.Empty(t, local.Saved)
 
 	// Test that an invalid manifest from the mirror causes an error
 	invalidTimestamp := timestampManifest()
 	invalidTimestamp.SpecVersion = "10.1.0"
-	hash, err = repo.checkTimestamp(local)
+	hash, err = repo.checkTimestamp()
 	assert.NotNil(t, err)
 	assert.Empty(t, local.Saved)
 
@@ -97,8 +98,8 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 	mirror := MockMirror{
 		Resources: map[string]string{},
 	}
-	repo := NewV1Repo(&mirror, Options{})
 	local := v1manifest.NewMockManifests()
+	repo := NewV1Repo(&mirror, Options{}, local)
 
 	timestamp := timestampManifest()
 	snapshotManifest := snapshotManifest()
@@ -107,15 +108,15 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 	local.Manifests[v1manifest.ManifestFilenameTimestamp] = timestamp
 
 	// test that up to date timestamp does nothing
-	snapshot, err := repo.updateLocalSnapshot(local)
+	snapshot, err := repo.updateLocalSnapshot()
 	assert.Nil(t, err)
 	assert.Nil(t, snapshot)
 	assert.Empty(t, local.Saved)
 
 	// test that out of date timestamp downloads and saves snapshot
-	timestamp.Meta[v1manifest.ManifestURLSnapshot].Hashes["sha256"] = "an old hash"
+	timestamp.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = "an old hash"
 	timestamp.Version -= 1
-	snapshot, err = repo.updateLocalSnapshot(local)
+	snapshot, err = repo.updateLocalSnapshot()
 	assert.Nil(t, err)
 	assert.NotNil(t, snapshot)
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameSnapshot)
@@ -124,7 +125,7 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 	snapshotManifest.Expires = "2000-05-11T04:51:08Z"
 	mirror.Resources[v1manifest.ManifestURLSnapshot] = serialize(t, snapshotManifest)
 	local.Saved = []string{}
-	snapshot, err = repo.updateLocalSnapshot(local)
+	snapshot, err = repo.updateLocalSnapshot()
 	assert.NotNil(t, err)
 	assert.Nil(t, snapshot)
 	assert.NotContains(t, local.Saved, v1manifest.ManifestFilenameSnapshot)
@@ -138,14 +139,14 @@ func TestUpdateLocalRoot(t *testing.T) {
 		Resources: map[string]string{},
 	}
 
-	repo := NewV1Repo(&mirror, Options{})
 	local := v1manifest.NewMockManifests()
+	repo := NewV1Repo(&mirror, Options{}, local)
 
 	root := rootManifest(t)
 	local.Manifests[v1manifest.ManifestFilenameRoot] = root
 
 	// Should success if no new version root.
-	err := repo.updateLocalRoot(local)
+	err := repo.updateLocalRoot()
 	assert.Nil(t, err)
 
 	root2 := rootManifest(t)
@@ -153,20 +154,20 @@ func TestUpdateLocalRoot(t *testing.T) {
 	mirror.Resources[fname] = serialize(t, root2)
 
 	// Fail cause wrong version
-	err = repo.updateLocalRoot(local)
+	err = repo.updateLocalRoot()
 	assert.NotNil(t, err)
 
 	// Fix Version but the new root expired.
 	root2.Version = root.Version + 1
 	root2.Expires = "2000-05-11T04:51:08Z"
 	mirror.Resources[fname] = serialize(t, root2)
-	err = repo.updateLocalRoot(local)
+	err = repo.updateLocalRoot()
 	assert.NotNil(t, err)
 
 	// Fix Expires, should success now.
 	root2.Expires = "2222-05-11T04:51:08Z"
 	mirror.Resources[fname] = serialize(t, root2)
-	err = repo.updateLocalRoot(local)
+	err = repo.updateLocalRoot()
 	assert.Nil(t, err)
 }
 
@@ -175,8 +176,8 @@ func TestUpdateIndex(t *testing.T) {
 	mirror := MockMirror{
 		Resources: map[string]string{},
 	}
-	repo := NewV1Repo(&mirror, Options{})
 	local := v1manifest.NewMockManifests()
+	repo := NewV1Repo(&mirror, Options{}, local)
 
 	index := indexManifest()
 	root := rootManifest(t)
@@ -188,7 +189,7 @@ func TestUpdateIndex(t *testing.T) {
 	index.Version -= 1
 	local.Manifests[v1manifest.ManifestFilenameIndex] = index
 
-	updated, err := repo.updateLocalIndex(local, uint(len(serIndex)))
+	updated, err := repo.updateLocalIndex(uint(len(serIndex)))
 	assert.Nil(t, err)
 	assert.NotNil(t, updated)
 	assert.Contains(t, local.Saved, "index.json")
@@ -200,8 +201,8 @@ func TestUpdateComponent(t *testing.T) {
 	mirror := MockMirror{
 		Resources: map[string]string{},
 	}
-	repo := NewV1Repo(&mirror, Options{})
 	local := v1manifest.NewMockManifests()
+	repo := NewV1Repo(&mirror, Options{}, local)
 
 	index := indexManifest()
 	root := rootManifest(t)
@@ -214,7 +215,7 @@ func TestUpdateComponent(t *testing.T) {
 	local.Manifests[v1manifest.ManifestFilenameIndex] = index
 
 	// Test happy path
-	updated, err := repo.updateComponentManifest(local, "foo")
+	updated, err := repo.updateComponentManifest("foo")
 	assert.Nil(t, err)
 	assert.NotNil(t, updated)
 	assert.Contains(t, local.Saved, "foo.json")
@@ -224,19 +225,62 @@ func TestUpdateComponent(t *testing.T) {
 	oldFoo.Version = 8
 	local.Manifests["foo.json"] = oldFoo
 	local.Saved = []string{}
-	updated, err = repo.updateComponentManifest(local, "foo")
+	updated, err = repo.updateComponentManifest("foo")
 	assert.NotNil(t, err)
 	assert.Nil(t, updated)
 	assert.Empty(t, local.Saved)
 
 	// Test that id missing from index causes an error
-	updated, err = repo.updateComponentManifest(local, "bar")
+	updated, err = repo.updateComponentManifest("bar")
 	assert.NotNil(t, err)
 	assert.Nil(t, updated)
 	assert.Empty(t, local.Saved)
 
 	// TODO check that the correct files were created
 	// TODO test that invalid signature of component manifest causes an error
+}
+
+func TestDownloadManifest(t *testing.T) {
+	mirror := MockMirror{
+		Resources: map[string]string{},
+	}
+	someString := "just some string for testing"
+	mirror.Resources["/foo-2.0.1.tar.gz"] = someString
+	local := v1manifest.NewMockManifests()
+	foo := componentManifest()
+	local.Manifests["foo.json"] = foo
+	repo := NewV1Repo(&mirror, Options{}, local)
+
+	// Happy path file is as expected
+	reader, err := repo.downloadComponent("foo", "a_platform", "2.0.1")
+	assert.Nil(t, err)
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, reader)
+	assert.Nil(t, err)
+	assert.Equal(t, someString, buf.String())
+
+	// Sad paths
+	version1 := foo.Platforms["a_platform"]["2.0.1"]
+	version2 := foo.Platforms["a_platform"]["2.0.1"]
+	version3 := foo.Platforms["a_platform"]["2.0.1"]
+
+	// bad hash
+	version1.Hashes[v1manifest.SHA256] = "Not a hash"
+	foo.Platforms["a_platform"]["2.0.1"] = version1
+	reader, err = repo.downloadComponent("foo", "a_platform", "2.0.1")
+	assert.NotNil(t, err)
+
+	//  Too long
+	version2.Length = 26
+	foo.Platforms["a_platform"]["2.0.1"] = version2
+	reader, err = repo.downloadComponent("foo", "a_platform", "2.0.1")
+	assert.NotNil(t, err)
+
+	// missing tar ball/bad url
+	version3.URL = "/bar-2.0.1.tar.gz"
+	foo.Platforms["a_platform"]["2.0.1"] = version3
+	reader, err = repo.downloadComponent("foo", "a_platform", "2.0.1")
+	assert.NotNil(t, err)
 }
 
 func timestampManifest() *v1manifest.Timestamp {
@@ -248,7 +292,7 @@ func timestampManifest() *v1manifest.Timestamp {
 			Version:     42,
 		},
 		Meta: map[string]v1manifest.FileHash{v1manifest.ManifestURLSnapshot: {
-			Hashes: map[string]string{"sha256": "123456"},
+			Hashes: map[string]string{v1manifest.SHA256: "123456"},
 			Length: 1001,
 		}},
 	}
@@ -280,7 +324,15 @@ func componentManifest() *v1manifest.Component {
 		},
 		Name:        "Foo",
 		Description: "foo does stuff",
-		Platforms:   nil,
+		Platforms: map[string]map[string]v1manifest.VersionItem{
+			"a_platform": {"2.0.1": {
+				URL: "/foo-2.0.1.tar.gz",
+				FileHash: v1manifest.FileHash{
+					Hashes: map[string]string{v1manifest.SHA256: "963ba8374bac92a8a00fc21ca458e0c2016bf8930519e5271f7b49d16762a184"},
+					Length: 28,
+				},
+			}},
+		},
 	}
 }
 

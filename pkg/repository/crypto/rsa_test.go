@@ -41,7 +41,7 @@ func TestSignAndVerify(t *testing.T) {
 	for _, cas := range cases {
 		sig, err := pri.Signature(cas)
 		assert.Nil(t, err)
-		assert.Nil(t, pub.Verify(cas, sig))
+		assert.Nil(t, pub.VerifySignature(cas, sig))
 	}
 }
 
@@ -52,7 +52,7 @@ func TestSeriAndDeseri(t *testing.T) {
 	_, err := pri.Signature([]byte("foo"))
 	assert.EqualError(t, err, ErrorKeyUninitialized.Error())
 
-	assert.EqualError(t, pub.Verify([]byte(`foo`), "sig"), ErrorKeyUninitialized.Error())
+	assert.EqualError(t, pub.VerifySignature([]byte(`foo`), "sig"), ErrorKeyUninitialized.Error())
 
 	assert.Nil(t, pub.Deserialize(publicTestKey))
 	assert.Nil(t, pri.Deserialize(privateTestKey))
@@ -60,6 +60,6 @@ func TestSeriAndDeseri(t *testing.T) {
 	for _, cas := range cases {
 		sig, err := pri.Signature(cas)
 		assert.Nil(t, err)
-		assert.Nil(t, pub.Verify(cas, sig))
+		assert.Nil(t, pub.VerifySignature(cas, sig))
 	}
 }

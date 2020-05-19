@@ -96,8 +96,8 @@ func hashFile(srcDir, filename string) (map[string]string, int64, error) {
 	n, err := io.Copy(io.MultiWriter(s256, s512), file)
 
 	hashes := map[string]string{
-		"sha256": hex.EncodeToString(s256.Sum(nil)),
-		"sha512": hex.EncodeToString(s512.Sum(nil)),
+		v1manifest.SHA256: hex.EncodeToString(s256.Sum(nil)),
+		v1manifest.SHA512: hex.EncodeToString(s512.Sum(nil)),
 	}
 	return hashes, n, err
 }
@@ -112,8 +112,8 @@ func hashManifest(m *v1manifest.Manifest) (map[string]string, uint, error) {
 	s512 := sha512.Sum512(bytes)
 
 	return map[string]string{
-		"sha256": hex.EncodeToString(s256[:]),
-		"sha512": hex.EncodeToString(s512[:]),
+		v1manifest.SHA256: hex.EncodeToString(s256[:]),
+		v1manifest.SHA512: hex.EncodeToString(s512[:]),
 	}, uint(len(bytes)), nil
 }
 
@@ -136,6 +136,21 @@ func migrate(srcDir, dstDir string) error {
 		root     = v1manifest.NewRoot(initTime)
 		index    = v1manifest.NewIndex(initTime)
 	)
+
+	// TODO: bootstrap a server instead of generating key
+	keys := map[string][]*v1manifest.KeyInfo{}
+	tys := []string{
+		v1manifest.ManifestTypeRoot,
+		v1manifest.ManifestTypeIndex,
+		v1manifest.ManifestTypeSnapshot,
+		v1manifest.ManifestTypeTimestamp,
+	}
+	keyDir := filepath.Join(dstDir, "keys")
+	for _, ty := range tys {
+		if err := v1manifest.GenAndSaveKeys(keys, ty, int(v1manifest.ManifestsConfig[ty].Threshold), keyDir); err != nil {
+			return err
+		}
+	}
 
 	// initial manifests
 	manifests := map[string]v1manifest.ValidManifest{
@@ -169,10 +184,6 @@ func migrate(srcDir, dstDir string) error {
 		Keys: map[string]*v1manifest.KeyInfo{
 			ownerkeyID: ownerkeyInfo,
 		},
-	}
-	signedManifests[v1manifest.ManifestTypeIndex], err = v1manifest.SignManifest(index, ownerkeyInfo)
-	if err != nil {
-		return err
 	}
 
 	snapshot := v1manifest.NewSnapshot(initTime)
@@ -252,7 +263,7 @@ func migrate(srcDir, dstDir string) error {
 	}
 
 	// sign index and snapshot
-	signedManifests[v1manifest.ManifestTypeIndex], err = v1manifest.SignManifest(index, ownerkeyInfo)
+	signedManifests[v1manifest.ManifestTypeIndex], err = v1manifest.SignManifest(index, keys[v1manifest.ManifestTypeIndex]...)
 	if err != nil {
 		return err
 	}
@@ -263,7 +274,7 @@ func migrate(srcDir, dstDir string) error {
 	if err != nil {
 		return err
 	}
-	signedManifests[v1manifest.ManifestTypeSnapshot], err = v1manifest.SignManifest(snapshot, ownerkeyInfo)
+	signedManifests[v1manifest.ManifestTypeSnapshot], err = v1manifest.SignManifest(snapshot, keys[v1manifest.ManifestTypeSnapshot]...)
 	if err != nil {
 		return err
 	}
@@ -277,7 +288,7 @@ func migrate(srcDir, dstDir string) error {
 		root.SetRole(m)
 	}
 
-	signedManifests[v1manifest.ManifestTypeRoot], err = v1manifest.SignManifest(root, ownerkeyInfo)
+	signedManifests[v1manifest.ManifestTypeRoot], err = v1manifest.SignManifest(root, keys[v1manifest.ManifestTypeRoot]...)
 	if err != nil {
 		return err
 	}
@@ -292,7 +303,7 @@ func migrate(srcDir, dstDir string) error {
 			Length: n,
 		},
 	}
-	signedManifests[v1manifest.ManifestTypeTimestamp], err = v1manifest.SignManifest(timestamp, ownerkeyInfo)
+	signedManifests[v1manifest.ManifestTypeTimestamp], err = v1manifest.SignManifest(timestamp, keys[v1manifest.ManifestTypeTimestamp]...)
 	if err != nil {
 		return err
 	}

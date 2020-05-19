@@ -64,8 +64,8 @@ type PubKey interface {
 	Type() string
 	// Scheme returns the scheme of  signature algorithm, e.g. rsassa-pss-sha256
 	Scheme() string
-	// Verify check the signature is right
-	Verify(payload []byte, sig string) error
+	// VerifySignature check the signature is right
+	VerifySignature(payload []byte, sig string) error
 }
 
 // PrivKey is the private key that provide signature method

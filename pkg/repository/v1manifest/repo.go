@@ -22,6 +22,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -32,6 +33,9 @@ import (
 	"github.com/pingcap/errors"
 )
 
+// ErrorInsufficientKeys indicates that the key number is less than threshold
+var ErrorInsufficientKeys = errors.New("not enough keys supplied")
+
 // Init creates and initializes an empty reposityro
 func Init(dst, keyDir string, initTime time.Time) (err error) {
 	// initial manifests
@@ -39,9 +43,11 @@ func Init(dst, keyDir string, initTime time.Time) (err error) {
 	signedManifests := make(map[string]*Manifest)
 
 	// TODO: bootstrap a server instead of generating key
-	privKey, err := GenKeyInfo()
-	if err != nil {
-		return err
+	keys := map[string][]*KeyInfo{}
+	for _, ty := range []string{ManifestTypeRoot, ManifestTypeIndex, ManifestTypeSnapshot, ManifestTypeTimestamp} {
+		if err := GenAndSaveKeys(keys, ty, int(ManifestsConfig[ty].Threshold), keyDir); err != nil {
+			return err
+		}
 	}
 
 	// init the root manifest
@@ -49,7 +55,7 @@ func Init(dst, keyDir string, initTime time.Time) (err error) {
 
 	// init index
 	manifests[ManifestTypeIndex] = NewIndex(initTime)
-	signedManifests[ManifestTypeIndex], err = SignManifest(manifests[ManifestTypeIndex], privKey)
+	signedManifests[ManifestTypeIndex], err = SignManifest(manifests[ManifestTypeIndex], keys[ManifestTypeIndex]...)
 	if err != nil {
 		return err
 	}
@@ -60,7 +66,7 @@ func Init(dst, keyDir string, initTime time.Time) (err error) {
 	if err != nil {
 		return err
 	}
-	signedManifests[ManifestTypeSnapshot], err = SignManifest(manifests[ManifestTypeSnapshot], privKey)
+	signedManifests[ManifestTypeSnapshot], err = SignManifest(manifests[ManifestTypeSnapshot], keys[ManifestTypeSnapshot]...)
 	if err != nil {
 		return err
 	}
@@ -72,7 +78,7 @@ func Init(dst, keyDir string, initTime time.Time) (err error) {
 		return err
 	}
 	manifests[ManifestTypeTimestamp] = timestamp
-	signedManifests[ManifestTypeTimestamp], err = SignManifest(manifests[ManifestTypeTimestamp], privKey)
+	signedManifests[ManifestTypeTimestamp], err = SignManifest(manifests[ManifestTypeTimestamp], keys[ManifestTypeTimestamp]...)
 	if err != nil {
 		return err
 	}
@@ -85,18 +91,47 @@ func Init(dst, keyDir string, initTime time.Time) (err error) {
 			continue
 		}
 		if m, ok := manifests[ty]; ok {
-			manifests[ManifestTypeRoot].(*Root).SetRole(m)
+			if err := manifests[ManifestTypeRoot].(*Root).SetRole(m, keys[ty]...); err != nil {
+				return err
+			}
 			continue
 		}
 		// FIXME: log a warning about manifest not found instead of returning error
 		return fmt.Errorf("manifest '%s' not initialized porperly", ty)
 	}
-	signedManifests[ManifestTypeRoot], err = SignManifest(manifests[ManifestTypeRoot], privKey)
+	signedManifests[ManifestTypeRoot], err = SignManifest(manifests[ManifestTypeRoot], keys[ManifestTypeRoot]...)
 	if err != nil {
 		return err
 	}
 
 	return BatchSaveManifests(dst, signedManifests)
+}
+
+// GenAndSaveKeys generate private keys to keys param and save key file to dir
+func GenAndSaveKeys(keys map[string][]*KeyInfo, ty string, num int, dir string) error {
+	for i := 0; i < num; i++ {
+		k, err := GenKeyInfo()
+		if err != nil {
+			return err
+		}
+		keys[ty] = append(keys[ty], k)
+
+		id, err := k.ID()
+		if err != nil {
+			return err
+		}
+
+		f, err := os.Create(path.Join(dir, fmt.Sprintf("%s-%s.json", id[:16], ty)))
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		if err := json.NewEncoder(f).Encode(k); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // AddComponent adds a new component to an existing repository
@@ -147,7 +182,7 @@ func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv 
 	if isDefault {
 		index.DefaultComponents = append(index.DefaultComponents, id)
 	}
-	index.Version += 1 // bump index version
+	index.Version++ // bump index version
 	signedManifests[ManifestTypeIndex], err = SignManifest(index, privKey)
 	if err != nil {
 		return err
@@ -280,8 +315,8 @@ func (manifest *Timestamp) SetSnapshot(s *Manifest) (*Timestamp, error) {
 	}
 	manifest.Meta[s.Signed.Base().Filename()] = FileHash{
 		Hashes: map[string]string{
-			"sha256": hex.EncodeToString(hash256[:]),
-			"sha512": hex.EncodeToString(hash512[:]),
+			SHA256: hex.EncodeToString(hash256[:]),
+			SHA512: hex.EncodeToString(hash512[:]),
 		},
 		Length: uint(len(bytes)),
 	}
@@ -290,7 +325,7 @@ func (manifest *Timestamp) SetSnapshot(s *Manifest) (*Timestamp, error) {
 }
 
 // SetRole populates role list in the root manifest
-func (manifest *Root) SetRole(m ValidManifest) error {
+func (manifest *Root) SetRole(m ValidManifest, keys ...*KeyInfo) error {
 	if manifest.Roles == nil {
 		manifest.Roles = make(map[string]*Role)
 	}
@@ -299,6 +334,22 @@ func (manifest *Root) SetRole(m ValidManifest) error {
 		URL:       fmt.Sprintf("/%s", m.Filename()),
 		Threshold: ManifestsConfig[m.Base().Ty].Threshold,
 		Keys:      make(map[string]*KeyInfo),
+	}
+
+	if uint(len(keys)) < manifest.Roles[m.Base().Ty].Threshold {
+		return ErrorInsufficientKeys
+	}
+
+	for _, k := range keys {
+		id, err := k.ID()
+		if err != nil {
+			return err
+		}
+		pub, err := k.Public()
+		if err != nil {
+			return err
+		}
+		manifest.Roles[m.Base().Ty].Keys[id] = pub
 	}
 
 	return nil
@@ -315,7 +366,7 @@ func FreshKeyInfo() (*KeyInfo, string, crypto.PrivKey, error) {
 		return nil, "", nil, err
 	}
 	info := KeyInfo{
-		Algorithms: []string{"sha256"},
+		Algorithms: []string{SHA256},
 		Type:       "rsa",
 		Value:      map[string]string{"public": string(pubBytes)},
 		Scheme:     "rsassa-pss-sha256",

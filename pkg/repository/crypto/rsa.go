@@ -76,8 +76,8 @@ func (k *RSAPubKey) Deserialize(key []byte) error {
 	return nil
 }
 
-// Verify check the signature is right
-func (k *RSAPubKey) Verify(payload []byte, sig string) error {
+// VerifySignature check the signature is right
+func (k *RSAPubKey) VerifySignature(payload []byte, sig string) error {
 	if k.key == nil {
 		return ErrorKeyUninitialized
 	}
