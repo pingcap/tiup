@@ -14,7 +14,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -77,13 +76,6 @@ of components or the repository itself.`,
 
 // the `repo sign` sub command
 func newRepoSignCmd(env *meta.Environment) *cobra.Command {
-	type manifestT struct {
-		// Signatures value
-		Signatures []map[string]string `json:"signatures"`
-		// Signed value
-		Signed interface{} `json:"signed"`
-	}
-
 	cmd := &cobra.Command{
 		Use:   "sign <manifest-file> [key-files]",
 		Short: "Add signatures to a manifest file",
@@ -92,62 +84,7 @@ func newRepoSignCmd(env *meta.Environment) *cobra.Command {
 				return cmd.Help()
 			}
 
-			fi, err := os.Open(args[0])
-			if err != nil {
-				return err
-			}
-			defer fi.Close()
-
-			m := manifestT{}
-			content, err := ioutil.ReadFile(args[0])
-			if err != nil {
-				return err
-			}
-			if err := json.Unmarshal(content, &m); err != nil {
-				return err
-			}
-			payload, err := json.Marshal(m.Signed)
-			if err != nil {
-				return err
-			}
-
-			for _, kf := range args[1:] {
-				f, err := os.Open(kf)
-				if err != nil {
-					return err
-				}
-				defer f.Close()
-
-				ki := v1manifest.KeyInfo{}
-				if err := json.NewDecoder(f).Decode(&ki); err != nil {
-					return err
-				}
-
-				id, err := ki.ID()
-				if err != nil {
-					return err
-				}
-
-				sig, err := ki.Signature(payload)
-				if err != nil {
-					return err
-				}
-
-				m.Signatures = append(m.Signatures, map[string]string{
-					"keyid": id,
-					"sig":   sig,
-				})
-			}
-
-			content, err = json.MarshalIndent(m, "", "\t")
-			if err != nil {
-				return err
-			}
-			if err := ioutil.WriteFile(args[0], content, 0664); err != nil {
-				return err
-			}
-
-			return nil
+			return v1manifest.SignManifestFile(args[0], args[1:]...)
 		},
 	}
 

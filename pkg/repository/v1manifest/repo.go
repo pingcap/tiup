@@ -134,6 +134,81 @@ func GenAndSaveKeys(keys map[string][]*KeyInfo, ty string, num int, dir string) 
 	return nil
 }
 
+// SignManifestFile add signatures to a manifest file
+func SignManifestFile(mfile string, kfiles ...string) error {
+	type manifestT struct {
+		// Signatures value
+		Signatures []*signature `json:"signatures"`
+		// Signed value
+		Signed interface{} `json:"signed"`
+	}
+
+	fi, err := os.Open(mfile)
+	if err != nil {
+		return err
+	}
+	defer fi.Close()
+
+	m := manifestT{}
+	content, err := ioutil.ReadFile(mfile)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(content, &m); err != nil {
+		return err
+	}
+	payload, err := json.Marshal(m.Signed)
+	if err != nil {
+		return err
+	}
+
+NextKey:
+	for _, kf := range kfiles {
+		f, err := os.Open(kf)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		ki := KeyInfo{}
+		if err := json.NewDecoder(f).Decode(&ki); err != nil {
+			return err
+		}
+
+		id, err := ki.ID()
+		if err != nil {
+			return err
+		}
+
+		sig, err := ki.Signature(payload)
+		if err != nil {
+			return err
+		}
+
+		for _, s := range m.Signatures {
+			if s.KeyID == id {
+				s.Sig = sig
+				continue NextKey
+			}
+		}
+
+		m.Signatures = append(m.Signatures, &signature{
+			KeyID: id,
+			Sig:   sig,
+		})
+	}
+
+	content, err = json.MarshalIndent(m, "", "\t")
+	if err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(mfile, content, 0664); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // AddComponent adds a new component to an existing repository
 func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv string) error {
 	// read key files
