@@ -95,10 +95,18 @@ var ManifestsConfig = map[string]ty{
 
 var knownVersions = map[string]struct{}{"0.1.0": {}}
 
-// verifySignature ensures that each signature in manifest::signatures is a valid signature of manifest::signed.
-func (manifest *Manifest) verifySignature(keys crypto.KeyStore) error {
+// VerifySignature ensures that threshold signature in manifest::signatures is a valid signature of manifest::signed.
+func (manifest *Manifest) VerifySignature(threshold uint, keys crypto.KeyStore) error {
 	if keys == nil {
 		return nil
+	}
+
+	if threshold == 0 {
+		return nil
+	}
+
+	if len(manifest.Signatures) < int(threshold) {
+		return errors.Errorf("only %d signature but need %d", len(manifest.Signatures), threshold)
 	}
 
 	payload, err := cjson.Marshal(manifest.Signed)
@@ -106,20 +114,31 @@ func (manifest *Manifest) verifySignature(keys crypto.KeyStore) error {
 		return nil
 	}
 
+	var validCount uint
+	var errs []error
 	for _, sig := range manifest.Signatures {
 		// TODO check that KeyID belongs to a role which is authorised to sign this manifest
 		key := keys.Get(sig.KeyID)
 		if key == nil {
 			// TODO use SignatureError
-			return fmt.Errorf("signature key %s not found", sig.KeyID)
+			err := fmt.Errorf("signature key %s not found", sig.KeyID)
+			errs = append(errs, err)
+			continue
 		}
-		if err := key.VerifySignature(payload, sig.Sig); err != nil {
-			// TODO use SignatureError
-			return err
+		err := key.VerifySignature(payload, sig.Sig)
+		// TODO use SignatureError
+		if err != nil {
+			errs = append(errs, err)
+		} else {
+			validCount++
 		}
 	}
 
-	return nil
+	if validCount >= threshold {
+		return nil
+	}
+
+	return errors.Errorf("only %d signature valid but need %d", validCount, threshold)
 }
 
 // SignatureError the signature of a file is incorrect.
@@ -149,6 +168,20 @@ func (s *SignedBase) Versioned() bool {
 	return ManifestsConfig[s.Ty].Versioned
 }
 
+// CheckExpire return not nil if it's expired.
+func CheckExpire(expires string) error {
+	expiresTime, err := time.Parse(time.RFC3339, expires)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	if expiresTime.Before(time.Now()) {
+		return fmt.Errorf("manifest has expired at: %s", expires)
+	}
+
+	return nil
+}
+
 func (s *SignedBase) expiryTime() (time.Time, error) {
 	return time.Parse(time.RFC3339, s.Expires)
 }
@@ -163,13 +196,8 @@ func (s *SignedBase) isValid() error {
 		return fmt.Errorf("unknown manifest version: `%s`", s.SpecVersion)
 	}
 
-	expires, err := s.expiryTime()
-	if err != nil {
-		return err
-	}
-
-	if expires.Before(time.Now()) {
-		return fmt.Errorf("manifest has expired at: %s", s.Expires)
+	if err := CheckExpire(s.Expires); err != nil {
+		return errors.AddStack(err)
 	}
 
 	return nil
@@ -265,7 +293,7 @@ func ReadManifest(input io.Reader, role ValidManifest, keys crypto.KeyStore) (*M
 		return nil, errors.New("no signatures supplied in manifest")
 	}
 
-	err = m.verifySignature(keys)
+	err = m.VerifySignature(uint(len(m.Signatures)), keys)
 	if err != nil {
 		return nil, err
 	}

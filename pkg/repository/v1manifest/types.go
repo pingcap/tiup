@@ -13,6 +13,8 @@
 
 package v1manifest
 
+import "github.com/pingcap-incubator/tiup/pkg/repository/crypto"
+
 // Manifest representation for ser/de.
 type Manifest struct {
 	// Signatures value
@@ -93,10 +95,11 @@ type VersionItem struct {
 // Component manifest.
 type Component struct {
 	SignedBase
-	ID          string                            `json:"id"`
-	Name        string                            `json:"name"`
-	Description string                            `json:"description"`
-	Platforms   map[string]map[string]VersionItem `json:"platforms"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	// platform -> version -> VersionItem
+	Platforms map[string]map[string]VersionItem `json:"platforms"`
 }
 
 // ComponentItem object
@@ -136,6 +139,37 @@ type FileVersion struct {
 // Base implements ValidManifest
 func (manifest *Root) Base() *SignedBase {
 	return &manifest.SignedBase
+}
+
+// GetKeyStore get a KeyStore with all the keys of all roles.
+func (manifest *Root) GetKeyStore() (ks crypto.KeyStore, err error) {
+	ks = crypto.NewKeyStore()
+	for _, role := range manifest.Roles {
+		for id, info := range role.Keys {
+			pub, err := info.publicKey()
+			if err != nil {
+				return nil, err
+			}
+			ks.Put(id, pub)
+		}
+	}
+	return
+}
+
+// GetRootKeyStore create KeyStore of root keys.
+func (manifest *Root) GetRootKeyStore() (ks crypto.KeyStore, err error) {
+	ks = crypto.NewKeyStore()
+
+	role := manifest.Roles[ManifestTypeRoot]
+	for id, info := range role.Keys {
+		pub, err := info.publicKey()
+		if err != nil {
+			return nil, err
+		}
+		ks.Put(id, pub)
+	}
+
+	return
 }
 
 // Base implements ValidManifest

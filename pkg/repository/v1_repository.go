@@ -15,9 +15,12 @@ package repository
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"path/filepath"
 	"runtime"
+	"strconv"
 
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
@@ -49,6 +52,7 @@ func NewV1Repo(mirror Mirror, opts Options, local v1manifest.LocalManifests) *V1
 }
 
 const maxTimeStampSize uint = 1024
+const maxRootSize uint = 1024 * 1024
 
 // If the snapshot has been updated, we return the new snapshot, if not we return nil.
 // Postcondition: if returned error is nil, then the local snapshot and timestamp are up to date.
@@ -88,13 +92,102 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 	return &snapshot, nil
 }
 
+func fnameWithVersion(fname string, version uint) string {
+	base := filepath.Base(fname)
+	dir := filepath.Dir(fname)
+
+	versionBase := strconv.Itoa(int(version)) + "." + base
+	return filepath.Join(dir, versionBase)
+}
+
 func (r *V1Repository) updateLocalRoot() error {
-	// When we save to disk need to save twice:
-	//filename := v1manifest.ManifestFilenameRoot
-	//err := local.SaveManifest(manifest, filename)
-	//version := manifest.Signed.Base().Version
-	//filename =  fmt.Sprintf("%v.%s", version, filename)
-	//err = local.SaveManifest(manifest, filename)
+	var root1 v1manifest.Root
+	_, err := r.local.LoadManifest(&root1)
+	if err != nil {
+		return err
+	}
+
+	var newRoots []v1manifest.Manifest
+
+	for version := root1.Version + 1; ; version++ {
+		var root2 v1manifest.Root
+		fname := fnameWithVersion(v1manifest.ManifestURLRoot, version)
+
+		reader, err := r.mirror.Fetch(fname, int64(maxRootSize))
+		if err != nil {
+			// Break if we have read the newest version.
+			if errors.Cause(err) == ErrNotFound {
+				break
+			}
+			return errors.AddStack(err)
+		}
+
+		decoder := json.NewDecoder(reader)
+		var m v1manifest.Manifest
+		m.Signed = &root2
+		err = decoder.Decode(&m)
+		if err != nil {
+			return err
+		}
+
+		if root2.Version != root1.Version+1 {
+			return errors.Errorf("version is %d, but should be: %d", root2.Version, root1.Version+1)
+		}
+
+		// check signed by old version root
+		threshold := root1.Roles[v1manifest.ManifestTypeRoot].Threshold
+		keyStore, err := root1.GetRootKeyStore()
+		if err != nil {
+			return errors.AddStack(err)
+		}
+
+		err = m.VerifySignature(threshold, keyStore)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+
+		// check signed by new version root
+		threshold = root2.Roles[v1manifest.ManifestTypeRoot].Threshold
+		keyStore, err = root2.GetRootKeyStore()
+		if err != nil {
+			return errors.AddStack(err)
+		}
+
+		err = m.VerifySignature(threshold, keyStore)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+
+		// This is valid new version
+		newRoots = append(newRoots, m)
+		root1 = root2
+	}
+
+	if len(newRoots) == 0 {
+		return nil
+	}
+
+	newTrusted := newRoots[len(newRoots)-1]
+	// check expire of this version
+	err = v1manifest.CheckExpire(newTrusted.Signed.Base().Expires)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	// Save the new trusted root.
+	err = r.local.SaveManifest(&newTrusted, v1manifest.ManifestFilenameRoot)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	for _, m := range newRoots {
+		filename := fnameWithVersion(v1manifest.ManifestTypeRoot, m.Signed.Base().Version)
+		err = r.local.SaveManifest(&m, filename)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+	}
+
 	return nil
 }
 
