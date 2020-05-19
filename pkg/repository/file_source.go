@@ -102,6 +102,7 @@ func (fs *mirrorSource) downloadTarFile(targetDir, resName string, expand bool) 
 	if !ok {
 		return errors.Errorf("expected file, found %v", tarReader)
 	}
+	// make sure to read from file start, it was read once in CheckSHA()
 	_, err = tarFile.Seek(0, 0)
 	if err != nil {
 		return errors.Trace(err)

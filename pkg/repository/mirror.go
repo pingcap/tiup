@@ -227,6 +227,9 @@ func (l *httpMirror) prepareURL(resource string) string {
 func (l *httpMirror) Download(resource, targetDir string) error {
 	tmpFilePath := filepath.Join(l.tmpDir, resource)
 	dstFilePath := filepath.Join(targetDir, resource)
+	// downloaded file is stored in a temp directory and the temp directory is
+	// deleted at Close(), in this way an interrupted download won't remain
+	// any partial file on the disk
 	r, err := l.download(l.prepareURL(resource), tmpFilePath, 0)
 	if err != nil {
 		return errors.Trace(err)
