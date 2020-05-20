@@ -15,14 +15,12 @@ package repository
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"path/filepath"
 	"runtime"
 	"strconv"
 
-	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
@@ -33,10 +31,12 @@ type V1Repository struct {
 	Options
 	mirror Mirror
 	local  v1manifest.LocalManifests
+	root   *v1manifest.Root
 }
 
 // NewV1Repo creates a new v1 repository from the given mirror
-func NewV1Repo(mirror Mirror, opts Options, local v1manifest.LocalManifests) *V1Repository {
+// local must exists a trusted root.
+func NewV1Repo(mirror Mirror, opts Options, local v1manifest.LocalManifests) (*V1Repository, error) {
 	if opts.GOOS == "" {
 		opts.GOOS = runtime.GOOS
 	}
@@ -44,15 +44,35 @@ func NewV1Repo(mirror Mirror, opts Options, local v1manifest.LocalManifests) *V1
 		opts.GOARCH = runtime.GOARCH
 	}
 
-	return &V1Repository{
+	repo := &V1Repository{
 		Options: opts,
 		mirror:  mirror,
 		local:   local,
 	}
+
+	if err := repo.loadRoot(); err != nil {
+		return nil, errors.AddStack(err)
+	}
+
+	return repo, nil
 }
 
 const maxTimeStampSize uint = 1024
 const maxRootSize uint = 1024 * 1024
+
+func (r *V1Repository) loadRoot() error {
+	root := new(v1manifest.Root)
+	exists, err := r.local.LoadManifest(root)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	if !exists {
+		return errors.New("no trusted root in the local manifest")
+	}
+	r.root = root
+	return nil
+}
 
 // If the snapshot has been updated, we return the new snapshot, if not we return nil.
 // Postcondition: if returned error is nil, then the local snapshot and timestamp are up to date.
@@ -77,7 +97,7 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 	}
 
 	var snapshot v1manifest.Snapshot
-	manifest, err := r.fetchManifest(v1manifest.ManifestURLSnapshot, &snapshot, r.local.Keys(), hash.Length)
+	manifest, err := r.fetchManifest(v1manifest.ManifestURLSnapshot, &snapshot, r.root, hash.Length)
 	if err != nil {
 		return nil, err
 	}
@@ -101,19 +121,15 @@ func fnameWithVersion(fname string, version uint) string {
 }
 
 func (r *V1Repository) updateLocalRoot() error {
-	var root1 v1manifest.Root
-	_, err := r.local.LoadManifest(&root1)
-	if err != nil {
-		return err
-	}
+	root1 := r.root
 
-	var newRoots []v1manifest.Manifest
+	var newRoots []*v1manifest.Manifest
 
 	for version := root1.Version + 1; ; version++ {
 		var root2 v1manifest.Root
 		fname := fnameWithVersion(v1manifest.ManifestURLRoot, version)
 
-		reader, err := r.mirror.Fetch(fname, int64(maxRootSize))
+		m, err := r.fetchManifest(fname, &root2, root1, maxRootSize)
 		if err != nil {
 			// Break if we have read the newest version.
 			if errors.Cause(err) == ErrNotFound {
@@ -122,45 +138,13 @@ func (r *V1Repository) updateLocalRoot() error {
 			return errors.AddStack(err)
 		}
 
-		decoder := json.NewDecoder(reader)
-		var m v1manifest.Manifest
-		m.Signed = &root2
-		err = decoder.Decode(&m)
-		if err != nil {
-			return err
-		}
-
 		if root2.Version != root1.Version+1 {
 			return errors.Errorf("version is %d, but should be: %d", root2.Version, root1.Version+1)
 		}
 
-		// check signed by old version root
-		threshold := root1.Roles[v1manifest.ManifestTypeRoot].Threshold
-		keyStore, err := root1.GetRootKeyStore()
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		err = m.VerifySignature(threshold, keyStore)
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		// check signed by new version root
-		threshold = root2.Roles[v1manifest.ManifestTypeRoot].Threshold
-		keyStore, err = root2.GetRootKeyStore()
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		err = m.VerifySignature(threshold, keyStore)
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
 		// This is valid new version
 		newRoots = append(newRoots, m)
-		root1 = root2
+		root1 = &root2
 	}
 
 	if len(newRoots) == 0 {
@@ -169,24 +153,27 @@ func (r *V1Repository) updateLocalRoot() error {
 
 	newTrusted := newRoots[len(newRoots)-1]
 	// check expire of this version
+	var err error
 	err = v1manifest.CheckExpire(newTrusted.Signed.Base().Expires)
 	if err != nil {
 		return errors.AddStack(err)
 	}
 
 	// Save the new trusted root.
-	err = r.local.SaveManifest(&newTrusted, v1manifest.ManifestFilenameRoot)
+	err = r.local.SaveManifest(newTrusted, v1manifest.ManifestFilenameRoot)
 	if err != nil {
 		return errors.AddStack(err)
 	}
 
 	for _, m := range newRoots {
 		filename := fnameWithVersion(v1manifest.ManifestTypeRoot, m.Signed.Base().Version)
-		err = r.local.SaveManifest(&m, filename)
+		err = r.local.SaveManifest(m, filename)
 		if err != nil {
 			return errors.AddStack(err)
 		}
 	}
+
+	r.root = newTrusted.Signed.(*v1manifest.Root)
 
 	return nil
 }
@@ -211,7 +198,7 @@ func (r *V1Repository) updateLocalIndex(length uint) (*v1manifest.Index, error) 
 	}
 
 	var index v1manifest.Index
-	manifest, err := r.fetchManifest(url, &index, r.local.Keys(), length)
+	manifest, err := r.fetchManifest(url, &index, r.root, length)
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +243,7 @@ func (r *V1Repository) updateComponentManifest(id string) (*v1manifest.Component
 		return nil, err
 	}
 	var component v1manifest.Component
-	manifest, err := r.fetchManifest(url, &component, r.local.Keys(), snapshot.Meta[item.URL].Length)
+	manifest, err := r.fetchManifest(url, &component, r.root, snapshot.Meta[item.URL].Length)
 	if err != nil {
 		return nil, err
 	}
@@ -321,7 +308,7 @@ func (r *V1Repository) downloadComponent(id string, platform string, version str
 // snapshot's file info.
 func (r *V1Repository) checkTimestamp() (*v1manifest.FileHash, error) {
 	var ts v1manifest.Timestamp
-	manifest, err := r.fetchManifest(v1manifest.ManifestURLTimestamp, &ts, r.local.Keys(), maxTimeStampSize)
+	manifest, err := r.fetchManifest(v1manifest.ManifestURLTimestamp, &ts, r.root, maxTimeStampSize)
 	if err != nil {
 		return nil, err
 	}
@@ -343,11 +330,11 @@ func (r *V1Repository) checkTimestamp() (*v1manifest.FileHash, error) {
 }
 
 // fetchManifest downloads and validates a manifest from this repo.
-func (r *V1Repository) fetchManifest(url string, role v1manifest.ValidManifest, keys crypto.KeyStore, maxSize uint) (*v1manifest.Manifest, error) {
+func (r *V1Repository) fetchManifest(url string, role v1manifest.ValidManifest, root *v1manifest.Root, maxSize uint) (*v1manifest.Manifest, error) {
 	reader, err := r.mirror.Fetch(url, int64(maxSize))
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 	defer reader.Close()
-	return v1manifest.ReadManifest(reader, role, keys)
+	return v1manifest.ReadManifest(reader, role, root)
 }

@@ -47,7 +47,23 @@ func TestReadTimestamp(t *testing.T) {
 	pubKey := &crypto.RSAPubKey{}
 	assert.Nil(t, pubKey.Deserialize(publicTestKey))
 
-	_, err := readTimestampManifest(strings.NewReader(`{
+	privKey := &crypto.RSAPrivKey{}
+	assert.Nil(t, privKey.Deserialize(privateTestKey))
+	bytes, err := privKey.Serialize()
+	assert.Nil(t, err)
+	keyInfo := NewKeyInfo(bytes)
+
+	root := &Root{
+		Roles: map[string]*Role{
+			ManifestTypeTimestamp: {
+				URL:       ManifestURLTimestamp,
+				Keys:      map[string]*KeyInfo{"test-key-id": keyInfo},
+				Threshold: 1,
+			},
+		},
+	}
+
+	_, err = readTimestampManifest(strings.NewReader(`{
 		"signatures":[
 			{
 				"keyid": "test-key-id",
@@ -68,7 +84,7 @@ func TestReadTimestamp(t *testing.T) {
 				}
 			}
 		}
-	}`), crypto.NewKeyStore().Put("test-key-id", pubKey))
+	}`), root)
 	assert.Nil(t, err)
 }
 

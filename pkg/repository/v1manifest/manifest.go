@@ -102,7 +102,7 @@ func (manifest *Manifest) VerifySignature(threshold uint, keys crypto.KeyStore) 
 	}
 
 	if threshold == 0 {
-		return nil
+		return errors.New("invalid zero threshold")
 	}
 
 	if len(manifest.Signatures) < int(threshold) {
@@ -114,31 +114,21 @@ func (manifest *Manifest) VerifySignature(threshold uint, keys crypto.KeyStore) 
 		return nil
 	}
 
-	var validCount uint
-	var errs []error
 	for _, sig := range manifest.Signatures {
 		// TODO check that KeyID belongs to a role which is authorised to sign this manifest
 		key := keys.Get(sig.KeyID)
 		if key == nil {
 			// TODO use SignatureError
-			err := fmt.Errorf("signature key %s not found", sig.KeyID)
-			errs = append(errs, err)
-			continue
+			return errors.Errorf("signature key %s not found", sig.KeyID)
 		}
 		err := key.VerifySignature(payload, sig.Sig)
 		// TODO use SignatureError
 		if err != nil {
-			errs = append(errs, err)
-		} else {
-			validCount++
+			return err
 		}
 	}
 
-	if validCount >= threshold {
-		return nil
-	}
-
-	return errors.Errorf("only %d signature valid but need %d", validCount, threshold)
+	return nil
 }
 
 // SignatureError the signature of a file is incorrect.
@@ -196,8 +186,12 @@ func (s *SignedBase) isValid() error {
 		return fmt.Errorf("unknown manifest version: `%s`", s.SpecVersion)
 	}
 
-	if err := CheckExpire(s.Expires); err != nil {
-		return errors.AddStack(err)
+	// When updating root, we only check the newest version is not expire.
+	// This checking should be done by the update root flow.
+	if s.Ty != ManifestTypeRoot {
+		if err := CheckExpire(s.Expires); err != nil {
+			return errors.AddStack(err)
+		}
 	}
 
 	return nil
@@ -269,18 +263,28 @@ func (manifest *Snapshot) VersionedURL(url string) (string, error) {
 	return fmt.Sprintf("%s/%v.%s", url[:lastSlash], entry.Version, url[lastSlash+1:]), nil
 }
 
-func readTimestampManifest(input io.Reader, keys crypto.KeyStore) (*Timestamp, error) {
+func readTimestampManifest(input io.Reader, root *Root) (*Timestamp, error) {
 	var ts Timestamp
-	_, err := ReadManifest(input, &ts, keys)
+	_, err := ReadManifest(input, &ts, root)
 	if err != nil {
 		return nil, err
 	}
-
 	return &ts, nil
 }
 
+func checkHasThresholdKeys(threshold uint, sigs []signature, keys crypto.KeyStore) bool {
+	var count uint
+	for _, sig := range sigs {
+		if keys.Get(sig.KeyID) != nil {
+			count++
+		}
+	}
+
+	return count >= threshold
+}
+
 // ReadManifest reads a manifest from input and validates it, the result is stored in role, which must be a pointer type.
-func ReadManifest(input io.Reader, role ValidManifest, keys crypto.KeyStore) (*Manifest, error) {
+func ReadManifest(input io.Reader, role ValidManifest, root *Root) (*Manifest, error) {
 	decoder := json.NewDecoder(input)
 	var m Manifest
 	m.Signed = role
@@ -293,9 +297,51 @@ func ReadManifest(input io.Reader, role ValidManifest, keys crypto.KeyStore) (*M
 		return nil, errors.New("no signatures supplied in manifest")
 	}
 
-	err = m.VerifySignature(uint(len(m.Signatures)), keys)
-	if err != nil {
-		return nil, err
+	if role.Base().Ty != ManifestTypeRoot {
+		if root != nil {
+			keys, err := root.GetKeyStore()
+			if err != nil {
+				return nil, errors.AddStack(err)
+			}
+
+			threshold := root.Roles[role.Base().Ty].Threshold
+			err = m.VerifySignature(threshold, keys)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		newR := role.(*Root)
+		keys, err := newR.GetRootKeyStore()
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+		threshold := newR.Roles[ManifestTypeRoot].Threshold
+
+		if !checkHasThresholdKeys(threshold, m.Signatures, keys) {
+			return nil, errors.Errorf("no enough %d signature: %v, keys: %v", threshold, m.Signatures, keys)
+		}
+
+		if root != nil {
+			oldKeys, err := root.GetRootKeyStore()
+			if err != nil {
+				return nil, errors.AddStack(err)
+			}
+
+			threshold := root.Roles[ManifestTypeRoot].Threshold
+			if !checkHasThresholdKeys(threshold, m.Signatures, oldKeys) {
+				return nil, errors.Errorf("no enough %d signature", threshold)
+			}
+
+			oldKeys.Visit(func(id string, key crypto.PubKey) {
+				keys.Put(id, key)
+			})
+		}
+
+		err = m.VerifySignature(uint(len(m.Signatures)), keys)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	err = m.Signed.Base().isValid()
