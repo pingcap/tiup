@@ -17,7 +17,9 @@ import (
 	"time"
 
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/errors"
+	"golang.org/x/mod/semver"
 )
 
 // Manifest representation for ser/de.
@@ -252,4 +254,29 @@ func (manifest *Snapshot) Filename() string {
 // Filename implements ValidManifest
 func (manifest *Timestamp) Filename() string {
 	return ManifestFilenameTimestamp
+}
+
+// HasNightly return true if the component has nightly version.
+func (manifest *Component) HasNightly() bool {
+	// TODO how to support nightly??
+	return false
+}
+
+// LatestVersion return the latest version of the component.
+func (manifest *Component) LatestVersion(platform string) (v0manifest.Version, *VersionItem, bool) {
+	versions, ok := manifest.Platforms[platform]
+	if !ok || len(versions) == 0 {
+		return "", nil, false
+	}
+
+	var latest string
+	var latestItem VersionItem
+	for version, item := range versions {
+		if latest == "" || semver.Compare(version, latest) < 0 {
+			latest = version
+			latestItem = item
+		}
+	}
+
+	return v0manifest.Version(latest), &latestItem, true
 }

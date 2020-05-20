@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
@@ -379,6 +380,26 @@ func (r *V1Repository) updateComponentManifest(id string) (*v1manifest.Component
 	return &component, nil
 }
 
+// DownloadComponent downloads a component with specific version from repository
+func (r *V1Repository) DownloadComponent(
+	component string,
+	version v0manifest.Version,
+	versionItem *v1manifest.VersionItem,
+) error {
+	cr, err := r.downloadComponent(versionItem)
+	if err != nil {
+		return err
+	}
+
+	resName := fmt.Sprintf("%s-%s", component, version)
+	// targetDir := filepath.Join(compsDir, component, version.String())
+
+	// TODO  handle r.DisableDecompress
+	filename := fmt.Sprintf("%s-%s-%s", resName, r.GOOS, r.GOARCH)
+	var _ = filename
+	return r.local.InstallComponent(cr, component, string(version))
+}
+
 // downloadComponent downloads the component specified by item.
 func (r *V1Repository) downloadComponent(item *v1manifest.VersionItem) (io.Reader, error) {
 	reader, err := r.mirror.Fetch(item.URL, int64(item.Length))
@@ -541,4 +562,34 @@ func (r *V1Repository) FetchComponent(id string) (com *v1manifest.Component, err
 	}
 
 	return r.updateComponentManifest(id)
+}
+
+// BinaryPath return the binary path of the component.
+// Support you have install the component, need to get entry from local manifest.
+// Load the manifest locally only to get then Entry, do not force do something need access mirror.
+func (r *V1Repository) BinaryPath(installPath string, componentID string, version v0manifest.Version) (string, error) {
+	var index v1manifest.Index
+	_, err := r.local.LoadManifest(&index)
+	if err != nil {
+		return "", err
+	}
+
+	filename := v1manifest.ComponentManifestFilename(componentID)
+
+	component, err := r.local.LoadComponentManifest(&index, filename)
+	if err != nil {
+		return "", err
+	}
+
+	item, ok := component.Platforms[r.PlatformString()][string(version)]
+	if !ok {
+		return "", errors.Errorf("no version: %s", version)
+	}
+
+	entry := item.Entry
+	if entry == "" {
+		return "", errors.Errorf("cannot found entry for %s:%s", componentID, version)
+	}
+
+	return filepath.Join(installPath, entry), nil
 }
