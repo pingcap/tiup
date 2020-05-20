@@ -24,6 +24,8 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
@@ -66,9 +68,7 @@ func InitEnv(options repository.Options) (*Environment, error) {
 	if os.Getenv(EnvNameV1) == "" {
 		repo, err = repository.NewRepository(mirror, options)
 	} else {
-		lm, e := profile.LocalManifests()
-		err = e
-		v1repo = repository.NewV1Repo(mirror, options, lm)
+		v1repo = repository.NewV1Repo(mirror, options, v1manifest.NewManifests(profile))
 	}
 
 	return &Environment{profile, repo, v1repo}, err
@@ -83,11 +83,6 @@ func NewV0(profile *localdata.Profile, repo *repository.Repository) *Environment
 // Repository returns the initialized repository
 func (env *Environment) Repository() *repository.Repository {
 	return env.repo
-}
-
-// SetRepository exports for test
-func (env *Environment) SetRepository(r *repository.Repository) {
-	env.repo = r
 }
 
 // Profile returns the profile of local data
@@ -107,6 +102,15 @@ func (env *Environment) LocalPath(path ...string) string {
 
 // UpdateComponents updates or installs all components described by specs.
 func (env *Environment) UpdateComponents(specs []string, nightly, force bool) error {
+	if env.v1Repo != nil {
+		var v1specs []repository.ComponentSpec
+		for _, spec := range specs {
+			component, v := ParseCompVersion(spec)
+			v1specs = append(v1specs, repository.ComponentSpec{ID: component, Version: v.String(), Force: force})
+		}
+		return env.v1Repo.UpdateComponents(v1specs)
+	}
+
 	manifest, err := env.latestManifest()
 	if err != nil {
 		return err
@@ -119,10 +123,10 @@ func (env *Environment) UpdateComponents(specs []string, nightly, force bool) er
 		if !manifest.HasComponent(component) {
 			compInfo, found := manifest.FindComponent(component)
 			if !found {
-				return fmt.Errorf("component `%s` not exists", component)
+				return fmt.Errorf("component `%s` not found", component)
 			}
 
-			if !compInfo.IsSupport(runtime.GOOS, runtime.GOARCH) {
+			if !compInfo.IsSupport(utils.PlatformString()) {
 				return fmt.Errorf("component `%s` does not support `%s/%s`", component, runtime.GOOS, runtime.GOARCH)
 			}
 		}
@@ -159,16 +163,9 @@ func (env *Environment) downloadComponent(component string, version v0manifest.V
 	}
 	if !overwrite {
 		// Ignore if installed
-		installed, err := env.profile.InstalledVersions(component)
+		found, err := env.profile.VersionIsInstalled(component, version.String())
 		if err != nil {
 			return err
-		}
-		found := false
-		for _, v := range installed {
-			if v0manifest.Version(v) == version {
-				found = true
-				break
-			}
 		}
 		if found {
 			fmt.Printf("The component `%s:%s` has been installed.\n", component, version)
