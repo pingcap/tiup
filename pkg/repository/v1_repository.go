@@ -59,7 +59,6 @@ func NewV1Repo(mirror Mirror, opts Options, local v1manifest.LocalManifests) (*V
 
 const maxTimeStampSize uint = 1024
 const maxRootSize uint = 1024 * 1024
-const maxIndexSize uint = 1024 * 1024
 
 func (r *V1Repository) loadRoot() error {
 	root := new(v1manifest.Root)
@@ -340,51 +339,38 @@ func (r *V1Repository) fetchManifest(url string, role v1manifest.ValidManifest, 
 	return v1manifest.ReadManifest(reader, role, root)
 }
 
+func (r *V1Repository) ensureManifests() error {
+	// TODO
+	return nil
+}
+
 // FetchIndex fetch the index manifest.
 func (r *V1Repository) FetchIndex() (index *v1manifest.Index, err error) {
-	snapshot, err := r.updateLocalSnapshot()
+	err = r.ensureManifests()
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
 
-	// Load from local
 	index = new(v1manifest.Index)
 	exists, err := r.local.LoadManifest(index)
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
 
-	if snapshot != nil  {
-		if exists && index.Version < snapshot.Meta
-		index, err := r.updateLocalIndex(maxIndexSize)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-
-		return index, nil
+	if !exists {
+		return nil, errors.Errorf("no index manifest")
 	}
 
-	// Load from local
-	index = new(v1manifest.Index)
-	_, err = r.local.LoadManifest(index)
-	if err != nil {
-		return nil, errors.AddStack(err)
-	}
 	return index, nil
 }
 
 // FetchComponent fetch the component manifest.
 func (r *V1Repository) FetchComponent(id string) (com *v1manifest.Component, err error) {
-	var snapshot *v1manifest.Snapshot
-	snapshot, err := r.updateLocalSnapshot()
+	err = r.ensureManifests()
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
 
-	com, err := r.updateComponentManifest(id)
-	if err != nil {
-		return nil, errors.AddStack(err)
-	}
-
-	panic("TODO")
+	com, err = r.local.LoadComponentManifest(v1manifest.ComponentFilename(id))
+	return
 }
