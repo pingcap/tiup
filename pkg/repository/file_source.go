@@ -81,14 +81,10 @@ func (fs *mirrorSource) downloadTarFile(targetDir, resName string, expand bool) 
 	}
 
 	var tarReader io.ReadCloser
-	if expand {
-		tarReader, err = fs.mirror.Fetch(resName, 0)
-	} else {
-		if err := fs.mirror.Download(resName, targetDir); err != nil {
-			return errors.Trace(err)
-		}
-		tarReader, err = os.OpenFile(filepath.Join(targetDir, resName), os.O_RDONLY, 0)
+	if err := fs.mirror.Download(resName, targetDir); err != nil {
+		return errors.Trace(err)
 	}
+	tarReader, err = os.OpenFile(filepath.Join(targetDir, resName), os.O_RDONLY, 0)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -106,6 +102,7 @@ func (fs *mirrorSource) downloadTarFile(targetDir, resName string, expand bool) 
 	if !ok {
 		return errors.Errorf("expected file, found %v", tarReader)
 	}
+	// make sure to read from file start, it was read once in CheckSHA()
 	_, err = tarFile.Seek(0, 0)
 	if err != nil {
 		return errors.Trace(err)
