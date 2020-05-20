@@ -183,10 +183,14 @@ func migrate(srcDir, dstDir string) error {
 		return errors.Trace(err)
 	}
 
+	ownerkeyPub, err := ownerkeyInfo.Public()
+	if err != nil {
+		return errors.Trace(err)
+	}
 	index.Owners["pingcap"] = v1manifest.Owner{
 		Name: "PingCAP",
 		Keys: map[string]*v1manifest.KeyInfo{
-			ownerkeyID: ownerkeyInfo,
+			ownerkeyID: ownerkeyPub,
 		},
 	}
 
