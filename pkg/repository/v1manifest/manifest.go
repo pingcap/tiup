@@ -328,6 +328,7 @@ func ReadManifest(input io.Reader, role ValidManifest, root *Root) (*Manifest, e
 				return nil, errors.AddStack(err)
 			}
 
+			threshold := root.Roles[ManifestTypeRoot].Threshold
 			if !checkHasThresholdKeys(threshold, m.Signatures, oldKeys) {
 				return nil, errors.Errorf("no enough %d signature", threshold)
 			}
@@ -338,10 +339,6 @@ func ReadManifest(input io.Reader, role ValidManifest, root *Root) (*Manifest, e
 		}
 
 		err = m.VerifySignature(uint(len(m.Signatures)), keys)
-		if err != nil {
-			return nil, err
-		}
-
 		if err != nil {
 			return nil, err
 		}
