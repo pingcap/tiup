@@ -47,7 +47,7 @@ type KeyStore interface {
 	// Get return a key by it's id
 	Get(string) PubKey
 
-	// Visit all keys
+	// Visit applies the supplied function to all keys
 	Visit(func(id string, key PubKey))
 }
 

@@ -202,11 +202,8 @@ NextKey:
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(mfile, content, 0664); err != nil {
-		return err
-	}
 
-	return nil
+	return ioutil.WriteFile(mfile, content, 0664)
 }
 
 // AddComponent adds a new component to an existing repository
