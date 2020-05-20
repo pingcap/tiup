@@ -15,13 +15,10 @@ package cmd
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
-	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap-incubator/tiup/pkg/tui"
-	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -82,102 +79,53 @@ func (lr *listResult) print() {
 }
 
 func showComponentList(env *meta.Environment, onlyInstalled bool, refresh bool) (*listResult, error) {
-	if refresh || env.Profile().Manifest() == nil {
-		manifest, err := env.Repository().Manifest()
-		if err != nil {
-			return nil, err
-		}
-		err = env.Profile().SaveManifest(manifest)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	installed, err := env.Profile().InstalledComponents()
+	index, err := env.Repository().FetchIndex()
 	if err != nil {
 		return nil, err
 	}
-	manifest := env.Profile().Manifest()
-	var cmpTable [][]string
-	cmpTable = append(cmpTable, []string{"Name", "Installed", "Platforms", "Description"})
 
-	localComponents := set.NewStringSet(installed...)
-	for _, comp := range manifest.Components {
-		if comp.Hide {
-			continue
-		}
-		if onlyInstalled && !localComponents.Exist(comp.Name) {
-			continue
-		}
-		installStatus := ""
-		if localComponents.Exist(comp.Name) {
-			versions, err := env.Profile().InstalledVersions(comp.Name)
-			if err != nil {
-				return nil, err
-			}
-			installStatus = fmt.Sprintf("YES(%s)", strings.Join(versions, ","))
-		}
-		sort.Strings(comp.Platforms)
+	var cmpTable [][]string
+	cmpTable = append(cmpTable, []string{"Name", "Description", "Owner"})
+
+	for name, comp := range index.Components {
 		cmpTable = append(cmpTable, []string{
-			comp.Name,
-			installStatus,
-			strings.Join(comp.Platforms, ","),
-			comp.Desc,
+			name,
+			"desc",
+			comp.Owner,
 		})
 	}
 
 	return &listResult{
-		header:   fmt.Sprintf("Available components (Last Modified: %s):\n", manifest.Modified),
+		header:   fmt.Sprintf("Available components:\n"),
 		cmpTable: cmpTable,
 	}, nil
 }
 
 func showComponentVersions(env *meta.Environment, component string, onlyInstalled bool, refresh bool) (*listResult, error) {
-	if refresh || env.Profile().Versions(component) == nil {
-		manifest, err := env.Repository().ComponentVersions(component)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-		err = env.Profile().SaveVersions(component, manifest)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	versions, err := env.Profile().InstalledVersions(component)
+	comp, err := env.Repository().FetchComponent(component)
 	if err != nil {
 		return nil, err
 	}
-	manifest := env.Profile().Versions(component)
 
 	var cmpTable [][]string
-	cmpTable = append(cmpTable, []string{"Version", "Installed", "Release:", "Platforms"})
+	cmpTable = append(cmpTable, []string{"Version", "Release", "Platforms"})
 
-	installed := set.NewStringSet(versions...)
-	released := manifest.Versions
-	if manifest.Nightly != nil {
-		released = append(released, *manifest.Nightly)
+	platforms := make(map[string][]string)
+	released := make(map[string]string)
+
+	for plat, versions := range comp.Platforms {
+		for ver, verinfo := range versions {
+			platforms[ver] = append(platforms[ver], plat)
+			released[ver] = verinfo.Released
+		}
 	}
-	for _, ver := range released {
-		version := ver.Version.String()
-		if onlyInstalled && !installed.Exist(version) {
-			continue
-		}
-		installStatus := ""
-		if installed.Exist(version) {
-			installStatus = "YES"
-		}
-		sort.Strings(ver.Platforms)
-		cmpTable = append(cmpTable, []string{
-			version,
-			installStatus,
-			ver.Date,
-			strings.Join(ver.Platforms, ","),
-		})
+
+	for v := range platforms {
+		cmpTable = append(cmpTable, []string{v, released[v], strings.Join(platforms[v], ",")})
 	}
 
 	return &listResult{
-		header:   fmt.Sprintf("Available versions for %s (Last Modified: %s):\n", component, manifest.Modified),
+		header:   fmt.Sprintf("Available versions for %s:\n", component),
 		cmpTable: cmpTable,
 	}, nil
 }

@@ -19,6 +19,7 @@ import (
 	"runtime"
 
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/errors"
 )
 
@@ -121,4 +122,28 @@ func (r *Repository) DownloadComponent(compsDir, component string, version v0man
 	resName := fmt.Sprintf("%s-%s", component, version)
 	targetDir := filepath.Join(compsDir, component, version.String())
 	return r.fileSource.downloadTarFile(targetDir, fmt.Sprintf("%s-%s-%s", resName, r.GOOS, r.GOARCH), !r.DisableDecompress)
+}
+
+// FetchIndex fetch newest index file
+func (r *Repository) FetchIndex() (*v1manifest.Index, error) {
+	index := &v1manifest.Manifest{
+		Signed: &v1manifest.Index{},
+	}
+	err := r.fileSource.downloadJSON("index.json", index)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	return index.Signed.(*v1manifest.Index), nil
+}
+
+// FetchComponent fetch newest component file
+func (r *Repository) FetchComponent(component string) (*v1manifest.Component, error) {
+	comp := &v1manifest.Manifest{
+		Signed: &v1manifest.Component{},
+	}
+	err := r.fileSource.downloadJSON(fmt.Sprintf("%s.json", component), comp)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	return comp.Signed.(*v1manifest.Component), nil
 }
