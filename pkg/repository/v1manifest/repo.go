@@ -475,7 +475,7 @@ func ReadManifestDir(dir string, roles ...string) (map[string]ValidManifest, err
 		}
 		defer reader.Close()
 		var role ValidManifest
-		m, err := ReadManifest(reader, role, crypto.NewKeyStore())
+		m, err := ReadManifest(reader, role, nil)
 		if err != nil {
 			return nil, err
 		}

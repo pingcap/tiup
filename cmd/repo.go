@@ -14,13 +14,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
-	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pkg/errors"
@@ -79,11 +78,15 @@ func newRepoSignCmd(env *meta.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sign <manifest-file> [key-files]",
 		Short: "Add signatures to a manifest file",
+		Long:  "Add signatures to a manifest file, if no key file specified, the ~/.tiup/private.json will be used",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
 				return cmd.Help()
 			}
 
+			if len(args) == 1 {
+				return v1manifest.SignManifestFile(args[0], env.Profile().Path("private.json"))
+			}
 			return v1manifest.SignManifestFile(args[0], args[1:]...)
 		},
 	}
@@ -170,49 +173,68 @@ func delComp(repo, id, version string) error {
 
 // the `repo genkey` sub command
 func newRepoGenkeyCmd(env *meta.Environment) *cobra.Command {
+	showPublic := false
+	privPath := env.Profile().Path("private.json")
 	cmd := &cobra.Command{
 		Use:   "genkey",
 		Short: "Generate a new key pair",
 		Long:  `Generate a new key pair that can be used to sign components.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			privPath := env.Profile().Path("private.pem")
+			if showPublic {
+				f, err := os.Open(privPath)
+				if err != nil {
+					return err
+				}
+				defer f.Close()
+
+				ki := v1manifest.KeyInfo{}
+				if err := json.NewDecoder(f).Decode(&ki); err != nil {
+					return err
+				}
+				pki, err := ki.Public()
+				if err != nil {
+					return err
+				}
+				id, err := pki.ID()
+				if err != nil {
+					return err
+				}
+				content, err := json.MarshalIndent(pki, "", "\t")
+				if err != nil {
+					return err
+				}
+
+				fmt.Printf("KeyID: %s\nKeyContent: \n%s\n", id, string(content))
+				return nil
+			}
+
 			if utils.IsExist(privPath) {
 				fmt.Println("Key already exists, skipped")
 				return nil
 			}
 
-			_, privKey, err := genKeyPair()
+			key, err := v1manifest.GenKeyInfo()
 			if err != nil {
 				return err
 			}
 
-			if err := ioutil.WriteFile(privPath, privKey, 0600); err != nil {
+			f, err := os.Create(privPath)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			if err := json.NewEncoder(f).Encode(key); err != nil {
 				return err
 			}
 
-			fmt.Printf("Private key generated:\n%s\n", privKey)
-			fmt.Printf("Key have been write to %s\n", privPath)
+			fmt.Printf("private key have been write to %s\n", privPath)
 			return nil
 		},
 	}
+	cmd.Flags().BoolVarP(&showPublic, "public", "p", showPublic, fmt.Sprintf("show public content of %s", privPath))
 
 	return cmd
-}
-
-func genKeyPair() ([]byte, []byte, error) {
-	pub, priv, err := crypto.RSAPair()
-	if err != nil {
-		return nil, nil, err
-	}
-	pubBytes, err := pub.Serialize()
-	if err != nil {
-		return nil, nil, err
-	}
-	privBytes, err := priv.Serialize()
-	if err != nil {
-		return nil, nil, err
-	}
-	return pubBytes, privBytes, nil
 }
 
 // the `repo init` sub command

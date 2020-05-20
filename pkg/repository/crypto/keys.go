@@ -46,6 +46,9 @@ type KeyStore interface {
 
 	// Get return a key by it's id
 	Get(string) PubKey
+
+	// Visit applies the supplied function to all keys
+	Visit(func(id string, key PubKey))
 }
 
 // Serializable represents object that can be serialized and deserialized
@@ -86,6 +89,15 @@ type keychain map[string]PubKey
 // NewKeyStore return a KeyStore
 func NewKeyStore() KeyStore {
 	return &keychain{}
+}
+
+var _ KeyStore = &keychain{}
+
+// Visit implements KeyStore interface.
+func (s *keychain) Visit(fn func(id string, key PubKey)) {
+	for id, key := range *s {
+		fn(id, key)
+	}
 }
 
 // Get return key by id
