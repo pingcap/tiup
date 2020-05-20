@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
-	"github.com/pingcap/errors"
 )
 
 // FsManifests represents a collection of v1 manifests on disk.
@@ -33,13 +32,8 @@ type FsManifests struct {
 // FIXME implement garbage collection of old manifests
 
 // NewManifests creates a new FsManifests with local store at root.
-// There must exists the trusted root.json.
 func NewManifests(root string) (*FsManifests, error) {
 	fs := &FsManifests{root: root}
-	err := fs.initKeys()
-	if err != nil {
-		return nil, errors.AddStack(err)
-	}
 
 	return fs, nil
 }
@@ -55,24 +49,6 @@ type LocalManifests interface {
 	LoadManifest(role ValidManifest) (bool, error)
 	// LoadComponentManifest loads and validates the most recent manifest at filename.
 	LoadComponentManifest(filename string) (*Component, error)
-	// Keys returns the key store derived from these manifests.
-	Keys() crypto.KeyStore
-}
-
-func (ms *FsManifests) initKeys() error {
-	var root Root
-	_, err := ms.LoadManifest(&root)
-	if err != nil {
-		return errors.AddStack(err)
-	}
-
-	keys, err := root.GetRootKeyStore()
-	if err != nil {
-		return errors.AddStack(err)
-	}
-
-	ms.keys = keys
-	return nil
 }
 
 // SaveManifest implements LocalManifests.
@@ -85,10 +61,6 @@ func (ms *FsManifests) SaveManifest(manifest *Manifest, filename string) error {
 	err = ioutil.WriteFile(filepath.Join(ms.root, filename), bytes, 0644)
 	if err != nil {
 		return err
-	}
-
-	if manifest.Signed.Base().Ty == ManifestTypeRoot {
-		return ms.initKeys()
 	}
 
 	return nil
@@ -131,7 +103,7 @@ func (ms *FsManifests) load(filename string, role ValidManifest) (bool, error) {
 	}
 	defer file.Close()
 
-	_, err = ReadManifest(file, role, ms.keys)
+	_, err = ReadManifest(file, role, nil)
 	return true, err
 }
 
