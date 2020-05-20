@@ -18,8 +18,6 @@ import (
 	"os"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
-	"github.com/pingcap-incubator/tiup/pkg/version"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -62,11 +60,11 @@ latest version. All other flags will be ignored if the flag --self is given.
 					}
 				}()
 
-				err = env.Repository().DownloadTiup(env.LocalPath("bin"))
+				err = env.SelfUpdate()
 				if err != nil {
 					return err
 				}
-				fmt.Println("Update successfully!")
+				fmt.Println("Updated successfully!")
 				return nil
 			}
 			if (len(components) == 0 && !all && !force) || (len(components) > 0 && all) {
@@ -76,7 +74,7 @@ latest version. All other flags will be ignored if the flag --self is given.
 			if err != nil {
 				return err
 			}
-			fmt.Println("Update successfully!")
+			fmt.Println("Updated successfully!")
 			return nil
 		},
 	}
@@ -96,22 +94,5 @@ func updateComponents(env *meta.Environment, components []string, nightly, force
 		components = installed
 	}
 
-	manifest, err := env.LatestManifest()
-	if err != nil {
-		return err
-	}
-	for _, comp := range components {
-		component, v := meta.ParseCompVersion(comp)
-		if !manifest.HasComponent(component) {
-			return errors.Errorf("component `%s` not found", component)
-		}
-		if nightly {
-			v = version.NightlyVersion
-		}
-		err = env.DownloadComponent(component, v, nightly || force)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return env.UpdateComponents(components, nightly, force)
 }

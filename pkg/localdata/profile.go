@@ -16,6 +16,7 @@ package localdata
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"io/ioutil"
 	"log"
 	"os"
@@ -278,4 +279,9 @@ func (p *Profile) SelectInstalledVersion(component string, version v0manifest.Ve
 		return "", errInstallFirst
 	}
 	return version, nil
+}
+
+// LocalManifests creates a LocalManifests object representing the v1 manifests stored locally.
+func (p *Profile) LocalManifests() (v1manifest.LocalManifests, error) {
+	return v1manifest.NewManifests(p.root)
 }
