@@ -178,6 +178,10 @@ func buildScaleOutTask(
 	iterErr = nil
 	newPart.IterInstance(func(instance meta.Instance) {
 		if host := instance.GetHost(); !initializedHosts.Exist(host) {
+			if _, found := uninitializedHosts[host]; found {
+				return
+			}
+
 			// check for "imported" parameter, it can not be true when scaling out
 			if instance.IsImported() {
 				iterErr = errors.New(
