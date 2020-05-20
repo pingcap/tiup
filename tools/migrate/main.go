@@ -179,7 +179,7 @@ func migrate(srcDir, dstDir string) error {
 		return errors.Trace(err)
 	}
 	// save owner key
-	if err := v1manifest.SavePrivKey(ownerkeyInfo, "pingcap", keyDir); err != nil {
+	if err := v1manifest.SaveKeyInfo(ownerkeyInfo, "pingcap", keyDir); err != nil {
 		return errors.Trace(err)
 	}
 
@@ -215,10 +215,10 @@ func migrate(srcDir, dstDir string) error {
 				if err != nil {
 					return err
 				}
-				// FIXME: The URL need to be confirmed, the /id/ part may not be needed
+				// due to the nature of our CDN, all files are under the same URI base
 				vs[v.Version.String()] = v1manifest.VersionItem{
 					Yanked:   false,
-					URL:      fmt.Sprintf("/%s%s", comp.Name, filename),
+					URL:      filename,
 					Entry:    v.Entry,
 					Released: v.Date,
 					FileHash: v1manifest.FileHash{

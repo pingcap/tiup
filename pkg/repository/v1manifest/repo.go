@@ -107,7 +107,8 @@ func Init(dst, keyDir string, initTime time.Time) (err error) {
 	return BatchSaveManifests(dst, signedManifests)
 }
 
-func SavePrivKey(key *KeyInfo, ty, dir string) error {
+// SaveKeyInfo saves a KeyInfo object to a JSON file
+func SaveKeyInfo(key *KeyInfo, ty, dir string) error {
 	id, err := key.ID()
 	if err != nil {
 		return err
@@ -119,10 +120,7 @@ func SavePrivKey(key *KeyInfo, ty, dir string) error {
 	}
 	defer f.Close()
 
-	if err := json.NewEncoder(f).Encode(key); err != nil {
-		return err
-	}
-	return nil
+	return json.NewEncoder(f).Encode(key)
 }
 
 // GenAndSaveKeys generate private keys to keys param and save key file to dir
@@ -134,7 +132,7 @@ func GenAndSaveKeys(keys map[string][]*KeyInfo, ty string, num int, dir string) 
 		}
 		keys[ty] = append(keys[ty], k)
 
-		if err := SavePrivKey(k, ty, dir); err != nil {
+		if err := SaveKeyInfo(k, ty, dir); err != nil {
 			return err
 		}
 	}
