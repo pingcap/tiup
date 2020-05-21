@@ -18,9 +18,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/stretchr/testify/assert"
@@ -565,4 +569,62 @@ func hash(s string) string {
 	}
 
 	return hex.EncodeToString(shaWriter.Sum(nil))
+}
+
+func TestWithMigrate(t *testing.T) {
+	// generate using toots/migrate
+	mdir := "./testdata/manifests"
+
+	repo := createMigrateRepo(t, mdir)
+	root, err := repo.loadRoot()
+	assert.Nil(t, err)
+	t.Log(root)
+
+	err = repo.updateLocalRoot()
+	assert.Nil(t, err)
+
+	_, err = repo.ensureManifests()
+	assert.Nil(t, err)
+
+	// after ensureManifests we should can load index/timestamp/snapshot
+	{
+		var index v1manifest.Index
+		exists, err := repo.local.LoadManifest(&index)
+		assert.Nil(t, err)
+		assert.True(t, exists)
+		var root v1manifest.Root
+		exists, err = repo.local.LoadManifest(&root)
+		assert.Nil(t, err)
+		assert.True(t, exists)
+		var snap v1manifest.Snapshot
+		exists, err = repo.local.LoadManifest(&snap)
+		assert.Nil(t, err)
+		assert.True(t, exists)
+	}
+}
+
+func createMigrateRepo(t *testing.T, mdir string) (repo *V1Repository) {
+	os.TempDir()
+	profileDir, err := ioutil.TempDir("", "tiup-*")
+	assert.Nil(t, err)
+	t.Logf("using profile dir: %s", profileDir)
+
+	t.Cleanup(
+		func() {
+			os.RemoveAll(profileDir)
+		},
+	)
+
+	// copy root.json from mdir to profileDir
+	data, err := ioutil.ReadFile(filepath.Join(mdir, "root.json"))
+	assert.Nil(t, err)
+	err = ioutil.WriteFile(filepath.Join(profileDir, "root.json"), data, 0644)
+	assert.Nil(t, err)
+
+	localdata.DefaultTiupHome = profileDir
+	profile := localdata.InitProfile()
+	options := Options{}
+	mirror := NewMirror(mdir, MirrorOptions{})
+	repo = NewV1Repo(mirror, options, v1manifest.NewManifests(profile))
+	return
 }

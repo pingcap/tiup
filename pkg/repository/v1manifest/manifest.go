@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -263,7 +264,7 @@ func (manifest *Snapshot) isValid() error {
 }
 
 func (manifest *Timestamp) isValid() error {
-	snapshot, ok := manifest.Meta[ManifestURLSnapshot]
+	snapshot, ok := manifest.Meta[ManifestFilenameSnapshot]
 	if !ok {
 		return errors.New("timestamp manifest is missing entry for snapshot.json")
 	}
@@ -278,12 +279,12 @@ func (manifest *Timestamp) isValid() error {
 
 // SnapshotHash returns the hashes of the snapshot manifest as specified in the timestamp manifest.
 func (manifest *Timestamp) SnapshotHash() FileHash {
-	return manifest.Meta[ManifestURLSnapshot]
+	return manifest.Meta[ManifestFilenameSnapshot]
 }
 
 // VersionedURL looks up url in the snapshot and returns a modified url with the version prefix, and that file's length.
 func (manifest *Snapshot) VersionedURL(url string) (string, *FileVersion, error) {
-	entry, ok := manifest.Meta[url]
+	entry, ok := manifest.Meta[filepath.Base(url)]
 	if !ok {
 		return "", nil, fmt.Errorf("no entry in snapshot manifest for %s", url)
 	}
@@ -336,7 +337,11 @@ func ReadManifest(input io.Reader, role ValidManifest, root *Root) (*Manifest, e
 				return nil, errors.AddStack(err)
 			}
 
-			threshold := root.Roles[role.Base().Ty].Threshold
+			roleInfo, ok := root.Roles[role.Base().Ty]
+			if !ok {
+				return nil, errors.Errorf("no type %s in roles", role.Base().Ty)
+			}
+			threshold := roleInfo.Threshold
 			err = m.VerifySignature(threshold, keys)
 			if err != nil {
 				return nil, err
