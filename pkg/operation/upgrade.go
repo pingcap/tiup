@@ -33,7 +33,7 @@ func Upgrade(
 ) error {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
-	components := spec.ComponentsByStartOrder()
+	components := spec.ComponentsByUpdateOrder()
 	components = FilterComponent(components, roleFilter)
 
 	leaderAware := set.NewStringSet(meta.ComponentPD, meta.ComponentTiKV)

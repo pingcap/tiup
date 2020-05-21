@@ -87,7 +87,7 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 		return err
 	}
 
-	for _, comp := range metadata.Topology.ComponentsByStartOrder() {
+	for _, comp := range metadata.Topology.ComponentsByUpdateOrder() {
 		for _, inst := range comp.Instances() {
 			version := meta.ComponentVersion(inst.ComponentName(), clusterVersion)
 			if version == "" {

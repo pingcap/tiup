@@ -94,6 +94,7 @@ type Instance interface {
 type Specification interface {
 	ComponentsByStopOrder() (comps []Component)
 	ComponentsByStartOrder() (comps []Component)
+	ComponentsByUpdateOrder() (comps []Component)
 	IterComponent(fn func(comp Component))
 	IterInstance(fn func(instance Instance))
 	IterHost(fn func(instance Instance))
@@ -1410,7 +1411,7 @@ func (topo *ClusterSpecification) ComponentsByStopOrder() (comps []Component) {
 
 // ComponentsByStartOrder return component in the order need to start.
 func (topo *ClusterSpecification) ComponentsByStartOrder() (comps []Component) {
-	// "pd", "tikv", "pump", "tidb", "drainer", "prometheus", "grafana", "alertmanager"
+	// "pd", "tikv", "pump", "tidb", "tiflash", "drainer", "cdc", "prometheus", "grafana", "alertmanager"
 	comps = append(comps, &PDComponent{topo})
 	comps = append(comps, &TiKVComponent{topo})
 	comps = append(comps, &PumpComponent{topo})
@@ -1421,6 +1422,19 @@ func (topo *ClusterSpecification) ComponentsByStartOrder() (comps []Component) {
 	comps = append(comps, &MonitorComponent{topo})
 	comps = append(comps, &GrafanaComponent{topo})
 	comps = append(comps, &AlertManagerComponent{topo})
+	return
+}
+
+// ComponentsByUpdateOrder return component in the order need to be updated.
+func (topo *ClusterSpecification) ComponentsByUpdateOrder() (comps []Component) {
+	// "tiflash", "pd", "tikv", "pump", "tidb", "drainer", "cdc", "prometheus", "grafana", "alertmanager"
+	comps = topo.ComponentsByStartOrder()
+	for i, comp := range comps {
+		if comp.Name() == ComponentTiFlash {
+			comps = append([]Component{comp}, append(comps[:i], comps[i+1:]...)...)
+			return
+		}
+	}
 	return
 }
 
