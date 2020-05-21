@@ -371,6 +371,5 @@ func (r *V1Repository) FetchComponent(id string) (com *v1manifest.Component, err
 		return nil, errors.AddStack(err)
 	}
 
-	com, err = r.local.LoadComponentManifest(v1manifest.ComponentFilename(id))
-	return
+	return r.updateComponentManifest(id)
 }
