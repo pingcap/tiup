@@ -107,6 +107,22 @@ func Init(dst, keyDir string, initTime time.Time) (err error) {
 	return BatchSaveManifests(dst, signedManifests)
 }
 
+// SaveKeyInfo saves a KeyInfo object to a JSON file
+func SaveKeyInfo(key *KeyInfo, ty, dir string) error {
+	id, err := key.ID()
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(path.Join(dir, fmt.Sprintf("%s-%s.json", id[:16], ty)))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	return json.NewEncoder(f).Encode(key)
+}
+
 // GenAndSaveKeys generate private keys to keys param and save key file to dir
 func GenAndSaveKeys(keys map[string][]*KeyInfo, ty string, num int, dir string) error {
 	for i := 0; i < num; i++ {
@@ -116,18 +132,7 @@ func GenAndSaveKeys(keys map[string][]*KeyInfo, ty string, num int, dir string) 
 		}
 		keys[ty] = append(keys[ty], k)
 
-		id, err := k.ID()
-		if err != nil {
-			return err
-		}
-
-		f, err := os.Create(path.Join(dir, fmt.Sprintf("%s-%s.json", id[:16], ty)))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		if err := json.NewEncoder(f).Encode(k); err != nil {
+		if err := SaveKeyInfo(k, ty, dir); err != nil {
 			return err
 		}
 	}
@@ -323,6 +328,7 @@ func NewSnapshot(initTime time.Time) *Snapshot {
 			Expires:     initTime.Add(ManifestsConfig[ManifestTypeSnapshot].Expire).Format(time.RFC3339),
 			Version:     0, // not versioned
 		},
+		Meta: make(map[string]FileVersion),
 	}
 }
 
