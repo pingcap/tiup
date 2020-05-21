@@ -105,6 +105,15 @@ func (manifest *Manifest) VerifySignature(threshold uint, keys crypto.KeyStore) 
 		return errors.New("invalid zero threshold")
 	}
 
+	// Check duplicate of signature
+	has := make(map[string]struct{})
+	for _, s := range manifest.Signatures {
+		if _, ok := has[s.KeyID]; ok {
+			return errors.Errorf("contains duplicate signature")
+		}
+		has[s.KeyID] = struct{}{}
+	}
+
 	if len(manifest.Signatures) < int(threshold) {
 		return errors.Errorf("only %d signature but need %d", len(manifest.Signatures), threshold)
 	}
