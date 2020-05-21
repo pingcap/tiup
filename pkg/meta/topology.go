@@ -199,8 +199,8 @@ type TiKVSpec struct {
 	OS              string                 `yaml:"os,omitempty"`
 }
 
-// Status queries current status of the instance
-func (s TiKVSpec) Status(pdList ...string) string {
+// checkStoreStatus checks the store status in current cluster
+func checkStoreStatus(storeAddr string, pdList ...string) string {
 	if len(pdList) < 1 {
 		return "N/A"
 	}
@@ -210,13 +210,11 @@ func (s TiKVSpec) Status(pdList ...string) string {
 		return "Down"
 	}
 
-	name := fmt.Sprintf("%s:%d", s.Host, s.Port)
-
 	// only get status of the latest store, it is the store with lagest ID number
 	// older stores might be legacy ones that already offlined
 	var latestStore *pdserverapi.StoreInfo
 	for _, store := range stores.Stores {
-		if name == store.Store.Address {
+		if storeAddr == store.Store.Address {
 			if latestStore == nil {
 				latestStore = store
 				continue
@@ -230,6 +228,12 @@ func (s TiKVSpec) Status(pdList ...string) string {
 		return latestStore.Store.StateName
 	}
 	return "N/A"
+}
+
+// Status queries current status of the instance
+func (s TiKVSpec) Status(pdList ...string) string {
+	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.Port)
+	return checkStoreStatus(storeAddr, pdList...)
 }
 
 // Role returns the component role of the instance
@@ -347,9 +351,9 @@ type TiFlashSpec struct {
 }
 
 // Status queries current status of the instance
-func (s TiFlashSpec) Status(flashList ...string) string {
-	url := fmt.Sprintf("http://%s:%d/?query=select%%20version()", s.Host, s.HTTPPort)
-	return statusByURL(url)
+func (s TiFlashSpec) Status(pdList ...string) string {
+	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.FlashProxyPort)
+	return checkStoreStatus(storeAddr, pdList...)
 }
 
 // Role returns the component role of the instance
