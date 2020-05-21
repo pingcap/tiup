@@ -518,9 +518,12 @@ func SignManifest(role ValidManifest, keys ...*KeyInfo) (*Manifest, error) {
 
 // WriteManifest writes a Manifest object to file in JSON format
 func WriteManifest(out io.Writer, m *Manifest) error {
-	encoder := json.NewEncoder(out)
-	encoder.SetIndent("", "\t")
-	return encoder.Encode(m)
+	bytes, err := cjson.Marshal(m)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	_, err = out.Write(bytes)
+	return err
 }
 
 // SignAndWrite creates a manifest and writes it to out.

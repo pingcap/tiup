@@ -14,9 +14,6 @@
 package cmd
 
 import (
-	"fmt"
-	"runtime"
-
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/spf13/cobra"
 )
@@ -45,25 +42,5 @@ of the same component:
 }
 
 func installComponents(env *meta.Environment, specs []string) error {
-	manifest, err := env.LatestManifest()
-	if err != nil {
-		return err
-	}
-	for _, spec := range specs {
-		component, version := meta.ParseCompVersion(spec)
-		compInfo, found := manifest.FindComponent(component)
-		if !found {
-			return fmt.Errorf("component `%s` not exists", component)
-		}
-
-		if !compInfo.IsSupport(runtime.GOOS, runtime.GOARCH) {
-			return fmt.Errorf("component `%s` does not support `%s/%s`", component, runtime.GOOS, runtime.GOARCH)
-		}
-
-		err := env.DownloadComponent(component, version, version.IsNightly())
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return env.UpdateComponents(specs, false, false)
 }

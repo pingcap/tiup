@@ -17,14 +17,21 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap-incubator/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
+
+// EnvNameV1 is the name of the env var used to direct TiUp to use v1 manifests.
+const EnvNameV1 = "TIUP_USE_V1"
 
 // Mirror return mirror of tiup.
 // If it's not defined, it will use "https://tiup-mirrors.pingcap.com/".
@@ -41,33 +48,41 @@ type Environment struct {
 	profile *localdata.Profile
 	// repo represents the components repository of TiUP, it can be a
 	// local file system or a HTTP URL
-	repo *repository.Repository
+	repo   *repository.Repository
+	v1Repo *repository.V1Repository
 }
 
-// InitEnv creates a new Environment object configured using env vars and defaults.
+// InitEnv creates a new Environment object configured using env vars and defaults. Uses the EnvNameV1 env var to
+// determine whether to use v0 or v1 manifests.
 func InitEnv(options repository.Options) (*Environment, error) {
 	profile := localdata.InitProfile()
 
 	// Initialize the repository
 	// Replace the mirror if some sub-commands use different mirror address
 	mirror := repository.NewMirror(Mirror(), repository.MirrorOptions{})
-	repo, err := repository.NewRepository(mirror, options)
-	return &Environment{profile, repo}, err
+
+	var repo *repository.Repository
+	var v1repo *repository.V1Repository
+	var err error
+
+	if os.Getenv(EnvNameV1) == "" {
+		repo, err = repository.NewRepository(mirror, options)
+	} else {
+		v1repo = repository.NewV1Repo(mirror, options, v1manifest.NewManifests(profile))
+	}
+
+	return &Environment{profile, repo, v1repo}, err
 }
 
-// New creates a new Environment with the provided data.
-func New(profile *localdata.Profile, repo *repository.Repository) *Environment {
-	return &Environment{profile, repo}
+// NewV0 creates a new Environment with the provided data. Note that environments created with this function do not
+// support v1 repositories.
+func NewV0(profile *localdata.Profile, repo *repository.Repository) *Environment {
+	return &Environment{profile, repo, nil}
 }
 
 // Repository returns the initialized repository
 func (env *Environment) Repository() *repository.Repository {
 	return env.repo
-}
-
-// SetRepository exports for test
-func (env *Environment) SetRepository(r *repository.Repository) {
-	env.repo = r
 }
 
 // Profile returns the profile of local data
@@ -85,8 +100,52 @@ func (env *Environment) LocalPath(path ...string) string {
 	return env.profile.Path(filepath.Join(path...))
 }
 
-// DownloadComponent downloads the specific version of a component from repository
-func (env *Environment) DownloadComponent(component string, version v0manifest.Version, overwrite bool) error {
+// UpdateComponents updates or installs all components described by specs.
+func (env *Environment) UpdateComponents(specs []string, nightly, force bool) error {
+	if env.v1Repo != nil {
+		var v1specs []repository.ComponentSpec
+		for _, spec := range specs {
+			component, v := ParseCompVersion(spec)
+			v1specs = append(v1specs, repository.ComponentSpec{ID: component, Version: v.String(), Force: force})
+		}
+		return env.v1Repo.UpdateComponents(v1specs)
+	}
+
+	manifest, err := env.latestManifest()
+	if err != nil {
+		return err
+	}
+	for _, spec := range specs {
+		component, v := ParseCompVersion(spec)
+		if nightly {
+			v = version.NightlyVersion
+		}
+		if !manifest.HasComponent(component) {
+			compInfo, found := manifest.FindComponent(component)
+			if !found {
+				return fmt.Errorf("component `%s` not found", component)
+			}
+
+			if !compInfo.IsSupport(utils.PlatformString()) {
+				return fmt.Errorf("component `%s` does not support `%s/%s`", component, runtime.GOOS, runtime.GOARCH)
+			}
+		}
+
+		err := env.downloadComponent(component, v, v.IsNightly() || force)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SelfUpdate updates TiUp.
+func (env *Environment) SelfUpdate() error {
+	return env.repo.DownloadTiup(env.LocalPath("bin"))
+}
+
+// downloadComponent downloads the specific version of a component from repository
+func (env *Environment) downloadComponent(component string, version v0manifest.Version, overwrite bool) error {
 	versions, err := env.repo.ComponentVersions(component)
 	if err != nil {
 		return err
@@ -104,16 +163,9 @@ func (env *Environment) DownloadComponent(component string, version v0manifest.V
 	}
 	if !overwrite {
 		// Ignore if installed
-		installed, err := env.profile.InstalledVersions(component)
+		found, err := env.profile.VersionIsInstalled(component, version.String())
 		if err != nil {
 			return err
-		}
-		found := false
-		for _, v := range installed {
-			if v0manifest.Version(v) == version {
-				found = true
-				break
-			}
 		}
 		if found {
 			fmt.Printf("The component `%s:%s` has been installed.\n", component, version)
@@ -162,7 +214,7 @@ func (env *Environment) DownloadComponentIfMissing(component string, version v0m
 
 	if needDownload {
 		fmt.Printf("The component `%s` is not installed; downloading from repository.\n", component)
-		err := env.DownloadComponent(component, version, false)
+		err := env.downloadComponent(component, version, false)
 		if err != nil {
 			return "", err
 		}
@@ -175,8 +227,8 @@ func (env *Environment) DownloadComponentIfMissing(component string, version v0m
 	return version, nil
 }
 
-// LatestManifest returns the latest component manifest and refresh the local cache
-func (env *Environment) LatestManifest() (*v0manifest.ComponentManifest, error) {
+// latestManifest returns the latest v0 component manifest and refresh the local cache
+func (env *Environment) latestManifest() (*v0manifest.ComponentManifest, error) {
 	manifest, err := env.repo.Manifest()
 	if err != nil {
 		return nil, err

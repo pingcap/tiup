@@ -162,9 +162,14 @@ func (s *SignatureError) Error() string {
 	return fmt.Sprintf("invalid signature for file %s: %s", s.fname, s.Error())
 }
 
-// ComponentFilename returns the expected filename for the component identified by id.
-func ComponentFilename(id string) string {
+// ComponentManifestFilename returns the expected filename for the component manifest identified by id.
+func ComponentManifestFilename(id string) string {
 	return fmt.Sprintf("%s.json", id)
+}
+
+// RootManifestFilename returns the expected filename for the root manifest with the given version.
+func RootManifestFilename(version uint) string {
+	return fmt.Sprintf("%v.root.json", version)
 }
 
 // Filename returns the unversioned name that the manifest should be saved as based on the type in s.
@@ -181,8 +186,8 @@ func (s *SignedBase) Versioned() bool {
 	return ManifestsConfig[s.Ty].Versioned
 }
 
-// CheckExpire return not nil if it's expired.
-func CheckExpire(expires string) error {
+// CheckExpiry return not nil if it's expired.
+func CheckExpiry(expires string) error {
 	expiresTime, err := time.Parse(time.RFC3339, expires)
 	if err != nil {
 		return errors.AddStack(err)
@@ -199,6 +204,24 @@ func (s *SignedBase) expiryTime() (time.Time, error) {
 	return time.Parse(time.RFC3339, s.Expires)
 }
 
+// ExpiresAfter checks that manifest 1 expires after manifest 2 (or are equal) and returns an error otherwise.
+func ExpiresAfter(m1, m2 ValidManifest) error {
+	time1, err := time.Parse(time.RFC3339, m1.Base().Expires)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+	time2, err := time.Parse(time.RFC3339, m2.Base().Expires)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	if time1.Before(time2) {
+		return fmt.Errorf("manifests have mis-ordered expiry times, expected %s >= %s", time1, time2)
+	}
+
+	return nil
+}
+
 // isValid checks if s is valid manifest metadata.
 func (s *SignedBase) isValid() error {
 	if _, ok := ManifestsConfig[s.Ty]; !ok {
@@ -212,7 +235,7 @@ func (s *SignedBase) isValid() error {
 	// When updating root, we only check the newest version is not expire.
 	// This checking should be done by the update root flow.
 	if s.Ty != ManifestTypeRoot {
-		if err := CheckExpire(s.Expires); err != nil {
+		if err := CheckExpiry(s.Expires); err != nil {
 			return errors.AddStack(err)
 		}
 	}
@@ -272,18 +295,18 @@ func (manifest *Timestamp) SnapshotHash() FileHash {
 	return manifest.Meta[ManifestURLSnapshot]
 }
 
-// VersionedURL looks up url in the snapshot and returns a modified url with the version prefix
-func (manifest *Snapshot) VersionedURL(url string) (string, error) {
+// VersionedURL looks up url in the snapshot and returns a modified url with the version prefix, and that file's length.
+func (manifest *Snapshot) VersionedURL(url string) (string, *FileVersion, error) {
 	entry, ok := manifest.Meta[url]
 	if !ok {
-		return "", fmt.Errorf("no entry in snapshot manifest for %s", url)
+		return "", nil, fmt.Errorf("no entry in snapshot manifest for %s", url)
 	}
 	lastSlash := strings.LastIndex(url, "/")
 	if lastSlash < 0 {
-		return fmt.Sprintf("%v.%s", entry.Version, url), nil
+		return fmt.Sprintf("%v.%s", entry.Version, url), &entry, nil
 	}
 
-	return fmt.Sprintf("%s/%v.%s", url[:lastSlash], entry.Version, url[lastSlash+1:]), nil
+	return fmt.Sprintf("%s/%v.%s", url[:lastSlash], entry.Version, url[lastSlash+1:]), &entry, nil
 }
 
 func readTimestampManifest(input io.Reader, root *Root) (*Timestamp, error) {
