@@ -352,7 +352,7 @@ type TiFlashSpec struct {
 
 // Status queries current status of the instance
 func (s TiFlashSpec) Status(pdList ...string) string {
-	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.FlashProxyPort)
+	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.FlashServicePort)
 	return checkStoreStatus(storeAddr, pdList...)
 }
 
