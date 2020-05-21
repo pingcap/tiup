@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -115,6 +116,14 @@ func hashManifest(m *v1manifest.Manifest) (map[string]string, uint, error) {
 		v1manifest.SHA256: hex.EncodeToString(s256[:]),
 		v1manifest.SHA512: hex.EncodeToString(s512[:]),
 	}, uint(len(bytes)), nil
+}
+
+func fnameWithVersion(fname string, version uint) string {
+	base := filepath.Base(fname)
+	dir := filepath.Dir(fname)
+
+	versionBase := strconv.Itoa(int(version)) + "." + base
+	return filepath.Join(dir, versionBase)
 }
 
 func migrate(srcDir, dstDir string) error {
@@ -315,15 +324,41 @@ func migrate(srcDir, dstDir string) error {
 		return err
 	}
 	for _, m := range signedManifests {
-		writer, err := os.OpenFile(filepath.Join(dstDir, "manifests", m.Signed.Filename()), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
-		if err != nil {
-			return err
+		fname := filepath.Join(dstDir, "manifests", m.Signed.Filename())
+		switch m.Signed.Base().Ty {
+		case v1manifest.ManifestTypeRoot:
+			err := writeManifest(fnameWithVersion(fname, 1), m)
+			if err != nil {
+				return err
+			}
+			// A copy of the newest version which is 1.
+			err = writeManifest(fname, m)
+			if err != nil {
+				return err
+			}
+		case v1manifest.ManifestTypeComponent, v1manifest.ManifestTypeIndex:
+			err := writeManifest(fnameWithVersion(fname, 1), m)
+			if err != nil {
+				return err
+			}
+		default:
+			err = writeManifest(fname, m)
+			if err != nil {
+				return err
+			}
 		}
-		defer writer.Close()
+	}
+	return nil
+}
 
-		if err = v1manifest.WriteManifest(writer, m); err != nil {
-			return err
-		}
+func writeManifest(fname string, m *v1manifest.Manifest) error {
+	writer, err := os.OpenFile(fname, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer writer.Close()
+	if err = v1manifest.WriteManifest(writer, m); err != nil {
+		return err
 	}
 	return nil
 }
