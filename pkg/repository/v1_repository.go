@@ -78,7 +78,7 @@ func (r *V1Repository) loadRoot() error {
 // Postcondition: if returned error is nil, then the local snapshot and timestamp are up to date.
 func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 	hash, err := r.checkTimestamp()
-	if _, ok := err.(*v1manifest.SignatureError); ok {
+	if v1manifest.IsSignatureError(errors.Cause(err)) {
 		// The signature is wrong, update our signatures from the root manifest and try again.
 		err = r.updateLocalRoot()
 		if err != nil {
