@@ -105,6 +105,11 @@ func NeedCheckTomebsome(spec *meta.ClusterSpecification) bool {
 			return true
 		}
 	}
+	for _, s := range spec.TiFlashServers {
+		if s.Offline {
+			return true
+		}
+	}
 	for _, s := range spec.PumpServers {
 		if s.Offline {
 			return true
@@ -181,6 +186,45 @@ func DestroyClusterTombstone(
 		}
 
 		instances := (&meta.TiKVComponent{ClusterSpecification: spec}).Instances()
+		instances = filterID(instances, id)
+
+		err = StopComponent(getter, instances)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+
+		err = DestroyComponent(getter, instances, options.OptTimeout)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+
+	}
+
+	var flashServers []meta.TiFlashSpec
+	for _, s := range spec.TiFlashServers {
+		if !s.Offline {
+			flashServers = append(flashServers, s)
+			continue
+		}
+
+		id := s.Host + ":" + strconv.Itoa(s.FlashProxyPort)
+
+		tombstone, err := pdClient.IsTombStone(id)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+
+		if !tombstone {
+			flashServers = append(flashServers, s)
+			continue
+		}
+
+		nodes = append(nodes, id)
+		if returNodesOnly {
+			continue
+		}
+
+		instances := (&meta.TiFlashComponent{ClusterSpecification: spec}).Instances()
 		instances = filterID(instances, id)
 
 		err = StopComponent(getter, instances)
@@ -274,6 +318,7 @@ func DestroyClusterTombstone(
 	}
 
 	spec.TiKVServers = kvServers
+	spec.TiFlashServers = flashServers
 	spec.PumpServers = pumpServers
 	spec.Drainers = drainerServers
 

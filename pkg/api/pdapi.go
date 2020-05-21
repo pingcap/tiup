@@ -565,13 +565,13 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 		for _, store := range currStores.Stores {
 			if store.Store.Id == storeID {
 				// deleting a store may take long time to transfer data, so we
-				// return sucess once it get to "Offline" status and not waiting
+				// return success once it get to "Offline" status and not waiting
 				// for the whole process to complete.
 				// When finished, the store's state will be "Tombstone".
 				if store.Store.StateName != metapb.StoreState_name[0] {
 					return nil
 				}
-				return errors.New("still waitting for the store to be deleted")
+				return errors.New("still waiting for the store to be deleted")
 			}
 		}
 

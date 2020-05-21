@@ -171,6 +171,11 @@ func ScaleInCluster(
 				if err := pdClient.DelStore(instance.ID(), timeoutOpt); err != nil {
 					return err
 				}
+			case meta.ComponentTiFlash:
+				addr := instance.GetHost() + ":" + strconv.Itoa(instance.(*meta.TiFlashInstance).GetServicePort())
+				if err := pdClient.DelStore(addr, timeoutOpt); err != nil {
+					return err
+				}
 			case meta.ComponentPD:
 				if err := pdClient.DelPD(instance.(*meta.PDInstance).Name, timeoutOpt); err != nil {
 					return err
@@ -211,6 +216,16 @@ func ScaleInCluster(
 		}
 		s.Offline = true
 		spec.TiKVServers[i] = s
+	}
+
+	for i := 0; i < len(spec.TiFlashServers); i++ {
+		s := spec.TiFlashServers[i]
+		id := s.Host + ":" + strconv.Itoa(s.TCPPort)
+		if !deletedNodes.Exist(id) {
+			continue
+		}
+		s.Offline = true
+		spec.TiFlashServers[i] = s
 	}
 
 	for i := 0; i < len(spec.PumpServers); i++ {

@@ -740,6 +740,11 @@ type TiFlashInstance struct {
 	instance
 }
 
+// GetServicePort returns the service port of TiFlash
+func (i *TiFlashInstance) GetServicePort() int {
+	return i.InstanceSpec.(TiFlashSpec).FlashServicePort
+}
+
 // checkIncorrectDataDir checks TiFlash's key should not be set in config
 func (i *TiFlashInstance) checkIncorrectKey(key string) error {
 	errMsg := "NOTE: TiFlash `%s` is should NOT be set in topo's \"%s\" config, its value will be ignored, you should set `data_dir` in each host instead, please check your topology"
