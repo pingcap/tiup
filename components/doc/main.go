@@ -31,25 +31,25 @@ func execute() error {
 	lang := "en"
 
 	rootCmd := &cobra.Command{
-		Use:          "tiup doc",
+		Use:          "doc",
 		Short:        "TiDB document summary page",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if lang == "en" {
-				if err := open.Run("https://pingcap.com/docs/stable"); err != nil {
-					return err
-				}
-			} else if lang == "cn" {
-				if err := open.Run("https://pingcap.com/docs-cn/stable"); err != nil {
-					return err
-				}
-			} else {
-				return errors.New("lang should be en or cn")
+			var url string
+			switch lang {
+			case "en":
+				url = "https://pingcap.com/docs/stable"
+			case "cn":
+				url = "https://pingcap.com/docs-cn/stable"
+			default:
+				return errors.New("unrecognized language (only `en` and `cn` supported)")
 			}
-			return nil
+			return open.Run(url)
 		},
 	}
 
-	rootCmd.Flags().StringVar(&lang, "lang", lang, "The language of the document: en/cn")
+	rootCmd.AddCommand(newErrorCmd())
+
+	rootCmd.Flags().StringVar(&lang, "lang", lang, "The language of the documentation: en/cn")
 	return rootCmd.Execute()
 }
