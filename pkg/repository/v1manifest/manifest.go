@@ -140,6 +140,24 @@ func (manifest *Manifest) VerifySignature(threshold uint, keys crypto.KeyStore) 
 	return nil
 }
 
+// AddSignature adds one or more signatures to the manifest
+func (manifest *Manifest) AddSignature(sigs []Signature) {
+	hasSig := func(lst []Signature, s Signature) bool {
+		for _, sig := range lst {
+			if sig.KeyID == s.KeyID {
+				return true
+			}
+		}
+		return false
+	}
+	for _, sig := range sigs {
+		if hasSig(manifest.Signatures, sig) {
+			continue
+		}
+		manifest.Signatures = append(manifest.Signatures, sig)
+	}
+}
+
 func newSignatureError(fname string, err error) *SignatureError {
 	return &SignatureError{
 		fname: fname,

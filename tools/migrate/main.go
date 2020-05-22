@@ -64,15 +64,18 @@ func main() {
 	}
 
 	updateCmd := &cobra.Command{
-		Use:           "update <dir>",
-		Short:         "Rehash root.json and update snapshot.json, timestamp.json in the repo",
+		Use:   "update <dir> [signed-root.json ...]",
+		Short: "Rehash root.json and update snapshot.json, timestamp.json in the repo",
+		Long: `Rehash root.json and update snapshot.json, timestamp.json in the repo.
+If one or more signed root.json files are specified, the signatures
+from them are added to the root.json before updating.`,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
+			if len(args) < 1 {
 				return cmd.Help()
 			}
-			return update(args[0])
+			return update(args[0], args[1:])
 		},
 	}
 
@@ -103,7 +106,7 @@ func readManifest0(srcDir string) (*v0manifest.ComponentManifest, error) {
 }
 
 func readManifest1(dir, filename string, m *v1manifest.Manifest) error {
-	f, err := os.Open(filepath.Join(dir, "manifests", filename))
+	f, err := os.Open(filepath.Join(dir, filename))
 	if err != nil {
 		return err
 	}
@@ -399,7 +402,7 @@ func migrate(srcDir, dstDir string) error {
 	return nil
 }
 
-func update(dir string) error {
+func update(dir string, signedFiles []string) error {
 	manifests := make(map[string]*v1manifest.Manifest)
 	keys := make(map[string][]*v1manifest.KeyInfo)
 	currTime := time.Now().UTC()
@@ -409,16 +412,27 @@ func update(dir string) error {
 	root := v1manifest.Manifest{
 		Signed: &v1manifest.Root{},
 	}
-	if err = readManifest1(dir, v1manifest.ManifestFilenameRoot, &root); err != nil {
+	if err = readManifest1(filepath.Join(dir, "manifests"), v1manifest.ManifestFilenameRoot, &root); err != nil {
 		return err
 	}
 	manifests[v1manifest.ManifestTypeRoot] = &root
+
+	// append signatures
+	for _, fname := range signedFiles {
+		sr := v1manifest.Manifest{
+			Signed: &v1manifest.Root{},
+		}
+		if err = readManifest1("", fname, &sr); err != nil {
+			return err
+		}
+		root.AddSignature(sr.Signatures)
+	}
 
 	// read snapshot.json
 	snapshotOld := v1manifest.Manifest{
 		Signed: &v1manifest.Snapshot{},
 	}
-	if err := readManifest1(dir, v1manifest.ManifestFilenameSnapshot, &snapshotOld); err != nil {
+	if err := readManifest1(filepath.Join(dir, "manifests"), v1manifest.ManifestFilenameSnapshot, &snapshotOld); err != nil {
 		return err
 	}
 	for _, sig := range snapshotOld.Signatures {
@@ -455,7 +469,7 @@ func update(dir string) error {
 	tsOld := v1manifest.Manifest{
 		Signed: &v1manifest.Timestamp{},
 	}
-	if err := readManifest1(dir, v1manifest.ManifestFilenameTimestamp, &tsOld); err != nil {
+	if err := readManifest1(filepath.Join(dir, "manifests"), v1manifest.ManifestFilenameTimestamp, &tsOld); err != nil {
 		return err
 	}
 	manifests[v1manifest.ManifestTypeTimestamp] = &tsOld
