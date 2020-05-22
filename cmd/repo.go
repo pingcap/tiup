@@ -175,6 +175,7 @@ func delComp(repo, id, version string) error {
 func newRepoGenkeyCmd(env *meta.Environment) *cobra.Command {
 	showPublic := false
 	privPath := env.Profile().Path("private.json")
+
 	cmd := &cobra.Command{
 		Use:   "genkey",
 		Short: "Generate a new key pair",

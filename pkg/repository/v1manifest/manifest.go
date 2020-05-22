@@ -348,7 +348,7 @@ func readTimestampManifest(input io.Reader, root *Root) (*Timestamp, error) {
 	return &ts, nil
 }
 
-func checkHasThresholdKeys(threshold uint, sigs []signature, keys crypto.KeyStore) bool {
+func checkHasThresholdKeys(threshold uint, sigs []Signature, keys crypto.KeyStore) bool {
 	var count uint
 	for _, sig := range sigs {
 		if keys.Get(sig.KeyID) != nil {
