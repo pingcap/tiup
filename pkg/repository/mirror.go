@@ -126,8 +126,9 @@ func (l *localFilesystem) Fetch(resource string, maxSize int64) (io.ReadCloser, 
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
+
 		if info.Size() > maxSize {
-			return nil, errors.Annotatef(err, "local load from %s failed, maximum size exceeded", resource)
+			return nil, errors.Errorf("local load from %s failed, maximum size exceeded, file size: %d, max size: %d", resource, info.Size(), maxSize)
 		}
 	}
 
