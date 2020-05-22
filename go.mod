@@ -3,8 +3,10 @@ module github.com/pingcap-incubator/tiup
 go 1.13
 
 require (
+	github.com/BurntSushi/toml v0.3.1
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/alecthomas/assert v0.0.0-20170929043011-405dbfeb8e38
+	github.com/blevesearch/bleve v1.0.8-0.20200520165604-f0ded112bb1b
 	github.com/cavaliercoder/grab v2.0.1-0.20200331080741-9f014744ee41+incompatible
 	github.com/cheggaaa/pb v2.0.7+incompatible
 	github.com/cheynewallace/tabby v1.1.0
@@ -17,6 +19,7 @@ require (
 	github.com/juju/errors v0.0.0-20190930114154-d42613fe1ab9
 	github.com/juju/loggo v0.0.0-20190526231331-6e530bcce5d8 // indirect
 	github.com/juju/testing v0.0.0-20191001232224-ce9dec17d28b // indirect
+	github.com/pelletier/go-toml v1.3.0
 	github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712
 	github.com/pingcap/errors v0.11.5-0.20190809092503-95897b64e011
 	github.com/pingcap/failpoint v0.0.0-20200210140405-f8f9fb234798
@@ -42,4 +45,5 @@ require (
 	gopkg.in/yaml.v2 v2.2.8
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
+	github.com/tj/go-termd v0.0.2-0.20200115111609-7f6aeb166380
 )

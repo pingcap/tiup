@@ -5,4 +5,4 @@ Usage:
 
 Flags:
   -h, --help          help for tiup
-      --lang string   The language of the document: en/cn (default "en")
+      --lang string   The language of the documentation: en/cn (default "en")
