@@ -76,7 +76,7 @@ func TestReadTimestamp(t *testing.T) {
 			"expires": "2220-05-11T04:51:08Z",
 			"version": 43,
 			"meta": {
-				"/snapshot.json": {
+				"snapshot.json": {
 					"hashes": {
 						"sha256": "TODO"
 					},
@@ -95,7 +95,7 @@ func TestEmptyManifest(t *testing.T) {
 }
 
 func TestWriteManifest(t *testing.T) {
-	ts := Timestamp{Meta: map[string]FileHash{ManifestURLSnapshot: {
+	ts := Timestamp{Meta: map[string]FileHash{ManifestFilenameSnapshot: {
 		Hashes: map[string]string{SHA256: "TODO"},
 		Length: 0,
 	}},
