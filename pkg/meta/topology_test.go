@@ -114,25 +114,6 @@ pd_servers:
 	c.Assert(topo.PDServers[1].DataDir, Equals, "/test-data/pd-12379")
 }
 
-// gopkg.in/yaml.v2 will report error
-// github.com/goccy/go-yaml will not
-/*
-func (s *metaSuite) TestEmptyHost(c *C) {
-	topo := TopologySpecification{}
-	err := yaml.Unmarshal([]byte(`
-tidb_servers:
-  - host: 172.16.5.138
-tikv_servers:
-  - host:
-pd_servers:
-  - host: 172.16.5.138
-
-`), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "`tikv_servers` contains empty host field")
-}
-*/
-
 func (s *metaSuite) TestDirectoryConflicts(c *C) {
 	topo := TopologySpecification{}
 	err := yaml.Unmarshal([]byte(`
@@ -380,6 +361,35 @@ tikv_servers:
 	got, err := flattenMap(topo.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
+}
+
+func (s *metaSuite) TestLogDir(c *C) {
+	topo := TopologySpecification{}
+	err := yaml.Unmarshal([]byte(`
+tidb_servers:
+  - host: 172.16.5.138
+    deploy_dir: "test-deploy"
+    log_dir: "test-deploy/log"
+`), &topo)
+	c.Assert(err, IsNil)
+	c.Assert(topo.TiDBServers[0].LogDir, Equals, "test-deploy/log")
+}
+
+func (s *metaSuite) TestMonitorLogDir(c *C) {
+	topo := TopologySpecification{}
+	err := yaml.Unmarshal([]byte(`
+monitored:
+    deploy_dir: "test-deploy"
+    log_dir: "test-deploy/log"
+`), &topo)
+	c.Assert(err, IsNil)
+	c.Assert(topo.MonitoredOptions.LogDir, Equals, "test-deploy/log")
+
+	out, err := yaml.Marshal(topo)
+	c.Assert(err, IsNil)
+	err = yaml.Unmarshal(out, &topo)
+	c.Assert(err, IsNil)
+	c.Assert(topo.MonitoredOptions.LogDir, Equals, "test-deploy/log")
 }
 
 func (s *metaSuite) TestMerge2Toml(c *C) {

@@ -615,7 +615,8 @@ func (topo *TopologySpecification) UnmarshalYAML(unmarshal func(interface{}) err
 	if topo.MonitoredOptions.LogDir == "" {
 		topo.MonitoredOptions.LogDir = "log"
 	}
-	if !strings.HasPrefix(topo.MonitoredOptions.LogDir, "/") {
+	if !strings.HasPrefix(topo.MonitoredOptions.LogDir, "/") &&
+		!strings.HasPrefix(topo.MonitoredOptions.LogDir, topo.MonitoredOptions.DeployDir) {
 		topo.MonitoredOptions.LogDir = filepath.Join(topo.MonitoredOptions.DeployDir, topo.MonitoredOptions.LogDir)
 	}
 
