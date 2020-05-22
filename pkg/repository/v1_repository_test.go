@@ -390,6 +390,7 @@ func TestUpdateComponents(t *testing.T) {
 	// Specific version doesn't exist
 	// Platform not supported
 	// Already installed
+	// Test that even after one error, other components are handled
 }
 
 func timestampManifest() *v1manifest.Timestamp {
