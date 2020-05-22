@@ -350,7 +350,11 @@ func ReadManifest(input io.Reader, role ValidManifest, root *Root) (*Manifest, e
 				return nil, errors.AddStack(err)
 			}
 
-			threshold := root.Roles[role.Base().Ty].Threshold
+			roleInfo, ok := root.Roles[role.Base().Ty]
+			if !ok {
+				return nil, errors.Errorf("no type %s in roles", role.Base().Ty)
+			}
+			threshold := roleInfo.Threshold
 			err = m.VerifySignature(threshold, keys)
 			if err != nil {
 				return nil, err
