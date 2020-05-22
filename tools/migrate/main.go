@@ -363,8 +363,5 @@ func writeManifest(fname string, m *v1manifest.Manifest) error {
 		return err
 	}
 	defer writer.Close()
-	if err = v1manifest.WriteManifest(writer, m); err != nil {
-		return err
-	}
-	return nil
+	return v1manifest.WriteManifest(writer, m)
 }

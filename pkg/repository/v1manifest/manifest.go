@@ -14,6 +14,7 @@
 package v1manifest
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -159,7 +160,7 @@ type SignatureError struct {
 }
 
 func (s *SignatureError) Error() string {
-	return fmt.Sprintf("invalid signature for file %s: %s", s.fname, s.Error())
+	return fmt.Sprintf("invalid signature for file %s: %s", s.fname, s.err.Error())
 }
 
 // ComponentManifestFilename returns the expected filename for the component manifest identified by id.
@@ -244,7 +245,36 @@ func (s *SignedBase) isValid() error {
 }
 
 func (manifest *Root) isValid() error {
-	// TODO
+	types := []string{ManifestTypeRoot, ManifestTypeIndex, ManifestTypeSnapshot, ManifestTypeTimestamp}
+	for _, ty := range types {
+		role, ok := manifest.Roles[ty]
+		if !ok {
+			return fmt.Errorf("root manifest is missing %s role", ty)
+		}
+		if uint(len(role.Keys)) < role.Threshold {
+			return fmt.Errorf("%s role in root manifest does not have enough keys; expected: %v, found: %v", ty, role.Threshold, len(role.Keys))
+		}
+
+		// Check all keys have valid id and known types.
+		for id, k := range role.Keys {
+			serInfo, err := cjson.Marshal(k)
+			if err != nil {
+				return err
+			}
+			hash := fmt.Sprintf("%x", sha256.Sum256(serInfo))
+			if hash != id {
+				return fmt.Errorf("id does not match key. Expected: %s, found %s", hash, id)
+			}
+
+			if k.Type != "rsa" {
+				return fmt.Errorf("unsupported key type %s in key %s", k.Type, id)
+			}
+			if k.Scheme != "rsassa-pss-sha256" {
+				return fmt.Errorf("unsupported scheme %s in key %s", k.Scheme, id)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -343,7 +373,7 @@ func ReadManifest(input io.Reader, role ValidManifest, root *Root) (*Manifest, e
 		return nil, errors.New("no signatures supplied in manifest")
 	}
 
-	if role.Base().Ty != ManifestTypeRoot {
+	if role.Base().Ty != ManifestTypeRoot && role.Base().Ty != ManifestTypeComponent {
 		if root != nil {
 			keys, err := root.GetKeyStore()
 			if err != nil {
@@ -360,7 +390,7 @@ func ReadManifest(input io.Reader, role ValidManifest, root *Root) (*Manifest, e
 				return nil, err
 			}
 		}
-	} else {
+	} else if role.Base().Ty == ManifestTypeRoot {
 		newR := role.(*Root)
 		keys, err := newR.GetRootKeyStore()
 		if err != nil {

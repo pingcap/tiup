@@ -374,7 +374,7 @@ func TestEnsureManifests(t *testing.T) {
 	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
 
-	changed, err = repo.ensureManifests()
+	_, err = repo.ensureManifests()
 	assert.NotNil(t, err)
 }
 
@@ -517,10 +517,6 @@ func rootManifest(t *testing.T) (*v1manifest.Root, crypto.PrivKey) {
 			},
 			v1manifest.ManifestTypeSnapshot: {
 				URL:       v1manifest.ManifestURLSnapshot,
-				Keys:      map[string]*v1manifest.KeyInfo{keyID: info},
-				Threshold: 1,
-			},
-			v1manifest.ManifestTypeComponent: {
 				Keys:      map[string]*v1manifest.KeyInfo{keyID: info},
 				Threshold: 1,
 			},

@@ -29,9 +29,8 @@ var ErrorNotPrivateKey = errors.New("not a private key")
 func NewKeyInfo(privKey []byte) *KeyInfo {
 	// TODO: support other key type and scheme
 	return &KeyInfo{
-		Algorithms: []string{SHA256, SHA512},
-		Type:       crypto.KeyTypeRSA,
-		Scheme:     crypto.KeySchemeRSASSAPSSSHA256,
+		Type:   crypto.KeyTypeRSA,
+		Scheme: crypto.KeySchemeRSASSAPSSSHA256,
 		Value: map[string]string{
 			"private": string(privKey),
 		},
@@ -69,10 +68,9 @@ func (ki *KeyInfo) ID() (string, error) {
 	}
 
 	payload, err := cjson.Marshal(KeyInfo{
-		Algorithms: ki.Algorithms,
-		Type:       ki.Type,
-		Scheme:     ki.Scheme,
-		Value:      value,
+		Type:   ki.Type,
+		Scheme: ki.Scheme,
+		Value:  value,
 	})
 	if err != nil {
 		// XXX: maybe we can assume that the error should always be nil since the KeyInfo struct is valid
@@ -116,9 +114,8 @@ func (ki *KeyInfo) Public() (*KeyInfo, error) {
 		return nil, err
 	}
 	return &KeyInfo{
-		Algorithms: ki.Algorithms,
-		Type:       pk.Type(),
-		Scheme:     pk.Scheme(),
+		Type:   pk.Type(),
+		Scheme: pk.Scheme(),
 		Value: map[string]string{
 			"public": string(bytes),
 		},
