@@ -219,14 +219,16 @@ func migrate(srcDir, dstDir string) error {
 		platforms := map[string]map[string]v1manifest.VersionItem{}
 		for _, v := range versions.Versions {
 			for _, p := range v.Platforms {
-				newp := strings.Replace(p, "/", "-", -1)
+				newp := p
 				vs, found := platforms[newp]
 				if !found {
 					vs = map[string]v1manifest.VersionItem{}
 					platforms[newp] = vs
 				}
 
-				filename := fmt.Sprintf("/%s-%s-%s.tar.gz", comp.Name, v.Version, newp)
+				filename := fmt.Sprintf("/%s-%s-%s.tar.gz", comp.Name, v.Version, strings.Join(
+					strings.Split(newp, "/"),
+					"-"))
 				hashes, length, err := hashFile(srcDir, filename)
 				if err != nil {
 					return err
