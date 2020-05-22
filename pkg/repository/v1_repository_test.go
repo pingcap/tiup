@@ -571,10 +571,14 @@ func hash(s string) string {
 	return hex.EncodeToString(shaWriter.Sum(nil))
 }
 
+// Test we can correctly load manifests generate by tools/migrate
+// which generate the v1manifest from the v0manifest.
 func TestWithMigrate(t *testing.T) {
 	// generate using tools/migrate
 	mdir := "./testdata/manifests"
 
+	// create a repo using the manifests as a mirror.
+	// profileDir will contains the only trusted root.
 	repo, profileDir := createMigrateRepo(t, mdir)
 	root, err := repo.loadRoot()
 	assert.Nil(t, err)
