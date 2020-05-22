@@ -330,8 +330,8 @@ func TestEnsureManifests(t *testing.T) {
 	snapStr := serialize(t, snapshot, priv)
 	ts := timestampManifest()
 	ts.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = hash(snapStr)
-	indexUrl, _, _ := snapshot.VersionedURL(v1manifest.ManifestURLIndex)
-	mirror.Resources[indexUrl] = serialize(t, index, priv)
+	indexURL, _, _ := snapshot.VersionedURL(v1manifest.ManifestURLIndex)
+	mirror.Resources[indexURL] = serialize(t, index, priv)
 	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
 
@@ -575,9 +575,10 @@ func TestWithMigrate(t *testing.T) {
 	// generate using tools/migrate
 	mdir := "./testdata/manifests"
 
-	repo := createMigrateRepo(t, mdir)
+	repo, profileDir := createMigrateRepo(t, mdir)
 	root, err := repo.loadRoot()
 	assert.Nil(t, err)
+	defer os.RemoveAll(profileDir)
 	t.Log(root)
 
 	err = repo.updateLocalRoot()
@@ -603,17 +604,11 @@ func TestWithMigrate(t *testing.T) {
 	}
 }
 
-func createMigrateRepo(t *testing.T, mdir string) (repo *V1Repository) {
-	os.TempDir()
-	profileDir, err := ioutil.TempDir("", "tiup-*")
+func createMigrateRepo(t *testing.T, mdir string) (repo *V1Repository, profileDir string) {
+	var err error
+	profileDir, err = ioutil.TempDir("", "tiup-*")
 	assert.Nil(t, err)
 	t.Logf("using profile dir: %s", profileDir)
-
-	t.Cleanup(
-		func() {
-			os.RemoveAll(profileDir)
-		},
-	)
 
 	// copy root.json from mdir to profileDir
 	data, err := ioutil.ReadFile(filepath.Join(mdir, "root.json"))
