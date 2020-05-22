@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -589,7 +590,7 @@ func TestWithMigrate(t *testing.T) {
 	repo, profileDir := createMigrateRepo(t, mdir)
 	_, err := repo.loadRoot()
 	assert.Nil(t, err)
-	// defer os.RemoveAll(profileDir)
+	defer os.RemoveAll(profileDir)
 	_ = profileDir
 
 	err = repo.updateLocalRoot()
