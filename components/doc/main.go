@@ -31,7 +31,7 @@ func execute() error {
 	lang := "en"
 
 	rootCmd := &cobra.Command{
-		Use:          "doc",
+		Use:          "tiup doc",
 		Short:        "TiDB document summary page",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -47,8 +47,6 @@ func execute() error {
 			return open.Run(url)
 		},
 	}
-
-	rootCmd.AddCommand(newErrorCmd())
 
 	rootCmd.Flags().StringVar(&lang, "lang", lang, "The language of the documentation: en/cn")
 	return rootCmd.Execute()

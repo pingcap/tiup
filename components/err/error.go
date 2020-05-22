@@ -35,10 +35,11 @@ func init() {
 	bleve.Config.DefaultKVStore = "goleveldb"
 }
 
-func newErrorCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "error",
-		Short: "Show detailed error message via error code or keyword",
+func main() {
+	rootCmd := &cobra.Command{
+		Use:          "tiup err",
+		Short:        "Show detailed error message via error code or keyword",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return cmd.Help()
@@ -46,7 +47,10 @@ func newErrorCmd() *cobra.Command {
 			return searchError(args)
 		},
 	}
-	return cmd
+
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }
 
 type errorSpec struct {

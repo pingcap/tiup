@@ -1,5 +1,6 @@
 [error.8005]
 message = '''Write Conflict, txnStartTS is stale'''
+tags = ["tikv", "tidb-txn"]
 description = '''In versions before 3.0.8, TiDB implements the optimistic transaction mode by default, in which the transaction commit might fail because of transaction conflict. To make sure that the commit succeeds, you need to modify the application andad an automatic retry mechanism. You can avoid this issue by using the pessimistic transaction mode of TiDB.'''
 workaround = '''To apply the pessimistic transaction mode, choose any of the following three methods that suits your needs:
 - Execute the `BEGIN PESSIMISTIC;` statement to allow the transaction to apply the pessimistic transaction mode. You can write it in comment style as `BEGIN /*!90000 PESSIMISTIC */;` to make it compatible with the MySQL syntax.
