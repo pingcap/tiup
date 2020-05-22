@@ -53,7 +53,7 @@ type LocalManifests interface {
 	// exists.
 	LoadManifest(role ValidManifest) (bool, error)
 	// LoadComponentManifest loads and validates the most recent manifest at filename.
-	LoadComponentManifest(filename string) (*Component, error)
+	LoadComponentManifest(index *Index, filename string) (*Component, error)
 	// ComponentInstalled is true if the version of component is present locally.
 	ComponentInstalled(component, version string) (bool, error)
 	// InstallComponent installs the component from the reader.
@@ -91,13 +91,20 @@ func (ms *FsManifests) LoadManifest(role ValidManifest) (bool, error) {
 }
 
 // LoadComponentManifest implements LocalManifests.
-func (ms *FsManifests) LoadComponentManifest(filename string) (*Component, error) {
-	var role Component
-	exists, err := ms.load(filename, &role)
-	if !exists {
-		return nil, nil
+func (ms *FsManifests) LoadComponentManifest(index *Index, filename string) (*Component, error) {
+	com := new(Component)
+	fullPath := filepath.Join(ms.profile.Root(), filename)
+	file, err := os.Open(fullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
 	}
-	return &role, err
+	defer file.Close()
+
+	_, err = ReadComponentManifest(file, com, index)
+	return com, err
 }
 
 // load and validate a manifest from disk. The returned bool is true if the file exists.
@@ -189,7 +196,7 @@ func (ms *MockManifests) LoadManifest(role ValidManifest) (bool, error) {
 }
 
 // LoadComponentManifest implements LocalManifests.
-func (ms *MockManifests) LoadComponentManifest(filename string) (*Component, error) {
+func (ms *MockManifests) LoadComponentManifest(_ *Index, filename string) (*Component, error) {
 	manifest, ok := ms.Manifests[filename]
 	if !ok {
 		return nil, nil
