@@ -572,7 +572,7 @@ func hash(s string) string {
 }
 
 func TestWithMigrate(t *testing.T) {
-	// generate using toots/migrate
+	// generate using tools/migrate
 	mdir := "./testdata/manifests"
 
 	repo := createMigrateRepo(t, mdir)

@@ -141,7 +141,7 @@ func (r *V1Repository) ensureManifests() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	snapRootVersion := snapshot.Meta[v1manifest.ManifestFilenameRoot].Version
+	snapRootVersion := snapshot.Meta[v1manifest.ManifestURLRoot].Version
 	if root.Version != snapRootVersion {
 		return false, fmt.Errorf("root version mismatch. Expected: %v, found: %v", snapRootVersion, root.Version)
 	}

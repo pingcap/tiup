@@ -370,7 +370,7 @@ func (manifest *Snapshot) SetVersions(manifestList map[string]*Manifest) (*Snaps
 		if err != nil {
 			return nil, err
 		}
-		manifest.Meta[m.Signed.Filename()] = FileVersion{
+		manifest.Meta["/"+m.Signed.Filename()] = FileVersion{
 			Version: m.Signed.Base().Version,
 			Length:  uint(len(bytes)),
 		}

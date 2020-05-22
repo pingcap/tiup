@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -278,7 +277,7 @@ func (manifest *Snapshot) isValid() error {
 }
 
 func (manifest *Timestamp) isValid() error {
-	snapshot, ok := manifest.Meta[ManifestFilenameSnapshot]
+	snapshot, ok := manifest.Meta[ManifestURLSnapshot]
 	if !ok {
 		return errors.New("timestamp manifest is missing entry for snapshot.json")
 	}
@@ -293,12 +292,12 @@ func (manifest *Timestamp) isValid() error {
 
 // SnapshotHash returns the hashes of the snapshot manifest as specified in the timestamp manifest.
 func (manifest *Timestamp) SnapshotHash() FileHash {
-	return manifest.Meta[ManifestFilenameSnapshot]
+	return manifest.Meta[ManifestURLSnapshot]
 }
 
 // VersionedURL looks up url in the snapshot and returns a modified url with the version prefix, and that file's length.
 func (manifest *Snapshot) VersionedURL(url string) (string, *FileVersion, error) {
-	entry, ok := manifest.Meta[filepath.Base(url)]
+	entry, ok := manifest.Meta[url]
 	if !ok {
 		return "", nil, fmt.Errorf("no entry in snapshot manifest for %s", url)
 	}
