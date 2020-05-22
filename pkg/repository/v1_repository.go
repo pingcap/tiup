@@ -187,7 +187,7 @@ func (r *V1Repository) selectVersion(id string, versions map[string]v1manifest.V
 // Returns nil if the timestamp has not changed, or the new snapshot if it has.
 func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 	hash, err := r.checkTimestamp()
-	if _, ok := err.(*v1manifest.SignatureError); ok {
+	if v1manifest.IsSignatureError(errors.Cause(err)) {
 		// The signature is wrong, update our signatures from the root manifest and try again.
 		err = r.updateLocalRoot()
 		if err != nil {

@@ -127,25 +127,39 @@ func (manifest *Manifest) VerifySignature(threshold uint, keys crypto.KeyStore) 
 		// TODO check that KeyID belongs to a role which is authorised to sign this manifest
 		key := keys.Get(sig.KeyID)
 		if key == nil {
-			// TODO use SignatureError
-			return errors.Errorf("signature key %s not found", sig.KeyID)
+			err := errors.Errorf("signature key %s not found", sig.KeyID)
+			return newSignatureError(manifest.Signed.Filename(), err)
 		}
 		err := key.VerifySignature(payload, sig.Sig)
-		// TODO use SignatureError
 		if err != nil {
-			return err
+			return newSignatureError(manifest.Signed.Filename(), err)
 		}
 	}
 
 	return nil
 }
 
-// SignatureError the signature of a file is incorrect.
-type SignatureError struct{}
+func newSignatureError(fname string, err error) *SignatureError {
+	return &SignatureError{
+		fname: fname,
+		err:   err,
+	}
+}
 
-func (err *SignatureError) Error() string {
-	// TODO include the filename
-	return "invalid signature for file"
+// IsSignatureError check if the err is SignatureError.
+func IsSignatureError(err error) bool {
+	_, ok := err.(*SignatureError)
+	return ok
+}
+
+// SignatureError the signature of a file is incorrect.
+type SignatureError struct {
+	fname string
+	err   error
+}
+
+func (s *SignatureError) Error() string {
+	return fmt.Sprintf("invalid signature for file %s: %s", s.fname, s.Error())
 }
 
 // ComponentManifestFilename returns the expected filename for the component manifest identified by id.
