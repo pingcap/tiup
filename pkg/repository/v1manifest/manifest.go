@@ -160,7 +160,7 @@ type SignatureError struct {
 }
 
 func (s *SignatureError) Error() string {
-	return fmt.Sprintf("invalid signature for file %s: %s", s.fname, s.Error())
+	return fmt.Sprintf("invalid signature for file %s: %s", s.fname, s.err.Error())
 }
 
 // ComponentManifestFilename returns the expected filename for the component manifest identified by id.

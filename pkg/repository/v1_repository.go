@@ -21,6 +21,7 @@ import (
 	"runtime"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
@@ -72,24 +73,25 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 	if err != nil {
 		return err
 	}
+	var errs []string
 	for _, spec := range specs {
 		manifest, err := r.updateComponentManifest(spec.ID)
 		if err != nil {
-			// TODO could report error and continue
-			return err
+			errs = append(errs, err.Error())
+			continue
 		}
 
 		platform := utils.PlatformString()
 		versions, ok := manifest.Platforms[platform]
 		if !ok {
-			// TODO could report error and continue
-			return fmt.Errorf("platform %s not supported by component %s", platform, spec.ID)
+			errs = append(errs, fmt.Sprintf("platform %s not supported by component %s", platform, spec.ID))
+			continue
 		}
 
 		version, versionItem, err := r.selectVersion(spec.ID, versions, spec.Version)
 		if err != nil {
-			// TODO could report error and continue
-			return err
+			errs = append(errs, err.Error())
+			continue
 		}
 
 		if !spec.Force {
@@ -98,23 +100,28 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 				return err
 			}
 			if installed {
-				// TODO could report error and continue
-				return fmt.Errorf("component %s version %s is already installed", spec.ID, version)
+				errs = append(errs, fmt.Sprintf("component %s version %s is already installed", spec.ID, version))
+				continue
 			}
 		}
 
 		reader, err := r.downloadComponent(versionItem)
 		if err != nil {
-			// TODO could report error and continue
-			return err
+			errs = append(errs, err.Error())
+			continue
 		}
 
 		err = r.local.InstallComponent(reader, spec.ID, version)
 		if err != nil {
-			// TODO could report error and continue
-			return err
+			errs = append(errs, err.Error())
+			continue
 		}
 	}
+
+	if len(errs) > 0 {
+		return errors.New(strings.Join(errs, "\n"))
+	}
+
 	return nil
 }
 
