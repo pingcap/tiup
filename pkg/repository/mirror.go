@@ -126,8 +126,9 @@ func (l *localFilesystem) Fetch(resource string, maxSize int64) (io.ReadCloser, 
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
+
 		if info.Size() > maxSize {
-			return nil, errors.Annotatef(err, "local load from %s failed, maximum size exceeded", resource)
+			return nil, errors.Errorf("local load from %s failed, maximum size exceeded, file size: %d, max size: %d", resource, info.Size(), maxSize)
 		}
 	}
 
@@ -274,7 +275,7 @@ func (l *MockMirror) Fetch(resource string, maxSize int64) (io.ReadCloser, error
 		return nil, ErrNotFound
 	}
 	if maxSize > 0 && int64(len(content)) > maxSize {
-		return nil, fmt.Errorf("Oversized resource %s in mock mirror", resource)
+		return nil, fmt.Errorf("oversized resource %s in mock mirror %v > %v", resource, len(content), maxSize)
 	}
 	return ioutil.NopCloser(strings.NewReader(content)), nil
 }

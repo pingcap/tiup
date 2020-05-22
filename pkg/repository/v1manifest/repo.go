@@ -370,7 +370,7 @@ func (manifest *Snapshot) SetVersions(manifestList map[string]*Manifest) (*Snaps
 		if err != nil {
 			return nil, err
 		}
-		manifest.Meta[m.Signed.Filename()] = FileVersion{
+		manifest.Meta["/"+m.Signed.Filename()] = FileVersion{
 			Version: m.Signed.Base().Version,
 			Length:  uint(len(bytes)),
 		}
@@ -444,10 +444,9 @@ func FreshKeyInfo() (*KeyInfo, string, crypto.PrivKey, error) {
 		return nil, "", nil, err
 	}
 	info := KeyInfo{
-		Algorithms: []string{SHA256, SHA512},
-		Type:       "rsa",
-		Value:      map[string]string{"public": string(pubBytes)},
-		Scheme:     "rsassa-pss-sha256",
+		Type:   "rsa",
+		Value:  map[string]string{"public": string(pubBytes)},
+		Scheme: "rsassa-pss-sha256",
 	}
 	serInfo, err := cjson.Marshal(&info)
 	if err != nil {
@@ -518,9 +517,12 @@ func SignManifest(role ValidManifest, keys ...*KeyInfo) (*Manifest, error) {
 
 // WriteManifest writes a Manifest object to file in JSON format
 func WriteManifest(out io.Writer, m *Manifest) error {
-	encoder := json.NewEncoder(out)
-	encoder.SetIndent("", "\t")
-	return encoder.Encode(m)
+	bytes, err := cjson.Marshal(m)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	_, err = out.Write(bytes)
+	return err
 }
 
 // SignAndWrite creates a manifest and writes it to out.

@@ -14,11 +14,17 @@
 package repository
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/stretchr/testify/assert"
@@ -40,20 +46,13 @@ func TestFnameWithVersion(t *testing.T) {
 	}
 }
 
-func setRoot(t *testing.T, local *v1manifest.MockManifests) crypto.PrivKey {
-	root, privk := rootManifest(t)
-	local.Manifests[v1manifest.ManifestFilenameRoot] = root
-	return privk
-}
-
 func TestCheckTimestamp(t *testing.T) {
 	mirror := MockMirror{
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
 	privk := setRoot(t, local)
-	repo, err := NewV1Repo(&mirror, Options{}, local)
-	assert.Nil(t, err)
+	repo := NewV1Repo(&mirror, Options{}, local)
 
 	repoTimestamp := timestampManifest()
 	// Test that no local timestamp => return hash
@@ -77,6 +76,7 @@ func TestCheckTimestamp(t *testing.T) {
 
 	// Hashes don't match => return correct File hash
 	localManifest.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = "023456"
+	localManifest.Version = 41
 	hash, err = repo.checkTimestamp()
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1001), hash.Length)
@@ -108,13 +108,14 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 	}
 	local := v1manifest.NewMockManifests()
 	privk := setRoot(t, local)
-	repo, err := NewV1Repo(&mirror, Options{}, local)
-	assert.Nil(t, err)
+	repo := NewV1Repo(&mirror, Options{}, local)
 
 	timestamp := timestampManifest()
 	snapshotManifest := snapshotManifest()
+	serSnap := serialize(t, snapshotManifest, privk)
+	mirror.Resources[v1manifest.ManifestURLSnapshot] = serSnap
+	timestamp.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = hash(serSnap)
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, timestamp, privk)
-	mirror.Resources[v1manifest.ManifestURLSnapshot] = serialize(t, snapshotManifest, privk)
 	local.Manifests[v1manifest.ManifestFilenameTimestamp] = timestamp
 
 	// test that up to date timestamp does nothing
@@ -133,6 +134,7 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 
 	// test that invalid snapshot causes an error
 	snapshotManifest.Expires = "2000-05-11T04:51:08Z"
+	local.Manifests[v1manifest.ManifestFilenameTimestamp] = timestamp
 	mirror.Resources[v1manifest.ManifestURLSnapshot] = serialize(t, snapshotManifest, privk)
 	local.Saved = []string{}
 	snapshot, err = repo.updateLocalSnapshot()
@@ -151,16 +153,14 @@ func TestUpdateLocalRoot(t *testing.T) {
 
 	local := v1manifest.NewMockManifests()
 	privKey := setRoot(t, local)
-	repo, err := NewV1Repo(&mirror, Options{}, local)
-	assert.Nil(t, err)
-	assert.NotNil(t, repo.root)
-	root := repo.root
+	repo := NewV1Repo(&mirror, Options{}, local)
 
 	// Should success if no new version root.
-	err = repo.updateLocalRoot()
+	err := repo.updateLocalRoot()
 	assert.Nil(t, err)
 
 	root2, privKey2 := rootManifest(t)
+	root, _ := repo.loadRoot()
 	fname := fmt.Sprintf("/%d.root.json", root.Version+1)
 	mirror.Resources[fname] = serialize(t, root2, privKey, privKey2)
 
@@ -189,22 +189,18 @@ func TestUpdateIndex(t *testing.T) {
 	}
 	local := v1manifest.NewMockManifests()
 	priv := setRoot(t, local)
-	repo, err := NewV1Repo(&mirror, Options{}, local)
-	assert.Nil(t, err)
+	repo := NewV1Repo(&mirror, Options{}, local)
 
 	index := indexManifest()
-	root, _ := rootManifest(t)
 	snapshot := snapshotManifest()
 	serIndex := serialize(t, index, priv)
 	mirror.Resources["/5.index.json"] = serIndex
-	local.Manifests[v1manifest.ManifestFilenameRoot] = root
 	local.Manifests[v1manifest.ManifestFilenameSnapshot] = snapshot
 	index.Version--
 	local.Manifests[v1manifest.ManifestFilenameIndex] = index
 
-	updated, err := repo.updateLocalIndex(uint(len(serIndex)))
+	err := repo.updateLocalIndex()
 	assert.Nil(t, err)
-	assert.NotNil(t, updated)
 	assert.Contains(t, local.Saved, "index.json")
 
 	// TODO test that invalid signature of snapshot causes an error
@@ -216,16 +212,13 @@ func TestUpdateComponent(t *testing.T) {
 	}
 	local := v1manifest.NewMockManifests()
 	priv := setRoot(t, local)
-	repo, err := NewV1Repo(&mirror, Options{}, local)
-	assert.Nil(t, err)
+	repo := NewV1Repo(&mirror, Options{}, local)
 
 	index := indexManifest()
-	root, _ := rootManifest(t)
 	snapshot := snapshotManifest()
 	foo := componentManifest()
 	serFoo := serialize(t, foo, priv)
 	mirror.Resources["/7.foo.json"] = serFoo
-	local.Manifests[v1manifest.ManifestFilenameRoot] = root
 	local.Manifests[v1manifest.ManifestFilenameSnapshot] = snapshot
 	local.Manifests[v1manifest.ManifestFilenameIndex] = index
 
@@ -263,13 +256,11 @@ func TestDownloadManifest(t *testing.T) {
 	mirror.Resources["/foo-2.0.1.tar.gz"] = someString
 	local := v1manifest.NewMockManifests()
 	setRoot(t, local)
-	foo := componentManifest()
-	local.Manifests["foo.json"] = foo
-	repo, err := NewV1Repo(&mirror, Options{}, local)
-	assert.Nil(t, err)
+	repo := NewV1Repo(&mirror, Options{}, local)
+	item := versionItem()
 
 	// Happy path file is as expected
-	reader, err := repo.downloadComponent("foo", "a_platform", "2.0.1")
+	reader, err := repo.downloadComponent(&item)
 	assert.Nil(t, err)
 	buf := new(strings.Builder)
 	_, err = io.Copy(buf, reader)
@@ -277,27 +268,129 @@ func TestDownloadManifest(t *testing.T) {
 	assert.Equal(t, someString, buf.String())
 
 	// Sad paths
-	version1 := foo.Platforms["a_platform"]["2.0.1"]
-	version2 := foo.Platforms["a_platform"]["2.0.1"]
-	version3 := foo.Platforms["a_platform"]["2.0.1"]
 
 	// bad hash
-	version1.Hashes[v1manifest.SHA256] = "Not a hash"
-	foo.Platforms["a_platform"]["2.0.1"] = version1
-	_, err = repo.downloadComponent("foo", "a_platform", "2.0.1")
+	item.Hashes[v1manifest.SHA256] = "Not a hash"
+	_, err = repo.downloadComponent(&item)
 	assert.NotNil(t, err)
 
 	//  Too long
-	version2.Length = 26
-	foo.Platforms["a_platform"]["2.0.1"] = version2
-	_, err = repo.downloadComponent("foo", "a_platform", "2.0.1")
+	item.Length = 26
+	_, err = repo.downloadComponent(&item)
 	assert.NotNil(t, err)
 
 	// missing tar ball/bad url
-	version3.URL = "/bar-2.0.1.tar.gz"
-	foo.Platforms["a_platform"]["2.0.1"] = version3
-	_, err = repo.downloadComponent("foo", "a_platform", "2.0.1")
+	item.URL = "/bar-2.0.1.tar.gz"
+	_, err = repo.downloadComponent(&item)
 	assert.NotNil(t, err)
+}
+
+func TestSelectVersion(t *testing.T) {
+	mirror := MockMirror{
+		Resources: map[string]string{},
+	}
+	local := v1manifest.NewMockManifests()
+	setRoot(t, local)
+	repo := NewV1Repo(&mirror, Options{}, local)
+
+	// Simple case
+	s, i, err := repo.selectVersion("foo", map[string]v1manifest.VersionItem{"0.1.0": {URL: "1"}}, "")
+	assert.Nil(t, err)
+	assert.Equal(t, "0.1.0", s)
+	assert.Equal(t, "1", i.URL)
+
+	// Choose by order
+	s, i, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"0.1.0": {URL: "1"}, "0.1.1": {URL: "2"}, "0.2.0": {URL: "3"}}, "")
+	assert.Nil(t, err)
+	assert.Equal(t, "0.2.0", s)
+	assert.Equal(t, "3", i.URL)
+
+	// Choose specific
+	s, i, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"0.1.0": {URL: "1"}, "0.1.1": {URL: "2"}, "0.2.0": {URL: "3"}}, "0.1.1")
+	assert.Nil(t, err)
+	assert.Equal(t, "0.1.1", s)
+	assert.Equal(t, "2", i.URL)
+
+	// Target doesn't exists
+	_, _, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"0.1.0": {URL: "1"}, "0.1.1": {URL: "2"}, "0.2.0": {URL: "3"}}, "0.2.1")
+	assert.NotNil(t, err)
+}
+
+func TestEnsureManifests(t *testing.T) {
+	mirror := MockMirror{
+		Resources: map[string]string{},
+	}
+	local := v1manifest.NewMockManifests()
+	priv := setRoot(t, local)
+
+	repo := NewV1Repo(&mirror, Options{}, local)
+
+	index := indexManifest()
+	snapshot := snapshotManifest()
+	snapStr := serialize(t, snapshot, priv)
+	ts := timestampManifest()
+	ts.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = hash(snapStr)
+	indexURL, _, _ := snapshot.VersionedURL(v1manifest.ManifestURLIndex)
+	mirror.Resources[indexURL] = serialize(t, index, priv)
+	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
+	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
+
+	// Initial repo
+	changed, err := repo.ensureManifests()
+	assert.Nil(t, err)
+	assert.True(t, changed)
+	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameIndex)
+	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameSnapshot)
+	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameTimestamp)
+	assert.NotContains(t, local.Saved, v1manifest.ManifestFilenameRoot)
+
+	// Happy update
+	root2, priv2 := rootManifest(t)
+	root, _ := repo.loadRoot()
+	root2.Version = root.Version + 1
+	mirror.Resources["/43.root.json"] = serialize(t, root2, priv, priv2)
+
+	rootMeta := snapshot.Meta[v1manifest.ManifestURLRoot]
+	rootMeta.Version = root2.Version
+	snapshot.Meta[v1manifest.ManifestURLRoot] = rootMeta
+	snapStr = serialize(t, snapshot, priv)
+	ts.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = hash(snapStr)
+	ts.Version++
+	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
+	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
+	local.Saved = []string{}
+
+	changed, err = repo.ensureManifests()
+	assert.Nil(t, err)
+	assert.True(t, changed)
+	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameRoot)
+
+	// Sad path - root and snapshot disagree on version
+	rootMeta.Version = 500
+	snapshot.Meta[v1manifest.ManifestURLRoot] = rootMeta
+	snapStr = serialize(t, snapshot, priv)
+	ts.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = hash(snapStr)
+	ts.Version++
+	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
+	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
+
+	_, err = repo.ensureManifests()
+	assert.NotNil(t, err)
+}
+
+// TODO
+func TestUpdateComponents(t *testing.T) {
+	// Install
+	// Update
+	// Update; already up to date
+	// Specific version
+
+	// Sad paths
+	// Component doesn't exists
+	// Specific version doesn't exist
+	// Platform not supported
+	// Already installed
+	// Test that even after one error, other components are handled
 }
 
 func timestampManifest() *v1manifest.Timestamp {
@@ -324,7 +417,7 @@ func snapshotManifest() *v1manifest.Snapshot {
 			Version:     42,
 		},
 		Meta: map[string]v1manifest.FileVersion{
-			v1manifest.ManifestURLRoot:  {Version: 56},
+			v1manifest.ManifestURLRoot:  {Version: 42},
 			v1manifest.ManifestURLIndex: {Version: 5},
 			"/foo.json":                 {Version: 7},
 		},
@@ -342,15 +435,20 @@ func componentManifest() *v1manifest.Component {
 		Name:        "Foo",
 		Description: "foo does stuff",
 		Platforms: map[string]map[string]v1manifest.VersionItem{
-			"a_platform": {"2.0.1": {
-				URL: "/foo-2.0.1.tar.gz",
-				FileHash: v1manifest.FileHash{
-					Hashes: map[string]string{v1manifest.SHA256: "963ba8374bac92a8a00fc21ca458e0c2016bf8930519e5271f7b49d16762a184"},
-					Length: 28,
-				},
-			}},
+			"a_platform": {"2.0.1": versionItem()},
 		},
 	}
+}
+
+func versionItem() v1manifest.VersionItem {
+	return v1manifest.VersionItem{
+		URL: "/foo-2.0.1.tar.gz",
+		FileHash: v1manifest.FileHash{
+			Hashes: map[string]string{v1manifest.SHA256: "963ba8374bac92a8a00fc21ca458e0c2016bf8930519e5271f7b49d16762a184"},
+			Length: 28,
+		},
+	}
+
 }
 
 func indexManifest() *v1manifest.Index {
@@ -423,12 +521,14 @@ func rootManifest(t *testing.T) (*v1manifest.Root, crypto.PrivKey) {
 				Keys:      map[string]*v1manifest.KeyInfo{keyID: info},
 				Threshold: 1,
 			},
-			v1manifest.ManifestTypeComponent: {
-				Keys:      map[string]*v1manifest.KeyInfo{keyID: info},
-				Threshold: 1,
-			},
 		},
 	}, priv
+}
+
+func setRoot(t *testing.T, local *v1manifest.MockManifests) crypto.PrivKey {
+	root, privk := rootManifest(t)
+	local.Manifests[v1manifest.ManifestFilenameRoot] = root
+	return privk
 }
 
 func serialize(t *testing.T, role v1manifest.ValidManifest, privKeys ...crypto.PrivKey) string {
@@ -457,4 +557,70 @@ func serialize(t *testing.T, role v1manifest.ValidManifest, privKeys ...crypto.P
 	err := v1manifest.SignAndWrite(&out, role, keyInfos...)
 	assert.Nil(t, err)
 	return out.String()
+}
+
+func hash(s string) string {
+	shaWriter := sha256.New()
+	if _, err := io.Copy(shaWriter, strings.NewReader(s)); err != nil {
+		panic(err)
+	}
+
+	return hex.EncodeToString(shaWriter.Sum(nil))
+}
+
+// Test we can correctly load manifests generate by tools/migrate
+// which generate the v1manifest from the v0manifest.
+func TestWithMigrate(t *testing.T) {
+	// generate using tools/migrate
+	mdir := "./testdata/manifests"
+
+	// create a repo using the manifests as a mirror.
+	// profileDir will contains the only trusted root.
+	repo, profileDir := createMigrateRepo(t, mdir)
+	root, err := repo.loadRoot()
+	assert.Nil(t, err)
+	defer os.RemoveAll(profileDir)
+	t.Log(root)
+
+	err = repo.updateLocalRoot()
+	assert.Nil(t, err)
+
+	_, err = repo.ensureManifests()
+	assert.Nil(t, err)
+
+	// after ensureManifests we should can load index/timestamp/snapshot
+	{
+		var index v1manifest.Index
+		exists, err := repo.local.LoadManifest(&index)
+		assert.Nil(t, err)
+		assert.True(t, exists)
+		var root v1manifest.Root
+		exists, err = repo.local.LoadManifest(&root)
+		assert.Nil(t, err)
+		assert.True(t, exists)
+		var snap v1manifest.Snapshot
+		exists, err = repo.local.LoadManifest(&snap)
+		assert.Nil(t, err)
+		assert.True(t, exists)
+	}
+}
+
+func createMigrateRepo(t *testing.T, mdir string) (repo *V1Repository, profileDir string) {
+	var err error
+	profileDir, err = ioutil.TempDir("", "tiup-*")
+	assert.Nil(t, err)
+	t.Logf("using profile dir: %s", profileDir)
+
+	// copy root.json from mdir to profileDir
+	data, err := ioutil.ReadFile(filepath.Join(mdir, "root.json"))
+	assert.Nil(t, err)
+	err = ioutil.WriteFile(filepath.Join(profileDir, "root.json"), data, 0644)
+	assert.Nil(t, err)
+
+	localdata.DefaultTiupHome = profileDir
+	profile := localdata.InitProfile()
+	options := Options{}
+	mirror := NewMirror(mdir, MirrorOptions{})
+	repo = NewV1Repo(mirror, options, v1manifest.NewManifests(profile))
+	return
 }

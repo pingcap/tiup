@@ -14,7 +14,6 @@
 package v0manifest
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -58,10 +57,9 @@ func (m *ComponentManifest) FindComponent(component string) (ComponentInfo, bool
 }
 
 // IsSupport returns true if the component can be run in current OS and architecture
-func (c *ComponentInfo) IsSupport(goos, goarch string) bool {
-	s := fmt.Sprintf("%s/%s", goos, goarch)
+func (c *ComponentInfo) IsSupport(platform string) bool {
 	for _, p := range c.Platforms {
-		if p == s {
+		if p == platform {
 			return true
 		}
 	}

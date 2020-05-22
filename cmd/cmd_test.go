@@ -57,7 +57,7 @@ func (s *testCmdSuite) newEnv(c *C) *meta.Environment {
 	c.Assert(os.MkdirAll(path.Join(s.testDir, "profile"), 0755), IsNil)
 	profile := localdata.NewProfile(path.Join(s.testDir, "profile"))
 
-	return meta.New(profile, repo)
+	return meta.NewV0(profile, repo)
 }
 
 func (s *testCmdSuite) TearDownSuite(c *C) {
