@@ -276,7 +276,7 @@ func migrate(srcDir, dstDir string) error {
 			return err
 		}
 		var _ = len(bytes) // this length is the not final length, since we still change the manifests before write it to disk.
-		snapshot.Meta[name] = v1manifest.FileVersion{
+		snapshot.Meta["/"+name] = v1manifest.FileVersion{
 			Version: 1,
 			Length:  limitLength,
 		}
@@ -320,7 +320,7 @@ func migrate(srcDir, dstDir string) error {
 		return errors.Trace(err)
 	}
 	timestamp.Meta = map[string]v1manifest.FileHash{
-		v1manifest.ManifestFilenameSnapshot: {
+		v1manifest.ManifestURLSnapshot: {
 			Hashes: hash,
 			Length: limitLength,
 		},
