@@ -34,6 +34,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// for simplify just set the length of manifest file a value lager than the true value
+var limitLength uint = 1024 * 1024
+
 func main() {
 	cmd := &cobra.Command{
 		Use:           "migrate <src-dir> <dst-dir>",
@@ -272,9 +275,10 @@ func migrate(srcDir, dstDir string) error {
 		if err != nil {
 			return err
 		}
-		snapshot.Meta[name] = v1manifest.FileVersion{
+		var _ = len(bytes) // this length is the not final length, since we still change the manifests before write it to disk.
+		snapshot.Meta["/"+name] = v1manifest.FileVersion{
 			Version: 1,
-			Length:  uint(len(bytes)),
+			Length:  limitLength,
 		}
 	}
 
@@ -285,19 +289,11 @@ func migrate(srcDir, dstDir string) error {
 	}
 
 	// snapshot and timestamp are the last two manifests to be initialized
-	// init snapshot
-	snapshot, err = snapshot.SetVersions(signedManifests)
-	if err != nil {
-		return err
-	}
-	signedManifests[v1manifest.ManifestTypeSnapshot], err = v1manifest.SignManifest(snapshot, keys[v1manifest.ManifestTypeSnapshot]...)
-	if err != nil {
-		return err
-	}
 
 	// Initialize timestamp
 	timestamp := v1manifest.NewTimestamp(initTime)
 	manifests[v1manifest.ManifestTypeTimestamp] = timestamp
+	manifests[v1manifest.ManifestTypeSnapshot] = snapshot
 
 	// Initialize the root manifest
 	for _, m := range manifests {
@@ -309,14 +305,24 @@ func migrate(srcDir, dstDir string) error {
 		return err
 	}
 
-	hash, n, err := hashManifest(signedManifests[v1manifest.ManifestTypeSnapshot])
+	// init snapshot
+	snapshot, err = snapshot.SetVersions(signedManifests)
+	if err != nil {
+		return err
+	}
+	signedManifests[v1manifest.ManifestTypeSnapshot], err = v1manifest.SignManifest(snapshot, keys[v1manifest.ManifestTypeSnapshot]...)
+	if err != nil {
+		return err
+	}
+
+	hash, _, err := hashManifest(signedManifests[v1manifest.ManifestTypeSnapshot])
 	if err != nil {
 		return errors.Trace(err)
 	}
 	timestamp.Meta = map[string]v1manifest.FileHash{
-		v1manifest.ManifestFilenameSnapshot: {
+		v1manifest.ManifestURLSnapshot: {
 			Hashes: hash,
-			Length: n,
+			Length: limitLength,
 		},
 	}
 	signedManifests[v1manifest.ManifestTypeTimestamp], err = v1manifest.SignManifest(timestamp, keys[v1manifest.ManifestTypeTimestamp]...)
