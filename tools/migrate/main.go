@@ -63,6 +63,7 @@ func main() {
 		},
 	}
 
+	var isPublicKey bool
 	updateCmd := &cobra.Command{
 		Use:   "update <dir> [signed-root.json ...]",
 		Short: "Rehash root.json and update snapshot.json, timestamp.json in the repo",
@@ -75,9 +76,11 @@ from them are added to the root.json before updating.`,
 			if len(args) < 1 {
 				return cmd.Help()
 			}
-			return update(args[0], args[1:])
+			return update(args[0], args[1:], isPublicKey)
 		},
 	}
+
+	updateCmd.Flags().BoolVar(&isPublicKey, "public", false, "Indicate that inputs are public keys to be added to key list, not signatures")
 
 	cmd.AddCommand(
 		newCmd,
@@ -402,7 +405,7 @@ func migrate(srcDir, dstDir string) error {
 	return nil
 }
 
-func update(dir string, signedFiles []string) error {
+func update(dir string, keyFiles []string, isPublicKey bool) error {
 	manifests := make(map[string]*v1manifest.Manifest)
 	keys := make(map[string][]*v1manifest.KeyInfo)
 	currTime := time.Now().UTC()
@@ -417,8 +420,43 @@ func update(dir string, signedFiles []string) error {
 	}
 	manifests[v1manifest.ManifestTypeRoot] = &root
 
+	// if inputs are public keys, just add them to the root's key list and return
+	if isPublicKey {
+		for _, fname := range keyFiles {
+			var kp v1manifest.KeyInfo
+			f, err := os.Open(fname)
+			if err != nil {
+				return err
+			}
+			bytes, err := ioutil.ReadAll(f)
+			if err != nil {
+				return err
+			}
+
+			if err := json.Unmarshal(bytes, &kp); err != nil {
+				return err
+			}
+
+			if err := root.Signed.(*v1manifest.Root).AddKey(v1manifest.ManifestTypeRoot, &kp); err != nil {
+				return err
+			}
+		}
+		// write the file
+		fname := filepath.Join(dir, "manifests", root.Signed.Filename())
+		err := writeManifest(fnameWithVersion(fname, 1), &root)
+		if err != nil {
+			return err
+		}
+		// A copy of the newest version which is 1.
+		err = writeManifest(fname, &root)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
 	// append signatures
-	for _, fname := range signedFiles {
+	for _, fname := range keyFiles { // signed root files
 		sr := v1manifest.Manifest{
 			Signed: &v1manifest.Root{},
 		}

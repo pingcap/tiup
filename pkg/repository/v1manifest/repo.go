@@ -433,6 +433,29 @@ func (manifest *Root) SetRole(m ValidManifest, keys ...*KeyInfo) error {
 	return nil
 }
 
+// AddKey adds a public key info to a role of Root
+func (manifest *Root) AddKey(roleName string, key *KeyInfo) error {
+	newID, err := key.ID()
+	if err != nil {
+		return err
+	}
+	role, found := manifest.Roles[roleName]
+	if !found {
+		return errors.Errorf("role '%s' not found in root manifest", roleName)
+	}
+	for _, k := range role.Keys {
+		id, err := k.ID()
+		if err != nil {
+			return err
+		}
+		if newID == id {
+			return nil // skip exist
+		}
+	}
+	role.Keys[newID] = key
+	return nil
+}
+
 // FreshKeyInfo generates a new key pair and wraps it in a KeyInfo. The returned string is the key id.
 func FreshKeyInfo() (*KeyInfo, string, crypto.PrivKey, error) {
 	pub, priv, err := crypto.RSAPair()

@@ -261,7 +261,7 @@ func newRepoGenkeyCmd(env *meta.Environment) *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVarP(&showPublic, "public", "p", showPublic, fmt.Sprintf("show public content of %s", privPath))
-	cmd.Flags().BoolVar(&saveKey, "save", true, "Save public key to a file at current working dir")
+	cmd.Flags().BoolVar(&saveKey, "save", false, "Save public key to a file at current working dir")
 
 	return cmd
 }
