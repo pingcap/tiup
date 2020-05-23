@@ -3,18 +3,23 @@ module github.com/pingcap-incubator/tiup
 go 1.13
 
 require (
-	github.com/BurntSushi/toml v0.3.1
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/alecthomas/assert v0.0.0-20170929043011-405dbfeb8e38
 	github.com/blevesearch/bleve v1.0.8-0.20200520165604-f0ded112bb1b
 	github.com/cavaliercoder/grab v2.0.1-0.20200331080741-9f014744ee41+incompatible
 	github.com/cheggaaa/pb v2.0.7+incompatible
 	github.com/cheynewallace/tabby v1.1.0
+	github.com/cznic/b v0.0.0-20181122101859-a26611c4d92d // indirect
+	github.com/cznic/strutil v0.0.0-20181122101858-275e90344537 // indirect
+	github.com/facebookgo/ensure v0.0.0-20200202191622-63f1cf65ac4c // indirect
+	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
+	github.com/facebookgo/subset v0.0.0-20200203212716-c811ad88dec4 // indirect
 	github.com/fatih/color v1.9.0
 	github.com/gibson042/canonicaljson-go v1.0.3
 	github.com/gizak/termui/v3 v3.1.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/google/uuid v1.1.1
+	github.com/jmhodges/levigo v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/juju/errors v0.0.0-20190930114154-d42613fe1ab9
 	github.com/juju/loggo v0.0.0-20190526231331-6e530bcce5d8 // indirect
@@ -29,6 +34,7 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/cobra v0.0.6
 	github.com/stretchr/testify v1.4.0
+	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect
 	github.com/tj/go-termd v0.0.2-0.20200115111609-7f6aeb166380
 	github.com/xo/usql v0.7.8
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20191023171146-3cf2f69b5738
