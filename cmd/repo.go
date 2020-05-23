@@ -173,8 +173,12 @@ func delComp(repo, id, version string) error {
 
 // the `repo genkey` sub command
 func newRepoGenkeyCmd(env *meta.Environment) *cobra.Command {
-	showPublic := false
+	var (
+		showPublic bool
+		saveKey    bool
+	)
 	privPath := env.Profile().Path("private.json")
+
 	cmd := &cobra.Command{
 		Use:   "genkey",
 		Short: "Generate a new key pair",
@@ -205,6 +209,18 @@ func newRepoGenkeyCmd(env *meta.Environment) *cobra.Command {
 				}
 
 				fmt.Printf("KeyID: %s\nKeyContent: \n%s\n", id, string(content))
+
+				// TODO: suggest key type from input, there will also be owner keys
+				if saveKey {
+					pubKey, err := ki.Public()
+					if err != nil {
+						return err
+					}
+					if err = v1manifest.SaveKeyInfo(pubKey, "root", ""); err != nil {
+						return err
+					}
+					fmt.Printf("public key have been write to current working dir\n")
+				}
 				return nil
 			}
 
@@ -229,10 +245,23 @@ func newRepoGenkeyCmd(env *meta.Environment) *cobra.Command {
 			}
 
 			fmt.Printf("private key have been write to %s\n", privPath)
+
+			// TODO: suggest key type from input, there will also be owner keys
+			if saveKey {
+				pubKey, err := key.Public()
+				if err != nil {
+					return err
+				}
+				if err = v1manifest.SaveKeyInfo(pubKey, "root", ""); err != nil {
+					return err
+				}
+				fmt.Printf("public key have been write to current working dir\n")
+			}
 			return nil
 		},
 	}
 	cmd.Flags().BoolVarP(&showPublic, "public", "p", showPublic, fmt.Sprintf("show public content of %s", privPath))
+	cmd.Flags().BoolVar(&saveKey, "save", false, "Save public key to a file at current working dir")
 
 	return cmd
 }

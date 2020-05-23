@@ -21,12 +21,13 @@ import (
 // Manifest representation for ser/de.
 type Manifest struct {
 	// Signatures value
-	Signatures []signature `json:"signatures"`
+	Signatures []Signature `json:"signatures"`
 	// Signed value; any value here must have the SignedBase base.
 	Signed ValidManifest `json:"signed"`
 }
 
-type signature struct {
+// Signature represents a signature for a manifest
+type Signature struct {
 	KeyID string `json:"keyid"`
 	Sig   string `json:"sig"`
 }
