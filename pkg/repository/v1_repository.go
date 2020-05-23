@@ -362,7 +362,7 @@ func (r *V1Repository) updateComponentManifest(id string) (*v1manifest.Component
 	}
 
 	var component v1manifest.Component
-	manifest, err := r.fetchComponentManefest(&index, url, &component, fileVersion.Length)
+	manifest, err := r.fetchComponentManifest(&index, url, &component, fileVersion.Length)
 	if err != nil {
 		return nil, err
 	}
@@ -420,7 +420,7 @@ func (r *V1Repository) checkTimestamp() (*v1manifest.FileHash, error) {
 	return &hash, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
 }
 
-func (r *V1Repository) fetchComponentManefest(index *v1manifest.Index, url string, com *v1manifest.Component, maxSize uint) (*v1manifest.Manifest, error) {
+func (r *V1Repository) fetchComponentManifest(index *v1manifest.Index, url string, com *v1manifest.Component, maxSize uint) (*v1manifest.Manifest, error) {
 	reader, err := r.mirror.Fetch(url, int64(maxSize))
 	if err != nil {
 		return nil, errors.Trace(err)

@@ -87,40 +87,48 @@ func (ms *FsManifests) SaveComponentManifest(manifest *Manifest, filename string
 
 // LoadManifest implements LocalManifests.
 func (ms *FsManifests) LoadManifest(role ValidManifest) (bool, error) {
-	return ms.load(role.Filename(), role)
+	file, err := ms.load(role.Filename())
+	if err != nil {
+		return false, err
+	}
+	if file == nil {
+		return false, nil
+	}
+	defer file.Close()
+
+	_, err = ReadManifest(file, role, nil)
+	return true, err
 }
 
 // LoadComponentManifest implements LocalManifests.
 func (ms *FsManifests) LoadComponentManifest(index *Index, filename string) (*Component, error) {
+	file, err := ms.load(filename)
+	if err != nil {
+		return nil, err
+	}
+	if file == nil {
+		return nil, nil
+	}
+	defer file.Close()
+
 	com := new(Component)
+	_, err = ReadComponentManifest(file, com, index)
+	return com, err
+}
+
+// load return the file for the manifest from disk.
+// The returned file is not nil if the file do not exists.
+func (ms *FsManifests) load(filename string) (file *os.File, err error) {
 	fullPath := filepath.Join(ms.profile.Root(), filename)
-	file, err := os.Open(fullPath)
+	file, err = os.Open(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
 		return nil, err
 	}
-	defer file.Close()
 
-	_, err = ReadComponentManifest(file, com, index)
-	return com, err
-}
-
-// load and validate a manifest from disk. The returned bool is true if the file exists.
-func (ms *FsManifests) load(filename string, role ValidManifest) (bool, error) {
-	fullPath := filepath.Join(ms.profile.Root(), filename)
-	file, err := os.Open(fullPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return true, err
-	}
-	defer file.Close()
-
-	_, err = ReadManifest(file, role, nil)
-	return true, err
+	return
 }
 
 // Keys implements LocalManifests.

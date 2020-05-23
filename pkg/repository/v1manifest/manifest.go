@@ -460,7 +460,7 @@ func ReadManifest(input io.Reader, role ValidManifest, root *Root) (*Manifest, e
 			return nil, err
 		}
 	} else {
-		return nil, errors.Errorf("unknow type: %s", role.Base().Ty)
+		return nil, errors.Errorf("unknown type: %s", role.Base().Ty)
 	}
 
 	err = m.Signed.Base().isValid()

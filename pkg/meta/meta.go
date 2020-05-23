@@ -92,11 +92,11 @@ func (env *Environment) Profile() *localdata.Profile {
 
 // Close release resource of env.
 func (env *Environment) Close() error {
-	if os.Getenv(EnvNameV1) == "" {
-		return env.repo.Close()
+	if env.v1Repo != nil {
+		return nil
 	}
 
-	return nil
+	return env.repo.Close()
 }
 
 // SetProfile exports for test

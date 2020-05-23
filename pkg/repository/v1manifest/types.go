@@ -186,7 +186,7 @@ func (manifest *Root) GetRootKeyStore() (ks crypto.KeyStore, err error) {
 	return
 }
 
-// GetComponentKeys the the threshold and keys for the specified component id.
+// GetComponentKeys return the threshold and keys for the specified component id.
 func (manifest *Index) GetComponentKeys(id string) (threshold uint, keys map[string]*KeyInfo, err error) {
 	item, ok := manifest.Components[id]
 	if !ok {
