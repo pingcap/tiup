@@ -81,7 +81,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			continue
 		}
 
-		platform := utils.PlatformString()
+		platform := r.PlatformString()
 		versions, ok := manifest.Platforms[platform]
 		if !ok {
 			errs = append(errs, fmt.Sprintf("platform %s not supported by component %s", platform, spec.ID))
@@ -418,6 +418,11 @@ func (r *V1Repository) checkTimestamp() (*v1manifest.FileHash, error) {
 	}
 
 	return &hash, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
+}
+
+// PlatformString returns a string identifying the current system.
+func (r *V1Repository) PlatformString() string {
+	return fmt.Sprintf("%s/%s", r.GOOS, r.GOARCH)
 }
 
 // fetchManifest downloads and validates a manifest from this repo.

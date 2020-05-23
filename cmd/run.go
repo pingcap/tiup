@@ -17,7 +17,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"math"
 	"os"
 	"os/exec"
@@ -133,7 +132,7 @@ func isSupportedComponent(env *meta.Environment, component string) bool {
 	if !found {
 		return false
 	}
-	return comp.IsSupport(utils.PlatformString())
+	return comp.IsSupport(env.PlatformString())
 }
 
 type process struct {
