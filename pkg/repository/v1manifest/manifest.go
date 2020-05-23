@@ -377,6 +377,43 @@ func checkHasThresholdKeys(threshold uint, sigs []Signature, keys crypto.KeyStor
 	return count >= threshold
 }
 
+// ReadComponentManifest reads a component manifest from input and validates it.
+func ReadComponentManifest(input io.Reader, com *Component, index *Index) (*Manifest, error) {
+	decoder := json.NewDecoder(input)
+	var m Manifest
+	m.Signed = com
+	err := decoder.Decode(&m)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(m.Signatures) == 0 {
+		return nil, errors.New("no signatures supplied in manifest")
+	}
+
+	threshold, keys, err := index.GetComponentKeys(com.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	ks, err := createKeyStore(keys)
+	if err != nil {
+		return nil, err
+	}
+
+	err = m.VerifySignature(threshold, ks)
+	if err != nil {
+		return nil, err
+	}
+
+	err = m.Signed.Base().isValid()
+	if err != nil {
+		return nil, err
+	}
+
+	return &m, m.Signed.isValid()
+}
+
 // ReadManifest reads a manifest from input and validates it, the result is stored in role, which must be a pointer type.
 func ReadManifest(input io.Reader, role ValidManifest, root *Root) (*Manifest, error) {
 	decoder := json.NewDecoder(input)
@@ -440,6 +477,8 @@ func ReadManifest(input io.Reader, role ValidManifest, root *Root) (*Manifest, e
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		return nil, errors.Errorf("unknown type: %s", role.Base().Ty)
 	}
 
 	err = m.Signed.Base().isValid()

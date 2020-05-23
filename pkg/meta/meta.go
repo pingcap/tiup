@@ -88,6 +88,15 @@ func (env *Environment) Profile() *localdata.Profile {
 	return env.profile
 }
 
+// Close release resource of env.
+func (env *Environment) Close() error {
+	if env.v1Repo != nil {
+		return nil
+	}
+
+	return env.repo.Close()
+}
+
 // SetProfile exports for test
 func (env *Environment) SetProfile(p *localdata.Profile) {
 	env.profile = p

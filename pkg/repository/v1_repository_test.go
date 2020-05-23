@@ -191,7 +191,7 @@ func TestUpdateIndex(t *testing.T) {
 	priv := setRoot(t, local)
 	repo := NewV1Repo(&mirror, Options{}, local)
 
-	index := indexManifest()
+	index, _ := indexManifest(t)
 	snapshot := snapshotManifest()
 	serIndex := serialize(t, index, priv)
 	mirror.Resources["/5.index.json"] = serIndex
@@ -211,13 +211,13 @@ func TestUpdateComponent(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
-	priv := setRoot(t, local)
+	_ = setRoot(t, local)
 	repo := NewV1Repo(&mirror, Options{}, local)
 
-	index := indexManifest()
+	index, indexPriv := indexManifest(t)
 	snapshot := snapshotManifest()
 	foo := componentManifest()
-	serFoo := serialize(t, foo, priv)
+	serFoo := serialize(t, foo, indexPriv)
 	mirror.Resources["/7.foo.json"] = serFoo
 	local.Manifests[v1manifest.ManifestFilenameSnapshot] = snapshot
 	local.Manifests[v1manifest.ManifestFilenameIndex] = index
@@ -225,6 +225,7 @@ func TestUpdateComponent(t *testing.T) {
 	// Test happy path
 	updated, err := repo.updateComponentManifest("foo")
 	assert.Nil(t, err)
+	t.Logf("%+v", err)
 	assert.NotNil(t, updated)
 	assert.Contains(t, local.Saved, "foo.json")
 
@@ -325,7 +326,7 @@ func TestEnsureManifests(t *testing.T) {
 
 	repo := NewV1Repo(&mirror, Options{}, local)
 
-	index := indexManifest()
+	index, _ := indexManifest(t)
 	snapshot := snapshotManifest()
 	snapStr := serialize(t, snapshot, priv)
 	ts := timestampManifest()
@@ -387,7 +388,7 @@ func TestUpdateComponents(t *testing.T) {
 
 	repo := NewV1Repo(&mirror, Options{GOOS: "plat", GOARCH: "form"}, local)
 
-	index := indexManifest()
+	index, indexPriv := indexManifest(t)
 	snapshot := snapshotManifest()
 	snapStr := serialize(t, snapshot, priv)
 	ts := timestampManifest()
@@ -397,7 +398,7 @@ func TestUpdateComponents(t *testing.T) {
 	mirror.Resources[indexURL] = serialize(t, index, priv)
 	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
-	mirror.Resources["/7.foo.json"] = serialize(t, foo, priv)
+	mirror.Resources["/7.foo.json"] = serialize(t, foo, indexPriv)
 	mirror.Resources["/foo-2.0.1.tar.gz"] = "foo201"
 
 	// Install
@@ -412,7 +413,7 @@ func TestUpdateComponents(t *testing.T) {
 	// Update
 	foo.Version = 8
 	foo.Platforms["plat/form"]["2.0.2"] = versionItem2()
-	mirror.Resources["/8.foo.json"] = serialize(t, foo, priv)
+	mirror.Resources["/8.foo.json"] = serialize(t, foo, indexPriv)
 	mirror.Resources["/foo-2.0.2.tar.gz"] = "foo202"
 	snapshot.Version++
 	item := snapshot.Meta["/foo.json"]
@@ -542,6 +543,7 @@ func componentManifest() *v1manifest.Component {
 			Expires:     "2220-05-11T04:51:08Z",
 			Version:     7,
 		},
+		ID:          "foo",
 		Name:        "Foo",
 		Description: "foo does stuff",
 		Platforms: map[string]map[string]v1manifest.VersionItem{
@@ -570,7 +572,17 @@ func versionItem2() v1manifest.VersionItem {
 	}
 }
 
-func indexManifest() *v1manifest.Index {
+func indexManifest(t *testing.T) (*v1manifest.Index, crypto.PrivKey) {
+	info, keyID, priv, err := v1manifest.FreshKeyInfo()
+	assert.Nil(t, err)
+	bytes, err := priv.Serialize()
+	assert.Nil(t, err)
+	privKeyInfo := v1manifest.NewKeyInfo(bytes)
+	// The signed id will be priveID and it should be equal as keyID
+	privID, err := privKeyInfo.ID()
+	assert.Nil(t, err)
+	assert.Equal(t, keyID, privID)
+
 	return &v1manifest.Index{
 		SignedBase: v1manifest.SignedBase{
 			Ty:          v1manifest.ManifestTypeIndex,
@@ -580,7 +592,7 @@ func indexManifest() *v1manifest.Index {
 		},
 		Owners: map[string]v1manifest.Owner{"bar": {
 			Name: "Bar",
-			Keys: nil,
+			Keys: map[string]*v1manifest.KeyInfo{keyID: info},
 		}},
 		Components: map[string]v1manifest.ComponentItem{"foo": {
 			Yanked:    false,
@@ -589,11 +601,10 @@ func indexManifest() *v1manifest.Index {
 			Threshold: 1,
 		}},
 		DefaultComponents: []string{},
-	}
+	}, priv
 }
 
 func rootManifest(t *testing.T) (*v1manifest.Root, crypto.PrivKey) {
-	// TODO use the key id and private key to sign the index manifest
 	info, keyID, priv, err := v1manifest.FreshKeyInfo()
 	assert.Nil(t, err)
 	id, err := info.ID()
@@ -696,10 +707,10 @@ func TestWithMigrate(t *testing.T) {
 	// create a repo using the manifests as a mirror.
 	// profileDir will contains the only trusted root.
 	repo, profileDir := createMigrateRepo(t, mdir)
-	root, err := repo.loadRoot()
+	_, err := repo.loadRoot()
 	assert.Nil(t, err)
 	defer os.RemoveAll(profileDir)
-	t.Log(root)
+	_ = profileDir
 
 	err = repo.updateLocalRoot()
 	assert.Nil(t, err)
@@ -708,19 +719,43 @@ func TestWithMigrate(t *testing.T) {
 	assert.Nil(t, err)
 
 	// after ensureManifests we should can load index/timestamp/snapshot
+	var snap v1manifest.Snapshot
+	var index v1manifest.Index
+	var root v1manifest.Root
 	{
-		var index v1manifest.Index
 		exists, err := repo.local.LoadManifest(&index)
 		assert.Nil(t, err)
 		assert.True(t, exists)
-		var root v1manifest.Root
 		exists, err = repo.local.LoadManifest(&root)
 		assert.Nil(t, err)
 		assert.True(t, exists)
-		var snap v1manifest.Snapshot
 		exists, err = repo.local.LoadManifest(&snap)
 		assert.Nil(t, err)
 		assert.True(t, exists)
+	}
+
+	// check can load component manifests.
+	assert.NotZero(t, len(snap.Meta))
+	assert.NotZero(t, len(index.Components))
+	{
+		// Every component should in snapshot's meta
+		t.Logf("snap meta: %+v", snap.Meta)
+		for _, item := range index.Components {
+			_, ok := snap.Meta[item.URL]
+			assert.True(t, ok, "component url: %s", item.URL)
+		}
+
+		// Test after updateComponentManifest we can load it locally.
+		for id, item := range index.Components {
+			_, err := repo.updateComponentManifest(id)
+			assert.Nil(t, err)
+
+			filename := v1manifest.ComponentManifestFilename(id)
+			_, _, err = snap.VersionedURL(item.URL)
+			assert.Nil(t, err)
+			_, err = repo.local.LoadComponentManifest(&index, filename)
+			assert.Nil(t, err)
+		}
 	}
 }
 
