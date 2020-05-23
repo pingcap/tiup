@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
@@ -153,6 +154,13 @@ func (ms *FsManifests) InstallComponent(reader io.Reader, component, version str
 type MockManifests struct {
 	Manifests map[string]ValidManifest
 	Saved     []string
+	Installed map[string]MockInstalled
+}
+
+// MockInstalled is used by MockManifests to remember what was installed for a component.
+type MockInstalled struct {
+	Version  string
+	Contents string
 }
 
 // NewMockManifests creates an empty MockManifests.
@@ -160,6 +168,7 @@ func NewMockManifests() *MockManifests {
 	return &MockManifests{
 		Manifests: map[string]ValidManifest{},
 		Saved:     []string{},
+		Installed: map[string]MockInstalled{},
 	}
 }
 
@@ -223,10 +232,21 @@ func (ms *MockManifests) Keys() crypto.KeyStore {
 
 // ComponentInstalled implements LocalManifests.
 func (ms *MockManifests) ComponentInstalled(component, version string) (bool, error) {
-	return false, nil
+	inst, ok := ms.Installed[component]
+	if !ok {
+		return false, nil
+	}
+
+	return inst.Version == version, nil
 }
 
 // InstallComponent implements LocalManifests.
 func (ms *MockManifests) InstallComponent(reader io.Reader, component, version string) error {
+	buf := strings.Builder{}
+	io.Copy(&buf, reader)
+	ms.Installed[component] = MockInstalled{
+		Version:  version,
+		Contents: buf.String(),
+	}
 	return nil
 }

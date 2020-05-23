@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 
@@ -25,7 +24,6 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap-incubator/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
@@ -135,8 +133,8 @@ func (env *Environment) UpdateComponents(specs []string, nightly, force bool) er
 				return fmt.Errorf("component `%s` not found", component)
 			}
 
-			if !compInfo.IsSupport(utils.PlatformString()) {
-				return fmt.Errorf("component `%s` does not support `%s/%s`", component, runtime.GOOS, runtime.GOARCH)
+			if !compInfo.IsSupport(env.PlatformString()) {
+				return fmt.Errorf("component `%s` does not support `%s`", component, env.PlatformString())
 			}
 		}
 
@@ -146,6 +144,15 @@ func (env *Environment) UpdateComponents(specs []string, nightly, force bool) er
 		}
 	}
 	return nil
+}
+
+// PlatformString returns a string identifying the current system.
+func (env *Environment) PlatformString() string {
+	if env.v1Repo != nil {
+		return env.v1Repo.PlatformString()
+	}
+
+	return fmt.Sprintf("%s/%s", env.repo.GOOS, env.repo.GOARCH)
 }
 
 // SelfUpdate updates TiUp.

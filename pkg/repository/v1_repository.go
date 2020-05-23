@@ -81,7 +81,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			continue
 		}
 
-		platform := utils.PlatformString()
+		platform := r.PlatformString()
 		versions, ok := manifest.Platforms[platform]
 		if !ok {
 			errs = append(errs, fmt.Sprintf("platform %s not supported by component %s", platform, spec.ID))
@@ -428,6 +428,11 @@ func (r *V1Repository) fetchComponentManifest(index *v1manifest.Index, url strin
 	defer reader.Close()
 
 	return v1manifest.ReadComponentManifest(reader, com, index)
+}
+
+// PlatformString returns a string identifying the current system.
+func (r *V1Repository) PlatformString() string {
+	return fmt.Sprintf("%s/%s", r.GOOS, r.GOARCH)
 }
 
 // fetchManifest downloads and validates a manifest from this repo.
