@@ -252,7 +252,7 @@ func TestDownloadManifest(t *testing.T) {
 	mirror := MockMirror{
 		Resources: map[string]string{},
 	}
-	someString := "just some string for testing"
+	someString := "foo201"
 	mirror.Resources["/foo-2.0.1.tar.gz"] = someString
 	local := v1manifest.NewMockManifests()
 	setRoot(t, local)
@@ -378,19 +378,129 @@ func TestEnsureManifests(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-// TODO
 func TestUpdateComponents(t *testing.T) {
+	mirror := MockMirror{
+		Resources: map[string]string{},
+	}
+	local := v1manifest.NewMockManifests()
+	priv := setRoot(t, local)
+
+	repo := NewV1Repo(&mirror, Options{GOOS: "plat", GOARCH: "form"}, local)
+
+	index := indexManifest()
+	snapshot := snapshotManifest()
+	snapStr := serialize(t, snapshot, priv)
+	ts := timestampManifest()
+	ts.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = hash(snapStr)
+	foo := componentManifest()
+	indexURL, _, _ := snapshot.VersionedURL(v1manifest.ManifestURLIndex)
+	mirror.Resources[indexURL] = serialize(t, index, priv)
+	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
+	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
+	mirror.Resources["/7.foo.json"] = serialize(t, foo, priv)
+	mirror.Resources["/foo-2.0.1.tar.gz"] = "foo201"
+
 	// Install
+	err := repo.UpdateComponents([]ComponentSpec{{
+		ID: "foo",
+	}})
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(local.Installed))
+	assert.Equal(t, "2.0.1", local.Installed["foo"].Version)
+	assert.Equal(t, "foo201", local.Installed["foo"].Contents)
+
 	// Update
+	foo.Version = 8
+	foo.Platforms["plat/form"]["2.0.2"] = versionItem2()
+	mirror.Resources["/8.foo.json"] = serialize(t, foo, priv)
+	mirror.Resources["/foo-2.0.2.tar.gz"] = "foo202"
+	snapshot.Version++
+	item := snapshot.Meta["/foo.json"]
+	item.Version = 8
+	snapshot.Meta["/foo.json"] = item
+	snapStr = serialize(t, snapshot, priv)
+	ts.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = hash(snapStr)
+	ts.Version++
+	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
+	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
+	err = repo.UpdateComponents([]ComponentSpec{{
+		ID: "foo",
+	}})
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(local.Installed))
+	assert.Equal(t, "2.0.2", local.Installed["foo"].Version)
+	assert.Equal(t, "foo202", local.Installed["foo"].Contents)
+
 	// Update; already up to date
+	err = repo.UpdateComponents([]ComponentSpec{{
+		ID: "foo",
+	}})
+	assert.NotNil(t, err)
+	assert.Equal(t, 1, len(local.Installed))
+	assert.Equal(t, "2.0.2", local.Installed["foo"].Version)
+	assert.Equal(t, "foo202", local.Installed["foo"].Contents)
+
 	// Specific version
+	err = repo.UpdateComponents([]ComponentSpec{{
+		ID:      "foo",
+		Version: "2.0.1",
+	}})
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(local.Installed))
+	assert.Equal(t, "2.0.1", local.Installed["foo"].Version)
+	assert.Equal(t, "foo201", local.Installed["foo"].Contents)
 
 	// Sad paths
 	// Component doesn't exists
+	err = repo.UpdateComponents([]ComponentSpec{{
+		ID: "bar",
+	}})
+	assert.NotNil(t, err)
+	_, ok := local.Installed["bar"]
+	assert.False(t, ok)
+
 	// Specific version doesn't exist
+	err = repo.UpdateComponents([]ComponentSpec{{
+		ID:      "foo",
+		Version: "2.0.3",
+	}})
+	assert.NotNil(t, err)
+	assert.Equal(t, 1, len(local.Installed))
+	assert.Equal(t, "2.0.1", local.Installed["foo"].Version)
+	assert.Equal(t, "foo201", local.Installed["foo"].Contents)
+
 	// Platform not supported
+	repo.GOARCH = "sdfsadfsadf"
+	err = repo.UpdateComponents([]ComponentSpec{{
+		ID: "foo",
+	}})
+	assert.NotNil(t, err)
+	assert.Equal(t, 1, len(local.Installed))
+	assert.Equal(t, "2.0.1", local.Installed["foo"].Version)
+	assert.Equal(t, "foo201", local.Installed["foo"].Contents)
+
 	// Already installed
+	repo.GOARCH = "form"
+	err = repo.UpdateComponents([]ComponentSpec{{
+		ID:      "foo",
+		Version: "2.0.1",
+	}})
+	assert.NotNil(t, err)
+	assert.Equal(t, 1, len(local.Installed))
+	assert.Equal(t, "2.0.1", local.Installed["foo"].Version)
+	assert.Equal(t, "foo201", local.Installed["foo"].Contents)
+
 	// Test that even after one error, other components are handled
+	repo.GOARCH = "form"
+	err = repo.UpdateComponents([]ComponentSpec{{
+		ID: "bar",
+	}, {
+		ID: "foo",
+	}})
+	assert.NotNil(t, err)
+	assert.Equal(t, 1, len(local.Installed))
+	assert.Equal(t, "2.0.2", local.Installed["foo"].Version)
+	assert.Equal(t, "foo202", local.Installed["foo"].Contents)
 }
 
 func timestampManifest() *v1manifest.Timestamp {
@@ -435,7 +545,7 @@ func componentManifest() *v1manifest.Component {
 		Name:        "Foo",
 		Description: "foo does stuff",
 		Platforms: map[string]map[string]v1manifest.VersionItem{
-			"a_platform": {"2.0.1": versionItem()},
+			"plat/form": {"2.0.1": versionItem()},
 		},
 	}
 }
@@ -444,11 +554,20 @@ func versionItem() v1manifest.VersionItem {
 	return v1manifest.VersionItem{
 		URL: "/foo-2.0.1.tar.gz",
 		FileHash: v1manifest.FileHash{
-			Hashes: map[string]string{v1manifest.SHA256: "963ba8374bac92a8a00fc21ca458e0c2016bf8930519e5271f7b49d16762a184"},
+			Hashes: map[string]string{v1manifest.SHA256: "8dc7102c0d675dfa53da273317b9f627e96ed24efeecc8c5ebd00dc06f4e09c3"},
 			Length: 28,
 		},
 	}
+}
 
+func versionItem2() v1manifest.VersionItem {
+	return v1manifest.VersionItem{
+		URL: "/foo-2.0.2.tar.gz",
+		FileHash: v1manifest.FileHash{
+			Hashes: map[string]string{v1manifest.SHA256: "5abe91bc22039c15c05580062357be7ab0bfd7968582a118fbb4eb817ddc2e76"},
+			Length: 12,
+		},
+	}
 }
 
 func indexManifest() *v1manifest.Index {
