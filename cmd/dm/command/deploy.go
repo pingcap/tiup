@@ -224,7 +224,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 					Deploy: deployDir,
 					Data:   []string{dataDir},
 					Log:    logDir,
-					Cache:  meta.ClusterPath(clusterName, "config"),
+					Cache:  meta.ClusterPath(clusterName, meta.TempConfigPath),
 				},
 			).
 			BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", inst.ComponentName(), inst.GetHost()))

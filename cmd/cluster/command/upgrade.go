@@ -87,6 +87,7 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 		return err
 	}
 
+	hasImported := false
 	for _, comp := range metadata.Topology.ComponentsByUpdateOrder() {
 		for _, inst := range comp.Instances() {
 			version := meta.ComponentVersion(inst.ComponentName(), clusterVersion)
@@ -133,14 +134,22 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 						Deploy: deployDir,
 						Data:   dataDirs,
 						Log:    logDir,
-						Cache:  meta.ClusterPath(clusterName, "config"),
+						Cache:  meta.ClusterPath(clusterName, meta.TempConfigPath),
 					},
 				)
+				hasImported = true
 			} else {
 				tb.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
 					CopyComponent(inst.ComponentName(), inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
 			}
 			copyCompTasks = append(copyCompTasks, tb.Build())
+		}
+	}
+
+	// handle dir scheme changes
+	if hasImported {
+		if err := meta.HandleImportPathMigration(clusterName); err != nil {
+			return err
 		}
 	}
 

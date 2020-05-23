@@ -268,6 +268,8 @@ func buildScaleOutTask(
 		deployCompTasks = append(deployCompTasks, t)
 	})
 
+	hasImported := false
+
 	mergedTopo.IterInstance(func(inst meta.Instance) {
 		deployDir := clusterutil.Abs(metadata.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
@@ -284,6 +286,7 @@ func buildScaleOutTask(
 				tb.Download(compName, inst.OS(), inst.Arch(), version).
 					CopyComponent(compName, inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
 			}
+			hasImported = true
 		}
 
 		// Refresh all configuration
@@ -295,11 +298,18 @@ func buildScaleOutTask(
 				Deploy: deployDir,
 				Data:   dataDirs,
 				Log:    logDir,
-				Cache:  meta.ClusterPath(clusterName, "config"),
+				Cache:  meta.ClusterPath(clusterName, meta.TempConfigPath),
 			},
 		).Build()
 		refreshConfigTasks = append(refreshConfigTasks, t)
 	})
+
+	// handle dir scheme changes
+	if hasImported {
+		if err := meta.HandleImportPathMigration(clusterName); err != nil {
+			return task.NewBuilder().Build(), err
+		}
+	}
 
 	nodeInfoTask := task.NewBuilder().Func("Check status", func(ctx *task.Context) error {
 		var err error

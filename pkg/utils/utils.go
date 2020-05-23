@@ -45,7 +45,7 @@ type RetryOption struct {
 
 // default values for RetryOption
 var (
-	defaultAttempts int64 = 10
+	defaultAttempts int64 = 20
 	defaultDelay          = time.Millisecond * 500 // 500ms
 	defaultTimeout        = time.Second * 10       // 10s
 )

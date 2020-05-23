@@ -59,5 +59,5 @@ func (c *InitConfig) Rollback(ctx *Context) error {
 func (c *InitConfig) String() string {
 	return fmt.Sprintf("InitConfig: cluster=%s, user=%s, host=%s, path=%s, %s",
 		c.clusterName, c.deployUser, c.instance.GetHost(),
-		filepath.Join(meta.ClusterPath(c.clusterName, "config", c.instance.ServiceName())), c.paths)
+		filepath.Join(meta.ClusterPath(c.clusterName, meta.TempConfigPath, c.instance.ServiceName())), c.paths)
 }

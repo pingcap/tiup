@@ -272,7 +272,7 @@ func (i *DMMasterInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clu
 	if i.IsImported() {
 		configPath := ClusterPath(
 			clusterName,
-			"config",
+			AnsibleImportedConfigPath,
 			fmt.Sprintf(
 				"%s-%s-%d.toml",
 				i.ComponentName(),
@@ -382,7 +382,7 @@ func (i *DMWorkerInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clu
 	if i.IsImported() {
 		configPath := ClusterPath(
 			clusterName,
-			"config",
+			AnsibleImportedConfigPath,
 			fmt.Sprintf(
 				"%s-%s-%d.toml",
 				i.ComponentName(),

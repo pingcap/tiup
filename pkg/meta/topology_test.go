@@ -410,7 +410,7 @@ tikv_servers:
 
 `), &topo)
 	c.Assert(err, IsNil)
-	expected := `# WARNING: This file was auto-generated. Do not edit! All your edit might be overwritten!
+	expected := `# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
 # You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
 # All configuration items you want to change can be added to:
 # server_configs:
@@ -483,7 +483,7 @@ tikv_servers:
   - host: 172.19.0.103
 `), &topo)
 	c.Assert(err, IsNil)
-	expected := `# WARNING: This file was auto-generated. Do not edit! All your edit might be overwritten!
+	expected := `# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
 # You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
 # All configuration items you want to change can be added to:
 # server_configs:
@@ -557,7 +557,7 @@ itemy = 999
 item7 = 780
 `)
 
-	expected := `# WARNING: This file was auto-generated. Do not edit! All your edit might be overwritten!
+	expected := `# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
 # You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
 # All configuration items you want to change can be added to:
 # server_configs:

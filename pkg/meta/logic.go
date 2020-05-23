@@ -411,7 +411,7 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 	if i.IsImported() {
 		configPath := ClusterPath(
 			clusterName,
-			"config",
+			AnsibleImportedConfigPath,
 			fmt.Sprintf(
 				"%s-%s-%d.toml",
 				i.ComponentName(),
@@ -519,7 +519,7 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 	if i.IsImported() {
 		configPath := ClusterPath(
 			clusterName,
-			"config",
+			AnsibleImportedConfigPath,
 			fmt.Sprintf(
 				"%s-%s-%d.toml",
 				i.ComponentName(),
@@ -640,7 +640,7 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVe
 	if i.IsImported() {
 		configPath := ClusterPath(
 			clusterName,
-			"config",
+			AnsibleImportedConfigPath,
 			fmt.Sprintf(
 				"%s-%s-%d.toml",
 				i.ComponentName(),
@@ -946,7 +946,7 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 	if i.IsImported() {
 		configPath := ClusterPath(
 			clusterName,
-			"config",
+			AnsibleImportedConfigPath,
 			fmt.Sprintf(
 				"%s-learner-%s-%d.toml",
 				i.ComponentName(),
@@ -980,7 +980,7 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 	if i.IsImported() {
 		configPath := ClusterPath(
 			clusterName,
-			"config",
+			AnsibleImportedConfigPath,
 			fmt.Sprintf(
 				"%s-%s-%d.toml",
 				i.ComponentName(),

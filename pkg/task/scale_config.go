@@ -38,7 +38,7 @@ func (c *ScaleConfig) Execute(ctx *Context) error {
 		return ErrNoExecutor
 	}
 
-	c.paths.Cache = meta.ClusterPath(c.clusterName, "config")
+	c.paths.Cache = meta.ClusterPath(c.clusterName, meta.TempConfigPath)
 	if err := os.MkdirAll(c.paths.Cache, 0755); err != nil {
 		return err
 	}

@@ -112,7 +112,7 @@ func (i *DrainerInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 	if i.IsImported() {
 		configPath := ClusterPath(
 			clusterName,
-			"config",
+			AnsibleImportedConfigPath,
 			fmt.Sprintf(
 				"%s-%s-%d.toml",
 				i.ComponentName(),

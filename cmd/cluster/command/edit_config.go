@@ -59,7 +59,7 @@ func newEditConfigCmd() *cobra.Command {
 }
 
 // 1. Write Topology to a temporary file.
-// 2. Open file in editro.
+// 2. Open file in editor.
 // 3. Check and update Topology.
 // 4. Save meta file.
 func editTopo(clusterName string, metadata *meta.ClusterMeta) error {

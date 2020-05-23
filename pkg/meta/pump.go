@@ -109,7 +109,7 @@ func (i *PumpInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 	if i.IsImported() {
 		configPath := ClusterPath(
 			clusterName,
-			"config",
+			AnsibleImportedConfigPath,
 			fmt.Sprintf(
 				"%s-%s-%d.toml",
 				i.ComponentName(),

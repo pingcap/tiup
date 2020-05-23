@@ -77,6 +77,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 
 	// Regenerate configuration
 	var regenConfigTasks []task.Task
+	hasImported := false
 	deletedNodes := set.NewStringSet(options.Nodes...)
 	for _, component := range metadata.Topology.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
@@ -98,6 +99,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 					tb.Download(compName, instance.OS(), instance.Arch(), version).
 						CopyComponent(compName, instance.OS(), instance.Arch(), version, instance.GetHost(), deployDir)
 				}
+				hasImported = true
 			}
 
 			t := tb.InitConfig(clusterName,
@@ -108,10 +110,17 @@ func scaleIn(clusterName string, options operator.Options) error {
 					Deploy: deployDir,
 					Data:   dataDirs,
 					Log:    logDir,
-					Cache:  meta.ClusterPath(clusterName, "config"),
+					Cache:  meta.ClusterPath(clusterName, meta.TempConfigPath),
 				},
 			).Build()
 			regenConfigTasks = append(regenConfigTasks, t)
+		}
+	}
+
+	// handle dir scheme changes
+	if hasImported {
+		if err := meta.HandleImportPathMigration(clusterName); err != nil {
+			return err
 		}
 	}
 

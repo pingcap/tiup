@@ -45,7 +45,7 @@ func ImportConfig(name string, clsMeta *meta.ClusterMeta, sshTimeout int64) erro
 					UserSSH(inst.GetHost(), inst.GetSSHPort(), clsMeta.User, sshTimeout).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
 						meta.ClusterPath(name,
-							"config",
+							meta.AnsibleImportedConfigPath,
 							fmt.Sprintf("%s-%s-%d.toml",
 								inst.ComponentName(),
 								inst.GetHost(),
@@ -62,7 +62,7 @@ func ImportConfig(name string, clsMeta *meta.ClusterMeta, sshTimeout int64) erro
 					UserSSH(inst.GetHost(), inst.GetSSHPort(), clsMeta.User, sshTimeout).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
 						meta.ClusterPath(name,
-							"config",
+							meta.AnsibleImportedConfigPath,
 							fmt.Sprintf("%s-%s-%d.toml",
 								inst.ComponentName(),
 								inst.GetHost(),
@@ -71,7 +71,7 @@ func ImportConfig(name string, clsMeta *meta.ClusterMeta, sshTimeout int64) erro
 						true).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+"-learner.toml"),
 						meta.ClusterPath(name,
-							"config",
+							meta.AnsibleImportedConfigPath,
 							fmt.Sprintf("%s-learner-%s-%d.toml",
 								inst.ComponentName(),
 								inst.GetHost(),

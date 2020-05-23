@@ -14,6 +14,7 @@
 package task
 
 import (
+	"bytes"
 	"fmt"
 	"path/filepath"
 
@@ -42,9 +43,14 @@ func (c *BackupComponent) Execute(ctx *Context) error {
 	// Make upgrade idempotent
 	// The old version has been backup if upgrade abort
 	cmd := fmt.Sprintf(`test -d %[2]s || mv %[1]s %[2]s && mkdir -p %[1]s`, binDir, binDir+".old."+c.fromVer)
-	_, _, err := exec.Execute(cmd, false)
+	_, stderr, err := exec.Execute(cmd, false)
 	if err != nil {
-		return errors.Annotate(err, cmd)
+		// ignore error if the source path does not exist, this is possible when
+		// there are multiple instances share the same deploy_dir, typical case
+		// is imported cluster
+		if !bytes.Contains(stderr, []byte("No such file or directory")) {
+			return errors.Annotate(err, cmd)
+		}
 	}
 	return nil
 }
