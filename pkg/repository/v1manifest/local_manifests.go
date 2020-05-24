@@ -59,7 +59,7 @@ type FsManifests struct {
 // There must exist the trusted root.json.
 // There must exists the trusted root.json.
 func NewManifests(profile *localdata.Profile) *FsManifests {
-	return &FsManifests{profile: profile}
+	return &FsManifests{profile: profile, cache: make(map[string]string)}
 }
 
 // SaveManifest implements LocalManifests.
