@@ -112,7 +112,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			continue
 		}
 
-		err = r.local.InstallComponent(reader, spec.ID, version)
+		err = r.local.InstallComponent(reader, spec.ID, version, versionItem.URL, r.DisableDecompress)
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
@@ -392,12 +392,9 @@ func (r *V1Repository) DownloadComponent(
 	}
 
 	resName := fmt.Sprintf("%s-%s", component, version)
-	// targetDir := filepath.Join(compsDir, component, version.String())
 
-	// TODO  handle r.DisableDecompress
 	filename := fmt.Sprintf("%s-%s-%s", resName, r.GOOS, r.GOARCH)
-	var _ = filename
-	return r.local.InstallComponent(cr, component, string(version))
+	return r.local.InstallComponent(cr, component, string(version), filename, r.DisableDecompress)
 }
 
 // downloadComponent downloads the component specified by item.
