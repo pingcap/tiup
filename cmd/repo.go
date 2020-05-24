@@ -17,9 +17,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/repository/remote"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pkg/errors"
@@ -69,6 +71,7 @@ of components or the repository itself.`,
 		newRepoYankCompCmd(env),
 		newRepoDelCompCmd(env),
 		newRepoGenkeyCmd(env),
+		newRepoPublishCmd(env),
 	)
 	return cmd
 }
@@ -176,6 +179,59 @@ func delComp(repo, id, version string) error {
 
 	// TODO: check if version is the latest nightly, refuse if it is
 	return nil
+}
+
+// the `repo publish` sub command
+func newRepoPublishCmd(env *meta.Environment) *cobra.Command {
+	privPath := env.Profile().Path("private.json")
+	endpoint := "http://127.0.0.1:8989"
+	goos := runtime.GOOS
+	goarch := runtime.GOARCH
+	desc := ""
+
+	cmd := &cobra.Command{
+		Use:   "publish <comp-name> <version> <tarbal> <entry>",
+		Short: "Publish a component",
+		Long:  "Publish a component to the repository",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 4 {
+				return cmd.Help()
+			}
+
+			// Get the private key
+			f, err := os.Open(privPath)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			ki := v1manifest.KeyInfo{}
+			if err := json.NewDecoder(f).Decode(&ki); err != nil {
+				return err
+			}
+
+			t := remote.New(endpoint, args[0], args[1], args[3]).WithDesc(desc).WithOS(goos).WithArch(goarch)
+			if err := t.Open(args[2]); err != nil {
+				return err
+			}
+			if err := t.Upload(); err != nil {
+				return err
+			}
+			m, _ := env.V1Repository().FetchComponentManifest(args[0])
+			if err := t.Sign(&ki, m); err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&privPath, "key", "k", privPath, "private key path")
+	cmd.Flags().StringVarP(&goos, "os", "", goos, "the target operation system")
+	cmd.Flags().StringVarP(&goarch, "arch", "", goarch, "the target system architecture")
+	cmd.Flags().StringVarP(&desc, "desc", "", desc, "description of the component")
+	cmd.Flags().StringVarP(&endpoint, "endpoint", "", endpoint, "endpoint of the server")
+	return cmd
 }
 
 // the `repo genkey` sub command

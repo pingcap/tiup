@@ -598,3 +598,72 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, versio
 
 	return filepath.Join(installPath, entry), nil
 }
+
+/*
+// UploadComponent upload tarbal and signature the component manifest
+func (r *V1Repository) UploadComponent(endpoint, component, version, tarbal, entry, desc, goos, goarch string, key *v1manifest.KeyInfo) error {
+	var r remote.Transporter
+	/*
+		file, err := os.Open(tarbal)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		sha256, err := utils.SHA256(file)
+		if err != nil {
+			return err
+		}
+
+		if _, err := file.Seek(0, io.SeekStart); err != nil {
+			return err
+		}
+
+		postAddr := fmt.Sprintf("%s/api/v1/tarbal/%s", endpoint, sha256)
+		resp, err := utils.PostFile(file, postAddr, "file", path.Base(tarbal))
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		manifest := v1manifest.Manifest{}
+		comp, err = r.FetchComponentManifest(component)
+		// TODO: handle first publish
+		if err != nil {
+			return err
+		}
+		comp.Version++
+
+		platformStr := fmt.Sprintf("%s/%s", goos, goarch)
+		comp.Platforms[platformStr][version] = v1manifest.VersionItem{
+			URL:   fmt.Sprintf("/%d.%s.json", comp.Version, component),
+			Entry: entry,
+			Hashes: map[string]string{
+				"sha256": sha256,
+			},
+			Length: 256,
+		}
+
+		id, err := key.ID()
+		if err != nil {
+			return err
+		}
+		payload, err := cjson.Marshal(comp)
+		if err != nil {
+			return err
+		}
+
+		sig, err := key.Signature(payload)
+		if err != nil {
+			return err
+		}
+
+		manifest.Signatures = []v1manifest.Signature{
+			KeyID: id,
+			Sig:   sig,
+		}
+
+		signAddr := fmt.Sprintf("%s/api/v1/component/%s/%s", sha256, component)
+		http.Post()
+}
+*/
