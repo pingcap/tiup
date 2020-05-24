@@ -57,10 +57,9 @@ type FsManifests struct {
 // FIXME implement garbage collection of old manifests
 
 // NewManifests creates a new FsManifests with local store at root.
-// There must exist the trusted root.json.
 // There must exists the trusted root.json.
 func NewManifests(profile *localdata.Profile) *FsManifests {
-	return &FsManifests{profile: profile}
+	return &FsManifests{profile: profile, cache: make(map[string]string)}
 }
 
 // SaveManifest implements LocalManifests.

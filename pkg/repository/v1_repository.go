@@ -512,3 +512,33 @@ func (r *V1Repository) loadRoot() (*v1manifest.Root, error) {
 	}
 	return root, nil
 }
+
+// FetchIndex fetch the index manifest.
+func (r *V1Repository) FetchIndex() (index *v1manifest.Index, err error) {
+	_, err = r.ensureManifests()
+	if err != nil {
+		return nil, errors.AddStack(err)
+	}
+
+	index = new(v1manifest.Index)
+	exists, err := r.local.LoadManifest(index)
+	if err != nil {
+		return nil, errors.AddStack(err)
+	}
+
+	if !exists {
+		return nil, errors.Errorf("no index manifest")
+	}
+
+	return index, nil
+}
+
+// FetchComponent fetch the component manifest.
+func (r *V1Repository) FetchComponent(id string) (com *v1manifest.Component, err error) {
+	_, err = r.ensureManifests()
+	if err != nil {
+		return nil, errors.AddStack(err)
+	}
+
+	return r.updateComponentManifest(id)
+}
