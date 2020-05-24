@@ -22,8 +22,6 @@ import (
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
-	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
-	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
 )
 
@@ -97,48 +95,14 @@ var ManifestsConfig = map[string]ty{
 
 var knownVersions = map[string]struct{}{"0.1.0": {}}
 
-// VerifySignature ensures that threshold signature in manifest::signatures is a valid signature of manifest::signed.
-func (manifest *Manifest) VerifySignature(threshold uint, keys crypto.KeyStore) error {
-	if keys == nil {
-		return nil
-	}
-
-	if threshold == 0 {
-		return errors.New("invalid zero threshold")
-	}
-
-	// Check duplicate of signature
-	has := make(map[string]struct{})
-	for _, s := range manifest.Signatures {
-		if _, ok := has[s.KeyID]; ok {
-			return errors.Errorf("contains duplicate signature")
-		}
-		has[s.KeyID] = struct{}{}
-	}
-
-	if len(manifest.Signatures) < int(threshold) {
-		return errors.Errorf("only %d signature but need %d", len(manifest.Signatures), threshold)
-	}
-
-	payload, err := cjson.Marshal(manifest.Signed)
+// verifySignature ensures that threshold signature in manifest::signatures is a valid signature of manifest::signed.
+func (manifest *Manifest) verifySignature(keys *KeyStore, role string) error {
+	bytes, err := cjson.Marshal(manifest.Signed)
 	if err != nil {
-		return nil
+		return errors.Trace(err)
 	}
 
-	for _, sig := range manifest.Signatures {
-		// TODO check that KeyID belongs to a role which is authorised to sign this manifest
-		key := keys.Get(sig.KeyID)
-		if key == nil {
-			err := errors.Errorf("signature key %s not found", sig.KeyID)
-			return newSignatureError(manifest.Signed.Filename(), err)
-		}
-		err := key.VerifySignature(payload, sig.Sig)
-		if err != nil {
-			return newSignatureError(manifest.Signed.Filename(), err)
-		}
-	}
-
-	return nil
+	return keys.verifySignature(bytes, role, manifest.Signatures, manifest.Signed.Filename())
 }
 
 // AddSignature adds one or more signatures to the manifest
@@ -157,29 +121,6 @@ func (manifest *Manifest) AddSignature(sigs []Signature) {
 		}
 		manifest.Signatures = append(manifest.Signatures, sig)
 	}
-}
-
-// SignatureError the signature of a file is incorrect.
-type SignatureError struct {
-	fname string
-	err   error
-}
-
-func (s *SignatureError) Error() string {
-	return fmt.Sprintf("invalid signature for file %s: %s", s.fname, s.err.Error())
-}
-
-func newSignatureError(fname string, err error) *SignatureError {
-	return &SignatureError{
-		fname: fname,
-		err:   err,
-	}
-}
-
-// IsSignatureError check if the err is SignatureError.
-func IsSignatureError(err error) bool {
-	_, ok := err.(*SignatureError)
-	return ok
 }
 
 // ExpirationError the a manifest has expired.
@@ -409,134 +350,88 @@ func (manifest *Snapshot) VersionedURL(url string) (string, *FileVersion, error)
 	return fmt.Sprintf("%s/%v.%s", url[:lastSlash], entry.Version, url[lastSlash+1:]), &entry, nil
 }
 
-func readTimestampManifest(input io.Reader, root *Root) (*Timestamp, error) {
-	var ts Timestamp
-	_, err := ReadManifest(input, &ts, root)
-	if err != nil {
-		return nil, err
-	}
-	return &ts, nil
-}
-
-func checkHasThresholdKeys(threshold uint, sigs []Signature, keys crypto.KeyStore) bool {
-	var count uint
-	for _, sig := range sigs {
-		if keys.Get(sig.KeyID) != nil {
-			count++
-		}
-	}
-
-	return count >= threshold
-}
-
 // ReadComponentManifest reads a component manifest from input and validates it.
-func ReadComponentManifest(input io.Reader, com *Component, index *Index) (*Manifest, error) {
+func ReadComponentManifest(input io.Reader, com *Component, item *ComponentItem, keys *KeyStore) (*Manifest, error) {
 	decoder := json.NewDecoder(input)
 	var m Manifest
 	m.Signed = com
 	err := decoder.Decode(&m)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
-	if len(m.Signatures) == 0 {
-		return nil, errors.New("no signatures supplied in manifest")
-	}
-
-	threshold, keys, err := index.GetComponentKeys(com.ID)
+	err = m.verifySignature(keys, item.Owner)
 	if err != nil {
-		return nil, err
-	}
-
-	ks, err := createKeyStore(keys)
-	if err != nil {
-		return nil, err
-	}
-
-	err = m.VerifySignature(threshold, ks)
-	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	err = m.Signed.Base().isValid()
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	return &m, m.Signed.isValid()
 }
 
 // ReadManifest reads a manifest from input and validates it, the result is stored in role, which must be a pointer type.
-func ReadManifest(input io.Reader, role ValidManifest, root *Root) (*Manifest, error) {
+func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifest, error) {
+	if role.Base().Ty == ManifestTypeComponent {
+		return nil, errors.New("Trying to read component manifest as non-component manifest")
+	}
+
 	decoder := json.NewDecoder(input)
 	var m Manifest
 	m.Signed = role
 	err := decoder.Decode(&m)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
-	if len(m.Signatures) == 0 {
-		return nil, errors.New("no signatures supplied in manifest")
+	err = m.verifySignature(keys, role.Base().Ty)
+	if err != nil {
+		return nil, errors.Trace(err)
 	}
 
-	if role.Base().Ty != ManifestTypeRoot && role.Base().Ty != ManifestTypeComponent {
-		if root != nil {
-			keys, err := root.GetKeyStore()
-			if err != nil {
-				return nil, errors.AddStack(err)
-			}
-
-			roleInfo, ok := root.Roles[role.Base().Ty]
-			if !ok {
-				return nil, errors.Errorf("no type %s in roles", role.Base().Ty)
-			}
-			threshold := roleInfo.Threshold
-			err = m.VerifySignature(threshold, keys)
-			if err != nil {
-				return nil, err
-			}
-		}
-	} else if role.Base().Ty == ManifestTypeRoot {
-		newR := role.(*Root)
-		keys, err := newR.GetRootKeyStore()
+	if role.Base().Ty == ManifestTypeRoot {
+		newRoot := role.(*Root)
+		threshold := newRoot.Roles[ManifestTypeRoot].Threshold
+		bytes, err := cjson.Marshal(m.Signed)
 		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-		threshold := newR.Roles[ManifestTypeRoot].Threshold
-
-		if !checkHasThresholdKeys(threshold, m.Signatures, keys) {
-			return nil, errors.Errorf("no enough %d signature: %v, keys: %v", threshold, m.Signatures, keys)
+			return nil, errors.Trace(err)
 		}
 
-		if root != nil {
-			oldKeys, err := root.GetRootKeyStore()
-			if err != nil {
-				return nil, errors.AddStack(err)
-			}
-
-			threshold := root.Roles[ManifestTypeRoot].Threshold
-			if !checkHasThresholdKeys(threshold, m.Signatures, oldKeys) {
-				return nil, errors.Errorf("no enough %d signature", threshold)
-			}
-
-			oldKeys.Visit(func(id string, key crypto.PubKey) {
-				keys.Put(id, key)
-			})
-		}
-
-		err = m.VerifySignature(uint(len(m.Signatures)), keys)
+		err = keys.transitionRoot(bytes, threshold, m.Signatures, newRoot.Roles[ManifestTypeRoot].Keys)
 		if err != nil {
-			return nil, err
+			return nil, errors.Trace(err)
 		}
-	} else {
-		return nil, errors.Errorf("unknown type: %s", role.Base().Ty)
 	}
 
 	err = m.Signed.Base().isValid()
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	return &m, m.Signed.isValid()
+}
+
+// loadKeys stores all keys declared in manifest into ks.
+func loadKeys(manifest ValidManifest, ks *KeyStore) error {
+	switch manifest.Base().Ty {
+	case "root":
+		root := manifest.(*Root)
+		for name, role := range root.Roles {
+			if err := ks.AddKeys(name, role.Threshold, role.Keys); err != nil {
+				return errors.Trace(err)
+			}
+		}
+	case "index":
+		index := manifest.(*Index)
+		for name, owner := range index.Owners {
+			// TODO threshold
+			if err := ks.AddKeys(name, 1, owner.Keys); err != nil {
+				return errors.Trace(err)
+			}
+		}
+	}
+	return nil
 }

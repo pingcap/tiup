@@ -50,7 +50,7 @@ func TestCheckTimestamp(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
-	privk := setRoot(t, local)
+	privk := setNewRoot(t, local)
 	repo := NewV1Repo(&mirror, Options{}, local)
 
 	repoTimestamp := timestampManifest()
@@ -106,7 +106,7 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
-	privk := setRoot(t, local)
+	privk := setNewRoot(t, local)
 	repo := NewV1Repo(&mirror, Options{}, local)
 
 	timestamp := timestampManifest()
@@ -151,7 +151,7 @@ func TestUpdateLocalRoot(t *testing.T) {
 	}
 
 	local := v1manifest.NewMockManifests()
-	privKey := setRoot(t, local)
+	privKey := setNewRoot(t, local)
 	repo := NewV1Repo(&mirror, Options{}, local)
 
 	// Should success if no new version root.
@@ -187,7 +187,7 @@ func TestUpdateIndex(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
-	priv := setRoot(t, local)
+	priv := setNewRoot(t, local)
 	repo := NewV1Repo(&mirror, Options{}, local)
 
 	index, _ := indexManifest(t)
@@ -210,7 +210,7 @@ func TestUpdateComponent(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
-	_ = setRoot(t, local)
+	_ = setNewRoot(t, local)
 	repo := NewV1Repo(&mirror, Options{}, local)
 
 	index, indexPriv := indexManifest(t)
@@ -255,7 +255,7 @@ func TestDownloadManifest(t *testing.T) {
 	someString := "foo201"
 	mirror.Resources["/foo-2.0.1.tar.gz"] = someString
 	local := v1manifest.NewMockManifests()
-	setRoot(t, local)
+	setNewRoot(t, local)
 	repo := NewV1Repo(&mirror, Options{}, local)
 	item := versionItem()
 
@@ -290,7 +290,7 @@ func TestSelectVersion(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
-	setRoot(t, local)
+	setNewRoot(t, local)
 	repo := NewV1Repo(&mirror, Options{}, local)
 
 	// Simple case
@@ -321,7 +321,7 @@ func TestEnsureManifests(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
-	priv := setRoot(t, local)
+	priv := setNewRoot(t, local)
 
 	repo := NewV1Repo(&mirror, Options{}, local)
 
@@ -383,7 +383,7 @@ func TestUpdateComponents(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
-	priv := setRoot(t, local)
+	priv := setNewRoot(t, local)
 
 	repo := NewV1Repo(&mirror, Options{GOOS: "plat", GOARCH: "form"}, local)
 
@@ -654,10 +654,17 @@ func rootManifest(t *testing.T) (*v1manifest.Root, crypto.PrivKey) {
 	}, priv
 }
 
-func setRoot(t *testing.T, local *v1manifest.MockManifests) crypto.PrivKey {
+func setNewRoot(t *testing.T, local *v1manifest.MockManifests) crypto.PrivKey {
 	root, privk := rootManifest(t)
-	local.Manifests[v1manifest.ManifestFilenameRoot] = root
+	setRoot(local, root)
 	return privk
+}
+
+func setRoot(local *v1manifest.MockManifests, root *v1manifest.Root) {
+	local.Manifests[v1manifest.ManifestFilenameRoot] = root
+	for r, ks := range root.Roles {
+		local.Ks.AddKeys(r, 1, ks.Keys)
+	}
 }
 
 func serialize(t *testing.T, role v1manifest.ValidManifest, privKeys ...crypto.PrivKey) string {

@@ -14,6 +14,7 @@
 package v1manifest
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -23,7 +24,6 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 )
@@ -37,12 +37,17 @@ type LocalManifests interface {
 	// LoadManifest loads and validates the most recent manifest of role's type. The returned bool is true if the file
 	// exists.
 	LoadManifest(role ValidManifest) (bool, error)
-	// LoadComponentManifest loads and validates the most recent manifest at filename if passing a not nil index.
-	LoadComponentManifest(index *Index, filename string) (*Component, error)
+	// LoadComponentManifest loads and validates the most recent manifest at filename.
+	LoadComponentManifest(item *ComponentItem, filename string) (*Component, error)
 	// ComponentInstalled is true if the version of component is present locally.
 	ComponentInstalled(component, version string) (bool, error)
 	// InstallComponent installs the component from the reader.
-	InstallComponent(reader io.Reader, targetDir string, component, version, filename string, noExpand bool) error
+	InstallComponent(reader io.Reader, component, version, filename string, noExpand bool) error
+	// Return the local key store.
+	KeyStore() *KeyStore
+	// ManifestVersion opens filename, if it exists and is a manifest, returns its manifest version number. Otherwise
+	// returns 0.
+	ManifestVersion(filename string) uint
 }
 
 // FsManifests represents a collection of v1 manifests on disk.
@@ -50,7 +55,7 @@ type LocalManifests interface {
 // ok when written and has expired since).
 type FsManifests struct {
 	profile *localdata.Profile
-	keys    crypto.KeyStore
+	keys    *KeyStore
 	cache   map[string]string
 }
 
@@ -59,12 +64,16 @@ type FsManifests struct {
 // NewManifests creates a new FsManifests with local store at root.
 // There must exists the trusted root.json.
 func NewManifests(profile *localdata.Profile) *FsManifests {
-	return &FsManifests{profile: profile, cache: make(map[string]string)}
+	return &FsManifests{profile: profile, keys: NewKeyStore(), cache: make(map[string]string)}
 }
 
 // SaveManifest implements LocalManifests.
 func (ms *FsManifests) SaveManifest(manifest *Manifest, filename string) error {
-	return ms.save(manifest, filename)
+	err := ms.save(manifest, filename)
+	if err != nil {
+		return err
+	}
+	return loadKeys(manifest.Signed, ms.keys)
 }
 
 // SaveComponentManifest implements LocalManifests.
@@ -95,24 +104,24 @@ func (ms *FsManifests) LoadManifest(role ValidManifest) (bool, error) {
 		return false, err
 	}
 
-	_, err = ReadManifest(strings.NewReader(manifest), role, nil)
+	_, err = ReadManifest(strings.NewReader(manifest), role, ms.keys)
 	if err != nil {
 		return true, err
 	}
 
 	ms.cache[filename] = manifest
-	return true, nil
+	return true, loadKeys(role, ms.keys)
 }
 
 // LoadComponentManifest implements LocalManifests.
-func (ms *FsManifests) LoadComponentManifest(index *Index, filename string) (*Component, error) {
+func (ms *FsManifests) LoadComponentManifest(item *ComponentItem, filename string) (*Component, error) {
 	manifest, err := ms.load(filename)
 	if err != nil || manifest == "" {
 		return nil, err
 	}
 
 	component := new(Component)
-	_, err = ReadComponentManifest(strings.NewReader(manifest), component, index)
+	_, err = ReadComponentManifest(strings.NewReader(manifest), component, item, ms.keys)
 	if err != nil {
 		return nil, err
 	}
@@ -142,11 +151,6 @@ func (ms *FsManifests) load(filename string) (string, error) {
 	builder := strings.Builder{}
 	io.Copy(&builder, file)
 	return builder.String(), nil
-}
-
-// Keys implements LocalManifests.
-func (ms *FsManifests) Keys() crypto.KeyStore {
-	return ms.keys
 }
 
 // ComponentInstalled implements LocalManifests.
@@ -180,11 +184,33 @@ func (ms *FsManifests) InstallComponent(reader io.Reader, targetDir string, comp
 	return nil
 }
 
+// KeyStore implements LocalManifests.
+func (ms *FsManifests) KeyStore() *KeyStore {
+	return ms.keys
+}
+
+// ManifestVersion implements LocalManifests.
+func (ms *FsManifests) ManifestVersion(filename string) uint {
+	data, err := ms.load(filename)
+	if err != nil {
+		return 0
+	}
+
+	var manifest Manifest
+	err = json.Unmarshal([]byte(data), &manifest)
+	if err != nil {
+		return 0
+	}
+
+	return manifest.Signed.Base().Version
+}
+
 // MockManifests is a LocalManifests implementation for testing.
 type MockManifests struct {
 	Manifests map[string]ValidManifest
 	Saved     []string
 	Installed map[string]MockInstalled
+	Ks        *KeyStore
 }
 
 // MockInstalled is used by MockManifests to remember what was installed for a component.
@@ -199,6 +225,7 @@ func NewMockManifests() *MockManifests {
 		Manifests: map[string]ValidManifest{},
 		Saved:     []string{},
 		Installed: map[string]MockInstalled{},
+		Ks:        NewKeyStore(),
 	}
 }
 
@@ -206,6 +233,7 @@ func NewMockManifests() *MockManifests {
 func (ms *MockManifests) SaveManifest(manifest *Manifest, filename string) error {
 	ms.Saved = append(ms.Saved, filename)
 	ms.Manifests[filename] = manifest.Signed
+	loadKeys(manifest.Signed, ms.Ks)
 	return nil
 }
 
@@ -239,11 +267,13 @@ func (ms *MockManifests) LoadManifest(role ValidManifest) (bool, error) {
 	default:
 		return true, fmt.Errorf("unknown manifest type: %s", role.Filename())
 	}
+
+	loadKeys(role, ms.Ks)
 	return true, nil
 }
 
 // LoadComponentManifest implements LocalManifests.
-func (ms *MockManifests) LoadComponentManifest(_ *Index, filename string) (*Component, error) {
+func (ms *MockManifests) LoadComponentManifest(item *ComponentItem, filename string) (*Component, error) {
 	manifest, ok := ms.Manifests[filename]
 	if !ok {
 		return nil, nil
@@ -253,11 +283,6 @@ func (ms *MockManifests) LoadComponentManifest(_ *Index, filename string) (*Comp
 		return nil, fmt.Errorf("manifest %s is not a component manifest", filename)
 	}
 	return comp, nil
-}
-
-// Keys implements LocalManifests.
-func (ms *MockManifests) Keys() crypto.KeyStore {
-	return nil
 }
 
 // ComponentInstalled implements LocalManifests.
@@ -279,4 +304,18 @@ func (ms *MockManifests) InstallComponent(reader io.Reader, targetDir string, co
 		Contents: buf.String(),
 	}
 	return nil
+}
+
+// KeyStore implements LocalManifests.
+func (ms *MockManifests) KeyStore() *KeyStore {
+	return ms.Ks
+}
+
+// ManifestVersion implements LocalManifests.
+func (ms *MockManifests) ManifestVersion(filename string) uint {
+	manifest, ok := ms.Manifests[filename]
+	if ok {
+		return manifest.Base().Version
+	}
+	return 0
 }

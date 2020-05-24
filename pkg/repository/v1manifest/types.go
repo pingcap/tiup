@@ -15,11 +15,6 @@ package v1manifest
 
 import (
 	"time"
-
-	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
-	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
-	"github.com/pingcap/errors"
-	"golang.org/x/mod/semver"
 )
 
 // Manifest representation for ser/de.
@@ -151,64 +146,6 @@ type FileVersion struct {
 // Base implements ValidManifest
 func (manifest *Root) Base() *SignedBase {
 	return &manifest.SignedBase
-}
-
-func createKeyStore(keys map[string]*KeyInfo) (ks crypto.KeyStore, err error) {
-	ks = crypto.NewKeyStore()
-	for id, info := range keys {
-		pub, err := info.publicKey()
-		if err != nil {
-			return nil, err
-		}
-		ks.Put(id, pub)
-	}
-	return
-}
-
-// GetKeyStore get a KeyStore with all the keys of all roles.
-func (manifest *Root) GetKeyStore() (ks crypto.KeyStore, err error) {
-	ks = crypto.NewKeyStore()
-	for _, role := range manifest.Roles {
-		for id, info := range role.Keys {
-			pub, err := info.publicKey()
-			if err != nil {
-				return nil, err
-			}
-			ks.Put(id, pub)
-		}
-	}
-	return
-}
-
-// GetRootKeyStore create KeyStore of root keys.
-func (manifest *Root) GetRootKeyStore() (ks crypto.KeyStore, err error) {
-	ks = crypto.NewKeyStore()
-
-	role := manifest.Roles[ManifestTypeRoot]
-	for id, info := range role.Keys {
-		pub, err := info.publicKey()
-		if err != nil {
-			return nil, err
-		}
-		ks.Put(id, pub)
-	}
-
-	return
-}
-
-// GetComponentKeys return the threshold and keys for the specified component id.
-func (manifest *Index) GetComponentKeys(id string) (threshold uint, keys map[string]*KeyInfo, err error) {
-	item, ok := manifest.Components[id]
-	if !ok {
-		return 0, nil, errors.Errorf("have no component %s in index, components: %v", id, manifest.Components)
-	}
-
-	owner, ok := manifest.Owners[item.Owner]
-	if !ok {
-		return 0, nil, errors.Errorf("have no owner %s in index", item.Owner)
-	}
-
-	return uint(item.Threshold), owner.Keys, nil
 }
 
 // Base implements ValidManifest
