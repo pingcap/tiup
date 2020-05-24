@@ -87,7 +87,7 @@ the latest stable version will be downloaded from the repository.`,
 			return cmd.Help()
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			return env.Repository().Close()
+			return env.Close()
 		},
 		SilenceUsage: true,
 	}

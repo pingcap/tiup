@@ -16,26 +16,32 @@ package v1manifest
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 )
 
 // FsManifests represents a collection of v1 manifests on disk.
+// Invariant: any manifest written to disk should be valid, but may have expired. (It is also possible the manifest was
+// ok when written and has expired since).
 type FsManifests struct {
-	root string
-	keys crypto.KeyStore
+	profile *localdata.Profile
+	keys    crypto.KeyStore
 }
 
 // FIXME implement garbage collection of old manifests
 
 // NewManifests creates a new FsManifests with local store at root.
-func NewManifests(root string) (*FsManifests, error) {
-	fs := &FsManifests{root: root}
-
-	return fs, nil
+// There must exist the trusted root.json.
+// There must exists the trusted root.json.
+func NewManifests(profile *localdata.Profile) *FsManifests {
+	return &FsManifests{profile: profile}
 }
 
 // LocalManifests methods for accessing a store of manifests.
@@ -48,7 +54,11 @@ type LocalManifests interface {
 	// exists.
 	LoadManifest(role ValidManifest) (bool, error)
 	// LoadComponentManifest loads and validates the most recent manifest at filename.
-	LoadComponentManifest(filename string) (*Component, error)
+	LoadComponentManifest(index *Index, filename string) (*Component, error)
+	// ComponentInstalled is true if the version of component is present locally.
+	ComponentInstalled(component, version string) (bool, error)
+	// InstallComponent installs the component from the reader.
+	InstallComponent(reader io.Reader, component, version string) error
 }
 
 // SaveManifest implements LocalManifests.
@@ -58,7 +68,7 @@ func (ms *FsManifests) SaveManifest(manifest *Manifest, filename string) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(filepath.Join(ms.root, filename), bytes, 0644)
+	err = ioutil.WriteFile(filepath.Join(ms.profile.Root(), filename), bytes, 0644)
 	if err != nil {
 		return err
 	}
@@ -73,33 +83,17 @@ func (ms *FsManifests) SaveComponentManifest(manifest *Manifest, filename string
 		return err
 	}
 
-	return ioutil.WriteFile(filepath.Join(ms.root, filename), bytes, 0644)
+	return ioutil.WriteFile(filepath.Join(ms.profile.Root(), filename), bytes, 0644)
 }
 
 // LoadManifest implements LocalManifests.
 func (ms *FsManifests) LoadManifest(role ValidManifest) (bool, error) {
-	return ms.load(role.Filename(), role)
-}
-
-// LoadComponentManifest implements LocalManifests.
-func (ms *FsManifests) LoadComponentManifest(filename string) (*Component, error) {
-	var role Component
-	exists, err := ms.load(filename, &role)
-	if !exists {
-		return nil, nil
-	}
-	return &role, err
-}
-
-// load and validate a manifest from disk. The returned bool is true if the file exists.
-func (ms *FsManifests) load(filename string, role ValidManifest) (bool, error) {
-	fullPath := filepath.Join(ms.root, filename)
-	file, err := os.Open(fullPath)
+	file, err := ms.load(role.Filename())
 	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return true, err
+		return false, err
+	}
+	if file == nil {
+		return false, nil
 	}
 	defer file.Close()
 
@@ -107,15 +101,66 @@ func (ms *FsManifests) load(filename string, role ValidManifest) (bool, error) {
 	return true, err
 }
 
+// LoadComponentManifest implements LocalManifests.
+func (ms *FsManifests) LoadComponentManifest(index *Index, filename string) (*Component, error) {
+	file, err := ms.load(filename)
+	if err != nil {
+		return nil, err
+	}
+	if file == nil {
+		return nil, nil
+	}
+	defer file.Close()
+
+	com := new(Component)
+	_, err = ReadComponentManifest(file, com, index)
+	return com, err
+}
+
+// load return the file for the manifest from disk.
+// The returned file is not nil if the file do not exists.
+func (ms *FsManifests) load(filename string) (file *os.File, err error) {
+	fullPath := filepath.Join(ms.profile.Root(), filename)
+	file, err = os.Open(fullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return
+}
+
 // Keys implements LocalManifests.
 func (ms *FsManifests) Keys() crypto.KeyStore {
 	return ms.keys
+}
+
+// ComponentInstalled implements LocalManifests.
+func (ms *FsManifests) ComponentInstalled(component, version string) (bool, error) {
+	return ms.profile.VersionIsInstalled(component, version)
+}
+
+// InstallComponent implements LocalManifests.
+func (ms *FsManifests) InstallComponent(reader io.Reader, component, version string) error {
+	// TODO factor path construction to profile (also used by v0 repo).
+	targetDir := ms.profile.Path(localdata.ComponentParentDir, component, version)
+	// TODO handle disable decompression by writing directly to disk using the url as filename
+	return utils.Untar(reader, targetDir)
 }
 
 // MockManifests is a LocalManifests implementation for testing.
 type MockManifests struct {
 	Manifests map[string]ValidManifest
 	Saved     []string
+	Installed map[string]MockInstalled
+}
+
+// MockInstalled is used by MockManifests to remember what was installed for a component.
+type MockInstalled struct {
+	Version  string
+	Contents string
 }
 
 // NewMockManifests creates an empty MockManifests.
@@ -123,18 +168,21 @@ func NewMockManifests() *MockManifests {
 	return &MockManifests{
 		Manifests: map[string]ValidManifest{},
 		Saved:     []string{},
+		Installed: map[string]MockInstalled{},
 	}
 }
 
 // SaveManifest implements LocalManifests.
 func (ms *MockManifests) SaveManifest(manifest *Manifest, filename string) error {
 	ms.Saved = append(ms.Saved, filename)
+	ms.Manifests[filename] = manifest.Signed
 	return nil
 }
 
 // SaveComponentManifest implements LocalManifests.
 func (ms *MockManifests) SaveComponentManifest(manifest *Manifest, filename string) error {
 	ms.Saved = append(ms.Saved, filename)
+	ms.Manifests[filename] = manifest.Signed
 	return nil
 }
 
@@ -142,7 +190,7 @@ func (ms *MockManifests) SaveComponentManifest(manifest *Manifest, filename stri
 func (ms *MockManifests) LoadManifest(role ValidManifest) (bool, error) {
 	manifest, ok := ms.Manifests[role.Filename()]
 	if !ok {
-		return false, fmt.Errorf("No manifest for %s in mock manifests", role.Filename())
+		return false, nil
 	}
 
 	switch role.Filename() {
@@ -165,7 +213,7 @@ func (ms *MockManifests) LoadManifest(role ValidManifest) (bool, error) {
 }
 
 // LoadComponentManifest implements LocalManifests.
-func (ms *MockManifests) LoadComponentManifest(filename string) (*Component, error) {
+func (ms *MockManifests) LoadComponentManifest(_ *Index, filename string) (*Component, error) {
 	manifest, ok := ms.Manifests[filename]
 	if !ok {
 		return nil, nil
@@ -179,5 +227,26 @@ func (ms *MockManifests) LoadComponentManifest(filename string) (*Component, err
 
 // Keys implements LocalManifests.
 func (ms *MockManifests) Keys() crypto.KeyStore {
+	return nil
+}
+
+// ComponentInstalled implements LocalManifests.
+func (ms *MockManifests) ComponentInstalled(component, version string) (bool, error) {
+	inst, ok := ms.Installed[component]
+	if !ok {
+		return false, nil
+	}
+
+	return inst.Version == version, nil
+}
+
+// InstallComponent implements LocalManifests.
+func (ms *MockManifests) InstallComponent(reader io.Reader, component, version string) error {
+	buf := strings.Builder{}
+	io.Copy(&buf, reader)
+	ms.Installed[component] = MockInstalled{
+		Version:  version,
+		Contents: buf.String(),
+	}
 	return nil
 }

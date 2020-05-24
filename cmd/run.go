@@ -132,7 +132,7 @@ func isSupportedComponent(env *meta.Environment, component string) bool {
 	if !found {
 		return false
 	}
-	return comp.IsSupport(runtime.GOOS, runtime.GOARCH)
+	return comp.IsSupport(env.PlatformString())
 }
 
 type process struct {

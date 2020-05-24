@@ -13,17 +13,21 @@
 
 package v1manifest
 
-import "github.com/pingcap-incubator/tiup/pkg/repository/crypto"
+import (
+	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
+	"github.com/pingcap/errors"
+)
 
 // Manifest representation for ser/de.
 type Manifest struct {
 	// Signatures value
-	Signatures []signature `json:"signatures"`
+	Signatures []Signature `json:"signatures"`
 	// Signed value; any value here must have the SignedBase base.
 	Signed ValidManifest `json:"signed"`
 }
 
-type signature struct {
+// Signature represents a signature for a manifest
+type Signature struct {
 	KeyID string `json:"keyid"`
 	Sig   string `json:"sig"`
 }
@@ -61,10 +65,9 @@ type Role struct {
 
 // KeyInfo is the manifest structure of a single key
 type KeyInfo struct {
-	Algorithms []string          `json:"keyid_hash_algorithms"`
-	Type       string            `json:"keytype"`
-	Value      map[string]string `json:"keyval"`
-	Scheme     string            `json:"scheme"`
+	Type   string            `json:"keytype"`
+	Value  map[string]string `json:"keyval"`
+	Scheme string            `json:"scheme"`
 }
 
 // Index manifest.
@@ -141,6 +144,18 @@ func (manifest *Root) Base() *SignedBase {
 	return &manifest.SignedBase
 }
 
+func createKeyStore(keys map[string]*KeyInfo) (ks crypto.KeyStore, err error) {
+	ks = crypto.NewKeyStore()
+	for id, info := range keys {
+		pub, err := info.publicKey()
+		if err != nil {
+			return nil, err
+		}
+		ks.Put(id, pub)
+	}
+	return
+}
+
 // GetKeyStore get a KeyStore with all the keys of all roles.
 func (manifest *Root) GetKeyStore() (ks crypto.KeyStore, err error) {
 	ks = crypto.NewKeyStore()
@@ -170,6 +185,21 @@ func (manifest *Root) GetRootKeyStore() (ks crypto.KeyStore, err error) {
 	}
 
 	return
+}
+
+// GetComponentKeys return the threshold and keys for the specified component id.
+func (manifest *Index) GetComponentKeys(id string) (threshold uint, keys map[string]*KeyInfo, err error) {
+	item, ok := manifest.Components[id]
+	if !ok {
+		return 0, nil, errors.Errorf("have no component %s in index, components: %v", id, manifest.Components)
+	}
+
+	owner, ok := manifest.Owners[item.Owner]
+	if !ok {
+		return 0, nil, errors.Errorf("have no owner %s in index", item.Owner)
+	}
+
+	return uint(item.Threshold), owner.Keys, nil
 }
 
 // Base implements ValidManifest

@@ -107,6 +107,22 @@ func Init(dst, keyDir string, initTime time.Time) (err error) {
 	return BatchSaveManifests(dst, signedManifests)
 }
 
+// SaveKeyInfo saves a KeyInfo object to a JSON file
+func SaveKeyInfo(key *KeyInfo, ty, dir string) error {
+	id, err := key.ID()
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(path.Join(dir, fmt.Sprintf("%s-%s.json", id[:16], ty)))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	return json.NewEncoder(f).Encode(key)
+}
+
 // GenAndSaveKeys generate private keys to keys param and save key file to dir
 func GenAndSaveKeys(keys map[string][]*KeyInfo, ty string, num int, dir string) error {
 	for i := 0; i < num; i++ {
@@ -116,18 +132,7 @@ func GenAndSaveKeys(keys map[string][]*KeyInfo, ty string, num int, dir string) 
 		}
 		keys[ty] = append(keys[ty], k)
 
-		id, err := k.ID()
-		if err != nil {
-			return err
-		}
-
-		f, err := os.Create(path.Join(dir, fmt.Sprintf("%s-%s.json", id[:16], ty)))
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		if err := json.NewEncoder(f).Encode(k); err != nil {
+		if err := SaveKeyInfo(k, ty, dir); err != nil {
 			return err
 		}
 	}
@@ -138,7 +143,7 @@ func GenAndSaveKeys(keys map[string][]*KeyInfo, ty string, num int, dir string) 
 func SignManifestFile(mfile string, kfiles ...string) error {
 	type manifestT struct {
 		// Signatures value
-		Signatures []*signature `json:"signatures"`
+		Signatures []*Signature `json:"signatures"`
 		// Signed value
 		Signed interface{} `json:"signed"`
 	}
@@ -192,7 +197,7 @@ NextKey:
 			}
 		}
 
-		m.Signatures = append(m.Signatures, &signature{
+		m.Signatures = append(m.Signatures, &Signature{
 			KeyID: id,
 			Sig:   sig,
 		})
@@ -323,6 +328,7 @@ func NewSnapshot(initTime time.Time) *Snapshot {
 			Expires:     initTime.Add(ManifestsConfig[ManifestTypeSnapshot].Expire).Format(time.RFC3339),
 			Version:     0, // not versioned
 		},
+		Meta: make(map[string]FileVersion),
 	}
 }
 
@@ -364,7 +370,7 @@ func (manifest *Snapshot) SetVersions(manifestList map[string]*Manifest) (*Snaps
 		if err != nil {
 			return nil, err
 		}
-		manifest.Meta[m.Signed.Filename()] = FileVersion{
+		manifest.Meta["/"+m.Signed.Filename()] = FileVersion{
 			Version: m.Signed.Base().Version,
 			Length:  uint(len(bytes)),
 		}
@@ -427,6 +433,29 @@ func (manifest *Root) SetRole(m ValidManifest, keys ...*KeyInfo) error {
 	return nil
 }
 
+// AddKey adds a public key info to a role of Root
+func (manifest *Root) AddKey(roleName string, key *KeyInfo) error {
+	newID, err := key.ID()
+	if err != nil {
+		return err
+	}
+	role, found := manifest.Roles[roleName]
+	if !found {
+		return errors.Errorf("role '%s' not found in root manifest", roleName)
+	}
+	for _, k := range role.Keys {
+		id, err := k.ID()
+		if err != nil {
+			return err
+		}
+		if newID == id {
+			return nil // skip exist
+		}
+	}
+	role.Keys[newID] = key
+	return nil
+}
+
 // FreshKeyInfo generates a new key pair and wraps it in a KeyInfo. The returned string is the key id.
 func FreshKeyInfo() (*KeyInfo, string, crypto.PrivKey, error) {
 	pub, priv, err := crypto.RSAPair()
@@ -438,10 +467,9 @@ func FreshKeyInfo() (*KeyInfo, string, crypto.PrivKey, error) {
 		return nil, "", nil, err
 	}
 	info := KeyInfo{
-		Algorithms: []string{SHA256, SHA512},
-		Type:       "rsa",
-		Value:      map[string]string{"public": string(pubBytes)},
-		Scheme:     "rsassa-pss-sha256",
+		Type:   "rsa",
+		Value:  map[string]string{"public": string(pubBytes)},
+		Scheme: "rsassa-pss-sha256",
 	}
 	serInfo, err := cjson.Marshal(&info)
 	if err != nil {
@@ -485,7 +513,7 @@ func SignManifest(role ValidManifest, keys ...*KeyInfo) (*Manifest, error) {
 		return nil, err
 	}
 
-	signs := []signature{}
+	signs := []Signature{}
 	for _, k := range keys {
 		id, err := k.ID()
 		if err != nil {
@@ -498,7 +526,7 @@ func SignManifest(role ValidManifest, keys ...*KeyInfo) (*Manifest, error) {
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
-		signs = append(signs, signature{
+		signs = append(signs, Signature{
 			KeyID: id,
 			Sig:   sign,
 		})
@@ -512,9 +540,12 @@ func SignManifest(role ValidManifest, keys ...*KeyInfo) (*Manifest, error) {
 
 // WriteManifest writes a Manifest object to file in JSON format
 func WriteManifest(out io.Writer, m *Manifest) error {
-	encoder := json.NewEncoder(out)
-	encoder.SetIndent("", "\t")
-	return encoder.Encode(m)
+	bytes, err := cjson.Marshal(m)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	_, err = out.Write(bytes)
+	return err
 }
 
 // SignAndWrite creates a manifest and writes it to out.
