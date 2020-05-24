@@ -37,6 +37,8 @@ import (
 
 // for simplify just set the length of manifest file a value lager than the true value
 var limitLength uint = 1024 * 1024
+var expires time.Duration = 0
+var signedRoot bool // generate keys and sign root in new command
 
 func main() {
 	cmd := &cobra.Command{
@@ -62,6 +64,8 @@ func main() {
 			return migrate(args[0], args[1])
 		},
 	}
+	newCmd.Flags().DurationVar(&expires, "expires", 0, "set all manifest expires after the specified time if it's not zero")
+	newCmd.Flags().BoolVar(&signedRoot, "signed-root", false, "generate keys and sign root in new command")
 
 	var isPublicKey bool
 	updateCmd := &cobra.Command{
@@ -197,6 +201,11 @@ func migrate(srcDir, dstDir string) error {
 		index    = v1manifest.NewIndex(initTime)
 	)
 
+	if expires != 0 {
+		root.SetExpiresAt(initTime.Add(expires))
+		index.SetExpiresAt(initTime.Add(expires))
+	}
+
 	// TODO: bootstrap a server instead of generating key
 	keyDir := filepath.Join(dstDir, "keys")
 	keys := map[string][]*v1manifest.KeyInfo{}
@@ -206,6 +215,10 @@ func migrate(srcDir, dstDir string) error {
 		v1manifest.ManifestTypeSnapshot,
 		v1manifest.ManifestTypeTimestamp,
 	}
+	if signedRoot {
+		tys = append(tys, v1manifest.ManifestTypeRoot)
+	}
+
 	for _, ty := range tys {
 		if err := v1manifest.GenAndSaveKeys(keys, ty, int(v1manifest.ManifestsConfig[ty].Threshold), keyDir); err != nil {
 			return err
@@ -255,6 +268,9 @@ func migrate(srcDir, dstDir string) error {
 	}
 
 	snapshot := v1manifest.NewSnapshot(initTime)
+	if expires != 0 {
+		snapshot.SetExpiresAt(initTime.Add(expires))
+	}
 
 	// Initialize the components manifest
 	for _, comp := range m.Components {
@@ -307,6 +323,9 @@ func migrate(srcDir, dstDir string) error {
 			Description: comp.Desc,
 			Platforms:   platforms,
 		}
+		if expires != 0 {
+			component.SetExpiresAt(initTime.Add(expires))
+		}
 
 		name := fmt.Sprintf("%s.json", component.ID)
 		signedManifests[component.ID], err = v1manifest.SignManifest(component, ownerkeyInfo)
@@ -342,6 +361,10 @@ func migrate(srcDir, dstDir string) error {
 
 	// Initialize timestamp
 	timestamp := v1manifest.NewTimestamp(initTime)
+	if expires != 0 {
+		timestamp.SetExpiresAt(initTime.Add(expires))
+	}
+
 	manifests[v1manifest.ManifestTypeTimestamp] = timestamp
 	manifests[v1manifest.ManifestTypeSnapshot] = snapshot
 
@@ -350,9 +373,16 @@ func migrate(srcDir, dstDir string) error {
 		root.SetRole(m, keys[m.Base().Ty]...)
 	}
 
-	// root manifest is not signed, and need to be manually signed by root key owners
-	signedManifests[v1manifest.ManifestTypeRoot] = &v1manifest.Manifest{
-		Signed: root,
+	if signedRoot {
+		signedManifests[v1manifest.ManifestTypeRoot], err = v1manifest.SignManifest(root, keys[v1manifest.ManifestTypeRoot]...)
+		if err != nil {
+			return err
+		}
+	} else {
+		// root manifest is not signed, and need to be manually signed by root key owners
+		signedManifests[v1manifest.ManifestTypeRoot] = &v1manifest.Manifest{
+			Signed: root,
+		}
 	}
 
 	// init snapshot

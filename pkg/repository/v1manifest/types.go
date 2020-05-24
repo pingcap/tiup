@@ -14,6 +14,8 @@
 package v1manifest
 
 import (
+	"time"
+
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap/errors"
 )
@@ -39,6 +41,11 @@ type SignedBase struct {
 	Expires     string `json:"expires"`
 	// 0 => no version specified
 	Version uint `json:"version"`
+}
+
+// SetExpiresAt set manifest expires at the specified time.
+func (s *SignedBase) SetExpiresAt(t time.Time) {
+	s.Expires = t.Format(time.RFC3339)
 }
 
 // ValidManifest is a manifest which includes SignedBase and can be validated.
