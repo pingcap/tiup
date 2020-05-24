@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap/errors"
 )
 
 // LocalManifests methods for accessing a store of manifests.
@@ -41,7 +42,7 @@ type LocalManifests interface {
 	// ComponentInstalled is true if the version of component is present locally.
 	ComponentInstalled(component, version string) (bool, error)
 	// InstallComponent installs the component from the reader.
-	InstallComponent(reader io.Reader, component, version string) error
+	InstallComponent(reader io.Reader, component, version, filename string, noExpand bool) error
 }
 
 // FsManifests represents a collection of v1 manifests on disk.
@@ -155,11 +156,27 @@ func (ms *FsManifests) ComponentInstalled(component, version string) (bool, erro
 }
 
 // InstallComponent implements LocalManifests.
-func (ms *FsManifests) InstallComponent(reader io.Reader, component, version string) error {
+func (ms *FsManifests) InstallComponent(reader io.Reader, component, version, filename string, noExpand bool) error {
 	// TODO factor path construction to profile (also used by v0 repo).
 	targetDir := ms.profile.Path(localdata.ComponentParentDir, component, version)
-	// TODO handle disable decompression by writing directly to disk using the url as filename
-	return utils.Untar(reader, targetDir)
+
+	if !noExpand {
+		return utils.Untar(reader, targetDir)
+	}
+
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return errors.Trace(err)
+	}
+	writer, err := os.OpenFile(filepath.Join(targetDir, filename), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	defer writer.Close()
+
+	if _, err = io.Copy(writer, reader); err != nil {
+		return errors.Trace(err)
+	}
+	return nil
 }
 
 // MockManifests is a LocalManifests implementation for testing.
@@ -253,7 +270,7 @@ func (ms *MockManifests) ComponentInstalled(component, version string) (bool, er
 }
 
 // InstallComponent implements LocalManifests.
-func (ms *MockManifests) InstallComponent(reader io.Reader, component, version string) error {
+func (ms *MockManifests) InstallComponent(reader io.Reader, component, version, filename string, noExpand bool) error {
 	buf := strings.Builder{}
 	io.Copy(&buf, reader)
 	ms.Installed[component] = MockInstalled{
