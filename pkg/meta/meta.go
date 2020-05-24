@@ -83,6 +83,11 @@ func (env *Environment) Repository() *repository.Repository {
 	return env.repo
 }
 
+// V1Repository returns the initialized v1 repository
+func (env *Environment) V1Repository() *repository.V1Repository {
+	return env.v1Repo
+}
+
 // Profile returns the profile of local data
 func (env *Environment) Profile() *localdata.Profile {
 	return env.profile

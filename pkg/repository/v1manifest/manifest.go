@@ -23,6 +23,7 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
+	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
 )
 
@@ -317,6 +318,34 @@ func (manifest *Index) isValid() error {
 func (manifest *Component) isValid() error {
 	// Nothing to do.
 	return nil
+}
+
+// ListVersion returns version list of the component
+func (manifest *Component) ListVersion() []string {
+	s := set.NewStringSet()
+	for _, vi := range manifest.Platforms {
+		for v := range vi {
+			s.Insert(v)
+		}
+	}
+	list := []string{}
+	for v := range s {
+		list = append(list, v)
+	}
+	return list
+}
+
+// VersionItem returns VersionItem by platform and version
+func (manifest *Component) VersionItem(plat, ver string) *VersionItem {
+	p := manifest.Platforms[plat]
+	if p == nil {
+		return nil
+	}
+	v := p[ver]
+	if v.Entry == "" {
+		return nil
+	}
+	return &v
 }
 
 func (manifest *Snapshot) isValid() error {

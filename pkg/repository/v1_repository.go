@@ -67,6 +67,11 @@ func NewV1Repo(mirror Mirror, opts Options, local v1manifest.LocalManifests) *V1
 const maxTimeStampSize uint = 1024
 const maxRootSize uint = 1024 * 1024
 
+// Mirror returns Mirror
+func (r *V1Repository) Mirror() Mirror {
+	return r.mirror
+}
+
 // UpdateComponents updates the components described by specs.
 func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 	_, err := r.ensureManifests()
@@ -105,7 +110,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			}
 		}
 
-		reader, err := r.downloadComponent(versionItem)
+		reader, err := r.DownloadComponent(versionItem)
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
@@ -379,8 +384,8 @@ func (r *V1Repository) updateComponentManifest(id string) (*v1manifest.Component
 	return &component, nil
 }
 
-// downloadComponent downloads the component specified by item.
-func (r *V1Repository) downloadComponent(item *v1manifest.VersionItem) (io.Reader, error) {
+// DownloadComponent downloads the component specified by item.
+func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem) (io.Reader, error) {
 	reader, err := r.mirror.Fetch(item.URL, int64(item.Length))
 	if err != nil {
 		return nil, err
@@ -541,4 +546,17 @@ func (r *V1Repository) FetchComponent(id string) (com *v1manifest.Component, err
 	}
 
 	return r.updateComponentManifest(id)
+}
+
+// ComponentVersion returns version item of a component
+func (r *V1Repository) ComponentVersion(id, version string) (*v1manifest.VersionItem, error) {
+	manifest, err := r.FetchComponent(id)
+	if err != nil {
+		return nil, err
+	}
+	vi := manifest.VersionItem(r.PlatformString(), version)
+	if vi == nil {
+		return nil, fmt.Errorf("version %s on %s for component %s not found", version, r.PlatformString(), id)
+	}
+	return vi, nil
 }

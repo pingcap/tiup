@@ -261,7 +261,7 @@ func TestDownloadManifest(t *testing.T) {
 	item := versionItem()
 
 	// Happy path file is as expected
-	reader, err := repo.downloadComponent(&item)
+	reader, err := repo.DownloadComponent(&item)
 	assert.Nil(t, err)
 	buf := new(strings.Builder)
 	_, err = io.Copy(buf, reader)
@@ -272,17 +272,17 @@ func TestDownloadManifest(t *testing.T) {
 
 	// bad hash
 	item.Hashes[v1manifest.SHA256] = "Not a hash"
-	_, err = repo.downloadComponent(&item)
+	_, err = repo.DownloadComponent(&item)
 	assert.NotNil(t, err)
 
 	//  Too long
 	item.Length = 26
-	_, err = repo.downloadComponent(&item)
+	_, err = repo.DownloadComponent(&item)
 	assert.NotNil(t, err)
 
 	// missing tar ball/bad url
 	item.URL = "/bar-2.0.1.tar.gz"
-	_, err = repo.downloadComponent(&item)
+	_, err = repo.DownloadComponent(&item)
 	assert.NotNil(t, err)
 }
 
