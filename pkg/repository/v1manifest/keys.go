@@ -53,7 +53,6 @@ func GenKeyInfo() (*KeyInfo, error) {
 
 // ID returns the hash id of the key
 func (ki *KeyInfo) ID() (string, error) {
-	// TODO: apply keyid_hash_algorithms
 	// Make sure private key and coresponed public key has the same id
 	pk, err := ki.publicKey()
 	if err != nil {

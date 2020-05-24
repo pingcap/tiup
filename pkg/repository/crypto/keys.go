@@ -36,21 +36,6 @@ const (
 	KeySchemeRSASSAPSSSHA256 = "rsassa-pss-sha256"
 )
 
-// KeyStore is the collection of all public keys available to TiUp.
-type KeyStore interface {
-	// KeyIDs returns all key ids
-	KeyIDs() []string
-
-	// Add put new key into KeyStore
-	Put(string, PubKey) KeyStore
-
-	// Get return a key by it's id
-	Get(string) PubKey
-
-	// Visit applies the supplied function to all keys
-	Visit(func(id string, key PubKey))
-}
-
 // Serializable represents object that can be serialized and deserialized
 type Serializable interface {
 	// Translate the key to the format that can be stored
@@ -82,42 +67,6 @@ type PrivKey interface {
 	Signature(payload []byte) (string, error)
 	// Public returns public key of the PrivKey
 	Public() PubKey
-}
-
-type keychain map[string]PubKey
-
-// NewKeyStore return a KeyStore
-func NewKeyStore() KeyStore {
-	return &keychain{}
-}
-
-var _ KeyStore = &keychain{}
-
-// Visit implements KeyStore interface.
-func (s *keychain) Visit(fn func(id string, key PubKey)) {
-	for id, key := range *s {
-		fn(id, key)
-	}
-}
-
-// Get return key by id
-func (s *keychain) Get(id string) PubKey {
-	return (*s)[id]
-}
-
-// Add put a new key into keychain
-func (s *keychain) Put(id string, key PubKey) KeyStore {
-	(*s)[id] = key
-	return s
-}
-
-// Keys returns all key ids
-func (s *keychain) KeyIDs() []string {
-	ids := []string{}
-	for id := range *s {
-		ids = append(ids, id)
-	}
-	return ids
 }
 
 // NewKeyPair return a pair of key
