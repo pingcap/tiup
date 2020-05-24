@@ -111,7 +111,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			continue
 		}
 
-		err = r.local.InstallComponent(reader, spec.ID, version)
+		err = r.local.InstallComponent(reader, spec.ID, version, versionItem.URL, r.DisableDecompress)
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
