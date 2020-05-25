@@ -55,7 +55,7 @@ which is used to uninstall tiup.
 					}
 					fmt.Printf("Remove directory '%s' successfully!\n", env.Profile().Path(dir))
 				}
-				fmt.Println("Uninstalled self successfully!")
+				fmt.Printf("Uninstalled TiUP successfully! (User data reserved, you can delete '%s' manually if you confirm userdata useless)\n", env.Profile().Root())
 				return nil
 			}
 			switch {
