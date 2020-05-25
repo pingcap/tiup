@@ -48,10 +48,14 @@ which is used to uninstall tiup.
   tiup uninstall --all`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if self {
-				if err := os.RemoveAll(env.Profile().Root()); err != nil {
-					return errors.Trace(err)
+				deletable := []string{"bin", "manifest", "components", "storage/cluster/packages"}
+				for _, dir := range deletable {
+					if err := os.RemoveAll(env.Profile().Path(dir)); err != nil {
+						return errors.Trace(err)
+					}
+					fmt.Printf("Remove directory '%s' successfully!\n", env.Profile().Path(dir))
 				}
-				fmt.Println("Uninstalled self successfully!")
+				fmt.Printf("Uninstalled TiUP successfully! (User data reserved, you can delete '%s' manually if you confirm userdata useless)\n", env.Profile().Root())
 				return nil
 			}
 			switch {
