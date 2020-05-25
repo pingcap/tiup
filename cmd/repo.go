@@ -240,6 +240,11 @@ func newRepoGenkeyCmd(env *meta.Environment) *cobra.Command {
 			}
 			defer f.Close()
 
+			// set private key permission
+			if err = f.Chmod(0600); err != nil {
+				return err
+			}
+
 			if err := json.NewEncoder(f).Encode(key); err != nil {
 				return err
 			}
