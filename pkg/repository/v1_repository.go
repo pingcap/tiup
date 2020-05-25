@@ -194,7 +194,7 @@ func (r *V1Repository) selectVersion(id string, versions map[string]v1manifest.V
 		var latest string
 		var latestItem v1manifest.VersionItem
 		for version, item := range versions {
-			if latest == "" || semver.Compare("v"+version, "v"+latest) > 0 {
+			if latest == "" || semver.Compare(version, latest) > 0 {
 				latest = version
 				latestItem = item
 			}
