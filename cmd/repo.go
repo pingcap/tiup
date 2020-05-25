@@ -96,6 +96,7 @@ func newRepoSignCmd(env *meta.Environment) *cobra.Command {
 
 // the `repo add` sub command
 func newRepoAddCompCmd(env *meta.Environment) *cobra.Command {
+	var nightly bool // if this is a nightly version
 	cmd := &cobra.Command{
 		Use:   "add <component-id> <platform> <version> <file>",
 		Short: "Add a file to a component",
@@ -105,14 +106,18 @@ func newRepoAddCompCmd(env *meta.Environment) *cobra.Command {
 				return cmd.Help()
 			}
 
-			return addCompFile(repoPath, args[0], args[1], args[2], args[3])
+			return addCompFile(repoPath, args[0], args[1], args[2], args[3], nightly)
 		},
 	}
+
+	// If adding legacy nightly build (e.g., add a version from yesterday), just
+	// omit the flag to treat it as normal versions
+	cmd.Flags().BoolVar(&nightly, "nightly", false, "Mark this version as the latest nightly build")
 
 	return cmd
 }
 
-func addCompFile(repo, id, platform, version, file string) error {
+func addCompFile(repo, id, platform, version, file string, nightly bool) error {
 	// TODO
 	return nil
 }
@@ -167,7 +172,9 @@ may still be available for them.`,
 }
 
 func delComp(repo, id, version string) error {
-	// TODO
+	// TODO: implement the func
+
+	// TODO: check if version is the latest nightly, refuse if it is
 	return nil
 }
 
