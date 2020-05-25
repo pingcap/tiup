@@ -255,6 +255,7 @@ Where xxx is the id of the component, n is the version of the manifest, file is 
 ```
 "name": "Name of the Component",
 "description": "This is a component",
+"nightly": "0.2.0-nightly-20200525",
 "platforms": {
     "x86_64-apple-darwin": {
         "0.0.1": {
@@ -277,6 +278,7 @@ Where xxx is the id of the component, n is the version of the manifest, file is 
 
 The platform id should be one of the supported TiUp target triples. Version ids must be valid semver. Dependencies are a map from component id to a semver version string.
 
+The "nightly" points to the version number of latest daily build, that version should be in the version list of all supported platforms.
 
 ### snapshot.json
 
