@@ -42,7 +42,7 @@ type LocalManifests interface {
 	// ComponentInstalled is true if the version of component is present locally.
 	ComponentInstalled(component, version string) (bool, error)
 	// InstallComponent installs the component from the reader.
-	InstallComponent(reader io.Reader, component, version, filename string, noExpand bool) error
+	InstallComponent(reader io.Reader, targetDir string, component, version, filename string, noExpand bool) error
 }
 
 // FsManifests represents a collection of v1 manifests on disk.
@@ -155,9 +155,11 @@ func (ms *FsManifests) ComponentInstalled(component, version string) (bool, erro
 }
 
 // InstallComponent implements LocalManifests.
-func (ms *FsManifests) InstallComponent(reader io.Reader, component, version, filename string, noExpand bool) error {
+func (ms *FsManifests) InstallComponent(reader io.Reader, targetDir string, component, version, filename string, noExpand bool) error {
 	// TODO factor path construction to profile (also used by v0 repo).
-	targetDir := ms.profile.Path(localdata.ComponentParentDir, component, version)
+	if targetDir == "" {
+		targetDir = ms.profile.Path(localdata.ComponentParentDir, component, version)
+	}
 
 	if !noExpand {
 		return utils.Untar(reader, targetDir)
@@ -269,7 +271,7 @@ func (ms *MockManifests) ComponentInstalled(component, version string) (bool, er
 }
 
 // InstallComponent implements LocalManifests.
-func (ms *MockManifests) InstallComponent(reader io.Reader, component, version, filename string, noExpand bool) error {
+func (ms *MockManifests) InstallComponent(reader io.Reader, targetDir string, component, version, filename string, noExpand bool) error {
 	buf := strings.Builder{}
 	io.Copy(&buf, reader)
 	ms.Installed[component] = MockInstalled{

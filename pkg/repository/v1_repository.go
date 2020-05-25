@@ -38,6 +38,9 @@ type V1Repository struct {
 
 // ComponentSpec describes a component a user would like to have or use.
 type ComponentSpec struct {
+	// TargetDir it the target directory of the component,
+	// Will use the default directory of Profile if it's empty.
+	TargetDir string
 	// ID is the id of the component
 	ID string
 	// Version describes the versions which are desirable; "" = use the most recent, compatible version.
@@ -117,7 +120,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			continue
 		}
 
-		err = r.local.InstallComponent(reader, spec.ID, version, versionItem.URL, r.DisableDecompress)
+		err = r.local.InstallComponent(reader, spec.TargetDir, spec.ID, version, versionItem.URL, r.DisableDecompress)
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
@@ -399,7 +402,7 @@ func (r *V1Repository) DownloadComponent(
 	resName := fmt.Sprintf("%s-%s", component, version)
 
 	filename := fmt.Sprintf("%s-%s-%s", resName, r.GOOS, r.GOARCH)
-	return r.local.InstallComponent(cr, component, string(version), filename, r.DisableDecompress)
+	return r.local.InstallComponent(cr, "", component, string(version), filename, r.DisableDecompress)
 }
 
 // FetchComponent downloads the component specified by item.
@@ -554,6 +557,17 @@ func (r *V1Repository) FetchIndexManifest() (index *v1manifest.Index, err error)
 	}
 
 	return index, nil
+}
+
+// DownloadTiup downloads the tiup tarball and expands it into targetDir
+func (r *V1Repository) DownloadTiup(targetDir string) error {
+	var spec = ComponentSpec{
+		TargetDir: targetDir,
+		ID:        "tiup",
+		Version:   "",
+		Force:     false,
+	}
+	return r.UpdateComponents([]ComponentSpec{spec})
 }
 
 // FetchComponentManifest fetch the component manifest.

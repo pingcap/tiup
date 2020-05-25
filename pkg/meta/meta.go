@@ -162,6 +162,10 @@ func (env *Environment) PlatformString() string {
 
 // SelfUpdate updates TiUp.
 func (env *Environment) SelfUpdate() error {
+	if env.v1Repo != nil {
+		return env.v1Repo.DownloadTiup(env.LocalPath("bin"))
+	}
+
 	return env.repo.DownloadTiup(env.LocalPath("bin"))
 }
 
