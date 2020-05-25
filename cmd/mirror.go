@@ -20,6 +20,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/fatih/color"
+
 	"github.com/pingcap-incubator/tiup/pkg/assets"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
@@ -394,7 +396,7 @@ func newMirrorCloneCmd(env *meta.Environment) *cobra.Command {
 	repo := env.V1Repository()
 	index, err := repo.FetchIndexManifest()
 	if err != nil {
-		fmt.Println("Warning: cannot fetch component list from mirror:", err)
+		fmt.Println(color.YellowString("Warning: cannot fetch component list from mirror: %v", err))
 	}
 
 	var components []string

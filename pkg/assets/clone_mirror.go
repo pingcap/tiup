@@ -105,7 +105,7 @@ func CloneMirror(repo *repository.V1Repository, components []string, targetDir s
 						}
 						newVersions[version] = versionItem
 					}
-					if err := download(targetDir, tmpDir, repo, versionItem); err != nil {
+					if err := download(targetDir, tmpDir, repo, &versionItem); err != nil {
 						return errors.Annotatef(err, "download resource: %s", name)
 					}
 				}
