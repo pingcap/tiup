@@ -557,9 +557,10 @@ func (r *V1Repository) FetchIndex() (index *v1manifest.Index, err error) {
 // DownloadTiup downloads the tiup tarball and expands it into targetDir
 func (r *V1Repository) DownloadTiup(targetDir string) error {
 	var spec = ComponentSpec{
-		ID:      "tiup",
-		Version: "",
-		Force:   false,
+		TargetDir: targetDir,
+		ID:        "tiup",
+		Version:   "",
+		Force:     false,
 	}
 	return r.UpdateComponents([]ComponentSpec{spec})
 }
