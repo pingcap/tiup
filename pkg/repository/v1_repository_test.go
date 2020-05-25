@@ -294,25 +294,25 @@ func TestSelectVersion(t *testing.T) {
 	repo := NewV1Repo(&mirror, Options{}, local)
 
 	// Simple case
-	s, i, err := repo.selectVersion("foo", map[string]v1manifest.VersionItem{"0.1.0": {URL: "1"}}, "")
+	s, i, err := repo.selectVersion("foo", map[string]v1manifest.VersionItem{"v0.1.0": {URL: "1"}}, "")
 	assert.Nil(t, err)
-	assert.Equal(t, "0.1.0", s)
+	assert.Equal(t, "v0.1.0", s)
 	assert.Equal(t, "1", i.URL)
 
 	// Choose by order
-	s, i, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"0.1.0": {URL: "1"}, "0.1.1": {URL: "2"}, "0.2.0": {URL: "3"}}, "")
+	s, i, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"v0.1.0": {URL: "1"}, "v0.1.1": {URL: "2"}, "v0.2.0": {URL: "3"}}, "")
 	assert.Nil(t, err)
-	assert.Equal(t, "0.2.0", s)
+	assert.Equal(t, "v0.2.0", s)
 	assert.Equal(t, "3", i.URL)
 
 	// Choose specific
-	s, i, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"0.1.0": {URL: "1"}, "0.1.1": {URL: "2"}, "0.2.0": {URL: "3"}}, "0.1.1")
+	s, i, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"v0.1.0": {URL: "1"}, "v0.1.1": {URL: "2"}, "v0.2.0": {URL: "3"}}, "v0.1.1")
 	assert.Nil(t, err)
-	assert.Equal(t, "0.1.1", s)
+	assert.Equal(t, "v0.1.1", s)
 	assert.Equal(t, "2", i.URL)
 
 	// Target doesn't exists
-	_, _, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"0.1.0": {URL: "1"}, "0.1.1": {URL: "2"}, "0.2.0": {URL: "3"}}, "0.2.1")
+	_, _, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"v0.1.0": {URL: "1"}, "v0.1.1": {URL: "2"}, "v0.2.0": {URL: "3"}}, "v0.2.1")
 	assert.NotNil(t, err)
 }
 
