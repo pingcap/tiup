@@ -31,7 +31,6 @@ var (
 	outputInterval time.Duration
 	isolationLevel int
 	silence        bool
-	summaryReport  bool
 	pprofAddr      string
 	maxProcs       int
 
@@ -97,7 +96,6 @@ func main() {
 	rootCmd.PersistentFlags().BoolVar(&dropData, "dropdata", false, "Cleanup data before prepare")
 	rootCmd.PersistentFlags().BoolVar(&ignoreError, "ignore-error", false, "Ignore error when running workload")
 	rootCmd.PersistentFlags().BoolVar(&silence, "silence", false, "Don't print error when running workload")
-	rootCmd.PersistentFlags().BoolVar(&summaryReport, "summary", false, "Print summary TPM only, or also print current TPM when running workload")
 	rootCmd.PersistentFlags().DurationVar(&outputInterval, "interval", 10*time.Second, "Output interval time")
 	rootCmd.PersistentFlags().IntVar(&isolationLevel, "isolation", 0, `Isolation Level 0: Default, 1: ReadUncommitted, 
 2: ReadCommitted, 3: WriteCommitted, 4: RepeatableRead, 

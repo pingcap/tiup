@@ -28,7 +28,7 @@ require (
 	github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712
 	github.com/pingcap/errors v0.11.5-0.20190809092503-95897b64e011
 	github.com/pingcap/failpoint v0.0.0-20200210140405-f8f9fb234798
-	github.com/pingcap/go-tpc v1.0.4-0.20200511044254-883c1a10d555
+	github.com/pingcap/go-tpc v1.0.4-0.20200525052430-dc963cdeef62
 	github.com/pkg/errors v0.9.1
 	github.com/shirou/gopsutil v2.20.2+incompatible
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
