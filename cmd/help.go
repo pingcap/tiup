@@ -26,7 +26,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newHelpCmd(profile *localdata.Profile) *cobra.Command {
+func newHelpCmd(env *meta.Environment) *cobra.Command {
 	return &cobra.Command{
 		Use:   "help [command]",
 		Short: "Help about any command or component",
@@ -35,7 +35,7 @@ Simply type tiup help <command>|<component> for full details.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd, n, e := cmd.Root().Find(args)
 			if (cmd == rootCmd || e != nil) && len(n) > 0 {
-				externalHelp(profile, n[0], n[1:]...)
+				externalHelp(env, n[0], n[1:]...)
 			} else {
 				cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
 				cmd.HelpFunc()(cmd, args)
@@ -44,14 +44,15 @@ Simply type tiup help <command>|<component> for full details.`,
 	}
 }
 
-func externalHelp(profile *localdata.Profile, spec string, args ...string) {
+func externalHelp(env *meta.Environment, spec string, args ...string) {
+	profile := env.Profile()
 	component, version := meta.ParseCompVersion(spec)
 	selectVer, err := profile.SelectInstalledVersion(component, version)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	binaryPath, err := profile.BinaryPath(component, selectVer)
+	binaryPath, err := env.BinaryPath(component, selectVer)
 	if err != nil {
 		fmt.Println(err)
 		return

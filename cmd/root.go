@@ -60,7 +60,7 @@ the latest stable version will be downloaded from the repository.`,
 				if err != nil {
 					return err
 				}
-				binaryPath, err := env.Profile().BinaryPath(component, selectedVer)
+				binaryPath, err := env.BinaryPath(component, selectedVer)
 				if err != nil {
 					return err
 				}
@@ -124,13 +124,13 @@ the latest stable version will be downloaded from the repository.`,
 		}
 		cmd, n, e := cmd.Root().Find(args)
 		if (cmd == rootCmd || e != nil) && len(n) > 0 {
-			externalHelp(env.Profile(), n[0], n[1:]...)
+			externalHelp(env, n[0], n[1:]...)
 		} else {
 			cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
 			cmd.Help()
 		}
 	})
-	rootCmd.SetHelpCommand(newHelpCmd(env.Profile()))
+	rootCmd.SetHelpCommand(newHelpCmd(env))
 	rootCmd.SetUsageTemplate(usageTemplate(env.Profile()))
 }
 

@@ -37,7 +37,7 @@ type LocalManifests interface {
 	// LoadManifest loads and validates the most recent manifest of role's type. The returned bool is true if the file
 	// exists.
 	LoadManifest(role ValidManifest) (bool, error)
-	// LoadComponentManifest loads and validates the most recent manifest at filename.
+	// LoadComponentManifest loads and validates the most recent manifest at filename if passing a not nil index.
 	LoadComponentManifest(index *Index, filename string) (*Component, error)
 	// ComponentInstalled is true if the version of component is present locally.
 	ComponentInstalled(component, version string) (bool, error)
