@@ -35,7 +35,7 @@ import (
 
 func runComponent(env *meta.Environment, tag, spec, binPath string, args []string) error {
 	component, version := meta.ParseCompVersion(spec)
-	if !isSupportedComponent(env, component) {
+	if !env.IsSupportedComponent(component) {
 		return fmt.Errorf("component `%s` does not support `%s/%s` (see `tiup list --refresh`)", component, runtime.GOOS, runtime.GOARCH)
 	}
 
@@ -113,28 +113,6 @@ func cleanDataDir(rm bool, dir string) {
 	}
 }
 
-func isSupportedComponent(env *meta.Environment, component string) bool {
-	// check local manifest
-	manifest := env.Profile().Manifest()
-	if manifest != nil && manifest.HasComponent(component) {
-		return true
-	}
-
-	manifest, err := env.Repository().Manifest()
-	if err != nil {
-		fmt.Println("Fetch latest manifest error:", err)
-		return false
-	}
-	if err := env.Profile().SaveManifest(manifest); err != nil {
-		fmt.Println("Save latest manifest error:", err)
-	}
-	comp, found := manifest.FindComponent(component)
-	if !found {
-		return false
-	}
-	return comp.IsSupport(env.PlatformString())
-}
-
 type process struct {
 	Component   string   `json:"component"`
 	CreatedTime string   `json:"created_time"`
@@ -178,7 +156,7 @@ func launchComponent(ctx context.Context, component string, version v0manifest.V
 		}
 		binPath = p
 	} else {
-		binPath, err = profile.BinaryPath(component, selectVer)
+		binPath, err = env.BinaryPath(component, selectVer)
 		if err != nil {
 			return nil, err
 		}

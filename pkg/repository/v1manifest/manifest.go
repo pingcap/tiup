@@ -159,6 +159,16 @@ func (manifest *Manifest) AddSignature(sigs []Signature) {
 	}
 }
 
+// SignatureError the signature of a file is incorrect.
+type SignatureError struct {
+	fname string
+	err   error
+}
+
+func (s *SignatureError) Error() string {
+	return fmt.Sprintf("invalid signature for file %s: %s", s.fname, s.err.Error())
+}
+
 func newSignatureError(fname string, err error) *SignatureError {
 	return &SignatureError{
 		fname: fname,
@@ -172,14 +182,27 @@ func IsSignatureError(err error) bool {
 	return ok
 }
 
-// SignatureError the signature of a file is incorrect.
-type SignatureError struct {
+// ExpirationError the a manifest has expired.
+type ExpirationError struct {
 	fname string
-	err   error
+	date  string
 }
 
-func (s *SignatureError) Error() string {
-	return fmt.Sprintf("invalid signature for file %s: %s", s.fname, s.err.Error())
+func (s *ExpirationError) Error() string {
+	return fmt.Sprintf("manifest has expired at: %s", s.date)
+}
+
+func newExpirationError(date string) *ExpirationError {
+	return &ExpirationError{
+		fname: "",
+		date:  date,
+	}
+}
+
+// IsExpirationError checks if the err is an ExpirationError.
+func IsExpirationError(err error) bool {
+	_, ok := err.(*ExpirationError)
+	return ok
 }
 
 // ComponentManifestFilename returns the expected filename for the component manifest identified by id.
@@ -214,7 +237,7 @@ func CheckExpiry(expires string) error {
 	}
 
 	if expiresTime.Before(time.Now()) {
-		return fmt.Errorf("manifest has expired at: %s", expires)
+		return newExpirationError(expires)
 	}
 
 	return nil

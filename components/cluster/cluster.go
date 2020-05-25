@@ -40,7 +40,7 @@ func (r *repositoryT) DownloadComponent(comp, version, target string) error {
 		return err
 	}
 
-	reader, err := r.repo.DownloadComponent(versionItem)
+	reader, err := r.repo.FetchComponent(versionItem)
 	if err != nil {
 		return err
 	}

@@ -165,8 +165,61 @@ func (env *Environment) SelfUpdate() error {
 	return env.repo.DownloadTiup(env.LocalPath("bin"))
 }
 
+func (env *Environment) downloadComponentv1(component string, version v0manifest.Version, overwrite bool) error {
+	com, err := env.v1Repo.FetchComponentManifest(component)
+	if err != nil {
+		return err
+	}
+
+	if version.IsNightly() && !com.HasNightly() {
+		fmt.Printf("The component `%s` does not have a nightly version; skipped.\n", component)
+		return nil
+	}
+
+	platform := env.v1Repo.PlatformString()
+	var versionIem *v1manifest.VersionItem
+	if version.IsEmpty() {
+		var ok bool
+		version, versionIem, ok = com.LatestVersion(platform)
+		if !ok {
+			fmt.Printf("The component `%s` does not support %s; skipped.\n", component, platform)
+			return nil
+		}
+	} else {
+		versions, ok := com.Platforms[platform]
+		if !ok {
+			fmt.Printf("The component `%s` does not support %s; skipped.\n", component, platform)
+			return nil
+		}
+		item, ok := versions[string(version)]
+		if !ok {
+			fmt.Printf("The component `%s` does not support %s; skipped.\n", component, version)
+			return nil
+		}
+		versionIem = &item
+	}
+
+	if !overwrite {
+		// Ignore if installed
+		found, err := env.profile.VersionIsInstalled(component, version.String())
+		if err != nil {
+			return err
+		}
+		if found {
+			fmt.Printf("The component `%s:%s` has been installed.\n", component, version)
+			return nil
+		}
+	}
+
+	return env.v1Repo.DownloadComponent(component, version, versionIem)
+}
+
 // downloadComponent downloads the specific version of a component from repository
 func (env *Environment) downloadComponent(component string, version v0manifest.Version, overwrite bool) error {
+	if env.v1Repo != nil {
+		return env.downloadComponentv1(component, version, overwrite)
+	}
+
 	versions, err := env.repo.ComponentVersions(component)
 	if err != nil {
 		return err
@@ -260,6 +313,19 @@ func (env *Environment) latestManifest() (*v0manifest.ComponentManifest, error) 
 	return manifest, err
 }
 
+// BinaryPath return the installed binary path.
+func (env *Environment) BinaryPath(component string, version v0manifest.Version) (string, error) {
+	if env.v1Repo != nil {
+		installPath, err := env.profile.ComponentInstalledPath(component, version)
+		if err != nil {
+			return "", err
+		}
+		return env.v1Repo.BinaryPath(installPath, component, version)
+	}
+
+	return env.profile.BinaryPath(component, version)
+}
+
 // ParseCompVersion parses component part from <component>[:version] specification
 func ParseCompVersion(spec string) (string, v0manifest.Version) {
 	if strings.Contains(spec, ":") {
@@ -267,4 +333,32 @@ func ParseCompVersion(spec string) (string, v0manifest.Version) {
 		return parts[0], v0manifest.Version(parts[1])
 	}
 	return spec, ""
+}
+
+// IsSupportedComponent return true if support if platform support the component.
+func (env *Environment) IsSupportedComponent(component string) bool {
+	if env.v1Repo != nil {
+		// TODO
+		return true
+	}
+
+	// check local manifest
+	manifest := env.Profile().Manifest()
+	if manifest != nil && manifest.HasComponent(component) {
+		return true
+	}
+
+	manifest, err := env.Repository().Manifest()
+	if err != nil {
+		fmt.Println("Fetch latest manifest error:", err)
+		return false
+	}
+	if err := env.Profile().SaveManifest(manifest); err != nil {
+		fmt.Println("Save latest manifest error:", err)
+	}
+	comp, found := manifest.FindComponent(component)
+	if !found {
+		return false
+	}
+	return comp.IsSupport(env.PlatformString())
 }
