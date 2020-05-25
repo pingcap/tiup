@@ -160,7 +160,7 @@ func (env *Environment) SelfUpdate() error {
 	return env.repo.DownloadTiup(env.LocalPath("bin"))
 }
 
-func (env *Environment) downloadCompoentv1(component string, version v0manifest.Version, overwrite bool) error {
+func (env *Environment) downloadComponentv1(component string, version v0manifest.Version, overwrite bool) error {
 	com, err := env.v1Repo.FetchComponent(component)
 	if err != nil {
 		return err
@@ -212,7 +212,7 @@ func (env *Environment) downloadCompoentv1(component string, version v0manifest.
 // downloadComponent downloads the specific version of a component from repository
 func (env *Environment) downloadComponent(component string, version v0manifest.Version, overwrite bool) error {
 	if env.v1Repo != nil {
-		return env.downloadCompoentv1(component, version, overwrite)
+		return env.downloadComponentv1(component, version, overwrite)
 	}
 
 	versions, err := env.repo.ComponentVersions(component)
