@@ -72,18 +72,24 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 		return errors.Errorf("cannot scale-out non-exists cluster %s", clusterName)
 	}
 
-	var newPart meta.TopologySpecification
+	metadata, err := meta.ClusterMetadata(clusterName)
+	if err != nil {
+		return err
+	}
+
+	// Inherit existing global configuration. We must assign the inherited values before unmarshalling
+	// because some default value rely on the global options and monitored options.
+	var newPart = meta.TopologySpecification{
+		GlobalOptions:    metadata.Topology.GlobalOptions,
+		MonitoredOptions: metadata.Topology.MonitoredOptions,
+		ServerConfigs:    metadata.Topology.ServerConfigs,
+	}
 	if err := utils.ParseTopologyYaml(topoFile, &newPart); err != nil {
 		return err
 	}
 
 	if data, err := ioutil.ReadFile(topoFile); err == nil {
 		teleTopology = string(data)
-	}
-
-	metadata, err := meta.ClusterMetadata(clusterName)
-	if err != nil {
-		return err
 	}
 
 	// Abort scale out operation if the merged topology is invalid
@@ -111,11 +117,6 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 			return err
 		}
 	}
-
-	// Inherit existing global configuration
-	newPart.GlobalOptions = metadata.Topology.GlobalOptions
-	newPart.MonitoredOptions = metadata.Topology.MonitoredOptions
-	newPart.ServerConfigs = metadata.Topology.ServerConfigs
 
 	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.identityFile, opt.usePassword)
 	if err != nil {
