@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pingcap/go-tpc/pkg/measurement"
 	"github.com/pingcap/go-tpc/pkg/workload"
 )
 
@@ -94,7 +93,7 @@ func executeWorkload(ctx context.Context, w workload.Workloader, action string) 
 				ch <- struct{}{}
 				return
 			case <-ticker.C:
-				measurement.Output(summaryReport)
+				w.OutputStats(false)
 			}
 		}
 	}()
@@ -120,5 +119,5 @@ func executeWorkload(ctx context.Context, w workload.Workloader, action string) 
 	<-ch
 
 	fmt.Println("Finished")
-	measurement.Output(true)
+	w.OutputStats(true)
 }

@@ -313,8 +313,8 @@ github.com/pingcap/errors v0.11.5-0.20190809092503-95897b64e011 h1:58naV4XMEqm0h
 github.com/pingcap/errors v0.11.5-0.20190809092503-95897b64e011/go.mod h1:Oi8TUi2kEtXXLMJk9l1cGmz20kV3TaQ0usTwv5KuLY8=
 github.com/pingcap/failpoint v0.0.0-20200210140405-f8f9fb234798 h1:6DMbRqPI1qzQ8N1xc3+nKY8IxSACd9VqQKkRVvbyoIg=
 github.com/pingcap/failpoint v0.0.0-20200210140405-f8f9fb234798/go.mod h1:DNS3Qg7bEDhU6EXNHF+XSv/PGznQaMJ5FWvctpm6pQI=
-github.com/pingcap/go-tpc v1.0.4-0.20200511044254-883c1a10d555 h1:KnjhPPzKAB3V8K18rCpQ+H+TDRBFv7NT/kwevZl/fRw=
-github.com/pingcap/go-tpc v1.0.4-0.20200511044254-883c1a10d555/go.mod h1:YToE6BW+r+aWksQm1kuFnzKgEzaTKsVIHD36rxVYaWc=
+github.com/pingcap/go-tpc v1.0.4-0.20200525052430-dc963cdeef62 h1:Ssr4JKS/0jxI6Ye6x4v5DNOD5fjXYniy1sxVCkqkL08=
+github.com/pingcap/go-tpc v1.0.4-0.20200525052430-dc963cdeef62/go.mod h1:YToE6BW+r+aWksQm1kuFnzKgEzaTKsVIHD36rxVYaWc=
 github.com/pingcap/log v0.0.0-20191012051959-b742a5d432e9 h1:AJD9pZYm72vMgPcQDww9rkZ1DnWfl0pXV3BOWlkYIjA=
 github.com/pingcap/log v0.0.0-20191012051959-b742a5d432e9/go.mod h1:4rbK1p9ILyIfb6hU7OG2CiWSqMXnp3JMbiaVJ6mvoY8=
 github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4/go.mod h1:4OwLy04Bl9Ef3GJJCoec+30X3LQs/0/m4HFRt/2LUSA=
