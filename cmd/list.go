@@ -79,18 +79,17 @@ func (lr *listResult) print() {
 }
 
 func showComponentList(env *meta.Environment, onlyInstalled bool, refresh bool) (*listResult, error) {
-	index, err := env.Repository().FetchIndex()
+	index, err := env.V1Repository().FetchIndexManifest()
 	if err != nil {
 		return nil, err
 	}
 
 	var cmpTable [][]string
-	cmpTable = append(cmpTable, []string{"Name", "Description", "Owner"})
+	cmpTable = append(cmpTable, []string{"Name", "Owner"})
 
 	for name, comp := range index.Components {
 		cmpTable = append(cmpTable, []string{
 			name,
-			"desc",
 			comp.Owner,
 		})
 	}
@@ -102,7 +101,7 @@ func showComponentList(env *meta.Environment, onlyInstalled bool, refresh bool) 
 }
 
 func showComponentVersions(env *meta.Environment, component string, onlyInstalled bool, refresh bool) (*listResult, error) {
-	comp, err := env.Repository().FetchComponent(component)
+	comp, err := env.V1Repository().FetchComponentManifest(component)
 	if err != nil {
 		return nil, err
 	}
