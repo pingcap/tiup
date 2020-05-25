@@ -195,7 +195,11 @@ func (manifest *Timestamp) Filename() string {
 }
 
 // HasNightly return true if the component has nightly version.
-func (manifest *Component) HasNightly() bool {
-	// TODO how to support nightly??
-	return false
+func (manifest *Component) HasNightly(platform string) bool {
+	if manifest.Nightly == "" {
+		return false
+	}
+
+	_, ok := manifest.Platforms[platform][manifest.Nightly]
+	return ok
 }

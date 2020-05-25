@@ -122,7 +122,7 @@ func (env *Environment) UpdateComponents(specs []string, nightly, force bool) er
 			component, v := ParseCompVersion(spec)
 			v1specs = append(v1specs, repository.ComponentSpec{ID: component, Version: v.String(), Force: force})
 		}
-		return env.v1Repo.UpdateComponents(v1specs)
+		return env.v1Repo.UpdateComponents(v1specs, nightly)
 	}
 
 	manifest, err := env.latestManifest()
@@ -178,7 +178,7 @@ func (env *Environment) downloadComponentv1(component string, version v0manifest
 		Force:   overwrite,
 	}
 
-	return env.v1Repo.UpdateComponents([]repository.ComponentSpec{spec})
+	return env.v1Repo.UpdateComponents([]repository.ComponentSpec{spec}, false)
 }
 
 // downloadComponent downloads the specific version of a component from repository

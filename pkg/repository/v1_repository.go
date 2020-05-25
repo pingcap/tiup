@@ -16,12 +16,13 @@ package repository
 import (
 	"bytes"
 	"fmt"
-	"golang.org/x/mod/semver"
 	"io"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+
+	"golang.org/x/mod/semver"
 
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
@@ -77,7 +78,7 @@ func (r *V1Repository) Mirror() Mirror {
 }
 
 // UpdateComponents updates the components described by specs.
-func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
+func (r *V1Repository) UpdateComponents(specs []ComponentSpec, nightly bool) error {
 	_, err := r.ensureManifests()
 	if err != nil {
 		return errors.Trace(err)
@@ -91,7 +92,11 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			continue
 		}
 
-		if spec.Version == "nightly" && !manifest.HasNightly() {
+		if nightly {
+			spec.Version = manifest.Nightly
+		}
+
+		if v0manifest.Version(spec.Version).IsNightly() && !manifest.HasNightly(r.PlatformString()) {
 			errs = append(errs, fmt.Sprintf("the component `%s` does not have a nightly version; skipped", spec.ID))
 			continue
 		}
@@ -194,6 +199,10 @@ func (r *V1Repository) selectVersion(id string, versions map[string]v1manifest.V
 		var latest string
 		var latestItem v1manifest.VersionItem
 		for version, item := range versions {
+			if v0manifest.Version(version).IsNightly() {
+				continue
+			}
+
 			if latest == "" || semver.Compare(version, latest) > 0 {
 				latest = version
 				latestItem = item
@@ -565,7 +574,7 @@ func (r *V1Repository) DownloadTiup(targetDir string) error {
 		Version:   "",
 		Force:     false,
 	}
-	return r.UpdateComponents([]ComponentSpec{spec})
+	return r.UpdateComponents([]ComponentSpec{spec}, false)
 }
 
 // FetchComponentManifest fetch the component manifest.
