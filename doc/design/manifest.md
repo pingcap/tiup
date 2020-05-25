@@ -278,7 +278,13 @@ Where xxx is the id of the component, n is the version of the manifest, file is 
 
 The platform id should be one of the supported TiUp target triples. Version ids must be valid semver. Dependencies are a map from component id to a semver version string.
 
-The "nightly" points to the version number of latest daily build, that version should be in the version list of all supported platforms.
+The "nightly" points to the version number of latest daily build, that version should be in the version list of all supported platforms. The version number of nightly build should (but not forced to be) in the following format:
+
+```
+vX.Y.Z-nightly+YYYYmmdd
+```
+
+Where `vX.Y.Z` is the version of the last released version of that component.
 
 ### snapshot.json
 

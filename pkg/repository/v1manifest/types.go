@@ -106,7 +106,7 @@ type Component struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	NightlyVer  string `json:"nightly"` // version of the latest daily build
+	Nightly     string `json:"nightly"` // version of the latest daily build
 	// platform -> version -> VersionItem
 	Platforms map[string]map[string]VersionItem `json:"platforms"`
 }
