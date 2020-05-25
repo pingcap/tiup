@@ -17,7 +17,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"time"
+
+	"github.com/pingcap-incubator/tiup/pkg/assets"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
@@ -382,28 +385,55 @@ func yankComp(repo, id, version string) error {
 	return nil
 }
 
-// the `mirror yank` sub command
+// the `mirror clone` sub command
 func newMirrorCloneCmd(env *meta.Environment) *cobra.Command {
+	options := assets.CloneOptions{
+		Components: map[string]*[]string{},
+	}
+
+	repo := env.V1Repository()
+	index, err := repo.FetchIndexManifest()
+	if err != nil {
+		fmt.Println("Warning: cannot fetch component list from mirror:", err)
+	}
+
+	var components []string
+	if index != nil && len(index.Components) > 0 {
+		for name := range index.Components {
+			components = append(components, name)
+		}
+	}
+	sort.Strings(components)
+
 	cmd := &cobra.Command{
-		Use:   "yank <component> [version]",
-		Short: "Yank a component in the repository",
-		Long: `Yank a component in the repository. If version is not specified, all versions
-of the given component will be yanked.
-A yanked component is still in the repository, but not visible to client, and is
-no longer considered stable to use. A yanked component is expected to be removed
-from the repository in the future.`,
-		Hidden: true, // WIP, remove when it becomes working and stable
+		Use: "clone <target-dir> [global version]",
+		Example: `  tiup mirror clone /path/to/local --arch amd64,arm --os linux,darwin    # Specify the architectures and OSs
+  tiup mirror clone /path/to/local --full                                # Build a full local mirror
+  tiup mirror clone /path/to/local --tikv v4                             # Specify the version via prefix
+  tiup mirror clone /path/to/local --tidb all --pd all                   # Download all version for specific component`,
+		Short:        "Clone a local mirror from remote mirror and download all selected components",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			compVer := ""
-			switch len(args) {
-			case 2:
-				compVer = args[1]
-			default:
+			if len(args) < 1 {
 				return cmd.Help()
 			}
 
-			return yankComp(repoPath, args[0], compVer)
+			if len(components) < 1 {
+				return errors.New("component list doesn't contain components")
+			}
+
+			return assets.CloneMirror(repo, components, args[0], args[1:], options)
 		},
+	}
+
+	cmd.Flags().SortFlags = false
+	cmd.Flags().BoolVarP(&options.Full, "full", "f", false, "Build a full mirrors repository")
+	cmd.Flags().StringSliceVarP(&options.Archs, "arch", "a", []string{"amd64", "arm64"}, "Specify the downloading architecture")
+	cmd.Flags().StringSliceVarP(&options.OSs, "os", "o", []string{"linux", "darwin"}, "Specify the downloading os")
+
+	for _, name := range components {
+		options.Components[name] = new([]string)
+		cmd.Flags().StringSliceVar(options.Components[name], name, nil, "Specify the versions for component "+name)
 	}
 
 	return cmd

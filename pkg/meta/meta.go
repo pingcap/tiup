@@ -159,7 +159,7 @@ func (env *Environment) PlatformString() string {
 		return env.v1Repo.PlatformString()
 	}
 
-	return fmt.Sprintf("%s/%s", env.repo.GOOS, env.repo.GOARCH)
+	return repository.PlatformString(env.repo.GOOS, env.repo.GOARCH)
 }
 
 // SelfUpdate updates TiUp.

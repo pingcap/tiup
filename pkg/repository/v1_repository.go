@@ -452,8 +452,13 @@ func (r *V1Repository) checkTimestamp() (*v1manifest.FileHash, error) {
 }
 
 // PlatformString returns a string identifying the current system.
+func PlatformString(os, arch string) string {
+	return fmt.Sprintf("%s/%s", os, arch)
+}
+
+// PlatformString returns a string identifying the current system.
 func (r *V1Repository) PlatformString() string {
-	return fmt.Sprintf("%s/%s", r.GOOS, r.GOARCH)
+	return PlatformString(r.GOOS, r.GOARCH)
 }
 
 func (r *V1Repository) fetchComponentManifest(item *v1manifest.ComponentItem, url string, com *v1manifest.Component, maxSize uint) (*v1manifest.Manifest, error) {

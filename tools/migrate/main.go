@@ -19,7 +19,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -139,24 +138,6 @@ func readVersions(srcDir, comp string) (*v0manifest.VersionManifest, error) {
 	}
 
 	return m, nil
-}
-
-func hashFile(srcDir, filename string) (map[string]string, int64, error) {
-	path := filepath.Join(srcDir, filename)
-	s256 := sha256.New()
-	s512 := sha512.New()
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer file.Close()
-	n, err := io.Copy(io.MultiWriter(s256, s512), file)
-
-	hashes := map[string]string{
-		v1manifest.SHA256: hex.EncodeToString(s256.Sum(nil)),
-		v1manifest.SHA512: hex.EncodeToString(s512.Sum(nil)),
-	}
-	return hashes, n, err
 }
 
 func hashManifest(m *v1manifest.Manifest) (map[string]string, uint, error) {
@@ -295,7 +276,7 @@ func migrate(srcDir, dstDir string) error {
 				filename := fmt.Sprintf("/%s-%s-%s.tar.gz", comp.Name, v.Version, strings.Join(
 					strings.Split(newp, "/"),
 					"-"))
-				hashes, length, err := hashFile(srcDir, filename)
+				hashes, length, err := repository.HashFile(srcDir, filename)
 				if err != nil {
 					return err
 				}
