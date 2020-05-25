@@ -84,6 +84,7 @@ func registerTpcc(root *cobra.Command) {
 			executeTpcc("run")
 		},
 	}
+	cmdRun.PersistentFlags().BoolVar(&tpccConfig.Wait, "wait", false, "including keying & thinking time described on TPC-C Standard Specification")
 
 	var cmdCleanup = &cobra.Command{
 		Use:   "cleanup",
