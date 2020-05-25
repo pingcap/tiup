@@ -23,15 +23,19 @@ type repositoryT struct {
 }
 
 // NewRepository returns repository
-func NewRepository(os, arch string) Repository {
+func NewRepository(os, arch string) (Repository, error) {
 	profile := localdata.InitProfile()
 	mirror := repository.NewMirror(meta.Mirror(), repository.MirrorOptions{})
+	local, err := v1manifest.NewManifests(profile)
+	if err != nil {
+		return nil, err
+	}
 	repo := repository.NewV1Repo(mirror, repository.Options{
 		GOOS:              os,
 		GOARCH:            arch,
 		DisableDecompress: true,
-	}, v1manifest.NewManifests(profile))
-	return &repositoryT{repo}
+	}, local)
+	return &repositoryT{repo}, nil
 }
 
 func (r *repositoryT) DownloadComponent(comp, version, target string) error {

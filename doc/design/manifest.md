@@ -201,6 +201,7 @@ Example:
 "owners": {
     "pingcap": {
         "name": "PingCAP",
+        "threshold": 1,
         "keys": {
             "4e777de0d275f9d28588dd9a1606cc748e548f9e22b6795b7cb3f63f98035fcb": {
                 "keyid_hash_algorithms": [
@@ -232,7 +233,6 @@ Example:
         "yanked": false,
         "owner": "pingcap",
         "url": "/name_of.json",
-        "threshold": 1,
     },
 },
 "default components": [

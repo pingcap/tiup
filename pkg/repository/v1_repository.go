@@ -16,10 +16,10 @@ package repository
 import (
 	"bytes"
 	"fmt"
+	"golang.org/x/mod/semver"
 	"io"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -80,13 +80,19 @@ func (r *V1Repository) Mirror() Mirror {
 func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 	_, err := r.ensureManifests()
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
+
 	var errs []string
 	for _, spec := range specs {
 		manifest, err := r.updateComponentManifest(spec.ID)
 		if err != nil {
 			errs = append(errs, err.Error())
+			continue
+		}
+
+		if spec.Version == "nightly" && !manifest.HasNightly() {
+			errs = append(errs, fmt.Sprintf("the component `%s` does not have a nightly version; skipped", spec.ID))
 			continue
 		}
 
@@ -106,7 +112,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 		if !spec.Force {
 			installed, err := r.local.ComponentInstalled(spec.ID, version)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			if installed {
 				errs = append(errs, fmt.Sprintf("component %s version %s is already installed", spec.ID, version))
@@ -137,10 +143,15 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 // ensureManifests ensures that the snapshot, root, and index manifests are up to date and saved in r.local.
 // Returns true if the timestamp has changed,
 func (r *V1Repository) ensureManifests() (bool, error) {
+	// Load the root manifest from disk to populate the key store.
+	var root v1manifest.Root
+	_, _ = r.local.LoadManifest(&root)
+	// We can ignore errors here since we'll try again later.
+
 	// Update snapshot.
 	snapshot, err := r.updateLocalSnapshot()
 	if err != nil {
-		return false, err
+		return false, errors.Trace(err)
 	}
 	if snapshot == nil {
 		return false, nil
@@ -149,24 +160,24 @@ func (r *V1Repository) ensureManifests() (bool, error) {
 	// Update root.
 	err = r.updateLocalRoot()
 	if err != nil {
-		return false, err
+		return false, errors.Trace(err)
 	}
 
 	// Check that the version of root we have is the same as declared in the snapshot.
-	root, err := r.loadRoot()
+	newRoot, err := r.loadRoot()
 	if err != nil {
-		return false, err
+		return false, errors.Trace(err)
 	}
 	snapRootVersion := snapshot.Meta[v1manifest.ManifestURLRoot].Version
-	if root.Version != snapRootVersion {
-		return false, fmt.Errorf("root version mismatch. Expected: %v, found: %v", snapRootVersion, root.Version)
+	if newRoot.Version != snapRootVersion {
+		return false, fmt.Errorf("root version mismatch. Expected: %v, found: %v", snapRootVersion, newRoot.Version)
 	}
 
 	// Update index (if needed).
 	var index v1manifest.Index
 	exists, err := r.local.LoadManifest(&index)
 	if err != nil {
-		return false, err
+		return false, errors.Trace(err)
 	}
 	snapIndexVersion := snapshot.Meta[v1manifest.ManifestURLIndex].Version
 	if exists && index.Version == snapIndexVersion {
@@ -180,15 +191,16 @@ func (r *V1Repository) selectVersion(id string, versions map[string]v1manifest.V
 	// TODO we should check what version the user has currently installed and only update to the same semver major version unless they force upgrade.
 
 	if target == "" {
-		versionSlice := make([]string, 0, len(versions))
-		for v := range versions {
-			versionSlice = append(versionSlice, v)
+		var latest string
+		var latestItem v1manifest.VersionItem
+		for version, item := range versions {
+			if latest == "" || semver.Compare(version, latest) > 0 {
+				latest = version
+				latestItem = item
+			}
 		}
-		sort.Strings(versionSlice)
-		// TODO I think it is not actually correct semver order because versions can have a text suffix.
-		version := versionSlice[len(versionSlice)-1]
-		item := versions[version]
-		return version, &item, nil
+
+		return latest, &latestItem, nil
 	}
 
 	item, ok := versions[target]
@@ -207,14 +219,14 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 		// The signature is wrong, update our signatures from the root manifest and try again.
 		err = r.updateLocalRoot()
 		if err != nil {
-			return nil, err
+			return nil, errors.Trace(err)
 		}
 		hash, err = r.checkTimestamp()
 		if err != nil {
-			return nil, err
+			return nil, errors.Trace(err)
 		}
 	} else if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 	if hash == nil {
 		// Nothing has changed in the repo, return success.
@@ -224,7 +236,7 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 	var snapshot v1manifest.Snapshot
 	manifest, err := r.fetchManifestWithHash(v1manifest.ManifestURLSnapshot, &snapshot, hash)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	return &snapshot, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameSnapshot)
@@ -244,12 +256,13 @@ func (r *V1Repository) updateLocalRoot() error {
 		return errors.AddStack(err)
 	}
 	startVersion := oldRoot.Version
+	keyStore := *r.local.KeyStore()
 
 	var newManifest *v1manifest.Manifest
 	var newRoot v1manifest.Root
 	for {
 		url := fnameWithVersion(v1manifest.ManifestURLRoot, oldRoot.Version+1)
-		nextManifest, err := r.fetchManifestWithRoot(url, &newRoot, maxRootSize, oldRoot)
+		nextManifest, err := r.fetchManifestWithKeyStore(url, &newRoot, maxRootSize, &keyStore)
 		if err != nil {
 			// Break if we have read the newest version.
 			if errors.Cause(err) == ErrNotFound {
@@ -264,7 +277,7 @@ func (r *V1Repository) updateLocalRoot() error {
 		}
 
 		if err = v1manifest.ExpiresAfter(&newRoot, oldRoot); err != nil {
-			return err
+			return errors.AddStack(err)
 		}
 
 		// This is a valid new version.
@@ -286,7 +299,8 @@ func (r *V1Repository) updateLocalRoot() error {
 		return errors.AddStack(err)
 	}
 
-	// Save the new trusted root without a version number.
+	// Save the new trusted root without a version number. This action will also update the key store in r.local from
+	// the new root.
 	err = r.local.SaveManifest(newManifest, v1manifest.ManifestFilenameRoot)
 	if err != nil {
 		return errors.AddStack(err)
@@ -299,13 +313,13 @@ func (r *V1Repository) updateLocalRoot() error {
 func (r *V1Repository) updateLocalIndex() error {
 	root, err := r.loadRoot()
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	var snapshot v1manifest.Snapshot
 	exists, err := r.local.LoadManifest(&snapshot)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	if !exists {
 		return errors.New("No snapshot")
@@ -313,13 +327,13 @@ func (r *V1Repository) updateLocalIndex() error {
 
 	url, fileVersion, err := snapshot.VersionedURL(root.Roles[v1manifest.ManifestTypeIndex].URL)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	var index v1manifest.Index
 	manifest, err := r.fetchManifest(url, &index, fileVersion.Length)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	// Check version number against old manifest
@@ -343,7 +357,7 @@ func (r *V1Repository) updateComponentManifest(id string) (*v1manifest.Component
 	var index v1manifest.Index
 	_, err := r.local.LoadManifest(&index)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 	item, ok := index.Components[id]
 	if !ok {
@@ -352,37 +366,35 @@ func (r *V1Repository) updateComponentManifest(id string) (*v1manifest.Component
 	var snapshot v1manifest.Snapshot
 	_, err = r.local.LoadManifest(&snapshot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	filename := v1manifest.ComponentManifestFilename(id)
 	url, fileVersion, err := snapshot.VersionedURL(item.URL)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
-	oldManifest, err := r.local.LoadComponentManifest(&index, filename)
-	if err != nil {
-		return nil, err
-	}
-	if oldManifest != nil && oldManifest.Version == fileVersion.Version {
-		// We're up to date.
-		return oldManifest, nil
+	oldVersion := r.local.ManifestVersion(filename)
+
+	if oldVersion != 0 && oldVersion == fileVersion.Version {
+		// We're up to date, load the old manifest from disk.
+		return r.local.LoadComponentManifest(&item, filename)
 	}
 
 	var component v1manifest.Component
-	manifest, err := r.fetchComponentManifest(&index, url, &component, fileVersion.Length)
+	manifest, err := r.fetchComponentManifest(&item, url, &component, fileVersion.Length)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
-	if oldManifest != nil && component.Version <= oldManifest.Version {
-		return nil, fmt.Errorf("component manifest for %s has a version number <= the old manifest (%v, %v)", id, component.Version, oldManifest.Version)
+	if oldVersion != 0 && component.Version <= oldVersion {
+		return nil, fmt.Errorf("component manifest for %s has a version number <= the old manifest (%v, %v)", id, component.Version, oldVersion)
 	}
 
 	err = r.local.SaveComponentManifest(manifest, filename)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	return &component, nil
@@ -409,7 +421,7 @@ func (r *V1Repository) DownloadComponent(
 func (r *V1Repository) FetchComponent(item *v1manifest.VersionItem) (io.Reader, error) {
 	reader, err := r.mirror.Fetch(item.URL, int64(item.Length))
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 	defer reader.Close()
 
@@ -423,7 +435,7 @@ func (r *V1Repository) checkTimestamp() (*v1manifest.FileHash, error) {
 	var ts v1manifest.Timestamp
 	manifest, err := r.fetchManifest(v1manifest.ManifestURLTimestamp, &ts, maxTimeStampSize)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 	hash := ts.SnapshotHash()
 
@@ -433,7 +445,7 @@ func (r *V1Repository) checkTimestamp() (*v1manifest.FileHash, error) {
 		// We can't find a local timestamp, so we're going to have to update
 		return &hash, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
 	} else if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 	if hash.Hashes[v1manifest.SHA256] == localTs.SnapshotHash().Hashes[v1manifest.SHA256] {
 		return nil, nil
@@ -446,74 +458,39 @@ func (r *V1Repository) checkTimestamp() (*v1manifest.FileHash, error) {
 	return &hash, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
 }
 
-func (r *V1Repository) fetchComponentManifest(index *v1manifest.Index, url string, com *v1manifest.Component, maxSize uint) (*v1manifest.Manifest, error) {
-	reader, err := r.mirror.Fetch(url, int64(maxSize))
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	defer reader.Close()
-
-	return v1manifest.ReadComponentManifest(reader, com, index)
-}
-
 // PlatformString returns a string identifying the current system.
 func (r *V1Repository) PlatformString() string {
 	return fmt.Sprintf("%s/%s", r.GOOS, r.GOARCH)
 }
 
-// fetchManifest downloads and validates a manifest from this repo.
-func (r *V1Repository) fetchManifest(url string, role v1manifest.ValidManifest, maxSize uint) (*v1manifest.Manifest, error) {
-	root, err := r.loadRoot()
-	if err != nil {
-		return nil, err
-	}
-
+func (r *V1Repository) fetchComponentManifest(item *v1manifest.ComponentItem, url string, com *v1manifest.Component, maxSize uint) (*v1manifest.Manifest, error) {
 	return r.fetchBase(url, maxSize, func(reader io.Reader) (*v1manifest.Manifest, error) {
-		return v1manifest.ReadManifest(reader, role, root)
+		return v1manifest.ReadComponentManifest(reader, com, item, r.local.KeyStore())
 	})
 }
 
-func (r *V1Repository) fetchManifestWithRoot(url string, role v1manifest.ValidManifest, maxSize uint, root *v1manifest.Root) (*v1manifest.Manifest, error) {
+// fetchManifest downloads and validates a manifest from this repo.
+func (r *V1Repository) fetchManifest(url string, role v1manifest.ValidManifest, maxSize uint) (*v1manifest.Manifest, error) {
 	return r.fetchBase(url, maxSize, func(reader io.Reader) (*v1manifest.Manifest, error) {
-		return v1manifest.ReadManifest(reader, role, root)
+		return v1manifest.ReadManifest(reader, role, r.local.KeyStore())
+	})
+}
+
+func (r *V1Repository) fetchManifestWithKeyStore(url string, role v1manifest.ValidManifest, maxSize uint, keys *v1manifest.KeyStore) (*v1manifest.Manifest, error) {
+	return r.fetchBase(url, maxSize, func(reader io.Reader) (*v1manifest.Manifest, error) {
+		return v1manifest.ReadManifest(reader, role, keys)
 	})
 }
 
 func (r *V1Repository) fetchManifestWithHash(url string, role v1manifest.ValidManifest, hash *v1manifest.FileHash) (*v1manifest.Manifest, error) {
-	root, err := r.loadRoot()
-	if err != nil {
-		return nil, err
-	}
-
 	return r.fetchBase(url, hash.Length, func(reader io.Reader) (*v1manifest.Manifest, error) {
 		bufReader, err := checkHash(reader, hash.Hashes[v1manifest.SHA256])
 		if err != nil {
-			return nil, err
+			return nil, errors.Trace(err)
 		}
 
-		return v1manifest.ReadManifest(bufReader, role, root)
+		return v1manifest.ReadManifest(bufReader, role, r.local.KeyStore())
 	})
-}
-
-func checkHash(reader io.Reader, sha256 string) (io.Reader, error) {
-	buffer := new(bytes.Buffer)
-	_, err := io.Copy(buffer, reader)
-	if err != nil {
-		return nil, err
-	}
-
-	b := buffer.Bytes()
-	bufReader := bytes.NewReader(b)
-	if err = utils.CheckSHA256(bufReader, sha256); err != nil {
-		return nil, err
-	}
-
-	_, err = bufReader.Seek(0, io.SeekStart)
-	if err != nil {
-		return nil, err
-	}
-
-	return bufReader, nil
 }
 
 func (r *V1Repository) fetchBase(url string, maxSize uint, f func(reader io.Reader) (*v1manifest.Manifest, error)) (*v1manifest.Manifest, error) {
@@ -524,6 +501,27 @@ func (r *V1Repository) fetchBase(url string, maxSize uint, f func(reader io.Read
 	defer reader.Close()
 
 	return f(reader)
+}
+
+func checkHash(reader io.Reader, sha256 string) (io.Reader, error) {
+	buffer := new(bytes.Buffer)
+	_, err := io.Copy(buffer, reader)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	b := buffer.Bytes()
+	bufReader := bytes.NewReader(b)
+	if err = utils.CheckSHA256(bufReader, sha256); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	_, err = bufReader.Seek(0, io.SeekStart)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return bufReader, nil
 }
 
 func (r *V1Repository) loadRoot() (*v1manifest.Root, error) {
@@ -596,7 +594,7 @@ func (r *V1Repository) ComponentVersion(id, version string) (*v1manifest.Version
 // BinaryPath return the binary path of the component.
 // Support you have install the component, need to get entry from local manifest.
 // Load the manifest locally only to get then Entry, do not force do something need access mirror.
-func (r *V1Repository) BinaryPath(installPath string, componentID string, version v0manifest.Version) (string, error) {
+func (r *V1Repository) BinaryPath(installPath string, componentID string, version string) (string, error) {
 	var index v1manifest.Index
 	_, err := r.local.LoadManifest(&index)
 	if err != nil {
@@ -605,17 +603,18 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, versio
 
 	filename := v1manifest.ComponentManifestFilename(componentID)
 
-	component, err := r.local.LoadComponentManifest(&index, filename)
+	item := index.Components[componentID]
+	component, err := r.local.LoadComponentManifest(&item, filename)
 	if err != nil {
 		return "", err
 	}
 
-	item, ok := component.Platforms[r.PlatformString()][string(version)]
+	versionItem, ok := component.Platforms[r.PlatformString()][version]
 	if !ok {
 		return "", errors.Errorf("no version: %s", version)
 	}
 
-	entry := item.Entry
+	entry := versionItem.Entry
 	if entry == "" {
 		return "", errors.Errorf("cannot found entry for %s:%s", componentID, version)
 	}

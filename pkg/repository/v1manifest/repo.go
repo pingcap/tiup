@@ -257,9 +257,8 @@ func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv 
 
 	// update repository
 	compInfo := ComponentItem{
-		Owner:     owner,
-		URL:       fmt.Sprintf("/%s", comp.Filename()),
-		Threshold: 1,
+		Owner: owner,
+		URL:   fmt.Sprintf("/%s", comp.Filename()),
 	}
 	index := manifests[ManifestTypeIndex].(*Index)
 	index.Components[id] = compInfo

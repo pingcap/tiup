@@ -50,7 +50,7 @@ func TestCheckTimestamp(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
-	privk := setRoot(t, local)
+	privk := setNewRoot(t, local)
 	repo := NewV1Repo(&mirror, Options{}, local)
 
 	repoTimestamp := timestampManifest()
@@ -106,7 +106,7 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
-	privk := setRoot(t, local)
+	privk := setNewRoot(t, local)
 	repo := NewV1Repo(&mirror, Options{}, local)
 
 	timestamp := timestampManifest()
@@ -151,7 +151,7 @@ func TestUpdateLocalRoot(t *testing.T) {
 	}
 
 	local := v1manifest.NewMockManifests()
-	privKey := setRoot(t, local)
+	privKey := setNewRoot(t, local)
 	repo := NewV1Repo(&mirror, Options{}, local)
 
 	// Should success if no new version root.
@@ -187,7 +187,7 @@ func TestUpdateIndex(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
-	priv := setRoot(t, local)
+	priv := setNewRoot(t, local)
 	repo := NewV1Repo(&mirror, Options{}, local)
 
 	index, _ := indexManifest(t)
@@ -210,7 +210,7 @@ func TestUpdateComponent(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
-	_ = setRoot(t, local)
+	_ = setNewRoot(t, local)
 	repo := NewV1Repo(&mirror, Options{}, local)
 
 	index, indexPriv := indexManifest(t)
@@ -255,7 +255,7 @@ func TestDownloadManifest(t *testing.T) {
 	someString := "foo201"
 	mirror.Resources["/foo-2.0.1.tar.gz"] = someString
 	local := v1manifest.NewMockManifests()
-	setRoot(t, local)
+	setNewRoot(t, local)
 	repo := NewV1Repo(&mirror, Options{}, local)
 	item := versionItem()
 
@@ -290,29 +290,29 @@ func TestSelectVersion(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
-	setRoot(t, local)
+	setNewRoot(t, local)
 	repo := NewV1Repo(&mirror, Options{}, local)
 
 	// Simple case
-	s, i, err := repo.selectVersion("foo", map[string]v1manifest.VersionItem{"0.1.0": {URL: "1"}}, "")
+	s, i, err := repo.selectVersion("foo", map[string]v1manifest.VersionItem{"v0.1.0": {URL: "1"}}, "")
 	assert.Nil(t, err)
-	assert.Equal(t, "0.1.0", s)
+	assert.Equal(t, "v0.1.0", s)
 	assert.Equal(t, "1", i.URL)
 
 	// Choose by order
-	s, i, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"0.1.0": {URL: "1"}, "0.1.1": {URL: "2"}, "0.2.0": {URL: "3"}}, "")
+	s, i, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"v0.1.0": {URL: "1"}, "v0.1.1": {URL: "2"}, "v0.2.0": {URL: "3"}}, "")
 	assert.Nil(t, err)
-	assert.Equal(t, "0.2.0", s)
+	assert.Equal(t, "v0.2.0", s)
 	assert.Equal(t, "3", i.URL)
 
 	// Choose specific
-	s, i, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"0.1.0": {URL: "1"}, "0.1.1": {URL: "2"}, "0.2.0": {URL: "3"}}, "0.1.1")
+	s, i, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"v0.1.0": {URL: "1"}, "v0.1.1": {URL: "2"}, "v0.2.0": {URL: "3"}}, "v0.1.1")
 	assert.Nil(t, err)
-	assert.Equal(t, "0.1.1", s)
+	assert.Equal(t, "v0.1.1", s)
 	assert.Equal(t, "2", i.URL)
 
 	// Target doesn't exists
-	_, _, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"0.1.0": {URL: "1"}, "0.1.1": {URL: "2"}, "0.2.0": {URL: "3"}}, "0.2.1")
+	_, _, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"v0.1.0": {URL: "1"}, "v0.1.1": {URL: "2"}, "v0.2.0": {URL: "3"}}, "v0.2.1")
 	assert.NotNil(t, err)
 }
 
@@ -321,7 +321,7 @@ func TestEnsureManifests(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
-	priv := setRoot(t, local)
+	priv := setNewRoot(t, local)
 
 	repo := NewV1Repo(&mirror, Options{}, local)
 
@@ -383,7 +383,7 @@ func TestUpdateComponents(t *testing.T) {
 		Resources: map[string]string{},
 	}
 	local := v1manifest.NewMockManifests()
-	priv := setRoot(t, local)
+	priv := setNewRoot(t, local)
 
 	repo := NewV1Repo(&mirror, Options{GOOS: "plat", GOARCH: "form"}, local)
 
@@ -406,12 +406,12 @@ func TestUpdateComponents(t *testing.T) {
 	}})
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
-	assert.Equal(t, "2.0.1", local.Installed["foo"].Version)
+	assert.Equal(t, "v2.0.1", local.Installed["foo"].Version)
 	assert.Equal(t, "foo201", local.Installed["foo"].Contents)
 
 	// Update
 	foo.Version = 8
-	foo.Platforms["plat/form"]["2.0.2"] = versionItem2()
+	foo.Platforms["plat/form"]["v2.0.2"] = versionItem2()
 	mirror.Resources["/8.foo.json"] = serialize(t, foo, indexPriv)
 	mirror.Resources["/foo-2.0.2.tar.gz"] = "foo202"
 	snapshot.Version++
@@ -428,7 +428,7 @@ func TestUpdateComponents(t *testing.T) {
 	}})
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
-	assert.Equal(t, "2.0.2", local.Installed["foo"].Version)
+	assert.Equal(t, "v2.0.2", local.Installed["foo"].Version)
 	assert.Equal(t, "foo202", local.Installed["foo"].Contents)
 
 	// Update; already up to date
@@ -437,17 +437,17 @@ func TestUpdateComponents(t *testing.T) {
 	}})
 	assert.NotNil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
-	assert.Equal(t, "2.0.2", local.Installed["foo"].Version)
+	assert.Equal(t, "v2.0.2", local.Installed["foo"].Version)
 	assert.Equal(t, "foo202", local.Installed["foo"].Contents)
 
 	// Specific version
 	err = repo.UpdateComponents([]ComponentSpec{{
 		ID:      "foo",
-		Version: "2.0.1",
+		Version: "v2.0.1",
 	}})
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
-	assert.Equal(t, "2.0.1", local.Installed["foo"].Version)
+	assert.Equal(t, "v2.0.1", local.Installed["foo"].Version)
 	assert.Equal(t, "foo201", local.Installed["foo"].Contents)
 
 	// Sad paths
@@ -462,11 +462,11 @@ func TestUpdateComponents(t *testing.T) {
 	// Specific version doesn't exist
 	err = repo.UpdateComponents([]ComponentSpec{{
 		ID:      "foo",
-		Version: "2.0.3",
+		Version: "v2.0.3",
 	}})
 	assert.NotNil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
-	assert.Equal(t, "2.0.1", local.Installed["foo"].Version)
+	assert.Equal(t, "v2.0.1", local.Installed["foo"].Version)
 	assert.Equal(t, "foo201", local.Installed["foo"].Contents)
 
 	// Platform not supported
@@ -476,18 +476,18 @@ func TestUpdateComponents(t *testing.T) {
 	}})
 	assert.NotNil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
-	assert.Equal(t, "2.0.1", local.Installed["foo"].Version)
+	assert.Equal(t, "v2.0.1", local.Installed["foo"].Version)
 	assert.Equal(t, "foo201", local.Installed["foo"].Contents)
 
 	// Already installed
 	repo.GOARCH = "form"
 	err = repo.UpdateComponents([]ComponentSpec{{
 		ID:      "foo",
-		Version: "2.0.1",
+		Version: "v2.0.1",
 	}})
 	assert.NotNil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
-	assert.Equal(t, "2.0.1", local.Installed["foo"].Version)
+	assert.Equal(t, "v2.0.1", local.Installed["foo"].Version)
 	assert.Equal(t, "foo201", local.Installed["foo"].Contents)
 
 	// Test that even after one error, other components are handled
@@ -499,7 +499,7 @@ func TestUpdateComponents(t *testing.T) {
 	}})
 	assert.NotNil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
-	assert.Equal(t, "2.0.2", local.Installed["foo"].Version)
+	assert.Equal(t, "v2.0.2", local.Installed["foo"].Version)
 	assert.Equal(t, "foo202", local.Installed["foo"].Contents)
 }
 
@@ -546,7 +546,7 @@ func componentManifest() *v1manifest.Component {
 		Name:        "Foo",
 		Description: "foo does stuff",
 		Platforms: map[string]map[string]v1manifest.VersionItem{
-			"plat/form": {"2.0.1": versionItem()},
+			"plat/form": {"v2.0.1": versionItem()},
 		},
 	}
 }
@@ -590,14 +590,14 @@ func indexManifest(t *testing.T) (*v1manifest.Index, crypto.PrivKey) {
 			Version:     5,
 		},
 		Owners: map[string]v1manifest.Owner{"bar": {
-			Name: "Bar",
-			Keys: map[string]*v1manifest.KeyInfo{keyID: info},
+			Name:      "Bar",
+			Keys:      map[string]*v1manifest.KeyInfo{keyID: info},
+			Threshold: 1,
 		}},
 		Components: map[string]v1manifest.ComponentItem{"foo": {
-			Yanked:    false,
-			Owner:     "bar",
-			URL:       "/foo.json",
-			Threshold: 1,
+			Yanked: false,
+			Owner:  "bar",
+			URL:    "/foo.json",
 		}},
 		DefaultComponents: []string{},
 	}, priv
@@ -654,10 +654,17 @@ func rootManifest(t *testing.T) (*v1manifest.Root, crypto.PrivKey) {
 	}, priv
 }
 
-func setRoot(t *testing.T, local *v1manifest.MockManifests) crypto.PrivKey {
+func setNewRoot(t *testing.T, local *v1manifest.MockManifests) crypto.PrivKey {
 	root, privk := rootManifest(t)
-	local.Manifests[v1manifest.ManifestFilenameRoot] = root
+	setRoot(local, root)
 	return privk
+}
+
+func setRoot(local *v1manifest.MockManifests, root *v1manifest.Root) {
+	local.Manifests[v1manifest.ManifestFilenameRoot] = root
+	for r, ks := range root.Roles {
+		local.Ks.AddKeys(r, 1, ks.Keys)
+	}
 }
 
 func serialize(t *testing.T, role v1manifest.ValidManifest, privKeys ...crypto.PrivKey) string {
@@ -774,6 +781,8 @@ func createMigrateRepo(t *testing.T, mdir string) (repo *V1Repository, profileDi
 	profile := localdata.InitProfile()
 	options := Options{}
 	mirror := NewMirror(mdir, MirrorOptions{})
-	repo = NewV1Repo(mirror, options, v1manifest.NewManifests(profile))
+	local, err := v1manifest.NewManifests(profile)
+	assert.Nil(t, err)
+	repo = NewV1Repo(mirror, options, local)
 	return
 }

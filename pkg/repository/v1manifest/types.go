@@ -15,11 +15,6 @@ package v1manifest
 
 import (
 	"time"
-
-	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
-	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
-	"github.com/pingcap/errors"
-	"golang.org/x/mod/semver"
 )
 
 // Manifest representation for ser/de.
@@ -89,8 +84,9 @@ type Index struct {
 
 // Owner object.
 type Owner struct {
-	Name string              `json:"name"`
-	Keys map[string]*KeyInfo `json:"keys"`
+	Name      string              `json:"name"`
+	Keys      map[string]*KeyInfo `json:"keys"`
+	Threshold int                 `json:"threshold"`
 }
 
 // VersionItem is the manifest structure of a version of a component
@@ -116,10 +112,9 @@ type Component struct {
 
 // ComponentItem object
 type ComponentItem struct {
-	Yanked    bool   `json:"yanked"`
-	Owner     string `json:"owner"`
-	URL       string `json:"url"`
-	Threshold int    `json:"threshold"`
+	Yanked bool   `json:"yanked"`
+	Owner  string `json:"owner"`
+	URL    string `json:"url"`
 }
 
 // Snapshot manifest.
@@ -151,64 +146,6 @@ type FileVersion struct {
 // Base implements ValidManifest
 func (manifest *Root) Base() *SignedBase {
 	return &manifest.SignedBase
-}
-
-func createKeyStore(keys map[string]*KeyInfo) (ks crypto.KeyStore, err error) {
-	ks = crypto.NewKeyStore()
-	for id, info := range keys {
-		pub, err := info.publicKey()
-		if err != nil {
-			return nil, err
-		}
-		ks.Put(id, pub)
-	}
-	return
-}
-
-// GetKeyStore get a KeyStore with all the keys of all roles.
-func (manifest *Root) GetKeyStore() (ks crypto.KeyStore, err error) {
-	ks = crypto.NewKeyStore()
-	for _, role := range manifest.Roles {
-		for id, info := range role.Keys {
-			pub, err := info.publicKey()
-			if err != nil {
-				return nil, err
-			}
-			ks.Put(id, pub)
-		}
-	}
-	return
-}
-
-// GetRootKeyStore create KeyStore of root keys.
-func (manifest *Root) GetRootKeyStore() (ks crypto.KeyStore, err error) {
-	ks = crypto.NewKeyStore()
-
-	role := manifest.Roles[ManifestTypeRoot]
-	for id, info := range role.Keys {
-		pub, err := info.publicKey()
-		if err != nil {
-			return nil, err
-		}
-		ks.Put(id, pub)
-	}
-
-	return
-}
-
-// GetComponentKeys return the threshold and keys for the specified component id.
-func (manifest *Index) GetComponentKeys(id string) (threshold uint, keys map[string]*KeyInfo, err error) {
-	item, ok := manifest.Components[id]
-	if !ok {
-		return 0, nil, errors.Errorf("have no component %s in index, components: %v", id, manifest.Components)
-	}
-
-	owner, ok := manifest.Owners[item.Owner]
-	if !ok {
-		return 0, nil, errors.Errorf("have no owner %s in index", item.Owner)
-	}
-
-	return uint(item.Threshold), owner.Keys, nil
 }
 
 // Base implements ValidManifest
@@ -260,23 +197,4 @@ func (manifest *Timestamp) Filename() string {
 func (manifest *Component) HasNightly() bool {
 	// TODO how to support nightly??
 	return false
-}
-
-// LatestVersion return the latest version of the component.
-func (manifest *Component) LatestVersion(platform string) (v0manifest.Version, *VersionItem, bool) {
-	versions, ok := manifest.Platforms[platform]
-	if !ok || len(versions) == 0 {
-		return "", nil, false
-	}
-
-	var latest string
-	var latestItem VersionItem
-	for version, item := range versions {
-		if latest == "" || semver.Compare(version, latest) < 0 {
-			latest = version
-			latestItem = item
-		}
-	}
-
-	return v0manifest.Version(latest), &latestItem, true
 }
