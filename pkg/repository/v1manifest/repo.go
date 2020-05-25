@@ -120,6 +120,13 @@ func SaveKeyInfo(key *KeyInfo, ty, dir string) error {
 	}
 	defer f.Close()
 
+	if _, found := key.Value["private"]; found {
+		err = f.Chmod(0600)
+		if err != nil {
+			return err
+		}
+	}
+
 	return json.NewEncoder(f).Encode(key)
 }
 
