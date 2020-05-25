@@ -265,6 +265,7 @@ func migrate(srcDir, dstDir string) error {
 		Keys: map[string]*v1manifest.KeyInfo{
 			ownerkeyID: ownerkeyPub,
 		},
+		Threshold: 1,
 	}
 
 	snapshot := v1manifest.NewSnapshot(initTime)
@@ -334,10 +335,9 @@ func migrate(srcDir, dstDir string) error {
 		}
 
 		index.Components[comp.Name] = v1manifest.ComponentItem{
-			Yanked:    false,
-			Owner:     "pingcap",
-			URL:       fmt.Sprintf("/%s", name),
-			Threshold: 1,
+			Yanked: false,
+			Owner:  "pingcap",
+			URL:    fmt.Sprintf("/%s", name),
 		}
 
 		bytes, err := cjson.Marshal(signedManifests[component.ID])

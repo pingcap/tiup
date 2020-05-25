@@ -590,14 +590,14 @@ func indexManifest(t *testing.T) (*v1manifest.Index, crypto.PrivKey) {
 			Version:     5,
 		},
 		Owners: map[string]v1manifest.Owner{"bar": {
-			Name: "Bar",
-			Keys: map[string]*v1manifest.KeyInfo{keyID: info},
+			Name:      "Bar",
+			Keys:      map[string]*v1manifest.KeyInfo{keyID: info},
+			Threshold: 1,
 		}},
 		Components: map[string]v1manifest.ComponentItem{"foo": {
-			Yanked:    false,
-			Owner:     "bar",
-			URL:       "/foo.json",
-			Threshold: 1,
+			Yanked: false,
+			Owner:  "bar",
+			URL:    "/foo.json",
 		}},
 		DefaultComponents: []string{},
 	}, priv

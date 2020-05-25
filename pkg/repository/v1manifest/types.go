@@ -84,8 +84,9 @@ type Index struct {
 
 // Owner object.
 type Owner struct {
-	Name string              `json:"name"`
-	Keys map[string]*KeyInfo `json:"keys"`
+	Name      string              `json:"name"`
+	Keys      map[string]*KeyInfo `json:"keys"`
+	Threshold int                 `json:"threshold"`
 }
 
 // VersionItem is the manifest structure of a version of a component
@@ -111,10 +112,9 @@ type Component struct {
 
 // ComponentItem object
 type ComponentItem struct {
-	Yanked    bool   `json:"yanked"`
-	Owner     string `json:"owner"`
-	URL       string `json:"url"`
-	Threshold int    `json:"threshold"`
+	Yanked bool   `json:"yanked"`
+	Owner  string `json:"owner"`
+	URL    string `json:"url"`
 }
 
 // Snapshot manifest.

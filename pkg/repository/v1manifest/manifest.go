@@ -213,7 +213,7 @@ func (s *SignedBase) isValid() error {
 	}
 
 	if _, ok := knownVersions[s.SpecVersion]; !ok {
-		return fmt.Errorf("unknown manifest version: `%s`", s.SpecVersion)
+		return fmt.Errorf("unknown manifest version: `%s`, you might need to update TiUp", s.SpecVersion)
 	}
 
 	// When updating root, we only check the newest version is not expire.
@@ -427,8 +427,7 @@ func loadKeys(manifest ValidManifest, ks *KeyStore) error {
 	case "index":
 		index := manifest.(*Index)
 		for name, owner := range index.Owners {
-			// TODO threshold
-			if err := ks.AddKeys(name, 1, owner.Keys); err != nil {
+			if err := ks.AddKeys(name, uint(owner.Threshold), owner.Keys); err != nil {
 				return errors.Trace(err)
 			}
 		}
