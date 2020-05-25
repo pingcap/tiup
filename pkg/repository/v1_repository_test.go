@@ -406,12 +406,12 @@ func TestUpdateComponents(t *testing.T) {
 	}})
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
-	assert.Equal(t, "2.0.1", local.Installed["foo"].Version)
+	assert.Equal(t, "v2.0.1", local.Installed["foo"].Version)
 	assert.Equal(t, "foo201", local.Installed["foo"].Contents)
 
 	// Update
 	foo.Version = 8
-	foo.Platforms["plat/form"]["2.0.2"] = versionItem2()
+	foo.Platforms["plat/form"]["v2.0.2"] = versionItem2()
 	mirror.Resources["/8.foo.json"] = serialize(t, foo, indexPriv)
 	mirror.Resources["/foo-2.0.2.tar.gz"] = "foo202"
 	snapshot.Version++
@@ -428,7 +428,7 @@ func TestUpdateComponents(t *testing.T) {
 	}})
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
-	assert.Equal(t, "2.0.2", local.Installed["foo"].Version)
+	assert.Equal(t, "v2.0.2", local.Installed["foo"].Version)
 	assert.Equal(t, "foo202", local.Installed["foo"].Contents)
 
 	// Update; already up to date
@@ -437,17 +437,17 @@ func TestUpdateComponents(t *testing.T) {
 	}})
 	assert.NotNil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
-	assert.Equal(t, "2.0.2", local.Installed["foo"].Version)
+	assert.Equal(t, "v2.0.2", local.Installed["foo"].Version)
 	assert.Equal(t, "foo202", local.Installed["foo"].Contents)
 
 	// Specific version
 	err = repo.UpdateComponents([]ComponentSpec{{
 		ID:      "foo",
-		Version: "2.0.1",
+		Version: "v2.0.1",
 	}})
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
-	assert.Equal(t, "2.0.1", local.Installed["foo"].Version)
+	assert.Equal(t, "v2.0.1", local.Installed["foo"].Version)
 	assert.Equal(t, "foo201", local.Installed["foo"].Contents)
 
 	// Sad paths
@@ -462,11 +462,11 @@ func TestUpdateComponents(t *testing.T) {
 	// Specific version doesn't exist
 	err = repo.UpdateComponents([]ComponentSpec{{
 		ID:      "foo",
-		Version: "2.0.3",
+		Version: "v2.0.3",
 	}})
 	assert.NotNil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
-	assert.Equal(t, "2.0.1", local.Installed["foo"].Version)
+	assert.Equal(t, "v2.0.1", local.Installed["foo"].Version)
 	assert.Equal(t, "foo201", local.Installed["foo"].Contents)
 
 	// Platform not supported
@@ -476,18 +476,18 @@ func TestUpdateComponents(t *testing.T) {
 	}})
 	assert.NotNil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
-	assert.Equal(t, "2.0.1", local.Installed["foo"].Version)
+	assert.Equal(t, "v2.0.1", local.Installed["foo"].Version)
 	assert.Equal(t, "foo201", local.Installed["foo"].Contents)
 
 	// Already installed
 	repo.GOARCH = "form"
 	err = repo.UpdateComponents([]ComponentSpec{{
 		ID:      "foo",
-		Version: "2.0.1",
+		Version: "v2.0.1",
 	}})
 	assert.NotNil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
-	assert.Equal(t, "2.0.1", local.Installed["foo"].Version)
+	assert.Equal(t, "v2.0.1", local.Installed["foo"].Version)
 	assert.Equal(t, "foo201", local.Installed["foo"].Contents)
 
 	// Test that even after one error, other components are handled
@@ -499,7 +499,7 @@ func TestUpdateComponents(t *testing.T) {
 	}})
 	assert.NotNil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
-	assert.Equal(t, "2.0.2", local.Installed["foo"].Version)
+	assert.Equal(t, "v2.0.2", local.Installed["foo"].Version)
 	assert.Equal(t, "foo202", local.Installed["foo"].Contents)
 }
 
@@ -546,7 +546,7 @@ func componentManifest() *v1manifest.Component {
 		Name:        "Foo",
 		Description: "foo does stuff",
 		Platforms: map[string]map[string]v1manifest.VersionItem{
-			"plat/form": {"2.0.1": versionItem()},
+			"plat/form": {"v2.0.1": versionItem()},
 		},
 	}
 }
