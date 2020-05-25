@@ -16,10 +16,10 @@ package repository
 import (
 	"bytes"
 	"fmt"
+	"golang.org/x/mod/semver"
 	"io"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -82,11 +82,17 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
+
 	var errs []string
 	for _, spec := range specs {
 		manifest, err := r.updateComponentManifest(spec.ID)
 		if err != nil {
 			errs = append(errs, err.Error())
+			continue
+		}
+
+		if spec.Version == "nightly" && !manifest.HasNightly() {
+			errs = append(errs, fmt.Sprintf("the component `%s` does not have a nightly version; skipped", spec.ID))
 			continue
 		}
 
@@ -137,6 +143,11 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 // ensureManifests ensures that the snapshot, root, and index manifests are up to date and saved in r.local.
 // Returns true if the timestamp has changed,
 func (r *V1Repository) ensureManifests() (bool, error) {
+	// Load the root manifest from disk to populate the key store.
+	var root v1manifest.Root
+	_, _ = r.local.LoadManifest(&root)
+	// We can ignore errors here since we'll try again later.
+
 	// Update snapshot.
 	snapshot, err := r.updateLocalSnapshot()
 	if err != nil {
@@ -153,13 +164,13 @@ func (r *V1Repository) ensureManifests() (bool, error) {
 	}
 
 	// Check that the version of root we have is the same as declared in the snapshot.
-	root, err := r.loadRoot()
+	newRoot, err := r.loadRoot()
 	if err != nil {
 		return false, errors.Trace(err)
 	}
 	snapRootVersion := snapshot.Meta[v1manifest.ManifestURLRoot].Version
-	if root.Version != snapRootVersion {
-		return false, fmt.Errorf("root version mismatch. Expected: %v, found: %v", snapRootVersion, root.Version)
+	if newRoot.Version != snapRootVersion {
+		return false, fmt.Errorf("root version mismatch. Expected: %v, found: %v", snapRootVersion, newRoot.Version)
 	}
 
 	// Update index (if needed).
@@ -180,15 +191,16 @@ func (r *V1Repository) selectVersion(id string, versions map[string]v1manifest.V
 	// TODO we should check what version the user has currently installed and only update to the same semver major version unless they force upgrade.
 
 	if target == "" {
-		versionSlice := make([]string, 0, len(versions))
-		for v := range versions {
-			versionSlice = append(versionSlice, v)
+		var latest string
+		var latestItem v1manifest.VersionItem
+		for version, item := range versions {
+			if latest == "" || semver.Compare("v"+version, "v"+latest) > 0 {
+				latest = version
+				latestItem = item
+			}
 		}
-		sort.Strings(versionSlice)
-		// TODO I think it is not actually correct semver order because versions can have a text suffix.
-		version := versionSlice[len(versionSlice)-1]
-		item := versions[version]
-		return version, &item, nil
+
+		return latest, &latestItem, nil
 	}
 
 	item, ok := versions[target]
@@ -582,7 +594,7 @@ func (r *V1Repository) ComponentVersion(id, version string) (*v1manifest.Version
 // BinaryPath return the binary path of the component.
 // Support you have install the component, need to get entry from local manifest.
 // Load the manifest locally only to get then Entry, do not force do something need access mirror.
-func (r *V1Repository) BinaryPath(installPath string, componentID string, version v0manifest.Version) (string, error) {
+func (r *V1Repository) BinaryPath(installPath string, componentID string, version string) (string, error) {
 	var index v1manifest.Index
 	_, err := r.local.LoadManifest(&index)
 	if err != nil {
@@ -591,17 +603,18 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, versio
 
 	filename := v1manifest.ComponentManifestFilename(componentID)
 
-	component, err := r.local.LoadComponentManifest(&index, filename)
+	item := index.Components[componentID]
+	component, err := r.local.LoadComponentManifest(&item, filename)
 	if err != nil {
 		return "", err
 	}
 
-	item, ok := component.Platforms[r.PlatformString()][string(version)]
+	versionItem, ok := component.Platforms[r.PlatformString()][version]
 	if !ok {
 		return "", errors.Errorf("no version: %s", version)
 	}
 
-	entry := item.Entry
+	entry := versionItem.Entry
 	if entry == "" {
 		return "", errors.Errorf("cannot found entry for %s:%s", componentID, version)
 	}

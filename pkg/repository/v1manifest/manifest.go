@@ -17,6 +17,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/pingcap-incubator/tiup/pkg/set"
 	"io"
 	"strings"
 	"time"
@@ -371,6 +372,15 @@ func ReadComponentManifest(input io.Reader, com *Component, item *ComponentItem,
 	}
 
 	return &m, m.Signed.isValid()
+}
+
+// ReadNoVerify will read role from input and will not do any validation or verification. It is very dangerous to use
+// this function and it should only be used to read trusted data from local storage.
+func ReadNoVerify(input io.Reader, role ValidManifest) error {
+	decoder := json.NewDecoder(input)
+	var m Manifest
+	m.Signed = role
+	return decoder.Decode(&m)
 }
 
 // ReadManifest reads a manifest from input and validates it, the result is stored in role, which must be a pointer type.

@@ -66,7 +66,9 @@ func InitEnv(options repository.Options) (*Environment, error) {
 	if os.Getenv(EnvNameV1) == "" {
 		repo, err = repository.NewRepository(mirror, options)
 	} else {
-		v1repo = repository.NewV1Repo(mirror, options, v1manifest.NewManifests(profile))
+		var local v1manifest.LocalManifests
+		local, err = v1manifest.NewManifests(profile)
+		v1repo = repository.NewV1Repo(mirror, options, local)
 	}
 
 	return &Environment{profile, repo, v1repo}, err
@@ -170,52 +172,13 @@ func (env *Environment) SelfUpdate() error {
 }
 
 func (env *Environment) downloadComponentv1(component string, version v0manifest.Version, overwrite bool) error {
-	com, err := env.v1Repo.FetchComponentManifest(component)
-	if err != nil {
-		return err
+	spec := repository.ComponentSpec{
+		ID:      component,
+		Version: string(version),
+		Force:   overwrite,
 	}
 
-	if version.IsNightly() && !com.HasNightly() {
-		fmt.Printf("The component `%s` does not have a nightly version; skipped.\n", component)
-		return nil
-	}
-
-	platform := env.v1Repo.PlatformString()
-	var versionIem *v1manifest.VersionItem
-	if version.IsEmpty() {
-		var ok bool
-		version, versionIem, ok = com.LatestVersion(platform)
-		if !ok {
-			fmt.Printf("The component `%s` does not support %s; skipped.\n", component, platform)
-			return nil
-		}
-	} else {
-		versions, ok := com.Platforms[platform]
-		if !ok {
-			fmt.Printf("The component `%s` does not support %s; skipped.\n", component, platform)
-			return nil
-		}
-		item, ok := versions[string(version)]
-		if !ok {
-			fmt.Printf("The component `%s` does not support %s; skipped.\n", component, version)
-			return nil
-		}
-		versionIem = &item
-	}
-
-	if !overwrite {
-		// Ignore if installed
-		found, err := env.profile.VersionIsInstalled(component, version.String())
-		if err != nil {
-			return err
-		}
-		if found {
-			fmt.Printf("The component `%s:%s` has been installed.\n", component, version)
-			return nil
-		}
-	}
-
-	return env.v1Repo.DownloadComponent(component, version, versionIem)
+	return env.v1Repo.UpdateComponents([]repository.ComponentSpec{spec})
 }
 
 // downloadComponent downloads the specific version of a component from repository
@@ -324,7 +287,7 @@ func (env *Environment) BinaryPath(component string, version v0manifest.Version)
 		if err != nil {
 			return "", err
 		}
-		return env.v1Repo.BinaryPath(installPath, component, version)
+		return env.v1Repo.BinaryPath(installPath, component, string(version))
 	}
 
 	return env.profile.BinaryPath(component, version)

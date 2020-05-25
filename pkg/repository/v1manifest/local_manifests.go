@@ -42,7 +42,7 @@ type LocalManifests interface {
 	// ComponentInstalled is true if the version of component is present locally.
 	ComponentInstalled(component, version string) (bool, error)
 	// InstallComponent installs the component from the reader.
-	InstallComponent(reader io.Reader, component, version, filename string, noExpand bool) error
+	InstallComponent(reader io.Reader, targetDir, component, version, filename string, noExpand bool) error
 	// Return the local key store.
 	KeyStore() *KeyStore
 	// ManifestVersion opens filename, if it exists and is a manifest, returns its manifest version number. Otherwise
@@ -63,8 +63,34 @@ type FsManifests struct {
 
 // NewManifests creates a new FsManifests with local store at root.
 // There must exists the trusted root.json.
-func NewManifests(profile *localdata.Profile) *FsManifests {
-	return &FsManifests{profile: profile, keys: NewKeyStore(), cache: make(map[string]string)}
+func NewManifests(profile *localdata.Profile) (*FsManifests, error) {
+	result := &FsManifests{profile: profile, keys: NewKeyStore(), cache: make(map[string]string)}
+
+	manifest, err := result.load(ManifestFilenameRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	var root Root
+	err = ReadNoVerify(strings.NewReader(manifest), &root)
+	if err != nil {
+		return nil, err
+	}
+
+	err = loadKeys(&root, result.keys)
+	if err != nil {
+		return nil, err
+	}
+
+	// Now that we've bootstrapped the key store, we can verify the root manifest we loaded earlier.
+	_, err = ReadManifest(strings.NewReader(manifest), &root, result.keys)
+	if err != nil {
+		return nil, err
+	}
+
+	result.cache[ManifestFilenameRoot] = manifest
+
+	return result, nil
 }
 
 // SaveManifest implements LocalManifests.
@@ -159,7 +185,7 @@ func (ms *FsManifests) ComponentInstalled(component, version string) (bool, erro
 }
 
 // InstallComponent implements LocalManifests.
-func (ms *FsManifests) InstallComponent(reader io.Reader, targetDir string, component, version, filename string, noExpand bool) error {
+func (ms *FsManifests) InstallComponent(reader io.Reader, targetDir, component, version, filename string, noExpand bool) error {
 	// TODO factor path construction to profile (also used by v0 repo).
 	if targetDir == "" {
 		targetDir = ms.profile.Path(localdata.ComponentParentDir, component, version)

@@ -781,6 +781,8 @@ func createMigrateRepo(t *testing.T, mdir string) (repo *V1Repository, profileDi
 	profile := localdata.InitProfile()
 	options := Options{}
 	mirror := NewMirror(mdir, MirrorOptions{})
-	repo = NewV1Repo(mirror, options, v1manifest.NewManifests(profile))
+	local, err := v1manifest.NewManifests(profile)
+	assert.Nil(t, err)
+	repo = NewV1Repo(mirror, options, local)
 	return
 }

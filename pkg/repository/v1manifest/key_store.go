@@ -97,7 +97,8 @@ func (s *KeyStore) transitionRoot(signed []byte, newThreshold uint, signatures [
 }
 
 // verifySignature verifies all supplied signatures are correct for signed. Also, that there are at least threshold signatures,
-// and that they all belong to the correct role.
+// and that they all belong to the correct role and are correct for signed. It is permissible for signature keys to not
+// exist (they will be ignored, and not count towards the threshold) but not for a signature to be incorrect.
 func (s *KeyStore) verifySignature(signed []byte, role string, signatures []Signature, filename string) error {
 	if s == nil {
 		return nil

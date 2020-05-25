@@ -198,22 +198,3 @@ func (manifest *Component) HasNightly() bool {
 	// TODO how to support nightly??
 	return false
 }
-
-// LatestVersion return the latest version of the component.
-func (manifest *Component) LatestVersion(platform string) (v0manifest.Version, *VersionItem, bool) {
-	versions, ok := manifest.Platforms[platform]
-	if !ok || len(versions) == 0 {
-		return "", nil, false
-	}
-
-	var latest string
-	var latestItem VersionItem
-	for version, item := range versions {
-		if latest == "" || semver.Compare(version, latest) < 0 {
-			latest = version
-			latestItem = item
-		}
-	}
-
-	return v0manifest.Version(latest), &latestItem, true
-}
