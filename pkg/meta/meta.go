@@ -83,6 +83,11 @@ func (env *Environment) Repository() *repository.Repository {
 	return env.repo
 }
 
+// V1Repository returns the initialized v1 repository
+func (env *Environment) V1Repository() *repository.V1Repository {
+	return env.v1Repo
+}
+
 // Profile returns the profile of local data
 func (env *Environment) Profile() *localdata.Profile {
 	return env.profile
@@ -165,7 +170,7 @@ func (env *Environment) SelfUpdate() error {
 }
 
 func (env *Environment) downloadComponentv1(component string, version v0manifest.Version, overwrite bool) error {
-	com, err := env.v1Repo.FetchComponent(component)
+	com, err := env.v1Repo.FetchComponentManifest(component)
 	if err != nil {
 		return err
 	}

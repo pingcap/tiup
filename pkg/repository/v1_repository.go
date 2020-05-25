@@ -71,6 +71,11 @@ func NewV1Repo(mirror Mirror, opts Options, local v1manifest.LocalManifests) *V1
 const maxTimeStampSize uint = 1024
 const maxRootSize uint = 1024 * 1024
 
+// Mirror returns Mirror
+func (r *V1Repository) Mirror() Mirror {
+	return r.mirror
+}
+
 // UpdateComponents updates the components described by specs.
 func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 	_, err := r.ensureManifests()
@@ -109,7 +114,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			}
 		}
 
-		reader, err := r.downloadComponent(versionItem)
+		reader, err := r.FetchComponent(versionItem)
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
@@ -389,7 +394,7 @@ func (r *V1Repository) DownloadComponent(
 	version v0manifest.Version,
 	versionItem *v1manifest.VersionItem,
 ) error {
-	cr, err := r.downloadComponent(versionItem)
+	cr, err := r.FetchComponent(versionItem)
 	if err != nil {
 		return err
 	}
@@ -400,8 +405,8 @@ func (r *V1Repository) DownloadComponent(
 	return r.local.InstallComponent(cr, "", component, string(version), filename, r.DisableDecompress)
 }
 
-// downloadComponent downloads the component specified by item.
-func (r *V1Repository) downloadComponent(item *v1manifest.VersionItem) (io.Reader, error) {
+// FetchComponent downloads the component specified by item.
+func (r *V1Repository) FetchComponent(item *v1manifest.VersionItem) (io.Reader, error) {
 	reader, err := r.mirror.Fetch(item.URL, int64(item.Length))
 	if err != nil {
 		return nil, err
@@ -534,8 +539,8 @@ func (r *V1Repository) loadRoot() (*v1manifest.Root, error) {
 	return root, nil
 }
 
-// FetchIndex fetch the index manifest.
-func (r *V1Repository) FetchIndex() (index *v1manifest.Index, err error) {
+// FetchIndexManifest fetch the index manifest.
+func (r *V1Repository) FetchIndexManifest() (index *v1manifest.Index, err error) {
 	_, err = r.ensureManifests()
 	if err != nil {
 		return nil, errors.AddStack(err)
@@ -565,14 +570,27 @@ func (r *V1Repository) DownloadTiup(targetDir string) error {
 	return r.UpdateComponents([]ComponentSpec{spec})
 }
 
-// FetchComponent fetch the component manifest.
-func (r *V1Repository) FetchComponent(id string) (com *v1manifest.Component, err error) {
+// FetchComponentManifest fetch the component manifest.
+func (r *V1Repository) FetchComponentManifest(id string) (com *v1manifest.Component, err error) {
 	_, err = r.ensureManifests()
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
 
 	return r.updateComponentManifest(id)
+}
+
+// ComponentVersion returns version item of a component
+func (r *V1Repository) ComponentVersion(id, version string) (*v1manifest.VersionItem, error) {
+	manifest, err := r.FetchComponentManifest(id)
+	if err != nil {
+		return nil, err
+	}
+	vi := manifest.VersionItem(r.PlatformString(), version)
+	if vi == nil {
+		return nil, fmt.Errorf("version %s on %s for component %s not found", version, r.PlatformString(), id)
+	}
+	return vi, nil
 }
 
 // BinaryPath return the binary path of the component.

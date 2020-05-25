@@ -5,7 +5,6 @@
         "command": "tiup update --self",
         "path": "tiup/tiup-self-update.output"
     },
-    
     {
         "command": "tiup -h",
         "path": "tiup/tiup-h.output"
