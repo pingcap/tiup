@@ -22,7 +22,6 @@ import (
 	"path/filepath"
 
 	cjson "github.com/gibson042/canonicaljson-go"
-
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 )
 

@@ -21,16 +21,13 @@ import (
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
-
-	"github.com/pingcap-incubator/tiup/pkg/version"
-	"golang.org/x/mod/semver"
-
-	"github.com/pingcap/errors"
-
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap-incubator/tiup/pkg/version"
+	"github.com/pingcap/errors"
+	"golang.org/x/mod/semver"
 )
 
 // CloneOptions represents the options of clone a remote mirror

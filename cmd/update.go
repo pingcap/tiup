@@ -30,7 +30,7 @@ func newUpdateCmd(env *meta.Environment) *cobra.Command {
 to update to the latest nightly version. Use --all to update all components 
 installed locally. Use <component>:<version> to update to the specified 
 version. Components will be ignored if the latest version has already been 
-installed locally, but you can use --force explicitly to Overwrite an 
+installed locally, but you can use --force explicitly to overwrite an 
 existing installation. Use --self which is used to update TiUP to the 
 latest version. All other flags will be ignored if the flag --self is given.
 
