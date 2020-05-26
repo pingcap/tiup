@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap-incubator/tiup/pkg/tui"
 	"github.com/spf13/cobra"
 )
@@ -84,13 +85,44 @@ func showComponentList(env *meta.Environment, onlyInstalled bool, refresh bool) 
 		return nil, err
 	}
 
-	var cmpTable [][]string
-	cmpTable = append(cmpTable, []string{"Name", "Owner"})
+	installed, err := env.Profile().InstalledComponents()
+	if err != nil {
+		return nil, err
+	}
 
+	var cmpTable [][]string
+	cmpTable = append(cmpTable, []string{"Name", "Owner", "Installed", "Platforms", "Description"})
+
+	localComponents := set.NewStringSet(installed...)
 	for name, comp := range index.Components {
+		if onlyInstalled && !localComponents.Exist(name) {
+			continue
+		}
+		installStatus := ""
+		if localComponents.Exist(name) {
+			versions, err := env.Profile().InstalledVersions(name)
+			if err != nil {
+				return nil, err
+			}
+			installStatus = fmt.Sprintf("YES(%s)", strings.Join(versions, ","))
+		}
+
+		manifest, err := env.V1Repository().FetchComponentManifest(name)
+		if err != nil {
+			return nil, err
+		}
+
+		platforms := []string{}
+		for p := range manifest.Platforms {
+			platforms = append(platforms, p)
+		}
+
 		cmpTable = append(cmpTable, []string{
 			name,
 			comp.Owner,
+			installStatus,
+			strings.Join(platforms, ","),
+			manifest.Description,
 		})
 	}
 
@@ -106,8 +138,14 @@ func showComponentVersions(env *meta.Environment, component string, onlyInstalle
 		return nil, err
 	}
 
+	versions, err := env.Profile().InstalledVersions(component)
+	if err != nil {
+		return nil, err
+	}
+	installed := set.NewStringSet(versions...)
+
 	var cmpTable [][]string
-	cmpTable = append(cmpTable, []string{"Version", "Release", "Platforms"})
+	cmpTable = append(cmpTable, []string{"Version", "Installed", "Release", "Platforms"})
 
 	platforms := make(map[string][]string)
 	released := make(map[string]string)
@@ -120,7 +158,11 @@ func showComponentVersions(env *meta.Environment, component string, onlyInstalle
 	}
 
 	for v := range platforms {
-		cmpTable = append(cmpTable, []string{v, released[v], strings.Join(platforms[v], ",")})
+		installStatus := ""
+		if installed.Exist(v) {
+			installStatus = "YES"
+		}
+		cmpTable = append(cmpTable, []string{v, installStatus, released[v], strings.Join(platforms[v], ",")})
 	}
 
 	return &listResult{
