@@ -396,7 +396,7 @@ func newMirrorCloneCmd(env *meta.Environment) *cobra.Command {
 	repo := env.V1Repository()
 	index, err := repo.FetchIndexManifest()
 	if err != nil {
-		fmt.Println(color.YellowString("Warning: cannot fetch component list from mirror: %+v", err))
+		fmt.Println(color.YellowString("Warning: cannot fetch component list from mirror: %v", err))
 	}
 
 	var components []string
