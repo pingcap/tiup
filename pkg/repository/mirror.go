@@ -14,6 +14,7 @@
 package repository
 
 import (
+	stderrors "errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -31,7 +32,7 @@ import (
 )
 
 // ErrNotFound represents the resource not exists.
-var ErrNotFound = errors.New("not found")
+var ErrNotFound = stderrors.New("not found")
 
 type (
 	// DownloadProgress represents the download progress notifier
@@ -213,8 +214,7 @@ L:
 }
 
 func (l *httpMirror) prepareURL(resource string) string {
-	url := strings.TrimSuffix(l.server, "/") + "/" + resource
-
+	url := strings.TrimSuffix(l.server, "/") + "/" + strings.TrimPrefix(resource, "/")
 	// Force CDN to refresh if the resource name starts with TiupBinaryName.
 	if strings.HasPrefix(resource, TiupBinaryName) {
 		nano := time.Now().UnixNano()

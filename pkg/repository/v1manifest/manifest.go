@@ -386,7 +386,7 @@ func ReadNoVerify(input io.Reader, role ValidManifest) error {
 // ReadManifest reads a manifest from input and validates it, the result is stored in role, which must be a pointer type.
 func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifest, error) {
 	if role.Base().Ty == ManifestTypeComponent {
-		return nil, errors.New("Trying to read component manifest as non-component manifest")
+		return nil, errors.New("trying to read component manifest as non-component manifest")
 	}
 
 	decoder := json.NewDecoder(input)
@@ -427,14 +427,14 @@ func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifes
 // loadKeys stores all keys declared in manifest into ks.
 func loadKeys(manifest ValidManifest, ks *KeyStore) error {
 	switch manifest.Base().Ty {
-	case "root":
+	case ManifestTypeRoot:
 		root := manifest.(*Root)
 		for name, role := range root.Roles {
 			if err := ks.AddKeys(name, role.Threshold, manifest.Base().Expires, role.Keys); err != nil {
 				return errors.Trace(err)
 			}
 		}
-	case "index":
+	case ManifestTypeIndex:
 		index := manifest.(*Index)
 		for name, owner := range index.Owners {
 			if err := ks.AddKeys(name, uint(owner.Threshold), manifest.Base().Expires, owner.Keys); err != nil {
