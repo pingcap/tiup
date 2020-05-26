@@ -114,7 +114,7 @@ func SaveKeyInfo(key *KeyInfo, ty, dir string) error {
 		return err
 	}
 
-	f, err := os.Create(path.Join(dir, fmt.Sprintf("%s-%s.json", id[:16], ty)))
+	f, err := os.Create(path.Join(dir, fmt.Sprintf("%s-%s.json", id[:ShortKeyIDLength], ty)))
 	if err != nil {
 		return err
 	}
@@ -396,7 +396,7 @@ func (manifest *Timestamp) SetSnapshot(s *Manifest) (*Timestamp, error) {
 	if manifest.Meta == nil {
 		manifest.Meta = make(map[string]FileHash)
 	}
-	manifest.Meta[s.Signed.Base().Filename()] = FileHash{
+	manifest.Meta[fmt.Sprintf("/%s", s.Signed.Base().Filename())] = FileHash{
 		Hashes: map[string]string{
 			SHA256: hex.EncodeToString(hash256[:]),
 			SHA512: hex.EncodeToString(hash512[:]),

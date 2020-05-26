@@ -22,6 +22,9 @@ import (
 	"github.com/pingcap/errors"
 )
 
+// ShortKeyIDLength is the number of bytes used for filenames
+const ShortKeyIDLength = 16
+
 // ErrorNotPrivateKey indicate that it need a private key, but the supplied is not.
 var ErrorNotPrivateKey = errors.New("not a private key")
 
