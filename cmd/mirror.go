@@ -17,7 +17,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"time"
+
+	"github.com/pingcap-incubator/tiup/pkg/repository"
+
+	"github.com/fatih/color"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
@@ -30,16 +35,15 @@ var (
 	repoPath string
 )
 
-func newRepoCmd(env *meta.Environment) *cobra.Command {
+func newMirrorCmd(env *meta.Environment) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "repo <command>",
-		Short: "Manage a repository for TiUP components",
-		Long: `The 'repo' command is used to manage a component repository for TiUP, you can use
+		Use:   "mirror <command>",
+		Short: "Manage a repository mirror for TiUP components",
+		Long: `The 'mirror' command is used to manage a component repository for TiUP, you can use
 it to create a private repository, or to add new component to an existing repository.
 The repository can be used either online or offline.
 It also provides some useful utilities to help managing keys, users and versions
 of components or the repository itself.`,
-		Hidden: true, // WIP, remove when it becomes working and stable
 		Args: func(cmd *cobra.Command, args []string) error {
 			if repoPath == "" {
 				var err error
@@ -61,20 +65,21 @@ of components or the repository itself.`,
 	cmd.PersistentFlags().StringVar(&repoPath, "repo", "", "Path to the repository")
 
 	cmd.AddCommand(
-		newRepoInitCmd(env),
-		newRepoSignCmd(env),
-		newRepoOwnerCmd(env),
-		newRepoCompCmd(env),
-		newRepoAddCompCmd(env),
-		newRepoYankCompCmd(env),
-		newRepoDelCompCmd(env),
-		newRepoGenkeyCmd(env),
+		newMirrorInitCmd(env),
+		newMirrorSignCmd(env),
+		newMirrorOwnerCmd(env),
+		newMirrorCompCmd(env),
+		newMirrorAddCompCmd(env),
+		newMirrorYankCompCmd(env),
+		newMirrorDelCompCmd(env),
+		newMirrorGenkeyCmd(env),
+		newMirrorCloneCmd(env),
 	)
 	return cmd
 }
 
-// the `repo sign` sub command
-func newRepoSignCmd(env *meta.Environment) *cobra.Command {
+// the `mirror sign` sub command
+func newMirrorSignCmd(env *meta.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sign <manifest-file> [key-files]",
 		Short: "Add signatures to a manifest file",
@@ -94,13 +99,14 @@ func newRepoSignCmd(env *meta.Environment) *cobra.Command {
 	return cmd
 }
 
-// the `repo add` sub command
-func newRepoAddCompCmd(env *meta.Environment) *cobra.Command {
+// the `mirror add` sub command
+func newMirrorAddCompCmd(env *meta.Environment) *cobra.Command {
 	var nightly bool // if this is a nightly version
 	cmd := &cobra.Command{
-		Use:   "add <component-id> <platform> <version> <file>",
-		Short: "Add a file to a component",
-		Long:  `Add a file to a component, and set its metadata of platform ID and version.`,
+		Use:    "add <component-id> <platform> <version> <file>",
+		Short:  "Add a file to a component",
+		Long:   `Add a file to a component, and set its metadata of platform ID and version.`,
+		Hidden: true, // WIP, remove when it becomes working and stable
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 4 {
 				return cmd.Help()
@@ -122,12 +128,13 @@ func addCompFile(repo, id, platform, version, file string, nightly bool) error {
 	return nil
 }
 
-// the `repo component` sub command
-func newRepoCompCmd(env *meta.Environment) *cobra.Command {
+// the `mirror component` sub command
+func newMirrorCompCmd(env *meta.Environment) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "component <id> <description>",
-		Short: "Create a new component in the repository",
-		Long:  `Create a new component in the repository, and sign with the local owner key.`,
+		Use:    "component <id> <description>",
+		Short:  "Create a new component in the repository",
+		Long:   `Create a new component in the repository, and sign with the local owner key.`,
+		Hidden: true, // WIP, remove when it becomes working and stable
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 2 {
 				return cmd.Help()
@@ -145,8 +152,8 @@ func createComp(repo, id, name string) error {
 	return nil
 }
 
-// the `repo del` sub command
-func newRepoDelCompCmd(env *meta.Environment) *cobra.Command {
+// the `mirror del` sub command
+func newMirrorDelCompCmd(env *meta.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "del <component> [version]",
 		Short: "Delete a component from the repository",
@@ -155,6 +162,7 @@ of the given component will be deleted.
 Manifests and files of a deleted component will be removed from the repository,
 clients can no longer fetch the component, but files already download by clients
 may still be available for them.`,
+		Hidden: true, // WIP, remove when it becomes working and stable
 		RunE: func(cmd *cobra.Command, args []string) error {
 			compVer := ""
 			switch len(args) {
@@ -178,8 +186,8 @@ func delComp(repo, id, version string) error {
 	return nil
 }
 
-// the `repo genkey` sub command
-func newRepoGenkeyCmd(env *meta.Environment) *cobra.Command {
+// the `mirror genkey` sub command
+func newMirrorGenkeyCmd(env *meta.Environment) *cobra.Command {
 	var (
 		showPublic bool
 		saveKey    bool
@@ -278,8 +286,8 @@ func newRepoGenkeyCmd(env *meta.Environment) *cobra.Command {
 	return cmd
 }
 
-// the `repo init` sub command
-func newRepoInitCmd(env *meta.Environment) *cobra.Command {
+// the `mirror init` sub command
+func newMirrorInitCmd(env *meta.Environment) *cobra.Command {
 	var (
 		keyDir string // Directory to write genreated key files
 	)
@@ -322,13 +330,14 @@ func initRepo(path, keyDir string) error {
 	return v1manifest.Init(path, keyDir, time.Now().UTC())
 }
 
-// the `repo owner` sub command
-func newRepoOwnerCmd(env *meta.Environment) *cobra.Command {
+// the `mirror owner` sub command
+func newMirrorOwnerCmd(env *meta.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "owner <id> <name>",
 		Short: "Create a new owner for the repository",
 		Long: `Create a new owner role for the repository, the owner can then perform management
 actions on authorized resources.`,
+		Hidden: true, // WIP, remove when it becomes working and stable
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 2 {
 				return cmd.Help()
@@ -346,8 +355,8 @@ func createOwner(repo, id, name string) error {
 	return nil
 }
 
-// the `repo yank` sub command
-func newRepoYankCompCmd(env *meta.Environment) *cobra.Command {
+// the `mirror yank` sub command
+func newMirrorYankCompCmd(env *meta.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "yank <component> [version]",
 		Short: "Yank a component in the repository",
@@ -356,6 +365,7 @@ of the given component will be yanked.
 A yanked component is still in the repository, but not visible to client, and is
 no longer considered stable to use. A yanked component is expected to be removed
 from the repository in the future.`,
+		Hidden: true, // WIP, remove when it becomes working and stable
 		RunE: func(cmd *cobra.Command, args []string) error {
 			compVer := ""
 			switch len(args) {
@@ -375,4 +385,58 @@ from the repository in the future.`,
 func yankComp(repo, id, version string) error {
 	// TODO
 	return nil
+}
+
+// the `mirror clone` sub command
+func newMirrorCloneCmd(env *meta.Environment) *cobra.Command {
+	options := repository.CloneOptions{
+		Components: map[string]*[]string{},
+	}
+
+	repo := env.V1Repository()
+	index, err := repo.FetchIndexManifest()
+	if err != nil {
+		fmt.Println(color.YellowString("Warning: cannot fetch component list from mirror: %v", err))
+	}
+
+	var components []string
+	if index != nil && len(index.Components) > 0 {
+		for name := range index.Components {
+			components = append(components, name)
+		}
+	}
+	sort.Strings(components)
+
+	cmd := &cobra.Command{
+		Use: "clone <target-dir> [global version]",
+		Example: `  tiup mirror clone /path/to/local --arch amd64,arm --os linux,darwin    # Specify the architectures and OSs
+  tiup mirror clone /path/to/local --full                                # Build a full local mirror
+  tiup mirror clone /path/to/local --tikv v4                             # Specify the version via prefix
+  tiup mirror clone /path/to/local --tidb all --pd all                   # Download all version for specific component`,
+		Short:        "Clone a local mirror from remote mirror and download all selected components",
+		SilenceUsage: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) < 1 {
+				return cmd.Help()
+			}
+
+			if len(components) < 1 {
+				return errors.New("component list doesn't contain components")
+			}
+
+			return repository.CloneMirror(repo, components, args[0], args[1:], options)
+		},
+	}
+
+	cmd.Flags().SortFlags = false
+	cmd.Flags().BoolVarP(&options.Full, "full", "f", false, "Build a full mirrors repository")
+	cmd.Flags().StringSliceVarP(&options.Archs, "arch", "a", []string{"amd64", "arm64"}, "Specify the downloading architecture")
+	cmd.Flags().StringSliceVarP(&options.OSs, "os", "o", []string{"linux", "darwin"}, "Specify the downloading os")
+
+	for _, name := range components {
+		options.Components[name] = new([]string)
+		cmd.Flags().StringSliceVar(options.Components[name], name, nil, "Specify the versions for component "+name)
+	}
+
+	return cmd
 }

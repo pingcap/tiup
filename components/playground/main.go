@@ -261,6 +261,7 @@ func bootCluster(options *bootOptions) error {
 	}
 
 	profile := localdata.InitProfile()
+
 	for _, comp := range []string{"pd", "tikv", "tidb", "tiflash"} {
 		if pathMap[comp] != "" {
 			continue
