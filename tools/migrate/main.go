@@ -170,10 +170,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		root  *v1manifest.Root
 		index *v1manifest.Index
 	)
-	manifests := map[string]v1manifest.ValidManifest{
-		v1manifest.ManifestTypeRoot:  root,
-		v1manifest.ManifestTypeIndex: index,
-	}
+
 	signedManifests := make(map[string]*v1manifest.Manifest)
 
 	snapshot := v1manifest.NewSnapshot(initTime)
@@ -209,6 +206,11 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 	} else {
 		root = v1manifest.NewRoot(initTime)
 		index = v1manifest.NewIndex(initTime)
+	}
+
+	manifests := map[string]v1manifest.ValidManifest{
+		v1manifest.ManifestTypeRoot:  root,
+		v1manifest.ManifestTypeIndex: index,
 	}
 
 	// TODO: bootstrap a server instead of generating key

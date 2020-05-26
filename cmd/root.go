@@ -137,7 +137,7 @@ the latest stable version will be downloaded from the repository.`,
 // Execute parses the command line arguments and calls proper functions
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(color.RedString("Error: %v", err))
+		fmt.Println(color.RedString("Error: %+v", err))
 		os.Exit(1)
 	}
 }

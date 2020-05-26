@@ -18,6 +18,7 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -34,7 +35,7 @@ import (
 )
 
 // ErrorInsufficientKeys indicates that the key number is less than threshold
-var ErrorInsufficientKeys = errors.New("not enough keys supplied")
+var ErrorInsufficientKeys = stderrors.New("not enough keys supplied")
 
 // Init creates and initializes an empty reposityro
 func Init(dst, keyDir string, initTime time.Time) (err error) {
