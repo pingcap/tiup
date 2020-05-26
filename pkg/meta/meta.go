@@ -65,15 +65,15 @@ func InitEnv(options repository.Options) (*Environment, error) {
 	var v1repo *repository.V1Repository
 	var err error
 
-	if v0 := os.Getenv(EnvNameV0); v0 != "" && strings.ToLower(v0) != "disable" {
-		repo, err = repository.NewRepository(mirror, options)
+	if env := os.Getenv(EnvNameV0); env == "" || env == "disable" || env == "false" {
+		var local v1manifest.LocalManifests
+		local, err = v1manifest.NewManifests(profile)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
-	} else {
-		var local v1manifest.LocalManifests
-		local, err = v1manifest.NewManifests(profile)
 		v1repo = repository.NewV1Repo(mirror, options, local)
+	} else {
+		repo, err = repository.NewRepository(mirror, options)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}

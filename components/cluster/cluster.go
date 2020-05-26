@@ -78,7 +78,7 @@ func (r *repositoryT) VerifyComponent(comp, version, target string) error {
 		return err
 	}
 
-	file, err := os.Create(target)
+	file, err := os.Open(target)
 	if err != nil {
 		return err
 	}
