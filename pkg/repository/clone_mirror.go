@@ -247,7 +247,7 @@ func cloneComponents(repo *V1Repository,
 	for _, name := range components {
 		manifest, err := repo.FetchComponentManifest(name)
 		if err != nil {
-			return nil, errors.Annotatef(err, "fetch component '%s' manifest", name)
+			return nil, errors.Annotatef(err, "fetch component '%s' manifest failed", name)
 		}
 
 		vs := combineVersions(options.Components[name], manifest, options.OSs, options.Archs, selectedVersions)

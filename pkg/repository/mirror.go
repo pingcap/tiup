@@ -14,6 +14,7 @@
 package repository
 
 import (
+	stderrors "errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -31,7 +32,7 @@ import (
 )
 
 // ErrNotFound represents the resource not exists.
-var ErrNotFound = errors.New("not found")
+var ErrNotFound = stderrors.New("not found")
 
 type (
 	// DownloadProgress represents the download progress notifier
