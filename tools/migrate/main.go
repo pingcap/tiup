@@ -194,7 +194,18 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 	}
 	signedManifests := make(map[string]*v1manifest.Manifest)
 
-	if rehash {
+	snapshot := v1manifest.NewSnapshot(initTime)
+
+	if rehash { // read exist manifests
+		s := &v1manifest.Manifest{
+			Signed: &v1manifest.Snapshot{},
+		}
+		err = readManifest1(dstDir, filepath.Join("manifests", snapshot.Filename()), s)
+		if err != nil {
+			return err
+		}
+		snapshot = s.Signed.(*v1manifest.Snapshot)
+
 		r := &v1manifest.Manifest{
 			Signed: &v1manifest.Root{},
 		}
@@ -207,7 +218,9 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 			Signed: &v1manifest.Index{},
 		}
 		fmt.Println("reading index.json")
-		if err := readManifest1(dstDir, filepath.Join("manifests", "1."+index.Filename()), i); err != nil {
+		fname := fmt.Sprintf("%d.%s",
+			snapshot.Meta["/"+index.Filename()].Version, index.Filename())
+		if err := readManifest1(dstDir, filepath.Join("manifests", fname), i); err != nil {
 			return err
 		}
 		index = i.Signed.(*v1manifest.Index)
@@ -319,18 +332,6 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		}
 	}
 
-	snapshot := v1manifest.NewSnapshot(initTime)
-	if rehash {
-		s := &v1manifest.Manifest{
-			Signed: &v1manifest.Snapshot{},
-		}
-		err = readManifest1(dstDir, filepath.Join("manifests", snapshot.Filename()), s)
-		if err != nil {
-			return err
-		}
-		snapshot = s.Signed.(*v1manifest.Snapshot)
-	}
-
 	// Initialize the components manifest
 	for _, comp := range m.Components {
 		fmt.Println("found component", comp.Name)
@@ -420,6 +421,12 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		}
 
 		name := fmt.Sprintf("%s.json", component.ID)
+
+		// update manifest version for component
+		if rehash {
+			component.Version = snapshot.Meta["/"+name].Version + 1
+		}
+
 		signedManifests[component.ID], err = v1manifest.SignManifest(component, ownerkeyInfo)
 		if err != nil {
 			return err
@@ -429,11 +436,6 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 			Yanked: false,
 			Owner:  "pingcap",
 			URL:    fmt.Sprintf("/%s", name),
-		}
-
-		// update manifest version for component
-		if rehash {
-			component.Version = snapshot.Meta["/"+name].Version + 1
 		}
 
 		bytes, err := cjson.Marshal(signedManifests[component.ID])
@@ -518,9 +520,9 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		fname := filepath.Join(dstDir, "manifests", m.Signed.Filename())
 		switch m.Signed.Base().Ty {
 		case v1manifest.ManifestTypeRoot:
-			err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, 1), m)
+			err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, m.Signed.Base().Version), m)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			// A copy of the newest version which is 1.
 			err = v1manifest.WriteManifestFile(fname, m)
@@ -528,14 +530,14 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 				return err
 			}
 		case v1manifest.ManifestTypeComponent, v1manifest.ManifestTypeIndex:
-			err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, 1), m)
+			err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, m.Signed.Base().Version), m)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 		default:
 			err = v1manifest.WriteManifestFile(fname, m)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 		}
 	}
@@ -580,14 +582,14 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 		}
 		// write the file
 		fname := filepath.Join(dir, "manifests", root.Signed.Filename())
-		err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, 1), &root)
+		err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, root.Signed.Base().Version), &root)
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		// A copy of the newest version which is 1.
 		err = v1manifest.WriteManifestFile(fname, &root)
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		return nil
 	}
@@ -683,19 +685,19 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 		fname := filepath.Join(dir, "manifests", m.Signed.Filename())
 		switch m.Signed.Base().Ty {
 		case v1manifest.ManifestTypeRoot:
-			err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, 1), m)
+			err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, m.Signed.Base().Version), m)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			// A copy of the newest version which is 1.
 			err = v1manifest.WriteManifestFile(fname, m)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 		default:
 			err = v1manifest.WriteManifestFile(fname, m)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 		}
 	}
