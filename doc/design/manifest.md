@@ -281,7 +281,7 @@ The platform id should be one of the supported TiUp target triples. Version ids 
 The "nightly" points to the version number of latest daily build, that version should be in the version list of all supported platforms. The version number of nightly build should (but not forced to) be in the following format:
 
 ```
-vX.Y.Z-nightly+YYYYmmdd
+vX.Y.Z-nightly-YYYY-mm-dd
 ```
 
 Where `vX.Y.Z` is the version of the last released version of that component.
