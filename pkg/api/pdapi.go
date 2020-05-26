@@ -75,6 +75,7 @@ var (
 )
 
 type doFunc func(endpoint string) error
+type getFunc func(endpoint string) ([]byte, error)
 
 func tryURLs(endpoints []string, f doFunc) error {
 	var err error
@@ -98,6 +99,31 @@ func tryURLs(endpoints []string, f doFunc) error {
 		err = errors.Errorf("after trying all endpoints, no endpoint is available, the last error we met: %s", err)
 	}
 	return err
+}
+
+func tryURLsGet(endpoints []string, f getFunc) ([]byte, error) {
+	var err error
+	var bytes []byte
+	for _, endpoint := range endpoints {
+		var u *url.URL
+		u, err = url.Parse(endpoint)
+
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+
+		endpoint = u.String()
+
+		bytes, err = f(endpoint)
+		if err != nil {
+			continue
+		}
+		break
+	}
+	if len(endpoints) > 1 && err != nil {
+		return nil, errors.Errorf("after trying all endpoints, no endpoint is available, the last error we met: %s", err)
+	}
+	return bytes, err
 }
 
 // PDHealthInfo is the member health info from PD's API
@@ -591,5 +617,17 @@ func (pc *PDClient) UpdateReplicateConfig(body io.Reader) error {
 			return err
 		}
 		return nil
+	})
+}
+
+// GetReplicateConfig gets the PD replicate config
+func (pc *PDClient) GetReplicateConfig() ([]byte, error) {
+	endpoints := pc.getEndpoints(pdConfigReplicate)
+	return tryURLsGet(endpoints, func(endpoint string) ([]byte, error) {
+		ret, err := pc.httpClient.Get(endpoint)
+		if err != nil {
+			return nil, err
+		}
+		return ret, nil
 	})
 }
