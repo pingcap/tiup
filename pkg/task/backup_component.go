@@ -42,13 +42,17 @@ func (c *BackupComponent) Execute(ctx *Context) error {
 
 	// Make upgrade idempotent
 	// The old version has been backup if upgrade abort
-	cmd := fmt.Sprintf(`test -d %[2]s || mv %[1]s %[2]s && mkdir -p %[1]s`, binDir, binDir+".old."+c.fromVer)
+	cmd := fmt.Sprintf(`test -d %[2]s || cp -r %[1]s %[2]s`, binDir, binDir+".old."+c.fromVer)
 	_, stderr, err := exec.Execute(cmd, false)
 	if err != nil {
 		// ignore error if the source path does not exist, this is possible when
 		// there are multiple instances share the same deploy_dir, typical case
 		// is imported cluster
-		if !bytes.Contains(stderr, []byte("No such file or directory")) {
+		// NOTE: by changing the behaviour to cp instead of mv in line 45, we don't
+		// need to check "no such file" anymore, but I'm keeping it here in case
+		// we got a better way handling the backups later
+		if !(bytes.Contains(stderr, []byte("No such file or directory")) ||
+			bytes.Contains(stderr, []byte("File exists"))) {
 			return errors.Annotate(err, cmd)
 		}
 	}
