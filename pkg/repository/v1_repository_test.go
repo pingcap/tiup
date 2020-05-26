@@ -40,7 +40,7 @@ func TestFnameWithVersion(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		fname := fnameWithVersion(test.name, test.version)
+		fname := FnameWithVersion(test.name, test.version)
 		assert.Equal(t, test.versionName, fname)
 	}
 }

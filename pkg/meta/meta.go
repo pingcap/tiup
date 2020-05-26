@@ -20,6 +20,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pingcap/errors"
+
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
@@ -28,8 +30,8 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// EnvNameV1 is the name of the env var used to direct TiUp to use v1 manifests.
-const EnvNameV1 = "TIUP_USE_V1"
+// EnvNameV0 is the name of the env var used to direct TiUp to use old manifests.
+const EnvNameV0 = "TIUP_USE_V0"
 
 // Mirror return mirror of tiup.
 // If it's not defined, it will use "https://tiup-mirrors.pingcap.com/".
@@ -50,7 +52,7 @@ type Environment struct {
 	v1Repo *repository.V1Repository
 }
 
-// InitEnv creates a new Environment object configured using env vars and defaults. Uses the EnvNameV1 env var to
+// InitEnv creates a new Environment object configured using env vars and defaults. Uses the EnvNameV0 env var to
 // determine whether to use v0 or v1 manifests.
 func InitEnv(options repository.Options) (*Environment, error) {
 	profile := localdata.InitProfile()
@@ -63,15 +65,21 @@ func InitEnv(options repository.Options) (*Environment, error) {
 	var v1repo *repository.V1Repository
 	var err error
 
-	if os.Getenv(EnvNameV1) == "" {
+	if v0 := os.Getenv(EnvNameV0); v0 != "" && strings.ToLower(v0) != "disable" {
 		repo, err = repository.NewRepository(mirror, options)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
 	} else {
 		var local v1manifest.LocalManifests
 		local, err = v1manifest.NewManifests(profile)
 		v1repo = repository.NewV1Repo(mirror, options, local)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
 	}
 
-	return &Environment{profile, repo, v1repo}, err
+	return &Environment{profile, repo, v1repo}, nil
 }
 
 // NewV0 creates a new Environment with the provided data. Note that environments created with this function do not
@@ -159,7 +167,7 @@ func (env *Environment) PlatformString() string {
 		return env.v1Repo.PlatformString()
 	}
 
-	return fmt.Sprintf("%s/%s", env.repo.GOOS, env.repo.GOARCH)
+	return repository.PlatformString(env.repo.GOOS, env.repo.GOARCH)
 }
 
 // SelfUpdate updates TiUp.

@@ -22,6 +22,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pingcap-incubator/tiup/pkg/assets"
+
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
@@ -69,26 +71,26 @@ func NewManifests(profile *localdata.Profile) (*FsManifests, error) {
 	// Load the root manifest.
 	manifest, err := result.load(ManifestFilenameRoot)
 	if err != nil {
-		return nil, err
+		return nil, errors.AddStack(err)
 	}
 
 	// We must load without validation because we have no keys yet.
 	var root Root
 	err = ReadNoVerify(strings.NewReader(manifest), &root)
 	if err != nil {
-		return nil, err
+		return nil, errors.AddStack(err)
 	}
 
 	// Populate our key store from the root manifest.
 	err = loadKeys(&root, result.keys)
 	if err != nil {
-		return nil, err
+		return nil, errors.AddStack(err)
 	}
 
 	// Now that we've bootstrapped the key store, we can verify the root manifest we loaded earlier.
 	_, err = ReadManifest(strings.NewReader(manifest), &root, result.keys)
 	if err != nil {
-		return nil, err
+		return nil, errors.AddStack(err)
 	}
 
 	result.cache[ManifestFilenameRoot] = manifest
@@ -171,6 +173,10 @@ func (ms *FsManifests) load(filename string) (string, error) {
 	file, err := os.Open(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
+			// Use the hardcode root.json if there is no root.json currently
+			if filename == ManifestFilenameRoot {
+				return assets.Root, nil
+			}
 			return "", nil
 		}
 		return "", err

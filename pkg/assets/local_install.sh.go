@@ -1,4 +1,26 @@
-#!/bin/sh
+// Copyright 2020 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package assets
+
+import "io/ioutil"
+
+// WriteLocalInstallScript writes the install script into specified path
+func WriteLocalInstallScript(path string) error {
+	return ioutil.WriteFile(path, []byte(script), 0755)
+}
+
+var script = `#!/bin/sh
 
 case $(uname -s) in
     Linux|linux) os=linux ;;
@@ -63,3 +85,4 @@ echo "Installed path: ${bold}$bin_dir/tiup${sgr0}"
 echo "==============================================="
 echo "Have a try:     ${bold}tiup playground${sgr0}"
 echo "==============================================="
+`
