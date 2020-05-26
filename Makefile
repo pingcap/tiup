@@ -77,9 +77,6 @@ integration_test:
 			-o tests/tiup_home/bin/package ./components/package/ ;
 	@$(GOTEST) -c -cover -covermode=count \
 			-coverpkg=./... \
-			-o tests/tiup_home/bin/mirrors ./components/mirrors/ ;
-	@$(GOTEST) -c -cover -covermode=count \
-			-coverpkg=./... \
 			-o tests/tiup_home/bin/playground ./components/playground/ ;
 	@$(GOTEST) -c -cover -covermode=count \
 			-coverpkg=./... \
@@ -89,7 +86,6 @@ integration_test:
 			-o tests/tiup_home/bin/doc ./components/doc/ ;
 	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/tiup.2
 	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/package ./components/package/
-	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/mirrors ./components/mirrors/
 	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/playground ./components/playground/
 	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/ctl ./components/ctl/
 	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/doc ./components/doc/
@@ -99,7 +95,9 @@ integration_test:
 test: cover-dir failpoint-enable
 	make run-tests; STATUS=$$?; $(FAILPOINT_DISABLE); exit $$STATUS
 
-run-tests: unit-test integration_test
+# TODO: refactor integration tests base on v1 manifest
+# run-tests: unit-test integration_test
+run-tests: unit-test
 
 coverage:
 	GO111MODULE=off go get github.com/wadey/gocovmerge

@@ -241,7 +241,6 @@ Each owner id and component id must be unique (TiUp should treat owner and compo
 Where xxx is the id of the component, n is the version of the manifest, file is immutable.
 
 ```
-"name": "Name of the Component",
 "description": "This is a component",
 "nightly": "v0.2.0-nightly+20200525",
 "platforms": {

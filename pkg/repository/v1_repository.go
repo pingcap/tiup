@@ -16,16 +16,17 @@ package repository
 import (
 	"bytes"
 	"fmt"
-	"golang.org/x/mod/semver"
 	"io"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"golang.org/x/mod/semver"
 )
 
 // V1Repository represents a remote repository viewed with the v1 manifest design.
@@ -46,6 +47,8 @@ type ComponentSpec struct {
 	Version string
 	// Force is true means overwrite any existing installation.
 	Force bool
+	// Nightly means to install a latest nightly version.
+	Nightly bool
 }
 
 // NewV1Repo creates a new v1 repository from the given mirror
@@ -90,7 +93,16 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			continue
 		}
 
-		if spec.Version == "nightly" && !manifest.HasNightly() {
+		if spec.Nightly {
+			spec.Version = manifest.Nightly
+			// The v0 "nightly" is not versioned, force update as v0...
+			// we will add daily ones like: "v3.0.0-nightly-yyyy-mm-dd"
+			if spec.Version == "nightly" {
+				spec.Force = true
+			}
+		}
+
+		if spec.Nightly && !manifest.HasNightly(r.PlatformString()) {
 			errs = append(errs, fmt.Sprintf("the component `%s` does not have a nightly version; skipped", spec.ID))
 			continue
 		}
@@ -188,6 +200,10 @@ func (r *V1Repository) selectVersion(id string, versions map[string]v1manifest.V
 		var latest string
 		var latestItem v1manifest.VersionItem
 		for version, item := range versions {
+			if v0manifest.Version(version).IsNightly() {
+				continue
+			}
+
 			if latest == "" || semver.Compare(version, latest) > 0 {
 				latest = version
 				latestItem = item
@@ -236,7 +252,8 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 	return &snapshot, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameSnapshot)
 }
 
-func fnameWithVersion(fname string, version uint) string {
+// FnameWithVersion returns a filename, which contains the specific version number
+func FnameWithVersion(fname string, version uint) string {
 	base := filepath.Base(fname)
 	dir := filepath.Dir(fname)
 
@@ -255,7 +272,7 @@ func (r *V1Repository) updateLocalRoot() error {
 	var newManifest *v1manifest.Manifest
 	var newRoot v1manifest.Root
 	for {
-		url := fnameWithVersion(v1manifest.ManifestURLRoot, oldRoot.Version+1)
+		url := FnameWithVersion(v1manifest.ManifestURLRoot, oldRoot.Version+1)
 		nextManifest, err := r.fetchManifestWithKeyStore(url, &newRoot, maxRootSize, &keyStore)
 		if err != nil {
 			// Break if we have read the newest version.
@@ -436,8 +453,13 @@ func (r *V1Repository) checkTimestamp() (*v1manifest.FileHash, error) {
 }
 
 // PlatformString returns a string identifying the current system.
+func PlatformString(os, arch string) string {
+	return fmt.Sprintf("%s/%s", os, arch)
+}
+
+// PlatformString returns a string identifying the current system.
 func (r *V1Repository) PlatformString() string {
-	return fmt.Sprintf("%s/%s", r.GOOS, r.GOARCH)
+	return PlatformString(r.GOOS, r.GOARCH)
 }
 
 func (r *V1Repository) fetchComponentManifest(item *v1manifest.ComponentItem, url string, com *v1manifest.Component, maxSize uint) (*v1manifest.Manifest, error) {

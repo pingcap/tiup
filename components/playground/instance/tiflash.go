@@ -67,7 +67,7 @@ func getFlashClusterPath(dir string) string {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Version, binPath string, profile *localdata.Profile) error {
+func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Version, binPath string, _ *localdata.Profile) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
@@ -84,17 +84,6 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 		return err
 	}
 
-	if binPath == "" {
-		installedVersion, err := profile.SelectInstalledVersion("tiflash", version)
-		if err != nil {
-			return err
-		}
-		dir, err := profile.BinaryPath("tiflash", installedVersion)
-		if err != nil {
-			return err
-		}
-		binPath = dir
-	}
 	// Wait for PD
 	time.Sleep(10 * time.Second)
 	dirPath := path.Dir(binPath)

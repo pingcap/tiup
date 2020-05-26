@@ -40,7 +40,7 @@ func TestFnameWithVersion(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		fname := fnameWithVersion(test.name, test.version)
+		fname := FnameWithVersion(test.name, test.version)
 		assert.Equal(t, test.versionName, fname)
 	}
 }
@@ -543,7 +543,6 @@ func componentManifest() *v1manifest.Component {
 			Version:     7,
 		},
 		ID:          "foo",
-		Name:        "Foo",
 		Description: "foo does stuff",
 		Platforms: map[string]map[string]v1manifest.VersionItem{
 			"plat/form": {"v2.0.1": versionItem()},

@@ -174,7 +174,6 @@ func (t *transporter) defaultComponent() *v1manifest.Component {
 			Version:     1, // initial repo starts with version 1
 		},
 		ID:          t.component,
-		Name:        t.component,
 		Description: t.description,
 		Platforms:   make(map[string]map[string]v1manifest.VersionItem),
 	}

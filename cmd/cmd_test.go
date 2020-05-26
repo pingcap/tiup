@@ -18,13 +18,11 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
 	. "github.com/pingcap/check"
 )
 
@@ -65,6 +63,9 @@ func (s *testCmdSuite) TearDownSuite(c *C) {
 	c.Assert(os.RemoveAll(path.Join(s.testDir, "profile")), IsNil)
 }
 
+// TODO: add back these tests after we have mock test data
+// For now, disable it temporary
+/*
 func (s *testCmdSuite) TestInstall(c *C) {
 	cmd := newInstallCmd(s.newEnv(c))
 
@@ -93,3 +94,4 @@ func (s *testCmdSuite) TestListVersion(c *C) {
 		c.Assert(success, IsTrue)
 	}
 }
+*/

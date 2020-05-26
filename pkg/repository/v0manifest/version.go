@@ -16,8 +16,8 @@ package v0manifest
 import (
 	"fmt"
 	"sort"
+	"strings"
 
-	"github.com/pingcap-incubator/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
 
@@ -54,8 +54,7 @@ func (v Version) IsEmpty() bool {
 
 // IsNightly returns true if the version is nightly
 func (v Version) IsNightly() bool {
-	return string(v) == version.NightlyVersion
-
+	return strings.Contains(string(v), "nightly")
 }
 
 // String implements the fmt.Stringer interface
