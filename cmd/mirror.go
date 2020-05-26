@@ -20,9 +20,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/fatih/color"
+	"github.com/pingcap-incubator/tiup/pkg/repository"
 
-	"github.com/pingcap-incubator/tiup/pkg/assets"
+	"github.com/fatih/color"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
@@ -389,7 +389,7 @@ func yankComp(repo, id, version string) error {
 
 // the `mirror clone` sub command
 func newMirrorCloneCmd(env *meta.Environment) *cobra.Command {
-	options := assets.CloneOptions{
+	options := repository.CloneOptions{
 		Components: map[string]*[]string{},
 	}
 
@@ -424,7 +424,7 @@ func newMirrorCloneCmd(env *meta.Environment) *cobra.Command {
 				return errors.New("component list doesn't contain components")
 			}
 
-			return assets.CloneMirror(repo, components, args[0], args[1:], options)
+			return repository.CloneMirror(repo, components, args[0], args[1:], options)
 		},
 	}
 

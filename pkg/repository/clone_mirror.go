@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package assets
+package repository
 
 import (
 	"fmt"
@@ -20,8 +20,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pingcap-incubator/tiup/pkg/assets"
+
 	cjson "github.com/gibson042/canonicaljson-go"
-	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
@@ -40,7 +41,7 @@ type CloneOptions struct {
 }
 
 // CloneMirror clones a local mirror from the remote repository
-func CloneMirror(repo *repository.V1Repository, components []string, targetDir string, selectedVersions []string, options CloneOptions) error {
+func CloneMirror(repo *V1Repository, components []string, targetDir string, selectedVersions []string, options CloneOptions) error {
 	if utils.IsNotExist(targetDir) {
 		if err := os.MkdirAll(targetDir, 0755); err != nil {
 			return err
@@ -200,7 +201,7 @@ func CloneMirror(repo *repository.V1Repository, components []string, targetDir s
 		return err
 	}
 
-	hash, _, err := repository.HashManifest(signedManifests[v1manifest.ManifestTypeSnapshot])
+	hash, _, err := HashManifest(signedManifests[v1manifest.ManifestTypeSnapshot])
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -218,7 +219,7 @@ func CloneMirror(repo *repository.V1Repository, components []string, targetDir s
 		fname := filepath.Join(tmpDir, m.Signed.Filename())
 		switch m.Signed.Base().Ty {
 		case v1manifest.ManifestTypeRoot:
-			err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, 1), m)
+			err := v1manifest.WriteManifestFile(FnameWithVersion(fname, 1), m)
 			if err != nil {
 				return err
 			}
@@ -228,7 +229,7 @@ func CloneMirror(repo *repository.V1Repository, components []string, targetDir s
 				return err
 			}
 		case v1manifest.ManifestTypeComponent, v1manifest.ManifestTypeIndex:
-			err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, 1), m)
+			err := v1manifest.WriteManifestFile(FnameWithVersion(fname, 1), m)
 			if err != nil {
 				return err
 			}
@@ -240,10 +241,10 @@ func CloneMirror(repo *repository.V1Repository, components []string, targetDir s
 		}
 	}
 
-	return writeLocalInstallScript(filepath.Join(targetDir, "local_install.sh"))
+	return assets.WriteLocalInstallScript(filepath.Join(targetDir, "local_install.sh"))
 }
 
-func cloneComponents(repo *repository.V1Repository,
+func cloneComponents(repo *V1Repository,
 	components, selectedVersions []string,
 	targetDir, tmpDir string,
 	options CloneOptions) (map[string]*v1manifest.Component, error) {
@@ -277,7 +278,7 @@ func cloneComponents(repo *repository.V1Repository,
 
 		for _, goos := range options.OSs {
 			for _, goarch := range options.Archs {
-				platform := repository.PlatformString(goos, goarch)
+				platform := PlatformString(goos, goarch)
 				versions, found := manifest.Platforms[platform]
 				if !found {
 					fmt.Printf("The component '%s' donesn't %s/%s, skipped\n", name, goos, goarch)
@@ -306,12 +307,12 @@ func cloneComponents(repo *repository.V1Repository,
 	return compManifests, nil
 }
 
-func download(targetDir, tmpDir string, repo *repository.V1Repository, item *v1manifest.VersionItem) error {
+func download(targetDir, tmpDir string, repo *V1Repository, item *v1manifest.VersionItem) error {
 	err := repo.Mirror().Download(item.URL, tmpDir)
 	if err != nil {
 		return err
 	}
-	hashes, n, err := repository.HashFile(tmpDir, item.URL)
+	hashes, n, err := HashFile(tmpDir, item.URL)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -368,7 +369,7 @@ func combineVersions(versions *[]string, manifest *v1manifest.Component, oss, ar
 
 	for _, os := range oss {
 		for _, arch := range archs {
-			platform := repository.PlatformString(os, arch)
+			platform := PlatformString(os, arch)
 			versions, found := manifest.Platforms[platform]
 			if !found {
 				continue

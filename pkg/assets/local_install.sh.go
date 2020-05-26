@@ -15,8 +15,8 @@ package assets
 
 import "io/ioutil"
 
-// writeLocalInstallScript writes the install script into specified path
-func writeLocalInstallScript(path string) error {
+// WriteLocalInstallScript writes the install script into specified path
+func WriteLocalInstallScript(path string) error {
 	return ioutil.WriteFile(path, []byte(script), 0755)
 }
 

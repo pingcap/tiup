@@ -20,6 +20,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pingcap/errors"
+
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
@@ -65,13 +67,19 @@ func InitEnv(options repository.Options) (*Environment, error) {
 
 	if v0 := os.Getenv(EnvNameV0); v0 != "" && strings.ToLower(v0) != "disable" {
 		repo, err = repository.NewRepository(mirror, options)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
 	} else {
 		var local v1manifest.LocalManifests
 		local, err = v1manifest.NewManifests(profile)
 		v1repo = repository.NewV1Repo(mirror, options, local)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
 	}
 
-	return &Environment{profile, repo, v1repo}, err
+	return &Environment{profile, repo, v1repo}, nil
 }
 
 // NewV0 creates a new Environment with the provided data. Note that environments created with this function do not
