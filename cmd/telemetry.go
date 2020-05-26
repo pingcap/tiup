@@ -34,8 +34,9 @@ func newTelemetryCmd(env *meta.Environment) *cobra.Command {
 	}
 
 	cmd.AddCommand(&cobra.Command{
-		Use:   "reset",
-		Short: "Reset the uuid used for telemetry",
+		Use:    "reset",
+		Hidden: true, // Make false once it's ready to release.
+		Short:  "Reset the uuid used for telemetry",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			teleMeta, fname, err := getTelemetryMeta(env)
 			if err != nil {
