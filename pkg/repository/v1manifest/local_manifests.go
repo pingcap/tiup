@@ -22,8 +22,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pingcap-incubator/tiup/pkg/assets"
-
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
@@ -183,7 +181,12 @@ func (ms *FsManifests) load(filename string) (string, error) {
 		if os.IsNotExist(err) {
 			// Use the hardcode root.json if there is no root.json currently
 			if filename == ManifestFilenameRoot {
-				return assets.Root, nil
+				initRoot := filepath.Join(ms.profile.Root(), "bin/root.json")
+				bytes, err := ioutil.ReadFile(initRoot)
+				if err != nil {
+					return "", errors.Errorf("cannot open the initial root.json at %s", initRoot)
+				}
+				return string(bytes), nil
 			}
 			return "", nil
 		}

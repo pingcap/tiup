@@ -214,7 +214,7 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 		fname := filepath.Join(targetDir, m.Signed.Filename())
 		switch m.Signed.Base().Ty {
 		case v1manifest.ManifestTypeRoot:
-			err := v1manifest.WriteManifestFile(FnameWithVersion(fname, 1), m)
+			err := v1manifest.WriteManifestFile(FnameWithVersion(fname, m.Signed.Base().Version), m)
 			if err != nil {
 				return err
 			}
@@ -224,7 +224,7 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 				return err
 			}
 		case v1manifest.ManifestTypeComponent, v1manifest.ManifestTypeIndex:
-			err := v1manifest.WriteManifestFile(FnameWithVersion(fname, 1), m)
+			err := v1manifest.WriteManifestFile(FnameWithVersion(fname, m.Signed.Base().Version), m)
 			if err != nil {
 				return err
 			}
@@ -297,6 +297,23 @@ func cloneComponents(repo *V1Repository,
 			}
 		}
 		compManifests[name] = newManifest
+	}
+
+	// Download TiUP binary
+	for _, goos := range options.OSs {
+		for _, goarch := range options.Archs {
+			url := fmt.Sprintf("/tiup-%s-%s.tar.gz", goos, goarch)
+			dstFile := filepath.Join(targetDir, url)
+			tmpFile := filepath.Join(tmpDir, url)
+
+			if err := repo.Mirror().Download(url, tmpDir); err != nil {
+				return nil, err
+			}
+			// Move file to target directory if hashes pass verify.
+			if err := os.Rename(tmpFile, dstFile); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return compManifests, nil

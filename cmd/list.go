@@ -49,6 +49,8 @@ components or versions which have not been installed.
 
   # List all installed versions of TiDB
   tiup list tidb --installed`,
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch len(args) {
 			case 0:

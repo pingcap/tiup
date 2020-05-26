@@ -39,6 +39,7 @@ import (
 	"github.com/spf13/cobra"
 	"go.etcd.io/etcd/clientv3"
 	"go.uber.org/zap"
+	"golang.org/x/mod/semver"
 )
 
 type bootOptions struct {
@@ -262,6 +263,11 @@ func bootCluster(options *bootOptions) error {
 
 	profile := localdata.InitProfile()
 
+	if semver.Compare("v3.1.0", options.version) > 0 && options.tiflashNum != 0 {
+		fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.version))
+		options.tiflashNum = 0
+	}
+
 	for _, comp := range []string{"pd", "tikv", "tidb", "tiflash"} {
 		if pathMap[comp] != "" {
 			continue
@@ -269,6 +275,7 @@ func bootCluster(options *bootOptions) error {
 		if comp == "tiflash" && options.tiflashNum == 0 {
 			continue
 		}
+
 		if err := installIfMissing(profile, comp, options.version); err != nil {
 			return err
 		}
