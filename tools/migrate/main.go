@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,9 +32,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// for simplify just set the length of manifest file a value lager than the true value
-var limitLength uint = 1024 * 1024
-var expires time.Duration = 0
 var signedRoot bool // generate keys and sign root in new command
 
 func main() {
@@ -57,10 +55,10 @@ func main() {
 				return cmd.Help()
 			}
 
-			return migrate(args[0], args[1])
+			return migrate(args[0], args[1], false)
 		},
 	}
-	newCmd.Flags().DurationVar(&expires, "expires", 0, "set all manifest expires after the specified time if it's not zero")
+
 	newCmd.Flags().BoolVar(&signedRoot, "signed-root", false, "generate keys and sign root in new command")
 
 	var isPublicKey bool
@@ -82,9 +80,25 @@ from them are added to the root.json before updating.`,
 
 	updateCmd.Flags().BoolVar(&isPublicKey, "public", false, "Indicate that inputs are public keys to be added to key list, not signatures")
 
+	rehashCmd := &cobra.Command{
+		Use:   "rehash <src-dir> <dst-dir>",
+		Short: "Rehash tarballs and update manifests in the repo",
+		Long: `Rehash tarballs in src-dir and update manifests in the dst-dir repo.
+A already populated repo should be in dst-dir, and the root.json will not be changed.`,
+		SilenceErrors: true,
+		SilenceUsage:  true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 2 {
+				return cmd.Help()
+			}
+			return migrate(args[0], args[1], true)
+		},
+	}
+
 	cmd.AddCommand(
 		newCmd,
 		updateCmd,
+		rehashCmd,
 	)
 
 	if err := cmd.Execute(); err != nil {
@@ -136,57 +150,115 @@ func readVersions(srcDir, comp string) (*v0manifest.VersionManifest, error) {
 	return m, nil
 }
 
-func migrate(srcDir, dstDir string) error {
+func fnameWithVersion(fname string, version uint) string {
+	base := filepath.Base(fname)
+	dir := filepath.Dir(fname)
+
+	versionBase := strconv.Itoa(int(version)) + "." + base
+	return filepath.Join(dir, versionBase)
+}
+
+func writeManifest(fname string, m *v1manifest.Manifest) error {
+	writer, err := os.OpenFile(fname, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer writer.Close()
+	return v1manifest.WriteManifest(writer, m)
+}
+
+func migrate(srcDir, dstDir string, rehash bool) error {
 	m, err := readManifest0(srcDir)
 	if err != nil {
 		return err
 	}
 
-	if err := os.MkdirAll(filepath.Join(dstDir, "keys"), 0755); err != nil {
-		return errors.Trace(err)
-	}
+	if !rehash {
+		if err := os.MkdirAll(filepath.Join(dstDir, "keys"), 0755); err != nil {
+			return errors.Trace(err)
+		}
 
-	if err := os.MkdirAll(filepath.Join(dstDir, "manifests"), 0755); err != nil {
-		return errors.Trace(err)
-	}
-
-	var (
-		initTime = time.Now()
-		root     = v1manifest.NewRoot(initTime)
-		index    = v1manifest.NewIndex(initTime)
-	)
-
-	if expires != 0 {
-		root.SetExpiresAt(initTime.Add(expires))
-		index.SetExpiresAt(initTime.Add(expires))
-	}
-
-	// TODO: bootstrap a server instead of generating key
-	keyDir := filepath.Join(dstDir, "keys")
-	keys := map[string][]*v1manifest.KeyInfo{}
-
-	tys := []string{ // root.json is not signed
-		v1manifest.ManifestTypeIndex,
-		v1manifest.ManifestTypeSnapshot,
-		v1manifest.ManifestTypeTimestamp,
-	}
-	if signedRoot {
-		tys = append(tys, v1manifest.ManifestTypeRoot)
-	}
-
-	for _, ty := range tys {
-		if err := v1manifest.GenAndSaveKeys(keys, ty, int(v1manifest.ManifestsConfig[ty].Threshold), keyDir); err != nil {
-			return err
+		if err := os.MkdirAll(filepath.Join(dstDir, "manifests"), 0755); err != nil {
+			return errors.Trace(err)
 		}
 	}
 
-	// initial manifests
+	initTime := time.Now().UTC()
+	var (
+		root  *v1manifest.Root
+		index *v1manifest.Index
+	)
 	manifests := map[string]v1manifest.ValidManifest{
 		v1manifest.ManifestTypeRoot:  root,
 		v1manifest.ManifestTypeIndex: index,
 	}
 	signedManifests := make(map[string]*v1manifest.Manifest)
 
+	if rehash {
+		r := &v1manifest.Manifest{
+			Signed: &v1manifest.Root{},
+		}
+		fmt.Println("reading root.json")
+		if err := readManifest1(dstDir, filepath.Join("manifests", root.Filename()), r); err != nil {
+			return err
+		}
+		root = r.Signed.(*v1manifest.Root)
+		i := &v1manifest.Manifest{
+			Signed: &v1manifest.Index{},
+		}
+		fmt.Println("reading index.json")
+		if err := readManifest1(dstDir, filepath.Join("manifests", "1."+index.Filename()), i); err != nil {
+			return err
+		}
+		index = i.Signed.(*v1manifest.Index)
+	} else {
+		root = v1manifest.NewRoot(initTime)
+		index = v1manifest.NewIndex(initTime)
+	}
+
+	// TODO: bootstrap a server instead of generating key
+	keyDir := filepath.Join(dstDir, "keys")
+	keys := map[string][]*v1manifest.KeyInfo{}
+
+	tys := []string{ // root.json is not signed by default
+		v1manifest.ManifestTypeIndex,
+		v1manifest.ManifestTypeSnapshot,
+		v1manifest.ManifestTypeTimestamp,
+	}
+	if rehash { // read keys
+		for _, ty := range tys { // read manifest keys
+			privKi := make([]*v1manifest.KeyInfo, 0)
+			for id := range root.Roles[ty].Keys {
+				pk := &v1manifest.KeyInfo{}
+				f, err := os.Open(filepath.Join(dstDir, "keys",
+					fmt.Sprintf("%s-%s.json", id[:16], ty)))
+				if err != nil {
+					return err
+				}
+				bytes, err := ioutil.ReadAll(f)
+				if err != nil {
+					return err
+				}
+				if json.Unmarshal(bytes, pk); err != nil {
+					return err
+				}
+				privKi = append(privKi, pk)
+			}
+			keys[ty] = privKi
+		}
+	} else { // generate new keys
+		if signedRoot {
+			tys = append(tys, v1manifest.ManifestTypeRoot)
+		}
+
+		for _, ty := range tys {
+			if err := v1manifest.GenAndSaveKeys(keys, ty, int(v1manifest.ManifestsConfig[ty].Threshold), keyDir); err != nil {
+				return err
+			}
+		}
+	}
+
+	// initial manifests
 	genkey := func() (string, *v1manifest.KeyInfo, error) {
 		priv, err := v1manifest.GenKeyInfo()
 		if err != nil {
@@ -201,31 +273,62 @@ func migrate(srcDir, dstDir string) error {
 		return id, priv, nil
 	}
 
-	// Initialize the index manifest
-	ownerkeyID, ownerkeyInfo, err := genkey()
-	if err != nil {
-		return errors.Trace(err)
-	}
-	// save owner key
-	if err := v1manifest.SaveKeyInfo(ownerkeyInfo, "pingcap", keyDir); err != nil {
-		return errors.Trace(err)
-	}
+	var (
+		ownerkeyID   string
+		ownerkeyInfo = &v1manifest.KeyInfo{}
+	)
+	if rehash {
+		// read owner key (not considering index version, migrate assumes there
+		// is no owner change between new and rehash
+		for id := range index.Owners["pingcap"].Keys {
+			ownerkeyID = id
+			f, err := os.Open(filepath.Join(dstDir, "keys",
+				fmt.Sprintf("%s-pingcap.json", ownerkeyID[:16])))
+			if err != nil {
+				return err
+			}
+			bytes, err := ioutil.ReadAll(f)
+			if err != nil {
+				return err
+			}
+			if json.Unmarshal(bytes, ownerkeyInfo); err != nil {
+				return err
+			}
+		}
+	} else {
+		// Initialize the index manifest
+		ownerkeyID, ownerkeyInfo, err = genkey()
+		if err != nil {
+			return errors.Trace(err)
+		}
+		// save owner key
+		if err := v1manifest.SaveKeyInfo(ownerkeyInfo, "pingcap", keyDir); err != nil {
+			return errors.Trace(err)
+		}
 
-	ownerkeyPub, err := ownerkeyInfo.Public()
-	if err != nil {
-		return errors.Trace(err)
-	}
-	index.Owners["pingcap"] = v1manifest.Owner{
-		Name: "PingCAP",
-		Keys: map[string]*v1manifest.KeyInfo{
-			ownerkeyID: ownerkeyPub,
-		},
-		Threshold: 1,
+		ownerkeyPub, err := ownerkeyInfo.Public()
+		if err != nil {
+			return errors.Trace(err)
+		}
+		index.Owners["pingcap"] = v1manifest.Owner{
+			Name: "PingCAP",
+			Keys: map[string]*v1manifest.KeyInfo{
+				ownerkeyID: ownerkeyPub,
+			},
+			Threshold: 1,
+		}
 	}
 
 	snapshot := v1manifest.NewSnapshot(initTime)
-	if expires != 0 {
-		snapshot.SetExpiresAt(initTime.Add(expires))
+	if rehash {
+		s := &v1manifest.Manifest{
+			Signed: &v1manifest.Snapshot{},
+		}
+		err = readManifest1(dstDir, filepath.Join("manifests", snapshot.Filename()), s)
+		if err != nil {
+			return err
+		}
+		snapshot = s.Signed.(*v1manifest.Snapshot)
 	}
 
 	// Initialize the components manifest
@@ -315,9 +418,6 @@ func migrate(srcDir, dstDir string) error {
 			Nightly:     nightlyVer,
 			Platforms:   platforms,
 		}
-		if expires != 0 {
-			component.SetExpiresAt(initTime.Add(expires))
-		}
 
 		name := fmt.Sprintf("%s.json", component.ID)
 		signedManifests[component.ID], err = v1manifest.SignManifest(component, ownerkeyInfo)
@@ -335,10 +435,10 @@ func migrate(srcDir, dstDir string) error {
 		if err != nil {
 			return err
 		}
-		var _ = len(bytes) // this length is the not final length, since we still change the manifests before write it to disk.
+
 		snapshot.Meta["/"+name] = v1manifest.FileVersion{
 			Version: 1,
-			Length:  limitLength,
+			Length:  uint(len(bytes)), // this length is the not final length, since we still change the manifests before write it to disk.
 		}
 	}
 
@@ -352,52 +452,47 @@ func migrate(srcDir, dstDir string) error {
 
 	// Initialize timestamp
 	timestamp := v1manifest.NewTimestamp(initTime)
-	if expires != 0 {
-		timestamp.SetExpiresAt(initTime.Add(expires))
-	}
 
 	manifests[v1manifest.ManifestTypeTimestamp] = timestamp
 	manifests[v1manifest.ManifestTypeSnapshot] = snapshot
 
-	// Initialize the root manifest
-	for _, m := range manifests {
-		if err := root.SetRole(m, keys[m.Base().Ty]...); err != nil {
-			return err
+	if !rehash {
+		// Initialize the root manifest
+		for _, m := range manifests {
+			if err := root.SetRole(m, keys[m.Base().Ty]...); err != nil {
+				return err
+			}
+		}
+
+		if signedRoot {
+			signedManifests[v1manifest.ManifestTypeRoot], err = v1manifest.SignManifest(root, keys[v1manifest.ManifestTypeRoot]...)
+			if err != nil {
+				return err
+			}
+		} else {
+			// root manifest is not signed, and need to be manually signed by root key owners
+			signedManifests[v1manifest.ManifestTypeRoot] = &v1manifest.Manifest{
+				Signed: root,
+			}
 		}
 	}
 
-	if signedRoot {
-		signedManifests[v1manifest.ManifestTypeRoot], err = v1manifest.SignManifest(root, keys[v1manifest.ManifestTypeRoot]...)
-		if err != nil {
-			return err
-		}
-	} else {
-		// root manifest is not signed, and need to be manually signed by root key owners
-		signedManifests[v1manifest.ManifestTypeRoot] = &v1manifest.Manifest{
-			Signed: root,
-		}
-	}
-
-	// init snapshot
+	// populate snapshot
 	snapshot, err = snapshot.SetVersions(signedManifests)
 	if err != nil {
 		return err
 	}
 	signedManifests[v1manifest.ManifestTypeSnapshot], err = v1manifest.SignManifest(snapshot, keys[v1manifest.ManifestTypeSnapshot]...)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
-	hash, _, err := repository.HashManifest(signedManifests[v1manifest.ManifestTypeSnapshot])
+	// populate timestamp
+	timestamp, err = timestamp.SetSnapshot(signedManifests[v1manifest.ManifestTypeSnapshot])
 	if err != nil {
 		return errors.Trace(err)
 	}
-	timestamp.Meta = map[string]v1manifest.FileHash{
-		v1manifest.ManifestURLSnapshot: {
-			Hashes: hash,
-			Length: limitLength,
-		},
-	}
+
 	signedManifests[v1manifest.ManifestTypeTimestamp], err = v1manifest.SignManifest(timestamp, keys[v1manifest.ManifestTypeTimestamp]...)
 	if err != nil {
 		return err

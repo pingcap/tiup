@@ -201,16 +201,11 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 		return err
 	}
 
-	hash, _, err := HashManifest(signedManifests[v1manifest.ManifestTypeSnapshot])
+	timestamp, err = timestamp.SetSnapshot(signedManifests[v1manifest.ManifestTypeSnapshot])
 	if err != nil {
 		return errors.Trace(err)
 	}
-	timestamp.Meta = map[string]v1manifest.FileHash{
-		v1manifest.ManifestURLSnapshot: {
-			Hashes: hash,
-			Length: limitLength,
-		},
-	}
+
 	signedManifests[v1manifest.ManifestTypeTimestamp], err = v1manifest.SignManifest(timestamp, keys[v1manifest.ManifestTypeTimestamp]...)
 	if err != nil {
 		return err
