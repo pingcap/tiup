@@ -181,7 +181,10 @@ func (ms *FsManifests) load(filename string) (string, error) {
 		if os.IsNotExist(err) {
 			// Use the hardcode root.json if there is no root.json currently
 			if filename == ManifestFilenameRoot {
-				initRoot := filepath.Join(ms.profile.Root(), "bin/root.json")
+				initRoot, err := filepath.Abs(filepath.Join(ms.profile.Root(), "bin/root.json"))
+				if err != nil {
+					return "", errors.Trace(err)
+				}
 				bytes, err := ioutil.ReadFile(initRoot)
 				if err != nil {
 					return "", errors.Errorf("cannot open the initial root.json at %s", initRoot)

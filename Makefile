@@ -65,7 +65,7 @@ cover-dir:
 
 # Run tests
 unit-test:
-	$(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
+	TIUP_HOME=$(shell pwd)/tests/tiup_home $(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
 
 integration_test:
 	@$(GOTEST) -c -cover -covermode=count \
