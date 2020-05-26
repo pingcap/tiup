@@ -17,12 +17,12 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"github.com/pingcap-incubator/tiup/pkg/set"
 	"io"
 	"strings"
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
+	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
 )
 
@@ -83,13 +83,13 @@ var ManifestsConfig = map[string]ty{
 	ManifestTypeSnapshot: {
 		Filename:  ManifestFilenameSnapshot,
 		Versioned: false,
-		Expire:    time.Hour * 24, // 1d
+		Expire:    time.Hour * 24 * 30, // 1mon, should be changed to 1d
 		Threshold: 1,
 	},
 	ManifestTypeTimestamp: {
 		Filename:  ManifestFilenameTimestamp,
 		Versioned: false,
-		Expire:    time.Hour * 24, // 1d
+		Expire:    time.Hour * 24 * 30, // 1mon, should be changed to 1d
 		Threshold: 1,
 	},
 }
