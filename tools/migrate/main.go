@@ -19,7 +19,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -150,23 +149,6 @@ func readVersions(srcDir, comp string) (*v0manifest.VersionManifest, error) {
 	return m, nil
 }
 
-func fnameWithVersion(fname string, version uint) string {
-	base := filepath.Base(fname)
-	dir := filepath.Dir(fname)
-
-	versionBase := strconv.Itoa(int(version)) + "." + base
-	return filepath.Join(dir, versionBase)
-}
-
-func writeManifest(fname string, m *v1manifest.Manifest) error {
-	writer, err := os.OpenFile(fname, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
-	if err != nil {
-		return err
-	}
-	defer writer.Close()
-	return v1manifest.WriteManifest(writer, m)
-}
-
 func migrate(srcDir, dstDir string, rehash bool) error {
 	m, err := readManifest0(srcDir)
 	if err != nil {
@@ -244,7 +226,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 			for id := range root.Roles[ty].Keys {
 				pk := &v1manifest.KeyInfo{}
 				f, err := os.Open(filepath.Join(dstDir, "keys",
-					fmt.Sprintf("%s-%s.json", id[:16], ty)))
+					fmt.Sprintf("%s-%s.json", id[:v1manifest.ShortKeyIDLength], ty)))
 				if err != nil {
 					return err
 				}
@@ -296,7 +278,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		for id := range index.Owners["pingcap"].Keys {
 			ownerkeyID = id
 			f, err := os.Open(filepath.Join(dstDir, "keys",
-				fmt.Sprintf("%s-pingcap.json", ownerkeyID[:16])))
+				fmt.Sprintf("%s-pingcap.json", ownerkeyID[:v1manifest.ShortKeyIDLength])))
 			if err != nil {
 				return err
 			}
@@ -613,7 +595,7 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 		return err
 	}
 	for _, sig := range snapshotOld.Signatures {
-		id := sig.KeyID[:16]
+		id := sig.KeyID[:v1manifest.ShortKeyIDLength]
 		f, err := os.Open(filepath.Join(dir, "keys", fmt.Sprintf(
 			"%s-%s", id, v1manifest.ManifestFilenameSnapshot,
 		)))
@@ -651,7 +633,7 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 	}
 	manifests[v1manifest.ManifestTypeTimestamp] = &tsOld
 	for _, sig := range manifests[v1manifest.ManifestTypeTimestamp].Signatures {
-		id := sig.KeyID[:16]
+		id := sig.KeyID[:v1manifest.ShortKeyIDLength]
 		f, err := os.Open(filepath.Join(dir, "keys", fmt.Sprintf(
 			"%s-%s", id, v1manifest.ManifestFilenameTimestamp,
 		)))

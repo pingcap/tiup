@@ -114,7 +114,7 @@ func SaveKeyInfo(key *KeyInfo, ty, dir string) error {
 		return err
 	}
 
-	f, err := os.Create(path.Join(dir, fmt.Sprintf("%s-%s.json", id[:16], ty)))
+	f, err := os.Create(path.Join(dir, fmt.Sprintf("%s-%s.json", id[:ShortKeyIDLength], ty)))
 	if err != nil {
 		return err
 	}
