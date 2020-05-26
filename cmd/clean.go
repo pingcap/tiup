@@ -60,11 +60,13 @@ func cleanData(env *meta.Environment, names []string, all bool) error {
 		if !all && !clean.Exist(dir.Name()) {
 			continue
 		}
-		metaFile := filepath.Join(localdata.DataParentDir, dir.Name(), localdata.MetaFilename)
-		var process process
-		err := env.Profile().ReadJSON(metaFile, &process)
+
+		process, err := env.Profile().ReadMetaFile(dir.Name())
 		if err != nil {
 			return err
+		}
+		if process == nil {
+			continue
 		}
 
 		if p, err := gops.NewProcess(int32(process.Pid)); err == nil {

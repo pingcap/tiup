@@ -410,7 +410,7 @@ func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifes
 			return nil, errors.Trace(err)
 		}
 
-		err = keys.transitionRoot(bytes, threshold, m.Signatures, newRoot.Roles[ManifestTypeRoot].Keys)
+		err = keys.transitionRoot(bytes, threshold, newRoot.Expires, m.Signatures, newRoot.Roles[ManifestTypeRoot].Keys)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
@@ -430,14 +430,14 @@ func loadKeys(manifest ValidManifest, ks *KeyStore) error {
 	case "root":
 		root := manifest.(*Root)
 		for name, role := range root.Roles {
-			if err := ks.AddKeys(name, role.Threshold, role.Keys); err != nil {
+			if err := ks.AddKeys(name, role.Threshold, manifest.Base().Expires, role.Keys); err != nil {
 				return errors.Trace(err)
 			}
 		}
 	case "index":
 		index := manifest.(*Index)
 		for name, owner := range index.Owners {
-			if err := ks.AddKeys(name, uint(owner.Threshold), owner.Keys); err != nil {
+			if err := ks.AddKeys(name, uint(owner.Threshold), manifest.Base().Expires, owner.Keys); err != nil {
 				return errors.Trace(err)
 			}
 		}

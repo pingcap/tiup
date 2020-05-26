@@ -663,7 +663,7 @@ func setNewRoot(t *testing.T, local *v1manifest.MockManifests) crypto.PrivKey {
 func setRoot(local *v1manifest.MockManifests, root *v1manifest.Root) {
 	local.Manifests[v1manifest.ManifestFilenameRoot] = root
 	for r, ks := range root.Roles {
-		local.Ks.AddKeys(r, 1, ks.Keys)
+		local.Ks.AddKeys(r, 1, "2220-05-11T04:51:08Z", ks.Keys)
 	}
 }
 
