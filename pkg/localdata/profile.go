@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"sort"
@@ -136,8 +137,8 @@ func (p *Profile) WriteJSON(path string, data interface{}) error {
 	return p.SaveTo(path, jsonData, 0644)
 }
 
-// ReadJSON read file and unmarshal to target `data`
-func (p *Profile) ReadJSON(path string, data interface{}) error {
+// readJSON read file and unmarshal to target `data`
+func (p *Profile) readJSON(path string, data interface{}) error {
 	fullPath := filepath.Join(p.root, path)
 	file, err := os.Open(fullPath)
 	if err != nil {
@@ -146,6 +147,20 @@ func (p *Profile) ReadJSON(path string, data interface{}) error {
 	defer file.Close()
 
 	return json.NewDecoder(file).Decode(data)
+}
+
+// ReadMetaFile reads a Process object from dirName/MetaFilename. Returns (nil, nil) if a metafile does not exist.
+func (p *Profile) ReadMetaFile(dirName string) (*Process, error) {
+	metaFile := filepath.Join(DataParentDir, dirName, MetaFilename)
+
+	// If the path doesn't contain the meta file, which means startup interrupted
+	if utils.IsNotExist(p.Path(metaFile)) {
+		return nil, nil
+	}
+
+	var process Process
+	err := p.readJSON(metaFile, &process)
+	return &process, err
 }
 
 func (p *Profile) versionFileName(component string) string {
@@ -167,7 +182,7 @@ func (p *Profile) Manifest() *v0manifest.ComponentManifest {
 	}
 
 	var manifest v0manifest.ComponentManifest
-	if err := p.ReadJSON(p.v0ManifestFileName(), &manifest); err != nil {
+	if err := p.readJSON(p.v0ManifestFileName(), &manifest); err != nil {
 		// The manifest was marshaled and stored by `tiup`, it should
 		// be a valid JSON file
 		log.Fatal(err)
@@ -189,7 +204,7 @@ func (p *Profile) Versions(component string) *v0manifest.VersionManifest {
 	}
 
 	var manifest v0manifest.VersionManifest
-	if err := p.ReadJSON(file, &manifest); err != nil {
+	if err := p.readJSON(file, &manifest); err != nil {
 		// The manifest was marshaled and stored by `tiup`, it should
 		// be a valid JSON file
 		log.Fatal(err)
@@ -293,4 +308,16 @@ func (p *Profile) SelectInstalledVersion(component string, version v0manifest.Ve
 		return "", errInstallFirst
 	}
 	return version, nil
+}
+
+// Process represents a process as written to a meta file.
+type Process struct {
+	Component   string    `json:"component"`
+	CreatedTime string    `json:"created_time"`
+	Pid         int       `json:"pid"`            // PID of the process
+	Exec        string    `json:"exec"`           // Path to the binary
+	Args        []string  `json:"args,omitempty"` // Command line arguments
+	Env         []string  `json:"env,omitempty"`  // Environment variables
+	Dir         string    `json:"dir,omitempty"`  // Working directory
+	Cmd         *exec.Cmd `json:"-"`
 }

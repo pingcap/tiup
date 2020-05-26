@@ -25,6 +25,7 @@ type KeyStore map[string]roleKeys
 
 type roleKeys struct {
 	threshold uint
+	expiry    string
 	// key id -> public key
 	keys map[string]crypto.PubKey
 }
@@ -35,12 +36,12 @@ func NewKeyStore() *KeyStore {
 }
 
 // AddKeys clears all keys for role, then adds all supplied keys and stores the threshold value.
-func (s *KeyStore) AddKeys(role string, threshold uint, keys map[string]*KeyInfo) error {
+func (s *KeyStore) AddKeys(role string, threshold uint, expiry string, keys map[string]*KeyInfo) error {
 	if threshold == 0 {
 		return errors.Errorf("invalid threshold (0)")
 	}
 
-	(*s)[role] = roleKeys{threshold: threshold, keys: map[string]crypto.PubKey{}}
+	(*s)[role] = roleKeys{threshold: threshold, expiry: expiry, keys: map[string]crypto.PubKey{}}
 
 	for id, info := range keys {
 		pub, err := info.publicKey()
@@ -78,10 +79,10 @@ func (s *SignatureError) Error() string {
 
 // transitionRoot checks that signed is verified by signatures using newThreshold, and if so, updates the keys for the root
 // role in the key store.
-func (s *KeyStore) transitionRoot(signed []byte, newThreshold uint, signatures []Signature, newKeys map[string]*KeyInfo) error {
+func (s *KeyStore) transitionRoot(signed []byte, newThreshold uint, expiry string, signatures []Signature, newKeys map[string]*KeyInfo) error {
 	oldKeys := (*s)[ManifestTypeRoot]
 
-	err := s.AddKeys(ManifestTypeRoot, newThreshold, newKeys)
+	err := s.AddKeys(ManifestTypeRoot, newThreshold, expiry, newKeys)
 	if err != nil {
 		return err
 	}
@@ -129,6 +130,14 @@ func (s *KeyStore) verifySignature(signed []byte, role string, signatures []Sign
 			return newSignatureError(filename, err)
 		}
 		validSigs++
+	}
+
+	// We may need to verify the root manifest with old keys. Once the most up to date root is found and verified, then
+	// the keys used to do so should be checked for expiry.
+	if role != ManifestTypeRoot {
+		if err := CheckExpiry(keys.expiry); err != nil {
+			return err
+		}
 	}
 	if validSigs < keys.threshold {
 		return errors.Errorf("not enough signatures (%v) for threshold %v in %s", validSigs, keys.threshold, filename)
