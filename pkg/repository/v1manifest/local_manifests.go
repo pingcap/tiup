@@ -62,21 +62,24 @@ type FsManifests struct {
 // FIXME implement garbage collection of old manifests
 
 // NewManifests creates a new FsManifests with local store at root.
-// There must exists the trusted root.json.
+// There must exist a trusted root.json.
 func NewManifests(profile *localdata.Profile) (*FsManifests, error) {
 	result := &FsManifests{profile: profile, keys: NewKeyStore(), cache: make(map[string]string)}
 
+	// Load the root manifest.
 	manifest, err := result.load(ManifestFilenameRoot)
 	if err != nil {
 		return nil, err
 	}
 
+	// We must load without validation because we have no keys yet.
 	var root Root
 	err = ReadNoVerify(strings.NewReader(manifest), &root)
 	if err != nil {
 		return nil, err
 	}
 
+	// Populate our key store from the root manifest.
 	err = loadKeys(&root, result.keys)
 	if err != nil {
 		return nil, err
