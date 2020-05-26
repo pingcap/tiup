@@ -3,7 +3,6 @@ module github.com/pingcap-incubator/tiup
 go 1.13
 
 require (
-	cloud.google.com/go v0.57.0 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/alecthomas/assert v0.0.0-20170929043011-405dbfeb8e38
 	github.com/blevesearch/bleve v1.0.8-0.20200520165604-f0ded112bb1b
@@ -40,7 +39,9 @@ require (
 	github.com/xo/usql v0.7.8
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20191023171146-3cf2f69b5738
 	go.uber.org/zap v1.14.1
+	golang.org/x/lint v0.0.0-20200130185559-910be7a94367 // indirect
 	golang.org/x/mod v0.2.0
+	golang.org/x/tools v0.0.0-20200225022059-a0ec867d517c // indirect
 	gopkg.in/VividCortex/ewma.v1 v1.1.1 // indirect
 	gopkg.in/cheggaaa/pb.v2 v2.0.7 // indirect
 	gopkg.in/fatih/color.v1 v1.7.0 // indirect

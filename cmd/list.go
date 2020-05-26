@@ -104,7 +104,7 @@ func showComponentList(env *meta.Environment, onlyInstalled bool, refresh bool) 
 			if err != nil {
 				return nil, err
 			}
-			installStatus = fmt.Sprintf("YES(%s)", strings.Join(versions, ","))
+			installStatus = strings.Join(versions, ",")
 		}
 
 		manifest, err := env.V1Repository().FetchComponentManifest(name)

@@ -63,7 +63,7 @@ func InitEnv(options repository.Options) (*Environment, error) {
 	var v1repo *repository.V1Repository
 	var err error
 
-	if env := os.Getenv(EnvNameV0); env == "" || env == "disable" || env = "false" {
+	if env := os.Getenv(EnvNameV0); env == "" || env == "disable" || env == "false" {
 		var local v1manifest.LocalManifests
 		local, err = v1manifest.NewManifests(profile)
 		v1repo = repository.NewV1Repo(mirror, options, local)
