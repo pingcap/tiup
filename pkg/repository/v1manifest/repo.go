@@ -544,6 +544,16 @@ func SignManifest(role ValidManifest, keys ...*KeyInfo) (*Manifest, error) {
 }
 
 // WriteManifest writes a Manifest object to file in JSON format
+func WriteManifestFile(fname string, m *Manifest) error {
+	writer, err := os.OpenFile(fname, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer writer.Close()
+	return WriteManifest(writer, m)
+}
+
+// WriteManifest writes a Manifest object to writer in JSON format
 func WriteManifest(out io.Writer, m *Manifest) error {
 	bytes, err := cjson.Marshal(m)
 	if err != nil {

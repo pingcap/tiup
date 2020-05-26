@@ -14,15 +14,11 @@
 package main
 
 import (
-	"crypto/sha256"
-	"crypto/sha512"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -138,29 +134,6 @@ func readVersions(srcDir, comp string) (*v0manifest.VersionManifest, error) {
 	}
 
 	return m, nil
-}
-
-func hashManifest(m *v1manifest.Manifest) (map[string]string, uint, error) {
-	bytes, err := cjson.Marshal(m)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	s256 := sha256.Sum256(bytes)
-	s512 := sha512.Sum512(bytes)
-
-	return map[string]string{
-		v1manifest.SHA256: hex.EncodeToString(s256[:]),
-		v1manifest.SHA512: hex.EncodeToString(s512[:]),
-	}, uint(len(bytes)), nil
-}
-
-func fnameWithVersion(fname string, version uint) string {
-	base := filepath.Base(fname)
-	dir := filepath.Dir(fname)
-
-	versionBase := strconv.Itoa(int(version)) + "." + base
-	return filepath.Join(dir, versionBase)
 }
 
 func migrate(srcDir, dstDir string) error {
@@ -388,7 +361,9 @@ func migrate(srcDir, dstDir string) error {
 
 	// Initialize the root manifest
 	for _, m := range manifests {
-		root.SetRole(m, keys[m.Base().Ty]...)
+		if err := root.SetRole(m, keys[m.Base().Ty]...); err != nil {
+			return err
+		}
 	}
 
 	if signedRoot {
@@ -413,7 +388,7 @@ func migrate(srcDir, dstDir string) error {
 		return err
 	}
 
-	hash, _, err := hashManifest(signedManifests[v1manifest.ManifestTypeSnapshot])
+	hash, _, err := repository.HashManifest(signedManifests[v1manifest.ManifestTypeSnapshot])
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -431,22 +406,22 @@ func migrate(srcDir, dstDir string) error {
 		fname := filepath.Join(dstDir, "manifests", m.Signed.Filename())
 		switch m.Signed.Base().Ty {
 		case v1manifest.ManifestTypeRoot:
-			err := writeManifest(fnameWithVersion(fname, 1), m)
+			err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, 1), m)
 			if err != nil {
 				return err
 			}
 			// A copy of the newest version which is 1.
-			err = writeManifest(fname, m)
+			err = v1manifest.WriteManifestFile((fname, m)
 			if err != nil {
 				return err
 			}
 		case v1manifest.ManifestTypeComponent, v1manifest.ManifestTypeIndex:
-			err := writeManifest(fnameWithVersion(fname, 1), m)
+			err := v1manifest.WriteManifestFile((repository.FnameWithVersion(fname, 1), m)
 			if err != nil {
 				return err
 			}
 		default:
-			err = writeManifest(fname, m)
+			err = v1manifest.WriteManifestFile((fname, m)
 			if err != nil {
 				return err
 			}
@@ -493,12 +468,12 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 		}
 		// write the file
 		fname := filepath.Join(dir, "manifests", root.Signed.Filename())
-		err := writeManifest(fnameWithVersion(fname, 1), &root)
+		err := v1manifest.WriteManifestFile((repository.FnameWithVersion(fname, 1), &root)
 		if err != nil {
 			return err
 		}
 		// A copy of the newest version which is 1.
-		err = writeManifest(fname, &root)
+		err = v1manifest.WriteManifestFile((fname, &root)
 		if err != nil {
 			return err
 		}
@@ -596,17 +571,17 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 		fname := filepath.Join(dir, "manifests", m.Signed.Filename())
 		switch m.Signed.Base().Ty {
 		case v1manifest.ManifestTypeRoot:
-			err := writeManifest(fnameWithVersion(fname, 1), m)
+			err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, 1), m)
 			if err != nil {
 				return err
 			}
 			// A copy of the newest version which is 1.
-			err = writeManifest(fname, m)
+			err = v1manifest.WriteManifestFile(fname, m)
 			if err != nil {
 				return err
 			}
 		default:
-			err = writeManifest(fname, m)
+			err = v1manifest.WriteManifestFile(fname, m)
 			if err != nil {
 				return err
 			}
@@ -614,13 +589,4 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 	}
 
 	return nil
-}
-
-func writeManifest(fname string, m *v1manifest.Manifest) error {
-	writer, err := os.OpenFile(fname, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
-	if err != nil {
-		return err
-	}
-	defer writer.Close()
-	return v1manifest.WriteManifest(writer, m)
 }

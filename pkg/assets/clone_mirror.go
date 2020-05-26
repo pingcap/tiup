@@ -20,6 +20,8 @@ import (
 	"strings"
 	"time"
 
+	cjson "github.com/gibson042/canonicaljson-go"
+
 	"github.com/pingcap-incubator/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 
@@ -64,11 +66,195 @@ func CloneMirror(repo *repository.V1Repository, components []string, targetDir s
 		return nil
 	}
 
-	manifests := map[string]*v1manifest.Component{}
+	var (
+		initTime = time.Now()
+		expirsAt = initTime.Add(50 * 365 * 24 * time.Hour)
+		root     = v1manifest.NewRoot(initTime)
+		index    = v1manifest.NewIndex(initTime)
+	)
+
+	// All offline expires at 50 years to prevent manifests stale
+	root.SetExpiresAt(expirsAt)
+	index.SetExpiresAt(expirsAt)
+
+	keys := map[string][]*v1manifest.KeyInfo{}
+	for _, ty := range []string{
+		v1manifest.ManifestTypeRoot,
+		v1manifest.ManifestTypeIndex,
+		v1manifest.ManifestTypeSnapshot,
+		v1manifest.ManifestTypeTimestamp,
+	} {
+		if err := v1manifest.GenAndSaveKeys(keys, ty, int(v1manifest.ManifestsConfig[ty].Threshold), tmpDir); err != nil {
+			return err
+		}
+	}
+
+	// initial manifests
+	manifests := map[string]v1manifest.ValidManifest{
+		v1manifest.ManifestTypeRoot:  root,
+		v1manifest.ManifestTypeIndex: index,
+	}
+	signedManifests := make(map[string]*v1manifest.Manifest)
+
+	genkey := func() (string, *v1manifest.KeyInfo, error) {
+		priv, err := v1manifest.GenKeyInfo()
+		if err != nil {
+			return "", nil, err
+		}
+
+		id, err := priv.ID()
+		if err != nil {
+			return "", nil, err
+		}
+
+		return id, priv, nil
+	}
+
+	// Initialize the index manifest
+	ownerkeyID, ownerkeyInfo, err := genkey()
+	if err != nil {
+		return errors.Trace(err)
+	}
+	// save owner key
+	if err := v1manifest.SaveKeyInfo(ownerkeyInfo, "pingcap", tmpDir); err != nil {
+		return errors.Trace(err)
+	}
+
+	ownerkeyPub, err := ownerkeyInfo.Public()
+	if err != nil {
+		return errors.Trace(err)
+	}
+	index.Owners["pingcap"] = v1manifest.Owner{
+		Name: "PingCAP",
+		Keys: map[string]*v1manifest.KeyInfo{
+			ownerkeyID: ownerkeyPub,
+		},
+		Threshold: 1,
+	}
+
+	snapshot := v1manifest.NewSnapshot(initTime)
+	snapshot.SetExpiresAt(expirsAt)
+
+	componentManifests, err := cloneComponents(repo, components, selectedVersions, targetDir, tmpDir, options)
+	if err != nil {
+		return err
+	}
+
+	const limitLength = 1024 * 1024
+
+	for name, component := range componentManifests {
+		component.SetExpiresAt(expirsAt)
+		fname := fmt.Sprintf("%s.json", name)
+		// TODO: support external owner
+		signedManifests[component.ID], err = v1manifest.SignManifest(component, ownerkeyInfo)
+		if err != nil {
+			return err
+		}
+		index.Components[component.ID] = v1manifest.ComponentItem{
+			Owner: "pingcap",
+			URL:   fmt.Sprintf("/%s", fname),
+		}
+		bytes, err := cjson.Marshal(signedManifests[component.ID])
+		if err != nil {
+			return err
+		}
+		var _ = len(bytes) // this length is the not final length, since we still change the manifests before write it to disk.
+		snapshot.Meta["/"+name] = v1manifest.FileVersion{
+			Version: 1,
+			Length:  limitLength,
+		}
+	}
+
+	// sign index and snapshot
+	signedManifests[v1manifest.ManifestTypeIndex], err = v1manifest.SignManifest(index, keys[v1manifest.ManifestTypeIndex]...)
+	if err != nil {
+		return err
+	}
+
+	// snapshot and timestamp are the last two manifests to be initialized
+
+	// Initialize timestamp
+	timestamp := v1manifest.NewTimestamp(initTime)
+	timestamp.SetExpiresAt(expirsAt)
+
+	manifests[v1manifest.ManifestTypeTimestamp] = timestamp
+	manifests[v1manifest.ManifestTypeSnapshot] = snapshot
+
+	// Initialize the root manifest
+	for _, m := range manifests {
+		if err := root.SetRole(m, keys[m.Base().Ty]...); err != nil {
+			return err
+		}
+	}
+
+	// Sign root
+	signedManifests[v1manifest.ManifestTypeRoot], err = v1manifest.SignManifest(root, keys[v1manifest.ManifestTypeRoot]...)
+	if err != nil {
+		return err
+	}
+
+	// init snapshot
+	snapshot, err = snapshot.SetVersions(signedManifests)
+	if err != nil {
+		return err
+	}
+	signedManifests[v1manifest.ManifestTypeSnapshot], err = v1manifest.SignManifest(snapshot, keys[v1manifest.ManifestTypeSnapshot]...)
+	if err != nil {
+		return err
+	}
+
+	hash, _, err := repository.HashManifest(signedManifests[v1manifest.ManifestTypeSnapshot])
+	if err != nil {
+		return errors.Trace(err)
+	}
+	timestamp.Meta = map[string]v1manifest.FileHash{
+		v1manifest.ManifestURLSnapshot: {
+			Hashes: hash,
+			Length: limitLength,
+		},
+	}
+	signedManifests[v1manifest.ManifestTypeTimestamp], err = v1manifest.SignManifest(timestamp, keys[v1manifest.ManifestTypeTimestamp]...)
+	if err != nil {
+		return err
+	}
+	for _, m := range signedManifests {
+		fname := filepath.Join(tmpDir, m.Signed.Filename())
+		switch m.Signed.Base().Ty {
+		case v1manifest.ManifestTypeRoot:
+			err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, 1), m)
+			if err != nil {
+				return err
+			}
+			// A copy of the newest version which is 1.
+			err = v1manifest.WriteManifestFile(fname, m)
+			if err != nil {
+				return err
+			}
+		case v1manifest.ManifestTypeComponent, v1manifest.ManifestTypeIndex:
+			err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, 1), m)
+			if err != nil {
+				return err
+			}
+		default:
+			err = v1manifest.WriteManifestFile(fname, m)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return writeLocalInstallScript(filepath.Join(targetDir, "local_install.sh"))
+}
+
+func cloneComponents(repo *repository.V1Repository,
+	components, selectedVersions []string,
+	targetDir, tmpDir string,
+	options CloneOptions) (map[string]*v1manifest.Component, error) {
+	compManifests := map[string]*v1manifest.Component{}
 	for _, name := range components {
 		manifest, err := repo.FetchComponentManifest(name)
 		if err != nil {
-			return errors.Annotatef(err, "fetch component '%s' manifest", name)
+			return nil, errors.Annotatef(err, "fetch component '%s' manifest", name)
 		}
 
 		vs := combineVersions(options.Components[name], manifest, options.OSs, options.Archs, selectedVersions)
@@ -79,13 +265,17 @@ func CloneMirror(repo *repository.V1Repository, components []string, targetDir s
 			if len(vs) < 1 {
 				continue
 			}
-			// TODO: support nightly version
 			newManifest = &v1manifest.Component{
 				SignedBase:  manifest.SignedBase,
 				ID:          manifest.ID,
 				Name:        manifest.Name,
 				Description: manifest.Description,
 				Platforms:   map[string]map[string]v1manifest.VersionItem{},
+			}
+			// Include the nightly reference version
+			if vs.Exist(version.NightlyVersion) {
+				newManifest.Nightly = manifest.Nightly
+				vs.Insert(manifest.Nightly)
 			}
 		}
 
@@ -96,8 +286,8 @@ func CloneMirror(repo *repository.V1Repository, components []string, targetDir s
 				if !found {
 					fmt.Printf("The component '%s' donesn't %s/%s, skipped\n", name, goos, goarch)
 				}
-				for version, versionItem := range versions {
-					if !checkVersion(options, vs, version) {
+				for v, versionItem := range versions {
+					if !checkVersion(options, vs, v) {
 						continue
 					}
 					if !options.Full {
@@ -106,20 +296,18 @@ func CloneMirror(repo *repository.V1Repository, components []string, targetDir s
 							newVersions = map[string]v1manifest.VersionItem{}
 							newManifest.Platforms[platform] = newVersions
 						}
-						newVersions[version] = versionItem
+						newVersions[v] = versionItem
 					}
 					if err := download(targetDir, tmpDir, repo, &versionItem); err != nil {
-						return errors.Annotatef(err, "download resource: %s", name)
+						return nil, errors.Annotatef(err, "download resource: %s", name)
 					}
 				}
 			}
 		}
-		manifests[name] = newManifest
+		compManifests[name] = newManifest
 	}
 
-	// TODO: write all manifests
-
-	return writeLocalInstallScript(filepath.Join(targetDir, "local_install.sh"))
+	return compManifests, nil
 }
 
 func download(targetDir, tmpDir string, repo *repository.V1Repository, item *v1manifest.VersionItem) error {

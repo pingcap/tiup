@@ -252,7 +252,8 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 	return &snapshot, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameSnapshot)
 }
 
-func fnameWithVersion(fname string, version uint) string {
+// FnameWithVersion returns a filename, which contains the specific version number
+func FnameWithVersion(fname string, version uint) string {
 	base := filepath.Base(fname)
 	dir := filepath.Dir(fname)
 
@@ -271,7 +272,7 @@ func (r *V1Repository) updateLocalRoot() error {
 	var newManifest *v1manifest.Manifest
 	var newRoot v1manifest.Root
 	for {
-		url := fnameWithVersion(v1manifest.ManifestURLRoot, oldRoot.Version+1)
+		url := FnameWithVersion(v1manifest.ManifestURLRoot, oldRoot.Version+1)
 		nextManifest, err := r.fetchManifestWithKeyStore(url, &newRoot, maxRootSize, &keyStore)
 		if err != nil {
 			// Break if we have read the newest version.
