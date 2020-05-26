@@ -290,7 +290,7 @@ func (env *Environment) BinaryPath(component string, version v0manifest.Version)
 		return env.v1Repo.BinaryPath(installPath, component, string(version))
 	}
 
-	return env.profile.BinaryPath(component, version)
+	return env.profile.BinaryPathV0(component, version)
 }
 
 // ParseCompVersion parses component part from <component>[:version] specification
