@@ -68,9 +68,8 @@ func (p *Profile) Root() string {
 	return p.root
 }
 
-// BinaryPath returns the binary path of component specific version
-// TODO rename this func name and update the caller, since only v0 can call this
-func (p *Profile) BinaryPath(component string, version v0manifest.Version) (string, error) {
+// BinaryPathV0 returns the binary path of component specific version
+func (p *Profile) BinaryPathV0(component string, version v0manifest.Version) (string, error) {
 	manifest := p.Versions(component)
 	if manifest == nil {
 		return "", errors.Errorf("component `%s` doesn't install", component)
