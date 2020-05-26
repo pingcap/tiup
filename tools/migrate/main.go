@@ -31,6 +31,7 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
+	tiupver "github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
@@ -312,6 +313,42 @@ func migrate(srcDir, dstDir string) error {
 			}
 		}
 
+		// add nightly version, the versions for daily builds are all "nightly"
+		// without date in v0 manifest, we keep that during migrate, but should
+		// use new format with date number in version string when adding new
+		// in the future
+		var nightlyVer string
+		if versions.Nightly != nil {
+			v := versions.Nightly
+			nightlyVer = v.Version.String()
+			for _, p := range v.Platforms {
+				newp := p
+				vs, found := platforms[newp]
+				if !found {
+					vs = map[string]v1manifest.VersionItem{}
+					platforms[newp] = vs
+				}
+
+				filename := fmt.Sprintf("/%s-%s-%s.tar.gz", comp.Name, tiupver.NightlyVersion,
+					strings.Join(strings.Split(newp, "/"), "-"))
+				hashes, length, err := hashFile(srcDir, filename)
+				if err != nil {
+					return err
+				}
+				// due to the nature of our CDN, all files are under the same URI base
+				vs[v.Version.String()] = v1manifest.VersionItem{
+					Yanked:   false,
+					URL:      filename,
+					Entry:    v.Entry,
+					Released: v.Date,
+					FileHash: v1manifest.FileHash{
+						Hashes: hashes,
+						Length: uint(length),
+					},
+				}
+			}
+		}
+
 		component := &v1manifest.Component{
 			SignedBase: v1manifest.SignedBase{
 				Ty:          v1manifest.ManifestTypeComponent,
@@ -322,6 +359,7 @@ func migrate(srcDir, dstDir string) error {
 			ID:          comp.Name,
 			Name:        comp.Name,
 			Description: comp.Desc,
+			Nightly:     nightlyVer,
 			Platforms:   platforms,
 		}
 		if expires != 0 {

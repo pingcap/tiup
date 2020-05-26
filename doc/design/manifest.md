@@ -255,21 +255,22 @@ Where xxx is the id of the component, n is the version of the manifest, file is 
 ```
 "name": "Name of the Component",
 "description": "This is a component",
+"nightly": "v0.2.0-nightly+20200525",
 "platforms": {
     "x86_64-apple-darwin": {
-        "0.0.1": {
+        "v0.0.1": {
             "yanked": false,
-            "url": "/name-of_x86_64-apple-darwin_0.0.1.tar.gz",
+            "url": "/name-of_x86_64-apple-darwin_v0.0.1.tar.gz",
             "hashes": {
                 "sha256": "141f740f53781d1ca54b8a50af22cbf74e44c21a998fa2a8a05aaac2c002886b",
                 "sha512": "ef5beafa16041bcdd2937140afebd485296cd54f7348ecd5a4d035c09759608de467a7ac0eb58753d0242df873c305e8bffad2454aa48f44480f15efae1cacd0"
             },
             "length": 1001000499,
             "dependencies": {
-                "foo": "1.0.0",
+                "foo": "v1.0.0",
             },
         },
-        "0.2.0": { ... },
+        "v0.2.0": { ... },
     },
     "aarch64-unknown-linux": { ... },
 },
@@ -277,6 +278,13 @@ Where xxx is the id of the component, n is the version of the manifest, file is 
 
 The platform id should be one of the supported TiUp target triples. Version ids must be valid semver. Dependencies are a map from component id to a semver version string.
 
+The "nightly" points to the version number of latest daily build, that version should be in the version list of all supported platforms. The version number of nightly build should (but not forced to) be in the following format:
+
+```
+vX.Y.Z-nightly-YYYY-mm-dd
+```
+
+Where `vX.Y.Z` is the version of the last released version of that component.
 
 ### snapshot.json
 
