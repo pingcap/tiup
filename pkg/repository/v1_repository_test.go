@@ -543,7 +543,6 @@ func componentManifest() *v1manifest.Component {
 			Version:     7,
 		},
 		ID:          "foo",
-		Name:        "Foo",
 		Description: "foo does stuff",
 		Platforms: map[string]map[string]v1manifest.VersionItem{
 			"plat/form": {"v2.0.1": versionItem()},
