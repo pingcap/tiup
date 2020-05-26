@@ -875,6 +875,9 @@ server_configs:
     security.ca-path: ""
     security.cert-path: ""
     security.key-path: ""
+    # Normally the number of TiFlash nodes is smaller than TiKV nodes, and we need more raft threads to match the write speed of TiKV.
+    raftstore.apply-pool-size: 4
+    raftstore.store-pool-size: 4
 `, cfg.LogDir, cfg.IP, cfg.FlashServicePort, cfg.FlashProxyPort, cfg.FlashProxyStatusPort, firstDataDir)), &topo)
 
 	if err != nil {

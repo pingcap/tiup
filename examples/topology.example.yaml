@@ -61,6 +61,8 @@ server_configs:
     logger.level: "info"
   tiflash-learner:
     log-level: "info"
+    # raftstore.apply-pool-size: 4
+    # raftstore.store-pool-size: 4
   pump:
     gc: 7
 
@@ -155,6 +157,8 @@ tiflash_servers:
     # # The following configs are used to overwrite the `server_configs.tiflash-learner` values.
     # learner_config:
     #   log-level: "info"
+    #   raftstore.apply-pool-size: 4
+    #   raftstore.store-pool-size: 4
   - host: 10.0.1.15
   - host: 10.0.1.16
 
