@@ -396,7 +396,7 @@ func (manifest *Timestamp) SetSnapshot(s *Manifest) (*Timestamp, error) {
 	if manifest.Meta == nil {
 		manifest.Meta = make(map[string]FileHash)
 	}
-	manifest.Meta[s.Signed.Base().Filename()] = FileHash{
+	manifest.Meta[fmt.Sprintf("/%s", s.Signed.Base().Filename())] = FileHash{
 		Hashes: map[string]string{
 			SHA256: hex.EncodeToString(hash256[:]),
 			SHA512: hex.EncodeToString(hash512[:]),
