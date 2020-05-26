@@ -54,19 +54,17 @@ func showStatus(env *meta.Environment) error {
 			if !dir.IsDir() {
 				continue
 			}
-			metaFile := filepath.Join(localdata.DataParentDir, dir.Name(), localdata.MetaFilename)
 
-			// If the path doesn't contain the meta file, which means startup interrupted
-			if utils.IsNotExist(env.LocalPath(metaFile)) {
+			process, err := env.Profile().ReadMetaFile(dir.Name())
+			if err != nil {
+				return err
+			}
+			if process == nil {
+				// If the path doesn't contain the meta file, which means startup interrupted
 				_ = os.RemoveAll(env.LocalPath(filepath.Join(localdata.DataParentDir, dir.Name())))
 				continue
 			}
 
-			var process process
-			err := env.Profile().ReadJSON(metaFile, &process)
-			if err != nil {
-				return err
-			}
 			status := "TERM"
 			if exist, err := gops.PidExists(int32(process.Pid)); err == nil && exist {
 				status = "RUNNING"

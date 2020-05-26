@@ -84,7 +84,7 @@ func runComponent(env *meta.Environment, tag, spec, binPath string, args []strin
 
 	go func() {
 		defer close(ch)
-		ch <- p.cmd.Wait()
+		ch <- p.Cmd.Wait()
 	}()
 
 	select {
@@ -113,17 +113,6 @@ func cleanDataDir(rm bool, dir string) {
 	}
 }
 
-type process struct {
-	Component   string   `json:"component"`
-	CreatedTime string   `json:"created_time"`
-	Pid         int      `json:"pid"`            // PID of the process
-	Exec        string   `json:"exec"`           // Path to the binary
-	Args        []string `json:"args,omitempty"` // Command line arguments
-	Env         []string `json:"env,omitempty"`  // Environment variables
-	Dir         string   `json:"dir,omitempty"`  // Working directory
-	cmd         *exec.Cmd
-}
-
 func base62Tag() string {
 	const base = 62
 	const sets = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -137,7 +126,7 @@ func base62Tag() string {
 	return string(b)
 }
 
-func launchComponent(ctx context.Context, component string, version v0manifest.Version, binPath string, tag string, args []string, env *meta.Environment) (*process, error) {
+func launchComponent(ctx context.Context, component string, version v0manifest.Version, binPath string, tag string, args []string, env *meta.Environment) (*localdata.Process, error) {
 	selectVer, err := env.DownloadComponentIfMissing(component, version)
 	if err != nil {
 		return nil, err
@@ -211,20 +200,20 @@ func launchComponent(ctx context.Context, component string, version v0manifest.V
 	c.Stderr = os.Stderr
 	c.Dir = wd
 
-	p := &process{
+	p := &localdata.Process{
 		Component:   component,
 		CreatedTime: time.Now().Format(time.RFC3339),
 		Exec:        binPath,
 		Args:        args,
 		Dir:         wd,
 		Env:         envs,
-		cmd:         c,
+		Cmd:         c,
 	}
 
 	fmt.Printf("Starting component `%s`: %s\n", component, strings.Join(append([]string{p.Exec}, p.Args...), " "))
-	err = p.cmd.Start()
-	if p.cmd.Process != nil {
-		p.Pid = p.cmd.Process.Pid
+	err = p.Cmd.Start()
+	if p.Cmd.Process != nil {
+		p.Pid = p.Cmd.Process.Pid
 	}
 	return p, err
 }

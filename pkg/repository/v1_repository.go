@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
@@ -143,11 +142,6 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 // ensureManifests ensures that the snapshot, root, and index manifests are up to date and saved in r.local.
 // Returns true if the timestamp has changed,
 func (r *V1Repository) ensureManifests() (bool, error) {
-	// Load the root manifest from disk to populate the key store.
-	var root v1manifest.Root
-	_, _ = r.local.LoadManifest(&root)
-	// We can ignore errors here since we'll try again later.
-
 	// Update snapshot.
 	snapshot, err := r.updateLocalSnapshot()
 	if err != nil {
@@ -400,23 +394,6 @@ func (r *V1Repository) updateComponentManifest(id string) (*v1manifest.Component
 	return &component, nil
 }
 
-// DownloadComponent downloads a component with specific version from repository
-func (r *V1Repository) DownloadComponent(
-	component string,
-	version v0manifest.Version,
-	versionItem *v1manifest.VersionItem,
-) error {
-	cr, err := r.FetchComponent(versionItem)
-	if err != nil {
-		return err
-	}
-
-	resName := fmt.Sprintf("%s-%s", component, version)
-
-	filename := fmt.Sprintf("%s-%s-%s", resName, r.GOOS, r.GOARCH)
-	return r.local.InstallComponent(cr, "", component, string(version), filename, r.DisableDecompress)
-}
-
 // FetchComponent downloads the component specified by item.
 func (r *V1Repository) FetchComponent(item *v1manifest.VersionItem) (io.Reader, error) {
 	reader, err := r.mirror.Fetch(item.URL, int64(item.Length))
@@ -532,7 +509,7 @@ func (r *V1Repository) loadRoot() (*v1manifest.Root, error) {
 	}
 
 	if !exists {
-		return nil, errors.New("no trusted root in the local manifest")
+		return nil, errors.New("no trusted root in the local manifests")
 	}
 	return root, nil
 }
@@ -561,7 +538,7 @@ func (r *V1Repository) FetchIndexManifest() (index *v1manifest.Index, err error)
 func (r *V1Repository) DownloadTiup(targetDir string) error {
 	var spec = ComponentSpec{
 		TargetDir: targetDir,
-		ID:        "tiup",
+		ID:        TiupBinaryName,
 		Version:   "",
 		Force:     false,
 	}

@@ -108,10 +108,6 @@ A key definition is:
 
 ```json
 "KEYID": {
-    "keyid_hash_algorithms": [
-        "sha256",
-        "sha512",
-    ],
     "keytype": "ed25519",
     "keyval": {
         "public": "KEY",
@@ -204,10 +200,6 @@ Example:
         "threshold": 1,
         "keys": {
             "4e777de0d275f9d28588dd9a1606cc748e548f9e22b6795b7cb3f63f98035fcb": {
-                "keyid_hash_algorithms": [
-                    "sha256",
-                    "sha512",
-                ],
                 "keytype": "rsa",
                 "keyval": {
                     "public": "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEA0GjPoVrjS9eCqzoQ8VRe\nPkC0cI6ktiEgqPfHESFzyxyjC490Cuy19nuxPcJuZfN64MC48oOkR+W2mq4pM51i\nxmdG5xjvNOBRkJ5wUCc8fDCltMUTBlqt9y5eLsf/4/EoBU+zC4SW1iPU++mCsity\nfQQ7U6LOn3EYCyrkH51hZ/dvKC4o9TPYMVxNecJ3CL1q02Q145JlyjBTuM3Xdqsa\nndTHoXSRPmmzgB/1dL/c4QjMnCowrKW06mFLq9RAYGIaJWfM/0CbrOJpVDkATmEc\nMdpGJYDfW/sRQvRdlHNPo24ZW7vkQUCqdRxvnTWkK5U81y7RtjLt1yskbWXBIbOV\nz94GXsgyzANyCT9qRjHXDDz2mkLq+9I2iKtEqaEePcWRu3H6RLahpM/TxFzw684Y\nR47weXdDecPNxWyiWiyMGStRFP4Cg9trcwAGnEm1w8R2ggmWphznCd5dXGhPNjfA\na82yNFY8ubnOUVJOf0nXGg3Edw9iY3xyjJb2+nrsk5f3AgMBAAE=\n-----END PUBLIC KEY-----",
@@ -215,10 +207,6 @@ Example:
                 "scheme": "rsassa-pss-sha256",
             },
             "59a4df8af818e9ed7abe0764c0b47b4240952aa0d179b5b78346c470ac30278d": {
-                "keyid_hash_algorithms": [
-                    "sha256",
-                    "sha512",
-                ],
                 "keytype": "ed25519",
                 "keyval": {
                     "public": "edcd0a32a07dce33f7c7873aaffbff36d20ea30787574ead335eefd337e4dacd",
