@@ -219,7 +219,7 @@ NextKey:
 }
 
 // AddComponent adds a new component to an existing repository
-func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv string) error {
+func AddComponent(id, desc, owner, repo string, isDefault bool, pub, priv string) error {
 	// read key files
 	privBytes, err := ioutil.ReadFile(priv)
 	if err != nil {
@@ -248,7 +248,7 @@ func AddComponent(id, name, desc, owner, repo string, isDefault bool, pub, priv 
 
 	// create new component manifest
 	currTime := time.Now().UTC()
-	comp := NewComponent(id, name, desc, currTime)
+	comp := NewComponent(id, desc, currTime)
 	manifests[id] = comp
 	signedManifests[id], err = SignManifest(comp, privKey)
 	if err != nil {
@@ -351,7 +351,7 @@ func NewTimestamp(initTime time.Time) *Timestamp {
 }
 
 // NewComponent creates a Component object
-func NewComponent(id, name, desc string, initTime time.Time) *Component {
+func NewComponent(id, desc string, initTime time.Time) *Component {
 	return &Component{
 		SignedBase: SignedBase{
 			Ty:          ManifestTypeComponent,
@@ -360,7 +360,6 @@ func NewComponent(id, name, desc string, initTime time.Time) *Component {
 			Version:     1,
 		},
 		ID:          id,
-		Name:        name,
 		Description: desc,
 		Platforms:   make(map[string]map[string]VersionItem),
 	}
