@@ -543,7 +543,7 @@ func SignManifest(role ValidManifest, keys ...*KeyInfo) (*Manifest, error) {
 	}, nil
 }
 
-// WriteManifest writes a Manifest object to file in JSON format
+// WriteManifestFile writes a Manifest object to file in JSON format
 func WriteManifestFile(fname string, m *Manifest) error {
 	writer, err := os.OpenFile(fname, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 	if err != nil {

@@ -268,7 +268,6 @@ func cloneComponents(repo *repository.V1Repository,
 			newManifest = &v1manifest.Component{
 				SignedBase:  manifest.SignedBase,
 				ID:          manifest.ID,
-				Name:        manifest.Name,
 				Description: manifest.Description,
 				Platforms:   map[string]map[string]v1manifest.VersionItem{},
 			}
@@ -354,7 +353,7 @@ func combineVersions(versions *[]string, manifest *v1manifest.Component, oss, ar
 		return nil
 	}
 
-	switch manifest.Name {
+	switch manifest.ID {
 	case "alertmanager":
 		return set.NewStringSet("v0.17.0")
 	case "blackbox_exporter":

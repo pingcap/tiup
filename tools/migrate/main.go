@@ -411,17 +411,17 @@ func migrate(srcDir, dstDir string) error {
 				return err
 			}
 			// A copy of the newest version which is 1.
-			err = v1manifest.WriteManifestFile((fname, m)
+			err = v1manifest.WriteManifestFile(fname, m)
 			if err != nil {
 				return err
 			}
 		case v1manifest.ManifestTypeComponent, v1manifest.ManifestTypeIndex:
-			err := v1manifest.WriteManifestFile((repository.FnameWithVersion(fname, 1), m)
+			err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, 1), m)
 			if err != nil {
 				return err
 			}
 		default:
-			err = v1manifest.WriteManifestFile((fname, m)
+			err = v1manifest.WriteManifestFile(fname, m)
 			if err != nil {
 				return err
 			}
@@ -468,12 +468,12 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 		}
 		// write the file
 		fname := filepath.Join(dir, "manifests", root.Signed.Filename())
-		err := v1manifest.WriteManifestFile((repository.FnameWithVersion(fname, 1), &root)
+		err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, 1), &root)
 		if err != nil {
 			return err
 		}
 		// A copy of the newest version which is 1.
-		err = v1manifest.WriteManifestFile((fname, &root)
+		err = v1manifest.WriteManifestFile(fname, &root)
 		if err != nil {
 			return err
 		}
