@@ -20,6 +20,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pingcap-incubator/tiup/pkg/version"
+	"golang.org/x/mod/semver"
+
 	"github.com/pingcap/errors"
 
 	"github.com/pingcap-incubator/tiup/pkg/repository"
@@ -182,19 +185,27 @@ func combineVersions(versions *[]string, manifest *v1manifest.Component, oss, ar
 	for _, os := range oss {
 		for _, arch := range archs {
 			platform := repository.PlatformString(os, arch)
-			platforms, found := manifest.Platforms[platform]
+			versions, found := manifest.Platforms[platform]
 			if !found {
 				continue
 			}
 			for _, selectedVersion := range selectedVersions {
-				_, found := platforms[selectedVersion]
+				_, found := versions[selectedVersion]
 				if !found {
-					latest, _, exists := manifest.LatestVersion(platform)
-					if !exists {
+					// Use the latest stable versionS if the selected version doesn't exist in specific platform
+					var latest string
+					for v := range versions {
+						if strings.Contains(v, version.NightlyVersion) {
+							continue
+						}
+						if latest == "" || semver.Compare(v, latest) > 0 {
+							latest = v
+						}
+					}
+					if latest == "" {
 						continue
 					}
-					// Use the latest stable version if the selected version doesn't exist in specific platform
-					selectedVersion = latest.String()
+					selectedVersion = latest
 				}
 				if !result.Exist(selectedVersion) {
 					result.Insert(selectedVersion)

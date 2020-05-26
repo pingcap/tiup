@@ -312,7 +312,7 @@ func migrate(srcDir, dstDir string) error {
 
 				filename := fmt.Sprintf("/%s-%s-%s.tar.gz", comp.Name, tiupver.NightlyVersion,
 					strings.Join(strings.Split(newp, "/"), "-"))
-				hashes, length, err := hashFile(srcDir, filename)
+				hashes, length, err := repository.HashFile(srcDir, filename)
 				if err != nil {
 					return err
 				}
