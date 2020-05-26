@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
@@ -23,6 +24,7 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/tui"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
+	"golang.org/x/mod/semver"
 )
 
 func newListCmd(env *meta.Environment) *cobra.Command {
@@ -190,8 +192,15 @@ func showComponentVersions(env *meta.Environment, component string, onlyInstalle
 			released[ver] = verinfo.Released
 		}
 	}
-
+	verList := []string{}
 	for v := range platforms {
+		verList = append(verList, v)
+	}
+	sort.Slice(verList, func(p, q int) bool {
+		return semver.Compare(verList[p], verList[q]) < 0
+	})
+
+	for _, v := range verList {
 		installStatus := ""
 		if installed.Exist(v) {
 			installStatus = "YES"
