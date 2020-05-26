@@ -18,8 +18,10 @@ import (
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap-incubator/tiup/pkg/tui"
+	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -80,9 +82,25 @@ func (lr *listResult) print() {
 }
 
 func showComponentList(env *meta.Environment, onlyInstalled bool, refresh bool) (*listResult, error) {
-	index, err := env.V1Repository().FetchIndexManifest()
+	local, err := v1manifest.NewManifests(env.Profile())
 	if err != nil {
 		return nil, err
+	}
+
+	index := new(v1manifest.Index)
+	if refresh {
+		index, err = env.V1Repository().FetchIndexManifest()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		exists, err := local.LoadManifest(index)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+		if !exists {
+			return nil, errors.Errorf("no index manifest")
+		}
 	}
 
 	installed, err := env.Profile().InstalledComponents()
@@ -133,9 +151,25 @@ func showComponentList(env *meta.Environment, onlyInstalled bool, refresh bool) 
 }
 
 func showComponentVersions(env *meta.Environment, component string, onlyInstalled bool, refresh bool) (*listResult, error) {
-	comp, err := env.V1Repository().FetchComponentManifest(component)
+	local, err := v1manifest.NewManifests(env.Profile())
 	if err != nil {
 		return nil, err
+	}
+
+	comp := new(v1manifest.Component)
+	if refresh {
+		comp, err = env.V1Repository().FetchComponentManifest(component)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		exists, err := local.LoadManifest(comp)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+		if !exists {
+			return nil, errors.Errorf("no component manifest for %s", component)
+		}
 	}
 
 	versions, err := env.Profile().InstalledVersions(component)
