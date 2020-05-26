@@ -357,7 +357,6 @@ func migrate(srcDir, dstDir string) error {
 				Version:     1, // initial repo starts with version 1
 			},
 			ID:          comp.Name,
-			Name:        comp.Name,
 			Description: comp.Desc,
 			Nightly:     nightlyVer,
 			Platforms:   platforms,

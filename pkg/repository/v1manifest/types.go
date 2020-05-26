@@ -104,7 +104,6 @@ type VersionItem struct {
 type Component struct {
 	SignedBase
 	ID          string `json:"id"`
-	Name        string `json:"name"`
 	Description string `json:"description"`
 	Nightly     string `json:"nightly"` // version of the latest daily build
 	// platform -> version -> VersionItem
