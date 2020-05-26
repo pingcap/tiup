@@ -431,13 +431,18 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 			URL:    fmt.Sprintf("/%s", name),
 		}
 
+		// update manifest version for component
+		if rehash {
+			component.Version = snapshot.Meta["/"+name].Version + 1
+		}
+
 		bytes, err := cjson.Marshal(signedManifests[component.ID])
 		if err != nil {
 			return err
 		}
 
 		snapshot.Meta["/"+name] = v1manifest.FileVersion{
-			Version: 1,
+			Version: component.Version,
 			Length:  uint(len(bytes)), // this length is the not final length, since we still change the manifests before write it to disk.
 		}
 	}
@@ -452,6 +457,15 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 
 	// Initialize timestamp
 	timestamp := v1manifest.NewTimestamp(initTime)
+	if rehash {
+		t := &v1manifest.Manifest{
+			Signed: &v1manifest.Timestamp{},
+		}
+		if err := readManifest1(dstDir, filepath.Join("manifests", timestamp.Filename()), t); err != nil {
+			return err
+		}
+		timestamp.Version = t.Signed.(*v1manifest.Timestamp).Version
+	}
 
 	manifests[v1manifest.ManifestTypeTimestamp] = timestamp
 	manifests[v1manifest.ManifestTypeSnapshot] = snapshot
@@ -491,6 +505,9 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 	timestamp, err = timestamp.SetSnapshot(signedManifests[v1manifest.ManifestTypeSnapshot])
 	if err != nil {
 		return errors.Trace(err)
+	}
+	if rehash {
+		timestamp.Version++
 	}
 
 	signedManifests[v1manifest.ManifestTypeTimestamp], err = v1manifest.SignManifest(timestamp, keys[v1manifest.ManifestTypeTimestamp]...)
