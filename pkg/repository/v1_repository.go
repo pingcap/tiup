@@ -103,7 +103,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 		}
 
 		if spec.Nightly && !manifest.HasNightly(r.PlatformString()) {
-			errs = append(errs, fmt.Sprintf("the component `%s` does not have a nightly version; skipped", spec.ID))
+			fmt.Printf("The component `%s` does not have a nightly version; skipped\n", spec.ID)
 			continue
 		}
 
