@@ -121,7 +121,7 @@ func showComponentList(env *meta.Environment, onlyInstalled bool, refresh bool) 
 			name,
 			comp.Owner,
 			installStatus,
-			strings.Join(platforms, ","),
+			strings.Join(platforms, ", "),
 			manifest.Description,
 		})
 	}
