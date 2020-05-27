@@ -599,12 +599,7 @@ func (r *V1Repository) ComponentVersion(id, version string) (*v1manifest.Version
 // Load the manifest locally only to get then Entry, do not force do something need access mirror.
 func (r *V1Repository) BinaryPath(installPath string, componentID string, version string) (string, error) {
 	var index v1manifest.Index
-	_, err := r.ensureManifests()
-	if err != nil {
-		return "", errors.AddStack(err)
-	}
-
-	_, err = r.local.LoadManifest(&index)
+	_, err := r.local.LoadManifest(&index)
 	if err != nil {
 		return "", err
 	}
@@ -615,6 +610,11 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, versio
 	component, err := r.local.LoadComponentManifest(&item, filename)
 	if err != nil {
 		return "", err
+	} else if component == nil {
+		component, err = r.FetchComponentManifest(componentID)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	versionItem, ok := component.Platforms[r.PlatformString()][version]
