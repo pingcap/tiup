@@ -5,6 +5,7 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/juju/errors"
+	"github.com/pingcap-incubator/tiup/pkg/log"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap-incubator/tiup/server/store"
@@ -36,6 +37,7 @@ func (m *model) UpdateComponentManifest(component string, manifest *ComponentMan
 	}
 	lastVersion := snap.Signed.Meta[fmt.Sprintf("/%s.json", component)].Version
 	if manifest.Signed.Version != lastVersion+1 {
+		log.Debugf("Component version not expected, expect %d, got %d", lastVersion+1, manifest.Signed.Version)
 		return ErrorConflict
 	}
 	if err := m.txn.WriteManifest(fmt.Sprintf("%d.%s.json", manifest.Signed.Version, component), manifest); err != nil {
@@ -154,9 +156,6 @@ func sign(signed interface{}, keys ...*v1manifest.KeyInfo) ([]signature, error) 
 			return nil, errors.Trace(err)
 		}
 		sign, err := k.Signature(payload)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
 		if err != nil {
 			return nil, errors.Trace(err)
 		}

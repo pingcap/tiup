@@ -231,7 +231,11 @@ func newMirrorPublishCmd(env *meta.Environment) *cobra.Command {
 			log.Debugf("Upload sucess")
 
 			log.Debugf("Fetch last component manifest for component %s", args[0])
-			m, _ := env.V1Repository().FetchComponentManifest(args[0])
+			m, err := env.V1Repository().FetchComponentManifest(args[0])
+			if err != nil {
+				log.Warnf(err.Error())
+				log.Warnf("Failed to load component manifest, create a new one")
+			}
 
 			log.Debugf("Sign manifest")
 			if err := t.Sign(&ki, m); err != nil {

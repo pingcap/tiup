@@ -185,7 +185,13 @@ func showComponentVersions(env *meta.Environment, component string, opt listOpti
 	}
 	verList := []string{}
 	for v := range platforms {
+		if strings.Contains(v, "nightly") {
+			continue
+		}
 		verList = append(verList, v)
+	}
+	if comp.Nightly != "" {
+		verList = append(verList, "nightly")
 	}
 	sort.Slice(verList, func(p, q int) bool {
 		return semver.Compare(verList[p], verList[q]) < 0

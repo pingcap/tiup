@@ -1,7 +1,6 @@
 package store
 
 import (
-	"encoding/json"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -10,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/google/uuid"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 )
@@ -111,7 +111,7 @@ func (t *qcloudTxn) WriteManifest(filename string, manifest interface{}) error {
 	}
 	defer file.Close()
 
-	return json.NewEncoder(file).Encode(manifest)
+	return cjson.NewEncoder(file).Encode(manifest)
 }
 
 func (t *qcloudTxn) ReadManifest(filename string, manifest interface{}) error {
@@ -126,7 +126,7 @@ func (t *qcloudTxn) ReadManifest(filename string, manifest interface{}) error {
 	}
 	defer file.Close()
 
-	return json.NewDecoder(file).Decode(manifest)
+	return cjson.NewDecoder(file).Decode(manifest)
 }
 
 func (t *qcloudTxn) ResetManifest() error {

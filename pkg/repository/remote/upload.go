@@ -117,6 +117,13 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 
 	if m == nil {
 		m = t.defaultComponent()
+	} else {
+		m.Version++
+	}
+
+	if strings.Contains(t.version, "nightly") {
+		fmt.Println("nightly")
+		m.Nightly = t.version
 	}
 
 	platformStr := fmt.Sprintf("%s/%s", t.os, t.arch)
@@ -125,7 +132,7 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 	}
 	m.Platforms[platformStr][t.version] = v1manifest.VersionItem{
 		Entry:    t.entry,
-		Released: time.Now().String(),
+		Released: time.Now().Format(time.RFC3339),
 		URL:      fmt.Sprintf("/%s-%s-%s-%s.tar.gz", t.component, t.version, t.os, t.arch),
 		FileHash: v1manifest.FileHash{
 			Hashes: map[string]string{
