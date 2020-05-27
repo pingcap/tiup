@@ -597,6 +597,12 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, versio
 	if err != nil {
 		return "", err
 	}
+	if component == nil {
+		component, err = r.FetchComponentManifest(componentID)
+		if err != nil {
+			return "", err
+		}
+	}
 
 	versionItem, ok := component.Platforms[r.PlatformString()][version]
 	if !ok {
