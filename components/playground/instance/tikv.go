@@ -91,6 +91,11 @@ func (inst *TiKVInstance) Pid() int {
 	return inst.cmd.Process.Pid
 }
 
+// StoreAddr return the store address of TiKV
+func (inst *TiKVInstance) StoreAddr() string {
+	return fmt.Sprintf("%s:%d", inst.Host, inst.Port)
+}
+
 func (inst *TiKVInstance) checkConfig() error {
 	if inst.ConfigPath == "" {
 		inst.ConfigPath = path.Join(inst.Dir, "tikv.toml")

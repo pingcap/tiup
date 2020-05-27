@@ -209,19 +209,20 @@ func checkDB(dbAddr string) bool {
 	return false
 }
 
-func checkFlash(pdClient *api.PDClient, storeAddr string) error {
-	for i := 0; i < 60; i++ {
+func checkStoreStatus(pdClient *api.PDClient, storeAddr string) error {
+	for i := 0; i < 180; i++ {
 		up, err := pdClient.IsUp(storeAddr)
-		if !up || err != nil {
+		if err != nil || !up {
 			time.Sleep(time.Second)
 			fmt.Print(".")
 		} else {
 			if i != 0 {
 				fmt.Println()
 			}
+			return nil
 		}
 	}
-	return fmt.Errorf(fmt.Sprintf("store %s failed to up after timeout(60s)", storeAddr))
+	return fmt.Errorf(fmt.Sprintf("store %s failed to up after timeout(180s)", storeAddr))
 }
 
 func hasDashboard(pdAddr string) bool {
@@ -279,7 +280,7 @@ func bootCluster(options *bootOptions) error {
 
 	profile := localdata.InitProfile()
 
-	if semver.Compare("v3.1.0", options.version) > 0 && options.tiflashNum != 0 {
+	if options.version != "" && semver.Compare("v3.1.0", options.version) > 0 && options.tiflashNum != 0 {
 		fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.version))
 		options.tiflashNum = 0
 	}
@@ -429,26 +430,45 @@ func bootCluster(options *bootOptions) error {
 	}
 
 	if len(succ) > 0 {
-		// start TiFlash after at least one tidb is up.
-		for _, flash := range flashs {
-			if err := flash.Start(ctx, v0manifest.Version(options.version), pathMap["tiflash"], profile); err != nil {
-				return err
-			}
-		}
+		// start TiFlash after at least one TiDB is up.
+		var lastErr error
+
 		var endpoints []string
 		for _, pd := range pds {
 			endpoints = append(endpoints, pd.Addr())
 		}
 		pdClient := api.NewPDClient(endpoints, 10*time.Second, nil)
-		for _, flash := range flashs {
-			if err := checkFlash(pdClient, flash.StoreAddr()); err != nil {
-				return err
+
+		// make sure TiKV are all up
+		for _, kv := range kvs {
+			if err := checkStoreStatus(pdClient, kv.StoreAddr()); err != nil {
+				lastErr = err
+				break
 			}
 		}
-		fmt.Println(color.GreenString("CLUSTER START SUCCESSFULLY, Enjoy it ^-^"))
-		for _, dbAddr := range succ {
-			ss := strings.Split(dbAddr, ":")
-			fmt.Println(color.GreenString("To connect TiDB: mysql --host %s --port %s -u root", ss[0], ss[1]))
+
+		for _, flash := range flashs {
+			if err := flash.Start(ctx, v0manifest.Version(options.version), pathMap["tiflash"], profile); err != nil {
+				lastErr = err
+			}
+		}
+
+		// check if all TiFlash is up
+		for _, flash := range flashs {
+			if err := checkStoreStatus(pdClient, flash.StoreAddr()); err != nil {
+				lastErr = err
+				break
+			}
+		}
+
+		if lastErr != nil {
+			fmt.Println(color.RedString("TiFlash failed to start. %s", lastErr))
+		} else {
+			fmt.Println(color.GreenString("CLUSTER START SUCCESSFULLY, Enjoy it ^-^"))
+			for _, dbAddr := range succ {
+				ss := strings.Split(dbAddr, ":")
+				fmt.Println(color.GreenString("To connect TiDB: mysql --host %s --port %s -u root", ss[0], ss[1]))
+			}
 		}
 	}
 

@@ -113,6 +113,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 			return err
 		}
 	}
+
 	dirPath := filepath.Dir(binPath)
 	clusterManagerPath := getFlashClusterPath(dirPath)
 	if err = inst.checkConfig(wd, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
