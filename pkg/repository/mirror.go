@@ -270,6 +270,11 @@ type MockMirror struct {
 	Resources map[string]string
 }
 
+// Source implements the Mirror interface
+func (l *MockMirror) Source() string {
+	return "mock"
+}
+
 // Open implements Mirror.
 func (l *MockMirror) Open() error {
 	return nil
