@@ -54,27 +54,34 @@ func TestCheckTimestamp(t *testing.T) {
 	repo := NewV1Repo(&mirror, Options{}, local)
 
 	repoTimestamp := timestampManifest()
-	// Test that no local timestamp => return hash
+	// Test that no local timestamp => return changed = true
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, repoTimestamp, privk)
-	hash, err := repo.checkTimestamp()
+	changed, hash, err := repo.checkTimestamp()
 	assert.Nil(t, err)
+	assert.NotNil(t, hash)
+	assert.Equal(t, changed, true)
 	assert.Equal(t, uint(1001), hash.Length)
 	assert.Equal(t, "123456", hash.Hashes[v1manifest.SHA256])
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameTimestamp)
+
+	changed, hash, err = repo.checkTimestamp()
+	assert.Nil(t, err)
+	assert.NotNil(t, hash)
+	assert.Equal(t, changed, false)
 
 	// Test that an expired manifest from the mirror causes an error
 	expiredTimestamp := timestampManifest()
 	expiredTimestamp.Expires = "2000-05-12T04:51:08Z"
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, expiredTimestamp)
 	local.Saved = []string{}
-	hash, err = repo.checkTimestamp()
+	changed, hash, err = repo.checkTimestamp()
 	assert.NotNil(t, err)
 	assert.Empty(t, local.Saved)
 
 	// Test that an invalid manifest from the mirror causes an error
 	invalidTimestamp := timestampManifest()
 	invalidTimestamp.SpecVersion = "10.1.0"
-	hash, err = repo.checkTimestamp()
+	changed, hash, err = repo.checkTimestamp()
 	assert.NotNil(t, err)
 	assert.Empty(t, local.Saved)
 
@@ -106,6 +113,17 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameSnapshot)
 
 	local.Saved = local.Saved[:0]
+	snapshot, err = repo.updateLocalSnapshot()
+	assert.Nil(t, err)
+	assert.NotNil(t, snapshot)
+	assert.NotContains(t, local.Saved, v1manifest.ManifestFilenameSnapshot)
+
+	// delete the local snapshot will fetch and save it again
+	delete(local.Manifests, v1manifest.ManifestFilenameTimestamp)
+	snapshot, err = repo.updateLocalSnapshot()
+	assert.Nil(t, err)
+	assert.NotNil(t, snapshot)
+	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameSnapshot)
 
 	// test that invalid snapshot causes an error
 	snapshotManifest.Expires = "2000-05-11T04:51:08Z"

@@ -208,14 +208,14 @@ func (r *V1Repository) selectVersion(id string, versions map[string]v1manifest.V
 
 // Postcondition: if returned error is nil, then the local snapshot and timestamp are up to date and return the snapshot
 func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
-	hash, err := r.checkTimestamp()
+	changed, hash, err := r.checkTimestamp()
 	if v1manifest.IsSignatureError(errors.Cause(err)) {
 		// The signature is wrong, update our signatures from the root manifest and try again.
 		err = r.updateLocalRoot()
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
-		hash, err = r.checkTimestamp()
+		changed, hash, err = r.checkTimestamp()
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
@@ -224,14 +224,15 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 	}
 
 	var snapshot v1manifest.Snapshot
-	exists, err := r.local.LoadManifest(&snapshot)
+	snapshotExists, err := r.local.LoadManifest(&snapshot)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 
-	if hash == nil && exists {
+	// TODO: check changed in checkTimestamp by compared to the raw local snapshot instead of timestamp.
+	if !changed && snapshotExists {
 		// Nothing has changed in the repo, return success.
-		return nil, nil
+		return &snapshot, nil
 	}
 
 	manifest, err := r.fetchManifestWithHash(v1manifest.ManifestURLSnapshot, &snapshot, hash)
@@ -409,12 +410,12 @@ func (r *V1Repository) FetchComponent(item *v1manifest.VersionItem) (io.Reader, 
 }
 
 // CheckTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash matches our local one.
-// Return the FileHash of snapshot.
-func (r *V1Repository) checkTimestamp() (hash *v1manifest.FileHash, err error) {
+// Return weather the FileHash is changed compared to the one in local ts and the FileHash of snapshot.
+func (r *V1Repository) checkTimestamp() (changed bool, hash *v1manifest.FileHash, err error) {
 	var ts v1manifest.Timestamp
 	manifest, err := r.fetchManifest(v1manifest.ManifestURLTimestamp, &ts, maxTimeStampSize)
 	if err != nil {
-		return nil, errors.Trace(err)
+		return false, nil, errors.Trace(err)
 	}
 
 	tmp := ts.SnapshotHash()
@@ -423,14 +424,18 @@ func (r *V1Repository) checkTimestamp() (hash *v1manifest.FileHash, err error) {
 	var localTs v1manifest.Timestamp
 	exists, err := r.local.LoadManifest(&localTs)
 	if err != nil {
-		return nil, errors.Trace(err)
+		return false, nil, errors.Trace(err)
 	}
 
 	if exists && ts.Version < localTs.Version {
-		return nil, fmt.Errorf("timestamp manifest has a version number < the old manifest (%v, %v)", ts.Version, localTs.Version)
+		return false, nil, fmt.Errorf("timestamp manifest has a version number < the old manifest (%v, %v)", ts.Version, localTs.Version)
 	}
 
-	return hash, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
+	if hash.Hashes[v1manifest.SHA256] != localTs.SnapshotHash().Hashes[v1manifest.SHA256] {
+		changed = true
+	}
+
+	return changed, hash, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
 }
 
 // PlatformString returns a string identifying the current system.
