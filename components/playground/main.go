@@ -31,6 +31,7 @@ import (
 
 	"github.com/fatih/color"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/pingcap-incubator/tiup/components/playground/api"
 	"github.com/pingcap-incubator/tiup/components/playground/instance"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
@@ -206,6 +207,21 @@ func checkDB(dbAddr string) bool {
 		}
 	}
 	return false
+}
+
+func checkFlash(pdClient *api.PDClient, storeAddr string) error {
+	for i := 0; i < 60; i++ {
+		up, err := pdClient.IsUp(storeAddr)
+		if !up || err != nil {
+			time.Sleep(time.Second)
+			fmt.Print(".")
+		} else {
+			if i != 0 {
+				fmt.Println()
+			}
+		}
+	}
+	return fmt.Errorf(fmt.Sprintf("store %s failed to up after timeout(60s)", storeAddr))
 }
 
 func hasDashboard(pdAddr string) bool {
@@ -414,8 +430,18 @@ func bootCluster(options *bootOptions) error {
 
 	if len(succ) > 0 {
 		// start TiFlash after at least one tidb is up.
-		for _, inst := range flashs {
-			if err := inst.Start(ctx, v0manifest.Version(options.version), pathMap["tiflash"], profile); err != nil {
+		for _, flash := range flashs {
+			if err := flash.Start(ctx, v0manifest.Version(options.version), pathMap["tiflash"], profile); err != nil {
+				return err
+			}
+		}
+		var endpoints []string
+		for _, pd := range pds {
+			endpoints = append(endpoints, pd.Addr())
+		}
+		pdClient := api.NewPDClient(endpoints, 10*time.Second, nil)
+		for _, flash := range flashs {
+			if err := checkFlash(pdClient, flash.StoreAddr()); err != nil {
 				return err
 			}
 		}

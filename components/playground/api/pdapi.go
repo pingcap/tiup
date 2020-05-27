@@ -148,9 +148,9 @@ func (pc *PDClient) GetStores() (*pdserverapi.StoresInfo, error) {
 	return &storesInfo, nil
 }
 
-// IsTombStone check if the node is Tombstone.
+// IsUp check if the node is Up state.
 // The host parameter should be in format of IP:Port, that matches store's address
-func (pc *PDClient) IsTombStone(host string) (bool, error) {
+func (pc *PDClient) IsUp(host string) (bool, error) {
 	// get info of current stores
 	stores, err := pc.GetStores()
 	if err != nil {
@@ -163,7 +163,7 @@ func (pc *PDClient) IsTombStone(host string) (bool, error) {
 			continue
 		}
 
-		if storeInfo.Store.State == metapb.StoreState_Tombstone {
+		if storeInfo.Store.State == metapb.StoreState_Up {
 			return true, nil
 		}
 		return false, nil

@@ -103,16 +103,16 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 		return err
 	}
 
+	// TiFlash needs to obtain absolute path of cluster_manager
 	if binPath == "" {
+		// version may be empty, we will use the latest stable version later in Start cmd.
 		if version == "" {
 			version = profile.Versions("tiflash").LatestVersion()
 		}
 		if binPath, err = profile.BinaryPathV0("tiflash", version); err != nil {
-			fmt.Println(fmt.Sprintf("version = %v", version))
 			return err
 		}
 	}
-	fmt.Println("binpath = " + binPath)
 	dirPath := filepath.Dir(binPath)
 	clusterManagerPath := getFlashClusterPath(dirPath)
 	if err = inst.checkConfig(wd, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
@@ -145,6 +145,11 @@ func (inst *TiFlashInstance) Wait() error {
 // Pid return the PID of the instance
 func (inst *TiFlashInstance) Pid() int {
 	return inst.cmd.Process.Pid
+}
+
+// StoreAddr return the store address of TiFlash
+func (inst *TiFlashInstance) StoreAddr() string {
+	return fmt.Sprintf("%s:%d", inst.Host, inst.ServicePort)
 }
 
 func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string, tidbStatusAddrs, endpoints []string) error {
