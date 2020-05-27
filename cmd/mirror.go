@@ -17,9 +17,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"time"
 
+	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
@@ -80,14 +82,14 @@ func newMirrorSignCmd(env *meta.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sign <manifest-file> [key-files]",
 		Short: "Add signatures to a manifest file",
-		Long:  "Add signatures to a manifest file, if no key file specified, the ~/.tiup/private.json will be used",
+		Long:  "Add signatures to a manifest file, if no key file specified, the ~/.tiup/keys/private.json will be used",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
 				return cmd.Help()
 			}
 
 			if len(args) == 1 {
-				return v1manifest.SignManifestFile(args[0], env.Profile().Path("private.json"))
+				return v1manifest.SignManifestFile(args[0], env.Profile().Path(localdata.KeyInfoParentDir, "private.json"))
 			}
 			return v1manifest.SignManifestFile(args[0], args[1:]...)
 		},
@@ -189,12 +191,19 @@ func newMirrorGenkeyCmd(env *meta.Environment) *cobra.Command {
 		showPublic bool
 		saveKey    bool
 	)
-	privPath := env.Profile().Path("private.json")
+	privPath := env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
 
 	cmd := &cobra.Command{
 		Use:   "genkey",
 		Short: "Generate a new key pair",
 		Long:  `Generate a new key pair that can be used to sign components.`,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			keyDir := filepath.Dir(privPath)
+			if utils.IsNotExist(keyDir) {
+				return os.Mkdir(keyDir, 0755)
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if showPublic {
 				f, err := os.Open(privPath)
