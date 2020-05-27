@@ -29,7 +29,6 @@ import (
 
 type listOptions struct {
 	installedOnly bool
-	refresh       bool
 	verbose       bool
 	showAll       bool
 }
@@ -41,12 +40,8 @@ func newListCmd(env *meta.Environment) *cobra.Command {
 		Short: "List the available TiDB components or versions",
 		Long: `List the available TiDB components if you don't specify any component name,
 or list the available versions of a specific component. Display a list of
-local caches by default. You must use --refresh to force TiUP to fetch
-the latest list from the mirror server. Use the --installed flag to hide 
+local caches by default. Use the --installed flag to hide
 components or versions which have not been installed.
-
-  # Refresh and list all available components
-  tiup list --refresh
 
   # List all installed components
   tiup list --installed
@@ -72,7 +67,6 @@ components or versions which have not been installed.
 	}
 
 	cmd.Flags().BoolVar(&opt.installedOnly, "installed", false, "List installed components only.")
-	cmd.Flags().BoolVar(&opt.refresh, "refresh", false, "Refresh local components/version list cache.")
 	cmd.Flags().BoolVar(&opt.verbose, "verbose", false, "Show detailed component information.")
 	cmd.Flags().BoolVar(&opt.showAll, "all", false, "Show all components include hidden ones.")
 
