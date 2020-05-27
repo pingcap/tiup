@@ -62,26 +62,6 @@ func TestCheckTimestamp(t *testing.T) {
 	assert.Equal(t, "123456", hash.Hashes[v1manifest.SHA256])
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameTimestamp)
 
-	// Test that hashes match => return nil
-	localManifest := timestampManifest()
-	localManifest.Version = 43
-	localManifest.Expires = "2220-05-13T04:51:08Z"
-	local.Manifests[v1manifest.ManifestFilenameTimestamp] = localManifest
-	local.Saved = []string{}
-	hash, err = repo.checkTimestamp()
-	assert.Nil(t, err)
-	assert.Nil(t, hash)
-	assert.Empty(t, local.Saved)
-
-	// Hashes don't match => return correct File hash
-	localManifest.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = "023456"
-	localManifest.Version = 41
-	hash, err = repo.checkTimestamp()
-	assert.Nil(t, err)
-	assert.Equal(t, uint(1001), hash.Length)
-	assert.Equal(t, "123456", hash.Hashes[v1manifest.SHA256])
-	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameTimestamp)
-
 	// Test that an expired manifest from the mirror causes an error
 	expiredTimestamp := timestampManifest()
 	expiredTimestamp.Expires = "2000-05-12T04:51:08Z"
@@ -117,19 +97,15 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, timestamp, privk)
 	local.Manifests[v1manifest.ManifestFilenameTimestamp] = timestamp
 
-	// test that up to date timestamp does nothing
-	snapshot, err := repo.updateLocalSnapshot()
-	assert.Nil(t, err)
-	assert.Nil(t, snapshot)
-	assert.Empty(t, local.Saved)
-
 	// test that out of date timestamp downloads and saves snapshot
 	timestamp.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = "an old hash"
 	timestamp.Version--
-	snapshot, err = repo.updateLocalSnapshot()
+	snapshot, err := repo.updateLocalSnapshot()
 	assert.Nil(t, err)
 	assert.NotNil(t, snapshot)
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameSnapshot)
+
+	local.Saved = local.Saved[:0]
 
 	// test that invalid snapshot causes an error
 	snapshotManifest.Expires = "2000-05-11T04:51:08Z"
@@ -198,7 +174,7 @@ func TestUpdateIndex(t *testing.T) {
 	index.Version--
 	local.Manifests[v1manifest.ManifestFilenameIndex] = index
 
-	err := repo.updateLocalIndex()
+	err := repo.updateLocalIndex(snapshot)
 	assert.Nil(t, err)
 	assert.Contains(t, local.Saved, "index.json")
 
@@ -336,9 +312,8 @@ func TestEnsureManifests(t *testing.T) {
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
 
 	// Initial repo
-	changed, err := repo.ensureManifests()
+	err := repo.ensureManifests()
 	assert.Nil(t, err)
-	assert.True(t, changed)
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameIndex)
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameSnapshot)
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameTimestamp)
@@ -360,9 +335,8 @@ func TestEnsureManifests(t *testing.T) {
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
 	local.Saved = []string{}
 
-	changed, err = repo.ensureManifests()
+	err = repo.ensureManifests()
 	assert.Nil(t, err)
-	assert.True(t, changed)
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameRoot)
 
 	// Sad path - root and snapshot disagree on version
@@ -374,7 +348,7 @@ func TestEnsureManifests(t *testing.T) {
 	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
 
-	_, err = repo.ensureManifests()
+	err = repo.ensureManifests()
 	assert.NotNil(t, err)
 }
 
