@@ -112,7 +112,7 @@ func showComponentList(env *meta.Environment, opt listOptions) (*listResult, err
 			continue
 		}
 
-		if !opt.showAll && comp.Hidden {
+		if (!opt.installedOnly && !opt.showAll) && comp.Hidden {
 			continue
 		}
 
