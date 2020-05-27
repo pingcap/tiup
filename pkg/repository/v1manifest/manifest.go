@@ -96,16 +96,6 @@ var ManifestsConfig = map[string]ty{
 
 var knownVersions = map[string]struct{}{"0.1.0": {}}
 
-// verifySignature ensures that threshold signature in manifest::signatures is a valid signature of manifest::signed.
-func (manifest *Manifest) verifySignature(keys *KeyStore, role string) error {
-	bytes, err := cjson.Marshal(manifest.Signed)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	return keys.verifySignature(bytes, role, manifest.Signatures, manifest.Signed.Filename())
-}
-
 // AddSignature adds one or more signatures to the manifest
 func (manifest *Manifest) AddSignature(sigs []Signature) {
 	hasSig := func(lst []Signature, s Signature) bool {
@@ -354,16 +344,24 @@ func (manifest *Snapshot) VersionedURL(url string) (string, *FileVersion, error)
 // ReadComponentManifest reads a component manifest from input and validates it.
 func ReadComponentManifest(input io.Reader, com *Component, item *ComponentItem, keys *KeyStore) (*Manifest, error) {
 	decoder := json.NewDecoder(input)
-	var m Manifest
-	m.Signed = com
-	err := decoder.Decode(&m)
+	// For prevent the signatures verify failed from specification changing
+	// we use JSON raw message decode the signed part first.
+	rawM := RawManifest{}
+	if err := decoder.Decode(&rawM); err != nil {
+		return nil, errors.Trace(err)
+	}
+	if err := json.Unmarshal(rawM.Signed, com); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	err := keys.verifySignature(rawM.Signed, item.Owner, rawM.Signatures, com.Filename())
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 
-	err = m.verifySignature(keys, item.Owner)
-	if err != nil {
-		return nil, errors.Trace(err)
+	m := &Manifest{
+		Signatures: rawM.Signatures,
+		Signed:     com,
 	}
 
 	err = m.Signed.Base().isValid()
@@ -371,7 +369,7 @@ func ReadComponentManifest(input io.Reader, com *Component, item *ComponentItem,
 		return nil, errors.Trace(err)
 	}
 
-	return &m, m.Signed.isValid()
+	return m, m.Signed.isValid()
 }
 
 // ReadNoVerify will read role from input and will not do any validation or verification. It is very dangerous to use
@@ -390,27 +388,31 @@ func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifes
 	}
 
 	decoder := json.NewDecoder(input)
-	var m Manifest
-	m.Signed = role
-	err := decoder.Decode(&m)
+	// For prevent the signatures verify failed from specification changing
+	// we use JSON raw message decode the signed part first.
+	rawM := RawManifest{}
+	if err := decoder.Decode(&rawM); err != nil {
+		return nil, errors.Trace(err)
+	}
+	if err := json.Unmarshal(rawM.Signed, role); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	err := keys.verifySignature(rawM.Signed, role.Base().Ty, rawM.Signatures, role.Base().Filename())
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 
-	err = m.verifySignature(keys, role.Base().Ty)
-	if err != nil {
-		return nil, errors.Trace(err)
+	m := &Manifest{
+		Signatures: rawM.Signatures,
+		Signed:     role,
 	}
 
 	if role.Base().Ty == ManifestTypeRoot {
 		newRoot := role.(*Root)
 		threshold := newRoot.Roles[ManifestTypeRoot].Threshold
-		bytes, err := cjson.Marshal(m.Signed)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
 
-		err = keys.transitionRoot(bytes, threshold, newRoot.Expires, m.Signatures, newRoot.Roles[ManifestTypeRoot].Keys)
+		err = keys.transitionRoot(rawM.Signed, threshold, newRoot.Expires, m.Signatures, newRoot.Roles[ManifestTypeRoot].Keys)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
@@ -421,7 +423,7 @@ func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifes
 		return nil, errors.Trace(err)
 	}
 
-	return &m, m.Signed.isValid()
+	return m, m.Signed.isValid()
 }
 
 // loadKeys stores all keys declared in manifest into ks.

@@ -14,6 +14,7 @@
 package v1manifest
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -23,6 +24,14 @@ type Manifest struct {
 	Signatures []Signature `json:"signatures"`
 	// Signed value; any value here must have the SignedBase base.
 	Signed ValidManifest `json:"signed"`
+}
+
+// RawManifest representation for ser/de.
+type RawManifest struct {
+	// Signatures value
+	Signatures []Signature `json:"signatures"`
+	// Signed value; raw json message
+	Signed json.RawMessage `json:"signed"`
 }
 
 // Signature represents a signature for a manifest
