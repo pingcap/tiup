@@ -610,7 +610,8 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, versio
 	component, err := r.local.LoadComponentManifest(&item, filename)
 	if err != nil {
 		return "", err
-	} else if component == nil {
+	}
+	if component == nil {
 		component, err = r.FetchComponentManifest(componentID)
 		if err != nil {
 			return "", err
