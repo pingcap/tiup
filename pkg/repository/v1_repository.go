@@ -126,7 +126,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 				return errors.Trace(err)
 			}
 			if installed {
-				errs = append(errs, fmt.Sprintf("component %s version %s is already installed", spec.ID, version))
+				fmt.Printf("component %s version %s is already installed\n", spec.ID, version)
 				continue
 			}
 		}
