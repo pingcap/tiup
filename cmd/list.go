@@ -93,25 +93,11 @@ func (lr *listResult) print() {
 }
 
 func showComponentList(env *meta.Environment, opt listOptions) (*listResult, error) {
-	local, err := v1manifest.NewManifests(env.Profile())
+	index := new(v1manifest.Index)
+	var err error
+	index, err = env.V1Repository().FetchIndexManifest()
 	if err != nil {
 		return nil, err
-	}
-
-	index := new(v1manifest.Index)
-	if opt.refresh {
-		index, err = env.V1Repository().FetchIndexManifest()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		exists, err := local.LoadManifest(index)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-		if !exists {
-			return nil, errors.Errorf("no index manifest")
-		}
 	}
 
 	installed, err := env.Profile().InstalledComponents()
@@ -178,25 +164,11 @@ func showComponentList(env *meta.Environment, opt listOptions) (*listResult, err
 }
 
 func showComponentVersions(env *meta.Environment, component string, opt listOptions) (*listResult, error) {
-	local, err := v1manifest.NewManifests(env.Profile())
-	if err != nil {
-		return nil, err
-	}
-
 	comp := new(v1manifest.Component)
-	if opt.refresh {
-		comp, err = env.V1Repository().FetchComponentManifest(component)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		exists, err := local.LoadManifest(comp)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-		if !exists {
-			return nil, errors.Errorf("no component manifest for %s", component)
-		}
+	var err error
+	comp, err = env.V1Repository().FetchComponentManifest(component)
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to fetch component")
 	}
 
 	versions, err := env.Profile().InstalledVersions(component)
@@ -229,6 +201,10 @@ func showComponentVersions(env *meta.Environment, component string, opt listOpti
 		installStatus := ""
 		if installed.Exist(v) {
 			installStatus = "YES"
+		} else {
+			if opt.installedOnly {
+				continue
+			}
 		}
 		cmpTable = append(cmpTable, []string{v, installStatus, released[v], strings.Join(platforms[v], ",")})
 	}
