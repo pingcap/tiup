@@ -211,7 +211,7 @@ NextKey:
 		})
 	}
 
-	content, err = json.MarshalIndent(m, "", "\t")
+	content, err = cjson.Marshal(m)
 	if err != nil {
 		return err
 	}
