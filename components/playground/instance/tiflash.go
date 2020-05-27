@@ -14,7 +14,9 @@
 package instance
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -22,13 +24,14 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/pingcap-incubator/tiup/components/playground/api"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 )
 
-// TiFlashInstance represent a running tikv-server
+// TiFlashInstance represent a running TiFlash
 type TiFlashInstance struct {
 	instance
 	TCPPort         int
@@ -66,8 +69,12 @@ func getFlashClusterPath(dir string) string {
 	return fmt.Sprintf("%s/flash_cluster_manager", dir)
 }
 
+type replicateConfig struct {
+	EnablePlacementRules string `json:"enable-placement-rules"`
+}
+
 // Start calls set inst.cmd and Start
-func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Version, binPath string, _ *localdata.Profile) error {
+func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Version, binPath string, profile *localdata.Profile) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
@@ -85,14 +92,34 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 	}
 
 	// Wait for PD
-	time.Sleep(10 * time.Second)
-	dirPath := path.Dir(binPath)
-	clusterManagerPath := getFlashClusterPath(dirPath)
-	if err := inst.checkConfig(wd, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
+	pdClient := api.NewPDClient(endpoints, 10*time.Second, nil)
+	enablePlacementRules, err := json.Marshal(replicateConfig{
+		EnablePlacementRules: "true",
+	})
+	if err != nil {
+		return nil
+	}
+	if err = pdClient.UpdateReplicateConfig(bytes.NewBuffer(enablePlacementRules)); err != nil {
 		return err
 	}
 
-	if err := os.Setenv("LD_LIBRARY_PATH", fmt.Sprintf("%s:$LD_LIBRARY_PATH", dirPath)); err != nil {
+	if binPath == "" {
+		if version == "" {
+			version = profile.Versions("tiflash").LatestVersion()
+		}
+		if binPath, err = profile.BinaryPathV0("tiflash", version); err != nil {
+			fmt.Println(fmt.Sprintf("version = %v", version))
+			return err
+		}
+	}
+	fmt.Println("binpath = " + binPath)
+	dirPath := filepath.Dir(binPath)
+	clusterManagerPath := getFlashClusterPath(dirPath)
+	if err = inst.checkConfig(wd, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
+		return err
+	}
+
+	if err = os.Setenv("LD_LIBRARY_PATH", fmt.Sprintf("%s:$LD_LIBRARY_PATH", dirPath)); err != nil {
 		return err
 	}
 	inst.cmd = exec.CommandContext(ctx,

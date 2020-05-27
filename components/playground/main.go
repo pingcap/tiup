@@ -286,7 +286,8 @@ func bootCluster(options *bootOptions) error {
 	}
 
 	all := make([]instance.Instance, 0, options.pdNum+options.tikvNum+options.tidbNum+options.tiflashNum)
-	allRole := make([]string, 0, options.pdNum+options.tikvNum+options.tidbNum+options.tiflashNum)
+	allButTiFlash := make([]instance.Instance, 0, options.pdNum+options.tikvNum+options.tidbNum)
+	allRolesButTiFlash := make([]string, 0, options.pdNum+options.tikvNum+options.tidbNum)
 	pds := make([]*instance.PDInstance, 0, options.pdNum)
 	kvs := make([]*instance.TiKVInstance, 0, options.tikvNum)
 	dbs := make([]*instance.TiDBInstance, 0, options.tidbNum)
@@ -297,7 +298,7 @@ func bootCluster(options *bootOptions) error {
 
 	pdHost := options.host
 	// If pdHost flag is specified, use it instead.
-	if options.tidbHost != "" {
+	if options.pdHost != "" {
 		pdHost = options.pdHost
 	}
 	for i := 0; i < options.pdNum; i++ {
@@ -305,7 +306,8 @@ func bootCluster(options *bootOptions) error {
 		inst := instance.NewPDInstance(dir, pdHost, options.pdConfigPath, i)
 		pds = append(pds, inst)
 		all = append(all, inst)
-		allRole = append(allRole, "pd")
+		allButTiFlash = append(allButTiFlash, inst)
+		allRolesButTiFlash = append(allRolesButTiFlash, "pd")
 	}
 	for _, pd := range pds {
 		pd.Join(pds)
@@ -316,7 +318,8 @@ func bootCluster(options *bootOptions) error {
 		inst := instance.NewTiKVInstance(dir, options.host, options.tikvConfigPath, i, pds)
 		kvs = append(kvs, inst)
 		all = append(all, inst)
-		allRole = append(allRole, "tikv")
+		allButTiFlash = append(allButTiFlash, inst)
+		allRolesButTiFlash = append(allRolesButTiFlash, "tikv")
 	}
 
 	tidbHost := options.host
@@ -328,8 +331,8 @@ func bootCluster(options *bootOptions) error {
 		dir := filepath.Join(dataDir, fmt.Sprintf("tidb-%d", i))
 		inst := instance.NewTiDBInstance(dir, tidbHost, options.tidbConfigPath, i, pds)
 		dbs = append(dbs, inst)
-		all = append(all, inst)
-		allRole = append(allRole, "tidb")
+		allButTiFlash = append(allButTiFlash, inst)
+		allRolesButTiFlash = append(allRolesButTiFlash, "tidb")
 	}
 
 	for i := 0; i < options.tiflashNum; i++ {
@@ -337,7 +340,6 @@ func bootCluster(options *bootOptions) error {
 		inst := instance.NewTiFlashInstance(dir, options.host, options.tiflashConfigPath, i, pds, dbs)
 		flashs = append(flashs, inst)
 		all = append(all, inst)
-		allRole = append(allRole, "tiflash")
 	}
 
 	fmt.Println("Playground Bootstrapping...")
@@ -397,8 +399,8 @@ func bootCluster(options *bootOptions) error {
 		}()
 	}
 
-	for i, inst := range all {
-		if err := inst.Start(context.WithValue(ctx, "has_tiflash", options.tiflashNum > 0), v0manifest.Version(options.version), pathMap[allRole[i]], profile); err != nil {
+	for i, inst := range allButTiFlash {
+		if err := inst.Start(ctx, v0manifest.Version(options.version), pathMap[allRolesButTiFlash[i]], profile); err != nil {
 			return err
 		}
 	}
@@ -411,6 +413,12 @@ func bootCluster(options *bootOptions) error {
 	}
 
 	if len(succ) > 0 {
+		// start TiFlash after at least one tidb is up.
+		for _, inst := range flashs {
+			if err := inst.Start(ctx, v0manifest.Version(options.version), pathMap["tiflash"], profile); err != nil {
+				return err
+			}
+		}
 		fmt.Println(color.GreenString("CLUSTER START SUCCESSFULLY, Enjoy it ^-^"))
 		for _, dbAddr := range succ {
 			ss := strings.Split(dbAddr, ":")
@@ -493,7 +501,7 @@ func bootCluster(options *bootOptions) error {
 }
 
 func dumpDSN(dbs []*instance.TiDBInstance) {
-	dsn := []string{}
+	var dsn []string
 	for _, db := range dbs {
 		dsn = append(dsn, fmt.Sprintf("mysql://root@%s", db.Addr()))
 	}
