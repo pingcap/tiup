@@ -80,7 +80,7 @@ func (r *V1Repository) Mirror() Mirror {
 
 // UpdateComponents updates the components described by specs.
 func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
-	_, err := r.ensureManifests()
+	err := r.ensureManifests()
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -152,45 +152,30 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 }
 
 // ensureManifests ensures that the snapshot, root, and index manifests are up to date and saved in r.local.
-// Returns true if the timestamp has changed,
-func (r *V1Repository) ensureManifests() (bool, error) {
+func (r *V1Repository) ensureManifests() error {
 	// Update snapshot.
 	snapshot, err := r.updateLocalSnapshot()
 	if err != nil {
-		return false, errors.Trace(err)
-	}
-	if snapshot == nil {
-		return false, nil
+		return errors.Trace(err)
 	}
 
 	// Update root.
 	err = r.updateLocalRoot()
 	if err != nil {
-		return false, errors.Trace(err)
+		return errors.Trace(err)
 	}
 
 	// Check that the version of root we have is the same as declared in the snapshot.
 	newRoot, err := r.loadRoot()
 	if err != nil {
-		return false, errors.Trace(err)
+		return errors.Trace(err)
 	}
 	snapRootVersion := snapshot.Meta[v1manifest.ManifestURLRoot].Version
 	if newRoot.Version != snapRootVersion {
-		return false, fmt.Errorf("root version mismatch. Expected: %v, found: %v", snapRootVersion, newRoot.Version)
+		return fmt.Errorf("root version mismatch. Expected: %v, found: %v", snapRootVersion, newRoot.Version)
 	}
 
-	// Update index (if needed).
-	var index v1manifest.Index
-	exists, err := r.local.LoadManifest(&index)
-	if err != nil {
-		return false, errors.Trace(err)
-	}
-	snapIndexVersion := snapshot.Meta[v1manifest.ManifestURLIndex].Version
-	if exists && index.Version == snapIndexVersion {
-		return true, nil
-	}
-
-	return true, r.updateLocalIndex()
+	return r.updateLocalIndex(snapshot)
 }
 
 func (r *V1Repository) selectVersion(id string, versions map[string]v1manifest.VersionItem, target string) (string, *v1manifest.VersionItem, error) {
@@ -221,29 +206,35 @@ func (r *V1Repository) selectVersion(id string, versions map[string]v1manifest.V
 	return target, &item, nil
 }
 
-// Postcondition: if returned error is nil, then the local snapshot and timestamp are up to date.
-// Returns nil if the timestamp has not changed, or the new snapshot if it has.
+// Postcondition: if returned error is nil, then the local snapshot and timestamp are up to date and return the snapshot
 func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
-	hash, err := r.checkTimestamp()
+	changed, hash, err := r.checkTimestamp()
 	if v1manifest.IsSignatureError(errors.Cause(err)) {
 		// The signature is wrong, update our signatures from the root manifest and try again.
 		err = r.updateLocalRoot()
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
-		hash, err = r.checkTimestamp()
+		changed, hash, err = r.checkTimestamp()
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
 	} else if err != nil {
 		return nil, errors.Trace(err)
 	}
-	if hash == nil {
-		// Nothing has changed in the repo, return success.
-		return nil, nil
-	}
 
 	var snapshot v1manifest.Snapshot
+	snapshotExists, err := r.local.LoadManifest(&snapshot)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	// TODO: check changed in checkTimestamp by compared to the raw local snapshot instead of timestamp.
+	if !changed && snapshotExists {
+		// Nothing has changed in the repo, return success.
+		return &snapshot, nil
+	}
+
 	manifest, err := r.fetchManifestWithHash(v1manifest.ManifestURLSnapshot, &snapshot, hash)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -320,20 +311,24 @@ func (r *V1Repository) updateLocalRoot() error {
 	return nil
 }
 
-// Precondition: the index manifest actually requires updating, snapshot manifest exists, and the root manifest has been updated if necessary.
-func (r *V1Repository) updateLocalIndex() error {
+// Precondition: the root manifest has been updated if necessary.
+func (r *V1Repository) updateLocalIndex(snapshot *v1manifest.Snapshot) error {
+	// Update index (if needed).
+	var oldIndex v1manifest.Index
+	exists, err := r.local.LoadManifest(&oldIndex)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	snapIndexVersion := snapshot.Meta[v1manifest.ManifestURLIndex].Version
+
+	if exists && oldIndex.Version == snapIndexVersion {
+		return nil
+	}
+
 	root, err := r.loadRoot()
 	if err != nil {
 		return errors.Trace(err)
-	}
-
-	var snapshot v1manifest.Snapshot
-	exists, err := r.local.LoadManifest(&snapshot)
-	if err != nil {
-		return errors.Trace(err)
-	}
-	if !exists {
-		return errors.New("No snapshot")
 	}
 
 	url, fileVersion, err := snapshot.VersionedURL(root.Roles[v1manifest.ManifestTypeIndex].URL)
@@ -347,16 +342,8 @@ func (r *V1Repository) updateLocalIndex() error {
 		return errors.Trace(err)
 	}
 
-	// Check version number against old manifest
-	var oldIndex v1manifest.Index
-	exists, err = r.local.LoadManifest(&oldIndex)
-	if exists {
-		if err != nil {
-			return err
-		}
-		if index.Version <= oldIndex.Version {
-			return fmt.Errorf("index manifest has a version number <= the old manifest (%v, %v)", index.Version, oldIndex.Version)
-		}
+	if exists && oldIndex.Version < oldIndex.Version {
+		return errors.Errorf("index manifest has a version number < the old manifest (%v, %v)", index.Version, oldIndex.Version)
 	}
 
 	return r.local.SaveManifest(manifest, v1manifest.ManifestFilenameIndex)
@@ -423,33 +410,32 @@ func (r *V1Repository) FetchComponent(item *v1manifest.VersionItem) (io.Reader, 
 }
 
 // CheckTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash matches our local one.
-// If they match, then there is nothing to update and we return nil. If they do not match, we return the
-// snapshot's file info.
-func (r *V1Repository) checkTimestamp() (*v1manifest.FileHash, error) {
+// Return weather the FileHash is changed compared to the one in local ts and the FileHash of snapshot.
+func (r *V1Repository) checkTimestamp() (changed bool, hash *v1manifest.FileHash, err error) {
 	var ts v1manifest.Timestamp
 	manifest, err := r.fetchManifest(v1manifest.ManifestURLTimestamp, &ts, maxTimeStampSize)
 	if err != nil {
-		return nil, errors.Trace(err)
+		return false, nil, errors.Trace(err)
 	}
-	hash := ts.SnapshotHash()
+
+	tmp := ts.SnapshotHash()
+	hash = &tmp
 
 	var localTs v1manifest.Timestamp
 	exists, err := r.local.LoadManifest(&localTs)
-	if !exists {
-		// We can't find a local timestamp, so we're going to have to update
-		return &hash, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
-	} else if err != nil {
-		return nil, errors.Trace(err)
-	}
-	if hash.Hashes[v1manifest.SHA256] == localTs.SnapshotHash().Hashes[v1manifest.SHA256] {
-		return nil, nil
+	if err != nil {
+		return false, nil, errors.Trace(err)
 	}
 
-	if exists && ts.Version <= localTs.Version {
-		return nil, fmt.Errorf("timestamp manifest has a version number <= the old manifest (%v, %v)", ts.Version, localTs.Version)
+	if exists && ts.Version < localTs.Version {
+		return false, nil, fmt.Errorf("timestamp manifest has a version number < the old manifest (%v, %v)", ts.Version, localTs.Version)
 	}
 
-	return &hash, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
+	if hash.Hashes[v1manifest.SHA256] != localTs.SnapshotHash().Hashes[v1manifest.SHA256] {
+		changed = true
+	}
+
+	return changed, hash, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
 }
 
 // PlatformString returns a string identifying the current system.
@@ -542,7 +528,7 @@ func (r *V1Repository) loadRoot() (*v1manifest.Root, error) {
 
 // FetchIndexManifest fetch the index manifest.
 func (r *V1Repository) FetchIndexManifest() (index *v1manifest.Index, err error) {
-	_, err = r.ensureManifests()
+	err = r.ensureManifests()
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
@@ -573,7 +559,7 @@ func (r *V1Repository) DownloadTiup(targetDir string) error {
 
 // FetchComponentManifest fetch the component manifest.
 func (r *V1Repository) FetchComponentManifest(id string) (com *v1manifest.Component, err error) {
-	_, err = r.ensureManifests()
+	err = r.ensureManifests()
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
