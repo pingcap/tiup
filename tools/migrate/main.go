@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
@@ -185,6 +184,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 			return err
 		}
 		snapshot = s.Signed.(*v1manifest.Snapshot)
+		v1manifest.RenewManifest(snapshot, initTime)
 
 		r := &v1manifest.Manifest{
 			Signed: &v1manifest.Root{},
@@ -204,6 +204,8 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 			return err
 		}
 		index = i.Signed.(*v1manifest.Index)
+		index.Base().Version++
+		v1manifest.RenewManifest(index, initTime)
 	} else {
 		root = v1manifest.NewRoot(initTime)
 		index = v1manifest.NewIndex(initTime)
@@ -465,16 +467,6 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 			URL:        fmt.Sprintf("/%s", name),
 			Standalone: comp.Standalone,
 			Hidden:     comp.Hide,
-		}
-
-		bytes, err := cjson.Marshal(signedManifests[component.ID])
-		if err != nil {
-			return err
-		}
-
-		snapshot.Meta["/"+name] = v1manifest.FileVersion{
-			Version: component.Version,
-			Length:  uint(len(bytes)), // this length is the not final length, since we still change the manifests before write it to disk.
 		}
 	}
 
