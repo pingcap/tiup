@@ -28,7 +28,7 @@ func (h *componentSigner) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fn.Wrap(h.sign).ServeHTTP(w, r)
 }
 
-func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr *simpleResponse, err error) {
+func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr *simpleResponse, err statusError) {
 	sid := mux.Vars(r)["sid"]
 	name := mux.Vars(r)["name"]
 
@@ -95,6 +95,9 @@ func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr 
 		return err == store.ErrorFsCommitConflict && txn.ResetManifest() == nil
 	}); err != nil {
 		log.Errorf("Sign component failed: %s", err.Error())
+		if err, ok := err.(statusError); ok {
+			return nil, err
+		}
 		return nil, ErrorInternalError
 	}
 

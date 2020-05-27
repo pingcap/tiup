@@ -11,5 +11,5 @@ func Retry(f func() error, when func(error) bool) error {
 	} else if when(e) {
 		return Retry(f, when)
 	}
-	return nil
+	return e
 }

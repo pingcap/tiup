@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
@@ -162,7 +163,16 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 	}
 	resp.Body.Close()
 
-	return nil
+	if resp.StatusCode < 300 {
+		return nil
+	} else if resp.StatusCode == http.StatusConflict {
+		return fmt.Errorf("Local manifest for component %s is not new enough, update it first", t.component)
+	}
+
+	buf := new(strings.Builder)
+	io.Copy(buf, resp.Body)
+
+	return fmt.Errorf("Unknow error from server, response body: %s", buf.String())
 }
 
 func (t *transporter) defaultComponent() *v1manifest.Component {

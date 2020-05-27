@@ -25,7 +25,7 @@ func (h *tarbalUploader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fn.Wrap(h.upload).ServeHTTP(w, r)
 }
 
-func (h *tarbalUploader) upload(r *http.Request) (*simpleResponse, error) {
+func (h *tarbalUploader) upload(r *http.Request) (*simpleResponse, statusError) {
 	sid := mux.Vars(r)["sid"]
 	log.Infof("Uploading tarbal, sid: %s", sid)
 

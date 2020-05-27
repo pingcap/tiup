@@ -2,13 +2,19 @@ package handler
 
 import "net/http"
 
+type statusError interface {
+	StatusCode() int
+	Status() string
+	Error() string
+}
+
 type handlerError struct {
 	code    int
 	status  string
 	message string
 }
 
-func newHandlerError(code int, status, message string) *handlerError {
+func newHandlerError(code int, status, message string) statusError {
 	return &handlerError{
 		code:    code,
 		status:  status,
