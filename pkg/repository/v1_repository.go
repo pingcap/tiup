@@ -91,6 +91,8 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
+		} else if manifest == nil {
+			errs = append(errs, fmt.Sprintf("component %s manifest not found", spec.ID))
 		}
 
 		if spec.Nightly {
@@ -578,7 +580,11 @@ func (r *V1Repository) FetchComponentManifest(id string) (com *v1manifest.Compon
 		return nil, errors.AddStack(err)
 	}
 
-	return r.updateComponentManifest(id)
+	com, err = r.updateComponentManifest(id)
+	if err == nil && com == nil {
+		err = errors.Errorf("component %s manifest not found", com.ID)
+	}
+	return
 }
 
 // ComponentVersion returns version item of a component
@@ -610,6 +616,9 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, versio
 	component, err := r.local.LoadComponentManifest(&item, filename)
 	if err != nil {
 		return "", err
+	}
+	if component == nil {
+		return "", errors.Errorf("component %s manifest not found, you can try `tiup list` to generate", componentID)
 	}
 
 	versionItem, ok := component.Platforms[r.PlatformString()][version]
