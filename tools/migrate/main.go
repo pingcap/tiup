@@ -22,6 +22,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pingcap-incubator/tiup/pkg/utils"
+
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
@@ -316,10 +318,41 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		}
 	}
 
+	// Tread TiUP as a component
+	tiup := v0manifest.ComponentInfo{
+		Name: "tiup",
+		Desc: "Components manager for TiDB ecosystem",
+	}
+	tiupVersions := &v0manifest.VersionManifest{
+		Description: tiup.Desc,
+		Versions: []v0manifest.VersionInfo{
+			{
+				Version: v0manifest.Version(tiupver.NewTiUPVersion().SemVer()),
+				Date:    time.Now().Format(time.RFC3339),
+				Entry:   "tiup",
+			},
+		},
+	}
+	for _, goos := range []string{"linux", "darwin"} {
+		for _, goarch := range []string{"amd64", "arm64"} {
+			name := fmt.Sprintf("tiup-%s-%s.tar.gz", goos, goarch)
+			path := filepath.Join(srcDir, name)
+			if utils.IsExist(path) {
+				tiupVersions.Versions[0].Platforms = append(tiupVersions.Versions[0].Platforms, repository.PlatformString(goos, goarch))
+			}
+		}
+	}
+
 	// Initialize the components manifest
-	for _, comp := range m.Components {
+	for _, comp := range append(m.Components, tiup) {
 		fmt.Println("found component", comp.Name)
-		versions, err := readVersions(srcDir, comp.Name)
+		var versions *v0manifest.VersionManifest
+		var err error
+		if comp.Name == "tiup" {
+			versions = tiupVersions
+		} else {
+			versions, err = readVersions(srcDir, comp.Name)
+		}
 		if err != nil {
 			return err
 		}
@@ -334,9 +367,17 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 					platforms[newp] = vs
 				}
 
-				filename := fmt.Sprintf("/%s-%s-%s.tar.gz", comp.Name, v.Version, strings.Join(
-					strings.Split(newp, "/"),
-					"-"))
+				var filename string
+				if comp.Name == "tiup" {
+					filename = fmt.Sprintf("/%s-%s.tar.gz", comp.Name, strings.Join(
+						strings.Split(newp, "/"),
+						"-"))
+				} else {
+					filename = fmt.Sprintf("/%s-%s-%s.tar.gz", comp.Name, v.Version, strings.Join(
+						strings.Split(newp, "/"),
+						"-"))
+				}
+
 				hashes, length, err := repository.HashFile(srcDir, filename)
 				if err != nil {
 					return err
