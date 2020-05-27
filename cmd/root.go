@@ -130,6 +130,7 @@ the latest stable version will be downloaded from the repository.`,
 			cmd.Help()
 		}
 	})
+
 	rootCmd.SetHelpCommand(newHelpCmd(env))
 	rootCmd.SetUsageTemplate(usageTemplate(env.Profile()))
 }

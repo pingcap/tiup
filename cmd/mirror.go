@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/pingcap-incubator/tiup/pkg/log"
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/remote"
@@ -73,9 +74,10 @@ of components or the repository itself.`,
 		newMirrorYankCompCmd(env),
 		newMirrorDelCompCmd(env),
 		newMirrorGenkeyCmd(env),
-		newMirrorCloneCmd(env),
+		//newMirrorCloneCmd(env),
 		newMirrorPublishCmd(env),
 	)
+
 	return cmd
 }
 
@@ -203,6 +205,7 @@ func newMirrorPublishCmd(env *meta.Environment) *cobra.Command {
 			if len(args) != 4 {
 				return cmd.Help()
 			}
+			log.Debugf("Publish component %s", args[0])
 
 			// Get the private key
 			f, err := os.Open(privPath)
@@ -220,13 +223,21 @@ func newMirrorPublishCmd(env *meta.Environment) *cobra.Command {
 			if err := t.Open(args[2]); err != nil {
 				return err
 			}
+
+			log.Debugf("Start upload tarbal...")
 			if err := t.Upload(); err != nil {
 				return err
 			}
+			log.Debugf("Upload sucess")
+
+			log.Debugf("Fetch last component manifest for component %s", args[0])
 			m, _ := env.V1Repository().FetchComponentManifest(args[0])
+
+			log.Debugf("Sign manifest")
 			if err := t.Sign(&ki, m); err != nil {
 				return err
 			}
+			log.Debugf("Sign success")
 
 			return nil
 		},

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/pingcap-incubator/tiup/pkg/log"
 	"github.com/pingcap-incubator/tiup/server/session"
 	"github.com/pingcap/fn"
 )
@@ -26,7 +27,10 @@ func (h *tarbalUploader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *tarbalUploader) upload(r *http.Request) (*simpleResponse, error) {
 	sid := mux.Vars(r)["sid"]
+	log.Infof("Uploading tarbal, sid: %s", sid)
+
 	if err := h.sm.Begin(sid); err != nil {
+		log.Errorf("Failed to start session: %s", err.Error())
 		return nil, ErrorTarbalConflict
 	}
 

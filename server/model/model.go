@@ -34,11 +34,11 @@ func (m *model) UpdateComponentManifest(component string, manifest *ComponentMan
 	if err != nil {
 		return err
 	}
-	lastVersion := snap.Signed.Meta["/index.json"].Version
+	lastVersion := snap.Signed.Meta[fmt.Sprintf("/%s.json", component)].Version
 	if manifest.Signed.Version != lastVersion+1 {
 		return ErrorConflict
 	}
-	if err := m.txn.WriteManifest(fmt.Sprintf("%d.%s.json", manifest.Signed.Version, component), m); err != nil {
+	if err := m.txn.WriteManifest(fmt.Sprintf("%d.%s.json", manifest.Signed.Version, component), manifest); err != nil {
 		return err
 	}
 	return nil
@@ -59,9 +59,14 @@ func (m *model) UpdateRootManifest(manifest *RootManifest) error {
 }
 
 func (m *model) UpdateIndexManifest(f func(*IndexManifest) *IndexManifest) error {
-	var last IndexManifest
-	err := m.txn.ReadManifest("index.json", &last)
+	snap, err := m.ReadSnapshotManifest()
 	if err != nil {
+		return err
+	}
+	lastVersion := snap.Signed.Meta["/index.json"].Version
+
+	var last IndexManifest
+	if err := m.txn.ReadManifest(fmt.Sprintf("%d.index.json", lastVersion), &last); err != nil {
 		return err
 	}
 	manifest := f(&last)
@@ -123,7 +128,7 @@ func (m *model) UpdateTimestampManifest() error {
 		return err
 	}
 	manifest.Signed.Version++
-	manifest.Signed.Meta["snapshot.json"] = v1manifest.FileHash{
+	manifest.Signed.Meta["/snapshot.json"] = v1manifest.FileHash{
 		Hashes: map[string]string{
 			"sha256": sha256,
 		},

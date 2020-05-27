@@ -123,8 +123,9 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 		m.Platforms[platformStr] = map[string]v1manifest.VersionItem{}
 	}
 	m.Platforms[platformStr][t.version] = v1manifest.VersionItem{
-		Entry: t.entry,
-		URL:   fmt.Sprintf("/%s-%s-%s-%s.tar.gz", t.component, t.version, t.os, t.arch),
+		Entry:    t.entry,
+		Released: time.Now().String(),
+		URL:      fmt.Sprintf("/%s-%s-%s-%s.tar.gz", t.component, t.version, t.os, t.arch),
 		FileHash: v1manifest.FileHash{
 			Hashes: map[string]string{
 				"sha256": t.sha256,
