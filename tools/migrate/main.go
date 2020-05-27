@@ -317,10 +317,10 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		}
 	}
 
-	// Tread TiUP as a component
+	// Treat TiUP as a component
 	tiup := v0manifest.ComponentInfo{
 		Name: "tiup",
-		Desc: "Components manager for TiDB ecosystem",
+		Desc: "Component manager for TiDB ecosystem",
 	}
 	tiupVersions := &v0manifest.VersionManifest{
 		Description: tiup.Desc,
