@@ -50,6 +50,8 @@ type (
 	// Mirror represents a repository mirror, which can be remote HTTP
 	// server or a local file system directory
 	Mirror interface {
+		// Source returns the address of the mirror
+		Source() string
 		// Open initialize the mirror.
 		Open() error
 		// Download fetches a resource to disk.
@@ -80,6 +82,11 @@ func NewMirror(mirror string, options MirrorOptions) Mirror {
 
 type localFilesystem struct {
 	rootPath string
+}
+
+// Source implements the Mirror interface
+func (l *localFilesystem) Source() string {
+	return l.rootPath
 }
 
 // Open implements the Mirror interface
@@ -145,6 +152,11 @@ type httpMirror struct {
 	server  string
 	tmpDir  string
 	options MirrorOptions
+}
+
+// Source implements the Mirror interface
+func (l *httpMirror) Source() string {
+	return l.server
 }
 
 // Open implements the Mirror interface

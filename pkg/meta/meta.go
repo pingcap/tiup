@@ -68,7 +68,7 @@ func InitEnv(options repository.Options) (*Environment, error) {
 		var local v1manifest.LocalManifests
 		local, err = v1manifest.NewManifests(profile)
 		if err != nil {
-			return nil, errors.AddStack(err)
+			return nil, errors.Annotatef(err, "initial repository from mirror(%s) failed", Mirror())
 		}
 		v1repo = repository.NewV1Repo(mirror, options, local)
 	} else {

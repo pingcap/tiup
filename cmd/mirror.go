@@ -20,14 +20,11 @@ import (
 	"sort"
 	"time"
 
-	"github.com/pingcap-incubator/tiup/pkg/repository"
-
-	"github.com/fatih/color"
-
 	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
-	"github.com/pkg/errors"
+	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -394,10 +391,7 @@ func newMirrorCloneCmd(env *meta.Environment) *cobra.Command {
 	}
 
 	repo := env.V1Repository()
-	index, err := repo.FetchIndexManifest()
-	if err != nil {
-		fmt.Println(color.YellowString("Warning: cannot fetch component list from mirror: %v", err))
-	}
+	index, fetchErr := repo.FetchIndexManifest()
 
 	var components []string
 	if index != nil && len(index.Components) > 0 {
@@ -418,6 +412,10 @@ func newMirrorCloneCmd(env *meta.Environment) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
 				return cmd.Help()
+			}
+
+			if fetchErr != nil {
+				return errors.AddStack(fetchErr)
 			}
 
 			if len(components) < 1 {

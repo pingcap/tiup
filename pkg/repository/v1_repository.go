@@ -495,11 +495,15 @@ func (r *V1Repository) fetchManifestWithHash(url string, role v1manifest.ValidMa
 func (r *V1Repository) fetchBase(url string, maxSize uint, f func(reader io.Reader) (*v1manifest.Manifest, error)) (*v1manifest.Manifest, error) {
 	reader, err := r.mirror.Fetch(url, int64(maxSize))
 	if err != nil {
-		return nil, errors.Annotatef(err, "fetch %s failed", url)
+		return nil, errors.Annotatef(err, "fetch %s from mirror(%s) failed", url, r.mirror.Source())
 	}
 	defer reader.Close()
 
-	return f(reader)
+	m, err := f(reader)
+	if err != nil {
+		return nil, errors.Annotatef(err, "read manifest from mirror(%s) failed", r.mirror.Source())
+	}
+	return m, nil
 }
 
 func checkHash(reader io.Reader, sha256 string) (io.Reader, error) {
