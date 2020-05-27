@@ -91,8 +91,6 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
-		} else if manifest == nil {
-			errs = append(errs, fmt.Sprintf("component %s manifest not found", spec.ID))
 		}
 
 		if spec.Nightly {
@@ -580,11 +578,7 @@ func (r *V1Repository) FetchComponentManifest(id string) (com *v1manifest.Compon
 		return nil, errors.AddStack(err)
 	}
 
-	com, err = r.updateComponentManifest(id)
-	if err == nil && com == nil {
-		err = errors.Errorf("component %s manifest not found", com.ID)
-	}
-	return
+	return r.updateComponentManifest(id)
 }
 
 // ComponentVersion returns version item of a component
@@ -605,7 +599,12 @@ func (r *V1Repository) ComponentVersion(id, version string) (*v1manifest.Version
 // Load the manifest locally only to get then Entry, do not force do something need access mirror.
 func (r *V1Repository) BinaryPath(installPath string, componentID string, version string) (string, error) {
 	var index v1manifest.Index
-	_, err := r.local.LoadManifest(&index)
+	_, err := r.ensureManifests()
+	if err != nil {
+		return "", errors.AddStack(err)
+	}
+
+	_, err = r.local.LoadManifest(&index)
 	if err != nil {
 		return "", err
 	}
@@ -616,9 +615,6 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, versio
 	component, err := r.local.LoadComponentManifest(&item, filename)
 	if err != nil {
 		return "", err
-	}
-	if component == nil {
-		return "", errors.Errorf("component %s manifest not found, you can try `tiup list` to generate", componentID)
 	}
 
 	versionItem, ok := component.Platforms[r.PlatformString()][version]

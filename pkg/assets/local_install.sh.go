@@ -57,8 +57,6 @@ install_binary() {
   cp "$script_dir/root.json" "$bin_dir" || return 1
   # Remove old manifests
   rm -rf $TIUP_HOME/manifests
-  # Install new manifests
-  $bin_dir/tiup list >> /dev/null
   return 0
 }
 
