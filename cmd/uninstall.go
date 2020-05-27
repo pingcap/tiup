@@ -94,9 +94,6 @@ func removeComponents(env *meta.Environment, specs []string, all bool) error {
 				fmt.Printf("Use `tiup uninstall %s --all` if you want to remove all versions.\n", spec)
 				continue
 			}
-			if err := os.RemoveAll(env.LocalPath(localdata.StorageParentDir, spec)); err != nil {
-				return err
-			}
 			path = env.LocalPath(localdata.ComponentParentDir, spec)
 		}
 		err := os.RemoveAll(path)

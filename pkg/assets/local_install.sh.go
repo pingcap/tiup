@@ -55,6 +55,8 @@ install_binary() {
   tar -zxf "$script_dir/tiup-$os-$arch.tar.gz" -C "$bin_dir" || return 1
   # Use the offline root.json
   cp "$script_dir/root.json" "$bin_dir" || return 1
+  # Remove old manifests
+  rm -rf $TIUP_HOME/manifests
   return 0
 }
 
