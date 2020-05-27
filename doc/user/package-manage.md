@@ -17,7 +17,6 @@ When you want to install something with TiUP, you first need to know what compon
 
 For the above two methods of use, two flags can be used in combination.
 --installed: which components are already installed locally, or which versions of a component are already installed
---refresh: Get a list of the latest components on the server, and a list of their versions
 
 Example 1: View all components currently installed
 
@@ -28,7 +27,7 @@ tiup list --installed
 Example 2: Get a list of all TiKV installable version components from the server
 
 ```shell
-tiup list tikv --refresh
+tiup list tikv
 ```
 
 ## Install component: tiup install
