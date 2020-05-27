@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 
@@ -82,7 +83,12 @@ func removeComponents(env *meta.Environment, specs []string, all bool) error {
 		var path string
 		if strings.Contains(spec, ":") {
 			parts := strings.SplitN(spec, ":", 2)
-			path = env.LocalPath(localdata.ComponentParentDir, parts[0], parts[1])
+			// after this version is deleted, component will have no version left. delete the whole component dir directly
+			if dir, err := ioutil.ReadDir(env.LocalPath(localdata.ComponentParentDir, parts[0])); err == nil && len(dir) <= 1 {
+				path = env.LocalPath(localdata.ComponentParentDir, parts[0])
+			} else {
+				path = env.LocalPath(localdata.ComponentParentDir, parts[0], parts[1])
+			}
 		} else {
 			if !all {
 				fmt.Printf("Use `tiup uninstall %s --all` if you want to remove all versions.\n", spec)
