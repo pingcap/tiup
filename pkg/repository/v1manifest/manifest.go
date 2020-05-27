@@ -426,6 +426,13 @@ func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifes
 	return m, m.Signed.isValid()
 }
 
+// RenewManifest resets and extends the expire time of manifest
+func RenewManifest(m ValidManifest, startTime time.Time) {
+	m.Base().Expires = startTime.Add(
+		ManifestsConfig[m.Base().Ty].Expire,
+	).Format(time.RFC3339)
+}
+
 // loadKeys stores all keys declared in manifest into ks.
 func loadKeys(manifest ValidManifest, ks *KeyStore) error {
 	switch manifest.Base().Ty {
