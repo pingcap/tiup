@@ -1,6 +1,6 @@
 [
     {
-        "command": "tiup list --refresh",
+        "command": "tiup list",
         "path": ""
     },
     {
@@ -36,7 +36,7 @@
         "path": ""
     },
     {
-        "command": "tiup list test --refresh",
+        "command": "tiup list test",
         "path": ""
     },
     {

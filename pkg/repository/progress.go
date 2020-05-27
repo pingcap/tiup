@@ -33,11 +33,13 @@ func (d DisableProgress) Finish() {}
 
 // ProgressBar implement the DownloadProgress interface with download progress
 type ProgressBar struct {
-	bar *pb.ProgressBar
+	bar  *pb.ProgressBar
+	size int64
 }
 
 // Start implement the DownloadProgress interface
 func (p *ProgressBar) Start(url string, size int64) {
+	p.size = size
 	p.bar = pb.Start64(size)
 	p.bar.Set(pb.Bytes, true)
 	p.bar.SetTemplateString(fmt.Sprintf(`download %s {{counters . }} {{percent . }} {{speed . }}`, url))
@@ -50,5 +52,6 @@ func (p *ProgressBar) SetCurrent(size int64) {
 
 // Finish implement the DownloadProgress interface
 func (p *ProgressBar) Finish() {
+	p.bar.SetCurrent(p.size)
 	p.bar.Finish()
 }

@@ -201,25 +201,20 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 		return err
 	}
 
-	hash, _, err := HashManifest(signedManifests[v1manifest.ManifestTypeSnapshot])
+	timestamp, err = timestamp.SetSnapshot(signedManifests[v1manifest.ManifestTypeSnapshot])
 	if err != nil {
 		return errors.Trace(err)
 	}
-	timestamp.Meta = map[string]v1manifest.FileHash{
-		v1manifest.ManifestURLSnapshot: {
-			Hashes: hash,
-			Length: limitLength,
-		},
-	}
+
 	signedManifests[v1manifest.ManifestTypeTimestamp], err = v1manifest.SignManifest(timestamp, keys[v1manifest.ManifestTypeTimestamp]...)
 	if err != nil {
 		return err
 	}
 	for _, m := range signedManifests {
-		fname := filepath.Join(tmpDir, m.Signed.Filename())
+		fname := filepath.Join(targetDir, m.Signed.Filename())
 		switch m.Signed.Base().Ty {
 		case v1manifest.ManifestTypeRoot:
-			err := v1manifest.WriteManifestFile(FnameWithVersion(fname, 1), m)
+			err := v1manifest.WriteManifestFile(FnameWithVersion(fname, m.Signed.Base().Version), m)
 			if err != nil {
 				return err
 			}
@@ -229,7 +224,7 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 				return err
 			}
 		case v1manifest.ManifestTypeComponent, v1manifest.ManifestTypeIndex:
-			err := v1manifest.WriteManifestFile(FnameWithVersion(fname, 1), m)
+			err := v1manifest.WriteManifestFile(FnameWithVersion(fname, m.Signed.Base().Version), m)
 			if err != nil {
 				return err
 			}
@@ -252,7 +247,7 @@ func cloneComponents(repo *V1Repository,
 	for _, name := range components {
 		manifest, err := repo.FetchComponentManifest(name)
 		if err != nil {
-			return nil, errors.Annotatef(err, "fetch component '%s' manifest", name)
+			return nil, errors.Annotatef(err, "fetch component '%s' manifest failed", name)
 		}
 
 		vs := combineVersions(options.Components[name], manifest, options.OSs, options.Archs, selectedVersions)
@@ -304,33 +299,69 @@ func cloneComponents(repo *V1Repository,
 		compManifests[name] = newManifest
 	}
 
+	// Download TiUP binary
+	for _, goos := range options.OSs {
+		for _, goarch := range options.Archs {
+			url := fmt.Sprintf("/tiup-%s-%s.tar.gz", goos, goarch)
+			dstFile := filepath.Join(targetDir, url)
+			tmpFile := filepath.Join(tmpDir, url)
+
+			if err := repo.Mirror().Download(url, tmpDir); err != nil {
+				return nil, err
+			}
+			// Move file to target directory if hashes pass verify.
+			if err := os.Rename(tmpFile, dstFile); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return compManifests, nil
 }
 
 func download(targetDir, tmpDir string, repo *V1Repository, item *v1manifest.VersionItem) error {
+	validate := func(dir string) error {
+		hashes, n, err := HashFile(dir, item.URL)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+		if uint(n) != item.Length {
+			return errors.Errorf("file length mismatch, expected: %d, got: %v", item.Length, n)
+		}
+		for algo, hash := range item.Hashes {
+			h, found := hashes[algo]
+			if !found {
+				continue
+			}
+			if h != hash {
+				return errors.Errorf("file %s hash mismatch, expected: %s, got: %s", algo, hash, h)
+			}
+		}
+		return nil
+	}
+
+	dstFile := filepath.Join(targetDir, item.URL)
+	tmpFile := filepath.Join(tmpDir, item.URL)
+
+	// Skip installed file if exists file valid
+	if utils.IsExist(dstFile) {
+		if err := validate(targetDir); err == nil {
+			fmt.Println("Skip exists file:", filepath.Join(targetDir, item.URL))
+			return nil
+		}
+	}
+
 	err := repo.Mirror().Download(item.URL, tmpDir)
 	if err != nil {
 		return err
 	}
-	hashes, n, err := HashFile(tmpDir, item.URL)
-	if err != nil {
-		return errors.AddStack(err)
-	}
-	if uint(n) != item.Length {
-		return errors.Errorf("file length mismatch, expected: %d, got: %v", item.Length, n)
-	}
-	for algo, hash := range item.Hashes {
-		h, found := hashes[algo]
-		if !found {
-			continue
-		}
-		if h != hash {
-			return errors.Errorf("file %s hash mismatch, expected: %s, got: %s", algo, hash, h)
-		}
+
+	if err := validate(tmpDir); err != nil {
+		return err
 	}
 
 	// Move file to target directory if hashes pass verify.
-	return os.Rename(filepath.Join(tmpDir, item.URL), filepath.Join(targetDir, item.URL))
+	return os.Rename(tmpFile, dstFile)
 }
 
 func checkVersion(options CloneOptions, versions set.StringSet, version string) bool {
@@ -367,6 +398,9 @@ func combineVersions(versions *[]string, manifest *v1manifest.Component, oss, ar
 		result = set.NewStringSet(*versions...)
 	}
 
+	// Some components version binding to TiDB
+	coreSuites := set.NewStringSet("tidb", "tikv", "pd", "tiflash", "prometheus", "grafana", "ctl", "cdc")
+
 	for _, os := range oss {
 		for _, arch := range archs {
 			platform := PlatformString(os, arch)
@@ -376,7 +410,9 @@ func combineVersions(versions *[]string, manifest *v1manifest.Component, oss, ar
 			}
 			for _, selectedVersion := range selectedVersions {
 				_, found := versions[selectedVersion]
-				if !found {
+				// Some TiUP components won't be bound version with TiDB, if cannot find
+				// selected version we download the latest version to as a alternative
+				if !found && !coreSuites.Exist(manifest.ID) {
 					// Use the latest stable versionS if the selected version doesn't exist in specific platform
 					var latest string
 					for v := range versions {

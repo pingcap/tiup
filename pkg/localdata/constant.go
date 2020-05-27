@@ -25,6 +25,9 @@ const (
 	// ComponentParentDir represent the parent directory of all downloaded components
 	ComponentParentDir = "components"
 
+	// ManifestParentDir represent the parent directory of all manifests
+	ManifestParentDir = "manifests"
+
 	// DataParentDir represent the parent directory of all running instances
 	DataParentDir = "data"
 

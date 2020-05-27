@@ -27,36 +27,37 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+type listOptions struct {
+	installedOnly bool
+	verbose       bool
+	showAll       bool
+}
+
 func newListCmd(env *meta.Environment) *cobra.Command {
-	var (
-		showInstalled bool
-		refresh       bool
-	)
+	var opt listOptions
 	cmd := &cobra.Command{
 		Use:   "list [component]",
 		Short: "List the available TiDB components or versions",
 		Long: `List the available TiDB components if you don't specify any component name,
 or list the available versions of a specific component. Display a list of
-local caches by default. You must use --refresh to force TiUP to fetch
-the latest list from the mirror server. Use the --installed flag to hide 
+local caches by default. Use the --installed flag to hide
 components or versions which have not been installed.
-
-  # Refresh and list all available components
-  tiup list --refresh
 
   # List all installed components
   tiup list --installed
 
   # List all installed versions of TiDB
   tiup list tidb --installed`,
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch len(args) {
 			case 0:
-				result, err := showComponentList(env, showInstalled, refresh)
+				result, err := showComponentList(env, opt)
 				result.print()
 				return err
 			case 1:
-				result, err := showComponentVersions(env, args[0], showInstalled, refresh)
+				result, err := showComponentVersions(env, args[0], opt)
 				result.print()
 				return err
 			default:
@@ -65,8 +66,10 @@ components or versions which have not been installed.
 		},
 	}
 
-	cmd.Flags().BoolVar(&showInstalled, "installed", false, "List installed components only.")
-	cmd.Flags().BoolVar(&refresh, "refresh", false, "Refresh local components/version list cache.")
+	cmd.Flags().BoolVar(&opt.installedOnly, "installed", false, "List installed components only.")
+	cmd.Flags().BoolVar(&opt.verbose, "verbose", false, "Show detailed component information.")
+	cmd.Flags().BoolVar(&opt.showAll, "all", false, "Show all components include hidden ones.")
+
 	return cmd
 }
 
@@ -83,26 +86,12 @@ func (lr *listResult) print() {
 	tui.PrintTable(lr.cmpTable, true)
 }
 
-func showComponentList(env *meta.Environment, onlyInstalled bool, refresh bool) (*listResult, error) {
-	local, err := v1manifest.NewManifests(env.Profile())
+func showComponentList(env *meta.Environment, opt listOptions) (*listResult, error) {
+	index := new(v1manifest.Index)
+	var err error
+	index, err = env.V1Repository().FetchIndexManifest()
 	if err != nil {
 		return nil, err
-	}
-
-	index := new(v1manifest.Index)
-	if refresh {
-		index, err = env.V1Repository().FetchIndexManifest()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		exists, err := local.LoadManifest(index)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-		if !exists {
-			return nil, errors.Errorf("no index manifest")
-		}
 	}
 
 	installed, err := env.Profile().InstalledComponents()
@@ -111,20 +100,20 @@ func showComponentList(env *meta.Environment, onlyInstalled bool, refresh bool) 
 	}
 
 	var cmpTable [][]string
-	cmpTable = append(cmpTable, []string{"Name", "Owner", "Installed", "Platforms", "Description"})
+	if opt.verbose {
+		cmpTable = append(cmpTable, []string{"Name", "Owner", "Installed", "Platforms", "Description"})
+	} else {
+		cmpTable = append(cmpTable, []string{"Name", "Owner", "Description"})
+	}
 
 	localComponents := set.NewStringSet(installed...)
 	for name, comp := range index.Components {
-		if onlyInstalled && !localComponents.Exist(name) {
+		if opt.installedOnly && !localComponents.Exist(name) {
 			continue
 		}
-		installStatus := ""
-		if localComponents.Exist(name) {
-			versions, err := env.Profile().InstalledVersions(name)
-			if err != nil {
-				return nil, err
-			}
-			installStatus = strings.Join(versions, ",")
+
+		if (!opt.installedOnly && !opt.showAll) && comp.Hidden {
+			continue
 		}
 
 		manifest, err := env.V1Repository().FetchComponentManifest(name)
@@ -132,18 +121,34 @@ func showComponentList(env *meta.Environment, onlyInstalled bool, refresh bool) 
 			return nil, err
 		}
 
-		platforms := []string{}
-		for p := range manifest.Platforms {
-			platforms = append(platforms, p)
-		}
+		if opt.verbose {
+			installStatus := ""
+			if localComponents.Exist(name) {
+				versions, err := env.Profile().InstalledVersions(name)
+				if err != nil {
+					return nil, err
+				}
+				installStatus = strings.Join(versions, ",")
+			}
 
-		cmpTable = append(cmpTable, []string{
-			name,
-			comp.Owner,
-			installStatus,
-			strings.Join(platforms, ", "),
-			manifest.Description,
-		})
+			var platforms []string
+			for p := range manifest.Platforms {
+				platforms = append(platforms, p)
+			}
+			cmpTable = append(cmpTable, []string{
+				name,
+				comp.Owner,
+				installStatus,
+				strings.Join(platforms, ","),
+				manifest.Description,
+			})
+		} else {
+			cmpTable = append(cmpTable, []string{
+				name,
+				comp.Owner,
+				manifest.Description,
+			})
+		}
 	}
 
 	return &listResult{
@@ -152,26 +157,12 @@ func showComponentList(env *meta.Environment, onlyInstalled bool, refresh bool) 
 	}, nil
 }
 
-func showComponentVersions(env *meta.Environment, component string, onlyInstalled bool, refresh bool) (*listResult, error) {
-	local, err := v1manifest.NewManifests(env.Profile())
-	if err != nil {
-		return nil, err
-	}
-
+func showComponentVersions(env *meta.Environment, component string, opt listOptions) (*listResult, error) {
 	comp := new(v1manifest.Component)
-	if refresh {
-		comp, err = env.V1Repository().FetchComponentManifest(component)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		exists, err := local.LoadManifest(comp)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-		if !exists {
-			return nil, errors.Errorf("no component manifest for %s", component)
-		}
+	var err error
+	comp, err = env.V1Repository().FetchComponentManifest(component)
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to fetch component")
 	}
 
 	versions, err := env.Profile().InstalledVersions(component)
@@ -204,6 +195,10 @@ func showComponentVersions(env *meta.Environment, component string, onlyInstalle
 		installStatus := ""
 		if installed.Exist(v) {
 			installStatus = "YES"
+		} else {
+			if opt.installedOnly {
+				continue
+			}
 		}
 		cmpTable = append(cmpTable, []string{v, installStatus, released[v], strings.Join(platforms[v], ",")})
 	}

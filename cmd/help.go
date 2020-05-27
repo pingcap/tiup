@@ -130,7 +130,7 @@ Available Components:
 	} else {
 		installComps = `
 Components Manifest:
-  use "tiup list --refresh" to fetch the latest components manifest
+  use "tiup list" to fetch the latest components manifest
 `
 	}
 
@@ -165,7 +165,7 @@ Examples:
   $ tiup update --all                  # Update all installed components to the latest version
   $ tiup update --nightly              # Update all installed components to the nightly version
   $ tiup update --self                 # Update the "tiup" to the latest version
-  $ tiup list --refresh                # Fetch the latest supported components list
+  $ tiup list                          # Fetch the latest supported components list
   $ tiup status                        # Display all running/terminated instances
   $ tiup clean <name>                  # Clean the data of running/terminated instance (Kill process if it's running)
   $ tiup clean --all                   # Clean the data of all running/terminated instances{{end}}{{if .HasAvailableSubCommands}}

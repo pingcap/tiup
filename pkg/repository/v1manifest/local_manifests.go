@@ -22,8 +22,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pingcap-incubator/tiup/pkg/assets"
-
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
@@ -118,7 +116,15 @@ func (ms *FsManifests) save(manifest *Manifest, filename string) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(filepath.Join(ms.profile.Root(), filename), bytes, 0644)
+	// Save all manifests in `$TIUP_HOME/manifests`
+	path := filepath.Join(ms.profile.Root(), localdata.ManifestParentDir, filename)
+
+	// create sub directory if needed
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return errors.Trace(err)
+	}
+
+	err = ioutil.WriteFile(path, bytes, 0644)
 	if err != nil {
 		return err
 	}
@@ -169,13 +175,21 @@ func (ms *FsManifests) load(filename string) (string, error) {
 		return str, nil
 	}
 
-	fullPath := filepath.Join(ms.profile.Root(), filename)
+	fullPath := filepath.Join(ms.profile.Root(), localdata.ManifestParentDir, filename)
 	file, err := os.Open(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// Use the hardcode root.json if there is no root.json currently
 			if filename == ManifestFilenameRoot {
-				return assets.Root, nil
+				initRoot, err := filepath.Abs(filepath.Join(ms.profile.Root(), "bin/root.json"))
+				if err != nil {
+					return "", errors.Trace(err)
+				}
+				bytes, err := ioutil.ReadFile(initRoot)
+				if err != nil {
+					return "", errors.Errorf("cannot open the initial root.json at %s", initRoot)
+				}
+				return string(bytes), nil
 			}
 			return "", nil
 		}

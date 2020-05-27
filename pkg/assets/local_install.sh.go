@@ -49,9 +49,13 @@ fi
 bin_dir=$TIUP_HOME/bin
 mkdir -p "$bin_dir"
 
+script_dir=$(cd $(dirname $0) && pwd)
+
 install_binary() {
-    tar -zxf "tiup-$os-$arch.tar.gz" -C "$bin_dir" || return 1
-    return 0
+  tar -zxf "$script_dir/tiup-$os-$arch.tar.gz" -C "$bin_dir" || return 1
+  # Use the offline root.json
+  cp "$script_dir/root.json" "$bin_dir" || return 1
+  return 0
 }
 
 if ! install_binary; then
@@ -83,6 +87,8 @@ esac
 
 echo "Installed path: ${bold}$bin_dir/tiup${sgr0}"
 echo "==============================================="
-echo "Have a try:     ${bold}tiup playground${sgr0}"
+echo "1. ${bold}source ${PROFILE}${sgr0}"
+echo "2. ${bold}export TIUP_MIRRORS=${script_dir}${sgr0}"
+echo "3. Have a try:   ${bold}tiup playground${sgr0}"
 echo "==============================================="
 `

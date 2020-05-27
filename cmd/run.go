@@ -36,7 +36,7 @@ import (
 func runComponent(env *meta.Environment, tag, spec, binPath string, args []string) error {
 	component, version := meta.ParseCompVersion(spec)
 	if !env.IsSupportedComponent(component) {
-		return fmt.Errorf("component `%s` does not support `%s/%s` (see `tiup list --refresh`)", component, runtime.GOOS, runtime.GOARCH)
+		return fmt.Errorf("component `%s` does not support `%s/%s` (see `tiup list`)", component, runtime.GOOS, runtime.GOARCH)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

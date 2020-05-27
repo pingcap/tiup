@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 
@@ -48,7 +49,7 @@ which is used to uninstall tiup.
   tiup uninstall --all`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if self {
-				deletable := []string{"bin", "manifest", "components", "storage/cluster/packages"}
+				deletable := []string{"bin", "manifest", "manifests", "components", "storage/cluster/packages"}
 				for _, dir := range deletable {
 					if err := os.RemoveAll(env.Profile().Path(dir)); err != nil {
 						return errors.Trace(err)
@@ -82,7 +83,12 @@ func removeComponents(env *meta.Environment, specs []string, all bool) error {
 		var path string
 		if strings.Contains(spec, ":") {
 			parts := strings.SplitN(spec, ":", 2)
-			path = env.LocalPath(localdata.ComponentParentDir, parts[0], parts[1])
+			// after this version is deleted, component will have no version left. delete the whole component dir directly
+			if dir, err := ioutil.ReadDir(env.LocalPath(localdata.ComponentParentDir, parts[0])); err == nil && len(dir) <= 1 {
+				path = env.LocalPath(localdata.ComponentParentDir, parts[0])
+			} else {
+				path = env.LocalPath(localdata.ComponentParentDir, parts[0], parts[1])
+			}
 		} else {
 			if !all {
 				fmt.Printf("Use `tiup uninstall %s --all` if you want to remove all versions.\n", spec)

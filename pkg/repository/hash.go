@@ -21,7 +21,6 @@ import (
 	"os"
 	"path/filepath"
 
-	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 )
 
@@ -43,20 +42,4 @@ func HashFile(srcDir, filename string) (map[string]string, int64, error) {
 		v1manifest.SHA512: hex.EncodeToString(s512.Sum(nil)),
 	}
 	return hashes, n, err
-}
-
-// HashManifest returns the sha256/sha512 hashes and the file length of specific manifest
-func HashManifest(m *v1manifest.Manifest) (map[string]string, uint, error) {
-	bytes, err := cjson.Marshal(m)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	s256 := sha256.Sum256(bytes)
-	s512 := sha512.Sum512(bytes)
-
-	return map[string]string{
-		v1manifest.SHA256: hex.EncodeToString(s256[:]),
-		v1manifest.SHA512: hex.EncodeToString(s512[:]),
-	}, uint(len(bytes)), nil
 }

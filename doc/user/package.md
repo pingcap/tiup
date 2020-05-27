@@ -70,7 +70,7 @@ If the directory created in step 3 happens to be in the current directory and is
 6. Implementation
 
 ```bash
-[user@localhost ~]# tiup list hello --refresh
+[user@localhost ~]# tiup list hello
 Available versions for hello (Last Modified: 2020-04-23T16:45:53+08:00):
 Version  Installed  Release:                   Platforms
 -------  ---------  --------                   ---------

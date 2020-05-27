@@ -103,7 +103,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 		}
 
 		if spec.Nightly && !manifest.HasNightly(r.PlatformString()) {
-			errs = append(errs, fmt.Sprintf("the component `%s` does not have a nightly version; skipped", spec.ID))
+			fmt.Printf("The component `%s` does not have a nightly version; skipped\n", spec.ID)
 			continue
 		}
 
@@ -126,7 +126,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 				return errors.Trace(err)
 			}
 			if installed {
-				errs = append(errs, fmt.Sprintf("component %s version %s is already installed", spec.ID, version))
+				fmt.Printf("component %s version %s is already installed\n", spec.ID, version)
 				continue
 			}
 		}
@@ -495,7 +495,7 @@ func (r *V1Repository) fetchManifestWithHash(url string, role v1manifest.ValidMa
 func (r *V1Repository) fetchBase(url string, maxSize uint, f func(reader io.Reader) (*v1manifest.Manifest, error)) (*v1manifest.Manifest, error) {
 	reader, err := r.mirror.Fetch(url, int64(maxSize))
 	if err != nil {
-		return nil, errors.Trace(err)
+		return nil, errors.Annotatef(err, "fetch %s failed", url)
 	}
 	defer reader.Close()
 
