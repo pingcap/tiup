@@ -319,8 +319,10 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 
 	// Treat TiUP as a component
 	tiup := v0manifest.ComponentInfo{
-		Name: "tiup",
-		Desc: "Component manager for TiDB ecosystem",
+		Name:       "tiup",
+		Desc:       "Components manager for TiDB ecosystem",
+		Standalone: false,
+		Hide:       true,
 	}
 	tiupVersions := &v0manifest.VersionManifest{
 		Description: tiup.Desc,
@@ -332,6 +334,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 			},
 		},
 	}
+
 	for _, goos := range []string{"linux", "darwin"} {
 		for _, goarch := range []string{"amd64", "arm64"} {
 			name := fmt.Sprintf("tiup-%s-%s.tar.gz", goos, goarch)
@@ -457,9 +460,11 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		}
 
 		index.Components[comp.Name] = v1manifest.ComponentItem{
-			Yanked: false,
-			Owner:  "pingcap",
-			URL:    fmt.Sprintf("/%s", name),
+			Yanked:     false,
+			Owner:      "pingcap",
+			URL:        fmt.Sprintf("/%s", name),
+			Standalone: comp.Standalone,
+			Hidden:     comp.Hide,
 		}
 
 		bytes, err := cjson.Marshal(signedManifests[component.ID])

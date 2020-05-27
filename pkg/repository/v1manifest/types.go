@@ -112,9 +112,11 @@ type Component struct {
 
 // ComponentItem object
 type ComponentItem struct {
-	Yanked bool   `json:"yanked"`
-	Owner  string `json:"owner"`
-	URL    string `json:"url"`
+	Yanked     bool   `json:"yanked"`
+	Owner      string `json:"owner"`
+	URL        string `json:"url"`
+	Standalone bool   `json:"standalone"`
+	Hidden     bool   `json:"hidden"`
 }
 
 // Snapshot manifest.
