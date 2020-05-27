@@ -29,7 +29,6 @@ import (
 
 type listOptions struct {
 	installedOnly bool
-	refresh       bool
 	verbose       bool
 	showAll       bool
 }
@@ -41,12 +40,8 @@ func newListCmd(env *meta.Environment) *cobra.Command {
 		Short: "List the available TiDB components or versions",
 		Long: `List the available TiDB components if you don't specify any component name,
 or list the available versions of a specific component. Display a list of
-local caches by default. You must use --refresh to force TiUP to fetch
-the latest list from the mirror server. Use the --installed flag to hide 
+local caches by default. Use the --installed flag to hide
 components or versions which have not been installed.
-
-  # Refresh and list all available components
-  tiup list --refresh
 
   # List all installed components
   tiup list --installed
@@ -72,7 +67,6 @@ components or versions which have not been installed.
 	}
 
 	cmd.Flags().BoolVar(&opt.installedOnly, "installed", false, "List installed components only.")
-	cmd.Flags().BoolVar(&opt.refresh, "refresh", false, "Refresh local components/version list cache.")
 	cmd.Flags().BoolVar(&opt.verbose, "verbose", false, "Show detailed component information.")
 	cmd.Flags().BoolVar(&opt.showAll, "all", false, "Show all components include hidden ones.")
 
@@ -93,25 +87,11 @@ func (lr *listResult) print() {
 }
 
 func showComponentList(env *meta.Environment, opt listOptions) (*listResult, error) {
-	local, err := v1manifest.NewManifests(env.Profile())
+	index := new(v1manifest.Index)
+	var err error
+	index, err = env.V1Repository().FetchIndexManifest()
 	if err != nil {
 		return nil, err
-	}
-
-	index := new(v1manifest.Index)
-	if opt.refresh {
-		index, err = env.V1Repository().FetchIndexManifest()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		exists, err := local.LoadManifest(index)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-		if !exists {
-			return nil, errors.Errorf("no index manifest")
-		}
 	}
 
 	installed, err := env.Profile().InstalledComponents()
@@ -178,25 +158,11 @@ func showComponentList(env *meta.Environment, opt listOptions) (*listResult, err
 }
 
 func showComponentVersions(env *meta.Environment, component string, opt listOptions) (*listResult, error) {
-	local, err := v1manifest.NewManifests(env.Profile())
-	if err != nil {
-		return nil, err
-	}
-
 	comp := new(v1manifest.Component)
-	if opt.refresh {
-		comp, err = env.V1Repository().FetchComponentManifest(component)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		exists, err := local.LoadManifest(comp)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-		if !exists {
-			return nil, errors.Errorf("no component manifest for %s", component)
-		}
+	var err error
+	comp, err = env.V1Repository().FetchComponentManifest(component)
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to fetch component")
 	}
 
 	versions, err := env.Profile().InstalledVersions(component)
@@ -229,6 +195,10 @@ func showComponentVersions(env *meta.Environment, component string, opt listOpti
 		installStatus := ""
 		if installed.Exist(v) {
 			installStatus = "YES"
+		} else {
+			if opt.installedOnly {
+				continue
+			}
 		}
 		cmpTable = append(cmpTable, []string{v, installStatus, released[v], strings.Join(platforms[v], ",")})
 	}
