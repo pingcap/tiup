@@ -245,13 +245,19 @@ func (ms *FsManifests) ManifestVersion(filename string) uint {
 		return 0
 	}
 
-	var manifest Manifest
+	var manifest RawManifest
 	err = json.Unmarshal([]byte(data), &manifest)
 	if err != nil {
 		return 0
 	}
 
-	return manifest.Signed.Base().Version
+	var base SignedBase
+	err = json.Unmarshal(manifest.Signed, &base)
+	if err != nil {
+		return 0
+	}
+
+	return base.Version
 }
 
 // MockManifests is a LocalManifests implementation for testing.
