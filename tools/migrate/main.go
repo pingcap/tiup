@@ -22,12 +22,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pingcap-incubator/tiup/pkg/utils"
-
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap-incubator/tiup/pkg/utils"
 	tiupver "github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
