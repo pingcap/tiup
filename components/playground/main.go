@@ -445,7 +445,6 @@ func bootCluster(options *bootOptions) error {
 		}
 
 		if lastErr == nil {
-			time.Sleep(30 * time.Second)
 			for _, flash := range flashs {
 				if err := flash.Start(ctx, v0manifest.Version(options.version), pathMap["tiflash"]); err != nil {
 					lastErr = err
