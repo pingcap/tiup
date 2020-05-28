@@ -46,11 +46,11 @@ func newServer(rootDir, indexKey, snapshotKey, timestampKey string) (*server, er
 	}
 
 	for ty, kfile := range kmap {
-		if k, err := loadPrivateKey(kfile); err != nil {
+		k, err := loadPrivateKey(kfile)
+		if err != nil {
 			return nil, err
-		} else {
-			s.keys[ty] = k
 		}
+		s.keys[ty] = k
 	}
 
 	return s, nil

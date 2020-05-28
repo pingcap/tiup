@@ -53,10 +53,7 @@ func (m *model) UpdateComponentManifest(component string, manifest *ComponentMan
 		log.Debugf("Component version not expected, expect %d, got %d", lastVersion+1, manifest.Signed.Version)
 		return ErrorConflict
 	}
-	if err := m.txn.WriteManifest(fmt.Sprintf("%d.%s.json", manifest.Signed.Version, component), manifest); err != nil {
-		return err
-	}
-	return nil
+	return m.txn.WriteManifest(fmt.Sprintf("%d.%s.json", manifest.Signed.Version, component), manifest)
 }
 
 func (m *model) UpdateRootManifest(manifest *RootManifest) error {
@@ -154,7 +151,7 @@ func (m *model) UpdateTimestampManifest() error {
 	manifest.Signed.Version++
 	manifest.Signed.Meta[v1manifest.ManifestURLSnapshot] = v1manifest.FileHash{
 		Hashes: map[string]string{
-			"sha256": sha256,
+			v1manifest.SHA256: sha256,
 		},
 		Length: uint(fi.Size()),
 	}

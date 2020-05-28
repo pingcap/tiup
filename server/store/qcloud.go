@@ -217,16 +217,9 @@ func (t *qcloudTxn) Rollback() error {
 }
 
 func (t *qcloudTxn) require() (err error) {
-	if err := os.MkdirAll(t.root, 0755); err != nil {
-		return err
-	}
-
-	return nil
+	return os.MkdirAll(t.root, 0755)
 }
 
 func (t *qcloudTxn) release() error {
-	if err := os.RemoveAll(t.root); err != nil {
-		return err
-	}
-	return nil
+	return os.RemoveAll(t.root)
 }

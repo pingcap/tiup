@@ -61,5 +61,5 @@ var (
 	// ErrorManifestConflict indicates that the uploaded manifest is not new enough
 	ErrorManifestConflict = newHandlerError(http.StatusConflict, "MANIFEST CONFLICT", "the manifest provided is not new enough")
 	// ErrorForbiden indicates that the user can't access target resource
-	ErrorForbiden = newHandlerError(http.StatusForbidden, "FORBIDEN", "permission denied")
+	ErrorForbiden = newHandlerError(http.StatusForbidden, "FORBIDDEN", "permission denied")
 )

@@ -222,7 +222,7 @@ func newMirrorPublishCmd(env *meta.Environment) *cobra.Command {
 			}
 
 			if err := t.Upload(); err != nil {
-				fmt.Errorf("Failed on uploading tarbal: %s", err.Error())
+				fmt.Printf("Failed on uploading tarbal: %s\n", err.Error())
 				return err
 			}
 

@@ -18,6 +18,6 @@ import (
 )
 
 var (
-	// ErrorConflict indicats manifest conflict
+	// ErrorConflict indicates manifest conflict
 	ErrorConflict = errors.New("manifest conflict")
 )
