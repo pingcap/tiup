@@ -215,10 +215,7 @@ func hasDashboard(pdAddr string) bool {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 200 {
-		return true
-	}
-	return false
+	return resp.StatusCode == 200
 }
 
 func getAbsolutePath(binPath string) string {
@@ -398,6 +395,8 @@ func bootCluster(options *bootOptions) error {
 	}
 
 	for i, inst := range all {
+		// nolint
+		// SA1029: should not use built-in type string as key for value; define your own type to avoid collisions.
 		if err := inst.Start(context.WithValue(ctx, "has_tiflash", options.tiflashNum > 0), v0manifest.Version(options.version), pathMap[allRole[i]], profile); err != nil {
 			return err
 		}
@@ -431,7 +430,7 @@ func bootCluster(options *bootOptions) error {
 				if err != nil {
 					fmt.Println("Set the PD metrics storage failed")
 				}
-				fmt.Printf(color.GreenString("To view the monitor: http://%s:%d\n", monitorInfo.IP, monitorInfo.Port))
+				fmt.Print(color.GreenString("To view the monitor: http://%s:%d\n", monitorInfo.IP, monitorInfo.Port))
 			}
 		}
 	}

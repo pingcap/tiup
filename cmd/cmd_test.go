@@ -20,8 +20,6 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	. "github.com/pingcap/check"
 )
@@ -47,6 +45,7 @@ func (s *testCmdSuite) SetUpSuite(c *C) {
 	s.mirror = repository.NewMirror(s.testDir, repository.MirrorOptions{})
 }
 
+/*
 func (s *testCmdSuite) newEnv(c *C) *meta.Environment {
 	repo, err := repository.NewRepository(s.mirror, repository.Options{})
 	c.Assert(err, IsNil)
@@ -57,6 +56,7 @@ func (s *testCmdSuite) newEnv(c *C) *meta.Environment {
 
 	return meta.NewV0(profile, repo)
 }
+*/
 
 func (s *testCmdSuite) TearDownSuite(c *C) {
 	s.mirror.Close()
