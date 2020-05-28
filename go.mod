@@ -21,11 +21,11 @@ require (
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-runewidth v0.0.7
 	github.com/onsi/gomega v1.5.0 // indirect
-	github.com/pingcap-incubator/tiup v0.0.2-0.20200527070650-77d8bda378f8
+	github.com/pingcap-incubator/tiup v0.0.2-0.20200528101307-57964052da33
 	github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712
 	github.com/pingcap/errors v0.11.5-0.20190809092503-95897b64e011
-	github.com/pingcap/kvproto v0.0.0-20200317095539-c42a1d8db7d3
-	github.com/pingcap/pd/v4 v4.0.0-beta.2
+	github.com/pingcap/kvproto v0.0.0-20200518112156-d4aeb467de29
+	github.com/pingcap/pd/v4 v4.0.0-rc.2
 	github.com/pingcap/tidb-insight v0.3.1-0.20200423065530-051a0e987419
 	github.com/relex/aini v1.1.3
 	github.com/sergi/go-diff v1.0.1-0.20180205163309-da645544ed44
@@ -34,7 +34,7 @@ require (
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20191023171146-3cf2f69b5738
 	go.uber.org/atomic v1.6.0
 	go.uber.org/zap v1.14.1
-	golang.org/x/crypto v0.0.0-20200109152110-61a87790db17
+	golang.org/x/crypto v0.0.0-20200204104054-c9f3fb736b72
 	golang.org/x/mod v0.2.0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/sys v0.0.0-20200420163511-1957bb5e6d1f
