@@ -232,10 +232,7 @@ func hasDashboard(pdAddr string) bool {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 200 {
-		return true
-	}
-	return false
+	return resp.StatusCode == 200
 }
 
 func getAbsolutePath(binPath string) string {
@@ -491,7 +488,7 @@ func bootCluster(options *bootOptions) error {
 				if err != nil {
 					fmt.Println("Set the PD metrics storage failed")
 				}
-				fmt.Printf(color.GreenString("To view the monitor: http://%s:%d\n", monitorInfo.IP, monitorInfo.Port))
+				fmt.Print(color.GreenString("To view the monitor: http://%s:%d\n", monitorInfo.IP, monitorInfo.Port))
 			}
 		}
 	}
