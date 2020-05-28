@@ -386,7 +386,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 				filename := fmt.Sprintf("/%s-%s-%s.tar.gz", comp.Name, v.Version, strings.Join(
 					strings.Split(newp, "/"),
 					"-"))
-				if comp.Name == "tiup" && utils.IsNotExist(filename) {
+				if comp.Name == "tiup" && utils.IsNotExist(filepath.Join(srcDir, filename)) {
 					// if not versioned tiup package exist, use the unversioned one
 					// for v0 manifest to generate a dummy component
 					filename = fmt.Sprintf("/%s-%s.tar.gz", comp.Name, strings.Join(
@@ -394,6 +394,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 						"-"))
 				}
 
+				fmt.Printf("rehashing %s...\n", filepath.Join(srcDir, filename))
 				hashes, length, err := repository.HashFile(srcDir, filename)
 				if err != nil {
 					return errors.Trace(err)
