@@ -125,23 +125,23 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 					tb.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
 						CopyComponent(inst.ComponentName(), inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
 				}
-				tb.InitConfig(
-					clusterName,
-					clusterVersion,
-					inst,
-					metadata.User,
-					meta.DirPaths{
-						Deploy: deployDir,
-						Data:   dataDirs,
-						Log:    logDir,
-						Cache:  meta.ClusterPath(clusterName, meta.TempConfigPath),
-					},
-				)
 				hasImported = true
 			} else {
 				tb.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
 					CopyComponent(inst.ComponentName(), inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
 			}
+			tb.InitConfig(
+				clusterName,
+				clusterVersion,
+				inst,
+				metadata.User,
+				meta.DirPaths{
+					Deploy: deployDir,
+					Data:   dataDirs,
+					Log:    logDir,
+					Cache:  meta.ClusterPath(clusterName, meta.TempConfigPath),
+				},
+			)
 			copyCompTasks = append(copyCompTasks, tb.Build())
 		}
 	}
