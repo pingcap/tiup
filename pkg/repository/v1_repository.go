@@ -140,6 +140,9 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			continue
 		}
 
+		if spec.Version == "" {
+			spec.Version = version
+		}
 		err = r.local.InstallComponent(reader, spec.TargetDir, spec.ID, spec.Version, versionItem.URL, r.DisableDecompress)
 		if err != nil {
 			errs = append(errs, err.Error())
