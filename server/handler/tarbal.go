@@ -43,8 +43,16 @@ func (h *tarbalUploader) upload(r *http.Request) (*simpleResponse, statusError) 
 	log.Infof("Uploading tarbal, sid: %s", sid)
 
 	if err := h.sm.Begin(sid); err != nil {
-		log.Errorf("Failed to start session: %s", err.Error())
-		return nil, ErrorTarbalConflict
+		if err == session.ErrorSessionConflict {
+			// Reset manifest to avoid conflict
+			if err := h.sm.Load(sid).ResetManifest(); err != nil {
+				log.Errorf("Failed to restart session: %s", err.Error())
+				return nil, ErrorInternalError
+			}
+		} else {
+			log.Errorf("Failed to start session: %s", err.Error())
+			return nil, ErrorInternalError
+		}
 	}
 
 	txn := h.sm.Load(sid)

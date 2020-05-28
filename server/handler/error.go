@@ -48,8 +48,6 @@ func (e *handlerError) Error() string {
 }
 
 var (
-	// ErrorTarbalConflict indicates that the same tarbal is being concurrent uploading
-	ErrorTarbalConflict = newHandlerError(http.StatusConflict, "TARBAL CONFLICT", "another tarbal with the same hash is being uploading")
 	// ErrorSessionMissing indicates that the specified session not found
 	ErrorSessionMissing = newHandlerError(http.StatusNotFound, "SESSION NOT FOUND", "session with specified identity not found")
 	// ErrorManifestMissing indicates that the specified component doesn't have manifest yet
