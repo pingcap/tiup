@@ -447,17 +447,22 @@ func bootCluster(options *bootOptions) error {
 			}
 		}
 
-		for _, flash := range flashs {
-			if err := flash.Start(ctx, v0manifest.Version(options.version), pathMap["tiflash"], profile); err != nil {
-				lastErr = err
+		if lastErr == nil {
+			for _, flash := range flashs {
+				if err := flash.Start(ctx, v0manifest.Version(options.version), pathMap["tiflash"], profile); err != nil {
+					lastErr = err
+					break
+				}
 			}
 		}
 
-		// check if all TiFlash is up
-		for _, flash := range flashs {
-			if err := checkStoreStatus(pdClient, flash.StoreAddr()); err != nil {
-				lastErr = err
-				break
+		if lastErr == nil {
+			// check if all TiFlash is up
+			for _, flash := range flashs {
+				if err := checkStoreStatus(pdClient, flash.StoreAddr()); err != nil {
+					lastErr = err
+					break
+				}
 			}
 		}
 
