@@ -199,7 +199,7 @@ L:
 		case <-t.C:
 			if maxSize > 0 && resp.BytesComplete() > maxSize {
 				_ = resp.Cancel()
-				return nil, errors.Annotatef(err, "download from %s failed, maximum size exceeded", url)
+				return nil, errors.Errorf("download from %s failed, maximum size exceeded", url)
 			}
 			progress.SetCurrent(resp.BytesComplete())
 		case <-resp.Done:
@@ -219,7 +219,7 @@ L:
 		return nil, errors.Annotatef(err, "download from %s failed", url)
 	}
 	if maxSize > 0 && resp.BytesComplete() > maxSize {
-		return nil, errors.Annotatef(err, "download from %s failed, maximum size exceeded", url)
+		return nil, errors.Errorf("download from %s failed, maximum size exceeded", url)
 	}
 
 	return resp.Open()
