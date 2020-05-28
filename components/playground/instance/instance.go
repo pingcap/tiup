@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 )
 
@@ -33,7 +32,7 @@ type instance struct {
 // Instance represent running component
 type Instance interface {
 	Pid() int
-	Start(ctx context.Context, version v0manifest.Version, binPath string, profile *localdata.Profile) error
+	Start(ctx context.Context, version v0manifest.Version, binPath string) error
 	Wait() error
 }
 

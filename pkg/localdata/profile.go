@@ -94,8 +94,11 @@ func (p *Profile) BinaryPathV0(component string, version v0manifest.Version) (st
 	return filepath.Join(installPath, entry), nil
 }
 
-// ComponentInstalledPath returns the path where the component installed
-func (p *Profile) ComponentInstalledPath(component string, version v0manifest.Version) (string, error) {
+// GetComponentInstalledVersion return the installed version of component.
+func (p *Profile) GetComponentInstalledVersion(component string, version v0manifest.Version) (v0manifest.Version, error) {
+	if !version.IsEmpty() {
+		return version, nil
+	}
 	versions, err := p.InstalledVersions(component)
 	if err != nil {
 		return "", err
@@ -105,15 +108,24 @@ func (p *Profile) ComponentInstalledPath(component string, version v0manifest.Ve
 	// report an error if the specific component doesn't be installed
 
 	// Check whether the specific version exist in local
-	if version.IsEmpty() && len(versions) > 0 {
+	if len(versions) > 0 {
 		sort.Slice(versions, func(i, j int) bool {
 			return semver.Compare(versions[i], versions[j]) < 0
 		})
 		version = v0manifest.Version(versions[len(versions)-1])
-	} else if version.IsEmpty() {
+	} else {
 		return "", fmt.Errorf("component not installed, please try `tiup install %s` to install it", component)
 	}
-	return filepath.Join(p.Path(ComponentParentDir), component, version.String()), nil
+	return version, nil
+}
+
+// ComponentInstalledPath returns the path where the component installed
+func (p *Profile) ComponentInstalledPath(component string, version v0manifest.Version) (string, error) {
+	installedVersion, err := p.GetComponentInstalledVersion(component, version)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(p.Path(ComponentParentDir), component, installedVersion.String()), nil
 }
 
 // SaveTo saves file to the profile directory, path is relative to the

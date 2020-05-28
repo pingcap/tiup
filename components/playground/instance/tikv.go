@@ -51,7 +51,7 @@ func NewTiKVInstance(dir, host, configPath string, id int, pds []*PDInstance) *T
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiKVInstance) Start(ctx context.Context, version v0manifest.Version, binPath string, _ *localdata.Profile) error {
+func (inst *TiKVInstance) Start(ctx context.Context, version v0manifest.Version, binPath string) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
@@ -89,6 +89,11 @@ func (inst *TiKVInstance) Wait() error {
 // Pid return the PID of the instance
 func (inst *TiKVInstance) Pid() int {
 	return inst.cmd.Process.Pid
+}
+
+// StoreAddr return the store address of TiKV
+func (inst *TiKVInstance) StoreAddr() string {
+	return fmt.Sprintf("%s:%d", inst.Host, inst.Port)
 }
 
 func (inst *TiKVInstance) checkConfig() error {
