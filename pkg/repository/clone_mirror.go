@@ -276,7 +276,7 @@ func cloneComponents(repo *V1Repository,
 				platform := PlatformString(goos, goarch)
 				versions, found := manifest.Platforms[platform]
 				if !found {
-					fmt.Printf("The component '%s' donesn't %s/%s, skipped\n", name, goos, goarch)
+					fmt.Printf("The component '%s' donesn't have %s/%s, skipped\n", name, goos, goarch)
 				}
 				for v, versionItem := range versions {
 					if !checkVersion(options, vs, v) {
@@ -307,6 +307,10 @@ func cloneComponents(repo *V1Repository,
 			tmpFile := filepath.Join(tmpDir, url)
 
 			if err := repo.Mirror().Download(url, tmpDir); err != nil {
+				if errors.Cause(err) == ErrNotFound {
+					fmt.Printf("TiUP donesn't have %s/%s, skipped\n", goos, goarch)
+					continue
+				}
 				return nil, err
 			}
 			// Move file to target directory if hashes pass verify.
