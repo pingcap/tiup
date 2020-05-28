@@ -198,7 +198,11 @@ func (ms *FsManifests) load(filename string) (string, error) {
 	defer file.Close()
 
 	builder := strings.Builder{}
-	io.Copy(&builder, file)
+	_, err = io.Copy(&builder, file)
+	if err != nil {
+		return "", errors.AddStack(err)
+	}
+
 	return builder.String(), nil
 }
 
@@ -288,8 +292,7 @@ func NewMockManifests() *MockManifests {
 func (ms *MockManifests) SaveManifest(manifest *Manifest, filename string) error {
 	ms.Saved = append(ms.Saved, filename)
 	ms.Manifests[filename] = manifest.Signed
-	loadKeys(manifest.Signed, ms.Ks)
-	return nil
+	return loadKeys(manifest.Signed, ms.Ks)
 }
 
 // SaveComponentManifest implements LocalManifests.
@@ -323,7 +326,10 @@ func (ms *MockManifests) LoadManifest(role ValidManifest) (bool, error) {
 		return true, fmt.Errorf("unknown manifest type: %s", role.Filename())
 	}
 
-	loadKeys(role, ms.Ks)
+	err := loadKeys(role, ms.Ks)
+	if err != nil {
+		return false, errors.AddStack(err)
+	}
 	return true, nil
 }
 
@@ -353,7 +359,10 @@ func (ms *MockManifests) ComponentInstalled(component, version string) (bool, er
 // InstallComponent implements LocalManifests.
 func (ms *MockManifests) InstallComponent(reader io.Reader, targetDir string, component, version, filename string, noExpand bool) error {
 	buf := strings.Builder{}
-	io.Copy(&buf, reader)
+	_, err := io.Copy(&buf, reader)
+	if err != nil {
+		return err
+	}
 	ms.Installed[component] = MockInstalled{
 		Version:  version,
 		Contents: buf.String(),

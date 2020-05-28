@@ -345,7 +345,7 @@ func (r *V1Repository) updateLocalIndex(snapshot *v1manifest.Snapshot) error {
 		return errors.Trace(err)
 	}
 
-	if exists && oldIndex.Version < oldIndex.Version {
+	if exists && index.Version < oldIndex.Version {
 		return errors.Errorf("index manifest has a version number < the old manifest (%v, %v)", index.Version, oldIndex.Version)
 	}
 
@@ -599,6 +599,12 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, versio
 	component, err := r.local.LoadComponentManifest(&item, filename)
 	if err != nil {
 		return "", err
+	}
+	if component == nil {
+		component, err = r.FetchComponentManifest(componentID)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	specVersion := version
