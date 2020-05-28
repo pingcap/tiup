@@ -434,7 +434,7 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		return err
 	}
 
-	return checkConfig(e, i.ComponentName(), clusterVersion, i.ComponentName()+".toml", paths)
+	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -542,7 +542,7 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		return err
 	}
 
-	return checkConfig(e, i.ComponentName(), clusterVersion, i.ComponentName()+".toml", paths)
+	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -663,7 +663,7 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVe
 		return err
 	}
 
-	return checkConfig(e, i.ComponentName(), clusterVersion, i.ComponentName()+".toml", paths)
+	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
 // ScaleConfig deploy temporary config on scaling

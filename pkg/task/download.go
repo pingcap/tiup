@@ -17,7 +17,6 @@ import (
 	"fmt"
 
 	operator "github.com/pingcap-incubator/tiup-cluster/pkg/operation"
-	"github.com/pingcap-incubator/tiup/pkg/repository"
 )
 
 // Downloader is used to download the specific version of a component from
@@ -26,11 +25,11 @@ type Downloader struct {
 	component string
 	os        string
 	arch      string
-	version   repository.Version
+	version   string
 }
 
 // NewDownloader create a Downloader instance.
-func NewDownloader(component string, os string, arch string, version repository.Version) *Downloader {
+func NewDownloader(component string, os string, arch string, version string) *Downloader {
 	return &Downloader{
 		component: component,
 		os:        os,

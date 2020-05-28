@@ -135,5 +135,5 @@ func (i *DrainerInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		return err
 	}
 
-	return checkConfig(e, i.ComponentName(), clusterVersion, i.ComponentName()+".toml", paths)
+	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }

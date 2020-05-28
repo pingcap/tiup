@@ -24,7 +24,6 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/report"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/telemetry"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/version"
-	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap/errors"
 	"golang.org/x/sync/errgroup"
 )
@@ -35,7 +34,7 @@ func GetNodeInfo(
 	getter ExecutorGetter,
 	topo *meta.TopologySpecification,
 ) (nodes []*telemetry.NodeInfo, err error) {
-	ver := repository.Version(version.NewTiOpsVersion().SemVer())
+	ver := version.NewTiOpsVersion().SemVer()
 	dir := "/tmp/_cluster"
 
 	// Download cluster binary

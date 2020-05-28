@@ -16,7 +16,6 @@ package task
 import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
 	operator "github.com/pingcap-incubator/tiup-cluster/pkg/operation"
-	"github.com/pingcap-incubator/tiup/pkg/repository"
 )
 
 // Builder is used to build TiOps task
@@ -115,14 +114,14 @@ func (b *Builder) CopyFile(src, dst, server string, download bool) *Builder {
 }
 
 // Download appends a Downloader task to the current task collection
-func (b *Builder) Download(component, os, arch string, version repository.Version) *Builder {
+func (b *Builder) Download(component, os, arch string, version string) *Builder {
 	b.tasks = append(b.tasks, NewDownloader(component, os, arch, version))
 	return b
 }
 
 // CopyComponent appends a CopyComponent task to the current task collection
 func (b *Builder) CopyComponent(component, os, arch string,
-	version repository.Version,
+	version string,
 	dstHost, dstDir string,
 ) *Builder {
 	b.tasks = append(b.tasks, &CopyComponent{

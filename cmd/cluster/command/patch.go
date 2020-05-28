@@ -25,6 +25,7 @@ import (
 	operator "github.com/pingcap-incubator/tiup-cluster/pkg/operation"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/task"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
+	"github.com/pingcap-incubator/tiup/components/cluster"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
@@ -79,7 +80,7 @@ func patch(clusterName, packagePath string, options operator.Options, overwrite 
 	if err != nil {
 		return err
 	}
-	if err := checkPackage(clusterName, insts[0].ComponentName(), packagePath); err != nil {
+	if err := checkPackage(clusterName, insts[0].ComponentName(), insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
 		return err
 	}
 
@@ -144,19 +145,20 @@ func instancesToPatch(metadata *meta.ClusterMeta, options operator.Options) ([]m
 	return instances, nil
 }
 
-func checkPackage(clusterName, comp, packagePath string) error {
+func checkPackage(clusterName, comp, nodeOS, arch, packagePath string) error {
 	metadata, err := meta.ClusterMetadata(clusterName)
 	if err != nil {
 		return err
 	}
-	manifest, err := meta.TiupEnv().Repository().ComponentVersions(comp)
+
+	ver := meta.ComponentVersion(comp, metadata.Version)
+	repo, err := cluster.NewRepository(nodeOS, arch)
 	if err != nil {
 		return err
 	}
-	ver := meta.ComponentVersion(comp, metadata.Version)
-	versionInfo, found := manifest.FindVersion(ver)
-	if !found {
-		return fmt.Errorf("cannot found version %v in %s manifest", ver, comp)
+	entry, err := repo.ComponentBinEntry(comp, ver)
+	if err != nil {
+		return err
 	}
 
 	checksum, err := utils.Checksum(packagePath)
@@ -171,8 +173,8 @@ func checkPackage(clusterName, comp, packagePath string) error {
 		return err
 	}
 
-	if exists := tiuputils.IsExist(path.Join(cacheDir, versionInfo.Entry)); !exists {
-		return fmt.Errorf("entry %s not found in package %s", versionInfo.Entry, packagePath)
+	if exists := tiuputils.IsExist(path.Join(cacheDir, entry)); !exists {
+		return fmt.Errorf("entry %s not found in package %s", entry, packagePath)
 	}
 
 	return nil

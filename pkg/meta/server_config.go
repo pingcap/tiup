@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/executor"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/log"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
+	"github.com/pingcap-incubator/tiup/components/cluster"
 	"github.com/pingcap/errors"
 )
 
@@ -155,18 +156,16 @@ func mergeImported(importConfig []byte, specConfig map[string]interface{}) (map[
 	return lhs, nil
 }
 
-func checkConfig(e executor.TiOpsExecutor, componentName, clusterVersion, config string, paths DirPaths) error {
-	manifest, err := TiupEnv().Repository().ComponentVersions(componentName)
+func checkConfig(e executor.TiOpsExecutor, componentName, clusterVersion, nodeOS, arch, config string, paths DirPaths) error {
+	repo, err := cluster.NewRepository(nodeOS, arch)
 	if err != nil {
 		return err
 	}
 	ver := ComponentVersion(componentName, clusterVersion)
-	versionInfo, found := manifest.FindVersion(ver)
-	if !found {
-		return fmt.Errorf("cannot found version %v in %s manifest", ver, componentName)
+	entry, err := repo.ComponentBinEntry(componentName, ver)
+	if err != nil {
+		return err
 	}
-
-	entry := versionInfo.Entry
 
 	binPath := path.Join(paths.Deploy, "bin", entry)
 	// Skip old versions

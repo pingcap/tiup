@@ -36,7 +36,6 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/task"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/telemetry"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
-	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
@@ -58,7 +57,7 @@ var (
 type (
 	componentInfo struct {
 		component string
-		version   repository.Version
+		version   string
 	}
 
 	deployOptions struct {

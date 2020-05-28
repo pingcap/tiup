@@ -17,7 +17,6 @@ import (
 	"fmt"
 
 	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
-	"github.com/pingcap-incubator/tiup/pkg/repository"
 )
 
 // CopyComponent is used to copy all files related the specific version a component
@@ -26,7 +25,7 @@ type CopyComponent struct {
 	component string
 	os        string
 	arch      string
-	version   repository.Version
+	version   string
 	host      string
 	dstDir    string
 }

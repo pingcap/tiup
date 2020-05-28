@@ -13,12 +13,8 @@
 
 package meta
 
-import (
-	"github.com/pingcap-incubator/tiup/pkg/repository"
-)
-
 // ComponentVersion maps the TiDB version to the third components binding version
-func ComponentVersion(comp, version string) repository.Version {
+func ComponentVersion(comp, version string) string {
 	switch comp {
 	case ComponentAlertManager:
 		return "v0.17.0"
@@ -31,6 +27,6 @@ func ComponentVersion(comp, version string) repository.Version {
 	case ComponentCheckCollector:
 		return "v0.3.0-3"
 	default:
-		return repository.Version(version)
+		return version
 	}
 }
