@@ -21,7 +21,7 @@ import (
 )
 
 func main() {
-	addr := "127.0.0.1:8989"
+	addr := "0.0.0.0:8989"
 	indexKey := ""
 	snapshotKey := ""
 	timestampKey := ""

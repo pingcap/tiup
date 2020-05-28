@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"net/http"
 
+	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/gorilla/mux"
 	"github.com/pingcap-incubator/tiup/pkg/log"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
@@ -45,6 +46,13 @@ func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr 
 	sid := mux.Vars(r)["sid"]
 	name := mux.Vars(r)["name"]
 
+	blackList := []string{"root", "index", "snapshot", "timestamp"}
+	for _, b := range blackList {
+		if name == b {
+			return nil, ErrorForbiden
+		}
+	}
+
 	log.Infof("Sign component manifest for %s, sid: %s", name, sid)
 	txn := h.sm.Load(sid)
 	if txn == nil {
@@ -69,16 +77,23 @@ func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr 
 		}
 
 		var indexVersion uint
+		var keys map[string]*v1manifest.KeyInfo
 		if err := md.UpdateIndexManifest(func(om *model.IndexManifest) *model.IndexManifest {
 			om.Signed.Components[name] = v1manifest.ComponentItem{
 				Owner: "pingcap", // TODO: read this from request
 				URL:   fmt.Sprintf("/%s.json", name),
 			}
+			keys = om.Signed.Owners["pingcap"].Keys
 			indexVersion = om.Signed.Version + 1
 			return om
 		}); err != nil {
 			return err
 		}
+
+		if err := h.validate(keys, m); err != nil {
+			return err
+		}
+
 		indexFi, err := txn.Stat(fmt.Sprintf("%d.index.json", indexVersion))
 		if err != nil {
 			return err
@@ -116,4 +131,28 @@ func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr 
 
 	h.sm.Delete(sid)
 	return nil, nil
+}
+
+func (h *componentSigner) validate(keys map[string]*v1manifest.KeyInfo, m *model.ComponentManifest) error {
+	if len(keys) == 0 {
+		return nil
+	}
+
+	payload, err := cjson.Marshal(m.Signed)
+	if err != nil {
+		return err
+	}
+
+	for _, s := range m.Signatures {
+		k := keys[s.KeyID]
+		if k == nil {
+			continue
+		}
+
+		if err := k.Verify(payload, s.Sig); err == nil {
+			return nil
+		}
+	}
+
+	return ErrorForbiden
 }

@@ -99,7 +99,7 @@ func (m *model) UpdateIndexManifest(f func(*IndexManifest) *IndexManifest) error
 
 func (m *model) UpdateSnapshotManifest(f func(*SnapshotManifest) *SnapshotManifest) error {
 	var last SnapshotManifest
-	err := m.txn.ReadManifest("snapshot.json", &last)
+	err := m.txn.ReadManifest(v1manifest.ManifestFilenameSnapshot, &last)
 	if err != nil {
 		return err
 	}
@@ -109,24 +109,33 @@ func (m *model) UpdateSnapshotManifest(f func(*SnapshotManifest) *SnapshotManife
 		return err
 	}
 
-	return m.txn.WriteManifest("snapshot.json", manifest)
+	return m.txn.WriteManifest(v1manifest.ManifestFilenameSnapshot, manifest)
 }
 
 // ReadSnapshotManifest returns snapshot.json
 func (m *model) ReadSnapshotManifest() (*SnapshotManifest, error) {
 	var snap SnapshotManifest
-	if err := m.txn.ReadManifest("snapshot.json", &snap); err != nil {
+	if err := m.txn.ReadManifest(v1manifest.ManifestFilenameSnapshot, &snap); err != nil {
 		return nil, err
 	}
 	return &snap, nil
 }
 
+// ReadRootManifest returns root.json
+func (m *model) ReadRootManifest() (*RootManifest, error) {
+	var root RootManifest
+	if err := m.txn.ReadManifest(v1manifest.ManifestFilenameRoot, &root); err != nil {
+		return nil, err
+	}
+	return &root, nil
+}
+
 func (m *model) UpdateTimestampManifest() error {
-	fi, err := m.txn.Stat("snapshot.json")
+	fi, err := m.txn.Stat(v1manifest.ManifestFilenameSnapshot)
 	if err != nil {
 		return err
 	}
-	reader, err := m.txn.Read("snapshot.json")
+	reader, err := m.txn.Read(v1manifest.ManifestFilenameSnapshot)
 	if err != nil {
 		return err
 	}
@@ -138,12 +147,12 @@ func (m *model) UpdateTimestampManifest() error {
 	reader.Close()
 
 	var manifest TimestampManifest
-	err = m.txn.ReadManifest("timestamp.json", &manifest)
+	err = m.txn.ReadManifest(v1manifest.ManifestFilenameTimestamp, &manifest)
 	if err != nil {
 		return err
 	}
 	manifest.Signed.Version++
-	manifest.Signed.Meta["/snapshot.json"] = v1manifest.FileHash{
+	manifest.Signed.Meta[v1manifest.ManifestURLSnapshot] = v1manifest.FileHash{
 		Hashes: map[string]string{
 			"sha256": sha256,
 		},
@@ -153,16 +162,16 @@ func (m *model) UpdateTimestampManifest() error {
 	if err != nil {
 		return err
 	}
-	return m.txn.WriteManifest("timestamp.json", &manifest)
+	return m.txn.WriteManifest(v1manifest.ManifestFilenameTimestamp, &manifest)
 }
 
-func sign(signed interface{}, keys ...*v1manifest.KeyInfo) ([]signature, error) {
+func sign(signed interface{}, keys ...*v1manifest.KeyInfo) ([]v1manifest.Signature, error) {
 	payload, err := cjson.Marshal(signed)
 	if err != nil {
 		return nil, err
 	}
 
-	signs := []signature{}
+	signs := []v1manifest.Signature{}
 	for _, k := range keys {
 		id, err := k.ID()
 		if err != nil {
@@ -172,7 +181,7 @@ func sign(signed interface{}, keys ...*v1manifest.KeyInfo) ([]signature, error) 
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
-		signs = append(signs, signature{
+		signs = append(signs, v1manifest.Signature{
 			KeyID: id,
 			Sig:   sign,
 		})

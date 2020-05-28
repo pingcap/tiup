@@ -1,3 +1,16 @@
+// Copyright 2020 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package remote
 
 import (
@@ -14,6 +27,7 @@ import (
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap-incubator/tiup/pkg/version"
 )
 
 // Transporter defines methods to upload components
@@ -100,7 +114,7 @@ func (t *transporter) Close() error {
 }
 
 func (t *transporter) Upload() error {
-	postAddr := fmt.Sprintf("%s/api/v1/tarbal/%s", t.endpoint, t.sha256)
+	postAddr := fmt.Sprintf("%s/api/v1/tarball/%s", t.endpoint, t.sha256)
 	tarbalName := fmt.Sprintf("%s-%s-%s-%s.tar.gz", t.component, t.version, t.os, t.arch)
 	resp, err := utils.PostFile(t.tarFile, postAddr, "file", tarbalName)
 	if err != nil {
@@ -121,8 +135,7 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 		m.Version++
 	}
 
-	if strings.Contains(t.version, "nightly") {
-		fmt.Println("nightly")
+	if strings.Contains(t.version, version.NightlyVersion) {
 		m.Nightly = t.version
 	}
 
@@ -174,6 +187,8 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 		return nil
 	} else if resp.StatusCode == http.StatusConflict {
 		return fmt.Errorf("Local manifest for component %s is not new enough, update it first", t.component)
+	} else if resp.StatusCode == http.StatusForbidden {
+		return fmt.Errorf("The server refused, make sure you have access to this component: %s", t.component)
 	}
 
 	buf := new(strings.Builder)

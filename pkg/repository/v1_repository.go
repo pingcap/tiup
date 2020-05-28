@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/pingcap/errors"
 	"golang.org/x/mod/semver"
 )
@@ -94,13 +95,13 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 		}
 
 		if spec.Nightly {
-			spec.Version = "nightly"
+			spec.Version = version.NightlyVersion
 			// The v0 "nightly" is not versioned, force update as v0...
 			// we will add daily ones like: "v3.0.0-nightly-yyyy-mm-dd"
 			spec.Force = true
 		}
 		specVersion := spec.Version
-		if spec.Version == "nightly" {
+		if v0manifest.Version(spec.Version).IsNightly() {
 			specVersion = manifest.Nightly
 		}
 
@@ -601,7 +602,7 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, versio
 	}
 
 	specVersion := version
-	if version == "nightly" {
+	if v0manifest.Version(version).IsNightly() {
 		specVersion = component.Nightly
 	}
 
