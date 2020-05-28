@@ -175,10 +175,6 @@ func CheckExpiry(expires string) error {
 	return nil
 }
 
-func (s *SignedBase) expiryTime() (time.Time, error) {
-	return time.Parse(time.RFC3339, s.Expires)
-}
-
 // ExpiresAfter checks that manifest 1 expires after manifest 2 (or are equal) and returns an error otherwise.
 func ExpiresAfter(m1, m2 ValidManifest) error {
 	time1, err := time.Parse(time.RFC3339, m1.Base().Expires)

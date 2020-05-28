@@ -111,7 +111,7 @@ func (l *localFilesystem) Download(resource, targetDir string) error {
 	writer, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return ErrNotFound
+			return errors.Annotatef(ErrNotFound, "resource %s", resource)
 		}
 		return errors.Trace(err)
 	}
@@ -125,7 +125,7 @@ func (l *localFilesystem) Fetch(resource string, maxSize int64) (io.ReadCloser, 
 	file, err := os.OpenFile(path, os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, ErrNotFound
+			return nil, errors.Annotatef(ErrNotFound, "resource %s", resource)
 		}
 		return nil, errors.Trace(err)
 	}
@@ -198,7 +198,7 @@ L:
 		select {
 		case <-t.C:
 			if maxSize > 0 && resp.BytesComplete() > maxSize {
-				resp.Cancel()
+				_ = resp.Cancel()
 				return nil, errors.Annotatef(err, "download from %s failed, maximum size exceeded", url)
 			}
 			progress.SetCurrent(resp.BytesComplete())
@@ -213,7 +213,7 @@ L:
 		if grab.IsStatusCodeError(err) {
 			code := err.(grab.StatusCodeError)
 			if int(code) == http.StatusNotFound {
-				return nil, ErrNotFound
+				return nil, errors.Annotatef(ErrNotFound, "url %s", url)
 			}
 		}
 		return nil, errors.Annotatef(err, "download from %s failed", url)
@@ -289,7 +289,7 @@ func (l *MockMirror) Download(resource, targetDir string) error {
 func (l *MockMirror) Fetch(resource string, maxSize int64) (io.ReadCloser, error) {
 	content, ok := l.Resources[resource]
 	if !ok {
-		return nil, ErrNotFound
+		return nil, errors.Annotatef(ErrNotFound, "resource %s", resource)
 	}
 	if maxSize > 0 && int64(len(content)) > maxSize {
 		return nil, fmt.Errorf("oversized resource %s in mock mirror %v > %v", resource, len(content), maxSize)

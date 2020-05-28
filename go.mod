@@ -29,7 +29,6 @@ require (
 	github.com/pingcap/go-tpc v1.0.4-0.20200525052430-dc963cdeef62
 	github.com/pingcap/kvproto v0.0.0-20200518112156-d4aeb467de29
 	github.com/pingcap/pd/v4 v4.0.0-rc.2
-	github.com/pkg/errors v0.9.1
 	github.com/shirou/gopsutil v2.20.2+incompatible
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/cobra v0.0.6
