@@ -417,7 +417,7 @@ func bootCluster(options *bootOptions) error {
 	}
 
 	for i, inst := range allButTiFlash {
-		if err := inst.Start(ctx, v0manifest.Version(options.version), pathMap[allRolesButTiFlash[i]], profile); err != nil {
+		if err := inst.Start(ctx, v0manifest.Version(options.version), pathMap[allRolesButTiFlash[i]]); err != nil {
 			return err
 		}
 	}
@@ -449,7 +449,7 @@ func bootCluster(options *bootOptions) error {
 
 		if lastErr == nil {
 			for _, flash := range flashs {
-				if err := flash.Start(ctx, v0manifest.Version(options.version), pathMap["tiflash"], profile); err != nil {
+				if err := flash.Start(ctx, v0manifest.Version(options.version), pathMap["tiflash"]); err != nil {
 					lastErr = err
 					break
 				}

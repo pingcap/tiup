@@ -22,10 +22,13 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/pingcap-incubator/tiup/components/playground/api"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
+	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
@@ -74,7 +77,7 @@ type replicateConfig struct {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Version, binPath string, profile *localdata.Profile) error {
+func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Version, binPath string) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
@@ -105,11 +108,20 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 
 	// TiFlash needs to obtain absolute path of cluster_manager
 	if binPath == "" {
-		// version may be empty, we will use the latest stable version later in Start cmd.
-		if version == "" {
-			version = profile.Versions("tiflash").LatestVersion()
+		env, err := meta.InitEnv(repository.Options{
+			SkipVersionCheck:  false,
+			GOOS:              runtime.GOOS,
+			GOARCH:            runtime.GOARCH,
+			DisableDecompress: false,
+		})
+		if err != nil {
+			return err
 		}
-		if binPath, err = profile.BinaryPathV0("tiflash", version); err != nil {
+		if version, err = env.GetComponentInstalledVersion("tiflash", version); err != nil {
+			return err
+		}
+		// version may be empty, we will use the latest stable version later in Start cmd.
+		if binPath, err = env.BinaryPath("tiflash", version); err != nil {
 			return err
 		}
 	}

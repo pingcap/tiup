@@ -50,7 +50,7 @@ func NewTiDBInstance(dir, host, configPath string, id int, pds []*PDInstance) *T
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiDBInstance) Start(ctx context.Context, version v0manifest.Version, binPath string, _ *localdata.Profile) error {
+func (inst *TiDBInstance) Start(ctx context.Context, version v0manifest.Version, binPath string) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
