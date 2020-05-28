@@ -20,9 +20,9 @@ import (
 
 var (
 	// TiOpsVerMajor is the major version of TiOps
-	TiOpsVerMajor = 0
+	TiOpsVerMajor = 1
 	// TiOpsVerMinor is the minor version of TiOps
-	TiOpsVerMinor = 6
+	TiOpsVerMinor = 0
 	// TiOpsVerPatch is the patch version of TiOps
 	TiOpsVerPatch = 0
 	// GitHash is the current git commit hash
