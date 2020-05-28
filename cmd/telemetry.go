@@ -11,8 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var telemetryCmd *cobra.Command
-
 const telemetryFname = "meta.yaml"
 
 func getTelemetryMeta(env *meta.Environment) (meta *telemetry.Meta, fname string, err error) {

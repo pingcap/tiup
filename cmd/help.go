@@ -94,6 +94,7 @@ func externalHelp(env *meta.Environment, spec string, args ...string) {
 	}
 }
 
+// nolint unused
 func rebuildArgs(args []string) []string {
 	helpFlag := "--help"
 	argList := []string{}

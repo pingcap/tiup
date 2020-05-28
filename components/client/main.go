@@ -203,7 +203,7 @@ func selectEndpoint(endpoints []*endpoint) *endpoint {
 	uiEvents := ui.PollEvents()
 	for {
 		e := <-uiEvents
-		ioutil.WriteFile("/tmp/log", []byte(e.ID+"\n"), 0664)
+		_ = ioutil.WriteFile("/tmp/log", []byte(e.ID+"\n"), 0664)
 		switch e.ID {
 		case "q", "<C-c>":
 			return nil

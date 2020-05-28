@@ -239,7 +239,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 				if err != nil {
 					return err
 				}
-				if json.Unmarshal(bytes, pk); err != nil {
+				if err = json.Unmarshal(bytes, pk); err != nil {
 					return err
 				}
 				privKi = append(privKi, pk)
@@ -291,7 +291,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 			if err != nil {
 				return err
 			}
-			if json.Unmarshal(bytes, ownerkeyInfo); err != nil {
+			if err = json.Unmarshal(bytes, ownerkeyInfo); err != nil {
 				return err
 			}
 		}

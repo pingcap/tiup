@@ -87,7 +87,7 @@ func (lr *listResult) print() {
 }
 
 func showComponentList(env *meta.Environment, opt listOptions) (*listResult, error) {
-	index := new(v1manifest.Index)
+	var index *v1manifest.Index
 	var err error
 	index, err = env.V1Repository().FetchIndexManifest()
 	if err != nil {
@@ -152,13 +152,13 @@ func showComponentList(env *meta.Environment, opt listOptions) (*listResult, err
 	}
 
 	return &listResult{
-		header:   fmt.Sprintf("Available components:\n"),
+		header:   "Available components:\n",
 		cmpTable: cmpTable,
 	}, nil
 }
 
 func showComponentVersions(env *meta.Environment, component string, opt listOptions) (*listResult, error) {
-	comp := new(v1manifest.Component)
+	var comp *v1manifest.Component
 	var err error
 	comp, err = env.V1Repository().FetchComponentManifest(component)
 	if err != nil {
