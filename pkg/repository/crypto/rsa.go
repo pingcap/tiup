@@ -20,6 +20,8 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+
+	"github.com/pingcap/errors"
 )
 
 // RSAKeyLength define the length of RSA keys
@@ -83,7 +85,11 @@ func (k *RSAPubKey) VerifySignature(payload []byte, sig string) error {
 	}
 
 	sha256 := crypto.SHA256.New()
-	sha256.Write(payload)
+	_, err := sha256.Write(payload)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
 	hashed := sha256.Sum(nil)
 
 	b64decSig, err := base64.StdEncoding.DecodeString(sig)
@@ -140,7 +146,11 @@ func (k *RSAPrivKey) Signature(payload []byte) (string, error) {
 	}
 
 	sha256 := crypto.SHA256.New()
-	sha256.Write(payload)
+	_, err := sha256.Write(payload)
+	if err != nil {
+		return "", errors.AddStack(err)
+	}
+
 	hashed := sha256.Sum(nil)
 
 	sig, err := rsa.SignPSS(rand.Reader, k.key, crypto.SHA256, hashed, nil)

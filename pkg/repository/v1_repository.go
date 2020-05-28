@@ -342,7 +342,7 @@ func (r *V1Repository) updateLocalIndex(snapshot *v1manifest.Snapshot) error {
 		return errors.Trace(err)
 	}
 
-	if exists && oldIndex.Version < oldIndex.Version {
+	if exists && index.Version < oldIndex.Version {
 		return errors.Errorf("index manifest has a version number < the old manifest (%v, %v)", index.Version, oldIndex.Version)
 	}
 
