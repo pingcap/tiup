@@ -18,12 +18,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/stretchr/testify/assert"
@@ -74,14 +71,14 @@ func TestCheckTimestamp(t *testing.T) {
 	expiredTimestamp.Expires = "2000-05-12T04:51:08Z"
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, expiredTimestamp)
 	local.Saved = []string{}
-	_, hash, err = repo.checkTimestamp()
+	_, _, err = repo.checkTimestamp()
 	assert.NotNil(t, err)
 	assert.Empty(t, local.Saved)
 
 	// Test that an invalid manifest from the mirror causes an error
 	invalidTimestamp := timestampManifest()
 	invalidTimestamp.SpecVersion = "10.1.0"
-	_, hash, err = repo.checkTimestamp()
+	_, _, err = repo.checkTimestamp()
 	assert.NotNil(t, err)
 	assert.Empty(t, local.Saved)
 
@@ -654,7 +651,7 @@ func setNewRoot(t *testing.T, local *v1manifest.MockManifests) crypto.PrivKey {
 func setRoot(local *v1manifest.MockManifests, root *v1manifest.Root) {
 	local.Manifests[v1manifest.ManifestFilenameRoot] = root
 	for r, ks := range root.Roles {
-		local.Ks.AddKeys(r, 1, "2220-05-11T04:51:08Z", ks.Keys)
+		_ = local.Ks.AddKeys(r, 1, "2220-05-11T04:51:08Z", ks.Keys)
 	}
 }
 
@@ -756,6 +753,7 @@ func hash(s string) string {
 //	}
 //}
 
+/*
 func createMigrateRepo(t *testing.T, mdir string) (repo *V1Repository, profileDir string) {
 	var err error
 	profileDir, err = ioutil.TempDir("", "tiup-*")
@@ -777,3 +775,4 @@ func createMigrateRepo(t *testing.T, mdir string) (repo *V1Repository, profileDi
 	repo = NewV1Repo(mirror, options, local)
 	return
 }
+*/

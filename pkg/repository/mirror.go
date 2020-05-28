@@ -198,7 +198,7 @@ L:
 		select {
 		case <-t.C:
 			if maxSize > 0 && resp.BytesComplete() > maxSize {
-				resp.Cancel()
+				_ = resp.Cancel()
 				return nil, errors.Annotatef(err, "download from %s failed, maximum size exceeded", url)
 			}
 			progress.SetCurrent(resp.BytesComplete())
