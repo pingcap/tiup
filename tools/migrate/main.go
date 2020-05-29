@@ -124,11 +124,11 @@ func readManifest0(srcDir string) (*v0manifest.ComponentManifest, error) {
 func readManifest1(dir, filename string, m *v1manifest.Manifest) error {
 	f, err := os.Open(filepath.Join(dir, filename))
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	bytes, err := ioutil.ReadAll(f)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	return json.Unmarshal(bytes, m)
@@ -152,7 +152,7 @@ func readVersions(srcDir, comp string) (*v0manifest.VersionManifest, error) {
 func migrate(srcDir, dstDir string, rehash bool) error {
 	m, err := readManifest0(srcDir)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	if !rehash {
@@ -181,7 +181,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		}
 		err = readManifest1(dstDir, filepath.Join("manifests", snapshot.Filename()), s)
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		snapshot = s.Signed.(*v1manifest.Snapshot)
 		v1manifest.RenewManifest(snapshot, initTime)
@@ -191,7 +191,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		}
 		fmt.Println("reading root.json")
 		if err := readManifest1(dstDir, filepath.Join("manifests", root.Filename()), r); err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		root = r.Signed.(*v1manifest.Root)
 		i := &v1manifest.Manifest{
@@ -201,7 +201,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		fname := fmt.Sprintf("%d.%s",
 			snapshot.Meta["/"+index.Filename()].Version, index.Filename())
 		if err := readManifest1(dstDir, filepath.Join("manifests", fname), i); err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		index = i.Signed.(*v1manifest.Index)
 		index.Base().Version++
@@ -233,14 +233,14 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 				f, err := os.Open(filepath.Join(dstDir, "keys",
 					fmt.Sprintf("%s-%s.json", id[:v1manifest.ShortKeyIDLength], ty)))
 				if err != nil {
-					return err
+					return errors.Trace(err)
 				}
 				bytes, err := ioutil.ReadAll(f)
 				if err != nil {
-					return err
+					return errors.Trace(err)
 				}
 				if err = json.Unmarshal(bytes, pk); err != nil {
-					return err
+					return errors.Trace(err)
 				}
 				privKi = append(privKi, pk)
 			}
@@ -253,7 +253,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 
 		for _, ty := range tys {
 			if err := v1manifest.GenAndSaveKeys(keys, ty, int(v1manifest.ManifestsConfig[ty].Threshold), keyDir); err != nil {
-				return err
+				return errors.Trace(err)
 			}
 		}
 	}
@@ -285,14 +285,14 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 			f, err := os.Open(filepath.Join(dstDir, "keys",
 				fmt.Sprintf("%s-pingcap.json", ownerkeyID[:v1manifest.ShortKeyIDLength])))
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			bytes, err := ioutil.ReadAll(f)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			if err = json.Unmarshal(bytes, ownerkeyInfo); err != nil {
-				return err
+				return errors.Trace(err)
 			}
 		}
 	} else {
@@ -319,15 +319,18 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		}
 	}
 
-	// Treat TiUP as a component
-	tiup := v0manifest.ComponentInfo{
-		Name:       "tiup",
-		Desc:       "Components manager for TiDB ecosystem",
-		Standalone: false,
-		Hide:       true,
+	hasTiup := false
+	for _, comp := range m.Components {
+		if comp.Name == "tiup" {
+			hasTiup = true
+			break
+		}
 	}
+
+	// If TiUP it self is not in the v0 repo, build a dummy one from the default tarball
+	tiupDesc := "Components manager for TiDB ecosystem"
 	tiupVersions := &v0manifest.VersionManifest{
-		Description: tiup.Desc,
+		Description: tiupDesc,
 		Versions: []v0manifest.VersionInfo{
 			{
 				Version: v0manifest.Version(tiupver.NewTiUPVersion().SemVer()),
@@ -336,7 +339,6 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 			},
 		},
 	}
-
 	for _, goos := range []string{"linux", "darwin"} {
 		for _, goarch := range []string{"amd64", "arm64"} {
 			name := fmt.Sprintf("tiup-%s-%s.tar.gz", goos, goarch)
@@ -347,18 +349,28 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		}
 	}
 
+	if !hasTiup {
+		// Treat TiUP as a component
+		tiup := v0manifest.ComponentInfo{
+			Name:       "tiup",
+			Desc:       tiupDesc,
+			Standalone: false,
+			Hide:       true,
+		}
+
+		m.Components = append(m.Components, tiup)
+	}
+
 	// Initialize the components manifest
-	for _, comp := range append(m.Components, tiup) {
+	for _, comp := range m.Components {
 		fmt.Println("found component", comp.Name)
 		var versions *v0manifest.VersionManifest
 		var err error
-		if comp.Name == "tiup" {
+		versions, err = readVersions(srcDir, comp.Name)
+		if comp.Name == "tiup" && os.IsNotExist(err) {
 			versions = tiupVersions
-		} else {
-			versions, err = readVersions(srcDir, comp.Name)
-		}
-		if err != nil {
-			return err
+		} else if err != nil {
+			return errors.Trace(err)
 		}
 
 		platforms := map[string]map[string]v1manifest.VersionItem{}
@@ -371,20 +383,21 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 					platforms[newp] = vs
 				}
 
-				var filename string
-				if comp.Name == "tiup" {
+				filename := fmt.Sprintf("/%s-%s-%s.tar.gz", comp.Name, v.Version, strings.Join(
+					strings.Split(newp, "/"),
+					"-"))
+				if comp.Name == "tiup" && utils.IsNotExist(filepath.Join(srcDir, filename)) {
+					// if not versioned tiup package exist, use the unversioned one
+					// for v0 manifest to generate a dummy component
 					filename = fmt.Sprintf("/%s-%s.tar.gz", comp.Name, strings.Join(
-						strings.Split(newp, "/"),
-						"-"))
-				} else {
-					filename = fmt.Sprintf("/%s-%s-%s.tar.gz", comp.Name, v.Version, strings.Join(
 						strings.Split(newp, "/"),
 						"-"))
 				}
 
+				fmt.Printf("rehashing %s...\n", filepath.Join(srcDir, filename))
 				hashes, length, err := repository.HashFile(srcDir, filename)
 				if err != nil {
-					return err
+					return errors.Trace(err)
 				}
 				// due to the nature of our CDN, all files are under the same URI base
 				vs[v.Version.String()] = v1manifest.VersionItem{
@@ -420,7 +433,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 					strings.Join(strings.Split(newp, "/"), "-"))
 				hashes, length, err := repository.HashFile(srcDir, filename)
 				if err != nil {
-					return err
+					return errors.Trace(err)
 				}
 				// due to the nature of our CDN, all files are under the same URI base
 				vs[v.Version.String()] = v1manifest.VersionItem{
@@ -458,7 +471,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 
 		signedManifests[component.ID], err = v1manifest.SignManifest(component, ownerkeyInfo)
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 
 		index.Components[comp.Name] = v1manifest.ComponentItem{
@@ -473,7 +486,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 	// sign index and snapshot
 	signedManifests[v1manifest.ManifestTypeIndex], err = v1manifest.SignManifest(index, keys[v1manifest.ManifestTypeIndex]...)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	// snapshot and timestamp are the last two manifests to be initialized
@@ -485,7 +498,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 			Signed: &v1manifest.Timestamp{},
 		}
 		if err := readManifest1(dstDir, filepath.Join("manifests", timestamp.Filename()), t); err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		timestamp.Version = t.Signed.(*v1manifest.Timestamp).Version
 	}
@@ -497,14 +510,14 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		// Initialize the root manifest
 		for _, m := range manifests {
 			if err := root.SetRole(m, keys[m.Base().Ty]...); err != nil {
-				return err
+				return errors.Trace(err)
 			}
 		}
 
 		if signedRoot {
 			signedManifests[v1manifest.ManifestTypeRoot], err = v1manifest.SignManifest(root, keys[v1manifest.ManifestTypeRoot]...)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 		} else {
 			// root manifest is not signed, and need to be manually signed by root key owners
@@ -517,7 +530,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 	// populate snapshot
 	snapshot, err = snapshot.SetVersions(signedManifests)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	signedManifests[v1manifest.ManifestTypeSnapshot], err = v1manifest.SignManifest(snapshot, keys[v1manifest.ManifestTypeSnapshot]...)
 	if err != nil {
@@ -535,7 +548,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 
 	signedManifests[v1manifest.ManifestTypeTimestamp], err = v1manifest.SignManifest(timestamp, keys[v1manifest.ManifestTypeTimestamp]...)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	for _, m := range signedManifests {
 		fname := filepath.Join(dstDir, "manifests", m.Signed.Filename())
@@ -548,7 +561,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 			// A copy of the newest version which is 1.
 			err = v1manifest.WriteManifestFile(fname, m)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 		case v1manifest.ManifestTypeComponent, v1manifest.ManifestTypeIndex:
 			err := v1manifest.WriteManifestFile(repository.FnameWithVersion(fname, m.Signed.Base().Version), m)
@@ -576,7 +589,7 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 		Signed: &v1manifest.Root{},
 	}
 	if err = readManifest1(filepath.Join(dir, "manifests"), v1manifest.ManifestFilenameRoot, &root); err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	manifests[v1manifest.ManifestTypeRoot] = &root
 
@@ -586,19 +599,19 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 			var kp v1manifest.KeyInfo
 			f, err := os.Open(fname)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 			bytes, err := ioutil.ReadAll(f)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 
 			if err := json.Unmarshal(bytes, &kp); err != nil {
-				return err
+				return errors.Trace(err)
 			}
 
 			if err := root.Signed.(*v1manifest.Root).AddKey(v1manifest.ManifestTypeRoot, &kp); err != nil {
-				return err
+				return errors.Trace(err)
 			}
 		}
 		// write the file
@@ -621,7 +634,7 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 			Signed: &v1manifest.Root{},
 		}
 		if err = readManifest1("", fname, &sr); err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		root.AddSignature(sr.Signatures)
 	}
@@ -631,7 +644,7 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 		Signed: &v1manifest.Snapshot{},
 	}
 	if err := readManifest1(filepath.Join(dir, "manifests"), v1manifest.ManifestFilenameSnapshot, &snapshotOld); err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	for _, sig := range snapshotOld.Signatures {
 		id := sig.KeyID[:v1manifest.ShortKeyIDLength]
@@ -639,13 +652,13 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 			"%s-%s", id, v1manifest.ManifestFilenameSnapshot,
 		)))
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		defer f.Close()
 
 		ki := v1manifest.KeyInfo{}
 		if err := json.NewDecoder(f).Decode(&ki); err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		if keys[v1manifest.ManifestTypeSnapshot] == nil {
 			keys[v1manifest.ManifestTypeSnapshot] = make([]*v1manifest.KeyInfo, 0)
@@ -656,11 +669,11 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 	// update snapshot
 	snapshot, err := snapshotOld.Signed.(*v1manifest.Snapshot).SetVersions(manifests)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	manifests[v1manifest.ManifestTypeSnapshot], err = v1manifest.SignManifest(snapshot, keys[v1manifest.ManifestTypeSnapshot]...)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	// read timestamp.json
@@ -668,7 +681,7 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 		Signed: &v1manifest.Timestamp{},
 	}
 	if err := readManifest1(filepath.Join(dir, "manifests"), v1manifest.ManifestFilenameTimestamp, &tsOld); err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	manifests[v1manifest.ManifestTypeTimestamp] = &tsOld
 	for _, sig := range manifests[v1manifest.ManifestTypeTimestamp].Signatures {
@@ -677,13 +690,13 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 			"%s-%s", id, v1manifest.ManifestFilenameTimestamp,
 		)))
 		if err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		defer f.Close()
 
 		ki := v1manifest.KeyInfo{}
 		if err := json.NewDecoder(f).Decode(&ki); err != nil {
-			return err
+			return errors.Trace(err)
 		}
 		if keys[v1manifest.ManifestTypeTimestamp] == nil {
 			keys[v1manifest.ManifestTypeTimestamp] = make([]*v1manifest.KeyInfo, 0)
@@ -694,12 +707,12 @@ func update(dir string, keyFiles []string, isPublicKey bool) error {
 	// update timestamp
 	timestamp, err := v1manifest.NewTimestamp(currTime).SetSnapshot(manifests[v1manifest.ManifestTypeSnapshot])
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	timestamp.Base().Version = manifests[v1manifest.ManifestTypeTimestamp].Signed.Base().Version + 1
 	manifests[v1manifest.ManifestTypeTimestamp], err = v1manifest.SignManifest(timestamp, keys[v1manifest.ManifestTypeTimestamp]...)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	for _, m := range manifests {
