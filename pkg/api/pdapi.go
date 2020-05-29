@@ -28,6 +28,7 @@ import (
 	"github.com/pingcap/kvproto/pkg/metapb"
 	"github.com/pingcap/kvproto/pkg/pdpb"
 	pdserverapi "github.com/pingcap/pd/v4/server/api"
+	pdserverconfig "github.com/pingcap/pd/v4/server/config"
 )
 
 // PDClient is an HTTP client of the PD server
@@ -251,6 +252,28 @@ func (pc *PDClient) GetMembers() (*pdpb.GetMembersResponse, error) {
 	}
 
 	return &members, nil
+}
+
+// GetDashboardAddress get the PD node address which runs dashboard
+func (pc *PDClient) GetDashboardAddress() (string, error) {
+	endpoints := pc.getEndpoints(pdConfigURI)
+
+	pdConfig := pdserverconfig.Config{}
+
+	err := tryURLs(endpoints, func(endpoint string) error {
+		body, err := pc.httpClient.Get(endpoint)
+		if err != nil {
+			return err
+		}
+
+		return json.Unmarshal(body, &pdConfig)
+	})
+
+	if err != nil {
+		return "", errors.AddStack(err)
+	}
+
+	return pdConfig.PDServerCfg.DashboardAddress, nil
 }
 
 // EvictPDLeader evicts the PD leader

@@ -290,18 +290,25 @@ func (s PDSpec) Status(pdList ...string) string {
 		return "ERR"
 	}
 
+	// find dashboard node
+	dashboardAddr, _ := pdapi.GetDashboardAddress()
+
 	for _, member := range healths.Healths {
 		suffix := ""
+		clientURL := member.ClientUrls[0]
 		if s.Name != member.Name {
 			continue
 		}
 		if s.Name == leader.Name {
-			suffix = "|L"
+			suffix += "|L"
+		}
+		if clientURL == dashboardAddr {
+			suffix += "|UI"
 		}
 		if member.Health {
 			return "Healthy" + suffix
 		}
-		return "Unhealthy"
+		return "Unhealthy" + suffix
 	}
 	return "N/A"
 }
