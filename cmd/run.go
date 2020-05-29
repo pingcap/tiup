@@ -31,6 +31,7 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/errors"
+	"golang.org/x/mod/semver"
 )
 
 func runComponent(env *meta.Environment, tag, spec, binPath string, args []string) error {
@@ -130,6 +131,11 @@ func launchComponent(ctx context.Context, component string, version v0manifest.V
 	selectVer, err := env.DownloadComponentIfMissing(component, version)
 	if err != nil {
 		return nil, err
+	}
+
+	// playground && cluster version must greater than v1.0.0
+	if (component == "playground" || component == "cluster") && semver.Compare(selectVer.String(), "v1.0.0") < 0 {
+		return nil, errors.Errorf("incompatible component version, please use `tiup update %s` to upgrade to the latest version", component)
 	}
 
 	profile := env.Profile()

@@ -28,6 +28,9 @@ const (
 	// ManifestParentDir represent the parent directory of all manifests
 	ManifestParentDir = "manifests"
 
+	// KeyInfoParentDir represent the parent directory of all keys
+	KeyInfoParentDir = "keys"
+
 	// DataParentDir represent the parent directory of all running instances
 	DataParentDir = "data"
 

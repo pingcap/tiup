@@ -20,11 +20,11 @@ import (
 
 var (
 	// TiUPVerMajor is the major version of TiUP
-	TiUPVerMajor = 0
+	TiUPVerMajor = 1
 	// TiUPVerMinor is the minor version of TiUP
 	TiUPVerMinor = 0
 	// TiUPVerPatch is the patch version of TiUP
-	TiUPVerPatch = 5
+	TiUPVerPatch = 0
 	// TiUPVerName is alternative name of the version
 	TiUPVerName = "tiup"
 	// BuildTime is the time when binary is built

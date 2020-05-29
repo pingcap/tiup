@@ -127,7 +127,7 @@ the latest stable version will be downloaded from the repository.`,
 			externalHelp(env, n[0], n[1:]...)
 		} else {
 			cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
-			cmd.Help()
+			_ = cmd.Help()
 		}
 	})
 

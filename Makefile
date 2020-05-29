@@ -29,17 +29,10 @@ default: cmd check
 cmd:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
 
-check: fmt errcheck lint tidy check-static vet staticcheck
-
-errcheck:tools/bin/errcheck
-	@echo "errcheck"
-	@GO111MODULE=on tools/bin/errcheck -exclude ./tools/check/errcheck_excludes.txt -ignoretests -blank $(PACKAGES)
+check: fmt lint tidy check-static vet
 
 check-static: tools/bin/golangci-lint
-	tools/bin/golangci-lint run -v --disable-all --deadline=3m \
-	  --enable=misspell \
-	  --enable=ineffassign \
-	  $$($(PACKAGE_DIRECTORIES))
+	tools/bin/golangci-lint run ./... --deadline=3m
 
 lint:tools/bin/revive
 	@echo "linting"
@@ -47,10 +40,6 @@ lint:tools/bin/revive
 
 vet:
 	$(GO) vet ./...
-
-staticcheck:
-	$(GO) get honnef.co/go/tools/cmd/staticcheck
-	GO111MODULE=on staticcheck ./...
 
 tidy:
 	@echo "go mod tidy"
@@ -164,5 +153,5 @@ tools/bin/revive: tools/check/go.mod
 	$(GO) build -o ../bin/revive github.com/mgechev/revive
 
 tools/bin/golangci-lint:
-	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b ./tools/bin v1.21.0
+	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b ./tools/bin v1.27.0
 

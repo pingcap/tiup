@@ -18,7 +18,10 @@ var tpccConfig tpcc.Config
 func executeTpcc(action string) {
 	if pprofAddr != "" {
 		go func() {
-			http.ListenAndServe(pprofAddr, http.DefaultServeMux)
+			err := http.ListenAndServe(pprofAddr, http.DefaultServeMux)
+			if err != nil {
+				fmt.Printf("failed to ListenAndServe: %s\n", err.Error())
+			}
 		}()
 	}
 	runtime.GOMAXPROCS(maxProcs)

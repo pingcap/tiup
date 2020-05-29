@@ -287,6 +287,11 @@ func (env *Environment) latestManifest() (*v0manifest.ComponentManifest, error) 
 	return manifest, err
 }
 
+// GetComponentInstalledVersion return the installed version of component.
+func (env *Environment) GetComponentInstalledVersion(component string, version v0manifest.Version) (v0manifest.Version, error) {
+	return env.profile.GetComponentInstalledVersion(component, version)
+}
+
 // BinaryPath return the installed binary path.
 func (env *Environment) BinaryPath(component string, version v0manifest.Version) (string, error) {
 	if env.v1Repo != nil {
