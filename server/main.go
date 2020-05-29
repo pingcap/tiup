@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/pingcap-incubator/tiup/pkg/log"
 	"github.com/spf13/cobra"
 )
 
@@ -47,9 +48,11 @@ func main() {
 	cmd.Flags().StringVarP(&snapshotKey, "snapshot", "", "", "specific the private key for snapshot")
 	cmd.Flags().StringVarP(&timestampKey, "timestamp", "", "", "specific the private key for timestamp")
 
-	cmd.MarkFlagRequired("index")
-	cmd.MarkFlagRequired("snapshot")
-	cmd.MarkFlagRequired("timestamp")
+	_ = cmd.MarkFlagRequired("index")
+	_ = cmd.MarkFlagRequired("snapshot")
+	_ = cmd.MarkFlagRequired("timestamp")
 
-	cmd.Execute()
+	if err := cmd.Execute(); err != nil {
+		log.Errorf("Execute command: %s", err.Error())
+	}
 }

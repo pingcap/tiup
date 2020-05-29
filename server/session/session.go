@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pingcap-incubator/tiup/pkg/log"
 	"github.com/pingcap-incubator/tiup/server/store"
 )
 
@@ -63,16 +64,18 @@ func (s *sessionManager) Begin(id string) error {
 	return nil
 }
 
-func (s *sessionManager) gc(id string) error {
+func (s *sessionManager) gc(id string) {
 	time.Sleep(maxAliveTime)
 
 	txn := s.Load(id)
 	if txn == nil {
-		return nil
+		return
 	}
 
 	s.Delete(id)
-	return txn.Rollback()
+	if err := txn.Rollback(); err != nil {
+		log.Errorf("Rollback: %s", err.Error())
+	}
 }
 
 // Get returns the txn of given session

@@ -206,7 +206,9 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 	}
 
 	buf := new(strings.Builder)
-	io.Copy(buf, resp.Body)
+	if _, err := io.Copy(buf, resp.Body); err != nil {
+		return err
+	}
 
 	return fmt.Errorf("Unknow error from server, response body: %s", buf.String())
 }

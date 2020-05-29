@@ -24,6 +24,7 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/google/uuid"
+	"github.com/pingcap-incubator/tiup/pkg/log"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 )
 
@@ -40,7 +41,7 @@ type qcloudStore struct {
 
 func newQCloudStore(root string) *qcloudStore {
 	if err := os.MkdirAll(root, 0755); err != nil {
-		// TODO: handle error here
+		log.Errorf("Create store directory: %s", err.Error())
 	}
 	return &qcloudStore{
 		root:     root,
