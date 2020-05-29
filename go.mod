@@ -18,6 +18,7 @@ require (
 	github.com/gizak/termui/v3 v3.1.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/google/uuid v1.1.1
+	github.com/gorilla/mux v1.7.4
 	github.com/jmhodges/levigo v1.0.0 // indirect
 	github.com/juju/errors v0.0.0-20190930114154-d42613fe1ab9
 	github.com/juju/loggo v0.0.0-20190526231331-6e530bcce5d8 // indirect
@@ -26,6 +27,7 @@ require (
 	github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712
 	github.com/pingcap/errors v0.11.5-0.20190809092503-95897b64e011
 	github.com/pingcap/failpoint v0.0.0-20200210140405-f8f9fb234798
+	github.com/pingcap/fn v0.0.0-20200306044125-d5540d389059
 	github.com/pingcap/go-tpc v1.0.4-0.20200525052430-dc963cdeef62
 	github.com/pingcap/kvproto v0.0.0-20200518112156-d4aeb467de29
 	github.com/pingcap/pd/v4 v4.0.0-rc.2

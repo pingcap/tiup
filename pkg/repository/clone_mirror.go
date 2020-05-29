@@ -23,6 +23,7 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/assets"
 
 	cjson "github.com/gibson042/canonicaljson-go"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
@@ -420,7 +421,7 @@ func combineVersions(versions *[]string, manifest *v1manifest.Component, oss, ar
 					// Use the latest stable versionS if the selected version doesn't exist in specific platform
 					var latest string
 					for v := range versions {
-						if strings.Contains(v, version.NightlyVersion) {
+						if v0manifest.Version(v).IsNightly() {
 							continue
 						}
 						if latest == "" || semver.Compare(v, latest) > 0 {
