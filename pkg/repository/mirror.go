@@ -219,7 +219,7 @@ L:
 		return nil, errors.Annotatef(err, "download from %s failed", url)
 	}
 	if maxSize > 0 && resp.BytesComplete() > maxSize {
-		return nil, fmt.Errorf("download from %s failed, maximum size exceeded", url)
+		return nil, errors.Errorf("download from %s failed, maximum size exceeded", url)
 	}
 
 	return resp.Open()

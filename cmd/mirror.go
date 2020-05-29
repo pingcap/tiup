@@ -222,7 +222,7 @@ func newMirrorPublishCmd(env *meta.Environment) *cobra.Command {
 			}
 
 			if err := t.Upload(); err != nil {
-				fmt.Printf("Failed on uploading tarbal: %s\n", err.Error())
+				fmt.Printf("Failed to upload component: %s\n", err.Error())
 				return err
 			}
 
@@ -236,7 +236,7 @@ func newMirrorPublishCmd(env *meta.Environment) *cobra.Command {
 				fmt.Printf("Sign component manifest: %s\n", err.Error())
 				return err
 			}
-			fmt.Printf("Upload %s(%s) success\n", args[0], args[1])
+			fmt.Printf("Upload %s(%s) for platform %s/%s success\n", args[0], args[1], goos, goarch)
 
 			return nil
 		},

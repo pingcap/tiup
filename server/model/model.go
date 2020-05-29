@@ -48,7 +48,7 @@ func (m *model) UpdateComponentManifest(component string, manifest *ComponentMan
 	if err != nil {
 		return err
 	}
-	lastVersion := snap.Signed.Meta[fmt.Sprintf("/%s.json", component)].Version
+	lastVersion := snap.Signed.Meta["/"+manifest.Signed.Filename()].Version
 	if manifest.Signed.Version != lastVersion+1 {
 		log.Debugf("Component version not expected, expect %d, got %d", lastVersion+1, manifest.Signed.Version)
 		return ErrorConflict
@@ -58,13 +58,13 @@ func (m *model) UpdateComponentManifest(component string, manifest *ComponentMan
 
 func (m *model) UpdateRootManifest(manifest *RootManifest) error {
 	var last RootManifest
-	if err := m.txn.ReadManifest("root.json", &last); err != nil {
+	if err := m.txn.ReadManifest(v1manifest.ManifestFilenameRoot, &last); err != nil {
 		return err
 	}
 	if manifest.Signed.Version != last.Signed.Version+1 {
 		return ErrorConflict
 	}
-	if err := m.txn.WriteManifest("root.json", manifest); err != nil {
+	if err := m.txn.WriteManifest(v1manifest.ManifestFilenameRoot, manifest); err != nil {
 		return err
 	}
 	return m.txn.WriteManifest(fmt.Sprintf("%d.root.json", manifest.Signed.Version), manifest)
@@ -75,7 +75,7 @@ func (m *model) UpdateIndexManifest(f func(*IndexManifest) *IndexManifest) error
 	if err != nil {
 		return err
 	}
-	lastVersion := snap.Signed.Meta["/index.json"].Version
+	lastVersion := snap.Signed.Meta[v1manifest.ManifestURLIndex].Version
 
 	var last IndexManifest
 	if err := m.txn.ReadManifest(fmt.Sprintf("%d.index.json", lastVersion), &last); err != nil {

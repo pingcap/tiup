@@ -45,6 +45,7 @@ type transporter struct {
 	tarFile     *os.File
 	tarInfo     os.FileInfo
 	sha256      string
+	sha512      string
 	os          string
 	arch        string
 	entry       string
@@ -101,6 +102,18 @@ func (t *transporter) Open(tarbal string) error {
 	}
 	t.sha256 = sha256
 
+	_, err = file.Seek(0, io.SeekStart)
+	if err != nil {
+		return err
+	}
+
+	sha512, err := utils.SHA256(file)
+	if err != nil {
+		file.Close()
+		return err
+	}
+	t.sha512 = sha512
+
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		file.Close()
 		return err
@@ -149,7 +162,8 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 		URL:      fmt.Sprintf("/%s-%s-%s-%s.tar.gz", t.component, t.version, t.os, t.arch),
 		FileHash: v1manifest.FileHash{
 			Hashes: map[string]string{
-				"sha256": t.sha256,
+				v1manifest.SHA256: t.sha256,
+				v1manifest.SHA512: t.sha512,
 			},
 			Length: uint(t.tarInfo.Size()),
 		},

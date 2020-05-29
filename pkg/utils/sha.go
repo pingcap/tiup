@@ -16,6 +16,7 @@ package utils
 import (
 	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/hex"
 	"io"
 	"strings"
@@ -54,6 +55,17 @@ func CheckSHA256(reader io.Reader, sha string) error {
 // SHA256 returns the hash of reader
 func SHA256(reader io.Reader) (string, error) {
 	shaWriter := sha256.New()
+	if _, err := io.Copy(shaWriter, reader); err != nil {
+		return "", errors.Trace(err)
+	}
+
+	checksum := hex.EncodeToString(shaWriter.Sum(nil))
+	return checksum, nil
+}
+
+// SHA512 returns the hash of reader
+func SHA512(reader io.Reader) (string, error) {
+	shaWriter := sha512.New()
 	if _, err := io.Copy(shaWriter, reader); err != nil {
 		return "", errors.Trace(err)
 	}
