@@ -2,10 +2,12 @@
 
 set -eu
 
-version=${version-v4.0.0-rc}
+version=${version-v4.0.0}
 old_version=${old_version-v4.0.0-beta.2}
 name=test_upgrade
 topo=./topo/upgrade.yaml
+
+mkdir -p ~/.tiup/bin && cp -f ./root.json ~/.tiup/bin/
 
 yes | tiup-cluster deploy $name $old_version $topo -i ~/.ssh/id_rsa
 
