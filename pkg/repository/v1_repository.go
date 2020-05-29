@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/pingcap/errors"
 	"golang.org/x/mod/semver"
 )
@@ -94,12 +95,14 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 		}
 
 		if spec.Nightly {
-			spec.Version = manifest.Nightly
+			spec.Version = version.NightlyVersion
 			// The v0 "nightly" is not versioned, force update as v0...
 			// we will add daily ones like: "v3.0.0-nightly-yyyy-mm-dd"
-			if spec.Version == "nightly" {
-				spec.Force = true
-			}
+			spec.Force = true
+		}
+		specVersion := spec.Version
+		if v0manifest.Version(spec.Version).IsNightly() {
+			specVersion = manifest.Nightly
 		}
 
 		if spec.Nightly && !manifest.HasNightly(r.PlatformString()) {
@@ -114,7 +117,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			continue
 		}
 
-		version, versionItem, err := r.selectVersion(spec.ID, versions, spec.Version)
+		version, versionItem, err := r.selectVersion(spec.ID, versions, specVersion)
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
@@ -137,7 +140,10 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			continue
 		}
 
-		err = r.local.InstallComponent(reader, spec.TargetDir, spec.ID, version, versionItem.URL, r.DisableDecompress)
+		if spec.Version == "" {
+			spec.Version = version
+		}
+		err = r.local.InstallComponent(reader, spec.TargetDir, spec.ID, spec.Version, versionItem.URL, r.DisableDecompress)
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
@@ -604,7 +610,12 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, versio
 		}
 	}
 
-	versionItem, ok := component.Platforms[r.PlatformString()][version]
+	specVersion := version
+	if v0manifest.Version(version).IsNightly() {
+		specVersion = component.Nightly
+	}
+
+	versionItem, ok := component.Platforms[r.PlatformString()][specVersion]
 	if !ok {
 		return "", errors.Errorf("no version: %s", version)
 	}

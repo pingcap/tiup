@@ -19,9 +19,11 @@ import (
 	"strings"
 
 	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap-incubator/tiup/pkg/tui"
+	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
@@ -185,7 +187,13 @@ func showComponentVersions(env *meta.Environment, component string, opt listOpti
 	}
 	verList := []string{}
 	for v := range platforms {
+		if v0manifest.Version(v).IsNightly() {
+			continue
+		}
 		verList = append(verList, v)
+	}
+	if comp.Nightly != "" {
+		verList = append(verList, version.NightlyVersion)
 	}
 	sort.Slice(verList, func(p, q int) bool {
 		return semver.Compare(verList[p], verList[q]) < 0
