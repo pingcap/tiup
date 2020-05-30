@@ -44,23 +44,13 @@ import (
 )
 
 type bootOptions struct {
-	version           string
-	pdConfigPath      string
-	tidbConfigPath    string
-	tikvConfigPath    string
-	tiflashConfigPath string
-	pdBinPath         string
-	tidbBinPath       string
-	tikvBinPath       string
-	tiflashBinPath    string
-	pdNum             int
-	tidbNum           int
-	tikvNum           int
-	tiflashNum        int
-	host              string
-	tidbHost          string
-	pdHost            string
-	monitor           bool
+	version string
+	pd      instance.Config
+	tidb    instance.Config
+	tikv    instance.Config
+	tiflash instance.Config
+	host    string
+	monitor bool
 }
 
 func installIfMissing(profile *localdata.Profile, component, version string) error {
@@ -94,27 +84,29 @@ func installIfMissing(profile *localdata.Profile, component, version string) err
 }
 
 func execute() error {
-	tidbNum := 1
-	tikvNum := 1
-	pdNum := 1
-	tiflashNum := 1
-	host := "127.0.0.1"
-	tidbHost := ""
-	pdHost := ""
-	monitor := false
-	tidbConfigPath := ""
-	tikvConfigPath := ""
-	pdConfigPath := ""
-	tiflashConfigPath := ""
-	tidbBinPath := ""
-	tikvBinPath := ""
-	pdBinPath := ""
-	tiflashBinPath := ""
 	var defaultTiflashNum int
 	if runtime.GOOS == "linux" {
 		defaultTiflashNum = 1
 	} else {
 		defaultTiflashNum = 0
+	}
+
+	opt := &bootOptions{
+		tidb: instance.Config{
+			Num: 1,
+		},
+		tikv: instance.Config{
+			Num: 1,
+		},
+		pd: instance.Config{
+			Num: 1,
+		},
+		tiflash: instance.Config{
+			Num: defaultTiflashNum,
+		},
+		host:    "127.0.0.1",
+		monitor: false,
+		version: "",
 	}
 
 	rootCmd := &cobra.Command{
@@ -130,49 +122,29 @@ Examples:
   $ tiup playground --db.binpath /xx/tidb-server    # Start a local cluster with component binary path`,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			version := ""
 			if len(args) > 0 {
-				version = args[0]
+				opt.version = args[0]
 			}
-			options := &bootOptions{
-				version:           version,
-				pdConfigPath:      pdConfigPath,
-				tidbConfigPath:    tidbConfigPath,
-				tikvConfigPath:    tikvConfigPath,
-				tiflashConfigPath: tiflashConfigPath,
-				pdBinPath:         pdBinPath,
-				tidbBinPath:       tidbBinPath,
-				tikvBinPath:       tikvBinPath,
-				tiflashBinPath:    tiflashBinPath,
-				pdNum:             pdNum,
-				tidbNum:           tidbNum,
-				tikvNum:           tikvNum,
-				tiflashNum:        tiflashNum,
-				host:              host,
-				tidbHost:          tidbHost,
-				pdHost:            pdHost,
-				monitor:           monitor,
-			}
-			return bootCluster(options)
+			return bootCluster(opt)
 		},
 	}
 
-	rootCmd.Flags().IntVarP(&tidbNum, "db", "", 1, "TiDB instance number")
-	rootCmd.Flags().IntVarP(&tikvNum, "kv", "", 1, "TiKV instance number")
-	rootCmd.Flags().IntVarP(&pdNum, "pd", "", 1, "PD instance number")
-	rootCmd.Flags().IntVarP(&tiflashNum, "tiflash", "", defaultTiflashNum, "TiFlash instance number")
-	rootCmd.Flags().StringVarP(&host, "host", "", host, "Playground cluster host")
-	rootCmd.Flags().StringVarP(&tidbHost, "db.host", "", "", "Playground TiDB host. If not provided, TiDB will still use `host` flag as its host")
-	rootCmd.Flags().StringVarP(&pdHost, "pd.host", "", "", "Playground PD host. If not provided, PD will still use `host` flag as its host")
-	rootCmd.Flags().BoolVar(&monitor, "monitor", false, "Start prometheus component")
-	rootCmd.Flags().StringVarP(&tidbConfigPath, "db.config", "", tidbConfigPath, "TiDB instance configuration file")
-	rootCmd.Flags().StringVarP(&tikvConfigPath, "kv.config", "", tikvConfigPath, "TiKV instance configuration file")
-	rootCmd.Flags().StringVarP(&pdConfigPath, "pd.config", "", pdConfigPath, "PD instance configuration file")
-	rootCmd.Flags().StringVarP(&tiflashConfigPath, "tiflash.config", "", tiflashConfigPath, "TiFlash instance configuration file")
-	rootCmd.Flags().StringVarP(&tidbBinPath, "db.binpath", "", tidbBinPath, "TiDB instance binary path")
-	rootCmd.Flags().StringVarP(&tikvBinPath, "kv.binpath", "", tikvBinPath, "TiKV instance binary path")
-	rootCmd.Flags().StringVarP(&pdBinPath, "pd.binpath", "", pdBinPath, "PD instance binary path")
-	rootCmd.Flags().StringVarP(&tiflashBinPath, "tiflash.binpath", "", tiflashBinPath, "TiFlash instance binary path")
+	rootCmd.Flags().IntVarP(&opt.tidb.Num, "db", "", opt.tidb.Num, "TiDB instance number")
+	rootCmd.Flags().IntVarP(&opt.tikv.Num, "kv", "", opt.tikv.Num, "TiKV instance number")
+	rootCmd.Flags().IntVarP(&opt.pd.Num, "pd", "", opt.pd.Num, "PD instance number")
+	rootCmd.Flags().IntVarP(&opt.tiflash.Num, "tiflash", "", opt.tiflash.Num, "TiFlash instance number")
+	rootCmd.Flags().StringVarP(&opt.host, "host", "", opt.host, "Playground cluster host")
+	rootCmd.Flags().StringVarP(&opt.tidb.Host, "db.host", "", opt.tidb.Host, "Playground TiDB host. If not provided, TiDB will still use `host` flag as its host")
+	rootCmd.Flags().StringVarP(&opt.pd.Host, "pd.host", "", opt.pd.Host, "Playground PD host. If not provided, PD will still use `host` flag as its host")
+	rootCmd.Flags().BoolVar(&opt.monitor, "monitor", false, "Start prometheus component")
+	rootCmd.Flags().StringVarP(&opt.tidb.ConfigPath, "db.config", "", opt.tidb.ConfigPath, "TiDB instance configuration file")
+	rootCmd.Flags().StringVarP(&opt.tikv.ConfigPath, "kv.config", "", opt.tikv.ConfigPath, "TiKV instance configuration file")
+	rootCmd.Flags().StringVarP(&opt.pd.ConfigPath, "pd.config", "", opt.pd.ConfigPath, "PD instance configuration file")
+	rootCmd.Flags().StringVarP(&opt.tidb.ConfigPath, "tiflash.config", "", opt.tidb.ConfigPath, "TiFlash instance configuration file")
+	rootCmd.Flags().StringVarP(&opt.tidb.BinPath, "db.binpath", "", opt.tidb.BinPath, "TiDB instance binary path")
+	rootCmd.Flags().StringVarP(&opt.tikv.BinPath, "kv.binpath", "", opt.tikv.BinPath, "TiKV instance binary path")
+	rootCmd.Flags().StringVarP(&opt.pd.BinPath, "pd.binpath", "", opt.pd.BinPath, "PD instance binary path")
+	rootCmd.Flags().StringVarP(&opt.tiflash.BinPath, "tiflash.binpath", "", opt.tiflash.BinPath, "TiFlash instance binary path")
 
 	return rootCmd.Execute()
 }
@@ -243,50 +215,50 @@ func getAbsolutePath(binPath string) string {
 }
 
 func bootCluster(options *bootOptions) error {
-	if options.pdNum < 1 || options.tidbNum < 1 || options.tikvNum < 1 {
+	if options.pd.Num < 1 || options.tidb.Num < 1 || options.tikv.Num < 1 {
 		return fmt.Errorf("all components count must be great than 0 (tidb=%v, tikv=%v, pd=%v)",
-			options.tidbNum, options.tikvNum, options.pdNum)
+			options.pd.Num, options.tikv.Num, options.pd.Num)
 	}
 
 	var pathMap = make(map[string]string)
-	if options.tidbBinPath != "" {
-		pathMap["tidb"] = getAbsolutePath(options.tidbBinPath)
+	if options.tidb.BinPath != "" {
+		pathMap["tidb"] = getAbsolutePath(options.tidb.BinPath)
 	}
-	if options.tikvBinPath != "" {
-		pathMap["tikv"] = getAbsolutePath(options.tikvBinPath)
+	if options.tikv.BinPath != "" {
+		pathMap["tikv"] = getAbsolutePath(options.tikv.BinPath)
 	}
-	if options.pdBinPath != "" {
-		pathMap["pd"] = getAbsolutePath(options.pdBinPath)
+	if options.pd.BinPath != "" {
+		pathMap["pd"] = getAbsolutePath(options.pd.BinPath)
 	}
-	if options.tiflashNum > 0 && options.tiflashBinPath != "" {
-		pathMap["tiflash"] = getAbsolutePath(options.tiflashBinPath)
+	if options.tiflash.Num > 0 && options.tiflash.BinPath != "" {
+		pathMap["tiflash"] = getAbsolutePath(options.tiflash.BinPath)
 	}
 
-	if options.tidbConfigPath != "" {
-		options.tidbConfigPath = getAbsolutePath(options.tidbConfigPath)
+	if options.tidb.ConfigPath != "" {
+		options.tidb.ConfigPath = getAbsolutePath(options.tidb.ConfigPath)
 	}
-	if options.tikvConfigPath != "" {
-		options.tikvConfigPath = getAbsolutePath(options.tikvConfigPath)
+	if options.tikv.ConfigPath != "" {
+		options.tikv.ConfigPath = getAbsolutePath(options.tikv.ConfigPath)
 	}
-	if options.pdConfigPath != "" {
-		options.pdConfigPath = getAbsolutePath(options.pdConfigPath)
+	if options.pd.ConfigPath != "" {
+		options.pd.ConfigPath = getAbsolutePath(options.pd.ConfigPath)
 	}
-	if options.tiflashNum > 0 && options.tiflashConfigPath != "" {
-		options.tiflashConfigPath = getAbsolutePath(options.tiflashConfigPath)
+	if options.tiflash.Num > 0 && options.tiflash.ConfigPath != "" {
+		options.tiflash.ConfigPath = getAbsolutePath(options.tiflash.ConfigPath)
 	}
 
 	profile := localdata.InitProfile()
 
-	if options.version != "" && semver.Compare("v3.1.0", options.version) > 0 && options.tiflashNum != 0 {
+	if options.version != "" && semver.Compare("v3.1.0", options.version) > 0 && options.tiflash.Num != 0 {
 		fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.version))
-		options.tiflashNum = 0
+		options.tiflash.Num = 0
 	}
 
 	for _, comp := range []string{"pd", "tikv", "tidb", "tiflash"} {
 		if pathMap[comp] != "" {
 			continue
 		}
-		if comp == "tiflash" && options.tiflashNum == 0 {
+		if comp == "tiflash" && options.tiflash.Num == 0 {
 			continue
 		}
 
@@ -299,25 +271,25 @@ func bootCluster(options *bootOptions) error {
 		return fmt.Errorf("cannot read environment variable %s", localdata.EnvNameInstanceDataDir)
 	}
 
-	all := make([]instance.Instance, 0, options.pdNum+options.tikvNum+options.tidbNum+options.tiflashNum)
-	allButTiFlash := make([]instance.Instance, 0, options.pdNum+options.tikvNum+options.tidbNum)
-	allRolesButTiFlash := make([]string, 0, options.pdNum+options.tikvNum+options.tidbNum)
-	pds := make([]*instance.PDInstance, 0, options.pdNum)
-	kvs := make([]*instance.TiKVInstance, 0, options.tikvNum)
-	dbs := make([]*instance.TiDBInstance, 0, options.tidbNum)
-	flashs := make([]*instance.TiFlashInstance, 0, options.tiflashNum)
+	all := make([]instance.Instance, 0)
+	allButTiFlash := make([]instance.Instance, 0)
+	allRolesButTiFlash := make([]string, 0)
+	pds := make([]*instance.PDInstance, 0)
+	kvs := make([]*instance.TiKVInstance, 0)
+	dbs := make([]*instance.TiDBInstance, 0)
+	flashs := make([]*instance.TiFlashInstance, 0)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	pdHost := options.host
 	// If pdHost flag is specified, use it instead.
-	if options.pdHost != "" {
-		pdHost = options.pdHost
+	if options.pd.Host != "" {
+		pdHost = options.pd.Host
 	}
-	for i := 0; i < options.pdNum; i++ {
+	for i := 0; i < options.pd.Num; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("pd-%d", i))
-		inst := instance.NewPDInstance(dir, pdHost, options.pdConfigPath, i)
+		inst := instance.NewPDInstance(dir, pdHost, options.pd.ConfigPath, i)
 		pds = append(pds, inst)
 		all = append(all, inst)
 		allButTiFlash = append(allButTiFlash, inst)
@@ -327,9 +299,9 @@ func bootCluster(options *bootOptions) error {
 		pd.Join(pds)
 	}
 
-	for i := 0; i < options.tikvNum; i++ {
+	for i := 0; i < options.tikv.Num; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("tikv-%d", i))
-		inst := instance.NewTiKVInstance(dir, options.host, options.tikvConfigPath, i, pds)
+		inst := instance.NewTiKVInstance(dir, options.host, options.tikv.ConfigPath, i, pds)
 		kvs = append(kvs, inst)
 		all = append(all, inst)
 		allButTiFlash = append(allButTiFlash, inst)
@@ -338,20 +310,20 @@ func bootCluster(options *bootOptions) error {
 
 	tidbHost := options.host
 	// If tidbHost flag is specified, use it instead.
-	if options.tidbHost != "" {
-		tidbHost = options.tidbHost
+	if options.tidb.Host != "" {
+		tidbHost = options.tidb.Host
 	}
-	for i := 0; i < options.tidbNum; i++ {
+	for i := 0; i < options.tidb.Num; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("tidb-%d", i))
-		inst := instance.NewTiDBInstance(dir, tidbHost, options.tidbConfigPath, i, pds)
+		inst := instance.NewTiDBInstance(dir, tidbHost, options.tidb.ConfigPath, i, pds)
 		dbs = append(dbs, inst)
 		allButTiFlash = append(allButTiFlash, inst)
 		allRolesButTiFlash = append(allRolesButTiFlash, "tidb")
 	}
 
-	for i := 0; i < options.tiflashNum; i++ {
+	for i := 0; i < options.tiflash.Num; i++ {
 		dir := filepath.Join(dataDir, fmt.Sprintf("tiflash-%d", i))
-		inst := instance.NewTiFlashInstance(dir, options.host, options.tiflashConfigPath, i, pds, dbs)
+		inst := instance.NewTiFlashInstance(dir, options.host, options.tiflash.ConfigPath, i, pds, dbs)
 		flashs = append(flashs, inst)
 		all = append(all, inst)
 	}

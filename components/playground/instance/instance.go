@@ -20,6 +20,14 @@ import (
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 )
 
+// Config of the instance.
+type Config struct {
+	ConfigPath string
+	BinPath    string
+	Num        int
+	Host       string
+}
+
 type instance struct {
 	ID         int
 	Dir        string
