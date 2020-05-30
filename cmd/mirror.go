@@ -481,7 +481,7 @@ func newMirrorCloneCmd(env *meta.Environment) *cobra.Command {
 		Use: "clone <target-dir> [global version]",
 		Example: `  tiup mirror clone /path/to/local --arch amd64,arm --os linux,darwin    # Specify the architectures and OSs
   tiup mirror clone /path/to/local --full                                # Build a full local mirror
-  tiup mirror clone /path/to/local --tikv v4                             # Specify the version via prefix
+  tiup mirror clone /path/to/local --tikv v4  --prefix                   # Specify the version via prefix
   tiup mirror clone /path/to/local --tidb all --pd all                   # Download all version for specific component`,
 		Short:        "Clone a local mirror from remote mirror and download all selected components",
 		SilenceUsage: true,
@@ -511,6 +511,7 @@ func newMirrorCloneCmd(env *meta.Environment) *cobra.Command {
 	cmd.Flags().BoolVarP(&options.Full, "full", "f", false, "Build a full mirrors repository")
 	cmd.Flags().StringSliceVarP(&options.Archs, "arch", "a", []string{"amd64", "arm64"}, "Specify the downloading architecture")
 	cmd.Flags().StringSliceVarP(&options.OSs, "os", "o", []string{"linux", "darwin"}, "Specify the downloading os")
+	cmd.Flags().BoolVarP(&options.Prefix, "prefix", "", false, "Download the version with matching prefix")
 
 	for _, name := range components {
 		options.Components[name] = new([]string)
