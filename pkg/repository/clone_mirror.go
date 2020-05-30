@@ -39,6 +39,7 @@ type CloneOptions struct {
 	Versions   []string
 	Full       bool
 	Components map[string]*[]string
+	Prefix     bool
 }
 
 // CloneMirror clones a local mirror from the remote repository
@@ -375,7 +376,10 @@ func checkVersion(options CloneOptions, versions set.StringSet, version string) 
 	}
 	// prefix match
 	for v := range versions {
-		if strings.HasPrefix(version, v) {
+
+		if options.Prefix && strings.HasPrefix(version, v) {
+			return true
+		} else if version == v {
 			return true
 		}
 	}
