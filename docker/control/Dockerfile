@@ -27,6 +27,6 @@ RUN dos2unix /init.sh /root/.bashrc \
 
 # build tiup-cluster in without --dev flag
 WORKDIR /tiup-cluster
-RUN (test Makefile && make build) || true
+RUN (test Makefile && make cluster) || true
 
 CMD /init.sh

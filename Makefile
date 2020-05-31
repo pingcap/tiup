@@ -24,10 +24,34 @@ FILES     := $$(find . -name "*.go")
 FAILPOINT_ENABLE  := $$(tools/bin/failpoint-ctl enable)
 FAILPOINT_DISABLE := $$(tools/bin/failpoint-ctl disable)
 
-default: cmd check
+default: build check
 
-cmd:
+# Build TiUP and all components
+build: tiup playground client cluster dm bench
+
+tiup:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
+
+playground:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-playground ./components/playground
+
+client:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-client ./components/client
+
+cluster:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster ./components/cluster
+
+dm:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./components/dm
+
+bench:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-bench ./components/bench
+
+doc:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-doc ./components/doc
+
+err:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-err ./components/err
 
 check: fmt lint tidy check-static vet
 
@@ -55,6 +79,12 @@ cover-dir:
 # Run tests
 unit-test:
 	TIUP_HOME=$(shell pwd)/tests/tiup_home $(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
+
+build_integration_test:
+	$(GOTEST) -c -cover -covermode=count \
+		-coverpkg=github.com/pingcap-incubator/tiup/... \
+		-o tests/tiup-cluster/bin/tiup-cluster.test \
+		github.com/pingcap-incubator/tiup/components/cluster
 
 integration_test:
 	@$(GOTEST) -c -cover -covermode=count \
@@ -103,21 +133,6 @@ failpoint-disable: tools/bin/failpoint-ctl
 
 tools/bin/failpoint-ctl: go.mod
 	$(GO) build -o $@ github.com/pingcap/failpoint/failpoint-ctl
-
-playground:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-playground ./components/playground
-
-client:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-client ./components/client
-
-cluster:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster ./components/cluster
-
-dm:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./components/dm
-
-bench:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-bench ./components/bench
 
 pkger:
 	 $(GO) run tools/pkger/main.go -s templates -d pkg/cluster/embed

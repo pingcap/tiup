@@ -58,14 +58,14 @@ jobs:
         run: |
           # should not use -it
           # ref: https://stackoverflow.com/questions/43099116/error-the-input-device-is-not-a-tty
-          docker exec  tiup-cluster-control bash /tiup-cluster/tests/run.sh ${{matrix.cases}}
+          docker exec  tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/run.sh ${{matrix.cases}}
 
       - name: Collect component log
         working-directory: ${{env.working-directory}}
         # if: steps.test.outputs.exit_code != 0
         if: always()
         run: |
-          docker exec  tiup-cluster-control bash /tiup-cluster/tests/script/pull_log.sh /tiup-cluster/logs
+          docker exec  tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/script/pull_log.sh /tiup-cluster/logs
           ls ${{env.working-directory}}
           tar czvf ${{env.working-directory}}/logs.tar.gz ${{env.working-directory}}/logs/
 
