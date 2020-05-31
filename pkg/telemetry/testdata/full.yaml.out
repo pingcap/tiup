@@ -1,0 +1,45 @@
+alertmanager_servers:
+- host: 24b7e8f209cf3a8b43ca34f86a0858a0
+cdc_servers:
+- host: d6b873c771bf523e6e46a3065dfa8bed
+- host: 8b928279d5af90a9fc276e872a065372
+- host: 2e58f921c680e3adc7981a1e1823e416
+drainer_servers:
+- commit_ts: 0
+  config:
+    syncer.db-type: _
+  data_dir: _
+  host: 24b7e8f209cf3a8b43ca34f86a0858a0
+grafana_servers:
+- host: 24b7e8f209cf3a8b43ca34f86a0858a0
+monitoring_servers:
+- host: 24b7e8f209cf3a8b43ca34f86a0858a0
+pd_servers:
+- host: d6b873c771bf523e6e46a3065dfa8bed
+- host: 8b928279d5af90a9fc276e872a065372
+- host: 2e58f921c680e3adc7981a1e1823e416
+pump_servers:
+- host: d6b873c771bf523e6e46a3065dfa8bed
+- host: 8b928279d5af90a9fc276e872a065372
+- host: 2e58f921c680e3adc7981a1e1823e416
+server_configs:
+  pd:
+    replication.enable-placement-rules: false
+  pump:
+    storage.stop-write-at-available-space: _
+  tidb:
+    binlog.enable: false
+    binlog.ignore-error: false
+  tikv:
+    storage.reserve-space: _
+tidb_servers:
+- host: 24b7e8f209cf3a8b43ca34f86a0858a0
+- host: 785e9420afbfbfd0b9b2ea68e0406057
+tiflash_servers:
+- host: d6b873c771bf523e6e46a3065dfa8bed
+tikv_servers:
+- host: 785e9420afbfbfd0b9b2ea68e0406057
+- data_dir: _
+  host: d6b873c771bf523e6e46a3065dfa8bed
+- host: 8b928279d5af90a9fc276e872a065372
+- host: 2e58f921c680e3adc7981a1e1823e416
