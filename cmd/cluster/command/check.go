@@ -30,6 +30,7 @@ import (
 	operator "github.com/pingcap-incubator/tiup-cluster/pkg/operation"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/task"
 	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
+	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
@@ -40,6 +41,7 @@ type checkOptions struct {
 	usePassword  bool   // use password instead of identity file for ssh connection
 	opr          *operator.CheckOptions
 	applyFix     bool // try to apply fixes of failed checks
+	existCluster bool // check an exist cluster
 }
 
 func newCheckCmd() *cobra.Command {
@@ -48,25 +50,43 @@ func newCheckCmd() *cobra.Command {
 		identityFile: path.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
-		Use:   "check <topology.yml>",
+		Use:   "check <topology.yml | cluster-name>",
 		Short: "Perform preflight checks for the cluster.",
+		Long: `Perform preflight checks for the cluster. By default, it checks deploy servers
+before a cluster is deployed, the input is the topology.yaml for the cluster.
+If '--cluster' is set, it will perform checks for an existing cluster, the input
+is the cluster name. Some checks are ignore in this mode, such as port and dir
+conflict checks with other clusters`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
 			}
 
 			logger.EnableAuditLog()
-			var topo meta.TopologySpecification
-			if err := utils.ParseTopologyYaml(args[0], &topo); err != nil {
-				return err
-			}
 
-			// use a dummy cluster name, the real cluster name is set during deploy
-			if err := prepare.CheckClusterPortConflict("nonexist-dummy-tidb-cluster", &topo); err != nil {
-				return err
-			}
-			if err := prepare.CheckClusterDirConflict("nonexist-dummy-tidb-cluster", &topo); err != nil {
-				return err
+			var topo meta.TopologySpecification
+			if opt.existCluster { // check for existing cluster
+				clusterName := args[0]
+				if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+					return errors.Errorf("cluster %s does not exist", clusterName)
+				}
+				metadata, err := meta.ClusterMetadata(clusterName)
+				if err != nil {
+					return err
+				}
+				topo = *metadata.Topology
+			} else { // check before cluster is deployed
+				if err := utils.ParseTopologyYaml(args[0], &topo); err != nil {
+					return err
+				}
+
+				// use a dummy cluster name, the real cluster name is set during deploy
+				if err := prepare.CheckClusterPortConflict("nonexist-dummy-tidb-cluster", &topo); err != nil {
+					return err
+				}
+				if err := prepare.CheckClusterDirConflict("nonexist-dummy-tidb-cluster", &topo); err != nil {
+					return err
+				}
 			}
 
 			sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.identityFile, opt.usePassword)
@@ -90,6 +110,7 @@ func newCheckCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&opt.opr.EnableMem, "enable-mem", false, "Enable memory size check")
 	cmd.Flags().BoolVar(&opt.opr.EnableDisk, "enable-disk", false, "Enable disk IO (fio) check")
 	cmd.Flags().BoolVar(&opt.applyFix, "apply", false, "Try to fix failed checks")
+	cmd.Flags().BoolVar(&opt.existCluster, "cluster", false, "Check existing cluster, the input is a cluster name.")
 
 	return cmd
 }
