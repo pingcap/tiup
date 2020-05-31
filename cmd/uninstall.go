@@ -19,13 +19,13 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pingcap-incubator/tiup/pkg/environment"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 )
 
-func newUninstallCmd(env *meta.Environment) *cobra.Command {
+func newUninstallCmd(env *environment.Environment) *cobra.Command {
 	var all, self bool
 	cmdUnInst := &cobra.Command{
 		Use:   "uninstall <component1>:<version>",
@@ -78,7 +78,7 @@ which is used to uninstall tiup.
 	return cmdUnInst
 }
 
-func removeComponents(env *meta.Environment, specs []string, all bool) error {
+func removeComponents(env *environment.Environment, specs []string, all bool) error {
 	for _, spec := range specs {
 		var path string
 		if strings.Contains(spec, ":") {

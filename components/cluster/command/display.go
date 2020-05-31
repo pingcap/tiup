@@ -1,0 +1,240 @@
+// Copyright 2020 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package command
+
+import (
+	"fmt"
+	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
+	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
+	"sort"
+	"strings"
+
+	"github.com/fatih/color"
+	"github.com/pingcap-incubator/tiup/pkg/cliutil"
+	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
+	operator "github.com/pingcap-incubator/tiup/pkg/cluster/operation"
+	"github.com/pingcap-incubator/tiup/pkg/cluster/task"
+	"github.com/pingcap-incubator/tiup/pkg/set"
+	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap/errors"
+	"github.com/spf13/cobra"
+)
+
+func newDisplayCmd() *cobra.Command {
+	var (
+		clusterName string
+	)
+	cmd := &cobra.Command{
+		Use:   "display <cluster-name>",
+		Short: "Display information of a TiDB cluster",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return cmd.Help()
+			}
+
+			clusterName = args[0]
+			if err := displayClusterMeta(clusterName, &gOpt); err != nil {
+				return err
+			}
+			if err := displayClusterTopology(clusterName, &gOpt); err != nil {
+				return err
+			}
+
+			metadata, err := meta.ClusterMetadata(clusterName)
+			if err != nil {
+				return errors.AddStack(err)
+			}
+			return destroyTombstoneIfNeed(clusterName, metadata, gOpt)
+		},
+	}
+
+	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only display specified roles")
+	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only display specified nodes")
+
+	return cmd
+}
+
+func displayClusterMeta(clusterName string, opt *operator.Options) error {
+	if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+		return errors.Errorf("cannot display non-exists cluster %s", clusterName)
+	}
+
+	clsMeta, err := meta.ClusterMetadata(clusterName)
+	if err != nil {
+		return err
+	}
+
+	cyan := color.New(color.FgCyan, color.Bold)
+
+	fmt.Printf("TiDB Cluster: %s\n", cyan.Sprint(clusterName))
+	fmt.Printf("TiDB Version: %s\n", cyan.Sprint(clsMeta.Version))
+
+	return nil
+}
+
+func destroyTombstoneIfNeed(clusterName string, metadata *meta.ClusterMeta, opt operator.Options) error {
+	topo := metadata.Topology
+
+	if !operator.NeedCheckTomebsome(topo) {
+		return nil
+	}
+
+	ctx := task.NewContext()
+	err := ctx.SetSSHKeySet(meta.ClusterPath(clusterName, "ssh", "id_rsa"),
+		meta.ClusterPath(clusterName, "ssh", "id_rsa.pub"))
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	err = ctx.SetClusterSSH(topo, metadata.User, gOpt.SSHTimeout)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	nodes, err := operator.DestroyTombstone(ctx, topo, true /* returnNodesOnly */, opt)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	if len(nodes) == 0 {
+		return nil
+	}
+
+	log2.Infof("Start destroy Tombstone nodes: %v ...", nodes)
+
+	_, err = operator.DestroyTombstone(ctx, topo, false /* returnNodesOnly */, opt)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	log2.Infof("Destroy success")
+
+	return meta.SaveClusterMeta(clusterName, metadata)
+}
+
+func displayClusterTopology(clusterName string, opt *operator.Options) error {
+	metadata, err := meta.ClusterMetadata(clusterName)
+	if err != nil {
+		return err
+	}
+
+	topo := metadata.Topology
+
+	clusterTable := [][]string{
+		// Header
+		{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Data Dir", "Deploy Dir"},
+	}
+
+	ctx := task.NewContext()
+	err = ctx.SetSSHKeySet(meta.ClusterPath(clusterName, "ssh", "id_rsa"),
+		meta.ClusterPath(clusterName, "ssh", "id_rsa.pub"))
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	err = ctx.SetClusterSSH(topo, metadata.User, gOpt.SSHTimeout)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	filterRoles := set.NewStringSet(opt.Roles...)
+	filterNodes := set.NewStringSet(opt.Nodes...)
+	pdList := topo.GetPDList()
+	for _, comp := range topo.ComponentsByStartOrder() {
+		for _, ins := range comp.Instances() {
+			// apply role filter
+			if len(filterRoles) > 0 && !filterRoles.Exist(ins.Role()) {
+				continue
+			}
+			// apply node filter
+			if len(filterNodes) > 0 && !filterNodes.Exist(ins.ID()) {
+				continue
+			}
+
+			dataDir := "-"
+			insDirs := ins.UsedDirs()
+			deployDir := insDirs[0]
+			if len(insDirs) > 1 {
+				dataDir = insDirs[1]
+			}
+
+			status := ins.Status(pdList...)
+			// Query the service status
+			if status == "-" {
+				e, found := ctx.GetExecutor(ins.GetHost())
+				if found {
+					active, _ := operator.GetServiceStatus(e, ins.ServiceName())
+					if parts := strings.Split(strings.TrimSpace(active), " "); len(parts) > 2 {
+						if parts[1] == "active" {
+							status = "Up"
+						} else {
+							status = parts[1]
+						}
+					}
+				}
+			}
+			clusterTable = append(clusterTable, []string{
+				color.CyanString(ins.ID()),
+				ins.Role(),
+				ins.GetHost(),
+				clusterutil.JoinInt(ins.UsedPorts(), "/"),
+				cliutil.OsArch(ins.OS(), ins.Arch()),
+				formatInstanceStatus(status),
+				dataDir,
+				deployDir,
+			})
+
+		}
+	}
+
+	// Sort by role,host,ports
+	sort.Slice(clusterTable[1:], func(i, j int) bool {
+		lhs, rhs := clusterTable[i+1], clusterTable[j+1]
+		// column: 1 => role, 2 => host, 3 => ports
+		for _, col := range []int{1, 2} {
+			if lhs[col] != rhs[col] {
+				return lhs[col] < rhs[col]
+			}
+		}
+		return lhs[3] < rhs[3]
+	})
+
+	cliutil.PrintTable(clusterTable, true)
+
+	return nil
+}
+
+func formatInstanceStatus(status string) string {
+	lowercaseStatus := strings.ToLower(status)
+
+	switch {
+	case strings.HasPrefix(lowercaseStatus, "healthy|l"): // healthy|l , healthy|l|ui
+		return color.HiGreenString(status)
+	case strings.HasPrefix(lowercaseStatus, "healthy"): // healthy , healthy|ui
+		return color.GreenString(status)
+	case strings.HasPrefix(lowercaseStatus, "unhealthy"): // unhealthy , unhealthy|ui
+		return color.RedString(status)
+	}
+
+	switch lowercaseStatus {
+	case "up":
+		return color.GreenString(status)
+	case "offline", "tombstone", "disconnected":
+		return color.YellowString(status)
+	case "down", "err":
+		return color.RedString(status)
+	default:
+		return status
+	}
+}

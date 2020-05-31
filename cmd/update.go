@@ -17,11 +17,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/environment"
 	"github.com/spf13/cobra"
 )
 
-func newUpdateCmd(env *meta.Environment) *cobra.Command {
+func newUpdateCmd(env *environment.Environment) *cobra.Command {
 	var all, nightly, force, self bool
 	cmd := &cobra.Command{
 		Use:   "update [component1][:version] [component2..N]",
@@ -85,7 +85,7 @@ latest version. All other flags will be ignored if the flag --self is given.
 	return cmd
 }
 
-func updateComponents(env *meta.Environment, components []string, nightly, force bool) error {
+func updateComponents(env *environment.Environment, components []string, nightly, force bool) error {
 	if len(components) == 0 {
 		installed, err := env.Profile().InstalledComponents()
 		if err != nil {

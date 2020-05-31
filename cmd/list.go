@@ -18,7 +18,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/environment"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/set"
@@ -35,7 +35,7 @@ type listOptions struct {
 	showAll       bool
 }
 
-func newListCmd(env *meta.Environment) *cobra.Command {
+func newListCmd(env *environment.Environment) *cobra.Command {
 	var opt listOptions
 	cmd := &cobra.Command{
 		Use:   "list [component]",
@@ -88,7 +88,7 @@ func (lr *listResult) print() {
 	tui.PrintTable(lr.cmpTable, true)
 }
 
-func showComponentList(env *meta.Environment, opt listOptions) (*listResult, error) {
+func showComponentList(env *environment.Environment, opt listOptions) (*listResult, error) {
 	var index *v1manifest.Index
 	var err error
 	index, err = env.V1Repository().FetchIndexManifest()
@@ -159,7 +159,7 @@ func showComponentList(env *meta.Environment, opt listOptions) (*listResult, err
 	}, nil
 }
 
-func showComponentVersions(env *meta.Environment, component string, opt listOptions) (*listResult, error) {
+func showComponentVersions(env *environment.Environment, component string, opt listOptions) (*listResult, error) {
 	var comp *v1manifest.Component
 	var err error
 	comp, err = env.V1Repository().FetchComponentManifest(component)

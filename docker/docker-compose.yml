@@ -1,0 +1,66 @@
+version: '3.7'
+x-node:
+  &default-node
+  build: ./node
+  env_file: ./secret/node.env
+  privileged: true
+  networks:
+    - tiops
+  ports:
+    - ${TIOPS_PORT:-22}
+
+services:
+  control:
+    container_name: tiup-cluster-control
+    hostname: control
+    build: control
+    env_file: ./secret/control.env
+    privileged: true
+    ports:
+      - "8080"
+    networks:
+       tiops:
+         ipv4_address: 172.19.0.100
+  n1:
+    << : *default-node
+    container_name: tiup-cluster-n1
+    hostname: n1
+    networks:
+         tiops:
+           ipv4_address: 172.19.0.101
+  n2:
+    << : *default-node
+    container_name: tiup-cluster-n2
+    hostname: n2
+    networks:
+         tiops:
+           ipv4_address: 172.19.0.102
+  n3:
+    << : *default-node
+    container_name: tiup-cluster-n3
+    hostname: n3
+    networks:
+         tiops:
+           ipv4_address: 172.19.0.103
+  n4:
+    << : *default-node
+    container_name: tiup-cluster-n4
+    hostname: n4
+    networks:
+       tiops:
+         ipv4_address: 172.19.0.104
+  n5:
+    << : *default-node
+    container_name: tiup-cluster-n5
+    hostname: n5
+    networks:
+         tiops:
+           ipv4_address: 172.19.0.105
+
+# docker network create --gateway 172.19.0.1 --subnet 172.19.0.0/16 tiup-cluster
+networks:
+  tiops:
+    external: true
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16

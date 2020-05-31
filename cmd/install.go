@@ -14,11 +14,11 @@
 package cmd
 
 import (
-	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/environment"
 	"github.com/spf13/cobra"
 )
 
-func newInstallCmd(env *meta.Environment) *cobra.Command {
+func newInstallCmd(env *environment.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "install <component1>[:version] [component2...N]",
 		Short: "Install a specific version of a component",
@@ -41,6 +41,6 @@ of the same component:
 	return cmd
 }
 
-func installComponents(env *meta.Environment, specs []string) error {
+func installComponents(env *environment.Environment, specs []string) error {
 	return env.UpdateComponents(specs, false, false)
 }

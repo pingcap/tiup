@@ -1,0 +1,57 @@
+syntax = "proto3";
+package telemetry;
+
+import "gogoproto/gogo.proto";
+
+message Report {
+	string eventUUID = 1;
+	int64 event_unix_timestamp = 2; // unix time second
+	
+	oneof event_detail {
+		ClusterReport cluster = 3;
+	}
+}
+
+message ClusterReport {
+	string UUID = 1;
+	string command = 2;
+	uint64 take_milliseconds = 3;
+	int32 exit_code = 4;
+
+	// only deploy and scale-out is setted:
+	string topology = 5;// topology.yaml of the cluster, with all the value scrubbed.
+	repeated NodeInfo nodes = 6;
+}
+
+message NodeInfo {
+	string node_id = 1;
+	HardwareInfo hardware = 6 [(gogoproto.nullable) = false];
+	OSInfo os = 7 [(gogoproto.nullable) = false];
+}
+
+message CPUInfo {
+	int32 numcpu = 1; // go's reported runtime.NUMCPU()
+	int32 sockets = 2; // number of cpus reported
+	int32 cores = 3;  //  reported cores for first cpu
+	string model = 4; // reported model name e.g. `Intel(R) Core(TM) i7-7920HQ CPU @ 3.10GHz`
+	float mhz = 5;  // speed of first cpu e.g. 3100
+	repeated string features = 6; // cpu feature flags for first cpu
+}
+
+message HardwareInfo {
+	string virtualization = 1;
+	CPUInfo cpu = 2 [(gogoproto.nullable) = false];
+	MemInfo mem = 3 [(gogoproto.nullable) = false];
+	float loadavg15 = 4;
+}
+
+message OSInfo {
+	string family = 1;
+	string platform = 2;
+	string version = 3;
+}
+
+message MemInfo {
+	uint64 total = 1;
+	uint64 available = 2;
+}

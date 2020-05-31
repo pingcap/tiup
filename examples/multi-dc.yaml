@@ -1,0 +1,112 @@
+
+# Tip: PD priority needs to be manually set using the PD-ctl client tool. such as, member Leader_priority PD-name numbers.
+global:
+  user: "tidb"
+  ssh_port: 22
+  deploy_dir: "/data/deploy1"
+monitored:
+  node_exporter_port: 9100
+  blackbox_exporter_port: 9115
+  deploy_dir: "/data/deploy1/monitored-9100"
+server_configs:
+  tidb:
+    log.level: debug
+    log.slow-query-file: tidb-slow.log
+  tikv:
+    server.grpc-compression-type: gzip
+    readpool.storage.use-unified-pool: true
+    readpool.storage.low-concurrency: 8
+  pd:
+    replication.location-labels: ["zone","dc","rack","host"]
+    replication.max-replicas: 5
+    schedule.tolerant-size-ratio: 20.0
+    schedule.max-merge-region-size: 20
+    schedule.max-merge-region-keys: 200000
+    schedule.split-merge-interval: 1h
+    schedule.max-snapshot-count: 3
+    schedule.max-pending-peer-count: 16
+    schedule.max-store-down-time: 30m
+    schedule.leader-schedule-limit: 4
+    schedule.region-schedule-limit: 2048
+    schedule.replica-schedule-limit: 64
+    schedule.merge-schedule-limit: 8
+    schedule.hot-region-schedule-limit: 4
+    label-property:
+      reject-leader:
+        - key: "dc"
+          value: "bja"
+pd_servers:
+ - host: 10.63.10.10
+ - host: 10.63.10.11
+ - host: 10.63.10.12
+ - host: 10.63.10.13
+ - host: 10.63.10.14
+tidb_servers:
+ - host: 10.63.10.10
+ - host: 10.63.10.11
+ - host: 10.63.10.12
+ - host: 10.63.10.13
+ - host: 10.63.10.14
+tikv_servers:
+ - host: 10.63.10.30 
+   ssh_port: 22
+   port: 20160
+   status_port: 20180
+   deploy_dir: "/data/deploy1/tikv-20160"
+   config:
+     server.labels:
+       zone: sh
+       dc: sha
+       rack: rack1
+       host: host1
+ - host: 10.63.10.31
+   ssh_port: 22
+   port: 20161
+   status_port: 20181
+   deploy_dir: "/data/deploy2/tikv-20161"
+   config:
+     server.labels:
+       zone: sh
+       dc: sha
+       rack: rack1
+       host: host2
+ - host: 10.63.10.32
+   ssh_port: 22
+   port: 20160
+   status_port: 20180
+   deploy_dir: "/data/deploy1/tikv-20160"
+   config:
+     server.labels:
+       zone: sh
+       dc: shb
+       rack: rack1
+       host: host1
+ - host: 10.63.10.33
+   ssh_port: 22
+   port: 20161
+   status_port: 20181
+   deploy_dir: "/data/deploy2/tikv-20161"
+   config:
+     server.labels:
+       zone: sh
+       dc: shb
+       rack: rack1
+       host: host2
+ - host: 10.63.10.34
+   ssh_port: 22
+   port: 20160
+   deploy_dir: "/data/deploy1/tikv-20160"
+   config:
+     server.labels:
+       zone: bj
+       dc: bja
+       rack: rack1
+       host: host1
+     readpool.storage.use-unified-pool: true
+     readpool.storage.low-concurrency: 10
+     raftstore.raft-min-election-timeout-ticks: 1000
+     raftstore.raft-max-election-timeout-ticks: 1020
+monitoring_servers:
+ - host: 10.63.10.09
+grafana_servers:
+ - host: 10.63.10.09

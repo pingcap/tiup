@@ -27,15 +27,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/pingcap-incubator/tiup/pkg/environment"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/errors"
 	"golang.org/x/mod/semver"
 )
 
-func runComponent(env *meta.Environment, tag, spec, binPath string, args []string) error {
-	component, version := meta.ParseCompVersion(spec)
+func runComponent(env *environment.Environment, tag, spec, binPath string, args []string) error {
+	component, version := environment.ParseCompVersion(spec)
 	if !env.IsSupportedComponent(component) {
 		return fmt.Errorf("component `%s` does not support `%s/%s` (see `tiup list`)", component, runtime.GOOS, runtime.GOARCH)
 	}
@@ -127,7 +127,7 @@ func base62Tag() string {
 	return string(b)
 }
 
-func launchComponent(ctx context.Context, component string, version v0manifest.Version, binPath string, tag string, args []string, env *meta.Environment) (*localdata.Process, error) {
+func launchComponent(ctx context.Context, component string, version v0manifest.Version, binPath string, tag string, args []string, env *environment.Environment) (*localdata.Process, error) {
 	selectVer, err := env.DownloadComponentIfMissing(component, version)
 	if err != nil {
 		return nil, err

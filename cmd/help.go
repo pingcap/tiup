@@ -20,13 +20,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pingcap-incubator/tiup/pkg/environment"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
-func newHelpCmd(env *meta.Environment) *cobra.Command {
+func newHelpCmd(env *environment.Environment) *cobra.Command {
 	return &cobra.Command{
 		Use:   "help [command]",
 		Short: "Help about any command or component",
@@ -44,9 +44,9 @@ Simply type tiup help <command>|<component> for full details.`,
 	}
 }
 
-func externalHelp(env *meta.Environment, spec string, args ...string) {
+func externalHelp(env *environment.Environment, spec string, args ...string) {
 	profile := env.Profile()
-	component, version := meta.ParseCompVersion(spec)
+	component, version := environment.ParseCompVersion(spec)
 	selectVer, err := profile.SelectInstalledVersion(component, version)
 	if err != nil {
 		fmt.Println(err)

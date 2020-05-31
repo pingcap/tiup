@@ -105,36 +105,22 @@ tools/bin/failpoint-ctl: go.mod
 	$(GO) build -o $@ github.com/pingcap/failpoint/failpoint-ctl
 
 playground:
-	make -C components/playground package
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-playground ./components/playground
 
 client:
-	make -C components/client package
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-client ./components/client
 
-pack:
-	make -C components/package package
+cluster:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster ./components/cluster
 
-tiops:
-	make -C components/tiops package
+dm:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./components/dm
 
 bench:
-	make -C components/bench package
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-bench ./components/bench
 
-package: playground client pack tiops
-	mkdir -p package ; \
-	GOOS=darwin GOARCH=amd64 go build ; \
-    tar -czf tiup-darwin-amd64.tar.gz tiup ; \
-    shasum tiup-darwin-amd64.tar.gz | awk '{print $$1}' > tiup-darwin-amd64.sha1 ; \
-    GOOS=linux GOARCH=amd64 go build ; \
-    tar -czf tiup-linux-amd64.tar.gz tiup ; \
-    shasum tiup-linux-amd64.tar.gz | awk '{print $$1}' > tiup-linux-amd64.sha1 ; \
-    rm tiup ; \
-    mv tiup* package/ ; \
-    mv components/playground/playground-* package/ ; \
-	mv components/client/client-* package/ ; \
-	mv components/package/package-* package/ ; \
-	mv components/tiops/tiops-* package/ ; \
-    cp mirror/*.index package/
-	cp install.sh package/
+pkger:
+	 $(GO) run tools/pkger/main.go -s templates -d pkg/cluster/embed
 
 fmt:
 	@echo "gofmt (simplify)"
@@ -142,7 +128,7 @@ fmt:
 	@echo "goimports (if installed)"
 	$(shell gimports -w $(FILES) 2>/dev/null)
 
-.PHONY: cmd package
+.PHONY: cmd
 
 tools/bin/errcheck: tools/check/go.mod
 	cd tools/check; \

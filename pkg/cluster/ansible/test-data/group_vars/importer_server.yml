@@ -1,0 +1,8 @@
+---
+dummy:
+
+# this directory is used to store the data written by `tidb-lightning`
+import_dir: "{{ deploy_dir }}/data.import"
+
+# the listening address of tikv-importer. tidb-lightning needs to connect to this address to write data. Set it to the actual IP address.
+tikv_importer_port: 8287
