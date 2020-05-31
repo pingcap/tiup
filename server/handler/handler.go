@@ -16,9 +16,11 @@ package handler
 import (
 	"context"
 
+	"github.com/pingcap-incubator/tiup/pkg/log"
 	"github.com/pingcap/fn"
 )
 
+// errorMessage is used for error response
 type errorMessage struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
@@ -26,12 +28,15 @@ type errorMessage struct {
 
 func init() {
 	fn.SetErrorEncoder(func(ctx context.Context, err error) interface{} {
+		log.Debugf("Response an error message to client")
 		if e, ok := err.(statusError); ok {
+			log.Debugf("Response status error to client: %s", e.Error())
 			return &errorMessage{
 				Status:  e.Status(),
 				Message: e.Error(),
 			}
 		}
+		log.Debugf("Unknow error occured: %s", err.Error())
 		return &errorMessage{
 			Status:  "UNKNOWN_ERROR",
 			Message: "make sure your request is valid",

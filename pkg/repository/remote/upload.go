@@ -195,7 +195,7 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
 
 	if resp.StatusCode < 300 {
 		return nil

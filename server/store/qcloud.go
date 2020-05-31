@@ -75,6 +75,7 @@ func (s *qcloudStore) unlock() {
 }
 
 type qcloudTxn struct {
+	syncer   Syncer
 	store    *qcloudStore
 	root     string
 	begin    time.Time
@@ -83,6 +84,7 @@ type qcloudTxn struct {
 
 func newQCloudTxn(store *qcloudStore) (*qcloudTxn, error) {
 	txn := &qcloudTxn{
+		syncer:   newFsSyncer(path.Join(store.root, "commits")),
 		store:    store,
 		root:     path.Join("/tmp", uuid.New().String()),
 		begin:    time.Now(),
@@ -145,8 +147,9 @@ func (t *qcloudTxn) ReadManifest(filename string, manifest interface{}) error {
 
 func (t *qcloudTxn) ResetManifest() error {
 	for file := range t.accessed {
-		if utils.IsExist(path.Join(t.root, file)) {
-			if err := os.Remove(file); err != nil {
+		fp := path.Join(t.root, file)
+		if utils.IsExist(fp) {
+			if err := os.Remove(fp); err != nil {
 				return err
 			}
 		}
@@ -192,6 +195,10 @@ func (t *qcloudTxn) Commit() error {
 		return err
 	}
 
+	if err := t.syncer.Sync(t.root); err != nil {
+		return err
+	}
+
 	at := time.Now()
 	for _, f := range files {
 		if err := utils.Copy(path.Join(t.root, f.Name()), t.store.path(f.Name())); err != nil {
@@ -200,7 +207,6 @@ func (t *qcloudTxn) Commit() error {
 		t.store.modify(f.Name(), &at)
 	}
 
-	// TODO: qshell upload
 	return t.release()
 }
 
