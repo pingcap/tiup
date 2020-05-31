@@ -20,13 +20,13 @@ RUN sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
 COPY tiup-cluster/tiup-cluster /tiup-cluster/tiup-cluster/
 COPY tiup-cluster /tiup-cluster/
 
-ADD ./bashrc /root/.bashrc
-ADD ./init.sh /init.sh
+ADD bashrc /root/.bashrc
+ADD init.sh /init.sh
 RUN dos2unix /init.sh /root/.bashrc \
     && chmod +x /init.sh
 
 # build tiup-cluster in without --dev flag
 WORKDIR /tiup-cluster
-RUN (test Makefile && make build) || true
+RUN (test Makefile && make cluster) || true
 
 CMD /init.sh

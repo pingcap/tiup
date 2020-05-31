@@ -21,11 +21,11 @@ import (
 	"strings"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/cliutil"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/clusterutil"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/errutil"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/task"
+	"github.com/pingcap-incubator/tiup/pkg/cliutil"
+	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
+	"github.com/pingcap-incubator/tiup/pkg/cluster/task"
+	"github.com/pingcap-incubator/tiup/pkg/errutil"
 	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
 	"go.uber.org/zap"
@@ -289,8 +289,7 @@ func BuildDownloadCompTasks(version string, topo meta.Specification) []*task.Ste
 			uniqueTaskList[key] = struct{}{}
 
 			version := meta.ComponentVersion(inst.ComponentName(), version)
-			t := task.
-				NewBuilder().
+			t := task.NewBuilder().
 				Download(inst.ComponentName(), inst.OS(), inst.Arch(), version).
 				BuildAsStep(fmt.Sprintf("  - Download %s:%s (%s/%s)",
 					inst.ComponentName(), version, inst.OS(), inst.Arch()))

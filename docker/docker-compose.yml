@@ -13,7 +13,7 @@ services:
   control:
     container_name: tiup-cluster-control
     hostname: control
-    build: ./control
+    build: control
     env_file: ./secret/control.env
     privileged: true
     ports:

@@ -1,0 +1,12 @@
+[
+    {
+        "1.comment": "------------- some flags will conflicts with test binary ----------",
+        "2.comment": "------------- must following tiup update --self          ----------",
+        "command": "tiup update --self",
+        "path": "tiup/tiup-self-update.output"
+    },
+    {
+        "command": "tiup -h",
+        "path": "tiup/tiup-h.output"
+    }
+]

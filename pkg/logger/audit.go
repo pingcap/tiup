@@ -15,14 +15,14 @@ package logger
 
 import (
 	"bytes"
+	utils2 "github.com/pingcap-incubator/tiup/pkg/utils"
 	"io/ioutil"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/pingcap-incubator/tiup-cluster/pkg/base52"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/meta"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/utils"
+	"github.com/pingcap-incubator/tiup/pkg/base52"
+	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -53,7 +53,7 @@ func OutputAuditLogIfEnabled() {
 		return
 	}
 	auditDir := meta.ProfilePath(meta.TiOpsAuditDir)
-	if err := utils.CreateDir(auditDir); err != nil {
+	if err := utils2.CreateDir(auditDir); err != nil {
 		zap.L().Warn("Create audit directory failed", zap.Error(err))
 	} else {
 		auditFilePath := meta.ProfilePath(meta.TiOpsAuditDir, base52.Encode(time.Now().Unix()))

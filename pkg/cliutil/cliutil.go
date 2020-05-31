@@ -22,8 +22,8 @@ import (
 	"text/template"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/colorutil"
-	"github.com/pingcap-incubator/tiup-cluster/pkg/errutil"
+	"github.com/pingcap-incubator/tiup/pkg/colorutil"
+	"github.com/pingcap-incubator/tiup/pkg/errutil"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
 	"github.com/spf13/cobra"
 )

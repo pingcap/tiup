@@ -12,29 +12,52 @@ COMMIT    := $(shell git describe --no-match --always --dirty)
 BRANCH    := $(shell git rev-parse --abbrev-ref HEAD)
 BUILDTIME := $(shell date '+%Y-%m-%d %T %z')
 
-REPO := github.com/pingcap-incubator/tiup-cluster
+REPO := github.com/pingcap-incubator/tiup
 LDFLAGS := -w -s
 LDFLAGS += -X "$(REPO)/pkg/version.GitHash=$(COMMIT)"
 LDFLAGS += -X "$(REPO)/pkg/version.GitBranch=$(BRANCH)"
+LDFLAGS += -X "$(REPO)/pkg/version.BuildTime=$(BUILDTIME)"
 LDFLAGS += $(EXTRA_LDFLAGS)
 
 FILES     := $$(find . -name "*.go")
 
-FAILPOINT_ENABLE  := $$(find $$PWD/ -type d | grep -vE "(\.git|tools)" | xargs tools/bin/failpoint-ctl enable)
-FAILPOINT_DISABLE := $$(find $$PWD/ -type d | grep -vE "(\.git|tools)" | xargs tools/bin/failpoint-ctl disable)
+FAILPOINT_ENABLE  := $$(tools/bin/failpoint-ctl enable)
+FAILPOINT_DISABLE := $$(tools/bin/failpoint-ctl disable)
 
-default: check build
+default: build check
 
-build: cluster dm
+# Build TiUP and all components
+build: tiup playground client cluster dm bench
+
+tiup:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
+
+playground:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-playground ./components/playground
+
+client:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-client ./components/client
 
 cluster:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster ./cmd/cluster
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster ./components/cluster
 
 dm:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./cmd/dm
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./components/dm
 
-# lint:
-# 	@golint ./...
+bench:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-bench ./components/bench
+
+doc:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-doc ./components/doc
+
+err:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-err ./components/err
+
+check: fmt lint tidy check-static vet
+
+check-static: tools/bin/golangci-lint
+	tools/bin/golangci-lint run ./... --deadline=3m
+
 lint:tools/bin/revive
 	@echo "linting"
 	@tools/bin/revive -formatter friendly -config tools/check/revive.toml $(FILES)
@@ -42,7 +65,9 @@ lint:tools/bin/revive
 vet:
 	$(GO) vet ./...
 
-check: lint vet fmt check-static
+tidy:
+	@echo "go mod tidy"
+	./tools/check/check-tidy.sh
 
 clean:
 	@rm -rf bin
@@ -53,31 +78,51 @@ cover-dir:
 
 # Run tests
 unit-test: cover-dir
-	$(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
+	TIUP_HOME=$(shell pwd)/tests/tiup_home $(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
 
 build_integration_test:
 	$(GOTEST) -c -cover -covermode=count \
-		-coverpkg=github.com/pingcap-incubator/tiup-cluster/... \
-		-o tests/bin/tiup-cluster.test \
-		github.com/pingcap-incubator/tiup-cluster/cmd/cluster
+		-coverpkg=github.com/pingcap-incubator/tiup/... \
+		-o tests/tiup-cluster/bin/tiup-cluster.test \
+		github.com/pingcap-incubator/tiup/components/cluster
+
+integration_test:
+	@$(GOTEST) -c -cover -covermode=count \
+		-coverpkg=./... \
+		-o tests/tiup_home/bin/tiup \
+		github.com/pingcap-incubator/tiup/ ;
+	@$(GOTEST) -c -cover -covermode=count \
+			-coverpkg=./... \
+			-o tests/tiup_home/bin/package ./components/package/ ;
+	@$(GOTEST) -c -cover -covermode=count \
+			-coverpkg=./... \
+			-o tests/tiup_home/bin/playground ./components/playground/ ;
+	@$(GOTEST) -c -cover -covermode=count \
+			-coverpkg=./... \
+			-o tests/tiup_home/bin/ctl ./components/ctl/ ;
+	@$(GOTEST) -c -cover -covermode=count \
+			-coverpkg=./... \
+			-o tests/tiup_home/bin/doc ./components/doc/ ;
+	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/tiup.2
+	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/package ./components/package/
+	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/playground ./components/playground/
+	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/ctl ./components/ctl/
+	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/doc ./components/doc/
+	cd tests && bash run.sh ; \
 
 
-test: failpoint-enable unit-test
-	@$(FAILPOINT_DISABLE)
+test: cover-dir failpoint-enable
+	make run-tests; STATUS=$$?; $(FAILPOINT_DISABLE); exit $$STATUS
 
-check-static: tools/bin/golangci-lint
-	tools/bin/golangci-lint run --timeout 5m ./...
-
-pkger:
-	 $(GO) run tools/pkger/main.go -s templates -d pkg/embed
+# TODO: refactor integration tests base on v1 manifest
+# run-tests: unit-test integration_test
+run-tests: unit-test
 
 coverage:
 	GO111MODULE=off go get github.com/wadey/gocovmerge
-	gocovmerge cover/* | grep -vE ".*.pb.go|.*__failpoint_binding__.go" > "cover/all_cov.out"
+	gocovmerge cover/cov.* | grep -vE ".*.pb.go|.*__failpoint_binding__.go|mock.go" > "cover/all_cov.out"
 ifeq ("$(JenkinsCI)", "1")
 	@bash <(curl -s https://codecov.io/bash) -f cover/all_cov.out -t $(CODECOV_TOKEN)
-else
-	go tool cover -html "cover/all_cov.out" -o "cover/all_cov.html"
 endif
 
 failpoint-enable: tools/bin/failpoint-ctl
@@ -89,16 +134,25 @@ failpoint-disable: tools/bin/failpoint-ctl
 tools/bin/failpoint-ctl: go.mod
 	$(GO) build -o $@ github.com/pingcap/failpoint/failpoint-ctl
 
-tools/bin/revive: tools/check/go.mod
-	cd tools/check; \
-	$(GO) build -o ../bin/revive github.com/mgechev/revive
-
-tools/bin/golangci-lint: tools/check/go.mod
-	cd tools/check; \
-	$(GO) build -o ../bin/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
+pkger:
+	 $(GO) run tools/pkger/main.go -s templates -d pkg/cluster/embed
 
 fmt:
 	@echo "gofmt (simplify)"
 	@gofmt -s -l -w $(FILES) 2>&1
+	@echo "goimports (if installed)"
+	$(shell gimports -w $(FILES) 2>/dev/null)
 
-.PHONY: build package
+.PHONY: cmd
+
+tools/bin/errcheck: tools/check/go.mod
+	cd tools/check; \
+	$(GO) build -o ../bin/errcheck github.com/kisielk/errcheck
+
+tools/bin/revive: tools/check/go.mod
+	cd tools/check; \
+	$(GO) build -o ../bin/revive github.com/mgechev/revive
+
+tools/bin/golangci-lint:
+	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b ./tools/bin v1.27.0
+

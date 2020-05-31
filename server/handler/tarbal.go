@@ -1,0 +1,78 @@
+// Copyright 2020 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package handler
+
+import (
+	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/pingcap-incubator/tiup/pkg/logger/log"
+	"github.com/pingcap-incubator/tiup/server/session"
+	"github.com/pingcap/fn"
+)
+
+// MaxFileSize is the max size content can be uploaded
+const MaxFileSize = 32 * 1024 * 1024
+
+// UploadTarbal handle tarbal upload
+func UploadTarbal(sm session.Manager) http.Handler {
+	return &tarbalUploader{sm}
+}
+
+type tarbalUploader struct {
+	sm session.Manager
+}
+
+func (h *tarbalUploader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fn.Wrap(h.upload).ServeHTTP(w, r)
+}
+
+func (h *tarbalUploader) upload(r *http.Request) (*simpleResponse, statusError) {
+	sid := mux.Vars(r)["sid"]
+	log.Infof("Uploading tarbal, sid: %s", sid)
+
+	if err := h.sm.Begin(sid); err != nil {
+		if err == session.ErrorSessionConflict {
+			// Reset manifest to avoid conflict
+			if err := h.sm.Load(sid).ResetManifest(); err != nil {
+				log.Errorf("Failed to restart session: %s", err.Error())
+				return nil, ErrorInternalError
+			}
+		} else {
+			log.Errorf("Failed to start session: %s", err.Error())
+			return nil, ErrorInternalError
+		}
+	}
+
+	txn := h.sm.Load(sid)
+
+	if err := r.ParseMultipartForm(MaxFileSize); err != nil {
+		// TODO: log error here
+		return nil, ErrorInvalidTarbal
+	}
+
+	file, handler, err := r.FormFile("file")
+	if err != nil {
+		// TODO: log error here
+		return nil, ErrorInvalidTarbal
+	}
+	defer file.Close()
+
+	if err := txn.Write(handler.Filename, file); err != nil {
+		// TODO: log error here
+		return nil, ErrorInternalError
+	}
+
+	return nil, nil
+}

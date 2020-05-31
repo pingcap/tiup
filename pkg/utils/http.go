@@ -14,83 +14,35 @@
 package utils
 
 import (
-	"crypto/tls"
-	"fmt"
+	"bytes"
 	"io"
-	"io/ioutil"
+	"mime/multipart"
 	"net/http"
-	"time"
 )
 
-// HTTPClient is a wrap of http.Client
-type HTTPClient struct {
-	client *http.Client
-}
+// PostFile upload file
+func PostFile(reader io.Reader, url, fieldname, filename string) (*http.Response, error) {
+	bodyBuf := &bytes.Buffer{}
+	bodyWriter := multipart.NewWriter(bodyBuf)
 
-// NewHTTPClient returns a new HTTP client with timeout and HTTPS support
-func NewHTTPClient(timeout time.Duration, tlsConfig *tls.Config) *HTTPClient {
-	if timeout < time.Second {
-		timeout = 10 * time.Second // default timeout is 10s
-	}
-	return &HTTPClient{
-		client: &http.Client{
-			Timeout: timeout,
-			Transport: &http.Transport{
-				TLSClientConfig: tlsConfig,
-			},
-		},
-	}
-}
-
-// Get fetch an URL with GET method and returns the response
-func (c *HTTPClient) Get(url string) ([]byte, error) {
-	res, err := c.client.Get(url)
+	// this step is very important
+	fileWriter, err := bodyWriter.CreateFormFile(fieldname, filename)
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
 
-	return checkHTTPResponse(res)
-}
-
-// Post send a POST request to the url and returns the response
-func (c *HTTPClient) Post(url string, body io.Reader) ([]byte, error) {
-	res, err := c.client.Post(url, "application/json", body)
+	_, err = io.Copy(fileWriter, reader)
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
 
-	return checkHTTPResponse(res)
-}
+	contentType := bodyWriter.FormDataContentType()
+	bodyWriter.Close()
 
-// Delete send a DELETE request to the url and returns the response and status code.
-func (c *HTTPClient) Delete(url string, body io.Reader) ([]byte, int, error) {
-	var statusCode int
-	req, err := http.NewRequest("DELETE", url, body)
-	if err != nil {
-		return nil, statusCode, err
-	}
-
-	res, err := c.client.Do(req)
-	if err != nil {
-		return nil, statusCode, err
-	}
-	defer res.Body.Close()
-	b, err := checkHTTPResponse(res)
-	statusCode = res.StatusCode
-	return b, statusCode, err
-}
-
-// checkHTTPResponse checks if an HTTP response is with normal status codes
-func checkHTTPResponse(res *http.Response) ([]byte, error) {
-	body, err := ioutil.ReadAll(res.Body)
+	resp, err := http.Post(url, contentType, bodyBuf)
 	if err != nil {
 		return nil, err
 	}
-	if res.StatusCode < 200 || res.StatusCode >= 400 {
-		return body, fmt.Errorf("error requesting %s, response: %s, code %d",
-			res.Request.URL, string(body[:]), res.StatusCode)
-	}
-	return body, nil
+
+	return resp, nil
 }

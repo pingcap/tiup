@@ -11,7 +11,7 @@ warningCode = -1
 [rule.error-strings]
 [rule.error-naming]
 [rule.exported]
-# [rule.if-return]
+[rule.if-return]
 [rule.var-naming]
 [rule.package-comments]
 [rule.range]
