@@ -99,7 +99,7 @@ func init() {
 			return cmd.Help()
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			return meta.TiupEnv().Repository().Mirror().Close()
+			return meta.TiupEnv().V1Repository().Mirror().Close()
 		},
 	}
 

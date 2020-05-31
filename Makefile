@@ -77,14 +77,18 @@ cover-dir:
 	mkdir -p cover
 
 # Run tests
-unit-test:
+unit-test: cover-dir
 	TIUP_HOME=$(shell pwd)/tests/tiup_home $(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
 
 build_integration_test:
 	$(GOTEST) -c -cover -covermode=count \
 		-coverpkg=github.com/pingcap-incubator/tiup/... \
 		-o tests/tiup-cluster/bin/tiup-cluster.test \
-		github.com/pingcap-incubator/tiup/components/cluster
+		github.com/pingcap-incubator/tiup/components/cluster;
+	$(GOTEST) -c -cover -covermode=count \
+			-coverpkg=github.com/pingcap-incubator/tiup/... \
+			-o tests/tiup-cluster/bin/tiup-dm.test \
+			github.com/pingcap-incubator/tiup/components/dm
 
 integration_test:
 	@$(GOTEST) -c -cover -covermode=count \

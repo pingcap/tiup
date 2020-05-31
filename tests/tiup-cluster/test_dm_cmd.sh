@@ -5,6 +5,8 @@ set -eu
 name=test_dm_cmd
 topo=./topo/full_dm.yaml
 
+mkdir -p ~/.tiup/bin && cp -f ./root.json ~/.tiup/bin/
+
 tiup-dm check $topo -i ~/.ssh/id_rsa --enable-mem --enable-cpu --apply
 
 tiup-dm --yes check $topo -i ~/.ssh/id_rsa
