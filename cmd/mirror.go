@@ -22,8 +22,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/pingcap-incubator/tiup/pkg/environment"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/remote"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
@@ -36,7 +36,7 @@ var (
 	repoPath string
 )
 
-func newMirrorCmd(env *meta.Environment) *cobra.Command {
+func newMirrorCmd(env *environment.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "mirror <command>",
 		Short: "Manage a repository mirror for TiUP components",
@@ -82,7 +82,7 @@ of components or the repository itself.`,
 }
 
 // the `mirror sign` sub command
-func newMirrorSignCmd(env *meta.Environment) *cobra.Command {
+func newMirrorSignCmd(env *environment.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sign <manifest-file> [key-files]",
 		Short: "Add signatures to a manifest file",
@@ -103,7 +103,7 @@ func newMirrorSignCmd(env *meta.Environment) *cobra.Command {
 }
 
 // the `mirror add` sub command
-func newMirrorAddCompCmd(env *meta.Environment) *cobra.Command {
+func newMirrorAddCompCmd(env *environment.Environment) *cobra.Command {
 	var nightly bool // if this is a nightly version
 	cmd := &cobra.Command{
 		Use:    "add <component-id> <platform> <version> <file>",
@@ -132,7 +132,7 @@ func addCompFile(repo, id, platform, version, file string, nightly bool) error {
 }
 
 // the `mirror component` sub command
-func newMirrorCompCmd(env *meta.Environment) *cobra.Command {
+func newMirrorCompCmd(env *environment.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "component <id> <description>",
 		Short:  "Create a new component in the repository",
@@ -156,7 +156,7 @@ func createComp(repo, id, name string) error {
 }
 
 // the `mirror del` sub command
-func newMirrorDelCompCmd(env *meta.Environment) *cobra.Command {
+func newMirrorDelCompCmd(env *environment.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "del <component> [version]",
 		Short: "Delete a component from the repository",
@@ -190,7 +190,7 @@ func delComp(repo, id, version string) error {
 }
 
 // the `repo publish` sub command
-func newMirrorPublishCmd(env *meta.Environment) *cobra.Command {
+func newMirrorPublishCmd(env *environment.Environment) *cobra.Command {
 	privPath := env.Profile().Path("private.json")
 	endpoint := "http://127.0.0.1:8989"
 	goos := runtime.GOOS
@@ -253,7 +253,7 @@ func newMirrorPublishCmd(env *meta.Environment) *cobra.Command {
 }
 
 // the `mirror genkey` sub command
-func newMirrorGenkeyCmd(env *meta.Environment) *cobra.Command {
+func newMirrorGenkeyCmd(env *environment.Environment) *cobra.Command {
 	var (
 		showPublic bool
 		saveKey    bool
@@ -360,7 +360,7 @@ func newMirrorGenkeyCmd(env *meta.Environment) *cobra.Command {
 }
 
 // the `mirror init` sub command
-func newMirrorInitCmd(env *meta.Environment) *cobra.Command {
+func newMirrorInitCmd(env *environment.Environment) *cobra.Command {
 	var (
 		keyDir string // Directory to write genreated key files
 	)
@@ -404,7 +404,7 @@ func initRepo(path, keyDir string) error {
 }
 
 // the `mirror owner` sub command
-func newMirrorOwnerCmd(env *meta.Environment) *cobra.Command {
+func newMirrorOwnerCmd(env *environment.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "owner <id> <name>",
 		Short: "Create a new owner for the repository",
@@ -429,7 +429,7 @@ func createOwner(repo, id, name string) error {
 }
 
 // the `mirror yank` sub command
-func newMirrorYankCompCmd(env *meta.Environment) *cobra.Command {
+func newMirrorYankCompCmd(env *environment.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "yank <component> [version]",
 		Short: "Yank a component in the repository",
@@ -461,7 +461,7 @@ func yankComp(repo, id, version string) error {
 }
 
 // the `mirror clone` sub command
-func newMirrorCloneCmd(env *meta.Environment) *cobra.Command {
+func newMirrorCloneCmd(env *environment.Environment) *cobra.Command {
 	options := repository.CloneOptions{
 		Components: map[string]*[]string{},
 	}

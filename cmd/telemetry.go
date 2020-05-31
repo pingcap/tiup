@@ -5,15 +5,15 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pingcap-incubator/tiup/pkg/environment"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/telemetry"
 	"github.com/spf13/cobra"
 )
 
 const telemetryFname = "meta.yaml"
 
-func getTelemetryMeta(env *meta.Environment) (meta *telemetry.Meta, fname string, err error) {
+func getTelemetryMeta(env *environment.Environment) (meta *telemetry.Meta, fname string, err error) {
 	dir := env.Profile().Path(localdata.TelemetryDir)
 	err = os.MkdirAll(dir, 0755)
 	if err != nil {
@@ -25,7 +25,7 @@ func getTelemetryMeta(env *meta.Environment) (meta *telemetry.Meta, fname string
 	return
 }
 
-func newTelemetryCmd(env *meta.Environment) *cobra.Command {
+func newTelemetryCmd(env *environment.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "telemetry",
 		Hidden: true, // Make false once it's ready to release.

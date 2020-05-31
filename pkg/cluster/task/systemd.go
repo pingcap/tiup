@@ -1,0 +1,58 @@
+// Copyright 2020 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package task
+
+import (
+	"fmt"
+
+	"github.com/pingcap-incubator/tiup/pkg/cluster/module"
+)
+
+// SystemCtl run systemctl command on host
+type SystemCtl struct {
+	host   string
+	unit   string
+	action string
+}
+
+// Execute implements the Task interface
+func (c *SystemCtl) Execute(ctx *Context) error {
+	e, ok := ctx.GetExecutor(c.host)
+	if !ok {
+		return ErrNoExecutor
+	}
+
+	cfg := module.SystemdModuleConfig{
+		Unit:   c.unit,
+		Action: c.action,
+	}
+	systemd := module.NewSystemdModule(cfg)
+	stdout, stderr, err := systemd.Execute(e)
+	ctx.SetOutputs(c.host, stdout, stderr)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Rollback implements the Task interface
+func (c *SystemCtl) Rollback(ctx *Context) error {
+	return ErrUnsupportedRollback
+}
+
+// String implements the fmt.Stringer interface
+func (c *SystemCtl) String() string {
+	return fmt.Sprintf("SystemCtl: host=%s action=%s %s", c.host, c.action, c.unit)
+}

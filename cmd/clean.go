@@ -19,15 +19,15 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pingcap-incubator/tiup/pkg/environment"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	gops "github.com/shirou/gopsutil/process"
 	"github.com/spf13/cobra"
 )
 
-func newCleanCmd(env *meta.Environment) *cobra.Command {
+func newCleanCmd(env *environment.Environment) *cobra.Command {
 	var all bool
 	cmd := &cobra.Command{
 		Use:   "clean <name>",
@@ -43,7 +43,7 @@ func newCleanCmd(env *meta.Environment) *cobra.Command {
 	return cmd
 }
 
-func cleanData(env *meta.Environment, names []string, all bool) error {
+func cleanData(env *environment.Environment, names []string, all bool) error {
 	dataDir := env.LocalPath(localdata.DataParentDir)
 	if utils.IsNotExist(dataDir) {
 		return nil

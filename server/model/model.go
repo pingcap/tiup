@@ -18,7 +18,7 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/juju/errors"
-	"github.com/pingcap-incubator/tiup/pkg/log"
+	"github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap-incubator/tiup/server/store"

@@ -20,15 +20,15 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pingcap-incubator/tiup/pkg/environment"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/tui"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
 	gops "github.com/shirou/gopsutil/process"
 	"github.com/spf13/cobra"
 )
 
-func newStatusCmd(env *meta.Environment) *cobra.Command {
+func newStatusCmd(env *environment.Environment) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "List the status of instantiated components",
@@ -42,7 +42,7 @@ func newStatusCmd(env *meta.Environment) *cobra.Command {
 	return cmd
 }
 
-func showStatus(env *meta.Environment) error {
+func showStatus(env *environment.Environment) error {
 	var table [][]string
 	table = append(table, []string{"Name", "Component", "PID", "Status", "Created Time", "Directory", "Binary", "Args"})
 	if dataDir := env.LocalPath(localdata.DataParentDir); utils.IsExist(dataDir) {

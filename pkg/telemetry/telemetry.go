@@ -1,70 +1,67 @@
+// Copyright 2020 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package telemetry
 
 import (
-	"io/ioutil"
-	"os"
+	"bytes"
+	"context"
+	"encoding/json"
+	"net/http"
 
-	"github.com/google/uuid"
 	"github.com/pingcap/errors"
-	"gopkg.in/yaml.v2"
 )
 
-// Status of telemetry.
-type Status string
+var defaultURL = "https://telemetry.pingcap.com/api/v1/clusters/report"
 
-// Status of telemetry
-const (
-	EnableStatus  Status = "enable"
-	DisableStatus Status = "disable"
-)
-
-const defaultStatus = EnableStatus
-
-// Meta data of telemetry.
-type Meta struct {
-	UUID   string `yaml:"uuid,omitempty"`
-	Status Status `yaml:"status,omitempty"`
+// Telemetry control telemetry.
+type Telemetry struct {
+	url string
+	cli *http.Client
 }
 
-// NewUUID return a new uuid.
-func NewUUID() string {
-	return uuid.New().String()
-}
+// NewTelemetry return a new Telemetry instance.
+func NewTelemetry() *Telemetry {
+	cli := new(http.Client)
 
-// NewMeta create a new default Meta.
-func NewMeta() *Meta {
-	return &Meta{
-		UUID:   NewUUID(),
-		Status: EnableStatus,
+	return &Telemetry{
+		url: defaultURL,
+		cli: cli,
 	}
 }
 
-// LoadFrom load meta from the specify file,
-// return a default Meta and save it if the file not exist.
-func LoadFrom(fname string) (meta *Meta, err error) {
-	var data []byte
-	data, err = ioutil.ReadFile(fname)
-
-	if err != nil {
-		if os.IsNotExist(err) {
-			meta = NewMeta()
-			return meta, meta.SaveTo(fname)
-		}
-		return
-	}
-
-	meta = new(Meta)
-	err = yaml.Unmarshal(data, meta)
-
-	return
-}
-
-// SaveTo save to the specified file.
-func (m *Meta) SaveTo(fname string) error {
-	data, err := yaml.Marshal(m)
+// Report report the msg right away.
+func (t *Telemetry) Report(ctx context.Context, msg *Report) error {
+	dst, err := json.Marshal(msg)
 	if err != nil {
 		return errors.AddStack(err)
 	}
 
-	return ioutil.WriteFile(fname, data, 0644)
+	req, err := http.NewRequestWithContext(ctx, "POST", t.url, bytes.NewReader(dst))
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := t.cli.Do(req)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	code := resp.StatusCode
+	if code < 200 || code >= 300 {
+		return errors.Errorf("StatusCode: %d, Status: %s", resp.StatusCode, resp.Status)
+	}
+
+	return nil
 }

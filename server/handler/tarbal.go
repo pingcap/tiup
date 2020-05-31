@@ -17,7 +17,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/pingcap-incubator/tiup/pkg/log"
+	"github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"github.com/pingcap-incubator/tiup/server/session"
 	"github.com/pingcap/fn"
 )

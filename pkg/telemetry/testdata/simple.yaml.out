@@ -1,0 +1,6 @@
+tidb_servers:
+- host: 24b7e8f209cf3a8b43ca34f86a0858a0
+  no_hash_str: _
+  port: 0
+- host: 785e9420afbfbfd0b9b2ea68e0406057
+  port: 0

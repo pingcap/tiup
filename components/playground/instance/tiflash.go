@@ -26,8 +26,8 @@ import (
 	"time"
 
 	"github.com/pingcap-incubator/tiup/components/playground/api"
+	"github.com/pingcap-incubator/tiup/pkg/environment"
 	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/meta"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap-incubator/tiup/pkg/utils"
@@ -108,7 +108,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 
 	// TiFlash needs to obtain absolute path of cluster_manager
 	if binPath == "" {
-		env, err := meta.InitEnv(repository.Options{
+		env, err := environment.InitEnv(repository.Options{
 			SkipVersionCheck:  false,
 			GOOS:              runtime.GOOS,
 			GOARCH:            runtime.GOARCH,

@@ -1,0 +1,15 @@
+---
+dummy:
+
+# background profile for debugging
+tidb_lightning_pprof_port: 8289
+
+# the source data directory of Mydumper
+data_source_dir: "{{ deploy_dir }}/mydumper"
+
+# Tidb cluster information to import data
+# tidb_host: ""
+# tidb_port: 4000
+# tidb_user: ""
+# tidb_password: ""
+# tidb_status_port: 10080

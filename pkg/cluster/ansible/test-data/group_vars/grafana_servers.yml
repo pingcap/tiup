@@ -1,0 +1,5 @@
+---
+
+grafana_port: 3000
+
+grafana_api_keys_dir: "{{ playbook_dir }}/conf/keys"

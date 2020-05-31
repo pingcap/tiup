@@ -24,10 +24,34 @@ FILES     := $$(find . -name "*.go")
 FAILPOINT_ENABLE  := $$(tools/bin/failpoint-ctl enable)
 FAILPOINT_DISABLE := $$(tools/bin/failpoint-ctl disable)
 
-default: cmd check
+default: build check
 
-cmd:
+# Build TiUP and all components
+build: tiup playground client cluster dm bench
+
+tiup:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
+
+playground:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-playground ./components/playground
+
+client:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-client ./components/client
+
+cluster:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster ./components/cluster
+
+dm:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./components/dm
+
+bench:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-bench ./components/bench
+
+doc:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-doc ./components/doc
+
+err:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-err ./components/err
 
 check: fmt lint tidy check-static vet
 
@@ -53,8 +77,18 @@ cover-dir:
 	mkdir -p cover
 
 # Run tests
-unit-test:
+unit-test: cover-dir
 	TIUP_HOME=$(shell pwd)/tests/tiup_home $(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
+
+build_integration_test:
+	$(GOTEST) -c -cover -covermode=count \
+		-coverpkg=github.com/pingcap-incubator/tiup/... \
+		-o tests/tiup-cluster/bin/tiup-cluster.test \
+		github.com/pingcap-incubator/tiup/components/cluster;
+	$(GOTEST) -c -cover -covermode=count \
+			-coverpkg=github.com/pingcap-incubator/tiup/... \
+			-o tests/tiup-cluster/bin/tiup-dm.test \
+			github.com/pingcap-incubator/tiup/components/dm
 
 integration_test:
 	@$(GOTEST) -c -cover -covermode=count \
@@ -104,37 +138,8 @@ failpoint-disable: tools/bin/failpoint-ctl
 tools/bin/failpoint-ctl: go.mod
 	$(GO) build -o $@ github.com/pingcap/failpoint/failpoint-ctl
 
-playground:
-	make -C components/playground package
-
-client:
-	make -C components/client package
-
-pack:
-	make -C components/package package
-
-tiops:
-	make -C components/tiops package
-
-bench:
-	make -C components/bench package
-
-package: playground client pack tiops
-	mkdir -p package ; \
-	GOOS=darwin GOARCH=amd64 go build ; \
-    tar -czf tiup-darwin-amd64.tar.gz tiup ; \
-    shasum tiup-darwin-amd64.tar.gz | awk '{print $$1}' > tiup-darwin-amd64.sha1 ; \
-    GOOS=linux GOARCH=amd64 go build ; \
-    tar -czf tiup-linux-amd64.tar.gz tiup ; \
-    shasum tiup-linux-amd64.tar.gz | awk '{print $$1}' > tiup-linux-amd64.sha1 ; \
-    rm tiup ; \
-    mv tiup* package/ ; \
-    mv components/playground/playground-* package/ ; \
-	mv components/client/client-* package/ ; \
-	mv components/package/package-* package/ ; \
-	mv components/tiops/tiops-* package/ ; \
-    cp mirror/*.index package/
-	cp install.sh package/
+pkger:
+	 $(GO) run tools/pkger/main.go -s templates -d pkg/cluster/embed
 
 fmt:
 	@echo "gofmt (simplify)"
@@ -142,7 +147,7 @@ fmt:
 	@echo "goimports (if installed)"
 	$(shell gimports -w $(FILES) 2>/dev/null)
 
-.PHONY: cmd package
+.PHONY: cmd
 
 tools/bin/errcheck: tools/check/go.mod
 	cd tools/check; \
