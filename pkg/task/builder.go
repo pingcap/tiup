@@ -96,6 +96,16 @@ func (b *Builder) UpdateMeta(cluster string, metadata *meta.ClusterMeta, deleted
 	return b
 }
 
+// UpdateDMMeta maintain the dm meta information
+func (b *Builder) UpdateDMMeta(cluster string, metadata *meta.DMMeta, deletedNodeIds []string) *Builder {
+	b.tasks = append(b.tasks, &UpdateDMMeta{
+		cluster:        cluster,
+		metadata:       metadata,
+		deletedNodesID: deletedNodeIds,
+	})
+	return b
+}
+
 // UpdateTopology maintain the topology information
 func (b *Builder) UpdateTopology(cluster string, metadata *meta.ClusterMeta, deletedNodeIds []string) *Builder {
 	b.tasks = append(b.tasks, &UpdateTopology{metadata: metadata, cluster: cluster, deletedNodesID: deletedNodeIds})
@@ -169,7 +179,7 @@ func (b *Builder) InitConfig(clusterName, clusterVersion string, inst meta.Insta
 }
 
 // ScaleConfig generate temporary config on scaling
-func (b *Builder) ScaleConfig(clusterName, clusterVersion string, base *meta.TopologySpecification, inst meta.Instance, deployUser string, paths meta.DirPaths) *Builder {
+func (b *Builder) ScaleConfig(clusterName, clusterVersion string, base meta.Specification, inst meta.Instance, deployUser string, paths meta.DirPaths) *Builder {
 	b.tasks = append(b.tasks, &ScaleConfig{
 		clusterName:    clusterName,
 		clusterVersion: clusterVersion,
@@ -299,7 +309,7 @@ func (b *Builder) Limit(host, domain, limit, item, value string) *Builder {
 }
 
 // CheckSys checks system information of deploy server
-func (b *Builder) CheckSys(host, dataDir, checkType string, topo *meta.TopologySpecification, opt *operator.CheckOptions) *Builder {
+func (b *Builder) CheckSys(host, dataDir, checkType string, topo meta.Specification, opt *operator.CheckOptions) *Builder {
 	b.tasks = append(b.tasks, &CheckSys{
 		host:    host,
 		topo:    topo,

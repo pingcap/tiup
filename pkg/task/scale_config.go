@@ -25,7 +25,7 @@ type ScaleConfig struct {
 	clusterName    string
 	clusterVersion string
 	instance       meta.Instance
-	base           *meta.TopologySpecification
+	base           meta.Specification
 	deployUser     string
 	paths          meta.DirPaths
 }

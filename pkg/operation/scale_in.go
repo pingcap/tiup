@@ -31,7 +31,7 @@ import (
 var asyncOfflineComps = set.NewStringSet(meta.ComponentPump, meta.ComponentTiKV, meta.ComponentDrainer)
 
 // AsyncNodes return all nodes async destroy or not.
-func AsyncNodes(spec *meta.ClusterSpecification, nodes []string, async bool) []string {
+func AsyncNodes(spec meta.Specification, nodes []string, async bool) []string {
 	var asyncNodes []string
 	var notAsyncNodes []string
 
@@ -73,6 +73,8 @@ func ScaleIn(
 ) error {
 	if clusterSpec := spec.GetClusterSpecification(); clusterSpec != nil {
 		return ScaleInCluster(getter, clusterSpec, options)
+	} else if dmSpec := spec.GetDMSpecification(); dmSpec != nil {
+		return ScaleInDMCluster(getter, dmSpec, options)
 	}
 	return nil
 }
@@ -283,6 +285,111 @@ func ScaleInCluster(
 		}
 		s.Offline = true
 		spec.Drainers[i] = s
+	}
+
+	return nil
+}
+
+// ScaleInDMCluster scales in the cluster
+func ScaleInDMCluster(
+	getter ExecutorGetter,
+	spec *meta.DMSpecification,
+	options Options,
+) error {
+	// instances by uuid
+	instances := map[string]meta.Instance{}
+
+	// make sure all nodeIds exists in topology
+	for _, component := range spec.ComponentsByStartOrder() {
+		for _, instance := range component.Instances() {
+			instances[instance.ID()] = instance
+		}
+	}
+
+	// Clean components
+	deletedDiff := map[string][]meta.Instance{}
+	deletedNodes := set.NewStringSet(options.Nodes...)
+	for nodeID := range deletedNodes {
+		inst, found := instances[nodeID]
+		if !found {
+			return errors.Errorf("cannot find node id '%s' in topology", nodeID)
+		}
+		deletedDiff[inst.ComponentName()] = append(deletedDiff[inst.ComponentName()], inst)
+	}
+
+	// Cannot delete all DM Master servers
+	if len(deletedDiff[meta.ComponentDMMaster]) == len(spec.Masters) {
+		return errors.New("cannot delete all dm-master servers")
+	}
+
+	if options.Force {
+		for _, component := range spec.ComponentsByStartOrder() {
+			for _, instance := range component.Instances() {
+				if !deletedNodes.Exist(instance.ID()) {
+					continue
+				}
+				// just try stop and destroy
+				if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
+					log.Warnf("failed to stop %s: %v", component.Name(), err)
+				}
+				if err := DestroyComponent(getter, []meta.Instance{instance}, options.OptTimeout); err != nil {
+					log.Warnf("failed to destroy %s: %v", component.Name(), err)
+				}
+
+				continue
+			}
+		}
+		return nil
+	}
+
+	// At least a DMMaster server exists
+	var dmMasterClient *api.DMMasterClient
+	var dmMasterEndpoint []string
+	for _, instance := range (&meta.DMMasterComponent{DMSpecification: spec}).Instances() {
+		if !deletedNodes.Exist(instance.ID()) {
+			dmMasterEndpoint = append(dmMasterEndpoint, addr(instance))
+		}
+	}
+
+	if len(dmMasterEndpoint) == 0 {
+		return errors.New("cannot find available dm-master instance")
+	}
+
+	retryOpt := &utils.RetryOption{
+		Timeout: time.Second * time.Duration(options.APITimeout),
+		Delay:   time.Second * 2,
+	}
+	dmMasterClient = api.NewDMMasterClient(dmMasterEndpoint, 10*time.Second, nil)
+
+	// Delete member from cluster
+	for _, component := range spec.ComponentsByStartOrder() {
+		for _, instance := range component.Instances() {
+			if !deletedNodes.Exist(instance.ID()) {
+				continue
+			}
+
+			if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
+				return errors.Annotatef(err, "failed to stop %s", component.Name())
+			}
+			if err := DestroyComponent(getter, []meta.Instance{instance}, options.OptTimeout); err != nil {
+				return errors.Annotatef(err, "failed to destroy %s", component.Name())
+			}
+
+			switch component.Name() {
+			case meta.ComponentDMMaster:
+				name := instance.(*meta.DMMasterInstance).Name
+				err := dmMasterClient.OfflineMaster(name, retryOpt)
+				if err != nil {
+					return errors.AddStack(err)
+				}
+			case meta.ComponentDMWorker:
+				name := instance.(*meta.DMWorkerInstance).Name
+				err := dmMasterClient.OfflineWorker(name, retryOpt)
+				if err != nil {
+					return errors.AddStack(err)
+				}
+			}
+		}
 	}
 
 	return nil

@@ -9,9 +9,9 @@ cd "${DEPLOY_DIR}" || exit 1
 {{- define "MasterList"}}
   {{- range $idx, $master := .}}
     {{- if eq $idx 0}}
-      {{- $master.Name}}={{$master.Scheme}}://{{$master.IP}}:{{$master.PeerPort}}
+      {{- $master.IP}}:{{$master.Port}}
     {{- else -}}
-      ,{{- $master.Name}}={{$master.Scheme}}://{{$master.IP}}:{{$master.PeerPort}}
+      ,{{- $master.IP}}:{{$master.Port}}
     {{- end}}
   {{- end}}
 {{- end}}
@@ -24,9 +24,9 @@ exec bin/dm-master \
     --name="{{.Name}}" \
     --master-addr="0.0.0.0:{{.Port}}" \
     --advertise-addr="{{.IP}}:{{.Port}}" \
-    --peer-urls="{{.IP}}:{{.PeerPort}}" \
-    --advertise-peer-urls="{{.IP}}:{{.PeerPort}}" \
+    --peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
+    --advertise-peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
     --log-file="{{.LogDir}}/dm-master.log" \
     --data-dir="{{.DataDir}}" \
-    --initial-cluster="{{template "MasterList" .Endpoints}}" \
-    --config=conf/dm_master.toml 2>> "{{.LogDir}}/dm-master_stderr.log"
+    --join="{{template "MasterList" .Endpoints}}" \
+    --config=conf/dm-master.toml 2>> "{{.LogDir}}/dm-master_stderr.log"

@@ -36,7 +36,7 @@ func Upgrade(
 	components := spec.ComponentsByUpdateOrder()
 	components = FilterComponent(components, roleFilter)
 
-	leaderAware := set.NewStringSet(meta.ComponentPD, meta.ComponentTiKV)
+	leaderAware := set.NewStringSet(meta.ComponentPD, meta.ComponentTiKV, meta.ComponentDMMaster)
 
 	timeoutOpt := &utils.RetryOption{
 		Timeout: time.Second * time.Duration(options.APITimeout),
@@ -110,6 +110,34 @@ func Upgrade(
 					}
 				}
 				continue
+			}
+		} else if dmSpec := spec.GetDMSpecification(); dmSpec != nil {
+			// Transfer leader of evict leader if the component is TiKV/PD in non-force mode
+			if !options.Force && leaderAware.Exist(component.Name()) {
+				dmMasterClient := api.NewDMMasterClient(dmSpec.GetMasterList(), 5*time.Second, nil)
+				if component.Name() == meta.ComponentDMMaster {
+					log.Infof("Restarting component %s", component.Name())
+
+					for _, instance := range instances {
+						leader, err := dmMasterClient.GetLeader(timeoutOpt)
+						if err != nil {
+							return errors.Annotatef(err, "failed to get dm-master leader %s", instance.GetHost())
+						}
+
+						if len(dmSpec.Masters) > 1 && leader == instance.(*meta.DMMasterInstance).Name {
+							if err := dmMasterClient.EvictDMMasterLeader(timeoutOpt); err != nil {
+								return errors.Annotatef(err, "failed to dm-master PD leader %s", instance.GetHost())
+							}
+						}
+
+						if err := stopInstance(getter, instance); err != nil {
+							return errors.Annotatef(err, "failed to stop %s", instance.GetHost())
+						}
+						if err := startInstance(getter, instance, options.OptTimeout); err != nil {
+							return errors.Annotatef(err, "failed to start %s", instance.GetHost())
+						}
+					}
+				}
 			}
 		}
 

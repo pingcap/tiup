@@ -27,4 +27,4 @@ exec bin/dm-worker \
     --advertise-addr="{{.IP}}:{{.Port}}" \
     --log-file="{{.LogDir}}/dm-worker.log" \
     --join="{{template "MasterList" .Endpoints}}"
-    --config=conf/dm_worker.toml 2>> "{{.LogDir}}/dm-worker_stderr.log"
+    --config=conf/dm-worker.toml 2>> "{{.LogDir}}/dm-worker_stderr.log"

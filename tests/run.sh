@@ -12,6 +12,7 @@ export TIUP_CLUSTER_EXECUTE_DEFAULT_TIMEOUT=300s
 
 export version=${version-v4.0.0}
 export old_version=${old_version-v3.0.12}
+export dm_version=${dm_version-nightly}
 
 function tiup-cluster() {
   mkdir -p "~/.tiup/bin" && cp -f ./root.json ~/.tiup/bin/
@@ -21,6 +22,15 @@ function tiup-cluster() {
     else
     ../bin/tiup-cluster "$@"
   fi
+}
+
+function tiup-dm() {
+	# echo "in function"
+	if [ -f "./bin/tiup-dm.test" ]; then
+	  ./bin/tiup-dm.test  -test.coverprofile=./cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
+    else
+	  ../bin/tiup-dm "$@"
+	fi
 }
 
 . ./script/util.sh

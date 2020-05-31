@@ -444,7 +444,7 @@ func CheckSELinux(e executor.TiOpsExecutor) *CheckResult {
 }
 
 // CheckListeningPort checks if the ports are already binded by some process on host
-func CheckListeningPort(opt *CheckOptions, host string, topo *meta.TopologySpecification, rawData []byte) []*CheckResult {
+func CheckListeningPort(opt *CheckOptions, host string, topo meta.Specification, rawData []byte) []*CheckResult {
 	var results []*CheckResult
 	ports := make(map[int]struct{})
 
@@ -479,7 +479,7 @@ func CheckListeningPort(opt *CheckOptions, host string, topo *meta.TopologySpeci
 }
 
 // CheckPartitions checks partition info of data directories
-func CheckPartitions(opt *CheckOptions, host string, topo *meta.TopologySpecification, rawData []byte) []*CheckResult {
+func CheckPartitions(opt *CheckOptions, host string, topo meta.Specification, rawData []byte) []*CheckResult {
 	var results []*CheckResult
 	var insightInfo insight.InsightInfo
 	if err := json.Unmarshal(rawData, &insightInfo); err != nil {
@@ -496,7 +496,7 @@ func CheckPartitions(opt *CheckOptions, host string, topo *meta.TopologySpecific
 		if inst.GetHost() != host {
 			return
 		}
-		for _, dataDir := range clusterutil.MultiDirAbs(topo.GlobalOptions.User, inst.DataDir()) {
+		for _, dataDir := range clusterutil.MultiDirAbs(topo.GetGlobalOptions().User, inst.DataDir()) {
 			if dataDir == "" {
 				continue
 			}

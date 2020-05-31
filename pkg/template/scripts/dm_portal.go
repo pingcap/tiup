@@ -22,49 +22,51 @@ import (
 	"github.com/pingcap-incubator/tiup-cluster/pkg/embed"
 )
 
-// DMWorkerScript represent the data to generate TiDB config
-type DMWorkerScript struct {
+// DMPortalScript represent the data to generate dm portal config
+type DMPortalScript struct {
 	Name      string
 	IP        string
 	Port      int
+	DataDir   string
 	DeployDir string
 	LogDir    string
 	NumaNode  string
-	Endpoints []*DMMasterScript
+	Timeout   int
 }
 
-// NewDMWorkerScript returns a DMWorkerScript with given arguments
-func NewDMWorkerScript(name, ip, deployDir, logDir string) *DMWorkerScript {
-	return &DMWorkerScript{
-		Name:      name,
+// NewDMPortalScript returns a DMWorkerScript with given arguments
+func NewDMPortalScript(ip, deployDir, dataDir, logDir string) *DMPortalScript {
+	return &DMPortalScript{
 		IP:        ip,
-		Port:      8262,
+		Port:      8280,
 		DeployDir: deployDir,
+		DataDir:   dataDir,
 		LogDir:    logDir,
+		Timeout:   5,
 	}
 }
 
 // WithPort set Port field of DMWorkerScript
-func (c *DMWorkerScript) WithPort(port int) *DMWorkerScript {
+func (c *DMPortalScript) WithPort(port int) *DMPortalScript {
 	c.Port = port
 	return c
 }
 
 // WithNumaNode set NumaNode field of DMWorkerScript
-func (c *DMWorkerScript) WithNumaNode(numa string) *DMWorkerScript {
+func (c *DMPortalScript) WithNumaNode(numa string) *DMPortalScript {
 	c.NumaNode = numa
 	return c
 }
 
-// AppendEndpoints add new PDScript to Endpoints field
-func (c *DMWorkerScript) AppendEndpoints(ends ...*DMMasterScript) *DMWorkerScript {
-	c.Endpoints = append(c.Endpoints, ends...)
+// WithTimeout set Timeout field of DMWorkerScript
+func (c *DMPortalScript) WithTimeout(timeout int) *DMPortalScript {
+	c.Timeout = timeout
 	return c
 }
 
 // Config generate the config file data.
-func (c *DMWorkerScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_dm-worker.sh.tpl")
+func (c *DMPortalScript) Config() ([]byte, error) {
+	fp := path.Join("/templates", "scripts", "run_dm-portal.sh.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
@@ -73,7 +75,7 @@ func (c *DMWorkerScript) Config() ([]byte, error) {
 }
 
 // ConfigToFile write config content to specific path
-func (c *DMWorkerScript) ConfigToFile(file string) error {
+func (c *DMPortalScript) ConfigToFile(file string) error {
 	config, err := c.Config()
 	if err != nil {
 		return err
@@ -82,8 +84,8 @@ func (c *DMWorkerScript) ConfigToFile(file string) error {
 }
 
 // ConfigWithTemplate generate the DM worker config content by tpl
-func (c *DMWorkerScript) ConfigWithTemplate(tpl string) ([]byte, error) {
-	tmpl, err := template.New("dm-worker").Parse(tpl)
+func (c *DMPortalScript) ConfigWithTemplate(tpl string) ([]byte, error) {
+	tmpl, err := template.New("dm-portal").Parse(tpl)
 	if err != nil {
 		return nil, err
 	}

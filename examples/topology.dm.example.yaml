@@ -15,46 +15,62 @@ monitored:
   # data_dir: "/tidb-data/monitored-9100"
   # log_dir: "/tidb-deploy/monitored-9100/log"
 
-# # Server configs are used to specify the runtime configuration of TiDB components
-# # All configuration items can be found in TiDB docs:
+# # Server configs are used to specify the runtime configuration of TiDB-DM components
+# # All configuration items can be found in TiDB-DM docs:
 # #
-# # - TiDB: https://pingcap.com/docs/stable/reference/configuration/tidb-server/configuration-file/
-# # - TiKV: https://pingcap.com/docs/stable/reference/configuration/tikv-server/configuration-file/
-# # - PD: https://pingcap.com/docs/stable/reference/configuration/pd-server/configuration-file/
+# # - DM-master: https://pingcap.com/docs/tidb-data-migration/dev/dm-master-configuration-file/
+# # - DM-worker: https://pingcap.com/docs/tidb-data-migration/dev/dm-worker-configuration-file/
 # #
 # # All configuration items use points to represent the hierarchy, e.g:
 # #   readpool.storage.use-unified-pool
 # #           ^       ^
 # # You can overwrite this configuration via instance-level `config` field
 
-dm_masters:
+# server_configs:
+#  dm-master:
+#    rpc-timeout: "30s"
+#    rpc-rate-limit: 10.0
+#    rpc-rate-burst: 40
+#  dm-worker:
+#
+
+dm-master_servers:
   - host: 10.0.1.11
     port: 8261
-    config:
-      rpc-timeout: "30s"
-      rpc-rate-limit: 10.0
-      rpc-rate-burst: 40
-#     ssh_port: 22
-#     peer_port: 8291
-#     deploy_dir: "/dm-deploy/dm_master-8261"
-#     data_dir: "/dm-data/dm_master-8261"
-#     log_dir: "/dm-deploy/dm_master-8261/log"
-#     numa_node: "0,1"
-#     # Config is used to overwrite the `server_configs.dm_master` values
+#    ssh_port: 22
+#    peer_port: 8291
+#    deploy_dir: "/dm-deploy/dm-master-8261"
+#    data_dir: "/dm-data/dm-master-8261"
+#    log_dir: "/dm-deploy/dm-master-8261/log"
+#    numa_node: "0,1"
+#    # The following configs are used to overwrite the `server_configs.dm-master` values.
+#    config:
+#      rpc-timeout: "30s"
+#      rpc-rate-limit: 10.0
+#      rpc-rate-burst: 40
 
 #   - host: 10.0.1.18
 #   - host: 10.0.1.19
 
-dm_workers:
+dm-worker_servers:
   - host: 10.0.1.12
     port: 8262
 #     ssh_port: 22
-#     deploy_dir: "/dm-deploy/dm_worker-8262"
-#     log_dir: "/dm-deploy/dm_worker-8262/log"
+#     deploy_dir: "/dm-deploy/dm-worker-8262"
+#     log_dir: "/dm-deploy/dm-worker-8262/log"
 #     numa_node: "0,1"
-#     # Config is used to overwrite the `server_configs.dm_worker` values
+#     # Config is used to overwrite the `server_configs.dm-worker` values
 #     config:
 #   - host: 10.0.1.19
+
+dm-portal_servers:
+  - host: 10.0.1.11
+    port: 8280
+#     ssh_port: 22
+#     timeout: 5
+#     deploy_dir: "/dm-deploy/dm-portal-8280"
+#     log_dir: "/dm-deploy/dm-portal-8280/log"
+#     numa_node: "0,1"
 
 monitoring_servers:
   - host: 10.0.1.13

@@ -41,8 +41,9 @@ import (
 
 // Components names supported by TiOps
 const (
-	ComponentDMMaster         = "dm_master"
-	ComponentDMWorker         = "dm_worker"
+	ComponentDMMaster         = "dm-master"
+	ComponentDMWorker         = "dm-worker"
+	ComponentDMPortal         = "dm-portal"
 	ComponentTiDB             = "tidb"
 	ComponentTiKV             = "tikv"
 	ComponentPD               = "pd"

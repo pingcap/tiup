@@ -51,7 +51,7 @@ func NewDMMasterScript(name, ip, deployDir, dataDir, logDir string) *DMMasterScr
 	}
 }
 
-// WithScheme set Scheme field of PDScript
+// WithScheme set Scheme field of NewDMMasterScript
 func (c *DMMasterScript) WithScheme(scheme string) *DMMasterScript {
 	c.Scheme = scheme
 	return c
@@ -83,7 +83,7 @@ func (c *DMMasterScript) AppendEndpoints(ends ...*DMMasterScript) *DMMasterScrip
 
 // Config generate the config file data.
 func (c *DMMasterScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_dm_master.sh.tpl")
+	fp := path.Join("/templates", "scripts", "run_dm-master.sh.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
@@ -122,4 +122,63 @@ func (c *DMMasterScript) ConfigWithTemplate(tpl string) ([]byte, error) {
 	}
 
 	return content.Bytes(), nil
+}
+
+// DMMasterScaleScript represent the data to generate dm-master config on scaling
+type DMMasterScaleScript struct {
+	DMMasterScript
+}
+
+// NewDMMasterScaleScript return a new DMMasterScaleScript
+func NewDMMasterScaleScript(name, ip, deployDir, dataDir, logDir string) *DMMasterScaleScript {
+	return &DMMasterScaleScript{*NewDMMasterScript(name, ip, deployDir, dataDir, logDir)}
+}
+
+// WithScheme set Scheme field of DMMasterScaleScript
+func (c *DMMasterScaleScript) WithScheme(scheme string) *DMMasterScaleScript {
+	c.Scheme = scheme
+	return c
+}
+
+// WithPort set Port field of DMMasterScript
+func (c *DMMasterScaleScript) WithPort(port int) *DMMasterScaleScript {
+	c.Port = port
+	return c
+}
+
+// WithNumaNode set NumaNode field of DMMasterScript
+func (c *DMMasterScaleScript) WithNumaNode(numa string) *DMMasterScaleScript {
+	c.NumaNode = numa
+	return c
+}
+
+// WithPeerPort set PeerPort field of DMMasterScript
+func (c *DMMasterScaleScript) WithPeerPort(port int) *DMMasterScaleScript {
+	c.PeerPort = port
+	return c
+}
+
+// AppendEndpoints add new DMMasterScript to Endpoints field
+func (c *DMMasterScaleScript) AppendEndpoints(ends ...*DMMasterScript) *DMMasterScaleScript {
+	c.Endpoints = append(c.Endpoints, ends...)
+	return c
+}
+
+// Config generate the config file data.
+func (c *DMMasterScaleScript) Config() ([]byte, error) {
+	fp := path.Join("/templates", "scripts", "run_dm-master_scale.sh.tpl")
+	tpl, err := embed.ReadFile(fp)
+	if err != nil {
+		return nil, err
+	}
+	return c.ConfigWithTemplate(string(tpl))
+}
+
+// ConfigToFile write config content to specific path
+func (c *DMMasterScaleScript) ConfigToFile(file string) error {
+	config, err := c.Config()
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(file, config, 0755)
 }

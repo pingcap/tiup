@@ -63,9 +63,9 @@ func (s *metaSuiteDM) TestDefaultDataDir(c *C) {
 	err = yaml.Unmarshal(data, topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.DataDir, Equals, "/gloable_data")
-	c.Assert(topo.Masters[0].DataDir, Equals, "/gloable_data/dm_master-1111")
+	c.Assert(topo.Masters[0].DataDir, Equals, "/gloable_data/dm-master-1111")
 	c.Assert(topo.Masters[1].DataDir, Equals, "/my_data")
-	c.Assert(topo.Workers[0].DataDir, Equals, "/gloable_data/dm_worker-2221")
+	c.Assert(topo.Workers[0].DataDir, Equals, "/gloable_data/dm-worker-2221")
 	c.Assert(topo.Workers[1].DataDir, Equals, "/my_data")
 }
 
@@ -77,10 +77,10 @@ global:
   ssh_port: 220
   deploy_dir: "test-deploy"
   data_dir: "test-data" 
-dm_masters:
+dm-master_servers:
   - host: 172.16.5.138
     deploy_dir: "master-deploy"
-dm_workers:
+dm-worker_servers:
   - host: 172.16.5.53
     data_dir: "worker-data"
 `), &topo)
@@ -91,7 +91,7 @@ dm_workers:
 	c.Assert(topo.Masters[0].DeployDir, Equals, "master-deploy")
 
 	c.Assert(topo.Workers[0].SSHPort, Equals, 220)
-	c.Assert(topo.Workers[0].DeployDir, Equals, "test-deploy/dm_worker-8262")
+	c.Assert(topo.Workers[0].DeployDir, Equals, "test-deploy/dm-worker-8262")
 	c.Assert(topo.Workers[0].DataDir, Equals, "worker-data")
 }
 
@@ -103,15 +103,15 @@ global:
   ssh_port: 220
   deploy_dir: "test-deploy"
   data_dir: "test-data" 
-dm_masters:
+dm-master_servers:
   - host: 172.16.5.138
     deploy_dir: "/test-1"
-dm_workers:
+dm-worker_servers:
   - host: 172.16.5.138
     data_dir: "/test-1"
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "directory '/test-1' conflicts between 'dm_masters:172.16.5.138.deploy_dir' and 'dm_workers:172.16.5.138.data_dir'")
+	c.Assert(err.Error(), Equals, "directory '/test-1' conflicts between 'dm-master_servers:172.16.5.138.deploy_dir' and 'dm-worker_servers:172.16.5.138.data_dir'")
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -119,10 +119,10 @@ global:
   ssh_port: 220
   deploy_dir: "test-deploy"
   data_dir: "/test-data" 
-dm_masters:
+dm-master_servers:
   - host: 172.16.5.138
     data_dir: "test-1"
-dm_workers:
+dm-worker_servers:
   - host: 172.16.5.138
     data_dir: "test-1"
 `), &topo)
@@ -137,29 +137,29 @@ global:
   ssh_port: 220
   deploy_dir: "test-deploy"
   data_dir: "test-data" 
-dm_masters:
+dm-master_servers:
   - host: 172.16.5.138
     peer_port: 1234
-dm_workers:
+dm-worker_servers:
   - host: 172.16.5.138
     port: 1234
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "port '1234' conflicts between 'dm_masters:172.16.5.138.peer_port' and 'dm_workers:172.16.5.138.port'")
+	c.Assert(err.Error(), Equals, "port '1234' conflicts between 'dm-master_servers:172.16.5.138.peer_port' and 'dm-worker_servers:172.16.5.138.port'")
 
 	topo = DMTopologySpecification{}
 	err = yaml.Unmarshal([]byte(`
 monitored:
   node_exporter_port: 1234
-dm_masters:
+dm-master_servers:
   - host: 172.16.5.138
     port: 1234
-dm_workers:
+dm-worker_servers:
   - host: 172.16.5.138
     status_port: 2345
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "port '1234' conflicts between 'dm_masters:172.16.5.138.port' and 'monitored:172.16.5.138.node_exporter_port'")
+	c.Assert(err.Error(), Equals, "port '1234' conflicts between 'dm-master_servers:172.16.5.138.port' and 'monitored:172.16.5.138.node_exporter_port'")
 
 }
 
@@ -170,10 +170,10 @@ func (s *metaSuiteDM) TestPlatformConflicts(c *C) {
 global:
   os: "linux"
   arch: "aarch64"
-dm_masters:
+dm-master_servers:
   - host: 172.16.5.138
     arch: "arm64"
-dm_workers:
+dm-worker_servers:
   - host: 172.16.5.138
 `), &topo)
 	c.Assert(err, IsNil)
@@ -183,14 +183,14 @@ dm_workers:
 	err = yaml.Unmarshal([]byte(`
 global:
   os: "linux"
-dm_masters:
+dm-master_servers:
   - host: 172.16.5.138
     arch: "aarch64"
-dm_workers:
+dm-worker_servers:
   - host: 172.16.5.138
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' as in 'dm_masters:linux/arm64' and 'dm_workers:linux/amd64'")
+	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' as in 'dm-master_servers:linux/arm64' and 'dm-worker_servers:linux/amd64'")
 
 	// different os defined for the same host
 	topo = DMTopologySpecification{}
@@ -198,13 +198,13 @@ dm_workers:
 global:
   os: "linux"
   arch: "aarch64"
-dm_masters:
+dm-master_servers:
   - host: 172.16.5.138
     os: "darwin"
-dm_workers:
+dm-worker_servers:
   - host: 172.16.5.138
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' as in 'dm_masters:darwin/arm64' and 'dm_workers:linux/arm64'")
+	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' as in 'dm-master_servers:darwin/arm64' and 'dm-worker_servers:linux/arm64'")
 
 }

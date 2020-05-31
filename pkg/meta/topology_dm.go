@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/creasty/defaults"
+	"github.com/pingcap-incubator/tiup-cluster/pkg/api"
 	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
 )
@@ -27,8 +28,9 @@ import (
 type (
 	// DMServerConfigs represents the server runtime configuration
 	DMServerConfigs struct {
-		Master map[string]interface{} `yaml:"master"`
-		Worker map[string]interface{} `yaml:"worker"`
+		Master map[string]interface{} `yaml:"dm-master"`
+		Worker map[string]interface{} `yaml:"dm-worker"`
+		Portal map[string]interface{} `yaml:"dm-portal"`
 	}
 
 	// DMTopologySpecification represents the specification of topology.yaml
@@ -36,13 +38,25 @@ type (
 		GlobalOptions    GlobalOptions      `yaml:"global,omitempty"`
 		MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty"`
 		ServerConfigs    DMServerConfigs    `yaml:"server_configs,omitempty"`
-		Masters          []MasterSpec       `yaml:"dm_masters"`
-		Workers          []WorkerSpec       `yaml:"dm_workers"`
+		Masters          []MasterSpec       `yaml:"dm-master_servers"`
+		Workers          []WorkerSpec       `yaml:"dm-worker_servers"`
+		Portals          []PortalSpec       `yaml:"dm-portal_servers"`
 		Monitors         []PrometheusSpec   `yaml:"monitoring_servers"`
 		Grafana          []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
 		Alertmanager     []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
 	}
 )
+
+// AllDMComponentNames contains the names of all dm components.
+// should include all components in ComponentsByStartOrder
+func AllDMComponentNames() (roles []string) {
+	tp := &DMSpecification{}
+	tp.IterComponent(func(c Component) {
+		roles = append(roles, c.Name())
+	})
+
+	return
+}
 
 // MasterSpec represents the Master topology specification in topology.yaml
 type MasterSpec struct {
@@ -50,23 +64,40 @@ type MasterSpec struct {
 	SSHPort  int    `yaml:"ssh_port,omitempty"`
 	Imported bool   `yaml:"imported,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
-	Name      string                 `yaml:"name"`
-	Port      int                    `yaml:"port" default:"8261"`
-	PeerPort  int                    `yaml:"peer_port" default:"8291"`
-	DeployDir string                 `yaml:"deploy_dir,omitempty"`
-	DataDir   string                 `yaml:"data_dir,omitempty"`
-	LogDir    string                 `yaml:"log_dir,omitempty"`
-	Offline   bool                   `yaml:"offline,omitempty"`
-	NumaNode  string                 `yaml:"numa_node,omitempty"`
-	Config    map[string]interface{} `yaml:"config,omitempty"`
-	Arch      string                 `yaml:"arch,omitempty"`
-	OS        string                 `yaml:"os,omitempty"`
+	Name            string                 `yaml:"name"`
+	Port            int                    `yaml:"port" default:"8261"`
+	PeerPort        int                    `yaml:"peer_port" default:"8291"`
+	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
+	DataDir         string                 `yaml:"data_dir,omitempty"`
+	LogDir          string                 `yaml:"log_dir,omitempty"`
+	NumaNode        string                 `yaml:"numa_node,omitempty"`
+	Config          map[string]interface{} `yaml:"config,omitempty"`
+	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	Arch            string                 `yaml:"arch,omitempty"`
+	OS              string                 `yaml:"os,omitempty"`
 }
 
 // Status queries current status of the instance
-func (s MasterSpec) Status(pdList ...string) string {
-	url := fmt.Sprintf("http://%s:%d/status", s.Host, s.Port)
-	return statusByURL(url)
+func (s MasterSpec) Status(masterList ...string) string {
+	if len(masterList) < 1 {
+		return "N/A"
+	}
+	masterapi := api.NewDMMasterClient(masterList, statusQueryTimeout, nil)
+	isFound, isActive, isLeader, err := masterapi.GetMaster(s.Name)
+	if err != nil {
+		return "Down"
+	}
+	if !isFound {
+		return "N/A"
+	}
+	if !isActive {
+		return "Unhealthy"
+	}
+	res := "Healthy"
+	if isLeader {
+		res += "|L"
+	}
+	return res
 }
 
 // Role returns the component role of the instance
@@ -95,21 +126,32 @@ type WorkerSpec struct {
 	SSHPort  int    `yaml:"ssh_port,omitempty"`
 	Imported bool   `yaml:"imported,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
-	Name      string                 `yaml:"name"`
-	Port      int                    `yaml:"port" default:"8262"`
-	DeployDir string                 `yaml:"deploy_dir,omitempty"`
-	DataDir   string                 `yaml:"data_dir,omitempty"`
-	LogDir    string                 `yaml:"log_dir,omitempty"`
-	Offline   bool                   `yaml:"offline,omitempty"`
-	NumaNode  string                 `yaml:"numa_node,omitempty"`
-	Config    map[string]interface{} `yaml:"config,omitempty"`
-	Arch      string                 `yaml:"arch,omitempty"`
-	OS        string                 `yaml:"os,omitempty"`
+	Name            string                 `yaml:"name"`
+	Port            int                    `yaml:"port" default:"8262"`
+	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
+	DataDir         string                 `yaml:"data_dir,omitempty"`
+	LogDir          string                 `yaml:"log_dir,omitempty"`
+	NumaNode        string                 `yaml:"numa_node,omitempty"`
+	Config          map[string]interface{} `yaml:"config,omitempty"`
+	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	Arch            string                 `yaml:"arch,omitempty"`
+	OS              string                 `yaml:"os,omitempty"`
 }
 
 // Status queries current status of the instance
-func (s WorkerSpec) Status(pdList ...string) string {
-	return "N/A"
+func (s WorkerSpec) Status(masterList ...string) string {
+	if len(masterList) < 1 {
+		return "N/A"
+	}
+	masterapi := api.NewDMMasterClient(masterList, statusQueryTimeout, nil)
+	stage, err := masterapi.GetWorker(s.Name)
+	if err != nil {
+		return "Down"
+	}
+	if stage == "" {
+		return "N/A"
+	}
+	return stage
 }
 
 // Role returns the component role of the instance
@@ -129,6 +171,43 @@ func (s WorkerSpec) GetMainPort() int {
 
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s WorkerSpec) IsImported() bool {
+	return s.Imported
+}
+
+// PortalSpec represents the Portal topology specification in topology.yaml
+type PortalSpec struct {
+	Host            string                 `yaml:"host"`
+	SSHPort         int                    `yaml:"ssh_port,omitempty"`
+	Imported        bool                   `yaml:"imported,omitempty"`
+	Port            int                    `yaml:"port" default:"8280"`
+	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
+	DataDir         string                 `yaml:"data_dir,omitempty"`
+	LogDir          string                 `yaml:"log_dir,omitempty"`
+	Timeout         int                    `yaml:"timeout" default:"5"`
+	NumaNode        string                 `yaml:"numa_node,omitempty"`
+	Config          map[string]interface{} `yaml:"config,omitempty"`
+	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	Arch            string                 `yaml:"arch,omitempty"`
+	OS              string                 `yaml:"os,omitempty"`
+}
+
+// Role returns the component role of the instance
+func (s PortalSpec) Role() string {
+	return ComponentDMPortal
+}
+
+// SSH returns the host and SSH port of the instance
+func (s PortalSpec) SSH() (string, int) {
+	return s.Host, s.SSHPort
+}
+
+// GetMainPort returns the main port of the instance
+func (s PortalSpec) GetMainPort() int {
+	return s.Port
+}
+
+// IsImported returns if the node is imported from TiDB-Ansible
+func (s PortalSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -414,6 +493,17 @@ func (topo *DMTopologySpecification) Validate() error {
 	return topo.dirConflictsDetect()
 }
 
+// GetMasterList returns a list of Master API hosts of the current cluster
+func (topo *DMTopologySpecification) GetMasterList() []string {
+	var masterList []string
+
+	for _, master := range topo.Masters {
+		masterList = append(masterList, fmt.Sprintf("%s:%d", master.Host, master.Port))
+	}
+
+	return masterList
+}
+
 // Merge returns a new TopologySpecification which sum old ones
 func (topo *DMTopologySpecification) Merge(that *DMTopologySpecification) *DMTopologySpecification {
 	return &DMTopologySpecification{
@@ -422,6 +512,7 @@ func (topo *DMTopologySpecification) Merge(that *DMTopologySpecification) *DMTop
 		ServerConfigs:    topo.ServerConfigs,
 		Masters:          append(topo.Masters, that.Masters...),
 		Workers:          append(topo.Workers, that.Workers...),
+		Portals:          append(topo.Portals, that.Portals...),
 		Monitors:         append(topo.Monitors, that.Monitors...),
 		Grafana:          append(topo.Grafana, that.Grafana...),
 		Alertmanager:     append(topo.Alertmanager, that.Alertmanager...),
