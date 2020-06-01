@@ -17,7 +17,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 )
 
 // Config of the instance.

@@ -18,9 +18,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
-	utils2 "github.com/pingcap-incubator/tiup/pkg/utils"
 	"io"
 	"net/url"
 	"time"
@@ -30,13 +27,16 @@ import (
 	"github.com/pingcap/kvproto/pkg/pdpb"
 	pdserverapi "github.com/pingcap/pd/v4/server/api"
 	pdserverconfig "github.com/pingcap/pd/v4/server/config"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // PDClient is an HTTP client of the PD server
 type PDClient struct {
 	addrs      []string
 	tlsEnabled bool
-	httpClient *utils2.HTTPClient
+	httpClient *utils.HTTPClient
 }
 
 // NewPDClient returns a new PDClient
@@ -49,7 +49,7 @@ func NewPDClient(addrs []string, timeout time.Duration, tlsConfig *tls.Config) *
 	return &PDClient{
 		addrs:      addrs,
 		tlsEnabled: enableTLS,
-		httpClient: utils2.NewHTTPClient(timeout, tlsConfig),
+		httpClient: utils.NewHTTPClient(timeout, tlsConfig),
 	}
 }
 
@@ -204,7 +204,7 @@ func (pc *PDClient) WaitLeader(retryOpt *clusterutil.RetryOption) error {
 		}
 
 		// return error by default, to make the retry work
-		log2.Debugf("Still waitting for the PD leader to be elected")
+		log.Debugf("Still waitting for the PD leader to be elected")
 		return errors.New("still waitting for the PD leader to be elected")
 	}, *retryOpt); err != nil {
 		return fmt.Errorf("error getting PD leader, %v", err)
@@ -286,7 +286,7 @@ func (pc *PDClient) EvictPDLeader(retryOpt *clusterutil.RetryOption) error {
 	}
 
 	if len(members.Members) == 1 {
-		log2.Warnf("Only 1 member in the PD cluster, skip leader evicting")
+		log.Warnf("Only 1 member in the PD cluster, skip leader evicting")
 		return nil
 	}
 
@@ -325,7 +325,7 @@ func (pc *PDClient) EvictPDLeader(retryOpt *clusterutil.RetryOption) error {
 		}
 
 		// return error by default, to make the retry work
-		log2.Debugf("Still waitting for the PD leader to transfer")
+		log.Debugf("Still waitting for the PD leader to transfer")
 		return errors.New("still waitting for the PD leader to transfer")
 	}, *retryOpt); err != nil {
 		return fmt.Errorf("error evicting PD leader, %v", err)
@@ -373,7 +373,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *clusterutil.RetryOpt
 		return nil
 	}
 
-	log2.Infof("Evicting %d leaders from store %s...",
+	log.Infof("Evicting %d leaders from store %s...",
 		latestStore.Status.LeaderCount, latestStore.Store.Address)
 
 	// set scheduler for stores
@@ -416,7 +416,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *clusterutil.RetryOpt
 			if currStoreInfo.Status.LeaderCount == 0 {
 				return nil
 			}
-			log2.Debugf(
+			log.Debugf(
 				"Still waitting for %d store leaders to transfer...",
 				currStoreInfo.Status.LeaderCount,
 			)
@@ -471,19 +471,19 @@ func (pc *PDClient) RemoveStoreEvict(host string) error {
 		body, statusCode, err := pc.httpClient.Delete(endpoint, nil)
 		if err != nil {
 			if statusCode == 404 || bytes.Contains(body, []byte("scheduler not found")) {
-				log2.Debugf("Store leader evicting scheduler does not exist, ignore.")
+				log.Debugf("Store leader evicting scheduler does not exist, ignore.")
 				return nil
 			}
 			return err
 		}
-		log2.Debugf("Delete leader evicting scheduler of store %d success", latestStore.Store.Id)
+		log.Debugf("Delete leader evicting scheduler of store %d success", latestStore.Store.Id)
 		return nil
 	})
 	if err != nil {
 		return errors.AddStack(err)
 	}
 
-	log2.Debugf("Removed store leader evicting scheduler from %s.", latestStore.Store.Address)
+	log.Debugf("Removed store leader evicting scheduler from %s.", latestStore.Store.Address)
 	return nil
 }
 

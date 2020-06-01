@@ -18,8 +18,8 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/pingcap-incubator/tiup/pkg/logger/log"
-	"github.com/pingcap-incubator/tiup/server/handler"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/server/handler"
 )
 
 type traceResponseWriter struct {

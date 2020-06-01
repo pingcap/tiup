@@ -1,4 +1,4 @@
-module github.com/pingcap-incubator/tiup
+module github.com/pingcap/tiup
 
 go 1.13
 
@@ -39,6 +39,7 @@ require (
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-runewidth v0.0.7
 	github.com/pelletier/go-toml v1.3.0
+	github.com/pingcap-incubator/tiup v0.0.1
 	github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712
 	github.com/pingcap/dm v1.1.0-alpha.0.20200521025928-83063141c5fd
 	github.com/pingcap/errors v0.11.5-0.20190809092503-95897b64e011

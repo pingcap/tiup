@@ -18,15 +18,14 @@ import (
 	"os"
 	"path/filepath"
 
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
-
 	"github.com/google/uuid"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/executor"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/template"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/template/config"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/template/scripts"
-	system "github.com/pingcap-incubator/tiup/pkg/cluster/template/systemd"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/template"
+	"github.com/pingcap/tiup/pkg/cluster/template/config"
+	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
+	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
+	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
 // MonitoredConfig is used to generate the monitor node configuration
@@ -104,7 +103,7 @@ func (m *MonitoredConfig) syncMonitoredSystemConfig(exec executor.TiOpsExecutor,
 			fmt.Println(string(outp))
 		}
 		if len(errp) > 0 {
-			log2.Errorf(string(errp))
+			log.Errorf(string(errp))
 		}
 		return err
 	}

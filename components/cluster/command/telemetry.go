@@ -16,9 +16,10 @@ package command
 import (
 	"context"
 	"fmt"
-	telemetry2 "github.com/pingcap-incubator/tiup/pkg/telemetry"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/report"
+	telemetry2 "github.com/pingcap/tiup/pkg/telemetry"
+
+	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/spf13/cobra"
 )
 

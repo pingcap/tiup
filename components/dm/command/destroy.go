@@ -14,18 +14,18 @@
 package command
 
 import (
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"os"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup/pkg/cliutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	operator "github.com/pingcap-incubator/tiup/pkg/cluster/operation"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/task"
-	"github.com/pingcap-incubator/tiup/pkg/logger"
-	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/logger"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -56,7 +56,7 @@ func newDestroyCmd() *cobra.Command {
 					color.HiYellowString(clusterName)); err != nil {
 					return err
 				}
-				log2.Infof("Destroying cluster...")
+				log.Infof("Destroying cluster...")
 			}
 
 			t := task.NewBuilder().
@@ -79,7 +79,7 @@ func newDestroyCmd() *cobra.Command {
 			if err := os.RemoveAll(meta.ClusterPath(clusterName)); err != nil {
 				return errors.Trace(err)
 			}
-			log2.Infof("Destroyed DM cluster `%s` successfully", clusterName)
+			log.Infof("Destroyed DM cluster `%s` successfully", clusterName)
 			return nil
 		},
 	}

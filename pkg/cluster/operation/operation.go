@@ -16,9 +16,9 @@ package operator
 import (
 	"fmt"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/executor"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	"github.com/pingcap-incubator/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/set"
 )
 
 // Options represents the operation options

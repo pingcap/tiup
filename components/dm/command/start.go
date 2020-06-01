@@ -15,13 +15,13 @@ package command
 
 import (
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	operator "github.com/pingcap-incubator/tiup/pkg/cluster/operation"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/task"
-	"github.com/pingcap-incubator/tiup/pkg/logger"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/logger"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -51,7 +51,7 @@ func newStartCmd() *cobra.Command {
 
 func startCluster(clusterName string, options operator.Options) error {
 	logger.EnableAuditLog()
-	log2.Infof("Starting cluster %s...", clusterName)
+	log.Infof("Starting cluster %s...", clusterName)
 	metadata, err := meta.DMMetadata(clusterName)
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func startCluster(clusterName string, options operator.Options) error {
 		return errors.Trace(err)
 	}
 
-	log2.Infof("Started cluster `%s` successfully", clusterName)
+	log.Infof("Started cluster `%s` successfully", clusterName)
 
 	return nil
 }

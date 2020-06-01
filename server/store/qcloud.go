@@ -24,8 +24,8 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/google/uuid"
-	"github.com/pingcap-incubator/tiup/pkg/logger/log"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 var (

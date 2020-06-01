@@ -15,8 +15,9 @@ package report
 
 import (
 	"context"
-	telemetry2 "github.com/pingcap-incubator/tiup/pkg/telemetry"
 	"testing"
+
+	telemetry2 "github.com/pingcap/tiup/pkg/telemetry"
 
 	"github.com/pingcap/check"
 )

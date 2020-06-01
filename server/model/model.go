@@ -18,10 +18,10 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/juju/errors"
-	"github.com/pingcap-incubator/tiup/pkg/logger/log"
-	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
-	"github.com/pingcap-incubator/tiup/server/store"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/server/store"
 )
 
 // Model defines operations on the manifests

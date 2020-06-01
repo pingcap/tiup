@@ -18,9 +18,9 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 

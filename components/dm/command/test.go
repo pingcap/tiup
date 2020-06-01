@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
 	dmpb "github.com/pingcap/dm/dm/pb"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"

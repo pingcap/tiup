@@ -21,8 +21,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
-	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap/tiup/pkg/repository/crypto"
+	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/stretchr/testify/assert"
 )
 

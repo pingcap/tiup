@@ -15,13 +15,13 @@ package ansible
 
 import (
 	"fmt"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"strings"
 	"time"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/executor"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
 var (
@@ -39,7 +39,7 @@ func parseDirs(user string, ins meta.InstanceSpec, sshTimeout int64) (meta.Insta
 		KeyFile: SSHKeyPath(), // ansible generated keyfile
 		Timeout: time.Second * time.Duration(sshTimeout),
 	}, false) // not using global sudo
-	log2.Debugf("Detecting deploy paths on %s...", hostName)
+	log.Debugf("Detecting deploy paths on %s...", hostName)
 
 	stdout, err := readStartScript(e, ins.Role(), hostName, ins.GetMainPort())
 	if len(stdout) <= 1 || err != nil {

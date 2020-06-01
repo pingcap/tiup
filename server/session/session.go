@@ -18,8 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pingcap-incubator/tiup/pkg/logger/log"
-	"github.com/pingcap-incubator/tiup/server/store"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/server/store"
 )
 
 // Max alive time of a session

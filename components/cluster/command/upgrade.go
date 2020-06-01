@@ -15,18 +15,18 @@ package command
 
 import (
 	"fmt"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"os"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	operator "github.com/pingcap-incubator/tiup/pkg/cluster/operation"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/task"
-	"github.com/pingcap-incubator/tiup/pkg/logger"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
-	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/logger"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
 )
@@ -179,7 +179,7 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 		return errors.Trace(err)
 	}
 
-	log2.Infof("Upgraded cluster `%s` successfully", clusterName)
+	log.Infof("Upgraded cluster `%s` successfully", clusterName)
 
 	return nil
 }

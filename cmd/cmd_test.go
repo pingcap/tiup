@@ -20,8 +20,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/pingcap-incubator/tiup/pkg/repository"
 	. "github.com/pingcap/check"
+	"github.com/pingcap/tiup/pkg/repository"
 )
 
 func TestCMD(t *testing.T) {

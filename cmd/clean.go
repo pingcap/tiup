@@ -19,10 +19,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pingcap-incubator/tiup/pkg/environment"
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/set"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 	gops "github.com/shirou/gopsutil/process"
 	"github.com/spf13/cobra"
 )

@@ -16,7 +16,7 @@ package task
 import (
 	"fmt"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/module"
+	"github.com/pingcap/tiup/pkg/cluster/module"
 )
 
 // SystemCtl run systemctl command on host

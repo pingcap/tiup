@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 )
 
 var (

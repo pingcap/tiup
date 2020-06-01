@@ -17,8 +17,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	. "github.com/pingcap/check"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 )
 
 type repositorySuite struct{}

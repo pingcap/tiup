@@ -16,7 +16,7 @@ package task
 import (
 	"fmt"
 
-	operator "github.com/pingcap-incubator/tiup/pkg/cluster/operation"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 )
 
 // Downloader is used to download the specific version of a component from

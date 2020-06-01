@@ -21,10 +21,10 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/pingcap-incubator/tiup/components/playground/utils"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/kvproto/pkg/metapb"
 	pdserverapi "github.com/pingcap/pd/v4/server/api"
+	"github.com/pingcap/tiup/components/playground/utils"
 )
 
 // PDClient is an HTTP client of the PD server

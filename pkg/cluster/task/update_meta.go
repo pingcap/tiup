@@ -17,8 +17,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	"github.com/pingcap-incubator/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/set"
 )
 
 // UpdateMeta is used to maintain the cluster meta information

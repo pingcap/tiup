@@ -16,8 +16,8 @@ package v1manifest
 import (
 	"fmt"
 
-	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/repository/crypto"
 )
 
 // KeyStore tracks roles, keys, etc. and verifies signatures against this metadata.

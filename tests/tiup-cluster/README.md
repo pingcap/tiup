@@ -2,7 +2,7 @@ This folder contains all tests which relies on external service.
 
 ## Preprations
 
-1. Set up test environment by running `./docker/up.sh`, see [README.sh](https://github.com/pingcap-incubator/tiup/components/cluster/tree/master/docker) for detail.
+1. Set up test environment by running `./docker/up.sh`, see [README.sh](https://github.com/pingcap/tiup/components/cluster/tree/master/docker) for detail.
 2. run `docker exec -it tiup-cluster-control bash` in another terminal to proceed.
 
 ## Running

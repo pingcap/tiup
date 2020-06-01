@@ -20,11 +20,11 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/report"
-	"github.com/pingcap-incubator/tiup/pkg/telemetry"
-	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/report"
+	"github.com/pingcap/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/sync/errgroup"
 )
 

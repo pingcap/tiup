@@ -22,8 +22,8 @@ import (
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
-	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/set"
 )
 
 // Names of manifest ManifestsConfig

@@ -27,10 +27,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/pingcap-incubator/tiup/pkg/environment"
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"golang.org/x/mod/semver"
 )
 

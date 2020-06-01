@@ -15,12 +15,12 @@ package ansible
 
 import (
 	"fmt"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"path/filepath"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/task"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
 // ImportConfig copies config files from cluster which deployed through tidb-ansible
@@ -34,7 +34,7 @@ func ImportConfig(name string, clsMeta *meta.ClusterMeta, sshTimeout int64) erro
 	//}
 	var copyFileTasks []task.Task
 	for _, comp := range clsMeta.Topology.ComponentsByStartOrder() {
-		log2.Infof("Copying config file(s) of %s...", comp.Name())
+		log.Infof("Copying config file(s) of %s...", comp.Name())
 		for _, inst := range comp.Instances() {
 			switch inst.ComponentName() {
 			case meta.ComponentPD, meta.ComponentTiKV, meta.ComponentPump, meta.ComponentTiDB, meta.ComponentDrainer:
@@ -92,6 +92,6 @@ func ImportConfig(name string, clsMeta *meta.ClusterMeta, sshTimeout int64) erro
 	if err := t.Execute(task.NewContext()); err != nil {
 		return errors.Trace(err)
 	}
-	log2.Infof("Finished copying configs.")
+	log.Infof("Finished copying configs.")
 	return nil
 }

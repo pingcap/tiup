@@ -21,24 +21,23 @@ import (
 	"strings"
 	"time"
 
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
-	telemetry2 "github.com/pingcap-incubator/tiup/pkg/telemetry"
-	"github.com/pingcap-incubator/tiup/pkg/version"
-
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup/pkg/cliutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/flags"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	operator "github.com/pingcap-incubator/tiup/pkg/cluster/operation"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/report"
-	"github.com/pingcap-incubator/tiup/pkg/colorutil"
-	tiupmeta "github.com/pingcap-incubator/tiup/pkg/environment"
-	"github.com/pingcap-incubator/tiup/pkg/errutil"
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/logger"
-	"github.com/pingcap-incubator/tiup/pkg/repository"
+	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/flags"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/report"
+	"github.com/pingcap/tiup/pkg/colorutil"
+	tiupmeta "github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/errutil"
+	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/logger"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/repository"
+	"github.com/pingcap/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -199,9 +198,9 @@ func Execute() {
 		}
 	}
 
-	teleReport = new(telemetry2.Report)
-	clusterReport = new(telemetry2.ClusterReport)
-	teleReport.EventDetail = &telemetry2.Report_Cluster{Cluster: clusterReport}
+	teleReport = new(telemetry.Report)
+	clusterReport = new(telemetry.ClusterReport)
+	teleReport.EventDetail = &telemetry.Report_Cluster{Cluster: clusterReport}
 	if report.Enable() {
 		teleReport.EventUUID = uuid.New().String()
 		teleReport.EventUnixTimestamp = time.Now().Unix()
@@ -221,17 +220,17 @@ func Execute() {
 		clusterReport.ExitCode = int32(code)
 		clusterReport.Nodes = teleNodeInfos
 		if teleTopology != "" {
-			if data, err := telemetry2.ScrubYaml([]byte(teleTopology), map[string]struct{}{"host": {}}); err == nil {
+			if data, err := telemetry.ScrubYaml([]byte(teleTopology), map[string]struct{}{"host": {}}); err == nil {
 				clusterReport.Topology = (string(data))
 			}
 		}
 		clusterReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
-		tele := telemetry2.NewTelemetry()
+		tele := telemetry.NewTelemetry()
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 		err := tele.Report(ctx, teleReport)
 		if flags.DebugMode {
 			if err != nil {
-				log2.Infof("report failed: %v", err)
+				log.Infof("report failed: %v", err)
 			}
 			fmt.Printf("report: %s\n", teleReport.String())
 			if data, err := json.Marshal(teleReport); err == nil {

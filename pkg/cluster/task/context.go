@@ -16,9 +16,9 @@ package task
 import (
 	"time"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/executor"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
 )
 
 // SetSSHKeySet set ssh key set.

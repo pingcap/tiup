@@ -17,15 +17,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"strconv"
 	"time"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/api"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/module"
-	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/module"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/set"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -352,8 +352,8 @@ func StartMonitored(getter ExecutorGetter, instance meta.Instance, options meta.
 	}
 	e := getter.Get(instance.GetHost())
 	for _, comp := range []string{meta.ComponentNodeExporter, meta.ComponentBlackboxExporter} {
-		log2.Infof("Starting component %s", comp)
-		log2.Infof("\tStarting instance %s", instance.GetHost())
+		log.Infof("Starting component %s", comp)
+		log.Infof("\tStarting instance %s", instance.GetHost())
 		c := module.SystemdModuleConfig{
 			Unit:         fmt.Sprintf("%s-%d.service", comp, ports[comp]),
 			ReloadDaemon: true,
@@ -366,7 +366,7 @@ func StartMonitored(getter ExecutorGetter, instance meta.Instance, options meta.
 			fmt.Println(string(stdout))
 		}
 		if len(stderr) > 0 {
-			log2.Errorf(string(stderr))
+			log.Errorf(string(stderr))
 		}
 
 		if err != nil {
@@ -376,11 +376,11 @@ func StartMonitored(getter ExecutorGetter, instance meta.Instance, options meta.
 		// Check ready.
 		if err := meta.PortStarted(e, ports[comp], timeout); err != nil {
 			str := fmt.Sprintf("\t%s failed to start: %s", instance.GetHost(), err)
-			log2.Errorf(str)
+			log.Errorf(str)
 			return errors.Annotatef(err, str)
 		}
 
-		log2.Infof("\tStart %s success", instance.GetHost())
+		log.Infof("\tStart %s success", instance.GetHost())
 	}
 
 	return nil
@@ -393,11 +393,11 @@ func RestartComponent(getter ExecutorGetter, instances []meta.Instance, timeout 
 	}
 
 	name := instances[0].ComponentName()
-	log2.Infof("Restarting component %s", name)
+	log.Infof("Restarting component %s", name)
 
 	for _, ins := range instances {
 		e := getter.Get(ins.GetHost())
-		log2.Infof("\tRestarting instance %s", ins.GetHost())
+		log.Infof("\tRestarting instance %s", ins.GetHost())
 
 		// Restart by systemd.
 		c := module.SystemdModuleConfig{
@@ -412,7 +412,7 @@ func RestartComponent(getter ExecutorGetter, instances []meta.Instance, timeout 
 			fmt.Println(string(stdout))
 		}
 		if len(stderr) > 0 {
-			log2.Errorf(string(stderr))
+			log.Errorf(string(stderr))
 		}
 
 		if err != nil {
@@ -423,11 +423,11 @@ func RestartComponent(getter ExecutorGetter, instances []meta.Instance, timeout 
 		err = ins.Ready(e, timeout)
 		if err != nil {
 			str := fmt.Sprintf("\t%s failed to restart: %s", ins.GetHost(), err)
-			log2.Errorf(str)
+			log.Errorf(str)
 			return errors.Annotatef(err, str)
 		}
 
-		log2.Infof("\tRestart %s success", ins.GetHost())
+		log.Infof("\tRestart %s success", ins.GetHost())
 	}
 
 	return nil
@@ -435,7 +435,7 @@ func RestartComponent(getter ExecutorGetter, instances []meta.Instance, timeout 
 
 func startInstance(getter ExecutorGetter, ins meta.Instance, timeout int64) error {
 	e := getter.Get(ins.GetHost())
-	log2.Infof("\tStarting instance %s %s:%d",
+	log.Infof("\tStarting instance %s %s:%d",
 		ins.ComponentName(),
 		ins.GetHost(),
 		ins.GetPort())
@@ -454,7 +454,7 @@ func startInstance(getter ExecutorGetter, ins meta.Instance, timeout int64) erro
 		fmt.Println(string(stdout))
 	}
 	if len(stderr) > 0 && !bytes.Contains(stderr, []byte("Created symlink ")) {
-		log2.Errorf(string(stderr))
+		log.Errorf(string(stderr))
 	}
 
 	if err != nil {
@@ -471,11 +471,11 @@ func startInstance(getter ExecutorGetter, ins meta.Instance, timeout int64) erro
 			ins.ComponentName(),
 			ins.GetHost(),
 			ins.GetPort(), err)
-		log2.Errorf(str)
+		log.Errorf(str)
 		return errors.Annotatef(err, str)
 	}
 
-	log2.Infof("\tStart %s %s:%d success",
+	log.Infof("\tStart %s %s:%d success",
 		ins.ComponentName(),
 		ins.GetHost(),
 		ins.GetPort())
@@ -490,7 +490,7 @@ func StartComponent(getter ExecutorGetter, instances []meta.Instance, options Op
 	}
 
 	name := instances[0].ComponentName()
-	log2.Infof("Starting component %s", name)
+	log.Infof("Starting component %s", name)
 
 	errg, _ := errgroup.WithContext(context.Background())
 
@@ -520,7 +520,7 @@ func StopMonitored(getter ExecutorGetter, instance meta.Instance, options meta.M
 	}
 	e := getter.Get(instance.GetHost())
 	for _, comp := range []string{meta.ComponentNodeExporter, meta.ComponentBlackboxExporter} {
-		log2.Infof("Stopping component %s", comp)
+		log.Infof("Stopping component %s", comp)
 
 		c := module.SystemdModuleConfig{
 			Unit:         fmt.Sprintf("%s-%d.service", comp, ports[comp]),
@@ -540,10 +540,10 @@ func StopMonitored(getter ExecutorGetter, instance meta.Instance, options meta.M
 			// NOTE: there will be a potential bug if the unit name is set
 			// wrong and the real unit still remains started.
 			if bytes.Contains(stderr, []byte(" not loaded.")) {
-				log2.Warnf(string(stderr))
+				log.Warnf(string(stderr))
 				err = nil // reset the error to avoid exiting
 			} else {
-				log2.Errorf(string(stderr))
+				log.Errorf(string(stderr))
 			}
 		}
 
@@ -559,7 +559,7 @@ func StopMonitored(getter ExecutorGetter, instance meta.Instance, options meta.M
 				instance.ComponentName(),
 				instance.GetHost(),
 				instance.GetPort(), err)
-			log2.Errorf(str)
+			log.Errorf(str)
 			return errors.Annotatef(err, str)
 		}
 	}
@@ -569,7 +569,7 @@ func StopMonitored(getter ExecutorGetter, instance meta.Instance, options meta.M
 
 func stopInstance(getter ExecutorGetter, ins meta.Instance) error {
 	e := getter.Get(ins.GetHost())
-	log2.Infof("\tStopping instance %s", ins.GetHost())
+	log.Infof("\tStopping instance %s", ins.GetHost())
 
 	// Stop by systemd.
 	c := module.SystemdModuleConfig{
@@ -589,10 +589,10 @@ func stopInstance(getter ExecutorGetter, ins meta.Instance) error {
 		// NOTE: there will be a potential bug if the unit name is set
 		// wrong and the real unit still remains started.
 		if bytes.Contains(stderr, []byte(" not loaded.")) {
-			log2.Warnf(string(stderr))
+			log.Warnf(string(stderr))
 			err = nil // reset the error to avoid exiting
 		} else {
-			log2.Errorf(string(stderr))
+			log.Errorf(string(stderr))
 		}
 	}
 
@@ -603,7 +603,7 @@ func stopInstance(getter ExecutorGetter, ins meta.Instance) error {
 			ins.GetPort())
 	}
 
-	log2.Infof("\tStop %s %s:%d success",
+	log.Infof("\tStop %s %s:%d success",
 		ins.ComponentName(),
 		ins.GetHost(),
 		ins.GetPort())
@@ -618,7 +618,7 @@ func StopComponent(getter ExecutorGetter, instances []meta.Instance) error {
 	}
 
 	name := instances[0].ComponentName()
-	log2.Infof("Stopping component %s", name)
+	log.Infof("Stopping component %s", name)
 
 	errg, _ := errgroup.WithContext(context.Background())
 
@@ -646,7 +646,7 @@ func PrintClusterStatus(getter ExecutorGetter, spec meta.Specification) (health 
 			continue
 		}
 
-		log2.Infof("Checking service state of %s", com.Name())
+		log.Infof("Checking service state of %s", com.Name())
 		errg, _ := errgroup.WithContext(context.Background())
 		for _, ins := range com.Instances() {
 			ins := ins
@@ -656,9 +656,9 @@ func PrintClusterStatus(getter ExecutorGetter, spec meta.Specification) (health 
 				active, err := GetServiceStatus(e, ins.ServiceName())
 				if err != nil {
 					health = false
-					log2.Errorf("\t%s\t%v", ins.GetHost(), err)
+					log.Errorf("\t%s\t%v", ins.GetHost(), err)
 				} else {
-					log2.Infof("\t%s\t%s", ins.GetHost(), active)
+					log.Infof("\t%s\t%s", ins.GetHost(), active)
 				}
 				return nil
 			})

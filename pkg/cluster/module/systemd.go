@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 )
 
 // scope can be either "system", "user" or "global"

@@ -15,15 +15,15 @@ package command
 
 import (
 	"fmt"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"os"
 	"path/filepath"
 
 	"github.com/fatih/color"
-	"github.com/pingcap-incubator/tiup/pkg/cliutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/ansible"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/ansible"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -74,11 +74,11 @@ func newImportCmd() *cobra.Command {
 			backupFile := filepath.Join(ansibleDir, fmt.Sprintf("tiup-%s.bak", inventoryFileName))
 			prompt := fmt.Sprintf("The ansible directory will be moved to %s after import.", backupDir)
 			if noBackup {
-				log2.Infof("The '--no-backup' flag is set, the ansible directory will be kept at its current location.")
+				log.Infof("The '--no-backup' flag is set, the ansible directory will be kept at its current location.")
 				prompt = fmt.Sprintf("The inventory file will be renamed to %s after import.", backupFile)
 			}
-			log2.Warnf("TiDB-Ansible and TiUP Cluster can NOT be used together, please DO NOT try to use ansible to manage the imported cluster anymore to avoid metadata conflict.")
-			log2.Infof(prompt)
+			log.Warnf("TiDB-Ansible and TiUP Cluster can NOT be used together, please DO NOT try to use ansible to manage the imported cluster anymore to avoid metadata conflict.")
+			log.Infof(prompt)
 			if !skipConfirm {
 				err = cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 				if err != nil {
@@ -131,16 +131,16 @@ func newImportCmd() *cobra.Command {
 				if err = tiuputils.Move(filepath.Join(ansibleDir, inventoryFileName), backupFile); err != nil {
 					return err
 				}
-				log2.Infof("Ansible inventory renamed to %s.", color.HiCyanString(backupFile))
+				log.Infof("Ansible inventory renamed to %s.", color.HiCyanString(backupFile))
 			} else {
 				// move original TiDB-Ansible directory to a staged location
 				if err = tiuputils.Move(ansibleDir, backupDir); err != nil {
 					return err
 				}
-				log2.Infof("Ansible inventory saved in %s.", color.HiCyanString(backupDir))
+				log.Infof("Ansible inventory saved in %s.", color.HiCyanString(backupDir))
 			}
 
-			log2.Infof("Cluster %s imported.", clsName)
+			log.Infof("Cluster %s imported.", clsName)
 			fmt.Printf("Try `%s` to show node list and status of the cluster.\n",
 				color.HiYellowString("%s display %s", cliutil.OsArgs0(), clsName))
 			return nil

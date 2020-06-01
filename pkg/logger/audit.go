@@ -15,14 +15,15 @@ package logger
 
 import (
 	"bytes"
-	utils2 "github.com/pingcap-incubator/tiup/pkg/utils"
 	"io/ioutil"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/pingcap-incubator/tiup/pkg/base52"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
+	utils2 "github.com/pingcap/tiup/pkg/utils"
+
+	"github.com/pingcap/tiup/pkg/base52"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

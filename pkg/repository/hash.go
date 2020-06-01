@@ -21,7 +21,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 )
 
 // HashFile returns the sha256/sha512 hashes and the file length of specific file

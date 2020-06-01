@@ -13,7 +13,7 @@
 
 package main
 
-import "github.com/pingcap-incubator/tiup/components/cluster/command"
+import "github.com/pingcap/tiup/components/cluster/command"
 
 func main() {
 	command.Execute()

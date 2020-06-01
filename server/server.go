@@ -20,9 +20,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
-	"github.com/pingcap-incubator/tiup/server/session"
-	"github.com/pingcap-incubator/tiup/server/store"
+	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap/tiup/server/session"
+	"github.com/pingcap/tiup/server/store"
 )
 
 type server struct {

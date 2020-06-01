@@ -25,13 +25,13 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/pingcap-incubator/tiup/components/playground/api"
-	"github.com/pingcap-incubator/tiup/pkg/environment"
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/repository"
-	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/components/playground/api"
+	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/repository"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiFlashInstance represent a running TiFlash

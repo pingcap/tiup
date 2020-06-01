@@ -16,7 +16,7 @@ package task
 import (
 	"strings"
 
-	"github.com/pingcap-incubator/tiup/pkg/cliutil/progress"
+	"github.com/pingcap/tiup/pkg/cliutil/progress"
 )
 
 // StepDisplay is a task that will display a progress bar for inner task.

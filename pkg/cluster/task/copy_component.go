@@ -16,7 +16,7 @@ package task
 import (
 	"fmt"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
 )
 
 // CopyComponent is used to copy all files related the specific version a component

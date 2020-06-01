@@ -14,15 +14,15 @@
 package operator
 
 import (
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"strconv"
 	"time"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/api"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/set"
 )
 
 // Upgrade the cluster.
@@ -55,7 +55,7 @@ func Upgrade(
 				pdClient := api.NewPDClient(clusterSpec.GetPDList(), 5*time.Second, nil)
 				switch component.Name() {
 				case meta.ComponentPD:
-					log2.Infof("Restarting component %s", component.Name())
+					log.Infof("Restarting component %s", component.Name())
 
 					for _, instance := range instances {
 						leader, err := pdClient.GetLeader()
@@ -78,7 +78,7 @@ func Upgrade(
 					}
 
 				case meta.ComponentTiKV:
-					log2.Infof("Restarting component %s", component.Name())
+					log.Infof("Restarting component %s", component.Name())
 					pdClient := api.NewPDClient(clusterSpec.GetPDList(), 5*time.Second, nil)
 					// Make sure there's leader of PD.
 					// Although we evict pd leader when restart pd,
@@ -91,7 +91,7 @@ func Upgrade(
 					for _, instance := range instances {
 						if err := pdClient.EvictStoreLeader(addr(instance), timeoutOpt); err != nil {
 							if clusterutil.IsTimeoutOrMaxRetry(err) {
-								log2.Warnf("Ignore evicting store leader from %s, %v", instance.ID(), err)
+								log.Warnf("Ignore evicting store leader from %s, %v", instance.ID(), err)
 							} else {
 								return errors.Annotatef(err, "failed to evict store leader %s", instance.GetHost())
 							}
@@ -116,7 +116,7 @@ func Upgrade(
 			if !options.Force && leaderAware.Exist(component.Name()) {
 				dmMasterClient := api.NewDMMasterClient(dmSpec.GetMasterList(), 5*time.Second, nil)
 				if component.Name() == meta.ComponentDMMaster {
-					log2.Infof("Restarting component %s", component.Name())
+					log.Infof("Restarting component %s", component.Name())
 
 					for _, instance := range instances {
 						leader, err := dmMasterClient.GetLeader(timeoutOpt)
