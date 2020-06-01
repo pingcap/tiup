@@ -132,7 +132,7 @@ func (env *Environment) UpdateComponents(specs []string, nightly, force bool) er
 		var v1specs []repository.ComponentSpec
 		for _, spec := range specs {
 			component, v := ParseCompVersion(spec)
-			if spec == TiUPName {
+			if component == TiUPName {
 				continue
 			}
 			v1specs = append(v1specs, repository.ComponentSpec{ID: component, Version: v.String(), Force: force, Nightly: nightly})
@@ -146,7 +146,7 @@ func (env *Environment) UpdateComponents(specs []string, nightly, force bool) er
 	}
 	for _, spec := range specs {
 		component, v := ParseCompVersion(spec)
-		if spec == TiUPName {
+		if component == TiUPName {
 			continue
 		}
 		if nightly {
