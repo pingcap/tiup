@@ -17,10 +17,12 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -33,7 +35,8 @@ import (
 
 func newDisplayCmd() *cobra.Command {
 	var (
-		clusterName string
+		clusterName       string
+		showDashboardOnly bool
 	)
 	cmd := &cobra.Command{
 		Use:   "display <cluster-name>",
@@ -44,11 +47,22 @@ func newDisplayCmd() *cobra.Command {
 			}
 
 			clusterName = args[0]
-			if err := displayClusterMeta(clusterName, &gOpt); err != nil {
-				return err
+
+			if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+				return errors.Errorf("Cluster %s not found", clusterName)
 			}
-			if err := displayClusterTopology(clusterName, &gOpt); err != nil {
-				return err
+
+			if showDashboardOnly {
+				if err := displayDashboardInfo(clusterName); err != nil {
+					return err
+				}
+			} else {
+				if err := displayClusterMeta(clusterName, &gOpt); err != nil {
+					return err
+				}
+				if err := displayClusterTopology(clusterName, &gOpt); err != nil {
+					return err
+				}
 			}
 
 			metadata, err := meta.ClusterMetadata(clusterName)
@@ -61,15 +75,39 @@ func newDisplayCmd() *cobra.Command {
 
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only display specified roles")
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only display specified nodes")
+	cmd.Flags().BoolVar(&showDashboardOnly, "dashboard", false, "Only display TiDB Dashboard information")
 
 	return cmd
 }
 
-func displayClusterMeta(clusterName string, opt *operator.Options) error {
-	if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-		return errors.Errorf("cannot display non-exists cluster %s", clusterName)
+func displayDashboardInfo(clusterName string) error {
+	metadata, err := meta.ClusterMetadata(clusterName)
+	if err != nil {
+		return err
 	}
 
+	pdEndpoints := make([]string, 0)
+	for _, pd := range metadata.Topology.PDServers {
+		pdEndpoints = append(pdEndpoints, fmt.Sprintf("%s:%d", pd.Host, pd.ClientPort))
+	}
+
+	pdApi := api.NewPDClient(pdEndpoints, 2*time.Second, nil)
+	dashboardAddr, err := pdApi.GetDashboardAddress()
+	if err != nil {
+		return fmt.Errorf("failed to retrieve TiDB Dashboard instance from PD: %s", err)
+	}
+	if dashboardAddr == "auto" {
+		return fmt.Errorf("TiDB Dashboard is not initialized, please start PD and try again")
+	} else if dashboardAddr == "none" {
+		return fmt.Errorf("TiDB Dashboard is disabled")
+	}
+
+	fmt.Println(dashboardAddr)
+
+	return nil
+}
+
+func displayClusterMeta(clusterName string, opt *operator.Options) error {
 	clsMeta, err := meta.ClusterMetadata(clusterName)
 	if err != nil {
 		return err
