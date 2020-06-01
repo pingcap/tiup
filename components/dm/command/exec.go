@@ -16,13 +16,13 @@ package command
 import (
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/task"
-	"github.com/pingcap-incubator/tiup/pkg/logger"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
-	"github.com/pingcap-incubator/tiup/pkg/set"
-	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/logger"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/set"
+	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -101,14 +101,14 @@ func newExecCmd() *cobra.Command {
 				if !ok {
 					continue
 				}
-				log2.Infof("Outputs of %s on %s:",
+				log.Infof("Outputs of %s on %s:",
 					color.CyanString(opt.command),
 					color.CyanString(host))
 				if len(stdout) > 0 {
-					log2.Infof("%s:\n%s", color.GreenString("stdout"), stdout)
+					log.Infof("%s:\n%s", color.GreenString("stdout"), stdout)
 				}
 				if len(stderr) > 0 {
-					log2.Infof("%s:\n%s", color.RedString("stderr"), stderr)
+					log.Infof("%s:\n%s", color.RedString("stderr"), stderr)
 				}
 			}
 

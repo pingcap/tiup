@@ -20,8 +20,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // fileSource is a high-level interface for providing file-like objects, either as objects in memory or purely on disk.

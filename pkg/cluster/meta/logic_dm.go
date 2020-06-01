@@ -21,14 +21,13 @@ import (
 	"reflect"
 	"strings"
 
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
-
 	"github.com/google/uuid"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/executor"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/template/scripts"
-	system "github.com/pingcap-incubator/tiup/pkg/cluster/template/systemd"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
+	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
+	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
 type dmInstance struct {
@@ -330,7 +329,7 @@ func (i *DMMasterInstance) ScaleConfig(e executor.TiOpsExecutor, b Specification
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithPeerPort(spec.PeerPort).AppendEndpoints(c.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_dm-master_%s_%d.sh", i.GetHost(), i.GetPort()))
-	log2.Infof("script path: %s", fp)
+	log.Infof("script path: %s", fp)
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}

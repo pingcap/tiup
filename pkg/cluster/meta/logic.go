@@ -24,18 +24,17 @@ import (
 	"strings"
 	"time"
 
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
-
 	"github.com/google/uuid"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/api"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/executor"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/module"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/template/config"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/template/scripts"
-	system "github.com/pingcap-incubator/tiup/pkg/cluster/template/systemd"
-	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/module"
+	"github.com/pingcap/tiup/pkg/cluster/template/config"
+	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
+	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/set"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v2"
 )
@@ -685,7 +684,7 @@ func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b Specification, clus
 	).WithPeerPort(spec.PeerPort).WithNumaNode(spec.NumaNode).WithClientPort(spec.ClientPort).AppendEndpoints(c.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
-	log2.Infof("script path: %s", fp)
+	log.Infof("script path: %s", fp)
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
@@ -771,7 +770,7 @@ func (i *TiFlashInstance) checkIncorrectDataDir() error {
 // DataDir represents TiFlash's DataDir
 func (i *TiFlashInstance) DataDir() string {
 	if err := i.checkIncorrectDataDir(); err != nil {
-		log2.Errorf(err.Error())
+		log.Errorf(err.Error())
 	}
 	dataDir := reflect.ValueOf(i.InstanceSpec).FieldByName("DataDir")
 	if !dataDir.IsValid() {

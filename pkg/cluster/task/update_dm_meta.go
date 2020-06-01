@@ -17,9 +17,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
 
-	"github.com/pingcap-incubator/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/set"
 )
 
 // UpdateDMMeta is used to maintain the DM meta information

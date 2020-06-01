@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pingcap-incubator/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/spf13/cobra"
 )
 

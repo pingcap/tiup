@@ -15,19 +15,20 @@ package meta
 
 import (
 	"fmt"
-	utils2 "github.com/pingcap-incubator/tiup/pkg/utils"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
 
+	utils2 "github.com/pingcap/tiup/pkg/utils"
+
 	"go.etcd.io/etcd/clientv3"
 
 	"github.com/creasty/defaults"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/api"
-	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
 	pdserverapi "github.com/pingcap/pd/v4/server/api"
+	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/set"
 )
 
 const (

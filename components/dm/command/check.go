@@ -19,19 +19,18 @@ import (
 	"path/filepath"
 	"strings"
 
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
-	utils2 "github.com/pingcap-incubator/tiup/pkg/utils"
-
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup/pkg/cliutil"
-	"github.com/pingcap-incubator/tiup/pkg/cliutil/prepare"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	operator "github.com/pingcap-incubator/tiup/pkg/cluster/operation"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/task"
-	"github.com/pingcap-incubator/tiup/pkg/logger"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cliutil/prepare"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/logger"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -46,7 +45,7 @@ type checkOptions struct {
 func newCheckCmd() *cobra.Command {
 	opt := checkOptions{
 		opr:          &operator.CheckOptions{},
-		identityFile: path.Join(utils2.UserHome(), ".ssh", "id_rsa"),
+		identityFile: path.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
 		Use:   "check <topology.yml>",
@@ -79,7 +78,7 @@ func newCheckCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&opt.user, "user", utils2.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
+	cmd.Flags().StringVar(&opt.user, "user", utils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
 	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", opt.identityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.usePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 
@@ -330,7 +329,7 @@ func handleCheckResults(ctx *task.Context, host string, opt *checkOptions, t *ta
 			}
 			msg, err := fixFailedChecks(ctx, host, r, t)
 			if err != nil {
-				log2.Debugf("%s: fail to apply fix to %s (%s)", host, r.Name, err)
+				log.Debugf("%s: fail to apply fix to %s (%s)", host, r.Name, err)
 			}
 			if msg != "" {
 				// show auto fixing info

@@ -27,8 +27,8 @@ import (
 	"time"
 
 	"github.com/cavaliercoder/grab"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // ErrNotFound represents the resource not exists.

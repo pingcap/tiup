@@ -14,13 +14,14 @@
 package meta
 
 import (
-	utils2 "github.com/pingcap-incubator/tiup/pkg/utils"
 	"os"
 	"os/user"
 	"path"
 
-	tiuplocaldata "github.com/pingcap-incubator/tiup/pkg/localdata"
+	utils2 "github.com/pingcap/tiup/pkg/utils"
+
 	"github.com/pingcap/errors"
+	tiuplocaldata "github.com/pingcap/tiup/pkg/localdata"
 )
 
 // sub directory names

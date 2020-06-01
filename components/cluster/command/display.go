@@ -15,19 +15,19 @@ package command
 
 import (
 	"fmt"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"sort"
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/pingcap-incubator/tiup/pkg/cliutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	operator "github.com/pingcap-incubator/tiup/pkg/cluster/operation"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/task"
-	"github.com/pingcap-incubator/tiup/pkg/set"
-	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/set"
+	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -111,14 +111,14 @@ func destroyTombstoneIfNeed(clusterName string, metadata *meta.ClusterMeta, opt 
 		return nil
 	}
 
-	log2.Infof("Start destroy Tombstone nodes: %v ...", nodes)
+	log.Infof("Start destroy Tombstone nodes: %v ...", nodes)
 
 	_, err = operator.DestroyTombstone(ctx, topo, false /* returnNodesOnly */, opt)
 	if err != nil {
 		return errors.AddStack(err)
 	}
 
-	log2.Infof("Destroy success")
+	log.Infof("Destroy success")
 
 	return meta.SaveClusterMeta(clusterName, metadata)
 }

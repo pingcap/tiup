@@ -19,10 +19,9 @@ import (
 	"path/filepath"
 	"strconv"
 
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
-
 	"github.com/creasty/defaults"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/relex/aini"
 	"gopkg.in/ini.v1"
 	"gopkg.in/yaml.v2"
@@ -196,11 +195,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *meta.ClusterMeta, inv *aini
 				tmpIns.LogDir = logDir
 			}
 
-			log2.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
+			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
 
 			clsMeta.Topology.TiDBServers = append(clsMeta.Topology.TiDBServers, tmpIns)
 		}
-		log2.Infof("Imported %d TiDB node(s).", len(clsMeta.Topology.TiDBServers))
+		log.Infof("Imported %d TiDB node(s).", len(clsMeta.Topology.TiDBServers))
 	}
 
 	// tikv_servers
@@ -241,11 +240,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *meta.ClusterMeta, inv *aini
 				tmpIns.LogDir = logDir
 			}
 
-			log2.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
+			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
 
 			clsMeta.Topology.TiKVServers = append(clsMeta.Topology.TiKVServers, tmpIns)
 		}
-		log2.Infof("Imported %d TiKV node(s).", len(clsMeta.Topology.TiKVServers))
+		log.Infof("Imported %d TiKV node(s).", len(clsMeta.Topology.TiKVServers))
 	}
 
 	// pd_servers
@@ -289,11 +288,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *meta.ClusterMeta, inv *aini
 				tmpIns.LogDir = logDir
 			}
 
-			log2.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
+			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
 
 			clsMeta.Topology.PDServers = append(clsMeta.Topology.PDServers, tmpIns)
 		}
-		log2.Infof("Imported %d PD node(s).", len(clsMeta.Topology.PDServers))
+		log.Infof("Imported %d PD node(s).", len(clsMeta.Topology.PDServers))
 	}
 
 	// tiflash_servers
@@ -361,11 +360,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *meta.ClusterMeta, inv *aini
 				tmpIns.TmpDir = tmpDir
 			}
 
-			log2.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
+			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
 
 			clsMeta.Topology.TiFlashServers = append(clsMeta.Topology.TiFlashServers, tmpIns)
 		}
-		log2.Infof("Imported %d TiFlash node(s).", len(clsMeta.Topology.TiFlashServers))
+		log.Infof("Imported %d TiFlash node(s).", len(clsMeta.Topology.TiFlashServers))
 	}
 
 	// spark_master
@@ -408,11 +407,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *meta.ClusterMeta, inv *aini
 				tmpIns.Retention = _retention
 			}
 
-			log2.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
+			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
 
 			clsMeta.Topology.Monitors = append(clsMeta.Topology.Monitors, tmpIns)
 		}
-		log2.Infof("Imported %d monitoring node(s).", len(clsMeta.Topology.Monitors))
+		log.Infof("Imported %d monitoring node(s).", len(clsMeta.Topology.Monitors))
 	}
 
 	// monitored_servers
@@ -450,11 +449,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *meta.ClusterMeta, inv *aini
 				tmpIns.ClusterPort, _ = strconv.Atoi(clusterPort)
 			}
 
-			log2.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
+			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
 
 			clsMeta.Topology.Alertmanager = append(clsMeta.Topology.Alertmanager, tmpIns)
 		}
-		log2.Infof("Imported %d Alertmanager node(s).", len(clsMeta.Topology.Alertmanager))
+		log.Infof("Imported %d Alertmanager node(s).", len(clsMeta.Topology.Alertmanager))
 	}
 
 	// grafana_servers
@@ -483,11 +482,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *meta.ClusterMeta, inv *aini
 				tmpIns.Port, _ = strconv.Atoi(port)
 			}
 
-			log2.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
+			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
 
 			clsMeta.Topology.Grafana = append(clsMeta.Topology.Grafana, tmpIns)
 		}
-		log2.Infof("Imported %d Grafana node(s).", len(clsMeta.Topology.Alertmanager))
+		log.Infof("Imported %d Grafana node(s).", len(clsMeta.Topology.Alertmanager))
 	}
 
 	// kafka_exporter_servers
@@ -526,11 +525,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *meta.ClusterMeta, inv *aini
 				tmpIns.LogDir = logDir
 			}
 
-			log2.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
+			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
 
 			clsMeta.Topology.PumpServers = append(clsMeta.Topology.PumpServers, tmpIns)
 		}
-		log2.Infof("Imported %d Pump node(s).", len(clsMeta.Topology.PumpServers))
+		log.Infof("Imported %d Pump node(s).", len(clsMeta.Topology.PumpServers))
 	}
 
 	// drainer_servers
@@ -557,11 +556,11 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *meta.ClusterMeta, inv *aini
 				tmpIns.Port, _ = strconv.Atoi(port)
 			}
 
-			log2.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
+			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
 
 			clsMeta.Topology.Drainers = append(clsMeta.Topology.Drainers, tmpIns)
 		}
-		log2.Infof("Imported %d Drainer node(s).", len(clsMeta.Topology.Drainers))
+		log.Infof("Imported %d Drainer node(s).", len(clsMeta.Topology.Drainers))
 	}
 
 	// TODO: node_exporter and blackbox_exporter on custom port is not supported yet

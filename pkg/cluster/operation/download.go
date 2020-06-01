@@ -17,12 +17,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
-	tiupver "github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/utils"
+	tiupver "github.com/pingcap/tiup/pkg/version"
 )
 
 // Download the specific version of a component from

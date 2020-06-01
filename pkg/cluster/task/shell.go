@@ -15,9 +15,9 @@ package task
 
 import (
 	"fmt"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
 // Shell is used to create directory on the target host
@@ -34,7 +34,7 @@ func (m *Shell) Execute(ctx *Context) error {
 		return ErrNoExecutor
 	}
 
-	log2.Infof("Run command on %s(sudo:%v): %s", m.host, m.sudo, m.command)
+	log.Infof("Run command on %s(sudo:%v): %s", m.host, m.sudo, m.command)
 
 	stdout, stderr, err := exec.Execute(m.command, m.sudo)
 	ctx.SetOutputs(m.host, stdout, stderr)

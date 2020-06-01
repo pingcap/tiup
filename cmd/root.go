@@ -18,9 +18,9 @@ import (
 	"os"
 
 	"github.com/fatih/color"
-	"github.com/pingcap-incubator/tiup/pkg/environment"
-	"github.com/pingcap-incubator/tiup/pkg/repository"
-	"github.com/pingcap-incubator/tiup/pkg/version"
+	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/repository"
+	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
 

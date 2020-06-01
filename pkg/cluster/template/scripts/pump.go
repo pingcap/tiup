@@ -19,7 +19,7 @@ import (
 	"path"
 	"text/template"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/pkg/cluster/embed"
 )
 
 // PumpScript represent the data to generate Pump config

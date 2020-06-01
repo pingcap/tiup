@@ -1,6 +1,6 @@
 # Manifest format and repository layout
 
-See [#120](https://github.com/pingcap-incubator/tiup/issues/120).
+See [#120](https://github.com/pingcap/tiup/issues/120).
 
 ## The Update Framework
 

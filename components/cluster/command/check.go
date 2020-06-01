@@ -19,19 +19,18 @@ import (
 	"path/filepath"
 	"strings"
 
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
-
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup/pkg/cliutil"
-	"github.com/pingcap-incubator/tiup/pkg/cliutil/prepare"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	operator "github.com/pingcap-incubator/tiup/pkg/cluster/operation"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/task"
-	"github.com/pingcap-incubator/tiup/pkg/logger"
-	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cliutil/prepare"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/logger"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -350,7 +349,7 @@ func handleCheckResults(ctx *task.Context, host string, opt *checkOptions, t *ta
 			}
 			msg, err := fixFailedChecks(ctx, host, r, t)
 			if err != nil {
-				log2.Debugf("%s: fail to apply fix to %s (%s)", host, r.Name, err)
+				log.Debugf("%s: fail to apply fix to %s (%s)", host, r.Name, err)
 			}
 			if msg != "" {
 				// show auto fixing info

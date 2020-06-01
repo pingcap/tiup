@@ -12,7 +12,7 @@ COMMIT    := $(shell git describe --no-match --always --dirty)
 BRANCH    := $(shell git rev-parse --abbrev-ref HEAD)
 BUILDTIME := $(shell date '+%Y-%m-%d %T %z')
 
-REPO := github.com/pingcap-incubator/tiup
+REPO := github.com/pingcap/tiup
 LDFLAGS := -w -s
 LDFLAGS += -X "$(REPO)/pkg/version.GitHash=$(COMMIT)"
 LDFLAGS += -X "$(REPO)/pkg/version.GitBranch=$(BRANCH)"
@@ -82,19 +82,19 @@ unit-test: cover-dir
 
 build_integration_test:
 	$(GOTEST) -c -cover -covermode=count \
-		-coverpkg=github.com/pingcap-incubator/tiup/... \
+		-coverpkg=github.com/pingcap/tiup/... \
 		-o tests/tiup-cluster/bin/tiup-cluster.test \
-		github.com/pingcap-incubator/tiup/components/cluster;
+		github.com/pingcap/tiup/components/cluster;
 	$(GOTEST) -c -cover -covermode=count \
-			-coverpkg=github.com/pingcap-incubator/tiup/... \
+			-coverpkg=github.com/pingcap/tiup/... \
 			-o tests/tiup-cluster/bin/tiup-dm.test \
-			github.com/pingcap-incubator/tiup/components/dm
+			github.com/pingcap/tiup/components/dm
 
 integration_test:
 	@$(GOTEST) -c -cover -covermode=count \
 		-coverpkg=./... \
 		-o tests/tiup_home/bin/tiup \
-		github.com/pingcap-incubator/tiup/ ;
+		github.com/pingcap/tiup/ ;
 	@$(GOTEST) -c -cover -covermode=count \
 			-coverpkg=./... \
 			-o tests/tiup_home/bin/package ./components/package/ ;

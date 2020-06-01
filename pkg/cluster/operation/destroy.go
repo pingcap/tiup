@@ -15,14 +15,14 @@ package operator
 
 import (
 	"fmt"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"strings"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/module"
-	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/module"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/set"
 )
 
 // Destroy the cluster.
@@ -70,14 +70,14 @@ func Destroy(
 // DeleteGlobalDirs deletes all global directory if them empty
 func DeleteGlobalDirs(getter ExecutorGetter, host string, options meta.GlobalOptions) error {
 	e := getter.Get(host)
-	log2.Infof("Clean global directories %s", host)
+	log.Infof("Clean global directories %s", host)
 	for _, dir := range []string{options.LogDir, options.DeployDir, options.DataDir} {
 		if dir == "" {
 			continue
 		}
 		dir = clusterutil.Abs(options.User, dir)
 
-		log2.Infof("\tClean directory %s on instance %s", dir, host)
+		log.Infof("\tClean directory %s on instance %s", dir, host)
 
 		c := module.ShellModuleConfig{
 			Command:  fmt.Sprintf("rmdir %s > /dev/null 2>&1 || true", dir),
@@ -91,7 +91,7 @@ func DeleteGlobalDirs(getter ExecutorGetter, host string, options meta.GlobalOpt
 			fmt.Println(string(stdout))
 		}
 		if len(stderr) > 0 {
-			log2.Errorf(string(stderr))
+			log.Errorf(string(stderr))
 		}
 
 		if err != nil {
@@ -99,17 +99,17 @@ func DeleteGlobalDirs(getter ExecutorGetter, host string, options meta.GlobalOpt
 		}
 	}
 
-	log2.Infof("Clean global directories %s success", host)
+	log.Infof("Clean global directories %s success", host)
 	return nil
 }
 
 // DestroyMonitored destroy the monitored service.
 func DestroyMonitored(getter ExecutorGetter, inst meta.Instance, options meta.MonitoredOptions, timeout int64) error {
 	e := getter.Get(inst.GetHost())
-	log2.Infof("Destroying monitored %s", inst.GetHost())
+	log.Infof("Destroying monitored %s", inst.GetHost())
 
-	log2.Infof("Destroying monitored")
-	log2.Infof("\tDestroying instance %s", inst.GetHost())
+	log.Infof("Destroying monitored")
+	log.Infof("\tDestroying instance %s", inst.GetHost())
 
 	// Stop by systemd.
 	delPaths := make([]string, 0)
@@ -124,7 +124,7 @@ func DestroyMonitored(getter ExecutorGetter, inst meta.Instance, options meta.Mo
 	if !inst.IsImported() {
 		delPaths = append(delPaths, options.DeployDir)
 	} else {
-		log2.Warnf("Monitored deploy dir %s not deleted for TiDB-Ansible imported instance %s.",
+		log.Warnf("Monitored deploy dir %s not deleted for TiDB-Ansible imported instance %s.",
 			options.DeployDir, inst.InstanceName())
 	}
 
@@ -144,7 +144,7 @@ func DestroyMonitored(getter ExecutorGetter, inst meta.Instance, options meta.Mo
 		fmt.Println(string(stdout))
 	}
 	if len(stderr) > 0 {
-		log2.Errorf(string(stderr))
+		log.Errorf(string(stderr))
 	}
 
 	if err != nil {
@@ -153,16 +153,16 @@ func DestroyMonitored(getter ExecutorGetter, inst meta.Instance, options meta.Mo
 
 	if err := meta.PortStopped(e, options.NodeExporterPort, timeout); err != nil {
 		str := fmt.Sprintf("%s failed to destroy node exportoer: %s", inst.GetHost(), err)
-		log2.Errorf(str)
+		log.Errorf(str)
 		return errors.Annotatef(err, str)
 	}
 	if err := meta.PortStopped(e, options.BlackboxExporterPort, timeout); err != nil {
 		str := fmt.Sprintf("%s failed to destroy blackbox exportoer: %s", inst.GetHost(), err)
-		log2.Errorf(str)
+		log.Errorf(str)
 		return errors.Annotatef(err, str)
 	}
 
-	log2.Infof("Destroy monitored on %s success", inst.GetHost())
+	log.Infof("Destroy monitored on %s success", inst.GetHost())
 
 	return nil
 }
@@ -174,11 +174,11 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, timeout 
 	}
 
 	name := instances[0].ComponentName()
-	log2.Infof("Destroying component %s", name)
+	log.Infof("Destroying component %s", name)
 
 	for _, ins := range instances {
 		e := getter.Get(ins.GetHost())
-		log2.Infof("Destroying instance %s", ins.GetHost())
+		log.Infof("Destroying instance %s", ins.GetHost())
 
 		// Stop by systemd.
 		delPaths := make([]string, 0)
@@ -199,11 +199,11 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, timeout 
 				delPaths = append(delPaths, logDir)
 			}
 		} else {
-			log2.Warnf("Deploy dir %s not deleted for TiDB-Ansible imported instance %s.",
+			log.Warnf("Deploy dir %s not deleted for TiDB-Ansible imported instance %s.",
 				ins.DeployDir(), ins.InstanceName())
 		}
 		delPaths = append(delPaths, fmt.Sprintf("/etc/systemd/system/%s", ins.ServiceName()))
-		log2.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delPaths, " "))
+		log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delPaths, " "))
 		c := module.ShellModuleConfig{
 			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delPaths, " ")),
 			Sudo:     true, // the .service files are in a directory owned by root
@@ -217,7 +217,7 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, timeout 
 			fmt.Println(string(stdout))
 		}
 		if len(stderr) > 0 {
-			log2.Errorf(string(stderr))
+			log.Errorf(string(stderr))
 		}
 
 		if err != nil {
@@ -227,12 +227,12 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, timeout 
 		err = ins.WaitForDown(e, timeout)
 		if err != nil {
 			str := fmt.Sprintf("%s failed to destroy: %s", ins.GetHost(), err)
-			log2.Errorf(str)
+			log.Errorf(str)
 			return errors.Annotatef(err, str)
 		}
 
-		log2.Infof("Destroy %s success", ins.GetHost())
-		log2.Infof("- Destroy %s paths: %v", ins.ComponentName(), delPaths)
+		log.Infof("Destroy %s success", ins.GetHost())
+		log.Infof("- Destroy %s paths: %v", ins.ComponentName(), delPaths)
 	}
 
 	return nil

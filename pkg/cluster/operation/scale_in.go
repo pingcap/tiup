@@ -16,15 +16,15 @@ package operator
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"strconv"
 	"time"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/api"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/set"
 )
 
 // TODO: We can make drainer not async.
@@ -124,10 +124,10 @@ func ScaleInCluster(
 				}
 				// just try stop and destroy
 				if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
-					log2.Warnf("failed to stop %s: %v", component.Name(), err)
+					log.Warnf("failed to stop %s: %v", component.Name(), err)
 				}
 				if err := DestroyComponent(getter, []meta.Instance{instance}, options.OptTimeout); err != nil {
-					log2.Warnf("failed to destroy %s: %v", component.Name(), err)
+					log.Warnf("failed to destroy %s: %v", component.Name(), err)
 				}
 
 				continue
@@ -189,7 +189,7 @@ func ScaleInCluster(
 		maxReplicas := config.MaxReplicas
 
 		if len(tikvInstances) < maxReplicas {
-			log2.Warnf(fmt.Sprintf("TiKV instance number %d will be less than max-replicas setting after scale-in. TiFlash won't be able to receive data from leader before TiKV instance number reach %d", len(tikvInstances), maxReplicas))
+			log.Warnf(fmt.Sprintf("TiKV instance number %d will be less than max-replicas setting after scale-in. TiFlash won't be able to receive data from leader before TiKV instance number reach %d", len(tikvInstances), maxReplicas))
 		}
 	}
 
@@ -241,7 +241,7 @@ func ScaleInCluster(
 					return errors.Annotatef(err, "failed to destroy %s", component.Name())
 				}
 			} else {
-				log2.Warnf("The component `%s` will be destroyed when display cluster info when it become tombstone, maybe exists in several minutes or hours",
+				log.Warnf("The component `%s` will be destroyed when display cluster info when it become tombstone, maybe exists in several minutes or hours",
 					component.Name())
 			}
 		}
@@ -330,10 +330,10 @@ func ScaleInDMCluster(
 				}
 				// just try stop and destroy
 				if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
-					log2.Warnf("failed to stop %s: %v", component.Name(), err)
+					log.Warnf("failed to stop %s: %v", component.Name(), err)
 				}
 				if err := DestroyComponent(getter, []meta.Instance{instance}, options.OptTimeout); err != nil {
-					log2.Warnf("failed to destroy %s: %v", component.Name(), err)
+					log.Warnf("failed to destroy %s: %v", component.Name(), err)
 				}
 
 				continue

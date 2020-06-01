@@ -22,23 +22,22 @@ import (
 	"path/filepath"
 	"strings"
 
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
-	telemetry2 "github.com/pingcap-incubator/tiup/pkg/telemetry"
-
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup/pkg/cliutil"
-	"github.com/pingcap-incubator/tiup/pkg/cliutil/prepare"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	operator "github.com/pingcap-incubator/tiup/pkg/cluster/operation"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/report"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/task"
-	"github.com/pingcap-incubator/tiup/pkg/errutil"
-	"github.com/pingcap-incubator/tiup/pkg/logger"
-	"github.com/pingcap-incubator/tiup/pkg/set"
-	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cliutil/prepare"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/report"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/errutil"
+	"github.com/pingcap/tiup/pkg/logger"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/set"
+	telemetry2 "github.com/pingcap/tiup/pkg/telemetry"
+	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -105,7 +104,7 @@ func newDeploy() *cobra.Command {
 }
 
 func confirmTopology(clusterName, version string, topo *meta.ClusterSpecification, patchedRoles set.StringSet) error {
-	log2.Infof("Please confirm your topology:")
+	log.Infof("Please confirm your topology:")
 
 	cyan := color.New(color.FgCyan, color.Bold)
 	fmt.Printf("TiDB Cluster: %s\n", cyan.Sprint(clusterName))
@@ -132,11 +131,11 @@ func confirmTopology(clusterName, version string, topo *meta.ClusterSpecificatio
 
 	cliutil.PrintTable(clusterTable, true)
 
-	log2.Warnf("Attention:")
-	log2.Warnf("    1. If the topology is not what you expected, check your yaml file.")
-	log2.Warnf("    2. Please confirm there is no port/directory conflicts in same host.")
+	log.Warnf("Attention:")
+	log.Warnf("    1. If the topology is not what you expected, check your yaml file.")
+	log.Warnf("    2. Please confirm there is no port/directory conflicts in same host.")
 	if len(patchedRoles) != 0 {
-		log2.Errorf("    3. The component marked as `patched` has been replaced by previours patch command.")
+		log.Errorf("    3. The component marked as `patched` has been replaced by previours patch command.")
 	}
 
 	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
@@ -342,7 +341,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 	}
 
 	hint := color.New(color.Bold).Sprintf("%s start %s", cliutil.OsArgs0(), clusterName)
-	log2.Infof("Deployed cluster `%s` successfully, you can start the cluster via `%s`", clusterName, hint)
+	log.Infof("Deployed cluster `%s` successfully, you can start the cluster via `%s`", clusterName, hint)
 	return nil
 }
 

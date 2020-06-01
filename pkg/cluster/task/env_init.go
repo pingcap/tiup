@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/module"
+	"github.com/pingcap/tiup/pkg/cluster/module"
 )
 
 var (

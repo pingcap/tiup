@@ -24,9 +24,9 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 )
 

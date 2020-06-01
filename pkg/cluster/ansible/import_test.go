@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	"github.com/creasty/defaults"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
 	. "github.com/pingcap/check"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
 	"gopkg.in/yaml.v2"
 )
 

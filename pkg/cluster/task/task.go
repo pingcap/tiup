@@ -16,12 +16,12 @@ package task
 import (
 	stderrors "errors"
 	"fmt"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"strings"
 	"sync"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/executor"
-	operator "github.com/pingcap-incubator/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
 var (
@@ -176,7 +176,7 @@ func (s *Serial) Execute(ctx *Context) error {
 	for _, t := range s.inner {
 		if !isDisplayTask(t) {
 			if !s.hideDetailDisplay {
-				log2.Infof("+ [ Serial ] - %s", t.String())
+				log.Infof("+ [ Serial ] - %s", t.String())
 			}
 		}
 		ctx.ev.PublishTaskBegin(t)
@@ -229,7 +229,7 @@ func (pt *Parallel) Execute(ctx *Context) error {
 			defer wg.Done()
 			if !isDisplayTask(t) {
 				if !pt.hideDetailDisplay {
-					log2.Infof("+ [Parallel] - %s", t.String())
+					log.Infof("+ [Parallel] - %s", t.String())
 				}
 			}
 			ctx.ev.PublishTaskBegin(t)

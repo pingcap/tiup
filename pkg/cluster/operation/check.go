@@ -16,18 +16,18 @@ package operator
 import (
 	"encoding/json"
 	"fmt"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"math"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/AstroProfundis/sysinfo"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/executor"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/module"
 	"github.com/pingcap/tidb-insight/collector/insight"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/module"
+	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
 // CheckOptions control the list of checks to be performed
@@ -169,7 +169,7 @@ func checkNTP(ntpInfo *insight.TimeStat) *CheckResult {
 	}
 
 	if ntpInfo.Status == "none" {
-		log2.Infof("The NTPd daemon may be not installed, skip.")
+		log.Infof("The NTPd daemon may be not installed, skip.")
 		return result
 	}
 

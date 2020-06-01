@@ -18,8 +18,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 )
 
 // Repository represents a components repository. All logic concerning manifests and the locations of tarballs
