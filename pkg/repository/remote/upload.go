@@ -107,7 +107,7 @@ func (t *transporter) Open(tarbal string) error {
 		return err
 	}
 
-	sha512, err := utils.SHA256(file)
+	sha512, err := utils.SHA512(file)
 	if err != nil {
 		file.Close()
 		return err

@@ -24,6 +24,7 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
+	ru "github.com/pingcap/tiup/pkg/repository/utils"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/set"
@@ -330,7 +331,7 @@ func cloneComponents(repo *V1Repository,
 
 func download(targetDir, tmpDir string, repo *V1Repository, item *v1manifest.VersionItem) error {
 	validate := func(dir string) error {
-		hashes, n, err := HashFile(dir, item.URL)
+		hashes, n, err := ru.HashFile(dir, item.URL)
 		if err != nil {
 			return errors.AddStack(err)
 		}
