@@ -15,6 +15,7 @@ package command
 
 import (
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -102,7 +103,13 @@ func displayDashboardInfo(clusterName string) error {
 		return fmt.Errorf("TiDB Dashboard is disabled")
 	}
 
-	fmt.Println(dashboardAddr)
+	u, err := url.Parse(dashboardAddr)
+	if err != nil {
+		return fmt.Errorf("unknown TiDB Dashboard PD instance: %s", dashboardAddr)
+	}
+
+	u.Path = "/dashboard/"
+	fmt.Println(u.String())
 
 	return nil
 }
