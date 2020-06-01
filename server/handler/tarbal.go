@@ -44,11 +44,13 @@ func (h *tarbalUploader) upload(r *http.Request) (*simpleResponse, statusError) 
 
 	if err := h.sm.Begin(sid); err != nil {
 		if err == session.ErrorSessionConflict {
+			log.Warnf("Session already exists, this is a retransmission, try to restart session")
 			// Reset manifest to avoid conflict
 			if err := h.sm.Load(sid).ResetManifest(); err != nil {
 				log.Errorf("Failed to restart session: %s", err.Error())
 				return nil, ErrorInternalError
 			}
+			log.Infof("Restart session success")
 		} else {
 			log.Errorf("Failed to start session: %s", err.Error())
 			return nil, ErrorInternalError
@@ -70,7 +72,7 @@ func (h *tarbalUploader) upload(r *http.Request) (*simpleResponse, statusError) 
 	defer file.Close()
 
 	if err := txn.Write(handler.Filename, file); err != nil {
-		// TODO: log error here
+		log.Errorf("Error to write tarbal: %s", err.Error())
 		return nil, ErrorInternalError
 	}
 
