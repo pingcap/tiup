@@ -19,7 +19,7 @@ jobs:
         cases:
           - "test_cmd"
           - "test_upgrade"
-          - "test_dm_cmd"
+          # - "test_dm_cmd"
     env:
       working-directory: ${{ github.workspace   }}/go/src/github.com/${{ github.repository   }}
     steps:
