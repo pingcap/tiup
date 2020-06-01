@@ -91,8 +91,8 @@ func displayDashboardInfo(clusterName string) error {
 		pdEndpoints = append(pdEndpoints, fmt.Sprintf("%s:%d", pd.Host, pd.ClientPort))
 	}
 
-	pdApi := api.NewPDClient(pdEndpoints, 2*time.Second, nil)
-	dashboardAddr, err := pdApi.GetDashboardAddress()
+	pdAPI := api.NewPDClient(pdEndpoints, 2*time.Second, nil)
+	dashboardAddr, err := pdAPI.GetDashboardAddress()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve TiDB Dashboard instance from PD: %s", err)
 	}
