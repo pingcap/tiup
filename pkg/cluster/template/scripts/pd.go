@@ -16,12 +16,12 @@ package scripts
 import (
 	"bytes"
 	"errors"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"io/ioutil"
 	"path"
 	"text/template"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
 // PDScript represent the data to generate pd config
@@ -168,7 +168,7 @@ func (c *PDScaleScript) AppendEndpoints(ends ...*PDScript) *PDScaleScript {
 // Config generate the config file data.
 func (c *PDScaleScript) Config() ([]byte, error) {
 	fp := path.Join("/templates", "scripts", "run_pd_scale.sh.tpl")
-	log2.Infof("script path: %s", fp)
+	log.Infof("script path: %s", fp)
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

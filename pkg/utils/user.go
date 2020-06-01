@@ -1,15 +1,16 @@
 package utils
 
 import (
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"os/user"
+
+	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
 // CurrentUser returns current login user
 func CurrentUser() string {
 	user, err := user.Current()
 	if err != nil {
-		log2.Errorf("Get current user: %s", err)
+		log.Errorf("Get current user: %s", err)
 		return "root"
 	}
 	return user.Username
@@ -19,7 +20,7 @@ func CurrentUser() string {
 func UserHome() string {
 	user, err := user.Current()
 	if err != nil {
-		log2.Errorf("Get current user home: %s", err)
+		log.Errorf("Get current user home: %s", err)
 		return "root"
 	}
 	return user.HomeDir

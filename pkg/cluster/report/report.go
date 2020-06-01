@@ -18,8 +18,8 @@ import (
 	"os"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	tiuptele "github.com/pingcap-incubator/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/localdata"
+	tiuptele "github.com/pingcap/tiup/pkg/telemetry"
 )
 
 // Enable return true if we enable telemetry.

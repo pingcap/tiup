@@ -29,9 +29,9 @@ import (
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
-	"github.com/pingcap-incubator/tiup/pkg/repository/crypto"
-	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/repository/crypto"
+	"github.com/pingcap/tiup/pkg/set"
 )
 
 // ErrorInsufficientKeys indicates that the key number is less than threshold

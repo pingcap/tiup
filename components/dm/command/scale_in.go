@@ -14,20 +14,20 @@
 package command
 
 import (
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup/pkg/cliutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	operator "github.com/pingcap-incubator/tiup/pkg/cluster/operation"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/task"
-	"github.com/pingcap-incubator/tiup/pkg/logger"
-	"github.com/pingcap-incubator/tiup/pkg/set"
-	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/logger"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/set"
+	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -48,7 +48,7 @@ func newScaleInCmd() *cobra.Command {
 					color.HiYellowString(clusterName)); err != nil {
 					return err
 				}
-				log2.Infof("Scale-in nodes...")
+				log.Infof("Scale-in nodes...")
 			}
 
 			logger.EnableAuditLog()
@@ -131,7 +131,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 		return errors.Trace(err)
 	}
 
-	log2.Infof("Scaled cluster `%s` in successfully", clusterName)
+	log.Infof("Scaled cluster `%s` in successfully", clusterName)
 
 	return nil
 }

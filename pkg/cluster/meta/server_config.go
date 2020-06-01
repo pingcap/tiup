@@ -21,12 +21,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
-
 	"github.com/BurntSushi/toml"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/executor"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
 const (
@@ -195,7 +194,7 @@ func HandleImportPathMigration(clsName string) error {
 	targetPath := path.Join(dirPath, AnsibleImportedConfigPath)
 	_, err := os.Stat(targetPath)
 	if os.IsNotExist(err) {
-		log2.Warnf("renaming '%s/config' to '%s'", dirPath, targetPath)
+		log.Warnf("renaming '%s/config' to '%s'", dirPath, targetPath)
 
 		if lckErr := clusterutil.Retry(func() error {
 			_, lckErr := os.Stat(path.Join(dirPath, migrateLockName))
@@ -212,7 +211,7 @@ func HandleImportPathMigration(clsName string) error {
 		defer func() {
 			rmErr := os.Remove(path.Join(dirPath, migrateLockName))
 			if rmErr != nil {
-				log2.Errorf("error unlocking config dir, %s", rmErr)
+				log.Errorf("error unlocking config dir, %s", rmErr)
 			}
 		}()
 

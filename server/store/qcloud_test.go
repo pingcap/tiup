@@ -14,8 +14,8 @@
 package store
 
 import (
-	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
 	. "github.com/pingcap/check"
+	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 )
 
 var _ = Suite(&TestQCloudStoreSuite{})

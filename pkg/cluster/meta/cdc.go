@@ -17,8 +17,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/executor"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/template/scripts"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 )
 
 // CDCComponent represents CDC component.

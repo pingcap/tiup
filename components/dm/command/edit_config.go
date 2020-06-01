@@ -15,18 +15,18 @@ package command
 
 import (
 	"bytes"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"io"
 	"io/ioutil"
 	"os"
 
 	"github.com/fatih/color"
-	"github.com/pingcap-incubator/tiup/pkg/cliutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/edit"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	"github.com/pingcap-incubator/tiup/pkg/logger"
-	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/edit"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/logger"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
@@ -99,12 +99,12 @@ func editTopo(clusterName string, metadata *meta.DMMeta) error {
 	newTopo := new(meta.DMTopologySpecification)
 	err = yaml.UnmarshalStrict(newData, newTopo)
 	if err != nil {
-		log2.Infof("Failed to parse topology file: %v", err)
+		log.Infof("Failed to parse topology file: %v", err)
 		return errors.AddStack(err)
 	}
 
 	if bytes.Equal(data, newData) {
-		log2.Infof("The file has nothing changed")
+		log.Infof("The file has nothing changed")
 		return nil
 	}
 
@@ -118,7 +118,7 @@ func editTopo(clusterName string, metadata *meta.DMMeta) error {
 		}
 	}
 
-	log2.Infof("Apply the change...")
+	log.Infof("Apply the change...")
 
 	metadata.Topology = newTopo
 	err = meta.SaveDMMeta(clusterName, metadata)
@@ -126,7 +126,7 @@ func editTopo(clusterName string, metadata *meta.DMMeta) error {
 		return errors.Annotate(err, "failed to save")
 	}
 
-	log2.Infof("Apply change successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", cliutil.OsArgs0(), clusterName)
+	log.Infof("Apply change successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", cliutil.OsArgs0(), clusterName)
 
 	return nil
 }

@@ -14,7 +14,7 @@
 package meta
 
 import (
-	tiupmeta "github.com/pingcap-incubator/tiup/pkg/environment"
+	tiupmeta "github.com/pingcap/tiup/pkg/environment"
 )
 
 var _env *tiupmeta.Environment

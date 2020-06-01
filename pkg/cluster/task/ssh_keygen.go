@@ -23,8 +23,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/crypto/ssh"
 )
 

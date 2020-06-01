@@ -18,11 +18,11 @@ import (
 	"os"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup/pkg/cliutil"
-	"github.com/pingcap-incubator/tiup/pkg/file"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
-	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/file"
+	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/version"
 	"gopkg.in/yaml.v2"
 )
 

@@ -19,13 +19,13 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/gorilla/mux"
-	"github.com/pingcap-incubator/tiup/pkg/logger/log"
-	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
-	"github.com/pingcap-incubator/tiup/server/model"
-	"github.com/pingcap-incubator/tiup/server/session"
-	"github.com/pingcap-incubator/tiup/server/store"
 	"github.com/pingcap/fn"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/server/model"
+	"github.com/pingcap/tiup/server/session"
+	"github.com/pingcap/tiup/server/store"
 )
 
 // SignComponent handles requests to re-sign component manifest

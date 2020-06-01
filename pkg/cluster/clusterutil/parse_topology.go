@@ -17,8 +17,8 @@ import (
 	"io/ioutil"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup/pkg/cliutil"
-	"github.com/pingcap-incubator/tiup/pkg/errutil"
+	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/errutil"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )

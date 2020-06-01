@@ -1,6 +1,6 @@
-[![LICENSE](https://img.shields.io/github/license/pingcap/tidb.svg)](https://github.com/pingcap-incubator/tiup/blob/master/LICENSE)
+[![LICENSE](https://img.shields.io/github/license/pingcap/tidb.svg)](https://github.com/pingcap/tiup/blob/master/LICENSE)
 [![Language](https://img.shields.io/badge/Language-Go-blue.svg)](https://golang.org/)
-[![Go Report Card](https://goreportcard.com/badge/github.com/pingcap-incubator/tiup)](https://goreportcard.com/badge/github.com/pingcap-incubator/tiup)
+[![Go Report Card](https://goreportcard.com/badge/github.com/pingcap/tiup)](https://goreportcard.com/badge/github.com/pingcap/tiup)
 [![Coverage Status](https://codecov.io/gh/pingcap-incubator/tiup/branch/master/graph/badge.svg)](https://codecov.io/gh/pingcap-incubator/tiup/)
 
 # What is TiUP
@@ -46,7 +46,7 @@ See our [doc](doc/user/README.md) for more information on how to use TiUp.
 
 # Contributing to TiUp
 
-Contributions of code, tests, docs, and bug reports are welcome! To get started take a look at our [open issues](https://github.com/pingcap-incubator/tiup/issues).
+Contributions of code, tests, docs, and bug reports are welcome! To get started take a look at our [open issues](https://github.com/pingcap/tiup/issues).
 
 For docs on how to build, test, and run TiUp, see our [dev docs](docs/dev/README.md).
 

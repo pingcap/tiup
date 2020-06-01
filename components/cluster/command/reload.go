@@ -15,14 +15,14 @@ package command
 
 import (
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	operator "github.com/pingcap-incubator/tiup/pkg/cluster/operation"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/task"
-	"github.com/pingcap-incubator/tiup/pkg/logger"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/logger"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -63,7 +63,7 @@ func newReloadCmd() *cobra.Command {
 				return errors.Trace(err)
 			}
 
-			log2.Infof("Reloaded cluster `%s` successfully", clusterName)
+			log.Infof("Reloaded cluster `%s` successfully", clusterName)
 
 			return nil
 		},

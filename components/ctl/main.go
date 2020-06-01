@@ -8,8 +8,8 @@ import (
 	"path"
 
 	"github.com/fatih/color"
-	"github.com/pingcap-incubator/tiup/pkg/localdata"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 

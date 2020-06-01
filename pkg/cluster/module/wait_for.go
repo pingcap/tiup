@@ -16,12 +16,12 @@ package module
 import (
 	"bytes"
 	"fmt"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"time"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/executor"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
 // WaitForConfig is the configurations of WaitFor module.
@@ -86,7 +86,7 @@ func (w *WaitFor) Execute(e executor.TiOpsExecutor) (err error) {
 		}
 		return err
 	}, retryOpt); err != nil {
-		log2.Debugf("retry error: %s", err)
+		log.Debugf("retry error: %s", err)
 		return errors.Errorf("timed out waiting for port %d to be %s after %s", w.c.Port, w.c.State, w.c.Timeout)
 	}
 	return nil

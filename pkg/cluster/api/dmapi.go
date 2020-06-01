@@ -17,10 +17,11 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
-	utils2 "github.com/pingcap-incubator/tiup/pkg/utils"
 	"strings"
 	"time"
+
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	utils2 "github.com/pingcap/tiup/pkg/utils"
 
 	"github.com/gogo/protobuf/jsonpb"
 	dmpb "github.com/pingcap/dm/dm/pb"

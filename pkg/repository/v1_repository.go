@@ -22,11 +22,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
-	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
-	"github.com/pingcap-incubator/tiup/pkg/utils"
-	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
 

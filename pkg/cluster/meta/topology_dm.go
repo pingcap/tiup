@@ -20,9 +20,9 @@ import (
 	"strings"
 
 	"github.com/creasty/defaults"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/api"
-	"github.com/pingcap-incubator/tiup/pkg/set"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/set"
 )
 
 type (

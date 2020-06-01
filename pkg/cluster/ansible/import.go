@@ -15,13 +15,13 @@ package ansible
 
 import (
 	"fmt"
-	log2 "github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/relex/aini"
 )
 
@@ -36,13 +36,13 @@ func ReadInventory(dir, inventoryFileName string) (string, *meta.ClusterMeta, *a
 	}
 	defer inventoryFile.Close()
 
-	log2.Infof("Found inventory file %s, parsing...", inventoryFile.Name())
+	log.Infof("Found inventory file %s, parsing...", inventoryFile.Name())
 	clsName, clsMeta, inventory, err := parseInventoryFile(inventoryFile)
 	if err != nil {
 		return "", nil, inventory, err
 	}
 
-	log2.Infof("Found cluster \"%s\" (%s), deployed with user %s.",
+	log.Infof("Found cluster \"%s\" (%s), deployed with user %s.",
 		clsName, clsMeta.Version, clsMeta.User)
 	return clsName, clsMeta, inventory, err
 }

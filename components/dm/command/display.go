@@ -15,21 +15,22 @@ package command
 
 import (
 	"fmt"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/clusterutil"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+
 	"github.com/fatih/color"
-	"github.com/pingcap-incubator/tiup/pkg/cliutil"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/api"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/meta"
-	operator "github.com/pingcap-incubator/tiup/pkg/cluster/operation"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/task"
-	"github.com/pingcap-incubator/tiup/pkg/set"
-	tiuputils "github.com/pingcap-incubator/tiup/pkg/utils"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/set"
+	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )

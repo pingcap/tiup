@@ -15,17 +15,18 @@ package executor
 
 import (
 	"fmt"
-	utils2 "github.com/pingcap-incubator/tiup/pkg/utils"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
+	utils2 "github.com/pingcap/tiup/pkg/utils"
+
 	"github.com/appleboy/easyssh-proxy"
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap-incubator/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cliutil"
 	"go.uber.org/zap"
 )
 

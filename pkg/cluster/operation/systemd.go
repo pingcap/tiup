@@ -16,9 +16,9 @@ package operator
 import (
 	"strings"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/executor"
-	"github.com/pingcap-incubator/tiup/pkg/cluster/module"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/module"
 )
 
 // GetServiceStatus return the Acitive line of status.

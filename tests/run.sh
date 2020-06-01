@@ -120,7 +120,7 @@ done
 
 # Run playground integration test in github action environment
 if [ $GITHUB_ACTION ]; then
-  GO_FAILPOINTS=github.com/pingcap-incubator/tiup/components/playground/terminateEarly=return \
+  GO_FAILPOINTS=github.com/pingcap/tiup/components/playground/terminateEarly=return \
    TIUP_HOME=$TIUP_HOME TIUP_MIRRORS=$TIUP_MIRRORS \
    tiup -T test-playground playground \
    -test.coverprofile="$TEST_DIR/../cover/cov.integration-test.playground.out" v4.0.0-rc --monitor

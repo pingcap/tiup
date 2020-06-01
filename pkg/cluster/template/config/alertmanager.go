@@ -17,7 +17,7 @@ import (
 	"io/ioutil"
 	"path"
 
-	"github.com/pingcap-incubator/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/pkg/cluster/embed"
 )
 
 // AlertManagerConfig represent the data to generate AlertManager config

@@ -14,7 +14,7 @@
 package model
 
 import (
-	"github.com/pingcap-incubator/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 )
 
 // ComponentManifest represents xxx.json
