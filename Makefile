@@ -10,13 +10,11 @@ SHELL   := /usr/bin/env bash
 
 COMMIT    := $(shell git describe --no-match --always --dirty)
 BRANCH    := $(shell git rev-parse --abbrev-ref HEAD)
-BUILDTIME := $(shell date '+%Y-%m-%d %T %z')
 
 REPO := github.com/pingcap/tiup
 LDFLAGS := -w -s
 LDFLAGS += -X "$(REPO)/pkg/version.GitHash=$(COMMIT)"
 LDFLAGS += -X "$(REPO)/pkg/version.GitBranch=$(BRANCH)"
-LDFLAGS += -X "$(REPO)/pkg/version.BuildTime=$(BUILDTIME)"
 LDFLAGS += $(EXTRA_LDFLAGS)
 
 FILES     := $$(find . -name "*.go")
@@ -27,7 +25,9 @@ FAILPOINT_DISABLE := $$(tools/bin/failpoint-ctl disable)
 default: build check
 
 # Build TiUP and all components
-build: tiup playground client cluster dm bench
+build: tiup components
+
+components: playground client cluster dm bench
 
 tiup:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
