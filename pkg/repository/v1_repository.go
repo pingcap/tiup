@@ -392,8 +392,8 @@ func (r *V1Repository) updateComponentManifest(id string) (*v1manifest.Component
 		return nil, errors.Trace(err)
 	}
 
-	if oldVersion != 0 && component.Version <= oldVersion {
-		return nil, fmt.Errorf("component manifest for %s has a version number <= the old manifest (%v, %v)", id, component.Version, oldVersion)
+	if oldVersion != 0 && component.Version < oldVersion {
+		return nil, fmt.Errorf("component manifest for %s has a version number < the old manifest (%v, %v)", id, component.Version, oldVersion)
 	}
 
 	err = r.local.SaveComponentManifest(manifest, filename)
