@@ -5,8 +5,8 @@ The cluster component deploys production clusters as quickly as playground deplo
 ```bash
 $ tiup cluster
 The component `cluster` is not installed; downloading from repository.
-download https://tiup-mirrors.pingcap.com/cluster-v0.4.9-darwin-amd64.tar.gz 15.32 MiB / 15.34 MiB 99.90% 10.04 MiB p/s                                                   
-Starting component `cluster`: /Users/joshua/.tiup/components/cluster/v0.4.9/cluster 
+download https://tiup-mirrors.pingcap.com/cluster-v0.4.9-darwin-amd64.tar.gz 15.32 MiB / 15.34 MiB 99.90% 10.04 MiB p/s
+Starting component `cluster`: /Users/joshua/.tiup/components/cluster/v0.4.9/cluster
 Deploy a TiDB cluster for production
 
 Usage:
@@ -50,7 +50,7 @@ This command requires us to provide the name of the cluster, the version of TiDB
 
 ```yaml
 ---
-  
+
 pd_servers:
   - host: 172.16.5.134
     name: pd-134
