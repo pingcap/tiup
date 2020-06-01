@@ -191,7 +191,7 @@ func delComp(repo, id, version string) error {
 
 // the `repo publish` sub command
 func newMirrorPublishCmd(env *environment.Environment) *cobra.Command {
-	privPath := env.Profile().Path("private.json")
+	privPath := env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
 	endpoint := "http://127.0.0.1:8989"
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH

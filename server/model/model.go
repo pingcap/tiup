@@ -88,9 +88,6 @@ func (m *model) UpdateIndexManifest(f func(*IndexManifest) *IndexManifest) error
 		return err
 	}
 
-	if err := m.txn.WriteManifest("index.json", manifest); err != nil {
-		return err
-	}
 	return m.txn.WriteManifest(fmt.Sprintf("%d.index.json", manifest.Signed.Version), manifest)
 }
 

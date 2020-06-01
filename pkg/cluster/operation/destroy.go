@@ -189,6 +189,16 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, timeout 
 			delPaths = append(delPaths, strings.Split(ins.DataDir(), ",")...)
 		}
 
+		// check if service is down before deleting files
+		if err := ins.WaitForDown(e, timeout); err != nil {
+			str := fmt.Sprintf("%s error destroying %s: %s", ins.GetHost(), ins.ComponentName(), err)
+			log.Errorf(str)
+			if !clusterutil.IsTimeoutOrMaxRetry(err) {
+				return errors.Annotatef(err, str)
+			}
+			log.Warnf("You may manually check if the process on %s:%d is still running", ins.GetHost(), ins.GetPort())
+		}
+
 		// In TiDB-Ansible, deploy dir are shared by all components on the same
 		// host, so not deleting it.
 		// TODO: this may leave undeleted files when destroying the cluster, fix
@@ -222,13 +232,6 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, timeout 
 
 		if err != nil {
 			return errors.Annotatef(err, "failed to destroy: %s", ins.GetHost())
-		}
-
-		err = ins.WaitForDown(e, timeout)
-		if err != nil {
-			str := fmt.Sprintf("%s failed to destroy: %s", ins.GetHost(), err)
-			log.Errorf(str)
-			return errors.Annotatef(err, str)
 		}
 
 		log.Infof("Destroy %s success", ins.GetHost())

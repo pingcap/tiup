@@ -121,10 +121,10 @@ jobs:
           name: test_cmd-cover
           path: ${{env.working-directory}}/cover
 
-#      - uses: actions/download-artifact@v1
-#        with:
-#          name: test_dm_cmd-cover
-#          path: ${{env.working-directory}}/cover
+      # - uses: actions/download-artifact@v1
+      #  with:
+      #    name: test_dm_cmd-cover
+      #    path: ${{env.working-directory}}/cover
 
       - uses: actions/download-artifact@v1
         with:
