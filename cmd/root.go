@@ -18,7 +18,7 @@ import (
 	"os"
 
 	"github.com/fatih/color"
-	"github.com/pingcap-incubator/tiup/pkg/meta"
+	"github.com/pingcap-incubator/tiup/pkg/environment"
 	"github.com/pingcap-incubator/tiup/pkg/repository"
 	"github.com/pingcap-incubator/tiup/pkg/version"
 	"github.com/spf13/cobra"
@@ -34,7 +34,7 @@ func init() {
 		binPath  string
 		tag      string
 		repoOpts repository.Options
-		env      *meta.Environment
+		env      *environment.Environment
 	)
 
 	rootCmd = &cobra.Command{
@@ -55,7 +55,7 @@ the latest stable version will be downloaded from the repository.`,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if binary != "" {
-				component, ver := meta.ParseCompVersion(binary)
+				component, ver := environment.ParseCompVersion(binary)
 				selectedVer, err := env.SelectInstalledVersion(component, ver)
 				if err != nil {
 					return err
@@ -92,7 +92,7 @@ the latest stable version will be downloaded from the repository.`,
 		SilenceUsage: true,
 	}
 
-	e, err := meta.InitEnv(repoOpts)
+	e, err := environment.InitEnv(repoOpts)
 	if err != nil {
 		fmt.Println(color.RedString("Error: %v", err))
 		os.Exit(1)

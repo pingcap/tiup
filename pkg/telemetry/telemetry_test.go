@@ -1,8 +1,24 @@
+// Copyright 2020 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package telemetry
 
 import (
+	"context"
+	"encoding/json"
 	"io/ioutil"
-	"os"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/pingcap/check"
@@ -10,42 +26,44 @@ import (
 
 func Test(t *testing.T) { check.TestingT(t) }
 
-type teleSuite struct{}
+var _ = check.Suite(&TelemetrySuite{})
 
-var _ = check.Suite(&teleSuite{})
+type TelemetrySuite struct {
+}
 
-func (s *teleSuite) TestTelemetry(c *check.C) {
-	// get a temp file and remove it.
-	file, err := ioutil.TempFile("", "")
+func (s *TelemetrySuite) TestReport(c *check.C) {
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		dst, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(400)
+			return
+		}
+
+		msg := new(Report)
+		err = json.Unmarshal(dst, msg)
+		if err != nil {
+			w.WriteHeader(400)
+			return
+		}
+
+		if msg.EventUUID == "" {
+			w.WriteHeader(400)
+			return
+		}
+	}))
+
+	defer ts.Close()
+
+	tele := NewTelemetry()
+	tele.cli = ts.Client()
+	tele.url = ts.URL
+
+	msg := new(Report)
+
+	err := tele.Report(context.Background(), msg)
+	c.Assert(err, check.NotNil)
+
+	msg.EventUUID = "dfdfdf"
+	err = tele.Report(context.Background(), msg)
 	c.Assert(err, check.IsNil)
-
-	fname := file.Name()
-	file.Close()
-	err = os.Remove(fname)
-	c.Assert(err, check.IsNil)
-
-	// Should no error and get a default meta.
-	meta, err := LoadFrom(fname)
-	c.Assert(err, check.IsNil)
-	c.Assert(meta.Status, check.Equals, defaultStatus)
-	c.Assert(len(meta.UUID), check.Greater, 0)
-
-	// Save and load back
-	err = meta.SaveTo(fname)
-	c.Assert(err, check.IsNil)
-
-	var meta2 *Meta
-	meta2, err = LoadFrom(fname)
-	c.Assert(err, check.IsNil)
-	c.Assert(meta2, check.DeepEquals, meta)
-
-	// Update UUID
-	meta2.UUID = NewUUID()
-	err = meta2.SaveTo(fname)
-	c.Assert(err, check.IsNil)
-
-	var meta3 *Meta
-	meta3, err = LoadFrom(fname)
-	c.Assert(err, check.IsNil)
-	c.Assert(meta3, check.DeepEquals, meta2)
 }

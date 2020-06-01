@@ -15,7 +15,7 @@ package tui
 
 import (
 	"github.com/cheynewallace/tabby"
-	"github.com/pingcap-incubator/tiup/pkg/mock"
+	"github.com/pingcap-incubator/tiup/pkg/utils/mock"
 )
 
 // PrintTable accepts a matrix of strings and print them as ASCII table to terminal

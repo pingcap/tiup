@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pingcap-incubator/tiup/pkg/assets"
+	"github.com/pingcap-incubator/tiup/pkg/cluster/template/install"
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap-incubator/tiup/pkg/repository/v0manifest"
@@ -238,7 +238,7 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 		}
 	}
 
-	return assets.WriteLocalInstallScript(filepath.Join(targetDir, "local_install.sh"))
+	return install.WriteLocalInstallScript(filepath.Join(targetDir, "local_install.sh"))
 }
 
 func cloneComponents(repo *V1Repository,

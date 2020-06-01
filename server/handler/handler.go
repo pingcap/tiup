@@ -16,7 +16,7 @@ package handler
 import (
 	"context"
 
-	"github.com/pingcap-incubator/tiup/pkg/log"
+	"github.com/pingcap-incubator/tiup/pkg/logger/log"
 	"github.com/pingcap/fn"
 )
 
