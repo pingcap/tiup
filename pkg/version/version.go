@@ -27,8 +27,6 @@ var (
 	TiUPVerPatch = 0
 	// TiUPVerName is alternative name of the version
 	TiUPVerName = "tiup"
-	// BuildTime is the time when binary is built
-	BuildTime = "Unknown"
 	// GitHash is the current git commit hash
 	GitHash = "Unknown"
 	// GitBranch is the current git branch name
@@ -73,7 +71,6 @@ func (v *TiUPVersion) String() string {
 
 // TiUPBuild is the info of building environment
 type TiUPBuild struct {
-	BuildTime string `json:"buildTime"`
 	GitHash   string `json:"gitHash"`
 	GitBranch string `json:"gitBranch"`
 	GoVersion string `json:"goVersion"`
@@ -82,7 +79,6 @@ type TiUPBuild struct {
 // NewTiUPBuildInfo creates a TiUPBuild object
 func NewTiUPBuildInfo() *TiUPBuild {
 	return &TiUPBuild{
-		BuildTime: BuildTime,
 		GitHash:   GitHash,
 		GitBranch: GitBranch,
 		GoVersion: runtime.Version(),
@@ -91,5 +87,5 @@ func NewTiUPBuildInfo() *TiUPBuild {
 
 // String converts TiUPBuild to a string
 func (v *TiUPBuild) String() string {
-	return fmt.Sprintf("Go Version: %s\nGit Branch: %s\nGitHash: %s\nBuild Time: %s", v.GoVersion, v.GitBranch, v.GitHash, v.BuildTime)
+	return fmt.Sprintf("Go Version: %s\nGit Branch: %s\nGitHash: %s", v.GoVersion, v.GitBranch, v.GitHash)
 }

@@ -23,7 +23,7 @@ import (
 )
 
 // Max alive time of a session
-const maxAliveTime = 3600 * time.Second
+const maxAliveTime = 600 * time.Second
 
 var (
 	// ErrorSessionConflict indicates that a same session existed
@@ -55,6 +55,7 @@ func (s *sessionManager) Begin(id string) error {
 	if s.Load(id) != nil {
 		return ErrorSessionConflict
 	}
+	log.Debugf("Begin new session: %s", id)
 	txn, err := s.store.Begin()
 	if err != nil {
 		return err
@@ -89,5 +90,6 @@ func (s *sessionManager) Load(id string) store.FsTxn {
 
 // Delele delete a session
 func (s *sessionManager) Delete(id string) {
+	log.Debugf("Delete session: %s", id)
 	s.txns.Delete(id)
 }
