@@ -44,8 +44,8 @@ type CloneOptions struct {
 
 // CloneMirror clones a local mirror from the remote repository
 func CloneMirror(repo *V1Repository, components []string, targetDir string, selectedVersions []string, options CloneOptions) error {
-	fmt.Printf("start to clone mirror, targetDir is %s, selectedVersions are %s\n", targetDir, selectedVersions)
-	fmt.Println("if this does not meet expectations, please abort this process, read `tiup mirror clone --help` and run again")
+	fmt.Printf("Start to clone mirror, targetDir is %s, selectedVersions are [%s]\n", targetDir, strings.Join(selectedVersions, ","))
+	fmt.Println("If this does not meet expectations, please abort this process, read `tiup mirror clone --help` and run again")
 
 	if utils.IsNotExist(targetDir) {
 		if err := os.MkdirAll(targetDir, 0755); err != nil {
