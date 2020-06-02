@@ -25,6 +25,8 @@ import (
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
+	"github.com/juju/errors"
+	ru "github.com/pingcap/tiup/pkg/repository/utils"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
@@ -43,9 +45,6 @@ type Transporter interface {
 
 type transporter struct {
 	tarFile     *os.File
-	tarInfo     os.FileInfo
-	sha256      string
-	sha512      string
 	os          string
 	arch        string
 	entry       string
@@ -53,6 +52,7 @@ type transporter struct {
 	version     string
 	description string
 	endpoint    string
+	filehash    v1manifest.FileHash
 }
 
 // New returns a Transporter
@@ -83,41 +83,21 @@ func (t *transporter) WithArch(arch string) Transporter {
 }
 
 func (t *transporter) Open(tarbal string) error {
-	info, err := os.Stat(tarbal)
+	hashes, length, err := ru.HashFile(tarbal)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
-	t.tarInfo = info
+
+	t.filehash = v1manifest.FileHash{
+		Hashes: hashes,
+		Length: uint(length),
+	}
 
 	file, err := os.Open(tarbal)
 	if err != nil {
 		return err
 	}
 	t.tarFile = file
-
-	sha256, err := utils.SHA256(file)
-	if err != nil {
-		file.Close()
-		return err
-	}
-	t.sha256 = sha256
-
-	_, err = file.Seek(0, io.SeekStart)
-	if err != nil {
-		return err
-	}
-
-	sha512, err := utils.SHA256(file)
-	if err != nil {
-		file.Close()
-		return err
-	}
-	t.sha512 = sha512
-
-	if _, err := file.Seek(0, io.SeekStart); err != nil {
-		file.Close()
-		return err
-	}
 
 	return nil
 }
@@ -127,7 +107,11 @@ func (t *transporter) Close() error {
 }
 
 func (t *transporter) Upload() error {
-	postAddr := fmt.Sprintf("%s/api/v1/tarball/%s", t.endpoint, t.sha256)
+	sha256 := t.filehash.Hashes[v1manifest.SHA256]
+	if sha256 == "" {
+		return errors.New("sha256 not found for tarbal")
+	}
+	postAddr := fmt.Sprintf("%s/api/v1/tarball/%s", t.endpoint, sha256)
 	tarbalName := fmt.Sprintf("%s-%s-%s-%s.tar.gz", t.component, t.version, t.os, t.arch)
 	resp, err := utils.PostFile(t.tarFile, postAddr, "file", tarbalName)
 	if err != nil {
@@ -137,6 +121,10 @@ func (t *transporter) Upload() error {
 }
 
 func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) error {
+	sha256 := t.filehash.Hashes[v1manifest.SHA256]
+	if sha256 == "" {
+		return errors.New("sha256 not found for tarbal")
+	}
 	id, err := key.ID()
 	if err != nil {
 		return err
@@ -160,13 +148,7 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 		Entry:    t.entry,
 		Released: time.Now().Format(time.RFC3339),
 		URL:      fmt.Sprintf("/%s-%s-%s-%s.tar.gz", t.component, t.version, t.os, t.arch),
-		FileHash: v1manifest.FileHash{
-			Hashes: map[string]string{
-				v1manifest.SHA256: t.sha256,
-				v1manifest.SHA512: t.sha512,
-			},
-			Length: uint(t.tarInfo.Size()),
-		},
+		FileHash: t.filehash,
 	}
 
 	payload, err := cjson.Marshal(m)
@@ -190,7 +172,7 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 		return err
 	}
 	bodyBuf := bytes.NewBuffer(payload)
-	addr := fmt.Sprintf("%s/api/v1/component/%s/%s", t.endpoint, t.sha256, t.component)
+	addr := fmt.Sprintf("%s/api/v1/component/%s/%s", t.endpoint, sha256, t.component)
 	resp, err := http.Post(addr, "text/json", bodyBuf)
 	if err != nil {
 		return err
