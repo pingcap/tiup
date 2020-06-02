@@ -64,6 +64,11 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 			return err
 		}
 	}
+	if utils.IsNotExist(keyDir) {
+		if err := os.MkdirAll(keyDir, 0755); err != nil {
+			return err
+		}
+	}
 	defer os.RemoveAll(tmpDir)
 
 	fmt.Println("Arch", options.Archs)
