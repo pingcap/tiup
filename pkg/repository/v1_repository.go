@@ -214,14 +214,14 @@ func (r *V1Repository) selectVersion(id string, versions map[string]v1manifest.V
 
 // Postcondition: if returned error is nil, then the local snapshot and timestamp are up to date and return the snapshot
 func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
-	changed, hash, err := r.checkTimestamp()
+	changed, tsManifest, err := r.checkTimestamp()
 	if v1manifest.IsSignatureError(errors.Cause(err)) {
 		// The signature is wrong, update our signatures from the root manifest and try again.
 		err = r.updateLocalRoot()
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
-		changed, hash, err = r.checkTimestamp()
+		changed, tsManifest, err = r.checkTimestamp()
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
@@ -241,12 +241,21 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 		return &snapshot, nil
 	}
 
-	manifest, err := r.fetchManifestWithHash(v1manifest.ManifestURLSnapshot, &snapshot, hash)
+	hash := tsManifest.Signed.(*v1manifest.Timestamp).SnapshotHash()
+	manifest, err := r.fetchManifestWithHash(v1manifest.ManifestURLSnapshot, &snapshot, &hash)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 
-	return &snapshot, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameSnapshot)
+	// Persistent the snapshot first and prevent the snapshot.json/timestamp.json inconsistent
+	// 1. timestamp.json will fetch every time
+	// 2. saved timestamp.json and crash before save snapshot.json will cause snapshot.json doesn't be updated anymore
+	err = r.local.SaveManifest(manifest, v1manifest.ManifestFilenameSnapshot)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &snapshot, r.local.SaveManifest(tsManifest, v1manifest.ManifestFilenameTimestamp)
 }
 
 // FnameWithVersion returns a filename, which contains the specific version number
@@ -417,15 +426,14 @@ func (r *V1Repository) FetchComponent(item *v1manifest.VersionItem) (io.Reader, 
 
 // CheckTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash matches our local one.
 // Return weather the FileHash is changed compared to the one in local ts and the FileHash of snapshot.
-func (r *V1Repository) checkTimestamp() (changed bool, hash *v1manifest.FileHash, err error) {
+func (r *V1Repository) checkTimestamp() (changed bool, manifest *v1manifest.Manifest, err error) {
 	var ts v1manifest.Timestamp
-	manifest, err := r.fetchManifest(v1manifest.ManifestURLTimestamp, &ts, maxTimeStampSize)
+	manifest, err = r.fetchManifest(v1manifest.ManifestURLTimestamp, &ts, maxTimeStampSize)
 	if err != nil {
 		return false, nil, errors.Trace(err)
 	}
 
-	tmp := ts.SnapshotHash()
-	hash = &tmp
+	hash := ts.SnapshotHash()
 
 	var localTs v1manifest.Timestamp
 	exists, err := r.local.LoadManifest(&localTs)
@@ -441,7 +449,7 @@ func (r *V1Repository) checkTimestamp() (changed bool, hash *v1manifest.FileHash
 		changed = true
 	}
 
-	return changed, hash, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
+	return changed, manifest, nil
 }
 
 // PlatformString returns a string identifying the current system.
