@@ -54,16 +54,14 @@ func newDisplayCmd() *cobra.Command {
 			}
 
 			if showDashboardOnly {
-				if err := displayDashboardInfo(clusterName); err != nil {
-					return err
-				}
-			} else {
-				if err := displayClusterMeta(clusterName, &gOpt); err != nil {
-					return err
-				}
-				if err := displayClusterTopology(clusterName, &gOpt); err != nil {
-					return err
-				}
+				return displayDashboardInfo(clusterName)
+			}
+
+			if err := displayClusterMeta(clusterName, &gOpt); err != nil {
+				return err
+			}
+			if err := displayClusterTopology(clusterName, &gOpt); err != nil {
+				return err
 			}
 
 			metadata, err := meta.ClusterMetadata(clusterName)
