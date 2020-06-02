@@ -57,6 +57,8 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 
 	// Temporary directory is used to save the unverified tarballs
 	tmpDir := filepath.Join(targetDir, fmt.Sprintf("_tmp_%d", time.Now().UnixNano()))
+	keyDir := filepath.Join(targetDir, "keys")
+
 	if utils.IsNotExist(tmpDir) {
 		if err := os.MkdirAll(tmpDir, 0755); err != nil {
 			return err
@@ -89,7 +91,7 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 		v1manifest.ManifestTypeSnapshot,
 		v1manifest.ManifestTypeTimestamp,
 	} {
-		if err := v1manifest.GenAndSaveKeys(keys, ty, int(v1manifest.ManifestsConfig[ty].Threshold), tmpDir); err != nil {
+		if err := v1manifest.GenAndSaveKeys(keys, ty, int(v1manifest.ManifestsConfig[ty].Threshold), keyDir); err != nil {
 			return err
 		}
 	}
@@ -121,7 +123,7 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 		return errors.Trace(err)
 	}
 	// save owner key
-	if err := v1manifest.SaveKeyInfo(ownerkeyInfo, "pingcap", tmpDir); err != nil {
+	if err := v1manifest.SaveKeyInfo(ownerkeyInfo, "pingcap", keyDir); err != nil {
 		return errors.Trace(err)
 	}
 
