@@ -284,7 +284,7 @@ func (s PDSpec) Status(pdList ...string) string {
 	suffix := ""
 
 	// find dashboard node
-	dashboardAddr, err := allPdAPI.GetDashboardAddress()
+	dashboardAddr, _ := allPdAPI.GetDashboardAddress()
 	if strings.HasPrefix(dashboardAddr, "http") {
 		r := strings.NewReplacer("http://", "", "https://", "")
 		dashboardAddr = r.Replace(dashboardAddr)
