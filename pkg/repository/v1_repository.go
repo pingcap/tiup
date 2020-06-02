@@ -79,6 +79,11 @@ func (r *V1Repository) Mirror() Mirror {
 	return r.mirror
 }
 
+// Local returns the local cached manifests
+func (r *V1Repository) Local() v1manifest.LocalManifests {
+	return r.local
+}
+
 // UpdateComponents updates the components described by specs.
 func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 	err := r.ensureManifests()
@@ -214,14 +219,14 @@ func (r *V1Repository) selectVersion(id string, versions map[string]v1manifest.V
 
 // Postcondition: if returned error is nil, then the local snapshot and timestamp are up to date and return the snapshot
 func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
-	changed, hash, err := r.checkTimestamp()
+	changed, tsManifest, err := r.fetchTimestamp()
 	if v1manifest.IsSignatureError(errors.Cause(err)) {
 		// The signature is wrong, update our signatures from the root manifest and try again.
 		err = r.updateLocalRoot()
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
-		changed, hash, err = r.checkTimestamp()
+		changed, tsManifest, err = r.fetchTimestamp()
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
@@ -235,18 +240,34 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 		return nil, errors.Trace(err)
 	}
 
-	// TODO: check changed in checkTimestamp by compared to the raw local snapshot instead of timestamp.
+	// TODO: check changed in fetchTimestamp by compared to the raw local snapshot instead of timestamp.
 	if !changed && snapshotExists {
 		// Nothing has changed in the repo, return success.
 		return &snapshot, nil
 	}
 
-	manifest, err := r.fetchManifestWithHash(v1manifest.ManifestURLSnapshot, &snapshot, hash)
+	hash := tsManifest.Signed.(*v1manifest.Timestamp).SnapshotHash()
+	manifest, err := r.fetchManifestWithHash(v1manifest.ManifestURLSnapshot, &snapshot, &hash)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 
-	return &snapshot, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameSnapshot)
+	// Persistent the snapshot first and prevent the snapshot.json/timestamp.json inconsistent
+	// 1. timestamp.json will fetch every time
+	// 2. saved timestamp.json and crash before save snapshot.json will cause snapshot.json doesn't be updated anymore
+	err = r.local.SaveManifest(manifest, v1manifest.ManifestFilenameSnapshot)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if changed {
+		err = r.local.SaveManifest(tsManifest, v1manifest.ManifestFilenameTimestamp)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+	}
+
+	return &snapshot, nil
 }
 
 // FnameWithVersion returns a filename, which contains the specific version number
@@ -415,17 +436,16 @@ func (r *V1Repository) FetchComponent(item *v1manifest.VersionItem) (io.Reader, 
 	return checkHash(reader, item.Hashes[v1manifest.SHA256])
 }
 
-// CheckTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash matches our local one.
-// Return weather the FileHash is changed compared to the one in local ts and the FileHash of snapshot.
-func (r *V1Repository) checkTimestamp() (changed bool, hash *v1manifest.FileHash, err error) {
+// FetchTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash matches our local one.
+// Return weather the manifest is changed compared to the one in local ts and the FileHash of snapshot.
+func (r *V1Repository) fetchTimestamp() (changed bool, manifest *v1manifest.Manifest, err error) {
 	var ts v1manifest.Timestamp
-	manifest, err := r.fetchManifest(v1manifest.ManifestURLTimestamp, &ts, maxTimeStampSize)
+	manifest, err = r.fetchManifest(v1manifest.ManifestURLTimestamp, &ts, maxTimeStampSize)
 	if err != nil {
 		return false, nil, errors.Trace(err)
 	}
 
-	tmp := ts.SnapshotHash()
-	hash = &tmp
+	hash := ts.SnapshotHash()
 
 	var localTs v1manifest.Timestamp
 	exists, err := r.local.LoadManifest(&localTs)
@@ -441,7 +461,7 @@ func (r *V1Repository) checkTimestamp() (changed bool, hash *v1manifest.FileHash
 		changed = true
 	}
 
-	return changed, hash, r.local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
+	return changed, manifest, nil
 }
 
 // PlatformString returns a string identifying the current system.
@@ -561,6 +581,23 @@ func (r *V1Repository) DownloadTiup(targetDir string) error {
 		Force:     false,
 	}
 	return r.UpdateComponents([]ComponentSpec{spec})
+}
+
+// UpdateComponentManifests updates all components's manifest to the latest version
+func (r *V1Repository) UpdateComponentManifests() error {
+	index, err := r.FetchIndexManifest()
+	if err != nil {
+		return err
+	}
+
+	for name := range index.Components {
+		_, err = r.updateComponentManifest(name)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // FetchComponentManifest fetch the component manifest.
