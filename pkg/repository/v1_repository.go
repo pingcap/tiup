@@ -15,6 +15,8 @@ package repository
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -22,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 
+	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
@@ -240,21 +243,28 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 		return nil, errors.Trace(err)
 	}
 
+	hash := tsManifest.Signed.(*v1manifest.Timestamp).SnapshotHash()
+	bytes, err := cjson.Marshal(&snapshot)
+	if err != nil {
+		return &snapshot, err
+	}
+	hash256 := sha256.Sum256(bytes)
+
 	// TODO: check changed in fetchTimestamp by compared to the raw local snapshot instead of timestamp.
-	if !changed && snapshotExists {
+	if !changed && snapshotExists &&
+		hash.Hashes[v1manifest.SHA256] == hex.EncodeToString(hash256[:]) {
 		// Nothing has changed in the repo, return success.
 		return &snapshot, nil
 	}
 
-	hash := tsManifest.Signed.(*v1manifest.Timestamp).SnapshotHash()
 	manifest, err := r.fetchManifestWithHash(v1manifest.ManifestURLSnapshot, &snapshot, &hash)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 
 	// Persistent the snapshot first and prevent the snapshot.json/timestamp.json inconsistent
-	// 1. timestamp.json will fetch every time
-	// 2. saved timestamp.json and crash before save snapshot.json will cause snapshot.json doesn't be updated anymore
+	// 1. timestamp.json is fetched every time
+	// 2. when interrupted after timestamp.json been saved but snapshot.json have not, the snapshot.json is not going to be updated anymore
 	err = r.local.SaveManifest(manifest, v1manifest.ManifestFilenameSnapshot)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -436,7 +446,8 @@ func (r *V1Repository) FetchComponent(item *v1manifest.VersionItem) (io.Reader, 
 	return checkHash(reader, item.Hashes[v1manifest.SHA256])
 }
 
-// FetchTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash matches our local one.
+// FetchTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash in it
+// has the same value of our local one. (not hashing the snapshot file itself)
 // Return weather the manifest is changed compared to the one in local ts and the FileHash of snapshot.
 func (r *V1Repository) fetchTimestamp() (changed bool, manifest *v1manifest.Manifest, err error) {
 	var ts v1manifest.Timestamp
