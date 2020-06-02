@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/tiup/pkg/repository/crypto"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/stretchr/testify/assert"
@@ -105,8 +106,13 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 	serSnap := serialize(t, snapshotManifest, privk)
 	mirror.Resources[v1manifest.ManifestURLSnapshot] = serSnap
 	timestamp.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = hash(serSnap)
-	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, timestamp, privk)
-	local.Manifests[v1manifest.ManifestFilenameTimestamp] = timestamp
+
+	signedTs := serialize(t, timestamp, privk)
+	mirror.Resources[v1manifest.ManifestURLTimestamp] = signedTs
+	ts := &v1manifest.Manifest{Signed: &v1manifest.Timestamp{}}
+	err := cjson.Unmarshal([]byte(signedTs), ts)
+	assert.Nil(t, err)
+	local.Manifests[v1manifest.ManifestFilenameTimestamp] = ts
 
 	// test that out of date timestamp downloads and saves snapshot
 	timestamp.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = "an old hash"
@@ -116,6 +122,11 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 	assert.NotNil(t, snapshot)
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameSnapshot)
 
+	// test that if snapshot unchanged, no update of snapshot is performed
+	timestamp.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = hash(serSnap)
+	timestamp.Version += 2
+	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, timestamp, privk)
+
 	local.Saved = local.Saved[:0]
 	snapshot, err = repo.updateLocalSnapshot()
 	assert.Nil(t, err)
@@ -123,22 +134,25 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 	assert.NotContains(t, local.Saved, v1manifest.ManifestFilenameSnapshot)
 
 	// delete the local snapshot will fetch and save it again
-	delete(local.Manifests, v1manifest.ManifestFilenameTimestamp)
+	delete(local.Manifests, v1manifest.ManifestFilenameSnapshot)
 	snapshot, err = repo.updateLocalSnapshot()
 	assert.Nil(t, err)
 	assert.NotNil(t, snapshot)
+	fmt.Printf("%v\n", snapshot)
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameSnapshot)
 
-	// test that invalid snapshot causes an error
+	// test that invalid snapshot will causes an error
 	snapshotManifest.Expires = "2000-05-11T04:51:08Z"
-	local.Manifests[v1manifest.ManifestFilenameTimestamp] = timestamp
 	mirror.Resources[v1manifest.ManifestURLSnapshot] = serialize(t, snapshotManifest, privk)
-	local.Saved = []string{}
+	local.Manifests[v1manifest.ManifestFilenameTimestamp] = ts
+	delete(local.Manifests, v1manifest.ManifestFilenameSnapshot)
+	local.Saved = local.Saved[:0]
 	snapshot, err = repo.updateLocalSnapshot()
 	assert.NotNil(t, err)
 	assert.Nil(t, snapshot)
 	assert.NotContains(t, local.Saved, v1manifest.ManifestFilenameSnapshot)
 
+	// TODO test an expired manifest will cause an error or force update
 	// TODO test that invalid signature of snapshot causes an error
 	// TODO test that signature error on timestamp causes root to be reloaded and timestamp to be rechecked
 }
@@ -192,9 +206,9 @@ func TestUpdateIndex(t *testing.T) {
 	snapshot := snapshotManifest()
 	serIndex := serialize(t, index, priv)
 	mirror.Resources["/5.index.json"] = serIndex
-	local.Manifests[v1manifest.ManifestFilenameSnapshot] = snapshot
+	local.Manifests[v1manifest.ManifestFilenameSnapshot] = &v1manifest.Manifest{Signed: snapshot}
 	index.Version--
-	local.Manifests[v1manifest.ManifestFilenameIndex] = index
+	local.Manifests[v1manifest.ManifestFilenameIndex] = &v1manifest.Manifest{Signed: index}
 
 	err := repo.updateLocalIndex(snapshot)
 	assert.Nil(t, err)
@@ -216,8 +230,8 @@ func TestUpdateComponent(t *testing.T) {
 	foo := componentManifest()
 	serFoo := serialize(t, foo, indexPriv)
 	mirror.Resources["/7.foo.json"] = serFoo
-	local.Manifests[v1manifest.ManifestFilenameSnapshot] = snapshot
-	local.Manifests[v1manifest.ManifestFilenameIndex] = index
+	local.Manifests[v1manifest.ManifestFilenameSnapshot] = &v1manifest.Manifest{Signed: snapshot}
+	local.Manifests[v1manifest.ManifestFilenameIndex] = &v1manifest.Manifest{Signed: index}
 
 	// Test happy path
 	updated, err := repo.updateComponentManifest("foo")
@@ -229,7 +243,7 @@ func TestUpdateComponent(t *testing.T) {
 	// Test that decrementing version numbers cause an error
 	oldFoo := componentManifest()
 	oldFoo.Version = 8
-	local.Manifests["foo.json"] = oldFoo
+	local.Manifests["foo.json"] = &v1manifest.Manifest{Signed: oldFoo}
 	local.Saved = []string{}
 	updated, err = repo.updateComponentManifest("foo")
 	assert.NotNil(t, err)
@@ -656,7 +670,7 @@ func setNewRoot(t *testing.T, local *v1manifest.MockManifests) crypto.PrivKey {
 }
 
 func setRoot(local *v1manifest.MockManifests, root *v1manifest.Root) {
-	local.Manifests[v1manifest.ManifestFilenameRoot] = root
+	local.Manifests[v1manifest.ManifestFilenameRoot] = &v1manifest.Manifest{Signed: root}
 	for r, ks := range root.Roles {
 		_ = local.Ks.AddKeys(r, 1, "2220-05-11T04:51:08Z", ks.Keys)
 	}
