@@ -26,17 +26,19 @@ import (
 )
 
 type server struct {
-	root string
-	keys map[string]*v1manifest.KeyInfo
-	sm   session.Manager
+	root     string
+	upstream string
+	keys     map[string]*v1manifest.KeyInfo
+	sm       session.Manager
 }
 
 // NewServer returns a pointer to server
-func newServer(rootDir, indexKey, snapshotKey, timestampKey string) (*server, error) {
+func newServer(rootDir, upstream, indexKey, snapshotKey, timestampKey string) (*server, error) {
 	s := &server{
-		root: rootDir,
-		keys: make(map[string]*v1manifest.KeyInfo),
-		sm:   session.New(store.NewStore(rootDir), new(sync.Map)),
+		root:     rootDir,
+		upstream: upstream,
+		keys:     make(map[string]*v1manifest.KeyInfo),
+		sm:       session.New(store.NewStore(rootDir, upstream), new(sync.Map)),
 	}
 
 	kmap := map[string]string{
