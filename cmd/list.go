@@ -89,9 +89,7 @@ func (lr *listResult) print() {
 }
 
 func showComponentList(env *environment.Environment, opt listOptions) (*listResult, error) {
-	var index *v1manifest.Index
-	var err error
-	index, err = env.V1Repository().FetchIndexManifest()
+	err := env.V1Repository().UpdateComponentManifests()
 	if err != nil {
 		return nil, err
 	}
@@ -108,9 +106,18 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 		cmpTable = append(cmpTable, []string{"Name", "Owner", "Description"})
 	}
 
+	index := v1manifest.Index{}
+	exists, err := env.V1Repository().Local().LoadManifest(&index)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.Errorf("unreachable: index.json not found in manifests directory")
+	}
+
 	localComponents := set.NewStringSet(installed...)
-	for name, comp := range index.Components {
-		if opt.installedOnly && !localComponents.Exist(name) {
+	for id, comp := range index.Components {
+		if opt.installedOnly && !localComponents.Exist(id) {
 			continue
 		}
 
@@ -118,15 +125,16 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 			continue
 		}
 
-		manifest, err := env.V1Repository().FetchComponentManifest(name)
+		filename := v1manifest.ComponentManifestFilename(id)
+		manifest, err := env.V1Repository().Local().LoadComponentManifest(&comp, filename)
 		if err != nil {
 			return nil, err
 		}
 
 		if opt.verbose {
 			installStatus := ""
-			if localComponents.Exist(name) {
-				versions, err := env.Profile().InstalledVersions(name)
+			if localComponents.Exist(id) {
+				versions, err := env.Profile().InstalledVersions(id)
 				if err != nil {
 					return nil, err
 				}
@@ -138,7 +146,7 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 				platforms = append(platforms, p)
 			}
 			cmpTable = append(cmpTable, []string{
-				name,
+				id,
 				comp.Owner,
 				installStatus,
 				strings.Join(platforms, ","),
@@ -146,7 +154,7 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 			})
 		} else {
 			cmpTable = append(cmpTable, []string{
-				name,
+				id,
 				comp.Owner,
 				manifest.Description,
 			})

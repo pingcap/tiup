@@ -53,16 +53,26 @@ func TestCheckTimestamp(t *testing.T) {
 	repoTimestamp := timestampManifest()
 	// Test that no local timestamp => return changed = true
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, repoTimestamp, privk)
-	changed, hash, err := repo.checkTimestamp()
+	changed, manifest, err := repo.fetchTimestamp()
 	assert.Nil(t, err)
+	err = local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
+	assert.Nil(t, err)
+	assert.NotNil(t, manifest)
+	tmp := manifest.Signed.(*v1manifest.Timestamp).SnapshotHash()
+	hash := &tmp
 	assert.NotNil(t, hash)
 	assert.Equal(t, changed, true)
 	assert.Equal(t, uint(1001), hash.Length)
 	assert.Equal(t, "123456", hash.Hashes[v1manifest.SHA256])
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameTimestamp)
 
-	changed, hash, err = repo.checkTimestamp()
+	changed, manifest, err = repo.fetchTimestamp()
 	assert.Nil(t, err)
+	err = local.SaveManifest(manifest, v1manifest.ManifestFilenameTimestamp)
+	assert.Nil(t, err)
+	assert.NotNil(t, manifest)
+	tmp = manifest.Signed.(*v1manifest.Timestamp).SnapshotHash()
+	hash = &tmp
 	assert.NotNil(t, hash)
 	assert.Equal(t, changed, false)
 
@@ -70,17 +80,14 @@ func TestCheckTimestamp(t *testing.T) {
 	expiredTimestamp := timestampManifest()
 	expiredTimestamp.Expires = "2000-05-12T04:51:08Z"
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, expiredTimestamp)
-	local.Saved = []string{}
-	_, _, err = repo.checkTimestamp()
+	_, _, err = repo.fetchTimestamp()
 	assert.NotNil(t, err)
-	assert.Empty(t, local.Saved)
 
 	// Test that an invalid manifest from the mirror causes an error
 	invalidTimestamp := timestampManifest()
 	invalidTimestamp.SpecVersion = "10.1.0"
-	_, _, err = repo.checkTimestamp()
+	_, _, err = repo.fetchTimestamp()
 	assert.NotNil(t, err)
-	assert.Empty(t, local.Saved)
 
 	// TODO test that a bad signature causes an error
 }
