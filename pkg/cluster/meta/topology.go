@@ -281,10 +281,14 @@ func (s PDSpec) Status(pdList ...string) string {
 	curAddr := fmt.Sprintf("%s:%d", s.Host, s.ClientPort)
 	curPdAPI := api.NewPDClient([]string{curAddr}, statusQueryTimeout, nil)
 	allPdAPI := api.NewPDClient(pdList, statusQueryTimeout, nil)
+	suffix := ""
 
 	// find dashboard node
-	dashboardAddr, _ := allPdAPI.GetDashboardAddress()
-	suffix := ""
+	dashboardAddr, err := allPdAPI.GetDashboardAddress()
+	if strings.HasPrefix(dashboardAddr, "http") {
+		r := strings.NewReplacer("http://", "", "https://", "")
+		dashboardAddr = r.Replace(dashboardAddr)
+	}
 	if dashboardAddr == curAddr {
 		suffix = "|UI"
 	}
