@@ -238,21 +238,20 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 	}
 
 	var snapshot v1manifest.Snapshot
-	snapshotExists, err := r.local.LoadManifest(&snapshot)
+	snapshotManifest, snapshotExists, err := r.local.LoadManifest(&snapshot)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 
 	hash := tsManifest.Signed.(*v1manifest.Timestamp).SnapshotHash()
-	bytes, err := cjson.Marshal(&snapshot)
+	bytes, err := cjson.Marshal(snapshotManifest)
 	if err != nil {
-		return &snapshot, err
+		return nil, err
 	}
 	hash256 := sha256.Sum256(bytes)
 
 	// TODO: check changed in fetchTimestamp by compared to the raw local snapshot instead of timestamp.
-	if !changed && snapshotExists &&
-		hash.Hashes[v1manifest.SHA256] == hex.EncodeToString(hash256[:]) {
+	if snapshotExists && hash.Hashes[v1manifest.SHA256] == hex.EncodeToString(hash256[:]) {
 		// Nothing has changed in the repo, return success.
 		return &snapshot, nil
 	}
@@ -352,7 +351,7 @@ func (r *V1Repository) updateLocalRoot() error {
 func (r *V1Repository) updateLocalIndex(snapshot *v1manifest.Snapshot) error {
 	// Update index (if needed).
 	var oldIndex v1manifest.Index
-	exists, err := r.local.LoadManifest(&oldIndex)
+	_, exists, err := r.local.LoadManifest(&oldIndex)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -390,7 +389,7 @@ func (r *V1Repository) updateLocalIndex(snapshot *v1manifest.Snapshot) error {
 func (r *V1Repository) updateComponentManifest(id string) (*v1manifest.Component, error) {
 	// Find the component's entry in the index and snapshot manifests.
 	var index v1manifest.Index
-	_, err := r.local.LoadManifest(&index)
+	_, _, err := r.local.LoadManifest(&index)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -399,7 +398,7 @@ func (r *V1Repository) updateComponentManifest(id string) (*v1manifest.Component
 		return nil, fmt.Errorf("unknown component: %s", id)
 	}
 	var snapshot v1manifest.Snapshot
-	_, err = r.local.LoadManifest(&snapshot)
+	_, _, err = r.local.LoadManifest(&snapshot)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -459,7 +458,7 @@ func (r *V1Repository) fetchTimestamp() (changed bool, manifest *v1manifest.Mani
 	hash := ts.SnapshotHash()
 
 	var localTs v1manifest.Timestamp
-	exists, err := r.local.LoadManifest(&localTs)
+	_, exists, err := r.local.LoadManifest(&localTs)
 	if err != nil {
 		return false, nil, errors.Trace(err)
 	}
@@ -552,7 +551,7 @@ func checkHash(reader io.Reader, sha256 string) (io.Reader, error) {
 
 func (r *V1Repository) loadRoot() (*v1manifest.Root, error) {
 	root := new(v1manifest.Root)
-	exists, err := r.local.LoadManifest(root)
+	_, exists, err := r.local.LoadManifest(root)
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
@@ -571,7 +570,7 @@ func (r *V1Repository) FetchIndexManifest() (index *v1manifest.Index, err error)
 	}
 
 	index = new(v1manifest.Index)
-	exists, err := r.local.LoadManifest(index)
+	_, exists, err := r.local.LoadManifest(index)
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
@@ -639,7 +638,7 @@ func (r *V1Repository) ComponentVersion(id, version string) (*v1manifest.Version
 // Load the manifest locally only to get then Entry, do not force do something need access mirror.
 func (r *V1Repository) BinaryPath(installPath string, componentID string, version string) (string, error) {
 	var index v1manifest.Index
-	_, err := r.local.LoadManifest(&index)
+	_, _, err := r.local.LoadManifest(&index)
 	if err != nil {
 		return "", err
 	}
