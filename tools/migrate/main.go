@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -396,7 +397,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 				}
 
 				fmt.Printf("rehashing %s...\n", filepath.Join(srcDir, filename))
-				hashes, length, err := ru.HashFile(srcDir, filename)
+				hashes, length, err := ru.HashFile(filepath.Join(srcDir, filename))
 				if err != nil {
 					return errors.Trace(err)
 				}
@@ -432,7 +433,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 
 				filename := fmt.Sprintf("/%s-%s-%s.tar.gz", comp.Name, tiupver.NightlyVersion,
 					strings.Join(strings.Split(newp, "/"), "-"))
-				hashes, length, err := ru.HashFile(srcDir, filename)
+				hashes, length, err := ru.HashFile(path.Join(srcDir, filename))
 				if err != nil {
 					return errors.Trace(err)
 				}

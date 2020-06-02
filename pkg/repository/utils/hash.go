@@ -19,17 +19,15 @@ import (
 	"encoding/hex"
 	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 )
 
 // HashFile returns the sha256/sha512 hashes and the file length of specific file
-func HashFile(srcDir, filename string) (map[string]string, int64, error) {
-	path := filepath.Join(srcDir, filename)
+func HashFile(filepath string) (map[string]string, int64, error) {
 	s256 := sha256.New()
 	s512 := sha512.New()
-	file, err := os.Open(path)
+	file, err := os.Open(filepath)
 	if err != nil {
 		return nil, 0, err
 	}
