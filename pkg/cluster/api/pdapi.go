@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -274,7 +275,8 @@ func (pc *PDClient) GetDashboardAddress() (string, error) {
 		return "", errors.AddStack(err)
 	}
 
-	return pdConfig.PDServerCfg.DashboardAddress, nil
+	r := strings.NewReplacer("http://", "", "https://", "")
+	return r.Replace(pdConfig.PDServerCfg.DashboardAddress), nil
 }
 
 // EvictPDLeader evicts the PD leader
