@@ -79,6 +79,11 @@ func (r *V1Repository) Mirror() Mirror {
 	return r.mirror
 }
 
+// Local returns the local cached manifests
+func (r *V1Repository) Local() v1manifest.LocalManifests {
+	return r.local
+}
+
 // UpdateComponents updates the components described by specs.
 func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 	err := r.ensureManifests()
@@ -569,6 +574,23 @@ func (r *V1Repository) DownloadTiup(targetDir string) error {
 		Force:     false,
 	}
 	return r.UpdateComponents([]ComponentSpec{spec})
+}
+
+// UpdateComponentManifests updates all components's manifest to the latest version
+func (r *V1Repository) UpdateComponentManifests() error {
+	index, err := r.FetchIndexManifest()
+	if err != nil {
+		return err
+	}
+
+	for name := range index.Components {
+		_, err = r.updateComponentManifest(name)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // FetchComponentManifest fetch the component manifest.
