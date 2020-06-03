@@ -33,7 +33,7 @@ func newCleanCmd() *cobra.Command {
 		Use:   "clean <name>",
 		Short: "Clean the data of instantiated components",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			env := environment.TiupEnv()
+			env := environment.GlobalEnv()
 			if len(args) == 0 && !all {
 				return cmd.Help()
 			}

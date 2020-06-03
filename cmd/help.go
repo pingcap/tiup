@@ -33,7 +33,7 @@ func newHelpCmd() *cobra.Command {
 		Long: `Help provides help for any command or component in the application.
 Simply type tiup help <command>|<component> for full details.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			env := environment.TiupEnv()
+			env := environment.GlobalEnv()
 			cmd, n, e := cmd.Root().Find(args)
 			if (cmd == rootCmd || e != nil) && len(n) > 0 {
 				externalHelp(env, n[0], n[1:]...)

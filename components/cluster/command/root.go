@@ -87,7 +87,7 @@ func init() {
 			if err != nil {
 				return err
 			}
-			tiupmeta.SetTiupEnv(env)
+			tiupmeta.SetGlobalEnv(env)
 
 			cmds := append(getParentNames(cmd), args...)
 			clusterReport.Command = strings.Join(cmds, " ")
@@ -98,7 +98,7 @@ func init() {
 			return cmd.Help()
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			return tiupmeta.TiupEnv().V1Repository().Mirror().Close()
+			return tiupmeta.GlobalEnv().V1Repository().Mirror().Close()
 		},
 	}
 

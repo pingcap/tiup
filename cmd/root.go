@@ -58,11 +58,11 @@ the latest stable version will be downloaded from the repository.`,
 			if err != nil {
 				return err
 			}
-			environment.SetTiupEnv(e)
+			environment.SetGlobalEnv(e)
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			env := environment.TiupEnv()
+			env := environment.GlobalEnv()
 			if binary != "" {
 				component, ver := environment.ParseCompVersion(binary)
 				selectedVer, err := env.SelectInstalledVersion(component, ver)
@@ -96,7 +96,7 @@ the latest stable version will be downloaded from the repository.`,
 			return cmd.Help()
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			return environment.TiupEnv().Close()
+			return environment.GlobalEnv().Close()
 		},
 		SilenceUsage: true,
 	}
@@ -132,10 +132,8 @@ the latest stable version will be downloaded from the repository.`,
 			cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
 			_ = cmd.Help()
 		}
-		if err != nil {
-			fmt.Printf("\ninit local env meet error: %s\n", err)
-		} else {
-			environment.SetTiupEnv(env)
+		if err == nil {
+			environment.SetGlobalEnv(env)
 		}
 	})
 

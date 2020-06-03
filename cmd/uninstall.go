@@ -48,7 +48,7 @@ which is used to uninstall tiup.
   # Uninstall all installed components
   tiup uninstall --all`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			env := environment.TiupEnv()
+			env := environment.GlobalEnv()
 			if self {
 				deletable := []string{"bin", "manifest", "manifests", "components", "storage/cluster/packages"}
 				for _, dir := range deletable {

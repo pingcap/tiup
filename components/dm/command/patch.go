@@ -150,7 +150,7 @@ func checkPackage(clusterName, comp, packagePath string) error {
 	if err != nil {
 		return err
 	}
-	manifest, err := tiupmeta.TiupEnv().Repository().ComponentVersions(comp)
+	manifest, err := tiupmeta.GlobalEnv().Repository().ComponentVersions(comp)
 	if err != nil {
 		return err
 	}

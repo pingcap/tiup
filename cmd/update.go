@@ -39,7 +39,7 @@ latest version. All other flags will be ignored if the flag --self is given.
   $ tiup update playground:v0.0.3 --force # Overwrite an existing local installation
   $ tiup update --self                    # Update TiUP to the latest version`,
 		RunE: func(cmd *cobra.Command, components []string) error {
-			env := environment.TiupEnv()
+			env := environment.GlobalEnv()
 			if self {
 				originFile := env.LocalPath("bin", "tiup")
 				renameFile := env.LocalPath("bin", "tiup.tmp")

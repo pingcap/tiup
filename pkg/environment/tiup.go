@@ -15,12 +15,12 @@ package environment
 
 var _env *Environment
 
-// SetTiupEnv the global env used.
-func SetTiupEnv(env *Environment) {
+// SetGlobalEnv the global env used.
+func SetGlobalEnv(env *Environment) {
 	_env = env
 }
 
-// TiupEnv Get the global env used.
-func TiupEnv() *Environment {
+// GlobalEnv Get the global env used.
+func GlobalEnv() *Environment {
 	return _env
 }

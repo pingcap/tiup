@@ -33,7 +33,7 @@ func newStatusCmd() *cobra.Command {
 		Use:   "status",
 		Short: "List the status of instantiated components",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			env := environment.TiupEnv()
+			env := environment.GlobalEnv()
 			if len(args) > 0 {
 				return cmd.Help()
 			}

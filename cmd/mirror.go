@@ -88,7 +88,7 @@ func newMirrorSignCmd() *cobra.Command {
 		Short: "Add signatures to a manifest file",
 		Long:  "Add signatures to a manifest file, if no key file specified, the ~/.tiup/keys/private.json will be used",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			env := environment.TiupEnv()
+			env := environment.GlobalEnv()
 			if len(args) < 1 {
 				return cmd.Help()
 			}
@@ -206,7 +206,7 @@ func newMirrorPublishCmd() *cobra.Command {
 			if len(args) != 4 {
 				return cmd.Help()
 			}
-			env := environment.TiupEnv()
+			env := environment.GlobalEnv()
 			if privPath == "" {
 				privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
 			}
@@ -271,7 +271,7 @@ func newMirrorGenkeyCmd() *cobra.Command {
 		Short: "Generate a new key pair",
 		Long:  `Generate a new key pair that can be used to sign components.`,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			env := environment.TiupEnv()
+			env := environment.GlobalEnv()
 			privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
 			keyDir := filepath.Dir(privPath)
 			if utils.IsNotExist(keyDir) {
