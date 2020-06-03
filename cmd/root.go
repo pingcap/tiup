@@ -19,22 +19,22 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
 
 var rootCmd *cobra.Command
+var repoOpts repository.Options
 
 func init() {
 	cobra.EnableCommandSorting = false
 
 	var (
-		binary   string
-		binPath  string
-		tag      string
-		repoOpts repository.Options
-		env      *environment.Environment
+		binary  string
+		binPath string
+		tag     string
 	)
 
 	rootCmd = &cobra.Command{
@@ -53,7 +53,16 @@ the latest stable version will be downloaded from the repository.`,
 			// Support `tiup <component>`
 			return nil
 		},
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			e, err := environment.InitEnv(repoOpts)
+			if err != nil {
+				return err
+			}
+			environment.SetGlobalEnv(e)
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			env := environment.GlobalEnv()
 			if binary != "" {
 				component, ver := environment.ParseCompVersion(binary)
 				selectedVer, err := env.SelectInstalledVersion(component, ver)
@@ -87,17 +96,10 @@ the latest stable version will be downloaded from the repository.`,
 			return cmd.Help()
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			return env.Close()
+			return environment.GlobalEnv().Close()
 		},
 		SilenceUsage: true,
 	}
-
-	e, err := environment.InitEnv(repoOpts)
-	if err != nil {
-		fmt.Println(color.RedString("Error: %v", err))
-		os.Exit(1)
-	}
-	env = e
 
 	rootCmd.PersistentFlags().BoolVarP(&repoOpts.SkipVersionCheck, "skip-version-check", "", false, "Skip the strict version check, by default a version must be a valid SemVer string")
 	rootCmd.Flags().StringVarP(&binary, "binary", "B", "", "Print binary path of a specific version of a component `<component>[:version]`\n"+
@@ -106,14 +108,14 @@ the latest stable version will be downloaded from the repository.`,
 	rootCmd.Flags().StringVar(&binPath, "binpath", "", "Specify the binary path of component instance")
 
 	rootCmd.AddCommand(
-		newInstallCmd(env),
-		newListCmd(env),
-		newUninstallCmd(env),
-		newUpdateCmd(env),
-		newStatusCmd(env),
-		newCleanCmd(env),
-		newMirrorCmd(env),
-		newTelemetryCmd(env),
+		newInstallCmd(),
+		newListCmd(),
+		newUninstallCmd(),
+		newUpdateCmd(),
+		newStatusCmd(),
+		newCleanCmd(),
+		newMirrorCmd(),
+		newTelemetryCmd(),
 	)
 
 	originHelpFunc := rootCmd.HelpFunc()
@@ -122,8 +124,9 @@ the latest stable version will be downloaded from the repository.`,
 			originHelpFunc(cmd, args)
 			return
 		}
+		env, err := environment.InitEnv(repoOpts)
 		cmd, n, e := cmd.Root().Find(args)
-		if (cmd == rootCmd || e != nil) && len(n) > 0 {
+		if (cmd == rootCmd || e != nil) && len(n) > 0 && err != nil {
 			externalHelp(env, n[0], n[1:]...)
 		} else {
 			cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
@@ -131,8 +134,10 @@ the latest stable version will be downloaded from the repository.`,
 		}
 	})
 
-	rootCmd.SetHelpCommand(newHelpCmd(env))
-	rootCmd.SetUsageTemplate(usageTemplate(env.Profile()))
+	rootCmd.SetHelpCommand(newHelpCmd())
+	// If env is inited before, localdata.InitProfile() will return a valid profile
+	// or it will return an invalid one but still print usage
+	rootCmd.SetUsageTemplate(usageTemplate(localdata.InitProfile()))
 }
 
 // Execute parses the command line arguments and calls proper functions

@@ -54,6 +54,10 @@ type Environment struct {
 // InitEnv creates a new Environment object configured using env vars and defaults. Uses the EnvNameV0 env var to
 // determine whether to use v0 or v1 manifests.
 func InitEnv(options repository.Options) (*Environment, error) {
+	if env := GlobalEnv(); env != nil {
+		return env, nil
+	}
+
 	profile := localdata.InitProfile()
 
 	// Initialize the repository
