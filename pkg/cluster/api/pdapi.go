@@ -538,7 +538,7 @@ func (pc *PDClient) DelPD(name string, retryOpt *clusterutil.RetryOption) error 
 	return nil
 }
 
-func (pc *PDClient) isState(host string, state metapb.StoreState) (bool, error) {
+func (pc *PDClient) isSameState(host string, state metapb.StoreState) (bool, error) {
 	// get info of current stores
 	stores, err := pc.GetStores()
 	if err != nil {
@@ -564,13 +564,13 @@ func (pc *PDClient) isState(host string, state metapb.StoreState) (bool, error) 
 // IsTombStone check if the node is Tombstone.
 // The host parameter should be in format of IP:Port, that matches store's address
 func (pc *PDClient) IsTombStone(host string) (bool, error) {
-	return pc.isState(host, metapb.StoreState_Tombstone)
+	return pc.isSameState(host, metapb.StoreState_Tombstone)
 }
 
 // IsUp check if the node is Up state.
 // The host parameter should be in format of IP:Port, that matches store's address
 func (pc *PDClient) IsUp(host string) (bool, error) {
-	return pc.isState(host, metapb.StoreState_Up)
+	return pc.isSameState(host, metapb.StoreState_Up)
 }
 
 // ErrStoreNotExists represents the store not exists.

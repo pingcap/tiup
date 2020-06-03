@@ -106,10 +106,10 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 	pdClient := api.NewPDClient(endpoints, 10*time.Second, nil)
 	// set low-space-ratio to 1 to avoid low disk space
 	lowSpaceRatio, err := json.Marshal(scheduleConfig{
-		LowSpaceRatio: 1,
+		LowSpaceRatio: 0.99,
 	})
 	if err != nil {
-		return nil
+		return err
 	}
 	if err = pdClient.UpdateScheduleConfig(bytes.NewBuffer(lowSpaceRatio)); err != nil {
 		return err
@@ -119,7 +119,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 		MaxReplicas: 1,
 	})
 	if err != nil {
-		return nil
+		return err
 	}
 	if err = pdClient.UpdateReplicateConfig(bytes.NewBuffer(maxReplicas)); err != nil {
 		return err
@@ -129,7 +129,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 		EnablePlacementRules: "true",
 	})
 	if err != nil {
-		return nil
+		return err
 	}
 	if err = pdClient.UpdateReplicateConfig(bytes.NewBuffer(enablePlacementRules)); err != nil {
 		return err
