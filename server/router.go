@@ -48,7 +48,7 @@ func (s *server) router() http.Handler {
 
 	r.Handle("/api/v1/tarball/{sid}", handler.UploadTarbal(s.sm))
 	r.Handle("/api/v1/component/{sid}/{name}", handler.SignComponent(s.sm, s.keys))
-	r.PathPrefix("/").Handler(s.static("/", s.root))
+	r.PathPrefix("/").Handler(s.static("/", s.root, s.upstream))
 
 	return httpRequestMiddleware(r)
 }

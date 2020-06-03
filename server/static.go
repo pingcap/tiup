@@ -15,13 +15,47 @@ package main
 
 import (
 	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
+	"path"
+
+	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
 // staticServer start a static web server
-func staticServer(fs http.FileSystem) http.Handler {
-	return http.FileServer(fs)
+func staticServer(local string, upstream string) http.Handler {
+	fs := http.Dir(local)
+	fsh := http.FileServer(fs)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if f, err := fs.Open(path.Clean(r.URL.Path)); err == nil {
+			f.Close()
+		} else if os.IsNotExist(err) && upstream != "" {
+			if err := proxyUpstream(w, r, path.Join(local, path.Clean(r.URL.Path)), upstream); err != nil {
+				log.Errorf("Proxy upstream: %s", err.Error())
+				fsh.ServeHTTP(w, r)
+			}
+			log.Errorf("Hanle file: %s", err.Error())
+			return
+		}
+		fsh.ServeHTTP(w, r)
+	})
 }
 
-func (s *server) static(prefix, root string) http.Handler {
-	return http.StripPrefix(prefix, staticServer(http.Dir(root)))
+func proxyUpstream(w http.ResponseWriter, r *http.Request, file, upstream string) error {
+	url, err := url.Parse(upstream)
+	if err != nil {
+		return err
+	}
+
+	r.Host = url.Host
+	r.URL.Host = url.Host
+	r.URL.Scheme = url.Scheme
+
+	httputil.NewSingleHostReverseProxy(url).ServeHTTP(w, r)
+	return nil
+}
+
+func (s *server) static(prefix, root, upstream string) http.Handler {
+	return http.StripPrefix(prefix, staticServer(root, upstream))
 }
