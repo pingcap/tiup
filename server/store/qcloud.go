@@ -131,7 +131,16 @@ func (t *qcloudTxn) WriteManifest(filename string, manifest interface{}) error {
 	}
 	defer file.Close()
 
-	return cjson.NewEncoder(file).Encode(manifest)
+	bytes, err := cjson.Marshal(manifest)
+	if err != nil {
+		return err
+	}
+
+	if _, err = file.Write(bytes); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (t *qcloudTxn) ReadManifest(filename string, manifest interface{}) error {
@@ -141,7 +150,8 @@ func (t *qcloudTxn) ReadManifest(filename string, manifest interface{}) error {
 		filepath = path.Join(t.root, filename)
 	}
 	var wc io.ReadCloser
-	if file, err := os.Open(filepath); err == nil {
+	file, err := os.Open(filepath)
+	if err == nil {
 		wc = file
 	} else if os.IsNotExist(err) && t.store.upstream != "" {
 		if resp, err := http.Get(fmt.Sprintf("%s/%s", t.store.upstream, filename)); err == nil {
@@ -155,7 +165,12 @@ func (t *qcloudTxn) ReadManifest(filename string, manifest interface{}) error {
 	}
 	defer wc.Close()
 
-	return cjson.NewDecoder(wc).Decode(manifest)
+	bytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	return cjson.Unmarshal(bytes, manifest)
 }
 
 func (t *qcloudTxn) ResetManifest() error {
