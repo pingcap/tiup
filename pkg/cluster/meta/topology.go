@@ -278,40 +278,45 @@ type PDSpec struct {
 
 // Status queries current status of the instance
 func (s PDSpec) Status(pdList ...string) string {
-	pdapi := api.NewPDClient([]string{fmt.Sprintf("%s:%d", s.Host, s.ClientPort)},
-		statusQueryTimeout, nil)
-	healths, err := pdapi.GetHealth()
+	curAddr := fmt.Sprintf("%s:%d", s.Host, s.ClientPort)
+	curPdAPI := api.NewPDClient([]string{curAddr}, statusQueryTimeout, nil)
+	allPdAPI := api.NewPDClient(pdList, statusQueryTimeout, nil)
+	suffix := ""
+
+	// find dashboard node
+	dashboardAddr, _ := allPdAPI.GetDashboardAddress()
+	if strings.HasPrefix(dashboardAddr, "http") {
+		r := strings.NewReplacer("http://", "", "https://", "")
+		dashboardAddr = r.Replace(dashboardAddr)
+	}
+	if dashboardAddr == curAddr {
+		suffix = "|UI"
+	}
+
+	healths, err := curPdAPI.GetHealth()
 	if err != nil {
-		return "Down"
+		return "Down" + suffix
 	}
 
 	// find leader node
-	leader, err := pdapi.GetLeader()
+	leader, err := curPdAPI.GetLeader()
 	if err != nil {
-		return "ERR"
+		return "ERR" + suffix
 	}
 
-	// find dashboard node
-	dashboardAddr, _ := pdapi.GetDashboardAddress()
-
 	for _, member := range healths.Healths {
-		suffix := ""
-		clientURL := member.ClientUrls[0]
 		if s.Name != member.Name {
 			continue
 		}
 		if s.Name == leader.Name {
-			suffix += "|L"
-		}
-		if clientURL == dashboardAddr {
-			suffix += "|UI"
+			suffix = "|L" + suffix
 		}
 		if member.Health {
 			return "Healthy" + suffix
 		}
 		return "Unhealthy" + suffix
 	}
-	return "N/A"
+	return "N/A" + suffix
 }
 
 // Role returns the component role of the instance
