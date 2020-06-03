@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newInstallCmd(env *environment.Environment) *cobra.Command {
+func newInstallCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "install <component1>[:version] [component2...N]",
 		Short: "Install a specific version of a component",
@@ -32,6 +32,7 @@ of the same component:
   tiup install tidb:v3.0.5 tikv pd
   tiup install tidb:v3.0.5 tidb:v3.0.8 tikv:v3.0.9`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			env := environment.GlobalEnv()
 			if len(args) == 0 {
 				return cmd.Help()
 			}
