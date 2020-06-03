@@ -15,8 +15,10 @@ package store
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
 	"sync"
@@ -36,15 +38,17 @@ var (
 type qcloudStore struct {
 	mux      sync.Mutex
 	root     string
+	upstream string
 	modified map[string]*time.Time
 }
 
-func newQCloudStore(root string) *qcloudStore {
+func newQCloudStore(root, upstream string) *qcloudStore {
 	if err := os.MkdirAll(root, 0755); err != nil {
 		log.Errorf("Create store directory: %s", err.Error())
 	}
 	return &qcloudStore{
 		root:     root,
+		upstream: upstream,
 		modified: make(map[string]*time.Time),
 	}
 }
@@ -127,7 +131,16 @@ func (t *qcloudTxn) WriteManifest(filename string, manifest interface{}) error {
 	}
 	defer file.Close()
 
-	return cjson.NewEncoder(file).Encode(manifest)
+	bytes, err := cjson.Marshal(manifest)
+	if err != nil {
+		return err
+	}
+
+	if _, err = file.Write(bytes); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (t *qcloudTxn) ReadManifest(filename string, manifest interface{}) error {
@@ -136,13 +149,28 @@ func (t *qcloudTxn) ReadManifest(filename string, manifest interface{}) error {
 	if utils.IsExist(path.Join(t.root, filename)) {
 		filepath = path.Join(t.root, filename)
 	}
+	var wc io.ReadCloser
 	file, err := os.Open(filepath)
+	if err == nil {
+		wc = file
+	} else if os.IsNotExist(err) && t.store.upstream != "" {
+		if resp, err := http.Get(fmt.Sprintf("%s/%s", t.store.upstream, filename)); err == nil {
+			wc = resp.Body
+		} else {
+			return err
+		}
+	} else {
+		log.Errorf("Error on read manifest: %s, upstream: %s", err.Error(), t.store.upstream)
+		return err
+	}
+	defer wc.Close()
+
+	bytes, err := ioutil.ReadAll(file)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
-	return cjson.NewDecoder(file).Decode(manifest)
+	return cjson.Unmarshal(bytes, manifest)
 }
 
 func (t *qcloudTxn) ResetManifest() error {

@@ -35,7 +35,7 @@ type listOptions struct {
 	showAll       bool
 }
 
-func newListCmd(env *environment.Environment) *cobra.Command {
+func newListCmd() *cobra.Command {
 	var opt listOptions
 	cmd := &cobra.Command{
 		Use:   "list [component]",
@@ -53,6 +53,7 @@ components or versions which have not been installed.
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			env := environment.GlobalEnv()
 			switch len(args) {
 			case 0:
 				result, err := showComponentList(env, opt)
@@ -107,7 +108,7 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 	}
 
 	index := v1manifest.Index{}
-	exists, err := env.V1Repository().Local().LoadManifest(&index)
+	_, exists, err := env.V1Repository().Local().LoadManifest(&index)
 	if err != nil {
 		return nil, err
 	}
