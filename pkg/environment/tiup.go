@@ -11,20 +11,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package meta
+package environment
 
-import (
-	tiupmeta "github.com/pingcap/tiup/pkg/environment"
-)
+var _env *Environment
 
-var _env *tiupmeta.Environment
-
-// SetTiupEnv the gloable env used.
-func SetTiupEnv(env *tiupmeta.Environment) {
+// SetTiupEnv the global env used.
+func SetTiupEnv(env *Environment) {
 	_env = env
 }
 
-// TiupEnv Get the gloable env used.
-func TiupEnv() *tiupmeta.Environment {
+// TiupEnv Get the global env used.
+func TiupEnv() *Environment {
 	return _env
 }

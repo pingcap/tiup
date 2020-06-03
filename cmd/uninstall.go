@@ -25,7 +25,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newUninstallCmd(env *environment.Environment) *cobra.Command {
+func newUninstallCmd() *cobra.Command {
 	var all, self bool
 	cmdUnInst := &cobra.Command{
 		Use:   "uninstall <component1>:<version>",
@@ -48,6 +48,7 @@ which is used to uninstall tiup.
   # Uninstall all installed components
   tiup uninstall --all`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			env := environment.TiupEnv()
 			if self {
 				deletable := []string{"bin", "manifest", "manifests", "components", "storage/cluster/packages"}
 				for _, dir := range deletable {

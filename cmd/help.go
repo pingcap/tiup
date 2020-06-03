@@ -26,13 +26,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newHelpCmd(env *environment.Environment) *cobra.Command {
+func newHelpCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "help [command]",
 		Short: "Help about any command or component",
 		Long: `Help provides help for any command or component in the application.
 Simply type tiup help <command>|<component> for full details.`,
 		Run: func(cmd *cobra.Command, args []string) {
+			env := environment.TiupEnv()
 			cmd, n, e := cmd.Root().Find(args)
 			if (cmd == rootCmd || e != nil) && len(n) > 0 {
 				externalHelp(env, n[0], n[1:]...)

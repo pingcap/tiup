@@ -35,7 +35,7 @@ type listOptions struct {
 	showAll       bool
 }
 
-func newListCmd(env *environment.Environment) *cobra.Command {
+func newListCmd() *cobra.Command {
 	var opt listOptions
 	cmd := &cobra.Command{
 		Use:   "list [component]",
@@ -53,6 +53,7 @@ components or versions which have not been installed.
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			env := environment.TiupEnv()
 			switch len(args) {
 			case 0:
 				result, err := showComponentList(env, opt)

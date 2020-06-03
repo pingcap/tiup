@@ -25,7 +25,7 @@ func getTelemetryMeta(env *environment.Environment) (meta *telemetry.Meta, fname
 	return
 }
 
-func newTelemetryCmd(env *environment.Environment) *cobra.Command {
+func newTelemetryCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "telemetry",
 		Hidden: true, // Make false once it's ready to release.
@@ -37,6 +37,7 @@ func newTelemetryCmd(env *environment.Environment) *cobra.Command {
 		Hidden: false,
 		Short:  "Reset the uuid used for telemetry",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			env := environment.TiupEnv()
 			teleMeta, fname, err := getTelemetryMeta(env)
 			if err != nil {
 				return err
@@ -57,6 +58,7 @@ func newTelemetryCmd(env *environment.Environment) *cobra.Command {
 		Use:   "enable",
 		Short: "Enable telemetry of tiup",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			env := environment.TiupEnv()
 			teleMeta, fname, err := getTelemetryMeta(env)
 			if err != nil {
 				return err
@@ -77,6 +79,7 @@ func newTelemetryCmd(env *environment.Environment) *cobra.Command {
 		Use:   "disable",
 		Short: "Disable telemetry of tiup",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			env := environment.TiupEnv()
 			teleMeta, fname, err := getTelemetryMeta(env)
 			if err != nil {
 				return err
@@ -97,6 +100,7 @@ func newTelemetryCmd(env *environment.Environment) *cobra.Command {
 		Use:   "status",
 		Short: "Display the current status of tiup telemetry",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			env := environment.TiupEnv()
 			teleMeta, _, err := getTelemetryMeta(env)
 			if err != nil {
 				return err

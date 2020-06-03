@@ -36,7 +36,7 @@ var (
 	repoPath string
 )
 
-func newMirrorCmd(env *environment.Environment) *cobra.Command {
+func newMirrorCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "mirror <command>",
 		Short: "Manage a repository mirror for TiUP components",
@@ -66,28 +66,29 @@ of components or the repository itself.`,
 	cmd.PersistentFlags().StringVar(&repoPath, "repo", "", "Path to the repository")
 
 	cmd.AddCommand(
-		newMirrorInitCmd(env),
-		newMirrorSignCmd(env),
-		newMirrorOwnerCmd(env),
-		newMirrorCompCmd(env),
-		newMirrorAddCompCmd(env),
-		newMirrorYankCompCmd(env),
-		newMirrorDelCompCmd(env),
-		newMirrorGenkeyCmd(env),
-		newMirrorCloneCmd(env),
-		newMirrorPublishCmd(env),
+		newMirrorInitCmd(),
+		newMirrorSignCmd(),
+		newMirrorOwnerCmd(),
+		newMirrorCompCmd(),
+		newMirrorAddCompCmd(),
+		newMirrorYankCompCmd(),
+		newMirrorDelCompCmd(),
+		newMirrorGenkeyCmd(),
+		newMirrorCloneCmd(),
+		newMirrorPublishCmd(),
 	)
 
 	return cmd
 }
 
 // the `mirror sign` sub command
-func newMirrorSignCmd(env *environment.Environment) *cobra.Command {
+func newMirrorSignCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sign <manifest-file> [key-files]",
 		Short: "Add signatures to a manifest file",
 		Long:  "Add signatures to a manifest file, if no key file specified, the ~/.tiup/keys/private.json will be used",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			env := environment.TiupEnv()
 			if len(args) < 1 {
 				return cmd.Help()
 			}
@@ -103,7 +104,7 @@ func newMirrorSignCmd(env *environment.Environment) *cobra.Command {
 }
 
 // the `mirror add` sub command
-func newMirrorAddCompCmd(env *environment.Environment) *cobra.Command {
+func newMirrorAddCompCmd() *cobra.Command {
 	var nightly bool // if this is a nightly version
 	cmd := &cobra.Command{
 		Use:    "add <component-id> <platform> <version> <file>",
@@ -132,7 +133,7 @@ func addCompFile(repo, id, platform, version, file string, nightly bool) error {
 }
 
 // the `mirror component` sub command
-func newMirrorCompCmd(env *environment.Environment) *cobra.Command {
+func newMirrorCompCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "component <id> <description>",
 		Short:  "Create a new component in the repository",
@@ -156,7 +157,7 @@ func createComp(repo, id, name string) error {
 }
 
 // the `mirror del` sub command
-func newMirrorDelCompCmd(env *environment.Environment) *cobra.Command {
+func newMirrorDelCompCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "del <component> [version]",
 		Short: "Delete a component from the repository",
@@ -190,8 +191,8 @@ func delComp(repo, id, version string) error {
 }
 
 // the `repo publish` sub command
-func newMirrorPublishCmd(env *environment.Environment) *cobra.Command {
-	privPath := env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
+func newMirrorPublishCmd() *cobra.Command {
+	var privPath string
 	endpoint := "http://127.0.0.1:8989"
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH
@@ -204,6 +205,10 @@ func newMirrorPublishCmd(env *environment.Environment) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 4 {
 				return cmd.Help()
+			}
+			env := environment.TiupEnv()
+			if privPath == "" {
+				privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
 			}
 
 			// Get the private key
@@ -244,7 +249,7 @@ func newMirrorPublishCmd(env *environment.Environment) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&privPath, "key", "k", privPath, "private key path")
+	cmd.Flags().StringVarP(&privPath, "key", "k", "", "private key path")
 	cmd.Flags().StringVarP(&goos, "os", "", goos, "the target operation system")
 	cmd.Flags().StringVarP(&goarch, "arch", "", goarch, "the target system architecture")
 	cmd.Flags().StringVarP(&desc, "desc", "", desc, "description of the component")
@@ -253,18 +258,20 @@ func newMirrorPublishCmd(env *environment.Environment) *cobra.Command {
 }
 
 // the `mirror genkey` sub command
-func newMirrorGenkeyCmd(env *environment.Environment) *cobra.Command {
+func newMirrorGenkeyCmd() *cobra.Command {
 	var (
 		showPublic bool
 		saveKey    bool
+		privPath   string
 	)
-	privPath := env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
 
 	cmd := &cobra.Command{
 		Use:   "genkey",
 		Short: "Generate a new key pair",
 		Long:  `Generate a new key pair that can be used to sign components.`,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			env := environment.TiupEnv()
+			privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
 			keyDir := filepath.Dir(privPath)
 			if utils.IsNotExist(keyDir) {
 				return os.Mkdir(keyDir, 0755)
@@ -360,7 +367,7 @@ func newMirrorGenkeyCmd(env *environment.Environment) *cobra.Command {
 }
 
 // the `mirror init` sub command
-func newMirrorInitCmd(env *environment.Environment) *cobra.Command {
+func newMirrorInitCmd() *cobra.Command {
 	var (
 		keyDir string // Directory to write genreated key files
 	)
@@ -404,7 +411,7 @@ func initRepo(path, keyDir string) error {
 }
 
 // the `mirror owner` sub command
-func newMirrorOwnerCmd(env *environment.Environment) *cobra.Command {
+func newMirrorOwnerCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "owner <id> <name>",
 		Short: "Create a new owner for the repository",
@@ -429,7 +436,7 @@ func createOwner(repo, id, name string) error {
 }
 
 // the `mirror yank` sub command
-func newMirrorYankCompCmd(env *environment.Environment) *cobra.Command {
+func newMirrorYankCompCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "yank <component> [version]",
 		Short: "Yank a component in the repository",
@@ -461,21 +468,28 @@ func yankComp(repo, id, version string) error {
 }
 
 // the `mirror clone` sub command
-func newMirrorCloneCmd(env *environment.Environment) *cobra.Command {
+func newMirrorCloneCmd() *cobra.Command {
 	options := repository.CloneOptions{
 		Components: map[string]*[]string{},
 	}
+	var (
+		components []string
+		repo       *repository.V1Repository
+	)
 
-	repo := env.V1Repository()
-	index, fetchErr := repo.FetchIndexManifest()
+	env, fetchErr := environment.InitEnv(repoOpts)
+	if fetchErr == nil {
+		repo = env.V1Repository()
+		var index *v1manifest.Index
+		index, fetchErr = repo.FetchIndexManifest()
 
-	var components []string
-	if index != nil && len(index.Components) > 0 {
-		for name := range index.Components {
-			components = append(components, name)
+		if index != nil && len(index.Components) > 0 {
+			for name := range index.Components {
+				components = append(components, name)
+			}
 		}
+		sort.Strings(components)
 	}
-	sort.Strings(components)
 
 	cmd := &cobra.Command{
 		Use: "clone <target-dir> [global version]",
