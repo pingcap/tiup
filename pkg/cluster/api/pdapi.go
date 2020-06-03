@@ -95,7 +95,7 @@ func tryURLs(endpoints []string, f doFunc) error {
 		if err != nil {
 			continue
 		}
-		break
+		return nil
 	}
 	if len(endpoints) > 1 && err != nil {
 		err = errors.Errorf("after trying all endpoints, no endpoint is available, the last error we met: %s", err)
