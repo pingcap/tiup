@@ -15,6 +15,7 @@ Available Commands:
   update      Update tiup components to the latest version
   status      List the status of instantiated components
   clean       Clean the data of instantiated components
+  telemetry   Controls things about telemetry
   help        Help about any command or component
 
 Available Components:
