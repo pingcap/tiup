@@ -19,14 +19,14 @@ import (
 	"os/exec"
 	"path"
 
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
-
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/task"
+	tiupmeta "github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/set"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -150,7 +150,7 @@ func checkPackage(clusterName, comp, packagePath string) error {
 	if err != nil {
 		return err
 	}
-	manifest, err := meta.TiupEnv().Repository().ComponentVersions(comp)
+	manifest, err := tiupmeta.GlobalEnv().Repository().ComponentVersions(comp)
 	if err != nil {
 		return err
 	}

@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newUpdateCmd(env *environment.Environment) *cobra.Command {
+func newUpdateCmd() *cobra.Command {
 	var all, nightly, force, self bool
 	cmd := &cobra.Command{
 		Use:   "update [component1][:version] [component2..N]",
@@ -39,6 +39,7 @@ latest version. All other flags will be ignored if the flag --self is given.
   $ tiup update playground:v0.0.3 --force # Overwrite an existing local installation
   $ tiup update --self                    # Update TiUP to the latest version`,
 		RunE: func(cmd *cobra.Command, components []string) error {
+			env := environment.GlobalEnv()
 			if self {
 				originFile := env.LocalPath("bin", "tiup")
 				renameFile := env.LocalPath("bin", "tiup.tmp")
