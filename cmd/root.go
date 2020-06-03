@@ -56,7 +56,6 @@ the latest stable version will be downloaded from the repository.`,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			e, err := environment.InitEnv(repoOpts)
 			if err != nil {
-				fmt.Println(color.RedString("Error: %v", err))
 				return err
 			}
 			environment.SetTiupEnv(e)
@@ -134,7 +133,7 @@ the latest stable version will be downloaded from the repository.`,
 			_ = cmd.Help()
 		}
 		if err != nil {
-			fmt.Printf("init local env meet error: %s\n", err)
+			fmt.Printf("\ninit local env meet error: %s\n", err)
 		} else {
 			environment.SetTiupEnv(env)
 		}
