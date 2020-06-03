@@ -23,14 +23,14 @@ var _ = Suite(&TestQCloudStoreSuite{})
 type TestQCloudStoreSuite struct{}
 
 func (s *TestQCloudStoreSuite) TestEmptyCommit(c *C) {
-	store := NewStore("/tmp/store")
+	store := NewStore("/tmp/store", "")
 	txn, err := store.Begin()
 	c.Assert(err, IsNil)
 	c.Assert(txn.Commit(), IsNil)
 }
 
 func (s *TestQCloudStoreSuite) TestSingleWrite(c *C) {
-	store := NewStore("/tmp/store")
+	store := NewStore("/tmp/store", "")
 	txn, err := store.Begin()
 	c.Assert(err, IsNil)
 	c.Assert(txn.WriteManifest("test.json", &v1manifest.Manifest{}), IsNil)
@@ -39,7 +39,7 @@ func (s *TestQCloudStoreSuite) TestSingleWrite(c *C) {
 }
 
 func (s *TestQCloudStoreSuite) TestWrite(c *C) {
-	store := NewStore("/tmp/store")
+	store := NewStore("/tmp/store", "")
 	txn1, err := store.Begin()
 	c.Assert(err, IsNil)
 	txn2, err := store.Begin()

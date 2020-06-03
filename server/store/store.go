@@ -37,6 +37,6 @@ type FsTxn interface {
 }
 
 // NewStore returns a Store, curretly only qcloud supported
-func NewStore(root string) Store {
-	return newQCloudStore(root)
+func NewStore(root string, upstream string) Store {
+	return newQCloudStore(root, upstream)
 }
