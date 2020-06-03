@@ -74,6 +74,7 @@ var (
 	pdLeaderURI         = "pd/api/v1/leader"
 	pdLeaderTransferURI = "pd/api/v1/leader/transfer"
 	pdConfigReplicate   = "pd/api/v1/config/replicate"
+	pdConfigSchedule    = "pd/api/v1/config/schedule"
 )
 
 type doFunc func(endpoint string) error
@@ -537,9 +538,7 @@ func (pc *PDClient) DelPD(name string, retryOpt *clusterutil.RetryOption) error 
 	return nil
 }
 
-// IsTombStone check if the node is Tombstone.
-// The host parameter should be in format of IP:Port, that matches store's address
-func (pc *PDClient) IsTombStone(host string) (bool, error) {
+func (pc *PDClient) isState(host string, state metapb.StoreState) (bool, error) {
 	// get info of current stores
 	stores, err := pc.GetStores()
 	if err != nil {
@@ -547,13 +546,12 @@ func (pc *PDClient) IsTombStone(host string) (bool, error) {
 	}
 
 	for _, storeInfo := range stores.Stores {
-		// log.Debugf("host: %s addr: %s, state: %v", host, storeInfo.Store.Address, storeInfo.Store.State)
 
 		if storeInfo.Store.Address != host {
 			continue
 		}
 
-		if storeInfo.Store.State == metapb.StoreState_Tombstone {
+		if storeInfo.Store.State == state {
 			return true, nil
 		}
 		return false, nil
@@ -561,6 +559,18 @@ func (pc *PDClient) IsTombStone(host string) (bool, error) {
 	}
 
 	return false, errors.New("node not exists")
+}
+
+// IsTombStone check if the node is Tombstone.
+// The host parameter should be in format of IP:Port, that matches store's address
+func (pc *PDClient) IsTombStone(host string) (bool, error) {
+	return pc.isState(host, metapb.StoreState_Tombstone)
+}
+
+// IsUp check if the node is Up state.
+// The host parameter should be in format of IP:Port, that matches store's address
+func (pc *PDClient) IsUp(host string) (bool, error) {
+	return pc.isState(host, metapb.StoreState_Up)
 }
 
 // ErrStoreNotExists represents the store not exists.
@@ -632,9 +642,8 @@ func (pc *PDClient) DelStore(host string, retryOpt *clusterutil.RetryOption) err
 	return nil
 }
 
-// UpdateReplicateConfig updates the PD replicate config
-func (pc *PDClient) UpdateReplicateConfig(body io.Reader) error {
-	endpoints := pc.getEndpoints(pdConfigReplicate)
+func (pc *PDClient) updateConfig(body io.Reader, url string) error {
+	endpoints := pc.getEndpoints(url)
 	return tryURLs(endpoints, func(endpoint string) error {
 		_, err := pc.httpClient.Post(endpoint, body)
 		if err != nil {
@@ -644,7 +653,12 @@ func (pc *PDClient) UpdateReplicateConfig(body io.Reader) error {
 	})
 }
 
-// GetReplicateConfig gets the PD replicate config
+// UpdateReplicateConfig updates the PD replication config
+func (pc *PDClient) UpdateReplicateConfig(body io.Reader) error {
+	return pc.updateConfig(body, pdConfigReplicate)
+}
+
+// GetReplicateConfig gets the PD replication config
 func (pc *PDClient) GetReplicateConfig() ([]byte, error) {
 	endpoints := pc.getEndpoints(pdConfigReplicate)
 	return tryURLsGet(endpoints, func(endpoint string) ([]byte, error) {
@@ -654,4 +668,9 @@ func (pc *PDClient) GetReplicateConfig() ([]byte, error) {
 		}
 		return ret, nil
 	})
+}
+
+// UpdateScheduleConfig updates the PD schedule config
+func (pc *PDClient) UpdateScheduleConfig(body io.Reader) error {
+	return pc.updateConfig(body, pdConfigSchedule)
 }
