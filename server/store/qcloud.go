@@ -127,7 +127,16 @@ func (t *qcloudTxn) WriteManifest(filename string, manifest interface{}) error {
 	}
 	defer file.Close()
 
-	return cjson.NewEncoder(file).Encode(manifest)
+	bytes, err := cjson.Marshal(manifest)
+	if err != nil {
+		return err
+	}
+
+	if _, err = file.Write(bytes); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (t *qcloudTxn) ReadManifest(filename string, manifest interface{}) error {
@@ -142,7 +151,12 @@ func (t *qcloudTxn) ReadManifest(filename string, manifest interface{}) error {
 	}
 	defer file.Close()
 
-	return cjson.NewDecoder(file).Decode(manifest)
+	bytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	return cjson.Unmarshal(bytes, manifest)
 }
 
 func (t *qcloudTxn) ResetManifest() error {
