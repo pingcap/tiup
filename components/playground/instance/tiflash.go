@@ -48,9 +48,10 @@ type TiFlashInstance struct {
 }
 
 // NewTiFlashInstance return a TiFlashInstance
-func NewTiFlashInstance(dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance) *TiFlashInstance {
+func NewTiFlashInstance(binPath, dir, host, configPath string, id int, pds []*PDInstance, dbs []*TiDBInstance) *TiFlashInstance {
 	return &TiFlashInstance{
 		instance: instance{
+			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
@@ -77,7 +78,7 @@ type replicateConfig struct {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Version, binPath string) error {
+func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Version) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
@@ -107,7 +108,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 	}
 
 	// TiFlash needs to obtain absolute path of cluster_manager
-	if binPath == "" {
+	if inst.BinPath == "" {
 		env, err := environment.InitEnv(repository.Options{
 			SkipVersionCheck:  false,
 			GOOS:              runtime.GOOS,
@@ -121,12 +122,12 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 			return err
 		}
 		// version may be empty, we will use the latest stable version later in Start cmd.
-		if binPath, err = env.BinaryPath("tiflash", version); err != nil {
+		if inst.BinPath, err = env.BinaryPath("tiflash", version); err != nil {
 			return err
 		}
 	}
 
-	dirPath := filepath.Dir(binPath)
+	dirPath := filepath.Dir(inst.BinPath)
 	clusterManagerPath := getFlashClusterPath(dirPath)
 	if err = inst.checkConfig(wd, clusterManagerPath, tidbStatusAddrs, endpoints); err != nil {
 		return err
@@ -136,7 +137,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 		return err
 	}
 	inst.cmd = exec.CommandContext(ctx,
-		"tiup", fmt.Sprintf("--binpath=%s", binPath),
+		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
 		compVersion("tiflash", version),
 		"server",
 		fmt.Sprintf("--config-file=%s", inst.ConfigPath),

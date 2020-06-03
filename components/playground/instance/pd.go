@@ -34,9 +34,10 @@ type PDInstance struct {
 }
 
 // NewPDInstance return a PDInstance
-func NewPDInstance(dir, host, configPath string, id int) *PDInstance {
+func NewPDInstance(binPath, dir, host, configPath string, id int) *PDInstance {
 	return &PDInstance{
 		instance: instance{
+			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
@@ -54,13 +55,13 @@ func (inst *PDInstance) Join(pds []*PDInstance) *PDInstance {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *PDInstance) Start(ctx context.Context, version v0manifest.Version, binPath string) error {
+func (inst *PDInstance) Start(ctx context.Context, version v0manifest.Version) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
 	uid := fmt.Sprintf("pd-%d", inst.ID)
 	args := []string{
-		"tiup", fmt.Sprintf("--binpath=%s", binPath),
+		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
 		compVersion("pd", version),
 		"--name=" + uid,
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),

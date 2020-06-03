@@ -27,6 +27,8 @@ import (
 	"github.com/pingcap/tiup/components/playground/utils"
 )
 
+// TODO: use pkg/cluster/api/pdapi.go
+
 // PDClient is an HTTP client of the PD server
 type PDClient struct {
 	addrs      []string

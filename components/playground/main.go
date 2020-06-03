@@ -16,22 +16,21 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
-	"github.com/fatih/color"
+	_ "net/http/pprof"
+
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/pingcap/failpoint"
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/api"
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -40,7 +39,6 @@ import (
 	"github.com/spf13/cobra"
 	"go.etcd.io/etcd/clientv3"
 	"go.uber.org/zap"
-	"golang.org/x/mod/semver"
 )
 
 type bootOptions struct {
@@ -123,9 +121,27 @@ Examples:
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
+				// Any way to add subcommand but still compatible with the old usage?
+				if args[0] == "scale-in" {
+					return scaleIn(args[1:], opt)
+				} else if args[0] == "scale-out" {
+					return scaleOut(args[1:], opt)
+				} else if args[0] == "display" {
+					return display(args[1:])
+				}
 				opt.version = args[0]
 			}
-			return bootCluster(opt)
+
+			port, err := utils.GetFreePort("0.0.0.0", 9527)
+			if err != nil {
+				return errors.AddStack(err)
+			}
+			err = dumpPort(port)
+			p := NewPlayground(port)
+			if err != nil {
+				return errors.AddStack(err)
+			}
+			return p.bootCluster(opt)
 		},
 	}
 
@@ -214,310 +230,18 @@ func getAbsolutePath(binPath string) string {
 	return binPath
 }
 
-func bootCluster(options *bootOptions) error {
-	if options.pd.Num < 1 || options.tidb.Num < 1 || options.tikv.Num < 1 {
-		return fmt.Errorf("all components count must be great than 0 (tidb=%v, tikv=%v, pd=%v)",
-			options.pd.Num, options.tikv.Num, options.pd.Num)
+func dumpPort(port int) error {
+	return ioutil.WriteFile("port", []byte(strconv.Itoa(port)), 0644)
+}
+
+func loadPort(dir string) (port int, err error) {
+	data, err := ioutil.ReadFile(filepath.Join(dir, "port"))
+	if err != nil {
+		return 0, err
 	}
 
-	var pathMap = make(map[string]string)
-	if options.tidb.BinPath != "" {
-		pathMap["tidb"] = getAbsolutePath(options.tidb.BinPath)
-	}
-	if options.tikv.BinPath != "" {
-		pathMap["tikv"] = getAbsolutePath(options.tikv.BinPath)
-	}
-	if options.pd.BinPath != "" {
-		pathMap["pd"] = getAbsolutePath(options.pd.BinPath)
-	}
-	if options.tiflash.Num > 0 && options.tiflash.BinPath != "" {
-		pathMap["tiflash"] = getAbsolutePath(options.tiflash.BinPath)
-	}
-
-	if options.tidb.ConfigPath != "" {
-		options.tidb.ConfigPath = getAbsolutePath(options.tidb.ConfigPath)
-	}
-	if options.tikv.ConfigPath != "" {
-		options.tikv.ConfigPath = getAbsolutePath(options.tikv.ConfigPath)
-	}
-	if options.pd.ConfigPath != "" {
-		options.pd.ConfigPath = getAbsolutePath(options.pd.ConfigPath)
-	}
-	if options.tiflash.Num > 0 && options.tiflash.ConfigPath != "" {
-		options.tiflash.ConfigPath = getAbsolutePath(options.tiflash.ConfigPath)
-	}
-
-	profile := localdata.InitProfile()
-
-	if options.version != "" && semver.Compare("v3.1.0", options.version) > 0 && options.tiflash.Num != 0 {
-		fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.version))
-		options.tiflash.Num = 0
-	}
-
-	for _, comp := range []string{"pd", "tikv", "tidb", "tiflash"} {
-		if pathMap[comp] != "" {
-			continue
-		}
-		if comp == "tiflash" && options.tiflash.Num == 0 {
-			continue
-		}
-
-		if err := installIfMissing(profile, comp, options.version); err != nil {
-			return err
-		}
-	}
-	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
-	if dataDir == "" {
-		return fmt.Errorf("cannot read environment variable %s", localdata.EnvNameInstanceDataDir)
-	}
-
-	all := make([]instance.Instance, 0)
-	allButTiFlash := make([]instance.Instance, 0)
-	allRolesButTiFlash := make([]string, 0)
-	pds := make([]*instance.PDInstance, 0)
-	kvs := make([]*instance.TiKVInstance, 0)
-	dbs := make([]*instance.TiDBInstance, 0)
-	flashs := make([]*instance.TiFlashInstance, 0)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	pdHost := options.host
-	// If pdHost flag is specified, use it instead.
-	if options.pd.Host != "" {
-		pdHost = options.pd.Host
-	}
-	for i := 0; i < options.pd.Num; i++ {
-		dir := filepath.Join(dataDir, fmt.Sprintf("pd-%d", i))
-		inst := instance.NewPDInstance(dir, pdHost, options.pd.ConfigPath, i)
-		pds = append(pds, inst)
-		all = append(all, inst)
-		allButTiFlash = append(allButTiFlash, inst)
-		allRolesButTiFlash = append(allRolesButTiFlash, "pd")
-	}
-	for _, pd := range pds {
-		pd.Join(pds)
-	}
-
-	for i := 0; i < options.tikv.Num; i++ {
-		dir := filepath.Join(dataDir, fmt.Sprintf("tikv-%d", i))
-		inst := instance.NewTiKVInstance(dir, options.host, options.tikv.ConfigPath, i, pds)
-		kvs = append(kvs, inst)
-		all = append(all, inst)
-		allButTiFlash = append(allButTiFlash, inst)
-		allRolesButTiFlash = append(allRolesButTiFlash, "tikv")
-	}
-
-	tidbHost := options.host
-	// If tidbHost flag is specified, use it instead.
-	if options.tidb.Host != "" {
-		tidbHost = options.tidb.Host
-	}
-	for i := 0; i < options.tidb.Num; i++ {
-		dir := filepath.Join(dataDir, fmt.Sprintf("tidb-%d", i))
-		inst := instance.NewTiDBInstance(dir, tidbHost, options.tidb.ConfigPath, i, pds)
-		dbs = append(dbs, inst)
-		allButTiFlash = append(allButTiFlash, inst)
-		allRolesButTiFlash = append(allRolesButTiFlash, "tidb")
-	}
-
-	for i := 0; i < options.tiflash.Num; i++ {
-		dir := filepath.Join(dataDir, fmt.Sprintf("tiflash-%d", i))
-		inst := instance.NewTiFlashInstance(dir, options.host, options.tiflash.ConfigPath, i, pds, dbs)
-		flashs = append(flashs, inst)
-		all = append(all, inst)
-	}
-
-	fmt.Println("Playground Bootstrapping...")
-
-	monitorInfo := struct {
-		IP         string `json:"ip"`
-		Port       int    `json:"port"`
-		BinaryPath string `json:"binary_path"`
-	}{}
-
-	var monitorCmd *exec.Cmd
-	if options.monitor {
-		if err := installIfMissing(profile, "prometheus", options.version); err != nil {
-			return err
-		}
-		var pdAddrs, tidbAddrs, tikvAddrs, tiflashAddrs []string
-		for _, pd := range pds {
-			pdAddrs = append(pdAddrs, fmt.Sprintf("%s:%d", pd.Host, pd.StatusPort))
-		}
-		for _, db := range dbs {
-			tidbAddrs = append(tidbAddrs, fmt.Sprintf("%s:%d", db.Host, db.StatusPort))
-		}
-		for _, kv := range kvs {
-			tikvAddrs = append(tikvAddrs, fmt.Sprintf("%s:%d", kv.Host, kv.StatusPort))
-		}
-		for _, flash := range flashs {
-			tiflashAddrs = append(tiflashAddrs, fmt.Sprintf("%s:%d", flash.Host, flash.StatusPort))
-			tiflashAddrs = append(tiflashAddrs, fmt.Sprintf("%s:%d", flash.Host, flash.ProxyStatusPort))
-		}
-
-		promDir := filepath.Join(dataDir, "prometheus")
-		port, cmd, err := startMonitor(ctx, options.host, promDir, tidbAddrs, tikvAddrs, pdAddrs, tiflashAddrs)
-		if err != nil {
-			return err
-		}
-
-		monitorInfo.IP = options.host
-		monitorInfo.BinaryPath = promDir
-		monitorInfo.Port = port
-
-		monitorCmd = cmd
-		go func() {
-			log, err := os.OpenFile(filepath.Join(promDir, "prom.log"), os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
-			if err != nil {
-				fmt.Println("Monitor system start failed", err)
-				return
-			}
-			defer log.Close()
-
-			cmd.Stderr = log
-			cmd.Stdout = os.Stdout
-
-			if err := cmd.Start(); err != nil {
-				fmt.Println("Monitor system start failed", err)
-				return
-			}
-		}()
-	}
-
-	for i, inst := range allButTiFlash {
-		if err := inst.Start(ctx, v0manifest.Version(options.version), pathMap[allRolesButTiFlash[i]]); err != nil {
-			return err
-		}
-	}
-
-	var succ []string
-	for _, db := range dbs {
-		if s := checkDB(db.Addr()); s {
-			succ = append(succ, db.Addr())
-		}
-	}
-
-	if len(succ) > 0 {
-		// start TiFlash after at least one TiDB is up.
-		var lastErr error
-
-		var endpoints []string
-		for _, pd := range pds {
-			endpoints = append(endpoints, pd.Addr())
-		}
-		pdClient := api.NewPDClient(endpoints, 10*time.Second, nil)
-
-		// make sure TiKV are all up
-		for _, kv := range kvs {
-			if err := checkStoreStatus(pdClient, kv.StoreAddr()); err != nil {
-				lastErr = err
-				break
-			}
-		}
-
-		if lastErr == nil {
-			for _, flash := range flashs {
-				if err := flash.Start(ctx, v0manifest.Version(options.version), pathMap["tiflash"]); err != nil {
-					lastErr = err
-					break
-				}
-			}
-		}
-
-		if lastErr == nil {
-			// check if all TiFlash is up
-			for _, flash := range flashs {
-				if err := checkStoreStatus(pdClient, flash.StoreAddr()); err != nil {
-					lastErr = err
-					break
-				}
-			}
-		}
-
-		if lastErr != nil {
-			fmt.Println(color.RedString("TiFlash failed to start. %s", lastErr))
-		} else {
-			fmt.Println(color.GreenString("CLUSTER START SUCCESSFULLY, Enjoy it ^-^"))
-			for _, dbAddr := range succ {
-				ss := strings.Split(dbAddr, ":")
-				fmt.Println(color.GreenString("To connect TiDB: mysql --host %s --port %s -u root", ss[0], ss[1]))
-			}
-		}
-	}
-
-	if pdAddr := pds[0].Addr(); hasDashboard(pdAddr) {
-		fmt.Println(color.GreenString("To view the dashboard: http://%s/dashboard", pdAddr))
-	}
-
-	if monitorInfo.IP != "" && len(pds) != 0 {
-		client, err := newEtcdClient(pds[0].Addr())
-		if err == nil && client != nil {
-			promBinary, err := json.Marshal(monitorInfo)
-			if err == nil {
-				_, err = client.Put(context.TODO(), "/topology/prometheus", string(promBinary))
-				if err != nil {
-					fmt.Println("Set the PD metrics storage failed")
-				}
-				fmt.Print(color.GreenString("To view the monitor: http://%s:%d\n", monitorInfo.IP, monitorInfo.Port))
-			}
-		}
-	}
-
-	dumpDSN(dbs)
-
-	failpoint.Inject("terminateEarly", func() error {
-		time.Sleep(20 * time.Second)
-
-		fmt.Println("Early terminated via failpoint")
-		for _, inst := range all {
-			_ = syscall.Kill(inst.Pid(), syscall.SIGKILL)
-		}
-		if monitorCmd != nil {
-			_ = syscall.Kill(monitorCmd.Process.Pid, syscall.SIGKILL)
-		}
-
-		fmt.Println("Wait all processes terminated")
-		for _, inst := range all {
-			_ = inst.Wait()
-		}
-		if monitorCmd != nil {
-			_ = monitorCmd.Wait()
-		}
-		return nil
-	})
-
-	go func() {
-		sc := make(chan os.Signal, 1)
-		signal.Notify(sc,
-			syscall.SIGHUP,
-			syscall.SIGINT,
-			syscall.SIGTERM,
-			syscall.SIGQUIT)
-		sig := (<-sc).(syscall.Signal)
-		if sig != syscall.SIGINT {
-			for _, inst := range all {
-				_ = syscall.Kill(inst.Pid(), sig)
-			}
-			if monitorCmd != nil {
-				_ = syscall.Kill(monitorCmd.Process.Pid, sig)
-			}
-		}
-	}()
-
-	for _, inst := range all {
-		if err := inst.Wait(); err != nil {
-			return err
-		}
-	}
-
-	if monitorCmd != nil {
-		if err := monitorCmd.Wait(); err != nil {
-			fmt.Println("Monitor system wait failed", err)
-		}
-	}
-
-	return nil
+	port, err = strconv.Atoi(string(data))
+	return
 }
 
 func dumpDSN(dbs []*instance.TiDBInstance) {

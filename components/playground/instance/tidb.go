@@ -35,9 +35,10 @@ type TiDBInstance struct {
 }
 
 // NewTiDBInstance return a TiDBInstance
-func NewTiDBInstance(dir, host, configPath string, id int, pds []*PDInstance) *TiDBInstance {
+func NewTiDBInstance(binPath string, dir, host, configPath string, id int, pds []*PDInstance) *TiDBInstance {
 	return &TiDBInstance{
 		instance: instance{
+			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
@@ -50,7 +51,7 @@ func NewTiDBInstance(dir, host, configPath string, id int, pds []*PDInstance) *T
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiDBInstance) Start(ctx context.Context, version v0manifest.Version, binPath string) error {
+func (inst *TiDBInstance) Start(ctx context.Context, version v0manifest.Version) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
@@ -59,7 +60,7 @@ func (inst *TiDBInstance) Start(ctx context.Context, version v0manifest.Version,
 		endpoints = append(endpoints, fmt.Sprintf("%s:%d", inst.Host, pd.StatusPort))
 	}
 	args := []string{
-		"tiup", fmt.Sprintf("--binpath=%s", binPath),
+		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
 		compVersion("tidb", version),
 		"-P", strconv.Itoa(inst.Port),
 		"--store=tikv",
