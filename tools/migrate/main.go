@@ -18,12 +18,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/repository"
+	ru "github.com/pingcap/tiup/pkg/repository/utils"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -395,7 +397,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 				}
 
 				fmt.Printf("rehashing %s...\n", filepath.Join(srcDir, filename))
-				hashes, length, err := repository.HashFile(srcDir, filename)
+				hashes, length, err := ru.HashFile(filepath.Join(srcDir, filename))
 				if err != nil {
 					return errors.Trace(err)
 				}
@@ -431,7 +433,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 
 				filename := fmt.Sprintf("/%s-%s-%s.tar.gz", comp.Name, tiupver.NightlyVersion,
 					strings.Join(strings.Split(newp, "/"), "-"))
-				hashes, length, err := repository.HashFile(srcDir, filename)
+				hashes, length, err := ru.HashFile(path.Join(srcDir, filename))
 				if err != nil {
 					return errors.Trace(err)
 				}

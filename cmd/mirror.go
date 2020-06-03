@@ -227,6 +227,7 @@ func newMirrorPublishCmd() *cobra.Command {
 			if err := t.Open(args[2]); err != nil {
 				return err
 			}
+			defer t.Close()
 
 			if err := t.Upload(); err != nil {
 				fmt.Printf("Failed to upload component: %s\n", err.Error())

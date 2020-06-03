@@ -384,13 +384,13 @@ func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifes
 	}
 
 	decoder := json.NewDecoder(input)
-	// For prevent the signatures verify failed from specification changing
+	// To prevent signatures verification failure from specification changing
 	// we use JSON raw message decode the signed part first.
 	rawM := RawManifest{}
 	if err := decoder.Decode(&rawM); err != nil {
 		return nil, errors.Trace(err)
 	}
-	if err := json.Unmarshal(rawM.Signed, role); err != nil {
+	if err := cjson.Unmarshal(rawM.Signed, role); err != nil {
 		return nil, errors.Trace(err)
 	}
 

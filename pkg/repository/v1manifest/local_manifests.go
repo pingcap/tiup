@@ -36,7 +36,7 @@ type LocalManifests interface {
 	SaveComponentManifest(manifest *Manifest, filename string) error
 	// LoadManifest loads and validates the most recent manifest of role's type. The returned bool is true if the file
 	// exists.
-	LoadManifest(role ValidManifest) (bool, error)
+	LoadManifest(role ValidManifest) (*Manifest, bool, error)
 	// LoadComponentManifest loads and validates the most recent manifest at filename.
 	LoadComponentManifest(item *ComponentItem, filename string) (*Component, error)
 	// ComponentInstalled is true if the version of component is present locally.
@@ -134,20 +134,20 @@ func (ms *FsManifests) save(manifest *Manifest, filename string) error {
 }
 
 // LoadManifest implements LocalManifests.
-func (ms *FsManifests) LoadManifest(role ValidManifest) (bool, error) {
+func (ms *FsManifests) LoadManifest(role ValidManifest) (*Manifest, bool, error) {
 	filename := role.Filename()
 	manifest, err := ms.load(filename)
 	if err != nil || manifest == "" {
-		return false, err
+		return nil, false, err
 	}
 
-	_, err = ReadManifest(strings.NewReader(manifest), role, ms.keys)
+	m, err := ReadManifest(strings.NewReader(manifest), role, ms.keys)
 	if err != nil {
-		return true, err
+		return m, true, err
 	}
 
 	ms.cache[filename] = manifest
-	return true, loadKeys(role, ms.keys)
+	return m, true, loadKeys(role, ms.keys)
 }
 
 // LoadComponentManifest implements LocalManifests.
@@ -266,7 +266,7 @@ func (ms *FsManifests) ManifestVersion(filename string) uint {
 
 // MockManifests is a LocalManifests implementation for testing.
 type MockManifests struct {
-	Manifests map[string]ValidManifest
+	Manifests map[string]*Manifest
 	Saved     []string
 	Installed map[string]MockInstalled
 	Ks        *KeyStore
@@ -281,7 +281,7 @@ type MockInstalled struct {
 // NewMockManifests creates an empty MockManifests.
 func NewMockManifests() *MockManifests {
 	return &MockManifests{
-		Manifests: map[string]ValidManifest{},
+		Manifests: map[string]*Manifest{},
 		Saved:     []string{},
 		Installed: map[string]MockInstalled{},
 		Ks:        NewKeyStore(),
@@ -291,46 +291,46 @@ func NewMockManifests() *MockManifests {
 // SaveManifest implements LocalManifests.
 func (ms *MockManifests) SaveManifest(manifest *Manifest, filename string) error {
 	ms.Saved = append(ms.Saved, filename)
-	ms.Manifests[filename] = manifest.Signed
+	ms.Manifests[filename] = manifest
 	return loadKeys(manifest.Signed, ms.Ks)
 }
 
 // SaveComponentManifest implements LocalManifests.
 func (ms *MockManifests) SaveComponentManifest(manifest *Manifest, filename string) error {
 	ms.Saved = append(ms.Saved, filename)
-	ms.Manifests[filename] = manifest.Signed
+	ms.Manifests[filename] = manifest
 	return nil
 }
 
 // LoadManifest implements LocalManifests.
-func (ms *MockManifests) LoadManifest(role ValidManifest) (bool, error) {
+func (ms *MockManifests) LoadManifest(role ValidManifest) (*Manifest, bool, error) {
 	manifest, ok := ms.Manifests[role.Filename()]
 	if !ok {
-		return false, nil
+		return nil, false, nil
 	}
 
 	switch role.Filename() {
 	case ManifestFilenameRoot:
 		ptr := role.(*Root)
-		*ptr = *manifest.(*Root)
+		*ptr = *manifest.Signed.(*Root)
 	case ManifestFilenameIndex:
 		ptr := role.(*Index)
-		*ptr = *manifest.(*Index)
+		*ptr = *manifest.Signed.(*Index)
 	case ManifestFilenameSnapshot:
 		ptr := role.(*Snapshot)
-		*ptr = *manifest.(*Snapshot)
+		*ptr = *manifest.Signed.(*Snapshot)
 	case ManifestFilenameTimestamp:
 		ptr := role.(*Timestamp)
-		*ptr = *manifest.(*Timestamp)
+		*ptr = *manifest.Signed.(*Timestamp)
 	default:
-		return true, fmt.Errorf("unknown manifest type: %s", role.Filename())
+		return nil, true, fmt.Errorf("unknown manifest type: %s", role.Filename())
 	}
 
 	err := loadKeys(role, ms.Ks)
 	if err != nil {
-		return false, errors.AddStack(err)
+		return nil, false, errors.AddStack(err)
 	}
-	return true, nil
+	return manifest, true, nil
 }
 
 // LoadComponentManifest implements LocalManifests.
@@ -339,7 +339,7 @@ func (ms *MockManifests) LoadComponentManifest(item *ComponentItem, filename str
 	if !ok {
 		return nil, nil
 	}
-	comp, ok := manifest.(*Component)
+	comp, ok := manifest.Signed.(*Component)
 	if !ok {
 		return nil, fmt.Errorf("manifest %s is not a component manifest", filename)
 	}
@@ -379,7 +379,7 @@ func (ms *MockManifests) KeyStore() *KeyStore {
 func (ms *MockManifests) ManifestVersion(filename string) uint {
 	manifest, ok := ms.Manifests[filename]
 	if ok {
-		return manifest.Base().Version
+		return manifest.Signed.Base().Version
 	}
 	return 0
 }

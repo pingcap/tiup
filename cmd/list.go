@@ -108,7 +108,7 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 	}
 
 	index := v1manifest.Index{}
-	exists, err := env.V1Repository().Local().LoadManifest(&index)
+	_, exists, err := env.V1Repository().Local().LoadManifest(&index)
 	if err != nil {
 		return nil, err
 	}

@@ -27,15 +27,13 @@ func getTelemetryMeta(env *environment.Environment) (meta *telemetry.Meta, fname
 
 func newTelemetryCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:    "telemetry",
-		Hidden: true, // Make false once it's ready to release.
-		Short:  "Controls things about telemetry",
+		Use:   "telemetry",
+		Short: "Controls things about telemetry",
 	}
 
 	cmd.AddCommand(&cobra.Command{
-		Use:    "reset",
-		Hidden: false,
-		Short:  "Reset the uuid used for telemetry",
+		Use:   "reset",
+		Short: "Reset the uuid used for telemetry",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			env := environment.TiupEnv()
 			teleMeta, fname, err := getTelemetryMeta(env)

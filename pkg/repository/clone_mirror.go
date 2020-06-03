@@ -16,6 +16,7 @@ package repository
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -24,6 +25,7 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
+	ru "github.com/pingcap/tiup/pkg/repository/utils"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/set"
@@ -55,8 +57,15 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 
 	// Temporary directory is used to save the unverified tarballs
 	tmpDir := filepath.Join(targetDir, fmt.Sprintf("_tmp_%d", time.Now().UnixNano()))
+	keyDir := filepath.Join(targetDir, "keys")
+
 	if utils.IsNotExist(tmpDir) {
 		if err := os.MkdirAll(tmpDir, 0755); err != nil {
+			return err
+		}
+	}
+	if utils.IsNotExist(keyDir) {
+		if err := os.MkdirAll(keyDir, 0755); err != nil {
 			return err
 		}
 	}
@@ -87,7 +96,7 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 		v1manifest.ManifestTypeSnapshot,
 		v1manifest.ManifestTypeTimestamp,
 	} {
-		if err := v1manifest.GenAndSaveKeys(keys, ty, int(v1manifest.ManifestsConfig[ty].Threshold), tmpDir); err != nil {
+		if err := v1manifest.GenAndSaveKeys(keys, ty, int(v1manifest.ManifestsConfig[ty].Threshold), keyDir); err != nil {
 			return err
 		}
 	}
@@ -119,7 +128,7 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 		return errors.Trace(err)
 	}
 	// save owner key
-	if err := v1manifest.SaveKeyInfo(ownerkeyInfo, "pingcap", tmpDir); err != nil {
+	if err := v1manifest.SaveKeyInfo(ownerkeyInfo, "pingcap", keyDir); err != nil {
 		return errors.Trace(err)
 	}
 
@@ -330,7 +339,7 @@ func cloneComponents(repo *V1Repository,
 
 func download(targetDir, tmpDir string, repo *V1Repository, item *v1manifest.VersionItem) error {
 	validate := func(dir string) error {
-		hashes, n, err := HashFile(dir, item.URL)
+		hashes, n, err := ru.HashFile(path.Join(dir, item.URL))
 		if err != nil {
 			return errors.AddStack(err)
 		}
