@@ -132,9 +132,6 @@ the latest stable version will be downloaded from the repository.`,
 			cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
 			_ = cmd.Help()
 		}
-		if err == nil {
-			environment.SetGlobalEnv(env)
-		}
 	})
 
 	rootCmd.SetHelpCommand(newHelpCmd())
