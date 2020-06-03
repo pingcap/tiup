@@ -138,7 +138,6 @@ func TestUpdateLocalSnapshot(t *testing.T) {
 	snapshot, err = repo.updateLocalSnapshot()
 	assert.Nil(t, err)
 	assert.NotNil(t, snapshot)
-	fmt.Printf("%v\n", snapshot)
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameSnapshot)
 
 	// test that invalid snapshot will causes an error
