@@ -58,7 +58,7 @@ type transporter struct {
 // New returns a Transporter
 func New(endpoint, component, version, entry string) Transporter {
 	return &transporter{
-		endpoint:  endpoint,
+		endpoint:  strings.TrimSuffix(endpoint, "/"),
 		component: component,
 		entry:     entry,
 		os:        runtime.GOOS,
