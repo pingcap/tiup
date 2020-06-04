@@ -21,6 +21,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/otiai10/copy"
 	"github.com/pingcap/errors"
 )
 
@@ -100,8 +101,19 @@ func Untar(reader io.Reader, to string) error {
 	return nil
 }
 
-// Copy copy file from src to dst
+// Copy copies a file or directory from src to dst
 func Copy(src, dst string) error {
+	// check if src is a directory
+	fi, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if fi.IsDir() {
+		// use copy.Copy to copy a directory
+		return copy.Copy(src, dst)
+	}
+
+	// for regular files
 	in, err := os.Open(src)
 	if err != nil {
 		return err
@@ -126,7 +138,7 @@ func Copy(src, dst string) error {
 // instead this, it's more lightweight but can not be used across devices.
 func Move(src, dst string) error {
 	if err := Copy(src, dst); err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	return errors.Trace(os.Remove(src))
 }
