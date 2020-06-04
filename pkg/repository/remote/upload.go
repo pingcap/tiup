@@ -37,7 +37,7 @@ type Transporter interface {
 	WithOS(os string) Transporter
 	WithArch(arch string) Transporter
 	WithDesc(desc string) Transporter
-	Open(tarbal string) error
+	Open(tarball string) error
 	Close() error
 	Upload() error
 	Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) error
@@ -82,8 +82,8 @@ func (t *transporter) WithArch(arch string) Transporter {
 	return t
 }
 
-func (t *transporter) Open(tarbal string) error {
-	hashes, length, err := ru.HashFile(tarbal)
+func (t *transporter) Open(tarball string) error {
+	hashes, length, err := ru.HashFile(tarball)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -93,7 +93,7 @@ func (t *transporter) Open(tarbal string) error {
 		Length: uint(length),
 	}
 
-	file, err := os.Open(tarbal)
+	file, err := os.Open(tarball)
 	if err != nil {
 		return err
 	}
@@ -109,11 +109,11 @@ func (t *transporter) Close() error {
 func (t *transporter) Upload() error {
 	sha256 := t.filehash.Hashes[v1manifest.SHA256]
 	if sha256 == "" {
-		return errors.New("sha256 not found for tarbal")
+		return errors.New("sha256 not found for tarball")
 	}
 	postAddr := fmt.Sprintf("%s/api/v1/tarball/%s", t.endpoint, sha256)
-	tarbalName := fmt.Sprintf("%s-%s-%s-%s.tar.gz", t.component, t.version, t.os, t.arch)
-	resp, err := utils.PostFile(t.tarFile, postAddr, "file", tarbalName)
+	tarballName := fmt.Sprintf("%s-%s-%s-%s.tar.gz", t.component, t.version, t.os, t.arch)
+	resp, err := utils.PostFile(t.tarFile, postAddr, "file", tarballName)
 	if err != nil {
 		return err
 	}
@@ -123,16 +123,18 @@ func (t *transporter) Upload() error {
 func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) error {
 	sha256 := t.filehash.Hashes[v1manifest.SHA256]
 	if sha256 == "" {
-		return errors.New("sha256 not found for tarbal")
+		return errors.New("sha256 not found for tarball")
 	}
 	id, err := key.ID()
 	if err != nil {
 		return err
 	}
 
+	initTime := time.Now()
 	if m == nil {
-		m = t.defaultComponent()
+		m = t.defaultComponent(initTime)
 	} else {
+		v1manifest.RenewManifest(m, initTime)
 		m.Version++
 	}
 
@@ -146,7 +148,7 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 	}
 	m.Platforms[platformStr][t.version] = v1manifest.VersionItem{
 		Entry:    t.entry,
-		Released: time.Now().Format(time.RFC3339),
+		Released: initTime.Format(time.RFC3339),
 		URL:      fmt.Sprintf("/%s-%s-%s-%s.tar.gz", t.component, t.version, t.os, t.arch),
 		FileHash: t.filehash,
 	}
@@ -195,17 +197,6 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 	return fmt.Errorf("Unknow error from server, response body: %s", buf.String())
 }
 
-func (t *transporter) defaultComponent() *v1manifest.Component {
-	initTime := time.Now()
-	return &v1manifest.Component{
-		SignedBase: v1manifest.SignedBase{
-			Ty:          v1manifest.ManifestTypeComponent,
-			SpecVersion: v1manifest.CurrentSpecVersion,
-			Expires:     initTime.Add(v1manifest.ManifestsConfig[v1manifest.ManifestTypeComponent].Expire).Format(time.RFC3339),
-			Version:     1, // initial repo starts with version 1
-		},
-		ID:          t.component,
-		Description: t.description,
-		Platforms:   make(map[string]map[string]v1manifest.VersionItem),
-	}
+func (t *transporter) defaultComponent(initTime time.Time) *v1manifest.Component {
+	return v1manifest.NewComponent(t.component, t.description, initTime)
 }

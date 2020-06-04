@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/juju/errors"
@@ -27,10 +28,10 @@ import (
 // Model defines operations on the manifests
 type Model interface {
 	UpdateComponentManifest(component string, manifest *ComponentManifest) error
-	UpdateRootManifest(manifest *RootManifest) error
-	UpdateIndexManifest(func(*IndexManifest) *IndexManifest) error
-	UpdateSnapshotManifest(func(*SnapshotManifest) *SnapshotManifest) error
-	UpdateTimestampManifest() error
+	UpdateRootManifest(initTime time.Time, manifest *RootManifest) error
+	UpdateIndexManifest(time.Time, func(*IndexManifest) *IndexManifest) error
+	UpdateSnapshotManifest(time.Time, func(*SnapshotManifest) *SnapshotManifest) error
+	UpdateTimestampManifest(time.Time) error
 }
 
 type model struct {
@@ -56,7 +57,7 @@ func (m *model) UpdateComponentManifest(component string, manifest *ComponentMan
 	return m.txn.WriteManifest(fmt.Sprintf("%d.%s.json", manifest.Signed.Version, component), manifest)
 }
 
-func (m *model) UpdateRootManifest(manifest *RootManifest) error {
+func (m *model) UpdateRootManifest(initTime time.Time, manifest *RootManifest) error {
 	var last RootManifest
 	if err := m.txn.ReadManifest(v1manifest.ManifestFilenameRoot, &last); err != nil {
 		return err
@@ -67,10 +68,11 @@ func (m *model) UpdateRootManifest(manifest *RootManifest) error {
 	if err := m.txn.WriteManifest(v1manifest.ManifestFilenameRoot, manifest); err != nil {
 		return err
 	}
+
 	return m.txn.WriteManifest(fmt.Sprintf("%d.root.json", manifest.Signed.Version), manifest)
 }
 
-func (m *model) UpdateIndexManifest(f func(*IndexManifest) *IndexManifest) error {
+func (m *model) UpdateIndexManifest(initTime time.Time, f func(*IndexManifest) *IndexManifest) error {
 	snap, err := m.ReadSnapshotManifest()
 	if err != nil {
 		return err
@@ -87,11 +89,12 @@ func (m *model) UpdateIndexManifest(f func(*IndexManifest) *IndexManifest) error
 	if err != nil {
 		return err
 	}
+	v1manifest.RenewManifest(&manifest.Signed, initTime)
 
 	return m.txn.WriteManifest(fmt.Sprintf("%d.index.json", manifest.Signed.Version), manifest)
 }
 
-func (m *model) UpdateSnapshotManifest(f func(*SnapshotManifest) *SnapshotManifest) error {
+func (m *model) UpdateSnapshotManifest(initTime time.Time, f func(*SnapshotManifest) *SnapshotManifest) error {
 	var last SnapshotManifest
 	err := m.txn.ReadManifest(v1manifest.ManifestFilenameSnapshot, &last)
 	if err != nil {
@@ -102,6 +105,7 @@ func (m *model) UpdateSnapshotManifest(f func(*SnapshotManifest) *SnapshotManife
 	if err != nil {
 		return err
 	}
+	v1manifest.RenewManifest(&manifest.Signed, initTime)
 
 	return m.txn.WriteManifest(v1manifest.ManifestFilenameSnapshot, manifest)
 }
@@ -124,7 +128,7 @@ func (m *model) ReadRootManifest() (*RootManifest, error) {
 	return &root, nil
 }
 
-func (m *model) UpdateTimestampManifest() error {
+func (m *model) UpdateTimestampManifest(initTime time.Time) error {
 	fi, err := m.txn.Stat(v1manifest.ManifestFilenameSnapshot)
 	if err != nil {
 		return err
@@ -156,6 +160,7 @@ func (m *model) UpdateTimestampManifest() error {
 	if err != nil {
 		return err
 	}
+	v1manifest.RenewManifest(&manifest.Signed, initTime)
 	return m.txn.WriteManifest(v1manifest.ManifestFilenameTimestamp, &manifest)
 }
 
