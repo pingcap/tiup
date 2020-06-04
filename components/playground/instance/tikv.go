@@ -36,9 +36,10 @@ type TiKVInstance struct {
 }
 
 // NewTiKVInstance return a TiKVInstance
-func NewTiKVInstance(dir, host, configPath string, id int, pds []*PDInstance) *TiKVInstance {
+func NewTiKVInstance(binPath string, dir, host, configPath string, id int, pds []*PDInstance) *TiKVInstance {
 	return &TiKVInstance{
 		instance: instance{
+			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
@@ -51,7 +52,7 @@ func NewTiKVInstance(dir, host, configPath string, id int, pds []*PDInstance) *T
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiKVInstance) Start(ctx context.Context, version v0manifest.Version, binPath string) error {
+func (inst *TiKVInstance) Start(ctx context.Context, version v0manifest.Version) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
@@ -63,7 +64,7 @@ func (inst *TiKVInstance) Start(ctx context.Context, version v0manifest.Version,
 		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", inst.Host, pd.StatusPort))
 	}
 	inst.cmd = exec.CommandContext(ctx,
-		"tiup", fmt.Sprintf("--binpath=%s", binPath),
+		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
 		compVersion("tikv", version),
 		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
 		fmt.Sprintf("--status-addr=%s:%d", inst.Host, inst.StatusPort),
