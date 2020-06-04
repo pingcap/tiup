@@ -31,6 +31,7 @@ type Command struct {
 	instance.Config
 }
 
+// nolint
 func buildCommands(tp CommandType, opt *bootOptions) (cmds []Command) {
 	for i := 0; i < opt.pd.Num; i++ {
 		c := Command{
@@ -108,6 +109,7 @@ func newDisplay() *cobra.Command {
 	return cmd
 }
 
+// nolint
 func scaleOut(args []string, opt *bootOptions) error {
 	port, err := targetTag()
 	if err != nil {
