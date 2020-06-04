@@ -16,6 +16,7 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/gorilla/mux"
@@ -59,6 +60,8 @@ func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr 
 		return nil, ErrorSessionMissing
 	}
 
+	initTime := time.Now()
+
 	md := model.New(txn, h.keys)
 	// Retry util not conflict with other txns
 	if err := utils.Retry(func() error {
@@ -78,7 +81,7 @@ func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr 
 
 		var indexVersion uint
 		var keys map[string]*v1manifest.KeyInfo
-		if err := md.UpdateIndexManifest(func(om *model.IndexManifest) *model.IndexManifest {
+		if err := md.UpdateIndexManifest(initTime, func(om *model.IndexManifest) *model.IndexManifest {
 			om.Signed.Components[name] = v1manifest.ComponentItem{
 				Owner: "pingcap", // TODO: read this from request
 				URL:   fmt.Sprintf("/%s.json", name),
@@ -99,7 +102,7 @@ func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr 
 			return err
 		}
 
-		if err := md.UpdateSnapshotManifest(func(om *model.SnapshotManifest) *model.SnapshotManifest {
+		if err := md.UpdateSnapshotManifest(initTime, func(om *model.SnapshotManifest) *model.SnapshotManifest {
 			om.Signed.Meta["/index.json"] = v1manifest.FileVersion{
 				Version: indexVersion,
 				Length:  uint(indexFi.Size()),
@@ -114,7 +117,7 @@ func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr 
 		}
 
 		// Update timestamp.json and signature
-		if err := md.UpdateTimestampManifest(); err != nil {
+		if err := md.UpdateTimestampManifest(initTime); err != nil {
 			return err
 		}
 		return txn.Commit()

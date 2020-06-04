@@ -25,22 +25,22 @@ import (
 // MaxFileSize is the max size content can be uploaded
 const MaxFileSize = 32 * 1024 * 1024
 
-// UploadTarbal handle tarbal upload
+// UploadTarbal handle tarball upload
 func UploadTarbal(sm session.Manager) http.Handler {
-	return &tarbalUploader{sm}
+	return &tarballUploader{sm}
 }
 
-type tarbalUploader struct {
+type tarballUploader struct {
 	sm session.Manager
 }
 
-func (h *tarbalUploader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *tarballUploader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fn.Wrap(h.upload).ServeHTTP(w, r)
 }
 
-func (h *tarbalUploader) upload(r *http.Request) (*simpleResponse, statusError) {
+func (h *tarballUploader) upload(r *http.Request) (*simpleResponse, statusError) {
 	sid := mux.Vars(r)["sid"]
-	log.Infof("Uploading tarbal, sid: %s", sid)
+	log.Infof("Uploading tarball, sid: %s", sid)
 
 	if err := h.sm.Begin(sid); err != nil {
 		if err == session.ErrorSessionConflict {
@@ -61,18 +61,18 @@ func (h *tarbalUploader) upload(r *http.Request) (*simpleResponse, statusError) 
 
 	if err := r.ParseMultipartForm(MaxFileSize); err != nil {
 		// TODO: log error here
-		return nil, ErrorInvalidTarbal
+		return nil, ErrorInvalidTarball
 	}
 
 	file, handler, err := r.FormFile("file")
 	if err != nil {
 		// TODO: log error here
-		return nil, ErrorInvalidTarbal
+		return nil, ErrorInvalidTarball
 	}
 	defer file.Close()
 
 	if err := txn.Write(handler.Filename, file); err != nil {
-		log.Errorf("Error to write tarbal: %s", err.Error())
+		log.Errorf("Error to write tarball: %s", err.Error())
 		return nil, ErrorInternalError
 	}
 

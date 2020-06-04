@@ -52,8 +52,8 @@ var (
 	ErrorSessionMissing = newHandlerError(http.StatusNotFound, "SESSION NOT FOUND", "session with specified identity not found")
 	// ErrorManifestMissing indicates that the specified component doesn't have manifest yet
 	ErrorManifestMissing = newHandlerError(http.StatusNotFound, "MANIFEST NOT FOUND", "that component doesn't have manifest yet")
-	// ErrorInvalidTarbal indicates that the tarbal is not valid (eg. too large)
-	ErrorInvalidTarbal = newHandlerError(http.StatusBadRequest, "INVALID TARBAL", "the tarbal content is not valid")
+	// ErrorInvalidTarball indicates that the tarball is not valid (eg. too large)
+	ErrorInvalidTarball = newHandlerError(http.StatusBadRequest, "INVALID TARBALL", "the tarball content is not valid")
 	// ErrorInternalError indicates that an internal error happened
 	ErrorInternalError = newHandlerError(http.StatusInternalServerError, "INTERNAL ERROR", "an internal error happened")
 	// ErrorManifestConflict indicates that the uploaded manifest is not new enough

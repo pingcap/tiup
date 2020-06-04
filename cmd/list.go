@@ -190,8 +190,13 @@ func showComponentVersions(env *environment.Environment, component string, opt l
 
 	for plat, versions := range comp.Platforms {
 		for ver, verinfo := range versions {
-			platforms[ver] = append(platforms[ver], plat)
-			released[ver] = verinfo.Released
+			if v0manifest.Version(ver).IsNightly() && ver == comp.Nightly {
+				platforms[version.NightlyVersion] = append(platforms[version.NightlyVersion], plat)
+				released[version.NightlyVersion] = verinfo.Released
+			} else {
+				platforms[ver] = append(platforms[ver], plat)
+				released[ver] = verinfo.Released
+			}
 		}
 	}
 	verList := []string{}

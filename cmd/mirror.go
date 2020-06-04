@@ -193,13 +193,13 @@ func delComp(repo, id, version string) error {
 // the `repo publish` sub command
 func newMirrorPublishCmd() *cobra.Command {
 	var privPath string
-	endpoint := "http://127.0.0.1:8989"
+	endpoint := environment.Mirror()
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH
 	desc := ""
 
 	cmd := &cobra.Command{
-		Use:   "publish <comp-name> <version> <tarbal> <entry>",
+		Use:   "publish <comp-name> <version> <tarball> <entry>",
 		Short: "Publish a component",
 		Long:  "Publish a component to the repository",
 		RunE: func(cmd *cobra.Command, args []string) error {
