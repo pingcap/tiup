@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -29,8 +30,9 @@ import (
 // PDInstance represent a running pd-server
 type PDInstance struct {
 	instance
-	endpoints []*PDInstance
-	cmd       *exec.Cmd
+	initEndpoints []*PDInstance
+	joinEndpoints []*PDInstance
+	cmd           *exec.Cmd
 }
 
 // NewPDInstance return a PDInstance
@@ -50,7 +52,13 @@ func NewPDInstance(binPath, dir, host, configPath string, id int) *PDInstance {
 
 // Join set endpoints field of PDInstance
 func (inst *PDInstance) Join(pds []*PDInstance) *PDInstance {
-	inst.endpoints = pds
+	inst.joinEndpoints = pds
+	return inst
+}
+
+// InitCluster set the init cluster instance.
+func (inst *PDInstance) InitCluster(pds []*PDInstance) *PDInstance {
+	inst.initEndpoints = pds
 	return inst
 }
 
@@ -74,14 +82,24 @@ func (inst *PDInstance) Start(ctx context.Context, version v0manifest.Version) e
 	if inst.ConfigPath != "" {
 		args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
 	}
-	endpoints := make([]string, 0, len(inst.endpoints))
-	for _, pd := range inst.endpoints {
-		uid := fmt.Sprintf("pd-%d", pd.ID)
-		endpoints = append(endpoints, fmt.Sprintf("%s=http://%s:%d", uid, inst.Host, pd.Port))
+
+	if len(inst.initEndpoints) > 0 {
+		endpoints := make([]string, 0)
+		for _, pd := range inst.initEndpoints {
+			uid := fmt.Sprintf("pd-%d", pd.ID)
+			endpoints = append(endpoints, fmt.Sprintf("%s=http://%s:%d", uid, inst.Host, pd.Port))
+			args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(endpoints, ",")))
+		}
+	} else if len(inst.joinEndpoints) > 0 {
+		endpoints := make([]string, 0)
+		for _, pd := range inst.joinEndpoints {
+			endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", inst.Host, pd.Port))
+			args = append(args, fmt.Sprintf("--join=%s", strings.Join(endpoints, ",")))
+		}
+	} else {
+		return errors.Errorf("must set the init or join instances.")
 	}
-	if len(endpoints) > 0 {
-		args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(endpoints, ",")))
-	}
+
 	inst.cmd = exec.CommandContext(ctx, args[0], args[1:]...)
 	inst.cmd.Env = append(
 		os.Environ(),

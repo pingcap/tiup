@@ -31,6 +31,7 @@ import (
 
 // Playground represent the playground of a cluster.
 type Playground struct {
+	booted      bool
 	bootOptions *bootOptions
 	profile     *localdata.Profile
 	port        int
@@ -88,8 +89,50 @@ func (p *Playground) handleScaleIn(w io.Writer, cmd *Command) error {
 	return nil
 }
 
+func (p *Playground) sanitizeConfig(boot instance.Config, cfg *instance.Config) {
+	if cfg.BinPath == "" {
+		cfg.BinPath = boot.BinPath
+	}
+	if cfg.ConfigPath == "" {
+		cfg.ConfigPath = boot.ConfigPath
+	}
+	if cfg.Host == "" {
+		cfg.Host = boot.ConfigPath
+	}
+}
+
+func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) {
+	switch cid {
+	case "pd":
+		p.sanitizeConfig(p.bootOptions.pd, cfg)
+	case "tikv":
+		p.sanitizeConfig(p.bootOptions.tikv, cfg)
+	case "tidb":
+		p.sanitizeConfig(p.bootOptions.tidb, cfg)
+	case "tiflash":
+		p.sanitizeConfig(p.bootOptions.tiflash, cfg)
+	default:
+		fmt.Printf("unknow %s in sanitizeConfig", cid)
+	}
+}
+
 func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
-	fmt.Sprintln(w, "TODO")
+	// Ignore Config.Num, alway one command as scale out one instance.
+	p.sanitizeComponentConfig(cmd.ComponentID, &cmd.Config)
+	inst, err := p.addInstance(cmd.ComponentID, cmd.Config)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	err = inst.Start(context.Background(), v0manifest.Version(p.bootOptions.version))
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	p.instanceWaiter.Go(func() error {
+		return inst.Wait()
+	})
+
 	return nil
 }
 
@@ -200,9 +243,14 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 	case "pd":
 		inst := instance.NewPDInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id)
 		ins = inst
-		p.pds = append(p.pds, inst)
-		for _, pd := range p.pds {
-			pd.Join(p.pds)
+		if p.booted {
+			inst.Join(p.pds)
+			p.pds = append(p.pds, inst)
+		} else {
+			p.pds = append(p.pds, inst)
+			for _, pd := range p.pds {
+				pd.InitCluster(p.pds)
+			}
 		}
 	case "tidb":
 		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
@@ -333,6 +381,8 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 	if err != nil {
 		return errors.AddStack(err)
 	}
+
+	p.booted = true
 
 	var succ []string
 	for _, db := range p.tidbs {
