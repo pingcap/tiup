@@ -493,7 +493,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 		sig := (<-sc).(syscall.Signal)
 		if sig != syscall.SIGINT {
 			_ = p.WalkInstances(func(_ string, inst instance.Instance) error {
-				_ = syscall.Kill(inst.Pid(), syscall.SIGKILL)
+				_ = syscall.Kill(inst.Pid(), sig)
 				return nil
 			})
 			if monitorCmd != nil {
