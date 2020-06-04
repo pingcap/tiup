@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/components/playground/api"
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
@@ -72,7 +72,15 @@ func getFlashClusterPath(dir string) string {
 	return fmt.Sprintf("%s/flash_cluster_manager", dir)
 }
 
-type replicateConfig struct {
+type scheduleConfig struct {
+	LowSpaceRatio float64 `json:"low-space-ratio"`
+}
+
+type replicateMaxReplicaConfig struct {
+	MaxReplicas int `json:"max-replicas"`
+}
+
+type replicateEnablePlacementRulesConfig struct {
 	EnablePlacementRules string `json:"enable-placement-rules"`
 }
 
@@ -96,11 +104,32 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 
 	// Wait for PD
 	pdClient := api.NewPDClient(endpoints, 10*time.Second, nil)
-	enablePlacementRules, err := json.Marshal(replicateConfig{
+	// set low-space-ratio to 1 to avoid low disk space
+	lowSpaceRatio, err := json.Marshal(scheduleConfig{
+		LowSpaceRatio: 0.99,
+	})
+	if err != nil {
+		return err
+	}
+	if err = pdClient.UpdateScheduleConfig(bytes.NewBuffer(lowSpaceRatio)); err != nil {
+		return err
+	}
+	// Update maxReplicas before placement rules so that it would not be overwritten
+	maxReplicas, err := json.Marshal(replicateMaxReplicaConfig{
+		MaxReplicas: 1,
+	})
+	if err != nil {
+		return err
+	}
+	if err = pdClient.UpdateReplicateConfig(bytes.NewBuffer(maxReplicas)); err != nil {
+		return err
+	}
+	// Set enable-placement-rules to allow TiFlash work properly
+	enablePlacementRules, err := json.Marshal(replicateEnablePlacementRulesConfig{
 		EnablePlacementRules: "true",
 	})
 	if err != nil {
-		return nil
+		return err
 	}
 	if err = pdClient.UpdateReplicateConfig(bytes.NewBuffer(enablePlacementRules)); err != nil {
 		return err
