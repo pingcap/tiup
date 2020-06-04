@@ -79,51 +79,51 @@ func (dm *DMMasterClient) getEndpoints(cmd string) (endpoints []string) {
 
 func (dm *DMMasterClient) getMember(endpoints []string) (*dmpb.ListMemberResponse, error) {
 	resp := &dmpb.ListMemberResponse{}
-	err := tryURLs(endpoints, func(endpoint string) error {
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := dm.httpClient.Get(endpoint)
 		if err != nil {
-			return err
+			return body, err
 		}
 
 		err = jsonpb.Unmarshal(strings.NewReader(string(body)), resp)
 
 		if err != nil {
-			return err
+			return body, err
 		}
 
 		if !resp.Result {
-			return errors.New("dm-master get members failed: " + resp.Msg)
+			return body, errors.New("dm-master get members failed: " + resp.Msg)
 		}
 
-		return nil
+		return body, nil
 	})
 	return resp, err
 }
 
 func (dm *DMMasterClient) deleteMember(endpoints []string) (*dmpb.OfflineWorkerResponse, error) {
 	resp := &dmpb.OfflineWorkerResponse{}
-	err := tryURLs(endpoints, func(endpoint string) error {
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, statusCode, err := dm.httpClient.Delete(endpoint, nil)
 
 		if statusCode == 404 || bytes.Contains(body, []byte("not exists")) {
 			zap.L().Debug("member to offline does not exist, ignore.")
-			return nil
+			return body, nil
 		}
 		if err != nil {
-			return err
+			return body, err
 		}
 
 		err = jsonpb.Unmarshal(strings.NewReader(string(body)), resp)
 
 		if err != nil {
-			return err
+			return body, err
 		}
 
 		if !resp.Result {
-			return errors.New("dm-master offline member failed: " + resp.Msg)
+			return body, errors.New("dm-master offline member failed: " + resp.Msg)
 		}
 
-		return nil
+		return body, nil
 	})
 	return resp, err
 }

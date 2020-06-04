@@ -77,34 +77,7 @@ var (
 	pdConfigSchedule    = "pd/api/v1/config/schedule"
 )
 
-type doFunc func(endpoint string) error
-type getFunc func(endpoint string) ([]byte, error)
-
-func tryURLs(endpoints []string, f doFunc) error {
-	var err error
-	for _, endpoint := range endpoints {
-		var u *url.URL
-		u, err = url.Parse(endpoint)
-
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		endpoint = u.String()
-
-		err = f(endpoint)
-		if err != nil {
-			continue
-		}
-		return nil
-	}
-	if len(endpoints) > 1 && err != nil {
-		err = errors.Errorf("after trying all endpoints, no endpoint is available, the last error we met: %s", err)
-	}
-	return err
-}
-
-func tryURLsGet(endpoints []string, f getFunc) ([]byte, error) {
+func tryURLs(endpoints []string, f func(endpoint string) ([]byte, error)) ([]byte, error) {
 	var err error
 	var bytes []byte
 	for _, endpoint := range endpoints {
@@ -112,7 +85,7 @@ func tryURLsGet(endpoints []string, f getFunc) ([]byte, error) {
 		u, err = url.Parse(endpoint)
 
 		if err != nil {
-			return nil, errors.AddStack(err)
+			return bytes, errors.AddStack(err)
 		}
 
 		endpoint = u.String()
@@ -121,10 +94,10 @@ func tryURLsGet(endpoints []string, f getFunc) ([]byte, error) {
 		if err != nil {
 			continue
 		}
-		break
+		return bytes, nil
 	}
 	if len(endpoints) > 1 && err != nil {
-		return nil, errors.Errorf("after trying all endpoints, no endpoint is available, the last error we met: %s", err)
+		err = errors.Errorf("no pd endpoint available, the last err is: %s", err)
 	}
 	return bytes, err
 }
@@ -149,13 +122,13 @@ func (pc *PDClient) GetHealth() (*PDHealthInfo, error) {
 
 	healths := []pdserverapi.Health{}
 
-	err := tryURLs(endpoints, func(endpoint string) error {
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := pc.httpClient.Get(endpoint)
 		if err != nil {
-			return err
+			return body, err
 		}
 
-		return json.Unmarshal(body, &healths)
+		return body, json.Unmarshal(body, &healths)
 	})
 
 	if err != nil {
@@ -173,13 +146,13 @@ func (pc *PDClient) GetStores() (*pdserverapi.StoresInfo, error) {
 
 	storesInfo := pdserverapi.StoresInfo{}
 
-	err := tryURLs(endpoints, func(endpoint string) error {
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := pc.httpClient.Get(endpoint)
 		if err != nil {
-			return err
+			return body, err
 		}
 
-		return json.Unmarshal(body, &storesInfo)
+		return body, json.Unmarshal(body, &storesInfo)
 
 	})
 	if err != nil {
@@ -219,13 +192,13 @@ func (pc *PDClient) GetLeader() (*pdpb.Member, error) {
 
 	leader := pdpb.Member{}
 
-	err := tryURLs(endpoints, func(endpoint string) error {
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := pc.httpClient.Get(endpoint)
 		if err != nil {
-			return err
+			return body, err
 		}
 
-		return json.Unmarshal(body, &leader)
+		return body, json.Unmarshal(body, &leader)
 	})
 
 	if err != nil {
@@ -240,13 +213,13 @@ func (pc *PDClient) GetMembers() (*pdpb.GetMembersResponse, error) {
 	endpoints := pc.getEndpoints(pdMembersURI)
 	members := pdpb.GetMembersResponse{}
 
-	err := tryURLs(endpoints, func(endpoint string) error {
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := pc.httpClient.Get(endpoint)
 		if err != nil {
-			return err
+			return body, err
 		}
 
-		return json.Unmarshal(body, &members)
+		return body, json.Unmarshal(body, &members)
 	})
 
 	if err != nil {
@@ -262,13 +235,13 @@ func (pc *PDClient) GetDashboardAddress() (string, error) {
 
 	pdConfig := pdserverconfig.Config{}
 
-	err := tryURLs(endpoints, func(endpoint string) error {
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := pc.httpClient.Get(endpoint)
 		if err != nil {
-			return err
+			return body, err
 		}
 
-		return json.Unmarshal(body, &pdConfig)
+		return body, json.Unmarshal(body, &pdConfig)
 	})
 
 	if err != nil {
@@ -295,12 +268,12 @@ func (pc *PDClient) EvictPDLeader(retryOpt *clusterutil.RetryOption) error {
 	cmd := fmt.Sprintf("%s/resign", pdLeaderURI)
 	endpoints := pc.getEndpoints(cmd)
 
-	err = tryURLs(endpoints, func(endpoint string) error {
-		_, err = pc.httpClient.Post(endpoint, nil)
+	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := pc.httpClient.Post(endpoint, nil)
 		if err != nil {
-			return err
+			return body, err
 		}
-		return nil
+		return body, nil
 	})
 
 	if err != nil {
@@ -388,9 +361,8 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *clusterutil.RetryOpt
 
 	endpoints := pc.getEndpoints(pdSchedulersURI)
 
-	err = tryURLs(endpoints, func(endpoint string) error {
-		_, err := pc.httpClient.Post(endpoint, bytes.NewBuffer(scheduler))
-		return err
+	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		return pc.httpClient.Post(endpoint, bytes.NewBuffer(scheduler))
 	})
 	if err != nil {
 		return errors.AddStack(err)
@@ -468,17 +440,17 @@ func (pc *PDClient) RemoveStoreEvict(host string) error {
 	)
 	endpoints := pc.getEndpoints(cmd)
 
-	err = tryURLs(endpoints, func(endpoint string) error {
+	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, statusCode, err := pc.httpClient.Delete(endpoint, nil)
 		if err != nil {
 			if statusCode == 404 || bytes.Contains(body, []byte("scheduler not found")) {
 				log.Debugf("Store leader evicting scheduler does not exist, ignore.")
-				return nil
+				return body, nil
 			}
-			return err
+			return body, err
 		}
 		log.Debugf("Delete leader evicting scheduler of store %d success", latestStore.Store.Id)
-		return nil
+		return body, nil
 	})
 	if err != nil {
 		return errors.AddStack(err)
@@ -503,9 +475,9 @@ func (pc *PDClient) DelPD(name string, retryOpt *clusterutil.RetryOption) error 
 	cmd := fmt.Sprintf("%s/name/%s", pdMembersURI, name)
 	endpoints := pc.getEndpoints(cmd)
 
-	err = tryURLs(endpoints, func(endpoint string) error {
-		_, _, err := pc.httpClient.Delete(endpoint, nil)
-		return err
+	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, _, err := pc.httpClient.Delete(endpoint, nil)
+		return body, err
 	})
 	if err != nil {
 		return errors.AddStack(err)
@@ -600,9 +572,9 @@ func (pc *PDClient) DelStore(host string, retryOpt *clusterutil.RetryOption) err
 	cmd := fmt.Sprintf("%s/%d", pdStoreURI, storeID)
 	endpoints := pc.getEndpoints(cmd)
 
-	err = tryURLs(endpoints, func(endpoint string) error {
-		_, _, err := pc.httpClient.Delete(endpoint, nil)
-		return err
+	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, _, err := pc.httpClient.Delete(endpoint, nil)
+		return body, err
 	})
 	if err != nil {
 		return errors.AddStack(err)
@@ -644,13 +616,10 @@ func (pc *PDClient) DelStore(host string, retryOpt *clusterutil.RetryOption) err
 
 func (pc *PDClient) updateConfig(body io.Reader, url string) error {
 	endpoints := pc.getEndpoints(url)
-	return tryURLs(endpoints, func(endpoint string) error {
-		_, err := pc.httpClient.Post(endpoint, body)
-		if err != nil {
-			return err
-		}
-		return nil
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		return pc.httpClient.Post(endpoint, body)
 	})
+	return err
 }
 
 // UpdateReplicateConfig updates the PD replication config
@@ -661,12 +630,8 @@ func (pc *PDClient) UpdateReplicateConfig(body io.Reader) error {
 // GetReplicateConfig gets the PD replication config
 func (pc *PDClient) GetReplicateConfig() ([]byte, error) {
 	endpoints := pc.getEndpoints(pdConfigReplicate)
-	return tryURLsGet(endpoints, func(endpoint string) ([]byte, error) {
-		ret, err := pc.httpClient.Get(endpoint)
-		if err != nil {
-			return nil, err
-		}
-		return ret, nil
+	return tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		return pc.httpClient.Get(endpoint)
 	})
 }
 
