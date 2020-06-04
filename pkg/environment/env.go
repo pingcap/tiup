@@ -32,6 +32,11 @@ import (
 // EnvNameV0 is the name of the env var used to direct TiUp to use old manifests.
 const EnvNameV0 = "TIUP_USE_V0"
 
+// Name of components
+const (
+	TiUPName = "tiup"
+)
+
 // Mirror return mirror of tiup.
 // If it's not defined, it will use "https://tiup-mirrors.pingcap.com/".
 func Mirror() string {
@@ -131,6 +136,9 @@ func (env *Environment) UpdateComponents(specs []string, nightly, force bool) er
 		var v1specs []repository.ComponentSpec
 		for _, spec := range specs {
 			component, v := ParseCompVersion(spec)
+			if component == TiUPName {
+				continue
+			}
 			v1specs = append(v1specs, repository.ComponentSpec{ID: component, Version: v.String(), Force: force, Nightly: nightly})
 		}
 		return env.v1Repo.UpdateComponents(v1specs)
@@ -142,6 +150,9 @@ func (env *Environment) UpdateComponents(specs []string, nightly, force bool) er
 	}
 	for _, spec := range specs {
 		component, v := ParseCompVersion(spec)
+		if component == TiUPName {
+			continue
+		}
 		if nightly {
 			v = version.NightlyVersion
 		}
