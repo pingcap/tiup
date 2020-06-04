@@ -11,6 +11,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
+	"github.com/spf13/cobra"
 )
 
 // CommandType send to playground.
@@ -70,16 +71,41 @@ func buildCommands(tp CommandType, opt *bootOptions) (cmds []Command) {
 	return
 }
 
-func scaleIn(args []string, opt *bootOptions) error {
-	port, err := targetTag()
-	if err != nil {
-		return errors.AddStack(err)
+func newScaleOut() *cobra.Command {
+	cmd := &cobra.Command{
+		Use: "scale-out",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// TODO
+			return nil
+		},
+		Hidden: true,
 	}
 
-	cmds := buildCommands(ScaleInCommandType, opt)
+	return cmd
+}
 
-	addr := "127.0.0.1:" + strconv.Itoa(port)
-	return sendCommandsAndPrintResult(cmds, addr)
+func newScaleIn() *cobra.Command {
+	cmd := &cobra.Command{
+		Use: "scale-in",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// TODO
+			return nil
+		},
+		Hidden: true,
+	}
+
+	return cmd
+}
+
+func newDisplay() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:    "display",
+		Hidden: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return display(args)
+		},
+	}
+	return cmd
 }
 
 func scaleOut(args []string, opt *bootOptions) error {

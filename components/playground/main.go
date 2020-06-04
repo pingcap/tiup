@@ -119,16 +119,11 @@ Examples:
   $ tiup playground --pd.config ~/config/pd.toml    # Start a local cluster with specified configuration file,
   $ tiup playground --db.binpath /xx/tidb-server    # Start a local cluster with component binary path`,
 		SilenceUsage: true,
+		Args: func(cmd *cobra.Command, args []string) error {
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
-				// Any way to add subcommand but still compatible with the old usage?
-				if args[0] == "scale-in" {
-					return scaleIn(args[1:], opt)
-				} else if args[0] == "scale-out" {
-					return scaleOut(args[1:], opt)
-				} else if args[0] == "display" {
-					return display(args[1:])
-				}
 				opt.version = args[0]
 			}
 
@@ -161,6 +156,10 @@ Examples:
 	rootCmd.Flags().StringVarP(&opt.tikv.BinPath, "kv.binpath", "", opt.tikv.BinPath, "TiKV instance binary path")
 	rootCmd.Flags().StringVarP(&opt.pd.BinPath, "pd.binpath", "", opt.pd.BinPath, "PD instance binary path")
 	rootCmd.Flags().StringVarP(&opt.tiflash.BinPath, "tiflash.binpath", "", opt.tiflash.BinPath, "TiFlash instance binary path")
+
+	rootCmd.AddCommand(newDisplay())
+	rootCmd.AddCommand(newScaleOut())
+	rootCmd.AddCommand(newScaleIn())
 
 	return rootCmd.Execute()
 }
