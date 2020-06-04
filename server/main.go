@@ -23,6 +23,7 @@ import (
 
 func main() {
 	addr := "0.0.0.0:8989"
+	upstream := "https://tiup-mirrors.pingcap.com"
 	indexKey := ""
 	snapshotKey := ""
 	timestampKey := ""
@@ -35,7 +36,7 @@ func main() {
 				return cmd.Help()
 			}
 
-			s, err := newServer(args[0], indexKey, snapshotKey, timestampKey)
+			s, err := newServer(args[0], upstream, indexKey, snapshotKey, timestampKey)
 			if err != nil {
 				return err
 			}
@@ -47,6 +48,7 @@ func main() {
 	cmd.Flags().StringVarP(&indexKey, "index", "", "", "specific the private key for index")
 	cmd.Flags().StringVarP(&snapshotKey, "snapshot", "", "", "specific the private key for snapshot")
 	cmd.Flags().StringVarP(&timestampKey, "timestamp", "", "", "specific the private key for timestamp")
+	cmd.Flags().StringVarP(&upstream, "upstream", "", upstream, "specific the upstream mirror")
 
 	_ = cmd.MarkFlagRequired("index")
 	_ = cmd.MarkFlagRequired("snapshot")

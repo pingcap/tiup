@@ -28,11 +28,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newStatusCmd(env *environment.Environment) *cobra.Command {
+func newStatusCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "List the status of instantiated components",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			env := environment.GlobalEnv()
 			if len(args) > 0 {
 				return cmd.Help()
 			}

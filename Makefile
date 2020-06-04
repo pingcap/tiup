@@ -1,3 +1,5 @@
+.PHONY: server
+
 GOVER := $(shell go version)
 
 GOOS    := $(if $(GOOS),$(GOOS),$(shell go env GOOS))
@@ -27,7 +29,7 @@ default: build check
 # Build TiUP and all components
 build: tiup components
 
-components: playground client cluster dm bench
+components: playground client cluster dm bench server
 
 tiup:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
@@ -52,6 +54,9 @@ doc:
 
 err:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-err ./components/err
+
+server:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-server ./server
 
 check: fmt lint tidy check-static vet
 
