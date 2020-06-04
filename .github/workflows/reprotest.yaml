@@ -1,0 +1,37 @@
+# Check for reproducible build
+
+name: reprotest
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  pull_request:
+    branches:
+      - master
+      - release-*
+
+jobs:
+  reprotest:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        go:
+          - 1.13
+          - 1.14
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Go ${{ matrix.go }}
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go }}
+
+    - name: Install reprotest
+      run: sudo apt-get update && sudo apt-get -qy install reprotest
+
+    - name: Check for reproducible build
+      run: sudo reprotest "make clean && BUILD_FLAG='-trimpath -buildmode=pie' make build" bin
+
