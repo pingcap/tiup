@@ -15,7 +15,7 @@ yes | tiup-cluster start $name
 
 tiup-cluster _test $name writable
 
-yes | tiup-cluster upgrade $name $version
+yes | tiup-cluster upgrade $name $version --transfer-timeout 60
 
 tiup-cluster _test $name writable
 
