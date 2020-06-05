@@ -17,7 +17,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/fatih/color"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -28,8 +27,7 @@ import (
 	"strings"
 	"time"
 
-	_ "net/http/pprof"
-
+	"github.com/fatih/color"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
@@ -40,6 +38,7 @@ import (
 	"github.com/spf13/cobra"
 	"go.etcd.io/etcd/clientv3"
 	"go.uber.org/zap"
+	_ "net/http/pprof"
 )
 
 type bootOptions struct {

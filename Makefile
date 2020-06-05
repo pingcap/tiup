@@ -85,7 +85,7 @@ cover-dir:
 
 # Run tests
 unit-test: cover-dir
-	TIUP_HOME=$(shell pwd)/tests/tiup_home $(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
+	TIUP_HOME=$(shell pwd)/tests/tiup $(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
 
 test: cover-dir failpoint-enable
 	make run-tests; STATUS=$$?; $(FAILPOINT_DISABLE); exit $$STATUS
