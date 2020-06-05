@@ -29,7 +29,7 @@ default: build check
 # Build TiUP and all components
 build: tiup components
 
-components: playground client cluster dm bench server
+components: playground client cluster dms bench server
 
 tiup:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
@@ -43,8 +43,8 @@ client:
 cluster:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster ./components/cluster
 
-dm:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./components/dm
+dms:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dms ./components/dms
 
 bench:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-bench ./components/bench
@@ -92,8 +92,8 @@ build_integration_test:
 		github.com/pingcap/tiup/components/cluster;
 	$(GOTEST) -c -cover -covermode=count \
 			-coverpkg=github.com/pingcap/tiup/... \
-			-o tests/tiup-cluster/bin/tiup-dm.test \
-			github.com/pingcap/tiup/components/dm
+			-o tests/tiup-cluster/bin/tiup-dms.test \
+			github.com/pingcap/tiup/components/dms
 
 integration_test:
 	@$(GOTEST) -c -cover -covermode=count \
