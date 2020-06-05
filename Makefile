@@ -24,6 +24,8 @@ FILES     := $$(find . -name "*.go")
 FAILPOINT_ENABLE  := $$(tools/bin/failpoint-ctl enable)
 FAILPOINT_DISABLE := $$(tools/bin/failpoint-ctl disable)
 
+include ./tests/Makefile
+
 default: build check
 
 # Build TiUP and all components
@@ -84,41 +86,6 @@ cover-dir:
 # Run tests
 unit-test: cover-dir
 	TIUP_HOME=$(shell pwd)/tests/tiup_home $(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
-
-build_integration_test:
-	$(GOTEST) -c -cover -covermode=count \
-		-coverpkg=github.com/pingcap/tiup/... \
-		-o tests/tiup-cluster/bin/tiup-cluster.test \
-		github.com/pingcap/tiup/components/cluster;
-	$(GOTEST) -c -cover -covermode=count \
-			-coverpkg=github.com/pingcap/tiup/... \
-			-o tests/tiup-cluster/bin/tiup-dms.test \
-			github.com/pingcap/tiup/components/dms
-
-integration_test:
-	@$(GOTEST) -c -cover -covermode=count \
-		-coverpkg=./... \
-		-o tests/tiup_home/bin/tiup \
-		github.com/pingcap/tiup/ ;
-	@$(GOTEST) -c -cover -covermode=count \
-			-coverpkg=./... \
-			-o tests/tiup_home/bin/package ./components/package/ ;
-	@$(GOTEST) -c -cover -covermode=count \
-			-coverpkg=./... \
-			-o tests/tiup_home/bin/playground ./components/playground/ ;
-	@$(GOTEST) -c -cover -covermode=count \
-			-coverpkg=./... \
-			-o tests/tiup_home/bin/ctl ./components/ctl/ ;
-	@$(GOTEST) -c -cover -covermode=count \
-			-coverpkg=./... \
-			-o tests/tiup_home/bin/doc ./components/doc/ ;
-	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/tiup.2
-	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/package ./components/package/
-	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/playground ./components/playground/
-	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/ctl ./components/ctl/
-	@$(GOBUILD) -ldflags '$(LDFLAGS)' -o tests/tiup_home/bin/doc ./components/doc/
-	cd tests && bash run.sh ; \
-
 
 test: cover-dir failpoint-enable
 	make run-tests; STATUS=$$?; $(FAILPOINT_DISABLE); exit $$STATUS
