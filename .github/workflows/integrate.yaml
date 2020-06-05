@@ -178,7 +178,7 @@ jobs:
         run: |
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
-          make tiup
+          make build_tiup_test
 
       - name: Run test suite
         id: test
