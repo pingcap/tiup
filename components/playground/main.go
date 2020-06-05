@@ -251,10 +251,6 @@ func dumpDSN(dbs []*instance.TiDBInstance) {
 	_ = ioutil.WriteFile("dsn", []byte(strings.Join(dsn, "\n")), 0644)
 }
 
-func addrsToString(addrs []string) string {
-	return strings.Join(addrs, "','")
-}
-
 func newEtcdClient(endpoint string) (*clientv3.Client, error) {
 	// Because etcd client does not support setting logger directly,
 	// the configuration of pingcap/log is copied here.

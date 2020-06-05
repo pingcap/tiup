@@ -141,7 +141,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 		return errors.AddStack(err)
 	}
 
-	p.renderSDFile()
+	logIfErr(p.renderSDFile())
 
 	fmt.Fprintf(w, "scale in %s success\n", cid)
 
@@ -192,7 +192,7 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 		return inst.Wait()
 	})
 
-	p.renderSDFile()
+	logIfErr(p.renderSDFile())
 
 	return nil
 }

@@ -71,7 +71,7 @@ func (m *monitor) startMonitor(ctx context.Context, host, dir string) (int, *exe
 	}
 	addr := fmt.Sprintf("%s:%d", host, port)
 
-	tmpl := fmt.Sprintf(`
+	tmpl := `
 global:
   scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
   evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
@@ -97,7 +97,7 @@ scrape_configs:
     - files:
       - targets.json
 
-`)
+`
 
 	m.sdFname = filepath.Join(dir, "targets.json")
 
