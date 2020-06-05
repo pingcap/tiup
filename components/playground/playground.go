@@ -464,7 +464,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			}
 		}
 
-		if lastErr != nil {
+		if lastErr == nil {
 			for _, flash := range p.tiflashs {
 				if err := flash.Start(ctx, v0manifest.Version(options.version)); err != nil {
 					lastErr = err
