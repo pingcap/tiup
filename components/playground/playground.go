@@ -43,6 +43,8 @@ type Playground struct {
 
 	idAlloc        map[string]int
 	instanceWaiter errgroup.Group
+
+	monitor *monitor
 }
 
 // NewPlayground create a Playground instance.
@@ -139,6 +141,8 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 		return errors.AddStack(err)
 	}
 
+	p.renderSDFile()
+
 	fmt.Fprintf(w, "scale in %s success\n", cid)
 
 	return nil
@@ -187,6 +191,8 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 	p.instanceWaiter.Go(func() error {
 		return inst.Wait()
 	})
+
+	p.renderSDFile()
 
 	return nil
 }
@@ -380,27 +386,16 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 		if err := installIfMissing(p.profile, "prometheus", options.version); err != nil {
 			return err
 		}
-		var pdAddrs, tidbAddrs, tikvAddrs, tiflashAddrs []string
-		for _, pd := range p.pds {
-			pdAddrs = append(pdAddrs, fmt.Sprintf("%s:%d", pd.Host, pd.StatusPort))
-		}
-		for _, db := range p.tidbs {
-			tidbAddrs = append(tidbAddrs, fmt.Sprintf("%s:%d", db.Host, db.StatusPort))
-		}
-		for _, kv := range p.tikvs {
-			tikvAddrs = append(tikvAddrs, fmt.Sprintf("%s:%d", kv.Host, kv.StatusPort))
-		}
-		for _, flash := range p.tiflashs {
-			tiflashAddrs = append(tiflashAddrs, fmt.Sprintf("%s:%d", flash.Host, flash.StatusPort))
-			tiflashAddrs = append(tiflashAddrs, fmt.Sprintf("%s:%d", flash.Host, flash.ProxyStatusPort))
-		}
 
 		dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
 		promDir := filepath.Join(dataDir, "prometheus")
-		port, cmd, err := startMonitor(ctx, options.host, promDir, tidbAddrs, tikvAddrs, pdAddrs, tiflashAddrs)
+
+		monitor := newMonitor()
+		port, cmd, err := monitor.startMonitor(ctx, options.host, promDir)
 		if err != nil {
 			return err
 		}
+		p.monitor = monitor
 
 		monitorInfo.IP = options.host
 		monitorInfo.BinaryPath = promDir
@@ -572,6 +567,8 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 		return nil
 	})
 
+	logIfErr(p.renderSDFile())
+
 	err = p.instanceWaiter.Wait()
 	if err != nil {
 		return err
@@ -584,4 +581,28 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 	}
 
 	return nil
+}
+
+func (p *Playground) renderSDFile() error {
+	cid2targets := make(map[string][]string)
+
+	_ = p.WalkInstances(func(cid string, inst instance.Instance) error {
+		targets := cid2targets[cid]
+		targets = append(targets, inst.StatusAddrs()...)
+		cid2targets[cid] = targets
+		return nil
+	})
+
+	err := p.monitor.renderSDFile(cid2targets)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	return nil
+}
+
+func logIfErr(err error) {
+	if err != nil {
+		fmt.Println(err)
+	}
 }
