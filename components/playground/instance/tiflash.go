@@ -85,6 +85,13 @@ type replicateEnablePlacementRulesConfig struct {
 	EnablePlacementRules string `json:"enable-placement-rules"`
 }
 
+// StatusAddrs implements Instance interface.
+func (inst *TiFlashInstance) StatusAddrs() (addrs []string) {
+	addrs = append(addrs, fmt.Sprintf("%s:%d", inst.Host, inst.StatusPort))
+	addrs = append(addrs, fmt.Sprintf("%s:%d", inst.Host, inst.ProxyStatusPort))
+	return
+}
+
 // Start calls set inst.cmd and Start
 func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Version) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
