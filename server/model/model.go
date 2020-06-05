@@ -85,11 +85,11 @@ func (m *model) UpdateIndexManifest(initTime time.Time, f func(*IndexManifest) *
 	}
 	manifest := f(&last)
 	manifest.Signed.Version = last.Signed.Version + 1
+	v1manifest.RenewManifest(&manifest.Signed, initTime)
 	manifest.Signatures, err = sign(manifest.Signed, m.keys[v1manifest.ManifestTypeIndex])
 	if err != nil {
 		return err
 	}
-	v1manifest.RenewManifest(&manifest.Signed, initTime)
 
 	return m.txn.WriteManifest(fmt.Sprintf("%d.index.json", manifest.Signed.Version), manifest)
 }
@@ -101,11 +101,11 @@ func (m *model) UpdateSnapshotManifest(initTime time.Time, f func(*SnapshotManif
 		return err
 	}
 	manifest := f(&last)
+	v1manifest.RenewManifest(&manifest.Signed, initTime)
 	manifest.Signatures, err = sign(manifest.Signed, m.keys[v1manifest.ManifestTypeSnapshot])
 	if err != nil {
 		return err
 	}
-	v1manifest.RenewManifest(&manifest.Signed, initTime)
 
 	return m.txn.WriteManifest(v1manifest.ManifestFilenameSnapshot, manifest)
 }
@@ -156,11 +156,12 @@ func (m *model) UpdateTimestampManifest(initTime time.Time) error {
 		},
 		Length: uint(fi.Size()),
 	}
+	v1manifest.RenewManifest(&manifest.Signed, initTime)
 	manifest.Signatures, err = sign(manifest.Signed, m.keys[v1manifest.ManifestTypeTimestamp])
 	if err != nil {
 		return err
 	}
-	v1manifest.RenewManifest(&manifest.Signed, initTime)
+
 	return m.txn.WriteManifest(v1manifest.ManifestFilenameTimestamp, &manifest)
 }
 
