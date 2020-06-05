@@ -20,7 +20,7 @@ import (
 // Global flags
 var (
 	ShowBacktrace = false
-	DebugMode     = true
+	DebugMode     = false
 )
 
 func init() {
