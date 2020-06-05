@@ -27,6 +27,7 @@ const (
 // Command send to Playground.
 type Command struct {
 	CommandType CommandType
+	PID         int // Set when scale-in
 	ComponentID string
 	instance.Config
 }
@@ -101,14 +102,21 @@ func newScaleOut() *cobra.Command {
 }
 
 func newScaleIn() *cobra.Command {
+	var pids []int
+
 	cmd := &cobra.Command{
 		Use: "scale-in",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// TODO
-			return nil
+			if len(pids) == 0 {
+				return cmd.Help()
+			}
+
+			return scaleIn(pids)
 		},
 		Hidden: true,
 	}
+
+	cmd.Flags().IntSliceVar(&pids, "pid", nil, "pid of instance to be scale in")
 
 	return cmd
 }
@@ -124,7 +132,25 @@ func newDisplay() *cobra.Command {
 	return cmd
 }
 
-// nolint
+func scaleIn(pids []int) error {
+	port, err := targetTag()
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	var cmds []Command
+	for _, pid := range pids {
+		c := Command{
+			CommandType: ScaleInCommandType,
+			PID:         pid,
+		}
+		cmds = append(cmds, c)
+	}
+
+	addr := "127.0.0.1:" + strconv.Itoa(port)
+	return sendCommandsAndPrintResult(cmds, addr)
+}
+
 func scaleOut(args []string, opt *bootOptions) error {
 	port, err := targetTag()
 	if err != nil {

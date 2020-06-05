@@ -84,8 +84,63 @@ func (p *Playground) handleDisplay(r io.Writer) (err error) {
 	return nil
 }
 
-func (p *Playground) handleScaleIn(w io.Writer, cmd *Command) error {
-	fmt.Sprintln(w, "TODO")
+func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
+	var cid string
+	var inst instance.Instance
+	err := p.WalkInstances(func(wcid string, winst instance.Instance) error {
+		if winst.Pid() == pid {
+			cid = wcid
+			inst = winst
+		}
+		return nil
+	})
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	if inst == nil {
+		fmt.Fprintf(w, "no instance with id: %d\n", pid)
+		return nil
+	}
+
+	// TODO: case by case handle for stateful components.
+	switch cid {
+	case "pd":
+		for i := 0; i < len(p.pds); i++ {
+			if p.pds[i].Pid() == pid {
+				p.pds = append(p.pds[:i], p.pds[i+1:]...)
+			}
+		}
+	case "tikv":
+		for i := 0; i < len(p.tikvs); i++ {
+			if p.tikvs[i].Pid() == pid {
+				p.tikvs = append(p.tikvs[:i], p.tikvs[i+1:]...)
+			}
+		}
+	case "tidb":
+		for i := 0; i < len(p.tidbs); i++ {
+			if p.tidbs[i].Pid() == pid {
+				p.tidbs = append(p.tidbs[:i], p.tidbs[i+1:]...)
+			}
+		}
+	case "tiflash":
+		for i := 0; i < len(p.tiflashs); i++ {
+			if p.tiflashs[i].Pid() == pid {
+				p.tiflashs = append(p.tiflashs[:i], p.tiflashs[i+1:]...)
+			}
+		}
+	default:
+		fmt.Fprintf(w, "unknown component in scale in: %s", cid)
+		return nil
+	}
+
+	err = syscall.Kill(pid, syscall.SIGQUIT)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	fmt.Fprintf(w, "scale in %s success\n", cid)
+
 	return nil
 }
 
@@ -142,7 +197,7 @@ func (p *Playground) handleCommand(cmd *Command, w io.Writer) error {
 	case DisplayCommandType:
 		return p.handleDisplay(w)
 	case ScaleInCommandType:
-		return p.handleScaleIn(w, cmd)
+		return p.handleScaleIn(w, cmd.PID)
 	case ScaleOutCommandType:
 		return p.handleScaleOut(w, cmd)
 	}
