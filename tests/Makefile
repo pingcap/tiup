@@ -37,3 +37,9 @@ build_tiup_dms_test:
 		-coverpkg=github.com/pingcap/tiup/... \
 		-o tests/tiup-dms/bin/tiup-dms.test \
 		github.com/pingcap/tiup/components/dms;
+
+build_tiup_test:
+	$(GOTEST) -c -cover -covermode=count \
+		-coverpkg=github.com/pingcap/tiup/... \
+		-o tests/tiup/bin/tiup.test \
+		github.com/pingcap/tiup;
