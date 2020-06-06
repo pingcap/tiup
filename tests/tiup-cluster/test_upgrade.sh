@@ -27,7 +27,7 @@ EDITOR=ex tiup-cluster edit-config -y $name <<EOEX
 :x
 EOEX
 
-yes | tiup-cluster reload $name
+yes | tiup-cluster reload $name --transfer-timeout 60
 
 tiup-cluster exec $name -R pump --command "grep '2 mib' /home/tidb/deploy/pump-8250/conf/pump.toml"
 
