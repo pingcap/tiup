@@ -134,7 +134,7 @@ jobs:
         # if: steps.test.outputs.exit_code != 0
         if: always()
         run: |
-          tar czvf ${{env.working-directory}}/playground.logs.tar.gz ${{env.working-directory}}/tests/tiup-playground/_tmp/data
+          find ${{env.working-directory}}/tests/tiup-playground/_tmp/data -type f | grep -E '*/ti.*/ti.*.log$' | xargs tar czvf ${{env.working-directory}}/playground.logs.tar.gz
 
       - name: Upload component log
         # if: steps.test.outputs.exit_code != 0
