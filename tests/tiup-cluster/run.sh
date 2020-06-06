@@ -24,15 +24,6 @@ function tiup-cluster() {
   fi
 }
 
-function tiup-dm() {
-	# echo "in function"
-	if [ -f "./bin/tiup-dm.test" ]; then
-	  ./bin/tiup-dm.test  -test.coverprofile=./cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
-    else
-	  ../bin/tiup-dm "$@"
-	fi
-}
-
 . ./script/util.sh
 
 # use run.sh test_cmd test_upgrade to run specify cases

@@ -197,6 +197,11 @@ func (inst *TiFlashInstance) Pid() int {
 	return inst.cmd.Process.Pid
 }
 
+// Cmd returns the internal Cmd instance
+func (inst *TiFlashInstance) Cmd() *exec.Cmd {
+	return inst.cmd
+}
+
 // StoreAddr return the store address of TiFlash
 func (inst *TiFlashInstance) StoreAddr() string {
 	return fmt.Sprintf("%s:%d", inst.Host, inst.ServicePort)

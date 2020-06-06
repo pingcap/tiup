@@ -27,8 +27,7 @@ import (
 	"strings"
 	"time"
 
-	_ "net/http/pprof"
-
+	"github.com/fatih/color"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
@@ -39,6 +38,7 @@ import (
 	"github.com/spf13/cobra"
 	"go.etcd.io/etcd/clientv3"
 	"go.uber.org/zap"
+	_ "net/http/pprof"
 )
 
 type bootOptions struct {
@@ -196,16 +196,15 @@ func checkDB(dbAddr string) bool {
 	return false
 }
 
-func checkStoreStatus(pdClient *api.PDClient, storeAddr string) error {
+func checkStoreStatus(pdClient *api.PDClient, typ, storeAddr string) error {
+	fmt.Print(color.YellowString("Waiting for %s %s ready ", typ, storeAddr))
 	for i := 0; i < 180; i++ {
 		up, err := pdClient.IsUp(storeAddr)
 		if err != nil || !up {
 			time.Sleep(time.Second)
-			fmt.Print(".")
+			fmt.Print(color.YellowString("."))
 		} else {
-			if i != 0 {
-				fmt.Println()
-			}
+			fmt.Println()
 			return nil
 		}
 	}

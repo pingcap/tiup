@@ -466,7 +466,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 
 		// make sure TiKV are all up
 		for _, kv := range p.tikvs {
-			if err := checkStoreStatus(pdClient, kv.StoreAddr()); err != nil {
+			if err := checkStoreStatus(pdClient, "tikv", kv.StoreAddr()); err != nil {
 				lastErr = err
 				break
 			}
@@ -484,7 +484,16 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 		if lastErr == nil {
 			// check if all TiFlash is up
 			for _, flash := range p.tiflashs {
-				if err := checkStoreStatus(pdClient, flash.StoreAddr()); err != nil {
+				cmd := flash.Cmd()
+				if cmd == nil {
+					lastErr = errors.Errorf("tiflash %s initialize command failed", flash.StoreAddr())
+					break
+				}
+				if state := cmd.ProcessState; state != nil && state.Exited() {
+					lastErr = errors.Errorf("tiflash process exited with code: %d", state.ExitCode())
+					break
+				}
+				if err := checkStoreStatus(pdClient, "tiflash", flash.StoreAddr()); err != nil {
 					lastErr = err
 					break
 				}
