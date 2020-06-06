@@ -1,3 +1,16 @@
+// Copyright 2020 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -43,6 +56,8 @@ type Playground struct {
 
 	idAlloc        map[string]int
 	instanceWaiter errgroup.Group
+
+	monitor *monitor
 }
 
 // NewPlayground create a Playground instance.
@@ -139,6 +154,8 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 		return errors.AddStack(err)
 	}
 
+	logIfErr(p.renderSDFile())
+
 	fmt.Fprintf(w, "scale in %s success\n", cid)
 
 	return nil
@@ -187,6 +204,8 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 	p.instanceWaiter.Go(func() error {
 		return inst.Wait()
 	})
+
+	logIfErr(p.renderSDFile())
 
 	return nil
 }
@@ -380,27 +399,16 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 		if err := installIfMissing(p.profile, "prometheus", options.version); err != nil {
 			return err
 		}
-		var pdAddrs, tidbAddrs, tikvAddrs, tiflashAddrs []string
-		for _, pd := range p.pds {
-			pdAddrs = append(pdAddrs, fmt.Sprintf("%s:%d", pd.Host, pd.StatusPort))
-		}
-		for _, db := range p.tidbs {
-			tidbAddrs = append(tidbAddrs, fmt.Sprintf("%s:%d", db.Host, db.StatusPort))
-		}
-		for _, kv := range p.tikvs {
-			tikvAddrs = append(tikvAddrs, fmt.Sprintf("%s:%d", kv.Host, kv.StatusPort))
-		}
-		for _, flash := range p.tiflashs {
-			tiflashAddrs = append(tiflashAddrs, fmt.Sprintf("%s:%d", flash.Host, flash.StatusPort))
-			tiflashAddrs = append(tiflashAddrs, fmt.Sprintf("%s:%d", flash.Host, flash.ProxyStatusPort))
-		}
 
 		dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
 		promDir := filepath.Join(dataDir, "prometheus")
-		port, cmd, err := startMonitor(ctx, options.host, promDir, tidbAddrs, tikvAddrs, pdAddrs, tiflashAddrs)
+
+		monitor := newMonitor()
+		port, cmd, err := monitor.startMonitor(ctx, options.host, promDir)
 		if err != nil {
 			return err
 		}
+		p.monitor = monitor
 
 		monitorInfo.IP = options.host
 		monitorInfo.BinaryPath = promDir
@@ -458,7 +466,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 
 		// make sure TiKV are all up
 		for _, kv := range p.tikvs {
-			if err := checkStoreStatus(pdClient, kv.StoreAddr()); err != nil {
+			if err := checkStoreStatus(pdClient, "tikv", kv.StoreAddr()); err != nil {
 				lastErr = err
 				break
 			}
@@ -476,7 +484,16 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 		if lastErr == nil {
 			// check if all TiFlash is up
 			for _, flash := range p.tiflashs {
-				if err := checkStoreStatus(pdClient, flash.StoreAddr()); err != nil {
+				cmd := flash.Cmd()
+				if cmd == nil {
+					lastErr = errors.Errorf("tiflash %s initialize command failed", flash.StoreAddr())
+					break
+				}
+				if state := cmd.ProcessState; state != nil && state.Exited() {
+					lastErr = errors.Errorf("tiflash process exited with code: %d", state.ExitCode())
+					break
+				}
+				if err := checkStoreStatus(pdClient, "tiflash", flash.StoreAddr()); err != nil {
 					lastErr = err
 					break
 				}
@@ -572,6 +589,8 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 		return nil
 	})
 
+	logIfErr(p.renderSDFile())
+
 	err = p.instanceWaiter.Wait()
 	if err != nil {
 		return err
@@ -584,4 +603,28 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 	}
 
 	return nil
+}
+
+func (p *Playground) renderSDFile() error {
+	cid2targets := make(map[string][]string)
+
+	_ = p.WalkInstances(func(cid string, inst instance.Instance) error {
+		targets := cid2targets[cid]
+		targets = append(targets, inst.StatusAddrs()...)
+		cid2targets[cid] = targets
+		return nil
+	})
+
+	err := p.monitor.renderSDFile(cid2targets)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	return nil
+}
+
+func logIfErr(err error) {
+	if err != nil {
+		fmt.Println(err)
+	}
 }

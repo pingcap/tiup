@@ -18,7 +18,6 @@ jobs:
         target:
           - "build"
           - "check"
-          - "unit-test"
     steps:
       - name: Set up Go 1.13
         uses: actions/setup-go@v1

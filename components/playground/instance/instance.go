@@ -43,7 +43,15 @@ type Instance interface {
 	Pid() int
 	// Start the instance process.
 	Start(ctx context.Context, version v0manifest.Version) error
+	StatusAddrs() []string
 	Wait() error
+}
+
+func (inst *instance) StatusAddrs() (addrs []string) {
+	if inst.Host != "" && inst.StatusPort != 0 {
+		addrs = append(addrs, fmt.Sprintf("%s:%d", inst.Host, inst.StatusPort))
+	}
+	return
 }
 
 func compVersion(comp string, version v0manifest.Version) string {

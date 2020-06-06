@@ -23,6 +23,7 @@ log-file = "%[1]s/tiflash_tikv.log"
 
 [rocksdb]
 wal-dir = ""
+max-open-files = 256
 
 [security]
 ca-path = ""
@@ -37,6 +38,9 @@ status-addr = "%[2]s:%[5]d"
 
 [storage]
 data-dir = "%[6]s"
+
+[raftdb]
+max-open-files = 256
 `
 
 func writeTiFlashProxyConfig(w io.Writer, ip, deployDir string, servicePort, proxyPort, proxyStatusPort int) error {
