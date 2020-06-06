@@ -20,9 +20,9 @@ import (
 )
 
 // To build:
-// see build_integration_test in Makefile
+// see build_tiup_playground_test in Makefile
 // To run:
-// tiup-cluster.test  -test.coverprofile={file} __DEVEL--i-heard-you-like-tests
+// tiup-playground.test  -test.coverprofile={file} __DEVEL--i-heard-you-like-tests
 
 func TestMain(t *testing.T) {
 	var (

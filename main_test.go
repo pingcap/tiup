@@ -13,24 +13,38 @@
 
 package main
 
-// Reference: https://dzone.com/articles/measuring-integration-test-coverage-rate-in-pouchc
-
 import (
 	"os"
 	"strings"
 	"testing"
 )
 
-func TestRunMain(t *testing.T) {
-	var args []string
+// To build:
+// see build_tiup_test in Makefile
+// To run:
+// tiup.test  -test.coverprofile={file} __DEVEL--i-heard-you-like-tests
+
+func TestMain(t *testing.T) {
+	var (
+		args []string
+		run  bool
+	)
+
 	for _, arg := range os.Args {
 		switch {
-		case strings.HasPrefix(arg, "DEVEL"):
+		case arg == "__DEVEL--i-heard-you-like-tests":
+			run = true
 		case strings.HasPrefix(arg, "-test"):
+		case strings.HasPrefix(arg, "__DEVEL"):
 		default:
 			args = append(args, arg)
 		}
 	}
 	os.Args = args
-	main()
+
+	// fmt.Println(os.Args)
+
+	if run {
+		main()
+	}
 }
