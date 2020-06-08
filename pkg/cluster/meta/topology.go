@@ -226,11 +226,7 @@ func checkStoreStatus(storeAddr string, pdList ...string) string {
 		}
 	}
 	if latestStore != nil {
-		state := latestStore.Store.StateName
-		if strings.ToLower(state) == "offline" {
-			state = "Pending Offline" // avoid misleading
-		}
-		return state
+		return latestStore.Store.StateName
 	}
 	return "N/A"
 }
@@ -238,7 +234,11 @@ func checkStoreStatus(storeAddr string, pdList ...string) string {
 // Status queries current status of the instance
 func (s TiKVSpec) Status(pdList ...string) string {
 	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.Port)
-	return checkStoreStatus(storeAddr, pdList...)
+	state := checkStoreStatus(storeAddr, pdList...)
+	if s.Offline && strings.ToLower(state) == "offline" {
+		state = "Pending Offline" // avoid misleading
+	}
+	return state
 }
 
 // Role returns the component role of the instance
