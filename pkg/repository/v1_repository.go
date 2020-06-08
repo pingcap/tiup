@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	stderrors "errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -24,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fatih/color"
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
@@ -32,6 +34,9 @@ import (
 	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
+
+// errUnknownComponent represents the specific component cannot be found in index.json
+var errUnknownComponent = stderrors.New("unknown component")
 
 // V1Repository represents a remote repository viewed with the v1 manifest design.
 type V1Repository struct {
@@ -98,7 +103,11 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 	for _, spec := range specs {
 		manifest, err := r.updateComponentManifest(spec.ID)
 		if err != nil {
-			errs = append(errs, err.Error())
+			if err == errUnknownComponent {
+				fmt.Println(color.YellowString("The component `%s` not found (may be deleted from repository); skipped", spec.ID))
+			} else {
+				errs = append(errs, err.Error())
+			}
 			continue
 		}
 
@@ -395,7 +404,7 @@ func (r *V1Repository) updateComponentManifest(id string) (*v1manifest.Component
 	}
 	item, ok := index.Components[id]
 	if !ok {
-		return nil, fmt.Errorf("unknown component: %s", id)
+		return nil, errUnknownComponent
 	}
 	var snapshot v1manifest.Snapshot
 	_, _, err = r.local.LoadManifest(&snapshot)
