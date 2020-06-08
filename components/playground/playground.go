@@ -606,6 +606,10 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 }
 
 func (p *Playground) renderSDFile() error {
+	// we not start monitor at all.
+	if p.monitor == nil {
+		return nil
+	}
 	cid2targets := make(map[string][]string)
 
 	_ = p.WalkInstances(func(cid string, inst instance.Instance) error {
