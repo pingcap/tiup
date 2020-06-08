@@ -226,7 +226,11 @@ func checkStoreStatus(storeAddr string, pdList ...string) string {
 		}
 	}
 	if latestStore != nil {
-		return latestStore.Store.StateName
+		state := latestStore.Store.StateName
+		if strings.ToLower(state) == "offline" {
+			state = "Pending Offline" // avoid misleading
+		}
+		return state
 	}
 	return "N/A"
 }

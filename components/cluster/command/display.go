@@ -279,7 +279,7 @@ func formatInstanceStatus(status string) string {
 		return color.RedString(status)
 	case startsWith("up"):
 		return color.GreenString(status)
-	case startsWith("offline", "tombstone", "disconnected"):
+	case startsWith("tombstone", "disconnected"), strings.Contains(status, "offline"):
 		return color.YellowString(status)
 	default:
 		return status
