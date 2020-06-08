@@ -140,5 +140,5 @@ func Move(src, dst string) error {
 	if err := Copy(src, dst); err != nil {
 		return errors.Trace(err)
 	}
-	return errors.Trace(os.Remove(src))
+	return errors.Trace(os.RemoveAll(src))
 }
