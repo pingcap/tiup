@@ -464,7 +464,7 @@ func TestUpdateComponents(t *testing.T) {
 	err = repo.UpdateComponents([]ComponentSpec{{
 		ID: "bar",
 	}})
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
 	_, ok := local.Installed["bar"]
 	assert.False(t, ok)
 
@@ -506,7 +506,7 @@ func TestUpdateComponents(t *testing.T) {
 	}, {
 		ID: "foo",
 	}})
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
 	assert.Equal(t, "v2.0.2", local.Installed["foo"].Version)
 	assert.Equal(t, "foo202", local.Installed["foo"].Contents)
