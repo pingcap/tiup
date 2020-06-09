@@ -49,6 +49,8 @@ func newPatchCmd() *cobra.Command {
 			if len(gOpt.Nodes) == 0 && len(gOpt.Roles) == 0 {
 				return errors.New("the flag -R or -N must be specified at least one")
 			}
+			clusterName := args[0]
+			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			return patch(args[0], args[1], gOpt, overwrite)
 		},
 	}

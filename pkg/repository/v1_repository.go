@@ -635,6 +635,9 @@ func (r *V1Repository) ComponentVersion(id, version string) (*v1manifest.Version
 	if err != nil {
 		return nil, err
 	}
+	if v0manifest.Version(version).IsNightly() && manifest.Nightly != "" {
+		version = manifest.Nightly
+	}
 	vi := manifest.VersionItem(r.PlatformString(), version)
 	if vi == nil {
 		return nil, fmt.Errorf("version %s on %s for component %s not found", version, r.PlatformString(), id)
