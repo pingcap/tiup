@@ -46,6 +46,7 @@ var (
 	clusterReport *telemetry2.ClusterReport
 	teleNodeInfos []*telemetry2.NodeInfo
 	teleTopology  string
+	teleCommand   []string
 )
 
 var (
@@ -92,7 +93,11 @@ func newDeploy() *cobra.Command {
 			}
 
 			logger.EnableAuditLog()
-			return deploy(args[0], args[1], args[2], opt)
+			clusterName := args[0]
+			version := args[1]
+			teleCommand = append(teleCommand, scrubClusterName(clusterName))
+			teleCommand = append(teleCommand, version)
+			return deploy(clusterName, version, args[2], opt)
 		},
 	}
 
