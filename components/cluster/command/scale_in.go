@@ -48,6 +48,15 @@ func newScaleInCmd() *cobra.Command {
 					color.HiYellowString(clusterName)); err != nil {
 					return err
 				}
+
+				if gOpt.Force {
+					if err := cliutil.PromptForConfirmOrAbortError(
+						"Forcing scale in is unsafe and may result in data lost for stateful components.\nDo you want to continue? [y/N]:",
+					); err != nil {
+						return err
+					}
+				}
+
 				log.Infof("Scale-in nodes...")
 			}
 
