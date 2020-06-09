@@ -41,7 +41,11 @@ func newUpgradeCmd() *cobra.Command {
 			}
 
 			logger.EnableAuditLog()
-			return upgrade(args[0], args[1], gOpt)
+			clusterName := args[0]
+			version := args[1]
+			teleCommand = append(teleCommand, scrubClusterName(clusterName))
+			teleCommand = append(teleCommand, version)
+			return upgrade(clusterName, version, gOpt)
 		},
 	}
 	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force upgrade won't transfer leader")

@@ -39,6 +39,7 @@ func newStopCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
+			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
 				return errors.Errorf("cannot stop non-exists cluster %s", clusterName)
 			}

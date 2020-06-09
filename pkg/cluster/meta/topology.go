@@ -33,7 +33,7 @@ import (
 
 const (
 	// Timeout in second when quering node status
-	statusQueryTimeout = 2 * time.Second
+	statusQueryTimeout = 10 * time.Second
 )
 
 // general role names
