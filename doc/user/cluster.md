@@ -46,7 +46,7 @@ The command used for deploying clusters is tiup cluster deploy, and its general 
 tiup cluster deploy <cluster-name> <version> <topology.yaml> [flags]
 ```
 
-This command requires us to provide the name of the cluster, the version of TiDB used by the cluster, and a topology file for the cluster, which can be written with reference to [example](https://raw.githubusercontent.com/pingcap-incubator/tiup-cluster/master/examples/topology.example.yaml). Take a simplest topology as an example:
+This command requires us to provide the name of the cluster, the version of TiDB used by the cluster, and a topology file for the cluster, which can be written with reference to [example](/examples/topology.example.yaml). Take a simplest topology as an example:
 
 ```yaml
 ---
