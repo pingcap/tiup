@@ -48,6 +48,7 @@ func newDisplayCmd() *cobra.Command {
 			}
 
 			clusterName = args[0]
+			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
 				return errors.Errorf("Cluster %s not found", clusterName)
