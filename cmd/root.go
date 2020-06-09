@@ -126,7 +126,7 @@ the latest stable version will be downloaded from the repository.`,
 		}
 		env, err := environment.InitEnv(repoOpts)
 		cmd, n, e := cmd.Root().Find(args)
-		if (cmd == rootCmd || e != nil) && len(n) > 0 && err != nil {
+		if (cmd == rootCmd || e != nil) && len(n) > 0 && err == nil {
 			externalHelp(env, n[0], n[1:]...)
 		} else {
 			cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
