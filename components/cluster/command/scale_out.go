@@ -55,6 +55,8 @@ func newScaleOutCmd() *cobra.Command {
 			}
 
 			logger.EnableAuditLog()
+			clusterName := args[0]
+			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			return scaleOut(args[0], args[1], opt)
 		},
 	}

@@ -49,12 +49,21 @@ var (
 	skipConfirm bool
 )
 
+func scrubClusterName(n string) string {
+	return "cluster_" + telemetry.HashReport(n)
+}
+
 func getParentNames(cmd *cobra.Command) []string {
 	if cmd == nil {
 		return nil
 	}
 
 	p := cmd.Parent()
+	// always use 'cluster' as the root command name
+	if cmd.Parent() == nil {
+		return []string{"cluster"}
+	}
+
 	return append(getParentNames(p), cmd.Name())
 }
 
@@ -89,8 +98,7 @@ func init() {
 			}
 			tiupmeta.SetGlobalEnv(env)
 
-			cmds := append(getParentNames(cmd), args...)
-			clusterReport.Command = strings.Join(cmds, " ")
+			teleCommand = getParentNames(cmd)
 
 			return nil
 		},
@@ -234,6 +242,7 @@ func Execute() {
 				}
 			}
 			clusterReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
+			clusterReport.Command = strings.Join(teleCommand, " ")
 			tele := telemetry.NewTelemetry()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 			err := tele.Report(ctx, teleReport)

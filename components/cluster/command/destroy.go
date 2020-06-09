@@ -39,6 +39,7 @@ func newDestroyCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
+			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
 				return errors.Errorf("cannot destroy non-exists cluster %s", clusterName)
 			}
