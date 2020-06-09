@@ -129,7 +129,7 @@ func (e *SSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duration) (
 	}
 
 	if e.Locale != "" {
-		cmd = fmt.Sprintf("LANG=%s %s", e.Locale, cmd)
+		cmd = fmt.Sprintf("export LANG=%s; %s", e.Locale, cmd)
 	}
 
 	// set a basic PATH in case it's empty on login
