@@ -40,6 +40,8 @@ const (
 	ComponentDrainer          = "drainer"
 	ComponentPump             = "pump"
 	ComponentCDC              = "cdc"
+	ComponentTiSparkMaster    = "tispark-master"
+	ComponentTiSparkSlave     = "tispark-slave"
 	ComponentAlertManager     = "alertmanager"
 	ComponentPrometheus       = "prometheus"
 	ComponentPushwaygate      = "pushgateway"
@@ -272,11 +274,19 @@ func (i *instance) LogDir() string {
 }
 
 func (i *instance) OS() string {
-	return reflect.ValueOf(i.InstanceSpec).FieldByName("OS").Interface().(string)
+	os := reflect.ValueOf(i.InstanceSpec).FieldByName("OS").Interface().(string)
+	if os == "" {
+		return "any"
+	}
+	return os
 }
 
 func (i *instance) Arch() string {
-	return reflect.ValueOf(i.InstanceSpec).FieldByName("Arch").Interface().(string)
+	arch := reflect.ValueOf(i.InstanceSpec).FieldByName("Arch").Interface().(string)
+	if arch == "" {
+		return "any"
+	}
+	return arch
 }
 
 // PrepareStart checks instance requirements before starting

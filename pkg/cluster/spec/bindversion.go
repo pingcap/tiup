@@ -26,6 +26,8 @@ func ComponentVersion(comp, version string) string {
 		return "v0.7.0"
 	case ComponentCheckCollector:
 		return "v0.3.1"
+	case ComponentTiSparkMaster, ComponentTiSparkSlave:
+		return "v2.3.0-rc"
 	default:
 		return version
 	}

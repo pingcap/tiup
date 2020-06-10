@@ -86,19 +86,21 @@ type (
 
 	// Specification represents the specification of topology.yaml
 	Specification struct {
-		GlobalOptions    GlobalOptions      `yaml:"global,omitempty"`
-		MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty"`
-		ServerConfigs    ServerConfigs      `yaml:"server_configs,omitempty"`
-		TiDBServers      []TiDBSpec         `yaml:"tidb_servers"`
-		TiKVServers      []TiKVSpec         `yaml:"tikv_servers"`
-		TiFlashServers   []TiFlashSpec      `yaml:"tiflash_servers"`
-		PDServers        []PDSpec           `yaml:"pd_servers"`
-		PumpServers      []PumpSpec         `yaml:"pump_servers,omitempty"`
-		Drainers         []DrainerSpec      `yaml:"drainer_servers,omitempty"`
-		CDCServers       []CDCSpec          `yaml:"cdc_servers,omitempty"`
-		Monitors         []PrometheusSpec   `yaml:"monitoring_servers"`
-		Grafana          []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
-		Alertmanager     []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
+		GlobalOptions    GlobalOptions       `yaml:"global,omitempty"`
+		MonitoredOptions MonitoredOptions    `yaml:"monitored,omitempty"`
+		ServerConfigs    ServerConfigs       `yaml:"server_configs,omitempty"`
+		TiDBServers      []TiDBSpec          `yaml:"tidb_servers"`
+		TiKVServers      []TiKVSpec          `yaml:"tikv_servers"`
+		TiFlashServers   []TiFlashSpec       `yaml:"tiflash_servers"`
+		PDServers        []PDSpec            `yaml:"pd_servers"`
+		PumpServers      []PumpSpec          `yaml:"pump_servers,omitempty"`
+		Drainers         []DrainerSpec       `yaml:"drainer_servers,omitempty"`
+		CDCServers       []CDCSpec           `yaml:"cdc_servers,omitempty"`
+		TiSparkMasters   []TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
+		TiSparkSlaves    []TiSparkSlaveSpec  `yaml:"tispark_slaves,omitempty"`
+		Monitors         []PrometheusSpec    `yaml:"monitoring_servers"`
+		Grafana          []GrafanaSpec       `yaml:"grafana_servers,omitempty"`
+		Alertmanager     []AlertManagerSpec  `yaml:"alertmanager_servers,omitempty"`
 	}
 )
 
