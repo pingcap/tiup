@@ -151,8 +151,6 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 		return err
 	}
 
-	const limitLength = 1024 * 1024
-
 	for name, component := range componentManifests {
 		component.SetExpiresAt(expirsAt)
 		fname := fmt.Sprintf("%s.json", name)
