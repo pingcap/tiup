@@ -70,7 +70,7 @@ func (inst *PDInstance) Start(ctx context.Context, version v0manifest.Version) e
 	uid := fmt.Sprintf("pd-%d", inst.ID)
 	args := []string{
 		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
-		compVersion("pd", version),
+		CompVersion("pd", version),
 		"--name=" + uid,
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
 		fmt.Sprintf("--peer-urls=http://%s:%d", inst.Host, inst.Port),
