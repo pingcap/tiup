@@ -41,6 +41,7 @@ func newScaleInCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
+			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			if !skipConfirm {
 				if err := cliutil.PromptForConfirmOrAbortError(
 					"This operation will delete the %s nodes in `%s` and all their data.\nDo you want to continue? [y/N]:",
