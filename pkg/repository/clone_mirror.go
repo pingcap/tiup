@@ -171,7 +171,7 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 			return err
 		}
 		var _ = len(bytes) // this length is the not final length, since we still change the manifests before write it to disk.
-		snapshot.Meta["/"+name] = v1manifest.FileVersion{
+		snapshot.Meta["/"+fname] = v1manifest.FileVersion{
 			Version: 1,
 			Length:  limitLength,
 		}
