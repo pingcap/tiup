@@ -19,12 +19,14 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap/tiup/pkg/verbose"
 	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
@@ -63,6 +65,7 @@ func InitEnv(options repository.Options) (*Environment, error) {
 		return env, nil
 	}
 
+	initRepo := time.Now()
 	profile := localdata.InitProfile()
 
 	// Initialize the repository
@@ -86,6 +89,8 @@ func InitEnv(options repository.Options) (*Environment, error) {
 			return nil, errors.AddStack(err)
 		}
 	}
+
+	verbose.Log("Initialize repository finished in %s", time.Since(initRepo))
 
 	return &Environment{profile, repo, v1repo}, nil
 }
