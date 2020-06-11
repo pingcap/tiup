@@ -141,6 +141,14 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 	if strings.Contains(t.version, version.NightlyVersion) {
 		m.Nightly = t.version
 	}
+	// Remove history nightly
+	for plat := range m.Platforms {
+		for ver := range m.Platforms[plat] {
+			if strings.Contains(ver, version.NightlyVersion) && ver != m.Nightly {
+				delete(m.Platforms[plat], ver)
+			}
+		}
+	}
 
 	platformStr := fmt.Sprintf("%s/%s", t.os, t.arch)
 	if m.Platforms[platformStr] == nil {
