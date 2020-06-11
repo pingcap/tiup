@@ -401,10 +401,12 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 	spec := i.InstanceSpec.(TiDBSpec)
 	cfg := scripts.NewTiDBScript(
 		i.GetHost(),
-		i.GetListenAddress(),
 		paths.Deploy,
 		paths.Log,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(deployUser)...)
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).
+		WithStatusPort(spec.StatusPort).
+		AppendEndpoints(i.instance.topo.Endpoints(deployUser)...).
+		WithListenAddress(i.GetListenAddress())
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -509,11 +511,14 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 	spec := i.InstanceSpec.(TiKVSpec)
 	cfg := scripts.NewTiKVScript(
 		i.GetHost(),
-		i.GetListenAddress(),
 		paths.Deploy,
 		paths.Data[0],
 		paths.Log,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(deployUser)...)
+	).WithPort(spec.Port).
+		WithNumaNode(spec.NumaNode).
+		WithStatusPort(spec.StatusPort).
+		AppendEndpoints(i.instance.topo.Endpoints(deployUser)...).
+		WithListenAddress(i.GetListenAddress())
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tikv_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -624,11 +629,13 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVe
 	cfg := scripts.NewPDScript(
 		spec.Name,
 		i.GetHost(),
-		i.GetListenAddress(),
 		paths.Deploy,
 		paths.Data[0],
 		paths.Log,
-	).WithClientPort(spec.ClientPort).WithPeerPort(spec.PeerPort).AppendEndpoints(i.instance.topo.Endpoints(deployUser)...)
+	).WithClientPort(spec.ClientPort).
+		WithPeerPort(spec.PeerPort).
+		AppendEndpoints(i.instance.topo.Endpoints(deployUser)...).
+		WithListenAddress(i.GetListenAddress())
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -693,11 +700,14 @@ func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b Specification, clus
 	cfg := scripts.NewPDScaleScript(
 		i.Name,
 		i.GetHost(),
-		i.GetListenAddress(),
 		paths.Deploy,
 		paths.Data[0],
 		paths.Log,
-	).WithPeerPort(spec.PeerPort).WithNumaNode(spec.NumaNode).WithClientPort(spec.ClientPort).AppendEndpoints(c.Endpoints(deployUser)...)
+	).WithPeerPort(spec.PeerPort).
+		WithNumaNode(spec.NumaNode).
+		WithClientPort(spec.ClientPort).
+		AppendEndpoints(c.Endpoints(deployUser)...).
+		WithListenAddress(i.GetListenAddress())
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	log.Infof("script path: %s", fp)
@@ -1490,12 +1500,12 @@ func (topo *ClusterSpecification) Endpoints(user string) []*scripts.PDScript {
 		script := scripts.NewPDScript(
 			spec.Name,
 			spec.Host,
-			spec.ListenAddress,
 			deployDir,
 			dataDir,
 			logDir).
 			WithClientPort(spec.ClientPort).
-			WithPeerPort(spec.PeerPort)
+			WithPeerPort(spec.PeerPort).
+			WithListenAddress(spec.ListenAddress)
 		ends = append(ends, script)
 	}
 	return ends

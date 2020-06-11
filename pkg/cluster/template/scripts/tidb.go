@@ -35,15 +35,20 @@ type TiDBScript struct {
 }
 
 // NewTiDBScript returns a TiDBScript with given arguments
-func NewTiDBScript(ip, listenAddress, deployDir, logDir string) *TiDBScript {
+func NewTiDBScript(ip, deployDir, logDir string) *TiDBScript {
 	return &TiDBScript{
-		IP:            ip,
-		ListenAddress: listenAddress,
-		Port:          4000,
-		StatusPort:    10080,
-		DeployDir:     deployDir,
-		LogDir:        logDir,
+		IP:         ip,
+		Port:       4000,
+		StatusPort: 10080,
+		DeployDir:  deployDir,
+		LogDir:     logDir,
 	}
+}
+
+// WithListenAddress set ListenAddress field of TiDBScript
+func (c *TiDBScript) WithListenAddress(listenAddress string) *TiDBScript {
+	c.ListenAddress = listenAddress
+	return c
 }
 
 // WithPort set Port field of TiDBScript

@@ -36,16 +36,21 @@ type TiKVScript struct {
 }
 
 // NewTiKVScript returns a TiKVScript with given arguments
-func NewTiKVScript(ip, listenAddress, deployDir, dataDir, logDir string) *TiKVScript {
+func NewTiKVScript(ip, deployDir, dataDir, logDir string) *TiKVScript {
 	return &TiKVScript{
-		IP:            ip,
-		ListenAddress: listenAddress,
-		Port:          20160,
-		StatusPort:    20180,
-		DeployDir:     deployDir,
-		DataDir:       dataDir,
-		LogDir:        logDir,
+		IP:         ip,
+		Port:       20160,
+		StatusPort: 20180,
+		DeployDir:  deployDir,
+		DataDir:    dataDir,
+		LogDir:     logDir,
 	}
+}
+
+// WithListenAddress set ListenAddress field of TiKVScript
+func (c *TiKVScript) WithListenAddress(listenAddress string) *TiKVScript {
+	c.ListenAddress = listenAddress
+	return c
 }
 
 // WithPort set Port field of TiKVScript
