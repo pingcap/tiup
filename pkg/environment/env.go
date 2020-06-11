@@ -19,6 +19,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
+
+	"github.com/pingcap/tiup/pkg/verbose"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -63,6 +66,7 @@ func InitEnv(options repository.Options) (*Environment, error) {
 		return env, nil
 	}
 
+	initRepo := time.Now()
 	profile := localdata.InitProfile()
 
 	// Initialize the repository
@@ -86,6 +90,8 @@ func InitEnv(options repository.Options) (*Environment, error) {
 			return nil, errors.AddStack(err)
 		}
 	}
+
+	verbose.Log("Initialize repository finished in %s", time.Since(initRepo))
 
 	return &Environment{profile, repo, v1repo}, nil
 }
