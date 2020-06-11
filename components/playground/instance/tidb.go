@@ -30,12 +30,13 @@ import (
 // TiDBInstance represent a running tidb-server
 type TiDBInstance struct {
 	instance
-	pds []*PDInstance
-	cmd *exec.Cmd
+	pds          []*PDInstance
+	cmd          *exec.Cmd
+	enableBinlog bool
 }
 
 // NewTiDBInstance return a TiDBInstance
-func NewTiDBInstance(binPath string, dir, host, configPath string, id int, pds []*PDInstance) *TiDBInstance {
+func NewTiDBInstance(binPath string, dir, host, configPath string, id int, pds []*PDInstance, enableBinlog bool) *TiDBInstance {
 	return &TiDBInstance{
 		instance: instance{
 			BinPath:    binPath,
@@ -46,7 +47,8 @@ func NewTiDBInstance(binPath string, dir, host, configPath string, id int, pds [
 			StatusPort: utils.MustGetFreePort("0.0.0.0", 10080),
 			ConfigPath: configPath,
 		},
-		pds: pds,
+		pds:          pds,
+		enableBinlog: enableBinlog,
 	}
 }
 
@@ -72,6 +74,9 @@ func (inst *TiDBInstance) Start(ctx context.Context, version v0manifest.Version)
 	if inst.ConfigPath != "" {
 		args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
 	}
+	if inst.enableBinlog {
+		args = append(args, "--enable-binlog=true")
+	}
 	inst.cmd = exec.CommandContext(ctx, args[0], args[1:]...)
 	inst.cmd.Env = append(
 		os.Environ(),
@@ -94,5 +99,5 @@ func (inst *TiDBInstance) Pid() int {
 
 // Addr return the listen address of TiDB
 func (inst *TiDBInstance) Addr() string {
-	return fmt.Sprintf("%s:%d", inst.Host, inst.Port)
+	return fmt.Sprintf("%s:%d", advertiseHost(inst.Host), inst.Port)
 }

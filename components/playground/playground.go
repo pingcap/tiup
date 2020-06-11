@@ -54,6 +54,8 @@ type Playground struct {
 	tikvs    []*instance.TiKVInstance
 	tidbs    []*instance.TiDBInstance
 	tiflashs []*instance.TiFlashInstance
+	pumps    []*instance.Pump
+	drainers []*instance.Drainer
 
 	idAlloc        map[string]int
 	instanceWaiter errgroup.Group
@@ -105,6 +107,15 @@ var timeoutOpt = &clusterutil.RetryOption{
 	Delay:   time.Second * 5,
 }
 
+func (p *Playground) binlogClient() (*api.BinlogClient, error) {
+	var addrs []string
+	for _, inst := range p.pds {
+		addrs = append(addrs, inst.Addr())
+	}
+
+	return api.NewBinlogClient(addrs, nil)
+}
+
 func (p *Playground) pdClient() *api.PDClient {
 	var addrs []string
 	for _, inst := range p.pds {
@@ -132,6 +143,52 @@ func (p *Playground) killKVIfTombstone(inst *instance.TiKVInstance) {
 						fmt.Println(err)
 					}
 					p.tikvs = append(p.tikvs[:i], p.tikvs[i+1:]...)
+					return
+				}
+			}
+		}
+
+		time.Sleep(time.Second * 5)
+	}
+}
+
+func (p *Playground) removePumpWhenTombstone(c *api.BinlogClient, inst *instance.Pump) {
+	defer logIfErr(p.renderSDFile())
+
+	for {
+		tombstone, err := c.IsPumpTombstone(inst.NodeID())
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		if tombstone {
+			for i, e := range p.pumps {
+				if e == inst {
+					fmt.Printf("pump already offline %s\n", inst.Addr())
+					p.pumps = append(p.pumps[:i], p.pumps[i+1:]...)
+					return
+				}
+			}
+		}
+
+		time.Sleep(time.Second * 5)
+	}
+}
+
+func (p *Playground) removeDrainerWhenTombstone(c *api.BinlogClient, inst *instance.Drainer) {
+	defer logIfErr(p.renderSDFile())
+
+	for {
+		tombstone, err := c.IsDrainerTombstone(inst.NodeID())
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		if tombstone {
+			for i, e := range p.drainers {
+				if e == inst {
+					fmt.Printf("drainer already offline %s\n", inst.Addr())
+					p.drainers = append(p.drainers[:i], p.drainers[i+1:]...)
 					return
 				}
 			}
@@ -233,6 +290,44 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				return nil
 			}
 		}
+	case "pump":
+		for i := 0; i < len(p.pumps); i++ {
+			if p.pumps[i].Pid() == pid {
+				inst := p.pumps[i]
+
+				c, err := p.binlogClient()
+				if err != nil {
+					return errors.AddStack(err)
+				}
+				err = c.OfflinePump(inst.Addr(), inst.NodeID())
+				if err != nil {
+					return errors.AddStack(err)
+				}
+
+				go p.removePumpWhenTombstone(c, inst)
+				fmt.Fprintf(w, "pump will be stop when offline\n")
+				return nil
+			}
+		}
+	case "drainer":
+		for i := 0; i < len(p.drainers); i++ {
+			if p.drainers[i].Pid() == pid {
+				inst := p.drainers[i]
+
+				c, err := p.binlogClient()
+				if err != nil {
+					return errors.AddStack(err)
+				}
+				err = c.OfflineDrainer(inst.Addr(), inst.NodeID())
+				if err != nil {
+					return errors.AddStack(err)
+				}
+
+				go p.removeDrainerWhenTombstone(c, inst)
+				fmt.Fprintf(w, "drainer will be stop when offline\n")
+				return nil
+			}
+		}
 	default:
 		fmt.Fprintf(w, "unknown component in scale in: %s", cid)
 		return nil
@@ -272,6 +367,10 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) {
 		p.sanitizeConfig(p.bootOptions.tidb, cfg)
 	case "tiflash":
 		p.sanitizeConfig(p.bootOptions.tiflash, cfg)
+	case "pump":
+		p.sanitizeConfig(p.bootOptions.pump, cfg)
+	case "drainer":
+		p.sanitizeConfig(p.bootOptions.drainer, cfg)
 	default:
 		fmt.Printf("unknow %s in sanitizeConfig", cid)
 	}
@@ -360,12 +459,28 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 			return errors.AddStack(err)
 		}
 	}
+
+	for _, ins := range p.pumps {
+		err := fn("pump", ins)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+	}
+
 	for _, ins := range p.tidbs {
 		err := fn("tidb", ins)
 		if err != nil {
 			return errors.AddStack(err)
 		}
 	}
+
+	for _, ins := range p.drainers {
+		err := fn("drainer", ins)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+	}
+
 	for _, ins := range p.tiflashs {
 		err := fn("tiflash", ins)
 		if err != nil {
@@ -373,6 +488,10 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 		}
 	}
 	return nil
+}
+
+func (p *Playground) enableBinlog() bool {
+	return p.bootOptions.pump.Num > 0
 }
 
 func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins instance.Instance, err error) {
@@ -416,7 +535,7 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 			}
 		}
 	case "tidb":
-		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
+		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.enableBinlog())
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
 	case "tikv":
@@ -427,6 +546,14 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 		inst := instance.NewTiFlashInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs)
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
+	case "pump":
+		inst := instance.NewPump(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
+		ins = inst
+		p.pumps = append(p.pumps, inst)
+	case "drainer":
+		inst := instance.NewDrainer(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
+		ins = inst
+		p.drainers = append(p.drainers, inst)
 	default:
 		return nil, errors.Errorf("unknow component: %s", componentID)
 	}
@@ -462,8 +589,20 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			return errors.AddStack(err)
 		}
 	}
+	for i := 0; i < options.pump.Num; i++ {
+		_, err := p.addInstance("pump", options.pump)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+	}
 	for i := 0; i < options.tidb.Num; i++ {
 		_, err := p.addInstance("tidb", options.tidb)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+	}
+	for i := 0; i < options.drainer.Num; i++ {
+		_, err := p.addInstance("drainer", options.drainer)
 		if err != nil {
 			return errors.AddStack(err)
 		}
@@ -576,13 +715,30 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 		}
 	}
 
+	anyPumpReady := false
 	// Start all instance except tiflash.
 	err := p.WalkInstances(func(cid string, ins instance.Instance) error {
 		if cid == "tiflash" {
 			return nil
 		}
 
-		return ins.Start(ctx, v0manifest.Version(options.version))
+		err := ins.Start(ctx, v0manifest.Version(options.version))
+		if err != nil {
+			return err
+		}
+
+		// if no any pump, tidb will quit right away.
+		if cid == "pump" && !anyPumpReady {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err = ins.(*instance.Pump).Ready(ctx)
+			cancel()
+			if err != nil {
+				return err
+			}
+			anyPumpReady = true
+		}
+
+		return nil
 	})
 	if err != nil {
 		return errors.AddStack(err)
