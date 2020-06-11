@@ -64,13 +64,10 @@ type (
 
 	// DMSTopologySpecification represents the specification of topology.yaml
 	DMSTopologySpecification struct {
-		GlobalOptions    GlobalOptions      `yaml:"global,omitempty"`
-		MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty"`
-		ServerConfigs    DMSServerConfigs   `yaml:"server_configs,omitempty"`
-		Job              JobSpec            `yaml:"job"`
-		Monitors         []PrometheusSpec   `yaml:"monitoring_servers"`
-		Grafana          []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
-		Alertmanager     []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
+		GlobalOptions    GlobalOptions    `yaml:"global,omitempty"`
+		MonitoredOptions MonitoredOptions `yaml:"monitored,omitempty"`
+		ServerConfigs    DMSServerConfigs `yaml:"server_configs,omitempty"`
+		Job              JobSpec          `yaml:"job"`
 	}
 )
 
@@ -94,6 +91,11 @@ type JobSpec struct {
 	Sources []SourceSpec           `yaml:"sources"`
 	Sink    SourceSpec             `yaml:"sink"`
 	Workers []WorkerSpec           `yaml:"workers"`
+	// job related specs, once job is stopped, these specs should stopped
+	DMMasters    []DMMasterSpec     `yaml:"dm-masters,omitempty"`
+	Monitors     []PrometheusSpec   `yaml:"monitoring_servers"`
+	Grafana      []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
+	Alertmanager []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
 }
 
 // SourceSpec represents a data source (could be file path or address to a database)
@@ -104,6 +106,11 @@ type SourceSpec struct {
 	User     string                 `yaml:"user,omitempty"`
 	Password string                 `yaml:"password,omitempty"`
 	Config   map[string]interface{} `yaml:"config,omitempty"`
+	// source related specs, once source is deleted, these specs should be stopped
+	Dumpling  DumplingSpec  `yaml:"dumpling,omitempty"`
+	Lightning LightningSpec `yaml:"lightning,omitempty"`
+	Importer  ImporterSpec  `yaml:"importer,omitempty"`
+	DMWorker  DMWorkerSpec  `yaml:"dm-worker,omitempty"`
 }
 
 // WorkerSpec represents a server instance to do the dms job
@@ -801,9 +808,6 @@ func (topo *DMSTopologySpecification) Merge(that *DMSTopologySpecification) *DMS
 		GlobalOptions:    topo.GlobalOptions,
 		MonitoredOptions: topo.MonitoredOptions,
 		ServerConfigs:    topo.ServerConfigs,
-		Monitors:         append(topo.Monitors, that.Monitors...),
-		Grafana:          append(topo.Grafana, that.Grafana...),
-		Alertmanager:     append(topo.Alertmanager, that.Alertmanager...),
 	}
 }
 
