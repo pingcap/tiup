@@ -85,6 +85,11 @@ type replicateEnablePlacementRulesConfig struct {
 	EnablePlacementRules string `json:"enable-placement-rules"`
 }
 
+// Addr return the address of tiflash
+func (inst *TiFlashInstance) Addr() string {
+	return fmt.Sprintf("%s:%d", inst.Host, inst.Port)
+}
+
 // StatusAddrs implements Instance interface.
 func (inst *TiFlashInstance) StatusAddrs() (addrs []string) {
 	addrs = append(addrs, fmt.Sprintf("%s:%d", inst.Host, inst.StatusPort))

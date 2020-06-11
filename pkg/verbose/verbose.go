@@ -11,22 +11,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package meta
+package verbose
 
-// ComponentVersion maps the TiDB version to the third components binding version
-func ComponentVersion(comp, version string) string {
-	switch comp {
-	case ComponentAlertManager:
-		return "v0.17.0"
-	case ComponentBlackboxExporter:
-		return "v0.12.0"
-	case ComponentNodeExporter:
-		return "v0.17.0"
-	case ComponentPushwaygate:
-		return "v0.7.0"
-	case ComponentCheckCollector:
-		return "v0.3.1"
-	default:
-		return version
+import (
+	"fmt"
+	"os"
+	"strings"
+)
+
+var verbose bool
+
+func init() {
+	v := strings.ToLower(os.Getenv("TIUP_VERBOSE"))
+	verbose = v == "1" || v == "enable"
+}
+
+// Log logs verbose messages
+func Log(format string, args ...interface{}) {
+	if !verbose {
+		return
 	}
+	fmt.Println("Verbose:", fmt.Sprintf(format, args...))
 }
