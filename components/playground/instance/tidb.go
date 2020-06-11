@@ -61,7 +61,7 @@ func (inst *TiDBInstance) Start(ctx context.Context, version v0manifest.Version)
 	}
 	args := []string{
 		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
-		compVersion("tidb", version),
+		CompVersion("tidb", version),
 		"-P", strconv.Itoa(inst.Port),
 		"--store=tikv",
 		fmt.Sprintf("--host=%s", inst.Host),
