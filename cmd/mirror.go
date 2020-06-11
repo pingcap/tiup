@@ -471,11 +471,34 @@ func yankComp(repo, id, version string) error {
 // the `mirror clone` sub command
 func newMirrorCloneCmd() *cobra.Command {
 	var (
-		options    = repository.CloneOptions{Components: map[string]*[]string{}}
-		components []string
-		repo       *repository.V1Repository
+		options     = repository.CloneOptions{Components: map[string]*[]string{}}
+		components  []string
+		repo        *repository.V1Repository
+		initialized bool
 	)
 
+	initMirrorCloneExtraArgs := func(cmd *cobra.Command) error {
+		initialized = true
+		env := environment.GlobalEnv()
+		repo = env.V1Repository()
+		index, err := repo.FetchIndexManifest()
+		if err != nil {
+			return err
+		}
+
+		if index != nil && len(index.Components) > 0 {
+			for name := range index.Components {
+				components = append(components, name)
+			}
+		}
+		sort.Strings(components)
+
+		for _, name := range components {
+			options.Components[name] = new([]string)
+			cmd.Flags().StringSliceVar(options.Components[name], name, nil, "Specify the versions for component "+name)
+		}
+		return nil
+	}
 	cmd := &cobra.Command{
 		Use: "clone <target-dir> [global version]",
 		Example: `  tiup mirror clone /path/to/local --arch amd64,arm --os linux,darwin    # Specify the architectures and OSs
@@ -486,25 +509,7 @@ func newMirrorCloneCmd() *cobra.Command {
 		SilenceUsage:       true,
 		DisableFlagParsing: true,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			env := environment.GlobalEnv()
-			repo = env.V1Repository()
-			index, err := repo.FetchIndexManifest()
-			if err != nil {
-				return err
-			}
-
-			if index != nil && len(index.Components) > 0 {
-				for name := range index.Components {
-					components = append(components, name)
-				}
-			}
-			sort.Strings(components)
-
-			for _, name := range components {
-				options.Components[name] = new([]string)
-				cmd.Flags().StringSliceVar(options.Components[name], name, nil, "Specify the versions for component "+name)
-			}
-			return nil
+			return initMirrorCloneExtraArgs(cmd)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.DisableFlagParsing = false
@@ -537,6 +542,14 @@ func newMirrorCloneCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&options.Archs, "arch", "a", []string{"amd64", "arm64"}, "Specify the downloading architecture")
 	cmd.Flags().StringSliceVarP(&options.OSs, "os", "o", []string{"linux", "darwin"}, "Specify the downloading os")
 	cmd.Flags().BoolVarP(&options.Prefix, "prefix", "", false, "Download the version with matching prefix")
+
+	originHelpFunc := cmd.HelpFunc()
+	cmd.SetHelpFunc(func(command *cobra.Command, args []string) {
+		if !initialized {
+			_ = initMirrorCloneExtraArgs(command)
+		}
+		originHelpFunc(command, args)
+	})
 
 	return cmd
 }
