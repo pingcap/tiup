@@ -251,7 +251,7 @@ func (i *instance) GetHost() string {
 
 // GetListenAddress implements Instance interface
 func (i *instance) GetListenAddress() string {
-	if len(i.listenAddress) == 0 {
+	if i.listenAddress == "" {
 		return "0.0.0.0"
 	}
 	return i.listenAddress

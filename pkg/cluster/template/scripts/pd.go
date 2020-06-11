@@ -41,7 +41,7 @@ type PDScript struct {
 
 // NewPDScript returns a PDScript with given arguments
 func NewPDScript(name, ip, listenAddress, deployDir, dataDir, logDir string) *PDScript {
-	if len(listenAddress) == 0 {
+	if listenAddress == "" {
 		listenAddress = "0.0.0.0"
 	}
 	return &PDScript{
