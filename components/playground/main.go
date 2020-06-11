@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,8 +27,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	_ "net/http/pprof"
 
 	"github.com/fatih/color"
 	_ "github.com/go-sql-driver/mysql"
