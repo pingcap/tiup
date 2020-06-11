@@ -14,123 +14,16 @@ package meta
 // limitations under the License.
 
 import (
-	"bytes"
 	"fmt"
 	"path"
-	"reflect"
 	"strings"
 
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 
-	"github.com/BurntSushi/toml"
 	"github.com/pingcap/errors"
 )
-
-// strKeyMap tries to convert `map[interface{}]interface{}` to `map[string]interface{}`
-func strKeyMap(val interface{}) interface{} {
-	m, ok := val.(map[interface{}]interface{})
-	if ok {
-		ret := map[string]interface{}{}
-		for k, v := range m {
-			kk, ok := k.(string)
-			if !ok {
-				return val
-			}
-			ret[kk] = strKeyMap(v)
-		}
-		return ret
-	}
-
-	rv := reflect.ValueOf(val)
-	if rv.Kind() == reflect.Slice {
-		var ret []interface{}
-		for i := 0; i < rv.Len(); i++ {
-			ret = append(ret, strKeyMap(rv.Index(i).Interface()))
-		}
-		return ret
-	}
-
-	return val
-}
-
-func flattenKey(key string, val interface{}) (string, interface{}) {
-	parts := strings.SplitN(key, ".", 2)
-	if len(parts) == 1 {
-		return key, strKeyMap(val)
-	}
-	subKey, subVal := flattenKey(parts[1], val)
-	return parts[0], map[string]interface{}{
-		subKey: strKeyMap(subVal),
-	}
-}
-
-func patch(origin map[string]interface{}, key string, val interface{}) {
-	origVal, found := origin[key]
-	if !found {
-		origin[key] = strKeyMap(val)
-		return
-	}
-	origMap, lhsOk := origVal.(map[string]interface{})
-	valMap, rhsOk := val.(map[string]interface{})
-	if lhsOk && rhsOk {
-		for k, v := range valMap {
-			patch(origMap, k, v)
-		}
-	} else {
-		// overwrite
-		origin[key] = strKeyMap(val)
-	}
-}
-
-func flattenMap(ms map[string]interface{}) (map[string]interface{}, error) {
-	result := map[string]interface{}{}
-	for k, v := range ms {
-		key, val := flattenKey(k, v)
-		patch(result, key, val)
-	}
-	return result, nil
-}
-
-func merge(orig, overwrite map[string]interface{}) (map[string]interface{}, error) {
-	lhs, err := flattenMap(orig)
-	if err != nil {
-		return nil, err
-	}
-	rhs, err := flattenMap(overwrite)
-	if err != nil {
-		return nil, err
-	}
-	for k, v := range rhs {
-		patch(lhs, k, v)
-	}
-	return lhs, nil
-}
-
-func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
-	lhs, err := merge(global, overwrite)
-	if err != nil {
-		return nil, errors.AddStack(err)
-	}
-
-	buf := bytes.NewBufferString(fmt.Sprintf(`# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
-# You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
-# All configuration items you want to change can be added to:
-# server_configs:
-#   %s:
-#     aa.b1.c3: value
-#     aa.b2.c4: value
-`, comp))
-
-	enc := toml.NewEncoder(buf)
-	enc.Indent = ""
-	err = enc.Encode(lhs)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	return buf.Bytes(), nil
-}
 
 func checkConfig(e executor.TiOpsExecutor, componentName, clusterVersion, nodeOS, arch, config string, paths DirPaths) error {
 	repo, err := clusterutil.NewRepository(nodeOS, arch)
