@@ -15,8 +15,6 @@ package meta
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -148,22 +146,6 @@ func (i *instance) InitConfig(e executor.TiOpsExecutor, _, _, user string, paths
 	}
 
 	return nil
-}
-
-// mergeServerConfig merges the server configuration and overwrite the global configuration
-func (i *instance) mergeServerConfig(e executor.TiOpsExecutor, globalConf, instanceConf map[string]interface{}, paths DirPaths) error {
-	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
-	conf, err := merge2Toml(i.ComponentName(), globalConf, instanceConf)
-	if err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(fp, conf, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	dst := filepath.Join(paths.Deploy, "conf", fmt.Sprintf("%s.toml", i.ComponentName()))
-	// transfer config
-	return e.Transfer(fp, dst, false)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -349,12 +331,6 @@ func (i *DMMasterInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clu
 		return err
 	}
 
-	specConfig := spec.Config
-
-	if err := i.mergeServerConfig(e, i.instance.topo.ServerConfigs.DMMaster, specConfig, paths); err != nil {
-		return err
-	}
-
 	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
 }
 
@@ -388,8 +364,7 @@ func (i *DMMasterInstance) ScaleConfig(e executor.TiOpsExecutor, b *DMSSpecifica
 		return err
 	}
 
-	specConfig := spec.Config
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.DMMaster, specConfig, paths)
+	return nil
 }
 
 // DMWorkerComponent represents DM worker component.
@@ -463,9 +438,7 @@ func (i *DMWorkerInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clu
 		return err
 	}
 
-	specConfig := spec.Config
-
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.DMWorker, specConfig, paths)
+	return nil
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -550,9 +523,7 @@ func (i *DMPortalInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clu
 		return err
 	}
 
-	specConfig := spec.Config
-
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.DMPortal, specConfig, paths)
+	return nil
 }
 
 // ScaleConfig deploy temporary config on scaling

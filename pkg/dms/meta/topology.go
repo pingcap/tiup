@@ -52,21 +52,10 @@ type (
 	// MonitoredOptions represents the monitored node configuration
 	MonitoredOptions = meta.MonitoredOptions
 
-	// DMSServerConfigs represents the server runtime configuration
-	DMSServerConfigs struct {
-		DMMaster  map[string]interface{} `yaml:"dm-master"`
-		DMWorker  map[string]interface{} `yaml:"dm-worker"`
-		DMPortal  map[string]interface{} `yaml:"dm-portal"`
-		Lightning map[string]interface{} `yaml:"lightning"`
-		Importer  map[string]interface{} `yaml:"importer"`
-		Dumpling  map[string]interface{} `yaml:"dumpling"`
-	}
-
 	// DMSTopologySpecification represents the specification of topology.yaml
 	DMSTopologySpecification struct {
 		GlobalOptions    GlobalOptions    `yaml:"global,omitempty"`
 		MonitoredOptions MonitoredOptions `yaml:"monitored,omitempty"`
-		ServerConfigs    DMSServerConfigs `yaml:"server_configs,omitempty"`
 		Job              JobSpec          `yaml:"job"`
 	}
 )
@@ -520,14 +509,14 @@ func (topo *DMSTopologySpecification) UnmarshalYAML(unmarshal func(interface{}) 
 }
 
 var (
-	monitorOptionTypeName   = reflect.TypeOf(MonitoredOptions{}).Name()
-	dmServerConfigsTypeName = reflect.TypeOf(DMSServerConfigs{}).Name()
+	globalOptionTypeName  = reflect.TypeOf(GlobalOptions{}).Name()
+	monitorOptionTypeName = reflect.TypeOf(MonitoredOptions{}).Name()
 )
 
 // Skip global/monitored options
 func isSkipField(field reflect.Value) bool {
 	tp := field.Type().Name()
-	return tp == dmServerConfigsTypeName
+	return tp == globalOptionTypeName || tp == monitorOptionTypeName
 }
 
 func setDefaultDir(parent, role, port string, field reflect.Value) {
@@ -807,7 +796,6 @@ func (topo *DMSTopologySpecification) Merge(that *DMSTopologySpecification) *DMS
 	return &DMSTopologySpecification{
 		GlobalOptions:    topo.GlobalOptions,
 		MonitoredOptions: topo.MonitoredOptions,
-		ServerConfigs:    topo.ServerConfigs,
 	}
 }
 
