@@ -48,7 +48,7 @@ require (
 	github.com/pingcap/go-tpc v1.0.4-0.20200525052430-dc963cdeef62
 	github.com/pingcap/kvproto v0.0.0-20200518112156-d4aeb467de29
 	github.com/pingcap/pd/v4 v4.0.0
-	github.com/pingcap/tidb-insight v0.3.1-0.20200423065530-051a0e987419
+	github.com/pingcap/tidb-insight v0.3.1
 	github.com/relex/aini v1.1.3
 	github.com/sergi/go-diff v1.0.1-0.20180205163309-da645544ed44
 	github.com/shirou/gopsutil v2.20.3+incompatible

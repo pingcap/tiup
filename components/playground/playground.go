@@ -36,6 +36,7 @@ import (
 	"github.com/pingcap/failpoint"
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"golang.org/x/mod/semver"
@@ -99,6 +100,74 @@ func (p *Playground) handleDisplay(r io.Writer) (err error) {
 	return nil
 }
 
+var timeoutOpt = &clusterutil.RetryOption{
+	Timeout: time.Second * 15,
+	Delay:   time.Second * 5,
+}
+
+func (p *Playground) pdClient() *api.PDClient {
+	var addrs []string
+	for _, inst := range p.pds {
+		addrs = append(addrs, inst.Addr())
+	}
+
+	return api.NewPDClient(addrs, 10*time.Second, nil)
+}
+
+func (p *Playground) killKVIfTombstone(inst *instance.TiKVInstance) {
+	defer logIfErr(p.renderSDFile())
+
+	for {
+		tombstone, err := p.pdClient().IsTombStone(inst.Addr())
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		if tombstone {
+			for i, e := range p.tikvs {
+				if e == inst {
+					fmt.Printf("stop tombstone tikv %s\n", inst.Addr())
+					err = syscall.Kill(inst.Pid(), syscall.SIGQUIT)
+					if err != nil {
+						fmt.Println(err)
+					}
+					p.tikvs = append(p.tikvs[:i], p.tikvs[i+1:]...)
+					return
+				}
+			}
+		}
+
+		time.Sleep(time.Second * 5)
+	}
+}
+
+func (p *Playground) killFlashIfTombstone(inst *instance.TiFlashInstance) {
+	defer logIfErr(p.renderSDFile())
+
+	for {
+		tombstone, err := p.pdClient().IsTombStone(inst.Addr())
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		if tombstone {
+			for i, e := range p.tiflashs {
+				if e == inst {
+					fmt.Printf("stop tombstone tiflash %s\n", inst.Addr())
+					err = syscall.Kill(inst.Pid(), syscall.SIGQUIT)
+					if err != nil {
+						fmt.Println(err)
+					}
+					p.tiflashs = append(p.tiflashs[:i], p.tiflashs[i+1:]...)
+					return
+				}
+			}
+		}
+
+		time.Sleep(time.Second * 5)
+	}
+}
+
 func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 	var cid string
 	var inst instance.Instance
@@ -118,18 +187,30 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 		return nil
 	}
 
-	// TODO: case by case handle for stateful components.
 	switch cid {
 	case "pd":
 		for i := 0; i < len(p.pds); i++ {
 			if p.pds[i].Pid() == pid {
+				inst := p.pds[i]
+				err := p.pdClient().DelPD(inst.Name(), timeoutOpt)
+				if err != nil {
+					return errors.AddStack(err)
+				}
 				p.pds = append(p.pds[:i], p.pds[i+1:]...)
 			}
 		}
 	case "tikv":
 		for i := 0; i < len(p.tikvs); i++ {
 			if p.tikvs[i].Pid() == pid {
-				p.tikvs = append(p.tikvs[:i], p.tikvs[i+1:]...)
+				inst := p.tikvs[i]
+				err := p.pdClient().DelStore(inst.Addr(), timeoutOpt)
+				if err != nil {
+					return errors.AddStack(err)
+				}
+
+				go p.killKVIfTombstone(inst)
+				fmt.Fprintf(w, "tikv will be stop when tombstone\n")
+				return nil
 			}
 		}
 	case "tidb":
@@ -141,7 +222,15 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 	case "tiflash":
 		for i := 0; i < len(p.tiflashs); i++ {
 			if p.tiflashs[i].Pid() == pid {
-				p.tiflashs = append(p.tiflashs[:i], p.tiflashs[i+1:]...)
+				inst := p.tiflashs[i]
+				err := p.pdClient().DelStore(inst.Addr(), timeoutOpt)
+				if err != nil {
+					return errors.AddStack(err)
+				}
+
+				go p.killFlashIfTombstone(inst)
+				fmt.Fprintf(w, "tiflash will be stop when tombstone\n")
+				return nil
 			}
 		}
 	default:
@@ -395,7 +484,9 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 	}{}
 
 	var monitorCmd *exec.Cmd
+	var grafana *grafana
 	if options.monitor {
+		// set up prometheus
 		if err := installIfMissing(p.profile, "prometheus", options.version); err != nil {
 			return err
 		}
@@ -404,7 +495,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 		promDir := filepath.Join(dataDir, "prometheus")
 
 		monitor := newMonitor()
-		port, cmd, err := monitor.startMonitor(ctx, options.host, promDir)
+		port, cmd, err := monitor.startMonitor(ctx, options.version, options.host, promDir)
 		if err != nil {
 			return err
 		}
@@ -431,6 +522,58 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 				return
 			}
 		}()
+
+		// set up grafana
+		if err := installIfMissing(p.profile, "grafana", options.version); err != nil {
+			return err
+		}
+		installPath, err := p.profile.ComponentInstalledPath("grafana", v0manifest.Version(options.version))
+		if err != nil {
+			return errors.AddStack(err)
+		}
+
+		dataDir = os.Getenv(localdata.EnvNameInstanceDataDir)
+		grafanaDir := filepath.Join(dataDir, "grafana")
+
+		cmd = exec.Command("cp", "-r", installPath, grafanaDir)
+		err = cmd.Run()
+		if err != nil {
+			return errors.AddStack(err)
+		}
+
+		dashboardDir := filepath.Join(grafanaDir, "dashboards")
+		err = os.MkdirAll(dashboardDir, 0755)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+
+		// mv {grafanaDir}/*.json {grafanaDir}/dashboards/
+		err = filepath.Walk(grafanaDir, func(path string, info os.FileInfo, err error) error {
+			// skip scan sub directory
+			if info.IsDir() && path != grafanaDir {
+				return filepath.SkipDir
+			}
+
+			if strings.HasSuffix(info.Name(), ".json") {
+				return os.Rename(path, filepath.Join(grafanaDir, "dashboards", info.Name()))
+			}
+
+			return nil
+		})
+		if err != nil {
+			return errors.AddStack(err)
+		}
+
+		err = replaceDatasource(dashboardDir, clusterName)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+
+		grafana = newGrafana(options.version, options.host)
+		err = grafana.start(ctx, grafanaDir, fmt.Sprintf("http://%s:%d", monitorInfo.IP, monitorInfo.Port))
+		if err != nil {
+			return errors.AddStack(err)
+		}
 	}
 
 	// Start all instance except tiflash.
@@ -524,7 +667,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 				if err != nil {
 					fmt.Println("Set the PD metrics storage failed")
 				}
-				fmt.Print(color.GreenString("To view the monitor: http://%s:%d\n", monitorInfo.IP, monitorInfo.Port))
+				fmt.Print(color.GreenString("To view the Prometheus: http://%s:%d\n", monitorInfo.IP, monitorInfo.Port))
 			}
 		}
 	}
@@ -571,6 +714,9 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			if monitorCmd != nil {
 				_ = syscall.Kill(monitorCmd.Process.Pid, sig)
 			}
+			if grafana != nil {
+				_ = syscall.Kill(grafana.cmd.Process.Pid, sig)
+			}
 		}
 	}()
 
@@ -591,6 +737,14 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 
 	logIfErr(p.renderSDFile())
 
+	if grafana != nil {
+		p.instanceWaiter.Go(func() error {
+			err := grafana.cmd.Wait()
+			return err
+		})
+		fmt.Print(color.GreenString("To view the Grafana: http://%s:%d\n", grafana.host, grafana.port))
+	}
+
 	err = p.instanceWaiter.Wait()
 	if err != nil {
 		return err
@@ -610,6 +764,7 @@ func (p *Playground) renderSDFile() error {
 	if p.monitor == nil {
 		return nil
 	}
+
 	cid2targets := make(map[string][]string)
 
 	_ = p.WalkInstances(func(cid string, inst instance.Instance) error {
