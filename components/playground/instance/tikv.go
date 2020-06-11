@@ -51,6 +51,11 @@ func NewTiKVInstance(binPath string, dir, host, configPath string, id int, pds [
 	}
 }
 
+// Addr return the address of tikv.
+func (inst *TiKVInstance) Addr() string {
+	return fmt.Sprintf("%s:%d", inst.Host, inst.Port)
+}
+
 // Start calls set inst.cmd and Start
 func (inst *TiKVInstance) Start(ctx context.Context, version v0manifest.Version) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
@@ -65,7 +70,7 @@ func (inst *TiKVInstance) Start(ctx context.Context, version v0manifest.Version)
 	}
 	inst.cmd = exec.CommandContext(ctx,
 		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
-		compVersion("tikv", version),
+		CompVersion("tikv", version),
 		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
 		fmt.Sprintf("--status-addr=%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
