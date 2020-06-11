@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -38,7 +39,6 @@ import (
 	"github.com/spf13/cobra"
 	"go.etcd.io/etcd/clientv3"
 	"go.uber.org/zap"
-	_ "net/http/pprof"
 )
 
 type bootOptions struct {
@@ -270,7 +270,7 @@ func newEtcdClient(endpoint string) (*clientv3.Client, error) {
 
 func main() {
 	if err := execute(); err != nil {
-		fmt.Println("Playground bootstrapping failed:", err)
+		fmt.Printf("Playground bootstrapping failed: %v\n", err)
 		os.Exit(1)
 	}
 }
