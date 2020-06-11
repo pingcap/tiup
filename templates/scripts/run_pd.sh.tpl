@@ -23,7 +23,7 @@ exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/pd-server \
 exec bin/pd-server \
 {{- end}}
     --name="{{.Name}}" \
-    --client-urls="{{.Scheme}}://{{.IP}}:{{.ClientPort}}" \
+    --client-urls="{{.Scheme}}://{{.ListenAddress}}:{{.ClientPort}}" \
     --advertise-client-urls="{{.Scheme}}://{{.IP}}:{{.ClientPort}}" \
     --peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
     --advertise-peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \

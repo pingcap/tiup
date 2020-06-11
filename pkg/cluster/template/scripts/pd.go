@@ -26,29 +26,34 @@ import (
 
 // PDScript represent the data to generate pd config
 type PDScript struct {
-	Name       string
-	Scheme     string
-	IP         string
-	ClientPort int
-	PeerPort   int
-	DeployDir  string
-	DataDir    string
-	LogDir     string
-	NumaNode   string
-	Endpoints  []*PDScript
+	Name          string
+	Scheme        string
+	IP            string
+	ListenAddress string
+	ClientPort    int
+	PeerPort      int
+	DeployDir     string
+	DataDir       string
+	LogDir        string
+	NumaNode      string
+	Endpoints     []*PDScript
 }
 
 // NewPDScript returns a PDScript with given arguments
-func NewPDScript(name, ip, deployDir, dataDir, logDir string) *PDScript {
+func NewPDScript(name, ip, listenAddress, deployDir, dataDir, logDir string) *PDScript {
+	if len(listenAddress) == 0 {
+		listenAddress = "0.0.0.0"
+	}
 	return &PDScript{
-		Name:       name,
-		Scheme:     "http",
-		IP:         ip,
-		ClientPort: 2379,
-		PeerPort:   2380,
-		DeployDir:  deployDir,
-		DataDir:    dataDir,
-		LogDir:     logDir,
+		Name:          name,
+		Scheme:        "http",
+		IP:            ip,
+		ListenAddress: listenAddress,
+		ClientPort:    2379,
+		PeerPort:      2380,
+		DeployDir:     deployDir,
+		DataDir:       dataDir,
+		LogDir:        logDir,
 	}
 }
 
@@ -131,8 +136,8 @@ type PDScaleScript struct {
 }
 
 // NewPDScaleScript return a new PDScaleScript
-func NewPDScaleScript(name, ip, deployDir, dataDir, logDir string) *PDScaleScript {
-	return &PDScaleScript{*NewPDScript(name, ip, deployDir, dataDir, logDir)}
+func NewPDScaleScript(name, ip, listenAddress, deployDir, dataDir, logDir string) *PDScaleScript {
+	return &PDScaleScript{*NewPDScript(name, ip, listenAddress, deployDir, dataDir, logDir)}
 }
 
 // WithScheme set Scheme field of PDScaleScript

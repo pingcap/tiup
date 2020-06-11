@@ -624,6 +624,7 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVe
 	cfg := scripts.NewPDScript(
 		spec.Name,
 		i.GetHost(),
+		i.GetListenAddress(),
 		paths.Deploy,
 		paths.Data[0],
 		paths.Log,
@@ -692,6 +693,7 @@ func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b Specification, clus
 	cfg := scripts.NewPDScaleScript(
 		i.Name,
 		i.GetHost(),
+		i.GetListenAddress(),
 		paths.Deploy,
 		paths.Data[0],
 		paths.Log,
@@ -1488,6 +1490,7 @@ func (topo *ClusterSpecification) Endpoints(user string) []*scripts.PDScript {
 		script := scripts.NewPDScript(
 			spec.Name,
 			spec.Host,
+			spec.ListenAddress,
 			deployDir,
 			dataDir,
 			logDir).
