@@ -25,7 +25,7 @@ func ComponentVersion(comp, version string) string {
 	case ComponentPushwaygate:
 		return "v0.7.0"
 	case ComponentCheckCollector:
-		return "v0.3.0-3"
+		return "v0.3.1"
 	default:
 		return version
 	}
