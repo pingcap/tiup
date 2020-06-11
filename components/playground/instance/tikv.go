@@ -70,7 +70,7 @@ func (inst *TiKVInstance) Start(ctx context.Context, version v0manifest.Version)
 	}
 	inst.cmd = exec.CommandContext(ctx,
 		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
-		compVersion("tikv", version),
+		CompVersion("tikv", version),
 		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
 		fmt.Sprintf("--status-addr=%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),

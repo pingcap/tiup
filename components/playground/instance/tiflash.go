@@ -179,7 +179,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 	}
 	inst.cmd = exec.CommandContext(ctx,
 		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
-		compVersion("tiflash", version),
+		CompVersion("tiflash", version),
 		"server",
 		fmt.Sprintf("--config-file=%s", inst.ConfigPath),
 	)
