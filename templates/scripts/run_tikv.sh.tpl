@@ -25,7 +25,7 @@ exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/tikv-server
 {{- else}}
 exec bin/tikv-server \
 {{- end}}
-    --addr "0.0.0.0:{{.Port}}" \
+    --addr "{{.ListenAddress}}:{{.Port}}" \
     --advertise-addr "{{.IP}}:{{.Port}}" \
     --status-addr "{{.IP}}:{{.StatusPort}}" \
     --pd "{{template "PDList" .Endpoints}}" \

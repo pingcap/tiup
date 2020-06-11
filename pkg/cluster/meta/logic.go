@@ -130,11 +130,12 @@ func PortStopped(e executor.TiOpsExecutor, port int, timeout int64) error {
 type instance struct {
 	InstanceSpec
 
-	name string
-	host string
-	port int
-	sshp int
-	topo *ClusterSpecification
+	name          string
+	host          string
+	listenAddress string
+	port          int
+	sshp          int
+	topo          *ClusterSpecification
 
 	usedPorts []int
 	usedDirs  []string
@@ -248,6 +249,14 @@ func (i *instance) GetHost() string {
 	return i.host
 }
 
+// GetListenAddress implements Instance interface
+func (i *instance) GetListenAddress() string {
+	if len(i.listenAddress) == 0 {
+		return "0.0.0.0"
+	}
+	return i.listenAddress
+}
+
 // GetSSHPort implements Instance interface
 func (i *instance) GetSSHPort() int {
 	return i.sshp
@@ -357,12 +366,13 @@ func (c *TiDBComponent) Instances() []Instance {
 	for _, s := range c.TiDBServers {
 		s := s
 		ins = append(ins, &TiDBInstance{instance{
-			InstanceSpec: s,
-			name:         c.Name(),
-			host:         s.Host,
-			port:         s.Port,
-			sshp:         s.SSHPort,
-			topo:         c.ClusterSpecification,
+			InstanceSpec:  s,
+			name:          c.Name(),
+			host:          s.Host,
+			listenAddress: s.ListenAddress,
+			port:          s.Port,
+			sshp:          s.SSHPort,
+			topo:          c.ClusterSpecification,
 
 			usedPorts: []int{
 				s.Port,
@@ -391,6 +401,7 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 	spec := i.InstanceSpec.(TiDBSpec)
 	cfg := scripts.NewTiDBScript(
 		i.GetHost(),
+		i.GetListenAddress(),
 		paths.Deploy,
 		paths.Log,
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(deployUser)...)
@@ -462,12 +473,13 @@ func (c *TiKVComponent) Instances() []Instance {
 	for _, s := range c.TiKVServers {
 		s := s
 		ins = append(ins, &TiKVInstance{instance{
-			InstanceSpec: s,
-			name:         c.Name(),
-			host:         s.Host,
-			port:         s.Port,
-			sshp:         s.SSHPort,
-			topo:         c.ClusterSpecification,
+			InstanceSpec:  s,
+			name:          c.Name(),
+			host:          s.Host,
+			listenAddress: s.ListenAddress,
+			port:          s.Port,
+			sshp:          s.SSHPort,
+			topo:          c.ClusterSpecification,
 
 			usedPorts: []int{
 				s.Port,
@@ -497,6 +509,7 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 	spec := i.InstanceSpec.(TiKVSpec)
 	cfg := scripts.NewTiKVScript(
 		i.GetHost(),
+		i.GetListenAddress(),
 		paths.Deploy,
 		paths.Data[0],
 		paths.Log,
@@ -572,12 +585,13 @@ func (c *PDComponent) Instances() []Instance {
 		ins = append(ins, &PDInstance{
 			Name: s.Name,
 			instance: instance{
-				InstanceSpec: s,
-				name:         c.Name(),
-				host:         s.Host,
-				port:         s.ClientPort,
-				sshp:         s.SSHPort,
-				topo:         c.ClusterSpecification,
+				InstanceSpec:  s,
+				name:          c.Name(),
+				host:          s.Host,
+				listenAddress: s.ListenAddress,
+				port:          s.ClientPort,
+				sshp:          s.SSHPort,
+				topo:          c.ClusterSpecification,
 
 				usedPorts: []int{
 					s.ClientPort,

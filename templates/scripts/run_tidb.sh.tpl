@@ -24,6 +24,7 @@ exec env GODEBUG=madvdontneed=1 bin/tidb-server \
 {{- end}}
     -P {{.Port}} \
     --status="{{.StatusPort}}" \
+    --host="{{.ListenAddress}}" \
     --advertise-address="{{.IP}}" \
     --store="tikv" \
     --config="conf/tidb.toml" \
