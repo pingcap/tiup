@@ -60,3 +60,17 @@ func (s *scrubSuite) testScrubYaml(c *check.C, generate bool) {
 func (s *scrubSuite) TestScrubYaml(c *check.C) {
 	s.testScrubYaml(c, false)
 }
+
+// alertmanager_servers will contains a nil value in the yaml.
+func (s *scrubSuite) TestNilValueNotPanic(c *check.C) {
+	data, err := ioutil.ReadFile(filepath.Join("./testdata", "single/nilvalue.yaml"))
+	c.Assert(err, check.IsNil)
+
+	hashs := make(map[string]struct{})
+	hashs["host"] = struct{}{}
+
+	scrubed, err := ScrubYaml(data, hashs)
+	c.Assert(err, check.IsNil)
+
+	var _ = scrubed
+}

@@ -41,6 +41,7 @@ func newScaleInCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
+			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			if !skipConfirm {
 				if err := cliutil.PromptForConfirmOrAbortError(
 					"This operation will delete the %s nodes in `%s` and all their data.\nDo you want to continue? [y/N]:",
@@ -48,6 +49,15 @@ func newScaleInCmd() *cobra.Command {
 					color.HiYellowString(clusterName)); err != nil {
 					return err
 				}
+
+				if gOpt.Force {
+					if err := cliutil.PromptForConfirmOrAbortError(
+						"Forcing scale in is unsafe and may result in data lost for stateful components.\nDo you want to continue? [y/N]:",
+					); err != nil {
+						return err
+					}
+				}
+
 				log.Infof("Scale-in nodes...")
 			}
 

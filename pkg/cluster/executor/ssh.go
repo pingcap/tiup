@@ -65,7 +65,8 @@ type (
 	// SSHExecutor implements TiOpsExecutor with SSH as transportation layer.
 	SSHExecutor struct {
 		Config *easyssh.MakeConfig
-		Sudo   bool // all commands run with this executor will be using sudo
+		Locale string // the locale used when executing the command
+		Sudo   bool   // all commands run with this executor will be using sudo
 	}
 
 	// SSHConfig is the configuration needed to establish SSH connection.
@@ -87,6 +88,7 @@ var _ TiOpsExecutor = &SSHExecutor{}
 func NewSSHExecutor(c SSHConfig, sudo bool) *SSHExecutor {
 	e := new(SSHExecutor)
 	e.Initialize(c)
+	e.Locale = "C" // default locale, hard coded for now
 	e.Sudo = sudo
 	return e
 }
@@ -124,6 +126,10 @@ func (e *SSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duration) (
 	// try to acquire root permission
 	if e.Sudo || sudo {
 		cmd = fmt.Sprintf("sudo -H -u root bash -c \"%s\"", cmd)
+	}
+
+	if e.Locale != "" {
+		cmd = fmt.Sprintf("export LANG=%s; %s", e.Locale, cmd)
 	}
 
 	// set a basic PATH in case it's empty on login

@@ -49,12 +49,21 @@ var (
 	skipConfirm bool
 )
 
+func scrubClusterName(n string) string {
+	return "cluster_" + telemetry.HashReport(n)
+}
+
 func getParentNames(cmd *cobra.Command) []string {
 	if cmd == nil {
 		return nil
 	}
 
 	p := cmd.Parent()
+	// always use 'cluster' as the root command name
+	if cmd.Parent() == nil {
+		return []string{"cluster"}
+	}
+
 	return append(getParentNames(p), cmd.Name())
 }
 
@@ -89,8 +98,7 @@ func init() {
 			}
 			tiupmeta.SetGlobalEnv(env)
 
-			cmds := append(getParentNames(cmd), args...)
-			clusterReport.Command = strings.Join(cmds, " ")
+			teleCommand = getParentNames(cmd)
 
 			return nil
 		},
@@ -217,27 +225,40 @@ func Execute() {
 	zap.L().Info("Execute command finished", zap.Int("code", code), zap.Error(err))
 
 	if report.Enable() {
-		clusterReport.ExitCode = int32(code)
-		clusterReport.Nodes = teleNodeInfos
-		if teleTopology != "" {
-			if data, err := telemetry.ScrubYaml([]byte(teleTopology), map[string]struct{}{"host": {}}); err == nil {
-				clusterReport.Topology = (string(data))
+		f := func() {
+			defer func() {
+				if r := recover(); r != nil {
+					if flags.DebugMode {
+						fmt.Println("Recovered in telemetry report", r)
+					}
+				}
+			}()
+
+			clusterReport.ExitCode = int32(code)
+			clusterReport.Nodes = teleNodeInfos
+			if teleTopology != "" {
+				if data, err := telemetry.ScrubYaml([]byte(teleTopology), map[string]struct{}{"host": {}}); err == nil {
+					clusterReport.Topology = (string(data))
+				}
 			}
+			clusterReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
+			clusterReport.Command = strings.Join(teleCommand, " ")
+			tele := telemetry.NewTelemetry()
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+			err := tele.Report(ctx, teleReport)
+			if flags.DebugMode {
+				if err != nil {
+					log.Infof("report failed: %v", err)
+				}
+				fmt.Printf("report: %s\n", teleReport.String())
+				if data, err := json.Marshal(teleReport); err == nil {
+					fmt.Printf("report: %s\n", string(data))
+				}
+			}
+			cancel()
 		}
-		clusterReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
-		tele := telemetry.NewTelemetry()
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
-		err := tele.Report(ctx, teleReport)
-		if flags.DebugMode {
-			if err != nil {
-				log.Infof("report failed: %v", err)
-			}
-			fmt.Printf("report: %s\n", teleReport.String())
-			if data, err := json.Marshal(teleReport); err == nil {
-				fmt.Printf("report: %s\n", string(data))
-			}
-		}
-		cancel()
+
+		f()
 	}
 
 	if err != nil {

@@ -46,6 +46,10 @@ func ScrubYaml(data []byte, hashFieldNames map[string]struct{}) (scrubed []byte,
 }
 
 func scrupMap(val interface{}, hashFieldNames map[string]struct{}, hash bool) interface{} {
+	if val == nil {
+		return nil
+	}
+
 	m, ok := val.(map[interface{}]interface{})
 	if ok {
 		ret := make(map[string]interface{})

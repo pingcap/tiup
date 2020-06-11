@@ -150,8 +150,7 @@ func (t *qcloudTxn) ReadManifest(filename string, manifest interface{}) error {
 		filepath = path.Join(t.root, filename)
 	}
 	var wc io.ReadCloser
-	file, err := os.Open(filepath)
-	if err == nil {
+	if file, err := os.Open(filepath); err == nil {
 		wc = file
 	} else if os.IsNotExist(err) && t.store.upstream != "" {
 		if resp, err := http.Get(fmt.Sprintf("%s/%s", t.store.upstream, filename)); err == nil {
@@ -165,7 +164,7 @@ func (t *qcloudTxn) ReadManifest(filename string, manifest interface{}) error {
 	}
 	defer wc.Close()
 
-	bytes, err := ioutil.ReadAll(file)
+	bytes, err := ioutil.ReadAll(wc)
 	if err != nil {
 		return err
 	}

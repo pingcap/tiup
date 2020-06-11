@@ -11,20 +11,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package flags
+package verbose
 
 import (
+	"fmt"
 	"os"
+	"strings"
 )
 
-// Global flags
-var (
-	ShowBacktrace = false
-	DebugMode     = false
-)
+var verbose bool
 
 func init() {
-	if s := os.Getenv("TIUP_CLUSTER_DEBUG"); s == "enable" {
-		DebugMode = true
+	v := strings.ToLower(os.Getenv("TIUP_VERBOSE"))
+	verbose = v == "1" || v == "enable"
+}
+
+// Log logs verbose messages
+func Log(format string, args ...interface{}) {
+	if !verbose {
+		return
 	}
+	fmt.Println("Verbose:", fmt.Sprintf(format, args...))
 }

@@ -48,6 +48,7 @@ func newDisplayCmd() *cobra.Command {
 			}
 
 			clusterName = args[0]
+			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
 				return errors.Errorf("Cluster %s not found", clusterName)
@@ -279,7 +280,7 @@ func formatInstanceStatus(status string) string {
 		return color.RedString(status)
 	case startsWith("up"):
 		return color.GreenString(status)
-	case startsWith("offline", "tombstone", "disconnected"):
+	case startsWith("tombstone", "disconnected"), strings.Contains(status, "offline"):
 		return color.YellowString(status)
 	default:
 		return status

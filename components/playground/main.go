@@ -27,8 +27,7 @@ import (
 	"strings"
 	"time"
 
-	_ "net/http/pprof"
-
+	"github.com/fatih/color"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
@@ -39,6 +38,7 @@ import (
 	"github.com/spf13/cobra"
 	"go.etcd.io/etcd/clientv3"
 	"go.uber.org/zap"
+	_ "net/http/pprof"
 )
 
 type bootOptions struct {
@@ -196,16 +196,15 @@ func checkDB(dbAddr string) bool {
 	return false
 }
 
-func checkStoreStatus(pdClient *api.PDClient, storeAddr string) error {
+func checkStoreStatus(pdClient *api.PDClient, typ, storeAddr string) error {
+	fmt.Print(color.YellowString("Waiting for %s %s ready ", typ, storeAddr))
 	for i := 0; i < 180; i++ {
 		up, err := pdClient.IsUp(storeAddr)
 		if err != nil || !up {
 			time.Sleep(time.Second)
-			fmt.Print(".")
+			fmt.Print(color.YellowString("."))
 		} else {
-			if i != 0 {
-				fmt.Println()
-			}
+			fmt.Println()
 			return nil
 		}
 	}
@@ -249,78 +248,6 @@ func dumpDSN(dbs []*instance.TiDBInstance) {
 		dsn = append(dsn, fmt.Sprintf("mysql://root@%s", db.Addr()))
 	}
 	_ = ioutil.WriteFile("dsn", []byte(strings.Join(dsn, "\n")), 0644)
-}
-
-func addrsToString(addrs []string) string {
-	return strings.Join(addrs, "','")
-}
-
-func startMonitor(ctx context.Context, host, dir string, dbs, kvs, pds, flashs []string) (int, *exec.Cmd, error) {
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return 0, nil, err
-	}
-
-	port, err := utils.GetFreePort(host, 9090)
-	if err != nil {
-		return 0, nil, err
-	}
-	addr := fmt.Sprintf("%s:%d", host, port)
-
-	tmpl := fmt.Sprintf(`
-global:
-  scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
-  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
-  # scrape_timeout is set to the global default (10s).
-
-# Alertmanager configuration
-alerting:
-  alertmanagers:
-  - static_configs:
-    - targets:
-      # - alertmanager:9093
-
-# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
-rule_files:
-  # - "first_rules.yml"
-  # - "second_rules.yml"
-
-# A scrape configuration containing exactly one endpoint to scrape:
-# Here it's Prometheus itself.
-scrape_configs:
-  - job_name: 'prometheus'
-    static_configs:
-    - targets: ['%s']
-  - job_name: 'tidb'
-    static_configs:
-    - targets: ['%s']
-  - job_name: 'tikv'
-    static_configs:
-    - targets: ['%s']
-  - job_name: 'pd'
-    static_configs:
-    - targets: ['%s']
-  - job_name: 'tiflash'
-    static_configs:
-    - targets: ['%s']
-`, addr, addrsToString(dbs), addrsToString(kvs), addrsToString(pds), addrsToString(flashs))
-
-	if err := ioutil.WriteFile(filepath.Join(dir, "prometheus.yml"), []byte(tmpl), os.ModePerm); err != nil {
-		return 0, nil, err
-	}
-
-	args := []string{
-		"tiup", "prometheus",
-		fmt.Sprintf("--config.file=%s", filepath.Join(dir, "prometheus.yml")),
-		fmt.Sprintf("--web.external-url=http://%s", addr),
-		fmt.Sprintf("--web.listen-address=0.0.0.0:%d", port),
-		fmt.Sprintf("--storage.tsdb.path='%s'", filepath.Join(dir, "data")),
-	}
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
-	cmd.Env = append(
-		os.Environ(),
-		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, dir),
-	)
-	return port, cmd, nil
 }
 
 func newEtcdClient(endpoint string) (*clientv3.Client, error) {
