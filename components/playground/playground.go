@@ -36,6 +36,7 @@ import (
 	"github.com/pingcap/failpoint"
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"golang.org/x/mod/semver"
@@ -99,6 +100,74 @@ func (p *Playground) handleDisplay(r io.Writer) (err error) {
 	return nil
 }
 
+var timeoutOpt = &clusterutil.RetryOption{
+	Timeout: time.Second * 15,
+	Delay:   time.Second * 5,
+}
+
+func (p *Playground) pdClient() *api.PDClient {
+	var addrs []string
+	for _, inst := range p.pds {
+		addrs = append(addrs, inst.Addr())
+	}
+
+	return api.NewPDClient(addrs, 10*time.Second, nil)
+}
+
+func (p *Playground) killKVIfTombstone(inst *instance.TiKVInstance) {
+	defer logIfErr(p.renderSDFile())
+
+	for {
+		tombstone, err := p.pdClient().IsTombStone(inst.Addr())
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		if tombstone {
+			for i, e := range p.tikvs {
+				if e == inst {
+					fmt.Printf("stop tombstone tikv %s\n", inst.Addr())
+					err = syscall.Kill(inst.Pid(), syscall.SIGQUIT)
+					if err != nil {
+						fmt.Println(err)
+					}
+					p.tikvs = append(p.tikvs[:i], p.tikvs[i+1:]...)
+					return
+				}
+			}
+		}
+
+		time.Sleep(time.Second * 5)
+	}
+}
+
+func (p *Playground) killFlashIfTombstone(inst *instance.TiFlashInstance) {
+	defer logIfErr(p.renderSDFile())
+
+	for {
+		tombstone, err := p.pdClient().IsTombStone(inst.Addr())
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		if tombstone {
+			for i, e := range p.tiflashs {
+				if e == inst {
+					fmt.Printf("stop tombstone tiflash %s\n", inst.Addr())
+					err = syscall.Kill(inst.Pid(), syscall.SIGQUIT)
+					if err != nil {
+						fmt.Println(err)
+					}
+					p.tiflashs = append(p.tiflashs[:i], p.tiflashs[i+1:]...)
+					return
+				}
+			}
+		}
+
+		time.Sleep(time.Second * 5)
+	}
+}
+
 func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 	var cid string
 	var inst instance.Instance
@@ -118,18 +187,30 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 		return nil
 	}
 
-	// TODO: case by case handle for stateful components.
 	switch cid {
 	case "pd":
 		for i := 0; i < len(p.pds); i++ {
 			if p.pds[i].Pid() == pid {
+				inst := p.pds[i]
+				err := p.pdClient().DelPD(inst.Name(), timeoutOpt)
+				if err != nil {
+					return errors.AddStack(err)
+				}
 				p.pds = append(p.pds[:i], p.pds[i+1:]...)
 			}
 		}
 	case "tikv":
 		for i := 0; i < len(p.tikvs); i++ {
 			if p.tikvs[i].Pid() == pid {
-				p.tikvs = append(p.tikvs[:i], p.tikvs[i+1:]...)
+				inst := p.tikvs[i]
+				err := p.pdClient().DelStore(inst.Addr(), timeoutOpt)
+				if err != nil {
+					return errors.AddStack(err)
+				}
+
+				go p.killKVIfTombstone(inst)
+				fmt.Fprintf(w, "tikv will be stop when tombstone\n")
+				return nil
 			}
 		}
 	case "tidb":
@@ -141,7 +222,15 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 	case "tiflash":
 		for i := 0; i < len(p.tiflashs); i++ {
 			if p.tiflashs[i].Pid() == pid {
-				p.tiflashs = append(p.tiflashs[:i], p.tiflashs[i+1:]...)
+				inst := p.tiflashs[i]
+				err := p.pdClient().DelStore(inst.Addr(), timeoutOpt)
+				if err != nil {
+					return errors.AddStack(err)
+				}
+
+				go p.killFlashIfTombstone(inst)
+				fmt.Fprintf(w, "tiflash will be stop when tombstone\n")
+				return nil
 			}
 		}
 	default:

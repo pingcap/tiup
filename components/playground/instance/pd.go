@@ -62,12 +62,17 @@ func (inst *PDInstance) InitCluster(pds []*PDInstance) *PDInstance {
 	return inst
 }
 
+// Name return the name of pd.
+func (inst *PDInstance) Name() string {
+	return fmt.Sprintf("pd-%d", inst.ID)
+}
+
 // Start calls set inst.cmd and Start
 func (inst *PDInstance) Start(ctx context.Context, version v0manifest.Version) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
-	uid := fmt.Sprintf("pd-%d", inst.ID)
+	uid := inst.Name()
 	args := []string{
 		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
 		compVersion("pd", version),
