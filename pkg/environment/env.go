@@ -21,13 +21,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pingcap/tiup/pkg/verbose"
-
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap/tiup/pkg/verbose"
 	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )

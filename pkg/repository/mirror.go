@@ -26,11 +26,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pingcap/tiup/pkg/verbose"
-
 	"github.com/cavaliercoder/grab"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/verbose"
 )
 
 // ErrNotFound represents the resource not exists.
