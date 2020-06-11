@@ -13,52 +13,52 @@
 
 package command
 
-import (
-	"context"
-	"fmt"
-
-	telemetry2 "github.com/pingcap/tiup/pkg/telemetry"
-
-	"github.com/pingcap/tiup/pkg/cluster/report"
-	"github.com/spf13/cobra"
-)
-
-func newTelemetryCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:    "_telemetry",
-		Short:  "telemetry",
-		Hidden: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) < 1 {
-				return cmd.Help()
-			}
-
-			switch args[0] {
-			case "node_info":
-				return nodeInfo(context.Background())
-			default:
-				fmt.Println("unknown command: ", args[1])
-				return cmd.Help()
-			}
-		},
-	}
-
-	return cmd
-}
-
-// nodeInfo dispaly telemetry.NodeInfo in stdout.
-func nodeInfo(ctx context.Context) error {
-	info := new(telemetry2.NodeInfo)
-	err := telemetry2.FillNodeInfo(ctx, info)
-	if err != nil {
-		return err
-	}
-
-	text, err := report.NodeInfoToText(info)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(text)
-	return nil
-}
+//import (
+//	"context"
+//	"fmt"
+//
+//	telemetry2 "github.com/pingcap/tiup/pkg/telemetry"
+//
+//	"github.com/pingcap/tiup/pkg/cluster/report"
+//	"github.com/spf13/cobra"
+//)
+//
+//func newTelemetryCmd() *cobra.Command {
+//	cmd := &cobra.Command{
+//		Use:    "_telemetry",
+//		Short:  "telemetry",
+//		Hidden: true,
+//		RunE: func(cmd *cobra.Command, args []string) error {
+//			if len(args) < 1 {
+//				return cmd.Help()
+//			}
+//
+//			switch args[0] {
+//			case "node_info":
+//				return nodeInfo(context.Background())
+//			default:
+//				fmt.Println("unknown command: ", args[1])
+//				return cmd.Help()
+//			}
+//		},
+//	}
+//
+//	return cmd
+//}
+//
+//// nodeInfo dispaly telemetry.NodeInfo in stdout.
+//func nodeInfo(ctx context.Context) error {
+//	info := new(telemetry2.NodeInfo)
+//	err := telemetry2.FillNodeInfo(ctx, info)
+//	if err != nil {
+//		return err
+//	}
+//
+//	text, err := report.NodeInfoToText(info)
+//	if err != nil {
+//		return err
+//	}
+//
+//	fmt.Println(text)
+//	return nil
+//}

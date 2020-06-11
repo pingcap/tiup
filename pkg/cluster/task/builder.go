@@ -97,14 +97,14 @@ func (b *Builder) UpdateMeta(cluster string, metadata *meta.ClusterMeta, deleted
 }
 
 // UpdateDMMeta maintain the dm meta information
-func (b *Builder) UpdateDMMeta(cluster string, metadata *meta.DMMeta, deletedNodeIds []string) *Builder {
-	b.tasks = append(b.tasks, &UpdateDMMeta{
-		cluster:        cluster,
-		metadata:       metadata,
-		deletedNodesID: deletedNodeIds,
-	})
-	return b
-}
+//func (b *Builder) UpdateDMMeta(cluster string, metadata *meta2.DMMeta, deletedNodeIds []string) *Builder {
+//	b.tasks = append(b.tasks, &UpdateDMMeta{
+//		cluster:        cluster,
+//		metadata:       metadata,
+//		deletedNodesID: deletedNodeIds,
+//	})
+//	return b
+//}
 
 // UpdateTopology maintain the topology information
 func (b *Builder) UpdateTopology(cluster string, metadata *meta.ClusterMeta, deletedNodeIds []string) *Builder {
