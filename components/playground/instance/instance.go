@@ -54,7 +54,8 @@ func (inst *instance) StatusAddrs() (addrs []string) {
 	return
 }
 
-func compVersion(comp string, version v0manifest.Version) string {
+// CompVersion return the format to run specified version of a component.
+func CompVersion(comp string, version v0manifest.Version) string {
 	if version.IsEmpty() {
 		return comp
 	}

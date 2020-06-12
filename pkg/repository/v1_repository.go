@@ -24,6 +24,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	cjson "github.com/gibson042/canonicaljson-go"
@@ -31,6 +32,7 @@ import (
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/verbose"
 	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
@@ -176,6 +178,10 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 
 // ensureManifests ensures that the snapshot, root, and index manifests are up to date and saved in r.local.
 func (r *V1Repository) ensureManifests() error {
+	defer func(start time.Time) {
+		verbose.Log("Ensure manifests finished in %s", time.Since(start))
+	}(time.Now())
+
 	// Update snapshot.
 	snapshot, err := r.updateLocalSnapshot()
 	if err != nil {
@@ -231,6 +237,10 @@ func (r *V1Repository) selectVersion(id string, versions map[string]v1manifest.V
 
 // Postcondition: if returned error is nil, then the local snapshot and timestamp are up to date and return the snapshot
 func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
+	defer func(start time.Time) {
+		verbose.Log("Update local snapshot finished in %s", time.Since(start))
+	}(time.Now())
+
 	changed, tsManifest, err := r.fetchTimestamp()
 	if v1manifest.IsSignatureError(errors.Cause(err)) {
 		// The signature is wrong, update our signatures from the root manifest and try again.
@@ -298,6 +308,10 @@ func FnameWithVersion(fname string, version uint) string {
 }
 
 func (r *V1Repository) updateLocalRoot() error {
+	defer func(start time.Time) {
+		verbose.Log("Update local root finished in %s", time.Since(start))
+	}(time.Now())
+
 	oldRoot, err := r.loadRoot()
 	if err != nil {
 		return errors.AddStack(err)
@@ -358,6 +372,10 @@ func (r *V1Repository) updateLocalRoot() error {
 
 // Precondition: the root manifest has been updated if necessary.
 func (r *V1Repository) updateLocalIndex(snapshot *v1manifest.Snapshot) error {
+	defer func(start time.Time) {
+		verbose.Log("Update local index finished in %s", time.Since(start))
+	}(time.Now())
+
 	// Update index (if needed).
 	var oldIndex v1manifest.Index
 	_, exists, err := r.local.LoadManifest(&oldIndex)
@@ -396,6 +414,10 @@ func (r *V1Repository) updateLocalIndex(snapshot *v1manifest.Snapshot) error {
 
 // Precondition: the snapshot and index manifests exist and are up to date.
 func (r *V1Repository) updateComponentManifest(id string) (*v1manifest.Component, error) {
+	defer func(start time.Time) {
+		verbose.Log("update component '%s' manifest finished in %s", id, time.Since(start))
+	}(time.Now())
+
 	// Find the component's entry in the index and snapshot manifests.
 	var index v1manifest.Index
 	_, _, err := r.local.LoadManifest(&index)
@@ -458,6 +480,10 @@ func (r *V1Repository) FetchComponent(item *v1manifest.VersionItem) (io.Reader, 
 // has the same value of our local one. (not hashing the snapshot file itself)
 // Return weather the manifest is changed compared to the one in local ts and the FileHash of snapshot.
 func (r *V1Repository) fetchTimestamp() (changed bool, manifest *v1manifest.Manifest, err error) {
+	defer func(start time.Time) {
+		verbose.Log("Fetch timestamp finished in %s", time.Since(start))
+	}(time.Now())
+
 	var ts v1manifest.Timestamp
 	manifest, err = r.fetchManifest(v1manifest.ManifestURLTimestamp, &ts, maxTimeStampSize)
 	if err != nil {

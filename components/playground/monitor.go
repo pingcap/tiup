@@ -23,7 +23,9 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -73,7 +75,7 @@ func newMonitor() *monitor {
 	return &monitor{}
 }
 
-func (m *monitor) startMonitor(ctx context.Context, host, dir string) (int, *exec.Cmd, error) {
+func (m *monitor) startMonitor(ctx context.Context, version string, host, dir string) (int, *exec.Cmd, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return 0, nil, err
 	}
@@ -119,7 +121,8 @@ scrape_configs:
 	}
 
 	args := []string{
-		"tiup", "prometheus",
+		"tiup",
+		instance.CompVersion("prometheus", v0manifest.Version(version)),
 		fmt.Sprintf("--config.file=%s", filepath.Join(dir, "prometheus.yml")),
 		fmt.Sprintf("--web.external-url=http://%s", addr),
 		fmt.Sprintf("--web.listen-address=0.0.0.0:%d", port),
