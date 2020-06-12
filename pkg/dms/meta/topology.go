@@ -783,11 +783,9 @@ func (topo *DMSTopologySpecification) Validate() error {
 // GetMasterList returns a list of DMMaster API hosts of the current cluster
 func (topo *DMSTopologySpecification) GetMasterList() []string {
 	var masterList []string
-
-	//for _, master := range topo.Masters {
-	//	masterList = append(masterList, fmt.Sprintf("%s:%d", master.Host, master.Port))
-	//}
-
+	/*for _, master := range topo.Masters {
+		masterList = append(masterList, fmt.Sprintf("%s:%d", master.Host, master.Port))
+	}*/
 	return masterList
 }
 

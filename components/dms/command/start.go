@@ -13,68 +13,70 @@
 
 package command
 
-//import (
-//	"github.com/joomcode/errorx"
-//	"github.com/pingcap/errors"
-//	"github.com/pingcap/tiup/pkg/cluster/meta"
-//	operator "github.com/pingcap/tiup/pkg/cluster/operation"
-//	"github.com/pingcap/tiup/pkg/cluster/task"
-//	meta2 "github.com/pingcap/tiup/pkg/dms/meta"
-//	"github.com/pingcap/tiup/pkg/logger"
-//	"github.com/pingcap/tiup/pkg/logger/log"
-//	"github.com/pingcap/tiup/pkg/utils"
-//	"github.com/spf13/cobra"
-//)
-//
-//func newStartCmd() *cobra.Command {
-//	cmd := &cobra.Command{
-//		Use:   "start <cluster-name>",
-//		Short: "Start a DM cluster",
-//		RunE: func(cmd *cobra.Command, args []string) error {
-//			if len(args) != 1 {
-//				return cmd.Help()
-//			}
-//
-//			clusterName := args[0]
-//			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-//				return errors.Errorf("cannot start non-exists cluster %s", clusterName)
-//			}
-//
-//			return startCluster(clusterName, gOpt)
-//		},
-//	}
-//
-//	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only start specified roles")
-//	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only start specified nodes")
-//
-//	return cmd
-//}
-//
-//func startCluster(clusterName string, options operator.Options) error {
-//	logger.EnableAuditLog()
-//	log.Infof("Starting cluster %s...", clusterName)
-//	metadata, err := meta2.DMMetadata(clusterName)
-//	if err != nil {
-//		return err
-//	}
-//
-//	t := task.NewBuilder().
-//		SSHKeySet(
-//			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
-//			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-//		ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
-//		ClusterOperate(metadata.Topology, operator.StartOperation, options).
-//		Build()
-//
-//	if err := t.Execute(task.NewContext()); err != nil {
-//		if errorx.Cast(err) != nil {
-//			// FIXME: Map possible task errors and give suggestions.
-//			return err
-//		}
-//		return errors.Trace(err)
-//	}
-//
-//	log.Infof("Started cluster `%s` successfully", clusterName)
-//
-//	return nil
-//}
+/*
+import (
+	"github.com/joomcode/errorx"
+	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/meta"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	meta2 "github.com/pingcap/tiup/pkg/dms/meta"
+	"github.com/pingcap/tiup/pkg/logger"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/spf13/cobra"
+)
+
+func newStartCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "start <cluster-name>",
+		Short: "Start a DM cluster",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return cmd.Help()
+			}
+
+			clusterName := args[0]
+			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+				return errors.Errorf("cannot start non-exists cluster %s", clusterName)
+			}
+
+			return startCluster(clusterName, gOpt)
+		},
+	}
+
+	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only start specified roles")
+	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only start specified nodes")
+
+	return cmd
+}
+
+func startCluster(clusterName string, options operator.Options) error {
+	logger.EnableAuditLog()
+	log.Infof("Starting cluster %s...", clusterName)
+	metadata, err := meta2.DMMetadata(clusterName)
+	if err != nil {
+		return err
+	}
+
+	t := task.NewBuilder().
+		SSHKeySet(
+			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
+			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
+		ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
+		ClusterOperate(metadata.Topology, operator.StartOperation, options).
+		Build()
+
+	if err := t.Execute(task.NewContext()); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return errors.Trace(err)
+	}
+
+	log.Infof("Started cluster `%s` successfully", clusterName)
+
+	return nil
+}
+*/

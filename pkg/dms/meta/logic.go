@@ -271,30 +271,31 @@ func (c *DMMasterComponent) Name() string {
 
 // Instances implements Component interface.
 func (c *DMMasterComponent) Instances() []Instance {
-	ins := make([]Instance, 0) //, len(c.Masters))
-	//for _, s := range c.Masters {
-	//	s := s
-	//	ins = append(ins, &DMMasterInstance{
-	//		Name: s.Name,
-	//		instance: instance{
-	//			InstanceSpec: s,
-	//			name:         c.Name(),
-	//			host:         s.Host,
-	//			port:         s.Port,
-	//			sshp:         s.SSHPort,
-	//			topo:         c.DMSSpecification,
-	//
-	//			usedPorts: []int{
-	//				s.Port,
-	//				s.PeerPort,
-	//			},
-	//			usedDirs: []string{
-	//				s.DeployDir,
-	//				s.DataDir,
-	//			},
-	//			statusFn: s.Status,
-	//		}})
-	//}
+	ins := make([]Instance, 0) /*, len(c.Masters))
+	for _, s := range c.Masters {
+		s := s
+		ins = append(ins, &DMMasterInstance{
+			Name: s.Name,
+			instance: instance{
+				InstanceSpec: s,
+				name:         c.Name(),
+				host:         s.Host,
+				port:         s.Port,
+				sshp:         s.SSHPort,
+				topo:         c.DMSSpecification,
+
+				usedPorts: []int{
+					s.Port,
+					s.PeerPort,
+				},
+				usedDirs: []string{
+					s.DeployDir,
+					s.DataDir,
+				},
+				statusFn: s.Status,
+			}})
+	}
+	*/
 	return ins
 }
 
@@ -379,29 +380,30 @@ func (c *DMWorkerComponent) Name() string {
 
 // Instances implements Component interface.
 func (c *DMWorkerComponent) Instances() []Instance {
-	ins := make([]Instance, 0) //, len(c.Workers))
-	//for _, s := range c.Workers {
-	//	s := s
-	//	ins = append(ins, &DMWorkerInstance{
-	//		Name: s.Name,
-	//		instance: instance{
-	//			InstanceSpec: s,
-	//			name:         c.Name(),
-	//			host:         s.Host,
-	//			port:         s.Port,
-	//			sshp:         s.SSHPort,
-	//			topo:         c.DMSSpecification,
-	//
-	//			usedPorts: []int{
-	//				s.Port,
-	//			},
-	//			usedDirs: []string{
-	//				s.DeployDir,
-	//				s.DataDir,
-	//			},
-	//			statusFn: s.Status,
-	//		}})
-	//}
+	ins := make([]Instance, 0) /*, len(c.Workers))
+	for _, s := range c.Workers {
+		s := s
+		ins = append(ins, &DMWorkerInstance{
+			Name: s.Name,
+			instance: instance{
+				InstanceSpec: s,
+				name:         c.Name(),
+				host:         s.Host,
+				port:         s.Port,
+				sshp:         s.SSHPort,
+				topo:         c.DMSSpecification,
+
+				usedPorts: []int{
+					s.Port,
+				},
+				usedDirs: []string{
+					s.DeployDir,
+					s.DataDir,
+				},
+				statusFn: s.Status,
+			}})
+	}
+	*/
 	return ins
 }
 
@@ -463,31 +465,32 @@ func (c *DMPortalComponent) Name() string {
 
 // Instances implements Component interface.
 func (c *DMPortalComponent) Instances() []Instance {
-	ins := make([]Instance, 0) //, len(c.Portals))
-	//for _, s := range c.Portals {
-	//	s := s
-	//	ins = append(ins, &DMPortalInstance{
-	//		instance: instance{
-	//			InstanceSpec: s,
-	//			name:         c.Name(),
-	//			host:         s.Host,
-	//			port:         s.Port,
-	//			sshp:         s.SSHPort,
-	//			topo:         c.DMSSpecification,
-	//
-	//			usedPorts: []int{
-	//				s.Port,
-	//			},
-	//			usedDirs: []string{
-	//				s.DeployDir,
-	//				s.DataDir,
-	//			},
-	//			statusFn: func(_ ...string) string {
-	//				url := fmt.Sprintf("http://%s:%d", s.Host, s.Port)
-	//				return statusByURL(url)
-	//			},
-	//		}})
-	//}
+	ins := make([]Instance, 0) /*, len(c.Portals))
+	for _, s := range c.Portals {
+		s := s
+		ins = append(ins, &DMPortalInstance{
+			instance: instance{
+				InstanceSpec: s,
+				name:         c.Name(),
+				host:         s.Host,
+				port:         s.Port,
+				sshp:         s.SSHPort,
+				topo:         c.DMSSpecification,
+
+				usedPorts: []int{
+					s.Port,
+				},
+				usedDirs: []string{
+					s.DeployDir,
+					s.DataDir,
+				},
+				statusFn: func(_ ...string) string {
+					url := fmt.Sprintf("http://%s:%d", s.Host, s.Port)
+					return statusByURL(url)
+				},
+			}})
+	}
+	*/
 	return ins
 }
 
@@ -612,26 +615,26 @@ func (topo *DMSSpecification) IterHost(fn func(instance Instance)) {
 // Endpoints returns the PD endpoints configurations
 func (topo *DMSSpecification) Endpoints(user string) []*scripts.DMMasterScript {
 	var ends []*scripts.DMMasterScript
-	//for _, spec := range topo.Masters {
-	//	deployDir := clusterutil.Abs(user, spec.DeployDir)
-	//	// data dir would be empty for components which don't need it
-	//	dataDir := spec.DataDir
-	//	// the default data_dir is relative to deploy_dir
-	//	if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
-	//		dataDir = filepath.Join(deployDir, dataDir)
-	//	}
-	//	// log dir will always be with values, but might not used by the component
-	//	logDir := clusterutil.Abs(user, spec.LogDir)
-	//
-	//	script := scripts.NewDMMasterScript(
-	//		spec.Name,
-	//		spec.Host,
-	//		deployDir,
-	//		dataDir,
-	//		logDir).
-	//		WithPort(spec.Port).
-	//		WithPeerPort(spec.PeerPort)
-	//	ends = append(ends, script)
-	//}
+	/*for _, spec := range topo.Masters {
+		deployDir := clusterutil.Abs(user, spec.DeployDir)
+		// data dir would be empty for components which don't need it
+		dataDir := spec.DataDir
+		// the default data_dir is relative to deploy_dir
+		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
+			dataDir = filepath.Join(deployDir, dataDir)
+		}
+		// log dir will always be with values, but might not used by the component
+		logDir := clusterutil.Abs(user, spec.LogDir)
+
+		script := scripts.NewDMMasterScript(
+			spec.Name,
+			spec.Host,
+			deployDir,
+			dataDir,
+			logDir).
+			WithPort(spec.Port).
+			WithPeerPort(spec.PeerPort)
+		ends = append(ends, script)
+	}*/
 	return ends
 }

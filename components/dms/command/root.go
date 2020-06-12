@@ -13,29 +13,34 @@
 
 package command
 
+func Execute() {
+
+}
+
+/*
 import (
-	//"context"
-	//"encoding/json"
+	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
-
-	//"time"
+	"time"
 
 	"github.com/fatih/color"
-	//"github.com/google/uuid"
+	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/flags"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
-
-	//"github.com/pingcap/tiup/pkg/cluster/report"
+	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/colorutil"
 	tiupmeta "github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/telemetry"
 
 	//"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository"
@@ -45,21 +50,22 @@ import (
 	"go.uber.org/zap"
 )
 
+
 var (
-	//errNS       = errorx.NewNamespace("cmd")
+	errNS       = errorx.NewNamespace("cmd")
 	rootCmd     *cobra.Command
 	gOpt        operator.Options
 	skipConfirm bool
 )
 
-//func getParentNames(cmd *cobra.Command) []string {
-//	if cmd == nil {
-//		return nil
-//	}
-//
-//	p := cmd.Parent()
-//	return append(getParentNames(p), cmd.Name())
-//}
+func getParentNames(cmd *cobra.Command) []string {
+	if cmd == nil {
+		return nil
+	}
+
+	p := cmd.Parent()
+	return append(getParentNames(p), cmd.Name())
+}
 
 func init() {
 	logger.InitGlobalLogger()
@@ -111,26 +117,26 @@ func init() {
 	rootCmd.PersistentFlags().Int64Var(&gOpt.OptTimeout, "wait-timeout", 60, "Timeout in seconds to wait for an operation to complete, ignored for operations that don't fit.")
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
 
-	//rootCmd.AddCommand(
-	//	newCheckCmd(),
-	//	newDeploy(),
-	//	newStartCmd(),
-	//	newStopCmd(),
-	//	newRestartCmd(),
-	//	newScaleInCmd(),
-	//	newScaleOutCmd(),
-	//	newDestroyCmd(),
-	//	newUpgradeCmd(),
-	//	newExecCmd(),
-	//	newDisplayCmd(),
-	//	newListCmd(),
-	//	newAuditCmd(),
-	//	newEditConfigCmd(),
-	//	newReloadCmd(),
-	//	newPatchCmd(),
-	//	newTestCmd(), // hidden command for test internally
-	//	newTelemetryCmd(),
-	//)
+	rootCmd.AddCommand(
+		newCheckCmd(),
+		newDeploy(),
+		newStartCmd(),
+		newStopCmd(),
+		newRestartCmd(),
+		newScaleInCmd(),
+		newScaleOutCmd(),
+		newDestroyCmd(),
+		newUpgradeCmd(),
+		newExecCmd(),
+		newDisplayCmd(),
+		newListCmd(),
+		newAuditCmd(),
+		newEditConfigCmd(),
+		newReloadCmd(),
+		newPatchCmd(),
+		newTestCmd(), // hidden command for test internally
+		newTelemetryCmd(),
+	)
 }
 
 func printErrorMessageForNormalError(err error) {
@@ -200,15 +206,15 @@ func Execute() {
 		}
 	}
 
-	//teleReport = new(telemetry.Report)
-	//clusterReport = new(telemetry.ClusterReport)
-	//teleReport.EventDetail = &telemetry.Report_Cluster{Cluster: clusterReport}
-	//if report.Enable() {
-	//	teleReport.EventUUID = uuid.New().String()
-	//	teleReport.EventUnixTimestamp = time.Now().Unix()
-	//	clusterReport.UUID = report.UUID()
-	//}
-	//
+	teleReport = new(telemetry.Report)
+	clusterReport = new(telemetry.ClusterReport)
+	teleReport.EventDetail = &telemetry.Report_Cluster{Cluster: clusterReport}
+	if report.Enable() {
+		teleReport.EventUUID = uuid.New().String()
+		teleReport.EventUnixTimestamp = time.Now().Unix()
+		clusterReport.UUID = report.UUID()
+	}
+
 	//start := time.Now()
 	code := 0
 	err := rootCmd.Execute()
@@ -218,29 +224,29 @@ func Execute() {
 
 	zap.L().Info("Execute command finished", zap.Int("code", code), zap.Error(err))
 
-	//if report.Enable() {
-	//	clusterReport.ExitCode = int32(code)
-	//	clusterReport.Nodes = teleNodeInfos
-	//	if teleTopology != "" {
-	//		if data, err := telemetry.ScrubYaml([]byte(teleTopology), map[string]struct{}{"host": {}}); err == nil {
-	//			clusterReport.Topology = (string(data))
-	//		}
-	//	}
-	//	clusterReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
-	//	tele := telemetry.NewTelemetry()
-	//	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
-	//	err := tele.Report(ctx, teleReport)
-	//	if flags.DebugMode {
-	//		if err != nil {
-	//			log.Infof("report failed: %v", err)
-	//		}
-	//		fmt.Printf("report: %s\n", teleReport.String())
-	//		if data, err := json.Marshal(teleReport); err == nil {
-	//			fmt.Printf("report: %s\n", string(data))
-	//		}
-	//	}
-	//	cancel()
-	//}
+	if report.Enable() {
+		clusterReport.ExitCode = int32(code)
+		clusterReport.Nodes = teleNodeInfos
+		if teleTopology != "" {
+			if data, err := telemetry.ScrubYaml([]byte(teleTopology), map[string]struct{}{"host": {}}); err == nil {
+				clusterReport.Topology = (string(data))
+			}
+		}
+		clusterReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
+		tele := telemetry.NewTelemetry()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+		err := tele.Report(ctx, teleReport)
+		if flags.DebugMode {
+			if err != nil {
+				log.Infof("report failed: %v", err)
+			}
+			fmt.Printf("report: %s\n", teleReport.String())
+			if data, err := json.Marshal(teleReport); err == nil {
+				fmt.Printf("report: %s\n", string(data))
+			}
+		}
+		cancel()
+	}
 
 	if err != nil {
 		if errx := errorx.Cast(err); errx != nil {
@@ -268,3 +274,4 @@ func Execute() {
 		os.Exit(code)
 	}
 }
+*/
