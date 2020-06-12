@@ -117,8 +117,18 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 	}
 
 	localComponents := set.NewStringSet(installed...)
-	for id, comp := range index.Components {
+	compIDs := []string{}
+	for id := range index.Components {
+		compIDs = append(compIDs, id)
+	}
+	sort.Strings(compIDs)
+	for _, id := range compIDs {
+		comp := index.Components[id]
 		if opt.installedOnly && !localComponents.Exist(id) {
+			continue
+		}
+
+		if comp.Yanked {
 			continue
 		}
 
