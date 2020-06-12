@@ -13,6 +13,7 @@
 
 package command
 
+// Execute executes the root command
 func Execute() {
 
 }
@@ -40,11 +41,8 @@ import (
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
-	"github.com/pingcap/tiup/pkg/telemetry"
-
-	//"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository"
-	//"github.com/pingcap/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
