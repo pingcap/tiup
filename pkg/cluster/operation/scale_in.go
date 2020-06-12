@@ -320,10 +320,10 @@ func ScaleInDMCluster(
 		deletedDiff[inst.ComponentName()] = append(deletedDiff[inst.ComponentName()], inst)
 	}
 
-	//// Cannot delete all DM DMMaster servers
-	//if len(deletedDiff[meta.ComponentDMMaster]) == len(spec.Masters) {
-	//	return errors.New("cannot delete all dm-master servers")
-	//}
+	// Cannot delete all DM DMMaster servers
+	if len(deletedDiff[meta.ComponentDMMaster]) == len(spec.Masters) {
+		return errors.New("cannot delete all dm-master servers")
+	}
 
 	if options.Force {
 		for _, component := range spec.ComponentsByStartOrder() {

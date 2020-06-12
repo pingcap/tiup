@@ -48,7 +48,6 @@ import (
 	"go.uber.org/zap"
 )
 
-
 var (
 	errNS       = errorx.NewNamespace("cmd")
 	rootCmd     *cobra.Command
@@ -96,8 +95,8 @@ func init() {
 			}
 			tiupmeta.SetGlobalEnv(env)
 
-			//cmds := append(getParentNames(cmd), args...)
-			//clusterReport.Command = strings.Join(cmds, " ")
+			cmds := append(getParentNames(cmd), args...)
+			clusterReport.Command = strings.Join(cmds, " ")
 
 			return nil
 		},
@@ -213,7 +212,7 @@ func Execute() {
 		clusterReport.UUID = report.UUID()
 	}
 
-	//start := time.Now()
+	start := time.Now()
 	code := 0
 	err := rootCmd.Execute()
 	if err != nil {
