@@ -193,6 +193,11 @@ tiflash_servers:
 #       syncer.to.user: "root"
 #       syncer.to.password: ""
 #       syncer.to.port: 3306
+#       syncer.ignore-table:
+#         - db-name: test
+#           tbl-name: log
+#         - db-name: test
+#           tbl-name: audit
 #   - host: 10.0.1.19
 
 # cdc_servers:
