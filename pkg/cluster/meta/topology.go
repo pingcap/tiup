@@ -279,6 +279,7 @@ type PDSpec struct {
 // Status queries current status of the instance
 func (s PDSpec) Status(pdList ...string) string {
 	curAddr := fmt.Sprintf("%s:%d", s.Host, s.ClientPort)
+	curPdAPI := api.NewPDClient([]string{curAddr}, statusQueryTimeout, nil)
 	allPdAPI := api.NewPDClient(pdList, statusQueryTimeout, nil)
 	suffix := ""
 
@@ -292,15 +293,13 @@ func (s PDSpec) Status(pdList ...string) string {
 		suffix = "|UI"
 	}
 
-	// "Down" means all PD nodes don't work,
-	// while "Unhealthy" means current PD node doesn't work
-	healths, err := allPdAPI.GetHealth()
+	healths, err := curPdAPI.GetHealth()
 	if err != nil {
 		return "Down" + suffix
 	}
 
 	// find leader node
-	leader, err := allPdAPI.GetLeader()
+	leader, err := curPdAPI.GetLeader()
 	if err != nil {
 		return "ERR" + suffix
 	}
