@@ -111,7 +111,7 @@ func (pc *PDClient) getEndpoints(cmd string) (endpoints []string) {
 	return
 }
 
-// CheckHeath checks the health of PD node
+// CheckHealth checks the health of PD node
 func (pc *PDClient) CheckHealth() error {
 	endpoints := pc.getEndpoints(pdPingURI)
 
