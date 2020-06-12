@@ -270,7 +270,7 @@ func newMirrorGenkeyCmd() *cobra.Command {
 		Use:   "genkey",
 		Short: "Generate a new key pair",
 		Long:  `Generate a new key pair that can be used to sign components.`,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
 			env := environment.GlobalEnv()
 			privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
 			keyDir := filepath.Dir(privPath)
