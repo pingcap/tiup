@@ -481,23 +481,16 @@ func (topo *DMTopologySpecification) dirConflictsDetect() error {
 
 // CountDir counts for dir paths used by any instance in the cluster with the same
 // prefix, useful to find potential path conflicts
-func (topo *DMTopologySpecification) CountDir(dirPrefix string) int {
+func (topo *DMTopologySpecification) CountDir(targetHost, dirPrefix string) int {
 	dirTypes := []string{
 		"DataDir",
 		"DeployDir",
+		"LogDir",
 	}
 
-	// path -> count
+	// host-path -> count
 	dirStats := make(map[string]int)
 	count := 0
-
-	if topo.GlobalOptions.DataDir != "" {
-		dirStats[topo.GlobalOptions.DataDir] = 1
-	}
-	if topo.GlobalOptions.DeployDir != "" {
-		dirStats[topo.GlobalOptions.DeployDir] = 1
-	}
-
 	topoSpec := reflect.ValueOf(topo).Elem()
 
 	for i := 0; i < topoSpec.NumField(); i++ {
@@ -512,18 +505,34 @@ func (topo *DMTopologySpecification) CountDir(dirPrefix string) int {
 			for _, dirType := range dirTypes {
 				if j, found := findField(compSpec, dirType); found {
 					dir := compSpec.Field(j).String()
+					host := compSpec.FieldByName("Host").String()
 
-					// data_dir is relative to deploy_dir by default, so they can be with
-					// same (sub) paths as long as the deploy_dirs are different
-					if dir != "" && !strings.HasPrefix(dir, "/") {
+					if dir == "" {
 						continue
 					}
+					if !strings.HasPrefix(dir, "/") {
+						switch dirType {
+						case "DataDir":
+							if !strings.HasPrefix(dir, topo.GlobalOptions.DataDir+"/") {
+								dir = filepath.Join(topo.GlobalOptions.DataDir, dir)
+							}
+						case "DeployDir":
+							if !strings.HasPrefix(dir, topo.GlobalOptions.DeployDir+"/") {
+								dir = filepath.Join(topo.GlobalOptions.DeployDir, dir)
+							}
+						case "LogDir":
+							if !strings.HasPrefix(dir, topo.GlobalOptions.LogDir+"/") {
+								dir = filepath.Join(topo.GlobalOptions.LogDir, dir)
+							}
 
-					_, exist := dirStats[dir]
+						}
+					}
+
+					_, exist := dirStats[host+dir]
 					if exist {
-						dirStats[dir] += 1
+						dirStats[host+dir] += 1
 					} else {
-						dirStats[dir] = 1
+						dirStats[host+dir] = 1
 					}
 				}
 			}
@@ -531,7 +540,7 @@ func (topo *DMTopologySpecification) CountDir(dirPrefix string) int {
 	}
 
 	for k, v := range dirStats {
-		if strings.HasPrefix(k, dirPrefix) {
+		if strings.HasPrefix(k, targetHost+dirPrefix) {
 			count += v
 		}
 	}

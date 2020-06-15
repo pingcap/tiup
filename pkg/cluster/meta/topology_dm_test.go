@@ -208,3 +208,27 @@ dm-worker_servers:
 	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' as in 'dm-master_servers:darwin/arm64' and 'dm-worker_servers:linux/arm64'")
 
 }
+
+func (s *metaSuiteDM) TestCountDir(c *C) {
+	topo := DMTopologySpecification{}
+
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+  data_dir: "/test-data" 
+dm-master_servers:
+  - host: 172.16.5.138
+    deploy_dir: "master-deploy"
+    data_dir: "test-1"
+dm-worker_servers:
+  - host: 172.16.5.53
+    data_dir: "test-1"
+`), &topo)
+	c.Assert(err, IsNil)
+	cnt := topo.CountDir("172.16.5.53", "test-deploy/dm-worker-8262")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.16.5.138", "/test-data/test-1")
+	c.Assert(cnt, Equals, 1)
+}

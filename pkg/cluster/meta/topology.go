@@ -822,8 +822,9 @@ func (topo *ClusterSpecification) dirConflictsDetect() error {
 			dir  string
 		}
 		conflict struct {
-			tp  string
-			cfg string
+			tp       string
+			cfg      string
+			imported bool
 		}
 	)
 
@@ -868,15 +869,18 @@ func (topo *ClusterSpecification) dirConflictsDetect() error {
 					// `yaml:"data_dir,omitempty"`
 					tp := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
 					prev, exist := dirStats[item]
-					// not reporting error for nodes imported from TiDB-Ansible, but keep
-					// their dirs in the map to check if other nodes are using them
-					if exist && !compSpec.Interface().(InstanceSpec).IsImported() {
+					// not checking between imported nodes
+					if exist &&
+						!(compSpec.Interface().(InstanceSpec).IsImported() && prev.imported) {
 						return errors.Errorf("directory '%s' conflicts between '%s:%s.%s' and '%s:%s.%s'",
 							item.dir, prev.cfg, item.host, prev.tp, cfg, item.host, tp)
 					}
+					// not reporting error for nodes imported from TiDB-Ansible, but keep
+					// their dirs in the map to check if other nodes are using them
 					dirStats[item] = conflict{
-						tp:  tp,
-						cfg: cfg,
+						tp:       tp,
+						cfg:      cfg,
+						imported: compSpec.Interface().(InstanceSpec).IsImported(),
 					}
 				}
 			}
@@ -888,23 +892,16 @@ func (topo *ClusterSpecification) dirConflictsDetect() error {
 
 // CountDir counts for dir paths used by any instance in the cluster with the same
 // prefix, useful to find potential path conflicts
-func (topo *ClusterSpecification) CountDir(dirPrefix string) int {
+func (topo *ClusterSpecification) CountDir(targetHost, dirPrefix string) int {
 	dirTypes := []string{
 		"DataDir",
 		"DeployDir",
+		"LogDir",
 	}
 
 	// path -> count
 	dirStats := make(map[string]int)
 	count := 0
-
-	if topo.GlobalOptions.DataDir != "" {
-		dirStats[topo.GlobalOptions.DataDir] = 1
-	}
-	if topo.GlobalOptions.DeployDir != "" {
-		dirStats[topo.GlobalOptions.DeployDir] = 1
-	}
-
 	topoSpec := reflect.ValueOf(topo).Elem()
 
 	for i := 0; i < topoSpec.NumField(); i++ {
@@ -919,18 +916,34 @@ func (topo *ClusterSpecification) CountDir(dirPrefix string) int {
 			for _, dirType := range dirTypes {
 				if j, found := findField(compSpec, dirType); found {
 					dir := compSpec.Field(j).String()
+					host := compSpec.FieldByName("Host").String()
 
-					// data_dir is relative to deploy_dir by default, so they can be with
-					// same (sub) paths as long as the deploy_dirs are different
-					if dir != "" && !strings.HasPrefix(dir, "/") {
+					if dir == "" {
 						continue
 					}
+					if !strings.HasPrefix(dir, "/") {
+						switch dirType {
+						case "DataDir":
+							if !strings.HasPrefix(dir, topo.GlobalOptions.DataDir+"/") {
+								dir = filepath.Join(topo.GlobalOptions.DataDir, dir)
+							}
+						case "DeployDir":
+							if !strings.HasPrefix(dir, topo.GlobalOptions.DeployDir+"/") {
+								dir = filepath.Join(topo.GlobalOptions.DeployDir, dir)
+							}
+						case "LogDir":
+							if !strings.HasPrefix(dir, topo.GlobalOptions.LogDir+"/") {
+								dir = filepath.Join(topo.GlobalOptions.LogDir, dir)
+							}
 
-					_, exist := dirStats[dir]
+						}
+					}
+
+					_, exist := dirStats[host+dir]
 					if exist {
-						dirStats[dir] += 1
+						dirStats[host+dir] += 1
 					} else {
-						dirStats[dir] = 1
+						dirStats[host+dir] = 1
 					}
 				}
 			}
@@ -938,7 +951,7 @@ func (topo *ClusterSpecification) CountDir(dirPrefix string) int {
 	}
 
 	for k, v := range dirStats {
-		if strings.HasPrefix(k, dirPrefix) {
+		if strings.HasPrefix(k, targetHost+dirPrefix) {
 			count += v
 		}
 	}

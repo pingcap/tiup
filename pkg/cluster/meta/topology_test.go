@@ -116,12 +116,13 @@ pd_servers:
 
 func (s *metaSuite) TestDirectoryConflicts(c *C) {
 	topo := ClusterSpecification{}
+
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
   ssh_port: 220
   deploy_dir: "test-deploy"
-  data_dir: "test-data" 
+  data_dir: "test-data"
 tidb_servers:
   - host: 172.16.5.138
     deploy_dir: "/test-1"
@@ -137,7 +138,7 @@ global:
   user: "test1"
   ssh_port: 220
   deploy_dir: "test-deploy"
-  data_dir: "/test-data" 
+  data_dir: "/test-data"
 tikv_servers:
   - host: 172.16.5.138
     data_dir: "test-1"
@@ -146,6 +147,27 @@ pd_servers:
     data_dir: "test-1"
 `), &topo)
 	c.Assert(err, IsNil)
+
+	// report conflict if a non-import node use same dir as an imported one
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: deploy
+  data_dir: data
+tidb_servers:
+  - host: 172.16.4.190
+    deploy_dir: /home/tidb/deploy
+pd_servers:
+  - host: 172.16.4.190
+    imported: true
+    name: pd_ip-172-16-4-190
+    deploy_dir: /home/tidb/deploy
+    data_dir: /home/tidb/deploy/data.pd
+    log_dir: /home/tidb/deploy/log
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "directory '/home/tidb/deploy' conflicts between 'tidb_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'")
 }
 
 func (s *metaSuite) TestPortConflicts(c *C) {
@@ -226,6 +248,51 @@ tikv_servers:
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' as in 'tidb_servers:darwin/arm64' and 'tikv_servers:linux/arm64'")
 
+}
+
+func (s *metaSuite) TestCountDir(c *C) {
+	topo := ClusterSpecification{}
+
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+  data_dir: "/test-data"
+tikv_servers:
+  - host: 172.16.5.138
+    data_dir: "test-1"
+pd_servers:
+  - host: 172.16.5.138
+    data_dir: "test-1"
+`), &topo)
+	c.Assert(err, IsNil)
+	cnt := topo.CountDir("172.16.5.138", "test-deploy/pd-2379")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.16.5.138", "/test-data/test-1")
+	c.Assert(cnt, Equals, 2)
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: deploy
+  data_dir: data
+tidb_servers:
+  - host: 172.16.4.190
+    imported: true
+    deploy_dir: /home/tidb/deploy
+pd_servers:
+  - host: 172.16.4.190
+    imported: true
+    name: pd_ip-172-16-4-190
+    deploy_dir: /home/tidb/deploy
+    data_dir: /home/tidb/deploy/data.pd
+    log_dir: /home/tidb/deploy/log
+`), &topo)
+	c.Assert(err, IsNil)
+	cnt = topo.CountDir("172.16.4.190", "/home/tidb/deploy")
+	c.Assert(cnt, Equals, 4)
 }
 
 func (s *metaSuite) TestGlobalConfig(c *C) {

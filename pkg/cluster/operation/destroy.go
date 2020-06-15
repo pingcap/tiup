@@ -167,7 +167,7 @@ func DestroyMonitored(getter ExecutorGetter, inst meta.Instance, options meta.Mo
 
 // topologySpecification is an interface used to get essential information of a cluster
 type topologySpecification interface {
-	CountDir(string) int // count how many time a path is used by instances in cluster
+	CountDir(string, string) int // count how many time a path is used by instances in cluster
 }
 
 // DestroyComponent destroy the instances.
@@ -195,13 +195,13 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, cls topo
 			meta.ComponentDMMaster,
 			meta.ComponentDMWorker,
 			meta.ComponentDMPortal:
-			if cls.CountDir(ins.DataDir()) == 1 {
+			if cls.CountDir(ins.GetHost(), ins.DataDir()) == 1 {
 				// only delete path if it is not used by any other instance in the cluster
 				delPaths = append(delPaths, ins.DataDir())
 			}
 		case meta.ComponentTiFlash:
 			for _, dataDir := range strings.Split(ins.DataDir(), ",") {
-				if cls.CountDir(dataDir) == 1 {
+				if cls.CountDir(ins.GetHost(), dataDir) == 1 {
 					// only delete path if it is not used by any other instance in the cluster
 					delPaths = append(delPaths, dataDir)
 				}
@@ -222,10 +222,10 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, cls topo
 		// host, so not deleting it.
 		if !ins.IsImported() {
 			// only delete path if it is not used by any other instance in the cluster
-			if cls.CountDir(ins.DeployDir()) == 1 {
+			if cls.CountDir(ins.GetHost(), ins.DeployDir()) == 1 {
 				delPaths = append(delPaths, ins.DeployDir())
 			}
-			if logDir := ins.LogDir(); !strings.HasPrefix(ins.DeployDir(), logDir) && cls.CountDir(logDir) == 1 {
+			if logDir := ins.LogDir(); !strings.HasPrefix(ins.DeployDir(), logDir) && cls.CountDir(ins.GetHost(), logDir) == 1 {
 				delPaths = append(delPaths, logDir)
 			}
 		} else {
