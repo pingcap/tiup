@@ -26,17 +26,17 @@ import (
 
 // PDScript represent the data to generate pd config
 type PDScript struct {
-	Name          string
-	Scheme        string
-	IP            string
-	ListenAddress string
-	ClientPort    int
-	PeerPort      int
-	DeployDir     string
-	DataDir       string
-	LogDir        string
-	NumaNode      string
-	Endpoints     []*PDScript
+	Name       string
+	Scheme     string
+	IP         string
+	ListenHost string
+	ClientPort int
+	PeerPort   int
+	DeployDir  string
+	DataDir    string
+	LogDir     string
+	NumaNode   string
+	Endpoints  []*PDScript
 }
 
 // NewPDScript returns a PDScript with given arguments
@@ -53,9 +53,9 @@ func NewPDScript(name, ip, deployDir, dataDir, logDir string) *PDScript {
 	}
 }
 
-// WithListenAddress set ListenAddress field of PDScript
-func (c *PDScript) WithListenAddress(listenAddress string) *PDScript {
-	c.ListenAddress = listenAddress
+// WithListenHost set listenHost field of PDScript
+func (c *PDScript) WithListenHost(listenHost string) *PDScript {
+	c.ListenHost = listenHost
 	return c
 }
 

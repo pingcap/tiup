@@ -25,7 +25,7 @@ import (
 // TiDBScript represent the data to generate TiDB config
 type TiDBScript struct {
 	IP            string
-	ListenAddress string
+	ListenHost string
 	Port          int
 	StatusPort    int
 	DeployDir     string
@@ -45,9 +45,9 @@ func NewTiDBScript(ip, deployDir, logDir string) *TiDBScript {
 	}
 }
 
-// WithListenAddress set ListenAddress field of TiDBScript
-func (c *TiDBScript) WithListenAddress(listenAddress string) *TiDBScript {
-	c.ListenAddress = listenAddress
+// WithListenHost set ListenHost field of TiDBScript
+func (c *TiDBScript) WithListenHost(listenHost string) *TiDBScript {
+	c.ListenHost = listenHost
 	return c
 }
 

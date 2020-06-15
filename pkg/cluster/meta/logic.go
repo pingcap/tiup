@@ -130,12 +130,12 @@ func PortStopped(e executor.TiOpsExecutor, port int, timeout int64) error {
 type instance struct {
 	InstanceSpec
 
-	name          string
-	host          string
-	listenAddress string
-	port          int
-	sshp          int
-	topo          *ClusterSpecification
+	name       string
+	host       string
+	listenHost string
+	port       int
+	sshp       int
+	topo       *ClusterSpecification
 
 	usedPorts []int
 	usedDirs  []string
@@ -249,12 +249,12 @@ func (i *instance) GetHost() string {
 	return i.host
 }
 
-// GetListenAddress implements Instance interface
-func (i *instance) GetListenAddress() string {
-	if i.listenAddress == "" {
+// GetListenHost implements Instance interface
+func (i *instance) GetListenHost() string {
+	if i.listenHost == "" {
 		return "0.0.0.0"
 	}
-	return i.listenAddress
+	return i.listenHost
 }
 
 // GetSSHPort implements Instance interface
@@ -366,13 +366,13 @@ func (c *TiDBComponent) Instances() []Instance {
 	for _, s := range c.TiDBServers {
 		s := s
 		ins = append(ins, &TiDBInstance{instance{
-			InstanceSpec:  s,
-			name:          c.Name(),
-			host:          s.Host,
-			listenAddress: s.ListenAddress,
-			port:          s.Port,
-			sshp:          s.SSHPort,
-			topo:          c.ClusterSpecification,
+			InstanceSpec: s,
+			name:         c.Name(),
+			host:         s.Host,
+			listenHost:   s.ListenHost,
+			port:         s.Port,
+			sshp:         s.SSHPort,
+			topo:         c.ClusterSpecification,
 
 			usedPorts: []int{
 				s.Port,
@@ -406,7 +406,7 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).
 		WithStatusPort(spec.StatusPort).
 		AppendEndpoints(i.instance.topo.Endpoints(deployUser)...).
-		WithListenAddress(i.GetListenAddress())
+		WithListenHost(i.GetListenHost())
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -475,13 +475,13 @@ func (c *TiKVComponent) Instances() []Instance {
 	for _, s := range c.TiKVServers {
 		s := s
 		ins = append(ins, &TiKVInstance{instance{
-			InstanceSpec:  s,
-			name:          c.Name(),
-			host:          s.Host,
-			listenAddress: s.ListenAddress,
-			port:          s.Port,
-			sshp:          s.SSHPort,
-			topo:          c.ClusterSpecification,
+			InstanceSpec: s,
+			name:         c.Name(),
+			host:         s.Host,
+			listenHost:   s.ListenHost,
+			port:         s.Port,
+			sshp:         s.SSHPort,
+			topo:         c.ClusterSpecification,
 
 			usedPorts: []int{
 				s.Port,
@@ -518,7 +518,7 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		WithNumaNode(spec.NumaNode).
 		WithStatusPort(spec.StatusPort).
 		AppendEndpoints(i.instance.topo.Endpoints(deployUser)...).
-		WithListenAddress(i.GetListenAddress())
+		WithListenHost(i.GetListenHost())
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tikv_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -590,13 +590,13 @@ func (c *PDComponent) Instances() []Instance {
 		ins = append(ins, &PDInstance{
 			Name: s.Name,
 			instance: instance{
-				InstanceSpec:  s,
-				name:          c.Name(),
-				host:          s.Host,
-				listenAddress: s.ListenAddress,
-				port:          s.ClientPort,
-				sshp:          s.SSHPort,
-				topo:          c.ClusterSpecification,
+				InstanceSpec: s,
+				name:         c.Name(),
+				host:         s.Host,
+				listenHost:   s.ListenHost,
+				port:         s.ClientPort,
+				sshp:         s.SSHPort,
+				topo:         c.ClusterSpecification,
 
 				usedPorts: []int{
 					s.ClientPort,
@@ -635,7 +635,7 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVe
 	).WithClientPort(spec.ClientPort).
 		WithPeerPort(spec.PeerPort).
 		AppendEndpoints(i.instance.topo.Endpoints(deployUser)...).
-		WithListenAddress(i.GetListenAddress())
+		WithListenHost(i.GetListenHost())
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -707,7 +707,7 @@ func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b Specification, clus
 		WithNumaNode(spec.NumaNode).
 		WithClientPort(spec.ClientPort).
 		AppendEndpoints(c.Endpoints(deployUser)...).
-		WithListenAddress(i.GetListenAddress())
+		WithListenHost(i.GetListenHost())
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	log.Infof("script path: %s", fp)
@@ -1505,7 +1505,7 @@ func (topo *ClusterSpecification) Endpoints(user string) []*scripts.PDScript {
 			logDir).
 			WithClientPort(spec.ClientPort).
 			WithPeerPort(spec.PeerPort).
-			WithListenAddress(spec.ListenAddress)
+			WithListenHost(spec.ListenHost)
 		ends = append(ends, script)
 	}
 	return ends

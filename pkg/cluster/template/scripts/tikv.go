@@ -25,7 +25,7 @@ import (
 // TiKVScript represent the data to generate TiKV config
 type TiKVScript struct {
 	IP            string
-	ListenAddress string
+	ListenHost string
 	Port          int
 	StatusPort    int
 	DeployDir     string
@@ -47,9 +47,9 @@ func NewTiKVScript(ip, deployDir, dataDir, logDir string) *TiKVScript {
 	}
 }
 
-// WithListenAddress set ListenAddress field of TiKVScript
-func (c *TiKVScript) WithListenAddress(listenAddress string) *TiKVScript {
-	c.ListenAddress = listenAddress
+// WithListenHost set ListenHost field of TiKVScript
+func (c *TiKVScript) WithListenHost(listenHost string) *TiKVScript {
+	c.ListenHost = listenHost
 	return c
 }
 
