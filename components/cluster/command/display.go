@@ -272,14 +272,12 @@ func formatInstanceStatus(status string) string {
 	}
 
 	switch {
-	case startsWith("healthy|l"): // healthy|l, healthy|l|ui
+	case startsWith("up|l"): // up|l, up|l|ui
 		return color.HiGreenString(status)
-	case startsWith("healthy"): // healthy, healthy|ui
-		return color.GreenString(status)
-	case startsWith("unhealthy", "down", "err"): // unhealthy/down/err, unhealthy/down/err|ui
-		return color.RedString(status)
 	case startsWith("up"):
 		return color.GreenString(status)
+	case startsWith("down", "err"): // down, down|ui
+		return color.RedString(status)
 	case startsWith("tombstone", "disconnected"), strings.Contains(status, "offline"):
 		return color.YellowString(status)
 	default:

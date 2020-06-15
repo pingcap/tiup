@@ -104,11 +104,11 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 	}
 	endpoints := make([]string, 0, len(inst.pds))
 	for _, pd := range inst.pds {
-		endpoints = append(endpoints, fmt.Sprintf("%s:%d", inst.Host, pd.StatusPort))
+		endpoints = append(endpoints, fmt.Sprintf("%s:%d", advertiseHost(inst.Host), pd.StatusPort))
 	}
 	tidbStatusAddrs := make([]string, 0, len(inst.dbs))
 	for _, db := range inst.dbs {
-		tidbStatusAddrs = append(tidbStatusAddrs, fmt.Sprintf("%s:%d", db.Host, uint64(db.StatusPort)))
+		tidbStatusAddrs = append(tidbStatusAddrs, fmt.Sprintf("%s:%d", advertiseHost(db.Host), uint64(db.StatusPort)))
 	}
 	wd, err := filepath.Abs(inst.Dir)
 	if err != nil {
@@ -209,7 +209,7 @@ func (inst *TiFlashInstance) Cmd() *exec.Cmd {
 
 // StoreAddr return the store address of TiFlash
 func (inst *TiFlashInstance) StoreAddr() string {
-	return fmt.Sprintf("%s:%d", inst.Host, inst.ServicePort)
+	return fmt.Sprintf("%s:%d", advertiseHost(inst.Host), inst.ServicePort)
 }
 
 func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string, tidbStatusAddrs, endpoints []string) error {

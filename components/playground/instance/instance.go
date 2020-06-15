@@ -61,3 +61,11 @@ func CompVersion(comp string, version v0manifest.Version) string {
 	}
 	return fmt.Sprintf("%v:%v", comp, version)
 }
+
+func advertiseHost(listen string) string {
+	if listen == "0.0.0.0" {
+		return "localhost"
+	}
+
+	return listen
+}

@@ -66,12 +66,13 @@ func (inst *TiKVInstance) Start(ctx context.Context, version v0manifest.Version)
 	}
 	endpoints := make([]string, 0, len(inst.pds))
 	for _, pd := range inst.pds {
-		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", inst.Host, pd.StatusPort))
+		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", advertiseHost(inst.Host), pd.StatusPort))
 	}
 	inst.cmd = exec.CommandContext(ctx,
 		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
 		CompVersion("tikv", version),
 		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
+		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(inst.Host), inst.Port),
 		fmt.Sprintf("--status-addr=%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--config=%s", inst.ConfigPath),
@@ -99,7 +100,7 @@ func (inst *TiKVInstance) Pid() int {
 
 // StoreAddr return the store address of TiKV
 func (inst *TiKVInstance) StoreAddr() string {
-	return fmt.Sprintf("%s:%d", inst.Host, inst.Port)
+	return fmt.Sprintf("%s:%d", advertiseHost(inst.Host), inst.Port)
 }
 
 func (inst *TiKVInstance) checkConfig() error {
