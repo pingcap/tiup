@@ -38,7 +38,7 @@ type repositoryT struct {
 // NewRepository returns repository
 func NewRepository(os, arch string) (Repository, error) {
 	profile := localdata.InitProfile()
-	mirror := repository.NewMirror(environment.Mirror(), repository.MirrorOptions{
+	mirror := repository.NewMirror(environment.Mirror(profile.Config), repository.MirrorOptions{
 		Progress: repository.DisableProgress{},
 	})
 	local, err := v1manifest.NewManifests(profile)

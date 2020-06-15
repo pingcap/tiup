@@ -68,6 +68,8 @@ fi
 
 chmod 755 "$bin_dir/tiup"
 
+exec "$bin_dir/tiup" mirror set ${script_dir} --force
+
 bold=$(tput bold 2>/dev/null)
 sgr0=$(tput sgr0 2>/dev/null)
 

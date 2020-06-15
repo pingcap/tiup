@@ -76,6 +76,7 @@ of components or the repository itself.`,
 		newMirrorGenkeyCmd(),
 		newMirrorCloneCmd(),
 		newMirrorPublishCmd(),
+		newMirrorSetCmd(),
 	)
 
 	return cmd
@@ -190,10 +191,38 @@ func delComp(repo, id, version string) error {
 	return nil
 }
 
-// the `repo publish` sub command
+// the `mirror set` sub command
+func newMirrorSetCmd() *cobra.Command {
+	root := ""
+	force := false
+	cmd := &cobra.Command{
+		Use:   "set <mirror-addr>",
+		Short: "set mirror address",
+		Long:  "set mirror address, will replace the root certificate",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return cmd.Help()
+			}
+
+			addr := args[0]
+			profile := localdata.InitProfile()
+			if err := profile.ResetMirror(addr, root, force); err != nil {
+				fmt.Printf("Failed to set mirror: %s\n", err.Error())
+				return err
+			}
+			fmt.Printf("Set mirror to %s success\n", addr)
+			return nil
+		},
+	}
+	cmd.Flags().StringVarP(&root, "root", "r", root, "root.json path")
+	cmd.Flags().BoolVarP(&force, "force", "f", force, "force replace root.json, may be risky")
+	return cmd
+}
+
+// the `mirror publish` sub command
 func newMirrorPublishCmd() *cobra.Command {
 	var privPath string
-	endpoint := environment.Mirror()
+	endpoint := environment.Mirror(localdata.InitProfile().Config)
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH
 	desc := ""

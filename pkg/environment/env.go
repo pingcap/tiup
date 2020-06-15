@@ -41,8 +41,18 @@ const (
 
 // Mirror return mirror of tiup.
 // If it's not defined, it will use "https://tiup-mirrors.pingcap.com/".
-func Mirror() string {
-	if m := os.Getenv(repository.EnvMirrors); m != "" {
+func Mirror(cfg *localdata.TiUPConfig) string {
+	m := os.Getenv(repository.EnvMirrors)
+	if cfg != nil && cfg.Mirror != "" {
+		if m != "" && m != cfg.Mirror {
+			fmt.Printf(`WARNING: both mirror config and TIUP_MIRRORS have been set.
+Use config mirror(%s) instead of TIUP_MIRRORS(%s)
+`, cfg.Mirror, m)
+			os.Setenv(repository.EnvMirrors, cfg.Mirror)
+		}
+		return cfg.Mirror
+	}
+	if m != "" {
 		return m
 	}
 	return repository.DefaultMirror
@@ -70,7 +80,8 @@ func InitEnv(options repository.Options) (*Environment, error) {
 
 	// Initialize the repository
 	// Replace the mirror if some sub-commands use different mirror address
-	mirror := repository.NewMirror(Mirror(), repository.MirrorOptions{})
+	mirrorAddr := Mirror(profile.Config)
+	mirror := repository.NewMirror(mirrorAddr, repository.MirrorOptions{})
 
 	var repo *repository.Repository
 	var v1repo *repository.V1Repository
@@ -80,7 +91,7 @@ func InitEnv(options repository.Options) (*Environment, error) {
 		var local v1manifest.LocalManifests
 		local, err = v1manifest.NewManifests(profile)
 		if err != nil {
-			return nil, errors.Annotatef(err, "initial repository from mirror(%s) failed", Mirror())
+			return nil, errors.Annotatef(err, "initial repository from mirror(%s) failed", mirrorAddr)
 		}
 		v1repo = repository.NewV1Repo(mirror, options, local)
 	} else {
