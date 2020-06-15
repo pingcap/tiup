@@ -104,7 +104,7 @@ func (i *PumpInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		return err
 	}
 
-	specConfig := spec.Config
+	globalConfig := i.topo.ServerConfigs.Pump
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -121,12 +121,11 @@ func (i *PumpInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		if err != nil {
 			return err
 		}
-		mergedConfig, err := mergeImported(importConfig, spec.Config)
+		globalConfig, err = mergeImported(importConfig, globalConfig)
 		if err != nil {
 			return err
 		}
-		specConfig = mergedConfig
 	}
 
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.Pump, specConfig, paths)
+	return i.mergeServerConfig(e, globalConfig, spec.Config, paths)
 }
