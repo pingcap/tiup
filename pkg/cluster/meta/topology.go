@@ -127,6 +127,7 @@ func AllComponentNames() (roles []string) {
 // TiDBSpec represents the TiDB topology specification in topology.yaml
 type TiDBSpec struct {
 	Host            string                 `yaml:"host"`
+	ListenHost      string                 `yaml:"listen_host,omitempty"`
 	SSHPort         int                    `yaml:"ssh_port,omitempty"`
 	Imported        bool                   `yaml:"imported,omitempty"`
 	Port            int                    `yaml:"port" default:"4000"`
@@ -185,6 +186,7 @@ func (s TiDBSpec) IsImported() bool {
 // TiKVSpec represents the TiKV topology specification in topology.yaml
 type TiKVSpec struct {
 	Host            string                 `yaml:"host"`
+	ListenHost      string                 `yaml:"listen_host,omitempty"`
 	SSHPort         int                    `yaml:"ssh_port,omitempty"`
 	Imported        bool                   `yaml:"imported,omitempty"`
 	Port            int                    `yaml:"port" default:"20160"`
@@ -263,9 +265,10 @@ func (s TiKVSpec) IsImported() bool {
 
 // PDSpec represents the PD topology specification in topology.yaml
 type PDSpec struct {
-	Host     string `yaml:"host"`
-	SSHPort  int    `yaml:"ssh_port,omitempty"`
-	Imported bool   `yaml:"imported,omitempty"`
+	Host       string `yaml:"host"`
+	ListenHost string `yaml:"listen_host,omitempty"`
+	SSHPort    int    `yaml:"ssh_port,omitempty"`
+	Imported   bool   `yaml:"imported,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
 	Name            string                 `yaml:"name"`
 	ClientPort      int                    `yaml:"client_port" default:"2379"`
