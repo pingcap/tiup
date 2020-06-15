@@ -165,13 +165,13 @@ func DestroyMonitored(getter ExecutorGetter, inst meta.Instance, options meta.Mo
 	return nil
 }
 
-// clusterSpec is an interface used to get essential information of a cluster
-type clusterSpec interface {
+// topologySpecification is an interface used to get essential information of a cluster
+type topologySpecification interface {
 	CountDir(string) int // count how many time a path is used by instances in cluster
 }
 
 // DestroyComponent destroy the instances.
-func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, cls clusterSpec, timeout int64) error {
+func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, cls topologySpecification, timeout int64) error {
 	if len(instances) <= 0 {
 		return nil
 	}

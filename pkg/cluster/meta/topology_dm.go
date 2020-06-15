@@ -564,7 +564,7 @@ func (topo *DMTopologySpecification) GetMasterList() []string {
 	return masterList
 }
 
-// Merge returns a new ClusterSpecification which sum old ones
+// Merge returns a new DMTopologySpecification which sum old ones
 func (topo *DMTopologySpecification) Merge(that *DMTopologySpecification) *DMTopologySpecification {
 	return &DMTopologySpecification{
 		GlobalOptions:    topo.GlobalOptions,
