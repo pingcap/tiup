@@ -281,7 +281,7 @@ func (i *DMMasterInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clu
 		return err
 	}
 
-	specConfig := spec.Config
+	globalConfig := i.dmInstance.topo.ServerConfigs.Master
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -298,14 +298,13 @@ func (i *DMMasterInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clu
 		if err != nil {
 			return err
 		}
-		mergedConfig, err := mergeImported(importConfig, spec.Config)
+		globalConfig, err = mergeImported(importConfig, globalConfig)
 		if err != nil {
 			return err
 		}
-		specConfig = mergedConfig
 	}
 
-	if err := i.mergeServerConfig(e, i.dmInstance.topo.ServerConfigs.Master, specConfig, paths); err != nil {
+	if err := i.mergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
 
@@ -417,7 +416,7 @@ func (i *DMWorkerInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clu
 		return err
 	}
 
-	specConfig := spec.Config
+	globalConfig := i.topo.ServerConfigs.Worker
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -434,14 +433,13 @@ func (i *DMWorkerInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clu
 		if err != nil {
 			return err
 		}
-		mergedConfig, err := mergeImported(importConfig, spec.Config)
+		globalConfig, err = mergeImported(importConfig, globalConfig)
 		if err != nil {
 			return err
 		}
-		specConfig = mergedConfig
 	}
 
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.Worker, specConfig, paths)
+	return i.mergeServerConfig(e, globalConfig, spec.Config, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -526,7 +524,7 @@ func (i *DMPortalInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clu
 		return err
 	}
 
-	specConfig := spec.Config
+	globalConfig := i.topo.ServerConfigs.Portal
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -543,14 +541,13 @@ func (i *DMPortalInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clu
 		if err != nil {
 			return err
 		}
-		mergedConfig, err := mergeImported(importConfig, spec.Config)
+		globalConfig, err = mergeImported(importConfig, globalConfig)
 		if err != nil {
 			return err
 		}
-		specConfig = mergedConfig
 	}
 
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.Portal, specConfig, paths)
+	return i.mergeServerConfig(e, globalConfig, spec.Config, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
