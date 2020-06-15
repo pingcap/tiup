@@ -575,13 +575,13 @@ item6 = 600
 itemx = "valuex"
 itemy = 1000
 [config2.item4]
-item7 = 780
+item7 = 700
 `
 
-	merge1, err := mergeImported(config, spec.TiKVServers[0].Config)
+	merge1, err := mergeImported(config, spec.ServerConfigs.TiKV)
 	c.Assert(err, IsNil)
 
-	merge2, err := merge2Toml(ComponentTiKV, spec.ServerConfigs.TiKV, merge1)
+	merge2, err := merge2Toml(ComponentTiKV, merge1, spec.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(merge2), DeepEquals, expected)
 }

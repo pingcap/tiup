@@ -407,7 +407,7 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		return err
 	}
 
-	specConfig := spec.Config
+	globalConfig := i.instance.topo.ServerConfigs.TiDB
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -424,14 +424,13 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		if err != nil {
 			return err
 		}
-		mergedConfig, err := mergeImported(importConfig, spec.Config)
+		globalConfig, err = mergeImported(importConfig, globalConfig)
 		if err != nil {
 			return err
 		}
-		specConfig = mergedConfig
 	}
 
-	if err := i.mergeServerConfig(e, i.instance.topo.ServerConfigs.TiDB, specConfig, paths); err != nil {
+	if err := i.mergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
 
@@ -515,7 +514,7 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		return err
 	}
 
-	specConfig := spec.Config
+	globalConfig := i.instance.topo.ServerConfigs.TiKV
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -532,14 +531,13 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		if err != nil {
 			return err
 		}
-		mergedConfig, err := mergeImported(importConfig, spec.Config)
+		globalConfig, err = mergeImported(importConfig, globalConfig)
 		if err != nil {
 			return err
 		}
-		specConfig = mergedConfig
 	}
 
-	if err := i.mergeServerConfig(e, i.instance.topo.ServerConfigs.TiKV, specConfig, paths); err != nil {
+	if err := i.mergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
 
@@ -636,7 +634,7 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVe
 		spec.Config["pd-server.metric-storage"] = fmt.Sprintf("http://%s:%d", prom.Host, prom.Port)
 	}
 
-	specConfig := spec.Config
+	globalConfig := i.instance.topo.ServerConfigs.PD
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -653,14 +651,13 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVe
 		if err != nil {
 			return err
 		}
-		mergedConfig, err := mergeImported(importConfig, spec.Config)
+		globalConfig, err = mergeImported(importConfig, globalConfig)
 		if err != nil {
 			return err
 		}
-		specConfig = mergedConfig
 	}
 
-	if err := i.mergeServerConfig(e, i.instance.topo.ServerConfigs.PD, specConfig, paths); err != nil {
+	if err := i.mergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
 
@@ -942,7 +939,6 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		return err
 	}
 
-	specLernerConfig := spec.LearnerConfig
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -959,14 +955,13 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		if err != nil {
 			return err
 		}
-		mergedConfig, err := mergeImported(importConfig, spec.LearnerConfig)
+		conf, err = mergeImported(importConfig, conf)
 		if err != nil {
 			return err
 		}
-		specLernerConfig = mergedConfig
 	}
 
-	err = i.mergeTiFlashLearnerServerConfig(e, conf, specLernerConfig, paths)
+	err = i.mergeTiFlashLearnerServerConfig(e, conf, spec.LearnerConfig, paths)
 	if err != nil {
 		return err
 	}
@@ -976,7 +971,6 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		return err
 	}
 
-	specConfig := spec.Config
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -993,13 +987,13 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		if err != nil {
 			return err
 		}
-		specConfig, err = mergeImported(importConfig, spec.Config)
+		conf, err = mergeImported(importConfig, conf)
 		if err != nil {
 			return err
 		}
 	}
 
-	return i.mergeServerConfig(e, conf, specConfig, paths)
+	return i.mergeServerConfig(e, conf, spec.Config, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
