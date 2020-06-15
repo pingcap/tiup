@@ -297,7 +297,8 @@ func (s PDSpec) Status(pdList ...string) string {
 		suffix = "|UI"
 	}
 
-	healths, err := curPdAPI.GetHealth()
+	// check health
+	err := curPdAPI.CheckHealth()
 	if err != nil {
 		return "Down" + suffix
 	}
@@ -307,20 +308,10 @@ func (s PDSpec) Status(pdList ...string) string {
 	if err != nil {
 		return "ERR" + suffix
 	}
-
-	for _, member := range healths.Healths {
-		if s.Name != member.Name {
-			continue
-		}
-		if s.Name == leader.Name {
-			suffix = "|L" + suffix
-		}
-		if member.Health {
-			return "Healthy" + suffix
-		}
-		return "Unhealthy" + suffix
+	if s.Name == leader.Name {
+		suffix = "|L" + suffix
 	}
-	return "N/A" + suffix
+	return "Up" + suffix
 }
 
 // Role returns the component role of the instance

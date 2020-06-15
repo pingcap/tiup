@@ -79,9 +79,9 @@ func (inst *PDInstance) Start(ctx context.Context, version v0manifest.Version) e
 		"--name=" + uid,
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
 		fmt.Sprintf("--peer-urls=http://%s:%d", inst.Host, inst.Port),
-		fmt.Sprintf("--advertise-peer-urls=http://%s:%d", inst.Host, inst.Port),
+		fmt.Sprintf("--advertise-peer-urls=http://%s:%d", advertiseHost(inst.Host), inst.Port),
 		fmt.Sprintf("--client-urls=http://%s:%d", inst.Host, inst.StatusPort),
-		fmt.Sprintf("--advertise-client-urls=http://%s:%d", inst.Host, inst.StatusPort),
+		fmt.Sprintf("--advertise-client-urls=http://%s:%d", advertiseHost(inst.Host), inst.StatusPort),
 		fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "pd.log")),
 	}
 	if inst.ConfigPath != "" {
@@ -92,15 +92,15 @@ func (inst *PDInstance) Start(ctx context.Context, version v0manifest.Version) e
 		endpoints := make([]string, 0)
 		for _, pd := range inst.initEndpoints {
 			uid := fmt.Sprintf("pd-%d", pd.ID)
-			endpoints = append(endpoints, fmt.Sprintf("%s=http://%s:%d", uid, inst.Host, pd.Port))
-			args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(endpoints, ",")))
+			endpoints = append(endpoints, fmt.Sprintf("%s=http://%s:%d", uid, advertiseHost(inst.Host), pd.Port))
 		}
+		args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(endpoints, ",")))
 	} else if len(inst.joinEndpoints) > 0 {
 		endpoints := make([]string, 0)
 		for _, pd := range inst.joinEndpoints {
-			endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", inst.Host, pd.Port))
-			args = append(args, fmt.Sprintf("--join=%s", strings.Join(endpoints, ",")))
+			endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", advertiseHost(inst.Host), pd.Port))
 		}
+		args = append(args, fmt.Sprintf("--join=%s", strings.Join(endpoints, ",")))
 	} else {
 		return errors.Errorf("must set the init or join instances.")
 	}
@@ -127,5 +127,5 @@ func (inst *PDInstance) Pid() int {
 
 // Addr return the listen address of PD
 func (inst *PDInstance) Addr() string {
-	return fmt.Sprintf("%s:%d", inst.Host, inst.StatusPort)
+	return fmt.Sprintf("%s:%d", advertiseHost(inst.Host), inst.StatusPort)
 }

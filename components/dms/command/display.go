@@ -246,15 +246,26 @@ func displayClusterTopology(clusterName string, opt *operator.Options) error {
 }
 
 func formatInstanceStatus(status string) string {
-	switch strings.ToLower(status) {
-	case "up", "healthy", "free":
-		return color.GreenString(status)
-	case "healthy|l", "bound": // master leader
+	lowercaseStatus := strings.ToLower(status)
+
+	startsWith := func(prefixs ...string) bool {
+		for _, prefix := range prefixs {
+			if strings.HasPrefix(lowercaseStatus, prefix) {
+				return true
+			}
+		}
+		return false
+	}
+
+	switch {
+	case startsWith("up|l"): // up|l, up|l|ui
 		return color.HiGreenString(status)
-	case "offline", "tombstone", "disconnected":
-		return color.YellowString(status)
-	case "down", "unhealthy", "err":
+	case startsWith("up"):
+		return color.GreenString(status)
+	case startsWith("down", "err"): // down, down|ui
 		return color.RedString(status)
+	case startsWith("tombstone", "disconnected"), strings.Contains(status, "offline"):
+		return color.YellowString(status)
 	default:
 		return status
 	}
