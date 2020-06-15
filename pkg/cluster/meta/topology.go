@@ -886,6 +886,66 @@ func (topo *TopologySpecification) dirConflictsDetect() error {
 	return nil
 }
 
+// CountDir counts for dir paths used by any instance in the cluster with the same
+// prefix, useful to find potential path conflicts
+func (topo *TopologySpecification) CountDir(dirPrefix string) int {
+	dirTypes := []string{
+		"DataDir",
+		"DeployDir",
+	}
+
+	// path -> count
+	dirStats := make(map[string]int)
+	count := 0
+
+	if topo.GlobalOptions.DataDir != "" {
+		dirStats[topo.GlobalOptions.DataDir] = 1
+	}
+	if topo.GlobalOptions.DeployDir != "" {
+		dirStats[topo.GlobalOptions.DeployDir] = 1
+	}
+
+	topoSpec := reflect.ValueOf(topo).Elem()
+
+	for i := 0; i < topoSpec.NumField(); i++ {
+		if isSkipField(topoSpec.Field(i)) {
+			continue
+		}
+
+		compSpecs := topoSpec.Field(i)
+		for index := 0; index < compSpecs.Len(); index++ {
+			compSpec := compSpecs.Index(index)
+			// Directory conflicts
+			for _, dirType := range dirTypes {
+				if j, found := findField(compSpec, dirType); found {
+					dir := compSpec.Field(j).String()
+
+					// data_dir is relative to deploy_dir by default, so they can be with
+					// same (sub) paths as long as the deploy_dirs are different
+					if dir != "" && !strings.HasPrefix(dir, "/") {
+						continue
+					}
+
+					_, exist := dirStats[dir]
+					if exist {
+						dirStats[dir] += 1
+					} else {
+						dirStats[dir] = 1
+					}
+				}
+			}
+		}
+	}
+
+	for k, v := range dirStats {
+		if strings.HasPrefix(k, dirPrefix) {
+			count += v
+		}
+	}
+
+	return count
+}
+
 // Validate validates the topology specification and produce error if the
 // specification invalid (e.g: port conflicts or directory conflicts)
 func (topo *TopologySpecification) Validate() error {
