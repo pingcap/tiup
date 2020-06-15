@@ -17,8 +17,6 @@ package command
 import (
 	"os"
 
-	meta2 "github.com/pingcap/tiup/pkg/dms/meta"
-
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
@@ -47,7 +45,7 @@ func newDestroyCmd() *cobra.Command {
 			}
 
 			logger.EnableAuditLog()
-			metadata, err := meta2.DMMetadata(clusterName)
+			metadata, err := meta.DMMetadata(clusterName)
 			if err != nil {
 				return err
 			}

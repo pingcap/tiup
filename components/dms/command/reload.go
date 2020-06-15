@@ -21,7 +21,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	meta2 "github.com/pingcap/tiup/pkg/dms/meta"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -47,7 +46,7 @@ func newReloadCmd() *cobra.Command {
 			}
 
 			logger.EnableAuditLog()
-			metadata, err := meta2.DMMetadata(clusterName)
+			metadata, err := meta.DMMetadata(clusterName)
 			if err != nil {
 				return err
 			}
@@ -80,7 +79,7 @@ func newReloadCmd() *cobra.Command {
 
 func buildReloadTask(
 	clusterName string,
-	metadata *meta2.DMMeta,
+	metadata *meta.DMMeta,
 	options operator.Options,
 ) (task.Task, error) {
 
@@ -134,7 +133,7 @@ func buildReloadTask(
 func validRoles(roles []string) error {
 	for _, r := range roles {
 		match := false
-		for _, has := range meta2.AllDMComponentNames() {
+		for _, has := range meta.AllDMComponentNames() {
 			if r == has {
 				match = true
 				break
@@ -142,7 +141,7 @@ func validRoles(roles []string) error {
 		}
 
 		if !match {
-			return errors.Errorf("not valid role: %s, should be one of: %v", r, meta2.AllDMComponentNames())
+			return errors.Errorf("not valid role: %s, should be one of: %v", r, meta.AllDMComponentNames())
 		}
 	}
 

@@ -23,8 +23,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	meta2 "github.com/pingcap/tiup/pkg/dms/meta"
-
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 
 	"github.com/fatih/color"
@@ -108,7 +106,7 @@ func newDeploy() *cobra.Command {
 	return cmd
 }
 
-func confirmTopology(clusterName, version string, topo *meta2.DMSTopologySpecification, patchedRoles set.StringSet) error {
+func confirmTopology(clusterName, version string, topo *meta.DMSTopologySpecification, patchedRoles set.StringSet) error {
 	log.Infof("Please confirm your topology:")
 
 	cyan := color.New(color.FgCyan, color.Bold)
@@ -157,7 +155,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
 	}
 
-	var topo meta2.DMSTopologySpecification
+	var topo meta.DMSTopologySpecification
 	if err := clusterutil.ParseTopologyYaml(topoFile, &topo); err != nil {
 		return err
 	}
@@ -310,7 +308,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 		return errors.Trace(err)
 	}
 
-	err = meta2.SaveDMMeta(clusterName, &meta2.DMMeta{
+	err = meta.SaveDMMeta(clusterName, &meta.DMMeta{
 		User:     globalOptions.User,
 		Version:  clusterVersion,
 		Topology: &topo,

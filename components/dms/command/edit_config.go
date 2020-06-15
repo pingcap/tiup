@@ -20,8 +20,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	meta2 "github.com/pingcap/tiup/pkg/dms/meta"
-
 	"github.com/fatih/color"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
@@ -49,7 +47,7 @@ func newEditConfigCmd() *cobra.Command {
 			}
 
 			logger.EnableAuditLog()
-			metadata, err := meta2.DMMetadata(clusterName)
+			metadata, err := meta.DMMetadata(clusterName)
 			if err != nil {
 				return err
 			}
@@ -65,7 +63,7 @@ func newEditConfigCmd() *cobra.Command {
 // 2. Open file in editor.
 // 3. Check and update Topology.
 // 4. Save meta file.
-func editTopo(clusterName string, metadata *meta2.DMMeta) error {
+func editTopo(clusterName string, metadata *meta.DMMeta) error {
 	data, err := yaml.Marshal(metadata.Topology)
 	if err != nil {
 		return errors.AddStack(err)
@@ -99,7 +97,7 @@ func editTopo(clusterName string, metadata *meta2.DMMeta) error {
 		return errors.AddStack(err)
 	}
 
-	newTopo := new(meta2.DMSTopologySpecification)
+	newTopo := new(meta.DMSTopologySpecification)
 	err = yaml.UnmarshalStrict(newData, newTopo)
 	if err != nil {
 		log.Infof("Failed to parse topology file: %v", err)
@@ -124,7 +122,7 @@ func editTopo(clusterName string, metadata *meta2.DMMeta) error {
 	log.Infof("Apply the change...")
 
 	metadata.Topology = newTopo
-	err = meta2.SaveDMMeta(clusterName, metadata)
+	err = meta.SaveDMMeta(clusterName, metadata)
 	if err != nil {
 		return errors.Annotate(err, "failed to save")
 	}

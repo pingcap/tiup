@@ -20,8 +20,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	meta2 "github.com/pingcap/tiup/pkg/dms/meta"
-
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
@@ -59,7 +57,7 @@ func newCheckCmd() *cobra.Command {
 			}
 
 			logger.EnableAuditLog()
-			var topo meta2.DMSTopologySpecification
+			var topo meta.DMSTopologySpecification
 			if err := clusterutil.ParseTopologyYaml(args[0], &topo); err != nil {
 				return err
 			}
@@ -94,7 +92,7 @@ func newCheckCmd() *cobra.Command {
 }
 
 // checkSystemInfo performs series of checks and tests of the deploy server
-func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta2.DMSTopologySpecification, opt *checkOptions) error {
+func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.DMSTopologySpecification, opt *checkOptions) error {
 	var (
 		collectTasks  []*task.StepDisplay
 		checkSysTasks []*task.StepDisplay

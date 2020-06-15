@@ -18,8 +18,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	meta2 "github.com/pingcap/tiup/pkg/dms/meta"
-
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
@@ -52,7 +50,7 @@ func listCluster() error {
 		if tiuputils.IsNotExist(meta.ClusterPath(fi.Name(), meta.MetaFileName)) {
 			continue
 		}
-		metadata, err := meta2.DMMetadata(fi.Name())
+		metadata, err := meta.DMMetadata(fi.Name())
 		if err != nil {
 			return errors.Trace(err)
 		}

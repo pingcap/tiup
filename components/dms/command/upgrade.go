@@ -18,8 +18,6 @@ import (
 	"fmt"
 	"os"
 
-	meta2 "github.com/pingcap/tiup/pkg/dms/meta"
-
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
@@ -74,7 +72,7 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 		return errors.Errorf("cannot upgrade non-exists cluster %s", clusterName)
 	}
 
-	metadata, err := meta2.DMMetadata(clusterName)
+	metadata, err := meta.DMMetadata(clusterName)
 	if err != nil {
 		return err
 	}
@@ -166,7 +164,7 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 	}
 
 	metadata.Version = clusterVersion
-	if err := meta2.SaveDMMeta(clusterName, metadata); err != nil {
+	if err := meta.SaveDMMeta(clusterName, metadata); err != nil {
 		return errors.Trace(err)
 	}
 	if err := os.RemoveAll(meta.ClusterPath(clusterName, "patch")); err != nil {

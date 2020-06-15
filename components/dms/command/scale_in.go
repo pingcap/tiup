@@ -17,8 +17,6 @@ package command
 import (
 	"strings"
 
-	meta2 "github.com/pingcap/tiup/pkg/dms/meta"
-
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
@@ -73,7 +71,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 		return errors.Errorf("cannot scale-in non-exists cluster %s", clusterName)
 	}
 
-	metadata, err := meta2.DMMetadata(clusterName)
+	metadata, err := meta.DMMetadata(clusterName)
 	if err != nil {
 		return err
 	}

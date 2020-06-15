@@ -21,8 +21,6 @@ import (
 	"sync"
 	"time"
 
-	meta2 "github.com/pingcap/tiup/pkg/dms/meta"
-
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 
 	"github.com/fatih/color"
@@ -58,7 +56,7 @@ func newDisplayCmd() *cobra.Command {
 				return err
 			}
 
-			metadata, err := meta2.DMMetadata(clusterName)
+			metadata, err := meta.DMMetadata(clusterName)
 			if err != nil {
 				return errors.AddStack(err)
 			}
@@ -77,7 +75,7 @@ func displayDMMeta(clusterName string, opt *operator.Options) error {
 		return errors.Errorf("cannot display non-exists cluster %s", clusterName)
 	}
 
-	clsMeta, err := meta2.DMMetadata(clusterName)
+	clsMeta, err := meta.DMMetadata(clusterName)
 	if err != nil {
 		return err
 	}
@@ -90,7 +88,7 @@ func displayDMMeta(clusterName string, opt *operator.Options) error {
 	return nil
 }
 
-func clearOutDatedEtcdInfo(clusterName string, metadata *meta2.DMMeta, opt operator.Options) error {
+func clearOutDatedEtcdInfo(clusterName string, metadata *meta.DMMeta, opt operator.Options) error {
 	topo := metadata.Topology
 
 	existedMasters := make(map[string]struct{})
@@ -158,7 +156,7 @@ func clearOutDatedEtcdInfo(clusterName string, metadata *meta2.DMMeta, opt opera
 }
 
 func displayClusterTopology(clusterName string, opt *operator.Options) error {
-	metadata, err := meta2.DMMetadata(clusterName)
+	metadata, err := meta.DMMetadata(clusterName)
 	if err != nil {
 		return err
 	}

@@ -20,8 +20,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	meta2 "github.com/pingcap/tiup/pkg/dms/meta"
-
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
@@ -74,7 +72,7 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 		return errors.Errorf("cannot scale-out non-exists cluster %s", clusterName)
 	}
 
-	var newPart meta2.DMSTopologySpecification
+	var newPart meta.DMSTopologySpecification
 	if err := clusterutil.ParseTopologyYaml(topoFile, &newPart); err != nil {
 		return err
 	}
@@ -83,7 +81,7 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 		teleTopology = string(data)
 	}
 
-	metadata, err := meta2.DMMetadata(clusterName)
+	metadata, err := meta.DMMetadata(clusterName)
 	if err != nil {
 		return err
 	}
@@ -154,8 +152,8 @@ func convertStepDisplaysToTasks(t []*task.StepDisplay) []task.Task {
 
 func buildScaleOutTask(
 	clusterName string,
-	metadata *meta2.DMMeta,
-	mergedTopo *meta2.DMSSpecification,
+	metadata *meta.DMMeta,
+	mergedTopo *meta.DMSSpecification,
 	opt scaleOutOptions,
 	sshConnProps *cliutil.SSHConnectionProps,
 	newPart meta.Specification,
@@ -306,7 +304,7 @@ func buildScaleOutTask(
 		ClusterSSH(newPart, metadata.User, gOpt.SSHTimeout).
 		Func("save meta", func(_ *task.Context) error {
 			metadata.Topology = mergedTopo
-			return meta2.SaveDMMeta(clusterName, metadata)
+			return meta.SaveDMMeta(clusterName, metadata)
 		}).
 		ClusterOperate(newPart, operator.StartOperation, operator.Options{OptTimeout: timeout}).
 		Parallel(refreshConfigTasks...).

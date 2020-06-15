@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	meta2 "github.com/pingcap/tiup/pkg/dms/meta"
-
 	dmpb "github.com/pingcap/dm/dm/pb"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
@@ -46,7 +44,7 @@ func newTestCmd() *cobra.Command {
 				return errors.Errorf("cannot start non-exists cluster %s", clusterName)
 			}
 
-			metadata, err := meta2.DMMetadata(clusterName)
+			metadata, err := meta.DMMetadata(clusterName)
 			if err != nil {
 				return err
 			}
@@ -101,7 +99,7 @@ func checkWorkerOnline(addr string) error {
 	return err
 }
 
-func readable(topo *meta2.DMSTopologySpecification) error {
+func readable(topo *meta.DMSTopologySpecification) error {
 	errg, _ := errgroup.WithContext(context.Background())
 
 	for _, spec := range topo.Masters {

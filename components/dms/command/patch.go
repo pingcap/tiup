@@ -20,8 +20,6 @@ import (
 	"os/exec"
 	"path"
 
-	meta2 "github.com/pingcap/tiup/pkg/dms/meta"
-
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
@@ -74,7 +72,7 @@ func patch(clusterName, packagePath string, options operator.Options, overwrite 
 		return errors.New("specified package not exists")
 	}
 
-	metadata, err := meta2.DMMetadata(clusterName)
+	metadata, err := meta.DMMetadata(clusterName)
 	if err != nil {
 		return err
 	}
@@ -122,7 +120,7 @@ func patch(clusterName, packagePath string, options operator.Options, overwrite 
 	return nil
 }
 
-func instancesToPatch(metadata *meta2.DMMeta, options operator.Options) ([]meta.Instance, error) {
+func instancesToPatch(metadata *meta.DMMeta, options operator.Options) ([]meta.Instance, error) {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := metadata.Topology.ComponentsByStartOrder()
@@ -149,7 +147,7 @@ func instancesToPatch(metadata *meta2.DMMeta, options operator.Options) ([]meta.
 }
 
 func checkPackage(clusterName, comp, packagePath string) error {
-	metadata, err := meta2.DMMetadata(clusterName)
+	metadata, err := meta.DMMetadata(clusterName)
 	if err != nil {
 		return err
 	}

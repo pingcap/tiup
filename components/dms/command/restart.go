@@ -20,7 +20,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	meta2 "github.com/pingcap/tiup/pkg/dms/meta"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
@@ -46,7 +45,7 @@ func newRestartCmd() *cobra.Command {
 			}
 
 			logger.EnableAuditLog()
-			metadata, err := meta2.DMMetadata(clusterName)
+			metadata, err := meta.DMMetadata(clusterName)
 			if err != nil {
 				return err
 			}
