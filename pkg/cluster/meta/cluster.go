@@ -51,7 +51,7 @@ type ClusterMeta struct {
 	//EnableFirewall bool   `yaml:"firewall"`
 	OpsVer string `yaml:"last_ops_ver,omitempty"` // the version of ourself that updated the meta last time
 
-	Topology *TopologySpecification `yaml:"topology"`
+	Topology *ClusterSpecification `yaml:"topology"`
 }
 
 // EnsureClusterDir ensures that the cluster directory exists.

@@ -97,7 +97,7 @@ func editTopo(clusterName string, metadata *meta.ClusterMeta) error {
 		return errors.AddStack(err)
 	}
 
-	newTopo := new(meta.TopologySpecification)
+	newTopo := new(meta.ClusterSpecification)
 	err = yaml.UnmarshalStrict(newData, newTopo)
 	if err != nil {
 		log.Infof("Failed to parse topology file: %v", err)

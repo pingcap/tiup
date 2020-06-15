@@ -68,7 +68,7 @@ func createDB(spec meta.TiDBSpec) (db *sql.DB, err error) {
 	return
 }
 
-func writable(topo *meta.TopologySpecification) error {
+func writable(topo *meta.ClusterSpecification) error {
 	errg, _ := errgroup.WithContext(context.Background())
 
 	for _, spec := range topo.TiDBServers {

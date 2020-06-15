@@ -63,7 +63,7 @@ conflict checks with other clusters`,
 
 			logger.EnableAuditLog()
 
-			var topo meta.TopologySpecification
+			var topo meta.ClusterSpecification
 			if opt.existCluster { // check for existing cluster
 				clusterName := args[0]
 				if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
@@ -111,7 +111,7 @@ conflict checks with other clusters`,
 }
 
 // checkSystemInfo performs series of checks and tests of the deploy server
-func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecification, opt *checkOptions) error {
+func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.ClusterSpecification, opt *checkOptions) error {
 	var (
 		collectTasks  []*task.StepDisplay
 		checkSysTasks []*task.StepDisplay

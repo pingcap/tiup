@@ -95,8 +95,8 @@ type (
 		CDC            map[string]interface{} `yaml:"cdc"`
 	}
 
-	// TopologySpecification represents the specification of topology.yaml
-	TopologySpecification struct {
+	// ClusterSpecification represents the specification of topology.yaml
+	ClusterSpecification struct {
 		GlobalOptions    GlobalOptions      `yaml:"global,omitempty"`
 		MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty"`
 		ServerConfigs    ServerConfigs      `yaml:"server_configs,omitempty"`
@@ -607,8 +607,8 @@ func (s AlertManagerSpec) IsImported() bool {
 }
 
 // UnmarshalYAML sets default values when unmarshaling the topology file
-func (topo *TopologySpecification) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	type topology TopologySpecification
+func (topo *ClusterSpecification) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type topology ClusterSpecification
 	if err := unmarshal((*topology)(topo)); err != nil {
 		return err
 	}
@@ -654,7 +654,7 @@ func findField(v reflect.Value, fieldName string) (int, bool) {
 
 // platformConflictsDetect checks for conflicts in topology for different OS / Arch
 // set to the same host / IP
-func (topo *TopologySpecification) platformConflictsDetect() error {
+func (topo *ClusterSpecification) platformConflictsDetect() error {
 	type (
 		conflict struct {
 			os   string
@@ -710,7 +710,7 @@ func (topo *TopologySpecification) platformConflictsDetect() error {
 	return nil
 }
 
-func (topo *TopologySpecification) portConflictsDetect() error {
+func (topo *ClusterSpecification) portConflictsDetect() error {
 	type (
 		usedPort struct {
 			host string
@@ -815,7 +815,7 @@ func (topo *TopologySpecification) portConflictsDetect() error {
 	return nil
 }
 
-func (topo *TopologySpecification) dirConflictsDetect() error {
+func (topo *ClusterSpecification) dirConflictsDetect() error {
 	type (
 		usedDir struct {
 			host string
@@ -888,7 +888,7 @@ func (topo *TopologySpecification) dirConflictsDetect() error {
 
 // CountDir counts for dir paths used by any instance in the cluster with the same
 // prefix, useful to find potential path conflicts
-func (topo *TopologySpecification) CountDir(dirPrefix string) int {
+func (topo *ClusterSpecification) CountDir(dirPrefix string) int {
 	dirTypes := []string{
 		"DataDir",
 		"DeployDir",
@@ -948,7 +948,7 @@ func (topo *TopologySpecification) CountDir(dirPrefix string) int {
 
 // Validate validates the topology specification and produce error if the
 // specification invalid (e.g: port conflicts or directory conflicts)
-func (topo *TopologySpecification) Validate() error {
+func (topo *ClusterSpecification) Validate() error {
 	if err := topo.platformConflictsDetect(); err != nil {
 		return err
 	}
@@ -961,7 +961,7 @@ func (topo *TopologySpecification) Validate() error {
 }
 
 // GetPDList returns a list of PD API hosts of the current cluster
-func (topo *TopologySpecification) GetPDList() []string {
+func (topo *ClusterSpecification) GetPDList() []string {
 	var pdList []string
 
 	for _, pd := range topo.PDServers {
@@ -972,15 +972,15 @@ func (topo *TopologySpecification) GetPDList() []string {
 }
 
 // GetEtcdClient load EtcdClient of current cluster
-func (topo *TopologySpecification) GetEtcdClient() (*clientv3.Client, error) {
+func (topo *ClusterSpecification) GetEtcdClient() (*clientv3.Client, error) {
 	return clientv3.New(clientv3.Config{
 		Endpoints: topo.GetPDList(),
 	})
 }
 
-// Merge returns a new TopologySpecification which sum old ones
-func (topo *TopologySpecification) Merge(that *TopologySpecification) *TopologySpecification {
-	return &TopologySpecification{
+// Merge returns a new ClusterSpecification which sum old ones
+func (topo *ClusterSpecification) Merge(that *ClusterSpecification) *ClusterSpecification {
+	return &ClusterSpecification{
 		GlobalOptions:    topo.GlobalOptions,
 		MonitoredOptions: topo.MonitoredOptions,
 		ServerConfigs:    topo.ServerConfigs,
