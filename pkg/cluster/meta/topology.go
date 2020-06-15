@@ -653,7 +653,7 @@ func findField(v reflect.Value, fieldName string) (int, bool) {
 }
 
 // platformConflictsDetect checks for conflicts in topology for different OS / Arch
-// for set to the same host / IP
+// set to the same host / IP
 func (topo *TopologySpecification) platformConflictsDetect() error {
 	type (
 		conflict struct {
@@ -833,10 +833,7 @@ func (topo *TopologySpecification) dirConflictsDetect() error {
 	}
 
 	// usedInfo => type
-	var (
-		dirStats    = map[usedDir]conflict{}
-		uniqueHosts = set.NewStringSet()
-	)
+	var dirStats = map[usedDir]conflict{}
 
 	topoSpec := reflect.ValueOf(topo).Elem()
 	topoType := reflect.TypeOf(topo).Elem()
@@ -849,17 +846,12 @@ func (topo *TopologySpecification) dirConflictsDetect() error {
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
 			compSpec := compSpecs.Index(index)
-			// skip nodes imported from TiDB-Ansible
-			if compSpec.Interface().(InstanceSpec).IsImported() {
-				continue
-			}
 			// check hostname
 			host := compSpec.FieldByName("Host").String()
 			cfg := topoType.Field(i).Tag.Get("yaml")
 			if host == "" {
 				return errors.Errorf("`%s` contains empty host field", cfg)
 			}
-			uniqueHosts.Insert(host)
 
 			// Directory conflicts
 			for _, dirType := range dirTypes {
@@ -876,7 +868,9 @@ func (topo *TopologySpecification) dirConflictsDetect() error {
 					// `yaml:"data_dir,omitempty"`
 					tp := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
 					prev, exist := dirStats[item]
-					if exist {
+					// not reporting error for nodes imported from TiDB-Ansible, but keep
+					// their dirs in the map to check if other nodes are using them
+					if exist && !compSpec.Interface().(InstanceSpec).IsImported() {
 						return errors.Errorf("directory '%s' conflicts between '%s:%s.%s' and '%s:%s.%s'",
 							item.dir, prev.cfg, item.host, prev.tp, cfg, item.host, tp)
 					}
