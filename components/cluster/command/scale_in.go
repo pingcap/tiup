@@ -81,7 +81,9 @@ func scaleIn(clusterName string, options operator.Options) error {
 	}
 
 	metadata, err := meta.ClusterMetadata(clusterName)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "conflicts between") {
+		// ignore conflict check error, node may be deployed by former version
+		// that lack of some certain conflict checks
 		return err
 	}
 

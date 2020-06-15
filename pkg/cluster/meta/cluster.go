@@ -108,7 +108,8 @@ func ClusterMetadata(clusterName string) (*ClusterMeta, error) {
 	}
 
 	if err = yaml.Unmarshal(yamlFile, &cm); err != nil {
-		return nil, errors.Trace(err)
+		// return the meta no matter there is error or not
+		return &cm, errors.Trace(err)
 	}
 	return &cm, nil
 }
