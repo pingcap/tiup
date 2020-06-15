@@ -64,7 +64,7 @@ func (pc *PDClient) GetURL(addr string) string {
 
 // nolint (some is unused now)
 var (
-	pdHealthURI         = "pd/health"
+	pdPingURI           = "pd/ping"
 	pdMembersURI        = "pd/api/v1/members"
 	pdStoresURI         = "pd/api/v1/stores"
 	pdStoreURI          = "pd/api/v1/store"
@@ -102,11 +102,6 @@ func tryURLs(endpoints []string, f func(endpoint string) ([]byte, error)) ([]byt
 	return bytes, err
 }
 
-// PDHealthInfo is the member health info from PD's API
-type PDHealthInfo struct {
-	Healths []pdserverapi.Health
-}
-
 func (pc *PDClient) getEndpoints(cmd string) (endpoints []string) {
 	for _, addr := range pc.addrs {
 		endpoint := fmt.Sprintf("%s/%s", pc.GetURL(addr), cmd)
@@ -116,11 +111,9 @@ func (pc *PDClient) getEndpoints(cmd string) (endpoints []string) {
 	return
 }
 
-// GetHealth queries the health info from PD server
-func (pc *PDClient) GetHealth() (*PDHealthInfo, error) {
-	endpoints := pc.getEndpoints(pdHealthURI)
-
-	healths := []pdserverapi.Health{}
+// CheckHealth checks the health of PD node
+func (pc *PDClient) CheckHealth() error {
+	endpoints := pc.getEndpoints(pdPingURI)
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := pc.httpClient.Get(endpoint)
@@ -128,14 +121,14 @@ func (pc *PDClient) GetHealth() (*PDHealthInfo, error) {
 			return body, err
 		}
 
-		return body, json.Unmarshal(body, &healths)
+		return body, nil
 	})
 
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return errors.AddStack(err)
 	}
 
-	return &PDHealthInfo{healths}, nil
+	return nil
 }
 
 // GetStores queries the stores info from PD server
