@@ -700,8 +700,13 @@ func (topo *ClusterSpecification) platformConflictsDetect() error {
 			prev, exist := platformStats[host]
 			if exist {
 				if prev.os != stat.os || prev.arch != stat.arch {
-					return errors.Errorf("platform mismatch for '%s' as in '%s:%s/%s' and '%s:%s/%s'",
-						host, prev.cfg, prev.os, prev.arch, stat.cfg, stat.os, stat.arch)
+					return &ValidateErr{
+						ty:     errTypeMismatch,
+						target: "platform",
+						one:    fmt.Sprintf("%s:%s/%s", prev.cfg, prev.os, prev.arch),
+						two:    fmt.Sprintf("%s:%s/%s", stat.cfg, stat.os, stat.arch),
+						value:  host,
+					}
 				}
 			}
 			platformStats[host] = stat
@@ -768,8 +773,13 @@ func (topo *ClusterSpecification) portConflictsDetect() error {
 					tp := compSpec.Type().Field(j).Tag.Get("yaml")
 					prev, exist := portStats[item]
 					if exist {
-						return errors.Errorf("port '%d' conflicts between '%s:%s.%s' and '%s:%s.%s'",
-							item.port, prev.cfg, item.host, prev.tp, cfg, item.host, tp)
+						return &ValidateErr{
+							ty:     errTypeConflict,
+							target: "port",
+							one:    fmt.Sprintf("%s:%s.%s", prev.cfg, item.host, prev.tp),
+							two:    fmt.Sprintf("%s:%s.%s", cfg, item.host, tp),
+							value:  item.port,
+						}
 					}
 					portStats[item] = conflict{
 						tp:  tp,
@@ -802,8 +812,13 @@ func (topo *ClusterSpecification) portConflictsDetect() error {
 			tp := strings.Split(ft.Tag.Get("yaml"), ",")[0]
 			prev, exist := portStats[item]
 			if exist {
-				return errors.Errorf("port '%d' conflicts between '%s:%s.%s' and '%s:%s.%s'",
-					item.port, prev.cfg, item.host, prev.tp, cfg, item.host, tp)
+				return &ValidateErr{
+					ty:     errTypeConflict,
+					target: "port",
+					one:    fmt.Sprintf("%s:%s.%s", prev.cfg, item.host, prev.tp),
+					two:    fmt.Sprintf("%s:%s.%s", cfg, item.host, tp),
+					value:  item.port,
+				}
 			}
 			portStats[item] = conflict{
 				tp:  tp,
@@ -872,8 +887,13 @@ func (topo *ClusterSpecification) dirConflictsDetect() error {
 					// not checking between imported nodes
 					if exist &&
 						!(compSpec.Interface().(InstanceSpec).IsImported() && prev.imported) {
-						return errors.Errorf("directory '%s' conflicts between '%s:%s.%s' and '%s:%s.%s'",
-							item.dir, prev.cfg, item.host, prev.tp, cfg, item.host, tp)
+						return &ValidateErr{
+							ty:     errTypeConflict,
+							target: "directory",
+							one:    fmt.Sprintf("%s:%s.%s", prev.cfg, item.host, prev.tp),
+							two:    fmt.Sprintf("%s:%s.%s", cfg, item.host, tp),
+							value:  item.dir,
+						}
 					}
 					// not reporting error for nodes imported from TiDB-Ansible, but keep
 					// their dirs in the map to check if other nodes are using them

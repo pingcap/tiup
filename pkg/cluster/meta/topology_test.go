@@ -131,7 +131,7 @@ pd_servers:
     data_dir: "/test-1"
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "directory '/test-1' conflicts between 'tidb_servers:172.16.5.138.deploy_dir' and 'pd_servers:172.16.5.138.data_dir'")
+	c.Assert(err.Error(), Equals, "directory conflict for '/test-1' between 'tidb_servers:172.16.5.138.deploy_dir' and 'pd_servers:172.16.5.138.data_dir'")
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -167,7 +167,7 @@ pd_servers:
     log_dir: /home/tidb/deploy/log
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "directory '/home/tidb/deploy' conflicts between 'tidb_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'")
+	c.Assert(err.Error(), Equals, "directory conflict for '/home/tidb/deploy' between 'tidb_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'")
 }
 
 func (s *metaSuite) TestPortConflicts(c *C) {
@@ -186,7 +186,7 @@ tikv_servers:
     status_port: 1234
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "port '1234' conflicts between 'tidb_servers:172.16.5.138.port' and 'tikv_servers:172.16.5.138.status_port'")
+	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'tidb_servers:172.16.5.138.port' and 'tikv_servers:172.16.5.138.status_port'")
 
 	topo = ClusterSpecification{}
 	err = yaml.Unmarshal([]byte(`
@@ -200,7 +200,7 @@ tikv_servers:
     status_port: 2345
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "port '1234' conflicts between 'tidb_servers:172.16.5.138.port' and 'monitored:172.16.5.138.node_exporter_port'")
+	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'tidb_servers:172.16.5.138.port' and 'monitored:172.16.5.138.node_exporter_port'")
 
 }
 
@@ -231,7 +231,7 @@ tikv_servers:
   - host: 172.16.5.138
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' as in 'tidb_servers:linux/arm64' and 'tikv_servers:linux/amd64'")
+	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' between 'tidb_servers:linux/arm64' and 'tikv_servers:linux/amd64'")
 
 	// different os defined for the same host
 	topo = ClusterSpecification{}
@@ -246,7 +246,7 @@ tikv_servers:
   - host: 172.16.5.138
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' as in 'tidb_servers:darwin/arm64' and 'tikv_servers:linux/arm64'")
+	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' between 'tidb_servers:darwin/arm64' and 'tikv_servers:linux/arm64'")
 
 }
 
