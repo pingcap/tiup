@@ -29,6 +29,10 @@ type Options struct {
 	SSHTimeout int64 // timeout in seconds when connecting an SSH server
 	OptTimeout int64 // timeout in seconds for operations that support it, not to confuse with SSH timeout
 	APITimeout int64 // timeout in seconds for API operations that support it, like transfering store leader
+
+	// Some data will be retained when destroying instances
+	RetainDataRoles []string
+	RetainDataNodes []string
 }
 
 // Operation represents the type of cluster operation

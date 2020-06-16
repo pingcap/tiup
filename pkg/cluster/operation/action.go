@@ -193,7 +193,7 @@ func DestroyClusterTombstone(
 			return nil, errors.AddStack(err)
 		}
 
-		err = DestroyComponent(getter, instances, options.OptTimeout)
+		err = DestroyComponent(getter, instances, options)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
@@ -232,7 +232,7 @@ func DestroyClusterTombstone(
 			return nil, errors.AddStack(err)
 		}
 
-		err = DestroyComponent(getter, instances, options.OptTimeout)
+		err = DestroyComponent(getter, instances, options)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
@@ -269,7 +269,7 @@ func DestroyClusterTombstone(
 			return nil, errors.AddStack(err)
 		}
 
-		err = DestroyComponent(getter, instances, options.OptTimeout)
+		err = DestroyComponent(getter, instances, options)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
@@ -307,7 +307,7 @@ func DestroyClusterTombstone(
 			return nil, errors.AddStack(err)
 		}
 
-		err = DestroyComponent(getter, instances, options.OptTimeout)
+		err = DestroyComponent(getter, instances, options)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}

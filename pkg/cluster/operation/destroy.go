@@ -41,7 +41,7 @@ func Destroy(
 
 	for _, com := range coms {
 		insts := com.Instances()
-		err := DestroyComponent(getter, insts, options.OptTimeout)
+		err := DestroyComponent(getter, insts, options)
 		if err != nil {
 			return errors.Annotatef(err, "failed to destroy %s", com.Name())
 		}
@@ -168,25 +168,35 @@ func DestroyMonitored(getter ExecutorGetter, inst meta.Instance, options meta.Mo
 }
 
 // DestroyComponent destroy the instances.
-func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, timeout int64) error {
+func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, options Options) error {
 	if len(instances) <= 0 {
 		return nil
 	}
 
+	timeout := options.OptTimeout
 	name := instances[0].ComponentName()
 	log.Infof("Destroying component %s", name)
 
+	retainDataRoles := set.NewStringSet(options.RetainDataRoles...)
+	retainDataNodes := set.NewStringSet(options.RetainDataNodes...)
+
 	for _, ins := range instances {
+		// Some data of instances will be retained
+		dataRetained := (len(retainDataRoles) > 0 && retainDataRoles.Exist(ins.ComponentName())) ||
+			(len(retainDataNodes) > 0 && retainDataNodes.Exist(ins.ID()))
+
 		e := getter.Get(ins.GetHost())
 		log.Infof("Destroying instance %s", ins.GetHost())
 
 		// Stop by systemd.
-		delPaths := make([]string, 0)
-		switch name {
-		case meta.ComponentTiKV, meta.ComponentPD, meta.ComponentPump, meta.ComponentDrainer, meta.ComponentPrometheus, meta.ComponentAlertManager, meta.ComponentDMMaster, meta.ComponentDMWorker, meta.ComponentDMPortal:
-			delPaths = append(delPaths, ins.DataDir())
-		case meta.ComponentTiFlash:
-			delPaths = append(delPaths, strings.Split(ins.DataDir(), ",")...)
+		var delPaths []string
+		if !dataRetained {
+			switch name {
+			case meta.ComponentTiKV, meta.ComponentPD, meta.ComponentPump, meta.ComponentDrainer, meta.ComponentPrometheus, meta.ComponentAlertManager, meta.ComponentDMMaster, meta.ComponentDMWorker, meta.ComponentDMPortal:
+				delPaths = append(delPaths, ins.DataDir())
+			case meta.ComponentTiFlash:
+				delPaths = append(delPaths, strings.Split(ins.DataDir(), ",")...)
+			}
 		}
 
 		// check if service is down before deleting files
