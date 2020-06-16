@@ -958,13 +958,7 @@ func (topo *ClusterSpecification) CountDir(targetHost, dirPrefix string) int {
 
 						}
 					}
-
-					_, exist := dirStats[host+dir]
-					if exist {
-						dirStats[host+dir] += 1
-					} else {
-						dirStats[host+dir] = 1
-					}
+					dirStats[host+dir] += 1
 				}
 			}
 		}

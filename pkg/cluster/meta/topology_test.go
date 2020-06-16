@@ -168,6 +168,36 @@ pd_servers:
 `), &topo)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "directory conflict for '/home/tidb/deploy' between 'tidb_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'")
+
+	// two imported tidb pass the validation, two pd servers don't
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test2"
+  ssh_port: 220
+  deploy_dir: deploy
+  data_dir: /data
+tidb_servers:
+  - host: 172.16.4.190
+    imported: true
+    port: 3306
+    deploy_dir: /home/tidb/deploy1
+  - host: 172.16.4.190
+    imported: true
+    status_port: 3307
+    deploy_dir: /home/tidb/deploy1
+pd_servers:
+  - host: 172.16.4.190
+    imported: true
+    name: pd_ip-172-16-4-190
+    deploy_dir: /home/tidb/deploy
+  - host: 172.16.4.190
+    name: pd_ip-172-16-4-190-2
+    client_port: 2381
+    peer_port: 2382
+    deploy_dir: /home/tidb/deploy
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "directory conflict for '/home/tidb/deploy' between 'pd_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'")
 }
 
 func (s *metaSuite) TestPortConflicts(c *C) {
