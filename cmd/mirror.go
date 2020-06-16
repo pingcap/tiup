@@ -194,7 +194,6 @@ func delComp(repo, id, version string) error {
 // the `mirror set` sub command
 func newMirrorSetCmd() *cobra.Command {
 	root := ""
-	force := false
 	cmd := &cobra.Command{
 		Use:   "set <mirror-addr>",
 		Short: "set mirror address",
@@ -205,8 +204,8 @@ func newMirrorSetCmd() *cobra.Command {
 			}
 
 			addr := args[0]
-			profile := localdata.InitProfile()
-			if err := profile.ResetMirror(addr, root, force); err != nil {
+			profile := environment.GlobalEnv().Profile()
+			if err := profile.ResetMirror(addr, root); err != nil {
 				fmt.Printf("Failed to set mirror: %s\n", err.Error())
 				return err
 			}
@@ -214,8 +213,7 @@ func newMirrorSetCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&root, "root", "r", root, "root.json path")
-	cmd.Flags().BoolVarP(&force, "force", "f", force, "force replace root.json, may be risky")
+	cmd.Flags().StringVarP(&root, "root", "r", root, "Specify the path of `root.json`")
 	return cmd
 }
 

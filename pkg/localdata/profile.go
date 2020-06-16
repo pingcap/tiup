@@ -329,7 +329,8 @@ func (p *Profile) SelectInstalledVersion(component string, version v0manifest.Ve
 }
 
 // ResetMirror reset root.json and cleanup manifests directory
-func (p *Profile) ResetMirror(addr, root string, forceRefresh bool) error {
+func (p *Profile) ResetMirror(addr, root string) error {
+	// Calculating root.json path
 	shaWriter := sha256.New()
 	if _, err := io.Copy(shaWriter, strings.NewReader(addr)); err != nil {
 		return err
@@ -337,7 +338,7 @@ func (p *Profile) ResetMirror(addr, root string, forceRefresh bool) error {
 	localRoot := p.Path("bin", fmt.Sprintf("%s.root.json", hex.EncodeToString(shaWriter.Sum(nil))[:16]))
 
 	if root == "" {
-		if utils.IsExist(localRoot) && !forceRefresh {
+		if utils.IsExist(localRoot) {
 			root = localRoot
 		} else if strings.HasSuffix(addr, "/") {
 			root = addr + "root.json"
@@ -346,12 +347,15 @@ func (p *Profile) ResetMirror(addr, root string, forceRefresh bool) error {
 		}
 	}
 
+	// Fetch root.json
 	var wc io.ReadCloser
 	if strings.HasPrefix(root, "http") {
-		if resp, err := http.Get(root); err == nil {
-			wc = resp.Body
-		} else {
+		if resp, err := http.Get(root); err != nil {
 			return err
+		} else if resp.StatusCode != http.StatusOK {
+			return errors.Errorf("Fetch remote root.json returns http code %d", resp.StatusCode)
+		} else {
+			wc = resp.Body
 		}
 	} else {
 		if file, err := os.Open(root); err == nil {
@@ -372,7 +376,14 @@ func (p *Profile) ResetMirror(addr, root string, forceRefresh bool) error {
 	}
 	f.Close()
 
-	_ = utils.CopyFile(p.Path("bin", "root.json"), localRoot)
+	// Only cache remote mirror
+	if strings.HasPrefix(addr, "http") && root != localRoot {
+		if strings.HasPrefix(root, "http") {
+			fmt.Printf("WARN: adding root certificate via internet: %s\n", root)
+			fmt.Printf("You can revoke this by remove %s\n", localRoot)
+		}
+		_ = utils.CopyFile(p.Path("bin", "root.json"), localRoot)
+	}
 
 	if err := os.RemoveAll(p.Path(ManifestParentDir)); err != nil {
 		return err
