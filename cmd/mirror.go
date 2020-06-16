@@ -556,19 +556,21 @@ func yankComp(repo, id, version string) error {
 
 // the `mirror clone` sub command
 func newMirrorCloneCmd() *cobra.Command {
-	options := repository.CloneOptions{
-		Components: map[string]*[]string{},
-	}
 	var (
-		components []string
-		repo       *repository.V1Repository
+		options     = repository.CloneOptions{Components: map[string]*[]string{}}
+		components  []string
+		repo        *repository.V1Repository
+		initialized bool
 	)
 
-	env, fetchErr := environment.InitEnv(repoOpts)
-	if fetchErr == nil {
+	initMirrorCloneExtraArgs := func(cmd *cobra.Command) error {
+		initialized = true
+		env := environment.GlobalEnv()
 		repo = env.V1Repository()
-		var index *v1manifest.Index
-		index, fetchErr = repo.FetchIndexManifest()
+		index, err := repo.FetchIndexManifest()
+		if err != nil {
+			return err
+		}
 
 		if index != nil && len(index.Components) > 0 {
 			for name := range index.Components {
@@ -576,30 +578,43 @@ func newMirrorCloneCmd() *cobra.Command {
 			}
 		}
 		sort.Strings(components)
-	}
 
+		for _, name := range components {
+			options.Components[name] = new([]string)
+			cmd.Flags().StringSliceVar(options.Components[name], name, nil, "Specify the versions for component "+name)
+		}
+		return nil
+	}
 	cmd := &cobra.Command{
 		Use: "clone <target-dir> [global version]",
 		Example: `  tiup mirror clone /path/to/local --arch amd64,arm --os linux,darwin    # Specify the architectures and OSs
   tiup mirror clone /path/to/local --full                                # Build a full local mirror
   tiup mirror clone /path/to/local --tikv v4  --prefix                   # Specify the version via prefix
   tiup mirror clone /path/to/local --tidb all --pd all                   # Download all version for specific component`,
-		Short:        "Clone a local mirror from remote mirror and download all selected components",
-		SilenceUsage: true,
+		Short:              "Clone a local mirror from remote mirror and download all selected components",
+		SilenceUsage:       true,
+		DisableFlagParsing: true,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return initMirrorCloneExtraArgs(cmd)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) < 1 {
-				return cmd.Help()
+			cmd.DisableFlagParsing = false
+			err := cmd.ParseFlags(args)
+			if err != nil {
+				return err
 			}
+			args = cmd.Flags().Args()
+			printHelp, _ := cmd.Flags().GetBool("help")
 
-			if fetchErr != nil {
-				return errors.AddStack(fetchErr)
+			if printHelp || len(args) < 1 {
+				return cmd.Help()
 			}
 
 			if len(components) < 1 {
 				return errors.New("component list doesn't contain components")
 			}
 
-			if err := repo.Mirror().Open(); err != nil {
+			if err = repo.Mirror().Open(); err != nil {
 				return err
 			}
 			defer repo.Mirror().Close()
@@ -614,10 +629,13 @@ func newMirrorCloneCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&options.OSs, "os", "o", []string{"linux", "darwin"}, "Specify the downloading os")
 	cmd.Flags().BoolVarP(&options.Prefix, "prefix", "", false, "Download the version with matching prefix")
 
-	for _, name := range components {
-		options.Components[name] = new([]string)
-		cmd.Flags().StringSliceVar(options.Components[name], name, nil, "Specify the versions for component "+name)
-	}
+	originHelpFunc := cmd.HelpFunc()
+	cmd.SetHelpFunc(func(command *cobra.Command, args []string) {
+		if !initialized {
+			_ = initMirrorCloneExtraArgs(command)
+		}
+		originHelpFunc(command, args)
+	})
 
 	return cmd
 }
