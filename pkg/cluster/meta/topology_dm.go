@@ -22,6 +22,7 @@ import (
 	"github.com/creasty/defaults"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/set"
 )
 
@@ -512,6 +513,7 @@ func (topo *DMTopologySpecification) CountDir(targetHost, dirPrefix string) int 
 	dirStats := make(map[string]int)
 	count := 0
 	topoSpec := reflect.ValueOf(topo).Elem()
+	dirPrefix = clusterutil.Abs(topo.GlobalOptions.User, dirPrefix)
 
 	for i := 0; i < topoSpec.NumField(); i++ {
 		if isSkipField(topoSpec.Field(i)) {
@@ -527,40 +529,39 @@ func (topo *DMTopologySpecification) CountDir(targetHost, dirPrefix string) int 
 					dir := compSpec.Field(j).String()
 					host := compSpec.FieldByName("Host").String()
 
-					if dir == "" {
-						continue
-					}
-					if !strings.HasPrefix(dir, "/") {
-						switch dirType {
-						case "DataDir":
-							if !strings.HasPrefix(dir, topo.GlobalOptions.DataDir+"/") {
-								dir = filepath.Join(topo.GlobalOptions.DataDir, dir)
-							}
-						case "DeployDir":
-							if !strings.HasPrefix(dir, topo.GlobalOptions.DeployDir+"/") {
-								dir = filepath.Join(topo.GlobalOptions.DeployDir, dir)
-							}
-						case "LogDir":
-							if !strings.HasPrefix(dir, topo.GlobalOptions.LogDir+"/") {
-								dir = filepath.Join(topo.GlobalOptions.LogDir, dir)
-							}
-
+					switch dirType { // the same as in logic.go for (*instance)
+					case "DeployDir":
+						dir = clusterutil.Abs(topo.GlobalOptions.User, dir)
+					case "DataDir":
+						deployDir := compSpec.FieldByName("DeployDir").String()
+						// the default data_dir is relative to deploy_dir
+						if dir != "" && !strings.HasPrefix(dir, "/") {
+							dir = filepath.Join(deployDir, dir)
 						}
-					}
+						dir = clusterutil.Abs(topo.GlobalOptions.User, dir)
+					case "LogDir":
+						deployDir := compSpec.FieldByName("DeployDir").String()
+						field := compSpec.FieldByName("LogDir")
+						if field.IsValid() {
+							dir = field.Interface().(string)
+						}
 
-					_, exist := dirStats[host+dir]
-					if exist {
-						dirStats[host+dir] += 1
-					} else {
-						dirStats[host+dir] = 1
+						if dir == "" {
+							dir = "log"
+						}
+						if !strings.HasPrefix(dir, "/") {
+							dir = filepath.Join(deployDir, dir)
+						}
+						dir = clusterutil.Abs(topo.GlobalOptions.User, dir)
 					}
+					dirStats[host+dir] += 1
 				}
 			}
 		}
 	}
 
 	for k, v := range dirStats {
-		if strings.HasPrefix(k, targetHost+dirPrefix) {
+		if k == targetHost+dirPrefix || strings.HasPrefix(k, targetHost+dirPrefix+"/") {
 			count += v
 		}
 	}

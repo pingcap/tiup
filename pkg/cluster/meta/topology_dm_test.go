@@ -217,18 +217,17 @@ global:
   user: "test1"
   ssh_port: 220
   deploy_dir: "test-deploy"
-  data_dir: "/test-data" 
 dm-master_servers:
   - host: 172.16.5.138
     deploy_dir: "master-deploy"
-    data_dir: "test-1"
+    data_dir: "/test-data/data-1"
 dm-worker_servers:
   - host: 172.16.5.53
     data_dir: "test-1"
 `), &topo)
 	c.Assert(err, IsNil)
 	cnt := topo.CountDir("172.16.5.53", "test-deploy/dm-worker-8262")
-	c.Assert(cnt, Equals, 1)
-	cnt = topo.CountDir("172.16.5.138", "/test-data/test-1")
-	c.Assert(cnt, Equals, 1)
+	c.Assert(cnt, Equals, 3)
+	cnt = topo.CountDir("172.16.5.138", "/test-data/data")
+	c.Assert(cnt, Equals, 0)
 }
