@@ -55,12 +55,17 @@ func (e *ValidateErr) Is(target error) bool {
 	}
 
 	// check for interface value seperately
-	if !(reflect.TypeOf(e.value).Comparable() && reflect.TypeOf(t.value).Comparable()) {
+	if !(reflect.ValueOf(e.value).IsValid() && reflect.ValueOf(t.value).IsValid()) {
+		return false
+	}
+	// not supporting non-comparable values for now
+	if e.value != nil && t.value != nil &&
+		!(reflect.TypeOf(e.value).Comparable() && reflect.TypeOf(t.value).Comparable()) {
 		return false
 	}
 	return (e.ty == t.ty || t.ty == "") &&
 		(e.target == t.target || t.target == "") &&
-		(e.value == t.value || reflect.ValueOf(t.value).IsZero()) &&
+		(e.value == t.value || t.value == nil || reflect.ValueOf(t.value).IsZero()) &&
 		(e.one == t.one || t.one == "") &&
 		(e.two == t.two || t.two == "")
 }
