@@ -15,6 +15,7 @@ package operator
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/pingcap/errors"
@@ -188,14 +189,27 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, options 
 		e := getter.Get(ins.GetHost())
 		log.Infof("Destroying instance %s", ins.GetHost())
 
+		// Retain the deploy directory if the users want to retain the data directory
+		// and the data directory is a sub-directory of deploy directory
+		keepDeployDir := false
+		deployDir := ins.DeployDir()
+
 		// Stop by systemd.
 		var delPaths []string
-		if !dataRetained {
-			switch name {
-			case meta.ComponentTiKV, meta.ComponentPD, meta.ComponentPump, meta.ComponentDrainer, meta.ComponentPrometheus, meta.ComponentAlertManager, meta.ComponentDMMaster, meta.ComponentDMWorker, meta.ComponentDMPortal:
+		switch name {
+		case meta.ComponentTiKV, meta.ComponentPD, meta.ComponentPump, meta.ComponentDrainer, meta.ComponentPrometheus, meta.ComponentAlertManager, meta.ComponentDMMaster, meta.ComponentDMWorker, meta.ComponentDMPortal:
+			if !dataRetained {
 				delPaths = append(delPaths, ins.DataDir())
-			case meta.ComponentTiFlash:
-				delPaths = append(delPaths, strings.Split(ins.DataDir(), ",")...)
+			} else if strings.HasPrefix(ins.DataDir(), deployDir) {
+				keepDeployDir = true
+			}
+		case meta.ComponentTiFlash:
+			for _, dataDir := range strings.Split(ins.DataDir(), ",") {
+				if !dataRetained {
+					delPaths = append(delPaths, dataDir)
+				} else if strings.HasPrefix(dataDir, deployDir) {
+					keepDeployDir = true
+				}
 			}
 		}
 
@@ -214,9 +228,20 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, options 
 		// TODO: this may leave undeleted files when destroying the cluster, fix
 		// that later.
 		if !ins.IsImported() {
-			delPaths = append(delPaths, ins.DeployDir())
-			if logDir := ins.LogDir(); !strings.HasPrefix(ins.DeployDir(), logDir) {
-				delPaths = append(delPaths, logDir)
+			if keepDeployDir {
+				delPaths = append(delPaths,
+					filepath.Join(deployDir, "conf"),
+					filepath.Join(deployDir, "bin"),
+					filepath.Join(deployDir, "scripts"),
+				)
+				if logDir := ins.LogDir(); strings.HasPrefix(logDir, deployDir) {
+					delPaths = append(delPaths, logDir)
+				}
+			} else {
+				delPaths = append(delPaths, deployDir)
+				if logDir := ins.LogDir(); !strings.HasPrefix(logDir, deployDir) {
+					delPaths = append(delPaths, logDir)
+				}
 			}
 		} else {
 			log.Warnf("Deploy dir %s not deleted for TiDB-Ansible imported instance %s.",

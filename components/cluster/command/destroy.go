@@ -102,7 +102,7 @@ You can retain some nodes and roles data when destroy cluster, eg:
 	}
 
 	cmd.Flags().StringArrayVar(&destoyOpt.RetainDataNodes, "retain-node-data", nil, "Specify the nodes whose data will be retained")
-	cmd.Flags().StringArrayVar(&destoyOpt.RetainDataNodes, "retain-role-data", nil, "Specify the roles whose data will be retained")
+	cmd.Flags().StringArrayVar(&destoyOpt.RetainDataRoles, "retain-role-data", nil, "Specify the roles whose data will be retained")
 
 	return cmd
 }
