@@ -280,6 +280,23 @@ func (i *instance) DataDir() string {
 	return dataDir.String()
 }
 
+func (i *instance) LogDir() string {
+	logDir := ""
+
+	field := reflect.ValueOf(i.InstanceSpec).FieldByName("LogDir")
+	if field.IsValid() {
+		logDir = field.Interface().(string)
+	}
+
+	if logDir == "" {
+		logDir = "log"
+	}
+	if !strings.HasPrefix(logDir, "/") {
+		logDir = filepath.Join(i.DeployDir(), logDir)
+	}
+	return logDir
+}
+
 func (i *instance) OS() string {
 	return reflect.ValueOf(i.InstanceSpec).FieldByName("OS").Interface().(string)
 }
@@ -314,23 +331,6 @@ func (i *instance) resourceControl() ResourceControl {
 	return reflect.ValueOf(i.InstanceSpec).
 		FieldByName("ResourceControl").
 		Interface().(ResourceControl)
-}
-
-func (i *instance) LogDir() string {
-	logDir := ""
-
-	field := reflect.ValueOf(i.InstanceSpec).FieldByName("LogDir")
-	if field.IsValid() {
-		logDir = field.Interface().(string)
-	}
-
-	if logDir == "" {
-		logDir = "log"
-	}
-	if !strings.HasPrefix(logDir, "/") {
-		logDir = filepath.Join(i.DeployDir(), logDir)
-	}
-	return logDir
 }
 
 func (i *instance) GetPort() int {

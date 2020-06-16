@@ -288,19 +288,18 @@ global:
   user: "test1"
   ssh_port: 220
   deploy_dir: "test-deploy"
-  data_dir: "/test-data"
 tikv_servers:
   - host: 172.16.5.138
-    data_dir: "test-1"
+    data_dir: "/test-data/data-1"
 pd_servers:
   - host: 172.16.5.138
-    data_dir: "test-1"
+    data_dir: "/test-data/data-2"
 `), &topo)
 	c.Assert(err, IsNil)
-	cnt := topo.CountDir("172.16.5.138", "test-deploy/pd-2379")
-	c.Assert(cnt, Equals, 1)
-	cnt = topo.CountDir("172.16.5.138", "/test-data/test-1")
+	cnt := topo.CountDir("172.16.5.138", "/home/test1/test-deploy/pd-2379")
 	c.Assert(cnt, Equals, 2)
+	cnt = topo.CountDir("172.16.5.138", "/test-data/data")
+	c.Assert(cnt, Equals, 0)
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -322,7 +321,7 @@ pd_servers:
 `), &topo)
 	c.Assert(err, IsNil)
 	cnt = topo.CountDir("172.16.4.190", "/home/tidb/deploy")
-	c.Assert(cnt, Equals, 4)
+	c.Assert(cnt, Equals, 5)
 }
 
 func (s *metaSuite) TestGlobalConfig(c *C) {
