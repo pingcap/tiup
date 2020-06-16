@@ -296,7 +296,7 @@ func ScaleInCluster(
 // ScaleInDMCluster scales in the cluster
 func ScaleInDMCluster(
 	getter ExecutorGetter,
-	spec *meta2.DMSSpecification,
+	spec *meta.DMSSpecification,
 	options Options,
 ) error {
 	// instances by uuid
@@ -348,7 +348,7 @@ func ScaleInDMCluster(
 	// At least a DMMaster server exists
 	var dmMasterClient *api.DMMasterClient
 	var dmMasterEndpoint []string
-	for _, instance := range (&meta2.DMMasterComponent{DMSSpecification: spec}).Instances() {
+	for _, instance := range (&meta.DMMasterComponent{DMSSpecification: spec}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
 			dmMasterEndpoint = append(dmMasterEndpoint, addr(instance))
 		}
@@ -380,13 +380,13 @@ func ScaleInDMCluster(
 
 			switch component.Name() {
 			case meta.ComponentDMMaster:
-				name := instance.(*meta2.DMMasterInstance).Name
+				name := instance.(*meta.DMMasterInstance).Name
 				err := dmMasterClient.OfflineMaster(name, retryOpt)
 				if err != nil {
 					return errors.AddStack(err)
 				}
 			case meta.ComponentDMWorker:
-				name := instance.(*meta2.DMWorkerInstance).Name
+				name := instance.(*meta.DMWorkerInstance).Name
 				err := dmMasterClient.OfflineWorker(name, retryOpt)
 				if err != nil {
 					return errors.AddStack(err)

@@ -124,7 +124,7 @@ func Upgrade(
 							return errors.Annotatef(err, "failed to get dm-master leader %s", instance.GetHost())
 						}
 
-						if len(dmSpec.Masters) > 1 && leader == instance.(*meta2.DMMasterInstance).Name {
+						if len(dmSpec.Masters) > 1 && leader == instance.(*meta.DMMasterInstance).Name {
 							if err := dmMasterClient.EvictDMMasterLeader(timeoutOpt); err != nil {
 								return errors.Annotatef(err, "failed to dm-master PD leader %s", instance.GetHost())
 							}

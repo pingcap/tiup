@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	meta2 "github.com/pingcap/tiup/pkg/dms/meta"
+	"github.com/pingcap/tiup/pkg/dms/meta"
 
 	"github.com/pingcap/tiup/pkg/set"
 )
@@ -26,16 +26,16 @@ import (
 // UpdateDMMeta is used to maintain the DM meta information
 type UpdateDMMeta struct {
 	cluster        string
-	metadata       *meta2.DMMeta
+	metadata       *meta.DMMeta
 	deletedNodesID []string
 }
 
 // Execute implements the Task interface
 func (u *UpdateDMMeta) Execute(ctx *Context) error {
 	// make a copy
-	newMeta := &meta2.DMMeta{}
+	newMeta := &meta.DMMeta{}
 	*newMeta = *u.metadata
-	newMeta.Topology = &meta2.DMSTopologySpecification{
+	newMeta.Topology = &meta.DMSTopologySpecification{
 		GlobalOptions:    u.metadata.Topology.GlobalOptions,
 		MonitoredOptions: u.metadata.Topology.MonitoredOptions,
 		ServerConfigs:    u.metadata.Topology.ServerConfigs,
@@ -43,31 +43,31 @@ func (u *UpdateDMMeta) Execute(ctx *Context) error {
 
 	deleted := set.NewStringSet(u.deletedNodesID...)
 	topo := u.metadata.Topology
-	for i, instance := range (&meta2.DMMasterComponent{DMSSpecification: topo}).Instances() {
+	for i, instance := range (&meta.DMMasterComponent{DMSSpecification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Masters = append(newMeta.Topology.Masters, topo.Masters[i])
 	}
-	for i, instance := range (&meta2.DMWorkerComponent{DMSSpecification: topo}).Instances() {
+	for i, instance := range (&meta.DMWorkerComponent{DMSSpecification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Workers = append(newMeta.Topology.Workers, topo.Workers[i])
 	}
-	for i, instance := range (&meta2.DMPortalComponent{DMSSpecification: topo}).Instances() {
+	for i, instance := range (&meta.DMPortalComponent{DMSSpecification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Portals = append(newMeta.Topology.Portals, topo.Portals[i])
 	}
 
-	return meta2.SaveDMMeta(u.cluster, newMeta)
+	return meta.SaveDMMeta(u.cluster, newMeta)
 }
 
 // Rollback implements the Task interface
 func (u *UpdateDMMeta) Rollback(ctx *Context) error {
-	return meta2.SaveDMMeta(u.cluster, u.metadata)
+	return meta.SaveDMMeta(u.cluster, u.metadata)
 }
 
 // String implements the fmt.Stringer interface

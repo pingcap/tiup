@@ -20,7 +20,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	meta "github.com/pingcap/tiup/pkg/dms/meta"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/utils"
