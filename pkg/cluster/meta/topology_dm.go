@@ -288,7 +288,7 @@ func (topo *DMTopologySpecification) platformConflictsDetect() error {
 			prev, exist := platformStats[host]
 			if exist {
 				if prev.os != stat.os || prev.arch != stat.arch {
-					return &ValidateErr{
+					return &validateErr{
 						ty:     errTypeMismatch,
 						target: "platform",
 						one:    fmt.Sprintf("%s:%s/%s", prev.cfg, prev.os, prev.arch),
@@ -361,7 +361,7 @@ func (topo *DMTopologySpecification) portConflictsDetect() error {
 					tp := compSpec.Type().Field(j).Tag.Get("yaml")
 					prev, exist := portStats[item]
 					if exist {
-						return &ValidateErr{
+						return &validateErr{
 							ty:     errTypeConflict,
 							target: "port",
 							one:    fmt.Sprintf("%s:%s.%s", prev.cfg, item.host, prev.tp),
@@ -400,7 +400,7 @@ func (topo *DMTopologySpecification) portConflictsDetect() error {
 			tp := strings.Split(ft.Tag.Get("yaml"), ",")[0]
 			prev, exist := portStats[item]
 			if exist {
-				return &ValidateErr{
+				return &validateErr{
 					ty:     errTypeConflict,
 					target: "port",
 					one:    fmt.Sprintf("%s:%s.%s", prev.cfg, item.host, prev.tp),
@@ -480,7 +480,7 @@ func (topo *DMTopologySpecification) dirConflictsDetect() error {
 					tp := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
 					prev, exist := dirStats[item]
 					if exist {
-						return &ValidateErr{
+						return &validateErr{
 							ty:     errTypeConflict,
 							target: "directory",
 							one:    fmt.Sprintf("%s:%s.%s", prev.cfg, item.host, prev.tp),

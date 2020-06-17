@@ -72,7 +72,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 	}
 
 	metadata, err := meta.DMMetadata(clusterName)
-	if err != nil && !errors.Is(err, &meta.ValidateErr{}) {
+	if err != nil && !errors.Is(err, meta.ValidateErr) {
 		// ignore conflict check error, node may be deployed by former version
 		// that lack of some certain conflict checks
 		return err

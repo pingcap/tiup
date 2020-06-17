@@ -67,7 +67,7 @@ func newDisplayCmd() *cobra.Command {
 			}
 
 			metadata, err := meta.ClusterMetadata(clusterName)
-			if err != nil && !errors.Is(perrs.Cause(err), &meta.ValidateErr{}) {
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 				return perrs.AddStack(err)
 			}
 			return destroyTombstoneIfNeed(clusterName, metadata, gOpt)
@@ -83,7 +83,7 @@ func newDisplayCmd() *cobra.Command {
 
 func displayDashboardInfo(clusterName string) error {
 	metadata, err := meta.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), &meta.ValidateErr{}) {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 		return err
 	}
 
@@ -116,7 +116,7 @@ func displayDashboardInfo(clusterName string) error {
 
 func displayClusterMeta(clusterName string, opt *operator.Options) error {
 	clsMeta, err := meta.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), &meta.ValidateErr{}) {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 		return err
 	}
 
@@ -170,7 +170,7 @@ func destroyTombstoneIfNeed(clusterName string, metadata *meta.ClusterMeta, opt 
 
 func displayClusterTopology(clusterName string, opt *operator.Options) error {
 	metadata, err := meta.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), &meta.ValidateErr{}) {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 		return err
 	}
 

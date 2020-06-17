@@ -22,6 +22,8 @@ import (
 
 var (
 	errNS = errorx.NewNamespace("meta")
+	// ValidateErr is an empty validateErr object, useful for type checking
+	ValidateErr = &validateErr{}
 )
 
 // error types
@@ -30,8 +32,8 @@ const (
 	errTypeMismatch = "mismatch"
 )
 
-// ValidateErr is the error when meta validation fails with conflicts
-type ValidateErr struct {
+// validateErr is the error when meta validation fails with conflicts
+type validateErr struct {
 	ty     string      // conflict type
 	target string      // conflict target
 	value  interface{} // conflict value
@@ -40,16 +42,16 @@ type ValidateErr struct {
 }
 
 // Error implements the error interface
-func (e *ValidateErr) Error() string {
+func (e *validateErr) Error() string {
 	return fmt.Sprintf("%s %s for '%v' between '%s' and '%s'", e.target, e.ty, e.value, e.one, e.two)
 }
 
 // Unwrap implements the error interface
-func (e *ValidateErr) Unwrap() error { return nil }
+func (e *validateErr) Unwrap() error { return nil }
 
 // Is implements the error interface
-func (e *ValidateErr) Is(target error) bool {
-	t, ok := target.(*ValidateErr)
+func (e *validateErr) Is(target error) bool {
+	t, ok := target.(*validateErr)
 	if !ok {
 		return false
 	}

@@ -699,7 +699,7 @@ func (topo *ClusterSpecification) platformConflictsDetect() error {
 			prev, exist := platformStats[host]
 			if exist {
 				if prev.os != stat.os || prev.arch != stat.arch {
-					return &ValidateErr{
+					return &validateErr{
 						ty:     errTypeMismatch,
 						target: "platform",
 						one:    fmt.Sprintf("%s:%s/%s", prev.cfg, prev.os, prev.arch),
@@ -772,7 +772,7 @@ func (topo *ClusterSpecification) portConflictsDetect() error {
 					tp := compSpec.Type().Field(j).Tag.Get("yaml")
 					prev, exist := portStats[item]
 					if exist {
-						return &ValidateErr{
+						return &validateErr{
 							ty:     errTypeConflict,
 							target: "port",
 							one:    fmt.Sprintf("%s:%s.%s", prev.cfg, item.host, prev.tp),
@@ -811,7 +811,7 @@ func (topo *ClusterSpecification) portConflictsDetect() error {
 			tp := strings.Split(ft.Tag.Get("yaml"), ",")[0]
 			prev, exist := portStats[item]
 			if exist {
-				return &ValidateErr{
+				return &validateErr{
 					ty:     errTypeConflict,
 					target: "port",
 					one:    fmt.Sprintf("%s:%s.%s", prev.cfg, item.host, prev.tp),
@@ -886,7 +886,7 @@ func (topo *ClusterSpecification) dirConflictsDetect() error {
 					// not checking between imported nodes
 					if exist &&
 						!(compSpec.Interface().(InstanceSpec).IsImported() && prev.imported) {
-						return &ValidateErr{
+						return &validateErr{
 							ty:     errTypeConflict,
 							target: "directory",
 							one:    fmt.Sprintf("%s:%s.%s", prev.cfg, item.host, prev.tp),

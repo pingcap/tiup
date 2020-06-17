@@ -25,7 +25,7 @@ type metaSuite struct {
 var _ = check.Suite(&metaSuite{})
 
 func (s *metaSuite) TestValidateErrIs(c *check.C) {
-	err0 := &ValidateErr{
+	err0 := &validateErr{
 		ty:     "dummy",
 		target: "test",
 		one:    "one",
@@ -34,22 +34,24 @@ func (s *metaSuite) TestValidateErrIs(c *check.C) {
 	}
 	// identical errors are equal
 	c.Assert(errors.Is(err0, err0), check.IsTrue)
-	c.Assert(errors.Is(&ValidateErr{}, &ValidateErr{}), check.IsTrue)
+	c.Assert(errors.Is(ValidateErr, ValidateErr), check.IsTrue)
+	c.Assert(errors.Is(ValidateErr, &validateErr{}), check.IsTrue)
+	c.Assert(errors.Is(&validateErr{}, ValidateErr), check.IsTrue)
 	// not equal for different error types
 	c.Assert(errors.Is(err0, errors.New("")), check.IsFalse)
 	// default value matches any error
-	c.Assert(errors.Is(err0, &ValidateErr{}), check.IsTrue)
+	c.Assert(errors.Is(err0, ValidateErr), check.IsTrue)
 	// error with values are not matching default ones
-	c.Assert(errors.Is(&ValidateErr{}, err0), check.IsFalse)
+	c.Assert(errors.Is(ValidateErr, err0), check.IsFalse)
 
-	err1 := &ValidateErr{
+	err1 := &validateErr{
 		ty:     errTypeConflict,
 		target: "test",
 		one:    "one",
 		two:    "two",
 		value:  2,
 	}
-	c.Assert(errors.Is(err1, &ValidateErr{}), check.IsTrue)
+	c.Assert(errors.Is(err1, ValidateErr), check.IsTrue)
 	// errors with different values are not equal
 	c.Assert(errors.Is(err0, err1), check.IsFalse)
 	c.Assert(errors.Is(err1, err0), check.IsFalse)
@@ -59,7 +61,7 @@ func (s *metaSuite) TestValidateErrIs(c *check.C) {
 	c.Assert(errors.Is(err0, err1), check.IsFalse)
 	c.Assert(errors.Is(err1, err0), check.IsFalse)
 
-	err2 := &ValidateErr{
+	err2 := &validateErr{
 		ty:     errTypeMismatch,
 		target: "test",
 		one:    "one",
@@ -69,34 +71,36 @@ func (s *metaSuite) TestValidateErrIs(c *check.C) {
 			"key2": "2",
 		},
 	}
-	c.Assert(errors.Is(err2, &ValidateErr{}), check.IsTrue)
+	c.Assert(errors.Is(err2, ValidateErr), check.IsTrue)
+	c.Assert(errors.Is(err1, err2), check.IsFalse)
+	c.Assert(errors.Is(err2, err1), check.IsFalse)
 
-	err3 := &ValidateErr{
+	err3 := &validateErr{
 		ty:     errTypeMismatch,
 		target: "test",
 		one:    "one",
 		two:    "two",
 		value:  []float64{1.0, 2.0},
 	}
-	c.Assert(errors.Is(err3, &ValidateErr{}), check.IsTrue)
+	c.Assert(errors.Is(err3, ValidateErr), check.IsTrue)
 	// different values are not equal
 	c.Assert(errors.Is(err2, err3), check.IsFalse)
 	c.Assert(errors.Is(err3, err2), check.IsFalse)
 
-	err4 := &ValidateErr{
+	err4 := &validateErr{
 		ty:     errTypeMismatch,
 		target: "test",
 		one:    "one",
 		two:    "two",
 		value:  nil,
 	}
-	c.Assert(errors.Is(err4, &ValidateErr{}), check.IsTrue)
+	c.Assert(errors.Is(err4, ValidateErr), check.IsTrue)
 	// nil value matches any error if other fields are with the same values
 	c.Assert(errors.Is(err3, err4), check.IsTrue)
 	c.Assert(errors.Is(err4, err3), check.IsFalse)
 
 	err4.value = 0
-	c.Assert(errors.Is(err4, &ValidateErr{}), check.IsTrue)
+	c.Assert(errors.Is(err4, ValidateErr), check.IsTrue)
 	c.Assert(errors.Is(err3, err4), check.IsFalse)
 	c.Assert(errors.Is(err4, err3), check.IsFalse)
 }
