@@ -14,18 +14,18 @@
 package command
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-
 	"github.com/fatih/color"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -56,8 +56,8 @@ func newDisplayCmd() *cobra.Command {
 			}
 
 			metadata, err := meta.DMMetadata(clusterName)
-			if err != nil {
-				return errors.AddStack(err)
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+				return perrs.AddStack(err)
 			}
 			return clearOutDatedEtcdInfo(clusterName, metadata, gOpt)
 		},
@@ -71,11 +71,11 @@ func newDisplayCmd() *cobra.Command {
 
 func displayDMMeta(clusterName string, opt *operator.Options) error {
 	if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-		return errors.Errorf("cannot display non-exists cluster %s", clusterName)
+		return perrs.Errorf("cannot display non-exists cluster %s", clusterName)
 	}
 
 	clsMeta, err := meta.DMMetadata(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 		return err
 	}
 
@@ -156,7 +156,7 @@ func clearOutDatedEtcdInfo(clusterName string, metadata *meta.DMMeta, opt operat
 
 func displayClusterTopology(clusterName string, opt *operator.Options) error {
 	metadata, err := meta.DMMetadata(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 		return err
 	}
 
@@ -171,12 +171,12 @@ func displayClusterTopology(clusterName string, opt *operator.Options) error {
 	err = ctx.SetSSHKeySet(meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 		meta.ClusterPath(clusterName, "ssh", "id_rsa.pub"))
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	err = ctx.SetClusterSSH(topo, metadata.User, gOpt.SSHTimeout)
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	filterRoles := set.NewStringSet(opt.Roles...)

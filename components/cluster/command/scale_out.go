@@ -74,7 +74,7 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 	}
 
 	metadata, err := meta.ClusterMetadata(clusterName)
-	if err != nil {
+	if err != nil { // not allowing validation errors
 		return err
 	}
 

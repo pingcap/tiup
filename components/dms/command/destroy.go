@@ -14,11 +14,12 @@
 package command
 
 import (
+	"errors"
 	"os"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -40,12 +41,12 @@ func newDestroyCmd() *cobra.Command {
 
 			clusterName := args[0]
 			if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-				return errors.Errorf("cannot destroy non-exists cluster %s", clusterName)
+				return perrs.Errorf("cannot destroy non-exists cluster %s", clusterName)
 			}
 
 			logger.EnableAuditLog()
 			metadata, err := meta.DMMetadata(clusterName)
-			if err != nil {
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 				return err
 			}
 
@@ -73,11 +74,11 @@ func newDestroyCmd() *cobra.Command {
 					// FIXME: Map possible task errors and give suggestions.
 					return err
 				}
-				return errors.Trace(err)
+				return perrs.Trace(err)
 			}
 
 			if err := os.RemoveAll(meta.ClusterPath(clusterName)); err != nil {
-				return errors.Trace(err)
+				return perrs.Trace(err)
 			}
 			log.Infof("Destroyed DM cluster `%s` successfully", clusterName)
 			return nil
