@@ -259,7 +259,7 @@ func newMirrorModifyCmd() *cobra.Command {
 			}
 
 			if endpoint == "" {
-				endpoint = environment.Mirror(env.Profile().Config)
+				endpoint = environment.Mirror()
 			}
 			e := remote.NewEditor(endpoint, args[0]).WithDesc(desc)
 			flagSet := set.NewStringSet()
@@ -292,7 +292,7 @@ func newMirrorModifyCmd() *cobra.Command {
 // the `mirror publish` sub command
 func newMirrorPublishCmd() *cobra.Command {
 	var privPath string
-	endpoint := environment.Mirror(localdata.InitProfile().Config)
+	endpoint := environment.Mirror()
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH
 	desc := ""

@@ -41,13 +41,16 @@ const (
 
 // Mirror return mirror of tiup.
 // If it's not defined, it will use "https://tiup-mirrors.pingcap.com/".
-func Mirror(cfg *localdata.TiUPConfig) string {
+func Mirror() string {
+	profile := localdata.InitProfile()
+	cfg := profile.Config
 	m := os.Getenv(repository.EnvMirrors)
 	if cfg != nil && cfg.Mirror != "" {
 		if m != "" && m != cfg.Mirror {
 			fmt.Printf(`WARNING: both mirror config and TIUP_MIRRORS have been set.
-Use config mirror(%s) instead of TIUP_MIRRORS(%s)
-`, cfg.Mirror, m)
+Setting mirror to TIUP_MIRRORS(%s)
+`, m)
+			_ = profile.ResetMirror(m, "")
 			os.Setenv(repository.EnvMirrors, cfg.Mirror)
 		}
 		return cfg.Mirror
@@ -80,7 +83,7 @@ func InitEnv(options repository.Options) (*Environment, error) {
 
 	// Initialize the repository
 	// Replace the mirror if some sub-commands use different mirror address
-	mirrorAddr := Mirror(profile.Config)
+	mirrorAddr := Mirror()
 	mirror := repository.NewMirror(mirrorAddr, repository.MirrorOptions{})
 
 	var repo *repository.Repository

@@ -38,7 +38,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var mirror = environment.Mirror(nil)
+var mirror = environment.Mirror()
 var errNotFound = fmt.Errorf("resource not found")
 
 func main() {
