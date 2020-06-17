@@ -55,7 +55,8 @@ func (e *ValidateErr) Is(target error) bool {
 	}
 
 	// check for interface value seperately
-	if !(reflect.ValueOf(e.value).IsValid() && reflect.ValueOf(t.value).IsValid()) {
+	if e.value != nil && t.value != nil &&
+		(!reflect.ValueOf(e.value).IsValid() && !reflect.ValueOf(t.value).IsValid()) {
 		return false
 	}
 	// not supporting non-comparable values for now

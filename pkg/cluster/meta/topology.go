@@ -939,15 +939,12 @@ func (topo *ClusterSpecification) CountDir(targetHost, dirPrefix string) int {
 					host := compSpec.FieldByName("Host").String()
 
 					switch dirType { // the same as in logic.go for (*instance)
-					case "DeployDir":
-						dir = clusterutil.Abs(topo.GlobalOptions.User, dir)
 					case "DataDir":
 						deployDir := compSpec.FieldByName("DeployDir").String()
 						// the default data_dir is relative to deploy_dir
 						if dir != "" && !strings.HasPrefix(dir, "/") {
 							dir = filepath.Join(deployDir, dir)
 						}
-						dir = clusterutil.Abs(topo.GlobalOptions.User, dir)
 					case "LogDir":
 						deployDir := compSpec.FieldByName("DeployDir").String()
 						field := compSpec.FieldByName("LogDir")
@@ -961,8 +958,8 @@ func (topo *ClusterSpecification) CountDir(targetHost, dirPrefix string) int {
 						if !strings.HasPrefix(dir, "/") {
 							dir = filepath.Join(deployDir, dir)
 						}
-						dir = clusterutil.Abs(topo.GlobalOptions.User, dir)
 					}
+					dir = clusterutil.Abs(topo.GlobalOptions.User, dir)
 					dirStats[host+dir] += 1
 				}
 			}
@@ -1117,7 +1114,10 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 
 			dataDir := field.Field(j).String()
 
-			if dataDir != "" { // already have a value, skip filling default values
+			// If the per-instance data_dir already have a value, skip filling default values
+			// and ignore any value in global data_dir, the default values are filled only
+			// when the pre-instance data_dir is empty
+			if dataDir != "" {
 				continue
 			}
 			// If the data dir in global options is an absolute path, append current

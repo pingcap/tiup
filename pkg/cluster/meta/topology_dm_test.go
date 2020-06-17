@@ -229,5 +229,52 @@ dm-worker_servers:
 	cnt := topo.CountDir("172.16.5.53", "test-deploy/dm-worker-8262")
 	c.Assert(cnt, Equals, 3)
 	cnt = topo.CountDir("172.16.5.138", "/test-data/data")
+	c.Assert(cnt, Equals, 0) // should not match partial path
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "/test-deploy"
+dm-master_servers:
+  - host: 172.16.5.138
+    deploy_dir: "master-deploy"
+    data_dir: "/test-data/data-1"
+dm-worker_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-data/data-2"
+`), &topo)
+	c.Assert(err, IsNil)
+	cnt = topo.CountDir("172.16.5.138", "/test-deploy/dm-worker-8262")
+	c.Assert(cnt, Equals, 2)
+	cnt = topo.CountDir("172.16.5.138", "")
+	c.Assert(cnt, Equals, 2)
+	cnt = topo.CountDir("172.16.5.138", "test-data")
 	c.Assert(cnt, Equals, 0)
+	cnt = topo.CountDir("172.16.5.138", "/test-data")
+	c.Assert(cnt, Equals, 2)
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "/test-deploy"
+  data_dir: "/test-data"
+dm-master_servers:
+  - host: 172.16.5.138
+    data_dir: "data-1"
+dm-worker_servers:
+  - host: 172.16.5.138
+    data_dir: "data-2"
+  - host: 172.16.5.53
+`), &topo)
+	c.Assert(err, IsNil)
+	// if per-instance data_dir is set, the global data_dir is ignored, and if it
+	// is a relative path, it will be under the instance's deploy_dir
+	cnt = topo.CountDir("172.16.5.138", "/test-deploy/dm-worker-8262")
+	c.Assert(cnt, Equals, 3)
+	cnt = topo.CountDir("172.16.5.138", "")
+	c.Assert(cnt, Equals, 0)
+	cnt = topo.CountDir("172.16.5.53", "/test-data")
+	c.Assert(cnt, Equals, 1)
 }

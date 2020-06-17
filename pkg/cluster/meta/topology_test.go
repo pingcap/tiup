@@ -22,16 +22,16 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type metaSuite struct {
+type metaSuiteTopo struct {
 }
 
-var _ = Suite(&metaSuite{})
+var _ = Suite(&metaSuiteTopo{})
 
 func TestMeta(t *testing.T) {
 	TestingT(t)
 }
 
-func (s *metaSuite) TestDefaultDataDir(c *C) {
+func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 	// Test with without global DataDir.
 	topo := new(ClusterSpecification)
 	topo.TiKVServers = append(topo.TiKVServers, TiKVSpec{Host: "1.1.1.1", Port: 22})
@@ -70,7 +70,7 @@ func (s *metaSuite) TestDefaultDataDir(c *C) {
 	c.Assert(topo.TiKVServers[1].DataDir, Equals, "/my_data")
 }
 
-func (s *metaSuite) TestGlobalOptions(c *C) {
+func (s *metaSuiteTopo) TestGlobalOptions(c *C) {
 	topo := ClusterSpecification{}
 	err := yaml.Unmarshal([]byte(`
 global:
@@ -96,7 +96,7 @@ pd_servers:
 	c.Assert(topo.PDServers[0].DataDir, Equals, "pd-data")
 }
 
-func (s *metaSuite) TestDataDirAbsolute(c *C) {
+func (s *metaSuiteTopo) TestDataDirAbsolute(c *C) {
 	topo := ClusterSpecification{}
 	err := yaml.Unmarshal([]byte(`
 global:
@@ -114,7 +114,7 @@ pd_servers:
 	c.Assert(topo.PDServers[1].DataDir, Equals, "/test-data/pd-12379")
 }
 
-func (s *metaSuite) TestDirectoryConflicts(c *C) {
+func (s *metaSuiteTopo) TestDirectoryConflicts1(c *C) {
 	topo := ClusterSpecification{}
 
 	err := yaml.Unmarshal([]byte(`
@@ -169,7 +169,7 @@ pd_servers:
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "directory conflict for '/home/tidb/deploy' between 'tidb_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'")
 
-	// two imported tidb pass the validation, two pd servers don't
+	// two imported tidb pass the validation, two pd servers (only one is imported) don't
 	err = yaml.Unmarshal([]byte(`
 global:
   user: "test2"
@@ -200,7 +200,7 @@ pd_servers:
 	c.Assert(err.Error(), Equals, "directory conflict for '/home/tidb/deploy' between 'pd_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'")
 }
 
-func (s *metaSuite) TestPortConflicts(c *C) {
+func (s *metaSuiteTopo) TestPortConflicts(c *C) {
 	topo := ClusterSpecification{}
 	err := yaml.Unmarshal([]byte(`
 global:
@@ -234,7 +234,7 @@ tikv_servers:
 
 }
 
-func (s *metaSuite) TestPlatformConflicts(c *C) {
+func (s *metaSuiteTopo) TestPlatformConflicts(c *C) {
 	// aarch64 and arm64 are equal
 	topo := ClusterSpecification{}
 	err := yaml.Unmarshal([]byte(`
@@ -280,7 +280,7 @@ tikv_servers:
 
 }
 
-func (s *metaSuite) TestCountDir(c *C) {
+func (s *metaSuiteTopo) TestCountDir(c *C) {
 	topo := ClusterSpecification{}
 
 	err := yaml.Unmarshal([]byte(`
@@ -298,8 +298,54 @@ pd_servers:
 	c.Assert(err, IsNil)
 	cnt := topo.CountDir("172.16.5.138", "/home/test1/test-deploy/pd-2379")
 	c.Assert(cnt, Equals, 2)
+	cnt = topo.CountDir("172.16.5.138", "") // the default user home
+	c.Assert(cnt, Equals, 4)
 	cnt = topo.CountDir("172.16.5.138", "/test-data/data")
+	c.Assert(cnt, Equals, 0) // should not match partial path
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "/test-deploy"
+tikv_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-data/data-1"
+pd_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-data/data-2"
+`), &topo)
+	c.Assert(err, IsNil)
+	cnt = topo.CountDir("172.16.5.138", "/test-deploy/pd-2379")
+	c.Assert(cnt, Equals, 2)
+	cnt = topo.CountDir("172.16.5.138", "")
 	c.Assert(cnt, Equals, 0)
+	cnt = topo.CountDir("172.16.5.138", "test-data")
+	c.Assert(cnt, Equals, 0)
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "/test-deploy"
+  data_dir: "/test-data"
+tikv_servers:
+  - host: 172.16.5.138
+    data_dir: "data-1"
+pd_servers:
+  - host: 172.16.5.138
+    data_dir: "data-2"
+  - host: 172.16.5.139
+`), &topo)
+	c.Assert(err, IsNil)
+	// if per-instance data_dir is set, the global data_dir is ignored, and if it
+	// is a relative path, it will be under the instance's deploy_dir
+	cnt = topo.CountDir("172.16.5.138", "/test-deploy/pd-2379")
+	c.Assert(cnt, Equals, 3)
+	cnt = topo.CountDir("172.16.5.138", "")
+	c.Assert(cnt, Equals, 0)
+	cnt = topo.CountDir("172.16.5.139", "/test-data")
+	c.Assert(cnt, Equals, 1)
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -324,7 +370,7 @@ pd_servers:
 	c.Assert(cnt, Equals, 5)
 }
 
-func (s *metaSuite) TestGlobalConfig(c *C) {
+func (s *metaSuiteTopo) TestGlobalConfig(c *C) {
 	topo := ClusterSpecification{}
 	err := yaml.Unmarshal([]byte(`
 global:
@@ -429,7 +475,7 @@ tidb_servers:
 	c.Assert(got, DeepEquals, expected)
 }
 
-func (s *metaSuite) TestGlobalConfigPatch(c *C) {
+func (s *metaSuiteTopo) TestGlobalConfigPatch(c *C) {
 	topo := ClusterSpecification{}
 	err := yaml.Unmarshal([]byte(`
 tikv_sata_config: &tikv_sata_config
@@ -459,7 +505,7 @@ tikv_servers:
 	c.Assert(got, DeepEquals, expected)
 }
 
-func (s *metaSuite) TestLogDir(c *C) {
+func (s *metaSuiteTopo) TestLogDir(c *C) {
 	topo := ClusterSpecification{}
 	err := yaml.Unmarshal([]byte(`
 tidb_servers:
@@ -471,7 +517,7 @@ tidb_servers:
 	c.Assert(topo.TiDBServers[0].LogDir, Equals, "test-deploy/log")
 }
 
-func (s *metaSuite) TestMonitorLogDir(c *C) {
+func (s *metaSuiteTopo) TestMonitorLogDir(c *C) {
 	topo := ClusterSpecification{}
 	err := yaml.Unmarshal([]byte(`
 monitored:
@@ -488,7 +534,7 @@ monitored:
 	c.Assert(topo.MonitoredOptions.LogDir, Equals, "test-deploy/log")
 }
 
-func (s *metaSuite) TestMerge2Toml(c *C) {
+func (s *metaSuiteTopo) TestMerge2Toml(c *C) {
 	topo := ClusterSpecification{}
 	err := yaml.Unmarshal([]byte(`
 server_configs:
@@ -525,7 +571,7 @@ item6 = 600
 	c.Assert(string(got), DeepEquals, expected)
 }
 
-func (s *metaSuite) TestMerge2Toml2(c *C) {
+func (s *metaSuiteTopo) TestMerge2Toml2(c *C) {
 	topo := ClusterSpecification{}
 	err := yaml.Unmarshal([]byte(`
 global:
@@ -614,7 +660,7 @@ split-merge-interval = "1h"
 	c.Assert(string(got), DeepEquals, expected)
 }
 
-func (s *metaSuite) TestMergeImported(c *C) {
+func (s *metaSuiteTopo) TestMergeImported(c *C) {
 	spec := ClusterSpecification{}
 
 	// values set in topology specification of the cluster

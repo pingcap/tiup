@@ -530,15 +530,12 @@ func (topo *DMTopologySpecification) CountDir(targetHost, dirPrefix string) int 
 					host := compSpec.FieldByName("Host").String()
 
 					switch dirType { // the same as in logic.go for (*instance)
-					case "DeployDir":
-						dir = clusterutil.Abs(topo.GlobalOptions.User, dir)
 					case "DataDir":
 						deployDir := compSpec.FieldByName("DeployDir").String()
 						// the default data_dir is relative to deploy_dir
 						if dir != "" && !strings.HasPrefix(dir, "/") {
 							dir = filepath.Join(deployDir, dir)
 						}
-						dir = clusterutil.Abs(topo.GlobalOptions.User, dir)
 					case "LogDir":
 						deployDir := compSpec.FieldByName("DeployDir").String()
 						field := compSpec.FieldByName("LogDir")
@@ -552,8 +549,8 @@ func (topo *DMTopologySpecification) CountDir(targetHost, dirPrefix string) int 
 						if !strings.HasPrefix(dir, "/") {
 							dir = filepath.Join(deployDir, dir)
 						}
-						dir = clusterutil.Abs(topo.GlobalOptions.User, dir)
 					}
+					dir = clusterutil.Abs(topo.GlobalOptions.User, dir)
 					dirStats[host+dir] += 1
 				}
 			}
