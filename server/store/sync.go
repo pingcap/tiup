@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"time"
 
@@ -26,6 +27,23 @@ import (
 // Syncer sync diff files to target
 type Syncer interface {
 	Sync(srcDir string) error
+}
+
+type combinedSyncer struct {
+	syncers []Syncer
+}
+
+func (s *combinedSyncer) Sync(srcDir string) error {
+	for _, sy := range s.syncers {
+		if err := sy.Sync(srcDir); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func combine(syncers ...Syncer) Syncer {
+	return &combinedSyncer{syncers}
 }
 
 type fsSyncer struct {
@@ -56,4 +74,19 @@ func (s *fsSyncer) Sync(srcDir string) error {
 	}
 
 	return nil
+}
+
+type qcloudSyncer struct {
+	script string
+}
+
+func newQcloudSyncer(scriptPath string) Syncer {
+	return &qcloudSyncer{scriptPath}
+}
+
+func (s *qcloudSyncer) Sync(srcDir string) error {
+	cmd := exec.Command(s.script, srcDir)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
