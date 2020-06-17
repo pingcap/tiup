@@ -28,7 +28,7 @@ import (
 // Model defines operations on the manifests
 type Model interface {
 	UpdateComponentManifest(component string, manifest *ComponentManifest) error
-	UpdateRootManifest(initTime time.Time, manifest *RootManifest) error
+	UpdateRootManifest(manifest *RootManifest) error
 	UpdateIndexManifest(time.Time, func(*IndexManifest) *IndexManifest) error
 	UpdateSnapshotManifest(time.Time, func(*SnapshotManifest) *SnapshotManifest) error
 	UpdateTimestampManifest(time.Time) error
@@ -57,7 +57,7 @@ func (m *model) UpdateComponentManifest(component string, manifest *ComponentMan
 	return m.txn.WriteManifest(fmt.Sprintf("%d.%s.json", manifest.Signed.Version, component), manifest)
 }
 
-func (m *model) UpdateRootManifest(initTime time.Time, manifest *RootManifest) error {
+func (m *model) UpdateRootManifest(manifest *RootManifest) error {
 	var last RootManifest
 	if err := m.txn.ReadManifest(v1manifest.ManifestFilenameRoot, &last); err != nil {
 		return err
@@ -84,6 +84,9 @@ func (m *model) UpdateIndexManifest(initTime time.Time, f func(*IndexManifest) *
 		return err
 	}
 	manifest := f(&last)
+	if manifest == nil {
+		return nil
+	}
 	manifest.Signed.Version = last.Signed.Version + 1
 	v1manifest.RenewManifest(&manifest.Signed, initTime)
 	manifest.Signatures, err = sign(manifest.Signed, m.keys[v1manifest.ManifestTypeIndex])
@@ -101,6 +104,9 @@ func (m *model) UpdateSnapshotManifest(initTime time.Time, f func(*SnapshotManif
 		return err
 	}
 	manifest := f(&last)
+	if manifest == nil {
+		return nil
+	}
 	v1manifest.RenewManifest(&manifest.Signed, initTime)
 	manifest.Signatures, err = sign(manifest.Signed, m.keys[v1manifest.ManifestTypeSnapshot])
 	if err != nil {
@@ -173,6 +179,9 @@ func sign(signed interface{}, keys ...*v1manifest.KeyInfo) ([]v1manifest.Signatu
 
 	signs := []v1manifest.Signature{}
 	for _, k := range keys {
+		if k == nil {
+			return nil, ErrorMissingKey
+		}
 		id, err := k.ID()
 		if err != nil {
 			return nil, errors.Trace(err)

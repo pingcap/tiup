@@ -54,6 +54,7 @@ require (
 	github.com/shirou/gopsutil v2.20.3+incompatible
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/cobra v1.0.0
+	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.5.1
 	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect
 	github.com/tj/go-termd v0.0.2-0.20200115111609-7f6aeb166380

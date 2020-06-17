@@ -50,10 +50,6 @@ func main() {
 	cmd.Flags().StringVarP(&timestampKey, "timestamp", "", "", "specific the private key for timestamp")
 	cmd.Flags().StringVarP(&upstream, "upstream", "", upstream, "specific the upstream mirror")
 
-	_ = cmd.MarkFlagRequired("index")
-	_ = cmd.MarkFlagRequired("snapshot")
-	_ = cmd.MarkFlagRequired("timestamp")
-
 	if err := cmd.Execute(); err != nil {
 		log.Errorf("Execute command: %s", err.Error())
 	}
