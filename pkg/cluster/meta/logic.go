@@ -130,11 +130,12 @@ func PortStopped(e executor.TiOpsExecutor, port int, timeout int64) error {
 type instance struct {
 	InstanceSpec
 
-	name string
-	host string
-	port int
-	sshp int
-	topo *ClusterSpecification
+	name       string
+	host       string
+	listenHost string
+	port       int
+	sshp       int
+	topo       *ClusterSpecification
 
 	usedPorts []int
 	usedDirs  []string
@@ -246,6 +247,14 @@ func (i *instance) ServiceName() string {
 // GetHost implements Instance interface
 func (i *instance) GetHost() string {
 	return i.host
+}
+
+// GetListenHost implements Instance interface
+func (i *instance) GetListenHost() string {
+	if i.listenHost == "" {
+		return "0.0.0.0"
+	}
+	return i.listenHost
 }
 
 // GetSSHPort implements Instance interface
@@ -360,6 +369,7 @@ func (c *TiDBComponent) Instances() []Instance {
 			InstanceSpec: s,
 			name:         c.Name(),
 			host:         s.Host,
+			listenHost:   s.ListenHost,
 			port:         s.Port,
 			sshp:         s.SSHPort,
 			topo:         c.ClusterSpecification,
@@ -393,7 +403,10 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		i.GetHost(),
 		paths.Deploy,
 		paths.Log,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(deployUser)...)
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).
+		WithStatusPort(spec.StatusPort).
+		AppendEndpoints(i.instance.topo.Endpoints(deployUser)...).
+		WithListenHost(i.GetListenHost())
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -407,7 +420,7 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		return err
 	}
 
-	specConfig := spec.Config
+	globalConfig := i.instance.topo.ServerConfigs.TiDB
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -424,14 +437,13 @@ func (i *TiDBInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		if err != nil {
 			return err
 		}
-		mergedConfig, err := mergeImported(importConfig, spec.Config)
+		globalConfig, err = mergeImported(importConfig, globalConfig)
 		if err != nil {
 			return err
 		}
-		specConfig = mergedConfig
 	}
 
-	if err := i.mergeServerConfig(e, i.instance.topo.ServerConfigs.TiDB, specConfig, paths); err != nil {
+	if err := i.mergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
 
@@ -465,6 +477,7 @@ func (c *TiKVComponent) Instances() []Instance {
 			InstanceSpec: s,
 			name:         c.Name(),
 			host:         s.Host,
+			listenHost:   s.ListenHost,
 			port:         s.Port,
 			sshp:         s.SSHPort,
 			topo:         c.ClusterSpecification,
@@ -500,7 +513,11 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		paths.Deploy,
 		paths.Data[0],
 		paths.Log,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithStatusPort(spec.StatusPort).AppendEndpoints(i.instance.topo.Endpoints(deployUser)...)
+	).WithPort(spec.Port).
+		WithNumaNode(spec.NumaNode).
+		WithStatusPort(spec.StatusPort).
+		AppendEndpoints(i.instance.topo.Endpoints(deployUser)...).
+		WithListenHost(i.GetListenHost())
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tikv_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -515,7 +532,7 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		return err
 	}
 
-	specConfig := spec.Config
+	globalConfig := i.instance.topo.ServerConfigs.TiKV
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -532,14 +549,13 @@ func (i *TiKVInstance) InitConfig(e executor.TiOpsExecutor, clusterName, cluster
 		if err != nil {
 			return err
 		}
-		mergedConfig, err := mergeImported(importConfig, spec.Config)
+		globalConfig, err = mergeImported(importConfig, globalConfig)
 		if err != nil {
 			return err
 		}
-		specConfig = mergedConfig
 	}
 
-	if err := i.mergeServerConfig(e, i.instance.topo.ServerConfigs.TiKV, specConfig, paths); err != nil {
+	if err := i.mergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
 
@@ -575,6 +591,7 @@ func (c *PDComponent) Instances() []Instance {
 				InstanceSpec: s,
 				name:         c.Name(),
 				host:         s.Host,
+				listenHost:   s.ListenHost,
 				port:         s.ClientPort,
 				sshp:         s.SSHPort,
 				topo:         c.ClusterSpecification,
@@ -613,7 +630,10 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVe
 		paths.Deploy,
 		paths.Data[0],
 		paths.Log,
-	).WithClientPort(spec.ClientPort).WithPeerPort(spec.PeerPort).AppendEndpoints(i.instance.topo.Endpoints(deployUser)...)
+	).WithClientPort(spec.ClientPort).
+		WithPeerPort(spec.PeerPort).
+		AppendEndpoints(i.instance.topo.Endpoints(deployUser)...).
+		WithListenHost(i.GetListenHost())
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -636,7 +656,7 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVe
 		spec.Config["pd-server.metric-storage"] = fmt.Sprintf("http://%s:%d", prom.Host, prom.Port)
 	}
 
-	specConfig := spec.Config
+	globalConfig := i.instance.topo.ServerConfigs.PD
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -653,14 +673,13 @@ func (i *PDInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVe
 		if err != nil {
 			return err
 		}
-		mergedConfig, err := mergeImported(importConfig, spec.Config)
+		globalConfig, err = mergeImported(importConfig, globalConfig)
 		if err != nil {
 			return err
 		}
-		specConfig = mergedConfig
 	}
 
-	if err := i.mergeServerConfig(e, i.instance.topo.ServerConfigs.PD, specConfig, paths); err != nil {
+	if err := i.mergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
 
@@ -681,7 +700,11 @@ func (i *PDInstance) ScaleConfig(e executor.TiOpsExecutor, b Specification, clus
 		paths.Deploy,
 		paths.Data[0],
 		paths.Log,
-	).WithPeerPort(spec.PeerPort).WithNumaNode(spec.NumaNode).WithClientPort(spec.ClientPort).AppendEndpoints(c.Endpoints(deployUser)...)
+	).WithPeerPort(spec.PeerPort).
+		WithNumaNode(spec.NumaNode).
+		WithClientPort(spec.ClientPort).
+		AppendEndpoints(c.Endpoints(deployUser)...).
+		WithListenHost(i.GetListenHost())
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	log.Infof("script path: %s", fp)
@@ -942,7 +965,6 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		return err
 	}
 
-	specLernerConfig := spec.LearnerConfig
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -959,14 +981,13 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		if err != nil {
 			return err
 		}
-		mergedConfig, err := mergeImported(importConfig, spec.LearnerConfig)
+		conf, err = mergeImported(importConfig, conf)
 		if err != nil {
 			return err
 		}
-		specLernerConfig = mergedConfig
 	}
 
-	err = i.mergeTiFlashLearnerServerConfig(e, conf, specLernerConfig, paths)
+	err = i.mergeTiFlashLearnerServerConfig(e, conf, spec.LearnerConfig, paths)
 	if err != nil {
 		return err
 	}
@@ -976,7 +997,6 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		return err
 	}
 
-	specConfig := spec.Config
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -993,13 +1013,13 @@ func (i *TiFlashInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		if err != nil {
 			return err
 		}
-		specConfig, err = mergeImported(importConfig, spec.Config)
+		conf, err = mergeImported(importConfig, conf)
 		if err != nil {
 			return err
 		}
 	}
 
-	return i.mergeServerConfig(e, conf, specConfig, paths)
+	return i.mergeServerConfig(e, conf, spec.Config, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -1478,7 +1498,8 @@ func (topo *ClusterSpecification) Endpoints(user string) []*scripts.PDScript {
 			dataDir,
 			logDir).
 			WithClientPort(spec.ClientPort).
-			WithPeerPort(spec.PeerPort)
+			WithPeerPort(spec.PeerPort).
+			WithListenHost(spec.ListenHost)
 		ends = append(ends, script)
 	}
 	return ends

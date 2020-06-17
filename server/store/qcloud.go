@@ -226,11 +226,14 @@ func (t *qcloudTxn) Commit() error {
 		return err
 	}
 
-	at := time.Now()
 	for _, f := range files {
 		if err := utils.Copy(path.Join(t.root, f.Name()), t.store.path(f.Name())); err != nil {
 			return err
 		}
+	}
+
+	at := time.Now()
+	for _, f := range files {
 		t.store.modify(f.Name(), &at)
 	}
 

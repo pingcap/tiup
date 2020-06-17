@@ -29,6 +29,7 @@ type PDScript struct {
 	Name       string
 	Scheme     string
 	IP         string
+	ListenHost string
 	ClientPort int
 	PeerPort   int
 	DeployDir  string
@@ -50,6 +51,12 @@ func NewPDScript(name, ip, deployDir, dataDir, logDir string) *PDScript {
 		DataDir:    dataDir,
 		LogDir:     logDir,
 	}
+}
+
+// WithListenHost set listenHost field of PDScript
+func (c *PDScript) WithListenHost(listenHost string) *PDScript {
+	c.ListenHost = listenHost
+	return c
 }
 
 // WithScheme set Scheme field of PDScript

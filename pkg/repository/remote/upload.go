@@ -14,17 +14,12 @@
 package remote
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"runtime"
 	"strings"
 	"time"
 
-	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/juju/errors"
 	ru "github.com/pingcap/tiup/pkg/repository/utils"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
@@ -37,6 +32,8 @@ type Transporter interface {
 	WithOS(os string) Transporter
 	WithArch(arch string) Transporter
 	WithDesc(desc string) Transporter
+	Standalone() Transporter
+	Hide() Transporter
 	Open(tarball string) error
 	Close() error
 	Upload() error
@@ -52,11 +49,12 @@ type transporter struct {
 	version     string
 	description string
 	endpoint    string
+	options     map[string]bool
 	filehash    v1manifest.FileHash
 }
 
-// New returns a Transporter
-func New(endpoint, component, version, entry string) Transporter {
+// NewTransporter returns a Transporter
+func NewTransporter(endpoint, component, version, entry string) Transporter {
 	return &transporter{
 		endpoint:  strings.TrimSuffix(endpoint, "/"),
 		component: component,
@@ -64,24 +62,41 @@ func New(endpoint, component, version, entry string) Transporter {
 		os:        runtime.GOOS,
 		arch:      runtime.GOARCH,
 		version:   version,
+		options:   make(map[string]bool),
 	}
 }
 
+// WithOS set os field of transporter
 func (t *transporter) WithOS(os string) Transporter {
 	t.os = os
 	return t
 }
 
+// WithDesc set description field of transporter
 func (t *transporter) WithDesc(desc string) Transporter {
 	t.description = desc
 	return t
 }
 
+// WithArch set arch field of transporter
 func (t *transporter) WithArch(arch string) Transporter {
 	t.arch = arch
 	return t
 }
 
+// Standalone set standalone field to true
+func (t *transporter) Standalone() Transporter {
+	t.options["standalone"] = true
+	return t
+}
+
+// Hide set hidden field to true
+func (t *transporter) Hide() Transporter {
+	t.options["hidden"] = true
+	return t
+}
+
+// Open read the tarball
 func (t *transporter) Open(tarball string) error {
 	hashes, length, err := ru.HashFile(tarball)
 	if err != nil {
@@ -125,10 +140,6 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 	if sha256 == "" {
 		return errors.New("sha256 not found for tarball")
 	}
-	id, err := key.ID()
-	if err != nil {
-		return err
-	}
 
 	initTime := time.Now()
 	if m == nil {
@@ -136,6 +147,9 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 	} else {
 		v1manifest.RenewManifest(m, initTime)
 		m.Version++
+		if t.description != "" {
+			m.Description = t.description
+		}
 	}
 
 	if strings.Contains(t.version, version.NightlyVersion) {
@@ -161,48 +175,8 @@ func (t *transporter) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) err
 		FileHash: t.filehash,
 	}
 
-	payload, err := cjson.Marshal(m)
-	if err != nil {
-		return err
-	}
-	sig, err := key.Signature(payload)
-	if err != nil {
-		return err
-	}
-	manifest := v1manifest.Manifest{
-		Signatures: []v1manifest.Signature{{
-			KeyID: id,
-			Sig:   sig,
-		}},
-		Signed: m,
-	}
-
-	payload, err = json.Marshal(manifest)
-	if err != nil {
-		return err
-	}
-	bodyBuf := bytes.NewBuffer(payload)
-	addr := fmt.Sprintf("%s/api/v1/component/%s/%s", t.endpoint, sha256, t.component)
-	resp, err := http.Post(addr, "text/json", bodyBuf)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 300 {
-		return nil
-	} else if resp.StatusCode == http.StatusConflict {
-		return fmt.Errorf("Local manifest for component %s is not new enough, update it first", t.component)
-	} else if resp.StatusCode == http.StatusForbidden {
-		return fmt.Errorf("The server refused, make sure you have access to this component: %s", t.component)
-	}
-
-	buf := new(strings.Builder)
-	if _, err := io.Copy(buf, resp.Body); err != nil {
-		return err
-	}
-
-	return fmt.Errorf("Unknow error from server, response body: %s", buf.String())
+	url := fmt.Sprintf("%s/api/v1/component/%s/%s", t.endpoint, sha256, t.component)
+	return signAndSend(url, m, key, t.options)
 }
 
 func (t *transporter) defaultComponent(initTime time.Time) *v1manifest.Component {

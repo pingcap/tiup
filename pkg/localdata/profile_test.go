@@ -34,8 +34,8 @@ func TestProfile(t *testing.T) {
 func (s *profileTestSuite) TestResetMirror(c *check.C) {
 	uuid := uuid.New().String()
 	root := path.Join("/tmp", uuid)
-	os.Mkdir(root, 0755)
-	os.Mkdir(path.Join(root, "bin"), 0755)
+	_ = os.Mkdir(root, 0755)
+	_ = os.Mkdir(path.Join(root, "bin"), 0755)
 	defer os.RemoveAll(root)
 
 	profile := NewProfile(root, InitConfig(root))
