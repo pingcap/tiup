@@ -116,6 +116,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 				metadata.Version,
 				instance,
 				metadata.User,
+				true,
 				meta.DirPaths{
 					Deploy: deployDir,
 					Data:   dataDirs,

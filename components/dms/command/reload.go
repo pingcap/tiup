@@ -27,6 +27,7 @@ import (
 )
 
 func newReloadCmd() *cobra.Command {
+	var ignoreConfigCheck bool
 	cmd := &cobra.Command{
 		Use:   "reload <cluster-name>",
 		Short: "Reload a DM cluster's config and restart if needed",
@@ -50,7 +51,7 @@ func newReloadCmd() *cobra.Command {
 				return err
 			}
 
-			t, err := buildReloadTask(clusterName, metadata, gOpt)
+			t, err := buildReloadTask(clusterName, metadata, gOpt, ignoreConfigCheck)
 			if err != nil {
 				return err
 			}
@@ -72,6 +73,7 @@ func newReloadCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only start specified roles")
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only start specified nodes")
 	cmd.Flags().Int64Var(&gOpt.APITimeout, "transfer-timeout", 300, "Timeout in seconds when transferring dm-master leaders")
+	cmd.Flags().BoolVarP(&ignoreConfigCheck, "ignore-config-check", "", ignoreConfigCheck, "Ignore the config check result")
 
 	return cmd
 }
@@ -80,6 +82,7 @@ func buildReloadTask(
 	clusterName string,
 	metadata *meta.DMMeta,
 	options operator.Options,
+	ignoreConfigCheck bool,
 ) (task.Task, error) {
 
 	var refreshConfigTasks []task.Task
@@ -108,6 +111,7 @@ func buildReloadTask(
 		t := tb.InitConfig(clusterName,
 			metadata.Version,
 			inst, metadata.User,
+			ignoreConfigCheck,
 			meta.DirPaths{
 				Deploy: deployDir,
 				Data:   dataDirs,

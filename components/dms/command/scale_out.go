@@ -267,6 +267,7 @@ func buildScaleOutTask(
 			metadata.Version,
 			inst,
 			metadata.User,
+			true,
 			meta.DirPaths{
 				Deploy: deployDir,
 				Data:   dataDirs,
