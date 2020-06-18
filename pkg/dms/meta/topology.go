@@ -87,10 +87,12 @@ type WorkerSpec struct {
 	OS              string          `yaml:"os,omitempty"`
 }
 
+// SourceSpec represents the upstream source specification
 type SourceSpec interface {
 	sourceSpec()
 }
 
+// SinkSpec represents the downstream sink specification
 type SinkSpec interface {
 	sinkSpec()
 }
@@ -118,6 +120,7 @@ type DatabaseServerSpec struct {
 	Config   map[string]interface{} `yaml:"config,omitempty"`
 }
 
+// JobSpecHeader is the common part for job specification
 type JobSpecHeader struct {
 	Action  string                 `yaml:"action"`
 	Type    string                 `yaml:"type"`
@@ -125,9 +128,10 @@ type JobSpecHeader struct {
 	Workers []WorkerSpec           `yaml:"workers"`
 }
 
+// JobSpecBody is the upstream & downstream info for job specification
 type JobSpecBody struct {
-	Sources []SourceSpec `yaml:"sources"`
-	Sink    SinkSpec     `yaml:"sink"`
+	Sources []SourceSpec `yaml:"sources,omitempty"`
+	Sink    SinkSpec     `yaml:"sink,omitempty"`
 }
 
 // JobSpec represents the data migration job that users want to do
@@ -136,6 +140,7 @@ type JobSpec struct {
 	JobSpecBody   `yaml:"-,inline"`
 }
 
+// UnmarshalYAML sets values for different type jobs when unmarshaling the topology file
 func (s *JobSpec) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var header JobSpecHeader
 	if err := unmarshal(&header); err != nil {

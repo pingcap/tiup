@@ -1,6 +1,7 @@
 package meta
 
 import (
+	"strings"
 	"testing"
 
 	. "github.com/pingcap/check"
@@ -14,6 +15,179 @@ var _ = Suite(&metaSuite{})
 
 func TestMeta(t *testing.T) {
 	TestingT(t)
+}
+
+func subtestJobUnmarshal(c *C, topo *DMSTopologySpecification, expectedYaml string) {
+	data, err := yaml.Marshal(topo)
+	c.Assert(err, IsNil)
+	c.Assert(string(data), Equals, expectedYaml)
+	topo2 := new(DMSTopologySpecification)
+	err = yaml.Unmarshal(data, topo2)
+	c.Assert(err, IsNil)
+	c.Assert(topo2.Job.Action, DeepEquals, topo.Job.Action)
+	c.Assert(topo2.Job.Type, DeepEquals, topo.Job.Type)
+	c.Assert(topo2.Job.Sources, DeepEquals, topo.Job.Sources)
+	c.Assert(topo2.Job.Sink, DeepEquals, topo.Job.Sink)
+	c.Assert(topo2.Job.Workers[0].Host, DeepEquals, topo.Job.Workers[0].Host)
+}
+
+func (s *metaSuite) TestJobUnmarshal(c *C) {
+	fileServerSpecArray := []FileServerSpec{
+		{
+			Host:    "127.0.0.1",
+			SSHPort: 22,
+			Path:    "/tmp/h1",
+		}, {
+			Host:    "127.0.0.2",
+			SSHPort: 22,
+			Path:    "/tmp/h2",
+		}, {
+			Host:    "127.0.0.3",
+			SSHPort: 22,
+			Path:    "/tmp/h3",
+		},
+	}
+	databaseServerSpecArray := []DatabaseServerSpec{
+		{
+			Host:     "127.0.0.1",
+			Port:     4000,
+			User:     "root",
+			Password: "123456",
+		}, {
+			Host:     "127.0.0.2",
+			Port:     4000,
+			User:     "root",
+			Password: "123456",
+		}, {
+			Host:     "127.0.0.3",
+			Port:     4000,
+			User:     "root",
+			Password: "123456",
+		}, {
+			Host:     "127.0.0.4",
+			Port:     4000,
+			User:     "root",
+			Password: "123456",
+		},
+	}
+	workerSpec := WorkerSpec{Host: "1.1.1.1", SSHPort: 22}
+	importExpectedYaml := `job:
+  action: import
+  type: sql
+  workers:
+  - host: 1.1.1.1
+    ssh_port: 22
+  sources:
+  - host: 127.0.0.1
+    ssh_port: 22
+    path: /tmp/h1
+  - host: 127.0.0.2
+    ssh_port: 22
+    path: /tmp/h2
+  - host: 127.0.0.3
+    ssh_port: 22
+    path: /tmp/h3
+  sink:
+    host: 127.0.0.1
+    port: 4000
+    user: root
+    password: "123456"
+monitoring_servers: []
+`
+	exportExpectedYaml := `job:
+  action: export
+  type: mysql
+  workers:
+  - host: 1.1.1.1
+    ssh_port: 22
+  sources:
+  - host: 127.0.0.1
+    port: 4000
+    user: root
+    password: "123456"
+  - host: 127.0.0.2
+    port: 4000
+    user: root
+    password: "123456"
+  - host: 127.0.0.3
+    port: 4000
+    user: root
+    password: "123456"
+  sink:
+    host: 127.0.0.1
+    ssh_port: 22
+    path: /tmp/h1
+monitoring_servers: []
+`
+	migrateExpectedYaml := `job:
+  action: migrate
+  type: mysql
+  workers:
+  - host: 1.1.1.1
+    ssh_port: 22
+  sources:
+  - host: 127.0.0.1
+    port: 4000
+    user: root
+    password: "123456"
+  - host: 127.0.0.2
+    port: 4000
+    user: root
+    password: "123456"
+  - host: 127.0.0.3
+    port: 4000
+    user: root
+    password: "123456"
+  sink:
+    host: 127.0.0.4
+    port: 4000
+    user: root
+    password: "123456"
+monitoring_servers: []
+`
+	// Test with import job
+	topo := new(DMSTopologySpecification)
+	topo.Job.Action = "import"
+	topo.Job.Type = "sql"
+	topo.Job.Sources = append(topo.Job.Sources, fileServerSpecArray[0], fileServerSpecArray[1], fileServerSpecArray[2])
+	topo.Job.Sink = databaseServerSpecArray[0]
+	topo.Job.Workers = append(topo.Job.Workers, workerSpec)
+	subtestJobUnmarshal(c, topo, importExpectedYaml)
+	// Test with export job
+	topo = new(DMSTopologySpecification)
+	topo.Job.Action = "export"
+	topo.Job.Type = "mysql"
+	topo.Job.Sources = append(topo.Job.Sources, databaseServerSpecArray[0], databaseServerSpecArray[1], databaseServerSpecArray[2])
+	topo.Job.Sink = fileServerSpecArray[0]
+	topo.Job.Workers = append(topo.Job.Workers, workerSpec)
+	subtestJobUnmarshal(c, topo, exportExpectedYaml)
+	// Test with migrate
+	topo = new(DMSTopologySpecification)
+	topo.Job.Action = "migrate"
+	topo.Job.Type = "mysql"
+	topo.Job.Sources = append(topo.Job.Sources, databaseServerSpecArray[0], databaseServerSpecArray[1], databaseServerSpecArray[2])
+	topo.Job.Sink = databaseServerSpecArray[3]
+	topo.Job.Workers = append(topo.Job.Workers, workerSpec)
+	subtestJobUnmarshal(c, topo, migrateExpectedYaml)
+
+	// Test invalid job action
+	topo = new(DMSTopologySpecification)
+	wrongJobActionYaml := strings.ReplaceAll(importExpectedYaml, "import", "invalidAction")
+	err := yaml.Unmarshal([]byte(wrongJobActionYaml), topo)
+	c.Assert(err, ErrorMatches, "invalid job action invalidAction")
+
+	actionArray := []string{"import", "export", "migrate"}
+	yamlArray := []string{importExpectedYaml, exportExpectedYaml, migrateExpectedYaml}
+	for i := range actionArray {
+		for j := range yamlArray {
+			if i == j {
+				continue
+			}
+			wrongSourceTypeYaml := strings.ReplaceAll(yamlArray[i], actionArray[i], actionArray[j])
+			err := yaml.Unmarshal([]byte(wrongSourceTypeYaml), topo)
+			c.Assert(err, ErrorMatches, "invalid job action invalidAction")
+		}
+	}
 }
 
 func (s *metaSuite) TestDefaultDataDir(c *C) {
