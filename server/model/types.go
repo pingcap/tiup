@@ -41,6 +41,19 @@ type IndexManifest struct {
 	Signed v1manifest.Index `json:"signed"`
 }
 
+// KeyOwner returns the owner or nil for a given keyid
+func (m *IndexManifest) KeyOwner(keyid string) (string, *v1manifest.Owner) {
+	for on := range m.Signed.Owners {
+		for k := range m.Signed.Owners[on].Keys {
+			if k == keyid {
+				o := m.Signed.Owners[on]
+				return on, &o
+			}
+		}
+	}
+	return "", nil
+}
+
 // SnapshotManifest represents snapshot.json
 type SnapshotManifest struct {
 	// Signatures value

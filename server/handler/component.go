@@ -46,6 +46,15 @@ func (h *componentSigner) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr *simpleResponse, err statusError) {
 	sid := mux.Vars(r)["sid"]
 	name := mux.Vars(r)["name"]
+	options := make(map[string]bool)
+
+	for _, opt := range []string{"yanked", "standalone", "hidden"} {
+		if query(r, opt) == "true" {
+			options[opt] = true
+		} else if query(r, opt) == "false" {
+			options[opt] = false
+		}
+	}
 
 	blackList := []string{"root", "index", "snapshot", "timestamp"}
 	for _, b := range blackList {
@@ -57,7 +66,13 @@ func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr 
 	log.Infof("Sign component manifest for %s, sid: %s", name, sid)
 	txn := h.sm.Load(sid)
 	if txn == nil {
-		return nil, ErrorSessionMissing
+		if e := h.sm.Begin(sid); e != nil {
+			log.Errorf("Begin session %s", e.Error())
+			return nil, ErrorInternalError
+		}
+		if txn = h.sm.Load(sid); txn == nil {
+			return nil, ErrorSessionMissing
+		}
 	}
 
 	initTime := time.Now()
@@ -80,20 +95,58 @@ func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr 
 		}
 
 		var indexVersion uint
-		var keys map[string]*v1manifest.KeyInfo
+		var owner *v1manifest.Owner
 		if err := md.UpdateIndexManifest(initTime, func(om *model.IndexManifest) *model.IndexManifest {
-			om.Signed.Components[name] = v1manifest.ComponentItem{
-				Owner: "pingcap", // TODO: read this from request
-				URL:   fmt.Sprintf("/%s.json", name),
+			// We only update index.json when it's a new component
+			// or the yanked, standalone, hidden fileds changed
+			var (
+				compItem  v1manifest.ComponentItem
+				compExist bool
+			)
+
+			if compItem, compExist = om.Signed.Components[name]; compExist {
+				// Find the owner of target component
+				o := om.Signed.Owners[compItem.Owner]
+				owner = &o
+				if len(options) == 0 {
+					// No changes on index.json
+					indexVersion = om.Signed.Version
+					return nil
+				}
+				if opt, ok := options["yanked"]; ok {
+					compItem.Yanked = opt
+				}
+				if opt, ok := options["hidden"]; ok {
+					compItem.Hidden = opt
+				}
+				if opt, ok := options["standalone"]; ok {
+					compItem.Standalone = opt
+				}
+			} else {
+				var ownerID string
+				// The component is a new component, so the owner is whoever first create it.
+				for _, sk := range m.Signatures {
+					if ownerID, owner = om.KeyOwner(sk.KeyID); owner != nil {
+						break
+					}
+				}
+				compItem = v1manifest.ComponentItem{
+					Owner:      ownerID,
+					URL:        fmt.Sprintf("/%s.json", name),
+					Yanked:     options["yanked"],
+					Standalone: options["standalone"],
+					Hidden:     options["hidden"],
+				}
 			}
-			keys = om.Signed.Owners["pingcap"].Keys
+
+			om.Signed.Components[name] = compItem
 			indexVersion = om.Signed.Version + 1
 			return om
 		}); err != nil {
 			return err
 		}
 
-		if err := h.validate(keys, m); err != nil {
+		if err := validate(owner, m); err != nil {
 			return err
 		}
 
@@ -136,9 +189,14 @@ func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr 
 	return nil, nil
 }
 
-func (h *componentSigner) validate(keys map[string]*v1manifest.KeyInfo, m *model.ComponentManifest) error {
-	if len(keys) == 0 {
-		return nil
+// ModifyComponent handles requests to modify index.json (yank or hide components)
+func ModifyComponent(sm session.Manager, keys map[string]*v1manifest.KeyInfo) http.Handler {
+	return &componentSigner{sm, keys}
+}
+
+func validate(owner *v1manifest.Owner, m *model.ComponentManifest) error {
+	if owner == nil {
+		return ErrorForbiden
 	}
 
 	payload, err := cjson.Marshal(m.Signed)
@@ -147,7 +205,7 @@ func (h *componentSigner) validate(keys map[string]*v1manifest.KeyInfo, m *model
 	}
 
 	for _, s := range m.Signatures {
-		k := keys[s.KeyID]
+		k := owner.Keys[s.KeyID]
 		if k == nil {
 			continue
 		}
@@ -158,4 +216,14 @@ func (h *componentSigner) validate(keys map[string]*v1manifest.KeyInfo, m *model
 	}
 
 	return ErrorForbiden
+}
+
+func query(r *http.Request, q string) string {
+	qs := r.URL.Query()[q]
+
+	if len(qs) == 0 {
+		return ""
+	}
+
+	return qs[0]
 }

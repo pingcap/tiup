@@ -20,4 +20,6 @@ import (
 var (
 	// ErrorConflict indicates manifest conflict
 	ErrorConflict = errors.New("manifest conflict")
+	// ErrorMissingKey indicates that the private key is missing
+	ErrorMissingKey = errors.New("the private key is missing")
 )

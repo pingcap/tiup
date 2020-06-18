@@ -14,11 +14,12 @@
 package command
 
 import (
+	"errors"
 	"os"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -49,7 +50,7 @@ You can retain some nodes and roles data when destroy cluster, eg:
 				validRoles := set.NewStringSet(meta.AllComponentNames()...)
 				for _, role := range destoyOpt.RetainDataRoles {
 					if !validRoles.Exist(role) {
-						return errors.Errorf("role name `%s` invalid", role)
+						return perrs.Errorf("role name `%s` invalid", role)
 					}
 				}
 			}
@@ -57,12 +58,12 @@ You can retain some nodes and roles data when destroy cluster, eg:
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-				return errors.Errorf("cannot destroy non-exists cluster %s", clusterName)
+				return perrs.Errorf("cannot destroy non-exists cluster %s", clusterName)
 			}
 
 			logger.EnableAuditLog()
 			metadata, err := meta.ClusterMetadata(clusterName)
-			if err != nil {
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 				return err
 			}
 
@@ -90,11 +91,11 @@ You can retain some nodes and roles data when destroy cluster, eg:
 					// FIXME: Map possible task errors and give suggestions.
 					return err
 				}
-				return errors.Trace(err)
+				return perrs.Trace(err)
 			}
 
 			if err := os.RemoveAll(meta.ClusterPath(clusterName)); err != nil {
-				return errors.Trace(err)
+				return perrs.Trace(err)
 			}
 			log.Infof("Destroyed cluster `%s` successfully", clusterName)
 			return nil
