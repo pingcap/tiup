@@ -107,7 +107,7 @@ func (i *DrainerInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		return err
 	}
 
-	specConfig := spec.Config
+	globalConfig := i.topo.ServerConfigs.Drainer
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -124,14 +124,13 @@ func (i *DrainerInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clus
 		if err != nil {
 			return err
 		}
-		mergedConfig, err := mergeImported(importConfig, spec.Config)
+		globalConfig, err = mergeImported(importConfig, globalConfig)
 		if err != nil {
 			return err
 		}
-		specConfig = mergedConfig
 	}
 
-	if err := i.mergeServerConfig(e, i.topo.ServerConfigs.Drainer, specConfig, paths); err != nil {
+	if err := i.mergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
 

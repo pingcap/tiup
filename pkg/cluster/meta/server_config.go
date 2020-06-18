@@ -102,17 +102,19 @@ func flattenMap(ms map[string]interface{}) (map[string]interface{}, error) {
 	return result, nil
 }
 
-func merge(orig, overwrite map[string]interface{}) (map[string]interface{}, error) {
+func merge(orig map[string]interface{}, overwrites ...map[string]interface{}) (map[string]interface{}, error) {
 	lhs, err := flattenMap(orig)
 	if err != nil {
 		return nil, err
 	}
-	rhs, err := flattenMap(overwrite)
-	if err != nil {
-		return nil, err
-	}
-	for k, v := range rhs {
-		patch(lhs, k, v)
+	for _, overwrite := range overwrites {
+		rhs, err := flattenMap(overwrite)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range rhs {
+			patch(lhs, k, v)
+		}
 	}
 	return lhs, nil
 }
@@ -141,16 +143,16 @@ func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, 
 	return buf.Bytes(), nil
 }
 
-func mergeImported(importConfig []byte, specConfig map[string]interface{}) (map[string]interface{}, error) {
+func mergeImported(importConfig []byte, specConfigs ...map[string]interface{}) (map[string]interface{}, error) {
 	var configData map[string]interface{}
 	if err := toml.Unmarshal(importConfig, &configData); err != nil {
-		return specConfig, errors.Trace(err)
+		return nil, errors.Trace(err)
 	}
 
 	// overwrite topology specifieced configs upon the imported configs
-	lhs, err := merge(configData, specConfig)
+	lhs, err := merge(configData, specConfigs...)
 	if err != nil {
-		return specConfig, errors.Trace(err)
+		return nil, errors.Trace(err)
 	}
 	return lhs, nil
 }

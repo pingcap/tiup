@@ -48,6 +48,9 @@ func newServer(rootDir, upstream, indexKey, snapshotKey, timestampKey string) (*
 	}
 
 	for ty, kfile := range kmap {
+		if kfile == "" {
+			continue
+		}
 		k, err := loadPrivateKey(kfile)
 		if err != nil {
 			return nil, err

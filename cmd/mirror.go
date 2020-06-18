@@ -28,8 +28,10 @@ import (
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/remote"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -76,6 +78,7 @@ of components or the repository itself.`,
 		newMirrorGenkeyCmd(),
 		newMirrorCloneCmd(),
 		newMirrorPublishCmd(),
+		newMirrorModifyCmd(),
 	)
 
 	return cmd
@@ -190,13 +193,81 @@ func delComp(repo, id, version string) error {
 	return nil
 }
 
-// the `repo publish` sub command
+// the `mirror modify` sub command
+func newMirrorModifyCmd() *cobra.Command {
+	var privPath string
+	endpoint := environment.Mirror()
+	desc := ""
+	standalone := false
+	hidden := false
+	yanked := false
+
+	cmd := &cobra.Command{
+		Use:  "modify <comp-name> [flags]",
+		Long: "modify component attributes (hidden, standalone, yanked)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return cmd.Help()
+			}
+			env := environment.GlobalEnv()
+			if privPath == "" {
+				privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
+			}
+
+			// Get the private key
+			f, err := os.Open(privPath)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			ki := v1manifest.KeyInfo{}
+			if err := json.NewDecoder(f).Decode(&ki); err != nil {
+				return err
+			}
+
+			m, err := env.V1Repository().FetchComponentManifest(args[0])
+			if err != nil {
+				return err
+			}
+
+			e := remote.NewEditor(endpoint, args[0]).WithDesc(desc)
+			flagSet := set.NewStringSet()
+			cmd.Flags().Visit(func(f *pflag.Flag) {
+				flagSet.Insert(f.Name)
+			})
+			if flagSet.Exist("standalone") {
+				e.Standalone(standalone)
+			}
+			if flagSet.Exist("hide") {
+				e.Hide(hidden)
+			}
+			if flagSet.Exist("yank") {
+				e.Yank(yanked)
+			}
+
+			return e.Sign(&ki, m)
+		},
+	}
+
+	cmd.Flags().StringVarP(&privPath, "key", "k", "", "private key path")
+	cmd.Flags().StringVarP(&endpoint, "endpoint", "", endpoint, "endpoint of the server")
+	cmd.Flags().StringVarP(&desc, "desc", "", desc, "description of the component")
+	cmd.Flags().BoolVarP(&standalone, "standalone", "", standalone, "can this component run directly")
+	cmd.Flags().BoolVarP(&hidden, "hide", "", hidden, "is this component visible in list")
+	cmd.Flags().BoolVarP(&yanked, "yank", "", yanked, "is this component deprecated")
+	return cmd
+}
+
+// the `mirror publish` sub command
 func newMirrorPublishCmd() *cobra.Command {
 	var privPath string
 	endpoint := environment.Mirror()
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH
 	desc := ""
+	standalone := false
+	hidden := false
 
 	cmd := &cobra.Command{
 		Use:   "publish <comp-name> <version> <tarball> <entry>",
@@ -223,7 +294,26 @@ func newMirrorPublishCmd() *cobra.Command {
 				return err
 			}
 
-			t := remote.New(endpoint, args[0], args[1], args[3]).WithDesc(desc).WithOS(goos).WithArch(goarch)
+			flagSet := set.NewStringSet()
+			cmd.Flags().Visit(func(f *pflag.Flag) {
+				flagSet.Insert(f.Name)
+			})
+			m, err := env.V1Repository().FetchComponentManifest(args[0])
+			if err != nil {
+				fmt.Printf("Fetch local manifest: %s\n", err.Error())
+				fmt.Printf("Failed to load component manifest, create a new one\n")
+			} else if flagSet.Exist("standalone") || flagSet.Exist("hide") {
+				fmt.Println("This is not a new component, --standalone and --hide flag will be omited")
+			}
+
+			t := remote.NewTransporter(endpoint, args[0], args[1], args[3]).WithDesc(desc).WithOS(goos).WithArch(goarch)
+			if m == nil && standalone {
+				t = t.Standalone()
+			}
+			if m == nil && hidden {
+				t = t.Hide()
+			}
+
 			if err := t.Open(args[2]); err != nil {
 				return err
 			}
@@ -232,12 +322,6 @@ func newMirrorPublishCmd() *cobra.Command {
 			if err := t.Upload(); err != nil {
 				fmt.Printf("Failed to upload component: %s\n", err.Error())
 				return err
-			}
-
-			m, err := env.V1Repository().FetchComponentManifest(args[0])
-			if err != nil {
-				fmt.Printf("Fetch local manifest: %s\n", err.Error())
-				fmt.Printf("Failed to load component manifest, create a new one\n")
 			}
 
 			if err := t.Sign(&ki, m); err != nil {
@@ -255,6 +339,8 @@ func newMirrorPublishCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&goarch, "arch", "", goarch, "the target system architecture")
 	cmd.Flags().StringVarP(&desc, "desc", "", desc, "description of the component")
 	cmd.Flags().StringVarP(&endpoint, "endpoint", "", endpoint, "endpoint of the server")
+	cmd.Flags().BoolVarP(&standalone, "standalone", "", standalone, "can this component run directly")
+	cmd.Flags().BoolVarP(&hidden, "hide", "", hidden, "is this component invisible on listing")
 	return cmd
 }
 

@@ -23,7 +23,6 @@ import (
 
 	"github.com/pingcap/tiup/pkg/cluster/template/install"
 
-	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
 	ru "github.com/pingcap/tiup/pkg/repository/utils"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
@@ -152,8 +151,6 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 		return err
 	}
 
-	const limitLength = 1024 * 1024
-
 	for name, component := range componentManifests {
 		component.SetExpiresAt(expirsAt)
 		fname := fmt.Sprintf("%s.json", name)
@@ -165,15 +162,6 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 		index.Components[component.ID] = v1manifest.ComponentItem{
 			Owner: "pingcap",
 			URL:   fmt.Sprintf("/%s", fname),
-		}
-		bytes, err := cjson.Marshal(signedManifests[component.ID])
-		if err != nil {
-			return err
-		}
-		var _ = len(bytes) // this length is the not final length, since we still change the manifests before write it to disk.
-		snapshot.Meta["/"+name] = v1manifest.FileVersion{
-			Version: 1,
-			Length:  limitLength,
 		}
 	}
 

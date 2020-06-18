@@ -35,7 +35,7 @@ func staticServer(local string, upstream string) http.Handler {
 				log.Errorf("Proxy upstream: %s", err.Error())
 				fsh.ServeHTTP(w, r)
 			}
-			log.Errorf("Hanle file: %s", err.Error())
+			log.Errorf("Handle file: %s", err.Error())
 			return
 		}
 		fsh.ServeHTTP(w, r)
