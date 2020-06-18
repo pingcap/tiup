@@ -15,8 +15,10 @@ package command
 
 /*
 import (
+	"errors"
+
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -37,12 +39,12 @@ func newStopCmd() *cobra.Command {
 
 			clusterName := args[0]
 			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-				return errors.Errorf("cannot stop non-exists cluster %s", clusterName)
+				return perrs.Errorf("cannot stop non-exists cluster %s", clusterName)
 			}
 
 			logger.EnableAuditLog()
 			metadata, err := meta.DMMetadata(clusterName)
-			if err != nil {
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 				return err
 			}
 
@@ -59,7 +61,7 @@ func newStopCmd() *cobra.Command {
 					// FIXME: Map possible task errors and give suggestions.
 					return err
 				}
-				return errors.Trace(err)
+				return perrs.Trace(err)
 			}
 
 			log.Infof("Stopped cluster `%s` successfully", clusterName)

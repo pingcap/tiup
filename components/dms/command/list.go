@@ -15,10 +15,11 @@ package command
 
 /*
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
@@ -51,8 +52,8 @@ func listCluster() error {
 			continue
 		}
 		metadata, err := meta.DMMetadata(fi.Name())
-		if err != nil {
-			return errors.Trace(err)
+		if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+			return perrs.Trace(err)
 		}
 
 		clusterTable = append(clusterTable, []string{

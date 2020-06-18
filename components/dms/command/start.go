@@ -15,8 +15,10 @@ package command
 
 /*
 import (
+	"errors"
+
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -37,7 +39,7 @@ func newStartCmd() *cobra.Command {
 
 			clusterName := args[0]
 			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-				return errors.Errorf("cannot start non-exists cluster %s", clusterName)
+				return perrs.Errorf("cannot start non-exists cluster %s", clusterName)
 			}
 
 			return startCluster(clusterName, gOpt)
@@ -54,7 +56,7 @@ func startCluster(clusterName string, options operator.Options) error {
 	logger.EnableAuditLog()
 	log.Infof("Starting cluster %s...", clusterName)
 	metadata, err := meta.DMMetadata(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 		return err
 	}
 
@@ -71,7 +73,7 @@ func startCluster(clusterName string, options operator.Options) error {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
 		}
-		return errors.Trace(err)
+		return perrs.Trace(err)
 	}
 
 	log.Infof("Started cluster `%s` successfully", clusterName)
