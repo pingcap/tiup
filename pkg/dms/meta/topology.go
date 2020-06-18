@@ -54,9 +54,12 @@ type (
 
 	// DMSTopologySpecification represents the specification of topology.yaml
 	DMSTopologySpecification struct {
-		GlobalOptions    GlobalOptions    `yaml:"global,omitempty"`
-		MonitoredOptions MonitoredOptions `yaml:"monitored,omitempty"`
-		Job              JobSpec          `yaml:"job"`
+		GlobalOptions    GlobalOptions      `yaml:"global,omitempty"`
+		MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty"`
+		Job              JobSpec            `yaml:"job"`
+		Monitors         []PrometheusSpec   `yaml:"monitoring_servers"`
+		Grafana          []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
+		Alertmanager     []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
 	}
 )
 
@@ -71,37 +74,6 @@ func AllDMSComponentNames() (roles []string) {
 	return
 }
 
-// JobSpec represents the data migration job that users want to do
-type JobSpec struct {
-	Action  string                 `yaml:"action"`
-	Type    string                 `yaml:"type"`
-	Name    string                 `yaml:"name,omitempty"`
-	Config  map[string]interface{} `yaml:"config,omitempty"`
-	Sources []SourceSpec           `yaml:"sources"`
-	Sink    SourceSpec             `yaml:"sink"`
-	Workers []WorkerSpec           `yaml:"workers"`
-	// job related specs, once job is stopped, these specs should stopped
-	DMMasters    []DMMasterSpec     `yaml:"dm-masters,omitempty"`
-	Monitors     []PrometheusSpec   `yaml:"monitoring_servers"`
-	Grafana      []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
-	Alertmanager []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
-}
-
-// SourceSpec represents a data source (could be file path or address to a database)
-type SourceSpec struct {
-	Host     string                 `yaml:"host"`
-	Path     string                 `yaml:"path,omitempty"`
-	Port     string                 `yaml:"port,omitempty"`
-	User     string                 `yaml:"user,omitempty"`
-	Password string                 `yaml:"password,omitempty"`
-	Config   map[string]interface{} `yaml:"config,omitempty"`
-	// source related specs, once source is deleted, these specs should be stopped
-	Dumpling  DumplingSpec  `yaml:"dumpling,omitempty"`
-	Lightning LightningSpec `yaml:"lightning,omitempty"`
-	Importer  ImporterSpec  `yaml:"importer,omitempty"`
-	DMWorker  DMWorkerSpec  `yaml:"dm-worker,omitempty"`
-}
-
 // WorkerSpec represents a server instance to do the dms job
 type WorkerSpec struct {
 	Host            string          `yaml:"host"`
@@ -113,6 +85,107 @@ type WorkerSpec struct {
 	ResourceControl ResourceControl `yaml:"resource_control,omitempty"`
 	Arch            string          `yaml:"arch,omitempty"`
 	OS              string          `yaml:"os,omitempty"`
+}
+
+type SourceSpec interface {
+	sourceSpec()
+}
+
+type SinkSpec interface {
+	sinkSpec()
+}
+
+// FileServerSpec represents a data source (file path)
+type FileServerSpec struct {
+	SourceSpec `yaml:"-"`
+	SinkSpec   `yaml:"-"`
+
+	Host    string                 `yaml:"host"`
+	SSHPort int                    `yaml:"ssh_port,omitempty"`
+	Path    string                 `yaml:"path,omitempty"`
+	Config  map[string]interface{} `yaml:"config,omitempty"`
+}
+
+// DatabaseServerSpec represents a data source (address to a database)
+type DatabaseServerSpec struct {
+	SourceSpec `yaml:"-"`
+	SinkSpec   `yaml:"-"`
+
+	Host     string                 `yaml:"host"`
+	Port     int                    `yaml:"port,omitempty"`
+	User     string                 `yaml:"user,omitempty"`
+	Password string                 `yaml:"password,omitempty"`
+	Config   map[string]interface{} `yaml:"config,omitempty"`
+}
+
+type JobSpecHeader struct {
+	Action  string                 `yaml:"action"`
+	Type    string                 `yaml:"type"`
+	Config  map[string]interface{} `yaml:"config,omitempty"`
+	Workers []WorkerSpec           `yaml:"workers"`
+}
+
+type JobSpecBody struct {
+	Sources []SourceSpec `yaml:"sources"`
+	Sink    SinkSpec     `yaml:"sink"`
+}
+
+// JobSpec represents the data migration job that users want to do
+type JobSpec struct {
+	JobSpecHeader `yaml:"-,inline"`
+	JobSpecBody   `yaml:"-,inline"`
+}
+
+func (s *JobSpec) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var header JobSpecHeader
+	if err := unmarshal(&header); err != nil {
+		return err
+	}
+
+	s.JobSpecHeader = header
+
+	switch header.Action {
+	case "migrate":
+		var body = struct {
+			Sources []DatabaseServerSpec `yaml:"sources"`
+			Sink    DatabaseServerSpec   `yaml:"sink"`
+		}{}
+		if err := unmarshal(&body); err != nil {
+			return err
+		}
+		for _, src := range body.Sources {
+			s.Sources = append(s.Sources, src)
+		}
+		s.Sink = body.Sink
+	case "import":
+		var body = struct {
+			Sources []FileServerSpec   `yaml:"sources"`
+			Sink    DatabaseServerSpec `yaml:"sink"`
+		}{}
+		if err := unmarshal(&body); err != nil {
+			return err
+		}
+		for _, src := range body.Sources {
+			s.Sources = append(s.Sources, src)
+		}
+		s.Sink = body.Sink
+	case "export":
+		var body = struct {
+			Sources []DatabaseServerSpec `yaml:"sources"`
+			Sink    FileServerSpec       `yaml:"sink"`
+		}{}
+		if err := unmarshal(&body); err != nil {
+			return err
+		}
+		for _, src := range body.Sources {
+			s.Sources = append(s.Sources, src)
+		}
+		s.Sink = body.Sink
+	default:
+		return errors.Errorf("invalid job action %s", header.Action)
+	}
+
+	return nil
 }
 
 // PrometheusSpec represents the Prometheus Server topology specification in topology.yaml
@@ -511,12 +584,13 @@ func (topo *DMSTopologySpecification) UnmarshalYAML(unmarshal func(interface{}) 
 var (
 	globalOptionTypeName  = reflect.TypeOf(GlobalOptions{}).Name()
 	monitorOptionTypeName = reflect.TypeOf(MonitoredOptions{}).Name()
+	jobSpecTypeName       = reflect.TypeOf(JobSpec{}).Name()
 )
 
-// Skip global/monitored options
+// Skip global/monitored/job options
 func isSkipField(field reflect.Value) bool {
 	tp := field.Type().Name()
-	return tp == globalOptionTypeName || tp == monitorOptionTypeName
+	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == jobSpecTypeName
 }
 
 func setDefaultDir(parent, role, port string, field reflect.Value) {
@@ -553,17 +627,11 @@ func (topo *DMSTopologySpecification) platformConflictsDetect() error {
 	topoSpec := reflect.ValueOf(topo).Elem()
 	topoType := reflect.TypeOf(topo).Elem()
 
-	for i := 0; i < topoSpec.NumField(); i++ {
-		if isSkipField(topoSpec.Field(i)) {
-			continue
-		}
-
-		compSpecs := topoSpec.Field(i)
+	checkConflict := func(compSpecs reflect.Value, cfg string) error {
 		for index := 0; index < compSpecs.Len(); index++ {
 			compSpec := compSpecs.Index(index)
 			// check hostname
 			host := compSpec.FieldByName("Host").String()
-			cfg := topoType.Field(i).Tag.Get("yaml")
 			if host == "" {
 				return errors.Errorf("`%s` contains empty host field", cfg)
 			}
@@ -588,8 +656,27 @@ func (topo *DMSTopologySpecification) platformConflictsDetect() error {
 			}
 			platformStats[host] = stat
 		}
+		return nil
 	}
-	return nil
+
+	for i := 0; i < topoSpec.NumField(); i++ {
+		if isSkipField(topoSpec.Field(i)) {
+			continue
+		}
+
+		compSpecs := topoSpec.Field(i)
+		err := checkConflict(compSpecs, topoType.Field(i).Tag.Get("yaml"))
+		if err != nil {
+			return err
+		}
+	}
+
+	workerSpec := reflect.ValueOf(topo.Job.Workers)
+	var workerTypeName string
+	if workerType, ok := reflect.TypeOf(topo.Job).FieldByName("Workers"); ok {
+		workerTypeName = workerType.Tag.Get("yaml")
+	}
+	return checkConflict(workerSpec, workerTypeName)
 }
 
 func (topo *DMSTopologySpecification) portConflictsDetect() error {
@@ -791,10 +878,17 @@ func (topo *DMSTopologySpecification) GetMasterList() []string {
 
 // Merge returns a new TopologySpecification which sum old ones
 func (topo *DMSTopologySpecification) Merge(that *DMSTopologySpecification) *DMSTopologySpecification {
-	return &DMSTopologySpecification{
+	mergedTopo := &DMSTopologySpecification{
 		GlobalOptions:    topo.GlobalOptions,
 		MonitoredOptions: topo.MonitoredOptions,
+		Job:              topo.Job,
+		Monitors:         append(topo.Monitors, that.Monitors...),
+		Grafana:          append(topo.Grafana, that.Grafana...),
+		Alertmanager:     append(topo.Alertmanager, that.Alertmanager...),
 	}
+	mergedTopo.Job.Workers = append(topo.Job.Workers, that.Job.Workers...)
+	mergedTopo.Job.Sources = append(topo.Job.Sources, that.Job.Sources...)
+	return mergedTopo
 }
 
 // fillDefaults tries to fill custom fields to their default values
@@ -813,7 +907,7 @@ func fillDMCustomDefaults(globalOptions *GlobalOptions, data interface{}) error 
 }
 
 func setDMCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error {
-	if !field.CanSet() || isSkipField(field) {
+	if !field.CanSet() || (field.Type().Name() != jobSpecTypeName && isSkipField(field)) {
 		return nil
 	}
 
@@ -863,10 +957,14 @@ func setDMCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) erro
 			// If the data dir in global options is an obsolute path, it appends to
 			// the global and has a comp-port sub directory
 			if strings.HasPrefix(globalOptions.DataDir, "/") {
-				field.Field(j).Set(reflect.ValueOf(filepath.Join(
-					globalOptions.DataDir,
-					fmt.Sprintf("%s-%s", field.Interface().(InstanceSpec).Role(), getPort(field)),
-				)))
+				if instanceSpec, ok := field.Interface().(InstanceSpec); ok {
+					field.Field(j).Set(reflect.ValueOf(filepath.Join(
+						globalOptions.DataDir,
+						fmt.Sprintf("%s-%s", instanceSpec.Role(), getPort(field)),
+					)))
+				} else {
+					field.Field(j).Set(reflect.ValueOf(globalOptions.DataDir))
+				}
 				continue
 			}
 			// If the data dir in global options is empty or a relative path, keep it be relative
@@ -879,7 +977,15 @@ func setDMCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) erro
 				field.Field(j).Set(reflect.ValueOf(globalOptions.DataDir))
 			}
 		case "DeployDir":
-			setDefaultDir(globalOptions.DeployDir, field.Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
+			deployDir := field.Field(j).String()
+			if deployDir != "" { // already have a value, skip filling default values
+				continue
+			}
+			if instanceSpec, ok := field.Interface().(InstanceSpec); ok {
+				setDefaultDir(globalOptions.DeployDir, instanceSpec.Role(), getPort(field), field.Field(j))
+			} else {
+				field.Field(j).Set(reflect.ValueOf(globalOptions.DeployDir))
+			}
 		case "LogDir":
 			if field.Field(j).String() == "" && defaults.CanUpdate(field.Field(j).Interface()) {
 				field.Field(j).Set(reflect.ValueOf(globalOptions.LogDir))
