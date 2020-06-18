@@ -54,7 +54,7 @@ func parseInventoryFile(invFile io.Reader) (string, *meta.ClusterMeta, *aini.Inv
 	}
 
 	clsMeta := &meta.ClusterMeta{
-		Topology: &meta.TopologySpecification{
+		Topology: &meta.ClusterSpecification{
 			GlobalOptions:    meta.GlobalOptions{},
 			MonitoredOptions: meta.MonitoredOptions{},
 			TiDBServers:      make([]meta.TiDBSpec, 0),

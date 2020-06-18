@@ -111,7 +111,7 @@ dm-worker_servers:
     data_dir: "/test-1"
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "directory '/test-1' conflicts between 'dm-master_servers:172.16.5.138.deploy_dir' and 'dm-worker_servers:172.16.5.138.data_dir'")
+	c.Assert(err.Error(), Equals, "directory conflict for '/test-1' between 'dm-master_servers:172.16.5.138.deploy_dir' and 'dm-worker_servers:172.16.5.138.data_dir'")
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -145,7 +145,7 @@ dm-worker_servers:
     port: 1234
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "port '1234' conflicts between 'dm-master_servers:172.16.5.138.peer_port' and 'dm-worker_servers:172.16.5.138.port'")
+	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'dm-master_servers:172.16.5.138.peer_port' and 'dm-worker_servers:172.16.5.138.port'")
 
 	topo = DMTopologySpecification{}
 	err = yaml.Unmarshal([]byte(`
@@ -159,7 +159,7 @@ dm-worker_servers:
     status_port: 2345
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "port '1234' conflicts between 'dm-master_servers:172.16.5.138.port' and 'monitored:172.16.5.138.node_exporter_port'")
+	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'dm-master_servers:172.16.5.138.port' and 'monitored:172.16.5.138.node_exporter_port'")
 
 }
 
@@ -190,7 +190,7 @@ dm-worker_servers:
   - host: 172.16.5.138
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' as in 'dm-master_servers:linux/arm64' and 'dm-worker_servers:linux/amd64'")
+	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' between 'dm-master_servers:linux/arm64' and 'dm-worker_servers:linux/amd64'")
 
 	// different os defined for the same host
 	topo = DMTopologySpecification{}
@@ -205,6 +205,76 @@ dm-worker_servers:
   - host: 172.16.5.138
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' as in 'dm-master_servers:darwin/arm64' and 'dm-worker_servers:linux/arm64'")
+	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' between 'dm-master_servers:darwin/arm64' and 'dm-worker_servers:linux/arm64'")
 
+}
+
+func (s *metaSuiteDM) TestCountDir(c *C) {
+	topo := DMTopologySpecification{}
+
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+dm-master_servers:
+  - host: 172.16.5.138
+    deploy_dir: "master-deploy"
+    data_dir: "/test-data/data-1"
+dm-worker_servers:
+  - host: 172.16.5.53
+    data_dir: "test-1"
+`), &topo)
+	c.Assert(err, IsNil)
+	cnt := topo.CountDir("172.16.5.53", "test-deploy/dm-worker-8262")
+	c.Assert(cnt, Equals, 3)
+	cnt = topo.CountDir("172.16.5.138", "/test-data/data")
+	c.Assert(cnt, Equals, 0) // should not match partial path
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "/test-deploy"
+dm-master_servers:
+  - host: 172.16.5.138
+    deploy_dir: "master-deploy"
+    data_dir: "/test-data/data-1"
+dm-worker_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-data/data-2"
+`), &topo)
+	c.Assert(err, IsNil)
+	cnt = topo.CountDir("172.16.5.138", "/test-deploy/dm-worker-8262")
+	c.Assert(cnt, Equals, 2)
+	cnt = topo.CountDir("172.16.5.138", "")
+	c.Assert(cnt, Equals, 2)
+	cnt = topo.CountDir("172.16.5.138", "test-data")
+	c.Assert(cnt, Equals, 0)
+	cnt = topo.CountDir("172.16.5.138", "/test-data")
+	c.Assert(cnt, Equals, 2)
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "/test-deploy"
+  data_dir: "/test-data"
+dm-master_servers:
+  - host: 172.16.5.138
+    data_dir: "data-1"
+dm-worker_servers:
+  - host: 172.16.5.138
+    data_dir: "data-2"
+  - host: 172.16.5.53
+`), &topo)
+	c.Assert(err, IsNil)
+	// if per-instance data_dir is set, the global data_dir is ignored, and if it
+	// is a relative path, it will be under the instance's deploy_dir
+	cnt = topo.CountDir("172.16.5.138", "/test-deploy/dm-worker-8262")
+	c.Assert(cnt, Equals, 3)
+	cnt = topo.CountDir("172.16.5.138", "")
+	c.Assert(cnt, Equals, 0)
+	cnt = topo.CountDir("172.16.5.53", "/test-data")
+	c.Assert(cnt, Equals, 1)
 }

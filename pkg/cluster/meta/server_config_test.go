@@ -19,7 +19,7 @@ server_configs:
     performance.feedback-probability: 0.0
 `)
 
-	topo := new(TopologySpecification)
+	topo := new(ClusterSpecification)
 
 	err := yaml.Unmarshal(yamlData, topo)
 	c.Assert(err, check.IsNil)

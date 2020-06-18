@@ -15,12 +15,13 @@ package command
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
 
 	"github.com/fatih/color"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/edit"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
@@ -42,12 +43,12 @@ func newEditConfigCmd() *cobra.Command {
 
 			clusterName := args[0]
 			if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-				return errors.Errorf("cannot start non-exists cluster %s", clusterName)
+				return perrs.Errorf("cannot start non-exists cluster %s", clusterName)
 			}
 
 			logger.EnableAuditLog()
 			metadata, err := meta.DMMetadata(clusterName)
-			if err != nil {
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 				return err
 			}
 
@@ -65,42 +66,42 @@ func newEditConfigCmd() *cobra.Command {
 func editTopo(clusterName string, metadata *meta.DMMeta) error {
 	data, err := yaml.Marshal(metadata.Topology)
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	file, err := ioutil.TempFile(os.TempDir(), "*")
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	name := file.Name()
 
 	_, err = io.Copy(file, bytes.NewReader(data))
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	err = file.Close()
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	err = edit.OpenFileInEditor(name)
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	// Now user finish editing the file.
 	newData, err := ioutil.ReadFile(name)
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	newTopo := new(meta.DMTopologySpecification)
 	err = yaml.UnmarshalStrict(newData, newTopo)
 	if err != nil {
 		log.Infof("Failed to parse topology file: %v", err)
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	if bytes.Equal(data, newData) {
@@ -123,7 +124,7 @@ func editTopo(clusterName string, metadata *meta.DMMeta) error {
 	metadata.Topology = newTopo
 	err = meta.SaveDMMeta(clusterName, metadata)
 	if err != nil {
-		return errors.Annotate(err, "failed to save")
+		return perrs.Annotate(err, "failed to save")
 	}
 
 	log.Infof("Apply change successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", cliutil.OsArgs0(), clusterName)

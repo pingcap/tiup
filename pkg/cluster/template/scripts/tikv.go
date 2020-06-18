@@ -24,15 +24,15 @@ import (
 
 // TiKVScript represent the data to generate TiKV config
 type TiKVScript struct {
-	IP            string
+	IP         string
 	ListenHost string
-	Port          int
-	StatusPort    int
-	DeployDir     string
-	DataDir       string
-	LogDir        string
-	NumaNode      string
-	Endpoints     []*PDScript
+	Port       int
+	StatusPort int
+	DeployDir  string
+	DataDir    string
+	LogDir     string
+	NumaNode   string
+	Endpoints  []*PDScript
 }
 
 // NewTiKVScript returns a TiKVScript with given arguments
