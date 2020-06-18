@@ -13,6 +13,7 @@
 
 package command
 
+/*
 import (
 	"errors"
 	"fmt"
@@ -270,3 +271,4 @@ func formatInstanceStatus(status string) string {
 		return status
 	}
 }
+*/

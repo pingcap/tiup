@@ -13,6 +13,7 @@
 
 package command
 
+/*
 import (
 	"errors"
 
@@ -125,3 +126,4 @@ func newExecCmd() *cobra.Command {
 
 	return cmd
 }
+*/

@@ -13,6 +13,7 @@
 
 package command
 
+/*
 import (
 	"errors"
 	"strings"
@@ -138,3 +139,4 @@ func scaleIn(clusterName string, options operator.Options) error {
 
 	return nil
 }
+*/

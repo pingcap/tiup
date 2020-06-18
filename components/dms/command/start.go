@@ -13,6 +13,7 @@
 
 package command
 
+/*
 import (
 	"errors"
 
@@ -79,3 +80,4 @@ func startCluster(clusterName string, options operator.Options) error {
 
 	return nil
 }
+*/

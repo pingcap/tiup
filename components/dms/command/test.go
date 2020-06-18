@@ -13,6 +13,7 @@
 
 package command
 
+/*
 import (
 	"context"
 	"errors"
@@ -99,7 +100,7 @@ func checkWorkerOnline(addr string) error {
 	return err
 }
 
-func readable(topo *meta.DMTopologySpecification) error {
+func readable(topo *meta.DMSTopologySpecification) error {
 	errg, _ := errgroup.WithContext(context.Background())
 
 	for _, spec := range topo.Masters {
@@ -128,3 +129,4 @@ func readable(topo *meta.DMTopologySpecification) error {
 
 	return errg.Wait()
 }
+*/

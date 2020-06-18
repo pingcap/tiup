@@ -41,9 +41,6 @@ import (
 
 // Components names supported by TiOps
 const (
-	ComponentDMMaster         = "dm-master"
-	ComponentDMWorker         = "dm-worker"
-	ComponentDMPortal         = "dm-portal"
 	ComponentTiDB             = "tidb"
 	ComponentTiKV             = "tikv"
 	ComponentPD               = "pd"
@@ -102,7 +99,6 @@ type Specification interface {
 	GetGlobalOptions() GlobalOptions
 	GetMonitoredOptions() MonitoredOptions
 	GetClusterSpecification() *ClusterSpecification
-	GetDMSpecification() *DMSpecification
 }
 
 // PortStarted wait until a port is being listened
@@ -1393,11 +1389,6 @@ func (topo *ClusterSpecification) GetMonitoredOptions() MonitoredOptions {
 // GetClusterSpecification returns cluster topology
 func (topo *ClusterSpecification) GetClusterSpecification() *ClusterSpecification {
 	return topo
-}
-
-// GetDMSpecification returns dm topology
-func (topo *ClusterSpecification) GetDMSpecification() *DMSpecification {
-	return nil
 }
 
 // ComponentsByStopOrder return component in the order need to stop.
