@@ -30,6 +30,10 @@ func Abs(user, path string) string {
 func MultiDirAbs(user, paths string) []string {
 	var dirs []string
 	for _, path := range strings.Split(paths, ",") {
+		path = strings.TrimSpace(path)
+		if path == "" {
+			continue
+		}
 		dirs = append(dirs, Abs(user, path))
 	}
 	return dirs
