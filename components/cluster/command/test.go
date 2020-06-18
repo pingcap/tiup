@@ -16,9 +16,10 @@ package command
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -40,11 +41,11 @@ func newTestCmd() *cobra.Command {
 
 			clusterName := args[0]
 			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-				return errors.Errorf("cannot start non-exists cluster %s", clusterName)
+				return perrs.Errorf("cannot start non-exists cluster %s", clusterName)
 			}
 
 			metadata, err := meta.ClusterMetadata(clusterName)
-			if err != nil {
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 				return err
 			}
 
@@ -68,7 +69,7 @@ func createDB(spec meta.TiDBSpec) (db *sql.DB, err error) {
 	return
 }
 
-func writable(topo *meta.TopologySpecification) error {
+func writable(topo *meta.ClusterSpecification) error {
 	errg, _ := errgroup.WithContext(context.Background())
 
 	for _, spec := range topo.TiDBServers {

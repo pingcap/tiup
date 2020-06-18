@@ -14,13 +14,14 @@
 package command
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -49,7 +50,7 @@ func newPatchCmd() *cobra.Command {
 			}
 
 			if len(gOpt.Nodes) == 0 && len(gOpt.Roles) == 0 {
-				return errors.New("the flag -R or -N must be specified at least one")
+				return perrs.New("the flag -R or -N must be specified at least one")
 			}
 			return patch(args[0], args[1], gOpt, overwrite)
 		},
@@ -64,15 +65,15 @@ func newPatchCmd() *cobra.Command {
 
 func patch(clusterName, packagePath string, options operator.Options, overwrite bool) error {
 	if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-		return errors.Errorf("cannot patch non-exists cluster %s", clusterName)
+		return perrs.Errorf("cannot patch non-exists cluster %s", clusterName)
 	}
 
 	if exist := tiuputils.IsExist(packagePath); !exist {
-		return errors.New("specified package not exists")
+		return perrs.New("specified package not exists")
 	}
 
 	metadata, err := meta.DMMetadata(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 		return err
 	}
 
@@ -107,7 +108,7 @@ func patch(clusterName, packagePath string, options operator.Options, overwrite 
 			// FIXME: Map possible task errors and give suggestions.
 			return err
 		}
-		return errors.Trace(err)
+		return perrs.Trace(err)
 	}
 
 	if overwrite {
@@ -147,7 +148,7 @@ func instancesToPatch(metadata *meta.DMMeta, options operator.Options) ([]meta.I
 
 func checkPackage(clusterName, comp, packagePath string) error {
 	metadata, err := meta.DMMetadata(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 		return err
 	}
 	manifest, err := tiupmeta.GlobalEnv().Repository().ComponentVersions(comp)

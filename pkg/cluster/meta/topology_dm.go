@@ -22,6 +22,7 @@ import (
 	"github.com/creasty/defaults"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/set"
 )
 
@@ -287,8 +288,13 @@ func (topo *DMTopologySpecification) platformConflictsDetect() error {
 			prev, exist := platformStats[host]
 			if exist {
 				if prev.os != stat.os || prev.arch != stat.arch {
-					return errors.Errorf("platform mismatch for '%s' as in '%s:%s/%s' and '%s:%s/%s'",
-						host, prev.cfg, prev.os, prev.arch, stat.cfg, stat.os, stat.arch)
+					return &validateErr{
+						ty:     errTypeMismatch,
+						target: "platform",
+						one:    fmt.Sprintf("%s:%s/%s", prev.cfg, prev.os, prev.arch),
+						two:    fmt.Sprintf("%s:%s/%s", stat.cfg, stat.os, stat.arch),
+						value:  host,
+					}
 				}
 			}
 			platformStats[host] = stat
@@ -355,8 +361,13 @@ func (topo *DMTopologySpecification) portConflictsDetect() error {
 					tp := compSpec.Type().Field(j).Tag.Get("yaml")
 					prev, exist := portStats[item]
 					if exist {
-						return errors.Errorf("port '%d' conflicts between '%s:%s.%s' and '%s:%s.%s'",
-							item.port, prev.cfg, item.host, prev.tp, cfg, item.host, tp)
+						return &validateErr{
+							ty:     errTypeConflict,
+							target: "port",
+							one:    fmt.Sprintf("%s:%s.%s", prev.cfg, item.host, prev.tp),
+							two:    fmt.Sprintf("%s:%s.%s", cfg, item.host, tp),
+							value:  item.port,
+						}
 					}
 					portStats[item] = conflict{
 						tp:  tp,
@@ -389,8 +400,13 @@ func (topo *DMTopologySpecification) portConflictsDetect() error {
 			tp := strings.Split(ft.Tag.Get("yaml"), ",")[0]
 			prev, exist := portStats[item]
 			if exist {
-				return errors.Errorf("port '%d' conflicts between '%s:%s.%s' and '%s:%s.%s'",
-					item.port, prev.cfg, item.host, prev.tp, cfg, item.host, tp)
+				return &validateErr{
+					ty:     errTypeConflict,
+					target: "port",
+					one:    fmt.Sprintf("%s:%s.%s", prev.cfg, item.host, prev.tp),
+					two:    fmt.Sprintf("%s:%s.%s", cfg, item.host, tp),
+					value:  item.port,
+				}
 			}
 			portStats[item] = conflict{
 				tp:  tp,
@@ -464,8 +480,13 @@ func (topo *DMTopologySpecification) dirConflictsDetect() error {
 					tp := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
 					prev, exist := dirStats[item]
 					if exist {
-						return errors.Errorf("directory '%s' conflicts between '%s:%s.%s' and '%s:%s.%s'",
-							item.dir, prev.cfg, item.host, prev.tp, cfg, item.host, tp)
+						return &validateErr{
+							ty:     errTypeConflict,
+							target: "directory",
+							one:    fmt.Sprintf("%s:%s.%s", prev.cfg, item.host, prev.tp),
+							two:    fmt.Sprintf("%s:%s.%s", cfg, item.host, tp),
+							value:  item.dir,
+						}
 					}
 					dirStats[item] = conflict{
 						tp:  tp,
@@ -477,6 +498,72 @@ func (topo *DMTopologySpecification) dirConflictsDetect() error {
 	}
 
 	return nil
+}
+
+// CountDir counts for dir paths used by any instance in the cluster with the same
+// prefix, useful to find potential path conflicts
+func (topo *DMTopologySpecification) CountDir(targetHost, dirPrefix string) int {
+	dirTypes := []string{
+		"DataDir",
+		"DeployDir",
+		"LogDir",
+	}
+
+	// host-path -> count
+	dirStats := make(map[string]int)
+	count := 0
+	topoSpec := reflect.ValueOf(topo).Elem()
+	dirPrefix = clusterutil.Abs(topo.GlobalOptions.User, dirPrefix)
+
+	for i := 0; i < topoSpec.NumField(); i++ {
+		if isSkipField(topoSpec.Field(i)) {
+			continue
+		}
+
+		compSpecs := topoSpec.Field(i)
+		for index := 0; index < compSpecs.Len(); index++ {
+			compSpec := compSpecs.Index(index)
+			// Directory conflicts
+			for _, dirType := range dirTypes {
+				if j, found := findField(compSpec, dirType); found {
+					dir := compSpec.Field(j).String()
+					host := compSpec.FieldByName("Host").String()
+
+					switch dirType { // the same as in logic.go for (*instance)
+					case "DataDir":
+						deployDir := compSpec.FieldByName("DeployDir").String()
+						// the default data_dir is relative to deploy_dir
+						if dir != "" && !strings.HasPrefix(dir, "/") {
+							dir = filepath.Join(deployDir, dir)
+						}
+					case "LogDir":
+						deployDir := compSpec.FieldByName("DeployDir").String()
+						field := compSpec.FieldByName("LogDir")
+						if field.IsValid() {
+							dir = field.Interface().(string)
+						}
+
+						if dir == "" {
+							dir = "log"
+						}
+						if !strings.HasPrefix(dir, "/") {
+							dir = filepath.Join(deployDir, dir)
+						}
+					}
+					dir = clusterutil.Abs(topo.GlobalOptions.User, dir)
+					dirStats[host+dir] += 1
+				}
+			}
+		}
+	}
+
+	for k, v := range dirStats {
+		if k == targetHost+dirPrefix || strings.HasPrefix(k, targetHost+dirPrefix+"/") {
+			count += v
+		}
+	}
+
+	return count
 }
 
 // Validate validates the topology specification and produce error if the
@@ -504,7 +591,7 @@ func (topo *DMTopologySpecification) GetMasterList() []string {
 	return masterList
 }
 
-// Merge returns a new TopologySpecification which sum old ones
+// Merge returns a new DMTopologySpecification which sum old ones
 func (topo *DMTopologySpecification) Merge(that *DMTopologySpecification) *DMTopologySpecification {
 	return &DMTopologySpecification{
 		GlobalOptions:    topo.GlobalOptions,

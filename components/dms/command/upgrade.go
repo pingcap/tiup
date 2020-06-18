@@ -14,11 +14,12 @@
 package command
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -60,19 +61,19 @@ func versionCompare(curVersion, newVersion string) error {
 	case -1:
 		return nil
 	case 0, 1:
-		return errors.Errorf("please specify a higher version than %s", curVersion)
+		return perrs.Errorf("please specify a higher version than %s", curVersion)
 	default:
-		return errors.Errorf("unreachable")
+		return perrs.Errorf("unreachable")
 	}
 }
 
 func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 	if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-		return errors.Errorf("cannot upgrade non-exists cluster %s", clusterName)
+		return perrs.Errorf("cannot upgrade non-exists cluster %s", clusterName)
 	}
 
 	metadata, err := meta.DMMetadata(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 		return err
 	}
 
@@ -91,7 +92,7 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 		for _, inst := range comp.Instances() {
 			version := meta.ComponentVersion(inst.ComponentName(), clusterVersion)
 			if version == "" {
-				return errors.Errorf("unsupported component: %v", inst.ComponentName())
+				return perrs.Errorf("unsupported component: %v", inst.ComponentName())
 			}
 			compInfo := componentInfo{
 				component: inst.ComponentName(),
@@ -159,15 +160,15 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
 		}
-		return errors.Trace(err)
+		return perrs.Trace(err)
 	}
 
 	metadata.Version = clusterVersion
 	if err := meta.SaveDMMeta(clusterName, metadata); err != nil {
-		return errors.Trace(err)
+		return perrs.Trace(err)
 	}
 	if err := os.RemoveAll(meta.ClusterPath(clusterName, "patch")); err != nil {
-		return errors.Trace(err)
+		return perrs.Trace(err)
 	}
 
 	log.Infof("Upgraded cluster `%s` successfully", clusterName)
