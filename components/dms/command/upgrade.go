@@ -13,6 +13,7 @@
 
 package command
 
+/*
 import (
 	"errors"
 	"fmt"
@@ -175,3 +176,4 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 
 	return nil
 }
+*/

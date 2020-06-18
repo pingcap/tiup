@@ -13,6 +13,7 @@
 
 package command
 
+/*
 import (
 	"errors"
 	"io/ioutil"
@@ -67,3 +68,4 @@ func listCluster() error {
 	cliutil.PrintTable(clusterTable, true)
 	return nil
 }
+*/

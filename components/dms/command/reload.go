@@ -13,6 +13,7 @@
 
 package command
 
+/*
 import (
 	"errors"
 
@@ -148,3 +149,4 @@ func validRoles(roles []string) error {
 
 	return nil
 }
+*/

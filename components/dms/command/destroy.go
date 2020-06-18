@@ -13,6 +13,7 @@
 
 package command
 
+/*
 import (
 	"errors"
 	"os"
@@ -87,3 +88,4 @@ func newDestroyCmd() *cobra.Command {
 
 	return cmd
 }
+*/

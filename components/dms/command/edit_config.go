@@ -13,6 +13,7 @@
 
 package command
 
+/*
 import (
 	"bytes"
 	"errors"
@@ -97,7 +98,7 @@ func editTopo(clusterName string, metadata *meta.DMMeta) error {
 		return perrs.AddStack(err)
 	}
 
-	newTopo := new(meta.DMTopologySpecification)
+	newTopo := new(meta.DMSTopologySpecification)
 	err = yaml.UnmarshalStrict(newData, newTopo)
 	if err != nil {
 		log.Infof("Failed to parse topology file: %v", err)
@@ -131,3 +132,4 @@ func editTopo(clusterName string, metadata *meta.DMMeta) error {
 
 	return nil
 }
+*/

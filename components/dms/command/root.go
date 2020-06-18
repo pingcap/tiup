@@ -13,6 +13,12 @@
 
 package command
 
+// Execute executes the root command
+func Execute() {
+
+}
+
+/*
 import (
 	"context"
 	"encoding/json"
@@ -265,3 +271,4 @@ func Execute() {
 		os.Exit(code)
 	}
 }
+*/

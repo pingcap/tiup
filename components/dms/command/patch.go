@@ -13,6 +13,7 @@
 
 package command
 
+/*
 import (
 	"errors"
 	"fmt"
@@ -194,3 +195,4 @@ func overwritePatch(clusterName, comp, packagePath string) error {
 	}
 	return os.Symlink(tg, meta.ClusterPath(clusterName, meta.PatchDirName, comp+".tar.gz"))
 }
+*/

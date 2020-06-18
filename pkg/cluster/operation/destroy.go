@@ -204,10 +204,7 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, cls topo
 			meta.ComponentPump,
 			meta.ComponentDrainer,
 			meta.ComponentPrometheus,
-			meta.ComponentAlertManager,
-			meta.ComponentDMMaster,
-			meta.ComponentDMWorker,
-			meta.ComponentDMPortal:
+			meta.ComponentAlertManager:
 			if !dataRetained {
 				if cls.CountDir(ins.GetHost(), ins.DataDir()) == 1 {
 					// only delete path if it is not used by any other instance in the cluster
@@ -215,6 +212,7 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, cls topo
 				}
 			} else if strings.HasPrefix(ins.DataDir(), deployDir) {
 				keepDeployDir = true
+
 			}
 		case meta.ComponentTiFlash:
 			for _, dataDir := range strings.Split(ins.DataDir(), ",") {

@@ -36,7 +36,7 @@ func Upgrade(
 	components := spec.ComponentsByUpdateOrder()
 	components = FilterComponent(components, roleFilter)
 
-	leaderAware := set.NewStringSet(meta.ComponentPD, meta.ComponentTiKV, meta.ComponentDMMaster)
+	leaderAware := set.NewStringSet(meta.ComponentPD, meta.ComponentTiKV)
 
 	timeoutOpt := &clusterutil.RetryOption{
 		Timeout: time.Second * time.Duration(options.APITimeout),
@@ -111,7 +111,7 @@ func Upgrade(
 				}
 				continue
 			}
-		} else if dmSpec := spec.GetDMSpecification(); dmSpec != nil {
+		} /* else if dmSpec := spec.GetDMSpecification(); dmSpec != nil {
 			// Transfer leader of evict leader if the component is TiKV/PD in non-force mode
 			if !options.Force && leaderAware.Exist(component.Name()) {
 				dmMasterClient := api.NewDMMasterClient(dmSpec.GetMasterList(), 5*time.Second, nil)
@@ -139,7 +139,7 @@ func Upgrade(
 					}
 				}
 			}
-		}
+		}*/
 
 		if err := RestartComponent(getter, instances, options.OptTimeout); err != nil {
 			return errors.Annotatef(err, "failed to restart %s", component.Name())
