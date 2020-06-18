@@ -183,8 +183,7 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, cls topo
 		e := getter.Get(ins.GetHost())
 		log.Infof("Destroying instance %s", ins.GetHost())
 
-		// Stop by systemd.
-		delPaths := make([]string, 0)
+		delPaths := set.NewStringSet()
 		switch name {
 		case meta.ComponentTiKV,
 			meta.ComponentPD,
@@ -197,13 +196,13 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, cls topo
 			meta.ComponentDMPortal:
 			if cls.CountDir(ins.GetHost(), ins.DataDir()) == 1 {
 				// only delete path if it is not used by any other instance in the cluster
-				delPaths = append(delPaths, ins.DataDir())
+				delPaths.Insert(ins.DataDir())
 			}
 		case meta.ComponentTiFlash:
 			for _, dataDir := range strings.Split(ins.DataDir(), ",") {
 				if cls.CountDir(ins.GetHost(), dataDir) == 1 {
 					// only delete path if it is not used by any other instance in the cluster
-					delPaths = append(delPaths, dataDir)
+					delPaths.Insert(dataDir)
 				}
 			}
 		}
@@ -222,20 +221,36 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, cls topo
 		// host, so not deleting it.
 		if !ins.IsImported() {
 			// only delete path if it is not used by any other instance in the cluster
+			if logDir := ins.LogDir(); cls.CountDir(ins.GetHost(), logDir) == 1 {
+				delPaths.Insert(logDir)
+			}
 			if cls.CountDir(ins.GetHost(), ins.DeployDir()) == 1 {
-				delPaths = append(delPaths, ins.DeployDir())
+				delPaths.Insert(ins.DeployDir())
 			}
+		} else { // not deleting files for imported clusters
 			if logDir := ins.LogDir(); !strings.HasPrefix(ins.DeployDir(), logDir) && cls.CountDir(ins.GetHost(), logDir) == 1 {
-				delPaths = append(delPaths, logDir)
+				delPaths.Insert(logDir)
 			}
-		} else {
 			log.Warnf("Deploy dir %s not deleted for TiDB-Ansible imported instance %s.",
 				ins.DeployDir(), ins.InstanceName())
 		}
-		delPaths = append(delPaths, fmt.Sprintf("/etc/systemd/system/%s", ins.ServiceName()))
-		log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delPaths, " "))
+
+		// check for deploy dir again, to avoid unused files being left on disk
+		dpCnt := 0
+		deployDir := ins.DeployDir()
+		for _, dir := range delPaths.Slice() {
+			if strings.HasPrefix(dir, deployDir+"/") { // only check subdir of deploy dir
+				dpCnt++
+			}
+		}
+		if cls.CountDir(ins.GetHost(), deployDir)-dpCnt == 1 {
+			delPaths.Insert(deployDir)
+		}
+
+		delPaths.Insert(fmt.Sprintf("/etc/systemd/system/%s", ins.ServiceName()))
+		log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delPaths.Slice(), " "))
 		c := module.ShellModuleConfig{
-			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delPaths, " ")),
+			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delPaths.Slice(), " ")),
 			Sudo:     true, // the .service files are in a directory owned by root
 			Chdir:    "",
 			UseShell: false,
@@ -255,7 +270,7 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, cls topo
 		}
 
 		log.Infof("Destroy %s success", ins.GetHost())
-		log.Infof("- Destroy %s paths: %v", ins.ComponentName(), delPaths)
+		log.Infof("- Destroy %s paths: %v", ins.ComponentName(), delPaths.Slice())
 	}
 
 	return nil

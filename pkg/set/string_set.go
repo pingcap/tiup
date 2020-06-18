@@ -62,3 +62,12 @@ func (s StringSet) Difference(rhs StringSet) StringSet {
 	}
 	return newSet
 }
+
+// Slice converts the set to a slice
+func (s StringSet) Slice() []string {
+	res := make([]string, 0)
+	for val := range s {
+		res = append(res, val)
+	}
+	return res
+}
