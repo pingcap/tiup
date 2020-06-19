@@ -192,12 +192,7 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, cls topo
 		e := getter.Get(ins.GetHost())
 		log.Infof("Destroying instance %s", ins.GetHost())
 
-		// Retain the deploy directory if the users want to retain the data directory
-		// and the data directory is a sub-directory of deploy directory
-		keepDeployDir := false
-		deployDir := ins.DeployDir()
-
-		delPaths := set.NewStringSet()
+		var dataDirs []string
 		switch name {
 		case meta.ComponentTiKV,
 			meta.ComponentPD,
@@ -205,26 +200,9 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, cls topo
 			meta.ComponentDrainer,
 			meta.ComponentPrometheus,
 			meta.ComponentAlertManager:
-			if !dataRetained {
-				if cls.CountDir(ins.GetHost(), ins.DataDir()) == 1 {
-					// only delete path if it is not used by any other instance in the cluster
-					delPaths.Insert(ins.DataDir())
-				}
-			} else if strings.HasPrefix(ins.DataDir(), deployDir) {
-				keepDeployDir = true
-
-			}
+			dataDirs = []string{ins.DataDir()}
 		case meta.ComponentTiFlash:
-			for _, dataDir := range strings.Split(ins.DataDir(), ",") {
-				if !dataRetained {
-					if cls.CountDir(ins.GetHost(), dataDir) == 1 {
-						// only delete path if it is not used by any other instance in the cluster
-						delPaths.Insert(dataDir)
-					}
-				} else if strings.HasPrefix(dataDir, deployDir) {
-					keepDeployDir = true
-				}
-			}
+			dataDirs = strings.Split(ins.DataDir(), ",")
 		}
 
 		// check if service is down before deleting files
@@ -237,35 +215,51 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, cls topo
 			log.Warnf("You may manually check if the process on %s:%d is still running", ins.GetHost(), ins.GetPort())
 		}
 
+		deployDir := ins.DeployDir()
+		delPaths := set.NewStringSet()
+
+		// Retain the deploy directory if the users want to retain the data directory
+		// and the data directory is a sub-directory of deploy directory
+		keepDeployDir := false
+
+		for _, dataDir := range dataDirs {
+			// Don't delete the parent directory if any sub-directory retained
+			keepDeployDir = (dataRetained && strings.HasPrefix(dataDir, deployDir)) || keepDeployDir
+			if !dataRetained && cls.CountDir(ins.GetHost(), dataDir) == 1 {
+				// only delete path if it is not used by any other instance in the cluster
+				delPaths.Insert(dataDir)
+			}
+		}
+
+		logDir := ins.LogDir()
+
 		// In TiDB-Ansible, deploy dir are shared by all components on the same
 		// host, so not deleting it.
-		if !ins.IsImported() {
+		if ins.IsImported() {
+			// not deleting files for imported clusters
+			if !strings.HasPrefix(logDir, ins.DeployDir()) && cls.CountDir(ins.GetHost(), logDir) == 1 {
+				delPaths.Insert(logDir)
+			}
+			log.Warnf("Deploy dir %s not deleted for TiDB-Ansible imported instance %s.",
+				ins.DeployDir(), ins.InstanceName())
+		} else {
 			if keepDeployDir {
 				delPaths.Insert(filepath.Join(deployDir, "conf"))
 				delPaths.Insert(filepath.Join(deployDir, "bin"))
 				delPaths.Insert(filepath.Join(deployDir, "scripts"))
-				if logDir := ins.LogDir(); strings.HasPrefix(logDir, deployDir) {
-					// only delete path if it is not used by any other instance in the cluster
-					if logDir := ins.LogDir(); cls.CountDir(ins.GetHost(), logDir) == 1 {
-						delPaths.Insert(logDir)
-					}
+				// only delete path if it is not used by any other instance in the cluster
+				if strings.HasPrefix(logDir, deployDir) && cls.CountDir(ins.GetHost(), logDir) == 1 {
+					delPaths.Insert(logDir)
 				}
 			} else {
 				// only delete path if it is not used by any other instance in the cluster
-				if logDir := ins.LogDir(); cls.CountDir(ins.GetHost(), logDir) == 1 {
+				if cls.CountDir(ins.GetHost(), logDir) == 1 {
 					delPaths.Insert(logDir)
 				}
 				if cls.CountDir(ins.GetHost(), ins.DeployDir()) == 1 {
 					delPaths.Insert(ins.DeployDir())
 				}
 			}
-
-		} else { // not deleting files for imported clusters
-			if logDir := ins.LogDir(); !strings.HasPrefix(logDir, ins.DeployDir()) && cls.CountDir(ins.GetHost(), logDir) == 1 {
-				delPaths.Insert(logDir)
-			}
-			log.Warnf("Deploy dir %s not deleted for TiDB-Ansible imported instance %s.",
-				ins.DeployDir(), ins.InstanceName())
 		}
 
 		// check for deploy dir again, to avoid unused files being left on disk
