@@ -47,6 +47,8 @@ type Instance interface {
 	Component() string
 	// LogFile return the log file name
 	LogFile() string
+	// Uptime show uptime.
+	Uptime() string
 	StatusAddrs() []string
 	Wait() error
 }

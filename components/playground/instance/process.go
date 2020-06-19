@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -13,12 +14,14 @@ import (
 
 // Process represent process to be run by playground.
 type Process struct {
-	cmd *exec.Cmd
+	cmd       *exec.Cmd
+	startTime time.Time
 }
 
 // Start the process
 func (p *Process) Start() error {
 	// fmt.Printf("Starting `%s`: %s", filepath.Base(p.cmd.Path), strings.Join(p.cmd.Args, " "))
+	p.startTime = time.Now()
 	return p.cmd.Start()
 }
 
@@ -30,6 +33,17 @@ func (p *Process) Wait() error {
 // Pid implements Instance interface.
 func (p *Process) Pid() int {
 	return p.cmd.Process.Pid
+}
+
+// Uptime implements Instance interface.
+func (p *Process) Uptime() string {
+	s := p.cmd.ProcessState
+	if s != nil && s.Exited() {
+		return "exited"
+	}
+
+	duration := time.Since(p.startTime)
+	return duration.String()
 }
 
 func (p *Process) setOutputFile(fname string) error {
