@@ -13,13 +13,15 @@
 
 package command
 
+/*
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	dmpb "github.com/pingcap/dm/dm/pb"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -40,11 +42,11 @@ func newTestCmd() *cobra.Command {
 
 			clusterName := args[0]
 			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-				return errors.Errorf("cannot start non-exists cluster %s", clusterName)
+				return perrs.Errorf("cannot start non-exists cluster %s", clusterName)
 			}
 
 			metadata, err := meta.DMMetadata(clusterName)
-			if err != nil {
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 				return err
 			}
 
@@ -75,7 +77,7 @@ func checkMasterOnline(addr string) error {
 	defer cancel()
 	resp, err := cli.ShowDDLLocks(ctx, req)
 	if err == nil && !resp.Result {
-		return errors.Errorf("check master ddl locks failed: %s", resp.Msg)
+		return perrs.Errorf("check master ddl locks failed: %s", resp.Msg)
 	}
 	return err
 }
@@ -93,12 +95,12 @@ func checkWorkerOnline(addr string) error {
 	defer cancel()
 	resp, err := cli.QueryStatus(ctx, req)
 	if err == nil && !resp.Result {
-		return errors.Errorf("check worker status failed: %s", resp.Msg)
+		return perrs.Errorf("check worker status failed: %s", resp.Msg)
 	}
 	return err
 }
 
-func readable(topo *meta.DMTopologySpecification) error {
+func readable(topo *meta.DMSTopologySpecification) error {
 	errg, _ := errgroup.WithContext(context.Background())
 
 	for _, spec := range topo.Masters {
@@ -127,3 +129,4 @@ func readable(topo *meta.DMTopologySpecification) error {
 
 	return errg.Wait()
 }
+*/

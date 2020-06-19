@@ -11,30 +11,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package clusterutil
+package meta
 
 import (
-	"path/filepath"
-	"strings"
+	"fmt"
 )
 
-// Abs returns the absolute path
-func Abs(user, path string) string {
-	if !strings.HasPrefix(path, "/") {
-		return filepath.Join("/home", user, path)
-	}
-	return path
+// DirPaths stores the paths needed for component to put files
+type DirPaths struct {
+	Deploy string
+	Data   []string
+	Log    string
+	Cache  string
 }
 
-// MultiDirAbs returns the absolute path for multi-dir separated by comma
-func MultiDirAbs(user, paths string) []string {
-	var dirs []string
-	for _, path := range strings.Split(paths, ",") {
-		path = strings.TrimSpace(path)
-		if path == "" {
-			continue
-		}
-		dirs = append(dirs, Abs(user, path))
-	}
-	return dirs
+// String implements the fmt.Stringer interface
+func (p DirPaths) String() string {
+	return fmt.Sprintf(
+		"deploy_dir=%s, data_dir=%v, log_dir=%s, cache_dir=%s",
+		p.Deploy,
+		p.Data,
+		p.Log,
+		p.Cache,
+	)
 }

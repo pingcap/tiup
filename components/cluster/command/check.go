@@ -14,6 +14,7 @@
 package command
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -21,7 +22,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cliutil/prepare"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
@@ -63,14 +64,14 @@ conflict checks with other clusters`,
 
 			logger.EnableAuditLog()
 
-			var topo meta.TopologySpecification
+			var topo meta.ClusterSpecification
 			if opt.existCluster { // check for existing cluster
 				clusterName := args[0]
 				if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-					return errors.Errorf("cluster %s does not exist", clusterName)
+					return perrs.Errorf("cluster %s does not exist", clusterName)
 				}
 				metadata, err := meta.ClusterMetadata(clusterName)
-				if err != nil {
+				if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 					return err
 				}
 				topo = *metadata.Topology
@@ -111,7 +112,7 @@ conflict checks with other clusters`,
 }
 
 // checkSystemInfo performs series of checks and tests of the deploy server
-func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecification, opt *checkOptions) error {
+func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.ClusterSpecification, opt *checkOptions) error {
 	var (
 		collectTasks  []*task.StepDisplay
 		checkSysTasks []*task.StepDisplay
@@ -278,7 +279,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecifica
 			// FIXME: Map possible task errors and give suggestions.
 			return err
 		}
-		return errors.Trace(err)
+		return perrs.Trace(err)
 	}
 
 	var checkResultTable [][]string
@@ -319,7 +320,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.TopologySpecifica
 				// FIXME: Map possible task errors and give suggestions.
 				return err
 			}
-			return errors.Trace(err)
+			return perrs.Trace(err)
 		}
 	}
 

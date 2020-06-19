@@ -41,7 +41,7 @@ func Destroy(
 
 	for _, com := range coms {
 		insts := com.Instances()
-		err := DestroyComponent(getter, insts, options.OptTimeout)
+		err := DestroyComponent(getter, insts, spec.GetClusterSpecification(), options.OptTimeout)
 		if err != nil {
 			return errors.Annotatef(err, "failed to destroy %s", com.Name())
 		}
@@ -67,7 +67,7 @@ func Destroy(
 	return nil
 }
 
-// DeleteGlobalDirs deletes all global directory if them empty
+// DeleteGlobalDirs deletes all global directories if they are empty
 func DeleteGlobalDirs(getter ExecutorGetter, host string, options meta.GlobalOptions) error {
 	e := getter.Get(host)
 	log.Infof("Clean global directories %s", host)
@@ -119,8 +119,6 @@ func DestroyMonitored(getter ExecutorGetter, inst meta.Instance, options meta.Mo
 
 	// In TiDB-Ansible, deploy dir are shared by all components on the same
 	// host, so not deleting it.
-	// TODO: this may leave undeleted files when destroying the cluster, fix
-	// that later.
 	if !inst.IsImported() {
 		delPaths = append(delPaths, options.DeployDir)
 	} else {
@@ -167,8 +165,13 @@ func DestroyMonitored(getter ExecutorGetter, inst meta.Instance, options meta.Mo
 	return nil
 }
 
+// topologySpecification is an interface used to get essential information of a cluster
+type topologySpecification interface {
+	CountDir(string, string) int // count how many time a path is used by instances in cluster
+}
+
 // DestroyComponent destroy the instances.
-func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, timeout int64) error {
+func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, cls topologySpecification, timeout int64) error {
 	if len(instances) <= 0 {
 		return nil
 	}
@@ -180,13 +183,25 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, timeout 
 		e := getter.Get(ins.GetHost())
 		log.Infof("Destroying instance %s", ins.GetHost())
 
-		// Stop by systemd.
-		delPaths := make([]string, 0)
+		delPaths := set.NewStringSet()
 		switch name {
-		case meta.ComponentTiKV, meta.ComponentPD, meta.ComponentPump, meta.ComponentDrainer, meta.ComponentPrometheus, meta.ComponentAlertManager, meta.ComponentDMMaster, meta.ComponentDMWorker, meta.ComponentDMPortal:
-			delPaths = append(delPaths, ins.DataDir())
+		case meta.ComponentTiKV,
+			meta.ComponentPD,
+			meta.ComponentPump,
+			meta.ComponentDrainer,
+			meta.ComponentPrometheus,
+			meta.ComponentAlertManager:
+			if cls.CountDir(ins.GetHost(), ins.DataDir()) == 1 {
+				// only delete path if it is not used by any other instance in the cluster
+				delPaths.Insert(ins.DataDir())
+			}
 		case meta.ComponentTiFlash:
-			delPaths = append(delPaths, strings.Split(ins.DataDir(), ",")...)
+			for _, dataDir := range strings.Split(ins.DataDir(), ",") {
+				if cls.CountDir(ins.GetHost(), dataDir) == 1 {
+					// only delete path if it is not used by any other instance in the cluster
+					delPaths.Insert(dataDir)
+				}
+			}
 		}
 
 		// check if service is down before deleting files
@@ -201,21 +216,38 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, timeout 
 
 		// In TiDB-Ansible, deploy dir are shared by all components on the same
 		// host, so not deleting it.
-		// TODO: this may leave undeleted files when destroying the cluster, fix
-		// that later.
 		if !ins.IsImported() {
-			delPaths = append(delPaths, ins.DeployDir())
-			if logDir := ins.LogDir(); !strings.HasPrefix(ins.DeployDir(), logDir) {
-				delPaths = append(delPaths, logDir)
+			// only delete path if it is not used by any other instance in the cluster
+			if logDir := ins.LogDir(); cls.CountDir(ins.GetHost(), logDir) == 1 {
+				delPaths.Insert(logDir)
 			}
-		} else {
+			if cls.CountDir(ins.GetHost(), ins.DeployDir()) == 1 {
+				delPaths.Insert(ins.DeployDir())
+			}
+		} else { // not deleting files for imported clusters
+			if logDir := ins.LogDir(); !strings.HasPrefix(ins.DeployDir(), logDir) && cls.CountDir(ins.GetHost(), logDir) == 1 {
+				delPaths.Insert(logDir)
+			}
 			log.Warnf("Deploy dir %s not deleted for TiDB-Ansible imported instance %s.",
 				ins.DeployDir(), ins.InstanceName())
 		}
-		delPaths = append(delPaths, fmt.Sprintf("/etc/systemd/system/%s", ins.ServiceName()))
-		log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delPaths, " "))
+
+		// check for deploy dir again, to avoid unused files being left on disk
+		dpCnt := 0
+		deployDir := ins.DeployDir()
+		for _, dir := range delPaths.Slice() {
+			if strings.HasPrefix(dir, deployDir+"/") { // only check subdir of deploy dir
+				dpCnt++
+			}
+		}
+		if cls.CountDir(ins.GetHost(), deployDir)-dpCnt == 1 {
+			delPaths.Insert(deployDir)
+		}
+
+		delPaths.Insert(fmt.Sprintf("/etc/systemd/system/%s", ins.ServiceName()))
+		log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delPaths.Slice(), " "))
 		c := module.ShellModuleConfig{
-			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delPaths, " ")),
+			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delPaths.Slice(), " ")),
 			Sudo:     true, // the .service files are in a directory owned by root
 			Chdir:    "",
 			UseShell: false,
@@ -235,7 +267,7 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, timeout 
 		}
 
 		log.Infof("Destroy %s success", ins.GetHost())
-		log.Infof("- Destroy %s paths: %v", ins.ComponentName(), delPaths)
+		log.Infof("- Destroy %s paths: %v", ins.ComponentName(), delPaths.Slice())
 	}
 
 	return nil

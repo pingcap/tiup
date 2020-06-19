@@ -14,6 +14,7 @@
 package command
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"sort"
@@ -21,7 +22,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
@@ -51,7 +52,7 @@ func newDisplayCmd() *cobra.Command {
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-				return errors.Errorf("Cluster %s not found", clusterName)
+				return perrs.Errorf("Cluster %s not found", clusterName)
 			}
 
 			if showDashboardOnly {
@@ -66,8 +67,8 @@ func newDisplayCmd() *cobra.Command {
 			}
 
 			metadata, err := meta.ClusterMetadata(clusterName)
-			if err != nil {
-				return errors.AddStack(err)
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+				return perrs.AddStack(err)
 			}
 			return destroyTombstoneIfNeed(clusterName, metadata, gOpt)
 		},
@@ -82,7 +83,7 @@ func newDisplayCmd() *cobra.Command {
 
 func displayDashboardInfo(clusterName string) error {
 	metadata, err := meta.ClusterMetadata(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 		return err
 	}
 
@@ -115,7 +116,7 @@ func displayDashboardInfo(clusterName string) error {
 
 func displayClusterMeta(clusterName string, opt *operator.Options) error {
 	clsMeta, err := meta.ClusterMetadata(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 		return err
 	}
 
@@ -138,17 +139,17 @@ func destroyTombstoneIfNeed(clusterName string, metadata *meta.ClusterMeta, opt 
 	err := ctx.SetSSHKeySet(meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 		meta.ClusterPath(clusterName, "ssh", "id_rsa.pub"))
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	err = ctx.SetClusterSSH(topo, metadata.User, gOpt.SSHTimeout)
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	nodes, err := operator.DestroyTombstone(ctx, topo, true /* returnNodesOnly */, opt)
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	if len(nodes) == 0 {
@@ -159,7 +160,7 @@ func destroyTombstoneIfNeed(clusterName string, metadata *meta.ClusterMeta, opt 
 
 	_, err = operator.DestroyTombstone(ctx, topo, false /* returnNodesOnly */, opt)
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	log.Infof("Destroy success")
@@ -169,7 +170,7 @@ func destroyTombstoneIfNeed(clusterName string, metadata *meta.ClusterMeta, opt 
 
 func displayClusterTopology(clusterName string, opt *operator.Options) error {
 	metadata, err := meta.ClusterMetadata(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 		return err
 	}
 
@@ -184,12 +185,12 @@ func displayClusterTopology(clusterName string, opt *operator.Options) error {
 	err = ctx.SetSSHKeySet(meta.ClusterPath(clusterName, "ssh", "id_rsa"),
 		meta.ClusterPath(clusterName, "ssh", "id_rsa.pub"))
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	err = ctx.SetClusterSSH(topo, metadata.User, gOpt.SSHTimeout)
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	filterRoles := set.NewStringSet(opt.Roles...)

@@ -17,6 +17,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	meta2 "github.com/pingcap/tiup/pkg/cluster/meta"
+
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
 	"gopkg.in/yaml.v2"
@@ -29,18 +31,18 @@ type DMMeta struct {
 	//EnableTLS      bool   `yaml:"enable_tls"`
 	//EnableFirewall bool   `yaml:"firewall"`
 
-	Topology *DMTopologySpecification `yaml:"topology"`
+	Topology *DMSTopologySpecification `yaml:"topology"`
 }
 
 // SaveDMMeta saves the cluster meta information to profile directory
 func SaveDMMeta(clusterName string, meta *DMMeta) error {
 	wrapError := func(err error) *errorx.Error {
-		return ErrClusterSaveMetaFailed.Wrap(err, "Failed to save dm metadata")
+		return meta2.ErrClusterSaveMetaFailed.Wrap(err, "Failed to save dm metadata")
 	}
 
-	metaFile := ClusterPath(clusterName, MetaFileName)
+	metaFile := meta2.ClusterPath(clusterName, meta2.MetaFileName)
 
-	if err := EnsureClusterDir(clusterName); err != nil {
+	if err := meta2.EnsureClusterDir(clusterName); err != nil {
 		return wrapError(err)
 	}
 
@@ -59,7 +61,7 @@ func SaveDMMeta(clusterName string, meta *DMMeta) error {
 // DMMetadata tries to read the metadata of a cluster from file
 func DMMetadata(clusterName string) (*DMMeta, error) {
 	var cm DMMeta
-	topoFile := ClusterPath(clusterName, MetaFileName)
+	topoFile := meta2.ClusterPath(clusterName, meta2.MetaFileName)
 
 	yamlFile, err := ioutil.ReadFile(topoFile)
 	if err != nil {
