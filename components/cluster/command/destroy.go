@@ -26,17 +26,33 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/set"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 func newDestroyCmd() *cobra.Command {
+	destoyOpt := operator.Options{}
 	cmd := &cobra.Command{
-		Use:   "destroy <cluster-name>",
-		Short: "Destroy a specified cluster",
+		Use: "destroy <cluster-name>",
+		Long: `Destroy a specified cluster, which will clean the deployment binaries and data.
+You can retain some nodes and roles data when destroy cluster, eg:
+  
+  $ tiup cluster destroy <cluster-name> --retain-role-data prometheus
+  $ tiup cluster destroy <cluster-name> --retain-node-data 172.16.13.11:9000`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
+			}
+
+			// Validate the retained roles to prevent unexpected deleting data
+			if len(destoyOpt.RetainDataRoles) > 0 {
+				validRoles := set.NewStringSet(meta.AllComponentNames()...)
+				for _, role := range destoyOpt.RetainDataRoles {
+					if !validRoles.Exist(role) {
+						return perrs.Errorf("role name `%s` invalid", role)
+					}
+				}
 			}
 
 			clusterName := args[0]
@@ -67,7 +83,7 @@ func newDestroyCmd() *cobra.Command {
 					meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
 				ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
 				ClusterOperate(metadata.Topology, operator.StopOperation, operator.Options{}).
-				ClusterOperate(metadata.Topology, operator.DestroyOperation, operator.Options{}).
+				ClusterOperate(metadata.Topology, operator.DestroyOperation, destoyOpt).
 				Build()
 
 			if err := t.Execute(task.NewContext()); err != nil {
@@ -85,6 +101,9 @@ func newDestroyCmd() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().StringArrayVar(&destoyOpt.RetainDataNodes, "retain-node-data", nil, "Specify the nodes whose data will be retained")
+	cmd.Flags().StringArrayVar(&destoyOpt.RetainDataRoles, "retain-role-data", nil, "Specify the roles whose data will be retained")
 
 	return cmd
 }
