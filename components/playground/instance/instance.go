@@ -43,6 +43,10 @@ type Instance interface {
 	Pid() int
 	// Start the instance process.
 	Start(ctx context.Context, version v0manifest.Version) error
+	// Component Return the component name.
+	Component() string
+	// LogFile return the log file name
+	LogFile() string
 	StatusAddrs() []string
 	Wait() error
 }
@@ -68,4 +72,10 @@ func advertiseHost(listen string) string {
 	}
 
 	return listen
+}
+
+func logIfErr(err error) {
+	if err != nil {
+		fmt.Println(err)
+	}
 }

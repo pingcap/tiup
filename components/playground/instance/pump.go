@@ -18,12 +18,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -32,14 +30,14 @@ import (
 type Pump struct {
 	instance
 	pds []*PDInstance
-	cmd *exec.Cmd
+	*Process
 }
 
 var _ Instance = &Pump{}
 
 // NewPump create a Pump instance.
 func NewPump(binPath string, dir, host, configPath string, id int, pds []*PDInstance) *Pump {
-	return &Pump{
+	pump := &Pump{
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
@@ -50,6 +48,8 @@ func NewPump(binPath string, dir, host, configPath string, id int, pds []*PDInst
 		},
 		pds: pds,
 	}
+	pump.StatusPort = pump.Port
+	return pump
 }
 
 // NodeID return the node id of pump.
@@ -99,29 +99,24 @@ func (p *Pump) Start(ctx context.Context, version v0manifest.Version) error {
 		fmt.Sprintf("--addr=%s:%d", p.Host, p.Port),
 		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(p.Host), p.Port),
 		fmt.Sprintf("--pd-urls=%s", strings.Join(urls, ",")),
-		fmt.Sprintf("--log-file=%s", filepath.Join(p.Dir, "pump.log")),
+		fmt.Sprintf("--log-file=%s", p.LogFile()),
 	}
 	if p.ConfigPath != "" {
 		args = append(args, fmt.Sprintf("--config=%s", p.ConfigPath))
 	}
 
-	p.cmd = exec.CommandContext(ctx, args[0], args[1:]...)
-	p.cmd.Env = append(
-		os.Environ(),
-		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, p.Dir),
-	)
-	p.cmd.Stderr = os.Stderr
-	p.cmd.Stdout = os.Stdout
+	p.Process = NewProcess(ctx, p.Dir, args[0], args[1:]...)
+	logIfErr(p.Process.setOutputFile(p.LogFile()))
 
-	return p.cmd.Start()
+	return p.Process.Start()
 }
 
-// Wait implements Instance interface.
-func (p *Pump) Wait() error {
-	return p.cmd.Wait()
+// Component return component name.
+func (p *Pump) Component() string {
+	return "pump"
 }
 
-// Pid implements Instance interface.
-func (p *Pump) Pid() int {
-	return p.cmd.Process.Pid
+// LogFile return the log file.
+func (p *Pump) LogFile() string {
+	return filepath.Join(p.Dir, "pump.log")
 }
