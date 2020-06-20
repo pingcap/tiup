@@ -172,6 +172,12 @@ func (c *PDScaleScript) AppendEndpoints(ends ...*PDScript) *PDScaleScript {
 	return c
 }
 
+// WithListenHost set listenHost field of PDScript
+func (c *PDScaleScript) WithListenHost(listenHost string) *PDScaleScript {
+	c.ListenHost = listenHost
+	return c
+}
+
 // Config generate the config file data.
 func (c *PDScaleScript) Config() ([]byte, error) {
 	fp := path.Join("/templates", "scripts", "run_pd_scale.sh.tpl")
