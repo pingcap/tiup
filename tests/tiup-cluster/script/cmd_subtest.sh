@@ -1,10 +1,12 @@
 #!/bin/bash
 
 function cmd_subtest() {
+    mkdir -p ~/.tiup/bin/
+
     version=$1
     test_cdc=$2
 
-    name="test_cmd_$version"
+    name="test_cmd_$RANDOM"
     if [ $test_cdc = true ]; then
         topo=./topo/full.yaml
     else
