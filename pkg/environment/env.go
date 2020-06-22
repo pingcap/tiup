@@ -42,9 +42,31 @@ const (
 // Mirror return mirror of tiup.
 // If it's not defined, it will use "https://tiup-mirrors.pingcap.com/".
 func Mirror() string {
-	if m := os.Getenv(repository.EnvMirrors); m != "" {
-		return m
+	profile := localdata.InitProfile()
+	cfg := profile.Config
+
+	reset := func(m string) {
+		os.Setenv(repository.EnvMirrors, m)
+		if err := profile.ResetMirror(m, ""); err != nil {
+			fmt.Printf("WARNING: reset mirror failed, %s\n", err.Error())
+		}
 	}
+
+	m := os.Getenv(repository.EnvMirrors)
+	if m != "" {
+		if cfg.Mirror != m {
+			fmt.Printf(`WARNING: both mirror config(%s) 
+and TIUP_MIRRORS(%s) have been set.
+Setting mirror to TIUP_MIRRORS(%s)
+`, cfg.Mirror, m, m)
+			reset(m)
+		}
+		return m
+	} else if cfg.Mirror != "" {
+		os.Setenv(repository.EnvMirrors, cfg.Mirror)
+		return cfg.Mirror
+	}
+
 	return repository.DefaultMirror
 }
 
@@ -70,7 +92,8 @@ func InitEnv(options repository.Options) (*Environment, error) {
 
 	// Initialize the repository
 	// Replace the mirror if some sub-commands use different mirror address
-	mirror := repository.NewMirror(Mirror(), repository.MirrorOptions{})
+	mirrorAddr := Mirror()
+	mirror := repository.NewMirror(mirrorAddr, repository.MirrorOptions{})
 
 	var repo *repository.Repository
 	var v1repo *repository.V1Repository
@@ -80,7 +103,7 @@ func InitEnv(options repository.Options) (*Environment, error) {
 		var local v1manifest.LocalManifests
 		local, err = v1manifest.NewManifests(profile)
 		if err != nil {
-			return nil, errors.Annotatef(err, "initial repository from mirror(%s) failed", Mirror())
+			return nil, errors.Annotatef(err, "initial repository from mirror(%s) failed", mirrorAddr)
 		}
 		v1repo = repository.NewV1Repo(mirror, options, local)
 	} else {

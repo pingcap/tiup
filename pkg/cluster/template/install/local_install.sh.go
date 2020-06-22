@@ -68,6 +68,8 @@ fi
 
 chmod 755 "$bin_dir/tiup"
 
+exec "$bin_dir/tiup" mirror set ${script_dir}
+
 bold=$(tput bold 2>/dev/null)
 sgr0=$(tput sgr0 2>/dev/null)
 
@@ -91,7 +93,6 @@ esac
 echo "Installed path: ${bold}$bin_dir/tiup${sgr0}"
 echo "==============================================="
 echo "1. ${bold}source ${PROFILE}${sgr0}"
-echo "2. ${bold}export TIUP_MIRRORS=${script_dir}${sgr0}"
-echo "3. Have a try:   ${bold}tiup playground${sgr0}"
+echo "2. Have a try:   ${bold}tiup playground${sgr0}"
 echo "==============================================="
 `
