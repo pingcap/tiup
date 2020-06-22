@@ -13,6 +13,7 @@
 
 package command
 
+/*
 import (
 	"fmt"
 	"path"
@@ -56,7 +57,7 @@ func newCheckCmd() *cobra.Command {
 			}
 
 			logger.EnableAuditLog()
-			var topo meta.DMTopologySpecification
+			var topo meta.DMSTopologySpecification
 			if err := clusterutil.ParseTopologyYaml(args[0], &topo); err != nil {
 				return err
 			}
@@ -91,7 +92,7 @@ func newCheckCmd() *cobra.Command {
 }
 
 // checkSystemInfo performs series of checks and tests of the deploy server
-func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.DMTopologySpecification, opt *checkOptions) error {
+func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.DMSTopologySpecification, opt *checkOptions) error {
 	var (
 		collectTasks  []*task.StepDisplay
 		checkSysTasks []*task.StepDisplay
@@ -399,3 +400,4 @@ func fixFailedChecks(ctx *task.Context, host string, res *operator.CheckResult, 
 	}
 	return msg, nil
 }
+*/

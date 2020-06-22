@@ -13,10 +13,13 @@
 
 package command
 
+/*
 import (
+	"errors"
+
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger"
@@ -43,12 +46,12 @@ func newExecCmd() *cobra.Command {
 
 			clusterName := args[0]
 			if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-				return errors.Errorf("cannot execute command on non-exists cluster %s", clusterName)
+				return perrs.Errorf("cannot execute command on non-exists cluster %s", clusterName)
 			}
 
 			logger.EnableAuditLog()
 			metadata, err := meta.DMMetadata(clusterName)
-			if err != nil {
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 				return err
 			}
 
@@ -92,7 +95,7 @@ func newExecCmd() *cobra.Command {
 					// FIXME: Map possible task errors and give suggestions.
 					return err
 				}
-				return errors.Trace(err)
+				return perrs.Trace(err)
 			}
 
 			// print outputs
@@ -123,3 +126,4 @@ func newExecCmd() *cobra.Command {
 
 	return cmd
 }
+*/

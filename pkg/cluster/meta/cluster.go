@@ -51,7 +51,7 @@ type ClusterMeta struct {
 	//EnableFirewall bool   `yaml:"firewall"`
 	OpsVer string `yaml:"last_ops_ver,omitempty"` // the version of ourself that updated the meta last time
 
-	Topology *TopologySpecification `yaml:"topology"`
+	Topology *ClusterSpecification `yaml:"topology"`
 }
 
 // EnsureClusterDir ensures that the cluster directory exists.
@@ -108,7 +108,8 @@ func ClusterMetadata(clusterName string) (*ClusterMeta, error) {
 	}
 
 	if err = yaml.Unmarshal(yamlFile, &cm); err != nil {
-		return nil, errors.Trace(err)
+		// return the meta no matter there is error or not
+		return &cm, errors.Trace(err)
 	}
 	return &cm, nil
 }

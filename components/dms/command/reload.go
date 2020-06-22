@@ -13,9 +13,12 @@
 
 package command
 
+/*
 import (
+	"errors"
+
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -41,12 +44,12 @@ func newReloadCmd() *cobra.Command {
 
 			clusterName := args[0]
 			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-				return errors.Errorf("cannot start non-exists cluster %s", clusterName)
+				return perrs.Errorf("cannot start non-exists cluster %s", clusterName)
 			}
 
 			logger.EnableAuditLog()
 			metadata, err := meta.DMMetadata(clusterName)
-			if err != nil {
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 				return err
 			}
 
@@ -60,7 +63,7 @@ func newReloadCmd() *cobra.Command {
 					// FIXME: Map possible task errors and give suggestions.
 					return err
 				}
-				return errors.Trace(err)
+				return perrs.Trace(err)
 			}
 
 			log.Infof("Reloaded cluster `%s` successfully", clusterName)
@@ -140,9 +143,10 @@ func validRoles(roles []string) error {
 		}
 
 		if !match {
-			return errors.Errorf("not valid role: %s, should be one of: %v", r, meta.AllDMComponentNames())
+			return perrs.Errorf("not valid role: %s, should be one of: %v", r, meta.AllDMComponentNames())
 		}
 	}
 
 	return nil
 }
+*/

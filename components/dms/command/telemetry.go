@@ -13,6 +13,7 @@
 
 package command
 
+/*
 import (
 	"context"
 	"fmt"
@@ -62,3 +63,4 @@ func nodeInfo(ctx context.Context) error {
 	fmt.Println(text)
 	return nil
 }
+*/

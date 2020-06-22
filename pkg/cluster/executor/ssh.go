@@ -128,12 +128,12 @@ func (e *SSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duration) (
 		cmd = fmt.Sprintf("sudo -H -u root bash -c \"%s\"", cmd)
 	}
 
+	// set a basic PATH in case it's empty on login
+	cmd = fmt.Sprintf("PATH=$PATH:/usr/bin:/usr/sbin %s", cmd)
+
 	if e.Locale != "" {
 		cmd = fmt.Sprintf("export LANG=%s; %s", e.Locale, cmd)
 	}
-
-	// set a basic PATH in case it's empty on login
-	cmd = fmt.Sprintf("PATH=$PATH:/usr/bin:/usr/sbin %s", cmd)
 
 	// run command on remote host
 	// default timeout is 60s in easyssh-proxy

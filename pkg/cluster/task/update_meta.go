@@ -33,7 +33,7 @@ func (u *UpdateMeta) Execute(ctx *Context) error {
 	// make a copy
 	newMeta := &meta.ClusterMeta{}
 	*newMeta = *u.metadata
-	newMeta.Topology = &meta.TopologySpecification{
+	newMeta.Topology = &meta.ClusterSpecification{
 		GlobalOptions:    u.metadata.Topology.GlobalOptions,
 		MonitoredOptions: u.metadata.Topology.MonitoredOptions,
 		ServerConfigs:    u.metadata.Topology.ServerConfigs,
