@@ -22,7 +22,7 @@ import (
 )
 
 // Finalizer represent the function that clean a mock point
-type Finalizer func() error
+type Finalizer func()
 
 type mockPoints struct {
 	m map[string]interface{}
@@ -67,7 +67,11 @@ func With(fpname string, value interface{}) Finalizer {
 		panic(err)
 	}
 	points.set(fpname, value)
-	return func() error { return Reset(fpname) }
+	return func() {
+		if err := Reset(fpname); err != nil {
+			panic(err)
+		}
+	}
 }
 
 // Reset disable failpoint and remove mock value
