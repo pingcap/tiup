@@ -17,9 +17,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pingcap/tiup/pkg/meta"
-
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/meta"
 )
 
 // ScaleConfig is used to copy all configurations to the target directory of path

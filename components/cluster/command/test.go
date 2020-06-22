@@ -19,10 +19,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/pingcap/tiup/pkg/meta"
-
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"

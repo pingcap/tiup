@@ -18,8 +18,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pingcap/tiup/pkg/meta"
-
 	"github.com/google/uuid"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -28,6 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/meta"
 )
 
 // MonitoredConfig is used to generate the monitor node configuration

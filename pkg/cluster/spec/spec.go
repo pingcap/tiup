@@ -20,13 +20,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pingcap/tiup/pkg/meta"
-
-	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
-
 	"github.com/creasty/defaults"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
+	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	"go.etcd.io/etcd/clientv3"
 )

@@ -18,10 +18,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pingcap/tiup/pkg/meta"
-
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/meta"
 )
 
 // InitConfig is used to copy all configurations to the target directory of path
