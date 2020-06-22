@@ -32,7 +32,6 @@ import (
 )
 
 func newUpgradeCmd() *cobra.Command {
-	var ignoreConfigCheck bool
 	cmd := &cobra.Command{
 		Use:   "upgrade <cluster-name> <version>",
 		Short: "Upgrade a specified DM cluster",
@@ -42,12 +41,12 @@ func newUpgradeCmd() *cobra.Command {
 			}
 
 			logger.EnableAuditLog()
-			return upgrade(args[0], args[1], gOpt, ignoreConfigCheck)
+			return upgrade(args[0], args[1], gOpt)
 		},
 	}
 	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force upgrade won't transfer leader")
 	cmd.Flags().Int64Var(&gOpt.APITimeout, "transfer-timeout", 300, "Timeout in seconds when transferring dm-master leaders")
-	cmd.Flags().BoolVarP(&ignoreConfigCheck, "ignore-config-check", "", ignoreConfigCheck, "Ignore the config check result")
+	cmd.Flags().BoolVarP(&gOpt.IgnoreConfigCheck, "ignore-config-check", "", false, "Ignore the config check result")
 
 	return cmd
 }
@@ -68,7 +67,7 @@ func versionCompare(curVersion, newVersion string) error {
 	}
 }
 
-func upgrade(clusterName, clusterVersion string, opt operator.Options, ignoreConfigCheck bool) error {
+func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 	if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
 		return errors.Errorf("cannot upgrade non-exists cluster %s", clusterName)
 	}
@@ -131,7 +130,7 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options, ignoreCon
 					clusterVersion,
 					inst,
 					metadata.User,
-					ignoreConfigCheck,
+					opt.IgnoreConfigCheck,
 					meta.DirPaths{
 						Deploy: deployDir,
 						Data:   dataDirs,
