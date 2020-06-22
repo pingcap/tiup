@@ -20,11 +20,13 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/pingcap/tiup/pkg/meta"
+
 	"github.com/fatih/color"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/edit"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
@@ -43,13 +45,13 @@ func newEditConfigCmd() *cobra.Command {
 
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
-			if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+			if tiuputils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
 				return perrs.Errorf("cannot start non-exists cluster %s", clusterName)
 			}
 
 			logger.EnableAuditLog()
-			metadata, err := meta.ClusterMetadata(clusterName)
-			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+			metadata, err := spec.ClusterMetadata(clusterName)
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 				return err
 			}
 
@@ -64,7 +66,7 @@ func newEditConfigCmd() *cobra.Command {
 // 2. Open file in editor.
 // 3. Check and update Topology.
 // 4. Save meta file.
-func editTopo(clusterName string, metadata *meta.ClusterMeta) error {
+func editTopo(clusterName string, metadata *spec.ClusterMeta) error {
 	data, err := yaml.Marshal(metadata.Topology)
 	if err != nil {
 		return perrs.AddStack(err)
@@ -98,7 +100,7 @@ func editTopo(clusterName string, metadata *meta.ClusterMeta) error {
 		return perrs.AddStack(err)
 	}
 
-	newTopo := new(meta.ClusterSpecification)
+	newTopo := new(spec.Specification)
 	err = yaml.UnmarshalStrict(newData, newTopo)
 	if err != nil {
 		log.Infof("Failed to parse topology file: %v", err)
@@ -123,7 +125,7 @@ func editTopo(clusterName string, metadata *meta.ClusterMeta) error {
 	log.Infof("Apply the change...")
 
 	metadata.Topology = newTopo
-	err = meta.SaveClusterMeta(clusterName, metadata)
+	err = spec.SaveClusterMeta(clusterName, metadata)
 	if err != nil {
 		return perrs.Annotate(err, "failed to save")
 	}

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package meta
+package spec
 
 import (
 	"fmt"
@@ -23,7 +23,8 @@ import (
 	"github.com/creasty/defaults"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 )
 
@@ -43,14 +44,14 @@ type (
 
 	// ResourceControl is used to control the system resource
 	// See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html
-	ResourceControl = meta.ResourceControl
+	ResourceControl = spec.ResourceControl
 
 	// GlobalOptions represents the global options for all groups in topology
 	// specification in topology.yaml
-	GlobalOptions = meta.GlobalOptions
+	GlobalOptions = spec.GlobalOptions
 
 	// MonitoredOptions represents the monitored node configuration
-	MonitoredOptions = meta.MonitoredOptions
+	MonitoredOptions = spec.MonitoredOptions
 
 	// DMSTopologySpecification represents the specification of topology.yaml
 	DMSTopologySpecification struct {
@@ -76,15 +77,15 @@ func AllDMSComponentNames() (roles []string) {
 
 // WorkerSpec represents a server instance to do the dms job
 type WorkerSpec struct {
-	Host            string          `yaml:"host"`
-	SSHPort         int             `yaml:"ssh_port,omitempty"`
-	DeployDir       string          `yaml:"deploy_dir,omitempty"`
-	DataDir         string          `yaml:"data_dir,omitempty"`
-	LogDir          string          `yaml:"log_dir,omitempty"`
-	NumaNode        string          `yaml:"numa_node,omitempty"`
-	ResourceControl ResourceControl `yaml:"resource_control,omitempty"`
-	Arch            string          `yaml:"arch,omitempty"`
-	OS              string          `yaml:"os,omitempty"`
+	Host            string               `yaml:"host"`
+	SSHPort         int                  `yaml:"ssh_port,omitempty"`
+	DeployDir       string               `yaml:"deploy_dir,omitempty"`
+	DataDir         string               `yaml:"data_dir,omitempty"`
+	LogDir          string               `yaml:"log_dir,omitempty"`
+	NumaNode        string               `yaml:"numa_node,omitempty"`
+	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty"`
+	Arch            string               `yaml:"arch,omitempty"`
+	OS              string               `yaml:"os,omitempty"`
 }
 
 // SourceSpec represents the upstream source specification
@@ -195,18 +196,18 @@ func (s *JobSpec) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // PrometheusSpec represents the Prometheus Server topology specification in topology.yaml
 type PrometheusSpec struct {
-	Host            string          `yaml:"host"`
-	SSHPort         int             `yaml:"ssh_port,omitempty"`
-	Imported        bool            `yaml:"imported,omitempty"`
-	Port            int             `yaml:"port" default:"9090"`
-	DeployDir       string          `yaml:"deploy_dir,omitempty"`
-	DataDir         string          `yaml:"data_dir,omitempty"`
-	LogDir          string          `yaml:"log_dir,omitempty"`
-	NumaNode        string          `yaml:"numa_node,omitempty"`
-	Retention       string          `yaml:"storage_retention,omitempty"`
-	ResourceControl ResourceControl `yaml:"resource_control,omitempty"`
-	Arch            string          `yaml:"arch,omitempty"`
-	OS              string          `yaml:"os,omitempty"`
+	Host            string               `yaml:"host"`
+	SSHPort         int                  `yaml:"ssh_port,omitempty"`
+	Imported        bool                 `yaml:"imported,omitempty"`
+	Port            int                  `yaml:"port" default:"9090"`
+	DeployDir       string               `yaml:"deploy_dir,omitempty"`
+	DataDir         string               `yaml:"data_dir,omitempty"`
+	LogDir          string               `yaml:"log_dir,omitempty"`
+	NumaNode        string               `yaml:"numa_node,omitempty"`
+	Retention       string               `yaml:"storage_retention,omitempty"`
+	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty"`
+	Arch            string               `yaml:"arch,omitempty"`
+	OS              string               `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -231,14 +232,14 @@ func (s PrometheusSpec) IsImported() bool {
 
 // GrafanaSpec represents the Grafana topology specification in topology.yaml
 type GrafanaSpec struct {
-	Host            string          `yaml:"host"`
-	SSHPort         int             `yaml:"ssh_port,omitempty"`
-	Imported        bool            `yaml:"imported,omitempty"`
-	Port            int             `yaml:"port" default:"3000"`
-	DeployDir       string          `yaml:"deploy_dir,omitempty"`
-	ResourceControl ResourceControl `yaml:"resource_control,omitempty"`
-	Arch            string          `yaml:"arch,omitempty"`
-	OS              string          `yaml:"os,omitempty"`
+	Host            string               `yaml:"host"`
+	SSHPort         int                  `yaml:"ssh_port,omitempty"`
+	Imported        bool                 `yaml:"imported,omitempty"`
+	Port            int                  `yaml:"port" default:"3000"`
+	DeployDir       string               `yaml:"deploy_dir,omitempty"`
+	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty"`
+	Arch            string               `yaml:"arch,omitempty"`
+	OS              string               `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -263,18 +264,18 @@ func (s GrafanaSpec) IsImported() bool {
 
 // AlertManagerSpec represents the AlertManager topology specification in topology.yaml
 type AlertManagerSpec struct {
-	Host            string          `yaml:"host"`
-	SSHPort         int             `yaml:"ssh_port,omitempty"`
-	Imported        bool            `yaml:"imported,omitempty"`
-	WebPort         int             `yaml:"web_port" default:"9093"`
-	ClusterPort     int             `yaml:"cluster_port" default:"9094"`
-	DeployDir       string          `yaml:"deploy_dir,omitempty"`
-	DataDir         string          `yaml:"data_dir,omitempty"`
-	LogDir          string          `yaml:"log_dir,omitempty"`
-	NumaNode        string          `yaml:"numa_node,omitempty"`
-	ResourceControl ResourceControl `yaml:"resource_control,omitempty"`
-	Arch            string          `yaml:"arch,omitempty"`
-	OS              string          `yaml:"os,omitempty"`
+	Host            string               `yaml:"host"`
+	SSHPort         int                  `yaml:"ssh_port,omitempty"`
+	Imported        bool                 `yaml:"imported,omitempty"`
+	WebPort         int                  `yaml:"web_port" default:"9093"`
+	ClusterPort     int                  `yaml:"cluster_port" default:"9094"`
+	DeployDir       string               `yaml:"deploy_dir,omitempty"`
+	DataDir         string               `yaml:"data_dir,omitempty"`
+	LogDir          string               `yaml:"log_dir,omitempty"`
+	NumaNode        string               `yaml:"numa_node,omitempty"`
+	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty"`
+	Arch            string               `yaml:"arch,omitempty"`
+	OS              string               `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -572,11 +573,11 @@ func (topo *DMSTopologySpecification) UnmarshalYAML(unmarshal func(interface{}) 
 	// Set monitored options
 	if topo.MonitoredOptions.DeployDir == "" {
 		topo.MonitoredOptions.DeployDir = filepath.Join(topo.GlobalOptions.DeployDir,
-			fmt.Sprintf("%s-%d", meta.RoleMonitor, topo.MonitoredOptions.NodeExporterPort))
+			fmt.Sprintf("%s-%d", spec.RoleMonitor, topo.MonitoredOptions.NodeExporterPort))
 	}
 	if topo.MonitoredOptions.DataDir == "" {
 		topo.MonitoredOptions.DataDir = filepath.Join(topo.GlobalOptions.DataDir,
-			fmt.Sprintf("%s-%d", meta.RoleMonitor, topo.MonitoredOptions.NodeExporterPort))
+			fmt.Sprintf("%s-%d", spec.RoleMonitor, topo.MonitoredOptions.NodeExporterPort))
 	}
 
 	if err := fillDMCustomDefaults(&topo.GlobalOptions, topo); err != nil {

@@ -110,7 +110,7 @@ func NewUserModule(config UserModuleConfig) *UserModule {
 
 // Execute passes the command to executor and returns its results, the executor
 // should be already initialized.
-func (mod *UserModule) Execute(exec executor.TiOpsExecutor) ([]byte, []byte, error) {
+func (mod *UserModule) Execute(exec executor.Executor) ([]byte, []byte, error) {
 	a, b, err := exec.Execute(mod.cmd, true)
 	if err != nil {
 		switch mod.config.Action {

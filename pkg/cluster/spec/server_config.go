@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package meta
+package spec
 
 import (
 	"bytes"
@@ -26,6 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/meta"
 )
 
 const (
@@ -157,7 +158,7 @@ func mergeImported(importConfig []byte, specConfigs ...map[string]interface{}) (
 	return lhs, nil
 }
 
-func checkConfig(e executor.TiOpsExecutor, componentName, clusterVersion, nodeOS, arch, config string, paths DirPaths) error {
+func checkConfig(e executor.Executor, componentName, clusterVersion, nodeOS, arch, config string, paths meta.DirPaths) error {
 	repo, err := clusterutil.NewRepository(nodeOS, arch)
 	if err != nil {
 		return err
@@ -185,7 +186,7 @@ func checkConfig(e executor.TiOpsExecutor, componentName, clusterVersion, nodeOS
 	return errors.Annotatef(err, "check config failed: %s", componentName)
 }
 
-func hasConfigCheckFlag(e executor.TiOpsExecutor, binPath string) bool {
+func hasConfigCheckFlag(e executor.Executor, binPath string) bool {
 	stdout, stderr, _ := e.Execute(fmt.Sprintf("%s --help", binPath), false)
 	return strings.Contains(string(stdout), "config-check") || strings.Contains(string(stderr), "config-check")
 }

@@ -23,7 +23,7 @@ import (
 	utils2 "github.com/pingcap/tiup/pkg/utils"
 
 	"github.com/pingcap/tiup/pkg/base52"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -53,11 +53,11 @@ func OutputAuditLogIfEnabled() {
 	if !auditEnabled.Load() {
 		return
 	}
-	auditDir := meta.ProfilePath(meta.TiOpsAuditDir)
+	auditDir := spec.ProfilePath(spec.TiOpsAuditDir)
 	if err := utils2.CreateDir(auditDir); err != nil {
 		zap.L().Warn("Create audit directory failed", zap.Error(err))
 	} else {
-		auditFilePath := meta.ProfilePath(meta.TiOpsAuditDir, base52.Encode(time.Now().Unix()))
+		auditFilePath := spec.ProfilePath(spec.TiOpsAuditDir, base52.Encode(time.Now().Unix()))
 		err := ioutil.WriteFile(auditFilePath, auditBuffer.Bytes(), os.ModePerm)
 		if err != nil {
 			zap.L().Warn("Write audit log file failed", zap.Error(err))

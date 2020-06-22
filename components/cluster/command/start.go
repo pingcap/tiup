@@ -16,10 +16,12 @@ package command
 import (
 	"errors"
 
+	"github.com/pingcap/tiup/pkg/meta"
+
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -42,7 +44,7 @@ func newStartCmd() *cobra.Command {
 
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
-			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+			if utils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
 				return perrs.Errorf("cannot start non-exists cluster %s", clusterName)
 			}
 
@@ -59,15 +61,15 @@ func newStartCmd() *cobra.Command {
 func startCluster(clusterName string, options operator.Options) error {
 	logger.EnableAuditLog()
 	log.Infof("Starting cluster %s...", clusterName)
-	metadata, err := meta.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+	metadata, err := spec.ClusterMetadata(clusterName)
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
 	}
 
 	t := task.NewBuilder().
 		SSHKeySet(
-			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
-			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
+			spec.ClusterPath(clusterName, "ssh", "id_rsa"),
+			spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
 		ClusterOperate(metadata.Topology, operator.StartOperation, options).
 		UpdateTopology(clusterName, metadata, nil).

@@ -83,7 +83,7 @@ func NewSystemdModule(config SystemdModuleConfig) *SystemdModule {
 
 // Execute passes the command to executor and returns its results, the executor
 // should be already initialized.
-func (mod *SystemdModule) Execute(exec executor.TiOpsExecutor) ([]byte, []byte, error) {
+func (mod *SystemdModule) Execute(exec executor.Executor) ([]byte, []byte, error) {
 	// 100s just for avoid timeout now
 	// default send kill before gracefully stop of systemd is 90s.
 	return exec.Execute(mod.cmd, mod.sudo, 100*time.Second)

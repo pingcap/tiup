@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package meta
+package spec
 
 import (
 	"io/ioutil"
@@ -36,6 +36,7 @@ const (
 )
 
 var (
+	errNS        = errorx.NewNamespace("spec")
 	errNSCluster = errNS.NewSubNamespace("cluster")
 	// ErrClusterCreateDirFailed is ErrClusterCreateDirFailed
 	ErrClusterCreateDirFailed = errNSCluster.NewType("create_dir_failed")
@@ -51,7 +52,7 @@ type ClusterMeta struct {
 	//EnableFirewall bool   `yaml:"firewall"`
 	OpsVer string `yaml:"last_ops_ver,omitempty"` // the version of ourself that updated the meta last time
 
-	Topology *ClusterSpecification `yaml:"topology"`
+	Topology *Specification `yaml:"topology"`
 }
 
 // EnsureClusterDir ensures that the cluster directory exists.

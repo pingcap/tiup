@@ -11,13 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package meta
+package spec
 
 import (
 	"io/ioutil"
 	"os"
 
-	meta2 "github.com/pingcap/tiup/pkg/cluster/meta"
+	meta2 "github.com/pingcap/tiup/pkg/cluster/spec"
 
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package meta
+package spec
 
 import (
 	"fmt"
@@ -21,10 +21,49 @@ import (
 
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
+	"github.com/pingcap/tiup/pkg/meta"
 )
 
+// DrainerSpec represents the Drainer topology specification in topology.yaml
+type DrainerSpec struct {
+	Host            string                 `yaml:"host"`
+	SSHPort         int                    `yaml:"ssh_port,omitempty"`
+	Imported        bool                   `yaml:"imported,omitempty"`
+	Port            int                    `yaml:"port" default:"8249"`
+	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
+	DataDir         string                 `yaml:"data_dir,omitempty"`
+	LogDir          string                 `yaml:"log_dir,omitempty"`
+	CommitTS        int64                  `yaml:"commit_ts,omitempty"`
+	Offline         bool                   `yaml:"offline,omitempty"`
+	NumaNode        string                 `yaml:"numa_node,omitempty"`
+	Config          map[string]interface{} `yaml:"config,omitempty"`
+	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty"`
+	Arch            string                 `yaml:"arch,omitempty"`
+	OS              string                 `yaml:"os,omitempty"`
+}
+
+// Role returns the component role of the instance
+func (s DrainerSpec) Role() string {
+	return ComponentDrainer
+}
+
+// SSH returns the host and SSH port of the instance
+func (s DrainerSpec) SSH() (string, int) {
+	return s.Host, s.SSHPort
+}
+
+// GetMainPort returns the main port of the instance
+func (s DrainerSpec) GetMainPort() int {
+	return s.Port
+}
+
+// IsImported returns if the node is imported from TiDB-Ansible
+func (s DrainerSpec) IsImported() bool {
+	return s.Imported
+}
+
 // DrainerComponent represents Drainer component.
-type DrainerComponent struct{ *ClusterSpecification }
+type DrainerComponent struct{ *Specification }
 
 // Name implements Component interface.
 func (c *DrainerComponent) Name() string {
@@ -42,7 +81,7 @@ func (c *DrainerComponent) Instances() []Instance {
 			host:         s.Host,
 			port:         s.Port,
 			sshp:         s.SSHPort,
-			topo:         c.ClusterSpecification,
+			topo:         c.Specification,
 
 			usedPorts: []int{
 				s.Port,
@@ -66,18 +105,18 @@ type DrainerInstance struct {
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DrainerInstance) ScaleConfig(e executor.TiOpsExecutor, b Specification, clusterName, clusterVersion, user string, paths DirPaths) error {
+func (i *DrainerInstance) ScaleConfig(e executor.Executor, cluster *Specification, clusterName, clusterVersion, user string, paths meta.DirPaths) error {
 	s := i.instance.topo
 	defer func() {
 		i.instance.topo = s
 	}()
-	i.instance.topo = b.GetClusterSpecification()
+	i.instance.topo = cluster
 
 	return i.InitConfig(e, clusterName, clusterVersion, user, paths)
 }
 
 // InitConfig implements Instance interface.
-func (i *DrainerInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+func (i *DrainerInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}

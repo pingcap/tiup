@@ -24,7 +24,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/errutil"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
@@ -38,36 +38,36 @@ var (
 	errDeployPortConflict = errNSDeploy.NewType("port_conflict", errutil.ErrTraitPreCheck)
 )
 
-func fixDir(topo meta.Specification) func(string) string {
+func fixDir(topo *spec.Specification) func(string) string {
 	return func(dir string) string {
 		if dir != "" {
-			return clusterutil.Abs(topo.GetGlobalOptions().User, dir)
+			return clusterutil.Abs(topo.GlobalOptions.User, dir)
 		}
 		return dir
 	}
 }
 
 // CheckClusterDirConflict checks cluster dir conflict
-func CheckClusterDirConflict(clusterName string, topo meta.Specification) error {
+func CheckClusterDirConflict(clusterName string, topo *spec.Specification) error {
 	type DirAccessor struct {
 		dirKind  string
-		accessor func(meta.Instance, meta.Specification) string
+		accessor func(spec.Instance, *spec.Specification) string
 	}
 
 	instanceDirAccessor := []DirAccessor{
-		{dirKind: "deploy directory", accessor: func(instance meta.Instance, topo meta.Specification) string { return instance.DeployDir() }},
-		{dirKind: "data directory", accessor: func(instance meta.Instance, topo meta.Specification) string { return instance.DataDir() }},
-		{dirKind: "log directory", accessor: func(instance meta.Instance, topo meta.Specification) string { return instance.LogDir() }},
+		{dirKind: "deploy directory", accessor: func(instance spec.Instance, topo *spec.Specification) string { return instance.DeployDir() }},
+		{dirKind: "data directory", accessor: func(instance spec.Instance, topo *spec.Specification) string { return instance.DataDir() }},
+		{dirKind: "log directory", accessor: func(instance spec.Instance, topo *spec.Specification) string { return instance.LogDir() }},
 	}
 	hostDirAccessor := []DirAccessor{
-		{dirKind: "monitor deploy directory", accessor: func(instance meta.Instance, topo meta.Specification) string {
-			return topo.GetMonitoredOptions().DeployDir
+		{dirKind: "monitor deploy directory", accessor: func(instance spec.Instance, topo *spec.Specification) string {
+			return topo.MonitoredOptions.DeployDir
 		}},
-		{dirKind: "monitor data directory", accessor: func(instance meta.Instance, topo meta.Specification) string {
-			return topo.GetMonitoredOptions().DataDir
+		{dirKind: "monitor data directory", accessor: func(instance spec.Instance, topo *spec.Specification) string {
+			return topo.MonitoredOptions.DataDir
 		}},
-		{dirKind: "monitor log directory", accessor: func(instance meta.Instance, topo meta.Specification) string {
-			return topo.GetMonitoredOptions().LogDir
+		{dirKind: "monitor log directory", accessor: func(instance spec.Instance, topo *spec.Specification) string {
+			return topo.MonitoredOptions.LogDir
 		}},
 	}
 
@@ -75,13 +75,13 @@ func CheckClusterDirConflict(clusterName string, topo meta.Specification) error 
 		clusterName string
 		dirKind     string
 		dir         string
-		instance    meta.Instance
+		instance    spec.Instance
 	}
 
 	currentEntries := []Entry{}
 	existingEntries := []Entry{}
 
-	clusterDir := meta.ProfilePath(meta.TiOpsClusterDir)
+	clusterDir := spec.ProfilePath(spec.TiOpsClusterDir)
 	fileInfos, err := ioutil.ReadDir(clusterDir)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -91,16 +91,16 @@ func CheckClusterDirConflict(clusterName string, topo meta.Specification) error 
 			continue
 		}
 
-		if tiuputils.IsNotExist(meta.ClusterPath(fi.Name(), meta.MetaFileName)) {
+		if tiuputils.IsNotExist(spec.ClusterPath(fi.Name(), spec.MetaFileName)) {
 			continue
 		}
-		metadata, err := meta.ClusterMetadata(fi.Name())
+		metadata, err := spec.ClusterMetadata(fi.Name())
 		if err != nil {
 			return errors.Trace(err)
 		}
 
 		f := fixDir(metadata.Topology)
-		metadata.Topology.IterInstance(func(inst meta.Instance) {
+		metadata.Topology.IterInstance(func(inst spec.Instance) {
 			for _, dirAccessor := range instanceDirAccessor {
 				for _, dir := range strings.Split(f(dirAccessor.accessor(inst, metadata.Topology)), ",") {
 					existingEntries = append(existingEntries, Entry{
@@ -112,7 +112,7 @@ func CheckClusterDirConflict(clusterName string, topo meta.Specification) error 
 				}
 			}
 		})
-		metadata.Topology.IterHost(func(inst meta.Instance) {
+		metadata.Topology.IterHost(func(inst spec.Instance) {
 			for _, dirAccessor := range hostDirAccessor {
 				for _, dir := range strings.Split(f(dirAccessor.accessor(inst, metadata.Topology)), ",") {
 					existingEntries = append(existingEntries, Entry{
@@ -127,7 +127,7 @@ func CheckClusterDirConflict(clusterName string, topo meta.Specification) error 
 	}
 
 	f := fixDir(topo)
-	topo.IterInstance(func(inst meta.Instance) {
+	topo.IterInstance(func(inst spec.Instance) {
 		for _, dirAccessor := range instanceDirAccessor {
 			for _, dir := range strings.Split(f(dirAccessor.accessor(inst, topo)), ",") {
 				currentEntries = append(currentEntries, Entry{
@@ -138,7 +138,7 @@ func CheckClusterDirConflict(clusterName string, topo meta.Specification) error 
 			}
 		}
 	})
-	topo.IterHost(func(inst meta.Instance) {
+	topo.IterHost(func(inst spec.Instance) {
 		for _, dirAccessor := range hostDirAccessor {
 			for _, dir := range strings.Split(f(dirAccessor.accessor(inst, topo)), ",") {
 				currentEntries = append(currentEntries, Entry{
@@ -194,8 +194,8 @@ Please change to use another directory or another host.
 }
 
 // CheckClusterPortConflict checks cluster dir conflict
-func CheckClusterPortConflict(clusterName string, topo meta.Specification) error {
-	clusterDir := meta.ProfilePath(meta.TiOpsClusterDir)
+func CheckClusterPortConflict(clusterName string, topo *spec.Specification) error {
+	clusterDir := spec.ProfilePath(spec.TiOpsClusterDir)
 	fileInfos, err := ioutil.ReadDir(clusterDir)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -203,7 +203,7 @@ func CheckClusterPortConflict(clusterName string, topo meta.Specification) error
 
 	type Entry struct {
 		clusterName string
-		instance    meta.Instance
+		instance    spec.Instance
 		port        int
 	}
 
@@ -215,15 +215,15 @@ func CheckClusterPortConflict(clusterName string, topo meta.Specification) error
 			continue
 		}
 
-		if tiuputils.IsNotExist(meta.ClusterPath(fi.Name(), meta.MetaFileName)) {
+		if tiuputils.IsNotExist(spec.ClusterPath(fi.Name(), spec.MetaFileName)) {
 			continue
 		}
-		metadata, err := meta.ClusterMetadata(fi.Name())
+		metadata, err := spec.ClusterMetadata(fi.Name())
 		if err != nil {
 			return errors.Trace(err)
 		}
 
-		metadata.Topology.IterInstance(func(inst meta.Instance) {
+		metadata.Topology.IterInstance(func(inst spec.Instance) {
 			for _, port := range inst.UsedPorts() {
 				existingEntries = append(existingEntries, Entry{
 					clusterName: fi.Name(),
@@ -234,7 +234,7 @@ func CheckClusterPortConflict(clusterName string, topo meta.Specification) error
 		})
 	}
 
-	topo.IterInstance(func(inst meta.Instance) {
+	topo.IterInstance(func(inst spec.Instance) {
 		for _, port := range inst.UsedPorts() {
 			currentEntries = append(currentEntries, Entry{
 				instance: inst,
@@ -280,15 +280,15 @@ Please change to use another port or another host.
 }
 
 // BuildDownloadCompTasks build download component tasks
-func BuildDownloadCompTasks(version string, topo meta.Specification) []*task.StepDisplay {
+func BuildDownloadCompTasks(version string, topo *spec.Specification) []*task.StepDisplay {
 	var tasks []*task.StepDisplay
 	uniqueTaskList := make(map[string]struct{}) // map["comp-os-arch"]{}
-	topo.IterInstance(func(inst meta.Instance) {
+	topo.IterInstance(func(inst spec.Instance) {
 		key := fmt.Sprintf("%s-%s-%s", inst.ComponentName(), inst.OS(), inst.Arch())
 		if _, found := uniqueTaskList[key]; !found {
 			uniqueTaskList[key] = struct{}{}
 
-			version := meta.ComponentVersion(inst.ComponentName(), version)
+			version := spec.ComponentVersion(inst.ComponentName(), version)
 			t := task.NewBuilder().
 				Download(inst.ComponentName(), inst.OS(), inst.Arch(), version).
 				BuildAsStep(fmt.Sprintf("  - Download %s:%s (%s/%s)",

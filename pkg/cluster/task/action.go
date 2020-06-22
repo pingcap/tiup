@@ -17,13 +17,13 @@ import (
 	"fmt"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 )
 
 // ClusterOperate represents the cluster operation task.
 type ClusterOperate struct {
-	spec    meta.Specification
+	spec    *spec.Specification
 	op      operator.Operation
 	options operator.Options
 }
