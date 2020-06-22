@@ -1,5 +1,3 @@
-.PHONY: server
-
 build_integration_test: build_tiup_playground_test build_tiup_cluster_test build_tiup_dm_test
 
 build_tiup_playground_test: failpoint-enable
