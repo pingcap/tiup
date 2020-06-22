@@ -38,7 +38,8 @@ func (s *profileTestSuite) TestResetMirror(c *check.C) {
 	_ = os.Mkdir(path.Join(root, "bin"), 0755)
 	defer os.RemoveAll(root)
 
-	profile := NewProfile(root, InitConfig(root))
+	cfg, _ := InitConfig(root)
+	profile := NewProfile(root, cfg)
 
 	c.Assert(profile.ResetMirror("https://tiup-mirrors.pingcap.com", ""), check.IsNil)
 	c.Assert(profile.ResetMirror("https://example.com", ""), check.NotNil)
