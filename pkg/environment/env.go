@@ -44,20 +44,29 @@ const (
 func Mirror() string {
 	profile := localdata.InitProfile()
 	cfg := profile.Config
-	m := os.Getenv(repository.EnvMirrors)
-	if cfg != nil && cfg.Mirror != "" {
-		if m != "" && m != cfg.Mirror {
-			fmt.Printf(`WARNING: both mirror config and TIUP_MIRRORS have been set.
+
+	reset := func(m string) {
+		fmt.Printf(`WARNING: both mirror config and TIUP_MIRRORS have been set.
 Setting mirror to TIUP_MIRRORS(%s)
 `, m)
-			_ = profile.ResetMirror(m, "")
-			os.Setenv(repository.EnvMirrors, cfg.Mirror)
+		os.Setenv(repository.EnvMirrors, m)
+		if err := profile.ResetMirror(m, ""); err != nil {
+			fmt.Printf("WARNING: reset mirror failed, %s\n", err.Error())
 		}
+	}
+
+	m := os.Getenv(repository.EnvMirrors)
+	if m != "" {
+		if cfg.Mirror != m {
+			reset(m)
+		}
+		return m
+	} else if cfg.Mirror != "" {
+		os.Setenv(repository.EnvMirrors, cfg.Mirror)
 		return cfg.Mirror
 	}
-	if m != "" {
-		return m
-	}
+
+	reset(repository.DefaultMirror)
 	return repository.DefaultMirror
 }
 

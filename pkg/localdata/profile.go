@@ -62,7 +62,11 @@ func InitProfile() *Profile {
 		profileDir = filepath.Join(u.HomeDir, ProfileDirName)
 	}
 
-	return NewProfile(profileDir, InitConfig(profileDir))
+	cfg, err := InitConfig(profileDir)
+	if err != nil {
+		panic("cannot read config: " + err.Error())
+	}
+	return NewProfile(profileDir, cfg)
 }
 
 // Path returns a full path which is related to profile root directory

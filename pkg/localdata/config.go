@@ -17,6 +17,7 @@ import (
 	"path"
 
 	"github.com/BurntSushi/toml"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 type configBase struct {
@@ -30,12 +31,17 @@ type TiUPConfig struct {
 }
 
 // InitConfig returns a TiUPConfig struct which can flush config back to disk
-func InitConfig(root string) *TiUPConfig {
+func InitConfig(root string) (*TiUPConfig, error) {
 	config := TiUPConfig{configBase{path.Join(root, "tiup.toml")}, ""}
+	if utils.IsNotExist(config.file) {
+		return &config, nil
+	}
 	// We can ignore any error at current
 	// If we have more configs in the future, we should check the error
-	_, _ = toml.DecodeFile(config.file, &config)
-	return &config
+	if _, err := toml.DecodeFile(config.file, &config); err != nil {
+		return nil, err
+	}
+	return &config, nil
 }
 
 // Flush config to disk
