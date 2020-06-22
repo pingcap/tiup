@@ -265,6 +265,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 				clusterVersion,
 				inst,
 				globalOptions.User,
+				false,
 				meta.DirPaths{
 					Deploy: deployDir,
 					Data:   dataDirs,

@@ -296,6 +296,7 @@ func buildScaleOutTask(
 			metadata.Version,
 			inst,
 			metadata.User,
+			true, // always ignore config check result in scale out
 			meta.DirPaths{
 				Deploy: deployDir,
 				Data:   dataDirs,
