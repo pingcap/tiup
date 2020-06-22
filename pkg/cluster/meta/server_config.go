@@ -37,10 +37,8 @@ const (
 	migrateLockName = "tiup-migrate.lck"
 )
 
-// ConfigCheckError represent error occured in config check stage
-type ConfigCheckError struct {
-	error
-}
+// ErrorCheckConfig represent error occured in config check stage
+var ErrorCheckConfig = errors.New("check config failed")
 
 // strKeyMap tries to convert `map[interface{}]interface{}` to `map[string]interface{}`
 func strKeyMap(val interface{}) interface{} {
@@ -188,7 +186,7 @@ func checkConfig(e executor.TiOpsExecutor, componentName, clusterVersion, nodeOS
 	configPath := path.Join(paths.Deploy, "conf", config)
 	_, _, err = e.Execute(fmt.Sprintf("%s --config-check --config=%s %s", binPath, configPath, extra), false)
 	if err != nil {
-		return ConfigCheckError{err}
+		return errors.Annotate(ErrorCheckConfig, err.Error())
 	}
 	return nil
 }
