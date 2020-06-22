@@ -46,7 +46,7 @@ func (c *InitConfig) Execute(ctx *Context) error {
 
 	err := c.instance.InitConfig(exec, c.clusterName, c.clusterVersion, c.deployUser, c.paths)
 	if err != nil {
-		if errors.Cause(err) == meta.ErrorCheckConfig {
+		if c.ignoreCheck && errors.Cause(err) == meta.ErrorCheckConfig {
 			return nil
 		}
 		return errors.Annotatef(err, "init config failed: %s:%d", c.instance.GetHost(), c.instance.GetPort())
