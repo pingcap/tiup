@@ -46,9 +46,6 @@ func Mirror() string {
 	cfg := profile.Config
 
 	reset := func(m string) {
-		fmt.Printf(`WARNING: both mirror config and TIUP_MIRRORS have been set.
-Setting mirror to TIUP_MIRRORS(%s)
-`, m)
 		os.Setenv(repository.EnvMirrors, m)
 		if err := profile.ResetMirror(m, ""); err != nil {
 			fmt.Printf("WARNING: reset mirror failed, %s\n", err.Error())
@@ -58,6 +55,10 @@ Setting mirror to TIUP_MIRRORS(%s)
 	m := os.Getenv(repository.EnvMirrors)
 	if m != "" {
 		if cfg.Mirror != m {
+			fmt.Printf(`WARNING: both mirror config(%s) 
+and TIUP_MIRRORS(%s) have been set.
+Setting mirror to TIUP_MIRRORS(%s)
+`, cfg.Mirror, m, m)
 			reset(m)
 		}
 		return m
@@ -66,7 +67,6 @@ Setting mirror to TIUP_MIRRORS(%s)
 		return cfg.Mirror
 	}
 
-	reset(repository.DefaultMirror)
 	return repository.DefaultMirror
 }
 
