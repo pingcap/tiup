@@ -159,7 +159,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
 	}
 
-	var topo meta.TopologySpecification
+	var topo meta.ClusterSpecification
 	if err := clusterutil.ParseTopologyYaml(topoFile, &topo); err != nil {
 		return err
 	}

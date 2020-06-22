@@ -166,7 +166,7 @@ func printErrorMessageForErrorX(err *errorx.Error) {
 			causeErrX = c
 		} else if cause != nil {
 			if ident > 0 {
-				// Out most error may have empty message. In this case we treat it as a transparent error.
+				// The error may have empty message. In this case we treat it as a transparent error.
 				// Thus `ident == 0` can be possible.
 				msg += strings.Repeat("  ", ident) + "caused by: "
 			}

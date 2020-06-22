@@ -24,14 +24,14 @@ import (
 
 // TiDBScript represent the data to generate TiDB config
 type TiDBScript struct {
-	IP            string
+	IP         string
 	ListenHost string
-	Port          int
-	StatusPort    int
-	DeployDir     string
-	LogDir        string
-	NumaNode      string
-	Endpoints     []*PDScript
+	Port       int
+	StatusPort int
+	DeployDir  string
+	LogDir     string
+	NumaNode   string
+	Endpoints  []*PDScript
 }
 
 // NewTiDBScript returns a TiDBScript with given arguments

@@ -14,11 +14,12 @@
 package command
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
@@ -77,11 +78,13 @@ func newScaleInCmd() *cobra.Command {
 
 func scaleIn(clusterName string, options operator.Options) error {
 	if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-		return errors.Errorf("cannot scale-in non-exists cluster %s", clusterName)
+		return perrs.Errorf("cannot scale-in non-exists cluster %s", clusterName)
 	}
 
 	metadata, err := meta.ClusterMetadata(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+		// ignore conflict check error, node may be deployed by former version
+		// that lack of some certain conflict checks
 		return err
 	}
 
@@ -158,7 +161,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
 		}
-		return errors.Trace(err)
+		return perrs.Trace(err)
 	}
 
 	log.Infof("Scaled cluster `%s` in successfully", clusterName)

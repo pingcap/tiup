@@ -94,7 +94,7 @@ func CheckClusterDirConflict(clusterName string, topo meta.Specification) error 
 		if tiuputils.IsNotExist(meta.ClusterPath(fi.Name(), meta.MetaFileName)) {
 			continue
 		}
-		metadata, err := meta.DMMetadata(fi.Name())
+		metadata, err := meta.ClusterMetadata(fi.Name())
 		if err != nil {
 			return errors.Trace(err)
 		}

@@ -41,9 +41,6 @@ import (
 
 // Components names supported by TiOps
 const (
-	ComponentDMMaster         = "dm-master"
-	ComponentDMWorker         = "dm-worker"
-	ComponentDMPortal         = "dm-portal"
 	ComponentTiDB             = "tidb"
 	ComponentTiKV             = "tikv"
 	ComponentPD               = "pd"
@@ -102,7 +99,6 @@ type Specification interface {
 	GetGlobalOptions() GlobalOptions
 	GetMonitoredOptions() MonitoredOptions
 	GetClusterSpecification() *ClusterSpecification
-	GetDMSpecification() *DMSpecification
 }
 
 // PortStarted wait until a port is being listened
@@ -280,6 +276,23 @@ func (i *instance) DataDir() string {
 	return dataDir.String()
 }
 
+func (i *instance) LogDir() string {
+	logDir := ""
+
+	field := reflect.ValueOf(i.InstanceSpec).FieldByName("LogDir")
+	if field.IsValid() {
+		logDir = field.Interface().(string)
+	}
+
+	if logDir == "" {
+		logDir = "log"
+	}
+	if !strings.HasPrefix(logDir, "/") {
+		logDir = filepath.Join(i.DeployDir(), logDir)
+	}
+	return logDir
+}
+
 func (i *instance) OS() string {
 	return reflect.ValueOf(i.InstanceSpec).FieldByName("OS").Interface().(string)
 }
@@ -316,23 +329,6 @@ func (i *instance) resourceControl() ResourceControl {
 		Interface().(ResourceControl)
 }
 
-func (i *instance) LogDir() string {
-	logDir := ""
-
-	field := reflect.ValueOf(i.InstanceSpec).FieldByName("LogDir")
-	if field.IsValid() {
-		logDir = field.Interface().(string)
-	}
-
-	if logDir == "" {
-		logDir = "log"
-	}
-	if !strings.HasPrefix(logDir, "/") {
-		logDir = filepath.Join(i.DeployDir(), logDir)
-	}
-	return logDir
-}
-
 func (i *instance) GetPort() int {
 	return i.port
 }
@@ -348,9 +344,6 @@ func (i *instance) UsedDirs() []string {
 func (i *instance) Status(pdList ...string) string {
 	return i.statusFn(pdList...)
 }
-
-// ClusterSpecification of cluster
-type ClusterSpecification = TopologySpecification
 
 // TiDBComponent represents TiDB component.
 type TiDBComponent struct{ *ClusterSpecification }
@@ -815,7 +808,7 @@ func (i *TiFlashInstance) DataDir() string {
 
 // InitTiFlashConfig initializes TiFlash config file
 func (i *TiFlashInstance) InitTiFlashConfig(cfg *scripts.TiFlashScript, src map[string]interface{}) (map[string]interface{}, error) {
-	topo := TopologySpecification{}
+	topo := ClusterSpecification{}
 
 	err := yaml.Unmarshal([]byte(fmt.Sprintf(`
 server_configs:
@@ -879,7 +872,7 @@ server_configs:
 
 // InitTiFlashLearnerConfig initializes TiFlash learner config file
 func (i *TiFlashInstance) InitTiFlashLearnerConfig(cfg *scripts.TiFlashScript, src map[string]interface{}) (map[string]interface{}, error) {
-	topo := TopologySpecification{}
+	topo := ClusterSpecification{}
 
 	firstDataDir := strings.Split(cfg.DataDir, ",")[0]
 
@@ -1396,11 +1389,6 @@ func (topo *ClusterSpecification) GetMonitoredOptions() MonitoredOptions {
 // GetClusterSpecification returns cluster topology
 func (topo *ClusterSpecification) GetClusterSpecification() *ClusterSpecification {
 	return topo
-}
-
-// GetDMSpecification returns dm topology
-func (topo *ClusterSpecification) GetDMSpecification() *DMSpecification {
-	return nil
 }
 
 // ComponentsByStopOrder return component in the order need to stop.

@@ -13,11 +13,12 @@
 
 package task
 
+/*
 import (
 	"fmt"
 	"strings"
 
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/dms/meta"
 
 	"github.com/pingcap/tiup/pkg/set"
 )
@@ -34,7 +35,7 @@ func (u *UpdateDMMeta) Execute(ctx *Context) error {
 	// make a copy
 	newMeta := &meta.DMMeta{}
 	*newMeta = *u.metadata
-	newMeta.Topology = &meta.DMTopologySpecification{
+	newMeta.Topology = &meta.DMSTopologySpecification{
 		GlobalOptions:    u.metadata.Topology.GlobalOptions,
 		MonitoredOptions: u.metadata.Topology.MonitoredOptions,
 		ServerConfigs:    u.metadata.Topology.ServerConfigs,
@@ -42,19 +43,19 @@ func (u *UpdateDMMeta) Execute(ctx *Context) error {
 
 	deleted := set.NewStringSet(u.deletedNodesID...)
 	topo := u.metadata.Topology
-	for i, instance := range (&meta.DMMasterComponent{DMSpecification: topo}).Instances() {
+	for i, instance := range (&meta.DMMasterComponent{DMSSpecification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Masters = append(newMeta.Topology.Masters, topo.Masters[i])
 	}
-	for i, instance := range (&meta.DMWorkerComponent{DMSpecification: topo}).Instances() {
+	for i, instance := range (&meta.DMWorkerComponent{DMSSpecification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Workers = append(newMeta.Topology.Workers, topo.Workers[i])
 	}
-	for i, instance := range (&meta.DMPortalComponent{DMSpecification: topo}).Instances() {
+	for i, instance := range (&meta.DMPortalComponent{DMSSpecification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
@@ -73,3 +74,4 @@ func (u *UpdateDMMeta) Rollback(ctx *Context) error {
 func (u *UpdateDMMeta) String() string {
 	return fmt.Sprintf("UpdateMeta: cluster=%s, deleted=`'%s'`", u.cluster, strings.Join(u.deletedNodesID, "','"))
 }
+*/

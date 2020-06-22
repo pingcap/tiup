@@ -23,13 +23,17 @@ import (
 
 // Options represents the operation options
 type Options struct {
-	Roles             []string
-	Nodes             []string
-	Force             bool  // Option for upgrade subcommand
-	SSHTimeout        int64 // timeout in seconds when connecting an SSH server
-	OptTimeout        int64 // timeout in seconds for operations that support it, not to confuse with SSH timeout
-	APITimeout        int64 // timeout in seconds for API operations that support it, like transfering store leader
-	IgnoreConfigCheck bool  // should we ignore the config check result after init config
+	Roles      []string
+	Nodes      []string
+	Force      bool  // Option for upgrade subcommand
+	SSHTimeout int64 // timeout in seconds when connecting an SSH server
+	OptTimeout int64 // timeout in seconds for operations that support it, not to confuse with SSH timeout
+	APITimeout int64 // timeout in seconds for API operations that support it, like transfering store leader
+  IgnoreConfigCheck bool  // should we ignore the config check result after init config
+
+	// Some data will be retained when destroying instances
+	RetainDataRoles []string
+	RetainDataNodes []string
 }
 
 // Operation represents the type of cluster operation

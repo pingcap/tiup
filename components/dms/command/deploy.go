@@ -13,6 +13,7 @@
 
 package command
 
+/*
 import (
 	"context"
 	"fmt"
@@ -105,7 +106,7 @@ func newDeploy() *cobra.Command {
 	return cmd
 }
 
-func confirmTopology(clusterName, version string, topo *meta.DMTopologySpecification, patchedRoles set.StringSet) error {
+func confirmTopology(clusterName, version string, topo *meta.DMSTopologySpecification, patchedRoles set.StringSet) error {
 	log.Infof("Please confirm your topology:")
 
 	cyan := color.New(color.FgCyan, color.Bold)
@@ -154,7 +155,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
 	}
 
-	var topo meta.DMTopologySpecification
+	var topo meta.DMSTopologySpecification
 	if err := clusterutil.ParseTopologyYaml(topoFile, &topo); err != nil {
 		return err
 	}
@@ -321,3 +322,4 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 	log.Infof("Deployed cluster `%s` successfully, you can start the cluster via `%s`", clusterName, hint)
 	return nil
 }
+*/

@@ -96,6 +96,7 @@ func (b *Builder) UpdateMeta(cluster string, metadata *meta.ClusterMeta, deleted
 	return b
 }
 
+/*
 // UpdateDMMeta maintain the dm meta information
 func (b *Builder) UpdateDMMeta(cluster string, metadata *meta.DMMeta, deletedNodeIds []string) *Builder {
 	b.tasks = append(b.tasks, &UpdateDMMeta{
@@ -105,6 +106,7 @@ func (b *Builder) UpdateDMMeta(cluster string, metadata *meta.DMMeta, deletedNod
 	})
 	return b
 }
+*/
 
 // UpdateTopology maintain the topology information
 func (b *Builder) UpdateTopology(cluster string, metadata *meta.ClusterMeta, deletedNodeIds []string) *Builder {
