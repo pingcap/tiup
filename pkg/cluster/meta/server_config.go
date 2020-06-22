@@ -15,6 +15,7 @@ package meta
 
 import (
 	"bytes"
+	se "errors"
 	"fmt"
 	"os"
 	"path"
@@ -38,7 +39,7 @@ const (
 )
 
 // ErrorCheckConfig represent error occured in config check stage
-var ErrorCheckConfig = errors.New("check config failed")
+var ErrorCheckConfig = se.New("check config failed")
 
 // strKeyMap tries to convert `map[interface{}]interface{}` to `map[string]interface{}`
 func strKeyMap(val interface{}) interface{} {
