@@ -18,11 +18,10 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/pingcap/tiup/pkg/meta"
-
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/meta"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )

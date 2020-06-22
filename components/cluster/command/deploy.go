@@ -22,8 +22,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pingcap/tiup/pkg/meta"
-
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
@@ -37,6 +35,7 @@ import (
 	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	telemetry2 "github.com/pingcap/tiup/pkg/telemetry"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"

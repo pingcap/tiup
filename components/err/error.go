@@ -25,10 +25,8 @@ import (
 	"github.com/blevesearch/bleve/analysis/lang/en"
 	_ "github.com/blevesearch/bleve/index/store/goleveldb"
 	"github.com/blevesearch/bleve/mapping"
-	"github.com/pelletier/go-toml"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/spf13/cobra"
-	"github.com/tj/go-termd"
 )
 
 func init() {
