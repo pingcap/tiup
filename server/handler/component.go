@@ -94,7 +94,7 @@ func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr 
 			return err
 		}
 
-		var indexVersion uint
+		var indexFileVersion *v1manifest.FileVersion
 		var owner *v1manifest.Owner
 		if err := md.UpdateIndexManifest(initTime, func(om *model.IndexManifest) *model.IndexManifest {
 			// We only update index.json when it's a new component
@@ -110,7 +110,6 @@ func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr 
 				owner = &o
 				if len(options) == 0 {
 					// No changes on index.json
-					indexVersion = om.Signed.Version
 					return nil
 				}
 				if opt, ok := options["yanked"]; ok {
@@ -140,7 +139,7 @@ func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr 
 			}
 
 			om.Signed.Components[name] = compItem
-			indexVersion = om.Signed.Version + 1
+			indexFileVersion = &v1manifest.FileVersion{Version: om.Signed.Version + 1}
 			return om
 		}); err != nil {
 			return err
@@ -150,15 +149,17 @@ func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr 
 			return err
 		}
 
-		indexFi, err := txn.Stat(fmt.Sprintf("%d.index.json", indexVersion))
-		if err != nil {
-			return err
+		if indexFileVersion != nil {
+			if indexFi, err := txn.Stat(fmt.Sprintf("%d.index.json", indexFileVersion.Version)); err == nil {
+				indexFileVersion.Length = uint(indexFi.Size())
+			} else {
+				return err
+			}
 		}
 
 		if err := md.UpdateSnapshotManifest(initTime, func(om *model.SnapshotManifest) *model.SnapshotManifest {
-			om.Signed.Meta["/index.json"] = v1manifest.FileVersion{
-				Version: indexVersion,
-				Length:  uint(indexFi.Size()),
+			if indexFileVersion != nil {
+				om.Signed.Meta["/index.json"] = *indexFileVersion
 			}
 			om.Signed.Meta[fmt.Sprintf("/%s.json", name)] = v1manifest.FileVersion{
 				Version: m.Signed.Version,

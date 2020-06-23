@@ -120,6 +120,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 				metadata.Version,
 				instance,
 				metadata.User,
+				true, // always ignore config check result in scale in
 				meta.DirPaths{
 					Deploy: deployDir,
 					Data:   dataDirs,

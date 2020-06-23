@@ -35,6 +35,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/failpoint"
 	"github.com/pingcap/tiup/components/playground/instance"
+	"github.com/pingcap/tiup/components/playground/utils"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -83,13 +84,14 @@ func (p *Playground) handleDisplay(r io.Writer) (err error) {
 	t := tabby.NewCustom(w)
 
 	// TODO add more info.
-	header := []interface{}{"Pid", "Role"}
+	header := []interface{}{"Pid", "Role", "Uptime"}
 	t.AddHeader(header...)
 
 	err = p.WalkInstances(func(componentID string, ins instance.Instance) error {
 		row := make([]interface{}, len(header))
 		row[0] = strconv.Itoa(ins.Pid())
 		row[1] = componentID
+		row[2] = ins.Uptime()
 		t.AddLine(row...)
 		return nil
 	})
@@ -376,6 +378,12 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) {
 	}
 }
 
+func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
+	fmt.Printf("Start %s instance...\n", inst.Component())
+	err := inst.Start(context.Background(), v0manifest.Version(p.bootOptions.version))
+	return errors.AddStack(err)
+}
+
 func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 	// Ignore Config.Num, alway one command as scale out one instance.
 	p.sanitizeComponentConfig(cmd.ComponentID, &cmd.Config)
@@ -384,7 +392,7 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 		return errors.AddStack(err)
 	}
 
-	err = inst.Start(context.Background(), v0manifest.Version(p.bootOptions.version))
+	err = p.startInstance(context.Background(), inst)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -443,6 +451,26 @@ func (p *Playground) commandHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(403)
 		fmt.Fprintln(w, err)
 	}
+}
+
+// RWalkInstances work like WalkInstances, but in the reverse order.
+func (p *Playground) RWalkInstances(fn func(componentID string, ins instance.Instance) error) error {
+	var ids []string
+	var instances []instance.Instance
+
+	_ = p.WalkInstances(func(id string, ins instance.Instance) error {
+		ids = append(ids, id)
+		instances = append(instances, ins)
+		return nil
+	})
+
+	for i := 0; i < len(ids); i++ {
+		err := fn(ids[i], instances[i])
+		if err != nil {
+			return errors.AddStack(err)
+		}
+	}
+	return nil
 }
 
 // WalkInstances call fn for every intance and stop if return not nil.
@@ -656,6 +684,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			cmd.Stderr = log
 			cmd.Stdout = os.Stdout
 
+			// fmt.Println("Start Prometheus instance...")
 			if err := cmd.Start(); err != nil {
 				fmt.Println("Monitor system start failed", err)
 				return
@@ -709,6 +738,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 		}
 
 		grafana = newGrafana(options.version, options.host)
+		// fmt.Println("Start Grafana instance...")
 		err = grafana.start(ctx, grafanaDir, fmt.Sprintf("http://%s:%d", monitorInfo.IP, monitorInfo.Port))
 		if err != nil {
 			return errors.AddStack(err)
@@ -722,14 +752,14 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			return nil
 		}
 
-		err := ins.Start(ctx, v0manifest.Version(options.version))
+		err := p.startInstance(ctx, ins)
 		if err != nil {
 			return err
 		}
 
 		// if no any pump, tidb will quit right away.
 		if cid == "pump" && !anyPumpReady {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*120)
 			err = ins.(*instance.Pump).Ready(ctx)
 			cancel()
 			if err != nil {
@@ -863,7 +893,8 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			syscall.SIGQUIT)
 		sig := (<-sc).(syscall.Signal)
 		if sig != syscall.SIGINT {
-			_ = p.WalkInstances(func(_ string, inst instance.Instance) error {
+			// Need more graceful kill by stop components one by one?
+			_ = p.RWalkInstances(func(_ string, inst instance.Instance) error {
 				_ = syscall.Kill(inst.Pid(), sig)
 				return nil
 			})
@@ -886,7 +917,17 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 
 	_ = p.WalkInstances(func(_ string, inst instance.Instance) error {
 		p.instanceWaiter.Go(func() error {
-			return inst.Wait()
+			err := inst.Wait()
+			if err != nil {
+				fmt.Print(color.RedString("%s quit: \n", inst.Component()))
+				if lines, _ := utils.TailN(inst.LogFile(), 10); len(lines) > 0 {
+					for _, line := range lines {
+						fmt.Println(line)
+					}
+					fmt.Print(color.YellowString("...\ncheck detail log from: %s\n", inst.LogFile()))
+				}
+			}
+			return err
 		})
 		return nil
 	})
@@ -896,11 +937,15 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 	if grafana != nil {
 		p.instanceWaiter.Go(func() error {
 			err := grafana.cmd.Wait()
+			if err != nil {
+				fmt.Printf("Grafana quit: %v\n", err)
+			}
 			return err
 		})
 		fmt.Print(color.GreenString("To view the Grafana: http://%s:%d\n", grafana.host, grafana.port))
 	}
 
+	// Wait all instance quit and return the first non-nil err.
 	err = p.instanceWaiter.Wait()
 	if err != nil {
 		return err

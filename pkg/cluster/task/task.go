@@ -22,6 +22,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/utils/mock"
 )
 
 var (
@@ -106,6 +107,11 @@ func (ctx *Context) Get(host string) (e executor.Executor) {
 
 // GetExecutor get the executor.
 func (ctx *Context) GetExecutor(host string) (e executor.Executor, ok bool) {
+	// Mock point for unit test
+	if e := mock.On("FakeExecutor"); e != nil {
+		return e.(executor.Executor), true
+	}
+
 	ctx.exec.RLock()
 	e, ok = ctx.exec.executors[host]
 	ctx.exec.RUnlock()
