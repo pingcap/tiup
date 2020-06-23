@@ -13,5 +13,38 @@
 
 package v1manifest
 
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
 // TODO test that invalid manifests trigger errors
 // TODO test SignAndWrite
+
+func TestVersionItem(t *testing.T) {
+	manifest := &Component{
+		Platforms: map[string]map[string]VersionItem{
+			"linux/amd64": map[string]VersionItem{
+				"v1.0.0": VersionItem{Entry: "test"},
+			},
+			"any/any": map[string]VersionItem{
+				"v1.0.0": VersionItem{Entry: "test"},
+			},
+		},
+	}
+
+	assert.NotNil(t, manifest.VersionItem("linux/amd64", "v1.0.0"))
+	assert.NotNil(t, manifest.VersionItem("windows/386", "v1.0.0"))
+
+	manifest = &Component{
+		Platforms: map[string]map[string]VersionItem{
+			"linux/amd64": map[string]VersionItem{
+				"v1.0.0": VersionItem{Entry: "test"},
+			},
+		},
+	}
+
+	assert.NotNil(t, manifest.VersionItem("linux/amd64", "v1.0.0"))
+	assert.Nil(t, manifest.VersionItem("windows/386", "v1.0.0"))
+}
