@@ -737,6 +737,8 @@ func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 	comps = append(comps, &MonitorComponent{s})
 	comps = append(comps, &GrafanaComponent{s})
 	comps = append(comps, &AlertManagerComponent{s})
+	comps = append(comps, &TiSparkMasterComponent{s})
+	comps = append(comps, &TiSparkSlaveComponent{s})
 	return
 }
 

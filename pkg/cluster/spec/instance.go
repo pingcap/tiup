@@ -48,6 +48,7 @@ const (
 	ComponentBlackboxExporter = "blackbox_exporter"
 	ComponentNodeExporter     = "node_exporter"
 	ComponentCheckCollector   = "insight"
+	platformIndependentName   = "any"
 )
 
 // Component represents a component of the cluster.
@@ -274,19 +275,19 @@ func (i *instance) LogDir() string {
 }
 
 func (i *instance) OS() string {
-	os := reflect.ValueOf(i.InstanceSpec).FieldByName("OS").Interface().(string)
-	if os == "" {
-		return "any"
+	v := reflect.ValueOf(i.InstanceSpec).FieldByName("OS")
+	if !v.IsValid() {
+		return platformIndependentName
 	}
-	return os
+	return v.Interface().(string)
 }
 
 func (i *instance) Arch() string {
-	arch := reflect.ValueOf(i.InstanceSpec).FieldByName("Arch").Interface().(string)
-	if arch == "" {
-		return "any"
+	v := reflect.ValueOf(i.InstanceSpec).FieldByName("Arch")
+	if !v.IsValid() {
+		return platformIndependentName
 	}
-	return arch
+	return v.Interface().(string)
 }
 
 // PrepareStart checks instance requirements before starting
