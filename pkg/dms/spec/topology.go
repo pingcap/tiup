@@ -42,10 +42,6 @@ type (
 		IsImported() bool
 	}
 
-	// ResourceControl is used to control the system resource
-	// See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html
-	ResourceControl = spec.ResourceControl
-
 	// GlobalOptions represents the global options for all groups in topology
 	// specification in topology.yaml
 	GlobalOptions = spec.GlobalOptions
@@ -53,8 +49,8 @@ type (
 	// MonitoredOptions represents the monitored node configuration
 	MonitoredOptions = spec.MonitoredOptions
 
-	// DMSTopologySpecification represents the specification of topology.yaml
-	DMSTopologySpecification struct {
+	// Specification represents the specification of topology.yaml
+	Specification struct {
 		GlobalOptions    GlobalOptions      `yaml:"global,omitempty"`
 		MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty"`
 		Job              JobSpec            `yaml:"job"`
@@ -312,7 +308,7 @@ type DMMasterSpec struct {
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
-	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
 }
@@ -373,7 +369,7 @@ type DMWorkerSpec struct {
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
-	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
 }
@@ -426,7 +422,7 @@ type PortalSpec struct {
 	Timeout         int                    `yaml:"timeout" default:"5"`
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
-	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
 }
@@ -462,7 +458,7 @@ type DumplingSpec struct {
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
-	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
 }
@@ -498,7 +494,7 @@ type LightningSpec struct {
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
-	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
 }
@@ -534,7 +530,7 @@ type ImporterSpec struct {
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty"`
 	Config          map[string]interface{} `yaml:"config,omitempty"`
-	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
 }
@@ -560,8 +556,8 @@ func (s ImporterSpec) IsImported() bool {
 }
 
 // UnmarshalYAML sets default values when unmarshaling the topology file
-func (topo *DMSTopologySpecification) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	type topology DMSTopologySpecification
+func (topo *Specification) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type topology Specification
 	if err := unmarshal((*topology)(topo)); err != nil {
 		return err
 	}
@@ -620,7 +616,7 @@ func findField(v reflect.Value, fieldName string) (int, bool) {
 
 // platformConflictsDetect checks for conflicts in topology for different OS / Arch
 // for set to the same host / IP
-func (topo *DMSTopologySpecification) platformConflictsDetect() error {
+func (topo *Specification) platformConflictsDetect() error {
 	type (
 		conflict struct {
 			os   string
@@ -685,7 +681,7 @@ func (topo *DMSTopologySpecification) platformConflictsDetect() error {
 	return checkConflict(workerSpec, workerTypeName)
 }
 
-func (topo *DMSTopologySpecification) portConflictsDetect() error {
+func (topo *Specification) portConflictsDetect() error {
 	type (
 		usedPort struct {
 			host string
@@ -786,7 +782,7 @@ func (topo *DMSTopologySpecification) portConflictsDetect() error {
 	return nil
 }
 
-func (topo *DMSTopologySpecification) dirConflictsDetect() error {
+func (topo *Specification) dirConflictsDetect() error {
 	type (
 		usedDir struct {
 			host string
@@ -861,7 +857,7 @@ func (topo *DMSTopologySpecification) dirConflictsDetect() error {
 
 // Validate validates the topology specification and produce error if the
 // specification invalid (e.g: port conflicts or directory conflicts)
-func (topo *DMSTopologySpecification) Validate() error {
+func (topo *Specification) Validate() error {
 	if err := topo.platformConflictsDetect(); err != nil {
 		return err
 	}
@@ -874,7 +870,7 @@ func (topo *DMSTopologySpecification) Validate() error {
 }
 
 // GetMasterList returns a list of DMMaster API hosts of the current cluster
-func (topo *DMSTopologySpecification) GetMasterList() []string {
+func (topo *Specification) GetMasterList() []string {
 	var masterList []string
 	/*for _, master := range topo.Masters {
 		masterList = append(masterList, fmt.Sprintf("%s:%d", master.Host, master.Port))
@@ -883,8 +879,8 @@ func (topo *DMSTopologySpecification) GetMasterList() []string {
 }
 
 // Merge returns a new TopologySpecification which sum old ones
-func (topo *DMSTopologySpecification) Merge(that *DMSTopologySpecification) *DMSTopologySpecification {
-	mergedTopo := &DMSTopologySpecification{
+func (topo *Specification) Merge(that *Specification) *Specification {
+	mergedTopo := &Specification{
 		GlobalOptions:    topo.GlobalOptions,
 		MonitoredOptions: topo.MonitoredOptions,
 		Job:              topo.Job,

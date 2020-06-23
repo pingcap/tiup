@@ -17,10 +17,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/meta"
+
 	"github.com/pingcap/check"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	"github.com/pingcap/tiup/pkg/utils/mock"
 )
 
@@ -40,12 +42,12 @@ func (e *fakeExecutor) Transfer(src string, dst string, download bool) error {
 
 type fakeInstance struct {
 	hasConfigError bool
-	*meta.TiDBInstance
+	*spec.TiDBInstance
 }
 
-func (i *fakeInstance) InitConfig(e executor.TiOpsExecutor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error {
+func (i *fakeInstance) InitConfig(e executor.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error {
 	if i.hasConfigError {
-		return errors.Annotate(meta.ErrorCheckConfig, "test error")
+		return errors.Annotate(spec.ErrorCheckConfig, "test error")
 	}
 	return nil
 }

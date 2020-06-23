@@ -20,6 +20,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pingcap/tiup/pkg/meta"
+
 	"github.com/google/uuid"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -207,10 +209,10 @@ func (i *instance) DataDir() string {
 	return dataDir.String()
 }
 
-func (i *instance) resourceControl() ResourceControl {
+func (i *instance) resourceControl() meta.ResourceControl {
 	return reflect.ValueOf(i.InstanceSpec).
 		FieldByName("ResourceControl").
-		Interface().(ResourceControl)
+		Interface().(meta.ResourceControl)
 }
 
 func (i *instance) OS() string {
@@ -259,7 +261,7 @@ func (i *instance) Status(masterList ...string) string {
 }
 
 // DMSSpecification of cluster
-type DMSSpecification = DMSTopologySpecification
+type DMSSpecification = Specification
 
 // DMMasterComponent represents TiDB component.
 type DMMasterComponent struct{ *DMSSpecification }

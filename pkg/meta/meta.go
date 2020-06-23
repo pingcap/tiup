@@ -16,12 +16,9 @@ package meta
 import (
 	"fmt"
 	"reflect"
-
-	"github.com/joomcode/errorx"
 )
 
 var (
-	errNS = errorx.NewNamespace("meta")
 	// ErrValidate is an empty ValidateErr object, useful for type checking
 	ErrValidate = &ValidateErr{}
 )

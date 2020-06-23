@@ -427,7 +427,7 @@ tidb_servers:
 			},
 		},
 	}
-	got, err := meta.flattenMap(topo.ServerConfigs.TiDB)
+	got, err := flattenMap(topo.ServerConfigs.TiDB)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 	buf := &bytes.Buffer{}
@@ -456,7 +456,7 @@ tidb_servers:
 			},
 		},
 	}
-	got, err = meta.flattenMap(topo.TiDBServers[0].Config)
+	got, err = flattenMap(topo.TiDBServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 
@@ -470,7 +470,7 @@ tidb_servers:
 			},
 		},
 	}
-	got, err = meta.flattenMap(topo.TiDBServers[1].Config)
+	got, err = flattenMap(topo.TiDBServers[1].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 }
@@ -500,7 +500,7 @@ tikv_servers:
 			},
 		},
 	}
-	got, err := meta.flattenMap(topo.TiKVServers[0].Config)
+	got, err := flattenMap(topo.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 }
@@ -566,7 +566,7 @@ item2 = 500
 item5 = 700
 item6 = 600
 `
-	got, err := meta.merge2Toml("tikv", topo.ServerConfigs.TiKV, topo.TiKVServers[0].Config)
+	got, err := merge2Toml("tikv", topo.ServerConfigs.TiKV, topo.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(got), DeepEquals, expected)
 }
@@ -655,7 +655,7 @@ region-schedule-limit = 2048
 replica-schedule-limit = 164
 split-merge-interval = "1h"
 `
-	got, err := meta.merge2Toml("pd", topo.ServerConfigs.PD, topo.PDServers[1].Config)
+	got, err := merge2Toml("pd", topo.ServerConfigs.PD, topo.PDServers[1].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(got), DeepEquals, expected)
 }
@@ -720,10 +720,10 @@ itemy = 1000
 item7 = 700
 `
 
-	merge1, err := meta.mergeImported(config, spec.ServerConfigs.TiKV)
+	merge1, err := mergeImported(config, spec.ServerConfigs.TiKV)
 	c.Assert(err, IsNil)
 
-	merge2, err := meta.merge2Toml(ComponentTiKV, merge1, spec.TiKVServers[0].Config)
+	merge2, err := merge2Toml(ComponentTiKV, merge1, spec.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(merge2), DeepEquals, expected)
 }

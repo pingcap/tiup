@@ -80,7 +80,7 @@ func Stop(
 		insts := FilterInstance(com.Instances(), nodeFilter)
 		err := StopComponent(getter, insts)
 		if err != nil {
-			return errors.Annotatef(err, "failed to stop %cluster", com.Name())
+			return errors.Annotatef(err, "failed to stop %s cluster", com.Name())
 		}
 		for _, inst := range insts {
 			instCount[inst.GetHost()]--
