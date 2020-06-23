@@ -38,7 +38,6 @@ require (
 	github.com/markbates/pkger v0.16.0
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-runewidth v0.0.7
-	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
 	github.com/otiai10/copy v1.2.0
 	github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712
 	github.com/pingcap/dm v1.1.0-alpha.0.20200521025928-83063141c5fd
@@ -57,6 +56,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.5.1
 	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect
+	github.com/tj/go-termd v0.0.1
 	github.com/xo/usql v0.7.8
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20191023171146-3cf2f69b5738
 	go.uber.org/atomic v1.6.0

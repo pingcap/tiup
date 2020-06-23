@@ -21,12 +21,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/BurntSushi/toml"
 	"github.com/blevesearch/bleve"
 	"github.com/blevesearch/bleve/analysis/lang/en"
 	_ "github.com/blevesearch/bleve/index/store/goleveldb"
 	"github.com/blevesearch/bleve/mapping"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/spf13/cobra"
+	"github.com/tj/go-termd"
 )
 
 func init() {
@@ -151,7 +153,7 @@ func loadIndex() (bleve.Index, map[string]*errorSpec, error) {
 		}
 		// Ignore file if cannot be unmarshalled to error specification
 		file := tomlFile{}
-		if err := toml.NewDecoder(reader).Decode(&file); err != nil {
+		if _, err := toml.DecodeReader(reader, &file); err != nil {
 			return nil
 		}
 		for code, spec := range file.Errors {
