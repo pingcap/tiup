@@ -14,15 +14,20 @@
 package localdata
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
@@ -32,12 +37,13 @@ import (
 
 // Profile represents the `tiup` profile
 type Profile struct {
-	root string
+	root   string
+	Config *TiUPConfig
 }
 
 // NewProfile returns a new profile instance
-func NewProfile(root string) *Profile {
-	return &Profile{root: root}
+func NewProfile(root string, config *TiUPConfig) *Profile {
+	return &Profile{root: root, Config: config}
 }
 
 // InitProfile creates a new profile using environment variables and defaults.
@@ -55,7 +61,12 @@ func InitProfile() *Profile {
 		}
 		profileDir = filepath.Join(u.HomeDir, ProfileDirName)
 	}
-	return NewProfile(profileDir)
+
+	cfg, err := InitConfig(profileDir)
+	if err != nil {
+		panic("cannot read config: " + err.Error())
+	}
+	return NewProfile(profileDir, cfg)
 }
 
 // Path returns a full path which is related to profile root directory
@@ -319,6 +330,71 @@ func (p *Profile) SelectInstalledVersion(component string, version v0manifest.Ve
 		return "", errInstallFirst
 	}
 	return version, nil
+}
+
+// ResetMirror reset root.json and cleanup manifests directory
+func (p *Profile) ResetMirror(addr, root string) error {
+	// Calculating root.json path
+	shaWriter := sha256.New()
+	if _, err := io.Copy(shaWriter, strings.NewReader(addr)); err != nil {
+		return err
+	}
+	localRoot := p.Path("bin", fmt.Sprintf("%s.root.json", hex.EncodeToString(shaWriter.Sum(nil))[:16]))
+
+	if root == "" {
+		if utils.IsExist(localRoot) {
+			root = localRoot
+		} else if strings.HasSuffix(addr, "/") {
+			root = addr + "root.json"
+		} else {
+			root = addr + "/root.json"
+		}
+	}
+
+	// Fetch root.json
+	var wc io.ReadCloser
+	if strings.HasPrefix(root, "http") {
+		if resp, err := http.Get(root); err != nil {
+			return err
+		} else if resp.StatusCode != http.StatusOK {
+			return errors.Errorf("Fetch remote root.json returns http code %d", resp.StatusCode)
+		} else {
+			wc = resp.Body
+		}
+	} else {
+		if file, err := os.Open(root); err == nil {
+			wc = file
+		} else {
+			return err
+		}
+	}
+	defer wc.Close()
+
+	f, err := os.OpenFile(p.Path("bin", "root.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(f, wc); err != nil {
+		f.Close()
+		return err
+	}
+	f.Close()
+
+	// Only cache remote mirror
+	if strings.HasPrefix(addr, "http") && root != localRoot {
+		if strings.HasPrefix(root, "http") {
+			fmt.Printf("WARN: adding root certificate via internet: %s\n", root)
+			fmt.Printf("You can revoke this by remove %s\n", localRoot)
+		}
+		_ = utils.CopyFile(p.Path("bin", "root.json"), localRoot)
+	}
+
+	if err := os.RemoveAll(p.Path(ManifestParentDir)); err != nil {
+		return err
+	}
+
+	p.Config.Mirror = addr
+	return p.Config.Flush()
 }
 
 // Process represents a process as written to a meta file.

@@ -73,9 +73,11 @@ func ScaleIn(
 ) error {
 	if clusterSpec := spec.GetClusterSpecification(); clusterSpec != nil {
 		return ScaleInCluster(getter, clusterSpec, options)
-	} else if dmSpec := spec.GetDMSpecification(); dmSpec != nil {
+	} /* else if dmSpec := spec.GetDMSpecification(); dmSpec != nil {
 		return ScaleInDMCluster(getter, dmSpec, options)
 	}
+	*/
+
 	return nil
 }
 
@@ -126,7 +128,7 @@ func ScaleInCluster(
 				if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
 					log.Warnf("failed to stop %s: %v", component.Name(), err)
 				}
-				if err := DestroyComponent(getter, []meta.Instance{instance}, options.OptTimeout); err != nil {
+				if err := DestroyComponent(getter, []meta.Instance{instance}, spec, options); err != nil {
 					log.Warnf("failed to destroy %s: %v", component.Name(), err)
 				}
 
@@ -237,7 +239,7 @@ func ScaleInCluster(
 				if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
 					return errors.Annotatef(err, "failed to stop %s", component.Name())
 				}
-				if err := DestroyComponent(getter, []meta.Instance{instance}, options.OptTimeout); err != nil {
+				if err := DestroyComponent(getter, []meta.Instance{instance}, spec, options); err != nil {
 					return errors.Annotatef(err, "failed to destroy %s", component.Name())
 				}
 			} else {
@@ -290,10 +292,11 @@ func ScaleInCluster(
 	return nil
 }
 
+/*
 // ScaleInDMCluster scales in the cluster
 func ScaleInDMCluster(
 	getter ExecutorGetter,
-	spec *meta.DMSpecification,
+	spec *meta.DMSSpecification,
 	options Options,
 ) error {
 	// instances by uuid
@@ -317,7 +320,7 @@ func ScaleInDMCluster(
 		deletedDiff[inst.ComponentName()] = append(deletedDiff[inst.ComponentName()], inst)
 	}
 
-	// Cannot delete all DM Master servers
+	// Cannot delete all DM DMMaster servers
 	if len(deletedDiff[meta.ComponentDMMaster]) == len(spec.Masters) {
 		return errors.New("cannot delete all dm-master servers")
 	}
@@ -332,7 +335,7 @@ func ScaleInDMCluster(
 				if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
 					log.Warnf("failed to stop %s: %v", component.Name(), err)
 				}
-				if err := DestroyComponent(getter, []meta.Instance{instance}, options.OptTimeout); err != nil {
+				if err := DestroyComponent(getter, []meta.Instance{instance}, spec, options); err != nil {
 					log.Warnf("failed to destroy %s: %v", component.Name(), err)
 				}
 
@@ -345,7 +348,7 @@ func ScaleInDMCluster(
 	// At least a DMMaster server exists
 	var dmMasterClient *api.DMMasterClient
 	var dmMasterEndpoint []string
-	for _, instance := range (&meta.DMMasterComponent{DMSpecification: spec}).Instances() {
+	for _, instance := range (&meta.DMMasterComponent{DMSSpecification: spec}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
 			dmMasterEndpoint = append(dmMasterEndpoint, addr(instance))
 		}
@@ -371,7 +374,7 @@ func ScaleInDMCluster(
 			if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
 				return errors.Annotatef(err, "failed to stop %s", component.Name())
 			}
-			if err := DestroyComponent(getter, []meta.Instance{instance}, options.OptTimeout); err != nil {
+			if err := DestroyComponent(getter, []meta.Instance{instance}, spec, options); err != nil {
 				return errors.Annotatef(err, "failed to destroy %s", component.Name())
 			}
 
@@ -394,3 +397,4 @@ func ScaleInDMCluster(
 
 	return nil
 }
+*/

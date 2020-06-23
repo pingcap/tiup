@@ -78,6 +78,7 @@ of components or the repository itself.`,
 		newMirrorGenkeyCmd(),
 		newMirrorCloneCmd(),
 		newMirrorPublishCmd(),
+		newMirrorSetCmd(),
 		newMirrorModifyCmd(),
 	)
 
@@ -193,10 +194,36 @@ func delComp(repo, id, version string) error {
 	return nil
 }
 
+// the `mirror set` sub command
+func newMirrorSetCmd() *cobra.Command {
+	root := ""
+	cmd := &cobra.Command{
+		Use:   "set <mirror-addr>",
+		Short: "set mirror address",
+		Long:  "set mirror address, will replace the root certificate",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return cmd.Help()
+			}
+
+			addr := args[0]
+			profile := environment.GlobalEnv().Profile()
+			if err := profile.ResetMirror(addr, root); err != nil {
+				fmt.Printf("Failed to set mirror: %s\n", err.Error())
+				return err
+			}
+			fmt.Printf("Set mirror to %s success\n", addr)
+			return nil
+		},
+	}
+	cmd.Flags().StringVarP(&root, "root", "r", root, "Specify the path of `root.json`")
+	return cmd
+}
+
 // the `mirror modify` sub command
 func newMirrorModifyCmd() *cobra.Command {
 	var privPath string
-	endpoint := environment.Mirror()
+	endpoint := ""
 	desc := ""
 	standalone := false
 	hidden := false
@@ -231,6 +258,9 @@ func newMirrorModifyCmd() *cobra.Command {
 				return err
 			}
 
+			if endpoint == "" {
+				endpoint = environment.Mirror()
+			}
 			e := remote.NewEditor(endpoint, args[0]).WithDesc(desc)
 			flagSet := set.NewStringSet()
 			cmd.Flags().Visit(func(f *pflag.Flag) {

@@ -13,6 +13,7 @@
 
 package command
 
+/*
 import (
 	"context"
 	"io/ioutil"
@@ -71,7 +72,7 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 		return errors.Errorf("cannot scale-out non-exists cluster %s", clusterName)
 	}
 
-	var newPart meta.DMTopologySpecification
+	var newPart meta.DMSTopologySpecification
 	if err := clusterutil.ParseTopologyYaml(topoFile, &newPart); err != nil {
 		return err
 	}
@@ -152,7 +153,7 @@ func convertStepDisplaysToTasks(t []*task.StepDisplay) []task.Task {
 func buildScaleOutTask(
 	clusterName string,
 	metadata *meta.DMMeta,
-	mergedTopo *meta.DMSpecification,
+	mergedTopo *meta.DMSSpecification,
 	opt scaleOutOptions,
 	sshConnProps *cliutil.SSHConnectionProps,
 	newPart meta.Specification,
@@ -267,6 +268,7 @@ func buildScaleOutTask(
 			metadata.Version,
 			inst,
 			metadata.User,
+			true,
 			meta.DirPaths{
 				Deploy: deployDir,
 				Data:   dataDirs,
@@ -314,3 +316,4 @@ func buildScaleOutTask(
 
 	return builder.Build(), nil
 }
+*/

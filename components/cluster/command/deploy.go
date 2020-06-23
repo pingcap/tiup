@@ -61,9 +61,10 @@ type (
 	}
 
 	deployOptions struct {
-		user         string // username to login to the SSH server
-		identityFile string // path to the private key file
-		usePassword  bool   // use password instead of identity file for ssh connection
+		user              string // username to login to the SSH server
+		identityFile      string // path to the private key file
+		usePassword       bool   // use password instead of identity file for ssh connection
+		ignoreConfigCheck bool   // ignore config check result
 	}
 
 	hostInfo struct {
@@ -104,6 +105,7 @@ func newDeploy() *cobra.Command {
 	cmd.Flags().StringVar(&opt.user, "user", tiuputils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
 	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", opt.identityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.usePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
+	cmd.Flags().BoolVarP(&opt.ignoreConfigCheck, "ignore-config-check", "", opt.ignoreConfigCheck, "Ignore the config check result")
 
 	return cmd
 }
@@ -157,7 +159,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
 	}
 
-	var topo meta.TopologySpecification
+	var topo meta.ClusterSpecification
 	if err := clusterutil.ParseTopologyYaml(topoFile, &topo); err != nil {
 		return err
 	}
@@ -282,6 +284,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 				clusterVersion,
 				inst,
 				globalOptions.User,
+				opt.ignoreConfigCheck,
 				meta.DirPaths{
 					Deploy: deployDir,
 					Data:   dataDirs,

@@ -74,13 +74,13 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 	}
 
 	metadata, err := meta.ClusterMetadata(clusterName)
-	if err != nil {
+	if err != nil { // not allowing validation errors
 		return err
 	}
 
 	// Inherit existing global configuration. We must assign the inherited values before unmarshalling
 	// because some default value rely on the global options and monitored options.
-	var newPart = meta.TopologySpecification{
+	var newPart = meta.ClusterSpecification{
 		GlobalOptions:    metadata.Topology.GlobalOptions,
 		MonitoredOptions: metadata.Topology.MonitoredOptions,
 		ServerConfigs:    metadata.Topology.ServerConfigs,
@@ -158,7 +158,7 @@ func buildScaleOutTask(
 	mergedTopo *meta.ClusterSpecification,
 	opt scaleOutOptions,
 	sshConnProps *cliutil.SSHConnectionProps,
-	newPart *meta.TopologySpecification,
+	newPart *meta.ClusterSpecification,
 	patchedComponents set.StringSet,
 	timeout int64,
 ) (task.Task, error) {
@@ -296,6 +296,7 @@ func buildScaleOutTask(
 			metadata.Version,
 			inst,
 			metadata.User,
+			true, // always ignore config check result in scale out
 			meta.DirPaths{
 				Deploy: deployDir,
 				Data:   dataDirs,

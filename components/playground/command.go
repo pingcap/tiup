@@ -106,11 +106,21 @@ func buildCommands(tp CommandType, opt *bootOptions) (cmds []Command) {
 func newScaleOut() *cobra.Command {
 	var opt bootOptions
 	cmd := &cobra.Command{
-		Use: "scale-out",
+		Use:     "scale-out instances",
+		Example: "tiup playground scale-out --db 1",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return scaleOut(args, &opt)
+			num, err := scaleOut(args, &opt)
+			if err != nil {
+				return err
+			}
+
+			if num == 0 {
+				return cmd.Help()
+			}
+
+			return nil
 		},
-		Hidden: true,
+		Hidden: false,
 	}
 
 	cmd.Flags().IntVarP(&opt.tidb.Num, "db", "", opt.tidb.Num, "TiDB instance number")
@@ -144,7 +154,8 @@ func newScaleIn() *cobra.Command {
 	var pids []int
 
 	cmd := &cobra.Command{
-		Use: "scale-in",
+		Use:     "scale-in a instance with specified pid",
+		Example: "tiup playground scale-in --pid 234 # You can get pid by `tiup playground display`",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(pids) == 0 {
 				return cmd.Help()
@@ -152,7 +163,7 @@ func newScaleIn() *cobra.Command {
 
 			return scaleIn(pids)
 		},
-		Hidden: true,
+		Hidden: false,
 	}
 
 	cmd.Flags().IntSliceVar(&pids, "pid", nil, "pid of instance to be scale in")
@@ -162,8 +173,8 @@ func newScaleIn() *cobra.Command {
 
 func newDisplay() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:    "display",
-		Hidden: true,
+		Use:    "display the instances.",
+		Hidden: false,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return display(args)
 		},
@@ -190,15 +201,19 @@ func scaleIn(pids []int) error {
 	return sendCommandsAndPrintResult(cmds, addr)
 }
 
-func scaleOut(args []string, opt *bootOptions) error {
+func scaleOut(args []string, opt *bootOptions) (num int, err error) {
 	port, err := targetTag()
 	if err != nil {
-		return errors.AddStack(err)
+		return 0, errors.AddStack(err)
 	}
 
 	cmds := buildCommands(ScaleOutCommandType, opt)
+	if len(cmds) == 0 {
+		return 0, nil
+	}
+
 	addr := "127.0.0.1:" + strconv.Itoa(port)
-	return sendCommandsAndPrintResult(cmds, addr)
+	return len(cmds), sendCommandsAndPrintResult(cmds, addr)
 }
 
 func display(args []string) error {

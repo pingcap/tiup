@@ -28,7 +28,6 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -44,7 +43,7 @@ type TiFlashInstance struct {
 	ProxyConfigPath string
 	pds             []*PDInstance
 	dbs             []*TiDBInstance
-	cmd             *exec.Cmd
+	*Process
 }
 
 // NewTiFlashInstance return a TiFlashInstance
@@ -177,29 +176,28 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 	if err = os.Setenv("LD_LIBRARY_PATH", fmt.Sprintf("%s:$LD_LIBRARY_PATH", dirPath)); err != nil {
 		return err
 	}
-	inst.cmd = exec.CommandContext(ctx,
+
+	args := []string{
 		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
 		CompVersion("tiflash", version),
 		"server",
 		fmt.Sprintf("--config-file=%s", inst.ConfigPath),
-	)
-	inst.cmd.Env = append(
-		os.Environ(),
-		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, inst.Dir),
-	)
-	inst.cmd.Stderr = os.Stderr
-	inst.cmd.Stdout = os.Stdout
-	return inst.cmd.Start()
+	}
+
+	inst.Process = NewProcess(ctx, inst.Dir, args[0], args[1:]...)
+	logIfErr(inst.Process.setOutputFile(inst.LogFile()))
+
+	return inst.Process.Start()
 }
 
-// Wait calls inst.cmd.Wait
-func (inst *TiFlashInstance) Wait() error {
-	return inst.cmd.Wait()
+// Component return the component name.
+func (inst *TiFlashInstance) Component() string {
+	return "tiflash"
 }
 
-// Pid return the PID of the instance
-func (inst *TiFlashInstance) Pid() int {
-	return inst.cmd.Process.Pid
+// LogFile return the log file name.
+func (inst *TiFlashInstance) LogFile() string {
+	return filepath.Join(inst.Dir, "tiflash.log")
 }
 
 // Cmd returns the internal Cmd instance

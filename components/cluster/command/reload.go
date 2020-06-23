@@ -14,8 +14,10 @@
 package command
 
 import (
+	"errors"
+
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -42,12 +44,12 @@ func newReloadCmd() *cobra.Command {
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-				return errors.Errorf("cannot start non-exists cluster %s", clusterName)
+				return perrs.Errorf("cannot start non-exists cluster %s", clusterName)
 			}
 
 			logger.EnableAuditLog()
 			metadata, err := meta.ClusterMetadata(clusterName)
-			if err != nil {
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
 				return err
 			}
 
@@ -61,7 +63,7 @@ func newReloadCmd() *cobra.Command {
 					// FIXME: Map possible task errors and give suggestions.
 					return err
 				}
-				return errors.Trace(err)
+				return perrs.Trace(err)
 			}
 
 			log.Infof("Reloaded cluster `%s` successfully", clusterName)
@@ -73,6 +75,7 @@ func newReloadCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only start specified roles")
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only start specified nodes")
 	cmd.Flags().Int64Var(&gOpt.APITimeout, "transfer-timeout", 300, "Timeout in seconds when transferring PD and TiKV store leaders")
+	cmd.Flags().BoolVarP(&gOpt.IgnoreConfigCheck, "ignore-config-check", "", false, "Ignore the config check result")
 
 	return cmd
 }
@@ -111,6 +114,7 @@ func buildReloadTask(
 		t := tb.InitConfig(clusterName,
 			metadata.Version,
 			inst, metadata.User,
+			options.IgnoreConfigCheck,
 			meta.DirPaths{
 				Deploy: deployDir,
 				Data:   dataDirs,
@@ -150,7 +154,7 @@ func validRoles(roles []string) error {
 		}
 
 		if !match {
-			return errors.Errorf("not valid role: %s, should be one of: %v", r, meta.AllComponentNames())
+			return perrs.Errorf("not valid role: %s, should be one of: %v", r, meta.AllComponentNames())
 		}
 	}
 

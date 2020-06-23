@@ -13,6 +13,7 @@
 
 package command
 
+/*
 import (
 	"bufio"
 	"fmt"
@@ -122,3 +123,4 @@ func showAuditLog(auditID string) error {
 	_, _ = os.Stdout.Write(content)
 	return nil
 }
+*/

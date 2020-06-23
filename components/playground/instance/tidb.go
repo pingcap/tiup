@@ -17,12 +17,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -30,8 +28,8 @@ import (
 // TiDBInstance represent a running tidb-server
 type TiDBInstance struct {
 	instance
-	pds          []*PDInstance
-	cmd          *exec.Cmd
+	pds []*PDInstance
+	*Process
 	enableBinlog bool
 }
 
@@ -77,24 +75,21 @@ func (inst *TiDBInstance) Start(ctx context.Context, version v0manifest.Version)
 	if inst.enableBinlog {
 		args = append(args, "--enable-binlog=true")
 	}
-	inst.cmd = exec.CommandContext(ctx, args[0], args[1:]...)
-	inst.cmd.Env = append(
-		os.Environ(),
-		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, inst.Dir),
-	)
-	inst.cmd.Stderr = os.Stderr
-	inst.cmd.Stdout = os.Stdout
-	return inst.cmd.Start()
+
+	inst.Process = NewProcess(ctx, inst.Dir, args[0], args[1:]...)
+	logIfErr(inst.Process.setOutputFile(inst.LogFile()))
+
+	return inst.Process.Start()
 }
 
-// Wait calls inst.cmd.Wait
-func (inst *TiDBInstance) Wait() error {
-	return inst.cmd.Wait()
+// Component return the component name.
+func (inst *TiDBInstance) Component() string {
+	return "tidb"
 }
 
-// Pid return the PID of the instance
-func (inst *TiDBInstance) Pid() int {
-	return inst.cmd.Process.Pid
+// LogFile return the log file name.
+func (inst *TiDBInstance) LogFile() string {
+	return filepath.Join(inst.Dir, "tidb.log")
 }
 
 // Addr return the listen address of TiDB

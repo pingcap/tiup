@@ -34,19 +34,33 @@ func (m *Mkdir) Execute(ctx *Context) error {
 		return ErrNoExecutor
 	}
 	for _, dir := range m.dirs {
+		if !strings.HasPrefix(dir, "/") {
+			return fmt.Errorf("dir is a relative path: %s", dir)
+		}
 		if strings.Contains(dir, ",") {
 			return fmt.Errorf("dir name contains invalid characters: %v", dir)
 		}
-	}
 
-	cmd := fmt.Sprintf(
-		`mkdir -p %[1]s && chown -R %[2]s:%[2]s %[1]s`,
-		strings.Join(m.dirs, " "),
-		m.user,
-	)
-	_, _, err := exec.Execute(cmd, true) // use root to create the dir
-	if err != nil {
-		return errors.Trace(err)
+		xs := strings.Split(dir, "/")
+		// Create directories recursively
+		// The directory /a/b/c will be flatten to:
+		// 		test -d /a || (mkdir /a && chown tidb:tidb /a)
+		//		test -d /a/b || (mkdir /a/b && chown tidb:tidb /a/b)
+		//		test -d /a/b/c || (mkdir /a/b/c && chown tidb:tidb /a/b/c)
+		for i := 0; i < len(xs); i++ {
+			if xs[i] == "" {
+				continue
+			}
+			cmd := fmt.Sprintf(
+				`test -d %[1]s || (mkdir -p %[1]s && chown %[2]s:%[2]s %[1]s)`,
+				strings.Join(xs[:i+1], "/"),
+				m.user,
+			)
+			_, _, err := exec.Execute(cmd, true) // use root to create the dir
+			if err != nil {
+				return errors.Trace(err)
+			}
+		}
 	}
 
 	return nil

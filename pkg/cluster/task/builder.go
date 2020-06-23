@@ -96,6 +96,7 @@ func (b *Builder) UpdateMeta(cluster string, metadata *meta.ClusterMeta, deleted
 	return b
 }
 
+/*
 // UpdateDMMeta maintain the dm meta information
 func (b *Builder) UpdateDMMeta(cluster string, metadata *meta.DMMeta, deletedNodeIds []string) *Builder {
 	b.tasks = append(b.tasks, &UpdateDMMeta{
@@ -105,6 +106,7 @@ func (b *Builder) UpdateDMMeta(cluster string, metadata *meta.DMMeta, deletedNod
 	})
 	return b
 }
+*/
 
 // UpdateTopology maintain the topology information
 func (b *Builder) UpdateTopology(cluster string, metadata *meta.ClusterMeta, deletedNodeIds []string) *Builder {
@@ -167,12 +169,13 @@ func (b *Builder) BackupComponent(component, fromVer string, host, deployDir str
 }
 
 // InitConfig appends a CopyComponent task to the current task collection
-func (b *Builder) InitConfig(clusterName, clusterVersion string, inst meta.Instance, deployUser string, paths meta.DirPaths) *Builder {
+func (b *Builder) InitConfig(clusterName, clusterVersion string, inst meta.Instance, deployUser string, ignoreCheck bool, paths meta.DirPaths) *Builder {
 	b.tasks = append(b.tasks, &InitConfig{
 		clusterName:    clusterName,
 		clusterVersion: clusterVersion,
 		instance:       inst,
 		deployUser:     deployUser,
+		ignoreCheck:    ignoreCheck,
 		paths:          paths,
 	})
 	return b
