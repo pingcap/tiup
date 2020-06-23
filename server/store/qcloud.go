@@ -30,6 +30,11 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
+const (
+	// EnvQCloudScriptPath enable the qcloud uplaod (will update CDN if specified)
+	EnvQCloudScriptPath = "QCLOUD_UPLOAD_SCRIPT"
+)
+
 var (
 	// ErrorFsCommitConflict indicates concurrent writing file
 	ErrorFsCommitConflict = errors.New("conflict on fs commit")
@@ -87,8 +92,12 @@ type qcloudTxn struct {
 }
 
 func newQCloudTxn(store *qcloudStore) (*qcloudTxn, error) {
+	syncer := newFsSyncer(path.Join(store.root, "commits"))
+	if script := os.Getenv(EnvQCloudScriptPath); script != "" {
+		syncer = combine(syncer, newQcloudSyncer(script))
+	}
 	txn := &qcloudTxn{
-		syncer:   newFsSyncer(path.Join(store.root, "commits")),
+		syncer:   syncer,
 		store:    store,
 		root:     path.Join("/tmp", uuid.New().String()),
 		begin:    time.Now(),
@@ -222,10 +231,6 @@ func (t *qcloudTxn) Commit() error {
 		return err
 	}
 
-	if err := t.syncer.Sync(t.root); err != nil {
-		return err
-	}
-
 	for _, f := range files {
 		if err := utils.Copy(path.Join(t.root, f.Name()), t.store.path(f.Name())); err != nil {
 			return err
@@ -235,6 +240,10 @@ func (t *qcloudTxn) Commit() error {
 	at := time.Now()
 	for _, f := range files {
 		t.store.modify(f.Name(), &at)
+	}
+
+	if err := t.syncer.Sync(t.root); err != nil {
+		return err
 	}
 
 	return t.release()
