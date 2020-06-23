@@ -17,11 +17,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -30,14 +28,14 @@ import (
 type Drainer struct {
 	instance
 	pds []*PDInstance
-	cmd *exec.Cmd
+	*Process
 }
 
 var _ Instance = &Drainer{}
 
 // NewDrainer create a Drainer instance.
 func NewDrainer(binPath string, dir, host, configPath string, id int, pds []*PDInstance) *Drainer {
-	return &Drainer{
+	d := &Drainer{
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
@@ -48,6 +46,18 @@ func NewDrainer(binPath string, dir, host, configPath string, id int, pds []*PDI
 		},
 		pds: pds,
 	}
+	d.StatusPort = d.Port
+	return d
+}
+
+// Component return component name.
+func (d *Drainer) Component() string {
+	return "drainer"
+}
+
+// LogFile return the log file name.
+func (d *Drainer) LogFile() string {
+	return filepath.Join(d.Dir, "drainer.log")
 }
 
 // Addr return the address of Drainer.
@@ -78,29 +88,14 @@ func (d *Drainer) Start(ctx context.Context, version v0manifest.Version) error {
 		fmt.Sprintf("--addr=%s:%d", d.Host, d.Port),
 		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(d.Host), d.Port),
 		fmt.Sprintf("--pd-urls=%s", strings.Join(urls, ",")),
-		fmt.Sprintf("--log-file=%s", filepath.Join(d.Dir, "drainer.log")),
+		fmt.Sprintf("--log-file=%s", d.LogFile()),
 	}
 	if d.ConfigPath != "" {
 		args = append(args, fmt.Sprintf("--config=%s", d.ConfigPath))
 	}
 
-	d.cmd = exec.CommandContext(ctx, args[0], args[1:]...)
-	d.cmd.Env = append(
-		os.Environ(),
-		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, d.Dir),
-	)
-	d.cmd.Stderr = os.Stderr
-	d.cmd.Stdout = os.Stdout
+	d.Process = NewProcess(ctx, d.Dir, args[0], args[1:]...)
+	logIfErr(d.Process.setOutputFile(d.LogFile()))
 
-	return d.cmd.Start()
-}
-
-// Wait implements Instance interface.
-func (d *Drainer) Wait() error {
-	return d.cmd.Wait()
-}
-
-// Pid implements Instance interface.
-func (d *Drainer) Pid() int {
-	return d.cmd.Process.Pid
+	return d.Process.Start()
 }
