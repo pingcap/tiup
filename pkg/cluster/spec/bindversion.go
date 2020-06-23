@@ -11,27 +11,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package meta
+package spec
 
-import (
-	"fmt"
-)
-
-// DirPaths stores the paths needed for component to put files
-type DirPaths struct {
-	Deploy string
-	Data   []string
-	Log    string
-	Cache  string
-}
-
-// String implements the fmt.Stringer interface
-func (p DirPaths) String() string {
-	return fmt.Sprintf(
-		"deploy_dir=%s, data_dir=%v, log_dir=%s, cache_dir=%s",
-		p.Deploy,
-		p.Data,
-		p.Log,
-		p.Cache,
-	)
+// ComponentVersion maps the TiDB version to the third components binding version
+func ComponentVersion(comp, version string) string {
+	switch comp {
+	case ComponentAlertManager:
+		return "v0.17.0"
+	case ComponentBlackboxExporter:
+		return "v0.12.0"
+	case ComponentNodeExporter:
+		return "v0.17.0"
+	case ComponentPushwaygate:
+		return "v0.7.0"
+	case ComponentCheckCollector:
+		return "v0.3.1"
+	default:
+		return version
+	}
 }

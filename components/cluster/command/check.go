@@ -26,11 +26,12 @@ import (
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cliutil/prepare"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/meta"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -64,14 +65,14 @@ conflict checks with other clusters`,
 
 			logger.EnableAuditLog()
 
-			var topo meta.ClusterSpecification
+			var topo spec.Specification
 			if opt.existCluster { // check for existing cluster
 				clusterName := args[0]
-				if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+				if tiuputils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
 					return perrs.Errorf("cluster %s does not exist", clusterName)
 				}
-				metadata, err := meta.ClusterMetadata(clusterName)
-				if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+				metadata, err := spec.ClusterMetadata(clusterName)
+				if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 					return err
 				}
 				topo = *metadata.Topology
@@ -112,7 +113,7 @@ conflict checks with other clusters`,
 }
 
 // checkSystemInfo performs series of checks and tests of the deploy server
-func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.ClusterSpecification, opt *checkOptions) error {
+func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, opt *checkOptions) error {
 	var (
 		collectTasks  []*task.StepDisplay
 		checkSysTasks []*task.StepDisplay
@@ -120,17 +121,17 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.ClusterSpecificat
 		applyFixTasks []*task.StepDisplay
 		downloadTasks []*task.StepDisplay
 	)
-	insightVer := meta.ComponentVersion(meta.ComponentCheckCollector, "")
+	insightVer := spec.ComponentVersion(spec.ComponentCheckCollector, "")
 
 	uniqueHosts := map[string]int{}             // host -> ssh-port
 	uniqueArchList := make(map[string]struct{}) // map["os-arch"]{}
-	topo.IterInstance(func(inst meta.Instance) {
+	topo.IterInstance(func(inst spec.Instance) {
 		archKey := fmt.Sprintf("%s-%s", inst.OS(), inst.Arch())
 		if _, found := uniqueArchList[archKey]; !found {
 			uniqueArchList[archKey] = struct{}{}
 			t0 := task.NewBuilder().
 				Download(
-					meta.ComponentCheckCollector,
+					spec.ComponentCheckCollector,
 					inst.OS(),
 					inst.Arch(),
 					insightVer,
@@ -154,7 +155,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *meta.ClusterSpecificat
 				).
 				Mkdir(opt.user, inst.GetHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
 				CopyComponent(
-					meta.ComponentCheckCollector,
+					spec.ComponentCheckCollector,
 					inst.OS(),
 					inst.Arch(),
 					insightVer,

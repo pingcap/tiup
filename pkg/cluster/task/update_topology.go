@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/set"
 	"go.etcd.io/etcd/clientv3"
 )
@@ -14,7 +14,7 @@ import (
 // UpdateTopology is used to maintain the cluster meta information
 type UpdateTopology struct {
 	cluster        string
-	metadata       *meta.ClusterMeta
+	metadata       *spec.ClusterMeta
 	deletedNodesID []string
 }
 
@@ -36,13 +36,13 @@ func (u *UpdateTopology) Execute(ctx *Context) error {
 	deleted := set.NewStringSet(u.deletedNodesID...)
 
 	var ops []clientv3.Op
-	var instances []meta.Instance
+	var instances []spec.Instance
 
-	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&meta.MonitorComponent{ClusterSpecification: topo}).Instances(), "prometheus")
-	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&meta.GrafanaComponent{ClusterSpecification: topo}).Instances(), "grafana")
-	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&meta.AlertManagerComponent{ClusterSpecification: topo}).Instances(), "alertmanager")
+	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.MonitorComponent{Specification: topo}).Instances(), "prometheus")
+	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.GrafanaComponent{Specification: topo}).Instances(), "grafana")
+	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.AlertManagerComponent{Specification: topo}).Instances(), "alertmanager")
 
-	for _, instance := range (&meta.TiDBComponent{ClusterSpecification: topo}).Instances() {
+	for _, instance := range (&spec.TiDBComponent{Specification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			ops = append(ops, clientv3.OpDelete(fmt.Sprintf("/topology/tidb/%s:%d", instance.GetHost(), instance.GetPort()), clientv3.WithPrefix()))
 		}
@@ -69,8 +69,8 @@ type componentTopology struct {
 
 // componentTopology update receives alertmanager, prometheus and grafana instance list, if the list has
 //  no member or all deleted, it will add a `OpDelete` in ops, otherwise it will push an operation to destInstances.
-func updateInstancesAndOps(ops []clientv3.Op, destInstances []meta.Instance, deleted set.StringSet, instances []meta.Instance, componentName string) ([]clientv3.Op, []meta.Instance) {
-	var currentInstances []meta.Instance
+func updateInstancesAndOps(ops []clientv3.Op, destInstances []spec.Instance, deleted set.StringSet, instances []spec.Instance, componentName string) ([]clientv3.Op, []spec.Instance) {
+	var currentInstances []spec.Instance
 	for _, instance := range instances {
 		if deleted.Exist(instance.ID()) {
 			continue
@@ -88,9 +88,9 @@ func updateInstancesAndOps(ops []clientv3.Op, destInstances []meta.Instance, del
 
 // updateTopologyOp receive a  alertmanager, prometheus or grafana instance, and return an operation
 //  for update it's topology.
-func updateTopologyOp(instance meta.Instance) (*clientv3.Op, error) {
+func updateTopologyOp(instance spec.Instance) (*clientv3.Op, error) {
 	switch instance.ComponentName() {
-	case meta.ComponentAlertManager, meta.ComponentPrometheus, meta.ComponentGrafana:
+	case spec.ComponentAlertManager, spec.ComponentPrometheus, spec.ComponentGrafana:
 		topology := componentTopology{
 			IP:         instance.GetHost(),
 			Port:       instance.GetPort(),

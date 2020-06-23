@@ -23,9 +23,10 @@ import (
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -64,7 +65,7 @@ func newPatchCmd() *cobra.Command {
 }
 
 func patch(clusterName, packagePath string, options operator.Options, overwrite bool) error {
-	if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+	if tiuputils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
 		return perrs.Errorf("cannot patch non-exists cluster %s", clusterName)
 	}
 
@@ -72,8 +73,8 @@ func patch(clusterName, packagePath string, options operator.Options, overwrite 
 		return perrs.New("specified package not exists")
 	}
 
-	metadata, err := meta.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+	metadata, err := spec.ClusterMetadata(clusterName)
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
 	}
 
@@ -96,8 +97,8 @@ func patch(clusterName, packagePath string, options operator.Options, overwrite 
 
 	t := task.NewBuilder().
 		SSHKeySet(
-			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
-			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
+			spec.ClusterPath(clusterName, "ssh", "id_rsa"),
+			spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
 		Parallel(replacePackageTasks...).
 		ClusterOperate(metadata.Topology, operator.UpgradeOperation, options).
@@ -120,13 +121,13 @@ func patch(clusterName, packagePath string, options operator.Options, overwrite 
 	return nil
 }
 
-func instancesToPatch(metadata *meta.ClusterMeta, options operator.Options) ([]meta.Instance, error) {
+func instancesToPatch(metadata *spec.ClusterMeta, options operator.Options) ([]spec.Instance, error) {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := metadata.Topology.ComponentsByStartOrder()
 	components = operator.FilterComponent(components, roleFilter)
 
-	instances := []meta.Instance{}
+	instances := []spec.Instance{}
 	comps := []string{}
 	for _, com := range components {
 		insts := operator.FilterInstance(com.Instances(), nodeFilter)
@@ -147,12 +148,12 @@ func instancesToPatch(metadata *meta.ClusterMeta, options operator.Options) ([]m
 }
 
 func checkPackage(clusterName, comp, nodeOS, arch, packagePath string) error {
-	metadata, err := meta.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+	metadata, err := spec.ClusterMetadata(clusterName)
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
 	}
 
-	ver := meta.ComponentVersion(comp, metadata.Version)
+	ver := spec.ComponentVersion(comp, metadata.Version)
 	repo, err := clusterutil.NewRepository(nodeOS, arch)
 	if err != nil {
 		return err
@@ -166,7 +167,7 @@ func checkPackage(clusterName, comp, nodeOS, arch, packagePath string) error {
 	if err != nil {
 		return err
 	}
-	cacheDir := meta.ClusterPath(clusterName, "cache", comp+"-"+checksum[:7])
+	cacheDir := spec.ClusterPath(clusterName, "cache", comp+"-"+checksum[:7])
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		return err
 	}
@@ -182,16 +183,16 @@ func checkPackage(clusterName, comp, nodeOS, arch, packagePath string) error {
 }
 
 func overwritePatch(clusterName, comp, packagePath string) error {
-	if err := os.MkdirAll(meta.ClusterPath(clusterName, meta.PatchDirName), 0755); err != nil {
+	if err := os.MkdirAll(spec.ClusterPath(clusterName, spec.PatchDirName), 0755); err != nil {
 		return err
 	}
 	checksum, err := tiuputils.Checksum(packagePath)
 	if err != nil {
 		return err
 	}
-	tg := meta.ClusterPath(clusterName, meta.PatchDirName, comp+"-"+checksum[:7]+".tar.gz")
+	tg := spec.ClusterPath(clusterName, spec.PatchDirName, comp+"-"+checksum[:7]+".tar.gz")
 	if err := tiuputils.CopyFile(packagePath, tg); err != nil {
 		return err
 	}
-	return os.Symlink(tg, meta.ClusterPath(clusterName, meta.PatchDirName, comp+".tar.gz"))
+	return os.Symlink(tg, spec.ClusterPath(clusterName, spec.PatchDirName, comp+".tar.gz"))
 }

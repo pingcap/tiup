@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 )
 
 // the check types
@@ -44,7 +44,7 @@ const (
 // CheckSys performs checks of system information
 type CheckSys struct {
 	host    string
-	topo    meta.Specification
+	topo    *spec.Specification
 	opt     *operator.CheckOptions
 	check   string // check type name
 	dataDir string
@@ -61,7 +61,7 @@ func (c *CheckSys) Execute(ctx *Context) error {
 	case CheckTypeSystemInfo:
 		ctx.SetCheckResults(c.host, operator.CheckSystemInfo(c.opt, stdout))
 	case CheckTypeSystemLimits:
-		ctx.SetCheckResults(c.host, operator.CheckSysLimits(c.opt, c.topo.GetGlobalOptions().User, stdout))
+		ctx.SetCheckResults(c.host, operator.CheckSysLimits(c.opt, c.topo.GlobalOptions.User, stdout))
 	case CheckTypeSystemConfig:
 		results := operator.CheckKernelParameters(c.opt, stdout)
 		e, ok := ctx.GetExecutor(c.host)
@@ -149,7 +149,7 @@ func (c *CheckSys) runFIO(ctx *Context) (outRR []byte, outRW []byte, outLat []by
 		return
 	}
 
-	dataDir := clusterutil.Abs(c.topo.GetGlobalOptions().User, c.dataDir)
+	dataDir := clusterutil.Abs(c.topo.GlobalOptions.User, c.dataDir)
 	testWd := filepath.Join(dataDir, "tiup-fio-test")
 	fioBin := filepath.Join(CheckToolsPathDir, "bin", "fio")
 

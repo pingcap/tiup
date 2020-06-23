@@ -20,7 +20,8 @@ import (
 	"fmt"
 
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -40,12 +41,12 @@ func newTestCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+			if utils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
 				return perrs.Errorf("cannot start non-exists cluster %s", clusterName)
 			}
 
-			metadata, err := meta.ClusterMetadata(clusterName)
-			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+			metadata, err := spec.ClusterMetadata(clusterName)
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 				return err
 			}
 
@@ -62,14 +63,14 @@ func newTestCmd() *cobra.Command {
 	return cmd
 }
 
-func createDB(spec meta.TiDBSpec) (db *sql.DB, err error) {
+func createDB(spec spec.TiDBSpec) (db *sql.DB, err error) {
 	dsn := fmt.Sprintf("root:@tcp(%s:%d)/?charset=utf8mb4,utf8&multiStatements=true", spec.Host, spec.Port)
 	db, err = sql.Open("mysql", dsn)
 
 	return
 }
 
-func writable(topo *meta.ClusterSpecification) error {
+func writable(topo *spec.Specification) error {
 	errg, _ := errgroup.WithContext(context.Background())
 
 	for _, spec := range topo.TiDBServers {

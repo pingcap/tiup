@@ -1,4 +1,4 @@
-package meta
+package spec
 
 // Copyright 2020 PingCAP, Inc.
 //
@@ -18,19 +18,19 @@ import (
 	"path"
 	"strings"
 
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 )
 
-func checkConfig(e executor.TiOpsExecutor, componentName, clusterVersion, nodeOS, arch, config string, paths DirPaths) error {
+func checkConfig(e executor.Executor, componentName, clusterVersion, nodeOS, arch, config string, paths DirPaths) error {
 	repo, err := clusterutil.NewRepository(nodeOS, arch)
 	if err != nil {
 		return err
 	}
-	ver := meta.ComponentVersion(componentName, clusterVersion)
+	ver := spec.ComponentVersion(componentName, clusterVersion)
 	entry, err := repo.ComponentBinEntry(componentName, ver)
 	if err != nil {
 		return err
@@ -47,7 +47,7 @@ func checkConfig(e executor.TiOpsExecutor, componentName, clusterVersion, nodeOS
 	return errors.Annotatef(err, "check config failed: %s", componentName)
 }
 
-func hasConfigCheckFlag(e executor.TiOpsExecutor, binPath string) bool {
+func hasConfigCheckFlag(e executor.Executor, binPath string) bool {
 	stdout, stderr, _ := e.Execute(fmt.Sprintf("%s --help", binPath), false)
 	return strings.Contains(string(stdout), "config-check") || strings.Contains(string(stderr), "config-check")
 }

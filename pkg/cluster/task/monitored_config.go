@@ -20,12 +20,13 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/template"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/meta"
 )
 
 // MonitoredConfig is used to generate the monitor node configuration
@@ -34,7 +35,7 @@ type MonitoredConfig struct {
 	component  string
 	host       string
 	globResCtl meta.ResourceControl
-	options    meta.MonitoredOptions
+	options    spec.MonitoredOptions
 	deployUser string
 	paths      meta.DirPaths
 }
@@ -42,8 +43,8 @@ type MonitoredConfig struct {
 // Execute implements the Task interface
 func (m *MonitoredConfig) Execute(ctx *Context) error {
 	ports := map[string]int{
-		meta.ComponentNodeExporter:     m.options.NodeExporterPort,
-		meta.ComponentBlackboxExporter: m.options.BlackboxExporterPort,
+		spec.ComponentNodeExporter:     m.options.NodeExporterPort,
+		spec.ComponentBlackboxExporter: m.options.BlackboxExporterPort,
 	}
 	// Copy to remote server
 	exec, found := ctx.GetExecutor(m.host)
@@ -60,7 +61,7 @@ func (m *MonitoredConfig) Execute(ctx *Context) error {
 	}
 
 	var cfg template.ConfigGenerator
-	if m.component == meta.ComponentNodeExporter {
+	if m.component == spec.ComponentNodeExporter {
 		if err := m.syncBlackboxConfig(exec, config.NewBlackboxConfig()); err != nil {
 			return err
 		}
@@ -69,7 +70,7 @@ func (m *MonitoredConfig) Execute(ctx *Context) error {
 			m.paths.Log,
 		).WithPort(uint64(m.options.NodeExporterPort)).
 			WithNumaNode(m.options.NumaNode)
-	} else if m.component == meta.ComponentBlackboxExporter {
+	} else if m.component == spec.ComponentBlackboxExporter {
 		cfg = scripts.NewBlackboxExporterScript(
 			m.paths.Deploy,
 			m.paths.Log,
@@ -81,10 +82,10 @@ func (m *MonitoredConfig) Execute(ctx *Context) error {
 	return m.syncMonitoredScript(exec, m.component, cfg)
 }
 
-func (m *MonitoredConfig) syncMonitoredSystemConfig(exec executor.TiOpsExecutor, comp string, port int) error {
+func (m *MonitoredConfig) syncMonitoredSystemConfig(exec executor.Executor, comp string, port int) error {
 	sysCfg := filepath.Join(m.paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, m.host, port))
 
-	resource := meta.MergeResourceControl(m.globResCtl, m.options.ResourceControl)
+	resource := spec.MergeResourceControl(m.globResCtl, m.options.ResourceControl)
 	systemCfg := system.NewConfig(comp, m.deployUser, m.paths.Deploy).
 		WithMemoryLimit(resource.MemoryLimit).
 		WithCPUQuota(resource.CPUQuota).
@@ -110,7 +111,7 @@ func (m *MonitoredConfig) syncMonitoredSystemConfig(exec executor.TiOpsExecutor,
 	return nil
 }
 
-func (m *MonitoredConfig) syncMonitoredScript(exec executor.TiOpsExecutor, comp string, cfg template.ConfigGenerator) error {
+func (m *MonitoredConfig) syncMonitoredScript(exec executor.Executor, comp string, cfg template.ConfigGenerator) error {
 	fp := filepath.Join(m.paths.Cache, fmt.Sprintf("run_%s_%s.sh", comp, m.host))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -126,7 +127,7 @@ func (m *MonitoredConfig) syncMonitoredScript(exec executor.TiOpsExecutor, comp 
 	return nil
 }
 
-func (m *MonitoredConfig) syncBlackboxConfig(exec executor.TiOpsExecutor, cfg template.ConfigGenerator) error {
+func (m *MonitoredConfig) syncBlackboxConfig(exec executor.Executor, cfg template.ConfigGenerator) error {
 	fp := filepath.Join(m.paths.Cache, fmt.Sprintf("blackbox_%s.yaml", m.host))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err

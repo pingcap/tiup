@@ -23,7 +23,7 @@ import (
 
 	"github.com/creasty/defaults"
 	. "github.com/pingcap/check"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"gopkg.in/yaml.v2"
 )
 
@@ -76,8 +76,8 @@ func (s *ansSuite) TestParseGroupVars(c *C) {
 	err = defaults.Set(clsMeta)
 	c.Assert(err, IsNil)
 
-	var expected meta.ClusterMeta
-	var metaFull meta.ClusterMeta
+	var expected spec.ClusterMeta
+	var metaFull spec.ClusterMeta
 
 	expectedTopo, err := ioutil.ReadFile(filepath.Join(dir, "meta.yaml"))
 	c.Assert(err, IsNil)
@@ -100,7 +100,7 @@ func (s *ansSuite) TestParseGroupVars(c *C) {
 	c.Assert(metaFull, DeepEquals, expected)
 }
 
-func sortClusterMeta(clsMeta *meta.ClusterMeta) {
+func sortClusterMeta(clsMeta *spec.ClusterMeta) {
 	sort.Slice(clsMeta.Topology.TiDBServers, func(i, j int) bool {
 		return clsMeta.Topology.TiDBServers[i].Host < clsMeta.Topology.TiDBServers[j].Host
 	})

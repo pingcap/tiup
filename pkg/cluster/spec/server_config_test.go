@@ -1,4 +1,4 @@
-package meta
+package spec
 
 import (
 	"bytes"
@@ -19,7 +19,7 @@ server_configs:
     performance.feedback-probability: 0.0
 `)
 
-	topo := new(ClusterSpecification)
+	topo := new(Specification)
 
 	err := yaml.Unmarshal(yamlData, topo)
 	c.Assert(err, check.IsNil)

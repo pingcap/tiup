@@ -22,8 +22,8 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	"github.com/pingcap/tiup/pkg/cluster/module"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
 	"golang.org/x/sync/errgroup"
@@ -32,13 +32,13 @@ import (
 // Start the cluster.
 func Start(
 	getter ExecutorGetter,
-	spec meta.Specification,
+	cluster *spec.Specification,
 	options Options,
 ) error {
 	uniqueHosts := set.NewStringSet()
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
-	components := spec.ComponentsByStartOrder()
+	components := cluster.ComponentsByStartOrder()
 	components = FilterComponent(components, roleFilter)
 
 	for _, com := range components {
@@ -47,13 +47,11 @@ func Start(
 		if err != nil {
 			return errors.Annotatef(err, "failed to start %s", com.Name())
 		}
-		if clusterSpec := spec.GetClusterSpecification(); clusterSpec != nil {
-			for _, inst := range insts {
-				if !uniqueHosts.Exist(inst.GetHost()) {
-					uniqueHosts.Insert(inst.GetHost())
-					if err := StartMonitored(getter, inst, clusterSpec.MonitoredOptions, options.OptTimeout); err != nil {
-						return err
-					}
+		for _, inst := range insts {
+			if !uniqueHosts.Exist(inst.GetHost()) {
+				uniqueHosts.Insert(inst.GetHost())
+				if err := StartMonitored(getter, inst, cluster.MonitoredOptions, options.OptTimeout); err != nil {
+					return err
 				}
 			}
 		}
@@ -65,16 +63,16 @@ func Start(
 // Stop the cluster.
 func Stop(
 	getter ExecutorGetter,
-	spec meta.Specification,
+	cluster *spec.Specification,
 	options Options,
 ) error {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
-	components := spec.ComponentsByStopOrder()
+	components := cluster.ComponentsByStopOrder()
 	components = FilterComponent(components, roleFilter)
 
 	instCount := map[string]int{}
-	spec.IterInstance(func(inst meta.Instance) {
+	cluster.IterInstance(func(inst spec.Instance) {
 		instCount[inst.GetHost()] = instCount[inst.GetHost()] + 1
 	})
 
@@ -82,15 +80,13 @@ func Stop(
 		insts := FilterInstance(com.Instances(), nodeFilter)
 		err := StopComponent(getter, insts)
 		if err != nil {
-			return errors.Annotatef(err, "failed to stop %s", com.Name())
+			return errors.Annotatef(err, "failed to stop %s cluster", com.Name())
 		}
-		if clusterSpec := spec.GetClusterSpecification(); clusterSpec != nil {
-			for _, inst := range insts {
-				instCount[inst.GetHost()]--
-				if instCount[inst.GetHost()] == 0 {
-					if err := StopMonitored(getter, inst, clusterSpec.MonitoredOptions, options.OptTimeout); err != nil {
-						return err
-					}
+		for _, inst := range insts {
+			instCount[inst.GetHost()]--
+			if instCount[inst.GetHost()] == 0 {
+				if err := StopMonitored(getter, inst, cluster.MonitoredOptions, options.OptTimeout); err != nil {
+					return err
 				}
 			}
 		}
@@ -99,7 +95,7 @@ func Stop(
 }
 
 // NeedCheckTomebsome return true if we need to check and destroy some node.
-func NeedCheckTomebsome(spec *meta.ClusterSpecification) bool {
+func NeedCheckTomebsome(spec *spec.Specification) bool {
 	for _, s := range spec.TiKVServers {
 		if s.Offline {
 			return true
@@ -127,32 +123,29 @@ func NeedCheckTomebsome(spec *meta.ClusterSpecification) bool {
 // If returNodesOnly is true, it will only return the node id that can be destroy.
 func DestroyTombstone(
 	getter ExecutorGetter,
-	spec meta.Specification,
+	cluster *spec.Specification,
 	returNodesOnly bool,
 	options Options,
 ) (nodes []string, err error) {
-	if clusterSpec := spec.GetClusterSpecification(); clusterSpec != nil {
-		return DestroyClusterTombstone(getter, clusterSpec, returNodesOnly, options)
-	}
-	return nil, nil
+	return DestroyClusterTombstone(getter, cluster, returNodesOnly, options)
 }
 
 // DestroyClusterTombstone remove the tombstone node in spec and destroy them.
 // If returNodesOnly is true, it will only return the node id that can be destroy.
 func DestroyClusterTombstone(
 	getter ExecutorGetter,
-	spec *meta.ClusterSpecification,
+	cluster *spec.Specification,
 	returNodesOnly bool,
 	options Options,
 ) (nodes []string, err error) {
-	var pdClient = api.NewPDClient(spec.GetPDList(), 10*time.Second, nil)
+	var pdClient = api.NewPDClient(cluster.GetPDList(), 10*time.Second, nil)
 
-	binlogClient, err := api.NewBinlogClient(spec.GetPDList(), nil)
+	binlogClient, err := api.NewBinlogClient(cluster.GetPDList(), nil)
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
 
-	filterID := func(instance []meta.Instance, id string) (res []meta.Instance) {
+	filterID := func(instance []spec.Instance, id string) (res []spec.Instance) {
 		for _, ins := range instance {
 			if ins.ID() == id {
 				res = append(res, ins)
@@ -161,8 +154,8 @@ func DestroyClusterTombstone(
 		return
 	}
 
-	var kvServers []meta.TiKVSpec
-	for _, s := range spec.TiKVServers {
+	var kvServers []spec.TiKVSpec
+	for _, s := range cluster.TiKVServers {
 		if !s.Offline {
 			kvServers = append(kvServers, s)
 			continue
@@ -185,7 +178,7 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		instances := (&meta.TiKVComponent{ClusterSpecification: spec}).Instances()
+		instances := (&spec.TiKVComponent{Specification: cluster}).Instances()
 		instances = filterID(instances, id)
 
 		err = StopComponent(getter, instances)
@@ -193,15 +186,15 @@ func DestroyClusterTombstone(
 			return nil, errors.AddStack(err)
 		}
 
-		err = DestroyComponent(getter, instances, spec, options)
+		err = DestroyComponent(getter, instances, cluster, options)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
 
 	}
 
-	var flashServers []meta.TiFlashSpec
-	for _, s := range spec.TiFlashServers {
+	var flashServers []spec.TiFlashSpec
+	for _, s := range cluster.TiFlashServers {
 		if !s.Offline {
 			flashServers = append(flashServers, s)
 			continue
@@ -224,7 +217,7 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		instances := (&meta.TiFlashComponent{ClusterSpecification: spec}).Instances()
+		instances := (&spec.TiFlashComponent{Specification: cluster}).Instances()
 		instances = filterID(instances, id)
 
 		err = StopComponent(getter, instances)
@@ -232,15 +225,15 @@ func DestroyClusterTombstone(
 			return nil, errors.AddStack(err)
 		}
 
-		err = DestroyComponent(getter, instances, spec, options)
+		err = DestroyComponent(getter, instances, cluster, options)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
 
 	}
 
-	var pumpServers []meta.PumpSpec
-	for _, s := range spec.PumpServers {
+	var pumpServers []spec.PumpSpec
+	for _, s := range cluster.PumpServers {
 		if !s.Offline {
 			pumpServers = append(pumpServers, s)
 			continue
@@ -262,22 +255,22 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		instances := (&meta.PumpComponent{ClusterSpecification: spec}).Instances()
+		instances := (&spec.PumpComponent{Specification: cluster}).Instances()
 		instances = filterID(instances, id)
 		err = StopComponent(getter, instances)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
 
-		err = DestroyComponent(getter, instances, spec, options)
+		err = DestroyComponent(getter, instances, cluster, options)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
 
 	}
 
-	var drainerServers []meta.DrainerSpec
-	for _, s := range spec.Drainers {
+	var drainerServers []spec.DrainerSpec
+	for _, s := range cluster.Drainers {
 		if !s.Offline {
 			drainerServers = append(drainerServers, s)
 			continue
@@ -299,7 +292,7 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		instances := (&meta.DrainerComponent{ClusterSpecification: spec}).Instances()
+		instances := (&spec.DrainerComponent{Specification: cluster}).Instances()
 		instances = filterID(instances, id)
 
 		err = StopComponent(getter, instances)
@@ -307,7 +300,7 @@ func DestroyClusterTombstone(
 			return nil, errors.AddStack(err)
 		}
 
-		err = DestroyComponent(getter, instances, spec, options)
+		err = DestroyComponent(getter, instances, cluster, options)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
@@ -317,10 +310,10 @@ func DestroyClusterTombstone(
 		return
 	}
 
-	spec.TiKVServers = kvServers
-	spec.TiFlashServers = flashServers
-	spec.PumpServers = pumpServers
-	spec.Drainers = drainerServers
+	cluster.TiKVServers = kvServers
+	cluster.TiFlashServers = flashServers
+	cluster.PumpServers = pumpServers
+	cluster.Drainers = drainerServers
 
 	return
 }
@@ -328,15 +321,15 @@ func DestroyClusterTombstone(
 // Restart the cluster.
 func Restart(
 	getter ExecutorGetter,
-	spec meta.Specification,
+	cluster *spec.Specification,
 	options Options,
 ) error {
-	err := Stop(getter, spec, options)
+	err := Stop(getter, cluster, options)
 	if err != nil {
 		return errors.Annotatef(err, "failed to stop")
 	}
 
-	err = Start(getter, spec, options)
+	err = Start(getter, cluster, options)
 	if err != nil {
 		return errors.Annotatef(err, "failed to start")
 	}
@@ -345,13 +338,13 @@ func Restart(
 }
 
 // StartMonitored start BlackboxExporter and NodeExporter
-func StartMonitored(getter ExecutorGetter, instance meta.Instance, options meta.MonitoredOptions, timeout int64) error {
+func StartMonitored(getter ExecutorGetter, instance spec.Instance, options spec.MonitoredOptions, timeout int64) error {
 	ports := map[string]int{
-		meta.ComponentNodeExporter:     options.NodeExporterPort,
-		meta.ComponentBlackboxExporter: options.BlackboxExporterPort,
+		spec.ComponentNodeExporter:     options.NodeExporterPort,
+		spec.ComponentBlackboxExporter: options.BlackboxExporterPort,
 	}
 	e := getter.Get(instance.GetHost())
-	for _, comp := range []string{meta.ComponentNodeExporter, meta.ComponentBlackboxExporter} {
+	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
 		log.Infof("Starting component %s", comp)
 		log.Infof("\tStarting instance %s", instance.GetHost())
 		c := module.SystemdModuleConfig{
@@ -374,7 +367,7 @@ func StartMonitored(getter ExecutorGetter, instance meta.Instance, options meta.
 		}
 
 		// Check ready.
-		if err := meta.PortStarted(e, ports[comp], timeout); err != nil {
+		if err := spec.PortStarted(e, ports[comp], timeout); err != nil {
 			str := fmt.Sprintf("\t%s failed to start: %s", instance.GetHost(), err)
 			log.Errorf(str)
 			return errors.Annotatef(err, str)
@@ -387,7 +380,7 @@ func StartMonitored(getter ExecutorGetter, instance meta.Instance, options meta.
 }
 
 // RestartComponent restarts the component.
-func RestartComponent(getter ExecutorGetter, instances []meta.Instance, timeout int64) error {
+func RestartComponent(getter ExecutorGetter, instances []spec.Instance, timeout int64) error {
 	if len(instances) <= 0 {
 		return nil
 	}
@@ -433,7 +426,7 @@ func RestartComponent(getter ExecutorGetter, instances []meta.Instance, timeout 
 	return nil
 }
 
-func startInstance(getter ExecutorGetter, ins meta.Instance, timeout int64) error {
+func startInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) error {
 	e := getter.Get(ins.GetHost())
 	log.Infof("\tStarting instance %s %s:%d",
 		ins.ComponentName(),
@@ -484,7 +477,7 @@ func startInstance(getter ExecutorGetter, ins meta.Instance, timeout int64) erro
 }
 
 // StartComponent start the instances.
-func StartComponent(getter ExecutorGetter, instances []meta.Instance, options Options) error {
+func StartComponent(getter ExecutorGetter, instances []spec.Instance, options Options) error {
 	if len(instances) <= 0 {
 		return nil
 	}
@@ -513,13 +506,13 @@ func StartComponent(getter ExecutorGetter, instances []meta.Instance, options Op
 }
 
 // StopMonitored stop BlackboxExporter and NodeExporter
-func StopMonitored(getter ExecutorGetter, instance meta.Instance, options meta.MonitoredOptions, timeout int64) error {
+func StopMonitored(getter ExecutorGetter, instance spec.Instance, options spec.MonitoredOptions, timeout int64) error {
 	ports := map[string]int{
-		meta.ComponentNodeExporter:     options.NodeExporterPort,
-		meta.ComponentBlackboxExporter: options.BlackboxExporterPort,
+		spec.ComponentNodeExporter:     options.NodeExporterPort,
+		spec.ComponentBlackboxExporter: options.BlackboxExporterPort,
 	}
 	e := getter.Get(instance.GetHost())
-	for _, comp := range []string{meta.ComponentNodeExporter, meta.ComponentBlackboxExporter} {
+	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
 		log.Infof("Stopping component %s", comp)
 
 		c := module.SystemdModuleConfig{
@@ -554,7 +547,7 @@ func StopMonitored(getter ExecutorGetter, instance meta.Instance, options meta.M
 				instance.GetPort())
 		}
 
-		if err := meta.PortStopped(e, ports[comp], timeout); err != nil {
+		if err := spec.PortStopped(e, ports[comp], timeout); err != nil {
 			str := fmt.Sprintf("\t%s %s:%d failed to stop: %s",
 				instance.ComponentName(),
 				instance.GetHost(),
@@ -567,7 +560,7 @@ func StopMonitored(getter ExecutorGetter, instance meta.Instance, options meta.M
 	return nil
 }
 
-func stopInstance(getter ExecutorGetter, ins meta.Instance) error {
+func stopInstance(getter ExecutorGetter, ins spec.Instance) error {
 	e := getter.Get(ins.GetHost())
 	log.Infof("\tStopping instance %s", ins.GetHost())
 
@@ -612,7 +605,7 @@ func stopInstance(getter ExecutorGetter, ins meta.Instance) error {
 }
 
 // StopComponent stop the instances.
-func StopComponent(getter ExecutorGetter, instances []meta.Instance) error {
+func StopComponent(getter ExecutorGetter, instances []spec.Instance) error {
 	if len(instances) <= 0 {
 		return nil
 	}
@@ -638,10 +631,10 @@ func StopComponent(getter ExecutorGetter, instances []meta.Instance) error {
 }
 
 // PrintClusterStatus print cluster status into the io.Writer.
-func PrintClusterStatus(getter ExecutorGetter, spec meta.Specification) (health bool) {
+func PrintClusterStatus(getter ExecutorGetter, cluster *spec.Specification) (health bool) {
 	health = true
 
-	for _, com := range spec.ComponentsByStartOrder() {
+	for _, com := range cluster.ComponentsByStartOrder() {
 		if len(com.Instances()) == 0 {
 			continue
 		}

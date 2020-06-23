@@ -17,7 +17,7 @@ import (
 	"fmt"
 
 	"github.com/pingcap/tiup/pkg/cluster/executor"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/set"
 )
 
@@ -70,7 +70,7 @@ func (op Operation) String() string {
 }
 
 // FilterComponent filter components by set
-func FilterComponent(comps []meta.Component, components set.StringSet) (res []meta.Component) {
+func FilterComponent(comps []spec.Component, components set.StringSet) (res []spec.Component) {
 	if len(components) == 0 {
 		res = comps
 		return
@@ -88,7 +88,7 @@ func FilterComponent(comps []meta.Component, components set.StringSet) (res []me
 }
 
 // FilterInstance filter instances by set
-func FilterInstance(instances []meta.Instance, nodes set.StringSet) (res []meta.Instance) {
+func FilterInstance(instances []spec.Instance, nodes set.StringSet) (res []spec.Instance) {
 	if len(nodes) == 0 {
 		res = instances
 		return
@@ -106,5 +106,5 @@ func FilterInstance(instances []meta.Instance, nodes set.StringSet) (res []meta.
 
 // ExecutorGetter get the executor by host.
 type ExecutorGetter interface {
-	Get(host string) (e executor.TiOpsExecutor)
+	Get(host string) (e executor.Executor)
 }

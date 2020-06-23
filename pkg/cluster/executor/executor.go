@@ -23,9 +23,9 @@ var (
 	errNS = errorx.NewNamespace("executor")
 )
 
-// TiOpsExecutor is the executor interface for TiOps, all tasks will in the end
+// Executor is the executor interface for TiOps, all tasks will in the end
 // be passed to a executor and then be actually performed.
-type TiOpsExecutor interface {
+type Executor interface {
 	// Execute run the command, then return it's stdout and stderr
 	// NOTE: stdin is not supported as it seems we don't need it (for now). If
 	// at some point in the future we need to pass stdin to a command, we'll

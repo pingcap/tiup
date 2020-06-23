@@ -62,7 +62,7 @@ func init() {
 }
 
 type (
-	// SSHExecutor implements TiOpsExecutor with SSH as transportation layer.
+	// SSHExecutor implements Executor with SSH as transportation layer.
 	SSHExecutor struct {
 		Config *easyssh.MakeConfig
 		Locale string // the locale used when executing the command
@@ -82,7 +82,7 @@ type (
 	}
 )
 
-var _ TiOpsExecutor = &SSHExecutor{}
+var _ Executor = &SSHExecutor{}
 
 // NewSSHExecutor create a ssh executor.
 func NewSSHExecutor(c SSHConfig, sudo bool) *SSHExecutor {

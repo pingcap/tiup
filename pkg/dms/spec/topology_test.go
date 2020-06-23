@@ -1,4 +1,4 @@
-package meta
+package spec
 
 import (
 	"strings"
@@ -17,11 +17,11 @@ func TestMeta(t *testing.T) {
 	TestingT(t)
 }
 
-func subtestJobUnmarshal(c *C, topo *DMSTopologySpecification, expectedYaml string) {
+func subtestJobUnmarshal(c *C, topo *Specification, expectedYaml string) {
 	data, err := yaml.Marshal(topo)
 	c.Assert(err, IsNil)
 	c.Assert(string(data), Equals, expectedYaml)
-	topo2 := new(DMSTopologySpecification)
+	topo2 := new(Specification)
 	err = yaml.Unmarshal(data, topo2)
 	c.Assert(err, IsNil)
 	c.Assert(topo2.Job.Action, DeepEquals, topo.Job.Action)
@@ -146,7 +146,7 @@ monitoring_servers: []
 monitoring_servers: []
 `
 	// Test with import job
-	topo := new(DMSTopologySpecification)
+	topo := new(Specification)
 	topo.Job.Action = "import"
 	topo.Job.Type = "sql"
 	topo.Job.Sources = append(topo.Job.Sources, fileServerSpecArray[0], fileServerSpecArray[1], fileServerSpecArray[2])
@@ -154,7 +154,7 @@ monitoring_servers: []
 	topo.Job.Workers = append(topo.Job.Workers, workerSpec)
 	subtestJobUnmarshal(c, topo, importExpectedYaml)
 	// Test with export job
-	topo = new(DMSTopologySpecification)
+	topo = new(Specification)
 	topo.Job.Action = "export"
 	topo.Job.Type = "mysql"
 	topo.Job.Sources = append(topo.Job.Sources, databaseServerSpecArray[0], databaseServerSpecArray[1], databaseServerSpecArray[2])
@@ -162,7 +162,7 @@ monitoring_servers: []
 	topo.Job.Workers = append(topo.Job.Workers, workerSpec)
 	subtestJobUnmarshal(c, topo, exportExpectedYaml)
 	// Test with migrate
-	topo = new(DMSTopologySpecification)
+	topo = new(Specification)
 	topo.Job.Action = "migrate"
 	topo.Job.Type = "mysql"
 	topo.Job.Sources = append(topo.Job.Sources, databaseServerSpecArray[0], databaseServerSpecArray[1], databaseServerSpecArray[2])
@@ -171,7 +171,7 @@ monitoring_servers: []
 	subtestJobUnmarshal(c, topo, migrateExpectedYaml)
 
 	// Test invalid job action
-	topo = new(DMSTopologySpecification)
+	topo = new(Specification)
 	wrongJobActionYaml := strings.ReplaceAll(importExpectedYaml, "import", "invalidAction")
 	err := yaml.Unmarshal([]byte(wrongJobActionYaml), topo)
 	c.Assert(err, ErrorMatches, "invalid job action invalidAction")
@@ -195,14 +195,14 @@ monitoring_servers: []
 
 func (s *metaSuite) TestDefaultDataDir(c *C) {
 	// Test with without global DataDir.
-	topo := new(DMSTopologySpecification)
+	topo := new(Specification)
 	topo.Job.Action = "import"
 	topo.Job.Workers = append(topo.Job.Workers, WorkerSpec{Host: "1.1.1.1", SSHPort: 22})
 	data, err := yaml.Marshal(topo)
 	c.Assert(err, IsNil)
 
 	// Check default value.
-	topo = new(DMSTopologySpecification)
+	topo = new(Specification)
 	err = yaml.Unmarshal(data, topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.DataDir, Equals, "data")
@@ -211,14 +211,14 @@ func (s *metaSuite) TestDefaultDataDir(c *C) {
 	// Can keep the default value.
 	data, err = yaml.Marshal(topo)
 	c.Assert(err, IsNil)
-	topo = new(DMSTopologySpecification)
+	topo = new(Specification)
 	err = yaml.Unmarshal(data, topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.DataDir, Equals, "data")
 	c.Assert(topo.Job.Workers[0].DataDir, Equals, "data")
 
 	// Test with global DataDir.
-	topo = new(DMSTopologySpecification)
+	topo = new(Specification)
 	topo.GlobalOptions.DataDir = "/global_data"
 	topo.Job.Action = "import"
 	topo.Job.Workers = append(topo.Job.Workers, WorkerSpec{Host: "1.1.1.1", SSHPort: 22})
@@ -226,7 +226,7 @@ func (s *metaSuite) TestDefaultDataDir(c *C) {
 	data, err = yaml.Marshal(topo)
 	c.Assert(err, IsNil)
 
-	topo = new(DMSTopologySpecification)
+	topo = new(Specification)
 	err = yaml.Unmarshal(data, topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.DataDir, Equals, "/global_data")
@@ -235,7 +235,7 @@ func (s *metaSuite) TestDefaultDataDir(c *C) {
 }
 
 func (s *metaSuite) TestGlobalOptions(c *C) {
-	topo := DMSTopologySpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
@@ -264,7 +264,7 @@ job:
 }
 
 func (s *metaSuite) TestDataDirAbsolute(c *C) {
-	topo := DMSTopologySpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
@@ -284,7 +284,7 @@ job:
 }
 
 func (s *metaSuite) TestDirectoryConflicts(c *C) {
-	topo := DMSTopologySpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
@@ -318,7 +318,7 @@ alertmanager_servers:
 }
 
 func (s *metaSuite) TestPortConflicts(c *C) {
-	topo := DMSTopologySpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
@@ -335,7 +335,7 @@ alertmanager_servers:
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "port '1234' conflicts between 'monitoring_servers:172.16.5.138.port' and 'alertmanager_servers,omitempty:172.16.5.138.web_port'")
 
-	topo = DMSTopologySpecification{}
+	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
 monitored:
   node_exporter_port: 1234
@@ -352,7 +352,7 @@ alertmanager_servers:
 
 func (s *metaSuite) TestPlatformConflicts(c *C) {
 	// aarch64 and arm64 are equal
-	topo := DMSTopologySpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   os: "linux"
@@ -366,7 +366,7 @@ alertmanager_servers:
 	c.Assert(err, IsNil)
 
 	// different arch defined for the same host
-	topo = DMSTopologySpecification{}
+	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
 global:
   os: "linux"
@@ -383,7 +383,7 @@ job:
 	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' as in 'workers:linux/amd64' and 'workers:linux/arm64'")
 
 	// different os defined for the same host
-	topo = DMSTopologySpecification{}
+	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
 global:
   os: "linux"
@@ -402,7 +402,7 @@ job:
 }
 
 func (s *metaSuite) TestLogDir(c *C) {
-	topo := DMSTopologySpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
@@ -419,7 +419,7 @@ job:
 }
 
 func (s *metaSuite) TestMonitorLogDir(c *C) {
-	topo := DMSTopologySpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"

@@ -61,7 +61,7 @@ func NewWaitFor(c WaitForConfig) *WaitFor {
 }
 
 // Execute the module return nil if successfully wait for the event.
-func (w *WaitFor) Execute(e executor.TiOpsExecutor) (err error) {
+func (w *WaitFor) Execute(e executor.Executor) (err error) {
 	pattern := []byte(fmt.Sprintf(":%d ", w.c.Port))
 
 	retryOpt := clusterutil.RetryOption{

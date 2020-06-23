@@ -19,14 +19,15 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/meta"
 )
 
 // InitConfig is used to copy all configurations to the target directory of path
 type InitConfig struct {
 	clusterName    string
 	clusterVersion string
-	instance       meta.Instance
+	instance       spec.Instance
 	deployUser     string
 	ignoreCheck    bool
 	paths          meta.DirPaths
@@ -46,7 +47,7 @@ func (c *InitConfig) Execute(ctx *Context) error {
 
 	err := c.instance.InitConfig(exec, c.clusterName, c.clusterVersion, c.deployUser, c.paths)
 	if err != nil {
-		if c.ignoreCheck && errors.Cause(err) == meta.ErrorCheckConfig {
+		if c.ignoreCheck && errors.Cause(err) == spec.ErrorCheckConfig {
 			return nil
 		}
 		return errors.Annotatef(err, "init config failed: %s:%d", c.instance.GetHost(), c.instance.GetPort())
@@ -63,5 +64,5 @@ func (c *InitConfig) Rollback(ctx *Context) error {
 func (c *InitConfig) String() string {
 	return fmt.Sprintf("InitConfig: cluster=%s, user=%s, host=%s, path=%s, %s",
 		c.clusterName, c.deployUser, c.instance.GetHost(),
-		filepath.Join(meta.ClusterPath(c.clusterName, meta.TempConfigPath, c.instance.ServiceName())), c.paths)
+		filepath.Join(spec.ClusterPath(c.clusterName, spec.TempConfigPath, c.instance.ServiceName())), c.paths)
 }

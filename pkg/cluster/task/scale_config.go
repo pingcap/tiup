@@ -17,15 +17,16 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/meta"
 )
 
 // ScaleConfig is used to copy all configurations to the target directory of path
 type ScaleConfig struct {
 	clusterName    string
 	clusterVersion string
-	instance       meta.Instance
-	base           meta.Specification
+	instance       spec.Instance
+	base           *spec.Specification
 	deployUser     string
 	paths          meta.DirPaths
 }
@@ -38,7 +39,7 @@ func (c *ScaleConfig) Execute(ctx *Context) error {
 		return ErrNoExecutor
 	}
 
-	c.paths.Cache = meta.ClusterPath(c.clusterName, meta.TempConfigPath)
+	c.paths.Cache = spec.ClusterPath(c.clusterName, spec.TempConfigPath)
 	if err := os.MkdirAll(c.paths.Cache, 0755); err != nil {
 		return err
 	}

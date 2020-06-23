@@ -20,13 +20,13 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/relex/aini"
 )
 
 // ReadInventory reads the inventory files of a TiDB cluster deployed by TiDB-Ansible
-func ReadInventory(dir, inventoryFileName string) (string, *meta.ClusterMeta, *aini.InventoryData, error) {
+func ReadInventory(dir, inventoryFileName string) (string, *spec.ClusterMeta, *aini.InventoryData, error) {
 	if inventoryFileName == "" {
 		inventoryFileName = AnsibleInventoryFile
 	}
@@ -47,25 +47,25 @@ func ReadInventory(dir, inventoryFileName string) (string, *meta.ClusterMeta, *a
 	return clsName, clsMeta, inventory, err
 }
 
-func parseInventoryFile(invFile io.Reader) (string, *meta.ClusterMeta, *aini.InventoryData, error) {
+func parseInventoryFile(invFile io.Reader) (string, *spec.ClusterMeta, *aini.InventoryData, error) {
 	inventory, err := aini.Parse(invFile)
 	if err != nil {
 		return "", nil, inventory, err
 	}
 
-	clsMeta := &meta.ClusterMeta{
-		Topology: &meta.ClusterSpecification{
-			GlobalOptions:    meta.GlobalOptions{},
-			MonitoredOptions: meta.MonitoredOptions{},
-			TiDBServers:      make([]meta.TiDBSpec, 0),
-			TiKVServers:      make([]meta.TiKVSpec, 0),
-			PDServers:        make([]meta.PDSpec, 0),
-			TiFlashServers:   make([]meta.TiFlashSpec, 0),
-			PumpServers:      make([]meta.PumpSpec, 0),
-			Drainers:         make([]meta.DrainerSpec, 0),
-			Monitors:         make([]meta.PrometheusSpec, 0),
-			Grafana:          make([]meta.GrafanaSpec, 0),
-			Alertmanager:     make([]meta.AlertManagerSpec, 0),
+	clsMeta := &spec.ClusterMeta{
+		Topology: &spec.Specification{
+			GlobalOptions:    spec.GlobalOptions{},
+			MonitoredOptions: spec.MonitoredOptions{},
+			TiDBServers:      make([]spec.TiDBSpec, 0),
+			TiKVServers:      make([]spec.TiKVSpec, 0),
+			PDServers:        make([]spec.PDSpec, 0),
+			TiFlashServers:   make([]spec.TiFlashSpec, 0),
+			PumpServers:      make([]spec.PumpSpec, 0),
+			Drainers:         make([]spec.DrainerSpec, 0),
+			Monitors:         make([]spec.PrometheusSpec, 0),
+			Grafana:          make([]spec.GrafanaSpec, 0),
+			Alertmanager:     make([]spec.AlertManagerSpec, 0),
 		},
 	}
 	clsName := ""
