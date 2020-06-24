@@ -865,7 +865,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 
 	dumpDSN(p.tidbs)
 
-	if _, ok := failpoint.Eval(_curpkg_("terminateEarly")); ok {
+	failpoint.Inject("terminateEarly", func() error {
 		time.Sleep(20 * time.Second)
 
 		fmt.Println("Early terminated via failpoint")
@@ -887,7 +887,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			_ = monitorCmd.Wait()
 		}
 		return nil
-	}
+	})
 
 	go func() {
 		sc := make(chan os.Signal, 1)
