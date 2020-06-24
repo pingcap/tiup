@@ -47,7 +47,7 @@ const (
 	// SpecVersion of current, maybe we could expand it later
 	CurrentSpecVersion = "0.1.0"
 
-	// AnyPlatform can match any os and any arch
+	// AnyPlatform is the ID for platform independent components
 	AnyPlatform = "any/any"
 
 	// Acceptable values for hash kinds.

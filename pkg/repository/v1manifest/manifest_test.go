@@ -31,11 +31,21 @@ func TestVersionItem(t *testing.T) {
 			"any/any": map[string]VersionItem{
 				"v1.0.0": VersionItem{Entry: "test"},
 			},
+			// If hit this, the result of VersionItem will be nil since we don't have an entry
+			"darwin/any": map[string]VersionItem{
+				"v1.0.0": VersionItem{},
+			},
+			"any/arm64": map[string]VersionItem{
+				"v1.0.0": VersionItem{},
+			},
 		},
 	}
 
 	assert.NotNil(t, manifest.VersionItem("linux/amd64", "v1.0.0"))
 	assert.NotNil(t, manifest.VersionItem("windows/386", "v1.0.0"))
+	assert.NotNil(t, manifest.VersionItem("any/any", "v1.0.0"))
+	assert.Nil(t, manifest.VersionItem("darwin/any", "v1.0.0"))
+	assert.Nil(t, manifest.VersionItem("any/arm64", "v1.0.0"))
 
 	manifest = &Component{
 		Platforms: map[string]map[string]VersionItem{
@@ -47,4 +57,7 @@ func TestVersionItem(t *testing.T) {
 
 	assert.NotNil(t, manifest.VersionItem("linux/amd64", "v1.0.0"))
 	assert.Nil(t, manifest.VersionItem("windows/386", "v1.0.0"))
+	assert.Nil(t, manifest.VersionItem("any/any", "v1.0.0"))
+	assert.Nil(t, manifest.VersionItem("darwin/any", "v1.0.0"))
+	assert.Nil(t, manifest.VersionItem("any/arm64", "v1.0.0"))
 }
