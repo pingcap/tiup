@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -85,6 +86,12 @@ func binaryPath(home, cmd string) (string, error) {
 }
 
 func run(name string, args ...string) error {
+	// Handle `cdc cli`
+	if strings.Contains(name, " ") {
+		xs := strings.Split(name, " ")
+		name = xs[0]
+		args = append(xs[1:], args...)
+	}
 	cmd := exec.Command(name, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
