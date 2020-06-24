@@ -286,6 +286,11 @@ func BuildDownloadCompTasks(version string, instanceIter InstanceIter) []*task.S
 		if _, found := uniqueTaskList[key]; !found {
 			uniqueTaskList[key] = struct{}{}
 
+			// download spark as dependency of tispark
+			if inst.ComponentName() == spec.ComponentTiSpark {
+				tasks = append(tasks, buildDownloadSparkTask(version, inst))
+			}
+
 			version := spec.ComponentVersion(inst.ComponentName(), version)
 			t := task.NewBuilder().
 				Download(inst.ComponentName(), inst.OS(), inst.Arch(), version).
@@ -295,4 +300,14 @@ func BuildDownloadCompTasks(version string, instanceIter InstanceIter) []*task.S
 		}
 	})
 	return tasks
+}
+
+// buildDownloadSparkTask build download task for spark, which is a dependency of tispark
+// FIXME: this is a hack and should be replaced by dependency handling in manifest processing
+func buildDownloadSparkTask(version string, inst spec.Instance) *task.StepDisplay {
+	ver := spec.ComponentVersion(spec.ComponentSpark, version)
+	return task.NewBuilder().
+		Download(spec.ComponentSpark, inst.OS(), inst.Arch(), ver).
+		BuildAsStep(fmt.Sprintf("  - Download %s:%s (%s/%s)",
+			spec.ComponentSpark, version, inst.OS(), inst.Arch()))
 }

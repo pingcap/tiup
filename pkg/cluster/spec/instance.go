@@ -40,8 +40,7 @@ const (
 	ComponentDrainer          = "drainer"
 	ComponentPump             = "pump"
 	ComponentCDC              = "cdc"
-	ComponentTiSparkMaster    = "tispark-master"
-	ComponentTiSparkSlave     = "tispark-slave"
+	ComponentTiSpark          = "tispark"
 	ComponentSpark            = "spark"
 	ComponentAlertManager     = "alertmanager"
 	ComponentPrometheus       = "prometheus"
@@ -49,7 +48,6 @@ const (
 	ComponentBlackboxExporter = "blackbox_exporter"
 	ComponentNodeExporter     = "node_exporter"
 	ComponentCheckCollector   = "insight"
-	platformIndependentName   = "any"
 )
 
 // Component represents a component of the cluster.
@@ -278,7 +276,7 @@ func (i *instance) LogDir() string {
 func (i *instance) OS() string {
 	v := reflect.ValueOf(i.InstanceSpec).FieldByName("OS")
 	if !v.IsValid() {
-		return platformIndependentName
+		return ""
 	}
 	return v.Interface().(string)
 }
@@ -286,7 +284,7 @@ func (i *instance) OS() string {
 func (i *instance) Arch() string {
 	v := reflect.ValueOf(i.InstanceSpec).FieldByName("Arch")
 	if !v.IsValid() {
-		return platformIndependentName
+		return ""
 	}
 	return v.Interface().(string)
 }

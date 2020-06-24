@@ -26,11 +26,13 @@ type TiSparkMasterSpec struct {
 	Port      int    `yaml:"port" default:"7077"`
 	WebPort   int    `yaml:"web_port" default:"8080"`
 	DeployDir string `yaml:"deploy_dir,omitempty"`
+	Arch      string `yaml:"arch,omitempty"`
+	OS        string `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
 func (s TiSparkMasterSpec) Role() string {
-	return ComponentTiSparkMaster
+	return ComponentTiSpark
 }
 
 // SSH returns the host and SSH port of the instance
@@ -56,11 +58,13 @@ type TiSparkSlaveSpec struct {
 	Port      int    `yaml:"port" default:"7078"`
 	WebPort   int    `yaml:"web_port" default:"8081"`
 	DeployDir string `yaml:"deploy_dir,omitempty"`
+	Arch      string `yaml:"arch,omitempty"`
+	OS        string `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
 func (s TiSparkSlaveSpec) Role() string {
-	return ComponentTiSparkSlave
+	return ComponentTiSpark
 }
 
 // SSH returns the host and SSH port of the instance
@@ -83,7 +87,7 @@ type TiSparkMasterComponent struct{ *Specification }
 
 // Name implements Component interface.
 func (c *TiSparkMasterComponent) Name() string {
-	return ComponentTiSparkMaster
+	return ComponentTiSpark
 }
 
 // Instances implements Component interface.
@@ -192,7 +196,7 @@ type TiSparkSlaveComponent struct{ *Specification }
 
 // Name implements Component interface.
 func (c *TiSparkSlaveComponent) Name() string {
-	return ComponentTiSparkSlave
+	return ComponentTiSpark
 }
 
 // Instances implements Component interface.

@@ -373,6 +373,11 @@ func buildMonitoredDeployTask(
 		version := spec.ComponentVersion(comp, version)
 
 		for host, info := range uniqueHosts {
+			// FIXME: as the uniqueHosts list is built with os-arch as part of the key,
+			// for platform independent packages, it will be downloaded multiple times
+			// and be saved with different file names in the packages dir, the tarballs
+			// are identical and only the difference is platform in filename.
+
 			// populate unique os/arch set
 			key := fmt.Sprintf("%s-%s-%s", comp, info.os, info.arch)
 			if _, found := uniqueCompOSArch[key]; !found {
