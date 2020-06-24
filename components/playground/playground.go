@@ -598,12 +598,14 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			options.pd.Num, options.tikv.Num, options.pd.Num)
 	}
 
-	if options.version != "" && semver.Compare("v3.1.0", options.version) < 0 && options.tiflash.Num != 0 {
-		fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.version))
-		options.tiflash.Num = 0
-	} else if options.version != "" && runtime.GOOS == "darwin" && semver.Compare("v4.0.0", options.version) < 0 {
-		fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash on darwin", options.version))
-		options.tiflash.Num = 0
+	if options.version != "nightly" && options.version != "" {
+		if semver.Compare("v3.1.0", options.version) > 0 && options.tiflash.Num != 0 {
+			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.version))
+			options.tiflash.Num = 0
+		} else if runtime.GOOS == "darwin" && semver.Compare("v4.0.0", options.version) > 0 {
+			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash on darwin", options.version))
+			options.tiflash.Num = 0
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
