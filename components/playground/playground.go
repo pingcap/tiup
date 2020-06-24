@@ -603,6 +603,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.version))
 			options.tiflash.Num = 0
 		} else if runtime.GOOS == "darwin" && semver.Compare("v4.0.0", options.version) > 0 {
+			// only runs tiflash on version later than v4.0.0 when executing on darwin
 			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash on darwin", options.version))
 			options.tiflash.Num = 0
 		}
@@ -641,7 +642,6 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			return errors.AddStack(err)
 		}
 	}
-	// only runs tiflash on version later than v4.0.0-rc.2 when executing on darwin
 	for i := 0; i < options.tiflash.Num; i++ {
 		_, err := p.addInstance("tiflash", options.tiflash)
 		if err != nil {
