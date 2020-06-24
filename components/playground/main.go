@@ -23,7 +23,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -84,13 +83,6 @@ func installIfMissing(profile *localdata.Profile, component, version string) err
 }
 
 func execute() error {
-	var defaultTiflashNum int
-	if runtime.GOOS == "linux" {
-		defaultTiflashNum = 1
-	} else {
-		defaultTiflashNum = 0
-	}
-
 	opt := &bootOptions{
 		tidb: instance.Config{
 			Num: 1,
@@ -102,7 +94,7 @@ func execute() error {
 			Num: 1,
 		},
 		tiflash: instance.Config{
-			Num: defaultTiflashNum,
+			Num: 1,
 		},
 		host:    "127.0.0.1",
 		monitor: true,
