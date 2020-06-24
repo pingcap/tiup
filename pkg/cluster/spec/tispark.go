@@ -23,7 +23,8 @@ type TiSparkMasterSpec struct {
 	Host      string `yaml:"host"`
 	SSHPort   int    `yaml:"ssh_port,omitempty"`
 	Imported  bool   `yaml:"imported,omitempty"`
-	Port      int    `yaml:"port" default:"8300"`
+	Port      int    `yaml:"port" default:"7077"`
+	WebPort   int    `yaml:"web_port" default:"8080"`
 	DeployDir string `yaml:"deploy_dir,omitempty"`
 }
 
@@ -52,7 +53,8 @@ type TiSparkSlaveSpec struct {
 	Host      string `yaml:"host"`
 	SSHPort   int    `yaml:"ssh_port,omitempty"`
 	Imported  bool   `yaml:"imported,omitempty"`
-	Port      int    `yaml:"port" default:"8300"`
+	Port      int    `yaml:"port" default:"7078"`
+	WebPort   int    `yaml:"web_port" default:"8081"`
 	DeployDir string `yaml:"deploy_dir,omitempty"`
 }
 
@@ -99,6 +101,7 @@ func (c *TiSparkMasterComponent) Instances() []Instance {
 
 				usedPorts: []int{
 					s.Port,
+					s.WebPort,
 				},
 				usedDirs: []string{
 					s.DeployDir,
@@ -207,6 +210,7 @@ func (c *TiSparkSlaveComponent) Instances() []Instance {
 
 				usedPorts: []int{
 					s.Port,
+					s.WebPort,
 				},
 				usedDirs: []string{
 					s.DeployDir,

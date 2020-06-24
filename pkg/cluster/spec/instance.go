@@ -42,6 +42,7 @@ const (
 	ComponentCDC              = "cdc"
 	ComponentTiSparkMaster    = "tispark-master"
 	ComponentTiSparkSlave     = "tispark-slave"
+	ComponentSpark            = "spark"
 	ComponentAlertManager     = "alertmanager"
 	ComponentPrometheus       = "prometheus"
 	ComponentPushwaygate      = "pushgateway"
