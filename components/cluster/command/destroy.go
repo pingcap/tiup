@@ -21,11 +21,12 @@ import (
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -47,7 +48,7 @@ You can retain some nodes and roles data when destroy cluster, eg:
 
 			// Validate the retained roles to prevent unexpected deleting data
 			if len(destoyOpt.RetainDataRoles) > 0 {
-				validRoles := set.NewStringSet(meta.AllComponentNames()...)
+				validRoles := set.NewStringSet(spec.AllComponentNames()...)
 				for _, role := range destoyOpt.RetainDataRoles {
 					if !validRoles.Exist(role) {
 						return perrs.Errorf("role name `%s` invalid", role)
@@ -57,13 +58,13 @@ You can retain some nodes and roles data when destroy cluster, eg:
 
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
-			if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+			if tiuputils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
 				return perrs.Errorf("cannot destroy non-exists cluster %s", clusterName)
 			}
 
 			logger.EnableAuditLog()
-			metadata, err := meta.ClusterMetadata(clusterName)
-			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+			metadata, err := spec.ClusterMetadata(clusterName)
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 				return err
 			}
 
@@ -79,8 +80,8 @@ You can retain some nodes and roles data when destroy cluster, eg:
 
 			t := task.NewBuilder().
 				SSHKeySet(
-					meta.ClusterPath(clusterName, "ssh", "id_rsa"),
-					meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
+					spec.ClusterPath(clusterName, "ssh", "id_rsa"),
+					spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
 				ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
 				ClusterOperate(metadata.Topology, operator.StopOperation, operator.Options{}).
 				ClusterOperate(metadata.Topology, operator.DestroyOperation, destoyOpt).
@@ -94,7 +95,7 @@ You can retain some nodes and roles data when destroy cluster, eg:
 				return perrs.Trace(err)
 			}
 
-			if err := os.RemoveAll(meta.ClusterPath(clusterName)); err != nil {
+			if err := os.RemoveAll(spec.ClusterPath(clusterName)); err != nil {
 				return perrs.Trace(err)
 			}
 			log.Infof("Destroyed cluster `%s` successfully", clusterName)

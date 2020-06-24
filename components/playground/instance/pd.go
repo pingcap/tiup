@@ -17,12 +17,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -32,7 +30,7 @@ type PDInstance struct {
 	instance
 	initEndpoints []*PDInstance
 	joinEndpoints []*PDInstance
-	cmd           *exec.Cmd
+	*Process
 }
 
 // NewPDInstance return a PDInstance
@@ -82,7 +80,7 @@ func (inst *PDInstance) Start(ctx context.Context, version v0manifest.Version) e
 		fmt.Sprintf("--advertise-peer-urls=http://%s:%d", advertiseHost(inst.Host), inst.Port),
 		fmt.Sprintf("--client-urls=http://%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--advertise-client-urls=http://%s:%d", advertiseHost(inst.Host), inst.StatusPort),
-		fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "pd.log")),
+		fmt.Sprintf("--log-file=%s", inst.LogFile()),
 	}
 	if inst.ConfigPath != "" {
 		args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
@@ -105,24 +103,20 @@ func (inst *PDInstance) Start(ctx context.Context, version v0manifest.Version) e
 		return errors.Errorf("must set the init or join instances.")
 	}
 
-	inst.cmd = exec.CommandContext(ctx, args[0], args[1:]...)
-	inst.cmd.Env = append(
-		os.Environ(),
-		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, inst.Dir),
-	)
-	inst.cmd.Stderr = os.Stderr
-	inst.cmd.Stdout = os.Stdout
-	return inst.cmd.Start()
+	inst.Process = NewProcess(ctx, inst.Dir, args[0], args[1:]...)
+	logIfErr(inst.Process.setOutputFile(inst.LogFile()))
+
+	return inst.Process.Start()
 }
 
-// Wait calls inst.cmd.Wait
-func (inst *PDInstance) Wait() error {
-	return inst.cmd.Wait()
+// Component return the component name.
+func (inst *PDInstance) Component() string {
+	return "pd"
 }
 
-// Pid return the PID of the instance
-func (inst *PDInstance) Pid() int {
-	return inst.cmd.Process.Pid
+// LogFile return the log file.
+func (inst *PDInstance) LogFile() string {
+	return filepath.Join(inst.Dir, "pd.log")
 }
 
 // Addr return the listen address of PD

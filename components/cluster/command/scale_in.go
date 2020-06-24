@@ -22,11 +22,12 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -77,12 +78,12 @@ func newScaleInCmd() *cobra.Command {
 }
 
 func scaleIn(clusterName string, options operator.Options) error {
-	if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+	if tiuputils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
 		return perrs.Errorf("cannot scale-in non-exists cluster %s", clusterName)
 	}
 
-	metadata, err := meta.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+	metadata, err := spec.ClusterMetadata(clusterName)
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		// ignore conflict check error, node may be deployed by former version
 		// that lack of some certain conflict checks
 		return err
@@ -107,8 +108,8 @@ func scaleIn(clusterName string, options operator.Options) error {
 			tb := task.NewBuilder()
 			if instance.IsImported() {
 				switch compName := instance.ComponentName(); compName {
-				case meta.ComponentGrafana, meta.ComponentPrometheus, meta.ComponentAlertManager:
-					version := meta.ComponentVersion(compName, metadata.Version)
+				case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
+					version := spec.ComponentVersion(compName, metadata.Version)
 					tb.Download(compName, instance.OS(), instance.Arch(), version).
 						CopyComponent(compName, instance.OS(), instance.Arch(), version, instance.GetHost(), deployDir)
 				}
@@ -119,11 +120,12 @@ func scaleIn(clusterName string, options operator.Options) error {
 				metadata.Version,
 				instance,
 				metadata.User,
+				true, // always ignore config check result in scale in
 				meta.DirPaths{
 					Deploy: deployDir,
 					Data:   dataDirs,
 					Log:    logDir,
-					Cache:  meta.ClusterPath(clusterName, meta.TempConfigPath),
+					Cache:  spec.ClusterPath(clusterName, spec.TempConfigPath),
 				},
 			).Build()
 			regenConfigTasks = append(regenConfigTasks, t)
@@ -132,15 +134,15 @@ func scaleIn(clusterName string, options operator.Options) error {
 
 	// handle dir scheme changes
 	if hasImported {
-		if err := meta.HandleImportPathMigration(clusterName); err != nil {
+		if err := spec.HandleImportPathMigration(clusterName); err != nil {
 			return err
 		}
 	}
 
 	b := task.NewBuilder().
 		SSHKeySet(
-			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
-			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
+			spec.ClusterPath(clusterName, "ssh", "id_rsa"),
+			spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout)
 
 	if !options.Force {

@@ -47,6 +47,9 @@ const (
 	// SpecVersion of current, maybe we could expand it later
 	CurrentSpecVersion = "0.1.0"
 
+	// AnyPlatform is the ID for platform independent components
+	AnyPlatform = "any/any"
+
 	// Acceptable values for hash kinds.
 	SHA256 = "sha256"
 	SHA512 = "sha512"
@@ -290,7 +293,9 @@ func (manifest *Component) ListVersion() []string {
 func (manifest *Component) VersionItem(plat, ver string) *VersionItem {
 	p := manifest.Platforms[plat]
 	if p == nil {
-		return nil
+		if p = manifest.Platforms[AnyPlatform]; p == nil {
+			return nil
+		}
 	}
 	v := p[ver]
 	if v.Entry == "" {

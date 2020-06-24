@@ -20,8 +20,8 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	"github.com/pingcap/tiup/pkg/cluster/module"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
 )
@@ -29,30 +29,28 @@ import (
 // Destroy the cluster.
 func Destroy(
 	getter ExecutorGetter,
-	spec meta.Specification,
+	cluster *spec.Specification,
 	options Options,
 ) error {
 	uniqueHosts := set.NewStringSet()
-	coms := spec.ComponentsByStopOrder()
+	coms := cluster.ComponentsByStopOrder()
 
 	instCount := map[string]int{}
-	spec.IterInstance(func(inst meta.Instance) {
+	cluster.IterInstance(func(inst spec.Instance) {
 		instCount[inst.GetHost()] = instCount[inst.GetHost()] + 1
 	})
 
 	for _, com := range coms {
 		insts := com.Instances()
-		err := DestroyComponent(getter, insts, spec.GetClusterSpecification(), options)
+		err := DestroyComponent(getter, insts, cluster, options)
 		if err != nil {
 			return errors.Annotatef(err, "failed to destroy %s", com.Name())
 		}
-		if clusterSpec := spec.GetClusterSpecification(); clusterSpec != nil {
-			for _, inst := range insts {
-				instCount[inst.GetHost()]--
-				if instCount[inst.GetHost()] == 0 {
-					if err := DestroyMonitored(getter, inst, clusterSpec.MonitoredOptions, options.OptTimeout); err != nil {
-						return err
-					}
+		for _, inst := range insts {
+			instCount[inst.GetHost()]--
+			if instCount[inst.GetHost()] == 0 {
+				if err := DestroyMonitored(getter, inst, cluster.MonitoredOptions, options.OptTimeout); err != nil {
+					return err
 				}
 			}
 		}
@@ -60,7 +58,7 @@ func Destroy(
 
 	// Delete all global deploy directory
 	for host := range uniqueHosts {
-		if err := DeleteGlobalDirs(getter, host, spec.GetGlobalOptions()); err != nil {
+		if err := DeleteGlobalDirs(getter, host, cluster.GlobalOptions); err != nil {
 			return nil
 		}
 	}
@@ -69,7 +67,7 @@ func Destroy(
 }
 
 // DeleteGlobalDirs deletes all global directories if they are empty
-func DeleteGlobalDirs(getter ExecutorGetter, host string, options meta.GlobalOptions) error {
+func DeleteGlobalDirs(getter ExecutorGetter, host string, options spec.GlobalOptions) error {
 	e := getter.Get(host)
 	log.Infof("Clean global directories %s", host)
 	for _, dir := range []string{options.LogDir, options.DeployDir, options.DataDir} {
@@ -105,7 +103,7 @@ func DeleteGlobalDirs(getter ExecutorGetter, host string, options meta.GlobalOpt
 }
 
 // DestroyMonitored destroy the monitored service.
-func DestroyMonitored(getter ExecutorGetter, inst meta.Instance, options meta.MonitoredOptions, timeout int64) error {
+func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options spec.MonitoredOptions, timeout int64) error {
 	e := getter.Get(inst.GetHost())
 	log.Infof("Destroying monitored %s", inst.GetHost())
 
@@ -127,8 +125,8 @@ func DestroyMonitored(getter ExecutorGetter, inst meta.Instance, options meta.Mo
 			options.DeployDir, inst.InstanceName())
 	}
 
-	delPaths = append(delPaths, fmt.Sprintf("/etc/systemd/system/%s-%d.service", meta.ComponentNodeExporter, options.NodeExporterPort))
-	delPaths = append(delPaths, fmt.Sprintf("/etc/systemd/system/%s-%d.service", meta.ComponentBlackboxExporter, options.BlackboxExporterPort))
+	delPaths = append(delPaths, fmt.Sprintf("/etc/systemd/system/%s-%d.service", spec.ComponentNodeExporter, options.NodeExporterPort))
+	delPaths = append(delPaths, fmt.Sprintf("/etc/systemd/system/%s-%d.service", spec.ComponentBlackboxExporter, options.BlackboxExporterPort))
 
 	c := module.ShellModuleConfig{
 		Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delPaths, " ")),
@@ -150,12 +148,12 @@ func DestroyMonitored(getter ExecutorGetter, inst meta.Instance, options meta.Mo
 		return errors.Annotatef(err, "failed to destroy monitored: %s", inst.GetHost())
 	}
 
-	if err := meta.PortStopped(e, options.NodeExporterPort, timeout); err != nil {
+	if err := spec.PortStopped(e, options.NodeExporterPort, timeout); err != nil {
 		str := fmt.Sprintf("%s failed to destroy node exportoer: %s", inst.GetHost(), err)
 		log.Errorf(str)
 		return errors.Annotatef(err, str)
 	}
-	if err := meta.PortStopped(e, options.BlackboxExporterPort, timeout); err != nil {
+	if err := spec.PortStopped(e, options.BlackboxExporterPort, timeout); err != nil {
 		str := fmt.Sprintf("%s failed to destroy blackbox exportoer: %s", inst.GetHost(), err)
 		log.Errorf(str)
 		return errors.Annotatef(err, str)
@@ -172,7 +170,7 @@ type topologySpecification interface {
 }
 
 // DestroyComponent destroy the instances.
-func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, cls topologySpecification, options Options) error {
+func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls topologySpecification, options Options) error {
 	if len(instances) <= 0 {
 		return nil
 	}
@@ -194,14 +192,14 @@ func DestroyComponent(getter ExecutorGetter, instances []meta.Instance, cls topo
 
 		var dataDirs []string
 		switch name {
-		case meta.ComponentTiKV,
-			meta.ComponentPD,
-			meta.ComponentPump,
-			meta.ComponentDrainer,
-			meta.ComponentPrometheus,
-			meta.ComponentAlertManager:
+		case spec.ComponentTiKV,
+			spec.ComponentPD,
+			spec.ComponentPump,
+			spec.ComponentDrainer,
+			spec.ComponentPrometheus,
+			spec.ComponentAlertManager:
 			dataDirs = []string{ins.DataDir()}
-		case meta.ComponentTiFlash:
+		case spec.ComponentTiFlash:
 			dataDirs = strings.Split(ins.DataDir(), ",")
 		}
 

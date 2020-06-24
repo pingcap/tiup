@@ -26,7 +26,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/base52"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -51,7 +51,7 @@ func newAuditCmd() *cobra.Command {
 
 func showAuditList() error {
 	firstLine := func(fileName string) (string, error) {
-		file, err := os.Open(meta.ProfilePath(meta.TiOpsAuditDir, fileName))
+		file, err := os.Open(spec.ProfilePath(spec.TiOpsAuditDir, fileName))
 		if err != nil {
 			return "", errors.Trace(err)
 		}
@@ -64,7 +64,7 @@ func showAuditList() error {
 		return "", errors.New("unknown audit log format")
 	}
 
-	auditDir := meta.ProfilePath(meta.TiOpsAuditDir)
+	auditDir := spec.ProfilePath(spec.TiOpsAuditDir)
 	// Header
 	clusterTable := [][]string{{"ID", "Time", "Command"}}
 	fileInfos, err := ioutil.ReadDir(auditDir)
@@ -100,7 +100,7 @@ func showAuditList() error {
 }
 
 func showAuditLog(auditID string) error {
-	path := meta.ProfilePath(meta.TiOpsAuditDir, auditID)
+	path := spec.ProfilePath(spec.TiOpsAuditDir, auditID)
 	if tiuputils.IsNotExist(path) {
 		return errors.Errorf("cannot find the audit log '%s'", auditID)
 	}

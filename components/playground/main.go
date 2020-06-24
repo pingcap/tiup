@@ -23,7 +23,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -84,13 +83,6 @@ func installIfMissing(profile *localdata.Profile, component, version string) err
 }
 
 func execute() error {
-	var defaultTiflashNum int
-	if runtime.GOOS == "linux" {
-		defaultTiflashNum = 1
-	} else {
-		defaultTiflashNum = 0
-	}
-
 	opt := &bootOptions{
 		tidb: instance.Config{
 			Num: 1,
@@ -102,10 +94,10 @@ func execute() error {
 			Num: 1,
 		},
 		tiflash: instance.Config{
-			Num: defaultTiflashNum,
+			Num: 1,
 		},
 		host:    "127.0.0.1",
-		monitor: false,
+		monitor: true,
 		version: "",
 	}
 
@@ -117,7 +109,7 @@ if you don't specified a version.
 Examples:
   $ tiup playground nightly                         # Start a TiDB nightly version local cluster
   $ tiup playground v3.0.10 --db 3 --pd 3 --kv 3    # Start a local cluster with 10 nodes
-  $ tiup playground nightly --monitor               # Start a local cluster with monitor system
+  $ tiup playground nightly --monitor=false         # Start a local cluster and disable monitor system
   $ tiup playground --pd.config ~/config/pd.toml    # Start a local cluster with specified configuration file,
   $ tiup playground --db.binpath /xx/tidb-server    # Start a local cluster with component binary path`,
 		SilenceUsage: true,
@@ -152,7 +144,7 @@ Examples:
 	rootCmd.Flags().StringVarP(&opt.host, "host", "", opt.host, "Playground cluster host")
 	rootCmd.Flags().StringVarP(&opt.tidb.Host, "db.host", "", opt.tidb.Host, "Playground TiDB host. If not provided, TiDB will still use `host` flag as its host")
 	rootCmd.Flags().StringVarP(&opt.pd.Host, "pd.host", "", opt.pd.Host, "Playground PD host. If not provided, PD will still use `host` flag as its host")
-	rootCmd.Flags().BoolVar(&opt.monitor, "monitor", false, "Start prometheus component")
+	rootCmd.Flags().BoolVar(&opt.monitor, "monitor", opt.monitor, "Start prometheus and grafana component")
 
 	rootCmd.Flags().StringVarP(&opt.tidb.ConfigPath, "db.config", "", opt.tidb.ConfigPath, "TiDB instance configuration file")
 	rootCmd.Flags().StringVarP(&opt.tikv.ConfigPath, "kv.config", "", opt.tikv.ConfigPath, "TiKV instance configuration file")

@@ -17,13 +17,11 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -32,7 +30,7 @@ import (
 type TiKVInstance struct {
 	instance
 	pds []*PDInstance
-	cmd *exec.Cmd
+	*Process
 }
 
 // NewTiKVInstance return a TiKVInstance
@@ -68,7 +66,7 @@ func (inst *TiKVInstance) Start(ctx context.Context, version v0manifest.Version)
 	for _, pd := range inst.pds {
 		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", advertiseHost(inst.Host), pd.StatusPort))
 	}
-	inst.cmd = exec.CommandContext(ctx,
+	args := []string{
 		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
 		CompVersion("tikv", version),
 		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
@@ -77,25 +75,23 @@ func (inst *TiKVInstance) Start(ctx context.Context, version v0manifest.Version)
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--config=%s", inst.ConfigPath),
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
-		fmt.Sprintf("--log-file=%s", filepath.Join(inst.Dir, "tikv.log")),
-	)
-	inst.cmd.Env = append(
-		os.Environ(),
-		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, inst.Dir),
-	)
-	inst.cmd.Stderr = os.Stderr
-	inst.cmd.Stdout = os.Stdout
-	return inst.cmd.Start()
+		fmt.Sprintf("--log-file=%s", inst.LogFile()),
+	}
+
+	inst.Process = NewProcess(ctx, inst.Dir, args[0], args[1:]...)
+	logIfErr(inst.Process.setOutputFile(inst.LogFile()))
+
+	return inst.Process.Start()
 }
 
-// Wait calls inst.cmd.Wait
-func (inst *TiKVInstance) Wait() error {
-	return inst.cmd.Wait()
+// Component return the component name.
+func (inst *TiKVInstance) Component() string {
+	return "tikv"
 }
 
-// Pid return the PID of the instance
-func (inst *TiKVInstance) Pid() int {
-	return inst.cmd.Process.Pid
+// LogFile return the log file name.
+func (inst *TiKVInstance) LogFile() string {
+	return filepath.Join(inst.Dir, "tikv.log")
 }
 
 // StoreAddr return the store address of TiKV

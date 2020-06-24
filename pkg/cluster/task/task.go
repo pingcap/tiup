@@ -22,6 +22,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/utils/mock"
 )
 
 var (
@@ -49,7 +50,7 @@ type (
 
 		exec struct {
 			sync.RWMutex
-			executors    map[string]executor.TiOpsExecutor
+			executors    map[string]executor.Executor
 			stdouts      map[string][]byte
 			stderrs      map[string][]byte
 			checkResults map[string][]*operator.CheckResult
@@ -79,12 +80,12 @@ func NewContext() *Context {
 		ev: NewEventBus(),
 		exec: struct {
 			sync.RWMutex
-			executors    map[string]executor.TiOpsExecutor
+			executors    map[string]executor.Executor
 			stdouts      map[string][]byte
 			stderrs      map[string][]byte
 			checkResults map[string][]*operator.CheckResult
 		}{
-			executors:    make(map[string]executor.TiOpsExecutor),
+			executors:    make(map[string]executor.Executor),
 			stdouts:      make(map[string][]byte),
 			stderrs:      make(map[string][]byte),
 			checkResults: make(map[string][]*operator.CheckResult),
@@ -93,7 +94,7 @@ func NewContext() *Context {
 }
 
 // Get implements operation ExecutorGetter interface.
-func (ctx *Context) Get(host string) (e executor.TiOpsExecutor) {
+func (ctx *Context) Get(host string) (e executor.Executor) {
 	ctx.exec.Lock()
 	e, ok := ctx.exec.executors[host]
 	ctx.exec.Unlock()
@@ -105,7 +106,12 @@ func (ctx *Context) Get(host string) (e executor.TiOpsExecutor) {
 }
 
 // GetExecutor get the executor.
-func (ctx *Context) GetExecutor(host string) (e executor.TiOpsExecutor, ok bool) {
+func (ctx *Context) GetExecutor(host string) (e executor.Executor, ok bool) {
+	// Mock point for unit test
+	if e := mock.On("FakeExecutor"); e != nil {
+		return e.(executor.Executor), true
+	}
+
 	ctx.exec.RLock()
 	e, ok = ctx.exec.executors[host]
 	ctx.exec.RUnlock()
@@ -113,7 +119,7 @@ func (ctx *Context) GetExecutor(host string) (e executor.TiOpsExecutor, ok bool)
 }
 
 // SetExecutor set the executor.
-func (ctx *Context) SetExecutor(host string, e executor.TiOpsExecutor) {
+func (ctx *Context) SetExecutor(host string, e executor.Executor) {
 	ctx.exec.Lock()
 	ctx.exec.executors[host] = e
 	ctx.exec.Unlock()

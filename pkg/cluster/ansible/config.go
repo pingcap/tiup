@@ -18,13 +18,13 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
 // ImportConfig copies config files from cluster which deployed through tidb-ansible
-func ImportConfig(name string, clsMeta *meta.ClusterMeta, sshTimeout int64) error {
+func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout int64) error {
 	// there may be already cluster dir, skip create
 	//if err := os.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
 	//	return err
@@ -37,15 +37,15 @@ func ImportConfig(name string, clsMeta *meta.ClusterMeta, sshTimeout int64) erro
 		log.Infof("Copying config file(s) of %s...", comp.Name())
 		for _, inst := range comp.Instances() {
 			switch inst.ComponentName() {
-			case meta.ComponentPD, meta.ComponentTiKV, meta.ComponentPump, meta.ComponentTiDB, meta.ComponentDrainer:
+			case spec.ComponentPD, spec.ComponentTiKV, spec.ComponentPump, spec.ComponentTiDB, spec.ComponentDrainer:
 				t := task.NewBuilder().
 					SSHKeySet(
-						meta.ClusterPath(name, "ssh", "id_rsa"),
-						meta.ClusterPath(name, "ssh", "id_rsa.pub")).
+						spec.ClusterPath(name, "ssh", "id_rsa"),
+						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
 					UserSSH(inst.GetHost(), inst.GetSSHPort(), clsMeta.User, sshTimeout).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
-						meta.ClusterPath(name,
-							meta.AnsibleImportedConfigPath,
+						spec.ClusterPath(name,
+							spec.AnsibleImportedConfigPath,
 							fmt.Sprintf("%s-%s-%d.toml",
 								inst.ComponentName(),
 								inst.GetHost(),
@@ -54,15 +54,15 @@ func ImportConfig(name string, clsMeta *meta.ClusterMeta, sshTimeout int64) erro
 						true).
 					Build()
 				copyFileTasks = append(copyFileTasks, t)
-			case meta.ComponentTiFlash:
+			case spec.ComponentTiFlash:
 				t := task.NewBuilder().
 					SSHKeySet(
-						meta.ClusterPath(name, "ssh", "id_rsa"),
-						meta.ClusterPath(name, "ssh", "id_rsa.pub")).
+						spec.ClusterPath(name, "ssh", "id_rsa"),
+						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
 					UserSSH(inst.GetHost(), inst.GetSSHPort(), clsMeta.User, sshTimeout).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
-						meta.ClusterPath(name,
-							meta.AnsibleImportedConfigPath,
+						spec.ClusterPath(name,
+							spec.AnsibleImportedConfigPath,
 							fmt.Sprintf("%s-%s-%d.toml",
 								inst.ComponentName(),
 								inst.GetHost(),
@@ -70,8 +70,8 @@ func ImportConfig(name string, clsMeta *meta.ClusterMeta, sshTimeout int64) erro
 						inst.GetHost(),
 						true).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+"-learner.toml"),
-						meta.ClusterPath(name,
-							meta.AnsibleImportedConfigPath,
+						spec.ClusterPath(name,
+							spec.AnsibleImportedConfigPath,
 							fmt.Sprintf("%s-learner-%s-%d.toml",
 								inst.ComponentName(),
 								inst.GetHost(),

@@ -21,8 +21,8 @@ import (
 	"sync"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	"github.com/pingcap/tiup/pkg/cluster/report"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/sync/errgroup"
@@ -32,7 +32,7 @@ import (
 func GetNodeInfo(
 	ctx context.Context,
 	getter ExecutorGetter,
-	topo meta.Specification,
+	topo *spec.Specification,
 ) (nodes []*telemetry.NodeInfo, err error) {
 	ver := version.NewTiUPVersion().String()
 	dir := "/tmp/_cluster"
@@ -40,7 +40,7 @@ func GetNodeInfo(
 	// Download cluster binary
 	errg, _ := errgroup.WithContext(ctx)
 	foundArchs := make(map[string]struct{})
-	topo.IterInstance(func(inst meta.Instance) {
+	topo.IterInstance(func(inst spec.Instance) {
 		arch := fmt.Sprintf("%s-%s", inst.OS(), inst.Arch())
 		if _, ok := foundArchs[arch]; !ok {
 			inst := inst
@@ -60,7 +60,7 @@ func GetNodeInfo(
 	errg, _ = errgroup.WithContext(ctx)
 	var nodesMu sync.Mutex
 	foundHosts := make(map[string]struct{})
-	topo.IterInstance(func(inst meta.Instance) {
+	topo.IterInstance(func(inst spec.Instance) {
 		host := inst.GetHost()
 
 		if _, ok := foundHosts[host]; ok {
@@ -79,7 +79,7 @@ func GetNodeInfo(
 
 			resName := fmt.Sprintf("%s-%s", "cluster", ver)
 			fileName := fmt.Sprintf("%s-%s-%s.tar.gz", resName, inst.OS(), inst.Arch())
-			srcPath := meta.ProfilePath(meta.TiOpsPackageCacheDir, fileName)
+			srcPath := spec.ProfilePath(spec.TiOpsPackageCacheDir, fileName)
 
 			dstDir := filepath.Join(dir, "bin")
 			dstPath := filepath.Join(dstDir, path.Base(srcPath))

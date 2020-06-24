@@ -78,6 +78,7 @@ of components or the repository itself.`,
 		newMirrorGenkeyCmd(),
 		newMirrorCloneCmd(),
 		newMirrorPublishCmd(),
+		newMirrorSetCmd(),
 		newMirrorModifyCmd(),
 	)
 
@@ -193,10 +194,36 @@ func delComp(repo, id, version string) error {
 	return nil
 }
 
+// the `mirror set` sub command
+func newMirrorSetCmd() *cobra.Command {
+	root := ""
+	cmd := &cobra.Command{
+		Use:   "set <mirror-addr>",
+		Short: "set mirror address",
+		Long:  "set mirror address, will replace the root certificate",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return cmd.Help()
+			}
+
+			addr := args[0]
+			profile := environment.GlobalEnv().Profile()
+			if err := profile.ResetMirror(addr, root); err != nil {
+				fmt.Printf("Failed to set mirror: %s\n", err.Error())
+				return err
+			}
+			fmt.Printf("Set mirror to %s success\n", addr)
+			return nil
+		},
+	}
+	cmd.Flags().StringVarP(&root, "root", "r", root, "Specify the path of `root.json`")
+	return cmd
+}
+
 // the `mirror modify` sub command
 func newMirrorModifyCmd() *cobra.Command {
 	var privPath string
-	endpoint := environment.Mirror()
+	endpoint := ""
 	desc := ""
 	standalone := false
 	hidden := false
@@ -231,6 +258,9 @@ func newMirrorModifyCmd() *cobra.Command {
 				return err
 			}
 
+			if endpoint == "" {
+				endpoint = environment.Mirror()
+			}
 			e := remote.NewEditor(endpoint, args[0]).WithDesc(desc)
 			flagSet := set.NewStringSet()
 			cmd.Flags().Visit(func(f *pflag.Flag) {
@@ -277,6 +307,11 @@ func newMirrorPublishCmd() *cobra.Command {
 			if len(args) != 4 {
 				return cmd.Help()
 			}
+
+			if err := validatePlatform(goos, goarch); err != nil {
+				return err
+			}
+
 			env := environment.GlobalEnv()
 			if privPath == "" {
 				privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
@@ -342,6 +377,20 @@ func newMirrorPublishCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&standalone, "standalone", "", standalone, "can this component run directly")
 	cmd.Flags().BoolVarP(&hidden, "hide", "", hidden, "is this component invisible on listing")
 	return cmd
+}
+
+func validatePlatform(goos, goarch string) error {
+	// Only support any/any, don't support linux/any, any/amd64 .etc.
+	if goos == "any" && goarch == "any" {
+		return nil
+	}
+
+	switch goos + "/" + goarch {
+	case "linux/amd64", "linux/arm64", "darwin/amd64":
+		return nil
+	default:
+		return errors.Errorf("platform %s/%s not supported", goos, goarch)
+	}
 }
 
 // the `mirror genkey` sub command

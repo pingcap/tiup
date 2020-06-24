@@ -20,7 +20,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
@@ -29,7 +29,7 @@ var (
 )
 
 // parseDirs sets values of directories of component
-func parseDirs(user string, ins meta.InstanceSpec, sshTimeout int64) (meta.InstanceSpec, error) {
+func parseDirs(user string, ins spec.InstanceSpec, sshTimeout int64) (spec.InstanceSpec, error) {
 	hostName, sshPort := ins.SSH()
 
 	e := executor.NewSSHExecutor(executor.SSHConfig{
@@ -47,9 +47,9 @@ func parseDirs(user string, ins meta.InstanceSpec, sshTimeout int64) (meta.Insta
 	}
 
 	switch ins.Role() {
-	case meta.ComponentTiDB:
+	case spec.ComponentTiDB:
 		// parse dirs
-		newIns := ins.(meta.TiDBSpec)
+		newIns := ins.(spec.TiDBSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
@@ -64,9 +64,9 @@ func parseDirs(user string, ins meta.InstanceSpec, sshTimeout int64) (meta.Insta
 			}
 		}
 		return newIns, nil
-	case meta.ComponentTiKV:
+	case spec.ComponentTiKV:
 		// parse dirs
-		newIns := ins.(meta.TiKVSpec)
+		newIns := ins.(spec.TiKVSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
 			if strings.HasPrefix(line, "cd \"") {
 				newIns.DeployDir = strings.Trim(strings.Split(line, " ")[1], "\"")
@@ -86,9 +86,9 @@ func parseDirs(user string, ins meta.InstanceSpec, sshTimeout int64) (meta.Insta
 			}
 		}
 		return newIns, nil
-	case meta.ComponentPD:
+	case spec.ComponentPD:
 		// parse dirs
-		newIns := ins.(meta.PDSpec)
+		newIns := ins.(spec.PDSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
@@ -115,9 +115,9 @@ func parseDirs(user string, ins meta.InstanceSpec, sshTimeout int64) (meta.Insta
 			}
 		}
 		return newIns, nil
-	case meta.ComponentTiFlash:
+	case spec.ComponentTiFlash:
 		// parse dirs
-		newIns := ins.(meta.TiFlashSpec)
+		newIns := ins.(spec.TiFlashSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
 			if strings.HasPrefix(line, "cd \"") {
 				newIns.DeployDir = strings.Trim(strings.Split(line, " ")[1], "\"")
@@ -125,9 +125,9 @@ func parseDirs(user string, ins meta.InstanceSpec, sshTimeout int64) (meta.Insta
 			}
 		}
 		return newIns, nil
-	case meta.ComponentPump:
+	case spec.ComponentPump:
 		// parse dirs
-		newIns := ins.(meta.PumpSpec)
+		newIns := ins.(spec.PumpSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
@@ -148,9 +148,9 @@ func parseDirs(user string, ins meta.InstanceSpec, sshTimeout int64) (meta.Insta
 			}
 		}
 		return newIns, nil
-	case meta.ComponentDrainer:
+	case spec.ComponentDrainer:
 		// parse dirs
-		newIns := ins.(meta.DrainerSpec)
+		newIns := ins.(spec.DrainerSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
@@ -165,9 +165,9 @@ func parseDirs(user string, ins meta.InstanceSpec, sshTimeout int64) (meta.Insta
 			}
 		}
 		return newIns, nil
-	case meta.ComponentPrometheus:
+	case spec.ComponentPrometheus:
 		// parse dirs
-		newIns := ins.(meta.PrometheusSpec)
+		newIns := ins.(spec.PrometheusSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
@@ -188,9 +188,9 @@ func parseDirs(user string, ins meta.InstanceSpec, sshTimeout int64) (meta.Insta
 			}
 		}
 		return newIns, nil
-	case meta.ComponentAlertManager:
+	case spec.ComponentAlertManager:
 		// parse dirs
-		newIns := ins.(meta.AlertManagerSpec)
+		newIns := ins.(spec.AlertManagerSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
@@ -211,9 +211,9 @@ func parseDirs(user string, ins meta.InstanceSpec, sshTimeout int64) (meta.Insta
 			}
 		}
 		return newIns, nil
-	case meta.ComponentGrafana:
+	case spec.ComponentGrafana:
 		// parse dirs
-		newIns := ins.(meta.GrafanaSpec)
+		newIns := ins.(spec.GrafanaSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")

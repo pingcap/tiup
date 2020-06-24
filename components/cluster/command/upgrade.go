@@ -21,11 +21,12 @@ import (
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
@@ -51,6 +52,7 @@ func newUpgradeCmd() *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force upgrade won't transfer leader")
 	cmd.Flags().Int64Var(&gOpt.APITimeout, "transfer-timeout", 300, "Timeout in seconds when transferring PD and TiKV store leaders")
+	cmd.Flags().BoolVarP(&gOpt.IgnoreConfigCheck, "ignore-config-check", "", false, "Ignore the config check result")
 
 	return cmd
 }
@@ -72,12 +74,12 @@ func versionCompare(curVersion, newVersion string) error {
 }
 
 func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
-	if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+	if utils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
 		return perrs.Errorf("cannot upgrade non-exists cluster %s", clusterName)
 	}
 
-	metadata, err := meta.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+	metadata, err := spec.ClusterMetadata(clusterName)
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
 	}
 
@@ -95,7 +97,7 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 	hasImported := false
 	for _, comp := range metadata.Topology.ComponentsByUpdateOrder() {
 		for _, inst := range comp.Instances() {
-			version := meta.ComponentVersion(inst.ComponentName(), clusterVersion)
+			version := spec.ComponentVersion(inst.ComponentName(), clusterVersion)
 			if version == "" {
 				return perrs.Errorf("unsupported component: %v", inst.ComponentName())
 			}
@@ -124,7 +126,7 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 			tb := task.NewBuilder()
 			if inst.IsImported() {
 				switch inst.ComponentName() {
-				case meta.ComponentPrometheus, meta.ComponentGrafana, meta.ComponentAlertManager:
+				case spec.ComponentPrometheus, spec.ComponentGrafana, spec.ComponentAlertManager:
 					tb.CopyComponent(inst.ComponentName(), inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
 				default:
 					tb.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
@@ -140,11 +142,12 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 				clusterVersion,
 				inst,
 				metadata.User,
+				opt.IgnoreConfigCheck,
 				meta.DirPaths{
 					Deploy: deployDir,
 					Data:   dataDirs,
 					Log:    logDir,
-					Cache:  meta.ClusterPath(clusterName, meta.TempConfigPath),
+					Cache:  spec.ClusterPath(clusterName, spec.TempConfigPath),
 				},
 			)
 			copyCompTasks = append(copyCompTasks, tb.Build())
@@ -153,15 +156,15 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 
 	// handle dir scheme changes
 	if hasImported {
-		if err := meta.HandleImportPathMigration(clusterName); err != nil {
+		if err := spec.HandleImportPathMigration(clusterName); err != nil {
 			return err
 		}
 	}
 
 	t := task.NewBuilder().
 		SSHKeySet(
-			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
-			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
+			spec.ClusterPath(clusterName, "ssh", "id_rsa"),
+			spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
 		Parallel(downloadCompTasks...).
 		Parallel(copyCompTasks...).
@@ -177,10 +180,10 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 	}
 
 	metadata.Version = clusterVersion
-	if err := meta.SaveClusterMeta(clusterName, metadata); err != nil {
+	if err := spec.SaveClusterMeta(clusterName, metadata); err != nil {
 		return perrs.Trace(err)
 	}
-	if err := os.RemoveAll(meta.ClusterPath(clusterName, "patch")); err != nil {
+	if err := os.RemoveAll(spec.ClusterPath(clusterName, "patch")); err != nil {
 		return perrs.Trace(err)
 	}
 

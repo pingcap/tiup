@@ -11,10 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package meta
+package spec
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -22,10 +23,11 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/meta"
 )
 
 const (
@@ -36,6 +38,9 @@ const (
 	// migrateLockName is the directory name of migrating lock
 	migrateLockName = "tiup-migrate.lck"
 )
+
+// ErrorCheckConfig represent error occured in config check stage
+var ErrorCheckConfig = errors.New("check config failed")
 
 // strKeyMap tries to convert `map[interface{}]interface{}` to `map[string]interface{}`
 func strKeyMap(val interface{}) interface{} {
@@ -122,7 +127,7 @@ func merge(orig map[string]interface{}, overwrites ...map[string]interface{}) (m
 func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
 	lhs, err := merge(global, overwrite)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, perrs.AddStack(err)
 	}
 
 	buf := bytes.NewBufferString(fmt.Sprintf(`# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
@@ -138,7 +143,7 @@ func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, 
 	enc.Indent = ""
 	err = enc.Encode(lhs)
 	if err != nil {
-		return nil, errors.Trace(err)
+		return nil, perrs.Trace(err)
 	}
 	return buf.Bytes(), nil
 }
@@ -146,18 +151,18 @@ func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, 
 func mergeImported(importConfig []byte, specConfigs ...map[string]interface{}) (map[string]interface{}, error) {
 	var configData map[string]interface{}
 	if err := toml.Unmarshal(importConfig, &configData); err != nil {
-		return nil, errors.Trace(err)
+		return nil, perrs.Trace(err)
 	}
 
 	// overwrite topology specifieced configs upon the imported configs
 	lhs, err := merge(configData, specConfigs...)
 	if err != nil {
-		return nil, errors.Trace(err)
+		return nil, perrs.Trace(err)
 	}
 	return lhs, nil
 }
 
-func checkConfig(e executor.TiOpsExecutor, componentName, clusterVersion, nodeOS, arch, config string, paths DirPaths) error {
+func checkConfig(e executor.Executor, componentName, clusterVersion, nodeOS, arch, config string, paths meta.DirPaths) error {
 	repo, err := clusterutil.NewRepository(nodeOS, arch)
 	if err != nil {
 		return err
@@ -182,10 +187,13 @@ func checkConfig(e executor.TiOpsExecutor, componentName, clusterVersion, nodeOS
 
 	configPath := path.Join(paths.Deploy, "conf", config)
 	_, _, err = e.Execute(fmt.Sprintf("%s --config-check --config=%s %s", binPath, configPath, extra), false)
-	return errors.Annotatef(err, "check config failed: %s", componentName)
+	if err != nil {
+		return perrs.Annotate(ErrorCheckConfig, err.Error())
+	}
+	return nil
 }
 
-func hasConfigCheckFlag(e executor.TiOpsExecutor, binPath string) bool {
+func hasConfigCheckFlag(e executor.Executor, binPath string) bool {
 	stdout, stderr, _ := e.Execute(fmt.Sprintf("%s --help", binPath), false)
 	return strings.Contains(string(stdout), "config-check") || strings.Contains(string(stderr), "config-check")
 }
@@ -203,12 +211,12 @@ func HandleImportPathMigration(clsName string) error {
 			if os.IsNotExist(lckErr) {
 				return nil
 			}
-			return errors.Errorf("config dir already lock by another task, %s", lckErr)
+			return perrs.Errorf("config dir already lock by another task, %s", lckErr)
 		}); lckErr != nil {
 			return lckErr
 		}
 		if lckErr := os.Mkdir(path.Join(dirPath, migrateLockName), 0755); lckErr != nil {
-			return errors.Errorf("can not lock config dir, %s", lckErr)
+			return perrs.Errorf("can not lock config dir, %s", lckErr)
 		}
 		defer func() {
 			rmErr := os.Remove(path.Join(dirPath, migrateLockName))
