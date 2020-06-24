@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package meta
+package spec
 
 import (
 	"fmt"
@@ -20,11 +20,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pingcap/tiup/pkg/meta"
+
 	"github.com/google/uuid"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	"github.com/pingcap/tiup/pkg/cluster/module"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -38,9 +40,9 @@ const (
 	ComponentDumpling     = "dumpling"
 	ComponentLightning    = "lightning"
 	ComponentImporter     = "importer"
-	ComponentPrometheus   = meta.ComponentPrometheus
-	ComponentGrafana      = meta.ComponentGrafana
-	ComponentAlertManager = meta.ComponentAlertManager
+	ComponentPrometheus   = spec.ComponentPrometheus
+	ComponentGrafana      = spec.ComponentGrafana
+	ComponentAlertManager = spec.ComponentAlertManager
 )
 
 // Component represents a component of the cluster.
@@ -53,10 +55,10 @@ type Component interface {
 type Instance interface {
 	InstanceSpec
 	ID() string
-	Ready(executor.TiOpsExecutor, int64) error
-	WaitForDown(executor.TiOpsExecutor, int64) error
-	InitConfig(e executor.TiOpsExecutor, clusterName string, clusterVersion string, deployUser string, paths DirPaths) error
-	ScaleConfig(e executor.TiOpsExecutor, topo *DMSSpecification, clusterName string, clusterVersion string, deployUser string, paths DirPaths) error
+	Ready(executor.Executor, int64) error
+	WaitForDown(executor.Executor, int64) error
+	InitConfig(e executor.Executor, clusterName string, clusterVersion string, deployUser string, paths DirPaths) error
+	ScaleConfig(e executor.Executor, topo *DMSSpecification, clusterName string, clusterVersion string, deployUser string, paths DirPaths) error
 	PrepareStart() error
 	ComponentName() string
 	InstanceName() string
@@ -75,7 +77,7 @@ type Instance interface {
 }
 
 // PortStarted wait until a port is being listened
-func PortStarted(e executor.TiOpsExecutor, port int, timeout int64) error {
+func PortStarted(e executor.Executor, port int, timeout int64) error {
 	c := module.WaitForConfig{
 		Port:    port,
 		State:   "started",
@@ -86,7 +88,7 @@ func PortStarted(e executor.TiOpsExecutor, port int, timeout int64) error {
 }
 
 // PortStopped wait until a port is being released
-func PortStopped(e executor.TiOpsExecutor, port int, timeout int64) error {
+func PortStopped(e executor.Executor, port int, timeout int64) error {
 	c := module.WaitForConfig{
 		Port:    port,
 		State:   "stopped",
@@ -111,22 +113,22 @@ type instance struct {
 }
 
 // Ready implements Instance interface
-func (i *instance) Ready(e executor.TiOpsExecutor, timeout int64) error {
+func (i *instance) Ready(e executor.Executor, timeout int64) error {
 	return PortStarted(e, i.port, timeout)
 }
 
 // WaitForDown implements Instance interface
-func (i *instance) WaitForDown(e executor.TiOpsExecutor, timeout int64) error {
+func (i *instance) WaitForDown(e executor.Executor, timeout int64) error {
 	return PortStopped(e, i.port, timeout)
 }
 
-func (i *instance) InitConfig(e executor.TiOpsExecutor, _, _, user string, paths DirPaths) error {
+func (i *instance) InitConfig(e executor.Executor, _, _, user string, paths DirPaths) error {
 	comp := i.ComponentName()
 	host := i.GetHost()
 	port := i.GetPort()
 	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
 
-	resource := meta.MergeResourceControl(i.topo.GlobalOptions.ResourceControl, i.resourceControl())
+	resource := spec.MergeResourceControl(i.topo.GlobalOptions.ResourceControl, i.resourceControl())
 	systemCfg := system.NewConfig(comp, user, paths.Deploy).
 		WithMemoryLimit(resource.MemoryLimit).
 		WithCPUQuota(resource.CPUQuota).
@@ -149,7 +151,7 @@ func (i *instance) InitConfig(e executor.TiOpsExecutor, _, _, user string, paths
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *instance) ScaleConfig(e executor.TiOpsExecutor, _ *DMSSpecification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+func (i *instance) ScaleConfig(e executor.Executor, _ *DMSSpecification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
@@ -207,10 +209,10 @@ func (i *instance) DataDir() string {
 	return dataDir.String()
 }
 
-func (i *instance) resourceControl() ResourceControl {
+func (i *instance) resourceControl() meta.ResourceControl {
 	return reflect.ValueOf(i.InstanceSpec).
 		FieldByName("ResourceControl").
-		Interface().(ResourceControl)
+		Interface().(meta.ResourceControl)
 }
 
 func (i *instance) OS() string {
@@ -259,7 +261,7 @@ func (i *instance) Status(masterList ...string) string {
 }
 
 // DMSSpecification of cluster
-type DMSSpecification = DMSTopologySpecification
+type DMSSpecification = Specification
 
 // DMMasterComponent represents TiDB component.
 type DMMasterComponent struct{ *DMSSpecification }
@@ -306,7 +308,7 @@ type DMMasterInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *DMMasterInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+func (i *DMMasterInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
 	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
@@ -336,7 +338,7 @@ func (i *DMMasterInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clu
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DMMasterInstance) ScaleConfig(e executor.TiOpsExecutor, b *DMSSpecification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+func (i *DMMasterInstance) ScaleConfig(e executor.Executor, b *DMSSpecification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
 	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
@@ -414,7 +416,7 @@ type DMWorkerInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *DMWorkerInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+func (i *DMWorkerInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
 	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
@@ -444,7 +446,7 @@ func (i *DMWorkerInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clu
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DMWorkerInstance) ScaleConfig(e executor.TiOpsExecutor, b *DMSSpecification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+func (i *DMWorkerInstance) ScaleConfig(e executor.Executor, b *DMSSpecification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
 	s := i.instance.topo
 	defer func() {
 		i.instance.topo = s
@@ -500,7 +502,7 @@ type DMPortalInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *DMPortalInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+func (i *DMPortalInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
 	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
@@ -530,7 +532,7 @@ func (i *DMPortalInstance) InitConfig(e executor.TiOpsExecutor, clusterName, clu
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DMPortalInstance) ScaleConfig(e executor.TiOpsExecutor, b *DMSSpecification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+func (i *DMPortalInstance) ScaleConfig(e executor.Executor, b *DMSSpecification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
 	s := i.instance.topo
 	defer func() {
 		i.instance.topo = s
@@ -540,12 +542,12 @@ func (i *DMPortalInstance) ScaleConfig(e executor.TiOpsExecutor, b *DMSSpecifica
 }
 
 // GetGlobalOptions returns cluster topology
-func (topo *DMSSpecification) GetGlobalOptions() meta.GlobalOptions {
+func (topo *DMSSpecification) GetGlobalOptions() spec.GlobalOptions {
 	return topo.GlobalOptions
 }
 
 // GetMonitoredOptions returns MonitoredOptions
-func (topo *DMSSpecification) GetMonitoredOptions() meta.MonitoredOptions {
+func (topo *DMSSpecification) GetMonitoredOptions() spec.MonitoredOptions {
 	return topo.MonitoredOptions
 }
 

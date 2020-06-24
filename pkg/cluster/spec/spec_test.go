@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package meta
+package spec
 
 import (
 	"bytes"
@@ -33,13 +33,13 @@ func TestMeta(t *testing.T) {
 
 func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 	// Test with without global DataDir.
-	topo := new(ClusterSpecification)
+	topo := new(Specification)
 	topo.TiKVServers = append(topo.TiKVServers, TiKVSpec{Host: "1.1.1.1", Port: 22})
 	data, err := yaml.Marshal(topo)
 	c.Assert(err, IsNil)
 
 	// Check default value.
-	topo = new(ClusterSpecification)
+	topo = new(Specification)
 	err = yaml.Unmarshal(data, topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.DataDir, Equals, "data")
@@ -48,21 +48,21 @@ func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 	// Can keep the default value.
 	data, err = yaml.Marshal(topo)
 	c.Assert(err, IsNil)
-	topo = new(ClusterSpecification)
+	topo = new(Specification)
 	err = yaml.Unmarshal(data, topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.DataDir, Equals, "data")
 	c.Assert(topo.TiKVServers[0].DataDir, Equals, "data")
 
 	// Test with global DataDir.
-	topo = new(ClusterSpecification)
+	topo = new(Specification)
 	topo.GlobalOptions.DataDir = "/gloable_data"
 	topo.TiKVServers = append(topo.TiKVServers, TiKVSpec{Host: "1.1.1.1", Port: 22})
 	topo.TiKVServers = append(topo.TiKVServers, TiKVSpec{Host: "1.1.1.2", Port: 33, DataDir: "/my_data"})
 	data, err = yaml.Marshal(topo)
 	c.Assert(err, IsNil)
 
-	topo = new(ClusterSpecification)
+	topo = new(Specification)
 	err = yaml.Unmarshal(data, topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.DataDir, Equals, "/gloable_data")
@@ -71,7 +71,7 @@ func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 }
 
 func (s *metaSuiteTopo) TestGlobalOptions(c *C) {
-	topo := ClusterSpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
@@ -97,7 +97,7 @@ pd_servers:
 }
 
 func (s *metaSuiteTopo) TestDataDirAbsolute(c *C) {
-	topo := ClusterSpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
@@ -115,7 +115,7 @@ pd_servers:
 }
 
 func (s *metaSuiteTopo) TestDirectoryConflicts1(c *C) {
-	topo := ClusterSpecification{}
+	topo := Specification{}
 
 	err := yaml.Unmarshal([]byte(`
 global:
@@ -201,7 +201,7 @@ pd_servers:
 }
 
 func (s *metaSuiteTopo) TestPortConflicts(c *C) {
-	topo := ClusterSpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
@@ -218,7 +218,7 @@ tikv_servers:
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'tidb_servers:172.16.5.138.port' and 'tikv_servers:172.16.5.138.status_port'")
 
-	topo = ClusterSpecification{}
+	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
 monitored:
   node_exporter_port: 1234
@@ -236,7 +236,7 @@ tikv_servers:
 
 func (s *metaSuiteTopo) TestPlatformConflicts(c *C) {
 	// aarch64 and arm64 are equal
-	topo := ClusterSpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   os: "linux"
@@ -250,7 +250,7 @@ tikv_servers:
 	c.Assert(err, IsNil)
 
 	// different arch defined for the same host
-	topo = ClusterSpecification{}
+	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
 global:
   os: "linux"
@@ -264,7 +264,7 @@ tikv_servers:
 	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' between 'tidb_servers:linux/arm64' and 'tikv_servers:linux/amd64'")
 
 	// different os defined for the same host
-	topo = ClusterSpecification{}
+	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
 global:
   os: "linux"
@@ -281,7 +281,7 @@ tikv_servers:
 }
 
 func (s *metaSuiteTopo) TestCountDir(c *C) {
-	topo := ClusterSpecification{}
+	topo := Specification{}
 
 	err := yaml.Unmarshal([]byte(`
 global:
@@ -371,7 +371,7 @@ pd_servers:
 }
 
 func (s *metaSuiteTopo) TestGlobalConfig(c *C) {
-	topo := ClusterSpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
@@ -476,7 +476,7 @@ tidb_servers:
 }
 
 func (s *metaSuiteTopo) TestGlobalConfigPatch(c *C) {
-	topo := ClusterSpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 tikv_sata_config: &tikv_sata_config
   config.item1: 100
@@ -506,7 +506,7 @@ tikv_servers:
 }
 
 func (s *metaSuiteTopo) TestLogDir(c *C) {
-	topo := ClusterSpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 tidb_servers:
   - host: 172.16.5.138
@@ -518,7 +518,7 @@ tidb_servers:
 }
 
 func (s *metaSuiteTopo) TestMonitorLogDir(c *C) {
-	topo := ClusterSpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 monitored:
     deploy_dir: "test-deploy"
@@ -535,7 +535,7 @@ monitored:
 }
 
 func (s *metaSuiteTopo) TestMerge2Toml(c *C) {
-	topo := ClusterSpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 server_configs:
   tikv:
@@ -572,7 +572,7 @@ item6 = 600
 }
 
 func (s *metaSuiteTopo) TestMerge2Toml2(c *C) {
-	topo := ClusterSpecification{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: test4
@@ -661,7 +661,7 @@ split-merge-interval = "1h"
 }
 
 func (s *metaSuiteTopo) TestMergeImported(c *C) {
-	spec := ClusterSpecification{}
+	spec := Specification{}
 
 	// values set in topology specification of the cluster
 	err := yaml.Unmarshal([]byte(`

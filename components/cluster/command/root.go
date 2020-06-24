@@ -26,9 +26,9 @@ import (
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/flags"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/report"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/colorutil"
 	tiupmeta "github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/errutil"
@@ -85,7 +85,7 @@ func init() {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			var err error
 			var env *tiupmeta.Environment
-			if err = meta.Initialize("cluster"); err != nil {
+			if err = spec.Initialize("cluster"); err != nil {
 				return err
 			}
 			// Running in other OS/ARCH Should be fine we only download manifest file.

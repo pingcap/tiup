@@ -16,7 +16,7 @@ package task
 import (
 	"fmt"
 
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 )
 
 // CopyComponent is used to copy all files related the specific version a component
@@ -35,7 +35,7 @@ func (c *CopyComponent) Execute(ctx *Context) error {
 	// Copy to remote server
 	resName := fmt.Sprintf("%s-%s", c.component, c.version)
 	fileName := fmt.Sprintf("%s-%s-%s.tar.gz", resName, c.os, c.arch)
-	srcPath := meta.ProfilePath(meta.TiOpsPackageCacheDir, fileName)
+	srcPath := spec.ProfilePath(spec.TiOpsPackageCacheDir, fileName)
 
 	install := &InstallPackage{
 		srcPath: srcPath,

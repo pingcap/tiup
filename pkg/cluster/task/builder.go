@@ -14,8 +14,9 @@
 package task
 
 import (
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/meta"
 )
 
 // Builder is used to build TiOps task
@@ -68,7 +69,7 @@ func (b *Builder) Func(name string, fn func(ctx *Context) error) *Builder {
 }
 
 // ClusterSSH init all UserSSH need for the cluster.
-func (b *Builder) ClusterSSH(spec meta.Specification, deployUser string, sshTimeout int64) *Builder {
+func (b *Builder) ClusterSSH(spec *spec.Specification, deployUser string, sshTimeout int64) *Builder {
 	var tasks []Task
 	for _, com := range spec.ComponentsByStartOrder() {
 		for _, in := range com.Instances() {
@@ -87,7 +88,7 @@ func (b *Builder) ClusterSSH(spec meta.Specification, deployUser string, sshTime
 }
 
 // UpdateMeta maintain the meta information
-func (b *Builder) UpdateMeta(cluster string, metadata *meta.ClusterMeta, deletedNodeIds []string) *Builder {
+func (b *Builder) UpdateMeta(cluster string, metadata *spec.ClusterMeta, deletedNodeIds []string) *Builder {
 	b.tasks = append(b.tasks, &UpdateMeta{
 		cluster:        cluster,
 		metadata:       metadata,
@@ -109,7 +110,7 @@ func (b *Builder) UpdateDMMeta(cluster string, metadata *meta.DMMeta, deletedNod
 */
 
 // UpdateTopology maintain the topology information
-func (b *Builder) UpdateTopology(cluster string, metadata *meta.ClusterMeta, deletedNodeIds []string) *Builder {
+func (b *Builder) UpdateTopology(cluster string, metadata *spec.ClusterMeta, deletedNodeIds []string) *Builder {
 	b.tasks = append(b.tasks, &UpdateTopology{metadata: metadata, cluster: cluster, deletedNodesID: deletedNodeIds})
 	return b
 }
@@ -169,7 +170,7 @@ func (b *Builder) BackupComponent(component, fromVer string, host, deployDir str
 }
 
 // InitConfig appends a CopyComponent task to the current task collection
-func (b *Builder) InitConfig(clusterName, clusterVersion string, inst meta.Instance, deployUser string, ignoreCheck bool, paths meta.DirPaths) *Builder {
+func (b *Builder) InitConfig(clusterName, clusterVersion string, inst spec.Instance, deployUser string, ignoreCheck bool, paths meta.DirPaths) *Builder {
 	b.tasks = append(b.tasks, &InitConfig{
 		clusterName:    clusterName,
 		clusterVersion: clusterVersion,
@@ -182,11 +183,11 @@ func (b *Builder) InitConfig(clusterName, clusterVersion string, inst meta.Insta
 }
 
 // ScaleConfig generate temporary config on scaling
-func (b *Builder) ScaleConfig(clusterName, clusterVersion string, base meta.Specification, inst meta.Instance, deployUser string, paths meta.DirPaths) *Builder {
+func (b *Builder) ScaleConfig(clusterName, clusterVersion string, cluster *spec.Specification, inst spec.Instance, deployUser string, paths meta.DirPaths) *Builder {
 	b.tasks = append(b.tasks, &ScaleConfig{
 		clusterName:    clusterName,
 		clusterVersion: clusterVersion,
-		base:           base,
+		base:           cluster,
 		instance:       inst,
 		deployUser:     deployUser,
 		paths:          paths,
@@ -195,7 +196,7 @@ func (b *Builder) ScaleConfig(clusterName, clusterVersion string, base meta.Spec
 }
 
 // MonitoredConfig appends a CopyComponent task to the current task collection
-func (b *Builder) MonitoredConfig(name, comp, host string, globResCtl meta.ResourceControl, options meta.MonitoredOptions, deployUser string, paths meta.DirPaths) *Builder {
+func (b *Builder) MonitoredConfig(name, comp, host string, globResCtl meta.ResourceControl, options spec.MonitoredOptions, deployUser string, paths meta.DirPaths) *Builder {
 	b.tasks = append(b.tasks, &MonitoredConfig{
 		name:       name,
 		component:  comp,
@@ -237,7 +238,7 @@ func (b *Builder) EnvInit(host, deployUser string) *Builder {
 // ClusterOperate appends a cluster operation task.
 // All the UserSSH needed must be init first.
 func (b *Builder) ClusterOperate(
-	spec meta.Specification,
+	spec *spec.Specification,
 	op operator.Operation,
 	options operator.Options,
 ) *Builder {
@@ -312,7 +313,7 @@ func (b *Builder) Limit(host, domain, limit, item, value string) *Builder {
 }
 
 // CheckSys checks system information of deploy server
-func (b *Builder) CheckSys(host, dataDir, checkType string, topo meta.Specification, opt *operator.CheckOptions) *Builder {
+func (b *Builder) CheckSys(host, dataDir, checkType string, topo *spec.Specification, opt *operator.CheckOptions) *Builder {
 	b.tasks = append(b.tasks, &CheckSys{
 		host:    host,
 		topo:    topo,

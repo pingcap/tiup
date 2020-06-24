@@ -26,10 +26,11 @@ import (
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -51,7 +52,7 @@ func newDisplayCmd() *cobra.Command {
 			clusterName = args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			if tiuputils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+			if tiuputils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
 				return perrs.Errorf("Cluster %s not found", clusterName)
 			}
 
@@ -66,8 +67,8 @@ func newDisplayCmd() *cobra.Command {
 				return err
 			}
 
-			metadata, err := meta.ClusterMetadata(clusterName)
-			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+			metadata, err := spec.ClusterMetadata(clusterName)
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 				return perrs.AddStack(err)
 			}
 			return destroyTombstoneIfNeed(clusterName, metadata, gOpt)
@@ -82,8 +83,8 @@ func newDisplayCmd() *cobra.Command {
 }
 
 func displayDashboardInfo(clusterName string) error {
-	metadata, err := meta.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+	metadata, err := spec.ClusterMetadata(clusterName)
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
 	}
 
@@ -115,8 +116,8 @@ func displayDashboardInfo(clusterName string) error {
 }
 
 func displayClusterMeta(clusterName string, opt *operator.Options) error {
-	clsMeta, err := meta.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+	clsMeta, err := spec.ClusterMetadata(clusterName)
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
 	}
 
@@ -128,7 +129,7 @@ func displayClusterMeta(clusterName string, opt *operator.Options) error {
 	return nil
 }
 
-func destroyTombstoneIfNeed(clusterName string, metadata *meta.ClusterMeta, opt operator.Options) error {
+func destroyTombstoneIfNeed(clusterName string, metadata *spec.ClusterMeta, opt operator.Options) error {
 	topo := metadata.Topology
 
 	if !operator.NeedCheckTomebsome(topo) {
@@ -136,8 +137,8 @@ func destroyTombstoneIfNeed(clusterName string, metadata *meta.ClusterMeta, opt 
 	}
 
 	ctx := task.NewContext()
-	err := ctx.SetSSHKeySet(meta.ClusterPath(clusterName, "ssh", "id_rsa"),
-		meta.ClusterPath(clusterName, "ssh", "id_rsa.pub"))
+	err := ctx.SetSSHKeySet(spec.ClusterPath(clusterName, "ssh", "id_rsa"),
+		spec.ClusterPath(clusterName, "ssh", "id_rsa.pub"))
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -165,12 +166,12 @@ func destroyTombstoneIfNeed(clusterName string, metadata *meta.ClusterMeta, opt 
 
 	log.Infof("Destroy success")
 
-	return meta.SaveClusterMeta(clusterName, metadata)
+	return spec.SaveClusterMeta(clusterName, metadata)
 }
 
 func displayClusterTopology(clusterName string, opt *operator.Options) error {
-	metadata, err := meta.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
+	metadata, err := spec.ClusterMetadata(clusterName)
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
 	}
 
@@ -182,8 +183,8 @@ func displayClusterTopology(clusterName string, opt *operator.Options) error {
 	}
 
 	ctx := task.NewContext()
-	err = ctx.SetSSHKeySet(meta.ClusterPath(clusterName, "ssh", "id_rsa"),
-		meta.ClusterPath(clusterName, "ssh", "id_rsa.pub"))
+	err = ctx.SetSSHKeySet(spec.ClusterPath(clusterName, "ssh", "id_rsa"),
+		spec.ClusterPath(clusterName, "ssh", "id_rsa.pub"))
 	if err != nil {
 		return perrs.AddStack(err)
 	}

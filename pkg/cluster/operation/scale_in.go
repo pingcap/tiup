@@ -22,16 +22,16 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
 )
 
 // TODO: We can make drainer not async.
-var asyncOfflineComps = set.NewStringSet(meta.ComponentPump, meta.ComponentTiKV, meta.ComponentDrainer)
+var asyncOfflineComps = set.NewStringSet(spec.ComponentPump, spec.ComponentTiKV, spec.ComponentDrainer)
 
 // AsyncNodes return all nodes async destroy or not.
-func AsyncNodes(spec meta.Specification, nodes []string, async bool) []string {
+func AsyncNodes(spec *spec.Specification, nodes []string, async bool) []string {
 	var asyncNodes []string
 	var notAsyncNodes []string
 
@@ -68,37 +68,30 @@ func AsyncNodes(spec meta.Specification, nodes []string, async bool) []string {
 // ScaleIn scales in the cluster
 func ScaleIn(
 	getter ExecutorGetter,
-	spec meta.Specification,
+	cluster *spec.Specification,
 	options Options,
 ) error {
-	if clusterSpec := spec.GetClusterSpecification(); clusterSpec != nil {
-		return ScaleInCluster(getter, clusterSpec, options)
-	} /* else if dmSpec := spec.GetDMSpecification(); dmSpec != nil {
-		return ScaleInDMCluster(getter, dmSpec, options)
-	}
-	*/
-
-	return nil
+	return ScaleInCluster(getter, cluster, options)
 }
 
 // ScaleInCluster scales in the cluster
 func ScaleInCluster(
 	getter ExecutorGetter,
-	spec *meta.ClusterSpecification,
+	cluster *spec.Specification,
 	options Options,
 ) error {
 	// instances by uuid
-	instances := map[string]meta.Instance{}
+	instances := map[string]spec.Instance{}
 
 	// make sure all nodeIds exists in topology
-	for _, component := range spec.ComponentsByStartOrder() {
+	for _, component := range cluster.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
 			instances[instance.ID()] = instance
 		}
 	}
 
 	// Clean components
-	deletedDiff := map[string][]meta.Instance{}
+	deletedDiff := map[string][]spec.Instance{}
 	deletedNodes := set.NewStringSet(options.Nodes...)
 	for nodeID := range deletedNodes {
 		inst, found := instances[nodeID]
@@ -109,26 +102,26 @@ func ScaleInCluster(
 	}
 
 	// Cannot delete all PD servers
-	if len(deletedDiff[meta.ComponentPD]) == len(spec.PDServers) {
+	if len(deletedDiff[spec.ComponentPD]) == len(cluster.PDServers) {
 		return errors.New("cannot delete all PD servers")
 	}
 
 	// Cannot delete all TiKV servers
-	if len(deletedDiff[meta.ComponentTiKV]) == len(spec.TiKVServers) {
+	if len(deletedDiff[spec.ComponentTiKV]) == len(cluster.TiKVServers) {
 		return errors.New("cannot delete all TiKV servers")
 	}
 
 	if options.Force {
-		for _, component := range spec.ComponentsByStartOrder() {
+		for _, component := range cluster.ComponentsByStartOrder() {
 			for _, instance := range component.Instances() {
 				if !deletedNodes.Exist(instance.ID()) {
 					continue
 				}
 				// just try stop and destroy
-				if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
+				if err := StopComponent(getter, []spec.Instance{instance}); err != nil {
 					log.Warnf("failed to stop %s: %v", component.Name(), err)
 				}
-				if err := DestroyComponent(getter, []meta.Instance{instance}, spec, options); err != nil {
+				if err := DestroyComponent(getter, []spec.Instance{instance}, cluster, options); err != nil {
 					log.Warnf("failed to destroy %s: %v", component.Name(), err)
 				}
 
@@ -143,7 +136,7 @@ func ScaleInCluster(
 	// At least a PD server exists
 	var pdClient *api.PDClient
 	var pdEndpoint []string
-	for _, instance := range (&meta.PDComponent{ClusterSpecification: spec}).Instances() {
+	for _, instance := range (&spec.PDComponent{Specification: cluster}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
 			pdEndpoint = append(pdEndpoint, addr(instance))
 		}
@@ -160,16 +153,16 @@ func ScaleInCluster(
 		return err
 	}
 
-	var tiflashInstances []meta.Instance
-	for _, instance := range (&meta.TiFlashComponent{ClusterSpecification: spec}).Instances() {
+	var tiflashInstances []spec.Instance
+	for _, instance := range (&spec.TiFlashComponent{Specification: cluster}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
 			tiflashInstances = append(tiflashInstances, instance)
 		}
 	}
 
 	if len(tiflashInstances) > 0 {
-		var tikvInstances []meta.Instance
-		for _, instance := range (&meta.TiKVComponent{ClusterSpecification: spec}).Instances() {
+		var tikvInstances []spec.Instance
+		for _, instance := range (&spec.TiKVComponent{Specification: cluster}).Instances() {
 			if !deletedNodes.Exist(instance.ID()) {
 				tikvInstances = append(tikvInstances, instance)
 			}
@@ -201,33 +194,33 @@ func ScaleInCluster(
 	}
 
 	// Delete member from cluster
-	for _, component := range spec.ComponentsByStartOrder() {
+	for _, component := range cluster.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
 			if !deletedNodes.Exist(instance.ID()) {
 				continue
 			}
 
 			switch component.Name() {
-			case meta.ComponentTiKV:
+			case spec.ComponentTiKV:
 				if err := pdClient.DelStore(instance.ID(), timeoutOpt); err != nil {
 					return err
 				}
-			case meta.ComponentTiFlash:
-				addr := instance.GetHost() + ":" + strconv.Itoa(instance.(*meta.TiFlashInstance).GetServicePort())
+			case spec.ComponentTiFlash:
+				addr := instance.GetHost() + ":" + strconv.Itoa(instance.(*spec.TiFlashInstance).GetServicePort())
 				if err := pdClient.DelStore(addr, timeoutOpt); err != nil {
 					return err
 				}
-			case meta.ComponentPD:
-				if err := pdClient.DelPD(instance.(*meta.PDInstance).Name, timeoutOpt); err != nil {
+			case spec.ComponentPD:
+				if err := pdClient.DelPD(instance.(*spec.PDInstance).Name, timeoutOpt); err != nil {
 					return err
 				}
-			case meta.ComponentDrainer:
+			case spec.ComponentDrainer:
 				addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
 				err := binlogClient.OfflineDrainer(addr, addr)
 				if err != nil {
 					return errors.AddStack(err)
 				}
-			case meta.ComponentPump:
+			case spec.ComponentPump:
 				addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
 				err := binlogClient.OfflinePump(addr, addr)
 				if err != nil {
@@ -236,10 +229,10 @@ func ScaleInCluster(
 			}
 
 			if !asyncOfflineComps.Exist(instance.ComponentName()) {
-				if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
+				if err := StopComponent(getter, []spec.Instance{instance}); err != nil {
 					return errors.Annotatef(err, "failed to stop %s", component.Name())
 				}
-				if err := DestroyComponent(getter, []meta.Instance{instance}, spec, options); err != nil {
+				if err := DestroyComponent(getter, []spec.Instance{instance}, cluster, options); err != nil {
 					return errors.Annotatef(err, "failed to destroy %s", component.Name())
 				}
 			} else {
@@ -249,44 +242,44 @@ func ScaleInCluster(
 		}
 	}
 
-	for i := 0; i < len(spec.TiKVServers); i++ {
-		s := spec.TiKVServers[i]
+	for i := 0; i < len(cluster.TiKVServers); i++ {
+		s := cluster.TiKVServers[i]
 		id := s.Host + ":" + strconv.Itoa(s.Port)
 		if !deletedNodes.Exist(id) {
 			continue
 		}
 		s.Offline = true
-		spec.TiKVServers[i] = s
+		cluster.TiKVServers[i] = s
 	}
 
-	for i := 0; i < len(spec.TiFlashServers); i++ {
-		s := spec.TiFlashServers[i]
+	for i := 0; i < len(cluster.TiFlashServers); i++ {
+		s := cluster.TiFlashServers[i]
 		id := s.Host + ":" + strconv.Itoa(s.TCPPort)
 		if !deletedNodes.Exist(id) {
 			continue
 		}
 		s.Offline = true
-		spec.TiFlashServers[i] = s
+		cluster.TiFlashServers[i] = s
 	}
 
-	for i := 0; i < len(spec.PumpServers); i++ {
-		s := spec.PumpServers[i]
+	for i := 0; i < len(cluster.PumpServers); i++ {
+		s := cluster.PumpServers[i]
 		id := s.Host + ":" + strconv.Itoa(s.Port)
 		if !deletedNodes.Exist(id) {
 			continue
 		}
 		s.Offline = true
-		spec.PumpServers[i] = s
+		cluster.PumpServers[i] = s
 	}
 
-	for i := 0; i < len(spec.Drainers); i++ {
-		s := spec.Drainers[i]
+	for i := 0; i < len(cluster.Drainers); i++ {
+		s := cluster.Drainers[i]
 		id := s.Host + ":" + strconv.Itoa(s.Port)
 		if !deletedNodes.Exist(id) {
 			continue
 		}
 		s.Offline = true
-		spec.Drainers[i] = s
+		cluster.Drainers[i] = s
 	}
 
 	return nil

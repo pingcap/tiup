@@ -21,7 +21,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/ansible"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -62,7 +62,7 @@ func newImportCmd() *cobra.Command {
 			if clsName == "" {
 				return fmt.Errorf("cluster name should not be empty")
 			}
-			if tiuputils.IsExist(meta.ClusterPath(clsName, meta.MetaFileName)) {
+			if tiuputils.IsExist(spec.ClusterPath(clsName, spec.MetaFileName)) {
 				return errDeployNameDuplicate.
 					New("Cluster name '%s' is duplicated", clsName).
 					WithProperty(cliutil.SuggestionFromFormat(
@@ -70,7 +70,7 @@ func newImportCmd() *cobra.Command {
 			}
 
 			// prompt for backups
-			backupDir := meta.ClusterPath(clsName, "ansible-backup")
+			backupDir := spec.ClusterPath(clsName, "ansible-backup")
 			backupFile := filepath.Join(ansibleDir, fmt.Sprintf("tiup-%s.bak", inventoryFileName))
 			prompt := fmt.Sprintf("The ansible directory will be moved to %s after import.", backupDir)
 			if noBackup {
@@ -102,12 +102,12 @@ func newImportCmd() *cobra.Command {
 			}
 
 			// copy SSH key to TiOps profile directory
-			if err = tiuputils.CreateDir(meta.ClusterPath(clsName, "ssh")); err != nil {
+			if err = tiuputils.CreateDir(spec.ClusterPath(clsName, "ssh")); err != nil {
 				return err
 			}
 			srcKeyPathPriv := ansible.SSHKeyPath()
 			srcKeyPathPub := srcKeyPathPriv + ".pub"
-			dstKeyPathPriv := meta.ClusterPath(clsName, "ssh", "id_rsa")
+			dstKeyPathPriv := spec.ClusterPath(clsName, "ssh", "id_rsa")
 			dstKeyPathPub := dstKeyPathPriv + ".pub"
 			if err = tiuputils.CopyFile(srcKeyPathPriv, dstKeyPathPriv); err != nil {
 				return err
@@ -121,7 +121,7 @@ func newImportCmd() *cobra.Command {
 				return err
 			}
 
-			if err = meta.SaveClusterMeta(clsName, clsMeta); err != nil {
+			if err = spec.SaveClusterMeta(clsName, clsMeta); err != nil {
 				return err
 			}
 

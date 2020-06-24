@@ -20,7 +20,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/utils"
 	tiupver "github.com/pingcap/tiup/pkg/version"
 )
@@ -37,9 +37,9 @@ func Download(component, nodeOS, arch string, version string) error {
 
 	resName := fmt.Sprintf("%s-%s", component, version)
 	fileName := fmt.Sprintf("%s-%s-%s.tar.gz", resName, nodeOS, arch)
-	srcPath := meta.ProfilePath(meta.TiOpsPackageCacheDir, fileName)
+	srcPath := spec.ProfilePath(spec.TiOpsPackageCacheDir, fileName)
 
-	if err := os.MkdirAll(meta.ProfilePath(meta.TiOpsPackageCacheDir), 0755); err != nil {
+	if err := os.MkdirAll(spec.ProfilePath(spec.TiOpsPackageCacheDir), 0755); err != nil {
 		return err
 	}
 

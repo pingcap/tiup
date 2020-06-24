@@ -55,6 +55,6 @@ func NewShellModule(config ShellModuleConfig) *ShellModule {
 
 // Execute passes the command to executor and returns its results, the executor
 // should be already initialized.
-func (mod *ShellModule) Execute(exec executor.TiOpsExecutor) ([]byte, []byte, error) {
+func (mod *ShellModule) Execute(exec executor.Executor) ([]byte, []byte, error) {
 	return exec.Execute(mod.cmd, mod.sudo)
 }

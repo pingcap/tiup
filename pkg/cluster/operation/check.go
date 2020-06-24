@@ -25,8 +25,8 @@ import (
 	"github.com/pingcap/tidb-insight/collector/insight"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
 	"github.com/pingcap/tiup/pkg/cluster/module"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
@@ -378,7 +378,7 @@ func CheckKernelParameters(opt *CheckOptions, p []byte) []*CheckResult {
 }
 
 // CheckServices checks if a service is running on the host
-func CheckServices(e executor.TiOpsExecutor, host, service string, disable bool) *CheckResult {
+func CheckServices(e executor.Executor, host, service string, disable bool) *CheckResult {
 	result := &CheckResult{
 		Name: CheckNameSysService,
 	}
@@ -422,7 +422,7 @@ func CheckServices(e executor.TiOpsExecutor, host, service string, disable bool)
 }
 
 // CheckSELinux checks if SELinux is enabled on the host
-func CheckSELinux(e executor.TiOpsExecutor) *CheckResult {
+func CheckSELinux(e executor.Executor) *CheckResult {
 	result := &CheckResult{
 		Name: CheckNameSELinux,
 	}
@@ -444,11 +444,11 @@ func CheckSELinux(e executor.TiOpsExecutor) *CheckResult {
 }
 
 // CheckListeningPort checks if the ports are already binded by some process on host
-func CheckListeningPort(opt *CheckOptions, host string, topo meta.Specification, rawData []byte) []*CheckResult {
+func CheckListeningPort(opt *CheckOptions, host string, topo *spec.Specification, rawData []byte) []*CheckResult {
 	var results []*CheckResult
 	ports := make(map[int]struct{})
 
-	topo.IterInstance(func(inst meta.Instance) {
+	topo.IterInstance(func(inst spec.Instance) {
 		if inst.GetHost() != host {
 			return
 		}
@@ -479,7 +479,7 @@ func CheckListeningPort(opt *CheckOptions, host string, topo meta.Specification,
 }
 
 // CheckPartitions checks partition info of data directories
-func CheckPartitions(opt *CheckOptions, host string, topo meta.Specification, rawData []byte) []*CheckResult {
+func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, rawData []byte) []*CheckResult {
 	var results []*CheckResult
 	var insightInfo insight.InsightInfo
 	if err := json.Unmarshal(rawData, &insightInfo); err != nil {
@@ -492,11 +492,11 @@ func CheckPartitions(opt *CheckOptions, host string, topo meta.Specification, ra
 	flt := flatPartitions(insightInfo.Partitions)
 	parts := sortPartitions(flt)
 
-	topo.IterInstance(func(inst meta.Instance) {
+	topo.IterInstance(func(inst spec.Instance) {
 		if inst.GetHost() != host {
 			return
 		}
-		for _, dataDir := range clusterutil.MultiDirAbs(topo.GetGlobalOptions().User, inst.DataDir()) {
+		for _, dataDir := range clusterutil.MultiDirAbs(topo.GlobalOptions.User, inst.DataDir()) {
 			if dataDir == "" {
 				continue
 			}
