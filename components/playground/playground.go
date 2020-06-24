@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -597,8 +598,11 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			options.pd.Num, options.tikv.Num, options.pd.Num)
 	}
 
-	if options.version != "" && semver.Compare("v3.1.0", options.version) > 0 && options.tiflash.Num != 0 {
+	if options.version != "" && semver.Compare("v3.1.0", options.version) < 0 && options.tiflash.Num != 0 {
 		fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.version))
+		options.tiflash.Num = 0
+	} else if options.version != "" && runtime.GOOS == "darwin" && semver.Compare("v4.0.0", options.version) < 0 {
+		fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash on darwin", options.version))
 		options.tiflash.Num = 0
 	}
 
@@ -635,6 +639,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			return errors.AddStack(err)
 		}
 	}
+	// only runs tiflash on version later than v4.0.0-rc.2 when executing on darwin
 	for i := 0; i < options.tiflash.Num; i++ {
 		_, err := p.addInstance("tiflash", options.tiflash)
 		if err != nil {
@@ -860,7 +865,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 
 	dumpDSN(p.tidbs)
 
-	failpoint.Inject("terminateEarly", func() error {
+	if _, ok := failpoint.Eval(_curpkg_("terminateEarly")); ok {
 		time.Sleep(20 * time.Second)
 
 		fmt.Println("Early terminated via failpoint")
@@ -882,7 +887,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			_ = monitorCmd.Wait()
 		}
 		return nil
-	})
+	}
 
 	go func() {
 		sc := make(chan os.Signal, 1)
