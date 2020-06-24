@@ -307,6 +307,11 @@ func newMirrorPublishCmd() *cobra.Command {
 			if len(args) != 4 {
 				return cmd.Help()
 			}
+
+			if err := validatePlatform(goos, goarch); err != nil {
+				return err
+			}
+
 			env := environment.GlobalEnv()
 			if privPath == "" {
 				privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
@@ -372,6 +377,20 @@ func newMirrorPublishCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&standalone, "standalone", "", standalone, "can this component run directly")
 	cmd.Flags().BoolVarP(&hidden, "hide", "", hidden, "is this component invisible on listing")
 	return cmd
+}
+
+func validatePlatform(goos, goarch string) error {
+	// Only support any/any, don't support linux/any, any/amd64 .etc.
+	if goos == "any" && goarch == "any" {
+		return nil
+	}
+
+	switch goos + "/" + goarch {
+	case "linux/amd64", "linux/arm64", "darwin/amd64":
+		return nil
+	default:
+		return errors.Errorf("platform %s/%s not supported", goos, goarch)
+	}
 }
 
 // the `mirror genkey` sub command

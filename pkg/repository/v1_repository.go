@@ -132,8 +132,10 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 		platform := r.PlatformString()
 		versions, ok := manifest.Platforms[platform]
 		if !ok {
-			errs = append(errs, fmt.Sprintf("platform %s not supported by component %s", platform, spec.ID))
-			continue
+			if versions, ok = manifest.Platforms[v1manifest.AnyPlatform]; !ok {
+				errs = append(errs, fmt.Sprintf("platform %s not supported by component %s", platform, spec.ID))
+				continue
+			}
 		}
 
 		version, versionItem, err := r.selectVersion(spec.ID, versions, specVersion)
@@ -702,7 +704,9 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, versio
 
 	versionItem, ok := component.Platforms[r.PlatformString()][specVersion]
 	if !ok {
-		return "", errors.Errorf("no version: %s", version)
+		if versionItem, ok = component.Platforms[v1manifest.AnyPlatform][specVersion]; !ok {
+			return "", errors.Errorf("no version: %s", version)
+		}
 	}
 
 	entry := versionItem.Entry
