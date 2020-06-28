@@ -22,26 +22,22 @@
 #spark.eventLog.dir: "hdfs://namenode:8021/directory"
 # spark.executor.extraJavaOptions  -XX:+PrintGCDetails -Dkey=value -Dnumbers="one two three"
 
-{% for item, value in spark_defaults_custom | dictsort -%}
-{{ item }}   {{ value }}
-{% endfor %}
+{{- define "PDList"}}
+  {{- range $idx, $pd := .}}
+    {{- if eq $idx 0}}
+      {{- $pd.IP}}:{{$pd.ClientPort}}
+    {{- else -}}
+      ,{{$pd.IP}}:{{$pd.ClientPort}}
+    {{- end}}
+  {{- end}}
+{{- end}}
 
-{% set tispark_master = [] -%}
-{% set tispark_master_hosts = groups.spark_master %}
-{% for host in tispark_master_hosts -%}
-  {% set tispark_master_ip = hostvars[host].ansible_host | default(hostvars[host].inventory_hostname) -%}
-  {% set _ = tispark_master.append("%s:%s" % (tispark_master_ip, '7077')) -%}
-{% endfor -%}
+{{ range $k, $v := .CustomFields}}
+{{ $k }}   {{ $v }}
+{{- end }}
 
-{% if tispark_master %}
-spark.master   spark://{{ tispark_master | join('') }}
-{% endif %}
+{{- if .TiSparkMaster}}
+spark.master   spark://{{.TiSparkMaster}}
+{{- end}}
 
-{% set all_pd = [] -%}
-{% for host in groups.pd_servers -%}
-  {% set other_ip = hostvars[host].ansible_host | default(hostvars[host].inventory_hostname) -%}
-  {% set other_port = hostvars[host]['pd_client_port'] -%}
-  {% set _ = all_pd.append("%s:%s" % (other_ip, other_port)) -%}
-{% endfor -%}
-
-spark.tispark.pd.addresses   {{ all_pd | join(',') }}
+spark.tispark.pd.addresses {{template "PDList" .Endpoints}}

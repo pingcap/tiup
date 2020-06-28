@@ -66,17 +66,11 @@
 # - SPARK_NO_DAEMONIZE  Run the proposed command in the foreground. It will not output a PID file.
 
 #export JAVA_HOME, to set jdk home
-{% for item, value in spark_env_custom | dictsort -%}
-{{ item }}={{ value }}
-{% endfor %}
 
-{% set tispark_master = [] -%}
-{% set tispark_master_hosts = groups.spark_master %}
-{% for host in tispark_master_hosts -%}
-  {% set tispark_master_ip = hostvars[host].ansible_host | default(hostvars[host].inventory_hostname) -%}
-  {% set _ = tispark_master.append("%s" % (tispark_master_ip)) -%}
-{% endfor -%}
+{{ range $k, $v := .CustomEnvs}}
+{{ $k }}={{ $v }}
+{{- end }}
 
-{% if tispark_master %}
-SPARK_MASTER_HOST={{ tispark_master | join('') }}
-{% endif %}
+{{- if .TiSparkMaster}}
+SPARK_MASTER_HOST={{.Masters}}
+{{- end}}

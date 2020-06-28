@@ -14,20 +14,29 @@
 package spec
 
 import (
+	"fmt"
+	"io/ioutil"
+	"path/filepath"
+	"reflect"
+
 	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/template/config"
+	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 )
 
 // TiSparkMasterSpec is the topology specification for TiSpark master node
 type TiSparkMasterSpec struct {
-	Host      string `yaml:"host"`
-	SSHPort   int    `yaml:"ssh_port,omitempty"`
-	Imported  bool   `yaml:"imported,omitempty"`
-	Port      int    `yaml:"port" default:"7077"`
-	WebPort   int    `yaml:"web_port" default:"8080"`
-	DeployDir string `yaml:"deploy_dir,omitempty"`
-	Arch      string `yaml:"arch,omitempty"`
-	OS        string `yaml:"os,omitempty"`
+	Host         string                 `yaml:"host"`
+	SSHPort      int                    `yaml:"ssh_port,omitempty"`
+	Imported     bool                   `yaml:"imported,omitempty"`
+	Port         int                    `yaml:"port" default:"7077"`
+	WebPort      int                    `yaml:"web_port" default:"8080"`
+	DeployDir    string                 `yaml:"deploy_dir,omitempty"`
+	SparkConfigs map[string]interface{} `yaml:"spark_config",omitempty`
+	SparkEnvs    map[string]string      `yaml:"spark_env",omitempty`
+	Arch         string                 `yaml:"arch,omitempty"`
+	OS           string                 `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -52,14 +61,16 @@ func (s TiSparkMasterSpec) IsImported() bool {
 
 // TiSparkSlaveSpec is the topology specification for TiSpark slave nodes
 type TiSparkSlaveSpec struct {
-	Host      string `yaml:"host"`
-	SSHPort   int    `yaml:"ssh_port,omitempty"`
-	Imported  bool   `yaml:"imported,omitempty"`
-	Port      int    `yaml:"port" default:"7078"`
-	WebPort   int    `yaml:"web_port" default:"8081"`
-	DeployDir string `yaml:"deploy_dir,omitempty"`
-	Arch      string `yaml:"arch,omitempty"`
-	OS        string `yaml:"os,omitempty"`
+	Host         string                 `yaml:"host"`
+	SSHPort      int                    `yaml:"ssh_port,omitempty"`
+	Imported     bool                   `yaml:"imported,omitempty"`
+	Port         int                    `yaml:"port" default:"7078"`
+	WebPort      int                    `yaml:"web_port" default:"8081"`
+	DeployDir    string                 `yaml:"deploy_dir,omitempty"`
+	SparkConfigs map[string]interface{} `yaml:"spark_config",omitempty`
+	SparkEnvs    map[string]string      `yaml:"spark_env",omitempty`
+	Arch         string                 `yaml:"arch,omitempty"`
+	OS           string                 `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -124,61 +135,79 @@ type TiSparkMasterInstance struct {
 	instance
 }
 
+// GetCustomFields get custom spark configs of the instance
+func (i *TiSparkMasterInstance) GetCustomFields() map[string]interface{} {
+	v := reflect.ValueOf(i.InstanceSpec).FieldByName("SparkConfigs")
+	if !v.IsValid() {
+		return nil
+	}
+	return v.Interface().(map[string]interface{})
+}
+
+// GetCustomEnvs get custom spark envionment variables of the instance
+func (i *TiSparkMasterInstance) GetCustomEnvs() map[string]string {
+	v := reflect.ValueOf(i.InstanceSpec).FieldByName("SparkEnvs")
+	if !v.IsValid() {
+		return nil
+	}
+	return v.Interface().(map[string]string)
+}
+
 // InitConfig implement Instance interface
 func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
-	/*
-		// transfer run script
-		cfg := scripts.NewGrafanaScript(clusterName, paths.Deploy)
-		fp := filepath.Join(paths.Cache, fmt.Sprintf("run_grafana_%s_%d.sh", i.GetHost(), i.GetPort()))
-		if err := cfg.ConfigToFile(fp); err != nil {
-			return err
-		}
 
-		dst := filepath.Join(paths.Deploy, "scripts", "run_grafana.sh")
-		if err := e.Transfer(fp, dst, false); err != nil {
-			return err
-		}
+	// transfer default config
+	pdList := make([]string, 0)
+	for _, pd := range i.instance.topo.Endpoints(deployUser) {
+		pdList = append(pdList, fmt.Sprintf("%s:%d", pd.IP, pd.ClientPort))
+	}
+	masterList := make([]string, 0)
+	for _, m := range i.topo.TiSparkMasters {
+		masterList = append(masterList, fmt.Sprintf("%s:%d", m.Host, m.Port))
+	}
 
-		if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
-			return err
-		}
+	cfg := config.NewTiSparkConfig(pdList).WithMasters(masterList).
+		WithCustomFields(i.GetCustomFields())
+	// transfer spark-defaults.conf
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("spark-defaults-%s-%d.conf", i.GetHost(), i.GetPort()))
+	if err := cfg.ConfigToFile(fp); err != nil {
+		return err
+	}
+	// tispark files are all in a "spark" sub-directory of deploy dir
+	dst := filepath.Join(paths.Deploy, "spark", "conf", "spark-defaults.conf")
+	if err := e.Transfer(fp, dst, false); err != nil {
+		return err
+	}
 
-		// transfer config
-		fp = filepath.Join(paths.Cache, fmt.Sprintf("grafana_%s.ini", i.GetHost()))
-		if err := config.NewGrafanaConfig(i.GetHost(), paths.Deploy).WithPort(uint64(i.GetPort())).ConfigToFile(fp); err != nil {
-			return err
-		}
-		dst = filepath.Join(paths.Deploy, "conf", "grafana.ini")
-		if err := e.Transfer(fp, dst, false); err != nil {
-			return err
-		}
+	env := scripts.NewTiSparkEnv(masterList).WithCustomEnv(i.GetCustomEnvs())
+	// transfer spark-env.sh file
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("spark-env-%s-%d.sh", i.GetHost(), i.GetPort()))
+	if err := env.ScriptToFile(fp); err != nil {
+		return err
+	}
+	// tispark files are all in a "spark" sub-directory of deploy dir
+	dst = filepath.Join(paths.Deploy, "spark", "conf", "spark-env.sh")
+	if err := e.Transfer(fp, dst, false); err != nil {
+		return err
+	}
 
-		// transfer dashboard.yml
-		fp = filepath.Join(paths.Cache, fmt.Sprintf("dashboard_%s.yml", i.GetHost()))
-		if err := config.NewDashboardConfig(clusterName, paths.Deploy).ConfigToFile(fp); err != nil {
-			return err
-		}
-		dst = filepath.Join(paths.Deploy, "conf", "dashboard.yml")
-		if err := e.Transfer(fp, dst, false); err != nil {
-			return err
-		}
+	// transfer log4j config (it's not a template but a static file)
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("spark-log4j-%s-%d.properties", i.GetHost(), i.GetPort()))
+	log4jFile, err := config.GetConfig("spark-log4j.properties.tpl")
+	if err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(fp, log4jFile, 0644); err != nil {
+		return err
+	}
+	dst = filepath.Join(paths.Deploy, "spark", "conf", "log4j.properties")
+	if err := e.Transfer(fp, dst, false); err != nil {
+		return err
+	}
 
-		// transfer datasource.yml
-		if len(i.instance.topo.Monitors) == 0 {
-			return errors.New("no prometheus found in topology")
-		}
-		fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
-		if err := config.NewDatasourceConfig(clusterName, i.instance.topo.Monitors[0].Host).
-			WithPort(uint64(i.instance.topo.Monitors[0].Port)).
-			ConfigToFile(fp); err != nil {
-			return err
-		}
-		dst = filepath.Join(paths.Deploy, "conf", "datasource.yml")
-		return e.Transfer(fp, dst, false)
-	*/
 	return nil
 }
 
@@ -233,61 +262,93 @@ type TiSparkSlaveInstance struct {
 	instance
 }
 
+// GetCustomFields get custom spark configs of the instance
+func (i *TiSparkSlaveInstance) GetCustomFields() map[string]interface{} {
+	v := reflect.ValueOf(i.InstanceSpec).FieldByName("SparkConfigs")
+	if !v.IsValid() {
+		return nil
+	}
+	return v.Interface().(map[string]interface{})
+}
+
+// GetCustomEnvs get custom spark envionment variables of the instance
+func (i *TiSparkSlaveInstance) GetCustomEnvs() map[string]string {
+	v := reflect.ValueOf(i.InstanceSpec).FieldByName("SparkEnvs")
+	if !v.IsValid() {
+		return nil
+	}
+	return v.Interface().(map[string]string)
+}
+
 // InitConfig implement Instance interface
 func (i *TiSparkSlaveInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
-	/*
-		// transfer run script
-		cfg := scripts.NewGrafanaScript(clusterName, paths.Deploy)
-		fp := filepath.Join(paths.Cache, fmt.Sprintf("run_grafana_%s_%d.sh", i.GetHost(), i.GetPort()))
-		if err := cfg.ConfigToFile(fp); err != nil {
-			return err
-		}
 
-		dst := filepath.Join(paths.Deploy, "scripts", "run_grafana.sh")
-		if err := e.Transfer(fp, dst, false); err != nil {
-			return err
-		}
+	// transfer default config
+	pdList := make([]string, 0)
+	for _, pd := range i.instance.topo.Endpoints(deployUser) {
+		pdList = append(pdList, fmt.Sprintf("%s:%d", pd.IP, pd.ClientPort))
+	}
+	masterList := make([]string, 0)
+	for _, m := range i.topo.TiSparkMasters {
+		masterList = append(masterList, fmt.Sprintf("%s:%d", m.Host, m.Port))
+	}
 
-		if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
-			return err
-		}
+	cfg := config.NewTiSparkConfig(pdList).WithMasters(masterList).
+		WithCustomFields(i.GetCustomFields())
+	// transfer spark-defaults.conf
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("spark-defaults-%s-%d.conf", i.GetHost(), i.GetPort()))
+	if err := cfg.ConfigToFile(fp); err != nil {
+		return err
+	}
+	// tispark files are all in a "spark" sub-directory of deploy dir
+	dst := filepath.Join(paths.Deploy, "spark", "conf", "spark-defaults.conf")
+	if err := e.Transfer(fp, dst, false); err != nil {
+		return err
+	}
 
-		// transfer config
-		fp = filepath.Join(paths.Cache, fmt.Sprintf("grafana_%s.ini", i.GetHost()))
-		if err := config.NewGrafanaConfig(i.GetHost(), paths.Deploy).WithPort(uint64(i.GetPort())).ConfigToFile(fp); err != nil {
-			return err
-		}
-		dst = filepath.Join(paths.Deploy, "conf", "grafana.ini")
-		if err := e.Transfer(fp, dst, false); err != nil {
-			return err
-		}
+	env := scripts.NewTiSparkEnv(masterList).WithCustomEnv(i.GetCustomEnvs())
+	// transfer spark-env.sh file
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("spark-env-%s-%d.sh", i.GetHost(), i.GetPort()))
+	if err := env.ScriptToFile(fp); err != nil {
+		return err
+	}
+	// tispark files are all in a "spark" sub-directory of deploy dir
+	dst = filepath.Join(paths.Deploy, "spark", "conf", "spark-env.sh")
+	if err := e.Transfer(fp, dst, false); err != nil {
+		return err
+	}
 
-		// transfer dashboard.yml
-		fp = filepath.Join(paths.Cache, fmt.Sprintf("dashboard_%s.yml", i.GetHost()))
-		if err := config.NewDashboardConfig(clusterName, paths.Deploy).ConfigToFile(fp); err != nil {
-			return err
-		}
-		dst = filepath.Join(paths.Deploy, "conf", "dashboard.yml")
-		if err := e.Transfer(fp, dst, false); err != nil {
-			return err
-		}
+	// transfer start-slave.sh
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("start-tispark-slave-%s-%d.sh", i.GetHost(), i.GetPort()))
+	slaveSh, err := env.SlaveScriptWithTemplate()
+	if err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(fp, slaveSh, 0755); err != nil {
+		return err
+	}
+	dst = filepath.Join(paths.Deploy, "spark", "sbin", "start-slave.sh")
+	if err := e.Transfer(fp, dst, false); err != nil {
+		return err
+	}
 
-		// transfer datasource.yml
-		if len(i.instance.topo.Monitors) == 0 {
-			return errors.New("no prometheus found in topology")
-		}
-		fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
-		if err := config.NewDatasourceConfig(clusterName, i.instance.topo.Monitors[0].Host).
-			WithPort(uint64(i.instance.topo.Monitors[0].Port)).
-			ConfigToFile(fp); err != nil {
-			return err
-		}
-		dst = filepath.Join(paths.Deploy, "conf", "datasource.yml")
-		return e.Transfer(fp, dst, false)
-	*/
+	// transfer log4j config (it's not a template but a static file)
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("spark-log4j-%s-%d.properties", i.GetHost(), i.GetPort()))
+	log4jFile, err := config.GetConfig("spark-log4j.properties.tpl")
+	if err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(fp, log4jFile, 0644); err != nil {
+		return err
+	}
+	dst = filepath.Join(paths.Deploy, "spark", "conf", "log4j.properties")
+	if err := e.Transfer(fp, dst, false); err != nil {
+		return err
+	}
+
 	return nil
 }
 

@@ -56,15 +56,10 @@ fi
 # First argument should be the master; we need to store it aside because we may
 # need to insert arguments between it and the other arguments
 
-{% set tispark_master = [] -%}
-{% set tispark_master_hosts = groups.spark_master %}
-{% for host in tispark_master_hosts -%}
-  {% set tispark_master_ip = hostvars[host].ansible_host | default(hostvars[host].inventory_hostname) -%}
-  {% set _ = tispark_master.append("%s:%s" % (tispark_master_ip, '7077')) -%}
-{% endfor -%}
-
-MASTER=spark://{{ tispark_master | join('') }}
+{{- if .TiSparkMaster}}
+MASTER=spark://{{.Masters}}
 shift
+{{- end}}
 
 # Determine desired worker port
 if [ "$SPARK_WORKER_WEBUI_PORT" = "" ]; then
