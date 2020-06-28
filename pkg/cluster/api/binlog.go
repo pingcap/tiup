@@ -122,6 +122,51 @@ func (c *BinlogClient) drainerNodeStatus() (status []*NodeStatus, err error) {
 	return c.nodeStatus("drainers")
 }
 
+// UpdateDrainerState update the specify state as the specified state.
+func (c *BinlogClient) UpdateDrainerState(nodeID string, state string) error {
+	return c.updateStatus("drainers", nodeID, state)
+}
+
+// UpdatePumpState update the specify state as the specified state.
+func (c *BinlogClient) UpdatePumpState(nodeID string, state string) error {
+	return c.updateStatus("pumps", nodeID, state)
+}
+
+// updateStatus update the specify state as the specified state.
+func (c *BinlogClient) updateStatus(ty string, nodeID string, state string) error {
+	key := fmt.Sprintf("/tidb-binlog/v1/%s/%s", ty, nodeID)
+
+	ctx := context.Background()
+	resp, err := c.etcdClient.KV.Get(ctx, key)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	var nodeStatus NodeStatus
+	err = json.Unmarshal(resp.Kvs[0].Value, &nodeStatus)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	if nodeStatus.State == state {
+		return nil
+	}
+
+	nodeStatus.State = state
+
+	data, err := json.Marshal(&nodeStatus)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	_, err = c.etcdClient.Put(ctx, key, string(data))
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	return nil
+}
+
 func (c *BinlogClient) nodeStatus(ty string) (status []*NodeStatus, err error) {
 	key := fmt.Sprintf("/tidb-binlog/v1/%s", ty)
 
