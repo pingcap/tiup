@@ -167,6 +167,7 @@ func (g *grafana) start(ctx context.Context, dir string, p8sURL string) (err err
 	}
 
 	tpl := `
+[server]
 # The ip address to bind to, empty will bind to all interfaces
 http_addr = %s
 
