@@ -13,7 +13,7 @@
 
 package main
 
-import "github.com/pingcap/tiup/components/dms/command"
+import "github.com/pingcap/tiup/components/dm/command"
 
 func main() {
 	command.Execute()

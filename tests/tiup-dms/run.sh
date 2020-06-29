@@ -9,9 +9,9 @@ pushd "$( cd "$( dirname "${BASH_SOURCE[0]}"  )" >/dev/null 2>&1 && pwd  )"
 function tiup-dm() {
 	# echo "in function"
 	if [ -f "./bin/tiup-dm.test" ]; then
-	  ./bin/tiup-dms.test  -test.coverprofile=./cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
+	  ./bin/tiup-dm.test  -test.coverprofile=./cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
     else
-	  ../bin/tiup-dms "$@"
+	  ../bin/tiup-dm "$@"
 	fi
 }
 
