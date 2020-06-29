@@ -407,15 +407,6 @@ func fixFailedChecks(ctx *task.Context, host string, res *operator.CheckResult, 
 			),
 			true)
 		msg = fmt.Sprintf("will try to %s, reboot might be needed", color.HiBlueString("disable SELinux"))
-	case operator.CheckNameOSVer,
-		operator.CheckNameCPUThreads,
-		operator.CheckNameDisks,
-		operator.CheckNameEpoll,
-		operator.CheckNameMem,
-		operator.CheckNameCommand,
-		operator.CheckNameFio:
-		// don't show unsupported message for checks that are impossible to fix by us
-		return "", nil
 	default:
 		msg = fmt.Sprintf("%s, auto fixing not supported", res)
 	}
