@@ -46,7 +46,7 @@ cluster:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster ./components/cluster
 
 dms:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dms ./components/dms
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./components/dm
 
 bench:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-bench ./components/bench
