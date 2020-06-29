@@ -31,7 +31,7 @@ default: build check
 # Build TiUP and all components
 build: tiup components
 
-components: playground client cluster dms bench server
+components: playground client cluster dm bench server
 
 tiup:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
@@ -45,7 +45,7 @@ client:
 cluster:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster ./components/cluster
 
-dms:
+dm:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./components/dm
 
 bench:
