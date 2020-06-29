@@ -1,6 +1,6 @@
 .PHONY: server
 
-build_integration_test: build_tiup_playground_test build_tiup_cluster_test build_tiup_dms_test
+build_integration_test: build_tiup_playground_test build_tiup_cluster_test build_tiup_dm_test
 
 build_tiup_playground_test: failpoint-enable
 	$(GOTEST) -c -cover -covermode=count \
@@ -14,11 +14,11 @@ build_tiup_cluster_test: failpoint-enable
 		-o tests/tiup-cluster/bin/tiup-cluster.test \
 		github.com/pingcap/tiup/components/cluster;
 
-build_tiup_dms_test: failpoint-enable
+build_tiup_dm_test: failpoint-enable
 	$(GOTEST) -c -cover -covermode=count \
 		-coverpkg=github.com/pingcap/tiup/... \
-		-o tests/tiup-dms/bin/tiup-dms.test \
-		github.com/pingcap/tiup/components/dms;
+		-o tests/tiup-dm/bin/tiup-dm.test \
+		github.com/pingcap/tiup/components/dm;
 
 build_tiup_test: failpoint-enable
 	$(GOTEST) -c -cover -covermode=count \
