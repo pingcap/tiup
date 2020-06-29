@@ -401,7 +401,7 @@ func fixFailedChecks(ctx *task.Context, host string, res *operator.CheckResult, 
 	case operator.CheckNameSELinux:
 		t.Shell(host,
 			fmt.Sprintf(
-				"sed -i 's/SELINUX=enforcing/SELINUX=no/g' %s && %s",
+				"sed -i 's/^[[:blank:]]*SELINUX=enforcing/SELINUX=no/g' %s && %s",
 				"/etc/selinux/config",
 				"setenforce 0",
 			),

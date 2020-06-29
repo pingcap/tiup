@@ -23,6 +23,9 @@ max-open-files = 256
 
 [raftdb]
 max-open-files = 256
+
+[storage]
+reserve-space = 0
 `
 
 func writeTiKVConfig(w io.Writer) error {
