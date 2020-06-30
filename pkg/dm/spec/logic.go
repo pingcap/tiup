@@ -21,15 +21,16 @@ import (
 	"time"
 
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 
 	"github.com/google/uuid"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
-	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
 // Components names supported by TiOps
@@ -61,30 +62,8 @@ type Component interface {
 	Instances() []Instance
 }
 
-// Instance represents the instance.
-type Instance interface {
-	InstanceSpec
-	ID() string
-	Ready(executor.Executor, int64) error
-	WaitForDown(executor.Executor, int64) error
-	InitConfig(e executor.Executor, clusterName string, clusterVersion string, deployUser string, paths DirPaths) error
-	ScaleConfig(e executor.Executor, topo *DMSSpecification, clusterName string, clusterVersion string, deployUser string, paths DirPaths) error
-	PrepareStart() error
-	ComponentName() string
-	InstanceName() string
-	ServiceName() string
-	GetHost() string
-	GetPort() int
-	GetSSHPort() int
-	DeployDir() string
-	UsedPorts() []int
-	UsedDirs() []string
-	Status(pdList ...string) string
-	DataDir() string
-	LogDir() string
-	OS() string // only linux supported now
-	Arch() string
-}
+// Instance represents an instance
+type Instance = spec.Instance
 
 // PortStarted wait until a port is being listened
 func PortStarted(e executor.Executor, port int, timeout int64) error {
@@ -132,7 +111,7 @@ func (i *instance) WaitForDown(e executor.Executor, timeout int64) error {
 	return PortStopped(e, i.port, timeout)
 }
 
-func (i *instance) InitConfig(e executor.Executor, _, _, user string, paths DirPaths) error {
+func (i *instance) InitConfig(e executor.Executor, _, _, user string, paths meta.DirPaths) error {
 	comp := i.ComponentName()
 	host := i.GetHost()
 	port := i.GetPort()
@@ -283,7 +262,7 @@ func (c *DMMasterComponent) Name() string {
 
 // Instances implements Component interface.
 func (c *DMMasterComponent) Instances() []Instance {
-	ins := make([]Instance, 0) /*, len(c.Masters))
+	ins := make([]Instance, 0)
 	for _, s := range c.Masters {
 		s := s
 		ins = append(ins, &DMMasterInstance{
@@ -307,7 +286,6 @@ func (c *DMMasterComponent) Instances() []Instance {
 				statusFn: s.Status,
 			}})
 	}
-	*/
 	return ins
 }
 
@@ -318,7 +296,7 @@ type DMMasterInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *DMMasterInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+func (i *DMMasterInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
@@ -348,34 +326,37 @@ func (i *DMMasterInstance) InitConfig(e executor.Executor, clusterName, clusterV
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DMMasterInstance) ScaleConfig(e executor.Executor, b *DMSSpecification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
-	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
-		return err
-	}
+func (i *DMMasterInstance) ScaleConfig(e executor.Executor, b *spec.Specification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+	panic("TODO")
+	/*
+		if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
+			return err
+		}
 
-	c := b
-	spec := i.InstanceSpec.(MasterSpec)
-	cfg := scripts.NewDMMasterScaleScript(
-		spec.Name,
-		i.GetHost(),
-		paths.Deploy,
-		paths.Data[0],
-		paths.Log,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithPeerPort(spec.PeerPort).AppendEndpoints(c.Endpoints(deployUser)...)
+		c := b
+		spec := i.InstanceSpec.(MasterSpec)
+		cfg := scripts.NewDMMasterScaleScript(
+			spec.Name,
+			i.GetHost(),
+			paths.Deploy,
+			paths.Data[0],
+			paths.Log,
+		).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithPeerPort(spec.PeerPort).AppendEndpoints(c.Endpoints(deployUser)...)
 
-	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_dm-master_%s_%d.sh", i.GetHost(), i.GetPort()))
-	log.Infof("script path: %s", fp)
-	if err := cfg.ConfigToFile(fp); err != nil {
-		return err
-	}
+		fp := filepath.Join(paths.Cache, fmt.Sprintf("run_dm-master_%s_%d.sh", i.GetHost(), i.GetPort()))
+		log.Infof("script path: %s", fp)
+		if err := cfg.ConfigToFile(fp); err != nil {
+			return err
+		}
 
-	dst := filepath.Join(paths.Deploy, "scripts", "run_dm-master.sh")
-	if err := e.Transfer(fp, dst, false); err != nil {
-		return err
-	}
-	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
-		return err
-	}
+		dst := filepath.Join(paths.Deploy, "scripts", "run_dm-master.sh")
+		if err := e.Transfer(fp, dst, false); err != nil {
+			return err
+		}
+		if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+			return err
+		}
+	*/
 
 	return nil
 }
@@ -392,7 +373,7 @@ func (c *DMWorkerComponent) Name() string {
 
 // Instances implements Component interface.
 func (c *DMWorkerComponent) Instances() []Instance {
-	ins := make([]Instance, 0) /*, len(c.Workers))
+	ins := make([]Instance, 0)
 	for _, s := range c.Workers {
 		s := s
 		ins = append(ins, &DMWorkerInstance{
@@ -415,7 +396,7 @@ func (c *DMWorkerComponent) Instances() []Instance {
 				statusFn: s.Status,
 			}})
 	}
-	*/
+
 	return ins
 }
 
@@ -456,13 +437,16 @@ func (i *DMWorkerInstance) InitConfig(e executor.Executor, clusterName, clusterV
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DMWorkerInstance) ScaleConfig(e executor.Executor, b *DMSSpecification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
-	s := i.instance.topo
-	defer func() {
-		i.instance.topo = s
-	}()
-	i.instance.topo = b
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+func (i *DMWorkerInstance) ScaleConfig(e executor.Executor, b *spec.Specification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+	panic("TODO")
+	/*
+		s := i.instance.topo
+		defer func() {
+			i.instance.topo = s
+		}()
+		i.instance.topo = b
+		return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	*/
 }
 
 // DMPortalComponent represents DM portal component.
@@ -477,7 +461,7 @@ func (c *DMPortalComponent) Name() string {
 
 // Instances implements Component interface.
 func (c *DMPortalComponent) Instances() []Instance {
-	ins := make([]Instance, 0) /*, len(c.Portals))
+	ins := make([]Instance, 0)
 	for _, s := range c.Portals {
 		s := s
 		ins = append(ins, &DMPortalInstance{
@@ -502,8 +486,22 @@ func (c *DMPortalComponent) Instances() []Instance {
 				},
 			}})
 	}
-	*/
 	return ins
+}
+
+func statusByURL(url string) string {
+	client := utils.NewHTTPClient(statusQueryTimeout, nil)
+
+	// body doesn't have any status section needed
+	body, err := client.Get(url)
+	if err != nil {
+		return "Down"
+	}
+	if body == nil {
+		return "Down"
+	}
+	return "Up"
+
 }
 
 // DMPortalInstance represent the DM portal instance
@@ -512,7 +510,7 @@ type DMPortalInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *DMPortalInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+func (i *DMPortalInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
@@ -542,13 +540,16 @@ func (i *DMPortalInstance) InitConfig(e executor.Executor, clusterName, clusterV
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DMPortalInstance) ScaleConfig(e executor.Executor, b *DMSSpecification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
-	s := i.instance.topo
-	defer func() {
-		i.instance.topo = s
-	}()
-	i.instance.topo = b
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+func (i *DMPortalInstance) ScaleConfig(e executor.Executor, b *spec.Specification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+	panic("TODO")
+	/*
+		s := i.instance.topo
+		defer func() {
+			i.instance.topo = s
+		}()
+		i.instance.topo = b
+		return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	*/
 }
 
 // GetGlobalOptions returns cluster topology
@@ -627,7 +628,7 @@ func (topo *DMSSpecification) IterHost(fn func(instance Instance)) {
 // Endpoints returns the PD endpoints configurations
 func (topo *DMSSpecification) Endpoints(user string) []*scripts.DMMasterScript {
 	var ends []*scripts.DMMasterScript
-	/*for _, spec := range topo.Masters {
+	for _, spec := range topo.Masters {
 		deployDir := clusterutil.Abs(user, spec.DeployDir)
 		// data dir would be empty for components which don't need it
 		dataDir := spec.DataDir
@@ -647,6 +648,6 @@ func (topo *DMSSpecification) Endpoints(user string) []*scripts.DMMasterScript {
 			WithPort(spec.Port).
 			WithPeerPort(spec.PeerPort)
 		ends = append(ends, script)
-	}*/
+	}
 	return ends
 }

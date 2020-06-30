@@ -98,9 +98,9 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
 
 	rootCmd.AddCommand(
+		newDeploy(),
 	/*
 		newCheckCmd(),
-		newDeploy(),
 		newStartCmd(),
 		newStopCmd(),
 		newRestartCmd(),

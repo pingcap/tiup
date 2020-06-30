@@ -14,24 +14,8 @@
 package spec
 
 import (
-	"fmt"
+	"github.com/pingcap/tiup/pkg/meta"
 )
 
 // DirPaths stores the paths needed for component to put files
-type DirPaths struct {
-	Deploy string
-	Data   []string
-	Log    string
-	Cache  string
-}
-
-// String implements the fmt.Stringer interface
-func (p DirPaths) String() string {
-	return fmt.Sprintf(
-		"deploy_dir=%s, data_dir=%v, log_dir=%s, cache_dir=%s",
-		p.Deploy,
-		p.Data,
-		p.Log,
-		p.Cache,
-	)
-}
+type DirPaths = meta.DirPaths

@@ -36,6 +36,7 @@ const (
 var (
 	globalOptionTypeName  = reflect.TypeOf(GlobalOptions{}).Name()
 	monitorOptionTypeName = reflect.TypeOf(MonitoredOptions{}).Name()
+	serverConfigsTypeName = reflect.TypeOf(DMServerConfigs{}).Name()
 )
 
 func setDefaultDir(parent, role, port string, field reflect.Value) {
@@ -60,7 +61,7 @@ func findField(v reflect.Value, fieldName string) (int, bool) {
 // Skip global/monitored/job options
 func isSkipField(field reflect.Value) bool {
 	tp := field.Type().Name()
-	return tp == globalOptionTypeName || tp == monitorOptionTypeName
+	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName
 }
 
 // nolint

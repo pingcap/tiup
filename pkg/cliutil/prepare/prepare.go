@@ -279,11 +279,16 @@ Please change to use another port or another host.
 	return nil
 }
 
+// InstanceIter to iterate instance.
+type InstanceIter interface {
+	IterInstance(func(inst spec.Instance))
+}
+
 // BuildDownloadCompTasks build download component tasks
-func BuildDownloadCompTasks(version string, topo *spec.Specification) []*task.StepDisplay {
+func BuildDownloadCompTasks(version string, instanceIter InstanceIter) []*task.StepDisplay {
 	var tasks []*task.StepDisplay
 	uniqueTaskList := make(map[string]struct{}) // map["comp-os-arch"]{}
-	topo.IterInstance(func(inst spec.Instance) {
+	instanceIter.IterInstance(func(inst spec.Instance) {
 		key := fmt.Sprintf("%s-%s-%s", inst.ComponentName(), inst.OS(), inst.Arch())
 		if _, found := uniqueTaskList[key]; !found {
 			uniqueTaskList[key] = struct{}{}
