@@ -45,6 +45,16 @@ const (
 	ComponentAlertManager = spec.ComponentAlertManager
 )
 
+type (
+	// InstanceSpec represent a instance specification
+	InstanceSpec interface {
+		Role() string
+		SSH() (string, int)
+		GetMainPort() int
+		IsImported() bool
+	}
+)
+
 // Component represents a component of the cluster.
 type Component interface {
 	Name() string
@@ -261,7 +271,7 @@ func (i *instance) Status(masterList ...string) string {
 }
 
 // DMSSpecification of cluster
-type DMSSpecification = Specification
+type DMSSpecification = DMTopologySpecification
 
 // DMMasterComponent represents TiDB component.
 type DMMasterComponent struct{ *DMSSpecification }
@@ -313,7 +323,7 @@ func (i *DMMasterInstance) InitConfig(e executor.Executor, clusterName, clusterV
 		return err
 	}
 
-	spec := i.InstanceSpec.(DMMasterSpec)
+	spec := i.InstanceSpec.(MasterSpec)
 	cfg := scripts.NewDMMasterScript(
 		spec.Name,
 		i.GetHost(),
@@ -344,7 +354,7 @@ func (i *DMMasterInstance) ScaleConfig(e executor.Executor, b *DMSSpecification,
 	}
 
 	c := b
-	spec := i.InstanceSpec.(DMMasterSpec)
+	spec := i.InstanceSpec.(MasterSpec)
 	cfg := scripts.NewDMMasterScaleScript(
 		spec.Name,
 		i.GetHost(),
@@ -421,7 +431,7 @@ func (i *DMWorkerInstance) InitConfig(e executor.Executor, clusterName, clusterV
 		return err
 	}
 
-	spec := i.InstanceSpec.(DMWorkerSpec)
+	spec := i.InstanceSpec.(WorkerSpec)
 	cfg := scripts.NewDMWorkerScript(
 		i.Name,
 		i.GetHost(),

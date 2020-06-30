@@ -31,7 +31,7 @@ type DMMeta struct {
 	//EnableTLS      bool   `yaml:"enable_tls"`
 	//EnableFirewall bool   `yaml:"firewall"`
 
-	Topology *Specification `yaml:"topology"`
+	Topology *DMTopologySpecification `yaml:"topology"`
 }
 
 // SaveDMMeta saves the cluster meta information to profile directory
