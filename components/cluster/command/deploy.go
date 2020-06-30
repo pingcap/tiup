@@ -270,6 +270,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 		// log dir will always be with values, but might not used by the component
 		logDir := clusterutil.Abs(globalOptions.User, inst.LogDir())
 		// Deploy component
+		// prepare deployment server
 		t := task.NewBuilder().
 			UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, gOpt.SSHTimeout).
 			Mkdir(globalOptions.User, inst.GetHost(),
@@ -277,30 +278,47 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 				filepath.Join(deployDir, "bin"),
 				filepath.Join(deployDir, "conf"),
 				filepath.Join(deployDir, "scripts")).
-			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...).
-			CopyComponent(
-				inst.ComponentName(),
+			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
+
+		// copy dependency component if needed
+		switch inst.ComponentName() {
+		case spec.ComponentTiSpark:
+			t = t.CopyComponent(
+				spec.ComponentSpark,
 				inst.OS(),
 				inst.Arch(),
-				version,
+				spec.ComponentVersion(spec.ComponentSpark, version),
 				inst.GetHost(),
 				deployDir,
-			).
-			InitConfig(
-				clusterName,
-				clusterVersion,
-				inst,
-				globalOptions.User,
-				opt.ignoreConfigCheck,
-				meta.DirPaths{
-					Deploy: deployDir,
-					Data:   dataDirs,
-					Log:    logDir,
-					Cache:  spec.ClusterPath(clusterName, spec.TempConfigPath),
-				},
-			).
-			BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", inst.ComponentName(), inst.GetHost()))
-		deployCompTasks = append(deployCompTasks, t)
+			)
+		}
+		t = t.CopyComponent(
+			inst.ComponentName(),
+			inst.OS(),
+			inst.Arch(),
+			version,
+			inst.GetHost(),
+			deployDir,
+		)
+
+		// generate configs for the component
+		t = t.InitConfig(
+			clusterName,
+			clusterVersion,
+			inst,
+			globalOptions.User,
+			opt.ignoreConfigCheck,
+			meta.DirPaths{
+				Deploy: deployDir,
+				Data:   dataDirs,
+				Log:    logDir,
+				Cache:  spec.ClusterPath(clusterName, spec.TempConfigPath),
+			},
+		)
+
+		deployCompTasks = append(deployCompTasks,
+			t.BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", inst.ComponentName(), inst.GetHost())),
+		)
 	})
 
 	nodeInfoTask := task.NewBuilder().Func("Check status", func(ctx *task.Context) error {
