@@ -36,7 +36,9 @@ const (
 
 // general role names
 var (
-	RoleMonitor = "monitor"
+	RoleMonitor       = "monitor"
+	RoleTiSparkMaster = "tispark-master"
+	RoleTiSparkSlave  = "tispark-slave"
 )
 
 type (

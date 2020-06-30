@@ -41,7 +41,7 @@ type TiSparkMasterSpec struct {
 
 // Role returns the component role of the instance
 func (s TiSparkMasterSpec) Role() string {
-	return ComponentTiSpark
+	return RoleTiSparkMaster
 }
 
 // SSH returns the host and SSH port of the instance
@@ -75,7 +75,7 @@ type TiSparkSlaveSpec struct {
 
 // Role returns the component role of the instance
 func (s TiSparkSlaveSpec) Role() string {
-	return ComponentTiSpark
+	return RoleTiSparkSlave
 }
 
 // SSH returns the host and SSH port of the instance
@@ -122,7 +122,7 @@ func (c *TiSparkMasterComponent) Instances() []Instance {
 					s.DeployDir,
 				},
 				statusFn: func(_ ...string) string {
-					return "-"
+					return "N/A"
 				},
 			},
 		})
@@ -243,7 +243,7 @@ func (c *TiSparkSlaveComponent) Instances() []Instance {
 					s.DeployDir,
 				},
 				statusFn: func(_ ...string) string {
-					return "-"
+					return "N/A"
 				},
 			},
 		})
