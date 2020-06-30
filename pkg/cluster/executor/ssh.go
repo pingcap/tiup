@@ -21,12 +21,11 @@ import (
 	"strings"
 	"time"
 
-	utils2 "github.com/pingcap/tiup/pkg/utils"
-
 	"github.com/appleboy/easyssh-proxy"
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
 
@@ -196,7 +195,7 @@ func (e *SSHExecutor) Transfer(src string, dst string, download bool) error {
 	defer session.Close()
 
 	targetPath := filepath.Dir(dst)
-	if err = utils2.CreateDir(targetPath); err != nil {
+	if err = utils.CreateDir(targetPath); err != nil {
 		return err
 	}
 	targetFile, err := os.Create(dst)

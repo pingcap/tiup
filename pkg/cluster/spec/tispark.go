@@ -33,8 +33,8 @@ type TiSparkMasterSpec struct {
 	Port         int                    `yaml:"port" default:"7077"`
 	WebPort      int                    `yaml:"web_port" default:"8080"`
 	DeployDir    string                 `yaml:"deploy_dir,omitempty"`
-	SparkConfigs map[string]interface{} `yaml:"spark_config",omitempty`
-	SparkEnvs    map[string]string      `yaml:"spark_env",omitempty`
+	SparkConfigs map[string]interface{} `yaml:"spark_config,omitempty"`
+	SparkEnvs    map[string]string      `yaml:"spark_env,omitempty"`
 	Arch         string                 `yaml:"arch,omitempty"`
 	OS           string                 `yaml:"os,omitempty"`
 }
@@ -67,8 +67,8 @@ type TiSparkSlaveSpec struct {
 	Port         int                    `yaml:"port" default:"7078"`
 	WebPort      int                    `yaml:"web_port" default:"8081"`
 	DeployDir    string                 `yaml:"deploy_dir,omitempty"`
-	SparkConfigs map[string]interface{} `yaml:"spark_config",omitempty`
-	SparkEnvs    map[string]string      `yaml:"spark_env",omitempty`
+	SparkConfigs map[string]interface{} `yaml:"spark_config,omitempty"`
+	SparkEnvs    map[string]string      `yaml:"spark_env,omitempty"`
 	Arch         string                 `yaml:"arch,omitempty"`
 	OS           string                 `yaml:"os,omitempty"`
 }
@@ -155,9 +155,8 @@ func (i *TiSparkMasterInstance) GetCustomEnvs() map[string]string {
 
 // InitConfig implement Instance interface
 func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
-	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
-		return err
-	}
+	// we don't provide systemd service file for tispark, user need to start the service manually
+	// with deploy_dir/spark/sbin/start-master.sh
 
 	// transfer default config
 	pdList := make([]string, 0)
@@ -176,8 +175,7 @@ func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clu
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
-	// tispark files are all in a "spark" sub-directory of deploy dir
-	dst := filepath.Join(paths.Deploy, "spark", "conf", "spark-defaults.conf")
+	dst := filepath.Join(paths.Deploy, "conf", "spark-defaults.conf")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
@@ -189,7 +187,7 @@ func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clu
 		return err
 	}
 	// tispark files are all in a "spark" sub-directory of deploy dir
-	dst = filepath.Join(paths.Deploy, "spark", "conf", "spark-env.sh")
+	dst = filepath.Join(paths.Deploy, "conf", "spark-env.sh")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
@@ -203,12 +201,8 @@ func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clu
 	if err := ioutil.WriteFile(fp, log4jFile, 0644); err != nil {
 		return err
 	}
-	dst = filepath.Join(paths.Deploy, "spark", "conf", "log4j.properties")
-	if err := e.Transfer(fp, dst, false); err != nil {
-		return err
-	}
-
-	return nil
+	dst = filepath.Join(paths.Deploy, "conf", "log4j.properties")
+	return e.Transfer(fp, dst, false)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -282,9 +276,8 @@ func (i *TiSparkSlaveInstance) GetCustomEnvs() map[string]string {
 
 // InitConfig implement Instance interface
 func (i *TiSparkSlaveInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
-	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
-		return err
-	}
+	// we don't provide systemd service file for tispark, user need to start the service manually
+	// with deploy_dir/spark/sbin/start-slave.sh
 
 	// transfer default config
 	pdList := make([]string, 0)
@@ -303,8 +296,7 @@ func (i *TiSparkSlaveInstance) InitConfig(e executor.Executor, clusterName, clus
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
-	// tispark files are all in a "spark" sub-directory of deploy dir
-	dst := filepath.Join(paths.Deploy, "spark", "conf", "spark-defaults.conf")
+	dst := filepath.Join(paths.Deploy, "conf", "spark-defaults.conf")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
@@ -316,7 +308,7 @@ func (i *TiSparkSlaveInstance) InitConfig(e executor.Executor, clusterName, clus
 		return err
 	}
 	// tispark files are all in a "spark" sub-directory of deploy dir
-	dst = filepath.Join(paths.Deploy, "spark", "conf", "spark-env.sh")
+	dst = filepath.Join(paths.Deploy, "conf", "spark-env.sh")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
@@ -330,9 +322,10 @@ func (i *TiSparkSlaveInstance) InitConfig(e executor.Executor, clusterName, clus
 	if err := ioutil.WriteFile(fp, slaveSh, 0755); err != nil {
 		return err
 	}
-	dst = filepath.Join(paths.Deploy, "spark", "sbin", "start-slave.sh")
+	dst = filepath.Join(paths.Deploy, "sbin", "start-slave.sh")
 	if err := e.Transfer(fp, dst, false); err != nil {
-		return err
+		panic(err)
+		//return err
 	}
 
 	// transfer log4j config (it's not a template but a static file)
@@ -344,12 +337,8 @@ func (i *TiSparkSlaveInstance) InitConfig(e executor.Executor, clusterName, clus
 	if err := ioutil.WriteFile(fp, log4jFile, 0644); err != nil {
 		return err
 	}
-	dst = filepath.Join(paths.Deploy, "spark", "conf", "log4j.properties")
-	if err := e.Transfer(fp, dst, false); err != nil {
-		return err
-	}
-
-	return nil
+	dst = filepath.Join(paths.Deploy, "conf", "log4j.properties")
+	return e.Transfer(fp, dst, false)
 }
 
 // ScaleConfig deploy temporary config on scaling

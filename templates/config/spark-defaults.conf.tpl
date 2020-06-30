@@ -25,9 +25,19 @@
 {{- define "PDList"}}
   {{- range $idx, $pd := .}}
     {{- if eq $idx 0}}
-      {{- $pd.IP}}:{{$pd.ClientPort}}
+      {{- $pd}}
     {{- else -}}
-      ,{{$pd.IP}}:{{$pd.ClientPort}}
+      ,{{$pd}}
+    {{- end}}
+  {{- end}}
+{{- end}}
+
+{{- define "MasterList"}}
+  {{- range $idx, $m := .}}
+    {{- if eq $idx 0}}
+      {{- $m}}
+    {{- else -}}
+      ,{{$m}}
     {{- end}}
   {{- end}}
 {{- end}}
@@ -37,7 +47,7 @@
 {{- end }}
 
 {{- if .TiSparkMaster}}
-spark.master   spark://{{.TiSparkMaster}}
+spark.master   spark://{{template "MasterList" .TiSparkMaster}}
 {{- end}}
 
 spark.tispark.pd.addresses {{template "PDList" .Endpoints}}

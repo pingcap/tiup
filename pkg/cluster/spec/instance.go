@@ -214,6 +214,10 @@ func (i *instance) InstanceName() string {
 
 // ServiceName implements Instance interface
 func (i *instance) ServiceName() string {
+	switch i.ComponentName() {
+	case ComponentSpark, ComponentTiSpark:
+		return ""
+	}
 	if i.port > 0 {
 		return fmt.Sprintf("%s-%d.service", i.name, i.port)
 	}
@@ -312,9 +316,10 @@ func MergeResourceControl(lhs, rhs meta.ResourceControl) meta.ResourceControl {
 }
 
 func (i *instance) resourceControl() meta.ResourceControl {
-	return reflect.ValueOf(i.InstanceSpec).
-		FieldByName("ResourceControl").
-		Interface().(meta.ResourceControl)
+	if v := reflect.ValueOf(i.InstanceSpec).FieldByName("ResourceControl"); v.IsValid() {
+		return v.Interface().(meta.ResourceControl)
+	}
+	return meta.ResourceControl{}
 }
 
 func (i *instance) GetPort() int {
