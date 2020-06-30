@@ -99,9 +99,9 @@ func init() {
 
 	rootCmd.AddCommand(
 		newDeploy(),
+		newStartCmd(),
 	/*
 		newCheckCmd(),
-		newStartCmd(),
 		newStopCmd(),
 		newRestartCmd(),
 		newScaleInCmd(),

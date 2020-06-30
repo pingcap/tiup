@@ -32,7 +32,7 @@ import (
 // Start the cluster.
 func Start(
 	getter ExecutorGetter,
-	cluster *spec.Specification,
+	cluster spec.Spec,
 	options Options,
 ) error {
 	uniqueHosts := set.NewStringSet()
@@ -50,7 +50,7 @@ func Start(
 		for _, inst := range insts {
 			if !uniqueHosts.Exist(inst.GetHost()) {
 				uniqueHosts.Insert(inst.GetHost())
-				if err := StartMonitored(getter, inst, cluster.MonitoredOptions, options.OptTimeout); err != nil {
+				if err := StartMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil {
 					return err
 				}
 			}
@@ -80,7 +80,7 @@ func Stop(
 		insts := FilterInstance(com.Instances(), nodeFilter)
 		err := StopComponent(getter, insts)
 		if err != nil {
-			return errors.Annotatef(err, "failed to stop %s cluster", com.Name())
+			return errors.Annotatef(err, "failed to stop %s", com.Name())
 		}
 		for _, inst := range insts {
 			instCount[inst.GetHost()]--

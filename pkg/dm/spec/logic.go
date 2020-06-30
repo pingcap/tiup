@@ -57,10 +57,7 @@ type (
 )
 
 // Component represents a component of the cluster.
-type Component interface {
-	Name() string
-	Instances() []Instance
-}
+type Component = spec.Component
 
 // Instance represents an instance
 type Instance = spec.Instance
