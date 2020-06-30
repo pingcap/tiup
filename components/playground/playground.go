@@ -382,7 +382,24 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) {
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
 	fmt.Printf("Start %s instance...\n", inst.Component())
 	err := inst.Start(context.Background(), v0manifest.Version(p.bootOptions.version))
+	p.addWaitInstance(inst)
 	return errors.AddStack(err)
+}
+
+func (p *Playground) addWaitInstance(inst instance.Instance) {
+	p.instanceWaiter.Go(func() error {
+		err := inst.Wait()
+		if err != nil {
+			fmt.Print(color.RedString("%s quit: %s\n", inst.Component(), err.Error()))
+			if lines, _ := utils.TailN(inst.LogFile(), 10); len(lines) > 0 {
+				for _, line := range lines {
+					fmt.Println(line)
+				}
+				fmt.Print(color.YellowString("...\ncheck detail log from: %s\n", inst.LogFile()))
+			}
+		}
+		return err
+	})
 }
 
 func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
@@ -397,10 +414,6 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 	if err != nil {
 		return errors.AddStack(err)
 	}
-
-	p.instanceWaiter.Go(func() error {
-		return inst.Wait()
-	})
 
 	logIfErr(p.renderSDFile())
 
@@ -810,7 +823,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 
 		if lastErr == nil {
 			for _, flash := range p.tiflashs {
-				if err := flash.Start(ctx, v0manifest.Version(options.version)); err != nil {
+				if err := p.startInstance(ctx, flash); err != nil {
 					lastErr = err
 					break
 				}
@@ -921,23 +934,6 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			fmt.Printf("listenAndServeHTTP quit: %s\n", err)
 		}
 	}()
-
-	_ = p.WalkInstances(func(_ string, inst instance.Instance) error {
-		p.instanceWaiter.Go(func() error {
-			err := inst.Wait()
-			if err != nil {
-				fmt.Print(color.RedString("%s quit: \n", inst.Component()))
-				if lines, _ := utils.TailN(inst.LogFile(), 10); len(lines) > 0 {
-					for _, line := range lines {
-						fmt.Println(line)
-					}
-					fmt.Print(color.YellowString("...\ncheck detail log from: %s\n", inst.LogFile()))
-				}
-			}
-			return err
-		})
-		return nil
-	})
 
 	logIfErr(p.renderSDFile())
 
