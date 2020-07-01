@@ -357,8 +357,6 @@ func (i *DMMasterInstance) ScaleConfig(e executor.Executor, b *spec.Specificatio
 			return err
 		}
 	*/
-
-	return nil
 }
 
 // DMWorkerComponent represents DM worker component.

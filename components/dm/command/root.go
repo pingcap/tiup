@@ -42,15 +42,6 @@ var (
 	skipConfirm bool
 )
 
-func getParentNames(cmd *cobra.Command) []string {
-	if cmd == nil {
-		return nil
-	}
-
-	p := cmd.Parent()
-	return append(getParentNames(p), cmd.Name())
-}
-
 func init() {
 	logger.InitGlobalLogger()
 

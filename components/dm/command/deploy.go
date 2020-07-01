@@ -15,7 +15,6 @@ package command
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -24,7 +23,6 @@ import (
 	cspec "github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/dm/spec"
 	"github.com/pingcap/tiup/pkg/meta"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
@@ -37,16 +35,8 @@ import (
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
-	"github.com/pingcap/tiup/pkg/telemetry"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
-)
-
-var (
-	teleReport    *telemetry.Report
-	clusterReport *telemetry.ClusterReport
-	teleNodeInfos []*telemetry.NodeInfo
-	teleTopology  string
 )
 
 var (
@@ -55,11 +45,6 @@ var (
 )
 
 type (
-	componentInfo struct {
-		component string
-		version   v0manifest.Version
-	}
-
 	deployOptions struct {
 		user         string // username to login to the SSH server
 		identityFile string // path to the private key file
@@ -156,10 +141,6 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 	var topo spec.DMTopologySpecification
 	if err := clusterutil.ParseTopologyYaml(topoFile, &topo); err != nil {
 		return err
-	}
-
-	if data, err := ioutil.ReadFile(topoFile); err == nil {
-		teleTopology = string(data)
 	}
 
 	/*

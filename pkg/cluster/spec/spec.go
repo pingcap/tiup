@@ -110,8 +110,8 @@ type Spec interface {
 }
 
 // GetMonitoredOptions implements Spec interface.
-func (c *Specification) GetMonitoredOptions() *MonitoredOptions {
-	return &c.MonitoredOptions
+func (s *Specification) GetMonitoredOptions() *MonitoredOptions {
+	return &s.MonitoredOptions
 }
 
 // AllComponentNames contains the names of all components.

@@ -63,14 +63,17 @@ func isSkipField(field reflect.Value) bool {
 	return tp == globalOptionTypeName || tp == serverConfigsTypeName
 }
 
-// nolint
 type (
-	GlobalOptions    = spec.GlobalOptions
-	MonitoredOptions = spec.MonitoredOptions
-	PrometheusSpec   = spec.PrometheusSpec
-	GrafanaSpec      = spec.GrafanaSpec
+	// GlobalOptions of spec.
+	GlobalOptions = spec.GlobalOptions
+	// PrometheusSpec is the spec of Prometheus
+	PrometheusSpec = spec.PrometheusSpec
+	// GrafanaSpec is the spec of Grafana
+	GrafanaSpec = spec.GrafanaSpec
+	// AlertManagerSpec is the spec of Alertmanager
 	AlertManagerSpec = spec.AlertManagerSpec
-	ResourceControl  = meta.ResourceControl
+	// ResourceControl is the spec of ResourceControl
+	ResourceControl = meta.ResourceControl
 )
 
 type (
