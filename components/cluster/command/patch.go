@@ -28,6 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -186,13 +187,23 @@ func overwritePatch(clusterName, comp, packagePath string) error {
 	if err := os.MkdirAll(spec.ClusterPath(clusterName, spec.PatchDirName), 0755); err != nil {
 		return err
 	}
+
 	checksum, err := tiuputils.Checksum(packagePath)
 	if err != nil {
 		return err
 	}
+
 	tg := spec.ClusterPath(clusterName, spec.PatchDirName, comp+"-"+checksum[:7]+".tar.gz")
+	if utils.IsExist(tg) {
+		os.Remove(tg)
+	}
 	if err := tiuputils.CopyFile(packagePath, tg); err != nil {
 		return err
 	}
-	return os.Symlink(tg, spec.ClusterPath(clusterName, spec.PatchDirName, comp+".tar.gz"))
+
+	symlink := spec.ClusterPath(clusterName, spec.PatchDirName, comp+".tar.gz")
+	if utils.IsExist(symlink) {
+		os.Remove(symlink)
+	}
+	return os.Symlink(tg, symlink)
 }

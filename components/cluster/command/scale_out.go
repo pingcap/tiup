@@ -109,7 +109,7 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 
 	patchedComponents := set.NewStringSet()
 	newPart.IterInstance(func(instance spec.Instance) {
-		if exists := tiuputils.IsExist(spec.ClusterPath(clusterName, spec.PatchDirName, instance.ComponentName()+".tar.gz")); exists {
+		if tiuputils.IsExist(spec.ClusterPath(clusterName, spec.PatchDirName, instance.ComponentName()+".tar.gz")) {
 			patchedComponents.Insert(instance.ComponentName())
 		}
 	})
