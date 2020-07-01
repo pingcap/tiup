@@ -139,7 +139,7 @@ func (i *instance) InitConfig(e executor.Executor, _, _, user string, paths meta
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *instance) ScaleConfig(e executor.Executor, _ *DMSSpecification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+func (i *instance) ScaleConfig(e executor.Executor, _ *DMSSpecification, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
@@ -326,7 +326,7 @@ func (i *DMMasterInstance) InitConfig(e executor.Executor, clusterName, clusterV
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DMMasterInstance) ScaleConfig(e executor.Executor, b *spec.Specification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+func (i *DMMasterInstance) ScaleConfig(e executor.Executor, b *spec.Specification, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	panic("TODO")
 	/*
 		if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
@@ -405,7 +405,7 @@ type DMWorkerInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *DMWorkerInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+func (i *DMWorkerInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
@@ -436,7 +436,7 @@ func (i *DMWorkerInstance) InitConfig(e executor.Executor, clusterName, clusterV
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DMWorkerInstance) ScaleConfig(e executor.Executor, b *spec.Specification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+func (i *DMWorkerInstance) ScaleConfig(e executor.Executor, b *spec.Specification, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	panic("TODO")
 	/*
 		s := i.instance.topo
@@ -540,7 +540,7 @@ func (i *DMPortalInstance) InitConfig(e executor.Executor, clusterName, clusterV
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DMPortalInstance) ScaleConfig(e executor.Executor, b *spec.Specification, clusterName, clusterVersion, deployUser string, paths DirPaths) error {
+func (i *DMPortalInstance) ScaleConfig(e executor.Executor, b *spec.Specification, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	panic("TODO")
 	/*
 		s := i.instance.topo
