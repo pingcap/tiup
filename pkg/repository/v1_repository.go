@@ -496,7 +496,7 @@ func (r *V1Repository) fetchTimestamp() (changed bool, manifest *v1manifest.Mani
 
 	var localTs v1manifest.Timestamp
 	_, exists, err := r.local.LoadManifest(&localTs)
-	if err != nil && !v1manifest.IsExpirationError(errors.Cause(err)) {
+	if err != nil {
 		return false, nil, errors.Trace(err)
 	}
 
