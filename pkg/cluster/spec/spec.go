@@ -102,6 +102,18 @@ type (
 	}
 )
 
+// Spec represents specification of the  cluster.
+type Spec interface {
+	// Instances() []Instance
+	ComponentsByStartOrder() []Component
+	GetMonitoredOptions() *MonitoredOptions
+}
+
+// GetMonitoredOptions implements Spec interface.
+func (s *Specification) GetMonitoredOptions() *MonitoredOptions {
+	return &s.MonitoredOptions
+}
+
 // AllComponentNames contains the names of all components.
 // should include all components in ComponentsByStartOrder
 func AllComponentNames() (roles []string) {

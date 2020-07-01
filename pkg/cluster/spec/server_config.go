@@ -124,6 +124,11 @@ func merge(orig map[string]interface{}, overwrites ...map[string]interface{}) (m
 	return lhs, nil
 }
 
+// Merge2Toml merge the config of global.
+func Merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
+	return merge2Toml(comp, global, overwrite)
+}
+
 func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
 	lhs, err := merge(global, overwrite)
 	if err != nil {

@@ -69,7 +69,7 @@ func (b *Builder) Func(name string, fn func(ctx *Context) error) *Builder {
 }
 
 // ClusterSSH init all UserSSH need for the cluster.
-func (b *Builder) ClusterSSH(spec *spec.Specification, deployUser string, sshTimeout int64) *Builder {
+func (b *Builder) ClusterSSH(spec spec.Spec, deployUser string, sshTimeout int64) *Builder {
 	var tasks []Task
 	for _, com := range spec.ComponentsByStartOrder() {
 		for _, in := range com.Instances() {
