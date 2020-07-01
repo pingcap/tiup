@@ -13,6 +13,11 @@
 
 package spec
 
+import (
+	"fmt"
+	"strings"
+)
+
 // ComponentVersion maps the TiDB version to the third components binding version
 func ComponentVersion(comp, version string) string {
 	switch comp {
@@ -33,4 +38,13 @@ func ComponentVersion(comp, version string) string {
 	default:
 		return version
 	}
+}
+
+// ComponentSubDir maps a component with version to a subdir if needed
+func ComponentSubDir(comp, version string) string {
+	switch comp {
+	case ComponentSpark:
+		return fmt.Sprintf("spark-%s-bin-hadoop2.7", strings.TrimLeft(version, "v"))
+	}
+	return ""
 }

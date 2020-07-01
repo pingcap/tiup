@@ -283,6 +283,8 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 		// copy dependency component if needed
 		switch inst.ComponentName() {
 		case spec.ComponentTiSpark:
+			sparkSubPath := spec.ComponentSubDir(spec.ComponentSpark,
+				spec.ComponentVersion(spec.ComponentSpark, version))
 			t = t.CopyComponent(
 				spec.ComponentSpark,
 				inst.OS(),
@@ -290,8 +292,20 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 				spec.ComponentVersion(spec.ComponentSpark, version),
 				inst.GetHost(),
 				deployDir,
+			).Shell( // spark is under a subdir, move it to deploy dir
+				inst.GetHost(),
+				fmt.Sprintf(
+					"mv -f %s %s/ && mv -f %s/* %s/ && rm -rf %s",
+					filepath.Join(deployDir, "bin", sparkSubPath),
+					deployDir,
+					filepath.Join(deployDir, sparkSubPath),
+					deployDir,
+					filepath.Join(deployDir, sparkSubPath),
+				),
+				false, // (not) sudo
 			)
 		}
+
 		t = t.CopyComponent(
 			inst.ComponentName(),
 			inst.OS(),
@@ -300,6 +314,19 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 			inst.GetHost(),
 			deployDir,
 		)
+
+		switch inst.ComponentName() {
+		case spec.ComponentTiSpark:
+			t = t.Shell( // move tispark jar to correct path
+				inst.GetHost(),
+				fmt.Sprintf(
+					"mv -f %s/*.jar %s/jars/",
+					filepath.Join(deployDir, "bin"),
+					deployDir,
+				),
+				false, // (not) sudo
+			)
+		}
 
 		// generate configs for the component
 		t = t.InitConfig(
