@@ -24,9 +24,10 @@ FILES     := $$(find . -name "*.go")
 FAILPOINT_ENABLE  := $$(tools/bin/failpoint-ctl enable)
 FAILPOINT_DISABLE := $$(tools/bin/failpoint-ctl disable)
 
+default: build check
+
 include ./tests/Makefile
 
-default: build check
 
 # Build TiUP and all components
 build: tiup components

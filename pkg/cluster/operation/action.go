@@ -202,7 +202,7 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		id := s.Host + ":" + strconv.Itoa(s.FlashProxyPort)
+		id := s.Host + ":" + strconv.Itoa(s.FlashServicePort)
 
 		tombstone, err := pdClient.IsTombStone(id)
 		if err != nil {
