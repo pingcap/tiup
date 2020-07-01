@@ -50,8 +50,10 @@ func Start(
 		for _, inst := range insts {
 			if !uniqueHosts.Exist(inst.GetHost()) {
 				uniqueHosts.Insert(inst.GetHost())
-				if err := StartMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil {
-					return err
+				if cluster.GetMonitoredOptions() != nil {
+					if err := StartMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -338,7 +340,7 @@ func Restart(
 }
 
 // StartMonitored start BlackboxExporter and NodeExporter
-func StartMonitored(getter ExecutorGetter, instance spec.Instance, options spec.MonitoredOptions, timeout int64) error {
+func StartMonitored(getter ExecutorGetter, instance spec.Instance, options *spec.MonitoredOptions, timeout int64) error {
 	ports := map[string]int{
 		spec.ComponentNodeExporter:     options.NodeExporterPort,
 		spec.ComponentBlackboxExporter: options.BlackboxExporterPort,

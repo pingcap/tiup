@@ -15,6 +15,8 @@ package spec
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -319,7 +321,8 @@ func (i *DMMasterInstance) InitConfig(e executor.Executor, clusterName, clusterV
 		return err
 	}
 
-	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
+	specConfig := spec.Config
+	return i.mergeServerConfig(e, i.topo.ServerConfigs.Master, specConfig, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -430,7 +433,8 @@ func (i *DMWorkerInstance) InitConfig(e executor.Executor, clusterName, clusterV
 		return err
 	}
 
-	return nil
+	specConfig := spec.Config
+	return i.mergeServerConfig(e, i.topo.ServerConfigs.Master, specConfig, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -533,7 +537,8 @@ func (i *DMPortalInstance) InitConfig(e executor.Executor, clusterName, clusterV
 		return err
 	}
 
-	return nil
+	specConfig := spec.Config
+	return i.mergeServerConfig(e, i.topo.ServerConfigs.Master, specConfig, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -555,8 +560,8 @@ func (topo *DMSSpecification) GetGlobalOptions() spec.GlobalOptions {
 }
 
 // GetMonitoredOptions returns MonitoredOptions
-func (topo *DMSSpecification) GetMonitoredOptions() spec.MonitoredOptions {
-	return topo.MonitoredOptions
+func (topo *DMSSpecification) GetMonitoredOptions() *spec.MonitoredOptions {
+	return nil
 }
 
 // ComponentsByStopOrder return component in the order need to stop.
@@ -647,4 +652,20 @@ func (topo *DMSSpecification) Endpoints(user string) []*scripts.DMMasterScript {
 		ends = append(ends, script)
 	}
 	return ends
+}
+
+// mergeServerConfig merges the server configuration and overwrite the global configuration
+func (i *instance) mergeServerConfig(e executor.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
+	conf, err := spec.Merge2Toml(i.ComponentName(), globalConf, instanceConf)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(fp, conf, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	dst := filepath.Join(paths.Deploy, "conf", fmt.Sprintf("%s.toml", i.ComponentName()))
+	// transfer config
+	return e.Transfer(fp, dst, false)
 }

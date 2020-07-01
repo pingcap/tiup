@@ -35,7 +35,6 @@ const (
 
 var (
 	globalOptionTypeName  = reflect.TypeOf(GlobalOptions{}).Name()
-	monitorOptionTypeName = reflect.TypeOf(MonitoredOptions{}).Name()
 	serverConfigsTypeName = reflect.TypeOf(DMServerConfigs{}).Name()
 )
 
@@ -61,7 +60,7 @@ func findField(v reflect.Value, fieldName string) (int, bool) {
 // Skip global/monitored/job options
 func isSkipField(field reflect.Value) bool {
 	tp := field.Type().Name()
-	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName
+	return tp == globalOptionTypeName || tp == serverConfigsTypeName
 }
 
 // nolint
@@ -84,15 +83,15 @@ type (
 
 	// DMTopologySpecification represents the specification of topology.yaml
 	DMTopologySpecification struct {
-		GlobalOptions    GlobalOptions      `yaml:"global,omitempty"`
-		MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty"`
-		ServerConfigs    DMServerConfigs    `yaml:"server_configs,omitempty"`
-		Masters          []MasterSpec       `yaml:"dm-master_servers"`
-		Workers          []WorkerSpec       `yaml:"dm-worker_servers"`
-		Portals          []PortalSpec       `yaml:"dm-portal_servers"`
-		Monitors         []PrometheusSpec   `yaml:"monitoring_servers"`
-		Grafana          []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
-		Alertmanager     []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
+		GlobalOptions GlobalOptions `yaml:"global,omitempty"`
+		// MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty"`
+		ServerConfigs DMServerConfigs    `yaml:"server_configs,omitempty"`
+		Masters       []MasterSpec       `yaml:"dm-master_servers"`
+		Workers       []WorkerSpec       `yaml:"dm-worker_servers"`
+		Portals       []PortalSpec       `yaml:"dm-portal_servers"`
+		Monitors      []PrometheusSpec   `yaml:"monitoring_servers"`
+		Grafana       []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
+		Alertmanager  []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
 	}
 )
 
@@ -271,16 +270,6 @@ func (topo *DMTopologySpecification) UnmarshalYAML(unmarshal func(interface{}) e
 		return errors.Trace(err)
 	}
 
-	// Set monitored options
-	if topo.MonitoredOptions.DeployDir == "" {
-		topo.MonitoredOptions.DeployDir = filepath.Join(topo.GlobalOptions.DeployDir,
-			fmt.Sprintf("%s-%d", spec.RoleMonitor, topo.MonitoredOptions.NodeExporterPort))
-	}
-	if topo.MonitoredOptions.DataDir == "" {
-		topo.MonitoredOptions.DataDir = filepath.Join(topo.GlobalOptions.DataDir,
-			fmt.Sprintf("%s-%d", spec.RoleMonitor, topo.MonitoredOptions.NodeExporterPort))
-	}
-
 	if err := fillDMCustomDefaults(&topo.GlobalOptions, topo); err != nil {
 		return err
 	}
@@ -422,43 +411,6 @@ func (topo *DMTopologySpecification) portConflictsDetect() error {
 						cfg: cfg,
 					}
 				}
-			}
-		}
-	}
-
-	// Port conflicts in monitored components
-	monitoredPortTypes := []string{
-		"NodeExporterPort",
-		"BlackboxExporterPort",
-	}
-	monitoredOpt := topoSpec.FieldByName(monitorOptionTypeName)
-	for host := range uniqueHosts {
-		cfg := "monitored"
-		for _, portType := range monitoredPortTypes {
-			f := monitoredOpt.FieldByName(portType)
-			item := usedPort{
-				host: host,
-				port: int(f.Int()),
-			}
-			ft, found := monitoredOpt.Type().FieldByName(portType)
-			if !found {
-				return errors.Errorf("incompatible change `%s.%s`", monitorOptionTypeName, portType)
-			}
-			// `yaml:"node_exporter_port,omitempty"`
-			tp := strings.Split(ft.Tag.Get("yaml"), ",")[0]
-			prev, exist := portStats[item]
-			if exist {
-				return &meta.ValidateErr{
-					Type:   meta.TypeConflict,
-					Target: "port",
-					LHS:    fmt.Sprintf("%s:%s.%s", prev.cfg, item.host, prev.tp),
-					RHS:    fmt.Sprintf("%s:%s.%s", cfg, item.host, tp),
-					Value:  item.port,
-				}
-			}
-			portStats[item] = conflict{
-				tp:  tp,
-				cfg: cfg,
 			}
 		}
 	}
@@ -642,15 +594,15 @@ func (topo *DMTopologySpecification) GetMasterList() []string {
 // Merge returns a new DMTopologySpecification which sum old ones
 func (topo *DMTopologySpecification) Merge(that *DMTopologySpecification) *DMTopologySpecification {
 	return &DMTopologySpecification{
-		GlobalOptions:    topo.GlobalOptions,
-		MonitoredOptions: topo.MonitoredOptions,
-		ServerConfigs:    topo.ServerConfigs,
-		Masters:          append(topo.Masters, that.Masters...),
-		Workers:          append(topo.Workers, that.Workers...),
-		Portals:          append(topo.Portals, that.Portals...),
-		Monitors:         append(topo.Monitors, that.Monitors...),
-		Grafana:          append(topo.Grafana, that.Grafana...),
-		Alertmanager:     append(topo.Alertmanager, that.Alertmanager...),
+		GlobalOptions: topo.GlobalOptions,
+		// MonitoredOptions: topo.MonitoredOptions,
+		ServerConfigs: topo.ServerConfigs,
+		Masters:       append(topo.Masters, that.Masters...),
+		Workers:       append(topo.Workers, that.Workers...),
+		Portals:       append(topo.Portals, that.Portals...),
+		Monitors:      append(topo.Monitors, that.Monitors...),
+		Grafana:       append(topo.Grafana, that.Grafana...),
+		Alertmanager:  append(topo.Alertmanager, that.Alertmanager...),
 	}
 }
 
