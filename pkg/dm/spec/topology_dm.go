@@ -79,9 +79,9 @@ type (
 type (
 	// DMServerConfigs represents the server runtime configuration
 	DMServerConfigs struct {
-		Master map[string]interface{} `yaml:"dm-master"`
-		Worker map[string]interface{} `yaml:"dm-worker"`
-		Portal map[string]interface{} `yaml:"dm-portal"`
+		Master map[string]interface{} `yaml:"dm_master"`
+		Worker map[string]interface{} `yaml:"dm_worker"`
+		Portal map[string]interface{} `yaml:"dm_portal"`
 	}
 
 	// DMTopologySpecification represents the specification of topology.yaml
@@ -89,9 +89,9 @@ type (
 		GlobalOptions GlobalOptions `yaml:"global,omitempty"`
 		// MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty"`
 		ServerConfigs DMServerConfigs    `yaml:"server_configs,omitempty"`
-		Masters       []MasterSpec       `yaml:"dm-master_servers"`
-		Workers       []WorkerSpec       `yaml:"dm-worker_servers"`
-		Portals       []PortalSpec       `yaml:"dm-portal_servers"`
+		Masters       []MasterSpec       `yaml:"dm_master_servers"`
+		Workers       []WorkerSpec       `yaml:"dm_worker_servers"`
+		Portals       []PortalSpec       `yaml:"dm_portal_servers"`
 		Monitors      []PrometheusSpec   `yaml:"monitoring_servers"`
 		Grafana       []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
 		Alertmanager  []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
