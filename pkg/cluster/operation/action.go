@@ -32,7 +32,7 @@ import (
 // Start the cluster.
 func Start(
 	getter ExecutorGetter,
-	cluster *spec.Specification,
+	cluster spec.Spec,
 	options Options,
 ) error {
 	uniqueHosts := set.NewStringSet()
@@ -50,8 +50,10 @@ func Start(
 		for _, inst := range insts {
 			if !uniqueHosts.Exist(inst.GetHost()) {
 				uniqueHosts.Insert(inst.GetHost())
-				if err := StartMonitored(getter, inst, cluster.MonitoredOptions, options.OptTimeout); err != nil {
-					return err
+				if cluster.GetMonitoredOptions() != nil {
+					if err := StartMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -80,7 +82,7 @@ func Stop(
 		insts := FilterInstance(com.Instances(), nodeFilter)
 		err := StopComponent(getter, insts)
 		if err != nil {
-			return errors.Annotatef(err, "failed to stop %s cluster", com.Name())
+			return errors.Annotatef(err, "failed to stop %s", com.Name())
 		}
 		for _, inst := range insts {
 			instCount[inst.GetHost()]--
@@ -338,7 +340,7 @@ func Restart(
 }
 
 // StartMonitored start BlackboxExporter and NodeExporter
-func StartMonitored(getter ExecutorGetter, instance spec.Instance, options spec.MonitoredOptions, timeout int64) error {
+func StartMonitored(getter ExecutorGetter, instance spec.Instance, options *spec.MonitoredOptions, timeout int64) error {
 	ports := map[string]int{
 		spec.ComponentNodeExporter:     options.NodeExporterPort,
 		spec.ComponentBlackboxExporter: options.BlackboxExporterPort,

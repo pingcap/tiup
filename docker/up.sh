@@ -130,7 +130,7 @@ if [ -z "${DEV}" ]; then
     )
 else
 	INFO "Build tiup-cluster in $TIUP_CLUSTER_ROOT"
-	(cd $TIUP_CLUSTER_ROOT;GOOS=linux GOARCH=amd64 make cluster dms)
+	(cd $TIUP_CLUSTER_ROOT;GOOS=linux GOARCH=amd64 make cluster dm)
 fi
 
 if [ "${INIT_ONLY}" -eq 1 ]; then
