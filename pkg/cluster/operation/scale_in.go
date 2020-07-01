@@ -28,7 +28,7 @@ import (
 )
 
 // TODO: We can make drainer not async.
-var asyncOfflineComps = set.NewStringSet(spec.ComponentPump, spec.ComponentTiKV, spec.ComponentDrainer)
+var asyncOfflineComps = set.NewStringSet(spec.ComponentPump, spec.ComponentTiKV, spec.ComponentTiFlash, spec.ComponentDrainer)
 
 // AsyncNodes return all nodes async destroy or not.
 func AsyncNodes(spec *spec.Specification, nodes []string, async bool) []string {
@@ -111,18 +111,49 @@ func ScaleInCluster(
 		return errors.New("cannot delete all TiKV servers")
 	}
 
+	var pdEndpoint []string
+	for _, instance := range (&spec.PDComponent{Specification: cluster}).Instances() {
+		if !deletedNodes.Exist(instance.ID()) {
+			pdEndpoint = append(pdEndpoint, addr(instance))
+		}
+	}
+
 	if options.Force {
 		for _, component := range cluster.ComponentsByStartOrder() {
 			for _, instance := range component.Instances() {
 				if !deletedNodes.Exist(instance.ID()) {
 					continue
 				}
+
+				pdClient := api.NewPDClient(pdEndpoint, 10*time.Second, nil)
+				binlogClient, _ := api.NewBinlogClient(pdEndpoint, nil /* tls.Config */)
+
+				if component.Name() != spec.ComponentPump && component.Name() != spec.ComponentDrainer {
+					if err := deleteMember(component, instance, pdClient, binlogClient, options.APITimeout); err != nil {
+						log.Warnf("failed to delete %s: %v", component.Name(), err)
+					}
+				}
+
 				// just try stop and destroy
 				if err := StopComponent(getter, []spec.Instance{instance}); err != nil {
 					log.Warnf("failed to stop %s: %v", component.Name(), err)
 				}
 				if err := DestroyComponent(getter, []spec.Instance{instance}, cluster, options); err != nil {
 					log.Warnf("failed to destroy %s: %v", component.Name(), err)
+				}
+
+				// directly update pump&drainer 's state as offline in etcd.
+				if binlogClient != nil {
+					id := instance.ID()
+					if component.Name() == spec.ComponentPump {
+						if err := binlogClient.UpdatePumpState(id, "offline"); err != nil {
+							log.Warnf("failed to update %s state as offline: %v", component.Name(), err)
+						}
+					} else if component.Name() == spec.ComponentDrainer {
+						if err := binlogClient.UpdateDrainerState(id, "offline"); err != nil {
+							log.Warnf("failed to update %s state as offline: %v", component.Name(), err)
+						}
+					}
 				}
 
 				continue
@@ -135,12 +166,6 @@ func ScaleInCluster(
 
 	// At least a PD server exists
 	var pdClient *api.PDClient
-	var pdEndpoint []string
-	for _, instance := range (&spec.PDComponent{Specification: cluster}).Instances() {
-		if !deletedNodes.Exist(instance.ID()) {
-			pdEndpoint = append(pdEndpoint, addr(instance))
-		}
-	}
 
 	if len(pdEndpoint) == 0 {
 		return errors.New("cannot find available PD instance")
@@ -188,11 +213,6 @@ func ScaleInCluster(
 		}
 	}
 
-	timeoutOpt := &clusterutil.RetryOption{
-		Timeout: time.Second * time.Duration(options.APITimeout),
-		Delay:   time.Second * 5,
-	}
-
 	// Delete member from cluster
 	for _, component := range cluster.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
@@ -200,32 +220,9 @@ func ScaleInCluster(
 				continue
 			}
 
-			switch component.Name() {
-			case spec.ComponentTiKV:
-				if err := pdClient.DelStore(instance.ID(), timeoutOpt); err != nil {
-					return err
-				}
-			case spec.ComponentTiFlash:
-				addr := instance.GetHost() + ":" + strconv.Itoa(instance.(*spec.TiFlashInstance).GetServicePort())
-				if err := pdClient.DelStore(addr, timeoutOpt); err != nil {
-					return err
-				}
-			case spec.ComponentPD:
-				if err := pdClient.DelPD(instance.(*spec.PDInstance).Name, timeoutOpt); err != nil {
-					return err
-				}
-			case spec.ComponentDrainer:
-				addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
-				err := binlogClient.OfflineDrainer(addr, addr)
-				if err != nil {
-					return errors.AddStack(err)
-				}
-			case spec.ComponentPump:
-				addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
-				err := binlogClient.OfflinePump(addr, addr)
-				if err != nil {
-					return errors.AddStack(err)
-				}
+			err := deleteMember(component, instance, pdClient, binlogClient, options.APITimeout)
+			if err != nil {
+				return errors.Trace(err)
 			}
 
 			if !asyncOfflineComps.Exist(instance.ComponentName()) {
@@ -280,6 +277,49 @@ func ScaleInCluster(
 		}
 		s.Offline = true
 		cluster.Drainers[i] = s
+	}
+
+	return nil
+}
+
+func deleteMember(
+	component spec.Component,
+	instance spec.Instance,
+	pdClient *api.PDClient,
+	binlogClient *api.BinlogClient,
+	timeoutSecond int64,
+) error {
+	timeoutOpt := &clusterutil.RetryOption{
+		Timeout: time.Second * time.Duration(timeoutSecond),
+		Delay:   time.Second * 5,
+	}
+
+	switch component.Name() {
+	case spec.ComponentTiKV:
+		if err := pdClient.DelStore(instance.ID(), timeoutOpt); err != nil {
+			return err
+		}
+	case spec.ComponentTiFlash:
+		addr := instance.GetHost() + ":" + strconv.Itoa(instance.(*spec.TiFlashInstance).GetServicePort())
+		if err := pdClient.DelStore(addr, timeoutOpt); err != nil {
+			return err
+		}
+	case spec.ComponentPD:
+		if err := pdClient.DelPD(instance.(*spec.PDInstance).Name, timeoutOpt); err != nil {
+			return err
+		}
+	case spec.ComponentDrainer:
+		addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
+		err := binlogClient.OfflineDrainer(addr, addr)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+	case spec.ComponentPump:
+		addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
+		err := binlogClient.OfflinePump(addr, addr)
+		if err != nil {
+			return errors.AddStack(err)
+		}
 	}
 
 	return nil
