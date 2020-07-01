@@ -500,11 +500,11 @@ func (r *V1Repository) fetchTimestamp() (changed bool, manifest *v1manifest.Mani
 		return false, nil, errors.Trace(err)
 	}
 
-	if exists && ts.Version < localTs.Version {
+	if !exists {
+		changed = true
+	} else if ts.Version < localTs.Version {
 		return false, nil, fmt.Errorf("timestamp manifest has a version number < the old manifest (%v, %v)", ts.Version, localTs.Version)
-	}
-
-	if hash.Hashes[v1manifest.SHA256] != localTs.SnapshotHash().Hashes[v1manifest.SHA256] {
+	} else if hash.Hashes[v1manifest.SHA256] != localTs.SnapshotHash().Hashes[v1manifest.SHA256] {
 		changed = true
 	}
 

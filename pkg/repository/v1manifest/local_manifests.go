@@ -143,6 +143,12 @@ func (ms *FsManifests) LoadManifest(role ValidManifest) (*Manifest, bool, error)
 
 	m, err := ReadManifest(strings.NewReader(manifest), role, ms.keys)
 	if err != nil {
+		// We can think that there is no such file if it's expired or has wrong signature
+		if IsExpirationError(errors.Cause(err)) || IsSignatureError(errors.Cause(err)) {
+			// Maybe we can os.Remove(filename) here
+			fmt.Printf("Warn: %s\n", err.Error())
+			return nil, false, nil
+		}
 		return m, true, err
 	}
 
@@ -160,6 +166,12 @@ func (ms *FsManifests) LoadComponentManifest(item *ComponentItem, filename strin
 	component := new(Component)
 	_, err = ReadComponentManifest(strings.NewReader(manifest), component, item, ms.keys)
 	if err != nil {
+		// We can think that there is no such file if it's expired or has wrong signature
+		if IsExpirationError(errors.Cause(err)) || IsSignatureError(errors.Cause(err)) {
+			// Maybe we can os.Remove(filename) here
+			fmt.Printf("Warn: %s\n", err.Error())
+			return nil, nil
+		}
 		return nil, err
 	}
 
