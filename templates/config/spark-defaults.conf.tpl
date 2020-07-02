@@ -32,22 +32,12 @@
   {{- end}}
 {{- end}}
 
-{{- define "MasterList"}}
-  {{- range $idx, $m := .}}
-    {{- if eq $idx 0}}
-      {{- $m}}
-    {{- else -}}
-      ,{{$m}}
-    {{- end}}
-  {{- end}}
-{{- end}}
-
 {{ range $k, $v := .CustomFields}}
 {{ $k }}   {{ $v }}
 {{- end }}
 
 {{- if .TiSparkMaster}}
-spark.master   spark://{{template "MasterList" .TiSparkMaster}}
+spark.master   spark://{{.TiSparkMaster}}:{{.MasterPort}}
 {{- end}}
 
 spark.tispark.pd.addresses {{template "PDList" .Endpoints}}

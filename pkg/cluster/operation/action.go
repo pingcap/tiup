@@ -399,7 +399,7 @@ func RestartComponent(getter ExecutorGetter, instances []spec.Instance, timeout 
 				"TiSpark need to be restarted manually, please login to the server and execute stop-master.sh and start-master.sh in %s",
 				ins.DeployDir())
 			continue
-		case spec.RoleTiSparkSlave:
+		case spec.RoleTiSparkWorker:
 			log.Warnf(
 				"TiSpark need to be restarted manually, please login to the server and execute stop-slave.sh and start-slave.sh in %s",
 				ins.DeployDir())
@@ -451,7 +451,7 @@ func startInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) erro
 			"TiSpark need to be started manually, please login to the server and execute %s/start-master.sh",
 			ins.DeployDir())
 		return nil
-	case spec.RoleTiSparkSlave:
+	case spec.RoleTiSparkWorker:
 		log.Warnf(
 			"TiSpark need to be started manually, please login to the server and execute %s/start-slave.sh",
 			ins.DeployDir())
@@ -601,7 +601,7 @@ func stopInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) error
 			"TiSpark need to be stopped manually, please login to the server and execute %s/stop-master.sh",
 			ins.DeployDir())
 		return nil
-	case spec.RoleTiSparkSlave:
+	case spec.RoleTiSparkWorker:
 		log.Warnf(
 			"TiSpark need to be stopped manually, please login to the server and execute %s/stop-slave.sh",
 			ins.DeployDir())

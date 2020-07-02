@@ -57,7 +57,7 @@ fi
 # need to insert arguments between it and the other arguments
 
 {{- if .TiSparkMaster}}
-MASTER=spark://{{.Masters}}
+MASTER=spark://{{.TiSparkMaster}}:{{.MasterPort}}
 shift
 {{- end}}
 

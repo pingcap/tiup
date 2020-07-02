@@ -38,7 +38,7 @@ const (
 var (
 	RoleMonitor       = "monitor"
 	RoleTiSparkMaster = "tispark-master"
-	RoleTiSparkSlave  = "tispark-slave"
+	RoleTiSparkWorker = "tispark-worker"
 )
 
 type (
@@ -98,8 +98,8 @@ type (
 		PumpServers      []PumpSpec          `yaml:"pump_servers,omitempty"`
 		Drainers         []DrainerSpec       `yaml:"drainer_servers,omitempty"`
 		CDCServers       []CDCSpec           `yaml:"cdc_servers,omitempty"`
-		TiSparkMasters   []TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
-		TiSparkSlaves    []TiSparkSlaveSpec  `yaml:"tispark_slaves,omitempty"`
+		TiSparkMasters   []TiSparkMasterSpec `yaml:"tispark_master,omitempty"`
+		TiSparkWorkers   []TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
 		Monitors         []PrometheusSpec    `yaml:"monitoring_servers"`
 		Grafana          []GrafanaSpec       `yaml:"grafana_servers,omitempty"`
 		Alertmanager     []AlertManagerSpec  `yaml:"alertmanager_servers,omitempty"`
@@ -740,7 +740,7 @@ func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 	comps = append(comps, &GrafanaComponent{s})
 	comps = append(comps, &AlertManagerComponent{s})
 	comps = append(comps, &TiSparkMasterComponent{s})
-	comps = append(comps, &TiSparkSlaveComponent{s})
+	comps = append(comps, &TiSparkWorkerComponent{s})
 	return
 }
 

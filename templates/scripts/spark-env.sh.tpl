@@ -72,5 +72,17 @@
 {{- end }}
 
 {{- if .TiSparkMaster}}
-SPARK_MASTER_HOST={{.Masters}}
+SPARK_MASTER_HOST={{.TiSparkMaster}}
+{{- end}}
+{{- if ne .MasterPort 0}}
+SPARK_MASTER_PORT={{.MasterPort}}
+{{- end}}
+{{- if ne .MasterUIPort 0}}
+SPARK_MASTER_WEBUI_PORT={{.MasterUIPort}}
+{{- end}}
+{{- if ne .WorkerPort 0}}
+SPARK_WORKER_PORT={{.WorkerPort}}
+{{- end}}
+{{- if ne .WorkerUIPort 0}}
+SPARK_WORKER_WEBUI_PORT={{.WorkerUIPort}}
 {{- end}}

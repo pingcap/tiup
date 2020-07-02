@@ -16,24 +16,41 @@ package scripts
 import (
 	"bytes"
 	"io/ioutil"
-	"strings"
 	"text/template"
 )
 
 // TiSparkEnv represent the data to generate TiSpark environment config
 type TiSparkEnv struct {
-	TiSparkMaster []string
+	TiSparkMaster string
+	MasterPort    int
+	WorkerPort    int
+	MasterUIPort  int
+	WorkerUIPort  int
 	CustomEnvs    map[string]string
 }
 
 // NewTiSparkEnv returns a TiSparkConfig
-func NewTiSparkEnv(masters []string) *TiSparkEnv {
-	return &TiSparkEnv{TiSparkMaster: masters}
+func NewTiSparkEnv(master string) *TiSparkEnv {
+	return &TiSparkEnv{TiSparkMaster: master}
 }
 
 // WithCustomEnv sets custom setting fields
 func (c *TiSparkEnv) WithCustomEnv(m map[string]string) *TiSparkEnv {
 	c.CustomEnvs = m
+	return c
+}
+
+// WithMasterPorts sets port for masters
+func (c *TiSparkEnv) WithMasterPorts(port, ui int) *TiSparkEnv {
+	c.MasterPort = port
+	c.MasterUIPort = ui
+	return c
+}
+
+// WithWorkerPorts sets port for masters
+func (c *TiSparkEnv) WithWorkerPorts(port, ui int) *TiSparkEnv {
+	c.WorkerPort = port
+	c.WorkerUIPort = ui
 	return c
 }
 
@@ -88,9 +105,4 @@ func (c *TiSparkEnv) SlaveScriptWithTemplate() ([]byte, error) {
 	}
 
 	return content.Bytes(), nil
-}
-
-// Masters joins the master list
-func (c *TiSparkEnv) Masters() string {
-	return strings.Join(c.TiSparkMaster, ",")
 }

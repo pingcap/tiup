@@ -17,7 +17,6 @@ import (
 	"bytes"
 	"io/ioutil"
 	"path/filepath"
-	"strings"
 	"text/template"
 
 	"github.com/pingcap/tiup/pkg/cluster/embed"
@@ -25,7 +24,8 @@ import (
 
 // TiSparkConfig represent the data to generate TiSpark configs
 type TiSparkConfig struct {
-	TiSparkMaster []string
+	TiSparkMaster string
+	MasterPort    int
 	CustomFields  map[string]interface{}
 	Endpoints     []string
 }
@@ -35,9 +35,10 @@ func NewTiSparkConfig(pds []string) *TiSparkConfig {
 	return &TiSparkConfig{Endpoints: pds}
 }
 
-// WithMasters sets master address
-func (c *TiSparkConfig) WithMasters(master []string) *TiSparkConfig {
+// WithMaster sets master address
+func (c *TiSparkConfig) WithMaster(master string, port int) *TiSparkConfig {
 	c.TiSparkMaster = master
+	c.MasterPort = port
 	return c
 }
 
@@ -80,9 +81,4 @@ func (c *TiSparkConfig) ConfigWithTemplate(tpl string) ([]byte, error) {
 	}
 
 	return content.Bytes(), nil
-}
-
-// Masters joins the master list
-func (c *TiSparkConfig) Masters() string {
-	return strings.Join(c.TiSparkMaster, ",")
 }
