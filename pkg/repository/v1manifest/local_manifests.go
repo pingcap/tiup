@@ -146,7 +146,9 @@ func (ms *FsManifests) LoadManifest(role ValidManifest) (*Manifest, bool, error)
 		// We can think that there is no such file if it's expired or has wrong signature
 		if IsExpirationError(errors.Cause(err)) || IsSignatureError(errors.Cause(err)) {
 			// Maybe we can os.Remove(filename) here
-			fmt.Printf("Warn: %s\n", err.Error())
+			if IsSignatureError(errors.Cause(err)) {
+				fmt.Printf("Warn: %s\n", err.Error())
+			}
 			return nil, false, nil
 		}
 		return m, true, err
@@ -169,7 +171,9 @@ func (ms *FsManifests) LoadComponentManifest(item *ComponentItem, filename strin
 		// We can think that there is no such file if it's expired or has wrong signature
 		if IsExpirationError(errors.Cause(err)) || IsSignatureError(errors.Cause(err)) {
 			// Maybe we can os.Remove(filename) here
-			fmt.Printf("Warn: %s\n", err.Error())
+			if IsSignatureError(errors.Cause(err)) {
+				fmt.Printf("Warn: %s\n", err.Error())
+			}
 			return nil, nil
 		}
 		return nil, err

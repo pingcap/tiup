@@ -357,7 +357,7 @@ func (r *V1Repository) updateLocalRoot() error {
 	}
 
 	// Check expire of this version.
-	err = v1manifest.CheckExpiry(oldRoot.Expires)
+	err = v1manifest.CheckExpiry(v1manifest.ManifestFilenameRoot, oldRoot.Expires)
 	if err != nil {
 		return errors.AddStack(err)
 	}
