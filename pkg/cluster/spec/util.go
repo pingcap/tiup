@@ -18,9 +18,7 @@ import (
 
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/meta"
-	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 )
 
@@ -41,16 +39,6 @@ var (
 	// ErrClusterSaveMetaFailed is ErrClusterSaveMetaFailed
 	ErrClusterSaveMetaFailed = errNSCluster.NewType("save_meta_failed")
 )
-
-// EnsureClusterDir ensures that the cluster directory exists.
-func EnsureClusterDir(clusterName string) error {
-	if err := utils.CreateDir(ClusterPath(clusterName)); err != nil {
-		return ErrClusterCreateDirFailed.
-			Wrap(err, "Failed to create cluster metadata directory '%s'", ClusterPath(clusterName)).
-			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
-	}
-	return nil
-}
 
 // ClusterMeta is the specification of generic cluster metadata
 type ClusterMeta struct {
