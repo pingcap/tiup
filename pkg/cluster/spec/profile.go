@@ -78,15 +78,5 @@ func ProfilePath(subpath ...string) string {
 // as its name.
 // It is not guaranteed the path already exist.
 func ClusterPath(cluster string, subpath ...string) string {
-	if cluster == "" {
-		// keep the same behavior with legacy version of TiOps, we could change
-		// it in the future if needed.
-		cluster = "default-cluster"
-	}
-
-	return path.Join(append([]string{
-		profileDir,
-		TiOpsClusterDir,
-		cluster,
-	}, subpath...)...)
+	return NewTiDBSpec().ClusterPath(cluster, subpath...)
 }

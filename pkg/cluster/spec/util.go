@@ -14,16 +14,14 @@
 package spec
 
 import (
-	"io/ioutil"
-	"os"
+	"path/filepath"
 
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/file"
+	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
-	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -44,6 +42,16 @@ var (
 	ErrClusterSaveMetaFailed = errNSCluster.NewType("save_meta_failed")
 )
 
+// EnsureClusterDir ensures that the cluster directory exists.
+func EnsureClusterDir(clusterName string) error {
+	if err := utils.CreateDir(ClusterPath(clusterName)); err != nil {
+		return ErrClusterCreateDirFailed.
+			Wrap(err, "Failed to create cluster metadata directory '%s'", ClusterPath(clusterName)).
+			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
+	}
+	return nil
+}
+
 // ClusterMeta is the specification of generic cluster metadata
 type ClusterMeta struct {
 	User    string `yaml:"user"`         // the user to run and manage cluster on remote
@@ -55,62 +63,27 @@ type ClusterMeta struct {
 	Topology *Specification `yaml:"topology"`
 }
 
-// EnsureClusterDir ensures that the cluster directory exists.
-func EnsureClusterDir(clusterName string) error {
-	if err := utils.CreateDir(ClusterPath(clusterName)); err != nil {
-		return ErrClusterCreateDirFailed.
-			Wrap(err, "Failed to create cluster metadata directory '%s'", ClusterPath(clusterName)).
-			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
-	}
-	return nil
+// NewTiDBSpec create a Spec for tidb cluster.
+func NewTiDBSpec() *meta.Spec {
+	clusterBaseDir := filepath.Join(profileDir, TiOpsClusterDir)
+	clusterSpec := meta.NewSpec(clusterBaseDir)
+	return clusterSpec
 }
 
 // SaveClusterMeta saves the cluster meta information to profile directory
-func SaveClusterMeta(clusterName string, meta *ClusterMeta) error {
-	wrapError := func(err error) *errorx.Error {
-		return ErrClusterSaveMetaFailed.Wrap(err, "Failed to save cluster metadata")
-	}
-
-	metaFile := ClusterPath(clusterName, MetaFileName)
-	backupDir := ClusterPath(clusterName, BackupDirName)
-
+func SaveClusterMeta(clusterName string, cmeta *ClusterMeta) error {
 	// set the cmd version
-	meta.OpsVer = version.NewTiUPVersion().String()
-
-	if err := EnsureClusterDir(clusterName); err != nil {
-		return wrapError(err)
-	}
-
-	if err := os.MkdirAll(backupDir, 0755); err != nil {
-		return wrapError(err)
-	}
-
-	data, err := yaml.Marshal(meta)
-	if err != nil {
-		return wrapError(err)
-	}
-
-	err = file.SaveFileWithBackup(metaFile, data, backupDir)
-	if err != nil {
-		return wrapError(err)
-	}
-
-	return nil
+	cmeta.OpsVer = version.NewTiUPVersion().String()
+	return NewTiDBSpec().SaveClusterMeta(clusterName, cmeta)
 }
 
 // ClusterMetadata tries to read the metadata of a cluster from file
 func ClusterMetadata(clusterName string) (*ClusterMeta, error) {
 	var cm ClusterMeta
-	topoFile := ClusterPath(clusterName, MetaFileName)
-
-	yamlFile, err := ioutil.ReadFile(topoFile)
+	err := NewTiDBSpec().ClusterMetadata(clusterName, &cm)
 	if err != nil {
-		return nil, errors.Trace(err)
+		return nil, errors.AddStack(err)
 	}
 
-	if err = yaml.Unmarshal(yamlFile, &cm); err != nil {
-		// return the meta no matter there is error or not
-		return &cm, errors.Trace(err)
-	}
 	return &cm, nil
 }

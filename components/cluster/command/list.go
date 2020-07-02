@@ -15,14 +15,11 @@ package command
 
 import (
 	"errors"
-	"io/ioutil"
-	"os"
 
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
-	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -38,30 +35,29 @@ func newListCmd() *cobra.Command {
 }
 
 func listCluster() error {
-	clusterDir := spec.ProfilePath(spec.TiOpsClusterDir)
+	names, err := tidbSpec.List()
+	if err != nil {
+		return perrs.AddStack(err)
+	}
+
 	clusterTable := [][]string{
 		// Header
 		{"Name", "User", "Version", "Path", "PrivateKey"},
 	}
-	fileInfos, err := ioutil.ReadDir(clusterDir)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	for _, fi := range fileInfos {
-		if tiuputils.IsNotExist(spec.ClusterPath(fi.Name(), spec.MetaFileName)) {
-			continue
-		}
-		metadata, err := spec.ClusterMetadata(fi.Name())
+
+	for _, name := range names {
+		metadata := new(spec.ClusterMeta)
+		err := tidbSpec.ClusterMetadata(name, metadata)
 		if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 			return perrs.Trace(err)
 		}
 
 		clusterTable = append(clusterTable, []string{
-			fi.Name(),
+			name,
 			metadata.User,
 			metadata.Version,
-			spec.ClusterPath(fi.Name()),
-			spec.ClusterPath(fi.Name(), "ssh", "id_rsa"),
+			tidbSpec.ClusterPath(name),
+			tidbSpec.ClusterPath(name, "ssh", "id_rsa"),
 		})
 	}
 

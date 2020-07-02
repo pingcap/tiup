@@ -275,7 +275,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 		return errors.Trace(err)
 	}
 
-	err = spec.SaveDMMeta(clusterName, &spec.DMMeta{
+	err = dmspec.SaveClusterMeta(clusterName, &spec.DMMeta{
 		User:     globalOptions.User,
 		Version:  clusterVersion,
 		Topology: &topo,
