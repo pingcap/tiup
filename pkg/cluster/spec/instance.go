@@ -216,7 +216,10 @@ func (i *instance) InstanceName() string {
 func (i *instance) ServiceName() string {
 	switch i.ComponentName() {
 	case ComponentSpark, ComponentTiSpark:
-		return ""
+		if i.port > 0 {
+			return fmt.Sprintf("%s-%d.service", i.Role(), i.port)
+		}
+		return fmt.Sprintf("%s.service", i.Role())
 	}
 	if i.port > 0 {
 		return fmt.Sprintf("%s-%d.service", i.name, i.port)

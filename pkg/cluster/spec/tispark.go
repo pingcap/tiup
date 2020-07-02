@@ -19,9 +19,12 @@ import (
 	"path/filepath"
 	"reflect"
 
+	"github.com/google/uuid"
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
+	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
 	"github.com/pingcap/tiup/pkg/meta"
 )
 
@@ -155,8 +158,25 @@ func (i *TiSparkMasterInstance) GetCustomEnvs() map[string]string {
 
 // InitConfig implement Instance interface
 func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
-	// we don't provide systemd service file for tispark, user need to start the service manually
-	// with deploy_dir/spark/sbin/start-master.sh
+	// generate systemd service to invoke spark's start/stop scripts
+	comp := i.Role()
+	host := i.GetHost()
+	port := i.GetPort()
+	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
+
+	systemCfg := system.NewTiSparkConfig(comp, deployUser, paths.Deploy)
+
+	if err := systemCfg.ConfigToFile(sysCfg); err != nil {
+		return errors.Trace(err)
+	}
+	tgt := filepath.Join("/tmp", comp+"_"+uuid.New().String()+".service")
+	if err := e.Transfer(sysCfg, tgt, false); err != nil {
+		return errors.Annotatef(err, "transfer from %s to %s failed", sysCfg, tgt)
+	}
+	cmd := fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port)
+	if _, _, err := e.Execute(cmd, true); err != nil {
+		return errors.Annotatef(err, "execute: %s", cmd)
+	}
 
 	// transfer default config
 	pdList := make([]string, 0)
@@ -164,10 +184,10 @@ func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clu
 		pdList = append(pdList, fmt.Sprintf("%s:%d", pd.IP, pd.ClientPort))
 	}
 
-	cfg := config.NewTiSparkConfig(pdList).WithMaster(i.GetHost(), i.GetPort()).
+	cfg := config.NewTiSparkConfig(pdList).WithMaster(host, port).
 		WithCustomFields(i.GetCustomFields())
 	// transfer spark-defaults.conf
-	fp := filepath.Join(paths.Cache, fmt.Sprintf("spark-defaults-%s-%d.conf", i.GetHost(), i.GetPort()))
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("spark-defaults-%s-%d.conf", host, port))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
@@ -176,11 +196,11 @@ func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clu
 		return err
 	}
 
-	env := scripts.NewTiSparkEnv(i.GetHost()).
+	env := scripts.NewTiSparkEnv(host).
 		WithMasterPorts(i.usedPorts[0], i.usedPorts[1]).
 		WithCustomEnv(i.GetCustomEnvs())
 	// transfer spark-env.sh file
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("spark-env-%s-%d.sh", i.GetHost(), i.GetPort()))
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("spark-env-%s-%d.sh", host, port))
 	if err := env.ScriptToFile(fp); err != nil {
 		return err
 	}
@@ -191,7 +211,7 @@ func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clu
 	}
 
 	// transfer log4j config (it's not a template but a static file)
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("spark-log4j-%s-%d.properties", i.GetHost(), i.GetPort()))
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("spark-log4j-%s-%d.properties", host, port))
 	log4jFile, err := config.GetConfig("spark-log4j.properties.tpl")
 	if err != nil {
 		return err
@@ -274,8 +294,25 @@ func (i *TiSparkWorkerInstance) GetCustomEnvs() map[string]string {
 
 // InitConfig implement Instance interface
 func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
-	// we don't provide systemd service file for tispark, user need to start the service manually
-	// with deploy_dir/spark/sbin/start-slave.sh
+	// generate systemd service to invoke spark's start/stop scripts
+	comp := i.Role()
+	host := i.GetHost()
+	port := i.GetPort()
+	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
+
+	systemCfg := system.NewTiSparkConfig(comp, deployUser, paths.Deploy)
+
+	if err := systemCfg.ConfigToFile(sysCfg); err != nil {
+		return errors.Trace(err)
+	}
+	tgt := filepath.Join("/tmp", comp+"_"+uuid.New().String()+".service")
+	if err := e.Transfer(sysCfg, tgt, false); err != nil {
+		return errors.Annotatef(err, "transfer from %s to %s failed", sysCfg, tgt)
+	}
+	cmd := fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port)
+	if _, _, err := e.Execute(cmd, true); err != nil {
+		return errors.Annotatef(err, "execute: %s", cmd)
+	}
 
 	// transfer default config
 	pdList := make([]string, 0)
@@ -288,7 +325,7 @@ func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clu
 		i.topo.TiSparkMasters[0].Port,
 	).WithCustomFields(i.GetCustomFields())
 	// transfer spark-defaults.conf
-	fp := filepath.Join(paths.Cache, fmt.Sprintf("spark-defaults-%s-%d.conf", i.GetHost(), i.GetPort()))
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("spark-defaults-%s-%d.conf", host, port))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
@@ -302,7 +339,7 @@ func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clu
 		WithWorkerPorts(i.usedPorts[0], i.usedPorts[1]).
 		WithCustomEnv(i.GetCustomEnvs())
 	// transfer spark-env.sh file
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("spark-env-%s-%d.sh", i.GetHost(), i.GetPort()))
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("spark-env-%s-%d.sh", host, port))
 	if err := env.ScriptToFile(fp); err != nil {
 		return err
 	}
@@ -313,7 +350,7 @@ func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clu
 	}
 
 	// transfer start-slave.sh
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("start-tispark-slave-%s-%d.sh", i.GetHost(), i.GetPort()))
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("start-tispark-slave-%s-%d.sh", host, port))
 	slaveSh, err := env.SlaveScriptWithTemplate()
 	if err != nil {
 		return err
@@ -328,7 +365,7 @@ func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clu
 	}
 
 	// transfer log4j config (it's not a template but a static file)
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("spark-log4j-%s-%d.properties", i.GetHost(), i.GetPort()))
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("spark-log4j-%s-%d.properties", host, port))
 	log4jFile, err := config.GetConfig("spark-log4j.properties.tpl")
 	if err != nil {
 		return err

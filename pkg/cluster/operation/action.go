@@ -392,19 +392,6 @@ func RestartComponent(getter ExecutorGetter, instances []spec.Instance, timeout 
 	log.Infof("Restarting component %s", name)
 
 	for _, ins := range instances {
-		// tispark need to be started manually by user
-		switch ins.Role() {
-		case spec.RoleTiSparkMaster:
-			log.Warnf(
-				"TiSpark need to be restarted manually, please login to the server and execute stop-master.sh and start-master.sh in %s",
-				ins.DeployDir())
-			continue
-		case spec.RoleTiSparkWorker:
-			log.Warnf(
-				"TiSpark need to be restarted manually, please login to the server and execute stop-slave.sh and start-slave.sh in %s",
-				ins.DeployDir())
-			continue
-		}
 		e := getter.Get(ins.GetHost())
 		log.Infof("\tRestarting instance %s", ins.GetHost())
 
@@ -444,20 +431,6 @@ func RestartComponent(getter ExecutorGetter, instances []spec.Instance, timeout 
 }
 
 func startInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) error {
-	// tispark need to be started manually by user
-	switch ins.Role() {
-	case spec.RoleTiSparkMaster:
-		log.Warnf(
-			"TiSpark need to be started manually, please login to the server and execute %s/start-master.sh",
-			ins.DeployDir())
-		return nil
-	case spec.RoleTiSparkWorker:
-		log.Warnf(
-			"TiSpark need to be started manually, please login to the server and execute %s/start-slave.sh",
-			ins.DeployDir())
-		return nil
-	}
-
 	e := getter.Get(ins.GetHost())
 	log.Infof("\tStarting instance %s %s:%d",
 		ins.ComponentName(),
@@ -594,20 +567,6 @@ func StopMonitored(getter ExecutorGetter, instance spec.Instance, options spec.M
 }
 
 func stopInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) error {
-	// tispark need to be stopped manually by user
-	switch ins.Role() {
-	case spec.RoleTiSparkMaster:
-		log.Warnf(
-			"TiSpark need to be stopped manually, please login to the server and execute %s/stop-master.sh",
-			ins.DeployDir())
-		return nil
-	case spec.RoleTiSparkWorker:
-		log.Warnf(
-			"TiSpark need to be stopped manually, please login to the server and execute %s/stop-slave.sh",
-			ins.DeployDir())
-		return nil
-	}
-
 	e := getter.Get(ins.GetHost())
 	log.Infof("\tStopping instance %s", ins.GetHost())
 
