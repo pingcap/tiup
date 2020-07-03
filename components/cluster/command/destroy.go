@@ -28,7 +28,6 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
-	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -58,7 +57,13 @@ You can retain some nodes and roles data when destroy cluster, eg:
 
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
-			if tiuputils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
+
+			exist, err := tidbSpec.Exist(clusterName)
+			if err != nil {
+				return perrs.AddStack(err)
+			}
+
+			if !exist {
 				return perrs.Errorf("cannot destroy non-exists cluster %s", clusterName)
 			}
 

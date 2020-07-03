@@ -106,6 +106,21 @@ func (s *Spec) ClusterMetadata(clusterName string, meta interface{}) error {
 	return nil
 }
 
+// Exist check if the cluster exist by checking the meta file.
+func (s *Spec) Exist(name string) (exist bool, err error) {
+	fname := s.ClusterPath(name, MetaFileName)
+
+	_, err = os.Stat(fname)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, errors.AddStack(err)
+	}
+
+	return true, nil
+}
+
 // List return the cluster names.
 func (s *Spec) List() (names []string, err error) {
 	fileInfos, err := ioutil.ReadDir(s.base)

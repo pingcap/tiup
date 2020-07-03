@@ -15,8 +15,6 @@ package prepare
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"strconv"
 	"strings"
 
@@ -27,7 +25,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/errutil"
-	tiuputils "github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/meta"
 	"go.uber.org/zap"
 )
 
@@ -48,7 +46,7 @@ func fixDir(topo *spec.Specification) func(string) string {
 }
 
 // CheckClusterDirConflict checks cluster dir conflict
-func CheckClusterDirConflict(clusterName string, topo *spec.Specification) error {
+func CheckClusterDirConflict(clusterSpec *meta.Spec, clusterName string, topo *spec.Specification) error {
 	type DirAccessor struct {
 		dirKind  string
 		accessor func(spec.Instance, *spec.Specification) string
@@ -81,20 +79,18 @@ func CheckClusterDirConflict(clusterName string, topo *spec.Specification) error
 	currentEntries := []Entry{}
 	existingEntries := []Entry{}
 
-	clusterDir := spec.ProfilePath(spec.TiOpsClusterDir)
-	fileInfos, err := ioutil.ReadDir(clusterDir)
-	if err != nil && !os.IsNotExist(err) {
-		return err
+	names, err := clusterSpec.List()
+	if err != nil {
+		return errors.AddStack(err)
 	}
-	for _, fi := range fileInfos {
-		if fi.Name() == clusterName {
+
+	for _, name := range names {
+		if name == clusterName {
 			continue
 		}
 
-		if tiuputils.IsNotExist(spec.ClusterPath(fi.Name(), spec.MetaFileName)) {
-			continue
-		}
-		metadata, err := spec.ClusterMetadata(fi.Name())
+		metadata := new(spec.ClusterMeta)
+		err := clusterSpec.ClusterMetadata(name, metadata)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -104,7 +100,7 @@ func CheckClusterDirConflict(clusterName string, topo *spec.Specification) error
 			for _, dirAccessor := range instanceDirAccessor {
 				for _, dir := range strings.Split(f(dirAccessor.accessor(inst, metadata.Topology)), ",") {
 					existingEntries = append(existingEntries, Entry{
-						clusterName: fi.Name(),
+						clusterName: name,
 						dirKind:     dirAccessor.dirKind,
 						dir:         dir,
 						instance:    inst,
@@ -116,7 +112,7 @@ func CheckClusterDirConflict(clusterName string, topo *spec.Specification) error
 			for _, dirAccessor := range hostDirAccessor {
 				for _, dir := range strings.Split(f(dirAccessor.accessor(inst, metadata.Topology)), ",") {
 					existingEntries = append(existingEntries, Entry{
-						clusterName: fi.Name(),
+						clusterName: name,
 						dirKind:     dirAccessor.dirKind,
 						dir:         dir,
 						instance:    inst,
@@ -194,13 +190,7 @@ Please change to use another directory or another host.
 }
 
 // CheckClusterPortConflict checks cluster dir conflict
-func CheckClusterPortConflict(clusterName string, topo *spec.Specification) error {
-	clusterDir := spec.ProfilePath(spec.TiOpsClusterDir)
-	fileInfos, err := ioutil.ReadDir(clusterDir)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
+func CheckClusterPortConflict(clusterSpec *meta.Spec, clusterName string, topo *spec.Specification) error {
 	type Entry struct {
 		clusterName string
 		instance    spec.Instance
@@ -210,15 +200,18 @@ func CheckClusterPortConflict(clusterName string, topo *spec.Specification) erro
 	currentEntries := []Entry{}
 	existingEntries := []Entry{}
 
-	for _, fi := range fileInfos {
-		if fi.Name() == clusterName {
+	names, err := clusterSpec.List()
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	for _, name := range names {
+		if name == clusterName {
 			continue
 		}
 
-		if tiuputils.IsNotExist(spec.ClusterPath(fi.Name(), spec.MetaFileName)) {
-			continue
-		}
-		metadata, err := spec.ClusterMetadata(fi.Name())
+		metadata := new(spec.ClusterMeta)
+		err := clusterSpec.ClusterMetadata(name, metadata)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -226,7 +219,7 @@ func CheckClusterPortConflict(clusterName string, topo *spec.Specification) erro
 		metadata.Topology.IterInstance(func(inst spec.Instance) {
 			for _, port := range inst.UsedPorts() {
 				existingEntries = append(existingEntries, Entry{
-					clusterName: fi.Name(),
+					clusterName: name,
 					instance:    inst,
 					port:        port,
 				})

@@ -16,28 +16,14 @@ package spec
 import (
 	"path/filepath"
 
-	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/version"
 )
 
 const (
-	// MetaFileName is the file name of the meta file.
-	MetaFileName = "meta.yaml"
 	// PatchDirName is the directory to store patch file eg. {PatchDirName}/tidb-hotfix.tar.gz
 	PatchDirName = "patch"
-	// BackupDirName is the directory to save backup files.
-	BackupDirName = "backup"
-)
-
-var (
-	errNS        = errorx.NewNamespace("spec")
-	errNSCluster = errNS.NewSubNamespace("cluster")
-	// ErrClusterCreateDirFailed is ErrClusterCreateDirFailed
-	ErrClusterCreateDirFailed = errNSCluster.NewType("create_dir_failed")
-	// ErrClusterSaveMetaFailed is ErrClusterSaveMetaFailed
-	ErrClusterSaveMetaFailed = errNSCluster.NewType("save_meta_failed")
 )
 
 // ClusterMeta is the specification of generic cluster metadata
