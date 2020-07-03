@@ -19,12 +19,16 @@ func TestSpec(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Len(t, names, 0)
 
-	// Should ignore directory with meta file.
+	// Should ignore directory without meta file.
 	err = os.Mkdir(filepath.Join(dir, "dummy"), 0755)
 	assert.Nil(t, err)
 	names, err = spec.List()
 	assert.Nil(t, err)
 	assert.Len(t, names, 0)
+
+	exist, err := spec.Exist("dummy")
+	assert.Nil(t, err)
+	assert.False(t, exist)
 
 	type Meta struct {
 		A string
@@ -60,4 +64,12 @@ func TestSpec(t *testing.T) {
 	sort.Strings(names)
 	assert.Equal(t, "name1", names[0])
 	assert.Equal(t, "name2", names[1])
+
+	exist, err = spec.Exist("name1")
+	assert.Nil(t, err)
+	assert.True(t, exist)
+
+	exist, err = spec.Exist("name2")
+	assert.Nil(t, err)
+	assert.True(t, exist)
 }

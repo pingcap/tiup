@@ -23,8 +23,8 @@ var (
 )
 
 const (
-	// MetaFileName is the file name of the meta file.
-	MetaFileName = "meta.yaml"
+	// metaFileName is the file name of the meta file.
+	metaFileName = "meta.yaml"
 	// PatchDirName is the directory to store patch file eg. {PatchDirName}/tidb-hotfix.tar.gz
 	PatchDirName = "patch"
 	// BackupDirName is the directory to save backup files.
@@ -65,7 +65,7 @@ func (s *Spec) SaveClusterMeta(clusterName string, meta interface{}) error {
 		return ErrClusterSaveMetaFailed.Wrap(err, "Failed to save cluster metadata")
 	}
 
-	metaFile := s.ClusterPath(clusterName, MetaFileName)
+	metaFile := s.ClusterPath(clusterName, metaFileName)
 	backupDir := s.ClusterPath(clusterName, BackupDirName)
 
 	if err := s.ensureClusterDir(clusterName); err != nil {
@@ -91,7 +91,7 @@ func (s *Spec) SaveClusterMeta(clusterName string, meta interface{}) error {
 
 // ClusterMetadata tries to read the metadata of a cluster from file
 func (s *Spec) ClusterMetadata(clusterName string, meta interface{}) error {
-	fname := s.ClusterPath(clusterName, MetaFileName)
+	fname := s.ClusterPath(clusterName, metaFileName)
 
 	yamlFile, err := ioutil.ReadFile(fname)
 	if err != nil {
@@ -106,6 +106,21 @@ func (s *Spec) ClusterMetadata(clusterName string, meta interface{}) error {
 	return nil
 }
 
+// Exist check if the cluster exist by checking the meta file.
+func (s *Spec) Exist(name string) (exist bool, err error) {
+	fname := s.ClusterPath(name, metaFileName)
+
+	_, err = os.Stat(fname)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, errors.AddStack(err)
+	}
+
+	return true, nil
+}
+
 // List return the cluster names.
 func (s *Spec) List() (names []string, err error) {
 	fileInfos, err := ioutil.ReadDir(s.base)
@@ -117,7 +132,7 @@ func (s *Spec) List() (names []string, err error) {
 	}
 
 	for _, info := range fileInfos {
-		if utils.IsNotExist(s.ClusterPath(info.Name(), MetaFileName)) {
+		if utils.IsNotExist(s.ClusterPath(info.Name(), metaFileName)) {
 			continue
 		}
 		names = append(names, info.Name())

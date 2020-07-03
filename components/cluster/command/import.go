@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 
 	"github.com/fatih/color"
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/ansible"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -62,7 +63,13 @@ func newImportCmd() *cobra.Command {
 			if clsName == "" {
 				return fmt.Errorf("cluster name should not be empty")
 			}
-			if tiuputils.IsExist(spec.ClusterPath(clsName, spec.MetaFileName)) {
+
+			exist, err := tidbSpec.Exist(clsName)
+			if err != nil {
+				return errors.AddStack(err)
+			}
+
+			if exist {
 				return errDeployNameDuplicate.
 					New("Cluster name '%s' is duplicated", clsName).
 					WithProperty(cliutil.SuggestionFromFormat(

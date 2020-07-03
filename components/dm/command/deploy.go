@@ -131,7 +131,13 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 	if err := clusterutil.ValidateClusterNameOrError(clusterName); err != nil {
 		return err
 	}
-	if tiuputils.IsExist(cspec.ClusterPath(clusterName, cspec.MetaFileName)) {
+
+	exist, err := dmspec.Exist(clusterName)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	if exist {
 		// FIXME: When change to use args, the suggestion text need to be updated.
 		return errDeployNameDuplicate.
 			New("Cluster name '%s' is duplicated", clusterName).

@@ -68,13 +68,21 @@ conflict checks with other clusters`,
 			var topo spec.Specification
 			if opt.existCluster { // check for existing cluster
 				clusterName := args[0]
-				if tiuputils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
+
+				exist, err := tidbSpec.Exist(clusterName)
+				if err != nil {
+					return perrs.AddStack(err)
+				}
+
+				if !exist {
 					return perrs.Errorf("cluster %s does not exist", clusterName)
 				}
+
 				metadata, err := spec.ClusterMetadata(clusterName)
 				if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 					return err
 				}
+
 				topo = *metadata.Topology
 			} else { // check before cluster is deployed
 				if err := clusterutil.ParseTopologyYaml(args[0], &topo); err != nil {
@@ -82,10 +90,10 @@ conflict checks with other clusters`,
 				}
 
 				// use a dummy cluster name, the real cluster name is set during deploy
-				if err := prepare.CheckClusterPortConflict("nonexist-dummy-tidb-cluster", &topo); err != nil {
+				if err := prepare.CheckClusterPortConflict(tidbSpec, "nonexist-dummy-tidb-cluster", &topo); err != nil {
 					return err
 				}
-				if err := prepare.CheckClusterDirConflict("nonexist-dummy-tidb-cluster", &topo); err != nil {
+				if err := prepare.CheckClusterDirConflict(tidbSpec, "nonexist-dummy-tidb-cluster", &topo); err != nil {
 					return err
 				}
 			}
