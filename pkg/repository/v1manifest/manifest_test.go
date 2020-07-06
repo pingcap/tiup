@@ -25,18 +25,18 @@ import (
 func TestVersionItem(t *testing.T) {
 	manifest := &Component{
 		Platforms: map[string]map[string]VersionItem{
-			"linux/amd64": map[string]VersionItem{
-				"v1.0.0": VersionItem{Entry: "test"},
+			"linux/amd64": {
+				"v1.0.0": {Entry: "test"},
 			},
-			"any/any": map[string]VersionItem{
-				"v1.0.0": VersionItem{Entry: "test"},
+			"any/any": {
+				"v1.0.0": {Entry: "test"},
 			},
 			// If hit this, the result of VersionItem will be nil since we don't have an entry
-			"darwin/any": map[string]VersionItem{
-				"v1.0.0": VersionItem{},
+			"darwin/any": {
+				"v1.0.0": {},
 			},
-			"any/arm64": map[string]VersionItem{
-				"v1.0.0": VersionItem{},
+			"any/arm64": {
+				"v1.0.0": {},
 			},
 		},
 	}
@@ -49,8 +49,8 @@ func TestVersionItem(t *testing.T) {
 
 	manifest = &Component{
 		Platforms: map[string]map[string]VersionItem{
-			"linux/amd64": map[string]VersionItem{
-				"v1.0.0": VersionItem{Entry: "test"},
+			"linux/amd64": {
+				"v1.0.0": {Entry: "test"},
 			},
 		},
 	}

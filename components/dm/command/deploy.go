@@ -13,17 +13,16 @@
 
 package command
 
-/*
 import (
-	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	cspec "github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/dm/spec"
+	"github.com/pingcap/tiup/pkg/meta"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
@@ -31,24 +30,13 @@ import (
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cliutil/prepare"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
-	operator "github.com/pingcap/tiup/pkg/cluster/operation"
-	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
-	"github.com/pingcap/tiup/pkg/telemetry"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
-)
-
-var (
-	teleReport    *telemetry.Report
-	clusterReport *telemetry.ClusterReport
-	teleNodeInfos []*telemetry.NodeInfo
-	teleTopology  string
 )
 
 var (
@@ -57,11 +45,6 @@ var (
 )
 
 type (
-	componentInfo struct {
-		component string
-		version   v0manifest.Version
-	}
-
 	deployOptions struct {
 		user         string // username to login to the SSH server
 		identityFile string // path to the private key file
@@ -106,7 +89,7 @@ func newDeploy() *cobra.Command {
 	return cmd
 }
 
-func confirmTopology(clusterName, version string, topo *meta.DMSTopologySpecification, patchedRoles set.StringSet) error {
+func confirmTopology(clusterName, version string, topo *spec.DMTopologySpecification, patchedRoles set.StringSet) error {
 	log.Infof("Please confirm your topology:")
 
 	cyan := color.New(color.FgCyan, color.Bold)
@@ -118,7 +101,7 @@ func confirmTopology(clusterName, version string, topo *meta.DMSTopologySpecific
 		{"Type", "Host", "Ports", "OS/Arch", "Directories"},
 	}
 
-	topo.IterInstance(func(instance meta.Instance) {
+	topo.IterInstance(func(instance spec.Instance) {
 		comp := instance.ComponentName()
 		if patchedRoles.Exist(comp) {
 			comp = comp + " (patched)"
@@ -148,28 +131,32 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 	if err := clusterutil.ValidateClusterNameOrError(clusterName); err != nil {
 		return err
 	}
-	if tiuputils.IsExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
+
+	exist, err := dmspec.Exist(clusterName)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	if exist {
 		// FIXME: When change to use args, the suggestion text need to be updated.
 		return errDeployNameDuplicate.
 			New("Cluster name '%s' is duplicated", clusterName).
 			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
 	}
 
-	var topo meta.DMSTopologySpecification
+	var topo spec.DMTopologySpecification
 	if err := clusterutil.ParseTopologyYaml(topoFile, &topo); err != nil {
 		return err
 	}
 
-	if data, err := ioutil.ReadFile(topoFile); err == nil {
-		teleTopology = string(data)
-	}
-
-	if err := prepare.CheckClusterPortConflict(clusterName, &topo); err != nil {
-		return err
-	}
-	if err := prepare.CheckClusterDirConflict(clusterName, &topo); err != nil {
-		return err
-	}
+	/*
+		if err := prepare.CheckClusterPortConflict(clusterName, &topo); err != nil {
+			return err
+		}
+		if err := prepare.CheckClusterDirConflict(clusterName, &topo); err != nil {
+			return err
+		}
+	*/
 
 	if !skipConfirm {
 		if err := confirmTopology(clusterName, clusterVersion, &topo, set.NewStringSet()); err != nil {
@@ -182,9 +169,9 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 		return err
 	}
 
-	if err := os.MkdirAll(meta.ClusterPath(clusterName), 0755); err != nil {
+	if err := os.MkdirAll(cspec.ClusterPath(clusterName), 0755); err != nil {
 		return errorx.InitializationFailed.
-			Wrap(err, "Failed to create cluster metadata directory '%s'", meta.ClusterPath(clusterName)).
+			Wrap(err, "Failed to create cluster metadata directory '%s'", cspec.ClusterPath(clusterName)).
 			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
 	}
 
@@ -197,7 +184,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 	// Initialize environment
 	uniqueHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
 	globalOptions := topo.GlobalOptions
-	topo.IterInstance(func(inst meta.Instance) {
+	topo.IterInstance(func(inst spec.Instance) {
 		if _, found := uniqueHosts[inst.GetHost()]; !found {
 			uniqueHosts[inst.GetHost()] = hostInfo{
 				ssh:  inst.GetSSHPort(),
@@ -236,8 +223,8 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 	downloadCompTasks = prepare.BuildDownloadCompTasks(clusterVersion, &topo)
 
 	// Deploy components to remote
-	topo.IterInstance(func(inst meta.Instance) {
-		version := meta.ComponentVersion(inst.ComponentName(), clusterVersion)
+	topo.IterInstance(func(inst spec.Instance) {
+		version := cspec.ComponentVersion(inst.ComponentName(), clusterVersion)
 		deployDir := clusterutil.Abs(globalOptions.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDirs := clusterutil.MultiDirAbs(globalOptions.User, inst.DataDir())
@@ -270,34 +257,19 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 					Deploy: deployDir,
 					Data:   dataDirs,
 					Log:    logDir,
-					Cache:  meta.ClusterPath(clusterName, meta.TempConfigPath),
+					Cache:  cspec.ClusterPath(clusterName, cspec.TempConfigPath),
 				},
 			).
 			BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", inst.ComponentName(), inst.GetHost()))
 		deployCompTasks = append(deployCompTasks, t)
 	})
 
-	nodeInfoTask := task.NewBuilder().Func("Check status", func(ctx *task.Context) error {
-		var err error
-		teleNodeInfos, err = operator.GetNodeInfo(context.Background(), ctx, &topo)
-		_ = err
-		// intend to never return error
-		return nil
-	}).BuildAsStep("Check status").SetHidden(true)
-	if report.Enable() {
-		deployCompTasks = append(deployCompTasks, nodeInfoTask)
-	}
-
 	builder := task.NewBuilder().
 		Step("+ Generate SSH keys",
-			task.NewBuilder().SSHKeyGen(meta.ClusterPath(clusterName, "ssh", "id_rsa")).Build()).
+			task.NewBuilder().SSHKeyGen(cspec.ClusterPath(clusterName, "ssh", "id_rsa")).Build()).
 		ParallelStep("+ Download DM components", downloadCompTasks...).
 		ParallelStep("+ Initialize target host environments", envInitTasks...).
 		ParallelStep("+ Copy files", deployCompTasks...)
-
-	if report.Enable() {
-		builder.ParallelStep("+ Check status", nodeInfoTask)
-	}
 
 	t := builder.Build()
 
@@ -309,7 +281,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 		return errors.Trace(err)
 	}
 
-	err = meta.SaveDMMeta(clusterName, &meta.DMMeta{
+	err = dmspec.SaveMeta(clusterName, &spec.DMMeta{
 		User:     globalOptions.User,
 		Version:  clusterVersion,
 		Topology: &topo,
@@ -322,4 +294,3 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 	log.Infof("Deployed cluster `%s` successfully, you can start the cluster via `%s`", clusterName, hint)
 	return nil
 }
-*/

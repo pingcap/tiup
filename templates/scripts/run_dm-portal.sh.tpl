@@ -8,9 +8,9 @@ cd "${DEPLOY_DIR}" || exit 1
 
 
 {{- if .NumaNode}}
-exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/dm-portal \
+exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/bin/dm-portal \
 {{- else}}
-exec bin/dm-portal \
+exec bin/bin/dm-portal \
 {{- end}}
     --port="{{.Port}}" \
     --task-file-path="{{.DataDir}}" \
