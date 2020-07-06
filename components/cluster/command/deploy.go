@@ -153,7 +153,13 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 	if err := clusterutil.ValidateClusterNameOrError(clusterName); err != nil {
 		return err
 	}
-	if tiuputils.IsExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
+
+	exist, err := tidbSpec.Exist(clusterName)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	if exist {
 		// FIXME: When change to use args, the suggestion text need to be updated.
 		return errDeployNameDuplicate.
 			New("Cluster name '%s' is duplicated", clusterName).
@@ -169,10 +175,10 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 		teleTopology = string(data)
 	}
 
-	if err := prepare.CheckClusterPortConflict(clusterName, &topo); err != nil {
+	if err := prepare.CheckClusterPortConflict(tidbSpec, clusterName, &topo); err != nil {
 		return err
 	}
-	if err := prepare.CheckClusterDirConflict(clusterName, &topo); err != nil {
+	if err := prepare.CheckClusterDirConflict(tidbSpec, clusterName, &topo); err != nil {
 		return err
 	}
 

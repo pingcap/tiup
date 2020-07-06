@@ -22,7 +22,6 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
-	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
@@ -41,7 +40,13 @@ func newTestCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			if utils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
+
+			exist, err := tidbSpec.Exist(clusterName)
+			if err != nil {
+				return perrs.AddStack(err)
+			}
+
+			if !exist {
 				return perrs.Errorf("cannot start non-exists cluster %s", clusterName)
 			}
 
