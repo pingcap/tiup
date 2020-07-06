@@ -30,7 +30,6 @@ import (
 	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
-	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
@@ -44,7 +43,7 @@ var (
 	skipConfirm bool
 )
 
-var dmspec *meta.SpecManager
+var dmspec = spec.GetSpecManager()
 
 func init() {
 	logger.InitGlobalLogger()
@@ -67,7 +66,6 @@ func init() {
 			if err = cspec.Initialize("cluster"); err != nil {
 				return err
 			}
-			dmspec = spec.NewDMSpec()
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.
 			env, err = tiupmeta.InitEnv(repository.Options{

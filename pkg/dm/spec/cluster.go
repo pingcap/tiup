@@ -22,6 +22,12 @@ import (
 
 const dmDir = "dm"
 
+var specManager *meta.SpecManager
+
+func init() {
+	specManager = meta.NewSpec(filepath.Join(cspec.ProfileDir(), dmDir))
+}
+
 // DMMeta is the specification of generic cluster metadata
 type DMMeta struct {
 	User    string `yaml:"user"`       // the user to run and manage cluster on remote
@@ -32,7 +38,7 @@ type DMMeta struct {
 	Topology *DMTopologySpecification `yaml:"topology"`
 }
 
-// NewDMSpec create dm Spec.
-func NewDMSpec() *meta.SpecManager {
-	return meta.NewSpec(filepath.Join(cspec.ProfileDir(), dmDir))
+// GetSpecManager return the spec manager of dm cluster.
+func GetSpecManager() *meta.SpecManager {
+	return specManager
 }

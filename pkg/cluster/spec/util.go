@@ -26,6 +26,17 @@ const (
 	PatchDirName = "patch"
 )
 
+var tidbSpec *meta.SpecManager
+
+func init() {
+	tidbSpec = newTiDBSpec()
+}
+
+// GetSpecManager return the spec manager of tidb cluster.
+func GetSpecManager() *meta.SpecManager {
+	return tidbSpec
+}
+
 // ClusterMeta is the specification of generic cluster metadata
 type ClusterMeta struct {
 	User    string `yaml:"user"`         // the user to run and manage cluster on remote
@@ -37,8 +48,8 @@ type ClusterMeta struct {
 	Topology *Specification `yaml:"topology"`
 }
 
-// NewTiDBSpec create a Spec for tidb cluster.
-func NewTiDBSpec() *meta.SpecManager {
+// newTiDBSpec create a Spec for tidb cluster.
+func newTiDBSpec() *meta.SpecManager {
 	clusterBaseDir := filepath.Join(profileDir, TiOpsClusterDir)
 	clusterSpec := meta.NewSpec(clusterBaseDir)
 	return clusterSpec
@@ -48,13 +59,13 @@ func NewTiDBSpec() *meta.SpecManager {
 func SaveClusterMeta(clusterName string, cmeta *ClusterMeta) error {
 	// set the cmd version
 	cmeta.OpsVer = version.NewTiUPVersion().String()
-	return NewTiDBSpec().SaveMeta(clusterName, cmeta)
+	return GetSpecManager().SaveMeta(clusterName, cmeta)
 }
 
 // ClusterMetadata tries to read the metadata of a cluster from file
 func ClusterMetadata(clusterName string) (*ClusterMeta, error) {
 	var cm ClusterMeta
-	err := NewTiDBSpec().Metadata(clusterName, &cm)
+	err := GetSpecManager().Metadata(clusterName, &cm)
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
