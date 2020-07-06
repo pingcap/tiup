@@ -35,6 +35,7 @@
 {{ range $k, $v := .CustomFields}}
 {{ $k }}   {{ $v }}
 {{- end }}
+spark.sql.extensions   org.apache.spark.sql.TiExtensions
 
 {{- if .TiSparkMaster}}
 spark.master   spark://{{.TiSparkMaster}}:{{.MasterPort}}
