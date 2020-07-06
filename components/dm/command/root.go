@@ -23,8 +23,9 @@ import (
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/flags"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
-	"github.com/pingcap/tiup/pkg/cluster/spec"
+	cspec "github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/colorutil"
+	"github.com/pingcap/tiup/pkg/dm/spec"
 	tiupmeta "github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -41,6 +42,8 @@ var (
 	gOpt        operator.Options
 	skipConfirm bool
 )
+
+var dmspec = spec.GetSpecManager()
 
 func init() {
 	logger.InitGlobalLogger()
@@ -60,9 +63,10 @@ func init() {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			var err error
 			var env *tiupmeta.Environment
-			if err = spec.Initialize("cluster"); err != nil {
+			if err = cspec.Initialize("cluster"); err != nil {
 				return err
 			}
+
 			// Running in other OS/ARCH Should be fine we only download manifest file.
 			env, err = tiupmeta.InitEnv(repository.Options{
 				GOOS:   "linux",

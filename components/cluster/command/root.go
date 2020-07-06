@@ -49,6 +49,8 @@ var (
 	skipConfirm bool
 )
 
+var tidbSpec = spec.GetSpecManager()
+
 func scrubClusterName(n string) string {
 	return "cluster_" + telemetry.HashReport(n)
 }
@@ -88,6 +90,7 @@ func init() {
 			if err = spec.Initialize("cluster"); err != nil {
 				return err
 			}
+
 			// Running in other OS/ARCH Should be fine we only download manifest file.
 			env, err = tiupmeta.InitEnv(repository.Options{
 				GOOS:   "linux",
