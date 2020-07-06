@@ -135,7 +135,7 @@ func (s *KeyStore) verifySignature(signed []byte, role string, signatures []Sign
 	// We may need to verify the root manifest with old keys. Once the most up to date root is found and verified, then
 	// the keys used to do so should be checked for expiry.
 	if role != ManifestTypeRoot {
-		if err := CheckExpiry(keys.expiry); err != nil {
+		if err := CheckExpiry(filename, keys.expiry); err != nil {
 			return err
 		}
 	}

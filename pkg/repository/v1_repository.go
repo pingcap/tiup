@@ -243,14 +243,14 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 		verbose.Log("Update local snapshot finished in %s", time.Since(start))
 	}(time.Now())
 
-	changed, tsManifest, err := r.fetchTimestamp()
+	timestampChanged, tsManifest, err := r.fetchTimestamp()
 	if v1manifest.IsSignatureError(errors.Cause(err)) {
 		// The signature is wrong, update our signatures from the root manifest and try again.
 		err = r.updateLocalRoot()
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
-		changed, tsManifest, err = r.fetchTimestamp()
+		timestampChanged, tsManifest, err = r.fetchTimestamp()
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
@@ -271,26 +271,29 @@ func (r *V1Repository) updateLocalSnapshot() (*v1manifest.Snapshot, error) {
 	}
 	hash256 := sha256.Sum256(bytes)
 
+	snapshotChanged := true
 	// TODO: check changed in fetchTimestamp by compared to the raw local snapshot instead of timestamp.
 	if snapshotExists && hash.Hashes[v1manifest.SHA256] == hex.EncodeToString(hash256[:]) {
-		// Nothing has changed in the repo, return success.
-		return &snapshot, nil
+		// Nothing has changed in snapshot.json
+		snapshotChanged = false
 	}
 
-	manifest, err := r.fetchManifestWithHash(v1manifest.ManifestURLSnapshot, &snapshot, &hash)
-	if err != nil {
-		return nil, errors.Trace(err)
+	if snapshotChanged {
+		manifest, err := r.fetchManifestWithHash(v1manifest.ManifestURLSnapshot, &snapshot, &hash)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		// Persistent the snapshot first and prevent the snapshot.json/timestamp.json inconsistent
+		// 1. timestamp.json is fetched every time
+		// 2. when interrupted after timestamp.json been saved but snapshot.json have not, the snapshot.json is not going to be updated anymore
+		err = r.local.SaveManifest(manifest, v1manifest.ManifestFilenameSnapshot)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
 	}
 
-	// Persistent the snapshot first and prevent the snapshot.json/timestamp.json inconsistent
-	// 1. timestamp.json is fetched every time
-	// 2. when interrupted after timestamp.json been saved but snapshot.json have not, the snapshot.json is not going to be updated anymore
-	err = r.local.SaveManifest(manifest, v1manifest.ManifestFilenameSnapshot)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	if changed {
+	if timestampChanged {
 		err = r.local.SaveManifest(tsManifest, v1manifest.ManifestFilenameTimestamp)
 		if err != nil {
 			return nil, errors.Trace(err)
@@ -357,7 +360,7 @@ func (r *V1Repository) updateLocalRoot() error {
 	}
 
 	// Check expire of this version.
-	err = v1manifest.CheckExpiry(oldRoot.Expires)
+	err = v1manifest.CheckExpiry(v1manifest.ManifestFilenameRoot, oldRoot.Expires)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -500,11 +503,11 @@ func (r *V1Repository) fetchTimestamp() (changed bool, manifest *v1manifest.Mani
 		return false, nil, errors.Trace(err)
 	}
 
-	if exists && ts.Version < localTs.Version {
+	if !exists {
+		changed = true
+	} else if ts.Version < localTs.Version {
 		return false, nil, fmt.Errorf("timestamp manifest has a version number < the old manifest (%v, %v)", ts.Version, localTs.Version)
-	}
-
-	if hash.Hashes[v1manifest.SHA256] != localTs.SnapshotHash().Hashes[v1manifest.SHA256] {
+	} else if hash.Hashes[v1manifest.SHA256] != localTs.SnapshotHash().Hashes[v1manifest.SHA256] {
 		changed = true
 	}
 

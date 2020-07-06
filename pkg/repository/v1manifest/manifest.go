@@ -124,12 +124,12 @@ type ExpirationError struct {
 }
 
 func (s *ExpirationError) Error() string {
-	return fmt.Sprintf("manifest has expired at: %s", s.date)
+	return fmt.Sprintf("manifest %s has expired at: %s", s.fname, s.date)
 }
 
-func newExpirationError(date string) *ExpirationError {
+func newExpirationError(fname, date string) *ExpirationError {
 	return &ExpirationError{
-		fname: "",
+		fname: fname,
 		date:  date,
 	}
 }
@@ -165,14 +165,14 @@ func (s *SignedBase) Versioned() bool {
 }
 
 // CheckExpiry return not nil if it's expired.
-func CheckExpiry(expires string) error {
+func CheckExpiry(fname, expires string) error {
 	expiresTime, err := time.Parse(time.RFC3339, expires)
 	if err != nil {
 		return errors.AddStack(err)
 	}
 
 	if expiresTime.Before(time.Now()) {
-		return newExpirationError(expires)
+		return newExpirationError(fname, expires)
 	}
 
 	return nil
@@ -197,7 +197,7 @@ func ExpiresAfter(m1, m2 ValidManifest) error {
 }
 
 // isValid checks if s is valid manifest metadata.
-func (s *SignedBase) isValid() error {
+func (s *SignedBase) isValid(filename string) error {
 	if _, ok := ManifestsConfig[s.Ty]; !ok {
 		return fmt.Errorf("unknown manifest type: `%s`", s.Ty)
 	}
@@ -209,7 +209,7 @@ func (s *SignedBase) isValid() error {
 	// When updating root, we only check the newest version is not expire.
 	// This checking should be done by the update root flow.
 	if s.Ty != ManifestTypeRoot {
-		if err := CheckExpiry(s.Expires); err != nil {
+		if err := CheckExpiry(filename, s.Expires); err != nil {
 			return errors.AddStack(err)
 		}
 	}
@@ -365,7 +365,7 @@ func ReadComponentManifest(input io.Reader, com *Component, item *ComponentItem,
 		Signed:     com,
 	}
 
-	err = m.Signed.Base().isValid()
+	err = m.Signed.Base().isValid(m.Signed.Filename())
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -419,7 +419,7 @@ func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifes
 		}
 	}
 
-	err = m.Signed.Base().isValid()
+	err = m.Signed.Base().isValid(m.Signed.Filename())
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
