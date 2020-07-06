@@ -194,11 +194,10 @@ func overwritePatch(clusterName, comp, packagePath string) error {
 	}
 
 	tg := spec.ClusterPath(clusterName, spec.PatchDirName, comp+"-"+checksum[:7]+".tar.gz")
-	if utils.IsExist(tg) {
-		os.Remove(tg)
-	}
-	if err := tiuputils.CopyFile(packagePath, tg); err != nil {
-		return err
+	if !utils.IsExist(tg) {
+		if err := tiuputils.CopyFile(packagePath, tg); err != nil {
+			return err
+		}
 	}
 
 	symlink := spec.ClusterPath(clusterName, spec.PatchDirName, comp+".tar.gz")

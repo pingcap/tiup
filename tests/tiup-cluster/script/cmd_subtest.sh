@@ -35,6 +35,11 @@ function cmd_subtest() {
     tiup-cluster exec $name -N 172.19.0.102 --command "grep /home/tidb/deploy/tikv-20160/data /home/tidb/deploy/tikv-20160/scripts/run_tikv.sh"
     tiup-cluster exec $name -N 172.19.0.103 --command "grep /home/tidb/my_kv_data /home/tidb/deploy/tikv-20160/scripts/run_tikv.sh"
 
+    # test patch overwrite
+    tiup-cluster --yes patch $name ~/.tiup/storage/cluster/packages/tidb-$version-linux-amd64.tar.gz -R tidb --overwrite
+    # overwrite with the same tarball twice
+    tiup-cluster --yes patch $name ~/.tiup/storage/cluster/packages/tidb-$version-linux-amd64.tar.gz -R tidb --overwrite
+
     tiup-cluster --yes stop $name
 
     tiup-cluster --yes restart $name
