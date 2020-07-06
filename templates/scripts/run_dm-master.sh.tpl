@@ -17,9 +17,9 @@ cd "${DEPLOY_DIR}" || exit 1
 {{- end}}
 
 {{- if .NumaNode}}
-exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/dm-master \
+exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/bin/dm-master \
 {{- else}}
-exec bin/dm-master \
+exec bin/bin/dm-master \
 {{- end}}
     --name="{{.Name}}" \
     --master-addr="0.0.0.0:{{.Port}}" \
