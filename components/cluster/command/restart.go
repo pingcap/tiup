@@ -24,7 +24,6 @@ import (
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
-	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +42,13 @@ func newRestartCmd() *cobra.Command {
 
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
-			if tiuputils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
+
+			exist, err := tidbSpec.Exist(clusterName)
+			if err != nil {
+				return perrs.AddStack(err)
+			}
+
+			if !exist {
 				return perrs.Errorf("cannot restart non-exists cluster %s", clusterName)
 			}
 

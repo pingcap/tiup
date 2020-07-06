@@ -65,7 +65,12 @@ func newPatchCmd() *cobra.Command {
 }
 
 func patch(clusterName, packagePath string, options operator.Options, overwrite bool) error {
-	if tiuputils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
+	exist, err := tidbSpec.Exist(clusterName)
+	if err != nil {
+		return perrs.AddStack(err)
+	}
+
+	if !exist {
 		return perrs.Errorf("cannot patch non-exists cluster %s", clusterName)
 	}
 

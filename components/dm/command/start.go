@@ -25,7 +25,6 @@ import (
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
-	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -39,7 +38,13 @@ func newStartCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			if utils.IsNotExist(cspec.ClusterPath(clusterName, cspec.MetaFileName)) {
+
+			exist, err := dmspec.Exist(clusterName)
+			if err != nil {
+				return perrs.AddStack(err)
+			}
+
+			if !exist {
 				return perrs.Errorf("cannot start non-exists cluster %s", clusterName)
 			}
 
@@ -56,7 +61,8 @@ func newStartCmd() *cobra.Command {
 func startCluster(clusterName string, options operator.Options) error {
 	logger.EnableAuditLog()
 	log.Infof("Starting cluster %s...", clusterName)
-	metadata, err := spec.DMMetadata(clusterName)
+	metadata := new(spec.DMMeta)
+	err := dmspec.Metadata(clusterName, metadata)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
 	}
