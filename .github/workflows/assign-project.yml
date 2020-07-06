@@ -1,0 +1,31 @@
+name: Assign to Project
+
+on:
+  issues:
+    types: [opened, labeled]
+  pull_request:
+    types: [opened, labeled]
+env:
+  MY_GITHUB_TOKEN: ${{ secrets.AUTO_ASSIGN_PROJECT_TOKEN }}
+
+jobs:
+  assign_one_project:
+    runs-on: ubuntu-latest
+    name: Assign to Project
+    steps:
+    - name: Assign NEW issues to TiUP SIG project
+      uses: srggrs/assign-one-project-github-action@1.2.0
+      if: |
+        github.event_name == 'issues' && 
+        github.event.action == 'opened'
+      with:
+        project: 'https://github.com/orgs/pingcap/projects/26'
+        column_name: 'Issue Backlog: Need Triage'
+    - name: Assign NEW pull requests to TiUP SIG project
+      uses: srggrs/assign-one-project-github-action@1.2.0
+      if: |
+        github.event_name == 'pull_request' &&
+        github.event.action == 'opened'
+      with:
+        project: 'https://github.com/orgs/pingcap/projects/26'
+        column_name: 'In progress'
