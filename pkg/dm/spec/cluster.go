@@ -20,6 +20,8 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 )
 
+const dmDir = "dm"
+
 // DMMeta is the specification of generic cluster metadata
 type DMMeta struct {
 	User    string `yaml:"user"`       // the user to run and manage cluster on remote
@@ -31,6 +33,6 @@ type DMMeta struct {
 }
 
 // NewDMSpec create dm Spec.
-func NewDMSpec() *meta.Spec {
-	return meta.NewSpec(filepath.Join(cspec.ProfileDir(), "dm"))
+func NewDMSpec() *meta.SpecManager {
+	return meta.NewSpec(filepath.Join(cspec.ProfileDir(), dmDir))
 }

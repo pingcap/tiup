@@ -47,7 +47,7 @@ func listCluster() error {
 
 	for _, name := range names {
 		metadata := new(spec.ClusterMeta)
-		err := tidbSpec.ClusterMetadata(name, metadata)
+		err := tidbSpec.Metadata(name, metadata)
 		if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 			return perrs.Trace(err)
 		}
@@ -56,8 +56,8 @@ func listCluster() error {
 			name,
 			metadata.User,
 			metadata.Version,
-			tidbSpec.ClusterPath(name),
-			tidbSpec.ClusterPath(name, "ssh", "id_rsa"),
+			tidbSpec.Path(name),
+			tidbSpec.Path(name, "ssh", "id_rsa"),
 		})
 	}
 

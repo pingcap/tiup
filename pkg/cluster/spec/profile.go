@@ -78,5 +78,5 @@ func ProfilePath(subpath ...string) string {
 // as its name.
 // It is not guaranteed the path already exist.
 func ClusterPath(cluster string, subpath ...string) string {
-	return NewTiDBSpec().ClusterPath(cluster, subpath...)
+	return NewTiDBSpec().Path(cluster, subpath...)
 }

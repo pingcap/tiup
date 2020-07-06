@@ -44,7 +44,7 @@ var (
 	skipConfirm bool
 )
 
-var dmspec *meta.Spec
+var dmspec *meta.SpecManager
 
 func init() {
 	logger.InitGlobalLogger()

@@ -46,7 +46,7 @@ func fixDir(topo *spec.Specification) func(string) string {
 }
 
 // CheckClusterDirConflict checks cluster dir conflict
-func CheckClusterDirConflict(clusterSpec *meta.Spec, clusterName string, topo *spec.Specification) error {
+func CheckClusterDirConflict(clusterSpec *meta.SpecManager, clusterName string, topo *spec.Specification) error {
 	type DirAccessor struct {
 		dirKind  string
 		accessor func(spec.Instance, *spec.Specification) string
@@ -90,7 +90,7 @@ func CheckClusterDirConflict(clusterSpec *meta.Spec, clusterName string, topo *s
 		}
 
 		metadata := new(spec.ClusterMeta)
-		err := clusterSpec.ClusterMetadata(name, metadata)
+		err := clusterSpec.Metadata(name, metadata)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -190,7 +190,7 @@ Please change to use another directory or another host.
 }
 
 // CheckClusterPortConflict checks cluster dir conflict
-func CheckClusterPortConflict(clusterSpec *meta.Spec, clusterName string, topo *spec.Specification) error {
+func CheckClusterPortConflict(clusterSpec *meta.SpecManager, clusterName string, topo *spec.Specification) error {
 	type Entry struct {
 		clusterName string
 		instance    spec.Instance
@@ -211,7 +211,7 @@ func CheckClusterPortConflict(clusterSpec *meta.Spec, clusterName string, topo *
 		}
 
 		metadata := new(spec.ClusterMeta)
-		err := clusterSpec.ClusterMetadata(name, metadata)
+		err := clusterSpec.Metadata(name, metadata)
 		if err != nil {
 			return errors.Trace(err)
 		}

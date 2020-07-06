@@ -62,7 +62,7 @@ func startCluster(clusterName string, options operator.Options) error {
 	logger.EnableAuditLog()
 	log.Infof("Starting cluster %s...", clusterName)
 	metadata := new(spec.DMMeta)
-	err := dmspec.ClusterMetadata(clusterName, metadata)
+	err := dmspec.Metadata(clusterName, metadata)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
 	}

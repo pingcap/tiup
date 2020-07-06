@@ -38,7 +38,7 @@ type ClusterMeta struct {
 }
 
 // NewTiDBSpec create a Spec for tidb cluster.
-func NewTiDBSpec() *meta.Spec {
+func NewTiDBSpec() *meta.SpecManager {
 	clusterBaseDir := filepath.Join(profileDir, TiOpsClusterDir)
 	clusterSpec := meta.NewSpec(clusterBaseDir)
 	return clusterSpec
@@ -48,13 +48,13 @@ func NewTiDBSpec() *meta.Spec {
 func SaveClusterMeta(clusterName string, cmeta *ClusterMeta) error {
 	// set the cmd version
 	cmeta.OpsVer = version.NewTiUPVersion().String()
-	return NewTiDBSpec().SaveClusterMeta(clusterName, cmeta)
+	return NewTiDBSpec().SaveMeta(clusterName, cmeta)
 }
 
 // ClusterMetadata tries to read the metadata of a cluster from file
 func ClusterMetadata(clusterName string) (*ClusterMeta, error) {
 	var cm ClusterMeta
-	err := NewTiDBSpec().ClusterMetadata(clusterName, &cm)
+	err := NewTiDBSpec().Metadata(clusterName, &cm)
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}

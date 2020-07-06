@@ -50,7 +50,7 @@ var (
 	skipConfirm bool
 )
 
-var tidbSpec *meta.Spec
+var tidbSpec *meta.SpecManager
 
 func scrubClusterName(n string) string {
 	return "cluster_" + telemetry.HashReport(n)
