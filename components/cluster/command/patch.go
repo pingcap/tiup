@@ -202,7 +202,11 @@ func overwritePatch(clusterName, comp, packagePath string) error {
 
 	symlink := spec.ClusterPath(clusterName, spec.PatchDirName, comp+".tar.gz")
 	if utils.IsExist(symlink) {
-		os.Remove(symlink)
+		fmt.Println("symlink exists")
+		err := os.Remove(symlink)
+		if utils.IsExist(symlink) {
+			panic(err)
+		}
 	}
 	return os.Symlink(tg, symlink)
 }
