@@ -15,6 +15,7 @@ package spec
 
 import (
 	"path/filepath"
+	"sync"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -27,13 +28,11 @@ const (
 )
 
 var tidbSpec *meta.SpecManager
-
-func init() {
-	tidbSpec = newTiDBSpec()
-}
+var initOnce sync.Once
 
 // GetSpecManager return the spec manager of tidb cluster.
 func GetSpecManager() *meta.SpecManager {
+	initOnce.Do(initTidbSpec)
 	return tidbSpec
 }
 
@@ -48,11 +47,12 @@ type ClusterMeta struct {
 	Topology *Specification `yaml:"topology"`
 }
 
-// newTiDBSpec create a Spec for tidb cluster.
-func newTiDBSpec() *meta.SpecManager {
+func initTidbSpec() {
+	if !initialized {
+		panic("must Initialize profile first")
+	}
 	clusterBaseDir := filepath.Join(profileDir, TiOpsClusterDir)
-	clusterSpec := meta.NewSpec(clusterBaseDir)
-	return clusterSpec
+	tidbSpec = meta.NewSpec(clusterBaseDir)
 }
 
 // SaveClusterMeta saves the cluster meta information to profile directory

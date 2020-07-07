@@ -43,6 +43,8 @@ func getHomeDir() (string, error) {
 	return u.HomeDir, nil
 }
 
+var initialized = false
+
 // Initialize initializes the global variables of meta package. If the
 // environment variable TIUP_COMPONENT_DATA_DIR is set, it is used as root of
 // the profile directory, otherwise the `$HOME/.tiops` of current user is used.
@@ -59,6 +61,7 @@ func Initialize(base string) error {
 		profileDir = tiupData
 	}
 
+	initialized = true
 	// make sure the dir exist
 	return utils2.CreateDir(profileDir)
 }
