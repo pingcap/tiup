@@ -5,6 +5,7 @@ import (
 
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cliutil"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -131,6 +132,39 @@ func (d *Deployer) RestartCluster(clusterName string, options operator.Options) 
 	}
 
 	log.Infof("Restarted cluster `%s` successfully", clusterName)
+	return nil
+}
+
+// ListCluster list the clusters.
+func (d *Deployer) ListCluster() error {
+	names, err := d.specManager.List()
+	if err != nil {
+		return perrs.AddStack(err)
+	}
+
+	clusterTable := [][]string{
+		// Header
+		{"Name", "User", "Version", "Path", "PrivateKey"},
+	}
+
+	for _, name := range names {
+		metadata, err := d.meta(name)
+		if err != nil {
+			return perrs.Trace(err)
+		}
+
+		base := metadata.GetBaseMeta()
+
+		clusterTable = append(clusterTable, []string{
+			name,
+			base.User,
+			base.Version,
+			d.specManager.Path(name),
+			d.specManager.Path(name, "ssh", "id_rsa"),
+		})
+	}
+
+	cliutil.PrintTable(clusterTable, true)
 	return nil
 }
 

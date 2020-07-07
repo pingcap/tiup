@@ -101,6 +101,7 @@ func init() {
 		newStartCmd(),
 		newStopCmd(),
 		newRestartCmd(),
+		newListCmd(),
 	/*
 		newCheckCmd(),
 		newScaleInCmd(),
@@ -109,7 +110,6 @@ func init() {
 		newUpgradeCmd(),
 		newExecCmd(),
 		newDisplayCmd(),
-		newListCmd(),
 		newAuditCmd(),
 		newEditConfigCmd(),
 		newReloadCmd(),
