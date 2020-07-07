@@ -18,6 +18,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/pingcap/errors"
@@ -183,8 +184,12 @@ func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clu
 	for _, pd := range i.instance.topo.Endpoints(deployUser) {
 		pdList = append(pdList, fmt.Sprintf("%s:%d", pd.IP, pd.ClientPort))
 	}
+	masterList := make([]string, 0)
+	for _, master := range i.instance.topo.TiSparkMasters {
+		masterList = append(masterList, fmt.Sprintf("%s:%d", master.Host, master.Port))
+	}
 
-	cfg := config.NewTiSparkConfig(pdList).WithMaster(host, port).
+	cfg := config.NewTiSparkConfig(pdList).WithMasters(strings.Join(masterList, ",")).
 		WithCustomFields(i.GetCustomFields())
 	// transfer spark-defaults.conf
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("spark-defaults-%s-%d.conf", host, port))
@@ -319,11 +324,13 @@ func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clu
 	for _, pd := range i.instance.topo.Endpoints(deployUser) {
 		pdList = append(pdList, fmt.Sprintf("%s:%d", pd.IP, pd.ClientPort))
 	}
+	masterList := make([]string, 0)
+	for _, master := range i.instance.topo.TiSparkMasters {
+		masterList = append(masterList, fmt.Sprintf("%s:%d", master.Host, master.Port))
+	}
 
-	cfg := config.NewTiSparkConfig(pdList).WithMaster(
-		i.topo.TiSparkMasters[0].Host,
-		i.topo.TiSparkMasters[0].Port,
-	).WithCustomFields(i.GetCustomFields())
+	cfg := config.NewTiSparkConfig(pdList).WithMasters(strings.Join(masterList, ",")).
+		WithCustomFields(i.GetCustomFields())
 	// transfer spark-defaults.conf
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("spark-defaults-%s-%d.conf", host, port))
 	if err := cfg.ConfigToFile(fp); err != nil {

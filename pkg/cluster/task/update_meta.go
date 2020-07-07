@@ -83,6 +83,18 @@ func (u *UpdateMeta) Execute(ctx *Context) error {
 		}
 		newMeta.Topology.CDCServers = append(newMeta.Topology.CDCServers, topo.CDCServers[i])
 	}
+	for i, instance := range (&spec.TiSparkWorkerComponent{Specification: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
+			continue
+		}
+		newMeta.Topology.TiSparkWorkers = append(newMeta.Topology.TiSparkWorkers, topo.TiSparkWorkers[i])
+	}
+	for i, instance := range (&spec.TiSparkMasterComponent{Specification: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
+			continue
+		}
+		newMeta.Topology.TiSparkMasters = append(newMeta.Topology.TiSparkMasters, topo.TiSparkMasters[i])
+	}
 	for i, instance := range (&spec.MonitorComponent{Specification: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue

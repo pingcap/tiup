@@ -211,6 +211,52 @@ tiflash_servers:
 #   - host: 10.0.1.21
 #   - host: 10.0.1.22
 
+tispark_masters:
+  - host: 10.0.1.21
+    #spark_config:
+    #  spark.driver.memory: "2g"
+    #  spark.eventLog.enabled: "False"
+    #  spark.tispark.grpc.framesize: 268435456
+    #  spark.tispark.grpc.timeout_in_sec: 100
+    #  spark.tispark.meta.reload_period_in_sec: 60
+    #  spark.tispark.request.command.priority: "Low"
+    #  spark.tispark.table.scan_concurrency: 256
+    #spark_env:
+    #  SPARK_EXECUTOR_CORES: 5
+    #  SPARK_EXECUTOR_MEMORY: "10g"
+    #  SPARK_WORKER_CORES: 5
+    #  SPARK_WORKER_MEMORY: "10g"
+
+tispark_workers:
+  - host: 10.0.1.22
+    #spark_config:
+    #  spark.driver.memory: "2g"
+    #  spark.eventLog.enabled: "False"
+    #  spark.tispark.grpc.framesize: 268435456
+    #  spark.tispark.grpc.timeout_in_sec: 100
+    #  spark.tispark.meta.reload_period_in_sec: 60
+    #  spark.tispark.request.command.priority: "Low"
+    #  spark.tispark.table.scan_concurrency: 256
+    #spark_env:
+    #  SPARK_EXECUTOR_CORES: 5
+    #  SPARK_EXECUTOR_MEMORY: "10g"
+    #  SPARK_WORKER_CORES: 5
+    #  SPARK_WORKER_MEMORY: "10g"
+  - host: 10.0.1.23
+    #spark_config:
+    #  spark.driver.memory: "2g"
+    #  spark.eventLog.enabled: "False"
+    #  spark.tispark.grpc.framesize: 268435456
+    #  spark.tispark.grpc.timeout_in_sec: 100
+    #  spark.tispark.meta.reload_period_in_sec: 60
+    #  spark.tispark.request.command.priority: "Low"
+    #  spark.tispark.table.scan_concurrency: 256
+    #spark_env:
+    #  SPARK_EXECUTOR_CORES: 5
+    #  SPARK_EXECUTOR_MEMORY: "10g"
+    #  SPARK_WORKER_CORES: 5
+    #  SPARK_WORKER_MEMORY: "10g"
+
 monitoring_servers:
   - host: 10.0.1.11
     # ssh_port: 22

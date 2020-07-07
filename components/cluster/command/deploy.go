@@ -295,10 +295,8 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 			).Shell( // spark is under a subdir, move it to deploy dir
 				inst.GetHost(),
 				fmt.Sprintf(
-					"mv -f %s %s/ && mv -f %s/* %s/ && rm -rf %s",
+					"cp -rf %[1]s %[2]s/ && cp -rf %[3]s/* %[2]s/ && rm -rf %[1]s %[3]s",
 					filepath.Join(deployDir, "bin", sparkSubPath),
-					deployDir,
-					filepath.Join(deployDir, sparkSubPath),
 					deployDir,
 					filepath.Join(deployDir, sparkSubPath),
 				),
@@ -320,7 +318,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 			t = t.Shell( // move tispark jar to correct path
 				inst.GetHost(),
 				fmt.Sprintf(
-					"mv -f %s/*.jar %s/jars/",
+					"cp -f %[1]s/*.jar %[2]s/jars/ && rm -f %[1]s/*.jar",
 					filepath.Join(deployDir, "bin"),
 					deployDir,
 				),

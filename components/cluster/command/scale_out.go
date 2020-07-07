@@ -15,6 +15,7 @@ package command
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -247,11 +248,50 @@ func buildScaleOutTask(
 				filepath.Join(deployDir, "conf"),
 				filepath.Join(deployDir, "scripts")).
 			Mkdir(metadata.User, inst.GetHost(), dataDirs...)
+
+		// copy dependency component if needed
+		switch inst.ComponentName() {
+		case spec.ComponentTiSpark:
+			sparkSubPath := spec.ComponentSubDir(spec.ComponentSpark,
+				spec.ComponentVersion(spec.ComponentSpark, version))
+			tb = tb.CopyComponent(
+				spec.ComponentSpark,
+				inst.OS(),
+				inst.Arch(),
+				spec.ComponentVersion(spec.ComponentSpark, version),
+				inst.GetHost(),
+				deployDir,
+			).Shell( // spark is under a subdir, move it to deploy dir
+				inst.GetHost(),
+				fmt.Sprintf(
+					"cp -rf %[1]s %[2]s/ && cp -rf %[3]s/* %[2]s/ && rm -rf %[1]s %[3]s",
+					filepath.Join(deployDir, "bin", sparkSubPath),
+					deployDir,
+					filepath.Join(deployDir, sparkSubPath),
+				),
+				false, // (not) sudo
+			)
+		}
+
 		if patchedComponents.Exist(inst.ComponentName()) {
 			tb.InstallPackage(spec.ClusterPath(clusterName, spec.PatchDirName, inst.ComponentName()+".tar.gz"), inst.GetHost(), deployDir)
 		} else {
 			tb.CopyComponent(inst.ComponentName(), inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
 		}
+
+		switch inst.ComponentName() {
+		case spec.ComponentTiSpark:
+			tb = tb.Shell( // move tispark jar to correct path
+				inst.GetHost(),
+				fmt.Sprintf(
+					"cp -f %[1]s/*.jar %[2]s/jars/ && rm -f %[1]s/*.jar",
+					filepath.Join(deployDir, "bin"),
+					deployDir,
+				),
+				false, // (not) sudo
+			)
+		}
+
 		t := tb.ScaleConfig(clusterName,
 			metadata.Version,
 			metadata.Topology,

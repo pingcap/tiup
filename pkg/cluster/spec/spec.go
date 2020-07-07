@@ -98,7 +98,7 @@ type (
 		PumpServers      []PumpSpec          `yaml:"pump_servers,omitempty"`
 		Drainers         []DrainerSpec       `yaml:"drainer_servers,omitempty"`
 		CDCServers       []CDCSpec           `yaml:"cdc_servers,omitempty"`
-		TiSparkMasters   []TiSparkMasterSpec `yaml:"tispark_master,omitempty"`
+		TiSparkMasters   []TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
 		TiSparkWorkers   []TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
 		Monitors         []PrometheusSpec    `yaml:"monitoring_servers"`
 		Grafana          []GrafanaSpec       `yaml:"grafana_servers,omitempty"`
@@ -502,6 +502,11 @@ func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 // Validate validates the topology specification and produce error if the
 // specification invalid (e.g: port conflicts or directory conflicts)
 func (s *Specification) Validate() error {
+	// We only support 1 spark master at present
+	if s.TiSparkMasters != nil && len(s.TiSparkMasters) > 1 {
+		return errors.New("TiSpark enabled cluster with more than 1 Spark master node is not supported")
+	}
+
 	if err := s.platformConflictsDetect(); err != nil {
 		return err
 	}
@@ -544,6 +549,8 @@ func (s *Specification) Merge(that *Specification) *Specification {
 		PumpServers:      append(s.PumpServers, that.PumpServers...),
 		Drainers:         append(s.Drainers, that.Drainers...),
 		CDCServers:       append(s.CDCServers, that.CDCServers...),
+		TiSparkMasters:   append(s.TiSparkMasters, that.TiSparkMasters...),
+		TiSparkWorkers:   append(s.TiSparkWorkers, that.TiSparkWorkers...),
 		Monitors:         append(s.Monitors, that.Monitors...),
 		Grafana:          append(s.Grafana, that.Grafana...),
 		Alertmanager:     append(s.Alertmanager, that.Alertmanager...),

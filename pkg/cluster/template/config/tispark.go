@@ -24,10 +24,9 @@ import (
 
 // TiSparkConfig represent the data to generate TiSpark configs
 type TiSparkConfig struct {
-	TiSparkMaster string
-	MasterPort    int
-	CustomFields  map[string]interface{}
-	Endpoints     []string
+	TiSparkMasters string
+	CustomFields   map[string]interface{}
+	Endpoints      []string
 }
 
 // NewTiSparkConfig returns a TiSparkConfig
@@ -35,10 +34,9 @@ func NewTiSparkConfig(pds []string) *TiSparkConfig {
 	return &TiSparkConfig{Endpoints: pds}
 }
 
-// WithMaster sets master address
-func (c *TiSparkConfig) WithMaster(master string, port int) *TiSparkConfig {
-	c.TiSparkMaster = master
-	c.MasterPort = port
+// WithMasters sets master address
+func (c *TiSparkConfig) WithMasters(masters string) *TiSparkConfig {
+	c.TiSparkMasters = masters
 	return c
 }
 

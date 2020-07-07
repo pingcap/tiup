@@ -37,8 +37,8 @@
 {{- end }}
 spark.sql.extensions   org.apache.spark.sql.TiExtensions
 
-{{- if .TiSparkMaster}}
-spark.master   spark://{{.TiSparkMaster}}:{{.MasterPort}}
+{{- if .TiSparkMasters}}
+spark.master   spark://{{.TiSparkMasters}}
 {{- end}}
 
 spark.tispark.pd.addresses {{template "PDList" .Endpoints}}
