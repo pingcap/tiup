@@ -95,19 +95,8 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 		return err
 	}
 
-	var iterErr error
-	iterErr = nil
-	newPart.IterInstance(func(instance spec.Instance) {
-		// check for "imported" parameter, it can not be true when scaling out
-		if instance.IsImported() {
-			iterErr = errors.New(
-				"'imported' is set to 'true' for new instance, this is only used " +
-					"for instances imported from tidb-ansible and make no sense when " +
-					"scaling out, please delete the line or set it to 'false' for new instances")
-		}
-	})
-	if iterErr != nil {
-		return iterErr
+	if err := validateNewTopo(&newPart); err != nil {
+		return err
 	}
 
 	if data, err := ioutil.ReadFile(topoFile); err == nil {
@@ -370,4 +359,20 @@ func buildScaleOutTask(
 
 	return builder.Build(), nil
 
+}
+
+// validateNewTopo checks the new part of scale-out topology to make sure it's supported
+func validateNewTopo(topo *spec.Specification) (err error) {
+	err = nil
+	topo.IterInstance(func(instance spec.Instance) {
+		// check for "imported" parameter, it can not be true when scaling out
+		if instance.IsImported() {
+			err = errors.New(
+				"'imported' is set to 'true' for new instance, this is only used " +
+					"for instances imported from tidb-ansible and make no sense when " +
+					"scaling out, please delete the line or set it to 'false' for new instances")
+			return
+		}
+	})
+	return err
 }
