@@ -25,6 +25,12 @@ import (
 	"github.com/pingcap/errors"
 )
 
+// IsSymExist check whether a symbol link is exist
+func IsSymExist(path string) bool {
+	_, err := os.Lstat(path)
+	return !os.IsNotExist(err)
+}
+
 // IsExist check whether a path is exist
 func IsExist(path string) bool {
 	_, err := os.Stat(path)
