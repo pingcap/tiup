@@ -17,7 +17,9 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"path/filepath"
 
+	"github.com/pingcap/tiup/pkg/meta"
 	utils2 "github.com/pingcap/tiup/pkg/utils"
 
 	"github.com/pingcap/errors"
@@ -61,6 +63,8 @@ func Initialize(base string) error {
 		profileDir = tiupData
 	}
 
+	clusterBaseDir := filepath.Join(profileDir, TiOpsClusterDir)
+	tidbSpec = meta.NewSpec(clusterBaseDir)
 	initialized = true
 	// make sure the dir exist
 	return utils2.CreateDir(profileDir)
