@@ -38,6 +38,19 @@ type DMMeta struct {
 	Topology *DMTopologySpecification `yaml:"topology"`
 }
 
+// GetTopology implements Metadata interface.
+func (m *DMMeta) GetTopology() cspec.Topology {
+	return m.Topology
+}
+
+// GetBaseMeta implements Metadata interface.
+func (m *DMMeta) GetBaseMeta() *cspec.BaseMeta {
+	return &cspec.BaseMeta{
+		Version: m.Version,
+		User:    m.User,
+	}
+}
+
 // GetSpecManager return the spec manager of dm cluster.
 func GetSpecManager() *meta.SpecManager {
 	return specManager

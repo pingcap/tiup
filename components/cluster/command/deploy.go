@@ -33,7 +33,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/errutil"
-	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
@@ -94,12 +93,11 @@ func newDeploy() *cobra.Command {
 				return nil
 			}
 
-			logger.EnableAuditLog()
 			clusterName := args[0]
 			version := args[1]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			teleCommand = append(teleCommand, version)
-			return deploy(clusterName, version, args[2], opt)
+			return deployCluster(clusterName, version, args[2], opt)
 		},
 	}
 
@@ -154,7 +152,7 @@ func confirmTopology(clusterName, version string, topo *spec.Specification, patc
 	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 }
 
-func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) error {
+func deployCluster(clusterName, clusterVersion, topoFile string, opt deployOptions) error {
 	if err := clusterutil.ValidateClusterNameOrError(clusterName); err != nil {
 		return err
 	}

@@ -22,7 +22,6 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/spf13/cobra"
@@ -53,7 +52,6 @@ func newReloadCmd() *cobra.Command {
 				return perrs.Errorf("cannot start non-exists cluster %s", clusterName)
 			}
 
-			logger.EnableAuditLog()
 			metadata, err := spec.ClusterMetadata(clusterName)
 			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 				return err

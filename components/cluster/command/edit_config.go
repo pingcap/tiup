@@ -25,7 +25,6 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
@@ -54,7 +53,6 @@ func newEditConfigCmd() *cobra.Command {
 				return perrs.Errorf("cannot start non-exists cluster %s", clusterName)
 			}
 
-			logger.EnableAuditLog()
 			metadata, err := spec.ClusterMetadata(clusterName)
 			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 				return err

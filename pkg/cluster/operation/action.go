@@ -32,7 +32,7 @@ import (
 // Start the cluster.
 func Start(
 	getter ExecutorGetter,
-	cluster spec.Spec,
+	cluster spec.Topology,
 	options Options,
 ) error {
 	uniqueHosts := set.NewStringSet()
@@ -65,7 +65,7 @@ func Start(
 // Stop the cluster.
 func Stop(
 	getter ExecutorGetter,
-	cluster *spec.Specification,
+	cluster spec.Topology,
 	options Options,
 ) error {
 	roleFilter := set.NewStringSet(options.Roles...)
@@ -87,8 +87,10 @@ func Stop(
 		for _, inst := range insts {
 			instCount[inst.GetHost()]--
 			if instCount[inst.GetHost()] == 0 {
-				if err := StopMonitored(getter, inst, cluster.MonitoredOptions, options.OptTimeout); err != nil {
-					return err
+				if cluster.GetMonitoredOptions() != nil {
+					if err := StopMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -323,7 +325,7 @@ func DestroyClusterTombstone(
 // Restart the cluster.
 func Restart(
 	getter ExecutorGetter,
-	cluster *spec.Specification,
+	cluster spec.Topology,
 	options Options,
 ) error {
 	err := Stop(getter, cluster, options)
@@ -511,7 +513,7 @@ func StartComponent(getter ExecutorGetter, instances []spec.Instance, options Op
 }
 
 // StopMonitored stop BlackboxExporter and NodeExporter
-func StopMonitored(getter ExecutorGetter, instance spec.Instance, options spec.MonitoredOptions, timeout int64) error {
+func StopMonitored(getter ExecutorGetter, instance spec.Instance, options *spec.MonitoredOptions, timeout int64) error {
 	ports := map[string]int{
 		spec.ComponentNodeExporter:     options.NodeExporterPort,
 		spec.ComponentBlackboxExporter: options.BlackboxExporterPort,

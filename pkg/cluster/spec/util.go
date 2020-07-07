@@ -14,6 +14,8 @@
 package spec
 
 import (
+	"path/filepath"
+
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/version"
@@ -43,6 +45,26 @@ type ClusterMeta struct {
 	OpsVer string `yaml:"last_ops_ver,omitempty"` // the version of ourself that updated the meta last time
 
 	Topology *Specification `yaml:"topology"`
+}
+
+// GetTopology implement Metadata interface.
+func (m *ClusterMeta) GetTopology() Topology {
+	return m.Topology
+}
+
+// GetBaseMeta implements Metadata interface.
+func (m *ClusterMeta) GetBaseMeta() *BaseMeta {
+	return &BaseMeta{
+		Version: m.Version,
+		User:    m.User,
+	}
+}
+
+// newTiDBSpec create a Spec for tidb cluster.
+func newTiDBSpec() *meta.SpecManager {
+	clusterBaseDir := filepath.Join(profileDir, TiOpsClusterDir)
+	clusterSpec := meta.NewSpec(clusterBaseDir)
+	return clusterSpec
 }
 
 // SaveClusterMeta saves the cluster meta information to profile directory

@@ -24,7 +24,6 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/version"
@@ -41,7 +40,6 @@ func newUpgradeCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			logger.EnableAuditLog()
 			clusterName := args[0]
 			version := args[1]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))

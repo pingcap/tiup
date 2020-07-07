@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pingcap/tiup/components/dm/spec"
 	cspec "github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/dm/spec"
 	"github.com/pingcap/tiup/pkg/meta"
 
 	"github.com/fatih/color"
@@ -78,7 +78,7 @@ func newDeploy() *cobra.Command {
 			}
 
 			logger.EnableAuditLog()
-			return deploy(args[0], args[1], args[2], opt)
+			return deployCluster(args[0], args[1], args[2], opt)
 		},
 	}
 
@@ -127,7 +127,7 @@ func confirmTopology(clusterName, version string, topo *spec.DMTopologySpecifica
 	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 }
 
-func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) error {
+func deployCluster(clusterName, clusterVersion, topoFile string, opt deployOptions) error {
 	if err := clusterutil.ValidateClusterNameOrError(clusterName); err != nil {
 		return err
 	}

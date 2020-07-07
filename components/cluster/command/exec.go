@@ -21,7 +21,6 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
@@ -55,7 +54,6 @@ func newExecCmd() *cobra.Command {
 				return perrs.Errorf("cannot execute command on non-exists cluster %s", clusterName)
 			}
 
-			logger.EnableAuditLog()
 			metadata, err := spec.ClusterMetadata(clusterName)
 			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 				return err

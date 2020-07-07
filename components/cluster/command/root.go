@@ -25,6 +25,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/deploy"
 	"github.com/pingcap/tiup/pkg/cluster/flags"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/report"
@@ -51,11 +52,11 @@ var (
 )
 
 var tidbSpec *meta.SpecManager
+var deployer *deploy.Deployer
 
 func scrubClusterName(n string) string {
 	return "cluster_" + telemetry.HashReport(n)
 }
-
 func getParentNames(cmd *cobra.Command) []string {
 	if cmd == nil {
 		return nil
@@ -74,6 +75,10 @@ func init() {
 	logger.InitGlobalLogger()
 
 	colorutil.AddColorFunctionsForCobra()
+
+	deployer = deploy.NewDeployer("tidb", tidbSpec, func() spec.Metadata {
+		return new(spec.ClusterMeta)
+	})
 
 	// Initialize the global variables
 	flags.ShowBacktrace = len(os.Getenv("TIUP_BACKTRACE")) > 0
@@ -204,6 +209,8 @@ func extractSuggestionFromErrorX(err *errorx.Error) string {
 
 // Execute executes the root command
 func Execute() {
+	logger.EnableAuditLog()
+
 	zap.L().Info("Execute command", zap.String("command", cliutil.OsArgs()))
 	zap.L().Debug("Environment variables", zap.Strings("env", os.Environ()))
 

@@ -24,7 +24,6 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
@@ -67,7 +66,6 @@ You can retain some nodes and roles data when destroy cluster, eg:
 				return perrs.Errorf("cannot destroy non-exists cluster %s", clusterName)
 			}
 
-			logger.EnableAuditLog()
 			metadata, err := spec.ClusterMetadata(clusterName)
 			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 				!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {

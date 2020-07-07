@@ -109,11 +109,25 @@ type (
 	}
 )
 
-// Spec represents specification of the  cluster.
-type Spec interface {
+// Topology represents specification of the  cluster.
+type Topology interface {
 	// Instances() []Instance
 	ComponentsByStartOrder() []Component
+	ComponentsByStopOrder() []Component
+	IterInstance(fn func(instance Instance))
 	GetMonitoredOptions() *MonitoredOptions
+}
+
+// BaseMeta is the base info of metadata.
+type BaseMeta struct {
+	User    string
+	Version string
+}
+
+// Metadata of a cluster.
+type Metadata interface {
+	GetTopology() Topology
+	GetBaseMeta() *BaseMeta
 }
 
 // GetMonitoredOptions implements Spec interface.

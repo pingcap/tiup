@@ -20,12 +20,13 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
+	"github.com/pingcap/tiup/components/dm/spec"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/deploy"
 	"github.com/pingcap/tiup/pkg/cluster/flags"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	cspec "github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/colorutil"
-	"github.com/pingcap/tiup/pkg/dm/spec"
 	tiupmeta "github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -44,6 +45,7 @@ var (
 )
 
 var dmspec = spec.GetSpecManager()
+var deployer *deploy.Deployer
 
 func init() {
 	logger.InitGlobalLogger()
@@ -66,6 +68,8 @@ func init() {
 			if err = cspec.Initialize("cluster"); err != nil {
 				return err
 			}
+
+			deployer = deploy.NewDeployer("dm", spec.GetSpecManager(), func() cspec.Metadata { return new(spec.DMMeta) })
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.
 			env, err = tiupmeta.InitEnv(repository.Options{
@@ -95,10 +99,10 @@ func init() {
 	rootCmd.AddCommand(
 		newDeploy(),
 		newStartCmd(),
-	/*
-		newCheckCmd(),
 		newStopCmd(),
 		newRestartCmd(),
+	/*
+		newCheckCmd(),
 		newScaleInCmd(),
 		newScaleOutCmd(),
 		newDestroyCmd(),
@@ -172,6 +176,8 @@ func extractSuggestionFromErrorX(err *errorx.Error) string {
 
 // Execute executes the root command
 func Execute() {
+	logger.EnableAuditLog()
+
 	zap.L().Info("Execute command", zap.String("command", cliutil.OsArgs()))
 	zap.L().Debug("Environment variables", zap.Strings("env", os.Environ()))
 

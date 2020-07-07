@@ -29,7 +29,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
@@ -56,7 +55,6 @@ func newScaleOutCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			logger.EnableAuditLog()
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			return scaleOut(args[0], args[1], opt)
