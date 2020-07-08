@@ -170,12 +170,12 @@ func mergeImported(importConfig []byte, specConfigs ...map[string]interface{}) (
 func checkConfig(e executor.Executor, componentName, clusterVersion, nodeOS, arch, config string, paths meta.DirPaths) error {
 	repo, err := clusterutil.NewRepository(nodeOS, arch)
 	if err != nil {
-		return err
+		return perrs.Annotate(ErrorCheckConfig, err.Error())
 	}
 	ver := ComponentVersion(componentName, clusterVersion)
 	entry, err := repo.ComponentBinEntry(componentName, ver)
 	if err != nil {
-		return err
+		return perrs.Annotate(ErrorCheckConfig, err.Error())
 	}
 
 	binPath := path.Join(paths.Deploy, "bin", entry)

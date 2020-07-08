@@ -80,7 +80,7 @@ func Stop(
 
 	for _, com := range components {
 		insts := FilterInstance(com.Instances(), nodeFilter)
-		err := StopComponent(getter, insts)
+		err := StopComponent(getter, insts, options.OptTimeout)
 		if err != nil {
 			return errors.Annotatef(err, "failed to stop %s", com.Name())
 		}
@@ -183,7 +183,7 @@ func DestroyClusterTombstone(
 		instances := (&spec.TiKVComponent{Specification: cluster}).Instances()
 		instances = filterID(instances, id)
 
-		err = StopComponent(getter, instances)
+		err = StopComponent(getter, instances, options.OptTimeout)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
@@ -222,7 +222,7 @@ func DestroyClusterTombstone(
 		instances := (&spec.TiFlashComponent{Specification: cluster}).Instances()
 		instances = filterID(instances, id)
 
-		err = StopComponent(getter, instances)
+		err = StopComponent(getter, instances, options.OptTimeout)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
@@ -259,7 +259,7 @@ func DestroyClusterTombstone(
 
 		instances := (&spec.PumpComponent{Specification: cluster}).Instances()
 		instances = filterID(instances, id)
-		err = StopComponent(getter, instances)
+		err = StopComponent(getter, instances, options.OptTimeout)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
@@ -297,7 +297,7 @@ func DestroyClusterTombstone(
 		instances := (&spec.DrainerComponent{Specification: cluster}).Instances()
 		instances = filterID(instances, id)
 
-		err = StopComponent(getter, instances)
+		err = StopComponent(getter, instances, options.OptTimeout)
 		if err != nil {
 			return nil, errors.AddStack(err)
 		}
@@ -353,6 +353,7 @@ func StartMonitored(getter ExecutorGetter, instance spec.Instance, options *spec
 			Unit:         fmt.Sprintf("%s-%d.service", comp, ports[comp]),
 			ReloadDaemon: true,
 			Action:       "start",
+			Timeout:      time.Second * time.Duration(timeout),
 		}
 		systemd := module.NewSystemdModule(c)
 		stdout, stderr, err := systemd.Execute(e)
@@ -399,6 +400,7 @@ func RestartComponent(getter ExecutorGetter, instances []spec.Instance, timeout 
 			Unit:         ins.ServiceName(),
 			ReloadDaemon: true,
 			Action:       "restart",
+			Timeout:      time.Second * time.Duration(timeout),
 		}
 		systemd := module.NewSystemdModule(c)
 		stdout, stderr, err := systemd.Execute(e)
@@ -441,6 +443,7 @@ func startInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) erro
 		ReloadDaemon: true,
 		Action:       "start",
 		Enabled:      true,
+		Timeout:      time.Second * time.Duration(timeout),
 	}
 	systemd := module.NewSystemdModule(c)
 	stdout, stderr, err := systemd.Execute(e)
@@ -521,6 +524,7 @@ func StopMonitored(getter ExecutorGetter, instance spec.Instance, options spec.M
 			Unit:         fmt.Sprintf("%s-%d.service", comp, ports[comp]),
 			Action:       "stop",
 			ReloadDaemon: true,
+			Timeout:      time.Second * time.Duration(timeout),
 		}
 		systemd := module.NewSystemdModule(c)
 		stdout, stderr, err := systemd.Execute(e)
@@ -562,7 +566,7 @@ func StopMonitored(getter ExecutorGetter, instance spec.Instance, options spec.M
 	return nil
 }
 
-func stopInstance(getter ExecutorGetter, ins spec.Instance) error {
+func stopInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) error {
 	e := getter.Get(ins.GetHost())
 	log.Infof("\tStopping instance %s", ins.GetHost())
 
@@ -571,6 +575,7 @@ func stopInstance(getter ExecutorGetter, ins spec.Instance) error {
 		Unit:         ins.ServiceName(),
 		Action:       "stop",
 		ReloadDaemon: true, // always reload before operate
+		Timeout:      time.Second * time.Duration(timeout),
 	}
 	systemd := module.NewSystemdModule(c)
 	stdout, stderr, err := systemd.Execute(e)
@@ -607,7 +612,7 @@ func stopInstance(getter ExecutorGetter, ins spec.Instance) error {
 }
 
 // StopComponent stop the instances.
-func StopComponent(getter ExecutorGetter, instances []spec.Instance) error {
+func StopComponent(getter ExecutorGetter, instances []spec.Instance, timeout int64) error {
 	if len(instances) <= 0 {
 		return nil
 	}
@@ -621,7 +626,7 @@ func StopComponent(getter ExecutorGetter, instances []spec.Instance) error {
 		ins := ins
 		errg.Go(func() error {
 
-			err := stopInstance(getter, ins)
+			err := stopInstance(getter, ins, timeout)
 			if err != nil {
 				return errors.AddStack(err)
 			}
