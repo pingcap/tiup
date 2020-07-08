@@ -30,7 +30,7 @@ import (
 type TiKVInstance struct {
 	instance
 	pds []*PDInstance
-	*Process
+	Process
 }
 
 // NewTiKVInstance return a TiKVInstance
@@ -67,8 +67,6 @@ func (inst *TiKVInstance) Start(ctx context.Context, version v0manifest.Version)
 		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", advertiseHost(inst.Host), pd.StatusPort))
 	}
 	args := []string{
-		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
-		CompVersion("tikv", version),
 		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
 		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(inst.Host), inst.Port),
 		fmt.Sprintf("--status-addr=%s:%d", inst.Host, inst.StatusPort),
@@ -78,8 +76,11 @@ func (inst *TiKVInstance) Start(ctx context.Context, version v0manifest.Version)
 		fmt.Sprintf("--log-file=%s", inst.LogFile()),
 	}
 
-	inst.Process = NewProcess(ctx, inst.Dir, args[0], args[1:]...)
-	logIfErr(inst.Process.setOutputFile(inst.LogFile()))
+	var err error
+	if inst.Process, err = NewComponentProcess(ctx, inst.Dir, inst.BinPath, "tikv", version, args...); err != nil {
+		return err
+	}
+	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
 
 	return inst.Process.Start()
 }

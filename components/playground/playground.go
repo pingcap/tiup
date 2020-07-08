@@ -27,6 +27,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"text/tabwriter"
 	"time"
@@ -48,6 +49,7 @@ import (
 // Playground represent the playground of a cluster.
 type Playground struct {
 	booted      bool
+	curSig      int32
 	bootOptions *bootOptions
 	profile     *localdata.Profile
 	port        int
@@ -63,6 +65,13 @@ type Playground struct {
 	instanceWaiter errgroup.Group
 
 	monitor *monitor
+}
+
+// MonitorInfo represent the monitor
+type MonitorInfo struct {
+	IP         string `json:"ip"`
+	Port       int    `json:"port"`
+	BinaryPath string `json:"binary_path"`
 }
 
 // NewPlayground create a Playground instance.
@@ -389,7 +398,7 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 func (p *Playground) addWaitInstance(inst instance.Instance) {
 	p.instanceWaiter.Go(func() error {
 		err := inst.Wait()
-		if err != nil {
+		if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
 			fmt.Print(color.RedString("%s quit: %s\n", inst.Component(), err.Error()))
 			if lines, _ := utils.TailN(inst.LogFile(), 10); len(lines) > 0 {
 				for _, line := range lines {
@@ -664,103 +673,13 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 
 	fmt.Println("Playground Bootstrapping...")
 
-	monitorInfo := struct {
-		IP         string `json:"ip"`
-		Port       int    `json:"port"`
-		BinaryPath string `json:"binary_path"`
-	}{}
+	monitorInfo := MonitorInfo{}
 
 	var monitorCmd *exec.Cmd
 	var grafana *grafana
 	if options.monitor {
-		// set up prometheus
-		if err := installIfMissing(p.profile, "prometheus", options.version); err != nil {
-			return err
-		}
-
-		dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
-		promDir := filepath.Join(dataDir, "prometheus")
-
-		monitor := newMonitor()
-		port, cmd, err := monitor.startMonitor(ctx, options.version, options.host, promDir)
-		if err != nil {
-			return err
-		}
-		p.monitor = monitor
-
-		monitorInfo.IP = options.host
-		monitorInfo.BinaryPath = promDir
-		monitorInfo.Port = port
-
-		monitorCmd = cmd
-		go func() {
-			log, err := os.OpenFile(filepath.Join(promDir, "prom.log"), os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
-			if err != nil {
-				fmt.Println("Monitor system start failed", err)
-				return
-			}
-			defer log.Close()
-
-			cmd.Stderr = log
-			cmd.Stdout = os.Stdout
-
-			// fmt.Println("Start Prometheus instance...")
-			if err := cmd.Start(); err != nil {
-				fmt.Println("Monitor system start failed", err)
-				return
-			}
-		}()
-
-		// set up grafana
-		if err := installIfMissing(p.profile, "grafana", options.version); err != nil {
-			return err
-		}
-		installPath, err := p.profile.ComponentInstalledPath("grafana", v0manifest.Version(options.version))
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		dataDir = os.Getenv(localdata.EnvNameInstanceDataDir)
-		grafanaDir := filepath.Join(dataDir, "grafana")
-
-		cmd = exec.Command("cp", "-r", installPath, grafanaDir)
-		err = cmd.Run()
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		dashboardDir := filepath.Join(grafanaDir, "dashboards")
-		err = os.MkdirAll(dashboardDir, 0755)
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		// mv {grafanaDir}/*.json {grafanaDir}/dashboards/
-		err = filepath.Walk(grafanaDir, func(path string, info os.FileInfo, err error) error {
-			// skip scan sub directory
-			if info.IsDir() && path != grafanaDir {
-				return filepath.SkipDir
-			}
-
-			if strings.HasSuffix(info.Name(), ".json") {
-				return os.Rename(path, filepath.Join(grafanaDir, "dashboards", info.Name()))
-			}
-
-			return nil
-		})
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		err = replaceDatasource(dashboardDir, clusterName)
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		grafana = newGrafana(options.version, options.host)
-		// fmt.Println("Start Grafana instance...")
-		err = grafana.start(ctx, grafanaDir, fmt.Sprintf("http://%s:%d", monitorInfo.IP, monitorInfo.Port))
-		if err != nil {
+		var err error
+		if monitorCmd, grafana, err = p.bootMonitor(ctx, &monitorInfo); err != nil {
 			return errors.AddStack(err)
 		}
 	}
@@ -912,6 +831,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			syscall.SIGTERM,
 			syscall.SIGQUIT)
 		sig := (<-sc).(syscall.Signal)
+		atomic.StoreInt32(&p.curSig, int32(sig))
 		if sig != syscall.SIGINT {
 			// Need more graceful kill by stop components one by one?
 			_ = p.RWalkInstances(func(_ string, inst instance.Instance) error {
@@ -923,6 +843,17 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			}
 			if grafana != nil {
 				_ = syscall.Kill(grafana.cmd.Process.Pid, sig)
+			}
+		} else {
+			_ = p.RWalkInstances(func(_ string, inst instance.Instance) error {
+				_ = syscall.Kill(inst.Pid(), syscall.SIGKILL)
+				return nil
+			})
+			if monitorCmd != nil {
+				_ = syscall.Kill(monitorCmd.Process.Pid, syscall.SIGKILL)
+			}
+			if grafana != nil {
+				_ = syscall.Kill(grafana.cmd.Process.Pid, syscall.SIGKILL)
 			}
 		}
 	}()
@@ -940,7 +871,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 	if grafana != nil {
 		p.instanceWaiter.Go(func() error {
 			err := grafana.cmd.Wait()
-			if err != nil {
+			if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
 				fmt.Printf("Grafana quit: %v\n", err)
 			}
 			return err
@@ -950,12 +881,12 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 
 	// Wait all instance quit and return the first non-nil err.
 	err = p.instanceWaiter.Wait()
-	if err != nil {
+	if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
 		return err
 	}
 
 	if monitorCmd != nil {
-		if err := monitorCmd.Wait(); err != nil {
+		if err := monitorCmd.Wait(); err != nil && atomic.LoadInt32(&p.curSig) == 0 {
 			fmt.Println("Monitor system wait failed", err)
 		}
 	}
@@ -984,6 +915,103 @@ func (p *Playground) renderSDFile() error {
 	}
 
 	return nil
+}
+
+func (p *Playground) bootMonitor(ctx context.Context, monitorInfo *MonitorInfo) (*exec.Cmd, *grafana, error) {
+	options := p.bootOptions
+
+	// set up prometheus
+	if err := installIfMissing(p.profile, "prometheus", options.version); err != nil {
+		return nil, nil, err
+	}
+
+	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
+	promDir := filepath.Join(dataDir, "prometheus")
+
+	monitor := newMonitor()
+	port, cmd, err := monitor.startMonitor(ctx, options.version, options.host, promDir)
+	if err != nil {
+		return nil, nil, err
+	}
+	p.monitor = monitor
+
+	monitorInfo.IP = options.host
+	monitorInfo.BinaryPath = promDir
+	monitorInfo.Port = port
+
+	monitorCmd := cmd
+	go func() {
+		log, err := os.OpenFile(filepath.Join(promDir, "prom.log"), os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
+		if err != nil {
+			fmt.Println("Monitor system start failed", err)
+			return
+		}
+		defer log.Close()
+
+		cmd.Stderr = log
+		cmd.Stdout = os.Stdout
+
+		// fmt.Println("Start Prometheus instance...")
+		if err := cmd.Start(); err != nil {
+			fmt.Println("Monitor system start failed", err)
+			return
+		}
+	}()
+
+	// set up grafana
+	if err := installIfMissing(p.profile, "grafana", options.version); err != nil {
+		return nil, nil, errors.AddStack(err)
+	}
+	installPath, err := p.profile.ComponentInstalledPath("grafana", v0manifest.Version(options.version))
+	if err != nil {
+		return nil, nil, errors.AddStack(err)
+	}
+
+	dataDir = os.Getenv(localdata.EnvNameInstanceDataDir)
+	grafanaDir := filepath.Join(dataDir, "grafana")
+
+	cmd = exec.Command("cp", "-r", installPath, grafanaDir)
+	err = cmd.Run()
+	if err != nil {
+		return nil, nil, errors.AddStack(err)
+	}
+
+	dashboardDir := filepath.Join(grafanaDir, "dashboards")
+	err = os.MkdirAll(dashboardDir, 0755)
+	if err != nil {
+		return nil, nil, errors.AddStack(err)
+	}
+
+	// mv {grafanaDir}/*.json {grafanaDir}/dashboards/
+	err = filepath.Walk(grafanaDir, func(path string, info os.FileInfo, err error) error {
+		// skip scan sub directory
+		if info.IsDir() && path != grafanaDir {
+			return filepath.SkipDir
+		}
+
+		if strings.HasSuffix(info.Name(), ".json") {
+			return os.Rename(path, filepath.Join(grafanaDir, "dashboards", info.Name()))
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, nil, errors.AddStack(err)
+	}
+
+	err = replaceDatasource(dashboardDir, clusterName)
+	if err != nil {
+		return nil, nil, errors.AddStack(err)
+	}
+
+	grafana := newGrafana(options.version, options.host)
+	// fmt.Println("Start Grafana instance...")
+	err = grafana.start(ctx, grafanaDir, fmt.Sprintf("http://%s:%d", monitorInfo.IP, monitorInfo.Port))
+	if err != nil {
+		return nil, nil, errors.AddStack(err)
+	}
+
+	return monitorCmd, grafana, nil
 }
 
 func logIfErr(err error) {

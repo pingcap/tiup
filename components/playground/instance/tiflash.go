@@ -43,7 +43,7 @@ type TiFlashInstance struct {
 	ProxyConfigPath string
 	pds             []*PDInstance
 	dbs             []*TiDBInstance
-	*Process
+	Process
 }
 
 // NewTiFlashInstance return a TiFlashInstance
@@ -178,14 +178,14 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Versi
 	}
 
 	args := []string{
-		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
-		CompVersion("tiflash", version),
 		"server",
 		fmt.Sprintf("--config-file=%s", inst.ConfigPath),
 	}
 
-	inst.Process = NewProcess(ctx, inst.Dir, args[0], args[1:]...)
-	logIfErr(inst.Process.setOutputFile(inst.LogFile()))
+	if inst.Process, err = NewComponentProcess(ctx, inst.Dir, inst.BinPath, "tiflash", version, args...); err != nil {
+		return err
+	}
+	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
 
 	return inst.Process.Start()
 }
@@ -202,7 +202,7 @@ func (inst *TiFlashInstance) LogFile() string {
 
 // Cmd returns the internal Cmd instance
 func (inst *TiFlashInstance) Cmd() *exec.Cmd {
-	return inst.cmd
+	return inst.Process.Cmd()
 }
 
 // StoreAddr return the store address of TiFlash

@@ -3,11 +3,16 @@ package telemetry
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/google/uuid"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/localdata"
 	"gopkg.in/yaml.v2"
 )
+
+const telemetryFname = "meta.yaml"
 
 // Status of telemetry.
 type Status string
@@ -67,4 +72,17 @@ func (m *Meta) SaveTo(fname string) error {
 	}
 
 	return ioutil.WriteFile(fname, data, 0644)
+}
+
+// GetTelemetryMeta read the telemeta from disk
+func GetTelemetryMeta(env *environment.Environment) (meta *Meta, fname string, err error) {
+	dir := env.Profile().Path(localdata.TelemetryDir)
+	err = os.MkdirAll(dir, 0755)
+	if err != nil {
+		return
+	}
+
+	fname = filepath.Join(dir, telemetryFname)
+	meta, err = LoadFrom(fname)
+	return
 }

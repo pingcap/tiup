@@ -2,41 +2,54 @@ package instance
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"time"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/environment"
+	e "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/repository"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 )
 
-// Process represent process to be run by playground.
-type Process struct {
+// Process represent process to be run by playground
+type Process interface {
+	Start() error
+	Wait() error
+	Pid() int
+	Uptime() string
+	SetOutputFile(fname string) error
+	Cmd() *exec.Cmd
+}
+
+// process implementes Process
+type process struct {
 	cmd       *exec.Cmd
 	startTime time.Time
 }
 
 // Start the process
-func (p *Process) Start() error {
+func (p *process) Start() error {
 	// fmt.Printf("Starting `%s`: %s", filepath.Base(p.cmd.Path), strings.Join(p.cmd.Args, " "))
 	p.startTime = time.Now()
 	return p.cmd.Start()
 }
 
 // Wait implements Instance interface.
-func (p *Process) Wait() error {
+func (p *process) Wait() error {
 	return p.cmd.Wait()
 }
 
 // Pid implements Instance interface.
-func (p *Process) Pid() int {
+func (p *process) Pid() int {
 	return p.cmd.Process.Pid
 }
 
 // Uptime implements Instance interface.
-func (p *Process) Uptime() string {
+func (p *process) Uptime() string {
 	s := p.cmd.ProcessState
 	if s != nil && s.Exited() {
 		return "exited"
@@ -46,7 +59,7 @@ func (p *Process) Uptime() string {
 	return duration.String()
 }
 
-func (p *Process) setOutputFile(fname string) error {
+func (p *process) SetOutputFile(fname string) error {
 	f, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		return errors.AddStack(err)
@@ -55,27 +68,34 @@ func (p *Process) setOutputFile(fname string) error {
 	return nil
 }
 
-func (p *Process) setOutput(w io.Writer) {
+func (p *process) setOutput(w io.Writer) {
 	p.cmd.Stdout = w
 	p.cmd.Stderr = w
 }
 
-// NewProcess create a Process instance.
-func NewProcess(ctx context.Context, dir string, name string, arg ...string) *Process {
+func (p *process) Cmd() *exec.Cmd {
+	return p.cmd
+}
+
+// NewComponentProcess create a Process instance.
+func NewComponentProcess(ctx context.Context, dir, binPath, component string, version v0manifest.Version, arg ...string) (Process, error) {
 	if dir == "" {
 		panic("dir must be set")
 	}
 
-	cmd := exec.CommandContext(ctx, name, arg...)
-	cmd.Env = append(
-		os.Environ(),
-		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, dir),
-	)
-
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	return &Process{
-		cmd: cmd,
+	env, err := environment.InitEnv(repository.Options{})
+	if err != nil {
+		return nil, err
 	}
+
+	oldDir := os.Getenv(localdata.EnvNameInstanceDataDir)
+	defer os.Setenv(localdata.EnvNameInstanceDataDir, oldDir)
+	os.Setenv(localdata.EnvNameInstanceDataDir, dir)
+
+	cmd, err := e.PrepareCommand(ctx, component, version, binPath, "", arg, env)
+	if err != nil {
+		return nil, err
+	}
+
+	return &process{cmd: cmd}, nil
 }
