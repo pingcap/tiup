@@ -146,6 +146,12 @@ func confirmTopology(clusterName, version string, topo *spec.Specification, patc
 		log.Errorf("    3. The component marked as `patched` has been replaced by previours patch command.")
 	}
 
+	if (topo.TiSparkMasters != nil && len(topo.TiSparkMasters) > 0) ||
+		(topo.TiSparkWorkers != nil && len(topo.TiSparkWorkers) > 0) {
+		log.Warnf("There are TiSpark nodes defined in the topology, please note that you'll need to manually install Java Runtime Environment (JRE) 8 on the host, other wise the TiSpark nodes will fail to start.")
+		log.Warnf("You may read the OpenJDK doc for a reference: https://openjdk.java.net/install/")
+	}
+
 	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 }
 

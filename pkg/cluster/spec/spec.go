@@ -499,12 +499,30 @@ func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 	return count
 }
 
-// Validate validates the topology specification and produce error if the
-// specification invalid (e.g: port conflicts or directory conflicts)
-func (s *Specification) Validate() error {
+func (s *Specification) validateTiSparkSpec() error {
+	if s.TiSparkMasters == nil && s.TiSparkWorkers == nil {
+		return nil
+	}
+	if len(s.TiSparkMasters) == 0 {
+		if s.TiSparkWorkers == nil || len(s.TiSparkWorkers) == 0 {
+			return nil
+		}
+		return errors.New("There must be a Spark master node if you want to use the TiSpark component")
+	}
+
 	// We only support 1 spark master at present
 	if s.TiSparkMasters != nil && len(s.TiSparkMasters) > 1 {
 		return errors.New("TiSpark enabled cluster with more than 1 Spark master node is not supported")
+	}
+
+	return nil
+}
+
+// Validate validates the topology specification and produce error if the
+// specification invalid (e.g: port conflicts or directory conflicts)
+func (s *Specification) Validate() error {
+	if err := s.validateTiSparkSpec(); err != nil {
+		return err
 	}
 
 	if err := s.platformConflictsDetect(); err != nil {
