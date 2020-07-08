@@ -36,7 +36,6 @@ import (
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
-	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/version"
@@ -51,7 +50,7 @@ var (
 	skipConfirm bool
 )
 
-var tidbSpec *meta.SpecManager
+var tidbSpec *spec.SpecManager
 var deployer *deploy.Deployer
 
 func scrubClusterName(n string) string {

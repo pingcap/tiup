@@ -1,7 +1,12 @@
 package deploy
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
@@ -13,17 +18,19 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
+	"sigs.k8s.io/yaml"
 )
 
 // Deployer to deploy a cluster.
 type Deployer struct {
 	sysName     string
-	specManager *meta.SpecManager
+	specManager *spec.SpecManager
 	newMeta     func() spec.Metadata
 }
 
 // NewDeployer create a Deployer.
-func NewDeployer(sysName string, specManager *meta.SpecManager, newMeta func() spec.Metadata) *Deployer {
+func NewDeployer(sysName string, specManager *spec.SpecManager, newMeta func() spec.Metadata) *Deployer {
 	return &Deployer{
 		sysName:     sysName,
 		specManager: specManager,
@@ -300,6 +307,40 @@ func (d *Deployer) Exec(clusterName string, opt ExecOptions, gOpt operator.Optio
 	return nil
 }
 
+// EditConfig let the user edit the config.
+func (d *Deployer) EditConfig(clusterName string, skipConfirm bool) error {
+	metadata, err := d.meta(clusterName)
+	if err != nil {
+		return perrs.AddStack(err)
+	}
+
+	topo := metadata.GetTopology()
+
+	data, err := yaml.Marshal(topo)
+	if err != nil {
+		return perrs.AddStack(err)
+	}
+
+	newTopo, err := editTopo(topo, data, skipConfirm)
+	if err != nil {
+		return perrs.AddStack(err)
+	}
+
+	if newTopo == nil {
+		return nil
+	}
+
+	log.Infof("Apply the change...")
+	metadata.SetTopology(newTopo)
+	err = d.specManager.SaveMeta(clusterName, metadata)
+	if err != nil {
+		return perrs.Annotate(err, "failed to save meta")
+	}
+
+	log.Infof("Apply change successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", cliutil.OsArgs0(), clusterName)
+	return nil
+}
+
 func (d *Deployer) meta(name string) (metadata spec.Metadata, err error) {
 	exist, err := d.specManager.Exist(name)
 	if err != nil {
@@ -318,4 +359,84 @@ func (d *Deployer) meta(name string) (metadata spec.Metadata, err error) {
 	}
 
 	return metadata, nil
+}
+
+// 1. Write Topology to a temporary file.
+// 2. Open file in editor.
+// 3. Check and update Topology.
+// 4. Save meta file.
+func editTopo(origTopo spec.Topology, data []byte, skipConfirm bool) (spec.Topology, error) {
+	file, err := ioutil.TempFile(os.TempDir(), "*")
+	if err != nil {
+		return nil, perrs.AddStack(err)
+	}
+
+	name := file.Name()
+
+	_, err = io.Copy(file, bytes.NewReader(data))
+	if err != nil {
+		return nil, perrs.AddStack(err)
+	}
+
+	err = file.Close()
+	if err != nil {
+		return nil, perrs.AddStack(err)
+	}
+
+	err = utils.OpenFileInEditor(name)
+	if err != nil {
+		return nil, perrs.AddStack(err)
+	}
+
+	// Now user finish editing the file.
+	newData, err := ioutil.ReadFile(name)
+	if err != nil {
+		return nil, perrs.AddStack(err)
+	}
+
+	newTopo := new(spec.Specification)
+	err = yaml.UnmarshalStrict(newData, newTopo)
+	if err != nil {
+		fmt.Print(color.RedString("New topology could not be saved: "))
+		log.Infof("Failed to parse topology file: %v", err)
+		if cliutil.PromptForConfirmReverse("Do you want to continue editing? [Y/n]: ") {
+			return editTopo(origTopo, newData, skipConfirm)
+		}
+		log.Infof("Nothing changed.")
+		return nil, nil
+	}
+
+	// report error if immutable field has been changed
+	if err := utils.ValidateSpecDiff(origTopo, newTopo); err != nil {
+		fmt.Print(color.RedString("New topology could not be saved: "))
+		log.Errorf("%s", err)
+		if cliutil.PromptForConfirmReverse("Do you want to continue editing? [Y/n]: ") {
+			return editTopo(origTopo, newData, skipConfirm)
+		}
+		log.Infof("Nothing changed.")
+		return nil, nil
+
+	}
+
+	origData, err := yaml.Marshal(origTopo)
+	if err != nil {
+		return nil, perrs.AddStack(err)
+	}
+
+	if bytes.Equal(origData, newData) {
+		log.Infof("The file has nothing changed")
+		return nil, nil
+	}
+
+	utils.ShowDiff(string(origData), string(newData), os.Stdout)
+
+	if !skipConfirm {
+		if err := cliutil.PromptForConfirmOrAbortError(
+			color.HiYellowString("Please check change highlight above, do you want to apply the change? [y/N]:"),
+		); err != nil {
+			return nil, err
+		}
+	}
+
+	return newTopo, nil
 }

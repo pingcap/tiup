@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package meta
+package spec
 
 import (
 	"io/ioutil"
@@ -22,6 +22,55 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+type TestMetadata struct {
+	BaseMeta
+	Topo *TestTopology
+}
+
+func (m *TestMetadata) GetTopology() Topology {
+	return m.Topo
+}
+
+func (m *TestMetadata) GetBaseMeta() *BaseMeta {
+	return &m.BaseMeta
+}
+
+func (m *TestMetadata) SetTopology(topo Topology) {
+	testTopo, ok := topo.(*TestTopology)
+	if !ok {
+		panic("wrong toplogy type")
+	}
+
+	m.Topo = testTopo
+}
+
+type TestTopology struct {
+	base BaseTopo
+}
+
+func (t *TestTopology) BaseTopo() *BaseTopo {
+	return &t.base
+}
+
+func (t *TestTopology) ComponentsByStartOrder() []Component {
+	return nil
+}
+
+func (t *TestTopology) ComponentsByStopOrder() []Component {
+	return nil
+}
+
+func (t *TestTopology) IterInstance(fn func(instance Instance)) {
+}
+
+func (t *TestTopology) GetMonitoredOptions() *MonitoredOptions {
+	return nil
+}
+
+func (t *TestTopology) CountDir(host string, dir string) int {
+	return 0
+}
 
 func TestSpec(t *testing.T) {
 	dir, err := ioutil.TempDir("", "test-*")
@@ -43,17 +92,17 @@ func TestSpec(t *testing.T) {
 	assert.Nil(t, err)
 	assert.False(t, exist)
 
-	type Meta struct {
-		A string
-		B int
+	var meta1 = &TestMetadata{
+		BaseMeta: BaseMeta{
+			Version: "1.1.1",
+		},
+		Topo: &TestTopology{},
 	}
-	var meta1 = &Meta{
-		A: "a",
-		B: 1,
-	}
-	var meta2 = &Meta{
-		A: "b",
-		B: 2,
+	var meta2 = &TestMetadata{
+		BaseMeta: BaseMeta{
+			Version: "2.2.2",
+		},
+		Topo: &TestTopology{},
 	}
 
 	err = spec.SaveMeta("name1", meta1)
@@ -62,7 +111,7 @@ func TestSpec(t *testing.T) {
 	err = spec.SaveMeta("name2", meta2)
 	assert.Nil(t, err)
 
-	getMeta := new(Meta)
+	getMeta := new(TestMetadata)
 	err = spec.Metadata("name1", getMeta)
 	assert.Nil(t, err)
 	assert.Equal(t, meta1, getMeta)

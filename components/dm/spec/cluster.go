@@ -14,13 +14,14 @@
 package spec
 
 import (
+	"fmt"
 	"path/filepath"
+	"reflect"
 
 	cspec "github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/meta"
 )
 
-var specManager *meta.SpecManager
+var specManager *cspec.SpecManager
 
 // DMMeta is the specification of generic cluster metadata
 type DMMeta struct {
@@ -37,6 +38,16 @@ func (m *DMMeta) GetTopology() cspec.Topology {
 	return m.Topology
 }
 
+// SetTopology implements Metadata interface.
+func (m *DMMeta) SetTopology(topo cspec.Topology) {
+	dmTopo, ok := topo.(*DMTopologySpecification)
+	if !ok {
+		panic(fmt.Sprintln("wrong type: ", reflect.TypeOf(topo)))
+	}
+
+	m.Topology = dmTopo
+}
+
 // GetBaseMeta implements Metadata interface.
 func (m *DMMeta) GetBaseMeta() *cspec.BaseMeta {
 	return &cspec.BaseMeta{
@@ -46,9 +57,9 @@ func (m *DMMeta) GetBaseMeta() *cspec.BaseMeta {
 }
 
 // GetSpecManager return the spec manager of dm cluster.
-func GetSpecManager() *meta.SpecManager {
+func GetSpecManager() *cspec.SpecManager {
 	if specManager == nil {
-		specManager = meta.NewSpec(filepath.Join(cspec.ProfileDir(), cspec.TiOpsClusterDir))
+		specManager = cspec.NewSpec(filepath.Join(cspec.ProfileDir(), cspec.TiOpsClusterDir))
 	}
 	return specManager
 }

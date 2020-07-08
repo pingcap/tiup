@@ -131,11 +131,13 @@ type Topology interface {
 type BaseMeta struct {
 	User    string
 	Version string
+	OpsVer  *string `yaml:"last_ops_ver,omitempty"` // the version of ourself that updated the meta last time
 }
 
 // Metadata of a cluster.
 type Metadata interface {
 	GetTopology() Topology
+	SetTopology(topo Topology)
 	GetBaseMeta() *BaseMeta
 }
 

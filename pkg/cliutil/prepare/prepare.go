@@ -25,7 +25,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/errutil"
-	"github.com/pingcap/tiup/pkg/meta"
 	"go.uber.org/zap"
 )
 
@@ -46,7 +45,7 @@ func fixDir(topo *spec.Specification) func(string) string {
 }
 
 // CheckClusterDirConflict checks cluster dir conflict
-func CheckClusterDirConflict(clusterSpec *meta.SpecManager, clusterName string, topo *spec.Specification) error {
+func CheckClusterDirConflict(clusterSpec *spec.SpecManager, clusterName string, topo *spec.Specification) error {
 	type DirAccessor struct {
 		dirKind  string
 		accessor func(spec.Instance, *spec.Specification) string
@@ -190,7 +189,7 @@ Please change to use another directory or another host.
 }
 
 // CheckClusterPortConflict checks cluster dir conflict
-func CheckClusterPortConflict(clusterSpec *meta.SpecManager, clusterName string, topo *spec.Specification) error {
+func CheckClusterPortConflict(clusterSpec *spec.SpecManager, clusterName string, topo *spec.Specification) error {
 	type Entry struct {
 		clusterName string
 		instance    spec.Instance

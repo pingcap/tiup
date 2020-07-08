@@ -31,7 +31,6 @@ import (
 	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
-	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
@@ -45,7 +44,7 @@ var (
 	skipConfirm bool
 )
 
-var dmspec *meta.SpecManager
+var dmspec *cspec.SpecManager
 var deployer *deploy.Deployer
 
 func init() {
@@ -108,13 +107,13 @@ func init() {
 		newDestroyCmd(),
 		newAuditCmd(),
 		newExecCmd(),
+		newEditConfigCmd(),
 	/*
 		newCheckCmd(),
 		newScaleInCmd(),
 		newScaleOutCmd(),
 		newUpgradeCmd(),
 		newDisplayCmd(),
-		newEditConfigCmd(),
 		newReloadCmd(),
 		newPatchCmd(),
 		newTestCmd(), // hidden command for test internally
