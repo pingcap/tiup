@@ -28,6 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -65,7 +66,12 @@ func newPatchCmd() *cobra.Command {
 }
 
 func patch(clusterName, packagePath string, options operator.Options, overwrite bool) error {
-	if tiuputils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
+	exist, err := tidbSpec.Exist(clusterName)
+	if err != nil {
+		return perrs.AddStack(err)
+	}
+
+	if !exist {
 		return perrs.Errorf("cannot patch non-exists cluster %s", clusterName)
 	}
 
@@ -186,13 +192,22 @@ func overwritePatch(clusterName, comp, packagePath string) error {
 	if err := os.MkdirAll(spec.ClusterPath(clusterName, spec.PatchDirName), 0755); err != nil {
 		return err
 	}
+
 	checksum, err := tiuputils.Checksum(packagePath)
 	if err != nil {
 		return err
 	}
+
 	tg := spec.ClusterPath(clusterName, spec.PatchDirName, comp+"-"+checksum[:7]+".tar.gz")
-	if err := tiuputils.CopyFile(packagePath, tg); err != nil {
-		return err
+	if !utils.IsExist(tg) {
+		if err := tiuputils.CopyFile(packagePath, tg); err != nil {
+			return err
+		}
 	}
-	return os.Symlink(tg, spec.ClusterPath(clusterName, spec.PatchDirName, comp+".tar.gz"))
+
+	symlink := spec.ClusterPath(clusterName, spec.PatchDirName, comp+".tar.gz")
+	if utils.IsSymExist(symlink) {
+		os.Remove(symlink)
+	}
+	return os.Symlink(tg, symlink)
 }

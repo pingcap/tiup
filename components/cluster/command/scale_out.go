@@ -70,7 +70,12 @@ func newScaleOutCmd() *cobra.Command {
 }
 
 func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
-	if tiuputils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
+	exist, err := tidbSpec.Exist(clusterName)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	if !exist {
 		return errors.Errorf("cannot scale-out non-exists cluster %s", clusterName)
 	}
 
@@ -100,16 +105,16 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 		return err
 	}
 
-	if err := prepare.CheckClusterPortConflict(clusterName, mergedTopo); err != nil {
+	if err := prepare.CheckClusterPortConflict(tidbSpec, clusterName, mergedTopo); err != nil {
 		return err
 	}
-	if err := prepare.CheckClusterDirConflict(clusterName, mergedTopo); err != nil {
+	if err := prepare.CheckClusterDirConflict(tidbSpec, clusterName, mergedTopo); err != nil {
 		return err
 	}
 
 	patchedComponents := set.NewStringSet()
 	newPart.IterInstance(func(instance spec.Instance) {
-		if exists := tiuputils.IsExist(spec.ClusterPath(clusterName, spec.PatchDirName, instance.ComponentName()+".tar.gz")); exists {
+		if tiuputils.IsExist(spec.ClusterPath(clusterName, spec.PatchDirName, instance.ComponentName()+".tar.gz")) {
 			patchedComponents.Insert(instance.ComponentName())
 		}
 	})

@@ -135,7 +135,7 @@ func ScaleInCluster(
 				}
 
 				// just try stop and destroy
-				if err := StopComponent(getter, []spec.Instance{instance}); err != nil {
+				if err := StopComponent(getter, []spec.Instance{instance}, options.OptTimeout); err != nil {
 					log.Warnf("failed to stop %s: %v", component.Name(), err)
 				}
 				if err := DestroyComponent(getter, []spec.Instance{instance}, cluster, options); err != nil {
@@ -226,7 +226,7 @@ func ScaleInCluster(
 			}
 
 			if !asyncOfflineComps.Exist(instance.ComponentName()) {
-				if err := StopComponent(getter, []spec.Instance{instance}); err != nil {
+				if err := StopComponent(getter, []spec.Instance{instance}, options.OptTimeout); err != nil {
 					return errors.Annotatef(err, "failed to stop %s", component.Name())
 				}
 				if err := DestroyComponent(getter, []spec.Instance{instance}, cluster, options); err != nil {
@@ -365,7 +365,7 @@ func ScaleInDMCluster(
 					continue
 				}
 				// just try stop and destroy
-				if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
+				if err := StopComponent(getter, []meta.Instance{instance}, options.OptTimeout); err != nil {
 					log.Warnf("failed to stop %s: %v", component.Name(), err)
 				}
 				if err := DestroyComponent(getter, []meta.Instance{instance}, spec, options); err != nil {
@@ -404,7 +404,7 @@ func ScaleInDMCluster(
 				continue
 			}
 
-			if err := StopComponent(getter, []meta.Instance{instance}); err != nil {
+			if err := StopComponent(getter, []meta.Instance{instance}, options.OptTimeout); err != nil {
 				return errors.Annotatef(err, "failed to stop %s", component.Name())
 			}
 			if err := DestroyComponent(getter, []meta.Instance{instance}, spec, options); err != nil {

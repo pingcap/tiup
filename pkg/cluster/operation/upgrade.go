@@ -68,7 +68,7 @@ func Upgrade(
 						}
 					}
 
-					if err := stopInstance(getter, instance); err != nil {
+					if err := stopInstance(getter, instance, options.OptTimeout); err != nil {
 						return errors.Annotatef(err, "failed to stop %s", instance.GetHost())
 					}
 					if err := startInstance(getter, instance, options.OptTimeout); err != nil {
@@ -96,7 +96,7 @@ func Upgrade(
 						}
 					}
 
-					if err := stopInstance(getter, instance); err != nil {
+					if err := stopInstance(getter, instance, options.OptTimeout); err != nil {
 						return errors.Annotatef(err, "failed to stop %s", instance.GetHost())
 					}
 					if err := startInstance(getter, instance, options.OptTimeout); err != nil {

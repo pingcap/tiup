@@ -27,7 +27,6 @@ import (
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
-	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
@@ -74,7 +73,12 @@ func versionCompare(curVersion, newVersion string) error {
 }
 
 func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
-	if utils.IsNotExist(spec.ClusterPath(clusterName, spec.MetaFileName)) {
+	exist, err := tidbSpec.Exist(clusterName)
+	if err != nil {
+		return perrs.AddStack(err)
+	}
+
+	if !exist {
 		return perrs.Errorf("cannot upgrade non-exists cluster %s", clusterName)
 	}
 
