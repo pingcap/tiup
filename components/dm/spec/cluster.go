@@ -20,13 +20,7 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 )
 
-const dmDir = "dm"
-
 var specManager *meta.SpecManager
-
-func init() {
-	specManager = meta.NewSpec(filepath.Join(cspec.ProfileDir(), dmDir))
-}
 
 // DMMeta is the specification of generic cluster metadata
 type DMMeta struct {
@@ -53,5 +47,8 @@ func (m *DMMeta) GetBaseMeta() *cspec.BaseMeta {
 
 // GetSpecManager return the spec manager of dm cluster.
 func GetSpecManager() *meta.SpecManager {
+	if specManager == nil {
+		specManager = meta.NewSpec(filepath.Join(cspec.ProfileDir(), cspec.TiOpsClusterDir))
+	}
 	return specManager
 }

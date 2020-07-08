@@ -98,6 +98,7 @@ func init() {
 			}
 
 			tidbSpec = spec.GetSpecManager()
+			logger.EnableAuditLog(spec.AuditDir())
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.
 			env, err = tiupmeta.InitEnv(repository.Options{
@@ -209,7 +210,6 @@ func extractSuggestionFromErrorX(err *errorx.Error) string {
 
 // Execute executes the root command
 func Execute() {
-	logger.EnableAuditLog()
 
 	zap.L().Info("Execute command", zap.String("command", cliutil.OsArgs()))
 	zap.L().Debug("Environment variables", zap.Strings("env", os.Environ()))

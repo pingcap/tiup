@@ -60,11 +60,9 @@ func (m *ClusterMeta) GetBaseMeta() *BaseMeta {
 	}
 }
 
-// newTiDBSpec create a Spec for tidb cluster.
-func newTiDBSpec() *meta.SpecManager {
-	clusterBaseDir := filepath.Join(profileDir, TiOpsClusterDir)
-	clusterSpec := meta.NewSpec(clusterBaseDir)
-	return clusterSpec
+// AuditDir return the directory for saving audit log.
+func AuditDir() string {
+	return filepath.Join(profileDir, TiOpsAuditDir)
 }
 
 // SaveClusterMeta saves the cluster meta information to profile directory

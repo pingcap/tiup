@@ -32,7 +32,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/errutil"
-	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
@@ -77,7 +76,6 @@ func newDeploy() *cobra.Command {
 				return nil
 			}
 
-			logger.EnableAuditLog()
 			return deployCluster(args[0], args[1], args[2], opt)
 		},
 	}

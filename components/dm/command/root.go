@@ -31,6 +31,7 @@ import (
 	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
+	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
@@ -44,7 +45,7 @@ var (
 	skipConfirm bool
 )
 
-var dmspec = spec.GetSpecManager()
+var dmspec *meta.SpecManager
 var deployer *deploy.Deployer
 
 func init() {
@@ -65,10 +66,12 @@ func init() {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			var err error
 			var env *tiupmeta.Environment
-			if err = cspec.Initialize("cluster"); err != nil {
+			if err = cspec.Initialize("dm"); err != nil {
 				return err
 			}
 
+			dmspec = spec.GetSpecManager()
+			logger.EnableAuditLog(cspec.AuditDir())
 			deployer = deploy.NewDeployer("dm", spec.GetSpecManager(), func() cspec.Metadata { return new(spec.DMMeta) })
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.
@@ -103,6 +106,7 @@ func init() {
 		newRestartCmd(),
 		newListCmd(),
 		newDestroyCmd(),
+		newAuditCmd(),
 	/*
 		newCheckCmd(),
 		newScaleInCmd(),
@@ -110,7 +114,6 @@ func init() {
 		newUpgradeCmd(),
 		newExecCmd(),
 		newDisplayCmd(),
-		newAuditCmd(),
 		newEditConfigCmd(),
 		newReloadCmd(),
 		newPatchCmd(),
@@ -176,8 +179,6 @@ func extractSuggestionFromErrorX(err *errorx.Error) string {
 
 // Execute executes the root command
 func Execute() {
-	logger.EnableAuditLog()
-
 	zap.L().Info("Execute command", zap.String("command", cliutil.OsArgs()))
 	zap.L().Debug("Environment variables", zap.Strings("env", os.Environ()))
 
