@@ -85,4 +85,15 @@ func TestSpec(t *testing.T) {
 	exist, err = spec.Exist("name2")
 	assert.Nil(t, err)
 	assert.True(t, exist)
+
+	// remove name1 and check again.
+	err = spec.Remove("name1")
+	assert.Nil(t, err)
+	exist, err = spec.Exist("name1")
+	assert.Nil(t, err)
+	assert.False(t, exist)
+
+	// remove a not exist cluster should be fine
+	err = spec.Remove("name1")
+	assert.Nil(t, err)
 }

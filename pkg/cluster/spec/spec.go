@@ -109,13 +109,22 @@ type (
 	}
 )
 
+// BaseTopo is the base info to topology.
+type BaseTopo struct {
+	GlobalOptions    *GlobalOptions
+	MonitoredOptions *MonitoredOptions
+}
+
 // Topology represents specification of the  cluster.
 type Topology interface {
+	BaseTopo() *BaseTopo
 	// Instances() []Instance
 	ComponentsByStartOrder() []Component
 	ComponentsByStopOrder() []Component
 	IterInstance(fn func(instance Instance))
 	GetMonitoredOptions() *MonitoredOptions
+	// count how many time a path is used by instances in cluster
+	CountDir(host string, dir string) int
 }
 
 // BaseMeta is the base info of metadata.
@@ -130,9 +139,17 @@ type Metadata interface {
 	GetBaseMeta() *BaseMeta
 }
 
-// GetMonitoredOptions implements Spec interface.
+// GetMonitoredOptions implements Topology interface.
 func (s *Specification) GetMonitoredOptions() *MonitoredOptions {
 	return &s.MonitoredOptions
+}
+
+// BaseTopo implements Topology interface.
+func (s *Specification) BaseTopo() *BaseTopo {
+	return &BaseTopo{
+		GlobalOptions:    &s.GlobalOptions,
+		MonitoredOptions: s.GetMonitoredOptions(),
+	}
 }
 
 // AllComponentNames contains the names of all components.

@@ -102,11 +102,11 @@ func init() {
 		newStopCmd(),
 		newRestartCmd(),
 		newListCmd(),
+		newDestroyCmd(),
 	/*
 		newCheckCmd(),
 		newScaleInCmd(),
 		newScaleOutCmd(),
-		newDestroyCmd(),
 		newUpgradeCmd(),
 		newExecCmd(),
 		newDisplayCmd(),

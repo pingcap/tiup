@@ -583,6 +583,14 @@ func (topo *DMTopologySpecification) Validate() error {
 	return topo.dirConflictsDetect()
 }
 
+// BaseTopo implements Topology interface.
+func (topo *DMTopologySpecification) BaseTopo() *spec.BaseTopo {
+	return &spec.BaseTopo{
+		GlobalOptions:    &topo.GlobalOptions,
+		MonitoredOptions: topo.GetMonitoredOptions(),
+	}
+}
+
 // GetMasterList returns a list of Master API hosts of the current cluster
 func (topo *DMTopologySpecification) GetMasterList() []string {
 	var masterList []string

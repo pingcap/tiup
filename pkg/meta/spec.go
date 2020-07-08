@@ -133,6 +133,11 @@ func (s *SpecManager) Exist(name string) (exist bool, err error) {
 	return true, nil
 }
 
+// Remove remove the data with specified cluster name.
+func (s *SpecManager) Remove(name string) error {
+	return os.RemoveAll(s.Path(name))
+}
+
 // List return the cluster names.
 func (s *SpecManager) List() (names []string, err error) {
 	fileInfos, err := ioutil.ReadDir(s.base)
