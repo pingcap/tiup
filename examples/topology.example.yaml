@@ -211,6 +211,7 @@ tiflash_servers:
 #   - host: 10.0.1.21
 #   - host: 10.0.1.22
 
+# NOTE: Only 1 master node is supported for now
 tispark_masters:
   - host: 10.0.1.21
     #spark_config:
@@ -227,6 +228,7 @@ tispark_masters:
     #  SPARK_WORKER_CORES: 5
     #  SPARK_WORKER_MEMORY: "10g"
 
+# NOTE: multiple worker nodes on the same host is not supported
 tispark_workers:
   - host: 10.0.1.22
     #spark_config:

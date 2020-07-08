@@ -49,46 +49,52 @@ function cmd_subtest() {
     tiup-cluster display $name
 
     if [ $test_cdc = true ]; then
-        totol_sub_one=19
+        total_sub_one=21
     else
-        totol_sub_one=16
+        total_sub_one=18
     fi
 
     echo "start scale in tidb"
     tiup-cluster --yes scale-in $name -N 172.19.0.101:4000
-    wait_instance_num_reach $name $totol_sub_one
+    wait_instance_num_reach $name $total_sub_one
     echo "start scale out tidb"
     tiup-cluster --yes scale-out $name ./topo/full_scale_in_tidb.yaml
 
     # echo "start scale in tikv"
     # tiup-cluster --yes scale-in $name -N 172.19.0.103:20160
-    # wait_instance_num_reach $name $totol_sub_one
+    # wait_instance_num_reach $name $total_sub_one
     # echo "start scale out tikv"
     # tiup-cluster --yes scale-out $name ./topo/full_scale_in_tikv.yaml
 
     echo "start scale in pd"
     tiup-cluster --yes scale-in $name -N 172.19.0.103:2379
-    wait_instance_num_reach $name $totol_sub_one
+    wait_instance_num_reach $name $total_sub_one
     echo "start scale out pd"
     tiup-cluster --yes scale-out $name ./topo/full_scale_in_pd.yaml
 
     echo "start scale in pump"
     tiup-cluster --yes scale-in $name -N 172.19.0.103:8250
-    wait_instance_num_reach $name $totol_sub_one
+    wait_instance_num_reach $name $total_sub_one
     echo "start scale out pump"
     tiup-cluster --yes scale-out $name ./topo/full_scale_in_pump.yaml
 
     if [ $test_cdc = "true" ]; then
         echo "start scale in cdc"
         yes | tiup-cluster scale-in $name -N 172.19.0.103:8300
-        wait_instance_num_reach $name $totol_sub_one
+        wait_instance_num_reach $name $total_sub_one
         echo "start scale out cdc"
         yes | tiup-cluster scale-out $name ./topo/full_scale_in_cdc.yaml
     fi
 
+    echo "start scale in tispark"
+    yes | tiup-cluster --yes scale-in $name -N 172.19.0.104:7078
+    echo "start scale out tispark"
+    yes | tiup-cluster --yes scale-out $name ./topo/full_scale_in_tispark.yaml
+    wait_instance_num_reach $name $total_sub_one
+
     echo "start scale in grafana"
     tiup-cluster --yes scale-in $name -N 172.19.0.101:3000
-    wait_instance_num_reach $name $totol_sub_one
+    wait_instance_num_reach $name $total_sub_one
     echo "start scale out grafana"
     tiup-cluster --yes scale-out $name ./topo/full_scale_in_grafana.yaml
 
