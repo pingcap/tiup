@@ -35,6 +35,7 @@ import (
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/version"
@@ -49,7 +50,7 @@ var (
 	skipConfirm bool
 )
 
-var tidbSpec = spec.GetSpecManager()
+var tidbSpec *meta.SpecManager
 
 func scrubClusterName(n string) string {
 	return "cluster_" + telemetry.HashReport(n)
@@ -90,6 +91,8 @@ func init() {
 			if err = spec.Initialize("cluster"); err != nil {
 				return err
 			}
+
+			tidbSpec = spec.GetSpecManager()
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.
 			env, err = tiupmeta.InitEnv(repository.Options{
