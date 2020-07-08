@@ -119,7 +119,9 @@ func init() {
 	cliutil.BeautifyCobraUsageAndHelp(rootCmd)
 
 	rootCmd.PersistentFlags().Int64Var(&gOpt.SSHTimeout, "ssh-timeout", 5, "Timeout in seconds to connect host via SSH, ignored for operations that don't need an SSH connection.")
-	rootCmd.PersistentFlags().Int64Var(&gOpt.OptTimeout, "wait-timeout", 60, "Timeout in seconds to wait for an operation to complete, ignored for operations that don't fit.")
+	// the value of wait-timeout is also used for `systemctl` commands, as the default timeout of systemd for
+	// start/stop operations is 90s, the default value of this argument is better be longer than that
+	rootCmd.PersistentFlags().Int64Var(&gOpt.OptTimeout, "wait-timeout", 120, "Timeout in seconds to wait for an operation to complete, ignored for operations that don't fit.")
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
 
 	rootCmd.AddCommand(
