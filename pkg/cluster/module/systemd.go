@@ -30,18 +30,20 @@ const (
 
 // SystemdModuleConfig is the configurations used to initialize a SystemdModule
 type SystemdModuleConfig struct {
-	Unit         string // the name of systemd unit(s)
-	Action       string // the action to perform with the unit
-	Enabled      bool   // enable the unit or not
-	ReloadDaemon bool   // run daemon-reload before other actions
-	Scope        string // user, system or global
-	Force        bool   // add the `--force` arg to systemctl command
+	Unit         string        // the name of systemd unit(s)
+	Action       string        // the action to perform with the unit
+	Enabled      bool          // enable the unit or not
+	ReloadDaemon bool          // run daemon-reload before other actions
+	Scope        string        // user, system or global
+	Force        bool          // add the `--force` arg to systemctl command
+	Timeout      time.Duration // timeout to execute the command
 }
 
 // SystemdModule is the module used to control systemd units
 type SystemdModule struct {
-	cmd  string // the built command
-	sudo bool   // does the command need to be run as root
+	cmd     string        // the built command
+	sudo    bool          // does the command need to be run as root
+	timeout time.Duration // timeout to execute the command
 }
 
 // NewSystemdModule builds and returns a SystemdModule object base on
@@ -75,16 +77,23 @@ func NewSystemdModule(config SystemdModuleConfig) *SystemdModule {
 			systemctl, cmd)
 	}
 
-	return &SystemdModule{
-		cmd:  cmd,
-		sudo: sudo,
+	mod := &SystemdModule{
+		cmd:     cmd,
+		sudo:    sudo,
+		timeout: config.Timeout,
 	}
+
+	// the default TimeoutStopSec of systemd is 90s, after which it sends a SIGKILL
+	// to remaining processes, set the default value slightly larger than it
+	if config.Timeout == 0 {
+		mod.timeout = time.Second * 100
+	}
+
+	return mod
 }
 
 // Execute passes the command to executor and returns its results, the executor
 // should be already initialized.
 func (mod *SystemdModule) Execute(exec executor.Executor) ([]byte, []byte, error) {
-	// 100s just for avoid timeout now
-	// default send kill before gracefully stop of systemd is 90s.
-	return exec.Execute(mod.cmd, mod.sudo, 100*time.Second)
+	return exec.Execute(mod.cmd, mod.sudo, mod.timeout)
 }

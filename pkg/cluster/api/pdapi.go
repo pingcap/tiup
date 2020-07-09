@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"sort"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -151,6 +152,10 @@ func (pc *PDClient) GetStores() (*pdserverapi.StoresInfo, error) {
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
+
+	sort.Slice(storesInfo.Stores, func(i int, j int) bool {
+		return storesInfo.Stores[i].Store.Id > storesInfo.Stores[j].Store.Id
+	})
 
 	return &storesInfo, nil
 }
@@ -326,13 +331,8 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *clusterutil.RetryOpt
 		if storeInfo.Store.Address != host {
 			continue
 		}
-		if latestStore == nil {
-			latestStore = storeInfo
-			continue
-		}
-		if storeInfo.Store.Id > latestStore.Store.Id {
-			latestStore = storeInfo
-		}
+		latestStore = storeInfo
+		break
 	}
 
 	if latestStore == nil || latestStore.Status.LeaderCount == 0 {
@@ -386,6 +386,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *clusterutil.RetryOpt
 				"Still waitting for %d store leaders to transfer...",
 				currStoreInfo.Status.LeaderCount,
 			)
+			break
 		}
 
 		// return error by default, to make the retry work
@@ -411,13 +412,8 @@ func (pc *PDClient) RemoveStoreEvict(host string) error {
 		if storeInfo.Store.Address != host {
 			continue
 		}
-		if latestStore == nil {
-			latestStore = storeInfo
-			continue
-		}
-		if storeInfo.Store.Id > latestStore.Store.Id {
-			latestStore = storeInfo
-		}
+		latestStore = storeInfo
+		break
 	}
 
 	if latestStore == nil {
@@ -511,7 +507,6 @@ func (pc *PDClient) isSameState(host string, state metapb.StoreState) (bool, err
 	}
 
 	for _, storeInfo := range stores.Stores {
-
 		if storeInfo.Store.Address != host {
 			continue
 		}
@@ -520,7 +515,6 @@ func (pc *PDClient) isSameState(host string, state metapb.StoreState) (bool, err
 			return true, nil
 		}
 		return false, nil
-
 	}
 
 	return false, errors.New("node not exists")
@@ -557,7 +551,9 @@ func (pc *PDClient) DelStore(host string, retryOpt *clusterutil.RetryOption) err
 			continue
 		}
 		storeID = storeInfo.Store.Id
+		break
 	}
+
 	if storeID == 0 {
 		return errors.Annotatef(ErrStoreNotExists, "id: %s", host)
 	}
