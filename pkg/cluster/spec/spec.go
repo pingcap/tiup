@@ -36,9 +36,11 @@ const (
 
 // general role names
 var (
-	RoleMonitor       = "monitor"
-	RoleTiSparkMaster = "tispark-master"
-	RoleTiSparkWorker = "tispark-worker"
+	RoleMonitor              = "monitor"
+	RoleTiSparkMaster        = "tispark-master"
+	RoleTiSparkWorker        = "tispark-worker"
+	ErrNoTiSparkMaster       = errors.New("There must be a Spark master node if you want to use the TiSpark component")
+	ErrMultipleTiSparkMaster = errors.New("TiSpark enabled cluster with more than 1 Spark master node is not supported")
 )
 
 type (
@@ -507,12 +509,12 @@ func (s *Specification) validateTiSparkSpec() error {
 		if s.TiSparkWorkers == nil || len(s.TiSparkWorkers) == 0 {
 			return nil
 		}
-		return errors.New("There must be a Spark master node if you want to use the TiSpark component")
+		return ErrNoTiSparkMaster
 	}
 
 	// We only support 1 spark master at present
 	if s.TiSparkMasters != nil && len(s.TiSparkMasters) > 1 {
-		return errors.New("TiSpark enabled cluster with more than 1 Spark master node is not supported")
+		return ErrMultipleTiSparkMaster
 	}
 
 	return nil

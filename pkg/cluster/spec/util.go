@@ -57,7 +57,7 @@ func ClusterMetadata(clusterName string) (*ClusterMeta, error) {
 	var cm ClusterMeta
 	err := GetSpecManager().Metadata(clusterName, &cm)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return &cm, errors.AddStack(err)
 	}
 
 	return &cm, nil

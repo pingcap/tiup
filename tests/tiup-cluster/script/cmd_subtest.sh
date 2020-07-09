@@ -88,9 +88,9 @@ function cmd_subtest() {
 
     echo "start scale in tispark"
     yes | tiup-cluster --yes scale-in $name -N 172.19.0.104:7078
+    wait_instance_num_reach $name $total_sub_one
     echo "start scale out tispark"
     yes | tiup-cluster --yes scale-out $name ./topo/full_scale_in_tispark.yaml
-    wait_instance_num_reach $name $total_sub_one
 
     echo "start scale in grafana"
     tiup-cluster --yes scale-in $name -N 172.19.0.101:3000

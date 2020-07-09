@@ -92,7 +92,7 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 		MonitoredOptions: metadata.Topology.MonitoredOptions,
 		ServerConfigs:    metadata.Topology.ServerConfigs,
 	}
-	if err := clusterutil.ParseTopologyYaml(topoFile, &newPart); err != nil {
+	if err := clusterutil.ParseTopologyYaml(topoFile, &newPart); err != nil && errors.Cause(err) != spec.ErrNoTiSparkMaster {
 		return err
 	}
 
