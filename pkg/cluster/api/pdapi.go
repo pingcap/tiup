@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"sort"
 	"time"
@@ -432,7 +433,7 @@ func (pc *PDClient) RemoveStoreEvict(host string) error {
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, statusCode, err := pc.httpClient.Delete(endpoint, nil)
 		if err != nil {
-			if statusCode == 404 || bytes.Contains(body, []byte("scheduler not found")) {
+			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("scheduler not found")) {
 				log.Debugf("Store leader evicting scheduler does not exist, ignore.")
 				return body, nil
 			}
@@ -467,7 +468,7 @@ func (pc *PDClient) DelPD(name string, retryOpt *clusterutil.RetryOption) error 
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, statusCode, err := pc.httpClient.Delete(endpoint, nil)
 		if err != nil {
-			if statusCode == 404 || bytes.Contains(body, []byte("not found, pd")) {
+			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("not found, pd")) {
 				log.Debugf("PD node does not exist, ignore: %s", body)
 				return body, nil
 			}
@@ -572,7 +573,7 @@ func (pc *PDClient) DelStore(host string, retryOpt *clusterutil.RetryOption) err
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, statusCode, err := pc.httpClient.Delete(endpoint, nil)
 		if err != nil {
-			if statusCode == 404 || bytes.Contains(body, []byte("not found")) {
+			if statusCode == http.StatusNotFound || bytes.Contains(body, []byte("not found")) {
 				log.Debugf("store %d %s does not exist, ignore: %s", storeID, host, body)
 				return body, nil
 			}
