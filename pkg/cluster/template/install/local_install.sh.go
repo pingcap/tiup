@@ -73,13 +73,18 @@ chmod 755 "$bin_dir/tiup"
 bold=$(tput bold 2>/dev/null)
 sgr0=$(tput sgr0 2>/dev/null)
 
-echo "Detected shell: ${bold}$SHELL${sgr0}"
-case $SHELL in
-    *bash*) PROFILE=$HOME/.bash_profile;;
-     *zsh*) PROFILE=$HOME/.zshrc;;
-         *) PROFILE=$HOME/.profile;;
-esac
-
+# Refrence: https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux-unix
+shell=$(echo $SHELL | awk 'BEGIN {FS="/";} { print $NF }')
+echo "Detected shell: ${bold}$shell${sgr0}"
+if [ -f "${HOME}/.${shell}_profile" ]; then
+    PROFILE=${HOME}/.${shell}_profile
+elif [ -f "${HOME}/.${shell}_login" ]; then
+    PROFILE=${HOME}/.${shell}_login
+elif [ -f "${HOME}/.${shell}rc" ]; then
+    PROFILE=${HOME}/.${shell}rc
+else
+    PROFILE=${HOME}/.profile
+fi
 echo "Shell profile:  ${bold}$PROFILE${sgr0}"
 
 case :$PATH: in

@@ -7,7 +7,10 @@ on:
     branches:
       - master
       - release-*
-
+  push:
+    branches:
+      - master
+      - release-*
 
 jobs:
 
@@ -185,6 +188,7 @@ jobs:
         working-directory: ${{env.working-directory}}
         run: |
           export PATH=$PATH:${{env.working-directory}}/bin/
+          echo $PATH
           bash ${{env.working-directory}}/tests/tiup/${{matrix.cases}}.sh
 
       - name: Upload cover files

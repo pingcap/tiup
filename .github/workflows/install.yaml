@@ -1,0 +1,53 @@
+name: install
+
+on:
+    pull_request:
+        branches:
+            - master
+            - release-*
+
+jobs:
+    install:
+        name: Install
+        runs-on: ubuntu-latest
+        env:
+            working-directory: ${{ github.workspace   }}/go/src/github.com/${{ github.repository   }}
+        steps:
+            - name: Check out code into the Go module directory
+              uses: actions/checkout@v2
+              with:
+                ref: ${{ github.event.pull_request.head.sha  }}
+                path: go/src/github.com/${{ github.repository  }}
+            - name: Install And Check
+              working-directory: ${{env.working-directory}}
+              run: |
+                sh install.sh
+                source ~/.profile
+                which tiup || (echo "no tiup found" && exit 1)
+    local_install:
+        name: Local Install
+        runs-on: ubuntu-latest
+        env:
+            working-directory: ${{ github.workspace   }}/go/src/github.com/${{ github.repository   }}
+        steps:
+            - name: Check out code into the Go module directory
+              uses: actions/checkout@v2
+              with:
+                ref: ${{ github.event.pull_request.head.sha  }}
+                path: go/src/github.com/${{ github.repository  }}
+            - name: Build TiUP
+              working-directory: ${{env.working-directory}}
+              run: make build
+            - name: Setup TiUP
+              run: |
+                mkdir -p ~/.tiup/bin
+                curl https://tiup-mirrors.pingcap.com/root.json -o ~/.tiup/bin/root.json
+            - name: Clone Mirror
+              working-directory: ${{env.working-directory}}
+              run: ./bin/tiup mirror clone test-mirror
+            - name: Local Install And Check
+              working-directory: ${{env.working-directory}}/test-mirror
+              run: |
+                sh local_install.sh
+                source ~/.profile
+                which tiup || (echo "no tiup found" && exit 1)
