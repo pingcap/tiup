@@ -9,8 +9,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
-	e "github.com/pingcap/tiup/pkg/exec"
-	"github.com/pingcap/tiup/pkg/localdata"
+	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 )
 
@@ -83,11 +82,7 @@ func NewComponentProcess(ctx context.Context, dir, binPath, component string, ve
 	}
 
 	env := environment.GlobalEnv()
-	oldDir := os.Getenv(localdata.EnvNameInstanceDataDir)
-	defer os.Setenv(localdata.EnvNameInstanceDataDir, oldDir)
-	os.Setenv(localdata.EnvNameInstanceDataDir, dir)
-
-	cmd, err := e.PrepareCommand(ctx, component, version, binPath, "", arg, env)
+	cmd, err := tiupexec.PrepareCommand(ctx, component, version, binPath, "", dir, arg, env)
 	if err != nil {
 		return nil, err
 	}

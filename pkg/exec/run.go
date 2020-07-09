@@ -130,7 +130,14 @@ func base62Tag() string {
 }
 
 // PrepareCommand will download necessary component and returns a *exec.Cmd
-func PrepareCommand(ctx context.Context, component string, version v0manifest.Version, binPath string, tag string, args []string, env *environment.Environment) (*exec.Cmd, error) {
+func PrepareCommand(
+	ctx context.Context,
+	component string,
+	version v0manifest.Version,
+	binPath, tag, wd string,
+	args []string,
+	env *environment.Environment,
+) (*exec.Cmd, error) {
 	selectVer, err := env.DownloadComponentIfMissing(component, version)
 	if err != nil {
 		return nil, err
@@ -160,7 +167,6 @@ func PrepareCommand(ctx context.Context, component string, version v0manifest.Ve
 		}
 	}
 
-	wd := os.Getenv(localdata.EnvNameInstanceDataDir)
 	if wd == "" {
 		// Generate a tag for current instance if the tag doesn't specified
 		if tag == "" {
@@ -182,7 +188,7 @@ func PrepareCommand(ctx context.Context, component string, version v0manifest.Ve
 		return nil, err
 	}
 
-	teleMeta, _, err := telemetry.GetTelemetryMeta(env)
+	teleMeta, _, err := telemetry.GetMeta(env)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +219,8 @@ func PrepareCommand(ctx context.Context, component string, version v0manifest.Ve
 }
 
 func launchComponent(ctx context.Context, component string, version v0manifest.Version, binPath string, tag string, args []string, env *environment.Environment) (*localdata.Process, error) {
-	c, err := PrepareCommand(ctx, component, version, binPath, tag, args, env)
+	wd := os.Getenv(localdata.EnvNameInstanceDataDir)
+	c, err := PrepareCommand(ctx, component, version, binPath, tag, wd, args, env)
 	if err != nil {
 		return nil, err
 	}
