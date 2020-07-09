@@ -588,6 +588,7 @@ func (topo *DMTopologySpecification) BaseTopo() *spec.BaseTopo {
 	return &spec.BaseTopo{
 		GlobalOptions:    &topo.GlobalOptions,
 		MonitoredOptions: topo.GetMonitoredOptions(),
+		MasterList:       topo.GetMasterList(),
 	}
 }
 

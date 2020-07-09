@@ -75,10 +75,6 @@ func init() {
 
 	colorutil.AddColorFunctionsForCobra()
 
-	deployer = deploy.NewDeployer("tidb", tidbSpec, func() spec.Metadata {
-		return new(spec.ClusterMeta)
-	})
-
 	// Initialize the global variables
 	flags.ShowBacktrace = len(os.Getenv("TIUP_BACKTRACE")) > 0
 	cobra.EnableCommandSorting = false
@@ -97,6 +93,9 @@ func init() {
 			}
 
 			tidbSpec = spec.GetSpecManager()
+			deployer = deploy.NewDeployer("tidb", tidbSpec, func() spec.Metadata {
+				return new(spec.ClusterMeta)
+			})
 			logger.EnableAuditLog(spec.AuditDir())
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.

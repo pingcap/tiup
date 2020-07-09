@@ -113,6 +113,7 @@ type (
 type BaseTopo struct {
 	GlobalOptions    *GlobalOptions
 	MonitoredOptions *MonitoredOptions
+	MasterList       []string
 }
 
 // Topology represents specification of the  cluster.
@@ -151,6 +152,7 @@ func (s *Specification) BaseTopo() *BaseTopo {
 	return &BaseTopo{
 		GlobalOptions:    &s.GlobalOptions,
 		MonitoredOptions: s.GetMonitoredOptions(),
+		MasterList:       s.GetPDList(),
 	}
 }
 
