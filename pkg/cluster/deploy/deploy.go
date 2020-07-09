@@ -99,7 +99,7 @@ func (d *Deployer) StopCluster(clusterName string, options operator.Options) err
 			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(metadata.GetTopology(), base.User, options.SSHTimeout).
 		Serial(task.NewFunc("StopCluster", func(ctx *task.Context) error {
-			return operator.Start(ctx, topo, options)
+			return operator.Stop(ctx, topo, options)
 		})).
 		Build()
 
@@ -131,7 +131,7 @@ func (d *Deployer) RestartCluster(clusterName string, options operator.Options) 
 			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, options.SSHTimeout).
 		Serial(task.NewFunc("RestartCluster", func(ctx *task.Context) error {
-			return operator.Start(ctx, topo, options)
+			return operator.Restart(ctx, topo, options)
 		})).
 		Build()
 
