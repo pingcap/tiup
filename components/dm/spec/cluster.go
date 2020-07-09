@@ -33,6 +33,13 @@ type DMMeta struct {
 	Topology *DMTopologySpecification `yaml:"topology"`
 }
 
+var _ cspec.UpgradableMetadata = &DMMeta{}
+
+// SetVersion implement UpgradableMetadata interface.
+func (m *DMMeta) SetVersion(s string) {
+	m.Version = s
+}
+
 // GetTopology implements Metadata interface.
 func (m *DMMeta) GetTopology() cspec.Topology {
 	return m.Topology

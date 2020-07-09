@@ -141,6 +141,13 @@ type Metadata interface {
 	GetTopology() Topology
 	SetTopology(topo Topology)
 	GetBaseMeta() *BaseMeta
+
+	UpgradableMetadata
+}
+
+// UpgradableMetadata represents a upgradable Metadata.
+type UpgradableMetadata interface {
+	SetVersion(s string)
 }
 
 // GetMonitoredOptions implements Topology interface.

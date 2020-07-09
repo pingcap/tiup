@@ -43,6 +43,13 @@ type ClusterMeta struct {
 	Topology *Specification `yaml:"topology"`
 }
 
+var _ UpgradableMetadata = &ClusterMeta{}
+
+// SetVersion implement UpgradableMetadata interface.
+func (m *ClusterMeta) SetVersion(s string) {
+	m.Version = s
+}
+
 // GetTopology implement Metadata interface.
 func (m *ClusterMeta) GetTopology() Topology {
 	return m.Topology

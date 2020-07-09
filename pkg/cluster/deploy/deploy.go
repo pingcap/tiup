@@ -22,7 +22,9 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
-	"sigs.k8s.io/yaml"
+	"github.com/pingcap/tiup/pkg/version"
+	"golang.org/x/mod/semver"
+	"gopkg.in/yaml.v2"
 )
 
 // Deployer to deploy a cluster.
@@ -522,6 +524,151 @@ func (d *Deployer) Reload(clusterName string, opt operator.Options) error {
 	return nil
 }
 
+// Upgrade the cluster.
+func (d *Deployer) Upgrade(clusterName string, clusterVersion string, opt operator.Options) error {
+	metadata, err := d.meta(clusterName)
+	if err != nil {
+		return perrs.AddStack(err)
+	}
+
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
+
+	var (
+		downloadCompTasks []task.Task // tasks which are used to download components
+		copyCompTasks     []task.Task // tasks which are used to copy components to remote host
+
+		uniqueComps = map[string]struct{}{}
+	)
+
+	if err := versionCompare(base.Version, clusterVersion); err != nil {
+		return err
+	}
+
+	hasImported := false
+	for _, comp := range topo.ComponentsByUpdateOrder() {
+		for _, inst := range comp.Instances() {
+			version := spec.ComponentVersion(inst.ComponentName(), clusterVersion)
+			if version == "" {
+				return perrs.Errorf("unsupported component: %v", inst.ComponentName())
+			}
+			compInfo := componentInfo{
+				component: inst.ComponentName(),
+				version:   version,
+			}
+
+			// Download component from repository
+			key := fmt.Sprintf("%s-%s-%s-%s", compInfo.component, compInfo.version, inst.OS(), inst.Arch())
+			if _, found := uniqueComps[key]; !found {
+				uniqueComps[key] = struct{}{}
+				t := task.NewBuilder().
+					Download(inst.ComponentName(), inst.OS(), inst.Arch(), version).
+					Build()
+				downloadCompTasks = append(downloadCompTasks, t)
+			}
+
+			deployDir := clusterutil.Abs(base.User, inst.DeployDir())
+			// data dir would be empty for components which don't need it
+			dataDirs := clusterutil.MultiDirAbs(base.User, inst.DataDir())
+			// log dir will always be with values, but might not used by the component
+			logDir := clusterutil.Abs(base.User, inst.LogDir())
+
+			// Deploy component
+			tb := task.NewBuilder()
+			if inst.IsImported() {
+				switch inst.ComponentName() {
+				case spec.ComponentPrometheus, spec.ComponentGrafana, spec.ComponentAlertManager:
+					tb.CopyComponent(
+						inst.ComponentName(),
+						inst.OS(),
+						inst.Arch(),
+						version,
+						"", // use default srcPath
+						inst.GetHost(),
+						deployDir,
+					)
+				}
+				hasImported = true
+			}
+
+			// backup files of the old version
+			tb = tb.BackupComponent(inst.ComponentName(), base.Version, inst.GetHost(), deployDir)
+
+			// copy dependency component if needed
+			switch inst.ComponentName() {
+			case spec.ComponentTiSpark:
+				tb = tb.DeploySpark(inst, version, "" /* default srcPath */, deployDir)
+			default:
+				tb = tb.CopyComponent(
+					inst.ComponentName(),
+					inst.OS(),
+					inst.Arch(),
+					version,
+					"", // use default srcPath
+					inst.GetHost(),
+					deployDir,
+				)
+			}
+
+			tb.InitConfig(
+				clusterName,
+				clusterVersion,
+				inst,
+				base.User,
+				opt.IgnoreConfigCheck,
+				meta.DirPaths{
+					Deploy: deployDir,
+					Data:   dataDirs,
+					Log:    logDir,
+					Cache:  spec.ClusterPath(clusterName, spec.TempConfigPath),
+				},
+			)
+			copyCompTasks = append(copyCompTasks, tb.Build())
+		}
+	}
+
+	// handle dir scheme changes
+	if hasImported {
+		if err := spec.HandleImportPathMigration(clusterName); err != nil {
+			return err
+		}
+	}
+
+	t := task.NewBuilder().
+		SSHKeySet(
+			spec.ClusterPath(clusterName, "ssh", "id_rsa"),
+			spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
+		ClusterSSH(topo, base.User, opt.SSHTimeout).
+		Parallel(downloadCompTasks...).
+		Parallel(copyCompTasks...).
+		Serial(task.NewFunc("UpgradeCluster", func(ctx *task.Context) error {
+			return operator.Upgrade(ctx, topo, opt)
+		})).
+		Build()
+
+	if err := t.Execute(task.NewContext()); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.Trace(err)
+	}
+
+	metadata.SetVersion(clusterVersion)
+
+	if err := d.specManager.SaveMeta(clusterName, metadata); err != nil {
+		return perrs.Trace(err)
+	}
+
+	if err := os.RemoveAll(d.specManager.Path(clusterName, "patch")); err != nil {
+		return perrs.Trace(err)
+	}
+
+	log.Infof("Upgraded cluster `%s` successfully", clusterName)
+
+	return nil
+}
+
 func (d *Deployer) meta(name string) (metadata spec.Metadata, err error) {
 	exist, err := d.specManager.Exist(name)
 	if err != nil {
@@ -646,4 +793,25 @@ func formatInstanceStatus(status string) string {
 	default:
 		return status
 	}
+}
+
+func versionCompare(curVersion, newVersion string) error {
+	// Can always upgrade to 'nightly' event the current version is 'nightly'
+	if newVersion == version.NightlyVersion {
+		return nil
+	}
+
+	switch semver.Compare(curVersion, newVersion) {
+	case -1:
+		return nil
+	case 0, 1:
+		return perrs.Errorf("please specify a higher version than %s", curVersion)
+	default:
+		return perrs.Errorf("unreachable")
+	}
+}
+
+type componentInfo struct {
+	component string
+	version   string
 }

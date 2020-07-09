@@ -28,6 +28,10 @@ type TestMetadata struct {
 	Topo *TestTopology
 }
 
+func (m *TestMetadata) SetVersion(s string) {
+	m.BaseMeta.Version = s
+}
+
 func (m *TestMetadata) GetTopology() Topology {
 	return m.Topo
 }

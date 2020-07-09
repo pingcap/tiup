@@ -55,11 +55,6 @@ var (
 )
 
 type (
-	componentInfo struct {
-		component string
-		version   string
-	}
-
 	deployOptions struct {
 		user              string // username to login to the SSH server
 		identityFile      string // path to the private key file
