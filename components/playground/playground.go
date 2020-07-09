@@ -40,6 +40,7 @@ import (
 	"github.com/pingcap/tiup/components/playground/utils"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"golang.org/x/mod/semver"
@@ -612,7 +613,7 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 	return
 }
 
-func (p *Playground) bootCluster(options *bootOptions) error {
+func (p *Playground) bootCluster(env *environment.Environment, options *bootOptions) error {
 	p.bootOptions = options
 
 	if options.pd.Num < 1 || options.tidb.Num < 1 || options.tikv.Num < 1 {
@@ -620,7 +621,20 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			options.pd.Num, options.tikv.Num, options.pd.Num)
 	}
 
-	if options.version != "nightly" && options.version != "" {
+	if options.version == "" {
+		version, _, err := env.V1Repository().LatestStableVersion("tidb")
+		if err != nil {
+			return err
+		}
+		options.version = version.String()
+
+		fmt.Println(color.YellowString(`Warning: no version specified for cluster. Will use the last stable one: %s
+
+	You can specified the version by running "tiup playground <version>", example: "tiup playground v4.0.0"
+`, options.version))
+	}
+
+	if options.version != "nightly" {
 		if semver.Compare("v3.1.0", options.version) > 0 && options.tiflash.Num != 0 {
 			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.version))
 			options.tiflash.Num = 0

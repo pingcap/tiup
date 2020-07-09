@@ -32,7 +32,9 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -130,7 +132,14 @@ Examples:
 			if err != nil {
 				return errors.AddStack(err)
 			}
-			return p.bootCluster(opt)
+
+			env, err := environment.InitEnv(repository.Options{})
+			if err != nil {
+				return errors.AddStack(err)
+			}
+			environment.SetGlobalEnv(env)
+
+			return p.bootCluster(env, opt)
 		},
 	}
 

@@ -11,7 +11,6 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	e "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/localdata"
-	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 )
 
@@ -83,11 +82,7 @@ func NewComponentProcess(ctx context.Context, dir, binPath, component string, ve
 		panic("dir must be set")
 	}
 
-	env, err := environment.InitEnv(repository.Options{})
-	if err != nil {
-		return nil, err
-	}
-
+	env := environment.GlobalEnv()
 	oldDir := os.Getenv(localdata.EnvNameInstanceDataDir)
 	defer os.Setenv(localdata.EnvNameInstanceDataDir, oldDir)
 	os.Setenv(localdata.EnvNameInstanceDataDir, dir)

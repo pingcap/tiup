@@ -676,6 +676,39 @@ func (r *V1Repository) ComponentVersion(id, version string) (*v1manifest.Version
 	return vi, nil
 }
 
+// LatestStableVersion returns the latest stable version of specific component
+func (r *V1Repository) LatestStableVersion(id string) (v0manifest.Version, *v1manifest.VersionItem, error) {
+	com, err := r.FetchComponentManifest(id)
+	if err != nil {
+		return "", nil, err
+	}
+
+	versions := com.Platforms[r.PlatformString()]
+	if versions == nil {
+		versions = com.Platforms[v1manifest.AnyPlatform]
+		if versions == nil {
+			return "", nil, fmt.Errorf("component %s doesn't support platform %s", id, r.PlatformString())
+		}
+	}
+
+	var last string
+	for v := range versions {
+		if v0manifest.Version(v).IsNightly() {
+			continue
+		}
+
+		if last == "" || semver.Compare(last, v) < 0 {
+			last = v
+		}
+	}
+
+	if last == "" {
+		return "", nil, fmt.Errorf("component %s doesn't has a stable version", id)
+	}
+
+	return v0manifest.Version(last), com.VersionItem(r.PlatformString(), last), nil
+}
+
 // BinaryPath return the binary path of the component.
 // Support you have install the component, need to get entry from local manifest.
 // Load the manifest locally only to get then Entry, do not force do something need access mirror.
