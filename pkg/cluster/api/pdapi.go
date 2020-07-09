@@ -465,8 +465,16 @@ func (pc *PDClient) DelPD(name string, retryOpt *clusterutil.RetryOption) error 
 	endpoints := pc.getEndpoints(cmd)
 
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, _, err := pc.httpClient.Delete(endpoint, nil)
-		return body, err
+		body, statusCode, err := pc.httpClient.Delete(endpoint, nil)
+		if err != nil {
+			if statusCode == 404 || bytes.Contains(body, []byte("not found, pd")) {
+				log.Debugf("PD node does not exist, ignore: %s", body)
+				return body, nil
+			}
+			return body, err
+		}
+		log.Debugf("Delete PD %s from the cluster success", name)
+		return body, nil
 	})
 	if err != nil {
 		return errors.AddStack(err)
@@ -562,8 +570,16 @@ func (pc *PDClient) DelStore(host string, retryOpt *clusterutil.RetryOption) err
 	endpoints := pc.getEndpoints(cmd)
 
 	_, err = tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, _, err := pc.httpClient.Delete(endpoint, nil)
-		return body, err
+		body, statusCode, err := pc.httpClient.Delete(endpoint, nil)
+		if err != nil {
+			if statusCode == 404 || bytes.Contains(body, []byte("not found")) {
+				log.Debugf("store %d %s does not exist, ignore: %s", storeID, host, body)
+				return body, nil
+			}
+			return body, err
+		}
+		log.Debugf("Delete store %d %s from the cluster success", storeID, host)
+		return body, nil
 	})
 	if err != nil {
 		return errors.AddStack(err)
