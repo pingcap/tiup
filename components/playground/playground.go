@@ -811,6 +811,9 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 		if monitorCmd != nil {
 			_ = syscall.Kill(monitorCmd.Process.Pid, syscall.SIGKILL)
 		}
+		if grafana != nil {
+			_ = syscall.Kill(grafana.cmd.Process.Pid, syscall.SIGKILL)
+		}
 
 		fmt.Println("Wait all processes terminated")
 		_ = p.WalkInstances(func(_ string, inst instance.Instance) error {
@@ -819,6 +822,9 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 		})
 		if monitorCmd != nil {
 			_ = monitorCmd.Wait()
+		}
+		if grafana != nil {
+			_ = grafana.cmd.Wait()
 		}
 		return nil
 	})
