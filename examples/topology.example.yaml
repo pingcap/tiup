@@ -6,6 +6,7 @@ global:
   ssh_port: 22
   deploy_dir: "/tidb-deploy"
   data_dir: "/tidb-data"
+  arch: "amd64" # Supported values: "amd64", "arm64" (default: "amd64")
   # # Resource Control is used to limit the resource of an instance.
   # # See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html
   # # Supports using instance-level `resource_control` to override global `resource_control`.

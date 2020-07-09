@@ -10,6 +10,7 @@ global:
   ssh_port: 22
   deploy_dir: "deploy"
   data_dir: "data"
+  # arch: "amd64"
 
 pd_servers:
   - host: 172.19.0.101
