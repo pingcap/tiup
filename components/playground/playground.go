@@ -555,11 +555,6 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 		cfg.ConfigPath = getAbsolutePath(cfg.ConfigPath)
 	}
 
-	err = installIfMissing(p.profile, componentID, p.bootOptions.version)
-	if err != nil {
-		return nil, errors.Annotatef(err, "failed to install %s", componentID)
-	}
-
 	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
 	if dataDir == "" {
 		return nil, fmt.Errorf("cannot read environment variable %s", localdata.EnvNameInstanceDataDir)
@@ -939,11 +934,6 @@ func (p *Playground) renderSDFile() error {
 
 func (p *Playground) bootMonitor(ctx context.Context, monitorInfo *MonitorInfo) (*exec.Cmd, *grafana, error) {
 	options := p.bootOptions
-
-	// set up prometheus
-	if err := installIfMissing(p.profile, "prometheus", options.version); err != nil {
-		return nil, nil, err
-	}
 
 	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
 	promDir := filepath.Join(dataDir, "prometheus")

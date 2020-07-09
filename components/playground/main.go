@@ -21,7 +21,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -35,7 +34,6 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"go.etcd.io/etcd/clientv3"
@@ -55,33 +53,21 @@ type bootOptions struct {
 }
 
 func installIfMissing(profile *localdata.Profile, component, version string) error {
-	versions, err := profile.InstalledVersions(component)
+	env := environment.GlobalEnv()
+
+	installed, err := env.V1Repository().Local().ComponentInstalled(component, version)
 	if err != nil {
 		return err
 	}
-	if len(versions) > 0 {
-		if v0manifest.Version(version).IsEmpty() {
-			return nil
-		}
-		found := false
-		for _, v := range versions {
-			if v == version {
-				found = true
-				break
-			}
-		}
-		if found {
-			return nil
-		}
+	if installed {
+		return nil
 	}
-	spec := component
-	if !v0manifest.Version(version).IsEmpty() {
-		spec = fmt.Sprintf("%s:%s", component, version)
+
+	spec := repository.ComponentSpec{
+		ID:      component,
+		Version: version,
 	}
-	c := exec.Command("tiup", "install", spec)
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	return c.Run()
+	return env.V1Repository().UpdateComponents([]repository.ComponentSpec{spec})
 }
 
 func execute() error {
