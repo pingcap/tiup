@@ -61,6 +61,10 @@ func (t *TestTopology) ComponentsByStopOrder() []Component {
 	return nil
 }
 
+func (t *TestTopology) ComponentsByUpdateOrder() []Component {
+	return nil
+}
+
 func (t *TestTopology) IterInstance(fn func(instance Instance)) {
 }
 

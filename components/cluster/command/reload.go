@@ -14,16 +14,8 @@
 package command
 
 import (
-	"errors"
-
-	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger/log"
-	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/spf13/cobra"
 )
 
@@ -43,36 +35,7 @@ func newReloadCmd() *cobra.Command {
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			exist, err := tidbSpec.Exist(clusterName)
-			if err != nil {
-				return perrs.AddStack(err)
-			}
-
-			if !exist {
-				return perrs.Errorf("cannot start non-exists cluster %s", clusterName)
-			}
-
-			metadata, err := spec.ClusterMetadata(clusterName)
-			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
-				return err
-			}
-
-			t, err := buildReloadTask(clusterName, metadata, gOpt)
-			if err != nil {
-				return err
-			}
-
-			if err := t.Execute(task.NewContext()); err != nil {
-				if errorx.Cast(err) != nil {
-					// FIXME: Map possible task errors and give suggestions.
-					return err
-				}
-				return perrs.Trace(err)
-			}
-
-			log.Infof("Reloaded cluster `%s` successfully", clusterName)
-
-			return nil
+			return deployer.Reload(clusterName, gOpt)
 		},
 	}
 
@@ -83,77 +46,6 @@ func newReloadCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&gOpt.IgnoreConfigCheck, "ignore-config-check", "", false, "Ignore the config check result")
 
 	return cmd
-}
-
-func buildReloadTask(
-	clusterName string,
-	metadata *spec.ClusterMeta,
-	options operator.Options,
-) (task.Task, error) {
-
-	var refreshConfigTasks []task.Task
-
-	topo := metadata.Topology
-	hasImported := false
-
-	topo.IterInstance(func(inst spec.Instance) {
-		deployDir := clusterutil.Abs(metadata.User, inst.DeployDir())
-		// data dir would be empty for components which don't need it
-		dataDirs := clusterutil.MultiDirAbs(metadata.User, inst.DataDir())
-		// log dir will always be with values, but might not used by the component
-		logDir := clusterutil.Abs(metadata.User, inst.LogDir())
-
-		// Download and copy the latest component to remote if the cluster is imported from Ansible
-		tb := task.NewBuilder().UserSSH(inst.GetHost(), inst.GetSSHPort(), metadata.User, gOpt.SSHTimeout)
-		if inst.IsImported() {
-			switch compName := inst.ComponentName(); compName {
-			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
-				version := spec.ComponentVersion(compName, metadata.Version)
-				tb.Download(compName, inst.OS(), inst.Arch(), version).
-					CopyComponent(
-						compName,
-						inst.OS(),
-						inst.Arch(),
-						version,
-						"", // use default srcPath
-						inst.GetHost(),
-						deployDir,
-					)
-			}
-			hasImported = true
-		}
-
-		// Refresh all configuration
-		t := tb.InitConfig(clusterName,
-			metadata.Version,
-			inst, metadata.User,
-			options.IgnoreConfigCheck,
-			meta.DirPaths{
-				Deploy: deployDir,
-				Data:   dataDirs,
-				Log:    logDir,
-				Cache:  spec.ClusterPath(clusterName, spec.TempConfigPath),
-			}).Build()
-		refreshConfigTasks = append(refreshConfigTasks, t)
-	})
-
-	// handle dir scheme changes
-	if hasImported {
-		if err := spec.HandleImportPathMigration(clusterName); err != nil {
-			return task.NewBuilder().Build(), err
-		}
-	}
-
-	t := task.NewBuilder().
-		SSHKeySet(
-			spec.ClusterPath(clusterName, "ssh", "id_rsa"),
-			spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
-		Parallel(refreshConfigTasks...).
-		ClusterOperate(metadata.Topology, operator.UpgradeOperation, options).
-		Build()
-
-	return t, nil
 }
 
 func validRoles(roles []string) error {

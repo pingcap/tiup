@@ -444,6 +444,84 @@ func (d *Deployer) EditConfig(clusterName string, skipConfirm bool) error {
 	return nil
 }
 
+// Reload the cluster.
+func (d *Deployer) Reload(clusterName string, opt operator.Options) error {
+	metadata, err := d.meta(clusterName)
+	if err != nil {
+		return perrs.AddStack(err)
+	}
+
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
+
+	var refreshConfigTasks []task.Task
+
+	hasImported := false
+
+	topo.IterInstance(func(inst spec.Instance) {
+		deployDir := clusterutil.Abs(base.User, inst.DeployDir())
+		// data dir would be empty for components which don't need it
+		dataDirs := clusterutil.MultiDirAbs(base.User, inst.DataDir())
+		// log dir will always be with values, but might not used by the component
+		logDir := clusterutil.Abs(base.User, inst.LogDir())
+
+		// Download and copy the latest component to remote if the cluster is imported from Ansible
+		tb := task.NewBuilder().UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, opt.SSHTimeout)
+		if inst.IsImported() {
+			switch compName := inst.ComponentName(); compName {
+			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
+				version := spec.ComponentVersion(compName, base.Version)
+				tb.Download(compName, inst.OS(), inst.Arch(), version).
+					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetHost(), deployDir)
+			}
+			hasImported = true
+		}
+
+		// Refresh all configuration
+		t := tb.InitConfig(clusterName,
+			base.Version,
+			inst, base.User,
+			opt.IgnoreConfigCheck,
+			meta.DirPaths{
+				Deploy: deployDir,
+				Data:   dataDirs,
+				Log:    logDir,
+				Cache:  spec.ClusterPath(clusterName, spec.TempConfigPath),
+			}).Build()
+		refreshConfigTasks = append(refreshConfigTasks, t)
+	})
+
+	// handle dir scheme changes
+	if hasImported {
+		if err := spec.HandleImportPathMigration(clusterName); err != nil {
+			return perrs.AddStack(err)
+		}
+	}
+
+	t := task.NewBuilder().
+		SSHKeySet(
+			spec.ClusterPath(clusterName, "ssh", "id_rsa"),
+			spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
+		ClusterSSH(topo, base.User, opt.SSHTimeout).
+		Parallel(refreshConfigTasks...).
+		Serial(task.NewFunc("UpgradeCluster", func(ctx *task.Context) error {
+			return operator.Upgrade(ctx, topo, opt)
+		})).
+		Build()
+
+	if err := t.Execute(task.NewContext()); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.Trace(err)
+	}
+
+	log.Infof("Reloaded cluster `%s` successfully", clusterName)
+
+	return nil
+}
+
 func (d *Deployer) meta(name string) (metadata spec.Metadata, err error) {
 	exist, err := d.specManager.Exist(name)
 	if err != nil {

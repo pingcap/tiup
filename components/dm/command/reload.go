@@ -13,19 +13,9 @@
 
 package command
 
-/*
 import (
-	"errors"
-
-	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
-	operator "github.com/pingcap/tiup/pkg/cluster/operation"
-	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger"
-	"github.com/pingcap/tiup/pkg/logger/log"
-	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/components/dm/spec"
 	"github.com/spf13/cobra"
 )
 
@@ -43,32 +33,8 @@ func newReloadCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-				return perrs.Errorf("cannot start non-exists cluster %s", clusterName)
-			}
 
-			logger.EnableAuditLog()
-			metadata, err := meta.DMMetadata(clusterName)
-			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
-				return err
-			}
-
-			t, err := buildReloadTask(clusterName, metadata, gOpt)
-			if err != nil {
-				return err
-			}
-
-			if err := t.Execute(task.NewContext()); err != nil {
-				if errorx.Cast(err) != nil {
-					// FIXME: Map possible task errors and give suggestions.
-					return err
-				}
-				return perrs.Trace(err)
-			}
-
-			log.Infof("Reloaded cluster `%s` successfully", clusterName)
-
-			return nil
+			return deployer.Reload(clusterName, gOpt)
 		},
 	}
 
@@ -80,64 +46,10 @@ func newReloadCmd() *cobra.Command {
 	return cmd
 }
 
-func buildReloadTask(
-	clusterName string,
-	metadata *meta.DMMeta,
-	options operator.Options,
-) (task.Task, error) {
-
-	var refreshConfigTasks []task.Task
-
-	topo := metadata.Topology
-
-	topo.IterInstance(func(inst meta.Instance) {
-		deployDir := clusterutil.Abs(metadata.User, inst.DeployDir())
-		// data dir would be empty for components which don't need it
-		dataDirs := clusterutil.MultiDirAbs(metadata.User, inst.DataDir())
-		// log dir will always be with values, but might not used by the component
-		logDir := clusterutil.Abs(metadata.User, inst.LogDir())
-
-		// Download and copy the latest component to remote if the cluster is imported from Ansible
-		tb := task.NewBuilder().UserSSH(inst.GetHost(), inst.GetSSHPort(), metadata.User, gOpt.SSHTimeout)
-		if inst.IsImported() {
-			switch compName := inst.ComponentName(); compName {
-			case meta.ComponentGrafana, meta.ComponentPrometheus, meta.ComponentAlertManager:
-				version := meta.ComponentVersion(compName, metadata.Version)
-				tb.Download(compName, inst.OS(), inst.Arch(), version).
-					CopyComponent(compName, inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
-			}
-		}
-
-		// Refresh all configuration
-		t := tb.InitConfig(clusterName,
-			metadata.Version,
-			inst, metadata.User,
-			options.IgnoreConfigCheck,
-			meta.DirPaths{
-				Deploy: deployDir,
-				Data:   dataDirs,
-				Log:    logDir,
-				Cache:  meta.ClusterPath(clusterName, meta.TempConfigPath),
-			}).Build()
-		refreshConfigTasks = append(refreshConfigTasks, t)
-	})
-
-	t := task.NewBuilder().
-		SSHKeySet(
-			meta.ClusterPath(clusterName, "ssh", "id_rsa"),
-			meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
-		Parallel(refreshConfigTasks...).
-		ClusterOperate(metadata.Topology, operator.UpgradeOperation, options).
-		Build()
-
-	return t, nil
-}
-
 func validRoles(roles []string) error {
 	for _, r := range roles {
 		match := false
-		for _, has := range meta.AllDMComponentNames() {
+		for _, has := range spec.AllDMComponentNames() {
 			if r == has {
 				match = true
 				break
@@ -145,10 +57,9 @@ func validRoles(roles []string) error {
 		}
 
 		if !match {
-			return perrs.Errorf("not valid role: %s, should be one of: %v", r, meta.AllDMComponentNames())
+			return perrs.Errorf("not valid role: %s, should be one of: %v", r, spec.AllDMComponentNames())
 		}
 	}
 
 	return nil
 }
-*/
