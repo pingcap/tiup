@@ -95,6 +95,10 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 		return err
 	}
 
+	if err := validateNewTopo(&newPart); err != nil {
+		return err
+	}
+
 	if data, err := ioutil.ReadFile(topoFile); err == nil {
 		teleTopology = string(data)
 	}
@@ -118,6 +122,7 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 			patchedComponents.Insert(instance.ComponentName())
 		}
 	})
+
 	if !skipConfirm {
 		// patchedComponents are components that have been patched and overwrited
 		if err := confirmTopology(clusterName, metadata.Version, &newPart, patchedComponents); err != nil {
@@ -182,21 +187,10 @@ func buildScaleOutTask(
 	})
 	// uninitializedHosts are hosts which haven't been initialized yet
 	uninitializedHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
-	var iterErr error                               // error when itering over instances
-	iterErr = nil
 	newPart.IterInstance(func(instance spec.Instance) {
 		if host := instance.GetHost(); !initializedHosts.Exist(host) {
 			if _, found := uninitializedHosts[host]; found {
 				return
-			}
-
-			// check for "imported" parameter, it can not be true when scaling out
-			if instance.IsImported() {
-				iterErr = errors.New(
-					"'imported' is set to 'true' for new instance, this is only used " +
-						"for instances imported from tidb-ansible and make no sense when " +
-						"scaling out, please delete the line or set it to 'false' for new instances")
-				return // skip the host to avoid issues
 			}
 
 			uninitializedHosts[host] = hostInfo{
@@ -231,10 +225,6 @@ func buildScaleOutTask(
 			envInitTasks = append(envInitTasks, t)
 		}
 	})
-
-	if iterErr != nil {
-		return task.NewBuilder().Build(), iterErr
-	}
 
 	// Download missing component
 	downloadCompTasks = convertStepDisplaysToTasks(prepare.BuildDownloadCompTasks(metadata.Version, newPart))
@@ -369,4 +359,20 @@ func buildScaleOutTask(
 
 	return builder.Build(), nil
 
+}
+
+// validateNewTopo checks the new part of scale-out topology to make sure it's supported
+func validateNewTopo(topo *spec.Specification) (err error) {
+	err = nil
+	topo.IterInstance(func(instance spec.Instance) {
+		// check for "imported" parameter, it can not be true when scaling out
+		if instance.IsImported() {
+			err = errors.New(
+				"'imported' is set to 'true' for new instance, this is only used " +
+					"for instances imported from tidb-ansible and make no sense when " +
+					"scaling out, please delete the line or set it to 'false' for new instances")
+			return
+		}
+	})
+	return err
 }
