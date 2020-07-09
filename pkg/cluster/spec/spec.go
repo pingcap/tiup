@@ -122,6 +122,7 @@ type Topology interface {
 	// Instances() []Instance
 	ComponentsByStartOrder() []Component
 	ComponentsByStopOrder() []Component
+	ComponentsByUpdateOrder() []Component
 	IterInstance(fn func(instance Instance))
 	GetMonitoredOptions() *MonitoredOptions
 	// count how many time a path is used by instances in cluster

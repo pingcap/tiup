@@ -384,6 +384,44 @@ func StartMonitored(getter ExecutorGetter, instance spec.Instance, options *spec
 	return nil
 }
 
+func restartInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) error {
+	e := getter.Get(ins.GetHost())
+	log.Infof("\tRestarting instance %s", ins.GetHost())
+
+	// Restart by systemd.
+	c := module.SystemdModuleConfig{
+		Unit:         ins.ServiceName(),
+		ReloadDaemon: true,
+		Action:       "restart",
+		Timeout:      time.Second * time.Duration(timeout),
+	}
+	systemd := module.NewSystemdModule(c)
+	stdout, stderr, err := systemd.Execute(e)
+
+	if len(stdout) > 0 {
+		fmt.Println(string(stdout))
+	}
+	if len(stderr) > 0 {
+		log.Errorf(string(stderr))
+	}
+
+	if err != nil {
+		return errors.Annotatef(err, "failed to restart: %s", ins.GetHost())
+	}
+
+	// Check ready.
+	err = ins.Ready(e, timeout)
+	if err != nil {
+		str := fmt.Sprintf("\t%s failed to restart: %s", ins.GetHost(), err)
+		log.Errorf(str)
+		return errors.Annotatef(err, str)
+	}
+
+	log.Infof("\tRestart %s success", ins.GetHost())
+
+	return nil
+}
+
 // RestartComponent restarts the component.
 func RestartComponent(getter ExecutorGetter, instances []spec.Instance, timeout int64) error {
 	if len(instances) <= 0 {
@@ -394,39 +432,10 @@ func RestartComponent(getter ExecutorGetter, instances []spec.Instance, timeout 
 	log.Infof("Restarting component %s", name)
 
 	for _, ins := range instances {
-		e := getter.Get(ins.GetHost())
-		log.Infof("\tRestarting instance %s", ins.GetHost())
-
-		// Restart by systemd.
-		c := module.SystemdModuleConfig{
-			Unit:         ins.ServiceName(),
-			ReloadDaemon: true,
-			Action:       "restart",
-			Timeout:      time.Second * time.Duration(timeout),
-		}
-		systemd := module.NewSystemdModule(c)
-		stdout, stderr, err := systemd.Execute(e)
-
-		if len(stdout) > 0 {
-			fmt.Println(string(stdout))
-		}
-		if len(stderr) > 0 {
-			log.Errorf(string(stderr))
-		}
-
+		err := restartInstance(getter, ins, timeout)
 		if err != nil {
-			return errors.Annotatef(err, "failed to restart: %s", ins.GetHost())
+			return errors.AddStack(err)
 		}
-
-		// Check ready.
-		err = ins.Ready(e, timeout)
-		if err != nil {
-			str := fmt.Sprintf("\t%s failed to restart: %s", ins.GetHost(), err)
-			log.Errorf(str)
-			return errors.Annotatef(err, str)
-		}
-
-		log.Infof("\tRestart %s success", ins.GetHost())
 	}
 
 	return nil

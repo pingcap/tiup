@@ -18,8 +18,11 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -247,5 +250,41 @@ func (i *PDInstance) ScaleConfig(e executor.Executor, cluster *Specification, cl
 	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
 		return err
 	}
+	return nil
+}
+
+var _ RollingUpdateInstance = &PDInstance{}
+
+// BeforeRestart implements RollingUpdateInstance interface.
+func (i *PDInstance) BeforeRestart(topo Topology, apiTimeoutSeconds int) error {
+	timeoutOpt := &clusterutil.RetryOption{
+		Timeout: time.Second * time.Duration(apiTimeoutSeconds),
+		Delay:   time.Second * 2,
+	}
+
+	tidbTopo, ok := topo.(*Specification)
+	if !ok {
+		panic("topo should be type of tidb topology")
+	}
+
+	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, nil)
+
+	leader, err := pdClient.GetLeader()
+	if err != nil {
+		return errors.Annotatef(err, "failed to get PD leader %s", i.GetHost())
+	}
+
+	if len(tidbTopo.PDServers) > 1 && leader.Name == i.Name {
+		if err := pdClient.EvictPDLeader(timeoutOpt); err != nil {
+			return errors.Annotatef(err, "failed to evict PD leader %s", i.GetHost())
+		}
+	}
+
+	return nil
+}
+
+// AfterRestart implements RollingUpdateInstance interface.
+func (i *PDInstance) AfterRestart(topo Topology) error {
+	// intend to do nothing
 	return nil
 }
