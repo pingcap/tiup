@@ -792,7 +792,7 @@ func (p *Playground) bootCluster(env *environment.Environment, options *bootOpti
 		fmt.Println(color.GreenString("To view the dashboard: http://%s/dashboard", pdAddr))
 	}
 
-	if monitorInfo.IP != "" && len(p.pds) != 0 {
+	if monitorInfo != nil && len(p.pds) != 0 {
 		client, err := newEtcdClient(p.pds[0].Addr())
 		if err == nil && client != nil {
 			promBinary, err := json.Marshal(monitorInfo)
