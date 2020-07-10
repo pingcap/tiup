@@ -101,10 +101,6 @@ func NewComponentProcess(ctx context.Context, dir, binPath, component string, ve
 // WaitContext wrap cmd.Wait with context
 func WaitContext(ctx context.Context, cmd *exec.Cmd) error {
 	// We use cmd.Process.Wait instead of cmd.Wait because cmd.Wait is not reenterable
-	if ctx == nil {
-		_, err := cmd.Process.Wait()
-		return err
-	}
 	c := make(chan error, 1)
 	go func() {
 		_, err := cmd.Process.Wait()

@@ -401,7 +401,7 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 
 func (p *Playground) addWaitInstance(inst instance.Instance) {
 	p.instanceWaiter.Go(func() error {
-		err := inst.Wait(nil)
+		err := inst.Wait(context.TODO())
 		if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
 			fmt.Print(color.RedString("%s quit: %s\n", inst.Component(), err.Error()))
 			if lines, _ := utils.TailN(inst.LogFile(), 10); len(lines) > 0 {
@@ -899,7 +899,8 @@ func (p *Playground) terminate(sig syscall.Signal, extraCmds ...*exec.Cmd) {
 		} else if atomic.LoadInt32(&p.curSig) == int32(sig) { // In case of double ctr+c
 			fmt.Printf("Wait %s(%d) to quit...\n", inst.Component(), inst.Pid())
 		}
-		ctx, _ := context.WithTimeout(context.Background(), killDeadline)
+		ctx, cancel := context.WithTimeout(context.Background(), killDeadline)
+		defer cancel()
 		if err := inst.Wait(ctx); err == instance.ErrorWaitTimeout {
 			_ = syscall.Kill(inst.Pid(), syscall.SIGKILL)
 		}
@@ -909,7 +910,8 @@ func (p *Playground) terminate(sig syscall.Signal, extraCmds ...*exec.Cmd) {
 		if sig != syscall.SIGINT {
 			_ = syscall.Kill(cmd.Process.Pid, sig)
 		}
-		ctx, _ := context.WithTimeout(context.Background(), killDeadline)
+		ctx, cancel := context.WithTimeout(context.Background(), killDeadline)
+		defer cancel()
 		if err := instance.WaitContext(ctx, cmd); err == instance.ErrorWaitTimeout {
 			_ = syscall.Kill(cmd.Process.Pid, syscall.SIGKILL)
 		}
