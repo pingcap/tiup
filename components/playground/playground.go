@@ -55,7 +55,6 @@ type Playground struct {
 	booted      bool
 	curSig      int32
 	bootOptions *bootOptions
-	profile     *localdata.Profile
 	port        int
 
 	pds      []*instance.PDInstance
@@ -82,7 +81,6 @@ type MonitorInfo struct {
 func NewPlayground(port int) *Playground {
 	return &Playground{
 		port:    port,
-		profile: localdata.InitProfile(),
 		idAlloc: make(map[string]int),
 	}
 }
@@ -690,7 +688,7 @@ func (p *Playground) bootCluster(env *environment.Environment, options *bootOpti
 	var monitorInfo *MonitorInfo
 	if options.monitor {
 		var err error
-		if monitorCmd, monitorInfo, grafana, err = p.bootMonitor(ctx); err != nil {
+		if monitorCmd, monitorInfo, grafana, err = p.bootMonitor(ctx, env); err != nil {
 			return errors.AddStack(err)
 		}
 	}
@@ -941,7 +939,7 @@ func (p *Playground) renderSDFile() error {
 	return nil
 }
 
-func (p *Playground) bootMonitor(ctx context.Context) (*exec.Cmd, *MonitorInfo, *grafana, error) {
+func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environment) (*exec.Cmd, *MonitorInfo, *grafana, error) {
 	options := p.bootOptions
 	monitorInfo := &MonitorInfo{}
 
@@ -979,10 +977,10 @@ func (p *Playground) bootMonitor(ctx context.Context) (*exec.Cmd, *MonitorInfo, 
 	}()
 
 	// set up grafana
-	if err := installIfMissing(p.profile, "grafana", options.version); err != nil {
+	if err := installIfMissing(env.Profile(), "grafana", options.version); err != nil {
 		return nil, nil, nil, errors.AddStack(err)
 	}
-	installPath, err := p.profile.ComponentInstalledPath("grafana", v0manifest.Version(options.version))
+	installPath, err := env.Profile().ComponentInstalledPath("grafana", v0manifest.Version(options.version))
 	if err != nil {
 		return nil, nil, nil, errors.AddStack(err)
 	}
