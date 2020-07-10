@@ -111,11 +111,11 @@ func init() {
 		newDisplayCmd(),
 		newReloadCmd(),
 		newUpgradeCmd(),
+		newPatchCmd(),
 	/*
 		newCheckCmd(),
 		newScaleInCmd(),
 		newScaleOutCmd(),
-		newPatchCmd(),
 		newTestCmd(), // hidden command for test internally
 	*/
 	)
