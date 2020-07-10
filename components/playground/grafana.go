@@ -24,8 +24,8 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/components/playground/instance"
-	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/environment"
+	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -188,24 +188,19 @@ http_port = %d
 	}
 
 	args := []string{
-		"tiup",
-		instance.CompVersion("grafana", v0manifest.Version(g.version)),
 		"--homepath",
 		dir,
 		"--config",
 		customeFName,
 	}
 
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
-	cmd.Env = append(
-		os.Environ(),
-		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, dir),
-	)
+	env := environment.GlobalEnv()
+	cmd, err := tiupexec.PrepareCommand(ctx, "grafana", v0manifest.Version(g.version), "", "", dir, args, env)
+	if err != nil {
+		return errors.AddStack(err)
+	}
 
 	g.cmd = cmd
-	g.cmd.Stderr = os.Stderr
-	g.cmd.Stderr = os.Stdout
-	fmt.Println("start grafana: ", strings.Join(args, " "))
 
 	return g.cmd.Start()
 }

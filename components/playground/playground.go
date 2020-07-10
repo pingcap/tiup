@@ -861,16 +861,27 @@ func (p *Playground) bootCluster(env *environment.Environment, options *bootOpti
 			}
 		} else {
 			_ = p.RWalkInstances(func(_ string, inst instance.Instance) error {
-				_ = syscall.Kill(inst.Pid(), syscall.SIGKILL)
+				// FIXME: tidb doesn't quit on SIGINT
+				if inst.Component() == "tidb" {
+					_ = syscall.Kill(inst.Pid(), syscall.SIGKILL)
+				}
 				return nil
 			})
-			if monitorCmd != nil {
-				_ = syscall.Kill(monitorCmd.Process.Pid, syscall.SIGKILL)
-			}
-			if grafana != nil {
-				_ = syscall.Kill(grafana.cmd.Process.Pid, syscall.SIGKILL)
-			}
 		}
+		/*
+			sig := (<-sc).(syscall.Signal)
+			else {
+				_ = p.RWalkInstances(func(_ string, inst instance.Instance) error {
+					_ = syscall.Kill(inst.Pid(), syscall.SIGKILL)
+					return nil
+				})
+				if monitorCmd != nil {
+					_ = syscall.Kill(monitorCmd.Process.Pid, syscall.SIGKILL)
+				}
+				if grafana != nil {
+					_ = syscall.Kill(grafana.cmd.Process.Pid, syscall.SIGKILL)
+				}
+			}*/
 	}()
 
 	go func() {
