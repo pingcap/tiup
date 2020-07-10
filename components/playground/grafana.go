@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -192,6 +193,7 @@ http_port = %d
 		dir,
 		"--config",
 		customeFName,
+		fmt.Sprintf("cfg:default.paths.logs=%s", path.Join(dir, "log")),
 	}
 
 	env := environment.GlobalEnv()
@@ -199,6 +201,8 @@ http_port = %d
 	if err != nil {
 		return errors.AddStack(err)
 	}
+	cmd.Stdout = nil
+	cmd.Stderr = nil
 
 	g.cmd = cmd
 
