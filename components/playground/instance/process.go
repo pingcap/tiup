@@ -103,8 +103,12 @@ func WaitContext(ctx context.Context, cmd *exec.Cmd) error {
 	// We use cmd.Process.Wait instead of cmd.Wait because cmd.Wait is not reenterable
 	c := make(chan error, 1)
 	go func() {
-		_, err := cmd.Process.Wait()
-		c <- err
+		if cmd == nil || cmd.Process == nil {
+			c <- nil
+		} else {
+			_, err := cmd.Process.Wait()
+			c <- err
+		}
 	}()
 	select {
 	case <-ctx.Done():
