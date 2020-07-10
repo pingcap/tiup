@@ -814,29 +814,16 @@ func (p *Playground) bootCluster(env *environment.Environment, options *bootOpti
 		time.Sleep(20 * time.Second)
 
 		fmt.Println("Early terminated via failpoint")
-		_ = p.WalkInstances(func(_ string, inst instance.Instance) error {
-			_ = syscall.Kill(inst.Pid(), syscall.SIGKILL)
-			return nil
-		})
 
-		if monitorCmd != nil {
-			_ = syscall.Kill(monitorCmd.Process.Pid, syscall.SIGKILL)
-		}
+		extraCmds := []*exec.Cmd{}
 		if grafana != nil {
-			_ = syscall.Kill(grafana.cmd.Process.Pid, syscall.SIGKILL)
+			extraCmds = append(extraCmds, grafana.cmd)
 		}
+		if monitorCmd != nil {
+			extraCmds = append(extraCmds, monitorCmd)
+		}
+		p.terminate(syscall.SIGKILL, extraCmds...)
 
-		fmt.Println("Wait all processes terminated")
-		_ = p.WalkInstances(func(_ string, inst instance.Instance) error {
-			_ = inst.Wait(nil)
-			return nil
-		})
-		if monitorCmd != nil {
-			_ = monitorCmd.Wait()
-		}
-		if grafana != nil {
-			_ = grafana.cmd.Wait()
-		}
 		return nil
 	})
 
