@@ -63,7 +63,9 @@ func Initialize(base string) error {
 	}
 
 	clusterBaseDir := filepath.Join(profileDir, TiOpsClusterDir)
-	tidbSpec = NewSpec(clusterBaseDir)
+	tidbSpec = NewSpec(clusterBaseDir, func() Metadata {
+		return new(ClusterMeta)
+	})
 	initialized = true
 	// make sure the dir exist
 	return utils2.CreateDir(profileDir)

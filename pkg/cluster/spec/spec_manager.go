@@ -48,14 +48,21 @@ const (
 
 // SpecManager control management of spec meta data.
 type SpecManager struct {
-	base string
+	base    string
+	newMeta func() Metadata
 }
 
 // NewSpec create a spec instance.
-func NewSpec(base string) *SpecManager {
+func NewSpec(base string, newMeta func() Metadata) *SpecManager {
 	return &SpecManager{
-		base: base,
+		base:    base,
+		newMeta: newMeta,
 	}
+}
+
+// NewMetadata alloc a Metadata according the type.
+func (s *SpecManager) NewMetadata() Metadata {
+	return s.newMeta()
 }
 
 // Path returns the full path to a subpath (file or directory) of a

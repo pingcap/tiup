@@ -84,7 +84,9 @@ func TestSpec(t *testing.T) {
 	dir, err := ioutil.TempDir("", "test-*")
 	assert.Nil(t, err)
 
-	spec := NewSpec(dir)
+	spec := NewSpec(dir, func() Metadata {
+		return new(TestMetadata)
+	})
 	names, err := spec.List()
 	assert.Nil(t, err)
 	assert.Len(t, names, 0)

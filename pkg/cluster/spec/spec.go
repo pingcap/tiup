@@ -854,9 +854,9 @@ func (s *Specification) IterInstance(fn func(instance Instance)) {
 }
 
 // IterHost iterates one instance for each host
-func (s *Specification) IterHost(fn func(instance Instance)) {
+func IterHost(topo Topology, fn func(instance Instance)) {
 	hostMap := make(map[string]bool)
-	for _, comp := range s.ComponentsByStartOrder() {
+	for _, comp := range topo.ComponentsByStartOrder() {
 		for _, inst := range comp.Instances() {
 			host := inst.GetHost()
 			_, ok := hostMap[host]

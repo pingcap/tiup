@@ -66,7 +66,9 @@ func (m *DMMeta) GetBaseMeta() *cspec.BaseMeta {
 // GetSpecManager return the spec manager of dm cluster.
 func GetSpecManager() *cspec.SpecManager {
 	if specManager == nil {
-		specManager = cspec.NewSpec(filepath.Join(cspec.ProfileDir(), cspec.TiOpsClusterDir))
+		specManager = cspec.NewSpec(filepath.Join(cspec.ProfileDir(), cspec.TiOpsClusterDir), func() cspec.Metadata {
+			return new(DMMeta)
+		})
 	}
 	return specManager
 }
