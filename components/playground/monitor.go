@@ -23,8 +23,8 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/components/playground/instance"
-	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/environment"
+	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -121,18 +121,17 @@ scrape_configs:
 	}
 
 	args := []string{
-		"tiup",
-		instance.CompVersion("prometheus", v0manifest.Version(version)),
 		fmt.Sprintf("--config.file=%s", filepath.Join(dir, "prometheus.yml")),
 		fmt.Sprintf("--web.external-url=http://%s", addr),
 		fmt.Sprintf("--web.listen-address=%s:%d", host, port),
 		fmt.Sprintf("--storage.tsdb.path='%s'", filepath.Join(dir, "data")),
 	}
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
-	cmd.Env = append(
-		os.Environ(),
-		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, dir),
-	)
+
+	env := environment.GlobalEnv()
+	cmd, err := tiupexec.PrepareCommand(ctx, "prometheus", v0manifest.Version(version), "", "", dir, args, env)
+	if err != nil {
+		return 0, nil, err
+	}
 
 	m.port = port
 	m.cmd = cmd

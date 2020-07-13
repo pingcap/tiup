@@ -52,7 +52,7 @@ type Instance interface {
 	// StatusAddrs return the address to pull metrics.
 	StatusAddrs() []string
 	// Wait Should only call this if the instance is started successfully.
-	Wait() error
+	Wait(ctx context.Context) error
 }
 
 func (inst *instance) StatusAddrs() (addrs []string) {

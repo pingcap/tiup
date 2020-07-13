@@ -27,6 +27,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"text/tabwriter"
 	"time"
@@ -39,17 +40,21 @@ import (
 	"github.com/pingcap/tiup/components/playground/utils"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 )
 
+// The deadline a process should quit after receives kill signal
+const killDeadline = time.Second * 16
+
 // Playground represent the playground of a cluster.
 type Playground struct {
 	booted      bool
+	curSig      int32
 	bootOptions *bootOptions
-	profile     *localdata.Profile
 	port        int
 
 	pds      []*instance.PDInstance
@@ -65,11 +70,17 @@ type Playground struct {
 	monitor *monitor
 }
 
+// MonitorInfo represent the monitor
+type MonitorInfo struct {
+	IP         string `json:"ip"`
+	Port       int    `json:"port"`
+	BinaryPath string `json:"binary_path"`
+}
+
 // NewPlayground create a Playground instance.
 func NewPlayground(port int) *Playground {
 	return &Playground{
 		port:    port,
-		profile: localdata.InitProfile(),
 		idAlloc: make(map[string]int),
 	}
 }
@@ -388,8 +399,8 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 
 func (p *Playground) addWaitInstance(inst instance.Instance) {
 	p.instanceWaiter.Go(func() error {
-		err := inst.Wait()
-		if err != nil {
+		err := inst.Wait(context.TODO())
+		if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
 			fmt.Print(color.RedString("%s quit: %s\n", inst.Component(), err.Error()))
 			if lines, _ := utils.TailN(inst.LogFile(), 10); len(lines) > 0 {
 				for _, line := range lines {
@@ -478,8 +489,8 @@ func (p *Playground) RWalkInstances(fn func(componentID string, ins instance.Ins
 		return nil
 	})
 
-	for i := 0; i < len(ids); i++ {
-		err := fn(ids[i], instances[i])
+	for i := len(ids); i > 0; i-- {
+		err := fn(ids[i-1], instances[i-1])
 		if err != nil {
 			return errors.AddStack(err)
 		}
@@ -545,11 +556,6 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 		cfg.ConfigPath = getAbsolutePath(cfg.ConfigPath)
 	}
 
-	err = installIfMissing(p.profile, componentID, p.bootOptions.version)
-	if err != nil {
-		return nil, errors.Annotatef(err, "failed to install %s", componentID)
-	}
-
 	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
 	if dataDir == "" {
 		return nil, fmt.Errorf("cannot read environment variable %s", localdata.EnvNameInstanceDataDir)
@@ -603,7 +609,7 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 	return
 }
 
-func (p *Playground) bootCluster(options *bootOptions) error {
+func (p *Playground) bootCluster(env *environment.Environment, options *bootOptions) error {
 	p.bootOptions = options
 
 	if options.pd.Num < 1 || options.tidb.Num < 1 || options.tikv.Num < 1 {
@@ -611,7 +617,20 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			options.pd.Num, options.tikv.Num, options.pd.Num)
 	}
 
-	if options.version != "nightly" && options.version != "" {
+	if options.version == "" {
+		version, _, err := env.V1Repository().LatestStableVersion("tidb")
+		if err != nil {
+			return err
+		}
+		options.version = version.String()
+
+		fmt.Println(color.YellowString(`Use latest stable version: %s
+
+	You can specified the version by running "tiup playground <version>", example: "tiup playground v4.0.0"
+`, options.version))
+	}
+
+	if options.version != "nightly" {
 		if semver.Compare("v3.1.0", options.version) > 0 && options.tiflash.Num != 0 {
 			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.version))
 			options.tiflash.Num = 0
@@ -664,103 +683,12 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 
 	fmt.Println("Playground Bootstrapping...")
 
-	monitorInfo := struct {
-		IP         string `json:"ip"`
-		Port       int    `json:"port"`
-		BinaryPath string `json:"binary_path"`
-	}{}
-
 	var monitorCmd *exec.Cmd
 	var grafana *grafana
+	var monitorInfo *MonitorInfo
 	if options.monitor {
-		// set up prometheus
-		if err := installIfMissing(p.profile, "prometheus", options.version); err != nil {
-			return err
-		}
-
-		dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
-		promDir := filepath.Join(dataDir, "prometheus")
-
-		monitor := newMonitor()
-		port, cmd, err := monitor.startMonitor(ctx, options.version, options.host, promDir)
-		if err != nil {
-			return err
-		}
-		p.monitor = monitor
-
-		monitorInfo.IP = options.host
-		monitorInfo.BinaryPath = promDir
-		monitorInfo.Port = port
-
-		monitorCmd = cmd
-		go func() {
-			log, err := os.OpenFile(filepath.Join(promDir, "prom.log"), os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
-			if err != nil {
-				fmt.Println("Monitor system start failed", err)
-				return
-			}
-			defer log.Close()
-
-			cmd.Stderr = log
-			cmd.Stdout = os.Stdout
-
-			// fmt.Println("Start Prometheus instance...")
-			if err := cmd.Start(); err != nil {
-				fmt.Println("Monitor system start failed", err)
-				return
-			}
-		}()
-
-		// set up grafana
-		if err := installIfMissing(p.profile, "grafana", options.version); err != nil {
-			return err
-		}
-		installPath, err := p.profile.ComponentInstalledPath("grafana", v0manifest.Version(options.version))
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		dataDir = os.Getenv(localdata.EnvNameInstanceDataDir)
-		grafanaDir := filepath.Join(dataDir, "grafana")
-
-		cmd = exec.Command("cp", "-r", installPath, grafanaDir)
-		err = cmd.Run()
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		dashboardDir := filepath.Join(grafanaDir, "dashboards")
-		err = os.MkdirAll(dashboardDir, 0755)
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		// mv {grafanaDir}/*.json {grafanaDir}/dashboards/
-		err = filepath.Walk(grafanaDir, func(path string, info os.FileInfo, err error) error {
-			// skip scan sub directory
-			if info.IsDir() && path != grafanaDir {
-				return filepath.SkipDir
-			}
-
-			if strings.HasSuffix(info.Name(), ".json") {
-				return os.Rename(path, filepath.Join(grafanaDir, "dashboards", info.Name()))
-			}
-
-			return nil
-		})
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		err = replaceDatasource(dashboardDir, clusterName)
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		grafana = newGrafana(options.version, options.host)
-		// fmt.Println("Start Grafana instance...")
-		err = grafana.start(ctx, grafanaDir, fmt.Sprintf("http://%s:%d", monitorInfo.IP, monitorInfo.Port))
-		if err != nil {
+		var err error
+		if monitorCmd, monitorInfo, grafana, err = p.bootMonitor(ctx, env); err != nil {
 			return errors.AddStack(err)
 		}
 	}
@@ -864,7 +792,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 		fmt.Println(color.GreenString("To view the dashboard: http://%s/dashboard", pdAddr))
 	}
 
-	if monitorInfo.IP != "" && len(p.pds) != 0 {
+	if monitorInfo != nil && len(p.pds) != 0 {
 		client, err := newEtcdClient(p.pds[0].Addr())
 		if err == nil && client != nil {
 			promBinary, err := json.Marshal(monitorInfo)
@@ -884,23 +812,16 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 		time.Sleep(20 * time.Second)
 
 		fmt.Println("Early terminated via failpoint")
-		_ = p.WalkInstances(func(_ string, inst instance.Instance) error {
-			_ = syscall.Kill(inst.Pid(), syscall.SIGKILL)
-			return nil
-		})
 
-		if monitorCmd != nil {
-			_ = syscall.Kill(monitorCmd.Process.Pid, syscall.SIGKILL)
+		extraCmds := []*exec.Cmd{}
+		if grafana != nil {
+			extraCmds = append(extraCmds, grafana.cmd)
 		}
+		if monitorCmd != nil {
+			extraCmds = append(extraCmds, monitorCmd)
+		}
+		p.terminate(syscall.SIGKILL, extraCmds...)
 
-		fmt.Println("Wait all processes terminated")
-		_ = p.WalkInstances(func(_ string, inst instance.Instance) error {
-			_ = inst.Wait()
-			return nil
-		})
-		if monitorCmd != nil {
-			_ = monitorCmd.Wait()
-		}
 		return nil
 	})
 
@@ -912,18 +833,21 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 			syscall.SIGTERM,
 			syscall.SIGQUIT)
 		sig := (<-sc).(syscall.Signal)
-		if sig != syscall.SIGINT {
-			// Need more graceful kill by stop components one by one?
-			_ = p.RWalkInstances(func(_ string, inst instance.Instance) error {
-				_ = syscall.Kill(inst.Pid(), sig)
-				return nil
-			})
-			if monitorCmd != nil {
-				_ = syscall.Kill(monitorCmd.Process.Pid, sig)
-			}
-			if grafana != nil {
-				_ = syscall.Kill(grafana.cmd.Process.Pid, sig)
-			}
+		atomic.StoreInt32(&p.curSig, int32(sig))
+		extraCmds := []*exec.Cmd{}
+		if grafana != nil {
+			extraCmds = append(extraCmds, grafana.cmd)
+		}
+		if monitorCmd != nil {
+			extraCmds = append(extraCmds, monitorCmd)
+		}
+		go p.terminate(sig, extraCmds...)
+
+		// If user try double ctrl+c, force quit
+		sig = (<-sc).(syscall.Signal)
+		atomic.StoreInt32(&p.curSig, int32(syscall.SIGKILL))
+		if sig == syscall.SIGINT {
+			p.terminate(syscall.SIGKILL, extraCmds...)
 		}
 	}()
 
@@ -940,7 +864,7 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 	if grafana != nil {
 		p.instanceWaiter.Go(func() error {
 			err := grafana.cmd.Wait()
-			if err != nil {
+			if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
 				fmt.Printf("Grafana quit: %v\n", err)
 			}
 			return err
@@ -950,17 +874,46 @@ func (p *Playground) bootCluster(options *bootOptions) error {
 
 	// Wait all instance quit and return the first non-nil err.
 	err = p.instanceWaiter.Wait()
-	if err != nil {
+	if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
 		return err
 	}
 
 	if monitorCmd != nil {
-		if err := monitorCmd.Wait(); err != nil {
+		if err := monitorCmd.Wait(); err != nil && atomic.LoadInt32(&p.curSig) == 0 {
 			fmt.Println("Monitor system wait failed", err)
 		}
 	}
 
 	return nil
+}
+
+func (p *Playground) terminate(sig syscall.Signal, extraCmds ...*exec.Cmd) {
+	_ = p.RWalkInstances(func(_ string, inst instance.Instance) error {
+		if sig != syscall.SIGINT {
+			_ = syscall.Kill(inst.Pid(), sig)
+		}
+		if sig == syscall.SIGKILL {
+			fmt.Printf("Force %s(%d) to quit...\n", inst.Component(), inst.Pid())
+		} else if atomic.LoadInt32(&p.curSig) == int32(sig) { // In case of double ctr+c
+			fmt.Printf("Wait %s(%d) to quit...\n", inst.Component(), inst.Pid())
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), killDeadline)
+		defer cancel()
+		if err := inst.Wait(ctx); err == instance.ErrorWaitTimeout {
+			_ = syscall.Kill(inst.Pid(), syscall.SIGKILL)
+		}
+		return nil
+	})
+	for _, cmd := range extraCmds {
+		if sig != syscall.SIGINT {
+			_ = syscall.Kill(cmd.Process.Pid, sig)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), killDeadline)
+		defer cancel()
+		if err := instance.WaitContext(ctx, cmd); err == instance.ErrorWaitTimeout {
+			_ = syscall.Kill(cmd.Process.Pid, syscall.SIGKILL)
+		}
+	}
 }
 
 func (p *Playground) renderSDFile() error {
@@ -984,6 +937,99 @@ func (p *Playground) renderSDFile() error {
 	}
 
 	return nil
+}
+
+func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environment) (*exec.Cmd, *MonitorInfo, *grafana, error) {
+	options := p.bootOptions
+	monitorInfo := &MonitorInfo{}
+
+	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
+	promDir := filepath.Join(dataDir, "prometheus")
+
+	monitor := newMonitor()
+	port, cmd, err := monitor.startMonitor(ctx, options.version, options.host, promDir)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	p.monitor = monitor
+
+	monitorInfo.IP = options.host
+	monitorInfo.BinaryPath = promDir
+	monitorInfo.Port = port
+
+	monitorCmd := cmd
+	go func() {
+		log, err := os.OpenFile(filepath.Join(promDir, "prom.log"), os.O_WRONLY|os.O_APPEND|os.O_CREATE, os.ModePerm)
+		if err != nil {
+			fmt.Println("Monitor system start failed", err)
+			return
+		}
+		defer log.Close()
+
+		cmd.Stderr = log
+		cmd.Stdout = os.Stdout
+
+		// fmt.Println("Start Prometheus instance...")
+		if err := cmd.Start(); err != nil {
+			fmt.Println("Monitor system start failed", err)
+			return
+		}
+	}()
+
+	// set up grafana
+	if err := installIfMissing(env.Profile(), "grafana", options.version); err != nil {
+		return nil, nil, nil, errors.AddStack(err)
+	}
+	installPath, err := env.Profile().ComponentInstalledPath("grafana", v0manifest.Version(options.version))
+	if err != nil {
+		return nil, nil, nil, errors.AddStack(err)
+	}
+
+	dataDir = os.Getenv(localdata.EnvNameInstanceDataDir)
+	grafanaDir := filepath.Join(dataDir, "grafana")
+
+	cmd = exec.Command("cp", "-r", installPath, grafanaDir)
+	err = cmd.Run()
+	if err != nil {
+		return nil, nil, nil, errors.AddStack(err)
+	}
+
+	dashboardDir := filepath.Join(grafanaDir, "dashboards")
+	err = os.MkdirAll(dashboardDir, 0755)
+	if err != nil {
+		return nil, nil, nil, errors.AddStack(err)
+	}
+
+	// mv {grafanaDir}/*.json {grafanaDir}/dashboards/
+	err = filepath.Walk(grafanaDir, func(path string, info os.FileInfo, err error) error {
+		// skip scan sub directory
+		if info.IsDir() && path != grafanaDir {
+			return filepath.SkipDir
+		}
+
+		if strings.HasSuffix(info.Name(), ".json") {
+			return os.Rename(path, filepath.Join(grafanaDir, "dashboards", info.Name()))
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, nil, nil, errors.AddStack(err)
+	}
+
+	err = replaceDatasource(dashboardDir, clusterName)
+	if err != nil {
+		return nil, nil, nil, errors.AddStack(err)
+	}
+
+	grafana := newGrafana(options.version, options.host)
+	// fmt.Println("Start Grafana instance...")
+	err = grafana.start(ctx, grafanaDir, fmt.Sprintf("http://%s:%d", monitorInfo.IP, monitorInfo.Port))
+	if err != nil {
+		return nil, nil, nil, errors.AddStack(err)
+	}
+
+	return monitorCmd, monitorInfo, grafana, nil
 }
 
 func logIfErr(err error) {

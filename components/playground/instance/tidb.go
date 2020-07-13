@@ -29,7 +29,7 @@ import (
 type TiDBInstance struct {
 	instance
 	pds []*PDInstance
-	*Process
+	Process
 	enableBinlog bool
 }
 
@@ -60,8 +60,6 @@ func (inst *TiDBInstance) Start(ctx context.Context, version v0manifest.Version)
 		endpoints = append(endpoints, fmt.Sprintf("%s:%d", inst.Host, pd.StatusPort))
 	}
 	args := []string{
-		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
-		CompVersion("tidb", version),
 		"-P", strconv.Itoa(inst.Port),
 		"--store=tikv",
 		fmt.Sprintf("--host=%s", inst.Host),
@@ -76,8 +74,11 @@ func (inst *TiDBInstance) Start(ctx context.Context, version v0manifest.Version)
 		args = append(args, "--enable-binlog=true")
 	}
 
-	inst.Process = NewProcess(ctx, inst.Dir, args[0], args[1:]...)
-	logIfErr(inst.Process.setOutputFile(inst.LogFile()))
+	var err error
+	if inst.Process, err = NewComponentProcess(ctx, inst.Dir, inst.BinPath, "tidb", version, args...); err != nil {
+		return err
+	}
+	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
 
 	return inst.Process.Start()
 }

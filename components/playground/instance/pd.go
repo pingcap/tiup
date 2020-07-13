@@ -30,7 +30,7 @@ type PDInstance struct {
 	instance
 	initEndpoints []*PDInstance
 	joinEndpoints []*PDInstance
-	*Process
+	Process
 }
 
 // NewPDInstance return a PDInstance
@@ -72,8 +72,6 @@ func (inst *PDInstance) Start(ctx context.Context, version v0manifest.Version) e
 	}
 	uid := inst.Name()
 	args := []string{
-		"tiup", fmt.Sprintf("--binpath=%s", inst.BinPath),
-		CompVersion("pd", version),
 		"--name=" + uid,
 		fmt.Sprintf("--data-dir=%s", filepath.Join(inst.Dir, "data")),
 		fmt.Sprintf("--peer-urls=http://%s:%d", inst.Host, inst.Port),
@@ -103,8 +101,11 @@ func (inst *PDInstance) Start(ctx context.Context, version v0manifest.Version) e
 		return errors.Errorf("must set the init or join instances.")
 	}
 
-	inst.Process = NewProcess(ctx, inst.Dir, args[0], args[1:]...)
-	logIfErr(inst.Process.setOutputFile(inst.LogFile()))
+	var err error
+	if inst.Process, err = NewComponentProcess(ctx, inst.Dir, inst.BinPath, "pd", version, args...); err != nil {
+		return err
+	}
+	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
 
 	return inst.Process.Start()
 }

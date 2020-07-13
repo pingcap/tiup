@@ -30,7 +30,7 @@ import (
 type Pump struct {
 	instance
 	pds []*PDInstance
-	*Process
+	Process
 }
 
 var _ Instance = &Pump{}
@@ -93,8 +93,6 @@ func (p *Pump) Start(ctx context.Context, version v0manifest.Version) error {
 	}
 
 	args := []string{
-		"tiup", fmt.Sprintf("--binpath=%s", p.BinPath),
-		CompVersion("pump", version),
 		fmt.Sprintf("--node-id=%s", p.NodeID()),
 		fmt.Sprintf("--addr=%s:%d", p.Host, p.Port),
 		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(p.Host), p.Port),
@@ -105,8 +103,11 @@ func (p *Pump) Start(ctx context.Context, version v0manifest.Version) error {
 		args = append(args, fmt.Sprintf("--config=%s", p.ConfigPath))
 	}
 
-	p.Process = NewProcess(ctx, p.Dir, args[0], args[1:]...)
-	logIfErr(p.Process.setOutputFile(p.LogFile()))
+	var err error
+	if p.Process, err = NewComponentProcess(ctx, p.Dir, p.BinPath, "pump", version, args...); err != nil {
+		return err
+	}
+	logIfErr(p.Process.SetOutputFile(p.LogFile()))
 
 	return p.Process.Start()
 }

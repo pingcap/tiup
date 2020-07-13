@@ -2,41 +2,60 @@ package instance
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"time"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/environment"
+	tiupexec "github.com/pingcap/tiup/pkg/exec"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 )
 
-// Process represent process to be run by playground.
-type Process struct {
+// ErrorWaitTimeout is used to represent timeout of a command
+// Example:
+//		_ = syscall.Kill(cmd.Process.Pid, syscall.SIGKILL)
+//		if err := WaitContext(context.WithTimeout(context.Background(), 3), cmd); err == ErrorWaitTimeout {
+//			// Do something
+//		}
+var ErrorWaitTimeout = errors.New("wait command timeout")
+
+// Process represent process to be run by playground
+type Process interface {
+	Start() error
+	Wait(ctx context.Context) error
+	Pid() int
+	Uptime() string
+	SetOutputFile(fname string) error
+	Cmd() *exec.Cmd
+}
+
+// process implementes Process
+type process struct {
 	cmd       *exec.Cmd
 	startTime time.Time
 }
 
 // Start the process
-func (p *Process) Start() error {
+func (p *process) Start() error {
 	// fmt.Printf("Starting `%s`: %s", filepath.Base(p.cmd.Path), strings.Join(p.cmd.Args, " "))
 	p.startTime = time.Now()
 	return p.cmd.Start()
 }
 
 // Wait implements Instance interface.
-func (p *Process) Wait() error {
-	return p.cmd.Wait()
+func (p *process) Wait(ctx context.Context) error {
+	return WaitContext(ctx, p.cmd)
 }
 
 // Pid implements Instance interface.
-func (p *Process) Pid() int {
+func (p *process) Pid() int {
 	return p.cmd.Process.Pid
 }
 
 // Uptime implements Instance interface.
-func (p *Process) Uptime() string {
+func (p *process) Uptime() string {
 	s := p.cmd.ProcessState
 	if s != nil && s.Exited() {
 		return "exited"
@@ -46,7 +65,7 @@ func (p *Process) Uptime() string {
 	return duration.String()
 }
 
-func (p *Process) setOutputFile(fname string) error {
+func (p *process) SetOutputFile(fname string) error {
 	f, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		return errors.AddStack(err)
@@ -55,27 +74,46 @@ func (p *Process) setOutputFile(fname string) error {
 	return nil
 }
 
-func (p *Process) setOutput(w io.Writer) {
+func (p *process) setOutput(w io.Writer) {
 	p.cmd.Stdout = w
 	p.cmd.Stderr = w
 }
 
-// NewProcess create a Process instance.
-func NewProcess(ctx context.Context, dir string, name string, arg ...string) *Process {
+func (p *process) Cmd() *exec.Cmd {
+	return p.cmd
+}
+
+// NewComponentProcess create a Process instance.
+func NewComponentProcess(ctx context.Context, dir, binPath, component string, version v0manifest.Version, arg ...string) (Process, error) {
 	if dir == "" {
 		panic("dir must be set")
 	}
 
-	cmd := exec.CommandContext(ctx, name, arg...)
-	cmd.Env = append(
-		os.Environ(),
-		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, dir),
-	)
+	env := environment.GlobalEnv()
+	cmd, err := tiupexec.PrepareCommand(ctx, component, version, binPath, "", dir, arg, env)
+	if err != nil {
+		return nil, err
+	}
 
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	return &process{cmd: cmd}, nil
+}
 
-	return &Process{
-		cmd: cmd,
+// WaitContext wrap cmd.Wait with context
+func WaitContext(ctx context.Context, cmd *exec.Cmd) error {
+	// We use cmd.Process.Wait instead of cmd.Wait because cmd.Wait is not reenterable
+	c := make(chan error, 1)
+	go func() {
+		if cmd == nil || cmd.Process == nil {
+			c <- nil
+		} else {
+			_, err := cmd.Process.Wait()
+			c <- err
+		}
+	}()
+	select {
+	case <-ctx.Done():
+		return ErrorWaitTimeout
+	case err := <-c:
+		return err
 	}
 }

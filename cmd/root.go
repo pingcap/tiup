@@ -19,6 +19,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/version"
@@ -98,7 +99,7 @@ the latest stable version will be downloaded from the repository.`,
 						break
 					}
 				}
-				return runComponent(env, tag, componentSpec, binPath, transparentParams)
+				return exec.RunComponent(env, tag, componentSpec, binPath, transparentParams)
 			}
 			return cmd.Help()
 		},

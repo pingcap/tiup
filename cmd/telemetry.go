@@ -2,28 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/spf13/cobra"
 )
-
-const telemetryFname = "meta.yaml"
-
-func getTelemetryMeta(env *environment.Environment) (meta *telemetry.Meta, fname string, err error) {
-	dir := env.Profile().Path(localdata.TelemetryDir)
-	err = os.MkdirAll(dir, 0755)
-	if err != nil {
-		return
-	}
-
-	fname = filepath.Join(dir, telemetryFname)
-	meta, err = telemetry.LoadFrom(fname)
-	return
-}
 
 func newTelemetryCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -36,7 +19,7 @@ func newTelemetryCmd() *cobra.Command {
 		Short: "Reset the uuid used for telemetry",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			env := environment.GlobalEnv()
-			teleMeta, fname, err := getTelemetryMeta(env)
+			teleMeta, fname, err := telemetry.GetMeta(env)
 			if err != nil {
 				return err
 			}
@@ -57,7 +40,7 @@ func newTelemetryCmd() *cobra.Command {
 		Short: "Enable telemetry of tiup",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			env := environment.GlobalEnv()
-			teleMeta, fname, err := getTelemetryMeta(env)
+			teleMeta, fname, err := telemetry.GetMeta(env)
 			if err != nil {
 				return err
 			}
@@ -78,7 +61,7 @@ func newTelemetryCmd() *cobra.Command {
 		Short: "Disable telemetry of tiup",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			env := environment.GlobalEnv()
-			teleMeta, fname, err := getTelemetryMeta(env)
+			teleMeta, fname, err := telemetry.GetMeta(env)
 			if err != nil {
 				return err
 			}
@@ -99,7 +82,7 @@ func newTelemetryCmd() *cobra.Command {
 		Short: "Display the current status of tiup telemetry",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			env := environment.GlobalEnv()
-			teleMeta, _, err := getTelemetryMeta(env)
+			teleMeta, _, err := telemetry.GetMeta(env)
 			if err != nil {
 				return err
 			}

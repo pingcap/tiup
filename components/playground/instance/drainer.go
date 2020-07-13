@@ -28,7 +28,7 @@ import (
 type Drainer struct {
 	instance
 	pds []*PDInstance
-	*Process
+	Process
 }
 
 var _ Instance = &Drainer{}
@@ -82,8 +82,6 @@ func (d *Drainer) Start(ctx context.Context, version v0manifest.Version) error {
 	}
 
 	args := []string{
-		"tiup", fmt.Sprintf("--binpath=%s", d.BinPath),
-		CompVersion("drainer", version),
 		fmt.Sprintf("--node-id=%s", d.NodeID()),
 		fmt.Sprintf("--addr=%s:%d", d.Host, d.Port),
 		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(d.Host), d.Port),
@@ -94,8 +92,11 @@ func (d *Drainer) Start(ctx context.Context, version v0manifest.Version) error {
 		args = append(args, fmt.Sprintf("--config=%s", d.ConfigPath))
 	}
 
-	d.Process = NewProcess(ctx, d.Dir, args[0], args[1:]...)
-	logIfErr(d.Process.setOutputFile(d.LogFile()))
+	var err error
+	if d.Process, err = NewComponentProcess(ctx, d.Dir, d.BinPath, "drainer", version, args...); err != nil {
+		return err
+	}
+	logIfErr(d.Process.SetOutputFile(d.LogFile()))
 
 	return d.Process.Start()
 }

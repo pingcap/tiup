@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cmd
+package exec
 
 import (
 	"context"
@@ -31,10 +31,12 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	"github.com/pingcap/tiup/pkg/telemetry"
 	"golang.org/x/mod/semver"
 )
 
-func runComponent(env *environment.Environment, tag, spec, binPath string, args []string) error {
+// RunComponent start a component and wait it
+func RunComponent(env *environment.Environment, tag, spec, binPath string, args []string) error {
 	component, version := environment.ParseCompVersion(spec)
 	if !env.IsSupportedComponent(component) {
 		return fmt.Errorf("component `%s` does not support `%s/%s` (see `tiup list`)", component, runtime.GOOS, runtime.GOARCH)
@@ -127,7 +129,15 @@ func base62Tag() string {
 	return string(b)
 }
 
-func launchComponent(ctx context.Context, component string, version v0manifest.Version, binPath string, tag string, args []string, env *environment.Environment) (*localdata.Process, error) {
+// PrepareCommand will download necessary component and returns a *exec.Cmd
+func PrepareCommand(
+	ctx context.Context,
+	component string,
+	version v0manifest.Version,
+	binPath, tag, wd string,
+	args []string,
+	env *environment.Environment,
+) (*exec.Cmd, error) {
 	selectVer, err := env.DownloadComponentIfMissing(component, version)
 	if err != nil {
 		return nil, err
@@ -157,7 +167,6 @@ func launchComponent(ctx context.Context, component string, version v0manifest.V
 		}
 	}
 
-	wd := os.Getenv(localdata.EnvNameInstanceDataDir)
 	if wd == "" {
 		// Generate a tag for current instance if the tag doesn't specified
 		if tag == "" {
@@ -179,7 +188,7 @@ func launchComponent(ctx context.Context, component string, version v0manifest.V
 		return nil, err
 	}
 
-	teleMeta, _, err := getTelemetryMeta(env)
+	teleMeta, _, err := telemetry.GetMeta(env)
 	if err != nil {
 		return nil, err
 	}
@@ -206,13 +215,23 @@ func launchComponent(ctx context.Context, component string, version v0manifest.V
 	c.Stderr = os.Stderr
 	c.Dir = wd
 
+	return c, nil
+}
+
+func launchComponent(ctx context.Context, component string, version v0manifest.Version, binPath string, tag string, args []string, env *environment.Environment) (*localdata.Process, error) {
+	wd := os.Getenv(localdata.EnvNameInstanceDataDir)
+	c, err := PrepareCommand(ctx, component, version, binPath, tag, wd, args, env)
+	if err != nil {
+		return nil, err
+	}
+
 	p := &localdata.Process{
 		Component:   component,
 		CreatedTime: time.Now().Format(time.RFC3339),
 		Exec:        binPath,
 		Args:        args,
-		Dir:         wd,
-		Env:         envs,
+		Dir:         c.Dir,
+		Env:         c.Env,
 		Cmd:         c,
 	}
 
