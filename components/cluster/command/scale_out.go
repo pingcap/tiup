@@ -254,16 +254,25 @@ func buildScaleOutTask(
 				filepath.Join(deployDir, "scripts")).
 			Mkdir(metadata.User, inst.GetHost(), dataDirs...)
 
+		srcPath := ""
+		if patchedComponents.Exist(inst.ComponentName()) {
+			srcPath = spec.ClusterPath(clusterName, spec.PatchDirName, inst.ComponentName()+".tar.gz")
+		}
+
 		// copy dependency component if needed
 		switch inst.ComponentName() {
 		case spec.ComponentTiSpark:
-			tb = tb.DeploySpark(inst, version, deployDir)
+			tb = tb.DeploySpark(inst, version, srcPath, deployDir)
 		default:
-			if patchedComponents.Exist(inst.ComponentName()) {
-				tb.InstallPackage(spec.ClusterPath(clusterName, spec.PatchDirName, inst.ComponentName()+".tar.gz"), inst.GetHost(), deployDir)
-			} else {
-				tb.CopyComponent(inst.ComponentName(), inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
-			}
+			tb.CopyComponent(
+				inst.ComponentName(),
+				inst.OS(),
+				inst.Arch(),
+				version,
+				srcPath,
+				inst.GetHost(),
+				deployDir,
+			)
 		}
 
 		t := tb.ScaleConfig(clusterName,
@@ -296,7 +305,15 @@ func buildScaleOutTask(
 			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
 				version := spec.ComponentVersion(compName, metadata.Version)
 				tb.Download(compName, inst.OS(), inst.Arch(), version).
-					CopyComponent(compName, inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
+					CopyComponent(
+						compName,
+						inst.OS(),
+						inst.Arch(),
+						version,
+						"", // use default srcPath
+						inst.GetHost(),
+						deployDir,
+					)
 			}
 			hasImported = true
 		}

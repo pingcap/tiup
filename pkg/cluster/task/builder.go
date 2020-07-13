@@ -138,13 +138,14 @@ func (b *Builder) Download(component, os, arch string, version string) *Builder 
 // CopyComponent appends a CopyComponent task to the current task collection
 func (b *Builder) CopyComponent(component, os, arch string,
 	version string,
-	dstHost, dstDir string,
+	srcPath, dstHost, dstDir string,
 ) *Builder {
 	b.tasks = append(b.tasks, &CopyComponent{
 		component: component,
 		os:        os,
 		arch:      arch,
 		version:   version,
+		srcPath:   srcPath,
 		host:      dstHost,
 		dstDir:    dstDir,
 	})
@@ -328,7 +329,7 @@ func (b *Builder) CheckSys(host, dataDir, checkType string, topo *spec.Specifica
 }
 
 // DeploySpark deployes spark as dependency of TiSpark
-func (b *Builder) DeploySpark(inst spec.Instance, version, deployDir string) *Builder {
+func (b *Builder) DeploySpark(inst spec.Instance, version, srcPath, deployDir string) *Builder {
 	sparkSubPath := spec.ComponentSubDir(spec.ComponentSpark,
 		spec.ComponentVersion(spec.ComponentSpark, version))
 	return b.CopyComponent(
@@ -336,6 +337,7 @@ func (b *Builder) DeploySpark(inst spec.Instance, version, deployDir string) *Bu
 		inst.OS(),
 		inst.Arch(),
 		spec.ComponentVersion(spec.ComponentSpark, version),
+		srcPath,
 		inst.GetHost(),
 		deployDir,
 	).Shell( // spark is under a subdir, move it to deploy dir
@@ -352,6 +354,7 @@ func (b *Builder) DeploySpark(inst spec.Instance, version, deployDir string) *Bu
 		inst.OS(),
 		inst.Arch(),
 		version,
+		srcPath,
 		inst.GetHost(),
 		deployDir,
 	).Shell( // move tispark jar to correct path

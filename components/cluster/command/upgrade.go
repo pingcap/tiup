@@ -131,16 +131,38 @@ func upgrade(clusterName, clusterVersion string, opt operator.Options) error {
 			if inst.IsImported() {
 				switch inst.ComponentName() {
 				case spec.ComponentPrometheus, spec.ComponentGrafana, spec.ComponentAlertManager:
-					tb.CopyComponent(inst.ComponentName(), inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
-				default:
-					tb.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
-						CopyComponent(inst.ComponentName(), inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
+					tb.CopyComponent(
+						inst.ComponentName(),
+						inst.OS(),
+						inst.Arch(),
+						version,
+						"", // use default srcPath
+						inst.GetHost(),
+						deployDir,
+					)
 				}
 				hasImported = true
-			} else {
-				tb.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
-					CopyComponent(inst.ComponentName(), inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
 			}
+
+			// backup files of the old version
+			tb = tb.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir)
+
+			// copy dependency component if needed
+			switch inst.ComponentName() {
+			case spec.ComponentTiSpark:
+				tb = tb.DeploySpark(inst, version, "" /* default srcPath */, deployDir)
+			default:
+				tb = tb.CopyComponent(
+					inst.ComponentName(),
+					inst.OS(),
+					inst.Arch(),
+					version,
+					"", // use default srcPath
+					inst.GetHost(),
+					deployDir,
+				)
+			}
+
 			tb.InitConfig(
 				clusterName,
 				clusterVersion,

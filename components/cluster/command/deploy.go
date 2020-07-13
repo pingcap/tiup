@@ -288,13 +288,14 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 		// copy dependency component if needed
 		switch inst.ComponentName() {
 		case spec.ComponentTiSpark:
-			t = t.DeploySpark(inst, version, deployDir)
+			t = t.DeploySpark(inst, version, "" /* default srcPath */, deployDir)
 		default:
 			t = t.CopyComponent(
 				inst.ComponentName(),
 				inst.OS(),
 				inst.Arch(),
 				version,
+				"", // use default srcPath
 				inst.GetHost(),
 				deployDir,
 			)
@@ -426,6 +427,7 @@ func buildMonitoredDeployTask(
 					info.os,
 					info.arch,
 					version,
+					"", // use default srcPath
 					host,
 					deployDir,
 				).

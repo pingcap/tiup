@@ -167,6 +167,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 					inst.OS(),
 					inst.Arch(),
 					insightVer,
+					"", // use default srcPath
 					inst.GetHost(),
 					task.CheckToolsPathDir,
 				).
