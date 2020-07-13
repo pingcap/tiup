@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -102,9 +103,16 @@ func generate(opt options) error {
 		return err
 	}
 
+	// Sort by filename
+	var filenames []string
+	for n := range files {
+		filenames = append(filenames, n)
+	}
+	sort.Strings(filenames)
+
 	var lines []string
-	for n, c := range files {
-		lines = append(lines, fmt.Sprintf(`autogenFiles["%s"] = "%s"`, n, c))
+	for _, n := range filenames {
+		lines = append(lines, fmt.Sprintf(`autogenFiles["%s"] = "%s"`, n, files[n]))
 	}
 
 	writeBack := fmt.Sprintf(`// Copyright 2020 PingCAP, Inc.
