@@ -23,6 +23,7 @@ import (
 
 // Editor defines the methods to modify a component attrs
 type Editor interface {
+	WithVersion(version string) Editor
 	WithDesc(desc string) Editor
 	Standalone(bool) Editor
 	Hide(bool) Editor
@@ -33,6 +34,7 @@ type Editor interface {
 type editor struct {
 	endpoint    string
 	component   string
+	version     string
 	description string
 	options     map[string]bool
 }
@@ -44,6 +46,12 @@ func NewEditor(endpoint, component string) Editor {
 		component: component,
 		options:   make(map[string]bool),
 	}
+}
+
+// WithVersion set version field
+func (e *editor) WithVersion(version string) Editor {
+	e.version = version
+	return e
 }
 
 // WithDesc set description field
