@@ -755,7 +755,7 @@ tispark_masters:
     port: 1235
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "TiSpark enabled cluster with more than 1 Spark master node is not supported")
+	c.Assert(err.Error(), Equals, "a TiSpark enabled cluster with more than 1 Spark master node is not supported")
 
 	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
@@ -769,5 +769,5 @@ tispark_workers:
     port: 1235
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "There must be a Spark master node if you want to use the TiSpark component")
+	c.Assert(err.Error(), Equals, "there must be a Spark master node if you want to use the TiSpark component")
 }

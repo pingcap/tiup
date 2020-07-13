@@ -146,8 +146,7 @@ func confirmTopology(clusterName, version string, topo *spec.Specification, patc
 		log.Errorf("    3. The component marked as `patched` has been replaced by previours patch command.")
 	}
 
-	if (topo.TiSparkMasters != nil && len(topo.TiSparkMasters) > 0) ||
-		(topo.TiSparkWorkers != nil && len(topo.TiSparkWorkers) > 0) {
+	if len(topo.TiSparkMasters) > 0 || len(topo.TiSparkWorkers) > 0 {
 		log.Warnf("There are TiSpark nodes defined in the topology, please note that you'll need to manually install Java Runtime Environment (JRE) 8 on the host, other wise the TiSpark nodes will fail to start.")
 		log.Warnf("You may read the OpenJDK doc for a reference: https://openjdk.java.net/install/")
 	}
@@ -289,46 +288,15 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 		// copy dependency component if needed
 		switch inst.ComponentName() {
 		case spec.ComponentTiSpark:
-			sparkSubPath := spec.ComponentSubDir(spec.ComponentSpark,
-				spec.ComponentVersion(spec.ComponentSpark, version))
+			t = t.DeploySpark(inst, version, deployDir)
+		default:
 			t = t.CopyComponent(
-				spec.ComponentSpark,
+				inst.ComponentName(),
 				inst.OS(),
 				inst.Arch(),
-				spec.ComponentVersion(spec.ComponentSpark, version),
+				version,
 				inst.GetHost(),
 				deployDir,
-			).Shell( // spark is under a subdir, move it to deploy dir
-				inst.GetHost(),
-				fmt.Sprintf(
-					"cp -rf %[1]s %[2]s/ && cp -rf %[3]s/* %[2]s/ && rm -rf %[1]s %[3]s",
-					filepath.Join(deployDir, "bin", sparkSubPath),
-					deployDir,
-					filepath.Join(deployDir, sparkSubPath),
-				),
-				false, // (not) sudo
-			)
-		}
-
-		t = t.CopyComponent(
-			inst.ComponentName(),
-			inst.OS(),
-			inst.Arch(),
-			version,
-			inst.GetHost(),
-			deployDir,
-		)
-
-		switch inst.ComponentName() {
-		case spec.ComponentTiSpark:
-			t = t.Shell( // move tispark jar to correct path
-				inst.GetHost(),
-				fmt.Sprintf(
-					"cp -f %[1]s/*.jar %[2]s/jars/ && rm -f %[1]s/*.jar",
-					filepath.Join(deployDir, "bin"),
-					deployDir,
-				),
-				false, // (not) sudo
 			)
 		}
 

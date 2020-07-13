@@ -70,7 +70,7 @@ You can retain some nodes and roles data when destroy cluster, eg:
 			logger.EnableAuditLog()
 			metadata, err := spec.ClusterMetadata(clusterName)
 			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
-				perrs.Cause(err) != spec.ErrNoTiSparkMaster {
+				!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 				return err
 			}
 
