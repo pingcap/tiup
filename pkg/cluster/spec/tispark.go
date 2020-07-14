@@ -63,6 +63,12 @@ func (s TiSparkMasterSpec) IsImported() bool {
 	return s.Imported
 }
 
+// Status queries current status of the instance
+func (s TiSparkMasterSpec) Status(pdList ...string) string {
+	url := fmt.Sprintf("http://%s:%d/", s.Host, s.WebPort)
+	return statusByURL(url)
+}
+
 // TiSparkWorkerSpec is the topology specification for TiSpark slave nodes
 type TiSparkWorkerSpec struct {
 	Host         string                 `yaml:"host"`
@@ -97,6 +103,12 @@ func (s TiSparkWorkerSpec) IsImported() bool {
 	return s.Imported
 }
 
+// Status queries current status of the instance
+func (s TiSparkWorkerSpec) Status(pdList ...string) string {
+	url := fmt.Sprintf("http://%s:%d/", s.Host, s.WebPort)
+	return statusByURL(url)
+}
+
 // TiSparkMasterComponent represents TiSpark master component.
 type TiSparkMasterComponent struct{ *Specification }
 
@@ -125,9 +137,7 @@ func (c *TiSparkMasterComponent) Instances() []Instance {
 				usedDirs: []string{
 					s.DeployDir,
 				},
-				statusFn: func(_ ...string) string {
-					return "N/A"
-				},
+				statusFn: s.Status,
 			},
 		})
 	}
@@ -265,9 +275,7 @@ func (c *TiSparkWorkerComponent) Instances() []Instance {
 				usedDirs: []string{
 					s.DeployDir,
 				},
-				statusFn: func(_ ...string) string {
-					return "N/A"
-				},
+				statusFn: s.Status,
 			},
 		})
 	}
