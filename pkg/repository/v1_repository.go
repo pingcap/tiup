@@ -130,12 +130,10 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 		}
 
 		platform := r.PlatformString()
-		versions, ok := manifest.Platforms[platform]
-		if !ok {
-			if versions, ok = manifest.Platforms[v1manifest.AnyPlatform]; !ok {
-				errs = append(errs, fmt.Sprintf("platform %s not supported by component %s", platform, spec.ID))
-				continue
-			}
+		versions := manifest.VersionList(platform)
+		if versions == nil {
+			errs = append(errs, fmt.Sprintf("platform %s not supported by component %s", platform, spec.ID))
+			continue
 		}
 
 		version, versionItem, err := r.selectVersion(spec.ID, versions, specVersion)
@@ -661,7 +659,7 @@ func (r *V1Repository) FetchComponentManifest(id string) (com *v1manifest.Compon
 }
 
 // ComponentVersion returns version item of a component
-func (r *V1Repository) ComponentVersion(id, version string) (*v1manifest.VersionItem, error) {
+func (r *V1Repository) ComponentVersion(id, version string, includeYanked bool) (*v1manifest.VersionItem, error) {
 	manifest, err := r.FetchComponentManifest(id)
 	if err != nil {
 		return nil, err
@@ -669,7 +667,7 @@ func (r *V1Repository) ComponentVersion(id, version string) (*v1manifest.Version
 	if v0manifest.Version(version).IsNightly() && manifest.Nightly != "" {
 		version = manifest.Nightly
 	}
-	vi := manifest.VersionItem(r.PlatformString(), version)
+	vi := manifest.VersionItem(r.PlatformString(), version, includeYanked)
 	if vi == nil {
 		return nil, fmt.Errorf("version %s on %s for component %s not found", version, r.PlatformString(), id)
 	}
@@ -683,12 +681,9 @@ func (r *V1Repository) LatestStableVersion(id string) (v0manifest.Version, *v1ma
 		return "", nil, err
 	}
 
-	versions := com.Platforms[r.PlatformString()]
+	versions := com.VersionList(r.PlatformString())
 	if versions == nil {
-		versions = com.Platforms[v1manifest.AnyPlatform]
-		if versions == nil {
-			return "", nil, fmt.Errorf("component %s doesn't support platform %s", id, r.PlatformString())
-		}
+		return "", nil, fmt.Errorf("component %s doesn't support platform %s", id, r.PlatformString())
 	}
 
 	var last string
@@ -706,7 +701,7 @@ func (r *V1Repository) LatestStableVersion(id string) (v0manifest.Version, *v1ma
 		return "", nil, fmt.Errorf("component %s doesn't has a stable version", id)
 	}
 
-	return v0manifest.Version(last), com.VersionItem(r.PlatformString(), last), nil
+	return v0manifest.Version(last), com.VersionItem(r.PlatformString(), last, false), nil
 }
 
 // BinaryPath return the binary path of the component.
@@ -738,11 +733,10 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, versio
 		specVersion = component.Nightly
 	}
 
-	versionItem, ok := component.Platforms[r.PlatformString()][specVersion]
+	// We need yanked version because we may install that version before it was yanked
+	versionItem, ok := component.VersionListWithYanked(r.PlatformString())[specVersion]
 	if !ok {
-		if versionItem, ok = component.Platforms[v1manifest.AnyPlatform][specVersion]; !ok {
-			return "", errors.Errorf("no version: %s", version)
-		}
+		return "", errors.Errorf("no version: %s", version)
 	}
 
 	entry := versionItem.Entry

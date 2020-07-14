@@ -189,6 +189,23 @@ func (manifest *Index) Filename() string {
 	return ManifestFilenameIndex
 }
 
+// ComponentList returns non-yanked components
+func (manifest *Index) ComponentList() map[string]ComponentItem {
+	components := make(map[string]ComponentItem)
+	for n, c := range manifest.Components {
+		if c.Yanked {
+			continue
+		}
+		components[n] = c
+	}
+	return components
+}
+
+// ComponentListWithYanked return all components
+func (manifest *Index) ComponentListWithYanked() map[string]ComponentItem {
+	return manifest.Components
+}
+
 // Filename implements ValidManifest
 func (manifest *Component) Filename() string {
 	return manifest.ID + ".json"
@@ -210,6 +227,42 @@ func (manifest *Component) HasNightly(platform string) bool {
 		return false
 	}
 
-	_, ok := manifest.Platforms[platform][manifest.Nightly]
-	return ok
+	v, ok := manifest.Platforms[platform][manifest.Nightly]
+	if !ok {
+		return false
+	}
+
+	return !v.Yanked
+}
+
+// VersionList return all versions exclude yanked versions
+func (manifest *Component) VersionList(platform string) map[string]VersionItem {
+	versions := make(map[string]VersionItem)
+
+	vs := manifest.VersionListWithYanked(platform)
+	if vs == nil {
+		return nil
+	}
+
+	for v, vi := range vs {
+		if vi.Yanked {
+			continue
+		}
+		versions[v] = vi
+	}
+
+	return versions
+}
+
+// VersionListWithYanked return all versions include yanked versions
+func (manifest *Component) VersionListWithYanked(platform string) map[string]VersionItem {
+	vs, ok := manifest.Platforms[platform]
+	if !ok {
+		vs, ok = manifest.Platforms[AnyPlatform]
+		if !ok {
+			return nil
+		}
+	}
+
+	return vs
 }

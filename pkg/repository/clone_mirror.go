@@ -276,21 +276,26 @@ func cloneComponents(repo *V1Repository,
 		for _, goos := range options.OSs {
 			for _, goarch := range options.Archs {
 				platform := PlatformString(goos, goarch)
-				versions, found := manifest.Platforms[platform]
-				if !found {
+				versions := manifest.VersionListWithYanked(platform)
+				if versions == nil {
 					fmt.Printf("The component '%s' donesn't have %s/%s, skipped\n", name, goos, goarch)
 				}
 				for v, versionItem := range versions {
-					if !checkVersion(options, vs, v) {
-						continue
-					}
 					if !options.Full {
-						newVersions, found := newManifest.Platforms[platform]
-						if !found {
+						newVersions := newManifest.VersionListWithYanked(platform)
+						if newVersions == nil {
 							newVersions = map[string]v1manifest.VersionItem{}
 							newManifest.Platforms[platform] = newVersions
 						}
 						newVersions[v] = versionItem
+						if !checkVersion(options, vs, v) {
+							versionItem.Yanked = true
+							newVersions[v] = versionItem
+							continue
+						}
+					}
+					if versionItem.Yanked {
+						continue
 					}
 					if err := download(targetDir, tmpDir, repo, &versionItem); err != nil {
 						return nil, errors.Annotatef(err, "download resource: %s", name)
@@ -413,8 +418,8 @@ func combineVersions(versions *[]string, manifest *v1manifest.Component, oss, ar
 	for _, os := range oss {
 		for _, arch := range archs {
 			platform := PlatformString(os, arch)
-			versions, found := manifest.Platforms[platform]
-			if !found {
+			versions := manifest.VersionList(platform)
+			if versions == nil {
 				continue
 			}
 			for _, selectedVersion := range selectedVersions {

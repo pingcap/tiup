@@ -118,17 +118,14 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 
 	localComponents := set.NewStringSet(installed...)
 	compIDs := []string{}
-	for id := range index.Components {
+	components := index.ComponentList()
+	for id := range components {
 		compIDs = append(compIDs, id)
 	}
 	sort.Strings(compIDs)
 	for _, id := range compIDs {
-		comp := index.Components[id]
+		comp := components[id]
 		if opt.installedOnly && !localComponents.Exist(id) {
-			continue
-		}
-
-		if comp.Yanked {
 			continue
 		}
 
@@ -198,7 +195,8 @@ func showComponentVersions(env *environment.Environment, component string, opt l
 	platforms := make(map[string][]string)
 	released := make(map[string]string)
 
-	for plat, versions := range comp.Platforms {
+	for plat := range comp.Platforms {
+		versions := comp.VersionList(plat)
 		for ver, verinfo := range versions {
 			if v0manifest.Version(ver).IsNightly() && ver == comp.Nightly {
 				platforms[version.NightlyVersion] = append(platforms[version.NightlyVersion], plat)

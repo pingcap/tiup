@@ -23,7 +23,6 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/set"
 )
 
 // Names of manifest ManifestsConfig
@@ -274,31 +273,17 @@ func (manifest *Component) isValid() error {
 	return nil
 }
 
-// ListVersion returns version list of the component
-func (manifest *Component) ListVersion() []string {
-	s := set.NewStringSet()
-	for _, vi := range manifest.Platforms {
-		for v := range vi {
-			s.Insert(v)
-		}
-	}
-	list := []string{}
-	for v := range s {
-		list = append(list, v)
-	}
-	return list
-}
-
 // VersionItem returns VersionItem by platform and version
-func (manifest *Component) VersionItem(plat, ver string) *VersionItem {
-	p := manifest.Platforms[plat]
-	if p == nil {
-		if p = manifest.Platforms[AnyPlatform]; p == nil {
-			return nil
-		}
+func (manifest *Component) VersionItem(plat, ver string, includeYanked bool) *VersionItem {
+	var v VersionItem
+	var ok bool
+
+	if includeYanked {
+		v, ok = manifest.VersionListWithYanked(plat)[ver]
+	} else {
+		v, ok = manifest.VersionList(plat)[ver]
 	}
-	v := p[ver]
-	if v.Entry == "" {
+	if !ok {
 		return nil
 	}
 	return &v
