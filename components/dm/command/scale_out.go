@@ -245,7 +245,7 @@ func buildScaleOutTask(
 				inst.OS(),
 				inst.Arch(),
 				version,
-				"", // use default srcPath
+				srcPath,
 				inst.GetHost(),
 				deployDir,
 			).ScaleConfig(clusterName,

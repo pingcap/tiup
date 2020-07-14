@@ -521,10 +521,6 @@ func (s *Specification) validateTiSparkSpec() error {
 // Validate validates the topology specification and produce error if the
 // specification invalid (e.g: port conflicts or directory conflicts)
 func (s *Specification) Validate() error {
-	if err := s.validateTiSparkSpec(); err != nil {
-		return err
-	}
-
 	if err := s.platformConflictsDetect(); err != nil {
 		return err
 	}
@@ -533,7 +529,11 @@ func (s *Specification) Validate() error {
 		return err
 	}
 
-	return s.dirConflictsDetect()
+	if err := s.dirConflictsDetect(); err != nil {
+		return err
+	}
+
+	return s.validateTiSparkSpec()
 }
 
 // GetPDList returns a list of PD API hosts of the current cluster

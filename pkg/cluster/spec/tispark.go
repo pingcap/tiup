@@ -367,8 +367,7 @@ func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clu
 	}
 	dst = filepath.Join(paths.Deploy, "sbin", "start-slave.sh")
 	if err := e.Transfer(fp, dst, false); err != nil {
-		panic(err)
-		//return err
+		return err
 	}
 
 	// transfer log4j config (it's not a template but a static file)

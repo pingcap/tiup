@@ -60,8 +60,7 @@ func (c *TiSparkConfig) Config() ([]byte, error) {
 func (c *TiSparkConfig) ConfigToFile(file string) error {
 	config, err := c.Config()
 	if err != nil {
-		panic(err)
-		//return err
+		return err
 	}
 	return ioutil.WriteFile(file, config, 0755)
 }

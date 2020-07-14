@@ -171,7 +171,7 @@ func CopyFile(src, dst string) error {
 	}
 	defer in.Close()
 
-	if _, err := os.Stat(dst); !os.IsNotExist(err) {
+	if IsExist(dst) {
 		return fmt.Errorf("destination path %s already exist", dst)
 	}
 	out, err := os.Create(dst)
