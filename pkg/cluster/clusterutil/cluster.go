@@ -54,7 +54,7 @@ func NewRepository(os, arch string) (Repository, error) {
 }
 
 func (r *repositoryT) DownloadComponent(comp, version, target string) error {
-	versionItem, err := r.repo.ComponentVersion(comp, version)
+	versionItem, err := r.repo.ComponentVersion(comp, version, false)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (r *repositoryT) DownloadComponent(comp, version, target string) error {
 }
 
 func (r *repositoryT) VerifyComponent(comp, version, target string) error {
-	versionItem, err := r.repo.ComponentVersion(comp, version)
+	versionItem, err := r.repo.ComponentVersion(comp, version, true)
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (r *repositoryT) VerifyComponent(comp, version, target string) error {
 }
 
 func (r *repositoryT) ComponentBinEntry(comp, version string) (string, error) {
-	versionItem, err := r.repo.ComponentVersion(comp, version)
+	versionItem, err := r.repo.ComponentVersion(comp, version, true)
 	if err != nil {
 		return "", err
 	}

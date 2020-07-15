@@ -27,6 +27,7 @@ func TestVersionItem(t *testing.T) {
 		Platforms: map[string]map[string]VersionItem{
 			"linux/amd64": {
 				"v1.0.0": {Entry: "test"},
+				"v1.1.1": {Entry: "test", Yanked: true},
 			},
 			"any/any": {
 				"v1.0.0": {Entry: "test"},
@@ -41,11 +42,13 @@ func TestVersionItem(t *testing.T) {
 		},
 	}
 
-	assert.NotNil(t, manifest.VersionItem("linux/amd64", "v1.0.0"))
-	assert.NotNil(t, manifest.VersionItem("windows/386", "v1.0.0"))
-	assert.NotNil(t, manifest.VersionItem("any/any", "v1.0.0"))
-	assert.Nil(t, manifest.VersionItem("darwin/any", "v1.0.0"))
-	assert.Nil(t, manifest.VersionItem("any/arm64", "v1.0.0"))
+	assert.NotNil(t, manifest.VersionItem("linux/amd64", "v1.0.0", false))
+	assert.Nil(t, manifest.VersionItem("linux/amd64", "v1.1.1", false))
+	assert.NotNil(t, manifest.VersionItem("linux/amd64", "v1.1.1", true))
+	assert.NotNil(t, manifest.VersionItem("windows/386", "v1.0.0", false))
+	assert.NotNil(t, manifest.VersionItem("any/any", "v1.0.0", false))
+	assert.Nil(t, manifest.VersionItem("darwin/any", "v1.0.0", false))
+	assert.Nil(t, manifest.VersionItem("any/arm64", "v1.0.0", false))
 
 	manifest = &Component{
 		Platforms: map[string]map[string]VersionItem{
@@ -55,9 +58,9 @@ func TestVersionItem(t *testing.T) {
 		},
 	}
 
-	assert.NotNil(t, manifest.VersionItem("linux/amd64", "v1.0.0"))
-	assert.Nil(t, manifest.VersionItem("windows/386", "v1.0.0"))
-	assert.Nil(t, manifest.VersionItem("any/any", "v1.0.0"))
-	assert.Nil(t, manifest.VersionItem("darwin/any", "v1.0.0"))
-	assert.Nil(t, manifest.VersionItem("any/arm64", "v1.0.0"))
+	assert.NotNil(t, manifest.VersionItem("linux/amd64", "v1.0.0", false))
+	assert.Nil(t, manifest.VersionItem("windows/386", "v1.0.0", false))
+	assert.Nil(t, manifest.VersionItem("any/any", "v1.0.0", false))
+	assert.Nil(t, manifest.VersionItem("darwin/any", "v1.0.0", false))
+	assert.Nil(t, manifest.VersionItem("any/arm64", "v1.0.0", false))
 }
