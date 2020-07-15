@@ -128,6 +128,7 @@ the latest stable version will be downloaded from the repository.`,
 		newCleanCmd(),
 		newMirrorCmd(),
 		newTelemetryCmd(),
+		newCompletionCmd(),
 	)
 
 	originHelpFunc := rootCmd.HelpFunc()
