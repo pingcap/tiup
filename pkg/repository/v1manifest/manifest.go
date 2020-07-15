@@ -283,7 +283,7 @@ func (manifest *Component) VersionItem(plat, ver string, includeYanked bool) *Ve
 	} else {
 		v, ok = manifest.VersionList(plat)[ver]
 	}
-	if !ok {
+	if !ok || v.Entry == "" {
 		return nil
 	}
 	return &v
