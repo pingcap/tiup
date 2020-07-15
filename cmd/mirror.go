@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -230,7 +231,7 @@ func newMirrorModifyCmd() *cobra.Command {
 	yanked := false
 
 	cmd := &cobra.Command{
-		Use:  "modify <comp-name> [flags]",
+		Use:  "modify <component>[:version] [flags]",
 		Long: "modify component attributes (hidden, standalone, yanked)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
@@ -253,7 +254,14 @@ func newMirrorModifyCmd() *cobra.Command {
 				return err
 			}
 
-			m, err := env.V1Repository().FetchComponentManifest(args[0])
+			spec := strings.Split(args[0], ":")
+			component := spec[0]
+			version := ""
+			if len(spec) > 1 {
+				version = spec[1]
+			}
+
+			m, err := env.V1Repository().FetchComponentManifest(component)
 			if err != nil {
 				return err
 			}
@@ -261,7 +269,7 @@ func newMirrorModifyCmd() *cobra.Command {
 			if endpoint == "" {
 				endpoint = environment.Mirror()
 			}
-			e := remote.NewEditor(endpoint, args[0]).WithDesc(desc)
+			e := remote.NewEditor(endpoint, component).WithDesc(desc).WithVersion(version)
 			flagSet := set.NewStringSet()
 			cmd.Flags().Visit(func(f *pflag.Flag) {
 				flagSet.Insert(f.Name)

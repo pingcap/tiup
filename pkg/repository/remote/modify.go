@@ -18,6 +18,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/juju/errors"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 )
 
@@ -89,5 +91,20 @@ func (e *editor) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) error {
 	sid := uuid.New().String()
 	url := fmt.Sprintf("%s/api/v1/component/%s/%s", e.endpoint, sid, e.component)
 
+	if e.version != "" {
+		// Only support modify yanked field for specified versiion
+		for p := range m.Platforms {
+			if v0manifest.Version(e.version).IsNightly() {
+				return errors.New("nightly version can't be yanked")
+			}
+			vi, ok := m.Platforms[p][e.version]
+			if !ok {
+				continue
+			}
+			vi.Yanked = e.options["yanked"]
+			m.Platforms[p][e.version] = vi
+		}
+		return signAndSend(url, m, key, nil)
+	}
 	return signAndSend(url, m, key, e.options)
 }
