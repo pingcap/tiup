@@ -16,8 +16,16 @@ package edit
 import (
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 
+	"github.com/r3labs/diff"
 	"github.com/sergi/go-diff/diffmatchpatch"
+)
+
+const (
+	validateTagName  = "validate"
+	validateTagValue = "editable"
 )
 
 // ShowDiff write diff result into the Writer.
@@ -28,4 +36,56 @@ func ShowDiff(t1 string, t2 string, w io.Writer) {
 	diffs = dmp.DiffCleanupSemantic(diffs)
 
 	fmt.Fprint(w, dmp.DiffPrettyText(diffs))
+}
+
+// ValidateSpecDiff checks and validates the new spec to see if the modified
+// keys are all marked as editable
+func ValidateSpecDiff(s1, s2 interface{}) error {
+	differ, err := diff.NewDiffer(
+		diff.TagName(validateTagName),
+	)
+	if err != nil {
+		return err
+	}
+	changelog, err := differ.Diff(s1, s2)
+	if err != nil {
+		return err
+	}
+
+	if len(changelog) == 0 {
+		return nil
+	}
+
+	msg := make([]string, 0)
+	for _, c := range changelog {
+		if len(c.Path) > 0 {
+			// c.Path will be the tag value if TagName matched on the field
+			if c.Type == diff.UPDATE && c.Path[len(c.Path)-1] == validateTagValue {
+				// If the field is marked as editable, it is allowed to be modified no matter
+				// its parent level element is marked as editable or not
+				continue
+			}
+			pathEditable := true
+			for _, p := range c.Path {
+				if _, err := strconv.Atoi(p); err == nil {
+					// ignore slice offset counts
+					continue
+				}
+				if p != validateTagValue {
+					pathEditable = false
+				}
+			}
+			if pathEditable && (c.Type == diff.CREATE || c.Type == diff.DELETE) {
+				// If *every* parent elements on the path are all marked as editable,
+				// AND the field itself is marked as editable, it is allowed to add or delete
+				continue
+			}
+		}
+		msg = append(msg, fmt.Sprintf("(%s) %s '%v' -> '%v'", c.Type, strings.Join(c.Path, "."), c.From, c.To))
+	}
+
+	if len(msg) > 0 {
+		return fmt.Errorf("immutable field changed: %s", strings.Join(msg, ", "))
+	}
+	return nil
 }

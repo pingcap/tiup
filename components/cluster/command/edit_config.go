@@ -116,6 +116,10 @@ func editTopo(clusterName string, metadata *spec.ClusterMeta) error {
 		return nil
 	}
 
+	// report error if immutable field has been changed
+	if err := edit.ValidateSpecDiff(metadata.Topology, newTopo); err != nil {
+		return err
+	}
 	edit.ShowDiff(string(data), string(newData), os.Stdout)
 
 	if !skipConfirm {
