@@ -231,7 +231,6 @@ tikv_servers:
 `), &topo)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'tidb_servers:172.16.5.138.port' and 'monitored:172.16.5.138.node_exporter_port'")
-
 }
 
 func (s *metaSuiteTopo) TestPlatformConflicts(c *C) {
@@ -277,7 +276,6 @@ tikv_servers:
 `), &topo)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' between 'tidb_servers:darwin/arm64' and 'tikv_servers:linux/arm64'")
-
 }
 
 func (s *metaSuiteTopo) TestCountDir(c *C) {
@@ -726,4 +724,50 @@ item7 = 700
 	merge2, err := merge2Toml(ComponentTiKV, merge1, spec.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(merge2), DeepEquals, expected)
+}
+
+func (s *metaSuiteTopo) TestTiSparkSpecValidation(c *C) {
+	topo := Specification{}
+	err := yaml.Unmarshal([]byte(`
+pd_servers:
+  - host: 172.16.5.138
+    port: 1234
+tispark_masters:
+  - host: 172.16.5.138
+    port: 1235
+tispark_workers:
+  - host: 172.16.5.138
+    port: 1236
+  - host: 172.16.5.139
+    port: 1235
+`), &topo)
+	c.Assert(err, IsNil)
+
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+pd_servers:
+  - host: 172.16.5.138
+    port: 1234
+tispark_masters:
+  - host: 172.16.5.138
+    port: 1235
+  - host: 172.16.5.139
+    port: 1235
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "a TiSpark enabled cluster with more than 1 Spark master node is not supported")
+
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+pd_servers:
+  - host: 172.16.5.138
+    port: 1234
+tispark_workers:
+  - host: 172.16.5.138
+    port: 1235
+  - host: 172.16.5.139
+    port: 1235
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "there must be a Spark master node if you want to use the TiSpark component")
 }

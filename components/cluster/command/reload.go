@@ -112,7 +112,15 @@ func buildReloadTask(
 			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
 				version := spec.ComponentVersion(compName, metadata.Version)
 				tb.Download(compName, inst.OS(), inst.Arch(), version).
-					CopyComponent(compName, inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
+					CopyComponent(
+						compName,
+						inst.OS(),
+						inst.Arch(),
+						version,
+						"", // use default srcPath
+						inst.GetHost(),
+						deployDir,
+					)
 			}
 			hasImported = true
 		}

@@ -72,7 +72,8 @@ func newDisplayCmd() *cobra.Command {
 			}
 
 			metadata, err := spec.ClusterMetadata(clusterName)
-			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+				!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 				return perrs.AddStack(err)
 			}
 			return destroyTombstoneIfNeed(clusterName, metadata, gOpt)
@@ -88,7 +89,8 @@ func newDisplayCmd() *cobra.Command {
 
 func displayDashboardInfo(clusterName string) error {
 	metadata, err := spec.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return err
 	}
 
@@ -121,7 +123,8 @@ func displayDashboardInfo(clusterName string) error {
 
 func displayClusterMeta(clusterName string, opt *operator.Options) error {
 	clsMeta, err := spec.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return err
 	}
 
@@ -175,7 +178,8 @@ func destroyTombstoneIfNeed(clusterName string, metadata *spec.ClusterMeta, opt 
 
 func displayClusterTopology(clusterName string, opt *operator.Options) error {
 	metadata, err := spec.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return err
 	}
 

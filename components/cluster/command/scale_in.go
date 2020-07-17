@@ -115,7 +115,15 @@ func scaleIn(clusterName string, options operator.Options) error {
 				case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
 					version := spec.ComponentVersion(compName, metadata.Version)
 					tb.Download(compName, instance.OS(), instance.Arch(), version).
-						CopyComponent(compName, instance.OS(), instance.Arch(), version, instance.GetHost(), deployDir)
+						CopyComponent(
+							compName,
+							instance.OS(),
+							instance.Arch(),
+							version,
+							"", // use default srcPath
+							instance.GetHost(),
+							deployDir,
+						)
 				}
 				hasImported = true
 			}

@@ -271,7 +271,9 @@ func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls topo
 			delPaths.Insert(deployDir)
 		}
 
-		delPaths.Insert(fmt.Sprintf("/etc/systemd/system/%s", ins.ServiceName()))
+		if svc := ins.ServiceName(); svc != "" {
+			delPaths.Insert(fmt.Sprintf("/etc/systemd/system/%s", svc))
+		}
 		log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delPaths.Slice(), " "))
 		c := module.ShellModuleConfig{
 			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delPaths.Slice(), " ")),

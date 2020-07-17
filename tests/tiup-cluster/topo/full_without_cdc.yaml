@@ -45,6 +45,12 @@ drainer_servers:
     config:
         syncer.db-type: "file"
 
+tispark_masters:
+  - host: 172.19.0.103
+
+tispark_workers:
+  - host: 172.19.0.104
+
 monitoring_servers:
   - host: 172.19.0.101
 grafana_servers:

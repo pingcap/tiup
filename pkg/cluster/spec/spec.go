@@ -36,7 +36,11 @@ const (
 
 // general role names
 var (
-	RoleMonitor = "monitor"
+	RoleMonitor              = "monitor"
+	RoleTiSparkMaster        = "tispark-master"
+	RoleTiSparkWorker        = "tispark-worker"
+	ErrNoTiSparkMaster       = errors.New("there must be a Spark master node if you want to use the TiSpark component")
+	ErrMultipleTiSparkMaster = errors.New("a TiSpark enabled cluster with more than 1 Spark master node is not supported")
 )
 
 type (
@@ -86,19 +90,21 @@ type (
 
 	// Specification represents the specification of topology.yaml
 	Specification struct {
-		GlobalOptions    GlobalOptions      `yaml:"global,omitempty"`
-		MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty"`
-		ServerConfigs    ServerConfigs      `yaml:"server_configs,omitempty"`
-		TiDBServers      []TiDBSpec         `yaml:"tidb_servers"`
-		TiKVServers      []TiKVSpec         `yaml:"tikv_servers"`
-		TiFlashServers   []TiFlashSpec      `yaml:"tiflash_servers"`
-		PDServers        []PDSpec           `yaml:"pd_servers"`
-		PumpServers      []PumpSpec         `yaml:"pump_servers,omitempty"`
-		Drainers         []DrainerSpec      `yaml:"drainer_servers,omitempty"`
-		CDCServers       []CDCSpec          `yaml:"cdc_servers,omitempty"`
-		Monitors         []PrometheusSpec   `yaml:"monitoring_servers"`
-		Grafana          []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
-		Alertmanager     []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
+		GlobalOptions    GlobalOptions       `yaml:"global,omitempty"`
+		MonitoredOptions MonitoredOptions    `yaml:"monitored,omitempty"`
+		ServerConfigs    ServerConfigs       `yaml:"server_configs,omitempty"`
+		TiDBServers      []TiDBSpec          `yaml:"tidb_servers"`
+		TiKVServers      []TiKVSpec          `yaml:"tikv_servers"`
+		TiFlashServers   []TiFlashSpec       `yaml:"tiflash_servers"`
+		PDServers        []PDSpec            `yaml:"pd_servers"`
+		PumpServers      []PumpSpec          `yaml:"pump_servers,omitempty"`
+		Drainers         []DrainerSpec       `yaml:"drainer_servers,omitempty"`
+		CDCServers       []CDCSpec           `yaml:"cdc_servers,omitempty"`
+		TiSparkMasters   []TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
+		TiSparkWorkers   []TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
+		Monitors         []PrometheusSpec    `yaml:"monitoring_servers"`
+		Grafana          []GrafanaSpec       `yaml:"grafana_servers,omitempty"`
+		Alertmanager     []AlertManagerSpec  `yaml:"alertmanager_servers,omitempty"`
 	}
 )
 
@@ -480,7 +486,7 @@ func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 						}
 					}
 					dir = clusterutil.Abs(s.GlobalOptions.User, dir)
-					dirStats[host+dir] += 1
+					dirStats[host+dir]++
 				}
 			}
 		}
@@ -495,6 +501,23 @@ func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 	return count
 }
 
+func (s *Specification) validateTiSparkSpec() error {
+	// There must be a Spark master
+	if len(s.TiSparkMasters) == 0 {
+		if len(s.TiSparkWorkers) == 0 {
+			return nil
+		}
+		return ErrNoTiSparkMaster
+	}
+
+	// We only support 1 Spark master at present
+	if len(s.TiSparkMasters) > 1 {
+		return ErrMultipleTiSparkMaster
+	}
+
+	return nil
+}
+
 // Validate validates the topology specification and produce error if the
 // specification invalid (e.g: port conflicts or directory conflicts)
 func (s *Specification) Validate() error {
@@ -506,7 +529,11 @@ func (s *Specification) Validate() error {
 		return err
 	}
 
-	return s.dirConflictsDetect()
+	if err := s.dirConflictsDetect(); err != nil {
+		return err
+	}
+
+	return s.validateTiSparkSpec()
 }
 
 // GetPDList returns a list of PD API hosts of the current cluster
@@ -540,6 +567,8 @@ func (s *Specification) Merge(that *Specification) *Specification {
 		PumpServers:      append(s.PumpServers, that.PumpServers...),
 		Drainers:         append(s.Drainers, that.Drainers...),
 		CDCServers:       append(s.CDCServers, that.CDCServers...),
+		TiSparkMasters:   append(s.TiSparkMasters, that.TiSparkMasters...),
+		TiSparkWorkers:   append(s.TiSparkWorkers, that.TiSparkWorkers...),
 		Monitors:         append(s.Monitors, that.Monitors...),
 		Grafana:          append(s.Grafana, that.Grafana...),
 		Alertmanager:     append(s.Alertmanager, that.Alertmanager...),
@@ -735,6 +764,8 @@ func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 	comps = append(comps, &MonitorComponent{s})
 	comps = append(comps, &GrafanaComponent{s})
 	comps = append(comps, &AlertManagerComponent{s})
+	comps = append(comps, &TiSparkMasterComponent{s})
+	comps = append(comps, &TiSparkWorkerComponent{s})
 	return
 }
 

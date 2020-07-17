@@ -16,6 +16,9 @@ package utils
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/sha1"
+	"encoding/hex"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -147,4 +150,55 @@ func Move(src, dst string) error {
 		return errors.Trace(err)
 	}
 	return errors.Trace(os.RemoveAll(src))
+}
+
+// CreateDir creates the directory if it not exists.
+func CreateDir(path string) error {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return os.MkdirAll(path, 0755)
+		}
+		return err
+	}
+	return nil
+}
+
+// CopyFile copies a file from src to dst
+func CopyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	if IsExist(dst) {
+		return fmt.Errorf("destination path %s already exist", dst)
+	}
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	if _, err = io.Copy(out, in); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Checksum returns the sha1 sum of target file
+func Checksum(file string) (string, error) {
+	tarball, err := os.OpenFile(file, os.O_RDONLY, 0)
+	if err != nil {
+		return "", err
+	}
+	defer tarball.Close()
+
+	sha1Writter := sha1.New()
+	if _, err := io.Copy(sha1Writter, tarball); err != nil {
+		return "", err
+	}
+
+	checksum := hex.EncodeToString(sha1Writter.Sum(nil))
+	return checksum, nil
 }

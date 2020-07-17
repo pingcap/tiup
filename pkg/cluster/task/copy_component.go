@@ -27,6 +27,7 @@ type CopyComponent struct {
 	arch      string
 	version   string
 	host      string
+	srcPath   string
 	dstDir    string
 }
 
@@ -35,7 +36,10 @@ func (c *CopyComponent) Execute(ctx *Context) error {
 	// Copy to remote server
 	resName := fmt.Sprintf("%s-%s", c.component, c.version)
 	fileName := fmt.Sprintf("%s-%s-%s.tar.gz", resName, c.os, c.arch)
-	srcPath := spec.ProfilePath(spec.TiOpsPackageCacheDir, fileName)
+	srcPath := c.srcPath
+	if c.srcPath == "" {
+		srcPath = spec.ProfilePath(spec.TiOpsPackageCacheDir, fileName)
+	}
 
 	install := &InstallPackage{
 		srcPath: srcPath,

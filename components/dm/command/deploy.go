@@ -244,6 +244,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 				inst.OS(),
 				inst.Arch(),
 				version,
+				"", // use default srcPath
 				inst.GetHost(),
 				deployDir,
 			).

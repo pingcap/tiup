@@ -15,12 +15,13 @@ package command
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cliutil/prepare"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
@@ -72,11 +73,11 @@ func newScaleOutCmd() *cobra.Command {
 func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 	exist, err := tidbSpec.Exist(clusterName)
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	if !exist {
-		return errors.Errorf("cannot scale-out non-exists cluster %s", clusterName)
+		return perrs.Errorf("cannot scale-out non-exists cluster %s", clusterName)
 	}
 
 	metadata, err := spec.ClusterMetadata(clusterName)
@@ -91,7 +92,12 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 		MonitoredOptions: metadata.Topology.MonitoredOptions,
 		ServerConfigs:    metadata.Topology.ServerConfigs,
 	}
-	if err := clusterutil.ParseTopologyYaml(topoFile, &newPart); err != nil {
+
+	// The no tispark master error is ignored, as if the tispark master is removed from the topology
+	// file for some reason (manual edit, for example), it is still possible to scale-out it to make
+	// the whole topology back to normal state.
+	if err := clusterutil.ParseTopologyYaml(topoFile, &newPart); err != nil &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return err
 	}
 
@@ -146,7 +152,7 @@ func scaleOut(clusterName, topoFile string, opt scaleOutOptions) error {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
 		}
-		return errors.Trace(err)
+		return perrs.Trace(err)
 	}
 
 	log.Infof("Scaled cluster `%s` out successfully", clusterName)
@@ -247,11 +253,28 @@ func buildScaleOutTask(
 				filepath.Join(deployDir, "conf"),
 				filepath.Join(deployDir, "scripts")).
 			Mkdir(metadata.User, inst.GetHost(), dataDirs...)
+
+		srcPath := ""
 		if patchedComponents.Exist(inst.ComponentName()) {
-			tb.InstallPackage(spec.ClusterPath(clusterName, spec.PatchDirName, inst.ComponentName()+".tar.gz"), inst.GetHost(), deployDir)
-		} else {
-			tb.CopyComponent(inst.ComponentName(), inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
+			srcPath = spec.ClusterPath(clusterName, spec.PatchDirName, inst.ComponentName()+".tar.gz")
 		}
+
+		// copy dependency component if needed
+		switch inst.ComponentName() {
+		case spec.ComponentTiSpark:
+			tb = tb.DeploySpark(inst, version, srcPath, deployDir)
+		default:
+			tb.CopyComponent(
+				inst.ComponentName(),
+				inst.OS(),
+				inst.Arch(),
+				version,
+				srcPath,
+				inst.GetHost(),
+				deployDir,
+			)
+		}
+
 		t := tb.ScaleConfig(clusterName,
 			metadata.Version,
 			metadata.Topology,
@@ -282,7 +305,15 @@ func buildScaleOutTask(
 			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
 				version := spec.ComponentVersion(compName, metadata.Version)
 				tb.Download(compName, inst.OS(), inst.Arch(), version).
-					CopyComponent(compName, inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
+					CopyComponent(
+						compName,
+						inst.OS(),
+						inst.Arch(),
+						version,
+						"", // use default srcPath
+						inst.GetHost(),
+						deployDir,
+					)
 			}
 			hasImported = true
 		}
@@ -367,7 +398,7 @@ func validateNewTopo(topo *spec.Specification) (err error) {
 	topo.IterInstance(func(instance spec.Instance) {
 		// check for "imported" parameter, it can not be true when scaling out
 		if instance.IsImported() {
-			err = errors.New(
+			err = perrs.New(
 				"'imported' is set to 'true' for new instance, this is only used " +
 					"for instances imported from tidb-ansible and make no sense when " +
 					"scaling out, please delete the line or set it to 'false' for new instances")

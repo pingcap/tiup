@@ -38,7 +38,7 @@ func getAllFilePaths(dir string) (paths []string, err error) {
 }
 
 // Test can read all file in /templates
-// If files in /templates changed, you may need run `make pkager` to regenerate the pkager.go
+// If files in /templates changed, you may need run `make pkger` to regenerate the autogen_pkger.go
 func (s *embedSuite) TestCanReadTemplates(c *check.C) {
 	root, err := filepath.Abs("../../../")
 	c.Assert(err, check.IsNil)

@@ -1,4 +1,5 @@
-.PHONY: server
+.PHONY: cmd components server
+.DEFAULT_GOAL := default
 
 GOVER := $(shell go version)
 
@@ -24,10 +25,9 @@ FILES     := $$(find . -name "*.go")
 FAILPOINT_ENABLE  := $$(tools/bin/failpoint-ctl enable)
 FAILPOINT_DISABLE := $$(tools/bin/failpoint-ctl disable)
 
-default: build check
+default: check build
 
 include ./tests/Makefile
-
 
 # Build TiUP and all components
 build: tiup components
@@ -119,8 +119,6 @@ fmt:
 	@gofmt -s -l -w $(FILES) 2>&1
 	@echo "goimports (if installed)"
 	$(shell gimports -w $(FILES) 2>/dev/null)
-
-.PHONY: cmd
 
 tools/bin/errcheck: tools/check/go.mod
 	cd tools/check; \

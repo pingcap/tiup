@@ -146,6 +146,11 @@ func confirmTopology(clusterName, version string, topo *spec.Specification, patc
 		log.Errorf("    3. The component marked as `patched` has been replaced by previours patch command.")
 	}
 
+	if len(topo.TiSparkMasters) > 0 || len(topo.TiSparkWorkers) > 0 {
+		log.Warnf("There are TiSpark nodes defined in the topology, please note that you'll need to manually install Java Runtime Environment (JRE) 8 on the host, other wise the TiSpark nodes will fail to start.")
+		log.Warnf("You may read the OpenJDK doc for a reference: https://openjdk.java.net/install/")
+	}
+
 	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 }
 
@@ -270,6 +275,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 		// log dir will always be with values, but might not used by the component
 		logDir := clusterutil.Abs(globalOptions.User, inst.LogDir())
 		// Deploy component
+		// prepare deployment server
 		t := task.NewBuilder().
 			UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, gOpt.SSHTimeout).
 			Mkdir(globalOptions.User, inst.GetHost(),
@@ -277,30 +283,42 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 				filepath.Join(deployDir, "bin"),
 				filepath.Join(deployDir, "conf"),
 				filepath.Join(deployDir, "scripts")).
-			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...).
-			CopyComponent(
+			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
+
+		// copy dependency component if needed
+		switch inst.ComponentName() {
+		case spec.ComponentTiSpark:
+			t = t.DeploySpark(inst, version, "" /* default srcPath */, deployDir)
+		default:
+			t = t.CopyComponent(
 				inst.ComponentName(),
 				inst.OS(),
 				inst.Arch(),
 				version,
+				"", // use default srcPath
 				inst.GetHost(),
 				deployDir,
-			).
-			InitConfig(
-				clusterName,
-				clusterVersion,
-				inst,
-				globalOptions.User,
-				opt.ignoreConfigCheck,
-				meta.DirPaths{
-					Deploy: deployDir,
-					Data:   dataDirs,
-					Log:    logDir,
-					Cache:  spec.ClusterPath(clusterName, spec.TempConfigPath),
-				},
-			).
-			BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", inst.ComponentName(), inst.GetHost()))
-		deployCompTasks = append(deployCompTasks, t)
+			)
+		}
+
+		// generate configs for the component
+		t = t.InitConfig(
+			clusterName,
+			clusterVersion,
+			inst,
+			globalOptions.User,
+			opt.ignoreConfigCheck,
+			meta.DirPaths{
+				Deploy: deployDir,
+				Data:   dataDirs,
+				Log:    logDir,
+				Cache:  spec.ClusterPath(clusterName, spec.TempConfigPath),
+			},
+		)
+
+		deployCompTasks = append(deployCompTasks,
+			t.BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", inst.ComponentName(), inst.GetHost())),
+		)
 	})
 
 	nodeInfoTask := task.NewBuilder().Func("Check status", func(ctx *task.Context) error {
@@ -373,6 +391,11 @@ func buildMonitoredDeployTask(
 		version := spec.ComponentVersion(comp, version)
 
 		for host, info := range uniqueHosts {
+			// FIXME: as the uniqueHosts list is built with os-arch as part of the key,
+			// for platform independent packages, it will be downloaded multiple times
+			// and be saved with different file names in the packages dir, the tarballs
+			// are identical and the only difference is platform in filename.
+
 			// populate unique os/arch set
 			key := fmt.Sprintf("%s-%s-%s", comp, info.os, info.arch)
 			if _, found := uniqueCompOSArch[key]; !found {
@@ -404,6 +427,7 @@ func buildMonitoredDeployTask(
 					info.os,
 					info.arch,
 					version,
+					"", // use default srcPath
 					host,
 					deployDir,
 				).

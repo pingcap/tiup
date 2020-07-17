@@ -234,22 +234,31 @@ func buildScaleOutTask(
 				filepath.Join(deployDir, "conf"),
 				filepath.Join(deployDir, "scripts")).
 			Mkdir(metadata.User, inst.GetHost(), dataDirs...)
+
+		srcPath := ""
 		if patchedComponents.Exist(inst.ComponentName()) {
-			tb.InstallPackage(meta.ClusterPath(clusterName, meta.PatchDirName, inst.ComponentName()+".tar.gz"), inst.GetHost(), deployDir)
-		} else {
-			tb.CopyComponent(inst.ComponentName(), inst.OS(), inst.Arch(), version, inst.GetHost(), deployDir)
+			srcPath = spec.ClusterPath(clusterName, spec.PatchDirName, inst.ComponentName()+".tar.gz")
 		}
-		t := tb.ScaleConfig(clusterName,
-			metadata.Version,
-			metadata.Topology,
-			inst,
-			metadata.User,
-			meta.DirPaths{
-				Deploy: deployDir,
-				Data:   dataDirs,
-				Log:    logDir,
-			},
-		).Build()
+
+		t := tb.CopyComponent(
+				inst.ComponentName(),
+				inst.OS(),
+				inst.Arch(),
+				version,
+				srcPath,
+				inst.GetHost(),
+				deployDir,
+			).ScaleConfig(clusterName,
+				metadata.Version,
+				metadata.Topology,
+				inst,
+				metadata.User,
+				meta.DirPaths{
+					Deploy: deployDir,
+					Data:   dataDirs,
+					Log:    logDir,
+				},
+			).Build()
 		deployCompTasks = append(deployCompTasks, t)
 	})
 

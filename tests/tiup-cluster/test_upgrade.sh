@@ -2,7 +2,7 @@
 
 set -eu
 
-version=${version-v4.0.0}
+version=${version-v4.0.2}
 old_version=${old_version-v4.0.0-beta.2}
 name=test_upgrade
 topo=./topo/upgrade.yaml

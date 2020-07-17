@@ -57,7 +57,13 @@ func ClusterMetadata(clusterName string) (*ClusterMeta, error) {
 	var cm ClusterMeta
 	err := GetSpecManager().Metadata(clusterName, &cm)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		// Return the value of cm even on error, to make sure the caller can get the data
+		// we read, if there's any.
+		// This is necessary when, either by manual editing of meta.yaml file, by not fully
+		// validated `edit-config`, or by some unexpected operations from a broken legacy
+		// release, we could provide max possibility that operations like `display`, `scale`
+		// and `destroy` are still (more or less) working, by ignoring certain errors.
+		return &cm, errors.AddStack(err)
 	}
 
 	return &cm, nil

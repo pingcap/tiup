@@ -14,6 +14,9 @@
 package task
 
 import (
+	"fmt"
+	"path/filepath"
+
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -135,13 +138,14 @@ func (b *Builder) Download(component, os, arch string, version string) *Builder 
 // CopyComponent appends a CopyComponent task to the current task collection
 func (b *Builder) CopyComponent(component, os, arch string,
 	version string,
-	dstHost, dstDir string,
+	srcPath, dstHost, dstDir string,
 ) *Builder {
 	b.tasks = append(b.tasks, &CopyComponent{
 		component: component,
 		os:        os,
 		arch:      arch,
 		version:   version,
+		srcPath:   srcPath,
 		host:      dstHost,
 		dstDir:    dstDir,
 	})
@@ -322,6 +326,46 @@ func (b *Builder) CheckSys(host, dataDir, checkType string, topo *spec.Specifica
 		check:   checkType,
 	})
 	return b
+}
+
+// DeploySpark deployes spark as dependency of TiSpark
+func (b *Builder) DeploySpark(inst spec.Instance, version, srcPath, deployDir string) *Builder {
+	sparkSubPath := spec.ComponentSubDir(spec.ComponentSpark,
+		spec.ComponentVersion(spec.ComponentSpark, version))
+	return b.CopyComponent(
+		spec.ComponentSpark,
+		inst.OS(),
+		inst.Arch(),
+		spec.ComponentVersion(spec.ComponentSpark, version),
+		srcPath,
+		inst.GetHost(),
+		deployDir,
+	).Shell( // spark is under a subdir, move it to deploy dir
+		inst.GetHost(),
+		fmt.Sprintf(
+			"cp -rf %[1]s %[2]s/ && cp -rf %[3]s/* %[2]s/ && rm -rf %[1]s %[3]s",
+			filepath.Join(deployDir, "bin", sparkSubPath),
+			deployDir,
+			filepath.Join(deployDir, sparkSubPath),
+		),
+		false, // (not) sudo
+	).CopyComponent(
+		inst.ComponentName(),
+		inst.OS(),
+		inst.Arch(),
+		version,
+		srcPath,
+		inst.GetHost(),
+		deployDir,
+	).Shell( // move tispark jar to correct path
+		inst.GetHost(),
+		fmt.Sprintf(
+			"cp -f %[1]s/*.jar %[2]s/jars/ && rm -f %[1]s/*.jar",
+			filepath.Join(deployDir, "bin"),
+			deployDir,
+		),
+		false, // (not) sudo
+	)
 }
 
 // Parallel appends a parallel task to the current task collection
