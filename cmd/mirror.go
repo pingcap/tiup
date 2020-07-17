@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -254,14 +253,8 @@ func newMirrorModifyCmd() *cobra.Command {
 				return err
 			}
 
-			spec := strings.Split(args[0], ":")
-			component := spec[0]
-			version := ""
-			if len(spec) > 1 {
-				version = spec[1]
-			}
-
-			m, err := env.V1Repository().FetchComponentManifest(component)
+			comp, ver := environment.ParseCompVersion(args[0])
+			m, err := env.V1Repository().FetchComponentManifest(comp)
 			if err != nil {
 				return err
 			}
@@ -269,7 +262,7 @@ func newMirrorModifyCmd() *cobra.Command {
 			if endpoint == "" {
 				endpoint = environment.Mirror()
 			}
-			e := remote.NewEditor(endpoint, component).WithDesc(desc).WithVersion(version)
+			e := remote.NewEditor(endpoint, comp).WithDesc(desc).WithVersion(ver.String())
 			flagSet := set.NewStringSet()
 			cmd.Flags().Visit(func(f *pflag.Flag) {
 				flagSet.Insert(f.Name)
