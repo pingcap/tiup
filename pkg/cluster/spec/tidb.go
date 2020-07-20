@@ -35,7 +35,7 @@ type TiDBSpec struct {
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"editable"`
+	Config          map[string]interface{} `yaml:"config,omitempty" validate:"ignore"`
 	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"editable"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`

@@ -16,8 +16,8 @@ package meta
 // ResourceControl is used to control the system resource
 // See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html
 type ResourceControl struct {
-	MemoryLimit         string `yaml:"memory_limit,omitempty"`
-	CPUQuota            string `yaml:"cpu_quota,omitempty"`
-	IOReadBandwidthMax  string `yaml:"io_read_bandwidth_max,omitempty"`
-	IOWriteBandwidthMax string `yaml:"io_write_bandwidth_max,omitempty"`
+	MemoryLimit         string `yaml:"memory_limit,omitempty" validate:"editable"`
+	CPUQuota            string `yaml:"cpu_quota,omitempty" validate:"editable"`
+	IOReadBandwidthMax  string `yaml:"io_read_bandwidth_max,omitempty" validate:"editable"`
+	IOWriteBandwidthMax string `yaml:"io_write_bandwidth_max,omitempty" validate:"editable"`
 }

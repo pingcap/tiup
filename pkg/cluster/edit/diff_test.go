@@ -29,7 +29,7 @@ func TestDiff(t *testing.T) {
 type sampleDataMeta struct {
 	IntSlice     []int                    `yaml:"ints,omitempty"`
 	StrSlice     []string                 `yaml:"strs,omitempty" validate:"editable"`
-	MapSlice     []map[string]interface{} `yaml:"maps,omitempty"`
+	MapSlice     []map[string]interface{} `yaml:"maps,omitempty" validate:"ignore"`
 	StrElem      string                   `yaml:"stre" validate:"editable"`
 	StructSlice1 []sampleDataElem         `yaml:"slice1" validate:"editable"`
 	StructSlice2 []sampleDataElem         `yaml:"slice2,omitempty"`
@@ -423,6 +423,57 @@ slice2:
     interslice:
       - key0: 0
       - key3: 3.0
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+}
+
+func (d *diffSuite) TestValidateSpecDiff6(c *C) {
+	var d1 sampleDataMeta
+	var d2 sampleDataMeta
+	var err error
+
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+maps:
+  - key0: 0
+  - dot.key1: 1
+  - dotkey.subkey.1: "1"
+`), &d1)
+	c.Assert(err, IsNil)
+
+	// Modify key without dot in name, in ignorable slice
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+maps:
+  - key0: 1
+  - dot.key1: 1
+  - dotkey.subkey.1: "1"
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+
+	// Modify key with one dot in name, in ignorable slice
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+maps:
+  - key0: 0
+  - dot.key1: 11
+  - dotkey.subkey.1: "1"
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+
+	// Modify key with two dots and number in name, in ignorable slice
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+maps:
+  - key0: 0
+  - dot.key1: 1
+  - dotkey.subkey.1: "12"
 `), &d2)
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)

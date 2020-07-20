@@ -122,7 +122,7 @@ type MasterSpec struct {
 	DataDir         string                 `yaml:"data_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"editable"`
+	Config          map[string]interface{} `yaml:"config,omitempty" validate:"ignore"`
 	ResourceControl ResourceControl        `yaml:"resource_control,omitempty" validate:"editable"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
@@ -183,7 +183,7 @@ type WorkerSpec struct {
 	DataDir         string                 `yaml:"data_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"editable"`
+	Config          map[string]interface{} `yaml:"config,omitempty" validate:"ignore"`
 	ResourceControl ResourceControl        `yaml:"resource_control,omitempty" validate:"editable"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
@@ -236,7 +236,7 @@ type PortalSpec struct {
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	Timeout         int                    `yaml:"timeout" default:"5"`
 	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"editable"`
+	Config          map[string]interface{} `yaml:"config,omitempty" validate:"ignore"`
 	ResourceControl ResourceControl        `yaml:"resource_control,omitempty" validate:"editable"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`

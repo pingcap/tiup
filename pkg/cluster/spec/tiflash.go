@@ -48,7 +48,7 @@ type TiFlashSpec struct {
 	TmpDir               string                 `yaml:"tmp_path,omitempty"`
 	Offline              bool                   `yaml:"offline,omitempty"`
 	NumaNode             string                 `yaml:"numa_node,omitempty" validate:"editable"`
-	Config               map[string]interface{} `yaml:"config,omitempty" validate:"editable"`
+	Config               map[string]interface{} `yaml:"config,omitempty" validate:"ignore"`
 	LearnerConfig        map[string]interface{} `yaml:"learner_config,omitempty" validate:"editable"`
 	ResourceControl      meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"editable"`
 	Arch                 string                 `yaml:"arch,omitempty"`

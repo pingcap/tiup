@@ -24,8 +24,9 @@ import (
 )
 
 const (
-	validateTagName  = "validate"
-	validateTagValue = "editable"
+	validateTagName     = "validate"
+	validateTagEditable = "editable"
+	validateTagIgnore   = "ignore"
 )
 
 // ShowDiff write diff result into the Writer.
@@ -60,22 +61,29 @@ func ValidateSpecDiff(s1, s2 interface{}) error {
 	for _, c := range changelog {
 		if len(c.Path) > 0 {
 			// c.Path will be the tag value if TagName matched on the field
-			if c.Type == diff.UPDATE && c.Path[len(c.Path)-1] == validateTagValue {
+			if c.Type == diff.UPDATE && c.Path[len(c.Path)-1] == validateTagEditable {
 				// If the field is marked as editable, it is allowed to be modified no matter
 				// its parent level element is marked as editable or not
 				continue
 			}
+
 			pathEditable := true
+			pathIgnore := false
 			for _, p := range c.Path {
 				if _, err := strconv.Atoi(p); err == nil {
 					// ignore slice offset counts
 					continue
 				}
-				if p != validateTagValue {
+				if p == validateTagIgnore {
+					pathIgnore = true
+					continue
+				}
+				if p != validateTagEditable {
 					pathEditable = false
 				}
 			}
-			if pathEditable && (c.Type == diff.CREATE || c.Type == diff.DELETE) {
+			// if the path has any ignorable item, just ignore it
+			if pathIgnore || pathEditable && (c.Type == diff.CREATE || c.Type == diff.DELETE) {
 				// If *every* parent elements on the path are all marked as editable,
 				// AND the field itself is marked as editable, it is allowed to add or delete
 				continue
