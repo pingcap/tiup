@@ -84,7 +84,7 @@ type (
 var _ Executor = &SSHExecutor{}
 
 // NewSSHExecutor create a ssh executor.
-func NewSSHExecutor(c SSHConfig, sudo bool) *SSHExecutor {
+func NewSSHExecutor(c SSHConfig, sudo bool) Executor {
 	e := new(SSHExecutor)
 	e.Initialize(c)
 	e.Locale = "C" // default locale, hard coded for now

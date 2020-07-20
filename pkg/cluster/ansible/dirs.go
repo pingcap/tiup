@@ -285,7 +285,7 @@ func readFile(e *executor.SSHExecutor, fname string) (data []byte, err error) {
 	return stdout, nil
 }
 
-func readStartScript(e *executor.SSHExecutor, component, host string, port int) (string, error) {
+func readStartScript(e executor.Executor, component, host string, port int) (string, error) {
 	serviceFile := fmt.Sprintf("%s/%s-%d.service",
 		systemdUnitPath,
 		component,
