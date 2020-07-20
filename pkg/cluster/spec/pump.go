@@ -27,16 +27,16 @@ import (
 // PumpSpec represents the Pump topology specification in topology.yaml
 type PumpSpec struct {
 	Host            string                 `yaml:"host"`
-	SSHPort         int                    `yaml:"ssh_port,omitempty"`
+	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"editable"`
 	Imported        bool                   `yaml:"imported,omitempty"`
 	Port            int                    `yaml:"port" default:"8250"`
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	DataDir         string                 `yaml:"data_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	Offline         bool                   `yaml:"offline,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty"`
-	Config          map[string]interface{} `yaml:"config,omitempty"`
-	ResourceControl meta.ResourceControl   `yaml:"resource_control"`
+	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"editable"`
+	Config          map[string]interface{} `yaml:"config,omitempty" validate:"editable"`
+	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"editable"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
 }

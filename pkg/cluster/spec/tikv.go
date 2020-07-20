@@ -30,7 +30,7 @@ import (
 type TiKVSpec struct {
 	Host            string                 `yaml:"host"`
 	ListenHost      string                 `yaml:"listen_host,omitempty"`
-	SSHPort         int                    `yaml:"ssh_port,omitempty"`
+	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"editable"`
 	Imported        bool                   `yaml:"imported,omitempty"`
 	Port            int                    `yaml:"port" default:"20160"`
 	StatusPort      int                    `yaml:"status_port" default:"20180"`
@@ -38,9 +38,9 @@ type TiKVSpec struct {
 	DataDir         string                 `yaml:"data_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	Offline         bool                   `yaml:"offline,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty"`
-	Config          map[string]interface{} `yaml:"config,omitempty"`
-	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty"`
+	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"editable"`
+	Config          map[string]interface{} `yaml:"config,omitempty" validate:"editable"`
+	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"editable"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
 }

@@ -112,7 +112,7 @@ func AllDMComponentNames() (roles []string) {
 // MasterSpec represents the Master topology specification in topology.yaml
 type MasterSpec struct {
 	Host     string `yaml:"host"`
-	SSHPort  int    `yaml:"ssh_port,omitempty"`
+	SSHPort  int    `yaml:"ssh_port,omitempty" validate:"editable"`
 	Imported bool   `yaml:"imported,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
 	Name            string                 `yaml:"name"`
@@ -121,9 +121,9 @@ type MasterSpec struct {
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	DataDir         string                 `yaml:"data_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty"`
-	Config          map[string]interface{} `yaml:"config,omitempty"`
-	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"editable"`
+	Config          map[string]interface{} `yaml:"config,omitempty" validate:"editable"`
+	ResourceControl ResourceControl        `yaml:"resource_control,omitempty" validate:"editable"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
 }
@@ -174,7 +174,7 @@ func (s MasterSpec) IsImported() bool {
 // WorkerSpec represents the Master topology specification in topology.yaml
 type WorkerSpec struct {
 	Host     string `yaml:"host"`
-	SSHPort  int    `yaml:"ssh_port,omitempty"`
+	SSHPort  int    `yaml:"ssh_port,omitempty" validate:"editable"`
 	Imported bool   `yaml:"imported,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
 	Name            string                 `yaml:"name"`
@@ -182,9 +182,9 @@ type WorkerSpec struct {
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	DataDir         string                 `yaml:"data_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty"`
-	Config          map[string]interface{} `yaml:"config,omitempty"`
-	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"editable"`
+	Config          map[string]interface{} `yaml:"config,omitempty" validate:"editable"`
+	ResourceControl ResourceControl        `yaml:"resource_control,omitempty" validate:"editable"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
 }
@@ -228,16 +228,16 @@ func (s WorkerSpec) IsImported() bool {
 // PortalSpec represents the Portal topology specification in topology.yaml
 type PortalSpec struct {
 	Host            string                 `yaml:"host"`
-	SSHPort         int                    `yaml:"ssh_port,omitempty"`
+	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"editable"`
 	Imported        bool                   `yaml:"imported,omitempty"`
 	Port            int                    `yaml:"port" default:"8280"`
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	DataDir         string                 `yaml:"data_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	Timeout         int                    `yaml:"timeout" default:"5"`
-	NumaNode        string                 `yaml:"numa_node,omitempty"`
-	Config          map[string]interface{} `yaml:"config,omitempty"`
-	ResourceControl ResourceControl        `yaml:"resource_control,omitempty"`
+	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"editable"`
+	Config          map[string]interface{} `yaml:"config,omitempty" validate:"editable"`
+	ResourceControl ResourceControl        `yaml:"resource_control,omitempty" validate:"editable"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
 }

@@ -37,10 +37,11 @@ type sampleDataMeta struct {
 }
 
 type sampleDataElem struct {
-	StrElem1      string      `yaml:"str1" validate:"editable"`
-	StrElem2      string      `yaml:"str2,omitempty" validate:"editable"`
-	IntElem       int         `yaml:"int"`
-	InterfaceElem interface{} `yaml:"interface,omitempty" validate:"editable"`
+	StrElem1       string                   `yaml:"str1" validate:"editable"`
+	StrElem2       string                   `yaml:"str2,omitempty" validate:"editable"`
+	IntElem        int                      `yaml:"int"`
+	InterfaceElem  interface{}              `yaml:"interface,omitempty" validate:"editable"`
+	InterfaceSlice []map[string]interface{} `yaml:"mapslice,omitempty" validate:"editable"`
 }
 
 type sampleDataEditable struct {
@@ -309,6 +310,119 @@ ints: [11, 12, 13]
 slice3:
   - str1: strv21
     str2: strv22
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+}
+
+func (d *diffSuite) TestValidateSpecDiff5(c *C) {
+	var d1 sampleDataMeta
+	var d2 sampleDataMeta
+	var err error
+
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+slice1:
+  - str1: strv11
+    str2: strv21
+    interslice:
+      - key0: 0
+  - str1: strv12
+    str2: strv22
+slice2:
+  - str1: strv13
+    str2: strv14
+    interslice:
+      - key0: 0
+`), &d1)
+	c.Assert(err, IsNil)
+
+	// Modify item of editable slice in item of editable slice
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+slice1:
+  - str1: strv11
+    str2: strv21
+    interslice:
+      - key0: 0.1
+  - str1: strv12
+    str2: strv22
+    interslice:
+      - key1: 1
+      - key2: "v2"
+slice2:
+  - str1: strv13
+    str2: strv14
+    interslice:
+      - key0: 0
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+
+	// Modify item of editable slice in item of editable slice
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+slice1:
+  - str1: strv11
+    str2: strv21
+    interslice:
+      - key0: 0
+  - str1: strv12
+    str2: strv22
+    interslice:
+      - key1: 1
+      - key2: "v2"
+slice2:
+  - str1: strv13
+    str2: strv14
+    interslice:
+      - key0: 0.2
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+
+	// Add item to editable slice to item of editable slice
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+slice1:
+  - str1: strv11
+    str2: strv21
+    interslice:
+      - key0: 0
+  - str1: strv12
+    str2: strv22
+    interslice:
+      - key1: 1
+      - key2: "v2"
+slice2:
+  - str1: strv13
+    str2: strv14
+    interslice:
+      - key0: 0
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+
+	// Add item to editable slice to item of immutable slice
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+slice1:
+  - str1: strv11
+    str2: strv21
+    interslice:
+      - key0: 0
+  - str1: strv12
+    str2: strv22
+slice2:
+  - str1: strv13
+    str2: strv14
+    interslice:
+      - key0: 0
+      - key3: 3.0
 `), &d2)
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)

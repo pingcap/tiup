@@ -27,11 +27,11 @@ import (
 // GrafanaSpec represents the Grafana topology specification in topology.yaml
 type GrafanaSpec struct {
 	Host            string               `yaml:"host"`
-	SSHPort         int                  `yaml:"ssh_port,omitempty"`
+	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Port            int                  `yaml:"port" default:"3000"`
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`
-	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty"`
+	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"editable"`
 	Arch            string               `yaml:"arch,omitempty"`
 	OS              string               `yaml:"os,omitempty"`
 }

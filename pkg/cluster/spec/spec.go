@@ -56,11 +56,11 @@ type (
 	// specification in topology.yaml
 	GlobalOptions struct {
 		User            string               `yaml:"user,omitempty" default:"tidb"`
-		SSHPort         int                  `yaml:"ssh_port,omitempty" default:"22"`
+		SSHPort         int                  `yaml:"ssh_port,omitempty" default:"22" validate:"editable"`
 		DeployDir       string               `yaml:"deploy_dir,omitempty" default:"deploy"`
 		DataDir         string               `yaml:"data_dir,omitempty" default:"data"`
 		LogDir          string               `yaml:"log_dir,omitempty"`
-		ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty"`
+		ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"editable"`
 		OS              string               `yaml:"os,omitempty" default:"linux"`
 		Arch            string               `yaml:"arch,omitempty" default:"amd64"`
 	}
@@ -72,27 +72,27 @@ type (
 		DeployDir            string               `yaml:"deploy_dir,omitempty"`
 		DataDir              string               `yaml:"data_dir,omitempty"`
 		LogDir               string               `yaml:"log_dir,omitempty"`
-		NumaNode             string               `yaml:"numa_node,omitempty"`
-		ResourceControl      meta.ResourceControl `yaml:"resource_control,omitempty"`
+		NumaNode             string               `yaml:"numa_node,omitempty" validate:"editable"`
+		ResourceControl      meta.ResourceControl `yaml:"resource_control,omitempty" validate:"editable"`
 	}
 
 	// ServerConfigs represents the server runtime configuration
 	ServerConfigs struct {
-		TiDB           map[string]interface{} `yaml:"tidb"`
-		TiKV           map[string]interface{} `yaml:"tikv"`
-		PD             map[string]interface{} `yaml:"pd"`
-		TiFlash        map[string]interface{} `yaml:"tiflash"`
-		TiFlashLearner map[string]interface{} `yaml:"tiflash-learner"`
-		Pump           map[string]interface{} `yaml:"pump"`
-		Drainer        map[string]interface{} `yaml:"drainer"`
-		CDC            map[string]interface{} `yaml:"cdc"`
+		TiDB           map[string]interface{} `yaml:"tidb" validate:"editable"`
+		TiKV           map[string]interface{} `yaml:"tikv" validate:"editable"`
+		PD             map[string]interface{} `yaml:"pd" validate:"editable"`
+		TiFlash        map[string]interface{} `yaml:"tiflash" validate:"editable"`
+		TiFlashLearner map[string]interface{} `yaml:"tiflash-learner" validate:"editable"`
+		Pump           map[string]interface{} `yaml:"pump" validate:"editable"`
+		Drainer        map[string]interface{} `yaml:"drainer" validate:"editable"`
+		CDC            map[string]interface{} `yaml:"cdc" validate:"editable"`
 	}
 
 	// Specification represents the specification of topology.yaml
 	Specification struct {
-		GlobalOptions    GlobalOptions       `yaml:"global,omitempty"`
-		MonitoredOptions MonitoredOptions    `yaml:"monitored,omitempty"`
-		ServerConfigs    ServerConfigs       `yaml:"server_configs,omitempty"`
+		GlobalOptions    GlobalOptions       `yaml:"global,omitempty" validate:"editable"`
+		MonitoredOptions MonitoredOptions    `yaml:"monitored,omitempty" validate:"editable"`
+		ServerConfigs    ServerConfigs       `yaml:"server_configs,omitempty" validate:"editable"`
 		TiDBServers      []TiDBSpec          `yaml:"tidb_servers"`
 		TiKVServers      []TiKVSpec          `yaml:"tikv_servers"`
 		TiFlashServers   []TiFlashSpec       `yaml:"tiflash_servers"`
