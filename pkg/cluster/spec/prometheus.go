@@ -185,10 +185,10 @@ func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *MonitorInstance) ScaleConfig(e executor.Executor, cluster *Specification,
+func (i *MonitorInstance) ScaleConfig(e executor.Executor, topo Topology,
 	clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error {
 	s := i.instance.topo
 	defer func() { i.instance.topo = s }()
-	i.instance.topo = cluster
+	i.instance.topo = mustBeClusterTopo(topo)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cliutil/prepare"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -279,8 +281,8 @@ func (d *Deployer) Exec(clusterName string, opt ExecOptions, gOpt operator.Optio
 
 	t := task.NewBuilder().
 		SSHKeySet(
-			spec.ClusterPath(clusterName, "ssh", "id_rsa"),
-			spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
+			d.specManager.Path(clusterName, "ssh", "id_rsa"),
+			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, gOpt.SSHTimeout).
 		Parallel(shellTasks...).
 		Build()
@@ -336,8 +338,8 @@ func (d *Deployer) Display(clusterName string, opt operator.Options) error {
 	}
 
 	ctx := task.NewContext()
-	err = ctx.SetSSHKeySet(spec.ClusterPath(clusterName, "ssh", "id_rsa"),
-		spec.ClusterPath(clusterName, "ssh", "id_rsa.pub"))
+	err = ctx.SetSSHKeySet(d.specManager.Path(clusterName, "ssh", "id_rsa"),
+		d.specManager.Path(clusterName, "ssh", "id_rsa.pub"))
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -484,13 +486,14 @@ func (d *Deployer) Reload(clusterName string, opt operator.Options) error {
 		// Refresh all configuration
 		t := tb.InitConfig(clusterName,
 			base.Version,
+			d.specManager,
 			inst, base.User,
 			opt.IgnoreConfigCheck,
 			meta.DirPaths{
 				Deploy: deployDir,
 				Data:   dataDirs,
 				Log:    logDir,
-				Cache:  spec.ClusterPath(clusterName, spec.TempConfigPath),
+				Cache:  d.specManager.Path(clusterName, spec.TempConfigPath),
 			}).Build()
 		refreshConfigTasks = append(refreshConfigTasks, t)
 	})
@@ -504,8 +507,8 @@ func (d *Deployer) Reload(clusterName string, opt operator.Options) error {
 
 	t := task.NewBuilder().
 		SSHKeySet(
-			spec.ClusterPath(clusterName, "ssh", "id_rsa"),
-			spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
+			d.specManager.Path(clusterName, "ssh", "id_rsa"),
+			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout).
 		Parallel(refreshConfigTasks...).
 		Serial(task.NewFunc("UpgradeCluster", func(ctx *task.Context) error {
@@ -615,6 +618,7 @@ func (d *Deployer) Upgrade(clusterName string, clusterVersion string, opt operat
 			tb.InitConfig(
 				clusterName,
 				clusterVersion,
+				d.specManager,
 				inst,
 				base.User,
 				opt.IgnoreConfigCheck,
@@ -622,7 +626,7 @@ func (d *Deployer) Upgrade(clusterName string, clusterVersion string, opt operat
 					Deploy: deployDir,
 					Data:   dataDirs,
 					Log:    logDir,
-					Cache:  spec.ClusterPath(clusterName, spec.TempConfigPath),
+					Cache:  d.specManager.Path(clusterName, spec.TempConfigPath),
 				},
 			)
 			copyCompTasks = append(copyCompTasks, tb.Build())
@@ -638,8 +642,8 @@ func (d *Deployer) Upgrade(clusterName string, clusterVersion string, opt operat
 
 	t := task.NewBuilder().
 		SSHKeySet(
-			spec.ClusterPath(clusterName, "ssh", "id_rsa"),
-			spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
+			d.specManager.Path(clusterName, "ssh", "id_rsa"),
+			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout).
 		Parallel(downloadCompTasks...).
 		Parallel(copyCompTasks...).
@@ -689,7 +693,7 @@ func (d *Deployer) Patch(clusterName string, packagePath string, opt operator.Op
 	if err != nil {
 		return err
 	}
-	if err := checkPackage(clusterName, insts[0].ComponentName(), insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
+	if err := checkPackage(d.specManager, clusterName, insts[0].ComponentName(), insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
 		return err
 	}
 
@@ -704,8 +708,8 @@ func (d *Deployer) Patch(clusterName string, packagePath string, opt operator.Op
 
 	t := task.NewBuilder().
 		SSHKeySet(
-			spec.ClusterPath(clusterName, "ssh", "id_rsa"),
-			spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
+			d.specManager.Path(clusterName, "ssh", "id_rsa"),
+			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout).
 		Parallel(replacePackageTasks...).
 		Serial(task.NewFunc("UpgradeCluster", func(ctx *task.Context) error {
@@ -722,10 +726,108 @@ func (d *Deployer) Patch(clusterName string, packagePath string, opt operator.Op
 	}
 
 	if overwrite {
-		if err := overwritePatch(clusterName, insts[0].ComponentName(), packagePath); err != nil {
+		if err := overwritePatch(d.specManager, clusterName, insts[0].ComponentName(), packagePath); err != nil {
 			return err
 		}
 	}
+
+	return nil
+}
+
+// ScaleOutOptions contains the options for scale out.
+type ScaleOutOptions struct {
+	User         string // username to login to the SSH server
+	IdentityFile string // path to the private key file
+	UsePassword  bool   // use password instead of identity file for ssh connection
+}
+
+// ScaleOut scale out the cluster.
+func (d *Deployer) ScaleOut(
+	clusterName string,
+	topoFile string,
+	afterDeploy func(b *task.Builder, newPart spec.Topology),
+	final func(b *task.Builder, name string, meta spec.Metadata),
+	opt ScaleOutOptions,
+	skipConfirm bool,
+	optTimeout int64,
+	sshTimeout int64,
+) error {
+	metadata, err := d.meta(clusterName)
+	if err != nil {
+		return perrs.AddStack(err)
+	}
+
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
+
+	// not allowing validation errors
+	if err := topo.Validate(); err != nil {
+		return err
+	}
+
+	// Inherit existing global configuration. We must assign the inherited values before unmarshalling
+	// because some default value rely on the global options and monitored options.
+	newPart := topo.NewPart()
+
+	// The no tispark master error is ignored, as if the tispark master is removed from the topology
+	// file for some reason (manual edit, for example), it is still possible to scale-out it to make
+	// the whole topology back to normal state.
+	if err := clusterutil.ParseTopologyYaml(topoFile, &newPart); err != nil &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+		return err
+	}
+
+	if err := validateNewTopo(newPart); err != nil {
+		return err
+	}
+
+	// Abort scale out operation if the merged topology is invalid
+	mergedTopo := topo.MergeTopo(newPart)
+	if err := mergedTopo.Validate(); err != nil {
+		return err
+	}
+
+	if err := prepare.CheckClusterPortConflict(d.specManager, clusterName, mergedTopo); err != nil {
+		return err
+	}
+	if err := prepare.CheckClusterDirConflict(d.specManager, clusterName, mergedTopo); err != nil {
+		return err
+	}
+
+	patchedComponents := set.NewStringSet()
+	newPart.IterInstance(func(instance spec.Instance) {
+		if utils.IsExist(d.specManager.Path(clusterName, spec.PatchDirName, instance.ComponentName()+".tar.gz")) {
+			patchedComponents.Insert(instance.ComponentName())
+		}
+	})
+
+	if !skipConfirm {
+		// patchedComponents are components that have been patched and overwrited
+		if err := d.confirmTopology(clusterName, base.Version, newPart, patchedComponents); err != nil {
+			return err
+		}
+	}
+
+	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword)
+	if err != nil {
+		return err
+	}
+
+	// Build the scale out tasks
+	t, err := buildScaleOutTask(d, clusterName, metadata, mergedTopo, opt, sshConnProps, newPart, patchedComponents, optTimeout, sshTimeout, afterDeploy, final)
+	if err != nil {
+		return err
+	}
+
+	if err := t.Execute(task.NewContext()); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.Trace(err)
+	}
+
+	log.Infof("Scaled cluster `%s` out successfully", clusterName)
 
 	return nil
 }
@@ -903,7 +1005,7 @@ func instancesToPatch(topo spec.Topology, options operator.Options) ([]spec.Inst
 	return instances, nil
 }
 
-func checkPackage(clusterName, comp, nodeOS, arch, packagePath string) error {
+func checkPackage(specManager *spec.SpecManager, clusterName, comp, nodeOS, arch, packagePath string) error {
 	metadata, err := spec.ClusterMetadata(clusterName)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
@@ -923,7 +1025,7 @@ func checkPackage(clusterName, comp, nodeOS, arch, packagePath string) error {
 	if err != nil {
 		return err
 	}
-	cacheDir := spec.ClusterPath(clusterName, "cache", comp+"-"+checksum[:7])
+	cacheDir := specManager.Path(clusterName, "cache", comp+"-"+checksum[:7])
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		return err
 	}
@@ -938,8 +1040,8 @@ func checkPackage(clusterName, comp, nodeOS, arch, packagePath string) error {
 	return nil
 }
 
-func overwritePatch(clusterName, comp, packagePath string) error {
-	if err := os.MkdirAll(spec.ClusterPath(clusterName, spec.PatchDirName), 0755); err != nil {
+func overwritePatch(specManager *spec.SpecManager, clusterName, comp, packagePath string) error {
+	if err := os.MkdirAll(specManager.Path(clusterName, spec.PatchDirName), 0755); err != nil {
 		return err
 	}
 
@@ -948,16 +1050,384 @@ func overwritePatch(clusterName, comp, packagePath string) error {
 		return err
 	}
 
-	tg := spec.ClusterPath(clusterName, spec.PatchDirName, comp+"-"+checksum[:7]+".tar.gz")
+	tg := specManager.Path(clusterName, spec.PatchDirName, comp+"-"+checksum[:7]+".tar.gz")
 	if !utils.IsExist(tg) {
 		if err := utils.CopyFile(packagePath, tg); err != nil {
 			return err
 		}
 	}
 
-	symlink := spec.ClusterPath(clusterName, spec.PatchDirName, comp+".tar.gz")
+	symlink := specManager.Path(clusterName, spec.PatchDirName, comp+".tar.gz")
 	if utils.IsSymExist(symlink) {
 		os.Remove(symlink)
 	}
 	return os.Symlink(tg, symlink)
+}
+
+// validateNewTopo checks the new part of scale-out topology to make sure it's supported
+func validateNewTopo(topo spec.Topology) (err error) {
+	topo.IterInstance(func(instance spec.Instance) {
+		// check for "imported" parameter, it can not be true when scaling out
+		if instance.IsImported() {
+			err = errors.New(
+				"'imported' is set to 'true' for new instance, this is only used " +
+					"for instances imported from tidb-ansible and make no sense when " +
+					"scaling out, please delete the line or set it to 'false' for new instances")
+			return
+		}
+	})
+	return err
+}
+
+func (d *Deployer) confirmTopology(clusterName, version string, topo spec.Topology, patchedRoles set.StringSet) error {
+	log.Infof("Please confirm your topology:")
+
+	cyan := color.New(color.FgCyan, color.Bold)
+	fmt.Printf("%s Cluster: %s\n", d.sysName, cyan.Sprint(clusterName))
+	fmt.Printf("%s Version: %s\n", d.sysName, cyan.Sprint(version))
+
+	clusterTable := [][]string{
+		// Header
+		{"Type", "Host", "Ports", "OS/Arch", "Directories"},
+	}
+
+	topo.IterInstance(func(instance spec.Instance) {
+		comp := instance.ComponentName()
+		if patchedRoles.Exist(comp) {
+			comp = comp + " (patched)"
+		}
+		clusterTable = append(clusterTable, []string{
+			comp,
+			instance.GetHost(),
+			clusterutil.JoinInt(instance.UsedPorts(), "/"),
+			cliutil.OsArch(instance.OS(), instance.Arch()),
+			strings.Join(instance.UsedDirs(), ","),
+		})
+	})
+
+	cliutil.PrintTable(clusterTable, true)
+
+	log.Warnf("Attention:")
+	log.Warnf("    1. If the topology is not what you expected, check your yaml file.")
+	log.Warnf("    2. Please confirm there is no port/directory conflicts in same host.")
+	if len(patchedRoles) != 0 {
+		log.Errorf("    3. The component marked as `patched` has been replaced by previours patch command.")
+	}
+
+	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
+}
+
+func buildScaleOutTask(
+	d *Deployer,
+	clusterName string,
+	metadata spec.Metadata,
+	mergedTopo spec.Topology,
+	opt ScaleOutOptions,
+	sshConnProps *cliutil.SSHConnectionProps,
+	newPart spec.Topology,
+	patchedComponents set.StringSet,
+	optTimeout int64,
+	sshTimeout int64,
+	afterDeploy func(b *task.Builder, newPart spec.Topology),
+	final func(b *task.Builder, name string, meta spec.Metadata),
+) (task.Task, error) {
+	var (
+		envInitTasks       []task.Task // tasks which are used to initialize environment
+		downloadCompTasks  []task.Task // tasks which are used to download components
+		deployCompTasks    []task.Task // tasks which are used to copy components to remote host
+		refreshConfigTasks []task.Task // tasks which are used to refresh configuration
+	)
+
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
+	specManager := d.specManager
+
+	// Initialize the environments
+	initializedHosts := set.NewStringSet()
+	metadata.GetTopology().IterInstance(func(instance spec.Instance) {
+		initializedHosts.Insert(instance.GetHost())
+	})
+	// uninitializedHosts are hosts which haven't been initialized yet
+	uninitializedHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
+	newPart.IterInstance(func(instance spec.Instance) {
+		if host := instance.GetHost(); !initializedHosts.Exist(host) {
+			if _, found := uninitializedHosts[host]; found {
+				return
+			}
+
+			uninitializedHosts[host] = hostInfo{
+				ssh:  instance.GetSSHPort(),
+				os:   instance.OS(),
+				arch: instance.Arch(),
+			}
+
+			var dirs []string
+			globalOptions := metadata.GetTopology().BaseTopo().GlobalOptions
+			for _, dir := range []string{globalOptions.DeployDir, globalOptions.DataDir, globalOptions.LogDir} {
+				for _, dirname := range strings.Split(dir, ",") {
+					if dirname == "" {
+						continue
+					}
+					dirs = append(dirs, clusterutil.Abs(globalOptions.User, dirname))
+				}
+			}
+			t := task.NewBuilder().
+				RootSSH(
+					instance.GetHost(),
+					instance.GetSSHPort(),
+					opt.User,
+					sshConnProps.Password,
+					sshConnProps.IdentityFile,
+					sshConnProps.IdentityFilePassphrase,
+					sshTimeout,
+				).
+				EnvInit(instance.GetHost(), base.User).
+				Mkdir(globalOptions.User, instance.GetHost(), dirs...).
+				Build()
+			envInitTasks = append(envInitTasks, t)
+		}
+	})
+
+	// Download missing component
+	downloadCompTasks = convertStepDisplaysToTasks(prepare.BuildDownloadCompTasks(base.Version, newPart))
+
+	// Deploy the new topology and refresh the configuration
+	newPart.IterInstance(func(inst spec.Instance) {
+		version := spec.ComponentVersion(inst.ComponentName(), base.Version)
+		deployDir := clusterutil.Abs(base.User, inst.DeployDir())
+		// data dir would be empty for components which don't need it
+		dataDirs := clusterutil.MultiDirAbs(base.User, inst.DataDir())
+		// log dir will always be with values, but might not used by the component
+		logDir := clusterutil.Abs(base.User, inst.LogDir())
+
+		// Deploy component
+		tb := task.NewBuilder().
+			UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, sshTimeout).
+			Mkdir(base.User, inst.GetHost(),
+				deployDir, logDir,
+				filepath.Join(deployDir, "bin"),
+				filepath.Join(deployDir, "conf"),
+				filepath.Join(deployDir, "scripts")).
+			Mkdir(base.User, inst.GetHost(), dataDirs...)
+
+		srcPath := ""
+		if patchedComponents.Exist(inst.ComponentName()) {
+			srcPath = specManager.Path(clusterName, spec.PatchDirName, inst.ComponentName()+".tar.gz")
+		}
+
+		// copy dependency component if needed
+		switch inst.ComponentName() {
+		case spec.ComponentTiSpark:
+			tb = tb.DeploySpark(inst, version, srcPath, deployDir)
+		default:
+			tb.CopyComponent(
+				inst.ComponentName(),
+				inst.OS(),
+				inst.Arch(),
+				version,
+				srcPath,
+				inst.GetHost(),
+				deployDir,
+			)
+		}
+
+		t := tb.ScaleConfig(clusterName,
+			base.Version,
+			d.specManager,
+			topo,
+			inst,
+			base.User,
+			meta.DirPaths{
+				Deploy: deployDir,
+				Data:   dataDirs,
+				Log:    logDir,
+			},
+		).Build()
+		deployCompTasks = append(deployCompTasks, t)
+	})
+
+	hasImported := false
+
+	mergedTopo.IterInstance(func(inst spec.Instance) {
+		deployDir := clusterutil.Abs(base.User, inst.DeployDir())
+		// data dir would be empty for components which don't need it
+		dataDirs := clusterutil.MultiDirAbs(base.User, inst.DataDir())
+		// log dir will always be with values, but might not used by the component
+		logDir := clusterutil.Abs(base.User, inst.LogDir())
+
+		// Download and copy the latest component to remote if the cluster is imported from Ansible
+		tb := task.NewBuilder()
+		if inst.IsImported() {
+			switch compName := inst.ComponentName(); compName {
+			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
+				version := spec.ComponentVersion(compName, base.Version)
+				tb.Download(compName, inst.OS(), inst.Arch(), version).
+					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetHost(), deployDir)
+			}
+			hasImported = true
+		}
+
+		// Refresh all configuration
+		t := tb.InitConfig(clusterName,
+			base.Version,
+			d.specManager,
+			inst,
+			base.User,
+			true, // always ignore config check result in scale out
+			meta.DirPaths{
+				Deploy: deployDir,
+				Data:   dataDirs,
+				Log:    logDir,
+				Cache:  specManager.Path(clusterName, spec.TempConfigPath),
+			},
+		).Build()
+		refreshConfigTasks = append(refreshConfigTasks, t)
+	})
+
+	// handle dir scheme changes
+	if hasImported {
+		if err := spec.HandleImportPathMigration(clusterName); err != nil {
+			return task.NewBuilder().Build(), err
+		}
+	}
+
+	// Deploy monitor relevant components to remote
+	dlTasks, dpTasks := buildMonitoredDeployTask(
+		specManager,
+		clusterName,
+		uninitializedHosts,
+		topo.BaseTopo().GlobalOptions,
+		topo.BaseTopo().MonitoredOptions,
+		base.Version,
+		sshTimeout,
+	)
+	downloadCompTasks = append(downloadCompTasks, convertStepDisplaysToTasks(dlTasks)...)
+	deployCompTasks = append(deployCompTasks, convertStepDisplaysToTasks(dpTasks)...)
+
+	builder := task.NewBuilder().
+		SSHKeySet(
+			specManager.Path(clusterName, "ssh", "id_rsa"),
+			specManager.Path(clusterName, "ssh", "id_rsa.pub")).
+		Parallel(downloadCompTasks...).
+		Parallel(envInitTasks...).
+		ClusterSSH(topo, base.User, sshTimeout).
+		Parallel(deployCompTasks...)
+
+	if afterDeploy != nil {
+		afterDeploy(builder, newPart)
+	}
+
+	// TODO: find another way to make sure current cluster started
+	builder.
+		Serial(task.NewFunc("StartCluster", func(ctx *task.Context) error {
+			return operator.Start(ctx, metadata.GetTopology(), operator.Options{OptTimeout: optTimeout})
+		})).
+		ClusterSSH(newPart, base.User, sshTimeout).
+		Func("save meta", func(_ *task.Context) error {
+			metadata.SetTopology(mergedTopo)
+			return d.specManager.SaveMeta(clusterName, metadata)
+		}).
+		Serial(task.NewFunc("StartCluster", func(ctx *task.Context) error {
+			return operator.Start(ctx, newPart, operator.Options{OptTimeout: optTimeout})
+		})).
+		Parallel(refreshConfigTasks...).
+		Serial(task.NewFunc("RestartCluster", func(ctx *task.Context) error {
+			return operator.Restart(ctx, metadata.GetTopology(), operator.Options{
+				Roles:      []string{spec.ComponentPrometheus},
+				OptTimeout: optTimeout,
+			})
+		}))
+
+	if final != nil {
+		final(builder, clusterName, metadata)
+	}
+
+	return builder.Build(), nil
+}
+
+type hostInfo struct {
+	ssh  int    // ssh port of host
+	os   string // operating system
+	arch string // cpu architecture
+	// vendor string
+}
+
+// Deprecated
+func convertStepDisplaysToTasks(t []*task.StepDisplay) []task.Task {
+	tasks := make([]task.Task, 0, len(t))
+	for _, sd := range t {
+		tasks = append(tasks, sd)
+	}
+	return tasks
+}
+
+func buildMonitoredDeployTask(
+	specManager *spec.SpecManager,
+	clusterName string,
+	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
+	globalOptions *spec.GlobalOptions,
+	monitoredOptions *spec.MonitoredOptions,
+	version string,
+	sshTimeout int64,
+) (downloadCompTasks []*task.StepDisplay, deployCompTasks []*task.StepDisplay) {
+	uniqueCompOSArch := make(map[string]struct{}) // comp-os-arch -> {}
+	// monitoring agents
+	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
+		version := spec.ComponentVersion(comp, version)
+
+		for host, info := range uniqueHosts {
+			// populate unique os/arch set
+			key := fmt.Sprintf("%s-%s-%s", comp, info.os, info.arch)
+			if _, found := uniqueCompOSArch[key]; !found {
+				uniqueCompOSArch[key] = struct{}{}
+				downloadCompTasks = append(downloadCompTasks, task.NewBuilder().
+					Download(comp, info.os, info.arch, version).
+					BuildAsStep(fmt.Sprintf("  - Download %s:%s (%s/%s)", comp, version, info.os, info.arch)))
+			}
+
+			deployDir := clusterutil.Abs(globalOptions.User, monitoredOptions.DeployDir)
+			// data dir would be empty for components which don't need it
+			dataDir := monitoredOptions.DataDir
+			// the default data_dir is relative to deploy_dir
+			if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
+				dataDir = filepath.Join(deployDir, dataDir)
+			}
+			// log dir will always be with values, but might not used by the component
+			logDir := clusterutil.Abs(globalOptions.User, monitoredOptions.LogDir)
+			// Deploy component
+			t := task.NewBuilder().
+				UserSSH(host, info.ssh, globalOptions.User, sshTimeout).
+				Mkdir(globalOptions.User, host,
+					deployDir, dataDir, logDir,
+					filepath.Join(deployDir, "bin"),
+					filepath.Join(deployDir, "conf"),
+					filepath.Join(deployDir, "scripts")).
+				CopyComponent(
+					comp,
+					info.os,
+					info.arch,
+					version,
+					"",
+					host,
+					deployDir,
+				).
+				MonitoredConfig(
+					clusterName,
+					comp,
+					host,
+					globalOptions.ResourceControl,
+					monitoredOptions,
+					globalOptions.User,
+					meta.DirPaths{
+						Deploy: deployDir,
+						Data:   []string{dataDir},
+						Log:    logDir,
+						Cache:  specManager.Path(clusterName, spec.TempConfigPath),
+					},
+				).
+				BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", comp, host))
+			deployCompTasks = append(deployCompTasks, t)
+		}
+	}
+	return
 }

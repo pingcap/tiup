@@ -219,10 +219,12 @@ func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *PDInstance) ScaleConfig(e executor.Executor, cluster *Specification, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *PDInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
+
+	cluster := mustBeClusterTopo(topo)
 
 	spec := i.InstanceSpec.(PDSpec)
 	cfg := scripts.NewPDScaleScript(

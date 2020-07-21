@@ -298,6 +298,7 @@ func deployCluster(clusterName, clusterVersion, topoFile string, opt deployOptio
 		t = t.InitConfig(
 			clusterName,
 			clusterVersion,
+			tidbSpec,
 			inst,
 			globalOptions.User,
 			opt.ignoreConfigCheck,
@@ -429,7 +430,7 @@ func buildMonitoredDeployTask(
 					comp,
 					host,
 					globalOptions.ResourceControl,
-					monitoredOptions,
+					&monitoredOptions,
 					globalOptions.User,
 					meta.DirPaths{
 						Deploy: deployDir,

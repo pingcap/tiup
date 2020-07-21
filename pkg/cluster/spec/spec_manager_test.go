@@ -53,6 +53,18 @@ type TestTopology struct {
 	base BaseTopo
 }
 
+func (t *TestTopology) Validate() error {
+	return nil
+}
+
+func (t *TestTopology) NewPart() Topology {
+	panic("not support")
+}
+
+func (t *TestTopology) MergeTopo(topo Topology) Topology {
+	panic("not support")
+}
+
 func (t *TestTopology) BaseTopo() *BaseTopo {
 	return &t.base
 }

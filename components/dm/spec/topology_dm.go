@@ -592,6 +592,24 @@ func (topo *DMTopologySpecification) BaseTopo() *spec.BaseTopo {
 	}
 }
 
+// NewPart implements ScaleOutTopology interface.
+func (topo *DMTopologySpecification) NewPart() spec.Topology {
+	return &DMTopologySpecification{
+		GlobalOptions: topo.GlobalOptions,
+		ServerConfigs: topo.ServerConfigs,
+	}
+}
+
+// MergeTopo implements ScaleOutTopology interface.
+func (topo *DMTopologySpecification) MergeTopo(rhs spec.Topology) spec.Topology {
+	other, ok := rhs.(*DMTopologySpecification)
+	if !ok {
+		panic("topo should be DMTopologySpecification")
+	}
+
+	return topo.Merge(other)
+}
+
 // GetMasterList returns a list of Master API hosts of the current cluster
 func (topo *DMTopologySpecification) GetMasterList() []string {
 	var masterList []string

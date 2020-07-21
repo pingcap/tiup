@@ -249,6 +249,7 @@ func deployCluster(clusterName, clusterVersion, topoFile string, opt deployOptio
 			InitConfig(
 				clusterName,
 				clusterVersion,
+				dmspec,
 				inst,
 				globalOptions.User,
 				false,

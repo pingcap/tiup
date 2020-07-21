@@ -128,6 +128,7 @@ func scaleIn(clusterName string, options operator.Options) error {
 
 			t := tb.InitConfig(clusterName,
 				metadata.Version,
+				tidbSpec,
 				instance,
 				metadata.User,
 				true, // always ignore config check result in scale in

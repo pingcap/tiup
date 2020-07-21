@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
 
@@ -326,37 +327,36 @@ func (i *DMMasterInstance) InitConfig(e executor.Executor, clusterName, clusterV
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DMMasterInstance) ScaleConfig(e executor.Executor, b *spec.Specification, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
-	panic("TODO")
-	/*
-		if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
-			return err
-		}
+func (i *DMMasterInstance) ScaleConfig(e executor.Executor, topo spec.Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
+		return err
+	}
 
-		c := b
-		spec := i.InstanceSpec.(MasterSpec)
-		cfg := scripts.NewDMMasterScaleScript(
-			spec.Name,
-			i.GetHost(),
-			paths.Deploy,
-			paths.Data[0],
-			paths.Log,
-		).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithPeerPort(spec.PeerPort).AppendEndpoints(c.Endpoints(deployUser)...)
+	c := topo.(*DMTopologySpecification)
+	spec := i.InstanceSpec.(MasterSpec)
+	cfg := scripts.NewDMMasterScaleScript(
+		spec.Name,
+		i.GetHost(),
+		paths.Deploy,
+		paths.Data[0],
+		paths.Log,
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).WithPeerPort(spec.PeerPort).AppendEndpoints(c.Endpoints(deployUser)...)
 
-		fp := filepath.Join(paths.Cache, fmt.Sprintf("run_dm-master_%s_%d.sh", i.GetHost(), i.GetPort()))
-		log.Infof("script path: %s", fp)
-		if err := cfg.ConfigToFile(fp); err != nil {
-			return err
-		}
+	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_dm-master_%s_%d.sh", i.GetHost(), i.GetPort()))
+	log.Infof("script path: %s", fp)
+	if err := cfg.ConfigToFile(fp); err != nil {
+		return err
+	}
 
-		dst := filepath.Join(paths.Deploy, "scripts", "run_dm-master.sh")
-		if err := e.Transfer(fp, dst, false); err != nil {
-			return err
-		}
-		if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
-			return err
-		}
-	*/
+	dst := filepath.Join(paths.Deploy, "scripts", "run_dm-master.sh")
+	if err := e.Transfer(fp, dst, false); err != nil {
+		return err
+	}
+	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // DMWorkerComponent represents DM worker component.
@@ -436,16 +436,13 @@ func (i *DMWorkerInstance) InitConfig(e executor.Executor, clusterName, clusterV
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DMWorkerInstance) ScaleConfig(e executor.Executor, b *spec.Specification, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
-	panic("TODO")
-	/*
-		s := i.instance.topo
-		defer func() {
-			i.instance.topo = s
-		}()
-		i.instance.topo = b
-		return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
-	*/
+func (i *DMWorkerInstance) ScaleConfig(e executor.Executor, topo spec.Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+	s := i.instance.topo
+	defer func() {
+		i.instance.topo = s
+	}()
+	i.instance.topo = topo.(*DMTopologySpecification)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
 // DMPortalComponent represents DM portal component.
@@ -540,16 +537,13 @@ func (i *DMPortalInstance) InitConfig(e executor.Executor, clusterName, clusterV
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DMPortalInstance) ScaleConfig(e executor.Executor, b *spec.Specification, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
-	panic("TODO")
-	/*
-		s := i.instance.topo
-		defer func() {
-			i.instance.topo = s
-		}()
-		i.instance.topo = b
-		return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
-	*/
+func (i *DMPortalInstance) ScaleConfig(e executor.Executor, topo spec.Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+	s := i.instance.topo
+	defer func() {
+		i.instance.topo = s
+	}()
+	i.instance.topo = topo.(*DMTopologySpecification)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
 // GetGlobalOptions returns cluster topology

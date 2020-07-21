@@ -70,7 +70,7 @@ type Instance interface {
 	Ready(executor.Executor, int64) error
 	WaitForDown(executor.Executor, int64) error
 	InitConfig(e executor.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
-	ScaleConfig(e executor.Executor, cluster *Specification, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
+	ScaleConfig(e executor.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
 	PrepareStart() error
 	ComponentName() string
 	InstanceName() string

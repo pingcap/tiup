@@ -174,8 +174,9 @@ func (b *Builder) BackupComponent(component, fromVer string, host, deployDir str
 }
 
 // InitConfig appends a CopyComponent task to the current task collection
-func (b *Builder) InitConfig(clusterName, clusterVersion string, inst spec.Instance, deployUser string, ignoreCheck bool, paths meta.DirPaths) *Builder {
+func (b *Builder) InitConfig(clusterName, clusterVersion string, specManager *spec.SpecManager, inst spec.Instance, deployUser string, ignoreCheck bool, paths meta.DirPaths) *Builder {
 	b.tasks = append(b.tasks, &InitConfig{
+		specManager:    specManager,
 		clusterName:    clusterName,
 		clusterVersion: clusterVersion,
 		instance:       inst,
@@ -187,11 +188,12 @@ func (b *Builder) InitConfig(clusterName, clusterVersion string, inst spec.Insta
 }
 
 // ScaleConfig generate temporary config on scaling
-func (b *Builder) ScaleConfig(clusterName, clusterVersion string, cluster *spec.Specification, inst spec.Instance, deployUser string, paths meta.DirPaths) *Builder {
+func (b *Builder) ScaleConfig(clusterName, clusterVersion string, specManager *spec.SpecManager, topo spec.Topology, inst spec.Instance, deployUser string, paths meta.DirPaths) *Builder {
 	b.tasks = append(b.tasks, &ScaleConfig{
+		specManager:    specManager,
 		clusterName:    clusterName,
 		clusterVersion: clusterVersion,
-		base:           cluster,
+		base:           topo,
 		instance:       inst,
 		deployUser:     deployUser,
 		paths:          paths,
@@ -200,7 +202,7 @@ func (b *Builder) ScaleConfig(clusterName, clusterVersion string, cluster *spec.
 }
 
 // MonitoredConfig appends a CopyComponent task to the current task collection
-func (b *Builder) MonitoredConfig(name, comp, host string, globResCtl meta.ResourceControl, options spec.MonitoredOptions, deployUser string, paths meta.DirPaths) *Builder {
+func (b *Builder) MonitoredConfig(name, comp, host string, globResCtl meta.ResourceControl, options *spec.MonitoredOptions, deployUser string, paths meta.DirPaths) *Builder {
 	b.tasks = append(b.tasks, &MonitoredConfig{
 		name:       name,
 		component:  comp,

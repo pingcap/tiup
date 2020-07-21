@@ -119,6 +119,10 @@ type BaseTopo struct {
 // Topology represents specification of the  cluster.
 type Topology interface {
 	BaseTopo() *BaseTopo
+	// Validate validates the topology specification and produce error if the
+	// specification invalid (e.g: port conflicts or directory conflicts)
+	Validate() error
+
 	// Instances() []Instance
 	ComponentsByStartOrder() []Component
 	ComponentsByStopOrder() []Component
@@ -127,6 +131,8 @@ type Topology interface {
 	GetMonitoredOptions() *MonitoredOptions
 	// count how many time a path is used by instances in cluster
 	CountDir(host string, dir string) int
+
+	ScaleOutTopology
 }
 
 // BaseMeta is the base info of metadata.
@@ -145,9 +151,37 @@ type Metadata interface {
 	UpgradableMetadata
 }
 
+// ScaleOutTopology represents a scale out metadata.
+type ScaleOutTopology interface {
+	// Inherit existing global configuration. We must assign the inherited values before unmarshalling
+	// because some default value rely on the global options and monitored options.
+	// TODO: we should separate the  unmarshal and setting default value.
+	NewPart() Topology
+	MergeTopo(topo Topology) Topology
+}
+
 // UpgradableMetadata represents a upgradable Metadata.
 type UpgradableMetadata interface {
 	SetVersion(s string)
+}
+
+// NewPart implements ScaleOutTopology interface.
+func (s *Specification) NewPart() Topology {
+	return &Specification{
+		GlobalOptions:    s.GlobalOptions,
+		MonitoredOptions: s.MonitoredOptions,
+		ServerConfigs:    s.ServerConfigs,
+	}
+}
+
+// MergeTopo implements ScaleOutTopology interface.
+func (s *Specification) MergeTopo(topo Topology) Topology {
+	other, ok := topo.(*Specification)
+	if !ok {
+		panic("topo should be Specification")
+	}
+
+	return s.Merge(other)
 }
 
 // GetMonitoredOptions implements Topology interface.
