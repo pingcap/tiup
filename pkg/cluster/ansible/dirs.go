@@ -40,7 +40,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout int64) (spec.Insta
 		User:    user,
 		KeyFile: SSHKeyPath(), // ansible generated keyfile
 		Timeout: time.Second * time.Duration(sshTimeout),
-	}, false) // not using global sudo
+	}, false /* not using global sudo */, false)
 	log.Debugf("Detecting deploy paths on %s...", hostName)
 
 	stdout, err := readStartScript(e, ins.Role(), hostName, ins.GetMainPort())

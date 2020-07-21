@@ -11,15 +11,8 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	"github.com/pingcap/tiup/pkg/utils"
 )
-
-// ErrorWaitTimeout is used to represent timeout of a command
-// Example:
-//		_ = syscall.Kill(cmd.Process.Pid, syscall.SIGKILL)
-//		if err := WaitContext(context.WithTimeout(context.Background(), 3), cmd); err == ErrorWaitTimeout {
-//			// Do something
-//		}
-var ErrorWaitTimeout = errors.New("wait command timeout")
 
 // Process represent process to be run by playground
 type Process interface {
@@ -46,7 +39,7 @@ func (p *process) Start() error {
 
 // Wait implements Instance interface.
 func (p *process) Wait(ctx context.Context) error {
-	return WaitContext(ctx, p.cmd)
+	return utils.WaitContext(ctx, p.cmd)
 }
 
 // Pid implements Instance interface.
@@ -96,24 +89,4 @@ func NewComponentProcess(ctx context.Context, dir, binPath, component string, ve
 	}
 
 	return &process{cmd: cmd}, nil
-}
-
-// WaitContext wrap cmd.Wait with context
-func WaitContext(ctx context.Context, cmd *exec.Cmd) error {
-	// We use cmd.Process.Wait instead of cmd.Wait because cmd.Wait is not reenterable
-	c := make(chan error, 1)
-	go func() {
-		if cmd == nil || cmd.Process == nil {
-			c <- nil
-		} else {
-			_, err := cmd.Process.Wait()
-			c <- err
-		}
-	}()
-	select {
-	case <-ctx.Done():
-		return ErrorWaitTimeout
-	case err := <-c:
-		return err
-	}
 }
