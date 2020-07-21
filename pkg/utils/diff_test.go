@@ -70,7 +70,7 @@ strs:
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, IsNil)
 
-	// add editable element
+	// add editable element (without specifing alias)
 	err = yaml.Unmarshal([]byte(`
 ints: [11, 13, 12]
 strs:
@@ -89,7 +89,7 @@ ints: [11, 12, 13, 14]
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "immutable field changed: (create) IntSlice.3 '<nil>' -> '14'")
+	c.Assert(err.Error(), Equals, "immutable field changed: added IntSlice.3 with value '14'")
 }
 
 func (d *diffSuite) TestValidateSpecDiff2(c *C) {
@@ -144,7 +144,7 @@ slice1:
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "immutable field changed: (update) slice1.1.IntElem '42' -> '43'")
+	c.Assert(err.Error(), Equals, "immutable field changed: slice1.1.IntElem changed from '42' to '43'")
 
 	// Add item with immutable field to editable slice
 	err = yaml.Unmarshal([]byte(`
@@ -166,7 +166,7 @@ slice1:
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "immutable field changed: (create) slice1.2.IntElem '<nil>' -> '42'")
+	c.Assert(err.Error(), Equals, "immutable field changed: added slice1.2.IntElem with value '42'")
 
 	// Delete item with immutable field from editable slice
 	err = yaml.Unmarshal([]byte(`
@@ -180,7 +180,7 @@ slice1:
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "immutable field changed: (delete) slice1.1.IntElem '42' -> '<nil>'")
+	c.Assert(err.Error(), Equals, "immutable field changed: removed slice1.1.IntElem with value '42'")
 }
 
 func (d *diffSuite) TestValidateSpecDiff3(c *C) {
@@ -235,7 +235,7 @@ slice2:
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "immutable field changed: (update) StructSlice2.1.IntElem '42' -> '43'")
+	c.Assert(err.Error(), Equals, "immutable field changed: StructSlice2.1.IntElem changed from '42' to '43'")
 
 	// Add item to immutable slice
 	err = yaml.Unmarshal([]byte(`
@@ -255,7 +255,7 @@ slice2:
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "immutable field changed: (create) StructSlice2.2.str1 '<nil>' -> 'strv31', (create) StructSlice2.2.str2 '<nil>' -> 'strv32'")
+	c.Assert(err.Error(), Equals, "immutable field changed: added StructSlice2.2.str1 with value 'strv31', added StructSlice2.2.str2 with value 'strv32'")
 
 	// Remove item from immutable slice
 	err = yaml.Unmarshal([]byte(`
@@ -269,7 +269,7 @@ slice2:
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "immutable field changed: (delete) StructSlice2.1.str1 'strv12' -> '<nil>', (delete) StructSlice2.1.str2 'strv22' -> '<nil>', (delete) StructSlice2.1.IntElem '42' -> '<nil>', (delete) StructSlice2.1.interface '12' -> '<nil>'")
+	c.Assert(err.Error(), Equals, "immutable field changed: removed StructSlice2.1.str1 with value 'strv12', removed StructSlice2.1.str2 with value 'strv22', removed StructSlice2.1.IntElem with value '42', removed StructSlice2.1.interface with value '12'")
 }
 
 func (d *diffSuite) TestValidateSpecDiff4(c *C) {

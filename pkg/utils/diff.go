@@ -94,7 +94,16 @@ func ValidateSpecDiff(s1, s2 interface{}) error {
 				continue
 			}
 		}
-		msg = append(msg, fmt.Sprintf("(%s) %s '%v' -> '%v'", c.Type, buildFieldPath(c.Path), c.From, c.To))
+
+		// build error messages
+		switch c.Type {
+		case diff.CREATE:
+			msg = append(msg, fmt.Sprintf("added %s with value '%v'", buildFieldPath(c.Path), c.To))
+		case diff.DELETE:
+			msg = append(msg, fmt.Sprintf("removed %s with value '%v'", buildFieldPath(c.Path), c.From))
+		case diff.UPDATE:
+			msg = append(msg, fmt.Sprintf("%s changed from '%v' to '%v'", buildFieldPath(c.Path), c.From, c.To))
+		}
 	}
 
 	if len(msg) > 0 {
