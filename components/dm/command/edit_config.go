@@ -24,7 +24,6 @@ import (
 	"github.com/fatih/color"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster/edit"
 	"github.com/pingcap/tiup/pkg/cluster/meta"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -87,7 +86,7 @@ func editTopo(clusterName string, metadata *meta.DMMeta) error {
 		return perrs.AddStack(err)
 	}
 
-	err = edit.OpenFileInEditor(name)
+	err = tiuputils.OpenFileInEditor(name)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -110,7 +109,7 @@ func editTopo(clusterName string, metadata *meta.DMMeta) error {
 		return nil
 	}
 
-	edit.ShowDiff(string(data), string(newData), os.Stdout)
+	tiuputils.ShowDiff(string(data), string(newData), os.Stdout)
 
 	if !skipConfirm {
 		if err := cliutil.PromptForConfirmOrAbortError(
