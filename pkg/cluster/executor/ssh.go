@@ -247,36 +247,26 @@ func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 		timeout = append(timeout, executeDefaultTimeout)
 	}
 
+	ctx := context.Background()
+	if len(timeout) > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(context.Background(), timeout[0])
+		defer cancel()
+	}
+
+	var command *exec.Cmd
+	args := []string{"ssh", "-o", "StrictHostKeyChecking=no", fmt.Sprintf("%s@%s", e.Config.User, e.Config.Host), cmd}
+	if e.Config.Password != "" {
+		command = exec.CommandContext(ctx, "sshpass", append([]string{"-p", e.Config.Password}, args...)...)
+	} else {
+		command = exec.CommandContext(ctx, "ssh", args[1:]...)
+	}
+
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
-	var command *exec.Cmd
-	if e.Config.Password != "" {
-		command = exec.Command(
-			"sshpass", "-p", e.Config.Password, "ssh", "-o", "StrictHostKeyChecking=no",
-			fmt.Sprintf("%s@%s", e.Config.User, e.Config.Host), cmd,
-		)
-	} else {
-		command = exec.Command("ssh", "-o", "StrictHostKeyChecking=no",
-			fmt.Sprintf("%s@%s", e.Config.User, e.Config.Host), cmd,
-		)
-	}
-
 	command.Stdout = stdout
 	command.Stderr = stderr
-	if e.Config.Password != "" {
-		command.Stdin = bytes.NewBufferString(e.Config.Password)
-	}
-
-	err := command.Start()
-	if err == nil {
-		if len(timeout) > 0 {
-			ctx, cancel := context.WithTimeout(context.Background(), timeout[0])
-			defer cancel()
-			err = utils.WaitContext(ctx, command)
-		} else {
-			err = command.Wait()
-		}
-	}
+	err := command.Run()
 
 	zap.L().Info("SSHCommand",
 		zap.String("host", e.Config.Host),
@@ -310,5 +300,37 @@ func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 // This function is based on easyssh.MakeConfig.Scp() but with support of copying
 // file from remote to local.
 func (e *NativeSSHExecutor) Transfer(src string, dst string, download bool) error {
-	panic("test")
+	args := []string{"scp", "-r", "-o", "StrictHostKeyChecking=no"}
+	if download {
+		targetPath := filepath.Dir(dst)
+		if err := utils.CreateDir(targetPath); err != nil {
+			return err
+		}
+		args = append(args, fmt.Sprintf("%s@%s:%s", e.Config.User, e.Config.Host, src), dst)
+	} else {
+		args = append(args, src, fmt.Sprintf("%s@%s:%s", e.Config.User, e.Config.Host, dst))
+	}
+
+	var command *exec.Cmd
+	if e.Config.Password != "" {
+		command = exec.Command("sshpass", append([]string{"-p", e.Config.Password}, args...)...)
+	} else {
+		command = exec.Command("scp", args[1:]...)
+	}
+
+	stdout := new(bytes.Buffer)
+	stderr := new(bytes.Buffer)
+	command.Stdout = stdout
+	command.Stderr = stderr
+	err := command.Run()
+
+	zap.L().Info("SSHCommand",
+		zap.String("host", e.Config.Host),
+		zap.Int("port", e.Config.Port),
+		zap.String("cmd", strings.Join(command.Args, " ")),
+		zap.Error(err),
+		zap.String("stdout", stdout.String()),
+		zap.String("stderr", stderr.String()))
+
+	return err
 }
