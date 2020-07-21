@@ -34,7 +34,7 @@ import (
 // TiFlashSpec represents the TiFlash topology specification in topology.yaml
 type TiFlashSpec struct {
 	Host                 string                 `yaml:"host"`
-	SSHPort              int                    `yaml:"ssh_port,omitempty"`
+	SSHPort              int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported             bool                   `yaml:"imported,omitempty"`
 	TCPPort              int                    `yaml:"tcp_port" default:"9000"`
 	HTTPPort             int                    `yaml:"http_port" default:"8123"`
@@ -47,10 +47,10 @@ type TiFlashSpec struct {
 	LogDir               string                 `yaml:"log_dir,omitempty"`
 	TmpDir               string                 `yaml:"tmp_path,omitempty"`
 	Offline              bool                   `yaml:"offline,omitempty"`
-	NumaNode             string                 `yaml:"numa_node,omitempty"`
-	Config               map[string]interface{} `yaml:"config,omitempty"`
-	LearnerConfig        map[string]interface{} `yaml:"learner_config,omitempty"`
-	ResourceControl      meta.ResourceControl   `yaml:"resource_control,omitempty"`
+	NumaNode             string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config               map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
+	LearnerConfig        map[string]interface{} `yaml:"learner_config,omitempty" validate:"learner_config:editable"`
+	ResourceControl      meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch                 string                 `yaml:"arch,omitempty"`
 	OS                   string                 `yaml:"os,omitempty"`
 }

@@ -56,11 +56,11 @@ type (
 	// specification in topology.yaml
 	GlobalOptions struct {
 		User            string               `yaml:"user,omitempty" default:"tidb"`
-		SSHPort         int                  `yaml:"ssh_port,omitempty" default:"22"`
+		SSHPort         int                  `yaml:"ssh_port,omitempty" default:"22" validate:"ssh_port:editable"`
 		DeployDir       string               `yaml:"deploy_dir,omitempty" default:"deploy"`
 		DataDir         string               `yaml:"data_dir,omitempty" default:"data"`
 		LogDir          string               `yaml:"log_dir,omitempty"`
-		ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty"`
+		ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 		OS              string               `yaml:"os,omitempty" default:"linux"`
 		Arch            string               `yaml:"arch,omitempty" default:"amd64"`
 	}
@@ -72,8 +72,8 @@ type (
 		DeployDir            string               `yaml:"deploy_dir,omitempty"`
 		DataDir              string               `yaml:"data_dir,omitempty"`
 		LogDir               string               `yaml:"log_dir,omitempty"`
-		NumaNode             string               `yaml:"numa_node,omitempty"`
-		ResourceControl      meta.ResourceControl `yaml:"resource_control,omitempty"`
+		NumaNode             string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+		ResourceControl      meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	}
 
 	// ServerConfigs represents the server runtime configuration
@@ -90,9 +90,9 @@ type (
 
 	// Specification represents the specification of topology.yaml
 	Specification struct {
-		GlobalOptions    GlobalOptions       `yaml:"global,omitempty"`
-		MonitoredOptions MonitoredOptions    `yaml:"monitored,omitempty"`
-		ServerConfigs    ServerConfigs       `yaml:"server_configs,omitempty"`
+		GlobalOptions    GlobalOptions       `yaml:"global,omitempty" validate:"global:editable"`
+		MonitoredOptions MonitoredOptions    `yaml:"monitored,omitempty" validate:"monitored:editable"`
+		ServerConfigs    ServerConfigs       `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
 		TiDBServers      []TiDBSpec          `yaml:"tidb_servers"`
 		TiKVServers      []TiKVSpec          `yaml:"tikv_servers"`
 		TiFlashServers   []TiFlashSpec       `yaml:"tiflash_servers"`

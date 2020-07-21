@@ -23,11 +23,11 @@ import (
 	"github.com/fatih/color"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster/edit"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
+	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
@@ -93,7 +93,7 @@ func editTopo(clusterName string, metadata *spec.ClusterMeta) error {
 		return perrs.AddStack(err)
 	}
 
-	err = edit.OpenFileInEditor(name)
+	err = tiuputils.OpenFileInEditor(name)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -116,7 +116,11 @@ func editTopo(clusterName string, metadata *spec.ClusterMeta) error {
 		return nil
 	}
 
-	edit.ShowDiff(string(data), string(newData), os.Stdout)
+	// report error if immutable field has been changed
+	if err := tiuputils.ValidateSpecDiff(metadata.Topology, newTopo); err != nil {
+		return err
+	}
+	tiuputils.ShowDiff(string(data), string(newData), os.Stdout)
 
 	if !skipConfirm {
 		if err := cliutil.PromptForConfirmOrAbortError(

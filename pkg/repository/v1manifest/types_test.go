@@ -22,8 +22,8 @@ import (
 func TestComponentList(t *testing.T) {
 	manifest := &Index{
 		Components: map[string]ComponentItem{
-			"comp1": ComponentItem{},
-			"comp2": ComponentItem{Yanked: true},
+			"comp1": {},
+			"comp2": {Yanked: true},
 		},
 	}
 
