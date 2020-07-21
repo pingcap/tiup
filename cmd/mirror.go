@@ -230,7 +230,7 @@ func newMirrorModifyCmd() *cobra.Command {
 	yanked := false
 
 	cmd := &cobra.Command{
-		Use:  "modify <comp-name> [flags]",
+		Use:  "modify <component>[:version] [flags]",
 		Long: "modify component attributes (hidden, standalone, yanked)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
@@ -253,7 +253,8 @@ func newMirrorModifyCmd() *cobra.Command {
 				return err
 			}
 
-			m, err := env.V1Repository().FetchComponentManifest(args[0])
+			comp, ver := environment.ParseCompVersion(args[0])
+			m, err := env.V1Repository().FetchComponentManifest(comp)
 			if err != nil {
 				return err
 			}
@@ -261,7 +262,7 @@ func newMirrorModifyCmd() *cobra.Command {
 			if endpoint == "" {
 				endpoint = environment.Mirror()
 			}
-			e := remote.NewEditor(endpoint, args[0]).WithDesc(desc)
+			e := remote.NewEditor(endpoint, comp).WithDesc(desc).WithVersion(ver.String())
 			flagSet := set.NewStringSet()
 			cmd.Flags().Visit(func(f *pflag.Flag) {
 				flagSet.Insert(f.Name)

@@ -79,7 +79,7 @@ var ManifestsConfig = map[string]ty{
 	ManifestTypeComponent: {
 		Filename:  "",
 		Versioned: true,
-		Expire:    time.Hour * 24 * 365, // 1y
+		Expire:    time.Hour * 24 * 365 * 5, // 5y
 		Threshold: 1,
 	},
 	ManifestTypeSnapshot: {

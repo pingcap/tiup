@@ -18,11 +18,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/juju/errors"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 )
 
 // Editor defines the methods to modify a component attrs
 type Editor interface {
+	WithVersion(version string) Editor
 	WithDesc(desc string) Editor
 	Standalone(bool) Editor
 	Hide(bool) Editor
@@ -33,6 +36,7 @@ type Editor interface {
 type editor struct {
 	endpoint    string
 	component   string
+	version     string
 	description string
 	options     map[string]bool
 }
@@ -44,6 +48,12 @@ func NewEditor(endpoint, component string) Editor {
 		component: component,
 		options:   make(map[string]bool),
 	}
+}
+
+// WithVersion set version field
+func (e *editor) WithVersion(version string) Editor {
+	e.version = version
+	return e
 }
 
 // WithDesc set description field
@@ -81,5 +91,20 @@ func (e *editor) Sign(key *v1manifest.KeyInfo, m *v1manifest.Component) error {
 	sid := uuid.New().String()
 	url := fmt.Sprintf("%s/api/v1/component/%s/%s", e.endpoint, sid, e.component)
 
+	if e.version != "" {
+		// Only support modify yanked field for specified versiion
+		for p := range m.Platforms {
+			if v0manifest.Version(e.version).IsNightly() {
+				return errors.New("nightly version can't be yanked")
+			}
+			vi, ok := m.Platforms[p][e.version]
+			if !ok {
+				continue
+			}
+			vi.Yanked = e.options["yanked"]
+			m.Platforms[p][e.version] = vi
+		}
+		return signAndSend(url, m, key, nil)
+	}
 	return signAndSend(url, m, key, e.options)
 }
