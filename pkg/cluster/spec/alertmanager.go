@@ -26,15 +26,15 @@ import (
 // AlertManagerSpec represents the AlertManager topology specification in topology.yaml
 type AlertManagerSpec struct {
 	Host            string               `yaml:"host"`
-	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"editable"`
+	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	WebPort         int                  `yaml:"web_port" default:"9093"`
 	ClusterPort     int                  `yaml:"cluster_port" default:"9094"`
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`
 	DataDir         string               `yaml:"data_dir,omitempty"`
 	LogDir          string               `yaml:"log_dir,omitempty"`
-	NumaNode        string               `yaml:"numa_node,omitempty" validate:"editable"`
-	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"editable"`
+	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string               `yaml:"arch,omitempty"`
 	OS              string               `yaml:"os,omitempty"`
 }

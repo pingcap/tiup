@@ -22,25 +22,25 @@ var _ = Suite(&diffSuite{})
 
 type sampleDataMeta struct {
 	IntSlice     []int                    `yaml:"ints,omitempty"`
-	StrSlice     []string                 `yaml:"strs,omitempty" validate:"editable"`
-	MapSlice     []map[string]interface{} `yaml:"maps,omitempty" validate:"ignore"`
+	StrSlice     []string                 `yaml:"strs,omitempty" validate:"strs:editable"`
+	MapSlice     []map[string]interface{} `yaml:"maps,omitempty" validate:"maps:ignore"`
 	StrElem      string                   `yaml:"stre" validate:"editable"`
-	StructSlice1 []sampleDataElem         `yaml:"slice1" validate:"editable"`
+	StructSlice1 []sampleDataElem         `yaml:"slice1" validate:"slice1:editable"`
 	StructSlice2 []sampleDataElem         `yaml:"slice2,omitempty"`
-	StructSlice3 []sampleDataEditable     `yaml:"slice3,omitempty" validate:"editable"`
+	StructSlice3 []sampleDataEditable     `yaml:"slice3,omitempty" validate:"slice3:editable"`
 }
 
 type sampleDataElem struct {
-	StrElem1       string                   `yaml:"str1" validate:"editable"`
-	StrElem2       string                   `yaml:"str2,omitempty" validate:"editable"`
+	StrElem1       string                   `yaml:"str1" validate:"str1:editable"`
+	StrElem2       string                   `yaml:"str2,omitempty" validate:"str2:editable"`
 	IntElem        int                      `yaml:"int"`
-	InterfaceElem  interface{}              `yaml:"interface,omitempty" validate:"editable"`
-	InterfaceSlice []map[string]interface{} `yaml:"mapslice,omitempty" validate:"editable"`
+	InterfaceElem  interface{}              `yaml:"interface,omitempty" validate:"interface:editable"`
+	InterfaceSlice []map[string]interface{} `yaml:"mapslice,omitempty" validate:"mapslice:editable"`
 }
 
 type sampleDataEditable struct {
-	StrElem1 string `yaml:"str1" validate:"editable"`
-	StrElem2 string `yaml:"str2,omitempty" validate:"editable"`
+	StrElem1 string `yaml:"str1" validate:"str1:editable"`
+	StrElem2 string `yaml:"str2,omitempty" validate:"str2:editable"`
 }
 
 func (d *diffSuite) TestValidateSpecDiff1(c *C) {
@@ -144,7 +144,7 @@ slice1:
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "immutable field changed: (update) editable.1.IntElem '42' -> '43'")
+	c.Assert(err.Error(), Equals, "immutable field changed: (update) slice1.1.IntElem '42' -> '43'")
 
 	// Add item with immutable field to editable slice
 	err = yaml.Unmarshal([]byte(`
@@ -166,7 +166,7 @@ slice1:
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "immutable field changed: (create) editable.2.IntElem '<nil>' -> '42'")
+	c.Assert(err.Error(), Equals, "immutable field changed: (create) slice1.2.IntElem '<nil>' -> '42'")
 
 	// Delete item with immutable field from editable slice
 	err = yaml.Unmarshal([]byte(`
@@ -180,7 +180,7 @@ slice1:
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "immutable field changed: (delete) editable.1.IntElem '42' -> '<nil>'")
+	c.Assert(err.Error(), Equals, "immutable field changed: (delete) slice1.1.IntElem '42' -> '<nil>'")
 }
 
 func (d *diffSuite) TestValidateSpecDiff3(c *C) {
@@ -255,7 +255,7 @@ slice2:
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "immutable field changed: (create) StructSlice2.2.editable '<nil>' -> 'strv31', (create) StructSlice2.2.editable '<nil>' -> 'strv32'")
+	c.Assert(err.Error(), Equals, "immutable field changed: (create) StructSlice2.2.str1 '<nil>' -> 'strv31', (create) StructSlice2.2.str2 '<nil>' -> 'strv32'")
 
 	// Remove item from immutable slice
 	err = yaml.Unmarshal([]byte(`
@@ -269,7 +269,7 @@ slice2:
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "immutable field changed: (delete) StructSlice2.1.editable 'strv12' -> '<nil>', (delete) StructSlice2.1.editable 'strv22' -> '<nil>', (delete) StructSlice2.1.IntElem '42' -> '<nil>', (delete) StructSlice2.1.editable '12' -> '<nil>'")
+	c.Assert(err.Error(), Equals, "immutable field changed: (delete) StructSlice2.1.str1 'strv12' -> '<nil>', (delete) StructSlice2.1.str2 'strv22' -> '<nil>', (delete) StructSlice2.1.IntElem '42' -> '<nil>', (delete) StructSlice2.1.interface '12' -> '<nil>'")
 }
 
 func (d *diffSuite) TestValidateSpecDiff4(c *C) {

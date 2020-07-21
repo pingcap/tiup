@@ -27,6 +27,9 @@ const (
 	validateTagName     = "validate"
 	validateTagEditable = "editable"
 	validateTagIgnore   = "ignore"
+	// r3labs/diff drops everything after the first ',' in the tag value, so we use a different
+	// seperator for the tag value and its options
+	validateTagSeperator = ":"
 )
 
 // ShowDiff write diff result into the Writer.
@@ -60,8 +63,9 @@ func ValidateSpecDiff(s1, s2 interface{}) error {
 	msg := make([]string, 0)
 	for _, c := range changelog {
 		if len(c.Path) > 0 {
+			_, leafCtl := parseValidateTagValue(c.Path[len(c.Path)-1])
 			// c.Path will be the tag value if TagName matched on the field
-			if c.Type == diff.UPDATE && c.Path[len(c.Path)-1] == validateTagEditable {
+			if c.Type == diff.UPDATE && leafCtl == validateTagEditable {
 				// If the field is marked as editable, it is allowed to be modified no matter
 				// its parent level element is marked as editable or not
 				continue
@@ -70,15 +74,16 @@ func ValidateSpecDiff(s1, s2 interface{}) error {
 			pathEditable := true
 			pathIgnore := false
 			for _, p := range c.Path {
-				if _, err := strconv.Atoi(p); err == nil {
+				key, ctl := parseValidateTagValue(p)
+				if _, err := strconv.Atoi(key); err == nil {
 					// ignore slice offset counts
 					continue
 				}
-				if p == validateTagIgnore {
+				if ctl == validateTagIgnore {
 					pathIgnore = true
 					continue
 				}
-				if p != validateTagEditable {
+				if ctl != validateTagEditable {
 					pathEditable = false
 				}
 			}
@@ -89,11 +94,42 @@ func ValidateSpecDiff(s1, s2 interface{}) error {
 				continue
 			}
 		}
-		msg = append(msg, fmt.Sprintf("(%s) %s '%v' -> '%v'", c.Type, strings.Join(c.Path, "."), c.From, c.To))
+		msg = append(msg, fmt.Sprintf("(%s) %s '%v' -> '%v'", c.Type, buildFieldPath(c.Path), c.From, c.To))
 	}
 
 	if len(msg) > 0 {
 		return fmt.Errorf("immutable field changed: %s", strings.Join(msg, ", "))
 	}
 	return nil
+}
+
+func parseValidateTagValue(v string) (string, string) {
+	key := ""
+	ctl := ""
+	pvs := strings.Split(v, validateTagSeperator)
+	switch len(pvs) {
+	case 1:
+		// if only one field is set in tag value
+		// use it as both the field name and control command
+		key = pvs[0]
+		ctl = pvs[0]
+	case 2:
+		key = pvs[0]
+		ctl = pvs[1]
+	default:
+		panic(fmt.Sprintf("invalid tag value %s for %s, only one or two fields allowed", v, validateTagName))
+	}
+
+	return key, ctl
+}
+
+func buildFieldPath(rawPath []string) string {
+	namedPath := make([]string, 0)
+	for _, p := range rawPath {
+		pvs := strings.Split(p, validateTagSeperator)
+		if len(pvs) >= 1 {
+			namedPath = append(namedPath, pvs[0])
+		}
+	}
+	return strings.Join(namedPath, ".")
 }

@@ -32,13 +32,13 @@ import (
 // TiSparkMasterSpec is the topology specification for TiSpark master node
 type TiSparkMasterSpec struct {
 	Host         string                 `yaml:"host"`
-	SSHPort      int                    `yaml:"ssh_port,omitempty" validate:"editable"`
+	SSHPort      int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported     bool                   `yaml:"imported,omitempty"`
 	Port         int                    `yaml:"port" default:"7077"`
 	WebPort      int                    `yaml:"web_port" default:"8080"`
 	DeployDir    string                 `yaml:"deploy_dir,omitempty"`
-	SparkConfigs map[string]interface{} `yaml:"spark_config,omitempty" validate:"editable"`
-	SparkEnvs    map[string]string      `yaml:"spark_env,omitempty" validate:"editable"`
+	SparkConfigs map[string]interface{} `yaml:"spark_config,omitempty" validate:"spark_config:editable"`
+	SparkEnvs    map[string]string      `yaml:"spark_env,omitempty" validate:"spark_env:editable"`
 	Arch         string                 `yaml:"arch,omitempty"`
 	OS           string                 `yaml:"os,omitempty"`
 }
@@ -72,7 +72,7 @@ func (s TiSparkMasterSpec) Status(pdList ...string) string {
 // TiSparkWorkerSpec is the topology specification for TiSpark slave nodes
 type TiSparkWorkerSpec struct {
 	Host      string `yaml:"host"`
-	SSHPort   int    `yaml:"ssh_port,omitempty" validate:"editable"`
+	SSHPort   int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported  bool   `yaml:"imported,omitempty"`
 	Port      int    `yaml:"port" default:"7078"`
 	WebPort   int    `yaml:"web_port" default:"8081"`
