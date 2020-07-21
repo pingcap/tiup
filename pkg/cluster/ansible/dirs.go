@@ -15,9 +15,11 @@ package ansible
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -123,6 +125,21 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout int64) (spec.Insta
 				newIns.DeployDir = strings.Trim(strings.Split(line, " ")[1], "\"")
 				continue
 			}
+
+			// exec bin/tiflash/tiflash server --config-file conf/tiflash.toml
+			if strings.Contains(line, "-config-file") {
+				// parser the config file for `path` and `tmp_path`
+				part := strings.Split(line, " ")
+				fname := part[len(part)-1]
+				fname = strings.TrimSpace(fname)
+				if !filepath.IsAbs(fname) {
+					fname = filepath.Join(newIns.DeployDir, fname)
+				}
+				err := parseTiflashConfig(e, &newIns, fname)
+				if err != nil {
+					return nil, errors.AddStack(err)
+				}
+			}
 		}
 		return newIns, nil
 	case spec.ComponentPump:
@@ -223,6 +240,49 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout int64) (spec.Insta
 		return newIns, nil
 	}
 	return ins, nil
+}
+
+func parseTiflashConfig(e *executor.SSHExecutor, spec *spec.TiFlashSpec, fname string) error {
+	data, err := readFile(e, fname)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	err = parseTiflashConfigFromFileData(spec, data)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	return nil
+}
+
+func parseTiflashConfigFromFileData(spec *spec.TiFlashSpec, data []byte) error {
+	cfg := make(map[string]interface{})
+
+	err := toml.Unmarshal(data, &cfg)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	if path, ok := cfg["path"]; ok {
+		spec.DataDir = fmt.Sprintf("%v", path)
+	}
+
+	if tmpPath, ok := cfg["tmp_path"]; ok {
+		spec.TmpDir = fmt.Sprintf("%v", tmpPath)
+	}
+
+	return nil
+}
+
+func readFile(e *executor.SSHExecutor, fname string) (data []byte, err error) {
+	cmd := fmt.Sprintf("cat %s", fname)
+	stdout, stderr, err := e.Execute(cmd, false)
+	if err != nil {
+		return nil, errors.Annotatef(err, "stderr: %s", stderr)
+	}
+
+	return stdout, nil
 }
 
 func readStartScript(e *executor.SSHExecutor, component, host string, port int) (string, error) {
