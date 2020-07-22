@@ -50,6 +50,11 @@ func (m *ClusterMeta) SetVersion(s string) {
 	m.Version = s
 }
 
+// SetUser implement UpgradableMetadata interface.
+func (m *ClusterMeta) SetUser(s string) {
+	m.User = s
+}
+
 // GetTopology implement Metadata interface.
 func (m *ClusterMeta) GetTopology() Topology {
 	return m.Topology
@@ -80,6 +85,7 @@ func AuditDir() string {
 }
 
 // SaveClusterMeta saves the cluster meta information to profile directory
+// TODO remove this
 func SaveClusterMeta(clusterName string, cmeta *ClusterMeta) error {
 	// set the cmd version
 	cmeta.OpsVer = version.NewTiUPVersion().String()

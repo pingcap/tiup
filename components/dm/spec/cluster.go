@@ -40,6 +40,11 @@ func (m *DMMeta) SetVersion(s string) {
 	m.Version = s
 }
 
+// SetUser implement UpgradableMetadata interface.
+func (m *DMMeta) SetUser(s string) {
+	m.User = s
+}
+
 // GetTopology implements Metadata interface.
 func (m *DMMeta) GetTopology() cspec.Topology {
 	return m.Topology
@@ -67,7 +72,9 @@ func (m *DMMeta) GetBaseMeta() *cspec.BaseMeta {
 func GetSpecManager() *cspec.SpecManager {
 	if specManager == nil {
 		specManager = cspec.NewSpec(filepath.Join(cspec.ProfileDir(), cspec.TiOpsClusterDir), func() cspec.Metadata {
-			return new(DMMeta)
+			return &DMMeta{
+				Topology: new(DMTopologySpecification),
+			}
 		})
 	}
 	return specManager

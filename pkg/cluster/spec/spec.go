@@ -163,6 +163,7 @@ type ScaleOutTopology interface {
 // UpgradableMetadata represents a upgradable Metadata.
 type UpgradableMetadata interface {
 	SetVersion(s string)
+	SetUser(u string)
 }
 
 // NewPart implements ScaleOutTopology interface.

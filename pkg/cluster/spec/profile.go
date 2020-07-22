@@ -64,7 +64,9 @@ func Initialize(base string) error {
 
 	clusterBaseDir := filepath.Join(profileDir, TiOpsClusterDir)
 	tidbSpec = NewSpec(clusterBaseDir, func() Metadata {
-		return new(ClusterMeta)
+		return &ClusterMeta{
+			Topology: new(Specification),
+		}
 	})
 	initialized = true
 	// make sure the dir exist

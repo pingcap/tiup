@@ -38,6 +38,7 @@ import (
 )
 
 var (
+	// nolint
 	errNS       = errorx.NewNamespace("cmd")
 	rootCmd     *cobra.Command
 	gOpt        operator.Options

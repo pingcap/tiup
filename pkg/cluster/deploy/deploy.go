@@ -22,6 +22,7 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
@@ -29,6 +30,13 @@ import (
 	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v2"
+)
+
+//revive:disable:exported
+
+var (
+	errNSDeploy            = errorx.NewNamespace("deploy")
+	errDeployNameDuplicate = errNSDeploy.NewType("name_dup", errutil.ErrTraitPreCheck)
 )
 
 // Deployer to deploy a cluster.
@@ -741,6 +749,240 @@ type ScaleOutOptions struct {
 	UsePassword  bool   // use password instead of identity file for ssh connection
 }
 
+// DeployOptions contains the options for scale out.
+// TODO: merge ScaleOutOptions, should check config too when scale out.
+type DeployOptions struct {
+	User              string // username to login to the SSH server
+	IdentityFile      string // path to the private key file
+	UsePassword       bool   // use password instead of identity file for ssh connection
+	IgnoreConfigCheck bool   // ignore config check result
+}
+
+// Deploy a cluster.
+func (d *Deployer) Deploy(
+	clusterName string,
+	clusterVersion string,
+	topoFile string,
+	opt DeployOptions,
+	afterDeploy func(b *task.Builder, newPart spec.Topology),
+	skipConfirm bool,
+	optTimeout int64,
+	sshTimeout int64,
+) error {
+	if err := clusterutil.ValidateClusterNameOrError(clusterName); err != nil {
+		return err
+	}
+
+	exist, err := d.specManager.Exist(clusterName)
+	if err != nil {
+		return perrs.AddStack(err)
+	}
+
+	if exist {
+		// FIXME: When change to use args, the suggestion text need to be updated.
+		return errDeployNameDuplicate.
+			New("Cluster name '%s' is duplicated", clusterName).
+			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
+	}
+
+	metadata := d.specManager.NewMetadata()
+	topo := metadata.GetTopology()
+
+	if err := clusterutil.ParseTopologyYaml(topoFile, &topo); err != nil {
+		return err
+	}
+
+	base := topo.BaseTopo()
+
+	if err := prepare.CheckClusterPortConflict(d.specManager, clusterName, topo); err != nil {
+		return err
+	}
+	if err := prepare.CheckClusterDirConflict(d.specManager, clusterName, topo); err != nil {
+		return err
+	}
+
+	if !skipConfirm {
+		if err := d.confirmTopology(clusterName, clusterVersion, topo, set.NewStringSet()); err != nil {
+			return err
+		}
+	}
+
+	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(d.specManager.Path(clusterName), 0755); err != nil {
+		return errorx.InitializationFailed.
+			Wrap(err, "Failed to create cluster metadata directory '%s'", d.specManager.Path(clusterName)).
+			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
+	}
+
+	var (
+		envInitTasks      []*task.StepDisplay // tasks which are used to initialize environment
+		downloadCompTasks []*task.StepDisplay // tasks which are used to download components
+		deployCompTasks   []*task.StepDisplay // tasks which are used to copy components to remote host
+	)
+
+	// Initialize environment
+	uniqueHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
+	globalOptions := base.GlobalOptions
+	var iterErr error // error when itering over instances
+	iterErr = nil
+	topo.IterInstance(func(inst spec.Instance) {
+		if _, found := uniqueHosts[inst.GetHost()]; !found {
+			// check for "imported" parameter, it can not be true when scaling out
+			if inst.IsImported() {
+				iterErr = errors.New(
+					"'imported' is set to 'true' for new instance, this is only used " +
+						"for instances imported from tidb-ansible and make no sense when " +
+						"deploying new instances, please delete the line or set it to 'false' for new instances")
+				return // skip the host to avoid issues
+			}
+
+			uniqueHosts[inst.GetHost()] = hostInfo{
+				ssh:  inst.GetSSHPort(),
+				os:   inst.OS(),
+				arch: inst.Arch(),
+			}
+			var dirs []string
+			for _, dir := range []string{globalOptions.DeployDir, globalOptions.LogDir} {
+				if dir == "" {
+					continue
+				}
+				dirs = append(dirs, clusterutil.Abs(globalOptions.User, dir))
+			}
+			// the default, relative path of data dir is under deploy dir
+			if strings.HasPrefix(globalOptions.DataDir, "/") {
+				dirs = append(dirs, globalOptions.DataDir)
+			}
+			t := task.NewBuilder().
+				RootSSH(
+					inst.GetHost(),
+					inst.GetSSHPort(),
+					opt.User,
+					sshConnProps.Password,
+					sshConnProps.IdentityFile,
+					sshConnProps.IdentityFilePassphrase,
+					sshTimeout,
+				).
+				EnvInit(inst.GetHost(), globalOptions.User).
+				Mkdir(globalOptions.User, inst.GetHost(), dirs...).
+				BuildAsStep(fmt.Sprintf("  - Prepare %s:%d", inst.GetHost(), inst.GetSSHPort()))
+			envInitTasks = append(envInitTasks, t)
+		}
+	})
+
+	if iterErr != nil {
+		return iterErr
+	}
+
+	// Download missing component
+	downloadCompTasks = prepare.BuildDownloadCompTasks(clusterVersion, topo)
+
+	// Deploy components to remote
+	topo.IterInstance(func(inst spec.Instance) {
+		version := spec.ComponentVersion(inst.ComponentName(), clusterVersion)
+		deployDir := clusterutil.Abs(globalOptions.User, inst.DeployDir())
+		// data dir would be empty for components which don't need it
+		dataDirs := clusterutil.MultiDirAbs(globalOptions.User, inst.DataDir())
+		// log dir will always be with values, but might not used by the component
+		logDir := clusterutil.Abs(globalOptions.User, inst.LogDir())
+		// Deploy component
+		// prepare deployment server
+		t := task.NewBuilder().
+			UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, sshTimeout).
+			Mkdir(globalOptions.User, inst.GetHost(),
+				deployDir, logDir,
+				filepath.Join(deployDir, "bin"),
+				filepath.Join(deployDir, "conf"),
+				filepath.Join(deployDir, "scripts")).
+			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
+
+		// copy dependency component if needed
+		switch inst.ComponentName() {
+		case spec.ComponentTiSpark:
+			t = t.DeploySpark(inst, version, "" /* default srcPath */, deployDir)
+		default:
+			t = t.CopyComponent(
+				inst.ComponentName(),
+				inst.OS(),
+				inst.Arch(),
+				version,
+				"", // use default srcPath
+				inst.GetHost(),
+				deployDir,
+			)
+		}
+
+		// generate configs for the component
+		t = t.InitConfig(
+			clusterName,
+			clusterVersion,
+			d.specManager,
+			inst,
+			globalOptions.User,
+			opt.IgnoreConfigCheck,
+			meta.DirPaths{
+				Deploy: deployDir,
+				Data:   dataDirs,
+				Log:    logDir,
+				Cache:  d.specManager.Path(clusterName, spec.TempConfigPath),
+			},
+		)
+
+		deployCompTasks = append(deployCompTasks,
+			t.BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", inst.ComponentName(), inst.GetHost())),
+		)
+	})
+
+	// Deploy monitor relevant components to remote
+	dlTasks, dpTasks := buildMonitoredDeployTask(
+		d.specManager,
+		clusterName,
+		uniqueHosts,
+		globalOptions,
+		topo.GetMonitoredOptions(),
+		clusterVersion,
+		sshTimeout,
+	)
+	downloadCompTasks = append(downloadCompTasks, dlTasks...)
+	deployCompTasks = append(deployCompTasks, dpTasks...)
+
+	builder := task.NewBuilder().
+		Step("+ Generate SSH keys",
+			task.NewBuilder().SSHKeyGen(d.specManager.Path(clusterName, "ssh", "id_rsa")).Build()).
+		ParallelStep("+ Download TiDB components", downloadCompTasks...).
+		ParallelStep("+ Initialize target host environments", envInitTasks...).
+		ParallelStep("+ Copy files", deployCompTasks...)
+
+	if afterDeploy != nil {
+		afterDeploy(builder, topo)
+	}
+
+	t := builder.Build()
+
+	if err := t.Execute(task.NewContext()); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.AddStack(err)
+	}
+
+	metadata.SetUser(globalOptions.User)
+	metadata.SetVersion(clusterVersion)
+	err = d.specManager.SaveMeta(clusterName, metadata)
+
+	if err != nil {
+		return perrs.AddStack(err)
+	}
+
+	hint := color.New(color.Bold).Sprintf("%s start %s", cliutil.OsArgs0(), clusterName)
+	log.Infof("Deployed cluster `%s` successfully, you can start the cluster via `%s`", clusterName, hint)
+	return nil
+}
+
 // ScaleOut scale out the cluster.
 func (d *Deployer) ScaleOut(
 	clusterName string,
@@ -1111,7 +1353,14 @@ func (d *Deployer) confirmTopology(clusterName, version string, topo spec.Topolo
 	log.Warnf("    1. If the topology is not what you expected, check your yaml file.")
 	log.Warnf("    2. Please confirm there is no port/directory conflicts in same host.")
 	if len(patchedRoles) != 0 {
-		log.Errorf("    3. The component marked as `patched` has been replaced by previours patch command.")
+		log.Errorf("    3. The component marked as `patched` has been replaced by previous patch command.")
+	}
+
+	if spec, ok := topo.(*spec.Specification); ok {
+		if len(spec.TiSparkMasters) > 0 || len(spec.TiSparkWorkers) > 0 {
+			log.Warnf("There are TiSpark nodes defined in the topology, please note that you'll need to manually install Java Runtime Environment (JRE) 8 on the host, other wise the TiSpark nodes will fail to start.")
+			log.Warnf("You may read the OpenJDK doc for a reference: https://openjdk.java.net/install/")
+		}
 	}
 
 	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
