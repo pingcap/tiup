@@ -86,3 +86,6 @@ SPARK_WORKER_PORT={{.WorkerPort}}
 {{- if ne .WorkerUIPort 0}}
 SPARK_WORKER_WEBUI_PORT={{.WorkerUIPort}}
 {{- end}}
+{{- if ne .TiSparkLocalIP ""}}
+SPARK_LOCAL_IP={{.TiSparkLocalIP}}
+{{- end}}
