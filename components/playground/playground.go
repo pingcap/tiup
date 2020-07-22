@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"os/user"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -359,7 +360,36 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 	return nil
 }
 
-func (p *Playground) sanitizeConfig(boot instance.Config, cfg *instance.Config) {
+func (p *Playground) absDir(dir string) (string, error) {
+	if dir == "" {
+		return "", nil
+	}
+
+	if !filepath.IsAbs(dir) && !strings.HasPrefix(dir, "~/") {
+		wd := os.Getenv(localdata.EnvNameWorkDir)
+		if wd == "" {
+			return "", errors.New("playground running at non-tiup mode")
+		}
+		dir = filepath.Join(wd, dir)
+	}
+
+	if strings.HasPrefix(dir, "~/") {
+		usr, err := user.Current()
+		if err != nil {
+			return "", errors.Annotatef(err, "retrieve user home failed")
+		}
+		dir = filepath.Join(usr.HomeDir, dir[2:])
+	}
+
+	path, err := filepath.Abs(dir)
+	if err != nil {
+		return "", errors.AddStack(err)
+	}
+
+	return path, nil
+}
+
+func (p *Playground) sanitizeConfig(boot instance.Config, cfg *instance.Config) error {
 	if cfg.BinPath == "" {
 		cfg.BinPath = boot.BinPath
 	}
@@ -369,24 +399,31 @@ func (p *Playground) sanitizeConfig(boot instance.Config, cfg *instance.Config) 
 	if cfg.Host == "" {
 		cfg.Host = boot.ConfigPath
 	}
+
+	path, err := p.absDir(cfg.ConfigPath)
+	if err != nil {
+		return err
+	}
+	cfg.ConfigPath = path
+	return nil
 }
 
-func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) {
+func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) error {
 	switch cid {
 	case "pd":
-		p.sanitizeConfig(p.bootOptions.pd, cfg)
+		return p.sanitizeConfig(p.bootOptions.pd, cfg)
 	case "tikv":
-		p.sanitizeConfig(p.bootOptions.tikv, cfg)
+		return p.sanitizeConfig(p.bootOptions.tikv, cfg)
 	case "tidb":
-		p.sanitizeConfig(p.bootOptions.tidb, cfg)
+		return p.sanitizeConfig(p.bootOptions.tidb, cfg)
 	case "tiflash":
-		p.sanitizeConfig(p.bootOptions.tiflash, cfg)
+		return p.sanitizeConfig(p.bootOptions.tiflash, cfg)
 	case "pump":
-		p.sanitizeConfig(p.bootOptions.pump, cfg)
+		return p.sanitizeConfig(p.bootOptions.pump, cfg)
 	case "drainer":
-		p.sanitizeConfig(p.bootOptions.drainer, cfg)
+		return p.sanitizeConfig(p.bootOptions.drainer, cfg)
 	default:
-		fmt.Printf("unknow %s in sanitizeConfig", cid)
+		return fmt.Errorf("unknow %s in sanitizeConfig", cid)
 	}
 }
 
@@ -415,7 +452,10 @@ func (p *Playground) addWaitInstance(inst instance.Instance) {
 
 func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 	// Ignore Config.Num, alway one command as scale out one instance.
-	p.sanitizeComponentConfig(cmd.ComponentID, &cmd.Config)
+	err := p.sanitizeComponentConfig(cmd.ComponentID, &cmd.Config)
+	if err != nil {
+		return err
+	}
 	inst, err := p.addInstance(cmd.ComponentID, cmd.Config)
 	if err != nil {
 		return errors.AddStack(err)
@@ -610,6 +650,14 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 }
 
 func (p *Playground) bootCluster(env *environment.Environment, options *bootOptions) error {
+	for _, cfg := range []*instance.Config{&options.pd, &options.tidb, &options.tikv, &options.tiflash, &options.pump, &options.drainer} {
+		path, err := p.absDir(cfg.ConfigPath)
+		if err != nil {
+			return errors.Annotatef(err, "cannot eval absolute directory: %s", cfg.ConfigPath)
+		}
+		cfg.ConfigPath = path
+	}
+
 	p.bootOptions = options
 
 	if options.pd.Num < 1 || options.tidb.Num < 1 || options.tikv.Num < 1 {
