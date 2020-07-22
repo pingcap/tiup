@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	dm "github.com/pingcap/tiup/components/dm/spec"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -100,9 +101,8 @@ func (b *Builder) UpdateMeta(cluster string, metadata *spec.ClusterMeta, deleted
 	return b
 }
 
-/*
 // UpdateDMMeta maintain the dm meta information
-func (b *Builder) UpdateDMMeta(cluster string, metadata *meta.DMMeta, deletedNodeIds []string) *Builder {
+func (b *Builder) UpdateDMMeta(cluster string, metadata *dm.DMMeta, deletedNodeIds []string) *Builder {
 	b.tasks = append(b.tasks, &UpdateDMMeta{
 		cluster:        cluster,
 		metadata:       metadata,
@@ -110,7 +110,6 @@ func (b *Builder) UpdateDMMeta(cluster string, metadata *meta.DMMeta, deletedNod
 	})
 	return b
 }
-*/
 
 // UpdateTopology maintain the topology information
 func (b *Builder) UpdateTopology(cluster string, metadata *spec.ClusterMeta, deletedNodeIds []string) *Builder {

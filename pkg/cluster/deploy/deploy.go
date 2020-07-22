@@ -983,6 +983,125 @@ func (d *Deployer) Deploy(
 	return nil
 }
 
+// ScaleIn the cluster.
+func (d *Deployer) ScaleIn(
+	clusterName string,
+	skipConfirm bool,
+	sshTimeout int64,
+	force bool,
+	nodes []string,
+	scale func(builer *task.Builder, metadata spec.Metadata),
+) error {
+	if !skipConfirm {
+		if err := cliutil.PromptForConfirmOrAbortError(
+			"This operation will delete the %s nodes in `%s` and all their data.\nDo you want to continue? [y/N]:",
+			strings.Join(nodes, ","),
+			color.HiYellowString(clusterName)); err != nil {
+			return err
+		}
+
+		if force {
+			if err := cliutil.PromptForConfirmOrAbortError(
+				"Forcing scale in is unsafe and may result in data lost for stateful components.\nDo you want to continue? [y/N]:",
+			); err != nil {
+				return err
+			}
+		}
+
+		log.Infof("Scale-in nodes...")
+	}
+
+	metadata, err := d.meta(clusterName)
+	if err != nil {
+		return perrs.AddStack(err)
+	}
+
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
+
+	// Regenerate configuration
+	var regenConfigTasks []task.Task
+	hasImported := false
+	deletedNodes := set.NewStringSet(nodes...)
+	for _, component := range topo.ComponentsByStartOrder() {
+		for _, instance := range component.Instances() {
+			if deletedNodes.Exist(instance.ID()) {
+				continue
+			}
+			deployDir := clusterutil.Abs(base.User, instance.DeployDir())
+			// data dir would be empty for components which don't need it
+			dataDirs := clusterutil.MultiDirAbs(base.User, instance.DataDir())
+			// log dir will always be with values, but might not used by the component
+			logDir := clusterutil.Abs(base.User, instance.LogDir())
+
+			// Download and copy the latest component to remote if the cluster is imported from Ansible
+			tb := task.NewBuilder()
+			if instance.IsImported() {
+				switch compName := instance.ComponentName(); compName {
+				case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
+					version := spec.ComponentVersion(compName, base.Version)
+					tb.Download(compName, instance.OS(), instance.Arch(), version).
+						CopyComponent(
+							compName,
+							instance.OS(),
+							instance.Arch(),
+							version,
+							"", // use default srcPath
+							instance.GetHost(),
+							deployDir,
+						)
+				}
+				hasImported = true
+			}
+
+			t := tb.InitConfig(clusterName,
+				base.Version,
+				d.specManager,
+				instance,
+				base.User,
+				true, // always ignore config check result in scale in
+				meta.DirPaths{
+					Deploy: deployDir,
+					Data:   dataDirs,
+					Log:    logDir,
+					Cache:  d.specManager.Path(clusterName, spec.TempConfigPath),
+				},
+			).Build()
+			regenConfigTasks = append(regenConfigTasks, t)
+		}
+	}
+
+	// handle dir scheme changes
+	if hasImported {
+		if err := spec.HandleImportPathMigration(clusterName); err != nil {
+			return err
+		}
+	}
+
+	b := task.NewBuilder().
+		SSHKeySet(
+			d.specManager.Path(clusterName, "ssh", "id_rsa"),
+			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
+		ClusterSSH(topo, base.User, sshTimeout)
+
+	// TODO: support command scale in operation.
+	scale(b, metadata)
+
+	t := b.Parallel(regenConfigTasks...).Build()
+
+	if err := t.Execute(task.NewContext()); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.Trace(err)
+	}
+
+	log.Infof("Scaled cluster `%s` in successfully", clusterName)
+
+	return nil
+}
+
 // ScaleOut scale out the cluster.
 func (d *Deployer) ScaleOut(
 	clusterName string,
