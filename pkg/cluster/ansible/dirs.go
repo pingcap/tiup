@@ -31,7 +31,7 @@ var (
 )
 
 // parseDirs sets values of directories of component
-func parseDirs(user string, ins spec.InstanceSpec, sshTimeout int64) (spec.InstanceSpec, error) {
+func parseDirs(user string, ins spec.InstanceSpec, sshTimeout int64, nativeClient bool) (spec.InstanceSpec, error) {
 	hostName, sshPort := ins.SSH()
 
 	e := executor.NewSSHExecutor(executor.SSHConfig{
@@ -40,7 +40,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout int64) (spec.Insta
 		User:    user,
 		KeyFile: SSHKeyPath(), // ansible generated keyfile
 		Timeout: time.Second * time.Duration(sshTimeout),
-	}, false /* not using global sudo */, false)
+	}, false /* not using global sudo */, nativeClient)
 	log.Debugf("Detecting deploy paths on %s...", hostName)
 
 	stdout, err := readStartScript(e, ins.Role(), hostName, ins.GetMainPort())

@@ -251,6 +251,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 					sshConnProps.IdentityFile,
 					sshConnProps.IdentityFilePassphrase,
 					gOpt.SSHTimeout,
+					gOpt.NativeSSH,
 				).
 				EnvInit(inst.GetHost(), globalOptions.User).
 				Mkdir(globalOptions.User, inst.GetHost(), dirs...).
@@ -277,7 +278,7 @@ func deploy(clusterName, clusterVersion, topoFile string, opt deployOptions) err
 		// Deploy component
 		// prepare deployment server
 		t := task.NewBuilder().
-			UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, gOpt.SSHTimeout).
+			UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, gOpt.SSHTimeout, gOpt.NativeSSH).
 			Mkdir(globalOptions.User, inst.GetHost(),
 				deployDir, logDir,
 				filepath.Join(deployDir, "bin"),
@@ -416,7 +417,7 @@ func buildMonitoredDeployTask(
 			logDir := clusterutil.Abs(globalOptions.User, monitoredOptions.LogDir)
 			// Deploy component
 			t := task.NewBuilder().
-				UserSSH(host, info.ssh, globalOptions.User, gOpt.SSHTimeout).
+				UserSSH(host, info.ssh, globalOptions.User, gOpt.SSHTimeout, gOpt.NativeSSH).
 				Mkdir(globalOptions.User, host,
 					deployDir, dataDir, logDir,
 					filepath.Join(deployDir, "bin"),
