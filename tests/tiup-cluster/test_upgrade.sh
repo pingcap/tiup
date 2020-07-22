@@ -3,7 +3,7 @@
 set -eu
 
 version=${version-v4.0.2}
-old_version=${old_version-v4.0.0-beta.2}
+old_version=${old_version-v3.0.16}
 name=test_upgrade
 topo=./topo/upgrade.yaml
 
@@ -32,6 +32,5 @@ yes | tiup-cluster reload $name --transfer-timeout 60
 tiup-cluster exec $name -R pump --command "grep '2 mib' /home/tidb/deploy/pump-8250/conf/pump.toml"
 
 tiup-cluster _test $name writable
-
 
 yes | tiup-cluster destroy $name
