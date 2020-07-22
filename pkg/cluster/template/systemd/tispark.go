@@ -28,13 +28,14 @@ type TiSparkConfig struct {
 	ServiceName string
 	User        string
 	DeployDir   string
+	JavaHome    string
 	// Takes one of no, on-success, on-failure, on-abnormal, on-watchdog, on-abort, or always.
 	// The Template set as always if this is not setted.
 	Restart string
 }
 
 // NewTiSparkConfig returns a Config with given arguments
-func NewTiSparkConfig(service, user, deployDir string) *TiSparkConfig {
+func NewTiSparkConfig(service, user, deployDir, javaHome string) *TiSparkConfig {
 	if strings.Contains(service, "master") {
 		service = "master"
 	} else if strings.Contains(service, "worker") {
@@ -44,6 +45,7 @@ func NewTiSparkConfig(service, user, deployDir string) *TiSparkConfig {
 		ServiceName: service,
 		User:        user,
 		DeployDir:   deployDir,
+		JavaHome:    javaHome,
 	}
 }
 
