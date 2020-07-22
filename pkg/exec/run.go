@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/fatih/color"
 	"math"
 	"os"
 	"os/exec"
@@ -137,10 +138,28 @@ func PrepareCommand(
 	binPath, tag, wd string,
 	args []string,
 	env *environment.Environment,
+	checkUpdate ...bool,
 ) (*exec.Cmd, error) {
 	selectVer, err := env.DownloadComponentIfMissing(component, version)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(checkUpdate) > 0 && checkUpdate[0] {
+		latestV, _, err := env.V1Repository().LatestStableVersion(component)
+		if err != nil {
+			return nil, err
+		}
+		if semver.Compare(selectVer.String(), latestV.String()) < 0 {
+			fmt.Println(color.YellowString(`Found %[1]s newer version:
+
+    The latest version:         %[3]s
+    Local installed version:    %[2]s
+    Update current component:   tiup update %[1]s
+    Update all components:      tiup update --all
+`,
+				component, latestV.String(), selectVer.String()))
+		}
 	}
 
 	// playground && cluster version must greater than v1.0.0
@@ -220,7 +239,7 @@ func PrepareCommand(
 
 func launchComponent(ctx context.Context, component string, version v0manifest.Version, binPath string, tag string, args []string, env *environment.Environment) (*localdata.Process, error) {
 	wd := os.Getenv(localdata.EnvNameInstanceDataDir)
-	c, err := PrepareCommand(ctx, component, version, binPath, tag, wd, args, env)
+	c, err := PrepareCommand(ctx, component, version, binPath, tag, wd, args, env, true)
 	if err != nil {
 		return nil, err
 	}
