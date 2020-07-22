@@ -21,12 +21,13 @@ import (
 
 // TiSparkEnv represent the data to generate TiSpark environment config
 type TiSparkEnv struct {
-	TiSparkMaster string
-	MasterPort    int
-	WorkerPort    int
-	MasterUIPort  int
-	WorkerUIPort  int
-	CustomEnvs    map[string]string
+	TiSparkMaster  string
+	TiSparkLocalIP string
+	MasterPort     int
+	WorkerPort     int
+	MasterUIPort   int
+	WorkerUIPort   int
+	CustomEnvs     map[string]string
 }
 
 // NewTiSparkEnv returns a TiSparkConfig
@@ -37,6 +38,12 @@ func NewTiSparkEnv(master string) *TiSparkEnv {
 // WithCustomEnv sets custom setting fields
 func (c *TiSparkEnv) WithCustomEnv(m map[string]string) *TiSparkEnv {
 	c.CustomEnvs = m
+	return c
+}
+
+// WithLocalIP sets custom setting fields
+func (c *TiSparkEnv) WithLocalIP(ip string) *TiSparkEnv {
+	c.TiSparkLocalIP = ip
 	return c
 }
 
