@@ -788,5 +788,5 @@ tispark_workers:
     web_port: 8089
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "multiple TiSpark workers on the same host is not supported by Spark")
+	c.Assert(err.Error(), Equals, "the host 172.16.5.139 is duplicated: multiple TiSpark workers on the same host is not supported by Spark")
 }

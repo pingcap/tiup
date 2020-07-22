@@ -521,7 +521,7 @@ func (s *Specification) validateTiSparkSpec() error {
 		cnt := make(map[string]int)
 		for _, w := range s.TiSparkWorkers {
 			if cnt[w.Host] > 0 {
-				return ErrMultipleTisparkWorker
+				return errors.Annotatef(ErrMultipleTisparkWorker, "the host %s is duplicated", w.Host)
 			}
 			cnt[w.Host]++
 		}
