@@ -32,11 +32,13 @@ import (
 // TiSparkMasterSpec is the topology specification for TiSpark master node
 type TiSparkMasterSpec struct {
 	Host         string                 `yaml:"host"`
+	ListenHost   string                 `yaml:"listen_host,omitempty"`
 	SSHPort      int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported     bool                   `yaml:"imported,omitempty"`
 	Port         int                    `yaml:"port" default:"7077"`
 	WebPort      int                    `yaml:"web_port" default:"8080"`
 	DeployDir    string                 `yaml:"deploy_dir,omitempty"`
+	JavaHome     string                 `yaml:"java_home,omitempty" validate:"java_home:editable"`
 	SparkConfigs map[string]interface{} `yaml:"spark_config,omitempty" validate:"spark_config:editable"`
 	SparkEnvs    map[string]string      `yaml:"spark_env,omitempty" validate:"spark_env:editable"`
 	Arch         string                 `yaml:"arch,omitempty"`
@@ -71,14 +73,16 @@ func (s TiSparkMasterSpec) Status(pdList ...string) string {
 
 // TiSparkWorkerSpec is the topology specification for TiSpark slave nodes
 type TiSparkWorkerSpec struct {
-	Host      string `yaml:"host"`
-	SSHPort   int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported  bool   `yaml:"imported,omitempty"`
-	Port      int    `yaml:"port" default:"7078"`
-	WebPort   int    `yaml:"web_port" default:"8081"`
-	DeployDir string `yaml:"deploy_dir,omitempty"`
-	Arch      string `yaml:"arch,omitempty"`
-	OS        string `yaml:"os,omitempty"`
+	Host       string `yaml:"host"`
+	ListenHost string `yaml:"listen_host,omitempty"`
+	SSHPort    int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported   bool   `yaml:"imported,omitempty"`
+	Port       int    `yaml:"port" default:"7078"`
+	WebPort    int    `yaml:"web_port" default:"8081"`
+	DeployDir  string `yaml:"deploy_dir,omitempty"`
+	JavaHome   string `yaml:"java_home,omitempty" validate:"java_home:editable"`
+	Arch       string `yaml:"arch,omitempty"`
+	OS         string `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -165,6 +169,11 @@ func (i *TiSparkMasterInstance) GetCustomEnvs() map[string]string {
 	return v.Interface().(map[string]string)
 }
 
+// GetJavaHome returns the java_home value in spec
+func (i *TiSparkMasterInstance) GetJavaHome() string {
+	return reflect.ValueOf(i.InstanceSpec).FieldByName("JavaHome").String()
+}
+
 // InitConfig implement Instance interface
 func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	// generate systemd service to invoke spark's start/stop scripts
@@ -173,7 +182,7 @@ func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clu
 	port := i.GetPort()
 	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
 
-	systemCfg := system.NewTiSparkConfig(comp, deployUser, paths.Deploy)
+	systemCfg := system.NewTiSparkConfig(comp, deployUser, paths.Deploy, i.GetJavaHome())
 
 	if err := systemCfg.ConfigToFile(sysCfg); err != nil {
 		return errors.Trace(err)
@@ -210,6 +219,7 @@ func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clu
 	}
 
 	env := scripts.NewTiSparkEnv(host).
+		WithLocalIP(i.GetListenHost()).
 		WithMasterPorts(i.usedPorts[0], i.usedPorts[1]).
 		WithCustomEnv(i.GetCustomEnvs())
 	// transfer spark-env.sh file
@@ -285,6 +295,11 @@ type TiSparkWorkerInstance struct {
 	instance
 }
 
+// GetJavaHome returns the java_home value in spec
+func (i *TiSparkWorkerInstance) GetJavaHome() string {
+	return reflect.ValueOf(i.InstanceSpec).FieldByName("JavaHome").String()
+}
+
 // InitConfig implement Instance interface
 func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	// generate systemd service to invoke spark's start/stop scripts
@@ -293,7 +308,7 @@ func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clu
 	port := i.GetPort()
 	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
 
-	systemCfg := system.NewTiSparkConfig(comp, deployUser, paths.Deploy)
+	systemCfg := system.NewTiSparkConfig(comp, deployUser, paths.Deploy, i.GetJavaHome())
 
 	if err := systemCfg.ConfigToFile(sysCfg); err != nil {
 		return errors.Trace(err)
@@ -330,6 +345,7 @@ func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clu
 	}
 
 	env := scripts.NewTiSparkEnv(i.topo.TiSparkMasters[0].Host).
+		WithLocalIP(i.GetListenHost()).
 		WithMasterPorts(i.topo.TiSparkMasters[0].Port, i.topo.TiSparkMasters[0].WebPort).
 		WithWorkerPorts(i.usedPorts[0], i.usedPorts[1]).
 		WithCustomEnv(i.instance.topo.TiSparkMasters[0].SparkEnvs)

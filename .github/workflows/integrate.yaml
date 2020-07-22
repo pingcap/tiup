@@ -13,7 +13,6 @@ on:
       - release-*
 
 jobs:
-
   cluster:
     runs-on: ubuntu-latest
     strategy:
@@ -21,10 +20,13 @@ jobs:
       matrix:
         cases:
           - "test_cmd"
+          - "test_cmd_no_cdc"
+          - "test_scale_core"
+          - "test_scale_tools"
           - "test_upgrade"
           # - "test_dm_cmd"
     env:
-      working-directory: ${{ github.workspace   }}/go/src/github.com/${{ github.repository   }}
+      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
       - name: Set up Go 1.13
         uses: actions/setup-go@v1
@@ -105,7 +107,7 @@ jobs:
         cases:
           - "test_playground"
     env:
-      working-directory: ${{ github.workspace   }}/go/src/github.com/${{ github.repository   }}
+      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
       - name: Set up Go 1.13
         uses: actions/setup-go@v1
@@ -162,7 +164,7 @@ jobs:
         cases:
           - "test_tiup"
     env:
-      working-directory: ${{ github.workspace   }}/go/src/github.com/${{ github.repository   }}
+      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
       - name: Set up Go 1.13
         uses: actions/setup-go@v1
@@ -200,11 +202,12 @@ jobs:
       # - name: Setup tmate session
       #   if: always()
       #   uses: mxschmitt/action-tmate@v2
+
   coverage:
     needs: [cluster,playground,tiup]
     runs-on: ubuntu-latest
     env:
-      working-directory: ${{ github.workspace   }}/go/src/github.com/${{ github.repository   }}
+      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
