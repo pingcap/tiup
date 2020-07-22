@@ -28,6 +28,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
@@ -49,6 +50,11 @@ var (
 )
 
 var executeDefaultTimeout = time.Second * 60
+
+// This command will be execute once the NativeSSHExecutor is created.
+// It's used to predict if the connection can establish success in the future.
+// Its main purpose is to avoid sshpass hang when user speficied a wrong prompt.
+var connectionTestCommand = "echo connection test, if killed, check the password prompt"
 
 func init() {
 	v := os.Getenv("TIUP_CLUSTER_EXECUTE_DEFAULT_TIMEOUT")
@@ -73,9 +79,10 @@ type (
 
 	// NativeSSHExecutor implements Excutor with native SSH transportation layer.
 	NativeSSHExecutor struct {
-		Config *SSHConfig
-		Locale string // the locale used when executing the command
-		Sudo   bool   // all commands run with this executor will be using sudo
+		Config               *SSHConfig
+		Locale               string // the locale used when executing the command
+		Sudo                 bool   // all commands run with this executor will be using sudo
+		ConnectionTestResult error  // test if the connection can be established in initialization phase
 	}
 
 	// SSHConfig is the configuration needed to establish SSH connection.
@@ -96,32 +103,34 @@ var _ Executor = &NativeSSHExecutor{}
 
 // NewSSHExecutor create a ssh executor.
 func NewSSHExecutor(c SSHConfig, sudo bool, native bool) Executor {
+	// set default values
+	if c.Port <= 0 {
+		c.Port = 22
+	}
+
+	if c.Timeout == 0 {
+		c.Timeout = time.Second * 5 // default timeout is 5 sec
+	}
+
 	if native {
-		return &NativeSSHExecutor{
+		e := &NativeSSHExecutor{
 			Config: &c,
 			Locale: "C",
 			Sudo:   sudo,
 		}
+		_, _, e.ConnectionTestResult = e.Execute(connectionTestCommand, false, c.Timeout)
+		return e
 	}
 
 	e := new(EasySSHExecutor)
-	e.Initialize(c)
+	e.initialize(c)
 	e.Locale = "C" // default locale, hard coded for now
 	e.Sudo = sudo
 	return e
 }
 
 // Initialize builds and initializes a EasySSHExecutor
-func (e *EasySSHExecutor) Initialize(config SSHConfig) {
-	// set default values
-	if config.Port <= 0 {
-		config.Port = 22
-	}
-
-	if config.Timeout == 0 {
-		config.Timeout = time.Second * 5 // default timeout is 5 sec
-	}
-
+func (e *EasySSHExecutor) initialize(config SSHConfig) {
 	// build easyssh config
 	e.Config = &easyssh.MakeConfig{
 		Server:  config.Host,
@@ -227,8 +236,34 @@ func (e *EasySSHExecutor) Transfer(src string, dst string, download bool) error 
 	return session.Run(fmt.Sprintf("cat %s", src))
 }
 
+func (e *NativeSSHExecutor) prompt(def string) string {
+	if prom := os.Getenv(localdata.EnvNameSSHPassPrompt); prom != "" {
+		return prom
+	}
+	return def
+}
+
+func (e *NativeSSHExecutor) configArgs(args []string) []string {
+	if e.Config.Timeout != 0 {
+		args = append(args, "-o", fmt.Sprintf("ConnectTimeout=%d", int64(e.Config.Timeout.Seconds())))
+	}
+	if e.Config.Password != "" {
+		args = append([]string{"sshpass", "-p", e.Config.Password, "-P", e.prompt("password")}, args...)
+	} else if e.Config.KeyFile != "" {
+		args = append(args, "-i", e.Config.KeyFile)
+		if e.Config.Passphrase != "" {
+			args = append([]string{"sshpass", "-p", e.Config.Passphrase, "-P", e.prompt("passphrase")}, args...)
+		}
+	}
+	return args
+}
+
 // Execute run the command via SSH, it's not invoking any specific shell by default.
 func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
+	if e.ConnectionTestResult != nil {
+		return nil, nil, e.ConnectionTestResult
+	}
+
 	// try to acquire root permission
 	if e.Sudo || sudo {
 		cmd = fmt.Sprintf("sudo -H -u root bash -c \"%s\"", cmd)
@@ -255,15 +290,7 @@ func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 	}
 
 	args := []string{"ssh", "-o", "StrictHostKeyChecking=no"}
-	if e.Config.Password != "" {
-		args = append([]string{"sshpass", "-p", e.Config.Password, "-P", "password"}, args...)
-	}
-	if e.Config.KeyFile != "" {
-		args = append(args, "-i", e.Config.KeyFile)
-	}
-	if e.Config.Passphrase != "" {
-		args = append([]string{"sshpass", "-p", e.Config.Passphrase, "-P", "passphrase"}, args...)
-	}
+	args = e.configArgs(args) // prefix and postfix args
 	args = append(args, fmt.Sprintf("%s@%s", e.Config.User, e.Config.Host), cmd)
 
 	command := exec.CommandContext(ctx, args[0], args[1:]...)
@@ -272,6 +299,7 @@ func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 	stderr := new(bytes.Buffer)
 	command.Stdout = stdout
 	command.Stderr = stderr
+
 	err := command.Run()
 
 	zap.L().Info("SSHCommand",
@@ -306,16 +334,13 @@ func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 // This function is based on easyssh.MakeConfig.Scp() but with support of copying
 // file from remote to local.
 func (e *NativeSSHExecutor) Transfer(src string, dst string, download bool) error {
+	if e.ConnectionTestResult != nil {
+		return e.ConnectionTestResult
+	}
+
 	args := []string{"scp", "-r", "-o", "StrictHostKeyChecking=no"}
-	if e.Config.Password != "" {
-		args = append([]string{"sshpass", "-p", e.Config.Password, "-P", "password"}, args...)
-	}
-	if e.Config.KeyFile != "" {
-		args = append(args, "-i", e.Config.KeyFile)
-	}
-	if e.Config.Passphrase != "" {
-		args = append([]string{"sshpass", "-p", e.Config.Passphrase, "-P", "passphrase"}, args...)
-	}
+	args = e.configArgs(args) // prefix and postfix args
+
 	if download {
 		targetPath := filepath.Dir(dst)
 		if err := utils.CreateDir(targetPath); err != nil {
