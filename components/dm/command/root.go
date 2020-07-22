@@ -72,7 +72,7 @@ func init() {
 
 			dmspec = spec.GetSpecManager()
 			logger.EnableAuditLog(cspec.AuditDir())
-			deployer = deploy.NewDeployer("dm", spec.GetSpecManager(), func() cspec.Metadata { return new(spec.DMMeta) })
+			deployer = deploy.NewDeployer("dm", spec.GetSpecManager())
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.
 			env, err = tiupmeta.InitEnv(repository.Options{

@@ -93,9 +93,7 @@ func init() {
 			}
 
 			tidbSpec = spec.GetSpecManager()
-			deployer = deploy.NewDeployer("tidb", tidbSpec, func() spec.Metadata {
-				return new(spec.ClusterMeta)
-			})
+			deployer = deploy.NewDeployer("tidb", tidbSpec)
 			logger.EnableAuditLog(spec.AuditDir())
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.

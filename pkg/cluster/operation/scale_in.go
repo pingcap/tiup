@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/pingcap/errors"
 	dm "github.com/pingcap/tiup/components/dm/spec"
 	"github.com/pingcap/tiup/pkg/cluster/api"
@@ -234,8 +235,8 @@ func ScaleInCluster(
 					return errors.Annotatef(err, "failed to destroy %s", component.Name())
 				}
 			} else {
-				log.Warnf("The component `%s` will be destroyed when display cluster info when it become tombstone, maybe exists in several minutes or hours",
-					component.Name())
+				log.Warnf(color.YellowString("The component `%s` will be destroyed when display cluster info when it become tombstone, maybe exists in several minutes or hours",
+					component.Name()))
 			}
 		}
 	}

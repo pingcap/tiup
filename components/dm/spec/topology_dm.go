@@ -86,9 +86,9 @@ type (
 
 	// DMTopologySpecification represents the specification of topology.yaml
 	DMTopologySpecification struct {
-		GlobalOptions GlobalOptions `yaml:"global,omitempty"`
-		// MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty"`
-		ServerConfigs DMServerConfigs    `yaml:"server_configs,omitempty"`
+		GlobalOptions GlobalOptions `yaml:"global,omitempty" validate:"global:editable"`
+		// MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty" validate:"monitored:editable"`
+		ServerConfigs DMServerConfigs    `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
 		Masters       []MasterSpec       `yaml:"dm_master_servers"`
 		Workers       []WorkerSpec       `yaml:"dm_worker_servers"`
 		Portals       []PortalSpec       `yaml:"dm_portal_servers"`

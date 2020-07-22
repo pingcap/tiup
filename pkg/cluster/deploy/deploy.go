@@ -43,15 +43,13 @@ var (
 type Deployer struct {
 	sysName     string
 	specManager *spec.SpecManager
-	newMeta     func() spec.Metadata
 }
 
 // NewDeployer create a Deployer.
-func NewDeployer(sysName string, specManager *spec.SpecManager, newMeta func() spec.Metadata) *Deployer {
+func NewDeployer(sysName string, specManager *spec.SpecManager) *Deployer {
 	return &Deployer{
 		sysName:     sysName,
 		specManager: specManager,
-		newMeta:     newMeta,
 	}
 }
 
@@ -438,7 +436,7 @@ func (d *Deployer) EditConfig(clusterName string, skipConfirm bool) error {
 		return perrs.AddStack(err)
 	}
 
-	newTopo, err := editTopo(topo, data, skipConfirm)
+	newTopo, err := d.editTopo(topo, data, skipConfirm)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -788,7 +786,7 @@ func (d *Deployer) Deploy(
 	metadata := d.specManager.NewMetadata()
 	topo := metadata.GetTopology()
 
-	if err := clusterutil.ParseTopologyYaml(topoFile, &topo); err != nil {
+	if err := clusterutil.ParseTopologyYaml(topoFile, topo); err != nil {
 		return err
 	}
 
@@ -1133,7 +1131,7 @@ func (d *Deployer) ScaleOut(
 	// The no tispark master error is ignored, as if the tispark master is removed from the topology
 	// file for some reason (manual edit, for example), it is still possible to scale-out it to make
 	// the whole topology back to normal state.
-	if err := clusterutil.ParseTopologyYaml(topoFile, &newPart); err != nil &&
+	if err := clusterutil.ParseTopologyYaml(topoFile, newPart); err != nil &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return err
 	}
@@ -1203,7 +1201,7 @@ func (d *Deployer) meta(name string) (metadata spec.Metadata, err error) {
 		return nil, perrs.Errorf("cluster `%s` not exists", name)
 	}
 
-	metadata = d.newMeta()
+	metadata = d.specManager.NewMetadata()
 	err = d.specManager.Metadata(name, metadata)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
@@ -1217,7 +1215,7 @@ func (d *Deployer) meta(name string) (metadata spec.Metadata, err error) {
 // 2. Open file in editor.
 // 3. Check and update Topology.
 // 4. Save meta file.
-func editTopo(origTopo spec.Topology, data []byte, skipConfirm bool) (spec.Topology, error) {
+func (d *Deployer) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool) (spec.Topology, error) {
 	file, err := ioutil.TempFile(os.TempDir(), "*")
 	if err != nil {
 		return nil, perrs.AddStack(err)
@@ -1246,13 +1244,13 @@ func editTopo(origTopo spec.Topology, data []byte, skipConfirm bool) (spec.Topol
 		return nil, perrs.AddStack(err)
 	}
 
-	newTopo := new(spec.Specification)
+	newTopo := d.specManager.NewMetadata().GetTopology()
 	err = yaml.UnmarshalStrict(newData, newTopo)
 	if err != nil {
 		fmt.Print(color.RedString("New topology could not be saved: "))
 		log.Infof("Failed to parse topology file: %v", err)
 		if cliutil.PromptForConfirmReverse("Do you want to continue editing? [Y/n]: ") {
-			return editTopo(origTopo, newData, skipConfirm)
+			return d.editTopo(origTopo, newData, skipConfirm)
 		}
 		log.Infof("Nothing changed.")
 		return nil, nil
@@ -1263,7 +1261,7 @@ func editTopo(origTopo spec.Topology, data []byte, skipConfirm bool) (spec.Topol
 		fmt.Print(color.RedString("New topology could not be saved: "))
 		log.Errorf("%s", err)
 		if cliutil.PromptForConfirmReverse("Do you want to continue editing? [Y/n]: ") {
-			return editTopo(origTopo, newData, skipConfirm)
+			return d.editTopo(origTopo, newData, skipConfirm)
 		}
 		log.Infof("Nothing changed.")
 		return nil, nil
@@ -1691,7 +1689,7 @@ func buildScaleOutTask(
 			return operator.Start(ctx, metadata.GetTopology(), operator.Options{OptTimeout: optTimeout})
 		})).
 		ClusterSSH(newPart, base.User, sshTimeout).
-		Func("save meta", func(_ *task.Context) error {
+		Func("Save meta", func(_ *task.Context) error {
 			metadata.SetTopology(mergedTopo)
 			return d.specManager.SaveMeta(clusterName, metadata)
 		}).
@@ -1738,6 +1736,10 @@ func buildMonitoredDeployTask(
 	version string,
 	sshTimeout int64,
 ) (downloadCompTasks []*task.StepDisplay, deployCompTasks []*task.StepDisplay) {
+	if monitoredOptions == nil {
+		return
+	}
+
 	uniqueCompOSArch := make(map[string]struct{}) // comp-os-arch -> {}
 	// monitoring agents
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {

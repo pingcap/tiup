@@ -328,7 +328,7 @@ func (i *DMMasterInstance) InitConfig(e executor.Executor, clusterName, clusterV
 
 // ScaleConfig deploy temporary config on scaling
 func (i *DMMasterInstance) ScaleConfig(e executor.Executor, topo spec.Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
-	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
+	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -432,7 +432,7 @@ func (i *DMWorkerInstance) InitConfig(e executor.Executor, clusterName, clusterV
 	}
 
 	specConfig := spec.Config
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.Master, specConfig, paths)
+	return i.mergeServerConfig(e, i.topo.ServerConfigs.Worker, specConfig, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -533,7 +533,7 @@ func (i *DMPortalInstance) InitConfig(e executor.Executor, clusterName, clusterV
 	}
 
 	specConfig := spec.Config
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.Master, specConfig, paths)
+	return i.mergeServerConfig(e, i.topo.ServerConfigs.Portal, specConfig, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling

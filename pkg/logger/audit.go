@@ -53,7 +53,6 @@ func OutputAuditLogIfEnabled() {
 		return
 	}
 
-	auditBuffer.Reset()
 	if err := utils2.CreateDir(auditDir); err != nil {
 		zap.L().Warn("Create audit directory failed", zap.Error(err))
 		return
@@ -63,4 +62,5 @@ func OutputAuditLogIfEnabled() {
 	if err != nil {
 		zap.L().Warn("Write audit log file failed", zap.Error(err))
 	}
+	auditBuffer.Reset()
 }
