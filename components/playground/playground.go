@@ -23,7 +23,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"os/user"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -360,35 +359,6 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 	return nil
 }
 
-func (p *Playground) absDir(dir string) (string, error) {
-	if dir == "" {
-		return "", nil
-	}
-
-	if !filepath.IsAbs(dir) && !strings.HasPrefix(dir, "~/") {
-		wd := os.Getenv(localdata.EnvNameWorkDir)
-		if wd == "" {
-			return "", errors.New("playground running at non-tiup mode")
-		}
-		dir = filepath.Join(wd, dir)
-	}
-
-	if strings.HasPrefix(dir, "~/") {
-		usr, err := user.Current()
-		if err != nil {
-			return "", errors.Annotatef(err, "retrieve user home failed")
-		}
-		dir = filepath.Join(usr.HomeDir, dir[2:])
-	}
-
-	path, err := filepath.Abs(dir)
-	if err != nil {
-		return "", errors.AddStack(err)
-	}
-
-	return path, nil
-}
-
 func (p *Playground) sanitizeConfig(boot instance.Config, cfg *instance.Config) error {
 	if cfg.BinPath == "" {
 		cfg.BinPath = boot.BinPath
@@ -400,7 +370,7 @@ func (p *Playground) sanitizeConfig(boot instance.Config, cfg *instance.Config) 
 		cfg.Host = boot.ConfigPath
 	}
 
-	path, err := p.absDir(cfg.ConfigPath)
+	path, err := getAbsolutePath(cfg.ConfigPath)
 	if err != nil {
 		return err
 	}
@@ -589,11 +559,17 @@ func (p *Playground) enableBinlog() bool {
 
 func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins instance.Instance, err error) {
 	if cfg.BinPath != "" {
-		cfg.BinPath = getAbsolutePath(cfg.BinPath)
+		cfg.BinPath,err = getAbsolutePath(cfg.BinPath)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if cfg.ConfigPath != "" {
-		cfg.ConfigPath = getAbsolutePath(cfg.ConfigPath)
+		cfg.ConfigPath,err = getAbsolutePath(cfg.ConfigPath)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
@@ -651,7 +627,7 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 
 func (p *Playground) bootCluster(env *environment.Environment, options *bootOptions) error {
 	for _, cfg := range []*instance.Config{&options.pd, &options.tidb, &options.tikv, &options.tiflash, &options.pump, &options.drainer} {
-		path, err := p.absDir(cfg.ConfigPath)
+		path, err := getAbsolutePath(cfg.ConfigPath)
 		if err != nil {
 			return errors.Annotatef(err, "cannot eval absolute directory: %s", cfg.ConfigPath)
 		}
