@@ -242,7 +242,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout int64) (spec.Insta
 	return ins, nil
 }
 
-func parseTiflashConfig(e *executor.SSHExecutor, spec *spec.TiFlashSpec, fname string) error {
+func parseTiflashConfig(e executor.Executor, spec *spec.TiFlashSpec, fname string) error {
 	data, err := readFile(e, fname)
 	if err != nil {
 		return errors.AddStack(err)
@@ -275,7 +275,7 @@ func parseTiflashConfigFromFileData(spec *spec.TiFlashSpec, data []byte) error {
 	return nil
 }
 
-func readFile(e *executor.SSHExecutor, fname string) (data []byte, err error) {
+func readFile(e executor.Executor, fname string) (data []byte, err error) {
 	cmd := fmt.Sprintf("cat %s", fname)
 	stdout, stderr, err := e.Execute(cmd, false)
 	if err != nil {
