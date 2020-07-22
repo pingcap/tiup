@@ -153,8 +153,8 @@ func PrepareCommand(
 		if semver.Compare(selectVer.String(), latestV.String()) < 0 {
 			fmt.Println(color.YellowString(`Found %[1]s newer version:
 
-    The latest version:         %[3]s
-    Local installed version:    %[2]s
+    The latest version:         %[2]s
+    Local installed version:    %[3]s
     Update current component:   tiup update %[1]s
     Update all components:      tiup update --all
 `,
