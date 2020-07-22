@@ -41,6 +41,7 @@ var (
 	RoleTiSparkWorker        = "tispark-worker"
 	ErrNoTiSparkMaster       = errors.New("there must be a Spark master node if you want to use the TiSpark component")
 	ErrMultipleTiSparkMaster = errors.New("a TiSpark enabled cluster with more than 1 Spark master node is not supported")
+	ErrMultipleTisparkWorker = errors.New("multiple TiSpark workers on the same host is not supported by Spark")
 )
 
 type (
@@ -513,6 +514,17 @@ func (s *Specification) validateTiSparkSpec() error {
 	// We only support 1 Spark master at present
 	if len(s.TiSparkMasters) > 1 {
 		return ErrMultipleTiSparkMaster
+	}
+
+	// Multiple workers on the same host is not supported by Spark
+	if len(s.TiSparkWorkers) > 1 {
+		cnt := make(map[string]int)
+		for _, w := range s.TiSparkWorkers {
+			if cnt[w.Host] > 0 {
+				return ErrMultipleTisparkWorker
+			}
+			cnt[w.Host]++
+		}
 	}
 
 	return nil

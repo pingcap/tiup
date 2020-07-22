@@ -770,4 +770,23 @@ tispark_workers:
 `), &topo)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "there must be a Spark master node if you want to use the TiSpark component")
+
+	err = yaml.Unmarshal([]byte(`
+pd_servers:
+  - host: 172.16.5.138
+    port: 1234
+tispark_masters:
+  - host: 172.16.5.138
+    port: 1236
+tispark_workers:
+  - host: 172.16.5.138
+    port: 1235
+  - host: 172.16.5.139
+    port: 1235
+  - host: 172.16.5.139
+    port: 1236
+    web_port: 8089
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "multiple TiSpark workers on the same host is not supported by Spark")
 }
