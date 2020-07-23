@@ -648,9 +648,11 @@ func (p *Playground) bootCluster(env *environment.Environment, options *bootOpti
 		}
 		options.version = version.String()
 
-		fmt.Println(color.YellowString(`Use latest stable version: %s
+		fmt.Println(color.YellowString(`Use the latest stable version: %s
 
-	You can specified the version by running "tiup playground <version>", example: "tiup playground v4.0.0"
+    Specify version manually:   tiup playground <version>
+    The stable version:         tiup playground v4.0.0
+    The nightly version:        tiup playground nightly
 `, options.version))
 	}
 
