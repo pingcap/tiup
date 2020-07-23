@@ -118,7 +118,9 @@ func NewSSHExecutor(c SSHConfig, sudo bool, native bool) Executor {
 			Locale: "C",
 			Sudo:   sudo,
 		}
-		_, _, e.ConnectionTestResult = e.Execute(connectionTestCommand, false, c.Timeout)
+		if c.Password != "" || (c.KeyFile != "" && c.Passphrase != "") {
+			_, _, e.ConnectionTestResult = e.Execute(connectionTestCommand, false, executeDefaultTimeout)
+		}
 		return e
 	}
 
