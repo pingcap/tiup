@@ -29,5 +29,6 @@ exec bin/pd-server \
     --advertise-peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
     --data-dir="{{.DataDir}}" \
     --join="{{template "PDList" .Endpoints}}" \
+    --config=conf/pd.toml \
     --log-file="{{.LogDir}}/pd.log" 2>> "{{.LogDir}}/pd_stderr.log"
   

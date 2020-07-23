@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -217,7 +218,8 @@ func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion
 
 // ScaleConfig deploy temporary config on scaling
 func (i *PDInstance) ScaleConfig(e executor.Executor, cluster *Specification, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
-	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
+	// We need pd.toml here, but we don't need to check it
+	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil && errors.Cause(err) != ErrorCheckConfig {
 		return err
 	}
 
