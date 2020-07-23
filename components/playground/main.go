@@ -21,6 +21,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -219,11 +220,34 @@ func hasDashboard(pdAddr string) bool {
 	return resp.StatusCode == 200
 }
 
-func getAbsolutePath(binPath string) string {
-	if !strings.HasPrefix(binPath, "/") && !strings.HasPrefix(binPath, "~") {
-		binPath = filepath.Join(os.Getenv(localdata.EnvNameWorkDir), binPath)
+// getAbsolutePath returns the absolute path
+func getAbsolutePath(path string) (string, error) {
+	if path == "" {
+		return "", nil
 	}
-	return binPath
+
+	if !filepath.IsAbs(path) && !strings.HasPrefix(path, "~/") {
+		wd := os.Getenv(localdata.EnvNameWorkDir)
+		if wd == "" {
+			return "", errors.New("playground running at non-tiup mode")
+		}
+		path = filepath.Join(wd, path)
+	}
+
+	if strings.HasPrefix(path, "~/") {
+		usr, err := user.Current()
+		if err != nil {
+			return "", errors.Annotatef(err, "retrieve user home failed")
+		}
+		path = filepath.Join(usr.HomeDir, path[2:])
+	}
+
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", errors.AddStack(err)
+	}
+
+	return absPath, nil
 }
 
 func dumpPort(port int) error {
