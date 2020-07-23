@@ -68,7 +68,7 @@ func Prompt(prompt string) string {
 	return strings.TrimSuffix(input, "\n")
 }
 
-// PromptForConfirm accepts yes / no from console by user
+// PromptForConfirm accepts yes / no from console by user, default to No
 func PromptForConfirm(format string, a ...interface{}) bool {
 	ans := Prompt(fmt.Sprintf(format, a...))
 	switch strings.TrimSpace(strings.ToLower(ans)) {
@@ -77,6 +77,11 @@ func PromptForConfirm(format string, a ...interface{}) bool {
 	default:
 		return false
 	}
+}
+
+// PromptForConfirmReverse accepts yes / no from console by user, default to Yes
+func PromptForConfirmReverse(format string, a ...interface{}) bool {
+	return !PromptForConfirm(format, a...)
 }
 
 // PromptForConfirmOrAbortError accepts yes / no from console by user, generates AbortError if user does not input yes.

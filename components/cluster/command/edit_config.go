@@ -16,6 +16,7 @@ package command
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -59,7 +60,29 @@ func newEditConfigCmd() *cobra.Command {
 				return err
 			}
 
-			return editTopo(clusterName, metadata)
+			// do marshal and unmarshal outside editTopo() to avoid vadation inside
+			data, err := yaml.Marshal(metadata.Topology)
+			if err != nil {
+				return perrs.AddStack(err)
+			}
+
+			newTopo, err := editTopo(clusterName, metadata.Topology, data)
+			if err != nil {
+				return err
+			}
+			if newTopo == nil {
+				return nil
+			}
+
+			log.Infof("Apply the change...")
+			metadata.Topology = newTopo
+			err = spec.SaveClusterMeta(clusterName, metadata)
+			if err != nil {
+				return perrs.Annotate(err, "failed to save")
+			}
+
+			log.Infof("Apply change successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", cliutil.OsArgs0(), clusterName)
+			return nil
 		},
 	}
 
@@ -70,75 +93,78 @@ func newEditConfigCmd() *cobra.Command {
 // 2. Open file in editor.
 // 3. Check and update Topology.
 // 4. Save meta file.
-func editTopo(clusterName string, metadata *spec.ClusterMeta) error {
-	data, err := yaml.Marshal(metadata.Topology)
-	if err != nil {
-		return perrs.AddStack(err)
-	}
-
+func editTopo(clusterName string, origTopo *spec.Specification, data []byte) (*spec.Specification, error) {
 	file, err := ioutil.TempFile(os.TempDir(), "*")
 	if err != nil {
-		return perrs.AddStack(err)
+		return nil, perrs.AddStack(err)
 	}
 
 	name := file.Name()
 
 	_, err = io.Copy(file, bytes.NewReader(data))
 	if err != nil {
-		return perrs.AddStack(err)
+		return nil, perrs.AddStack(err)
 	}
 
 	err = file.Close()
 	if err != nil {
-		return perrs.AddStack(err)
+		return nil, perrs.AddStack(err)
 	}
 
 	err = tiuputils.OpenFileInEditor(name)
 	if err != nil {
-		return perrs.AddStack(err)
+		return nil, perrs.AddStack(err)
 	}
 
 	// Now user finish editing the file.
 	newData, err := ioutil.ReadFile(name)
 	if err != nil {
-		return perrs.AddStack(err)
+		return nil, perrs.AddStack(err)
 	}
 
 	newTopo := new(spec.Specification)
 	err = yaml.UnmarshalStrict(newData, newTopo)
 	if err != nil {
+		fmt.Print(color.RedString("New topology could not be saved: "))
 		log.Infof("Failed to parse topology file: %v", err)
-		return perrs.AddStack(err)
-	}
-
-	if bytes.Equal(data, newData) {
-		log.Infof("The file has nothing changed")
-		return nil
+		if cliutil.PromptForConfirmReverse("Do you want to continue editing? [Y/n]: ") {
+			return editTopo(clusterName, origTopo, newData)
+		}
+		log.Infof("Nothing changed.")
+		return nil, nil
 	}
 
 	// report error if immutable field has been changed
-	if err := tiuputils.ValidateSpecDiff(metadata.Topology, newTopo); err != nil {
-		return err
+	if err := tiuputils.ValidateSpecDiff(origTopo, newTopo); err != nil {
+		fmt.Print(color.RedString("New topology could not be saved: "))
+		log.Errorf("%s", err)
+		if cliutil.PromptForConfirmReverse("Do you want to continue editing? [Y/n]: ") {
+			return editTopo(clusterName, origTopo, newData)
+		}
+		log.Infof("Nothing changed.")
+		return nil, nil
+
 	}
-	tiuputils.ShowDiff(string(data), string(newData), os.Stdout)
+
+	origData, err := yaml.Marshal(origTopo)
+	if err != nil {
+		return nil, perrs.AddStack(err)
+	}
+
+	if bytes.Equal(origData, newData) {
+		log.Infof("The file has nothing changed")
+		return nil, nil
+	}
+
+	tiuputils.ShowDiff(string(origData), string(newData), os.Stdout)
 
 	if !skipConfirm {
 		if err := cliutil.PromptForConfirmOrAbortError(
 			color.HiYellowString("Please check change highlight above, do you want to apply the change? [y/N]:"),
 		); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	log.Infof("Apply the change...")
-
-	metadata.Topology = newTopo
-	err = spec.SaveClusterMeta(clusterName, metadata)
-	if err != nil {
-		return perrs.Annotate(err, "failed to save")
-	}
-
-	log.Infof("Apply change successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", cliutil.OsArgs0(), clusterName)
-
-	return nil
+	return newTopo, nil
 }
