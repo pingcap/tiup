@@ -6,7 +6,14 @@ set -eu
 # https://stackoverflow.com/a/246128/3858681
 pushd "$( cd "$( dirname "${BASH_SOURCE[0]}"  )" >/dev/null 2>&1 && pwd  )"
 
+PATH=$PATH:/tiup-cluster/bin
+export TIUP_CLUSTER_PROGRESS_REFRESH_RATE=10s
+export TIUP_CLUSTER_EXECUTE_DEFAULT_TIMEOUT=300s
+
+export version=${version-nightly}
+
 function tiup-dm() {
+	mkdir -p ~/.tiup/bin && cp -f ./root.json ~/.tiup/bin/
 	# echo "in function"
 	if [ -f "./bin/tiup-dm.test" ]; then
 	  ./bin/tiup-dm.test  -test.coverprofile=./cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
@@ -14,6 +21,8 @@ function tiup-dm() {
 	  ../bin/tiup-dm "$@"
 	fi
 }
+
+. ./script/util.sh
 
 # use run.sh test_cmd test_upgrade to run specify cases
 do_cases=$*
