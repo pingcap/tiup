@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/errutil"
+	"github.com/pingcap/tiup/pkg/set"
 	"go.uber.org/zap"
 )
 
@@ -230,7 +231,10 @@ func CheckClusterPortConflict(clusterSpec *spec.SpecManager, clusterName string,
 			return errors.Trace(err)
 		}
 
+		uniqueHosts := set.NewStringSet()
 		metadata.GetTopology().IterInstance(func(inst spec.Instance) {
+			nodeExporterPort := metadata.GetTopology().GetMonitoredOptions().NodeExporterPort
+			blackboxExporterPort := metadata.GetTopology().GetMonitoredOptions().BlackboxExporterPort
 			for _, port := range inst.UsedPorts() {
 				existingEntries = append(existingEntries, Entry{
 					clusterName: name,
@@ -238,15 +242,43 @@ func CheckClusterPortConflict(clusterSpec *spec.SpecManager, clusterName string,
 					port:        port,
 				})
 			}
+			if !uniqueHosts.Exist(inst.GetHost()) {
+				uniqueHosts.Insert(inst.GetHost())
+				existingEntries = append(existingEntries,
+					Entry{
+						clusterName: name,
+						instance:    inst,
+						port:        nodeExporterPort,
+					},
+					Entry{
+						clusterName: name,
+						instance:    inst,
+						port:        blackboxExporterPort,
+					})
+			}
 		})
 	}
 
+	uniqueHosts := set.NewStringSet()
 	topo.IterInstance(func(inst spec.Instance) {
 		for _, port := range inst.UsedPorts() {
 			currentEntries = append(currentEntries, Entry{
 				instance: inst,
 				port:     port,
 			})
+		}
+
+		if !uniqueHosts.Exist(inst.GetHost()) {
+			uniqueHosts.Insert(inst.GetHost())
+			currentEntries = append(currentEntries,
+				Entry{
+					instance: inst,
+					port:     topo.GetMonitoredOptions().NodeExporterPort,
+				},
+				Entry{
+					instance: inst,
+					port:     topo.GetMonitoredOptions().BlackboxExporterPort,
+				})
 		}
 	})
 

@@ -219,10 +219,11 @@ tikv_servers:
 	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'tidb_servers:172.16.5.138.port' and 'tikv_servers:172.16.5.138.status_port'")
 
 	topo = Specification{}
+	// tispark_masters has "omitempty" in its tag value
 	err = yaml.Unmarshal([]byte(`
 monitored:
   node_exporter_port: 1234
-tidb_servers:
+tispark_masters:
   - host: 172.16.5.138
     port: 1234
 tikv_servers:
@@ -230,7 +231,7 @@ tikv_servers:
     status_port: 2345
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'tidb_servers:172.16.5.138.port' and 'monitored:172.16.5.138.node_exporter_port'")
+	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'tispark_masters:172.16.5.138.port' and 'monitored:172.16.5.138.node_exporter_port'")
 }
 
 func (s *metaSuiteTopo) TestPlatformConflicts(c *C) {

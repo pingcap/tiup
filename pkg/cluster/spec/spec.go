@@ -285,7 +285,7 @@ func (s *Specification) platformConflictsDetect() error {
 			}
 			// check hostname
 			host := compSpec.FieldByName("Host").String()
-			cfg := topoType.Field(i).Tag.Get("yaml")
+			cfg := strings.Split(topoType.Field(i).Tag.Get("yaml"), ",")[0] // without meta
 			if host == "" {
 				return errors.Errorf("`%s` contains empty host field", cfg)
 			}
@@ -361,7 +361,7 @@ func (s *Specification) portConflictsDetect() error {
 			}
 			// check hostname
 			host := compSpec.FieldByName("Host").String()
-			cfg := topoType.Field(i).Tag.Get("yaml")
+			cfg := strings.Split(topoType.Field(i).Tag.Get("yaml"), ",")[0] // without meta
 			if host == "" {
 				return errors.Errorf("`%s` contains empty host field", cfg)
 			}
@@ -468,7 +468,7 @@ func (s *Specification) dirConflictsDetect() error {
 			compSpec := compSpecs.Index(index)
 			// check hostname
 			host := compSpec.FieldByName("Host").String()
-			cfg := topoType.Field(i).Tag.Get("yaml")
+			cfg := strings.Split(topoType.Field(i).Tag.Get("yaml"), ",")[0] // without meta
 			if host == "" {
 				return errors.Errorf("`%s` contains empty host field", cfg)
 			}
