@@ -15,6 +15,9 @@ package command
 
 import (
 	"errors"
+	"fmt"
+	"path/filepath"
+	"strings"
 
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
@@ -100,8 +103,17 @@ func buildReloadTask(
 
 	topo := metadata.Topology
 	hasImported := false
+	uniqueHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
 
 	topo.IterInstance(func(inst spec.Instance) {
+		if _, found := uniqueHosts[inst.GetHost()]; !found {
+			uniqueHosts[inst.GetHost()] = hostInfo{
+				ssh:  inst.GetSSHPort(),
+				os:   inst.OS(),
+				arch: inst.Arch(),
+			}
+		}
+
 		deployDir := clusterutil.Abs(metadata.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDirs := clusterutil.MultiDirAbs(metadata.User, inst.DataDir())
@@ -142,6 +154,8 @@ func buildReloadTask(
 		refreshConfigTasks = append(refreshConfigTasks, t)
 	})
 
+	monitorConfigTasks := refreshMonitoredConfigTask(clusterName, uniqueHosts, topo.GlobalOptions, topo.MonitoredOptions)
+
 	// handle dir scheme changes
 	if hasImported {
 		if err := spec.HandleImportPathMigration(clusterName); err != nil {
@@ -154,11 +168,55 @@ func buildReloadTask(
 			spec.ClusterPath(clusterName, "ssh", "id_rsa"),
 			spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
-		Parallel(refreshConfigTasks...)
+		Parallel(refreshConfigTasks...).
+		ParallelStep("+ Refresh monitor configs", monitorConfigTasks...)
 	if !skipRestart {
 		tb = tb.ClusterOperate(metadata.Topology, operator.UpgradeOperation, options)
 	}
 	return tb.Build(), nil
+}
+
+func refreshMonitoredConfigTask(
+	clusterName string,
+	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
+	globalOptions spec.GlobalOptions,
+	monitoredOptions spec.MonitoredOptions,
+) []*task.StepDisplay {
+	tasks := []*task.StepDisplay{}
+	// monitoring agents
+	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
+		for host, info := range uniqueHosts {
+			deployDir := clusterutil.Abs(globalOptions.User, monitoredOptions.DeployDir)
+			// data dir would be empty for components which don't need it
+			dataDir := monitoredOptions.DataDir
+			// the default data_dir is relative to deploy_dir
+			if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
+				dataDir = filepath.Join(deployDir, dataDir)
+			}
+			// log dir will always be with values, but might not used by the component
+			logDir := clusterutil.Abs(globalOptions.User, monitoredOptions.LogDir)
+			// Deploy component
+			t := task.NewBuilder().
+				UserSSH(host, info.ssh, globalOptions.User, gOpt.SSHTimeout).
+				MonitoredConfig(
+					clusterName,
+					comp,
+					host,
+					globalOptions.ResourceControl,
+					monitoredOptions,
+					globalOptions.User,
+					meta.DirPaths{
+						Deploy: deployDir,
+						Data:   []string{dataDir},
+						Log:    logDir,
+						Cache:  spec.ClusterPath(clusterName, spec.TempConfigPath),
+					},
+				).
+				BuildAsStep(fmt.Sprintf("  - Refresh config %s -> %s", comp, host))
+			tasks = append(tasks, t)
+		}
+	}
+	return tasks
 }
 
 func validRoles(roles []string) error {
