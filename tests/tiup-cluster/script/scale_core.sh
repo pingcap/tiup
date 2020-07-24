@@ -18,6 +18,8 @@ function scale_core() {
 
     tiup-cluster display $name
 
+    tiup-cluster reload $name --skip-restart
+
     total_sub_one=18
 
     echo "start scale in tidb"
