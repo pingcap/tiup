@@ -219,7 +219,8 @@ func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion
 // ScaleConfig deploy temporary config on scaling
 func (i *PDInstance) ScaleConfig(e executor.Executor, cluster *Specification, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	// We need pd.toml here, but we don't need to check it
-	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil && errors.Cause(err) != ErrorCheckConfig {
+	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil &&
+		errors.Cause(err) != ErrorCheckConfig {
 		return err
 	}
 
