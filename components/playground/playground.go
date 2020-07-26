@@ -559,14 +559,14 @@ func (p *Playground) enableBinlog() bool {
 
 func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins instance.Instance, err error) {
 	if cfg.BinPath != "" {
-		cfg.BinPath,err = getAbsolutePath(cfg.BinPath)
+		cfg.BinPath, err = getAbsolutePath(cfg.BinPath)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if cfg.ConfigPath != "" {
-		cfg.ConfigPath,err = getAbsolutePath(cfg.ConfigPath)
+		cfg.ConfigPath, err = getAbsolutePath(cfg.ConfigPath)
 		if err != nil {
 			return nil, err
 		}
