@@ -31,7 +31,7 @@ var (
 )
 
 // parseDirs sets values of directories of component
-func parseDirs(user string, ins spec.InstanceSpec, sshTimeout int64) (spec.InstanceSpec, error) {
+func parseDirs(user string, ins spec.InstanceSpec, sshTimeout int64, nativeClient bool) (spec.InstanceSpec, error) {
 	hostName, sshPort := ins.SSH()
 
 	e := executor.NewSSHExecutor(executor.SSHConfig{
@@ -40,7 +40,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout int64) (spec.Insta
 		User:    user,
 		KeyFile: SSHKeyPath(), // ansible generated keyfile
 		Timeout: time.Second * time.Duration(sshTimeout),
-	}, false) // not using global sudo
+	}, false /* not using global sudo */, nativeClient)
 	log.Debugf("Detecting deploy paths on %s...", hostName)
 
 	stdout, err := readStartScript(e, ins.Role(), hostName, ins.GetMainPort())
@@ -242,7 +242,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout int64) (spec.Insta
 	return ins, nil
 }
 
-func parseTiflashConfig(e *executor.SSHExecutor, spec *spec.TiFlashSpec, fname string) error {
+func parseTiflashConfig(e executor.Executor, spec *spec.TiFlashSpec, fname string) error {
 	data, err := readFile(e, fname)
 	if err != nil {
 		return errors.AddStack(err)
@@ -275,7 +275,7 @@ func parseTiflashConfigFromFileData(spec *spec.TiFlashSpec, data []byte) error {
 	return nil
 }
 
-func readFile(e *executor.SSHExecutor, fname string) (data []byte, err error) {
+func readFile(e executor.Executor, fname string) (data []byte, err error) {
 	cmd := fmt.Sprintf("cat %s", fname)
 	stdout, stderr, err := e.Execute(cmd, false)
 	if err != nil {
@@ -285,7 +285,7 @@ func readFile(e *executor.SSHExecutor, fname string) (data []byte, err error) {
 	return stdout, nil
 }
 
-func readStartScript(e *executor.SSHExecutor, component, host string, port int) (string, error) {
+func readStartScript(e executor.Executor, component, host string, port int) (string, error) {
 	serviceFile := fmt.Sprintf("%s/%s-%d.service",
 		systemdUnitPath,
 		component,

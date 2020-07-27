@@ -121,7 +121,7 @@ func buildReloadTask(
 		logDir := clusterutil.Abs(metadata.User, inst.LogDir())
 
 		// Download and copy the latest component to remote if the cluster is imported from Ansible
-		tb := task.NewBuilder().UserSSH(inst.GetHost(), inst.GetSSHPort(), metadata.User, gOpt.SSHTimeout)
+		tb := task.NewBuilder().UserSSH(inst.GetHost(), inst.GetSSHPort(), metadata.User, gOpt.SSHTimeout, gOpt.NativeSSH)
 		if inst.IsImported() {
 			switch compName := inst.ComponentName(); compName {
 			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
@@ -198,7 +198,7 @@ func refreshMonitoredConfigTask(
 			logDir := clusterutil.Abs(globalOptions.User, monitoredOptions.LogDir)
 			// Generate configs
 			t := task.NewBuilder().
-				UserSSH(host, info.ssh, globalOptions.User, gOpt.SSHTimeout).
+				UserSSH(host, info.ssh, globalOptions.User, gOpt.SSHTimeout, gOpt.NativeSSH).
 				MonitoredConfig(
 					clusterName,
 					comp,

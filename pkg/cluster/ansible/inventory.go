@@ -48,14 +48,14 @@ var (
 )
 
 // ParseAndImportInventory builds a basic ClusterMeta from the main Ansible inventory
-func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini.InventoryData, sshTimeout int64) error {
+func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini.InventoryData, sshTimeout int64, nativeClient bool) error {
 	if err := parseGroupVars(dir, ansCfgFile, clsMeta, inv); err != nil {
 		return err
 	}
 
 	for i := 0; i < len(clsMeta.Topology.TiDBServers); i++ {
 		s := clsMeta.Topology.TiDBServers[i]
-		ins, err := parseDirs(clsMeta.User, s, sshTimeout)
+		ins, err := parseDirs(clsMeta.User, s, sshTimeout, nativeClient)
 		if err != nil {
 			return err
 		}
@@ -63,7 +63,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 	}
 	for i := 0; i < len(clsMeta.Topology.TiKVServers); i++ {
 		s := clsMeta.Topology.TiKVServers[i]
-		ins, err := parseDirs(clsMeta.User, s, sshTimeout)
+		ins, err := parseDirs(clsMeta.User, s, sshTimeout, nativeClient)
 		if err != nil {
 			return err
 		}
@@ -71,7 +71,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 	}
 	for i := 0; i < len(clsMeta.Topology.PDServers); i++ {
 		s := clsMeta.Topology.PDServers[i]
-		ins, err := parseDirs(clsMeta.User, s, sshTimeout)
+		ins, err := parseDirs(clsMeta.User, s, sshTimeout, nativeClient)
 		if err != nil {
 			return err
 		}
@@ -79,7 +79,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 	}
 	for i := 0; i < len(clsMeta.Topology.TiFlashServers); i++ {
 		s := clsMeta.Topology.TiFlashServers[i]
-		ins, err := parseDirs(clsMeta.User, s, sshTimeout)
+		ins, err := parseDirs(clsMeta.User, s, sshTimeout, nativeClient)
 		if err != nil {
 			return err
 		}
@@ -87,7 +87,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 	}
 	for i := 0; i < len(clsMeta.Topology.PumpServers); i++ {
 		s := clsMeta.Topology.PumpServers[i]
-		ins, err := parseDirs(clsMeta.User, s, sshTimeout)
+		ins, err := parseDirs(clsMeta.User, s, sshTimeout, nativeClient)
 		if err != nil {
 			return err
 		}
@@ -95,7 +95,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 	}
 	for i := 0; i < len(clsMeta.Topology.Drainers); i++ {
 		s := clsMeta.Topology.Drainers[i]
-		ins, err := parseDirs(clsMeta.User, s, sshTimeout)
+		ins, err := parseDirs(clsMeta.User, s, sshTimeout, nativeClient)
 		if err != nil {
 			return err
 		}
@@ -103,7 +103,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 	}
 	for i := 0; i < len(clsMeta.Topology.Monitors); i++ {
 		s := clsMeta.Topology.Monitors[i]
-		ins, err := parseDirs(clsMeta.User, s, sshTimeout)
+		ins, err := parseDirs(clsMeta.User, s, sshTimeout, nativeClient)
 		if err != nil {
 			return err
 		}
@@ -111,7 +111,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 	}
 	for i := 0; i < len(clsMeta.Topology.Alertmanager); i++ {
 		s := clsMeta.Topology.Alertmanager[i]
-		ins, err := parseDirs(clsMeta.User, s, sshTimeout)
+		ins, err := parseDirs(clsMeta.User, s, sshTimeout, nativeClient)
 		if err != nil {
 			return err
 		}
@@ -119,7 +119,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 	}
 	for i := 0; i < len(clsMeta.Topology.Grafana); i++ {
 		s := clsMeta.Topology.Grafana[i]
-		ins, err := parseDirs(clsMeta.User, s, sshTimeout)
+		ins, err := parseDirs(clsMeta.User, s, sshTimeout, nativeClient)
 		if err != nil {
 			return err
 		}

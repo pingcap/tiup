@@ -17,7 +17,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/fatih/color"
 	"math"
 	"os"
 	"os/exec"
@@ -28,6 +27,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -247,7 +247,7 @@ func launchComponent(ctx context.Context, component string, version v0manifest.V
 	p := &localdata.Process{
 		Component:   component,
 		CreatedTime: time.Now().Format(time.RFC3339),
-		Exec:        binPath,
+		Exec:        c.Args[0],
 		Args:        args,
 		Dir:         c.Dir,
 		Env:         c.Env,

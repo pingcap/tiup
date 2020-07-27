@@ -224,6 +224,7 @@ func buildScaleOutTask(
 					sshConnProps.IdentityFile,
 					sshConnProps.IdentityFilePassphrase,
 					gOpt.SSHTimeout,
+					gOpt.NativeSSH,
 				).
 				EnvInit(instance.GetHost(), metadata.User).
 				Mkdir(globalOptions.User, instance.GetHost(), dirs...).
@@ -246,7 +247,7 @@ func buildScaleOutTask(
 
 		// Deploy component
 		tb := task.NewBuilder().
-			UserSSH(inst.GetHost(), inst.GetSSHPort(), metadata.User, gOpt.SSHTimeout).
+			UserSSH(inst.GetHost(), inst.GetSSHPort(), metadata.User, gOpt.SSHTimeout, gOpt.NativeSSH).
 			Mkdir(metadata.User, inst.GetHost(),
 				deployDir, logDir,
 				filepath.Join(deployDir, "bin"),

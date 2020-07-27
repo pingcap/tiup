@@ -30,6 +30,7 @@ type Options struct {
 	OptTimeout        int64 // timeout in seconds for operations that support it, not to confuse with SSH timeout
 	APITimeout        int64 // timeout in seconds for API operations that support it, like transfering store leader
 	IgnoreConfigCheck bool  // should we ignore the config check result after init config
+	NativeSSH         bool  // should use native ssh client or builtin easy ssh
 
 	// Some data will be retained when destroying instances
 	RetainDataRoles []string

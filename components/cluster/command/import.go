@@ -104,7 +104,7 @@ func newImportCmd() *cobra.Command {
 			}
 
 			// parse config and import nodes
-			if err = ansible.ParseAndImportInventory(ansibleDir, ansibleCfgFile, clsMeta, inv, gOpt.SSHTimeout); err != nil {
+			if err = ansible.ParseAndImportInventory(ansibleDir, ansibleCfgFile, clsMeta, inv, gOpt.SSHTimeout, gOpt.NativeSSH); err != nil {
 				return err
 			}
 
@@ -124,7 +124,7 @@ func newImportCmd() *cobra.Command {
 			}
 
 			// copy config files form deployment servers
-			if err = ansible.ImportConfig(clsName, clsMeta, gOpt.SSHTimeout); err != nil {
+			if err = ansible.ImportConfig(clsName, clsMeta, gOpt.SSHTimeout, gOpt.NativeSSH); err != nil {
 				return err
 			}
 
