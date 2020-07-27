@@ -28,7 +28,7 @@ func newStopCmd() *cobra.Command {
 
 			clusterName := args[0]
 
-			return deployer.StopCluster(clusterName, gOpt)
+			return manager.StopCluster(clusterName, gOpt)
 		},
 	}
 

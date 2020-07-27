@@ -26,7 +26,7 @@ func newUpgradeCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			return deployer.Upgrade(args[0], args[1], gOpt)
+			return manager.Upgrade(args[0], args[1], gOpt)
 		},
 	}
 	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force upgrade won't transfer leader")

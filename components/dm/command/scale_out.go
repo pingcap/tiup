@@ -16,13 +16,13 @@ package command
 import (
 	"path/filepath"
 
-	"github.com/pingcap/tiup/pkg/cluster/deploy"
+	"github.com/pingcap/tiup/pkg/cluster"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 func newScaleOutCmd() *cobra.Command {
-	opt := deploy.ScaleOutOptions{
+	opt := cluster.ScaleOutOptions{
 		IdentityFile: filepath.Join(tiuputils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
@@ -37,7 +37,7 @@ func newScaleOutCmd() *cobra.Command {
 			clusterName := args[0]
 			topoFile := args[1]
 
-			return deployer.ScaleOut(
+			return manager.ScaleOut(
 				clusterName,
 				topoFile,
 				nil,

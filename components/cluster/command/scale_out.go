@@ -18,7 +18,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/pingcap/tiup/pkg/cluster/deploy"
+	"github.com/pingcap/tiup/pkg/cluster"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -28,7 +28,7 @@ import (
 )
 
 func newScaleOutCmd() *cobra.Command {
-	opt := deploy.ScaleOutOptions{
+	opt := cluster.ScaleOutOptions{
 		IdentityFile: filepath.Join(tiuputils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
@@ -48,7 +48,7 @@ func newScaleOutCmd() *cobra.Command {
 				teleTopology = string(data)
 			}
 
-			return deployer.ScaleOut(
+			return manager.ScaleOut(
 				clusterName,
 				topoFile,
 				scaleOutPostDeployHook,

@@ -43,7 +43,7 @@ func newScaleInCmd() *cobra.Command {
 				).UpdateDMMeta(clusterName, metadata, gOpt.Nodes)
 			}
 
-			return deployer.ScaleIn(
+			return manager.ScaleIn(
 				clusterName,
 				skipConfirm,
 				gOpt.SSHTimeout,

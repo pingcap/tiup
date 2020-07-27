@@ -14,12 +14,12 @@
 package command
 
 import (
-	"github.com/pingcap/tiup/pkg/cluster/deploy"
+	"github.com/pingcap/tiup/pkg/cluster"
 	"github.com/spf13/cobra"
 )
 
 func newExecCmd() *cobra.Command {
-	opt := deploy.ExecOptions{}
+	opt := cluster.ExecOptions{}
 	cmd := &cobra.Command{
 		Use:   "exec <cluster-name>",
 		Short: "Run shell command on host in the tidb cluster",
@@ -31,7 +31,7 @@ func newExecCmd() *cobra.Command {
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			return deployer.Exec(clusterName, opt, gOpt)
+			return manager.Exec(clusterName, opt, gOpt)
 		},
 	}
 

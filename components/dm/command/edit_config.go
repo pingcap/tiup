@@ -28,7 +28,7 @@ func newEditConfigCmd() *cobra.Command {
 
 			clusterName := args[0]
 
-			return deployer.EditConfig(clusterName, skipConfirm)
+			return manager.EditConfig(clusterName, skipConfirm)
 		},
 	}
 

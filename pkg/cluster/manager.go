@@ -1,4 +1,4 @@
-package deploy
+package cluster
 
 import (
 	"bytes"
@@ -32,29 +32,27 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-//revive:disable:exported
-
 var (
 	errNSDeploy            = errorx.NewNamespace("deploy")
 	errDeployNameDuplicate = errNSDeploy.NewType("name_dup", errutil.ErrTraitPreCheck)
 )
 
-// Deployer to deploy a cluster.
-type Deployer struct {
+// Manager to deploy a cluster.
+type Manager struct {
 	sysName     string
 	specManager *spec.SpecManager
 }
 
-// NewDeployer create a Deployer.
-func NewDeployer(sysName string, specManager *spec.SpecManager) *Deployer {
-	return &Deployer{
+// NewManager create a Manager.
+func NewManager(sysName string, specManager *spec.SpecManager) *Manager {
+	return &Manager{
 		sysName:     sysName,
 		specManager: specManager,
 	}
 }
 
 // StartCluster start the cluster with specified name.
-func (d *Deployer) StartCluster(name string, options operator.Options, fn ...func(b *task.Builder, metadata spec.Metadata)) error {
+func (d *Manager) StartCluster(name string, options operator.Options, fn ...func(b *task.Builder, metadata spec.Metadata)) error {
 	log.Infof("Starting cluster %s...", name)
 
 	metadata, err := d.meta(name)
@@ -93,7 +91,7 @@ func (d *Deployer) StartCluster(name string, options operator.Options, fn ...fun
 }
 
 // StopCluster stop the cluster.
-func (d *Deployer) StopCluster(clusterName string, options operator.Options) error {
+func (d *Manager) StopCluster(clusterName string, options operator.Options) error {
 	metadata, err := d.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
@@ -125,7 +123,7 @@ func (d *Deployer) StopCluster(clusterName string, options operator.Options) err
 }
 
 // RestartCluster restart the cluster.
-func (d *Deployer) RestartCluster(clusterName string, options operator.Options) error {
+func (d *Manager) RestartCluster(clusterName string, options operator.Options) error {
 	metadata, err := d.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
@@ -157,7 +155,7 @@ func (d *Deployer) RestartCluster(clusterName string, options operator.Options) 
 }
 
 // ListCluster list the clusters.
-func (d *Deployer) ListCluster() error {
+func (d *Manager) ListCluster() error {
 	names, err := d.specManager.List()
 	if err != nil {
 		return perrs.AddStack(err)
@@ -190,7 +188,7 @@ func (d *Deployer) ListCluster() error {
 }
 
 // DestroyCluster destroy the cluster.
-func (d *Deployer) DestroyCluster(clusterName string, gOpt operator.Options, destroyOpt operator.Options, skipConfirm bool) error {
+func (d *Manager) DestroyCluster(clusterName string, gOpt operator.Options, destroyOpt operator.Options, skipConfirm bool) error {
 	metadata, err := d.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
@@ -247,7 +245,7 @@ type ExecOptions struct {
 }
 
 // Exec shell command on host in the tidb cluster.
-func (d *Deployer) Exec(clusterName string, opt ExecOptions, gOpt operator.Options) error {
+func (d *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Options) error {
 	metadata, err := d.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
@@ -320,7 +318,7 @@ func (d *Deployer) Exec(clusterName string, opt ExecOptions, gOpt operator.Optio
 }
 
 // Display cluster meta and topology.
-func (d *Deployer) Display(clusterName string, opt operator.Options) error {
+func (d *Manager) Display(clusterName string, opt operator.Options) error {
 	metadata, err := d.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
@@ -420,7 +418,7 @@ func (d *Deployer) Display(clusterName string, opt operator.Options) error {
 }
 
 // EditConfig let the user edit the config.
-func (d *Deployer) EditConfig(clusterName string, skipConfirm bool) error {
+func (d *Manager) EditConfig(clusterName string, skipConfirm bool) error {
 	metadata, err := d.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
@@ -454,7 +452,7 @@ func (d *Deployer) EditConfig(clusterName string, skipConfirm bool) error {
 }
 
 // Reload the cluster.
-func (d *Deployer) Reload(clusterName string, opt operator.Options, skipRestart bool) error {
+func (d *Manager) Reload(clusterName string, opt operator.Options, skipRestart bool) error {
 	sshTimeout := opt.SSHTimeout
 
 	metadata, err := d.meta(clusterName)
@@ -561,7 +559,7 @@ func (d *Deployer) Reload(clusterName string, opt operator.Options, skipRestart 
 }
 
 // Upgrade the cluster.
-func (d *Deployer) Upgrade(clusterName string, clusterVersion string, opt operator.Options) error {
+func (d *Manager) Upgrade(clusterName string, clusterVersion string, opt operator.Options) error {
 	metadata, err := d.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
@@ -707,7 +705,7 @@ func (d *Deployer) Upgrade(clusterName string, clusterVersion string, opt operat
 }
 
 // Patch the cluster.
-func (d *Deployer) Patch(clusterName string, packagePath string, opt operator.Options, overwrite bool) error {
+func (d *Manager) Patch(clusterName string, packagePath string, opt operator.Options, overwrite bool) error {
 	metadata, err := d.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
@@ -782,7 +780,7 @@ type DeployOptions struct {
 }
 
 // Deploy a cluster.
-func (d *Deployer) Deploy(
+func (d *Manager) Deploy(
 	clusterName string,
 	clusterVersion string,
 	topoFile string,
@@ -1007,7 +1005,7 @@ func (d *Deployer) Deploy(
 }
 
 // ScaleIn the cluster.
-func (d *Deployer) ScaleIn(
+func (d *Manager) ScaleIn(
 	clusterName string,
 	skipConfirm bool,
 	sshTimeout int64,
@@ -1126,7 +1124,7 @@ func (d *Deployer) ScaleIn(
 }
 
 // ScaleOut scale out the cluster.
-func (d *Deployer) ScaleOut(
+func (d *Manager) ScaleOut(
 	clusterName string,
 	topoFile string,
 	afterDeploy func(b *task.Builder, newPart spec.Topology),
@@ -1216,7 +1214,7 @@ func (d *Deployer) ScaleOut(
 	return nil
 }
 
-func (d *Deployer) meta(name string) (metadata spec.Metadata, err error) {
+func (d *Manager) meta(name string) (metadata spec.Metadata, err error) {
 	exist, err := d.specManager.Exist(name)
 	if err != nil {
 		return nil, perrs.AddStack(err)
@@ -1240,7 +1238,7 @@ func (d *Deployer) meta(name string) (metadata spec.Metadata, err error) {
 // 2. Open file in editor.
 // 3. Check and update Topology.
 // 4. Save meta file.
-func (d *Deployer) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool) (spec.Topology, error) {
+func (d *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool) (spec.Topology, error) {
 	file, err := ioutil.TempFile(os.TempDir(), "*")
 	if err != nil {
 		return nil, perrs.AddStack(err)
@@ -1463,7 +1461,7 @@ func validateNewTopo(topo spec.Topology) (err error) {
 	return err
 }
 
-func (d *Deployer) confirmTopology(clusterName, version string, topo spec.Topology, patchedRoles set.StringSet) error {
+func (d *Manager) confirmTopology(clusterName, version string, topo spec.Topology, patchedRoles set.StringSet) error {
 	log.Infof("Please confirm your topology:")
 
 	cyan := color.New(color.FgCyan, color.Bold)
@@ -1509,7 +1507,7 @@ func (d *Deployer) confirmTopology(clusterName, version string, topo spec.Topolo
 }
 
 func buildScaleOutTask(
-	d *Deployer,
+	d *Manager,
 	clusterName string,
 	metadata spec.Metadata,
 	mergedTopo spec.Topology,

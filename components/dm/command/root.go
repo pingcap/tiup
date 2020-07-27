@@ -22,7 +22,7 @@ import (
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/tiup/components/dm/spec"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster/deploy"
+	"github.com/pingcap/tiup/pkg/cluster"
 	"github.com/pingcap/tiup/pkg/cluster/flags"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	cspec "github.com/pingcap/tiup/pkg/cluster/spec"
@@ -46,7 +46,7 @@ var (
 )
 
 var dmspec *cspec.SpecManager
-var deployer *deploy.Deployer
+var manager *cluster.Manager
 
 func init() {
 	logger.InitGlobalLogger()
@@ -72,7 +72,7 @@ func init() {
 
 			dmspec = spec.GetSpecManager()
 			logger.EnableAuditLog(cspec.AuditDir())
-			deployer = deploy.NewDeployer("dm", spec.GetSpecManager())
+			manager = cluster.NewManager("dm", spec.GetSpecManager())
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.
 			env, err = tiupmeta.InitEnv(repository.Options{

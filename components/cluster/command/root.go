@@ -25,7 +25,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster/deploy"
+	"github.com/pingcap/tiup/pkg/cluster"
 	"github.com/pingcap/tiup/pkg/cluster/flags"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/report"
@@ -51,7 +51,7 @@ var (
 )
 
 var tidbSpec *spec.SpecManager
-var deployer *deploy.Deployer
+var manager *cluster.Manager
 
 func scrubClusterName(n string) string {
 	return "cluster_" + telemetry.HashReport(n)
@@ -94,7 +94,7 @@ func init() {
 			}
 
 			tidbSpec = spec.GetSpecManager()
-			deployer = deploy.NewDeployer("tidb", tidbSpec)
+			manager = cluster.NewManager("tidb", tidbSpec)
 			logger.EnableAuditLog(spec.AuditDir())
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.

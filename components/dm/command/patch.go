@@ -40,7 +40,7 @@ func newPatchCmd() *cobra.Command {
 
 			clusterName := args[0]
 
-			return deployer.Patch(clusterName, args[1], gOpt, overwrite)
+			return manager.Patch(clusterName, args[1], gOpt, overwrite)
 		},
 	}
 

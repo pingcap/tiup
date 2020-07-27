@@ -40,7 +40,7 @@ func newDisplayCmd() *cobra.Command {
 
 			clusterName = args[0]
 
-			err := deployer.Display(clusterName, gOpt)
+			err := manager.Display(clusterName, gOpt)
 			if err != nil {
 				return perrs.AddStack(err)
 			}

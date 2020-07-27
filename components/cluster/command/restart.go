@@ -33,7 +33,7 @@ func newRestartCmd() *cobra.Command {
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			return deployer.RestartCluster(clusterName, gOpt)
+			return manager.RestartCluster(clusterName, gOpt)
 		},
 	}
 

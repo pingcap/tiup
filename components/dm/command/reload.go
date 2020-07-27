@@ -35,7 +35,7 @@ func newReloadCmd() *cobra.Command {
 
 			clusterName := args[0]
 
-			return deployer.Reload(clusterName, gOpt, skipRestart)
+			return manager.Reload(clusterName, gOpt, skipRestart)
 		},
 	}
 

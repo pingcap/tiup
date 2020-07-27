@@ -17,13 +17,13 @@ import (
 	"path"
 
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster/deploy"
+	"github.com/pingcap/tiup/pkg/cluster"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 func newDeploy() *cobra.Command {
-	opt := deploy.DeployOptions{
+	opt := cluster.DeployOptions{
 		IdentityFile: path.Join(tiuputils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
@@ -44,7 +44,7 @@ func newDeploy() *cobra.Command {
 			version := args[1]
 			topoFile := args[2]
 
-			return deployer.Deploy(
+			return manager.Deploy(
 				clusterName,
 				version,
 				topoFile,

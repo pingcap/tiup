@@ -45,7 +45,7 @@ func newScaleInCmd() *cobra.Command {
 				}
 			}
 
-			return deployer.ScaleIn(
+			return manager.ScaleIn(
 				clusterName,
 				skipConfirm,
 				gOpt.SSHTimeout,
