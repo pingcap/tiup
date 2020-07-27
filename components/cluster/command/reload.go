@@ -99,7 +99,7 @@ func buildReloadTask(
 	skipRestart bool,
 ) (task.Task, error) {
 
-	var refreshConfigTasks []task.Task
+	var refreshConfigTasks []*task.StepDisplay
 
 	topo := metadata.Topology
 	hasImported := false
@@ -150,7 +150,8 @@ func buildReloadTask(
 				Data:   dataDirs,
 				Log:    logDir,
 				Cache:  spec.ClusterPath(clusterName, spec.TempConfigPath),
-			}).Build()
+			}).
+			BuildAsStep(fmt.Sprintf("  - Refresh config %s -> %s", inst.ComponentName(), inst.GetHost()))
 		refreshConfigTasks = append(refreshConfigTasks, t)
 	})
 
@@ -168,7 +169,7 @@ func buildReloadTask(
 			spec.ClusterPath(clusterName, "ssh", "id_rsa"),
 			spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
-		Parallel(refreshConfigTasks...).
+		ParallelStep("+ Refresh instance configs", refreshConfigTasks...).
 		ParallelStep("+ Refresh monitor configs", monitorConfigTasks...)
 	if !skipRestart {
 		tb = tb.ClusterOperate(metadata.Topology, operator.UpgradeOperation, options)
@@ -195,7 +196,7 @@ func refreshMonitoredConfigTask(
 			}
 			// log dir will always be with values, but might not used by the component
 			logDir := clusterutil.Abs(globalOptions.User, monitoredOptions.LogDir)
-			// Deploy component
+			// Generate configs
 			t := task.NewBuilder().
 				UserSSH(host, info.ssh, globalOptions.User, gOpt.SSHTimeout).
 				MonitoredConfig(
