@@ -23,36 +23,36 @@ import (
 
 var specManager *cspec.SpecManager
 
-// DMMeta is the specification of generic cluster metadata
-type DMMeta struct {
+// Metadata is the specification of generic cluster metadata
+type Metadata struct {
 	User    string `yaml:"user"`       // the user to run and manage cluster on remote
 	Version string `yaml:"dm_version"` // the version of TiDB cluster
 	//EnableTLS      bool   `yaml:"enable_tls"`
 	//EnableFirewall bool   `yaml:"firewall"`
 
-	Topology *DMTopologySpecification `yaml:"topology"`
+	Topology *Topology `yaml:"topology"`
 }
 
-var _ cspec.UpgradableMetadata = &DMMeta{}
+var _ cspec.UpgradableMetadata = &Metadata{}
 
 // SetVersion implement UpgradableMetadata interface.
-func (m *DMMeta) SetVersion(s string) {
+func (m *Metadata) SetVersion(s string) {
 	m.Version = s
 }
 
 // SetUser implement UpgradableMetadata interface.
-func (m *DMMeta) SetUser(s string) {
+func (m *Metadata) SetUser(s string) {
 	m.User = s
 }
 
 // GetTopology implements Metadata interface.
-func (m *DMMeta) GetTopology() cspec.Topology {
+func (m *Metadata) GetTopology() cspec.Topology {
 	return m.Topology
 }
 
 // SetTopology implements Metadata interface.
-func (m *DMMeta) SetTopology(topo cspec.Topology) {
-	dmTopo, ok := topo.(*DMTopologySpecification)
+func (m *Metadata) SetTopology(topo cspec.Topology) {
+	dmTopo, ok := topo.(*Topology)
 	if !ok {
 		panic(fmt.Sprintln("wrong type: ", reflect.TypeOf(topo)))
 	}
@@ -61,7 +61,7 @@ func (m *DMMeta) SetTopology(topo cspec.Topology) {
 }
 
 // GetBaseMeta implements Metadata interface.
-func (m *DMMeta) GetBaseMeta() *cspec.BaseMeta {
+func (m *Metadata) GetBaseMeta() *cspec.BaseMeta {
 	return &cspec.BaseMeta{
 		Version: m.Version,
 		User:    m.User,
@@ -72,8 +72,8 @@ func (m *DMMeta) GetBaseMeta() *cspec.BaseMeta {
 func GetSpecManager() *cspec.SpecManager {
 	if specManager == nil {
 		specManager = cspec.NewSpec(filepath.Join(cspec.ProfileDir(), cspec.TiOpsClusterDir), func() cspec.Metadata {
-			return &DMMeta{
-				Topology: new(DMTopologySpecification),
+			return &Metadata{
+				Topology: new(Topology),
 			}
 		})
 	}

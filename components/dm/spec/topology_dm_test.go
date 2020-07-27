@@ -25,14 +25,14 @@ var _ = Suite(&metaSuiteDM{})
 
 func (s *metaSuiteDM) TestDefaultDataDir(c *C) {
 	// Test with without global DataDir.
-	topo := new(DMTopologySpecification)
+	topo := new(Topology)
 	topo.Masters = append(topo.Masters, MasterSpec{Host: "1.1.1.1", Port: 1111})
 	topo.Workers = append(topo.Workers, WorkerSpec{Host: "1.1.2.1", Port: 2221})
 	data, err := yaml.Marshal(topo)
 	c.Assert(err, IsNil)
 
 	// Check default value.
-	topo = new(DMTopologySpecification)
+	topo = new(Topology)
 	err = yaml.Unmarshal(data, topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.DataDir, Equals, "data")
@@ -42,7 +42,7 @@ func (s *metaSuiteDM) TestDefaultDataDir(c *C) {
 	// Can keep the default value.
 	data, err = yaml.Marshal(topo)
 	c.Assert(err, IsNil)
-	topo = new(DMTopologySpecification)
+	topo = new(Topology)
 	err = yaml.Unmarshal(data, topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.DataDir, Equals, "data")
@@ -50,7 +50,7 @@ func (s *metaSuiteDM) TestDefaultDataDir(c *C) {
 	c.Assert(topo.Workers[0].DataDir, Equals, "data")
 
 	// Test with global DataDir.
-	topo = new(DMTopologySpecification)
+	topo = new(Topology)
 	topo.GlobalOptions.DataDir = "/gloable_data"
 	topo.Masters = append(topo.Masters, MasterSpec{Host: "1.1.1.1", Port: 1111})
 	topo.Masters = append(topo.Masters, MasterSpec{Host: "1.1.1.2", Port: 1112, DataDir: "/my_data"})
@@ -59,7 +59,7 @@ func (s *metaSuiteDM) TestDefaultDataDir(c *C) {
 	data, err = yaml.Marshal(topo)
 	c.Assert(err, IsNil)
 
-	topo = new(DMTopologySpecification)
+	topo = new(Topology)
 	err = yaml.Unmarshal(data, topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.DataDir, Equals, "/gloable_data")
@@ -70,7 +70,7 @@ func (s *metaSuiteDM) TestDefaultDataDir(c *C) {
 }
 
 func (s *metaSuiteDM) TestGlobalOptions(c *C) {
-	topo := DMTopologySpecification{}
+	topo := Topology{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
@@ -96,7 +96,7 @@ dm-worker_servers:
 }
 
 func (s *metaSuiteDM) TestDirectoryConflicts(c *C) {
-	topo := DMTopologySpecification{}
+	topo := Topology{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
@@ -130,7 +130,7 @@ dm-worker_servers:
 }
 
 func (s *metaSuiteDM) TestPortConflicts(c *C) {
-	topo := DMTopologySpecification{}
+	topo := Topology{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
@@ -147,7 +147,7 @@ dm-worker_servers:
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "port conflict for '1234' between 'dm-master_servers:172.16.5.138.peer_port' and 'dm-worker_servers:172.16.5.138.port'")
 
-	topo = DMTopologySpecification{}
+	topo = Topology{}
 	err = yaml.Unmarshal([]byte(`
 monitored:
   node_exporter_port: 1234
@@ -165,7 +165,7 @@ dm-worker_servers:
 
 func (s *metaSuiteDM) TestPlatformConflicts(c *C) {
 	// aarch64 and arm64 are equal
-	topo := DMTopologySpecification{}
+	topo := Topology{}
 	err := yaml.Unmarshal([]byte(`
 global:
   os: "linux"
@@ -179,7 +179,7 @@ dm-worker_servers:
 	c.Assert(err, IsNil)
 
 	// different arch defined for the same host
-	topo = DMTopologySpecification{}
+	topo = Topology{}
 	err = yaml.Unmarshal([]byte(`
 global:
   os: "linux"
@@ -193,7 +193,7 @@ dm-worker_servers:
 	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' between 'dm-master_servers:linux/arm64' and 'dm-worker_servers:linux/amd64'")
 
 	// different os defined for the same host
-	topo = DMTopologySpecification{}
+	topo = Topology{}
 	err = yaml.Unmarshal([]byte(`
 global:
   os: "linux"
@@ -210,7 +210,7 @@ dm-worker_servers:
 }
 
 func (s *metaSuiteDM) TestCountDir(c *C) {
-	topo := DMTopologySpecification{}
+	topo := Topology{}
 
 	err := yaml.Unmarshal([]byte(`
 global:

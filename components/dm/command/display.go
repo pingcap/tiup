@@ -45,7 +45,7 @@ func newDisplayCmd() *cobra.Command {
 				return perrs.AddStack(err)
 			}
 
-			metadata := new(spec.DMMeta)
+			metadata := new(spec.Metadata)
 			err = dmspec.Metadata(clusterName, metadata)
 			if err != nil {
 				return perrs.AddStack(err)
@@ -61,7 +61,7 @@ func newDisplayCmd() *cobra.Command {
 	return cmd
 }
 
-func clearOutDatedEtcdInfo(clusterName string, metadata *spec.DMMeta, opt operator.Options) error {
+func clearOutDatedEtcdInfo(clusterName string, metadata *spec.Metadata, opt operator.Options) error {
 	topo := metadata.Topology
 
 	existedMasters := make(map[string]struct{})

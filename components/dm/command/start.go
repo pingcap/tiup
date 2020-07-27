@@ -17,18 +17,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-/*
-func getMeta(name string) (metadata *spec.DMMeta, err error) {
-	metadata = new(spec.DMMeta)
-	err = dmspec.Metadata(name, metadata)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
-		return nil, err
-	}
-
-	return metadata, nil
-}
-*/
-
 func newStartCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start <cluster-name>",

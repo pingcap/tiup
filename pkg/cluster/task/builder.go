@@ -102,7 +102,7 @@ func (b *Builder) UpdateMeta(cluster string, metadata *spec.ClusterMeta, deleted
 }
 
 // UpdateDMMeta maintain the dm meta information
-func (b *Builder) UpdateDMMeta(cluster string, metadata *dm.DMMeta, deletedNodeIds []string) *Builder {
+func (b *Builder) UpdateDMMeta(cluster string, metadata *dm.Metadata, deletedNodeIds []string) *Builder {
 	b.tasks = append(b.tasks, &UpdateDMMeta{
 		cluster:        cluster,
 		metadata:       metadata,

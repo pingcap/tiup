@@ -25,16 +25,16 @@ import (
 // UpdateDMMeta is used to maintain the DM meta information
 type UpdateDMMeta struct {
 	cluster        string
-	metadata       *dmspec.DMMeta
+	metadata       *dmspec.Metadata
 	deletedNodesID []string
 }
 
 // Execute implements the Task interface
 func (u *UpdateDMMeta) Execute(ctx *Context) error {
 	// make a copy
-	newMeta := &dmspec.DMMeta{}
+	newMeta := &dmspec.Metadata{}
 	*newMeta = *u.metadata
-	newMeta.Topology = &dmspec.DMTopologySpecification{
+	newMeta.Topology = &dmspec.Topology{
 		GlobalOptions: u.metadata.Topology.GlobalOptions,
 		// MonitoredOptions: u.metadata.Topology.MonitoredOptions,
 		ServerConfigs: u.metadata.Topology.ServerConfigs,
@@ -42,19 +42,19 @@ func (u *UpdateDMMeta) Execute(ctx *Context) error {
 
 	deleted := set.NewStringSet(u.deletedNodesID...)
 	topo := u.metadata.Topology
-	for i, instance := range (&dmspec.DMMasterComponent{DMSSpecification: topo}).Instances() {
+	for i, instance := range (&dmspec.DMMasterComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Masters = append(newMeta.Topology.Masters, topo.Masters[i])
 	}
-	for i, instance := range (&dmspec.DMWorkerComponent{DMSSpecification: topo}).Instances() {
+	for i, instance := range (&dmspec.DMWorkerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Workers = append(newMeta.Topology.Workers, topo.Workers[i])
 	}
-	for i, instance := range (&dmspec.DMPortalComponent{DMSSpecification: topo}).Instances() {
+	for i, instance := range (&dmspec.DMPortalComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}

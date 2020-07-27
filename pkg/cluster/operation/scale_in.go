@@ -330,7 +330,7 @@ func deleteMember(
 // ScaleInDMCluster scale in dm cluster.
 func ScaleInDMCluster(
 	getter ExecutorGetter,
-	spec *dm.DMSSpecification,
+	spec *dm.Topology,
 	options Options,
 ) error {
 	// instances by uuid
@@ -382,7 +382,7 @@ func ScaleInDMCluster(
 	// At least a DMMaster server exists
 	var dmMasterClient *api.DMMasterClient
 	var dmMasterEndpoint []string
-	for _, instance := range (&dm.DMMasterComponent{DMSSpecification: spec}).Instances() {
+	for _, instance := range (&dm.DMMasterComponent{Topology: spec}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
 			dmMasterEndpoint = append(dmMasterEndpoint, addr(instance))
 		}
