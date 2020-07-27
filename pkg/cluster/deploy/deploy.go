@@ -70,9 +70,9 @@ func (d *Deployer) StartCluster(name string, options operator.Options, fn ...fun
 			d.specManager.Path(name, "ssh", "id_rsa"),
 			d.specManager.Path(name, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, options.SSHTimeout).
-		Serial(task.NewFunc("StartCluster", func(ctx *task.Context) error {
+		Func("StartCluster", func(ctx *task.Context) error {
 			return operator.Start(ctx, topo, options)
-		}))
+		})
 
 	if len(fn) > 0 {
 		if len(fn) != 1 {
@@ -110,9 +110,9 @@ func (d *Deployer) StopCluster(clusterName string, options operator.Options) err
 			d.specManager.Path(clusterName, "ssh", "id_rsa"),
 			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(metadata.GetTopology(), base.User, options.SSHTimeout).
-		Serial(task.NewFunc("StopCluster", func(ctx *task.Context) error {
+		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, options)
-		})).
+		}).
 		Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
@@ -142,9 +142,9 @@ func (d *Deployer) RestartCluster(clusterName string, options operator.Options) 
 			d.specManager.Path(clusterName, "ssh", "id_rsa"),
 			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, options.SSHTimeout).
-		Serial(task.NewFunc("RestartCluster", func(ctx *task.Context) error {
+		Func("RestartCluster", func(ctx *task.Context) error {
 			return operator.Restart(ctx, topo, options)
-		})).
+		}).
 		Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
@@ -218,12 +218,12 @@ func (d *Deployer) DestroyCluster(clusterName string, gOpt operator.Options, des
 			d.specManager.Path(clusterName, "ssh", "id_rsa"),
 			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, gOpt.SSHTimeout).
-		Serial(task.NewFunc("StopCluster", func(ctx *task.Context) error {
+		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, operator.Options{})
-		})).
-		Serial(task.NewFunc("DestroyCluster", func(ctx *task.Context) error {
+		}).
+		Func("DestroyCluster", func(ctx *task.Context) error {
 			return operator.Destroy(ctx, topo, destroyOpt)
-		})).
+		}).
 		Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
@@ -543,9 +543,9 @@ func (d *Deployer) Reload(clusterName string, opt operator.Options, skipRestart 
 	}
 
 	if !skipRestart {
-		tb = tb.Serial(task.NewFunc("UpgradeCluster", func(ctx *task.Context) error {
+		tb = tb.Func("UpgradeCluster", func(ctx *task.Context) error {
 			return operator.Upgrade(ctx, topo, opt)
-		}))
+		})
 	}
 
 	t := tb.Build()
@@ -681,9 +681,9 @@ func (d *Deployer) Upgrade(clusterName string, clusterVersion string, opt operat
 		ClusterSSH(topo, base.User, opt.SSHTimeout).
 		Parallel(downloadCompTasks...).
 		Parallel(copyCompTasks...).
-		Serial(task.NewFunc("UpgradeCluster", func(ctx *task.Context) error {
+		Func("UpgradeCluster", func(ctx *task.Context) error {
 			return operator.Upgrade(ctx, topo, opt)
-		})).
+		}).
 		Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
@@ -746,9 +746,9 @@ func (d *Deployer) Patch(clusterName string, packagePath string, opt operator.Op
 			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout).
 		Parallel(replacePackageTasks...).
-		Serial(task.NewFunc("UpgradeCluster", func(ctx *task.Context) error {
+		Func("UpgradeCluster", func(ctx *task.Context) error {
 			return operator.Upgrade(ctx, topo, opt)
-		})).
+		}).
 		Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
@@ -1713,24 +1713,24 @@ func buildScaleOutTask(
 
 	// TODO: find another way to make sure current cluster started
 	builder.
-		Serial(task.NewFunc("StartCluster", func(ctx *task.Context) error {
+		Func("StartCluster", func(ctx *task.Context) error {
 			return operator.Start(ctx, metadata.GetTopology(), operator.Options{OptTimeout: optTimeout})
-		})).
+		}).
 		ClusterSSH(newPart, base.User, sshTimeout).
 		Func("Save meta", func(_ *task.Context) error {
 			metadata.SetTopology(mergedTopo)
 			return d.specManager.SaveMeta(clusterName, metadata)
 		}).
-		Serial(task.NewFunc("StartCluster", func(ctx *task.Context) error {
+		Func("StartCluster", func(ctx *task.Context) error {
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: optTimeout})
-		})).
+		}).
 		Parallel(refreshConfigTasks...).
-		Serial(task.NewFunc("RestartCluster", func(ctx *task.Context) error {
+		Func("RestartCluster", func(ctx *task.Context) error {
 			return operator.Restart(ctx, metadata.GetTopology(), operator.Options{
 				Roles:      []string{spec.ComponentPrometheus},
 				OptTimeout: optTimeout,
 			})
-		}))
+		})
 
 	if final != nil {
 		final(builder, clusterName, metadata)
