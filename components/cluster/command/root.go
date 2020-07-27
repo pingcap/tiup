@@ -112,7 +112,8 @@ func init() {
 			teleCommand = getParentNames(cmd)
 
 			if gOpt.NativeSSH {
-				fmt.Println("Native ssh client will be used")
+				zap.L().Info("Native ssh client will be used",
+					zap.String(localdata.EnvNameNativeSSHClient, os.Getenv(localdata.EnvNameNativeSSHClient)))
 			}
 
 			return nil
@@ -132,7 +133,7 @@ func init() {
 	// start/stop operations is 90s, the default value of this argument is better be longer than that
 	rootCmd.PersistentFlags().Int64Var(&gOpt.OptTimeout, "wait-timeout", 120, "Timeout in seconds to wait for an operation to complete, ignored for operations that don't fit.")
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
-	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "Use native local ssh client instead of the easy ssh client.")
+	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "Use the native SSH client installed on local system instead of the build-in one.")
 
 	rootCmd.AddCommand(
 		newCheckCmd(),

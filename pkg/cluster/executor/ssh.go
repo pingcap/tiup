@@ -333,8 +333,6 @@ func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 
 // Transfer copies files via SCP
 // This function depends on `scp` (a tool from OpenSSH or other SSH implementation)
-// This function is based on easyssh.MakeConfig.Scp() but with support of copying
-// file from remote to local.
 func (e *NativeSSHExecutor) Transfer(src string, dst string, download bool) error {
 	if e.ConnectionTestResult != nil {
 		return e.ConnectionTestResult

@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
