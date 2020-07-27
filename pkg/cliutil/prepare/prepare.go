@@ -108,7 +108,7 @@ func CheckClusterDirConflict(clusterSpec *spec.SpecManager, clusterName string, 
 
 		topo := metadata.GetTopology()
 
-		f := fixDir(metadata.GetTopology())
+		f := fixDir(topo)
 		topo.IterInstance(func(inst spec.Instance) {
 			for _, dirAccessor := range instanceDirAccessor {
 				for _, dir := range strings.Split(f(dirAccessor.accessor(inst, topo)), ",") {
@@ -224,14 +224,13 @@ func CheckClusterPortConflict(clusterSpec *spec.SpecManager, clusterName string,
 			continue
 		}
 
-		// TODO
-		metadata := new(spec.ClusterMeta)
+		metadata := clusterSpec.NewMetadata()
 		err := clusterSpec.Metadata(name, metadata)
 		if err != nil {
 			return errors.Trace(err)
 		}
 
-		metadata.Topology.IterInstance(func(inst spec.Instance) {
+		metadata.GetTopology().IterInstance(func(inst spec.Instance) {
 			for _, port := range inst.UsedPorts() {
 				existingEntries = append(existingEntries, Entry{
 					clusterName: name,

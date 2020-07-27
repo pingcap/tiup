@@ -16,9 +16,8 @@ package command
 import (
 	"path"
 
-	"github.com/pingcap/tiup/pkg/cluster/deploy"
-
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/deploy"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )

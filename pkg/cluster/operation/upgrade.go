@@ -45,13 +45,14 @@ func Upgrade(
 
 		for _, instance := range instances {
 			var rollingInstance spec.RollingUpdateInstance
+			var isRollingInstance bool
 
 			if !options.Force {
-				rollingInstance, _ = instance.(spec.RollingUpdateInstance)
+				rollingInstance, isRollingInstance = instance.(spec.RollingUpdateInstance)
 			}
 
-			if rollingInstance != nil {
-				err := rollingInstance.BeforeRestart(topo, int(options.APITimeout))
+			if isRollingInstance {
+				err := rollingInstance.PreRestart(topo, int(options.APITimeout))
 				if err != nil {
 					return errors.AddStack(err)
 				}
@@ -61,8 +62,8 @@ func Upgrade(
 				return errors.AddStack(err)
 			}
 
-			if rollingInstance != nil {
-				err := rollingInstance.AfterRestart(topo)
+			if isRollingInstance {
+				err := rollingInstance.PostRestart(topo)
 				if err != nil {
 					return errors.AddStack(err)
 				}

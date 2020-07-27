@@ -59,8 +59,8 @@ type Component interface {
 // RollingUpdateInstance represent a instance need to transfer state when restart.
 // e.g transfer leader.
 type RollingUpdateInstance interface {
-	BeforeRestart(topo Topology, apiTimeoutSeconds int) error
-	AfterRestart(topo Topology) error
+	PreRestart(topo Topology, apiTimeoutSeconds int) error
+	PostRestart(topo Topology) error
 }
 
 // Instance represents the instance.

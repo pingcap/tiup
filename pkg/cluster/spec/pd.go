@@ -259,8 +259,8 @@ func (i *PDInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName
 
 var _ RollingUpdateInstance = &PDInstance{}
 
-// BeforeRestart implements RollingUpdateInstance interface.
-func (i *PDInstance) BeforeRestart(topo Topology, apiTimeoutSeconds int) error {
+// PreRestart implements RollingUpdateInstance interface.
+func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
 	timeoutOpt := &clusterutil.RetryOption{
 		Timeout: time.Second * time.Duration(apiTimeoutSeconds),
 		Delay:   time.Second * 2,
@@ -287,8 +287,8 @@ func (i *PDInstance) BeforeRestart(topo Topology, apiTimeoutSeconds int) error {
 	return nil
 }
 
-// AfterRestart implements RollingUpdateInstance interface.
-func (i *PDInstance) AfterRestart(topo Topology) error {
+// PostRestart implements RollingUpdateInstance interface.
+func (i *PDInstance) PostRestart(topo Topology) error {
 	// intend to do nothing
 	return nil
 }

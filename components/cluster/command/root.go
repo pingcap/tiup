@@ -56,6 +56,7 @@ var deployer *deploy.Deployer
 func scrubClusterName(n string) string {
 	return "cluster_" + telemetry.HashReport(n)
 }
+
 func getParentNames(cmd *cobra.Command) []string {
 	if cmd == nil {
 		return nil
@@ -206,7 +207,6 @@ func extractSuggestionFromErrorX(err *errorx.Error) string {
 
 // Execute executes the root command
 func Execute() {
-
 	zap.L().Info("Execute command", zap.String("command", cliutil.OsArgs()))
 	zap.L().Debug("Environment variables", zap.Strings("env", os.Environ()))
 

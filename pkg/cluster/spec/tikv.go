@@ -227,8 +227,8 @@ func (i *TiKVInstance) ScaleConfig(e executor.Executor, topo Topology, clusterNa
 
 var _ RollingUpdateInstance = &TiKVInstance{}
 
-// BeforeRestart implements RollingUpdateInstance interface.
-func (i *TiKVInstance) BeforeRestart(topo Topology, apiTimeoutSeconds int) error {
+// PreRestart implements RollingUpdateInstance interface.
+func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
 	timeoutOpt := &clusterutil.RetryOption{
 		Timeout: time.Second * time.Duration(apiTimeoutSeconds),
 		Delay:   time.Second * 2,
@@ -259,8 +259,8 @@ func (i *TiKVInstance) BeforeRestart(topo Topology, apiTimeoutSeconds int) error
 	return nil
 }
 
-// AfterRestart implements RollingUpdateInstance interface.
-func (i *TiKVInstance) AfterRestart(topo Topology) error {
+// PostRestart implements RollingUpdateInstance interface.
+func (i *TiKVInstance) PostRestart(topo Topology) error {
 	tidbTopo, ok := topo.(*Specification)
 	if !ok {
 		panic("should be type of tidb topology")

@@ -51,7 +51,7 @@ func newScaleOutCmd() *cobra.Command {
 			return deployer.ScaleOut(
 				clusterName,
 				topoFile,
-				afterDeploy,
+				scaleOutPostDeployHook,
 				final,
 				opt,
 				skipConfirm,
@@ -81,7 +81,7 @@ func final(builder *task.Builder, name string, meta spec.Metadata) {
 	builder.UpdateTopology(name, meta.(*spec.ClusterMeta), nil)
 }
 
-func afterDeploy(builder *task.Builder, newPart spec.Topology) {
+func scaleOutPostDeployHook(builder *task.Builder, newPart spec.Topology) {
 	nodeInfoTask := task.NewBuilder().Func("Check status", func(ctx *task.Context) error {
 		var err error
 		teleNodeInfos, err = operator.GetNodeInfo(context.Background(), ctx, newPart)

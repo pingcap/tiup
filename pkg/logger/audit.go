@@ -18,9 +18,8 @@ import (
 	"os"
 	"strings"
 
-	utils2 "github.com/pingcap/tiup/pkg/utils"
-
 	"github.com/pingcap/tiup/pkg/cluster/audit"
+	utils2 "github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

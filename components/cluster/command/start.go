@@ -14,7 +14,6 @@
 package command
 
 import (
-	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/spf13/cobra"
@@ -36,7 +35,10 @@ func newStartCmd() *cobra.Command {
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			return startCluster(clusterName, gOpt)
+			return deployer.StartCluster(clusterName, gOpt, func(b *task.Builder, metadata spec.Metadata) {
+				tidbMeta := metadata.(*spec.ClusterMeta)
+				b.UpdateTopology(clusterName, tidbMeta, nil)
+			})
 		},
 	}
 
@@ -44,11 +46,4 @@ func newStartCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only start specified nodes")
 
 	return cmd
-}
-
-func startCluster(clusterName string, options operator.Options) error {
-	return deployer.StartCluster(clusterName, options, func(b *task.Builder, metadata spec.Metadata) {
-		tidbMeta := metadata.(*spec.ClusterMeta)
-		b.UpdateTopology(clusterName, tidbMeta, nil)
-	})
 }
