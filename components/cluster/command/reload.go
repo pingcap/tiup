@@ -151,7 +151,7 @@ func buildReloadTask(
 				Log:    logDir,
 				Cache:  spec.ClusterPath(clusterName, spec.TempConfigPath),
 			}).
-			BuildAsStep(fmt.Sprintf("  - Refresh config %s -> %s", inst.ComponentName(), inst.GetHost()))
+			BuildAsStep(fmt.Sprintf("  - Refresh config %s -> %s", inst.ComponentName(), inst.ID()))
 		refreshConfigTasks = append(refreshConfigTasks, t)
 	})
 
