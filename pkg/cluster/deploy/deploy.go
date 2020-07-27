@@ -457,7 +457,9 @@ func (d *Deployer) EditConfig(clusterName string, skipConfirm bool) error {
 }
 
 // Reload the cluster.
-func (d *Deployer) Reload(clusterName string, opt operator.Options) error {
+func (d *Deployer) Reload(clusterName string, opt operator.Options, skipRestart bool) error {
+	sshTimeout := opt.SSHTimeout
+
 	metadata, err := d.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
@@ -466,11 +468,20 @@ func (d *Deployer) Reload(clusterName string, opt operator.Options) error {
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	var refreshConfigTasks []task.Task
+	var refreshConfigTasks []*task.StepDisplay
 
 	hasImported := false
+	uniqueHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
 
 	topo.IterInstance(func(inst spec.Instance) {
+		if _, found := uniqueHosts[inst.GetHost()]; !found {
+			uniqueHosts[inst.GetHost()] = hostInfo{
+				ssh:  inst.GetSSHPort(),
+				os:   inst.OS(),
+				arch: inst.Arch(),
+			}
+		}
+
 		deployDir := clusterutil.Abs(base.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDirs := clusterutil.MultiDirAbs(base.User, inst.DataDir())
@@ -500,9 +511,18 @@ func (d *Deployer) Reload(clusterName string, opt operator.Options) error {
 				Data:   dataDirs,
 				Log:    logDir,
 				Cache:  d.specManager.Path(clusterName, spec.TempConfigPath),
-			}).Build()
+			}).
+			BuildAsStep(fmt.Sprintf("  - Refresh config %s -> %s", inst.ComponentName(), inst.ID()))
 		refreshConfigTasks = append(refreshConfigTasks, t)
 	})
+
+	monitorConfigTasks := refreshMonitoredConfigTask(
+		d.specManager,
+		clusterName,
+		uniqueHosts,
+		*topo.BaseTopo().GlobalOptions,
+		topo.GetMonitoredOptions(),
+		sshTimeout)
 
 	// handle dir scheme changes
 	if hasImported {
@@ -511,16 +531,24 @@ func (d *Deployer) Reload(clusterName string, opt operator.Options) error {
 		}
 	}
 
-	t := task.NewBuilder().
+	tb := task.NewBuilder().
 		SSHKeySet(
 			d.specManager.Path(clusterName, "ssh", "id_rsa"),
 			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout).
-		Parallel(refreshConfigTasks...).
-		Serial(task.NewFunc("UpgradeCluster", func(ctx *task.Context) error {
+		ParallelStep("+ Refresh instance configs", refreshConfigTasks...)
+
+	if len(monitorConfigTasks) > 0 {
+		tb = tb.ParallelStep("+ Refresh monitor configs", monitorConfigTasks...)
+	}
+
+	if !skipRestart {
+		tb = tb.Serial(task.NewFunc("UpgradeCluster", func(ctx *task.Context) error {
 			return operator.Upgrade(ctx, topo, opt)
-		})).
-		Build()
+		}))
+	}
+
+	t := tb.Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
@@ -1800,4 +1828,53 @@ func buildMonitoredDeployTask(
 		}
 	}
 	return
+}
+
+func refreshMonitoredConfigTask(
+	specManager *spec.SpecManager,
+	clusterName string,
+	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
+	globalOptions spec.GlobalOptions,
+	monitoredOptions *spec.MonitoredOptions,
+	sshTimeout int64,
+) []*task.StepDisplay {
+	if monitoredOptions == nil {
+		return nil
+	}
+
+	tasks := []*task.StepDisplay{}
+	// monitoring agents
+	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
+		for host, info := range uniqueHosts {
+			deployDir := clusterutil.Abs(globalOptions.User, monitoredOptions.DeployDir)
+			// data dir would be empty for components which don't need it
+			dataDir := monitoredOptions.DataDir
+			// the default data_dir is relative to deploy_dir
+			if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
+				dataDir = filepath.Join(deployDir, dataDir)
+			}
+			// log dir will always be with values, but might not used by the component
+			logDir := clusterutil.Abs(globalOptions.User, monitoredOptions.LogDir)
+			// Generate configs
+			t := task.NewBuilder().
+				UserSSH(host, info.ssh, globalOptions.User, sshTimeout).
+				MonitoredConfig(
+					clusterName,
+					comp,
+					host,
+					globalOptions.ResourceControl,
+					monitoredOptions,
+					globalOptions.User,
+					meta.DirPaths{
+						Deploy: deployDir,
+						Data:   []string{dataDir},
+						Log:    logDir,
+						Cache:  specManager.Path(clusterName, spec.TempConfigPath),
+					},
+				).
+				BuildAsStep(fmt.Sprintf("  - Refresh config %s -> %s", comp, host))
+			tasks = append(tasks, t)
+		}
+	}
+	return tasks
 }

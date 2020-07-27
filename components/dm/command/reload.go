@@ -20,6 +20,7 @@ import (
 )
 
 func newReloadCmd() *cobra.Command {
+	var skipRestart bool
 	cmd := &cobra.Command{
 		Use:   "reload <cluster-name>",
 		Short: "Reload a DM cluster's config and restart if needed",
@@ -34,7 +35,7 @@ func newReloadCmd() *cobra.Command {
 
 			clusterName := args[0]
 
-			return deployer.Reload(clusterName, gOpt)
+			return deployer.Reload(clusterName, gOpt, skipRestart)
 		},
 	}
 
@@ -42,6 +43,7 @@ func newReloadCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only start specified nodes")
 	cmd.Flags().Int64Var(&gOpt.APITimeout, "transfer-timeout", 300, "Timeout in seconds when transferring dm-master leaders")
 	cmd.Flags().BoolVarP(&gOpt.IgnoreConfigCheck, "ignore-config-check", "", false, "Ignore the config check result")
+	cmd.Flags().BoolVar(&skipRestart, "skip-restart", false, "Only refresh configuration to remote and do not restart services")
 
 	return cmd
 }
