@@ -78,7 +78,12 @@ func init() {
 	// Initialize the global variables
 	flags.ShowBacktrace = len(os.Getenv("TIUP_BACKTRACE")) > 0
 	cobra.EnableCommandSorting = false
-	gOpt.NativeSSH = len(os.Getenv(localdata.EnvNameNativeSSHClient)) > 0
+
+	if os.Getenv(localdata.EnvNameNativeSSHClient) == "true" ||
+		os.Getenv(localdata.EnvNameNativeSSHClient) == "1" ||
+		os.Getenv(localdata.EnvNameNativeSSHClient) == "enable" {
+		gOpt.NativeSSH = true
+	}
 
 	rootCmd = &cobra.Command{
 		Use:           cliutil.OsArgs0(),
