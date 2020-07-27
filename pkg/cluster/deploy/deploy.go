@@ -74,11 +74,8 @@ func (d *Deployer) StartCluster(name string, options operator.Options, fn ...fun
 			return operator.Start(ctx, topo, options)
 		})
 
-	if len(fn) > 0 {
-		if len(fn) != 1 {
-			panic("wrong fn param")
-		}
-		fn[0](b, metadata)
+	for _, f := range fn {
+		f(b, metadata)
 	}
 
 	t := b.Build()
