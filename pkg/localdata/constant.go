@@ -68,7 +68,7 @@ const (
 	EnvNameSSHPassPrompt = "TIUP_SSHPASS_PROMPT"
 
 	// EnvNameNativeSSHClient is the variable name by which user can specific use natiive ssh client or not
-	EnvNameNativeSSHClient = "TIUP_USE_NATIVE_SSH"
+	EnvNameNativeSSHClient = "TIUP_NATIVE_SSH"
 
 	// MetaFilename represents the process meta file name
 	MetaFilename = "tiup_process_meta"
