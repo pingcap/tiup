@@ -198,7 +198,7 @@ func refreshMonitoredConfigTask(
 			logDir := clusterutil.Abs(globalOptions.User, monitoredOptions.LogDir)
 			// Generate configs
 			t := task.NewBuilder().
-				UserSSH(host, info.ssh, globalOptions.User, gOpt.SSHTimeout).
+				UserSSH(host, info.ssh, globalOptions.User, gOpt.SSHTimeout, gOpt.NativeSSH).
 				MonitoredConfig(
 					clusterName,
 					comp,
