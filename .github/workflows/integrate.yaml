@@ -25,7 +25,6 @@ jobs:
           - "test_scale_tools"
           - "test_upgrade"
           - "test_cmd_with_native_ssh"
-          - "test_cmd_no_cdc_with_native_ssh"
           - "test_scale_core_with_native_ssh"
           - "test_scale_tools_with_native_ssh"
           # - "test_dm_cmd"
