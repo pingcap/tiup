@@ -1227,7 +1227,7 @@ func (m *Manager) meta(name string) (metadata spec.Metadata, err error) {
 	}
 
 	if !exist {
-		return nil, perrs.Errorf("cluster `%s` not exists", name)
+		return nil, perrs.Errorf("%s cluster `%s` not exists", m.sysName, name)
 	}
 
 	metadata = m.specManager.NewMetadata()
