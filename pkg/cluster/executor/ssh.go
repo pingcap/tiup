@@ -27,6 +27,7 @@ import (
 	"github.com/appleboy/easyssh-proxy"
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
+	"github.com/pingcap/failpoint"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -123,6 +124,11 @@ func NewSSHExecutor(c SSHConfig, sudo bool, native bool) Executor {
 		}
 		return e
 	}
+
+	// Used in integration testing, to check if native ssh client is really used when it need to be.
+	failpoint.Inject("assertNativeSSH", func() {
+		panic("native ssh client should be used in this case")
+	})
 
 	e := new(EasySSHExecutor)
 	e.initialize(c)
