@@ -178,7 +178,7 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 func showComponentVersions(env *environment.Environment, component string, opt listOptions) (*listResult, error) {
 	var comp *v1manifest.Component
 	var err error
-	comp, err = env.V1Repository().FetchComponentManifest(component)
+	comp, err = env.V1Repository().FetchComponentManifest(component, false)
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to fetch component")
 	}

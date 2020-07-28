@@ -642,7 +642,7 @@ func (p *Playground) bootCluster(env *environment.Environment, options *bootOpti
 	}
 
 	if options.version == "" {
-		version, _, err := env.V1Repository().LatestStableVersion("tidb")
+		version, _, err := env.V1Repository().LatestStableVersion("tidb", false)
 		if err != nil {
 			return err
 		}
