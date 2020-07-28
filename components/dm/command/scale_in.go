@@ -36,10 +36,11 @@ func newScaleInCmd() *cobra.Command {
 
 			scale := func(b *task.Builder, imetadata spec.Metadata) {
 				metadata := imetadata.(*dm.Metadata)
-				b.Serial(
-					task.NewFunc(fmt.Sprintf("ScaleInCluster: options=%+v", gOpt), func(ctx *task.Context) error {
+				b.Func(
+					fmt.Sprintf("ScaleInCluster: options=%+v", gOpt),
+					func(ctx *task.Context) error {
 						return operator.ScaleInDMCluster(ctx, metadata.Topology, gOpt)
-					}),
+					},
 				).UpdateDMMeta(clusterName, metadata, gOpt.Nodes)
 			}
 
