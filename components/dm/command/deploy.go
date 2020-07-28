@@ -53,6 +53,7 @@ func newDeploy() *cobra.Command {
 				skipConfirm,
 				gOpt.OptTimeout,
 				gOpt.SSHTimeout,
+				gOpt.NativeSSH,
 			)
 		},
 	}

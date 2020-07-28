@@ -57,6 +57,11 @@ func init() {
 	flags.ShowBacktrace = len(os.Getenv("TIUP_BACKTRACE")) > 0
 	cobra.EnableCommandSorting = false
 
+	nativeEnvVar := strings.ToLower(os.Getenv(localdata.EnvNameNativeSSHClient))
+	if nativeEnvVar == "true" || nativeEnvVar == "1" || nativeEnvVar == "enable" {
+		gOpt.NativeSSH = true
+	}
+
 	rootCmd = &cobra.Command{
 		Use:           cliutil.OsArgs0(),
 		Short:         "Deploy a DM cluster for production",
@@ -83,6 +88,12 @@ func init() {
 				return err
 			}
 			tiupmeta.SetGlobalEnv(env)
+
+			if gOpt.NativeSSH {
+				zap.L().Info("Native ssh client will be used",
+					zap.String(localdata.EnvNameNativeSSHClient, os.Getenv(localdata.EnvNameNativeSSHClient)))
+			}
+
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -98,6 +109,7 @@ func init() {
 	rootCmd.PersistentFlags().Int64Var(&gOpt.SSHTimeout, "ssh-timeout", 5, "Timeout in seconds to connect host via SSH, ignored for operations that don't need an SSH connection.")
 	rootCmd.PersistentFlags().Int64Var(&gOpt.OptTimeout, "wait-timeout", 60, "Timeout in seconds to wait for an operation to complete, ignored for operations that don't fit.")
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
+	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "Use the native SSH client installed on local system instead of the build-in one.")
 
 	rootCmd.AddCommand(
 		newDeploy(),

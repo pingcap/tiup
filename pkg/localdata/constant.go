@@ -64,6 +64,12 @@ const (
 	// EnvTag is the tag of the running component
 	EnvTag = "TIUP_TAG"
 
+	// EnvNameSSHPassPrompt is the variable name by which user specific the password prompt for sshpass
+	EnvNameSSHPassPrompt = "TIUP_SSHPASS_PROMPT"
+
+	// EnvNameNativeSSHClient is the variable name by which user can specific use natiive ssh client or not
+	EnvNameNativeSSHClient = "TIUP_NATIVE_SSH"
+
 	// MetaFilename represents the process meta file name
 	MetaFilename = "tiup_process_meta"
 )

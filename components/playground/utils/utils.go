@@ -14,12 +14,8 @@
 package utils
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 	"time"
-
-	"github.com/pingcap/errors"
 )
 
 // RetryOption is options for Retry()
@@ -81,41 +77,4 @@ func Retry(doFunc func() error, opts ...RetryOption) error {
 	}
 
 	return fmt.Errorf("operation exceeds the max retry attempts of %d", cfg.Attempts)
-}
-
-// TailN try get the latest n line of the file.
-func TailN(fname string, n int) (lines []string, err error) {
-	file, err := os.Open(fname)
-	if err != nil {
-		return nil, errors.AddStack(err)
-	}
-	defer file.Close()
-
-	estimateLineSize := 1024
-
-	stat, err := os.Stat(fname)
-	if err != nil {
-		return nil, errors.AddStack(err)
-	}
-
-	start := int(stat.Size()) - n*estimateLineSize
-	if start < 0 {
-		start = 0
-	}
-
-	_, err = file.Seek(int64(start), 0 /*means relative to the origin of the file*/)
-	if err != nil {
-		return nil, errors.AddStack(err)
-	}
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-
-	if len(lines) > n {
-		lines = lines[len(lines)-n:]
-	}
-
-	return
 }

@@ -39,6 +39,7 @@ func (b *Builder) RootSSH(
 	port int,
 	user, password, keyFile, passphrase string,
 	sshTimeout int64,
+	nativeClient bool,
 ) *Builder {
 	b.tasks = append(b.tasks, &RootSSH{
 		host:       host,
@@ -48,17 +49,19 @@ func (b *Builder) RootSSH(
 		keyFile:    keyFile,
 		passphrase: passphrase,
 		timeout:    sshTimeout,
+		native:     nativeClient,
 	})
 	return b
 }
 
 // UserSSH append a UserSSH task to the current task collection
-func (b *Builder) UserSSH(host string, port int, deployUser string, sshTimeout int64) *Builder {
+func (b *Builder) UserSSH(host string, port int, deployUser string, sshTimeout int64, nativeClient bool) *Builder {
 	b.tasks = append(b.tasks, &UserSSH{
 		host:       host,
 		port:       port,
 		deployUser: deployUser,
 		timeout:    sshTimeout,
+		native:     nativeClient,
 	})
 	return b
 }
