@@ -297,7 +297,7 @@ func TestYanked(t *testing.T) {
 	_, ok := updated.VersionList("plat/form")["v2.0.3"]
 	assert.False(t, ok)
 
-	updated, err = repo.updateComponentManifest("bar", false)
+	_, err = repo.updateComponentManifest("bar", false)
 	assert.NotNil(t, err)
 	assert.Equal(t, err, errUnknownComponent)
 }

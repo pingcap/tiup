@@ -427,7 +427,7 @@ func (r *V1Repository) updateComponentManifest(id string, withYanked bool) (*v1m
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	components := map[string]v1manifest.ComponentItem{}
+	var components map[string]v1manifest.ComponentItem
 	if withYanked {
 		components = index.ComponentListWithYanked()
 	} else {
