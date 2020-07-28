@@ -52,10 +52,10 @@ func NewManager(sysName string, specManager *spec.SpecManager) *Manager {
 }
 
 // StartCluster start the cluster with specified name.
-func (d *Manager) StartCluster(name string, options operator.Options, fn ...func(b *task.Builder, metadata spec.Metadata)) error {
+func (m *Manager) StartCluster(name string, options operator.Options, fn ...func(b *task.Builder, metadata spec.Metadata)) error {
 	log.Infof("Starting cluster %s...", name)
 
-	metadata, err := d.meta(name)
+	metadata, err := m.meta(name)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -65,8 +65,8 @@ func (d *Manager) StartCluster(name string, options operator.Options, fn ...func
 
 	b := task.NewBuilder().
 		SSHKeySet(
-			d.specManager.Path(name, "ssh", "id_rsa"),
-			d.specManager.Path(name, "ssh", "id_rsa.pub")).
+			m.specManager.Path(name, "ssh", "id_rsa"),
+			m.specManager.Path(name, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, options.SSHTimeout).
 		Func("StartCluster", func(ctx *task.Context) error {
 			return operator.Start(ctx, topo, options)
@@ -91,8 +91,8 @@ func (d *Manager) StartCluster(name string, options operator.Options, fn ...func
 }
 
 // StopCluster stop the cluster.
-func (d *Manager) StopCluster(clusterName string, options operator.Options) error {
-	metadata, err := d.meta(clusterName)
+func (m *Manager) StopCluster(clusterName string, options operator.Options) error {
+	metadata, err := m.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -102,8 +102,8 @@ func (d *Manager) StopCluster(clusterName string, options operator.Options) erro
 
 	t := task.NewBuilder().
 		SSHKeySet(
-			d.specManager.Path(clusterName, "ssh", "id_rsa"),
-			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
+			m.specManager.Path(clusterName, "ssh", "id_rsa"),
+			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(metadata.GetTopology(), base.User, options.SSHTimeout).
 		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, options)
@@ -123,8 +123,8 @@ func (d *Manager) StopCluster(clusterName string, options operator.Options) erro
 }
 
 // RestartCluster restart the cluster.
-func (d *Manager) RestartCluster(clusterName string, options operator.Options) error {
-	metadata, err := d.meta(clusterName)
+func (m *Manager) RestartCluster(clusterName string, options operator.Options) error {
+	metadata, err := m.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -134,8 +134,8 @@ func (d *Manager) RestartCluster(clusterName string, options operator.Options) e
 
 	t := task.NewBuilder().
 		SSHKeySet(
-			d.specManager.Path(clusterName, "ssh", "id_rsa"),
-			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
+			m.specManager.Path(clusterName, "ssh", "id_rsa"),
+			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, options.SSHTimeout).
 		Func("RestartCluster", func(ctx *task.Context) error {
 			return operator.Restart(ctx, topo, options)
@@ -155,8 +155,8 @@ func (d *Manager) RestartCluster(clusterName string, options operator.Options) e
 }
 
 // ListCluster list the clusters.
-func (d *Manager) ListCluster() error {
-	names, err := d.specManager.List()
+func (m *Manager) ListCluster() error {
+	names, err := m.specManager.List()
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -167,7 +167,7 @@ func (d *Manager) ListCluster() error {
 	}
 
 	for _, name := range names {
-		metadata, err := d.meta(name)
+		metadata, err := m.meta(name)
 		if err != nil {
 			return perrs.Trace(err)
 		}
@@ -178,8 +178,8 @@ func (d *Manager) ListCluster() error {
 			name,
 			base.User,
 			base.Version,
-			d.specManager.Path(name),
-			d.specManager.Path(name, "ssh", "id_rsa"),
+			m.specManager.Path(name),
+			m.specManager.Path(name, "ssh", "id_rsa"),
 		})
 	}
 
@@ -188,8 +188,8 @@ func (d *Manager) ListCluster() error {
 }
 
 // DestroyCluster destroy the cluster.
-func (d *Manager) DestroyCluster(clusterName string, gOpt operator.Options, destroyOpt operator.Options, skipConfirm bool) error {
-	metadata, err := d.meta(clusterName)
+func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, destroyOpt operator.Options, skipConfirm bool) error {
+	metadata, err := m.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -200,7 +200,7 @@ func (d *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 	if !skipConfirm {
 		if err := cliutil.PromptForConfirmOrAbortError(
 			"This operation will destroy %s %s cluster %s and its data.\nDo you want to continue? [y/N]:",
-			d.sysName,
+			m.sysName,
 			color.HiYellowString(base.Version),
 			color.HiYellowString(clusterName)); err != nil {
 			return err
@@ -210,8 +210,8 @@ func (d *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 
 	t := task.NewBuilder().
 		SSHKeySet(
-			d.specManager.Path(clusterName, "ssh", "id_rsa"),
-			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
+			m.specManager.Path(clusterName, "ssh", "id_rsa"),
+			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, gOpt.SSHTimeout).
 		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, operator.Options{})
@@ -229,7 +229,7 @@ func (d *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 		return perrs.Trace(err)
 	}
 
-	if err := d.specManager.Remove(clusterName); err != nil {
+	if err := m.specManager.Remove(clusterName); err != nil {
 		return perrs.Trace(err)
 	}
 
@@ -238,15 +238,15 @@ func (d *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 
 }
 
-// ExecOptions for exec shell command.
+// ExecOptions for exec shell commanm.
 type ExecOptions struct {
 	Command string
 	Sudo    bool
 }
 
 // Exec shell command on host in the tidb cluster.
-func (d *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Options) error {
-	metadata, err := d.meta(clusterName)
+func (m *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Options) error {
+	metadata, err := m.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -282,8 +282,8 @@ func (d *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Option
 
 	t := task.NewBuilder().
 		SSHKeySet(
-			d.specManager.Path(clusterName, "ssh", "id_rsa"),
-			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
+			m.specManager.Path(clusterName, "ssh", "id_rsa"),
+			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, gOpt.SSHTimeout).
 		Parallel(shellTasks...).
 		Build()
@@ -318,8 +318,8 @@ func (d *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Option
 }
 
 // Display cluster meta and topology.
-func (d *Manager) Display(clusterName string, opt operator.Options) error {
-	metadata, err := d.meta(clusterName)
+func (m *Manager) Display(clusterName string, opt operator.Options) error {
+	metadata, err := m.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -329,8 +329,8 @@ func (d *Manager) Display(clusterName string, opt operator.Options) error {
 
 	// display cluster meta
 	cyan := color.New(color.FgCyan, color.Bold)
-	fmt.Printf("%s Cluster: %s\n", d.sysName, cyan.Sprint(clusterName))
-	fmt.Printf("%s Version: %s\n", d.sysName, cyan.Sprint(base.Version))
+	fmt.Printf("%s Cluster: %s\n", m.sysName, cyan.Sprint(clusterName))
+	fmt.Printf("%s Version: %s\n", m.sysName, cyan.Sprint(base.Version))
 
 	// display topology
 	clusterTable := [][]string{
@@ -339,8 +339,8 @@ func (d *Manager) Display(clusterName string, opt operator.Options) error {
 	}
 
 	ctx := task.NewContext()
-	err = ctx.SetSSHKeySet(d.specManager.Path(clusterName, "ssh", "id_rsa"),
-		d.specManager.Path(clusterName, "ssh", "id_rsa.pub"))
+	err = ctx.SetSSHKeySet(m.specManager.Path(clusterName, "ssh", "id_rsa"),
+		m.specManager.Path(clusterName, "ssh", "id_rsa.pub"))
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -418,8 +418,8 @@ func (d *Manager) Display(clusterName string, opt operator.Options) error {
 }
 
 // EditConfig let the user edit the config.
-func (d *Manager) EditConfig(clusterName string, skipConfirm bool) error {
-	metadata, err := d.meta(clusterName)
+func (m *Manager) EditConfig(clusterName string, skipConfirm bool) error {
+	metadata, err := m.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -431,7 +431,7 @@ func (d *Manager) EditConfig(clusterName string, skipConfirm bool) error {
 		return perrs.AddStack(err)
 	}
 
-	newTopo, err := d.editTopo(topo, data, skipConfirm)
+	newTopo, err := m.editTopo(topo, data, skipConfirm)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -442,7 +442,7 @@ func (d *Manager) EditConfig(clusterName string, skipConfirm bool) error {
 
 	log.Infof("Apply the change...")
 	metadata.SetTopology(newTopo)
-	err = d.specManager.SaveMeta(clusterName, metadata)
+	err = m.specManager.SaveMeta(clusterName, metadata)
 	if err != nil {
 		return perrs.Annotate(err, "failed to save meta")
 	}
@@ -452,11 +452,11 @@ func (d *Manager) EditConfig(clusterName string, skipConfirm bool) error {
 }
 
 // Reload the cluster.
-func (d *Manager) Reload(clusterName string, opt operator.Options, skipRestart bool) error {
+func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart bool) error {
 	sshTimeout := opt.SSHTimeout
 	nativeSSH := opt.NativeSSH
 
-	metadata, err := d.meta(clusterName)
+	metadata, err := m.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -499,21 +499,21 @@ func (d *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 		// Refresh all configuration
 		t := tb.InitConfig(clusterName,
 			base.Version,
-			d.specManager,
+			m.specManager,
 			inst, base.User,
 			opt.IgnoreConfigCheck,
 			meta.DirPaths{
 				Deploy: deployDir,
 				Data:   dataDirs,
 				Log:    logDir,
-				Cache:  d.specManager.Path(clusterName, spec.TempConfigPath),
+				Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
 			}).
 			BuildAsStep(fmt.Sprintf("  - Refresh config %s -> %s", inst.ComponentName(), inst.ID()))
 		refreshConfigTasks = append(refreshConfigTasks, t)
 	})
 
 	monitorConfigTasks := refreshMonitoredConfigTask(
-		d.specManager,
+		m.specManager,
 		clusterName,
 		uniqueHosts,
 		*topo.BaseTopo().GlobalOptions,
@@ -530,8 +530,8 @@ func (d *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 
 	tb := task.NewBuilder().
 		SSHKeySet(
-			d.specManager.Path(clusterName, "ssh", "id_rsa"),
-			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
+			m.specManager.Path(clusterName, "ssh", "id_rsa"),
+			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout).
 		ParallelStep("+ Refresh instance configs", refreshConfigTasks...)
 
@@ -561,8 +561,8 @@ func (d *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 }
 
 // Upgrade the cluster.
-func (d *Manager) Upgrade(clusterName string, clusterVersion string, opt operator.Options) error {
-	metadata, err := d.meta(clusterName)
+func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operator.Options) error {
+	metadata, err := m.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -649,7 +649,7 @@ func (d *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 			tb.InitConfig(
 				clusterName,
 				clusterVersion,
-				d.specManager,
+				m.specManager,
 				inst,
 				base.User,
 				opt.IgnoreConfigCheck,
@@ -657,7 +657,7 @@ func (d *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 					Deploy: deployDir,
 					Data:   dataDirs,
 					Log:    logDir,
-					Cache:  d.specManager.Path(clusterName, spec.TempConfigPath),
+					Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
 				},
 			)
 			copyCompTasks = append(copyCompTasks, tb.Build())
@@ -673,8 +673,8 @@ func (d *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 
 	t := task.NewBuilder().
 		SSHKeySet(
-			d.specManager.Path(clusterName, "ssh", "id_rsa"),
-			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
+			m.specManager.Path(clusterName, "ssh", "id_rsa"),
+			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout).
 		Parallel(downloadCompTasks...).
 		Parallel(copyCompTasks...).
@@ -693,11 +693,11 @@ func (d *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 
 	metadata.SetVersion(clusterVersion)
 
-	if err := d.specManager.SaveMeta(clusterName, metadata); err != nil {
+	if err := m.specManager.SaveMeta(clusterName, metadata); err != nil {
 		return perrs.Trace(err)
 	}
 
-	if err := os.RemoveAll(d.specManager.Path(clusterName, "patch")); err != nil {
+	if err := os.RemoveAll(m.specManager.Path(clusterName, "patch")); err != nil {
 		return perrs.Trace(err)
 	}
 
@@ -707,8 +707,8 @@ func (d *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 }
 
 // Patch the cluster.
-func (d *Manager) Patch(clusterName string, packagePath string, opt operator.Options, overwrite bool) error {
-	metadata, err := d.meta(clusterName)
+func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Options, overwrite bool) error {
+	metadata, err := m.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -724,7 +724,7 @@ func (d *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 	if err != nil {
 		return err
 	}
-	if err := checkPackage(d.specManager, clusterName, insts[0].ComponentName(), insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
+	if err := checkPackage(m.specManager, clusterName, insts[0].ComponentName(), insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
 		return err
 	}
 
@@ -739,8 +739,8 @@ func (d *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 
 	t := task.NewBuilder().
 		SSHKeySet(
-			d.specManager.Path(clusterName, "ssh", "id_rsa"),
-			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
+			m.specManager.Path(clusterName, "ssh", "id_rsa"),
+			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout).
 		Parallel(replacePackageTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
@@ -757,7 +757,7 @@ func (d *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 	}
 
 	if overwrite {
-		if err := overwritePatch(d.specManager, clusterName, insts[0].ComponentName(), packagePath); err != nil {
+		if err := overwritePatch(m.specManager, clusterName, insts[0].ComponentName(), packagePath); err != nil {
 			return err
 		}
 	}
@@ -782,7 +782,7 @@ type DeployOptions struct {
 }
 
 // Deploy a cluster.
-func (d *Manager) Deploy(
+func (m *Manager) Deploy(
 	clusterName string,
 	clusterVersion string,
 	topoFile string,
@@ -797,19 +797,19 @@ func (d *Manager) Deploy(
 		return err
 	}
 
-	exist, err := d.specManager.Exist(clusterName)
+	exist, err := m.specManager.Exist(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
 
 	if exist {
-		// FIXME: When change to use args, the suggestion text need to be updated.
+		// FIXME: When change to use args, the suggestion text need to be updatem.
 		return errDeployNameDuplicate.
 			New("Cluster name '%s' is duplicated", clusterName).
 			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
 	}
 
-	metadata := d.specManager.NewMetadata()
+	metadata := m.specManager.NewMetadata()
 	topo := metadata.GetTopology()
 
 	if err := clusterutil.ParseTopologyYaml(topoFile, topo); err != nil {
@@ -818,15 +818,15 @@ func (d *Manager) Deploy(
 
 	base := topo.BaseTopo()
 
-	if err := prepare.CheckClusterPortConflict(d.specManager, clusterName, topo); err != nil {
+	if err := prepare.CheckClusterPortConflict(m.specManager, clusterName, topo); err != nil {
 		return err
 	}
-	if err := prepare.CheckClusterDirConflict(d.specManager, clusterName, topo); err != nil {
+	if err := prepare.CheckClusterDirConflict(m.specManager, clusterName, topo); err != nil {
 		return err
 	}
 
 	if !skipConfirm {
-		if err := d.confirmTopology(clusterName, clusterVersion, topo, set.NewStringSet()); err != nil {
+		if err := m.confirmTopology(clusterName, clusterVersion, topo, set.NewStringSet()); err != nil {
 			return err
 		}
 	}
@@ -836,9 +836,9 @@ func (d *Manager) Deploy(
 		return err
 	}
 
-	if err := os.MkdirAll(d.specManager.Path(clusterName), 0755); err != nil {
+	if err := os.MkdirAll(m.specManager.Path(clusterName), 0755); err != nil {
 		return errorx.InitializationFailed.
-			Wrap(err, "Failed to create cluster metadata directory '%s'", d.specManager.Path(clusterName)).
+			Wrap(err, "Failed to create cluster metadata directory '%s'", m.specManager.Path(clusterName)).
 			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
 	}
 
@@ -944,7 +944,7 @@ func (d *Manager) Deploy(
 		t = t.InitConfig(
 			clusterName,
 			clusterVersion,
-			d.specManager,
+			m.specManager,
 			inst,
 			globalOptions.User,
 			opt.IgnoreConfigCheck,
@@ -952,7 +952,7 @@ func (d *Manager) Deploy(
 				Deploy: deployDir,
 				Data:   dataDirs,
 				Log:    logDir,
-				Cache:  d.specManager.Path(clusterName, spec.TempConfigPath),
+				Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
 			},
 		)
 
@@ -963,7 +963,7 @@ func (d *Manager) Deploy(
 
 	// Deploy monitor relevant components to remote
 	dlTasks, dpTasks := buildMonitoredDeployTask(
-		d.specManager,
+		m.specManager,
 		clusterName,
 		uniqueHosts,
 		globalOptions,
@@ -977,7 +977,7 @@ func (d *Manager) Deploy(
 
 	builder := task.NewBuilder().
 		Step("+ Generate SSH keys",
-			task.NewBuilder().SSHKeyGen(d.specManager.Path(clusterName, "ssh", "id_rsa")).Build()).
+			task.NewBuilder().SSHKeyGen(m.specManager.Path(clusterName, "ssh", "id_rsa")).Build()).
 		ParallelStep("+ Download TiDB components", downloadCompTasks...).
 		ParallelStep("+ Initialize target host environments", envInitTasks...).
 		ParallelStep("+ Copy files", deployCompTasks...)
@@ -998,7 +998,7 @@ func (d *Manager) Deploy(
 
 	metadata.SetUser(globalOptions.User)
 	metadata.SetVersion(clusterVersion)
-	err = d.specManager.SaveMeta(clusterName, metadata)
+	err = m.specManager.SaveMeta(clusterName, metadata)
 
 	if err != nil {
 		return perrs.AddStack(err)
@@ -1010,7 +1010,7 @@ func (d *Manager) Deploy(
 }
 
 // ScaleIn the cluster.
-func (d *Manager) ScaleIn(
+func (m *Manager) ScaleIn(
 	clusterName string,
 	skipConfirm bool,
 	sshTimeout int64,
@@ -1037,7 +1037,7 @@ func (d *Manager) ScaleIn(
 		log.Infof("Scale-in nodes...")
 	}
 
-	metadata, err := d.meta(clusterName)
+	metadata, err := m.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -1082,7 +1082,7 @@ func (d *Manager) ScaleIn(
 
 			t := tb.InitConfig(clusterName,
 				base.Version,
-				d.specManager,
+				m.specManager,
 				instance,
 				base.User,
 				true, // always ignore config check result in scale in
@@ -1090,7 +1090,7 @@ func (d *Manager) ScaleIn(
 					Deploy: deployDir,
 					Data:   dataDirs,
 					Log:    logDir,
-					Cache:  d.specManager.Path(clusterName, spec.TempConfigPath),
+					Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
 				},
 			).Build()
 			regenConfigTasks = append(regenConfigTasks, t)
@@ -1106,8 +1106,8 @@ func (d *Manager) ScaleIn(
 
 	b := task.NewBuilder().
 		SSHKeySet(
-			d.specManager.Path(clusterName, "ssh", "id_rsa"),
-			d.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
+			m.specManager.Path(clusterName, "ssh", "id_rsa"),
+			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, sshTimeout)
 
 	// TODO: support command scale in operation.
@@ -1129,7 +1129,7 @@ func (d *Manager) ScaleIn(
 }
 
 // ScaleOut scale out the cluster.
-func (d *Manager) ScaleOut(
+func (m *Manager) ScaleOut(
 	clusterName string,
 	topoFile string,
 	afterDeploy func(b *task.Builder, newPart spec.Topology),
@@ -1140,7 +1140,7 @@ func (d *Manager) ScaleOut(
 	sshTimeout int64,
 	nativeSSH bool,
 ) error {
-	metadata, err := d.meta(clusterName)
+	metadata, err := m.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -1175,23 +1175,23 @@ func (d *Manager) ScaleOut(
 		return err
 	}
 
-	if err := prepare.CheckClusterPortConflict(d.specManager, clusterName, mergedTopo); err != nil {
+	if err := prepare.CheckClusterPortConflict(m.specManager, clusterName, mergedTopo); err != nil {
 		return err
 	}
-	if err := prepare.CheckClusterDirConflict(d.specManager, clusterName, mergedTopo); err != nil {
+	if err := prepare.CheckClusterDirConflict(m.specManager, clusterName, mergedTopo); err != nil {
 		return err
 	}
 
 	patchedComponents := set.NewStringSet()
 	newPart.IterInstance(func(instance spec.Instance) {
-		if utils.IsExist(d.specManager.Path(clusterName, spec.PatchDirName, instance.ComponentName()+".tar.gz")) {
+		if utils.IsExist(m.specManager.Path(clusterName, spec.PatchDirName, instance.ComponentName()+".tar.gz")) {
 			patchedComponents.Insert(instance.ComponentName())
 		}
 	})
 
 	if !skipConfirm {
 		// patchedComponents are components that have been patched and overwrited
-		if err := d.confirmTopology(clusterName, base.Version, newPart, patchedComponents); err != nil {
+		if err := m.confirmTopology(clusterName, base.Version, newPart, patchedComponents); err != nil {
 			return err
 		}
 	}
@@ -1202,7 +1202,7 @@ func (d *Manager) ScaleOut(
 	}
 
 	// Build the scale out tasks
-	t, err := buildScaleOutTask(d, clusterName, metadata, mergedTopo, opt, sshConnProps, newPart, patchedComponents, optTimeout, sshTimeout, nativeSSH, afterDeploy, final)
+	t, err := buildScaleOutTask(m, clusterName, metadata, mergedTopo, opt, sshConnProps, newPart, patchedComponents, optTimeout, sshTimeout, nativeSSH, afterDeploy, final)
 	if err != nil {
 		return err
 	}
@@ -1220,8 +1220,8 @@ func (d *Manager) ScaleOut(
 	return nil
 }
 
-func (d *Manager) meta(name string) (metadata spec.Metadata, err error) {
-	exist, err := d.specManager.Exist(name)
+func (m *Manager) meta(name string) (metadata spec.Metadata, err error) {
+	exist, err := m.specManager.Exist(name)
 	if err != nil {
 		return nil, perrs.AddStack(err)
 	}
@@ -1230,8 +1230,8 @@ func (d *Manager) meta(name string) (metadata spec.Metadata, err error) {
 		return nil, perrs.Errorf("cluster `%s` not exists", name)
 	}
 
-	metadata = d.specManager.NewMetadata()
-	err = d.specManager.Metadata(name, metadata)
+	metadata = m.specManager.NewMetadata()
+	err = m.specManager.Metadata(name, metadata)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return nil, err
@@ -1244,7 +1244,7 @@ func (d *Manager) meta(name string) (metadata spec.Metadata, err error) {
 // 2. Open file in editor.
 // 3. Check and update Topology.
 // 4. Save meta file.
-func (d *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool) (spec.Topology, error) {
+func (m *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool) (spec.Topology, error) {
 	file, err := ioutil.TempFile(os.TempDir(), "*")
 	if err != nil {
 		return nil, perrs.AddStack(err)
@@ -1273,15 +1273,15 @@ func (d *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool
 		return nil, perrs.AddStack(err)
 	}
 
-	newTopo := d.specManager.NewMetadata().GetTopology()
+	newTopo := m.specManager.NewMetadata().GetTopology()
 	err = yaml.UnmarshalStrict(newData, newTopo)
 	if err != nil {
 		fmt.Print(color.RedString("New topology could not be saved: "))
 		log.Infof("Failed to parse topology file: %v", err)
 		if cliutil.PromptForConfirmReverse("Do you want to continue editing? [Y/n]: ") {
-			return d.editTopo(origTopo, newData, skipConfirm)
+			return m.editTopo(origTopo, newData, skipConfirm)
 		}
-		log.Infof("Nothing changed.")
+		log.Infof("Nothing changem.")
 		return nil, nil
 	}
 
@@ -1290,9 +1290,9 @@ func (d *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool
 		fmt.Print(color.RedString("New topology could not be saved: "))
 		log.Errorf("%s", err)
 		if cliutil.PromptForConfirmReverse("Do you want to continue editing? [Y/n]: ") {
-			return d.editTopo(origTopo, newData, skipConfirm)
+			return m.editTopo(origTopo, newData, skipConfirm)
 		}
-		log.Infof("Nothing changed.")
+		log.Infof("Nothing changem.")
 		return nil, nil
 
 	}
@@ -1467,12 +1467,12 @@ func validateNewTopo(topo spec.Topology) (err error) {
 	return err
 }
 
-func (d *Manager) confirmTopology(clusterName, version string, topo spec.Topology, patchedRoles set.StringSet) error {
+func (m *Manager) confirmTopology(clusterName, version string, topo spec.Topology, patchedRoles set.StringSet) error {
 	log.Infof("Please confirm your topology:")
 
 	cyan := color.New(color.FgCyan, color.Bold)
-	fmt.Printf("%s Cluster: %s\n", d.sysName, cyan.Sprint(clusterName))
-	fmt.Printf("%s Version: %s\n", d.sysName, cyan.Sprint(version))
+	fmt.Printf("%s Cluster: %s\n", m.sysName, cyan.Sprint(clusterName))
+	fmt.Printf("%s Version: %s\n", m.sysName, cyan.Sprint(version))
 
 	clusterTable := [][]string{
 		// Header
@@ -1499,7 +1499,7 @@ func (d *Manager) confirmTopology(clusterName, version string, topo spec.Topolog
 	log.Warnf("    1. If the topology is not what you expected, check your yaml file.")
 	log.Warnf("    2. Please confirm there is no port/directory conflicts in same host.")
 	if len(patchedRoles) != 0 {
-		log.Errorf("    3. The component marked as `patched` has been replaced by previous patch command.")
+		log.Errorf("    3. The component marked as `patched` has been replaced by previous patch commanm.")
 	}
 
 	if spec, ok := topo.(*spec.Specification); ok {
@@ -1513,7 +1513,7 @@ func (d *Manager) confirmTopology(clusterName, version string, topo spec.Topolog
 }
 
 func buildScaleOutTask(
-	d *Manager,
+	m *Manager,
 	clusterName string,
 	metadata spec.Metadata,
 	mergedTopo spec.Topology,
@@ -1536,7 +1536,7 @@ func buildScaleOutTask(
 
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
-	specManager := d.specManager
+	specManager := m.specManager
 
 	// Initialize the environments
 	initializedHosts := set.NewStringSet()
@@ -1630,7 +1630,7 @@ func buildScaleOutTask(
 
 		t := tb.ScaleConfig(clusterName,
 			base.Version,
-			d.specManager,
+			m.specManager,
 			topo,
 			inst,
 			base.User,
@@ -1667,7 +1667,7 @@ func buildScaleOutTask(
 		// Refresh all configuration
 		t := tb.InitConfig(clusterName,
 			base.Version,
-			d.specManager,
+			m.specManager,
 			inst,
 			base.User,
 			true, // always ignore config check result in scale out
@@ -1723,7 +1723,7 @@ func buildScaleOutTask(
 		ClusterSSH(newPart, base.User, sshTimeout).
 		Func("Save meta", func(_ *task.Context) error {
 			metadata.SetTopology(mergedTopo)
-			return d.specManager.SaveMeta(clusterName, metadata)
+			return m.specManager.SaveMeta(clusterName, metadata)
 		}).
 		Func("StartCluster", func(ctx *task.Context) error {
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: optTimeout})
