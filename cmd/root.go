@@ -118,6 +118,7 @@ the latest stable version will be downloaded from the repository.`,
 		"and the latest version installed will be selected if no version specified")
 	rootCmd.Flags().StringVarP(&tag, "tag", "T", "", "Specify a tag for component instance")
 	rootCmd.Flags().StringVar(&binPath, "binpath", "", "Specify the binary path of component instance")
+	rootCmd.PersistentFlags().Bool("help", false, "Help for this command")
 
 	rootCmd.AddCommand(
 		newInstallCmd(),
