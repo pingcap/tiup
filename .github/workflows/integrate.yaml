@@ -41,6 +41,7 @@ jobs:
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
           make build_integration_test
+          make tiup
 
       - name: Build the docker-compose stack
         working-directory: ${{env.working-directory}}
