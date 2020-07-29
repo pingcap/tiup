@@ -69,7 +69,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 	log.Infof("Starting cluster %s...", name)
 
 	metadata, err := m.meta(name)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return perrs.AddStack(err)
 	}
 
@@ -106,7 +106,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 // StopCluster stop the cluster.
 func (m *Manager) StopCluster(clusterName string, options operator.Options) error {
 	metadata, err := m.meta(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return perrs.AddStack(err)
 	}
 
@@ -138,7 +138,7 @@ func (m *Manager) StopCluster(clusterName string, options operator.Options) erro
 // RestartCluster restart the cluster.
 func (m *Manager) RestartCluster(clusterName string, options operator.Options) error {
 	metadata, err := m.meta(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return perrs.AddStack(err)
 	}
 
@@ -181,7 +181,7 @@ func (m *Manager) ListCluster() error {
 
 	for _, name := range names {
 		metadata, err := m.meta(name)
-		if err != nil {
+		if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 			return perrs.Trace(err)
 		}
 
@@ -203,7 +203,8 @@ func (m *Manager) ListCluster() error {
 // DestroyCluster destroy the cluster.
 func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, destroyOpt operator.Options, skipConfirm bool) error {
 	metadata, err := m.meta(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return perrs.AddStack(err)
 	}
 
@@ -260,7 +261,7 @@ type ExecOptions struct {
 // Exec shell command on host in the tidb cluster.
 func (m *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Options) error {
 	metadata, err := m.meta(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return perrs.AddStack(err)
 	}
 
@@ -333,7 +334,8 @@ func (m *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Option
 // Display cluster meta and topology.
 func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	metadata, err := m.meta(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return perrs.AddStack(err)
 	}
 
@@ -433,7 +435,7 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 // EditConfig let the user edit the config.
 func (m *Manager) EditConfig(clusterName string, skipConfirm bool) error {
 	metadata, err := m.meta(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return perrs.AddStack(err)
 	}
 
@@ -470,7 +472,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 	nativeSSH := opt.NativeSSH
 
 	metadata, err := m.meta(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return perrs.AddStack(err)
 	}
 
@@ -576,7 +578,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 // Upgrade the cluster.
 func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operator.Options) error {
 	metadata, err := m.meta(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return perrs.AddStack(err)
 	}
 
@@ -722,7 +724,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 // Patch the cluster.
 func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Options, overwrite bool) error {
 	metadata, err := m.meta(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return perrs.AddStack(err)
 	}
 
@@ -825,7 +827,11 @@ func (m *Manager) Deploy(
 	metadata := m.specManager.NewMetadata()
 	topo := metadata.GetTopology()
 
-	if err := clusterutil.ParseTopologyYaml(topoFile, topo); err != nil {
+	// The no tispark master error is ignored, as if the tispark master is removed from the topology
+	// file for some reason (manual edit, for example), it is still possible to scale-out it to make
+	// the whole topology back to normal state.
+	if err := clusterutil.ParseTopologyYaml(topoFile, topo); err != nil &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return err
 	}
 
@@ -1051,7 +1057,9 @@ func (m *Manager) ScaleIn(
 	}
 
 	metadata, err := m.meta(clusterName)
-	if err != nil {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+		// ignore conflict check error, node may be deployed by former version
+		// that lack of some certain conflict checks
 		return perrs.AddStack(err)
 	}
 
@@ -1154,7 +1162,7 @@ func (m *Manager) ScaleOut(
 	nativeSSH bool,
 ) error {
 	metadata, err := m.meta(clusterName)
-	if err != nil {
+	if err != nil { // not allowing validation errors
 		return perrs.AddStack(err)
 	}
 
@@ -1245,9 +1253,8 @@ func (m *Manager) meta(name string) (metadata spec.Metadata, err error) {
 
 	metadata = m.specManager.NewMetadata()
 	err = m.specManager.Metadata(name, metadata)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
-		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-		return nil, err
+	if err != nil {
+		return metadata, perrs.AddStack(err)
 	}
 
 	return metadata, nil
