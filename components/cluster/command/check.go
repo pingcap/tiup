@@ -29,7 +29,6 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
@@ -62,8 +61,6 @@ conflict checks with other clusters`,
 			if len(args) != 1 {
 				return cmd.Help()
 			}
-
-			logger.EnableAuditLog()
 
 			var topo spec.Specification
 			if opt.existCluster { // check for existing cluster

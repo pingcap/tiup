@@ -17,12 +17,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/pingcap/errors"
 	pdserverapi "github.com/pingcap/pd/v4/server/api"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 )
 
@@ -211,11 +216,69 @@ func (i *TiKVInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiKVInstance) ScaleConfig(e executor.Executor, cluster *Specification, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiKVInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	s := i.instance.topo
 	defer func() {
 		i.instance.topo = s
 	}()
-	i.instance.topo = cluster
+	i.instance.topo = mustBeClusterTopo(topo)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+}
+
+var _ RollingUpdateInstance = &TiKVInstance{}
+
+// PreRestart implements RollingUpdateInstance interface.
+func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
+	timeoutOpt := &clusterutil.RetryOption{
+		Timeout: time.Second * time.Duration(apiTimeoutSeconds),
+		Delay:   time.Second * 2,
+	}
+
+	tidbTopo, ok := topo.(*Specification)
+	if !ok {
+		panic("should be type of tidb topology")
+	}
+
+	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, nil)
+
+	// Make sure there's leader of PD.
+	// Although we evict pd leader when restart pd,
+	// But when there's only one PD instance the pd might not serve request right away after restart.
+	err := pdClient.WaitLeader(timeoutOpt)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	if err := pdClient.EvictStoreLeader(addr(i), timeoutOpt); err != nil {
+		if clusterutil.IsTimeoutOrMaxRetry(err) {
+			log.Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
+		} else {
+			return errors.Annotatef(err, "failed to evict store leader %s", i.GetHost())
+		}
+	}
+	return nil
+}
+
+// PostRestart implements RollingUpdateInstance interface.
+func (i *TiKVInstance) PostRestart(topo Topology) error {
+	tidbTopo, ok := topo.(*Specification)
+	if !ok {
+		panic("should be type of tidb topology")
+	}
+
+	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, nil)
+
+	// remove store leader evict scheduler after restart
+	if err := pdClient.RemoveStoreEvict(addr(i)); err != nil {
+		return errors.Annotatef(err, "failed to remove evict store scheduler for %s", i.GetHost())
+	}
+
+	return nil
+}
+
+func addr(ins Instance) string {
+	if ins.GetPort() == 0 || ins.GetPort() == 80 {
+		panic(ins)
+	}
+	return ins.GetHost() + ":" + strconv.Itoa(ins.GetPort())
 }

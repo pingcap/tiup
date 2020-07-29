@@ -14,12 +14,6 @@
 package command
 
 import (
-	"errors"
-
-	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/spf13/cobra"
 )
 
@@ -28,39 +22,8 @@ func newListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List all clusters",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return listCluster()
+			return manager.ListCluster()
 		},
 	}
 	return cmd
-}
-
-func listCluster() error {
-	names, err := tidbSpec.List()
-	if err != nil {
-		return perrs.AddStack(err)
-	}
-
-	clusterTable := [][]string{
-		// Header
-		{"Name", "User", "Version", "Path", "PrivateKey"},
-	}
-
-	for _, name := range names {
-		metadata := new(spec.ClusterMeta)
-		err := tidbSpec.Metadata(name, metadata)
-		if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
-			return perrs.Trace(err)
-		}
-
-		clusterTable = append(clusterTable, []string{
-			name,
-			metadata.User,
-			metadata.Version,
-			tidbSpec.Path(name),
-			tidbSpec.Path(name, "ssh", "id_rsa"),
-		})
-	}
-
-	cliutil.PrintTable(clusterTable, true)
-	return nil
 }

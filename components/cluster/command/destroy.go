@@ -14,19 +14,9 @@
 package command
 
 import (
-	"errors"
-	"os"
-
-	"github.com/fatih/color"
-	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger"
-	"github.com/pingcap/tiup/pkg/logger/log"
-	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/spf13/cobra"
 )
@@ -45,6 +35,9 @@ You can retain some nodes and roles data when destroy cluster, eg:
 				return cmd.Help()
 			}
 
+			clusterName := args[0]
+			teleCommand = append(teleCommand, scrubClusterName(clusterName))
+
 			// Validate the retained roles to prevent unexpected deleting data
 			if len(destoyOpt.RetainDataRoles) > 0 {
 				validRoles := set.NewStringSet(spec.AllComponentNames()...)
@@ -55,57 +48,7 @@ You can retain some nodes and roles data when destroy cluster, eg:
 				}
 			}
 
-			clusterName := args[0]
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
-
-			exist, err := tidbSpec.Exist(clusterName)
-			if err != nil {
-				return perrs.AddStack(err)
-			}
-
-			if !exist {
-				return perrs.Errorf("cannot destroy non-exists cluster %s", clusterName)
-			}
-
-			logger.EnableAuditLog()
-			metadata, err := spec.ClusterMetadata(clusterName)
-			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
-				!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-				return err
-			}
-
-			if !skipConfirm {
-				if err := cliutil.PromptForConfirmOrAbortError(
-					"This operation will destroy TiDB %s cluster %s and its data.\nDo you want to continue? [y/N]:",
-					color.HiYellowString(metadata.Version),
-					color.HiYellowString(clusterName)); err != nil {
-					return err
-				}
-				log.Infof("Destroying cluster...")
-			}
-
-			t := task.NewBuilder().
-				SSHKeySet(
-					spec.ClusterPath(clusterName, "ssh", "id_rsa"),
-					spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-				ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
-				ClusterOperate(metadata.Topology, operator.StopOperation, operator.Options{}).
-				ClusterOperate(metadata.Topology, operator.DestroyOperation, destoyOpt).
-				Build()
-
-			if err := t.Execute(task.NewContext()); err != nil {
-				if errorx.Cast(err) != nil {
-					// FIXME: Map possible task errors and give suggestions.
-					return err
-				}
-				return perrs.Trace(err)
-			}
-
-			if err := os.RemoveAll(spec.ClusterPath(clusterName)); err != nil {
-				return perrs.Trace(err)
-			}
-			log.Infof("Destroyed cluster `%s` successfully", clusterName)
-			return nil
+			return manager.DestroyCluster(clusterName, gOpt, destoyOpt, skipConfirm)
 		},
 	}
 

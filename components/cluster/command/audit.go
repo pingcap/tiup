@@ -14,20 +14,8 @@
 package command
 
 import (
-	"bufio"
-	"fmt"
-	"io/ioutil"
-	"os"
-	"sort"
-	"strings"
-	"time"
-
-	"github.com/fatih/color"
-	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/base52"
-	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/audit"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -38,87 +26,13 @@ func newAuditCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch len(args) {
 			case 0:
-				return showAuditList()
+				return audit.ShowAuditList(spec.AuditDir())
 			case 1:
-				return showAuditLog(args[0])
+				return audit.ShowAuditLog(spec.AuditDir(), args[0])
 			default:
 				return cmd.Help()
 			}
 		},
 	}
 	return cmd
-}
-
-func showAuditList() error {
-	firstLine := func(fileName string) (string, error) {
-		file, err := os.Open(spec.ProfilePath(spec.TiOpsAuditDir, fileName))
-		if err != nil {
-			return "", errors.Trace(err)
-		}
-		defer file.Close()
-
-		scanner := bufio.NewScanner(file)
-		if scanner.Scan() {
-			return scanner.Text(), nil
-		}
-		return "", errors.New("unknown audit log format")
-	}
-
-	auditDir := spec.ProfilePath(spec.TiOpsAuditDir)
-	// Header
-	clusterTable := [][]string{{"ID", "Time", "Command"}}
-	fileInfos, err := ioutil.ReadDir(auditDir)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	for _, fi := range fileInfos {
-		if fi.IsDir() {
-			continue
-		}
-		ts, err := base52.Decode(fi.Name())
-		if err != nil {
-			continue
-		}
-		t := time.Unix(ts, 0)
-		cmd, err := firstLine(fi.Name())
-		if err != nil {
-			continue
-		}
-		clusterTable = append(clusterTable, []string{
-			fi.Name(),
-			t.Format(time.RFC3339),
-			cmd,
-		})
-	}
-
-	sort.Slice(clusterTable[1:], func(i, j int) bool {
-		return clusterTable[i+1][1] > clusterTable[j+1][1]
-	})
-
-	cliutil.PrintTable(clusterTable, true)
-	return nil
-}
-
-func showAuditLog(auditID string) error {
-	path := spec.ProfilePath(spec.TiOpsAuditDir, auditID)
-	if tiuputils.IsNotExist(path) {
-		return errors.Errorf("cannot find the audit log '%s'", auditID)
-	}
-
-	ts, err := base52.Decode(auditID)
-	if err != nil {
-		return errors.Annotatef(err, "unrecognized audit id '%s'", auditID)
-	}
-
-	content, err := ioutil.ReadFile(path)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	t := time.Unix(ts, 0)
-	hint := fmt.Sprintf("- OPERATION TIME: %s -", t.Format("2006-01-02T15:04:05"))
-	line := strings.Repeat("-", len(hint))
-	_, _ = os.Stdout.WriteString(color.MagentaString("%s\n%s\n%s\n", line, hint, line))
-	_, _ = os.Stdout.Write(content)
-	return nil
 }

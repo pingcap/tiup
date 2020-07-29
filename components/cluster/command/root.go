@@ -25,6 +25,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster"
 	"github.com/pingcap/tiup/pkg/cluster/flags"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/report"
@@ -35,7 +36,6 @@ import (
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
-	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/version"
@@ -50,7 +50,8 @@ var (
 	skipConfirm bool
 )
 
-var tidbSpec *meta.SpecManager
+var tidbSpec *spec.SpecManager
+var manager *cluster.Manager
 
 func scrubClusterName(n string) string {
 	return "cluster_" + telemetry.HashReport(n)
@@ -98,6 +99,8 @@ func init() {
 			}
 
 			tidbSpec = spec.GetSpecManager()
+			manager = cluster.NewManager("tidb", tidbSpec)
+			logger.EnableAuditLog(spec.AuditDir())
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.
 			env, err = tiupmeta.InitEnv(repository.Options{

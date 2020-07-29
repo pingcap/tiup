@@ -29,7 +29,7 @@ import (
 // Destroy the cluster.
 func Destroy(
 	getter ExecutorGetter,
-	cluster *spec.Specification,
+	cluster spec.Topology,
 	options Options,
 ) error {
 	uniqueHosts := set.NewStringSet()
@@ -49,8 +49,10 @@ func Destroy(
 		for _, inst := range insts {
 			instCount[inst.GetHost()]--
 			if instCount[inst.GetHost()] == 0 {
-				if err := DestroyMonitored(getter, inst, cluster.MonitoredOptions, options.OptTimeout); err != nil {
-					return err
+				if cluster.GetMonitoredOptions() != nil {
+					if err := DestroyMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -58,7 +60,7 @@ func Destroy(
 
 	// Delete all global deploy directory
 	for host := range uniqueHosts {
-		if err := DeleteGlobalDirs(getter, host, cluster.GlobalOptions); err != nil {
+		if err := DeleteGlobalDirs(getter, host, cluster.BaseTopo().GlobalOptions); err != nil {
 			return nil
 		}
 	}
@@ -67,7 +69,11 @@ func Destroy(
 }
 
 // DeleteGlobalDirs deletes all global directories if they are empty
-func DeleteGlobalDirs(getter ExecutorGetter, host string, options spec.GlobalOptions) error {
+func DeleteGlobalDirs(getter ExecutorGetter, host string, options *spec.GlobalOptions) error {
+	if options == nil {
+		return nil
+	}
+
 	e := getter.Get(host)
 	log.Infof("Clean global directories %s", host)
 	for _, dir := range []string{options.LogDir, options.DeployDir, options.DataDir} {
@@ -103,7 +109,7 @@ func DeleteGlobalDirs(getter ExecutorGetter, host string, options spec.GlobalOpt
 }
 
 // DestroyMonitored destroy the monitored service.
-func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options spec.MonitoredOptions, timeout int64) error {
+func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.MonitoredOptions, timeout int64) error {
 	e := getter.Get(inst.GetHost())
 	log.Infof("Destroying monitored %s", inst.GetHost())
 
@@ -164,13 +170,8 @@ func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options spec.Mo
 	return nil
 }
 
-// topologySpecification is an interface used to get essential information of a cluster
-type topologySpecification interface {
-	CountDir(string, string) int // count how many time a path is used by instances in cluster
-}
-
 // DestroyComponent destroy the instances.
-func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls topologySpecification, options Options) error {
+func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls spec.Topology, options Options) error {
 	if len(instances) <= 0 {
 		return nil
 	}
@@ -184,22 +185,14 @@ func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls topo
 
 	for _, ins := range instances {
 		// Some data of instances will be retained
-		dataRetained := (len(retainDataRoles) > 0 && retainDataRoles.Exist(ins.ComponentName())) ||
-			(len(retainDataNodes) > 0 && retainDataNodes.Exist(ins.ID()))
+		dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
+			retainDataNodes.Exist(ins.ID())
 
 		e := getter.Get(ins.GetHost())
 		log.Infof("Destroying instance %s", ins.GetHost())
 
 		var dataDirs []string
-		switch name {
-		case spec.ComponentTiKV,
-			spec.ComponentPD,
-			spec.ComponentPump,
-			spec.ComponentDrainer,
-			spec.ComponentPrometheus,
-			spec.ComponentAlertManager:
-			dataDirs = []string{ins.DataDir()}
-		case spec.ComponentTiFlash:
+		if len(ins.DataDir()) > 0 {
 			dataDirs = strings.Split(ins.DataDir(), ",")
 		}
 

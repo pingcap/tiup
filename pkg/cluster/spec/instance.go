@@ -56,6 +56,13 @@ type Component interface {
 	Instances() []Instance
 }
 
+// RollingUpdateInstance represent a instance need to transfer state when restart.
+// e.g transfer leader.
+type RollingUpdateInstance interface {
+	PreRestart(topo Topology, apiTimeoutSeconds int) error
+	PostRestart(topo Topology) error
+}
+
 // Instance represents the instance.
 type Instance interface {
 	InstanceSpec
@@ -63,7 +70,7 @@ type Instance interface {
 	Ready(executor.Executor, int64) error
 	WaitForDown(executor.Executor, int64) error
 	InitConfig(e executor.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
-	ScaleConfig(e executor.Executor, cluster *Specification, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
+	ScaleConfig(e executor.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
 	PrepareStart() error
 	ComponentName() string
 	InstanceName() string
