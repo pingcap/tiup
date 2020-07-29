@@ -85,7 +85,6 @@ func AuditDir() string {
 }
 
 // SaveClusterMeta saves the cluster meta information to profile directory
-// TODO remove this
 func SaveClusterMeta(clusterName string, cmeta *ClusterMeta) error {
 	// set the cmd version
 	cmeta.OpsVer = version.NewTiUPVersion().String()
