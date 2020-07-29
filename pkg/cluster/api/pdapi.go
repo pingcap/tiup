@@ -24,11 +24,11 @@ import (
 	"sort"
 	"time"
 
+	"github.com/jeremywohl/flatten"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/kvproto/pkg/metapb"
 	"github.com/pingcap/kvproto/pkg/pdpb"
 	pdserverapi "github.com/pingcap/pd/v4/server/api"
-	pdserverconfig "github.com/pingcap/pd/v4/server/config"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -232,7 +232,9 @@ func (pc *PDClient) GetMembers() (*pdpb.GetMembersResponse, error) {
 func (pc *PDClient) GetDashboardAddress() (string, error) {
 	endpoints := pc.getEndpoints(pdConfigURI)
 
-	pdConfig := pdserverconfig.Config{}
+	// We don't use the `github.com/pingcap/pd/v4/server/config` directly because
+	// there is compatible issue: https://github.com/pingcap/tiup/issues/637
+	pdConfig := map[string]interface{}{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := pc.httpClient.Get(endpoint)
@@ -242,12 +244,20 @@ func (pc *PDClient) GetDashboardAddress() (string, error) {
 
 		return body, json.Unmarshal(body, &pdConfig)
 	})
-
 	if err != nil {
 		return "", errors.AddStack(err)
 	}
 
-	return pdConfig.PDServerCfg.DashboardAddress, nil
+	cfg, err := flatten.Flatten(pdConfig, "", flatten.DotStyle)
+	if err != nil {
+		return "", errors.AddStack(err)
+	}
+
+	addr, ok := cfg["pd-server.dashboard-address"].(string)
+	if !ok {
+		return "", errors.New("cannot found dashboard address")
+	}
+	return addr, nil
 }
 
 // EvictPDLeader evicts the PD leader
