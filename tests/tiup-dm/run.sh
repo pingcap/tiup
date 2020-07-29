@@ -18,7 +18,7 @@ function tiup-dm() {
 	if [ -f "./bin/tiup-dm.test" ]; then
 	  ./bin/tiup-dm.test  -test.coverprofile=./cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
     else
-	  ../bin/tiup-dm "$@"
+	  ../../bin/tiup-dm "$@"
 	fi
 }
 

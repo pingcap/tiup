@@ -54,12 +54,6 @@ func (u *UpdateDMMeta) Execute(ctx *Context) error {
 		}
 		newMeta.Topology.Workers = append(newMeta.Topology.Workers, topo.Workers[i])
 	}
-	for i, instance := range (&dmspec.DMPortalComponent{Topology: topo}).Instances() {
-		if deleted.Exist(instance.ID()) {
-			continue
-		}
-		newMeta.Topology.Portals = append(newMeta.Topology.Portals, topo.Portals[i])
-	}
 
 	return dmspec.GetSpecManager().SaveMeta(u.cluster, newMeta)
 }

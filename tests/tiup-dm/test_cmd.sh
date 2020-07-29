@@ -40,7 +40,7 @@ tiup-dm --yes restart $name
 
 tiup-dm display $name
 
-totol_sub_one=11
+totol_sub_one=9
 
 echo "start scale in dm-master"
 tiup-dm --yes scale-in $name -N 172.19.0.101:8261
@@ -53,12 +53,6 @@ yes | tiup-dm scale-in $name -N 172.19.0.102:8262
 wait_instance_num_reach $name $totol_sub_one
 echo "start scale out dm-worker"
 yes | tiup-dm scale-out $name ./topo/full_scale_in_dm-worker.yaml
-
-echo "start scale in dm-portal"
-yes | tiup-dm scale-in $name -N 172.19.0.102:8280
-wait_instance_num_reach $name $totol_sub_one
-echo "start scale out dm-portal"
-yes | tiup-dm scale-out $name ./topo/full_scale_in_dm-portal.yaml
 
 # TODO: try some write operations here
 # tiup-dm _test $name readable
