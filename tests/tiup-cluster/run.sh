@@ -32,12 +32,12 @@ do_cases=$*
 if [  "$do_cases" == "" ]; then
   for script in ./test_*.sh; do
     echo "run test: $script"
-    $script
+    . $script
   done
 else
   for script in "${do_cases[@]}"; do
     echo "run test: $script.sh"
-    ./$script.sh
+    . ./$script.sh
   done
 fi
 
