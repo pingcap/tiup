@@ -109,16 +109,94 @@ type (
 	}
 )
 
-// Spec represents specification of the  cluster.
-type Spec interface {
-	// Instances() []Instance
-	ComponentsByStartOrder() []Component
-	GetMonitoredOptions() *MonitoredOptions
+// BaseTopo is the base info to topology.
+type BaseTopo struct {
+	GlobalOptions    *GlobalOptions
+	MonitoredOptions *MonitoredOptions
+	MasterList       []string
 }
 
-// GetMonitoredOptions implements Spec interface.
+// Topology represents specification of the  cluster.
+type Topology interface {
+	BaseTopo() *BaseTopo
+	// Validate validates the topology specification and produce error if the
+	// specification invalid (e.g: port conflicts or directory conflicts)
+	Validate() error
+
+	// Instances() []Instance
+	ComponentsByStartOrder() []Component
+	ComponentsByStopOrder() []Component
+	ComponentsByUpdateOrder() []Component
+	IterInstance(fn func(instance Instance))
+	GetMonitoredOptions() *MonitoredOptions
+	// count how many time a path is used by instances in cluster
+	CountDir(host string, dir string) int
+
+	ScaleOutTopology
+}
+
+// BaseMeta is the base info of metadata.
+type BaseMeta struct {
+	User    string
+	Version string
+	OpsVer  *string `yaml:"last_ops_ver,omitempty"` // the version of ourself that updated the meta last time
+}
+
+// Metadata of a cluster.
+type Metadata interface {
+	GetTopology() Topology
+	SetTopology(topo Topology)
+	GetBaseMeta() *BaseMeta
+
+	UpgradableMetadata
+}
+
+// ScaleOutTopology represents a scale out metadata.
+type ScaleOutTopology interface {
+	// Inherit existing global configuration. We must assign the inherited values before unmarshalling
+	// because some default value rely on the global options and monitored options.
+	// TODO: we should separate the  unmarshal and setting default value.
+	NewPart() Topology
+	MergeTopo(topo Topology) Topology
+}
+
+// UpgradableMetadata represents a upgradable Metadata.
+type UpgradableMetadata interface {
+	SetVersion(s string)
+	SetUser(u string)
+}
+
+// NewPart implements ScaleOutTopology interface.
+func (s *Specification) NewPart() Topology {
+	return &Specification{
+		GlobalOptions:    s.GlobalOptions,
+		MonitoredOptions: s.MonitoredOptions,
+		ServerConfigs:    s.ServerConfigs,
+	}
+}
+
+// MergeTopo implements ScaleOutTopology interface.
+func (s *Specification) MergeTopo(topo Topology) Topology {
+	other, ok := topo.(*Specification)
+	if !ok {
+		panic("topo should be Specification")
+	}
+
+	return s.Merge(other)
+}
+
+// GetMonitoredOptions implements Topology interface.
 func (s *Specification) GetMonitoredOptions() *MonitoredOptions {
 	return &s.MonitoredOptions
+}
+
+// BaseTopo implements Topology interface.
+func (s *Specification) BaseTopo() *BaseTopo {
+	return &BaseTopo{
+		GlobalOptions:    &s.GlobalOptions,
+		MonitoredOptions: s.GetMonitoredOptions(),
+		MasterList:       s.GetPDList(),
+	}
 }
 
 // AllComponentNames contains the names of all components.
@@ -811,9 +889,9 @@ func (s *Specification) IterInstance(fn func(instance Instance)) {
 }
 
 // IterHost iterates one instance for each host
-func (s *Specification) IterHost(fn func(instance Instance)) {
+func IterHost(topo Topology, fn func(instance Instance)) {
 	hostMap := make(map[string]bool)
-	for _, comp := range s.ComponentsByStartOrder() {
+	for _, comp := range topo.ComponentsByStartOrder() {
 		for _, inst := range comp.Instances() {
 			host := inst.GetHost()
 			_, ok := hostMap[host]

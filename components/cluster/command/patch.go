@@ -14,22 +14,7 @@
 package command
 
 import (
-	"errors"
-	"fmt"
-	"os"
-	"os/exec"
-	"path"
-
-	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	operator "github.com/pingcap/tiup/pkg/cluster/operation"
-	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/meta"
-	"github.com/pingcap/tiup/pkg/set"
-	"github.com/pingcap/tiup/pkg/utils"
-	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -54,7 +39,8 @@ func newPatchCmd() *cobra.Command {
 			}
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
-			return patch(args[0], args[1], gOpt, overwrite)
+
+			return manager.Patch(clusterName, args[1], gOpt, overwrite)
 		},
 	}
 
@@ -63,151 +49,4 @@ func newPatchCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Specify the role")
 	cmd.Flags().Int64Var(&gOpt.APITimeout, "transfer-timeout", 300, "Timeout in seconds when transferring PD and TiKV store leaders")
 	return cmd
-}
-
-func patch(clusterName, packagePath string, options operator.Options, overwrite bool) error {
-	exist, err := tidbSpec.Exist(clusterName)
-	if err != nil {
-		return perrs.AddStack(err)
-	}
-
-	if !exist {
-		return perrs.Errorf("cannot patch non-exists cluster %s", clusterName)
-	}
-
-	if exist := tiuputils.IsExist(packagePath); !exist {
-		return perrs.New("specified package not exists")
-	}
-
-	metadata, err := spec.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
-		return err
-	}
-
-	insts, err := instancesToPatch(metadata, options)
-	if err != nil {
-		return err
-	}
-	if err := checkPackage(clusterName, insts[0].ComponentName(), insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
-		return err
-	}
-
-	var replacePackageTasks []task.Task
-	for _, inst := range insts {
-		deployDir := clusterutil.Abs(metadata.User, inst.DeployDir())
-		tb := task.NewBuilder()
-		tb.BackupComponent(inst.ComponentName(), metadata.Version, inst.GetHost(), deployDir).
-			InstallPackage(packagePath, inst.GetHost(), deployDir)
-		replacePackageTasks = append(replacePackageTasks, tb.Build())
-	}
-
-	t := task.NewBuilder().
-		SSHKeySet(
-			spec.ClusterPath(clusterName, "ssh", "id_rsa"),
-			spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
-		Parallel(replacePackageTasks...).
-		ClusterOperate(metadata.Topology, operator.UpgradeOperation, options).
-		Build()
-
-	if err := t.Execute(task.NewContext()); err != nil {
-		if errorx.Cast(err) != nil {
-			// FIXME: Map possible task errors and give suggestions.
-			return err
-		}
-		return perrs.Trace(err)
-	}
-
-	if overwrite {
-		if err := overwritePatch(clusterName, insts[0].ComponentName(), packagePath); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func instancesToPatch(metadata *spec.ClusterMeta, options operator.Options) ([]spec.Instance, error) {
-	roleFilter := set.NewStringSet(options.Roles...)
-	nodeFilter := set.NewStringSet(options.Nodes...)
-	components := metadata.Topology.ComponentsByStartOrder()
-	components = operator.FilterComponent(components, roleFilter)
-
-	instances := []spec.Instance{}
-	comps := []string{}
-	for _, com := range components {
-		insts := operator.FilterInstance(com.Instances(), nodeFilter)
-		if len(insts) > 0 {
-			comps = append(comps, com.Name())
-		}
-		instances = append(instances, insts...)
-	}
-	if len(comps) > 1 {
-		return nil, fmt.Errorf("can't patch more than one component at once: %v", comps)
-	}
-
-	if len(instances) == 0 {
-		return nil, fmt.Errorf("no instance found on specifid role(%v) and nodes(%v)", options.Roles, options.Nodes)
-	}
-
-	return instances, nil
-}
-
-func checkPackage(clusterName, comp, nodeOS, arch, packagePath string) error {
-	metadata, err := spec.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
-		return err
-	}
-
-	ver := spec.ComponentVersion(comp, metadata.Version)
-	repo, err := clusterutil.NewRepository(nodeOS, arch)
-	if err != nil {
-		return err
-	}
-	entry, err := repo.ComponentBinEntry(comp, ver)
-	if err != nil {
-		return err
-	}
-
-	checksum, err := tiuputils.Checksum(packagePath)
-	if err != nil {
-		return err
-	}
-	cacheDir := spec.ClusterPath(clusterName, "cache", comp+"-"+checksum[:7])
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		return err
-	}
-	if err := exec.Command("tar", "-xvf", packagePath, "-C", cacheDir).Run(); err != nil {
-		return err
-	}
-
-	if exists := tiuputils.IsExist(path.Join(cacheDir, entry)); !exists {
-		return fmt.Errorf("entry %s not found in package %s", entry, packagePath)
-	}
-
-	return nil
-}
-
-func overwritePatch(clusterName, comp, packagePath string) error {
-	if err := os.MkdirAll(spec.ClusterPath(clusterName, spec.PatchDirName), 0755); err != nil {
-		return err
-	}
-
-	checksum, err := tiuputils.Checksum(packagePath)
-	if err != nil {
-		return err
-	}
-
-	tg := spec.ClusterPath(clusterName, spec.PatchDirName, comp+"-"+checksum[:7]+".tar.gz")
-	if !utils.IsExist(tg) {
-		if err := tiuputils.CopyFile(packagePath, tg); err != nil {
-			return err
-		}
-	}
-
-	symlink := spec.ClusterPath(clusterName, spec.PatchDirName, comp+".tar.gz")
-	if utils.IsSymExist(symlink) {
-		os.Remove(symlink)
-	}
-	return os.Symlink(tg, symlink)
 }

@@ -247,10 +247,11 @@ func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clu
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiSparkMasterInstance) ScaleConfig(e executor.Executor, cluster *Specification,
+func (i *TiSparkMasterInstance) ScaleConfig(e executor.Executor, topo Topology,
 	clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	s := i.instance.topo
 	defer func() { i.instance.topo = s }()
+	cluster := mustBeClusterTopo(topo)
 	i.instance.topo = cluster.Merge(i.instance.topo)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
@@ -388,10 +389,11 @@ func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clu
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiSparkWorkerInstance) ScaleConfig(e executor.Executor, cluster *Specification,
+func (i *TiSparkWorkerInstance) ScaleConfig(e executor.Executor, topo Topology,
 	clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	s := i.instance.topo
 	defer func() { i.instance.topo = s }()
+	cluster := mustBeClusterTopo(topo)
 	i.instance.topo = cluster.Merge(i.instance.topo)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }

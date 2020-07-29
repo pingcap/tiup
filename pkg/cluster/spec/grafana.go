@@ -154,10 +154,11 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *GrafanaInstance) ScaleConfig(e executor.Executor, cluster *Specification,
+func (i *GrafanaInstance) ScaleConfig(e executor.Executor, topo Topology,
 	clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error {
 	s := i.instance.topo
 	defer func() { i.instance.topo = s }()
+	cluster := mustBeClusterTopo(topo)
 	i.instance.topo = cluster.Merge(i.instance.topo)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
