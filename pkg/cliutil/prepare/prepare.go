@@ -25,7 +25,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/errutil"
-	"github.com/pingcap/tiup/pkg/meta"
 	"go.uber.org/zap"
 )
 
@@ -36,36 +35,48 @@ var (
 	errDeployPortConflict = errNSDeploy.NewType("port_conflict", errutil.ErrTraitPreCheck)
 )
 
-func fixDir(topo *spec.Specification) func(string) string {
+func fixDir(topo spec.Topology) func(string) string {
 	return func(dir string) string {
 		if dir != "" {
-			return clusterutil.Abs(topo.GlobalOptions.User, dir)
+			return clusterutil.Abs(topo.BaseTopo().GlobalOptions.User, dir)
 		}
 		return dir
 	}
 }
 
 // CheckClusterDirConflict checks cluster dir conflict
-func CheckClusterDirConflict(clusterSpec *meta.SpecManager, clusterName string, topo *spec.Specification) error {
+func CheckClusterDirConflict(clusterSpec *spec.SpecManager, clusterName string, topo spec.Topology) error {
 	type DirAccessor struct {
 		dirKind  string
-		accessor func(spec.Instance, *spec.Specification) string
+		accessor func(spec.Instance, spec.Topology) string
 	}
 
 	instanceDirAccessor := []DirAccessor{
-		{dirKind: "deploy directory", accessor: func(instance spec.Instance, topo *spec.Specification) string { return instance.DeployDir() }},
-		{dirKind: "data directory", accessor: func(instance spec.Instance, topo *spec.Specification) string { return instance.DataDir() }},
-		{dirKind: "log directory", accessor: func(instance spec.Instance, topo *spec.Specification) string { return instance.LogDir() }},
+		{dirKind: "deploy directory", accessor: func(instance spec.Instance, topo spec.Topology) string { return instance.DeployDir() }},
+		{dirKind: "data directory", accessor: func(instance spec.Instance, topo spec.Topology) string { return instance.DataDir() }},
+		{dirKind: "log directory", accessor: func(instance spec.Instance, topo spec.Topology) string { return instance.LogDir() }},
 	}
 	hostDirAccessor := []DirAccessor{
-		{dirKind: "monitor deploy directory", accessor: func(instance spec.Instance, topo *spec.Specification) string {
-			return topo.MonitoredOptions.DeployDir
+		{dirKind: "monitor deploy directory", accessor: func(instance spec.Instance, topo spec.Topology) string {
+			m := topo.BaseTopo().MonitoredOptions
+			if m == nil {
+				return ""
+			}
+			return topo.BaseTopo().MonitoredOptions.DeployDir
 		}},
-		{dirKind: "monitor data directory", accessor: func(instance spec.Instance, topo *spec.Specification) string {
-			return topo.MonitoredOptions.DataDir
+		{dirKind: "monitor data directory", accessor: func(instance spec.Instance, topo spec.Topology) string {
+			m := topo.BaseTopo().MonitoredOptions
+			if m == nil {
+				return ""
+			}
+			return topo.BaseTopo().MonitoredOptions.DataDir
 		}},
-		{dirKind: "monitor log directory", accessor: func(instance spec.Instance, topo *spec.Specification) string {
-			return topo.MonitoredOptions.LogDir
+		{dirKind: "monitor log directory", accessor: func(instance spec.Instance, topo spec.Topology) string {
+			m := topo.BaseTopo().MonitoredOptions
+			if m == nil {
+				return ""
+			}
+			return topo.BaseTopo().MonitoredOptions.LogDir
 		}},
 	}
 
@@ -89,16 +100,18 @@ func CheckClusterDirConflict(clusterSpec *meta.SpecManager, clusterName string, 
 			continue
 		}
 
-		metadata := new(spec.ClusterMeta)
+		metadata := clusterSpec.NewMetadata()
 		err := clusterSpec.Metadata(name, metadata)
 		if err != nil {
 			return errors.Trace(err)
 		}
 
-		f := fixDir(metadata.Topology)
-		metadata.Topology.IterInstance(func(inst spec.Instance) {
+		topo := metadata.GetTopology()
+
+		f := fixDir(topo)
+		topo.IterInstance(func(inst spec.Instance) {
 			for _, dirAccessor := range instanceDirAccessor {
-				for _, dir := range strings.Split(f(dirAccessor.accessor(inst, metadata.Topology)), ",") {
+				for _, dir := range strings.Split(f(dirAccessor.accessor(inst, topo)), ",") {
 					existingEntries = append(existingEntries, Entry{
 						clusterName: name,
 						dirKind:     dirAccessor.dirKind,
@@ -108,9 +121,9 @@ func CheckClusterDirConflict(clusterSpec *meta.SpecManager, clusterName string, 
 				}
 			}
 		})
-		metadata.Topology.IterHost(func(inst spec.Instance) {
+		spec.IterHost(topo, func(inst spec.Instance) {
 			for _, dirAccessor := range hostDirAccessor {
-				for _, dir := range strings.Split(f(dirAccessor.accessor(inst, metadata.Topology)), ",") {
+				for _, dir := range strings.Split(f(dirAccessor.accessor(inst, topo)), ",") {
 					existingEntries = append(existingEntries, Entry{
 						clusterName: name,
 						dirKind:     dirAccessor.dirKind,
@@ -134,7 +147,8 @@ func CheckClusterDirConflict(clusterSpec *meta.SpecManager, clusterName string, 
 			}
 		}
 	})
-	topo.IterHost(func(inst spec.Instance) {
+
+	spec.IterHost(topo, func(inst spec.Instance) {
 		for _, dirAccessor := range hostDirAccessor {
 			for _, dir := range strings.Split(f(dirAccessor.accessor(inst, topo)), ",") {
 				currentEntries = append(currentEntries, Entry{
@@ -190,7 +204,7 @@ Please change to use another directory or another host.
 }
 
 // CheckClusterPortConflict checks cluster dir conflict
-func CheckClusterPortConflict(clusterSpec *meta.SpecManager, clusterName string, topo *spec.Specification) error {
+func CheckClusterPortConflict(clusterSpec *spec.SpecManager, clusterName string, topo spec.Topology) error {
 	type Entry struct {
 		clusterName string
 		instance    spec.Instance
@@ -210,13 +224,13 @@ func CheckClusterPortConflict(clusterSpec *meta.SpecManager, clusterName string,
 			continue
 		}
 
-		metadata := new(spec.ClusterMeta)
+		metadata := clusterSpec.NewMetadata()
 		err := clusterSpec.Metadata(name, metadata)
 		if err != nil {
 			return errors.Trace(err)
 		}
 
-		metadata.Topology.IterInstance(func(inst spec.Instance) {
+		metadata.GetTopology().IterInstance(func(inst spec.Instance) {
 			for _, port := range inst.UsedPorts() {
 				existingEntries = append(existingEntries, Entry{
 					clusterName: name,

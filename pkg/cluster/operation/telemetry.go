@@ -32,7 +32,7 @@ import (
 func GetNodeInfo(
 	ctx context.Context,
 	getter ExecutorGetter,
-	topo *spec.Specification,
+	topo spec.Topology,
 ) (nodes []*telemetry.NodeInfo, err error) {
 	ver := version.NewTiUPVersion().String()
 	dir := "/tmp/_cluster"

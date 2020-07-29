@@ -19,7 +19,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/pingcap/errors"
+	dm "github.com/pingcap/tiup/components/dm/spec"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -233,8 +235,8 @@ func ScaleInCluster(
 					return errors.Annotatef(err, "failed to destroy %s", component.Name())
 				}
 			} else {
-				log.Warnf("The component `%s` will be destroyed when display cluster info when it become tombstone, maybe exists in several minutes or hours",
-					component.Name())
+				log.Warnf(color.YellowString("The component `%s` will be destroyed when display cluster info when it become tombstone, maybe exists in several minutes or hours",
+					component.Name()))
 			}
 		}
 	}
@@ -325,15 +327,14 @@ func deleteMember(
 	return nil
 }
 
-/*
-// ScaleInDMCluster scales in the cluster
+// ScaleInDMCluster scale in dm cluster.
 func ScaleInDMCluster(
 	getter ExecutorGetter,
-	spec *meta.DMSSpecification,
+	spec *dm.Topology,
 	options Options,
 ) error {
 	// instances by uuid
-	instances := map[string]meta.Instance{}
+	instances := map[string]dm.Instance{}
 
 	// make sure all nodeIds exists in topology
 	for _, component := range spec.ComponentsByStartOrder() {
@@ -343,7 +344,7 @@ func ScaleInDMCluster(
 	}
 
 	// Clean components
-	deletedDiff := map[string][]meta.Instance{}
+	deletedDiff := map[string][]dm.Instance{}
 	deletedNodes := set.NewStringSet(options.Nodes...)
 	for nodeID := range deletedNodes {
 		inst, found := instances[nodeID]
@@ -354,7 +355,7 @@ func ScaleInDMCluster(
 	}
 
 	// Cannot delete all DM DMMaster servers
-	if len(deletedDiff[meta.ComponentDMMaster]) == len(spec.Masters) {
+	if len(deletedDiff[dm.ComponentDMMaster]) == len(spec.Masters) {
 		return errors.New("cannot delete all dm-master servers")
 	}
 
@@ -365,10 +366,10 @@ func ScaleInDMCluster(
 					continue
 				}
 				// just try stop and destroy
-				if err := StopComponent(getter, []meta.Instance{instance}, options.OptTimeout); err != nil {
+				if err := StopComponent(getter, []dm.Instance{instance}, options.OptTimeout); err != nil {
 					log.Warnf("failed to stop %s: %v", component.Name(), err)
 				}
-				if err := DestroyComponent(getter, []meta.Instance{instance}, spec, options); err != nil {
+				if err := DestroyComponent(getter, []dm.Instance{instance}, spec, options); err != nil {
 					log.Warnf("failed to destroy %s: %v", component.Name(), err)
 				}
 
@@ -381,7 +382,7 @@ func ScaleInDMCluster(
 	// At least a DMMaster server exists
 	var dmMasterClient *api.DMMasterClient
 	var dmMasterEndpoint []string
-	for _, instance := range (&meta.DMMasterComponent{DMSSpecification: spec}).Instances() {
+	for _, instance := range (&dm.DMMasterComponent{Topology: spec}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
 			dmMasterEndpoint = append(dmMasterEndpoint, addr(instance))
 		}
@@ -404,22 +405,22 @@ func ScaleInDMCluster(
 				continue
 			}
 
-			if err := StopComponent(getter, []meta.Instance{instance}, options.OptTimeout); err != nil {
+			if err := StopComponent(getter, []dm.Instance{instance}, options.OptTimeout); err != nil {
 				return errors.Annotatef(err, "failed to stop %s", component.Name())
 			}
-			if err := DestroyComponent(getter, []meta.Instance{instance}, spec, options); err != nil {
+			if err := DestroyComponent(getter, []dm.Instance{instance}, spec, options); err != nil {
 				return errors.Annotatef(err, "failed to destroy %s", component.Name())
 			}
 
 			switch component.Name() {
-			case meta.ComponentDMMaster:
-				name := instance.(*meta.DMMasterInstance).Name
+			case dm.ComponentDMMaster:
+				name := instance.(*dm.DMMasterInstance).Name
 				err := dmMasterClient.OfflineMaster(name, retryOpt)
 				if err != nil {
 					return errors.AddStack(err)
 				}
-			case meta.ComponentDMWorker:
-				name := instance.(*meta.DMWorkerInstance).Name
+			case dm.ComponentDMWorker:
+				name := instance.(*dm.DMWorkerInstance).Name
 				err := dmMasterClient.OfflineWorker(name, retryOpt)
 				if err != nil {
 					return errors.AddStack(err)
@@ -430,4 +431,3 @@ func ScaleInDMCluster(
 
 	return nil
 }
-*/

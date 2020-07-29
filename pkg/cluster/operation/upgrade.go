@@ -15,11 +15,8 @@ package operator
 
 import (
 	"strconv"
-	"time"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
@@ -28,20 +25,13 @@ import (
 // Upgrade the cluster.
 func Upgrade(
 	getter ExecutorGetter,
-	cluster *spec.Specification,
+	topo spec.Topology,
 	options Options,
 ) error {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
-	components := cluster.ComponentsByUpdateOrder()
+	components := topo.ComponentsByUpdateOrder()
 	components = FilterComponent(components, roleFilter)
-
-	leaderAware := set.NewStringSet(spec.ComponentPD, spec.ComponentTiKV)
-
-	timeoutOpt := &clusterutil.RetryOption{
-		Timeout: time.Second * time.Duration(options.APITimeout),
-		Delay:   time.Second * 2,
-	}
 
 	for _, component := range components {
 		instances := FilterInstance(component.Instances(), nodeFilter)
@@ -50,69 +40,34 @@ func Upgrade(
 		}
 
 		// Transfer leader of evict leader if the component is TiKV/PD in non-force mode
-		if !options.Force && leaderAware.Exist(component.Name()) {
-			pdClient := api.NewPDClient(cluster.GetPDList(), 5*time.Second, nil)
-			switch component.Name() {
-			case spec.ComponentPD:
-				log.Infof("Restarting component %s", component.Name())
 
-				for _, instance := range instances {
-					leader, err := pdClient.GetLeader()
-					if err != nil {
-						return errors.Annotatef(err, "failed to get PD leader %s", instance.GetHost())
-					}
+		log.Infof("Restarting component %s", component.Name())
 
-					if len(cluster.PDServers) > 1 && leader.Name == instance.(*spec.PDInstance).Name {
-						if err := pdClient.EvictPDLeader(timeoutOpt); err != nil {
-							return errors.Annotatef(err, "failed to evict PD leader %s", instance.GetHost())
-						}
-					}
+		for _, instance := range instances {
+			var rollingInstance spec.RollingUpdateInstance
+			var isRollingInstance bool
 
-					if err := stopInstance(getter, instance, options.OptTimeout); err != nil {
-						return errors.Annotatef(err, "failed to stop %s", instance.GetHost())
-					}
-					if err := startInstance(getter, instance, options.OptTimeout); err != nil {
-						return errors.Annotatef(err, "failed to start %s", instance.GetHost())
-					}
-				}
+			if !options.Force {
+				rollingInstance, isRollingInstance = instance.(spec.RollingUpdateInstance)
+			}
 
-			case spec.ComponentTiKV:
-				log.Infof("Restarting component %s", component.Name())
-				pdClient := api.NewPDClient(cluster.GetPDList(), 5*time.Second, nil)
-				// Make sure there's leader of PD.
-				// Although we evict pd leader when restart pd,
-				// But when there's only one PD instance the pd might not serve request right away after restart.
-				err := pdClient.WaitLeader(timeoutOpt)
+			if isRollingInstance {
+				err := rollingInstance.PreRestart(topo, int(options.APITimeout))
 				if err != nil {
-					return errors.Annotate(err, "failed to wait leader")
-				}
-
-				for _, instance := range instances {
-					if err := pdClient.EvictStoreLeader(addr(instance), timeoutOpt); err != nil {
-						if clusterutil.IsTimeoutOrMaxRetry(err) {
-							log.Warnf("Ignore evicting store leader from %s, %v", instance.ID(), err)
-						} else {
-							return errors.Annotatef(err, "failed to evict store leader %s", instance.GetHost())
-						}
-					}
-
-					if err := stopInstance(getter, instance, options.OptTimeout); err != nil {
-						return errors.Annotatef(err, "failed to stop %s", instance.GetHost())
-					}
-					if err := startInstance(getter, instance, options.OptTimeout); err != nil {
-						return errors.Annotatef(err, "failed to start %s", instance.GetHost())
-					}
-					// remove store leader evict scheduler after restart
-					if err := pdClient.RemoveStoreEvict(addr(instance)); err != nil {
-						return errors.Annotatef(err, "failed to remove evict store scheduler for %s", instance.GetHost())
-					}
+					return errors.AddStack(err)
 				}
 			}
-			continue
-		}
 
-		if err := RestartComponent(getter, instances, options.OptTimeout); err != nil {
-			return errors.Annotatef(err, "failed to restart %s", component.Name())
+			if err := restartInstance(getter, instance, options.OptTimeout); err != nil {
+				return errors.AddStack(err)
+			}
+
+			if isRollingInstance {
+				err := rollingInstance.PostRestart(topo)
+				if err != nil {
+					return errors.AddStack(err)
+				}
+			}
 		}
 	}
 

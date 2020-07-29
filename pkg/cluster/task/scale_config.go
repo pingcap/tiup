@@ -23,10 +23,11 @@ import (
 
 // ScaleConfig is used to copy all configurations to the target directory of path
 type ScaleConfig struct {
+	specManager    *spec.SpecManager
 	clusterName    string
 	clusterVersion string
 	instance       spec.Instance
-	base           *spec.Specification
+	base           spec.Topology
 	deployUser     string
 	paths          meta.DirPaths
 }
@@ -39,7 +40,7 @@ func (c *ScaleConfig) Execute(ctx *Context) error {
 		return ErrNoExecutor
 	}
 
-	c.paths.Cache = spec.ClusterPath(c.clusterName, spec.TempConfigPath)
+	c.paths.Cache = c.specManager.Path(c.clusterName, spec.TempConfigPath)
 	if err := os.MkdirAll(c.paths.Cache, 0755); err != nil {
 		return err
 	}

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package meta
+package spec
 
 import (
 	"io/ioutil"
@@ -23,6 +23,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/file"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/version"
 	"gopkg.in/yaml.v2"
 )
 
@@ -43,16 +44,25 @@ const (
 	BackupDirName = "backup"
 )
 
+//revive:disable
+
 // SpecManager control management of spec meta data.
 type SpecManager struct {
-	base string
+	base    string
+	newMeta func() Metadata
 }
 
 // NewSpec create a spec instance.
-func NewSpec(base string) *SpecManager {
+func NewSpec(base string, newMeta func() Metadata) *SpecManager {
 	return &SpecManager{
-		base: base,
+		base:    base,
+		newMeta: newMeta,
 	}
+}
+
+// NewMetadata alloc a Metadata according the type.
+func (s *SpecManager) NewMetadata() Metadata {
+	return s.newMeta()
 }
 
 // Path returns the full path to a subpath (file or directory) of a
@@ -72,7 +82,7 @@ func (s *SpecManager) Path(cluster string, subpath ...string) string {
 }
 
 // SaveMeta save the meta with specified cluster name.
-func (s *SpecManager) SaveMeta(clusterName string, meta interface{}) error {
+func (s *SpecManager) SaveMeta(clusterName string, meta Metadata) error {
 	wrapError := func(err error) *errorx.Error {
 		return ErrSaveMetaFailed.Wrap(err, "Failed to save cluster metadata")
 	}
@@ -91,6 +101,11 @@ func (s *SpecManager) SaveMeta(clusterName string, meta interface{}) error {
 	data, err := yaml.Marshal(meta)
 	if err != nil {
 		return wrapError(err)
+	}
+
+	opsVer := meta.GetBaseMeta().OpsVer
+	if opsVer != nil {
+		*opsVer = version.NewTiUPVersion().String()
 	}
 
 	err = file.SaveFileWithBackup(metaFile, data, backupDir)
@@ -131,6 +146,11 @@ func (s *SpecManager) Exist(name string) (exist bool, err error) {
 	}
 
 	return true, nil
+}
+
+// Remove remove the data with specified cluster name.
+func (s *SpecManager) Remove(name string) error {
+	return os.RemoveAll(s.Path(name))
 }
 
 // List return the cluster names.
