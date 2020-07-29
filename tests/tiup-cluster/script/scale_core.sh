@@ -24,7 +24,7 @@ function scale_core() {
 
     tiup-cluster $client display $name
 
-    tiup-cluster reload $name --skip-restart
+    tiup-cluster $client reload $name --skip-restart
 
     total_sub_one=18
 

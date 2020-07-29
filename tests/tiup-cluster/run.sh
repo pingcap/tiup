@@ -17,7 +17,6 @@ export dm_version=${dm_version-nightly}
 function tiup-cluster() {
   mkdir -p "~/.tiup/bin" && cp -f ./root.json ~/.tiup/bin/
   # echo "in function"
-  echo "$@"
   if [ -f "./bin/tiup-cluster.test" ]; then
     ./bin/tiup-cluster.test  -test.coverprofile=./cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
     else

@@ -127,7 +127,11 @@ func NewSSHExecutor(c SSHConfig, sudo bool, native bool) Executor {
 
 	// Used in integration testing, to check if native ssh client is really used when it need to be.
 	failpoint.Inject("assertNativeSSH", func() {
-		panic("native ssh client should be used in this case")
+		msg := fmt.Sprintf(
+			"native ssh client should be used in this case, os.Args: %s, %s = %s",
+			os.Args, localdata.EnvNameNativeSSHClient, os.Getenv(localdata.EnvNameNativeSSHClient),
+		)
+		panic(msg)
 	})
 
 	e := new(EasySSHExecutor)
