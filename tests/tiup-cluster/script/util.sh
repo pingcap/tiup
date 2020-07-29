@@ -15,12 +15,18 @@ function instance_num() {
 	echo $count
 }
 
-# wait_instance_num_reach <name> <target_num>
+# wait_instance_num_reach <name> <target_num> <use-native-ssh>
 # wait the instance number of cluster reach the target_num.
 # timeout 120 second
 function wait_instance_num_reach() {
 	name=$1
 	target_num=$2
+	native_ssh=$3
+
+	client=""
+    if [ $native_ssh == true ]; then
+        client="--native-ssh"
+    fi
 
 	for ((i=0;i<120;i++))
 	do
@@ -36,6 +42,6 @@ function wait_instance_num_reach() {
 	done
 
 	echo "fail to wait instance number reach $target_num, retry num: $i"
-	tiup-cluster display $name
+	tiup-cluster $client display $name
 	exit -1
 }
