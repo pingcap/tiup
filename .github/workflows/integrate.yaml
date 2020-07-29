@@ -45,7 +45,9 @@ jobs:
       - name: Build the docker-compose stack
         working-directory: ${{env.working-directory}}
         # with --dev the first run will fail for unknow reason, just retry it and will success now..
-        run: TIUP_CLUSTER_ROOT=${{env.working-directory}} ./docker/up.sh --daemon --dev || TIUP_CLUSTER_ROOT=${{env.working-directory}} ./docker/up.sh --daemon --dev
+        run: |
+          cd ${{env.working-directory}}/docker
+          TIUP_CLUSTER_ROOT=${{env.working-directory}} ./up.sh --daemon --dev --compose ./docker-compose.dm.yml || TIUP_CLUSTER_ROOT=${{env.working-directory}} ./up.sh --daemon --dev --compose ./docker-compose.dm.yml
 
       - name: Check running containers
         run: |

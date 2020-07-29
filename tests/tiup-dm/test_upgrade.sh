@@ -17,7 +17,6 @@ yes | tiup-dm start $name
 
 yes | tiup-dm upgrade $name $version --transfer-timeout 60
 
-# tiup-dm _test $name writable
 
 # test edit-config & reload
 # change the config of master and check it after reload
@@ -32,6 +31,9 @@ yes | tiup-dm reload $name
 # just check one instance for verify.
 tiup-dm exec $name -N "172.19.0.104:8261" --command "grep '31s' /home/tidb/deploy/dm-master-8261/conf/dm-master.toml"
 
-# tiup-dm _test $name writable
+
+# test create a task and can replicate data
+./script/task/run.sh
+
 
 yes | tiup-dm destroy $name

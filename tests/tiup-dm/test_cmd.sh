@@ -24,8 +24,6 @@ tiup-dm audit $id
 
 tiup-dm --yes start $name
 
-# TODO: try some write operations here
-# tiup-dm _test $name readable
 
 # check the data dir of dm-master
 tiup-dm exec $name -N 172.19.0.102 --command "grep /home/tidb/deploy/dm-master-8261/data /home/tidb/deploy/dm-master-8261/scripts/run_dm-master.sh"
@@ -34,9 +32,6 @@ tiup-dm exec $name -N 172.19.0.103 --command "grep /home/tidb/my_master_data /ho
 tiup-dm --yes stop $name
 
 tiup-dm --yes restart $name
-
-# TODO: try some write operations here
-# tiup-dm _test $name readable
 
 tiup-dm display $name
 
@@ -54,7 +49,7 @@ wait_instance_num_reach $name $totol_sub_one
 echo "start scale out dm-worker"
 yes | tiup-dm scale-out $name ./topo/full_scale_in_dm-worker.yaml
 
-# TODO: try some write operations here
-# tiup-dm _test $name readable
+# test create a task and can replicate data
+./script/task/run.sh
 
 tiup-dm --yes destroy $name
