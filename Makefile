@@ -100,6 +100,8 @@ coverage:
 	gocovmerge cover/cov.* | grep -vE ".*.pb.go|.*__failpoint_binding__.go|mock.go" > "cover/all_cov.out"
 ifeq ("$(JenkinsCI)", "1")
 	@bash <(curl -s https://codecov.io/bash) -f cover/all_cov.out -t $(CODECOV_TOKEN)
+else
+	go tool cover -html "cover/all_cov.out" -o "cover/all_cov.html"
 endif
 
 failpoint-enable: tools/bin/failpoint-ctl
