@@ -405,7 +405,7 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 				color.CyanString(ins.ID()),
 				ins.Role(),
 				ins.GetHost(),
-				clusterutil.JoinInt(ins.UsedPorts(), "/"),
+				utils.JoinInt(ins.UsedPorts(), "/"),
 				cliutil.OsArch(ins.OS(), ins.Arch()),
 				formatInstanceStatus(status),
 				dataDir,
@@ -1508,7 +1508,7 @@ func (m *Manager) confirmTopology(clusterName, version string, topo spec.Topolog
 		clusterTable = append(clusterTable, []string{
 			comp,
 			instance.GetHost(),
-			clusterutil.JoinInt(instance.UsedPorts(), "/"),
+			utils.JoinInt(instance.UsedPorts(), "/"),
 			cliutil.OsArch(instance.OS(), instance.Arch()),
 			strings.Join(instance.UsedDirs(), ","),
 		})

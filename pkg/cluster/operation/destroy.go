@@ -24,6 +24,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // Destroy the cluster.
@@ -200,7 +201,7 @@ func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 		if err := ins.WaitForDown(e, timeout); err != nil {
 			str := fmt.Sprintf("%s error destroying %s: %s", ins.GetHost(), ins.ComponentName(), err)
 			log.Errorf(str)
-			if !clusterutil.IsTimeoutOrMaxRetry(err) {
+			if !utils.IsTimeoutOrMaxRetry(err) {
 				return errors.Annotatef(err, str)
 			}
 			log.Warnf("You may manually check if the process on %s:%d is still running", ins.GetHost(), ins.GetPort())

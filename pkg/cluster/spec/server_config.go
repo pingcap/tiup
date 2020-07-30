@@ -28,6 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 const (
@@ -211,7 +212,7 @@ func HandleImportPathMigration(clsName string) error {
 	if os.IsNotExist(err) {
 		log.Warnf("renaming '%s/config' to '%s'", dirPath, targetPath)
 
-		if lckErr := clusterutil.Retry(func() error {
+		if lckErr := utils.Retry(func() error {
 			_, lckErr := os.Stat(path.Join(dirPath, migrateLockName))
 			if os.IsNotExist(lckErr) {
 				return nil

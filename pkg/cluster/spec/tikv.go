@@ -24,11 +24,11 @@ import (
 	"github.com/pingcap/errors"
 	pdserverapi "github.com/pingcap/pd/v4/server/api"
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiKVSpec represents the TiKV topology specification in topology.yaml
@@ -229,7 +229,7 @@ var _ RollingUpdateInstance = &TiKVInstance{}
 
 // PreRestart implements RollingUpdateInstance interface.
 func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
-	timeoutOpt := &clusterutil.RetryOption{
+	timeoutOpt := &utils.RetryOption{
 		Timeout: time.Second * time.Duration(apiTimeoutSeconds),
 		Delay:   time.Second * 2,
 	}
@@ -250,7 +250,7 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
 	}
 
 	if err := pdClient.EvictStoreLeader(addr(i), timeoutOpt); err != nil {
-		if clusterutil.IsTimeoutOrMaxRetry(err) {
+		if utils.IsTimeoutOrMaxRetry(err) {
 			log.Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
 		} else {
 			return errors.Annotatef(err, "failed to evict store leader %s", i.GetHost())

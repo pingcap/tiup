@@ -29,7 +29,6 @@ import (
 	"github.com/pingcap/kvproto/pkg/metapb"
 	"github.com/pingcap/kvproto/pkg/pdpb"
 	pdserverapi "github.com/pingcap/pd/v4/server/api"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -162,15 +161,15 @@ func (pc *PDClient) GetStores() (*pdserverapi.StoresInfo, error) {
 }
 
 // WaitLeader wait until there's a leader or timeout.
-func (pc *PDClient) WaitLeader(retryOpt *clusterutil.RetryOption) error {
+func (pc *PDClient) WaitLeader(retryOpt *utils.RetryOption) error {
 	if retryOpt == nil {
-		retryOpt = &clusterutil.RetryOption{
+		retryOpt = &utils.RetryOption{
 			Delay:   time.Second * 1,
 			Timeout: time.Second * 30,
 		}
 	}
 
-	if err := clusterutil.Retry(func() error {
+	if err := utils.Retry(func() error {
 		_, err := pc.GetLeader()
 		if err == nil {
 			return nil
@@ -261,7 +260,7 @@ func (pc *PDClient) GetDashboardAddress() (string, error) {
 }
 
 // EvictPDLeader evicts the PD leader
-func (pc *PDClient) EvictPDLeader(retryOpt *clusterutil.RetryOption) error {
+func (pc *PDClient) EvictPDLeader(retryOpt *utils.RetryOption) error {
 	// get current members
 	members, err := pc.GetMembers()
 	if err != nil {
@@ -291,12 +290,12 @@ func (pc *PDClient) EvictPDLeader(retryOpt *clusterutil.RetryOption) error {
 
 	// wait for the transfer to complete
 	if retryOpt == nil {
-		retryOpt = &clusterutil.RetryOption{
+		retryOpt = &utils.RetryOption{
 			Delay:   time.Second * 5,
 			Timeout: time.Second * 300,
 		}
 	}
-	if err := clusterutil.Retry(func() error {
+	if err := utils.Retry(func() error {
 		currLeader, err := pc.GetLeader()
 		if err != nil {
 			return err
@@ -329,7 +328,7 @@ type pdSchedulerRequest struct {
 
 // EvictStoreLeader evicts the store leaders
 // The host parameter should be in format of IP:Port, that matches store's address
-func (pc *PDClient) EvictStoreLeader(host string, retryOpt *clusterutil.RetryOption) error {
+func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption) error {
 	// get info of current stores
 	stores, err := pc.GetStores()
 	if err != nil {
@@ -374,12 +373,12 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *clusterutil.RetryOpt
 
 	// wait for the transfer to complete
 	if retryOpt == nil {
-		retryOpt = &clusterutil.RetryOption{
+		retryOpt = &utils.RetryOption{
 			Delay:   time.Second * 5,
 			Timeout: time.Second * 600,
 		}
 	}
-	if err := clusterutil.Retry(func() error {
+	if err := utils.Retry(func() error {
 		currStores, err := pc.GetStores()
 		if err != nil {
 			return err
@@ -461,7 +460,7 @@ func (pc *PDClient) RemoveStoreEvict(host string) error {
 }
 
 // DelPD deletes a PD node from the cluster, name is the Name of the PD member
-func (pc *PDClient) DelPD(name string, retryOpt *clusterutil.RetryOption) error {
+func (pc *PDClient) DelPD(name string, retryOpt *utils.RetryOption) error {
 	// get current members
 	members, err := pc.GetMembers()
 	if err != nil {
@@ -493,12 +492,12 @@ func (pc *PDClient) DelPD(name string, retryOpt *clusterutil.RetryOption) error 
 
 	// wait for the deletion to complete
 	if retryOpt == nil {
-		retryOpt = &clusterutil.RetryOption{
+		retryOpt = &utils.RetryOption{
 			Delay:   time.Second * 2,
 			Timeout: time.Second * 60,
 		}
 	}
-	if err := clusterutil.Retry(func() error {
+	if err := utils.Retry(func() error {
 		currMembers, err := pc.GetMembers()
 		if err != nil {
 			return err
@@ -556,7 +555,7 @@ var ErrStoreNotExists = errors.New("store not exists")
 
 // DelStore deletes stores from a (TiKV) host
 // The host parameter should be in format of IP:Port, that matches store's address
-func (pc *PDClient) DelStore(host string, retryOpt *clusterutil.RetryOption) error {
+func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 	// get info of current stores
 	stores, err := pc.GetStores()
 	if err != nil {
@@ -598,12 +597,12 @@ func (pc *PDClient) DelStore(host string, retryOpt *clusterutil.RetryOption) err
 
 	// wait for the deletion to complete
 	if retryOpt == nil {
-		retryOpt = &clusterutil.RetryOption{
+		retryOpt = &utils.RetryOption{
 			Delay:   time.Second * 2,
 			Timeout: time.Second * 60,
 		}
 	}
-	if err := clusterutil.Retry(func() error {
+	if err := utils.Retry(func() error {
 		currStores, err := pc.GetStores()
 		if err != nil {
 			return err

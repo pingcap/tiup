@@ -23,10 +23,10 @@ import (
 	"github.com/pingcap/errors"
 	dm "github.com/pingcap/tiup/components/dm/spec"
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TODO: We can make drainer not async.
@@ -291,7 +291,7 @@ func deleteMember(
 	binlogClient *api.BinlogClient,
 	timeoutSecond int64,
 ) error {
-	timeoutOpt := &clusterutil.RetryOption{
+	timeoutOpt := &utils.RetryOption{
 		Timeout: time.Second * time.Duration(timeoutSecond),
 		Delay:   time.Second * 5,
 	}
@@ -392,7 +392,7 @@ func ScaleInDMCluster(
 		return errors.New("cannot find available dm-master instance")
 	}
 
-	retryOpt := &clusterutil.RetryOption{
+	retryOpt := &utils.RetryOption{
 		Timeout: time.Second * time.Duration(options.APITimeout),
 		Delay:   time.Second * 2,
 	}

@@ -13,16 +13,99 @@
 
 package utils
 
-// Retry when the when func returns true
-func Retry(f func() error, when func(error) bool) error {
+import (
+	"fmt"
+	"strings"
+	"time"
+)
+
+// RetryUntil when the when func returns true
+func RetryUntil(f func() error, when func(error) bool) error {
 	e := f()
 	if e == nil {
 		return nil
 	}
 	if when == nil {
-		return Retry(f, nil)
+		return RetryUntil(f, nil)
 	} else if when(e) {
-		return Retry(f, when)
+		return RetryUntil(f, when)
 	}
 	return e
+}
+
+// RetryOption is options for Retry()
+type RetryOption struct {
+	Attempts int64
+	Delay    time.Duration
+	Timeout  time.Duration
+}
+
+// default values for RetryOption
+var (
+	defaultAttempts int64 = 20
+	defaultDelay          = time.Millisecond * 500 // 500ms
+	defaultTimeout        = time.Second * 10       // 10s
+)
+
+// Retry retries the func until it returns no error or reaches attempts limit or
+// timed out, either one is earlier
+func Retry(doFunc func() error, opts ...RetryOption) error {
+	var cfg RetryOption
+	if len(opts) > 0 {
+		cfg = opts[0]
+	} else {
+		cfg = RetryOption{
+			Attempts: defaultAttempts,
+			Delay:    defaultDelay,
+			Timeout:  defaultTimeout,
+		}
+	}
+
+	// timeout must be greater than 0
+	if cfg.Timeout <= 0 {
+		return fmt.Errorf("timeout (%s) must be greater than 0", cfg.Timeout)
+	}
+	// set options automatically for invalid value
+	if cfg.Delay <= 0 {
+		cfg.Delay = defaultDelay
+	}
+	if cfg.Attempts <= 0 {
+		cfg.Attempts = cfg.Timeout.Milliseconds()/cfg.Delay.Milliseconds() + 1
+	}
+
+	timeoutChan := time.After(cfg.Timeout)
+
+	// call the function
+	var attemptCount int64
+	for attemptCount = 0; attemptCount < cfg.Attempts; attemptCount++ {
+		if err := doFunc(); err == nil {
+			return nil
+		}
+
+		// check for timeout
+		select {
+		case <-timeoutChan:
+			return fmt.Errorf("operation timed out after %s", cfg.Timeout)
+		default:
+			time.Sleep(cfg.Delay)
+		}
+	}
+
+	return fmt.Errorf("operation exceeds the max retry attempts of %d", cfg.Attempts)
+}
+
+// IsTimeoutOrMaxRetry return true if it's timeout or reach max retry.
+func IsTimeoutOrMaxRetry(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	s := err.Error()
+
+	if strings.Contains(s, "operation timed out after") ||
+		strings.Contains(s, "operation exceeds the max retry attempts of") {
+		return true
+	}
+
+	return false
 }

@@ -78,8 +78,8 @@ func (h *componentSigner) sign(r *http.Request, m *model.ComponentManifest) (sr 
 	initTime := time.Now()
 
 	md := model.New(txn, h.keys)
-	// Retry util not conflict with other txns
-	if err := utils.Retry(func() error {
+	// retry util there is no conflict with other txns
+	if err := utils.RetryUntil(func() error {
 		// Write the component manifest (component.json)
 		if err := md.UpdateComponentManifest(name, m); err != nil {
 			if err == model.ErrorConflict {
