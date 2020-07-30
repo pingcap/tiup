@@ -11,20 +11,20 @@ target-database:
 
 mysql-instances:
   - source-id: "mysql1"
-    black-white-list:  "instance"
+    block-allow-list:  "instance"
     route-rules: ["sharding-route-rules-table", "sharding-route-rules-schema"]
     mydumper-thread: 4
     loader-thread: 16
     syncer-thread: 16
 
   - source-id: "mysql2"
-    black-white-list:  "instance"
+    block-allow-list:  "instance"
     route-rules: ["sharding-route-rules-table", "sharding-route-rules-schema"]
     mydumper-thread: 4
     loader-thread: 16
     syncer-thread: 16
 
-black-white-list:
+block-allow-list:
   instance:
     do-dbs: ["~^sharding[\\d]+"]
     do-tables:
