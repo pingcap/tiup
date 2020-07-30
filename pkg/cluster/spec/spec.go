@@ -861,14 +861,19 @@ func (s *Specification) ComponentsByStartOrder() (comps []Component) {
 
 // ComponentsByUpdateOrder return component in the order need to be updated.
 func (s *Specification) ComponentsByUpdateOrder() (comps []Component) {
-	// "tiflash", "pd", "tikv", "pump", "tidb", "drainer", "cdc", "prometheus", "grafana", "alertmanager"
-	comps = s.ComponentsByStartOrder()
-	for i, comp := range comps {
-		if comp.Name() == ComponentTiFlash {
-			comps = append([]Component{comp}, append(comps[:i], comps[i+1:]...)...)
-			return
-		}
-	}
+	// "tiflash", "cdc", "pd", "tikv", "pump", "tidb", "drainer", "prometheus", "grafana", "alertmanager"
+	comps = append(comps, &TiFlashComponent{s})
+	comps = append(comps, &CDCComponent{s})
+	comps = append(comps, &PDComponent{s})
+	comps = append(comps, &TiKVComponent{s})
+	comps = append(comps, &PumpComponent{s})
+	comps = append(comps, &TiDBComponent{s})
+	comps = append(comps, &DrainerComponent{s})
+	comps = append(comps, &MonitorComponent{s})
+	comps = append(comps, &GrafanaComponent{s})
+	comps = append(comps, &AlertManagerComponent{s})
+	comps = append(comps, &TiSparkMasterComponent{s})
+	comps = append(comps, &TiSparkWorkerComponent{s})
 	return
 }
 
