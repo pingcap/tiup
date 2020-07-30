@@ -80,7 +80,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 		SSHKeySet(
 			m.specManager.Path(name, "ssh", "id_rsa"),
 			m.specManager.Path(name, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, options.SSHTimeout).
+		ClusterSSH(topo, base.User, options.SSHTimeout, options.NativeSSH).
 		Func("StartCluster", func(ctx *task.Context) error {
 			return operator.Start(ctx, topo, options)
 		})
@@ -117,7 +117,7 @@ func (m *Manager) StopCluster(clusterName string, options operator.Options) erro
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(metadata.GetTopology(), base.User, options.SSHTimeout).
+		ClusterSSH(metadata.GetTopology(), base.User, options.SSHTimeout, options.NativeSSH).
 		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, options)
 		}).
@@ -149,7 +149,7 @@ func (m *Manager) RestartCluster(clusterName string, options operator.Options) e
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, options.SSHTimeout).
+		ClusterSSH(topo, base.User, options.SSHTimeout, options.NativeSSH).
 		Func("RestartCluster", func(ctx *task.Context) error {
 			return operator.Restart(ctx, topo, options)
 		}).
@@ -226,7 +226,7 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, gOpt.SSHTimeout).
+		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.NativeSSH).
 		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, operator.Options{})
 		}).
@@ -298,7 +298,7 @@ func (m *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Option
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, gOpt.SSHTimeout).
+		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.NativeSSH).
 		Parallel(shellTasks...).
 		Build()
 
@@ -547,7 +547,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, opt.SSHTimeout).
+		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.NativeSSH).
 		ParallelStep("+ Refresh instance configs", refreshConfigTasks...)
 
 	if len(monitorConfigTasks) > 0 {
@@ -690,7 +690,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, opt.SSHTimeout).
+		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.NativeSSH).
 		Parallel(downloadCompTasks...).
 		Parallel(copyCompTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
@@ -756,7 +756,7 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, opt.SSHTimeout).
+		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.NativeSSH).
 		Parallel(replacePackageTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
 			return operator.Upgrade(ctx, topo, opt)
@@ -1033,6 +1033,7 @@ func (m *Manager) ScaleIn(
 	clusterName string,
 	skipConfirm bool,
 	sshTimeout int64,
+	nativeSSH bool,
 	force bool,
 	nodes []string,
 	scale func(builer *task.Builder, metadata spec.Metadata),
@@ -1129,7 +1130,7 @@ func (m *Manager) ScaleIn(
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, sshTimeout)
+		ClusterSSH(topo, base.User, sshTimeout, nativeSSH)
 
 	// TODO: support command scale in operation.
 	scale(b, metadata)
@@ -1728,7 +1729,7 @@ func buildScaleOutTask(
 			specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		Parallel(downloadCompTasks...).
 		Parallel(envInitTasks...).
-		ClusterSSH(topo, base.User, sshTimeout).
+		ClusterSSH(topo, base.User, sshTimeout, nativeSSH).
 		Parallel(deployCompTasks...)
 
 	if afterDeploy != nil {
@@ -1740,7 +1741,7 @@ func buildScaleOutTask(
 		Func("StartCluster", func(ctx *task.Context) error {
 			return operator.Start(ctx, metadata.GetTopology(), operator.Options{OptTimeout: optTimeout})
 		}).
-		ClusterSSH(newPart, base.User, sshTimeout).
+		ClusterSSH(newPart, base.User, sshTimeout, nativeSSH).
 		Func("Save meta", func(_ *task.Context) error {
 			metadata.SetTopology(mergedTopo)
 			return m.specManager.SaveMeta(clusterName, metadata)
