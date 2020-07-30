@@ -436,7 +436,7 @@ func (r *V1Repository) updateComponentManifest(id string, withYanked bool) (*v1m
 
 	item, ok := components[id]
 	if !ok {
-		return nil, errUnknownComponent
+		return nil, errors.AddStack(errUnknownComponent)
 	}
 	var snapshot v1manifest.Snapshot
 	_, _, err = r.local.LoadManifest(&snapshot)
