@@ -14,16 +14,6 @@
 package command
 
 import (
-	"errors"
-
-	"github.com/joomcode/errorx"
-	perrs "github.com/pingcap/errors"
-	operator "github.com/pingcap/tiup/pkg/cluster/operation"
-	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger"
-	"github.com/pingcap/tiup/pkg/logger/log"
-	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/spf13/cobra"
 )
 
@@ -43,40 +33,7 @@ func newRestartCmd() *cobra.Command {
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			exist, err := tidbSpec.Exist(clusterName)
-			if err != nil {
-				return perrs.AddStack(err)
-			}
-
-			if !exist {
-				return perrs.Errorf("cannot restart non-exists cluster %s", clusterName)
-			}
-
-			logger.EnableAuditLog()
-			metadata, err := spec.ClusterMetadata(clusterName)
-			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
-				return err
-			}
-
-			t := task.NewBuilder().
-				SSHKeySet(
-					spec.ClusterPath(clusterName, "ssh", "id_rsa"),
-					spec.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-				ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
-				ClusterOperate(metadata.Topology, operator.RestartOperation, gOpt).
-				Build()
-
-			if err := t.Execute(task.NewContext()); err != nil {
-				if errorx.Cast(err) != nil {
-					// FIXME: Map possible task errors and give suggestions.
-					return err
-				}
-				return perrs.Trace(err)
-			}
-
-			log.Infof("Restarted cluster `%s` successfully", clusterName)
-
-			return nil
+			return manager.RestartCluster(clusterName, gOpt)
 		},
 	}
 

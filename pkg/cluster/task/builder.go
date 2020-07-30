@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	dm "github.com/pingcap/tiup/components/dm/spec"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -75,7 +76,7 @@ func (b *Builder) Func(name string, fn func(ctx *Context) error) *Builder {
 }
 
 // ClusterSSH init all UserSSH need for the cluster.
-func (b *Builder) ClusterSSH(spec spec.Spec, deployUser string, sshTimeout int64) *Builder {
+func (b *Builder) ClusterSSH(spec spec.Topology, deployUser string, sshTimeout int64, nativeClient bool) *Builder {
 	var tasks []Task
 	for _, com := range spec.ComponentsByStartOrder() {
 		for _, in := range com.Instances() {
@@ -84,6 +85,7 @@ func (b *Builder) ClusterSSH(spec spec.Spec, deployUser string, sshTimeout int64
 				port:       in.GetSSHPort(),
 				deployUser: deployUser,
 				timeout:    sshTimeout,
+				native:     nativeClient,
 			})
 		}
 	}
@@ -103,9 +105,8 @@ func (b *Builder) UpdateMeta(cluster string, metadata *spec.ClusterMeta, deleted
 	return b
 }
 
-/*
 // UpdateDMMeta maintain the dm meta information
-func (b *Builder) UpdateDMMeta(cluster string, metadata *meta.DMMeta, deletedNodeIds []string) *Builder {
+func (b *Builder) UpdateDMMeta(cluster string, metadata *dm.Metadata, deletedNodeIds []string) *Builder {
 	b.tasks = append(b.tasks, &UpdateDMMeta{
 		cluster:        cluster,
 		metadata:       metadata,
@@ -113,7 +114,6 @@ func (b *Builder) UpdateDMMeta(cluster string, metadata *meta.DMMeta, deletedNod
 	})
 	return b
 }
-*/
 
 // UpdateTopology maintain the topology information
 func (b *Builder) UpdateTopology(cluster string, metadata *spec.ClusterMeta, deletedNodeIds []string) *Builder {
@@ -177,8 +177,9 @@ func (b *Builder) BackupComponent(component, fromVer string, host, deployDir str
 }
 
 // InitConfig appends a CopyComponent task to the current task collection
-func (b *Builder) InitConfig(clusterName, clusterVersion string, inst spec.Instance, deployUser string, ignoreCheck bool, paths meta.DirPaths) *Builder {
+func (b *Builder) InitConfig(clusterName, clusterVersion string, specManager *spec.SpecManager, inst spec.Instance, deployUser string, ignoreCheck bool, paths meta.DirPaths) *Builder {
 	b.tasks = append(b.tasks, &InitConfig{
+		specManager:    specManager,
 		clusterName:    clusterName,
 		clusterVersion: clusterVersion,
 		instance:       inst,
@@ -190,11 +191,12 @@ func (b *Builder) InitConfig(clusterName, clusterVersion string, inst spec.Insta
 }
 
 // ScaleConfig generate temporary config on scaling
-func (b *Builder) ScaleConfig(clusterName, clusterVersion string, cluster *spec.Specification, inst spec.Instance, deployUser string, paths meta.DirPaths) *Builder {
+func (b *Builder) ScaleConfig(clusterName, clusterVersion string, specManager *spec.SpecManager, topo spec.Topology, inst spec.Instance, deployUser string, paths meta.DirPaths) *Builder {
 	b.tasks = append(b.tasks, &ScaleConfig{
+		specManager:    specManager,
 		clusterName:    clusterName,
 		clusterVersion: clusterVersion,
-		base:           cluster,
+		base:           topo,
 		instance:       inst,
 		deployUser:     deployUser,
 		paths:          paths,
@@ -203,7 +205,7 @@ func (b *Builder) ScaleConfig(clusterName, clusterVersion string, cluster *spec.
 }
 
 // MonitoredConfig appends a CopyComponent task to the current task collection
-func (b *Builder) MonitoredConfig(name, comp, host string, globResCtl meta.ResourceControl, options spec.MonitoredOptions, deployUser string, paths meta.DirPaths) *Builder {
+func (b *Builder) MonitoredConfig(name, comp, host string, globResCtl meta.ResourceControl, options *spec.MonitoredOptions, deployUser string, paths meta.DirPaths) *Builder {
 	b.tasks = append(b.tasks, &MonitoredConfig{
 		name:       name,
 		component:  comp,

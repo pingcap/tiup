@@ -35,7 +35,7 @@ type MonitoredConfig struct {
 	component  string
 	host       string
 	globResCtl meta.ResourceControl
-	options    spec.MonitoredOptions
+	options    *spec.MonitoredOptions
 	deployUser string
 	paths      meta.DirPaths
 }

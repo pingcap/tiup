@@ -13,18 +13,7 @@
 
 package command
 
-/*
 import (
-	"errors"
-
-	"github.com/joomcode/errorx"
-	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
-	operator "github.com/pingcap/tiup/pkg/cluster/operation"
-	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger"
-	"github.com/pingcap/tiup/pkg/logger/log"
-	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -38,35 +27,8 @@ func newStopCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			if utils.IsNotExist(meta.ClusterPath(clusterName, meta.MetaFileName)) {
-				return perrs.Errorf("cannot stop non-exists cluster %s", clusterName)
-			}
 
-			logger.EnableAuditLog()
-			metadata, err := meta.DMMetadata(clusterName)
-			if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
-				return err
-			}
-
-			t := task.NewBuilder().
-				SSHKeySet(
-					meta.ClusterPath(clusterName, "ssh", "id_rsa"),
-					meta.ClusterPath(clusterName, "ssh", "id_rsa.pub")).
-				ClusterSSH(metadata.Topology, metadata.User, gOpt.SSHTimeout).
-				ClusterOperate(metadata.Topology, operator.StopOperation, gOpt).
-				Build()
-
-			if err := t.Execute(task.NewContext()); err != nil {
-				if errorx.Cast(err) != nil {
-					// FIXME: Map possible task errors and give suggestions.
-					return err
-				}
-				return perrs.Trace(err)
-			}
-
-			log.Infof("Stopped cluster `%s` successfully", clusterName)
-
-			return nil
+			return manager.StopCluster(clusterName, gOpt)
 		},
 	}
 
@@ -75,4 +37,3 @@ func newStopCmd() *cobra.Command {
 
 	return cmd
 }
-*/

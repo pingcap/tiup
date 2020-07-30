@@ -20,12 +20,13 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
+	"github.com/pingcap/tiup/components/dm/spec"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster"
 	"github.com/pingcap/tiup/pkg/cluster/flags"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	cspec "github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/colorutil"
-	"github.com/pingcap/tiup/pkg/dm/spec"
 	tiupmeta "github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -37,13 +38,15 @@ import (
 )
 
 var (
+	// nolint
 	errNS       = errorx.NewNamespace("cmd")
 	rootCmd     *cobra.Command
 	gOpt        operator.Options
 	skipConfirm bool
 )
 
-var dmspec = spec.GetSpecManager()
+var dmspec *cspec.SpecManager
+var manager *cluster.Manager
 
 func init() {
 	logger.InitGlobalLogger()
@@ -54,6 +57,11 @@ func init() {
 	flags.ShowBacktrace = len(os.Getenv("TIUP_BACKTRACE")) > 0
 	cobra.EnableCommandSorting = false
 
+	nativeEnvVar := strings.ToLower(os.Getenv(localdata.EnvNameNativeSSHClient))
+	if nativeEnvVar == "true" || nativeEnvVar == "1" || nativeEnvVar == "enable" {
+		gOpt.NativeSSH = true
+	}
+
 	rootCmd = &cobra.Command{
 		Use:           cliutil.OsArgs0(),
 		Short:         "Deploy a DM cluster for production",
@@ -63,9 +71,13 @@ func init() {
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			var err error
 			var env *tiupmeta.Environment
-			if err = cspec.Initialize("cluster"); err != nil {
+			if err = cspec.Initialize("dm"); err != nil {
 				return err
 			}
+
+			dmspec = spec.GetSpecManager()
+			logger.EnableAuditLog(cspec.AuditDir())
+			manager = cluster.NewManager("dm", spec.GetSpecManager())
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.
 			env, err = tiupmeta.InitEnv(repository.Options{
@@ -76,6 +88,12 @@ func init() {
 				return err
 			}
 			tiupmeta.SetGlobalEnv(env)
+
+			if gOpt.NativeSSH {
+				zap.L().Info("Native ssh client will be used",
+					zap.String(localdata.EnvNameNativeSSHClient, os.Getenv(localdata.EnvNameNativeSSHClient)))
+			}
+
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -91,25 +109,26 @@ func init() {
 	rootCmd.PersistentFlags().Int64Var(&gOpt.SSHTimeout, "ssh-timeout", 5, "Timeout in seconds to connect host via SSH, ignored for operations that don't need an SSH connection.")
 	rootCmd.PersistentFlags().Int64Var(&gOpt.OptTimeout, "wait-timeout", 60, "Timeout in seconds to wait for an operation to complete, ignored for operations that don't fit.")
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
+	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "Use the native SSH client installed on local system instead of the build-in one.")
 
 	rootCmd.AddCommand(
 		newDeploy(),
 		newStartCmd(),
-	/*
-		newCheckCmd(),
 		newStopCmd(),
 		newRestartCmd(),
-		newScaleInCmd(),
-		newScaleOutCmd(),
-		newDestroyCmd(),
-		newUpgradeCmd(),
-		newExecCmd(),
-		newDisplayCmd(),
 		newListCmd(),
+		newDestroyCmd(),
 		newAuditCmd(),
+		newExecCmd(),
 		newEditConfigCmd(),
+		newDisplayCmd(),
 		newReloadCmd(),
+		newUpgradeCmd(),
 		newPatchCmd(),
+		newScaleOutCmd(),
+		newScaleInCmd(),
+	/*
+		newCheckCmd(),
 		newTestCmd(), // hidden command for test internally
 	*/
 	)

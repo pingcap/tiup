@@ -118,6 +118,10 @@ the latest stable version will be downloaded from the repository.`,
 		"and the latest version installed will be selected if no version specified")
 	rootCmd.Flags().StringVarP(&tag, "tag", "T", "", "Specify a tag for component instance")
 	rootCmd.Flags().StringVar(&binPath, "binpath", "", "Specify the binary path of component instance")
+	// Some components will define themself -h flag, eg:
+	// $ tiup dumpling -h ${host}.
+	// We try to leave the handling of `-h` flag to the component.
+	rootCmd.PersistentFlags().Bool("help", false, "Help for this command")
 
 	rootCmd.AddCommand(
 		newInstallCmd(),

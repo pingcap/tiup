@@ -182,9 +182,17 @@ func (i *TiDBInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiDBInstance) ScaleConfig(e executor.Executor, cluster *Specification, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiDBInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	s := i.instance.topo
 	defer func() { i.instance.topo = s }()
-	i.instance.topo = cluster
+	i.instance.topo = mustBeClusterTopo(topo)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+}
+
+func mustBeClusterTopo(topo Topology) *Specification {
+	spec, ok := topo.(*Specification)
+	if !ok {
+		panic("must be cluster spec")
+	}
+	return spec
 }

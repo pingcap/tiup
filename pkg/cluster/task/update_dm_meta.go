@@ -13,12 +13,11 @@
 
 package task
 
-/*
 import (
 	"fmt"
 	"strings"
 
-	"github.com/pingcap/tiup/pkg/dms/meta"
+	dmspec "github.com/pingcap/tiup/components/dm/spec"
 
 	"github.com/pingcap/tiup/pkg/set"
 )
@@ -26,52 +25,51 @@ import (
 // UpdateDMMeta is used to maintain the DM meta information
 type UpdateDMMeta struct {
 	cluster        string
-	metadata       *meta.DMMeta
+	metadata       *dmspec.Metadata
 	deletedNodesID []string
 }
 
 // Execute implements the Task interface
 func (u *UpdateDMMeta) Execute(ctx *Context) error {
 	// make a copy
-	newMeta := &meta.DMMeta{}
+	newMeta := &dmspec.Metadata{}
 	*newMeta = *u.metadata
-	newMeta.Topology = &meta.DMSTopologySpecification{
-		GlobalOptions:    u.metadata.Topology.GlobalOptions,
-		MonitoredOptions: u.metadata.Topology.MonitoredOptions,
-		ServerConfigs:    u.metadata.Topology.ServerConfigs,
+	newMeta.Topology = &dmspec.Topology{
+		GlobalOptions: u.metadata.Topology.GlobalOptions,
+		// MonitoredOptions: u.metadata.Topology.MonitoredOptions,
+		ServerConfigs: u.metadata.Topology.ServerConfigs,
 	}
 
 	deleted := set.NewStringSet(u.deletedNodesID...)
 	topo := u.metadata.Topology
-	for i, instance := range (&meta.DMMasterComponent{DMSSpecification: topo}).Instances() {
+	for i, instance := range (&dmspec.DMMasterComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Masters = append(newMeta.Topology.Masters, topo.Masters[i])
 	}
-	for i, instance := range (&meta.DMWorkerComponent{DMSSpecification: topo}).Instances() {
+	for i, instance := range (&dmspec.DMWorkerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Workers = append(newMeta.Topology.Workers, topo.Workers[i])
 	}
-	for i, instance := range (&meta.DMPortalComponent{DMSSpecification: topo}).Instances() {
+	for i, instance := range (&dmspec.DMPortalComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Portals = append(newMeta.Topology.Portals, topo.Portals[i])
 	}
 
-	return meta.SaveDMMeta(u.cluster, newMeta)
+	return dmspec.GetSpecManager().SaveMeta(u.cluster, newMeta)
 }
 
 // Rollback implements the Task interface
 func (u *UpdateDMMeta) Rollback(ctx *Context) error {
-	return meta.SaveDMMeta(u.cluster, u.metadata)
+	return dmspec.GetSpecManager().SaveMeta(u.cluster, u.metadata)
 }
 
 // String implements the fmt.Stringer interface
 func (u *UpdateDMMeta) String() string {
 	return fmt.Sprintf("UpdateMeta: cluster=%s, deleted=`'%s'`", u.cluster, strings.Join(u.deletedNodesID, "','"))
 }
-*/

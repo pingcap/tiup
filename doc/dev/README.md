@@ -16,8 +16,11 @@ To build TiUp, run `make`.
 
 For development, you don't want to use any global directories. You may also want to supply your own metadata. TiUp can be modified using the following environment variables:
 
-* `TIUP_HOME` the profile directory, where TiUp stores its metadata.
-* `TIUP_MIRRORS` set the location of TiUp's registry, can be a directory or URL
+* `TIUP_HOME` the profile directory, where TiUp stores its metadata. If not set, `~/.tiup` will be used.
+* `TIUP_MIRRORS` set the location of TiUp's registry, can be a directory or URL. If not set, `https://tiup-mirrors.pingcap.com` will be used.
+
+> **Note**
+> TiUP need a certificate file (root.json) installed in `${TIUP_HOME}/bin` directory. If this is your first time getting TiUP, you can run `tiup mirror set <tiup-mirror>` to get it installed.
 
 ## Testing
 

@@ -100,12 +100,12 @@ type CDCInstance struct {
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *CDCInstance) ScaleConfig(e executor.Executor, cluster *Specification, clusterName, clusterVersion, user string, paths meta.DirPaths) error {
+func (i *CDCInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, user string, paths meta.DirPaths) error {
 	s := i.instance.topo
 	defer func() {
 		i.instance.topo = s
 	}()
-	i.instance.topo = cluster
+	i.instance.topo = mustBeClusterTopo(topo)
 
 	return i.InitConfig(e, clusterName, clusterVersion, user, paths)
 }

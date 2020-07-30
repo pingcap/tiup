@@ -13,16 +13,7 @@
 
 package command
 
-/*
 import (
-	"errors"
-	"io/ioutil"
-	"os"
-
-	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster/meta"
-	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -31,41 +22,8 @@ func newListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List all clusters",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return listCluster()
+			return manager.ListCluster()
 		},
 	}
 	return cmd
 }
-
-func listCluster() error {
-	clusterDir := meta.ProfilePath(meta.TiOpsClusterDir)
-	clusterTable := [][]string{
-		// Header
-		{"Name", "User", "Version", "Path", "PrivateKey"},
-	}
-	fileInfos, err := ioutil.ReadDir(clusterDir)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	for _, fi := range fileInfos {
-		if tiuputils.IsNotExist(meta.ClusterPath(fi.Name(), meta.MetaFileName)) {
-			continue
-		}
-		metadata, err := meta.DMMetadata(fi.Name())
-		if err != nil && !errors.Is(perrs.Cause(err), meta.ValidateErr) {
-			return perrs.Trace(err)
-		}
-
-		clusterTable = append(clusterTable, []string{
-			fi.Name(),
-			metadata.User,
-			metadata.Version,
-			meta.ClusterPath(fi.Name()),
-			meta.ClusterPath(fi.Name(), "ssh", "id_rsa"),
-		})
-	}
-
-	cliutil.PrintTable(clusterTable, true)
-	return nil
-}
-*/

@@ -14,20 +14,18 @@
 package spec
 
 import (
+	"fmt"
+	"path/filepath"
+	"reflect"
+
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/version"
 )
 
-const (
-	// PatchDirName is the directory to store patch file eg. {PatchDirName}/tidb-hotfix.tar.gz
-	PatchDirName = "patch"
-)
-
-var tidbSpec *meta.SpecManager
+var tidbSpec *SpecManager
 
 // GetSpecManager return the spec manager of tidb cluster.
-func GetSpecManager() *meta.SpecManager {
+func GetSpecManager() *SpecManager {
 	if !initialized {
 		panic("must Initialize profile first")
 	}
@@ -43,6 +41,47 @@ type ClusterMeta struct {
 	OpsVer string `yaml:"last_ops_ver,omitempty"` // the version of ourself that updated the meta last time
 
 	Topology *Specification `yaml:"topology"`
+}
+
+var _ UpgradableMetadata = &ClusterMeta{}
+
+// SetVersion implement UpgradableMetadata interface.
+func (m *ClusterMeta) SetVersion(s string) {
+	m.Version = s
+}
+
+// SetUser implement UpgradableMetadata interface.
+func (m *ClusterMeta) SetUser(s string) {
+	m.User = s
+}
+
+// GetTopology implement Metadata interface.
+func (m *ClusterMeta) GetTopology() Topology {
+	return m.Topology
+}
+
+// SetTopology implement Metadata interface.
+func (m *ClusterMeta) SetTopology(topo Topology) {
+	tidbTopo, ok := topo.(*Specification)
+	if !ok {
+		panic(fmt.Sprintln("wrong type: ", reflect.TypeOf(topo)))
+	}
+
+	m.Topology = tidbTopo
+}
+
+// GetBaseMeta implements Metadata interface.
+func (m *ClusterMeta) GetBaseMeta() *BaseMeta {
+	return &BaseMeta{
+		Version: m.Version,
+		User:    m.User,
+		OpsVer:  &m.OpsVer,
+	}
+}
+
+// AuditDir return the directory for saving audit log.
+func AuditDir() string {
+	return filepath.Join(profileDir, TiOpsAuditDir)
 }
 
 // SaveClusterMeta saves the cluster meta information to profile directory
