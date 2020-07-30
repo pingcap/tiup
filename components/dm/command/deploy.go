@@ -16,10 +16,12 @@ package command
 import (
 	"path"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
+	"golang.org/x/mod/semver"
 )
 
 func newDeploy() *cobra.Command {
@@ -44,6 +46,10 @@ func newDeploy() *cobra.Command {
 			version := args[1]
 			topoFile := args[2]
 
+			if err := supportVersion(version); err != nil {
+				return err
+			}
+
 			return manager.Deploy(
 				clusterName,
 				version,
@@ -64,4 +70,17 @@ func newDeploy() *cobra.Command {
 	cmd.Flags().BoolVarP(&opt.IgnoreConfigCheck, "ignore-config-check", "", opt.IgnoreConfigCheck, "Ignore the config check result")
 
 	return cmd
+}
+
+func supportVersion(vs string) error {
+	if !semver.IsValid(vs) {
+		return nil
+	}
+
+	majorMinor := semver.MajorMinor(vs)
+	if semver.Compare(majorMinor, "v2.0") < 0 {
+		return errors.Errorf("Only support version not less than v2.0")
+	}
+
+	return nil
 }
