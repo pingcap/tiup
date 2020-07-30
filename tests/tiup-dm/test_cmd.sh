@@ -2,14 +2,14 @@
 
 set -eu
 
-name=test_dm_cmd
+name=test_cmd
 topo=./topo/full_dm.yaml
 
 mkdir -p ~/.tiup/bin && cp -f ./root.json ~/.tiup/bin/
 
-tiup-dm check $topo -i ~/.ssh/id_rsa --enable-mem --enable-cpu --apply
+# tiup-dm check $topo -i ~/.ssh/id_rsa --enable-mem --enable-cpu --apply
 
-tiup-dm --yes check $topo -i ~/.ssh/id_rsa
+# tiup-dm --yes check $topo -i ~/.ssh/id_rsa
 
 tiup-dm --yes deploy $name $version $topo -i ~/.ssh/id_rsa
 
@@ -24,10 +24,8 @@ tiup-dm audit $id
 
 tiup-dm --yes start $name
 
-# TODO: try some write operations here
-tiup-dm _test $name readable
 
-# check the data dir of tikv
+# check the data dir of dm-master
 tiup-dm exec $name -N 172.19.0.102 --command "grep /home/tidb/deploy/dm-master-8261/data /home/tidb/deploy/dm-master-8261/scripts/run_dm-master.sh"
 tiup-dm exec $name -N 172.19.0.103 --command "grep /home/tidb/my_master_data /home/tidb/deploy/dm-master-8261/scripts/run_dm-master.sh"
 
@@ -35,12 +33,9 @@ tiup-dm --yes stop $name
 
 tiup-dm --yes restart $name
 
-# TODO: try some write operations here
-tiup-dm _test $name readable
-
 tiup-dm display $name
 
-totol_sub_one=11
+totol_sub_one=9
 
 echo "start scale in dm-master"
 tiup-dm --yes scale-in $name -N 172.19.0.101:8261
@@ -49,18 +44,12 @@ echo "start scale out dm-master"
 tiup-dm --yes scale-out $name ./topo/full_scale_in_dm-master.yaml
 
 echo "start scale in dm-worker"
-yes | tiup-cluster scale-in $name -N 172.19.0.102:8262
-wait_instance_num_reach $name $totol_sub_one false
+yes | tiup-dm scale-in $name -N 172.19.0.102:8262
+wait_instance_num_reach $name $totol_sub_one
 echo "start scale out dm-worker"
-yes | tiup-cluster scale-out $name ./topo/full_scale_in_dm-worker.yaml
+yes | tiup-dm scale-out $name ./topo/full_scale_in_dm-worker.yaml
 
-echo "start scale in dm-portal"
-yes | tiup-cluster scale-in $name -N 172.19.0.102:8280
-wait_instance_num_reach $name $totol_sub_one false
-echo "start scale out dm-portal" 
-yes | tiup-cluster scale-out $name ./topo/full_scale_in_dm-worker.yaml
+# test create a task and can replicate data
+./script/task/run.sh
 
-# TODO: try some write operations here
-tiup-dm _test $name readable
-
-tiup-cluster --yes destroy $name
+tiup-dm --yes destroy $name

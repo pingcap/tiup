@@ -81,7 +81,6 @@ type (
 	DMServerConfigs struct {
 		Master map[string]interface{} `yaml:"dm_master"`
 		Worker map[string]interface{} `yaml:"dm_worker"`
-		Portal map[string]interface{} `yaml:"dm_portal"`
 	}
 
 	// Topology represents the specification of topology.yaml
@@ -91,7 +90,6 @@ type (
 		ServerConfigs DMServerConfigs    `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
 		Masters       []MasterSpec       `yaml:"dm_master_servers"`
 		Workers       []WorkerSpec       `yaml:"dm_worker_servers"`
-		Portals       []PortalSpec       `yaml:"dm_portal_servers"`
 		Monitors      []PrometheusSpec   `yaml:"monitoring_servers"`
 		Grafana       []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
 		Alertmanager  []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
@@ -222,43 +220,6 @@ func (s WorkerSpec) GetMainPort() int {
 
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s WorkerSpec) IsImported() bool {
-	return s.Imported
-}
-
-// PortalSpec represents the Portal topology specification in topology.yaml
-type PortalSpec struct {
-	Host            string                 `yaml:"host"`
-	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                   `yaml:"imported,omitempty"`
-	Port            int                    `yaml:"port" default:"8280"`
-	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
-	DataDir         string                 `yaml:"data_dir,omitempty"`
-	LogDir          string                 `yaml:"log_dir,omitempty"`
-	Timeout         int                    `yaml:"timeout" default:"5"`
-	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl ResourceControl        `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string                 `yaml:"arch,omitempty"`
-	OS              string                 `yaml:"os,omitempty"`
-}
-
-// Role returns the component role of the instance
-func (s PortalSpec) Role() string {
-	return ComponentDMPortal
-}
-
-// SSH returns the host and SSH port of the instance
-func (s PortalSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
-}
-
-// GetMainPort returns the main port of the instance
-func (s PortalSpec) GetMainPort() int {
-	return s.Port
-}
-
-// IsImported returns if the node is imported from TiDB-Ansible
-func (s PortalSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -629,7 +590,6 @@ func (topo *Topology) Merge(that *Topology) *Topology {
 		ServerConfigs: topo.ServerConfigs,
 		Masters:       append(topo.Masters, that.Masters...),
 		Workers:       append(topo.Workers, that.Workers...),
-		Portals:       append(topo.Portals, that.Portals...),
 		Monitors:      append(topo.Monitors, that.Monitors...),
 		Grafana:       append(topo.Grafana, that.Grafana...),
 		Alertmanager:  append(topo.Alertmanager, that.Alertmanager...),

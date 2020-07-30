@@ -12,7 +12,6 @@ export TIUP_CLUSTER_EXECUTE_DEFAULT_TIMEOUT=300s
 
 export version=${version-v4.0.2}
 export old_version=${old_version-v3.0.16}
-export dm_version=${dm_version-nightly}
 
 function tiup-cluster() {
   mkdir -p "~/.tiup/bin" && cp -f ./root.json ~/.tiup/bin/

@@ -1,0 +1,43 @@
+---
+name: test
+task-mode: all
+shard-mode: "pessimistic"
+
+target-database:
+  host: "tidb1"
+  port: 4000
+  user: "root"
+  password: ""
+
+mysql-instances:
+  - source-id: "mysql1"
+    block-allow-list:  "instance"
+    route-rules: ["sharding-route-rules-table", "sharding-route-rules-schema"]
+    mydumper-thread: 4
+    loader-thread: 16
+    syncer-thread: 16
+
+  - source-id: "mysql2"
+    block-allow-list:  "instance"
+    route-rules: ["sharding-route-rules-table", "sharding-route-rules-schema"]
+    mydumper-thread: 4
+    loader-thread: 16
+    syncer-thread: 16
+
+block-allow-list:
+  instance:
+    do-dbs: ["~^sharding[\\d]+"]
+    do-tables:
+    -  db-name: "~^sharding[\\d]+"
+       tbl-name: "~^t[\\d]+"
+
+routes:
+  sharding-route-rules-table:
+    schema-pattern: sharding*
+    table-pattern: t*
+    target-schema: db_target
+    target-table: t_target
+
+  sharding-route-rules-schema:
+    schema-pattern: sharding*
+    target-schema: db_target

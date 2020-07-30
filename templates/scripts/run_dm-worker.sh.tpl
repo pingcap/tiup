@@ -18,9 +18,9 @@ cd "${DEPLOY_DIR}" || exit 1
 {{- end}}
 
 {{- if .NumaNode}}
-exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/bin/dm-worker \
+exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/dm-worker/dm-worker \
 {{- else}}
-exec bin/bin/dm-worker \
+exec bin/dm-worker/dm-worker \
 {{- end}}
     --name="{{.Name}}" \
     --worker-addr="0.0.0.0:{{.Port}}" \

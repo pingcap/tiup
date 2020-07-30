@@ -13,6 +13,65 @@ on:
       - release-*
 
 jobs:
+  dm:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cases:
+          - "--do-cases test_cmd"
+          - "--do-cases test_upgrade"
+          - "--native-ssh --do-cases test_cmd"
+          - "--native-ssh --do-cases test_upgrade"
+    env:
+      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
+    steps:
+      - name: Set up Go 1.13
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.13
+        id: go
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha  }}
+          path: go/src/github.com/${{ github.repository  }}
+      - name: Build build_integration_test
+        working-directory: ${{env.working-directory}}
+        run: |
+          export GOPATH=${GITHUB_WORKSPACE}/go
+          export PATH=$PATH:$GOPATH/bin
+          make build_integration_test
+          make tiup
+
+      - name: Build the docker-compose stack
+        working-directory: ${{env.working-directory}}
+        # with --dev the first run will fail for unknow reason, just retry it and will success now..
+        run: |
+          cd ${{env.working-directory}}/docker
+          TIUP_CLUSTER_ROOT=${{env.working-directory}} ./up.sh --daemon --dev --compose ./docker-compose.dm.yml || TIUP_CLUSTER_ROOT=${{env.working-directory}} ./up.sh --daemon --dev --compose ./docker-compose.dm.yml
+
+      - name: Check running containers
+        run: |
+          docker ps
+          df -h
+          free -h
+
+      - name: Run test suite
+        id: test
+        working-directory: ${{env.working-directory}}
+        run: |
+          # should not use -it
+          # ref: https://stackoverflow.com/questions/43099116/error-the-input-device-is-not-a-tty
+          docker exec  tiup-cluster-control bash /tiup-cluster/tests/tiup-dm/run.sh ${{matrix.cases}}
+
+      - name: Upload cover files
+        uses: actions/upload-artifact@v1
+        with:
+          name: ${{matrix.cases}}-cover
+          path: ${{env.working-directory}}/tests/tiup-dm/cover
+
   cluster:
     runs-on: ubuntu-latest
     strategy:
@@ -27,7 +86,6 @@ jobs:
           - "test_cmd_with_native_ssh"
           - "test_scale_core_with_native_ssh"
           - "test_scale_tools_with_native_ssh"
-          # - "test_dm_cmd"
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:

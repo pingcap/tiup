@@ -1,13 +1,12 @@
 server_configs:
-  dm-master:
-    rpc-timeout: "30s"
+  dm_master:
+    rpc-timeout: "30s" # you many need update test_upgrade.sh if change this cause it's used to test edit-config
     rpc-rate-limit: 10.0
     rpc-rate-burst: 40
 
-dm-master_servers:
+dm_master_servers:
   - host: 172.19.0.101
     config:
-      rpc-timeout: "30s"
       rpc-rate-limit: 10.0
       rpc-rate-burst: 40
   - host: 172.19.0.101
@@ -18,7 +17,7 @@ dm-master_servers:
     data_dir: /home/tidb/my_master_data
   - host: 172.19.0.104
 
-dm-worker_servers:
+dm_worker_servers:
   - host: 172.19.0.101
     port: 8262
   - host: 172.19.0.101
@@ -26,7 +25,3 @@ dm-worker_servers:
   - host: 172.19.0.102
   - host: 172.19.0.103
   - host: 172.19.0.104
-
-dm-portal_servers:
-  - host: 172.19.0.101
-  - host: 172.19.0.102

@@ -1,0 +1,11 @@
+# MySQL1 Configuration.
+ 
+source-id = "mysql1"
+
+enable-gtid = true
+ 
+[from]
+host = "mysql1"
+user = "root"
+password = ""
+port = 3306
