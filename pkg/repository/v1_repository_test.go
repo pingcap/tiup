@@ -25,6 +25,7 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/google/uuid"
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/crypto"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
@@ -299,7 +300,7 @@ func TestYanked(t *testing.T) {
 
 	_, err = repo.updateComponentManifest("bar", false)
 	assert.NotNil(t, err)
-	assert.Equal(t, err, errUnknownComponent)
+	assert.Equal(t, errors.Cause(err), errUnknownComponent)
 }
 
 func TestUpdateComponent(t *testing.T) {
