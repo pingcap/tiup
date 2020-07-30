@@ -25,6 +25,7 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/google/uuid"
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/crypto"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
@@ -275,6 +276,33 @@ func TestUpdateIndex(t *testing.T) {
 	// TODO test that invalid signature of snapshot causes an error
 }
 
+func TestYanked(t *testing.T) {
+	mirror := MockMirror{
+		Resources: map[string]string{},
+	}
+	local := v1manifest.NewMockManifests()
+	_ = setNewRoot(t, local)
+	repo := NewV1Repo(&mirror, Options{}, local)
+
+	index, indexPriv := indexManifest(t)
+	snapshot := snapshotManifest()
+	bar := componentManifest()
+	serBar := serialize(t, bar, indexPriv)
+	mirror.Resources["/7.bar.json"] = serBar
+	local.Manifests[v1manifest.ManifestFilenameSnapshot] = &v1manifest.Manifest{Signed: snapshot}
+	local.Manifests[v1manifest.ManifestFilenameIndex] = &v1manifest.Manifest{Signed: index}
+
+	// Test yanked version
+	updated, err := repo.updateComponentManifest("bar", true)
+	assert.Nil(t, err)
+	_, ok := updated.VersionList("plat/form")["v2.0.3"]
+	assert.False(t, ok)
+
+	_, err = repo.updateComponentManifest("bar", false)
+	assert.NotNil(t, err)
+	assert.Equal(t, errors.Cause(err), errUnknownComponent)
+}
+
 func TestUpdateComponent(t *testing.T) {
 	mirror := MockMirror{
 		Resources: map[string]string{},
@@ -292,7 +320,7 @@ func TestUpdateComponent(t *testing.T) {
 	local.Manifests[v1manifest.ManifestFilenameIndex] = &v1manifest.Manifest{Signed: index}
 
 	// Test happy path
-	updated, err := repo.updateComponentManifest("foo")
+	updated, err := repo.updateComponentManifest("foo", false)
 	assert.Nil(t, err)
 	t.Logf("%+v", err)
 	assert.NotNil(t, updated)
@@ -303,13 +331,13 @@ func TestUpdateComponent(t *testing.T) {
 	oldFoo.Version = 8
 	local.Manifests["foo.json"] = &v1manifest.Manifest{Signed: oldFoo}
 	local.Saved = []string{}
-	updated, err = repo.updateComponentManifest("foo")
+	updated, err = repo.updateComponentManifest("foo", false)
 	assert.NotNil(t, err)
 	assert.Nil(t, updated)
 	assert.Empty(t, local.Saved)
 
 	// Test that id missing from index causes an error
-	updated, err = repo.updateComponentManifest("bar")
+	updated, err = repo.updateComponentManifest("bar", false)
 	assert.NotNil(t, err)
 	assert.Nil(t, updated)
 	assert.Empty(t, local.Saved)
@@ -598,6 +626,7 @@ func snapshotManifest() *v1manifest.Snapshot {
 			v1manifest.ManifestURLRoot:  {Version: 42},
 			v1manifest.ManifestURLIndex: {Version: 5},
 			"/foo.json":                 {Version: 7},
+			"/bar.json":                 {Version: 7},
 		},
 	}
 }
@@ -613,7 +642,10 @@ func componentManifest() *v1manifest.Component {
 		ID:          "foo",
 		Description: "foo does stuff",
 		Platforms: map[string]map[string]v1manifest.VersionItem{
-			"plat/form": {"v2.0.1": versionItem()},
+			"plat/form": {
+				"v2.0.1": versionItem(),
+				"v2.0.3": versionItem3(),
+			},
 		},
 	}
 }
@@ -631,6 +663,17 @@ func versionItem() v1manifest.VersionItem {
 func versionItem2() v1manifest.VersionItem {
 	return v1manifest.VersionItem{
 		URL: "/foo-2.0.2.tar.gz",
+		FileHash: v1manifest.FileHash{
+			Hashes: map[string]string{v1manifest.SHA256: "5abe91bc22039c15c05580062357be7ab0bfd7968582a118fbb4eb817ddc2e76"},
+			Length: 12,
+		},
+	}
+}
+
+func versionItem3() v1manifest.VersionItem {
+	return v1manifest.VersionItem{
+		URL:    "/foo-2.0.3.tar.gz",
+		Yanked: true,
 		FileHash: v1manifest.FileHash{
 			Hashes: map[string]string{v1manifest.SHA256: "5abe91bc22039c15c05580062357be7ab0bfd7968582a118fbb4eb817ddc2e76"},
 			Length: 12,
@@ -661,11 +704,18 @@ func indexManifest(t *testing.T) (*v1manifest.Index, crypto.PrivKey) {
 			Keys:      map[string]*v1manifest.KeyInfo{keyID: info},
 			Threshold: 1,
 		}},
-		Components: map[string]v1manifest.ComponentItem{"foo": {
-			Yanked: false,
-			Owner:  "bar",
-			URL:    "/foo.json",
-		}},
+		Components: map[string]v1manifest.ComponentItem{
+			"foo": {
+				Yanked: false,
+				Owner:  "bar",
+				URL:    "/foo.json",
+			},
+			"bar": {
+				Yanked: true,
+				Owner:  "bar",
+				URL:    "/bar.json",
+			},
+		},
 		DefaultComponents: []string{},
 	}, priv
 }

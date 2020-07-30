@@ -103,9 +103,9 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 
 	var errs []string
 	for _, spec := range specs {
-		manifest, err := r.updateComponentManifest(spec.ID)
+		manifest, err := r.updateComponentManifest(spec.ID, false)
 		if err != nil {
-			if err == errUnknownComponent {
+			if errors.Cause(err) == errUnknownComponent {
 				fmt.Println(color.YellowString("The component `%s` not found (may be deleted from repository); skipped", spec.ID))
 			} else {
 				errs = append(errs, err.Error())
@@ -416,7 +416,7 @@ func (r *V1Repository) updateLocalIndex(snapshot *v1manifest.Snapshot) error {
 }
 
 // Precondition: the snapshot and index manifests exist and are up to date.
-func (r *V1Repository) updateComponentManifest(id string) (*v1manifest.Component, error) {
+func (r *V1Repository) updateComponentManifest(id string, withYanked bool) (*v1manifest.Component, error) {
 	defer func(start time.Time) {
 		verbose.Log("update component '%s' manifest finished in %s", id, time.Since(start))
 	}(time.Now())
@@ -427,9 +427,16 @@ func (r *V1Repository) updateComponentManifest(id string) (*v1manifest.Component
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	item, ok := index.Components[id]
+	var components map[string]v1manifest.ComponentItem
+	if withYanked {
+		components = index.ComponentListWithYanked()
+	} else {
+		components = index.ComponentList()
+	}
+
+	item, ok := components[id]
 	if !ok {
-		return nil, errUnknownComponent
+		return nil, errors.AddStack(errUnknownComponent)
 	}
 	var snapshot v1manifest.Snapshot
 	_, _, err = r.local.LoadManifest(&snapshot)
@@ -639,8 +646,8 @@ func (r *V1Repository) UpdateComponentManifests() error {
 	}
 
 	for name := range index.Components {
-		_, err = r.updateComponentManifest(name)
-		if err != nil {
+		_, err = r.updateComponentManifest(name, false)
+		if err != nil && errors.Cause(err) != errUnknownComponent {
 			return err
 		}
 	}
@@ -649,18 +656,18 @@ func (r *V1Repository) UpdateComponentManifests() error {
 }
 
 // FetchComponentManifest fetch the component manifest.
-func (r *V1Repository) FetchComponentManifest(id string) (com *v1manifest.Component, err error) {
+func (r *V1Repository) FetchComponentManifest(id string, withYanked bool) (com *v1manifest.Component, err error) {
 	err = r.ensureManifests()
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
 
-	return r.updateComponentManifest(id)
+	return r.updateComponentManifest(id, withYanked)
 }
 
 // ComponentVersion returns version item of a component
 func (r *V1Repository) ComponentVersion(id, version string, includeYanked bool) (*v1manifest.VersionItem, error) {
-	manifest, err := r.FetchComponentManifest(id)
+	manifest, err := r.FetchComponentManifest(id, includeYanked)
 	if err != nil {
 		return nil, err
 	}
@@ -675,8 +682,8 @@ func (r *V1Repository) ComponentVersion(id, version string, includeYanked bool) 
 }
 
 // LatestStableVersion returns the latest stable version of specific component
-func (r *V1Repository) LatestStableVersion(id string) (v0manifest.Version, *v1manifest.VersionItem, error) {
-	com, err := r.FetchComponentManifest(id)
+func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (v0manifest.Version, *v1manifest.VersionItem, error) {
+	com, err := r.FetchComponentManifest(id, withYanked)
 	if err != nil {
 		return "", nil, err
 	}
@@ -722,7 +729,7 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, versio
 		return "", err
 	}
 	if component == nil {
-		component, err = r.FetchComponentManifest(componentID)
+		component, err = r.FetchComponentManifest(componentID, true)
 		if err != nil {
 			return "", err
 		}

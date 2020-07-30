@@ -247,7 +247,7 @@ func cloneComponents(repo *V1Repository,
 	options CloneOptions) (map[string]*v1manifest.Component, error) {
 	compManifests := map[string]*v1manifest.Component{}
 	for _, name := range components {
-		manifest, err := repo.FetchComponentManifest(name)
+		manifest, err := repo.FetchComponentManifest(name, true)
 		if err != nil {
 			return nil, errors.Annotatef(err, "fetch component '%s' manifest failed", name)
 		}

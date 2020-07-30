@@ -254,7 +254,7 @@ func newMirrorModifyCmd() *cobra.Command {
 			}
 
 			comp, ver := environment.ParseCompVersion(args[0])
-			m, err := env.V1Repository().FetchComponentManifest(comp)
+			m, err := env.V1Repository().FetchComponentManifest(comp, true)
 			if err != nil {
 				return err
 			}
@@ -334,7 +334,7 @@ func newMirrorPublishCmd() *cobra.Command {
 			cmd.Flags().Visit(func(f *pflag.Flag) {
 				flagSet.Insert(f.Name)
 			})
-			m, err := env.V1Repository().FetchComponentManifest(args[0])
+			m, err := env.V1Repository().FetchComponentManifest(args[0], true)
 			if err != nil {
 				fmt.Printf("Fetch local manifest: %s\n", err.Error())
 				fmt.Printf("Failed to load component manifest, create a new one\n")
