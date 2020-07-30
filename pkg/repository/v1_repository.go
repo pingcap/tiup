@@ -105,7 +105,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 	for _, spec := range specs {
 		manifest, err := r.updateComponentManifest(spec.ID, false)
 		if err != nil {
-			if err == errUnknownComponent {
+			if errors.Cause(err) == errUnknownComponent {
 				fmt.Println(color.YellowString("The component `%s` not found (may be deleted from repository); skipped", spec.ID))
 			} else {
 				errs = append(errs, err.Error())
@@ -647,7 +647,7 @@ func (r *V1Repository) UpdateComponentManifests() error {
 
 	for name := range index.Components {
 		_, err = r.updateComponentManifest(name, false)
-		if err != nil && err != errUnknownComponent {
+		if err != nil && errors.Cause(err) != errUnknownComponent {
 			return err
 		}
 	}
