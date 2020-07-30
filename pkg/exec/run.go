@@ -145,7 +145,7 @@ func PrepareCommand(
 		return nil, err
 	}
 
-	if len(checkUpdate) > 0 && checkUpdate[0] {
+	if version.IsEmpty() && len(checkUpdate) > 0 && checkUpdate[0] {
 		latestV, _, err := env.V1Repository().LatestStableVersion(component, true)
 		if err != nil {
 			return nil, err
