@@ -24,7 +24,6 @@ import (
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cliutil/prepare"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -86,11 +85,15 @@ conflict checks with other clusters`,
 					return err
 				}
 
-				// use a dummy cluster name, the real cluster name is set during deploy
-				if err := prepare.CheckClusterPortConflict(tidbSpec, "nonexist-dummy-tidb-cluster", &topo); err != nil {
+				clusterList, err := tidbSpec.GetAllClusters()
+				if err != nil {
 					return err
 				}
-				if err := prepare.CheckClusterDirConflict(tidbSpec, "nonexist-dummy-tidb-cluster", &topo); err != nil {
+				// use a dummy cluster name, the real cluster name is set during deploy
+				if err := spec.CheckClusterPortConflict(clusterList, "nonexist-dummy-tidb-cluster", &topo); err != nil {
+					return err
+				}
+				if err := spec.CheckClusterDirConflict(clusterList, "nonexist-dummy-tidb-cluster", &topo); err != nil {
 					return err
 				}
 			}

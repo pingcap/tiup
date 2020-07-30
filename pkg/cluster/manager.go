@@ -30,7 +30,6 @@ import (
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cliutil/prepare"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -837,10 +836,14 @@ func (m *Manager) Deploy(
 
 	base := topo.BaseTopo()
 
-	if err := prepare.CheckClusterPortConflict(m.specManager, clusterName, topo); err != nil {
+	clusterList, err := m.specManager.GetAllClusters()
+	if err != nil {
 		return err
 	}
-	if err := prepare.CheckClusterDirConflict(m.specManager, clusterName, topo); err != nil {
+	if err := spec.CheckClusterPortConflict(clusterList, clusterName, topo); err != nil {
+		return err
+	}
+	if err := spec.CheckClusterDirConflict(clusterList, clusterName, topo); err != nil {
 		return err
 	}
 
@@ -922,7 +925,7 @@ func (m *Manager) Deploy(
 	}
 
 	// Download missing component
-	downloadCompTasks = prepare.BuildDownloadCompTasks(clusterVersion, topo)
+	downloadCompTasks = BuildDownloadCompTasks(clusterVersion, topo)
 
 	// Deploy components to remote
 	topo.IterInstance(func(inst spec.Instance) {
@@ -1197,10 +1200,14 @@ func (m *Manager) ScaleOut(
 		return err
 	}
 
-	if err := prepare.CheckClusterPortConflict(m.specManager, clusterName, mergedTopo); err != nil {
+	clusterList, err := m.specManager.GetAllClusters()
+	if err != nil {
 		return err
 	}
-	if err := prepare.CheckClusterDirConflict(m.specManager, clusterName, mergedTopo); err != nil {
+	if err := spec.CheckClusterPortConflict(clusterList, clusterName, mergedTopo); err != nil {
+		return err
+	}
+	if err := spec.CheckClusterDirConflict(clusterList, clusterName, mergedTopo); err != nil {
 		return err
 	}
 
@@ -1607,7 +1614,7 @@ func buildScaleOutTask(
 	})
 
 	// Download missing component
-	downloadCompTasks = convertStepDisplaysToTasks(prepare.BuildDownloadCompTasks(base.Version, newPart))
+	downloadCompTasks = convertStepDisplaysToTasks(BuildDownloadCompTasks(base.Version, newPart))
 
 	// Deploy the new topology and refresh the configuration
 	newPart.IterInstance(func(inst spec.Instance) {
