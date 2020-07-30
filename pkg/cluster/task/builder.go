@@ -76,7 +76,7 @@ func (b *Builder) Func(name string, fn func(ctx *Context) error) *Builder {
 }
 
 // ClusterSSH init all UserSSH need for the cluster.
-func (b *Builder) ClusterSSH(spec spec.Topology, deployUser string, sshTimeout int64) *Builder {
+func (b *Builder) ClusterSSH(spec spec.Topology, deployUser string, sshTimeout int64, nativeClient bool) *Builder {
 	var tasks []Task
 	for _, com := range spec.ComponentsByStartOrder() {
 		for _, in := range com.Instances() {
@@ -85,6 +85,7 @@ func (b *Builder) ClusterSSH(spec spec.Topology, deployUser string, sshTimeout i
 				port:       in.GetSSHPort(),
 				deployUser: deployUser,
 				timeout:    sshTimeout,
+				native:     nativeClient,
 			})
 		}
 	}
