@@ -214,8 +214,12 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 
 		uniqueHosts := set.NewStringSet()
 		metadata.GetTopology().IterInstance(func(inst Instance) {
-			nodeExporterPort := metadata.GetTopology().GetMonitoredOptions().NodeExporterPort
-			blackboxExporterPort := metadata.GetTopology().GetMonitoredOptions().BlackboxExporterPort
+			mOpt := metadata.GetTopology().GetMonitoredOptions()
+			if mOpt == nil {
+				return
+			}
+			nodeExporterPort := mOpt.NodeExporterPort
+			blackboxExporterPort := mOpt.BlackboxExporterPort
 			for _, port := range inst.UsedPorts() {
 				existingEntries = append(existingEntries, Entry{
 					clusterName: name,
@@ -249,16 +253,20 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 			})
 		}
 
+		mOpt := topo.GetMonitoredOptions()
+		if mOpt == nil {
+			return
+		}
 		if !uniqueHosts.Exist(inst.GetHost()) {
 			uniqueHosts.Insert(inst.GetHost())
 			currentEntries = append(currentEntries,
 				Entry{
 					instance: inst,
-					port:     topo.GetMonitoredOptions().NodeExporterPort,
+					port:     mOpt.NodeExporterPort,
 				},
 				Entry{
 					instance: inst,
-					port:     topo.GetMonitoredOptions().BlackboxExporterPort,
+					port:     mOpt.BlackboxExporterPort,
 				})
 		}
 	})

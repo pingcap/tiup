@@ -161,6 +161,11 @@ func TestSpec(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, exist)
 
+	specList, err := spec.GetAllClusters()
+	assert.Nil(t, err)
+	assert.Equal(t, meta1, specList["name1"])
+	assert.Equal(t, meta2, specList["name2"])
+
 	// remove name1 and check again.
 	err = spec.Remove("name1")
 	assert.Nil(t, err)
