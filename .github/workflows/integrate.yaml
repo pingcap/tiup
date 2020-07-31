@@ -284,7 +284,7 @@ jobs:
           make failpoint-enable
           make unit-test
 
-      - uses: actions/download-artifact@v1
+      - uses: actions/download-artifact@v2
         with:
           path: ${{env.working-directory}}/cover
 
