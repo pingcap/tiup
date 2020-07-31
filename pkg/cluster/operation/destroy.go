@@ -15,6 +15,7 @@ package operator
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -26,6 +27,29 @@ import (
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
 )
+
+// Cleanup the cluster
+func Cleanup(
+	getter ExecutorGetter,
+	cluster spec.Topology,
+	options Options,
+) error {
+	coms := cluster.ComponentsByStopOrder()
+
+	instCount := map[string]int{}
+	cluster.IterInstance(func(inst spec.Instance) {
+		instCount[inst.GetHost()] = instCount[inst.GetHost()] + 1
+	})
+
+	for _, com := range coms {
+		insts := com.Instances()
+		if err := CleanupComponent(getter, insts, cluster, options); err != nil {
+			return errors.Annotatef(err, "failed to cleanup %s", com.Name())
+		}
+	}
+
+	return nil
+}
 
 // Destroy the cluster.
 func Destroy(
@@ -167,6 +191,59 @@ func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.M
 	}
 
 	log.Infof("Destroy monitored on %s success", inst.GetHost())
+
+	return nil
+}
+
+// CleanupComponent cleanup the instances
+func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec.Topology, options Options) error {
+	timeout := options.OptTimeout
+
+	for _, ins := range instances {
+		e := getter.Get(ins.GetHost())
+		log.Infof("Cleanup instance %s", ins.GetHost())
+
+		if err := ins.WaitForDown(e, timeout); err != nil {
+			str := fmt.Sprintf("%s error cleanup %s: %s", ins.GetHost(), ins.ComponentName(), err)
+			log.Errorf(str)
+			if !clusterutil.IsTimeoutOrMaxRetry(err) {
+				return errors.Annotatef(err, str)
+			}
+			log.Warnf("You may manually check if the process on %s:%d is still running", ins.GetHost(), ins.GetPort())
+		}
+
+		var datas []string
+		if len(ins.DataDir()) > 0 {
+			datas = strings.Split(ins.DataDir(), ",")
+		}
+		for i := range datas {
+			datas[i] = path.Join(datas[i], "*")
+		}
+
+		log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(datas, " "))
+		c := module.ShellModuleConfig{
+			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(datas, " ")),
+			Sudo:     true, // the .service files are in a directory owned by root
+			Chdir:    "",
+			UseShell: true,
+		}
+		shell := module.NewShellModule(c)
+		stdout, stderr, err := shell.Execute(e)
+
+		if len(stdout) > 0 {
+			fmt.Println(string(stdout))
+		}
+		if len(stderr) > 0 {
+			log.Errorf(string(stderr))
+		}
+
+		if err != nil {
+			return errors.Annotatef(err, "failed to cleanup: %s", ins.GetHost())
+		}
+
+		log.Infof("Cleanup %s success", ins.GetHost())
+		log.Infof("- Clanup %s paths: %v", ins.ComponentName(), datas)
+	}
 
 	return nil
 }
