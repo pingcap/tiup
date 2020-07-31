@@ -127,10 +127,6 @@ func init() {
 		newPatchCmd(),
 		newScaleOutCmd(),
 		newScaleInCmd(),
-	/*
-		newCheckCmd(),
-		newTestCmd(), // hidden command for test internally
-	*/
 	)
 }
 

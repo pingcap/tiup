@@ -265,7 +265,7 @@ jobs:
       #   uses: mxschmitt/action-tmate@v2
 
   coverage:
-    needs: [cluster,playground,tiup]
+    needs: [cluster,playground,tiup,dm]
     runs-on: ubuntu-latest
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
