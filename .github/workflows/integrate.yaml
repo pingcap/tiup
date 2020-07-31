@@ -265,7 +265,7 @@ jobs:
       #   uses: mxschmitt/action-tmate@v2
 
   coverage:
-    needs: [cluster,playground,tiup]
+    needs: [cluster,playground,tiup,dm]
     runs-on: ubuntu-latest
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
@@ -284,34 +284,14 @@ jobs:
           make failpoint-enable
           make unit-test
 
-      - uses: actions/download-artifact@v1
+      - uses: actions/download-artifact@v2
         with:
-          name: test_cmd-cover
-          path: ${{env.working-directory}}/cover
-
-      # - uses: actions/download-artifact@v1
-      #  with:
-      #    name: test_dm_cmd-cover
-      #    path: ${{env.working-directory}}/cover
-
-      - uses: actions/download-artifact@v1
-        with:
-          name: test_upgrade-cover
-          path: ${{env.working-directory}}/cover
-
-      - uses: actions/download-artifact@v1
-        with:
-          name: test_playground-cover
-          path: ${{env.working-directory}}/cover
-
-      - uses: actions/download-artifact@v1
-        with:
-          name: test_tiup-cover
           path: ${{env.working-directory}}/cover
 
       - name: Make coverage
         working-directory: ${{env.working-directory}}
         run: |
+          mv cover/*/cov.* cover/
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
           make failpoint-enable
