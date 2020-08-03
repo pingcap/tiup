@@ -119,25 +119,25 @@ func (c *PDComponent) Instances() []Instance {
 		s := s
 		ins = append(ins, &PDInstance{
 			Name: s.Name,
-			instance: instance{
+			BaseInstance: BaseInstance{
 				InstanceSpec: s,
-				name:         c.Name(),
-				host:         s.Host,
-				listenHost:   s.ListenHost,
-				port:         s.ClientPort,
-				sshp:         s.SSHPort,
-				topo:         c.Specification,
+				Name:         c.Name(),
+				Host:         s.Host,
+				ListenHost:   s.ListenHost,
+				Port:         s.ClientPort,
+				SSHP:         s.SSHPort,
 
-				usedPorts: []int{
+				Ports: []int{
 					s.ClientPort,
 					s.PeerPort,
 				},
-				usedDirs: []string{
+				Dirs: []string{
 					s.DeployDir,
 					s.DataDir,
 				},
-				statusFn: s.Status,
+				StatusFn: s.Status,
 			},
+			topo: c.Specification,
 		})
 	}
 	return ins
@@ -146,12 +146,13 @@ func (c *PDComponent) Instances() []Instance {
 // PDInstance represent the PD instance
 type PDInstance struct {
 	Name string
-	instance
+	BaseInstance
+	topo *Specification
 }
 
 // InitConfig implement Instance interface
 func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
-	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -164,7 +165,7 @@ func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion
 		paths.Log,
 	).WithClientPort(spec.ClientPort).
 		WithPeerPort(spec.PeerPort).
-		AppendEndpoints(i.instance.topo.Endpoints(deployUser)...).
+		AppendEndpoints(i.topo.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost())
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -180,15 +181,15 @@ func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion
 	}
 
 	// Set the PD metrics storage address
-	if semver.Compare(clusterVersion, "v3.1.0") >= 0 && len(i.instance.topo.Monitors) > 0 {
+	if semver.Compare(clusterVersion, "v3.1.0") >= 0 && len(i.topo.Monitors) > 0 {
 		if spec.Config == nil {
 			spec.Config = map[string]interface{}{}
 		}
-		prom := i.instance.topo.Monitors[0]
+		prom := i.topo.Monitors[0]
 		spec.Config["pd-server.metric-storage"] = fmt.Sprintf("http://%s:%d", prom.Host, prom.Port)
 	}
 
-	globalConfig := i.instance.topo.ServerConfigs.PD
+	globalConfig := i.topo.ServerConfigs.PD
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(

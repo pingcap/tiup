@@ -110,38 +110,38 @@ func PortStopped(e executor.Executor, port int, timeout int64) error {
 	return w.Execute(e)
 }
 
-type instance struct {
+type BaseInstance struct {
 	InstanceSpec
 
-	name       string
-	host       string
-	listenHost string
-	port       int
-	sshp       int
-	topo       *Specification
+	Name       string
+	Host       string
+	ListenHost string
+	Port       int
+	SSHP       int
 
-	usedPorts []int
-	usedDirs  []string
-	statusFn  func(pdHosts ...string) string
+	Ports    []int
+	Dirs     []string
+	StatusFn func(pdHosts ...string) string
 }
 
 // Ready implements Instance interface
-func (i *instance) Ready(e executor.Executor, timeout int64) error {
-	return PortStarted(e, i.port, timeout)
+func (i *BaseInstance) Ready(e executor.Executor, timeout int64) error {
+	return PortStarted(e, i.Port, timeout)
 }
 
 // WaitForDown implements Instance interface
-func (i *instance) WaitForDown(e executor.Executor, timeout int64) error {
-	return PortStopped(e, i.port, timeout)
+func (i *BaseInstance) WaitForDown(e executor.Executor, timeout int64) error {
+	return PortStopped(e, i.Port, timeout)
 }
 
-func (i *instance) InitConfig(e executor.Executor, _, _, user string, paths meta.DirPaths) error {
+// InitConfig init the service configuration.
+func (i *BaseInstance) InitConfig(e executor.Executor, opt GlobalOptions, user string, paths meta.DirPaths) error {
 	comp := i.ComponentName()
 	host := i.GetHost()
 	port := i.GetPort()
 	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
 
-	resource := MergeResourceControl(i.topo.GlobalOptions.ResourceControl, i.resourceControl())
+	resource := MergeResourceControl(opt.ResourceControl, i.resourceControl())
 	systemCfg := system.NewConfig(comp, user, paths.Deploy).
 		WithMemoryLimit(resource.MemoryLimit).
 		WithCPUQuota(resource.CPUQuota).
@@ -170,7 +170,7 @@ func (i *instance) InitConfig(e executor.Executor, _, _, user string, paths meta
 }
 
 // mergeServerConfig merges the server configuration and overwrite the global configuration
-func (i *instance) mergeServerConfig(e executor.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
+func (i *BaseInstance) mergeServerConfig(e executor.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
 	conf, err := merge2Toml(i.ComponentName(), globalConf, instanceConf)
 	if err != nil {
@@ -186,7 +186,7 @@ func (i *instance) mergeServerConfig(e executor.Executor, globalConf, instanceCo
 }
 
 // mergeTiFlashLearnerServerConfig merges the server configuration and overwrite the global configuration
-func (i *instance) mergeTiFlashLearnerServerConfig(e executor.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
+func (i *BaseInstance) mergeTiFlashLearnerServerConfig(e executor.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-learner-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
 	conf, err := merge2Toml(i.ComponentName()+"-learner", globalConf, instanceConf)
 	if err != nil {
@@ -202,61 +202,61 @@ func (i *instance) mergeTiFlashLearnerServerConfig(e executor.Executor, globalCo
 }
 
 // ID returns the identifier of this instance, the ID is constructed by host:port
-func (i *instance) ID() string {
-	return fmt.Sprintf("%s:%d", i.host, i.port)
+func (i *BaseInstance) ID() string {
+	return fmt.Sprintf("%s:%d", i.Host, i.Port)
 }
 
 // ComponentName implements Instance interface
-func (i *instance) ComponentName() string {
-	return i.name
+func (i *BaseInstance) ComponentName() string {
+	return i.Name
 }
 
 // InstanceName implements Instance interface
-func (i *instance) InstanceName() string {
-	if i.port > 0 {
-		return fmt.Sprintf("%s%d", i.name, i.port)
+func (i *BaseInstance) InstanceName() string {
+	if i.Port > 0 {
+		return fmt.Sprintf("%s%d", i.Name, i.Port)
 	}
 	return i.ComponentName()
 }
 
 // ServiceName implements Instance interface
-func (i *instance) ServiceName() string {
+func (i *BaseInstance) ServiceName() string {
 	switch i.ComponentName() {
 	case ComponentSpark, ComponentTiSpark:
-		if i.port > 0 {
-			return fmt.Sprintf("%s-%d.service", i.Role(), i.port)
+		if i.Port > 0 {
+			return fmt.Sprintf("%s-%d.service", i.Role(), i.Port)
 		}
 		return fmt.Sprintf("%s.service", i.Role())
 	}
-	if i.port > 0 {
-		return fmt.Sprintf("%s-%d.service", i.name, i.port)
+	if i.Port > 0 {
+		return fmt.Sprintf("%s-%d.service", i.Name, i.Port)
 	}
-	return fmt.Sprintf("%s.service", i.name)
+	return fmt.Sprintf("%s.service", i.Name)
 }
 
 // GetHost implements Instance interface
-func (i *instance) GetHost() string {
-	return i.host
+func (i *BaseInstance) GetHost() string {
+	return i.Host
 }
 
 // GetListenHost implements Instance interface
-func (i *instance) GetListenHost() string {
-	if i.listenHost == "" {
+func (i *BaseInstance) GetListenHost() string {
+	if i.ListenHost == "" {
 		return "0.0.0.0"
 	}
-	return i.listenHost
+	return i.ListenHost
 }
 
 // GetSSHPort implements Instance interface
-func (i *instance) GetSSHPort() int {
-	return i.sshp
+func (i *BaseInstance) GetSSHPort() int {
+	return i.SSHP
 }
 
-func (i *instance) DeployDir() string {
+func (i *BaseInstance) DeployDir() string {
 	return reflect.ValueOf(i.InstanceSpec).FieldByName("DeployDir").String()
 }
 
-func (i *instance) DataDir() string {
+func (i *BaseInstance) DataDir() string {
 	dataDir := reflect.ValueOf(i.InstanceSpec).FieldByName("DataDir")
 	if !dataDir.IsValid() {
 		return ""
@@ -270,7 +270,7 @@ func (i *instance) DataDir() string {
 	return dataDir.String()
 }
 
-func (i *instance) LogDir() string {
+func (i *BaseInstance) LogDir() string {
 	logDir := ""
 
 	field := reflect.ValueOf(i.InstanceSpec).FieldByName("LogDir")
@@ -287,7 +287,7 @@ func (i *instance) LogDir() string {
 	return logDir
 }
 
-func (i *instance) OS() string {
+func (i *BaseInstance) OS() string {
 	v := reflect.ValueOf(i.InstanceSpec).FieldByName("OS")
 	if !v.IsValid() {
 		return ""
@@ -295,7 +295,7 @@ func (i *instance) OS() string {
 	return v.Interface().(string)
 }
 
-func (i *instance) Arch() string {
+func (i *BaseInstance) Arch() string {
 	v := reflect.ValueOf(i.InstanceSpec).FieldByName("Arch")
 	if !v.IsValid() {
 		return ""
@@ -304,7 +304,7 @@ func (i *instance) Arch() string {
 }
 
 // PrepareStart checks instance requirements before starting
-func (i *instance) PrepareStart() error {
+func (i *BaseInstance) PrepareStart() error {
 	return nil
 }
 
@@ -325,25 +325,25 @@ func MergeResourceControl(lhs, rhs meta.ResourceControl) meta.ResourceControl {
 	return lhs
 }
 
-func (i *instance) resourceControl() meta.ResourceControl {
+func (i *BaseInstance) resourceControl() meta.ResourceControl {
 	if v := reflect.ValueOf(i.InstanceSpec).FieldByName("ResourceControl"); v.IsValid() {
 		return v.Interface().(meta.ResourceControl)
 	}
 	return meta.ResourceControl{}
 }
 
-func (i *instance) GetPort() int {
-	return i.port
+func (i *BaseInstance) GetPort() int {
+	return i.Port
 }
 
-func (i *instance) UsedPorts() []int {
-	return i.usedPorts
+func (i *BaseInstance) UsedPorts() []int {
+	return i.Ports
 }
 
-func (i *instance) UsedDirs() []string {
-	return i.usedDirs
+func (i *BaseInstance) UsedDirs() []string {
+	return i.Dirs
 }
 
-func (i *instance) Status(pdList ...string) string {
-	return i.statusFn(pdList...)
+func (i *BaseInstance) Status(pdList ...string) string {
+	return i.StatusFn(pdList...)
 }
