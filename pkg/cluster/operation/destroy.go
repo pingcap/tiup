@@ -33,6 +33,7 @@ func Cleanup(
 	getter ExecutorGetter,
 	cluster spec.Topology,
 	options Options,
+	withLog bool,
 ) error {
 	coms := cluster.ComponentsByStopOrder()
 
@@ -43,7 +44,7 @@ func Cleanup(
 
 	for _, com := range coms {
 		insts := com.Instances()
-		if err := CleanupComponent(getter, insts, cluster, options); err != nil {
+		if err := CleanupComponent(getter, insts, cluster, options, withLog); err != nil {
 			return errors.Annotatef(err, "failed to cleanup %s", com.Name())
 		}
 	}
@@ -196,10 +197,17 @@ func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.M
 }
 
 // CleanupComponent cleanup the instances
-func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec.Topology, options Options) error {
+func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec.Topology, options Options, withLog bool) error {
 	timeout := options.OptTimeout
 
+	retainDataRoles := set.NewStringSet(options.RetainDataRoles...)
+	retainDataNodes := set.NewStringSet(options.RetainDataNodes...)
+
 	for _, ins := range instances {
+		// Some data of instances will be retained
+		dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
+			retainDataNodes.Exist(ins.ID())
+
 		e := getter.Get(ins.GetHost())
 		log.Infof("Cleanup instance %s", ins.GetHost())
 
@@ -212,17 +220,28 @@ func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 			log.Warnf("You may manually check if the process on %s:%d is still running", ins.GetHost(), ins.GetPort())
 		}
 
-		var datas []string
+		var dataDirs []string
+		var logDirs []string
 		if len(ins.DataDir()) > 0 {
-			datas = strings.Split(ins.DataDir(), ",")
+			dataDirs = strings.Split(ins.DataDir(), ",")
 		}
-		for i := range datas {
-			datas[i] = path.Join(datas[i], "*")
+		if len(ins.LogDir()) > 0 {
+			logDirs = strings.Split(ins.LogDir(), ",")
 		}
 
-		log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(datas, " "))
+		delFiles := set.NewStringSet()
+		if !dataRetained {
+			for _, dataDir := range dataDirs {
+				delFiles.Insert(path.Join(dataDir, "*"))
+			}
+			for _, logDir := range logDirs {
+				delFiles.Insert(path.Join(logDir, "*"))
+			}
+		}
+
+		log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delFiles.Slice(), " "))
 		c := module.ShellModuleConfig{
-			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(datas, " ")),
+			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delFiles.Slice(), " ")),
 			Sudo:     true, // the .service files are in a directory owned by root
 			Chdir:    "",
 			UseShell: true,
@@ -242,7 +261,7 @@ func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 		}
 
 		log.Infof("Cleanup %s success", ins.GetHost())
-		log.Infof("- Clanup %s paths: %v", ins.ComponentName(), datas)
+		log.Infof("- Clanup %s files: %v", ins.ComponentName(), delFiles.Slice())
 	}
 
 	return nil

@@ -20,6 +20,7 @@ import (
 
 func newCleanCmd() *cobra.Command {
 	cleanOpt := operator.Options{}
+	withLog := false
 
 	cmd := &cobra.Command{
 		Use:  "clean <cluster-name>",
@@ -32,9 +33,13 @@ func newCleanCmd() *cobra.Command {
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			return manager.CleanCluster(clusterName, gOpt, cleanOpt, skipConfirm)
+			return manager.CleanCluster(clusterName, gOpt, cleanOpt, skipConfirm, withLog)
 		},
 	}
+
+	cmd.Flags().StringArrayVar(&cleanOpt.RetainDataNodes, "retain-node-data", nil, "Specify the nodes whose data will be retained")
+	cmd.Flags().StringArrayVar(&cleanOpt.RetainDataRoles, "retain-role-data", nil, "Specify the roles whose data will be retained")
+	cmd.Flags().BoolVar(&withLog, "with-log", false, "Cleanup log too")
 
 	return cmd
 }

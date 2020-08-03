@@ -200,7 +200,7 @@ func (m *Manager) ListCluster() error {
 }
 
 // CleanCluster clean the cluster without destroying it
-func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanOpt operator.Options, skipConfirm bool) error {
+func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanOpt operator.Options, skipConfirm, withLog bool) error {
 	metadata, err := m.meta(clusterName)
 	if err != nil {
 		return err
@@ -229,7 +229,7 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 			return operator.Stop(ctx, topo, operator.Options{})
 		}).
 		Func("CleanupCluster", func(ctx *task.Context) error {
-			return operator.Cleanup(ctx, topo, cleanOpt)
+			return operator.Cleanup(ctx, topo, cleanOpt, withLog)
 		}).
 		Build()
 
