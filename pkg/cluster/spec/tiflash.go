@@ -382,7 +382,7 @@ func (i *TiFlashInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		}
 	}
 
-	return i.mergeServerConfig(e, conf, spec.Config, paths)
+	return i.MergeServerConfig(e, conf, spec.Config, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling

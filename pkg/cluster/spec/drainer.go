@@ -169,7 +169,7 @@ func (i *DrainerInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		}
 	}
 
-	if err := i.mergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
+	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
 

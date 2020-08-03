@@ -139,5 +139,5 @@ func (i *CDCInstance) InitConfig(e executor.Executor, clusterName, clusterVersio
 
 	specConfig := spec.Config
 
-	return i.mergeServerConfig(e, i.topo.ServerConfigs.CDC, specConfig, paths)
+	return i.MergeServerConfig(e, i.topo.ServerConfigs.CDC, specConfig, paths)
 }

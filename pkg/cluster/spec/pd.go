@@ -212,7 +212,7 @@ func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion
 		}
 	}
 
-	if err := i.mergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
+	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
 

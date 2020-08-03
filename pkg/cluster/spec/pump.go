@@ -165,5 +165,5 @@ func (i *PumpInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 		}
 	}
 
-	return i.mergeServerConfig(e, globalConfig, spec.Config, paths)
+	return i.MergeServerConfig(e, globalConfig, spec.Config, paths)
 }

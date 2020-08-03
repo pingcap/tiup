@@ -110,6 +110,7 @@ func PortStopped(e executor.Executor, port int, timeout int64) error {
 	return w.Execute(e)
 }
 
+// BaseInstance implements some method of Instance interface..
 type BaseInstance struct {
 	InstanceSpec
 
@@ -169,8 +170,8 @@ func (i *BaseInstance) InitConfig(e executor.Executor, opt GlobalOptions, user s
 	return nil
 }
 
-// mergeServerConfig merges the server configuration and overwrite the global configuration
-func (i *BaseInstance) mergeServerConfig(e executor.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
+// MergeServerConfig merges the server configuration and overwrite the global configuration
+func (i *BaseInstance) MergeServerConfig(e executor.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
 	conf, err := merge2Toml(i.ComponentName(), globalConf, instanceConf)
 	if err != nil {
@@ -252,10 +253,12 @@ func (i *BaseInstance) GetSSHPort() int {
 	return i.SSHP
 }
 
+// DeployDir implements Instance interface
 func (i *BaseInstance) DeployDir() string {
 	return reflect.ValueOf(i.InstanceSpec).FieldByName("DeployDir").String()
 }
 
+// DataDir implements Instance interface
 func (i *BaseInstance) DataDir() string {
 	dataDir := reflect.ValueOf(i.InstanceSpec).FieldByName("DataDir")
 	if !dataDir.IsValid() {
@@ -270,6 +273,7 @@ func (i *BaseInstance) DataDir() string {
 	return dataDir.String()
 }
 
+// LogDir implements Instance interface
 func (i *BaseInstance) LogDir() string {
 	logDir := ""
 
@@ -287,6 +291,7 @@ func (i *BaseInstance) LogDir() string {
 	return logDir
 }
 
+// OS implements Instance interface
 func (i *BaseInstance) OS() string {
 	v := reflect.ValueOf(i.InstanceSpec).FieldByName("OS")
 	if !v.IsValid() {
@@ -295,6 +300,7 @@ func (i *BaseInstance) OS() string {
 	return v.Interface().(string)
 }
 
+// Arch implements Instance interface
 func (i *BaseInstance) Arch() string {
 	v := reflect.ValueOf(i.InstanceSpec).FieldByName("Arch")
 	if !v.IsValid() {
@@ -332,18 +338,22 @@ func (i *BaseInstance) resourceControl() meta.ResourceControl {
 	return meta.ResourceControl{}
 }
 
+// GetPort implements Instance interface
 func (i *BaseInstance) GetPort() int {
 	return i.Port
 }
 
+// UsedPorts implements Instance interface
 func (i *BaseInstance) UsedPorts() []int {
 	return i.Ports
 }
 
+// UsedDirs implements Instance interface
 func (i *BaseInstance) UsedDirs() []string {
 	return i.Dirs
 }
 
+// Status implements Instance interface
 func (i *BaseInstance) Status(pdList ...string) string {
 	return i.StatusFn(pdList...)
 }

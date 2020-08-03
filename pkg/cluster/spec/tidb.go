@@ -174,7 +174,7 @@ func (i *TiDBInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 		}
 	}
 
-	if err := i.mergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
+	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
 

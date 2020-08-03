@@ -515,7 +515,7 @@ func (topo *Topology) CountDir(targetHost, dirPrefix string) int {
 						}
 					}
 					dir = clusterutil.Abs(topo.GlobalOptions.User, dir)
-					dirStats[host+dir] += 1
+					dirStats[host+dir]++
 				}
 			}
 		}
