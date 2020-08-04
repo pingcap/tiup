@@ -26,6 +26,10 @@ services:
     container_name: tiup-cluster-n1
     hostname: n1
     networks:
+    ports:
+      - "3000:3000"
+      - "9090:9090"
+    networks:
          tiops:
            ipv4_address: 172.19.0.101
   n2:
