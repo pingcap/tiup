@@ -275,18 +275,23 @@ func (topo *Topology) ComponentsByStopOrder() (comps []Component) {
 
 // ComponentsByStartOrder return component in the order need to start.
 func (topo *Topology) ComponentsByStartOrder() (comps []Component) {
-	// "dm-master", "dm-worker", "dm-portal"
+	// "dm-master", "dm-worker"
 	comps = append(comps, &DMMasterComponent{topo})
 	comps = append(comps, &DMWorkerComponent{topo})
-	// comps = append(comps, &MonitorComponent{topo})
+	comps = append(comps, &MonitorComponent{topo})
+	comps = append(comps, &GrafanaComponent{topo})
+	comps = append(comps, &AlertManagerComponent{topo})
 	return
 }
 
 // ComponentsByUpdateOrder return component in the order need to be updated.
 func (topo *Topology) ComponentsByUpdateOrder() (comps []Component) {
-	// "dm-master", "dm-worker", "dm-portal"
+	// "dm-master", "dm-worker"
 	comps = append(comps, &DMMasterComponent{topo})
 	comps = append(comps, &DMWorkerComponent{topo})
+	comps = append(comps, &MonitorComponent{topo})
+	comps = append(comps, &GrafanaComponent{topo})
+	comps = append(comps, &AlertManagerComponent{topo})
 	return
 }
 

@@ -18,49 +18,15 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	cspec "github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 )
 
-// AlertManagerSpec represents the AlertManager topology specification in topology.yaml
-type AlertManagerSpec struct {
-	Host            string               `yaml:"host"`
-	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                 `yaml:"imported,omitempty"`
-	WebPort         int                  `yaml:"web_port" default:"9093"`
-	ClusterPort     int                  `yaml:"cluster_port" default:"9094"`
-	DeployDir       string               `yaml:"deploy_dir,omitempty"`
-	DataDir         string               `yaml:"data_dir,omitempty"`
-	LogDir          string               `yaml:"log_dir,omitempty"`
-	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string               `yaml:"arch,omitempty"`
-	OS              string               `yaml:"os,omitempty"`
-}
-
-// Role returns the component role of the instance
-func (s AlertManagerSpec) Role() string {
-	return ComponentAlertManager
-}
-
-// SSH returns the host and SSH port of the instance
-func (s AlertManagerSpec) SSH() (string, int) {
-	return s.Host, s.SSHPort
-}
-
-// GetMainPort returns the main port of the instance
-func (s AlertManagerSpec) GetMainPort() int {
-	return s.WebPort
-}
-
-// IsImported returns if the node is imported from TiDB-Ansible
-func (s AlertManagerSpec) IsImported() bool {
-	return s.Imported
-}
-
 // AlertManagerComponent represents Alertmanager component.
-type AlertManagerComponent struct{ *Specification }
+type AlertManagerComponent struct{ *Topology }
 
 // Name implements Component interface.
 func (c *AlertManagerComponent) Name() string {
@@ -72,7 +38,7 @@ func (c *AlertManagerComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Alertmanager))
 	for _, s := range c.Alertmanager {
 		ins = append(ins, &AlertManagerInstance{
-			BaseInstance: BaseInstance{
+			BaseInstance: cspec.BaseInstance{
 				InstanceSpec: s,
 				Name:         c.Name(),
 				Host:         s.Host,
@@ -91,7 +57,7 @@ func (c *AlertManagerComponent) Instances() []Instance {
 					return "-"
 				},
 			},
-			topo: c.Specification,
+			topo: c.Topology,
 		})
 	}
 	return ins
@@ -99,8 +65,8 @@ func (c *AlertManagerComponent) Instances() []Instance {
 
 // AlertManagerInstance represent the alert manager instance
 type AlertManagerInstance struct {
-	BaseInstance
-	topo *Specification
+	cspec.BaseInstance
+	topo *Topology
 }
 
 // InitConfig implement Instance interface
@@ -113,7 +79,7 @@ func (i *AlertManagerInstance) InitConfig(e executor.Executor, clusterName, clus
 	spec := i.InstanceSpec.(AlertManagerSpec)
 	cfg := scripts.NewAlertManagerScript(spec.Host, paths.Deploy, paths.Data[0], paths.Log).
 		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort).WithNumaNode(spec.NumaNode).
-		AppendEndpoints(AlertManagerEndpoints(i.topo.Alertmanager, deployUser))
+		AppendEndpoints(cspec.AlertManagerEndpoints(i.topo.Alertmanager, deployUser))
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_alertmanager_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -138,10 +104,10 @@ func (i *AlertManagerInstance) InitConfig(e executor.Executor, clusterName, clus
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *AlertManagerInstance) ScaleConfig(e executor.Executor, topo Topology,
+func (i *AlertManagerInstance) ScaleConfig(e executor.Executor, topo spec.Topology,
 	clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error {
 	s := i.topo
 	defer func() { i.topo = s }()
-	i.topo = mustBeClusterTopo(topo)
+	i.topo = topo.(*Topology)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
