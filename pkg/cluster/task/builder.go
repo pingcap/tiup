@@ -334,14 +334,14 @@ func (b *Builder) CheckSys(host, dataDir, checkType string, topo *spec.Specifica
 }
 
 // DeploySpark deployes spark as dependency of TiSpark
-func (b *Builder) DeploySpark(inst spec.Instance, version, srcPath, deployDir string) *Builder {
+func (b *Builder) DeploySpark(inst spec.Instance, version, srcPath, deployDir string, bindVersion spec.BindVersion) *Builder {
 	sparkSubPath := spec.ComponentSubDir(spec.ComponentSpark,
-		spec.ComponentVersion(spec.ComponentSpark, version))
+		bindVersion(spec.ComponentSpark, version))
 	return b.CopyComponent(
 		spec.ComponentSpark,
 		inst.OS(),
 		inst.Arch(),
-		spec.ComponentVersion(spec.ComponentSpark, version),
+		bindVersion(spec.ComponentSpark, version),
 		srcPath,
 		inst.GetHost(),
 		deployDir,

@@ -53,10 +53,11 @@ var (
 type Manager struct {
 	sysName     string
 	specManager *spec.SpecManager
+	bindVersion spec.BindVersion
 }
 
 // NewManager create a Manager.
-func NewManager(sysName string, specManager *spec.SpecManager) *Manager {
+func NewManager(sysName string, specManager *spec.SpecManager, bindVersion spec.BindVersion) *Manager {
 	return &Manager{
 		sysName:     sysName,
 		specManager: specManager,
@@ -503,7 +504,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 		if inst.IsImported() {
 			switch compName := inst.ComponentName(); compName {
 			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
-				version := spec.ComponentVersion(compName, base.Version)
+				version := m.bindVersion(compName, base.Version)
 				tb.Download(compName, inst.OS(), inst.Arch(), version).
 					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetHost(), deployDir)
 			}
@@ -598,7 +599,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 	hasImported := false
 	for _, comp := range topo.ComponentsByUpdateOrder() {
 		for _, inst := range comp.Instances() {
-			version := spec.ComponentVersion(inst.ComponentName(), clusterVersion)
+			version := m.bindVersion(inst.ComponentName(), clusterVersion)
 			if version == "" {
 				return perrs.Errorf("unsupported component: %v", inst.ComponentName())
 			}
@@ -647,7 +648,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 			// copy dependency component if needed
 			switch inst.ComponentName() {
 			case spec.ComponentTiSpark:
-				tb = tb.DeploySpark(inst, version, "" /* default srcPath */, deployDir)
+				tb = tb.DeploySpark(inst, version, "" /* default srcPath */, deployDir, m.bindVersion)
 			default:
 				tb = tb.CopyComponent(
 					inst.ComponentName(),
@@ -738,7 +739,7 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 	if err != nil {
 		return err
 	}
-	if err := checkPackage(m.specManager, clusterName, insts[0].ComponentName(), insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
+	if err := checkPackage(m.bindVersion, m.specManager, clusterName, insts[0].ComponentName(), insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
 		return err
 	}
 
@@ -925,11 +926,11 @@ func (m *Manager) Deploy(
 	}
 
 	// Download missing component
-	downloadCompTasks = BuildDownloadCompTasks(clusterVersion, topo)
+	downloadCompTasks = BuildDownloadCompTasks(clusterVersion, topo, m.bindVersion)
 
 	// Deploy components to remote
 	topo.IterInstance(func(inst spec.Instance) {
-		version := spec.ComponentVersion(inst.ComponentName(), clusterVersion)
+		version := m.bindVersion(inst.ComponentName(), clusterVersion)
 		deployDir := clusterutil.Abs(globalOptions.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDirs := clusterutil.MultiDirAbs(globalOptions.User, inst.DataDir())
@@ -949,7 +950,7 @@ func (m *Manager) Deploy(
 		// copy dependency component if needed
 		switch inst.ComponentName() {
 		case spec.ComponentTiSpark:
-			t = t.DeploySpark(inst, version, "" /* default srcPath */, deployDir)
+			t = t.DeploySpark(inst, version, "" /* default srcPath */, deployDir, m.bindVersion)
 		default:
 			t = t.CopyComponent(
 				inst.ComponentName(),
@@ -985,6 +986,7 @@ func (m *Manager) Deploy(
 
 	// Deploy monitor relevant components to remote
 	dlTasks, dpTasks := buildMonitoredDeployTask(
+		m.bindVersion,
 		m.specManager,
 		clusterName,
 		uniqueHosts,
@@ -1090,7 +1092,7 @@ func (m *Manager) ScaleIn(
 			if instance.IsImported() {
 				switch compName := instance.ComponentName(); compName {
 				case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
-					version := spec.ComponentVersion(compName, base.Version)
+					version := m.bindVersion(compName, base.Version)
 					tb.Download(compName, instance.OS(), instance.Arch(), version).
 						CopyComponent(
 							compName,
@@ -1421,13 +1423,13 @@ func instancesToPatch(topo spec.Topology, options operator.Options) ([]spec.Inst
 	return instances, nil
 }
 
-func checkPackage(specManager *spec.SpecManager, clusterName, comp, nodeOS, arch, packagePath string) error {
+func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, clusterName, comp, nodeOS, arch, packagePath string) error {
 	metadata, err := spec.ClusterMetadata(clusterName)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
 	}
 
-	ver := spec.ComponentVersion(comp, metadata.Version)
+	ver := bindVersion(comp, metadata.Version)
 	repo, err := clusterutil.NewRepository(nodeOS, arch)
 	if err != nil {
 		return err
@@ -1614,11 +1616,11 @@ func buildScaleOutTask(
 	})
 
 	// Download missing component
-	downloadCompTasks = convertStepDisplaysToTasks(BuildDownloadCompTasks(base.Version, newPart))
+	downloadCompTasks = convertStepDisplaysToTasks(BuildDownloadCompTasks(base.Version, newPart, m.bindVersion))
 
 	// Deploy the new topology and refresh the configuration
 	newPart.IterInstance(func(inst spec.Instance) {
-		version := spec.ComponentVersion(inst.ComponentName(), base.Version)
+		version := m.bindVersion(inst.ComponentName(), base.Version)
 		deployDir := clusterutil.Abs(base.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDirs := clusterutil.MultiDirAbs(base.User, inst.DataDir())
@@ -1643,7 +1645,7 @@ func buildScaleOutTask(
 		// copy dependency component if needed
 		switch inst.ComponentName() {
 		case spec.ComponentTiSpark:
-			tb = tb.DeploySpark(inst, version, srcPath, deployDir)
+			tb = tb.DeploySpark(inst, version, srcPath, deployDir, m.bindVersion)
 		default:
 			tb.CopyComponent(
 				inst.ComponentName(),
@@ -1685,7 +1687,7 @@ func buildScaleOutTask(
 		if inst.IsImported() {
 			switch compName := inst.ComponentName(); compName {
 			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
-				version := spec.ComponentVersion(compName, base.Version)
+				version := m.bindVersion(compName, base.Version)
 				tb.Download(compName, inst.OS(), inst.Arch(), version).
 					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetHost(), deployDir)
 			}
@@ -1718,6 +1720,7 @@ func buildScaleOutTask(
 
 	// Deploy monitor relevant components to remote
 	dlTasks, dpTasks := buildMonitoredDeployTask(
+		m.bindVersion,
 		specManager,
 		clusterName,
 		uninitializedHosts,
@@ -1788,6 +1791,7 @@ func convertStepDisplaysToTasks(t []*task.StepDisplay) []task.Task {
 }
 
 func buildMonitoredDeployTask(
+	bindVersion spec.BindVersion,
 	specManager *spec.SpecManager,
 	clusterName string,
 	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
@@ -1804,7 +1808,7 @@ func buildMonitoredDeployTask(
 	uniqueCompOSArch := make(map[string]struct{}) // comp-os-arch -> {}
 	// monitoring agents
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
-		version := spec.ComponentVersion(comp, version)
+		version := bindVersion(comp, version)
 
 		for host, info := range uniqueHosts {
 			// populate unique os/arch set

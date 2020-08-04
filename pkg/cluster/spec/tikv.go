@@ -212,7 +212,7 @@ func (i *TiKVInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 		return err
 	}
 
-	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
+	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
 }
 
 // ScaleConfig deploy temporary config on scaling

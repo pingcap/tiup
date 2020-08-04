@@ -173,5 +173,5 @@ func (i *DrainerInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		return err
 	}
 
-	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
+	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
 }
