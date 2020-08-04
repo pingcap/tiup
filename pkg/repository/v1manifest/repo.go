@@ -30,7 +30,7 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/repository/crypto"
+	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/set"
 )
 

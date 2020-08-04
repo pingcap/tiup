@@ -19,7 +19,7 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/repository/crypto"
+	"github.com/pingcap/tiup/pkg/crypto"
 )
 
 // ShortKeyIDLength is the number of bytes used for filenames

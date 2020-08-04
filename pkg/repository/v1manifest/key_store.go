@@ -17,7 +17,7 @@ import (
 	"fmt"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/repository/crypto"
+	"github.com/pingcap/tiup/pkg/crypto"
 )
 
 // KeyStore tracks roles, keys, etc. and verifies signatures against this metadata.
