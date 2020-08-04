@@ -18,6 +18,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -76,10 +77,15 @@ func parseInventoryFile(invFile io.Reader) (string, *spec.ClusterMeta, *aini.Inv
 			if host.Vars["process_supervision"] != "systemd" {
 				return "", nil, inventory, errors.New("only support cluster deployed with systemd")
 			}
+			clsName = host.Vars["cluster_name"]
+
 			clsMeta.User = host.Vars["ansible_user"]
 			clsMeta.Topology.GlobalOptions.User = clsMeta.User
 			clsMeta.Version = host.Vars["tidb_version"]
-			clsName = host.Vars["cluster_name"]
+
+			if enableBinlog, err := strconv.ParseBool(host.Vars["enable_binlog"]); err == nil && enableBinlog {
+				clsMeta.Topology.ServerConfigs.TiDB["binlog.enable"] = enableBinlog
+			}
 
 			// only read the first host, all global vars should be the same
 			break
