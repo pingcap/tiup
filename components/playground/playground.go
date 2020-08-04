@@ -38,7 +38,6 @@ import (
 	"github.com/pingcap/failpoint"
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
@@ -116,7 +115,7 @@ func (p *Playground) handleDisplay(r io.Writer) (err error) {
 	return nil
 }
 
-var timeoutOpt = &clusterutil.RetryOption{
+var timeoutOpt = &utils.RetryOption{
 	Timeout: time.Second * 15,
 	Delay:   time.Second * 5,
 }

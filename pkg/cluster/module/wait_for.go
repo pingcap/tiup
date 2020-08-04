@@ -19,9 +19,9 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // WaitForConfig is the configurations of WaitFor module.
@@ -64,11 +64,11 @@ func NewWaitFor(c WaitForConfig) *WaitFor {
 func (w *WaitFor) Execute(e executor.Executor) (err error) {
 	pattern := []byte(fmt.Sprintf(":%d ", w.c.Port))
 
-	retryOpt := clusterutil.RetryOption{
+	retryOpt := utils.RetryOption{
 		Delay:   w.c.Sleep,
 		Timeout: w.c.Timeout,
 	}
-	if err := clusterutil.Retry(func() error {
+	if err := utils.Retry(func() error {
 		// only listing TCP ports
 		stdout, _, err := e.Execute("ss -ltn", false)
 		if err == nil {

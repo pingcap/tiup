@@ -22,11 +22,11 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 )
 
@@ -261,7 +261,7 @@ var _ RollingUpdateInstance = &PDInstance{}
 
 // PreRestart implements RollingUpdateInstance interface.
 func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
-	timeoutOpt := &clusterutil.RetryOption{
+	timeoutOpt := &utils.RetryOption{
 		Timeout: time.Second * time.Duration(apiTimeoutSeconds),
 		Delay:   time.Second * 2,
 	}

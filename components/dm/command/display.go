@@ -20,8 +20,8 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/dm/spec"
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -93,7 +93,7 @@ func clearOutDatedEtcdInfo(clusterName string, metadata *spec.Metadata, opt oper
 		}
 	}
 
-	timeoutOpt := &clusterutil.RetryOption{
+	timeoutOpt := &utils.RetryOption{
 		Timeout: time.Second * time.Duration(opt.APITimeout),
 		Delay:   time.Second * 2,
 	}

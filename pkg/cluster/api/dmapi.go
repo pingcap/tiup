@@ -20,19 +20,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	utils2 "github.com/pingcap/tiup/pkg/utils"
-
 	"github.com/gogo/protobuf/jsonpb"
 	dmpb "github.com/pingcap/dm/dm/pb"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
 
 var (
 	dmMembersURI = "apis/v1alpha1/members"
 
-	defaultRetryOpt = &clusterutil.RetryOption{
+	defaultRetryOpt = &utils.RetryOption{
 		Delay:   time.Second * 5,
 		Timeout: time.Second * 60,
 	}
@@ -42,7 +40,7 @@ var (
 type DMMasterClient struct {
 	addrs      []string
 	tlsEnabled bool
-	httpClient *utils2.HTTPClient
+	httpClient *utils.HTTPClient
 }
 
 // NewDMMasterClient returns a new PDClient
@@ -55,7 +53,7 @@ func NewDMMasterClient(addrs []string, timeout time.Duration, tlsConfig *tls.Con
 	return &DMMasterClient{
 		addrs:      addrs,
 		tlsEnabled: enableTLS,
-		httpClient: utils2.NewHTTPClient(timeout, tlsConfig),
+		httpClient: utils.NewHTTPClient(timeout, tlsConfig),
 	}
 }
 
@@ -188,7 +186,7 @@ func (dm *DMMasterClient) GetWorker(name string) (string, error) {
 }
 
 // GetLeader gets leader of dm cluster
-func (dm *DMMasterClient) GetLeader(retryOpt *clusterutil.RetryOption) (string, error) {
+func (dm *DMMasterClient) GetLeader(retryOpt *utils.RetryOption) (string, error) {
 	query := "?leader=true"
 	endpoints := dm.getEndpoints(dmMembersURI + query)
 
@@ -201,7 +199,7 @@ func (dm *DMMasterClient) GetLeader(retryOpt *clusterutil.RetryOption) (string, 
 		err        error
 	)
 
-	if err := clusterutil.Retry(func() error {
+	if err := utils.Retry(func() error {
 		memberResp, err = dm.getMember(endpoints)
 		return errors.AddStack(err)
 	}, *retryOpt); err != nil {
@@ -249,19 +247,19 @@ func (dm *DMMasterClient) GetRegisteredMembers() ([]string, []string, error) {
 }
 
 // EvictDMMasterLeader evicts the dm master leader
-func (dm *DMMasterClient) EvictDMMasterLeader(retryOpt *clusterutil.RetryOption) error {
+func (dm *DMMasterClient) EvictDMMasterLeader(retryOpt *utils.RetryOption) error {
 	return nil
 }
 
 // OfflineMember offlines the member of dm cluster
-func (dm *DMMasterClient) OfflineMember(query string, retryOpt *clusterutil.RetryOption) error {
+func (dm *DMMasterClient) OfflineMember(query string, retryOpt *utils.RetryOption) error {
 	endpoints := dm.getEndpoints(dmMembersURI + query)
 
 	if retryOpt == nil {
 		retryOpt = defaultRetryOpt
 	}
 
-	if err := clusterutil.Retry(func() error {
+	if err := utils.Retry(func() error {
 		_, err := dm.deleteMember(endpoints)
 		return err
 	}, *retryOpt); err != nil {
@@ -271,13 +269,13 @@ func (dm *DMMasterClient) OfflineMember(query string, retryOpt *clusterutil.Retr
 }
 
 // OfflineWorker offlines the dm worker
-func (dm *DMMasterClient) OfflineWorker(name string, retryOpt *clusterutil.RetryOption) error {
+func (dm *DMMasterClient) OfflineWorker(name string, retryOpt *utils.RetryOption) error {
 	query := "/worker/" + name
 	return dm.OfflineMember(query, retryOpt)
 }
 
 // OfflineMaster offlines the dm master
-func (dm *DMMasterClient) OfflineMaster(name string, retryOpt *clusterutil.RetryOption) error {
+func (dm *DMMasterClient) OfflineMaster(name string, retryOpt *utils.RetryOption) error {
 	query := "/master/" + name
 	return dm.OfflineMember(query, retryOpt)
 }

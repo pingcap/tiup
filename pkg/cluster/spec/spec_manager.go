@@ -173,6 +173,24 @@ func (s *SpecManager) List() (names []string, err error) {
 	return
 }
 
+// GetAllClusters get a metadata list of all clusters deployed by current user
+func (s *SpecManager) GetAllClusters() (map[string]Metadata, error) {
+	clusters := make(map[string]Metadata)
+	names, err := s.List()
+	if err != nil {
+		return nil, errors.AddStack(err)
+	}
+	for _, name := range names {
+		metadata := s.NewMetadata()
+		err = s.Metadata(name, metadata)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		clusters[name] = metadata
+	}
+	return clusters, nil
+}
+
 // ensureDir ensures that the cluster directory exists.
 func (s *SpecManager) ensureDir(clusterName string) error {
 	if err := utils.CreateDir(s.Path(clusterName)); err != nil {
