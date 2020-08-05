@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	dm "github.com/pingcap/tiup/components/dm/spec"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -98,16 +97,6 @@ func (b *Builder) ClusterSSH(spec spec.Topology, deployUser string, sshTimeout i
 // UpdateMeta maintain the meta information
 func (b *Builder) UpdateMeta(cluster string, metadata *spec.ClusterMeta, deletedNodeIds []string) *Builder {
 	b.tasks = append(b.tasks, &UpdateMeta{
-		cluster:        cluster,
-		metadata:       metadata,
-		deletedNodesID: deletedNodeIds,
-	})
-	return b
-}
-
-// UpdateDMMeta maintain the dm meta information
-func (b *Builder) UpdateDMMeta(cluster string, metadata *dm.Metadata, deletedNodeIds []string) *Builder {
-	b.tasks = append(b.tasks, &UpdateDMMeta{
 		cluster:        cluster,
 		metadata:       metadata,
 		deletedNodesID: deletedNodeIds,

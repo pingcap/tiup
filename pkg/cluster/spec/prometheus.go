@@ -132,7 +132,7 @@ func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 	topo := i.topo
 
 	// transfer config
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("tikv_%s.yml", i.GetHost()))
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
 	cfig := config.NewPrometheusConfig(clusterName)
 	cfig.AddBlackbox(i.GetHost(), uint64(topo.MonitoredOptions.BlackboxExporterPort))
 	uniqueHosts := set.NewStringSet()

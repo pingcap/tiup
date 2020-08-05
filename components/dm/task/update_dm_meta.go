@@ -19,6 +19,7 @@ import (
 
 	dmspec "github.com/pingcap/tiup/components/dm/spec"
 
+	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/set"
 )
 
@@ -29,8 +30,17 @@ type UpdateDMMeta struct {
 	deletedNodesID []string
 }
 
+// NewUpdateDMMeta create i update dm meta task.
+func NewUpdateDMMeta(cluster string, metadata *dmspec.Metadata, deletedNodesID []string) *UpdateDMMeta {
+	return &UpdateDMMeta{
+		cluster:        cluster,
+		metadata:       metadata,
+		deletedNodesID: deletedNodesID,
+	}
+}
+
 // Execute implements the Task interface
-func (u *UpdateDMMeta) Execute(ctx *Context) error {
+func (u *UpdateDMMeta) Execute(ctx *task.Context) error {
 	// make a copy
 	newMeta := &dmspec.Metadata{}
 	*newMeta = *u.metadata
@@ -59,7 +69,7 @@ func (u *UpdateDMMeta) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (u *UpdateDMMeta) Rollback(ctx *Context) error {
+func (u *UpdateDMMeta) Rollback(ctx *task.Context) error {
 	return dmspec.GetSpecManager().SaveMeta(u.cluster, u.metadata)
 }
 

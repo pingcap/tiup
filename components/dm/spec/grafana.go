@@ -18,8 +18,10 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -74,7 +76,8 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 	}
 
 	// transfer run script
-	cfg := scripts.NewGrafanaScript(clusterName, paths.Deploy)
+	tpl := filepath.Join("/templates", "scripts", "dm", "run_grafana.sh.tpl")
+	cfg := scripts.NewGrafanaScript(clusterName, paths.Deploy).WithTPLFile(tpl)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_grafana_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -99,12 +102,28 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		return err
 	}
 
+	// provisioningDir Must same as in grafana.ini.tpl
+	provisioningDir := filepath.Join(paths.Deploy, "provisioning")
+	if _, _, err := e.Execute(fmt.Sprintf("mkdir -p %s", provisioningDir), false); err != nil {
+		return errors.AddStack(err)
+	}
+
+	datasourceDir := filepath.Join(provisioningDir, "datasources")
+	if _, _, err := e.Execute(fmt.Sprintf("mkdir -p %s", datasourceDir), false); err != nil {
+		return errors.AddStack(err)
+	}
+
+	dashboardDir := filepath.Join(provisioningDir, "dashboards")
+	if _, _, err := e.Execute(fmt.Sprintf("mkdir -p %s", dashboardDir), false); err != nil {
+		return errors.AddStack(err)
+	}
+
 	// transfer dashboard.yml
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("dashboard_%s.yml", i.GetHost()))
 	if err := config.NewDashboardConfig(clusterName, paths.Deploy).ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst = filepath.Join(paths.Deploy, "conf", "dashboard.yml")
+	dst = filepath.Join(dashboardDir, "dashboard.yml")
 	if err := e.Transfer(fp, dst, false); err != nil {
 		return err
 	}
@@ -119,7 +138,7 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst = filepath.Join(paths.Deploy, "conf", "datasource.yml")
+	dst = filepath.Join(datasourceDir, "datasource.yml")
 	return e.Transfer(fp, dst, false)
 }
 
@@ -131,4 +150,82 @@ func (i *GrafanaInstance) ScaleConfig(e executor.Executor, topo spec.Topology,
 	dmtopo := topo.(*Topology)
 	i.topo = dmtopo.Merge(i.topo)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+}
+
+var _ cluster.DeployerInstance = &GrafanaInstance{}
+
+// Deploy implements DeployerInstance interface.
+func (i *GrafanaInstance) Deploy(t *task.Builder, deployDir string, version string, clusterName string, clusterVersion string) {
+	t.CopyComponent(
+		i.ComponentName(),
+		i.OS(),
+		i.Arch(),
+		version,
+		"", // use default srcPath
+		i.GetHost(),
+		deployDir,
+	).Shell( // rm the json file which relate to tidb cluster and useless.
+		i.GetHost(),
+		fmt.Sprintf("rm %s/*.json", filepath.Join(deployDir, "bin")),
+		false, /*sudo*/
+	).Func("Dashboards", func(ctx *task.Context) error {
+		e := ctx.Get(i.GetHost())
+
+		tmp := filepath.Join(deployDir, "_tiup_tmp")
+		_, stderr, err := e.Execute(fmt.Sprintf("mkdir -p %s", tmp), false)
+		if err != nil {
+			return errors.Annotatef(err, "stderr: %s", string(stderr))
+		}
+
+		srcPath := task.PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
+		dstPath := filepath.Join(tmp, filepath.Base(srcPath))
+		err = e.Transfer(srcPath, dstPath, false)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+
+		cmd := fmt.Sprintf(`tar -xzf %s -C %s && rm %s`, dstPath, tmp, dstPath)
+		_, stderr, err = e.Execute(cmd, false)
+		if err != nil {
+			return errors.Annotatef(err, "stderr: %s", string(stderr))
+		}
+
+		// copy dm-master/scripts/*.json
+		targetDir := filepath.Join(deployDir, "dashboards")
+		_, stderr, err = e.Execute(fmt.Sprintf("mkdir -p %s", targetDir), false)
+		if err != nil {
+			return errors.Annotatef(err, "stderr: %s", string(stderr))
+		}
+
+		cmd = fmt.Sprintf("cp %s/dm-master/scripts/*json %s", tmp, targetDir)
+		_, stderr, err = e.Execute(cmd, false)
+		if err != nil {
+			return errors.Annotatef(err, "stderr: %s", string(stderr))
+		}
+
+		// find /home/tidb/deploy/grafana-3000/dashboards/ -type f -exec sed -i "s/\${DS_.*-CLUSTER}/test/g" {} \;
+		// find /home/tidb/deploy/grafana-3000/dashboards/ -type f -exec sed -i "s/test-cluster/test/g" {} \;
+		// find /home/tidb/deploy/grafana-3000/dashboards/ -type f -exec sed -i "s/Test-Cluster/test/g" {} \;
+
+		for _, cmd := range []string{
+			`find %s -type f -exec sed -i "s/\${DS_.*-CLUSTER}/%s/g" {} \;`,
+			`find %s -type f -exec sed -i "s/DS_.*-CLUSTER/%s/g" {} \;`,
+			`find %s -type f -exec sed -i "s/test-cluster/%s/g" {} \;`,
+			`find %s -type f -exec sed -i "s/Test-Cluster/%s/g" {} \;`,
+		} {
+			cmd := fmt.Sprintf(cmd, targetDir, clusterName)
+			_, stderr, err = e.Execute(cmd, false)
+			if err != nil {
+				return errors.Annotatef(err, "stderr: %s", string(stderr))
+			}
+		}
+
+		cmd = fmt.Sprintf("rm -rf %s", tmp)
+		_, stderr, err = e.Execute(cmd, false)
+		if err != nil {
+			return errors.Annotatef(err, "stderr: %s", string(stderr))
+		}
+
+		return nil
+	})
 }

@@ -17,9 +17,12 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/cluster/template/config"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/cluster/template/config/dm"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 )
@@ -78,7 +81,9 @@ func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		paths.Data[0],
 		paths.Log,
 	).WithPort(spec.Port).
-		WithNumaNode(spec.NumaNode)
+		WithNumaNode(spec.NumaNode).
+		WithTPLFile(filepath.Join("/templates", "scripts", "dm", "run_prometheus.sh.tpl"))
+
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -93,58 +98,23 @@ func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		return err
 	}
 
-	// topo := i.topo
+	topo := i.topo
 
 	// transfer config
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("tikv_%s.yml", i.GetHost()))
-	cfig := config.NewPrometheusConfig(clusterName)
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
+	cfig := dm.NewPrometheusConfig(clusterName)
 
-	/*
-		cfig.AddBlackbox(i.GetHost(), uint64(topo.MonitoredOptions.BlackboxExporterPort))
-		uniqueHosts := set.NewStringSet()
-		for _, pd := range topo.PDServers {
-			uniqueHosts.Insert(pd.Host)
-			cfig.AddPD(pd.Host, uint64(pd.ClientPort))
-		}
-		for _, kv := range topo.TiKVServers {
-			uniqueHosts.Insert(kv.Host)
-			cfig.AddTiKV(kv.Host, uint64(kv.StatusPort))
-		}
-		for _, db := range topo.TiDBServers {
-			uniqueHosts.Insert(db.Host)
-			cfig.AddTiDB(db.Host, uint64(db.StatusPort))
-		}
-		for _, flash := range topo.TiFlashServers {
-			uniqueHosts.Insert(flash.Host)
-			cfig.AddTiFlashLearner(flash.Host, uint64(flash.FlashProxyStatusPort))
-			cfig.AddTiFlash(flash.Host, uint64(flash.StatusPort))
-		}
-		for _, pump := range topo.PumpServers {
-			uniqueHosts.Insert(pump.Host)
-			cfig.AddPump(pump.Host, uint64(pump.Port))
-		}
-		for _, drainer := range topo.Drainers {
-			uniqueHosts.Insert(drainer.Host)
-			cfig.AddDrainer(drainer.Host, uint64(drainer.Port))
-		}
-		for _, cdc := range topo.CDCServers {
-			uniqueHosts.Insert(cdc.Host)
-			cfig.AddCDC(cdc.Host, uint64(cdc.Port))
-		}
-		for _, grafana := range topo.Grafana {
-			uniqueHosts.Insert(grafana.Host)
-			cfig.AddGrafana(grafana.Host, uint64(grafana.Port))
-		}
-		for _, alertmanager := range topo.Alertmanager {
-			uniqueHosts.Insert(alertmanager.Host)
-			cfig.AddAlertmanager(alertmanager.Host, uint64(alertmanager.WebPort))
-		}
-		for host := range uniqueHosts {
-			cfig.AddNodeExpoertor(host, uint64(topo.MonitoredOptions.NodeExporterPort))
-			cfig.AddBlackboxExporter(host, uint64(topo.MonitoredOptions.BlackboxExporterPort))
-			cfig.AddMonitoredServer(host)
-		}
-	*/
+	for _, master := range topo.Masters {
+		cfig.AddMasterAddrs(master.Host, uint64(master.Port))
+	}
+
+	for _, worker := range topo.Workers {
+		cfig.AddWorkerAddrs(worker.Host, uint64(worker.Port))
+	}
+
+	for _, alertmanager := range topo.Alertmanager {
+		cfig.AddAlertmanager(alertmanager.Host, uint64(alertmanager.WebPort))
+	}
 
 	if err := cfig.ConfigToFile(fp); err != nil {
 		return err
@@ -160,4 +130,60 @@ func (i *MonitorInstance) ScaleConfig(e executor.Executor, topo spec.Topology,
 	defer func() { i.topo = s }()
 	i.topo = topo.(*Topology)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+}
+
+var _ cluster.DeployerInstance = &MonitorInstance{}
+
+// Deploy implements DeployerInstance interface.
+func (i *MonitorInstance) Deploy(t *task.Builder, deployDir string, version string, _ string, clusterVersion string) {
+	t.CopyComponent(
+		i.ComponentName(),
+		i.OS(),
+		i.Arch(),
+		version,
+		"", // use default srcPath
+		i.GetHost(),
+		deployDir,
+	).Shell( // rm the rules file which relate to tidb cluster and useless.
+		i.GetHost(),
+		fmt.Sprintf("rm %s/*.rules.yml", filepath.Join(deployDir, "bin", "prometheus")),
+		false, /*sudo*/
+	).Func("CopyRulesYML", func(ctx *task.Context) error {
+		e := ctx.Get(i.GetHost())
+
+		tmp := filepath.Join(deployDir, "_tiup_tmp")
+		_, stderr, err := e.Execute(fmt.Sprintf("mkdir -p %s", tmp), false)
+		if err != nil {
+			return errors.Annotatef(err, "stderr: %s", string(stderr))
+		}
+
+		srcPath := task.PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
+		dstPath := filepath.Join(tmp, filepath.Base(srcPath))
+
+		err = e.Transfer(srcPath, dstPath, false)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+
+		cmd := fmt.Sprintf(`tar -xzf %s -C %s && rm %s`, dstPath, tmp, dstPath)
+		_, stderr, err = e.Execute(cmd, false)
+		if err != nil {
+			return errors.Annotatef(err, "stderr: %s", string(stderr))
+		}
+
+		// copy dm-master/conf/*.rules.yml
+		cmd = fmt.Sprintf("cp %s/dm-master/conf/*rules.yml %s", tmp, filepath.Join(deployDir, "conf"))
+		_, stderr, err = e.Execute(cmd, false)
+		if err != nil {
+			return errors.Annotatef(err, "stderr: %s", string(stderr))
+		}
+
+		cmd = fmt.Sprintf("rm -rf %s", tmp)
+		_, stderr, err = e.Execute(cmd, false)
+		if err != nil {
+			return errors.Annotatef(err, "stderr: %s", string(stderr))
+		}
+
+		return nil
+	})
 }

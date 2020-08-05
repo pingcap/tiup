@@ -27,6 +27,7 @@ type GrafanaScript struct {
 	ClusterName string
 	DeployDir   string
 	NumaNode    string
+	tplName     string
 }
 
 // NewGrafanaScript returns a GrafanaScript with given arguments
@@ -43,9 +44,19 @@ func (c *GrafanaScript) WithNumaNode(numa string) *GrafanaScript {
 	return c
 }
 
+// WithTPLFile set the template file.
+func (c *GrafanaScript) WithTPLFile(file string) *GrafanaScript {
+	c.tplName = file
+	return c
+}
+
 // Config generate the config file data.
 func (c *GrafanaScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_grafana.sh.tpl")
+	fp := c.tplName
+	if fp == "" {
+		fp = path.Join("/templates", "scripts", "run_grafana.sh.tpl")
+	}
+
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

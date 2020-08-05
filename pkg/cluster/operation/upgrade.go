@@ -74,7 +74,8 @@ func Upgrade(
 	return nil
 }
 
-func addr(ins spec.Instance) string {
+// Addr return the address of the instance.
+func Addr(ins spec.Instance) string {
 	if ins.GetPort() == 0 || ins.GetPort() == 80 {
 		panic(ins)
 	}

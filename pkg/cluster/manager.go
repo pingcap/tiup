@@ -61,6 +61,7 @@ func NewManager(sysName string, specManager *spec.SpecManager, bindVersion spec.
 	return &Manager{
 		sysName:     sysName,
 		specManager: specManager,
+		bindVersion: bindVersion,
 	}
 }
 
@@ -796,6 +797,11 @@ type DeployOptions struct {
 	IgnoreConfigCheck bool   // ignore config check result
 }
 
+// DeployerInstance is a instance can deploy to a target deploy directory.
+type DeployerInstance interface {
+	Deploy(b *task.Builder, deployDir string, version string, clusterName string, clusterVersion string)
+}
+
 // Deploy a cluster.
 func (m *Manager) Deploy(
 	clusterName string,
@@ -947,20 +953,24 @@ func (m *Manager) Deploy(
 				filepath.Join(deployDir, "scripts")).
 			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
 
-		// copy dependency component if needed
-		switch inst.ComponentName() {
-		case spec.ComponentTiSpark:
-			t = t.DeploySpark(inst, version, "" /* default srcPath */, deployDir, m.bindVersion)
-		default:
-			t = t.CopyComponent(
-				inst.ComponentName(),
-				inst.OS(),
-				inst.Arch(),
-				version,
-				"", // use default srcPath
-				inst.GetHost(),
-				deployDir,
-			)
+		if deployerInstance, ok := inst.(DeployerInstance); ok {
+			deployerInstance.Deploy(t, deployDir, version, clusterName, clusterVersion)
+		} else {
+			// copy dependency component if needed
+			switch inst.ComponentName() {
+			case spec.ComponentTiSpark:
+				t = t.DeploySpark(inst, version, "" /* default srcPath */, deployDir, m.bindVersion)
+			default:
+				t = t.CopyComponent(
+					inst.ComponentName(),
+					inst.OS(),
+					inst.Arch(),
+					version,
+					"", // use default srcPath
+					inst.GetHost(),
+					deployDir,
+				)
+			}
 		}
 
 		// generate configs for the component
