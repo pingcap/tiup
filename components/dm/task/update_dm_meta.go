@@ -64,6 +64,24 @@ func (u *UpdateDMMeta) Execute(ctx *task.Context) error {
 		}
 		newMeta.Topology.Workers = append(newMeta.Topology.Workers, topo.Workers[i])
 	}
+	for i, instance := range (&dmspec.MonitorComponent{Topology: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
+			continue
+		}
+		newMeta.Topology.Monitors = append(newMeta.Topology.Monitors, topo.Monitors[i])
+	}
+	for i, instance := range (&dmspec.GrafanaComponent{Topology: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
+			continue
+		}
+		newMeta.Topology.Grafana = append(newMeta.Topology.Grafana, topo.Grafana[i])
+	}
+	for i, instance := range (&dmspec.AlertManagerComponent{Topology: topo}).Instances() {
+		if deleted.Exist(instance.ID()) {
+			continue
+		}
+		newMeta.Topology.Alertmanager = append(newMeta.Topology.Alertmanager, topo.Alertmanager[i])
+	}
 
 	return dmspec.GetSpecManager().SaveMeta(u.cluster, newMeta)
 }
