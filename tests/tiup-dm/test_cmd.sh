@@ -15,6 +15,9 @@ tiup-dm --yes deploy $name $version $topo -i ~/.ssh/id_rsa
 
 tiup-dm list | grep "$name"
 
+# debug
+tiup-dm audit
+
 tiup-dm audit | grep "deploy $name $version"
 
 # Get the audit id can check it just runnable
