@@ -35,7 +35,7 @@ tiup-dm --yes restart $name
 
 tiup-dm display $name
 
-totol_sub_one=9
+totol_sub_one=12
 
 echo "start scale in dm-master"
 tiup-dm --yes scale-in $name -N 172.19.0.101:8261

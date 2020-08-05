@@ -203,10 +203,6 @@ func (i *GrafanaInstance) Deploy(t *task.Builder, deployDir string, version stri
 			return errors.Annotatef(err, "stderr: %s", string(stderr))
 		}
 
-		// find /home/tidb/deploy/grafana-3000/dashboards/ -type f -exec sed -i "s/\${DS_.*-CLUSTER}/test/g" {} \;
-		// find /home/tidb/deploy/grafana-3000/dashboards/ -type f -exec sed -i "s/test-cluster/test/g" {} \;
-		// find /home/tidb/deploy/grafana-3000/dashboards/ -type f -exec sed -i "s/Test-Cluster/test/g" {} \;
-
 		for _, cmd := range []string{
 			`find %s -type f -exec sed -i "s/\${DS_.*-CLUSTER}/%s/g" {} \;`,
 			`find %s -type f -exec sed -i "s/DS_.*-CLUSTER/%s/g" {} \;`,
