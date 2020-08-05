@@ -18,8 +18,10 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/pem"
+	"net"
 
 	"github.com/pingcap/errors"
 )
@@ -165,4 +167,30 @@ func (k *RSAPrivKey) Public() PubKey {
 	return &RSAPubKey{
 		key: &k.key.PublicKey,
 	}
+}
+
+// CSR generates a new CSR from given private key
+func (k *RSAPrivKey) CSR(role, commonName string, hostList []string, IPList []string) ([]byte, error) {
+	var ipAddrList []net.IP
+	for _, ip := range IPList {
+		ipAddr := net.ParseIP(ip)
+		ipAddrList = append(ipAddrList, ipAddr)
+	}
+
+	// set CSR attributes
+	csrTemplate := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			Organization:       []string{pkixOrganization},
+			OrganizationalUnit: []string{pkixOrganizationalUnit, role},
+			CommonName:         commonName,
+		},
+		DNSNames:    hostList,
+		IPAddresses: ipAddrList,
+	}
+	csr, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, k.key)
+	if err != nil {
+		return nil, err
+	}
+
+	return csr, nil
 }

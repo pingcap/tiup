@@ -34,6 +34,10 @@ const (
 
 	// KeySchemeRSASSAPSSSHA256 represents rsassa-pss-sha256 scheme
 	KeySchemeRSASSAPSSSHA256 = "rsassa-pss-sha256"
+
+	// strings used for cert subject
+	pkixOrganization       = "PingCAP"
+	pkixOrganizationalUnit = "TiUP"
 )
 
 // Serializable represents object that can be serialized and deserialized
@@ -67,6 +71,8 @@ type PrivKey interface {
 	Signature(payload []byte) (string, error)
 	// Public returns public key of the PrivKey
 	Public() PubKey
+	// CSR creates a new CSR from the private key
+	CSR(string, string, []string, []string) ([]byte, error)
 }
 
 // NewKeyPair return a pair of key
