@@ -453,7 +453,6 @@ func startInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) erro
 		Unit:         ins.ServiceName(),
 		ReloadDaemon: true,
 		Action:       "start",
-		Enabled:      true,
 		Timeout:      time.Second * time.Duration(timeout),
 	}
 	systemd := module.NewSystemdModule(c)
