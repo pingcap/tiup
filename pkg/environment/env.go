@@ -215,7 +215,17 @@ func (env *Environment) PlatformString() string {
 // SelfUpdate updates TiUp.
 func (env *Environment) SelfUpdate() error {
 	if env.v1Repo != nil {
-		return env.v1Repo.DownloadTiup(env.LocalPath("bin"))
+		if err := env.v1Repo.DownloadTiup(env.LocalPath("bin")); err != nil {
+			return err
+		}
+
+		// Cover the root.json from tiup.bar.gz
+		profile := localdata.InitProfile()
+		if err := profile.ResetMirror(Mirror(), ""); err != nil {
+			return err
+		}
+
+		return nil
 	}
 
 	return env.repo.DownloadTiup(env.LocalPath("bin"))
