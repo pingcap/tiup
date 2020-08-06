@@ -12,8 +12,8 @@ pushd "$( cd "$( dirname "${BASH_SOURCE[0]}"  )" >/dev/null 2>&1 && pwd  )"
 ctl="tiup dmctl:nightly"
 wd=$(pwd)
 
-$ctl --master-addr n1:8261 operate-source create $wd/source1.toml
-$ctl --master-addr n1:8261 operate-source create $wd/source2.toml
+$ctl --master-addr n1:8261 operate-source create $wd/source1.yml
+$ctl --master-addr n1:8261 operate-source create $wd/source2.yml
 
 cat $wd/db1.prepare.sql | mysql -h mysql1
 cat $wd/db2.prepare.sql | mysql -h mysql2
