@@ -239,6 +239,10 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
 		panic("should be type of tidb topology")
 	}
 
+	if len(tidbTopo.TiKVServers) <= 1 {
+		return nil
+	}
+
 	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, nil)
 
 	// Make sure there's leader of PD.
