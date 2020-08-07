@@ -270,6 +270,10 @@ func (i *TiKVInstance) PostRestart(topo Topology) error {
 		panic("should be type of tidb topology")
 	}
 
+	if len(tidbTopo.TiKVServers) <= 1 {
+		return nil
+	}
+
 	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, nil)
 
 	// remove store leader evict scheduler after restart
