@@ -220,12 +220,7 @@ func (env *Environment) SelfUpdate() error {
 		}
 
 		// Cover the root.json from tiup.bar.gz
-		profile := localdata.InitProfile()
-		if err := profile.ResetMirror(Mirror(), ""); err != nil {
-			return err
-		}
-
-		return nil
+		return localdata.InitProfile().ResetMirror(Mirror(), "")
 	}
 
 	return env.repo.DownloadTiup(env.LocalPath("bin"))
