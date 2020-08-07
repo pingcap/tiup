@@ -208,6 +208,10 @@ func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 		dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
 			retainDataNodes.Exist(ins.ID())
 
+		if dataRetained {
+			continue
+		}
+
 		e := getter.Get(ins.GetHost())
 		log.Infof("Cleanup instance %s", ins.GetHost())
 
@@ -230,13 +234,12 @@ func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 		}
 
 		delFiles := set.NewStringSet()
-		if !dataRetained {
-			for _, dataDir := range dataDirs {
-				delFiles.Insert(path.Join(dataDir, "*"))
-			}
-			for _, logDir := range logDirs {
-				delFiles.Insert(path.Join(logDir, "*"))
-			}
+
+		for _, dataDir := range dataDirs {
+			delFiles.Insert(path.Join(dataDir, "*"))
+		}
+		for _, logDir := range logDirs {
+			delFiles.Insert(path.Join(logDir, "*"))
 		}
 
 		log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delFiles.Slice(), " "))
