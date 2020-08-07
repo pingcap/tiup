@@ -205,7 +205,7 @@ func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 	for _, ins := range instances {
 		// Some data of instances will be retained
 		dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
-			retainDataNodes.Exist(ins.ID())
+			retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
 
 		if dataRetained {
 			continue
@@ -290,7 +290,7 @@ func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 	for _, ins := range instances {
 		// Some data of instances will be retained
 		dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
-			retainDataNodes.Exist(ins.ID())
+			retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
 
 		e := getter.Get(ins.GetHost())
 		log.Infof("Destroying instance %s", ins.GetHost())

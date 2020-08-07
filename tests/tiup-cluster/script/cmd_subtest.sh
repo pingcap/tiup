@@ -54,7 +54,7 @@ function cmd_subtest() {
 
     tiup-cluster $client display $name
 
-    tiup-cluster $client --yes clean $name --data --all --ignore-node 172.19.0.102
+    tiup-cluster $client --yes clean $name --data --all --ignore-node 172.19.0.102:20160
 
     echo "checking cleanup data and log"
     tiup-cluster $client exec $name -N 172.19.0.102 --command "ls /home/tidb/deploy/tikv-20160/log/tikv.log"
