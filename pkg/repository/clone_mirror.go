@@ -306,6 +306,27 @@ func cloneComponents(repo *V1Repository,
 		compManifests[name] = newManifest
 	}
 
+	// Download TiUP binary
+	for _, goos := range options.OSs {
+		for _, goarch := range options.Archs {
+			url := fmt.Sprintf("/tiup-%s-%s.tar.gz", goos, goarch)
+			dstFile := filepath.Join(targetDir, url)
+			tmpFile := filepath.Join(tmpDir, url)
+
+			if err := repo.Mirror().Download(url, tmpDir); err != nil {
+				if errors.Cause(err) == ErrNotFound {
+					fmt.Printf("TiUP donesn't have %s/%s, skipped\n", goos, goarch)
+					continue
+				}
+				return nil, err
+			}
+			// Move file to target directory if hashes pass verify.
+			if err := os.Rename(tmpFile, dstFile); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return compManifests, nil
 }
 
