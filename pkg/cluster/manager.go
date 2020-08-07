@@ -200,7 +200,7 @@ func (m *Manager) ListCluster() error {
 }
 
 // CleanCluster clean the cluster without destroying it
-func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanOpt operator.Options, skipConfirm, withLog bool) error {
+func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanOpt operator.Options, skipConfirm bool) error {
 	metadata, err := m.meta(clusterName)
 	if err != nil {
 		return err
@@ -210,11 +210,22 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 	base := metadata.GetBaseMeta()
 
 	if !skipConfirm {
+		target := ""
+		if cleanOpt.CleanupData && cleanOpt.CleanupLog {
+			target = "data and log"
+		} else if cleanOpt.CleanupData {
+			target = "data"
+		} else if cleanOpt.CleanupLog {
+			target = "log"
+		}
 		if err := cliutil.PromptForConfirmOrAbortError(
-			"This operation will clean %s %s cluster %s's data.\nDo you want to continue? [y/N]:",
+			"This operation will clean %s %s cluster %s's %s.\nNodes will be ignored: %s\nRoles will be ignored: %s\nDo you want to continue? [y/N]:",
 			m.sysName,
 			color.HiYellowString(base.Version),
-			color.HiYellowString(clusterName)); err != nil {
+			color.HiYellowString(clusterName),
+			target,
+			cleanOpt.RetainDataNodes,
+			cleanOpt.RetainDataRoles); err != nil {
 			return err
 		}
 		log.Infof("Cleanup cluster...")
@@ -229,7 +240,7 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 			return operator.Stop(ctx, topo, operator.Options{})
 		}).
 		Func("CleanupCluster", func(ctx *task.Context) error {
-			return operator.Cleanup(ctx, topo, cleanOpt, withLog)
+			return operator.Cleanup(ctx, topo, cleanOpt)
 		}).
 		Build()
 

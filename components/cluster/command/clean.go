@@ -14,13 +14,14 @@
 package command
 
 import (
+	perrs "github.com/pingcap/errors"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/spf13/cobra"
 )
 
 func newCleanCmd() *cobra.Command {
 	cleanOpt := operator.Options{}
-	withLog := false
+	cleanALl := false
 
 	cmd := &cobra.Command{
 		Use:  "clean <cluster-name>",
@@ -33,13 +34,24 @@ func newCleanCmd() *cobra.Command {
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			return manager.CleanCluster(clusterName, gOpt, cleanOpt, skipConfirm, withLog)
+			if cleanALl {
+				cleanOpt.CleanupData = true
+				cleanOpt.CleanupLog = true
+			}
+
+			if !(cleanOpt.CleanupData || cleanOpt.CleanupLog) {
+				return perrs.Errorf("at least one of `--all` `--data` `--log` should be specified")
+			}
+
+			return manager.CleanCluster(clusterName, gOpt, cleanOpt, skipConfirm)
 		},
 	}
 
-	cmd.Flags().StringArrayVar(&cleanOpt.RetainDataNodes, "retain-node-data", nil, "Specify the nodes whose data will be retained")
-	cmd.Flags().StringArrayVar(&cleanOpt.RetainDataRoles, "retain-role-data", nil, "Specify the roles whose data will be retained")
-	cmd.Flags().BoolVar(&withLog, "with-log", false, "Cleanup log too")
+	cmd.Flags().StringArrayVar(&cleanOpt.RetainDataNodes, "ignore-node", nil, "Specify the nodes whose data will be retained")
+	cmd.Flags().StringArrayVar(&cleanOpt.RetainDataRoles, "ignore-role", nil, "Specify the roles whose data will be retained")
+	cmd.Flags().BoolVar(&cleanOpt.CleanupData, "data", false, "Cleanup data")
+	cmd.Flags().BoolVar(&cleanOpt.CleanupLog, "log", false, "Cleanup log")
+	cmd.Flags().BoolVar(&cleanALl, "all", false, "Cleanup both log and data")
 
 	return cmd
 }

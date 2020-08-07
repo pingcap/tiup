@@ -33,7 +33,6 @@ func Cleanup(
 	getter ExecutorGetter,
 	cluster spec.Topology,
 	options Options,
-	withLog bool,
 ) error {
 	coms := cluster.ComponentsByStopOrder()
 
@@ -44,7 +43,7 @@ func Cleanup(
 
 	for _, com := range coms {
 		insts := com.Instances()
-		if err := CleanupComponent(getter, insts, cluster, options, withLog); err != nil {
+		if err := CleanupComponent(getter, insts, cluster, options); err != nil {
 			return errors.Annotatef(err, "failed to cleanup %s", com.Name())
 		}
 	}
@@ -197,7 +196,7 @@ func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.M
 }
 
 // CleanupComponent cleanup the instances
-func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec.Topology, options Options, withLog bool) error {
+func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec.Topology, options Options) error {
 	timeout := options.OptTimeout
 
 	retainDataRoles := set.NewStringSet(options.RetainDataRoles...)
@@ -235,11 +234,16 @@ func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 
 		delFiles := set.NewStringSet()
 
-		for _, dataDir := range dataDirs {
-			delFiles.Insert(path.Join(dataDir, "*"))
+		if options.CleanupData {
+			for _, dataDir := range dataDirs {
+				delFiles.Insert(path.Join(dataDir, "*"))
+			}
 		}
-		for _, logDir := range logDirs {
-			delFiles.Insert(path.Join(logDir, "*"))
+
+		if options.CleanupLog {
+			for _, logDir := range logDirs {
+				delFiles.Insert(path.Join(logDir, "*"))
+			}
 		}
 
 		log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delFiles.Slice(), " "))
