@@ -24,8 +24,13 @@ func newCleanCmd() *cobra.Command {
 	cleanALl := false
 
 	cmd := &cobra.Command{
-		Use:  "clean <cluster-name>",
-		Long: `clean cluster data without destroy cluster`,
+		Use: "clean <cluster-name>",
+		Long: `Cleanup a specified cluster without destroying it.
+	You can retain some nodes and roles data when cleanup the cluster, eg:
+		  
+	$ tiup cluster clean <cluster-name> --ignore-role prometheus
+	$ tiup cluster clean <cluster-name> --ignore-node 172.16.13.11:9000
+	$ tiup cluster clean <cluster-name> --ignore-node 172.16.13.12`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
@@ -40,14 +45,17 @@ func newCleanCmd() *cobra.Command {
 			}
 
 			if !(cleanOpt.CleanupData || cleanOpt.CleanupLog) {
-				return perrs.Errorf("at least one of `--all` `--data` `--log` should be specified")
+				return perrs.Errorf(`Please choose one of the following commands to clean the cluster:
+	tiup cluster clean <cluster-name> --data		# Only clean data in the cluster
+	tiup cluster clean <cluster-name> --log			# Only clean log in the cluster
+	tiup cluster clean <cluster-name> --all			# Both data and log will be cleaned`)
 			}
 
 			return manager.CleanCluster(clusterName, gOpt, cleanOpt, skipConfirm)
 		},
 	}
 
-	cmd.Flags().StringArrayVar(&cleanOpt.RetainDataNodes, "ignore-node", nil, "Specify the nodes whose data will be retained")
+	cmd.Flags().StringArrayVar(&cleanOpt.RetainDataNodes, "ignore-node", nil, "Specify the nodes or hosts whose data will be retained")
 	cmd.Flags().StringArrayVar(&cleanOpt.RetainDataRoles, "ignore-role", nil, "Specify the roles whose data will be retained")
 	cmd.Flags().BoolVar(&cleanOpt.CleanupData, "data", false, "Cleanup data")
 	cmd.Flags().BoolVar(&cleanOpt.CleanupLog, "log", false, "Cleanup log")

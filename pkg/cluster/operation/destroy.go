@@ -223,25 +223,16 @@ func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 			log.Warnf("You may manually check if the process on %s:%d is still running", ins.GetHost(), ins.GetPort())
 		}
 
-		var dataDirs []string
-		var logDirs []string
-		if len(ins.DataDir()) > 0 {
-			dataDirs = strings.Split(ins.DataDir(), ",")
-		}
-		if len(ins.LogDir()) > 0 {
-			logDirs = strings.Split(ins.LogDir(), ",")
-		}
-
 		delFiles := set.NewStringSet()
 
-		if options.CleanupData {
-			for _, dataDir := range dataDirs {
+		if options.CleanupData && len(ins.DataDir()) > 0 {
+			for _, dataDir := range strings.Split(ins.DataDir(), ",") {
 				delFiles.Insert(path.Join(dataDir, "*"))
 			}
 		}
 
-		if options.CleanupLog {
-			for _, logDir := range logDirs {
+		if options.CleanupLog && len(ins.LogDir()) > 0 {
+			for _, logDir := range strings.Split(ins.LogDir(), ",") {
 				delFiles.Insert(path.Join(logDir, "*"))
 			}
 		}
