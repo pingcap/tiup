@@ -14,7 +14,6 @@
 package command
 
 import (
-	perrs "github.com/pingcap/errors"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/spf13/cobra"
 )
@@ -28,9 +27,9 @@ func newCleanCmd() *cobra.Command {
 		Long: `Cleanup a specified cluster without destroying it.
 	You can retain some nodes and roles data when cleanup the cluster, eg:
 		  
-	$ tiup cluster clean <cluster-name> --ignore-role prometheus
-	$ tiup cluster clean <cluster-name> --ignore-node 172.16.13.11:9000
-	$ tiup cluster clean <cluster-name> --ignore-node 172.16.13.12`,
+	$ tiup cluster clean <cluster-name> --all --ignore-role prometheus
+	$ tiup cluster clean <cluster-name> --log --ignore-node 172.16.13.11:9000
+	$ tiup cluster clean <cluster-name> --data --ignore-node 172.16.13.12`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
@@ -45,10 +44,7 @@ func newCleanCmd() *cobra.Command {
 			}
 
 			if !(cleanOpt.CleanupData || cleanOpt.CleanupLog) {
-				return perrs.Errorf(`Please choose one of the following commands to clean the cluster:
-	tiup cluster clean <cluster-name> --data		# Only clean data in the cluster
-	tiup cluster clean <cluster-name> --log			# Only clean log in the cluster
-	tiup cluster clean <cluster-name> --all			# Both data and log will be cleaned`)
+				return cmd.Help()
 			}
 
 			return manager.CleanCluster(clusterName, gOpt, cleanOpt, skipConfirm)

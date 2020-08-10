@@ -16,7 +16,11 @@ tiup-dm --yes deploy $name $version $topo -i ~/.ssh/id_rsa
 tiup-dm list | grep "$name"
 
 # debug
+echo "debug audit:"
 tiup-dm audit
+ls -l ~/.tiup/storage/cluster/audit/*
+head -1 ~/.tiup/storage/cluster/audit/*
+echo "end debug audit"
 
 tiup-dm audit | grep "deploy $name $version"
 
