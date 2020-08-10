@@ -799,7 +799,7 @@ func serialize(t *testing.T, role v1manifest.ValidManifest, privKeys ...crypto.P
 	} else {
 		// just use a generate one
 		var err error
-		_, priv, err = crypto.RSAPair()
+		priv, err = crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
 		assert.Nil(t, err)
 		bytes, err := priv.Serialize()
 		assert.Nil(t, err)

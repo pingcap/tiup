@@ -43,7 +43,7 @@ func NewKeyInfo(privKey []byte) *KeyInfo {
 // GenKeyInfo generate a new private KeyInfo
 func GenKeyInfo() (*KeyInfo, error) {
 	// TODO: support other key type and scheme
-	_, priv, err := crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
+	priv, err := crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
 	if err != nil {
 		return nil, err
 	}

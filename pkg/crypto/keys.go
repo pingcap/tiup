@@ -14,6 +14,7 @@
 package crypto
 
 import (
+	"crypto"
 	"errors"
 )
 
@@ -56,6 +57,8 @@ type PubKey interface {
 	Type() string
 	// Scheme returns the scheme of  signature algorithm, e.g. rsassa-pss-sha256
 	Scheme() string
+	// Key returns the raw public key
+	Key() crypto.PublicKey
 	// VerifySignature check the signature is right
 	VerifySignature(payload []byte, sig string) error
 }
@@ -69,22 +72,26 @@ type PrivKey interface {
 	Scheme() string
 	// Signature sign a signature with the key for payload
 	Signature(payload []byte) (string, error)
+	// Signer returns the signer of the private key
+	Signer() crypto.Signer
 	// Public returns public key of the PrivKey
 	Public() PubKey
+	// Pem returns the raw private key in PEM format
+	Pem() []byte
 	// CSR creates a new CSR from the private key
-	CSR(string, string, []string, []string) ([]byte, error)
+	CSR(role, commonName string, hostList []string, IPList []string) ([]byte, error)
 }
 
 // NewKeyPair return a pair of key
-func NewKeyPair(keyType, keyScheme string) (PubKey, PrivKey, error) {
+func NewKeyPair(keyType, keyScheme string) (PrivKey, error) {
 	// We only support RSA now
 	if keyType != KeyTypeRSA {
-		return nil, nil, ErrorUnsupportedKeyType
+		return nil, ErrorUnsupportedKeyType
 	}
 
 	// We only support rsassa-pss-sha256 now
 	if keyScheme != KeySchemeRSASSAPSSSHA256 {
-		return nil, nil, ErrorUnsupportedKeySchema
+		return nil, ErrorUnsupportedKeySchema
 	}
 
 	return RSAPair()

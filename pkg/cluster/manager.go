@@ -15,6 +15,7 @@ package cluster
 
 import (
 	"bytes"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -34,7 +35,9 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/errutil"
+	"github.com/pingcap/tiup/pkg/file"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
@@ -1022,6 +1025,23 @@ func (m *Manager) Deploy(
 	// Initialize environment
 	uniqueHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
 	globalOptions := base.GlobalOptions
+
+	// generate CA and client cert for TLS enabled cluster
+	var ca *crypto.CertificateAuthority
+	if globalOptions.TLSEnabled {
+		// generate CA
+		tlsPath := m.specManager.Path(clusterName, spec.TLSCertKeyDir)
+		ca, err = genAndSaveClusterCA(clusterName, tlsPath)
+		if err != nil {
+			return err
+		}
+
+		// generate client cert
+		if err = genAndSaveClientCert(ca, clusterName, spec.TLSCertKeyDir); err != nil {
+			return err
+		}
+	}
+
 	var iterErr error // error when itering over instances
 	iterErr = nil
 	topo.IterInstance(func(inst spec.Instance) {
@@ -1113,6 +1133,16 @@ func (m *Manager) Deploy(
 					deployDir,
 				)
 			}
+		}
+
+		// generate and transfer tls cert for instance
+		if globalOptions.TLSEnabled {
+			t = t.TLSCert(inst, ca, meta.DirPaths{
+				Deploy: deployDir,
+				Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
+			})
+			// set config
+			setTLSEnabledConfigs(inst)
 		}
 
 		// generate configs for the component
@@ -2084,4 +2114,72 @@ func refreshMonitoredConfigTask(
 		}
 	}
 	return tasks
+}
+
+func genAndSaveClusterCA(clusterName, tlsPath string) (*crypto.CertificateAuthority, error) {
+	ca, err := crypto.NewCA(clusterName)
+	if err != nil {
+		return nil, err
+	}
+
+	// save CA private key
+	if err := file.SaveFileWithBackup(filepath.Join(tlsPath, spec.TLSCAKey), ca.Key.Pem(), ""); err != nil {
+		return nil, fmt.Errorf("cannot save CA private key for %s: %s", clusterName, err)
+	}
+
+	// save CA certificate
+	if err := file.SaveFileWithBackup(
+		filepath.Join(tlsPath, spec.TLSCACert),
+		pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: ca.Cert.Raw,
+		}), ""); err != nil {
+		return nil, fmt.Errorf("cannot save CA certificate for %s: %s", clusterName, err)
+	}
+
+	return ca, nil
+}
+
+func genAndSaveClientCert(ca *crypto.CertificateAuthority, clusterName, tlsPath string) error {
+	privKey, err := crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
+	if err != nil {
+		return err
+	}
+
+	// save CA private key
+	if err := file.SaveFileWithBackup(filepath.Join(tlsPath, spec.TLSClientKey), privKey.Pem(), ""); err != nil {
+		return fmt.Errorf("cannot save client private key for %s: %s", clusterName, err)
+	}
+
+	csr, err := privKey.CSR(
+		"tiup-cluster-client",
+		fmt.Sprintf("%s-client", clusterName),
+		[]string{}, []string{},
+	)
+	if err != nil {
+		return fmt.Errorf("cannot generate CSR of client certificate for %s: %s", clusterName, err)
+	}
+	cert, err := ca.Sign(csr)
+	if err != nil {
+		return fmt.Errorf("cannot sign client certificate for %s: %s", clusterName, err)
+	}
+
+	// save client certificate
+	if err := file.SaveFileWithBackup(
+		filepath.Join(tlsPath, spec.TLSClientCert),
+		pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: cert,
+		}), ""); err != nil {
+		return fmt.Errorf("cannot save client certificate for %s: %s", clusterName, err)
+	}
+
+	return nil
+}
+
+func setTLSEnabledConfigs(inst spec.Instance) {
+	switch inst.ComponentName() {
+	default:
+		return
+	}
 }

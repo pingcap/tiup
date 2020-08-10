@@ -14,7 +14,6 @@
 package crypto
 
 import (
-	"crypto"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -29,7 +28,7 @@ var serialNumberLimit = new(big.Int).Lsh(big.NewInt(1), 128)
 type CertificateAuthority struct {
 	ClusterName string
 	Cert        *x509.Certificate
-	Key         crypto.Signer
+	Key         PrivKey
 }
 
 // NewCA generates a new CA certificate
@@ -44,9 +43,14 @@ func NewCA(clsName string) (*CertificateAuthority, error) {
 
 	caTemplate := &x509.Certificate{
 		SerialNumber: serialNumber,
+		// NOTE: not adding cluster name to the cert subject to avoid potential issues
+		// when we implement cluster renaming feature. We may consider add this back
+		// if we find proper way renaming a TLS enabled cluster.
+		// Adding the cluster name in cert subject may be helpful to diagnose problem
+		// when a process is trying to connecting a component from another cluster.
 		Subject: pkix.Name{
 			Organization:       []string{pkixOrganization},
-			OrganizationalUnit: []string{pkixOrganizationalUnit, clsName},
+			OrganizationalUnit: []string{pkixOrganizationalUnit /*, clsName */},
 		},
 		NotBefore: currTime,
 		NotAfter:  currTime.Add(time.Hour * 24 * 365 * 50), // TODO: support ca cert rotate
@@ -59,11 +63,11 @@ func NewCA(clsName string) (*CertificateAuthority, error) {
 		BasicConstraintsValid: true,
 	}
 
-	pubKey, privKey, err := RSAPair()
+	priv, err := NewKeyPair(KeyTypeRSA, KeySchemeRSASSAPSSSHA256)
 	if err != nil {
 		return nil, err
 	}
-	caBytes, err := x509.CreateCertificate(rand.Reader, caTemplate, caTemplate, pubKey.key, privKey.key)
+	caBytes, err := x509.CreateCertificate(rand.Reader, caTemplate, caTemplate, priv.Public().Key(), priv.Signer())
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +78,7 @@ func NewCA(clsName string) (*CertificateAuthority, error) {
 	return &CertificateAuthority{
 		ClusterName: clsName,
 		Cert:        caCert,
-		Key:         privKey.key,
+		Key:         priv,
 	}, nil
 }
 
@@ -123,5 +127,5 @@ func (ca *CertificateAuthority) Sign(csrBytes []byte) ([]byte, error) {
 		ExtraExtensions: csr.ExtraExtensions,
 	}
 
-	return x509.CreateCertificate(rand.Reader, template, ca.Cert, csr.PublicKey, ca.Key)
+	return x509.CreateCertificate(rand.Reader, template, ca.Cert, csr.PublicKey, ca.Key.Signer())
 }

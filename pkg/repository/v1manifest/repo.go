@@ -464,11 +464,11 @@ func (manifest *Root) AddKey(roleName string, key *KeyInfo) error {
 
 // FreshKeyInfo generates a new key pair and wraps it in a KeyInfo. The returned string is the key id.
 func FreshKeyInfo() (*KeyInfo, string, crypto.PrivKey, error) {
-	pub, priv, err := crypto.RSAPair()
+	priv, err := crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
 	if err != nil {
 		return nil, "", nil, err
 	}
-	pubBytes, err := pub.Serialize()
+	pubBytes, err := priv.Public().Serialize()
 	if err != nil {
 		return nil, "", nil, err
 	}

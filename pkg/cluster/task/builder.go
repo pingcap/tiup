@@ -19,6 +19,7 @@ import (
 
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/meta"
 )
 
@@ -363,6 +364,16 @@ func (b *Builder) DeploySpark(inst spec.Instance, version, srcPath, deployDir st
 		),
 		false, // (not) sudo
 	)
+}
+
+// TLSCert geenrates certificate for instance and transfer it to server
+func (b *Builder) TLSCert(inst spec.Instance, ca *crypto.CertificateAuthority, paths meta.DirPaths) *Builder {
+	b.tasks = append(b.tasks, &TLSCert{
+		ca:    ca,
+		inst:  inst,
+		paths: paths,
+	})
+	return b
 }
 
 // Parallel appends a parallel task to the current task collection

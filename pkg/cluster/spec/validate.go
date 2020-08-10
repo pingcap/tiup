@@ -659,9 +659,44 @@ func (s *Specification) validateTiSparkSpec() error {
 	return nil
 }
 
+func (s *Specification) validateTLSEnabled() error {
+	if !s.GlobalOptions.TLSEnabled {
+		return nil
+	}
+
+	// check for component with no tls support
+	compList := make([]Component, 0)
+	s.IterComponent(func(c Component) {
+		if len(c.Instances()) > 0 {
+			compList = append(compList, c)
+		}
+	})
+
+	for _, c := range compList {
+		switch c.Name() {
+		case ComponentPD,
+			ComponentTiDB,
+			ComponentTiKV,
+			ComponentPump,
+			ComponentDrainer,
+			ComponentCDC,
+			ComponentPrometheus,
+			ComponentAlertManager,
+			ComponentGrafana:
+		default:
+			return fmt.Errorf("component %s is not supported in TLS enabled cluster", c.Name())
+		}
+	}
+	return nil
+}
+
 // Validate validates the topology specification and produce error if the
 // specification invalid (e.g: port conflicts or directory conflicts)
 func (s *Specification) Validate() error {
+	if err := s.validateTLSEnabled(); err != nil {
+		return err
+	}
+
 	if err := s.platformConflictsDetect(); err != nil {
 		return err
 	}

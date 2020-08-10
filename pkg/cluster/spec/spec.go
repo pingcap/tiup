@@ -55,7 +55,7 @@ type (
 		User            string               `yaml:"user,omitempty" default:"tidb"`
 		Group           string               `yaml:"group,omitempty"`
 		SSHPort         int                  `yaml:"ssh_port,omitempty" default:"22" validate:"ssh_port:editable"`
-		TLSCluster      bool                 `yaml:"tls_cluster,omitempty"`
+		TLSEnabled      bool                 `yaml:"tls_enabled,omitempty"`
 		DeployDir       string               `yaml:"deploy_dir,omitempty" default:"deploy"`
 		DataDir         string               `yaml:"data_dir,omitempty" default:"data"`
 		LogDir          string               `yaml:"log_dir,omitempty"`
