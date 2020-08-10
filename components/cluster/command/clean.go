@@ -25,11 +25,13 @@ func newCleanCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "clean <cluster-name>",
 		Long: `Cleanup a specified cluster without destroying it.
-	You can retain some nodes and roles data when cleanup the cluster, eg:
-		  
-	$ tiup cluster clean <cluster-name> --all --ignore-role prometheus
-	$ tiup cluster clean <cluster-name> --log --ignore-node 172.16.13.11:9000
-	$ tiup cluster clean <cluster-name> --data --ignore-node 172.16.13.12`,
+You can retain some nodes and roles data when cleanup the cluster, eg:
+    $ tiup cluster clean <cluster-name> --all
+    $ tiup cluster clean <cluster-name> --log
+    $ tiup cluster clean <cluster-name> --data
+    $ tiup cluster clean <cluster-name> --all --ignore-role prometheus
+    $ tiup cluster clean <cluster-name> --all --ignore-node 172.16.13.11:9000
+    $ tiup cluster clean <cluster-name> --all --ignore-node 172.16.13.12`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
