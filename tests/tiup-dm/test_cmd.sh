@@ -17,9 +17,9 @@ tiup-dm list | grep "$name"
 
 # debug
 echo "debug audit:"
+ls -l ~/.tiup/storage/dm/audit/*
+head -1 ~/.tiup/storage/dm/audit/*
 tiup-dm audit
-ls -l ~/.tiup/storage/cluster/audit/*
-head -1 ~/.tiup/storage/cluster/audit/*
 echo "end debug audit"
 
 tiup-dm audit | grep "deploy $name $version"
