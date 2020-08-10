@@ -113,9 +113,9 @@ type MasterSpec struct {
 	SSHPort  int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported bool   `yaml:"imported,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
-	Name            string                 `yaml:"name"`
-	Port            int                    `yaml:"port" default:"8261"`
-	PeerPort        int                    `yaml:"peer_port" default:"8291"`
+	Name            string                 `yaml:"name,omitempty"`
+	Port            int                    `yaml:"port,omitempty" default:"8261"`
+	PeerPort        int                    `yaml:"peer_port,omitempty" default:"8291"`
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	DataDir         string                 `yaml:"data_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
@@ -124,6 +124,7 @@ type MasterSpec struct {
 	ResourceControl ResourceControl        `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
+	V1SourcePath    string                 `yaml:"v1_source_path,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -175,8 +176,8 @@ type WorkerSpec struct {
 	SSHPort  int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported bool   `yaml:"imported,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
-	Name            string                 `yaml:"name"`
-	Port            int                    `yaml:"port" default:"8262"`
+	Name            string                 `yaml:"name,omitempty"`
+	Port            int                    `yaml:"port,omitempty" default:"8262"`
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	DataDir         string                 `yaml:"data_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
