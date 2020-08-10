@@ -32,6 +32,10 @@ type Options struct {
 	IgnoreConfigCheck bool  // should we ignore the config check result after init config
 	NativeSSH         bool  // should use native ssh client or builtin easy ssh
 
+	// What type of things should we cleanup in clean command
+	CleanupData bool // should we cleanup data
+	CleanupLog  bool // should we clenaup log
+
 	// Some data will be retained when destroying instances
 	RetainDataRoles []string
 	RetainDataNodes []string

@@ -297,6 +297,15 @@ jobs:
           make failpoint-enable
           make coverage
 
+          # for debug
+          echo "debug github env:"
+          echo "GITHUB_ACTION" $GITHUB_ACTION
+          echo "GITHUB_REF" $GITHUB_REF
+          echo "GITHUB_HEAD_REF" $GITHUB_HEAD_REF
+          echo "GITHUB_SHA" $GITHUB_SHA
+          echo "GITHUB_REPOSITORY" $GITHUB_REPOSITORY
+          echo "GITHUB_RUN_ID" $GITHUB_RUN_ID
+
       - name: Upload all cover files
         uses: actions/upload-artifact@v1
         with:

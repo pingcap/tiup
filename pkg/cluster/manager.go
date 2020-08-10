@@ -199,6 +199,63 @@ func (m *Manager) ListCluster() error {
 	return nil
 }
 
+// CleanCluster clean the cluster without destroying it
+func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanOpt operator.Options, skipConfirm bool) error {
+	metadata, err := m.meta(clusterName)
+	if err != nil {
+		return err
+	}
+
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
+
+	if !skipConfirm {
+		target := ""
+		if cleanOpt.CleanupData && cleanOpt.CleanupLog {
+			target = "data and log"
+		} else if cleanOpt.CleanupData {
+			target = "data"
+		} else if cleanOpt.CleanupLog {
+			target = "log"
+		}
+		if err := cliutil.PromptForConfirmOrAbortError(
+			"This operation will clean %s %s cluster %s's %s.\nNodes will be ignored: %s\nRoles will be ignored: %s\nDo you want to continue? [y/N]:",
+			m.sysName,
+			color.HiYellowString(base.Version),
+			color.HiYellowString(clusterName),
+			target,
+			cleanOpt.RetainDataNodes,
+			cleanOpt.RetainDataRoles); err != nil {
+			return err
+		}
+		log.Infof("Cleanup cluster...")
+	}
+
+	t := task.NewBuilder().
+		SSHKeySet(
+			m.specManager.Path(clusterName, "ssh", "id_rsa"),
+			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
+		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.NativeSSH).
+		Func("StopCluster", func(ctx *task.Context) error {
+			return operator.Stop(ctx, topo, operator.Options{})
+		}).
+		Func("CleanupCluster", func(ctx *task.Context) error {
+			return operator.Cleanup(ctx, topo, cleanOpt)
+		}).
+		Build()
+
+	if err := t.Execute(task.NewContext()); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.Trace(err)
+	}
+
+	log.Infof("Cleanup cluster `%s` successfully", clusterName)
+	return nil
+}
+
 // DestroyCluster destroy the cluster.
 func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, destroyOpt operator.Options, skipConfirm bool) error {
 	metadata, err := m.meta(clusterName)

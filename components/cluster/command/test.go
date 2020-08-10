@@ -58,6 +58,8 @@ func newTestCmd() *cobra.Command {
 			switch args[1] {
 			case "writable":
 				return writable(metadata.Topology)
+			case "data":
+				return data(metadata.Topology)
 			default:
 				fmt.Println("unknown command: ", args[1])
 				return cmd.Help()
@@ -73,6 +75,36 @@ func createDB(spec spec.TiDBSpec) (db *sql.DB, err error) {
 	db, err = sql.Open("mysql", dsn)
 
 	return
+}
+
+// To check if test.ti_cluster has data
+func data(topo *spec.Specification) error {
+	errg, _ := errgroup.WithContext(context.Background())
+
+	for _, spec := range topo.TiDBServers {
+		spec := spec
+		errg.Go(func() error {
+			db, err := createDB(spec)
+			if err != nil {
+				return err
+			}
+
+			row := db.QueryRow("select count(*) from test.ti_cluster")
+			count := 0
+			if err := row.Scan(&count); err != nil {
+				return err
+			}
+
+			if count == 0 {
+				return errors.New("table test.ti_cluster is empty")
+			}
+
+			fmt.Printf("check data %s:%d success\n", spec.Host, spec.Port)
+			return nil
+		})
+	}
+
+	return errg.Wait()
 }
 
 func writable(topo *spec.Specification) error {
