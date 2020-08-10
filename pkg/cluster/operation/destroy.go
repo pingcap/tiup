@@ -15,6 +15,7 @@ package operator
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -26,6 +27,29 @@ import (
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
 )
+
+// Cleanup the cluster
+func Cleanup(
+	getter ExecutorGetter,
+	cluster spec.Topology,
+	options Options,
+) error {
+	coms := cluster.ComponentsByStopOrder()
+
+	instCount := map[string]int{}
+	cluster.IterInstance(func(inst spec.Instance) {
+		instCount[inst.GetHost()] = instCount[inst.GetHost()] + 1
+	})
+
+	for _, com := range coms {
+		insts := com.Instances()
+		if err := CleanupComponent(getter, insts, cluster, options); err != nil {
+			return errors.Annotatef(err, "failed to cleanup %s", com.Name())
+		}
+	}
+
+	return nil
+}
 
 // Destroy the cluster.
 func Destroy(
@@ -171,6 +195,76 @@ func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.M
 	return nil
 }
 
+// CleanupComponent cleanup the instances
+func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec.Topology, options Options) error {
+	timeout := options.OptTimeout
+
+	retainDataRoles := set.NewStringSet(options.RetainDataRoles...)
+	retainDataNodes := set.NewStringSet(options.RetainDataNodes...)
+
+	for _, ins := range instances {
+		// Some data of instances will be retained
+		dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
+			retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
+
+		if dataRetained {
+			continue
+		}
+
+		e := getter.Get(ins.GetHost())
+		log.Infof("Cleanup instance %s", ins.GetHost())
+
+		if err := ins.WaitForDown(e, timeout); err != nil {
+			str := fmt.Sprintf("%s error cleanup %s: %s", ins.GetHost(), ins.ComponentName(), err)
+			log.Errorf(str)
+			if !utils.IsTimeoutOrMaxRetry(err) {
+				return errors.Annotatef(err, str)
+			}
+			log.Warnf("You may manually check if the process on %s:%d is still running", ins.GetHost(), ins.GetPort())
+		}
+
+		delFiles := set.NewStringSet()
+
+		if options.CleanupData && len(ins.DataDir()) > 0 {
+			for _, dataDir := range strings.Split(ins.DataDir(), ",") {
+				delFiles.Insert(path.Join(dataDir, "*"))
+			}
+		}
+
+		if options.CleanupLog && len(ins.LogDir()) > 0 {
+			for _, logDir := range strings.Split(ins.LogDir(), ",") {
+				delFiles.Insert(path.Join(logDir, "*"))
+			}
+		}
+
+		log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delFiles.Slice(), " "))
+		c := module.ShellModuleConfig{
+			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delFiles.Slice(), " ")),
+			Sudo:     true, // the .service files are in a directory owned by root
+			Chdir:    "",
+			UseShell: true,
+		}
+		shell := module.NewShellModule(c)
+		stdout, stderr, err := shell.Execute(e)
+
+		if len(stdout) > 0 {
+			fmt.Println(string(stdout))
+		}
+		if len(stderr) > 0 {
+			log.Errorf(string(stderr))
+		}
+
+		if err != nil {
+			return errors.Annotatef(err, "failed to cleanup: %s", ins.GetHost())
+		}
+
+		log.Infof("Cleanup %s success", ins.GetHost())
+		log.Infof("- Clanup %s files: %v", ins.ComponentName(), delFiles.Slice())
+	}
+
+	return nil
+}
+
 // DestroyComponent destroy the instances.
 func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls spec.Topology, options Options) error {
 	if len(instances) <= 0 {
@@ -187,7 +281,7 @@ func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 	for _, ins := range instances {
 		// Some data of instances will be retained
 		dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
-			retainDataNodes.Exist(ins.ID())
+			retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
 
 		e := getter.Get(ins.GetHost())
 		log.Infof("Destroying instance %s", ins.GetHost())

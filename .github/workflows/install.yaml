@@ -24,6 +24,7 @@ jobs:
                 sh install.sh
                 source ~/.profile
                 which tiup || (echo "no tiup found" && exit 1)
+                ! tiup update --self | grep -i "WARN: adding root certificate"
     local_install:
         name: Local Install
         runs-on: ubuntu-latest
@@ -51,3 +52,4 @@ jobs:
                 sh local_install.sh
                 source ~/.profile
                 which tiup || (echo "no tiup found" && exit 1)
+                ! tiup update --self | grep -i "WARN: adding root certificate"

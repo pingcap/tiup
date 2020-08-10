@@ -29,7 +29,8 @@ func newDestroyCmd() *cobra.Command {
 You can retain some nodes and roles data when destroy cluster, eg:
   
   $ tiup cluster destroy <cluster-name> --retain-role-data prometheus
-  $ tiup cluster destroy <cluster-name> --retain-node-data 172.16.13.11:9000`,
+  $ tiup cluster destroy <cluster-name> --retain-node-data 172.16.13.11:9000
+  $ tiup cluster destroy <cluster-name> --retain-node-data 172.16.13.12`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
@@ -52,7 +53,7 @@ You can retain some nodes and roles data when destroy cluster, eg:
 		},
 	}
 
-	cmd.Flags().StringArrayVar(&destoyOpt.RetainDataNodes, "retain-node-data", nil, "Specify the nodes whose data will be retained")
+	cmd.Flags().StringArrayVar(&destoyOpt.RetainDataNodes, "retain-node-data", nil, "Specify the nodes or hosts whose data will be retained")
 	cmd.Flags().StringArrayVar(&destoyOpt.RetainDataRoles, "retain-role-data", nil, "Specify the roles whose data will be retained")
 
 	return cmd
