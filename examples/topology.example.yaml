@@ -11,10 +11,12 @@ global:
   # # See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html
   # # Supports using instance-level `resource_control` to override global `resource_control`.
   # resource_control:
-  #   # See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html#IOReadBandwidthMax=device%20bytes
+  #   # See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html#MemoryLimit=bytes
   #   memory_limit: "2G"
-  #   # See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html#IOReadBandwidthMax=device%20bytes
-  #   cpu_quota: "20%"
+  #   # See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html#CPUQuota=
+  #   # The percentage specifies how much CPU time the unit shall get at maximum, relative to the total CPU time available on one CPU. Use values > 100% for allotting CPU time on more than one CPU.
+  #   # Example: CPUQuota=20% ensures that the executed processes will never get more than 20% CPU time on one CPU.
+  #   cpu_quota: "200%"
   #   # See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html#IOReadBandwidthMax=device%20bytes
   #   io_read_bandwidth_max: "/dev/disk/by-path/pci-0000:00:1f.2-scsi-0:0:0:0 100M"
   #   io_write_bandwidth_max: "/dev/disk/by-path/pci-0000:00:1f.2-scsi-0:0:0:0 100M"
