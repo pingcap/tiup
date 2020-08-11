@@ -75,49 +75,49 @@ func (c *DrainerComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Drainers))
 	for _, s := range c.Drainers {
 		s := s
-		ins = append(ins, &DrainerInstance{instance{
+		ins = append(ins, &DrainerInstance{BaseInstance{
 			InstanceSpec: s,
-			name:         c.Name(),
-			host:         s.Host,
-			port:         s.Port,
-			sshp:         s.SSHPort,
-			topo:         c.Specification,
+			Name:         c.Name(),
+			Host:         s.Host,
+			Port:         s.Port,
+			SSHP:         s.SSHPort,
 
-			usedPorts: []int{
+			Ports: []int{
 				s.Port,
 			},
-			usedDirs: []string{
+			Dirs: []string{
 				s.DeployDir,
 				s.DataDir,
 			},
-			statusFn: func(_ ...string) string {
+			StatusFn: func(_ ...string) string {
 				url := fmt.Sprintf("http://%s:%d/status", s.Host, s.Port)
 				return statusByURL(url)
 			},
-		}})
+		}, c.Specification})
 	}
 	return ins
 }
 
 // DrainerInstance represent the Drainer instance.
 type DrainerInstance struct {
-	instance
+	BaseInstance
+	topo *Specification
 }
 
 // ScaleConfig deploy temporary config on scaling
 func (i *DrainerInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, user string, paths meta.DirPaths) error {
-	s := i.instance.topo
+	s := i.topo
 	defer func() {
-		i.instance.topo = s
+		i.topo = s
 	}()
-	i.instance.topo = mustBeClusterTopo(topo)
+	i.topo = mustBeClusterTopo(topo)
 
 	return i.InitConfig(e, clusterName, clusterVersion, user, paths)
 }
 
 // InitConfig implements Instance interface.
 func (i *DrainerInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
-	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -128,7 +128,7 @@ func (i *DrainerInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		paths.Deploy,
 		paths.Data[0],
 		paths.Log,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.instance.topo.Endpoints(deployUser)...)
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.topo.Endpoints(deployUser)...)
 
 	cfg.WithCommitTs(spec.CommitTS)
 
@@ -169,9 +169,9 @@ func (i *DrainerInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		}
 	}
 
-	if err := i.mergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
+	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
 
-	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
+	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
 }

@@ -69,24 +69,24 @@ func (c *GrafanaComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Grafana))
 	for _, s := range c.Grafana {
 		ins = append(ins, &GrafanaInstance{
-			instance: instance{
+			BaseInstance: BaseInstance{
 				InstanceSpec: s,
-				name:         c.Name(),
-				host:         s.Host,
-				port:         s.Port,
-				sshp:         s.SSHPort,
-				topo:         c.Specification,
+				Name:         c.Name(),
+				Host:         s.Host,
+				Port:         s.Port,
+				SSHP:         s.SSHPort,
 
-				usedPorts: []int{
+				Ports: []int{
 					s.Port,
 				},
-				usedDirs: []string{
+				Dirs: []string{
 					s.DeployDir,
 				},
-				statusFn: func(_ ...string) string {
+				StatusFn: func(_ ...string) string {
 					return "-"
 				},
 			},
+			topo: c.Specification,
 		})
 	}
 	return ins
@@ -94,12 +94,13 @@ func (c *GrafanaComponent) Instances() []Instance {
 
 // GrafanaInstance represent the grafana instance
 type GrafanaInstance struct {
-	instance
+	BaseInstance
+	topo *Specification
 }
 
 // InitConfig implement Instance interface
 func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
-	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -140,12 +141,12 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 	}
 
 	// transfer datasource.yml
-	if len(i.instance.topo.Monitors) == 0 {
+	if len(i.topo.Monitors) == 0 {
 		return errors.New("no prometheus found in topology")
 	}
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
-	if err := config.NewDatasourceConfig(clusterName, i.instance.topo.Monitors[0].Host).
-		WithPort(uint64(i.instance.topo.Monitors[0].Port)).
+	if err := config.NewDatasourceConfig(clusterName, i.topo.Monitors[0].Host).
+		WithPort(uint64(i.topo.Monitors[0].Port)).
 		ConfigToFile(fp); err != nil {
 		return err
 	}
@@ -156,9 +157,9 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 // ScaleConfig deploy temporary config on scaling
 func (i *GrafanaInstance) ScaleConfig(e executor.Executor, topo Topology,
 	clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error {
-	s := i.instance.topo
-	defer func() { i.instance.topo = s }()
+	s := i.topo
+	defer func() { i.topo = s }()
 	cluster := mustBeClusterTopo(topo)
-	i.instance.topo = cluster.Merge(i.instance.topo)
+	i.topo = cluster.Merge(i.topo)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }

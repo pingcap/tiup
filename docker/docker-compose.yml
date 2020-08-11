@@ -25,6 +25,11 @@ services:
     << : *default-node
     container_name: tiup-cluster-n1
     hostname: n1
+    # Uncomment for access grafana and prometheus from host when deploy them at n1.
+    # networks:
+    # ports:
+    #   - "3000:3000"
+    #   - "9090:9090"
     networks:
          tiops:
            ipv4_address: 172.19.0.101

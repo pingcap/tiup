@@ -563,9 +563,9 @@ func (s *Specification) Endpoints(user string) []*scripts.PDScript {
 }
 
 // AlertManagerEndpoints returns the AlertManager endpoints configurations
-func (s *Specification) AlertManagerEndpoints(user string) []*scripts.AlertManagerScript {
+func AlertManagerEndpoints(alertmanager []AlertManagerSpec, user string) []*scripts.AlertManagerScript {
 	var ends []*scripts.AlertManagerScript
-	for _, spec := range s.Alertmanager {
+	for _, spec := range alertmanager {
 		deployDir := clusterutil.Abs(user, spec.DeployDir)
 		// data dir would be empty for components which don't need it
 		dataDir := spec.DataDir
