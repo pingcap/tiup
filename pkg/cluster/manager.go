@@ -522,6 +522,18 @@ func (m *Manager) EditConfig(clusterName string, skipConfirm bool) error {
 	return nil
 }
 
+// Rename the cluster
+func (m *Manager) Rename(clusterName string, opt operator.Options, newName string) error {
+	if err := os.Rename(m.specManager.Path(clusterName), m.specManager.Path(newName)); err != nil {
+		return perrs.AddStack(err)
+	}
+
+	log.Infof("Rename cluster `%s` -> `%s` successfully", clusterName, newName)
+
+	opt.Roles = []string{spec.ComponentGrafana, spec.ComponentPrometheus}
+	return m.Reload(newName, opt, false)
+}
+
 // Reload the cluster.
 func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart bool) error {
 	sshTimeout := opt.SSHTimeout

@@ -157,6 +157,7 @@ func init() {
 		newEditConfigCmd(),
 		newReloadCmd(),
 		newPatchCmd(),
+		newRenameCmd(),
 		newTestCmd(), // hidden command for test internally
 		newTelemetryCmd(),
 	)
