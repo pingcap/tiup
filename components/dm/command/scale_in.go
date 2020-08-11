@@ -150,13 +150,6 @@ func ScaleInDMCluster(
 				continue
 			}
 
-			if err := operator.StopComponent(getter, []dm.Instance{instance}, options.OptTimeout); err != nil {
-				return errors.Annotatef(err, "failed to stop %s", component.Name())
-			}
-			if err := operator.DestroyComponent(getter, []dm.Instance{instance}, spec, options); err != nil {
-				return errors.Annotatef(err, "failed to destroy %s", component.Name())
-			}
-
 			switch component.Name() {
 			case dm.ComponentDMMaster:
 				name := instance.(*dm.DMMasterInstance).Name
@@ -170,6 +163,13 @@ func ScaleInDMCluster(
 				if err != nil {
 					return errors.AddStack(err)
 				}
+			}
+
+			if err := operator.StopComponent(getter, []dm.Instance{instance}, options.OptTimeout); err != nil {
+				return errors.Annotatef(err, "failed to stop %s", component.Name())
+			}
+			if err := operator.DestroyComponent(getter, []dm.Instance{instance}, spec, options); err != nil {
+				return errors.Annotatef(err, "failed to destroy %s", component.Name())
 			}
 		}
 	}
