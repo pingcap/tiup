@@ -33,8 +33,7 @@ type CopyComponent struct {
 
 // PackagePath return the tar bar path
 func PackagePath(comp string, version string, os string, arch string) string {
-	resName := fmt.Sprintf("%s-%s", comp, version)
-	fileName := fmt.Sprintf("%s-%s-%s.tar.gz", resName, os, arch)
+	fileName := fmt.Sprintf("%s-%s-%s-%s.tar.gz", comp, version, os, arch)
 	return spec.ProfilePath(spec.TiOpsPackageCacheDir, fileName)
 }
 

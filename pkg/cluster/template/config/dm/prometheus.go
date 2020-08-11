@@ -23,7 +23,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/embed"
 )
 
-// PrometheusConfig represent the data to generate Prometheus config
+// PrometheusConfig represents the data to generate Prometheus config
 // You may need to update the template file if change this struct.
 type PrometheusConfig struct {
 	ClusterName       string
@@ -41,7 +41,7 @@ func NewPrometheusConfig(cluster string) *PrometheusConfig {
 	}
 }
 
-// AddGrafana add an kafka exporter address
+// AddGrafana adds an kafka exporter address
 func (c *PrometheusConfig) AddGrafana(ip string, port uint64) *PrometheusConfig {
 	c.GrafanaAddr = fmt.Sprintf("%s:%d", ip, port)
 	return c
