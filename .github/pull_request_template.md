@@ -34,3 +34,15 @@ Related changes
 
  - Need to cherry-pick to the release branch
  - Need to update the documentation
+
+
+Release notes:
+<!--
+If no, just leave the release note block below as is.
+If yes, a release note is required:
+Enter your extended release note in the block below. If the PR requires additional action from users switching to the new release, include the string "action required".
+Please refer to [Release Notes Language Style Guide](https://github.com/pingcap/tiup/blob/master/doc/dev/release-note-guide.md) before writing the release note.
+-->
+```release-note
+NONE
+```
