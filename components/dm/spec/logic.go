@@ -65,7 +65,7 @@ func (c *DMMasterComponent) Instances() []Instance {
 	ins := make([]Instance, 0)
 	for _, s := range c.Masters {
 		s := s
-		ins = append(ins, &DMMasterInstance{
+		ins = append(ins, &MasterInstance{
 			Name: s.Name,
 			BaseInstance: spec.BaseInstance{
 				InstanceSpec: s,
@@ -90,15 +90,15 @@ func (c *DMMasterComponent) Instances() []Instance {
 	return ins
 }
 
-// DMMasterInstance represent the TiDB instance
-type DMMasterInstance struct {
+// MasterInstance represent the TiDB instance
+type MasterInstance struct {
 	Name string
 	spec.BaseInstance
 	topo *Topology
 }
 
 // InitConfig implement Instance interface
-func (i *DMMasterInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *MasterInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func (i *DMMasterInstance) InitConfig(e executor.Executor, clusterName, clusterV
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DMMasterInstance) ScaleConfig(e executor.Executor, topo spec.Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *MasterInstance) ScaleConfig(e executor.Executor, topo spec.Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
@@ -176,7 +176,7 @@ func (c *DMWorkerComponent) Instances() []Instance {
 	ins := make([]Instance, 0)
 	for _, s := range c.Workers {
 		s := s
-		ins = append(ins, &DMWorkerInstance{
+		ins = append(ins, &WorkerInstance{
 			Name: s.Name,
 			BaseInstance: spec.BaseInstance{
 				InstanceSpec: s,
@@ -201,15 +201,15 @@ func (c *DMWorkerComponent) Instances() []Instance {
 	return ins
 }
 
-// DMWorkerInstance represent the DM worker instance
-type DMWorkerInstance struct {
+// WorkerInstance represent the DM worker instance
+type WorkerInstance struct {
 	Name string
 	spec.BaseInstance
 	topo *Topology
 }
 
 // InitConfig implement Instance interface
-func (i *DMWorkerInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *WorkerInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
@@ -240,7 +240,7 @@ func (i *DMWorkerInstance) InitConfig(e executor.Executor, clusterName, clusterV
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DMWorkerInstance) ScaleConfig(e executor.Executor, topo spec.Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *WorkerInstance) ScaleConfig(e executor.Executor, topo spec.Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	s := i.topo
 	defer func() {
 		i.topo = s

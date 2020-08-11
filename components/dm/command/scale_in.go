@@ -117,8 +117,6 @@ func ScaleInDMCluster(
 				if err := operator.DestroyComponent(getter, []dm.Instance{instance}, spec, options); err != nil {
 					log.Warnf("failed to destroy %s: %v", component.Name(), err)
 				}
-
-				continue
 			}
 		}
 		return nil
@@ -152,13 +150,13 @@ func ScaleInDMCluster(
 
 			switch component.Name() {
 			case dm.ComponentDMMaster:
-				name := instance.(*dm.DMMasterInstance).Name
+				name := instance.(*dm.MasterInstance).Name
 				err := dmMasterClient.OfflineMaster(name, retryOpt)
 				if err != nil {
 					return errors.AddStack(err)
 				}
 			case dm.ComponentDMWorker:
-				name := instance.(*dm.DMWorkerInstance).Name
+				name := instance.(*dm.WorkerInstance).Name
 				err := dmMasterClient.OfflineWorker(name, retryOpt)
 				if err != nil {
 					return errors.AddStack(err)

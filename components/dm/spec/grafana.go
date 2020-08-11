@@ -71,6 +71,10 @@ type GrafanaInstance struct {
 
 // InitConfig implement Instance interface
 func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+	if len(i.topo.Monitors) == 0 {
+		return errors.New("no prometheus found in topology")
+	}
+
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
@@ -102,19 +106,27 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		return err
 	}
 
+	var dirs []string
+
 	// provisioningDir Must same as in grafana.ini.tpl
 	provisioningDir := filepath.Join(paths.Deploy, "provisioning")
-	if _, _, err := e.Execute(fmt.Sprintf("mkdir -p %s", provisioningDir), false); err != nil {
-		return errors.AddStack(err)
-	}
+	dirs = append(dirs, provisioningDir)
 
 	datasourceDir := filepath.Join(provisioningDir, "datasources")
-	if _, _, err := e.Execute(fmt.Sprintf("mkdir -p %s", datasourceDir), false); err != nil {
-		return errors.AddStack(err)
-	}
+	dirs = append(dirs, datasourceDir)
 
 	dashboardDir := filepath.Join(provisioningDir, "dashboards")
-	if _, _, err := e.Execute(fmt.Sprintf("mkdir -p %s", dashboardDir), false); err != nil {
+	dirs = append(dirs, dashboardDir)
+
+	var cmd string
+	for _, dir := range dirs {
+		if cmd != "" {
+			cmd += ";"
+		}
+		cmd += fmt.Sprintf("mkdir -p %s", dir)
+	}
+
+	if _, _, err := e.Execute(cmd, false); err != nil {
 		return errors.AddStack(err)
 	}
 
@@ -129,9 +141,6 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 	}
 
 	// transfer datasource.yml
-	if len(i.topo.Monitors) == 0 {
-		return errors.New("no prometheus found in topology")
-	}
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
 	if err := config.NewDatasourceConfig(clusterName, i.topo.Monitors[0].Host).
 		WithPort(uint64(i.topo.Monitors[0].Port)).
