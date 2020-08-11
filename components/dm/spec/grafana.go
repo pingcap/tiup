@@ -16,6 +16,7 @@ package spec
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster"
@@ -118,14 +119,7 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 	dashboardDir := filepath.Join(provisioningDir, "dashboards")
 	dirs = append(dirs, dashboardDir)
 
-	var cmd string
-	for _, dir := range dirs {
-		if cmd != "" {
-			cmd += ";"
-		}
-		cmd += fmt.Sprintf("mkdir -p %s", dir)
-	}
-
+	cmd := fmt.Sprintf("mkdir -p %s", strings.Join(dirs, " "))
 	if _, _, err := e.Execute(cmd, false); err != nil {
 		return errors.AddStack(err)
 	}
