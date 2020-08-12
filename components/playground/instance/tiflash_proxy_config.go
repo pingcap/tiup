@@ -34,7 +34,8 @@ key-path = ""
 addr = "0.0.0.0:%[4]d"
 advertise-addr = "%[2]s:%[4]d"
 engine-addr = "%[2]s:%[3]d"
-status-addr = "%[2]s:%[5]d"
+status-addr = "0.0.0.0:%[5]d"
+advertise-status-addr = "%[2]s:%[5]d"
 
 [storage]
 data-dir = "%[6]s"
