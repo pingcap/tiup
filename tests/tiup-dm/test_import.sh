@@ -66,4 +66,19 @@ EOF
 	# ansible-playbook stop.yml
 }
 
-deploy_by_ansible
+
+function test() {
+	deploy_by_ansible
+
+	mkdir -p /home/tidb/.tiup/bin
+	cp /root/.tiup/bin/root.json /home/tidb/.tiup/bin/
+	chown -R tidb:tidb /home/tidb/.tiup
+
+su tidb <<EOF
+	tiup-dm --yes import --dir /home/tidb/dm-ansible
+	tiup-dm --yes start test-cluster
+	tiup-dm --yes destroy test-cluster
+EOF
+}
+
+test
