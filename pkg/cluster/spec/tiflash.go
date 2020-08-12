@@ -244,38 +244,24 @@ server_configs:
 // InitTiFlashLearnerConfig initializes TiFlash learner config file
 func (i *TiFlashInstance) InitTiFlashLearnerConfig(cfg *scripts.TiFlashScript, clusterVersion string, src map[string]interface{}) (map[string]interface{}, error) {
 	topo := Specification{}
-	var err error
+	var statusAddr string
 
 	firstDataDir := strings.Split(cfg.DataDir, ",")[0]
 
 	if semver.Compare("v4.0.5", clusterVersion) <= 0 {
-		err = yaml.Unmarshal([]byte(fmt.Sprintf(`
-server_configs:
-  tiflash-learner:
-    log-file: "%[1]s/tiflash_tikv.log"
-    server.engine-addr: "%[2]s:%[3]d"
-    server.addr: "0.0.0.0:%[4]d"
-    server.advertise-addr: "%[2]s:%[4]d"
-    server.status-addr: "0.0.0.0:%[5]d"
-    server.advertise-status-addr: "%[2]s:%[5]d"
-    storage.data-dir: "%[6]s/flash"
-    rocksdb.wal-dir: ""
-    security.ca-path: ""
-    security.cert-path: ""
-    security.key-path: ""
-    # Normally the number of TiFlash nodes is smaller than TiKV nodes, and we need more raft threads to match the write speed of TiKV.
-    raftstore.apply-pool-size: 4
-    raftstore.store-pool-size: 4
-`, cfg.LogDir, cfg.IP, cfg.FlashServicePort, cfg.FlashProxyPort, cfg.FlashProxyStatusPort, firstDataDir)), &topo)
+		statusAddr = fmt.Sprintf(`server.status-addr: "0.0.0.0:%[2]d"
+    server.advertise-status-addr: "%[1]s:%[2]d"`, cfg.IP, cfg.FlashProxyStatusPort)
 	} else {
-		err = yaml.Unmarshal([]byte(fmt.Sprintf(`
+		statusAddr = fmt.Sprintf(`server.status-addr: "%[1]s:%[2]d"`, cfg.IP, cfg.FlashProxyStatusPort)
+	}
+	err := yaml.Unmarshal([]byte(fmt.Sprintf(`
 server_configs:
   tiflash-learner:
     log-file: "%[1]s/tiflash_tikv.log"
     server.engine-addr: "%[2]s:%[3]d"
     server.addr: "0.0.0.0:%[4]d"
     server.advertise-addr: "%[2]s:%[4]d"
-    server.status-addr: "%[2]s:%[5]d"
+    %[5]s
     storage.data-dir: "%[6]s/flash"
     rocksdb.wal-dir: ""
     security.ca-path: ""
@@ -284,8 +270,7 @@ server_configs:
     # Normally the number of TiFlash nodes is smaller than TiKV nodes, and we need more raft threads to match the write speed of TiKV.
     raftstore.apply-pool-size: 4
     raftstore.store-pool-size: 4
-`, cfg.LogDir, cfg.IP, cfg.FlashServicePort, cfg.FlashProxyPort, cfg.FlashProxyStatusPort, firstDataDir)), &topo)
-	}
+`, cfg.LogDir, cfg.IP, cfg.FlashServicePort, cfg.FlashProxyPort, statusAddr, firstDataDir)), &topo)
 
 	if err != nil {
 		return nil, err

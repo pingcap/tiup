@@ -37,33 +37,7 @@ key-path = ""
 addr = "0.0.0.0:%[4]d"
 advertise-addr = "%[2]s:%[4]d"
 engine-addr = "%[2]s:%[3]d"
-status-addr = "%[2]s:%[5]d"
-
-[storage]
-data-dir = "%[6]s"
-
-[raftdb]
-max-open-files = 256
-`
-
-const tiflashProxyConfigV405 = `
-log-file = "%[1]s/tiflash_tikv.log"
-
-[rocksdb]
-wal-dir = ""
-max-open-files = 256
-
-[security]
-ca-path = ""
-cert-path = ""
-key-path = ""
-
-[server]
-addr = "0.0.0.0:%[4]d"
-advertise-addr = "%[2]s:%[4]d"
-engine-addr = "%[2]s:%[3]d"
-status-addr = "0.0.0.0:%[5]d"
-advertise-status-addr = "%[2]s:%[5]d"
+%[5]s
 
 [storage]
 data-dir = "%[6]s"
@@ -76,12 +50,14 @@ func writeTiFlashProxyConfig(w io.Writer, version v0manifest.Version, ip, deploy
 	// TODO: support multi-dir
 	dataDir := fmt.Sprintf("%s/flash", deployDir)
 	logDir := fmt.Sprintf("%s/log", deployDir)
-	var conf string
+	var statusAddr string
 	if semver.Compare("v4.0.5", version.String()) <= 0 {
-		conf = fmt.Sprintf(tiflashProxyConfigV405, logDir, ip, servicePort, proxyPort, proxyStatusPort, dataDir)
+		statusAddr = fmt.Sprintf(`status-addr = "0.0.0.0:%[2]d"
+advertise-status-addr = "%[1]s:%[2]d"`, ip, proxyStatusPort)
 	} else {
-		conf = fmt.Sprintf(tiflashProxyConfig, logDir, ip, servicePort, proxyPort, proxyStatusPort, dataDir)
+		statusAddr = fmt.Sprintf(`status-addr = "%[1]s:%[2]d"`, ip, proxyStatusPort)
 	}
+	conf := fmt.Sprintf(tiflashProxyConfig, logDir, ip, servicePort, proxyPort, statusAddr, dataDir)
 	_, err := w.Write([]byte(conf))
 	return err
 }
