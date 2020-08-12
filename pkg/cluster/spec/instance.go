@@ -62,8 +62,8 @@ type Component interface {
 // RollingUpdateInstance represent a instance need to transfer state when restart.
 // e.g transfer leader.
 type RollingUpdateInstance interface {
-	PreRestart(topo Topology, apiTimeoutSeconds int) error
-	PostRestart(topo Topology) error
+	PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error
+	PostRestart(topo Topology, tlsCfg *tls.Config) error
 }
 
 // Instance represents the instance.
@@ -73,7 +73,7 @@ type Instance interface {
 	Ready(executor.Executor, int64) error
 	InitConfig(e executor.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths, enableTLS bool) error
 	ScaleConfig(e executor.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
-	PrepareStart() error
+	PrepareStart(tlsCfg *tls.Config) error
 	ComponentName() string
 	InstanceName() string
 	ServiceName() string
@@ -346,7 +346,7 @@ func (i *BaseInstance) Arch() string {
 }
 
 // PrepareStart checks instance requirements before starting
-func (i *BaseInstance) PrepareStart() error {
+func (i *BaseInstance) PrepareStart(tlsCfg *tls.Config) error {
 	return nil
 }
 

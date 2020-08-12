@@ -14,6 +14,7 @@
 package task
 
 import (
+	"crypto/tls"
 	"fmt"
 	"path/filepath"
 
@@ -248,11 +249,13 @@ func (b *Builder) ClusterOperate(
 	spec *spec.Specification,
 	op operator.Operation,
 	options operator.Options,
+	tlsCfg *tls.Config,
 ) *Builder {
 	b.tasks = append(b.tasks, &ClusterOperate{
 		spec:    spec,
 		op:      op,
 		options: options,
+		tlsCfg:  tlsCfg,
 	})
 
 	return b

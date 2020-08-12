@@ -270,7 +270,7 @@ func (i *TiKVInstance) ScaleConfig(
 var _ RollingUpdateInstance = &TiKVInstance{}
 
 // PreRestart implements RollingUpdateInstance interface.
-func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
+func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
 	timeoutOpt := &utils.RetryOption{
 		Timeout: time.Second * time.Duration(apiTimeoutSeconds),
 		Delay:   time.Second * 2,
@@ -285,7 +285,7 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
 		return nil
 	}
 
-	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, nil)
+	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
 
 	// Make sure there's leader of PD.
 	// Although we evict pd leader when restart pd,
@@ -306,7 +306,7 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
 }
 
 // PostRestart implements RollingUpdateInstance interface.
-func (i *TiKVInstance) PostRestart(topo Topology) error {
+func (i *TiKVInstance) PostRestart(topo Topology, tlsCfg *tls.Config) error {
 	tidbTopo, ok := topo.(*Specification)
 	if !ok {
 		panic("should be type of tidb topology")
@@ -316,7 +316,7 @@ func (i *TiKVInstance) PostRestart(topo Topology) error {
 		return nil
 	}
 
-	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, nil)
+	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
 
 	// remove store leader evict scheduler after restart
 	if err := pdClient.RemoveStoreEvict(addr(i)); err != nil {

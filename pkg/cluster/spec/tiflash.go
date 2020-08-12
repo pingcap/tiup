@@ -436,10 +436,10 @@ func (i *TiFlashInstance) getEndpoints() []string {
 }
 
 // PrepareStart checks TiFlash requirements before starting
-func (i *TiFlashInstance) PrepareStart() error {
+func (i *TiFlashInstance) PrepareStart(tlsCfg *tls.Config) error {
 	endPoints := i.getEndpoints()
 	// set enable-placement-rules to true via PDClient
-	pdClient := api.NewPDClient(endPoints, 10*time.Second, nil)
+	pdClient := api.NewPDClient(endPoints, 10*time.Second, tlsCfg)
 	enablePlacementRules, err := json.Marshal(replicateConfig{
 		EnablePlacementRules: "true",
 	})

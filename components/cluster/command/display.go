@@ -14,6 +14,7 @@
 package command
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/url"
@@ -91,7 +92,14 @@ func displayDashboardInfo(clusterName string) error {
 		pdEndpoints = append(pdEndpoints, fmt.Sprintf("%s:%d", pd.Host, pd.ClientPort))
 	}
 
-	pdAPI := api.NewPDClient(pdEndpoints, 2*time.Second, nil)
+	var tlsCfg *tls.Config
+	if metadata.Topology.GlobalOptions.TLSEnabled {
+		tlsCfg, err = spec.LoadClientCert(tidbSpec.Path(clusterName, spec.TLSCertKeyDir))
+		if err != nil {
+			return perrs.AddStack(err)
+		}
+	}
+	pdAPI := api.NewPDClient(pdEndpoints, 2*time.Second, tlsCfg)
 	dashboardAddr, err := pdAPI.GetDashboardAddress()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve TiDB Dashboard instance from PD: %s", err)
@@ -120,8 +128,17 @@ func destroyTombstoneIfNeed(clusterName string, metadata *spec.ClusterMeta, opt 
 		return nil
 	}
 
+	var tlsCfg *tls.Config
+	var err error
+	if metadata.Topology.GlobalOptions.TLSEnabled {
+		tlsCfg, err = spec.LoadClientCert(tidbSpec.Path(clusterName, spec.TLSCertKeyDir))
+		if err != nil {
+			return perrs.AddStack(err)
+		}
+	}
+
 	ctx := task.NewContext()
-	err := ctx.SetSSHKeySet(spec.ClusterPath(clusterName, "ssh", "id_rsa"),
+	err = ctx.SetSSHKeySet(spec.ClusterPath(clusterName, "ssh", "id_rsa"),
 		spec.ClusterPath(clusterName, "ssh", "id_rsa.pub"))
 	if err != nil {
 		return perrs.AddStack(err)
@@ -132,7 +149,7 @@ func destroyTombstoneIfNeed(clusterName string, metadata *spec.ClusterMeta, opt 
 		return perrs.AddStack(err)
 	}
 
-	nodes, err := operator.DestroyTombstone(ctx, topo, true /* returnNodesOnly */, opt)
+	nodes, err := operator.DestroyTombstone(ctx, topo, true /* returnNodesOnly */, opt, tlsCfg)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -143,7 +160,7 @@ func destroyTombstoneIfNeed(clusterName string, metadata *spec.ClusterMeta, opt 
 
 	log.Infof("Start destroy Tombstone nodes: %v ...", nodes)
 
-	_, err = operator.DestroyTombstone(ctx, topo, false /* returnNodesOnly */, opt)
+	_, err = operator.DestroyTombstone(ctx, topo, false /* returnNodesOnly */, opt, tlsCfg)
 	if err != nil {
 		return perrs.AddStack(err)
 	}

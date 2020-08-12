@@ -136,13 +136,21 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
+	var tlsCfg *tls.Config
+	if topo.BaseTopo().GlobalOptions.TLSEnabled {
+		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(name, spec.TLSCertKeyDir))
+		if err != nil {
+			return perrs.AddStack(err)
+		}
+	}
+
 	b := task.NewBuilder().
 		SSHKeySet(
 			m.specManager.Path(name, "ssh", "id_rsa"),
 			m.specManager.Path(name, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, options.SSHTimeout, options.NativeSSH).
 		Func("StartCluster", func(ctx *task.Context) error {
-			return operator.Start(ctx, topo, options)
+			return operator.Start(ctx, topo, options, tlsCfg)
 		})
 
 	for _, f := range fn {
@@ -173,13 +181,21 @@ func (m *Manager) StopCluster(clusterName string, options operator.Options) erro
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
+	var tlsCfg *tls.Config
+	if topo.BaseTopo().GlobalOptions.TLSEnabled {
+		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+		if err != nil {
+			return perrs.AddStack(err)
+		}
+	}
+
 	t := task.NewBuilder().
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(metadata.GetTopology(), base.User, options.SSHTimeout, options.NativeSSH).
 		Func("StopCluster", func(ctx *task.Context) error {
-			return operator.Stop(ctx, topo, options)
+			return operator.Stop(ctx, topo, options, tlsCfg)
 		}).
 		Build()
 
@@ -205,13 +221,21 @@ func (m *Manager) RestartCluster(clusterName string, options operator.Options) e
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
+	var tlsCfg *tls.Config
+	if topo.BaseTopo().GlobalOptions.TLSEnabled {
+		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+		if err != nil {
+			return perrs.AddStack(err)
+		}
+	}
+
 	t := task.NewBuilder().
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, options.SSHTimeout, options.NativeSSH).
 		Func("RestartCluster", func(ctx *task.Context) error {
-			return operator.Restart(ctx, topo, options)
+			return operator.Restart(ctx, topo, options, tlsCfg)
 		}).
 		Build()
 
@@ -270,6 +294,14 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
+	var tlsCfg *tls.Config
+	if topo.BaseTopo().GlobalOptions.TLSEnabled {
+		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+		if err != nil {
+			return perrs.AddStack(err)
+		}
+	}
+
 	if !skipConfirm {
 		target := ""
 		if cleanOpt.CleanupData && cleanOpt.CleanupLog {
@@ -298,7 +330,7 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.NativeSSH).
 		Func("StopCluster", func(ctx *task.Context) error {
-			return operator.Stop(ctx, topo, operator.Options{})
+			return operator.Stop(ctx, topo, operator.Options{}, tlsCfg)
 		}).
 		Func("CleanupCluster", func(ctx *task.Context) error {
 			return operator.Cleanup(ctx, topo, cleanOpt)
@@ -328,6 +360,14 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
+	var tlsCfg *tls.Config
+	if topo.BaseTopo().GlobalOptions.TLSEnabled {
+		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+		if err != nil {
+			return perrs.AddStack(err)
+		}
+	}
+
 	if !skipConfirm {
 		if err := cliutil.PromptForConfirmOrAbortError(
 			"This operation will destroy %s %s cluster %s and its data.\nDo you want to continue? [y/N]:",
@@ -345,7 +385,7 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.NativeSSH).
 		Func("StopCluster", func(ctx *task.Context) error {
-			return operator.Stop(ctx, topo, operator.Options{})
+			return operator.Stop(ctx, topo, operator.Options{}, tlsCfg)
 		}).
 		Func("DestroyCluster", func(ctx *task.Context) error {
 			return operator.Destroy(ctx, topo, destroyOpt)
@@ -721,9 +761,16 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 		tb = tb.ParallelStep("+ Refresh monitor configs", monitorConfigTasks...)
 	}
 
+	var tlsCfg *tls.Config
+	if topo.BaseTopo().GlobalOptions.TLSEnabled {
+		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+		if err != nil {
+			return perrs.AddStack(err)
+		}
+	}
 	if !skipRestart {
 		tb = tb.Func("UpgradeCluster", func(ctx *task.Context) error {
-			return operator.Upgrade(ctx, topo, opt)
+			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		})
 	}
 
@@ -858,6 +905,13 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 		}
 	}
 
+	var tlsCfg *tls.Config
+	if topo.BaseTopo().GlobalOptions.TLSEnabled {
+		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+		if err != nil {
+			return perrs.AddStack(err)
+		}
+	}
 	t := task.NewBuilder().
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
@@ -866,7 +920,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 		Parallel(downloadCompTasks...).
 		Parallel(copyCompTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
-			return operator.Upgrade(ctx, topo, opt)
+			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		}).
 		Build()
 
@@ -924,6 +978,13 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 		replacePackageTasks = append(replacePackageTasks, tb.Build())
 	}
 
+	var tlsCfg *tls.Config
+	if topo.BaseTopo().GlobalOptions.TLSEnabled {
+		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+		if err != nil {
+			return perrs.AddStack(err)
+		}
+	}
 	t := task.NewBuilder().
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
@@ -931,7 +992,7 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.NativeSSH).
 		Parallel(replacePackageTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
-			return operator.Upgrade(ctx, topo, opt)
+			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		}).
 		Build()
 
@@ -1255,7 +1316,7 @@ func (m *Manager) ScaleIn(
 	nativeSSH bool,
 	force bool,
 	nodes []string,
-	scale func(builer *task.Builder, metadata spec.Metadata),
+	scale func(builer *task.Builder, metadata spec.Metadata, tlsCfg *tls.Config),
 ) error {
 	if !skipConfirm {
 		if err := cliutil.PromptForConfirmOrAbortError(
@@ -1345,6 +1406,13 @@ func (m *Manager) ScaleIn(
 			return err
 		}
 	}
+	var tlsCfg *tls.Config
+	if topo.BaseTopo().GlobalOptions.TLSEnabled {
+		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+		if err != nil {
+			return perrs.AddStack(err)
+		}
+	}
 
 	b := task.NewBuilder().
 		SSHKeySet(
@@ -1353,7 +1421,7 @@ func (m *Manager) ScaleIn(
 		ClusterSSH(topo, base.User, sshTimeout, nativeSSH)
 
 	// TODO: support command scale in operation.
-	scale(b, metadata)
+	scale(b, metadata, tlsCfg)
 
 	t := b.Parallel(regenConfigTasks...).Parallel(buildDynReloadProm(metadata.GetTopology())...).Build()
 
@@ -1800,6 +1868,15 @@ func buildScaleOutTask(
 	base := metadata.GetBaseMeta()
 	specManager := m.specManager
 
+	var tlsCfg *tls.Config
+	var err error
+	if topo.BaseTopo().GlobalOptions.TLSEnabled {
+		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+		if err != nil {
+			return nil, perrs.AddStack(err)
+		}
+	}
+
 	// Initialize the environments
 	initializedHosts := set.NewStringSet()
 	metadata.GetTopology().IterInstance(func(instance spec.Instance) {
@@ -2008,7 +2085,7 @@ func buildScaleOutTask(
 	// TODO: find another way to make sure current cluster started
 	builder.
 		Func("StartCluster", func(ctx *task.Context) error {
-			return operator.Start(ctx, metadata.GetTopology(), operator.Options{OptTimeout: optTimeout})
+			return operator.Start(ctx, metadata.GetTopology(), operator.Options{OptTimeout: optTimeout}, tlsCfg)
 		}).
 		ClusterSSH(newPart, base.User, sshTimeout, nativeSSH).
 		Func("Save meta", func(_ *task.Context) error {
@@ -2016,7 +2093,7 @@ func buildScaleOutTask(
 			return m.specManager.SaveMeta(clusterName, metadata)
 		}).
 		Func("StartCluster", func(ctx *task.Context) error {
-			return operator.Start(ctx, newPart, operator.Options{OptTimeout: optTimeout})
+			return operator.Start(ctx, newPart, operator.Options{OptTimeout: optTimeout}, tlsCfg)
 		}).
 		Parallel(refreshConfigTasks...).
 		Parallel(buildDynReloadProm(metadata.GetTopology())...)

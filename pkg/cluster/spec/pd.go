@@ -313,7 +313,7 @@ func (i *PDInstance) ScaleConfig(
 var _ RollingUpdateInstance = &PDInstance{}
 
 // PreRestart implements RollingUpdateInstance interface.
-func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
+func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
 	timeoutOpt := &utils.RetryOption{
 		Timeout: time.Second * time.Duration(apiTimeoutSeconds),
 		Delay:   time.Second * 2,
@@ -324,7 +324,7 @@ func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
 		panic("topo should be type of tidb topology")
 	}
 
-	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, nil)
+	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
 
 	leader, err := pdClient.GetLeader()
 	if err != nil {
@@ -341,7 +341,7 @@ func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
 }
 
 // PostRestart implements RollingUpdateInstance interface.
-func (i *PDInstance) PostRestart(topo Topology) error {
+func (i *PDInstance) PostRestart(topo Topology, tlsCfg *tls.Config) error {
 	// intend to do nothing
 	return nil
 }
