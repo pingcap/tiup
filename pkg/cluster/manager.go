@@ -1111,18 +1111,18 @@ func (m *Manager) Deploy(
 		logDir := clusterutil.Abs(globalOptions.User, inst.LogDir())
 		// Deploy component
 		// prepare deployment server
-		dirs := []string{
+		deployDirs := []string{
 			deployDir, logDir,
 			filepath.Join(deployDir, "bin"),
 			filepath.Join(deployDir, "conf"),
 			filepath.Join(deployDir, "scripts"),
 		}
 		if globalOptions.TLSEnabled {
-			dirs = append(dirs, filepath.Join(deployDir, "tls"))
+			deployDirs = append(deployDirs, filepath.Join(deployDir, "tls"))
 		}
 		t := task.NewBuilder().
 			UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, sshTimeout, nativeSSH).
-			Mkdir(globalOptions.User, inst.GetHost(), dirs...).
+			Mkdir(globalOptions.User, inst.GetHost(), deployDirs...).
 			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
 
 		if deployerInstance, ok := inst.(DeployerInstance); ok {
@@ -1828,6 +1828,7 @@ func buildScaleOutTask(
 	// Download missing component
 	downloadCompTasks = convertStepDisplaysToTasks(BuildDownloadCompTasks(base.Version, newPart, m.bindVersion))
 
+	var iterErr error
 	// Deploy the new topology and refresh the configuration
 	newPart.IterInstance(func(inst spec.Instance) {
 		version := m.bindVersion(inst.ComponentName(), base.Version)
@@ -1837,14 +1838,19 @@ func buildScaleOutTask(
 		// log dir will always be with values, but might not used by the component
 		logDir := clusterutil.Abs(base.User, inst.LogDir())
 
+		deployDirs := []string{
+			deployDir, logDir,
+			filepath.Join(deployDir, "bin"),
+			filepath.Join(deployDir, "conf"),
+			filepath.Join(deployDir, "scripts"),
+		}
+		if topo.BaseTopo().GlobalOptions.TLSEnabled {
+			deployDirs = append(deployDirs, filepath.Join(deployDir, "tls"))
+		}
 		// Deploy component
 		tb := task.NewBuilder().
 			UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, sshTimeout, nativeSSH).
-			Mkdir(base.User, inst.GetHost(),
-				deployDir, logDir,
-				filepath.Join(deployDir, "bin"),
-				filepath.Join(deployDir, "conf"),
-				filepath.Join(deployDir, "scripts")).
+			Mkdir(base.User, inst.GetHost(), deployDirs...).
 			Mkdir(base.User, inst.GetHost(), dataDirs...)
 
 		srcPath := ""
@@ -1871,6 +1877,19 @@ func buildScaleOutTask(
 				)
 			}
 		}
+		// generate and transfer tls cert for instance
+		if topo.BaseTopo().GlobalOptions.TLSEnabled {
+			ca, err := crypto.ReadCA(
+				clusterName,
+				m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSCACert),
+				m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSCAKey),
+			)
+			iterErr = err
+			tb = tb.TLSCert(inst, ca, meta.DirPaths{
+				Deploy: deployDir,
+				Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
+			})
+		}
 
 		t := tb.ScaleConfig(clusterName,
 			base.Version,
@@ -1886,6 +1905,9 @@ func buildScaleOutTask(
 		).Build()
 		deployCompTasks = append(deployCompTasks, t)
 	})
+	if iterErr != nil {
+		return nil, iterErr
+	}
 
 	hasImported := false
 

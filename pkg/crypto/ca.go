@@ -17,7 +17,9 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"time"
 )
@@ -128,4 +130,51 @@ func (ca *CertificateAuthority) Sign(csrBytes []byte) ([]byte, error) {
 	}
 
 	return x509.CreateCertificate(rand.Reader, template, ca.Cert, csr.PublicKey, ca.Key.Signer())
+}
+
+// ReadCA reads an existing CA certificate from disk
+func ReadCA(clsName, certPath, keyPath string) (*CertificateAuthority, error) {
+	// read private key
+	rawKey, err := ioutil.ReadFile(keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading CA private key for %s: %s", clsName, err)
+	}
+	keyPem, _ := pem.Decode(rawKey)
+	if keyPem == nil {
+		return nil, fmt.Errorf("error decoding CA private key for %s", clsName)
+	}
+	var privKey PrivKey
+	switch keyPem.Type {
+	case "RSA PRIVATE KEY":
+		pk, err := x509.ParsePKCS1PrivateKey(keyPem.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("error decoding CA private key for %s: %s", clsName, err)
+		}
+		privKey = &RSAPrivKey{key: pk}
+	default:
+		return nil, fmt.Errorf("the CA private key type \"%s\" is not supported", keyPem.Type)
+	}
+
+	// read certificate
+	rawCert, err := ioutil.ReadFile(certPath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading CA certificate for %s: %s", clsName, err)
+	}
+	certPem, _ := pem.Decode(rawCert)
+	if certPem == nil {
+		return nil, fmt.Errorf("error decoding CA certificate for %s", clsName)
+	}
+	if certPem.Type != "CERTIFICATE" {
+		return nil, fmt.Errorf("the CA certificate type \"%s\" is not valid", certPem.Type)
+	}
+	cert, err := x509.ParseCertificate(certPem.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding CA certificate for %s: %s", clsName, err)
+	}
+
+	return &CertificateAuthority{
+		ClusterName: clsName,
+		Cert:        cert,
+		Key:         privKey,
+	}, nil
 }

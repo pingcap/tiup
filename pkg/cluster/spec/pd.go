@@ -267,10 +267,10 @@ func (i *PDInstance) ScaleConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	// We need pd.toml here, but we don't need to check it
-	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, enableTLS); err != nil &&
+	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths,
+		topo.BaseTopo().GlobalOptions.TLSEnabled); err != nil &&
 		errors.Cause(err) != ErrorCheckConfig {
 		return err
 	}
@@ -289,7 +289,7 @@ func (i *PDInstance) ScaleConfig(
 		WithClientPort(spec.ClientPort).
 		AppendEndpoints(cluster.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost())
-	if enableTLS {
+	if topo.BaseTopo().GlobalOptions.TLSEnabled {
 		cfg = cfg.WithScheme("https")
 	}
 

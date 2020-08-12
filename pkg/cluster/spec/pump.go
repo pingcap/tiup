@@ -120,7 +120,6 @@ func (i *PumpInstance) ScaleConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	s := i.topo
 	defer func() {
@@ -128,7 +127,7 @@ func (i *PumpInstance) ScaleConfig(
 	}()
 	i.topo = mustBeClusterTopo(topo)
 
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, enableTLS)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, topo.BaseTopo().GlobalOptions.TLSEnabled)
 }
 
 // InitConfig implements Instance interface.

@@ -574,7 +574,8 @@ func (s *Specification) Endpoints(user string) []*scripts.PDScript {
 			deployDir,
 			dataDir,
 			logDir,
-		).WithClientPort(spec.ClientPort).
+		).
+			WithClientPort(spec.ClientPort).
 			WithPeerPort(spec.PeerPort).
 			WithListenHost(spec.ListenHost)
 		if s.GlobalOptions.TLSEnabled {

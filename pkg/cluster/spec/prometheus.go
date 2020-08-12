@@ -236,10 +236,9 @@ func (i *MonitorInstance) ScaleConfig(
 	clusterVersion string,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	s := i.topo
 	defer func() { i.topo = s }()
 	i.topo = mustBeClusterTopo(topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, enableTLS)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, topo.BaseTopo().GlobalOptions.TLSEnabled)
 }

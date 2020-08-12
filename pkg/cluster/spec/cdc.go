@@ -116,7 +116,6 @@ func (i *CDCInstance) ScaleConfig(
 	clusterVersion,
 	user string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	s := i.topo
 	defer func() {
@@ -124,7 +123,7 @@ func (i *CDCInstance) ScaleConfig(
 	}()
 	i.topo = mustBeClusterTopo(topo)
 
-	return i.InitConfig(e, clusterName, clusterVersion, user, paths, enableTLS)
+	return i.InitConfig(e, clusterName, clusterVersion, user, paths, topo.BaseTopo().GlobalOptions.TLSEnabled)
 }
 
 // InitConfig implements Instance interface.

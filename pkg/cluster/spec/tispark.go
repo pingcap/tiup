@@ -268,13 +268,12 @@ func (i *TiSparkMasterInstance) ScaleConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	s := i.topo
 	defer func() { i.topo = s }()
 	cluster := mustBeClusterTopo(topo)
 	i.topo = cluster.Merge(i.topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, enableTLS)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, topo.BaseTopo().GlobalOptions.TLSEnabled)
 }
 
 // TiSparkWorkerComponent represents TiSpark slave component.
@@ -431,11 +430,10 @@ func (i *TiSparkWorkerInstance) ScaleConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	s := i.topo
 	defer func() { i.topo = s }()
 	cluster := mustBeClusterTopo(topo)
 	i.topo = cluster.Merge(i.topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, enableTLS)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, topo.BaseTopo().GlobalOptions.TLSEnabled)
 }
