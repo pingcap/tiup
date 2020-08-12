@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	dm "github.com/pingcap/tiup/components/dm/spec"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -98,16 +97,6 @@ func (b *Builder) ClusterSSH(spec spec.Topology, deployUser string, sshTimeout i
 // UpdateMeta maintain the meta information
 func (b *Builder) UpdateMeta(cluster string, metadata *spec.ClusterMeta, deletedNodeIds []string) *Builder {
 	b.tasks = append(b.tasks, &UpdateMeta{
-		cluster:        cluster,
-		metadata:       metadata,
-		deletedNodesID: deletedNodeIds,
-	})
-	return b
-}
-
-// UpdateDMMeta maintain the dm meta information
-func (b *Builder) UpdateDMMeta(cluster string, metadata *dm.Metadata, deletedNodeIds []string) *Builder {
-	b.tasks = append(b.tasks, &UpdateDMMeta{
 		cluster:        cluster,
 		metadata:       metadata,
 		deletedNodesID: deletedNodeIds,
@@ -334,14 +323,14 @@ func (b *Builder) CheckSys(host, dataDir, checkType string, topo *spec.Specifica
 }
 
 // DeploySpark deployes spark as dependency of TiSpark
-func (b *Builder) DeploySpark(inst spec.Instance, version, srcPath, deployDir string) *Builder {
+func (b *Builder) DeploySpark(inst spec.Instance, version, srcPath, deployDir string, bindVersion spec.BindVersion) *Builder {
 	sparkSubPath := spec.ComponentSubDir(spec.ComponentSpark,
-		spec.ComponentVersion(spec.ComponentSpark, version))
+		bindVersion(spec.ComponentSpark, version))
 	return b.CopyComponent(
 		spec.ComponentSpark,
 		inst.OS(),
 		inst.Arch(),
-		spec.ComponentVersion(spec.ComponentSpark, version),
+		bindVersion(spec.ComponentSpark, version),
 		srcPath,
 		inst.GetHost(),
 		deployDir,

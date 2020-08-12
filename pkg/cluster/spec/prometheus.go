@@ -72,37 +72,37 @@ func (c *MonitorComponent) Name() string {
 func (c *MonitorComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Monitors))
 	for _, s := range c.Monitors {
-		ins = append(ins, &MonitorInstance{instance{
+		ins = append(ins, &MonitorInstance{BaseInstance{
 			InstanceSpec: s,
-			name:         c.Name(),
-			host:         s.Host,
-			port:         s.Port,
-			sshp:         s.SSHPort,
-			topo:         c.Specification,
+			Name:         c.Name(),
+			Host:         s.Host,
+			Port:         s.Port,
+			SSHP:         s.SSHPort,
 
-			usedPorts: []int{
+			Ports: []int{
 				s.Port,
 			},
-			usedDirs: []string{
+			Dirs: []string{
 				s.DeployDir,
 				s.DataDir,
 			},
-			statusFn: func(_ ...string) string {
+			StatusFn: func(_ ...string) string {
 				return "-"
 			},
-		}})
+		}, c.Specification})
 	}
 	return ins
 }
 
 // MonitorInstance represent the monitor instance
 type MonitorInstance struct {
-	instance
+	BaseInstance
+	topo *Specification
 }
 
 // InitConfig implement Instance interface
 func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
-	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -129,51 +129,53 @@ func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		return err
 	}
 
+	topo := i.topo
+
 	// transfer config
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("tikv_%s.yml", i.GetHost()))
+	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
 	cfig := config.NewPrometheusConfig(clusterName)
-	cfig.AddBlackbox(i.GetHost(), uint64(i.instance.topo.MonitoredOptions.BlackboxExporterPort))
+	cfig.AddBlackbox(i.GetHost(), uint64(topo.MonitoredOptions.BlackboxExporterPort))
 	uniqueHosts := set.NewStringSet()
-	for _, pd := range i.instance.topo.PDServers {
+	for _, pd := range topo.PDServers {
 		uniqueHosts.Insert(pd.Host)
 		cfig.AddPD(pd.Host, uint64(pd.ClientPort))
 	}
-	for _, kv := range i.instance.topo.TiKVServers {
+	for _, kv := range topo.TiKVServers {
 		uniqueHosts.Insert(kv.Host)
 		cfig.AddTiKV(kv.Host, uint64(kv.StatusPort))
 	}
-	for _, db := range i.instance.topo.TiDBServers {
+	for _, db := range topo.TiDBServers {
 		uniqueHosts.Insert(db.Host)
 		cfig.AddTiDB(db.Host, uint64(db.StatusPort))
 	}
-	for _, flash := range i.instance.topo.TiFlashServers {
+	for _, flash := range topo.TiFlashServers {
 		uniqueHosts.Insert(flash.Host)
 		cfig.AddTiFlashLearner(flash.Host, uint64(flash.FlashProxyStatusPort))
 		cfig.AddTiFlash(flash.Host, uint64(flash.StatusPort))
 	}
-	for _, pump := range i.instance.topo.PumpServers {
+	for _, pump := range topo.PumpServers {
 		uniqueHosts.Insert(pump.Host)
 		cfig.AddPump(pump.Host, uint64(pump.Port))
 	}
-	for _, drainer := range i.instance.topo.Drainers {
+	for _, drainer := range topo.Drainers {
 		uniqueHosts.Insert(drainer.Host)
 		cfig.AddDrainer(drainer.Host, uint64(drainer.Port))
 	}
-	for _, cdc := range i.instance.topo.CDCServers {
+	for _, cdc := range topo.CDCServers {
 		uniqueHosts.Insert(cdc.Host)
 		cfig.AddCDC(cdc.Host, uint64(cdc.Port))
 	}
-	for _, grafana := range i.instance.topo.Grafana {
+	for _, grafana := range topo.Grafana {
 		uniqueHosts.Insert(grafana.Host)
 		cfig.AddGrafana(grafana.Host, uint64(grafana.Port))
 	}
-	for _, alertmanager := range i.instance.topo.Alertmanager {
+	for _, alertmanager := range topo.Alertmanager {
 		uniqueHosts.Insert(alertmanager.Host)
 		cfig.AddAlertmanager(alertmanager.Host, uint64(alertmanager.WebPort))
 	}
 	for host := range uniqueHosts {
-		cfig.AddNodeExpoertor(host, uint64(i.instance.topo.MonitoredOptions.NodeExporterPort))
-		cfig.AddBlackboxExporter(host, uint64(i.instance.topo.MonitoredOptions.BlackboxExporterPort))
+		cfig.AddNodeExpoertor(host, uint64(topo.MonitoredOptions.NodeExporterPort))
+		cfig.AddBlackboxExporter(host, uint64(topo.MonitoredOptions.BlackboxExporterPort))
 		cfig.AddMonitoredServer(host)
 	}
 
@@ -187,8 +189,8 @@ func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 // ScaleConfig deploy temporary config on scaling
 func (i *MonitorInstance) ScaleConfig(e executor.Executor, topo Topology,
 	clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error {
-	s := i.instance.topo
-	defer func() { i.instance.topo = s }()
-	i.instance.topo = mustBeClusterTopo(topo)
+	s := i.topo
+	defer func() { i.topo = s }()
+	i.topo = mustBeClusterTopo(topo)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }

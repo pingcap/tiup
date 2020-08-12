@@ -18,8 +18,8 @@ import (
 	"strings"
 )
 
-// ComponentVersion maps the TiDB version to the third components binding version
-func ComponentVersion(comp, version string) string {
+// TiDBComponentVersion maps the TiDB version to the third components binding version
+func TiDBComponentVersion(comp, version string) string {
 	switch comp {
 	case ComponentAlertManager:
 		return "v0.17.0"

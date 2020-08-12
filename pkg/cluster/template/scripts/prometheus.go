@@ -30,6 +30,7 @@ type PrometheusScript struct {
 	DataDir   string
 	LogDir    string
 	NumaNode  string
+	tplFile   string
 }
 
 // NewPrometheusScript returns a PrometheusScript with given arguments
@@ -55,9 +56,19 @@ func (c *PrometheusScript) WithNumaNode(numa string) *PrometheusScript {
 	return c
 }
 
+// WithTPLFile set the template file.
+func (c *PrometheusScript) WithTPLFile(fname string) *PrometheusScript {
+	c.tplFile = fname
+	return c
+}
+
 // Config generate the config file data.
 func (c *PrometheusScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_prometheus.sh.tpl")
+	fp := c.tplFile
+	if fp == "" {
+		fp = path.Join("/templates", "scripts", "run_prometheus.sh.tpl")
+	}
+
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

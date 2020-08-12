@@ -77,7 +77,7 @@ func init() {
 
 			dmspec = spec.GetSpecManager()
 			logger.EnableAuditLog(cspec.AuditDir())
-			manager = cluster.NewManager("dm", dmspec)
+			manager = cluster.NewManager("dm", dmspec, spec.DMComponentVersion)
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.
 			env, err = tiupmeta.InitEnv(repository.Options{

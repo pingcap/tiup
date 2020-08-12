@@ -168,12 +168,20 @@ func mergeImported(importConfig []byte, specConfigs ...map[string]interface{}) (
 	return lhs, nil
 }
 
-func checkConfig(e executor.Executor, componentName, clusterVersion, nodeOS, arch, config string, paths meta.DirPaths) error {
+// BindVersion map the cluster version to the third components binding version.
+type BindVersion func(comp string, version string) (bindVersion string)
+
+func checkConfig(e executor.Executor, componentName, clusterVersion, nodeOS, arch, config string, paths meta.DirPaths, bindVersion BindVersion) error {
 	repo, err := clusterutil.NewRepository(nodeOS, arch)
 	if err != nil {
 		return perrs.Annotate(ErrorCheckConfig, err.Error())
 	}
-	ver := ComponentVersion(componentName, clusterVersion)
+
+	ver := clusterVersion
+	if bindVersion != nil {
+		ver = bindVersion(componentName, clusterVersion)
+	}
+
 	entry, err := repo.ComponentBinEntry(componentName, ver)
 	if err != nil {
 		return perrs.Annotate(ErrorCheckConfig, err.Error())
