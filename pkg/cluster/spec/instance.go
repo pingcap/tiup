@@ -68,7 +68,6 @@ type Instance interface {
 	InstanceSpec
 	ID() string
 	Ready(executor.Executor, int64) error
-	WaitForDown(executor.Executor, int64) error
 	InitConfig(e executor.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
 	ScaleConfig(e executor.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
 	PrepareStart() error
@@ -128,11 +127,6 @@ type BaseInstance struct {
 // Ready implements Instance interface
 func (i *BaseInstance) Ready(e executor.Executor, timeout int64) error {
 	return PortStarted(e, i.Port, timeout)
-}
-
-// WaitForDown implements Instance interface
-func (i *BaseInstance) WaitForDown(e executor.Executor, timeout int64) error {
-	return PortStopped(e, i.Port, timeout)
 }
 
 // InitConfig init the service configuration.
