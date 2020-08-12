@@ -14,6 +14,7 @@
 package task
 
 import (
+	"encoding/pem"
 	"fmt"
 	"path/filepath"
 
@@ -58,10 +59,20 @@ func (c *TLSCert) Execute(ctx *Context) error {
 		c.paths.Cache,
 		certFileName,
 	)
+	caFile := filepath.Join(c.paths.Cache, spec.TLSCACert)
 	if err := file.SaveFileWithBackup(keyFile, privKey.Pem(), ""); err != nil {
 		return err
 	}
-	if err := file.SaveFileWithBackup(certFile, cert, ""); err != nil {
+	if err := file.SaveFileWithBackup(certFile, pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert,
+	}), ""); err != nil {
+		return err
+	}
+	if err := file.SaveFileWithBackup(caFile, pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: c.ca.Cert.Raw,
+	}), ""); err != nil {
 		return err
 	}
 
@@ -70,15 +81,20 @@ func (c *TLSCert) Execute(ctx *Context) error {
 	if !ok {
 		return ErrNoExecutor
 	}
-	if err := e.Transfer(keyFile,
-		filepath.Join(c.paths.Deploy, "tls", keyFileName),
+	if err := e.Transfer(caFile,
+		filepath.Join(c.paths.Deploy, "tls", spec.TLSCACert),
 		false /* download */); err != nil {
-		return errors.Annotate(err, "failed to transfer tls private key to server")
+		return errors.Annotate(err, "failed to transfer CA cert to server")
+	}
+	if err := e.Transfer(keyFile,
+		filepath.Join(c.paths.Deploy, "tls", fmt.Sprintf("%s-%d.pem", c.inst.Role(), c.inst.GetMainPort())),
+		false /* download */); err != nil {
+		return errors.Annotate(err, "failed to transfer TLS private key to server")
 	}
 	if err := e.Transfer(certFile,
-		filepath.Join(c.paths.Deploy, "tls", certFileName),
+		filepath.Join(c.paths.Deploy, "tls", fmt.Sprintf("%s-%d.crt", c.inst.Role(), c.inst.GetMainPort())),
 		false /* download */); err != nil {
-		return errors.Annotate(err, "failed to transfer tls cert to server")
+		return errors.Annotate(err, "failed to transfer TLS cert to server")
 	}
 
 	return nil
@@ -92,5 +108,5 @@ func (c *TLSCert) Rollback(ctx *Context) error {
 // String implements the fmt.Stringer interface
 func (c *TLSCert) String() string {
 	return fmt.Sprintf("TLSCert: host=%s role=%s cn=%s",
-		c.inst.GetHost(), c.inst.Role(), c.inst.ServiceName())
+		c.inst.GetHost(), c.inst.Role(), c.inst.ComponentName())
 }

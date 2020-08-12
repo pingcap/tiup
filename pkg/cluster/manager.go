@@ -660,6 +660,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 			base.Version,
 			m.specManager,
 			inst, base.User,
+			topo.BaseTopo().GlobalOptions.TLSEnabled,
 			opt.IgnoreConfigCheck,
 			meta.DirPaths{
 				Deploy: deployDir,
@@ -815,6 +816,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 				m.specManager,
 				inst,
 				base.User,
+				topo.BaseTopo().GlobalOptions.TLSEnabled,
 				opt.IgnoreConfigCheck,
 				meta.DirPaths{
 					Deploy: deployDir,
@@ -1031,13 +1033,16 @@ func (m *Manager) Deploy(
 	if globalOptions.TLSEnabled {
 		// generate CA
 		tlsPath := m.specManager.Path(clusterName, spec.TLSCertKeyDir)
+		if err := utils.CreateDir(tlsPath); err != nil {
+			return err
+		}
 		ca, err = genAndSaveClusterCA(clusterName, tlsPath)
 		if err != nil {
 			return err
 		}
 
 		// generate client cert
-		if err = genAndSaveClientCert(ca, clusterName, spec.TLSCertKeyDir); err != nil {
+		if err = genAndSaveClientCert(ca, clusterName, tlsPath); err != nil {
 			return err
 		}
 	}
@@ -1106,13 +1111,18 @@ func (m *Manager) Deploy(
 		logDir := clusterutil.Abs(globalOptions.User, inst.LogDir())
 		// Deploy component
 		// prepare deployment server
+		dirs := []string{
+			deployDir, logDir,
+			filepath.Join(deployDir, "bin"),
+			filepath.Join(deployDir, "conf"),
+			filepath.Join(deployDir, "scripts"),
+		}
+		if globalOptions.TLSEnabled {
+			dirs = append(dirs, filepath.Join(deployDir, "tls"))
+		}
 		t := task.NewBuilder().
 			UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, sshTimeout, nativeSSH).
-			Mkdir(globalOptions.User, inst.GetHost(),
-				deployDir, logDir,
-				filepath.Join(deployDir, "bin"),
-				filepath.Join(deployDir, "conf"),
-				filepath.Join(deployDir, "scripts")).
+			Mkdir(globalOptions.User, inst.GetHost(), dirs...).
 			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
 
 		if deployerInstance, ok := inst.(DeployerInstance); ok {
@@ -1141,8 +1151,6 @@ func (m *Manager) Deploy(
 				Deploy: deployDir,
 				Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
 			})
-			// set config
-			setTLSEnabledConfigs(inst)
 		}
 
 		// generate configs for the component
@@ -1152,6 +1160,7 @@ func (m *Manager) Deploy(
 			m.specManager,
 			inst,
 			globalOptions.User,
+			topo.BaseTopo().GlobalOptions.TLSEnabled,
 			opt.IgnoreConfigCheck,
 			meta.DirPaths{
 				Deploy: deployDir,
@@ -1295,6 +1304,7 @@ func (m *Manager) ScaleIn(
 				m.specManager,
 				instance,
 				base.User,
+				topo.BaseTopo().GlobalOptions.TLSEnabled,
 				true, // always ignore config check result in scale in
 				meta.DirPaths{
 					Deploy: deployDir,
@@ -1904,6 +1914,7 @@ func buildScaleOutTask(
 			m.specManager,
 			inst,
 			base.User,
+			topo.BaseTopo().GlobalOptions.TLSEnabled,
 			true, // always ignore config check result in scale out
 			meta.DirPaths{
 				Deploy: deployDir,
@@ -2146,7 +2157,7 @@ func genAndSaveClientCert(ca *crypto.CertificateAuthority, clusterName, tlsPath 
 		return err
 	}
 
-	// save CA private key
+	// save client private key
 	if err := file.SaveFileWithBackup(filepath.Join(tlsPath, spec.TLSClientKey), privKey.Pem(), ""); err != nil {
 		return fmt.Errorf("cannot save client private key for %s: %s", clusterName, err)
 	}
@@ -2175,11 +2186,4 @@ func genAndSaveClientCert(ca *crypto.CertificateAuthority, clusterName, tlsPath 
 	}
 
 	return nil
-}
-
-func setTLSEnabledConfigs(inst spec.Instance) {
-	switch inst.ComponentName() {
-	default:
-		return
-	}
 }

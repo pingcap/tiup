@@ -160,7 +160,14 @@ type TiKVInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *TiKVInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiKVInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
@@ -213,6 +220,28 @@ func (i *TiKVInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 		}
 	}
 
+	// set TLS configs
+	if enableTLS {
+		if spec.Config == nil {
+			spec.Config = make(map[string]interface{})
+		}
+		spec.Config["security.ca-path"] = fmt.Sprintf(
+			"%s/tls/%s",
+			paths.Deploy,
+			TLSCACert,
+		)
+		spec.Config["security.cert-path"] = fmt.Sprintf(
+			"%s/tls/%s-%d.crt",
+			paths.Deploy,
+			i.Role(),
+			i.GetMainPort())
+		spec.Config["security.key-path"] = fmt.Sprintf(
+			"%s/tls/%s-%d.pem",
+			paths.Deploy,
+			i.Role(),
+			i.GetMainPort())
+	}
+
 	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
@@ -221,13 +250,21 @@ func (i *TiKVInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiKVInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiKVInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	s := i.topo
 	defer func() {
 		i.topo = s
 	}()
 	i.topo = mustBeClusterTopo(topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, enableTLS)
 }
 
 var _ RollingUpdateInstance = &TiKVInstance{}

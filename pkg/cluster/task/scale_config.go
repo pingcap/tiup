@@ -30,6 +30,7 @@ type ScaleConfig struct {
 	base           spec.Topology
 	deployUser     string
 	paths          meta.DirPaths
+	enableTLS      bool
 }
 
 // Execute implements the Task interface
@@ -45,7 +46,7 @@ func (c *ScaleConfig) Execute(ctx *Context) error {
 		return err
 	}
 
-	return c.instance.ScaleConfig(exec, c.base, c.clusterName, c.clusterVersion, c.deployUser, c.paths)
+	return c.instance.ScaleConfig(exec, c.base, c.clusterName, c.clusterVersion, c.deployUser, c.paths, c.enableTLS)
 }
 
 // Rollback implements the Task interface

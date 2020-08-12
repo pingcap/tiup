@@ -110,16 +110,23 @@ type AlertManagerInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *AlertManagerInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *AlertManagerInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
 	// Transfer start script
 	spec := i.InstanceSpec.(AlertManagerSpec)
-	cfg := scripts.NewAlertManagerScript(spec.Host, paths.Deploy, paths.Data[0], paths.Log).
+	cfg := scripts.NewAlertManagerScript(spec.Host, paths.Deploy, paths.Data[0], paths.Log, enableTLS).
 		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort).WithNumaNode(spec.NumaNode).
-		AppendEndpoints(AlertManagerEndpoints(i.topo.Alertmanager, deployUser))
+		AppendEndpoints(AlertManagerEndpoints(i.topo.Alertmanager, deployUser, enableTLS))
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_alertmanager_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -147,10 +154,17 @@ func (i *AlertManagerInstance) InitConfig(e executor.Executor, clusterName, clus
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *AlertManagerInstance) ScaleConfig(e executor.Executor, topo Topology,
-	clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error {
+func (i *AlertManagerInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName string,
+	clusterVersion string,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	s := i.topo
 	defer func() { i.topo = s }()
 	i.topo = mustBeClusterTopo(topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, enableTLS)
 }

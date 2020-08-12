@@ -107,7 +107,14 @@ type GrafanaInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *GrafanaInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
@@ -204,11 +211,18 @@ func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, 
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *GrafanaInstance) ScaleConfig(e executor.Executor, topo Topology,
-	clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error {
+func (i *GrafanaInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName string,
+	clusterVersion string,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	s := i.topo
 	defer func() { i.topo = s }()
 	cluster := mustBeClusterTopo(topo)
 	i.topo = cluster.Merge(i.topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, enableTLS)
 }

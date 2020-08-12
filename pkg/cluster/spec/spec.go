@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"path/filepath"
 	"reflect"
@@ -55,7 +56,7 @@ type (
 		User            string               `yaml:"user,omitempty" default:"tidb"`
 		Group           string               `yaml:"group,omitempty"`
 		SSHPort         int                  `yaml:"ssh_port,omitempty" default:"22" validate:"ssh_port:editable"`
-		TLSEnabled      bool                 `yaml:"tls_enabled,omitempty"`
+		TLSEnabled      bool                 `yaml:"enable_tls,omitempty"`
 		DeployDir       string               `yaml:"deploy_dir,omitempty" default:"deploy"`
 		DataDir         string               `yaml:"data_dir,omitempty" default:"data"`
 		LogDir          string               `yaml:"log_dir,omitempty"`
@@ -272,9 +273,10 @@ func (s *Specification) GetPDList() []string {
 }
 
 // GetEtcdClient load EtcdClient of current cluster
-func (s *Specification) GetEtcdClient() (*clientv3.Client, error) {
+func (s *Specification) GetEtcdClient(tlsCfg *tls.Config) (*clientv3.Client, error) {
 	return clientv3.New(clientv3.Config{
 		Endpoints: s.GetPDList(),
+		TLS:       tlsCfg,
 	})
 }
 
@@ -571,17 +573,20 @@ func (s *Specification) Endpoints(user string) []*scripts.PDScript {
 			spec.Host,
 			deployDir,
 			dataDir,
-			logDir).
-			WithClientPort(spec.ClientPort).
+			logDir,
+		).WithClientPort(spec.ClientPort).
 			WithPeerPort(spec.PeerPort).
 			WithListenHost(spec.ListenHost)
+		if s.GlobalOptions.TLSEnabled {
+			script = script.WithScheme("https")
+		}
 		ends = append(ends, script)
 	}
 	return ends
 }
 
 // AlertManagerEndpoints returns the AlertManager endpoints configurations
-func AlertManagerEndpoints(alertmanager []AlertManagerSpec, user string) []*scripts.AlertManagerScript {
+func AlertManagerEndpoints(alertmanager []AlertManagerSpec, user string, enableTLS bool) []*scripts.AlertManagerScript {
 	var ends []*scripts.AlertManagerScript
 	for _, spec := range alertmanager {
 		deployDir := clusterutil.Abs(user, spec.DeployDir)
@@ -598,7 +603,9 @@ func AlertManagerEndpoints(alertmanager []AlertManagerSpec, user string) []*scri
 			spec.Host,
 			deployDir,
 			dataDir,
-			logDir).
+			logDir,
+			enableTLS,
+		).
 			WithWebPort(spec.WebPort).
 			WithClusterPort(spec.ClusterPort)
 		ends = append(ends, script)

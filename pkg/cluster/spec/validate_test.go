@@ -347,7 +347,7 @@ func (s *metaSuiteTopo) TestTLSEnabledValidation(c *C) {
 	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
-  tls_enabled: true
+  enable_tls: true
 pd_servers:
   - host: 172.16.5.138
     peer_port: 1234
@@ -363,7 +363,7 @@ tikv_servers:
 	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
 global:
-  tls_enabled: true
+  enable_tls: true
 tidb_servers:
   - host: 172.16.5.138
     port: 1234

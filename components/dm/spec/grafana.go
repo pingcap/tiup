@@ -76,7 +76,14 @@ type GrafanaInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *GrafanaInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	if len(i.topo.Monitors) == 0 {
 		return errors.New("no prometheus found in topology")
 	}
@@ -176,13 +183,20 @@ func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, 
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *GrafanaInstance) ScaleConfig(e executor.Executor, topo spec.Topology,
-	clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error {
+func (i *GrafanaInstance) ScaleConfig(
+	e executor.Executor,
+	topo spec.Topology,
+	clusterName string,
+	clusterVersion string,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	s := i.topo
 	defer func() { i.topo = s }()
 	dmtopo := topo.(*Topology)
 	i.topo = dmtopo.Merge(i.topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, enableTLS)
 }
 
 var _ cluster.DeployerInstance = &GrafanaInstance{}

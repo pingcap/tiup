@@ -24,21 +24,23 @@ import (
 
 // CDCScript represent the data to generate cdc config
 type CDCScript struct {
-	IP        string
-	Port      int
-	DeployDir string
-	LogDir    string
-	NumaNode  string
-	Endpoints []*PDScript
+	IP         string
+	Port       int
+	DeployDir  string
+	LogDir     string
+	NumaNode   string
+	TLSEnabled bool
+	Endpoints  []*PDScript
 }
 
 // NewCDCScript returns a CDCScript with given arguments
-func NewCDCScript(ip, deployDir, logDir string) *CDCScript {
+func NewCDCScript(ip, deployDir, logDir string, enableTLS bool) *CDCScript {
 	return &CDCScript{
-		IP:        ip,
-		Port:      8300,
-		DeployDir: deployDir,
-		LogDir:    logDir,
+		IP:         ip,
+		Port:       8300,
+		DeployDir:  deployDir,
+		LogDir:     logDir,
+		TLSEnabled: enableTLS,
 	}
 }
 

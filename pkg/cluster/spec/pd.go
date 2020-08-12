@@ -156,7 +156,14 @@ type PDInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *PDInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
@@ -172,6 +179,12 @@ func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion
 		WithPeerPort(spec.PeerPort).
 		AppendEndpoints(i.topo.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost())
+
+	scheme := "http"
+	if enableTLS {
+		scheme = "https"
+		cfg = cfg.WithScheme(scheme)
+	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -191,7 +204,7 @@ func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion
 			spec.Config = map[string]interface{}{}
 		}
 		prom := i.topo.Monitors[0]
-		spec.Config["pd-server.metric-storage"] = fmt.Sprintf("http://%s:%d", prom.Host, prom.Port)
+		spec.Config["pd-server.metric-storage"] = fmt.Sprintf("%s://%s:%d", scheme, prom.Host, prom.Port)
 	}
 
 	globalConfig := i.topo.ServerConfigs.PD
@@ -217,6 +230,28 @@ func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion
 		}
 	}
 
+	// set TLS configs
+	if enableTLS {
+		if spec.Config == nil {
+			spec.Config = make(map[string]interface{})
+		}
+		spec.Config["security.cacert-path"] = fmt.Sprintf(
+			"%s/tls/%s",
+			paths.Deploy,
+			TLSCACert,
+		)
+		spec.Config["security.cert-path"] = fmt.Sprintf(
+			"%s/tls/%s-%d.crt",
+			paths.Deploy,
+			i.Role(),
+			i.GetMainPort())
+		spec.Config["security.key-path"] = fmt.Sprintf(
+			"%s/tls/%s-%d.pem",
+			paths.Deploy,
+			i.Role(),
+			i.GetMainPort())
+	}
+
 	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
@@ -225,9 +260,17 @@ func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *PDInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *PDInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	// We need pd.toml here, but we don't need to check it
-	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil &&
+	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, enableTLS); err != nil &&
 		errors.Cause(err) != ErrorCheckConfig {
 		return err
 	}
@@ -246,6 +289,9 @@ func (i *PDInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName
 		WithClientPort(spec.ClientPort).
 		AppendEndpoints(cluster.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost())
+	if enableTLS {
+		cfg = cfg.WithScheme("https")
+	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	log.Infof("script path: %s", fp)

@@ -290,7 +290,14 @@ server_configs:
 }
 
 // InitConfig implement Instance interface
-func (i *TiFlashInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiFlashInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
@@ -399,13 +406,21 @@ func (i *TiFlashInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiFlashInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiFlashInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	s := i.topo
 	defer func() {
 		i.topo = s
 	}()
 	i.topo = mustBeClusterTopo(topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, enableTLS)
 }
 
 type replicateConfig struct {

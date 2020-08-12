@@ -24,4 +24,9 @@ exec bin/cdc server \
     --addr "0.0.0.0:{{.Port}}" \
     --advertise-addr "{{.IP}}:{{.Port}}" \
     --pd "{{template "PDList" .Endpoints}}" \
+{{- if .TLSEnabled}}
+    --ca tls/ca.crt \
+    --cert tls/cdc-{{.Port}}.crt \
+    --key tls/cdc-{{.Port}}.pem \
+{{- end}}
     --log-file "{{.LogDir}}/cdc.log" 2>> "{{.LogDir}}/cdc_stderr.log"

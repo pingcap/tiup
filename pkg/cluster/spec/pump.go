@@ -94,7 +94,11 @@ func (c *PumpComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: func(_ ...string) string {
-				url := fmt.Sprintf("http://%s:%d/status", s.Host, s.Port)
+				scheme := "http"
+				if c.Specification.GlobalOptions.TLSEnabled {
+					scheme = "https"
+				}
+				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
 				return statusByURL(url)
 			},
 		}, c.Specification})
@@ -109,18 +113,33 @@ type PumpInstance struct {
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *PumpInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *PumpInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	s := i.topo
 	defer func() {
 		i.topo = s
 	}()
 	i.topo = mustBeClusterTopo(topo)
 
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, enableTLS)
 }
 
 // InitConfig implements Instance interface.
-func (i *PumpInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *PumpInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
@@ -168,6 +187,28 @@ func (i *PumpInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 		if err != nil {
 			return err
 		}
+	}
+
+	// set TLS configs
+	if enableTLS {
+		if spec.Config == nil {
+			spec.Config = make(map[string]interface{})
+		}
+		spec.Config["security.ssl-ca"] = fmt.Sprintf(
+			"%s/tls/%s",
+			paths.Deploy,
+			TLSCACert,
+		)
+		spec.Config["security.ssl-cert"] = fmt.Sprintf(
+			"%s/tls/%s-%d.crt",
+			paths.Deploy,
+			i.Role(),
+			i.GetMainPort())
+		spec.Config["security.ssl-key"] = fmt.Sprintf(
+			"%s/tls/%s-%d.pem",
+			paths.Deploy,
+			i.Role(),
+			i.GetMainPort())
 	}
 
 	return i.MergeServerConfig(e, globalConfig, spec.Config, paths)

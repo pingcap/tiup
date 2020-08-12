@@ -37,11 +37,21 @@ func newScaleInCmd() *cobra.Command {
 				if !gOpt.Force {
 					b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt).
 						UpdateMeta(clusterName, metadata, operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false)).
-						UpdateTopology(clusterName, metadata, operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false))
+						UpdateTopology(
+							clusterName,
+							tidbSpec.Path(clusterName),
+							metadata,
+							operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false), /* deleteNodeIds */
+						)
 				} else {
 					b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt).
 						UpdateMeta(clusterName, metadata, gOpt.Nodes).
-						UpdateTopology(clusterName, metadata, gOpt.Nodes)
+						UpdateTopology(
+							clusterName,
+							tidbSpec.Path(clusterName),
+							metadata,
+							gOpt.Nodes,
+						)
 				}
 			}
 

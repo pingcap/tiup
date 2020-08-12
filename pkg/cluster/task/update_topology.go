@@ -2,8 +2,10 @@ package task
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -14,6 +16,7 @@ import (
 // UpdateTopology is used to maintain the cluster meta information
 type UpdateTopology struct {
 	cluster        string
+	profileDir     string
 	metadata       *spec.ClusterMeta
 	deletedNodesID []string
 }
@@ -25,7 +28,16 @@ func (u *UpdateTopology) String() string {
 
 // Execute implements the Task interface
 func (u *UpdateTopology) Execute(ctx *Context) error {
-	client, err := u.metadata.Topology.GetEtcdClient()
+	var tlsCfg *tls.Config
+	var err error
+	if u.metadata.Topology.GlobalOptions.TLSEnabled {
+		tlsPath := filepath.Join(u.profileDir, spec.TLSCertKeyDir)
+		tlsCfg, err = spec.LoadClientCert(tlsPath)
+		if err != nil {
+			return err
+		}
+	}
+	client, err := u.metadata.Topology.GetEtcdClient(tlsCfg)
 	if err != nil {
 		return err
 	}

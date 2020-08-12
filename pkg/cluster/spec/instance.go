@@ -70,8 +70,8 @@ type Instance interface {
 	InstanceSpec
 	ID() string
 	Ready(executor.Executor, int64) error
-	InitConfig(e executor.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
-	ScaleConfig(e executor.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
+	InitConfig(e executor.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths, enableTLS bool) error
+	ScaleConfig(e executor.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths, enableTLS bool) error
 	PrepareStart() error
 	ComponentName() string
 	InstanceName() string

@@ -181,7 +181,14 @@ func (i *TiSparkMasterInstance) GetJavaHome() string {
 }
 
 // InitConfig implement Instance interface
-func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiSparkMasterInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	// generate systemd service to invoke spark's start/stop scripts
 	comp := i.Role()
 	host := i.GetHost()
@@ -254,13 +261,20 @@ func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clu
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiSparkMasterInstance) ScaleConfig(e executor.Executor, topo Topology,
-	clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiSparkMasterInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	s := i.topo
 	defer func() { i.topo = s }()
 	cluster := mustBeClusterTopo(topo)
 	i.topo = cluster.Merge(i.topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, enableTLS)
 }
 
 // TiSparkWorkerComponent represents TiSpark slave component.
@@ -315,7 +329,14 @@ func (i *TiSparkWorkerInstance) GetJavaHome() string {
 }
 
 // InitConfig implement Instance interface
-func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiSparkWorkerInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	// generate systemd service to invoke spark's start/stop scripts
 	comp := i.Role()
 	host := i.GetHost()
@@ -403,11 +424,18 @@ func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clu
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiSparkWorkerInstance) ScaleConfig(e executor.Executor, topo Topology,
-	clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiSparkWorkerInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+	enableTLS bool,
+) error {
 	s := i.topo
 	defer func() { i.topo = s }()
 	cluster := mustBeClusterTopo(topo)
 	i.topo = cluster.Merge(i.topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, enableTLS)
 }
