@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -59,7 +60,7 @@ func (c *GrafanaComponent) Instances() []Instance {
 				Dirs: []string{
 					s.DeployDir,
 				},
-				StatusFn: func(_ ...string) string {
+				StatusFn: func(_ *tls.Config, _ ...string) string {
 					return "-"
 				},
 			},

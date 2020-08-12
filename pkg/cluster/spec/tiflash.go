@@ -15,6 +15,7 @@ package spec
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -57,9 +58,9 @@ type TiFlashSpec struct {
 }
 
 // Status queries current status of the instance
-func (s TiFlashSpec) Status(pdList ...string) string {
+func (s TiFlashSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
 	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.FlashServicePort)
-	state := checkStoreStatus(storeAddr, pdList...)
+	state := checkStoreStatus(storeAddr, tlsCfg, pdList...)
 	if s.Offline && strings.ToLower(state) == "offline" {
 		state = "Pending Offline" // avoid misleading
 	}

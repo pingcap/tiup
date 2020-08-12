@@ -20,6 +20,7 @@ import (
 	"reflect"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"go.etcd.io/etcd/pkg/transport"
 )
@@ -116,4 +117,19 @@ func LoadClientCert(dir string) (*tls.Config, error) {
 		CertFile:      filepath.Join(dir, TLSClientCert),
 		KeyFile:       filepath.Join(dir, TLSClientKey),
 	}.ClientConfig()
+}
+
+// statusByURL queries current status of the instance by http status api.
+func statusByURL(url string, tlsCfg *tls.Config) string {
+	client := utils.NewHTTPClient(statusQueryTimeout, tlsCfg)
+
+	// body doesn't have any status section needed
+	body, err := client.Get(url)
+	if err != nil {
+		return "Down"
+	}
+	if body == nil {
+		return "Down"
+	}
+	return "Up"
 }

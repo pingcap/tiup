@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"path/filepath"
 	"reflect"
@@ -128,11 +129,11 @@ type MasterSpec struct {
 }
 
 // Status queries current status of the instance
-func (s MasterSpec) Status(masterList ...string) string {
+func (s MasterSpec) Status(tlsCfg *tls.Config, masterList ...string) string {
 	if len(masterList) < 1 {
 		return "N/A"
 	}
-	masterapi := api.NewDMMasterClient(masterList, statusQueryTimeout, nil)
+	masterapi := api.NewDMMasterClient(masterList, statusQueryTimeout, tlsCfg)
 	isFound, isActive, isLeader, err := masterapi.GetMaster(s.Name)
 	if err != nil {
 		return "Down"
@@ -189,11 +190,11 @@ type WorkerSpec struct {
 }
 
 // Status queries current status of the instance
-func (s WorkerSpec) Status(masterList ...string) string {
+func (s WorkerSpec) Status(tlsCfg *tls.Config, masterList ...string) string {
 	if len(masterList) < 1 {
 		return "N/A"
 	}
-	masterapi := api.NewDMMasterClient(masterList, statusQueryTimeout, nil)
+	masterapi := api.NewDMMasterClient(masterList, statusQueryTimeout, tlsCfg)
 	stage, err := masterapi.GetWorker(s.Name)
 	if err != nil {
 		return "Down"

@@ -15,6 +15,7 @@ package cluster
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -463,6 +464,20 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	fmt.Printf("%s Cluster: %s\n", m.sysName, cyan.Sprint(clusterName))
 	fmt.Printf("%s Version: %s\n", m.sysName, cyan.Sprint(base.Version))
 
+	// display TLS info
+	if topo.BaseTopo().GlobalOptions.TLSEnabled {
+		fmt.Printf("%s TLS encryption: %s\n", m.sysName, cyan.Sprint("enabled"))
+		fmt.Printf("CA certificate: %s\n", cyan.Sprint(
+			m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSCACert),
+		))
+		fmt.Printf("Client private key: %s\n", cyan.Sprint(
+			m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSClientKey),
+		))
+		fmt.Printf("Client certificate: %s\n", cyan.Sprint(
+			m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSClientCert),
+		))
+	}
+
 	// display topology
 	clusterTable := [][]string{
 		// Header
@@ -502,7 +517,14 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 				dataDir = insDirs[1]
 			}
 
-			status := ins.Status(pdList...)
+			var tlsCfg *tls.Config
+			if topo.BaseTopo().GlobalOptions.TLSEnabled {
+				tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+				if err != nil {
+					return perrs.AddStack(err)
+				}
+			}
+			status := ins.Status(tlsCfg, pdList...)
 			// Query the service status
 			if status == "-" {
 				e, found := ctx.GetExecutor(ins.GetHost())

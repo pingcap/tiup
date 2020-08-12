@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -66,9 +67,13 @@ func (s TiSparkMasterSpec) IsImported() bool {
 }
 
 // Status queries current status of the instance
-func (s TiSparkMasterSpec) Status(pdList ...string) string {
-	url := fmt.Sprintf("http://%s:%d/", s.Host, s.WebPort)
-	return statusByURL(url)
+func (s TiSparkMasterSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
+	scheme := "http"
+	if tlsCfg != nil {
+		scheme = "https"
+	}
+	url := fmt.Sprintf("%s://%s:%d/", scheme, s.Host, s.WebPort)
+	return statusByURL(url, tlsCfg)
 }
 
 // TiSparkWorkerSpec is the topology specification for TiSpark slave nodes
@@ -106,9 +111,13 @@ func (s TiSparkWorkerSpec) IsImported() bool {
 }
 
 // Status queries current status of the instance
-func (s TiSparkWorkerSpec) Status(pdList ...string) string {
-	url := fmt.Sprintf("http://%s:%d/", s.Host, s.WebPort)
-	return statusByURL(url)
+func (s TiSparkWorkerSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
+	scheme := "http"
+	if tlsCfg != nil {
+		scheme = "https"
+	}
+	url := fmt.Sprintf("%s://%s:%d/", scheme, s.Host, s.WebPort)
+	return statusByURL(url, tlsCfg)
 }
 
 // TiSparkMasterComponent represents TiSpark master component.

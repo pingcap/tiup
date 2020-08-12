@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -21,7 +22,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
-	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiDBSpec represents the TiDB topology specification in topology.yaml
@@ -39,22 +39,6 @@ type TiDBSpec struct {
 	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
-}
-
-// statusByURL queries current status of the instance by http status api.
-func statusByURL(url string) string {
-	client := utils.NewHTTPClient(statusQueryTimeout, nil)
-
-	// body doesn't have any status section needed
-	body, err := client.Get(url)
-	if err != nil {
-		return "Down"
-	}
-	if body == nil {
-		return "Down"
-	}
-	return "Up"
-
 }
 
 // Role returns the component role of the instance
@@ -110,13 +94,13 @@ func (c *TiDBComponent) Instances() []Instance {
 			Dirs: []string{
 				s.DeployDir,
 			},
-			StatusFn: func(_ ...string) string {
+			StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
 				scheme := "http"
-				if c.Specification.GlobalOptions.TLSEnabled {
+				if tlsCfg != nil {
 					scheme = "https"
 				}
 				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.StatusPort)
-				return statusByURL(url)
+				return statusByURL(url, tlsCfg)
 			},
 		}, c.Specification})
 	}

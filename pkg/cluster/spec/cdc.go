@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"path/filepath"
 
@@ -89,13 +90,13 @@ func (c *CDCComponent) Instances() []Instance {
 			Dirs: []string{
 				s.DeployDir,
 			},
-			StatusFn: func(_ ...string) string {
+			StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
 				scheme := "http"
-				if c.Specification.GlobalOptions.TLSEnabled {
+				if tlsCfg != nil {
 					scheme = "https"
 				}
 				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
-				return statusByURL(url)
+				return statusByURL(url, tlsCfg)
 			},
 		}, c.Specification})
 	}

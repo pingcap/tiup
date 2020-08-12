@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -51,10 +52,10 @@ type PDSpec struct {
 }
 
 // Status queries current status of the instance
-func (s PDSpec) Status(pdList ...string) string {
+func (s PDSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
 	curAddr := fmt.Sprintf("%s:%d", s.Host, s.ClientPort)
-	curPdAPI := api.NewPDClient([]string{curAddr}, statusQueryTimeout, nil)
-	allPdAPI := api.NewPDClient(pdList, statusQueryTimeout, nil)
+	curPdAPI := api.NewPDClient([]string{curAddr}, statusQueryTimeout, tlsCfg)
+	allPdAPI := api.NewPDClient(pdList, statusQueryTimeout, tlsCfg)
 	suffix := ""
 
 	// find dashboard node

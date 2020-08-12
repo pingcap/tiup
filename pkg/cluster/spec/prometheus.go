@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -95,7 +96,7 @@ func (c *MonitorComponent) Instances() []Instance {
 				s.DeployDir,
 				s.DataDir,
 			},
-			StatusFn: func(_ ...string) string {
+			StatusFn: func(_ *tls.Config, _ ...string) string {
 				return "-"
 			},
 		}, c.Specification})

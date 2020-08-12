@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -51,11 +52,11 @@ type TiKVSpec struct {
 }
 
 // checkStoreStatus checks the store status in current cluster
-func checkStoreStatus(storeAddr string, pdList ...string) string {
+func checkStoreStatus(storeAddr string, tlsCfg *tls.Config, pdList ...string) string {
 	if len(pdList) < 1 {
 		return "N/A"
 	}
-	pdapi := api.NewPDClient(pdList, statusQueryTimeout, nil)
+	pdapi := api.NewPDClient(pdList, statusQueryTimeout, tlsCfg)
 	stores, err := pdapi.GetStores()
 	if err != nil {
 		return "Down"
@@ -82,9 +83,9 @@ func checkStoreStatus(storeAddr string, pdList ...string) string {
 }
 
 // Status queries current status of the instance
-func (s TiKVSpec) Status(pdList ...string) string {
+func (s TiKVSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
 	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.Port)
-	state := checkStoreStatus(storeAddr, pdList...)
+	state := checkStoreStatus(storeAddr, tlsCfg, pdList...)
 	if s.Offline && strings.ToLower(state) == "offline" {
 		state = "Pending Offline" // avoid misleading
 	}

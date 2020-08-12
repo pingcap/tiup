@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -82,7 +83,7 @@ type Instance interface {
 	DeployDir() string
 	UsedPorts() []int
 	UsedDirs() []string
-	Status(pdList ...string) string
+	Status(tlsCfg *tls.Config, pdList ...string) string
 	DataDir() string
 	LogDir() string
 	OS() string // only linux supported now
@@ -123,7 +124,7 @@ type BaseInstance struct {
 
 	Ports    []int
 	Dirs     []string
-	StatusFn func(pdHosts ...string) string
+	StatusFn func(tlsCfg *tls.Config, pdHosts ...string) string
 }
 
 // Ready implements Instance interface
@@ -389,6 +390,6 @@ func (i *BaseInstance) UsedDirs() []string {
 }
 
 // Status implements Instance interface
-func (i *BaseInstance) Status(pdList ...string) string {
-	return i.StatusFn(pdList...)
+func (i *BaseInstance) Status(tlsCfg *tls.Config, pdList ...string) string {
+	return i.StatusFn(tlsCfg, pdList...)
 }
