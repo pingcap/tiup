@@ -1375,10 +1375,10 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool
 	if err != nil {
 		fmt.Print(color.RedString("New topology could not be saved: "))
 		log.Infof("Failed to parse topology file: %v", err)
-		if cliutil.PromptForConfirmReverse("Do you want to continue editing? [Y/n]: ") {
+		if !cliutil.PromptForConfirmNo("Do you want to continue editing? [Y/n]: ") {
 			return m.editTopo(origTopo, newData, skipConfirm)
 		}
-		log.Infof("Nothing changem.")
+		log.Infof("Nothing changed.")
 		return nil, nil
 	}
 
@@ -1386,10 +1386,10 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool
 	if err := utils.ValidateSpecDiff(origTopo, newTopo); err != nil {
 		fmt.Print(color.RedString("New topology could not be saved: "))
 		log.Errorf("%s", err)
-		if cliutil.PromptForConfirmReverse("Do you want to continue editing? [Y/n]: ") {
+		if !cliutil.PromptForConfirmNo("Do you want to continue editing? [Y/n]: ") {
 			return m.editTopo(origTopo, newData, skipConfirm)
 		}
-		log.Infof("Nothing changem.")
+		log.Infof("Nothing changed.")
 		return nil, nil
 
 	}
