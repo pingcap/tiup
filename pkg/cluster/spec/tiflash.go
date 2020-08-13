@@ -248,7 +248,7 @@ func (i *TiFlashInstance) InitTiFlashLearnerConfig(cfg *scripts.TiFlashScript, c
 
 	firstDataDir := strings.Split(cfg.DataDir, ",")[0]
 
-	if semver.Compare("v4.0.5", clusterVersion) <= 0 {
+	if semver.Compare(clusterVersion, "v4.0.5") >= 0 || clusterVersion == "nightly" {
 		statusAddr = fmt.Sprintf(`server.status-addr: "0.0.0.0:%[2]d"
     server.advertise-status-addr: "%[1]s:%[2]d"`, cfg.IP, cfg.FlashProxyStatusPort)
 	} else {
