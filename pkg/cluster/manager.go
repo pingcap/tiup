@@ -840,15 +840,17 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 
 // ScaleOutOptions contains the options for scale out.
 type ScaleOutOptions struct {
-	User         string // username to login to the SSH server
-	IdentityFile string // path to the private key file
-	UsePassword  bool   // use password instead of identity file for ssh connection
+	User           string // username to login to the SSH server
+	SkipCreateUser bool   // don't create user
+	IdentityFile   string // path to the private key file
+	UsePassword    bool   // use password instead of identity file for ssh connection
 }
 
 // DeployOptions contains the options for scale out.
 // TODO: merge ScaleOutOptions, should check config too when scale out.
 type DeployOptions struct {
 	User              string // username to login to the SSH server
+	SkipCreateUser    bool   // don't create the user
 	IdentityFile      string // path to the private key file
 	UsePassword       bool   // use password instead of identity file for ssh connection
 	IgnoreConfigCheck bool   // ignore config check result
@@ -977,7 +979,7 @@ func (m *Manager) Deploy(
 					sshTimeout,
 					nativeSSH,
 				).
-				EnvInit(inst.GetHost(), globalOptions.User, globalOptions.Group).
+				EnvInit(inst.GetHost(), globalOptions.User, globalOptions.Group, opt.SkipCreateUser).
 				Mkdir(globalOptions.User, inst.GetHost(), dirs...).
 				BuildAsStep(fmt.Sprintf("  - Prepare %s:%d", inst.GetHost(), inst.GetSSHPort()))
 			envInitTasks = append(envInitTasks, t)
@@ -1675,7 +1677,7 @@ func buildScaleOutTask(
 					sshTimeout,
 					nativeSSH,
 				).
-				EnvInit(instance.GetHost(), base.User, base.Group).
+				EnvInit(instance.GetHost(), base.User, base.Group, opt.SkipCreateUser).
 				Mkdir(globalOptions.User, instance.GetHost(), dirs...).
 				Build()
 			envInitTasks = append(envInitTasks, t)
