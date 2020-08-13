@@ -23,7 +23,7 @@ func newImportCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "import",
-		Short: "Import an exist DM 1.0 cluster from tidb-ansible and re-deploy 2.0 version",
+		Short: "Import an exist DM 1.0 cluster from dm-ansible and re-deploy 2.0 version",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := supportVersion(clusterVersion); err != nil {
 				return errors.AddStack(err)
