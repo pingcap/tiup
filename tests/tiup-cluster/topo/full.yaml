@@ -1,3 +1,7 @@
+global:
+  user: tidb
+  group: pingcap
+
 server_configs:
     tidb:
         binlog.enable: true
