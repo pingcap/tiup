@@ -22,10 +22,9 @@ import (
 
 // Mkdir is used to create directory on the target host
 type Mkdir struct {
-	user  string
-	group string
-	host  string
-	dirs  []string
+	user string
+	host string
+	dirs []string
 }
 
 // Execute implements the Task interface
@@ -33,14 +32,6 @@ func (m *Mkdir) Execute(ctx *Context) error {
 	exec, found := ctx.GetExecutor(m.host)
 	if !found {
 		panic(ErrNoExecutor)
-	}
-
-	if m.group == "" {
-		m.group = m.user
-	}
-
-	if m.group == "" {
-		m.group = m.user
 	}
 	for _, dir := range m.dirs {
 		if !strings.HasPrefix(dir, "/") {
@@ -61,10 +52,9 @@ func (m *Mkdir) Execute(ctx *Context) error {
 				continue
 			}
 			cmd := fmt.Sprintf(
-				`test -d %[1]s || (mkdir -p %[1]s && chown %[2]s:%[3]s %[1]s)`,
+				`test -d %[1]s || (mkdir -p %[1]s && chown %[2]s:$(id -g -n %[2]s) %[1]s)`,
 				strings.Join(xs[:i+1], "/"),
 				m.user,
-				m.group,
 			)
 			_, _, err := exec.Execute(cmd, true) // use root to create the dir
 			if err != nil {
