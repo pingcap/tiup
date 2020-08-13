@@ -17,7 +17,7 @@ meta-dir = ""
 [from]
 host = "mysql1"
 user = "root"
-password = ""
+password = "password1"
 port = 3306
 
 #relay log purge strategy

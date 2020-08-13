@@ -216,9 +216,10 @@ func TestImportFromAnsible(t *testing.T) {
 	s := im.sources[topo.Workers[0].Host+":"+strconv.Itoa(topo.Workers[0].Port)]
 	assert.Equal("mysql-replica-01", s.SourceID)
 	assert.Equal(DBConfig{
-		Host: "mysql1",
-		Port: 3306,
-		User: "root",
+		Host:     "mysql1",
+		Password: "password1",
+		Port:     3306,
+		User:     "root",
 	}, s.From)
 
 	s = im.sources[topo.Workers[1].Host+":"+strconv.Itoa(topo.Workers[1].Port)]
