@@ -849,6 +849,7 @@ type ScaleOutOptions struct {
 // TODO: merge ScaleOutOptions, should check config too when scale out.
 type DeployOptions struct {
 	User              string // username to login to the SSH server
+	Group             string // group the user belong to
 	IdentityFile      string // path to the private key file
 	UsePassword       bool   // use password instead of identity file for ssh connection
 	IgnoreConfigCheck bool   // ignore config check result
@@ -977,8 +978,8 @@ func (m *Manager) Deploy(
 					sshTimeout,
 					nativeSSH,
 				).
-				EnvInit(inst.GetHost(), globalOptions.User).
-				Mkdir(globalOptions.User, inst.GetHost(), dirs...).
+				EnvInit(inst.GetHost(), globalOptions.User, globalOptions.Group).
+				Mkdir(globalOptions.User, globalOptions.Group, inst.GetHost(), dirs...).
 				BuildAsStep(fmt.Sprintf("  - Prepare %s:%d", inst.GetHost(), inst.GetSSHPort()))
 			envInitTasks = append(envInitTasks, t)
 		}
@@ -1003,12 +1004,12 @@ func (m *Manager) Deploy(
 		// prepare deployment server
 		t := task.NewBuilder().
 			UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, sshTimeout, nativeSSH).
-			Mkdir(globalOptions.User, inst.GetHost(),
+			Mkdir(globalOptions.User, globalOptions.Group, inst.GetHost(),
 				deployDir, logDir,
 				filepath.Join(deployDir, "bin"),
 				filepath.Join(deployDir, "conf"),
 				filepath.Join(deployDir, "scripts")).
-			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
+			Mkdir(globalOptions.User, globalOptions.Group, inst.GetHost(), dataDirs...)
 
 		if deployerInstance, ok := inst.(DeployerInstance); ok {
 			deployerInstance.Deploy(t, deployDir, version, clusterName, clusterVersion)
@@ -1675,8 +1676,8 @@ func buildScaleOutTask(
 					sshTimeout,
 					nativeSSH,
 				).
-				EnvInit(instance.GetHost(), base.User).
-				Mkdir(globalOptions.User, instance.GetHost(), dirs...).
+				EnvInit(instance.GetHost(), base.User, base.Group).
+				Mkdir(globalOptions.User, globalOptions.Group, instance.GetHost(), dirs...).
 				Build()
 			envInitTasks = append(envInitTasks, t)
 		}
@@ -1697,12 +1698,12 @@ func buildScaleOutTask(
 		// Deploy component
 		tb := task.NewBuilder().
 			UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, sshTimeout, nativeSSH).
-			Mkdir(base.User, inst.GetHost(),
+			Mkdir(base.User, base.Group, inst.GetHost(),
 				deployDir, logDir,
 				filepath.Join(deployDir, "bin"),
 				filepath.Join(deployDir, "conf"),
 				filepath.Join(deployDir, "scripts")).
-			Mkdir(base.User, inst.GetHost(), dataDirs...)
+			Mkdir(base.User, base.Group, inst.GetHost(), dataDirs...)
 
 		srcPath := ""
 		if patchedComponents.Exist(inst.ComponentName()) {
@@ -1899,7 +1900,7 @@ func buildMonitoredDeployTask(
 			// Deploy component
 			t := task.NewBuilder().
 				UserSSH(host, info.ssh, globalOptions.User, sshTimeout, nativeSSH).
-				Mkdir(globalOptions.User, host,
+				Mkdir(globalOptions.User, globalOptions.Group, host,
 					deployDir, dataDir, logDir,
 					filepath.Join(deployDir, "bin"),
 					filepath.Join(deployDir, "conf"),

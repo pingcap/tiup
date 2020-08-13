@@ -37,6 +37,7 @@ var (
 type EnvInit struct {
 	host       string
 	deployUser string
+	userGroup  string
 }
 
 // Execute implements the Task interface
@@ -57,6 +58,7 @@ func (e *EnvInit) execute(ctx *Context) error {
 	um := module.NewUserModule(module.UserModuleConfig{
 		Action: module.UserActionAdd,
 		Name:   e.deployUser,
+		Group:  e.userGroup,
 		Sudoer: true,
 	})
 

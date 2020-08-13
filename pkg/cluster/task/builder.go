@@ -225,10 +225,11 @@ func (b *Builder) SSHKeySet(privKeyPath, pubKeyPath string) *Builder {
 }
 
 // EnvInit appends a EnvInit task to the current task collection
-func (b *Builder) EnvInit(host, deployUser string) *Builder {
+func (b *Builder) EnvInit(host, deployUser string, userGroup string) *Builder {
 	b.tasks = append(b.tasks, &EnvInit{
 		host:       host,
 		deployUser: deployUser,
+		userGroup:  userGroup,
 	})
 	return b
 }
@@ -250,11 +251,12 @@ func (b *Builder) ClusterOperate(
 }
 
 // Mkdir appends a Mkdir task to the current task collection
-func (b *Builder) Mkdir(user, host string, dirs ...string) *Builder {
+func (b *Builder) Mkdir(user, group, host string, dirs ...string) *Builder {
 	b.tasks = append(b.tasks, &Mkdir{
-		user: user,
-		host: host,
-		dirs: dirs,
+		user:  user,
+		group: group,
+		host:  host,
+		dirs:  dirs,
 	})
 	return b
 }

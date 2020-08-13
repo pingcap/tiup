@@ -36,6 +36,7 @@ import (
 
 type checkOptions struct {
 	user         string // username to login to the SSH server
+	group        string // group the user belong to
 	identityFile string // path to the private key file
 	usePassword  bool   // use password instead of identity file for ssh connection
 	opr          *operator.CheckOptions
@@ -108,6 +109,7 @@ conflict checks with other clusters`,
 	}
 
 	cmd.Flags().StringVarP(&opt.user, "user", "u", tiuputils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
+	cmd.Flags().StringVarP(&opt.group, "group", "g", tiuputils.CurrentUser(), "The group the user belong to, if not specified, it will be the same with user.")
 	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", opt.identityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.usePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 
@@ -162,7 +164,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 					gOpt.SSHTimeout,
 					gOpt.NativeSSH,
 				).
-				Mkdir(opt.user, inst.GetHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
+				Mkdir(opt.user, opt.group, inst.GetHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
 				CopyComponent(
 					spec.ComponentCheckCollector,
 					inst.OS(),
