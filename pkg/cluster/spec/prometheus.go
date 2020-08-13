@@ -151,7 +151,7 @@ func (i *MonitorInstance) InitConfig(
 
 	// transfer config
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
-	cfig := config.NewPrometheusConfig(clusterName)
+	cfig := config.NewPrometheusConfig(clusterName, enableTLS)
 	cfig.AddBlackbox(i.GetHost(), uint64(topo.MonitoredOptions.BlackboxExporterPort))
 	uniqueHosts := set.NewStringSet()
 	for _, pd := range topo.PDServers {

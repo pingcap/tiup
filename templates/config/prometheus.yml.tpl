@@ -68,6 +68,14 @@ scrape_configs:
 {{- end}}
 {{- if .LightningAddrs}}
   - job_name: "lightning"
+{{- if .TLSEnabled}}
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+      ca_file: ../tls/ca.crt
+      cert_file: ../tls/prometheus.crt
+      key_file: ../tls/prometheus.pem
+{{- end}}
     static_configs:
       - targets: ['{{index .LightningAddrs 0}}']
 {{- end}}
@@ -80,6 +88,14 @@ scrape_configs:
 {{- end}}
   - job_name: "tidb"
     honor_labels: true # don't overwrite job & instance labels
+{{- if .TLSEnabled}}
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+      ca_file: ../tls/ca.crt
+      cert_file: ../tls/prometheus.crt
+      key_file: ../tls/prometheus.pem
+{{- end}}
     static_configs:
     - targets:
 {{- range .TiDBStatusAddrs}}
@@ -87,6 +103,14 @@ scrape_configs:
 {{- end}}
   - job_name: "tikv"
     honor_labels: true # don't overwrite job & instance labels
+{{- if .TLSEnabled}}
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+      ca_file: ../tls/ca.crt
+      cert_file: ../tls/prometheus.crt
+      key_file: ../tls/prometheus.pem
+{{- end}}
     static_configs:
     - targets:
 {{- range .TiKVStatusAddrs}}
@@ -94,6 +118,14 @@ scrape_configs:
 {{- end}}
   - job_name: "pd"
     honor_labels: true # don't overwrite job & instance labels
+{{- if .TLSEnabled}}
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+      ca_file: ../tls/ca.crt
+      cert_file: ../tls/prometheus.crt
+      key_file: ../tls/prometheus.pem
+{{- end}}
     static_configs:
     - targets:
 {{- range .PDAddrs}}
@@ -102,6 +134,14 @@ scrape_configs:
 {{- if .TiFlashStatusAddrs}}
   - job_name: "tiflash"
     honor_labels: true # don't overwrite job & instance labels
+{{- if .TLSEnabled}}
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+      ca_file: ../tls/ca.crt
+      cert_file: ../tls/prometheus.crt
+      key_file: ../tls/prometheus.pem
+{{- end}}
     static_configs:
     - targets:
     {{- range .TiFlashStatusAddrs}}
@@ -121,6 +161,14 @@ scrape_configs:
 {{- end}}
   - job_name: 'pump'
     honor_labels: true # don't overwrite job & instance labels
+{{- if .TLSEnabled}}
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+      ca_file: ../tls/ca.crt
+      cert_file: ../tls/prometheus.crt
+      key_file: ../tls/prometheus.pem
+{{- end}}
     static_configs:
     - targets:
     {{- range .PumpAddrs}}
@@ -128,6 +176,14 @@ scrape_configs:
     {{- end}}
   - job_name: 'drainer'
     honor_labels: true # don't overwrite job & instance labels
+{{- if .TLSEnabled}}
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+      ca_file: ../tls/ca.crt
+      cert_file: ../tls/prometheus.crt
+      key_file: ../tls/prometheus.pem
+{{- end}}
     static_configs:
     - targets:
     {{- range .DrainerAddrs}}
@@ -184,6 +240,14 @@ scrape_configs:
 {{- if .CDCAddrs}}
   - job_name: "ticdc"
     honor_labels: true # don't overwrite job & instance labels
+{{- if .TLSEnabled}}
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+      ca_file: ../tls/ca.crt
+      cert_file: ../tls/prometheus.crt
+      key_file: ../tls/prometheus.pem
+{{- end}}
     static_configs:
     - targets:
 {{- range .CDCAddrs}}

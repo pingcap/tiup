@@ -501,13 +501,14 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 
 	// display cluster meta
 	cyan := color.New(color.FgCyan, color.Bold)
-	fmt.Printf("%s Cluster: %s\n", m.sysName, cyan.Sprint(clusterName))
-	fmt.Printf("%s Version: %s\n", m.sysName, cyan.Sprint(base.Version))
+	fmt.Printf("Cluster type:    %s\n", cyan.Sprint(m.sysName))
+	fmt.Printf("Cluster name:    %s\n", cyan.Sprint(clusterName))
+	fmt.Printf("Cluster version: %s\n", cyan.Sprint(base.Version))
 
 	// display TLS info
 	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		fmt.Printf("%s TLS encryption: %s\n", m.sysName, cyan.Sprint("enabled"))
-		fmt.Printf("CA certificate: %s\n", cyan.Sprint(
+		fmt.Printf("TLS encryption:  %s\n", cyan.Sprint("enabled"))
+		fmt.Printf("CA certificate:     %s\n", cyan.Sprint(
 			m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSCACert),
 		))
 		fmt.Printf("Client private key: %s\n", cyan.Sprint(
@@ -1784,8 +1785,12 @@ func (m *Manager) confirmTopology(clusterName, version string, topo spec.Topolog
 	log.Infof("Please confirm your topology:")
 
 	cyan := color.New(color.FgCyan, color.Bold)
-	fmt.Printf("%s Cluster: %s\n", m.sysName, cyan.Sprint(clusterName))
-	fmt.Printf("%s Version: %s\n", m.sysName, cyan.Sprint(version))
+	fmt.Printf("Cluster type:    %s\n", cyan.Sprint(m.sysName))
+	fmt.Printf("Cluster name:    %s\n", cyan.Sprint(clusterName))
+	fmt.Printf("Cluster version: %s\n", cyan.Sprint(version))
+	if topo.BaseTopo().GlobalOptions.TLSEnabled {
+		fmt.Printf("TLS encryption:  %s\n", cyan.Sprint("enabled"))
+	}
 
 	clusterTable := [][]string{
 		// Header

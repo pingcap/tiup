@@ -26,7 +26,7 @@ exec bin/cdc server \
     --pd "{{template "PDList" .Endpoints}}" \
 {{- if .TLSEnabled}}
     --ca tls/ca.crt \
-    --cert tls/cdc-{{.Port}}.crt \
-    --key tls/cdc-{{.Port}}.pem \
+    --cert tls/cdc.crt \
+    --key tls/cdc.pem \
 {{- end}}
     --log-file "{{.LogDir}}/cdc.log" 2>> "{{.LogDir}}/cdc_stderr.log"

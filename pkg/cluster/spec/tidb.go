@@ -182,15 +182,13 @@ func (i *TiDBInstance) InitConfig(
 			TLSCACert,
 		)
 		spec.Config["security.cluster-ssl-cert"] = fmt.Sprintf(
-			"%s/tls/%s-%d.crt",
+			"%s/tls/%s.crt",
 			paths.Deploy,
-			i.Role(),
-			i.GetMainPort())
+			i.Role())
 		spec.Config["security.cluster-ssl-key"] = fmt.Sprintf(
-			"%s/tls/%s-%d.pem",
+			"%s/tls/%s.pem",
 			paths.Deploy,
-			i.Role(),
-			i.GetMainPort())
+			i.Role())
 	}
 
 	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {

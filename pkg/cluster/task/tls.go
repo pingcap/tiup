@@ -87,12 +87,12 @@ func (c *TLSCert) Execute(ctx *Context) error {
 		return errors.Annotate(err, "failed to transfer CA cert to server")
 	}
 	if err := e.Transfer(keyFile,
-		filepath.Join(c.paths.Deploy, "tls", fmt.Sprintf("%s-%d.pem", c.inst.Role(), c.inst.GetMainPort())),
+		filepath.Join(c.paths.Deploy, "tls", fmt.Sprintf("%s.pem", c.inst.Role())),
 		false /* download */); err != nil {
 		return errors.Annotate(err, "failed to transfer TLS private key to server")
 	}
 	if err := e.Transfer(certFile,
-		filepath.Join(c.paths.Deploy, "tls", fmt.Sprintf("%s-%d.crt", c.inst.Role(), c.inst.GetMainPort())),
+		filepath.Join(c.paths.Deploy, "tls", fmt.Sprintf("%s.crt", c.inst.Role())),
 		false /* download */); err != nil {
 		return errors.Annotate(err, "failed to transfer TLS cert to server")
 	}

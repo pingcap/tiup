@@ -116,7 +116,7 @@ func (i *MonitorInstance) InitConfig(
 
 	// transfer config
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
-	cfig := dm.NewPrometheusConfig(clusterName)
+	cfig := dm.NewPrometheusConfig(clusterName, enableTLS)
 
 	for _, master := range topo.Masters {
 		cfig.AddMasterAddrs(master.Host, uint64(master.Port))
