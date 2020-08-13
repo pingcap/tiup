@@ -979,7 +979,7 @@ func (m *Manager) Deploy(
 					sshTimeout,
 					nativeSSH,
 				).
-				EnvInit(inst.GetHost(), globalOptions.User, globalOptions.Group, opt.SkipCreateUser).
+				EnvInit(inst.GetHost(), globalOptions.User, globalOptions.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
 				Mkdir(globalOptions.User, inst.GetHost(), dirs...).
 				BuildAsStep(fmt.Sprintf("  - Prepare %s:%d", inst.GetHost(), inst.GetSSHPort()))
 			envInitTasks = append(envInitTasks, t)
@@ -1677,7 +1677,7 @@ func buildScaleOutTask(
 					sshTimeout,
 					nativeSSH,
 				).
-				EnvInit(instance.GetHost(), base.User, base.Group, opt.SkipCreateUser).
+				EnvInit(instance.GetHost(), base.User, base.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
 				Mkdir(globalOptions.User, instance.GetHost(), dirs...).
 				Build()
 			envInitTasks = append(envInitTasks, t)
