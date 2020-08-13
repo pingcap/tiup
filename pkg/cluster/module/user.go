@@ -83,13 +83,15 @@ func NewUserModule(config UserModuleConfig) *UserModule {
 		}
 
 		// set user's group
-		if config.Group != "" {
-			cmd = fmt.Sprintf("%s -g %s", cmd, config.Group)
+		if config.Group == "" {
+			config.Group = config.Name
 		}
 
-		cmd = fmt.Sprintf("%s %s", cmd, config.Name)
-
+		// groupadd -f <group-name>
 		groupAdd := fmt.Sprintf("%s -f %s", groupaddCmd, config.Group)
+
+		// useradd -g <group-name> <user-name>
+		cmd = fmt.Sprintf("%s -g %s %s", cmd, config.Group, config.Name)
 
 		// prevent errors when username already in use
 		cmd = fmt.Sprintf("%s && (id -u %s > /dev/null 2>&1 || %s)", groupAdd, config.Name, cmd)
