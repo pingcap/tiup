@@ -25,7 +25,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
-	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // Cleanup the cluster
@@ -197,8 +196,6 @@ func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.M
 
 // CleanupComponent cleanup the instances
 func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec.Topology, options Options) error {
-	timeout := options.OptTimeout
-
 	retainDataRoles := set.NewStringSet(options.RetainDataRoles...)
 	retainDataNodes := set.NewStringSet(options.RetainDataNodes...)
 
@@ -213,15 +210,6 @@ func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 
 		e := getter.Get(ins.GetHost())
 		log.Infof("Cleanup instance %s", ins.GetHost())
-
-		if err := ins.WaitForDown(e, timeout); err != nil {
-			str := fmt.Sprintf("%s error cleanup %s: %s", ins.GetHost(), ins.ComponentName(), err)
-			log.Errorf(str)
-			if !utils.IsTimeoutOrMaxRetry(err) {
-				return errors.Annotatef(err, str)
-			}
-			log.Warnf("You may manually check if the process on %s:%d is still running", ins.GetHost(), ins.GetPort())
-		}
 
 		delFiles := set.NewStringSet()
 
@@ -271,7 +259,6 @@ func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 		return nil
 	}
 
-	timeout := options.OptTimeout
 	name := instances[0].ComponentName()
 	log.Infof("Destroying component %s", name)
 
@@ -289,16 +276,6 @@ func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 		var dataDirs []string
 		if len(ins.DataDir()) > 0 {
 			dataDirs = strings.Split(ins.DataDir(), ",")
-		}
-
-		// check if service is down before deleting files
-		if err := ins.WaitForDown(e, timeout); err != nil {
-			str := fmt.Sprintf("%s error destroying %s: %s", ins.GetHost(), ins.ComponentName(), err)
-			log.Errorf(str)
-			if !utils.IsTimeoutOrMaxRetry(err) {
-				return errors.Annotatef(err, str)
-			}
-			log.Warnf("You may manually check if the process on %s:%d is still running", ins.GetHost(), ins.GetPort())
 		}
 
 		deployDir := ins.DeployDir()
