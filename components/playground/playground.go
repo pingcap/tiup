@@ -656,10 +656,10 @@ func (p *Playground) bootCluster(env *environment.Environment, options *bootOpti
 	}
 
 	if options.version != "nightly" {
-		if semver.Compare("v3.1.0", options.version) > 0 && options.tiflash.Num != 0 {
+		if semver.Compare(options.version, "v3.1.0") < 0 && options.tiflash.Num != 0 {
 			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.version))
 			options.tiflash.Num = 0
-		} else if runtime.GOOS == "darwin" && semver.Compare("v4.0.0", options.version) > 0 {
+		} else if runtime.GOOS == "darwin" && semver.Compare(options.version, "v4.0.0") < 0 {
 			// only runs tiflash on version later than v4.0.0 when executing on darwin
 			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash on darwin", options.version))
 			options.tiflash.Num = 0

@@ -47,6 +47,10 @@ import (
 var (
 	errNSDeploy            = errorx.NewNamespace("deploy")
 	errDeployNameDuplicate = errNSDeploy.NewType("name_dup", errutil.ErrTraitPreCheck)
+
+	errNSRename              = errorx.NewNamespace("rename")
+	errorRenameNameNotExist  = errNSRename.NewType("name_not_exist", errutil.ErrTraitPreCheck)
+	errorRenameNameDuplicate = errNSRename.NewType("name_dup", errutil.ErrTraitPreCheck)
 )
 
 // Manager to deploy a cluster.
@@ -522,6 +526,29 @@ func (m *Manager) EditConfig(clusterName string, skipConfirm bool) error {
 
 	log.Infof("Apply change successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", cliutil.OsArgs0(), clusterName)
 	return nil
+}
+
+// Rename the cluster
+func (m *Manager) Rename(clusterName string, opt operator.Options, newName string) error {
+	if !utils.IsExist(m.specManager.Path(clusterName)) {
+		return errorRenameNameNotExist.
+			New("Cluster name '%s' not exist", clusterName).
+			WithProperty(cliutil.SuggestionFromFormat("Please double check your cluster name"))
+	}
+	if utils.IsExist(m.specManager.Path(newName)) {
+		return errorRenameNameDuplicate.
+			New("Cluster name '%s' is duplicated", newName).
+			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
+	}
+
+	if err := os.Rename(m.specManager.Path(clusterName), m.specManager.Path(newName)); err != nil {
+		return perrs.AddStack(err)
+	}
+
+	log.Infof("Rename cluster `%s` -> `%s` successfully", clusterName, newName)
+
+	opt.Roles = []string{spec.ComponentGrafana, spec.ComponentPrometheus}
+	return m.Reload(newName, opt, false)
 }
 
 // Reload the cluster.

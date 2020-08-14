@@ -42,7 +42,7 @@ func (c *InstallPackage) Execute(ctx *Context) error {
 
 	err := exec.Transfer(c.srcPath, dstPath, false)
 	if err != nil {
-		return errors.Trace(err)
+		return errors.Annotatef(err, "failed to scp %s to %s:%s", c.srcPath, c.host, dstPath)
 	}
 
 	cmd := fmt.Sprintf(`tar -xzf %s -C %s && rm %s`, dstPath, dstDir, dstPath)
