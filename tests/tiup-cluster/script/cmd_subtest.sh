@@ -56,6 +56,11 @@ function cmd_subtest() {
 
     tiup-cluster $client display $name
 
+    # Test rename
+    tiup-cluster $client rename $name "tmp-cluster-name"
+    tiup-cluster $client display "tmp-cluster-name"
+    tiup-cluster $client rename "tmp-cluster-name" $name
+
     tiup-cluster $client --yes clean $name --data --all --ignore-node 172.19.0.101:9090
 
     echo "checking cleanup data and log"
