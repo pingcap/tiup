@@ -129,7 +129,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 		applyFixTasks []*task.StepDisplay
 		downloadTasks []*task.StepDisplay
 	)
-	insightVer := spec.ComponentVersion(spec.ComponentCheckCollector, "")
+	insightVer := spec.TiDBComponentVersion(spec.ComponentCheckCollector, "")
 
 	uniqueHosts := map[string]int{}             // host -> ssh-port
 	uniqueArchList := make(map[string]struct{}) // map["os-arch"]{}

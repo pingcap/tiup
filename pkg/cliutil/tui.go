@@ -68,8 +68,9 @@ func Prompt(prompt string) string {
 	return strings.TrimSuffix(input, "\n")
 }
 
-// PromptForConfirm accepts yes / no from console by user, default to No
-func PromptForConfirm(format string, a ...interface{}) bool {
+// PromptForConfirmYes accepts yes / no from console by user, default to No and only return true
+// if the user input is Yes
+func PromptForConfirmYes(format string, a ...interface{}) bool {
 	ans := Prompt(fmt.Sprintf(format, a...))
 	switch strings.TrimSpace(strings.ToLower(ans)) {
 	case "y", "yes":
@@ -79,14 +80,21 @@ func PromptForConfirm(format string, a ...interface{}) bool {
 	}
 }
 
-// PromptForConfirmReverse accepts yes / no from console by user, default to Yes
-func PromptForConfirmReverse(format string, a ...interface{}) bool {
-	return !PromptForConfirm(format, a...)
+// PromptForConfirmNo accepts yes / no from console by user, default to Yes and only return true
+// if the user input is No
+func PromptForConfirmNo(format string, a ...interface{}) bool {
+	ans := Prompt(fmt.Sprintf(format, a...))
+	switch strings.TrimSpace(strings.ToLower(ans)) {
+	case "n", "no":
+		return true
+	default:
+		return false
+	}
 }
 
 // PromptForConfirmOrAbortError accepts yes / no from console by user, generates AbortError if user does not input yes.
 func PromptForConfirmOrAbortError(format string, a ...interface{}) error {
-	if !PromptForConfirm(format, a...) {
+	if !PromptForConfirmYes(format, a...) {
 		return errOperationAbort.New("Operation aborted by user")
 	}
 	return nil

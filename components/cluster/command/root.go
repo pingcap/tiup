@@ -99,7 +99,7 @@ func init() {
 			}
 
 			tidbSpec = spec.GetSpecManager()
-			manager = cluster.NewManager("tidb", tidbSpec)
+			manager = cluster.NewManager("tidb", tidbSpec, spec.TiDBComponentVersion)
 			logger.EnableAuditLog(spec.AuditDir())
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.

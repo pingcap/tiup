@@ -96,36 +96,36 @@ func (c *TiDBComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.TiDBServers))
 	for _, s := range c.TiDBServers {
 		s := s
-		ins = append(ins, &TiDBInstance{instance{
+		ins = append(ins, &TiDBInstance{BaseInstance{
 			InstanceSpec: s,
-			name:         c.Name(),
-			host:         s.Host,
-			listenHost:   s.ListenHost,
-			port:         s.Port,
-			sshp:         s.SSHPort,
-			topo:         c.Specification,
+			Name:         c.Name(),
+			Host:         s.Host,
+			ListenHost:   s.ListenHost,
+			Port:         s.Port,
+			SSHP:         s.SSHPort,
 
-			usedPorts: []int{
+			Ports: []int{
 				s.Port,
 				s.StatusPort,
 			},
-			usedDirs: []string{
+			Dirs: []string{
 				s.DeployDir,
 			},
-			statusFn: s.Status,
-		}})
+			StatusFn: s.Status,
+		}, c.Specification})
 	}
 	return ins
 }
 
 // TiDBInstance represent the TiDB instance
 type TiDBInstance struct {
-	instance
+	BaseInstance
+	topo *Specification
 }
 
 // InitConfig implement Instance interface
 func (i *TiDBInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
-	if err := i.instance.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -136,7 +136,7 @@ func (i *TiDBInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 		paths.Log,
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).
 		WithStatusPort(spec.StatusPort).
-		AppendEndpoints(i.instance.topo.Endpoints(deployUser)...).
+		AppendEndpoints(i.topo.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost())
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -151,7 +151,7 @@ func (i *TiDBInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 		return err
 	}
 
-	globalConfig := i.instance.topo.ServerConfigs.TiDB
+	globalConfig := i.topo.ServerConfigs.TiDB
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -174,18 +174,18 @@ func (i *TiDBInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 		}
 	}
 
-	if err := i.mergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
+	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
 
-	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths)
+	return checkConfig(e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".toml", paths, nil)
 }
 
 // ScaleConfig deploy temporary config on scaling
 func (i *TiDBInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
-	s := i.instance.topo
-	defer func() { i.instance.topo = s }()
-	i.instance.topo = mustBeClusterTopo(topo)
+	s := i.topo
+	defer func() { i.topo = s }()
+	i.topo = mustBeClusterTopo(topo)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
