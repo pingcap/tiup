@@ -15,6 +15,9 @@ alias ls='ls $LS_OPTIONS'
 alias ll='ls $LS_OPTIONS -l'
 alias l='ls $LS_OPTIONS -lA'
 
+mkdir -p ~/.tiup/bin
+file ~/.tiup/bin/roog.json || curl "https://tiup-mirrors.pingcap.com/root.json" > ~/.tiup/bin/root.json
+
 cat <<EOF
 Welcome to tiup-cluster on Docker
 ===========================
