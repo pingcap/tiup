@@ -28,6 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
+	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v2"
 )
 
@@ -241,11 +242,18 @@ server_configs:
 }
 
 // InitTiFlashLearnerConfig initializes TiFlash learner config file
-func (i *TiFlashInstance) InitTiFlashLearnerConfig(cfg *scripts.TiFlashScript, src map[string]interface{}) (map[string]interface{}, error) {
+func (i *TiFlashInstance) InitTiFlashLearnerConfig(cfg *scripts.TiFlashScript, clusterVersion string, src map[string]interface{}) (map[string]interface{}, error) {
 	topo := Specification{}
+	var statusAddr string
 
 	firstDataDir := strings.Split(cfg.DataDir, ",")[0]
 
+	if semver.Compare(clusterVersion, "v4.0.5") >= 0 || clusterVersion == "nightly" {
+		statusAddr = fmt.Sprintf(`server.status-addr: "0.0.0.0:%[2]d"
+    server.advertise-status-addr: "%[1]s:%[2]d"`, cfg.IP, cfg.FlashProxyStatusPort)
+	} else {
+		statusAddr = fmt.Sprintf(`server.status-addr: "%[1]s:%[2]d"`, cfg.IP, cfg.FlashProxyStatusPort)
+	}
 	err := yaml.Unmarshal([]byte(fmt.Sprintf(`
 server_configs:
   tiflash-learner:
@@ -253,7 +261,7 @@ server_configs:
     server.engine-addr: "%[2]s:%[3]d"
     server.addr: "0.0.0.0:%[4]d"
     server.advertise-addr: "%[2]s:%[4]d"
-    server.status-addr: "%[2]s:%[5]d"
+    %[5]s
     storage.data-dir: "%[6]s/flash"
     rocksdb.wal-dir: ""
     security.ca-path: ""
@@ -262,7 +270,7 @@ server_configs:
     # Normally the number of TiFlash nodes is smaller than TiKV nodes, and we need more raft threads to match the write speed of TiKV.
     raftstore.apply-pool-size: 4
     raftstore.store-pool-size: 4
-`, cfg.LogDir, cfg.IP, cfg.FlashServicePort, cfg.FlashProxyPort, cfg.FlashProxyStatusPort, firstDataDir)), &topo)
+`, cfg.LogDir, cfg.IP, cfg.FlashServicePort, cfg.FlashProxyPort, statusAddr, firstDataDir)), &topo)
 
 	if err != nil {
 		return nil, err
@@ -323,7 +331,7 @@ func (i *TiFlashInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		return err
 	}
 
-	conf, err := i.InitTiFlashLearnerConfig(cfg, i.topo.ServerConfigs.TiFlashLearner)
+	conf, err := i.InitTiFlashLearnerConfig(cfg, clusterVersion, i.topo.ServerConfigs.TiFlashLearner)
 	if err != nil {
 		return err
 	}
