@@ -186,14 +186,15 @@ func PrepareCommand(
 		}
 	}
 
-	if wd == "" {
+	instanceDir := wd
+	if instanceDir == "" {
 		// Generate a tag for current instance if the tag doesn't specified
 		if tag == "" {
 			tag = base62Tag()
 		}
-		wd = env.LocalPath(localdata.DataParentDir, tag)
+		instanceDir = env.LocalPath(localdata.DataParentDir, tag)
 	}
-	if err := os.MkdirAll(wd, 0755); err != nil {
+	if err := os.MkdirAll(instanceDir, 0755); err != nil {
 		return nil, err
 	}
 
@@ -215,7 +216,7 @@ func PrepareCommand(
 	envs := []string{
 		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameWorkDir, tiupWd),
-		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, wd),
+		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, instanceDir),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
 		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetryStatus, teleMeta.Status),
@@ -238,8 +239,7 @@ func PrepareCommand(
 }
 
 func launchComponent(ctx context.Context, component string, version v0manifest.Version, binPath string, tag string, args []string, env *environment.Environment) (*localdata.Process, error) {
-	wd := os.Getenv(localdata.EnvNameInstanceDataDir)
-	c, err := PrepareCommand(ctx, component, version, binPath, tag, wd, args, env, true)
+	c, err := PrepareCommand(ctx, component, version, binPath, tag, "", args, env, true)
 	if err != nil {
 		return nil, err
 	}
