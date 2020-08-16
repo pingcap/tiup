@@ -16,6 +16,9 @@ package instance
 import (
 	"fmt"
 	"io"
+
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	"golang.org/x/mod/semver"
 )
 
 const tiflashProxyConfig = `
@@ -34,7 +37,7 @@ key-path = ""
 addr = "0.0.0.0:%[4]d"
 advertise-addr = "%[2]s:%[4]d"
 engine-addr = "%[2]s:%[3]d"
-status-addr = "%[2]s:%[5]d"
+%[5]s
 
 [storage]
 data-dir = "%[6]s"
@@ -43,11 +46,18 @@ data-dir = "%[6]s"
 max-open-files = 256
 `
 
-func writeTiFlashProxyConfig(w io.Writer, ip, deployDir string, servicePort, proxyPort, proxyStatusPort int) error {
+func writeTiFlashProxyConfig(w io.Writer, version v0manifest.Version, ip, deployDir string, servicePort, proxyPort, proxyStatusPort int) error {
 	// TODO: support multi-dir
 	dataDir := fmt.Sprintf("%s/flash", deployDir)
 	logDir := fmt.Sprintf("%s/log", deployDir)
-	conf := fmt.Sprintf(tiflashProxyConfig, logDir, ip, servicePort, proxyPort, proxyStatusPort, dataDir)
+	var statusAddr string
+	if semver.Compare(version.String(), "v4.0.5") >= 0 || version.String() == "nightly" {
+		statusAddr = fmt.Sprintf(`status-addr = "0.0.0.0:%[2]d"
+advertise-status-addr = "%[1]s:%[2]d"`, ip, proxyStatusPort)
+	} else {
+		statusAddr = fmt.Sprintf(`status-addr = "%[1]s:%[2]d"`, ip, proxyStatusPort)
+	}
+	conf := fmt.Sprintf(tiflashProxyConfig, logDir, ip, servicePort, proxyPort, statusAddr, dataDir)
 	_, err := w.Write([]byte(conf))
 	return err
 }

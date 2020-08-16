@@ -1,0 +1,32 @@
+# The topology template is used deploy a minimal DM cluster, which suitable
+# for scenarios with only three machinescontains. The minimal cluster contains
+# - 3 master nodes
+# - 3 worker nodes
+# You can change the hosts according your environment
+---
+
+global:
+  user: "tidb"
+  ssh_port: 22
+  deploy_dir: "/home/tidb/dm/deploy"
+  data_dir: "/home/tidb/dm/data"
+  # arch: "amd64"
+
+master_servers:
+  - host: 172.19.0.101
+  - host: 172.19.0.102
+  - host: 172.19.0.103
+
+worker_servers:
+  - host: 172.19.0.101
+  - host: 172.19.0.102
+  - host: 172.19.0.103
+
+monitoring_servers:
+  - host: 172.19.0.101
+
+grafana_servers:
+  - host: 172.19.0.101
+
+alertmanager_servers:
+  - host: 172.19.0.101
