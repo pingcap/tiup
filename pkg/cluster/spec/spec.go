@@ -53,6 +53,7 @@ type (
 	// specification in topology.yaml
 	GlobalOptions struct {
 		User            string               `yaml:"user,omitempty" default:"tidb"`
+		Group           string               `yaml:"group,omitempty"`
 		SSHPort         int                  `yaml:"ssh_port,omitempty" default:"22" validate:"ssh_port:editable"`
 		DeployDir       string               `yaml:"deploy_dir,omitempty" default:"deploy"`
 		DataDir         string               `yaml:"data_dir,omitempty" default:"data"`
@@ -134,6 +135,7 @@ type Topology interface {
 // BaseMeta is the base info of metadata.
 type BaseMeta struct {
 	User    string
+	Group   string
 	Version string
 	OpsVer  *string `yaml:"last_ops_ver,omitempty"` // the version of ourself that updated the meta last time
 }

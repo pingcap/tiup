@@ -225,10 +225,12 @@ func (b *Builder) SSHKeySet(privKeyPath, pubKeyPath string) *Builder {
 }
 
 // EnvInit appends a EnvInit task to the current task collection
-func (b *Builder) EnvInit(host, deployUser string) *Builder {
+func (b *Builder) EnvInit(host, deployUser string, userGroup string, skipCreateUser bool) *Builder {
 	b.tasks = append(b.tasks, &EnvInit{
-		host:       host,
-		deployUser: deployUser,
+		host:           host,
+		deployUser:     deployUser,
+		userGroup:      userGroup,
+		skipCreateUser: skipCreateUser,
 	})
 	return b
 }
