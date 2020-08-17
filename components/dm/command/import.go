@@ -42,7 +42,7 @@ func newImportCmd() *cobra.Command {
 				return errors.AddStack(err)
 			}
 
-			importer, err := ansible.NewImporter(ansibleDir, inventoryFileName)
+			importer, err := ansible.NewImporter(ansibleDir, inventoryFileName, gOpt.NativeSSH, gOpt.SSHTimeout)
 			if err != nil {
 				return errors.AddStack(err)
 			}
