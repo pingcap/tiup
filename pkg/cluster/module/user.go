@@ -31,8 +31,9 @@ const (
 	// TODO: in RHEL/CentOS, the commands are in /usr/sbin, but in some
 	// other distros they may be in other location such as /usr/bin, we'll
 	// need to check and find the proper path of commands in the future.
-	useraddCmd = "/usr/sbin/useradd"
-	userdelCmd = "/usr/sbin/userdel"
+	useraddCmd  = "/usr/sbin/useradd"
+	userdelCmd  = "/usr/sbin/userdel"
+	groupaddCmd = "/usr/sbin/groupadd"
 	//usermodCmd = "/usr/sbin/usermod"
 )
 
@@ -48,6 +49,7 @@ var (
 type UserModuleConfig struct {
 	Action string // add, del or modify user
 	Name   string // username
+	Group  string // group name
 	Home   string // home directory of user
 	Shell  string // login shell of the user
 	Sudoer bool   // when true, the user will be added to sudoers list
@@ -80,10 +82,19 @@ func NewUserModule(config UserModuleConfig) *UserModule {
 			cmd = fmt.Sprintf("%s -s %s", cmd, defaultShell)
 		}
 
-		cmd = fmt.Sprintf("%s %s", cmd, config.Name)
+		// set user's group
+		if config.Group == "" {
+			config.Group = config.Name
+		}
+
+		// groupadd -f <group-name>
+		groupAdd := fmt.Sprintf("%s -f %s", groupaddCmd, config.Group)
+
+		// useradd -g <group-name> <user-name>
+		cmd = fmt.Sprintf("%s -g %s %s", cmd, config.Group, config.Name)
 
 		// prevent errors when username already in use
-		cmd = fmt.Sprintf("id -u %s > /dev/null 2>&1 || %s", config.Name, cmd)
+		cmd = fmt.Sprintf("id -u %s > /dev/null 2>&1 || (%s && %s)", config.Name, groupAdd, cmd)
 
 		// add user to sudoers list
 		if config.Sudoer {
@@ -93,6 +104,7 @@ func NewUserModule(config UserModuleConfig) *UserModule {
 				cmd,
 				fmt.Sprintf("echo '%s' > /etc/sudoers.d/%s", sudoLine, config.Name))
 		}
+
 	case UserActionDel:
 		cmd = fmt.Sprintf("%s -r %s", userdelCmd, config.Name)
 		// prevent errors when user does not exist

@@ -23,7 +23,13 @@ function cmd_subtest() {
 
     tiup-cluster $client --yes check $topo -i ~/.ssh/id_rsa
 
+    # This should fail because there is no such user: tidb
+    ! tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa --skip-create-user
+    # This is a normal deploy
     tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa
+    # Cleanup cluster meta and test --skip-create-user again, this should success
+    rm -rf ~/.tiup/storage/cluster/clusters/$name
+    tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa --skip-create-user
 
     tiup-cluster $client list | grep "$name"
 
