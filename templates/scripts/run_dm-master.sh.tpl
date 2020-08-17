@@ -21,6 +21,9 @@ exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/dm-master/d
 {{- else}}
 exec bin/dm-master/dm-master \
 {{- end}}
+{{- if .V1SourcePath}}
+    --v1-sources-path="{{.V1SourcePath}}" \
+{{- end}}
     --name="{{.Name}}" \
     --master-addr="0.0.0.0:{{.Port}}" \
     --advertise-addr="{{.IP}}:{{.Port}}" \
