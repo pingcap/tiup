@@ -129,7 +129,8 @@ type Importer struct {
 }
 
 // NewImporter create an Importer.
-func NewImporter(ansibleDir string, inventoryFileName string) (*Importer, error) {
+// @sshTimeout: set 0 to use a default value
+func NewImporter(ansibleDir string, inventoryFileName string, native bool, sshTimeout int64) (*Importer, error) {
 	dir, err := filepath.Abs(ansibleDir)
 	if err != nil {
 		return nil, errors.AddStack(err)
