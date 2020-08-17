@@ -3,6 +3,8 @@
 
 global:
   user: "tidb"
+  # # group is used to specify the group name the user belong to.
+  # group: "tidb"
   ssh_port: 22
   deploy_dir: "/tidb-deploy"
   data_dir: "/tidb-data"

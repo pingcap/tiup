@@ -35,8 +35,10 @@ var (
 // 1. Generate SSH key
 // 2. ssh-copy-id
 type EnvInit struct {
-	host       string
-	deployUser string
+	host           string
+	deployUser     string
+	userGroup      string
+	skipCreateUser bool
 }
 
 // Execute implements the Task interface
@@ -54,15 +56,18 @@ func (e *EnvInit) execute(ctx *Context) error {
 		panic(ErrNoExecutor)
 	}
 
-	um := module.NewUserModule(module.UserModuleConfig{
-		Action: module.UserActionAdd,
-		Name:   e.deployUser,
-		Sudoer: true,
-	})
+	if !e.skipCreateUser {
+		um := module.NewUserModule(module.UserModuleConfig{
+			Action: module.UserActionAdd,
+			Name:   e.deployUser,
+			Group:  e.userGroup,
+			Sudoer: true,
+		})
 
-	_, _, errx := um.Execute(exec)
-	if errx != nil {
-		return wrapError(errx)
+		_, _, errx := um.Execute(exec)
+		if errx != nil {
+			return wrapError(errx)
+		}
 	}
 
 	pubKey, err := ioutil.ReadFile(ctx.PublicKeyPath)

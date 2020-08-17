@@ -31,7 +31,7 @@ type Mkdir struct {
 func (m *Mkdir) Execute(ctx *Context) error {
 	exec, found := ctx.GetExecutor(m.host)
 	if !found {
-		return ErrNoExecutor
+		panic(ErrNoExecutor)
 	}
 	for _, dir := range m.dirs {
 		if !strings.HasPrefix(dir, "/") {
@@ -52,7 +52,7 @@ func (m *Mkdir) Execute(ctx *Context) error {
 				continue
 			}
 			cmd := fmt.Sprintf(
-				`test -d %[1]s || (mkdir -p %[1]s && chown %[2]s:%[2]s %[1]s)`,
+				`test -d %[1]s || (mkdir -p %[1]s && chown %[2]s:$(id -g -n %[2]s) %[1]s)`,
 				strings.Join(xs[:i+1], "/"),
 				m.user,
 			)
