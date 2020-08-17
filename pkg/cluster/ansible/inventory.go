@@ -606,7 +606,7 @@ func getHostPort(srv *aini.Host, cfg *ini.File) int {
 		}
 	}
 
-	// try to set value in global ansible config
+	// try to get value from global ansible config
 	if cfg != nil {
 		rPort, err := cfg.Section("defaults").Key("remote_port").Int()
 		if err == nil {

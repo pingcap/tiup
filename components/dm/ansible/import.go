@@ -380,7 +380,7 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				}
 
 				if deployDir == "" {
-					return "", nil, errors.Errorf("unexpected run script %s, can get deploy dir", runFileName)
+					return "", nil, errors.Errorf("unexpected run script %s, can not get deploy directory", runFileName)
 				}
 
 				var configFileName string
