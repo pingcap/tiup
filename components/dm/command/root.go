@@ -127,6 +127,7 @@ func init() {
 		newPatchCmd(),
 		newScaleOutCmd(),
 		newScaleInCmd(),
+		newImportCmd(),
 	)
 }
 
