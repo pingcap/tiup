@@ -25,16 +25,17 @@ import (
 
 // DMMasterScript represent the data to generate TiDB config
 type DMMasterScript struct {
-	Name      string
-	Scheme    string
-	IP        string
-	Port      int
-	PeerPort  int
-	DeployDir string
-	DataDir   string
-	LogDir    string
-	NumaNode  string
-	Endpoints []*DMMasterScript
+	Name         string
+	Scheme       string
+	IP           string
+	Port         int
+	PeerPort     int
+	DeployDir    string
+	DataDir      string
+	LogDir       string
+	NumaNode     string
+	V1SourcePath string
+	Endpoints    []*DMMasterScript
 }
 
 // NewDMMasterScript returns a DMMasterScript with given arguments
@@ -49,6 +50,12 @@ func NewDMMasterScript(name, ip, deployDir, dataDir, logDir string) *DMMasterScr
 		DataDir:   dataDir,
 		LogDir:    logDir,
 	}
+}
+
+// WithV1SourcePath set Scheme field of V1SourcePath
+func (c *DMMasterScript) WithV1SourcePath(path string) *DMMasterScript {
+	c.V1SourcePath = path
+	return c
 }
 
 // WithScheme set Scheme field of NewDMMasterScript

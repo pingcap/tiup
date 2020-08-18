@@ -585,17 +585,16 @@ func readGroupVars(dir, filename string) (map[string]string, error) {
 	return result, nil
 }
 
-// getHostPort tries to read the SSH port of the host
-func getHostPort(srv *aini.Host, cfg *ini.File) int {
-	sshPort := srv.Port
+// GetHostPort tries to read the SSH port of the host
+func GetHostPort(host *aini.Host, cfg *ini.File) int {
+	return getHostPort(host, cfg)
+}
 
-	// try to set value in global ansible config
-	if cfg != nil {
-		rPort, err := cfg.Section("defaults").Key("remote_port").Int()
-		if err == nil {
-			sshPort = rPort
-		}
-	}
+// getHostPort tries to read the SSH port of the host
+// 1. get from Host.Vars["ansible_port"]
+// 2. get from cfg.Section("defaults").Key("remote_port")
+// 3. get from srv.Port
+func getHostPort(srv *aini.Host, cfg *ini.File) int {
 
 	// parse per host config
 	// aini parse the port inline with hostnames (e.g., something like `host:22`)
@@ -603,10 +602,19 @@ func getHostPort(srv *aini.Host, cfg *ini.File) int {
 	if port, ok := srv.Vars["ansible_port"]; ok {
 		intPort, err := strconv.Atoi(port)
 		if err == nil {
-			sshPort = intPort
-		} // else just use the srv.Port
+			return intPort
+		}
 	}
-	return sshPort
+
+	// try to get value from global ansible config
+	if cfg != nil {
+		rPort, err := cfg.Section("defaults").Key("remote_port").Int()
+		if err == nil {
+			return rPort
+		}
+	}
+
+	return srv.Port
 }
 
 // readAnsibleCfg tries to read global configs of ansible
