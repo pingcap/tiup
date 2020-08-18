@@ -367,5 +367,31 @@ func (e *NativeSSHExecutor) Transfer(src string, dst string, download bool) erro
 	command.Stdout = stdout
 	command.Stderr = stderr
 
-	return command.Run()
+	err := command.Run()
+
+	zap.L().Info("SSPCommand",
+		zap.String("host", e.Config.Host),
+		zap.Int("port", e.Config.Port),
+		zap.String("cmd", strings.Join(args, " ")),
+		zap.Error(err),
+		zap.String("stdout", stdout.String()),
+		zap.String("stderr", stderr.String()))
+
+	if err != nil {
+		baseErr := ErrSSHExecuteFailed.
+			Wrap(err, "Failed to transfer file over SCP for '%s@%s:%d'", e.Config.User, e.Config.Host, e.Config.Port).
+			WithProperty(ErrPropSSHCommand, strings.Join(args, " ")).
+			WithProperty(ErrPropSSHStdout, stdout).
+			WithProperty(ErrPropSSHStderr, stderr)
+		if len(stdout.Bytes()) > 0 || len(stderr.Bytes()) > 0 {
+			output := strings.TrimSpace(strings.Join([]string{stdout.String(), stderr.String()}, "\n"))
+			baseErr = baseErr.
+				WithProperty(cliutil.SuggestionFromFormat("Command output on remote host %s:\n%s\n",
+					e.Config.Host,
+					color.YellowString(output)))
+		}
+		return baseErr
+	}
+
+	return err
 }
