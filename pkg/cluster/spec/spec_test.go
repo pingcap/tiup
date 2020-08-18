@@ -151,12 +151,6 @@ tidb_servers:
       log.file.rotate: "55555.xxx"
 `), &topo)
 	c.Assert(err, IsNil)
-	c.Assert(topo.ServerConfigs.TiDB, DeepEquals, map[string]interface{}{
-		"status.address":  10,
-		"port":            1230,
-		"latch.capacity":  20480,
-		"log.file.rotate": "123445.xxx",
-	})
 	expected := map[string]interface{}{
 		"status": map[string]interface{}{
 			"address": 10,
@@ -171,7 +165,7 @@ tidb_servers:
 			},
 		},
 	}
-	got, err := flattenMap(topo.ServerConfigs.TiDB)
+	got := topo.ServerConfigs.TiDB.Inner()
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 	buf := &bytes.Buffer{}
@@ -200,7 +194,7 @@ tidb_servers:
 			},
 		},
 	}
-	got, err = flattenMap(topo.TiDBServers[0].Config)
+	got = topo.TiDBServers[0].Config.Inner()
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 
@@ -214,7 +208,7 @@ tidb_servers:
 			},
 		},
 	}
-	got, err = flattenMap(topo.TiDBServers[1].Config)
+	got = topo.TiDBServers[1].Config.Inner()
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 }
@@ -244,7 +238,7 @@ tikv_servers:
 			},
 		},
 	}
-	got, err := flattenMap(topo.TiKVServers[0].Config)
+	got := topo.TiKVServers[0].Config.Inner()
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 }
@@ -296,21 +290,14 @@ tikv_servers:
 
 `), &topo)
 	c.Assert(err, IsNil)
-	expected := `# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
-# You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
-# All configuration items you want to change can be added to:
-# server_configs:
-#   tikv:
-#     aa.b1.c3: value
-#     aa.b2.c4: value
-[config]
+	expected := tomlHeader("tikv") + `[config]
 item1 = 100
 item2 = 500
 [config.item3]
 item5 = 700
 item6 = 600
 `
-	got, err := merge2Toml("tikv", topo.ServerConfigs.TiKV, topo.TiKVServers[0].Config)
+	got, err := merge2Toml("tikv", topo.ServerConfigs.TiKV.Inner(), topo.TiKVServers[0].Config.Inner())
 	c.Assert(err, IsNil)
 	c.Assert(string(got), DeepEquals, expected)
 }
@@ -369,14 +356,7 @@ tikv_servers:
   - host: 172.19.0.103
 `), &topo)
 	c.Assert(err, IsNil)
-	expected := `# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
-# You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
-# All configuration items you want to change can be added to:
-# server_configs:
-#   pd:
-#     aa.b1.c3: value
-#     aa.b2.c4: value
-[label-property]
+	expected := tomlHeader("pd") + `[label-property]
 
 [[label-property.reject-leader]]
 key = "zone"
@@ -399,7 +379,7 @@ region-schedule-limit = 2048
 replica-schedule-limit = 164
 split-merge-interval = "1h"
 `
-	got, err := merge2Toml("pd", topo.ServerConfigs.PD, topo.PDServers[1].Config)
+	got, err := merge2Toml("pd", topo.ServerConfigs.PD.Inner(), topo.PDServers[1].Config.Inner())
 	c.Assert(err, IsNil)
 	c.Assert(string(got), DeepEquals, expected)
 }
@@ -443,14 +423,7 @@ itemy = 999
 item7 = 780
 `)
 
-	expected := `# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
-# You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
-# All configuration items you want to change can be added to:
-# server_configs:
-#   tikv:
-#     aa.b1.c3: value
-#     aa.b2.c4: value
-[config]
+	expected := tomlHeader("tikv") + `[config]
 item1 = 100
 item2 = 500
 [config.item3]
@@ -464,10 +437,10 @@ itemy = 1000
 item7 = 700
 `
 
-	merge1, err := mergeImported(config, spec.ServerConfigs.TiKV)
+	merge1, err := mergeImported(config, spec.ServerConfigs.TiKV.Inner())
 	c.Assert(err, IsNil)
 
-	merge2, err := merge2Toml(ComponentTiKV, merge1, spec.TiKVServers[0].Config)
+	merge2, err := merge2Toml(ComponentTiKV, merge1, spec.TiKVServers[0].Config.Inner())
 	c.Assert(err, IsNil)
 	c.Assert(string(merge2), DeepEquals, expected)
 }

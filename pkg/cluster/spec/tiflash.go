@@ -34,26 +34,26 @@ import (
 
 // TiFlashSpec represents the TiFlash topology specification in topology.yaml
 type TiFlashSpec struct {
-	Host                 string                 `yaml:"host"`
-	SSHPort              int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported             bool                   `yaml:"imported,omitempty"`
-	TCPPort              int                    `yaml:"tcp_port" default:"9000"`
-	HTTPPort             int                    `yaml:"http_port" default:"8123"`
-	FlashServicePort     int                    `yaml:"flash_service_port" default:"3930"`
-	FlashProxyPort       int                    `yaml:"flash_proxy_port" default:"20170"`
-	FlashProxyStatusPort int                    `yaml:"flash_proxy_status_port" default:"20292"`
-	StatusPort           int                    `yaml:"metrics_port" default:"8234"`
-	DeployDir            string                 `yaml:"deploy_dir,omitempty"`
-	DataDir              string                 `yaml:"data_dir,omitempty"`
-	LogDir               string                 `yaml:"log_dir,omitempty"`
-	TmpDir               string                 `yaml:"tmp_path,omitempty"`
-	Offline              bool                   `yaml:"offline,omitempty"`
-	NumaNode             string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config               map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	LearnerConfig        map[string]interface{} `yaml:"learner_config,omitempty" validate:"learner_config:editable"`
-	ResourceControl      meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch                 string                 `yaml:"arch,omitempty"`
-	OS                   string                 `yaml:"os,omitempty"`
+	Host                 string               `yaml:"host"`
+	SSHPort              int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported             bool                 `yaml:"imported,omitempty"`
+	TCPPort              int                  `yaml:"tcp_port" default:"9000"`
+	HTTPPort             int                  `yaml:"http_port" default:"8123"`
+	FlashServicePort     int                  `yaml:"flash_service_port" default:"3930"`
+	FlashProxyPort       int                  `yaml:"flash_proxy_port" default:"20170"`
+	FlashProxyStatusPort int                  `yaml:"flash_proxy_status_port" default:"20292"`
+	StatusPort           int                  `yaml:"metrics_port" default:"8234"`
+	DeployDir            string               `yaml:"deploy_dir,omitempty"`
+	DataDir              string               `yaml:"data_dir,omitempty"`
+	LogDir               string               `yaml:"log_dir,omitempty"`
+	TmpDir               string               `yaml:"tmp_path,omitempty"`
+	Offline              bool                 `yaml:"offline,omitempty"`
+	NumaNode             string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config               *TomlConfig          `yaml:"config,omitempty" validate:"config:ignore"`
+	LearnerConfig        *TomlConfig          `yaml:"learner_config,omitempty" validate:"learner_config:editable"`
+	ResourceControl      meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch                 string               `yaml:"arch,omitempty"`
+	OS                   string               `yaml:"os,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -137,10 +137,10 @@ func (i *TiFlashInstance) GetServicePort() int {
 // checkIncorrectDataDir checks TiFlash's key should not be set in config
 func (i *TiFlashInstance) checkIncorrectKey(key string) error {
 	errMsg := "NOTE: TiFlash `%s` is should NOT be set in topo's \"%s\" config, its value will be ignored, you should set `data_dir` in each host instead, please check your topology"
-	if dir, ok := i.InstanceSpec.(TiFlashSpec).Config[key].(string); ok && dir != "" {
+	if dir, ok := i.InstanceSpec.(TiFlashSpec).Config.Inner()[key].(string); ok && dir != "" {
 		return fmt.Errorf(errMsg, key, "host")
 	}
-	if dir, ok := i.topo.ServerConfigs.TiFlash[key].(string); ok && dir != "" {
+	if dir, ok := i.topo.ServerConfigs.TiFlash.Inner()[key].(string); ok && dir != "" {
 		return fmt.Errorf(errMsg, key, "server_configs")
 	}
 	return nil
@@ -233,7 +233,7 @@ server_configs:
 		return nil, err
 	}
 
-	conf, err := merge(topo.ServerConfigs.TiFlash, src)
+	conf, err := merge(topo.ServerConfigs.TiFlash.Inner(), src)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +276,7 @@ server_configs:
 		return nil, err
 	}
 
-	conf, err := merge(topo.ServerConfigs.TiFlashLearner, src)
+	conf, err := merge(topo.ServerConfigs.TiFlashLearner.Inner(), src)
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +331,7 @@ func (i *TiFlashInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		return err
 	}
 
-	conf, err := i.InitTiFlashLearnerConfig(cfg, clusterVersion, i.topo.ServerConfigs.TiFlashLearner)
+	conf, err := i.InitTiFlashLearnerConfig(cfg, clusterVersion, i.topo.ServerConfigs.TiFlashLearner.Inner())
 	if err != nil {
 		return err
 	}
@@ -358,12 +358,12 @@ func (i *TiFlashInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		}
 	}
 
-	err = i.mergeTiFlashLearnerServerConfig(e, conf, spec.LearnerConfig, paths)
+	err = i.mergeTiFlashLearnerServerConfig(e, conf, spec.LearnerConfig.Inner(), paths)
 	if err != nil {
 		return err
 	}
 
-	conf, err = i.InitTiFlashConfig(cfg, i.topo.ServerConfigs.TiFlash)
+	conf, err = i.InitTiFlashConfig(cfg, i.topo.ServerConfigs.TiFlash.Inner())
 	if err != nil {
 		return err
 	}
@@ -390,7 +390,7 @@ func (i *TiFlashInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		}
 	}
 
-	return i.MergeServerConfig(e, conf, spec.Config, paths)
+	return i.MergeServerConfig(e, conf, spec.Config.Inner(), paths)
 }
 
 // ScaleConfig deploy temporary config on scaling

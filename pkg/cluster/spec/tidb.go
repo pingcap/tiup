@@ -26,19 +26,19 @@ import (
 
 // TiDBSpec represents the TiDB topology specification in topology.yaml
 type TiDBSpec struct {
-	Host            string                 `yaml:"host"`
-	ListenHost      string                 `yaml:"listen_host,omitempty"`
-	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                   `yaml:"imported,omitempty"`
-	Port            int                    `yaml:"port" default:"4000"`
-	StatusPort      int                    `yaml:"status_port" default:"10080"`
-	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
-	LogDir          string                 `yaml:"log_dir,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string                 `yaml:"arch,omitempty"`
-	OS              string                 `yaml:"os,omitempty"`
+	Host            string               `yaml:"host"`
+	ListenHost      string               `yaml:"listen_host,omitempty"`
+	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported        bool                 `yaml:"imported,omitempty"`
+	Port            int                  `yaml:"port" default:"4000"`
+	StatusPort      int                  `yaml:"status_port" default:"10080"`
+	DeployDir       string               `yaml:"deploy_dir,omitempty"`
+	LogDir          string               `yaml:"log_dir,omitempty"`
+	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config          *TomlConfig          `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch            string               `yaml:"arch,omitempty"`
+	OS              string               `yaml:"os,omitempty"`
 }
 
 // statusByURL queries current status of the instance by http status api.
@@ -151,7 +151,7 @@ func (i *TiDBInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 		return err
 	}
 
-	globalConfig := i.topo.ServerConfigs.TiDB
+	globalConfig := i.topo.ServerConfigs.TiDB.Inner()
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -174,7 +174,7 @@ func (i *TiDBInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 		}
 	}
 
-	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
+	if err := i.MergeServerConfig(e, globalConfig, spec.Config.Inner(), paths); err != nil {
 		return err
 	}
 

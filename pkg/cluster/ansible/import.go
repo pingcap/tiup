@@ -84,7 +84,8 @@ func parseInventoryFile(invFile io.Reader) (string, *spec.ClusterMeta, *aini.Inv
 			clsMeta.Version = host.Vars["tidb_version"]
 
 			if enableBinlog, err := strconv.ParseBool(host.Vars["enable_binlog"]); err == nil && enableBinlog {
-				clsMeta.Topology.ServerConfigs.TiDB["binlog.enable"] = enableBinlog
+				clsMeta.Topology.ServerConfigs.TiDB = new(spec.TomlConfig)
+				clsMeta.Topology.ServerConfigs.TiDB.Set("binlog.enable", enableBinlog)
 			}
 
 			// only read the first host, all global vars should be the same

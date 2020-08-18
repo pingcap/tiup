@@ -26,20 +26,20 @@ import (
 
 // DrainerSpec represents the Drainer topology specification in topology.yaml
 type DrainerSpec struct {
-	Host            string                 `yaml:"host"`
-	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                   `yaml:"imported,omitempty"`
-	Port            int                    `yaml:"port" default:"8249"`
-	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
-	DataDir         string                 `yaml:"data_dir,omitempty"`
-	LogDir          string                 `yaml:"log_dir,omitempty"`
-	CommitTS        int64                  `yaml:"commit_ts,omitempty"`
-	Offline         bool                   `yaml:"offline,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string                 `yaml:"arch,omitempty"`
-	OS              string                 `yaml:"os,omitempty"`
+	Host            string               `yaml:"host"`
+	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported        bool                 `yaml:"imported,omitempty"`
+	Port            int                  `yaml:"port" default:"8249"`
+	DeployDir       string               `yaml:"deploy_dir,omitempty"`
+	DataDir         string               `yaml:"data_dir,omitempty"`
+	LogDir          string               `yaml:"log_dir,omitempty"`
+	CommitTS        int64                `yaml:"commit_ts,omitempty"`
+	Offline         bool                 `yaml:"offline,omitempty"`
+	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config          *TomlConfig          `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch            string               `yaml:"arch,omitempty"`
+	OS              string               `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -146,7 +146,7 @@ func (i *DrainerInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		return err
 	}
 
-	globalConfig := i.topo.ServerConfigs.Drainer
+	globalConfig := i.topo.ServerConfigs.Drainer.Inner()
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -169,7 +169,7 @@ func (i *DrainerInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		}
 	}
 
-	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
+	if err := i.MergeServerConfig(e, globalConfig, spec.Config.Inner(), paths); err != nil {
 		return err
 	}
 

@@ -33,21 +33,21 @@ import (
 
 // TiKVSpec represents the TiKV topology specification in topology.yaml
 type TiKVSpec struct {
-	Host            string                 `yaml:"host"`
-	ListenHost      string                 `yaml:"listen_host,omitempty"`
-	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                   `yaml:"imported,omitempty"`
-	Port            int                    `yaml:"port" default:"20160"`
-	StatusPort      int                    `yaml:"status_port" default:"20180"`
-	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
-	DataDir         string                 `yaml:"data_dir,omitempty"`
-	LogDir          string                 `yaml:"log_dir,omitempty"`
-	Offline         bool                   `yaml:"offline,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string                 `yaml:"arch,omitempty"`
-	OS              string                 `yaml:"os,omitempty"`
+	Host            string               `yaml:"host"`
+	ListenHost      string               `yaml:"listen_host,omitempty"`
+	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported        bool                 `yaml:"imported,omitempty"`
+	Port            int                  `yaml:"port" default:"20160"`
+	StatusPort      int                  `yaml:"status_port" default:"20180"`
+	DeployDir       string               `yaml:"deploy_dir,omitempty"`
+	DataDir         string               `yaml:"data_dir,omitempty"`
+	LogDir          string               `yaml:"log_dir,omitempty"`
+	Offline         bool                 `yaml:"offline,omitempty"`
+	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config          *TomlConfig          `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch            string               `yaml:"arch,omitempty"`
+	OS              string               `yaml:"os,omitempty"`
 }
 
 // checkStoreStatus checks the store status in current cluster
@@ -185,7 +185,7 @@ func (i *TiKVInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 		return err
 	}
 
-	globalConfig := i.topo.ServerConfigs.TiKV
+	globalConfig := i.topo.ServerConfigs.TiKV.Inner()
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -208,7 +208,7 @@ func (i *TiKVInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 		}
 	}
 
-	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
+	if err := i.MergeServerConfig(e, globalConfig, spec.Config.Inner(), paths); err != nil {
 		return err
 	}
 

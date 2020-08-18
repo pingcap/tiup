@@ -76,14 +76,14 @@ type (
 
 	// ServerConfigs represents the server runtime configuration
 	ServerConfigs struct {
-		TiDB           map[string]interface{} `yaml:"tidb"`
-		TiKV           map[string]interface{} `yaml:"tikv"`
-		PD             map[string]interface{} `yaml:"pd"`
-		TiFlash        map[string]interface{} `yaml:"tiflash"`
-		TiFlashLearner map[string]interface{} `yaml:"tiflash-learner"`
-		Pump           map[string]interface{} `yaml:"pump"`
-		Drainer        map[string]interface{} `yaml:"drainer"`
-		CDC            map[string]interface{} `yaml:"cdc"`
+		TiDB           *TomlConfig `yaml:"tidb"`
+		TiKV           *TomlConfig `yaml:"tikv"`
+		PD             *TomlConfig `yaml:"pd"`
+		TiFlash        *TomlConfig `yaml:"tiflash"`
+		TiFlashLearner *TomlConfig `yaml:"tiflash-learner"`
+		Pump           *TomlConfig `yaml:"pump"`
+		Drainer        *TomlConfig `yaml:"drainer"`
+		CDC            *TomlConfig `yaml:"cdc"`
 	}
 
 	// Specification represents the specification of topology.yaml

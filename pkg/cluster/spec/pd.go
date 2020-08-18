@@ -37,17 +37,17 @@ type PDSpec struct {
 	SSHPort    int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported   bool   `yaml:"imported,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
-	Name            string                 `yaml:"name"`
-	ClientPort      int                    `yaml:"client_port" default:"2379"`
-	PeerPort        int                    `yaml:"peer_port" default:"2380"`
-	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
-	DataDir         string                 `yaml:"data_dir,omitempty"`
-	LogDir          string                 `yaml:"log_dir,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string                 `yaml:"arch,omitempty"`
-	OS              string                 `yaml:"os,omitempty"`
+	Name            string               `yaml:"name"`
+	ClientPort      int                  `yaml:"client_port" default:"2379"`
+	PeerPort        int                  `yaml:"peer_port" default:"2380"`
+	DeployDir       string               `yaml:"deploy_dir,omitempty"`
+	DataDir         string               `yaml:"data_dir,omitempty"`
+	LogDir          string               `yaml:"log_dir,omitempty"`
+	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config          *TomlConfig          `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch            string               `yaml:"arch,omitempty"`
+	OS              string               `yaml:"os,omitempty"`
 }
 
 // Status queries current status of the instance
@@ -183,13 +183,13 @@ func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion
 	// Set the PD metrics storage address
 	if semver.Compare(clusterVersion, "v3.1.0") >= 0 && len(i.topo.Monitors) > 0 {
 		if spec.Config == nil {
-			spec.Config = map[string]interface{}{}
+			spec.Config = new(TomlConfig)
 		}
 		prom := i.topo.Monitors[0]
-		spec.Config["pd-server.metric-storage"] = fmt.Sprintf("http://%s:%d", prom.Host, prom.Port)
+		spec.Config.Set("pd-server.metric-storage", fmt.Sprintf("http://%s:%d", prom.Host, prom.Port))
 	}
 
-	globalConfig := i.topo.ServerConfigs.PD
+	globalConfig := i.topo.ServerConfigs.PD.Inner()
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
@@ -212,7 +212,7 @@ func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion
 		}
 	}
 
-	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
+	if err := i.MergeServerConfig(e, globalConfig, spec.Config.Inner(), paths); err != nil {
 		return err
 	}
 

@@ -130,20 +130,26 @@ func Merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, 
 	return merge2Toml(comp, global, overwrite)
 }
 
+func tomlHeader(comp string) string {
+	return fmt.Sprintf(`# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
+# You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
+# All configuration items you want to change can be added to:
+# server_configs:
+#   %s:
+#     aa = value
+#     [bb]
+#     c = value
+#     d = value
+`, comp)
+}
+
 func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
 	lhs, err := merge(global, overwrite)
 	if err != nil {
 		return nil, perrs.AddStack(err)
 	}
 
-	buf := bytes.NewBufferString(fmt.Sprintf(`# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
-# You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
-# All configuration items you want to change can be added to:
-# server_configs:
-#   %s:
-#     aa.b1.c3: value
-#     aa.b2.c4: value
-`, comp))
+	buf := bytes.NewBufferString(tomlHeader(comp))
 
 	enc := toml.NewEncoder(buf)
 	enc.Indent = ""

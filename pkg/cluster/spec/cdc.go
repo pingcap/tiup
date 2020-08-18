@@ -24,18 +24,18 @@ import (
 
 // CDCSpec represents the Drainer topology specification in topology.yaml
 type CDCSpec struct {
-	Host            string                 `yaml:"host"`
-	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                   `yaml:"imported,omitempty"`
-	Port            int                    `yaml:"port" default:"8300"`
-	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
-	LogDir          string                 `yaml:"log_dir,omitempty"`
-	Offline         bool                   `yaml:"offline,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string                 `yaml:"arch,omitempty"`
-	OS              string                 `yaml:"os,omitempty"`
+	Host            string               `yaml:"host"`
+	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported        bool                 `yaml:"imported,omitempty"`
+	Port            int                  `yaml:"port" default:"8300"`
+	DeployDir       string               `yaml:"deploy_dir,omitempty"`
+	LogDir          string               `yaml:"log_dir,omitempty"`
+	Offline         bool                 `yaml:"offline,omitempty"`
+	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config          *TomlConfig          `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch            string               `yaml:"arch,omitempty"`
+	OS              string               `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -137,7 +137,7 @@ func (i *CDCInstance) InitConfig(e executor.Executor, clusterName, clusterVersio
 		return err
 	}
 
-	specConfig := spec.Config
+	specConfig := spec.Config.Inner()
 
-	return i.MergeServerConfig(e, i.topo.ServerConfigs.CDC, specConfig, paths)
+	return i.MergeServerConfig(e, i.topo.ServerConfigs.CDC.Inner(), specConfig, paths)
 }

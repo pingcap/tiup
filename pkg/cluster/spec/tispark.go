@@ -31,18 +31,21 @@ import (
 
 // TiSparkMasterSpec is the topology specification for TiSpark master node
 type TiSparkMasterSpec struct {
-	Host         string                 `yaml:"host"`
-	ListenHost   string                 `yaml:"listen_host,omitempty"`
-	SSHPort      int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported     bool                   `yaml:"imported,omitempty"`
-	Port         int                    `yaml:"port" default:"7077"`
-	WebPort      int                    `yaml:"web_port" default:"8080"`
-	DeployDir    string                 `yaml:"deploy_dir,omitempty"`
-	JavaHome     string                 `yaml:"java_home,omitempty" validate:"java_home:editable"`
+	Host       string `yaml:"host"`
+	ListenHost string `yaml:"listen_host,omitempty"`
+	SSHPort    int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported   bool   `yaml:"imported,omitempty"`
+	Port       int    `yaml:"port" default:"7077"`
+	WebPort    int    `yaml:"web_port" default:"8080"`
+	DeployDir  string `yaml:"deploy_dir,omitempty"`
+	JavaHome   string `yaml:"java_home,omitempty" validate:"java_home:editable"`
+
+	// search the field name in the codebase before change it..
 	SparkConfigs map[string]interface{} `yaml:"spark_config,omitempty" validate:"spark_config:editable"`
 	SparkEnvs    map[string]string      `yaml:"spark_env,omitempty" validate:"spark_env:editable"`
-	Arch         string                 `yaml:"arch,omitempty"`
-	OS           string                 `yaml:"os,omitempty"`
+
+	Arch string `yaml:"arch,omitempty"`
+	OS   string `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
