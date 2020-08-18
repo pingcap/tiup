@@ -379,7 +379,7 @@ func (e *NativeSSHExecutor) Transfer(src string, dst string, download bool) erro
 
 	if err != nil {
 		baseErr := ErrSSHExecuteFailed.
-			Wrap(err, "Failed to execute command over SCP for '%s@%s:%d'", e.Config.User, e.Config.Host, e.Config.Port).
+			Wrap(err, "Failed to transfer file over SCP for '%s@%s:%d'", e.Config.User, e.Config.Host, e.Config.Port).
 			WithProperty(ErrPropSSHCommand, strings.Join(args, " ")).
 			WithProperty(ErrPropSSHStdout, stdout).
 			WithProperty(ErrPropSSHStderr, stderr)
