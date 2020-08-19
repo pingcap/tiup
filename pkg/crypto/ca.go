@@ -26,14 +26,14 @@ import (
 
 var serialNumberLimit = new(big.Int).Lsh(big.NewInt(1), 128)
 
-// CertificateAuthority is the CA of a cluster
+// CertificateAuthority holds the CA of a cluster
 type CertificateAuthority struct {
 	ClusterName string
 	Cert        *x509.Certificate
 	Key         PrivKey
 }
 
-// NewCA generates a new CA certificate
+// NewCA generates a new CertificateAuthority object
 func NewCA(clsName string) (*CertificateAuthority, error) {
 	currTime := time.Now().UTC()
 
@@ -56,7 +56,7 @@ func NewCA(clsName string) (*CertificateAuthority, error) {
 		},
 		NotBefore: currTime,
 		NotAfter:  currTime.Add(time.Hour * 24 * 365 * 50), // TODO: support ca cert rotate
-		IsCA:      true,
+		IsCA:      true,                                    // must be true
 		KeyUsage:  x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage: []x509.ExtKeyUsage{
 			x509.ExtKeyUsageClientAuth,

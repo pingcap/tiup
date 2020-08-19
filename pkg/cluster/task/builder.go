@@ -375,7 +375,7 @@ func (b *Builder) DeploySpark(inst spec.Instance, version, srcPath, deployDir st
 	)
 }
 
-// TLSCert geenrates certificate for instance and transfer it to server
+// TLSCert geenrates certificate for instance and transfer it to the server
 func (b *Builder) TLSCert(inst spec.Instance, ca *crypto.CertificateAuthority, paths meta.DirPaths) *Builder {
 	b.tasks = append(b.tasks, &TLSCert{
 		ca:    ca,

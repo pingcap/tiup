@@ -79,8 +79,9 @@ func TestCASign(t *testing.T) {
 			"tidb.server.local",
 		}, []string{
 			"10.0.0.1",
-			"10.0.0.2",
+			"1.2.3.4",
 			"fe80:2333::dead:beef",
+			"2403:5180:5:c37d::",
 		})
 	assert.Nil(t, err)
 
@@ -96,8 +97,9 @@ func TestCASign(t *testing.T) {
 	assert.Equal(t, "testing-cn", cert.Subject.CommonName)
 	assert.Equal(t, []string{"tidb-server", "tidb.server.local"}, cert.DNSNames)
 	assert.Equal(t, "10.0.0.1", cert.IPAddresses[0].String())
-	assert.Equal(t, "10.0.0.2", cert.IPAddresses[1].String())
+	assert.Equal(t, "1.2.3.4", cert.IPAddresses[1].String())
 	assert.Equal(t, "fe80:2333::dead:beef", cert.IPAddresses[2].String())
+	assert.Equal(t, "2403:5180:5:c37d::", cert.IPAddresses[3].String())
 
 	// check for key usage
 	assert.Equal(t, x509.KeyUsage(5), cert.KeyUsage) // x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment

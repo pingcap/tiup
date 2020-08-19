@@ -607,6 +607,7 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	})
 
 	cliutil.PrintTable(clusterTable, true)
+	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
 
 	return nil
 }
@@ -1988,7 +1989,10 @@ func buildScaleOutTask(
 				m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSCACert),
 				m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSCAKey),
 			)
-			iterErr = err
+			if err != nil {
+				iterErr = err
+				return
+			}
 			tb = tb.TLSCert(inst, ca, meta.DirPaths{
 				Deploy: deployDir,
 				Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
@@ -2261,7 +2265,7 @@ func genAndSaveClusterCA(clusterName, tlsPath string) (*crypto.CertificateAuthor
 
 	// save CA private key
 	if err := file.SaveFileWithBackup(filepath.Join(tlsPath, spec.TLSCAKey), ca.Key.Pem(), ""); err != nil {
-		return nil, fmt.Errorf("cannot save CA private key for %s: %s", clusterName, err)
+		return nil, perrs.Annotatef(err, "cannot save CA private key for %s", clusterName)
 	}
 
 	// save CA certificate
@@ -2271,7 +2275,7 @@ func genAndSaveClusterCA(clusterName, tlsPath string) (*crypto.CertificateAuthor
 			Type:  "CERTIFICATE",
 			Bytes: ca.Cert.Raw,
 		}), ""); err != nil {
-		return nil, fmt.Errorf("cannot save CA certificate for %s: %s", clusterName, err)
+		return nil, perrs.Annotatef(err, "cannot save CA certificate for %s", clusterName)
 	}
 
 	return ca, nil
@@ -2280,12 +2284,12 @@ func genAndSaveClusterCA(clusterName, tlsPath string) (*crypto.CertificateAuthor
 func genAndSaveClientCert(ca *crypto.CertificateAuthority, clusterName, tlsPath string) error {
 	privKey, err := crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
 	if err != nil {
-		return err
+		return perrs.AddStack(err)
 	}
 
 	// save client private key
 	if err := file.SaveFileWithBackup(filepath.Join(tlsPath, spec.TLSClientKey), privKey.Pem(), ""); err != nil {
-		return fmt.Errorf("cannot save client private key for %s: %s", clusterName, err)
+		return perrs.Annotatef(err, "cannot save client private key for %s", clusterName)
 	}
 
 	csr, err := privKey.CSR(
@@ -2294,11 +2298,11 @@ func genAndSaveClientCert(ca *crypto.CertificateAuthority, clusterName, tlsPath 
 		[]string{}, []string{},
 	)
 	if err != nil {
-		return fmt.Errorf("cannot generate CSR of client certificate for %s: %s", clusterName, err)
+		return perrs.Annotatef(err, "cannot generate CSR of client certificate for %s", clusterName)
 	}
 	cert, err := ca.Sign(csr)
 	if err != nil {
-		return fmt.Errorf("cannot sign client certificate for %s: %s", clusterName, err)
+		return perrs.Annotatef(err, "cannot sign client certificate for %s", clusterName)
 	}
 
 	// save client certificate
@@ -2308,7 +2312,7 @@ func genAndSaveClientCert(ca *crypto.CertificateAuthority, clusterName, tlsPath 
 			Type:  "CERTIFICATE",
 			Bytes: cert,
 		}), ""); err != nil {
-		return fmt.Errorf("cannot save client certificate for %s: %s", clusterName, err)
+		return perrs.Annotatef(err, "cannot save client certificate for %s", clusterName)
 	}
 
 	return nil

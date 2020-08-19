@@ -4,8 +4,8 @@ set -eu
 
 version=${version-v4.0.4}
 old_version=${old_version-v3.0.16}
-name=test_upgrade
-topo=./topo/upgrade.yaml
+name=test_upgrade_tls
+topo=./topo/upgrade_tls.yaml
 
 mkdir -p ~/.tiup/bin && cp -f ./root.json ~/.tiup/bin/
 

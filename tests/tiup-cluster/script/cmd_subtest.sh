@@ -4,14 +4,14 @@ function cmd_subtest() {
     mkdir -p ~/.tiup/bin/
 
     version=$1
-    test_cdc=$2
+    test_tls=$2
     native_ssh=$3
 
     name="test_cmd_$RANDOM"
-    if [ $test_cdc = true ]; then
-        topo=./topo/full.yaml
+    if [ $test_tls = true ]; then
+        topo=./topo/full_tls.yaml
     else
-        topo=./topo/full_without_cdc.yaml
+        topo=./topo/full.yaml
     fi
 
     client=""

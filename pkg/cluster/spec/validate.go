@@ -684,7 +684,7 @@ func (s *Specification) validateTLSEnabled() error {
 			ComponentAlertManager,
 			ComponentGrafana:
 		default:
-			return fmt.Errorf("component %s is not supported in TLS enabled cluster", c.Name())
+			return errors.Errorf("component %s is not supported in TLS enabled cluster", c.Name())
 		}
 	}
 	return nil
