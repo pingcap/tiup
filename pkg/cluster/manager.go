@@ -69,6 +69,57 @@ func NewManager(sysName string, specManager *spec.SpecManager, bindVersion spec.
 	}
 }
 
+// EnableCluster enable/disable the service in a cluster
+func (m *Manager) EnableCluster(name string, options operator.Options, isEnable bool) error {
+	if isEnable {
+		log.Infof("Enabling cluster %s...", name)
+	} else {
+		log.Infof("Disabling cluster %s...", name)
+	}
+
+	metadata, err := m.meta(name)
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+		return perrs.AddStack(err)
+	}
+
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
+
+	b := task.NewBuilder().
+		SSHKeySet(
+			m.specManager.Path(name, "ssh", "id_rsa"),
+			m.specManager.Path(name, "ssh", "id_rsa.pub")).
+		ClusterSSH(topo, base.User, options.SSHTimeout, options.NativeSSH)
+
+	if isEnable {
+		b = b.Func("EnableCluster", func(ctx *task.Context) error {
+			return operator.Enable(ctx, topo, options, isEnable)
+		})
+	} else {
+		b = b.Func("DisableCluster", func(ctx *task.Context) error {
+			return operator.Enable(ctx, topo, options, isEnable)
+		})
+	}
+
+	t := b.Build()
+
+	if err := t.Execute(task.NewContext()); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.Trace(err)
+	}
+
+	if isEnable {
+		log.Infof("Enabled cluster `%s` successfully", name)
+	} else {
+		log.Infof("Disabled cluster `%s` successfully", name)
+	}
+
+	return nil
+}
+
 // StartCluster start the cluster with specified name.
 func (m *Manager) StartCluster(name string, options operator.Options, fn ...func(b *task.Builder, metadata spec.Metadata)) error {
 	log.Infof("Starting cluster %s...", name)

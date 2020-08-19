@@ -36,6 +36,7 @@ var (
 	teleNodeInfos []*telemetry2.NodeInfo
 	teleTopology  string
 	teleCommand   []string
+	skipEnable    bool
 )
 
 var (
@@ -90,6 +91,7 @@ func newDeploy() *cobra.Command {
 	cmd.Flags().StringVarP(&opt.IdentityFile, "identity_file", "i", opt.IdentityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.UsePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.IgnoreConfigCheck, "ignore-config-check", "", opt.IgnoreConfigCheck, "Ignore the config check result")
+	cmd.Flags().BoolVarP(&skipEnable, "skip-enable", "", skipEnable, "Don't start the cluster automaticlly after host restart")
 
 	return cmd
 }
@@ -102,7 +104,16 @@ func postDeployHook(builder *task.Builder, topo spec.Topology) {
 		// intend to never return error
 		return nil
 	}).BuildAsStep("Check status").SetHidden(true)
+
 	if report.Enable() {
 		builder.ParallelStep("+ Check status", nodeInfoTask)
+	}
+
+	enableTask := task.NewBuilder().Func("Enable cluster", func(ctx *task.Context) error {
+		return operator.Enable(ctx, topo, operator.Options{}, true)
+	}).BuildAsStep("Enable cluster").SetHidden(true)
+
+	if !skipEnable {
+		builder.ParallelStep("+ Enable cluster", enableTask)
 	}
 }
