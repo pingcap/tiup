@@ -68,11 +68,11 @@ function cmd_subtest() {
     tiup-cluster $client rename "tmp-cluster-name" $name
 
     # Test enable & disable
-    tiup-cluster $client exec $name --command="systemctl status tidb-4000|grep 'enabled;'"
-    tiup-cluster $client exec $name --command="systemctl status pd-2379|grep 'enabled;'"
+    tiup-cluster $client exec $name -R tidb --command="systemctl status tidb-4000|grep 'enabled;'"
+    tiup-cluster $client exec $name -R pd --command="systemctl status pd-2379|grep 'enabled;'"
     tiup-cluster $client disable $name -R tidb
-    tiup-cluster $client exec $name --command="systemctl status tidb-4000|grep 'disabled;'"
-    tiup-cluster $client exec $name --command="systemctl status pd-2379|grep 'enabled;'"
+    tiup-cluster $client exec $name -R tidb --command="systemctl status tidb-4000|grep 'disabled;'"
+    tiup-cluster $client exec $name -R pd --command="systemctl status pd-2379|grep 'enabled;'"
 
     tiup-cluster $client --yes clean $name --data --all --ignore-node 172.19.0.101:9090
 
