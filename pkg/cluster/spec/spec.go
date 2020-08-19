@@ -90,7 +90,7 @@ type (
 	Specification struct {
 		GlobalOptions    GlobalOptions       `yaml:"global,omitempty" validate:"global:editable"`
 		MonitoredOptions MonitoredOptions    `yaml:"monitored,omitempty" validate:"monitored:editable"`
-		ServerConfigs    ServerConfigs       `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
+		ServerConfigs    ServerConfigs       `yaml:"server_configs,omitempty" validate:"-"`
 		TiDBServers      []TiDBSpec          `yaml:"tidb_servers"`
 		TiKVServers      []TiKVSpec          `yaml:"tikv_servers"`
 		TiFlashServers   []TiFlashSpec       `yaml:"tiflash_servers"`

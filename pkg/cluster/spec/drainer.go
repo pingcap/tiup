@@ -36,7 +36,7 @@ type DrainerSpec struct {
 	CommitTS        int64                `yaml:"commit_ts,omitempty"`
 	Offline         bool                 `yaml:"offline,omitempty"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config          *TomlConfig          `yaml:"config,omitempty" validate:"config:ignore"`
+	Config          *TomlConfig          `yaml:"config,omitempty" validate:"-"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string               `yaml:"arch,omitempty"`
 	OS              string               `yaml:"os,omitempty"`

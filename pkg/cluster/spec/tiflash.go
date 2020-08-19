@@ -49,7 +49,7 @@ type TiFlashSpec struct {
 	TmpDir               string               `yaml:"tmp_path,omitempty"`
 	Offline              bool                 `yaml:"offline,omitempty"`
 	NumaNode             string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config               *TomlConfig          `yaml:"config,omitempty" validate:"config:ignore"`
+	Config               *TomlConfig          `yaml:"config,omitempty" validate:"-"`
 	LearnerConfig        *TomlConfig          `yaml:"learner_config,omitempty" validate:"learner_config:editable"`
 	ResourceControl      meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch                 string               `yaml:"arch,omitempty"`
