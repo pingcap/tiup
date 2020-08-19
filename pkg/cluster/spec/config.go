@@ -75,6 +75,9 @@ func (c *TomlConfig) ToToml() (data []byte, err error) {
 
 // Inner return the inter config.
 func (c *TomlConfig) Inner() map[string]interface{} {
+	if c == nil {
+		return nil
+	}
 	return c.mp
 }
 
