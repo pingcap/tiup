@@ -98,7 +98,7 @@ func tryURLs(endpoints []string, f func(endpoint string) ([]byte, error)) ([]byt
 		return bytes, nil
 	}
 	if len(endpoints) > 1 && err != nil {
-		err = errors.Errorf("no pd endpoint available, the last err is: %s", err)
+		err = errors.Errorf("no endpoint available, the last err is: %s", err)
 	}
 	return bytes, err
 }
