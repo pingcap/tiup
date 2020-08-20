@@ -14,13 +14,34 @@
 package executor
 
 import (
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/joomcode/errorx"
+	"github.com/pingcap/tiup/pkg/localdata"
 )
 
 var (
 	errNS = errorx.NewNamespace("executor")
+
+	// ExecutorTypeNative is the type of easy ssh executor
+	ExecutorTypeNative = "native"
+
+	// ExecutorTypeSystem is the type of host ssh client
+	ExecutorTypeSystem = "system"
+
+	// ExecutorTypeLocal is the type of local executor (no ssh will be used)
+	ExecutorTypeLocal = "local"
+
+	executeDefaultTimeout = time.Second * 60
+
+	// This command will be execute once the NativeSSHExecutor is created.
+	// It's used to predict if the connection can establish success in the future.
+	// Its main purpose is to avoid sshpass hang when user speficied a wrong prompt.
+	connectionTestCommand = "echo connection test, if killed, check the password prompt"
+
+	defaultLocalIP = "127.0.0.1"
 )
 
 // Executor is the executor interface for TiOps, all tasks will in the end
@@ -35,4 +56,54 @@ type Executor interface {
 
 	// Transfer copies files from or to a target
 	Transfer(src string, dst string, download bool) error
+}
+
+// New create a new Executor
+func New(etype string, sudo bool, c SSHConfig) (Executor, error) {
+	// set default values
+	if c.Port <= 0 {
+		c.Port = 22
+	}
+
+	if c.Timeout == 0 {
+		c.Timeout = time.Second * 5 // default timeout is 5 sec
+	}
+
+	switch etype {
+	case ExecutorTypeNative:
+		e := &EasySSHExecutor{
+			Locale: "C",
+			Sudo:   sudo,
+		}
+		e.initialize(c)
+		return e, nil
+	case ExecutorTypeSystem:
+		e := &NativeSSHExecutor{
+			Config: &c,
+			Locale: "C",
+			Sudo:   sudo,
+		}
+		if c.Password != "" || (c.KeyFile != "" && c.Passphrase != "") {
+			_, _, e.ConnectionTestResult = e.Execute(connectionTestCommand, false, executeDefaultTimeout)
+		}
+		return e, nil
+	case ExecutorTypeLocal:
+		local := os.Getenv(localdata.EnvNameLocalHost)
+		if local == "" {
+			local = defaultLocalIP
+		}
+		if c.Host != local {
+			return nil, fmt.Errorf(`you are trying to connect ip address %s
+this is not the local address %s
+if you have another ip address, you can set it with %s = <your-local-ip>`, c.Host, local, localdata.EnvNameLocalHost)
+		}
+		e := &Local{
+			Config: &c,
+			Sudo:   sudo,
+			Locale: "C",
+		}
+		return e, nil
+	default:
+		return nil, fmt.Errorf("unregistered executor: %s", etype)
+	}
 }

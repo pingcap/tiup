@@ -20,6 +20,7 @@ import (
 
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -60,6 +61,9 @@ func newDeploy() *cobra.Command {
 			if !shouldContinue {
 				return nil
 			}
+			if gOpt.ExecutorType == executor.ExecutorTypeLocal {
+				opt.IdentityFile = ""
+			}
 
 			clusterName := args[0]
 			version := args[1]
@@ -80,7 +84,7 @@ func newDeploy() *cobra.Command {
 				skipConfirm,
 				gOpt.OptTimeout,
 				gOpt.SSHTimeout,
-				gOpt.NativeSSH,
+				gOpt.ExecutorType,
 			)
 		},
 	}

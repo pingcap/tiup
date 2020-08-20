@@ -85,7 +85,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 		SSHKeySet(
 			m.specManager.Path(name, "ssh", "id_rsa"),
 			m.specManager.Path(name, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, options.SSHTimeout, options.NativeSSH).
+		ClusterSSH(topo, base.User, options.SSHTimeout, options.ExecutorType).
 		Func("StartCluster", func(ctx *task.Context) error {
 			return operator.Start(ctx, topo, options)
 		})
@@ -122,7 +122,7 @@ func (m *Manager) StopCluster(clusterName string, options operator.Options) erro
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(metadata.GetTopology(), base.User, options.SSHTimeout, options.NativeSSH).
+		ClusterSSH(metadata.GetTopology(), base.User, options.SSHTimeout, options.ExecutorType).
 		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, options)
 		}).
@@ -154,7 +154,7 @@ func (m *Manager) RestartCluster(clusterName string, options operator.Options) e
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, options.SSHTimeout, options.NativeSSH).
+		ClusterSSH(topo, base.User, options.SSHTimeout, options.ExecutorType).
 		Func("RestartCluster", func(ctx *task.Context) error {
 			return operator.Restart(ctx, topo, options)
 		}).
@@ -241,7 +241,7 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.NativeSSH).
+		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.ExecutorType).
 		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, operator.Options{})
 		}).
@@ -288,7 +288,7 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.NativeSSH).
+		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.ExecutorType).
 		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, operator.Options{})
 		}).
@@ -360,7 +360,7 @@ func (m *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Option
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.NativeSSH).
+		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.ExecutorType).
 		Parallel(shellTasks...).
 		Build()
 
@@ -422,7 +422,7 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 		return perrs.AddStack(err)
 	}
 
-	err = ctx.SetClusterSSH(topo, base.User, opt.SSHTimeout, opt.NativeSSH)
+	err = ctx.SetClusterSSH(topo, base.User, opt.SSHTimeout, opt.ExecutorType)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -554,7 +554,6 @@ func (m *Manager) Rename(clusterName string, opt operator.Options, newName strin
 // Reload the cluster.
 func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart bool) error {
 	sshTimeout := opt.SSHTimeout
-	nativeSSH := opt.NativeSSH
 
 	metadata, err := m.meta(clusterName)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
@@ -585,7 +584,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 		logDir := clusterutil.Abs(base.User, inst.LogDir())
 
 		// Download and copy the latest component to remote if the cluster is imported from Ansible
-		tb := task.NewBuilder().UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, opt.SSHTimeout, opt.NativeSSH)
+		tb := task.NewBuilder().UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, opt.SSHTimeout, opt.ExecutorType)
 		if inst.IsImported() {
 			switch compName := inst.ComponentName(); compName {
 			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
@@ -619,7 +618,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 		*topo.BaseTopo().GlobalOptions,
 		topo.GetMonitoredOptions(),
 		sshTimeout,
-		nativeSSH)
+		opt.ExecutorType)
 
 	// handle dir scheme changes
 	if hasImported {
@@ -632,7 +631,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.NativeSSH).
+		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.ExecutorType).
 		ParallelStep("+ Refresh instance configs", refreshConfigTasks...)
 
 	if len(monitorConfigTasks) > 0 {
@@ -775,7 +774,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.NativeSSH).
+		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.ExecutorType).
 		Parallel(downloadCompTasks...).
 		Parallel(copyCompTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
@@ -841,7 +840,7 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.NativeSSH).
+		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.ExecutorType).
 		Parallel(replacePackageTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
 			return operator.Upgrade(ctx, topo, opt)
@@ -898,7 +897,7 @@ func (m *Manager) Deploy(
 	skipConfirm bool,
 	optTimeout int64,
 	sshTimeout int64,
-	nativeSSH bool,
+	executorType string,
 ) error {
 	if err := clusterutil.ValidateClusterNameOrError(clusterName); err != nil {
 		return err
@@ -1004,7 +1003,7 @@ func (m *Manager) Deploy(
 					sshConnProps.IdentityFile,
 					sshConnProps.IdentityFilePassphrase,
 					sshTimeout,
-					nativeSSH,
+					executorType,
 				).
 				EnvInit(inst.GetHost(), globalOptions.User, globalOptions.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
 				Mkdir(globalOptions.User, inst.GetHost(), dirs...).
@@ -1031,7 +1030,7 @@ func (m *Manager) Deploy(
 		// Deploy component
 		// prepare deployment server
 		t := task.NewBuilder().
-			UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, sshTimeout, nativeSSH).
+			UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, sshTimeout, executorType).
 			Mkdir(globalOptions.User, inst.GetHost(),
 				deployDir, logDir,
 				filepath.Join(deployDir, "bin"),
@@ -1090,7 +1089,7 @@ func (m *Manager) Deploy(
 		topo.GetMonitoredOptions(),
 		clusterVersion,
 		sshTimeout,
-		nativeSSH,
+		executorType,
 	)
 	downloadCompTasks = append(downloadCompTasks, dlTasks...)
 	deployCompTasks = append(deployCompTasks, dpTasks...)
@@ -1134,7 +1133,7 @@ func (m *Manager) ScaleIn(
 	clusterName string,
 	skipConfirm bool,
 	sshTimeout int64,
-	nativeSSH bool,
+	executorType string,
 	force bool,
 	nodes []string,
 	scale func(builer *task.Builder, metadata spec.Metadata),
@@ -1231,7 +1230,7 @@ func (m *Manager) ScaleIn(
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, sshTimeout, nativeSSH)
+		ClusterSSH(topo, base.User, sshTimeout, executorType)
 
 	// TODO: support command scale in operation.
 	scale(b, metadata)
@@ -1261,7 +1260,7 @@ func (m *Manager) ScaleOut(
 	skipConfirm bool,
 	optTimeout int64,
 	sshTimeout int64,
-	nativeSSH bool,
+	executorType string,
 ) error {
 	metadata, err := m.meta(clusterName)
 	if err != nil { // not allowing validation errors
@@ -1329,7 +1328,9 @@ func (m *Manager) ScaleOut(
 	}
 
 	// Build the scale out tasks
-	t, err := buildScaleOutTask(m, clusterName, metadata, mergedTopo, opt, sshConnProps, newPart, patchedComponents, optTimeout, sshTimeout, nativeSSH, afterDeploy, final)
+	t, err := buildScaleOutTask(
+		m, clusterName, metadata, mergedTopo, opt, sshConnProps, newPart,
+		patchedComponents, optTimeout, sshTimeout, executorType, afterDeploy, final)
 	if err != nil {
 		return err
 	}
@@ -1649,7 +1650,7 @@ func buildScaleOutTask(
 	patchedComponents set.StringSet,
 	optTimeout int64,
 	sshTimeout int64,
-	nativeSSH bool,
+	executorType string,
 	afterDeploy func(b *task.Builder, newPart spec.Topology),
 	final func(b *task.Builder, name string, meta spec.Metadata),
 ) (task.Task, error) {
@@ -1702,7 +1703,7 @@ func buildScaleOutTask(
 					sshConnProps.IdentityFile,
 					sshConnProps.IdentityFilePassphrase,
 					sshTimeout,
-					nativeSSH,
+					executorType,
 				).
 				EnvInit(instance.GetHost(), base.User, base.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
 				Mkdir(globalOptions.User, instance.GetHost(), dirs...).
@@ -1725,7 +1726,7 @@ func buildScaleOutTask(
 
 		// Deploy component
 		tb := task.NewBuilder().
-			UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, sshTimeout, nativeSSH).
+			UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, sshTimeout, executorType).
 			Mkdir(base.User, inst.GetHost(),
 				deployDir, logDir,
 				filepath.Join(deployDir, "bin"),
@@ -1824,7 +1825,7 @@ func buildScaleOutTask(
 		topo.BaseTopo().MonitoredOptions,
 		base.Version,
 		sshTimeout,
-		nativeSSH,
+		executorType,
 	)
 	downloadCompTasks = append(downloadCompTasks, convertStepDisplaysToTasks(dlTasks)...)
 	deployCompTasks = append(deployCompTasks, convertStepDisplaysToTasks(dpTasks)...)
@@ -1835,7 +1836,7 @@ func buildScaleOutTask(
 			specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		Parallel(downloadCompTasks...).
 		Parallel(envInitTasks...).
-		ClusterSSH(topo, base.User, sshTimeout, nativeSSH).
+		ClusterSSH(topo, base.User, sshTimeout, executorType).
 		Parallel(deployCompTasks...)
 
 	if afterDeploy != nil {
@@ -1847,7 +1848,7 @@ func buildScaleOutTask(
 		Func("StartCluster", func(ctx *task.Context) error {
 			return operator.Start(ctx, metadata.GetTopology(), operator.Options{OptTimeout: optTimeout})
 		}).
-		ClusterSSH(newPart, base.User, sshTimeout, nativeSSH).
+		ClusterSSH(newPart, base.User, sshTimeout, executorType).
 		Func("Save meta", func(_ *task.Context) error {
 			metadata.SetTopology(mergedTopo)
 			return m.specManager.SaveMeta(clusterName, metadata)
@@ -1895,7 +1896,7 @@ func buildMonitoredDeployTask(
 	monitoredOptions *spec.MonitoredOptions,
 	version string,
 	sshTimeout int64,
-	nativeSSH bool,
+	executorType string,
 ) (downloadCompTasks []*task.StepDisplay, deployCompTasks []*task.StepDisplay) {
 	if monitoredOptions == nil {
 		return
@@ -1927,7 +1928,7 @@ func buildMonitoredDeployTask(
 			logDir := clusterutil.Abs(globalOptions.User, monitoredOptions.LogDir)
 			// Deploy component
 			t := task.NewBuilder().
-				UserSSH(host, info.ssh, globalOptions.User, sshTimeout, nativeSSH).
+				UserSSH(host, info.ssh, globalOptions.User, sshTimeout, executorType).
 				Mkdir(globalOptions.User, host,
 					deployDir, dataDir, logDir,
 					filepath.Join(deployDir, "bin"),
@@ -1970,7 +1971,7 @@ func refreshMonitoredConfigTask(
 	globalOptions spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
 	sshTimeout int64,
-	nativeSSH bool,
+	executorType string,
 ) []*task.StepDisplay {
 	if monitoredOptions == nil {
 		return nil
@@ -1991,7 +1992,7 @@ func refreshMonitoredConfigTask(
 			logDir := clusterutil.Abs(globalOptions.User, monitoredOptions.LogDir)
 			// Generate configs
 			t := task.NewBuilder().
-				UserSSH(host, info.ssh, globalOptions.User, sshTimeout, nativeSSH).
+				UserSSH(host, info.ssh, globalOptions.User, sshTimeout, executorType).
 				MonitoredConfig(
 					clusterName,
 					comp,

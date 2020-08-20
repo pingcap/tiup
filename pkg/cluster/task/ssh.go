@@ -34,12 +34,12 @@ type RootSSH struct {
 	keyFile    string // path to the private key file
 	passphrase string // passphrase of the private key file
 	timeout    int64  // timeout in seconds when connecting via SSH
-	native     bool   // use native ssh client
+	executor   string // the type of executor
 }
 
 // Execute implements the Task interface
 func (s *RootSSH) Execute(ctx *Context) error {
-	e := executor.NewSSHExecutor(executor.SSHConfig{
+	e, err := executor.New(s.executor, s.user != "root", executor.SSHConfig{
 		Host:       s.host,
 		Port:       s.port,
 		User:       s.user,
@@ -47,7 +47,10 @@ func (s *RootSSH) Execute(ctx *Context) error {
 		KeyFile:    s.keyFile,
 		Passphrase: s.passphrase,
 		Timeout:    time.Second * time.Duration(s.timeout),
-	}, s.user != "root", s.native) // using sudo by default if user is not root
+	})
+	if err != nil {
+		return err
+	}
 
 	ctx.SetExecutor(s.host, e)
 	return nil
@@ -75,18 +78,22 @@ type UserSSH struct {
 	port       int
 	deployUser string
 	timeout    int64
-	native     bool
+	executor   string
 }
 
 // Execute implements the Task interface
 func (s *UserSSH) Execute(ctx *Context) error {
-	e := executor.NewSSHExecutor(executor.SSHConfig{
+	e, err := executor.New(s.executor, false, executor.SSHConfig{
 		Host:    s.host,
 		Port:    s.port,
 		KeyFile: ctx.PrivateKeyPath,
 		User:    s.deployUser,
 		Timeout: time.Second * time.Duration(s.timeout),
-	}, false /* not using sudo by default */, s.native)
+	})
+	if err != nil {
+		return err
+	}
+
 	ctx.SetExecutor(s.host, e)
 	return nil
 }

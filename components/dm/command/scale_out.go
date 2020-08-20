@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/tiup/pkg/cluster"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -33,6 +34,9 @@ func newScaleOutCmd() *cobra.Command {
 			if len(args) != 2 {
 				return cmd.Help()
 			}
+			if gOpt.ExecutorType == executor.ExecutorTypeLocal {
+				opt.IdentityFile = ""
+			}
 
 			clusterName := args[0]
 			topoFile := args[1]
@@ -46,7 +50,7 @@ func newScaleOutCmd() *cobra.Command {
 				skipConfirm,
 				gOpt.OptTimeout,
 				gOpt.SSHTimeout,
-				gOpt.NativeSSH,
+				gOpt.ExecutorType,
 			)
 		},
 	}

@@ -49,7 +49,7 @@ func newScaleInCmd() *cobra.Command {
 				clusterName,
 				skipConfirm,
 				gOpt.SSHTimeout,
-				gOpt.NativeSSH,
+				gOpt.ExecutorType,
 				gOpt.Force,
 				gOpt.Nodes,
 				scale,

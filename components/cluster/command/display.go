@@ -127,7 +127,7 @@ func destroyTombstoneIfNeed(clusterName string, metadata *spec.ClusterMeta, opt 
 		return perrs.AddStack(err)
 	}
 
-	err = ctx.SetClusterSSH(topo, metadata.User, gOpt.SSHTimeout, gOpt.NativeSSH)
+	err = ctx.SetClusterSSH(topo, metadata.User, gOpt.SSHTimeout, gOpt.ExecutorType)
 	if err != nil {
 		return perrs.AddStack(err)
 	}

@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/tiup/pkg/cluster"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -39,6 +40,9 @@ func newScaleOutCmd() *cobra.Command {
 			if len(args) != 2 {
 				return cmd.Help()
 			}
+			if gOpt.ExecutorType == executor.ExecutorTypeLocal {
+				opt.IdentityFile = ""
+			}
 
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
@@ -57,7 +61,7 @@ func newScaleOutCmd() *cobra.Command {
 				skipConfirm,
 				gOpt.OptTimeout,
 				gOpt.SSHTimeout,
-				gOpt.NativeSSH,
+				gOpt.ExecutorType,
 			)
 		},
 	}

@@ -25,6 +25,7 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -59,6 +60,9 @@ conflict checks with other clusters`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
+			}
+			if gOpt.ExecutorType == executor.ExecutorTypeLocal {
+				opt.identityFile = ""
 			}
 
 			var topo spec.Specification
@@ -160,7 +164,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 					s.IdentityFile,
 					s.IdentityFilePassphrase,
 					gOpt.SSHTimeout,
-					gOpt.NativeSSH,
+					gOpt.ExecutorType,
 				).
 				Mkdir(opt.user, inst.GetHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
 				CopyComponent(
@@ -270,7 +274,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 					s.IdentityFile,
 					s.IdentityFilePassphrase,
 					gOpt.SSHTimeout,
-					gOpt.NativeSSH,
+					gOpt.ExecutorType,
 				).
 				Rmdir(inst.GetHost(), task.CheckToolsPathDir).
 				BuildAsStep(fmt.Sprintf("  - Cleanup check files on %s:%d", inst.GetHost(), inst.GetSSHPort()))
@@ -310,7 +314,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 				s.IdentityFile,
 				s.IdentityFilePassphrase,
 				gOpt.SSHTimeout,
-				gOpt.NativeSSH,
+				gOpt.ExecutorType,
 			)
 		resLines, err := handleCheckResults(ctx, host, opt, tf)
 		if err != nil {

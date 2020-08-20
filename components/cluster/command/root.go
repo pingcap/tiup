@@ -26,6 +26,7 @@ import (
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/flags"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/report"
@@ -85,6 +86,13 @@ func init() {
 		gOpt.NativeSSH = true
 	}
 
+	executorEnvVar := strings.ToLower(os.Getenv(localdata.EnvNameExecutorType))
+	if executorEnvVar != "" {
+		gOpt.ExecutorType = executorEnvVar
+	} else {
+		gOpt.ExecutorType = executor.ExecutorTypeNative
+	}
+
 	rootCmd = &cobra.Command{
 		Use:           cliutil.OsArgs0(),
 		Short:         "Deploy a TiDB cluster for production",
@@ -115,6 +123,7 @@ func init() {
 			teleCommand = getParentNames(cmd)
 
 			if gOpt.NativeSSH {
+				gOpt.ExecutorType = executor.ExecutorTypeSystem
 				zap.L().Info("Native ssh client will be used",
 					zap.String(localdata.EnvNameNativeSSHClient, os.Getenv(localdata.EnvNameNativeSSHClient)))
 			}
@@ -137,6 +146,7 @@ func init() {
 	rootCmd.PersistentFlags().Int64Var(&gOpt.OptTimeout, "wait-timeout", 120, "Timeout in seconds to wait for an operation to complete, ignored for operations that don't fit.")
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
 	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "Use the native SSH client installed on local system instead of the build-in one.")
+	rootCmd.PersistentFlags().StringVar(&gOpt.ExecutorType, "executor", gOpt.ExecutorType, "The executor type: 'native', 'system', 'local'")
 
 	rootCmd.AddCommand(
 		newCheckCmd(),

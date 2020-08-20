@@ -19,6 +19,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
@@ -41,6 +42,9 @@ func newDeploy() *cobra.Command {
 			if !shouldContinue {
 				return nil
 			}
+			if gOpt.ExecutorType == executor.ExecutorTypeLocal {
+				opt.IdentityFile = ""
+			}
 
 			clusterName := args[0]
 			version := args[1]
@@ -59,7 +63,7 @@ func newDeploy() *cobra.Command {
 				skipConfirm,
 				gOpt.OptTimeout,
 				gOpt.SSHTimeout,
-				gOpt.NativeSSH,
+				gOpt.ExecutorType,
 			)
 		},
 	}

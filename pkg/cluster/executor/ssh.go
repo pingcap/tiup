@@ -50,13 +50,6 @@ var (
 	ErrSSHExecuteTimedout = errNSSSH.NewType("execute_timedout")
 )
 
-var executeDefaultTimeout = time.Second * 60
-
-// This command will be execute once the NativeSSHExecutor is created.
-// It's used to predict if the connection can establish success in the future.
-// Its main purpose is to avoid sshpass hang when user speficied a wrong prompt.
-var connectionTestCommand = "echo connection test, if killed, check the password prompt"
-
 func init() {
 	v := os.Getenv("TIUP_CLUSTER_EXECUTE_DEFAULT_TIMEOUT")
 	if v != "" {
@@ -369,7 +362,7 @@ func (e *NativeSSHExecutor) Transfer(src string, dst string, download bool) erro
 
 	err := command.Run()
 
-	zap.L().Info("SSPCommand",
+	zap.L().Info("SCPCommand",
 		zap.String("host", e.Config.Host),
 		zap.Int("port", e.Config.Port),
 		zap.String("cmd", strings.Join(args, " ")),
