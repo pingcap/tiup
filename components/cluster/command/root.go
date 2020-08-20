@@ -303,7 +303,11 @@ func Execute() {
 		}
 	}
 
-	logger.OutputAuditLogIfEnabled()
+	err = logger.OutputAuditLogIfEnabled()
+	if err != nil {
+		zap.L().Warn("Write audit log file failed", zap.Error(err))
+		code = 1
+	}
 
 	color.Unset()
 
