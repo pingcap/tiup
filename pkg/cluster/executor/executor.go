@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/joomcode/errorx"
+	"github.com/pingcap/failpoint"
 	"github.com/pingcap/tiup/pkg/localdata"
 )
 
@@ -60,6 +61,20 @@ type Executor interface {
 
 // New create a new Executor
 func New(etype string, sudo bool, c SSHConfig) (Executor, error) {
+	// Used in integration testing, to check if native ssh client is really used when it need to be.
+	failpoint.Inject("assertNativeSSH", func() {
+		// XXX: We call system executor 'native' by mistake in commit f1142b1
+		// this should be fixed after we remove --native-ssh flag
+		if etype == ExecutorTypeSystem {
+			return
+		}
+		msg := fmt.Sprintf(
+			"native ssh client should be used in this case, os.Args: %s, %s = %s",
+			os.Args, localdata.EnvNameNativeSSHClient, os.Getenv(localdata.EnvNameNativeSSHClient),
+		)
+		panic(msg)
+	})
+
 	// set default values
 	if c.Port <= 0 {
 		c.Port = 22

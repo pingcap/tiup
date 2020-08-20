@@ -27,7 +27,6 @@ import (
 	"github.com/appleboy/easyssh-proxy"
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/failpoint"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -94,45 +93,6 @@ type (
 
 var _ Executor = &EasySSHExecutor{}
 var _ Executor = &NativeSSHExecutor{}
-
-// NewSSHExecutor create a ssh executor.
-func NewSSHExecutor(c SSHConfig, sudo bool, native bool) Executor {
-	// set default values
-	if c.Port <= 0 {
-		c.Port = 22
-	}
-
-	if c.Timeout == 0 {
-		c.Timeout = time.Second * 5 // default timeout is 5 sec
-	}
-
-	if native {
-		e := &NativeSSHExecutor{
-			Config: &c,
-			Locale: "C",
-			Sudo:   sudo,
-		}
-		if c.Password != "" || (c.KeyFile != "" && c.Passphrase != "") {
-			_, _, e.ConnectionTestResult = e.Execute(connectionTestCommand, false, executeDefaultTimeout)
-		}
-		return e
-	}
-
-	// Used in integration testing, to check if native ssh client is really used when it need to be.
-	failpoint.Inject("assertNativeSSH", func() {
-		msg := fmt.Sprintf(
-			"native ssh client should be used in this case, os.Args: %s, %s = %s",
-			os.Args, localdata.EnvNameNativeSSHClient, os.Getenv(localdata.EnvNameNativeSSHClient),
-		)
-		panic(msg)
-	})
-
-	e := new(EasySSHExecutor)
-	e.initialize(c)
-	e.Locale = "C" // default locale, hard coded for now
-	e.Sudo = sudo
-	return e
-}
 
 // Initialize builds and initializes a EasySSHExecutor
 func (e *EasySSHExecutor) initialize(config SSHConfig) {
