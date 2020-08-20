@@ -65,14 +65,13 @@ func New(etype string, sudo bool, c SSHConfig) (Executor, error) {
 	failpoint.Inject("assertNativeSSH", func() {
 		// XXX: We call system executor 'native' by mistake in commit f1142b1
 		// this should be fixed after we remove --native-ssh flag
-		if etype == ExecutorTypeSystem {
-			return
+		if etype != ExecutorTypeSystem {
+			msg := fmt.Sprintf(
+				"native ssh client should be used in this case, os.Args: %s, %s = %s",
+				os.Args, localdata.EnvNameNativeSSHClient, os.Getenv(localdata.EnvNameNativeSSHClient),
+			)
+			panic(msg)
 		}
-		msg := fmt.Sprintf(
-			"native ssh client should be used in this case, os.Args: %s, %s = %s",
-			os.Args, localdata.EnvNameNativeSSHClient, os.Getenv(localdata.EnvNameNativeSSHClient),
-		)
-		panic(msg)
 	})
 
 	// set default values

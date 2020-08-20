@@ -16,6 +16,7 @@ package executor
 import (
 	"io/ioutil"
 	"os"
+	"os/user"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,8 +24,11 @@ import (
 
 func TestLocal(t *testing.T) {
 	assert := require.New(t)
-	local := new(Local)
-	_, _, err := local.Execute("ls .", false)
+	user, err := user.Current()
+	assert.Nil(err)
+	local, err := New(ExecutorTypeLocal, false, SSHConfig{Host: defaultLocalIP, User: user.Username})
+	assert.Nil(err)
+	_, _, err = local.Execute("ls .", false)
 	assert.Nil(err)
 
 	// generate a src file and write some data

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strings"
 	"time"
@@ -106,10 +107,14 @@ func (l *Local) Transfer(src string, dst string, download bool) error {
 	}
 
 	cmd := ""
-	if !download {
-		cmd = fmt.Sprintf("sudo -H -u root bash -c \"cp %[1]s %[2]s && chown %[3]s:$(id -g -n %[3]s) %[2]s\"", src, dst, l.Config.User)
-	} else {
+	user, err := user.Current()
+	if err != nil {
+		return err
+	}
+	if download || user.Username == l.Config.User {
 		cmd = fmt.Sprintf("cp %s %s", src, dst)
+	} else {
+		cmd = fmt.Sprintf("sudo -H -u root bash -c \"cp %[1]s %[2]s && chown %[3]s:$(id -g -n %[3]s) %[2]s\"", src, dst, l.Config.User)
 	}
 
 	command := exec.Command("/bin/sh", "-c", cmd)
@@ -118,7 +123,7 @@ func (l *Local) Transfer(src string, dst string, download bool) error {
 	command.Stdout = stdout
 	command.Stderr = stderr
 
-	err := command.Run()
+	err = command.Run()
 
 	zap.L().Info("CPCommand",
 		zap.String("cmd", cmd),
