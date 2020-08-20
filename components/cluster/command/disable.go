@@ -37,7 +37,7 @@ func newDisableCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only start specified roles")
+	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only disable specified roles")
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only start specified nodes")
 
 	return cmd
