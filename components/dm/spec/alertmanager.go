@@ -15,11 +15,15 @@ package spec
 
 import (
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
 
+	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	cspec "github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -69,6 +73,39 @@ type AlertManagerInstance struct {
 	topo *Topology
 }
 
+var _ cluster.DeployerInstance = &AlertManagerInstance{}
+
+// Deploy implements DeployerInstance interface.
+func (i *AlertManagerInstance) Deploy(t *task.Builder, srcPath string, deployDir string, version string, clusterName string, clusterVersion string) {
+	t.CopyComponent(
+		i.ComponentName(),
+		i.OS(),
+		i.Arch(),
+		version,
+		srcPath,
+		i.GetHost(),
+		deployDir,
+	).Func("CopyConfig", func(ctx *task.Context) error {
+		tempDir, err := ioutil.TempDir("", "tiup-*")
+		if err != nil {
+			return errors.AddStack(err)
+		}
+		// transfer config
+		e := ctx.Get(i.GetHost())
+		fp := filepath.Join(tempDir, fmt.Sprintf("alertmanager_%s.yml", i.GetHost()))
+		if err := config.NewAlertManagerConfig().ConfigToFile(fp); err != nil {
+			return err
+		}
+		dst := filepath.Join(deployDir, "conf", "alertmanager.yml")
+		err = e.Transfer(fp, dst, false)
+		if err != nil {
+			return errors.Annotatef(err, "failed to transfer %s to %s@%s", fp, i.GetHost(), dst)
+		}
+		return nil
+	})
+
+}
+
 // InitConfig implement Instance interface
 func (i *AlertManagerInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
@@ -94,13 +131,7 @@ func (i *AlertManagerInstance) InitConfig(e executor.Executor, clusterName, clus
 		return err
 	}
 
-	// transfer config
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("alertmanager_%s.yml", i.GetHost()))
-	if err := config.NewAlertManagerConfig().ConfigToFile(fp); err != nil {
-		return err
-	}
-	dst = filepath.Join(paths.Deploy, "conf", "alertmanager.yml")
-	return e.Transfer(fp, dst, false)
+	return nil
 }
 
 // ScaleConfig deploy temporary config on scaling
