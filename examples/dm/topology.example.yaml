@@ -20,6 +20,7 @@ server_configs:
 
 master_servers:
   - host: 10.0.1.11
+    name: master1
     # ssh_port: 22
     # port: 8261
     # peer_port: 8291
@@ -34,7 +35,9 @@ master_servers:
       # rpc-rate-limit: 10.0
       # rpc-rate-burst: 40
   - host: 10.0.1.18
+    name: master2
   - host: 10.0.1.19
+    name: master3
 
 worker_servers:
   - host: 10.0.1.12
