@@ -114,11 +114,12 @@ func (s *StepDisplay) String() string {
 }
 
 func (s *StepDisplay) handleTaskBegin(task Task) {
-	fmt.Println("internal @@@@@@@@@@@@@@@@@@@@@@@@@@@", task)
-
 	if _, ok := s.children[task]; !ok {
 		return
 	}
+
+	fmt.Println("internal @@@@@@@@@@@@@@@@@@@@@@@@@@@", task)
+
 	s.progressBar.UpdateDisplay(&progress.DisplayProps{
 		Prefix: s.prefix,
 		Suffix: strings.Split(task.String(), "\n")[0],
@@ -126,11 +127,12 @@ func (s *StepDisplay) handleTaskBegin(task Task) {
 }
 
 func (s *StepDisplay) handleTaskProgress(task Task, p string) {
-	fmt.Println("internal @@@@@@@@@@@@@@@@@@@@@@@@@@@", task, p)
-
 	if _, ok := s.children[task]; !ok {
 		return
 	}
+
+	fmt.Println("internal @@@@@@@@@@@@@@@@@@@@@@@@@@@", task, p)
+
 	s.progressBar.UpdateDisplay(&progress.DisplayProps{
 		Prefix: s.prefix,
 		Suffix: strings.Split(p, "\n")[0],

@@ -29,8 +29,8 @@ tidb_servers:
   - host: 10.0.1.12
   - host: 10.0.1.13
 
-tiflash_servers:
-  - host: 10.0.1.14
+# tiflash_servers:
+#   - host: 10.0.1.14
 
 grafana_servers:
   - host: 10.0.1.11

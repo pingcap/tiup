@@ -1,4 +1,4 @@
-load "#{File.dirname(__FILE__)}/../_shared/Vagrantfile.partial.pubKey.ruby"
+load "#{File.dirname(__FILE__)}/../_shared/Vagrantfile.partial.pubKey.rb"
 
 Vagrant.configure("2") do |config|
   config.vm.provider "virtualbox" do |v|
