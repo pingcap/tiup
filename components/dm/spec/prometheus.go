@@ -135,13 +135,13 @@ func (i *MonitorInstance) ScaleConfig(e executor.Executor, topo spec.Topology,
 var _ cluster.DeployerInstance = &MonitorInstance{}
 
 // Deploy implements DeployerInstance interface.
-func (i *MonitorInstance) Deploy(t *task.Builder, deployDir string, version string, _ string, clusterVersion string) {
+func (i *MonitorInstance) Deploy(t *task.Builder, srcPath string, deployDir string, version string, _ string, clusterVersion string) {
 	t.CopyComponent(
 		i.ComponentName(),
 		i.OS(),
 		i.Arch(),
 		version,
-		"", // use default srcPath
+		srcPath,
 		i.GetHost(),
 		deployDir,
 	).Shell( // rm the rules file which relate to tidb cluster and useless.
