@@ -1,0 +1,14 @@
+load "#{File.dirname(__FILE__)}/../_shared/Vagrantfile.partial.pubKey.ruby"
+
+Vagrant.configure("2") do |config|
+  config.vm.provider "virtualbox" do |v|
+    v.memory = 1024
+    v.cpus = 1
+  end
+
+  (1..4).each do |i|
+    config.vm.define "node#{i}" do |node|
+      node.vm.network "private_network", ip: "10.0.1.#{i+10}"
+    end
+  end
+end

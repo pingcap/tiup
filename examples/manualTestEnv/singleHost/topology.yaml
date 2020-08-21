@@ -1,0 +1,37 @@
+global:
+  user: tidb
+  deploy_dir: tidb-deploy
+  data_dir: tidb-data
+
+server_configs:
+  tikv:
+    server.grpc-concurrency: 1
+    raftstore.apply-pool-size: 1
+    raftstore.store-pool-size: 1
+    readpool.unified.max-thread-count: 1
+    readpool.storage.use-unified-pool: false
+    readpool.coprocessor.use-unified-pool: true
+    storage.block-cache.capacity: 256MB
+  pd:
+    replication.enable-placement-rules: true
+
+pd_servers:
+  - host: 10.0.1.2
+
+tikv_servers:
+  - host: 10.0.1.2
+
+tidb_servers:
+  - host: 10.0.1.2
+
+tiflash_servers:
+  - host: 10.0.1.2
+
+grafana_servers:
+  - host: 10.0.1.2
+
+monitoring_servers:
+  - host: 10.0.1.2
+
+alertmanager_servers:
+  - host: 10.0.1.2
