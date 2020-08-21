@@ -92,6 +92,9 @@ func parseInventoryFile(invFile io.Reader) (string, *spec.ClusterMeta, *aini.Inv
 		}
 
 		if enableBinlog, err := strconv.ParseBool(grp.Vars["enable_binlog"]); err == nil && enableBinlog {
+			if clsMeta.Topology.ServerConfigs.TiDB == nil {
+				clsMeta.Topology.ServerConfigs.TiDB = make(map[string]interface{})
+			}
 			clsMeta.Topology.ServerConfigs.TiDB["binlog.enable"] = enableBinlog
 		}
 	} else {

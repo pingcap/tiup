@@ -14,6 +14,16 @@ topology:
     deploy_dir: /home/tiopsimport/ansible-deploy
     data_dir: /home/tiopsimport/ansible-deploy/data
     log_dir: /home/tiopsimport/ansible-deploy/log
+  server_configs:
+    tidb:
+      binlog.enable: true
+    tikv: {}
+    pd: {}
+    tiflash: {}
+    tiflash-learner: {}
+    pump: {}
+    drainer: {}
+    cdc: {}
   tidb_servers:
   - host: 172.16.1.218
     ssh_port: 9999

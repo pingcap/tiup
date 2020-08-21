@@ -55,6 +55,16 @@ func (s *ansSuite) TestParseInventoryFile(c *C) {
 monitored:
   deploy_dir: /home/tiopsimport/ansible-deploy
   data_dir: /home/tiopsimport/ansible-deploy/data
+server_configs:
+  tidb:
+    binlog.enable: true
+  tikv: {}
+  pd: {}
+  tiflash: {}
+  tiflash-learner: {}
+  pump: {}
+  drainer: {}
+  cdc: {}
 tidb_servers: []
 tikv_servers: []
 tiflash_servers: []
