@@ -46,7 +46,7 @@ type (
 	// We should use mutex to prevent concurrent R/W for some fields
 	// because of the same context can be shared in parallel tasks.
 	Context struct {
-		ev EventBus
+		Ev EventBus
 
 		exec struct {
 			sync.RWMutex
@@ -77,7 +77,7 @@ type (
 // NewContext create a context instance.
 func NewContext() *Context {
 	return &Context{
-		ev: NewEventBus(),
+		Ev: NewEventBus(),
 		exec: struct {
 			sync.RWMutex
 			executors    map[string]executor.Executor
@@ -185,9 +185,9 @@ func (s *Serial) Execute(ctx *Context) error {
 				log.Infof("+ [ Serial ] - %s", t.String())
 			}
 		}
-		ctx.ev.PublishTaskBegin(t)
+		ctx.Ev.PublishTaskBegin(t)
 		err := t.Execute(ctx)
-		ctx.ev.PublishTaskFinish(t, err)
+		ctx.Ev.PublishTaskFinish(t, err)
 		if err != nil {
 			return err
 		}
@@ -238,9 +238,9 @@ func (pt *Parallel) Execute(ctx *Context) error {
 					log.Infof("+ [Parallel] - %s", t.String())
 				}
 			}
-			ctx.ev.PublishTaskBegin(t)
+			ctx.Ev.PublishTaskBegin(t)
 			err := t.Execute(ctx)
-			ctx.ev.PublishTaskFinish(t, err)
+			ctx.Ev.PublishTaskFinish(t, err)
 			if err != nil {
 				mu.Lock()
 				if firstError == nil {

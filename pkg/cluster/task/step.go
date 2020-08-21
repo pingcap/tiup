@@ -14,6 +14,7 @@
 package task
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/pingcap/tiup/pkg/cliutil/progress"
@@ -80,11 +81,11 @@ func (s *StepDisplay) Execute(ctx *Context) error {
 	if singleBar, ok := s.progressBar.(*progress.SingleBar); ok {
 		singleBar.StartRenderLoop()
 	}
-	ctx.ev.Subscribe(EventTaskBegin, s.handleTaskBegin)
-	ctx.ev.Subscribe(EventTaskProgress, s.handleTaskProgress)
+	ctx.Ev.Subscribe(EventTaskBegin, s.handleTaskBegin)
+	ctx.Ev.Subscribe(EventTaskProgress, s.handleTaskProgress)
 	err := s.inner.Execute(ctx)
-	ctx.ev.Unsubscribe(EventTaskProgress, s.handleTaskProgress)
-	ctx.ev.Unsubscribe(EventTaskBegin, s.handleTaskBegin)
+	ctx.Ev.Unsubscribe(EventTaskProgress, s.handleTaskProgress)
+	ctx.Ev.Unsubscribe(EventTaskBegin, s.handleTaskBegin)
 	if err != nil {
 		s.progressBar.UpdateDisplay(&progress.DisplayProps{
 			Prefix: s.prefix,
@@ -113,6 +114,8 @@ func (s *StepDisplay) String() string {
 }
 
 func (s *StepDisplay) handleTaskBegin(task Task) {
+	fmt.Println("internal @@@@@@@@@@@@@@@@@@@@@@@@@@@", task)
+
 	if _, ok := s.children[task]; !ok {
 		return
 	}
@@ -123,6 +126,8 @@ func (s *StepDisplay) handleTaskBegin(task Task) {
 }
 
 func (s *StepDisplay) handleTaskProgress(task Task, p string) {
+	fmt.Println("internal @@@@@@@@@@@@@@@@@@@@@@@@@@@", task, p)
+
 	if _, ok := s.children[task]; !ok {
 		return
 	}

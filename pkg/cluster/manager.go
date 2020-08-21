@@ -1108,6 +1108,14 @@ func (m *Manager) Deploy(
 
 	t := builder.Build()
 
+	ctx := task.NewContext()
+	ctx.Ev.Subscribe(task.EventTaskBegin, func(task task.Task) {
+		fmt.Println("external /////////////", task)
+	})
+	ctx.Ev.Subscribe(task.EventTaskProgress, func(task task.Task, p string) {
+		fmt.Println("external /////////////", task, p)
+	})
+
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
