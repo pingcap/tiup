@@ -14,7 +14,6 @@
 package task
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/pingcap/tiup/pkg/cliutil/progress"
@@ -86,12 +85,16 @@ func (s *StepDisplay) Execute(ctx *Context) error {
 	err := s.inner.Execute(ctx)
 	ctx.Ev.Unsubscribe(EventTaskProgress, s.handleTaskProgress)
 	ctx.Ev.Unsubscribe(EventTaskBegin, s.handleTaskBegin)
+
+	// fmt.Println("=========== Step Finish ============")
+
 	if err != nil {
 		s.progressBar.UpdateDisplay(&progress.DisplayProps{
 			Prefix: s.prefix,
 			Mode:   progress.ModeError,
 		})
 	} else {
+		// fmt.Println("=========== Step Done ============")
 		s.progressBar.UpdateDisplay(&progress.DisplayProps{
 			Prefix: s.prefix,
 			Mode:   progress.ModeDone,
@@ -114,11 +117,13 @@ func (s *StepDisplay) String() string {
 }
 
 func (s *StepDisplay) handleTaskBegin(task Task) {
+	// 可能同时会收到其它 StepDisplay 发生的事件
+	// 要判断这个 task 是否属于这个 StepDisplay
 	if _, ok := s.children[task]; !ok {
 		return
 	}
 
-	fmt.Println("internal @@@@@@@@@@@@@@@@@@@@@@@@@@@", task)
+	// fmt.Println("internal @@@@@@@@@@@@@@@@@@@@@@@@@@@ begin:", task, "@@@@")
 
 	s.progressBar.UpdateDisplay(&progress.DisplayProps{
 		Prefix: s.prefix,
@@ -131,7 +136,7 @@ func (s *StepDisplay) handleTaskProgress(task Task, p string) {
 		return
 	}
 
-	fmt.Println("internal @@@@@@@@@@@@@@@@@@@@@@@@@@@", task, p)
+	// fmt.Println("internal @@@@@@@@@@@@@@@@@@@@@@@@@@@ progress:", task, "@@@@", p, "@@@@")
 
 	s.progressBar.UpdateDisplay(&progress.DisplayProps{
 		Prefix: s.prefix,

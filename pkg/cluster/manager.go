@@ -1101,22 +1101,31 @@ func (m *Manager) Deploy(
 		ParallelStep("+ Download TiDB components", downloadCompTasks...).
 		ParallelStep("+ Initialize target host environments", envInitTasks...).
 		ParallelStep("+ Copy files", deployCompTasks...)
+		// 并行任务里的小任务每一个都是 StepDisplay
 
 	if afterDeploy != nil {
 		afterDeploy(builder, topo)
 	}
 
+	// 最终得到的是一个串行执行的大 Serial task
+	// 里面有 4 个大步骤：
+	// - Generate SSH keys
+	// - Download TiDB components
+	// - Initialize target host environments
+	// - Copy files
+	// 这 4 个步骤串行执行
+	// 除了第一个大步骤 Generate SSH keys 是 Serial 外，其它三个是 Parallel Task，是说它内部的子 task 是并行执行的
 	t := builder.Build()
 
 	ctx := task.NewContext()
-	ctx.Ev.Subscribe(task.EventTaskBegin, func(task task.Task) {
-		fmt.Println("external /////////////", task)
-	})
-	ctx.Ev.Subscribe(task.EventTaskProgress, func(task task.Task, p string) {
-		fmt.Println("external /////////////", task, p)
-	})
+	// ctx.Ev.Subscribe(task.EventTaskBegin, func(task task.Task) {
+	// 	fmt.Println("external ----------- begin:", task, "----")
+	// })
+	// ctx.Ev.Subscribe(task.EventTaskProgress, func(task task.Task, p string) {
+	// 	fmt.Println("external ----------- progress:", task, "----", p, "----")
+	// })
 
-	if err := t.Execute(task.NewContext()); err != nil {
+	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
