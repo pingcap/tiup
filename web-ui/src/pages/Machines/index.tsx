@@ -5,6 +5,7 @@ import { useLocalStorageState } from 'ahooks'
 import MachineForm, { IMachine } from './MachineForm'
 import MachinesTable from './MachinesTable'
 import { IComponent } from '../Deployment/DeploymentTable'
+import { Root } from '../../components/Root'
 
 export default function MachinesPage() {
   const [showForm, setShowForm] = useState(false)
@@ -100,7 +101,7 @@ export default function MachinesPage() {
   )
 
   return (
-    <div>
+    <Root>
       <Space>
         <Button type="primary" onClick={addMachine}>
           添加机器
@@ -131,6 +132,6 @@ export default function MachinesPage() {
           onUpdate={handleUpdateMachine}
         />
       </Drawer>
-    </div>
+    </Root>
   )
 }

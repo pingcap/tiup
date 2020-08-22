@@ -15,14 +15,11 @@ import {
 
 import MachinesPage from './pages/Machines'
 import DeploymentPage from './pages/Deployment'
+import ClustersPage from './pages/Clusters'
 
 import './App.less'
 
 const { Sider, Content } = Layout
-
-function Clusters() {
-  return <div>Clusters</div>
-}
 
 function SiderMenu() {
   return (
@@ -47,12 +44,12 @@ function App() {
     <Router>
       <Layout style={{ minHeight: '100vh' }}>
         <SiderMenu />
-        <Content style={{ backgroundColor: 'white', padding: '24px' }}>
+        <Content style={{ backgroundColor: 'white' }}>
           <Routes>
             <Route path="/" element={<Navigate to="/machines" />} />
             <Route path="/machines" element={<MachinesPage />} />
             <Route path="/deploy" element={<DeploymentPage />} />
-            <Route path="/clusters" element={<Clusters />} />
+            <Route path="/clusters" element={<ClustersPage />} />
           </Routes>
         </Content>
       </Layout>

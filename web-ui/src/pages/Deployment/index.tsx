@@ -25,6 +25,7 @@ import DeploymentTable, {
 } from './DeploymentTable'
 import EditCompForm from './EditCompForm'
 import TopoPreview, { genTopo } from './TopoPreview'
+import { Root } from '../../components/Root'
 
 // TODO: fetch from API
 const TIDB_VERSIONS = [
@@ -170,7 +171,7 @@ export default function DeploymentPage() {
   }
 
   return (
-    <div>
+    <Root>
       <Form layout="inline" onFinish={handleFinish}>
         <Form.Item
           label="集群名字"
@@ -232,6 +233,6 @@ export default function DeploymentPage() {
       >
         <TopoPreview machines={machines} components={components} />
       </Modal>
-    </div>
+    </Root>
   )
 }
