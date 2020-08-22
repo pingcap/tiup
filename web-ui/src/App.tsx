@@ -18,6 +18,7 @@ import DeploymentPage from './pages/Deployment'
 import ClustersPage from './pages/Clusters'
 
 import './App.less'
+import ClusterDetailPage from './pages/Clusters/ClusterDetail'
 
 const { Sider, Content } = Layout
 
@@ -49,7 +50,9 @@ function App() {
             <Route path="/" element={<Navigate to="/machines" />} />
             <Route path="/machines" element={<MachinesPage />} />
             <Route path="/deploy" element={<DeploymentPage />} />
-            <Route path="/clusters" element={<ClustersPage />} />
+            <Route path="/clusters" element={<ClustersPage />}>
+              <Route path=":clusterName" element={<ClusterDetailPage />} />
+            </Route>
           </Routes>
         </Content>
       </Layout>

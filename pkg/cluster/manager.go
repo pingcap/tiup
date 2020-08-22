@@ -172,12 +172,23 @@ func (m *Manager) RestartCluster(clusterName string, options operator.Options) e
 	return nil
 }
 
+// Cluster represents a clsuter (temp put here)
+type Cluster struct {
+	Name       string `json:"name"`
+	User       string `json:"user"`
+	Version    string `json:"version"`
+	Path       string `json:"path"`
+	PrivateKey string `json:"private_key"`
+}
+
 // ListCluster list the clusters.
-func (m *Manager) ListCluster() error {
+func (m *Manager) ListCluster() ([]Cluster, error) {
 	names, err := m.specManager.List()
 	if err != nil {
-		return perrs.AddStack(err)
+		return nil, perrs.AddStack(err)
 	}
+
+	var clusters []Cluster = []Cluster{}
 
 	clusterTable := [][]string{
 		// Header
@@ -187,7 +198,7 @@ func (m *Manager) ListCluster() error {
 	for _, name := range names {
 		metadata, err := m.meta(name)
 		if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
-			return perrs.Trace(err)
+			return clusters, perrs.Trace(err)
 		}
 
 		base := metadata.GetBaseMeta()
@@ -199,10 +210,18 @@ func (m *Manager) ListCluster() error {
 			m.specManager.Path(name),
 			m.specManager.Path(name, "ssh", "id_rsa"),
 		})
+
+		clusters = append(clusters, Cluster{
+			Name:       name,
+			User:       base.User,
+			Version:    base.Version,
+			Path:       m.specManager.Path(name),
+			PrivateKey: m.specManager.Path(name, "ssh", "id_rsa"),
+		})
 	}
 
 	cliutil.PrintTable(clusterTable, true)
-	return nil
+	return clusters, nil
 }
 
 // CleanCluster clean the cluster without destroying it

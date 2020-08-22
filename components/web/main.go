@@ -25,6 +25,7 @@ func main() {
 	router.Use(cors.AllowAll())
 	api := router.Group("/api")
 	{
+		api.GET("/clusters", clustersHandler)
 		api.POST("/deploy", deployHandler)
 	}
 	_ = router.Run()
@@ -38,8 +39,6 @@ type DeployReq struct {
 }
 
 func deployHandler(c *gin.Context) {
-	fmt.Println("start to deploy")
-
 	var req DeployReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		_ = c.Error(err)
@@ -79,4 +78,13 @@ func deployHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "success",
 	})
+}
+
+func clustersHandler(c *gin.Context) {
+	clusters, err := manager.ListCluster()
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, clusters)
 }
