@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"path"
+	"regexp"
 	"text/template"
 
 	"github.com/pingcap/tiup/pkg/cluster/embed"
@@ -30,6 +31,7 @@ type PrometheusScript struct {
 	DataDir   string
 	LogDir    string
 	NumaNode  string
+	Retention string
 	tplFile   string
 }
 
@@ -53,6 +55,17 @@ func (c *PrometheusScript) WithPort(port int) *PrometheusScript {
 // WithNumaNode set NumaNode field of PrometheusScript
 func (c *PrometheusScript) WithNumaNode(numa string) *PrometheusScript {
 	c.NumaNode = numa
+	return c
+}
+
+// WithRetention set Retention field of PrometheusScript
+func (c *PrometheusScript) WithRetention(retention string) *PrometheusScript {
+	valid, _ := regexp.MatchString("^[1-9]\\d*d$", retention)
+	if retention == "" || !valid {
+		c.Retention = "30d"
+	} else {
+		c.Retention = retention
+	}
 	return c
 }
 
