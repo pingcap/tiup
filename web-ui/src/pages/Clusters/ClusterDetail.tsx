@@ -52,16 +52,6 @@ export default function ClusterDetailPage() {
     }))
   }, [])
 
-  useEffect(() => {
-    setLoadingTopo(true)
-    getClusterTopo(clusterName).then(({ data, err }) => {
-      setLoadingTopo(false)
-      if (data !== undefined) {
-        setClusterInstInfos(data)
-      }
-    })
-  }, [])
-
   function destroyCluster() {
     setDestroyingCluster(true)
     deleteCluster(clusterName).then(({ data, err }) => {
@@ -84,6 +74,16 @@ export default function ClusterDetailPage() {
       cancelText: '取消',
       okButtonProps: { danger: true },
       onOk: () => destroyCluster(),
+    })
+  }
+
+  function handleShowTopo() {
+    setLoadingTopo(true)
+    getClusterTopo(clusterName).then(({ data, err }) => {
+      setLoadingTopo(false)
+      if (data !== undefined) {
+        setClusterInstInfos(data)
+      }
     })
   }
 
@@ -111,13 +111,19 @@ export default function ClusterDetailPage() {
         <p>PrivateKey: {cluster.private_key}</p>
       </div>
 
-      <Table
-        dataSource={clusterInstInfos}
-        columns={columns}
-        pagination={false}
-        rowKey={'id'}
-        loading={loadingTopo}
-      />
+      <Space direction="vertical">
+        <Button onClick={handleShowTopo} loading={loadingTopo}>
+          更新拓扑
+        </Button>
+
+        <Table
+          dataSource={clusterInstInfos}
+          columns={columns}
+          pagination={false}
+          rowKey={'id'}
+          loading={loadingTopo}
+        />
+      </Space>
     </Root>
   )
 }
