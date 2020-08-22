@@ -83,11 +83,11 @@ func (s *StepDisplay) Execute(ctx *Context) error {
 	if singleBar, ok := s.progressBar.(*progress.SingleBar); ok {
 		singleBar.StartRenderLoop()
 	}
-	ctx.Ev.Subscribe(EventTaskBegin, s.handleTaskBegin)
-	ctx.Ev.Subscribe(EventTaskProgress, s.handleTaskProgress)
+	ctx.ev.Subscribe(EventTaskBegin, s.handleTaskBegin)
+	ctx.ev.Subscribe(EventTaskProgress, s.handleTaskProgress)
 	err := s.inner.Execute(ctx)
-	ctx.Ev.Unsubscribe(EventTaskProgress, s.handleTaskProgress)
-	ctx.Ev.Unsubscribe(EventTaskBegin, s.handleTaskBegin)
+	ctx.ev.Unsubscribe(EventTaskProgress, s.handleTaskProgress)
+	ctx.ev.Unsubscribe(EventTaskBegin, s.handleTaskBegin)
 
 	if err != nil {
 		s.progressBar.UpdateDisplay(&progress.DisplayProps{
