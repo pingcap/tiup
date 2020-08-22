@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react'
-import { useLocalStorageState, useSetState } from 'ahooks'
+import { useLocalStorageState } from 'ahooks'
 import { Drawer, Space, Button, Modal, Form, Input, Select } from 'antd'
 import uniqid from 'uniqid'
 import yaml from 'yaml'
@@ -27,11 +27,7 @@ import EditCompForm from './EditCompForm'
 import TopoPreview, { genTopo } from './TopoPreview'
 import { Root } from '../../components/Root'
 import DeploymentStatus, { IDeploymentStatus } from './DeploymentStatus'
-import {
-  getClusterList,
-  getDeploymentStatus,
-  deployCluster,
-} from '../../utils/api'
+import { getDeploymentStatus, deployCluster } from '../../utils/api'
 
 // TODO: fetch from API
 const TIDB_VERSIONS = [
@@ -181,16 +177,24 @@ export default function DeploymentPage() {
   )
 
   function handleFinish(values: any) {
+    if (deployStatus !== undefined) {
+      const { cluster_name, total_progress, err_msg } = deployStatus
+      if (cluster_name !== '' && err_msg === '' && total_progress < 100) {
+        Modal.error({
+          title: '部署暂时无法进行',
+          content: '当前有正在进行中的部署任务，请点击 "查看部署进度" 进行查看',
+        })
+        return
+      }
+    }
+
     const topoYaml = yaml.stringify(genTopo({ machines, components }))
     deployCluster({
       ...values,
       topo_yaml: topoYaml,
     })
     setReloadTimes((pre) => pre + 1)
-    Modal.info({
-      title: '部署任务已开始',
-      content: '请点击 "查看部署进度" 随时查看部署进度',
-    })
+    setViewDeployStatus(true)
   }
 
   return (
