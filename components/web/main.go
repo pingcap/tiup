@@ -60,20 +60,22 @@ func deployHandler(c *gin.Context) {
 	// parse request parameters
 	topoFilePath = "/Users/baurine/Codes/Work/tiup/examples/manualTestEnv/multiHost/topology.yaml"
 	identifyFile := "/Users/baurine/Codes/Work/tiup/examples/manualTestEnv/_shared/vagrant_key"
-	_ = manager.Deploy(
-		req.ClusterName,
-		req.TiDBVersion,
-		topoFilePath,
-		cluster.DeployOptions{
-			User:         "vagrant",
-			IdentityFile: identifyFile,
-		},
-		nil,
-		true,
-		120,
-		5,
-		true,
-	)
+	go func() {
+		_ = manager.Deploy(
+			"multiHost",
+			"v4.0.4",
+			topoFilePath,
+			cluster.DeployOptions{
+				User:         "vagrant",
+				IdentityFile: identifyFile,
+			},
+			nil,
+			true,
+			120,
+			5,
+			true,
+		)
+	}()
 	c.JSON(http.StatusOK, gin.H{
 		"message": "success",
 	})
