@@ -158,13 +158,13 @@ func (i *GrafanaInstance) ScaleConfig(e executor.Executor, topo spec.Topology,
 var _ cluster.DeployerInstance = &GrafanaInstance{}
 
 // Deploy implements DeployerInstance interface.
-func (i *GrafanaInstance) Deploy(t *task.Builder, deployDir string, version string, clusterName string, clusterVersion string) {
+func (i *GrafanaInstance) Deploy(t *task.Builder, srcPath string, deployDir string, version string, clusterName string, clusterVersion string) {
 	t.CopyComponent(
 		i.ComponentName(),
 		i.OS(),
 		i.Arch(),
 		version,
-		"", // use default srcPath
+		srcPath,
 		i.GetHost(),
 		deployDir,
 	).Shell( // rm the json file which relate to tidb cluster and useless.
