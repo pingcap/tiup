@@ -20,7 +20,7 @@ export default function DeploymentStatus({
 
   useEffect(() => {
     if (detailInfoRef.current) {
-      detailInfoRef.current.scrollTo(0, 36 * deployStatus.steps.length)
+      // detailInfoRef.current.scrollTo(0, 36 * deployStatus.steps.length)
     }
   }, [deployStatus])
 

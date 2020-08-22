@@ -1205,13 +1205,13 @@ func (m *Manager) Deploy(
 	deployingInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(task.NewContext()); err != nil {
-
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			deployingInfo.err = err
 			return err
 		}
 		err = perrs.AddStack(err)
+		deployingInfo.err = err
 		return err
 	}
 
