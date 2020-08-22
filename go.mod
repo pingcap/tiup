@@ -22,6 +22,7 @@ require (
 	github.com/facebookgo/subset v0.0.0-20200203212716-c811ad88dec4 // indirect
 	github.com/fatih/color v1.9.0
 	github.com/gibson042/canonicaljson-go v1.0.3
+	github.com/gin-gonic/gin v1.5.0
 	github.com/gizak/termui/v3 v3.1.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gogo/protobuf v1.3.1
@@ -51,6 +52,7 @@ require (
 	github.com/pingcap/tidb-insight v0.3.1
 	github.com/r3labs/diff v0.0.0-20200627101315-aecd9dd05dd2
 	github.com/relex/aini v1.1.3
+	github.com/rs/cors v1.7.0
 	github.com/sergi/go-diff v1.0.1-0.20180205163309-da645544ed44
 	github.com/shirou/gopsutil v2.20.3+incompatible
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966

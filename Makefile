@@ -32,7 +32,7 @@ include ./tests/Makefile
 # Build TiUP and all components
 build: tiup components
 
-components: playground client cluster dm bench server
+components: playground client cluster dm bench web server 
 
 tiup:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
@@ -57,6 +57,9 @@ doc:
 
 err:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-err ./components/err
+
+web:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-web ./components/web
 
 server:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-server ./server
