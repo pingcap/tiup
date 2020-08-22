@@ -73,7 +73,7 @@ func deployHandler(c *gin.Context) {
 			true,
 			120,
 			5,
-			true,
+			false,
 		)
 	}()
 	c.JSON(http.StatusOK, gin.H{
