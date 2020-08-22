@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Space, Button, Modal, message } from 'antd'
+import { Space, Button, Modal, message, Table } from 'antd'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { useSessionStorageState } from 'ahooks'
 
@@ -15,7 +15,7 @@ export interface IClusterInstInfo {
   ports: string
   os_arch: string
   status: string
-  data_dri: string
+  data_dir: string
   deploy_dir: string
 }
 
@@ -29,12 +29,33 @@ export default function ClusterDetailPage() {
   )
   const [destroyingCluster, setDestroyingCluster] = useState(false)
 
-  const [clusterInstInfos, setClusterInstInfos] = useState<IClusterInstInfo[]>(
-    []
-  )
+  const [clusterInstInfos, setClusterInstInfos] = useSessionStorageState<
+    IClusterInstInfo[]
+  >(`${clusterName}_cluster_topo`, [])
+
+  const [loadingTopo, setLoadingTopo] = useState(false)
+
+  const columns = useMemo(() => {
+    return [
+      'ID',
+      'Role',
+      'Host',
+      'Ports',
+      'OS_Arch',
+      'Status',
+      'Data_Dir',
+      'Deploy_Dir',
+    ].map((title) => ({
+      title,
+      key: title.toLowerCase(),
+      dataIndex: title.toLowerCase(),
+    }))
+  }, [])
 
   useEffect(() => {
+    setLoadingTopo(true)
     getClusterTopo(clusterName).then(({ data, err }) => {
+      setLoadingTopo(false)
       if (data !== undefined) {
         setClusterInstInfos(data)
       }
@@ -80,6 +101,7 @@ export default function ClusterDetailPage() {
         >
           销毁群集
         </Button>
+        <Button disabled>启动集群</Button>
       </Space>
       <div style={{ marginTop: 16 }}>
         <p>Name: {cluster.name}</p>
@@ -88,6 +110,14 @@ export default function ClusterDetailPage() {
         <p>Path: {cluster.path}</p>
         <p>PrivateKey: {cluster.private_key}</p>
       </div>
+
+      <Table
+        dataSource={clusterInstInfos}
+        columns={columns}
+        pagination={false}
+        rowKey={'id'}
+        loading={loadingTopo}
+      />
     </Root>
   )
 }
