@@ -59,7 +59,6 @@ var (
 // DeployingInfo records current deploying task and related info
 type DeployingInfo struct {
 	// save last deploying task
-	deploying   bool
 	clusterName string
 	curTask     *task.Serial
 	err         error
@@ -1168,11 +1167,9 @@ func (m *Manager) Deploy(
 	// 除了第一个大步骤 Generate SSH keys 是 Serial 外，其它三个是 Parallel Task，是说它内部的子 task 是并行执行的
 	t := builder.Build()
 
-	deployingInfo.deploying = true
 	deployingInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(task.NewContext()); err != nil {
-		deployingInfo.deploying = false
 
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
@@ -1182,7 +1179,6 @@ func (m *Manager) Deploy(
 		err = perrs.AddStack(err)
 		return err
 	}
-	deployingInfo.deploying = false
 
 	metadata.SetUser(globalOptions.User)
 	metadata.SetVersion(clusterVersion)
@@ -1203,7 +1199,6 @@ func (m *Manager) Deploy(
 // DeployStatus represents the current deployment status
 type DeployStatus struct {
 	ClusterName   string   `json:"cluster_name"`
-	Deploying     bool     `json:"is_deploying"`
 	TotalProgress int      `json:"total_progress"`
 	Steps         []string `json:"steps"`
 	ErrMsg        string   `json:"err_msg"`
@@ -1213,7 +1208,6 @@ type DeployStatus struct {
 func (m *Manager) GetDeployStatus() DeployStatus {
 	deployStaus := DeployStatus{
 		ClusterName: deployingInfo.clusterName,
-		Deploying:   deployingInfo.deploying,
 		Steps:       []string{},
 	}
 	if deployingInfo.curTask != nil {

@@ -62,10 +62,14 @@ export default function DeploymentPage() {
 
   useEffect(() => {
     const id = setInterval(() => {
-      getDeploymentStatus().then(({ data, err }) => {
+      getDeploymentStatus().then(({ data }) => {
         if (data !== undefined) {
           setDeployStatus(data)
-          if (data.total_progress === 100 || data.err_msg) {
+          if (
+            data.total_progress === 100 ||
+            data.err_msg ||
+            data.cluster_name === ''
+          ) {
             clearInterval(id)
           }
         }
@@ -193,6 +197,7 @@ export default function DeploymentPage() {
       ...values,
       topo_yaml: topoYaml,
     })
+    setDeployStatus(undefined)
     setReloadTimes((pre) => pre + 1)
     setViewDeployStatus(true)
   }
@@ -270,7 +275,11 @@ export default function DeploymentPage() {
         onOk={() => setViewDeployStatus(false)}
         onCancel={() => setViewDeployStatus(false)}
       >
-        {deployStatus && <DeploymentStatus deployStatus={deployStatus} />}
+        {deployStatus ? (
+          <DeploymentStatus deployStatus={deployStatus} />
+        ) : (
+          <div>Loading...</div>
+        )}
       </Modal>
     </Root>
   )

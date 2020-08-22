@@ -1,9 +1,8 @@
-import React from 'react'
+import React, { useRef, useEffect } from 'react'
 import { Progress } from 'antd'
 
 export interface IDeploymentStatus {
   cluster_name: string
-  is_deploying: boolean
   total_progress: number
   steps: string[]
   err_msg: string
@@ -17,6 +16,13 @@ export default function DeploymentStatus({
   deployStatus,
 }: IDeploymentStatusProps) {
   const { cluster_name, total_progress, steps, err_msg } = deployStatus
+  const detailInfoRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (detailInfoRef.current) {
+      detailInfoRef.current.scrollTo(0, 36 * deployStatus.steps.length)
+    }
+  }, [deployStatus])
 
   function result() {
     if (err_msg) {
@@ -34,18 +40,38 @@ export default function DeploymentStatus({
 
   return (
     <div>
-      <p>当前在正进行的部署集群名字：{cluster_name}</p>
-      <p>部署结果: {result()}</p>
-      <p>进度：</p>
       <Progress
         percent={total_progress}
         status={total_progress < 100 ? 'active' : 'success'}
       />
-      {err_msg && <p>错误日志：{err_msg}</p>}
-      <p>部署步骤：</p>
-      {steps.map((step, idx) => (
-        <p key={idx}>{step}</p>
-      ))}
+      <div style={{ marginTop: 16 }}>
+        <p>集群：{cluster_name}</p>
+        <p>部署结果: {result()}</p>
+        {err_msg && (
+          <>
+            <p>错误信息：</p>
+            <p>{err_msg}</p>
+          </>
+        )}
+        {steps.length > 0 && (
+          <>
+            <p>详细信息：</p>
+            <div
+              ref={detailInfoRef}
+              style={{
+                maxHeight: 300,
+                padding: 8,
+                border: '1px solid #ccc',
+                overflowY: 'auto',
+              }}
+            >
+              {steps.map((step, idx) => (
+                <p key={idx}>{step}</p>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }
