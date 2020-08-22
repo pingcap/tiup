@@ -8,14 +8,18 @@ function fullUrl(path: string): string {
 
 ////////////////////
 
+export function deployCluster(deployment: any) {
+  return request(fullUrl('deploy'), 'POST', deployment)
+}
+
+export function getDeploymentStatus() {
+  return request(fullUrl('deploy_status'))
+}
+
 export function getClusterList() {
   return request(fullUrl('clusters'))
 }
 
 export function deleteCluster(clusterName: string) {
   return request(fullUrl(`clusters/${clusterName}`), 'DELETE')
-}
-
-export function getDeploymentStatus() {
-  return request(fullUrl('deploy_status'))
 }

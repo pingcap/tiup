@@ -27,7 +27,11 @@ import EditCompForm from './EditCompForm'
 import TopoPreview, { genTopo } from './TopoPreview'
 import { Root } from '../../components/Root'
 import DeploymentStatus, { IDeploymentStatus } from './DeploymentStatus'
-import { getClusterList, getDeploymentStatus } from '../../utils/api'
+import {
+  getClusterList,
+  getDeploymentStatus,
+  deployCluster,
+} from '../../utils/api'
 
 // TODO: fetch from API
 const TIDB_VERSIONS = [
@@ -178,21 +182,15 @@ export default function DeploymentPage() {
 
   function handleFinish(values: any) {
     const topoYaml = yaml.stringify(genTopo({ machines, components }))
-    fetch('http://localhost:8080/api/deploy', {
-      method: 'post',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...values,
-        topo_yaml: topoYaml,
-      }),
+    deployCluster({
+      ...values,
+      topo_yaml: topoYaml,
     })
-      .then((res) => res.json())
-      .then((data) => console.log(data))
-      .catch((err) => console.log(err))
     setReloadTimes((pre) => pre + 1)
+    Modal.info({
+      title: '部署任务已开始',
+      content: '请点击 "查看部署进度" 随时查看部署进度',
+    })
   }
 
   return (
