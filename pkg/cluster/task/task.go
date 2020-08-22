@@ -216,6 +216,37 @@ func (s *Serial) String() string {
 	return strings.Join(ss, "\n")
 }
 
+// ComputeProgress compute whole progress
+func (s *Serial) ComputeProgress() ([]string, int) {
+	stepsStatus := []string{}
+	allStepsCount := 0
+	finishedSteps := 0
+
+	handleStepDisplay := func(sd *StepDisplay) {
+		allStepsCount++
+		if sd.progress == 100 {
+			finishedSteps++
+		}
+		stepsStatus = append(stepsStatus, fmt.Sprintf("%s ... %d%%", sd.prefix, sd.progress))
+	}
+
+	for _, step := range s.inner {
+		if sd, ok := step.(*StepDisplay); ok {
+			handleStepDisplay(sd)
+		}
+		if psd, ok := step.(*ParallelStepDisplay); ok {
+			stepsStatus = append(stepsStatus, psd.prefix)
+			for _, s := range psd.inner.inner {
+				if sd, ok := s.(*StepDisplay); ok {
+					handleStepDisplay(sd)
+				}
+			}
+		}
+	}
+
+	return stepsStatus, finishedSteps * 100 / allStepsCount
+}
+
 // NewParallel create a Parallel task.
 func NewParallel(hideDetailDisplay bool, tasks ...Task) *Parallel {
 	return &Parallel{

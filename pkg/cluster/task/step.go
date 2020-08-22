@@ -26,6 +26,9 @@ type StepDisplay struct {
 	prefix      string
 	children    map[Task]struct{}
 	progressBar progress.Bar
+
+	startedTask int
+	progress    int // 0~100
 }
 
 func addChildren(m map[Task]struct{}, task Task) {
@@ -86,19 +89,17 @@ func (s *StepDisplay) Execute(ctx *Context) error {
 	ctx.Ev.Unsubscribe(EventTaskProgress, s.handleTaskProgress)
 	ctx.Ev.Unsubscribe(EventTaskBegin, s.handleTaskBegin)
 
-	// fmt.Println("=========== Step Finish ============")
-
 	if err != nil {
 		s.progressBar.UpdateDisplay(&progress.DisplayProps{
 			Prefix: s.prefix,
 			Mode:   progress.ModeError,
 		})
 	} else {
-		// fmt.Println("=========== Step Done ============")
 		s.progressBar.UpdateDisplay(&progress.DisplayProps{
 			Prefix: s.prefix,
 			Mode:   progress.ModeDone,
 		})
+		s.progress = 100
 	}
 	if singleBar, ok := s.progressBar.(*progress.SingleBar); ok {
 		singleBar.StopRenderLoop()
@@ -124,6 +125,8 @@ func (s *StepDisplay) handleTaskBegin(task Task) {
 	}
 
 	// fmt.Println("internal @@@@@@@@@@@@@@@@@@@@@@@@@@@ begin:", task, "@@@@")
+	s.progress = s.startedTask * 100 / len(s.children)
+	s.startedTask++
 
 	s.progressBar.UpdateDisplay(&progress.DisplayProps{
 		Prefix: s.prefix,

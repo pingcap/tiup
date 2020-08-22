@@ -1117,15 +1117,7 @@ func (m *Manager) Deploy(
 	// 除了第一个大步骤 Generate SSH keys 是 Serial 外，其它三个是 Parallel Task，是说它内部的子 task 是并行执行的
 	t := builder.Build()
 
-	ctx := task.NewContext()
-	// ctx.Ev.Subscribe(task.EventTaskBegin, func(task task.Task) {
-	// 	fmt.Println("external ----------- begin:", task, "----")
-	// })
-	// ctx.Ev.Subscribe(task.EventTaskProgress, func(task task.Task, p string) {
-	// 	fmt.Println("external ----------- progress:", task, "----", p, "----")
-	// })
-
-	if err := t.Execute(ctx); err != nil {
+	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -1143,6 +1135,13 @@ func (m *Manager) Deploy(
 
 	hint := color.New(color.Bold).Sprintf("%s start %s", cliutil.OsArgs0(), clusterName)
 	log.Infof("Deployed cluster `%s` successfully, you can start the cluster via `%s`", clusterName, hint)
+
+	// test
+	s := t.(*task.Serial)
+	status, progress := s.ComputeProgress()
+	fmt.Println("======== status ===========", status)
+	fmt.Println("======== progress ===========", progress)
+
 	return nil
 }
 
