@@ -62,7 +62,7 @@ func deployHandler(c *gin.Context) {
 	fmt.Println("topo file path:", topoFilePath)
 
 	// parse request parameters
-	topoFilePath = "/Users/baurine/Codes/Work/tiup/examples/manualTestEnv/multiHost/topology.yaml"
+	// topoFilePath = "/Users/baurine/Codes/Work/tiup/examples/manualTestEnv/multiHost/topology.yaml"
 	identifyFile := "/Users/baurine/Codes/Work/tiup/examples/manualTestEnv/_shared/vagrant_key"
 	go func() {
 		_ = manager.Deploy(

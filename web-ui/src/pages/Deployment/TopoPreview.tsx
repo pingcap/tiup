@@ -13,6 +13,19 @@ export function genTopo({ machines, components }: ITopoPreviewProps) {
   const componentsArr = Object.values(components)
 
   let topo = {} as any
+  topo = {
+    global: {
+      user: 'tidb',
+      deploy_dir: 'tidb-deploy',
+      data_dir: 'tidb-data',
+    },
+    server_configs: {
+      pd: {
+        'replication.enable-placement-rules': true,
+      },
+    },
+  }
+
   for (const compType of COMPONENT_TYPES) {
     const comps = componentsArr.filter(
       (comp) => comp.type === compType
