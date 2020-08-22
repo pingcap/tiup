@@ -330,7 +330,6 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 
 	log.Infof("Destroyed cluster `%s` successfully", clusterName)
 	return nil
-
 }
 
 // ExecOptions for exec shell commanm.

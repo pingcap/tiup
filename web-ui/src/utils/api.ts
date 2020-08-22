@@ -11,3 +11,7 @@ function fullUrl(path: string): string {
 export function getClusterList() {
   return request(fullUrl('clusters'))
 }
+
+export function deleteCluster(clusterName: string) {
+  return request(fullUrl(`clusters/${clusterName}`), 'DELETE')
+}

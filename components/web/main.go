@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/pingcap/tiup/pkg/cluster"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	cors "github.com/rs/cors/wrapper/gin"
 )
@@ -26,6 +27,7 @@ func main() {
 	api := router.Group("/api")
 	{
 		api.GET("/clusters", clustersHandler)
+		api.DELETE("/clusters/:clusterName", destroyClusterHandler)
 		api.POST("/deploy", deployHandler)
 	}
 	_ = router.Run()
@@ -75,8 +77,9 @@ func deployHandler(c *gin.Context) {
 			false,
 		)
 	}()
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "success",
+		"message": "ok",
 	})
 }
 
@@ -87,4 +90,22 @@ func clustersHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, clusters)
+}
+
+func destroyClusterHandler(c *gin.Context) {
+	clusterName := c.Param("clusterName")
+	err := manager.DestroyCluster(clusterName, operator.Options{
+		SSHTimeout: 5,
+		OptTimeout: 120,
+		APITimeout: 300,
+	}, operator.Options{}, true)
+
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "ok",
+	})
 }
