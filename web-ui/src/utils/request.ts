@@ -1,5 +1,3 @@
-import { message } from 'antd'
-
 export type ResError = Error & {
   response?: any
 }

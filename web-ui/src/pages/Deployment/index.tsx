@@ -41,6 +41,12 @@ const TIDB_VERSIONS = [
   'v3.1.0',
 ]
 
+export interface IDeployReq {
+  cluster_name: string
+  tidb_version: string
+  // topo_yaml:string
+}
+
 export default function DeploymentPage() {
   const [machines] = useLocalStorageState<{
     [key: string]: IMachine
@@ -59,6 +65,11 @@ export default function DeploymentPage() {
   >(undefined)
 
   const [reloadTimes, setReloadTimes] = useState(0)
+
+  const [deployReq, setDeployReq] = useLocalStorageState<IDeployReq>(
+    'deploy_req',
+    { cluster_name: '', tidb_version: '' }
+  )
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -181,6 +192,8 @@ export default function DeploymentPage() {
   )
 
   function handleFinish(values: any) {
+    setDeployReq(values)
+
     if (deployStatus !== undefined) {
       const { cluster_name, total_progress, err_msg } = deployStatus
       if (cluster_name !== '' && err_msg === '' && total_progress < 100) {
@@ -204,7 +217,7 @@ export default function DeploymentPage() {
 
   return (
     <Root>
-      <Form layout="inline" onFinish={handleFinish}>
+      <Form layout="inline" onFinish={handleFinish} initialValues={deployReq}>
         <Form.Item
           label="集群名字"
           name="cluster_name"

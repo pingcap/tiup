@@ -65,8 +65,8 @@ func deployHandler(c *gin.Context) {
 	identifyFile := "/Users/baurine/Codes/Work/tiup/examples/manualTestEnv/_shared/vagrant_key"
 	go func() {
 		_ = manager.Deploy(
-			"multiHost",
-			"v4.0.4",
+			req.ClusterName,
+			req.TiDBVersion,
 			topoFilePath,
 			cluster.DeployOptions{
 				User:         "vagrant",
