@@ -58,19 +58,21 @@ export default function DeploymentPage() {
     IDeploymentStatus | undefined
   >(undefined)
 
+  const [reloadTimes, setReloadTimes] = useState(0)
+
   useEffect(() => {
     const id = setInterval(() => {
       getDeploymentStatus().then(({ data, err }) => {
         if (data !== undefined) {
           setDeployStatus(data)
-          if ((data as IDeploymentStatus).total_progress === 100) {
+          if (data.total_progress === 100 || data.err_msg) {
             clearInterval(id)
           }
         }
       })
     }, 2000)
     return () => clearInterval(id)
-  }, [])
+  }, [reloadTimes])
 
   const handleAddComponent = useCallback(
     (machine: IMachine, componentType: string) => {
@@ -190,6 +192,7 @@ export default function DeploymentPage() {
       .then((res) => res.json())
       .then((data) => console.log(data))
       .catch((err) => console.log(err))
+    setReloadTimes((pre) => pre + 1)
   }
 
   return (
