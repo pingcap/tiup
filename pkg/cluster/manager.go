@@ -51,7 +51,19 @@ var (
 	errNSRename              = errorx.NewNamespace("rename")
 	errorRenameNameNotExist  = errNSRename.NewType("name_not_exist", errutil.ErrTraitPreCheck)
 	errorRenameNameDuplicate = errNSRename.NewType("name_dup", errutil.ErrTraitPreCheck)
+
+	// TODO: use map to save map[string]DeployingInfo, the key is clusterName
+	deployingInfo DeployingInfo = DeployingInfo{}
 )
+
+// DeployingInfo records current deploying task and related info
+type DeployingInfo struct {
+	// save last deploying task
+	deploying   bool
+	clusterName string
+	curTask     *task.Serial
+	err         error
+}
 
 // Manager to deploy a cluster.
 type Manager struct {
@@ -918,20 +930,28 @@ func (m *Manager) Deploy(
 	sshTimeout int64,
 	nativeSSH bool,
 ) error {
+	// reset
+	deployingInfo = DeployingInfo{clusterName: clusterName}
+
 	if err := clusterutil.ValidateClusterNameOrError(clusterName); err != nil {
+		deployingInfo.err = err
 		return err
 	}
 
 	exist, err := m.specManager.Exist(clusterName)
 	if err != nil {
-		return perrs.AddStack(err)
+		err = perrs.AddStack(err)
+		deployingInfo.err = err
+		return err
 	}
 
 	if exist {
 		// FIXME: When change to use args, the suggestion text need to be updatem.
-		return errDeployNameDuplicate.
+		err = errDeployNameDuplicate.
 			New("Cluster name '%s' is duplicated", clusterName).
 			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
+		deployingInfo.err = err
+		return err
 	}
 
 	metadata := m.specManager.NewMetadata()
@@ -942,6 +962,7 @@ func (m *Manager) Deploy(
 	// the whole topology back to normal state.
 	if err := clusterutil.ParseTopologyYaml(topoFile, topo); err != nil &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+		deployingInfo.err = err
 		return err
 	}
 
@@ -949,30 +970,37 @@ func (m *Manager) Deploy(
 
 	clusterList, err := m.specManager.GetAllClusters()
 	if err != nil {
+		deployingInfo.err = err
 		return err
 	}
 	if err := spec.CheckClusterPortConflict(clusterList, clusterName, topo); err != nil {
+		deployingInfo.err = err
 		return err
 	}
 	if err := spec.CheckClusterDirConflict(clusterList, clusterName, topo); err != nil {
+		deployingInfo.err = err
 		return err
 	}
 
 	if !skipConfirm {
 		if err := m.confirmTopology(clusterName, clusterVersion, topo, set.NewStringSet()); err != nil {
+			deployingInfo.err = err
 			return err
 		}
 	}
 
 	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword)
 	if err != nil {
+		deployingInfo.err = err
 		return err
 	}
 
 	if err := os.MkdirAll(m.specManager.Path(clusterName), 0755); err != nil {
-		return errorx.InitializationFailed.
+		err = errorx.InitializationFailed.
 			Wrap(err, "Failed to create cluster metadata directory '%s'", m.specManager.Path(clusterName)).
 			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
+		deployingInfo.err = err
+		return err
 	}
 
 	var (
@@ -1032,6 +1060,7 @@ func (m *Manager) Deploy(
 	})
 
 	if iterErr != nil {
+		deployingInfo.err = err
 		return iterErr
 	}
 
@@ -1135,32 +1164,63 @@ func (m *Manager) Deploy(
 	// 除了第一个大步骤 Generate SSH keys 是 Serial 外，其它三个是 Parallel Task，是说它内部的子 task 是并行执行的
 	t := builder.Build()
 
+	deployingInfo.deploying = true
+	deployingInfo.curTask = t.(*task.Serial)
+
 	if err := t.Execute(task.NewContext()); err != nil {
+		deployingInfo.deploying = false
+
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
+			deployingInfo.err = err
 			return err
 		}
-		return perrs.AddStack(err)
+		err = perrs.AddStack(err)
+		return err
 	}
+	deployingInfo.deploying = false
 
 	metadata.SetUser(globalOptions.User)
 	metadata.SetVersion(clusterVersion)
 	err = m.specManager.SaveMeta(clusterName, metadata)
 
 	if err != nil {
-		return perrs.AddStack(err)
+		err = perrs.AddStack(err)
+		deployingInfo.err = err
+		return err
 	}
 
 	hint := color.New(color.Bold).Sprintf("%s start %s", cliutil.OsArgs0(), clusterName)
 	log.Infof("Deployed cluster `%s` successfully, you can start the cluster via `%s`", clusterName, hint)
 
-	// test
-	s := t.(*task.Serial)
-	status, progress := s.ComputeProgress()
-	fmt.Println("======== status ===========", status)
-	fmt.Println("======== progress ===========", progress)
-
 	return nil
+}
+
+// DeployStatus represents the current deployment status
+type DeployStatus struct {
+	ClusterName   string   `json:"cluster_name"`
+	Deploying     bool     `json:"is_deploying"`
+	TotalProgress int      `json:"total_progress"`
+	Steps         []string `json:"steps"`
+	ErrMsg        string   `json:"err_msg"`
+}
+
+// GetDeployStatus returns the current deployment progress
+func (m *Manager) GetDeployStatus() DeployStatus {
+	deployStaus := DeployStatus{
+		ClusterName: deployingInfo.clusterName,
+		Deploying:   deployingInfo.deploying,
+		Steps:       []string{},
+	}
+	if deployingInfo.curTask != nil {
+		steps, progress := deployingInfo.curTask.ComputeProgress()
+		deployStaus.TotalProgress = progress
+		deployStaus.Steps = steps
+	}
+	if deployingInfo.err != nil {
+		deployStaus.ErrMsg = deployingInfo.err.Error()
+	}
+	return deployStaus
 }
 
 // ScaleIn the cluster.

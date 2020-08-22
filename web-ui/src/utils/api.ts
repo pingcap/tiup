@@ -15,3 +15,7 @@ export function getClusterList() {
 export function deleteCluster(clusterName: string) {
   return request(fullUrl(`clusters/${clusterName}`), 'DELETE')
 }
+
+export function getDeploymentStatus() {
+  return request(fullUrl('deploy_status'))
+}

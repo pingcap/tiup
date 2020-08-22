@@ -28,7 +28,9 @@ func main() {
 	{
 		api.GET("/clusters", clustersHandler)
 		api.DELETE("/clusters/:clusterName", destroyClusterHandler)
+
 		api.POST("/deploy", deployHandler)
+		api.GET("/deploy_status", deployStatusHandler)
 	}
 	_ = router.Run()
 }
@@ -81,6 +83,11 @@ func deployHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "ok",
 	})
+}
+
+func deployStatusHandler(c *gin.Context) {
+	status := manager.GetDeployStatus()
+	c.JSON(http.StatusOK, status)
 }
 
 func clustersHandler(c *gin.Context) {

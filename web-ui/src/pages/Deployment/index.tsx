@@ -1,5 +1,5 @@
-import React, { useCallback, useState } from 'react'
-import { useLocalStorageState } from 'ahooks'
+import React, { useCallback, useState, useEffect } from 'react'
+import { useLocalStorageState, useSetState } from 'ahooks'
 import { Drawer, Space, Button, Modal, Form, Input, Select } from 'antd'
 import uniqid from 'uniqid'
 import yaml from 'yaml'
@@ -26,6 +26,8 @@ import DeploymentTable, {
 import EditCompForm from './EditCompForm'
 import TopoPreview, { genTopo } from './TopoPreview'
 import { Root } from '../../components/Root'
+import DeploymentStatus, { IDeploymentStatus } from './DeploymentStatus'
+import { getClusterList, getDeploymentStatus } from '../../utils/api'
 
 // TODO: fetch from API
 const TIDB_VERSIONS = [
@@ -49,6 +51,26 @@ export default function DeploymentPage() {
   const [curComp, setCurComp] = useState<IComponent | undefined>(undefined)
 
   const [previewYaml, setPreviewYaml] = useState(false)
+
+  const [viewDeployStatus, setViewDeployStatus] = useState(false)
+
+  const [deployStatus, setDeployStatus] = useState<
+    IDeploymentStatus | undefined
+  >(undefined)
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      getDeploymentStatus().then(({ data, err }) => {
+        if (data !== undefined) {
+          setDeployStatus(data)
+          if ((data as IDeploymentStatus).total_progress === 100) {
+            clearInterval(id)
+          }
+        }
+      })
+    }, 2000)
+    return () => clearInterval(id)
+  }, [])
 
   const handleAddComponent = useCallback(
     (machine: IMachine, componentType: string) => {
@@ -199,6 +221,9 @@ export default function DeploymentPage() {
             <Button type="primary" htmlType="submit">
               开始部署
             </Button>
+            <Button onClick={() => setViewDeployStatus(true)}>
+              查看部署进度
+            </Button>
           </Space>
         </Form.Item>
       </Form>
@@ -232,6 +257,15 @@ export default function DeploymentPage() {
         onCancel={() => setPreviewYaml(false)}
       >
         <TopoPreview machines={machines} components={components} />
+      </Modal>
+
+      <Modal
+        title="部署进度"
+        visible={viewDeployStatus}
+        onOk={() => setViewDeployStatus(false)}
+        onCancel={() => setViewDeployStatus(false)}
+      >
+        {deployStatus && <DeploymentStatus deployStatus={deployStatus} />}
       </Modal>
     </Root>
   )
