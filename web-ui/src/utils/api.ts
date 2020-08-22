@@ -23,3 +23,7 @@ export function getClusterList() {
 export function deleteCluster(clusterName: string) {
   return request(fullUrl(`clusters/${clusterName}`), 'DELETE')
 }
+
+export function getClusterTopo(clusterName: string) {
+  return request(fullUrl(`clusters/${clusterName}`))
+}

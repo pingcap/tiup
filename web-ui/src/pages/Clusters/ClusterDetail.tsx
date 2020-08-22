@@ -1,12 +1,23 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Space, Button, Modal, message } from 'antd'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { useSessionStorageState } from 'ahooks'
 
-import { deleteCluster } from '../../utils/api'
+import { deleteCluster, getClusterTopo } from '../../utils/api'
 import { Root } from '../../components/Root'
 import { ICluster } from '.'
+
+export interface IClusterInstInfo {
+  id: string
+  role: string
+  host: string
+  ports: string
+  os_arch: string
+  status: string
+  data_dri: string
+  deploy_dir: string
+}
 
 export default function ClusterDetailPage() {
   const navigate = useNavigate()
@@ -17,6 +28,18 @@ export default function ClusterDetailPage() {
     [clustersList, clusterName]
   )
   const [destroyingCluster, setDestroyingCluster] = useState(false)
+
+  const [clusterInstInfos, setClusterInstInfos] = useState<IClusterInstInfo[]>(
+    []
+  )
+
+  useEffect(() => {
+    getClusterTopo(clusterName).then(({ data, err }) => {
+      if (data !== undefined) {
+        setClusterInstInfos(data)
+      }
+    })
+  }, [])
 
   function destroyCluster() {
     setDestroyingCluster(true)

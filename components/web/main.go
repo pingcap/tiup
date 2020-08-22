@@ -27,6 +27,7 @@ func main() {
 	api := router.Group("/api")
 	{
 		api.GET("/clusters", clustersHandler)
+		api.GET("/clusters/:clusterName", clusterHandler)
 		api.DELETE("/clusters/:clusterName", destroyClusterHandler)
 
 		api.POST("/deploy", deployHandler)
@@ -97,6 +98,20 @@ func clustersHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, clusters)
+}
+
+func clusterHandler(c *gin.Context) {
+	clusterName := c.Param("clusterName")
+	instInfos, err := manager.Display(clusterName, operator.Options{
+		SSHTimeout: 5,
+		OptTimeout: 120,
+		APITimeout: 300,
+	})
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, instInfos)
 }
 
 func destroyClusterHandler(c *gin.Context) {

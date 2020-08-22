@@ -422,12 +422,24 @@ func (m *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Option
 	return nil
 }
 
+// InstInfo represents an instance info
+type InstInfo struct {
+	ID        string `json:"id"`
+	Role      string `json:"role"`
+	Host      string `json:"host"`
+	Ports     string `json:"ports"`
+	OsArch    string `json:"os_arch"`
+	Status    string `json:"status"`
+	DataDir   string `json:"data_dir"`
+	DeployDir string `json:"deploy_dir"`
+}
+
 // Display cluster meta and topology.
-func (m *Manager) Display(clusterName string, opt operator.Options) error {
+func (m *Manager) Display(clusterName string, opt operator.Options) ([]InstInfo, error) {
 	metadata, err := m.meta(clusterName)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-		return perrs.AddStack(err)
+		return nil, perrs.AddStack(err)
 	}
 
 	topo := metadata.GetTopology()
@@ -448,13 +460,15 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	err = ctx.SetSSHKeySet(m.specManager.Path(clusterName, "ssh", "id_rsa"),
 		m.specManager.Path(clusterName, "ssh", "id_rsa.pub"))
 	if err != nil {
-		return perrs.AddStack(err)
+		return nil, perrs.AddStack(err)
 	}
 
 	err = ctx.SetClusterSSH(topo, base.User, opt.SSHTimeout, opt.NativeSSH)
 	if err != nil {
-		return perrs.AddStack(err)
+		return nil, perrs.AddStack(err)
 	}
+
+	clusterInstInfos := []InstInfo{}
 
 	filterRoles := set.NewStringSet(opt.Roles...)
 	filterNodes := set.NewStringSet(opt.Nodes...)
@@ -503,6 +517,16 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 				deployDir,
 			})
 
+			clusterInstInfos = append(clusterInstInfos, InstInfo{
+				ID:        ins.ID(),
+				Role:      ins.Role(),
+				Host:      ins.GetHost(),
+				Ports:     utils.JoinInt(ins.UsedPorts(), "/"),
+				OsArch:    cliutil.OsArch(ins.OS(), ins.Arch()),
+				Status:    status,
+				DataDir:   dataDir,
+				DeployDir: deployDir,
+			})
 		}
 	}
 
@@ -518,9 +542,20 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 		return lhs[3] < rhs[3]
 	})
 
+	sort.Slice(clusterInstInfos, func(i, j int) bool {
+		lhs, rhs := clusterInstInfos[i], clusterInstInfos[j]
+		if lhs.Role != rhs.Role {
+			return lhs.Role < rhs.Role
+		}
+		if lhs.Host != rhs.Host {
+			return lhs.Host < rhs.Host
+		}
+		return lhs.Ports < rhs.Ports
+	})
+
 	cliutil.PrintTable(clusterTable, true)
 
-	return nil
+	return clusterInstInfos, nil
 }
 
 // EditConfig let the user edit the config.
