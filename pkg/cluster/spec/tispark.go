@@ -119,6 +119,11 @@ func (c *TiSparkMasterComponent) Name() string {
 	return ComponentTiSpark
 }
 
+// Role implements Component interface.
+func (c *TiSparkMasterComponent) Role() string {
+	return RoleTiSparkMaster
+}
+
 // Instances implements Component interface.
 func (c *TiSparkMasterComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.TiSparkMasters))
@@ -263,6 +268,11 @@ type TiSparkWorkerComponent struct{ *Specification }
 // Name implements Component interface.
 func (c *TiSparkWorkerComponent) Name() string {
 	return ComponentTiSpark
+}
+
+// Role implements Component interface.
+func (c *TiSparkWorkerComponent) Role() string {
+	return RoleTiSparkWorker
 }
 
 // Instances implements Component interface.
