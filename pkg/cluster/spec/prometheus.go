@@ -114,7 +114,8 @@ func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		paths.Data[0],
 		paths.Log,
 	).WithPort(spec.Port).
-		WithNumaNode(spec.NumaNode)
+		WithNumaNode(spec.NumaNode).
+		WithRetention(spec.Retention)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_prometheus_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
