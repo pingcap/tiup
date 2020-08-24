@@ -39,8 +39,8 @@ type TiSparkMasterSpec struct {
 	WebPort      int                    `yaml:"web_port" default:"8080"`
 	DeployDir    string                 `yaml:"deploy_dir,omitempty"`
 	JavaHome     string                 `yaml:"java_home,omitempty" validate:"java_home:editable"`
-	SparkConfigs map[string]interface{} `yaml:"spark_config,omitempty" validate:"spark_config:editable"`
-	SparkEnvs    map[string]string      `yaml:"spark_env,omitempty" validate:"spark_env:editable"`
+	SparkConfigs map[string]interface{} `yaml:"spark_config,omitempty" validate:"spark_config:ignore"`
+	SparkEnvs    map[string]string      `yaml:"spark_env,omitempty" validate:"spark_env:ignore"`
 	Arch         string                 `yaml:"arch,omitempty"`
 	OS           string                 `yaml:"os,omitempty"`
 }
