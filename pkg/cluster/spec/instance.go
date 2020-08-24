@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -159,6 +160,40 @@ func (i *BaseInstance) InitConfig(e executor.Executor, opt GlobalOptions, user s
 	cmd := fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port)
 	if _, _, err := e.Execute(cmd, true); err != nil {
 		return errors.Annotatef(err, "execute: %s", cmd)
+	}
+
+	return nil
+}
+
+// TransferLocalConfigFile scp local config file to remote
+// Precondition: the user on remote have right to access & mkdir of dest files
+func (i *BaseInstance) TransferLocalConfigFile(e executor.Executor, local, remote string) error {
+	remoteDir := filepath.Dir(remote)
+	// make sure the directory exists
+	cmd := fmt.Sprintf("mkdir -p %s", remoteDir)
+	if _, _, err := e.Execute(cmd, false); err != nil {
+		return errors.Annotatef(err, "execute: %s", cmd)
+	}
+
+	if err := e.Transfer(local, remote, false); err != nil {
+		return errors.Annotatef(err, "transfer from %s to %s failed", local, remote)
+	}
+
+	return nil
+}
+
+// TransferLocalConfigDir scp local config directory to remote
+// Precondition: the user on remote have right to access & mkdir of dest files
+func (i *BaseInstance) TransferLocalConfigDir(e executor.Executor, local, remote string) error {
+	files, err := ioutil.ReadDir(local)
+	if err != nil {
+		return errors.Annotatef(err, "read local directory %s failed", local)
+	}
+
+	for _, f := range files {
+		if err := i.TransferLocalConfigFile(e, path.Join(local, f.Name()), path.Join(remote, f.Name())); err != nil {
+			return errors.Annotatef(err, "transfer local config %s failed", path.Join(local, f.Name()))
+		}
 	}
 
 	return nil

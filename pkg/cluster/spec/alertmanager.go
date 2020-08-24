@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/juju/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -37,6 +38,7 @@ type AlertManagerSpec struct {
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string               `yaml:"arch,omitempty"`
 	OS              string               `yaml:"os,omitempty"`
+	ConfigFilePath  string               `yaml:"config_file,omitempty" validate:"resource_control:editable"`
 }
 
 // Role returns the component role of the instance
@@ -129,12 +131,15 @@ func (i *AlertManagerInstance) InitConfig(e executor.Executor, clusterName, clus
 	}
 
 	// transfer config
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("alertmanager_%s.yml", i.GetHost()))
-	if err := config.NewAlertManagerConfig().ConfigToFile(fp); err != nil {
-		return err
+	configPath := filepath.Join(paths.Cache, fmt.Sprintf("alertmanager_%s.yml", i.GetHost()))
+	if spec.ConfigFilePath != "" {
+		configPath = spec.ConfigFilePath
+	} else if err := config.NewAlertManagerConfig().ConfigToFile(configPath); err != nil {
+		return errors.Annotate(err, "failed to generate alertmanager config")
 	}
+
 	dst = filepath.Join(paths.Deploy, "conf", "alertmanager.yml")
-	return e.Transfer(fp, dst, false)
+	return i.TransferLocalConfigFile(e, configPath, dst)
 }
 
 // ScaleConfig deploy temporary config on scaling
