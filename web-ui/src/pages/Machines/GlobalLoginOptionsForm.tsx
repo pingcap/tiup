@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { Form, Input, Button, message } from 'antd'
-import { useLocalStorageState } from 'ahooks'
 
 export interface IGlobalLoginOptions {
   username?: string

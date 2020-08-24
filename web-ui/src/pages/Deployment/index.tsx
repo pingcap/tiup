@@ -202,6 +202,14 @@ export default function DeploymentPage() {
 
     if (deployStatus !== undefined) {
       const { cluster_name, total_progress, err_msg } = deployStatus
+      if (cluster_name === values.cluster_name) {
+        Modal.error({
+          title: '部署暂时无法进行',
+          content: '该集群正在或已经部署，请点击 "查看部署进度" 查看详情',
+        })
+        return
+      }
+
       if (cluster_name !== '' && err_msg === '' && total_progress < 100) {
         Modal.error({
           title: '部署暂时无法进行',
@@ -248,7 +256,11 @@ export default function DeploymentPage() {
         <Form.Item>
           <Space>
             <Button onClick={() => setPreviewYaml(true)}>预览 YAML</Button>
-            <Button type="primary" htmlType="submit">
+            <Button
+              type="primary"
+              htmlType="submit"
+              disabled={deployStatus === undefined}
+            >
               开始部署
             </Button>
             <Button onClick={() => setViewDeployStatus(true)}>
