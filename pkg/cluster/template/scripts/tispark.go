@@ -21,6 +21,7 @@ import (
 
 // TiSparkEnv represent the data to generate TiSpark environment config
 type TiSparkEnv struct {
+	Host           string
 	TiSparkMaster  string
 	TiSparkLocalIP string
 	MasterPort     int
@@ -31,8 +32,14 @@ type TiSparkEnv struct {
 }
 
 // NewTiSparkEnv returns a TiSparkConfig
-func NewTiSparkEnv(master string) *TiSparkEnv {
-	return &TiSparkEnv{TiSparkMaster: master}
+func NewTiSparkEnv(host string) *TiSparkEnv {
+	return &TiSparkEnv{Host: host}
+}
+
+// WithMaster sets master field
+func (c *TiSparkEnv) WithMaster(master string) *TiSparkEnv {
+	c.TiSparkMaster = master
+	return c
 }
 
 // WithCustomEnv sets custom setting fields
@@ -44,6 +51,9 @@ func (c *TiSparkEnv) WithCustomEnv(m map[string]string) *TiSparkEnv {
 // WithLocalIP sets custom setting fields
 func (c *TiSparkEnv) WithLocalIP(ip string) *TiSparkEnv {
 	c.TiSparkLocalIP = ip
+	if ip == "0.0.0.0" {
+		c.TiSparkLocalIP = "" // use empty result to fall back to spark's default
+	}
 	return c
 }
 

@@ -226,6 +226,7 @@ func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clu
 
 	env := scripts.NewTiSparkEnv(host).
 		WithLocalIP(i.GetListenHost()).
+		WithMaster(host).
 		WithMasterPorts(i.Ports[0], i.Ports[1]).
 		WithCustomEnv(i.GetCustomEnvs())
 	// transfer spark-env.sh file
@@ -357,8 +358,9 @@ func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clu
 		return err
 	}
 
-	env := scripts.NewTiSparkEnv(i.topo.TiSparkMasters[0].Host).
+	env := scripts.NewTiSparkEnv(host).
 		WithLocalIP(i.GetListenHost()).
+		WithMaster(i.topo.TiSparkMasters[0].Host).
 		WithMasterPorts(i.topo.TiSparkMasters[0].Port, i.topo.TiSparkMasters[0].WebPort).
 		WithWorkerPorts(i.Ports[0], i.Ports[1]).
 		WithCustomEnv(i.topo.TiSparkMasters[0].SparkEnvs)
