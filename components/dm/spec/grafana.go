@@ -145,6 +145,10 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 	return e.Transfer(fp, dst, false)
 }
 
+func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, deployDir, clusterName, clusterVersion string) error {
+	return nil
+}
+
 // ScaleConfig deploy temporary config on scaling
 func (i *GrafanaInstance) ScaleConfig(e executor.Executor, topo spec.Topology,
 	clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error {
@@ -174,57 +178,61 @@ func (i *GrafanaInstance) Deploy(t *task.Builder, srcPath string, deployDir stri
 	).Func("Dashboards", func(ctx *task.Context) error {
 		e := ctx.Get(i.GetHost())
 
-		tmp := filepath.Join(deployDir, "_tiup_tmp")
-		_, stderr, err := e.Execute(fmt.Sprintf("mkdir -p %s", tmp), false)
-		if err != nil {
-			return errors.Annotatef(err, "stderr: %s", string(stderr))
-		}
-
-		srcPath := task.PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
-		dstPath := filepath.Join(tmp, filepath.Base(srcPath))
-		err = e.Transfer(srcPath, dstPath, false)
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		cmd := fmt.Sprintf(`tar -xzf %s -C %s && rm %s`, dstPath, tmp, dstPath)
-		_, stderr, err = e.Execute(cmd, false)
-		if err != nil {
-			return errors.Annotatef(err, "stderr: %s", string(stderr))
-		}
-
-		// copy dm-master/scripts/*.json
-		targetDir := filepath.Join(deployDir, "dashboards")
-		_, stderr, err = e.Execute(fmt.Sprintf("mkdir -p %s", targetDir), false)
-		if err != nil {
-			return errors.Annotatef(err, "stderr: %s", string(stderr))
-		}
-
-		cmd = fmt.Sprintf("cp %s/dm-master/scripts/*json %s", tmp, targetDir)
-		_, stderr, err = e.Execute(cmd, false)
-		if err != nil {
-			return errors.Annotatef(err, "stderr: %s", string(stderr))
-		}
-
-		for _, cmd := range []string{
-			`find %s -type f -exec sed -i "s/\${DS_.*-CLUSTER}/%s/g" {} \;`,
-			`find %s -type f -exec sed -i "s/DS_.*-CLUSTER/%s/g" {} \;`,
-			`find %s -type f -exec sed -i "s/test-cluster/%s/g" {} \;`,
-			`find %s -type f -exec sed -i "s/Test-Cluster/%s/g" {} \;`,
-		} {
-			cmd := fmt.Sprintf(cmd, targetDir, clusterName)
-			_, stderr, err = e.Execute(cmd, false)
-			if err != nil {
-				return errors.Annotatef(err, "stderr: %s", string(stderr))
-			}
-		}
-
-		cmd = fmt.Sprintf("rm -rf %s", tmp)
-		_, stderr, err = e.Execute(cmd, false)
-		if err != nil {
-			return errors.Annotatef(err, "stderr: %s", string(stderr))
-		}
-
-		return nil
+		return i.setDefaultDashboards(e, deployDir, clusterName, clusterVersion)
 	})
+}
+
+func (i *GrafanaInstance) setDefaultDashboards(e executor.Executor, deployDir, clusterName, clusterVersion string) error {
+	tmp := filepath.Join(deployDir, "_tiup_tmp")
+	_, stderr, err := e.Execute(fmt.Sprintf("mkdir -p %s", tmp), false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	srcPath := task.PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
+	dstPath := filepath.Join(tmp, filepath.Base(srcPath))
+	err = e.Transfer(srcPath, dstPath, false)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	cmd := fmt.Sprintf(`tar -xzf %s -C %s && rm %s`, dstPath, tmp, dstPath)
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	// copy dm-master/scripts/*.json
+	targetDir := filepath.Join(deployDir, "dashboards")
+	_, stderr, err = e.Execute(fmt.Sprintf("mkdir -p %s", targetDir), false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	cmd = fmt.Sprintf("cp %s/dm-master/scripts/*json %s", tmp, targetDir)
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	for _, cmd := range []string{
+		`find %s -type f -exec sed -i "s/\${DS_.*-CLUSTER}/%s/g" {} \;`,
+		`find %s -type f -exec sed -i "s/DS_.*-CLUSTER/%s/g" {} \;`,
+		`find %s -type f -exec sed -i "s/test-cluster/%s/g" {} \;`,
+		`find %s -type f -exec sed -i "s/Test-Cluster/%s/g" {} \;`,
+	} {
+		cmd := fmt.Sprintf(cmd, targetDir, clusterName)
+		_, stderr, err = e.Execute(cmd, false)
+		if err != nil {
+			return errors.Annotatef(err, "stderr: %s", string(stderr))
+		}
+	}
+
+	cmd = fmt.Sprintf("rm -rf %s", tmp)
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	return nil
 }

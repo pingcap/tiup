@@ -15,8 +15,10 @@ package spec
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -38,6 +40,7 @@ type PrometheusSpec struct {
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string               `yaml:"arch,omitempty"`
 	OS              string               `yaml:"os,omitempty"`
+	RulesDir        string               `yaml:"rules_dir,omitempty" validate:"rules_dir:editable"`
 }
 
 // Role returns the component role of the instance
@@ -180,11 +183,36 @@ func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		cfig.AddMonitoredServer(host)
 	}
 
+	if err := i.initRules(e, spec, paths); err != nil {
+		return errors.AddStack(err)
+	}
+
 	if err := cfig.ConfigToFile(fp); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "prometheus.yml")
 	return e.Transfer(fp, dst, false)
+}
+
+func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, paths meta.DirPaths) error {
+	// To make this step idempotent, we need cleanup old rules first
+	if _, _, err := e.Execute(fmt.Sprintf("rm -f %s/*", path.Join(paths.Deploy, "conf")), false); err != nil {
+		return errors.Annotatef(err, "cleanup old rules")
+	}
+
+	// If the user specified a rule directory, we should overwrite the default rules (partially)
+	if spec.RulesDir != "" {
+		if err := i.TransferLocalConfigDir(e, spec.RulesDir, path.Join(paths.Deploy, "conf")); err != nil {
+			return errors.Annotate(err, "transfer prometheus rules failed")
+		}
+	} else { // Use the default ones
+		cmd := fmt.Sprintf("cp %[1]s/bin/prometheus/*.rules.yml %[1]s/conf/", paths.Deploy)
+		if _, _, err := e.Execute(cmd, false); err != nil {
+			return errors.Annotatef(err, "execute command failed: %s", err)
+		}
+	}
+
+	return nil
 }
 
 // ScaleConfig deploy temporary config on scaling

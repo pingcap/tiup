@@ -38,7 +38,7 @@ type AlertManagerSpec struct {
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string               `yaml:"arch,omitempty"`
 	OS              string               `yaml:"os,omitempty"`
-	ConfigFilePath  string               `yaml:"config_file,omitempty" validate:"resource_control:editable"`
+	ConfigFilePath  string               `yaml:"config_file,omitempty" validate:"config_file:editable"`
 }
 
 // Role returns the component role of the instance

@@ -15,6 +15,7 @@ package spec
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 
 	"github.com/pingcap/errors"
@@ -116,11 +117,31 @@ func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		cfig.AddAlertmanager(alertmanager.Host, uint64(alertmanager.WebPort))
 	}
 
+	if err := i.initRules(e, spec, paths); err != nil {
+		return errors.AddStack(err)
+	}
+
 	if err := cfig.ConfigToFile(fp); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "prometheus.yml")
 	return e.Transfer(fp, dst, false)
+}
+
+func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, paths meta.DirPaths) error {
+	// If the user specified a rule directory, we should overwrite the default rules (partially)
+	if spec.RulesDir != "" {
+		// To make this step idempotent, we need cleanup old rules first
+		if _, _, err := e.Execute(fmt.Sprintf("rm -f %s/*", path.Join(paths.Deploy, "conf")), false); err != nil {
+			return errors.Annotatef(err, "cleanup old rules")
+		}
+
+		if err := i.TransferLocalConfigDir(e, spec.RulesDir, path.Join(paths.Deploy, "conf")); err != nil {
+			return errors.Annotate(err, "transfer prometheus rules failed")
+		}
+	}
+
+	return nil
 }
 
 // ScaleConfig deploy temporary config on scaling

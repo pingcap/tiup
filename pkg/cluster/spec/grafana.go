@@ -34,6 +34,7 @@ type GrafanaSpec struct {
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string               `yaml:"arch,omitempty"`
 	OS              string               `yaml:"os,omitempty"`
+	DashboardsDir   string               `yaml:"dashboards_dir,omitempty" validate:"dashboards_dir:editable"`
 }
 
 // Role returns the component role of the instance
