@@ -120,9 +120,9 @@ export default function ClusterDetailPage() {
     setStarting(true)
     startCluster(clusterName).then(({ data, err }) => {
       setStarting(false)
+      handleShowTopo()
       if (data !== undefined) {
         message.success(`${clusterName} 集群已启动！`)
-        handleShowTopo()
       } else if (err !== undefined) {
         Modal.confirm({
           title: `${clusterName} 集群启动失败`,
@@ -136,9 +136,9 @@ export default function ClusterDetailPage() {
     setStoping(true)
     stopCluster(clusterName).then(({ data, err }) => {
       setStoping(false)
+      handleShowTopo()
       if (data !== undefined) {
         message.success(`${clusterName} 集群已停止！`)
-        handleShowTopo()
       } else if (err !== undefined) {
         Modal.confirm({
           title: `${clusterName} 集群停止失败`,
@@ -161,9 +161,9 @@ export default function ClusterDetailPage() {
       force,
     }).then(({ data, err }) => {
       setScaleIning(false)
+      handleShowTopo()
       if (data !== undefined) {
         message.success(`${clusterName} 集群缩容成功！`)
-        handleShowTopo()
       } else if (err !== undefined) {
         Modal.confirm({
           title: `${clusterName} 集群缩容失败`,
