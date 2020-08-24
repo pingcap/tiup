@@ -3,6 +3,11 @@ import { Tag, Table, Menu, Dropdown, Space, Divider, Popconfirm } from 'antd'
 import { DownOutlined } from '@ant-design/icons'
 
 import { IMachine, DEF_SSH_PORT } from '../Machines/MachineForm'
+import { useLocalStorageState } from 'ahooks'
+import {
+  IGlobalLoginOptions,
+  DEF_UESRNAME,
+} from '../Machines/GlobalLoginOptionsForm'
 
 export const COMPONENT_TYPES = [
   'TiDB',
@@ -106,6 +111,11 @@ export default function DeploymentTable({
   onDeleteComponent,
   onDeleteComponents,
 }: IDeploymentTableProps) {
+  const [globalLoginOptions] = useLocalStorageState<IGlobalLoginOptions>(
+    'global_login_options',
+    {}
+  )
+
   const dataSource = useMemo(() => {
     let machinesAndComps: (IMachine | IComponent)[] = []
     const sortedMachines = Object.values(machines).sort((a, b) =>
@@ -139,7 +149,7 @@ export default function DeploymentTable({
         title: '目标机器 / 组件',
         key: 'target_machine_component',
         render: (text: any, rec: any) => {
-          if (rec.username) {
+          if (rec.host) {
             return `${rec.name} (${rec.host})`
           }
           return (
@@ -153,9 +163,9 @@ export default function DeploymentTable({
         title: '信息',
         key: 'information',
         render: (text: any, rec: any) => {
-          if (rec.username) {
+          if (rec.host) {
             return `SSH Port=${rec.ssh_port || DEF_SSH_PORT}, User=${
-              rec.username
+              rec.username || globalLoginOptions.username || DEF_UESRNAME
             }, DC=${rec.dc}, Rack=${rec.rack}`
           }
           switch (rec.type) {
@@ -207,7 +217,7 @@ export default function DeploymentTable({
         title: '操作',
         key: 'action',
         render: (text: any, rec: any) => {
-          if (rec.username) {
+          if (rec.host) {
             return (
               <Space>
                 <Dropdown

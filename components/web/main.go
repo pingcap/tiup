@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pingcap/tiup/pkg/cluster"
@@ -36,11 +36,20 @@ func main() {
 	_ = router.Run()
 }
 
+// DeployGlobalLoginOptions represents the global options for deploy
+type DeployGlobalLoginOptions struct {
+	Username           string `json:"username"`
+	Password           string `json:"password"`
+	PrivateKey         string `json:"privateKey"`         // TODO: refine naming style
+	PrivateKeyPassword string `json:"privateKeyPassword"` // TODO: refine naming style
+}
+
 // DeployReq represents for the request of deploy API
 type DeployReq struct {
-	ClusterName string `json:"cluster_name"`
-	TiDBVersion string `json:"tidb_version"`
-	TopoYaml    string `json:"topo_yaml"`
+	ClusterName        string                   `json:"cluster_name"`
+	TiDBVersion        string                   `json:"tidb_version"`
+	TopoYaml           string                   `json:"topo_yaml"`
+	GlobalLoginOptions DeployGlobalLoginOptions `json:"global_login_options"`
 }
 
 func deployHandler(c *gin.Context) {
@@ -56,21 +65,31 @@ func deployHandler(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	defer tmpfile.Close()
-	_, _ = tmpfile.WriteString(req.TopoYaml)
+	_, _ = tmpfile.WriteString(strings.TrimSpace(req.TopoYaml))
 	topoFilePath := tmpfile.Name()
-	fmt.Println("topo file path:", topoFilePath)
+	tmpfile.Close()
+	// fmt.Println("topo file path:", topoFilePath)
+
+	// create private key file
+	tmpfile, err = ioutil.TempFile("", "private_key")
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	_, _ = tmpfile.WriteString(strings.TrimSpace(req.GlobalLoginOptions.PrivateKey))
+	identifyFile := tmpfile.Name()
+	tmpfile.Close()
 
 	// parse request parameters
 	// topoFilePath = "/Users/baurine/Codes/Work/tiup/examples/manualTestEnv/multiHost/topology.yaml"
-	identifyFile := "/Users/baurine/Codes/Work/tiup/examples/manualTestEnv/_shared/vagrant_key"
+	// identifyFile := "/Users/baurine/Codes/Work/tiup/examples/manualTestEnv/_shared/vagrant_key"
 	go func() {
 		_ = manager.Deploy(
 			req.ClusterName,
 			req.TiDBVersion,
 			topoFilePath,
 			cluster.DeployOptions{
-				User:         "vagrant",
+				User:         req.GlobalLoginOptions.Username,
 				IdentityFile: identifyFile,
 			},
 			nil,

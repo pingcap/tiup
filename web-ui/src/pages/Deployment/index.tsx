@@ -28,6 +28,7 @@ import TopoPreview, { genTopo } from './TopoPreview'
 import { Root } from '../../components/Root'
 import DeploymentStatus, { IDeploymentStatus } from './DeploymentStatus'
 import { getDeploymentStatus, deployCluster } from '../../utils/api'
+import { IGlobalLoginOptions } from '../Machines/GlobalLoginOptionsForm'
 
 // TODO: fetch from API
 const TIDB_VERSIONS = [
@@ -69,6 +70,11 @@ export default function DeploymentPage() {
   const [deployReq, setDeployReq] = useLocalStorageState<IDeployReq>(
     'deploy_req',
     { cluster_name: '', tidb_version: '' }
+  )
+
+  const [globalLoginOptions] = useLocalStorageState<IGlobalLoginOptions>(
+    'global_login_options',
+    {}
   )
 
   useEffect(() => {
@@ -209,6 +215,7 @@ export default function DeploymentPage() {
     deployCluster({
       ...values,
       topo_yaml: topoYaml,
+      global_login_options: globalLoginOptions,
     })
     setDeployStatus(undefined)
     setReloadTimes((pre) => pre + 1)

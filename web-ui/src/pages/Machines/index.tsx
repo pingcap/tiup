@@ -6,6 +6,9 @@ import MachineForm, { IMachine } from './MachineForm'
 import MachinesTable from './MachinesTable'
 import { IComponent } from '../Deployment/DeploymentTable'
 import { Root } from '../../components/Root'
+import GlobalLoginOptionsForm, {
+  IGlobalLoginOptions,
+} from './GlobalLoginOptionsForm'
 
 export default function MachinesPage() {
   const [showForm, setShowForm] = useState(false)
@@ -17,6 +20,10 @@ export default function MachinesPage() {
   const [components, setComponents] = useLocalStorageState<{
     [key: string]: IComponent
   }>('components', {})
+
+  const [globalLoginOptions, setGlobalLoginOptions] = useLocalStorageState<
+    IGlobalLoginOptions
+  >('global_login_options', {})
 
   function handleAddMachine(machine: IMachine, close: boolean) {
     let dup = Object.values(machines).find((m) => m.host === machine.host)
@@ -102,6 +109,14 @@ export default function MachinesPage() {
 
   return (
     <Root>
+      <div style={{ border: '1px solid #ccc', padding: 16, marginBottom: 16 }}>
+        <h2>全局默认登录选项：</h2>
+        <GlobalLoginOptionsForm
+          globalLoginOptions={globalLoginOptions}
+          onUpdateGlobalLoginOptions={setGlobalLoginOptions}
+        />
+      </div>
+
       <Space>
         <Button type="primary" onClick={addMachine}>
           添加机器
@@ -110,6 +125,7 @@ export default function MachinesPage() {
 
       <div style={{ marginTop: 16 }}>
         <MachinesTable
+          globalLoginOptions={globalLoginOptions}
           machines={machines}
           onEdit={editMachine}
           onDelete={deleteMachine}
@@ -126,6 +142,7 @@ export default function MachinesPage() {
         destroyOnClose={true}
       >
         <MachineForm
+          globalLoginOptions={globalLoginOptions}
           machines={machines}
           machine={curMachine}
           onAdd={handleAddMachine}

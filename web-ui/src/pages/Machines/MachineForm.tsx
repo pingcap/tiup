@@ -10,6 +10,7 @@ import {
   Typography,
 } from 'antd'
 import uniqid from 'uniqid'
+import { IGlobalLoginOptions, DEF_UESRNAME } from './GlobalLoginOptionsForm'
 
 export interface IMachine {
   id: string
@@ -35,7 +36,7 @@ const defMachine: IMachine = {
   host: '',
   ssh_port: undefined,
 
-  isPubKeyAuth: false,
+  isPubKeyAuth: true,
   privateKey: '',
   privateKeyPassword: '',
 
@@ -46,7 +47,10 @@ const defMachine: IMachine = {
   rack: '',
 }
 
-function correctFormValues(values: any) {
+function correctFormValues(
+  values: any,
+  globalLoginOptions: IGlobalLoginOptions
+) {
   for (const key of Object.keys(values)) {
     if (key !== 'ssh_port' && key !== 'isPubKeyAuth') {
       values[key] = values[key].trim()
@@ -59,13 +63,14 @@ function correctFormValues(values: any) {
     }
   }
   if (values.name === '') {
-    values.name = `${values.username}@${values.host}:${
-      values.ssh_port || DEF_SSH_PORT
-    }`
+    values.name = `${
+      values.username || globalLoginOptions.username || DEF_UESRNAME
+    }@${values.host}:${values.ssh_port || DEF_SSH_PORT}`
   }
 }
 
 interface IMachineFormProps {
+  globalLoginOptions: IGlobalLoginOptions
   machine?: IMachine
   machines: { [key: string]: IMachine }
   onAdd?: (machine: IMachine, close: boolean) => boolean
@@ -73,6 +78,7 @@ interface IMachineFormProps {
 }
 
 export default function MachineForm({
+  globalLoginOptions,
   machine,
   machines,
   onAdd,
@@ -90,7 +96,7 @@ export default function MachineForm({
     form
       .validateFields()
       .then((values) => {
-        correctFormValues(values)
+        correctFormValues(values, globalLoginOptions)
         const ok =
           onAdd &&
           onAdd(
@@ -109,7 +115,7 @@ export default function MachineForm({
   }
 
   function handleFinish(values: any) {
-    correctFormValues(values)
+    correctFormValues(values, globalLoginOptions)
     if (addNew) {
       onAdd &&
         onAdd(
@@ -210,17 +216,8 @@ export default function MachineForm({
           <Form.Item label="SSH 端口" name="ssh_port">
             <Input placeholder={DEF_SSH_PORT + ''} />
           </Form.Item>
-          <Form.Item
-            label="登录用户名"
-            name="username"
-            rules={[
-              {
-                required: true,
-                message: '请输入登录用户名',
-              },
-            ]}
-          >
-            <Input />
+          <Form.Item label="登录用户名" name="username">
+            <Input placeholder={globalLoginOptions.username || DEF_UESRNAME} />
           </Form.Item>
           <Form.Item name="isPubKeyAuth" valuePropName="checked">
             <Checkbox>使用私钥登录</Checkbox>
@@ -234,34 +231,18 @@ export default function MachineForm({
             {({ getFieldValue }) => {
               return getFieldValue('isPubKeyAuth') ? (
                 <>
-                  <Form.Item
-                    label="私钥"
-                    name="privateKey"
-                    rules={[
-                      {
-                        required: true,
-                        message: '请输入私钥',
-                      },
-                    ]}
-                  >
-                    <Input.TextArea />
+                  <Form.Item label="私钥" name="privateKey">
+                    <Input.TextArea
+                      placeholder={globalLoginOptions.privateKey}
+                    />
                   </Form.Item>
                   <Form.Item label="私钥密码" name="privateKeyPassword">
                     <Input.Password />
                   </Form.Item>
                 </>
               ) : (
-                <Form.Item
-                  label="密码"
-                  name="password"
-                  rules={[
-                    {
-                      required: true,
-                      message: '请输入登录密码',
-                    },
-                  ]}
-                >
-                  <Input.Password />
+                <Form.Item label="密码" name="password">
+                  <Input.Password placeholder={globalLoginOptions.password} />
                 </Form.Item>
               )
             }}
