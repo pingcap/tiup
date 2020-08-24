@@ -184,6 +184,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 
 			// build checking tasks
 			t2 := task.NewBuilder().
+				// check for general system info
 				CheckSys(
 					inst.GetHost(),
 					"",
@@ -198,39 +199,46 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 					topo,
 					opt.opr,
 				).
+				// check for listening port
 				Shell(
 					inst.GetHost(),
 					"ss -lnt",
 					false,
-				).CheckSys(
-				inst.GetHost(),
-				"",
-				task.CheckTypePort,
-				topo,
-				opt.opr,
-			).
+				).
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypePort,
+					topo,
+					opt.opr,
+				).
+				// check for system limits
 				Shell(
 					inst.GetHost(),
 					"cat /etc/security/limits.conf",
 					false,
-				).CheckSys(
-				inst.GetHost(),
-				"",
-				task.CheckTypeSystemLimits,
-				topo,
-				opt.opr,
-			).
+				).
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypeSystemLimits,
+					topo,
+					opt.opr,
+				).
+				// check for kernel params
 				Shell(
 					inst.GetHost(),
 					"sysctl -a",
 					true,
-				).CheckSys(
-				inst.GetHost(),
-				"",
-				task.CheckTypeSystemConfig,
-				topo,
-				opt.opr,
-			).
+				).
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypeSystemConfig,
+					topo,
+					opt.opr,
+				).
+				// check for needed system service
 				CheckSys(
 					inst.GetHost(),
 					"",
@@ -238,6 +246,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 					topo,
 					opt.opr,
 				).
+				// check for needed packages
 				CheckSys(
 					inst.GetHost(),
 					"",
