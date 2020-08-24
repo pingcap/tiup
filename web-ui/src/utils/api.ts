@@ -35,3 +35,10 @@ export function startCluster(clusterName: string) {
 export function stopCluster(clusterName: string) {
   return request(fullUrl(`clusters/${clusterName}/stop`), 'POST')
 }
+
+export function scaleInCluster(
+  clusterName: string,
+  data: { node_id: string; force: boolean }
+) {
+  return request(fullUrl(`clusters/${clusterName}/scale_in`), 'POST', data)
+}

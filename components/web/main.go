@@ -32,6 +32,7 @@ func main() {
 		api.DELETE("/clusters/:clusterName", destroyClusterHandler)
 		api.POST("/clusters/:clusterName/start", startClusterHandler)
 		api.POST("/clusters/:clusterName/stop", stopClusterHandler)
+		api.POST("/clusters/:clusterName/scale_in", scaleInClusterHandler)
 
 		api.POST("/deploy", deployHandler)
 		api.GET("/deploy_status", deployStatusHandler)
@@ -182,6 +183,53 @@ func stopClusterHandler(c *gin.Context) {
 		OptTimeout: 120,
 		APITimeout: 300,
 	})
+
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "ok",
+	})
+}
+
+// ScaleInReq represents the request for scale in cluster
+type ScaleInReq struct {
+	NodeID string `json:"node_id"`
+	Force  bool   `json:"force"`
+}
+
+func scaleInClusterHandler(c *gin.Context) {
+	clusterName := c.Param("clusterName")
+
+	var req ScaleInReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	gOpt := operator.Options{
+		SSHTimeout: 5,
+		OptTimeout: 120,
+		APITimeout: 300,
+		NativeSSH:  false,
+		Force:      req.Force,
+		Nodes:      []string{req.NodeID}}
+	scale := func(b *task.Builder, imetadata spec.Metadata) {
+		metadata := imetadata.(*spec.ClusterMeta)
+		if !gOpt.Force {
+			b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt).
+				UpdateMeta(clusterName, metadata, operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false)).
+				UpdateTopology(clusterName, metadata, operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false))
+		} else {
+			b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt).
+				UpdateMeta(clusterName, metadata, gOpt.Nodes).
+				UpdateTopology(clusterName, metadata, gOpt.Nodes)
+		}
+	}
+
+	err := manager.ScaleIn(clusterName, true, gOpt.SSHTimeout, gOpt.NativeSSH, gOpt.Force, gOpt.Nodes, scale)
 
 	if err != nil {
 		_ = c.Error(err)

@@ -9,6 +9,7 @@ import {
   getClusterTopo,
   startCluster,
   stopCluster,
+  scaleInCluster,
 } from '../../utils/api'
 import { Root } from '../../components/Root'
 import { ICluster } from '.'
@@ -35,6 +36,7 @@ export default function ClusterDetailPage() {
   const [destroying, setDestroying] = useState(false)
   const [starting, setStarting] = useState(false)
   const [stoping, setStoping] = useState(false)
+  const [scaleIning, setScaleIning] = useState(false)
 
   const [clusterInstInfos, setClusterInstInfos] = useSessionStorageState<
     IClusterInstInfo[]
@@ -43,7 +45,7 @@ export default function ClusterDetailPage() {
   const [loadingTopo, setLoadingTopo] = useState(false)
 
   const columns = useMemo(() => {
-    return [
+    const _columns = [
       'ID',
       'Role',
       'Host',
@@ -57,6 +59,26 @@ export default function ClusterDetailPage() {
       key: title.toLowerCase(),
       dataIndex: title.toLowerCase(),
     }))
+    _columns.push({
+      title: '操作',
+      key: 'action',
+      render: (text: any, rec: IClusterInstInfo) => {
+        if (rec.status.toLowerCase().indexOf('offline') !== -1) {
+          return null
+        }
+        return (
+          <Popconfirm
+            title="你确定要从集群中下线该组件吗？"
+            onConfirm={() => handleScaleInCluster(rec)}
+            okText="下线"
+            cancelText="取消"
+          >
+            <a href="#">缩容</a>
+          </Popconfirm>
+        )
+      },
+    } as any)
+    return _columns
   }, [])
 
   function destroyCluster() {
@@ -126,9 +148,30 @@ export default function ClusterDetailPage() {
     })
   }
 
-  // function handleScaleInCluster() {
-  //   // TODO
-  // }
+  function handleScaleInCluster(node: IClusterInstInfo) {
+    const lowerStatus = node.status.toLowerCase()
+    const force =
+      lowerStatus.indexOf('down') !== -1 ||
+      lowerStatus.indexOf('inactive') !== -1
+    message.info(`${clusterName} 集群正在缩容中！请尽量不要进行其它操作！`)
+    setScaleIning(true)
+
+    scaleInCluster(clusterName, {
+      node_id: node.id,
+      force,
+    }).then(({ data, err }) => {
+      setScaleIning(false)
+      if (data !== undefined) {
+        message.success(`${clusterName} 集群缩容成功！`)
+        handleShowTopo()
+      } else if (err !== undefined) {
+        Modal.confirm({
+          title: `${clusterName} 集群缩容失败`,
+          content: err.message,
+        })
+      }
+    })
+  }
 
   // function handleScaleOutCluster() {
   //   // TODO
@@ -145,7 +188,7 @@ export default function ClusterDetailPage() {
           danger
           onClick={handleDestroyCluster}
           loading={destroying}
-          disabled={starting || stoping}
+          disabled={starting || stoping || scaleIning}
         >
           销毁群集
         </Button>
@@ -154,12 +197,12 @@ export default function ClusterDetailPage() {
           onConfirm={handleStartCluster}
           okText="启动"
           cancelText="取消"
-          disabled={destroying || stoping}
+          disabled={destroying || stoping || scaleIning}
         >
           <Button
             type="primary"
             loading={starting}
-            disabled={destroying || stoping}
+            disabled={destroying || stoping || scaleIning}
           >
             启动集群
           </Button>
@@ -169,14 +212,15 @@ export default function ClusterDetailPage() {
           onConfirm={handleStopCluster}
           okText="停止"
           cancelText="取消"
-          disabled={destroying || starting}
+          disabled={destroying || starting || scaleIning}
         >
-          <Button loading={stoping} disabled={destroying || starting}>
+          <Button
+            loading={stoping}
+            disabled={destroying || starting || scaleIning}
+          >
             停止集群
           </Button>
         </Popconfirm>
-        <Button disabled>扩容</Button>
-        <Button disabled>缩容</Button>
       </Space>
       <div style={{ marginTop: 16 }}>
         <p>Name: {cluster.name}</p>
@@ -190,7 +234,7 @@ export default function ClusterDetailPage() {
         <Button
           onClick={handleShowTopo}
           loading={loadingTopo}
-          disabled={destroying || starting || stoping}
+          disabled={destroying || starting || stoping || scaleIning}
         >
           更新拓扑
         </Button>
@@ -200,7 +244,9 @@ export default function ClusterDetailPage() {
           columns={columns}
           pagination={false}
           rowKey={'id'}
-          loading={loadingTopo}
+          loading={
+            loadingTopo || scaleIning || destroying || starting || stoping
+          }
         />
       </Space>
     </Root>
