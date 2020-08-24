@@ -1,10 +1,15 @@
 import React, { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Space, Button, Modal, message, Table } from 'antd'
+import { Space, Button, Modal, message, Table, Popconfirm } from 'antd'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { useSessionStorageState } from 'ahooks'
 
-import { deleteCluster, getClusterTopo } from '../../utils/api'
+import {
+  deleteCluster,
+  getClusterTopo,
+  startCluster,
+  stopCluster,
+} from '../../utils/api'
 import { Root } from '../../components/Root'
 import { ICluster } from '.'
 
@@ -27,7 +32,9 @@ export default function ClusterDetailPage() {
     () => clustersList.find((el) => el.name === clusterName),
     [clustersList, clusterName]
   )
-  const [destroyingCluster, setDestroyingCluster] = useState(false)
+  const [destroying, setDestroying] = useState(false)
+  const [starting, setStarting] = useState(false)
+  const [stoping, setStoping] = useState(false)
 
   const [clusterInstInfos, setClusterInstInfos] = useSessionStorageState<
     IClusterInstInfo[]
@@ -53,9 +60,9 @@ export default function ClusterDetailPage() {
   }, [])
 
   function destroyCluster() {
-    setDestroyingCluster(true)
+    setDestroying(true)
     deleteCluster(clusterName).then(({ data, err }) => {
-      setDestroyingCluster(false)
+      setDestroying(false)
       if (data) {
         message.success('销毁成功!')
         navigate('/')
@@ -87,6 +94,46 @@ export default function ClusterDetailPage() {
     })
   }
 
+  function handleStartCluster() {
+    setStarting(true)
+    startCluster(clusterName).then(({ data, err }) => {
+      setStarting(false)
+      if (data !== undefined) {
+        message.success(`${clusterName} 集群已启动！`)
+        handleShowTopo()
+      } else if (err !== undefined) {
+        Modal.confirm({
+          title: `${clusterName} 集群启动失败`,
+          content: err.message,
+        })
+      }
+    })
+  }
+
+  function handleStopCluster() {
+    setStoping(true)
+    stopCluster(clusterName).then(({ data, err }) => {
+      setStoping(false)
+      if (data !== undefined) {
+        message.success(`${clusterName} 集群已停止！`)
+        handleShowTopo()
+      } else if (err !== undefined) {
+        Modal.confirm({
+          title: `${clusterName} 集群停止失败`,
+          content: err.message,
+        })
+      }
+    })
+  }
+
+  // function handleScaleInCluster() {
+  //   // TODO
+  // }
+
+  // function handleScaleOutCluster() {
+  //   // TODO
+  // }
+
   if (cluster === undefined) {
     return <Root></Root>
   }
@@ -97,11 +144,39 @@ export default function ClusterDetailPage() {
         <Button
           danger
           onClick={handleDestroyCluster}
-          loading={destroyingCluster}
+          loading={destroying}
+          disabled={starting || stoping}
         >
           销毁群集
         </Button>
-        <Button disabled>启动集群</Button>
+        <Popconfirm
+          title="你确定要启动集群吗？"
+          onConfirm={handleStartCluster}
+          okText="启动"
+          cancelText="取消"
+          disabled={destroying || stoping}
+        >
+          <Button
+            type="primary"
+            loading={starting}
+            disabled={destroying || stoping}
+          >
+            启动集群
+          </Button>
+        </Popconfirm>
+        <Popconfirm
+          title="你确定要停止集群吗？"
+          onConfirm={handleStopCluster}
+          okText="停止"
+          cancelText="取消"
+          disabled={destroying || starting}
+        >
+          <Button loading={stoping} disabled={destroying || starting}>
+            停止集群
+          </Button>
+        </Popconfirm>
+        <Button disabled>扩容</Button>
+        <Button disabled>缩容</Button>
       </Space>
       <div style={{ marginTop: 16 }}>
         <p>Name: {cluster.name}</p>
@@ -112,7 +187,11 @@ export default function ClusterDetailPage() {
       </div>
 
       <Space direction="vertical">
-        <Button onClick={handleShowTopo} loading={loadingTopo}>
+        <Button
+          onClick={handleShowTopo}
+          loading={loadingTopo}
+          disabled={destroying || starting || stoping}
+        >
           更新拓扑
         </Button>
 

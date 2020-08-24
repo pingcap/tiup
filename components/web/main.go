@@ -9,6 +9,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
 	cors "github.com/rs/cors/wrapper/gin"
 )
 
@@ -29,6 +30,8 @@ func main() {
 		api.GET("/clusters", clustersHandler)
 		api.GET("/clusters/:clusterName", clusterHandler)
 		api.DELETE("/clusters/:clusterName", destroyClusterHandler)
+		api.POST("/clusters/:clusterName/start", startClusterHandler)
+		api.POST("/clusters/:clusterName/stop", stopClusterHandler)
 
 		api.POST("/deploy", deployHandler)
 		api.GET("/deploy_status", deployStatusHandler)
@@ -140,6 +143,45 @@ func destroyClusterHandler(c *gin.Context) {
 		OptTimeout: 120,
 		APITimeout: 300,
 	}, operator.Options{}, true)
+
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "ok",
+	})
+}
+
+func startClusterHandler(c *gin.Context) {
+	clusterName := c.Param("clusterName")
+	err := manager.StartCluster(clusterName, operator.Options{
+		SSHTimeout: 5,
+		OptTimeout: 120,
+		APITimeout: 300,
+	}, func(b *task.Builder, metadata spec.Metadata) {
+		tidbMeta := metadata.(*spec.ClusterMeta)
+		b.UpdateTopology(clusterName, tidbMeta, nil)
+	})
+
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "ok",
+	})
+}
+
+func stopClusterHandler(c *gin.Context) {
+	clusterName := c.Param("clusterName")
+	err := manager.StopCluster(clusterName, operator.Options{
+		SSHTimeout: 5,
+		OptTimeout: 120,
+		APITimeout: 300,
+	})
 
 	if err != nil {
 		_ = c.Error(err)
