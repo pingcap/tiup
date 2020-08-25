@@ -297,7 +297,7 @@ export default function DeploymentPage() {
               }
               disabled={operationStatus === undefined}
             >
-              预览部署 YAML
+              预览部署拓扑
             </Button>
             <Button
               onClick={() =>
@@ -305,7 +305,7 @@ export default function DeploymentPage() {
               }
               disabled={operationStatus === undefined}
             >
-              预览扩容 YAML
+              预览扩容拓扑
             </Button>
             <Button onClick={() => setViewDeployStatus(true)}>查看进度</Button>
           </Space>

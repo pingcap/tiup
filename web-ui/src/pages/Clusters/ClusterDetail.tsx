@@ -183,7 +183,38 @@ export default function ClusterDetailPage() {
 
   return (
     <Root>
-      <Space>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <Space>
+          <Popconfirm
+            title="你确定要启动集群吗？"
+            onConfirm={handleStartCluster}
+            okText="启动"
+            cancelText="取消"
+            disabled={destroying || stoping || scaleIning}
+          >
+            <Button
+              type="primary"
+              loading={starting}
+              disabled={destroying || stoping || scaleIning}
+            >
+              启动集群
+            </Button>
+          </Popconfirm>
+          <Popconfirm
+            title="你确定要停止集群吗？"
+            onConfirm={handleStopCluster}
+            okText="停止"
+            cancelText="取消"
+            disabled={destroying || starting || scaleIning}
+          >
+            <Button
+              loading={stoping}
+              disabled={destroying || starting || scaleIning}
+            >
+              停止集群
+            </Button>
+          </Popconfirm>
+        </Space>
         <Button
           danger
           onClick={handleDestroyCluster}
@@ -192,36 +223,7 @@ export default function ClusterDetailPage() {
         >
           销毁群集
         </Button>
-        <Popconfirm
-          title="你确定要启动集群吗？"
-          onConfirm={handleStartCluster}
-          okText="启动"
-          cancelText="取消"
-          disabled={destroying || stoping || scaleIning}
-        >
-          <Button
-            type="primary"
-            loading={starting}
-            disabled={destroying || stoping || scaleIning}
-          >
-            启动集群
-          </Button>
-        </Popconfirm>
-        <Popconfirm
-          title="你确定要停止集群吗？"
-          onConfirm={handleStopCluster}
-          okText="停止"
-          cancelText="取消"
-          disabled={destroying || starting || scaleIning}
-        >
-          <Button
-            loading={stoping}
-            disabled={destroying || starting || scaleIning}
-          >
-            停止集群
-          </Button>
-        </Popconfirm>
-      </Space>
+      </div>
       <div style={{ marginTop: 16 }}>
         <p>Name: {cluster.name}</p>
         <p>User: {cluster.user}</p>
