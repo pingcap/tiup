@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
@@ -36,7 +37,9 @@ type grafana struct {
 	port    int
 	version string
 
-	cmd *exec.Cmd
+	waitErr  error
+	waitOnce sync.Once
+	cmd      *exec.Cmd
 }
 
 func newGrafana(version string, host string) *grafana {
@@ -149,6 +152,7 @@ func makeSureDir(fname string) error {
 var clusterName string = "playground"
 
 // dir should contains files untar the grafana.
+// return not error iff the Cmd is started successfully.
 func (g *grafana) start(ctx context.Context, dir string, p8sURL string) (err error) {
 	g.port, err = utils.GetFreePort(g.host, 3000)
 	if err != nil {
@@ -207,4 +211,12 @@ http_port = %d
 	g.cmd = cmd
 
 	return g.cmd.Start()
+}
+
+func (g *grafana) wait() error {
+	g.waitOnce.Do(func() {
+		g.waitErr = g.cmd.Wait()
+	})
+
+	return g.waitErr
 }
