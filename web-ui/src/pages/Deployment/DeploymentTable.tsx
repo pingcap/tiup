@@ -33,6 +33,7 @@ export interface IComponent {
   id: string
   machineID: string
   type: string
+  for_scale_out: boolean
   priority: number
 
   deploy_dir_prefix?: string // "/tidb-deploy"
@@ -97,7 +98,11 @@ export const DEF_ALERT_CLUSTER_PORT = 9094
 interface IDeploymentTableProps {
   machines: { [key: string]: IMachine }
   components: { [key: string]: IComponent }
-  onAddComponent?: (machine: IMachine, componentType: string) => void
+  onAddComponent?: (
+    machine: IMachine,
+    componentType: string,
+    forScaleOut: boolean
+  ) => void
   onEditComponent?: (comp: IComponent) => void
   onDeleteComponent?: (comp: IComponent) => void
   onDeleteComponents?: (machine: IMachine) => void
@@ -153,9 +158,13 @@ export default function DeploymentTable({
             return `${rec.name} (${rec.host})`
           }
           return (
-            <Tag key={rec.type} color={(COMPONENT_COLORS as any)[rec.type]}>
-              {rec.type}
-            </Tag>
+            <div>
+              -&nbsp;
+              <Tag key={rec.type} color={(COMPONENT_COLORS as any)[rec.type]}>
+                {rec.type}
+                {rec.for_scale_out ? ' (Scale)' : ''}
+              </Tag>
+            </div>
           )
         },
       },
@@ -224,7 +233,8 @@ export default function DeploymentTable({
                   overlay={
                     <Menu
                       onClick={(e) =>
-                        onAddComponent && onAddComponent(rec, e.key as string)
+                        onAddComponent &&
+                        onAddComponent(rec, e.key as string, false)
                       }
                     >
                       {COMPONENT_TYPES.map((t) => (
@@ -236,6 +246,26 @@ export default function DeploymentTable({
                 >
                   <a onClick={(e) => e.preventDefault()}>
                     添加组件 <DownOutlined />
+                  </a>
+                </Dropdown>
+                <Divider type="vertical" />
+                <Dropdown
+                  overlay={
+                    <Menu
+                      onClick={(e) =>
+                        onAddComponent &&
+                        onAddComponent(rec, e.key as string, true)
+                      }
+                    >
+                      {COMPONENT_TYPES.map((t) => (
+                        <Menu.Item key={t}>{t}</Menu.Item>
+                      ))}
+                    </Menu>
+                  }
+                  trigger={['click']}
+                >
+                  <a onClick={(e) => e.preventDefault()}>
+                    扩容组件 <DownOutlined />
                   </a>
                 </Dropdown>
                 <Divider type="vertical" />
@@ -278,7 +308,7 @@ export default function DeploymentTable({
 
   return (
     <Table
-      size="middle"
+      size="small"
       dataSource={dataSource}
       columns={columns}
       pagination={false}

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Form, Input, Button } from 'antd'
+import { Form, Input, Button, Checkbox } from 'antd'
 
 import {
   IComponent,
@@ -39,7 +39,7 @@ export default function EditCompForm({
       if (v === undefined) {
         continue
       }
-      if (typeof v === 'number') {
+      if (typeof v !== 'string') {
         continue
       }
       if (typeof v === 'string') {
@@ -72,6 +72,9 @@ export default function EditCompForm({
 
   return (
     <Form layout="vertical" initialValues={comp} onFinish={handleFinish}>
+      <Form.Item name="for_scale_out" valuePropName="checked">
+        <Checkbox>扩容组件？</Checkbox>
+      </Form.Item>
       <Form.Item label="Deploy Dir Prefix" name="deploy_dir_prefix">
         <Input placeholder={DEF_DEPLOY_DIR_PREFIX} />
       </Form.Item>

@@ -5,31 +5,41 @@ import { IMachine } from '../Machines/MachineForm'
 import { IComponent, COMPONENT_TYPES } from './DeploymentTable'
 
 interface ITopoPreviewProps {
+  forScaleOut: boolean
   machines: { [key: string]: IMachine }
   components: { [key: string]: IComponent }
 }
 
-export function genTopo({ machines, components }: ITopoPreviewProps) {
+// TODO: split into 2 methods: genDeployTopo, genScaleOutTopo
+export function genTopo({
+  machines,
+  components,
+  forScaleOut,
+}: ITopoPreviewProps) {
   const componentsArr = Object.values(components)
 
   let topo = {} as any
-  topo = {
-    global: {
-      user: 'tidb',
-      deploy_dir: 'tidb-deploy',
-      data_dir: 'tidb-data',
-    },
-    server_configs: {
-      pd: {
-        'replication.enable-placement-rules': true,
+
+  if (!forScaleOut) {
+    topo = {
+      global: {
+        user: 'tidb',
+        deploy_dir: 'tidb-deploy',
+        data_dir: 'tidb-data',
       },
-    },
+      server_configs: {
+        pd: {
+          'replication.enable-placement-rules': true,
+        },
+      },
+    }
   }
 
   for (const compType of COMPONENT_TYPES) {
     const comps = componentsArr.filter(
-      (comp) => comp.type === compType
+      (comp) => comp.type === compType && comp.for_scale_out === forScaleOut
     ) as any[]
+
     if (comps.length === 0) {
       continue
     }
@@ -50,7 +60,7 @@ export function genTopo({ machines, components }: ITopoPreviewProps) {
         m.ssh_port = targetMachine.ssh_port
       }
       // TODO:
-      // username / password / privateKey ...
+      // username / password / privateKey / deploy_dir / data_dir
 
       for (const key of Object.keys(comp)) {
         if (key.indexOf('port') !== -1 && comp[key] !== undefined) {
@@ -67,12 +77,14 @@ export function genTopo({ machines, components }: ITopoPreviewProps) {
 }
 
 export default function TopoPreview({
+  forScaleOut,
   machines,
   components,
 }: ITopoPreviewProps) {
-  const topo = useMemo(() => genTopo({ machines, components }), [
+  const topo = useMemo(() => genTopo({ machines, components, forScaleOut }), [
     machines,
     components,
+    forScaleOut,
   ])
 
   return (

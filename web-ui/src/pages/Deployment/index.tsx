@@ -57,7 +57,10 @@ export default function DeploymentPage() {
   }>('components', {})
   const [curComp, setCurComp] = useState<IComponent | undefined>(undefined)
 
-  const [previewYaml, setPreviewYaml] = useState(false)
+  const [previewYaml, setPreviewYaml] = useState({
+    preview: false,
+    forScaleOut: false,
+  })
 
   const [viewDeployStatus, setViewDeployStatus] = useState(false)
 
@@ -76,6 +79,8 @@ export default function DeploymentPage() {
     'global_login_options',
     {}
   )
+
+  const [form] = Form.useForm()
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -96,11 +101,12 @@ export default function DeploymentPage() {
   }, [reloadTimes])
 
   const handleAddComponent = useCallback(
-    (machine: IMachine, componentType: string) => {
+    (machine: IMachine, componentType: string, forScaleOut: boolean) => {
       let comp: IComponent = {
         id: uniqid(),
         machineID: machine.id,
         type: componentType,
+        for_scale_out: forScaleOut,
         priority: COMPONENT_TYPES.indexOf(componentType),
       }
       const existedSameComps = Object.values(components).filter(
@@ -219,7 +225,9 @@ export default function DeploymentPage() {
       }
     }
 
-    const topoYaml = yaml.stringify(genTopo({ machines, components }))
+    const topoYaml = yaml.stringify(
+      genTopo({ machines, components, forScaleOut: previewYaml.forScaleOut })
+    )
     deployCluster({
       ...values,
       topo_yaml: topoYaml,
@@ -232,7 +240,7 @@ export default function DeploymentPage() {
 
   return (
     <Root>
-      <Form layout="inline" onFinish={handleFinish} initialValues={deployReq}>
+      <Form form={form} layout="inline" initialValues={deployReq}>
         <Form.Item
           label="集群名字"
           name="cluster_name"
@@ -255,16 +263,24 @@ export default function DeploymentPage() {
         </Form.Item>
         <Form.Item>
           <Space>
-            <Button onClick={() => setPreviewYaml(true)}>预览 YAML</Button>
             <Button
-              type="primary"
-              htmlType="submit"
+              onClick={() =>
+                setPreviewYaml({ preview: true, forScaleOut: false })
+              }
               disabled={deployStatus === undefined}
             >
-              开始部署
+              预览部署 YAML
+            </Button>
+            <Button
+              onClick={() =>
+                setPreviewYaml({ preview: true, forScaleOut: true })
+              }
+              disabled={deployStatus === undefined}
+            >
+              预览扩容 YAML
             </Button>
             <Button onClick={() => setViewDeployStatus(true)}>
-              查看部署进度
+              查看部署/扩容进度
             </Button>
           </Space>
         </Form.Item>
@@ -294,15 +310,20 @@ export default function DeploymentPage() {
 
       <Modal
         title="Topology Yaml"
-        visible={previewYaml}
-        onOk={() => setPreviewYaml(false)}
-        onCancel={() => setPreviewYaml(false)}
+        visible={previewYaml.preview}
+        okText={previewYaml.forScaleOut ? '开始扩容' : '开始部署'}
+        onOk={() => setPreviewYaml({ preview: false, forScaleOut: false })}
+        onCancel={() => setPreviewYaml({ preview: false, forScaleOut: false })}
       >
-        <TopoPreview machines={machines} components={components} />
+        <TopoPreview
+          machines={machines}
+          components={components}
+          forScaleOut={previewYaml.forScaleOut}
+        />
       </Modal>
 
       <Modal
-        title="部署进度"
+        title="部署/扩容进度"
         visible={viewDeployStatus}
         onOk={() => setViewDeployStatus(false)}
         onCancel={() => setViewDeployStatus(false)}
