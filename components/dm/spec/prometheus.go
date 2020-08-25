@@ -15,7 +15,6 @@ package spec
 
 import (
 	"fmt"
-	"path"
 	"path/filepath"
 
 	"github.com/pingcap/errors"
@@ -129,18 +128,25 @@ func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 }
 
 func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, paths meta.DirPaths) error {
-	// If the user specified a rule directory, we should overwrite the default rules (partially)
-	if spec.RulesDir != "" {
-		// To make this step idempotent, we need cleanup old rules first
-		if _, _, err := e.Execute(fmt.Sprintf("rm -f %s/*", path.Join(paths.Deploy, "conf")), false); err != nil {
-			return errors.Annotatef(err, "cleanup old rules")
-		}
-
-		if err := i.TransferLocalConfigDir(e, spec.RulesDir, path.Join(paths.Deploy, "conf")); err != nil {
-			return errors.Annotate(err, "transfer prometheus rules failed")
-		}
+	confDir := filepath.Join(paths.Deploy, "conf")
+	// To make this step idempotent, we need cleanup old rules first
+	if _, stderr, err := e.Execute(fmt.Sprintf("rm -f %s/*.rules.yml", confDir), false); err != nil {
+		return errors.Annotatef(err, "cleanup old rules: %s", string(stderr))
 	}
 
+	// If the user specified a rule directory, we should overwrite the default rules (partially)
+	if spec.RulesDir != "" {
+		if err := i.TransferLocalConfigDir(e, spec.RulesDir, confDir); err != nil {
+			return errors.Annotate(err, "transfer prometheus rules failed")
+		}
+		return nil
+	}
+
+	// Use the default ones
+	cmd := fmt.Sprintf("cp %[1]s/bin/*.rules.yml %[1]s/conf/", paths.Deploy)
+	if _, _, err := e.Execute(cmd, false); err != nil {
+		return errors.Annotatef(err, "execute command failed: %s", err)
+	}
 	return nil
 }
 
@@ -172,39 +178,51 @@ func (i *MonitorInstance) Deploy(t *task.Builder, srcPath string, deployDir stri
 	).Func("CopyRulesYML", func(ctx *task.Context) error {
 		e := ctx.Get(i.GetHost())
 
-		tmp := filepath.Join(deployDir, "_tiup_tmp")
-		_, stderr, err := e.Execute(fmt.Sprintf("mkdir -p %s", tmp), false)
-		if err != nil {
-			return errors.Annotatef(err, "stderr: %s", string(stderr))
-		}
-
-		srcPath := task.PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
-		dstPath := filepath.Join(tmp, filepath.Base(srcPath))
-
-		err = e.Transfer(srcPath, dstPath, false)
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		cmd := fmt.Sprintf(`tar -xzf %s -C %s && rm %s`, dstPath, tmp, dstPath)
-		_, stderr, err = e.Execute(cmd, false)
-		if err != nil {
-			return errors.Annotatef(err, "stderr: %s", string(stderr))
-		}
-
-		// copy dm-master/conf/*.rules.yml
-		cmd = fmt.Sprintf("cp %s/dm-master/conf/*rules.yml %s", tmp, filepath.Join(deployDir, "conf"))
-		_, stderr, err = e.Execute(cmd, false)
-		if err != nil {
-			return errors.Annotatef(err, "stderr: %s", string(stderr))
-		}
-
-		cmd = fmt.Sprintf("rm -rf %s", tmp)
-		_, stderr, err = e.Execute(cmd, false)
-		if err != nil {
-			return errors.Annotatef(err, "stderr: %s", string(stderr))
-		}
-
-		return nil
+		return i.installRules(e, deployDir, clusterVersion)
 	})
+}
+
+func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVersion string) error {
+	tmp := filepath.Join(deployDir, "_tiup_tmp")
+	_, stderr, err := e.Execute(fmt.Sprintf("mkdir -p %s", tmp), false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	srcPath := task.PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
+	dstPath := filepath.Join(tmp, filepath.Base(srcPath))
+
+	err = e.Transfer(srcPath, dstPath, false)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	cmd := fmt.Sprintf(`tar -xzf %s -C %s && rm %s`, dstPath, tmp, dstPath)
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	// copy dm-master/conf/*.rules.yml
+	targetDir := filepath.Join(deployDir, "conf")
+	cmd = fmt.Sprintf("cp %s/dm-master/conf/*.rules.yml %s", tmp, targetDir)
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	cmd = fmt.Sprintf("rm -rf %s", tmp)
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	// backup *.rules.yml for later reload (in case that the user change rules_dir)
+	cmd = fmt.Sprintf("cp %s/*.rules.yml %s", targetDir, filepath.Join(deployDir, "bin"))
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	return nil
 }

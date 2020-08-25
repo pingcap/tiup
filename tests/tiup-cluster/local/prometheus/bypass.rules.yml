@@ -1,0 +1,4 @@
+# magic-string-for-test
+groups:
+- name: alert.rules
+  rules:

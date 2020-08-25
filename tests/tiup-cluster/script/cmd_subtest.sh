@@ -31,6 +31,11 @@ function cmd_subtest() {
     rm -rf ~/.tiup/storage/cluster/clusters/$name
     tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa --skip-create-user
 
+    # check the local config
+    tiup-dm exec $name -N 172.19.0.101 --command "grep magic-string-for-test /home/tidb/deploy/prometheus-9090/conf/dm_worker.rules.yml"
+    tiup-dm exec $name -N 172.19.0.101 --command "grep magic-string-for-test /home/tidb/deploy/grafana-3000/dashboards/dm.json"
+    tiup-dm exec $name -N 172.19.0.101 --command "grep magic-string-for-test /home/tidb/deploy/alertmanager-9093/conf/alertmanager.yml"
+
     tiup-cluster $client list | grep "$name"
 
     tiup-cluster $client audit | grep "deploy $name $version"

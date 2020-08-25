@@ -42,6 +42,9 @@ var templateFuncs = template.FuncMap{
 func args() []string {
 	if wd := os.Getenv(localdata.EnvNameWorkDir); wd != "" {
 		// FIXME: We should use TiUp's arg0 instead of hardcode
+		if strings.Contains(os.Args[0], "tiup-dm") {
+			return append([]string{"tiup dm"}, os.Args[1:]...)
+		}
 		return append([]string{"tiup cluster"}, os.Args[1:]...)
 	}
 	return os.Args

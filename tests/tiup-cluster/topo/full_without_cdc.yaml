@@ -53,7 +53,10 @@ tispark_workers:
 
 monitoring_servers:
   - host: 172.19.0.101
+    rules_dir: /tmp/local/prometheus
 grafana_servers:
   - host: 172.19.0.101
+    dashboards_dir: /tmp/local/grafana
 alertmanager_servers:
   - host: 172.19.0.101
+    config_file: /tmp/local/alertmanager.yml

@@ -16,6 +16,11 @@ function scale_tools() {
 
     tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa
 
+    # check the local config
+    tiup-dm exec $name -N 172.19.0.101 --command "grep magic-string-for-test /home/tidb/deploy/prometheus-9090/conf/tidb.rules.yml"
+    tiup-dm exec $name -N 172.19.0.101 --command "grep magic-string-for-test /home/tidb/deploy/grafana-3000/dashboards/tidb.json"
+    tiup-dm exec $name -N 172.19.0.101 --command "grep magic-string-for-test /home/tidb/deploy/alertmanager-9093/conf/alertmanager.yml"
+
     tiup-cluster $client list | grep "$name"
 
     tiup-cluster $client --yes start $name
@@ -49,6 +54,9 @@ function scale_tools() {
     wait_instance_num_reach $name $total_sub_one $native_ssh
     echo "start scale out grafana"
     tiup-cluster $client --yes scale-out $name ./topo/full_scale_in_grafana.yaml
+
+    # make sure grafana dashboards has been set to default (since the full_sale_in_grafana.yaml didn't provide a local dashboards dir)
+    ! tiup-dm exec $name -N 172.19.0.101 --command "grep magic-string-for-test /home/tidb/deploy/grafana-3000/dashboards/tidb.json"
 
     tiup-cluster $client _test $name writable
 }

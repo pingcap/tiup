@@ -1,0 +1,170 @@
+# magic-string-for-test
+groups:
+- name: alert.rules
+  rules:
+  - alert: cdc_checkpoint_high_delay
+    expr: (time() - ticdc_processor_checkpoint_ts / 1000) > 600
+    for: 1m
+    labels:
+      env: ENV_LABELS_ENV
+      level: critical
+      expr: (time() - ticdc_processor_checkpoint_ts / 1000) > 600
+    annotations:
+      description: 'cluster: ENV_LABELS_ENV, instance: {{ $labels.instance }}, values: {{ $value }}'
+      value: '{{ $value }}'
+      summary: cdc processor checkpoint delay more than 10 minutes
+
+  - alert: cdc_resolvedts_high_delay
+    expr: (time() - ticdc_processor_resolved_ts / 1000) > 300
+    for: 1m
+    labels:
+      env: ENV_LABELS_ENV
+      level: critical
+      expr: (time() - ticdc_processor_resolved_ts / 1000) > 300
+    annotations:
+      description: 'cluster: ENV_LABELS_ENV, instance: {{ $labels.instance }}, values: {{ $value }}'
+      value: '{{ $value }}'
+      summary: cdc processor resolved ts delay more than 5 minutes
+
+  - alert: ticdc_puller_entry_sorter_sort_duration_time_more_than_2s
+    expr: histogram_quantile(0.9, rate(ticdc_puller_entry_sorter_sort_bucket[1m])) > 2
+    for: 1m
+    labels:
+      env: ENV_LABELS_ENV
+      level: warning
+      expr: histogram_quantile(0.9, rate(ticdc_puller_entry_sorter_sort_bucket[1m])) > 2
+    annotations:
+      description: 'cluster: ENV_LABELS_ENV, instance: {{ $labels.instance }}, values: {{ $value }}'
+      value: '{{ $value }}'
+      summary: ticdc_puller_entry_sorter sort duration time more than 2s
+
+  - alert: ticdc_puller_entry_sorter_merge_duration_time_more_than_2s
+    expr: histogram_quantile(0.9, rate(ticdc_puller_entry_sorter_merge_bucket[1m])) > 2
+    for: 1m
+    labels:
+      env: ENV_LABELS_ENV
+      level: warning
+      expr: histogram_quantile(0.9, rate(ticdc_puller_entry_sorter_merge_bucket[1m])) > 2
+    annotations:
+      description: 'cluster: ENV_LABELS_ENV, instance: {{ $labels.instance }}, values: {{ $value }}'
+      value: '{{ $value }}'
+      summary: ticdc_puller_entry_sorter merge duration time more than 2s
+
+  - alert: ticdc_mounter_unmarshal_and_mount_time_more_than_10ms
+    expr: histogram_quantile(0.9, rate(ticdc_mounter_unmarshal_and_mount_bucket[1m])) * 1000 > 10
+    for: 1m
+    labels:
+      env: ENV_LABELS_ENV
+      level: warning
+      expr: histogram_quantile(0.9, rate(ticdc_mounter_unmarshal_and_mount_bucket[1m])) * 1000 > 10
+    annotations:
+      description: 'cluster: ENV_LABELS_ENV, instance: {{ $labels.instance }}, values: {{ $value }}'
+      value: '{{ $value }}'
+      summary: cdc_mounter unmarshal and mount time more than 10ms
+
+  - alert: cdc_sink_execute_duration_time_more_than_10s
+    expr: histogram_quantile(0.9, rate(ticdc_sink_txn_exec_duration_bucket[1m])) > 10
+    for: 1m
+    labels:
+      env: ENV_LABELS_ENV
+      level: warning
+      expr: histogram_quantile(0.9, rate(ticdc_sink_txn_exec_duration_bucket[1m])) > 10
+    annotations:
+      description: 'cluster: ENV_LABELS_ENV, instance: {{ $labels.instance }}, values: {{ $value }}'
+      value: '{{ $value }}'
+      summary: cdc sink execute_duration_time_more_than_10s
+
+  - alert: cdc_processor_checkpoint_tso_no_change_for_1m
+    expr: changes(ticdc_processor_checkpoint_ts[1m]) < 1
+    labels:
+      env: ENV_LABELS_ENV
+      level: warning
+      expr: changes(ticdc_processor_checkpoint_ts[1m]) < 1
+    annotations:
+      description: 'cluster: ENV_LABELS_ENV, instance: {{ $labels.instance }}, values: {{ $value }}'
+      value: '{{ $value }}'
+      summary: cdc processor checkpoint tso no change for 1m
+
+  - alert: ticdc_puller_entry_sorter_sort_bucket
+    expr: histogram_quantile(0.9, rate(ticdc_puller_entry_sorter_sort_bucket{}[1m])) > 1
+    for: 1m
+    labels:
+      env: ENV_LABELS_ENV
+      level: warning
+      expr: histogram_quantile(0.9, rate(ticdc_puller_entry_sorter_sort_bucket{}[1m]))
+    annotations:
+      description: 'cluster: ENV_LABELS_ENV, instance: {{ $labels.instance }}, values: {{ $value }}'
+      value: '{{ $value }}'
+      summary:  ticdc puller entry sorter sort latency is too high
+
+  - alert: ticdc_puller_entry_sorter_merge_bucket
+    expr: histogram_quantile(0.9, rate(ticdc_puller_entry_sorter_merge_bucket{}[1m])) > 1
+    for: 1m
+    labels:
+      env: ENV_LABELS_ENV
+      level: warning
+      expr: histogram_quantile(0.9, rate(ticdc_puller_entry_sorter_merge_bucket{}[1m]))
+    annotations:
+      description: 'cluster: ENV_LABELS_ENV, instance: {{ $labels.instance }}, values: {{ $value }}'
+      value: '{{ $value }}'
+      summary:  ticdc puller entry sorter merge latency is too high
+
+  - alert: tikv_cdc_min_resolved_ts_no_change_for_1m
+    expr: changes(tikv_cdc_min_resolved_ts[1m]) < 1
+    for: 1m
+    labels:
+      env: ENV_LABELS_ENV
+      level: warning
+      expr: changes(tikv_cdc_min_resolved_ts[1m]) < 1
+    annotations:
+      description: 'cluster: ENV_LABELS_ENV, instance: {{ $labels.instance }}, values: {{ $value }}'
+      value: '{{ $value }}'
+      summary: tikv cdc min resolved ts no change for 1m
+
+  - alert: tikv_cdc_scan_duration_seconds_more_than_30s
+    expr: histogram_quantile(0.9, rate(tikv_cdc_scan_duration_seconds_bucket{}[1m])) > 30
+    for: 1m
+    labels:
+      env: ENV_LABELS_ENV
+      level: warning
+      expr: histogram_quantile(0.9, rate(tikv_cdc_scan_duration_seconds_bucket{}[1m])) > 30
+    annotations:
+      description: 'cluster: ENV_LABELS_ENV, instance: {{ $labels.instance }}, values: {{ $value }}'
+      value: '{{ $value }}'
+      summary: tikv cdc scan duration seconds more than 30s
+
+  - alert: ticdc_sink_mysql_execution_error
+    expr: changes(ticdc_sink_mysql_execution_error[1m]) > 0
+    for: 1m
+    labels:
+      env: ENV_LABELS_ENV
+      level: warning
+      expr: changes(ticdc_sink_mysql_execution_error[1m]) > 0
+    annotations:
+      description: 'cluster: ENV_LABELS_ENV, instance: {{ $labels.instance }}, values: {{ $value }}'
+      value: '{{ $value }}'
+      summary: cdc sink mysql execution meets errors
+
+  - alert: ticdc_processor_exit_with_error_count
+    expr: changes(ticdc_processor_exit_with_error_count[1m]) > 0
+    for: 1m
+    labels:
+      env: ENV_LABELS_ENV
+      level: critical
+      expr: changes(ticdc_processor_exit_with_error_count[1m]) > 0
+    annotations:
+      description: 'cluster: ENV_LABELS_ENV, instance: {{ $labels.instance }}, values: {{ $value }}'
+      value: '{{ $value }}'
+      summary: cdc processor exits with error
+
+  - alert: ticdc_memory_abnormal
+    expr: go_memstats_heap_alloc_bytes{job="ticdc"} > 1e+10
+    for: 1m
+    labels:
+      env: ENV_LABELS_ENV
+      level: warning
+      expr: go_memstats_heap_alloc_bytes{job="ticdc"} > 1e+10
+    annotations:
+      description: 'cluster: ENV_LABELS_ENV, instance: {{ $labels.instance }}, values:{{ $value }}'
+      value: '{{ $value }}'
+      summary: TiCDC heap memory usage is over 10 GB

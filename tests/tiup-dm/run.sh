@@ -35,6 +35,10 @@ export TIUP_CLUSTER_EXECUTE_DEFAULT_TIMEOUT=300s
 
 export version=${version-nightly}
 
+# Prepare local config
+rm -rf /tmp/local
+cp -r ./local /tmp/local
+
 function tiup-dm() {
 	mkdir -p ~/.tiup/bin && cp -f ./root.json ~/.tiup/bin/
 	# echo "in function"
