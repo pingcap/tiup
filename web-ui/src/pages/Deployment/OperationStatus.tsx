@@ -1,34 +1,29 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef } from 'react'
 import { Progress } from 'antd'
 
-export interface IDeploymentStatus {
+export interface IOperationStatus {
+  operation_type: string // 'deploy', 'scaleOut'
   cluster_name: string
   total_progress: number
   steps: string[]
   err_msg: string
 }
 
-export interface IDeploymentStatusProps {
-  deployStatus: IDeploymentStatus
+export interface IOperationStatusProps {
+  operationStatus: IOperationStatus
 }
 
-export default function DeploymentStatus({
-  deployStatus,
-}: IDeploymentStatusProps) {
-  const { cluster_name, total_progress, steps, err_msg } = deployStatus
+export default function OperationStatus({
+  operationStatus,
+}: IOperationStatusProps) {
+  const { cluster_name, total_progress, steps, err_msg } = operationStatus
   const detailInfoRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (detailInfoRef.current) {
-      // detailInfoRef.current.scrollTo(0, 36 * deployStatus.steps.length)
-    }
-  }, [deployStatus])
 
   function result() {
     if (err_msg) {
       return '失败'
     } else if (total_progress === 100) {
-      return '成功 (请进入 "集群管理" 界面对该集群进行启动，停止，扩容，缩容，销毁等操作)'
+      return '成功 (请进入 "集群管理" 界面对该集群进行启动，停止，缩容，销毁等操作)'
     } else {
       return '进行中'
     }

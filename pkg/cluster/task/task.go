@@ -227,6 +227,7 @@ func (s *Serial) ComputeProgress() ([]string, int) {
 		if sd.progress == 100 {
 			finishedSteps++
 		}
+		// TODO: refine, not append progress 0 steps?
 		stepsStatus = append(stepsStatus, fmt.Sprintf("%s ... %d%%", sd.prefix, sd.progress))
 	}
 
@@ -235,6 +236,7 @@ func (s *Serial) ComputeProgress() ([]string, int) {
 			handleStepDisplay(sd)
 		}
 		if psd, ok := step.(*ParallelStepDisplay); ok {
+			// TODO: refine, not append it if all sub steps progress are 0?
 			stepsStatus = append(stepsStatus, psd.prefix)
 			for _, s := range psd.inner.inner {
 				if sd, ok := s.(*StepDisplay); ok {

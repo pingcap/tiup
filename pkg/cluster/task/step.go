@@ -118,14 +118,12 @@ func (s *StepDisplay) String() string {
 }
 
 func (s *StepDisplay) handleTaskBegin(task Task) {
-	// 可能同时会收到其它 StepDisplay 发生的事件
-	// 要判断这个 task 是否属于这个 StepDisplay
 	if _, ok := s.children[task]; !ok {
 		return
 	}
 
-	// fmt.Println("internal @@@@@@@@@@@@@@@@@@@@@@@@@@@ begin:", task, "@@@@")
-	s.progress = s.startedTask * 100 / len(s.children)
+	oneTaskPercentHalf := (100 / len(s.children)) / 2
+	s.progress = s.startedTask*100/len(s.children) + oneTaskPercentHalf
 	s.startedTask++
 
 	s.progressBar.UpdateDisplay(&progress.DisplayProps{
@@ -138,8 +136,6 @@ func (s *StepDisplay) handleTaskProgress(task Task, p string) {
 	if _, ok := s.children[task]; !ok {
 		return
 	}
-
-	// fmt.Println("internal @@@@@@@@@@@@@@@@@@@@@@@@@@@ progress:", task, "@@@@", p, "@@@@")
 
 	s.progressBar.UpdateDisplay(&progress.DisplayProps{
 		Prefix: s.prefix,

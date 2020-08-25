@@ -12,8 +12,8 @@ export function deployCluster(deployment: any) {
   return request(fullUrl('deploy'), 'POST', deployment)
 }
 
-export function getDeploymentStatus() {
-  return request(fullUrl('deploy_status'))
+export function getStatus() {
+  return request(fullUrl('status'))
 }
 
 export function getClusterList() {
@@ -38,7 +38,19 @@ export function stopCluster(clusterName: string) {
 
 export function scaleInCluster(
   clusterName: string,
-  data: { node_id: string; force: boolean }
+  scaleInOpts: { node_id: string; force: boolean }
 ) {
-  return request(fullUrl(`clusters/${clusterName}/scale_in`), 'POST', data)
+  return request(
+    fullUrl(`clusters/${clusterName}/scale_in`),
+    'POST',
+    scaleInOpts
+  )
+}
+
+export function scaleOutCluster(clusterName: string, scaleOutOpts: any) {
+  return request(
+    fullUrl(`clusters/${clusterName}/scale_in`),
+    'POST',
+    scaleOutOpts
+  )
 }

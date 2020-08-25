@@ -26,8 +26,8 @@ import DeploymentTable, {
 import EditCompForm from './EditCompForm'
 import TopoPreview, { genTopo } from './TopoPreview'
 import { Root } from '../../components/Root'
-import DeploymentStatus, { IDeploymentStatus } from './DeploymentStatus'
-import { getDeploymentStatus, deployCluster } from '../../utils/api'
+import OperationStatus, { IOperationStatus } from './OperationStatus'
+import { getStatus, deployCluster } from '../../utils/api'
 import { IGlobalLoginOptions } from '../Machines/GlobalLoginOptionsForm'
 
 // TODO: fetch from API
@@ -65,7 +65,7 @@ export default function DeploymentPage() {
   const [viewDeployStatus, setViewDeployStatus] = useState(false)
 
   const [deployStatus, setDeployStatus] = useState<
-    IDeploymentStatus | undefined
+    IOperationStatus | undefined
   >(undefined)
 
   const [reloadTimes, setReloadTimes] = useState(0)
@@ -84,7 +84,7 @@ export default function DeploymentPage() {
 
   useEffect(() => {
     const id = setInterval(() => {
-      getDeploymentStatus().then(({ data }) => {
+      getStatus().then(({ data }) => {
         if (data !== undefined) {
           setDeployStatus(data)
           if (
@@ -329,7 +329,7 @@ export default function DeploymentPage() {
         onCancel={() => setViewDeployStatus(false)}
       >
         {deployStatus ? (
-          <DeploymentStatus deployStatus={deployStatus} />
+          <OperationStatus operationStatus={deployStatus} />
         ) : (
           <div>Loading...</div>
         )}

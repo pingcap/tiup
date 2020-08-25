@@ -52,16 +52,16 @@ var (
 	errorRenameNameNotExist  = errNSRename.NewType("name_not_exist", errutil.ErrTraitPreCheck)
 	errorRenameNameDuplicate = errNSRename.NewType("name_dup", errutil.ErrTraitPreCheck)
 
-	// TODO: use map to save map[string]DeployingInfo, the key is clusterName
-	deployingInfo DeployingInfo = DeployingInfo{}
+	// TODO: use map to save map[string]OperationInfo, the key is clusterName
+	operationInfo OperationInfo = OperationInfo{}
 )
 
-// DeployingInfo records current deploying task and related info
-type DeployingInfo struct {
-	// save last deploying task
-	clusterName string
-	curTask     *task.Serial
-	err         error
+// OperationInfo records latest operation task and related info
+type OperationInfo struct {
+	operationType string // "deploy" | "scaleOut"
+	clusterName   string
+	curTask       *task.Serial
+	err           error
 }
 
 // Manager to deploy a cluster.
@@ -969,17 +969,17 @@ func (m *Manager) Deploy(
 	nativeSSH bool,
 ) error {
 	// reset
-	deployingInfo = DeployingInfo{clusterName: clusterName}
+	operationInfo = OperationInfo{operationType: "deploy", clusterName: clusterName}
 
 	if err := clusterutil.ValidateClusterNameOrError(clusterName); err != nil {
-		deployingInfo.err = err
+		operationInfo.err = err
 		return err
 	}
 
 	exist, err := m.specManager.Exist(clusterName)
 	if err != nil {
 		err = perrs.AddStack(err)
-		deployingInfo.err = err
+		operationInfo.err = err
 		return err
 	}
 
@@ -988,7 +988,7 @@ func (m *Manager) Deploy(
 		err = errDeployNameDuplicate.
 			New("Cluster name '%s' is duplicated", clusterName).
 			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
-		deployingInfo.err = err
+		operationInfo.err = err
 		return err
 	}
 
@@ -1000,7 +1000,7 @@ func (m *Manager) Deploy(
 	// the whole topology back to normal state.
 	if err := clusterutil.ParseTopologyYaml(topoFile, topo); err != nil &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-		deployingInfo.err = err
+		operationInfo.err = err
 		return err
 	}
 
@@ -1008,28 +1008,28 @@ func (m *Manager) Deploy(
 
 	clusterList, err := m.specManager.GetAllClusters()
 	if err != nil {
-		deployingInfo.err = err
+		operationInfo.err = err
 		return err
 	}
 	if err := spec.CheckClusterPortConflict(clusterList, clusterName, topo); err != nil {
-		deployingInfo.err = err
+		operationInfo.err = err
 		return err
 	}
 	if err := spec.CheckClusterDirConflict(clusterList, clusterName, topo); err != nil {
-		deployingInfo.err = err
+		operationInfo.err = err
 		return err
 	}
 
 	if !skipConfirm {
 		if err := m.confirmTopology(clusterName, clusterVersion, topo, set.NewStringSet()); err != nil {
-			deployingInfo.err = err
+			operationInfo.err = err
 			return err
 		}
 	}
 
 	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword)
 	if err != nil {
-		deployingInfo.err = err
+		operationInfo.err = err
 		return err
 	}
 
@@ -1037,7 +1037,7 @@ func (m *Manager) Deploy(
 		err = errorx.InitializationFailed.
 			Wrap(err, "Failed to create cluster metadata directory '%s'", m.specManager.Path(clusterName)).
 			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
-		deployingInfo.err = err
+		operationInfo.err = err
 		return err
 	}
 
@@ -1098,7 +1098,7 @@ func (m *Manager) Deploy(
 	})
 
 	if iterErr != nil {
-		deployingInfo.err = err
+		operationInfo.err = err
 		return iterErr
 	}
 
@@ -1186,32 +1186,23 @@ func (m *Manager) Deploy(
 		ParallelStep("+ Download TiDB components", downloadCompTasks...).
 		ParallelStep("+ Initialize target host environments", envInitTasks...).
 		ParallelStep("+ Copy files", deployCompTasks...)
-		// 并行任务里的小任务每一个都是 StepDisplay
 
 	if afterDeploy != nil {
 		afterDeploy(builder, topo)
 	}
 
-	// 最终得到的是一个串行执行的大 Serial task
-	// 里面有 4 个大步骤：
-	// - Generate SSH keys
-	// - Download TiDB components
-	// - Initialize target host environments
-	// - Copy files
-	// 这 4 个步骤串行执行
-	// 除了第一个大步骤 Generate SSH keys 是 Serial 外，其它三个是 Parallel Task，是说它内部的子 task 是并行执行的
 	t := builder.Build()
 
-	deployingInfo.curTask = t.(*task.Serial)
+	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
-			deployingInfo.err = err
+			operationInfo.err = err
 			return err
 		}
 		err = perrs.AddStack(err)
-		deployingInfo.err = err
+		operationInfo.err = err
 		return err
 	}
 
@@ -1221,7 +1212,7 @@ func (m *Manager) Deploy(
 
 	if err != nil {
 		err = perrs.AddStack(err)
-		deployingInfo.err = err
+		operationInfo.err = err
 		return err
 	}
 
@@ -1231,29 +1222,31 @@ func (m *Manager) Deploy(
 	return nil
 }
 
-// DeployStatus represents the current deployment status
-type DeployStatus struct {
+// OperationStatus represents the current deployment status
+type OperationStatus struct {
+	OperationType string   `json:"operation_type"`
 	ClusterName   string   `json:"cluster_name"`
 	TotalProgress int      `json:"total_progress"`
 	Steps         []string `json:"steps"`
 	ErrMsg        string   `json:"err_msg"`
 }
 
-// GetDeployStatus returns the current deployment progress
-func (m *Manager) GetDeployStatus() DeployStatus {
-	deployStaus := DeployStatus{
-		ClusterName: deployingInfo.clusterName,
-		Steps:       []string{},
+// GetOperationStatus returns the current operations status, including progress, steps, err message
+func (m *Manager) GetOperationStatus() OperationStatus {
+	operationStatus := OperationStatus{
+		OperationType: operationInfo.operationType,
+		ClusterName:   operationInfo.clusterName,
+		Steps:         []string{},
 	}
-	if deployingInfo.curTask != nil {
-		steps, progress := deployingInfo.curTask.ComputeProgress()
-		deployStaus.TotalProgress = progress
-		deployStaus.Steps = steps
+	if operationInfo.curTask != nil {
+		steps, progress := operationInfo.curTask.ComputeProgress()
+		operationStatus.TotalProgress = progress
+		operationStatus.Steps = steps
 	}
-	if deployingInfo.err != nil {
-		deployStaus.ErrMsg = deployingInfo.err.Error()
+	if operationInfo.err != nil {
+		operationStatus.ErrMsg = operationInfo.err.Error()
 	}
-	return deployStaus
+	return operationStatus
 }
 
 // ScaleIn the cluster.

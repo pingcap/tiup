@@ -76,7 +76,7 @@ func newDeploy() *cobra.Command {
 				version,
 				topoFile,
 				opt,
-				postDeployHook,
+				PostDeployHook,
 				skipConfirm,
 				gOpt.OptTimeout,
 				gOpt.SSHTimeout,
@@ -94,7 +94,8 @@ func newDeploy() *cobra.Command {
 	return cmd
 }
 
-func postDeployHook(builder *task.Builder, topo spec.Topology) {
+// PostDeployHook do things after deploy
+func PostDeployHook(builder *task.Builder, topo spec.Topology) {
 	nodeInfoTask := task.NewBuilder().Func("Check status", func(ctx *task.Context) error {
 		var err error
 		teleNodeInfos, err = operator.GetNodeInfo(context.Background(), ctx, topo)

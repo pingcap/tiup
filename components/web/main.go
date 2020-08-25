@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pingcap/tiup/components/cluster/command"
 	"github.com/pingcap/tiup/pkg/cluster"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -27,15 +28,16 @@ func main() {
 	router.Use(cors.AllowAll())
 	api := router.Group("/api")
 	{
+		api.POST("/deploy", deployHandler)
+		api.GET("/status", statusHandler)
+
 		api.GET("/clusters", clustersHandler)
 		api.GET("/clusters/:clusterName", clusterHandler)
 		api.DELETE("/clusters/:clusterName", destroyClusterHandler)
 		api.POST("/clusters/:clusterName/start", startClusterHandler)
 		api.POST("/clusters/:clusterName/stop", stopClusterHandler)
 		api.POST("/clusters/:clusterName/scale_in", scaleInClusterHandler)
-
-		api.POST("/deploy", deployHandler)
-		api.GET("/deploy_status", deployStatusHandler)
+		api.POST("/clusters/:clusterName/scale_out", scaleOutClusterHandler)
 	}
 	_ = router.Run()
 }
@@ -72,7 +74,6 @@ func deployHandler(c *gin.Context) {
 	_, _ = tmpfile.WriteString(strings.TrimSpace(req.TopoYaml))
 	topoFilePath := tmpfile.Name()
 	tmpfile.Close()
-	// fmt.Println("topo file path:", topoFilePath)
 
 	// create private key file
 	tmpfile, err = ioutil.TempFile("", "private_key")
@@ -84,9 +85,6 @@ func deployHandler(c *gin.Context) {
 	identifyFile := tmpfile.Name()
 	tmpfile.Close()
 
-	// parse request parameters
-	// topoFilePath = "/Users/baurine/Codes/Work/tiup/examples/manualTestEnv/multiHost/topology.yaml"
-	// identifyFile := "/Users/baurine/Codes/Work/tiup/examples/manualTestEnv/_shared/vagrant_key"
 	go func() {
 		_ = manager.Deploy(
 			req.ClusterName,
@@ -96,7 +94,7 @@ func deployHandler(c *gin.Context) {
 				User:         req.GlobalLoginOptions.Username,
 				IdentityFile: identifyFile,
 			},
-			nil,
+			command.PostDeployHook,
 			true,
 			120,
 			5,
@@ -104,13 +102,11 @@ func deployHandler(c *gin.Context) {
 		)
 	}()
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "ok",
-	})
+	c.Status(http.StatusNoContent)
 }
 
-func deployStatusHandler(c *gin.Context) {
-	status := manager.GetDeployStatus()
+func statusHandler(c *gin.Context) {
+	status := manager.GetOperationStatus()
 	c.JSON(http.StatusOK, status)
 }
 
@@ -150,9 +146,7 @@ func destroyClusterHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "ok",
-	})
+	c.Status(http.StatusNoContent)
 }
 
 func startClusterHandler(c *gin.Context) {
@@ -171,9 +165,7 @@ func startClusterHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "ok",
-	})
+	c.Status(http.StatusNoContent)
 }
 
 func stopClusterHandler(c *gin.Context) {
@@ -189,9 +181,7 @@ func stopClusterHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "ok",
-	})
+	c.Status(http.StatusNoContent)
 }
 
 // ScaleInReq represents the request for scale in cluster
@@ -236,7 +226,60 @@ func scaleInClusterHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "ok",
-	})
+	c.Status(http.StatusNoContent)
+}
+
+// ScaleOutReq represents the request for scale out
+type ScaleOutReq struct {
+	TopoYaml           string                   `json:"topo_yaml"`
+	GlobalLoginOptions DeployGlobalLoginOptions `json:"global_login_options"`
+}
+
+func scaleOutClusterHandler(c *gin.Context) {
+	clusterName := c.Param("clusterName")
+
+	var req ScaleOutReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	// create temp topo yaml file
+	tmpfile, err := ioutil.TempFile("", "topo")
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	_, _ = tmpfile.WriteString(strings.TrimSpace(req.TopoYaml))
+	topoFilePath := tmpfile.Name()
+	tmpfile.Close()
+
+	// create private key file
+	tmpfile, err = ioutil.TempFile("", "private_key")
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	_, _ = tmpfile.WriteString(strings.TrimSpace(req.GlobalLoginOptions.PrivateKey))
+	identifyFile := tmpfile.Name()
+	tmpfile.Close()
+
+	go func() {
+		_ = manager.ScaleOut(
+			clusterName,
+			topoFilePath,
+			command.PostScaleOutHook,
+			command.Final,
+			cluster.ScaleOutOptions{
+				User:         req.GlobalLoginOptions.Username,
+				IdentityFile: identifyFile,
+			},
+			true,
+			120,
+			5,
+			false,
+		)
+	}()
+
+	c.Status(http.StatusNoContent)
 }
