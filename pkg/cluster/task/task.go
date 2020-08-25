@@ -222,28 +222,41 @@ func (s *Serial) ComputeProgress() ([]string, int) {
 	allStepsCount := 0
 	finishedSteps := 0
 
-	handleStepDisplay := func(sd *StepDisplay) {
+	handleStepDisplay := func(sd *StepDisplay) string {
 		allStepsCount++
 		if sd.progress == 100 {
 			finishedSteps++
 		}
-		// TODO: refine, not append progress 0 steps?
-		stepsStatus = append(stepsStatus, fmt.Sprintf("%s ... %d%%", sd.prefix, sd.progress))
+		if sd.progress > 0 {
+			return fmt.Sprintf("%s ... %d%%", sd.prefix, sd.progress)
+		}
+		return ""
 	}
 
 	for _, step := range s.inner {
+		// for deploy
 		if sd, ok := step.(*StepDisplay); ok {
-			handleStepDisplay(sd)
-		}
-		if psd, ok := step.(*ParallelStepDisplay); ok {
-			// TODO: refine, not append it if all sub steps progress are 0?
-			stepsStatus = append(stepsStatus, psd.prefix)
-			for _, s := range psd.inner.inner {
-				if sd, ok := s.(*StepDisplay); ok {
-					handleStepDisplay(sd)
-				}
+			s := handleStepDisplay(sd)
+			if s != "" {
+				stepsStatus = append(stepsStatus, s)
 			}
 		}
+		if psd, ok := step.(*ParallelStepDisplay); ok {
+			steps := []string{}
+			for _, t := range psd.inner.inner {
+				if sd, ok := t.(*StepDisplay); ok {
+					s := handleStepDisplay(sd)
+					if s != "" {
+						steps = append(steps, s)
+					}
+				}
+			}
+			if len(steps) > 0 {
+				stepsStatus = append(stepsStatus, psd.prefix)
+				stepsStatus = append(stepsStatus, steps...)
+			}
+		}
+		// for scale out
 	}
 
 	progress := 0

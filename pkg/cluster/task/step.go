@@ -123,6 +123,9 @@ func (s *StepDisplay) handleTaskBegin(task Task) {
 	}
 
 	oneTaskPercentHalf := (100 / len(s.children)) / 2
+	if oneTaskPercentHalf == 0 {
+		oneTaskPercentHalf = 1
+	}
 	s.progress = s.startedTask*100/len(s.children) + oneTaskPercentHalf
 	s.startedTask++
 
