@@ -1,6 +1,15 @@
 import React, { useCallback, useState, useEffect } from 'react'
 import { useLocalStorageState } from 'ahooks'
-import { Drawer, Space, Button, Modal, Form, Input, Select } from 'antd'
+import {
+  Drawer,
+  Space,
+  Button,
+  Modal,
+  Form,
+  Input,
+  Select,
+  message,
+} from 'antd'
 import uniqid from 'uniqid'
 import yaml from 'yaml'
 
@@ -27,8 +36,9 @@ import EditCompForm from './EditCompForm'
 import TopoPreview, { genTopo } from './TopoPreview'
 import { Root } from '../../components/Root'
 import OperationStatus, { IOperationStatus } from './OperationStatus'
-import { getStatus, deployCluster } from '../../utils/api'
+import { getStatus, deployCluster, scaleOutCluster } from '../../utils/api'
 import { IGlobalLoginOptions } from '../Machines/GlobalLoginOptionsForm'
+import { ExclamationCircleOutlined } from '@ant-design/icons'
 
 // TODO: fetch from API
 const TIDB_VERSIONS = [
@@ -64,7 +74,7 @@ export default function DeploymentPage() {
 
   const [viewDeployStatus, setViewDeployStatus] = useState(false)
 
-  const [deployStatus, setDeployStatus] = useState<
+  const [operationStatus, setOperationStatus] = useState<
     IOperationStatus | undefined
   >(undefined)
 
@@ -86,7 +96,7 @@ export default function DeploymentPage() {
     const id = setInterval(() => {
       getStatus().then(({ data }) => {
         if (data !== undefined) {
-          setDeployStatus(data)
+          setOperationStatus(data)
           if (
             data.total_progress === 100 ||
             data.err_msg ||
@@ -204,22 +214,13 @@ export default function DeploymentPage() {
   )
 
   function handleFinish(values: any) {
-    setDeployReq(values)
-
-    if (deployStatus !== undefined) {
-      const { cluster_name, total_progress, err_msg } = deployStatus
-      if (cluster_name === values.cluster_name) {
-        Modal.error({
-          title: '部署暂时无法进行',
-          content: '该集群正在或已经部署，请点击 "查看部署进度" 查看详情',
-        })
-        return
-      }
-
+    if (operationStatus !== undefined) {
+      const { cluster_name, total_progress, err_msg } = operationStatus
       if (cluster_name !== '' && err_msg === '' && total_progress < 100) {
         Modal.error({
-          title: '部署暂时无法进行',
-          content: '当前有正在进行中的部署任务，请点击 "查看部署进度" 进行查看',
+          title: '操作暂时无法进行',
+          content:
+            '当前有正在进行中的部署或扩容任务，请点击 "查看进度" 进行查看',
         })
         return
       }
@@ -228,14 +229,41 @@ export default function DeploymentPage() {
     const topoYaml = yaml.stringify(
       genTopo({ machines, components, forScaleOut: previewYaml.forScaleOut })
     )
-    deployCluster({
-      ...values,
-      topo_yaml: topoYaml,
-      global_login_options: globalLoginOptions,
-    })
-    setDeployStatus(undefined)
+    if (previewYaml.forScaleOut) {
+      scaleOutCluster(values.cluster_name, {
+        topo_yaml: topoYaml,
+        global_login_options: globalLoginOptions,
+      })
+    } else {
+      deployCluster({
+        ...values,
+        topo_yaml: topoYaml,
+        global_login_options: globalLoginOptions,
+      })
+    }
+    setOperationStatus(undefined)
     setReloadTimes((pre) => pre + 1)
     setViewDeployStatus(true)
+  }
+
+  function startOperate() {
+    setPreviewYaml((prev) => ({ ...prev, preview: false }))
+    form.validateFields().then((values) => {
+      setDeployReq(values as any)
+      if (previewYaml.forScaleOut) {
+        Modal.confirm({
+          title: `开始扩容`,
+          icon: <ExclamationCircleOutlined />,
+          content:
+            '即将开始扩容，请确保在扩容之前已经启动集群，否则扩容将失败！',
+          okText: '扩容',
+          cancelText: '取消',
+          onOk: () => handleFinish(values),
+        })
+      } else {
+        handleFinish(values)
+      }
+    })
   }
 
   return (
@@ -267,7 +295,7 @@ export default function DeploymentPage() {
               onClick={() =>
                 setPreviewYaml({ preview: true, forScaleOut: false })
               }
-              disabled={deployStatus === undefined}
+              disabled={operationStatus === undefined}
             >
               预览部署 YAML
             </Button>
@@ -275,13 +303,11 @@ export default function DeploymentPage() {
               onClick={() =>
                 setPreviewYaml({ preview: true, forScaleOut: true })
               }
-              disabled={deployStatus === undefined}
+              disabled={operationStatus === undefined}
             >
               预览扩容 YAML
             </Button>
-            <Button onClick={() => setViewDeployStatus(true)}>
-              查看部署/扩容进度
-            </Button>
+            <Button onClick={() => setViewDeployStatus(true)}>查看进度</Button>
           </Space>
         </Form.Item>
       </Form>
@@ -309,11 +335,11 @@ export default function DeploymentPage() {
       </Drawer>
 
       <Modal
-        title="Topology Yaml"
+        title="Topology YAML"
         visible={previewYaml.preview}
         okText={previewYaml.forScaleOut ? '开始扩容' : '开始部署'}
-        onOk={() => setPreviewYaml({ preview: false, forScaleOut: false })}
-        onCancel={() => setPreviewYaml({ preview: false, forScaleOut: false })}
+        onOk={startOperate}
+        onCancel={() => setPreviewYaml((prev) => ({ ...prev, preview: false }))}
       >
         <TopoPreview
           machines={machines}
@@ -323,13 +349,13 @@ export default function DeploymentPage() {
       </Modal>
 
       <Modal
-        title="部署/扩容进度"
+        title="进度"
         visible={viewDeployStatus}
         onOk={() => setViewDeployStatus(false)}
         onCancel={() => setViewDeployStatus(false)}
       >
-        {deployStatus ? (
-          <OperationStatus operationStatus={deployStatus} />
+        {operationStatus ? (
+          <OperationStatus operationStatus={operationStatus} />
         ) : (
           <div>Loading...</div>
         )}

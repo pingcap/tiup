@@ -246,7 +246,12 @@ func (s *Serial) ComputeProgress() ([]string, int) {
 		}
 	}
 
-	return stepsStatus, finishedSteps * 100 / allStepsCount
+	progress := 0
+	if allStepsCount > 0 {
+		progress = finishedSteps * 100 / allStepsCount
+	}
+
+	return stepsStatus, progress
 }
 
 // NewParallel create a Parallel task.

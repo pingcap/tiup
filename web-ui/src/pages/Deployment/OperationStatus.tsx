@@ -16,7 +16,13 @@ export interface IOperationStatusProps {
 export default function OperationStatus({
   operationStatus,
 }: IOperationStatusProps) {
-  const { cluster_name, total_progress, steps, err_msg } = operationStatus
+  const {
+    operation_type,
+    cluster_name,
+    total_progress,
+    steps,
+    err_msg,
+  } = operationStatus
   const detailInfoRef = useRef<HTMLDivElement>(null)
 
   function result() {
@@ -30,7 +36,7 @@ export default function OperationStatus({
   }
 
   if (cluster_name === '') {
-    return <p>当前没有正在进行的部署任务</p>
+    return <p>当前没有正在进行的部署或扩容任务</p>
   }
 
   return (
@@ -40,8 +46,9 @@ export default function OperationStatus({
         status={total_progress < 100 ? 'active' : 'success'}
       />
       <div style={{ marginTop: 16 }}>
+        <p>正在执行的操作：{operation_type === 'deploy' ? '部署' : '扩容'}</p>
         <p>集群：{cluster_name}</p>
-        <p>部署结果: {result()}</p>
+        <p>执行结果: {result()}</p>
         {err_msg && (
           <>
             <p>错误信息：</p>

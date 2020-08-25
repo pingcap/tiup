@@ -49,7 +49,7 @@ export function scaleInCluster(
 
 export function scaleOutCluster(clusterName: string, scaleOutOpts: any) {
   return request(
-    fullUrl(`clusters/${clusterName}/scale_in`),
+    fullUrl(`clusters/${clusterName}/scale_out`),
     'POST',
     scaleOutOpts
   )
