@@ -159,7 +159,7 @@ export default function DeploymentTable({
           }
           return (
             <div>
-              -&nbsp;
+              --&nbsp;
               <Tag key={rec.type} color={(COMPONENT_COLORS as any)[rec.type]}>
                 {rec.type}
                 {rec.for_scale_out ? ' (Scale)' : ''}

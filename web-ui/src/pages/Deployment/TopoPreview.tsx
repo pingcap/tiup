@@ -88,7 +88,14 @@ export default function TopoPreview({
   ])
 
   return (
-    <div>
+    <div
+      style={{
+        maxHeight: 400,
+        padding: 12,
+        border: '1px solid #ccc',
+        overflowY: 'auto',
+      }}
+    >
       {/* TODO: syntax highlight */}
       <pre>{yaml.stringify(topo)}</pre>
     </div>
