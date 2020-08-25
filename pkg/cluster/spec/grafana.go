@@ -15,6 +15,7 @@ package spec
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 
 	"github.com/pingcap/errors"
@@ -131,14 +132,19 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		return err
 	}
 
+	// initial dashboards/*.json
+	if err := i.initDashboards(e, i.InstanceSpec.(GrafanaSpec), paths, clusterName); err != nil {
+		return errors.Annotate(err, "initial dashboards")
+	}
+
 	// transfer dashboard.yml
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("dashboard_%s.yml", i.GetHost()))
 	if err := config.NewDashboardConfig(clusterName, paths.Deploy).ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst = filepath.Join(paths.Deploy, "conf", "dashboard.yml")
-	if err := e.Transfer(fp, dst, false); err != nil {
-		return err
+	dst = filepath.Join(paths.Deploy, "provisioning", "dashboards", "dashboard.yml")
+	if err := i.TransferLocalConfigFile(e, fp, dst); err != nil {
+		return errors.Annotate(err, "transfer dashboard.yml")
 	}
 
 	// transfer datasource.yml
@@ -151,8 +157,48 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		ConfigToFile(fp); err != nil {
 		return err
 	}
-	dst = filepath.Join(paths.Deploy, "conf", "datasource.yml")
-	return e.Transfer(fp, dst, false)
+	dst = filepath.Join(paths.Deploy, "provisioning", "datasources", "datasource.yml")
+	if err := i.TransferLocalConfigFile(e, fp, dst); err != nil {
+		return errors.Annotate(err, "transfer datasource.yml")
+	}
+
+	return nil
+}
+
+func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, paths meta.DirPaths, clusterName string) error {
+	dashboardsDir := filepath.Join(paths.Deploy, "dashboards")
+	// To make this step idempotent, we need cleanup old dashboards first
+	if _, stderr, err := e.Execute(fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*", dashboardsDir), false); err != nil {
+		return errors.Annotatef(err, "cleanup old dashboards: %s", string(stderr))
+	}
+
+	if spec.DashboardsDir != "" {
+		if err := i.TransferLocalConfigDir(e, spec.DashboardsDir, dashboardsDir); err != nil {
+			return errors.Annotate(err, "transfer dashboards failed")
+		}
+		return nil
+	}
+
+	cmd := fmt.Sprintf("cp %[1]s/bin/*.json %[1]s/dashboards/", paths.Deploy)
+	if _, _, err := e.Execute(cmd, false); err != nil {
+		return errors.Annotatef(err, "execute command failed: %s", err)
+	}
+
+	// Deal with the cluster name
+	for _, cmd := range []string{
+		`find %s -type f -exec sed -i "s/\${DS_.*-CLUSTER}/%s/g" {} \;`,
+		`find %s -type f -exec sed -i "s/DS_.*-CLUSTER/%s/g" {} \;`,
+		`find %s -type f -exec sed -i "s/test-cluster/%s/g" {} \;`,
+		`find %s -type f -exec sed -i "s/Test-Cluster/%s/g" {} \;`,
+	} {
+		cmd := fmt.Sprintf(cmd, path.Join(paths.Deploy, "dashboards"), clusterName)
+		_, stderr, err := e.Execute(cmd, false)
+		if err != nil {
+			return errors.Annotatef(err, "stderr: %s", string(stderr))
+		}
+	}
+
+	return nil
 }
 
 // ScaleConfig deploy temporary config on scaling
