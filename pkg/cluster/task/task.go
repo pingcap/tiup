@@ -65,6 +65,10 @@ type (
 	Serial struct {
 		hideDetailDisplay bool
 		inner             []Task
+
+		startedTask int
+		progress    int // 0~100
+		curTaskDesc string
 	}
 
 	// Parallel will execute a bundle of task in parallelism way
@@ -185,6 +189,16 @@ func (s *Serial) Execute(ctx *Context) error {
 				log.Infof("+ [ Serial ] - %s", t.String())
 			}
 		}
+
+		// save progress internal
+		oneTaskPercentHalf := (100 / len(s.inner)) / 2
+		if oneTaskPercentHalf == 0 {
+			oneTaskPercentHalf = 1
+		}
+		s.progress = s.startedTask*100/len(s.inner) + oneTaskPercentHalf
+		s.curTaskDesc = t.String()
+		s.startedTask++
+
 		ctx.ev.PublishTaskBegin(t)
 		err := t.Execute(ctx)
 		ctx.ev.PublishTaskFinish(t, err)
@@ -192,6 +206,7 @@ func (s *Serial) Execute(ctx *Context) error {
 			return err
 		}
 	}
+	s.progress = 100
 	return nil
 }
 
@@ -233,6 +248,17 @@ func (s *Serial) ComputeProgress() ([]string, int) {
 		return ""
 	}
 
+	handleSerial := func(st *Serial) string {
+		allStepsCount++
+		if st.progress == 100 {
+			finishedSteps++
+		}
+		if st.progress > 0 {
+			return fmt.Sprintf("- %s ... %d%%", st.curTaskDesc, st.progress)
+		}
+		return ""
+	}
+
 	for _, step := range s.inner {
 		// for deploy
 		if sd, ok := step.(*StepDisplay); ok {
@@ -256,15 +282,32 @@ func (s *Serial) ComputeProgress() ([]string, int) {
 				stepsStatus = append(stepsStatus, steps...)
 			}
 		}
+
 		// for scale out
+		if st, ok := step.(*Serial); ok {
+			s := handleSerial(st)
+			if s != "" {
+				stepsStatus = append(stepsStatus, s)
+			}
+		}
+		if pt, ok := step.(*Parallel); ok {
+			for _, t := range pt.inner {
+				if st, ok := t.(*Serial); ok {
+					s := handleSerial(st)
+					if s != "" {
+						stepsStatus = append(stepsStatus, s)
+					}
+				}
+			}
+		}
 	}
 
-	progress := 0
+	totalProgress := 0
 	if allStepsCount > 0 {
-		progress = finishedSteps * 100 / allStepsCount
+		totalProgress = finishedSteps * 100 / allStepsCount
 	}
 
-	return stepsStatus, progress
+	return stepsStatus, totalProgress
 }
 
 // NewParallel create a Parallel task.
