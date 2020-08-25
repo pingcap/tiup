@@ -107,6 +107,10 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		return err
 	}
 
+	if err := i.initDashboards(e, i.InstanceSpec.(GrafanaSpec), paths); err != nil {
+		return errors.Annotate(err, "initial dashboards")
+	}
+
 	var dirs []string
 
 	// provisioningDir Must same as in grafana.ini.tpl
