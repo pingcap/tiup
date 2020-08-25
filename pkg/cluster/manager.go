@@ -1383,9 +1383,14 @@ func (m *Manager) ScaleOut(
 	sshTimeout int64,
 	nativeSSH bool,
 ) error {
+	// reset
+	operationInfo = OperationInfo{operationType: "scaleOut", clusterName: clusterName}
+
 	metadata, err := m.meta(clusterName)
 	if err != nil { // not allowing validation errors
-		return perrs.AddStack(err)
+		err = perrs.AddStack(err)
+		operationInfo.err = err
+		return err
 	}
 
 	topo := metadata.GetTopology()
@@ -1393,6 +1398,7 @@ func (m *Manager) ScaleOut(
 
 	// not allowing validation errors
 	if err := topo.Validate(); err != nil {
+		operationInfo.err = err
 		return err
 	}
 
@@ -1405,27 +1411,33 @@ func (m *Manager) ScaleOut(
 	// the whole topology back to normal state.
 	if err := clusterutil.ParseTopologyYaml(topoFile, newPart); err != nil &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+		operationInfo.err = err
 		return err
 	}
 
 	if err := validateNewTopo(newPart); err != nil {
+		operationInfo.err = err
 		return err
 	}
 
 	// Abort scale out operation if the merged topology is invalid
 	mergedTopo := topo.MergeTopo(newPart)
 	if err := mergedTopo.Validate(); err != nil {
+		operationInfo.err = err
 		return err
 	}
 
 	clusterList, err := m.specManager.GetAllClusters()
 	if err != nil {
+		operationInfo.err = err
 		return err
 	}
 	if err := spec.CheckClusterPortConflict(clusterList, clusterName, mergedTopo); err != nil {
+		operationInfo.err = err
 		return err
 	}
 	if err := spec.CheckClusterDirConflict(clusterList, clusterName, mergedTopo); err != nil {
+		operationInfo.err = err
 		return err
 	}
 
@@ -1439,27 +1451,35 @@ func (m *Manager) ScaleOut(
 	if !skipConfirm {
 		// patchedComponents are components that have been patched and overwrited
 		if err := m.confirmTopology(clusterName, base.Version, newPart, patchedComponents); err != nil {
+			operationInfo.err = err
 			return err
 		}
 	}
 
 	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword)
 	if err != nil {
+		operationInfo.err = err
 		return err
 	}
 
 	// Build the scale out tasks
 	t, err := buildScaleOutTask(m, clusterName, metadata, mergedTopo, opt, sshConnProps, newPart, patchedComponents, optTimeout, sshTimeout, nativeSSH, afterDeploy, final)
 	if err != nil {
+		operationInfo.err = err
 		return err
 	}
+
+	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
+			operationInfo.err = err
 			return err
 		}
-		return perrs.Trace(err)
+		err = perrs.Trace(err)
+		operationInfo.err = err
+		return err
 	}
 
 	log.Infof("Scaled cluster `%s` out successfully", clusterName)
