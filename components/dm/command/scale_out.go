@@ -34,7 +34,7 @@ func newScaleOutCmd() *cobra.Command {
 			if len(args) != 2 {
 				return cmd.Help()
 			}
-			if gOpt.ExecutorType == executor.ExecutorTypeLocal {
+			if gOpt.ExecutorType == executor.ExecutorTypeNone {
 				opt.IdentityFile = ""
 			}
 

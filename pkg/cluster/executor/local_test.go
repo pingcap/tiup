@@ -26,7 +26,7 @@ func TestLocal(t *testing.T) {
 	assert := require.New(t)
 	user, err := user.Current()
 	assert.Nil(err)
-	local, err := New(ExecutorTypeLocal, false, SSHConfig{Host: defaultLocalIP, User: user.Username})
+	local, err := New(ExecutorTypeNone, false, SSHConfig{Host: defaultLocalIP, User: user.Username})
 	assert.Nil(err)
 	_, _, err = local.Execute("ls .", false)
 	assert.Nil(err)

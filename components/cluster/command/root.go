@@ -90,7 +90,7 @@ func init() {
 	if executorEnvVar != "" {
 		gOpt.ExecutorType = executorEnvVar
 	} else {
-		gOpt.ExecutorType = executor.ExecutorTypeNative
+		gOpt.ExecutorType = executor.ExecutorTypeBuiltin
 	}
 
 	rootCmd = &cobra.Command{
@@ -145,8 +145,8 @@ func init() {
 	// start/stop operations is 90s, the default value of this argument is better be longer than that
 	rootCmd.PersistentFlags().Int64Var(&gOpt.OptTimeout, "wait-timeout", 120, "Timeout in seconds to wait for an operation to complete, ignored for operations that don't fit.")
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
-	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "Use the native SSH client installed on local system instead of the build-in one.")
-	rootCmd.PersistentFlags().StringVar(&gOpt.ExecutorType, "executor", gOpt.ExecutorType, "The executor type: 'native', 'system', 'local'")
+	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "Use the SSH client installed on local system instead of the build-in one.")
+	rootCmd.PersistentFlags().StringVar(&gOpt.ExecutorType, "ssh", gOpt.ExecutorType, "The executor type: 'builtin', 'system', 'none'")
 
 	rootCmd.AddCommand(
 		newCheckCmd(),

@@ -26,14 +26,14 @@ import (
 var (
 	errNS = errorx.NewNamespace("executor")
 
-	// ExecutorTypeNative is the type of easy ssh executor
-	ExecutorTypeNative = "native"
+	// ExecutorTypeBuiltin is the type of easy ssh executor
+	ExecutorTypeBuiltin = "builtin"
 
 	// ExecutorTypeSystem is the type of host ssh client
 	ExecutorTypeSystem = "system"
 
-	// ExecutorTypeLocal is the type of local executor (no ssh will be used)
-	ExecutorTypeLocal = "local"
+	// ExecutorTypeNone is the type of local executor (no ssh will be used)
+	ExecutorTypeNone = "none"
 
 	executeDefaultTimeout = time.Second * 60
 
@@ -84,7 +84,7 @@ func New(etype string, sudo bool, c SSHConfig) (Executor, error) {
 	}
 
 	switch etype {
-	case ExecutorTypeNative:
+	case ExecutorTypeBuiltin:
 		e := &EasySSHExecutor{
 			Locale: "C",
 			Sudo:   sudo,
@@ -101,7 +101,7 @@ func New(etype string, sudo bool, c SSHConfig) (Executor, error) {
 			_, _, e.ConnectionTestResult = e.Execute(connectionTestCommand, false, executeDefaultTimeout)
 		}
 		return e, nil
-	case ExecutorTypeLocal:
+	case ExecutorTypeNone:
 		local := os.Getenv(localdata.EnvNameLocalHost)
 		if local == "" {
 			local = defaultLocalIP

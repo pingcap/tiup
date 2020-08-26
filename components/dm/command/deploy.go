@@ -42,7 +42,7 @@ func newDeploy() *cobra.Command {
 			if !shouldContinue {
 				return nil
 			}
-			if gOpt.ExecutorType == executor.ExecutorTypeLocal {
+			if gOpt.ExecutorType == executor.ExecutorTypeNone {
 				opt.IdentityFile = ""
 			}
 

@@ -61,7 +61,7 @@ conflict checks with other clusters`,
 			if len(args) != 1 {
 				return cmd.Help()
 			}
-			if gOpt.ExecutorType == executor.ExecutorTypeLocal {
+			if gOpt.ExecutorType == executor.ExecutorTypeNone {
 				opt.identityFile = ""
 			}
 
