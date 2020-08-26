@@ -143,7 +143,7 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 	}
 
 	// Use the default ones
-	cmd := fmt.Sprintf("cp %[1]s/bin/*.rules.yml %[1]s/conf/", paths.Deploy)
+	cmd := fmt.Sprintf("cp %[1]s/bin/prometheus/*.rules.yml %[1]s/conf/", paths.Deploy)
 	if _, _, err := e.Execute(cmd, false); err != nil {
 		return errors.Annotatef(err, "execute command failed: %s", err)
 	}
@@ -218,7 +218,7 @@ func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVe
 	}
 
 	// backup *.rules.yml for later reload (in case that the user change rules_dir)
-	cmd = fmt.Sprintf("cp %s/*.rules.yml %s", targetDir, filepath.Join(deployDir, "bin"))
+	cmd = fmt.Sprintf("cp %s/*.rules.yml %s", targetDir, filepath.Join(deployDir, "bin", "prometheus"))
 	_, stderr, err = e.Execute(cmd, false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
