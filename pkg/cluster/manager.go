@@ -136,12 +136,9 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	var tlsCfg *tls.Config
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(name, spec.TLSCertKeyDir))
-		if err != nil {
-			return perrs.AddStack(err)
-		}
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
+	if err != nil {
+		return perrs.AddStack(err)
 	}
 
 	b := task.NewBuilder().
@@ -181,12 +178,9 @@ func (m *Manager) StopCluster(clusterName string, options operator.Options) erro
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	var tlsCfg *tls.Config
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
-		if err != nil {
-			return perrs.AddStack(err)
-		}
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return perrs.AddStack(err)
 	}
 
 	t := task.NewBuilder().
@@ -221,12 +215,9 @@ func (m *Manager) RestartCluster(clusterName string, options operator.Options) e
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	var tlsCfg *tls.Config
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
-		if err != nil {
-			return perrs.AddStack(err)
-		}
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return perrs.AddStack(err)
 	}
 
 	t := task.NewBuilder().
@@ -294,12 +285,9 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	var tlsCfg *tls.Config
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
-		if err != nil {
-			return perrs.AddStack(err)
-		}
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return perrs.AddStack(err)
 	}
 
 	if !skipConfirm {
@@ -360,12 +348,9 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	var tlsCfg *tls.Config
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
-		if err != nil {
-			return perrs.AddStack(err)
-		}
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return perrs.AddStack(err)
 	}
 
 	if !skipConfirm {
@@ -558,12 +543,9 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 				dataDir = insDirs[1]
 			}
 
-			var tlsCfg *tls.Config
-			if topo.BaseTopo().GlobalOptions.TLSEnabled {
-				tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
-				if err != nil {
-					return perrs.AddStack(err)
-				}
+			tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+			if err != nil {
+				return perrs.AddStack(err)
 			}
 			status := ins.Status(tlsCfg, pdList...)
 			// Query the service status
@@ -763,12 +745,9 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 		tb = tb.ParallelStep("+ Refresh monitor configs", monitorConfigTasks...)
 	}
 
-	var tlsCfg *tls.Config
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
-		if err != nil {
-			return perrs.AddStack(err)
-		}
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return perrs.AddStack(err)
 	}
 	if !skipRestart {
 		tb = tb.Func("UpgradeCluster", func(ctx *task.Context) error {
@@ -907,12 +886,9 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 		}
 	}
 
-	var tlsCfg *tls.Config
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
-		if err != nil {
-			return perrs.AddStack(err)
-		}
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return perrs.AddStack(err)
 	}
 	t := task.NewBuilder().
 		SSHKeySet(
@@ -980,12 +956,9 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 		replacePackageTasks = append(replacePackageTasks, tb.Build())
 	}
 
-	var tlsCfg *tls.Config
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
-		if err != nil {
-			return perrs.AddStack(err)
-		}
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return perrs.AddStack(err)
 	}
 	t := task.NewBuilder().
 		SSHKeySet(
@@ -1408,12 +1381,10 @@ func (m *Manager) ScaleIn(
 			return err
 		}
 	}
-	var tlsCfg *tls.Config
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
-		if err != nil {
-			return perrs.AddStack(err)
-		}
+
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return perrs.AddStack(err)
 	}
 
 	b := task.NewBuilder().
@@ -1874,13 +1845,9 @@ func buildScaleOutTask(
 	base := metadata.GetBaseMeta()
 	specManager := m.specManager
 
-	var tlsCfg *tls.Config
-	var err error
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		tlsCfg, err = spec.LoadClientCert(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
-		if err != nil {
-			return nil, perrs.AddStack(err)
-		}
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return nil, perrs.AddStack(err)
 	}
 
 	// Initialize the environments

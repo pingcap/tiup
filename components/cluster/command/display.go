@@ -55,8 +55,17 @@ func newDisplayCmd() *cobra.Command {
 				return perrs.Errorf("Cluster %s not found", clusterName)
 			}
 
+			metadata, err := spec.ClusterMetadata(clusterName)
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+				!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+				return perrs.AddStack(err)
+			}
 			if showDashboardOnly {
-				return displayDashboardInfo(clusterName)
+				tlsCfg, err := metadata.Topology.TLSConfig(tidbSpec.Path(clusterName, spec.TLSCertKeyDir))
+				if err != nil {
+					return perrs.AddStack(err)
+				}
+				return displayDashboardInfo(clusterName, tlsCfg)
 			}
 
 			err = manager.Display(clusterName, gOpt)
@@ -64,11 +73,6 @@ func newDisplayCmd() *cobra.Command {
 				return perrs.AddStack(err)
 			}
 
-			metadata, err := spec.ClusterMetadata(clusterName)
-			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
-				!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-				return perrs.AddStack(err)
-			}
 			return destroyTombstoneIfNeed(clusterName, metadata, gOpt)
 		},
 	}
@@ -80,7 +84,7 @@ func newDisplayCmd() *cobra.Command {
 	return cmd
 }
 
-func displayDashboardInfo(clusterName string) error {
+func displayDashboardInfo(clusterName string, tlsCfg *tls.Config) error {
 	metadata, err := spec.ClusterMetadata(clusterName)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
@@ -92,13 +96,6 @@ func displayDashboardInfo(clusterName string) error {
 		pdEndpoints = append(pdEndpoints, fmt.Sprintf("%s:%d", pd.Host, pd.ClientPort))
 	}
 
-	var tlsCfg *tls.Config
-	if metadata.Topology.GlobalOptions.TLSEnabled {
-		tlsCfg, err = spec.LoadClientCert(tidbSpec.Path(clusterName, spec.TLSCertKeyDir))
-		if err != nil {
-			return perrs.AddStack(err)
-		}
-	}
 	pdAPI := api.NewPDClient(pdEndpoints, 2*time.Second, tlsCfg)
 	dashboardAddr, err := pdAPI.GetDashboardAddress()
 	if err != nil {
@@ -128,13 +125,9 @@ func destroyTombstoneIfNeed(clusterName string, metadata *spec.ClusterMeta, opt 
 		return nil
 	}
 
-	var tlsCfg *tls.Config
-	var err error
-	if metadata.Topology.GlobalOptions.TLSEnabled {
-		tlsCfg, err = spec.LoadClientCert(tidbSpec.Path(clusterName, spec.TLSCertKeyDir))
-		if err != nil {
-			return perrs.AddStack(err)
-		}
+	tlsCfg, err := topo.TLSConfig(tidbSpec.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return perrs.AddStack(err)
 	}
 
 	ctx := task.NewContext()

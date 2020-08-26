@@ -18,10 +18,11 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"time"
+
+	"github.com/pingcap/errors"
 )
 
 var serialNumberLimit = new(big.Int).Lsh(big.NewInt(1), 128)
@@ -96,7 +97,7 @@ func (ca *CertificateAuthority) Sign(csrBytes []byte) ([]byte, error) {
 
 	currTime := time.Now().UTC()
 	if !currTime.Before(ca.Cert.NotAfter) {
-		return nil, fmt.Errorf("the signer has expired: NotAfter=%v", ca.Cert.NotAfter)
+		return nil, errors.Errorf("the signer has expired: NotAfter=%v", ca.Cert.NotAfter)
 	}
 
 	// generate a random serial number for the new cert
@@ -137,39 +138,39 @@ func ReadCA(clsName, certPath, keyPath string) (*CertificateAuthority, error) {
 	// read private key
 	rawKey, err := ioutil.ReadFile(keyPath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading CA private key for %s: %s", clsName, err)
+		return nil, errors.Annotatef(err, "error reading CA private key for %s", clsName)
 	}
 	keyPem, _ := pem.Decode(rawKey)
 	if keyPem == nil {
-		return nil, fmt.Errorf("error decoding CA private key for %s", clsName)
+		return nil, errors.Errorf("error decoding CA private key for %s", clsName)
 	}
 	var privKey PrivKey
 	switch keyPem.Type {
 	case "RSA PRIVATE KEY":
 		pk, err := x509.ParsePKCS1PrivateKey(keyPem.Bytes)
 		if err != nil {
-			return nil, fmt.Errorf("error decoding CA private key for %s: %s", clsName, err)
+			return nil, errors.Annotatef(err, "error decoding CA private key for %s", clsName)
 		}
 		privKey = &RSAPrivKey{key: pk}
 	default:
-		return nil, fmt.Errorf("the CA private key type \"%s\" is not supported", keyPem.Type)
+		return nil, errors.Errorf("the CA private key type \"%s\" is not supported", keyPem.Type)
 	}
 
 	// read certificate
 	rawCert, err := ioutil.ReadFile(certPath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading CA certificate for %s: %s", clsName, err)
+		return nil, errors.Annotatef(err, "error reading CA certificate for %s", clsName)
 	}
 	certPem, _ := pem.Decode(rawCert)
 	if certPem == nil {
-		return nil, fmt.Errorf("error decoding CA certificate for %s", clsName)
+		return nil, errors.Errorf("error decoding CA certificate for %s", clsName)
 	}
 	if certPem.Type != "CERTIFICATE" {
-		return nil, fmt.Errorf("the CA certificate type \"%s\" is not valid", certPem.Type)
+		return nil, errors.Errorf("the CA certificate type \"%s\" is not valid", certPem.Type)
 	}
 	cert, err := x509.ParseCertificate(certPem.Bytes)
 	if err != nil {
-		return nil, fmt.Errorf("error decoding CA certificate for %s: %s", clsName, err)
+		return nil, errors.Annotatef(err, "error decoding CA certificate for %s", clsName)
 	}
 
 	return &CertificateAuthority{

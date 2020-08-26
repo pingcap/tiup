@@ -2,7 +2,6 @@ package task
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -28,14 +27,11 @@ func (u *UpdateTopology) String() string {
 
 // Execute implements the Task interface
 func (u *UpdateTopology) Execute(ctx *Context) error {
-	var tlsCfg *tls.Config
-	var err error
-	if u.metadata.Topology.GlobalOptions.TLSEnabled {
-		tlsPath := filepath.Join(u.profileDir, spec.TLSCertKeyDir)
-		tlsCfg, err = spec.LoadClientCert(tlsPath)
-		if err != nil {
-			return err
-		}
+	tlsCfg, err := u.metadata.Topology.TLSConfig(
+		filepath.Join(u.profileDir, spec.TLSCertKeyDir),
+	)
+	if err != nil {
+		return err
 	}
 	client, err := u.metadata.Topology.GetEtcdClient(tlsCfg)
 	if err != nil {

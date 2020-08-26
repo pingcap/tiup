@@ -183,7 +183,7 @@ func DestroyClusterTombstone(
 ) (nodes []string, err error) {
 	var pdClient = api.NewPDClient(cluster.GetPDList(), 10*time.Second, tlsCfg)
 
-	binlogClient, err := api.NewBinlogClient(cluster.GetPDList(), nil)
+	binlogClient, err := api.NewBinlogClient(cluster.GetPDList(), tlsCfg)
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}

@@ -532,6 +532,14 @@ func (topo *Topology) CountDir(targetHost, dirPrefix string) int {
 	return count
 }
 
+// TLSConfig generates a tls.Config for the specification as needed
+func (topo *Topology) TLSConfig(dir string) (*tls.Config, error) {
+	if !topo.GlobalOptions.TLSEnabled {
+		return nil, nil
+	}
+	return spec.LoadClientCert(dir)
+}
+
 // Validate validates the topology specification and produce error if the
 // specification invalid (e.g: port conflicts or directory conflicts)
 func (topo *Topology) Validate() error {

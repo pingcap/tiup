@@ -130,6 +130,7 @@ type Topology interface {
 	GetMonitoredOptions() *MonitoredOptions
 	// count how many time a path is used by instances in cluster
 	CountDir(host string, dir string) int
+	TLSConfig(dir string) (*tls.Config, error)
 
 	ScaleOutTopology
 }
@@ -188,6 +189,14 @@ func (s *Specification) MergeTopo(topo Topology) Topology {
 // GetMonitoredOptions implements Topology interface.
 func (s *Specification) GetMonitoredOptions() *MonitoredOptions {
 	return &s.MonitoredOptions
+}
+
+// TLSConfig generates a tls.Config for the specification as needed
+func (s *Specification) TLSConfig(dir string) (*tls.Config, error) {
+	if !s.GlobalOptions.TLSEnabled {
+		return nil, nil
+	}
+	return LoadClientCert(dir)
 }
 
 // BaseTopo implements Topology interface.
