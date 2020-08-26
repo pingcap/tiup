@@ -60,7 +60,6 @@ require (
 	github.com/tikv/pd v1.1.0-beta.0.20200824114021-f8c45ae287fd
 	github.com/tj/assert v0.0.0-20190920132354-ee03d75cd160
 	github.com/tj/go-termd v0.0.1
-	github.com/twinj/uuid v1.0.0
 	github.com/xo/usql v0.7.8
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20191023171146-3cf2f69b5738
 	go.uber.org/atomic v1.6.0
