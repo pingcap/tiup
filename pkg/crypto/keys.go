@@ -15,6 +15,7 @@ package crypto
 
 import (
 	"crypto"
+	"crypto/x509"
 	"errors"
 )
 
@@ -39,6 +40,12 @@ const (
 	// strings used for cert subject
 	pkixOrganization       = "PingCAP"
 	pkixOrganizationalUnit = "TiUP"
+
+	// PKCS12Password is a hard-coded password for PKCS#12 file, it is by
+	// intend to use pre-defined string instead of generated every time,
+	// as the encryption of PKCS#12 it self is weak. The key should be
+	// protected by other means.
+	PKCS12Password = "tiup"
 )
 
 // Serializable represents object that can be serialized and deserialized
@@ -80,6 +87,8 @@ type PrivKey interface {
 	Pem() []byte
 	// CSR creates a new CSR from the private key
 	CSR(role, commonName string, hostList []string, IPList []string) ([]byte, error)
+	// PKCS12 encodes the certificate to a pfxData
+	PKCS12(cert *x509.Certificate, ca *CertificateAuthority) ([]byte, error)
 }
 
 // NewKeyPair return a pair of key

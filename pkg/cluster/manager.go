@@ -16,6 +16,7 @@ package cluster
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -2279,7 +2280,23 @@ func genAndSaveClientCert(ca *crypto.CertificateAuthority, clusterName, tlsPath 
 			Type:  "CERTIFICATE",
 			Bytes: cert,
 		}), ""); err != nil {
-		return perrs.Annotatef(err, "cannot save client certificate for %s", clusterName)
+		return perrs.Annotatef(err, "cannot save client PEM certificate for %s", clusterName)
+	}
+
+	// save pfx format certificate
+	clientCert, err := x509.ParseCertificate(cert)
+	if err != nil {
+		return perrs.Annotatef(err, "cannot decode signed client certificate for %s", clusterName)
+	}
+	pfxData, err := privKey.PKCS12(clientCert, ca)
+	if err != nil {
+		return perrs.Annotatef(err, "cannot encode client certificate to PKCS#12 format for %s", clusterName)
+	}
+	if err := file.SaveFileWithBackup(
+		filepath.Join(tlsPath, spec.PFXClientCert),
+		pfxData,
+		""); err != nil {
+		return perrs.Annotatef(err, "cannot save client PKCS#12 certificate for %s", clusterName)
 	}
 
 	return nil

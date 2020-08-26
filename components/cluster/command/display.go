@@ -20,11 +20,13 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/fatih/color"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/spf13/cobra"
@@ -113,7 +115,21 @@ func displayDashboardInfo(clusterName string, tlsCfg *tls.Config) error {
 	}
 
 	u.Path = "/dashboard/"
-	fmt.Println(u.String())
+
+	if tlsCfg != nil {
+		fmt.Println(
+			"Client certificate:",
+			color.CyanString(tidbSpec.Path(clusterName, spec.TLSCertKeyDir, spec.PFXClientCert)),
+		)
+		fmt.Println(
+			"Certificate password:",
+			color.CyanString(crypto.PKCS12Password),
+		)
+	}
+	fmt.Println(
+		"Dashboard URL:",
+		color.CyanString(u.String()),
+	)
 
 	return nil
 }

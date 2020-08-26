@@ -35,6 +35,7 @@ const (
 	TLSCAKey             = "ca.pem"
 	TLSClientCert        = "client.crt"
 	TLSClientKey         = "client.pem"
+	PFXClientCert        = "client.pfx"
 )
 
 var profileDir string

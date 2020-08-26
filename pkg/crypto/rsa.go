@@ -24,6 +24,7 @@ import (
 	"net"
 
 	"github.com/pingcap/errors"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 // RSAKeyLength define the length of RSA keys
@@ -211,4 +212,15 @@ func (k *RSAPrivKey) CSR(role, commonName string, hostList []string, IPList []st
 	}
 
 	return csr, nil
+}
+
+// PKCS12 encodes the private and certificate to a PKCS#12 pfxData
+func (k *RSAPrivKey) PKCS12(cert *x509.Certificate, ca *CertificateAuthority) ([]byte, error) {
+	return pkcs12.Encode(
+		rand.Reader,
+		k.key,
+		cert,
+		[]*x509.Certificate{ca.Cert},
+		PKCS12Password,
+	)
 }
