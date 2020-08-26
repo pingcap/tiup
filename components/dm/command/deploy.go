@@ -21,6 +21,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"golang.org/x/mod/semver"
 )
 
@@ -40,6 +41,16 @@ func newDeploy() *cobra.Command {
 			}
 			if !shouldContinue {
 				return nil
+			}
+
+			isDefaultIdentity := true
+			cmd.Flags().Visit(func(f *pflag.Flag) {
+				if f.Name == "identity_file" {
+					isDefaultIdentity = false
+				}
+			})
+			if gOpt.NativeSSH && isDefaultIdentity {
+				opt.IdentityFile = ""
 			}
 
 			clusterName := args[0]

@@ -32,6 +32,7 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 type checkOptions struct {
@@ -59,6 +60,16 @@ conflict checks with other clusters`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
+			}
+
+			isDefaultIdentity := true
+			cmd.Flags().Visit(func(f *pflag.Flag) {
+				if f.Name == "identity_file" {
+					isDefaultIdentity = false
+				}
+			})
+			if gOpt.NativeSSH && isDefaultIdentity {
+				opt.identityFile = ""
 			}
 
 			var topo spec.Specification

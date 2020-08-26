@@ -19,6 +19,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 func newScaleOutCmd() *cobra.Command {
@@ -32,6 +33,16 @@ func newScaleOutCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 2 {
 				return cmd.Help()
+			}
+
+			isDefaultIdentity := true
+			cmd.Flags().Visit(func(f *pflag.Flag) {
+				if f.Name == "identity_file" {
+					isDefaultIdentity = false
+				}
+			})
+			if gOpt.NativeSSH && isDefaultIdentity {
+				opt.IdentityFile = ""
 			}
 
 			clusterName := args[0]
