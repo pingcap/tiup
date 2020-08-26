@@ -66,9 +66,10 @@ type (
 		hideDetailDisplay bool
 		inner             []Task
 
-		startedTask int
-		progress    int // 0~100
-		curTaskDesc string
+		startedTasks int
+		Progress     int // 0~100
+		CurTaskSteps []string
+		Steps        []string
 	}
 
 	// Parallel will execute a bundle of task in parallelism way
@@ -195,19 +196,36 @@ func (s *Serial) Execute(ctx *Context) error {
 		if oneTaskPercentHalf == 0 {
 			oneTaskPercentHalf = 1
 		}
-		s.progress = s.startedTask*100/len(s.inner) + oneTaskPercentHalf
-		s.curTaskDesc = t.String()
-		s.startedTask++
+		s.Progress = s.startedTasks*100/len(s.inner) + oneTaskPercentHalf
+		s.startedTasks++
+		s.saveSteps(t, "Starting")
 
 		ctx.ev.PublishTaskBegin(t)
 		err := t.Execute(ctx)
 		ctx.ev.PublishTaskFinish(t, err)
 		if err != nil {
+			s.saveSteps(t, "Error")
 			return err
 		}
+		s.saveSteps(t, "Done")
 	}
-	s.progress = 100
+	s.Progress = 100
 	return nil
+}
+
+// stepStatus: Starting, Error, Done
+func (s *Serial) saveSteps(curTask Task, stepStatus string) {
+	curTaskSteps := strings.Split(curTask.String(), "\n")
+	s.CurTaskSteps = []string{}
+	for _, l := range curTaskSteps {
+		if strings.TrimSpace(l) != "" {
+			s.CurTaskSteps = append(s.CurTaskSteps, fmt.Sprintf("- %s ... %s", l, stepStatus))
+		}
+	}
+	if stepStatus == "Done" {
+		s.Steps = append(s.Steps, s.CurTaskSteps...)
+		s.CurTaskSteps = []string{}
+	}
 }
 
 // Rollback implements the Task interface
@@ -248,19 +266,7 @@ func (s *Serial) ComputeProgress() ([]string, int) {
 		return ""
 	}
 
-	handleSerial := func(st *Serial) string {
-		allStepsCount++
-		if st.progress == 100 {
-			finishedSteps++
-		}
-		if st.progress > 0 {
-			return fmt.Sprintf("- %s ... %d%%", st.curTaskDesc, st.progress)
-		}
-		return ""
-	}
-
 	for _, step := range s.inner {
-		// for deploy
 		if sd, ok := step.(*StepDisplay); ok {
 			s := handleStepDisplay(sd)
 			if s != "" {
@@ -280,24 +286,6 @@ func (s *Serial) ComputeProgress() ([]string, int) {
 			if len(steps) > 0 {
 				stepsStatus = append(stepsStatus, psd.prefix)
 				stepsStatus = append(stepsStatus, steps...)
-			}
-		}
-
-		// for scale out
-		if st, ok := step.(*Serial); ok {
-			s := handleSerial(st)
-			if s != "" {
-				stepsStatus = append(stepsStatus, s)
-			}
-		}
-		if pt, ok := step.(*Parallel); ok {
-			for _, t := range pt.inner {
-				if st, ok := t.(*Serial); ok {
-					s := handleSerial(st)
-					if s != "" {
-						stepsStatus = append(stepsStatus, s)
-					}
-				}
 			}
 		}
 	}

@@ -255,7 +255,7 @@ export default function DeploymentPage() {
           title: `开始扩容`,
           icon: <ExclamationCircleOutlined />,
           content:
-            '即将开始扩容，请确保在扩容之前已经启动集群，否则扩容将失败！',
+            '即将开始扩容，请确保在扩容之前已经集群已部署成功，否则扩容将失败！',
           okText: '扩容',
           cancelText: '取消',
           onOk: () => handleFinish(values),

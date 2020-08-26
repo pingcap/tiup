@@ -1239,9 +1239,16 @@ func (m *Manager) GetOperationStatus() OperationStatus {
 		Steps:         []string{},
 	}
 	if operationInfo.curTask != nil {
-		steps, progress := operationInfo.curTask.ComputeProgress()
-		operationStatus.TotalProgress = progress
-		operationStatus.Steps = steps
+		if operationInfo.operationType == "deploy" {
+			steps, progress := operationInfo.curTask.ComputeProgress()
+			operationStatus.TotalProgress = progress
+			operationStatus.Steps = steps
+		} else if operationInfo.operationType == "scaleOut" {
+			operationStatus.TotalProgress = operationInfo.curTask.Progress
+			operationStatus.Steps = []string{}
+			operationStatus.Steps = append(operationStatus.Steps, operationInfo.curTask.Steps...)
+			operationStatus.Steps = append(operationStatus.Steps, operationInfo.curTask.CurTaskSteps...)
+		}
 	}
 	if operationInfo.err != nil {
 		operationStatus.ErrMsg = operationInfo.err.Error()
