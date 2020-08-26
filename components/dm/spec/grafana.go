@@ -187,7 +187,7 @@ func (i *GrafanaInstance) Deploy(t *task.Builder, srcPath string, deployDir stri
 			return errors.AddStack(err)
 		}
 
-		cmd := fmt.Sprintf(`tar -xzf %s -C %s && rm %s`, dstPath, tmp, dstPath)
+		cmd := fmt.Sprintf(`tar --no-same-owner -zxf %s -C %s && rm %s`, dstPath, tmp, dstPath)
 		_, stderr, err = e.Execute(cmd, false)
 		if err != nil {
 			return errors.Annotatef(err, "stderr: %s", string(stderr))
