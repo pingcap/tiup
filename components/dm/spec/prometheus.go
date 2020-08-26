@@ -134,7 +134,7 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 		return errors.Annotatef(err, "cleanup old rules: %s", string(stderr))
 	}
 
-	// If the user specified a rule directory, we should overwrite the default rules (partially)
+	// If the user specify a rule directory, we should use the rules specified
 	if spec.RulesDir != "" {
 		if err := i.TransferLocalConfigDir(e, spec.RulesDir, confDir); err != nil {
 			return errors.Annotate(err, "transfer prometheus rules failed")
