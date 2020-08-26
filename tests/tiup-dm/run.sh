@@ -37,9 +37,10 @@ export version=${version-nightly}
 
 # Prepare local config
 echo "preparing local config"
+ls -lh ./local
 rm -rf /tmp/local
 cp -r ./local /tmp/local
-ls -l /tmp/local
+ls -lh /tmp/local
 
 function tiup-dm() {
 	mkdir -p ~/.tiup/bin && cp -f ./root.json ~/.tiup/bin/

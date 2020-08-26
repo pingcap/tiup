@@ -15,9 +15,10 @@ export old_version=${old_version-v3.0.16}
 
 # Prepare local config
 echo "preparing local config"
+ls -lh ./local
 rm -rf /tmp/local
 cp -r ./local /tmp/local
-ls -l /tmp/local
+ls -lh /tmp/local
 
 function tiup-cluster() {
   mkdir -p "~/.tiup/bin" && cp -f ./root.json ~/.tiup/bin/
