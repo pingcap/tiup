@@ -197,7 +197,7 @@ func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVe
 		return errors.AddStack(err)
 	}
 
-	cmd := fmt.Sprintf(`tar -xzf %s -C %s && rm %s`, dstPath, tmp, dstPath)
+	cmd := fmt.Sprintf(`tar --no-same-owner -zxf %s -C %s && rm %s`, dstPath, tmp, dstPath)
 	_, stderr, err = e.Execute(cmd, false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))

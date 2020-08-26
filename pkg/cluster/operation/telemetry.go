@@ -89,7 +89,7 @@ func GetNodeInfo(
 			}
 
 			// get node info by exec _telemetry node_info at remote instance.
-			cmd := fmt.Sprintf(`tar -xzf %s -C %s && rm %s`, dstPath, dstDir, dstPath)
+			cmd := fmt.Sprintf(`tar --no-same-owner -zxf %s -C %s && rm %s`, dstPath, dstDir, dstPath)
 			_, stderr, err := exec.Execute(cmd, false)
 			if err != nil {
 				return errors.Annotatef(err, "stderr: %s", string(stderr))
