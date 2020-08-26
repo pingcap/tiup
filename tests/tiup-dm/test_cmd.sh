@@ -29,9 +29,9 @@ id=`tiup-dm audit | grep "deploy $name $version" | awk '{print $1}'`
 tiup-dm audit $id
 
 # check the local config
-tiup-dm exec $name -N 172.19.0.101 --command "grep magic-string-for-test /home/tidb/dm/deploy/prometheus-9090/conf/dm_worker.rules.yml"
-tiup-dm exec $name -N 172.19.0.101 --command "grep magic-string-for-test /home/tidb/dm/deploy/grafana-3000/dashboards/dm.json"
-tiup-dm exec $name -N 172.19.0.101 --command "grep magic-string-for-test /home/tidb/dm/deploy/alertmanager-9093/conf/alertmanager.yml"
+tiup-dm exec $name -N 172.19.0.101 --command "grep magic-string-for-test /home/tidb/deploy/prometheus-9090/conf/dm_worker.rules.yml"
+tiup-dm exec $name -N 172.19.0.101 --command "grep magic-string-for-test /home/tidb/deploy/grafana-3000/dashboards/dm.json"
+tiup-dm exec $name -N 172.19.0.101 --command "grep magic-string-for-test /home/tidb/deploy/alertmanager-9093/conf/alertmanager.yml"
 
 tiup-dm --yes start $name
 
