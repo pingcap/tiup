@@ -729,20 +729,24 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 			// backup files of the old version
 			tb = tb.BackupComponent(inst.ComponentName(), base.Version, inst.GetHost(), deployDir)
 
-			// copy dependency component if needed
-			switch inst.ComponentName() {
-			case spec.ComponentTiSpark:
-				tb = tb.DeploySpark(inst, version, "" /* default srcPath */, deployDir, m.bindVersion)
-			default:
-				tb = tb.CopyComponent(
-					inst.ComponentName(),
-					inst.OS(),
-					inst.Arch(),
-					version,
-					"", // use default srcPath
-					inst.GetHost(),
-					deployDir,
-				)
+			if deployerInstance, ok := inst.(DeployerInstance); ok {
+				deployerInstance.Deploy(tb, "", deployDir, version, clusterName, clusterVersion)
+			} else {
+				// copy dependency component if needed
+				switch inst.ComponentName() {
+				case spec.ComponentTiSpark:
+					tb = tb.DeploySpark(inst, version, "" /* default srcPath */, deployDir, m.bindVersion)
+				default:
+					tb = tb.CopyComponent(
+						inst.ComponentName(),
+						inst.OS(),
+						inst.Arch(),
+						version,
+						"", // use default srcPath
+						inst.GetHost(),
+						deployDir,
+					)
+				}
 			}
 
 			tb.InitConfig(
@@ -884,7 +888,7 @@ type DeployOptions struct {
 
 // DeployerInstance is a instance can deploy to a target deploy directory.
 type DeployerInstance interface {
-	Deploy(b *task.Builder, deployDir string, version string, clusterName string, clusterVersion string)
+	Deploy(b *task.Builder, srcPath string, deployDir string, version string, clusterName string, clusterVersion string)
 }
 
 // Deploy a cluster.
@@ -1039,7 +1043,7 @@ func (m *Manager) Deploy(
 			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
 
 		if deployerInstance, ok := inst.(DeployerInstance); ok {
-			deployerInstance.Deploy(t, deployDir, version, clusterName, clusterVersion)
+			deployerInstance.Deploy(t, "", deployDir, version, clusterName, clusterVersion)
 		} else {
 			// copy dependency component if needed
 			switch inst.ComponentName() {
@@ -1739,20 +1743,24 @@ func buildScaleOutTask(
 			srcPath = specManager.Path(clusterName, spec.PatchDirName, inst.ComponentName()+".tar.gz")
 		}
 
-		// copy dependency component if needed
-		switch inst.ComponentName() {
-		case spec.ComponentTiSpark:
-			tb = tb.DeploySpark(inst, version, srcPath, deployDir, m.bindVersion)
-		default:
-			tb.CopyComponent(
-				inst.ComponentName(),
-				inst.OS(),
-				inst.Arch(),
-				version,
-				srcPath,
-				inst.GetHost(),
-				deployDir,
-			)
+		if deployerInstance, ok := inst.(DeployerInstance); ok {
+			deployerInstance.Deploy(tb, srcPath, deployDir, version, clusterName, version)
+		} else {
+			// copy dependency component if needed
+			switch inst.ComponentName() {
+			case spec.ComponentTiSpark:
+				tb = tb.DeploySpark(inst, version, srcPath, deployDir, m.bindVersion)
+			default:
+				tb.CopyComponent(
+					inst.ComponentName(),
+					inst.OS(),
+					inst.Arch(),
+					version,
+					srcPath,
+					inst.GetHost(),
+					deployDir,
+				)
+			}
 		}
 
 		t := tb.ScaleConfig(clusterName,

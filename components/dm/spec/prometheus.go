@@ -135,13 +135,13 @@ func (i *MonitorInstance) ScaleConfig(e executor.Executor, topo spec.Topology,
 var _ cluster.DeployerInstance = &MonitorInstance{}
 
 // Deploy implements DeployerInstance interface.
-func (i *MonitorInstance) Deploy(t *task.Builder, deployDir string, version string, _ string, clusterVersion string) {
+func (i *MonitorInstance) Deploy(t *task.Builder, srcPath string, deployDir string, version string, _ string, clusterVersion string) {
 	t.CopyComponent(
 		i.ComponentName(),
 		i.OS(),
 		i.Arch(),
 		version,
-		"", // use default srcPath
+		srcPath,
 		i.GetHost(),
 		deployDir,
 	).Shell( // rm the rules file which relate to tidb cluster and useless.
@@ -165,7 +165,7 @@ func (i *MonitorInstance) Deploy(t *task.Builder, deployDir string, version stri
 			return errors.AddStack(err)
 		}
 
-		cmd := fmt.Sprintf(`tar -xzf %s -C %s && rm %s`, dstPath, tmp, dstPath)
+		cmd := fmt.Sprintf(`tar --no-same-owner -zxf %s -C %s && rm %s`, dstPath, tmp, dstPath)
 		_, stderr, err = e.Execute(cmd, false)
 		if err != nil {
 			return errors.Annotatef(err, "stderr: %s", string(stderr))

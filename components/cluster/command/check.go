@@ -82,6 +82,8 @@ conflict checks with other clusters`,
 				if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 					return err
 				}
+				opt.user = metadata.User
+				opt.identityFile = tidbSpec.Path(clusterName, "ssh", "id_rsa")
 
 				topo = *metadata.Topology
 			} else { // check before cluster is deployed
@@ -184,86 +186,97 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 				BuildAsStep(fmt.Sprintf("  - Getting system info of %s:%d", inst.GetHost(), inst.GetSSHPort()))
 			collectTasks = append(collectTasks, t1)
 
+			// build checking tasks
+			t2 := task.NewBuilder().
+				// check for general system info
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypeSystemInfo,
+					topo,
+					opt.opr,
+				).
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypePartitions,
+					topo,
+					opt.opr,
+				).
+				// check for listening port
+				Shell(
+					inst.GetHost(),
+					"ss -lnt",
+					false,
+				).
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypePort,
+					topo,
+					opt.opr,
+				).
+				// check for system limits
+				Shell(
+					inst.GetHost(),
+					"cat /etc/security/limits.conf",
+					false,
+				).
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypeSystemLimits,
+					topo,
+					opt.opr,
+				).
+				// check for kernel params
+				Shell(
+					inst.GetHost(),
+					"sysctl -a",
+					true,
+				).
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypeSystemConfig,
+					topo,
+					opt.opr,
+				).
+				// check for needed system service
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypeService,
+					topo,
+					opt.opr,
+				).
+				// check for needed packages
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypePackage,
+					topo,
+					opt.opr,
+				)
+
 			// if the data dir set in topology is relative, and the home dir of deploy user
 			// and the user run the check command is on different partitions, the disk detection
 			// may be using incorrect partition for validations.
 			for _, dataDir := range clusterutil.MultiDirAbs(opt.user, inst.DataDir()) {
 				// build checking tasks
-				t2 := task.NewBuilder().
-					CheckSys(
-						inst.GetHost(),
-						dataDir,
-						task.CheckTypeSystemInfo,
-						topo,
-						opt.opr,
-					).
-					CheckSys(
-						inst.GetHost(),
-						dataDir,
-						task.CheckTypePartitions,
-						topo,
-						opt.opr,
-					).
-					Shell(
-						inst.GetHost(),
-						"ss -lnt",
-						false,
-					).
-					CheckSys(
-						inst.GetHost(),
-						dataDir,
-						task.CheckTypePort,
-						topo,
-						opt.opr,
-					).
-					Shell(
-						inst.GetHost(),
-						"cat /etc/security/limits.conf",
-						false,
-					).
-					CheckSys(
-						inst.GetHost(),
-						dataDir,
-						task.CheckTypeSystemLimits,
-						topo,
-						opt.opr,
-					).
-					Shell(
-						inst.GetHost(),
-						"sysctl -a",
-						true,
-					).
-					CheckSys(
-						inst.GetHost(),
-						dataDir,
-						task.CheckTypeSystemConfig,
-						topo,
-						opt.opr,
-					).
-					CheckSys(
-						inst.GetHost(),
-						dataDir,
-						task.CheckTypeService,
-						topo,
-						opt.opr,
-					).
-					CheckSys(
-						inst.GetHost(),
-						dataDir,
-						task.CheckTypePackage,
-						topo,
-						opt.opr,
-					).
+				t2 = t2.
 					CheckSys(
 						inst.GetHost(),
 						dataDir,
 						task.CheckTypeFIO,
 						topo,
 						opt.opr,
-					).
-					BuildAsStep(fmt.Sprintf("  - Checking node %s", inst.GetHost()))
-				checkSysTasks = append(checkSysTasks, t2)
+					)
 			}
+			checkSysTasks = append(
+				checkSysTasks,
+				t2.BuildAsStep(fmt.Sprintf("  - Checking node %s", inst.GetHost())),
+			)
 
 			t3 := task.NewBuilder().
 				RootSSH(
