@@ -96,9 +96,6 @@ func init() {
 
 			return nil
 		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Help()
-		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 			return tiupmeta.GlobalEnv().V1Repository().Mirror().Close()
 		},
