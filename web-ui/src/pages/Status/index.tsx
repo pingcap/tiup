@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+
 import { Root } from '../../components/Root'
 import OperationStatus, {
   IOperationStatus,
@@ -30,11 +32,23 @@ export default function StatusPage() {
 
   return (
     <Root>
-      {operationStatus ? (
-        <OperationStatus operationStatus={operationStatus} />
-      ) : (
-        <div>Loading...</div>
-      )}
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <div style={{ width: 800 }}>
+          <h1>操作状态</h1>
+          {operationStatus ? (
+            <OperationStatus operationStatus={operationStatus} />
+          ) : (
+            <div>Loading...</div>
+          )}
+          {operationStatus &&
+            (operationStatus.total_progress === 100 ||
+              operationStatus.err_msg) && (
+              <div style={{ marginTop: 16 }}>
+                <Link to="/clusters">进入集群管理</Link>
+              </div>
+            )}
+        </div>
+      </div>
     </Root>
   )
 }

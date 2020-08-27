@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Layout, Menu } from 'antd'
 import {
@@ -11,19 +11,26 @@ import { getStatus } from '../../utils/api'
 const { Sider, Content } = Layout
 
 function SiderMenu() {
+  const [curMenu, setCurMenu] = useState('')
+
+  useEffect(() => {
+    const path = window.location.pathname.split('/')[1]
+    setCurMenu(path || '')
+  })
+
   return (
     <Sider collapsible>
-      <Menu theme="dark" defaultSelectedKeys={['/clusters']} mode="inline">
-        <Menu.Item key="/clusters" icon={<ClusterOutlined />}>
+      <Menu theme="dark" selectedKeys={[curMenu]} mode="inline">
+        <Menu.Item key="clusters" icon={<ClusterOutlined />}>
           <NavLink to="/clusters">集群管理</NavLink>
         </Menu.Item>
-        <Menu.Item key="/machines" icon={<HddOutlined />}>
+        <Menu.Item key="machines" icon={<HddOutlined />}>
           <NavLink to="/machines">配置机器</NavLink>
         </Menu.Item>
-        <Menu.Item key="/deploy" icon={<DeploymentUnitOutlined />}>
+        <Menu.Item key="deploy" icon={<DeploymentUnitOutlined />}>
           <NavLink to="/deploy">部署</NavLink>
         </Menu.Item>
-        <Menu.Item key="/status" icon={<DeploymentUnitOutlined />}>
+        <Menu.Item key="status" icon={<DeploymentUnitOutlined />}>
           <NavLink to="/status">操作状态</NavLink>
         </Menu.Item>
       </Menu>

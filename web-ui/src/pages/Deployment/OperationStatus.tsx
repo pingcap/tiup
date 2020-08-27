@@ -29,7 +29,7 @@ export default function OperationStatus({
     if (err_msg) {
       return '失败'
     } else if (total_progress === 100) {
-      return '成功 (请进入 "集群管理" 界面对该集群进行启动，停止，缩容，销毁等操作)'
+      return '成功'
     } else {
       return '进行中'
     }
