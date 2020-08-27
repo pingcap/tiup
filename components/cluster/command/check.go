@@ -30,9 +30,9 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 type checkOptions struct {
@@ -62,13 +62,8 @@ conflict checks with other clusters`,
 				return cmd.Help()
 			}
 
-			isDefaultIdentity := true
-			cmd.Flags().Visit(func(f *pflag.Flag) {
-				if f.Name == "identity_file" {
-					isDefaultIdentity = false
-				}
-			})
-			if gOpt.NativeSSH && isDefaultIdentity {
+			// natvie ssh has it's own logic to find the default identity_file
+			if gOpt.NativeSSH && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
 				opt.identityFile = ""
 			}
 

@@ -19,9 +19,9 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster"
+	"github.com/pingcap/tiup/pkg/utils"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"golang.org/x/mod/semver"
 )
 
@@ -43,13 +43,8 @@ func newDeploy() *cobra.Command {
 				return nil
 			}
 
-			isDefaultIdentity := true
-			cmd.Flags().Visit(func(f *pflag.Flag) {
-				if f.Name == "identity_file" {
-					isDefaultIdentity = false
-				}
-			})
-			if gOpt.NativeSSH && isDefaultIdentity {
+			// natvie ssh has it's own logic to find the default identity_file
+			if gOpt.NativeSSH && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
 				opt.IdentityFile = ""
 			}
 
