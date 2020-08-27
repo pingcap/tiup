@@ -153,12 +153,12 @@ func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, 
 	dashboardsDir := filepath.Join(paths.Deploy, "dashboards")
 	// To make this step idempotent, we need cleanup old dashboards first
 	if _, stderr, err := e.Execute(fmt.Sprintf("rm -f %s/*", dashboardsDir), false); err != nil {
-		return errors.Annotatef(err, "cleanup old dashboards: %s", string(stderr))
+		return err
 	}
 
 	if spec.DashboardDir != "" {
 		if err := i.TransferLocalConfigDir(e, spec.DashboardDir, dashboardsDir); err != nil {
-			return errors.Annotate(err, "transfer dashboards failed")
+			return err
 		}
 		return nil
 	}
@@ -166,7 +166,7 @@ func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, 
 	// Use the default ones
 	cmd := fmt.Sprintf("cp %[1]s/bin/*.json %[1]s/dashboards/", paths.Deploy)
 	if _, _, err := e.Execute(cmd, false); err != nil {
-		return errors.Annotatef(err, "execute command failed: %s", err)
+		return err
 	}
 	return nil
 }

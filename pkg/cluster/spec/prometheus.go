@@ -197,12 +197,12 @@ func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, paths meta.DirPaths) error {
 	// To make this step idempotent, we need cleanup old rules first
 	if _, _, err := e.Execute(fmt.Sprintf("rm -f %s/*", path.Join(paths.Deploy, "conf")), false); err != nil {
-		return errors.Annotatef(err, "cleanup old rules")
+		return err
 	}
 
 	if spec.RuleDir != "" {
 		if err := i.TransferLocalConfigDir(e, spec.RuleDir, path.Join(paths.Deploy, "conf")); err != nil {
-			return errors.Annotate(err, "transfer prometheus rules failed")
+			return err
 		}
 		return nil
 	}
@@ -210,7 +210,7 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 	// Use the default ones
 	cmd := fmt.Sprintf("cp %[1]s/bin/prometheus/*.rules.yml %[1]s/conf/", paths.Deploy)
 	if _, _, err := e.Execute(cmd, false); err != nil {
-		return errors.Annotatef(err, "execute command failed: %s", err)
+		return err
 	}
 
 	return nil

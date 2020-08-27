@@ -131,13 +131,13 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 	confDir := filepath.Join(paths.Deploy, "conf")
 	// To make this step idempotent, we need cleanup old rules first
 	if _, stderr, err := e.Execute(fmt.Sprintf("rm -f %s/*.rules.yml", confDir), false); err != nil {
-		return errors.Annotatef(err, "cleanup old rules: %s", string(stderr))
+		return err
 	}
 
 	// If the user specify a rule directory, we should use the rules specified
 	if spec.RuleDir != "" {
 		if err := i.TransferLocalConfigDir(e, spec.RuleDir, confDir); err != nil {
-			return errors.Annotate(err, "transfer prometheus rules failed")
+			return err
 		}
 		return nil
 	}
@@ -145,7 +145,7 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 	// Use the default ones
 	cmd := fmt.Sprintf("cp %[1]s/bin/prometheus/*.rules.yml %[1]s/conf/", paths.Deploy)
 	if _, _, err := e.Execute(cmd, false); err != nil {
-		return errors.Annotatef(err, "execute command failed: %s", err)
+		return err
 	}
 	return nil
 }

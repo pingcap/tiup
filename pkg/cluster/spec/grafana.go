@@ -144,7 +144,7 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 	}
 	dst = filepath.Join(paths.Deploy, "provisioning", "dashboards", "dashboard.yml")
 	if err := i.TransferLocalConfigFile(e, fp, dst); err != nil {
-		return errors.Annotate(err, "transfer dashboard.yml")
+		return err
 	}
 
 	// transfer datasource.yml
@@ -159,7 +159,7 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 	}
 	dst = filepath.Join(paths.Deploy, "provisioning", "datasources", "datasource.yml")
 	if err := i.TransferLocalConfigFile(e, fp, dst); err != nil {
-		return errors.Annotate(err, "transfer datasource.yml")
+		return err
 	}
 
 	return nil

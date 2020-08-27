@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -131,15 +130,14 @@ func (i *AlertManagerInstance) InitConfig(e executor.Executor, clusterName, clus
 	}
 
 	// transfer config
-	configPath := filepath.Join(paths.Cache, fmt.Sprintf("alertmanager_%s.yml", i.GetHost()))
+
 	if spec.ConfigFilePath != "" {
-		configPath = spec.ConfigFilePath
-	} else if err := config.NewAlertManagerConfig().ConfigToFile(configPath); err != nil {
-		return errors.Annotate(err, "failed to generate alertmanager config")
+		dst = filepath.Join(paths.Deploy, "conf", "alertmanager.yml")
+		return i.TransferLocalConfigFile(e, spec.ConfigFilePath, dst)
 	}
 
-	dst = filepath.Join(paths.Deploy, "conf", "alertmanager.yml")
-	return i.TransferLocalConfigFile(e, configPath, dst)
+	configPath := filepath.Join(paths.Cache, fmt.Sprintf("alertmanager_%s.yml", i.GetHost()))
+	return config.NewAlertManagerConfig().ConfigToFile(configPath)
 }
 
 // ScaleConfig deploy temporary config on scaling
