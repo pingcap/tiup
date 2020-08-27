@@ -168,16 +168,13 @@ func startClusterHandler(c *gin.Context) {
 
 func stopClusterHandler(c *gin.Context) {
 	clusterName := c.Param("clusterName")
-	err := manager.StopCluster(clusterName, operator.Options{
-		SSHTimeout: 5,
-		OptTimeout: 120,
-		APITimeout: 300,
-	})
-
-	if err != nil {
-		_ = c.Error(err)
-		return
-	}
+	go func() {
+		manager.DoStopCluster(clusterName, operator.Options{
+			SSHTimeout: 5,
+			OptTimeout: 120,
+			APITimeout: 300,
+		})
+	}()
 
 	c.Status(http.StatusNoContent)
 }

@@ -62,7 +62,7 @@ type OperationType string
 const (
 	operationDeploy OperationType = "deploy"
 	operationStart  OperationType = "start"
-	// operationStop     OperationType = "stop"
+	operationStop   OperationType = "stop"
 	// operationScaleIn  OperationType = "scaleIn"
 	operationScaleOut OperationType = "scaleOut"
 	// operationDestroy  OperationType = "destroy"
@@ -138,6 +138,12 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 	return nil
 }
 
+// DoStopCluster stop the cluster.
+func (m *Manager) DoStopCluster(clusterName string, options operator.Options) {
+	operationInfo = OperationInfo{operationType: operationStop, clusterName: clusterName}
+	operationInfo.err = m.StopCluster(clusterName, options)
+}
+
 // StopCluster stop the cluster.
 func (m *Manager) StopCluster(clusterName string, options operator.Options) error {
 	metadata, err := m.meta(clusterName)
@@ -157,6 +163,7 @@ func (m *Manager) StopCluster(clusterName string, options operator.Options) erro
 			return operator.Stop(ctx, topo, options)
 		}).
 		Build()
+	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
