@@ -157,10 +157,7 @@ func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, 
 	}
 
 	if spec.DashboardDir != "" {
-		if err := i.TransferLocalConfigDir(e, spec.DashboardDir, dashboardsDir, nil); err != nil {
-			return err
-		}
-		return nil
+		return i.TransferLocalConfigDir(e, spec.DashboardDir, dashboardsDir)
 	}
 
 	// Use the default ones

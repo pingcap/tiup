@@ -158,11 +158,7 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "provisioning", "datasources", "datasource.yml")
-	if err := i.TransferLocalConfigFile(e, fp, dst); err != nil {
-		return err
-	}
-
-	return nil
+	return i.TransferLocalConfigFile(e, fp, dst)
 }
 
 func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, paths meta.DirPaths, clusterName string) error {
