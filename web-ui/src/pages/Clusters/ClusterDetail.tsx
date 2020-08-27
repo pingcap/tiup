@@ -127,6 +127,10 @@ export default function ClusterDetailPage() {
     navigate('/status')
   }
 
+  function handleScaleOutCluster() {
+    navigate(`/clusters/${clusterName}/scaleout`)
+  }
+
   if (cluster === undefined) {
     return <Root></Root>
   }
@@ -151,6 +155,7 @@ export default function ClusterDetailPage() {
           >
             <Button>停止集群</Button>
           </Popconfirm>
+          <Button onClick={handleScaleOutCluster}>扩容</Button>
         </Space>
         <Button danger onClick={handleDestroyCluster}>
           销毁群集
