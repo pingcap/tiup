@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -175,10 +176,9 @@ func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, 
 	}
 
 	if spec.DashboardDir != "" {
-		if err := i.TransferLocalConfigDir(e, spec.DashboardDir, dashboardsDir, nil); err != nil {
-			return errors.Annotate(err, "transfer dashboards failed")
-		}
-		return nil
+		return i.TransferLocalConfigDir(e, spec.DashboardDir, dashboardsDir, func(name) bool {
+			return strings.HasSuffix(".json")
+		})
 	}
 
 	cmd = fmt.Sprintf("cp %[1]s/bin/*.json %[1]s/dashboards/", paths.Deploy)

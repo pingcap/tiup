@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -206,7 +207,9 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 	}
 
 	if spec.RuleDir != "" {
-		return i.TransferLocalConfigDir(e, spec.RuleDir, path.Join(paths.Deploy, "conf"), nil)
+		return i.TransferLocalConfigDir(e, spec.RuleDir, path.Join(paths.Deploy, "conf"), func(name) string {
+			return strings.HasSuffix(".rules.yml")
+		})
 	}
 
 	// Use the default ones
