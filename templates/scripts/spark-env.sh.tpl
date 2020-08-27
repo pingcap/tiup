@@ -89,3 +89,4 @@ SPARK_WORKER_WEBUI_PORT={{.WorkerUIPort}}
 {{- if ne .TiSparkLocalIP ""}}
 SPARK_LOCAL_IP={{.TiSparkLocalIP}}
 {{- end}}
+SPARK_PUBLIC_DNS={{.Host}}

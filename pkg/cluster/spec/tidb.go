@@ -91,6 +91,11 @@ func (c *TiDBComponent) Name() string {
 	return ComponentTiDB
 }
 
+// Role implements Component interface.
+func (c *TiDBComponent) Role() string {
+	return ComponentTiDB
+}
+
 // Instances implements Component interface.
 func (c *TiDBComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.TiDBServers))
