@@ -459,19 +459,20 @@ func CheckListeningPort(opt *CheckOptions, host string, topo *spec.Specification
 		}
 	})
 
-	for _, line := range strings.Split(string(rawData), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) < 5 || fields[0] != "LISTEN" {
-			continue
-		}
-		addr := strings.Split(fields[3], ":")
-		lp, _ := strconv.Atoi(addr[len(addr)-1])
-		for p := range ports {
+	for p := range ports {
+		for _, line := range strings.Split(string(rawData), "\n") {
+			fields := strings.Fields(line)
+			if len(fields) < 5 || fields[0] != "LISTEN" {
+				continue
+			}
+			addr := strings.Split(fields[3], ":")
+			lp, _ := strconv.Atoi(addr[len(addr)-1])
 			if p == lp {
 				results = append(results, &CheckResult{
 					Name: CheckNamePortListen,
 					Err:  fmt.Errorf("port %d is already in use", lp),
 				})
+				break // ss may report multiple entries for the same port
 			}
 		}
 	}

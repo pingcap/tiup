@@ -39,13 +39,17 @@ var templateFuncs = template.FuncMap{
 	"OsArgs0": OsArgs0,
 }
 
+// FIXME: We should use TiUp's arg0 instead of hardcode
+var arg0 = "tiup cluster"
+
+// RegisterArg0 register arg0
+func RegisterArg0(s string) {
+	arg0 = s
+}
+
 func args() []string {
 	if wd := os.Getenv(localdata.EnvNameWorkDir); wd != "" {
-		// FIXME: We should use TiUp's arg0 instead of hardcode
-		if strings.Contains(os.Args[0], "tiup-dm") {
-			return append([]string{"tiup dm"}, os.Args[1:]...)
-		}
-		return append([]string{"tiup cluster"}, os.Args[1:]...)
+		return append([]string{arg0}, os.Args[1:]...)
 	}
 	return os.Args
 }
@@ -120,7 +124,7 @@ func SuggestionFromFormat(format string, a ...interface{}) (errorx.Property, str
 // BeautifyCobraUsageAndHelp beautifies cobra usages and help.
 func BeautifyCobraUsageAndHelp(rootCmd *cobra.Command) {
 	s := `Usage:{{if .Runnable}}
-  {{ColorCommand}}{{tiupUseLine .UseLine}}{{ColorReset}}{{end}}{{if .HasAvailableSubCommands}}
+  {{ColorCommand}}{{.UseLine}}{{ColorReset}}{{end}}{{if .HasAvailableSubCommands}}
   {{ColorCommand}}{{tiupCmdPath .Use}} [command]{{ColorReset}}{{end}}{{if gt (len .Aliases) 0}}
 
 Aliases:
@@ -143,19 +147,9 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
 
 Use "{{ColorCommand}}{{tiupCmdPath .Use}} help [command]{{ColorReset}}" for more information about a command.{{end}}
 `
-	cobra.AddTemplateFunc("tiupUseLine", cmdUseLine)
 	cobra.AddTemplateFunc("tiupCmdPath", cmdPath)
 
 	rootCmd.SetUsageTemplate(s)
-}
-
-// cmdUseLine is a customized cobra.Command.UseLine()
-func cmdUseLine(useline string) string {
-	i := strings.Index(useline, " ")
-	if i > 0 {
-		return OsArgs0() + useline[i:]
-	}
-	return useline
 }
 
 // cmdPath is a customized cobra.Command.CommandPath()
