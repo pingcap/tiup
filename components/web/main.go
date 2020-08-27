@@ -151,19 +151,17 @@ func destroyClusterHandler(c *gin.Context) {
 
 func startClusterHandler(c *gin.Context) {
 	clusterName := c.Param("clusterName")
-	err := manager.StartCluster(clusterName, operator.Options{
-		SSHTimeout: 5,
-		OptTimeout: 120,
-		APITimeout: 300,
-	}, func(b *task.Builder, metadata spec.Metadata) {
-		tidbMeta := metadata.(*spec.ClusterMeta)
-		b.UpdateTopology(clusterName, tidbMeta, nil)
-	})
 
-	if err != nil {
-		_ = c.Error(err)
-		return
-	}
+	go func() {
+		manager.DoStartCluster(clusterName, operator.Options{
+			SSHTimeout: 5,
+			OptTimeout: 120,
+			APITimeout: 300,
+		}, func(b *task.Builder, metadata spec.Metadata) {
+			tidbMeta := metadata.(*spec.ClusterMeta)
+			b.UpdateTopology(clusterName, tidbMeta, nil)
+		})
+	}()
 
 	c.Status(http.StatusNoContent)
 }

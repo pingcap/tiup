@@ -61,7 +61,7 @@ type OperationType string
 
 const (
 	operationDeploy OperationType = "deploy"
-	// operationStart    OperationType = "start"
+	operationStart  OperationType = "start"
 	// operationStop     OperationType = "stop"
 	// operationScaleIn  OperationType = "scaleIn"
 	operationScaleOut OperationType = "scaleOut"
@@ -92,6 +92,12 @@ func NewManager(sysName string, specManager *spec.SpecManager, bindVersion spec.
 	}
 }
 
+// DoStartCluster start the cluster with specified name.
+func (m *Manager) DoStartCluster(name string, options operator.Options, fn ...func(b *task.Builder, metadata spec.Metadata)) {
+	operationInfo = OperationInfo{operationType: operationStart, clusterName: name}
+	operationInfo.err = m.StartCluster(name, options, fn...)
+}
+
 // StartCluster start the cluster with specified name.
 func (m *Manager) StartCluster(name string, options operator.Options, fn ...func(b *task.Builder, metadata spec.Metadata)) error {
 	log.Infof("Starting cluster %s...", name)
@@ -118,6 +124,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 	}
 
 	t := b.Build()
+	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
@@ -1217,7 +1224,6 @@ func (m *Manager) Deploy(
 	}
 
 	t := builder.Build()
-
 	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(task.NewContext()); err != nil {
@@ -1265,7 +1271,7 @@ func (m *Manager) GetOperationStatus() OperationStatus {
 			steps, progress := operationInfo.curTask.ComputeProgress()
 			operationStatus.TotalProgress = progress
 			operationStatus.Steps = steps
-		} else if operationInfo.operationType == operationScaleOut {
+		} else {
 			operationStatus.TotalProgress = operationInfo.curTask.Progress
 			operationStatus.Steps = []string{}
 			operationStatus.Steps = append(operationStatus.Steps, operationInfo.curTask.Steps...)
