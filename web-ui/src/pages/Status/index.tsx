@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { Root } from '../../components/Root'
 import OperationStatus, {
   IOperationStatus,
-} from '../Deployment/OperationStatus'
+} from './OperationStatus'
 import { getStatus } from '../../utils/api'
 
 export default function StatusPage() {
