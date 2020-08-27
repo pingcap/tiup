@@ -135,7 +135,7 @@ func PrepareCommand(
 	ctx context.Context,
 	component string,
 	version v0manifest.Version,
-	binPath, tag, wd string,
+	binPath, tag, instanceDir string, wd string,
 	args []string,
 	env *environment.Environment,
 	checkUpdate ...bool,
@@ -186,14 +186,6 @@ func PrepareCommand(
 		}
 	}
 
-	instanceDir := wd
-	if instanceDir == "" {
-		// Generate a tag for current instance if the tag doesn't specified
-		if tag == "" {
-			tag = base62Tag()
-		}
-		instanceDir = env.LocalPath(localdata.DataParentDir, tag)
-	}
 	if err := os.MkdirAll(instanceDir, 0755); err != nil {
 		return nil, err
 	}
@@ -239,7 +231,16 @@ func PrepareCommand(
 }
 
 func launchComponent(ctx context.Context, component string, version v0manifest.Version, binPath string, tag string, args []string, env *environment.Environment) (*localdata.Process, error) {
-	c, err := PrepareCommand(ctx, component, version, binPath, tag, "", args, env, true)
+	instanceDir := os.Getenv(localdata.EnvNameInstanceDataDir)
+	if instanceDir == "" {
+		// Generate a tag for current instance if the tag doesn't specified
+		if tag == "" {
+			tag = base62Tag()
+		}
+		instanceDir = env.LocalPath(localdata.DataParentDir, tag)
+	}
+
+	c, err := PrepareCommand(ctx, component, version, binPath, tag, instanceDir, "" /*wd*/, args, env, true)
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +250,7 @@ func launchComponent(ctx context.Context, component string, version v0manifest.V
 		CreatedTime: time.Now().Format(time.RFC3339),
 		Exec:        c.Args[0],
 		Args:        args,
-		Dir:         c.Dir,
+		Dir:         instanceDir,
 		Env:         c.Env,
 		Cmd:         c,
 	}
