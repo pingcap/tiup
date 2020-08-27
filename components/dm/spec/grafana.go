@@ -162,8 +162,8 @@ func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, 
 	}
 
 	if spec.DashboardDir != "" {
-		return i.TransferLocalConfigDir(e, spec.DashboardDir, dashboardsDir, func(name) bool {
-			return strings.HasSuffix(".json")
+		return i.TransferLocalConfigDir(e, spec.DashboardDir, dashboardsDir, func(name string) bool {
+			return strings.HasSuffix(name, ".json")
 		})
 	}
 

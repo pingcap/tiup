@@ -142,8 +142,8 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 
 	// If the user specify a rule directory, we should use the rules specified
 	if spec.RuleDir != "" {
-		return i.TransferLocalConfigDir(e, spec.RuleDir, confDir, func(name) bool {
-			return strings.HasSuffix(".rules.yml")
+		return i.TransferLocalConfigDir(e, spec.RuleDir, confDir, func(name string) bool {
+			return strings.HasSuffix(name, ".rules.yml")
 		})
 	}
 

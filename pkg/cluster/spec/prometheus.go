@@ -207,8 +207,8 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 	}
 
 	if spec.RuleDir != "" {
-		return i.TransferLocalConfigDir(e, spec.RuleDir, path.Join(paths.Deploy, "conf"), func(name) string {
-			return strings.HasSuffix(".rules.yml")
+		return i.TransferLocalConfigDir(e, spec.RuleDir, path.Join(paths.Deploy, "conf"), func(name string) bool {
+			return strings.HasSuffix(name, ".rules.yml")
 		})
 	}
 
