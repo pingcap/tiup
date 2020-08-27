@@ -30,9 +30,6 @@ function SiderMenu() {
         <Menu.Item key="deploy" icon={<DeploymentUnitOutlined />}>
           <NavLink to="/deploy">部署</NavLink>
         </Menu.Item>
-        <Menu.Item key="status" icon={<DeploymentUnitOutlined />}>
-          <NavLink to="/status">操作状态</NavLink>
-        </Menu.Item>
       </Menu>
     </Sider>
   )
@@ -44,7 +41,11 @@ export default function HomePage() {
   useEffect(() => {
     getStatus().then(({ data }) => {
       if (data !== undefined) {
-        if (data.total_progress < 100 && data.err_msg === '') {
+        if (
+          data.cluster_name !== '' &&
+          data.total_progress < 100 &&
+          data.err_msg === ''
+        ) {
           navigate('/status')
         }
       }

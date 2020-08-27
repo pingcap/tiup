@@ -42,7 +42,8 @@ export default function StatusPage() {
           )}
           {operationStatus &&
             (operationStatus.total_progress === 100 ||
-              operationStatus.err_msg) && (
+              operationStatus.err_msg ||
+              operationStatus.cluster_name === '') && (
               <div style={{ marginTop: 16 }}>
                 <Link to="/clusters">进入集群管理</Link>
               </div>

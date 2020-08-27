@@ -191,27 +191,27 @@ func scaleInClusterHandler(c *gin.Context) {
 		return
 	}
 
-	gOpt := operator.Options{
-		SSHTimeout: 5,
-		OptTimeout: 120,
-		APITimeout: 300,
-		NativeSSH:  false,
-		Force:      req.Force,
-		Nodes:      req.Nodes}
-	scale := func(b *task.Builder, imetadata spec.Metadata) {
-		metadata := imetadata.(*spec.ClusterMeta)
-		if !gOpt.Force {
-			b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt).
-				UpdateMeta(clusterName, metadata, operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false)).
-				UpdateTopology(clusterName, metadata, operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false))
-		} else {
-			b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt).
-				UpdateMeta(clusterName, metadata, gOpt.Nodes).
-				UpdateTopology(clusterName, metadata, gOpt.Nodes)
-		}
-	}
-
 	go func() {
+		gOpt := operator.Options{
+			SSHTimeout: 5,
+			OptTimeout: 120,
+			APITimeout: 300,
+			NativeSSH:  false,
+			Force:      req.Force,
+			Nodes:      req.Nodes}
+		scale := func(b *task.Builder, imetadata spec.Metadata) {
+			metadata := imetadata.(*spec.ClusterMeta)
+			if !gOpt.Force {
+				b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt).
+					UpdateMeta(clusterName, metadata, operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false)).
+					UpdateTopology(clusterName, metadata, operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false))
+			} else {
+				b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt).
+					UpdateMeta(clusterName, metadata, gOpt.Nodes).
+					UpdateTopology(clusterName, metadata, gOpt.Nodes)
+			}
+		}
+
 		manager.DoScaleIn(clusterName, true, gOpt.SSHTimeout, gOpt.NativeSSH, gOpt.Force, gOpt.Nodes, scale)
 	}()
 

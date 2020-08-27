@@ -1,14 +1,6 @@
 import React, { useCallback, useState, useEffect } from 'react'
 import { useLocalStorageState } from 'ahooks'
-import {
-  Drawer,
-  Space,
-  Button,
-  Modal,
-  Form,
-  Input,
-  Select,
-} from 'antd'
+import { Drawer, Space, Button, Modal, Form, Input, Select } from 'antd'
 import uniqid from 'uniqid'
 import yaml from 'yaml'
 
@@ -38,6 +30,7 @@ import OperationStatus, { IOperationStatus } from './OperationStatus'
 import { getStatus, deployCluster, scaleOutCluster } from '../../utils/api'
 import { IGlobalLoginOptions } from '../Machines/GlobalLoginOptionsForm'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
 
 // TODO: fetch from API
 const TIDB_VERSIONS = [
@@ -54,7 +47,6 @@ const TIDB_VERSIONS = [
 export interface IDeployReq {
   cluster_name: string
   tidb_version: string
-  // topo_yaml:string
 }
 
 export default function DeploymentPage() {
@@ -71,14 +63,6 @@ export default function DeploymentPage() {
     forScaleOut: false,
   })
 
-  const [viewDeployStatus, setViewDeployStatus] = useState(false)
-
-  const [operationStatus, setOperationStatus] = useState<
-    IOperationStatus | undefined
-  >(undefined)
-
-  const [reloadTimes, setReloadTimes] = useState(0)
-
   const [deployReq, setDeployReq] = useLocalStorageState<IDeployReq>(
     'deploy_req',
     { cluster_name: '', tidb_version: '' }
@@ -89,25 +73,9 @@ export default function DeploymentPage() {
     {}
   )
 
-  const [form] = Form.useForm()
+  const navigate = useNavigate()
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      getStatus().then(({ data }) => {
-        if (data !== undefined) {
-          setOperationStatus(data)
-          if (
-            data.total_progress === 100 ||
-            data.err_msg ||
-            data.cluster_name === ''
-          ) {
-            clearInterval(id)
-          }
-        }
-      })
-    }, 2000)
-    return () => clearInterval(id)
-  }, [reloadTimes])
+  const [form] = Form.useForm()
 
   const handleAddComponent = useCallback(
     (machine: IMachine, componentType: string, forScaleOut: boolean) => {
@@ -213,18 +181,6 @@ export default function DeploymentPage() {
   )
 
   function handleFinish(values: any) {
-    if (operationStatus !== undefined) {
-      const { cluster_name, total_progress, err_msg } = operationStatus
-      if (cluster_name !== '' && err_msg === '' && total_progress < 100) {
-        Modal.error({
-          title: '操作暂时无法进行',
-          content:
-            '当前有正在进行中的部署或扩容任务，请点击 "查看进度" 进行查看',
-        })
-        return
-      }
-    }
-
     const topoYaml = yaml.stringify(
       genTopo({ machines, components, forScaleOut: previewYaml.forScaleOut })
     )
@@ -240,9 +196,7 @@ export default function DeploymentPage() {
         global_login_options: globalLoginOptions,
       })
     }
-    setOperationStatus(undefined)
-    setReloadTimes((pre) => pre + 1)
-    setViewDeployStatus(true)
+    navigate('/status')
   }
 
   function startOperate() {
@@ -294,19 +248,9 @@ export default function DeploymentPage() {
               onClick={() =>
                 setPreviewYaml({ preview: true, forScaleOut: false })
               }
-              disabled={operationStatus === undefined}
             >
               预览部署拓扑
             </Button>
-            <Button
-              onClick={() =>
-                setPreviewYaml({ preview: true, forScaleOut: true })
-              }
-              disabled={operationStatus === undefined}
-            >
-              预览扩容拓扑
-            </Button>
-            <Button onClick={() => setViewDeployStatus(true)}>查看进度</Button>
           </Space>
         </Form.Item>
       </Form>
@@ -345,19 +289,6 @@ export default function DeploymentPage() {
           components={components}
           forScaleOut={previewYaml.forScaleOut}
         />
-      </Modal>
-
-      <Modal
-        title="进度"
-        visible={viewDeployStatus}
-        onOk={() => setViewDeployStatus(false)}
-        onCancel={() => setViewDeployStatus(false)}
-      >
-        {operationStatus ? (
-          <OperationStatus operationStatus={operationStatus} />
-        ) : (
-          <div>Loading...</div>
-        )}
       </Modal>
     </Root>
   )

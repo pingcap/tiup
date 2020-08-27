@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Space, Button, Modal, message, Table, Popconfirm } from 'antd'
+import { Space, Button, Modal, Table, Popconfirm } from 'antd'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { useSessionStorageState } from 'ahooks'
 
@@ -33,10 +33,6 @@ export default function ClusterDetailPage() {
     () => clustersList.find((el) => el.name === clusterName),
     [clustersList, clusterName]
   )
-  const [destroying, setDestroying] = useState(false)
-  const [starting, setStarting] = useState(false)
-  const [stoping, setStoping] = useState(false)
-  const [scaleIning, setScaleIning] = useState(false)
 
   const [clusterInstInfos, setClusterInstInfos] = useSessionStorageState<
     IClusterInstInfo[]
@@ -82,16 +78,8 @@ export default function ClusterDetailPage() {
   }, [handleScaleInCluster])
 
   function destroyCluster() {
-    setDestroying(true)
-    deleteCluster(clusterName).then(({ data, err }) => {
-      setDestroying(false)
-      if (data) {
-        message.success('销毁成功!')
-        navigate('/')
-      } else {
-        message.error(err.message)
-      }
-    })
+    deleteCluster(clusterName)
+    navigate('/status')
   }
 
   function handleDestroyCluster() {
@@ -117,35 +105,13 @@ export default function ClusterDetailPage() {
   }
 
   function handleStartCluster() {
-    setStarting(true)
-    startCluster(clusterName).then(({ data, err }) => {
-      setStarting(false)
-      handleShowTopo()
-      if (data !== undefined) {
-        message.success(`${clusterName} 集群已启动！`)
-      } else if (err !== undefined) {
-        Modal.confirm({
-          title: `${clusterName} 集群启动失败`,
-          content: err.message,
-        })
-      }
-    })
+    startCluster(clusterName)
+    navigate('/status')
   }
 
   function handleStopCluster() {
-    setStoping(true)
-    stopCluster(clusterName).then(({ data, err }) => {
-      setStoping(false)
-      handleShowTopo()
-      if (data !== undefined) {
-        message.success(`${clusterName} 集群已停止！`)
-      } else if (err !== undefined) {
-        Modal.confirm({
-          title: `${clusterName} 集群停止失败`,
-          content: err.message,
-        })
-      }
-    })
+    stopCluster(clusterName)
+    navigate('/status')
   }
 
   function handleScaleInCluster(node: IClusterInstInfo) {
@@ -153,24 +119,12 @@ export default function ClusterDetailPage() {
     const force =
       lowerStatus.indexOf('down') !== -1 ||
       lowerStatus.indexOf('inactive') !== -1
-    message.info(`${clusterName} 集群正在缩容中！请尽量不要进行其它操作！`)
-    setScaleIning(true)
 
     scaleInCluster(clusterName, {
       nodes: [node.id],
       force,
-    }).then(({ data, err }) => {
-      setScaleIning(false)
-      handleShowTopo()
-      if (data !== undefined) {
-        message.success(`${clusterName} 集群缩容成功！`)
-      } else if (err !== undefined) {
-        Modal.confirm({
-          title: `${clusterName} 集群缩容失败`,
-          content: err.message,
-        })
-      }
     })
+    navigate('/status')
   }
 
   if (cluster === undefined) {
@@ -186,37 +140,19 @@ export default function ClusterDetailPage() {
             onConfirm={handleStartCluster}
             okText="启动"
             cancelText="取消"
-            disabled={destroying || stoping || scaleIning}
           >
-            <Button
-              type="primary"
-              loading={starting}
-              disabled={destroying || stoping || scaleIning}
-            >
-              启动集群
-            </Button>
+            <Button type="primary">启动集群</Button>
           </Popconfirm>
           <Popconfirm
             title="你确定要停止集群吗？"
             onConfirm={handleStopCluster}
             okText="停止"
             cancelText="取消"
-            disabled={destroying || starting || scaleIning}
           >
-            <Button
-              loading={stoping}
-              disabled={destroying || starting || scaleIning}
-            >
-              停止集群
-            </Button>
+            <Button>停止集群</Button>
           </Popconfirm>
         </Space>
-        <Button
-          danger
-          onClick={handleDestroyCluster}
-          loading={destroying}
-          disabled={starting || stoping || scaleIning}
-        >
+        <Button danger onClick={handleDestroyCluster}>
           销毁群集
         </Button>
       </div>
@@ -229,11 +165,7 @@ export default function ClusterDetailPage() {
       </div>
 
       <Space direction="vertical">
-        <Button
-          onClick={handleShowTopo}
-          loading={loadingTopo}
-          disabled={destroying || starting || stoping || scaleIning}
-        >
+        <Button onClick={handleShowTopo} loading={loadingTopo}>
           更新拓扑
         </Button>
 
@@ -242,9 +174,7 @@ export default function ClusterDetailPage() {
           columns={columns}
           pagination={false}
           rowKey={'id'}
-          loading={
-            loadingTopo || scaleIning || destroying || starting || stoping
-          }
+          loading={loadingTopo}
         />
       </Space>
     </Root>
