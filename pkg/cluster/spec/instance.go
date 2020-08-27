@@ -166,7 +166,7 @@ func (i *BaseInstance) InitConfig(e executor.Executor, opt GlobalOptions, user s
 }
 
 // TransferLocalConfigFile scp local config file to remote
-// Precondition: the user on remote have right to access & mkdir of dest files
+// Precondition: the user on remote have permission to access & mkdir of dest files
 func (i *BaseInstance) TransferLocalConfigFile(e executor.Executor, local, remote string) error {
 	remoteDir := filepath.Dir(remote)
 	// make sure the directory exists
