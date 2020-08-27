@@ -171,13 +171,15 @@ export default function CompsManager({
   )
 
   const handleDeleteComponents = useCallback(
-    (machine: IMachine) => {
+    (machine: IMachine, forScaleOut: boolean) => {
       const newComps = { ...components }
       const belongedComps = Object.values(components).filter(
         (c) => c.machineID === machine.id
       )
       for (const c of belongedComps) {
-        delete newComps[c.id]
+        if (c.for_scale_out === forScaleOut) {
+          delete newComps[c.id]
+        }
       }
       setComponents(newComps)
     },
@@ -222,38 +224,43 @@ export default function CompsManager({
 
   return (
     <Root>
-      <Space>
-        {!forScaleOut && (
-          <Form form={form} layout="inline" initialValues={deployReq}>
-            <Form.Item
-              label="集群名字"
-              name="cluster_name"
-              rules={[{ required: true, message: '请输出集群名字' }]}
-            >
-              <Input />
-            </Form.Item>
-            <Form.Item
-              label="TiDB 版本"
-              name="tidb_version"
-              rules={[{ required: true, message: '请选择 TiDB 版本' }]}
-            >
-              <Select style={{ width: 100 }}>
-                {TIDB_VERSIONS.map((ver) => (
-                  <Select.Option key={ver} value={ver}>
-                    {ver}
-                  </Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Form>
-        )}
+      {forScaleOut ? (
         <Button type="primary" onClick={() => setPreviewYaml(true)}>
-          预览{forScaleOut ? '扩容' : '部署'}拓扑
+          预览扩容拓扑
         </Button>
-      </Space>
+      ) : (
+        <Form form={form} layout="inline" initialValues={deployReq}>
+          <Form.Item
+            label="集群名字"
+            name="cluster_name"
+            rules={[{ required: true, message: '请输出集群名字' }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            label="TiDB 版本"
+            name="tidb_version"
+            rules={[{ required: true, message: '请选择 TiDB 版本' }]}
+          >
+            <Select style={{ width: 100 }}>
+              {TIDB_VERSIONS.map((ver) => (
+                <Select.Option key={ver} value={ver}>
+                  {ver}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" onClick={() => setPreviewYaml(true)}>
+              预览部署拓扑
+            </Button>
+          </Form.Item>
+        </Form>
+      )}
 
       <div style={{ marginTop: 16 }}>
         <DeploymentTable
+          forScaleOut={forScaleOut}
           machines={machines}
           components={components}
           onAddComponent={handleAddComponent}

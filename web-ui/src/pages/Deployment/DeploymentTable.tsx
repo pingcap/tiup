@@ -96,6 +96,7 @@ export const DEF_ALERT_WEB_PORT = 9093
 export const DEF_ALERT_CLUSTER_PORT = 9094
 
 interface IDeploymentTableProps {
+  forScaleOut: boolean // deploy or scale out
   machines: { [key: string]: IMachine }
   components: { [key: string]: IComponent }
   onAddComponent?: (
@@ -105,10 +106,11 @@ interface IDeploymentTableProps {
   ) => void
   onEditComponent?: (comp: IComponent) => void
   onDeleteComponent?: (comp: IComponent) => void
-  onDeleteComponents?: (machine: IMachine) => void
+  onDeleteComponents?: (machine: IMachine, forScaleOut: boolean) => void
 }
 
 export default function DeploymentTable({
+  forScaleOut,
   machines,
   components,
   onAddComponent,
@@ -128,9 +130,13 @@ export default function DeploymentTable({
     )
     for (const machine of sortedMachines) {
       machinesAndComps.push(machine)
-      const respondComps = Object.values(components).filter(
-        (c) => c.machineID === machine.id
-      )
+      const respondComps = Object.values(components).filter((c) => {
+        if (forScaleOut) {
+          return c.machineID === machine.id
+        } else {
+          return c.machineID === machine.id && !c.for_scale_out
+        }
+      })
       if (respondComps.length > 0) {
         respondComps.sort((a: any, b: any) => {
           let delta
@@ -234,7 +240,7 @@ export default function DeploymentTable({
                     <Menu
                       onClick={(e) =>
                         onAddComponent &&
-                        onAddComponent(rec, e.key as string, false)
+                        onAddComponent(rec, e.key as string, forScaleOut)
                       }
                     >
                       {COMPONENT_TYPES.map((t) => (
@@ -245,62 +251,47 @@ export default function DeploymentTable({
                   trigger={['click']}
                 >
                   <a onClick={(e) => e.preventDefault()}>
-                    添加组件 <DownOutlined />
-                  </a>
-                </Dropdown>
-                <Divider type="vertical" />
-                <Dropdown
-                  overlay={
-                    <Menu
-                      onClick={(e) =>
-                        onAddComponent &&
-                        onAddComponent(rec, e.key as string, true)
-                      }
-                    >
-                      {COMPONENT_TYPES.map((t) => (
-                        <Menu.Item key={t}>{t}</Menu.Item>
-                      ))}
-                    </Menu>
-                  }
-                  trigger={['click']}
-                >
-                  <a onClick={(e) => e.preventDefault()}>
-                    扩容组件 <DownOutlined />
+                    {forScaleOut ? '扩容' : '添加'}组件 <DownOutlined />
                   </a>
                 </Dropdown>
                 <Divider type="vertical" />
                 <Popconfirm
-                  title="你确定要删除所有组件吗？"
+                  title={`你确定要删除所有${
+                    forScaleOut ? '扩容' : '部署'
+                  }组件吗？`}
                   onConfirm={() =>
-                    onDeleteComponents && onDeleteComponents(rec)
+                    onDeleteComponents && onDeleteComponents(rec, forScaleOut)
                   }
                   okText="删除"
                   cancelText="取消"
                 >
-                  <a href="#">删除所有组件</a>
+                  <a href="#">删除{forScaleOut ? '扩容' : '部署'}组件</a>
                 </Popconfirm>
               </Space>
             )
           }
-          return (
-            <Space>
-              <a
-                href="#"
-                onClick={() => onEditComponent && onEditComponent(rec)}
-              >
-                编辑
-              </a>
-              <Divider type="vertical" />
-              <Popconfirm
-                title="你确定要删除这个组件吗？"
-                onConfirm={() => onDeleteComponent && onDeleteComponent(rec)}
-                okText="删除"
-                cancelText="取消"
-              >
-                <a href="#">删除</a>
-              </Popconfirm>
-            </Space>
-          )
+          if (forScaleOut === rec.for_scale_out) {
+            return (
+              <Space>
+                <a
+                  href="#"
+                  onClick={() => onEditComponent && onEditComponent(rec)}
+                >
+                  编辑
+                </a>
+                <Divider type="vertical" />
+                <Popconfirm
+                  title="你确定要删除这个组件吗？"
+                  onConfirm={() => onDeleteComponent && onDeleteComponent(rec)}
+                  okText="删除"
+                  cancelText="取消"
+                >
+                  <a href="#">删除</a>
+                </Popconfirm>
+              </Space>
+            )
+          }
+          return null
         },
       },
     ]
