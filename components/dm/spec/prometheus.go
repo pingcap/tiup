@@ -141,7 +141,7 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 
 	// If the user specify a rule directory, we should use the rules specified
 	if spec.RuleDir != "" {
-		return i.TransferLocalConfigDir(e, spec.RuleDir, confDir)
+		return i.TransferLocalConfigDir(e, spec.RuleDir, confDir, nil)
 	}
 
 	// Use the default ones
