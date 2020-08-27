@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useCallback, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Space, Button, Modal, Table, Popconfirm } from 'antd'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
@@ -40,6 +40,22 @@ export default function ClusterDetailPage() {
 
   const [loadingTopo, setLoadingTopo] = useState(false)
 
+  const handleScaleInCluster = useCallback(
+    (node: IClusterInstInfo) => {
+      const lowerStatus = node.status.toLowerCase()
+      const force =
+        lowerStatus.indexOf('down') !== -1 ||
+        lowerStatus.indexOf('inactive') !== -1
+
+      scaleInCluster(clusterName, {
+        nodes: [node.id],
+        force,
+      })
+      navigate('/status')
+    },
+    [navigate, clusterName]
+  )
+
   const columns = useMemo(() => {
     const _columns = [
       'ID',
@@ -77,6 +93,17 @@ export default function ClusterDetailPage() {
     return _columns
   }, [handleScaleInCluster])
 
+  useEffect(() => {
+    setLoadingTopo(true)
+    getClusterTopo(clusterName).then(({ data, err }) => {
+      setLoadingTopo(false)
+      if (data !== undefined) {
+        setClusterInstInfos(data)
+      }
+    })
+    // eslint-disable-next-line
+  }, [])
+
   function destroyCluster() {
     deleteCluster(clusterName)
     navigate('/status')
@@ -94,16 +121,6 @@ export default function ClusterDetailPage() {
     })
   }
 
-  function handleShowTopo() {
-    setLoadingTopo(true)
-    getClusterTopo(clusterName).then(({ data, err }) => {
-      setLoadingTopo(false)
-      if (data !== undefined) {
-        setClusterInstInfos(data)
-      }
-    })
-  }
-
   function handleStartCluster() {
     startCluster(clusterName)
     navigate('/status')
@@ -111,19 +128,6 @@ export default function ClusterDetailPage() {
 
   function handleStopCluster() {
     stopCluster(clusterName)
-    navigate('/status')
-  }
-
-  function handleScaleInCluster(node: IClusterInstInfo) {
-    const lowerStatus = node.status.toLowerCase()
-    const force =
-      lowerStatus.indexOf('down') !== -1 ||
-      lowerStatus.indexOf('inactive') !== -1
-
-    scaleInCluster(clusterName, {
-      nodes: [node.id],
-      force,
-    })
     navigate('/status')
   }
 
@@ -170,10 +174,6 @@ export default function ClusterDetailPage() {
       </div>
 
       <Space direction="vertical">
-        <Button onClick={handleShowTopo} loading={loadingTopo}>
-          更新拓扑
-        </Button>
-
         <Table
           dataSource={clusterInstInfos}
           columns={columns}

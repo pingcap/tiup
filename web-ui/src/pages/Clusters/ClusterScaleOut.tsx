@@ -1,5 +1,4 @@
-import React, { useState } from 'react'
-import { Root } from '../../components/Root'
+import React from 'react'
 import { useParams } from 'react-router-dom'
 import CompsManager from '../Deployment/CompsManager'
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react'
 import { useLocalStorageState } from 'ahooks'
-import { Drawer, Space, Button, Modal, Form, Input, Select } from 'antd'
+import { Drawer, Button, Modal, Form, Input, Select } from 'antd'
 import uniqid from 'uniqid'
 import yaml from 'yaml'
 
@@ -28,7 +28,6 @@ import TopoPreview, { genTopo } from './TopoPreview'
 import { Root } from '../../components/Root'
 import { deployCluster, scaleOutCluster } from '../../utils/api'
 import { IGlobalLoginOptions } from '../Machines/GlobalLoginOptionsForm'
-import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 
 // TODO: fetch from API

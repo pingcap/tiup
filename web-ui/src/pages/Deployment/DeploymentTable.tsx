@@ -152,7 +152,7 @@ export default function DeploymentTable({
       }
     }
     return machinesAndComps
-  }, [machines, components])
+  }, [machines, components, forScaleOut])
 
   const columns = useMemo(() => {
     return [
@@ -301,6 +301,7 @@ export default function DeploymentTable({
     onDeleteComponent,
     onDeleteComponents,
     globalLoginOptions.username,
+    forScaleOut,
   ])
 
   return (
