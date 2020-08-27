@@ -56,9 +56,21 @@ var (
 	operationInfo OperationInfo = OperationInfo{}
 )
 
+// OperationType represents the operation type
+type OperationType string
+
+const (
+	operationDeploy OperationType = "deploy"
+	// operationStart    OperationType = "start"
+	// operationStop     OperationType = "stop"
+	// operationScaleIn  OperationType = "scaleIn"
+	operationScaleOut OperationType = "scaleOut"
+	// operationDestroy  OperationType = "destroy"
+)
+
 // OperationInfo records latest operation task and related info
 type OperationInfo struct {
-	operationType string // "deploy" | "scaleOut"
+	operationType OperationType
 	clusterName   string
 	curTask       *task.Serial
 	err           error
@@ -956,6 +968,33 @@ type DeployerInstance interface {
 	Deploy(b *task.Builder, srcPath string, deployDir string, version string, clusterName string, clusterVersion string)
 }
 
+// DoDeploy do things about deploy
+// TODO: change a method name
+func (m *Manager) DoDeploy(
+	clusterName string,
+	clusterVersion string,
+	topoFile string,
+	opt DeployOptions,
+	afterDeploy func(b *task.Builder, newPart spec.Topology),
+	skipConfirm bool,
+	optTimeout int64,
+	sshTimeout int64,
+	nativeSSH bool,
+) {
+	operationInfo = OperationInfo{operationType: operationDeploy, clusterName: clusterName}
+	operationInfo.err = m.Deploy(
+		clusterName,
+		clusterVersion,
+		topoFile,
+		opt,
+		afterDeploy,
+		skipConfirm,
+		optTimeout,
+		sshTimeout,
+		nativeSSH,
+	)
+}
+
 // Deploy a cluster.
 func (m *Manager) Deploy(
 	clusterName string,
@@ -968,18 +1007,13 @@ func (m *Manager) Deploy(
 	sshTimeout int64,
 	nativeSSH bool,
 ) error {
-	// reset
-	operationInfo = OperationInfo{operationType: "deploy", clusterName: clusterName}
-
 	if err := clusterutil.ValidateClusterNameOrError(clusterName); err != nil {
-		operationInfo.err = err
 		return err
 	}
 
 	exist, err := m.specManager.Exist(clusterName)
 	if err != nil {
 		err = perrs.AddStack(err)
-		operationInfo.err = err
 		return err
 	}
 
@@ -988,7 +1022,6 @@ func (m *Manager) Deploy(
 		err = errDeployNameDuplicate.
 			New("Cluster name '%s' is duplicated", clusterName).
 			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
-		operationInfo.err = err
 		return err
 	}
 
@@ -1000,7 +1033,6 @@ func (m *Manager) Deploy(
 	// the whole topology back to normal state.
 	if err := clusterutil.ParseTopologyYaml(topoFile, topo); err != nil &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-		operationInfo.err = err
 		return err
 	}
 
@@ -1008,28 +1040,23 @@ func (m *Manager) Deploy(
 
 	clusterList, err := m.specManager.GetAllClusters()
 	if err != nil {
-		operationInfo.err = err
 		return err
 	}
 	if err := spec.CheckClusterPortConflict(clusterList, clusterName, topo); err != nil {
-		operationInfo.err = err
 		return err
 	}
 	if err := spec.CheckClusterDirConflict(clusterList, clusterName, topo); err != nil {
-		operationInfo.err = err
 		return err
 	}
 
 	if !skipConfirm {
 		if err := m.confirmTopology(clusterName, clusterVersion, topo, set.NewStringSet()); err != nil {
-			operationInfo.err = err
 			return err
 		}
 	}
 
 	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword)
 	if err != nil {
-		operationInfo.err = err
 		return err
 	}
 
@@ -1037,7 +1064,6 @@ func (m *Manager) Deploy(
 		err = errorx.InitializationFailed.
 			Wrap(err, "Failed to create cluster metadata directory '%s'", m.specManager.Path(clusterName)).
 			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
-		operationInfo.err = err
 		return err
 	}
 
@@ -1098,7 +1124,6 @@ func (m *Manager) Deploy(
 	})
 
 	if iterErr != nil {
-		operationInfo.err = err
 		return iterErr
 	}
 
@@ -1198,11 +1223,9 @@ func (m *Manager) Deploy(
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
-			operationInfo.err = err
 			return err
 		}
 		err = perrs.AddStack(err)
-		operationInfo.err = err
 		return err
 	}
 
@@ -1212,7 +1235,6 @@ func (m *Manager) Deploy(
 
 	if err != nil {
 		err = perrs.AddStack(err)
-		operationInfo.err = err
 		return err
 	}
 
@@ -1224,11 +1246,11 @@ func (m *Manager) Deploy(
 
 // OperationStatus represents the current deployment status
 type OperationStatus struct {
-	OperationType string   `json:"operation_type"`
-	ClusterName   string   `json:"cluster_name"`
-	TotalProgress int      `json:"total_progress"`
-	Steps         []string `json:"steps"`
-	ErrMsg        string   `json:"err_msg"`
+	OperationType OperationType `json:"operation_type"`
+	ClusterName   string        `json:"cluster_name"`
+	TotalProgress int           `json:"total_progress"`
+	Steps         []string      `json:"steps"`
+	ErrMsg        string        `json:"err_msg"`
 }
 
 // GetOperationStatus returns the current operations status, including progress, steps, err message
@@ -1239,11 +1261,11 @@ func (m *Manager) GetOperationStatus() OperationStatus {
 		Steps:         []string{},
 	}
 	if operationInfo.curTask != nil {
-		if operationInfo.operationType == "deploy" {
+		if operationInfo.operationType == operationDeploy {
 			steps, progress := operationInfo.curTask.ComputeProgress()
 			operationStatus.TotalProgress = progress
 			operationStatus.Steps = steps
-		} else if operationInfo.operationType == "scaleOut" {
+		} else if operationInfo.operationType == operationScaleOut {
 			operationStatus.TotalProgress = operationInfo.curTask.Progress
 			operationStatus.Steps = []string{}
 			operationStatus.Steps = append(operationStatus.Steps, operationInfo.curTask.Steps...)
@@ -1378,6 +1400,32 @@ func (m *Manager) ScaleIn(
 	return nil
 }
 
+// DoScaleOut scale out the cluster.
+func (m *Manager) DoScaleOut(
+	clusterName string,
+	topoFile string,
+	afterDeploy func(b *task.Builder, newPart spec.Topology),
+	final func(b *task.Builder, name string, meta spec.Metadata),
+	opt ScaleOutOptions,
+	skipConfirm bool,
+	optTimeout int64,
+	sshTimeout int64,
+	nativeSSH bool,
+) {
+	operationInfo = OperationInfo{operationType: operationScaleOut, clusterName: clusterName}
+	operationInfo.err = m.ScaleOut(
+		clusterName,
+		topoFile,
+		afterDeploy,
+		final,
+		opt,
+		skipConfirm,
+		optTimeout,
+		sshTimeout,
+		nativeSSH,
+	)
+}
+
 // ScaleOut scale out the cluster.
 func (m *Manager) ScaleOut(
 	clusterName string,
@@ -1390,13 +1438,9 @@ func (m *Manager) ScaleOut(
 	sshTimeout int64,
 	nativeSSH bool,
 ) error {
-	// reset
-	operationInfo = OperationInfo{operationType: "scaleOut", clusterName: clusterName}
-
 	metadata, err := m.meta(clusterName)
 	if err != nil { // not allowing validation errors
 		err = perrs.AddStack(err)
-		operationInfo.err = err
 		return err
 	}
 
@@ -1405,7 +1449,6 @@ func (m *Manager) ScaleOut(
 
 	// not allowing validation errors
 	if err := topo.Validate(); err != nil {
-		operationInfo.err = err
 		return err
 	}
 
@@ -1418,33 +1461,27 @@ func (m *Manager) ScaleOut(
 	// the whole topology back to normal state.
 	if err := clusterutil.ParseTopologyYaml(topoFile, newPart); err != nil &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-		operationInfo.err = err
 		return err
 	}
 
 	if err := validateNewTopo(newPart); err != nil {
-		operationInfo.err = err
 		return err
 	}
 
 	// Abort scale out operation if the merged topology is invalid
 	mergedTopo := topo.MergeTopo(newPart)
 	if err := mergedTopo.Validate(); err != nil {
-		operationInfo.err = err
 		return err
 	}
 
 	clusterList, err := m.specManager.GetAllClusters()
 	if err != nil {
-		operationInfo.err = err
 		return err
 	}
 	if err := spec.CheckClusterPortConflict(clusterList, clusterName, mergedTopo); err != nil {
-		operationInfo.err = err
 		return err
 	}
 	if err := spec.CheckClusterDirConflict(clusterList, clusterName, mergedTopo); err != nil {
-		operationInfo.err = err
 		return err
 	}
 
@@ -1458,21 +1495,18 @@ func (m *Manager) ScaleOut(
 	if !skipConfirm {
 		// patchedComponents are components that have been patched and overwrited
 		if err := m.confirmTopology(clusterName, base.Version, newPart, patchedComponents); err != nil {
-			operationInfo.err = err
 			return err
 		}
 	}
 
 	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword)
 	if err != nil {
-		operationInfo.err = err
 		return err
 	}
 
 	// Build the scale out tasks
 	t, err := buildScaleOutTask(m, clusterName, metadata, mergedTopo, opt, sshConnProps, newPart, patchedComponents, optTimeout, sshTimeout, nativeSSH, afterDeploy, final)
 	if err != nil {
-		operationInfo.err = err
 		return err
 	}
 
@@ -1481,11 +1515,9 @@ func (m *Manager) ScaleOut(
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
-			operationInfo.err = err
 			return err
 		}
 		err = perrs.Trace(err)
-		operationInfo.err = err
 		return err
 	}
 

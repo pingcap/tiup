@@ -86,7 +86,7 @@ func deployHandler(c *gin.Context) {
 	tmpfile.Close()
 
 	go func() {
-		_ = manager.Deploy(
+		manager.DoDeploy(
 			req.ClusterName,
 			req.TiDBVersion,
 			topoFilePath,
@@ -265,7 +265,7 @@ func scaleOutClusterHandler(c *gin.Context) {
 	tmpfile.Close()
 
 	go func() {
-		_ = manager.ScaleOut(
+		manager.DoScaleOut(
 			clusterName,
 			topoFilePath,
 			command.PostScaleOutHook,
