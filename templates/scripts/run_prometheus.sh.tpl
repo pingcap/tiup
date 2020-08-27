@@ -23,4 +23,4 @@ exec bin/prometheus/prometheus \
     --web.enable-admin-api \
     --log.level="info" \
     --storage.tsdb.path="{{.DataDir}}" \
-    --storage.tsdb.retention="30d"
+    --storage.tsdb.retention="{{.Retention}}"

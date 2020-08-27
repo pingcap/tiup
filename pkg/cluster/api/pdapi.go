@@ -28,9 +28,9 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/kvproto/pkg/metapb"
 	"github.com/pingcap/kvproto/pkg/pdpb"
-	pdserverapi "github.com/pingcap/pd/v4/server/api"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/utils"
+	pdserverapi "github.com/tikv/pd/server/api"
 )
 
 // PDClient is an HTTP client of the PD server
@@ -98,7 +98,7 @@ func tryURLs(endpoints []string, f func(endpoint string) ([]byte, error)) ([]byt
 		return bytes, nil
 	}
 	if len(endpoints) > 1 && err != nil {
-		err = errors.Errorf("no pd endpoint available, the last err is: %s", err)
+		err = errors.Errorf("no endpoint available, the last err is: %s", err)
 	}
 	return bytes, err
 }
@@ -231,7 +231,7 @@ func (pc *PDClient) GetMembers() (*pdpb.GetMembersResponse, error) {
 func (pc *PDClient) GetDashboardAddress() (string, error) {
 	endpoints := pc.getEndpoints(pdConfigURI)
 
-	// We don't use the `github.com/pingcap/pd/v4/server/config` directly because
+	// We don't use the `github.com/tikv/pd/server/config` directly because
 	// there is compatible issue: https://github.com/pingcap/tiup/issues/637
 	pdConfig := map[string]interface{}{}
 

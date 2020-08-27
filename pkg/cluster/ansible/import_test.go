@@ -51,6 +51,20 @@ func (s *ansSuite) TestParseInventoryFile(c *C) {
 
 	expected := []byte(`global:
   user: tiops
+  deploy_dir: /home/tiopsimport/ansible-deploy
+monitored:
+  deploy_dir: /home/tiopsimport/ansible-deploy
+  data_dir: /home/tiopsimport/ansible-deploy/data
+server_configs:
+  tidb:
+    binlog.enable: true
+  tikv: {}
+  pd: {}
+  tiflash: {}
+  tiflash-learner: {}
+  pump: {}
+  drainer: {}
+  cdc: {}
 tidb_servers: []
 tikv_servers: []
 tiflash_servers: []
@@ -59,6 +73,7 @@ monitoring_servers: []
 `)
 
 	topo, err := yaml.Marshal(clsMeta.Topology)
+	fmt.Printf("Got initial topo:\n%s\n", topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo, DeepEquals, expected)
 }
@@ -95,7 +110,7 @@ func (s *ansSuite) TestParseGroupVars(c *C) {
 
 	actual, err := yaml.Marshal(metaFull)
 	c.Assert(err, IsNil)
-	fmt.Printf("Got meta:\n%s\n", actual)
+	fmt.Printf("Got initial meta:\n%s\n", actual)
 
 	c.Assert(metaFull, DeepEquals, expected)
 }
