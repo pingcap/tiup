@@ -53,6 +53,7 @@ const (
 // Component represents a component of the cluster.
 type Component interface {
 	Name() string
+	Role() string
 	Instances() []Instance
 }
 
