@@ -156,8 +156,8 @@ func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, 
 		return errors.Annotatef(err, "cleanup old dashboards: %s", string(stderr))
 	}
 
-	if spec.DashboardsDir != "" {
-		if err := i.TransferLocalConfigDir(e, spec.DashboardsDir, dashboardsDir); err != nil {
+	if spec.DashboardDir != "" {
+		if err := i.TransferLocalConfigDir(e, spec.DashboardDir, dashboardsDir); err != nil {
 			return errors.Annotate(err, "transfer dashboards failed")
 		}
 		return nil
@@ -256,7 +256,7 @@ func (i *GrafanaInstance) installDashboards(e executor.Executor, deployDir, clus
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
-	// backup *.json for later reload (in case that the user change dashboards_dir)
+	// backup *.json for later reload (in case that the user change dashboard_dir)
 	cmd = fmt.Sprintf("cp %s/*.json %s", targetDir, filepath.Join(deployDir, "bin"))
 	_, stderr, err = e.Execute(cmd, false)
 	if err != nil {

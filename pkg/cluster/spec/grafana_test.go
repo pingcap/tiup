@@ -22,9 +22,9 @@ func TestLocalDashboards(t *testing.T) {
 
 	topo := new(Specification)
 	topo.Grafana = append(topo.Grafana, GrafanaSpec{
-		Host:          "127.0.0.1",
-		Port:          3000,
-		DashboardsDir: localDir,
+		Host:         "127.0.0.1",
+		Port:         3000,
+		DashboardDir: localDir,
 	})
 
 	comp := GrafanaComponent{topo}

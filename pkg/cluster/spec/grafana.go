@@ -35,7 +35,7 @@ type GrafanaSpec struct {
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string               `yaml:"arch,omitempty"`
 	OS              string               `yaml:"os,omitempty"`
-	DashboardsDir   string               `yaml:"dashboards_dir,omitempty" validate:"dashboards_dir:editable"`
+	DashboardDir    string               `yaml:"dashboard_dir,omitempty" validate:"dashboard_dir:editable"`
 }
 
 // Role returns the component role of the instance
@@ -173,8 +173,8 @@ func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, 
 		return errors.Annotatef(err, "cleanup old dashboards: %s, cmd: %s", string(stderr), cmd)
 	}
 
-	if spec.DashboardsDir != "" {
-		if err := i.TransferLocalConfigDir(e, spec.DashboardsDir, dashboardsDir); err != nil {
+	if spec.DashboardDir != "" {
+		if err := i.TransferLocalConfigDir(e, spec.DashboardDir, dashboardsDir); err != nil {
 			return errors.Annotate(err, "transfer dashboards failed")
 		}
 		return nil

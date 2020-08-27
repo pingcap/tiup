@@ -40,7 +40,7 @@ type PrometheusSpec struct {
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string               `yaml:"arch,omitempty"`
 	OS              string               `yaml:"os,omitempty"`
-	RulesDir        string               `yaml:"rules_dir,omitempty" validate:"rules_dir:editable"`
+	RuleDir         string               `yaml:"rule_dir,omitempty" validate:"rule_dir:editable"`
 }
 
 // Role returns the component role of the instance
@@ -200,8 +200,8 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 		return errors.Annotatef(err, "cleanup old rules")
 	}
 
-	if spec.RulesDir != "" {
-		if err := i.TransferLocalConfigDir(e, spec.RulesDir, path.Join(paths.Deploy, "conf")); err != nil {
+	if spec.RuleDir != "" {
+		if err := i.TransferLocalConfigDir(e, spec.RuleDir, path.Join(paths.Deploy, "conf")); err != nil {
 			return errors.Annotate(err, "transfer prometheus rules failed")
 		}
 	} else { // Use the default ones

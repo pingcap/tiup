@@ -135,8 +135,8 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 	}
 
 	// If the user specify a rule directory, we should use the rules specified
-	if spec.RulesDir != "" {
-		if err := i.TransferLocalConfigDir(e, spec.RulesDir, confDir); err != nil {
+	if spec.RuleDir != "" {
+		if err := i.TransferLocalConfigDir(e, spec.RuleDir, confDir); err != nil {
 			return errors.Annotate(err, "transfer prometheus rules failed")
 		}
 		return nil
@@ -217,7 +217,7 @@ func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVe
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
-	// backup *.rules.yml for later reload (in case that the user change rules_dir)
+	// backup *.rules.yml for later reload (in case that the user change rule_dir)
 	cmd = fmt.Sprintf("cp %s/*.rules.yml %s", targetDir, filepath.Join(deployDir, "bin", "prometheus"))
 	_, stderr, err = e.Execute(cmd, false)
 	if err != nil {
