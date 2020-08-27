@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react'
-import { Layout, Menu } from 'antd'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Layout, Menu, Button, Space } from 'antd'
+import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom'
 import { useSessionStorageState } from 'ahooks'
 import { getClusterList } from '../../utils/api'
+import { Root } from '../../components/Root'
 
 export interface ICluster {
   name: string
@@ -29,6 +30,18 @@ export default function ClustersPage() {
     })
     // eslint-disable-next-line
   }, [])
+
+  if (clustersList.length === 0) {
+    return (
+      <Root>
+        <p>当前没有可用的集群</p>
+        <Space direction="vertical">
+          <Link to="/machines">去配置机器</Link>
+          <Link to="/deploy">去部署组件</Link>
+        </Space>
+      </Root>
+    )
+  }
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
