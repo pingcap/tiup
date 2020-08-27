@@ -1,0 +1,55 @@
+import React, { useEffect } from 'react'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Layout, Menu } from 'antd'
+import {
+  HddOutlined,
+  DeploymentUnitOutlined,
+  ClusterOutlined,
+} from '@ant-design/icons'
+import { getStatus } from '../../utils/api'
+
+const { Sider, Content } = Layout
+
+function SiderMenu() {
+  return (
+    <Sider collapsible>
+      <Menu theme="dark" defaultSelectedKeys={['/clusters']} mode="inline">
+        <Menu.Item key="/clusters" icon={<ClusterOutlined />}>
+          <NavLink to="/clusters">集群管理</NavLink>
+        </Menu.Item>
+        <Menu.Item key="/machines" icon={<HddOutlined />}>
+          <NavLink to="/machines">配置机器</NavLink>
+        </Menu.Item>
+        <Menu.Item key="/deploy" icon={<DeploymentUnitOutlined />}>
+          <NavLink to="/deploy">部署</NavLink>
+        </Menu.Item>
+        <Menu.Item key="/status" icon={<DeploymentUnitOutlined />}>
+          <NavLink to="/status">操作状态</NavLink>
+        </Menu.Item>
+      </Menu>
+    </Sider>
+  )
+}
+
+export default function HomePage() {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    getStatus().then(({ data }) => {
+      if (data !== undefined) {
+        if (data.total_progress < 100 && data.err_msg === '') {
+          navigate('/status')
+        }
+      }
+    })
+  }, [navigate])
+
+  return (
+    <Layout style={{ minHeight: '100vh' }}>
+      <SiderMenu />
+      <Content style={{ backgroundColor: 'white' }}>
+        <Outlet />
+      </Content>
+    </Layout>
+  )
+}
