@@ -206,10 +206,7 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 	}
 
 	if spec.RuleDir != "" {
-		if err := i.TransferLocalConfigDir(e, spec.RuleDir, path.Join(paths.Deploy, "conf"), nil); err != nil {
-			return err
-		}
-		return nil
+		return i.TransferLocalConfigDir(e, spec.RuleDir, path.Join(paths.Deploy, "conf"), nil)
 	}
 
 	// Use the default ones
