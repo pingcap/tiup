@@ -36,6 +36,11 @@ func (c *GrafanaComponent) Name() string {
 	return ComponentGrafana
 }
 
+// Role implements Component interface.
+func (c *GrafanaComponent) Role() string {
+	return spec.RoleMonitor
+}
+
 // Instances implements Component interface.
 func (c *GrafanaComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Grafana))

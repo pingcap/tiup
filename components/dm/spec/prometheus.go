@@ -35,6 +35,11 @@ func (c *MonitorComponent) Name() string {
 	return ComponentPrometheus
 }
 
+// Role implements Component interface.
+func (c *MonitorComponent) Role() string {
+	return spec.RoleMonitor
+}
+
 // Instances implements Component interface.
 func (c *MonitorComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Monitors))

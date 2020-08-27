@@ -94,6 +94,11 @@ func (c *TiFlashComponent) Name() string {
 	return ComponentTiFlash
 }
 
+// Role implements Component interface.
+func (c *TiFlashComponent) Role() string {
+	return ComponentTiFlash
+}
+
 // Instances implements Component interface.
 func (c *TiFlashComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.TiFlashServers))

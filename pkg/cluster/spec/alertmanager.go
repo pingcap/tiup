@@ -68,6 +68,11 @@ func (c *AlertManagerComponent) Name() string {
 	return ComponentAlertManager
 }
 
+// Role implements Component interface.
+func (c *AlertManagerComponent) Role() string {
+	return RoleMonitor
+}
+
 // Instances implements Component interface.
 func (c *AlertManagerComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Alertmanager))

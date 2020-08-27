@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
@@ -69,20 +70,28 @@ type monitor struct {
 	cmd  *exec.Cmd
 
 	sdFname string
+
+	waitErr  error
+	waitOnce sync.Once
 }
 
-func newMonitor() *monitor {
-	return &monitor{}
+func (m *monitor) wait() error {
+	m.waitOnce.Do(func() {
+		m.waitErr = m.cmd.Wait()
+	})
+
+	return m.waitErr
 }
 
-func (m *monitor) startMonitor(ctx context.Context, version string, host, dir string) (int, *exec.Cmd, error) {
+// the cmd is not started after return
+func newMonitor(ctx context.Context, version string, host, dir string) (*monitor, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return 0, nil, err
+		return nil, errors.AddStack(err)
 	}
 
 	port, err := utils.GetFreePort(host, 9090)
 	if err != nil {
-		return 0, nil, err
+		return nil, errors.AddStack(err)
 	}
 	addr := fmt.Sprintf("%s:%d", host, port)
 
@@ -114,10 +123,11 @@ scrape_configs:
 
 `
 
+	m := new(monitor)
 	m.sdFname = filepath.Join(dir, "targets.json")
 
 	if err := ioutil.WriteFile(filepath.Join(dir, "prometheus.yml"), []byte(tmpl), os.ModePerm); err != nil {
-		return 0, nil, err
+		return nil, errors.AddStack(err)
 	}
 
 	args := []string{
@@ -128,13 +138,14 @@ scrape_configs:
 	}
 
 	env := environment.GlobalEnv()
-	cmd, err := tiupexec.PrepareCommand(ctx, "prometheus", v0manifest.Version(version), "", "", dir, args, env)
+	cmd, err := tiupexec.PrepareCommand(ctx, "prometheus", v0manifest.Version(version), "", "", dir, dir, args, env)
 	if err != nil {
-		return 0, nil, err
+		return nil, err
 	}
 
 	m.port = port
 	m.cmd = cmd
 	m.host = host
-	return port, cmd, nil
+
+	return m, nil
 }
