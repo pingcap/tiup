@@ -42,6 +42,7 @@ type instance struct {
 type Instance interface {
 	Pid() int
 	// Start the instance process.
+	// Will kill the process once the context is done.
 	Start(ctx context.Context, version v0manifest.Version) error
 	// Component Return the component name.
 	Component() string
@@ -52,7 +53,8 @@ type Instance interface {
 	// StatusAddrs return the address to pull metrics.
 	StatusAddrs() []string
 	// Wait Should only call this if the instance is started successfully.
-	Wait(ctx context.Context) error
+	// The implementation should be safe to call Wait multi times.
+	Wait() error
 }
 
 func (inst *instance) StatusAddrs() (addrs []string) {
