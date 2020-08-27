@@ -70,6 +70,11 @@ func (c *DrainerComponent) Name() string {
 	return ComponentDrainer
 }
 
+// Role implements Component interface.
+func (c *DrainerComponent) Role() string {
+	return ComponentDrainer
+}
+
 // Instances implements Component interface.
 func (c *DrainerComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Drainers))

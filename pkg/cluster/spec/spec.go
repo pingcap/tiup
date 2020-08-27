@@ -202,7 +202,12 @@ func (s *Specification) BaseTopo() *BaseTopo {
 func AllComponentNames() (roles []string) {
 	tp := &Specification{}
 	tp.IterComponent(func(c Component) {
-		roles = append(roles, c.Name())
+		switch c.Name() {
+		case ComponentTiSpark: // tispark-{master, worker}
+			roles = append(roles, c.Role())
+		default:
+			roles = append(roles, c.Name())
+		}
 	})
 
 	return

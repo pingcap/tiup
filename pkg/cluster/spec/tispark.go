@@ -39,8 +39,8 @@ type TiSparkMasterSpec struct {
 	WebPort      int                    `yaml:"web_port" default:"8080"`
 	DeployDir    string                 `yaml:"deploy_dir,omitempty"`
 	JavaHome     string                 `yaml:"java_home,omitempty" validate:"java_home:editable"`
-	SparkConfigs map[string]interface{} `yaml:"spark_config,omitempty" validate:"spark_config:editable"`
-	SparkEnvs    map[string]string      `yaml:"spark_env,omitempty" validate:"spark_env:editable"`
+	SparkConfigs map[string]interface{} `yaml:"spark_config,omitempty" validate:"spark_config:ignore"`
+	SparkEnvs    map[string]string      `yaml:"spark_env,omitempty" validate:"spark_env:ignore"`
 	Arch         string                 `yaml:"arch,omitempty"`
 	OS           string                 `yaml:"os,omitempty"`
 }
@@ -117,6 +117,11 @@ type TiSparkMasterComponent struct{ *Specification }
 // Name implements Component interface.
 func (c *TiSparkMasterComponent) Name() string {
 	return ComponentTiSpark
+}
+
+// Role implements Component interface.
+func (c *TiSparkMasterComponent) Role() string {
+	return RoleTiSparkMaster
 }
 
 // Instances implements Component interface.
@@ -221,6 +226,7 @@ func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clu
 
 	env := scripts.NewTiSparkEnv(host).
 		WithLocalIP(i.GetListenHost()).
+		WithMaster(host).
 		WithMasterPorts(i.Ports[0], i.Ports[1]).
 		WithCustomEnv(i.GetCustomEnvs())
 	// transfer spark-env.sh file
@@ -263,6 +269,11 @@ type TiSparkWorkerComponent struct{ *Specification }
 // Name implements Component interface.
 func (c *TiSparkWorkerComponent) Name() string {
 	return ComponentTiSpark
+}
+
+// Role implements Component interface.
+func (c *TiSparkWorkerComponent) Role() string {
+	return RoleTiSparkWorker
 }
 
 // Instances implements Component interface.
@@ -347,8 +358,9 @@ func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clu
 		return err
 	}
 
-	env := scripts.NewTiSparkEnv(i.topo.TiSparkMasters[0].Host).
+	env := scripts.NewTiSparkEnv(host).
 		WithLocalIP(i.GetListenHost()).
+		WithMaster(i.topo.TiSparkMasters[0].Host).
 		WithMasterPorts(i.topo.TiSparkMasters[0].Port, i.topo.TiSparkMasters[0].WebPort).
 		WithWorkerPorts(i.Ports[0], i.Ports[1]).
 		WithCustomEnv(i.topo.TiSparkMasters[0].SparkEnvs)

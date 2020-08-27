@@ -112,6 +112,11 @@ func (c *PDComponent) Name() string {
 	return ComponentPD
 }
 
+// Role implements Component interface.
+func (c *PDComponent) Role() string {
+	return ComponentPD
+}
+
 // Instances implements Component interface.
 func (c *PDComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.PDServers))

@@ -66,6 +66,11 @@ func (c *CDCComponent) Name() string {
 	return ComponentCDC
 }
 
+// Role implements Component interface.
+func (c *CDCComponent) Role() string {
+	return ComponentCDC
+}
+
 // Instances implements Component interface.
 func (c *CDCComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.CDCServers))

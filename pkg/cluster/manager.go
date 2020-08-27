@@ -323,7 +323,7 @@ type ExecOptions struct {
 // Exec shell command on host in the tidb cluster.
 func (m *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Options) error {
 	metadata, err := m.meta(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+	if err != nil {
 		return perrs.AddStack(err)
 	}
 
@@ -541,6 +541,11 @@ func (m *Manager) Rename(clusterName string, opt operator.Options, newName strin
 			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
 	}
 
+	_, err := m.meta(clusterName)
+	if err != nil { // refuse renaming if current cluster topology is not valid
+		return perrs.AddStack(err)
+	}
+
 	if err := os.Rename(m.specManager.Path(clusterName), m.specManager.Path(newName)); err != nil {
 		return perrs.AddStack(err)
 	}
@@ -557,7 +562,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 	nativeSSH := opt.NativeSSH
 
 	metadata, err := m.meta(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+	if err != nil {
 		return perrs.AddStack(err)
 	}
 
@@ -663,7 +668,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 // Upgrade the cluster.
 func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operator.Options) error {
 	metadata, err := m.meta(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+	if err != nil {
 		return perrs.AddStack(err)
 	}
 
@@ -813,7 +818,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 // Patch the cluster.
 func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Options, overwrite bool) error {
 	metadata, err := m.meta(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+	if err != nil {
 		return perrs.AddStack(err)
 	}
 
@@ -923,11 +928,7 @@ func (m *Manager) Deploy(
 	metadata := m.specManager.NewMetadata()
 	topo := metadata.GetTopology()
 
-	// The no tispark master error is ignored, as if the tispark master is removed from the topology
-	// file for some reason (manual edit, for example), it is still possible to scale-out it to make
-	// the whole topology back to normal state.
-	if err := clusterutil.ParseTopologyYaml(topoFile, topo); err != nil &&
-		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+	if err := clusterutil.ParseTopologyYaml(topoFile, topo); err != nil {
 		return err
 	}
 
