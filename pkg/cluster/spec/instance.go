@@ -191,8 +191,10 @@ func (i *BaseInstance) TransferLocalConfigDir(e executor.Executor, local, remote
 	}
 
 	for _, f := range files {
-		if err := i.TransferLocalConfigFile(e, path.Join(local, f.Name()), path.Join(remote, f.Name())); err != nil {
-			return errors.Annotatef(err, "transfer local config %s failed", path.Join(local, f.Name()))
+		localPath := path.Join(local, f.Name())
+		remotePath := path.Join(remote, f.Name())
+		if err := i.TransferLocalConfigFile(e, localPath, remotePath); err != nil {
+			return errors.Annotatef(err, "transfer local config (%s -> %s) failed", localPath, remotePath)
 		}
 	}
 

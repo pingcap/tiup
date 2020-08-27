@@ -204,11 +204,13 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 		if err := i.TransferLocalConfigDir(e, spec.RuleDir, path.Join(paths.Deploy, "conf")); err != nil {
 			return errors.Annotate(err, "transfer prometheus rules failed")
 		}
-	} else { // Use the default ones
-		cmd := fmt.Sprintf("cp %[1]s/bin/prometheus/*.rules.yml %[1]s/conf/", paths.Deploy)
-		if _, _, err := e.Execute(cmd, false); err != nil {
-			return errors.Annotatef(err, "execute command failed: %s", err)
-		}
+		return nil
+	}
+
+	// Use the default ones
+	cmd := fmt.Sprintf("cp %[1]s/bin/prometheus/*.rules.yml %[1]s/conf/", paths.Deploy)
+	if _, _, err := e.Execute(cmd, false); err != nil {
+		return errors.Annotatef(err, "execute command failed: %s", err)
 	}
 
 	return nil
