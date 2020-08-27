@@ -65,7 +65,7 @@ const (
 	operationStop     OperationType = "stop"
 	operationScaleIn  OperationType = "scaleIn"
 	operationScaleOut OperationType = "scaleOut"
-	// operationDestroy  OperationType = "destroy"
+	operationDestroy  OperationType = "destroy"
 )
 
 // OperationInfo records latest operation task and related info
@@ -318,6 +318,17 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 	return nil
 }
 
+// DoDestroyCluster destroy the cluster.
+func (m *Manager) DoDestroyCluster(clusterName string, gOpt operator.Options, destroyOpt operator.Options, skipConfirm bool) {
+	operationInfo = OperationInfo{operationType: operationDestroy, clusterName: clusterName}
+	operationInfo.err = m.DestroyCluster(
+		clusterName,
+		gOpt,
+		destroyOpt,
+		skipConfirm,
+	)
+}
+
 // DestroyCluster destroy the cluster.
 func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, destroyOpt operator.Options, skipConfirm bool) error {
 	metadata, err := m.meta(clusterName)
@@ -352,6 +363,7 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 			return operator.Destroy(ctx, topo, destroyOpt)
 		}).
 		Build()
+	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {

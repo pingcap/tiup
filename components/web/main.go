@@ -135,16 +135,13 @@ func clusterHandler(c *gin.Context) {
 
 func destroyClusterHandler(c *gin.Context) {
 	clusterName := c.Param("clusterName")
-	err := manager.DestroyCluster(clusterName, operator.Options{
-		SSHTimeout: 5,
-		OptTimeout: 120,
-		APITimeout: 300,
-	}, operator.Options{}, true)
-
-	if err != nil {
-		_ = c.Error(err)
-		return
-	}
+	go func() {
+		manager.DoDestroyCluster(clusterName, operator.Options{
+			SSHTimeout: 5,
+			OptTimeout: 120,
+			APITimeout: 300,
+		}, operator.Options{}, true)
+	}()
 
 	c.Status(http.StatusNoContent)
 }

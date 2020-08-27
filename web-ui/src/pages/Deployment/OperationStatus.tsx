@@ -53,7 +53,7 @@ export default function OperationStatus({
     <div>
       <Progress percent={total_progress} status={progressBarStatus()} />
       <div style={{ marginTop: 16 }}>
-        <p>正在执行的操作：{operation_type === 'deploy' ? '部署' : '扩容'}</p>
+        <p>正在执行的操作：{operation_type} cluster</p>
         <p>集群：{cluster_name}</p>
         <p>执行结果: {result()}</p>
         {err_msg && (

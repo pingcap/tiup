@@ -304,7 +304,13 @@ export default function DeploymentTable({
         },
       },
     ]
-  }, [onAddComponent, onEditComponent, onDeleteComponent, onDeleteComponents])
+  }, [
+    onAddComponent,
+    onEditComponent,
+    onDeleteComponent,
+    onDeleteComponents,
+    globalLoginOptions.username,
+  ])
 
   return (
     <Table

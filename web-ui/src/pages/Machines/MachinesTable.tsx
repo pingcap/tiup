@@ -76,7 +76,7 @@ export default function MachinesTable({
         ),
       },
     ]
-  }, [onEdit, onDelete])
+  }, [onEdit, onDelete, globalLoginOptions.username])
 
   return (
     <Table
