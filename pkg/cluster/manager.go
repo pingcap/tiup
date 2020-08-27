@@ -1137,6 +1137,7 @@ func (m *Manager) Deploy(
 func (m *Manager) ScaleIn(
 	clusterName string,
 	skipConfirm bool,
+	optTimeout int64,
 	sshTimeout int64,
 	nativeSSH bool,
 	force bool,
@@ -1240,7 +1241,14 @@ func (m *Manager) ScaleIn(
 	// TODO: support command scale in operation.
 	scale(b, metadata)
 
-	t := b.Parallel(regenConfigTasks...).Build()
+	t := b.Parallel(regenConfigTasks...).
+		Func("RestartMonitor", func(ctx *task.Context) error {
+			return operator.Restart(ctx, metadata.GetTopology(), operator.Options{
+				Roles:      []string{spec.ComponentPrometheus},
+				OptTimeout: optTimeout,
+			})
+		}).
+		Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
@@ -1864,7 +1872,7 @@ func buildScaleOutTask(
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: optTimeout})
 		}).
 		Parallel(refreshConfigTasks...).
-		Func("RestartCluster", func(ctx *task.Context) error {
+		Func("RestartMonitor", func(ctx *task.Context) error {
 			return operator.Restart(ctx, metadata.GetTopology(), operator.Options{
 				Roles:      []string{spec.ComponentPrometheus},
 				OptTimeout: optTimeout,
