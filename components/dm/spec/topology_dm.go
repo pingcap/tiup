@@ -546,7 +546,7 @@ func (topo *Topology) Validate() error {
 		return err
 	}
 
-	return spec.RelativePathDetect(topo)
+	return spec.RelativePathDetect(topo, isSkipField)
 }
 
 // BaseTopo implements Topology interface.

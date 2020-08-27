@@ -678,11 +678,11 @@ func (s *Specification) Validate() error {
 		return err
 	}
 
-	return RelativePathDetect(s)
+	return RelativePathDetect(s, isSkipField)
 }
 
 // RelativePathDetect detect if some specific path is relative path and report error
-func RelativePathDetect(topo interface{}) error {
+func RelativePathDetect(topo interface{}, isSkipField func(reflect.Value) bool) error {
 	pathTypes := []string{
 		"ConfigFilePath",
 		"RuleDir",

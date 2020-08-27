@@ -38,7 +38,6 @@ func (l *Local) Execute(cmd string, sudo bool, timeout ...time.Duration) (stdout
 		defer cancel()
 	}
 
-	//args := strings.Split(cmd, " ")
 	command := exec.CommandContext(ctx, "bash", "-c", cmd)
 
 	stdoutBuf := new(bytes.Buffer)
