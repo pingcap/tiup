@@ -60,10 +60,10 @@ var (
 type OperationType string
 
 const (
-	operationDeploy OperationType = "deploy"
-	operationStart  OperationType = "start"
-	operationStop   OperationType = "stop"
-	// operationScaleIn  OperationType = "scaleIn"
+	operationDeploy   OperationType = "deploy"
+	operationStart    OperationType = "start"
+	operationStop     OperationType = "stop"
+	operationScaleIn  OperationType = "scaleIn"
 	operationScaleOut OperationType = "scaleOut"
 	// operationDestroy  OperationType = "destroy"
 )
@@ -1291,6 +1291,28 @@ func (m *Manager) GetOperationStatus() OperationStatus {
 	return operationStatus
 }
 
+// DoScaleIn the cluster.
+func (m *Manager) DoScaleIn(
+	clusterName string,
+	skipConfirm bool,
+	sshTimeout int64,
+	nativeSSH bool,
+	force bool,
+	nodes []string,
+	scale func(builer *task.Builder, metadata spec.Metadata),
+) {
+	operationInfo = OperationInfo{operationType: operationScaleIn, clusterName: clusterName}
+	operationInfo.err = m.ScaleIn(
+		clusterName,
+		skipConfirm,
+		sshTimeout,
+		nativeSSH,
+		force,
+		nodes,
+		scale,
+	)
+}
+
 // ScaleIn the cluster.
 func (m *Manager) ScaleIn(
 	clusterName string,
@@ -1399,6 +1421,7 @@ func (m *Manager) ScaleIn(
 	scale(b, metadata)
 
 	t := b.Parallel(regenConfigTasks...).Build()
+	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {

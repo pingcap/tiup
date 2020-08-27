@@ -79,7 +79,7 @@ export default function ClusterDetailPage() {
       },
     } as any)
     return _columns
-  }, [])
+  }, [handleScaleInCluster])
 
   function destroyCluster() {
     setDestroying(true)
@@ -157,7 +157,7 @@ export default function ClusterDetailPage() {
     setScaleIning(true)
 
     scaleInCluster(clusterName, {
-      node_id: node.id,
+      nodes: [node.id],
       force,
     }).then(({ data, err }) => {
       setScaleIning(false)
@@ -172,10 +172,6 @@ export default function ClusterDetailPage() {
       }
     })
   }
-
-  // function handleScaleOutCluster() {
-  //   // TODO
-  // }
 
   if (cluster === undefined) {
     return <Root></Root>

@@ -8,7 +8,6 @@ import {
   Form,
   Input,
   Select,
-  message,
 } from 'antd'
 import uniqid from 'uniqid'
 import yaml from 'yaml'

@@ -38,7 +38,7 @@ export function stopCluster(clusterName: string) {
 
 export function scaleInCluster(
   clusterName: string,
-  scaleInOpts: { node_id: string; force: boolean }
+  scaleInOpts: { nodes: string[]; force: boolean }
 ) {
   return request(
     fullUrl(`clusters/${clusterName}/scale_in`),

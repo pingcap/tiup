@@ -181,8 +181,8 @@ func stopClusterHandler(c *gin.Context) {
 
 // ScaleInReq represents the request for scale in cluster
 type ScaleInReq struct {
-	NodeID string `json:"node_id"`
-	Force  bool   `json:"force"`
+	Nodes []string `json:"nodes"`
+	Force bool     `json:"force"`
 }
 
 func scaleInClusterHandler(c *gin.Context) {
@@ -200,7 +200,7 @@ func scaleInClusterHandler(c *gin.Context) {
 		APITimeout: 300,
 		NativeSSH:  false,
 		Force:      req.Force,
-		Nodes:      []string{req.NodeID}}
+		Nodes:      req.Nodes}
 	scale := func(b *task.Builder, imetadata spec.Metadata) {
 		metadata := imetadata.(*spec.ClusterMeta)
 		if !gOpt.Force {
@@ -214,12 +214,9 @@ func scaleInClusterHandler(c *gin.Context) {
 		}
 	}
 
-	err := manager.ScaleIn(clusterName, true, gOpt.SSHTimeout, gOpt.NativeSSH, gOpt.Force, gOpt.Nodes, scale)
-
-	if err != nil {
-		_ = c.Error(err)
-		return
-	}
+	go func() {
+		manager.DoScaleIn(clusterName, true, gOpt.SSHTimeout, gOpt.NativeSSH, gOpt.Force, gOpt.Nodes, scale)
+	}()
 
 	c.Status(http.StatusNoContent)
 }
