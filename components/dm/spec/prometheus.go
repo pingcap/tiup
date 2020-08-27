@@ -81,11 +81,12 @@ func (i *MonitorInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
+
+	enableTLS := i.topo.GlobalOptions.TLSEnabled
 
 	// transfer run script
 	spec := i.InstanceSpec.(PrometheusSpec)
@@ -175,7 +176,7 @@ func (i *MonitorInstance) ScaleConfig(
 	s := i.topo
 	defer func() { i.topo = s }()
 	i.topo = topo.(*Topology)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, topo.BaseTopo().GlobalOptions.TLSEnabled)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
 var _ cluster.DeployerInstance = &MonitorInstance{}

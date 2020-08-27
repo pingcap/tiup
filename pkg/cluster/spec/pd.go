@@ -163,12 +163,12 @@ func (i *PDInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
+	enableTLS := i.topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(PDSpec)
 	cfg := scripts.NewPDScript(
 		spec.Name,
@@ -268,8 +268,7 @@ func (i *PDInstance) ScaleConfig(
 	paths meta.DirPaths,
 ) error {
 	// We need pd.toml here, but we don't need to check it
-	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths,
-		topo.BaseTopo().GlobalOptions.TLSEnabled); err != nil &&
+	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil &&
 		errors.Cause(err) != ErrorCheckConfig {
 		return err
 	}

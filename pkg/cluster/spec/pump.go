@@ -128,7 +128,7 @@ func (i *PumpInstance) ScaleConfig(
 	}()
 	i.topo = mustBeClusterTopo(topo)
 
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, topo.BaseTopo().GlobalOptions.TLSEnabled)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
 // InitConfig implements Instance interface.
@@ -138,12 +138,12 @@ func (i *PumpInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
+	enableTLS := i.topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(PumpSpec)
 	cfg := scripts.NewPumpScript(
 		i.GetHost()+":"+strconv.Itoa(i.GetPort()),

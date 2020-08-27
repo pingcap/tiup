@@ -114,7 +114,6 @@ func (i *GrafanaInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
@@ -224,5 +223,5 @@ func (i *GrafanaInstance) ScaleConfig(
 	defer func() { i.topo = s }()
 	cluster := mustBeClusterTopo(topo)
 	i.topo = cluster.Merge(i.topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, topo.BaseTopo().GlobalOptions.TLSEnabled)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }

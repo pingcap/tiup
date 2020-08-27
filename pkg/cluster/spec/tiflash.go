@@ -297,7 +297,6 @@ func (i *TiFlashInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
@@ -420,7 +419,7 @@ func (i *TiFlashInstance) ScaleConfig(
 		i.topo = s
 	}()
 	i.topo = mustBeClusterTopo(topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, topo.BaseTopo().GlobalOptions.TLSEnabled)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
 type replicateConfig struct {

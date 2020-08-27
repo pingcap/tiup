@@ -196,7 +196,6 @@ func (i *TiSparkMasterInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	// generate systemd service to invoke spark's start/stop scripts
 	comp := i.Role()
@@ -282,7 +281,7 @@ func (i *TiSparkMasterInstance) ScaleConfig(
 	defer func() { i.topo = s }()
 	cluster := mustBeClusterTopo(topo)
 	i.topo = cluster.Merge(i.topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, topo.BaseTopo().GlobalOptions.TLSEnabled)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
 // TiSparkWorkerComponent represents TiSpark slave component.
@@ -343,7 +342,6 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	// generate systemd service to invoke spark's start/stop scripts
 	comp := i.Role()
@@ -444,5 +442,5 @@ func (i *TiSparkWorkerInstance) ScaleConfig(
 	defer func() { i.topo = s }()
 	cluster := mustBeClusterTopo(topo)
 	i.topo = cluster.Merge(i.topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, topo.BaseTopo().GlobalOptions.TLSEnabled)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }

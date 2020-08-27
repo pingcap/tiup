@@ -51,7 +51,6 @@ func (i *fakeInstance) InitConfig(
 	clusterVersion string,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	if i.hasConfigError {
 		return errors.Annotate(spec.ErrorCheckConfig, "test error")

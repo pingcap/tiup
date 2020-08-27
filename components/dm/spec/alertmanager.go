@@ -119,11 +119,12 @@ func (i *AlertManagerInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
+
+	enableTLS := i.topo.GlobalOptions.TLSEnabled
 
 	// Transfer start script
 	spec := i.InstanceSpec.(AlertManagerSpec)
@@ -168,5 +169,5 @@ func (i *AlertManagerInstance) ScaleConfig(
 	s := i.topo
 	defer func() { i.topo = s }()
 	i.topo = topo.(*Topology)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, topo.BaseTopo().GlobalOptions.TLSEnabled)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }

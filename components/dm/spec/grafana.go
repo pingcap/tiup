@@ -83,7 +83,6 @@ func (i *GrafanaInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	if len(i.topo.Monitors) == 0 {
 		return errors.New("no prometheus found in topology")
@@ -196,7 +195,7 @@ func (i *GrafanaInstance) ScaleConfig(
 	defer func() { i.topo = s }()
 	dmtopo := topo.(*Topology)
 	i.topo = dmtopo.Merge(i.topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths, topo.BaseTopo().GlobalOptions.TLSEnabled)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
 var _ cluster.DeployerInstance = &GrafanaInstance{}

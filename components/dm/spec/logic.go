@@ -109,7 +109,6 @@ func (i *MasterInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
@@ -149,8 +148,7 @@ func (i *MasterInstance) ScaleConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths,
-		topo.BaseTopo().GlobalOptions.TLSEnabled); err != nil {
+	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -240,7 +238,6 @@ func (i *WorkerInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-	enableTLS bool,
 ) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
@@ -285,8 +282,7 @@ func (i *WorkerInstance) ScaleConfig(
 		i.topo = s
 	}()
 	i.topo = topo.(*Topology)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths,
-		topo.BaseTopo().GlobalOptions.TLSEnabled)
+	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
 // GetGlobalOptions returns cluster topology

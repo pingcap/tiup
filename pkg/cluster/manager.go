@@ -707,7 +707,6 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 			base.Version,
 			m.specManager,
 			inst, base.User,
-			topo.BaseTopo().GlobalOptions.TLSEnabled,
 			opt.IgnoreConfigCheck,
 			meta.DirPaths{
 				Deploy: deployDir,
@@ -867,7 +866,6 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 				m.specManager,
 				inst,
 				base.User,
-				topo.BaseTopo().GlobalOptions.TLSEnabled,
 				opt.IgnoreConfigCheck,
 				meta.DirPaths{
 					Deploy: deployDir,
@@ -1219,7 +1217,6 @@ func (m *Manager) Deploy(
 			m.specManager,
 			inst,
 			globalOptions.User,
-			topo.BaseTopo().GlobalOptions.TLSEnabled,
 			opt.IgnoreConfigCheck,
 			meta.DirPaths{
 				Deploy: deployDir,
@@ -1363,7 +1360,6 @@ func (m *Manager) ScaleIn(
 				m.specManager,
 				instance,
 				base.User,
-				topo.BaseTopo().GlobalOptions.TLSEnabled,
 				true, // always ignore config check result in scale in
 				meta.DirPaths{
 					Deploy: deployDir,
@@ -2012,7 +2008,6 @@ func buildScaleOutTask(
 			m.specManager,
 			inst,
 			base.User,
-			topo.BaseTopo().GlobalOptions.TLSEnabled,
 			true, // always ignore config check result in scale out
 			meta.DirPaths{
 				Deploy: deployDir,
