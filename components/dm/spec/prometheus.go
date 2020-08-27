@@ -130,13 +130,13 @@ func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, paths meta.DirPaths) error {
 	confDir := filepath.Join(paths.Deploy, "conf")
 	// To make this step idempotent, we need cleanup old rules first
-	if _, stderr, err := e.Execute(fmt.Sprintf("rm -f %s/*.rules.yml", confDir), false); err != nil {
+	if _, _, err := e.Execute(fmt.Sprintf("rm -f %s/*.rules.yml", confDir), false); err != nil {
 		return err
 	}
 
 	// If the user specify a rule directory, we should use the rules specified
 	if spec.RuleDir != "" {
-		if err := i.TransferLocalConfigDir(e, spec.RuleDir, confDir); err != nil {
+		if err := i.TransferLocalConfigDir(e, spec.RuleDir, confDir, nil); err != nil {
 			return err
 		}
 		return nil

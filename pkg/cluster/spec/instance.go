@@ -184,13 +184,16 @@ func (i *BaseInstance) TransferLocalConfigFile(e executor.Executor, local, remot
 
 // TransferLocalConfigDir scp local config directory to remote
 // Precondition: the user on remote have right to access & mkdir of dest files
-func (i *BaseInstance) TransferLocalConfigDir(e executor.Executor, local, remote string) error {
+func (i *BaseInstance) TransferLocalConfigDir(e executor.Executor, local, remote string, filter func(string) bool) error {
 	files, err := ioutil.ReadDir(local)
 	if err != nil {
 		return errors.Annotatef(err, "read local directory %s failed", local)
 	}
 
 	for _, f := range files {
+		if filter != nil && !filter(f.Name()) {
+			continue
+		}
 		localPath := path.Join(local, f.Name())
 		remotePath := path.Join(remote, f.Name())
 		if err := i.TransferLocalConfigFile(e, localPath, remotePath); err != nil {

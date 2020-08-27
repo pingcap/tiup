@@ -152,12 +152,12 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, paths meta.DirPaths) error {
 	dashboardsDir := filepath.Join(paths.Deploy, "dashboards")
 	// To make this step idempotent, we need cleanup old dashboards first
-	if _, stderr, err := e.Execute(fmt.Sprintf("rm -f %s/*", dashboardsDir), false); err != nil {
+	if _, _, err := e.Execute(fmt.Sprintf("rm -f %s/*", dashboardsDir), false); err != nil {
 		return err
 	}
 
 	if spec.DashboardDir != "" {
-		if err := i.TransferLocalConfigDir(e, spec.DashboardDir, dashboardsDir); err != nil {
+		if err := i.TransferLocalConfigDir(e, spec.DashboardDir, dashboardsDir, nil); err != nil {
 			return err
 		}
 		return nil
