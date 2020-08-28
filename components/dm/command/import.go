@@ -81,10 +81,10 @@ func newImportCmd() *cobra.Command {
 
 			if !skipConfirm {
 				err = cliutil.PromptForConfirmOrAbortError(
-					"Using the Topology to deploy DM %s cluster %s, Do you want to continue? [y/N]: ",
-					clusterVersion,
-					clusterName,
-				)
+					color.HiYellowString("Using the Topology to deploy DM %s cluster %s, Please Stop the DM cluster from ansible side first.\nDo you want to continue? [y/N]: ",
+						clusterVersion,
+						clusterName,
+					))
 				if err != nil {
 					return errors.AddStack(err)
 				}
@@ -116,7 +116,9 @@ func newImportCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&ansibleDir, "dir", "d", "./", "The path to DM-Ansible directory")
 	cmd.Flags().StringVar(&inventoryFileName, "inventory", cansible.AnsibleInventoryFile, "The name of inventory file")
 	cmd.Flags().StringVarP(&rename, "rename", "r", "", "Rename the imported cluster to `NAME`")
-	cmd.Flags().StringVarP(&clusterVersion, "cluster-version", "v", "nightly", "cluster version of DM")
+	cmd.Flags().StringVarP(&clusterVersion, "cluster-version", "v", "", "cluster version of DM to deploy")
+
+	cmd.MarkFlagRequired("cluster-version")
 
 	return cmd
 }
