@@ -33,6 +33,9 @@ export function genTopo({
         data_dir: DEF_DATA_DIR_PREFIX,
       },
       server_configs: {
+        // tidb: {
+        //   'performance.txn-total-size-limit': 1048576000,
+        // },
         pd: {
           'replication.enable-placement-rules': true,
         },
