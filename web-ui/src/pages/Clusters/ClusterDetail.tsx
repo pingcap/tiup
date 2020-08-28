@@ -162,7 +162,7 @@ export default function ClusterDetailPage() {
           <Button onClick={handleScaleOutCluster}>扩容</Button>
         </Space>
         <Button danger onClick={handleDestroyCluster}>
-          销毁群集
+          销毁集群
         </Button>
       </div>
       <div style={{ marginTop: 16 }}>

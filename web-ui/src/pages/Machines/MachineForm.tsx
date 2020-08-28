@@ -65,7 +65,7 @@ function correctFormValues(
   if (values.name === '') {
     values.name = `${
       values.username || globalLoginOptions.username || DEF_UESRNAME
-    }@${values.host}:${values.ssh_port || DEF_SSH_PORT}`
+    }@${values.host}`
   }
 }
 
@@ -143,6 +143,7 @@ export default function MachineForm({
 
     const m = machines[machineID]
     form.setFieldsValue({
+      host: m.host,
       ssh_port: m.ssh_port,
 
       isPubKeyAuth: m.isPubKeyAuth,

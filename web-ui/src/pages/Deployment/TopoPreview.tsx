@@ -74,6 +74,13 @@ export function genTopo({
         // TODO: handle deploy dir and data dir
       }
 
+      // location labels
+      if (compType === 'TiKV' && (targetMachine.dc || targetMachine.rack)) {
+        m.config = {
+          'server.labels': { dc: targetMachine.dc, rack: targetMachine.rack },
+        }
+      }
+
       topo[topoKey].push(m)
       topo[topoKey].sort((a: any, b: any) => (a.host > b.host ? 1 : -1))
     }
