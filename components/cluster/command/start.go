@@ -29,7 +29,7 @@ func newStartCmd() *cobra.Command {
 			}
 
 			if err := validRoles(gOpt.Roles); err != nil {
-				return nil
+				return err
 			}
 
 			clusterName := args[0]

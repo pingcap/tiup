@@ -22,13 +22,13 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
-	pdserverapi "github.com/pingcap/pd/v4/server/api"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
+	pdserverapi "github.com/tikv/pd/server/api"
 )
 
 // TiKVSpec represents the TiKV topology specification in topology.yaml
@@ -118,6 +118,11 @@ type TiKVComponent struct {
 
 // Name implements Component interface.
 func (c *TiKVComponent) Name() string {
+	return ComponentTiKV
+}
+
+// Role implements Component interface.
+func (c *TiKVComponent) Role() string {
 	return ComponentTiKV
 }
 

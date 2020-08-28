@@ -16,6 +16,7 @@ package spec
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster"
@@ -33,6 +34,11 @@ type MonitorComponent struct{ *Topology }
 // Name implements Component interface.
 func (c *MonitorComponent) Name() string {
 	return ComponentPrometheus
+}
+
+// Role implements Component interface.
+func (c *MonitorComponent) Role() string {
+	return spec.RoleMonitor
 }
 
 // Instances implements Component interface.
@@ -116,11 +122,37 @@ func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		cfig.AddAlertmanager(alertmanager.Host, uint64(alertmanager.WebPort))
 	}
 
+	if err := i.initRules(e, spec, paths); err != nil {
+		return errors.AddStack(err)
+	}
+
 	if err := cfig.ConfigToFile(fp); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "prometheus.yml")
 	return e.Transfer(fp, dst, false)
+}
+
+func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, paths meta.DirPaths) error {
+	confDir := filepath.Join(paths.Deploy, "conf")
+	// To make this step idempotent, we need cleanup old rules first
+	if _, _, err := e.Execute(fmt.Sprintf("rm -f %s/*.rules.yml", confDir), false); err != nil {
+		return err
+	}
+
+	// If the user specify a rule directory, we should use the rules specified
+	if spec.RuleDir != "" {
+		return i.TransferLocalConfigDir(e, spec.RuleDir, confDir, func(name string) bool {
+			return strings.HasSuffix(name, ".rules.yml")
+		})
+	}
+
+	// Use the default ones
+	cmd := fmt.Sprintf("cp %[1]s/bin/prometheus/*.rules.yml %[1]s/conf/", paths.Deploy)
+	if _, _, err := e.Execute(cmd, false); err != nil {
+		return err
+	}
+	return nil
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -151,39 +183,51 @@ func (i *MonitorInstance) Deploy(t *task.Builder, srcPath string, deployDir stri
 	).Func("CopyRulesYML", func(ctx *task.Context) error {
 		e := ctx.Get(i.GetHost())
 
-		tmp := filepath.Join(deployDir, "_tiup_tmp")
-		_, stderr, err := e.Execute(fmt.Sprintf("mkdir -p %s", tmp), false)
-		if err != nil {
-			return errors.Annotatef(err, "stderr: %s", string(stderr))
-		}
-
-		srcPath := task.PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
-		dstPath := filepath.Join(tmp, filepath.Base(srcPath))
-
-		err = e.Transfer(srcPath, dstPath, false)
-		if err != nil {
-			return errors.AddStack(err)
-		}
-
-		cmd := fmt.Sprintf(`tar -xzf %s -C %s && rm %s`, dstPath, tmp, dstPath)
-		_, stderr, err = e.Execute(cmd, false)
-		if err != nil {
-			return errors.Annotatef(err, "stderr: %s", string(stderr))
-		}
-
-		// copy dm-master/conf/*.rules.yml
-		cmd = fmt.Sprintf("cp %s/dm-master/conf/*rules.yml %s", tmp, filepath.Join(deployDir, "conf"))
-		_, stderr, err = e.Execute(cmd, false)
-		if err != nil {
-			return errors.Annotatef(err, "stderr: %s", string(stderr))
-		}
-
-		cmd = fmt.Sprintf("rm -rf %s", tmp)
-		_, stderr, err = e.Execute(cmd, false)
-		if err != nil {
-			return errors.Annotatef(err, "stderr: %s", string(stderr))
-		}
-
-		return nil
+		return i.installRules(e, deployDir, clusterVersion)
 	})
+}
+
+func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVersion string) error {
+	tmp := filepath.Join(deployDir, "_tiup_tmp")
+	_, stderr, err := e.Execute(fmt.Sprintf("mkdir -p %s", tmp), false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	srcPath := task.PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
+	dstPath := filepath.Join(tmp, filepath.Base(srcPath))
+
+	err = e.Transfer(srcPath, dstPath, false)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	cmd := fmt.Sprintf(`tar --no-same-owner -zxf %s -C %s && rm %s`, dstPath, tmp, dstPath)
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	// copy dm-master/conf/*.rules.yml
+	targetDir := filepath.Join(deployDir, "conf")
+	cmd = fmt.Sprintf("cp %s/dm-master/conf/*.rules.yml %s", tmp, targetDir)
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	cmd = fmt.Sprintf("rm -rf %s", tmp)
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	// backup *.rules.yml for later reload (in case that the user change rule_dir)
+	cmd = fmt.Sprintf("cp %s/*.rules.yml %s", targetDir, filepath.Join(deployDir, "bin", "prometheus"))
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	return nil
 }

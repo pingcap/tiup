@@ -69,6 +69,11 @@ func (c *PumpComponent) Name() string {
 	return ComponentPump
 }
 
+// Role implements Component interface.
+func (c *PumpComponent) Role() string {
+	return ComponentPump
+}
+
 // Instances implements Component interface.
 func (c *PumpComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.PumpServers))

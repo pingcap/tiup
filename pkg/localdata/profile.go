@@ -405,6 +405,6 @@ type Process struct {
 	Exec        string    `json:"exec"`           // Path to the binary
 	Args        []string  `json:"args,omitempty"` // Command line arguments
 	Env         []string  `json:"env,omitempty"`  // Environment variables
-	Dir         string    `json:"dir,omitempty"`  // Working directory
+	Dir         string    `json:"dir,omitempty"`  // Data directory
 	Cmd         *exec.Cmd `json:"-"`
 }

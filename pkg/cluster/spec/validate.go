@@ -674,5 +674,45 @@ func (s *Specification) Validate() error {
 		return err
 	}
 
-	return s.validateTiSparkSpec()
+	if err := s.validateTiSparkSpec(); err != nil {
+		return err
+	}
+
+	return RelativePathDetect(s, isSkipField)
+}
+
+// RelativePathDetect detect if some specific path is relative path and report error
+func RelativePathDetect(topo interface{}, isSkipField func(reflect.Value) bool) error {
+	pathTypes := []string{
+		"ConfigFilePath",
+		"RuleDir",
+		"DashboardDir",
+	}
+
+	topoSpec := reflect.ValueOf(topo).Elem()
+
+	for i := 0; i < topoSpec.NumField(); i++ {
+		if isSkipField(topoSpec.Field(i)) {
+			continue
+		}
+
+		compSpecs := topoSpec.Field(i)
+		for index := 0; index < compSpecs.Len(); index++ {
+			compSpec := compSpecs.Index(index)
+
+			// Relateve path detect
+			for _, field := range pathTypes {
+				if j, found := findField(compSpec, field); found {
+					// `yaml:"xxxx,omitempty"`
+					fieldName := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
+					localPath := compSpec.Field(j).String()
+					if localPath != "" && !strings.HasPrefix(localPath, "/") {
+						return fmt.Errorf("relative path is not allowed for field %s: %s", fieldName, localPath)
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }

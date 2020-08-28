@@ -42,33 +42,32 @@ require (
 	github.com/otiai10/copy v1.2.0
 	github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712
 	github.com/pingcap/dm v1.1.0-alpha.0.20200521025928-83063141c5fd
-	github.com/pingcap/errors v0.11.5-0.20190809092503-95897b64e011
+	github.com/pingcap/errors v0.11.5-0.20200820035142-66eb5bf1d1cd
 	github.com/pingcap/failpoint v0.0.0-20200702092429-9f69995143ce
 	github.com/pingcap/fn v0.0.0-20200306044125-d5540d389059
 	github.com/pingcap/go-tpc v1.0.4-0.20200525052430-dc963cdeef62
 	github.com/pingcap/go-ycsb v0.0.0-20200226103513-00ca633a87d8
-	github.com/pingcap/kvproto v0.0.0-20200518112156-d4aeb467de29
-	github.com/pingcap/pd/v4 v4.0.0
+	github.com/pingcap/kvproto v0.0.0-20200810113304-6157337686b1
 	github.com/pingcap/tidb-insight v0.3.1
 	github.com/r3labs/diff v0.0.0-20200627101315-aecd9dd05dd2
-	github.com/relex/aini v1.1.3
+	github.com/relex/aini v1.2.0
 	github.com/sergi/go-diff v1.0.1-0.20180205163309-da645544ed44
 	github.com/shirou/gopsutil v2.20.3+incompatible
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.5.1
+	github.com/tikv/pd v1.1.0-beta.0.20200824114021-f8c45ae287fd
 	github.com/tj/assert v0.0.0-20190920132354-ee03d75cd160
 	github.com/tj/go-termd v0.0.1
 	github.com/xo/usql v0.7.8
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20191023171146-3cf2f69b5738
 	go.uber.org/atomic v1.6.0
-	go.uber.org/zap v1.14.1
+	go.uber.org/zap v1.15.0
 	golang.org/x/crypto v0.0.0-20200204104054-c9f3fb736b72
 	golang.org/x/mod v0.2.0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/sys v0.0.0-20200420163511-1957bb5e6d1f
-	golang.org/x/tools v0.0.0-20200526224456-8b020aee10d2 // indirect
 	gopkg.in/VividCortex/ewma.v1 v1.1.1 // indirect
 	gopkg.in/cheggaaa/pb.v2 v2.0.7 // indirect
 	gopkg.in/fatih/color.v1 v1.7.0 // indirect
