@@ -1308,6 +1308,7 @@ func (m *Manager) GetOperationStatus() OperationStatus {
 func (m *Manager) DoScaleIn(
 	clusterName string,
 	skipConfirm bool,
+	optTimeout int64,
 	sshTimeout int64,
 	nativeSSH bool,
 	force bool,
@@ -1318,6 +1319,7 @@ func (m *Manager) DoScaleIn(
 	operationInfo.err = m.ScaleIn(
 		clusterName,
 		skipConfirm,
+		optTimeout,
 		sshTimeout,
 		nativeSSH,
 		force,

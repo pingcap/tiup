@@ -212,7 +212,7 @@ func scaleInClusterHandler(c *gin.Context) {
 			}
 		}
 
-		manager.DoScaleIn(clusterName, true, gOpt.SSHTimeout, gOpt.NativeSSH, gOpt.Force, gOpt.Nodes, scale)
+		manager.DoScaleIn(clusterName, true, gOpt.OptTimeout, gOpt.SSHTimeout, gOpt.NativeSSH, gOpt.Force, gOpt.Nodes, scale)
 	}()
 
 	c.Status(http.StatusNoContent)
