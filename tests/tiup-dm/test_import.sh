@@ -61,21 +61,26 @@ su tidb <<EOF
 	ansible-playbook start.yml
 EOF
 
-
-	# stop cluster if need.
-	# ansible-playbook stop.yml
 }
 
 
 function test() {
 	deploy_by_ansible
 
+	# stop cluster
+su tidb <<EOF
+	cd /home/tidb/dm-ansible
+	ansible-playbook stop.yml
+EOF
+
+	# set up tiup root for tidb user
 	mkdir -p /home/tidb/.tiup/bin
 	cp /root/.tiup/bin/root.json /home/tidb/.tiup/bin/
 	chown -R tidb:tidb /home/tidb/.tiup
 
+	# import ans start new cluster
 su tidb <<EOF
-	tiup-dm --yes import --dir /home/tidb/dm-ansible
+	tiup-dm --yes import --dir /home/tidb/dm-ansible --cluster-version v2.0.0-rc
 	tiup-dm --yes start test-cluster
 	tiup-dm --yes destroy test-cluster
 EOF
