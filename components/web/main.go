@@ -1,12 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pingcap/tiup/components/cluster/command"
+	"github.com/pingcap/tiup/components/web/uiserver"
+
 	"github.com/pingcap/tiup/pkg/cluster"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -24,7 +28,7 @@ func main() {
 	tidbSpec = spec.GetSpecManager()
 	manager = cluster.NewManager("tidb", tidbSpec, spec.TiDBComponentVersion)
 
-	router := gin.Default()
+	router := gin.New()
 	router.Use(cors.AllowAll())
 	api := router.Group("/api")
 	{
@@ -39,7 +43,28 @@ func main() {
 		api.POST("/clusters/:clusterName/scale_in", scaleInClusterHandler)
 		api.POST("/clusters/:clusterName/scale_out", scaleOutClusterHandler)
 	}
-	_ = router.Run()
+	// router.GET("/", gin.WrapH(uiserver.Handler()))
+	// _ = router.Run()
+
+	apiHandler := func(w http.ResponseWriter, r *http.Request) {
+		router.ServeHTTP(w, r)
+	}
+
+	mux := http.DefaultServeMux
+	uiHandler := http.StripPrefix("", uiserver.Handler())
+	mux.Handle("/api", http.HandlerFunc(apiHandler))
+	mux.Handle("/", uiHandler)
+
+	// TODO: configurable
+	listenAddr := "127.0.0.1:8080"
+	listener, err := net.Listen("tcp", listenAddr)
+	if err != nil {
+		fmt.Println("web server start failed")
+		return
+	}
+
+	srv := &http.Server{Handler: mux}
+	_ = srv.Serve(listener)
 }
 
 // DeployGlobalLoginOptions represents the global options for deploy

@@ -59,7 +59,13 @@ err:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-err ./components/err
 
 web:
+ifeq ($(UI),1)
+	cd web-ui && yarn && yarn build
+	scripts/embed_ui_assets.sh
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -tags ui_server -o bin/tiup-web ./components/web
+else
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-web ./components/web
+endif
 
 server:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-server ./server
