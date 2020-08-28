@@ -2,7 +2,7 @@ import React, { useMemo, useState, useCallback, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Space, Button, Modal, Table, Popconfirm } from 'antd'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
-import { useSessionStorageState } from 'ahooks'
+import { useSessionStorageState, useLocalStorageState } from 'ahooks'
 
 import {
   deleteCluster,
@@ -13,6 +13,7 @@ import {
 } from '../../utils/api'
 import { Root } from '../../components/Root'
 import { ICluster } from '.'
+import { IComponent } from '../Deployment/DeploymentTable'
 
 export interface IClusterInstInfo {
   id: string
@@ -37,6 +38,14 @@ export default function ClusterDetailPage() {
   const [clusterInstInfos, setClusterInstInfos] = useSessionStorageState<
     IClusterInstInfo[]
   >(`${clusterName}_cluster_topo`, [])
+
+  const [curScaleOutNodes, setCurScaleOutNodes] = useLocalStorageState<{
+    cluster_name: string
+    scale_out_nodes: any[]
+  }>('cur_scale_out_nodes', { cluster_name: '', scale_out_nodes: [] })
+  const [components, setComponents] = useLocalStorageState<{
+    [key: string]: IComponent
+  }>('components', {})
 
   const [loadingTopo, setLoadingTopo] = useState(false)
 
@@ -99,10 +108,28 @@ export default function ClusterDetailPage() {
       setLoadingTopo(false)
       if (data !== undefined) {
         setClusterInstInfos(data)
+        updateLocalTopo(data)
       }
     })
     // eslint-disable-next-line
   }, [])
+
+  function updateLocalTopo(clusters: IClusterInstInfo[]) {
+    if (
+      curScaleOutNodes.cluster_name !== clusterName ||
+      curScaleOutNodes.scale_out_nodes.length === 0
+    ) {
+      return
+    }
+    let newComps = { ...components }
+    for (const n of curScaleOutNodes.scale_out_nodes) {
+      const exist = clusters.find((el) => el.id === n.node)
+      if (exist && newComps[n.id]) {
+        newComps[n.id].for_scale_out = false
+      }
+    }
+    setComponents(newComps)
+  }
 
   function destroyCluster() {
     deleteCluster(clusterName)

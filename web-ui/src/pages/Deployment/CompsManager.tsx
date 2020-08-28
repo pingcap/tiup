@@ -22,6 +22,8 @@ import DeploymentTable, {
   DEF_PROM_PORT,
   DEF_GRAFANA_PORT,
   DEF_ALERT_CLUSTER_PORT,
+  DEF_PD_CLIENT_PORT,
+  DEF_ALERT_WEB_PORT,
 } from './DeploymentTable'
 import EditCompForm from './EditCompForm'
 import TopoPreview, { genTopo } from './TopoPreview'
@@ -73,6 +75,11 @@ export default function CompsManager({
 
   const [globalLoginOptions] = useLocalStorageState<IGlobalLoginOptions>(
     'global_login_options',
+    {}
+  )
+
+  const [curScaleOutNodes, setCurScaleOutNodes] = useLocalStorageState(
+    'cur_scale_out_nodes',
     {}
   )
 
@@ -198,6 +205,57 @@ export default function CompsManager({
   }
 
   function handleScaleOut() {
+    // save in local
+    // cluster name, scale out nodes
+    const scaleOutComps = Object.values(components).filter(
+      (comp) => comp.for_scale_out
+    )
+    if (scaleOutComps.length === 0) {
+      Modal.warn({
+        title: '扩容无法进行',
+        content: '没有可扩容的组件',
+      })
+      return
+    }
+
+    const scaleOutNodes: any[] = []
+    for (const comp of scaleOutComps) {
+      let port: number = 0
+      let rec = comp as any
+
+      switch (rec.type) {
+        case 'TiDB':
+          port = rec.port || DEF_TIDB_PORT
+          break
+        case 'TiKV':
+          port = rec.port || DEF_TIKV_PORT
+          break
+        case 'TiFlash':
+          port = rec.tcp_port || DEF_TIFLASH_TCP_PORT
+          break
+        case 'PD':
+          port = rec.client_port || DEF_PD_CLIENT_PORT
+          break
+        case 'Prometheus':
+          port = rec.port || DEF_PROM_PORT
+          break
+        case 'Grafana':
+          port = rec.port || DEF_GRAFANA_PORT
+          break
+        case 'AlertManager':
+          port = rec.web_port || DEF_ALERT_WEB_PORT
+          break
+      }
+
+      const machine = machines[comp.machineID]
+      scaleOutNodes.push({ id: comp.id, node: `${machine.host}:${port}` })
+    }
+    setCurScaleOutNodes({
+      cluster_name: clusterName!,
+      scale_out_nodes: scaleOutNodes,
+    })
+
+    // scale out
     const topoYaml = yaml.stringify(
       genTopo({ machines, components, forScaleOut })
     )
