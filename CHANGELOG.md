@@ -25,12 +25,10 @@ TiUP Changelog
 ### Bugfix
 
 - Set correct `deploy_dir` of monitoring agents when importing ansible deployed clusters ([#704](https://github.com/pingcap/tiup/pull/704), [@AstroProfundis](https://github.com/AstroProfundis))
-- Fix reverse confirmation on prompt ([#670](https://github.com/pingcap/tiup/pull/670), [@AstroProfundis](https://github.com/AstroProfundis))
 - Fix the issue that `tiup update --self` may make root.json invalid with offline mirror ([#659](https://github.com/pingcap/tiup/pull/659), [@lucklove](https://github.com/lucklove))
 
 ### Improvements
 
-- Support debug scp with --natvie-ssh flag ([#689](https://github.com/pingcap/tiup/pull/689), [@lucklove](https://github.com/lucklove))
 - Add `advertise-status-addr` for tiflash to support host name ([#676](https://github.com/pingcap/tiup/pull/676), [@birdstorm](https://github.com/birdstorm))
 
 ## [1.0.9] 2020.08.03
