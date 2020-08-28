@@ -19,4 +19,4 @@ import (
 )
 
 // Assets represent the front-end assets
-var assets http.FileSystem = nil
+var Assets http.FileSystem = nil

@@ -22,8 +22,8 @@ import (
 
 // Handler to handle ui static files
 func Handler() http.Handler {
-	if assets != nil {
-		return httpgzip.FileServer(assets, httpgzip.FileServerOptions{IndexHTML: true})
+	if Assets != nil {
+		return httpgzip.FileServer(Assets, httpgzip.FileServerOptions{IndexHTML: true})
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

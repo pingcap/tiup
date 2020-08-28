@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"strings"
 
@@ -28,7 +26,7 @@ func main() {
 	tidbSpec = spec.GetSpecManager()
 	manager = cluster.NewManager("tidb", tidbSpec, spec.TiDBComponentVersion)
 
-	router := gin.New()
+	router := gin.Default()
 	router.Use(cors.AllowAll())
 	api := router.Group("/api")
 	{
@@ -44,27 +42,10 @@ func main() {
 		api.POST("/clusters/:clusterName/scale_out", scaleOutClusterHandler)
 	}
 	// router.GET("/", gin.WrapH(uiserver.Handler()))
-	// _ = router.Run()
-
-	apiHandler := func(w http.ResponseWriter, r *http.Request) {
-		router.ServeHTTP(w, r)
-	}
-
-	mux := http.DefaultServeMux
-	uiHandler := http.StripPrefix("", uiserver.Handler())
-	mux.Handle("/api", http.HandlerFunc(apiHandler))
-	mux.Handle("/", uiHandler)
-
-	// TODO: configurable
-	listenAddr := "127.0.0.1:8080"
-	listener, err := net.Listen("tcp", listenAddr)
-	if err != nil {
-		fmt.Println("web server start failed")
-		return
-	}
-
-	srv := &http.Server{Handler: mux}
-	_ = srv.Serve(listener)
+	// router.GET("/static", gin.WrapH(uiserver.Handler()))
+	router.StaticFS("/ui", uiserver.Assets)
+	router.StaticFS("/static", uiserver.Assets)
+	_ = router.Run()
 }
 
 // DeployGlobalLoginOptions represents the global options for deploy

@@ -17,7 +17,7 @@ func main() {
 	err := vfsgen.Generate(fs, vfsgen.Options{
 		BuildTags:    buildTag,
 		PackageName:  "uiserver",
-		VariableName: "assets",
+		VariableName: "Assets",
 	})
 	if err != nil {
 		log.Fatalln(err)
