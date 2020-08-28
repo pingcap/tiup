@@ -1493,8 +1493,7 @@ func (m *Manager) ScaleOut(
 ) error {
 	metadata, err := m.meta(clusterName)
 	if err != nil { // not allowing validation errors
-		err = perrs.AddStack(err)
-		return err
+		return perrs.AddStack(err)
 	}
 
 	topo := metadata.GetTopology()
