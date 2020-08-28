@@ -118,7 +118,10 @@ func newImportCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&rename, "rename", "r", "", "Rename the imported cluster to `NAME`")
 	cmd.Flags().StringVarP(&clusterVersion, "cluster-version", "v", "", "cluster version of DM to deploy")
 
-	cmd.MarkFlagRequired("cluster-version")
+	err := cmd.MarkFlagRequired("cluster-version")
+	if err != nil { // if no this flag
+		panic(err)
+	}
 
 	return cmd
 }
