@@ -36,11 +36,11 @@ export interface IComponent {
   for_scale_out: boolean
   priority: number
 
-  deploy_dir_prefix?: string // "/tidb-deploy"
-  data_dir_prefix?: string // "/tidb-data", TiDB and Grafana have no data_dir
+  deploy_dir_prefix?: string // "tidb-deploy"
+  data_dir_prefix?: string // "tidb-data", TiDB and Grafana have no data_dir
 }
-export const DEF_DEPLOY_DIR_PREFIX = '/tidb-deploy'
-export const DEF_DATA_DIR_PREFIX = '/tidb-data'
+export const DEF_DEPLOY_DIR_PREFIX = 'tidb-deploy'
+export const DEF_DATA_DIR_PREFIX = 'tidb-data'
 
 export interface ITiDBComponent extends IComponent {
   port?: number // 4000

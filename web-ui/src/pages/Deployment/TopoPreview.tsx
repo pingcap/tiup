@@ -2,7 +2,12 @@ import React, { useMemo } from 'react'
 import yaml from 'yaml'
 
 import { IMachine } from '../Machines/MachineForm'
-import { IComponent, COMPONENT_TYPES } from './DeploymentTable'
+import {
+  IComponent,
+  COMPONENT_TYPES,
+  DEF_DEPLOY_DIR_PREFIX,
+  DEF_DATA_DIR_PREFIX,
+} from './DeploymentTable'
 
 interface ITopoPreviewProps {
   forScaleOut: boolean
@@ -24,8 +29,8 @@ export function genTopo({
     topo = {
       global: {
         user: 'tidb',
-        deploy_dir: 'tidb-deploy',
-        data_dir: 'tidb-data',
+        deploy_dir: DEF_DEPLOY_DIR_PREFIX,
+        data_dir: DEF_DATA_DIR_PREFIX,
       },
       server_configs: {
         pd: {
