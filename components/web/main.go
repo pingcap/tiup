@@ -41,10 +41,7 @@ func main() {
 		api.POST("/clusters/:clusterName/scale_in", scaleInClusterHandler)
 		api.POST("/clusters/:clusterName/scale_out", scaleOutClusterHandler)
 	}
-	// router.GET("/", gin.WrapH(uiserver.Handler()))
-	// router.GET("/static", gin.WrapH(uiserver.Handler()))
-	router.StaticFS("/ui", uiserver.Assets)
-	router.StaticFS("/static", uiserver.Assets)
+	router.StaticFS("/tiup", uiserver.Assets)
 	_ = router.Run()
 }
 
