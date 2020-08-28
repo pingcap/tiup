@@ -121,6 +121,11 @@ func (c *TiKVComponent) Name() string {
 	return ComponentTiKV
 }
 
+// Role implements Component interface.
+func (c *TiKVComponent) Role() string {
+	return ComponentTiKV
+}
+
 // Instances implements Component interface.
 func (c *TiKVComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.TiKVServers))

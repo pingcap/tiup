@@ -30,3 +30,4 @@ bin/
 /tests/tiup_mirrors/*.sha1
 /tests/tiup_mirrors/
 /logs
+docker/secret/
