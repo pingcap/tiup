@@ -14,11 +14,10 @@ import (
 )
 
 type ycsbConfig struct {
-	OperationCount uint32
 	RecordCount    uint32
-	Workload       string
+	OperationCount uint32
 	ReadAllFields  bool
-	// proportion for each kind of workload
+
 	ReadProportion            float32
 	UpdateProportion          float32
 	ScanProportion            float32
@@ -28,13 +27,15 @@ type ycsbConfig struct {
 	RequestDistribution string
 	Verbose             bool
 	Pd                  string
+	ConnCount           uint32
+	BatchSize           uint32
 }
 
 func (config ycsbConfig) ToProperties() *properties.Properties {
 	result := properties.NewProperties()
 	_, _, _ = result.Set("operationcount", fmt.Sprint(config.OperationCount))
 	_, _, _ = result.Set("recordcount", fmt.Sprint(config.RecordCount))
-	_, _, _ = result.Set("workload", config.Workload)
+	_, _, _ = result.Set("verbose", fmt.Sprint(config.Verbose))
 	_, _, _ = result.Set("readallfields", fmt.Sprint(config.ReadAllFields))
 	_, _, _ = result.Set("readproportion", fmt.Sprint(config.ReadProportion))
 	_, _, _ = result.Set("updateproportion", fmt.Sprint(config.UpdateProportion))
@@ -42,13 +43,20 @@ func (config ycsbConfig) ToProperties() *properties.Properties {
 	_, _, _ = result.Set("insertproportion", fmt.Sprint(config.InsertProportion))
 	_, _, _ = result.Set("readmodifywriteproportion", fmt.Sprint(config.ReadModifyWriteProportion))
 	_, _, _ = result.Set("requestdistribution", config.RequestDistribution)
-	_, _, _ = result.Set("verbose", fmt.Sprint(config.Verbose))
+
+	// tikv specific settings
 	_, _, _ = result.Set("tikv.pd", fmt.Sprint(config.Pd))
-	_, _, _ = result.Set("tikv.type", "raw")
-	_, _, _ = result.Set("tikv.conncount", "128")
-	_, _, _ = result.Set("tikv.batchsize", "128")
+	_, _, _ = result.Set("tikv.conncount", fmt.Sprint(config.ConnCount))
+	_, _, _ = result.Set("tikv.batchsize", fmt.Sprint(config.BatchSize))
+
+	// merge "global" config into this
 	_, _, _ = result.Set("threadcount", fmt.Sprint(threads))
 	_, _, _ = result.Set("dropdata", fmt.Sprint(dropData))
+
+	// default values
+	_, _, _ = result.Set("workload", "core")
+	_, _, _ = result.Set("tikv.type", "raw") // todo: try to support txn
+
 	return result
 }
 
@@ -59,21 +67,23 @@ func registerYcsb(root *cobra.Command) {
 		Use: "ycsb",
 	}
 
-	cmd.PersistentFlags().Uint32Var(&config.OperationCount, "operationcount", 100000, "")
-	cmd.PersistentFlags().Uint32Var(&config.RecordCount, "recordcount", 100000, "")
-	cmd.PersistentFlags().StringVar(&config.Workload, "workload", "core", "")
+	cmd.PersistentFlags().Uint32VarP(&config.OperationCount, "operationcount", "ops", 100000, "The number of operations to use during the run phase")
+	cmd.PersistentFlags().Uint32VarP(&config.RecordCount, "recordcount", "records", 100000, "The number of records to be read/write")
+
+	cmd.PersistentFlags().Uint32Var(&config.BatchSize, "batchsize", 128, "")
+	cmd.PersistentFlags().Uint32Var(&config.ConnCount, "conncount", 128, "")
 	cmd.PersistentFlags().BoolVar(&config.ReadAllFields, "readallfields", true, "")
 
-	cmd.PersistentFlags().Float32Var(&config.ReadProportion, "readproportion", 1, "")
-	cmd.PersistentFlags().Float32Var(&config.UpdateProportion, "updateproportion", 0, "")
-	cmd.PersistentFlags().Float32Var(&config.ScanProportion, "scanproportion", 0, "")
-	cmd.PersistentFlags().Float32Var(&config.InsertProportion, "insertproportion", 0, "")
-	cmd.PersistentFlags().Float32Var(&config.ReadModifyWriteProportion, "readmodifywriteproportion", 0, "")
-	cmd.PersistentFlags().StringVar(&config.Pd, "debug.pprof", pprofAddr, "")
+	cmd.PersistentFlags().Float32Var(&config.ReadProportion, "readproportion", 0.95, "What proportion of operations are reads")
+	cmd.PersistentFlags().Float32Var(&config.UpdateProportion, "updateproportion", 0.05, "What proportion of operations are updates")
+	cmd.PersistentFlags().Float32Var(&config.ScanProportion, "scanproportion", 0, "What proportion of operations are scans")
+	cmd.PersistentFlags().Float32Var(&config.InsertProportion, "insertproportion", 0, "What proportion of operations are inserts")
+	cmd.PersistentFlags().Float32Var(&config.ReadModifyWriteProportion, "readmodifywriteproportion", 0, "What proportion of operations are read-modify-write")
 
-	cmd.PersistentFlags().StringVar(&config.RequestDistribution, "requestdistribution", "uniform", "")
-	cmd.PersistentFlags().BoolVar(&config.Verbose, "verbose", false, "")
-	cmd.PersistentFlags().StringVar(&config.Pd, "tikv.pd", "127.0.0.1:2379", "")
+	cmd.PersistentFlags().StringVarP(&config.RequestDistribution, "requestdistribution", "dist", "zipfian", "The distribution of requests across the keyspace, [zipfian, uniform, latest]")
+
+	cmd.PersistentFlags().BoolVar(&config.Verbose, "verbose", false, "Verbose mode")
+	cmd.PersistentFlags().StringVarP(&config.Pd, "tikv.pd", "pd", "127.0.0.1:2379", "PD address")
 
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",
@@ -104,7 +114,7 @@ func executeYcsb(action string) {
 	case "run":
 		_, _, _ = configProp.Set("dotransactions", "true")
 	}
-	workloadCreator := ycsb.GetWorkloadCreator(config.Workload)
+	workloadCreator := ycsb.GetWorkloadCreator("core")
 	measurement.InitMeasure(configProp)
 	workload, err := workloadCreator.Create(configProp)
 	if err != nil {
@@ -115,7 +125,7 @@ func executeYcsb(action string) {
 	if err != nil {
 		panic(err)
 	}
-	c := client.NewClient(configProp, workload, client.DbWrapper{db})
+	c := client.NewClient(configProp, workload, client.DbWrapper{DB: db})
 	ctx := context.Background()
 	c.Run(ctx)
 	measurement.Output()
