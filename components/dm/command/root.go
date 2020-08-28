@@ -64,7 +64,7 @@ func init() {
 
 	rootCmd = &cobra.Command{
 		Use:           cliutil.OsArgs0(),
-		Short:         "Deploy a DM cluster for production",
+		Short:         "Deploy a DM cluster (experimental)",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       version.NewTiUPVersion().String(),
