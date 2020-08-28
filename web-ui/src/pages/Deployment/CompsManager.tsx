@@ -78,7 +78,7 @@ export default function CompsManager({
     {}
   )
 
-  const [curScaleOutNodes, setCurScaleOutNodes] = useLocalStorageState(
+  const [, setCurScaleOutNodes] = useLocalStorageState(
     'cur_scale_out_nodes',
     {}
   )

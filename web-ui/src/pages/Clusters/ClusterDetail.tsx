@@ -39,7 +39,7 @@ export default function ClusterDetailPage() {
     IClusterInstInfo[]
   >(`${clusterName}_cluster_topo`, [])
 
-  const [curScaleOutNodes, setCurScaleOutNodes] = useLocalStorageState<{
+  const [curScaleOutNodes] = useLocalStorageState<{
     cluster_name: string
     scale_out_nodes: any[]
   }>('cur_scale_out_nodes', { cluster_name: '', scale_out_nodes: [] })

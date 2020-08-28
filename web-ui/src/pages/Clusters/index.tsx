@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { Layout, Menu, Button, Space } from 'antd'
+import { Layout, Menu, Space } from 'antd'
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom'
 import { useSessionStorageState } from 'ahooks'
 import { getClusterList } from '../../utils/api'
@@ -24,7 +24,8 @@ export default function ClustersPage() {
     getClusterList().then((res) => {
       const clusters = res.data || []
       setClustersList(clusters)
-      if (clusters.length > 0) {
+      const paths = window.location.hash.split('/') // ['#', 'clusters', 'xxx']
+      if (clusters.length === 1 && paths.length === 2) {
         navigate(`/clusters/${clusters[0].name}`)
       }
     })
@@ -47,9 +48,9 @@ export default function ClustersPage() {
     <Layout style={{ minHeight: '100vh' }}>
       <Layout.Sider theme="light">
         <Menu>
-          {clustersList.map((clsuter) => (
-            <Menu.Item key={clsuter.name}>
-              <NavLink to={`/clusters/${clsuter.name}`}>{clsuter.name}</NavLink>
+          {clustersList.map((cluster) => (
+            <Menu.Item key={cluster.name}>
+              <NavLink to={`/clusters/${cluster.name}`}>{cluster.name}</NavLink>
             </Menu.Item>
           ))}
         </Menu>

@@ -14,7 +14,7 @@ function SiderMenu() {
   const [curMenu, setCurMenu] = useState('')
 
   useEffect(() => {
-    const path = window.location.pathname.split('/')[1]
+    const path = window.location.hash.split('/')[1]
     setCurMenu(path || '')
   })
 
