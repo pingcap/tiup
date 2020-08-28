@@ -5,19 +5,19 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"sync"
 	"time"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
-	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // Process represent process to be run by playground
 type Process interface {
 	Start() error
-	Wait(ctx context.Context) error
+	Wait() error
 	Pid() int
 	Uptime() string
 	SetOutputFile(fname string) error
@@ -28,6 +28,9 @@ type Process interface {
 type process struct {
 	cmd       *exec.Cmd
 	startTime time.Time
+
+	waitOnce sync.Once
+	waitErr  error
 }
 
 // Start the process
@@ -38,8 +41,12 @@ func (p *process) Start() error {
 }
 
 // Wait implements Instance interface.
-func (p *process) Wait(ctx context.Context) error {
-	return utils.WaitContext(ctx, p.cmd)
+func (p *process) Wait() error {
+	p.waitOnce.Do(func() {
+		p.waitErr = p.cmd.Wait()
+	})
+
+	return p.waitErr
 }
 
 // Pid implements Instance interface.
@@ -50,8 +57,9 @@ func (p *process) Pid() int {
 // Uptime implements Instance interface.
 func (p *process) Uptime() string {
 	s := p.cmd.ProcessState
-	if s != nil && s.Exited() {
-		return "exited"
+
+	if s != nil {
+		return s.String()
 	}
 
 	duration := time.Since(p.startTime)
@@ -83,7 +91,7 @@ func NewComponentProcess(ctx context.Context, dir, binPath, component string, ve
 	}
 
 	env := environment.GlobalEnv()
-	cmd, err := tiupexec.PrepareCommand(ctx, component, version, binPath, "", dir, arg, env)
+	cmd, err := tiupexec.PrepareCommand(ctx, component, version, binPath, "", dir, dir, arg, env)
 	if err != nil {
 		return nil, err
 	}

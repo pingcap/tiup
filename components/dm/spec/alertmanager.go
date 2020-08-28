@@ -37,6 +37,11 @@ func (c *AlertManagerComponent) Name() string {
 	return ComponentAlertManager
 }
 
+// Role implements Component interface.
+func (c *AlertManagerComponent) Role() string {
+	return cspec.RoleMonitor
+}
+
 // Instances implements Component interface.
 func (c *AlertManagerComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Alertmanager))
@@ -129,6 +134,15 @@ func (i *AlertManagerInstance) InitConfig(e executor.Executor, clusterName, clus
 	}
 	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
 		return err
+	}
+
+	// If the user specific a local config file, we should overwrite the default one with it
+	if spec.ConfigFilePath != "" {
+		name := filepath.Base(spec.ConfigFilePath)
+		dst := filepath.Join(paths.Deploy, "conf", name)
+		if err := i.TransferLocalConfigFile(e, spec.ConfigFilePath, dst); err != nil {
+			return errors.Annotate(err, "transfer alertmanager config failed")
+		}
 	}
 
 	return nil

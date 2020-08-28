@@ -14,7 +14,6 @@
 package command
 
 import (
-	"errors"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -29,8 +28,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
-	"github.com/pingcap/tiup/pkg/meta"
-	"github.com/pingcap/tiup/pkg/utils"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -81,7 +78,7 @@ conflict checks with other clusters`,
 				}
 
 				metadata, err := spec.ClusterMetadata(clusterName)
-				if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+				if err != nil {
 					return err
 				}
 				opt.user = metadata.User
