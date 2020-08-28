@@ -18,7 +18,6 @@ require (
 	github.com/cznic/b v0.0.0-20181122101859-a26611c4d92d // indirect
 	github.com/cznic/strutil v0.0.0-20181122101858-275e90344537 // indirect
 	github.com/facebookgo/ensure v0.0.0-20200202191622-63f1cf65ac4c // indirect
-	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/facebookgo/subset v0.0.0-20200203212716-c811ad88dec4 // indirect
 	github.com/fatih/color v1.9.0
 	github.com/gibson042/canonicaljson-go v1.0.3
@@ -36,6 +35,7 @@ require (
 	github.com/juju/loggo v0.0.0-20190526231331-6e530bcce5d8 // indirect
 	github.com/juju/testing v0.0.0-20191001232224-ce9dec17d28b // indirect
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
+	github.com/magiconair/properties v1.8.0
 	github.com/markbates/pkger v0.16.0
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-runewidth v0.0.7
@@ -46,6 +46,7 @@ require (
 	github.com/pingcap/failpoint v0.0.0-20200702092429-9f69995143ce
 	github.com/pingcap/fn v0.0.0-20200306044125-d5540d389059
 	github.com/pingcap/go-tpc v1.0.4-0.20200525052430-dc963cdeef62
+	github.com/pingcap/go-ycsb v0.0.0-20200226103513-00ca633a87d8
 	github.com/pingcap/kvproto v0.0.0-20200518112156-d4aeb467de29
 	github.com/pingcap/pd/v4 v4.0.0
 	github.com/pingcap/tidb-insight v0.3.1
@@ -57,7 +58,6 @@ require (
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.5.1
-	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect
 	github.com/tj/assert v0.0.0-20190920132354-ee03d75cd160
 	github.com/tj/go-termd v0.0.1
 	github.com/xo/usql v0.7.8
