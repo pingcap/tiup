@@ -28,7 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
-	tiuputils "github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -44,7 +44,7 @@ type checkOptions struct {
 func newCheckCmd() *cobra.Command {
 	opt := checkOptions{
 		opr:          &operator.CheckOptions{},
-		identityFile: path.Join(tiuputils.UserHome(), ".ssh", "id_rsa"),
+		identityFile: path.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
 		Use:   "check <topology.yml | cluster-name>",
@@ -112,7 +112,7 @@ conflict checks with other clusters`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&opt.user, "user", "u", tiuputils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
+	cmd.Flags().StringVarP(&opt.user, "user", "u", utils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
 	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", opt.identityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.usePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 
