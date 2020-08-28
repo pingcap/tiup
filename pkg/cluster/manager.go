@@ -1044,16 +1044,14 @@ func (m *Manager) Deploy(
 
 	exist, err := m.specManager.Exist(clusterName)
 	if err != nil {
-		err = perrs.AddStack(err)
-		return err
+		return perrs.AddStack(err)
 	}
 
 	if exist {
 		// FIXME: When change to use args, the suggestion text need to be updatem.
-		err = errDeployNameDuplicate.
+		return errDeployNameDuplicate.
 			New("Cluster name '%s' is duplicated", clusterName).
 			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
-		return err
 	}
 
 	metadata := m.specManager.NewMetadata()
@@ -1088,10 +1086,9 @@ func (m *Manager) Deploy(
 	}
 
 	if err := os.MkdirAll(m.specManager.Path(clusterName), 0755); err != nil {
-		err = errorx.InitializationFailed.
+		return errorx.InitializationFailed.
 			Wrap(err, "Failed to create cluster metadata directory '%s'", m.specManager.Path(clusterName)).
 			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
-		return err
 	}
 
 	var (
@@ -1251,8 +1248,7 @@ func (m *Manager) Deploy(
 			// FIXME: Map possible task errors and give suggestions.
 			return err
 		}
-		err = perrs.AddStack(err)
-		return err
+		return perrs.AddStack(err)
 	}
 
 	metadata.SetUser(globalOptions.User)
@@ -1260,13 +1256,11 @@ func (m *Manager) Deploy(
 	err = m.specManager.SaveMeta(clusterName, metadata)
 
 	if err != nil {
-		err = perrs.AddStack(err)
-		return err
+		return perrs.AddStack(err)
 	}
 
 	hint := color.New(color.Bold).Sprintf("%s start %s", cliutil.OsArgs0(), clusterName)
 	log.Infof("Deployed cluster `%s` successfully, you can start the cluster via `%s`", clusterName, hint)
-
 	return nil
 }
 
@@ -1576,8 +1570,7 @@ func (m *Manager) ScaleOut(
 			// FIXME: Map possible task errors and give suggestions.
 			return err
 		}
-		err = perrs.Trace(err)
-		return err
+		return perrs.Trace(err)
 	}
 
 	log.Infof("Scaled cluster `%s` out successfully", clusterName)
