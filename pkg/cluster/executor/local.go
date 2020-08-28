@@ -18,7 +18,6 @@ import (
 	"context"
 	"io/ioutil"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -39,8 +38,7 @@ func (l *Local) Execute(cmd string, sudo bool, timeout ...time.Duration) (stdout
 		defer cancel()
 	}
 
-	args := strings.Split(cmd, " ")
-	command := exec.CommandContext(ctx, args[0], args[1:]...)
+	command := exec.CommandContext(ctx, "bash", "-c", cmd)
 
 	stdoutBuf := new(bytes.Buffer)
 	stderrBuf := new(bytes.Buffer)

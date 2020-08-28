@@ -28,9 +28,10 @@ worker_servers:
 
 monitoring_servers:
   - host: 172.19.0.101
-
+    rule_dir: /tmp/local/prometheus
 grafana_servers:
   - host: 172.19.0.101
-
+    dashboard_dir: /tmp/local/grafana
 alertmanager_servers:
   - host: 172.19.0.101
+    config_file: /tmp/local/alertmanager/alertmanager.yml
