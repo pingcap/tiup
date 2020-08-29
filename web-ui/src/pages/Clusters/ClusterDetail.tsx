@@ -94,7 +94,7 @@ export default function ClusterDetailPage() {
             okText="下线"
             cancelText="取消"
           >
-            <a href="#">缩容</a>
+            <a>缩容</a>
           </Popconfirm>
         )
       },

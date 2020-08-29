@@ -265,7 +265,7 @@ export default function DeploymentTable({
                   okText="删除"
                   cancelText="取消"
                 >
-                  <a href="#">删除{forScaleOut ? '扩容' : '部署'}组件</a>
+                  <a>删除{forScaleOut ? '扩容' : '部署'}组件</a>
                 </Popconfirm>
               </Space>
             )
@@ -273,10 +273,7 @@ export default function DeploymentTable({
           if (forScaleOut === rec.for_scale_out) {
             return (
               <Space>
-                <a
-                  href="#"
-                  onClick={() => onEditComponent && onEditComponent(rec)}
-                >
+                <a onClick={() => onEditComponent && onEditComponent(rec)}>
                   编辑
                 </a>
                 <Divider type="vertical" />
@@ -286,7 +283,7 @@ export default function DeploymentTable({
                   okText="删除"
                   cancelText="取消"
                 >
-                  <a href="#">删除</a>
+                  <a>删除</a>
                 </Popconfirm>
               </Space>
             )

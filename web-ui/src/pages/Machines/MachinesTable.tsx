@@ -60,9 +60,7 @@ export default function MachinesTable({
         key: 'action',
         render: (text: any, rec: any) => (
           <Space>
-            <a href="#" onClick={() => onEdit && onEdit(rec)}>
-              编辑
-            </a>
+            <a onClick={() => onEdit && onEdit(rec)}>编辑</a>
             <Divider type="vertical" />
             <Popconfirm
               title="你确定要删除这台主机吗？"
@@ -70,7 +68,7 @@ export default function MachinesTable({
               okText="删除"
               cancelText="取消"
             >
-              <a href="#">删除</a>
+              <a>删除</a>
             </Popconfirm>
           </Space>
         ),
