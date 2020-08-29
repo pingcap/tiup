@@ -7,8 +7,6 @@ cd "${DEPLOY_DIR}" || exit 1
 # WARNING: This file was auto-generated. Do not edit!
 #          All your edit might be overwritten!
 
-cp {{.DeployDir}}/bin/prometheus/*.rules.yml {{.DeployDir}}/conf/
-
 exec > >(tee -i -a "{{.LogDir}}/prometheus.log")
 exec 2>&1
 

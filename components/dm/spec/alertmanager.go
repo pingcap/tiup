@@ -136,6 +136,15 @@ func (i *AlertManagerInstance) InitConfig(e executor.Executor, clusterName, clus
 		return err
 	}
 
+	// If the user specific a local config file, we should overwrite the default one with it
+	if spec.ConfigFilePath != "" {
+		name := filepath.Base(spec.ConfigFilePath)
+		dst := filepath.Join(paths.Deploy, "conf", name)
+		if err := i.TransferLocalConfigFile(e, spec.ConfigFilePath, dst); err != nil {
+			return errors.Annotate(err, "transfer alertmanager config failed")
+		}
+	}
+
 	return nil
 }
 

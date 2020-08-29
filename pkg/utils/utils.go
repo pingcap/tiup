@@ -16,6 +16,8 @@ package utils
 import (
 	"strconv"
 	"strings"
+
+	"github.com/spf13/pflag"
 )
 
 // JoinInt joins a slice of int to string
@@ -26,4 +28,15 @@ func JoinInt(nums []int, delim string) string {
 		result += delim
 	}
 	return strings.TrimSuffix(result, delim)
+}
+
+// IsFlagSetByUser check if the a flag is set by user explicitly
+func IsFlagSetByUser(flagSet *pflag.FlagSet, flagName string) bool {
+	setByUser := false
+	flagSet.Visit(func(f *pflag.Flag) {
+		if f.Name == flagName {
+			setByUser = true
+		}
+	})
+	return setByUser
 }
