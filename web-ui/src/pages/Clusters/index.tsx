@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Layout, Menu, Space } from 'antd'
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom'
 import { useSessionStorageState } from 'ahooks'
@@ -19,6 +19,7 @@ export default function ClustersPage() {
     []
   )
   const navigate = useNavigate()
+  const [curMenu, setCurMenu] = useState('')
 
   useEffect(() => {
     getClusterList().then((res) => {
@@ -31,6 +32,13 @@ export default function ClustersPage() {
     })
     // eslint-disable-next-line
   }, [])
+
+  useEffect(() => {
+    const paths = window.location.hash.split('/') // ['#', 'clusters', 'xxx']
+    if (paths[1] === 'clusters') {
+      setCurMenu(paths[2] || '')
+    }
+  })
 
   if (clustersList.length === 0) {
     return (
@@ -47,7 +55,7 @@ export default function ClustersPage() {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Layout.Sider theme="light">
-        <Menu>
+        <Menu selectedKeys={[curMenu]}>
           {clustersList.map((cluster) => (
             <Menu.Item key={cluster.name}>
               <NavLink to={`/clusters/${cluster.name}`}>{cluster.name}</NavLink>
