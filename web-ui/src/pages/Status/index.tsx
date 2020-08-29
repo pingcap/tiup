@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
 import { Root } from '../../components/Root'
-import OperationStatus, {
-  IOperationStatus,
-} from './OperationStatus'
+import OperationStatus, { IOperationStatus } from './OperationStatus'
 import { getStatus } from '../../utils/api'
 
 export default function StatusPage() {
@@ -45,7 +43,13 @@ export default function StatusPage() {
               operationStatus.err_msg ||
               operationStatus.cluster_name === '') && (
               <div style={{ marginTop: 16 }}>
-                <Link to="/clusters">进入集群管理</Link>
+                {operationStatus.operation_type === 'destroy' ? (
+                  <Link to="/clusters">进入集群管理</Link>
+                ) : (
+                  <Link to={`/clusters/${operationStatus.cluster_name}`}>
+                    进入集群管理
+                  </Link>
+                )}
               </div>
             )}
         </div>

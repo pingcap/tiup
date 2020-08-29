@@ -42,6 +42,10 @@ func main() {
 		api.POST("/clusters/:clusterName/scale_out", scaleOutClusterHandler)
 	}
 	router.StaticFS("/tiup", uiserver.Assets)
+	router.GET("/", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/tiup")
+		c.Abort()
+	})
 	_ = router.Run()
 }
 
