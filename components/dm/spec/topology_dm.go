@@ -542,7 +542,11 @@ func (topo *Topology) Validate() error {
 		return err
 	}
 
-	return topo.dirConflictsDetect()
+	if err := topo.dirConflictsDetect(); err != nil {
+		return err
+	}
+
+	return spec.RelativePathDetect(topo, isSkipField)
 }
 
 // BaseTopo implements Topology interface.
