@@ -67,8 +67,14 @@ const (
 	// EnvNameSSHPassPrompt is the variable name by which user specific the password prompt for sshpass
 	EnvNameSSHPassPrompt = "TIUP_SSHPASS_PROMPT"
 
-	// EnvNameNativeSSHClient is the variable name by which user can specific use natiive ssh client or not
+	// EnvNameNativeSSHClient is the variable name by which user can specific use native ssh client or not
 	EnvNameNativeSSHClient = "TIUP_NATIVE_SSH"
+
+	// EnvNameNativeSSHPath is the variable name by which user can specific the native executable ssh binary path
+	EnvNameNativeSSHPath = "TIUP_NATIVE_SSH_PATH"
+
+	// EnvNameNativeSCPPath is the variable name by which user can specific the use native executable scp binary path
+	EnvNameNativeSCPPath = "TIUP_NATIVE_SCP_PATH"
 
 	// MetaFilename represents the process meta file name
 	MetaFilename = "tiup_process_meta"

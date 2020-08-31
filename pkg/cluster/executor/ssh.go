@@ -301,7 +301,17 @@ func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 		defer cancel()
 	}
 
-	args := []string{"ssh", "-o", "StrictHostKeyChecking=no"}
+	ssh := "ssh"
+
+	isExec := func(mode os.FileMode) bool { return mode&0111 == 0111 }
+	if val := os.Getenv(localdata.EnvNameNativeSSHPath); val != "" {
+		if info, err := os.Stat(val); err == nil && !info.IsDir() && isExec(info.Mode()) {
+			ssh = val
+		}
+	}
+
+	args := []string{ssh, "-o", "StrictHostKeyChecking"}
+
 	args = e.configArgs(args) // prefix and postfix args
 	args = append(args, fmt.Sprintf("%s@%s", e.Config.User, e.Config.Host), cmd)
 
@@ -348,7 +358,16 @@ func (e *NativeSSHExecutor) Transfer(src string, dst string, download bool) erro
 		return e.ConnectionTestResult
 	}
 
-	args := []string{"scp", "-r", "-o", "StrictHostKeyChecking=no"}
+	scp := "ssh"
+
+	isExec := func(mode os.FileMode) bool { return mode&0111 == 0111 }
+	if val := os.Getenv(localdata.EnvNameNativeSSHPath); val != "" {
+		if info, err := os.Stat(val); err == nil && !info.IsDir() && isExec(info.Mode()) {
+			scp = val
+		}
+	}
+
+	args := []string{scp, "-r", "-o", "StrictHostKeyChecking=no"}
 	args = e.configArgs(args) // prefix and postfix args
 
 	if download {
