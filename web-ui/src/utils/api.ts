@@ -1,6 +1,7 @@
 import request from './request'
 
-const API_URL = 'http://127.0.0.1:8080/api'
+const API_URL =
+  process.env.NODE_ENV === 'production' ? '/api' : 'http://127.0.0.1:8080/api'
 
 function fullUrl(path: string): string {
   return `${API_URL}/${path}`
