@@ -82,25 +82,34 @@ func deployHandler(c *gin.Context) {
 	topoFilePath := tmpfile.Name()
 	tmpfile.Close()
 
-	// create private key file
-	tmpfile, err = ioutil.TempFile("", "private_key")
-	if err != nil {
-		_ = c.Error(err)
-		return
+	opt := cluster.DeployOptions{
+		User: req.GlobalLoginOptions.Username,
 	}
-	_, _ = tmpfile.WriteString(strings.TrimSpace(req.GlobalLoginOptions.PrivateKey))
-	identifyFile := tmpfile.Name()
-	tmpfile.Close()
+	if req.GlobalLoginOptions.Password != "" {
+		opt.UsePassword = true
+		opt.Pass = &req.GlobalLoginOptions.Password
+	} else {
+		// create private key file
+		tmpfile, err = ioutil.TempFile("", "private_key")
+		if err != nil {
+			_ = c.Error(err)
+			return
+		}
+		_, _ = tmpfile.WriteString(strings.TrimSpace(req.GlobalLoginOptions.PrivateKey))
+		identifyFile := tmpfile.Name()
+		tmpfile.Close()
+
+		opt.UsePassword = false
+		opt.IdentityFile = identifyFile
+		opt.Pass = &req.GlobalLoginOptions.PrivateKeyPassword
+	}
 
 	go func() {
 		manager.DoDeploy(
 			req.ClusterName,
 			req.TiDBVersion,
 			topoFilePath,
-			cluster.DeployOptions{
-				User:         req.GlobalLoginOptions.Username,
-				IdentityFile: identifyFile,
-			},
+			opt,
 			command.PostDeployHook,
 			true,
 			120,
@@ -250,15 +259,27 @@ func scaleOutClusterHandler(c *gin.Context) {
 	topoFilePath := tmpfile.Name()
 	tmpfile.Close()
 
-	// create private key file
-	tmpfile, err = ioutil.TempFile("", "private_key")
-	if err != nil {
-		_ = c.Error(err)
-		return
+	opt := cluster.ScaleOutOptions{
+		User: req.GlobalLoginOptions.Username,
 	}
-	_, _ = tmpfile.WriteString(strings.TrimSpace(req.GlobalLoginOptions.PrivateKey))
-	identifyFile := tmpfile.Name()
-	tmpfile.Close()
+	if req.GlobalLoginOptions.Password != "" {
+		opt.UsePassword = true
+		opt.Pass = &req.GlobalLoginOptions.Password
+	} else {
+		// create private key file
+		tmpfile, err = ioutil.TempFile("", "private_key")
+		if err != nil {
+			_ = c.Error(err)
+			return
+		}
+		_, _ = tmpfile.WriteString(strings.TrimSpace(req.GlobalLoginOptions.PrivateKey))
+		identifyFile := tmpfile.Name()
+		tmpfile.Close()
+
+		opt.UsePassword = false
+		opt.IdentityFile = identifyFile
+		opt.Pass = &req.GlobalLoginOptions.PrivateKeyPassword
+	}
 
 	go func() {
 		manager.DoScaleOut(
@@ -266,10 +287,7 @@ func scaleOutClusterHandler(c *gin.Context) {
 			topoFilePath,
 			command.PostScaleOutHook,
 			command.Final,
-			cluster.ScaleOutOptions{
-				User:         req.GlobalLoginOptions.Username,
-				IdentityFile: identifyFile,
-			},
+			opt,
 			true,
 			120,
 			5,

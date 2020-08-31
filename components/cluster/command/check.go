@@ -103,7 +103,7 @@ conflict checks with other clusters`,
 				}
 			}
 
-			sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.identityFile, opt.usePassword)
+			sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.identityFile, opt.usePassword, nil)
 			if err != nil {
 				return err
 			}

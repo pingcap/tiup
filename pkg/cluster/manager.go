@@ -982,6 +982,8 @@ type ScaleOutOptions struct {
 	SkipCreateUser bool   // don't create user
 	IdentityFile   string // path to the private key file
 	UsePassword    bool   // use password instead of identity file for ssh connection
+
+	Pass *string // password for login User or passphrase for IdentityFile
 }
 
 // DeployOptions contains the options for scale out.
@@ -992,6 +994,8 @@ type DeployOptions struct {
 	IdentityFile      string // path to the private key file
 	UsePassword       bool   // use password instead of identity file for ssh connection
 	IgnoreConfigCheck bool   // ignore config check result
+
+	Pass *string // password for login User or passphrase for IdentityFile
 }
 
 // DeployerInstance is a instance can deploy to a target deploy directory.
@@ -1080,7 +1084,10 @@ func (m *Manager) Deploy(
 		}
 	}
 
-	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword)
+	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(
+		opt.IdentityFile,
+		opt.UsePassword,
+		opt.Pass)
 	if err != nil {
 		return err
 	}
@@ -1551,7 +1558,10 @@ func (m *Manager) ScaleOut(
 		}
 	}
 
-	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword)
+	sshConnProps, err := cliutil.ReadIdentityFileOrPassword(
+		opt.IdentityFile,
+		opt.UsePassword,
+		opt.Pass)
 	if err != nil {
 		return err
 	}
