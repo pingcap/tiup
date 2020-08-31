@@ -4,11 +4,11 @@ import { useLocalStorageState } from 'ahooks'
 
 import MachineForm, { IMachine } from './MachineForm'
 import MachinesTable from './MachinesTable'
-import { IComponent } from '../Deployment/DeploymentTable'
 import { Root } from '../../components/Root'
 import GlobalLoginOptionsForm, {
   IGlobalLoginOptions,
 } from './GlobalLoginOptionsForm'
+import { BaseComp } from '../../types/comps'
 
 export default function MachinesPage() {
   const [showForm, setShowForm] = useState(false)
@@ -18,7 +18,7 @@ export default function MachinesPage() {
     [key: string]: IMachine
   }>('machines', {})
   const [components, setComponents] = useLocalStorageState<{
-    [key: string]: IComponent
+    [key: string]: BaseComp
   }>('components', {})
 
   const [globalLoginOptions, setGlobalLoginOptions] = useLocalStorageState<

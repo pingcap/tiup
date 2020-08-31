@@ -2,7 +2,7 @@ import React from 'react'
 import { Form, Input, Button } from 'antd'
 
 import {
-  IComponent,
+  BaseComp,
   DEF_DEPLOY_DIR_PREFIX,
   DEF_DATA_DIR_PREFIX,
   DEF_TIDB_PORT,
@@ -21,11 +21,11 @@ import {
   DEF_PROM_PORT,
   DEF_ALERT_WEB_PORT,
   DEF_ALERT_CLUSTER_PORT,
-} from './DeploymentTable'
+} from '../../types/comps'
 
 interface IEditCompFormProps {
-  comp?: IComponent
-  onUpdateComp: (comp: IComponent) => void
+  comp?: BaseComp
+  onUpdateComp: (comp: BaseComp) => void
 }
 
 export default function EditCompForm({

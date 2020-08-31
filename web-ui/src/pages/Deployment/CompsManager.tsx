@@ -1,36 +1,17 @@
 import React, { useCallback, useState } from 'react'
 import { useLocalStorageState } from 'ahooks'
 import { Drawer, Button, Modal, Form, Input, Select } from 'antd'
-import uniqid from 'uniqid'
 import yaml from 'yaml'
 
 import { IMachine } from '../Machines/MachineForm'
-import DeploymentTable, {
-  IComponent,
-  COMPONENT_TYPES,
-  DEF_TIDB_PORT,
-  DEF_TIDB_STATUS_PORT,
-  DEF_TIKV_PORT,
-  DEF_TIKV_STATUS_PORT,
-  DEF_TIFLASH_TCP_PORT,
-  DEF_TIFLASH_HTTP_PORT,
-  DEF_TIFLASH_SERVICE_PORT,
-  DEF_TIFLASH_PROXY_PORT,
-  DEF_TIFLASH_PROXY_STATUS_PORT,
-  DEF_TIFLASH_METRICS_PORT,
-  DEF_PD_PEER_PORT,
-  DEF_PROM_PORT,
-  DEF_GRAFANA_PORT,
-  DEF_ALERT_CLUSTER_PORT,
-  DEF_PD_CLIENT_PORT,
-  DEF_ALERT_WEB_PORT,
-} from './DeploymentTable'
+import DeploymentTable from './DeploymentTable'
 import EditCompForm from './EditCompForm'
 import TopoPreview, { genTopo } from './TopoPreview'
 import { Root } from '../../components/Root'
 import { deployCluster, scaleOutCluster } from '../../utils/api'
 import { IGlobalLoginOptions } from '../Machines/GlobalLoginOptionsForm'
 import { useNavigate } from 'react-router-dom'
+import { BaseComp, CompTypes } from '../../types/comps'
 
 // TODO: fetch from API
 const TIDB_VERSIONS = [
@@ -62,9 +43,9 @@ export default function CompsManager({
     [key: string]: IMachine
   }>('machines', {})
   const [components, setComponents] = useLocalStorageState<{
-    [key: string]: IComponent
+    [key: string]: BaseComp
   }>('components', {})
-  const [curComp, setCurComp] = useState<IComponent | undefined>(undefined)
+  const [curComp, setCurComp] = useState<BaseComp | undefined>(undefined)
 
   const [previewYaml, setPreviewYaml] = useState(false)
 
@@ -88,65 +69,16 @@ export default function CompsManager({
   const [form] = Form.useForm()
 
   const handleAddComponent = useCallback(
-    (machine: IMachine, componentType: string, forScaleOut: boolean) => {
-      let comp: IComponent = {
-        id: uniqid(),
-        machineID: machine.id,
-        type: componentType,
-        for_scale_out: forScaleOut,
-        priority: COMPONENT_TYPES.indexOf(componentType),
-      }
+    (machine: IMachine, componentType: CompTypes, forScaleOut: boolean) => {
+      let comp = BaseComp.create(componentType, machine.id, forScaleOut)
       const existedSameComps = Object.values(components).filter(
         (comp) => comp.type === componentType && comp.machineID === machine.id
       )
       if (existedSameComps.length > 0) {
-        const lastComp = existedSameComps[existedSameComps.length - 1] as any
+        const lastComp = existedSameComps[existedSameComps.length - 1]
         comp.deploy_dir_prefix = lastComp.deploy_dir_prefix
         comp.data_dir_prefix = lastComp.data_dir_prefix
-        let newComp = comp as any
-        switch (componentType) {
-          case 'TiDB':
-            newComp.port = (lastComp.port || DEF_TIDB_PORT) + 1
-            newComp.status_port =
-              (lastComp.status_port || DEF_TIDB_STATUS_PORT) + 1
-            break
-          case 'TiKV':
-            newComp.port = (lastComp.port || DEF_TIKV_PORT) + 1
-            newComp.status_port =
-              (lastComp.status_port || DEF_TIKV_STATUS_PORT) + 1
-            break
-          case 'TiFlash':
-            newComp.tcp_port = (lastComp.tcp_port || DEF_TIFLASH_TCP_PORT) + 1
-            newComp.http_port =
-              (lastComp.http_port || DEF_TIFLASH_HTTP_PORT) + 1
-            newComp.flash_service_port =
-              (lastComp.flash_service_port || DEF_TIFLASH_SERVICE_PORT) + 1
-            newComp.flash_proxy_port =
-              (lastComp.flash_proxy_port || DEF_TIFLASH_PROXY_PORT) + 1
-            newComp.flash_proxy_status_port =
-              (lastComp.flash_proxy_status_port ||
-                DEF_TIFLASH_PROXY_STATUS_PORT) + 1
-            newComp.metrics_port =
-              (lastComp.metrics_port || DEF_TIFLASH_METRICS_PORT) + 1
-            break
-          case 'PD':
-            newComp.client_port = (lastComp.peer_port || DEF_PD_PEER_PORT) + 1
-            newComp.peer_port = (lastComp.peer_port || DEF_PD_PEER_PORT) + 2
-            break
-          case 'Prometheus':
-            newComp.port = (lastComp.port || DEF_PROM_PORT) + 1
-            break
-          case 'Grafana':
-            newComp.port = (lastComp.port || DEF_GRAFANA_PORT) + 2
-            break
-          case 'AlertManager':
-            newComp.web_port =
-              (lastComp.cluster_port || DEF_ALERT_CLUSTER_PORT) + 1
-            newComp.cluster_port =
-              (lastComp.cluster_port || DEF_ALERT_CLUSTER_PORT) + 2
-            break
-        }
-        comp = newComp
+        comp.increasePorts(lastComp)
       }
       setComponents({
         ...components,
@@ -157,7 +89,7 @@ export default function CompsManager({
   )
 
   const handleUpdateComponent = useCallback(
-    (comp: IComponent) => {
+    (comp: BaseComp) => {
       setComponents({
         ...components,
         [comp.id]: comp,
@@ -168,7 +100,7 @@ export default function CompsManager({
   )
 
   const handleDeleteComponent = useCallback(
-    (comp: IComponent) => {
+    (comp: BaseComp) => {
       const newComps = { ...components }
       delete newComps[comp.id]
       setComponents(newComps)
@@ -220,33 +152,7 @@ export default function CompsManager({
 
     const scaleOutNodes: any[] = []
     for (const comp of scaleOutComps) {
-      let port: number = 0
-      let rec = comp as any
-
-      switch (rec.type) {
-        case 'TiDB':
-          port = rec.port || DEF_TIDB_PORT
-          break
-        case 'TiKV':
-          port = rec.port || DEF_TIKV_PORT
-          break
-        case 'TiFlash':
-          port = rec.tcp_port || DEF_TIFLASH_TCP_PORT
-          break
-        case 'PD':
-          port = rec.client_port || DEF_PD_CLIENT_PORT
-          break
-        case 'Prometheus':
-          port = rec.port || DEF_PROM_PORT
-          break
-        case 'Grafana':
-          port = rec.port || DEF_GRAFANA_PORT
-          break
-        case 'AlertManager':
-          port = rec.web_port || DEF_ALERT_WEB_PORT
-          break
-      }
-
+      let port: number = comp.symbolPort()
       const machine = machines[comp.machineID]
       scaleOutNodes.push({ id: comp.id, node: `${machine.host}:${port}` })
     }

@@ -10,7 +10,7 @@ const COMP_COLORS = {
   AlertManager: 'blue',
 }
 
-type CompTypes = keyof typeof COMP_COLORS // "TiDB" | "TiKV" | "TiFlash" | ...
+export type CompTypes = keyof typeof COMP_COLORS // "TiDB" | "TiKV" | "TiFlash" | ...
 
 export const COMP_TYPES_ARR = [
   'TiDB',
@@ -24,8 +24,8 @@ export const COMP_TYPES_ARR = [
 
 ///////////////////////
 
-const DEF_DEPLOY_DIR_PREFIX = 'tidb-deploy'
-const DEF_DATA_DIR_PREFIX = 'tidb-data'
+export const DEF_DEPLOY_DIR_PREFIX = 'tidb-deploy'
+export const DEF_DATA_DIR_PREFIX = 'tidb-data'
 export abstract class BaseComp {
   id: string
   machineID: string
@@ -46,20 +46,58 @@ export abstract class BaseComp {
     this.color = COMP_COLORS[compType]
   }
 
+  public paths(): string {
+    return `${this.deploy_dir_prefix || DEF_DEPLOY_DIR_PREFIX},${
+      this.data_dir_prefix || DEF_DATA_DIR_PREFIX
+    }`
+  }
+
+  public abstract symbolPort(): number
   public abstract ports(): string
   public abstract increasePorts(comp: BaseComp): void
+
+  static create(
+    compType: CompTypes,
+    machineID: string,
+    for_scale_out: boolean
+  ): BaseComp {
+    switch (compType) {
+      case 'TiDB':
+        return new TiDBComp(machineID, for_scale_out)
+      case 'TiKV':
+        return new TiKVComp(machineID, for_scale_out)
+      case 'TiFlash':
+        return new TiFlashComp(machineID, for_scale_out)
+      case 'PD':
+        return new PDComp(machineID, for_scale_out)
+      case 'Prometheus':
+        return new PromComp(machineID, for_scale_out)
+      case 'Grafana':
+        return new GrafanaComp(machineID, for_scale_out)
+      case 'AlertManager':
+        return new AlertManagerComp(machineID, for_scale_out)
+    }
+  }
 }
 
 ///////////////////////
 
-const DEF_TIDB_PORT = 4000
-const DEF_TIDB_STATUS_PORT = 10080
+export const DEF_TIDB_PORT = 4000
+export const DEF_TIDB_STATUS_PORT = 10080
 export class TiDBComp extends BaseComp {
   port?: number
   status_port?: number
 
   constructor(machineID: string, for_scale_out: boolean) {
     super(machineID, 'TiDB', for_scale_out)
+  }
+
+  public paths(): string {
+    return `${this.deploy_dir_prefix || DEF_DEPLOY_DIR_PREFIX}`
+  }
+
+  public symbolPort() {
+    return this.port || DEF_TIDB_PORT
   }
 
   public ports() {
@@ -77,14 +115,18 @@ export class TiDBComp extends BaseComp {
 
 ///////////////////////
 
-const DEF_TIKV_PORT = 20160
-const DEF_TIKV_STATUS_PORT = 20180
+export const DEF_TIKV_PORT = 20160
+export const DEF_TIKV_STATUS_PORT = 20180
 export class TiKVComp extends BaseComp {
   port?: number
   status_port?: number
 
   constructor(machineID: string, for_scale_out: boolean) {
     super(machineID, 'TiKV', for_scale_out)
+  }
+
+  public symbolPort() {
+    return this.port || DEF_TIKV_PORT
   }
 
   public ports() {
@@ -102,12 +144,12 @@ export class TiKVComp extends BaseComp {
 
 ///////////////////////
 
-const DEF_TIFLASH_TCP_PORT = 9000
-const DEF_TIFLASH_HTTP_PORT = 8123
-const DEF_TIFLASH_SERVICE_PORT = 3930
-const DEF_TIFLASH_PROXY_PORT = 20170
-const DEF_TIFLASH_PROXY_STATUS_PORT = 20292
-const DEF_TIFLASH_METRICS_PORT = 8234
+export const DEF_TIFLASH_TCP_PORT = 9000
+export const DEF_TIFLASH_HTTP_PORT = 8123
+export const DEF_TIFLASH_SERVICE_PORT = 3930
+export const DEF_TIFLASH_PROXY_PORT = 20170
+export const DEF_TIFLASH_PROXY_STATUS_PORT = 20292
+export const DEF_TIFLASH_METRICS_PORT = 8234
 export class TiFlashComp extends BaseComp {
   tcp_port?: number
   http_port?: number
@@ -118,6 +160,10 @@ export class TiFlashComp extends BaseComp {
 
   constructor(machineID: string, for_scale_out: boolean) {
     super(machineID, 'TiFlash', for_scale_out)
+  }
+
+  public symbolPort() {
+    return this.tcp_port || DEF_TIFLASH_TCP_PORT
   }
 
   public ports() {
@@ -145,14 +191,18 @@ export class TiFlashComp extends BaseComp {
 
 ///////////////////////
 
-const DEF_PD_CLIENT_PORT = 2379
-const DEF_PD_PEER_PORT = 2380
+export const DEF_PD_CLIENT_PORT = 2379
+export const DEF_PD_PEER_PORT = 2380
 export class PDComp extends BaseComp {
   client_port?: number
   peer_port?: number
 
   constructor(machineID: string, for_scale_out: boolean) {
     super(machineID, 'PD', for_scale_out)
+  }
+
+  public symbolPort() {
+    return this.client_port || DEF_PD_CLIENT_PORT
   }
 
   public ports() {
@@ -170,12 +220,16 @@ export class PDComp extends BaseComp {
 
 ///////////////////////
 
-const DEF_PROM_PORT = 9090
+export const DEF_PROM_PORT = 9090
 export class PromComp extends BaseComp {
   port?: number
 
   constructor(machineID: string, for_scale_out: boolean) {
     super(machineID, 'Prometheus', for_scale_out)
+  }
+
+  public symbolPort() {
+    return this.port || DEF_PROM_PORT
   }
 
   public ports() {
@@ -190,12 +244,20 @@ export class PromComp extends BaseComp {
 
 ///////////////////////
 
-const DEF_GRAFANA_PORT = 3000
+export const DEF_GRAFANA_PORT = 3000
 export class GrafanaComp extends BaseComp {
   port?: number
 
   constructor(machineID: string, for_scale_out: boolean) {
     super(machineID, 'Grafana', for_scale_out)
+  }
+
+  public paths(): string {
+    return `${this.deploy_dir_prefix || DEF_DEPLOY_DIR_PREFIX}`
+  }
+
+  public symbolPort() {
+    return this.port || DEF_GRAFANA_PORT
   }
 
   public ports() {
@@ -210,14 +272,18 @@ export class GrafanaComp extends BaseComp {
 
 ///////////////////////
 
-const DEF_ALERT_WEB_PORT = 9093
-const DEF_ALERT_CLUSTER_PORT = 9094
+export const DEF_ALERT_WEB_PORT = 9093
+export const DEF_ALERT_CLUSTER_PORT = 9094
 export class AlertManagerComp extends BaseComp {
   web_port?: number
   cluster_port?: number
 
   constructor(machineID: string, for_scale_out: boolean) {
     super(machineID, 'AlertManager', for_scale_out)
+  }
+
+  public symbolPort() {
+    return this.web_port || DEF_ALERT_WEB_PORT
   }
 
   public ports() {

@@ -8,104 +8,19 @@ import {
   IGlobalLoginOptions,
   DEF_UESRNAME,
 } from '../Machines/GlobalLoginOptionsForm'
-
-export const COMPONENT_TYPES = [
-  'TiDB',
-  'TiKV',
-  'TiFlash',
-  'PD',
-  'Prometheus',
-  'Grafana',
-  'AlertManager',
-]
-
-const COMPONENT_COLORS = {
-  TiDB: 'magenta',
-  TiKV: 'orange',
-  TiFlash: 'red',
-  PD: 'purple',
-  Prometheus: 'green',
-  Grafana: 'cyan',
-  AlertManager: 'blue',
-}
-
-export interface IComponent {
-  id: string
-  machineID: string
-  type: string
-  for_scale_out: boolean
-  priority: number
-
-  deploy_dir_prefix?: string // "tidb-deploy"
-  data_dir_prefix?: string // "tidb-data", TiDB and Grafana have no data_dir
-}
-export const DEF_DEPLOY_DIR_PREFIX = 'tidb-deploy'
-export const DEF_DATA_DIR_PREFIX = 'tidb-data'
-
-export interface ITiDBComponent extends IComponent {
-  port?: number // 4000
-  status_port?: number // 10080
-}
-export const DEF_TIDB_PORT = 4000
-export const DEF_TIDB_STATUS_PORT = 10080
-
-export interface ITiKVComponent extends IComponent {
-  port?: number // 20160
-  status_port?: number // 20180
-}
-export const DEF_TIKV_PORT = 20160
-export const DEF_TIKV_STATUS_PORT = 20180
-
-export interface ITiFlashComponent extends IComponent {
-  tcp_port?: number // 9000
-  http_port?: number // 8123
-  flash_service_port?: number // 3930
-  flash_proxy_port?: number // 20170
-  flash_proxy_status_port?: number // 20292
-  metrics_port?: number // 8234
-}
-export const DEF_TIFLASH_TCP_PORT = 9000
-export const DEF_TIFLASH_HTTP_PORT = 8123
-export const DEF_TIFLASH_SERVICE_PORT = 3930
-export const DEF_TIFLASH_PROXY_PORT = 20170
-export const DEF_TIFLASH_PROXY_STATUS_PORT = 20292
-export const DEF_TIFLASH_METRICS_PORT = 8234
-
-export interface IPDComponent extends IComponent {
-  client_port?: number // 2379
-  peer_port?: number // 2380
-}
-export const DEF_PD_CLIENT_PORT = 2379
-export const DEF_PD_PEER_PORT = 2380
-
-export interface IPrometheusComponent extends IComponent {
-  port?: number // 9090
-}
-export const DEF_PROM_PORT = 9090
-
-export interface IGrafanaComponent extends IComponent {
-  port?: number // 3000
-}
-export const DEF_GRAFANA_PORT = 3000
-
-export interface IAlertManagerComponent extends IComponent {
-  web_port?: number // 9093
-  cluster_port?: number // 9094
-}
-export const DEF_ALERT_WEB_PORT = 9093
-export const DEF_ALERT_CLUSTER_PORT = 9094
+import { BaseComp, COMP_TYPES_ARR, CompTypes } from '../../types/comps'
 
 interface IDeploymentTableProps {
   forScaleOut: boolean // deploy or scale out
   machines: { [key: string]: IMachine }
-  components: { [key: string]: IComponent }
+  components: { [key: string]: BaseComp }
   onAddComponent?: (
     machine: IMachine,
-    componentType: string,
+    componentType: CompTypes,
     forScaleOut: boolean
   ) => void
-  onEditComponent?: (comp: IComponent) => void
-  onDeleteComponent?: (comp: IComponent) => void
+  onEditComponent?: (comp: BaseComp) => void
+  onDeleteComponent?: (comp: BaseComp) => void
   onDeleteComponents?: (machine: IMachine, forScaleOut: boolean) => void
 }
 
@@ -124,7 +39,7 @@ export default function DeploymentTable({
   )
 
   const dataSource = useMemo(() => {
-    let machinesAndComps: (IMachine | IComponent)[] = []
+    let machinesAndComps: (IMachine | BaseComp)[] = []
     const sortedMachines = Object.values(machines).sort((a, b) =>
       a.host > b.host ? 1 : -1
     )
@@ -166,7 +81,7 @@ export default function DeploymentTable({
           return (
             <div>
               --&nbsp;
-              <Tag key={rec.type} color={(COMPONENT_COLORS as any)[rec.type]}>
+              <Tag key={rec.type} color={rec.color}>
                 {rec.type}
                 {rec.for_scale_out ? ' (Scale)' : ''}
               </Tag>
@@ -183,49 +98,7 @@ export default function DeploymentTable({
               rec.username || globalLoginOptions.username || DEF_UESRNAME
             }, DC=${rec.dc}, Rack=${rec.rack}`
           }
-          switch (rec.type) {
-            case 'TiDB':
-              return `Port=${rec.port || DEF_TIDB_PORT}/${
-                rec.status_port || DEF_TIDB_STATUS_PORT
-              }, Path=${rec.deploy_dir_prefix || DEF_DEPLOY_DIR_PREFIX}`
-            case 'TiKV':
-              return `Port=${rec.port || DEF_TIKV_PORT}/${
-                rec.status_port || DEF_TIKV_STATUS_PORT
-              }, Path=${rec.deploy_dir_prefix || DEF_DEPLOY_DIR_PREFIX},${
-                rec.data_dir_prefix || DEF_DATA_DIR_PREFIX
-              }`
-            case 'TiFlash':
-              return `Port=${rec.tcp_port || DEF_TIFLASH_TCP_PORT}/${
-                rec.http_port || DEF_TIFLASH_HTTP_PORT
-              }/${rec.flash_service_port || DEF_TIFLASH_SERVICE_PORT}/${
-                rec.flash_proxy_port || DEF_TIFLASH_PROXY_PORT
-              }/${
-                rec.flash_proxy_status_port || DEF_TIFLASH_PROXY_STATUS_PORT
-              }/${rec.metrics_port || DEF_TIFLASH_METRICS_PORT}, Path=${
-                rec.deploy_dir_prefix || DEF_DEPLOY_DIR_PREFIX
-              },${rec.data_dir_prefix || DEF_DATA_DIR_PREFIX}`
-            case 'PD':
-              return `Port=${rec.client_port || DEF_PD_CLIENT_PORT}/${
-                rec.peer_port || DEF_PD_PEER_PORT
-              }, Path=${rec.deploy_dir_prefix || DEF_DEPLOY_DIR_PREFIX},${
-                rec.data_dir_prefix || DEF_DATA_DIR_PREFIX
-              }`
-            case 'Prometheus':
-              return `Port=${rec.port || DEF_PROM_PORT}, Path=${
-                rec.deploy_dir_prefix || DEF_DEPLOY_DIR_PREFIX
-              },${rec.data_dir_prefix || DEF_DATA_DIR_PREFIX}`
-            case 'Grafana':
-              return `Port=${rec.port || DEF_GRAFANA_PORT}, Path=${
-                rec.deploy_dir_prefix || DEF_DEPLOY_DIR_PREFIX
-              }`
-            case 'AlertManager':
-              return `Port=${rec.web_port || DEF_ALERT_WEB_PORT}/${
-                rec.cluster_port || DEF_ALERT_CLUSTER_PORT
-              }, Path=${rec.deploy_dir_prefix || DEF_DEPLOY_DIR_PREFIX},${
-                rec.data_dir_prefix || DEF_DATA_DIR_PREFIX
-              }`
-          }
-          return '...'
+          return `Port=${rec.ports()}, Path=${rec.paths()}`
         },
       },
       {
@@ -240,10 +113,10 @@ export default function DeploymentTable({
                     <Menu
                       onClick={(e) =>
                         onAddComponent &&
-                        onAddComponent(rec, e.key as string, forScaleOut)
+                        onAddComponent(rec, e.key as CompTypes, forScaleOut)
                       }
                     >
-                      {COMPONENT_TYPES.map((t) => (
+                      {COMP_TYPES_ARR.map((t) => (
                         <Menu.Item key={t}>{t}</Menu.Item>
                       ))}
                     </Menu>

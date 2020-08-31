@@ -13,7 +13,7 @@ import {
 } from '../../utils/api'
 import { Root } from '../../components/Root'
 import { ICluster } from '.'
-import { IComponent } from '../Deployment/DeploymentTable'
+import { BaseComp } from '../../types/comps'
 
 export interface IClusterInstInfo {
   id: string
@@ -44,7 +44,7 @@ export default function ClusterDetailPage() {
     scale_out_nodes: any[]
   }>('cur_scale_out_nodes', { cluster_name: '', scale_out_nodes: [] })
   const [components, setComponents] = useLocalStorageState<{
-    [key: string]: IComponent
+    [key: string]: BaseComp
   }>('components', {})
 
   const [loadingTopo, setLoadingTopo] = useState(false)

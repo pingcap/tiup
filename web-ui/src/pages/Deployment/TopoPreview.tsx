@@ -3,16 +3,16 @@ import yaml from 'yaml'
 
 import { IMachine } from '../Machines/MachineForm'
 import {
-  IComponent,
-  COMPONENT_TYPES,
+  BaseComp,
   DEF_DEPLOY_DIR_PREFIX,
   DEF_DATA_DIR_PREFIX,
-} from './DeploymentTable'
+  COMP_TYPES_ARR,
+} from '../../types/comps'
 
 interface ITopoPreviewProps {
   forScaleOut: boolean
   machines: { [key: string]: IMachine }
-  components: { [key: string]: IComponent }
+  components: { [key: string]: BaseComp }
 }
 
 // TODO: split into 2 methods: genDeployTopo, genScaleOutTopo
@@ -43,7 +43,7 @@ export function genTopo({
     }
   }
 
-  for (const compType of COMPONENT_TYPES) {
+  for (const compType of COMP_TYPES_ARR) {
     const comps = componentsArr.filter(
       (comp) => comp.type === compType && comp.for_scale_out === forScaleOut
     ) as any[]
