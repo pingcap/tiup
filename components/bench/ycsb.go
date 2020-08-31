@@ -24,9 +24,11 @@ import (
 	"github.com/pingcap/go-ycsb/pkg/ycsb"
 	"github.com/spf13/cobra"
 	"runtime"
+	"strings"
 )
 
 type ycsbConfig struct {
+	PropertyFile   string
 	RecordCount    uint32
 	OperationCount uint32
 	ReadAllFields  bool
@@ -44,19 +46,62 @@ type ycsbConfig struct {
 	BatchSize           uint32
 }
 
-func (config ycsbConfig) ToProperties() *properties.Properties {
+const commonWorkloadURL = "https://raw.githubusercontent.com/pingcap/go-ycsb/master/workloads/workload"
+
+func (config ycsbConfig) toProperties() *properties.Properties {
 	result := properties.NewProperties()
-	_, _, _ = result.Set("operationcount", fmt.Sprint(config.OperationCount))
-	_, _, _ = result.Set("recordcount", fmt.Sprint(config.RecordCount))
+	if config.PropertyFile != "" {
+		// "a" to "f" are some workloads that used a lot
+		// expand these shorthands to URL
+		if len(config.PropertyFile) == 1 {
+			for _, content := range []string{"a", "b", "c", "d", "e", "f"} {
+				if config.PropertyFile == content {
+					config.PropertyFile = commonWorkloadURL + content
+					break
+				}
+			}
+		}
+
+		if strings.HasPrefix(config.PropertyFile, "http") {
+			result = properties.MustLoadURL(config.PropertyFile)
+		} else {
+			result = properties.MustLoadFile(config.PropertyFile, properties.UTF8)
+		}
+	}
+	// since the properties are not from the user input directly
+	// we don't want expansion here
+	result.DisableExpansion = true
+
+	// these config are always included in the config file
+	// should be overwritten if they are passed through the command line
+	if config.OperationCount != 0 {
+		// we don't need to check errors since we disabled expansion
+		_, _, _ = result.Set("operationcount", fmt.Sprint(config.OperationCount))
+	}
+	if config.RecordCount != 0 {
+		_, _, _ = result.Set("recordcount", fmt.Sprint(config.RecordCount))
+	}
+	if config.ReadProportion != 0 {
+		_, _, _ = result.Set("readproportion", fmt.Sprint(config.ReadProportion))
+	}
+	if config.UpdateProportion != 0 {
+		_, _, _ = result.Set("updateproportion", fmt.Sprint(config.UpdateProportion))
+	}
+	if config.ScanProportion != 0 {
+		_, _, _ = result.Set("scanproportion", fmt.Sprint(config.ScanProportion))
+	}
+	if config.InsertProportion != 0 {
+		_, _, _ = result.Set("insertproportion", fmt.Sprint(config.InsertProportion))
+	}
+	if config.ReadModifyWriteProportion != 0 {
+		_, _, _ = result.Set("readmodifywriteproportion", fmt.Sprint(config.ReadModifyWriteProportion))
+	}
+	if config.RequestDistribution != "" {
+		_, _, _ = result.Set("requestdistribution", config.RequestDistribution)
+	}
+
 	_, _, _ = result.Set("verbose", fmt.Sprint(config.Verbose))
 	_, _, _ = result.Set("readallfields", fmt.Sprint(config.ReadAllFields))
-	_, _, _ = result.Set("readproportion", fmt.Sprint(config.ReadProportion))
-	_, _, _ = result.Set("updateproportion", fmt.Sprint(config.UpdateProportion))
-	_, _, _ = result.Set("scanproportion", fmt.Sprint(config.ScanProportion))
-	_, _, _ = result.Set("insertproportion", fmt.Sprint(config.InsertProportion))
-	_, _, _ = result.Set("readmodifywriteproportion", fmt.Sprint(config.ReadModifyWriteProportion))
-	_, _, _ = result.Set("requestdistribution", config.RequestDistribution)
-
 	// tikv specific settings
 	_, _, _ = result.Set("tikv.pd", fmt.Sprint(config.Pd))
 	_, _, _ = result.Set("tikv.conncount", fmt.Sprint(config.ConnCount))
@@ -80,37 +125,39 @@ func registerYcsb(root *cobra.Command) {
 		Use: "ycsb",
 	}
 
-	cmd.PersistentFlags().Uint32VarP(&config.OperationCount, "operationcount", "ops", 100000, "The number of operations to use during the run phase")
-	cmd.PersistentFlags().Uint32VarP(&config.RecordCount, "recordcount", "records", 100000, "The number of records to be read/write")
+	cmd.PersistentFlags().StringVarP(&config.PropertyFile, "propertyfile", "f", "", "Spefify a property file, can be a url or one of [a, b, c, d, e, f]")
 
-	cmd.PersistentFlags().Uint32Var(&config.BatchSize, "batchsize", 128, "")
-	cmd.PersistentFlags().Uint32Var(&config.ConnCount, "conncount", 128, "")
-	cmd.PersistentFlags().BoolVar(&config.ReadAllFields, "readallfields", true, "")
+	cmd.PersistentFlags().Uint32Var(&config.OperationCount, "operationcount", 0, "The number of operations to use during the run phase")
+	cmd.PersistentFlags().Uint32Var(&config.RecordCount, "recordcount", 0, "The number of records to be read/write")
 
-	cmd.PersistentFlags().Float32Var(&config.ReadProportion, "readproportion", 0.95, "What proportion of operations are reads")
-	cmd.PersistentFlags().Float32Var(&config.UpdateProportion, "updateproportion", 0.05, "What proportion of operations are updates")
+	cmd.PersistentFlags().Uint32Var(&config.BatchSize, "batchsize", 128, "Batch Size")
+	cmd.PersistentFlags().Uint32Var(&config.ConnCount, "conncount", 128, "Connection Count")
+	cmd.PersistentFlags().BoolVar(&config.ReadAllFields, "readallfields", true, "Whether Read All Fields")
+
+	cmd.PersistentFlags().Float32Var(&config.ReadProportion, "readproportion", 0, "What proportion of operations are reads")
+	cmd.PersistentFlags().Float32Var(&config.UpdateProportion, "updateproportion", 0, "What proportion of operations are updates")
 	cmd.PersistentFlags().Float32Var(&config.ScanProportion, "scanproportion", 0, "What proportion of operations are scans")
 	cmd.PersistentFlags().Float32Var(&config.InsertProportion, "insertproportion", 0, "What proportion of operations are inserts")
 	cmd.PersistentFlags().Float32Var(&config.ReadModifyWriteProportion, "readmodifywriteproportion", 0, "What proportion of operations are read-modify-write")
 
-	cmd.PersistentFlags().StringVarP(&config.RequestDistribution, "requestdistribution", "dist", "zipfian", "The distribution of requests across the keyspace, [zipfian, uniform, latest]")
+	cmd.PersistentFlags().StringVar(&config.RequestDistribution, "requestdistribution", "uniform", "The distribution of requests across the keyspace, [zipfian, uniform, latest]")
 
 	cmd.PersistentFlags().BoolVar(&config.Verbose, "verbose", false, "Verbose mode")
-	cmd.PersistentFlags().StringVarP(&config.Pd, "tikv.pd", "pd", "127.0.0.1:2379", "PD address")
+	cmd.PersistentFlags().StringVar(&config.Pd, "tikv.pd", "127.0.0.1:2379", "PD address")
 
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",
 		Short: "Prepare data for ycsb",
-		Run: func(cmd *cobra.Command, _ []string) {
-			executeYcsb("prepare")
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return executeYcsb("prepare")
 		},
 	}
 
 	var cmdRun = &cobra.Command{
 		Use:   "run",
 		Short: "Run ycsb",
-		Run: func(cmd *cobra.Command, _ []string) {
-			executeYcsb("run")
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return executeYcsb("run")
 		},
 	}
 
@@ -118,11 +165,13 @@ func registerYcsb(root *cobra.Command) {
 	root.AddCommand(cmd)
 }
 
-func executeYcsb(action string) {
+func executeYcsb(action string) error {
 	runtime.GOMAXPROCS(maxProcs)
-	configProp := config.ToProperties()
+	configProp := config.toProperties()
 	switch action {
 	case "prepare":
+		// note the expansion is already disabled in toProperties
+		// so no need to check the error
 		_, _, _ = configProp.Set("dotransactions", "false")
 	case "run":
 		_, _, _ = configProp.Set("dotransactions", "true")
@@ -131,15 +180,16 @@ func executeYcsb(action string) {
 	measurement.InitMeasure(configProp)
 	workload, err := workloadCreator.Create(configProp)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	dbCreator := ycsb.GetDBCreator("tikv")
 	db, err := dbCreator.Create(configProp)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	c := client.NewClient(configProp, workload, client.DbWrapper{DB: db})
 	ctx := context.Background()
 	c.Run(ctx)
 	measurement.Output()
+	return nil
 }
