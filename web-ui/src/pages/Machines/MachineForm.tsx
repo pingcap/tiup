@@ -218,7 +218,10 @@ export default function MachineForm({
             <Input placeholder={DEF_SSH_PORT + ''} />
           </Form.Item>
           <Form.Item label="登录用户名" name="username">
-            <Input placeholder={globalLoginOptions.username || DEF_UESRNAME} />
+            <Input
+              placeholder={globalLoginOptions.username || DEF_UESRNAME}
+              autoComplete="new-password"
+            />
           </Form.Item>
           <Form.Item name="isPubKeyAuth" valuePropName="checked">
             <Checkbox>使用私钥登录</Checkbox>
@@ -238,12 +241,18 @@ export default function MachineForm({
                     />
                   </Form.Item>
                   <Form.Item label="私钥密码" name="privateKeyPassword">
-                    <Input.Password />
+                    <Input.Password
+                      placeholder={globalLoginOptions.privateKeyPassword}
+                      autoComplete="new-password"
+                    />
                   </Form.Item>
                 </>
               ) : (
                 <Form.Item label="密码" name="password">
-                  <Input.Password placeholder={globalLoginOptions.password} />
+                  <Input.Password
+                    placeholder={globalLoginOptions.password}
+                    autoComplete="new-password"
+                  />
                 </Form.Item>
               )
             }}

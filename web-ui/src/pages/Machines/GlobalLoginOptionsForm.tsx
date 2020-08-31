@@ -8,7 +8,7 @@ export interface IGlobalLoginOptions {
   privateKeyPassword?: string
 }
 
-export const DEF_UESRNAME = 'tidb'
+export const DEF_UESRNAME = 'root'
 
 export interface IGlobalLoginOptionsFormProps {
   globalLoginOptions: IGlobalLoginOptions
