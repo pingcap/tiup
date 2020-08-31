@@ -137,6 +137,7 @@ func PrepareCommand(
 	version v0manifest.Version,
 	binPath, tag, instanceDir string, wd string,
 	args []string,
+	sysProcAttr *syscall.SysProcAttr,
 	env *environment.Environment,
 	checkUpdate ...bool,
 ) (*exec.Cmd, error) {
@@ -226,6 +227,7 @@ func PrepareCommand(
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	c.Dir = wd
+	c.SysProcAttr = sysProcAttr
 
 	return c, nil
 }
@@ -240,7 +242,7 @@ func launchComponent(ctx context.Context, component string, version v0manifest.V
 		instanceDir = env.LocalPath(localdata.DataParentDir, tag)
 	}
 
-	c, err := PrepareCommand(ctx, component, version, binPath, tag, instanceDir, "" /*wd*/, args, env, true)
+	c, err := PrepareCommand(ctx, component, version, binPath, tag, instanceDir, "" /*wd*/, args, nil, env, true)
 	if err != nil {
 		return nil, err
 	}

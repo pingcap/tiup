@@ -168,11 +168,6 @@ Examples:
 				}
 			}()
 
-			// TODO: we can set Pdeathsig of Cmd.SysProcAttr(linux only) in all the Cmd we started to kill
-			// all the process we start instead of let the orphaned child process adopted by init,
-			// this can make sure we kill all process event if
-			// playground is killed -9.
-			// ref: https://medium.com/@ganeshmaharaj/clean-exit-of-golangs-exec-command-897832ac3fa5
 			bootErr := p.bootCluster(ctx, env, opt)
 			if bootErr != nil {
 				// always kill all process started and wait before quit.
