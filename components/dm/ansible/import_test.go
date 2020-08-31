@@ -175,7 +175,7 @@ func TestImportFromAnsible(t *testing.T) {
 		Host:      "172.19.0.101",
 		SSHPort:   22,
 		Port:      8262,
-		DeployDir: "",
+		DeployDir: "/home/tidb/deploy",
 		LogDir:    "/home/tidb/deploy/log",
 		Config:    map[string]interface{}{"log-level": "info"},
 	}

@@ -413,7 +413,12 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 					}
 				}
 
-				srv.DeployDir = instancDeployDir(spec.ComponentDMWorker, srv.Port, host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir)
+				// Deploy dir MUST always keep the same and CAN NOT change.
+				// dm-worker will save the data in the wording directory and there's no configuration
+				// to specific the directory.
+				// We will always set the wd as DeployDir.
+				srv.DeployDir = deployDir
+
 				err = im.handleWorkerConfig(&srv, configFileName)
 				if err != nil {
 					return "", nil, errors.AddStack(err)

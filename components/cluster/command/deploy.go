@@ -27,6 +27,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/errutil"
 	telemetry2 "github.com/pingcap/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/utils"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -65,6 +66,11 @@ func newDeploy() *cobra.Command {
 				opt.IdentityFile = ""
 			}
 
+			// natvie ssh has it's own logic to find the default identity_file
+			if gOpt.NativeSSH && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
+				opt.IdentityFile = ""
+			}
+
 			clusterName := args[0]
 			version := args[1]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
@@ -90,7 +96,7 @@ func newDeploy() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opt.User, "user", "u", tiuputils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
-	cmd.Flags().BoolVarP(&opt.SkipCreateUser, "skip-create-user", "", false, "Skip creating the user specified in topology.")
+	cmd.Flags().BoolVarP(&opt.SkipCreateUser, "skip-create-user", "", false, "Skip creating the user specified in topology (experimental).")
 	cmd.Flags().StringVarP(&opt.IdentityFile, "identity_file", "i", opt.IdentityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.UsePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.IgnoreConfigCheck, "ignore-config-check", "", opt.IgnoreConfigCheck, "Ignore the config check result")

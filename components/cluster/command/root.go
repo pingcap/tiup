@@ -130,9 +130,6 @@ func init() {
 
 			return nil
 		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Help()
-		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 			return tiupmeta.GlobalEnv().V1Repository().Mirror().Close()
 		},
@@ -145,8 +142,8 @@ func init() {
 	// start/stop operations is 90s, the default value of this argument is better be longer than that
 	rootCmd.PersistentFlags().Int64Var(&gOpt.OptTimeout, "wait-timeout", 120, "Timeout in seconds to wait for an operation to complete, ignored for operations that don't fit.")
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
-	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "Use the SSH client installed on local system instead of the build-in one.")
-	rootCmd.PersistentFlags().StringVar(&gOpt.ExecutorType, "ssh", gOpt.ExecutorType, "The executor type: 'builtin', 'system', 'none'")
+	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "Use the native SSH client installed on local system instead of the build-in one (experimental).")
+	rootCmd.PersistentFlags().StringVar(&gOpt.ExecutorType, "ssh", gOpt.ExecutorType, "The executor type: 'builtin', 'system', 'none' (experimental).")
 
 	rootCmd.AddCommand(
 		newCheckCmd(),

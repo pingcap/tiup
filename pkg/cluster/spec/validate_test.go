@@ -14,6 +14,8 @@
 package spec
 
 import (
+	"fmt"
+
 	"github.com/joomcode/errorx"
 	. "github.com/pingcap/check"
 	"github.com/pingcap/errors"
@@ -543,4 +545,30 @@ It conflicts to a directory in the existing cluster:
   Existing Component:    pd 172.16.5.138
 
 Please change to use another directory or another host.`)
+}
+
+func (s *metaSuiteTopo) TestRelativePathDetect(c *C) {
+	servers := map[string]string{
+		"monitoring_servers":   "rule_dir",
+		"grafana_servers":      "dashboard_dir",
+		"alertmanager_servers": "config_file",
+	}
+	paths := map[string]Checker{
+		"/an/absolute/path":   IsNil,
+		"an/relative/path":    NotNil,
+		"./an/relative/path":  NotNil,
+		"../an/relative/path": NotNil,
+	}
+
+	for server, field := range servers {
+		for p, checker := range paths {
+			topo5 := Specification{}
+			content := fmt.Sprintf(`
+%s:
+  - host: 1.1.1.1
+    %s: %s
+`, server, field, p)
+			c.Assert(yaml.Unmarshal([]byte(content), &topo5), checker)
+		}
+	}
 }

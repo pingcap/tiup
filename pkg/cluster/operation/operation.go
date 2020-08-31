@@ -83,7 +83,14 @@ func FilterComponent(comps []spec.Component, components set.StringSet) (res []sp
 	}
 
 	for _, c := range comps {
-		if !components.Exist(c.Name()) {
+		var role string
+		switch c.Name() {
+		case spec.ComponentTiSpark:
+			role = c.Role()
+		default:
+			role = c.Name()
+		}
+		if !components.Exist(role) {
 			continue
 		}
 

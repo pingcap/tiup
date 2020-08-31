@@ -38,6 +38,11 @@ func newScaleOutCmd() *cobra.Command {
 				opt.IdentityFile = ""
 			}
 
+			// natvie ssh has it's own logic to find the default identity_file
+			if gOpt.NativeSSH && !tiuputils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
+				opt.IdentityFile = ""
+			}
+
 			clusterName := args[0]
 			topoFile := args[1]
 

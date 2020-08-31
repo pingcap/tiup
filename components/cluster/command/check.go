@@ -14,7 +14,6 @@
 package command
 
 import (
-	"errors"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -30,8 +29,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
-	"github.com/pingcap/tiup/pkg/meta"
-	tiuputils "github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -47,7 +45,7 @@ type checkOptions struct {
 func newCheckCmd() *cobra.Command {
 	opt := checkOptions{
 		opr:          &operator.CheckOptions{},
-		identityFile: path.Join(tiuputils.UserHome(), ".ssh", "id_rsa"),
+		identityFile: path.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
 		Use:   "check <topology.yml | cluster-name>",
@@ -65,6 +63,11 @@ conflict checks with other clusters`,
 				opt.identityFile = ""
 			}
 
+			// natvie ssh has it's own logic to find the default identity_file
+			if gOpt.NativeSSH && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
+				opt.identityFile = ""
+			}
+
 			var topo spec.Specification
 			if opt.existCluster { // check for existing cluster
 				clusterName := args[0]
@@ -79,7 +82,7 @@ conflict checks with other clusters`,
 				}
 
 				metadata, err := spec.ClusterMetadata(clusterName)
-				if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+				if err != nil {
 					return err
 				}
 				opt.user = metadata.User
@@ -113,7 +116,7 @@ conflict checks with other clusters`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&opt.user, "user", "u", tiuputils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
+	cmd.Flags().StringVarP(&opt.user, "user", "u", utils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
 	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", opt.identityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.usePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 
