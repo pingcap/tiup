@@ -13,8 +13,12 @@
 
 package main
 
-import "github.com/pingcap/tiup/components/dm/command"
+import (
+	"github.com/pingcap/tiup/components/dm/command"
+	"github.com/pingcap/tiup/pkg/cliutil"
+)
 
 func main() {
+	cliutil.RegisterArg0("tiup dm")
 	command.Execute()
 }

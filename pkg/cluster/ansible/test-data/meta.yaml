@@ -4,22 +4,33 @@ topology:
   global:
     user: tiops
     ssh_port: 9999
-    deploy_dir: deploy
+    deploy_dir: /home/tiopsimport/ansible-deploy
     data_dir: data
     os: linux
     arch: amd64
   monitored:
     node_exporter_port: 9101
     blackbox_exporter_port: 9115
-    deploy_dir: deploy/monitor-9101
-    data_dir: data/monitor-9101
+    deploy_dir: /home/tiopsimport/ansible-deploy
+    data_dir: /home/tiopsimport/ansible-deploy/data
+    log_dir: /home/tiopsimport/ansible-deploy/log
+  server_configs:
+    tidb:
+      binlog.enable: true
+    tikv: {}
+    pd: {}
+    tiflash: {}
+    tiflash-learner: {}
+    pump: {}
+    drainer: {}
+    cdc: {}
   tidb_servers:
   - host: 172.16.1.218
     ssh_port: 9999
     imported: true
     port: 4000
     status_port: 3399
-    deploy_dir: deploy/tidb-4000
+    deploy_dir: /home/tiopsimport/ansible-deploy/tidb-4000
     arch: amd64
     os: linux
   - host: 172.16.1.219
@@ -27,7 +38,7 @@ topology:
     imported: true
     port: 3397
     status_port: 10080
-    deploy_dir: deploy/tidb-3397
+    deploy_dir: /home/tiopsimport/ansible-deploy/tidb-3397
     arch: amd64
     os: linux
   tikv_servers:
@@ -36,7 +47,7 @@ topology:
     imported: true
     port: 20160
     status_port: 20180
-    deploy_dir: deploy/tikv-20160
+    deploy_dir: /home/tiopsimport/ansible-deploy/tikv-20160
     data_dir: data/tikv-20160
     arch: amd64
     os: linux
@@ -45,7 +56,7 @@ topology:
     imported: true
     port: 20166
     status_port: 20180
-    deploy_dir: deploy/tikv-20166
+    deploy_dir: /home/tiopsimport/ansible-deploy/tikv-20166
     data_dir: data/tikv-20166
     arch: amd64
     os: linux
@@ -54,7 +65,7 @@ topology:
     imported: true
     port: 20160
     status_port: 20180
-    deploy_dir: deploy/tikv-20160
+    deploy_dir: /home/tiopsimport/ansible-deploy/tikv-20160
     data_dir: data/tikv-20160
     arch: amd64
     os: linux
@@ -68,7 +79,7 @@ topology:
     flash_proxy_port: 20170
     flash_proxy_status_port: 20292
     metrics_port: 8234
-    deploy_dir: deploy/tiflash-9000
+    deploy_dir: /home/tiopsimport/ansible-deploy/tiflash-9000
     data_dir: data/tiflash-9000
     arch: amd64
     os: linux
@@ -81,7 +92,7 @@ topology:
     flash_proxy_port: 20170
     flash_proxy_status_port: 20292
     metrics_port: 8234
-    deploy_dir: deploy/tiflash-9000
+    deploy_dir: /home/tiopsimport/ansible-deploy/tiflash-9000
     data_dir: data/tiflash-9000
     arch: amd64
     os: linux
@@ -92,7 +103,7 @@ topology:
     name: TiDB-PD-218
     client_port: 2379
     peer_port: 2380
-    deploy_dir: deploy/pd-2379
+    deploy_dir: /home/tiopsimport/ansible-deploy/pd-2379
     data_dir: data/pd-2379
     arch: amd64
     os: linux
@@ -102,7 +113,7 @@ topology:
     name: pd-172.16.1.219-2379
     client_port: 2379
     peer_port: 2380
-    deploy_dir: deploy/pd-2379
+    deploy_dir: /home/tiopsimport/ansible-deploy/pd-2379
     data_dir: data/pd-2379
     arch: amd64
     os: linux
@@ -112,7 +123,7 @@ topology:
     name: pd-172.16.1.220-2379
     client_port: 2379
     peer_port: 2380
-    deploy_dir: deploy/pd-2379
+    deploy_dir: /home/tiopsimport/ansible-deploy/pd-2379
     data_dir: data/pd-2379
     arch: amd64
     os: linux
@@ -121,18 +132,16 @@ topology:
     ssh_port: 2222
     imported: true
     port: 8250
-    deploy_dir: deploy/pump-8250
+    deploy_dir: /home/tiopsimport/ansible-deploy/pump-8250
     data_dir: data/pump-8250
-    resource_control: {}
     arch: amd64
     os: linux
   - host: 172.16.1.220
     ssh_port: 9999
     imported: true
     port: 8250
-    deploy_dir: deploy/pump-8250
+    deploy_dir: /home/tiopsimport/ansible-deploy/pump-8250
     data_dir: data/pump-8250
-    resource_control: {}
     arch: amd64
     os: linux
   drainer_servers:
@@ -140,7 +149,7 @@ topology:
     ssh_port: 9999
     imported: true
     port: 8249
-    deploy_dir: deploy/drainer-8249
+    deploy_dir: /home/tiopsimport/ansible-deploy/drainer-8249
     data_dir: data/drainer-8249
     arch: amd64
     os: linux
@@ -149,7 +158,7 @@ topology:
     ssh_port: 9999
     imported: true
     port: 9090
-    deploy_dir: deploy/prometheus-9090
+    deploy_dir: /home/tiopsimport/ansible-deploy/prometheus-9090
     data_dir: data/prometheus-9090
     storage_retention: 30d
     arch: amd64
@@ -159,7 +168,7 @@ topology:
     ssh_port: 9999
     imported: true
     port: 3000
-    deploy_dir: deploy/grafana-3000
+    deploy_dir: /home/tiopsimport/ansible-deploy/grafana-3000
     arch: amd64
     os: linux
   alertmanager_servers:
@@ -168,7 +177,7 @@ topology:
     imported: true
     web_port: 9093
     cluster_port: 9094
-    deploy_dir: deploy/alertmanager-9093
+    deploy_dir: /home/tiopsimport/ansible-deploy/alertmanager-9093
     data_dir: data/alertmanager-9093
     arch: amd64
     os: linux

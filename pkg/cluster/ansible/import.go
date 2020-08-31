@@ -73,22 +73,29 @@ func parseInventoryFile(invFile io.Reader) (string, *spec.ClusterMeta, *aini.Inv
 
 	// get global vars
 	if grp, ok := inventory.Groups["all"]; ok && len(grp.Hosts) > 0 {
-		for _, host := range grp.Hosts {
-			if host.Vars["process_supervision"] != "systemd" {
-				return "", nil, inventory, errors.New("only support cluster deployed with systemd")
+		// set global variables
+		clsName = grp.Vars["cluster_name"]
+		clsMeta.User = grp.Vars["ansible_user"]
+		clsMeta.Topology.GlobalOptions.User = clsMeta.User
+		clsMeta.Version = grp.Vars["tidb_version"]
+		clsMeta.Topology.GlobalOptions.DeployDir = grp.Vars["deploy_dir"]
+		// deploy_dir and data_dir of monitored need to be set, otherwise they will be
+		// subdirs of deploy_dir in global options
+		clsMeta.Topology.MonitoredOptions.DeployDir = clsMeta.Topology.GlobalOptions.DeployDir
+		clsMeta.Topology.MonitoredOptions.DataDir = filepath.Join(
+			clsMeta.Topology.MonitoredOptions.DeployDir,
+			"data",
+		)
+
+		if grp.Vars["process_supervision"] != "systemd" {
+			return "", nil, inventory, errors.New("only support cluster deployed with systemd")
+		}
+
+		if enableBinlog, err := strconv.ParseBool(grp.Vars["enable_binlog"]); err == nil && enableBinlog {
+			if clsMeta.Topology.ServerConfigs.TiDB == nil {
+				clsMeta.Topology.ServerConfigs.TiDB = make(map[string]interface{})
 			}
-			clsName = host.Vars["cluster_name"]
-
-			clsMeta.User = host.Vars["ansible_user"]
-			clsMeta.Topology.GlobalOptions.User = clsMeta.User
-			clsMeta.Version = host.Vars["tidb_version"]
-
-			if enableBinlog, err := strconv.ParseBool(host.Vars["enable_binlog"]); err == nil && enableBinlog {
-				clsMeta.Topology.ServerConfigs.TiDB["binlog.enable"] = enableBinlog
-			}
-
-			// only read the first host, all global vars should be the same
-			break
+			clsMeta.Topology.ServerConfigs.TiDB["binlog.enable"] = enableBinlog
 		}
 	} else {
 		return "", nil, inventory, errors.New("no available host in the inventory file")

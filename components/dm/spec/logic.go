@@ -60,6 +60,11 @@ func (c *DMMasterComponent) Name() string {
 	return ComponentDMMaster
 }
 
+// Role implements Component interface.
+func (c *DMMasterComponent) Role() string {
+	return ComponentDMMaster
+}
+
 // Instances implements Component interface.
 func (c *DMMasterComponent) Instances() []Instance {
 	ins := make([]Instance, 0)
@@ -168,6 +173,11 @@ type DMWorkerComponent struct {
 
 // Name implements Component interface.
 func (c *DMWorkerComponent) Name() string {
+	return ComponentDMWorker
+}
+
+// Role implements Component interface.
+func (c *DMWorkerComponent) Role() string {
 	return ComponentDMWorker
 }
 

@@ -41,6 +41,8 @@ func ReadIdentityFileOrPassword(identityFilePath string, usePass bool) (*SSHConn
 		return &SSHConnectionProps{
 			Password: password,
 		}, nil
+	} else if identityFilePath == "" {
+		return &SSHConnectionProps{}, nil
 	}
 
 	// Identity file is specified, check identity file

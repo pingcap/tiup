@@ -64,7 +64,7 @@ func init() {
 
 	rootCmd = &cobra.Command{
 		Use:           cliutil.OsArgs0(),
-		Short:         "Deploy a DM cluster for production",
+		Short:         "Deploy a DM cluster (experimental)",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       version.NewTiUPVersion().String(),
@@ -95,9 +95,6 @@ func init() {
 			}
 
 			return nil
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Help()
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 			return tiupmeta.GlobalEnv().V1Repository().Mirror().Close()
@@ -224,7 +221,11 @@ func Execute() {
 		}
 	}
 
-	logger.OutputAuditLogIfEnabled()
+	err = logger.OutputAuditLogIfEnabled()
+	if err != nil {
+		zap.L().Warn("Write audit log file failed", zap.Error(err))
+		code = 1
+	}
 
 	color.Unset()
 

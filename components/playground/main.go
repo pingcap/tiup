@@ -21,10 +21,13 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/signal"
 	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/fatih/color"
@@ -101,7 +104,8 @@ Examples:
   $ tiup playground nightly --monitor=false         # Start a local cluster and disable monitor system
   $ tiup playground --pd.config ~/config/pd.toml    # Start a local cluster with specified configuration file,
   $ tiup playground --db.binpath /xx/tidb-server    # Start a local cluster with component binary path`,
-		SilenceUsage: true,
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		Args: func(cmd *cobra.Command, args []string) error {
 			return nil
 		},
@@ -126,7 +130,66 @@ Examples:
 			}
 			environment.SetGlobalEnv(env)
 
-			return p.bootCluster(env, opt)
+			var booted uint32
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			go func() {
+				sc := make(chan os.Signal, 1)
+				signal.Notify(sc,
+					syscall.SIGHUP,
+					syscall.SIGINT,
+					syscall.SIGTERM,
+					syscall.SIGQUIT,
+				)
+
+				sig := (<-sc).(syscall.Signal)
+				atomic.StoreInt32(&p.curSig, int32(sig))
+				fmt.Println("Playground receive signal: ", sig)
+
+				// if bootCluster is not done we just cancel context to make it
+				// clean up and return ASAP and exit directly after timeout.
+				// Note now bootCluster can not learn the context is done and return quickly now
+				// like while it's downloading component.
+				if atomic.LoadUint32(&booted) == 0 {
+					cancel()
+					time.AfterFunc(time.Second, func() {
+						os.Exit(0)
+					})
+					return
+				}
+
+				go p.terminate(sig)
+				// If user try double ctrl+c, force quit
+				sig = (<-sc).(syscall.Signal)
+				atomic.StoreInt32(&p.curSig, int32(syscall.SIGKILL))
+				if sig == syscall.SIGINT {
+					p.terminate(syscall.SIGKILL)
+				}
+			}()
+
+			// TODO: we can set Pdeathsig of Cmd.SysProcAttr(linux only) in all the Cmd we started to kill
+			// all the process we start instead of let the orphaned child process adopted by init,
+			// this can make sure we kill all process event if
+			// playground is killed -9.
+			// ref: https://medium.com/@ganeshmaharaj/clean-exit-of-golangs-exec-command-897832ac3fa5
+			bootErr := p.bootCluster(ctx, env, opt)
+			if bootErr != nil {
+				// always kill all process started and wait before quit.
+				atomic.StoreInt32(&p.curSig, int32(syscall.SIGKILL))
+				p.terminate(syscall.SIGKILL)
+				_ = p.wait()
+				return errors.Annotate(bootErr, "Playground bootstrapping failed")
+			}
+
+			atomic.StoreUint32(&booted, 1)
+
+			waitErr := p.wait()
+			if waitErr != nil {
+				return errors.AddStack(waitErr)
+			}
+
+			return nil
 		},
 	}
 
@@ -292,7 +355,7 @@ func newEtcdClient(endpoint string) (*clientv3.Client, error) {
 
 func main() {
 	if err := execute(); err != nil {
-		fmt.Printf("Playground bootstrapping failed: %v\n", err)
+		fmt.Println(color.RedString("Error: %v", err))
 		os.Exit(1)
 	}
 }

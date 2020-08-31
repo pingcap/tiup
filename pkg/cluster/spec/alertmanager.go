@@ -37,6 +37,7 @@ type AlertManagerSpec struct {
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string               `yaml:"arch,omitempty"`
 	OS              string               `yaml:"os,omitempty"`
+	ConfigFilePath  string               `yaml:"config_file,omitempty" validate:"config_file:editable"`
 }
 
 // Role returns the component role of the instance
@@ -65,6 +66,11 @@ type AlertManagerComponent struct{ *Specification }
 // Name implements Component interface.
 func (c *AlertManagerComponent) Name() string {
 	return ComponentAlertManager
+}
+
+// Role implements Component interface.
+func (c *AlertManagerComponent) Role() string {
+	return RoleMonitor
 }
 
 // Instances implements Component interface.
@@ -129,12 +135,14 @@ func (i *AlertManagerInstance) InitConfig(e executor.Executor, clusterName, clus
 	}
 
 	// transfer config
-	fp = filepath.Join(paths.Cache, fmt.Sprintf("alertmanager_%s.yml", i.GetHost()))
-	if err := config.NewAlertManagerConfig().ConfigToFile(fp); err != nil {
-		return err
+
+	if spec.ConfigFilePath != "" {
+		dst = filepath.Join(paths.Deploy, "conf", "alertmanager.yml")
+		return i.TransferLocalConfigFile(e, spec.ConfigFilePath, dst)
 	}
-	dst = filepath.Join(paths.Deploy, "conf", "alertmanager.yml")
-	return e.Transfer(fp, dst, false)
+
+	configPath := filepath.Join(paths.Cache, fmt.Sprintf("alertmanager_%s.yml", i.GetHost()))
+	return config.NewAlertManagerConfig().ConfigToFile(configPath)
 }
 
 // ScaleConfig deploy temporary config on scaling

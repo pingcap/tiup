@@ -14,7 +14,6 @@
 package command
 
 import (
-	"errors"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -29,8 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
-	"github.com/pingcap/tiup/pkg/meta"
-	tiuputils "github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -46,7 +44,7 @@ type checkOptions struct {
 func newCheckCmd() *cobra.Command {
 	opt := checkOptions{
 		opr:          &operator.CheckOptions{},
-		identityFile: path.Join(tiuputils.UserHome(), ".ssh", "id_rsa"),
+		identityFile: path.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
 		Use:   "check <topology.yml | cluster-name>",
@@ -59,6 +57,11 @@ conflict checks with other clusters`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
+			}
+
+			// natvie ssh has it's own logic to find the default identity_file
+			if gOpt.NativeSSH && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
+				opt.identityFile = ""
 			}
 
 			var topo spec.Specification
@@ -75,9 +78,11 @@ conflict checks with other clusters`,
 				}
 
 				metadata, err := spec.ClusterMetadata(clusterName)
-				if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+				if err != nil {
 					return err
 				}
+				opt.user = metadata.User
+				opt.identityFile = tidbSpec.Path(clusterName, "ssh", "id_rsa")
 
 				topo = *metadata.Topology
 			} else { // check before cluster is deployed
@@ -107,7 +112,7 @@ conflict checks with other clusters`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&opt.user, "user", "u", tiuputils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
+	cmd.Flags().StringVarP(&opt.user, "user", "u", utils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
 	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", opt.identityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.usePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 
@@ -180,86 +185,97 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 				BuildAsStep(fmt.Sprintf("  - Getting system info of %s:%d", inst.GetHost(), inst.GetSSHPort()))
 			collectTasks = append(collectTasks, t1)
 
+			// build checking tasks
+			t2 := task.NewBuilder().
+				// check for general system info
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypeSystemInfo,
+					topo,
+					opt.opr,
+				).
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypePartitions,
+					topo,
+					opt.opr,
+				).
+				// check for listening port
+				Shell(
+					inst.GetHost(),
+					"ss -lnt",
+					false,
+				).
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypePort,
+					topo,
+					opt.opr,
+				).
+				// check for system limits
+				Shell(
+					inst.GetHost(),
+					"cat /etc/security/limits.conf",
+					false,
+				).
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypeSystemLimits,
+					topo,
+					opt.opr,
+				).
+				// check for kernel params
+				Shell(
+					inst.GetHost(),
+					"sysctl -a",
+					true,
+				).
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypeSystemConfig,
+					topo,
+					opt.opr,
+				).
+				// check for needed system service
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypeService,
+					topo,
+					opt.opr,
+				).
+				// check for needed packages
+				CheckSys(
+					inst.GetHost(),
+					"",
+					task.CheckTypePackage,
+					topo,
+					opt.opr,
+				)
+
 			// if the data dir set in topology is relative, and the home dir of deploy user
 			// and the user run the check command is on different partitions, the disk detection
 			// may be using incorrect partition for validations.
 			for _, dataDir := range clusterutil.MultiDirAbs(opt.user, inst.DataDir()) {
 				// build checking tasks
-				t2 := task.NewBuilder().
-					CheckSys(
-						inst.GetHost(),
-						dataDir,
-						task.CheckTypeSystemInfo,
-						topo,
-						opt.opr,
-					).
-					CheckSys(
-						inst.GetHost(),
-						dataDir,
-						task.CheckTypePartitions,
-						topo,
-						opt.opr,
-					).
-					Shell(
-						inst.GetHost(),
-						"ss -lnt",
-						false,
-					).
-					CheckSys(
-						inst.GetHost(),
-						dataDir,
-						task.CheckTypePort,
-						topo,
-						opt.opr,
-					).
-					Shell(
-						inst.GetHost(),
-						"cat /etc/security/limits.conf",
-						false,
-					).
-					CheckSys(
-						inst.GetHost(),
-						dataDir,
-						task.CheckTypeSystemLimits,
-						topo,
-						opt.opr,
-					).
-					Shell(
-						inst.GetHost(),
-						"sysctl -a",
-						true,
-					).
-					CheckSys(
-						inst.GetHost(),
-						dataDir,
-						task.CheckTypeSystemConfig,
-						topo,
-						opt.opr,
-					).
-					CheckSys(
-						inst.GetHost(),
-						dataDir,
-						task.CheckTypeService,
-						topo,
-						opt.opr,
-					).
-					CheckSys(
-						inst.GetHost(),
-						dataDir,
-						task.CheckTypePackage,
-						topo,
-						opt.opr,
-					).
+				t2 = t2.
 					CheckSys(
 						inst.GetHost(),
 						dataDir,
 						task.CheckTypeFIO,
 						topo,
 						opt.opr,
-					).
-					BuildAsStep(fmt.Sprintf("  - Checking node %s", inst.GetHost()))
-				checkSysTasks = append(checkSysTasks, t2)
+					)
 			}
+			checkSysTasks = append(
+				checkSysTasks,
+				t2.BuildAsStep(fmt.Sprintf("  - Checking node %s", inst.GetHost())),
+			)
 
 			t3 := task.NewBuilder().
 				RootSSH(

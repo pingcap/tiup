@@ -4,7 +4,7 @@ TiDB clusters are distributed systems consisting of multiple components, and a t
 
 ## Playground component introduction
 
-playground 的基本用法：
+playground's basic usage:
 
 ```bash
 tiup playground [version] [flags]

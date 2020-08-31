@@ -18,6 +18,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/audit"
 	utils2 "github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/atomic"
@@ -47,19 +48,20 @@ func newAuditLogCore() zapcore.Core {
 }
 
 // OutputAuditLogIfEnabled outputs audit log if enabled.
-func OutputAuditLogIfEnabled() {
+func OutputAuditLogIfEnabled() error {
 	if !auditEnabled.Load() {
-		return
+		return nil
 	}
 
 	if err := utils2.CreateDir(auditDir); err != nil {
-		zap.L().Warn("Create audit directory failed", zap.Error(err))
-		return
+		return errors.AddStack(err)
 	}
 
 	err := audit.OutputAuditLog(auditDir, auditBuffer.Bytes())
 	if err != nil {
-		zap.L().Warn("Write audit log file failed", zap.Error(err))
+		return errors.AddStack(err)
 	}
 	auditBuffer.Reset()
+
+	return nil
 }
