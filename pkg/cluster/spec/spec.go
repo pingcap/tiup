@@ -512,6 +512,7 @@ func (s *Specification) ComponentsByUpdateOrder() (comps []Component) {
 	return
 }
 
+// Component implements the Topology interface
 func (s *Specification) Component(name string) Component {
 	for _, com := range s.ComponentsByStartOrder() {
 		if com.Name() == name {
