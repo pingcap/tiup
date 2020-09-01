@@ -77,7 +77,12 @@ func (s *StepDisplay) resetAsMultiBarItem(b *progress.MultiBar) {
 // Execute implements the Task interface
 func (s *StepDisplay) Execute(ctx *Context) error {
 	if s.hidden {
-		return s.inner.Execute(ctx)
+		s.progress = 10
+		err := s.inner.Execute(ctx)
+		if err == nil {
+			s.progress = 100
+		}
+		return err
 	}
 
 	if singleBar, ok := s.progressBar.(*progress.SingleBar); ok {
