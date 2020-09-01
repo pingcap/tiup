@@ -13,3 +13,22 @@ export interface IOperationStatus {
   steps: string[]
   err_msg: string
 }
+
+export interface ICluster {
+  name: string
+  user: string
+  version: string
+  path: string
+  private_key: string
+}
+
+export interface IClusterInstInfo {
+  id: string
+  role: string
+  host: string
+  ports: string
+  os_arch: string
+  status: string
+  data_dir: string
+  deploy_dir: string
+}

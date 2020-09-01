@@ -5,14 +5,7 @@ import { useSessionStorageState } from 'ahooks'
 
 import { getClusterList } from '_apis'
 import { Root } from '_components'
-
-export interface ICluster {
-  name: string
-  user: string
-  version: string
-  path: string
-  private_key: string
-}
+import { ICluster } from '_types'
 
 export default function ClustersPage() {
   const [clustersList, setClustersList] = useSessionStorageState<ICluster[]>(

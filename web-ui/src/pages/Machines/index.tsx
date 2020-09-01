@@ -29,7 +29,7 @@ export default function MachinesPage() {
 
     dup = Object.values(machines).find(
       (m) =>
-        m.fullName(globalLoginOptions) === machine.fullName(globalLoginOptions)
+        m.fullMachineName(globalLoginOptions) === machine.fullMachineName(globalLoginOptions)
     )
     if (dup && dup.id !== machine.id) {
       Modal.error({

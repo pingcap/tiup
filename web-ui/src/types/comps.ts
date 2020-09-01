@@ -304,7 +304,7 @@ export class GrafanaComp extends BaseComp {
   }
 
   public ports() {
-    return `${this.port || DEF_PROM_PORT}`
+    return `${this.port || DEF_GRAFANA_PORT}`
   }
 
   public increasePorts(comp: BaseComp) {

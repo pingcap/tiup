@@ -1,12 +1,7 @@
 import React, { useMemo } from 'react'
 import { Table, Space, Divider, Popconfirm } from 'antd'
 
-import {
-  IGlobalLoginOptions,
-  DEF_UESRNAME,
-  Machine,
-  DEF_SSH_PORT,
-} from '_types'
+import { IGlobalLoginOptions, Machine } from '_types'
 
 interface IMachinesTableProps {
   globalLoginOptions: IGlobalLoginOptions
@@ -35,14 +30,12 @@ export default function MachinesTable({
       {
         title: '地址',
         key: 'address',
-        render: (text: any, rec: any) =>
-          `${rec.host}:${rec.ssh_port || DEF_SSH_PORT}`,
+        render: (text: any, rec: Machine) => rec.address(),
       },
       {
         title: '登录用户',
         key: 'username',
-        render: (text: any, rec: any) =>
-          `${rec.username || globalLoginOptions.username || DEF_UESRNAME}`,
+        render: (text: any, rec: Machine) => rec.userName(globalLoginOptions),
       },
       {
         title: '使用公钥登录',
@@ -78,7 +71,7 @@ export default function MachinesTable({
         ),
       },
     ]
-  }, [onEdit, onDelete, globalLoginOptions.username])
+  }, [onEdit, onDelete, globalLoginOptions])
 
   return (
     <Table

@@ -41,12 +41,22 @@ export class Machine {
     return m
   }
 
-  public fullName(globalLoginOptions: IGlobalLoginOptions): string {
+  public userName(globalLoginOptions: IGlobalLoginOptions) {
+    return `${this.username || globalLoginOptions.username || DEF_UESRNAME}`
+  }
+
+  public port() {
+    return this.ssh_port || DEF_SSH_PORT
+  }
+
+  public address() {
+    return `${this.host}:${this.port()}`
+  }
+
+  public fullMachineName(globalLoginOptions: IGlobalLoginOptions): string {
     if (this.name) {
       return this.name
     }
-    return `${this.username || globalLoginOptions.username || DEF_UESRNAME}@${
-      this.host
-    }`
+    return `${this.userName(globalLoginOptions)}@${this.host}`
   }
 }

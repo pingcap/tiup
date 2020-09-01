@@ -6,18 +6,19 @@ import {
   BaseComp,
   COMP_TYPES_ARR,
   CompTypes,
-  DEF_UESRNAME,
   Machine,
-  DEF_SSH_PORT,
   MachineMap,
   CompMap,
 } from '_types'
 import { useGlobalLoginOptions } from '_hooks'
 
+type MachineOrComp = Machine | BaseComp
+
 interface IDeploymentTableProps {
   forScaleOut: boolean // deploy or scale out
   machines: MachineMap
   components: CompMap
+
   onAddComponent?: (
     machine: Machine,
     componentType: CompTypes,
@@ -32,6 +33,7 @@ export default function DeploymentTable({
   forScaleOut,
   machines,
   components,
+
   onAddComponent,
   onEditComponent,
   onDeleteComponent,
@@ -40,7 +42,7 @@ export default function DeploymentTable({
   const { globalLoginOptions } = useGlobalLoginOptions()
 
   const dataSource = useMemo(() => {
-    let machinesAndComps: (Machine | BaseComp)[] = []
+    let machinesAndComps: MachineOrComp[] = []
     const sortedMachines = Object.values(machines).sort((a, b) =>
       a.host > b.host ? 1 : -1
     )
@@ -54,13 +56,11 @@ export default function DeploymentTable({
         }
       })
       if (respondComps.length > 0) {
-        respondComps.sort((a: any, b: any) => {
+        respondComps.sort((a, b) => {
           let delta
           delta = a.priority - b.priority
           if (delta === 0) {
-            delta =
-              (a.port || a.tcp_port || a.client_port || a.web_port || 0) -
-              (b.port || b.tcp_port || b.client_port || b.web_port || 0)
+            delta = a.symbolPort() - b.symbolPort()
           }
           return delta
         })
@@ -75,9 +75,9 @@ export default function DeploymentTable({
       {
         title: '目标机器 / 组件',
         key: 'target_machine_component',
-        render: (text: any, rec: any) => {
-          if (rec.host) {
-            return `${rec.name} (${rec.host})`
+        render: (text: any, rec: MachineOrComp) => {
+          if (rec instanceof Machine) {
+            return `${rec.fullMachineName(globalLoginOptions)} (${rec.host})`
           }
           return (
             <div>
@@ -93,11 +93,11 @@ export default function DeploymentTable({
       {
         title: '信息',
         key: 'information',
-        render: (text: any, rec: any) => {
-          if (rec.host) {
-            return `SSH Port=${rec.ssh_port || DEF_SSH_PORT}, User=${
-              rec.username || globalLoginOptions.username || DEF_UESRNAME
-            }, DC=${rec.dc}, Rack=${rec.rack}`
+        render: (text: any, rec: MachineOrComp) => {
+          if (rec instanceof Machine) {
+            return `SSH Port=${rec.port()}, User=${rec.userName(
+              globalLoginOptions
+            )}, DC=${rec.dc}, Rack=${rec.rack}`
           }
           return `Port=${rec.ports()}, Path=${rec.allPathsPrefix()}`
         },
@@ -105,8 +105,8 @@ export default function DeploymentTable({
       {
         title: '操作',
         key: 'action',
-        render: (text: any, rec: any) => {
-          if (rec.host) {
+        render: (text: any, rec: MachineOrComp) => {
+          if (rec instanceof Machine) {
             return (
               <Space>
                 <Dropdown
@@ -171,7 +171,7 @@ export default function DeploymentTable({
     onEditComponent,
     onDeleteComponent,
     onDeleteComponents,
-    globalLoginOptions.username,
+    globalLoginOptions,
     forScaleOut,
   ])
 

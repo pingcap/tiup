@@ -13,19 +13,7 @@ import {
 } from '_apis'
 import { Root } from '_components'
 import { useComps } from '_hooks'
-
-import { ICluster } from '.'
-
-export interface IClusterInstInfo {
-  id: string
-  role: string
-  host: string
-  ports: string
-  os_arch: string
-  status: string
-  data_dir: string
-  deploy_dir: string
-}
+import { ICluster, IClusterInstInfo } from '_types'
 
 export default function ClusterDetailPage() {
   const navigate = useNavigate()
