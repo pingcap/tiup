@@ -149,10 +149,6 @@ export default function ClusterDetailPage() {
     navigate(`/clusters/${clusterName}/scaleout`)
   }
 
-  if (cluster === undefined) {
-    return <Root></Root>
-  }
-
   return (
     <Root>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -179,13 +175,15 @@ export default function ClusterDetailPage() {
           销毁集群
         </Button>
       </div>
-      <div style={{ marginTop: 16 }}>
-        <p>Name: {cluster.name}</p>
-        <p>User: {cluster.user}</p>
-        <p>Version: {cluster.version}</p>
-        <p>Path: {cluster.path}</p>
-        <p>PrivateKey: {cluster.private_key}</p>
-      </div>
+      {cluster && (
+        <div style={{ marginTop: 16 }}>
+          <p>Name: {cluster.name}</p>
+          <p>User: {cluster.user}</p>
+          <p>Version: {cluster.version}</p>
+          <p>Path: {cluster.path}</p>
+          <p>PrivateKey: {cluster.private_key}</p>
+        </div>
+      )}
 
       <Space direction="vertical">
         <Table

@@ -20,18 +20,20 @@ import {
 
 function correctFormValues(values: any) {
   for (const key of Object.keys(values)) {
-    if (key !== 'isPubKeyAuth') {
-      values[key] = values[key].trim()
-      if (values[key] === '') {
-        values[key] = undefined
+    let v = values[key]
+    if (key !== 'isPubKeyAuth' && v !== undefined) {
+      v = v.trim()
+      if (v === '') {
+        v = undefined
       }
     }
-    if (key === 'ssh_port' && values[key] !== undefined) {
-      values[key] = parseInt(values[key])
-      if (values[key] === 0) {
-        values[key] = undefined
+    if (key === 'ssh_port' && v !== undefined) {
+      v = parseInt(v)
+      if (v <= 0) {
+        v = undefined
       }
     }
+    values[key] = v
   }
 }
 
@@ -115,18 +117,19 @@ export default function MachineForm({
                 showSearch
                 filterOption={(input, option) => {
                   const m = machines[option?.key!]
-                  const v = `${m.name} ${m.username}@${m.host}:${m.ssh_port}`
+                  const v = `${m.name} ${m.userName(
+                    globalLoginOptions
+                  )}@${m.address()}`
                   return v.indexOf(input) > -1
                 }}
-                optionLabelProp="label"
               >
                 {Object.values(machines).map((m) => {
                   return (
-                    <Select.Option value={m.id} label={m.name} key={m.id}>
-                      <div>{m.name}</div>
+                    <Select.Option value={m.id} key={m.id}>
+                      <div>{m.fullMachineName(globalLoginOptions)}</div>
                       <div>
                         <Typography.Text type="secondary">
-                          {m.username}@{m.host}:{m.ssh_port}
+                          {m.userName(globalLoginOptions)}@{m.address()}
                         </Typography.Text>
                       </div>
                     </Select.Option>

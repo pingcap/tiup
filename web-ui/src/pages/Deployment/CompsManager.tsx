@@ -41,19 +41,17 @@ export default function CompsManager({
   clusterName,
   forScaleOut,
 }: ICompsManagerProps) {
+  const { globalLoginOptions } = useGlobalLoginOptions()
   const { machines } = useMachines()
   const { comps, setCompObjs } = useComps()
-  const [curComp, setCurComp] = useState<BaseComp | undefined>(undefined)
 
+  const [curComp, setCurComp] = useState<BaseComp | undefined>(undefined)
   const [previewYaml, setPreviewYaml] = useState(false)
 
   const [deployReq, setDeployReq] = useLocalStorageState<IDeployReq>(
     'deploy_req',
     { cluster_name: '', tidb_version: '' }
   )
-
-  const { globalLoginOptions } = useGlobalLoginOptions()
-
   const [, setCurScaleOutNodes] = useLocalStorageState(
     'cur_scale_out_nodes',
     {}

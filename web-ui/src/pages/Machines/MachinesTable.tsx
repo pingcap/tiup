@@ -24,8 +24,9 @@ export default function MachinesTable({
     return [
       {
         title: '机器名字',
-        dataIndex: 'name',
         key: 'name',
+        render: (text: any, rec: Machine) =>
+          rec.fullMachineName(globalLoginOptions),
       },
       {
         title: '地址',

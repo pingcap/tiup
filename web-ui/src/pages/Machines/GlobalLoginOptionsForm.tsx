@@ -29,10 +29,10 @@ export default function GlobalLoginOptionsForm({
       initialValues={globalLoginOptions}
     >
       <Form.Item label="登录用户名" name="username">
-        <Input placeholder={DEF_UESRNAME} />
+        <Input placeholder={DEF_UESRNAME} autoComplete="new-password" />
       </Form.Item>
       <Form.Item label="登录密码" name="password">
-        <Input.Password />
+        <Input.Password autoComplete="new-password" />
       </Form.Item>
       <Form.Item label="私钥" name="privateKey" style={{ width: 400 }}>
         <Input.TextArea />

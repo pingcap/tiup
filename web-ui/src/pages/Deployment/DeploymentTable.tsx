@@ -97,7 +97,7 @@ export default function DeploymentTable({
           if (rec instanceof Machine) {
             return `SSH Port=${rec.port()}, User=${rec.userName(
               globalLoginOptions
-            )}, DC=${rec.dc}, Rack=${rec.rack}`
+            )}, DC=${rec.dc || ''}, Rack=${rec.rack || ''}`
           }
           return `Port=${rec.ports()}, Path=${rec.allPathsPrefix()}`
         },
