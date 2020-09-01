@@ -1,14 +1,18 @@
 import React, { useMemo } from 'react'
 import { Table, Space, Divider, Popconfirm } from 'antd'
 
-import { IMachine, DEF_SSH_PORT } from './MachineForm'
-import { IGlobalLoginOptions, DEF_UESRNAME } from './GlobalLoginOptionsForm'
+import {
+  IGlobalLoginOptions,
+  DEF_UESRNAME,
+  Machine,
+  DEF_SSH_PORT,
+} from '_types'
 
 interface IMachinesTableProps {
   globalLoginOptions: IGlobalLoginOptions
-  machines: { [key: string]: IMachine }
-  onEdit?: (m: IMachine) => void
-  onDelete?: (m: IMachine) => void
+  machines: { [key: string]: Machine }
+  onEdit?: (m: Machine) => void
+  onDelete?: (m: Machine) => void
 }
 
 export default function MachinesTable({

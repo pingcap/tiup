@@ -1,28 +1,31 @@
 import React, { useMemo } from 'react'
 import { Tag, Table, Menu, Dropdown, Space, Divider, Popconfirm } from 'antd'
 import { DownOutlined } from '@ant-design/icons'
-import { useLocalStorageState } from 'ahooks'
 
-import { BaseComp, COMP_TYPES_ARR, CompTypes } from '_types'
-
-import { IMachine, DEF_SSH_PORT } from '../Machines/MachineForm'
 import {
-  IGlobalLoginOptions,
+  BaseComp,
+  COMP_TYPES_ARR,
+  CompTypes,
   DEF_UESRNAME,
-} from '../Machines/GlobalLoginOptionsForm'
+  Machine,
+  DEF_SSH_PORT,
+  MachineMap,
+  CompMap,
+} from '_types'
+import { useGlobalLoginOptions } from '_hooks'
 
 interface IDeploymentTableProps {
   forScaleOut: boolean // deploy or scale out
-  machines: { [key: string]: IMachine }
-  components: { [key: string]: BaseComp }
+  machines: MachineMap
+  components: CompMap
   onAddComponent?: (
-    machine: IMachine,
+    machine: Machine,
     componentType: CompTypes,
     forScaleOut: boolean
   ) => void
   onEditComponent?: (comp: BaseComp) => void
   onDeleteComponent?: (comp: BaseComp) => void
-  onDeleteComponents?: (machine: IMachine, forScaleOut: boolean) => void
+  onDeleteComponents?: (machine: Machine, forScaleOut: boolean) => void
 }
 
 export default function DeploymentTable({
@@ -34,13 +37,10 @@ export default function DeploymentTable({
   onDeleteComponent,
   onDeleteComponents,
 }: IDeploymentTableProps) {
-  const [globalLoginOptions] = useLocalStorageState<IGlobalLoginOptions>(
-    'global_login_options',
-    {}
-  )
+  const { globalLoginOptions } = useGlobalLoginOptions()
 
   const dataSource = useMemo(() => {
-    let machinesAndComps: (IMachine | BaseComp)[] = []
+    let machinesAndComps: (Machine | BaseComp)[] = []
     const sortedMachines = Object.values(machines).sort((a, b) =>
       a.host > b.host ? 1 : -1
     )

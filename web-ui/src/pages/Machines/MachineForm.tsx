@@ -9,52 +9,22 @@ import {
   Select,
   Typography,
 } from 'antd'
-import uniqid from 'uniqid'
 
-import { IGlobalLoginOptions, DEF_UESRNAME } from './GlobalLoginOptionsForm'
+import {
+  IGlobalLoginOptions,
+  DEF_UESRNAME,
+  Machine,
+  MachineMap,
+  DEF_SSH_PORT,
+} from '_types'
 
-export interface IMachine {
-  id: string
-  name: string
-  host: string
-  ssh_port?: number
-
-  isPubKeyAuth: boolean
-  privateKey: string
-  privateKeyPassword: string
-
-  username: string
-  password: string
-
-  dc: string
-  rack: string
-}
-export const DEF_SSH_PORT = 22
-
-const defMachine: IMachine = {
-  id: '',
-  name: '',
-  host: '',
-  ssh_port: undefined,
-
-  isPubKeyAuth: true,
-  privateKey: '',
-  privateKeyPassword: '',
-
-  username: '',
-  password: '',
-
-  dc: '',
-  rack: '',
-}
-
-function correctFormValues(
-  values: any,
-  globalLoginOptions: IGlobalLoginOptions
-) {
+function correctFormValues(values: any) {
   for (const key of Object.keys(values)) {
-    if (key !== 'ssh_port' && key !== 'isPubKeyAuth') {
+    if (key !== 'isPubKeyAuth') {
       values[key] = values[key].trim()
+      if (values[key] === '') {
+        values[key] = undefined
+      }
     }
     if (key === 'ssh_port' && values[key] !== undefined) {
       values[key] = parseInt(values[key])
@@ -63,20 +33,17 @@ function correctFormValues(
       }
     }
   }
-  if (values.name === '') {
-    values.name = `${
-      values.username || globalLoginOptions.username || DEF_UESRNAME
-    }@${values.host}`
-  }
 }
 
-interface IMachineFormProps {
+interface MachineFormProps {
   globalLoginOptions: IGlobalLoginOptions
-  machine?: IMachine
-  machines: { [key: string]: IMachine }
-  onAdd?: (machine: IMachine, close: boolean) => boolean
-  onUpdate?: (machine: IMachine) => boolean
+  machine?: Machine
+  machines: MachineMap
+  onAdd?: (machine: Machine, close: boolean) => boolean
+  onUpdate?: (machine: Machine) => boolean
 }
+
+const defMachine = new Machine()
 
 export default function MachineForm({
   globalLoginOptions,
@@ -84,7 +51,7 @@ export default function MachineForm({
   machines,
   onAdd,
   onUpdate,
-}: IMachineFormProps) {
+}: MachineFormProps) {
   const [form] = Form.useForm()
 
   const addNew: boolean = machine === undefined
@@ -97,17 +64,9 @@ export default function MachineForm({
     form
       .validateFields()
       .then((values) => {
-        correctFormValues(values, globalLoginOptions)
-        const ok =
-          onAdd &&
-          onAdd(
-            {
-              ...defMachine,
-              ...(values as IMachine),
-              id: uniqid(),
-            },
-            false
-          )
+        correctFormValues(values)
+        let m = Machine.deSerial(values)
+        const ok = onAdd && onAdd(m, false)
         if (ok) {
           form.resetFields()
         }
@@ -116,24 +75,13 @@ export default function MachineForm({
   }
 
   function handleFinish(values: any) {
-    correctFormValues(values, globalLoginOptions)
+    correctFormValues(values)
+    let m = Machine.deSerial(values)
     if (addNew) {
-      onAdd &&
-        onAdd(
-          {
-            ...defMachine,
-            ...(values as IMachine),
-            id: uniqid(),
-          },
-          true
-        )
+      onAdd && onAdd(m, true)
     } else {
-      onUpdate &&
-        onUpdate({
-          ...defMachine,
-          ...(values as IMachine),
-          id: machine!.id,
-        })
+      m.id = machine!.id
+      onUpdate && onUpdate(m)
     }
   }
 
@@ -144,18 +92,8 @@ export default function MachineForm({
 
     const m = machines[machineID]
     form.setFieldsValue({
-      host: m.host,
-      ssh_port: m.ssh_port,
-
-      isPubKeyAuth: m.isPubKeyAuth,
-      privateKey: m.privateKey,
-      privateKeyPassword: m.privateKeyPassword,
-
-      username: m.username,
-      password: m.password,
-
-      dc: m.dc,
-      rack: m.rack,
+      ...m,
+      name: undefined,
     })
   }
 

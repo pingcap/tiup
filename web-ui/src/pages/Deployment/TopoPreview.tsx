@@ -6,22 +6,20 @@ import {
   DEF_DATA_DIR_PREFIX,
   COMP_TYPES_ARR,
   CompMap,
+  MachineMap,
 } from '_types'
 
-import { IMachine } from '../Machines/MachineForm'
-
 interface ITopoPreviewProps {
-  forScaleOut: boolean
-  machines: { [key: string]: IMachine }
+  machines: MachineMap
   components: CompMap
+  forScaleOut: boolean
 }
 
-// TODO: split into 2 methods: genDeployTopo, genScaleOutTopo
-export function genTopo({
-  machines,
-  components,
-  forScaleOut,
-}: ITopoPreviewProps) {
+export function genTopo(
+  machines: MachineMap,
+  components: CompMap,
+  forScaleOut: boolean
+) {
   const componentsArr = Object.values(components)
 
   let topo = {} as any
@@ -93,11 +91,11 @@ export function genTopo({
 }
 
 export default function TopoPreview({
-  forScaleOut,
   machines,
   components,
+  forScaleOut,
 }: ITopoPreviewProps) {
-  const topo = useMemo(() => genTopo({ machines, components, forScaleOut }), [
+  const topo = useMemo(() => genTopo(machines, components, forScaleOut), [
     machines,
     components,
     forScaleOut,

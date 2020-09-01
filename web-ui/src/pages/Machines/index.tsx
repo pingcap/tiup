@@ -1,32 +1,25 @@
 import React, { useState, useCallback } from 'react'
 import { Button, Drawer, Modal, Space } from 'antd'
-import { useLocalStorageState } from 'ahooks'
 
 import { Root } from '_components'
-import { useComps } from '_hooks'
+import { useMachines, useComps, useGlobalLoginOptions } from '_hooks'
+import { Machine } from '_types'
 
-import MachineForm, { IMachine } from './MachineForm'
+import MachineForm from './MachineForm'
 import MachinesTable from './MachinesTable'
-import GlobalLoginOptionsForm, {
-  IGlobalLoginOptions,
-} from './GlobalLoginOptionsForm'
+import GlobalLoginOptionsForm from './GlobalLoginOptionsForm'
 
 export default function MachinesPage() {
   const [showForm, setShowForm] = useState(false)
-  const [curMachine, setCurMachine] = useState<IMachine | undefined>(undefined)
+  const [curMachine, setCurMachine] = useState<Machine | undefined>(undefined)
 
-  const [machines, setMachines] = useLocalStorageState<{
-    [key: string]: IMachine
-  }>('machines', {})
+  const { machines, setMachineObjs } = useMachines()
   const { comps, setCompObjs } = useComps()
+  const { globalLoginOptions, setGlobalLoginOptions } = useGlobalLoginOptions()
 
-  const [globalLoginOptions, setGlobalLoginOptions] = useLocalStorageState<
-    IGlobalLoginOptions
-  >('global_login_options', {})
-
-  function handleAddMachine(machine: IMachine, close: boolean) {
+  function addOrUpdateMachine(machine: Machine): boolean {
     let dup = Object.values(machines).find((m) => m.host === machine.host)
-    if (dup !== undefined) {
+    if (dup && dup.id !== machine.id) {
       Modal.error({
         title: '添加失败',
         content: `该主机 ${machine.host} 已存在`,
@@ -34,8 +27,11 @@ export default function MachinesPage() {
       return false
     }
 
-    dup = Object.values(machines).find((m) => m.name === machine.name)
-    if (dup !== undefined) {
+    dup = Object.values(machines).find(
+      (m) =>
+        m.fullName(globalLoginOptions) === machine.fullName(globalLoginOptions)
+    )
+    if (dup && dup.id !== machine.id) {
       Modal.error({
         title: '添加失败',
         content: `该主机 name ${machine.name} 已被使用`,
@@ -43,36 +39,31 @@ export default function MachinesPage() {
       return false
     }
 
-    setMachines({ ...machines, [machine.id]: machine })
+    setMachineObjs({
+      ...machines,
+      [machine.id]: machine,
+    })
+    return true
+  }
+
+  function handleAddMachine(machine: Machine, close: boolean): boolean {
+    let ret = addOrUpdateMachine(machine)
+    if (!ret) {
+      return false
+    }
+
     if (close) {
       setShowForm(false)
     }
     return true
   }
 
-  function handleUpdateMachine(machine: IMachine) {
-    // TODO: duplicated with above code
-    let dup = Object.values(machines).find((m) => m.host === machine.host)
-    if (dup && dup.id !== machine.id) {
-      Modal.error({
-        title: '添加失败',
-        content: `该主机 ${machine.host} 已存在`,
-      })
+  function handleUpdateMachine(machine: Machine): boolean {
+    let ret = addOrUpdateMachine(machine)
+    if (!ret) {
       return false
     }
 
-    dup = Object.values(machines).find((m) => m.name === machine.name)
-    if (dup && dup.id !== machine.id) {
-      Modal.error({
-        title: '添加失败',
-        content: `该主机 name ${machine.name} 已被使用`,
-      })
-      return false
-    }
-    setMachines({
-      ...machines,
-      [machine.id]: machine,
-    })
     setShowForm(false)
     return true
   }
@@ -82,16 +73,16 @@ export default function MachinesPage() {
     setShowForm(true)
   }, [])
 
-  const editMachine = useCallback((m: IMachine) => {
+  const editMachine = useCallback((m: Machine) => {
     setCurMachine(m)
     setShowForm(true)
   }, [])
 
   const deleteMachine = useCallback(
-    (m: IMachine) => {
+    (m: Machine) => {
       const newMachines = { ...machines }
       delete newMachines[m.id]
-      setMachines(newMachines)
+      setMachineObjs(newMachines)
 
       // delete related component
       const newComps = { ...comps }
@@ -103,7 +94,7 @@ export default function MachinesPage() {
       }
       setCompObjs(newComps)
     },
-    [machines, setMachines, comps, setCompObjs]
+    [machines, setMachineObjs, comps, setCompObjs]
   )
 
   return (

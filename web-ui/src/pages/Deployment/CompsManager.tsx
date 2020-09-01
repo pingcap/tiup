@@ -5,15 +5,13 @@ import yaml from 'yaml'
 import { useNavigate } from 'react-router-dom'
 
 import { Root } from '_components'
-import { BaseComp, CompTypes } from '_types'
-import { useComps } from '_hooks'
+import { BaseComp, CompTypes, Machine } from '_types'
+import { useComps, useGlobalLoginOptions, useMachines } from '_hooks'
 import { deployCluster, scaleOutCluster } from '_apis'
 
-import { IMachine } from '../Machines/MachineForm'
 import DeploymentTable from './DeploymentTable'
 import EditCompForm from './EditCompForm'
 import TopoPreview, { genTopo } from './TopoPreview'
-import { IGlobalLoginOptions } from '../Machines/GlobalLoginOptionsForm'
 
 // TODO: fetch from API
 const TIDB_VERSIONS = [
@@ -43,9 +41,7 @@ export default function CompsManager({
   clusterName,
   forScaleOut,
 }: ICompsManagerProps) {
-  const [machines] = useLocalStorageState<{
-    [key: string]: IMachine
-  }>('machines', {})
+  const { machines } = useMachines()
   const { comps, setCompObjs } = useComps()
   const [curComp, setCurComp] = useState<BaseComp | undefined>(undefined)
 
@@ -56,10 +52,7 @@ export default function CompsManager({
     { cluster_name: '', tidb_version: '' }
   )
 
-  const [globalLoginOptions] = useLocalStorageState<IGlobalLoginOptions>(
-    'global_login_options',
-    {}
-  )
+  const { globalLoginOptions } = useGlobalLoginOptions()
 
   const [, setCurScaleOutNodes] = useLocalStorageState(
     'cur_scale_out_nodes',
@@ -71,7 +64,7 @@ export default function CompsManager({
   const [form] = Form.useForm()
 
   const handleAddComponent = useCallback(
-    (machine: IMachine, componentType: CompTypes, forScaleOut: boolean) => {
+    (machine: Machine, componentType: CompTypes, forScaleOut: boolean) => {
       let comp = BaseComp.create(componentType, machine.id, forScaleOut)
       const existedSameComps = Object.values(comps).filter(
         (comp) => comp.type === componentType && comp.machineID === machine.id
@@ -110,7 +103,7 @@ export default function CompsManager({
   )
 
   const handleDeleteComponents = useCallback(
-    (machine: IMachine, forScaleOut: boolean) => {
+    (machine: Machine, forScaleOut: boolean) => {
       const newComps = { ...comps }
       const belongedComps = Object.values(comps).filter(
         (c) => c.machineID === machine.id
@@ -126,9 +119,7 @@ export default function CompsManager({
   )
 
   function handleDeploy(values: any) {
-    const topoYaml = yaml.stringify(
-      genTopo({ machines, components: comps, forScaleOut })
-    )
+    const topoYaml = yaml.stringify(genTopo(machines, comps, forScaleOut))
     deployCluster({
       ...values,
       topo_yaml: topoYaml,
@@ -163,9 +154,7 @@ export default function CompsManager({
     })
 
     // scale out
-    const topoYaml = yaml.stringify(
-      genTopo({ machines, components: comps, forScaleOut })
-    )
+    const topoYaml = yaml.stringify(genTopo(machines, comps, forScaleOut))
     scaleOutCluster(clusterName!, {
       topo_yaml: topoYaml,
       global_login_options: globalLoginOptions,

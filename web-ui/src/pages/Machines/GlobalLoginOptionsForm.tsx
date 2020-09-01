@@ -1,14 +1,7 @@
 import React, { useState } from 'react'
 import { Form, Input, Button, message } from 'antd'
 
-export interface IGlobalLoginOptions {
-  username?: string
-  password?: string
-  privateKey?: string
-  privateKeyPassword?: string
-}
-
-export const DEF_UESRNAME = 'root'
+import { IGlobalLoginOptions, DEF_UESRNAME } from '_types'
 
 export interface IGlobalLoginOptionsFormProps {
   globalLoginOptions: IGlobalLoginOptions

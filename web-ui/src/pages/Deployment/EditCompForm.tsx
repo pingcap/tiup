@@ -23,6 +23,32 @@ import {
   DEF_ALERT_CLUSTER_PORT,
 } from '_types'
 
+function correctFormValues(values: any) {
+  for (const key of Object.keys(values)) {
+    let v = values[key]
+    if (v === undefined) {
+      continue
+    }
+    if (typeof v !== 'string') {
+      continue
+    }
+    if (typeof v === 'string') {
+      v = v.trim()
+    }
+    if (v === '') {
+      values[key] = undefined
+      continue
+    }
+    if (key === 'deploy_dir_prefix' || key === 'data_dir_prefix') {
+      continue
+    }
+    values[key] = parseInt(v)
+    if (values[key] <= 0) {
+      values[key] = undefined
+    }
+  }
+}
+
 interface IEditCompFormProps {
   comp?: BaseComp
   onUpdateComp: (comp: BaseComp) => void
@@ -33,29 +59,7 @@ export default function EditCompForm({
   onUpdateComp,
 }: IEditCompFormProps) {
   function handleFinish(values: any) {
-    for (const key of Object.keys(values)) {
-      let v = values[key]
-      if (v === undefined) {
-        continue
-      }
-      if (typeof v !== 'string') {
-        continue
-      }
-      if (typeof v === 'string') {
-        v = v.trim()
-      }
-      if (v === '') {
-        values[key] = undefined
-        continue
-      }
-      if (key === 'deploy_dir_prefix' || key === 'data_dir_prefix') {
-        continue
-      }
-      values[key] = parseInt(v)
-      if (values[key] <= 0) {
-        values[key] = undefined
-      }
-    }
+    correctFormValues(values)
     onUpdateComp({
       ...comp,
       ...values,
