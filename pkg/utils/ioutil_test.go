@@ -23,10 +23,14 @@ func (s *TestIOUtilSuite) TestIOUtil(c *C) {}
 
 func (s *TestIOUtilSuite) SetUpSuite(c *C) {
 	os.RemoveAll(path.Join(currentDir(), "testdata", "parent"))
+	os.RemoveAll(path.Join(currentDir(), "testdata", "ssh-exec"))
+	os.RemoveAll(path.Join(currentDir(), "testdata", "nop-nop"))
 }
 
 func (s *TestIOUtilSuite) TearDownSuite(c *C) {
 	os.RemoveAll(path.Join(currentDir(), "testdata", "parent"))
+	os.RemoveAll(path.Join(currentDir(), "testdata", "ssh-exec"))
+	os.RemoveAll(path.Join(currentDir(), "testdata", "nop-nop"))
 }
 
 func (s *TestIOUtilSuite) TestIsExist(c *C) {
@@ -37,6 +41,22 @@ func (s *TestIOUtilSuite) TestIsExist(c *C) {
 func (s *TestIOUtilSuite) TestIsNotExist(c *C) {
 	c.Assert(IsNotExist("/tmp"), IsFalse)
 	c.Assert(IsNotExist("/tmp/"+uuid.New().String()), IsTrue)
+}
+
+func (s *TestIOUtilSuite) TestIsExecBinary(c *C) {
+	c.Assert(IsExecBinary("/tmp"), IsFalse)
+
+	e := path.Join(currentDir(), "testdata", "ssh-exec")
+	f, err := os.OpenFile(e, os.O_CREATE, 0777)
+	c.Assert(err, IsNil)
+	defer f.Close()
+	c.Assert(IsExecBinary(e), IsTrue)
+
+	e = path.Join(currentDir(), "testdata", "nop-nop")
+	f, err = os.OpenFile(e, os.O_CREATE, 0666)
+	c.Assert(err, IsNil)
+	defer f.Close()
+	c.Assert(IsExecBinary(e), IsFalse)
 }
 
 func (s *TestIOUtilSuite) TestUntar(c *C) {
