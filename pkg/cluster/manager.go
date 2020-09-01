@@ -1707,11 +1707,7 @@ func buildDynReloadProm(topo spec.Topology) []task.Task {
 	}
 	var dynReloadTasks []task.Task
 	for _, inst := range monitor.Instances() {
-		dynReloadTasks = append(dynReloadTasks, task.NewBuilder().SystemCtl(
-			inst.GetHost(),
-			inst.ServiceName(),
-			"kill -s SIGHUB",
-		).Build())
+		dynReloadTasks = append(dynReloadTasks, task.NewBuilder().SystemCtl(inst.GetHost(), inst.ServiceName(), "reload", true).Build())
 	}
 	return dynReloadTasks
 }

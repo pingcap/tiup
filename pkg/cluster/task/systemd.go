@@ -15,6 +15,7 @@ package task
 
 import (
 	"fmt"
+	"github.com/pingcap/errors"
 
 	"github.com/pingcap/tiup/pkg/cluster/module"
 )
@@ -24,6 +25,7 @@ type SystemCtl struct {
 	host   string
 	unit   string
 	action string
+	reload bool
 }
 
 // Execute implements the Task interface
@@ -34,14 +36,15 @@ func (c *SystemCtl) Execute(ctx *Context) error {
 	}
 
 	cfg := module.SystemdModuleConfig{
-		Unit:   c.unit,
-		Action: c.action,
+		Unit:         c.unit,
+		Action:       c.action,
+		ReloadDaemon: c.reload,
 	}
 	systemd := module.NewSystemdModule(cfg)
 	stdout, stderr, err := systemd.Execute(e)
 	ctx.SetOutputs(c.host, stdout, stderr)
 	if err != nil {
-		return err
+		return errors.Annotatef(err, "stdout: %s, stderr:%s", string(stdout), string(stderr))
 	}
 
 	return nil
