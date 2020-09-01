@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
 import { Root } from '../../components/Root'
-import OperationStatus, { IOperationStatus } from './OperationStatus'
+import OperationStatus from './OperationStatus'
 import { getStatus } from '../../utils/api'
+import { IOperationStatus } from '_types'
 
 export default function StatusPage() {
   const [operationStatus, setOperationStatus] = useState<

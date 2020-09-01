@@ -1,12 +1,11 @@
 import React from 'react'
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 
+import StatusPage from './pages/Status'
+import HomePage from './pages/Home'
 import MachinesPage from './pages/Machines'
 import DeploymentPage from './pages/Deployment'
 import ClustersPage from './pages/Clusters'
-
-import StatusPage from './pages/Status'
-import HomePage from './pages/Home'
 import ClusterScaleOutPage from './pages/Clusters/ClusterScaleOut'
 import ClusterDetailPage from './pages/Clusters/ClusterDetail'
 

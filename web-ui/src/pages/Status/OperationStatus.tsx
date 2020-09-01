@@ -1,13 +1,7 @@
 import React, { useRef } from 'react'
 import { Progress } from 'antd'
 
-export interface IOperationStatus {
-  operation_type: string // 'deploy', 'scaleOut'
-  cluster_name: string
-  total_progress: number
-  steps: string[]
-  err_msg: string
-}
+import { IOperationStatus } from '_types'
 
 export interface IOperationStatusProps {
   operationStatus: IOperationStatus

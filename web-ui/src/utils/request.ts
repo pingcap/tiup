@@ -37,7 +37,6 @@ function parseResponse(response: Response) {
   } else {
     return response.json().then((resData: any) => {
       const errMsg = resData.msg || response.statusText
-      // message.error(errMsg)
       const error: ResError = new Error(errMsg)
       error.response = response
       throw error
