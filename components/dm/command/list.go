@@ -22,8 +22,7 @@ func newListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List all clusters",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := manager.ListCluster()
-			return err
+			return manager.ListCluster()
 		},
 	}
 	return cmd
