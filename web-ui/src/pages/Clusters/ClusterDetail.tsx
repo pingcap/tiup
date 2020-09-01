@@ -10,10 +10,11 @@ import {
   startCluster,
   stopCluster,
   scaleInCluster,
-} from '../../utils/api'
-import { Root } from '../../components'
+} from '_utils'
+import { Root } from '_components'
+import { useComps } from '_hooks'
+
 import { ICluster } from '.'
-import { useComps } from '../../hooks'
 
 export interface IClusterInstInfo {
   id: string

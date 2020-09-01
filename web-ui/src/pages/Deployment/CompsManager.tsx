@@ -2,20 +2,23 @@ import React, { useCallback, useState } from 'react'
 import { useLocalStorageState } from 'ahooks'
 import { Drawer, Button, Modal, Form, Input, Select } from 'antd'
 import yaml from 'yaml'
+import { useNavigate } from 'react-router-dom'
+
+import { Root } from '_components'
+import { BaseComp, CompTypes } from '_types'
+import { useComps } from '_hooks'
+import { deployCluster, scaleOutCluster } from '_utils'
 
 import { IMachine } from '../Machines/MachineForm'
 import DeploymentTable from './DeploymentTable'
 import EditCompForm from './EditCompForm'
 import TopoPreview, { genTopo } from './TopoPreview'
-import { Root } from '../../components'
-import { deployCluster, scaleOutCluster } from '../../utils/api'
 import { IGlobalLoginOptions } from '../Machines/GlobalLoginOptionsForm'
-import { useNavigate } from 'react-router-dom'
-import { BaseComp, CompTypes } from '../../types/comps'
-import { useComps } from '../../hooks/useComps'
 
 // TODO: fetch from API
 const TIDB_VERSIONS = [
+  'nightly',
+  'v4.0.5',
   'v4.0.4',
   'v4.0.3',
   'v4.0.2',

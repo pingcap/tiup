@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { Layout, Menu, Space } from 'antd'
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom'
 import { useSessionStorageState } from 'ahooks'
-import { getClusterList } from '../../utils'
-import { Root } from '../../components'
+
+import { getClusterList } from '_utils'
+import { Root } from '_components'
 
 export interface ICluster {
   name: string

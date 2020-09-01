@@ -1,13 +1,14 @@
 import React, { useMemo } from 'react'
 import yaml from 'yaml'
 
-import { IMachine } from '../Machines/MachineForm'
 import {
   DEF_DEPLOY_DIR_PREFIX,
   DEF_DATA_DIR_PREFIX,
   COMP_TYPES_ARR,
   CompMap,
-} from '../../types/comps'
+} from '_types'
+
+import { IMachine } from '../Machines/MachineForm'
 
 interface ITopoPreviewProps {
   forScaleOut: boolean

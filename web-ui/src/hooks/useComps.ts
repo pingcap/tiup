@@ -1,6 +1,7 @@
 import { useLocalStorageState } from 'ahooks'
-import { BaseComp, CompMap } from '../types/comps'
 import { useMemo } from 'react'
+
+import { BaseComp, CompMap } from '_types'
 
 export function useComps() {
   const [compObjs, setCompObjs] = useLocalStorageState<CompMap>(

@@ -1,8 +1,12 @@
 {
   "compilerOptions": {
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "paths": {
-      "_types": ["types"]
+      "_types": ["src/types"],
+      "_utils": ["src/utils"],
+      "_hooks": ["src/hooks"],
+      "_components": ["src/components"],
+      "_pages/*": ["src/pages/*"]
     }
   }
 }

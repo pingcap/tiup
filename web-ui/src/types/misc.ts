@@ -1,5 +1,13 @@
+export type OperationType =
+  | 'deploy'
+  | 'start'
+  | 'stop'
+  | 'scaleIn'
+  | 'scaleOut'
+  | 'destroy'
+
 export interface IOperationStatus {
-  operation_type: string // deploy | start | stop | scaleIn | scaleOut | destroy
+  operation_type: OperationType
   cluster_name: string
   total_progress: number
   steps: string[]

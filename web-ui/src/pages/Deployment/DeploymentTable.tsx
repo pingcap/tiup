@@ -1,14 +1,15 @@
 import React, { useMemo } from 'react'
 import { Tag, Table, Menu, Dropdown, Space, Divider, Popconfirm } from 'antd'
 import { DownOutlined } from '@ant-design/icons'
+import { useLocalStorageState } from 'ahooks'
+
+import { BaseComp, COMP_TYPES_ARR, CompTypes } from '_types'
 
 import { IMachine, DEF_SSH_PORT } from '../Machines/MachineForm'
-import { useLocalStorageState } from 'ahooks'
 import {
   IGlobalLoginOptions,
   DEF_UESRNAME,
 } from '../Machines/GlobalLoginOptionsForm'
-import { BaseComp, COMP_TYPES_ARR, CompTypes } from '../../types/comps'
 
 interface IDeploymentTableProps {
   forScaleOut: boolean // deploy or scale out

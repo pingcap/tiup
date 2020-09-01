@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
-import { Root } from '../../components'
-import { getStatus } from '../../utils'
+import { Root } from '_components'
+import { getStatus } from '_utils'
 import { IOperationStatus } from '_types'
 
 import OperationStatus from './OperationStatus'

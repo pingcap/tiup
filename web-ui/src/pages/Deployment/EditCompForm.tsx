@@ -21,7 +21,7 @@ import {
   DEF_PROM_PORT,
   DEF_ALERT_WEB_PORT,
   DEF_ALERT_CLUSTER_PORT,
-} from '../../types/comps'
+} from '_types'
 
 interface IEditCompFormProps {
   comp?: BaseComp

@@ -2,13 +2,14 @@ import React, { useState, useCallback } from 'react'
 import { Button, Drawer, Modal, Space } from 'antd'
 import { useLocalStorageState } from 'ahooks'
 
+import { Root } from '_components'
+import { useComps } from '_hooks'
+
 import MachineForm, { IMachine } from './MachineForm'
 import MachinesTable from './MachinesTable'
-import { Root } from '../../components'
 import GlobalLoginOptionsForm, {
   IGlobalLoginOptions,
 } from './GlobalLoginOptionsForm'
-import { useComps } from '../../hooks'
 
 export default function MachinesPage() {
   const [showForm, setShowForm] = useState(false)

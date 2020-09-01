@@ -6,7 +6,8 @@ import {
   DeploymentUnitOutlined,
   ClusterOutlined,
 } from '@ant-design/icons'
-import { getStatus } from '../../utils/api'
+
+import { getStatus } from '_utils'
 
 const { Sider, Content } = Layout
 

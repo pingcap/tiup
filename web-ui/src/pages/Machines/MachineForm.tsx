@@ -10,6 +10,7 @@ import {
   Typography,
 } from 'antd'
 import uniqid from 'uniqid'
+
 import { IGlobalLoginOptions, DEF_UESRNAME } from './GlobalLoginOptionsForm'
 
 export interface IMachine {
