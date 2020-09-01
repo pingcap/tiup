@@ -11,9 +11,9 @@ import {
   stopCluster,
   scaleInCluster,
 } from '../../utils/api'
-import { Root } from '../../components/Root'
+import { Root } from '../../components'
 import { ICluster } from '.'
-import { useComps } from '../../hooks/useComps'
+import { useComps } from '../../hooks'
 
 export interface IClusterInstInfo {
   id: string

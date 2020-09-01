@@ -4,11 +4,11 @@ import { useLocalStorageState } from 'ahooks'
 
 import MachineForm, { IMachine } from './MachineForm'
 import MachinesTable from './MachinesTable'
-import { Root } from '../../components/Root'
+import { Root } from '../../components'
 import GlobalLoginOptionsForm, {
   IGlobalLoginOptions,
 } from './GlobalLoginOptionsForm'
-import { useComps } from '../../hooks/useComps'
+import { useComps } from '../../hooks'
 
 export default function MachinesPage() {
   const [showForm, setShowForm] = useState(false)
