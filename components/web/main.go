@@ -137,7 +137,7 @@ func clustersHandler(c *gin.Context) {
 
 func clusterHandler(c *gin.Context) {
 	clusterName := c.Param("clusterName")
-	instInfos, err := manager.Display(clusterName, operator.Options{
+	instInfos, err := manager.GetClusterTopology(clusterName, operator.Options{
 		SSHTimeout: 5,
 		OptTimeout: 120,
 		APITimeout: 300,

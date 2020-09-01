@@ -535,14 +535,13 @@ type InstInfo struct {
 }
 
 // Display cluster meta and topology.
-func (m *Manager) Display(clusterName string, opt operator.Options) ([]InstInfo, error) {
-	metadata, err := m.meta(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
-		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-		return nil, perrs.AddStack(err)
+func (m *Manager) Display(clusterName string, opt operator.Options) error {
+	clusterInstInfos, err := m.GetClusterTopology(clusterName, opt)
+	if err != nil {
+		return err
 	}
 
-	topo := metadata.GetTopology()
+	metadata, _ := m.meta(clusterName)
 	base := metadata.GetBaseMeta()
 
 	// display cluster meta
@@ -555,6 +554,33 @@ func (m *Manager) Display(clusterName string, opt operator.Options) ([]InstInfo,
 		// Header
 		{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Data Dir", "Deploy Dir"},
 	}
+	for _, v := range clusterInstInfos {
+		clusterTable = append(clusterTable, []string{
+			color.CyanString(v.ID),
+			v.Role,
+			v.Host,
+			v.Ports,
+			v.OsArch,
+			formatInstanceStatus(v.Status),
+			v.DataDir,
+			v.DeployDir,
+		})
+	}
+
+	cliutil.PrintTable(clusterTable, true)
+	return nil
+}
+
+// GetClusterTopology get the topology of the cluster.
+func (m *Manager) GetClusterTopology(clusterName string, opt operator.Options) ([]InstInfo, error) {
+	metadata, err := m.meta(clusterName)
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+		return nil, perrs.AddStack(err)
+	}
+
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
 
 	ctx := task.NewContext()
 	err = ctx.SetSSHKeySet(m.specManager.Path(clusterName, "ssh", "id_rsa"),
@@ -606,16 +632,6 @@ func (m *Manager) Display(clusterName string, opt operator.Options) ([]InstInfo,
 					}
 				}
 			}
-			clusterTable = append(clusterTable, []string{
-				color.CyanString(ins.ID()),
-				ins.Role(),
-				ins.GetHost(),
-				utils.JoinInt(ins.UsedPorts(), "/"),
-				cliutil.OsArch(ins.OS(), ins.Arch()),
-				formatInstanceStatus(status),
-				dataDir,
-				deployDir,
-			})
 
 			clusterInstInfos = append(clusterInstInfos, InstInfo{
 				ID:        ins.ID(),
@@ -630,18 +646,6 @@ func (m *Manager) Display(clusterName string, opt operator.Options) ([]InstInfo,
 		}
 	}
 
-	// Sort by role,host,ports
-	sort.Slice(clusterTable[1:], func(i, j int) bool {
-		lhs, rhs := clusterTable[i+1], clusterTable[j+1]
-		// column: 1 => role, 2 => host, 3 => ports
-		for _, col := range []int{1, 2} {
-			if lhs[col] != rhs[col] {
-				return lhs[col] < rhs[col]
-			}
-		}
-		return lhs[3] < rhs[3]
-	})
-
 	sort.Slice(clusterInstInfos, func(i, j int) bool {
 		lhs, rhs := clusterInstInfos[i], clusterInstInfos[j]
 		if lhs.Role != rhs.Role {
@@ -652,8 +656,6 @@ func (m *Manager) Display(clusterName string, opt operator.Options) ([]InstInfo,
 		}
 		return lhs.Ports < rhs.Ports
 	})
-
-	cliutil.PrintTable(clusterTable, true)
 
 	return clusterInstInfos, nil
 }

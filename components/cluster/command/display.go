@@ -58,7 +58,7 @@ func newDisplayCmd() *cobra.Command {
 				return displayDashboardInfo(clusterName)
 			}
 
-			_, err = manager.Display(clusterName, gOpt)
+			err = manager.Display(clusterName, gOpt)
 			if err != nil {
 				return perrs.AddStack(err)
 			}
