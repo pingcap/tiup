@@ -18,14 +18,21 @@ import {
   DEF_SSH_PORT,
 } from '_types'
 
-function correctFormValues(values: any) {
+function correctFormValues(values: any): any {
+  let newValues = {} as any
   for (const key of Object.keys(values)) {
     let v = values[key]
-    if (key !== 'isPubKeyAuth' && v !== undefined) {
-      v = v.trim()
-      if (v === '') {
-        v = undefined
-      }
+    newValues[key] = v
+
+    if (v === undefined) {
+      continue
+    }
+    if (typeof v !== 'string') {
+      continue
+    }
+    v = v.trim()
+    if (v === '') {
+      v = undefined
     }
     if (key === 'ssh_port' && v !== undefined) {
       v = parseInt(v)
@@ -33,8 +40,9 @@ function correctFormValues(values: any) {
         v = undefined
       }
     }
-    values[key] = v
+    newValues[key] = v
   }
+  return newValues
 }
 
 interface MachineFormProps {
@@ -73,12 +81,20 @@ export default function MachineForm({
           form.resetFields()
         }
       })
-      .catch((_err) => {})
+      .catch((_err) => {
+        console.log(_err)
+      })
   }
 
   function handleFinish(values: any) {
-    correctFormValues(values)
-    let m = Machine.deSerial(values)
+    let newValues
+    if (addNew) {
+      newValues = correctFormValues(values)
+    } else {
+      newValues = correctFormValues({ ...machine, ...values })
+    }
+
+    let m = Machine.deSerial(newValues)
     if (addNew) {
       onAdd && onAdd(m, true)
     } else {
@@ -159,46 +175,51 @@ export default function MachineForm({
           <Form.Item label="SSH 端口" name="ssh_port">
             <Input placeholder={DEF_SSH_PORT + ''} />
           </Form.Item>
-          <Form.Item label="登录用户名" name="username">
-            <Input
-              placeholder={globalLoginOptions.username || DEF_UESRNAME}
-              autoComplete="new-password"
-            />
-          </Form.Item>
-          <Form.Item name="isPubKeyAuth" valuePropName="checked">
-            <Checkbox>使用私钥登录</Checkbox>
-          </Form.Item>
-          <Form.Item
-            noStyle
-            shouldUpdate={(prevValues, currentValues) =>
-              prevValues.isPubKeyAuth !== currentValues.isPubKeyAuth
-            }
-          >
-            {({ getFieldValue }) => {
-              return getFieldValue('isPubKeyAuth') ? (
-                <>
-                  <Form.Item label="私钥" name="privateKey">
-                    <Input.TextArea
-                      placeholder={globalLoginOptions.privateKey}
-                    />
-                  </Form.Item>
-                  <Form.Item label="私钥密码" name="privateKeyPassword">
-                    <Input.Password
-                      placeholder={globalLoginOptions.privateKeyPassword}
-                      autoComplete="new-password"
-                    />
-                  </Form.Item>
-                </>
-              ) : (
-                <Form.Item label="密码" name="password">
-                  <Input.Password
-                    placeholder={globalLoginOptions.password}
-                    autoComplete="new-password"
-                  />
-                </Form.Item>
-              )
-            }}
-          </Form.Item>
+
+          {false && (
+            <>
+              <Form.Item label="登录用户名" name="username">
+                <Input
+                  placeholder={globalLoginOptions.username || DEF_UESRNAME}
+                  autoComplete="new-password"
+                />
+              </Form.Item>
+              <Form.Item name="isPubKeyAuth" valuePropName="checked">
+                <Checkbox>使用私钥登录</Checkbox>
+              </Form.Item>
+              <Form.Item
+                noStyle
+                shouldUpdate={(prevValues, currentValues) =>
+                  prevValues.isPubKeyAuth !== currentValues.isPubKeyAuth
+                }
+              >
+                {({ getFieldValue }) => {
+                  return getFieldValue('isPubKeyAuth') ? (
+                    <>
+                      <Form.Item label="私钥" name="privateKey">
+                        <Input.TextArea
+                          placeholder={globalLoginOptions.privateKey}
+                        />
+                      </Form.Item>
+                      <Form.Item label="私钥密码" name="privateKeyPassword">
+                        <Input.Password
+                          placeholder={globalLoginOptions.privateKeyPassword}
+                          autoComplete="new-password"
+                        />
+                      </Form.Item>
+                    </>
+                  ) : (
+                    <Form.Item label="密码" name="password">
+                      <Input.Password
+                        placeholder={globalLoginOptions.password}
+                        autoComplete="new-password"
+                      />
+                    </Form.Item>
+                  )
+                }}
+              </Form.Item>
+            </>
+          )}
         </Collapse.Panel>
 
         <Collapse.Panel key="advance" header="高级配置">

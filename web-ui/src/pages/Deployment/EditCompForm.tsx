@@ -32,9 +32,7 @@ function correctFormValues(values: any) {
     if (typeof v !== 'string') {
       continue
     }
-    if (typeof v === 'string') {
-      v = v.trim()
-    }
+    v = v.trim()
     if (v === '') {
       values[key] = undefined
       continue
@@ -42,10 +40,12 @@ function correctFormValues(values: any) {
     if (key === 'deploy_dir_prefix' || key === 'data_dir_prefix') {
       continue
     }
-    values[key] = parseInt(v)
-    if (values[key] <= 0) {
-      values[key] = undefined
+    // kinds of port, number
+    v = parseInt(v)
+    if (v <= 0) {
+      v = undefined
     }
+    values[key] = v
   }
 }
 

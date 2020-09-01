@@ -33,16 +33,16 @@ export default function MachinesTable({
         key: 'address',
         render: (text: any, rec: Machine) => rec.address(),
       },
-      {
-        title: '登录用户',
-        key: 'username',
-        render: (text: any, rec: Machine) => rec.userName(globalLoginOptions),
-      },
-      {
-        title: '使用公钥登录',
-        key: 'isPubKeyAuth',
-        render: (text: any, rec: any) => (rec.isPubKeyAuth ? '是' : '否'),
-      },
+      // {
+      //   title: '登录用户',
+      //   key: 'username',
+      //   render: (text: any, rec: Machine) => rec.userName(globalLoginOptions),
+      // },
+      // {
+      //   title: '使用公钥登录',
+      //   key: 'isPubKeyAuth',
+      //   render: (text: any, rec: any) => (rec.isPubKeyAuth ? '是' : '否'),
+      // },
       {
         title: '标签: DC',
         key: 'label_dc',

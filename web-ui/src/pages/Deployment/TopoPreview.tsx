@@ -69,10 +69,10 @@ export function genTopo(
           m[key] = (comp as any)[key]
         }
         if (key === 'deploy_dir_prefix' && comp[key] !== undefined) {
-          m[key] = comp.deployPathFull()
+          m['deploy_dir'] = comp.deployPathFull()
         }
         if (key === 'data_dir_prefix' && comp[key] !== undefined) {
-          m[key] = comp.dataPathFull()
+          m['data_dir'] = comp.dataPathFull()
         }
       }
 
@@ -84,7 +84,17 @@ export function genTopo(
       }
 
       topo[topoKey].push(m)
-      topo[topoKey].sort((a: any, b: any) => (a.host > b.host ? 1 : -1))
+      topo[topoKey].sort((a: any, b: any) => {
+        if (a.host > b.host) {
+          return 1
+        }
+        if (a.host < b.host) {
+          return -1
+        }
+        const aPort = a.port || a.tcp_port || a.client_port || a.web_port || 0
+        const bPort = b.port || b.tcp_port || b.client_port || b.web_port || 0
+        return aPort - bPort
+      })
     }
   }
   return topo
