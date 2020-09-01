@@ -1,5 +1,13 @@
 TiUP Changelog
 
+## [1.1.1] 2020.09.01
+
+### Fixes
+
+- Remove the username `root` in sudo command [#731](https://github.com/pingcap/tiup/issues/731)
+- Transfer the default alertmanager.yml if the local config file not specified [#735](https://github.com/pingcap/tiup/issues/735)
+- Only remove corresponed config files in InitConfig for monitor service in case it's a shared directory [#736](https://github.com/pingcap/tiup/issues/736)
+
 ## [1.1.0] 2020.08.28
 
 ### New Features
