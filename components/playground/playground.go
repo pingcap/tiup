@@ -784,7 +784,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	var succ []string
 	for _, db := range p.tidbs {
-		prefix := "Check DB " + db.Addr()
+		prefix := color.YellowString("Waiting for tidb %s ready ", db.Addr())
 		bar := progress.NewSingleBar(prefix)
 		bar.StartRenderLoop()
 		if s := checkDB(db.Addr()); s {
