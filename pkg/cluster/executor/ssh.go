@@ -303,11 +303,11 @@ func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 
 	ssh := "ssh"
 
-	isExec := func(mode os.FileMode) bool { return mode&0111 == 0111 }
-	if val := os.Getenv(localdata.EnvNameNativeSSHPath); val != "" {
-		if info, err := os.Stat(val); err == nil && !info.IsDir() && isExec(info.Mode()) {
-			ssh = val
+	if val := os.Getenv(localdata.EnvNameSSHPath); val != "" {
+		if isExec := utils.IsExecBinary(val); !isExec {
+			return nil, nil, fmt.Errorf("The specified SSH in the environment variable `%s` does not exist or is not executable", localdata.EnvNameSSHPath)
 		}
+		ssh = val
 	}
 
 	args := []string{ssh, "-o", "StrictHostKeyChecking"}
@@ -358,13 +358,13 @@ func (e *NativeSSHExecutor) Transfer(src string, dst string, download bool) erro
 		return e.ConnectionTestResult
 	}
 
-	scp := "ssh"
+	scp := "scp"
 
-	isExec := func(mode os.FileMode) bool { return mode&0111 == 0111 }
-	if val := os.Getenv(localdata.EnvNameNativeSSHPath); val != "" {
-		if info, err := os.Stat(val); err == nil && !info.IsDir() && isExec(info.Mode()) {
-			scp = val
+	if val := os.Getenv(localdata.EnvNameSCPPath); val != "" {
+		if isExec := utils.IsExecBinary(val); !isExec {
+			return fmt.Errorf("The specified SCP in the environment variable `%s` does not exist or is not executable", localdata.EnvNameSCPPath)
 		}
+		scp = val
 	}
 
 	args := []string{scp, "-r", "-o", "StrictHostKeyChecking=no"}
