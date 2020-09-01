@@ -35,6 +35,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
+	"github.com/pingcap/tiup/pkg/cliutil/progress"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -401,7 +402,7 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 }
 
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
-	fmt.Printf("Start %s instance...\n", inst.Component())
+	fmt.Printf("Start %s instance\n", inst.Component())
 	err := inst.Start(ctx, v0manifest.Version(p.bootOptions.version))
 	if err != nil {
 		return errors.AddStack(err)
@@ -783,68 +784,75 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	var succ []string
 	for _, db := range p.tidbs {
+		prefix := color.YellowString("Waiting for tidb %s ready ", db.Addr())
+		bar := progress.NewSingleBar(prefix)
+		bar.StartRenderLoop()
 		if s := checkDB(db.Addr()); s {
 			succ = append(succ, db.Addr())
+			bar.UpdateDisplay(&progress.DisplayProps{
+				Prefix: prefix,
+				Mode:   progress.ModeDone,
+			})
+		} else {
+			bar.UpdateDisplay(&progress.DisplayProps{
+				Prefix: prefix,
+				Mode:   progress.ModeError,
+			})
 		}
+		bar.StopRenderLoop()
 	}
 
 	if len(succ) > 0 {
 		// start TiFlash after at least one TiDB is up.
-		var lastErr error
-
-		var endpoints []string
-		for _, pd := range p.pds {
-			endpoints = append(endpoints, pd.Addr())
-		}
-		pdClient := api.NewPDClient(endpoints, 10*time.Second, nil)
-
-		// make sure TiKV are all up
-		for _, kv := range p.tikvs {
-			if err := checkStoreStatus(pdClient, "tikv", kv.StoreAddr()); err != nil {
-				lastErr = err
-				break
+		startTiFlash := func() error {
+			var endpoints []string
+			for _, pd := range p.pds {
+				endpoints = append(endpoints, pd.Addr())
 			}
-		}
+			pdClient := api.NewPDClient(endpoints, 10*time.Second, nil)
 
-		if lastErr == nil {
-			for _, flash := range p.tiflashs {
-				if err := p.startInstance(ctx, flash); err != nil {
-					lastErr = err
-					break
+			// make sure TiKV are all up
+			for _, kv := range p.tikvs {
+				if err := checkStoreStatus(pdClient, "tikv", kv.StoreAddr()); err != nil {
+					return err
 				}
 			}
-		}
 
-		if lastErr == nil {
+			for _, flash := range p.tiflashs {
+				if err := p.startInstance(ctx, flash); err != nil {
+					return err
+				}
+			}
+
 			// check if all TiFlash is up
 			for _, flash := range p.tiflashs {
 				cmd := flash.Cmd()
 				if cmd == nil {
-					lastErr = errors.Errorf("tiflash %s initialize command failed", flash.StoreAddr())
-					break
+					return errors.Errorf("tiflash %s initialize command failed", flash.StoreAddr())
 				}
 				if state := cmd.ProcessState; state != nil && state.Exited() {
-					lastErr = errors.Errorf("tiflash process exited with code: %d", state.ExitCode())
-					break
+					return errors.Errorf("tiflash process exited with code: %d", state.ExitCode())
 				}
 				if err := checkStoreStatus(pdClient, "tiflash", flash.StoreAddr()); err != nil {
-					lastErr = err
-					break
+					return err
 				}
 			}
-		}
 
-		if lastErr != nil {
-			fmt.Println(color.RedString("TiFlash failed to start. %s", lastErr))
+			return nil
 		}
-
-		if len(succ) > 0 {
-			fmt.Println(color.GreenString("CLUSTER START SUCCESSFULLY, Enjoy it ^-^"))
-			for _, dbAddr := range succ {
-				ss := strings.Split(dbAddr, ":")
-				fmt.Println(color.GreenString("To connect TiDB: mysql --host %s --port %s -u root", ss[0], ss[1]))
+		if len(p.tiflashs) > 0 {
+			err := startTiFlash()
+			if err != nil {
+				fmt.Println(color.RedString("TiFlash failed to start: %s", err))
 			}
 		}
+
+		fmt.Println(color.GreenString("CLUSTER START SUCCESSFULLY, Enjoy it ^-^"))
+		for _, dbAddr := range succ {
+			ss := strings.Split(dbAddr, ":")
+			fmt.Println(color.GreenString("To connect TiDB: mysql --host %s --port %s -u root", ss[0], ss[1]))
+		}
+
 	}
 
 	if pdAddr := p.pds[0].Addr(); hasDashboard(pdAddr) {
