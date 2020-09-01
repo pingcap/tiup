@@ -15,8 +15,8 @@ package task
 
 import (
 	"fmt"
-	"github.com/pingcap/errors"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 )
 
