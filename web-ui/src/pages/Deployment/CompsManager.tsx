@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import { Root } from '_components'
 import { BaseComp, CompTypes } from '_types'
 import { useComps } from '_hooks'
-import { deployCluster, scaleOutCluster } from '_utils'
+import { deployCluster, scaleOutCluster } from '_apis'
 
 import { IMachine } from '../Machines/MachineForm'
 import DeploymentTable from './DeploymentTable'

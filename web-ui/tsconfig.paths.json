@@ -3,7 +3,7 @@
     "baseUrl": ".",
     "paths": {
       "_types": ["src/types"],
-      "_utils": ["src/utils"],
+      "_apis": ["src/apis"],
       "_hooks": ["src/hooks"],
       "_components": ["src/components"],
       "_pages/*": ["src/pages/*"]

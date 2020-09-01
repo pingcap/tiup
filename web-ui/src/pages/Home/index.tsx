@@ -7,7 +7,7 @@ import {
   ClusterOutlined,
 } from '@ant-design/icons'
 
-import { getStatus } from '_utils'
+import { getStatus } from '_apis'
 
 const { Sider, Content } = Layout
 

@@ -3,7 +3,7 @@ import { Layout, Menu, Space } from 'antd'
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom'
 import { useSessionStorageState } from 'ahooks'
 
-import { getClusterList } from '_utils'
+import { getClusterList } from '_apis'
 import { Root } from '_components'
 
 export interface ICluster {
