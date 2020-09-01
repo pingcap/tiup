@@ -130,24 +130,32 @@ func base62Tag() string {
 	return string(b)
 }
 
+// PrepareCommandParams for PrepareCommand.
+type PrepareCommandParams struct {
+	Ctx         context.Context
+	Component   string
+	Version     v0manifest.Version
+	BinPath     string
+	Tag         string
+	InstanceDir string
+	WD          string
+	Args        []string
+	SysProcAttr *syscall.SysProcAttr
+	Env         *environment.Environment
+	CheckUpdate bool
+}
+
 // PrepareCommand will download necessary component and returns a *exec.Cmd
-func PrepareCommand(
-	ctx context.Context,
-	component string,
-	version v0manifest.Version,
-	binPath, tag, instanceDir string, wd string,
-	args []string,
-	sysProcAttr *syscall.SysProcAttr,
-	env *environment.Environment,
-	checkUpdate ...bool,
-) (*exec.Cmd, error) {
-	selectVer, err := env.DownloadComponentIfMissing(component, version)
+func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
+	env := p.Env
+
+	selectVer, err := env.DownloadComponentIfMissing(p.Component, p.Version)
 	if err != nil {
 		return nil, err
 	}
 
-	if version.IsEmpty() && len(checkUpdate) > 0 && checkUpdate[0] {
-		latestV, _, err := env.V1Repository().LatestStableVersion(component, true)
+	if p.Version.IsEmpty() && p.CheckUpdate {
+		latestV, _, err := env.V1Repository().LatestStableVersion(p.Component, true)
 		if err != nil {
 			return nil, err
 		}
@@ -159,39 +167,40 @@ func PrepareCommand(
     Update current component:   tiup update %[1]s
     Update all components:      tiup update --all
 `,
-				component, latestV.String(), selectVer.String()))
+				p.Component, latestV.String(), selectVer.String()))
 		}
 	}
 
 	// playground && cluster version must greater than v1.0.0
-	if (component == "playground" || component == "cluster") && semver.Compare(selectVer.String(), "v1.0.0") < 0 {
-		return nil, errors.Errorf("incompatible component version, please use `tiup update %s` to upgrade to the latest version", component)
+	if (p.Component == "playground" || p.Component == "cluster") && semver.Compare(selectVer.String(), "v1.0.0") < 0 {
+		return nil, errors.Errorf("incompatible component version, please use `tiup update %s` to upgrade to the latest version", p.Component)
 	}
 
 	profile := env.Profile()
-	installPath, err := profile.ComponentInstalledPath(component, selectVer)
+	installPath, err := profile.ComponentInstalledPath(p.Component, selectVer)
 	if err != nil {
 		return nil, err
 	}
 
+	binPath := p.BinPath
 	if binPath != "" {
-		p, err := filepath.Abs(binPath)
+		tmp, err := filepath.Abs(binPath)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
-		binPath = p
+		binPath = tmp
 	} else {
-		binPath, err = env.BinaryPath(component, selectVer)
+		binPath, err = env.BinaryPath(p.Component, selectVer)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if err := os.MkdirAll(instanceDir, 0755); err != nil {
+	if err := os.MkdirAll(p.InstanceDir, 0755); err != nil {
 		return nil, err
 	}
 
-	sd := env.LocalPath(localdata.StorageParentDir, component)
+	sd := env.LocalPath(localdata.StorageParentDir, p.Component)
 	if err := os.MkdirAll(sd, 0755); err != nil {
 		return nil, err
 	}
@@ -209,16 +218,16 @@ func PrepareCommand(
 	envs := []string{
 		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameWorkDir, tiupWd),
-		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, instanceDir),
+		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, p.InstanceDir),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
 		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetryStatus, teleMeta.Status),
 		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetryUUID, teleMeta.UUID),
-		fmt.Sprintf("%s=%s", localdata.EnvTag, tag),
+		fmt.Sprintf("%s=%s", localdata.EnvTag, p.Tag),
 	}
 
 	// init the command
-	c := exec.CommandContext(ctx, binPath, args...)
+	c := exec.CommandContext(p.Ctx, binPath, p.Args...)
 	c.Env = append(
 		envs,
 		os.Environ()...,
@@ -226,8 +235,8 @@ func PrepareCommand(
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
-	c.Dir = wd
-	c.SysProcAttr = sysProcAttr
+	c.Dir = p.WD
+	c.SysProcAttr = p.SysProcAttr
 
 	return c, nil
 }
@@ -242,7 +251,20 @@ func launchComponent(ctx context.Context, component string, version v0manifest.V
 		instanceDir = env.LocalPath(localdata.DataParentDir, tag)
 	}
 
-	c, err := PrepareCommand(ctx, component, version, binPath, tag, instanceDir, "" /*wd*/, args, nil, env, true)
+	params := &PrepareCommandParams{
+		Ctx:         ctx,
+		Component:   component,
+		Version:     version,
+		BinPath:     binPath,
+		Tag:         tag,
+		InstanceDir: instanceDir,
+		WD:          "",
+		Args:        args,
+		SysProcAttr: nil,
+		Env:         env,
+		CheckUpdate: true,
+	}
+	c, err := PrepareCommand(params)
 	if err != nil {
 		return nil, err
 	}

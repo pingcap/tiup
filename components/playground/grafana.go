@@ -202,7 +202,17 @@ http_port = %d
 	}
 
 	env := environment.GlobalEnv()
-	cmd, err := tiupexec.PrepareCommand(ctx, "grafana", v0manifest.Version(g.version), "", "", dir, dir, args, instance.SysProcAttr, env)
+	params := &tiupexec.PrepareCommandParams{
+		Ctx:         ctx,
+		Component:   "grafana",
+		Version:     v0manifest.Version(g.version),
+		InstanceDir: dir,
+		WD:          dir,
+		Args:        args,
+		SysProcAttr: instance.SysProcAttr,
+		Env:         env,
+	}
+	cmd, err := tiupexec.PrepareCommand(params)
 	if err != nil {
 		return errors.AddStack(err)
 	}

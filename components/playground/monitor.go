@@ -139,7 +139,17 @@ scrape_configs:
 	}
 
 	env := environment.GlobalEnv()
-	cmd, err := tiupexec.PrepareCommand(ctx, "prometheus", v0manifest.Version(version), "", "", dir, dir, args, instance.SysProcAttr, env)
+	params := &tiupexec.PrepareCommandParams{
+		Ctx:         ctx,
+		Component:   "prometheus",
+		Version:     v0manifest.Version(version),
+		InstanceDir: dir,
+		WD:          dir,
+		Args:        args,
+		SysProcAttr: instance.SysProcAttr,
+		Env:         env,
+	}
+	cmd, err := tiupexec.PrepareCommand(params)
 	if err != nil {
 		return nil, err
 	}
