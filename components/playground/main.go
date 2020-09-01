@@ -34,6 +34,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
+	"github.com/pingcap/tiup/pkg/cliutil/progress"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -168,11 +169,6 @@ Examples:
 				}
 			}()
 
-			// TODO: we can set Pdeathsig of Cmd.SysProcAttr(linux only) in all the Cmd we started to kill
-			// all the process we start instead of let the orphaned child process adopted by init,
-			// this can make sure we kill all process event if
-			// playground is killed -9.
-			// ref: https://medium.com/@ganeshmaharaj/clean-exit-of-golangs-exec-command-897832ac3fa5
 			bootErr := p.bootCluster(ctx, env, opt)
 			if bootErr != nil {
 				// always kill all process started and wait before quit.
@@ -242,12 +238,12 @@ func tryConnect(dsn string) error {
 	return nil
 }
 
+// checkDB check if the addr is connectable by getting a connection from sql.DB.
 func checkDB(dbAddr string) bool {
 	dsn := fmt.Sprintf("root:@tcp(%s)/", dbAddr)
 	for i := 0; i < 60; i++ {
 		if err := tryConnect(dsn); err != nil {
 			time.Sleep(time.Second)
-			fmt.Print(".")
 		} else {
 			if i != 0 {
 				fmt.Println()
@@ -259,18 +255,30 @@ func checkDB(dbAddr string) bool {
 }
 
 func checkStoreStatus(pdClient *api.PDClient, typ, storeAddr string) error {
-	fmt.Print(color.YellowString("Waiting for %s %s ready ", typ, storeAddr))
+	prefix := color.YellowString("Waiting for %s %s ready ", typ, storeAddr)
+	bar := progress.NewSingleBar(prefix)
+	bar.StartRenderLoop()
+	defer bar.StopRenderLoop()
+
 	for i := 0; i < 180; i++ {
 		up, err := pdClient.IsUp(storeAddr)
 		if err != nil || !up {
 			time.Sleep(time.Second)
-			fmt.Print(color.YellowString("."))
 		} else {
-			fmt.Println()
+			bar.UpdateDisplay(&progress.DisplayProps{
+				Prefix: prefix,
+				Mode:   progress.ModeDone,
+			})
 			return nil
 		}
 	}
-	return fmt.Errorf(fmt.Sprintf("store %s failed to up after timeout(180s)", storeAddr))
+
+	bar.UpdateDisplay(&progress.DisplayProps{
+		Prefix: prefix,
+		Mode:   progress.ModeError,
+	})
+
+	return errors.Errorf(fmt.Sprintf("store %s failed to up after timeout(180s)", storeAddr))
 }
 
 func hasDashboard(pdAddr string) bool {
