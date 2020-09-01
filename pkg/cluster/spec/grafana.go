@@ -170,7 +170,7 @@ func (i *GrafanaInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, paths meta.DirPaths, clusterName string) error {
 	dashboardsDir := filepath.Join(paths.Deploy, "dashboards")
 	// To make this step idempotent, we need cleanup old dashboards first
-	cmd := fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*", dashboardsDir)
+	cmd := fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*.json", dashboardsDir)
 	if _, stderr, err := e.Execute(cmd, false); err != nil {
 		return errors.Annotatef(err, "cleanup old dashboards: %s, cmd: %s", string(stderr), cmd)
 	}
