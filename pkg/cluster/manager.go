@@ -270,34 +270,46 @@ type Cluster struct {
 }
 
 // ListCluster list the clusters.
-func (m *Manager) ListCluster() ([]Cluster, error) {
-	names, err := m.specManager.List()
+func (m *Manager) ListCluster() error {
+	clusters, err := m.GetClusterList()
 	if err != nil {
-		return nil, perrs.AddStack(err)
+		return err
 	}
-
-	var clusters []Cluster = []Cluster{}
 
 	clusterTable := [][]string{
 		// Header
 		{"Name", "User", "Version", "Path", "PrivateKey"},
 	}
+	for _, v := range clusters {
+		clusterTable = append(clusterTable, []string{
+			v.Name,
+			v.User,
+			v.Version,
+			v.Path,
+			v.PrivateKey,
+		})
+	}
+
+	cliutil.PrintTable(clusterTable, true)
+	return nil
+}
+
+// GetClusterList get the clusters list.
+func (m *Manager) GetClusterList() ([]Cluster, error) {
+	names, err := m.specManager.List()
+	if err != nil {
+		return nil, perrs.AddStack(err)
+	}
+
+	var clusters = []Cluster{}
 
 	for _, name := range names {
 		metadata, err := m.meta(name)
 		if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
-			return clusters, perrs.Trace(err)
+			return nil, perrs.Trace(err)
 		}
 
 		base := metadata.GetBaseMeta()
-
-		clusterTable = append(clusterTable, []string{
-			name,
-			base.User,
-			base.Version,
-			m.specManager.Path(name),
-			m.specManager.Path(name, "ssh", "id_rsa"),
-		})
 
 		clusters = append(clusters, Cluster{
 			Name:       name,
@@ -308,7 +320,6 @@ func (m *Manager) ListCluster() ([]Cluster, error) {
 		})
 	}
 
-	cliutil.PrintTable(clusterTable, true)
 	return clusters, nil
 }
 

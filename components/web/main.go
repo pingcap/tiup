@@ -127,7 +127,7 @@ func statusHandler(c *gin.Context) {
 }
 
 func clustersHandler(c *gin.Context) {
-	clusters, err := manager.ListCluster()
+	clusters, err := manager.GetClusterList()
 	if err != nil {
 		_ = c.Error(err)
 		return
