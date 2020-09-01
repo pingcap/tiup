@@ -33,7 +33,6 @@ export default function EditCompForm({
   onUpdateComp,
 }: IEditCompFormProps) {
   function handleFinish(values: any) {
-    console.log('before:', values)
     for (const key of Object.keys(values)) {
       let v = values[key]
       if (v === undefined) {
@@ -57,7 +56,6 @@ export default function EditCompForm({
         values[key] = undefined
       }
     }
-    console.log('after:', values)
     onUpdateComp({
       ...comp,
       ...values,

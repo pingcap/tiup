@@ -12,6 +12,7 @@ import { deployCluster, scaleOutCluster } from '../../utils/api'
 import { IGlobalLoginOptions } from '../Machines/GlobalLoginOptionsForm'
 import { useNavigate } from 'react-router-dom'
 import { BaseComp, CompTypes } from '../../types/comps'
+import { useComps } from '../../hooks/useComps'
 
 // TODO: fetch from API
 const TIDB_VERSIONS = [
@@ -42,9 +43,7 @@ export default function CompsManager({
   const [machines] = useLocalStorageState<{
     [key: string]: IMachine
   }>('machines', {})
-  const [components, setComponents] = useLocalStorageState<{
-    [key: string]: BaseComp
-  }>('components', {})
+  const { comps, setCompObjs } = useComps()
   const [curComp, setCurComp] = useState<BaseComp | undefined>(undefined)
 
   const [previewYaml, setPreviewYaml] = useState(false)
@@ -71,47 +70,46 @@ export default function CompsManager({
   const handleAddComponent = useCallback(
     (machine: IMachine, componentType: CompTypes, forScaleOut: boolean) => {
       let comp = BaseComp.create(componentType, machine.id, forScaleOut)
-      const existedSameComps = Object.values(components).filter(
+      const existedSameComps = Object.values(comps).filter(
         (comp) => comp.type === componentType && comp.machineID === machine.id
       )
       if (existedSameComps.length > 0) {
         const lastComp = existedSameComps[existedSameComps.length - 1]
-        comp.deploy_dir_prefix = lastComp.deploy_dir_prefix
-        comp.data_dir_prefix = lastComp.data_dir_prefix
+        comp.copyPaths(lastComp)
         comp.increasePorts(lastComp)
       }
-      setComponents({
-        ...components,
+      setCompObjs({
+        ...comps,
         [comp.id]: comp,
       })
     },
-    [components, setComponents]
+    [comps, setCompObjs]
   )
 
   const handleUpdateComponent = useCallback(
     (comp: BaseComp) => {
-      setComponents({
-        ...components,
+      setCompObjs({
+        ...comps,
         [comp.id]: comp,
       })
       setCurComp(undefined)
     },
-    [components, setComponents]
+    [comps, setCompObjs]
   )
 
   const handleDeleteComponent = useCallback(
     (comp: BaseComp) => {
-      const newComps = { ...components }
+      const newComps = { ...comps }
       delete newComps[comp.id]
-      setComponents(newComps)
+      setCompObjs(newComps)
     },
-    [components, setComponents]
+    [comps, setCompObjs]
   )
 
   const handleDeleteComponents = useCallback(
     (machine: IMachine, forScaleOut: boolean) => {
-      const newComps = { ...components }
-      const belongedComps = Object.values(components).filter(
+      const newComps = { ...comps }
+      const belongedComps = Object.values(comps).filter(
         (c) => c.machineID === machine.id
       )
       for (const c of belongedComps) {
@@ -119,14 +117,14 @@ export default function CompsManager({
           delete newComps[c.id]
         }
       }
-      setComponents(newComps)
+      setCompObjs(newComps)
     },
-    [components, setComponents]
+    [comps, setCompObjs]
   )
 
   function handleDeploy(values: any) {
     const topoYaml = yaml.stringify(
-      genTopo({ machines, components, forScaleOut })
+      genTopo({ machines, components: comps, forScaleOut })
     )
     deployCluster({
       ...values,
@@ -139,7 +137,7 @@ export default function CompsManager({
   function handleScaleOut() {
     // save in local
     // cluster name, scale out nodes
-    const scaleOutComps = Object.values(components).filter(
+    const scaleOutComps = Object.values(comps).filter(
       (comp) => comp.for_scale_out
     )
     if (scaleOutComps.length === 0) {
@@ -163,7 +161,7 @@ export default function CompsManager({
 
     // scale out
     const topoYaml = yaml.stringify(
-      genTopo({ machines, components, forScaleOut })
+      genTopo({ machines, components: comps, forScaleOut })
     )
     scaleOutCluster(clusterName!, {
       topo_yaml: topoYaml,
@@ -225,7 +223,7 @@ export default function CompsManager({
         <DeploymentTable
           forScaleOut={forScaleOut}
           machines={machines}
-          components={components}
+          components={comps}
           onAddComponent={handleAddComponent}
           onEditComponent={(rec) => setCurComp(rec)}
           onDeleteComponent={handleDeleteComponent}
@@ -254,7 +252,7 @@ export default function CompsManager({
       >
         <TopoPreview
           machines={machines}
-          components={components}
+          components={comps}
           forScaleOut={forScaleOut}
         />
       </Modal>

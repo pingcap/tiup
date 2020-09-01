@@ -22,6 +22,10 @@ export const COMP_TYPES_ARR = [
   'AlertManager',
 ]
 
+export type CompMap = {
+  [key: string]: BaseComp
+}
+
 ///////////////////////
 
 export const DEF_DEPLOY_DIR_PREFIX = 'tidb-deploy'
@@ -52,6 +56,11 @@ export abstract class BaseComp {
     }`
   }
 
+  public copyPaths(comp: BaseComp): void {
+    this.deploy_dir_prefix = comp.deploy_dir_prefix
+    this.data_dir_prefix = comp.data_dir_prefix
+  }
+
   public abstract symbolPort(): number
   public abstract ports(): string
   public abstract increasePorts(comp: BaseComp): void
@@ -77,6 +86,12 @@ export abstract class BaseComp {
       case 'AlertManager':
         return new AlertManagerComp(machineID, for_scale_out)
     }
+  }
+
+  static deSerial(obj: any): BaseComp {
+    let comp = this.create(obj.type, obj.machineID, obj.for_scale_out)
+    Object.assign(comp, obj)
+    return comp
   }
 }
 
