@@ -132,7 +132,7 @@ func registerYcsb(root *cobra.Command) {
 		Use: "ycsb",
 	}
 
-	cmd.PersistentFlags().StringVarP(&config.PropertyFile, "propertyfile", "f", "", "Specify a property file, can be a url or one of [a, b, c, d, e, f]")
+	cmd.PersistentFlags().StringVarP(&config.PropertyFile, "propertyfile", "f", "", "Specify a property file, can be a url, a path or one of [a, b, c, d, e, f]")
 	cmd.PersistentFlags().Uint32VarP(&config.Count, "count", "c", 0, "The number of operations/records to use")
 	cmd.PersistentFlags().Uint32Var(&config.BatchSize, "batchsize", 128, "Batch Size")
 	cmd.PersistentFlags().Uint32Var(&config.ConnCount, "conncount", 128, "Connection Count")
