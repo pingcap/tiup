@@ -91,7 +91,18 @@ func NewComponentProcess(ctx context.Context, dir, binPath, component string, ve
 	}
 
 	env := environment.GlobalEnv()
-	cmd, err := tiupexec.PrepareCommand(ctx, component, version, binPath, "", dir, dir, arg, env)
+	params := &tiupexec.PrepareCommandParams{
+		Ctx:         ctx,
+		Component:   component,
+		Version:     version,
+		BinPath:     binPath,
+		InstanceDir: dir,
+		WD:          dir,
+		Args:        arg,
+		SysProcAttr: SysProcAttr,
+		Env:         env,
+	}
+	cmd, err := tiupexec.PrepareCommand(params)
 	if err != nil {
 		return nil, err
 	}
