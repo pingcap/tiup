@@ -98,7 +98,7 @@ export default function DeploymentTable({
               rec.username || globalLoginOptions.username || DEF_UESRNAME
             }, DC=${rec.dc}, Rack=${rec.rack}`
           }
-          return `Port=${rec.ports()}, Path=${rec.paths()}`
+          return `Port=${rec.ports()}, Path=${rec.allPathsPrefix()}`
         },
       },
       {

@@ -13,7 +13,7 @@ import {
 } from '../../utils/api'
 import { Root } from '../../components/Root'
 import { ICluster } from '.'
-import { BaseComp } from '../../types/comps'
+import { useComps } from '../../hooks/useComps'
 
 export interface IClusterInstInfo {
   id: string
@@ -43,9 +43,7 @@ export default function ClusterDetailPage() {
     cluster_name: string
     scale_out_nodes: any[]
   }>('cur_scale_out_nodes', { cluster_name: '', scale_out_nodes: [] })
-  const [components, setComponents] = useLocalStorageState<{
-    [key: string]: BaseComp
-  }>('components', {})
+  const { comps, setCompObjs } = useComps()
 
   const [loadingTopo, setLoadingTopo] = useState(false)
 
@@ -121,14 +119,14 @@ export default function ClusterDetailPage() {
     ) {
       return
     }
-    let newComps = { ...components }
+    let newComps = { ...comps }
     for (const n of curScaleOutNodes.scale_out_nodes) {
       const exist = clusters.find((el) => el.id === n.node)
       if (exist && newComps[n.id]) {
         newComps[n.id].for_scale_out = false
       }
     }
-    setComponents(newComps)
+    setCompObjs(newComps)
   }
 
   function destroyCluster() {

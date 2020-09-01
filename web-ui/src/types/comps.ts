@@ -50,15 +50,36 @@ export abstract class BaseComp {
     this.color = COMP_COLORS[compType]
   }
 
-  public paths(): string {
-    return `${this.deploy_dir_prefix || DEF_DEPLOY_DIR_PREFIX},${
-      this.data_dir_prefix || DEF_DATA_DIR_PREFIX
-    }`
+  public name(): string {
+    return this.type.toLowerCase()
   }
 
   public copyPaths(comp: BaseComp): void {
     this.deploy_dir_prefix = comp.deploy_dir_prefix
     this.data_dir_prefix = comp.data_dir_prefix
+  }
+
+  public deployPathPrefix() {
+    return this.deploy_dir_prefix || DEF_DEPLOY_DIR_PREFIX
+  }
+
+  public dataPathPrefix() {
+    return this.data_dir_prefix || DEF_DATA_DIR_PREFIX
+  }
+
+  public allPathsPrefix() {
+    if (this.dataPathPrefix()) {
+      return `${this.deployPathPrefix()},${this.dataPathPrefix()}`
+    }
+    return this.deployPathPrefix()
+  }
+
+  public deployPathFull(): string {
+    return `${this.deployPathPrefix()}/${this.name()}-${this.symbolPort()}`
+  }
+
+  public dataPathFull(): string {
+    return `${this.deployPathFull()}/${this.dataPathPrefix()}`
   }
 
   public abstract symbolPort(): number
@@ -107,8 +128,8 @@ export class TiDBComp extends BaseComp {
     super(machineID, 'TiDB', for_scale_out)
   }
 
-  public paths(): string {
-    return `${this.deploy_dir_prefix || DEF_DEPLOY_DIR_PREFIX}`
+  public dataPathPrefix() {
+    return ''
   }
 
   public symbolPort() {
@@ -243,6 +264,10 @@ export class PromComp extends BaseComp {
     super(machineID, 'Prometheus', for_scale_out)
   }
 
+  public name(): string {
+    return 'monitoring'
+  }
+
   public symbolPort() {
     return this.port || DEF_PROM_PORT
   }
@@ -267,8 +292,8 @@ export class GrafanaComp extends BaseComp {
     super(machineID, 'Grafana', for_scale_out)
   }
 
-  public paths(): string {
-    return `${this.deploy_dir_prefix || DEF_DEPLOY_DIR_PREFIX}`
+  public dataPathPrefix() {
+    return ''
   }
 
   public symbolPort() {

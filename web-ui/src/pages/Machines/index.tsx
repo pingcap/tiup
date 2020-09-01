@@ -8,7 +8,7 @@ import { Root } from '../../components/Root'
 import GlobalLoginOptionsForm, {
   IGlobalLoginOptions,
 } from './GlobalLoginOptionsForm'
-import { BaseComp } from '../../types/comps'
+import { useComps } from '../../hooks/useComps'
 
 export default function MachinesPage() {
   const [showForm, setShowForm] = useState(false)
@@ -17,9 +17,7 @@ export default function MachinesPage() {
   const [machines, setMachines] = useLocalStorageState<{
     [key: string]: IMachine
   }>('machines', {})
-  const [components, setComponents] = useLocalStorageState<{
-    [key: string]: BaseComp
-  }>('components', {})
+  const { comps, setCompObjs } = useComps()
 
   const [globalLoginOptions, setGlobalLoginOptions] = useLocalStorageState<
     IGlobalLoginOptions
@@ -95,16 +93,16 @@ export default function MachinesPage() {
       setMachines(newMachines)
 
       // delete related component
-      const newComps = { ...components }
-      const belongedComps = Object.values(components).filter(
+      const newComps = { ...comps }
+      const belongedComps = Object.values(comps).filter(
         (c) => c.machineID === m.id
       )
       for (const c of belongedComps) {
         delete newComps[c.id]
       }
-      setComponents(newComps)
+      setCompObjs(newComps)
     },
-    [machines, setMachines, components, setComponents]
+    [machines, setMachines, comps, setCompObjs]
   )
 
   return (
