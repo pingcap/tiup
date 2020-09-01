@@ -28,10 +28,12 @@ import (
 )
 
 type ycsbConfig struct {
-	PropertyFile   string
-	RecordCount    uint32
-	OperationCount uint32
-	ReadAllFields  bool
+	PropertyFile string
+	// Count is used as RecordCount in "prepare" stage and OperationCount in "run" stage
+	// Both of them specify how much work should be done
+	// Since they cannot exist together and stand for same reason, we can merged them together
+	Count         uint32
+	ReadAllFields bool
 
 	ReadProportion            float32
 	UpdateProportion          float32
@@ -48,8 +50,9 @@ type ycsbConfig struct {
 
 const commonWorkloadURL = "https://raw.githubusercontent.com/pingcap/go-ycsb/master/workloads/workload"
 
-func (config ycsbConfig) toProperties() *properties.Properties {
+func (config ycsbConfig) toProperties() (*properties.Properties, error) {
 	result := properties.NewProperties()
+	var err error
 	if config.PropertyFile != "" {
 		// "a" to "f" are some workloads that used a lot
 		// expand these shorthands to URL
@@ -63,9 +66,15 @@ func (config ycsbConfig) toProperties() *properties.Properties {
 		}
 
 		if strings.HasPrefix(config.PropertyFile, "http") {
-			result = properties.MustLoadURL(config.PropertyFile)
+			result, err = properties.LoadURL(config.PropertyFile)
+			if err != nil {
+				return nil, err
+			}
 		} else {
-			result = properties.MustLoadFile(config.PropertyFile, properties.UTF8)
+			result, err = properties.LoadFile(config.PropertyFile, properties.UTF8)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	// since the properties are not from the user input directly
@@ -74,14 +83,8 @@ func (config ycsbConfig) toProperties() *properties.Properties {
 
 	// these config are always included in the config file
 	// should be overwritten if they are passed through the command line
-	if config.OperationCount != 0 {
-		// we don't need to check errors since we disabled expansion
-		_, _, _ = result.Set("operationcount", fmt.Sprint(config.OperationCount))
-	}
-	if config.RecordCount != 0 {
-		_, _, _ = result.Set("recordcount", fmt.Sprint(config.RecordCount))
-	}
 	if config.ReadProportion != 0 {
+		// we don't need to check errors since we disabled expansion
 		_, _, _ = result.Set("readproportion", fmt.Sprint(config.ReadProportion))
 	}
 	if config.UpdateProportion != 0 {
@@ -99,9 +102,13 @@ func (config ycsbConfig) toProperties() *properties.Properties {
 	if config.RequestDistribution != "" {
 		_, _, _ = result.Set("requestdistribution", config.RequestDistribution)
 	}
-
+	if config.Count != 0 {
+		_, _, _ = result.Set("operationcount", fmt.Sprint(config.Count))
+		_, _, _ = result.Set("recordcount", fmt.Sprint(config.Count))
+	}
 	_, _, _ = result.Set("verbose", fmt.Sprint(config.Verbose))
 	_, _, _ = result.Set("readallfields", fmt.Sprint(config.ReadAllFields))
+
 	// tikv specific settings
 	_, _, _ = result.Set("tikv.pd", fmt.Sprint(config.Pd))
 	_, _, _ = result.Set("tikv.conncount", fmt.Sprint(config.ConnCount))
@@ -115,7 +122,7 @@ func (config ycsbConfig) toProperties() *properties.Properties {
 	_, _, _ = result.Set("workload", "core")
 	_, _, _ = result.Set("tikv.type", "raw") // todo: try to support txn
 
-	return result
+	return result, nil
 }
 
 var config ycsbConfig
@@ -125,11 +132,8 @@ func registerYcsb(root *cobra.Command) {
 		Use: "ycsb",
 	}
 
-	cmd.PersistentFlags().StringVarP(&config.PropertyFile, "propertyfile", "f", "", "Spefify a property file, can be a url or one of [a, b, c, d, e, f]")
-
-	cmd.PersistentFlags().Uint32Var(&config.OperationCount, "operationcount", 0, "The number of operations to use during the run phase")
-	cmd.PersistentFlags().Uint32Var(&config.RecordCount, "recordcount", 0, "The number of records to be read/write")
-
+	cmd.PersistentFlags().StringVarP(&config.PropertyFile, "propertyfile", "f", "", "Specify a property file, can be a url or one of [a, b, c, d, e, f]")
+	cmd.PersistentFlags().Uint32VarP(&config.Count, "count", "c", 0, "The number of operations/records to use")
 	cmd.PersistentFlags().Uint32Var(&config.BatchSize, "batchsize", 128, "Batch Size")
 	cmd.PersistentFlags().Uint32Var(&config.ConnCount, "conncount", 128, "Connection Count")
 	cmd.PersistentFlags().BoolVar(&config.ReadAllFields, "readallfields", true, "Whether Read All Fields")
@@ -143,7 +147,7 @@ func registerYcsb(root *cobra.Command) {
 	cmd.PersistentFlags().StringVar(&config.RequestDistribution, "requestdistribution", "uniform", "The distribution of requests across the keyspace, [zipfian, uniform, latest]")
 
 	cmd.PersistentFlags().BoolVar(&config.Verbose, "verbose", false, "Verbose mode")
-	cmd.PersistentFlags().StringVar(&config.Pd, "tikv.pd", "127.0.0.1:2379", "PD address")
+	cmd.PersistentFlags().StringVar(&config.Pd, "pd", "127.0.0.1:2379", "PD address")
 
 	var cmdPrepare = &cobra.Command{
 		Use:   "prepare",
@@ -167,7 +171,10 @@ func registerYcsb(root *cobra.Command) {
 
 func executeYcsb(action string) error {
 	runtime.GOMAXPROCS(maxProcs)
-	configProp := config.toProperties()
+	configProp, err := config.toProperties()
+	if err != nil {
+		return err
+	}
 	switch action {
 	case "prepare":
 		// note the expansion is already disabled in toProperties
