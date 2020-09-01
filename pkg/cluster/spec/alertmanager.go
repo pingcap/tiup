@@ -135,14 +135,15 @@ func (i *AlertManagerInstance) InitConfig(e executor.Executor, clusterName, clus
 	}
 
 	// transfer config
-
+	dst = filepath.Join(paths.Deploy, "conf", "alertmanager.yml")
 	if spec.ConfigFilePath != "" {
-		dst = filepath.Join(paths.Deploy, "conf", "alertmanager.yml")
 		return i.TransferLocalConfigFile(e, spec.ConfigFilePath, dst)
 	}
-
 	configPath := filepath.Join(paths.Cache, fmt.Sprintf("alertmanager_%s.yml", i.GetHost()))
-	return config.NewAlertManagerConfig().ConfigToFile(configPath)
+	if err := config.NewAlertManagerConfig().ConfigToFile(configPath); err != nil {
+		return err
+	}
+	return i.TransferLocalConfigFile(e, configPath, dst)
 }
 
 // ScaleConfig deploy temporary config on scaling
