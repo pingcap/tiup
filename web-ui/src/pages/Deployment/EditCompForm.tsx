@@ -70,12 +70,26 @@ export default function EditCompForm({
 
   return (
     <Form layout="vertical" initialValues={comp} onFinish={handleFinish}>
-      <Form.Item label="Deploy Dir Prefix" name="deploy_dir_prefix">
-        <Input placeholder={DEF_DEPLOY_DIR_PREFIX} />
+      <Form.Item noStyle>
+        <Form.Item
+          label="Deploy Dir Prefix"
+          name="deploy_dir_prefix"
+          style={{ marginBottom: 0 }}
+        >
+          <Input placeholder={DEF_DEPLOY_DIR_PREFIX} />
+        </Form.Item>
+        <p>{comp.deployPathFull()}</p>
       </Form.Item>
       {['TiDB', 'Grafana'].indexOf(componentType) === -1 && (
-        <Form.Item label="Data Dir Prefix" name="data_dir_prefix">
-          <Input placeholder={DEF_DATA_DIR_PREFIX} />
+        <Form.Item noStyle>
+          <Form.Item
+            label="Data Dir"
+            name="data_dir_prefix"
+            style={{ marginBottom: 0 }}
+          >
+            <Input placeholder={DEF_DATA_DIR_PREFIX} />
+          </Form.Item>
+          <p>{comp.dataPathFull()}</p>
         </Form.Item>
       )}
       {componentType === 'TiDB' && (

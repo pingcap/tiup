@@ -3,16 +3,16 @@ import yaml from 'yaml'
 
 import { IMachine } from '../Machines/MachineForm'
 import {
-  BaseComp,
   DEF_DEPLOY_DIR_PREFIX,
   DEF_DATA_DIR_PREFIX,
   COMP_TYPES_ARR,
+  CompMap,
 } from '../../types/comps'
 
 interface ITopoPreviewProps {
   forScaleOut: boolean
   machines: { [key: string]: IMachine }
-  components: { [key: string]: BaseComp }
+  components: CompMap
 }
 
 // TODO: split into 2 methods: genDeployTopo, genScaleOutTopo
@@ -46,18 +46,13 @@ export function genTopo({
   for (const compType of COMP_TYPES_ARR) {
     const comps = componentsArr.filter(
       (comp) => comp.type === compType && comp.for_scale_out === forScaleOut
-    ) as any[]
+    )
 
     if (comps.length === 0) {
       continue
     }
 
-    let topoKey = ''
-    if (compType === 'Prometheus') {
-      topoKey = 'monitoring_servers'
-    } else {
-      topoKey = `${compType.toLowerCase()}_servers`
-    }
+    let topoKey = `${comps[0].name()}_servers`
     topo[topoKey] = []
 
     for (const comp of comps) {
@@ -68,13 +63,18 @@ export function genTopo({
         m.ssh_port = targetMachine.ssh_port
       }
       // TODO:
-      // username / password / privateKey / deploy_dir / data_dir
+      // username / password / privateKey
 
       for (const key of Object.keys(comp)) {
-        if (key.indexOf('port') !== -1 && comp[key] !== undefined) {
-          m[key] = comp[key]
+        if (key.indexOf('port') !== -1 && (comp as any)[key] !== undefined) {
+          m[key] = (comp as any)[key]
         }
-        // TODO: handle deploy dir and data dir
+        if (key === 'deploy_dir_prefix' && comp[key] !== undefined) {
+          m[key] = comp.deployPathFull()
+        }
+        if (key === 'data_dir_prefix' && comp[key] !== undefined) {
+          m[key] = comp.dataPathFull()
+        }
       }
 
       // location labels

@@ -79,6 +79,9 @@ export abstract class BaseComp {
   }
 
   public dataPathFull(): string {
+    if (this.dataPathPrefix().startsWith('/')) {
+      return `${this.dataPathPrefix()}/${this.name()}-${this.symbolPort()}`
+    }
     return `${this.deployPathFull()}/${this.dataPathPrefix()}`
   }
 
