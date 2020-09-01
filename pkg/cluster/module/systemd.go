@@ -32,7 +32,6 @@ const (
 type SystemdModuleConfig struct {
 	Unit         string        // the name of systemd unit(s)
 	Action       string        // the action to perform with the unit
-	Enabled      bool          // enable the unit or not
 	ReloadDaemon bool          // run daemon-reload before other actions
 	Scope        string        // user, system or global
 	Force        bool          // add the `--force` arg to systemctl command
@@ -66,11 +65,6 @@ func NewSystemdModule(config SystemdModuleConfig) *SystemdModule {
 
 	cmd := fmt.Sprintf("%s %s %s",
 		systemctl, strings.ToLower(config.Action), config.Unit)
-
-	if config.Enabled {
-		cmd = fmt.Sprintf("%s && %s enable %s",
-			cmd, systemctl, config.Unit)
-	}
 
 	if config.ReloadDaemon {
 		cmd = fmt.Sprintf("%s daemon-reload && %s",
