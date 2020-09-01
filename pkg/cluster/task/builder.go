@@ -366,12 +366,18 @@ func (b *Builder) DeploySpark(inst spec.Instance, version, srcPath, deployDir st
 
 // Parallel appends a parallel task to the current task collection
 func (b *Builder) Parallel(tasks ...Task) *Builder {
+	if len(tasks) == 0 {
+		return b
+	}
 	b.tasks = append(b.tasks, &Parallel{inner: tasks})
 	return b
 }
 
 // Serial appends the tasks to the tail of queue
 func (b *Builder) Serial(tasks ...Task) *Builder {
+	if len(tasks) == 0 {
+		return b
+	}
 	b.tasks = append(b.tasks, tasks...)
 	return b
 }
