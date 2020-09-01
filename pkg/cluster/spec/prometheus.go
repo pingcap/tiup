@@ -202,7 +202,7 @@ func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 
 func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, paths meta.DirPaths) error {
 	// To make this step idempotent, we need cleanup old rules first
-	if _, _, err := e.Execute(fmt.Sprintf("rm -f %s/*", path.Join(paths.Deploy, "conf")), false); err != nil {
+	if _, _, err := e.Execute(fmt.Sprintf("rm -f %s/*.rules.yml", path.Join(paths.Deploy, "conf")), false); err != nil {
 		return err
 	}
 
