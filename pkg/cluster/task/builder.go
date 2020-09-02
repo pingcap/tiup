@@ -283,10 +283,10 @@ func (b *Builder) Shell(host, command string, sudo bool) *Builder {
 // SystemCtl run systemctl on host
 func (b *Builder) SystemCtl(host, unit, action string, daemonReload bool) *Builder {
 	b.tasks = append(b.tasks, &SystemCtl{
-		host:   host,
-		unit:   unit,
-		action: action,
-		reload: daemonReload,
+		host:         host,
+		unit:         unit,
+		action:       action,
+		daemonReload: daemonReload,
 	})
 	return b
 }

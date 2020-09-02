@@ -22,10 +22,10 @@ import (
 
 // SystemCtl run systemctl command on host
 type SystemCtl struct {
-	host   string
-	unit   string
-	action string
-	reload bool
+	host         string
+	unit         string
+	action       string
+	daemonReload bool
 }
 
 // Execute implements the Task interface
@@ -38,7 +38,7 @@ func (c *SystemCtl) Execute(ctx *Context) error {
 	cfg := module.SystemdModuleConfig{
 		Unit:         c.unit,
 		Action:       c.action,
-		ReloadDaemon: c.reload,
+		ReloadDaemon: c.daemonReload,
 	}
 	systemd := module.NewSystemdModule(cfg)
 	stdout, stderr, err := systemd.Execute(e)
