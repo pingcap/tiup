@@ -19,8 +19,8 @@ services:
     ports:
       - "8080"
     networks:
-       tiops:
-         ipv4_address: 172.19.0.100
+      tiops:
+        ipv4_address: 172.19.0.100
   n1:
     << : *default-node
     container_name: tiup-cluster-n1
@@ -31,36 +31,36 @@ services:
     #   - "3000:3000"
     #   - "9090:9090"
     networks:
-         tiops:
-           ipv4_address: 172.19.0.101
+        tiops:
+          ipv4_address: 172.19.0.101
   n2:
     << : *default-node
     container_name: tiup-cluster-n2
     hostname: n2
     networks:
-         tiops:
-           ipv4_address: 172.19.0.102
+        tiops:
+          ipv4_address: 172.19.0.102
   n3:
     << : *default-node
     container_name: tiup-cluster-n3
     hostname: n3
     networks:
-         tiops:
-           ipv4_address: 172.19.0.103
+        tiops:
+          ipv4_address: 172.19.0.103
   n4:
     << : *default-node
     container_name: tiup-cluster-n4
     hostname: n4
     networks:
-       tiops:
-         ipv4_address: 172.19.0.104
+      tiops:
+        ipv4_address: 172.19.0.104
   n5:
     << : *default-node
     container_name: tiup-cluster-n5
     hostname: n5
     networks:
-         tiops:
-           ipv4_address: 172.19.0.105
+        tiops:
+          ipv4_address: 172.19.0.105
 
 # docker network create --gateway 172.19.0.1 --subnet 172.19.0.0/16 tiup-cluster
 networks:
