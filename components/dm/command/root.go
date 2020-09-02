@@ -63,11 +63,11 @@ func init() {
 		gOpt.NativeSSH = true
 	}
 
-	executorEnvVar := strings.ToLower(os.Getenv(localdata.EnvNameExecutorType))
+	executorEnvVar := strings.ToLower(os.Getenv(localdata.EnvNameSSHType))
 	if executorEnvVar != "" {
-		gOpt.ExecutorType = executorEnvVar
+		gOpt.SSHType = executorEnvVar
 	} else {
-		gOpt.ExecutorType = executor.ExecutorTypeBuiltin
+		gOpt.SSHType = executor.SSHTypeBuiltin
 	}
 
 	rootCmd = &cobra.Command{
@@ -98,7 +98,7 @@ func init() {
 			tiupmeta.SetGlobalEnv(env)
 
 			if gOpt.NativeSSH {
-				gOpt.ExecutorType = executor.ExecutorTypeSystem
+				gOpt.SSHType = executor.SSHTypeSystem
 				zap.L().Info("System ssh client will be used",
 					zap.String(localdata.EnvNameNativeSSHClient, os.Getenv(localdata.EnvNameNativeSSHClient)))
 			}
@@ -116,7 +116,7 @@ func init() {
 	rootCmd.PersistentFlags().Int64Var(&gOpt.OptTimeout, "wait-timeout", 60, "Timeout in seconds to wait for an operation to complete, ignored for operations that don't fit.")
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
 	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "Use the SSH client installed on local system instead of the build-in one.")
-	rootCmd.PersistentFlags().StringVar(&gOpt.ExecutorType, "ssh", gOpt.ExecutorType, "The executor type: 'builtin', 'system', 'local'")
+	rootCmd.PersistentFlags().StringVar(&gOpt.SSHType, "ssh", gOpt.SSHType, "The executor type: 'builtin', 'system', 'none'")
 	rootCmd.PersistentFlags().MarkHidden("native-ssh")
 
 	rootCmd.AddCommand(

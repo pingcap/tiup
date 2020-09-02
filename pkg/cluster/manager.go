@@ -85,7 +85,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 		SSHKeySet(
 			m.specManager.Path(name, "ssh", "id_rsa"),
 			m.specManager.Path(name, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, options.SSHTimeout, options.ExecutorType).
+		ClusterSSH(topo, base.User, options.SSHTimeout, options.SSHType).
 		Func("StartCluster", func(ctx *task.Context) error {
 			return operator.Start(ctx, topo, options)
 		})
@@ -122,7 +122,7 @@ func (m *Manager) StopCluster(clusterName string, options operator.Options) erro
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(metadata.GetTopology(), base.User, options.SSHTimeout, options.ExecutorType).
+		ClusterSSH(metadata.GetTopology(), base.User, options.SSHTimeout, options.SSHType).
 		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, options)
 		}).
@@ -154,7 +154,7 @@ func (m *Manager) RestartCluster(clusterName string, options operator.Options) e
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, options.SSHTimeout, options.ExecutorType).
+		ClusterSSH(topo, base.User, options.SSHTimeout, options.SSHType).
 		Func("RestartCluster", func(ctx *task.Context) error {
 			return operator.Restart(ctx, topo, options)
 		}).
@@ -241,7 +241,7 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.ExecutorType).
+		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.SSHType).
 		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, operator.Options{})
 		}).
@@ -288,7 +288,7 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.ExecutorType).
+		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.SSHType).
 		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, operator.Options{})
 		}).
@@ -360,7 +360,7 @@ func (m *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Option
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.ExecutorType).
+		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.SSHType).
 		Parallel(shellTasks...).
 		Build()
 
@@ -422,7 +422,7 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 		return perrs.AddStack(err)
 	}
 
-	err = ctx.SetClusterSSH(topo, base.User, opt.SSHTimeout, opt.ExecutorType)
+	err = ctx.SetClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -589,7 +589,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 		logDir := clusterutil.Abs(base.User, inst.LogDir())
 
 		// Download and copy the latest component to remote if the cluster is imported from Ansible
-		tb := task.NewBuilder().UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, opt.SSHTimeout, opt.ExecutorType)
+		tb := task.NewBuilder().UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, opt.SSHTimeout, opt.SSHType)
 		if inst.IsImported() {
 			switch compName := inst.ComponentName(); compName {
 			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
@@ -623,7 +623,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 		*topo.BaseTopo().GlobalOptions,
 		topo.GetMonitoredOptions(),
 		sshTimeout,
-		opt.ExecutorType)
+		opt.SSHType)
 
 	// handle dir scheme changes
 	if hasImported {
@@ -636,7 +636,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.ExecutorType).
+		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType).
 		ParallelStep("+ Refresh instance configs", refreshConfigTasks...)
 
 	if len(monitorConfigTasks) > 0 {
@@ -783,7 +783,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.ExecutorType).
+		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType).
 		Parallel(downloadCompTasks...).
 		Parallel(copyCompTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
@@ -849,7 +849,7 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.ExecutorType).
+		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType).
 		Parallel(replacePackageTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
 			return operator.Upgrade(ctx, topo, opt)

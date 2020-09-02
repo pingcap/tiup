@@ -59,7 +59,7 @@ conflict checks with other clusters`,
 			if len(args) != 1 {
 				return cmd.Help()
 			}
-			if gOpt.ExecutorType == executor.ExecutorTypeNone {
+			if gOpt.SSHType == executor.SSHTypeNone {
 				opt.identityFile = ""
 			}
 
@@ -169,7 +169,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 					s.IdentityFile,
 					s.IdentityFilePassphrase,
 					gOpt.SSHTimeout,
-					gOpt.ExecutorType,
+					gOpt.SSHType,
 				).
 				Mkdir(opt.user, inst.GetHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
 				CopyComponent(
@@ -290,7 +290,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 					s.IdentityFile,
 					s.IdentityFilePassphrase,
 					gOpt.SSHTimeout,
-					gOpt.ExecutorType,
+					gOpt.SSHType,
 				).
 				Rmdir(inst.GetHost(), task.CheckToolsPathDir).
 				BuildAsStep(fmt.Sprintf("  - Cleanup check files on %s:%d", inst.GetHost(), inst.GetSSHPort()))
@@ -330,7 +330,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 				s.IdentityFile,
 				s.IdentityFilePassphrase,
 				gOpt.SSHTimeout,
-				gOpt.ExecutorType,
+				gOpt.SSHType,
 			)
 		resLines, err := handleCheckResults(ctx, host, opt, tf)
 		if err != nil {

@@ -42,7 +42,7 @@ func newDeploy() *cobra.Command {
 			if !shouldContinue {
 				return nil
 			}
-			if gOpt.ExecutorType == executor.ExecutorTypeNone {
+			if gOpt.SSHType == executor.SSHTypeNone {
 				opt.IdentityFile = ""
 			}
 
@@ -68,7 +68,7 @@ func newDeploy() *cobra.Command {
 				skipConfirm,
 				gOpt.OptTimeout,
 				gOpt.SSHTimeout,
-				gOpt.ExecutorType,
+				gOpt.SSHType,
 			)
 		},
 	}

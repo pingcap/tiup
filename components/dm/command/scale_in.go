@@ -56,7 +56,7 @@ func newScaleInCmd() *cobra.Command {
 				skipConfirm,
 				gOpt.OptTimeout,
 				gOpt.SSHTimeout,
-				gOpt.ExecutorType,
+				gOpt.SSHType,
 				gOpt.Force,
 				gOpt.Nodes,
 				scale,

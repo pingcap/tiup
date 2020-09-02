@@ -34,7 +34,7 @@ func newScaleOutCmd() *cobra.Command {
 			if len(args) != 2 {
 				return cmd.Help()
 			}
-			if gOpt.ExecutorType == executor.ExecutorTypeNone {
+			if gOpt.SSHType == executor.SSHTypeNone {
 				opt.IdentityFile = ""
 			}
 
@@ -55,7 +55,7 @@ func newScaleOutCmd() *cobra.Command {
 				skipConfirm,
 				gOpt.OptTimeout,
 				gOpt.SSHTimeout,
-				gOpt.ExecutorType,
+				gOpt.SSHType,
 			)
 		},
 	}

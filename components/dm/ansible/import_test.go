@@ -137,7 +137,7 @@ func TestImportFromAnsible(t *testing.T) {
 	assert := require.New(t)
 	dir := "./testdata/ansible"
 
-	im, err := NewImporter(dir, "inventory.ini", executor.ExecutorTypeBuiltin, 0)
+	im, err := NewImporter(dir, "inventory.ini", executor.SSHTypeBuiltin, 0)
 	assert.Nil(err)
 	im.testExecutorGetter = &executorGetter{}
 	clusterName, meta, err := im.ImportFromAnsibleDir()

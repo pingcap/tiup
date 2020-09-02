@@ -26,14 +26,14 @@ import (
 var (
 	errNS = errorx.NewNamespace("executor")
 
-	// ExecutorTypeBuiltin is the type of easy ssh executor
-	ExecutorTypeBuiltin = "builtin"
+	// SSHTypeBuiltin is the type of easy ssh executor
+	SSHTypeBuiltin = "builtin"
 
-	// ExecutorTypeSystem is the type of host ssh client
-	ExecutorTypeSystem = "system"
+	// SSHTypeSystem is the type of host ssh client
+	SSHTypeSystem = "system"
 
-	// ExecutorTypeNone is the type of local executor (no ssh will be used)
-	ExecutorTypeNone = "none"
+	// SSHTypeNone is the type of local executor (no ssh will be used)
+	SSHTypeNone = "none"
 
 	executeDefaultTimeout = time.Second * 60
 
@@ -65,7 +65,7 @@ func New(etype string, sudo bool, c SSHConfig) (Executor, error) {
 	failpoint.Inject("assertNativeSSH", func() {
 		// XXX: We call system executor 'native' by mistake in commit f1142b1
 		// this should be fixed after we remove --native-ssh flag
-		if etype != ExecutorTypeSystem {
+		if etype != SSHTypeSystem {
 			msg := fmt.Sprintf(
 				"native ssh client should be used in this case, os.Args: %s, %s = %s",
 				os.Args, localdata.EnvNameNativeSSHClient, os.Getenv(localdata.EnvNameNativeSSHClient),
@@ -84,14 +84,14 @@ func New(etype string, sudo bool, c SSHConfig) (Executor, error) {
 	}
 
 	switch etype {
-	case ExecutorTypeBuiltin:
+	case SSHTypeBuiltin:
 		e := &EasySSHExecutor{
 			Locale: "C",
 			Sudo:   sudo,
 		}
 		e.initialize(c)
 		return e, nil
-	case ExecutorTypeSystem:
+	case SSHTypeSystem:
 		e := &NativeSSHExecutor{
 			Config: &c,
 			Locale: "C",
@@ -101,7 +101,7 @@ func New(etype string, sudo bool, c SSHConfig) (Executor, error) {
 			_, _, e.ConnectionTestResult = e.Execute(connectionTestCommand, false, executeDefaultTimeout)
 		}
 		return e, nil
-	case ExecutorTypeNone:
+	case SSHTypeNone:
 		local := os.Getenv(localdata.EnvNameLocalHost)
 		if local == "" {
 			local = defaultLocalIP
