@@ -1,5 +1,46 @@
 import uniqid from 'uniqid'
 
+///////////////////////
+
+export interface IGlobalDir {
+  deploy_dir_prefix?: string
+  data_dir_prefix?: string
+}
+
+export const DEF_DEPLOY_DIR_PREFIX = 'tidb-deploy'
+export const DEF_DATA_DIR_PREFIX = 'tidb-data'
+export class GlobalDir implements IGlobalDir {
+  deploy_dir_prefix?: string
+  data_dir_prefix?: string
+
+  public deployPathPrefix() {
+    return this.deploy_dir_prefix || DEF_DEPLOY_DIR_PREFIX
+  }
+
+  public dataPathPrefix() {
+    return this.data_dir_prefix || DEF_DATA_DIR_PREFIX
+  }
+
+  public deployPathFull(): string {
+    return `${this.deployPathPrefix()}/[component]-[port]`
+  }
+
+  public dataPathFull(): string {
+    if (this.dataPathPrefix().startsWith('/')) {
+      return `${this.dataPathPrefix()}/[component]-[port]`
+    }
+    return `${this.deployPathFull()}/${this.dataPathPrefix()}`
+  }
+
+  static deSerial(obj: any): GlobalDir {
+    let d = new GlobalDir()
+    Object.assign(d, obj)
+    return d
+  }
+}
+
+///////////////////////
+
 const COMP_COLORS = {
   TiDB: 'magenta',
   TiKV: 'orange',
@@ -28,8 +69,6 @@ export type CompMap = {
 
 ///////////////////////
 
-export const DEF_DEPLOY_DIR_PREFIX = 'tidb-deploy'
-export const DEF_DATA_DIR_PREFIX = 'tidb-data'
 export abstract class BaseComp {
   id: string
   machineID: string
@@ -59,30 +98,36 @@ export abstract class BaseComp {
     this.data_dir_prefix = comp.data_dir_prefix
   }
 
-  public deployPathPrefix() {
-    return this.deploy_dir_prefix || DEF_DEPLOY_DIR_PREFIX
+  public deployPathPrefix(globalDir: GlobalDir) {
+    return this.deploy_dir_prefix || globalDir.deployPathPrefix()
   }
 
-  public dataPathPrefix() {
-    return this.data_dir_prefix || DEF_DATA_DIR_PREFIX
+  public dataPathPrefix(globalDir: GlobalDir) {
+    return this.data_dir_prefix || globalDir.dataPathPrefix()
   }
 
-  public allPathsPrefix() {
-    if (this.dataPathPrefix()) {
-      return `${this.deployPathPrefix()},${this.dataPathPrefix()}`
+  public allPathsPrefix(globalDir: GlobalDir) {
+    if (this.dataPathPrefix(globalDir)) {
+      return `${this.deployPathPrefix(globalDir)},${this.dataPathPrefix(
+        globalDir
+      )}`
     }
-    return this.deployPathPrefix()
+    return this.deployPathPrefix(globalDir)
   }
 
-  public deployPathFull(): string {
-    return `${this.deployPathPrefix()}/${this.name()}-${this.symbolPort()}`
+  public deployPathFull(globalDir: GlobalDir): string {
+    return `${this.deployPathPrefix(
+      globalDir
+    )}/${this.name()}-${this.symbolPort()}`
   }
 
-  public dataPathFull(): string {
-    if (this.dataPathPrefix().startsWith('/')) {
-      return `${this.dataPathPrefix()}/${this.name()}-${this.symbolPort()}`
+  public dataPathFull(globalDir: GlobalDir): string {
+    if (this.dataPathPrefix(globalDir).startsWith('/')) {
+      return `${this.dataPathPrefix(
+        globalDir
+      )}/${this.name()}-${this.symbolPort()}`
     }
-    return `${this.deployPathFull()}/${this.dataPathPrefix()}`
+    return `${this.deployPathFull(globalDir)}/${this.dataPathPrefix(globalDir)}`
   }
 
   public abstract symbolPort(): number
@@ -131,7 +176,7 @@ export class TiDBComp extends BaseComp {
     super(machineID, 'TiDB', for_scale_out)
   }
 
-  public dataPathPrefix() {
+  public dataPathPrefix(globalDir: GlobalDir) {
     return ''
   }
 
@@ -295,7 +340,7 @@ export class GrafanaComp extends BaseComp {
     super(machineID, 'Grafana', for_scale_out)
   }
 
-  public dataPathPrefix() {
+  public dataPathPrefix(globalDir: GlobalDir) {
     return ''
   }
 

@@ -6,12 +6,18 @@ import { useNavigate } from 'react-router-dom'
 
 import { Root } from '_components'
 import { BaseComp, CompTypes, Machine } from '_types'
-import { useComps, useGlobalLoginOptions, useMachines } from '_hooks'
+import {
+  useComps,
+  useGlobalLoginOptions,
+  useMachines,
+  useGlobalDir,
+} from '_hooks'
 import { deployCluster, scaleOutCluster } from '_apis'
 
 import DeploymentTable from './DeploymentTable'
 import EditCompForm from './EditCompForm'
 import TopoPreview, { genTopo } from './TopoPreview'
+import GlobalDirForm from './GlobalDirForm'
 
 // TODO: fetch from API
 const TIDB_VERSIONS = [
@@ -56,6 +62,7 @@ export default function CompsManager({
     'cur_scale_out_nodes',
     {}
   )
+  const { globalDir, setGlobalDirObj } = useGlobalDir()
 
   const navigate = useNavigate()
 
@@ -117,7 +124,9 @@ export default function CompsManager({
   )
 
   function handleDeploy(values: any) {
-    const topoYaml = yaml.stringify(genTopo(machines, comps, forScaleOut))
+    const topoYaml = yaml.stringify(
+      genTopo(globalDir, machines, comps, forScaleOut)
+    )
     deployCluster({
       ...values,
       topo_yaml: topoYaml,
@@ -152,7 +161,9 @@ export default function CompsManager({
     })
 
     // scale out
-    const topoYaml = yaml.stringify(genTopo(machines, comps, forScaleOut))
+    const topoYaml = yaml.stringify(
+      genTopo(globalDir, machines, comps, forScaleOut)
+    )
     scaleOutCluster(clusterName!, {
       topo_yaml: topoYaml,
       global_login_options: globalLoginOptions,
@@ -210,10 +221,18 @@ export default function CompsManager({
       )}
 
       <div style={{ marginTop: 16 }}>
+        <GlobalDirForm
+          globalDir={globalDir}
+          onUpdateGlobalDir={setGlobalDirObj}
+        />
+      </div>
+
+      <div style={{ marginTop: 16 }}>
         <DeploymentTable
           forScaleOut={forScaleOut}
           machines={machines}
           components={comps}
+          globalDir={globalDir}
           onAddComponent={handleAddComponent}
           onEditComponent={(rec) => setCurComp(rec)}
           onDeleteComponent={handleDeleteComponent}
@@ -229,7 +248,11 @@ export default function CompsManager({
         onClose={() => setCurComp(undefined)}
         destroyOnClose={true}
       >
-        <EditCompForm comp={curComp} onUpdateComp={handleUpdateComponent} />
+        <EditCompForm
+          globalDir={globalDir}
+          comp={curComp}
+          onUpdateComp={handleUpdateComponent}
+        />
       </Drawer>
 
       <Modal
@@ -241,6 +264,7 @@ export default function CompsManager({
         onCancel={() => setPreviewYaml(false)}
       >
         <TopoPreview
+          globalDir={globalDir}
           machines={machines}
           components={comps}
           forScaleOut={forScaleOut}

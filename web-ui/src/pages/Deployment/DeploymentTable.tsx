@@ -9,6 +9,7 @@ import {
   Machine,
   MachineMap,
   CompMap,
+  GlobalDir,
 } from '_types'
 import { useGlobalLoginOptions } from '_hooks'
 
@@ -18,6 +19,8 @@ interface IDeploymentTableProps {
   forScaleOut: boolean // deploy or scale out
   machines: MachineMap
   components: CompMap
+
+  globalDir: GlobalDir
 
   onAddComponent?: (
     machine: Machine,
@@ -33,6 +36,8 @@ export default function DeploymentTable({
   forScaleOut,
   machines,
   components,
+
+  globalDir,
 
   onAddComponent,
   onEditComponent,
@@ -99,7 +104,7 @@ export default function DeploymentTable({
               globalLoginOptions
             )}, DC=${rec.dc || ''}, Rack=${rec.rack || ''}`
           }
-          return `Port=${rec.ports()}, Path=${rec.allPathsPrefix()}`
+          return `Port=${rec.ports()}, Path=${rec.allPathsPrefix(globalDir)}`
         },
       },
       {

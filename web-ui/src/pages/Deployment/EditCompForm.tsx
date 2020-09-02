@@ -3,8 +3,6 @@ import { Form, Input, Button } from 'antd'
 
 import {
   BaseComp,
-  DEF_DEPLOY_DIR_PREFIX,
-  DEF_DATA_DIR_PREFIX,
   DEF_TIDB_PORT,
   DEF_TIDB_STATUS_PORT,
   DEF_TIKV_STATUS_PORT,
@@ -21,6 +19,7 @@ import {
   DEF_PROM_PORT,
   DEF_ALERT_WEB_PORT,
   DEF_ALERT_CLUSTER_PORT,
+  GlobalDir,
 } from '_types'
 
 function correctFormValues(values: any) {
@@ -50,11 +49,13 @@ function correctFormValues(values: any) {
 }
 
 interface IEditCompFormProps {
+  globalDir: GlobalDir
   comp?: BaseComp
   onUpdateComp: (comp: BaseComp) => void
 }
 
 export default function EditCompForm({
+  globalDir,
   comp,
   onUpdateComp,
 }: IEditCompFormProps) {
@@ -80,9 +81,9 @@ export default function EditCompForm({
           name="deploy_dir_prefix"
           style={{ marginBottom: 0 }}
         >
-          <Input placeholder={DEF_DEPLOY_DIR_PREFIX} />
+          <Input placeholder={globalDir.deployPathPrefix()} />
         </Form.Item>
-        <p>{comp.deployPathFull()}</p>
+        <p>{comp.deployPathFull(globalDir)}</p>
       </Form.Item>
       {['TiDB', 'Grafana'].indexOf(componentType) === -1 && (
         <Form.Item noStyle>
@@ -91,9 +92,9 @@ export default function EditCompForm({
             name="data_dir_prefix"
             style={{ marginBottom: 0 }}
           >
-            <Input placeholder={DEF_DATA_DIR_PREFIX} />
+            <Input placeholder={globalDir.dataPathPrefix()} />
           </Form.Item>
-          <p>{comp.dataPathFull()}</p>
+          <p>{comp.dataPathFull(globalDir)}</p>
         </Form.Item>
       )}
       {componentType === 'TiDB' && (

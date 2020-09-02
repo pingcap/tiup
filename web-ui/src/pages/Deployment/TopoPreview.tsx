@@ -1,21 +1,17 @@
 import React, { useMemo } from 'react'
 import yaml from 'yaml'
 
-import {
-  DEF_DEPLOY_DIR_PREFIX,
-  DEF_DATA_DIR_PREFIX,
-  COMP_TYPES_ARR,
-  CompMap,
-  MachineMap,
-} from '_types'
+import { COMP_TYPES_ARR, CompMap, MachineMap, GlobalDir } from '_types'
 
 interface ITopoPreviewProps {
+  globalDir: GlobalDir
   machines: MachineMap
   components: CompMap
   forScaleOut: boolean
 }
 
 export function genTopo(
+  globalDir: GlobalDir,
   machines: MachineMap,
   components: CompMap,
   forScaleOut: boolean
@@ -28,8 +24,8 @@ export function genTopo(
     topo = {
       global: {
         user: 'tidb',
-        deploy_dir: DEF_DEPLOY_DIR_PREFIX,
-        data_dir: DEF_DATA_DIR_PREFIX,
+        deploy_dir: globalDir.deployPathPrefix(),
+        data_dir: globalDir.dataPathPrefix(),
       },
       server_configs: {
         // tidb: {
@@ -69,17 +65,20 @@ export function genTopo(
           m[key] = (comp as any)[key]
         }
         if (key === 'deploy_dir_prefix' && comp[key] !== undefined) {
-          m['deploy_dir'] = comp.deployPathFull()
+          m['deploy_dir'] = comp.deployPathFull(globalDir)
         }
         if (key === 'data_dir_prefix' && comp[key] !== undefined) {
-          m['data_dir'] = comp.dataPathFull()
+          m['data_dir'] = comp.dataPathFull(globalDir)
         }
       }
 
       // location labels
       if (compType === 'TiKV' && (targetMachine.dc || targetMachine.rack)) {
         m.config = {
-          'server.labels': { dc: targetMachine.dc, rack: targetMachine.rack },
+          'server.labels': {
+            dc: targetMachine.dc || '',
+            rack: targetMachine.rack || '',
+          },
         }
       }
 
@@ -101,15 +100,15 @@ export function genTopo(
 }
 
 export default function TopoPreview({
+  globalDir,
   machines,
   components,
   forScaleOut,
 }: ITopoPreviewProps) {
-  const topo = useMemo(() => genTopo(machines, components, forScaleOut), [
-    machines,
-    components,
-    forScaleOut,
-  ])
+  const topo = useMemo(
+    () => genTopo(globalDir, machines, components, forScaleOut),
+    [globalDir, machines, components, forScaleOut]
+  )
 
   return (
     <div
