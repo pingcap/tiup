@@ -310,7 +310,7 @@ func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 		ssh = val
 	}
 
-	args := []string{ssh, "-o", "StrictHostKeyChecking"}
+	args := []string{ssh, "-o", "StrictHostKeyChecking=no"}
 
 	args = e.configArgs(args) // prefix and postfix args
 	args = append(args, fmt.Sprintf("%s@%s", e.Config.User, e.Config.Host), cmd)
