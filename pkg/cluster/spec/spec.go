@@ -129,8 +129,6 @@ type Topology interface {
 	// count how many time a path is used by instances in cluster
 	CountDir(host string, dir string) int
 
-	Component(name string) Component
-
 	ScaleOutTopology
 }
 
@@ -512,9 +510,9 @@ func (s *Specification) ComponentsByUpdateOrder() (comps []Component) {
 	return
 }
 
-// Component implements the Topology interface
-func (s *Specification) Component(name string) Component {
-	for _, com := range s.ComponentsByStartOrder() {
+// FindComponent returns the Component corresponding the name
+func FindComponent(topo Topology, name string) Component {
+	for _, com := range topo.ComponentsByStartOrder() {
 		if com.Name() == name {
 			return com
 		}

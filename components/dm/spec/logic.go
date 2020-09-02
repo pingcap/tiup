@@ -305,16 +305,6 @@ func (topo *Topology) ComponentsByUpdateOrder() (comps []Component) {
 	return
 }
 
-// Component implements the Topology interface
-func (topo *Topology) Component(name string) Component {
-	for _, com := range topo.ComponentsByStartOrder() {
-		if com.Name() == name {
-			return com
-		}
-	}
-	return nil
-}
-
 // IterComponent iterates all components in component starting order
 func (topo *Topology) IterComponent(fn func(comp Component)) {
 	for _, comp := range topo.ComponentsByStartOrder() {

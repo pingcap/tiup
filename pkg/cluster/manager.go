@@ -1697,7 +1697,7 @@ func (m *Manager) confirmTopology(clusterName, version string, topo spec.Topolog
 
 // Dynamic reload Prometheus configuration
 func buildDynReloadProm(topo spec.Topology) []task.Task {
-	monitor := topo.Component(spec.ComponentPrometheus)
+	monitor := spec.FindComponent(topo, spec.ComponentPrometheus)
 	if monitor == nil {
 		return nil
 	}
