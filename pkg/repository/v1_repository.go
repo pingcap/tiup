@@ -20,6 +20,7 @@ import (
 	stderrors "errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -484,6 +485,24 @@ func (r *V1Repository) FetchComponent(item *v1manifest.VersionItem) (io.Reader, 
 	defer reader.Close()
 
 	return checkHash(reader, item.Hashes[v1manifest.SHA256])
+}
+
+// DoDownloadComponent downloads the component specified by item into local file
+func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target string) error {
+	targetDir := filepath.Dir(target)
+	err := r.mirror.Download(item.URL, targetDir)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	reader, err := os.Open(target)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	_, err = checkHash(reader, item.Hashes[v1manifest.SHA256])
+	return err
 }
 
 // FetchTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash in it

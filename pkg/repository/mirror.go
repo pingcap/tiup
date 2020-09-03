@@ -253,6 +253,10 @@ func (l *httpMirror) Download(resource, targetDir string) error {
 		return errors.Trace(err)
 	}
 	defer r.Close()
+
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return errors.Trace(err)
+	}
 	return utils.Move(tmpFilePath, dstFilePath)
 }
 
