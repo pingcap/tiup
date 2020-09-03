@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -94,9 +95,13 @@ func (c *DrainerComponent) Instances() []Instance {
 				s.DeployDir,
 				s.DataDir,
 			},
-			StatusFn: func(_ ...string) string {
-				url := fmt.Sprintf("http://%s:%d/status", s.Host, s.Port)
-				return statusByURL(url)
+			StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
+				scheme := "http"
+				if tlsCfg != nil {
+					scheme = "https"
+				}
+				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
+				return statusByURL(url, tlsCfg)
 			},
 		}, c.Specification})
 	}
@@ -110,7 +115,14 @@ type DrainerInstance struct {
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *DrainerInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, user string, paths meta.DirPaths) error {
+func (i *DrainerInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName,
+	clusterVersion,
+	user string,
+	paths meta.DirPaths,
+) error {
 	s := i.topo
 	defer func() {
 		i.topo = s
@@ -121,11 +133,18 @@ func (i *DrainerInstance) ScaleConfig(e executor.Executor, topo Topology, cluste
 }
 
 // InitConfig implements Instance interface.
-func (i *DrainerInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *DrainerInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
+	enableTLS := i.topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(DrainerSpec)
 	cfg := scripts.NewDrainerScript(
 		i.GetHost()+":"+strconv.Itoa(i.GetPort()),
@@ -172,6 +191,26 @@ func (i *DrainerInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 		if err != nil {
 			return err
 		}
+	}
+
+	// set TLS configs
+	if enableTLS {
+		if spec.Config == nil {
+			spec.Config = make(map[string]interface{})
+		}
+		spec.Config["security.ssl-ca"] = fmt.Sprintf(
+			"%s/tls/%s",
+			paths.Deploy,
+			TLSCACert,
+		)
+		spec.Config["security.ssl-cert"] = fmt.Sprintf(
+			"%s/tls/%s.crt",
+			paths.Deploy,
+			i.Role())
+		spec.Config["security.ssl-key"] = fmt.Sprintf(
+			"%s/tls/%s.pem",
+			paths.Deploy,
+			i.Role())
 	}
 
 	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {

@@ -14,6 +14,7 @@
 package command
 
 import (
+	"crypto/tls"
 	"fmt"
 	"time"
 
@@ -41,7 +42,7 @@ func newScaleInCmd() *cobra.Command {
 
 			clusterName := args[0]
 
-			scale := func(b *task.Builder, imetadata spec.Metadata) {
+			scale := func(b *task.Builder, imetadata spec.Metadata, tlsCfg *tls.Config) {
 				metadata := imetadata.(*dm.Metadata)
 				b.Func(
 					fmt.Sprintf("ScaleInCluster: options=%+v", gOpt),

@@ -310,6 +310,9 @@ func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 				delPaths.Insert(filepath.Join(deployDir, "conf"))
 				delPaths.Insert(filepath.Join(deployDir, "bin"))
 				delPaths.Insert(filepath.Join(deployDir, "scripts"))
+				if cls.BaseTopo().GlobalOptions.TLSEnabled {
+					delPaths.Insert(filepath.Join(deployDir, "tls"))
+				}
 				// only delete path if it is not used by any other instance in the cluster
 				if strings.HasPrefix(logDir, deployDir) && cls.CountDir(ins.GetHost(), logDir) == 1 {
 					delPaths.Insert(logDir)

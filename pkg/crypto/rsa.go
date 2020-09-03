@@ -18,22 +18,25 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/pem"
+	"net"
 
 	"github.com/pingcap/errors"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 // RSAKeyLength define the length of RSA keys
 const RSAKeyLength = 2048
 
 // RSAPair generate a pair of rsa keys
-func RSAPair() (*RSAPubKey, *RSAPrivKey, error) {
+func RSAPair() (*RSAPrivKey, error) {
 	key, err := rsa.GenerateKey(rand.Reader, RSAKeyLength)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return &RSAPubKey{&key.PublicKey}, &RSAPrivKey{key}, nil
+	return &RSAPrivKey{key}, nil
 }
 
 // RSAPubKey represents the public key of RSA
@@ -49,6 +52,11 @@ func (k *RSAPubKey) Type() string {
 // Scheme returns the scheme of  signature algorithm, e.g. rsassa-pss-sha256
 func (k *RSAPubKey) Scheme() string {
 	return KeySchemeRSASSAPSSSHA256
+}
+
+// Key returns the raw public key
+func (k *RSAPubKey) Key() crypto.PublicKey {
+	return k.key
 }
 
 // Serialize generate the pem format for a key
@@ -165,4 +173,54 @@ func (k *RSAPrivKey) Public() PubKey {
 	return &RSAPubKey{
 		key: &k.key.PublicKey,
 	}
+}
+
+// Signer returns the signer of the private key
+func (k *RSAPrivKey) Signer() crypto.Signer {
+	return k.key
+}
+
+// Pem returns the raw private key im PEM format
+func (k *RSAPrivKey) Pem() []byte {
+	return pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(k.key),
+	})
+}
+
+// CSR generates a new CSR from given private key
+func (k *RSAPrivKey) CSR(role, commonName string, hostList []string, IPList []string) ([]byte, error) {
+	var ipAddrList []net.IP
+	for _, ip := range IPList {
+		ipAddr := net.ParseIP(ip)
+		ipAddrList = append(ipAddrList, ipAddr)
+	}
+
+	// set CSR attributes
+	csrTemplate := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			Organization:       []string{pkixOrganization},
+			OrganizationalUnit: []string{pkixOrganizationalUnit, role},
+			CommonName:         commonName,
+		},
+		DNSNames:    hostList,
+		IPAddresses: ipAddrList,
+	}
+	csr, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, k.key)
+	if err != nil {
+		return nil, err
+	}
+
+	return csr, nil
+}
+
+// PKCS12 encodes the private and certificate to a PKCS#12 pfxData
+func (k *RSAPrivKey) PKCS12(cert *x509.Certificate, ca *CertificateAuthority) ([]byte, error) {
+	return pkcs12.Encode(
+		rand.Reader,
+		k.key,
+		cert,
+		[]*x509.Certificate{ca.Cert},
+		PKCS12Password,
+	)
 }

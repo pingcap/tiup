@@ -27,7 +27,7 @@ exec bin/tikv-server \
 {{- end}}
     --addr "{{.ListenHost}}:{{.Port}}" \
     --advertise-addr "{{.IP}}:{{.Port}}" \
-    --status-addr "{{.IP}}:{{.StatusPort}}" \
+    --status-addr "{{.ListenHost}}:{{.StatusPort}}" \
     --pd "{{template "PDList" .Endpoints}}" \
     --data-dir "{{.DataDir}}" \
     --config conf/tikv.toml \

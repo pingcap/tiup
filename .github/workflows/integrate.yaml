@@ -79,13 +79,13 @@ jobs:
       matrix:
         cases:
           - "test_cmd"
-          - "test_cmd_no_cdc"
+          - "test_cmd_tls_native_ssh"
           - "test_scale_core"
           - "test_scale_tools"
           - "test_upgrade"
-          - "test_cmd_with_native_ssh"
-          - "test_scale_core_with_native_ssh"
-          - "test_scale_tools_with_native_ssh"
+          - "test_upgrade_tls"
+          - "test_scale_core_tls"
+          - "test_scale_tools_tls"
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
@@ -281,8 +281,8 @@ jobs:
         run: |
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
-          make failpoint-enable
-          make unit-test
+          make check
+          make test
 
       - uses: actions/download-artifact@v2
         with:

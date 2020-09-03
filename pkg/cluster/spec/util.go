@@ -14,12 +14,15 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"path/filepath"
 	"reflect"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
+	"go.etcd.io/etcd/pkg/transport"
 )
 
 var tidbSpec *SpecManager
@@ -36,7 +39,6 @@ func GetSpecManager() *SpecManager {
 type ClusterMeta struct {
 	User    string `yaml:"user"`         // the user to run and manage cluster on remote
 	Version string `yaml:"tidb_version"` // the version of TiDB cluster
-	//EnableTLS      bool   `yaml:"enable_tls"`
 	//EnableFirewall bool   `yaml:"firewall"`
 	OpsVer string `yaml:"last_ops_ver,omitempty"` // the version of ourself that updated the meta last time
 
@@ -106,4 +108,28 @@ func ClusterMetadata(clusterName string) (*ClusterMeta, error) {
 	}
 
 	return &cm, nil
+}
+
+// LoadClientCert read and load the client cert key pair and CA cert
+func LoadClientCert(dir string) (*tls.Config, error) {
+	return transport.TLSInfo{
+		TrustedCAFile: filepath.Join(dir, TLSCACert),
+		CertFile:      filepath.Join(dir, TLSClientCert),
+		KeyFile:       filepath.Join(dir, TLSClientKey),
+	}.ClientConfig()
+}
+
+// statusByURL queries current status of the instance by http status api.
+func statusByURL(url string, tlsCfg *tls.Config) string {
+	client := utils.NewHTTPClient(statusQueryTimeout, tlsCfg)
+
+	// body doesn't have any status section needed
+	body, err := client.Get(url)
+	if err != nil {
+		return "Down"
+	}
+	if body == nil {
+		return "Down"
+	}
+	return "Up"
 }

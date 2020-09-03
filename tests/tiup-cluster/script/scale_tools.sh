@@ -4,7 +4,8 @@ function scale_tools() {
     mkdir -p ~/.tiup/bin/
 
     version=$1
-    native_ssh=$2
+    test_tls=$2
+    native_ssh=$3
 
     client=""
     if [ $native_ssh == true ]; then
@@ -12,7 +13,11 @@ function scale_tools() {
     fi
 
     name="test_scale_tools_$RANDOM"
-    topo=./topo/full.yaml
+    if [ $test_tls = true ]; then
+        topo=./topo/full_tls.yaml
+    else
+        topo=./topo/full.yaml
+    fi
 
     tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa
 
@@ -29,7 +34,11 @@ function scale_tools() {
 
     tiup-cluster $client display $name
 
-    total_sub_one=21
+    if [ $test_tls = true ]; then
+        total_sub_one=18
+    else
+        total_sub_one=21
+    fi
 
     echo "start scale in pump"
     tiup-cluster $client --yes scale-in $name -N 172.19.0.103:8250
@@ -43,11 +52,13 @@ function scale_tools() {
     echo "start scale out cdc"
     yes | tiup-cluster $client scale-out $name ./topo/full_scale_in_cdc.yaml
 
-    echo "start scale in tispark"
-    yes | tiup-cluster $client --yes scale-in $name -N 172.19.0.104:7078
-    wait_instance_num_reach $name $total_sub_one $native_ssh
-    echo "start scale out tispark"
-    yes | tiup-cluster $client --yes scale-out $name ./topo/full_scale_in_tispark.yaml
+    if [ $test_tls = false ]; then
+        echo "start scale in tispark"
+        yes | tiup-cluster $client --yes scale-in $name -N 172.19.0.104:7078
+        wait_instance_num_reach $name $total_sub_one $native_ssh
+        echo "start scale out tispark"
+        yes | tiup-cluster $client --yes scale-out $name ./topo/full_scale_in_tispark.yaml
+    fi
 
     echo "start scale in grafana"
     tiup-cluster $client --yes scale-in $name -N 172.19.0.101:3000

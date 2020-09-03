@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -51,10 +52,10 @@ type PDSpec struct {
 }
 
 // Status queries current status of the instance
-func (s PDSpec) Status(pdList ...string) string {
+func (s PDSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
 	curAddr := fmt.Sprintf("%s:%d", s.Host, s.ClientPort)
-	curPdAPI := api.NewPDClient([]string{curAddr}, statusQueryTimeout, nil)
-	allPdAPI := api.NewPDClient(pdList, statusQueryTimeout, nil)
+	curPdAPI := api.NewPDClient([]string{curAddr}, statusQueryTimeout, tlsCfg)
+	allPdAPI := api.NewPDClient(pdList, statusQueryTimeout, tlsCfg)
 	suffix := ""
 
 	// find dashboard node
@@ -156,11 +157,18 @@ type PDInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *PDInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
+	enableTLS := i.topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(PDSpec)
 	cfg := scripts.NewPDScript(
 		spec.Name,
@@ -172,6 +180,12 @@ func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion
 		WithPeerPort(spec.PeerPort).
 		AppendEndpoints(i.topo.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost())
+
+	scheme := "http"
+	if enableTLS {
+		scheme = "https"
+		cfg = cfg.WithScheme(scheme)
+	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -191,7 +205,7 @@ func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion
 			spec.Config = map[string]interface{}{}
 		}
 		prom := i.topo.Monitors[0]
-		spec.Config["pd-server.metric-storage"] = fmt.Sprintf("http://%s:%d", prom.Host, prom.Port)
+		spec.Config["pd-server.metric-storage"] = fmt.Sprintf("%s://%s:%d", scheme, prom.Host, prom.Port)
 	}
 
 	globalConfig := i.topo.ServerConfigs.PD
@@ -217,6 +231,26 @@ func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion
 		}
 	}
 
+	// set TLS configs
+	if enableTLS {
+		if spec.Config == nil {
+			spec.Config = make(map[string]interface{})
+		}
+		spec.Config["security.cacert-path"] = fmt.Sprintf(
+			"%s/tls/%s",
+			paths.Deploy,
+			TLSCACert,
+		)
+		spec.Config["security.cert-path"] = fmt.Sprintf(
+			"%s/tls/%s.crt",
+			paths.Deploy,
+			i.Role())
+		spec.Config["security.key-path"] = fmt.Sprintf(
+			"%s/tls/%s.pem",
+			paths.Deploy,
+			i.Role())
+	}
+
 	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
@@ -225,7 +259,14 @@ func (i *PDInstance) InitConfig(e executor.Executor, clusterName, clusterVersion
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *PDInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *PDInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	// We need pd.toml here, but we don't need to check it
 	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil &&
 		errors.Cause(err) != ErrorCheckConfig {
@@ -246,6 +287,9 @@ func (i *PDInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName
 		WithClientPort(spec.ClientPort).
 		AppendEndpoints(cluster.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost())
+	if topo.BaseTopo().GlobalOptions.TLSEnabled {
+		cfg = cfg.WithScheme("https")
+	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	log.Infof("script path: %s", fp)
@@ -266,7 +310,7 @@ func (i *PDInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName
 var _ RollingUpdateInstance = &PDInstance{}
 
 // PreRestart implements RollingUpdateInstance interface.
-func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
+func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
 	timeoutOpt := &utils.RetryOption{
 		Timeout: time.Second * time.Duration(apiTimeoutSeconds),
 		Delay:   time.Second * 2,
@@ -277,7 +321,7 @@ func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
 		panic("topo should be type of tidb topology")
 	}
 
-	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, nil)
+	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
 
 	leader, err := pdClient.GetLeader()
 	if err != nil {
@@ -294,7 +338,7 @@ func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
 }
 
 // PostRestart implements RollingUpdateInstance interface.
-func (i *PDInstance) PostRestart(topo Topology) error {
+func (i *PDInstance) PostRestart(topo Topology, tlsCfg *tls.Config) error {
 	// intend to do nothing
 	return nil
 }

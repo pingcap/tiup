@@ -1,3 +1,8 @@
+global:
+  user: tidb
+  group: pingcap
+  enable_tls: true
+
 server_configs:
     tidb:
         binlog.enable: true
@@ -25,14 +30,6 @@ tikv_servers:
   - host: 172.19.0.104
   - host: 172.19.0.105
 
-# tiflash eat too much memory
-# and binary is more than 1G..
-tiflash_servers:
-  - host: 172.19.0.103
-#   - host: 172.19.0.104
-#   - host: 172.19.0.105
-
-
 pump_servers:
   - host: 172.19.0.103
   - host: 172.19.0.104
@@ -45,11 +42,10 @@ drainer_servers:
     config:
         syncer.db-type: "file"
 
-tispark_masters:
+cdc_servers:
   - host: 172.19.0.103
-
-tispark_workers:
   - host: 172.19.0.104
+  - host: 172.19.0.105
 
 monitoring_servers:
   - host: 172.19.0.101

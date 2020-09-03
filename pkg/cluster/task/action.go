@@ -14,6 +14,7 @@
 package task
 
 import (
+	"crypto/tls"
 	"fmt"
 
 	"github.com/pingcap/errors"
@@ -26,31 +27,32 @@ type ClusterOperate struct {
 	spec    *spec.Specification
 	op      operator.Operation
 	options operator.Options
+	tlsCfg  *tls.Config
 }
 
 // Execute implements the Task interface
 func (c *ClusterOperate) Execute(ctx *Context) error {
 	switch c.op {
 	case operator.StartOperation:
-		err := operator.Start(ctx, c.spec, c.options)
+		err := operator.Start(ctx, c.spec, c.options, c.tlsCfg)
 		if err != nil {
 			return errors.Annotate(err, "failed to start")
 		}
 		operator.PrintClusterStatus(ctx, c.spec)
 	case operator.StopOperation:
-		err := operator.Stop(ctx, c.spec, c.options)
+		err := operator.Stop(ctx, c.spec, c.options, c.tlsCfg)
 		if err != nil {
 			return errors.Annotate(err, "failed to stop")
 		}
 		operator.PrintClusterStatus(ctx, c.spec)
 	case operator.RestartOperation:
-		err := operator.Restart(ctx, c.spec, c.options)
+		err := operator.Restart(ctx, c.spec, c.options, c.tlsCfg)
 		if err != nil {
 			return errors.Annotate(err, "failed to restart")
 		}
 		operator.PrintClusterStatus(ctx, c.spec)
 	case operator.UpgradeOperation:
-		err := operator.Upgrade(ctx, c.spec, c.options)
+		err := operator.Upgrade(ctx, c.spec, c.options, c.tlsCfg)
 		if err != nil {
 			return errors.Annotate(err, "failed to upgrade")
 		}
@@ -61,13 +63,13 @@ func (c *ClusterOperate) Execute(ctx *Context) error {
 			return errors.Annotate(err, "failed to destroy")
 		}
 	case operator.DestroyTombstoneOperation:
-		_, err := operator.DestroyTombstone(ctx, c.spec, false, c.options)
+		_, err := operator.DestroyTombstone(ctx, c.spec, false, c.options, c.tlsCfg)
 		if err != nil {
 			return errors.Annotate(err, "failed to destroy")
 		}
 	// print nothing
 	case operator.ScaleInOperation:
-		err := operator.ScaleIn(ctx, c.spec, c.options)
+		err := operator.ScaleIn(ctx, c.spec, c.options, c.tlsCfg)
 		if err != nil {
 			return errors.Annotate(err, "failed to scale in")
 		}

@@ -30,6 +30,12 @@ const (
 	TiOpsPackageCacheDir = "packages"
 	TiOpsClusterDir      = "clusters"
 	TiOpsAuditDir        = "audit"
+	TLSCertKeyDir        = "tls"
+	TLSCACert            = "ca.crt"
+	TLSCAKey             = "ca.pem"
+	TLSClientCert        = "client.crt"
+	TLSClientKey         = "client.pem"
+	PFXClientCert        = "client.pfx"
 )
 
 var profileDir string

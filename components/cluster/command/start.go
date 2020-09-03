@@ -36,8 +36,12 @@ func newStartCmd() *cobra.Command {
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			return manager.StartCluster(clusterName, gOpt, func(b *task.Builder, metadata spec.Metadata) {
-				tidbMeta := metadata.(*spec.ClusterMeta)
-				b.UpdateTopology(clusterName, tidbMeta, nil)
+				b.UpdateTopology(
+					clusterName,
+					tidbSpec.Path(clusterName),
+					metadata.(*spec.ClusterMeta),
+					nil, /* deleteNodeIds */
+				)
 			})
 		},
 	}
