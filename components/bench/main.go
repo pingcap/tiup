@@ -105,6 +105,7 @@ func main() {
 
 	registerTpcc(rootCmd)
 	registerTpch(rootCmd)
+	registerYcsb(rootCmd)
 
 	var cancel context.CancelFunc
 	globalCtx, cancel = context.WithCancel(context.Background())

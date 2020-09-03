@@ -22,8 +22,8 @@ import (
 	"github.com/pingcap/tiup/server/session"
 )
 
-// MaxFileSize is the max size content can be uploaded
-const MaxFileSize = 32 * 1024 * 1024
+// MaxMemory is the a total of max bytes of its file parts stored in memory
+const MaxMemory = 32 * 1024 * 1024
 
 // UploadTarbal handle tarball upload
 func UploadTarbal(sm session.Manager) http.Handler {
@@ -59,7 +59,7 @@ func (h *tarballUploader) upload(r *http.Request) (*simpleResponse, statusError)
 
 	txn := h.sm.Load(sid)
 
-	if err := r.ParseMultipartForm(MaxFileSize); err != nil {
+	if err := r.ParseMultipartForm(MaxMemory); err != nil {
 		// TODO: log error here
 		return nil, ErrorInvalidTarball
 	}
