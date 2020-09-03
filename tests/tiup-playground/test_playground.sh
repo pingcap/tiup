@@ -56,10 +56,6 @@ trap "kill_all > /dev/null 2>&1" EXIT
 
 # wait start cluster successfully
 timeout 300 grep -q "CLUSTER START SUCCESSFULLY" <(tail -f $outfile)
-# playground dump this at the wd
-sleep 3
-mv ./dsn $TIUP_INSTANCE_DATA_DIR/
-mv ./port $TIUP_INSTANCE_DATA_DIR/
 
 tiup-playground display | grep -qv "exit"
 tiup-playground scale-out --db 2
