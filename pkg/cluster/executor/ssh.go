@@ -305,7 +305,7 @@ func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 
 	if val := os.Getenv(localdata.EnvNameSSHPath); val != "" {
 		if isExec := utils.IsExecBinary(val); !isExec {
-			return nil, nil, fmt.Errorf("The specified SSH in the environment variable `%s` does not exist or is not executable", localdata.EnvNameSSHPath)
+			return nil, nil, fmt.Errorf("specified SSH in the environment variable `%s` does not exist or is not executable", localdata.EnvNameSSHPath)
 		}
 		ssh = val
 	}
@@ -362,7 +362,7 @@ func (e *NativeSSHExecutor) Transfer(src string, dst string, download bool) erro
 
 	if val := os.Getenv(localdata.EnvNameSCPPath); val != "" {
 		if isExec := utils.IsExecBinary(val); !isExec {
-			return fmt.Errorf("The specified SCP in the environment variable `%s` does not exist or is not executable", localdata.EnvNameSCPPath)
+			return fmt.Errorf("specified SCP in the environment variable `%s` does not exist or is not executable", localdata.EnvNameSCPPath)
 		}
 		scp = val
 	}
