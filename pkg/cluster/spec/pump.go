@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -93,9 +94,13 @@ func (c *PumpComponent) Instances() []Instance {
 				s.DeployDir,
 				s.DataDir,
 			},
-			StatusFn: func(_ ...string) string {
-				url := fmt.Sprintf("http://%s:%d/status", s.Host, s.Port)
-				return statusByURL(url)
+			StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
+				scheme := "http"
+				if tlsCfg != nil {
+					scheme = "https"
+				}
+				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
+				return statusByURL(url, tlsCfg)
 			},
 		}, c.Specification})
 	}
@@ -109,7 +114,14 @@ type PumpInstance struct {
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *PumpInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *PumpInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	s := i.topo
 	defer func() {
 		i.topo = s
@@ -120,11 +132,18 @@ func (i *PumpInstance) ScaleConfig(e executor.Executor, topo Topology, clusterNa
 }
 
 // InitConfig implements Instance interface.
-func (i *PumpInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *PumpInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
+	enableTLS := i.topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(PumpSpec)
 	cfg := scripts.NewPumpScript(
 		i.GetHost()+":"+strconv.Itoa(i.GetPort()),
@@ -168,6 +187,26 @@ func (i *PumpInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 		if err != nil {
 			return err
 		}
+	}
+
+	// set TLS configs
+	if enableTLS {
+		if spec.Config == nil {
+			spec.Config = make(map[string]interface{})
+		}
+		spec.Config["security.ssl-ca"] = fmt.Sprintf(
+			"%s/tls/%s",
+			paths.Deploy,
+			TLSCACert,
+		)
+		spec.Config["security.ssl-cert"] = fmt.Sprintf(
+			"%s/tls/%s.crt",
+			paths.Deploy,
+			i.Role())
+		spec.Config["security.ssl-key"] = fmt.Sprintf(
+			"%s/tls/%s.pem",
+			paths.Deploy,
+			i.Role())
 	}
 
 	return i.MergeServerConfig(e, globalConfig, spec.Config, paths)

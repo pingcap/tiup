@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -59,6 +60,10 @@ type TestTopology struct {
 
 func (t *TestTopology) Validate() error {
 	return nil
+}
+
+func (t *TestTopology) TLSConfig(dir string) (*tls.Config, error) {
+	return nil, nil
 }
 
 func (t *TestTopology) NewPart() Topology {

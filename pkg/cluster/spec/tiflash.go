@@ -15,6 +15,7 @@ package spec
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -57,9 +58,9 @@ type TiFlashSpec struct {
 }
 
 // Status queries current status of the instance
-func (s TiFlashSpec) Status(pdList ...string) string {
+func (s TiFlashSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
 	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.FlashServicePort)
-	state := checkStoreStatus(storeAddr, pdList...)
+	state := checkStoreStatus(storeAddr, tlsCfg, pdList...)
 	if s.Offline && strings.ToLower(state) == "offline" {
 		state = "Pending Offline" // avoid misleading
 	}
@@ -290,7 +291,13 @@ server_configs:
 }
 
 // InitConfig implement Instance interface
-func (i *TiFlashInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiFlashInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
@@ -399,7 +406,14 @@ func (i *TiFlashInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiFlashInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiFlashInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	s := i.topo
 	defer func() {
 		i.topo = s
@@ -421,10 +435,10 @@ func (i *TiFlashInstance) getEndpoints() []string {
 }
 
 // PrepareStart checks TiFlash requirements before starting
-func (i *TiFlashInstance) PrepareStart() error {
+func (i *TiFlashInstance) PrepareStart(tlsCfg *tls.Config) error {
 	endPoints := i.getEndpoints()
 	// set enable-placement-rules to true via PDClient
-	pdClient := api.NewPDClient(endPoints, 10*time.Second, nil)
+	pdClient := api.NewPDClient(endPoints, 10*time.Second, tlsCfg)
 	enablePlacementRules, err := json.Marshal(replicateConfig{
 		EnablePlacementRules: "true",
 	})

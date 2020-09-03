@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -51,11 +52,11 @@ type TiKVSpec struct {
 }
 
 // checkStoreStatus checks the store status in current cluster
-func checkStoreStatus(storeAddr string, pdList ...string) string {
+func checkStoreStatus(storeAddr string, tlsCfg *tls.Config, pdList ...string) string {
 	if len(pdList) < 1 {
 		return "N/A"
 	}
-	pdapi := api.NewPDClient(pdList, statusQueryTimeout, nil)
+	pdapi := api.NewPDClient(pdList, statusQueryTimeout, tlsCfg)
 	stores, err := pdapi.GetStores()
 	if err != nil {
 		return "Down"
@@ -82,9 +83,9 @@ func checkStoreStatus(storeAddr string, pdList ...string) string {
 }
 
 // Status queries current status of the instance
-func (s TiKVSpec) Status(pdList ...string) string {
+func (s TiKVSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
 	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.Port)
-	state := checkStoreStatus(storeAddr, pdList...)
+	state := checkStoreStatus(storeAddr, tlsCfg, pdList...)
 	if s.Offline && strings.ToLower(state) == "offline" {
 		state = "Pending Offline" // avoid misleading
 	}
@@ -160,11 +161,18 @@ type TiKVInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *TiKVInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiKVInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
+	enableTLS := i.topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(TiKVSpec)
 	cfg := scripts.NewTiKVScript(
 		i.GetHost(),
@@ -213,6 +221,26 @@ func (i *TiKVInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 		}
 	}
 
+	// set TLS configs
+	if enableTLS {
+		if spec.Config == nil {
+			spec.Config = make(map[string]interface{})
+		}
+		spec.Config["security.ca-path"] = fmt.Sprintf(
+			"%s/tls/%s",
+			paths.Deploy,
+			TLSCACert,
+		)
+		spec.Config["security.cert-path"] = fmt.Sprintf(
+			"%s/tls/%s.crt",
+			paths.Deploy,
+			i.Role())
+		spec.Config["security.key-path"] = fmt.Sprintf(
+			"%s/tls/%s.pem",
+			paths.Deploy,
+			i.Role())
+	}
+
 	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
@@ -221,7 +249,14 @@ func (i *TiKVInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiKVInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiKVInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	s := i.topo
 	defer func() {
 		i.topo = s
@@ -233,7 +268,7 @@ func (i *TiKVInstance) ScaleConfig(e executor.Executor, topo Topology, clusterNa
 var _ RollingUpdateInstance = &TiKVInstance{}
 
 // PreRestart implements RollingUpdateInstance interface.
-func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
+func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
 	timeoutOpt := &utils.RetryOption{
 		Timeout: time.Second * time.Duration(apiTimeoutSeconds),
 		Delay:   time.Second * 2,
@@ -248,7 +283,7 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
 		return nil
 	}
 
-	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, nil)
+	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
 
 	// Make sure there's leader of PD.
 	// Although we evict pd leader when restart pd,
@@ -269,7 +304,7 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int) error {
 }
 
 // PostRestart implements RollingUpdateInstance interface.
-func (i *TiKVInstance) PostRestart(topo Topology) error {
+func (i *TiKVInstance) PostRestart(topo Topology, tlsCfg *tls.Config) error {
 	tidbTopo, ok := topo.(*Specification)
 	if !ok {
 		panic("should be type of tidb topology")
@@ -279,7 +314,7 @@ func (i *TiKVInstance) PostRestart(topo Topology) error {
 		return nil
 	}
 
-	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, nil)
+	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
 
 	// remove store leader evict scheduler after restart
 	if err := pdClient.RemoveStoreEvict(addr(i)); err != nil {

@@ -86,7 +86,11 @@ func convertStepDisplaysToTasks(t []*task.StepDisplay) []task.Task {
 }
 
 func final(builder *task.Builder, name string, meta spec.Metadata) {
-	builder.UpdateTopology(name, meta.(*spec.ClusterMeta), nil)
+	builder.UpdateTopology(name,
+		tidbSpec.Path(name),
+		meta.(*spec.ClusterMeta),
+		nil, /* deleteNodeIds */
+	)
 }
 
 func postScaleOutHook(builder *task.Builder, newPart spec.Topology) {

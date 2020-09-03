@@ -9,8 +9,7 @@ set -eu
 # coverage: 12.7% of statements in github.com/pingcap/tiup/components/dm/...
 function instance_num() {
 	name=$1
-	line=$(tiup-dm display $name | grep -v "PASS" | grep -v "coverage" | wc -l)
-	count=`expr $line - 4`
+	count=$(tiup-dm display $name | grep "Total nodes" | awk -F ' ' '{print $3}')
 
 	echo $count
 }

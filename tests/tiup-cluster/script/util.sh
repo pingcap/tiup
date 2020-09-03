@@ -16,8 +16,7 @@ function instance_num() {
         client="--native-ssh"
     fi
 
-	line=$(tiup-cluster $client display $name | grep -v "PASS" | grep -v "coverage" | wc -l)
-	count=`expr $line - 4`
+	count=$(tiup-cluster $client display $name | grep "Total nodes" | awk -F ' ' '{print $3}')
 
 	echo $count
 }

@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -95,7 +96,7 @@ func (c *MonitorComponent) Instances() []Instance {
 				s.DeployDir,
 				s.DataDir,
 			},
-			StatusFn: func(_ ...string) string {
+			StatusFn: func(_ *tls.Config, _ ...string) string {
 				return "-"
 			},
 		}, c.Specification})
@@ -110,11 +111,18 @@ type MonitorInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *MonitorInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
+	enableTLS := i.topo.GlobalOptions.TLSEnabled
 	// transfer run script
 	spec := i.InstanceSpec.(PrometheusSpec)
 	cfg := scripts.NewPrometheusScript(
@@ -143,7 +151,7 @@ func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 
 	// transfer config
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
-	cfig := config.NewPrometheusConfig(clusterName)
+	cfig := config.NewPrometheusConfig(clusterName, enableTLS)
 	cfig.AddBlackbox(i.GetHost(), uint64(topo.MonitoredOptions.BlackboxExporterPort))
 	uniqueHosts := set.NewStringSet()
 	for _, pd := range topo.PDServers {
@@ -222,8 +230,14 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *MonitorInstance) ScaleConfig(e executor.Executor, topo Topology,
-	clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error {
+func (i *MonitorInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName string,
+	clusterVersion string,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	s := i.topo
 	defer func() { i.topo = s }()
 	i.topo = mustBeClusterTopo(topo)

@@ -26,6 +26,7 @@ import (
 // PrometheusConfig represent the data to generate Prometheus config
 type PrometheusConfig struct {
 	ClusterName               string
+	TLSEnabled                bool
 	KafkaAddrs                []string
 	NodeExporterAddrs         []string
 	TiDBStatusAddrs           []string
@@ -48,9 +49,10 @@ type PrometheusConfig struct {
 }
 
 // NewPrometheusConfig returns a PrometheusConfig
-func NewPrometheusConfig(cluster string) *PrometheusConfig {
+func NewPrometheusConfig(cluster string, enableTLS bool) *PrometheusConfig {
 	return &PrometheusConfig{
 		ClusterName: cluster,
+		TLSEnabled:  enableTLS,
 	}
 }
 

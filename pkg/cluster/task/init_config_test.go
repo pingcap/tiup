@@ -45,7 +45,13 @@ type fakeInstance struct {
 	*spec.TiDBInstance
 }
 
-func (i *fakeInstance) InitConfig(e executor.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error {
+func (i *fakeInstance) InitConfig(
+	e executor.Executor,
+	clusterName string,
+	clusterVersion string,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	if i.hasConfigError {
 		return errors.Annotate(spec.ErrorCheckConfig, "test error")
 	}

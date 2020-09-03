@@ -283,7 +283,7 @@ func (s *metaSuiteTopo) TestTiSparkSpecValidation(c *C) {
 	err := yaml.Unmarshal([]byte(`
 pd_servers:
   - host: 172.16.5.138
-    port: 1234
+    peer_port: 1234
 tispark_masters:
   - host: 172.16.5.138
     port: 1235
@@ -299,7 +299,7 @@ tispark_workers:
 	err = yaml.Unmarshal([]byte(`
 pd_servers:
   - host: 172.16.5.138
-    port: 1234
+    peer_port: 1234
 tispark_masters:
   - host: 172.16.5.138
     port: 1235
@@ -313,7 +313,7 @@ tispark_masters:
 	err = yaml.Unmarshal([]byte(`
 pd_servers:
   - host: 172.16.5.138
-    port: 1234
+    peer_port: 1234
 tispark_workers:
   - host: 172.16.5.138
     port: 1235
@@ -326,7 +326,7 @@ tispark_workers:
 	err = yaml.Unmarshal([]byte(`
 pd_servers:
   - host: 172.16.5.138
-    port: 1234
+    peer_port: 1234
 tispark_masters:
   - host: 172.16.5.138
     port: 1236
@@ -341,6 +341,40 @@ tispark_workers:
 `), &topo)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "the host 172.16.5.139 is duplicated: multiple TiSpark workers on the same host is not supported by Spark")
+}
+
+func (s *metaSuiteTopo) TestTLSEnabledValidation(c *C) {
+	topo := Specification{}
+	err := yaml.Unmarshal([]byte(`
+global:
+  enable_tls: true
+pd_servers:
+  - host: 172.16.5.138
+    peer_port: 1234
+tidb_servers:
+  - host: 172.16.5.138
+    port: 1235
+tikv_servers:
+  - host: 172.16.5.138
+    port: 1236
+`), &topo)
+	c.Assert(err, IsNil)
+
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+global:
+  enable_tls: true
+tidb_servers:
+  - host: 172.16.5.138
+    port: 1234
+tispark_masters:
+  - host: 172.16.5.138
+    port: 1235
+  - host: 172.16.5.139
+    port: 1235
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "component tispark is not supported in TLS enabled cluster")
 }
 
 func (s *metaSuiteTopo) TestCrossClusterPortConflicts(c *C) {

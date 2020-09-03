@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -62,7 +63,7 @@ func (c *AlertManagerComponent) Instances() []Instance {
 					s.DeployDir,
 					s.DataDir,
 				},
-				StatusFn: func(_ ...string) string {
+				StatusFn: func(_ *tls.Config, _ ...string) string {
 					return "-"
 				},
 			},
@@ -112,16 +113,24 @@ func (i *AlertManagerInstance) Deploy(t *task.Builder, srcPath string, deployDir
 }
 
 // InitConfig implement Instance interface
-func (i *AlertManagerInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *AlertManagerInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
+	enableTLS := i.topo.GlobalOptions.TLSEnabled
+
 	// Transfer start script
 	spec := i.InstanceSpec.(AlertManagerSpec)
-	cfg := scripts.NewAlertManagerScript(spec.Host, paths.Deploy, paths.Data[0], paths.Log).
+	cfg := scripts.NewAlertManagerScript(spec.Host, paths.Deploy, paths.Data[0], paths.Log, enableTLS).
 		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort).WithNumaNode(spec.NumaNode).
-		AppendEndpoints(cspec.AlertManagerEndpoints(i.topo.Alertmanager, deployUser))
+		AppendEndpoints(cspec.AlertManagerEndpoints(i.topo.Alertmanager, deployUser, enableTLS))
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_alertmanager_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -149,8 +158,14 @@ func (i *AlertManagerInstance) InitConfig(e executor.Executor, clusterName, clus
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *AlertManagerInstance) ScaleConfig(e executor.Executor, topo spec.Topology,
-	clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error {
+func (i *AlertManagerInstance) ScaleConfig(
+	e executor.Executor,
+	topo spec.Topology,
+	clusterName string,
+	clusterVersion string,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	s := i.topo
 	defer func() { i.topo = s }()
 	i.topo = topo.(*Topology)

@@ -35,13 +35,13 @@ AL70wdUu5jMm2ex5cZGkZLRB50yE6rBiHCd5W1WdTFoe
 )
 
 func TestSignAndVerify(t *testing.T) {
-	pub, pri, err := RSAPair()
+	priv, err := RSAPair()
 	assert.Nil(t, err)
 
 	for _, cas := range cases {
-		sig, err := pri.Signature(cas)
+		sig, err := priv.Signature(cas)
 		assert.Nil(t, err)
-		assert.Nil(t, pub.VerifySignature(cas, sig))
+		assert.Nil(t, priv.Public().VerifySignature(cas, sig))
 	}
 }
 
