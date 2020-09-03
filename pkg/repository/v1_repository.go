@@ -30,6 +30,7 @@ import (
 	"github.com/fatih/color"
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -154,16 +155,26 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			}
 		}
 
-		reader, err := r.FetchComponent(versionItem)
+		if spec.Version == "" {
+			spec.Version = version
+		}
+
+		targetDir := filepath.Join(r.local.TargetRootDir(), localdata.ComponentParentDir, spec.ID, spec.Version)
+		target := filepath.Join(targetDir, versionItem.URL)
+		err = r.DownloadComponent(versionItem, target)
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
 		}
 
-		if spec.Version == "" {
-			spec.Version = version
+		reader, err := os.Open(target)
+		if err != nil {
+			errs = append(errs, err.Error())
+			continue
 		}
-		err = r.local.InstallComponent(reader, spec.TargetDir, spec.ID, spec.Version, versionItem.URL, r.DisableDecompress)
+		defer reader.Close()
+
+		err = r.local.InstallComponent(reader, targetDir, spec.ID, spec.Version, versionItem.URL, r.DisableDecompress)
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
