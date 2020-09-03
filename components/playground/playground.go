@@ -37,7 +37,6 @@ import (
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
@@ -49,7 +48,8 @@ const forceKillAfterDuration = time.Second * 10
 
 // Playground represent the playground of a cluster.
 type Playground struct {
-	booted bool
+	dataDir string
+	booted  bool
 	// the latest receive signal
 	curSig      int32
 	bootOptions *bootOptions
@@ -81,8 +81,9 @@ type MonitorInfo struct {
 }
 
 // NewPlayground create a Playground instance.
-func NewPlayground(port int) *Playground {
+func NewPlayground(dataDir string, port int) *Playground {
 	return &Playground{
+		dataDir: dataDir,
 		port:    port,
 		idAlloc: make(map[string]int),
 	}
@@ -581,10 +582,7 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 		}
 	}
 
-	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
-	if dataDir == "" {
-		return nil, fmt.Errorf("cannot read environment variable %s", localdata.EnvNameInstanceDataDir)
-	}
+	dataDir := p.dataDir
 
 	id := p.allocID(componentID)
 	dir := filepath.Join(dataDir, fmt.Sprintf("%s-%d", componentID, id))
@@ -865,7 +863,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 	}
 
-	dumpDSN(p.tidbs)
+	dumpDSN(filepath.Join(p.dataDir, "dsn"), p.tidbs)
 
 	go func() {
 		// fmt.Printf("serve at :%d\n", p.port)
@@ -972,7 +970,7 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 	options := p.bootOptions
 	monitorInfo := &MonitorInfo{}
 
-	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
+	dataDir := p.dataDir
 	promDir := filepath.Join(dataDir, "prometheus")
 
 	monitor, err := newMonitor(ctx, options.version, options.host, promDir)
@@ -1013,7 +1011,7 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 		return nil, errors.AddStack(err)
 	}
 
-	dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
+	dataDir := p.dataDir
 	grafanaDir := filepath.Join(dataDir, "grafana")
 
 	cmd := exec.Command("cp", "-r", installPath, grafanaDir)

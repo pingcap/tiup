@@ -114,12 +114,17 @@ Examples:
 				opt.version = args[0]
 			}
 
+			dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
+			if dataDir == "" {
+				return errors.Errorf("cannot read environment variable %s", localdata.EnvNameInstanceDataDir)
+			}
+
 			port, err := utils.GetFreePort("0.0.0.0", 9527)
 			if err != nil {
 				return errors.AddStack(err)
 			}
-			err = dumpPort(port)
-			p := NewPlayground(port)
+			err = dumpPort(filepath.Join(dataDir, "port"), port)
+			p := NewPlayground(dataDir, port)
 			if err != nil {
 				return errors.AddStack(err)
 			}
@@ -313,8 +318,8 @@ func getAbsolutePath(path string) (string, error) {
 	return absPath, nil
 }
 
-func dumpPort(port int) error {
-	return ioutil.WriteFile("port", []byte(strconv.Itoa(port)), 0644)
+func dumpPort(fname string, port int) error {
+	return ioutil.WriteFile(fname, []byte(strconv.Itoa(port)), 0644)
 }
 
 func loadPort(dir string) (port int, err error) {
@@ -327,12 +332,12 @@ func loadPort(dir string) (port int, err error) {
 	return
 }
 
-func dumpDSN(dbs []*instance.TiDBInstance) {
+func dumpDSN(fname string, dbs []*instance.TiDBInstance) {
 	var dsn []string
 	for _, db := range dbs {
 		dsn = append(dsn, fmt.Sprintf("mysql://root@%s", db.Addr()))
 	}
-	_ = ioutil.WriteFile("dsn", []byte(strings.Join(dsn, "\n")), 0644)
+	_ = ioutil.WriteFile(fname, []byte(strings.Join(dsn, "\n")), 0644)
 }
 
 func newEtcdClient(endpoint string) (*clientv3.Client, error) {
