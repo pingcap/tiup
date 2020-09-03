@@ -510,6 +510,16 @@ func (s *Specification) ComponentsByUpdateOrder() (comps []Component) {
 	return
 }
 
+// FindComponent returns the Component corresponding the name
+func FindComponent(topo Topology, name string) Component {
+	for _, com := range topo.ComponentsByStartOrder() {
+		if com.Name() == name {
+			return com
+		}
+	}
+	return nil
+}
+
 // IterComponent iterates all components in component starting order
 func (s *Specification) IterComponent(fn func(comp Component)) {
 	for _, comp := range s.ComponentsByStartOrder() {

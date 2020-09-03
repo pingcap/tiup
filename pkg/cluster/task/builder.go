@@ -281,11 +281,12 @@ func (b *Builder) Shell(host, command string, sudo bool) *Builder {
 }
 
 // SystemCtl run systemctl on host
-func (b *Builder) SystemCtl(host, unit, action string) *Builder {
+func (b *Builder) SystemCtl(host, unit, action string, daemonReload bool) *Builder {
 	b.tasks = append(b.tasks, &SystemCtl{
-		host:   host,
-		unit:   unit,
-		action: action,
+		host:         host,
+		unit:         unit,
+		action:       action,
+		daemonReload: daemonReload,
 	})
 	return b
 }
@@ -366,13 +367,17 @@ func (b *Builder) DeploySpark(inst spec.Instance, version, srcPath, deployDir st
 
 // Parallel appends a parallel task to the current task collection
 func (b *Builder) Parallel(tasks ...Task) *Builder {
-	b.tasks = append(b.tasks, &Parallel{inner: tasks})
+	if len(tasks) > 0 {
+		b.tasks = append(b.tasks, &Parallel{inner: tasks})
+	}
 	return b
 }
 
 // Serial appends the tasks to the tail of queue
 func (b *Builder) Serial(tasks ...Task) *Builder {
-	b.tasks = append(b.tasks, tasks...)
+	if len(tasks) > 0 {
+		b.tasks = append(b.tasks, tasks...)
+	}
 	return b
 }
 

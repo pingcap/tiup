@@ -1293,14 +1293,7 @@ func (m *Manager) ScaleIn(
 	// TODO: support command scale in operation.
 	scale(b, metadata)
 
-	t := b.Parallel(regenConfigTasks...).
-		Func("RestartMonitor", func(ctx *task.Context) error {
-			return operator.Restart(ctx, metadata.GetTopology(), operator.Options{
-				Roles:      []string{spec.ComponentPrometheus},
-				OptTimeout: optTimeout,
-			})
-		}).
-		Build()
+	t := b.Parallel(regenConfigTasks...).Parallel(buildDynReloadProm(metadata.GetTopology())...).Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
@@ -1702,6 +1695,23 @@ func (m *Manager) confirmTopology(clusterName, version string, topo spec.Topolog
 	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 }
 
+// Dynamic reload Prometheus configuration
+func buildDynReloadProm(topo spec.Topology) []task.Task {
+	monitor := spec.FindComponent(topo, spec.ComponentPrometheus)
+	if monitor == nil {
+		return nil
+	}
+	instances := monitor.Instances()
+	if len(instances) == 0 {
+		return nil
+	}
+	var dynReloadTasks []task.Task
+	for _, inst := range monitor.Instances() {
+		dynReloadTasks = append(dynReloadTasks, task.NewBuilder().SystemCtl(inst.GetHost(), inst.ServiceName(), "reload", true).Build())
+	}
+	return dynReloadTasks
+}
+
 func buildScaleOutTask(
 	m *Manager,
 	clusterName string,
@@ -1924,12 +1934,7 @@ func buildScaleOutTask(
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: optTimeout})
 		}).
 		Parallel(refreshConfigTasks...).
-		Func("RestartMonitor", func(ctx *task.Context) error {
-			return operator.Restart(ctx, metadata.GetTopology(), operator.Options{
-				Roles:      []string{spec.ComponentPrometheus},
-				OptTimeout: optTimeout,
-			})
-		})
+		Parallel(buildDynReloadProm(metadata.GetTopology())...)
 
 	if final != nil {
 		final(builder, clusterName, metadata)
