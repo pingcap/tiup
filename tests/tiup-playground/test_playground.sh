@@ -15,6 +15,7 @@ curl https://tiup-mirrors.pingcap.com/root.json -o $TMP_DIR/home/bin/root.json
 rm -rf $TIUP_HOME/data
 mkdir -p $TIUP_HOME/data
 export TIUP_INSTANCE_DATA_DIR=$TIUP_HOME/data/test_play
+mkdir $TIUP_INSTANCE_DATA_DIR
 
 mkdir -p $TEST_DIR/cover
 
