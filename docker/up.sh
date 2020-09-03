@@ -9,15 +9,15 @@ set -o nounset
 # set -o xtrace
 
 ERROR() {
-    /bin/echo -e "\e[101m\e[97m[ERROR]\e[49m\e[39m" "$@"
+    echo -e "\e[101m\e[97m[ERROR]\e[49m\e[39m" "$@"
 }
 
 WARNING() {
-    /bin/echo -e "\e[101m\e[97m[WARNING]\e[49m\e[39m" "$@"
+    echo -e "\e[101m\e[97m[WARNING]\e[49m\e[39m" "$@"
 }
 
 INFO() {
-    /bin/echo -e "\e[104m\e[97m[INFO]\e[49m\e[39m" "$@"
+    echo -e "\e[104m\e[97m[INFO]\e[49m\e[39m" "$@"
 }
 
 exists() {
@@ -123,14 +123,14 @@ if [ -z "${DEV}" ]; then
     # Dockerfile does not allow `ADD ..`. So we need to copy it here in setup.
     INFO "Copying .. to control/tiup-cluster"
     (
-		# TODO support exclude-ignore, check version of tar support this.
-		# https://www.gnu.org/software/tar/manual/html_section/tar_48.html#IDX408
+        # TODO support exclude-ignore, check version of tar support this.
+        # https://www.gnu.org/software/tar/manual/html_section/tar_48.html#IDX408
         # (cd ..; tar --exclude=./docker --exclude=./.git --exclude-ignore=.gitignore -cf - .)  | tar Cxf ./control/tiup-cluster -
         (cd ..; tar --exclude=./docker --exclude=./.git -cf - .)  | tar Cxf ./control/tiup-cluster -
     )
 else
-	INFO "Build tiup-cluster in $TIUP_CLUSTER_ROOT"
-	(cd $TIUP_CLUSTER_ROOT;make failpoint-enable;GOOS=linux GOARCH=amd64 make cluster dm;make failpoint-disable)
+    INFO "Build tiup-cluster in $TIUP_CLUSTER_ROOT"
+    (cd $TIUP_CLUSTER_ROOT;make failpoint-enable;GOOS=linux GOARCH=amd64 make cluster dm;make failpoint-disable)
 fi
 
 if [ "${INIT_ONLY}" -eq 1 ]; then
