@@ -86,13 +86,6 @@ func init() {
 		gOpt.NativeSSH = true
 	}
 
-	executorEnvVar := strings.ToLower(os.Getenv(localdata.EnvNameSSHType))
-	if executorEnvVar != "" {
-		gOpt.SSHType = executorEnvVar
-	} else {
-		gOpt.SSHType = executor.SSHTypeBuiltin
-	}
-
 	rootCmd = &cobra.Command{
 		Use:           cliutil.OsArgs0(),
 		Short:         "Deploy a TiDB cluster for production",
@@ -126,6 +119,7 @@ func init() {
 				gOpt.SSHType = executor.SSHTypeSystem
 				zap.L().Info("System ssh client will be used",
 					zap.String(localdata.EnvNameNativeSSHClient, os.Getenv(localdata.EnvNameNativeSSHClient)))
+				fmt.Println("The --native-ssh flag has been deprecated, please use --ssh=system")
 			}
 
 			return nil
@@ -143,7 +137,7 @@ func init() {
 	rootCmd.PersistentFlags().Int64Var(&gOpt.OptTimeout, "wait-timeout", 120, "Timeout in seconds to wait for an operation to complete, ignored for operations that don't fit.")
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
 	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "Use the native SSH client installed on local system instead of the build-in one (experimental).")
-	rootCmd.PersistentFlags().StringVar(&gOpt.SSHType, "ssh", gOpt.SSHType, "The executor type: 'builtin', 'system', 'none' (experimental).")
+	rootCmd.PersistentFlags().StringVar(&gOpt.SSHType, "ssh", "", "The executor type: 'builtin', 'system', 'none' (experimental).")
 	rootCmd.PersistentFlags().MarkHidden("native-ssh")
 
 	rootCmd.AddCommand(

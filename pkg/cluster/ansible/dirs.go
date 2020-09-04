@@ -31,10 +31,10 @@ var (
 )
 
 // parseDirs sets values of directories of component
-func parseDirs(user string, ins spec.InstanceSpec, sshTimeout int64, executorType string) (spec.InstanceSpec, error) {
+func parseDirs(user string, ins spec.InstanceSpec, sshTimeout int64, sshType string) (spec.InstanceSpec, error) {
 	hostName, sshPort := ins.SSH()
 
-	e, err := executor.New(executorType, false, executor.SSHConfig{
+	e, err := executor.New(sshType, false, executor.SSHConfig{
 		Host:    hostName,
 		Port:    sshPort,
 		User:    user,

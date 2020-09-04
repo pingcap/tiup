@@ -70,6 +70,10 @@ func newDisplayCmd() *cobra.Command {
 				return displayDashboardInfo(clusterName, tlsCfg)
 			}
 
+			if gOpt.SSHType == "" {
+				gOpt.SSHType = metadata.Topology.GlobalOptions.SSHType
+			}
+
 			err = manager.Display(clusterName, gOpt)
 			if err != nil {
 				return perrs.AddStack(err)

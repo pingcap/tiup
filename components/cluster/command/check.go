@@ -59,14 +59,6 @@ conflict checks with other clusters`,
 			if len(args) != 1 {
 				return cmd.Help()
 			}
-			if gOpt.SSHType == executor.SSHTypeNone {
-				opt.identityFile = ""
-			}
-
-			// natvie ssh has it's own logic to find the default identity_file
-			if gOpt.NativeSSH && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
-				opt.identityFile = ""
-			}
 
 			var topo spec.Specification
 			if opt.existCluster { // check for existing cluster
@@ -89,6 +81,10 @@ conflict checks with other clusters`,
 				opt.identityFile = tidbSpec.Path(clusterName, "ssh", "id_rsa")
 
 				topo = *metadata.Topology
+
+				if gOpt.SSHType == "" {
+					gOpt.SSHType = topo.GlobalOptions.SSHType
+				}
 			} else { // check before cluster is deployed
 				if err := clusterutil.ParseTopologyYaml(args[0], &topo); err != nil {
 					return err
@@ -107,9 +103,17 @@ conflict checks with other clusters`,
 				}
 			}
 
-			sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.identityFile, opt.usePassword)
-			if err != nil {
-				return err
+			// natvie ssh has it's own logic to find the default identity_file
+			if (gOpt.NativeSSH || gOpt.SSHType == executor.SSHTypeSystem) && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
+				opt.identityFile = ""
+			}
+
+			var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
+			if gOpt.SSHType != executor.SSHTypeNone {
+				var err error
+				if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.identityFile, opt.usePassword); err != nil {
+					return err
+				}
 			}
 
 			return checkSystemInfo(sshConnProps, &topo, &opt)

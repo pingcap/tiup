@@ -116,7 +116,7 @@ type ExecutorGetter interface {
 type Importer struct {
 	dir               string // ansible directory.
 	inventoryFileName string
-	executorType      string
+	sshType           string
 	sshTimeout        int64
 
 	// following vars parse from ansbile
@@ -130,7 +130,7 @@ type Importer struct {
 
 // NewImporter create an Importer.
 // @sshTimeout: set 0 to use a default value
-func NewImporter(ansibleDir, inventoryFileName, executorType string, sshTimeout int64) (*Importer, error) {
+func NewImporter(ansibleDir, inventoryFileName, sshType string, sshTimeout int64) (*Importer, error) {
 	dir, err := filepath.Abs(ansibleDir)
 	if err != nil {
 		return nil, errors.AddStack(err)
@@ -158,7 +158,7 @@ func (im *Importer) getExecutor(host string, port int) (e executor.Executor, err
 		Timeout: time.Second * time.Duration(im.sshTimeout),
 	}
 
-	e, err = executor.New(im.executorType, false, cfg)
+	e, err = executor.New(im.sshType, false, cfg)
 
 	return
 }

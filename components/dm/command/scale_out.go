@@ -17,7 +17,6 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/tiup/pkg/cluster"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -33,9 +32,6 @@ func newScaleOutCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 2 {
 				return cmd.Help()
-			}
-			if gOpt.SSHType == executor.SSHTypeNone {
-				opt.IdentityFile = ""
 			}
 
 			// natvie ssh has it's own logic to find the default identity_file

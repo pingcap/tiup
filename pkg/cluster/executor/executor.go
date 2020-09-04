@@ -42,7 +42,7 @@ var (
 	// Its main purpose is to avoid sshpass hang when user speficied a wrong prompt.
 	connectionTestCommand = "echo connection test, if killed, check the password prompt"
 
-	defaultLocalIP = "127.0.0.1"
+	localIP = ""
 )
 
 // Executor is the executor interface for TiOps, all tasks will in the end
@@ -61,6 +61,10 @@ type Executor interface {
 
 // New create a new Executor
 func New(etype string, sudo bool, c SSHConfig) (Executor, error) {
+	if etype == "" {
+		etype = SSHTypeBuiltin
+	}
+
 	// Used in integration testing, to check if native ssh client is really used when it need to be.
 	failpoint.Inject("assertNativeSSH", func() {
 		// XXX: We call system executor 'native' by mistake in commit f1142b1
@@ -102,14 +106,13 @@ func New(etype string, sudo bool, c SSHConfig) (Executor, error) {
 		}
 		return e, nil
 	case SSHTypeNone:
-		local := os.Getenv(localdata.EnvNameLocalHost)
-		if local == "" {
-			local = defaultLocalIP
+		if localIP == "" {
+			localIP = c.Host
 		}
-		if c.Host != local {
+		if c.Host != localIP {
 			return nil, fmt.Errorf(`you are trying to connect ip address %s
-this is not the local address %s
-if you have another ip address, you can set it with %s = <your-local-ip>`, c.Host, local, localdata.EnvNameLocalHost)
+this is not the same as another address %s
+make sure there is just one ip address in your topology fiile`, c.Host, localIP)
 		}
 		e := &Local{
 			Config: &c,

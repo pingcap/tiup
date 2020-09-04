@@ -70,11 +70,6 @@ const (
 	// EnvNameNativeSSHClient is the variable name by which user can specific use native ssh client or not
 	EnvNameNativeSSHClient = "TIUP_NATIVE_SSH"
 
-	// EnvNameSSHType is the variable name by which user can specific the ssh type
-	EnvNameSSHType = "TIUP_SSH"
-
-	// EnvNameLocalHost is the variable name by which user can specific the localhost ip (default is 127.0.0.1)
-	EnvNameLocalHost = "TIUP_LOCAL_IP"
 	// EnvNameSSHPath is the variable name by which user can specific the executable ssh binary path
 	EnvNameSSHPath = "TIUP_SSH_PATH"
 

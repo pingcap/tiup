@@ -24,7 +24,7 @@ import (
 )
 
 // ImportConfig copies config files from cluster which deployed through tidb-ansible
-func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout int64, executorType string) error {
+func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout int64, sshType string) error {
 	// there may be already cluster dir, skip create
 	//if err := os.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
 	//	return err
@@ -42,7 +42,7 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout int64, exec
 					SSHKeySet(
 						spec.ClusterPath(name, "ssh", "id_rsa"),
 						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
-					UserSSH(inst.GetHost(), inst.GetSSHPort(), clsMeta.User, sshTimeout, executorType).
+					UserSSH(inst.GetHost(), inst.GetSSHPort(), clsMeta.User, sshTimeout, sshType).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
 						spec.ClusterPath(name,
 							spec.AnsibleImportedConfigPath,
@@ -59,7 +59,7 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout int64, exec
 					SSHKeySet(
 						spec.ClusterPath(name, "ssh", "id_rsa"),
 						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
-					UserSSH(inst.GetHost(), inst.GetSSHPort(), clsMeta.User, sshTimeout, executorType).
+					UserSSH(inst.GetHost(), inst.GetSSHPort(), clsMeta.User, sshTimeout, sshType).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
 						spec.ClusterPath(name,
 							spec.AnsibleImportedConfigPath,

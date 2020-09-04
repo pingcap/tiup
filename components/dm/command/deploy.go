@@ -19,7 +19,6 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
@@ -41,9 +40,6 @@ func newDeploy() *cobra.Command {
 			}
 			if !shouldContinue {
 				return nil
-			}
-			if gOpt.SSHType == executor.SSHTypeNone {
-				opt.IdentityFile = ""
 			}
 
 			// natvie ssh has it's own logic to find the default identity_file
