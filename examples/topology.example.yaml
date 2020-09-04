@@ -221,7 +221,7 @@ tispark_masters:
     #spark_config:
     #  spark.driver.memory: "2g"
     #  spark.eventLog.enabled: "False"
-    #  spark.tispark.grpc.framesize: 268435456
+    #  spark.tispark.grpc.framesize: 2147483647
     #  spark.tispark.grpc.timeout_in_sec: 100
     #  spark.tispark.meta.reload_period_in_sec: 60
     #  spark.tispark.request.command.priority: "Low"
