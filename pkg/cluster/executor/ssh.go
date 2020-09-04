@@ -301,7 +301,17 @@ func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 		defer cancel()
 	}
 
-	args := []string{"ssh", "-o", "StrictHostKeyChecking=no"}
+	ssh := "ssh"
+
+	if val := os.Getenv(localdata.EnvNameSSHPath); val != "" {
+		if isExec := utils.IsExecBinary(val); !isExec {
+			return nil, nil, fmt.Errorf("specified SSH in the environment variable `%s` does not exist or is not executable", localdata.EnvNameSSHPath)
+		}
+		ssh = val
+	}
+
+	args := []string{ssh, "-o", "StrictHostKeyChecking=no"}
+
 	args = e.configArgs(args) // prefix and postfix args
 	args = append(args, fmt.Sprintf("%s@%s", e.Config.User, e.Config.Host), cmd)
 
@@ -348,7 +358,16 @@ func (e *NativeSSHExecutor) Transfer(src string, dst string, download bool) erro
 		return e.ConnectionTestResult
 	}
 
-	args := []string{"scp", "-r", "-o", "StrictHostKeyChecking=no"}
+	scp := "scp"
+
+	if val := os.Getenv(localdata.EnvNameSCPPath); val != "" {
+		if isExec := utils.IsExecBinary(val); !isExec {
+			return fmt.Errorf("specified SCP in the environment variable `%s` does not exist or is not executable", localdata.EnvNameSCPPath)
+		}
+		scp = val
+	}
+
+	args := []string{scp, "-r", "-o", "StrictHostKeyChecking=no"}
 	args = e.configArgs(args) // prefix and postfix args
 
 	if download {
