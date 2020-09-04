@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"path/filepath"
 
@@ -89,9 +90,13 @@ func (c *CDCComponent) Instances() []Instance {
 			Dirs: []string{
 				s.DeployDir,
 			},
-			StatusFn: func(_ ...string) string {
-				url := fmt.Sprintf("http://%s:%d/status", s.Host, s.Port)
-				return statusByURL(url)
+			StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
+				scheme := "http"
+				if tlsCfg != nil {
+					scheme = "https"
+				}
+				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
+				return statusByURL(url, tlsCfg)
 			},
 		}, c.Specification})
 	}
@@ -105,7 +110,14 @@ type CDCInstance struct {
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *CDCInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, user string, paths meta.DirPaths) error {
+func (i *CDCInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName,
+	clusterVersion,
+	user string,
+	paths meta.DirPaths,
+) error {
 	s := i.topo
 	defer func() {
 		i.topo = s
@@ -116,16 +128,24 @@ func (i *CDCInstance) ScaleConfig(e executor.Executor, topo Topology, clusterNam
 }
 
 // InitConfig implements Instance interface.
-func (i *CDCInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *CDCInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
+	enableTLS := i.topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(CDCSpec)
 	cfg := scripts.NewCDCScript(
 		i.GetHost(),
 		paths.Deploy,
 		paths.Log,
+		enableTLS,
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.topo.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_cdc_%s_%d.sh", i.GetHost(), i.GetPort()))

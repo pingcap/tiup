@@ -62,6 +62,15 @@ func IsEmptyDir(path string) (bool, error) {
 	return false, err
 }
 
+// IsExecBinary check whether a path is a valid executable
+func IsExecBinary(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return !info.IsDir() && info.Mode()&0111 == 0111
+}
+
 // Untar decompresses the tarball
 func Untar(reader io.Reader, to string) error {
 	gr, err := gzip.NewReader(reader)

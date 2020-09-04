@@ -14,6 +14,7 @@
 package operator
 
 import (
+	"crypto/tls"
 	"strconv"
 
 	"github.com/pingcap/errors"
@@ -27,6 +28,7 @@ func Upgrade(
 	getter ExecutorGetter,
 	topo spec.Topology,
 	options Options,
+	tlsCfg *tls.Config,
 ) error {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
@@ -52,7 +54,7 @@ func Upgrade(
 			}
 
 			if isRollingInstance {
-				err := rollingInstance.PreRestart(topo, int(options.APITimeout))
+				err := rollingInstance.PreRestart(topo, int(options.APITimeout), tlsCfg)
 				if err != nil {
 					return errors.AddStack(err)
 				}
@@ -63,7 +65,7 @@ func Upgrade(
 			}
 
 			if isRollingInstance {
-				err := rollingInstance.PostRestart(topo)
+				err := rollingInstance.PostRestart(topo, tlsCfg)
 				if err != nil {
 					return errors.AddStack(err)
 				}

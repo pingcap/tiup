@@ -36,7 +36,6 @@ tiflash_servers:
 #   - host: 172.19.0.104
 #   - host: 172.19.0.105
 
-
 pump_servers:
   - host: 172.19.0.103
   - host: 172.19.0.104

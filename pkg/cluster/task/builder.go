@@ -14,11 +14,13 @@
 package task
 
 import (
+	"crypto/tls"
 	"fmt"
 	"path/filepath"
 
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/meta"
 )
 
@@ -105,8 +107,13 @@ func (b *Builder) UpdateMeta(cluster string, metadata *spec.ClusterMeta, deleted
 }
 
 // UpdateTopology maintain the topology information
-func (b *Builder) UpdateTopology(cluster string, metadata *spec.ClusterMeta, deletedNodeIds []string) *Builder {
-	b.tasks = append(b.tasks, &UpdateTopology{metadata: metadata, cluster: cluster, deletedNodesID: deletedNodeIds})
+func (b *Builder) UpdateTopology(cluster, profile string, metadata *spec.ClusterMeta, deletedNodeIds []string) *Builder {
+	b.tasks = append(b.tasks, &UpdateTopology{
+		metadata:       metadata,
+		cluster:        cluster,
+		profileDir:     profile,
+		deletedNodesID: deletedNodeIds,
+	})
 	return b
 }
 
@@ -241,11 +248,13 @@ func (b *Builder) ClusterOperate(
 	spec *spec.Specification,
 	op operator.Operation,
 	options operator.Options,
+	tlsCfg *tls.Config,
 ) *Builder {
 	b.tasks = append(b.tasks, &ClusterOperate{
 		spec:    spec,
 		op:      op,
 		options: options,
+		tlsCfg:  tlsCfg,
 	})
 
 	return b
@@ -281,11 +290,12 @@ func (b *Builder) Shell(host, command string, sudo bool) *Builder {
 }
 
 // SystemCtl run systemctl on host
-func (b *Builder) SystemCtl(host, unit, action string) *Builder {
+func (b *Builder) SystemCtl(host, unit, action string, daemonReload bool) *Builder {
 	b.tasks = append(b.tasks, &SystemCtl{
-		host:   host,
-		unit:   unit,
-		action: action,
+		host:         host,
+		unit:         unit,
+		action:       action,
+		daemonReload: daemonReload,
 	})
 	return b
 }
@@ -364,15 +374,29 @@ func (b *Builder) DeploySpark(inst spec.Instance, version, srcPath, deployDir st
 	)
 }
 
+// TLSCert geenrates certificate for instance and transfer it to the server
+func (b *Builder) TLSCert(inst spec.Instance, ca *crypto.CertificateAuthority, paths meta.DirPaths) *Builder {
+	b.tasks = append(b.tasks, &TLSCert{
+		ca:    ca,
+		inst:  inst,
+		paths: paths,
+	})
+	return b
+}
+
 // Parallel appends a parallel task to the current task collection
 func (b *Builder) Parallel(tasks ...Task) *Builder {
-	b.tasks = append(b.tasks, &Parallel{inner: tasks})
+	if len(tasks) > 0 {
+		b.tasks = append(b.tasks, &Parallel{inner: tasks})
+	}
 	return b
 }
 
 // Serial appends the tasks to the tail of queue
 func (b *Builder) Serial(tasks ...Task) *Builder {
-	b.tasks = append(b.tasks, tasks...)
+	if len(tasks) > 0 {
+		b.tasks = append(b.tasks, tasks...)
+	}
 	return b
 }
 

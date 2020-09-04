@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -59,7 +60,7 @@ func (c *MonitorComponent) Instances() []Instance {
 				s.DeployDir,
 				s.DataDir,
 			},
-			StatusFn: func(_ ...string) string {
+			StatusFn: func(_ *tls.Config, _ ...string) string {
 				return "-"
 			},
 		}, c.Topology})
@@ -74,10 +75,18 @@ type MonitorInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *MonitorInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
+
+	enableTLS := i.topo.GlobalOptions.TLSEnabled
 
 	// transfer run script
 	spec := i.InstanceSpec.(PrometheusSpec)
@@ -108,7 +117,7 @@ func (i *MonitorInstance) InitConfig(e executor.Executor, clusterName, clusterVe
 
 	// transfer config
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
-	cfig := dm.NewPrometheusConfig(clusterName)
+	cfig := dm.NewPrometheusConfig(clusterName, enableTLS)
 
 	for _, master := range topo.Masters {
 		cfig.AddMasterAddrs(master.Host, uint64(master.Port))
@@ -156,8 +165,14 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *MonitorInstance) ScaleConfig(e executor.Executor, topo spec.Topology,
-	clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error {
+func (i *MonitorInstance) ScaleConfig(
+	e executor.Executor,
+	topo spec.Topology,
+	clusterName string,
+	clusterVersion string,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	s := i.topo
 	defer func() { i.topo = s }()
 	i.topo = topo.(*Topology)

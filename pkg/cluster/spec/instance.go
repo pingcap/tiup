@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -61,8 +62,8 @@ type Component interface {
 // RollingUpdateInstance represent a instance need to transfer state when restart.
 // e.g transfer leader.
 type RollingUpdateInstance interface {
-	PreRestart(topo Topology, apiTimeoutSeconds int) error
-	PostRestart(topo Topology) error
+	PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error
+	PostRestart(topo Topology, tlsCfg *tls.Config) error
 }
 
 // Instance represents the instance.
@@ -72,7 +73,7 @@ type Instance interface {
 	Ready(executor.Executor, int64) error
 	InitConfig(e executor.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
 	ScaleConfig(e executor.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
-	PrepareStart() error
+	PrepareStart(tlsCfg *tls.Config) error
 	ComponentName() string
 	InstanceName() string
 	ServiceName() string
@@ -82,7 +83,7 @@ type Instance interface {
 	DeployDir() string
 	UsedPorts() []int
 	UsedDirs() []string
-	Status(pdList ...string) string
+	Status(tlsCfg *tls.Config, pdList ...string) string
 	DataDir() string
 	LogDir() string
 	OS() string // only linux supported now
@@ -123,7 +124,7 @@ type BaseInstance struct {
 
 	Ports    []int
 	Dirs     []string
-	StatusFn func(pdHosts ...string) string
+	StatusFn func(tlsCfg *tls.Config, pdHosts ...string) string
 }
 
 // Ready implements Instance interface
@@ -345,7 +346,7 @@ func (i *BaseInstance) Arch() string {
 }
 
 // PrepareStart checks instance requirements before starting
-func (i *BaseInstance) PrepareStart() error {
+func (i *BaseInstance) PrepareStart(tlsCfg *tls.Config) error {
 	return nil
 }
 
@@ -389,6 +390,6 @@ func (i *BaseInstance) UsedDirs() []string {
 }
 
 // Status implements Instance interface
-func (i *BaseInstance) Status(pdList ...string) string {
-	return i.StatusFn(pdList...)
+func (i *BaseInstance) Status(tlsCfg *tls.Config, pdList ...string) string {
+	return i.StatusFn(tlsCfg, pdList...)
 }

@@ -139,6 +139,10 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 			return nil, err
 		}
 
+		if manifest == nil {
+			continue
+		}
+
 		if opt.verbose {
 			installStatus := ""
 			if localComponents.Exist(id) {

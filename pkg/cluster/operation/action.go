@@ -16,6 +16,7 @@ package operator
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"strconv"
 	"time"
@@ -29,11 +30,12 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Start the cluster.
-func Start(
+// Enable will enable/disable the cluster
+func Enable(
 	getter ExecutorGetter,
 	cluster spec.Topology,
 	options Options,
+	isEnable bool,
 ) error {
 	uniqueHosts := set.NewStringSet()
 	roleFilter := set.NewStringSet(options.Roles...)
@@ -43,7 +45,41 @@ func Start(
 
 	for _, com := range components {
 		insts := FilterInstance(com.Instances(), nodeFilter)
-		err := StartComponent(getter, insts, options)
+		err := EnableComponent(getter, insts, options, isEnable)
+		if err != nil {
+			return errors.Annotatef(err, "failed to start %s", com.Name())
+		}
+		for _, inst := range insts {
+			if !uniqueHosts.Exist(inst.GetHost()) {
+				uniqueHosts.Insert(inst.GetHost())
+				if cluster.GetMonitoredOptions() != nil {
+					if err := EnableMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout, isEnable); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// Start the cluster.
+func Start(
+	getter ExecutorGetter,
+	cluster spec.Topology,
+	options Options,
+	tlsCfg *tls.Config,
+) error {
+	uniqueHosts := set.NewStringSet()
+	roleFilter := set.NewStringSet(options.Roles...)
+	nodeFilter := set.NewStringSet(options.Nodes...)
+	components := cluster.ComponentsByStartOrder()
+	components = FilterComponent(components, roleFilter)
+
+	for _, com := range components {
+		insts := FilterInstance(com.Instances(), nodeFilter)
+		err := StartComponent(getter, insts, options, tlsCfg)
 		if err != nil {
 			return errors.Annotatef(err, "failed to start %s", com.Name())
 		}
@@ -67,6 +103,7 @@ func Stop(
 	getter ExecutorGetter,
 	cluster spec.Topology,
 	options Options,
+	tlsCfg *tls.Config,
 ) error {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
@@ -130,8 +167,9 @@ func DestroyTombstone(
 	cluster *spec.Specification,
 	returNodesOnly bool,
 	options Options,
+	tlsCfg *tls.Config,
 ) (nodes []string, err error) {
-	return DestroyClusterTombstone(getter, cluster, returNodesOnly, options)
+	return DestroyClusterTombstone(getter, cluster, returNodesOnly, options, tlsCfg)
 }
 
 // DestroyClusterTombstone remove the tombstone node in spec and destroy them.
@@ -141,10 +179,11 @@ func DestroyClusterTombstone(
 	cluster *spec.Specification,
 	returNodesOnly bool,
 	options Options,
+	tlsCfg *tls.Config,
 ) (nodes []string, err error) {
-	var pdClient = api.NewPDClient(cluster.GetPDList(), 10*time.Second, nil)
+	var pdClient = api.NewPDClient(cluster.GetPDList(), 10*time.Second, tlsCfg)
 
-	binlogClient, err := api.NewBinlogClient(cluster.GetPDList(), nil)
+	binlogClient, err := api.NewBinlogClient(cluster.GetPDList(), tlsCfg)
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
@@ -327,13 +366,14 @@ func Restart(
 	getter ExecutorGetter,
 	cluster spec.Topology,
 	options Options,
+	tlsCfg *tls.Config,
 ) error {
-	err := Stop(getter, cluster, options)
+	err := Stop(getter, cluster, options, tlsCfg)
 	if err != nil {
 		return errors.Annotatef(err, "failed to stop")
 	}
 
-	err = Start(getter, cluster, options)
+	err = Start(getter, cluster, options, tlsCfg)
 	if err != nil {
 		return errors.Annotatef(err, "failed to start")
 	}
@@ -441,6 +481,52 @@ func RestartComponent(getter ExecutorGetter, instances []spec.Instance, timeout 
 	return nil
 }
 
+func enableInstance(getter ExecutorGetter, ins spec.Instance, timeout int64, isEnable bool) error {
+	e := getter.Get(ins.GetHost())
+	if isEnable {
+		log.Infof("\tEnabling instance %s %s:%d", ins.ComponentName(), ins.GetHost(), ins.GetPort())
+	} else {
+		log.Infof("\tDisabling instance %s %s:%d", ins.ComponentName(), ins.GetHost(), ins.GetPort())
+	}
+
+	action := "disable"
+	if isEnable {
+		action = "enable"
+	}
+
+	// Enable/Disable by systemd.
+	c := module.SystemdModuleConfig{
+		Unit:    ins.ServiceName(),
+		Action:  action,
+		Timeout: time.Second * time.Duration(timeout),
+	}
+	systemd := module.NewSystemdModule(c)
+	stdout, stderr, err := systemd.Execute(e)
+
+	if len(stdout) > 0 {
+		fmt.Println(string(stdout))
+	}
+	if len(stderr) > 0 && !bytes.Contains(stderr, []byte("Created symlink ")) && !bytes.Contains(stderr, []byte("Removed symlink ")) {
+		log.Errorf(string(stderr))
+	}
+
+	if err != nil {
+		return errors.Annotatef(err, "failed to %s: %s %s:%d",
+			action,
+			ins.ComponentName(),
+			ins.GetHost(),
+			ins.GetPort())
+	}
+
+	if isEnable {
+		log.Infof("\tEnable %s %s:%d success", ins.ComponentName(), ins.GetHost(), ins.GetPort())
+	} else {
+		log.Infof("\tDisable %s %s:%d success", ins.ComponentName(), ins.GetHost(), ins.GetPort())
+	}
+
+	return nil
+}
+
 func startInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) error {
 	e := getter.Get(ins.GetHost())
 	log.Infof("\tStarting instance %s %s:%d",
@@ -453,7 +539,6 @@ func startInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) erro
 		Unit:         ins.ServiceName(),
 		ReloadDaemon: true,
 		Action:       "start",
-		Enabled:      true,
 		Timeout:      time.Second * time.Duration(timeout),
 	}
 	systemd := module.NewSystemdModule(c)
@@ -462,7 +547,7 @@ func startInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) erro
 	if len(stdout) > 0 {
 		fmt.Println(string(stdout))
 	}
-	if len(stderr) > 0 && !bytes.Contains(stderr, []byte("Created symlink ")) {
+	if len(stderr) > 0 && !bytes.Contains(stderr, []byte("Created symlink ")) && !bytes.Contains(stderr, []byte("Removed symlink ")) {
 		log.Errorf(string(stderr))
 	}
 
@@ -492,8 +577,87 @@ func startInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) erro
 	return nil
 }
 
+// EnableComponent enable/disable the instances
+func EnableComponent(getter ExecutorGetter, instances []spec.Instance, options Options, isEnable bool) error {
+	if len(instances) == 0 {
+		return nil
+	}
+
+	name := instances[0].ComponentName()
+	if isEnable {
+		log.Infof("Enabling component %s", name)
+	} else {
+		log.Infof("Disabling component %s", name)
+	}
+
+	errg, _ := errgroup.WithContext(context.Background())
+
+	for _, ins := range instances {
+		ins := ins
+
+		errg.Go(func() error {
+			err := enableInstance(getter, ins, options.OptTimeout, isEnable)
+			if err != nil {
+				return errors.AddStack(err)
+			}
+			return nil
+		})
+	}
+
+	return errg.Wait()
+}
+
+// EnableMonitored enable/disable monitor service in a cluster
+func EnableMonitored(
+	getter ExecutorGetter, instance spec.Instance,
+	options *spec.MonitoredOptions, timeout int64, isEnable bool,
+) error {
+	action := "disable"
+	if isEnable {
+		action = "enable"
+	}
+
+	ports := map[string]int{
+		spec.ComponentNodeExporter:     options.NodeExporterPort,
+		spec.ComponentBlackboxExporter: options.BlackboxExporterPort,
+	}
+	e := getter.Get(instance.GetHost())
+	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
+		if isEnable {
+			log.Infof("Enabling component %s", comp)
+		} else {
+			log.Infof("Disabling component %s", comp)
+		}
+
+		c := module.SystemdModuleConfig{
+			Unit:    fmt.Sprintf("%s-%d.service", comp, ports[comp]),
+			Action:  action,
+			Timeout: time.Second * time.Duration(timeout),
+		}
+		systemd := module.NewSystemdModule(c)
+		stdout, stderr, err := systemd.Execute(e)
+
+		if len(stdout) > 0 {
+			fmt.Println(string(stdout))
+		}
+		if len(stderr) > 0 && !bytes.Contains(stderr, []byte("Created symlink ")) && !bytes.Contains(stderr, []byte("Removed symlink ")) {
+			log.Errorf(string(stderr))
+		}
+
+		if err != nil {
+			return errors.Annotatef(err, "failed to %s: %s %s:%d",
+				action,
+				instance.ComponentName(),
+				instance.GetHost(),
+				instance.GetPort())
+		}
+	}
+
+	return nil
+}
+
 // StartComponent start the instances.
-func StartComponent(getter ExecutorGetter, instances []spec.Instance, options Options) error {
+func StartComponent(getter ExecutorGetter, instances []spec.Instance, options Options, tlsCfg *tls.Config) error {
 	if len(instances) <= 0 {
 		return nil
 	}
@@ -507,7 +671,7 @@ func StartComponent(getter ExecutorGetter, instances []spec.Instance, options Op
 		ins := ins
 
 		errg.Go(func() error {
-			if err := ins.PrepareStart(); err != nil {
+			if err := ins.PrepareStart(tlsCfg); err != nil {
 				return err
 			}
 			err := startInstance(getter, ins, options.OptTimeout)

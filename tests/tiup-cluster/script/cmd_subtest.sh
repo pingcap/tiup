@@ -4,14 +4,14 @@ function cmd_subtest() {
     mkdir -p ~/.tiup/bin/
 
     version=$1
-    test_cdc=$2
+    test_tls=$2
     native_ssh=$3
 
     name="test_cmd_$RANDOM"
-    if [ $test_cdc = true ]; then
-        topo=./topo/full.yaml
+    if [ $test_tls = true ]; then
+        topo=./topo/full_tls.yaml
     else
-        topo=./topo/full_without_cdc.yaml
+        topo=./topo/full.yaml
     fi
 
     client=""
@@ -71,6 +71,18 @@ function cmd_subtest() {
     tiup-cluster $client rename $name "tmp-cluster-name"
     tiup-cluster $client display "tmp-cluster-name"
     tiup-cluster $client rename "tmp-cluster-name" $name
+
+    # Test enable & disable
+    tiup-cluster $client exec $name -R tidb --command="systemctl status tidb-4000|grep 'enabled;'"
+    tiup-cluster $client exec $name -R pd --command="systemctl status pd-2379|grep 'enabled;'"
+    tiup-cluster $client disable $name -R tidb
+    tiup-cluster $client exec $name -R tidb --command="systemctl status tidb-4000|grep 'disabled;'"
+    tiup-cluster $client exec $name -R pd --command="systemctl status pd-2379|grep 'enabled;'"
+    tiup-cluster $client disable $name
+    tiup-cluster $client exec $name -R pd --command="systemctl status pd-2379|grep 'disabled;'"
+    tiup-cluster $client enable $name
+    tiup-cluster $client exec $name -R tidb --command="systemctl status tidb-4000|grep 'enabled;'"
+    tiup-cluster $client exec $name -R pd --command="systemctl status pd-2379|grep 'enabled;'"
 
     tiup-cluster $client --yes clean $name --data --all --ignore-node 172.19.0.101:9090
 

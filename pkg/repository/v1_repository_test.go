@@ -26,8 +26,8 @@ import (
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/google/uuid"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/localdata"
-	"github.com/pingcap/tiup/pkg/repository/crypto"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/stretchr/testify/assert"
@@ -799,7 +799,7 @@ func serialize(t *testing.T, role v1manifest.ValidManifest, privKeys ...crypto.P
 	} else {
 		// just use a generate one
 		var err error
-		_, priv, err = crypto.RSAPair()
+		priv, err = crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
 		assert.Nil(t, err)
 		bytes, err := priv.Serialize()
 		assert.Nil(t, err)

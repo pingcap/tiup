@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -21,7 +22,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
-	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiDBSpec represents the TiDB topology specification in topology.yaml
@@ -39,28 +39,6 @@ type TiDBSpec struct {
 	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string                 `yaml:"arch,omitempty"`
 	OS              string                 `yaml:"os,omitempty"`
-}
-
-// statusByURL queries current status of the instance by http status api.
-func statusByURL(url string) string {
-	client := utils.NewHTTPClient(statusQueryTimeout, nil)
-
-	// body doesn't have any status section needed
-	body, err := client.Get(url)
-	if err != nil {
-		return "Down"
-	}
-	if body == nil {
-		return "Down"
-	}
-	return "Up"
-
-}
-
-// Status queries current status of the instance
-func (s TiDBSpec) Status(pdList ...string) string {
-	url := fmt.Sprintf("http://%s:%d/status", s.Host, s.StatusPort)
-	return statusByURL(url)
 }
 
 // Role returns the component role of the instance
@@ -116,7 +94,14 @@ func (c *TiDBComponent) Instances() []Instance {
 			Dirs: []string{
 				s.DeployDir,
 			},
-			StatusFn: s.Status,
+			StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
+				scheme := "http"
+				if tlsCfg != nil {
+					scheme = "https"
+				}
+				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.StatusPort)
+				return statusByURL(url, tlsCfg)
+			},
 		}, c.Specification})
 	}
 	return ins
@@ -129,11 +114,18 @@ type TiDBInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *TiDBInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiDBInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
+	enableTLS := i.topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(TiDBSpec)
 	cfg := scripts.NewTiDBScript(
 		i.GetHost(),
@@ -179,6 +171,26 @@ func (i *TiDBInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 		}
 	}
 
+	// set TLS configs
+	if enableTLS {
+		if spec.Config == nil {
+			spec.Config = make(map[string]interface{})
+		}
+		spec.Config["security.cluster-ssl-ca"] = fmt.Sprintf(
+			"%s/tls/%s",
+			paths.Deploy,
+			TLSCACert,
+		)
+		spec.Config["security.cluster-ssl-cert"] = fmt.Sprintf(
+			"%s/tls/%s.crt",
+			paths.Deploy,
+			i.Role())
+		spec.Config["security.cluster-ssl-key"] = fmt.Sprintf(
+			"%s/tls/%s.pem",
+			paths.Deploy,
+			i.Role())
+	}
+
 	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}
@@ -187,7 +199,14 @@ func (i *TiDBInstance) InitConfig(e executor.Executor, clusterName, clusterVersi
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiDBInstance) ScaleConfig(e executor.Executor, topo Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiDBInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	s := i.topo
 	defer func() { i.topo = s }()
 	i.topo = mustBeClusterTopo(topo)

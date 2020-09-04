@@ -103,7 +103,13 @@ type MasterInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *MasterInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *MasterInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
@@ -134,7 +140,14 @@ func (i *MasterInstance) InitConfig(e executor.Executor, clusterName, clusterVer
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *MasterInstance) ScaleConfig(e executor.Executor, topo spec.Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *MasterInstance) ScaleConfig(
+	e executor.Executor,
+	topo spec.Topology,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
@@ -219,7 +232,13 @@ type WorkerInstance struct {
 }
 
 // InitConfig implement Instance interface
-func (i *WorkerInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *WorkerInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
@@ -250,7 +269,14 @@ func (i *WorkerInstance) InitConfig(e executor.Executor, clusterName, clusterVer
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *WorkerInstance) ScaleConfig(e executor.Executor, topo spec.Topology, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *WorkerInstance) ScaleConfig(
+	e executor.Executor,
+	topo spec.Topology,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	s := i.topo
 	defer func() {
 		i.topo = s
