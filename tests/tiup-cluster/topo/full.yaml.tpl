@@ -12,59 +12,59 @@ server_configs:
     storage.stop-write-at-available-space: 1 mib
 
 tidb_servers:
-  - host: 172.19.0.101
-  - host: 172.19.0.102
+  - host: __IPPREFIX__.101
+  - host: __IPPREFIX__.102
 
 pd_servers:
-  - host: 172.19.0.103
-  - host: 172.19.0.104
-  - host: 172.19.0.105
+  - host: __IPPREFIX__.103
+  - host: __IPPREFIX__.104
+  - host: __IPPREFIX__.105
 
 # Note if only 3 instance, when scale-in one of it.
 # It may not be tombstone.
 tikv_servers:
-  - host: 172.19.0.102
-  - host: 172.19.0.103
+  - host: __IPPREFIX__.102
+  - host: __IPPREFIX__.103
     data_dir: "/home/tidb/my_kv_data"
-  - host: 172.19.0.104
-  - host: 172.19.0.105
+  - host: __IPPREFIX__.104
+  - host: __IPPREFIX__.105
 
 # tiflash eat too much memory
 # and binary is more than 1G..
 tiflash_servers:
-  - host: 172.19.0.103
-#   - host: 172.19.0.104
-#   - host: 172.19.0.105
+  - host: __IPPREFIX__.103
+#   - host: __IPPREFIX__.104
+#   - host: __IPPREFIX__.105
 
 pump_servers:
-  - host: 172.19.0.103
-  - host: 172.19.0.104
-  - host: 172.19.0.105
+  - host: __IPPREFIX__.103
+  - host: __IPPREFIX__.104
+  - host: __IPPREFIX__.105
 
 drainer_servers:
-  - host: 172.19.0.101
+  - host: __IPPREFIX__.101
     data_dir: /home/tidb/data/drainer-8249/data
     commit_ts: -1
     config:
       syncer.db-type: "file"
 
 cdc_servers:
-  - host: 172.19.0.103
-  - host: 172.19.0.104
-  - host: 172.19.0.105
+  - host: __IPPREFIX__.103
+  - host: __IPPREFIX__.104
+  - host: __IPPREFIX__.105
 
 tispark_masters:
-  - host: 172.19.0.103
+  - host: __IPPREFIX__.103
 
 tispark_workers:
-  - host: 172.19.0.104
+  - host: __IPPREFIX__.104
 
 monitoring_servers:
-  - host: 172.19.0.101
+  - host: __IPPREFIX__.101
     rule_dir: /tmp/local/prometheus
 grafana_servers:
-  - host: 172.19.0.101
+  - host: __IPPREFIX__.101
     dashboard_dir: /tmp/local/grafana
 alertmanager_servers:
-  - host: 172.19.0.101
+  - host: __IPPREFIX__.101
     config_file: /tmp/local/alertmanager/alertmanager.yml
