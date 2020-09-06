@@ -12,7 +12,7 @@ FROM golang:1.14
      apt-get install -qqy \
          dos2unix \
          default-mysql-client \
-	     vim # not required by tiup-cluster itself, just for ease of use
+         vim # not required by tiup-cluster itself, just for ease of use
 
 
 # without --dev flag up.sh copies tiup-cluster to these subfolders
