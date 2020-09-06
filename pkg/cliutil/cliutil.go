@@ -124,7 +124,7 @@ func SuggestionFromFormat(format string, a ...interface{}) (errorx.Property, str
 // BeautifyCobraUsageAndHelp beautifies cobra usages and help.
 func BeautifyCobraUsageAndHelp(rootCmd *cobra.Command) {
 	s := `Usage:{{if .Runnable}}
-  {{ColorCommand}}{{.UseLine}}{{ColorReset}}{{end}}{{if .HasAvailableSubCommands}}
+  {{ColorCommand}}{{tiupCmdLine .UseLine}}{{ColorReset}}{{end}}{{if .HasAvailableSubCommands}}
   {{ColorCommand}}{{tiupCmdPath .Use}} [command]{{ColorReset}}{{end}}{{if gt (len .Aliases) 0}}
 
 Aliases:
@@ -147,9 +147,19 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
 
 Use "{{ColorCommand}}{{tiupCmdPath .Use}} help [command]{{ColorReset}}" for more information about a command.{{end}}
 `
+	cobra.AddTemplateFunc("tiupCmdLine", cmdLine)
 	cobra.AddTemplateFunc("tiupCmdPath", cmdPath)
 
 	rootCmd.SetUsageTemplate(s)
+}
+
+// cmdLine is a customized cobra.Command.UseLine()
+func cmdLine(useline string) string {
+	i := strings.Index(useline, " ")
+	if i > 0 {
+		return OsArgs0() + useline[i:]
+	}
+	return useline
 }
 
 // cmdPath is a customized cobra.Command.CommandPath()
