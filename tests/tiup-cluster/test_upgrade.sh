@@ -6,6 +6,8 @@ version=${version-v4.0.4}
 old_version=${old_version-v3.0.16}
 name=test_upgrade
 topo=./topo/upgrade.yaml
+ipprefix=${TIUP_TEST_IP_PREFIX:-"172.19.0"}
+sed "s/__IPPREFIX__/$ipprefix/g" $topo.tpl > $topo
 
 mkdir -p ~/.tiup/bin && cp -f ./root.json ~/.tiup/bin/
 

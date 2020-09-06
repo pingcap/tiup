@@ -6,6 +6,7 @@ function scale_core() {
     version=$1
     test_tls=$2
     native_ssh=$3
+    ipprefix=${TIUP_TEST_IP_PREFIX:-"172.19.0"}
 
     client=""
     if [ $native_ssh == true ]; then
@@ -18,6 +19,7 @@ function scale_core() {
     else
         topo=./topo/full.yaml
     fi
+    sed "s/__IPPREFIX__/$ipprefix/g" $topo.tpl > $topo
 
     tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa
 
@@ -38,22 +40,28 @@ function scale_core() {
     fi
 
     echo "start scale in tidb"
-    tiup-cluster $client --yes scale-in $name -N 172.19.0.101:4000
+    tiup-cluster $client --yes scale-in $name -N $ipprefix.101:4000
     wait_instance_num_reach $name $total_sub_one $native_ssh
     echo "start scale out tidb"
-    tiup-cluster $client --yes scale-out $name ./topo/full_scale_in_tidb.yaml
+    topo=./topo/full_scale_in_tidb.yaml
+    sed "s/__IPPREFIX__/$ipprefix/g" $topo.tpl > $topo
+    tiup-cluster $client --yes scale-out $name $topo
 
     # echo "start scale in tikv"
-    # tiup-cluster --yes scale-in $name -N 172.19.0.103:20160
+    # tiup-cluster --yes scale-in $name -N $ipprefix.103:20160
     # wait_instance_num_reach $name $total_sub_one $native_ssh
     # echo "start scale out tikv"
-    # tiup-cluster --yes scale-out $name ./topo/full_scale_in_tikv.yaml
+    # topo=./topo/full_scale_in_tikv.yaml
+    # sed "s/__IPPREFIX__/$ipprefix/g" $topo.tpl > $topo
+    # tiup-cluster --yes scale-out $name $topo
 
     echo "start scale in pd"
-    tiup-cluster $client --yes scale-in $name -N 172.19.0.103:2379
+    tiup-cluster $client --yes scale-in $name -N $ipprefix.103:2379
     wait_instance_num_reach $name $total_sub_one $native_ssh
     echo "start scale out pd"
-    tiup-cluster $client --yes scale-out $name ./topo/full_scale_in_pd.yaml
+    topo=./topo/full_scale_in_pd.yaml
+    sed "s/__IPPREFIX__/$ipprefix/g" $topo.tpl > $topo
+    tiup-cluster $client --yes scale-out $name $topo
 
     tiup-cluster $client _test $name writable
 }
