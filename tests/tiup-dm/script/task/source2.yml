@@ -1,6 +1,5 @@
 # MySQL2 Configuration.
 ---
-
 source-id: "mysql2"
 
 enable-gtid: true

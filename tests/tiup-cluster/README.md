@@ -27,7 +27,7 @@ where TEST_NAME is the file name of `tests/*.sh`
 The flowing environment can control the testing version of cluster:
 
 - `version` The version of cluster to be deploy and test.
-- `old_version ` The version of cluster to be deploy and upgrade to `version`
+- `old_version` The version of cluster to be deploy and upgrade to `version`
 
 For example:
 

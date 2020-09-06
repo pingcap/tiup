@@ -4,13 +4,13 @@ global:
   enable_tls: true
 
 server_configs:
-    tidb:
-        binlog.enable: true
-        binlog.ignore-error: false
-    tikv:
-        storage.reserve-space: 1K
-    pump:
-        storage.stop-write-at-available-space: 1 mib
+  tidb:
+    binlog.enable: true
+    binlog.ignore-error: false
+  tikv:
+    storage.reserve-space: 1K
+  pump:
+    storage.stop-write-at-available-space: 1 mib
 
 tidb_servers:
   - host: 172.19.0.101
@@ -40,7 +40,7 @@ drainer_servers:
     data_dir: /home/tidb/data/drainer-8249/data
     commit_ts: -1
     config:
-        syncer.db-type: "file"
+      syncer.db-type: "file"
 
 cdc_servers:
   - host: 172.19.0.103

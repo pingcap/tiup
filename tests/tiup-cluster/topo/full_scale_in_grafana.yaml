@@ -1,2 +1,2 @@
 grafana_servers:
-    - host: 172.19.0.101
+  - host: 172.19.0.101
