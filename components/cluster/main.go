@@ -13,8 +13,12 @@
 
 package main
 
-import "github.com/pingcap/tiup/components/cluster/command"
+import (
+	"github.com/pingcap/tiup/components/cluster/command"
+	"github.com/pingcap/tiup/pkg/cliutil"
+)
 
 func main() {
+	cliutil.RegisterArg0("tiup cluster")
 	command.Execute()
 }
