@@ -2,8 +2,8 @@ FROM golang:1.14
 
 
 # Use mirrors for poor network...
-RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
-RUN sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
+#RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list && \
+#    sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
 
 
 # tiup-cluster dependencies
@@ -22,8 +22,10 @@ COPY tiup-cluster /tiup-cluster/
 
 ADD bashrc /root/.bashrc
 ADD init.sh /init.sh
-RUN dos2unix /init.sh /root/.bashrc \
-    && chmod +x /init.sh
+RUN dos2unix /init.sh /root/.bashrc && \
+    chmod +x /init.sh && \
+    mkdir -p /root/.ssh && \
+    echo "Host *\n    ServerAliveInterval 30\n    ServerAliveCountMax 3" >> /root/.ssh/config
 
 # build tiup-cluster in without --dev flag
 WORKDIR /tiup-cluster
