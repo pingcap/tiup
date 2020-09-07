@@ -17,6 +17,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -29,7 +30,14 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
+	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/prom2json"
 	pdserverapi "github.com/tikv/pd/server/api"
+)
+
+const (
+	metricNameRegionCount = "tikv_raftstore_region_count"
+	labelNameLeaderCount  = "leader"
 )
 
 // TiKVSpec represents the TiKV topology specification in topology.yaml
@@ -293,7 +301,7 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *
 		return errors.AddStack(err)
 	}
 
-	if err := pdClient.EvictStoreLeader(addr(i), timeoutOpt); err != nil {
+	if err := pdClient.EvictStoreLeader(addr(i), timeoutOpt, genLeaderCounter(tlsCfg)); err != nil {
 		if utils.IsTimeoutOrMaxRetry(err) {
 			log.Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
 		} else {
@@ -329,4 +337,60 @@ func addr(ins Instance) string {
 		panic(ins)
 	}
 	return ins.GetHost() + ":" + strconv.Itoa(ins.GetPort())
+}
+
+func genLeaderCounter(tlsCfg *tls.Config) func(string) (int, error) {
+	return func(statusAddress string) (int, error) {
+		transport, err := makeTransport(tlsCfg)
+		if err != nil {
+			return 0, err
+		}
+
+		mfChan := make(chan *dto.MetricFamily, 1024)
+		go func() {
+			addr := fmt.Sprintf("http://%s/metrics", statusAddress)
+			if tlsCfg != nil {
+				addr = fmt.Sprintf("https://%s/metrics", statusAddress)
+			}
+			err := prom2json.FetchMetricFamilies(addr, mfChan, transport)
+			if err != nil {
+				log.Errorf("failed counting leader on %s, %v", statusAddress, err)
+			}
+		}()
+
+		fms := []*prom2json.Family{}
+		for mf := range mfChan {
+			fm := prom2json.NewFamily(mf)
+			fms = append(fms, fm)
+		}
+		for _, fm := range fms {
+			if fm.Name != metricNameRegionCount {
+				continue
+			}
+			for _, m := range fm.Metrics {
+				if m, ok := m.(prom2json.Metric); !ok {
+					continue
+				} else if m.Labels["type"] != labelNameLeaderCount {
+					continue
+				} else {
+					return strconv.Atoi(m.Value)
+				}
+			}
+		}
+
+		return 0, errors.AddStack(fmt.Errorf("metric %s{type=\"%s\"} not found", metricNameRegionCount, labelNameLeaderCount))
+	}
+}
+
+func makeTransport(tlsCfg *tls.Config) (*http.Transport, error) {
+	// Start with the DefaultTransport for sane defaults.
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	// Conservatively disable HTTP keep-alives as this program will only
+	// ever need a single HTTP request.
+	transport.DisableKeepAlives = true
+	// Timeout early if the server doesn't even return the headers.
+	transport.ResponseHeaderTimeout = time.Minute
+	// TODO: use tlsCfg
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	return transport, nil
 }
