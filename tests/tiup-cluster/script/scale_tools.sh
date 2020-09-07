@@ -19,6 +19,7 @@ function scale_tools() {
     else
         topo=./topo/full.yaml
     fi
+    sed "s/__IPPREFIX__/$ipprefix/g" $topo.tpl > $topo
 
     tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa
 

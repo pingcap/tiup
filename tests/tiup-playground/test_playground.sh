@@ -22,7 +22,7 @@ mkdir -p $TEST_DIR/cover
 function tiup-playground() {
     # echo "in function"
     if [ -f "$TEST_DIR/bin/tiup-playground.test" ]; then
-        $TEST_DIR/bin/tiup-playground.test  -test.coverprofile=$TEST_DIR/cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
+        $TEST_DIR/bin/tiup-playground.test -test.coverprofile=$TEST_DIR/cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
     else
         $TEST_DIR/../../bin/tiup-playground "$@"
     fi
