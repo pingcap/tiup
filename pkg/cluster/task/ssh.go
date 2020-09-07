@@ -27,19 +27,19 @@ var (
 
 // RootSSH is used to establish a SSH connection to the target host with specific key
 type RootSSH struct {
-	host       string // hostname of the SSH server
-	port       int    // port of the SSH server
-	user       string // username to login to the SSH server
-	password   string // password of the user
-	keyFile    string // path to the private key file
-	passphrase string // passphrase of the private key file
-	timeout    int64  // timeout in seconds when connecting via SSH
-	executor   string // the type of executor
+	host       string           // hostname of the SSH server
+	port       int              // port of the SSH server
+	user       string           // username to login to the SSH server
+	password   string           // password of the user
+	keyFile    string           // path to the private key file
+	passphrase string           // passphrase of the private key file
+	timeout    int64            // timeout in seconds when connecting via SSH
+	sshType    executor.SSHType // the type of SSH chanel
 }
 
 // Execute implements the Task interface
 func (s *RootSSH) Execute(ctx *Context) error {
-	e, err := executor.New(s.executor, s.user != "root", executor.SSHConfig{
+	e, err := executor.New(s.sshType, s.user != "root", executor.SSHConfig{
 		Host:       s.host,
 		Port:       s.port,
 		User:       s.user,
@@ -78,12 +78,12 @@ type UserSSH struct {
 	port       int
 	deployUser string
 	timeout    int64
-	executor   string
+	sshType    executor.SSHType
 }
 
 // Execute implements the Task interface
 func (s *UserSSH) Execute(ctx *Context) error {
-	e, err := executor.New(s.executor, false, executor.SSHConfig{
+	e, err := executor.New(s.sshType, false, executor.SSHConfig{
 		Host:    s.host,
 		Port:    s.port,
 		KeyFile: ctx.PrivateKeyPath,

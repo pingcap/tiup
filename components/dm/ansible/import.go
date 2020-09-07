@@ -116,7 +116,7 @@ type ExecutorGetter interface {
 type Importer struct {
 	dir               string // ansible directory.
 	inventoryFileName string
-	sshType           string
+	sshType           executor.SSHType
 	sshTimeout        int64
 
 	// following vars parse from ansbile

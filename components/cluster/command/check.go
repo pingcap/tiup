@@ -81,10 +81,6 @@ conflict checks with other clusters`,
 				opt.identityFile = tidbSpec.Path(clusterName, "ssh", "id_rsa")
 
 				topo = *metadata.Topology
-
-				if gOpt.SSHType == "" {
-					gOpt.SSHType = topo.GlobalOptions.SSHType
-				}
 			} else { // check before cluster is deployed
 				if err := clusterutil.ParseTopologyYaml(args[0], &topo); err != nil {
 					return err
@@ -104,7 +100,7 @@ conflict checks with other clusters`,
 			}
 
 			// natvie ssh has it's own logic to find the default identity_file
-			if (gOpt.NativeSSH || gOpt.SSHType == executor.SSHTypeSystem) && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
+			if gOpt.SSHType == executor.SSHTypeSystem && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
 				opt.identityFile = ""
 			}
 
@@ -174,6 +170,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 					s.IdentityFilePassphrase,
 					gOpt.SSHTimeout,
 					gOpt.SSHType,
+					topo.GlobalOptions.SSHType,
 				).
 				Mkdir(opt.user, inst.GetHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
 				CopyComponent(
@@ -295,6 +292,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 					s.IdentityFilePassphrase,
 					gOpt.SSHTimeout,
 					gOpt.SSHType,
+					topo.GlobalOptions.SSHType,
 				).
 				Rmdir(inst.GetHost(), task.CheckToolsPathDir).
 				BuildAsStep(fmt.Sprintf("  - Cleanup check files on %s:%d", inst.GetHost(), inst.GetSSHPort()))
@@ -335,6 +333,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 				s.IdentityFilePassphrase,
 				gOpt.SSHTimeout,
 				gOpt.SSHType,
+				topo.GlobalOptions.SSHType,
 			)
 		resLines, err := handleCheckResults(ctx, host, opt, tf)
 		if err != nil {

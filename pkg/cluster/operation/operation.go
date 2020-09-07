@@ -25,13 +25,13 @@ import (
 type Options struct {
 	Roles             []string
 	Nodes             []string
-	Force             bool   // Option for upgrade subcommand
-	SSHTimeout        int64  // timeout in seconds when connecting an SSH server
-	OptTimeout        int64  // timeout in seconds for operations that support it, not to confuse with SSH timeout
-	APITimeout        int64  // timeout in seconds for API operations that support it, like transfering store leader
-	IgnoreConfigCheck bool   // should we ignore the config check result after init config
-	NativeSSH         bool   // should use native ssh client or builtin easy ssh (deprecated, shoule use SSHType)
-	SSHType           string // the ssh type: 'builtin', 'system', 'none'
+	Force             bool             // Option for upgrade subcommand
+	SSHTimeout        int64            // timeout in seconds when connecting an SSH server
+	OptTimeout        int64            // timeout in seconds for operations that support it, not to confuse with SSH timeout
+	APITimeout        int64            // timeout in seconds for API operations that support it, like transfering store leader
+	IgnoreConfigCheck bool             // should we ignore the config check result after init config
+	NativeSSH         bool             // should use native ssh client or builtin easy ssh (deprecated, shoule use SSHType)
+	SSHType           executor.SSHType // the ssh type: 'builtin', 'system', 'none'
 
 	// What type of things should we cleanup in clean command
 	CleanupData bool // should we cleanup data

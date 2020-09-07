@@ -29,7 +29,10 @@ func (ctx *Context) SetSSHKeySet(privateKeyPath string, publicKeyPath string) er
 }
 
 // SetClusterSSH set cluster user ssh executor in context.
-func (ctx *Context) SetClusterSSH(topo spec.Topology, deployUser string, sshTimeout int64, sshType string) error {
+func (ctx *Context) SetClusterSSH(topo spec.Topology, deployUser string, sshTimeout int64, sshType, defaultSSHType executor.SSHType) error {
+	if sshType == "" {
+		sshType = defaultSSHType
+	}
 	if len(ctx.PrivateKeyPath) == 0 {
 		return errors.Errorf("context has no PrivateKeyPath")
 	}

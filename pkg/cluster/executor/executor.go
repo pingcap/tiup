@@ -23,17 +23,20 @@ import (
 	"github.com/pingcap/tiup/pkg/localdata"
 )
 
+// SSHType represent the type of the chanel used by ssh
+type SSHType = string
+
 var (
 	errNS = errorx.NewNamespace("executor")
 
 	// SSHTypeBuiltin is the type of easy ssh executor
-	SSHTypeBuiltin = "builtin"
+	SSHTypeBuiltin SSHType = "builtin"
 
 	// SSHTypeSystem is the type of host ssh client
-	SSHTypeSystem = "system"
+	SSHTypeSystem SSHType = "system"
 
 	// SSHTypeNone is the type of local executor (no ssh will be used)
-	SSHTypeNone = "none"
+	SSHTypeNone SSHType = "none"
 
 	executeDefaultTimeout = time.Second * 60
 
@@ -60,7 +63,7 @@ type Executor interface {
 }
 
 // New create a new Executor
-func New(etype string, sudo bool, c SSHConfig) (Executor, error) {
+func New(etype SSHType, sudo bool, c SSHConfig) (Executor, error) {
 	if etype == "" {
 		etype = SSHTypeBuiltin
 	}

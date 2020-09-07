@@ -51,10 +51,6 @@ func newDisplayCmd() *cobra.Command {
 				return perrs.AddStack(err)
 			}
 
-			if gOpt.SSHType == "" {
-				gOpt.SSHType = metadata.Topology.GlobalOptions.SSHType
-			}
-
 			return clearOutDatedEtcdInfo(clusterName, metadata, gOpt)
 		},
 	}
