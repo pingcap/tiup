@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joomcode/errorx"
@@ -26,7 +27,7 @@ import (
 )
 
 // SSHType represent the type of the chanel used by ssh
-type SSHType = string
+type SSHType string
 
 var (
 	errNS = errorx.NewNamespace("executor")
@@ -129,10 +130,11 @@ func checkLocalIP(ip string) error {
 		return errors.AddStack(err)
 	}
 
+	foundIps := []string{}
 	for _, i := range ifaces {
 		addrs, err := i.Addrs()
 		if err != nil {
-			return errors.Annotatef(err, "get address for interface %s", i.Name)
+			continue
 		}
 
 		for _, addr := range addrs {
@@ -141,13 +143,15 @@ func checkLocalIP(ip string) error {
 				if ip == v.IP.String() {
 					return nil
 				}
+				foundIps = append(foundIps, v.IP.String())
 			case *net.IPAddr:
 				if ip == v.IP.String() {
 					return nil
 				}
+				foundIps = append(foundIps, v.IP.String())
 			}
 		}
 	}
 
-	return fmt.Errorf("address %s not found in all interfaces", ip)
+	return fmt.Errorf("address %s not found in all interfaces, found ips: %s", ip, strings.Join(foundIps, ","))
 }
