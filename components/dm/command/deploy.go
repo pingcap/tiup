@@ -19,14 +19,15 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster"
-	tiuputils "github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
 )
 
 func newDeploy() *cobra.Command {
 	opt := cluster.DeployOptions{
-		IdentityFile: path.Join(tiuputils.UserHome(), ".ssh", "id_rsa"),
+		IdentityFile: path.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
 		Use:          "deploy <cluster-name> <version> <topology.yaml>",
@@ -43,7 +44,7 @@ func newDeploy() *cobra.Command {
 			}
 
 			// natvie ssh has it's own logic to find the default identity_file
-			if gOpt.NativeSSH && !tiuputils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
+			if gOpt.SSHType == executor.SSHTypeSystem && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
 				opt.IdentityFile = ""
 			}
 
@@ -69,7 +70,7 @@ func newDeploy() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&opt.User, "user", "u", tiuputils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
+	cmd.Flags().StringVarP(&opt.User, "user", "u", utils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
 	cmd.Flags().StringVarP(&opt.IdentityFile, "identity_file", "i", opt.IdentityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.UsePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.IgnoreConfigCheck, "ignore-config-check", "", opt.IgnoreConfigCheck, "Ignore the config check result")

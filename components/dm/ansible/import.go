@@ -130,7 +130,7 @@ type Importer struct {
 
 // NewImporter create an Importer.
 // @sshTimeout: set 0 to use a default value
-func NewImporter(ansibleDir, inventoryFileName, sshType string, sshTimeout int64) (*Importer, error) {
+func NewImporter(ansibleDir, inventoryFileName, sshType executor.SSHType, sshTimeout int64) (*Importer, error) {
 	dir, err := filepath.Abs(ansibleDir)
 	if err != nil {
 		return nil, errors.AddStack(err)
@@ -166,7 +166,7 @@ func (im *Importer) getExecutor(host string, port int) (e executor.Executor, err
 func (im *Importer) fetchFile(host string, port int, fname string) (data []byte, err error) {
 	e, err := im.getExecutor(host, port)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, errors.Annotatef(err, "target: %s:%d", host, port)
 	}
 
 	tmp, err := ioutil.TempDir("", "tiup")

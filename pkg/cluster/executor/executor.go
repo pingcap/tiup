@@ -15,10 +15,12 @@ package executor
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"time"
 
 	"github.com/joomcode/errorx"
+	"github.com/pingcap/errors"
 	"github.com/pingcap/failpoint"
 	"github.com/pingcap/tiup/pkg/localdata"
 )
@@ -44,8 +46,6 @@ var (
 	// It's used to predict if the connection can establish success in the future.
 	// Its main purpose is to avoid sshpass hang when user speficied a wrong prompt.
 	connectionTestCommand = "echo connection test, if killed, check the password prompt"
-
-	localIP = ""
 )
 
 // Executor is the executor interface for TiOps, all tasks will in the end
@@ -109,13 +109,8 @@ func New(etype SSHType, sudo bool, c SSHConfig) (Executor, error) {
 		}
 		return e, nil
 	case SSHTypeNone:
-		if localIP == "" {
-			localIP = c.Host
-		}
-		if c.Host != localIP {
-			return nil, fmt.Errorf(`you are trying to connect ip address %s
-this is not the same as another address %s
-make sure there is just one ip address in your topology fiile`, c.Host, localIP)
+		if err := checkLocalIP(c.Host); err != nil {
+			return nil, err
 		}
 		e := &Local{
 			Config: &c,
@@ -126,4 +121,33 @@ make sure there is just one ip address in your topology fiile`, c.Host, localIP)
 	default:
 		return nil, fmt.Errorf("unregistered executor: %s", etype)
 	}
+}
+
+func checkLocalIP(ip string) error {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	for _, i := range ifaces {
+		addrs, err := i.Addrs()
+		if err != nil {
+			return errors.Annotatef(err, "get address for interface %s", i.Name)
+		}
+
+		for _, addr := range addrs {
+			switch v := addr.(type) {
+			case *net.IPNet:
+				if ip == v.IP.String() {
+					return nil
+				}
+			case *net.IPAddr:
+				if ip == v.IP.String() {
+					return nil
+				}
+			}
+		}
+	}
+
+	return fmt.Errorf("address %s not found in all interfaces", ip)
 }

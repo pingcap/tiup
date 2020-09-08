@@ -57,3 +57,12 @@ func TestLocal(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal("src", string(data))
 }
+
+func TestWrongIP(t *testing.T) {
+	assert := require.New(t)
+	user, err := user.Current()
+	assert.Nil(err)
+	_, err = New(SSHTypeNone, false, SSHConfig{Host: "127.0.0.2", User: user.Username})
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "not found")
+}
