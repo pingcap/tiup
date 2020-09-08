@@ -224,7 +224,7 @@ func LoadConfig(clsName string ,cls *spec.ClusterMeta) error {
 			gConfigs = Configs
 			initflag = true
 		}
-		// make Configs containts
+		// make Configs containts global Config variables
 		for k, _ := range gConfigs {
 			if Configs[k] == nil && gConfigs[k] != nil {
 				Configs[k] = k
@@ -232,7 +232,7 @@ func LoadConfig(clsName string ,cls *spec.ClusterMeta) error {
 		}
 
 		for k, v := range  Configs {
-
+            //make sure variables should be put in Server Configs or Global Configs
 			if cls.Topology.ServerConfigs.TiDB == nil {
 				cls.Topology.ServerConfigs.TiDB = make(map[string]interface{})
 			}
@@ -279,7 +279,7 @@ func LoadConfig(clsName string ,cls *spec.ClusterMeta) error {
 			gConfigs = Configs
 			initflag = true
 		}
-		// make Configs containts
+
 		for k, _ := range gConfigs {
 			if Configs[k] == nil && gConfigs[k] != nil {
 				Configs[k] = k
@@ -330,7 +330,7 @@ func LoadConfig(clsName string ,cls *spec.ClusterMeta) error {
 			gConfigs = Configs
 			initflag = true
 		}
-		// make Configs containts
+
 		for k, _ := range gConfigs {
 			if Configs[k] == nil && gConfigs[k] != nil {
 				Configs[k] = k
