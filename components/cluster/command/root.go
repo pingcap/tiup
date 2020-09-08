@@ -138,7 +138,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
 	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "Use the native SSH client installed on local system instead of the build-in one (experimental).")
 	rootCmd.PersistentFlags().StringVar((*string)(&gOpt.SSHType), "ssh", "", "(experimental) The executor type: 'builtin', 'system', 'none'.")
-	rootCmd.PersistentFlags().MarkHidden("native-ssh")
+	_ = rootCmd.PersistentFlags().MarkHidden("native-ssh")
 
 	rootCmd.AddCommand(
 		newCheckCmd(),
