@@ -17,6 +17,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
@@ -99,7 +100,13 @@ func (s *SpecManager) SaveMeta(clusterName string, meta Metadata) error {
 	}
 
 	data, err := yaml.Marshal(meta)
-	if err != nil {
+
+	// remove quotes
+	data_str := string(data)
+	data_str = strings.ReplaceAll(data_str,"\"","")
+    data = []uint8(data_str)
+
+    if err != nil {
 		return wrapError(err)
 	}
 
