@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/pingcap/tiup/components/web/uiserver"
 
 	"github.com/pingcap/tiup/pkg/cluster"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -114,7 +116,7 @@ func deployHandler(c *gin.Context) {
 			true,
 			120,
 			5,
-			false,
+			executor.SSHTypeBuiltin,
 		)
 	}()
 
@@ -171,8 +173,12 @@ func startClusterHandler(c *gin.Context) {
 			OptTimeout: 120,
 			APITimeout: 300,
 		}, func(b *task.Builder, metadata spec.Metadata) {
-			tidbMeta := metadata.(*spec.ClusterMeta)
-			b.UpdateTopology(clusterName, tidbMeta, nil)
+			b.UpdateTopology(
+				clusterName,
+				tidbSpec.Path(clusterName),
+				metadata.(*spec.ClusterMeta),
+				nil, /* deleteNodeIds */
+			)
 		})
 	}()
 
@@ -215,20 +221,33 @@ func scaleInClusterHandler(c *gin.Context) {
 			NativeSSH:  false,
 			Force:      req.Force,
 			Nodes:      req.Nodes}
-		scale := func(b *task.Builder, imetadata spec.Metadata) {
+
+		// TODO
+		scale := func(b *task.Builder, imetadata spec.Metadata, tlsCfg *tls.Config) {
 			metadata := imetadata.(*spec.ClusterMeta)
+
 			if !gOpt.Force {
-				b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt).
+				b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt, tlsCfg).
 					UpdateMeta(clusterName, metadata, operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false)).
-					UpdateTopology(clusterName, metadata, operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false))
+					UpdateTopology(
+						clusterName,
+						tidbSpec.Path(clusterName),
+						metadata,
+						operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false), /* deleteNodeIds */
+					)
 			} else {
-				b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt).
+				b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt, tlsCfg).
 					UpdateMeta(clusterName, metadata, gOpt.Nodes).
-					UpdateTopology(clusterName, metadata, gOpt.Nodes)
+					UpdateTopology(
+						clusterName,
+						tidbSpec.Path(clusterName),
+						metadata,
+						gOpt.Nodes,
+					)
 			}
 		}
 
-		manager.DoScaleIn(clusterName, true, gOpt.OptTimeout, gOpt.SSHTimeout, gOpt.NativeSSH, gOpt.Force, gOpt.Nodes, scale)
+		manager.DoScaleIn(clusterName, true, gOpt.OptTimeout, gOpt.SSHTimeout, executor.SSHTypeBuiltin, gOpt.Force, gOpt.Nodes, scale)
 	}()
 
 	c.Status(http.StatusNoContent)
@@ -291,7 +310,7 @@ func scaleOutClusterHandler(c *gin.Context) {
 			true,
 			120,
 			5,
-			false,
+			executor.SSHTypeBuiltin,
 		)
 	}()
 

@@ -573,6 +573,7 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	}
 
 	metadata, _ := m.meta(clusterName)
+	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 	// display cluster meta
 	cyan := color.New(color.FgCyan, color.Bold)
@@ -666,7 +667,7 @@ func (m *Manager) GetClusterTopology(clusterName string, opt operator.Options) (
 
 			tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 			if err != nil {
-				return perrs.AddStack(err)
+				return nil, perrs.AddStack(err)
 			}
 			status := ins.Status(tlsCfg, pdList...)
 			// Query the service status
@@ -1140,7 +1141,7 @@ func (m *Manager) DoDeploy(
 	skipConfirm bool,
 	optTimeout int64,
 	sshTimeout int64,
-	nativeSSH bool,
+	sshType executor.SSHType,
 ) {
 	operationInfo = OperationInfo{operationType: operationDeploy, clusterName: clusterName}
 	operationInfo.err = m.Deploy(
@@ -1152,7 +1153,7 @@ func (m *Manager) DoDeploy(
 		skipConfirm,
 		optTimeout,
 		sshTimeout,
-		nativeSSH,
+		sshType,
 	)
 }
 
@@ -1474,10 +1475,10 @@ func (m *Manager) DoScaleIn(
 	skipConfirm bool,
 	optTimeout int64,
 	sshTimeout int64,
-	nativeSSH bool,
+	sshType executor.SSHType,
 	force bool,
 	nodes []string,
-	scale func(builer *task.Builder, metadata spec.Metadata),
+	scale func(builer *task.Builder, metadata spec.Metadata, tlsCfg *tls.Config),
 ) {
 	operationInfo = OperationInfo{operationType: operationScaleIn, clusterName: clusterName}
 	operationInfo.err = m.ScaleIn(
@@ -1485,7 +1486,7 @@ func (m *Manager) DoScaleIn(
 		skipConfirm,
 		optTimeout,
 		sshTimeout,
-		nativeSSH,
+		sshType,
 		force,
 		nodes,
 		scale,
@@ -1631,7 +1632,7 @@ func (m *Manager) DoScaleOut(
 	skipConfirm bool,
 	optTimeout int64,
 	sshTimeout int64,
-	nativeSSH bool,
+	sshType executor.SSHType,
 ) {
 	operationInfo = OperationInfo{operationType: operationScaleOut, clusterName: clusterName}
 	operationInfo.err = m.ScaleOut(
@@ -1643,7 +1644,7 @@ func (m *Manager) DoScaleOut(
 		skipConfirm,
 		optTimeout,
 		sshTimeout,
-		nativeSSH,
+		sshType,
 	)
 }
 
