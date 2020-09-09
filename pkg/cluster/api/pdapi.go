@@ -351,10 +351,18 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 	}
 
 	// XXX: the status address in store will be something like 0.0.0.0:20180
-	statusAddress := strings.Split(latestStore.Store.Address, ":")
-	statusAddress[1] = strings.Split(latestStore.Store.StatusAddress, ":")[1]
+	ss := strings.Split(latestStore.Store.Address, ":")
+	if len(ss) != 2 {
+		return fmt.Errorf("error on parse store address, expect x.x.x.x:xx, got %s", latestStore.Store.Address)
+	}
+	statusAddress := ss[0]
+	ss = strings.Split(latestStore.Store.StatusAddress, ":")
+	if len(ss) != 2 {
+		return fmt.Errorf("error on parse store status address, expect x.x.x.x:xx, got %s", latestStore.Store.StatusAddress)
+	}
+	statusAddress = fmt.Sprintf("%s:%s", statusAddress, ss[1])
 	var leaderCount int
-	if leaderCount, err = countLeader(strings.Join(statusAddress, ":")); err != nil {
+	if leaderCount, err = countLeader(statusAddress); err != nil {
 		return err
 	}
 	if leaderCount == 0 {
@@ -400,7 +408,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 			if currStoreInfo.Store.Address != host {
 				continue
 			}
-			if leaderCount, err = countLeader(strings.Join(statusAddress, ":")); err != nil {
+			if leaderCount, err = countLeader(statusAddress); err != nil {
 				return err
 			}
 			if leaderCount == 0 {
