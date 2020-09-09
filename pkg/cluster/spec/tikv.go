@@ -301,7 +301,7 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *
 		return errors.AddStack(err)
 	}
 
-	if err := pdClient.EvictStoreLeader(addr(i), timeoutOpt, genLeaderCounter(tlsCfg)); err != nil {
+	if err := pdClient.EvictStoreLeader(addr(i), timeoutOpt, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
 		if utils.IsTimeoutOrMaxRetry(err) {
 			log.Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
 		} else {
@@ -339,8 +339,22 @@ func addr(ins Instance) string {
 	return ins.GetHost() + ":" + strconv.Itoa(ins.GetPort())
 }
 
-func genLeaderCounter(tlsCfg *tls.Config) func(string) (int, error) {
-	return func(statusAddress string) (int, error) {
+func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int, error) {
+	return func(id string) (int, error) {
+		statusAddress := ""
+		foundIds := []string{}
+		for _, kv := range topo.TiKVServers {
+			kvid := fmt.Sprintf("%s:%d", kv.Host, kv.Port)
+			if id == kvid {
+				statusAddress = fmt.Sprintf("%s:%d", kv.Host, kv.StatusPort)
+				break
+			}
+			foundIds = append(foundIds, kvid)
+		}
+		if statusAddress == "" {
+			return 0, fmt.Errorf("TiKV instance with ID %s not found, found %s", id, strings.Join(foundIds, ","))
+		}
+
 		transport, err := makeTransport(tlsCfg)
 		if err != nil {
 			return 0, err
@@ -354,7 +368,7 @@ func genLeaderCounter(tlsCfg *tls.Config) func(string) (int, error) {
 			}
 			err := prom2json.FetchMetricFamilies(addr, mfChan, transport)
 			if err != nil {
-				log.Errorf("failed counting leader on %s, %v", statusAddress, err)
+				log.Errorf("failed counting leader on %s, %v", id, err)
 			}
 		}()
 
