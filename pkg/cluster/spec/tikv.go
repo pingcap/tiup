@@ -391,6 +391,8 @@ func makeTransport(tlsCfg *tls.Config) (*http.Transport, error) {
 	// Timeout early if the server doesn't even return the headers.
 	transport.ResponseHeaderTimeout = time.Minute
 	// We should clone a tlsCfg because we use it across goroutine
-	transport.TLSClientConfig = tlsCfg.Clone()
+	if tlsCfg != nil {
+		transport.TLSClientConfig = tlsCfg.Clone()
+	}
 	return transport, nil
 }
