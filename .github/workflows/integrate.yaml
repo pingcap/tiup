@@ -37,6 +37,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha  }}
           path: go/src/github.com/${{ github.repository  }}
+
       - name: Build build_integration_test
         working-directory: ${{env.working-directory}}
         run: |
@@ -313,9 +314,6 @@ jobs:
           path: ${{env.working-directory}}/cover
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
-        with:
-          file: ${{env.working-directory}}/cover/all_cov.out
-          flags: coverage
-          name: codecov-umbrella
-          fail_ci_if_error: true
+        working-directory: ${{env.working-directory}}
+        run: |
+          curl -s https://codecov.io/bash | bash -s - -F coverage -f cover/all_cov.out
