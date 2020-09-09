@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/crypto"
@@ -40,8 +41,12 @@ func (b *Builder) RootSSH(
 	port int,
 	user, password, keyFile, passphrase string,
 	sshTimeout int64,
-	nativeClient bool,
+	sshType executor.SSHType,
+	defaultSSHType executor.SSHType,
 ) *Builder {
+	if sshType == "" {
+		sshType = defaultSSHType
+	}
 	b.tasks = append(b.tasks, &RootSSH{
 		host:       host,
 		port:       port,
@@ -50,19 +55,22 @@ func (b *Builder) RootSSH(
 		keyFile:    keyFile,
 		passphrase: passphrase,
 		timeout:    sshTimeout,
-		native:     nativeClient,
+		sshType:    sshType,
 	})
 	return b
 }
 
 // UserSSH append a UserSSH task to the current task collection
-func (b *Builder) UserSSH(host string, port int, deployUser string, sshTimeout int64, nativeClient bool) *Builder {
+func (b *Builder) UserSSH(host string, port int, deployUser string, sshTimeout int64, sshType, defaultSSHType executor.SSHType) *Builder {
+	if sshType == "" {
+		sshType = defaultSSHType
+	}
 	b.tasks = append(b.tasks, &UserSSH{
 		host:       host,
 		port:       port,
 		deployUser: deployUser,
 		timeout:    sshTimeout,
-		native:     nativeClient,
+		sshType:    sshType,
 	})
 	return b
 }
@@ -77,7 +85,10 @@ func (b *Builder) Func(name string, fn func(ctx *Context) error) *Builder {
 }
 
 // ClusterSSH init all UserSSH need for the cluster.
-func (b *Builder) ClusterSSH(spec spec.Topology, deployUser string, sshTimeout int64, nativeClient bool) *Builder {
+func (b *Builder) ClusterSSH(spec spec.Topology, deployUser string, sshTimeout int64, sshType, defaultSSHType executor.SSHType) *Builder {
+	if sshType == "" {
+		sshType = defaultSSHType
+	}
 	var tasks []Task
 	for _, com := range spec.ComponentsByStartOrder() {
 		for _, in := range com.Instances() {
@@ -86,7 +97,7 @@ func (b *Builder) ClusterSSH(spec spec.Topology, deployUser string, sshTimeout i
 				port:       in.GetSSHPort(),
 				deployUser: deployUser,
 				timeout:    sshTimeout,
-				native:     nativeClient,
+				sshType:    sshType,
 			})
 		}
 	}

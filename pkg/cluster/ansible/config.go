@@ -18,13 +18,14 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
 // ImportConfig copies config files from cluster which deployed through tidb-ansible
-func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout int64, nativeClient bool) error {
+func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout int64, sshType executor.SSHType) error {
 	// there may be already cluster dir, skip create
 	//if err := os.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
 	//	return err
@@ -42,7 +43,7 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout int64, nati
 					SSHKeySet(
 						spec.ClusterPath(name, "ssh", "id_rsa"),
 						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
-					UserSSH(inst.GetHost(), inst.GetSSHPort(), clsMeta.User, sshTimeout, nativeClient).
+					UserSSH(inst.GetHost(), inst.GetSSHPort(), clsMeta.User, sshTimeout, sshType, "").
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
 						spec.ClusterPath(name,
 							spec.AnsibleImportedConfigPath,
@@ -59,7 +60,7 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout int64, nati
 					SSHKeySet(
 						spec.ClusterPath(name, "ssh", "id_rsa"),
 						spec.ClusterPath(name, "ssh", "id_rsa.pub")).
-					UserSSH(inst.GetHost(), inst.GetSSHPort(), clsMeta.User, sshTimeout, nativeClient).
+					UserSSH(inst.GetHost(), inst.GetSSHPort(), clsMeta.User, sshTimeout, sshType, "").
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+".toml"),
 						spec.ClusterPath(name,
 							spec.AnsibleImportedConfigPath,

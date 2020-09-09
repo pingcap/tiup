@@ -27,7 +27,6 @@ import (
 	"github.com/appleboy/easyssh-proxy"
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/failpoint"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -49,13 +48,6 @@ var (
 	// ErrSSHExecuteTimedout is ErrSSHExecuteTimedout
 	ErrSSHExecuteTimedout = errNSSSH.NewType("execute_timedout")
 )
-
-var executeDefaultTimeout = time.Second * 60
-
-// This command will be execute once the NativeSSHExecutor is created.
-// It's used to predict if the connection can establish success in the future.
-// Its main purpose is to avoid sshpass hang when user speficied a wrong prompt.
-var connectionTestCommand = "echo connection test, if killed, check the password prompt"
 
 func init() {
 	v := os.Getenv("TIUP_CLUSTER_EXECUTE_DEFAULT_TIMEOUT")
@@ -101,45 +93,6 @@ type (
 
 var _ Executor = &EasySSHExecutor{}
 var _ Executor = &NativeSSHExecutor{}
-
-// NewSSHExecutor create a ssh executor.
-func NewSSHExecutor(c SSHConfig, sudo bool, native bool) Executor {
-	// set default values
-	if c.Port <= 0 {
-		c.Port = 22
-	}
-
-	if c.Timeout == 0 {
-		c.Timeout = time.Second * 5 // default timeout is 5 sec
-	}
-
-	if native {
-		e := &NativeSSHExecutor{
-			Config: &c,
-			Locale: "C",
-			Sudo:   sudo,
-		}
-		if c.Password != "" || (c.KeyFile != "" && c.Passphrase != "") {
-			_, _, e.ConnectionTestResult = e.Execute(connectionTestCommand, false, executeDefaultTimeout)
-		}
-		return e
-	}
-
-	// Used in integration testing, to check if native ssh client is really used when it need to be.
-	failpoint.Inject("assertNativeSSH", func() {
-		msg := fmt.Sprintf(
-			"native ssh client should be used in this case, os.Args: %s, %s = %s",
-			os.Args, localdata.EnvNameNativeSSHClient, os.Getenv(localdata.EnvNameNativeSSHClient),
-		)
-		panic(msg)
-	})
-
-	e := new(EasySSHExecutor)
-	e.initialize(c)
-	e.Locale = "C" // default locale, hard coded for now
-	e.Sudo = sudo
-	return e
-}
 
 // Initialize builds and initializes a EasySSHExecutor
 func (e *EasySSHExecutor) initialize(config SSHConfig) {
@@ -388,7 +341,7 @@ func (e *NativeSSHExecutor) Transfer(src string, dst string, download bool) erro
 
 	err := command.Run()
 
-	zap.L().Info("SSPCommand",
+	zap.L().Info("SCPCommand",
 		zap.String("host", e.Config.Host),
 		zap.Int("port", e.Config.Port),
 		zap.String("cmd", strings.Join(args, " ")),
