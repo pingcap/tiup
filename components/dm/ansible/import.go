@@ -166,7 +166,7 @@ func (im *Importer) getExecutor(host string, port int) (e executor.Executor, err
 func (im *Importer) fetchFile(host string, port int, fname string) (data []byte, err error) {
 	e, err := im.getExecutor(host, port)
 	if err != nil {
-		return nil, errors.Annotatef(err, "target: %s:%d", host, port)
+		return nil, errors.Annotatef(err, "failed to get executor, target: %s:%d", host, port)
 	}
 
 	tmp, err := ioutil.TempDir("", "tiup")
@@ -228,7 +228,7 @@ func (im *Importer) ScpSourceToMaster(topo *spec.Topology) (err error) {
 
 		e, err := im.getExecutor(master.Host, master.SSHPort)
 		if err != nil {
-			return errors.Annotatef(err, "failed to get executor")
+			return errors.Annotatef(err, "failed to get executor, target: %s:%d", master.Host, master.SSHPort)
 		}
 		_, stderr, err := e.Execute("mkdir -p "+target, false)
 		if err != nil {
