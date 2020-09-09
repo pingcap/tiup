@@ -14,16 +14,19 @@
 package command
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/url"
 	"time"
 
+	"github.com/fatih/color"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/spf13/cobra"
@@ -54,8 +57,17 @@ func newDisplayCmd() *cobra.Command {
 				return perrs.Errorf("Cluster %s not found", clusterName)
 			}
 
+			metadata, err := spec.ClusterMetadata(clusterName)
+			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+				!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+				return perrs.AddStack(err)
+			}
 			if showDashboardOnly {
-				return displayDashboardInfo(clusterName)
+				tlsCfg, err := metadata.Topology.TLSConfig(tidbSpec.Path(clusterName, spec.TLSCertKeyDir))
+				if err != nil {
+					return perrs.AddStack(err)
+				}
+				return displayDashboardInfo(clusterName, tlsCfg)
 			}
 
 			err = manager.Display(clusterName, gOpt)
@@ -63,11 +75,6 @@ func newDisplayCmd() *cobra.Command {
 				return perrs.AddStack(err)
 			}
 
-			metadata, err := spec.ClusterMetadata(clusterName)
-			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
-				!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-				return perrs.AddStack(err)
-			}
 			return destroyTombstoneIfNeed(clusterName, metadata, gOpt)
 		},
 	}
@@ -79,7 +86,7 @@ func newDisplayCmd() *cobra.Command {
 	return cmd
 }
 
-func displayDashboardInfo(clusterName string) error {
+func displayDashboardInfo(clusterName string, tlsCfg *tls.Config) error {
 	metadata, err := spec.ClusterMetadata(clusterName)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
@@ -91,7 +98,7 @@ func displayDashboardInfo(clusterName string) error {
 		pdEndpoints = append(pdEndpoints, fmt.Sprintf("%s:%d", pd.Host, pd.ClientPort))
 	}
 
-	pdAPI := api.NewPDClient(pdEndpoints, 2*time.Second, nil)
+	pdAPI := api.NewPDClient(pdEndpoints, 2*time.Second, tlsCfg)
 	dashboardAddr, err := pdAPI.GetDashboardAddress()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve TiDB Dashboard instance from PD: %s", err)
@@ -108,7 +115,21 @@ func displayDashboardInfo(clusterName string) error {
 	}
 
 	u.Path = "/dashboard/"
-	fmt.Println(u.String())
+
+	if tlsCfg != nil {
+		fmt.Println(
+			"Client certificate:",
+			color.CyanString(tidbSpec.Path(clusterName, spec.TLSCertKeyDir, spec.PFXClientCert)),
+		)
+		fmt.Println(
+			"Certificate password:",
+			color.CyanString(crypto.PKCS12Password),
+		)
+	}
+	fmt.Println(
+		"Dashboard URL:",
+		color.CyanString(u.String()),
+	)
 
 	return nil
 }
@@ -120,19 +141,24 @@ func destroyTombstoneIfNeed(clusterName string, metadata *spec.ClusterMeta, opt 
 		return nil
 	}
 
+	tlsCfg, err := topo.TLSConfig(tidbSpec.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return perrs.AddStack(err)
+	}
+
 	ctx := task.NewContext()
-	err := ctx.SetSSHKeySet(spec.ClusterPath(clusterName, "ssh", "id_rsa"),
+	err = ctx.SetSSHKeySet(spec.ClusterPath(clusterName, "ssh", "id_rsa"),
 		spec.ClusterPath(clusterName, "ssh", "id_rsa.pub"))
 	if err != nil {
 		return perrs.AddStack(err)
 	}
 
-	err = ctx.SetClusterSSH(topo, metadata.User, gOpt.SSHTimeout, gOpt.NativeSSH)
+	err = ctx.SetClusterSSH(topo, metadata.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
 
-	nodes, err := operator.DestroyTombstone(ctx, topo, true /* returnNodesOnly */, opt)
+	nodes, err := operator.DestroyTombstone(ctx, topo, true /* returnNodesOnly */, opt, tlsCfg)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -143,7 +169,7 @@ func destroyTombstoneIfNeed(clusterName string, metadata *spec.ClusterMeta, opt 
 
 	log.Infof("Start destroy Tombstone nodes: %v ...", nodes)
 
-	_, err = operator.DestroyTombstone(ctx, topo, false /* returnNodesOnly */, opt)
+	_, err = operator.DestroyTombstone(ctx, topo, false /* returnNodesOnly */, opt, tlsCfg)
 	if err != nil {
 		return perrs.AddStack(err)
 	}

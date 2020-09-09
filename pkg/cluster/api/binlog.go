@@ -40,7 +40,6 @@ func NewBinlogClient(pdEndpoint []string, tlsConfig *tls.Config) (*BinlogClient,
 		DialTimeout: time.Second * 5,
 		TLS:         tlsConfig,
 	})
-
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}

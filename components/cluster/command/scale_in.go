@@ -14,6 +14,8 @@
 package command
 
 import (
+	"crypto/tls"
+
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -32,16 +34,27 @@ func newScaleInCmd() *cobra.Command {
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			scale := func(b *task.Builder, imetadata spec.Metadata) {
+			scale := func(b *task.Builder, imetadata spec.Metadata, tlsCfg *tls.Config) {
 				metadata := imetadata.(*spec.ClusterMeta)
+
 				if !gOpt.Force {
-					b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt).
+					b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt, tlsCfg).
 						UpdateMeta(clusterName, metadata, operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false)).
-						UpdateTopology(clusterName, metadata, operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false))
+						UpdateTopology(
+							clusterName,
+							tidbSpec.Path(clusterName),
+							metadata,
+							operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false), /* deleteNodeIds */
+						)
 				} else {
-					b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt).
+					b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt, tlsCfg).
 						UpdateMeta(clusterName, metadata, gOpt.Nodes).
-						UpdateTopology(clusterName, metadata, gOpt.Nodes)
+						UpdateTopology(
+							clusterName,
+							tidbSpec.Path(clusterName),
+							metadata,
+							gOpt.Nodes,
+						)
 				}
 			}
 
@@ -50,7 +63,7 @@ func newScaleInCmd() *cobra.Command {
 				skipConfirm,
 				gOpt.OptTimeout,
 				gOpt.SSHTimeout,
-				gOpt.NativeSSH,
+				gOpt.SSHType,
 				gOpt.Force,
 				gOpt.Nodes,
 				scale,

@@ -24,6 +24,7 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -57,11 +58,6 @@ conflict checks with other clusters`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
-			}
-
-			// natvie ssh has it's own logic to find the default identity_file
-			if gOpt.NativeSSH && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
-				opt.identityFile = ""
 			}
 
 			var topo spec.Specification
@@ -103,9 +99,17 @@ conflict checks with other clusters`,
 				}
 			}
 
-			sshConnProps, err := cliutil.ReadIdentityFileOrPassword(opt.identityFile, opt.usePassword, nil)
-			if err != nil {
-				return err
+			// natvie ssh has it's own logic to find the default identity_file
+			if gOpt.SSHType == executor.SSHTypeSystem && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
+				opt.identityFile = ""
+			}
+
+			var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
+			if gOpt.SSHType != executor.SSHTypeNone {
+				var err error
+				if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.identityFile, opt.usePassword, nil); err != nil {
+					return err
+				}
 			}
 
 			return checkSystemInfo(sshConnProps, &topo, &opt)
@@ -165,7 +169,8 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 					s.IdentityFile,
 					s.IdentityFilePassphrase,
 					gOpt.SSHTimeout,
-					gOpt.NativeSSH,
+					gOpt.SSHType,
+					topo.GlobalOptions.SSHType,
 				).
 				Mkdir(opt.user, inst.GetHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
 				CopyComponent(
@@ -286,7 +291,8 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 					s.IdentityFile,
 					s.IdentityFilePassphrase,
 					gOpt.SSHTimeout,
-					gOpt.NativeSSH,
+					gOpt.SSHType,
+					topo.GlobalOptions.SSHType,
 				).
 				Rmdir(inst.GetHost(), task.CheckToolsPathDir).
 				BuildAsStep(fmt.Sprintf("  - Cleanup check files on %s:%d", inst.GetHost(), inst.GetSSHPort()))
@@ -326,7 +332,8 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 				s.IdentityFile,
 				s.IdentityFilePassphrase,
 				gOpt.SSHTimeout,
-				gOpt.NativeSSH,
+				gOpt.SSHType,
+				topo.GlobalOptions.SSHType,
 			)
 		resLines, err := handleCheckResults(ctx, host, opt, tf)
 		if err != nil {
@@ -410,7 +417,7 @@ func fixFailedChecks(ctx *task.Context, host string, res *operator.CheckResult, 
 		if len(fields) < 2 {
 			return "", fmt.Errorf("can not perform action of service, %s", res.Msg)
 		}
-		t.SystemCtl(host, fields[1], fields[0])
+		t.SystemCtl(host, fields[1], fields[0], false)
 		msg = fmt.Sprintf("will try to '%s'", color.HiBlueString(res.Msg))
 	case operator.CheckNameSysctl:
 		fields := strings.Fields(res.Msg)

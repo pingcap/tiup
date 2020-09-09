@@ -1,6 +1,5 @@
 global:
-  user: tidb
-  group: pingcap
+  enable_tls: true
 
 server_configs:
     tidb:
@@ -25,16 +24,8 @@ pd_servers:
 tikv_servers:
   - host: 172.19.0.102
   - host: 172.19.0.103
-    data_dir: "/home/tidb/my_kv_data"
   - host: 172.19.0.104
   - host: 172.19.0.105
-
-# tiflash eat too much memory
-# and binary is more than 1G..
-tiflash_servers:
-  - host: 172.19.0.103
-#   - host: 172.19.0.104
-#   - host: 172.19.0.105
 
 pump_servers:
   - host: 172.19.0.103
@@ -48,23 +39,9 @@ drainer_servers:
     config:
         syncer.db-type: "file"
 
-cdc_servers:
-  - host: 172.19.0.103
-  - host: 172.19.0.104
-  - host: 172.19.0.105
-
-tispark_masters:
-  - host: 172.19.0.103
-
-tispark_workers:
-  - host: 172.19.0.104
-
 monitoring_servers:
   - host: 172.19.0.101
-    rule_dir: /tmp/local/prometheus
 grafana_servers:
   - host: 172.19.0.101
-    dashboard_dir: /tmp/local/grafana
 alertmanager_servers:
   - host: 172.19.0.101
-    config_file: /tmp/local/alertmanager/alertmanager.yml

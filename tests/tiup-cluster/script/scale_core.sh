@@ -4,7 +4,8 @@ function scale_core() {
     mkdir -p ~/.tiup/bin/
 
     version=$1
-    native_ssh=$2
+    test_tls=$2
+    native_ssh=$3
 
     client=""
     if [ $native_ssh == true ]; then
@@ -12,7 +13,11 @@ function scale_core() {
     fi
 
     name="test_scale_core_$RANDOM"
-    topo=./topo/full_without_cdc.yaml
+    if [ $test_tls = true ]; then
+        topo=./topo/full_tls.yaml
+    else
+        topo=./topo/full.yaml
+    fi
 
     tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa
 
@@ -26,7 +31,11 @@ function scale_core() {
 
     tiup-cluster $client reload $name --skip-restart
 
-    total_sub_one=18
+    if [ $test_tls = true ]; then
+        total_sub_one=18
+    else
+        total_sub_one=21
+    fi
 
     echo "start scale in tidb"
     tiup-cluster $client --yes scale-in $name -N 172.19.0.101:4000

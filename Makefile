@@ -90,9 +90,9 @@ tidy:
 
 clean:
 	@rm -rf bin
+	@rm -rf cover
 
 cover-dir:
-	rm -rf cover
 	mkdir -p cover
 
 # Run tests

@@ -15,6 +15,7 @@ curl https://tiup-mirrors.pingcap.com/root.json -o $TMP_DIR/home/bin/root.json
 rm -rf $TIUP_HOME/data
 mkdir -p $TIUP_HOME/data
 export TIUP_INSTANCE_DATA_DIR=$TIUP_HOME/data/test_play
+mkdir $TIUP_INSTANCE_DATA_DIR
 
 mkdir -p $TEST_DIR/cover
 
@@ -56,10 +57,6 @@ trap "kill_all > /dev/null 2>&1" EXIT
 
 # wait start cluster successfully
 timeout 300 grep -q "CLUSTER START SUCCESSFULLY" <(tail -f $outfile)
-# playground dump this at the wd
-sleep 3
-mv ./dsn $TIUP_INSTANCE_DATA_DIR/
-mv ./port $TIUP_INSTANCE_DATA_DIR/
 
 tiup-playground display | grep -qv "exit"
 tiup-playground scale-out --db 2

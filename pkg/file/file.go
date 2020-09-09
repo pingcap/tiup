@@ -10,8 +10,8 @@ import (
 	"github.com/pingcap/errors"
 )
 
-// SaveFileWithBackup will backup the file before save is.
-// back meta.yaml as meta-2006-01-02T15:04:05Z07:00.yaml
+// SaveFileWithBackup will backup the file before save it.
+// e.g., backup meta.yaml as meta-2006-01-02T15:04:05Z07:00.yaml
 // backup the files in the same dir of path if backupDir is empty.
 func SaveFileWithBackup(path string, data []byte, backupDir string) error {
 	timestr := time.Now().Format(time.RFC3339Nano)

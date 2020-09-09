@@ -17,14 +17,14 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/tiup/pkg/cluster"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/utils"
-	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 func newScaleOutCmd() *cobra.Command {
 	opt := cluster.ScaleOutOptions{
-		IdentityFile: filepath.Join(tiuputils.UserHome(), ".ssh", "id_rsa"),
+		IdentityFile: filepath.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
 		Use:          "scale-out <cluster-name> <topology.yaml>",
@@ -36,7 +36,7 @@ func newScaleOutCmd() *cobra.Command {
 			}
 
 			// natvie ssh has it's own logic to find the default identity_file
-			if gOpt.NativeSSH && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
+			if gOpt.SSHType == executor.SSHTypeSystem && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
 				opt.IdentityFile = ""
 			}
 
@@ -52,12 +52,12 @@ func newScaleOutCmd() *cobra.Command {
 				skipConfirm,
 				gOpt.OptTimeout,
 				gOpt.SSHTimeout,
-				gOpt.NativeSSH,
+				gOpt.SSHType,
 			)
 		},
 	}
 
-	cmd.Flags().StringVarP(&opt.User, "user", "u", tiuputils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
+	cmd.Flags().StringVarP(&opt.User, "user", "u", utils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
 	cmd.Flags().StringVarP(&opt.IdentityFile, "identity_file", "i", opt.IdentityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.UsePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 

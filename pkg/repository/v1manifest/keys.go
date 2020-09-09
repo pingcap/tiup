@@ -19,7 +19,7 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/repository/crypto"
+	"github.com/pingcap/tiup/pkg/crypto"
 )
 
 // ShortKeyIDLength is the number of bytes used for filenames
@@ -43,7 +43,7 @@ func NewKeyInfo(privKey []byte) *KeyInfo {
 // GenKeyInfo generate a new private KeyInfo
 func GenKeyInfo() (*KeyInfo, error) {
 	// TODO: support other key type and scheme
-	_, priv, err := crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
+	priv, err := crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
 	if err != nil {
 		return nil, err
 	}

@@ -16,6 +16,7 @@ package spec
 import (
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path"
 	"path/filepath"
 	"testing"
@@ -45,7 +46,10 @@ func TestLocalDashboards(t *testing.T) {
 	assert.Equal(t, len(ints), 1)
 	grafanaInstance := ints[0].(*GrafanaInstance)
 
-	e := &executor.Local{}
+	user, err := user.Current()
+	assert.Nil(t, err)
+	e, err := executor.New(executor.SSHTypeNone, false, executor.SSHConfig{Host: "127.0.0.1", User: user.Username})
+	assert.Nil(t, err)
 	err = grafanaInstance.initDashboards(e, topo.Grafana[0], meta.DirPaths{Deploy: deployDir})
 	assert.Nil(t, err)
 

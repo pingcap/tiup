@@ -16,6 +16,7 @@ package executor
 import (
 	"io/ioutil"
 	"os"
+	"os/user"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,8 +24,11 @@ import (
 
 func TestLocal(t *testing.T) {
 	assert := require.New(t)
-	local := new(Local)
-	_, _, err := local.Execute("ls .", false)
+	user, err := user.Current()
+	assert.Nil(err)
+	local, err := New(SSHTypeNone, false, SSHConfig{Host: "127.0.0.1", User: user.Username})
+	assert.Nil(err)
+	_, _, err = local.Execute("ls .", false)
 	assert.Nil(err)
 
 	// generate a src file and write some data
@@ -52,4 +56,13 @@ func TestLocal(t *testing.T) {
 	data, err := ioutil.ReadFile(dst.Name())
 	assert.Nil(err)
 	assert.Equal("src", string(data))
+}
+
+func TestWrongIP(t *testing.T) {
+	assert := require.New(t)
+	user, err := user.Current()
+	assert.Nil(err)
+	_, err = New(SSHTypeNone, false, SSHConfig{Host: "127.0.0.2", User: user.Username})
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "not found")
 }

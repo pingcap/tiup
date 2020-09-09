@@ -31,11 +31,12 @@ type AlertManagerScript struct {
 	DataDir     string
 	LogDir      string
 	NumaNode    string
+	TLSEnabled  bool
 	EndPoints   []*AlertManagerScript
 }
 
 // NewAlertManagerScript returns a AlertManagerScript with given arguments
-func NewAlertManagerScript(ip, deployDir, dataDir, logDir string) *AlertManagerScript {
+func NewAlertManagerScript(ip, deployDir, dataDir, logDir string, enableTLS bool) *AlertManagerScript {
 	return &AlertManagerScript{
 		IP:          ip,
 		WebPort:     9093,
@@ -43,6 +44,7 @@ func NewAlertManagerScript(ip, deployDir, dataDir, logDir string) *AlertManagerS
 		DeployDir:   deployDir,
 		DataDir:     dataDir,
 		LogDir:      logDir,
+		TLSEnabled:  enableTLS,
 	}
 }
 

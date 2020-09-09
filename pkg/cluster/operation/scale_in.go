@@ -14,6 +14,7 @@
 package operator
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -71,8 +72,9 @@ func ScaleIn(
 	getter ExecutorGetter,
 	cluster *spec.Specification,
 	options Options,
+	tlsCfg *tls.Config,
 ) error {
-	return ScaleInCluster(getter, cluster, options)
+	return ScaleInCluster(getter, cluster, options, tlsCfg)
 }
 
 // ScaleInCluster scales in the cluster
@@ -80,6 +82,7 @@ func ScaleInCluster(
 	getter ExecutorGetter,
 	cluster *spec.Specification,
 	options Options,
+	tlsCfg *tls.Config,
 ) error {
 	// instances by uuid
 	instances := map[string]spec.Instance{}
@@ -126,8 +129,8 @@ func ScaleInCluster(
 					continue
 				}
 
-				pdClient := api.NewPDClient(pdEndpoint, 10*time.Second, nil)
-				binlogClient, _ := api.NewBinlogClient(pdEndpoint, nil /* tls.Config */)
+				pdClient := api.NewPDClient(pdEndpoint, 10*time.Second, tlsCfg)
+				binlogClient, _ := api.NewBinlogClient(pdEndpoint, tlsCfg)
 
 				if component.Name() != spec.ComponentPump && component.Name() != spec.ComponentDrainer {
 					if err := deleteMember(component, instance, pdClient, binlogClient, options.APITimeout); err != nil {
@@ -172,9 +175,9 @@ func ScaleInCluster(
 		return errors.New("cannot find available PD instance")
 	}
 
-	pdClient = api.NewPDClient(pdEndpoint, 10*time.Second, nil)
+	pdClient = api.NewPDClient(pdEndpoint, 10*time.Second, tlsCfg)
 
-	binlogClient, err := api.NewBinlogClient(pdEndpoint, nil /* tls.Config */)
+	binlogClient, err := api.NewBinlogClient(pdEndpoint, tlsCfg)
 	if err != nil {
 		return err
 	}

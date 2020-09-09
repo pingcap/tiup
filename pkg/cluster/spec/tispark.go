@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -66,9 +67,13 @@ func (s TiSparkMasterSpec) IsImported() bool {
 }
 
 // Status queries current status of the instance
-func (s TiSparkMasterSpec) Status(pdList ...string) string {
-	url := fmt.Sprintf("http://%s:%d/", s.Host, s.WebPort)
-	return statusByURL(url)
+func (s TiSparkMasterSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
+	scheme := "http"
+	if tlsCfg != nil {
+		scheme = "https"
+	}
+	url := fmt.Sprintf("%s://%s:%d/", scheme, s.Host, s.WebPort)
+	return statusByURL(url, tlsCfg)
 }
 
 // TiSparkWorkerSpec is the topology specification for TiSpark slave nodes
@@ -106,9 +111,13 @@ func (s TiSparkWorkerSpec) IsImported() bool {
 }
 
 // Status queries current status of the instance
-func (s TiSparkWorkerSpec) Status(pdList ...string) string {
-	url := fmt.Sprintf("http://%s:%d/", s.Host, s.WebPort)
-	return statusByURL(url)
+func (s TiSparkWorkerSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
+	scheme := "http"
+	if tlsCfg != nil {
+		scheme = "https"
+	}
+	url := fmt.Sprintf("%s://%s:%d/", scheme, s.Host, s.WebPort)
+	return statusByURL(url, tlsCfg)
 }
 
 // TiSparkMasterComponent represents TiSpark master component.
@@ -181,7 +190,13 @@ func (i *TiSparkMasterInstance) GetJavaHome() string {
 }
 
 // InitConfig implement Instance interface
-func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiSparkMasterInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	// generate systemd service to invoke spark's start/stop scripts
 	comp := i.Role()
 	host := i.GetHost()
@@ -254,8 +269,14 @@ func (i *TiSparkMasterInstance) InitConfig(e executor.Executor, clusterName, clu
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiSparkMasterInstance) ScaleConfig(e executor.Executor, topo Topology,
-	clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiSparkMasterInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	s := i.topo
 	defer func() { i.topo = s }()
 	cluster := mustBeClusterTopo(topo)
@@ -315,7 +336,13 @@ func (i *TiSparkWorkerInstance) GetJavaHome() string {
 }
 
 // InitConfig implement Instance interface
-func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiSparkWorkerInstance) InitConfig(
+	e executor.Executor,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	// generate systemd service to invoke spark's start/stop scripts
 	comp := i.Role()
 	host := i.GetHost()
@@ -403,8 +430,14 @@ func (i *TiSparkWorkerInstance) InitConfig(e executor.Executor, clusterName, clu
 }
 
 // ScaleConfig deploy temporary config on scaling
-func (i *TiSparkWorkerInstance) ScaleConfig(e executor.Executor, topo Topology,
-	clusterName, clusterVersion, deployUser string, paths meta.DirPaths) error {
+func (i *TiSparkWorkerInstance) ScaleConfig(
+	e executor.Executor,
+	topo Topology,
+	clusterName,
+	clusterVersion,
+	deployUser string,
+	paths meta.DirPaths,
+) error {
 	s := i.topo
 	defer func() { i.topo = s }()
 	cluster := mustBeClusterTopo(topo)

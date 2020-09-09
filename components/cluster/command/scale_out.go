@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/tiup/pkg/cluster"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -42,7 +43,7 @@ func newScaleOutCmd() *cobra.Command {
 			}
 
 			// natvie ssh has it's own logic to find the default identity_file
-			if gOpt.NativeSSH && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
+			if gOpt.SSHType == executor.SSHTypeSystem && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
 				opt.IdentityFile = ""
 			}
 
@@ -63,7 +64,7 @@ func newScaleOutCmd() *cobra.Command {
 				skipConfirm,
 				gOpt.OptTimeout,
 				gOpt.SSHTimeout,
-				gOpt.NativeSSH,
+				gOpt.SSHType,
 			)
 		},
 	}
@@ -87,7 +88,11 @@ func convertStepDisplaysToTasks(t []*task.StepDisplay) []task.Task {
 
 // Final do things after scale out
 func Final(builder *task.Builder, name string, meta spec.Metadata) {
-	builder.UpdateTopology(name, meta.(*spec.ClusterMeta), nil)
+	builder.UpdateTopology(name,
+		tidbSpec.Path(name),
+		meta.(*spec.ClusterMeta),
+		nil, /* deleteNodeIds */
+	)
 }
 
 // PostScaleOutHook do things after scale out
