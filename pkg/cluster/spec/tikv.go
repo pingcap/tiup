@@ -390,7 +390,7 @@ func makeTransport(tlsCfg *tls.Config) (*http.Transport, error) {
 	transport.DisableKeepAlives = true
 	// Timeout early if the server doesn't even return the headers.
 	transport.ResponseHeaderTimeout = time.Minute
-	// TODO: use tlsCfg
-	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	// We should clone a tlsCfg because we use it across goroutine
+	transport.TLSClientConfig = tlsCfg.Clone()
 	return transport, nil
 }
