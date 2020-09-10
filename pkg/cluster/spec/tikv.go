@@ -355,10 +355,7 @@ func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int
 			return 0, fmt.Errorf("TiKV instance with ID %s not found, found %s", id, strings.Join(foundIds, ","))
 		}
 
-		transport, err := makeTransport(tlsCfg)
-		if err != nil {
-			return 0, err
-		}
+		transport := makeTransport(tlsCfg)
 
 		mfChan := make(chan *dto.MetricFamily, 1024)
 		go func() {
@@ -385,21 +382,17 @@ func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int
 				continue
 			}
 			for _, m := range fm.Metrics {
-				if m, ok := m.(prom2json.Metric); !ok {
-					continue
-				} else if m.Labels["type"] != labelNameLeaderCount {
-					continue
-				} else {
+				if m, ok := m.(prom2json.Metric); ok && m.Labels["type"] == labelNameLeaderCount {
 					return strconv.Atoi(m.Value)
 				}
 			}
 		}
 
-		return 0, errors.AddStack(fmt.Errorf("metric %s{type=\"%s\"} not found", metricNameRegionCount, labelNameLeaderCount))
+		return 0, errors.Errorf("metric %s{type=\"%s\"} not found", metricNameRegionCount, labelNameLeaderCount)
 	}
 }
 
-func makeTransport(tlsCfg *tls.Config) (*http.Transport, error) {
+func makeTransport(tlsCfg *tls.Config) *http.Transport {
 	// Start with the DefaultTransport for sane defaults.
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	// Conservatively disable HTTP keep-alives as this program will only
@@ -411,5 +404,5 @@ func makeTransport(tlsCfg *tls.Config) (*http.Transport, error) {
 	if tlsCfg != nil {
 		transport.TLSClientConfig = tlsCfg.Clone()
 	}
-	return transport, nil
+	return transport
 }
