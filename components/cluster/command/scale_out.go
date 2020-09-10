@@ -59,7 +59,7 @@ func newScaleOutCmd() *cobra.Command {
 				clusterName,
 				topoFile,
 				PostScaleOutHook,
-				Final,
+				final,
 				opt,
 				skipConfirm,
 				gOpt.OptTimeout,
@@ -86,8 +86,7 @@ func convertStepDisplaysToTasks(t []*task.StepDisplay) []task.Task {
 	return tasks
 }
 
-// Final do things after scale out
-func Final(builder *task.Builder, name string, meta spec.Metadata) {
+func final(builder *task.Builder, name string, meta spec.Metadata) {
 	builder.UpdateTopology(name,
 		tidbSpec.Path(name),
 		meta.(*spec.ClusterMeta),

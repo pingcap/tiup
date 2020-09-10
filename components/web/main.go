@@ -300,12 +300,20 @@ func scaleOutClusterHandler(c *gin.Context) {
 		opt.Pass = &req.GlobalLoginOptions.PrivateKeyPassword
 	}
 
+	final := func(builder *task.Builder, name string, meta spec.Metadata) {
+		builder.UpdateTopology(name,
+			tidbSpec.Path(name),
+			meta.(*spec.ClusterMeta),
+			nil, /* deleteNodeIds */
+		)
+	}
+
 	go func() {
 		manager.DoScaleOut(
 			clusterName,
 			topoFilePath,
 			command.PostScaleOutHook,
-			command.Final,
+			final,
 			opt,
 			true,
 			120,
