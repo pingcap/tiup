@@ -363,12 +363,15 @@ func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int
 		mfChan := make(chan *dto.MetricFamily, 1024)
 		go func() {
 			addr := fmt.Sprintf("http://%s/metrics", statusAddress)
-			if tlsCfg != nil {
+			// XXX: https://github.com/tikv/tikv/issues/5340
+			//		Some TiKV versions don't handle https correctly
+			//      So we check if it's in that case first
+			if _, err := http.Get(addr); err != nil && tlsCfg != nil {
 				addr = fmt.Sprintf("https://%s/metrics", statusAddress)
 			}
-			err := prom2json.FetchMetricFamilies(addr, mfChan, transport)
-			if err != nil {
-				log.Errorf("failed counting leader on %s, %v", id, err)
+
+			if err := prom2json.FetchMetricFamilies(addr, mfChan, transport); err != nil {
+				log.Errorf("failed counting leader on %s (status addr %s), %v", id, addr, err)
 			}
 		}()
 
