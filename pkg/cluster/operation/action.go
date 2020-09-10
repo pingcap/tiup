@@ -222,6 +222,7 @@ func DestroyClusterTombstone(
 		}
 
 		instances := (&spec.TiFlashComponent{Specification: cluster}).Instances()
+		id = s.Host + ":" + strconv.Itoa(s.GetMainPort())
 		instances = filterID(instances, id)
 
 		err = StopComponent(getter, instances, options.OptTimeout)
