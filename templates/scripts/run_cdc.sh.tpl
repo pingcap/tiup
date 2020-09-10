@@ -31,7 +31,7 @@ exec bin/cdc server \
 {{- end}}
 {{- if .GCTTL}}
     --gc-ttl {{.GCTTL}} \
-{{- end}
+{{- end}}
 {{- if .TZ}}
     --tz "{{.TZ}}" \
 {{- end}}
