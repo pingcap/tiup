@@ -1,40 +1,44 @@
-package main
+package web
 
 import (
+	"context"
 	"crypto/tls"
 	"io/ioutil"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pingcap/tiup/components/cluster/command"
-	"github.com/pingcap/tiup/components/web/uiserver"
+	"github.com/pingcap/tiup/components/cluster/web/uiserver"
 
 	"github.com/pingcap/tiup/pkg/cluster"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	cors "github.com/rs/cors/wrapper/gin"
 )
 
-var tidbSpec *spec.SpecManager
-var manager *cluster.Manager
+var (
+	tidbSpec    *spec.SpecManager
+	manager     *cluster.Manager
+	gOpt        operator.Options
+	skipConfirm = true
+)
 
-func main() {
-	if err := spec.Initialize("cluster"); err != nil {
-		panic("initialize spec failed")
-	}
-	tidbSpec = spec.GetSpecManager()
-	manager = cluster.NewManager("tidb", tidbSpec, spec.TiDBComponentVersion)
+// Run starts web ui for cluster
+func Run(_tidbSpec *spec.SpecManager, _manager *cluster.Manager, _gOpt operator.Options) {
+	tidbSpec = _tidbSpec
+	manager = _manager
+	gOpt = _gOpt
 
 	router := gin.Default()
 	router.Use(cors.AllowAll())
+	// Backend API
 	api := router.Group("/api")
 	{
-		api.POST("/deploy", deployHandler)
 		api.GET("/status", statusHandler)
 
+		api.POST("/deploy", deployHandler)
 		api.GET("/clusters", clustersHandler)
 		api.GET("/clusters/:clusterName", clusterHandler)
 		api.DELETE("/clusters/:clusterName", destroyClusterHandler)
@@ -43,16 +47,18 @@ func main() {
 		api.POST("/clusters/:clusterName/scale_in", scaleInClusterHandler)
 		api.POST("/clusters/:clusterName/scale_out", scaleOutClusterHandler)
 	}
+	// Frontend assets
 	router.StaticFS("/tiup", uiserver.Assets)
 	router.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusMovedPermanently, "/tiup")
 		c.Abort()
 	})
+
 	_ = router.Run()
 }
 
-// DeployGlobalLoginOptions represents the global options for deploy
-type DeployGlobalLoginOptions struct {
+// GlobalLoginOptions represents the global options for deploy
+type GlobalLoginOptions struct {
 	Username           string `json:"username"`
 	Password           string `json:"password"`
 	PrivateKey         string `json:"privateKey"`         // TODO: refine naming style
@@ -61,10 +67,15 @@ type DeployGlobalLoginOptions struct {
 
 // DeployReq represents for the request of deploy API
 type DeployReq struct {
-	ClusterName        string                   `json:"cluster_name"`
-	TiDBVersion        string                   `json:"tidb_version"`
-	TopoYaml           string                   `json:"topo_yaml"`
-	GlobalLoginOptions DeployGlobalLoginOptions `json:"global_login_options"`
+	ClusterName        string             `json:"cluster_name"`
+	TiDBVersion        string             `json:"tidb_version"`
+	TopoYaml           string             `json:"topo_yaml"`
+	GlobalLoginOptions GlobalLoginOptions `json:"global_login_options"`
+}
+
+func statusHandler(c *gin.Context) {
+	status := manager.GetOperationStatus()
+	c.JSON(http.StatusOK, status)
 }
 
 func deployHandler(c *gin.Context) {
@@ -112,20 +123,15 @@ func deployHandler(c *gin.Context) {
 			req.TiDBVersion,
 			topoFilePath,
 			opt,
-			command.PostDeployHook,
-			true,
-			120,
-			5,
-			executor.SSHTypeBuiltin,
+			postDeployHook,
+			skipConfirm,
+			gOpt.OptTimeout,
+			gOpt.SSHTimeout,
+			gOpt.SSHType,
 		)
 	}()
 
 	c.Status(http.StatusNoContent)
-}
-
-func statusHandler(c *gin.Context) {
-	status := manager.GetOperationStatus()
-	c.JSON(http.StatusOK, status)
 }
 
 func clustersHandler(c *gin.Context) {
@@ -139,11 +145,7 @@ func clustersHandler(c *gin.Context) {
 
 func clusterHandler(c *gin.Context) {
 	clusterName := c.Param("clusterName")
-	instInfos, err := manager.GetClusterTopology(clusterName, operator.Options{
-		SSHTimeout: 5,
-		OptTimeout: 120,
-		APITimeout: 300,
-	})
+	instInfos, err := manager.GetClusterTopology(clusterName, gOpt)
 	if err != nil {
 		_ = c.Error(err)
 		return
@@ -154,11 +156,7 @@ func clusterHandler(c *gin.Context) {
 func destroyClusterHandler(c *gin.Context) {
 	clusterName := c.Param("clusterName")
 	go func() {
-		manager.DoDestroyCluster(clusterName, operator.Options{
-			SSHTimeout: 5,
-			OptTimeout: 120,
-			APITimeout: 300,
-		}, operator.Options{}, true)
+		manager.DoDestroyCluster(clusterName, gOpt, operator.Options{}, skipConfirm)
 	}()
 
 	c.Status(http.StatusNoContent)
@@ -168,11 +166,7 @@ func startClusterHandler(c *gin.Context) {
 	clusterName := c.Param("clusterName")
 
 	go func() {
-		manager.DoStartCluster(clusterName, operator.Options{
-			SSHTimeout: 5,
-			OptTimeout: 120,
-			APITimeout: 300,
-		}, func(b *task.Builder, metadata spec.Metadata) {
+		manager.DoStartCluster(clusterName, gOpt, func(b *task.Builder, metadata spec.Metadata) {
 			b.UpdateTopology(
 				clusterName,
 				tidbSpec.Path(clusterName),
@@ -188,11 +182,7 @@ func startClusterHandler(c *gin.Context) {
 func stopClusterHandler(c *gin.Context) {
 	clusterName := c.Param("clusterName")
 	go func() {
-		manager.DoStopCluster(clusterName, operator.Options{
-			SSHTimeout: 5,
-			OptTimeout: 120,
-			APITimeout: 300,
-		})
+		manager.DoStopCluster(clusterName, gOpt)
 	}()
 
 	c.Status(http.StatusNoContent)
@@ -214,40 +204,41 @@ func scaleInClusterHandler(c *gin.Context) {
 	}
 
 	go func() {
-		gOpt := operator.Options{
-			SSHTimeout: 5,
-			OptTimeout: 120,
-			APITimeout: 300,
-			NativeSSH:  false,
-			Force:      req.Force,
-			Nodes:      req.Nodes}
-
 		// TODO
 		scale := func(b *task.Builder, imetadata spec.Metadata, tlsCfg *tls.Config) {
 			metadata := imetadata.(*spec.ClusterMeta)
 
 			if !gOpt.Force {
 				b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt, tlsCfg).
-					UpdateMeta(clusterName, metadata, operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false)).
+					UpdateMeta(clusterName, metadata, operator.AsyncNodes(metadata.Topology, req.Nodes, false)).
 					UpdateTopology(
 						clusterName,
 						tidbSpec.Path(clusterName),
 						metadata,
-						operator.AsyncNodes(metadata.Topology, gOpt.Nodes, false), /* deleteNodeIds */
+						operator.AsyncNodes(metadata.Topology, req.Nodes, false), /* deleteNodeIds */
 					)
 			} else {
 				b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt, tlsCfg).
-					UpdateMeta(clusterName, metadata, gOpt.Nodes).
+					UpdateMeta(clusterName, metadata, req.Nodes).
 					UpdateTopology(
 						clusterName,
 						tidbSpec.Path(clusterName),
 						metadata,
-						gOpt.Nodes,
+						req.Nodes,
 					)
 			}
 		}
 
-		manager.DoScaleIn(clusterName, true, gOpt.OptTimeout, gOpt.SSHTimeout, executor.SSHTypeBuiltin, gOpt.Force, gOpt.Nodes, scale)
+		manager.DoScaleIn(
+			clusterName,
+			skipConfirm,
+			gOpt.OptTimeout,
+			gOpt.SSHTimeout,
+			gOpt.SSHType,
+			req.Force,
+			req.Nodes,
+			scale,
+		)
 	}()
 
 	c.Status(http.StatusNoContent)
@@ -255,8 +246,8 @@ func scaleInClusterHandler(c *gin.Context) {
 
 // ScaleOutReq represents the request for scale out
 type ScaleOutReq struct {
-	TopoYaml           string                   `json:"topo_yaml"`
-	GlobalLoginOptions DeployGlobalLoginOptions `json:"global_login_options"`
+	TopoYaml           string             `json:"topo_yaml"`
+	GlobalLoginOptions GlobalLoginOptions `json:"global_login_options"`
 }
 
 func scaleOutClusterHandler(c *gin.Context) {
@@ -312,15 +303,57 @@ func scaleOutClusterHandler(c *gin.Context) {
 		manager.DoScaleOut(
 			clusterName,
 			topoFilePath,
-			command.PostScaleOutHook,
+			postScaleOutHook,
 			final,
 			opt,
-			true,
-			120,
-			5,
-			executor.SSHTypeBuiltin,
+			skipConfirm,
+			gOpt.OptTimeout,
+			gOpt.SSHTimeout,
+			gOpt.SSHType,
 		)
 	}()
 
 	c.Status(http.StatusNoContent)
+}
+
+//////////////////////////////////////
+// The following code are copied from command package to avoid cycle import
+
+// Deprecated
+func convertStepDisplaysToTasks(t []*task.StepDisplay) []task.Task {
+	tasks := make([]task.Task, 0, len(t))
+	for _, sd := range t {
+		tasks = append(tasks, sd)
+	}
+	return tasks
+}
+
+func postDeployHook(builder *task.Builder, topo spec.Topology) {
+	nodeInfoTask := task.NewBuilder().Func("Check status", func(ctx *task.Context) error {
+		_, _ = operator.GetNodeInfo(context.Background(), ctx, topo)
+		// intend to never return error
+		return nil
+	}).BuildAsStep("Check status").SetHidden(true)
+
+	if report.Enable() {
+		builder.ParallelStep("+ Check status", nodeInfoTask)
+	}
+
+	enableTask := task.NewBuilder().Func("Enable cluster", func(ctx *task.Context) error {
+		return operator.Enable(ctx, topo, operator.Options{}, true)
+	}).BuildAsStep("Enable cluster").SetHidden(true)
+
+	builder.ParallelStep("+ Enable cluster", enableTask)
+}
+
+func postScaleOutHook(builder *task.Builder, newPart spec.Topology) {
+	nodeInfoTask := task.NewBuilder().Func("Check status", func(ctx *task.Context) error {
+		_, _ = operator.GetNodeInfo(context.Background(), ctx, newPart)
+		// intend to never return error
+		return nil
+	}).BuildAsStep("Check status").SetHidden(true)
+
+	if report.Enable() {
+		builder.Parallel(convertStepDisplaysToTasks([]*task.StepDisplay{nodeInfoTask})...)
+	}
 }

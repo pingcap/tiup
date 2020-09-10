@@ -58,7 +58,7 @@ func newScaleOutCmd() *cobra.Command {
 			return manager.ScaleOut(
 				clusterName,
 				topoFile,
-				PostScaleOutHook,
+				postScaleOutHook,
 				final,
 				opt,
 				skipConfirm,
@@ -94,8 +94,7 @@ func final(builder *task.Builder, name string, meta spec.Metadata) {
 	)
 }
 
-// PostScaleOutHook do things after scale out
-func PostScaleOutHook(builder *task.Builder, newPart spec.Topology) {
+func postScaleOutHook(builder *task.Builder, newPart spec.Topology) {
 	nodeInfoTask := task.NewBuilder().Func("Check status", func(ctx *task.Context) error {
 		var err error
 		teleNodeInfos, err = operator.GetNodeInfo(context.Background(), ctx, newPart)

@@ -24,6 +24,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
+	"github.com/pingcap/tiup/components/cluster/web"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -86,6 +87,7 @@ func init() {
 		gOpt.NativeSSH = true
 	}
 
+	var runUI bool
 	rootCmd = &cobra.Command{
 		Use:           cliutil.OsArgs0(),
 		Short:         "Deploy a TiDB cluster for production",
@@ -124,6 +126,14 @@ func init() {
 
 			return nil
 		},
+		Run: func(cmd *cobra.Command, args []string) {
+			if runUI {
+				fmt.Println("Start to run cluster web ui")
+				web.Run(tidbSpec, manager, gOpt)
+				return
+			}
+			_ = cmd.Help()
+		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 			return tiupmeta.GlobalEnv().V1Repository().Mirror().Close()
 		},
@@ -139,6 +149,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "Use the native SSH client installed on local system instead of the build-in one (experimental).")
 	rootCmd.PersistentFlags().StringVar((*string)(&gOpt.SSHType), "ssh", "", "(experimental) The executor type: 'builtin', 'system', 'none'.")
 	_ = rootCmd.PersistentFlags().MarkHidden("native-ssh")
+
+	rootCmd.Flags().BoolVar(&runUI, "ui", false, "Run web ui for cluster")
 
 	rootCmd.AddCommand(
 		newCheckCmd(),

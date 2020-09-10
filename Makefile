@@ -32,7 +32,7 @@ include ./tests/Makefile
 # Build TiUP and all components
 build: tiup components
 
-components: playground client cluster dm bench web server
+components: playground client cluster dm bench server
 
 tiup:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
@@ -62,12 +62,12 @@ embed_ui:
 	cd web-ui && yarn && yarn build
 	scripts/embed_ui_assets.sh
 
-web:
-ifeq ($(UI),1)
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -tags ui_server -o bin/tiup-web ./components/web
-else
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-web ./components/web
-endif
+# web:
+# ifeq ($(UI),1)
+# 	$(GOBUILD) -ldflags '$(LDFLAGS)' -tags ui_server -o bin/tiup-web ./components/web
+# else
+# 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-web ./components/web
+# endif
 
 server:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-server ./server
