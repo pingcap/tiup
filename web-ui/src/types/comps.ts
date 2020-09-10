@@ -297,8 +297,8 @@ export class PDComp extends BaseComp {
 
   public increasePorts(comp: BaseComp) {
     const c = comp as PDComp
-    this.client_port = (c.client_port || DEF_PD_CLIENT_PORT) + 1
-    this.peer_port = (c.peer_port || DEF_PD_PEER_PORT) + 1
+    this.client_port = (c.client_port || DEF_PD_CLIENT_PORT) + 2
+    this.peer_port = (c.peer_port || DEF_PD_PEER_PORT) + 2
   }
 }
 
@@ -383,7 +383,7 @@ export class AlertManagerComp extends BaseComp {
 
   public increasePorts(comp: BaseComp) {
     const c = comp as AlertManagerComp
-    this.web_port = (c.web_port || DEF_ALERT_WEB_PORT) + 1
-    this.cluster_port = (c.cluster_port || DEF_ALERT_CLUSTER_PORT) + 1
+    this.web_port = (c.web_port || DEF_ALERT_WEB_PORT) + 2
+    this.cluster_port = (c.cluster_port || DEF_ALERT_CLUSTER_PORT) + 2
   }
 }
