@@ -183,7 +183,7 @@ func (e *EasySSHExecutor) Transfer(src string, dst string, download bool) error 
 	if !download {
 		err := e.Config.Scp(src, dst)
 		if err != nil {
-			return errors.Annotatef(err, "failed to scp %s to (%s@%s):%s", src, e.Config.User, e.Config.Server, dst)
+			return errors.Annotatef(err, "failed to scp %s to %s@%s:%s", src, e.Config.User, e.Config.Server, dst)
 		}
 		return nil
 	}
