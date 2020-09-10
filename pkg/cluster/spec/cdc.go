@@ -32,6 +32,8 @@ type CDCSpec struct {
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	Offline         bool                   `yaml:"offline,omitempty"`
+	GCTTL           int64                  `yaml:"gc-ttl,omitempty"`
+	TZ              string                 `yaml:"tz,omitempty"`
 	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
 	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
 	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
@@ -146,6 +148,8 @@ func (i *CDCInstance) InitConfig(
 		paths.Deploy,
 		paths.Log,
 		enableTLS,
+		spec.GCTTL,
+		spec.TZ,
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.topo.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_cdc_%s_%d.sh", i.GetHost(), i.GetPort()))
