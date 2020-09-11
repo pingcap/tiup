@@ -14,6 +14,7 @@ const { Sider, Content } = Layout
 function SiderMenu() {
   const [curMenu, setCurMenu] = useState('')
 
+  // eslint-disable-next-line
   useEffect(() => {
     const path = window.location.hash.split('/')[1]
     setCurMenu(path || '')

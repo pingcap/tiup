@@ -27,6 +27,7 @@ export default function ClustersPage() {
     // eslint-disable-next-line
   }, [])
 
+  // eslint-disable-next-line
   useEffect(() => {
     const paths = window.location.hash.split('/') // ['#', 'clusters', 'xxx']
     if (paths[1] === 'clusters') {
