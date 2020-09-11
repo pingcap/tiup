@@ -13,7 +13,7 @@ func main() {
 	if len(os.Args) > 1 {
 		buildTag = os.Args[1]
 	}
-	var fs http.FileSystem = http.Dir("web-ui/build")
+	var fs http.FileSystem = http.Dir("cluster-ui/build")
 	err := vfsgen.Generate(fs, vfsgen.Options{
 		BuildTags:    buildTag,
 		PackageName:  "uiserver",
