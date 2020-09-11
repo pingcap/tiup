@@ -46,8 +46,11 @@ require (
 	github.com/pingcap/failpoint v0.0.0-20200702092429-9f69995143ce
 	github.com/pingcap/fn v0.0.0-20200306044125-d5540d389059
 	github.com/pingcap/go-tpc v1.0.4-0.20200525052430-dc963cdeef62
+	github.com/pingcap/go-ycsb v0.0.0-20200226103513-00ca633a87d8 // indirect
 	github.com/pingcap/kvproto v0.0.0-20200810113304-6157337686b1
 	github.com/pingcap/tidb-insight v0.3.1
+	github.com/prometheus/client_model v0.2.0
+	github.com/prometheus/prom2json v1.3.0
 	github.com/r3labs/diff v0.0.0-20200627101315-aecd9dd05dd2
 	github.com/relex/aini v1.2.0
 	github.com/sergi/go-diff v1.0.1-0.20180205163309-da645544ed44
