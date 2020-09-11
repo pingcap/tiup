@@ -363,7 +363,7 @@ func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int
 			// XXX: https://github.com/tikv/tikv/issues/5340
 			//		Some TiKV versions don't handle https correctly
 			//      So we check if it's in that case first
-			if _, err := http.Get(addr); err != nil && tlsCfg != nil {
+			if tlsCfg != nil && checkHTTPS(fmt.Sprintf("https://%s/metrics", statusAddress), tlsCfg) == nil {
 				addr = fmt.Sprintf("https://%s/metrics", statusAddress)
 			}
 
@@ -405,4 +405,22 @@ func makeTransport(tlsCfg *tls.Config) *http.Transport {
 		transport.TLSClientConfig = tlsCfg.Clone()
 	}
 	return transport
+}
+
+// Check if the url works with tlsCfg
+func checkHTTPS(url string, tlsCfg *tls.Config) error {
+	transport := makeTransport(tlsCfg)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return errors.Annotatef(err, "creating GET request for URL %q failed", url)
+	}
+
+	client := http.Client{Transport: transport}
+	resp, err := client.Do(req)
+	if err != nil {
+		return errors.Annotatef(err, "executing GET request for URL %q failed", url)
+	}
+	resp.Body.Close()
+	return nil
 }
