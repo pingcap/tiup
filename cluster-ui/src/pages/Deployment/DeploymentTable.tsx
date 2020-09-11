@@ -178,6 +178,7 @@ export default function DeploymentTable({
     onDeleteComponents,
     globalLoginOptions,
     forScaleOut,
+    globalDir,
   ])
 
   return (
