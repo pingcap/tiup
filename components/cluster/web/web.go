@@ -204,27 +204,36 @@ func scaleInClusterHandler(c *gin.Context) {
 	}
 
 	go func() {
-		// TODO
+		opt := operator.Options{
+			SSHTimeout: gOpt.SSHTimeout,
+			OptTimeout: gOpt.OptTimeout,
+			APITimeout: gOpt.APITimeout,
+			NativeSSH:  gOpt.NativeSSH,
+			SSHType:    gOpt.SSHType,
+			Force:      req.Force,
+			Nodes:      req.Nodes}
+
+		// TODO, duplicated
 		scale := func(b *task.Builder, imetadata spec.Metadata, tlsCfg *tls.Config) {
 			metadata := imetadata.(*spec.ClusterMeta)
 
-			if !gOpt.Force {
-				b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt, tlsCfg).
-					UpdateMeta(clusterName, metadata, operator.AsyncNodes(metadata.Topology, req.Nodes, false)).
+			if !opt.Force {
+				b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, opt, tlsCfg).
+					UpdateMeta(clusterName, metadata, operator.AsyncNodes(metadata.Topology, opt.Nodes, false)).
 					UpdateTopology(
 						clusterName,
 						tidbSpec.Path(clusterName),
 						metadata,
-						operator.AsyncNodes(metadata.Topology, req.Nodes, false), /* deleteNodeIds */
+						operator.AsyncNodes(metadata.Topology, opt.Nodes, false), /* deleteNodeIds */
 					)
 			} else {
-				b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, gOpt, tlsCfg).
-					UpdateMeta(clusterName, metadata, req.Nodes).
+				b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, opt, tlsCfg).
+					UpdateMeta(clusterName, metadata, opt.Nodes).
 					UpdateTopology(
 						clusterName,
 						tidbSpec.Path(clusterName),
 						metadata,
-						req.Nodes,
+						opt.Nodes,
 					)
 			}
 		}
@@ -232,11 +241,11 @@ func scaleInClusterHandler(c *gin.Context) {
 		manager.DoScaleIn(
 			clusterName,
 			skipConfirm,
-			gOpt.OptTimeout,
-			gOpt.SSHTimeout,
-			gOpt.SSHType,
-			req.Force,
-			req.Nodes,
+			opt.OptTimeout,
+			opt.SSHTimeout,
+			opt.SSHType,
+			opt.Force,
+			opt.Nodes,
 			scale,
 		)
 	}()
