@@ -17,6 +17,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -29,7 +30,14 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
+	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/prom2json"
 	pdserverapi "github.com/tikv/pd/server/api"
+)
+
+const (
+	metricNameRegionCount = "tikv_raftstore_region_count"
+	labelNameLeaderCount  = "leader"
 )
 
 // TiKVSpec represents the TiKV topology specification in topology.yaml
@@ -293,7 +301,7 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *
 		return errors.AddStack(err)
 	}
 
-	if err := pdClient.EvictStoreLeader(addr(i), timeoutOpt); err != nil {
+	if err := pdClient.EvictStoreLeader(addr(i), timeoutOpt, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
 		if utils.IsTimeoutOrMaxRetry(err) {
 			log.Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
 		} else {
@@ -329,4 +337,90 @@ func addr(ins Instance) string {
 		panic(ins)
 	}
 	return ins.GetHost() + ":" + strconv.Itoa(ins.GetPort())
+}
+
+func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int, error) {
+	return func(id string) (int, error) {
+		statusAddress := ""
+		foundIds := []string{}
+		for _, kv := range topo.TiKVServers {
+			kvid := fmt.Sprintf("%s:%d", kv.Host, kv.Port)
+			if id == kvid {
+				statusAddress = fmt.Sprintf("%s:%d", kv.Host, kv.StatusPort)
+				break
+			}
+			foundIds = append(foundIds, kvid)
+		}
+		if statusAddress == "" {
+			return 0, fmt.Errorf("TiKV instance with ID %s not found, found %s", id, strings.Join(foundIds, ","))
+		}
+
+		transport := makeTransport(tlsCfg)
+
+		mfChan := make(chan *dto.MetricFamily, 1024)
+		go func() {
+			addr := fmt.Sprintf("http://%s/metrics", statusAddress)
+			// XXX: https://github.com/tikv/tikv/issues/5340
+			//		Some TiKV versions don't handle https correctly
+			//      So we check if it's in that case first
+			if tlsCfg != nil && checkHTTPS(fmt.Sprintf("https://%s/metrics", statusAddress), tlsCfg) == nil {
+				addr = fmt.Sprintf("https://%s/metrics", statusAddress)
+			}
+
+			if err := prom2json.FetchMetricFamilies(addr, mfChan, transport); err != nil {
+				log.Errorf("failed counting leader on %s (status addr %s), %v", id, addr, err)
+			}
+		}()
+
+		fms := []*prom2json.Family{}
+		for mf := range mfChan {
+			fm := prom2json.NewFamily(mf)
+			fms = append(fms, fm)
+		}
+		for _, fm := range fms {
+			if fm.Name != metricNameRegionCount {
+				continue
+			}
+			for _, m := range fm.Metrics {
+				if m, ok := m.(prom2json.Metric); ok && m.Labels["type"] == labelNameLeaderCount {
+					return strconv.Atoi(m.Value)
+				}
+			}
+		}
+
+		return 0, errors.Errorf("metric %s{type=\"%s\"} not found", metricNameRegionCount, labelNameLeaderCount)
+	}
+}
+
+func makeTransport(tlsCfg *tls.Config) *http.Transport {
+	// Start with the DefaultTransport for sane defaults.
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	// Conservatively disable HTTP keep-alives as this program will only
+	// ever need a single HTTP request.
+	transport.DisableKeepAlives = true
+	// Timeout early if the server doesn't even return the headers.
+	transport.ResponseHeaderTimeout = time.Minute
+	// We should clone a tlsCfg because we use it across goroutine
+	if tlsCfg != nil {
+		transport.TLSClientConfig = tlsCfg.Clone()
+	}
+	return transport
+}
+
+// Check if the url works with tlsCfg
+func checkHTTPS(url string, tlsCfg *tls.Config) error {
+	transport := makeTransport(tlsCfg)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return errors.Annotatef(err, "creating GET request for URL %q failed", url)
+	}
+
+	client := http.Client{Transport: transport}
+	resp, err := client.Do(req)
+	if err != nil {
+		return errors.Annotatef(err, "executing GET request for URL %q failed", url)
+	}
+	resp.Body.Close()
+	return nil
 }
