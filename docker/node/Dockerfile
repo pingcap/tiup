@@ -2,8 +2,8 @@
 FROM golang:1.14
 
 # Use mirrors for poor network...
-RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
-RUN sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
+#RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list && \
+#    sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
 
 # Install packages
 # JRE 11 is installed for tispark testing, a tispark node could be started

@@ -328,7 +328,7 @@ type pdSchedulerRequest struct {
 
 // EvictStoreLeader evicts the store leaders
 // The host parameter should be in format of IP:Port, that matches store's address
-func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption) error {
+func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, countLeader func(string) (int, error)) error {
 	// get info of current stores
 	stores, err := pc.GetStores()
 	if err != nil {
@@ -345,13 +345,21 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption) e
 		break
 	}
 
-	if latestStore == nil || latestStore.Status.LeaderCount == 0 {
+	if latestStore == nil {
+		return nil
+	}
+
+	// XXX: the status address in store will be something like 0.0.0.0:20180
+	var leaderCount int
+	if leaderCount, err = countLeader(latestStore.Store.Address); err != nil {
+		return err
+	}
+	if leaderCount == 0 {
 		// no store leader on the host, just skip
 		return nil
 	}
 
-	log.Infof("Evicting %d leaders from store %s...",
-		latestStore.Status.LeaderCount, latestStore.Store.Address)
+	log.Infof("Evicting %d leaders from store %s...", leaderCount, latestStore.Store.Address)
 
 	// set scheduler for stores
 	scheduler, err := json.Marshal(pdSchedulerRequest{
@@ -389,12 +397,15 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption) e
 			if currStoreInfo.Store.Address != host {
 				continue
 			}
-			if currStoreInfo.Status.LeaderCount == 0 {
+			if leaderCount, err = countLeader(latestStore.Store.Address); err != nil {
+				return err
+			}
+			if leaderCount == 0 {
 				return nil
 			}
 			log.Debugf(
 				"Still waitting for %d store leaders to transfer...",
-				currStoreInfo.Status.LeaderCount,
+				leaderCount,
 			)
 			break
 		}

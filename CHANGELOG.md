@@ -1,5 +1,14 @@
 TiUP Changelog
 
+## [1.1.2] 2020.09.11
+
+### Fixes
+
+- Fix the issue that tikv store leader count is not correct ([#762](https://github.com/pingcap/tiup/pull/762))
+- Fix the issue that tiflash's data is not clean up ([#768](https://github.com/pingcap/tiup/pull/768))
+- Fix the issue that `tiup cluster deploy --help` display wrong help message ([#758](https://github.com/pingcap/tiup/pull/758))
+- Fix the issue that tiup-playground can't display and scale ([#749](https://github.com/pingcap/tiup/pull/749))
+
 ## [1.1.1] 2020.09.01
 
 ### Fixes
