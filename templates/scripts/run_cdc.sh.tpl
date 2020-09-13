@@ -29,4 +29,10 @@ exec bin/cdc server \
     --cert tls/cdc.crt \
     --key tls/cdc.pem \
 {{- end}}
+{{- if .GCTTL}}
+    --gc-ttl {{.GCTTL}} \
+{{- end}}
+{{- if .TZ}}
+    --tz "{{.TZ}}" \
+{{- end}}
     --log-file "{{.LogDir}}/cdc.log" 2>> "{{.LogDir}}/cdc_stderr.log"
