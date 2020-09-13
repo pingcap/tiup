@@ -44,7 +44,13 @@ type CloneOptions struct {
 }
 
 // CloneMirror clones a local mirror from the remote repository
-func CloneMirror(repo *V1Repository, components []string, targetDir string, selectedVersions []string, options CloneOptions) error {
+func CloneMirror(repo *V1Repository,
+	components []string,
+	tidbClusterVersionMapper func(string) string,
+	targetDir string,
+	selectedVersions []string,
+	options CloneOptions) error {
+
 	fmt.Printf("Start to clone mirror, targetDir is %s, selectedVersions are [%s]\n", targetDir, strings.Join(selectedVersions, ","))
 	fmt.Println("If this does not meet expectations, please abort this process, read `tiup mirror clone --help` and run again")
 
@@ -146,7 +152,7 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 	snapshot := v1manifest.NewSnapshot(initTime)
 	snapshot.SetExpiresAt(expirsAt)
 
-	componentManifests, err := cloneComponents(repo, components, selectedVersions, targetDir, tmpDir, options)
+	componentManifests, err := cloneComponents(repo, components, selectedVersions, tidbClusterVersionMapper, targetDir, tmpDir, options)
 	if err != nil {
 		return err
 	}
@@ -243,8 +249,10 @@ func CloneMirror(repo *V1Repository, components []string, targetDir string, sele
 
 func cloneComponents(repo *V1Repository,
 	components, selectedVersions []string,
+	tidbClusterVersionMapper func(string) string,
 	targetDir, tmpDir string,
 	options CloneOptions) (map[string]*v1manifest.Component, error) {
+
 	compManifests := map[string]*v1manifest.Component{}
 	for _, name := range components {
 		manifest, err := repo.FetchComponentManifest(name, true)
@@ -252,7 +260,7 @@ func cloneComponents(repo *V1Repository,
 			return nil, errors.Annotatef(err, "fetch component '%s' manifest failed", name)
 		}
 
-		vs := combineVersions(options.Components[name], manifest, options.OSs, options.Archs, selectedVersions)
+		vs := combineVersions(options.Components[name], tidbClusterVersionMapper, manifest, options.OSs, options.Archs, selectedVersions)
 		var newManifest *v1manifest.Component
 		if options.Full {
 			newManifest = manifest
@@ -391,20 +399,17 @@ func checkVersion(options CloneOptions, versions set.StringSet, version string) 
 	return false
 }
 
-func combineVersions(versions *[]string, manifest *v1manifest.Component, oss, archs, selectedVersions []string) set.StringSet {
+func combineVersions(versions *[]string,
+	tidbClusterVersionMapper func(string) string,
+	manifest *v1manifest.Component, oss, archs,
+	selectedVersions []string) set.StringSet {
+
 	if (versions == nil || len(*versions) < 1) && len(selectedVersions) < 1 {
 		return nil
 	}
 
-	switch manifest.ID {
-	case "alertmanager":
-		return set.NewStringSet("v0.17.0")
-	case "blackbox_exporter":
-		return set.NewStringSet("v0.12.0")
-	case "node_exporter":
-		return set.NewStringSet("v0.17.0")
-	case "pushgateway":
-		return set.NewStringSet("v0.7.0")
+	if bindver := tidbClusterVersionMapper(manifest.ID); bindver != "" {
+		return set.NewStringSet(bindver)
 	}
 
 	result := set.NewStringSet()
