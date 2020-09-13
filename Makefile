@@ -1,6 +1,8 @@
 .PHONY: cmd components server
 .DEFAULT_GOAL := default
 
+REPO := github.com/pingcap/tiup
+
 GOVER := $(shell go version)
 
 GOOS    := $(if $(GOOS),$(GOOS),$(shell go env GOOS))
@@ -14,7 +16,6 @@ SHELL   := /usr/bin/env bash
 COMMIT    := $(shell git describe --no-match --always --dirty)
 BRANCH    := $(shell git rev-parse --abbrev-ref HEAD)
 
-REPO := github.com/pingcap/tiup
 LDFLAGS := -w -s
 LDFLAGS += -X "$(REPO)/pkg/version.GitHash=$(COMMIT)"
 LDFLAGS += -X "$(REPO)/pkg/version.GitBranch=$(BRANCH)"
@@ -81,28 +82,16 @@ clean:
 	@rm -rf bin
 	@rm -rf cover
 
-cover-dir:
-	mkdir -p cover
-
-# Run tests
-unit-test: cover-dir
-	TIUP_HOME=$(shell pwd)/tests/tiup $(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
-
-test: cover-dir failpoint-enable
-	make run-tests; STATUS=$$?; $(FAILPOINT_DISABLE); exit $$STATUS
+test: failpoint-enable run-tests failpoint-disable
 
 # TODO: refactor integration tests base on v1 manifest
 # run-tests: unit-test integration_test
 run-tests: unit-test
 
-coverage:
-	GO111MODULE=off go get github.com/wadey/gocovmerge
-	gocovmerge cover/cov.* | grep -vE ".*.pb.go|.*__failpoint_binding__.go|mock.go" > "cover/all_cov.out"
-ifeq ("$(JenkinsCI)", "1")
-	@bash <(curl -s https://codecov.io/bash) -f cover/all_cov.out -t $(CODECOV_TOKEN)
-else
-	go tool cover -html "cover/all_cov.out" -o "cover/all_cov.html"
-endif
+# Run tests
+unit-test:
+	mkdir -p cover
+	TIUP_HOME=$(shell pwd)/tests/tiup $(GOTEST) ./... -covermode=count -coverprofile cover/cov.unit-test.out
 
 failpoint-enable: tools/bin/failpoint-ctl
 	@$(FAILPOINT_ENABLE)
