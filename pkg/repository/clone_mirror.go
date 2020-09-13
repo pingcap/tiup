@@ -405,6 +405,10 @@ func combineVersions(versions *[]string, manifest *v1manifest.Component, oss, ar
 		return set.NewStringSet("v0.17.0")
 	case "pushgateway":
 		return set.NewStringSet("v0.7.0")
+	case "tispark":
+		return set.NewStringSet("v2.3.1")
+	case "spark":
+		return set.NewStringSet("v2.4.3")
 	}
 
 	result := set.NewStringSet()
