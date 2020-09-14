@@ -27,6 +27,7 @@ import (
 	"github.com/appleboy/easyssh-proxy"
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -135,7 +136,11 @@ func (e *EasySSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duratio
 
 	stdout, stderr, done, err := e.Config.Run(cmd, timeout...)
 
-	zap.L().Info("SSHCommand",
+	logfn := zap.L().Info
+	if err != nil {
+		logfn = zap.L().Error
+	}
+	logfn("SSHCommand",
 		zap.String("host", e.Config.Server),
 		zap.String("port", e.Config.Port),
 		zap.String("cmd", cmd),
@@ -176,7 +181,11 @@ func (e *EasySSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duratio
 // file from remote to local.
 func (e *EasySSHExecutor) Transfer(src string, dst string, download bool) error {
 	if !download {
-		return e.Config.Scp(src, dst)
+		err := e.Config.Scp(src, dst)
+		if err != nil {
+			return errors.Annotatef(err, "failed to scp %s to %s@%s:%s", src, e.Config.User, e.Config.Server, dst)
+		}
+		return nil
 	}
 
 	// download file from remote

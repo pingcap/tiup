@@ -50,6 +50,8 @@ require (
 	github.com/pingcap/go-ycsb v0.0.0-20200226103513-00ca633a87d8
 	github.com/pingcap/kvproto v0.0.0-20200810113304-6157337686b1
 	github.com/pingcap/tidb-insight v0.3.1
+	github.com/prometheus/client_model v0.2.0
+	github.com/prometheus/prom2json v1.3.0
 	github.com/r3labs/diff v0.0.0-20200627101315-aecd9dd05dd2
 	github.com/relex/aini v1.2.0
 	github.com/rs/cors v1.7.0
