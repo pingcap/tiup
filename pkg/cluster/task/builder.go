@@ -370,7 +370,7 @@ func (b *Builder) DeploySpark(inst spec.Instance, version, srcPath, deployDir st
 		inst.ComponentName(),
 		inst.OS(),
 		inst.Arch(),
-		version,
+		"", // use the latest stable version
 		srcPath,
 		inst.GetHost(),
 		deployDir,

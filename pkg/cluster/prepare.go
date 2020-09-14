@@ -34,12 +34,15 @@ func BuildDownloadCompTasks(version string, instanceIter InstanceIter, bindVersi
 		if _, found := uniqueTaskList[key]; !found {
 			uniqueTaskList[key] = struct{}{}
 
-			// download spark as dependency of tispark
-			if inst.ComponentName() == spec.ComponentTiSpark {
+			// we don't set version for tispark, so the lastest tispark will be used
+			var version string
+			if inst.ComponentName() != spec.ComponentTiSpark {
+				version = bindVersion(inst.ComponentName(), version)
+			} else {
+				// download spark as dependency of tispark
 				tasks = append(tasks, buildDownloadSparkTask(version, inst, bindVersion))
 			}
 
-			version := bindVersion(inst.ComponentName(), version)
 			t := task.NewBuilder().
 				Download(inst.ComponentName(), inst.OS(), inst.Arch(), version).
 				BuildAsStep(fmt.Sprintf("  - Download %s:%s (%s/%s)",
