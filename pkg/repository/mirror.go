@@ -306,8 +306,8 @@ func (l *MockMirror) Download(resource, targetDir string) error {
 		return err
 	}
 	defer file.Close()
-	file.Write([]byte(content))
-	return nil
+	_, err = file.Write([]byte(content))
+	return err
 }
 
 // Fetch implements Mirror.

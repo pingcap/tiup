@@ -498,7 +498,7 @@ func (r *V1Repository) FetchComponent(item *v1manifest.VersionItem) (io.Reader, 
 	return checkHash(reader, item.Hashes[v1manifest.SHA256])
 }
 
-// DoDownloadComponent downloads the component specified by item into local file
+// DownloadComponent downloads the component specified by item into local file
 func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target string) error {
 	targetDir := filepath.Dir(target)
 	err := r.mirror.Download(item.URL, targetDir)
