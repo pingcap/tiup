@@ -16,14 +16,11 @@ package instance
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	"github.com/pingcap/tiup/pkg/utils"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
-
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
-	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiCDC represent a ticdc instance.
@@ -50,35 +47,6 @@ func NewTiCDC(binPath string, dir, host, configPath string, id int, pds []*PDIns
 	}
 	ticdc.StatusPort = ticdc.Port
 	return ticdc
-}
-
-// NodeID return the node id of pump.
-func (c *TiCDC) NodeID() string {
-	return fmt.Sprintf("ticdc_%d", c.ID)
-}
-
-// Ready return nil when pump is ready to serve.
-func (c *TiCDC) Ready(ctx context.Context) error {
-	url := fmt.Sprintf("http://%s:%d/status", c.Host, c.Port)
-
-	for {
-		resp, err := http.Get(url)
-		if err == nil && resp.StatusCode == 200 {
-			return nil
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(time.Second):
-			// just retry
-		}
-	}
-}
-
-// Addr return the address of Pump.
-func (c *TiCDC) Addr() string {
-	return fmt.Sprintf("%s:%d", advertiseHost(c.Host), c.Port)
 }
 
 // Start implements Instance interface.
