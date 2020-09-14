@@ -60,6 +60,7 @@ type Playground struct {
 	tikvs            []*instance.TiKVInstance
 	tidbs            []*instance.TiDBInstance
 	tiflashs         []*instance.TiFlashInstance
+	ticdcs           []*instance.TiCDC
 	pumps            []*instance.Pump
 	drainers         []*instance.Drainer
 	startedInstances []instance.Instance
@@ -295,6 +296,12 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				p.tidbs = append(p.tidbs[:i], p.tidbs[i+1:]...)
 			}
 		}
+	case "ticdc":
+		for i := 0; i < len(p.ticdcs); i++ {
+			if p.ticdcs[i].Pid() == pid {
+				p.ticdcs = append(p.ticdcs[:i], p.ticdcs[i+1:]...)
+			}
+		}
 	case "tiflash":
 		for i := 0; i < len(p.tiflashs); i++ {
 			if p.tiflashs[i].Pid() == pid {
@@ -393,6 +400,8 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 		return p.sanitizeConfig(p.bootOptions.tidb, cfg)
 	case "tiflash":
 		return p.sanitizeConfig(p.bootOptions.tiflash, cfg)
+	case "ticdc":
+		return p.sanitizeConfig(p.bootOptions.ticdc, cfg)
 	case "pump":
 		return p.sanitizeConfig(p.bootOptions.pump, cfg)
 	case "drainer":
@@ -548,6 +557,13 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 		}
 	}
 
+	for _, ins := range p.ticdcs {
+		err := fn("ticdc", ins)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+	}
+
 	for _, ins := range p.drainers {
 		err := fn("drainer", ins)
 		if err != nil {
@@ -618,6 +634,10 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 		inst := instance.NewTiFlashInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs)
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
+	case "ticdc":
+		inst := instance.NewTiCDC(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
+		ins = inst
+		p.ticdcs = append(p.ticdcs, inst)
 	case "pump":
 		inst := instance.NewPump(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
@@ -695,6 +715,12 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	}
 	for i := 0; i < options.tidb.Num; i++ {
 		_, err := p.addInstance("tidb", options.tidb)
+		if err != nil {
+			return errors.AddStack(err)
+		}
+	}
+	for i := 0; i < options.ticdc.Num; i++ {
+		_, err := p.addInstance("ticdc", options.ticdc)
 		if err != nil {
 			return errors.AddStack(err)
 		}
