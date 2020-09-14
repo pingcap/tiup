@@ -116,7 +116,7 @@ type ExecutorGetter interface {
 type Importer struct {
 	dir               string // ansible directory.
 	inventoryFileName string
-	native            bool
+	sshType           executor.SSHType
 	sshTimeout        int64
 
 	// following vars parse from ansbile
@@ -130,7 +130,7 @@ type Importer struct {
 
 // NewImporter create an Importer.
 // @sshTimeout: set 0 to use a default value
-func NewImporter(ansibleDir string, inventoryFileName string, native bool, sshTimeout int64) (*Importer, error) {
+func NewImporter(ansibleDir, inventoryFileName string, sshType executor.SSHType, sshTimeout int64) (*Importer, error) {
 	dir, err := filepath.Abs(ansibleDir)
 	if err != nil {
 		return nil, errors.AddStack(err)
@@ -143,9 +143,9 @@ func NewImporter(ansibleDir string, inventoryFileName string, native bool, sshTi
 	}, nil
 }
 
-func (im *Importer) getExecutor(host string, port int) (e executor.Executor) {
+func (im *Importer) getExecutor(host string, port int) (e executor.Executor, err error) {
 	if im.testExecutorGetter != nil {
-		return im.testExecutorGetter.Get(host)
+		return im.testExecutorGetter.Get(host), nil
 	}
 
 	keypath := ansible.SSHKeyPath()
@@ -158,13 +158,16 @@ func (im *Importer) getExecutor(host string, port int) (e executor.Executor) {
 		Timeout: time.Second * time.Duration(im.sshTimeout),
 	}
 
-	e = executor.NewSSHExecutor(cfg, false, im.native)
+	e, err = executor.New(im.sshType, false, cfg)
 
 	return
 }
 
 func (im *Importer) fetchFile(host string, port int, fname string) (data []byte, err error) {
-	e := im.getExecutor(host, port)
+	e, err := im.getExecutor(host, port)
+	if err != nil {
+		return nil, errors.Annotatef(err, "failed to get executor, target: %s:%d", host, port)
+	}
 
 	tmp, err := ioutil.TempDir("", "tiup")
 	if err != nil {
@@ -223,7 +226,10 @@ func (im *Importer) ScpSourceToMaster(topo *spec.Topology) (err error) {
 		target := filepath.Join(firstNonEmpty(master.DeployDir, topo.GlobalOptions.DeployDir), "v1source")
 		master.V1SourcePath = target
 
-		e := im.getExecutor(master.Host, master.SSHPort)
+		e, err := im.getExecutor(master.Host, master.SSHPort)
+		if err != nil {
+			return errors.Annotatef(err, "failed to get executor, target: %s:%d", master.Host, master.SSHPort)
+		}
 		_, stderr, err := e.Execute("mkdir -p "+target, false)
 		if err != nil {
 			return errors.Annotatef(err, "failed to execute: %s", string(stderr))
