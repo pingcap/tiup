@@ -1,4 +1,4 @@
-version: '3.7'
+version: "3.7"
 
 services:
   # https://hub.docker.com/_/mysql
@@ -6,7 +6,7 @@ services:
     hostname: mysql1
     networks:
       tiops:
-        ipv4_address: 172.19.0.201
+        ipv4_address: __IPPREFIX__.201
     image: mysql:5.7
     command: --default-authentication-plugin=mysql_native_password --log-bin=/var/lib/mysql/mysql-bin.log --server-id=1 --binlog-format=ROW --gtid_mode=ON --enforce-gtid-consistency=true
     restart: always
@@ -18,7 +18,7 @@ services:
     hostname: mysql2
     networks:
       tiops:
-        ipv4_address: 172.19.0.202
+        ipv4_address: __IPPREFIX__.202
     image: mysql:5.7
     command: --default-authentication-plugin=mysql_native_password --log-bin=/var/lib/mysql/mysql-bin.log --server-id=2 --binlog-format=ROW --gtid_mode=ON --enforce-gtid-consistency=true
     restart: always
@@ -30,5 +30,5 @@ services:
     hostname: tidb1
     networks:
       tiops:
-        ipv4_address: 172.19.0.211
+        ipv4_address: __IPPREFIX__.211
     image: pingcap/tidb:v4.0.3
