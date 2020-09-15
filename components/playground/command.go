@@ -91,6 +91,15 @@ func buildCommands(tp CommandType, opt *bootOptions) (cmds []Command) {
 
 		cmds = append(cmds, c)
 	}
+	for i := 0; i < opt.ticdc.Num; i++ {
+		c := Command{
+			CommandType: tp,
+			ComponentID: "ticdc",
+			Config:      opt.ticdc,
+		}
+
+		cmds = append(cmds, c)
+	}
 	for i := 0; i < opt.drainer.Num; i++ {
 		c := Command{
 			CommandType: tp,
@@ -127,6 +136,7 @@ func newScaleOut() *cobra.Command {
 	cmd.Flags().IntVarP(&opt.tikv.Num, "kv", "", opt.tikv.Num, "TiKV instance number")
 	cmd.Flags().IntVarP(&opt.pd.Num, "pd", "", opt.pd.Num, "PD instance number")
 	cmd.Flags().IntVarP(&opt.tiflash.Num, "tiflash", "", opt.tiflash.Num, "TiFlash instance number")
+	cmd.Flags().IntVarP(&opt.ticdc.Num, "ticdc", "", opt.ticdc.Num, "TiCDC instance number")
 	cmd.Flags().IntVarP(&opt.pump.Num, "pump", "", opt.pump.Num, "Pump instance number")
 	cmd.Flags().IntVarP(&opt.drainer.Num, "drainer", "", opt.pump.Num, "Drainer instance number")
 
@@ -144,6 +154,7 @@ func newScaleOut() *cobra.Command {
 	cmd.Flags().StringVarP(&opt.tikv.BinPath, "kv.binpath", "", opt.tikv.BinPath, "TiKV instance binary path")
 	cmd.Flags().StringVarP(&opt.pd.BinPath, "pd.binpath", "", opt.pd.BinPath, "PD instance binary path")
 	cmd.Flags().StringVarP(&opt.tiflash.BinPath, "tiflash.binpath", "", opt.tiflash.BinPath, "TiFlash instance binary path")
+	cmd.Flags().StringVarP(&opt.ticdc.BinPath, "ticdc.binpath", "", opt.ticdc.BinPath, "TiCDC instance binary path")
 	cmd.Flags().StringVarP(&opt.pump.BinPath, "pump.binpath", "", opt.pump.BinPath, "Pump instance binary path")
 	cmd.Flags().StringVarP(&opt.drainer.BinPath, "drainer.binpath", "", opt.drainer.BinPath, "Drainer instance binary path")
 
