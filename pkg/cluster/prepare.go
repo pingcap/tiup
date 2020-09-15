@@ -26,7 +26,7 @@ type InstanceIter interface {
 }
 
 // BuildDownloadCompTasks build download component tasks
-func BuildDownloadCompTasks(version string, instanceIter InstanceIter, bindVersion spec.BindVersion) []*task.StepDisplay {
+func BuildDownloadCompTasks(clusterVersion string, instanceIter InstanceIter, bindVersion spec.BindVersion) []*task.StepDisplay {
 	var tasks []*task.StepDisplay
 	uniqueTaskList := make(map[string]struct{}) // map["comp-os-arch"]{}
 	instanceIter.IterInstance(func(inst spec.Instance) {
@@ -37,7 +37,7 @@ func BuildDownloadCompTasks(version string, instanceIter InstanceIter, bindVersi
 			// we don't set version for tispark, so the lastest tispark will be used
 			var version string
 			if inst.ComponentName() != spec.ComponentTiSpark {
-				version = bindVersion(inst.ComponentName(), version)
+				version = bindVersion(inst.ComponentName(), clusterVersion)
 			} else {
 				// download spark as dependency of tispark
 				tasks = append(tasks, buildDownloadSparkTask(version, inst, bindVersion))
