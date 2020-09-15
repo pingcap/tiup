@@ -11,14 +11,14 @@ target-database:
 
 mysql-instances:
   - source-id: "mysql1"
-    block-allow-list:  "instance"
+    block-allow-list: "instance"
     route-rules: ["sharding-route-rules-table", "sharding-route-rules-schema"]
     mydumper-thread: 4
     loader-thread: 16
     syncer-thread: 16
 
   - source-id: "mysql2"
-    block-allow-list:  "instance"
+    block-allow-list: "instance"
     route-rules: ["sharding-route-rules-table", "sharding-route-rules-schema"]
     mydumper-thread: 4
     loader-thread: 16
@@ -28,8 +28,8 @@ block-allow-list:
   instance:
     do-dbs: ["~^sharding[\\d]+"]
     do-tables:
-    -  db-name: "~^sharding[\\d]+"
-       tbl-name: "~^t[\\d]+"
+      - db-name: "~^sharding[\\d]+"
+        tbl-name: "~^t[\\d]+"
 
 routes:
   sharding-route-rules-table:

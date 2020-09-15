@@ -34,6 +34,7 @@ HELP=0
 INIT_ONLY=0
 DEV=""
 COMPOSE=${COMPOSE:-""}
+SUBNET=${SUBNET:-"172.19.0.0/24"}
 RUN_AS_DAEMON=0
 POSITIONAL=()
 
@@ -42,7 +43,7 @@ do
     key="$1"
 
     case $key in
-        --help)
+        -h|--help)
             HELP=1
             shift # past argument
             ;;
@@ -61,6 +62,11 @@ do
             ;;
         --compose)
             COMPOSE="-f $2"
+            shift # past argument
+            shift # past value
+            ;;
+        --subnet)
+            SUBNET="$2"
             shift # past argument
             shift # past value
             ;;
@@ -88,6 +94,7 @@ if [ "${HELP}" -eq 1 ]; then
     echo "  --daemon                                              Runs docker-compose in the background"
     echo "  --dev                                                 Mounts dir at host's TIUP_CLUSTER_ROOT to /tiup-cluster on tiup-cluster-control container, syncing files for development"
     echo "  --compose PATH                                        Path to an additional docker-compose yml config."
+    echo "  --subnet SUBNET                                       Subnet in 24 bit netmask"
     echo "To provide multiple additional docker-compose args, set the COMPOSE var directly, with the -f flag. Ex: COMPOSE=\"-f FILE_PATH_HERE -f ANOTHER_PATH\" ./up.sh --dev"
     exit 0
 fi
@@ -137,6 +144,11 @@ if [ "${INIT_ONLY}" -eq 1 ]; then
     exit 0
 fi
 
+if [ ${SUBNET##*/} -ne 24 ]; then
+    ERROR "Only subnet mask of 24 bits are currently supported"
+    exit 1
+fi
+
 exists docker ||
     { ERROR "Please install docker (https://docs.docker.com/engine/installation/)";
       exit 1; }
@@ -144,11 +156,28 @@ exists docker-compose ||
     { ERROR "Please install docker-compose (https://docs.docker.com/compose/install/)";
       exit 1; }
 
+exist_network=$(docker network ls | awk '{if($2 == "tiops") print $1}')
+if [[ "$exist_network" == "" ]]; then
+    ipprefix=${SUBNET%.*}
+    docker network create --gateway "${ipprefix}.1" --subnet "${SUBNET}" tiops
+else
+    echo "Skip create tiup-cluster network"
+    SUBNET=$(docker network inspect -f "{{range .IPAM.Config}}{{.Subnet}}{{end}}" tiops)
+    if [ ${SUBNET##*/} -ne 24 ]; then
+        ERROR "Only subnet mask of 24 bits are currently supported"
+        exit 1
+    fi
+    ipprefix=${SUBNET%.*}
+fi
+
+sed "s/__IPPREFIX__/$ipprefix/g" docker-compose.yml.tpl > docker-compose.yml
+sed "s/__IPPREFIX__/$ipprefix/g" docker-compose.dm.yml.tpl > docker-compose.dm.yml
+sed -i '/TIUP_TEST_IP_PREFIX/d' ./secret/control.env
+echo "TIUP_TEST_IP_PREFIX=$ipprefix" >> ./secret/control.env
+
 INFO "Running \`docker-compose build\`"
 # shellcheck disable=SC2086
 docker-compose -f docker-compose.yml ${COMPOSE} ${DEV} build
-
-docker network create --gateway 172.19.0.1 --subnet 172.19.0.0/16 tiops > /dev/null 2>&1 || echo "Skip create tiup-cluster network"
 
 INFO "Running \`docker-compose up\`"
 if [ "${RUN_AS_DAEMON}" -eq 1 ]; then
