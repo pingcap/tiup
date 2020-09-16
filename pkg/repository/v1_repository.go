@@ -498,7 +498,8 @@ func (r *V1Repository) FetchComponent(item *v1manifest.VersionItem) (io.Reader, 
 	return checkHash(reader, item.Hashes[v1manifest.SHA256])
 }
 
-// DownloadComponent downloads the component specified by item into local file
+// DownloadComponent downloads the component specified by item into local file,
+// the component will be removed if hash is not correct
 func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target string) error {
 	targetDir := filepath.Dir(target)
 	err := r.mirror.Download(item.URL, targetDir)
@@ -510,9 +511,14 @@ func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target st
 	if err != nil {
 		return err
 	}
-	defer reader.Close()
 
 	_, err = checkHash(reader, item.Hashes[v1manifest.SHA256])
+	reader.Close()
+
+	// remove the target compoonent to avoid attacking
+	if err != nil {
+		_ = os.Remove(target)
+	}
 	return err
 }
 
