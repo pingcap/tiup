@@ -1,6 +1,5 @@
 # MySQL1 Configuration.
 ---
-
 source-id: "mysql1"
 
 enable-gtid: true

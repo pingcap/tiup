@@ -3,31 +3,26 @@
 
 out_dir=$1
 
+ipprefix=${TIUP_TEST_IP_PREFIX:-"172.19.0"}
+
 mkdir -p $out_dir
 
-hosts="172.19.0.100 172.19.0.101 172.19.0.102 172.19.0.103 172.19.0.104 172.19.0.105"
-
-for h in $hosts
+for i in {100..105}
 do
-	echo $h
-	mkdir $out_dir/$h
+    h="${ipprefix}.${i}"
+    echo $h
+    mkdir -p $out_dir/$h
 
-	if [ "$h" == "172.19.0.100" ]
-	then
-  	logs=$(ssh -o "StrictHostKeyChecking no" root@$h "find /tiup-cluster/logs | grep '.*log/.*\.log'")
-	else
-  	logs=$(ssh -o "StrictHostKeyChecking no" root@$h "find /home/tidb | grep '.*log/.*\.log'")
-  fi
+    if [ "$h" == "${ipprefix}.100" ]
+    then
+        logs=$(ssh -o "StrictHostKeyChecking no" root@$h "find /tiup-cluster/logs | grep '.*log/.*\.log'")
+    else
+        logs=$(ssh -o "StrictHostKeyChecking no" root@$h "find /home/tidb | grep '.*log/.*\.log'")
+    fi
 
 
-	for log in $logs
-	do
-		scp -o "StrictHostKeyChecking no" -r root@$h:$log "$out_dir/$h/"
-	done
+    for log in $logs
+    do
+        scp -o "StrictHostKeyChecking no" -r root@$h:$log "$out_dir/$h/"
+    done
 done
-
-
-
-
-
-
