@@ -17,12 +17,12 @@ export TIUP_INSTANCE_DATA_DIR=$TMP_DIR/data
 mkdir -p $TEST_DIR/cover
 
 function tiup() {
-	# echo "in function"
-	if [ -f "$TEST_DIR/bin/tiup.test" ]; then
-	  $TEST_DIR/bin/tiup.test  -test.coverprofile=$TEST_DIR/cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
+    # echo "in function"
+    if [ -f "$TEST_DIR/bin/tiup.test" ]; then
+        $TEST_DIR/bin/tiup.test -test.coverprofile=$TEST_DIR/cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
     else
-	  $TEST_DIR/../../bin/tiup "$@"
-	fi
+        $TEST_DIR/../../bin/tiup "$@"
+    fi
 }
 
 tiup list
