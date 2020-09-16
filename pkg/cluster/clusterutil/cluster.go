@@ -40,6 +40,9 @@ func NewRepository(os, arch string) (Repository, error) {
 	mirror := repository.NewMirror(environment.Mirror(), repository.MirrorOptions{
 		Progress: repository.DisableProgress{},
 	})
+	if err := mirror.Open(); err != nil {
+		return nil, err
+	}
 	local, err := v1manifest.NewManifests(profile)
 	if err != nil {
 		return nil, err
