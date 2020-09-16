@@ -40,7 +40,6 @@ require (
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-runewidth v0.0.7
 	github.com/otiai10/copy v1.2.0
-	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712
 	github.com/pingcap/dm v1.1.0-alpha.0.20200521025928-83063141c5fd
 	github.com/pingcap/errors v0.11.5-0.20200820035142-66eb5bf1d1cd

@@ -29,7 +29,6 @@ import (
 
 	"github.com/fatih/color"
 	cjson "github.com/gibson042/canonicaljson-go"
-	"github.com/patrickmn/go-cache"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
@@ -52,7 +51,6 @@ type V1Repository struct {
 	sync.Mutex
 	mirror Mirror
 	local  v1manifest.LocalManifests
-	cache  *cache.Cache
 }
 
 // ComponentSpec describes a component a user would like to have or use.
@@ -84,7 +82,6 @@ func NewV1Repo(mirror Mirror, opts Options, local v1manifest.LocalManifests) *V1
 		Options: opts,
 		mirror:  mirror,
 		local:   local,
-		cache:   cache.New(cache.NoExpiration, 0),
 	}
 
 	return repo
@@ -666,23 +663,12 @@ func (r *V1Repository) UpdateComponentManifests() error {
 
 // FetchComponentManifest fetch the component manifest.
 func (r *V1Repository) FetchComponentManifest(id string, withYanked bool) (com *v1manifest.Component, err error) {
-	// cache is used to avoid fetching the same component manifests multiple time
-	cacheKey := fmt.Sprintf("%s-%s-%t", componentManifestCacheKey, id, withYanked)
-	if com, ok := r.cache.Get(cacheKey); ok {
-		return com.(*v1manifest.Component), nil
-	}
-
 	err = r.ensureManifests()
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
 
-	com, err = r.updateComponentManifest(id, withYanked)
-	if err != nil {
-		return nil, err
-	}
-	r.cache.Set(cacheKey, com, cache.DefaultExpiration)
-	return
+	return r.updateComponentManifest(id, withYanked)
 }
 
 // ComponentVersion returns version item of a component
