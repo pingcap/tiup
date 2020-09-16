@@ -5,7 +5,9 @@ set -eu
 version=${version-nightly}
 old_version=${old_version-nightly}
 name=test_upgrade
+ipprefix=${TIUP_TEST_IP_PREFIX:-"172.19.0"}
 topo=./topo/full_dm.yaml
+sed "s/__IPPREFIX__/$ipprefix/g" $topo.tpl > $topo
 
 mkdir -p ~/.tiup/bin && cp -f ./root.json ~/.tiup/bin/
 
@@ -29,7 +31,7 @@ EOEX
 yes | tiup-dm reload $name
 
 # just check one instance for verify.
-tiup-dm exec $name -N "172.19.0.104:8261" --command "grep '31s' /home/tidb/deploy/dm-master-8261/conf/dm-master.toml"
+tiup-dm exec $name -N "$ipprefix.104:8261" --command "grep '31s' /home/tidb/deploy/dm-master-8261/conf/dm-master.toml"
 
 
 # test create a task and can replicate data

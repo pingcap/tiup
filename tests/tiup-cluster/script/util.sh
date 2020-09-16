@@ -8,46 +8,46 @@ set -eu
 # PASS
 # coverage: 12.7% of statements in github.com/pingcap/tiup/components/cluster/...
 function instance_num() {
-	name=$1
-	native_ssh=$2
+    name=$1
+    native_ssh=$2
 
-	client=""
+    client=""
     if [ $native_ssh == true ]; then
         client="--native-ssh"
     fi
 
-	count=$(tiup-cluster $client display $name | grep "Total nodes" | awk -F ' ' '{print $3}')
+    count=$(tiup-cluster $client display $name | grep "Total nodes" | awk -F ' ' '{print $3}')
 
-	echo $count
+    echo $count
 }
 
 # wait_instance_num_reach <name> <target_num> <use-native-ssh>
 # wait the instance number of cluster reach the target_num.
 # timeout 120 second
 function wait_instance_num_reach() {
-	name=$1
-	target_num=$2
-	native_ssh=$3
+    name=$1
+    target_num=$2
+    native_ssh=$3
 
-	client=""
+    client=""
     if [ $native_ssh == true ]; then
         client="--native-ssh"
     fi
 
-	for ((i=0;i<120;i++))
-	do
-		count=$(instance_num $name $native_ssh)
-		if [ "$count" == "$target_num" ]; then
-			echo "instance number reach $target_num"
-			return
-		else
-			sleep 1
-		fi
+    for ((i=0;i<120;i++))
+    do
+        count=$(instance_num $name $native_ssh)
+        if [ "$count" == "$target_num" ]; then
+            echo "instance number reach $target_num"
+            return
+        else
+            sleep 1
+        fi
 
-		sleep 1
-	done
+        sleep 1
+    done
 
-	echo "fail to wait instance number reach $target_num, retry num: $i"
-	tiup-cluster $client display $name
-	exit -1
+    echo "fail to wait instance number reach $target_num, retry num: $i"
+    tiup-cluster $client display $name
+    exit -1
 }
