@@ -1202,7 +1202,12 @@ func (m *Manager) Deploy(
 			// copy dependency component if needed
 			switch inst.ComponentName() {
 			case spec.ComponentTiSpark:
-				t = t.DeploySpark(inst, version, "" /* default srcPath */, deployDir, m.bindVersion)
+				env := environment.GlobalEnv()
+				var sparkVer v0manifest.Version
+				if sparkVer, _, iterErr = env.V1Repository().LatestStableVersion(spec.ComponentSpark, false); iterErr != nil {
+					return
+				}
+				t = t.DeploySpark(inst, sparkVer.String(), "" /* default srcPath */, deployDir, m.bindVersion)
 			default:
 				t = t.CopyComponent(
 					inst.ComponentName(),
@@ -1244,6 +1249,10 @@ func (m *Manager) Deploy(
 			t.BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", inst.ComponentName(), inst.GetHost())),
 		)
 	})
+
+	if iterErr != nil {
+		return iterErr
+	}
 
 	// Deploy monitor relevant components to remote
 	dlTasks, dpTasks := buildMonitoredDeployTask(
