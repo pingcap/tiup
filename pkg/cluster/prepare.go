@@ -36,11 +36,11 @@ func BuildDownloadCompTasks(clusterVersion string, instanceIter InstanceIter, bi
 
 			// we don't set version for tispark, so the lastest tispark will be used
 			var version string
-			if inst.ComponentName() != spec.ComponentTiSpark {
-				version = bindVersion(inst.ComponentName(), clusterVersion)
-			} else {
+			if inst.ComponentName() == spec.ComponentTiSpark {
 				// download spark as dependency of tispark
 				tasks = append(tasks, buildDownloadSparkTask(inst))
+			} else {
+				version = bindVersion(inst.ComponentName(), clusterVersion)
 			}
 
 			t := task.NewBuilder().

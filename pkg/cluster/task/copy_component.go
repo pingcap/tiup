@@ -43,8 +43,6 @@ func (c *CopyComponent) Execute(ctx *Context) error {
 	// If the version is not specified, the last stable one will be used
 	if c.version == "" {
 		env := environment.GlobalEnv()
-		env.V1Repository().Lock()
-		defer env.V1Repository().Unlock()
 		ver, _, err := env.V1Repository().LatestStableVersion(c.component, false)
 		if err != nil {
 			return err

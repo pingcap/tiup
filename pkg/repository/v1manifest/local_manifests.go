@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
@@ -56,7 +57,7 @@ type LocalManifests interface {
 type FsManifests struct {
 	profile *localdata.Profile
 	keys    *KeyStore
-	cache   map[string]string
+	cache   sync.Map // map[string]string
 }
 
 // FIXME implement garbage collection of old manifests
@@ -64,7 +65,7 @@ type FsManifests struct {
 // NewManifests creates a new FsManifests with local store at root.
 // There must exist a trusted root.json.
 func NewManifests(profile *localdata.Profile) (*FsManifests, error) {
-	result := &FsManifests{profile: profile, keys: NewKeyStore(), cache: make(map[string]string)}
+	result := &FsManifests{profile: profile, keys: NewKeyStore()}
 
 	// Load the root manifest.
 	manifest, err := result.load(ManifestFilenameRoot)
@@ -91,7 +92,7 @@ func NewManifests(profile *localdata.Profile) (*FsManifests, error) {
 		return nil, errors.AddStack(err)
 	}
 
-	result.cache[ManifestFilenameRoot] = manifest
+	result.cache.Store(ManifestFilenameRoot, manifest)
 
 	return result, nil
 }
@@ -129,7 +130,7 @@ func (ms *FsManifests) save(manifest *Manifest, filename string) error {
 		return err
 	}
 
-	ms.cache[filename] = string(bytes)
+	ms.cache.Store(filename, string(bytes))
 	return nil
 }
 
@@ -154,7 +155,7 @@ func (ms *FsManifests) LoadManifest(role ValidManifest) (*Manifest, bool, error)
 		return m, true, err
 	}
 
-	ms.cache[filename] = manifest
+	ms.cache.Store(filename, manifest)
 	return m, true, loadKeys(role, ms.keys)
 }
 
@@ -179,16 +180,16 @@ func (ms *FsManifests) LoadComponentManifest(item *ComponentItem, filename strin
 		return nil, err
 	}
 
-	ms.cache[filename] = manifest
+	ms.cache.Store(filename, manifest)
 	return component, nil
 }
 
 // load return the file for the manifest from disk.
 // The returned string is empty if the file does not exist.
 func (ms *FsManifests) load(filename string) (string, error) {
-	str, cached := ms.cache[filename]
+	str, cached := ms.cache.Load(filename)
 	if cached {
-		return str, nil
+		return str.(string), nil
 	}
 
 	fullPath := filepath.Join(ms.profile.Root(), localdata.ManifestParentDir, filename)

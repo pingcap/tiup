@@ -44,8 +44,6 @@ func (d *Downloader) Execute(_ *Context) error {
 	// If the version is not specified, the last stable one will be used
 	if d.version == "" {
 		env := environment.GlobalEnv()
-		env.V1Repository().Lock()
-		defer env.V1Repository().Unlock()
 		ver, _, err := env.V1Repository().LatestStableVersion(d.component, false)
 		if err != nil {
 			return err

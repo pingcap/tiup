@@ -24,7 +24,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/fatih/color"
@@ -48,7 +47,6 @@ const (
 // V1Repository represents a remote repository viewed with the v1 manifest design.
 type V1Repository struct {
 	Options
-	sync.Mutex
 	mirror Mirror
 	local  v1manifest.LocalManifests
 }
