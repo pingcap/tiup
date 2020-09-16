@@ -40,10 +40,6 @@ import (
 // errUnknownComponent represents the specific component cannot be found in index.json
 var errUnknownComponent = stderrors.New("unknown component")
 
-const (
-	componentManifestCacheKey = "component-manifest"
-)
-
 // V1Repository represents a remote repository viewed with the v1 manifest design.
 type V1Repository struct {
 	Options

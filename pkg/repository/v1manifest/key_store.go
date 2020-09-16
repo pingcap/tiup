@@ -30,7 +30,7 @@ type roleKeys struct {
 	threshold uint
 	expiry    string
 	// key id -> public key (map[string]crypto.PubKey)
-	keys sync.Map
+	keys *sync.Map
 }
 
 // NewKeyStore return a KeyStore
@@ -44,7 +44,7 @@ func (s *KeyStore) AddKeys(role string, threshold uint, expiry string, keys map[
 		return errors.Errorf("invalid threshold (0)")
 	}
 
-	rk := roleKeys{threshold: threshold, expiry: expiry}
+	rk := roleKeys{threshold: threshold, expiry: expiry, keys: &sync.Map{}}
 
 	for id, info := range keys {
 		pub, err := info.publicKey()
