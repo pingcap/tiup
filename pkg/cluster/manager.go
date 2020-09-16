@@ -853,7 +853,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 					if err != nil {
 						return err
 					}
-					tb = tb.DeploySpark(inst, sparkVer.String(), "" /* default srcPath */, deployDir, m.bindVersion)
+					tb = tb.DeploySpark(inst, sparkVer.String(), "" /* default srcPath */, deployDir)
 				default:
 					tb = tb.CopyComponent(
 						inst.ComponentName(),
@@ -1207,7 +1207,7 @@ func (m *Manager) Deploy(
 				if sparkVer, _, iterErr = env.V1Repository().LatestStableVersion(spec.ComponentSpark, false); iterErr != nil {
 					return
 				}
-				t = t.DeploySpark(inst, sparkVer.String(), "" /* default srcPath */, deployDir, m.bindVersion)
+				t = t.DeploySpark(inst, sparkVer.String(), "" /* default srcPath */, deployDir)
 			default:
 				t = t.CopyComponent(
 					inst.ComponentName(),
@@ -1967,7 +1967,7 @@ func buildScaleOutTask(
 				if sparkVer, _, iterErr = env.V1Repository().LatestStableVersion(spec.ComponentSpark, false); iterErr != nil {
 					return
 				}
-				tb = tb.DeploySpark(inst, sparkVer.String(), srcPath, deployDir, m.bindVersion)
+				tb = tb.DeploySpark(inst, sparkVer.String(), srcPath, deployDir)
 			default:
 				tb.CopyComponent(
 					inst.ComponentName(),
