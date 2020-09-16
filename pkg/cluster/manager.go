@@ -39,10 +39,12 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/crypto"
+	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/file"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
@@ -846,7 +848,12 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 				// copy dependency component if needed
 				switch inst.ComponentName() {
 				case spec.ComponentTiSpark:
-					tb = tb.DeploySpark(inst, version, "" /* default srcPath */, deployDir, m.bindVersion)
+					env := environment.GlobalEnv()
+					sparkVer, _, err := env.V1Repository().LatestStableVersion(spec.ComponentSpark, false)
+					if err != nil {
+						return err
+					}
+					tb = tb.DeploySpark(inst, sparkVer.String(), "" /* default srcPath */, deployDir)
 				default:
 					tb = tb.CopyComponent(
 						inst.ComponentName(),
@@ -1195,7 +1202,12 @@ func (m *Manager) Deploy(
 			// copy dependency component if needed
 			switch inst.ComponentName() {
 			case spec.ComponentTiSpark:
-				t = t.DeploySpark(inst, version, "" /* default srcPath */, deployDir, m.bindVersion)
+				env := environment.GlobalEnv()
+				var sparkVer v0manifest.Version
+				if sparkVer, _, iterErr = env.V1Repository().LatestStableVersion(spec.ComponentSpark, false); iterErr != nil {
+					return
+				}
+				t = t.DeploySpark(inst, sparkVer.String(), "" /* default srcPath */, deployDir)
 			default:
 				t = t.CopyComponent(
 					inst.ComponentName(),
@@ -1237,6 +1249,10 @@ func (m *Manager) Deploy(
 			t.BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", inst.ComponentName(), inst.GetHost())),
 		)
 	})
+
+	if iterErr != nil {
+		return iterErr
+	}
 
 	// Deploy monitor relevant components to remote
 	dlTasks, dpTasks := buildMonitoredDeployTask(
@@ -1946,7 +1962,12 @@ func buildScaleOutTask(
 			// copy dependency component if needed
 			switch inst.ComponentName() {
 			case spec.ComponentTiSpark:
-				tb = tb.DeploySpark(inst, version, srcPath, deployDir, m.bindVersion)
+				env := environment.GlobalEnv()
+				var sparkVer v0manifest.Version
+				if sparkVer, _, iterErr = env.V1Repository().LatestStableVersion(spec.ComponentSpark, false); iterErr != nil {
+					return
+				}
+				tb = tb.DeploySpark(inst, sparkVer.String(), srcPath, deployDir)
 			default:
 				tb.CopyComponent(
 					inst.ComponentName(),

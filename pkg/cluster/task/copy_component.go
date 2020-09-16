@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/environment"
 )
 
 // CopyComponent is used to copy all files related the specific version a component
@@ -39,6 +40,16 @@ func PackagePath(comp string, version string, os string, arch string) string {
 
 // Execute implements the Task interface
 func (c *CopyComponent) Execute(ctx *Context) error {
+	// If the version is not specified, the last stable one will be used
+	if c.version == "" {
+		env := environment.GlobalEnv()
+		ver, _, err := env.V1Repository().LatestStableVersion(c.component, false)
+		if err != nil {
+			return err
+		}
+		c.version = string(ver)
+	}
+
 	// Copy to remote server
 	srcPath := c.srcPath
 	if srcPath == "" {

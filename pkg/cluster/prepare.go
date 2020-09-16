@@ -26,7 +26,7 @@ type InstanceIter interface {
 }
 
 // BuildDownloadCompTasks build download component tasks
-func BuildDownloadCompTasks(version string, instanceIter InstanceIter, bindVersion spec.BindVersion) []*task.StepDisplay {
+func BuildDownloadCompTasks(clusterVersion string, instanceIter InstanceIter, bindVersion spec.BindVersion) []*task.StepDisplay {
 	var tasks []*task.StepDisplay
 	uniqueTaskList := make(map[string]struct{}) // map["comp-os-arch"]{}
 	instanceIter.IterInstance(func(inst spec.Instance) {
@@ -34,12 +34,15 @@ func BuildDownloadCompTasks(version string, instanceIter InstanceIter, bindVersi
 		if _, found := uniqueTaskList[key]; !found {
 			uniqueTaskList[key] = struct{}{}
 
-			// download spark as dependency of tispark
+			// we don't set version for tispark, so the lastest tispark will be used
+			var version string
 			if inst.ComponentName() == spec.ComponentTiSpark {
-				tasks = append(tasks, buildDownloadSparkTask(version, inst, bindVersion))
+				// download spark as dependency of tispark
+				tasks = append(tasks, buildDownloadSparkTask(inst))
+			} else {
+				version = bindVersion(inst.ComponentName(), clusterVersion)
 			}
 
-			version := bindVersion(inst.ComponentName(), version)
 			t := task.NewBuilder().
 				Download(inst.ComponentName(), inst.OS(), inst.Arch(), version).
 				BuildAsStep(fmt.Sprintf("  - Download %s:%s (%s/%s)",
@@ -52,10 +55,9 @@ func BuildDownloadCompTasks(version string, instanceIter InstanceIter, bindVersi
 
 // buildDownloadSparkTask build download task for spark, which is a dependency of tispark
 // FIXME: this is a hack and should be replaced by dependency handling in manifest processing
-func buildDownloadSparkTask(version string, inst spec.Instance, bindVersion spec.BindVersion) *task.StepDisplay {
-	ver := bindVersion(spec.ComponentSpark, version)
+func buildDownloadSparkTask(inst spec.Instance) *task.StepDisplay {
 	return task.NewBuilder().
-		Download(spec.ComponentSpark, inst.OS(), inst.Arch(), ver).
-		BuildAsStep(fmt.Sprintf("  - Download %s:%s (%s/%s)",
-			spec.ComponentSpark, version, inst.OS(), inst.Arch()))
+		Download(spec.ComponentSpark, inst.OS(), inst.Arch(), "").
+		BuildAsStep(fmt.Sprintf("  - Download %s: (%s/%s)",
+			spec.ComponentSpark, inst.OS(), inst.Arch()))
 }
