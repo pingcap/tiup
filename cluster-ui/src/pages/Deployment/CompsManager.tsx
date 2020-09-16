@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react'
 import { useLocalStorageState } from 'ahooks'
-import { Drawer, Button, Modal, Form, Input, Select } from 'antd'
+import { Drawer, Button, Modal, Form, Input, AutoComplete } from 'antd'
 import yaml from 'yaml'
 import { useNavigate } from 'react-router-dom'
 
@@ -22,6 +22,7 @@ import GlobalDirForm from './GlobalDirForm'
 // TODO: fetch from API
 const TIDB_VERSIONS = [
   'nightly',
+  'v4.0.6',
   'v4.0.5',
   'v4.0.4',
   'v4.0.3',
@@ -32,6 +33,7 @@ const TIDB_VERSIONS = [
   'v3.1.1',
   'v3.1.0',
 ]
+const AUTO_COMPLETE_OPTIONS = TIDB_VERSIONS.map((v) => ({ value: v }))
 
 export interface IDeployReq {
   cluster_name: string
@@ -204,13 +206,10 @@ export default function CompsManager({
             name="tidb_version"
             rules={[{ required: true, message: '请选择 TiDB 版本' }]}
           >
-            <Select style={{ width: 100 }}>
-              {TIDB_VERSIONS.map((ver) => (
-                <Select.Option key={ver} value={ver}>
-                  {ver}
-                </Select.Option>
-              ))}
-            </Select>
+            <AutoComplete
+              style={{ width: 100 }}
+              options={AUTO_COMPLETE_OPTIONS}
+            />
           </Form.Item>
           <Form.Item>
             <Button type="primary" onClick={() => setPreviewYaml(true)}>
