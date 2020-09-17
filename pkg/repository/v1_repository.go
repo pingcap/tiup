@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -505,6 +506,14 @@ func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target st
 	err := r.mirror.Download(item.URL, targetDir)
 	if err != nil {
 		return errors.Trace(err)
+	}
+
+	// the downloaded file is named by item.URL, which maybe differ to target name
+	if downloaded := path.Join(targetDir, item.URL); downloaded != target {
+		err := os.Rename(downloaded, target)
+		if err != nil {
+			return errors.Trace(err)
+		}
 	}
 
 	reader, err := os.Open(target)
