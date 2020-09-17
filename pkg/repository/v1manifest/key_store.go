@@ -15,19 +15,22 @@ package v1manifest
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/crypto"
 )
 
-// KeyStore tracks roles, keys, etc. and verifies signatures against this metadata.
-type KeyStore map[string]roleKeys
+// KeyStore tracks roles, keys, etc. and verifies signatures against this metadata. (map[string]roleKeys)
+type KeyStore struct {
+	sync.Map
+}
 
 type roleKeys struct {
 	threshold uint
 	expiry    string
-	// key id -> public key
-	keys map[string]crypto.PubKey
+	// key id -> public key (map[string]crypto.PubKey)
+	keys *sync.Map
 }
 
 // NewKeyStore return a KeyStore
@@ -41,15 +44,17 @@ func (s *KeyStore) AddKeys(role string, threshold uint, expiry string, keys map[
 		return errors.Errorf("invalid threshold (0)")
 	}
 
-	(*s)[role] = roleKeys{threshold: threshold, expiry: expiry, keys: map[string]crypto.PubKey{}}
+	rk := roleKeys{threshold: threshold, expiry: expiry, keys: &sync.Map{}}
 
 	for id, info := range keys {
 		pub, err := info.publicKey()
 		if err != nil {
 			return err
 		}
-		(*s)[role].keys[id] = pub
+
+		rk.keys.Store(id, pub)
 	}
+	s.Store(role, rk)
 
 	return nil
 }
@@ -80,7 +85,7 @@ func (s *SignatureError) Error() string {
 // transitionRoot checks that signed is verified by signatures using newThreshold, and if so, updates the keys for the root
 // role in the key store.
 func (s *KeyStore) transitionRoot(signed []byte, newThreshold uint, expiry string, signatures []Signature, newKeys map[string]*KeyInfo) error {
-	oldKeys := (*s)[ManifestTypeRoot]
+	oldKeys, hasOldKeys := s.Load(ManifestTypeRoot)
 
 	err := s.AddKeys(ManifestTypeRoot, newThreshold, expiry, newKeys)
 	if err != nil {
@@ -90,7 +95,9 @@ func (s *KeyStore) transitionRoot(signed []byte, newThreshold uint, expiry strin
 	err = s.verifySignature(signed, ManifestTypeRoot, signatures, ManifestFilenameRoot)
 	if err != nil {
 		// Restore the old root keys.
-		(*s)[ManifestTypeRoot] = oldKeys
+		if hasOldKeys {
+			s.Store(ManifestTypeRoot, oldKeys)
+		}
 		return err
 	}
 
@@ -114,18 +121,19 @@ func (s *KeyStore) verifySignature(signed []byte, role string, signatures []Sign
 		has[sig.KeyID] = struct{}{}
 	}
 
-	keys, ok := (*s)[role]
+	ks, ok := s.Load(role)
 	if !ok {
 		return errors.Errorf("Unknown role %s", role)
 	}
+	keys := ks.(roleKeys)
 
 	var validSigs uint = 0
 	for _, sig := range signatures {
-		key, ok := keys.keys[sig.KeyID]
+		key, ok := keys.keys.Load(sig.KeyID)
 		if !ok {
 			continue
 		}
-		err := key.VerifySignature(signed, sig.Sig)
+		err := key.(crypto.PubKey).VerifySignature(signed, sig.Sig)
 		if err != nil {
 			return newSignatureError(filename, err)
 		}
