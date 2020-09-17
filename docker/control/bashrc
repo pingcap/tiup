@@ -5,7 +5,7 @@ export PATH=$PATH:/usr/local/go/bin
 export PATH=$PATH:/tiup-cluster/bin
 
 if [ -d "/mirrors" ]; then
-	export TIUP_MIRRORS=/mirrors
+    export TIUP_MIRRORS=/mirrors
 fi
 
 # You may uncomment the following lines if you want `ls' to be colorized:
@@ -16,7 +16,7 @@ alias ll='ls $LS_OPTIONS -l'
 alias l='ls $LS_OPTIONS -lA'
 
 mkdir -p ~/.tiup/bin
-file ~/.tiup/bin/root.json || curl "https://tiup-mirrors.pingcap.com/root.json" > ~/.tiup/bin/root.json
+[[ -f ~/.tiup/bin/root.json ]] || curl "https://tiup-mirrors.pingcap.com/root.json" > ~/.tiup/bin/root.json
 
 cat <<EOF
 Welcome to tiup-cluster on Docker
@@ -26,10 +26,10 @@ This container runs the tiup-cluster tests in sub-containers.
 
 You are currently in the base dir of the git repo for tiup-cluster.
 
-Run `tiup-cluster` to play with tiup-cluster.
+Run \`tiup-cluster\` to play with tiup-cluster.
 
 To run the test:
-   ./tests/run.sh
+   ./tests/tiup-cluster/run.sh
    ...
 EOF
 
