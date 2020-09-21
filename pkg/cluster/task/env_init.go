@@ -23,6 +23,20 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/module"
 )
 
+// PrivilegeEscalationMethod defiles availabile linux privilege escalation commands
+type PrivilegeEscalationMethod int
+
+const (
+	// Invalid privilege escalation mathod as a default
+	Invalid PrivilegeEscalationMethod = 0
+	// Sudo command
+	Sudo PrivilegeEscalationMethod = 1
+	//Su command
+	Su PrivilegeEscalationMethod = 2
+	//Runuser command
+	Runuser PrivilegeEscalationMethod = 3
+)
+
 var (
 	errNSEnvInit               = errNS.NewSubNamespace("env_init")
 	errEnvInitSubCommandFailed = errNSEnvInit.NewType("sub_command_failed")
@@ -74,8 +88,37 @@ func (e *EnvInit) execute(ctx *Context) error {
 		return wrapError(err)
 	}
 
+	// some of the privilege escalation commands might be prohibited by the linux administrator
+	// try different methods and choose the one that works (su, runuser, sudo)
+	// raise an error when there is no privilege escalation method available
+	var privilegeEscalationMethod PrivilegeEscalationMethod = Invalid
+	pems := map[PrivilegeEscalationMethod]string{
+		Su:      fmt.Sprintf(`su - %s -c 'echo 0'`, e.deployUser),
+		Runuser: fmt.Sprintf(`runuser -l %s -c 'echo 0'`, e.deployUser),
+		Sudo:    `sudo echo 0`,
+	}
+	for pem, cmd := range pems {
+		_, _, err = exec.Execute(cmd, true)
+		if err == nil {
+			privilegeEscalationMethod = pem
+			break
+		}
+	}
+	if privilegeEscalationMethod == Invalid {
+		return wrapError(errEnvInitSubCommandFailed.
+			Wrap(err, "No privilege escalation method available"))
+	}
+
 	// Authorize
-	cmd := `su - ` + e.deployUser + ` -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'`
+	var cmd string
+	switch privilegeEscalationMethod {
+	case Su:
+		cmd = fmt.Sprintf(`su - %s -c 'test -d ~/.ssh || mkdir -p ~/.ssh && chmod 700 ~/.ssh'`, e.deployUser)
+	case Runuser:
+		cmd = fmt.Sprintf(`runuser -l %s -c 'test -d ~/.ssh || mkdir -p ~/.ssh && chmod 700 ~/.ssh'`, e.deployUser)
+	case Sudo:
+		cmd = fmt.Sprintf(`sudo test -d ~/.ssh || sudo mkdir -p ~/.ssh && sudo chmod 700 ~/.ssh && sudo chown %s:%s ~/.ssh`, e.deployUser, e.userGroup)
+	}
 	_, _, err = exec.Execute(cmd, true)
 	if err != nil {
 		return wrapError(errEnvInitSubCommandFailed.
@@ -83,9 +126,20 @@ func (e *EnvInit) execute(ctx *Context) error {
 	}
 
 	pk := strings.TrimSpace(string(pubKey))
+
 	sshAuthorizedKeys := executor.FindSSHAuthorizedKeysFile(exec)
-	cmd = fmt.Sprintf(`su - %[1]s -c 'grep $(echo %[2]s) %[3]s || echo %[2]s >> %[3]s && chmod 600 %[3]s'`,
-		e.deployUser, pk, sshAuthorizedKeys)
+	switch privilegeEscalationMethod {
+	case Su:
+		cmd = fmt.Sprintf(`su - %[1]s -c 'grep $(echo %[2]s) %[3]s || echo %[2]s >> %[3]s && chmod 600 %[3]s'`,
+			e.deployUser, pk, sshAuthorizedKeys)
+	case Runuser:
+		cmd = fmt.Sprintf(`runuser -l %[1]s -c 'grep $(echo %[2]s) %[3]s || echo %[2]s >> %[3]s && chmod 600 %[3]s'`,
+			e.deployUser, pk, sshAuthorizedKeys)
+	case Sudo:
+		cmd = fmt.Sprintf(`sudo grep $(echo %[1]s) %[2]s || sudo echo %[1]s >> %[2]s && chmod 600 %[2]s && sudo chown %[3]s:%[4]s %[2]s`,
+			pk, sshAuthorizedKeys, e.deployUser, e.userGroup)
+	}
+
 	_, _, err = exec.Execute(cmd, true)
 	if err != nil {
 		return wrapError(errEnvInitSubCommandFailed.
