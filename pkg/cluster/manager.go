@@ -28,11 +28,13 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -529,6 +531,10 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	filterRoles := set.NewStringSet(opt.Roles...)
 	filterNodes := set.NewStringSet(opt.Nodes...)
 	pdList := topo.BaseTopo().MasterList
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return perrs.AddStack(err)
+	}
 	for _, comp := range topo.ComponentsByStartOrder() {
 		for _, ins := range comp.Instances() {
 			// apply role filter
@@ -547,10 +553,6 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 				dataDir = insDirs[1]
 			}
 
-			tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
-			if err != nil {
-				return perrs.AddStack(err)
-			}
 			status := ins.Status(tlsCfg, pdList...)
 			// Query the service status
 			if status == "-" {
@@ -594,6 +596,16 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 
 	cliutil.PrintTable(clusterTable, true)
 	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
+
+	pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
+	lbs, err := pdClient.GetLocationLabels()
+	if err != nil {
+		return err
+	}
+	kvs := topo.(*spec.Specification).TiKVServers
+	if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
+		fmt.Printf("%v", err)
+	}
 
 	return nil
 }

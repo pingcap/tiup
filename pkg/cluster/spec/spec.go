@@ -117,7 +117,7 @@ type BaseTopo struct {
 	MasterList       []string
 }
 
-// Topology represents specification of the  cluster.
+// Topology represents specification of the cluster.
 type Topology interface {
 	BaseTopo() *BaseTopo
 	// Validate validates the topology specification and produce error if the

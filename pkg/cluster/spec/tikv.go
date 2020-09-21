@@ -120,6 +120,11 @@ func (s TiKVSpec) IsImported() bool {
 	return s.Imported
 }
 
+// Labels returns the labels of TiKV
+func (s TiKVSpec) Labels() (map[string]string, error) {
+	return nil, nil
+}
+
 // TiKVComponent represents TiKV component.
 type TiKVComponent struct {
 	*Specification

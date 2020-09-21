@@ -62,6 +62,7 @@ server_configs:
     schedule.region-schedule-limit: 2048
     schedule.replica-schedule-limit: 64
     replication.location-labels: ["zone", "host"]
+    replication.strictly-match-label: true
   tiflash:
     # path_realtime_mode: false
     logger.level: "info"

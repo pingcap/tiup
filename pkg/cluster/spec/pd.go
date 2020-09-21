@@ -251,6 +251,11 @@ func (i *PDInstance) InitConfig(
 			i.Role())
 	}
 
+	// Enable strictly-match-label by default
+	if spec.Config["replication.strictly-match-label"] == nil {
+		spec.Config["replication.strictly-match-label"] = true
+	}
+
 	if err := i.MergeServerConfig(e, globalConfig, spec.Config, paths); err != nil {
 		return err
 	}

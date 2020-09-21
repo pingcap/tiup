@@ -307,6 +307,68 @@ Please change to use another port or another host.
 	return nil
 }
 
+// TiKVLabelError indicates that some TiKV servers don't have correct labels
+type TiKVLabelError struct {
+	TiKVInstances map[string][]error
+}
+
+// Error implements error
+func (e *TiKVLabelError) Error() string {
+	str := ""
+	for id, errs := range e.TiKVInstances {
+		if len(errs) == 0 {
+			continue
+		}
+
+		str += fmt.Sprintf("%s:\n", id)
+		for _, e := range errs {
+			str += fmt.Sprintf("\t%s\n", e.Error())
+		}
+	}
+	return str
+}
+
+// CheckTiKVLocationLabels will check if tikv missing label or have wrong label
+func CheckTiKVLocationLabels(pdLocLabels []string, kvs []TiKVSpec) error {
+	lerr := &TiKVLabelError{
+		TiKVInstances: make(map[string][]error),
+	}
+	lbs := set.NewStringSet(pdLocLabels...)
+	hosts := make(map[string]int)
+
+	for _, kv := range kvs {
+		hosts[kv.Host] = hosts[kv.Host] + 1
+	}
+
+	for _, kv := range kvs {
+		id := fmt.Sprintf("%s:%d", kv.Host, kv.GetMainPort())
+		ls, err := kv.Labels()
+		if err != nil {
+			return err
+		}
+		if len(ls) == 0 && hosts[kv.Host] > 1 {
+			lerr.TiKVInstances[id] = append(
+				lerr.TiKVInstances[id],
+				errors.New("location label missed"),
+			)
+			continue
+		}
+		for lname := range ls {
+			if len(lbs) > 0 && !lbs.Exist(lname) {
+				lerr.TiKVInstances[id] = append(
+					lerr.TiKVInstances[id],
+					fmt.Errorf("label name %s is not specified in pd config (replication.location-labels) %v", lname, pdLocLabels),
+				)
+			}
+		}
+	}
+
+	if len(lerr.TiKVInstances) == 0 {
+		return nil
+	}
+	return lerr
+}
+
 // platformConflictsDetect checks for conflicts in topology for different OS / Arch
 // set to the same host / IP
 func (s *Specification) platformConflictsDetect() error {
