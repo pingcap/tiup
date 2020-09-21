@@ -342,14 +342,11 @@ func CheckTiKVLocationLabels(pdLocLabels []string, kvs []TiKVSpec) error {
 
 	for _, kv := range kvs {
 		id := fmt.Sprintf("%s:%d", kv.Host, kv.GetMainPort())
-		ls, err := kv.Labels()
-		if err != nil {
-			return err
-		}
+		ls := kv.Labels()
 		if len(ls) == 0 && hosts[kv.Host] > 1 {
 			lerr.TiKVInstances[id] = append(
 				lerr.TiKVInstances[id],
-				errors.New("location label missed"),
+				errors.New("location label missing"),
 			)
 			continue
 		}

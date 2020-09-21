@@ -597,6 +597,7 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	cliutil.PrintTable(clusterTable, true)
 	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
 
+	// Check if TiKV's label set correctly
 	pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
 	lbs, err := pdClient.GetLocationLabels()
 	if err != nil {
