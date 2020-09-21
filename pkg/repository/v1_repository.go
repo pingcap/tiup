@@ -104,6 +104,10 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 		return errors.Trace(err)
 	}
 
+	keepSource := false
+	if v := os.Getenv(localdata.EnvNameKeepSourceTarget); v == "enable" || v == "true" {
+		keepSource = true
+	}
 	var errs []string
 	for _, spec := range specs {
 		manifest, err := r.updateComponentManifest(spec.ID, false)
@@ -173,12 +177,17 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			errs = append(errs, err.Error())
 			continue
 		}
-		defer reader.Close()
 
 		err = r.local.InstallComponent(reader, targetDir, spec.ID, spec.Version, versionItem.URL, r.DisableDecompress)
+		reader.Close()
+
 		if err != nil {
 			errs = append(errs, err.Error())
-			continue
+		}
+
+		// remove the source gzip target if expand is on
+		if !r.DisableDecompress && !keepSource {
+			_ = os.Remove(target)
 		}
 	}
 
