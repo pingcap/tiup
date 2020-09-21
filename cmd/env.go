@@ -36,9 +36,10 @@ func newEnvCmd() *cobra.Command {
 		Short: "Show the list of system environment variable that related to TiUP",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				args = envList
+				showEnvList(true, envList...)
+				return nil
 			}
-			showEnvList(args...)
+			showEnvList(false, args...)
 			return nil
 		},
 	}
@@ -46,8 +47,12 @@ func newEnvCmd() *cobra.Command {
 	return cmd
 }
 
-func showEnvList(names ...string) {
+func showEnvList(withKey bool, names ...string) {
 	for _, name := range names {
-		fmt.Printf("%s=\"%s\"\n", name, os.Getenv(name))
+		if withKey {
+			fmt.Printf("%s=\"%s\"\n", name, os.Getenv(name))
+		} else {
+			fmt.Printf("%s\n", os.Getenv(name))
+		}
 	}
 }
