@@ -141,6 +141,10 @@ func (c *BinlogClient) updateStatus(ty string, nodeID string, state string) erro
 		return errors.AddStack(err)
 	}
 
+	if len(resp.Kvs) == 0 {
+		return errors.Errorf("no pump with node id: %v", nodeID)
+	}
+
 	var nodeStatus NodeStatus
 	err = json.Unmarshal(resp.Kvs[0].Value, &nodeStatus)
 	if err != nil {

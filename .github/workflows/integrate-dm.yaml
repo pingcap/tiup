@@ -1,5 +1,4 @@
 ---
-
 name: integrate-dm
 
 on:
@@ -35,11 +34,11 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.event.pull_request.head.sha  }}
-          path: go/src/github.com/${{ github.repository  }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: go/src/github.com/${{ github.repository }}
 
       - name: Build build_integration_test
-        working-directory: ${{env.working-directory}}
+        working-directory: ${{ env.working-directory }}
         run: |
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
@@ -47,11 +46,11 @@ jobs:
           make tiup
 
       - name: Build the docker-compose stack
-        working-directory: ${{env.working-directory}}
+        working-directory: ${{ env.working-directory }}
         # with --dev the first run will fail for unknow reason, just retry it and will success now..
         run: |
-          cd ${{env.working-directory}}/docker
-          TIUP_CLUSTER_ROOT=${{env.working-directory}} ./up.sh --daemon --dev --compose ./docker-compose.dm.yml || TIUP_CLUSTER_ROOT=${{env.working-directory}} ./up.sh --daemon --dev --compose ./docker-compose.dm.yml
+          cd ${{ env.working-directory }}/docker
+          TIUP_CLUSTER_ROOT=${{ env.working-directory }} ./up.sh --daemon --dev --compose ./docker-compose.dm.yml || TIUP_CLUSTER_ROOT=${{ env.working-directory }} ./up.sh --daemon --dev --compose ./docker-compose.dm.yml
 
       - name: Check running containers
         run: |
@@ -61,13 +60,13 @@ jobs:
 
       - name: Run test suite
         id: test
-        working-directory: ${{env.working-directory}}
+        working-directory: ${{ env.working-directory }}
         run: |
           # should not use -it
           # ref: https://stackoverflow.com/questions/43099116/error-the-input-device-is-not-a-tty
-          docker exec  tiup-cluster-control bash /tiup-cluster/tests/tiup-dm/run.sh ${{matrix.cases}}
+          docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-dm/run.sh ${{matrix.cases}}
 
       - name: Upload coverage to Codecov
-        working-directory: ${{env.working-directory}}
+        working-directory: ${{ env.working-directory }}
         run: |
-          curl -s https://codecov.io/bash | bash -s - -F integrate,dm -s ${{env.working-directory}}/tests/tiup-dm/cover -f '*.out'
+          curl -s https://codecov.io/bash | bash -s - -F integrate,dm -s ${{ env.working-directory }}/tests/tiup-dm/cover -f '*.out'
