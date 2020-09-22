@@ -339,7 +339,6 @@ func CheckTiKVLocationLabels(pdLocLabels []string, kvs []TiKVSpec) error {
 	for _, kv := range kvs {
 		hosts[kv.Host] = hosts[kv.Host] + 1
 	}
-
 	for _, kv := range kvs {
 		id := fmt.Sprintf("%s:%d", kv.Host, kv.GetMainPort())
 		ls := kv.Labels()
@@ -351,10 +350,10 @@ func CheckTiKVLocationLabels(pdLocLabels []string, kvs []TiKVSpec) error {
 			continue
 		}
 		for lname := range ls {
-			if len(lbs) > 0 && !lbs.Exist(lname) {
+			if !lbs.Exist(lname) {
 				lerr.TiKVInstances[id] = append(
 					lerr.TiKVInstances[id],
-					fmt.Errorf("label name %s is not specified in pd config (replication.location-labels) %v", lname, pdLocLabels),
+					fmt.Errorf("label name '%s' is not specified in pd config (replication.location-labels: %v)", lname, pdLocLabels),
 				)
 			}
 		}

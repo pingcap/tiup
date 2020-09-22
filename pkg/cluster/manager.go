@@ -605,7 +605,7 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	}
 	kvs := topo.(*spec.Specification).TiKVServers
 	if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
-		fmt.Printf("%v", err)
+		color.Yellow("\nWARN: there is something wrong with TiKV labels, which may cause data losing:\n%v", err)
 	}
 
 	return nil
@@ -1013,6 +1013,7 @@ type ScaleOutOptions struct {
 	SkipCreateUser bool   // don't create user
 	IdentityFile   string // path to the private key file
 	UsePassword    bool   // use password instead of identity file for ssh connection
+	NoLabels       bool   // don't check labels for TiKV instance
 }
 
 // DeployOptions contains the options for scale out.
@@ -1489,6 +1490,24 @@ func (m *Manager) ScaleOut(
 	mergedTopo := topo.MergeTopo(newPart)
 	if err := mergedTopo.Validate(); err != nil {
 		return err
+	}
+
+	if !opt.NoLabels {
+		// Check if TiKV's label set correctly
+		pdList := topo.BaseTopo().MasterList
+		tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+		if err != nil {
+			return perrs.AddStack(err)
+		}
+		pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
+		lbs, err := pdClient.GetLocationLabels()
+		if err != nil {
+			return err
+		}
+		kvs := mergedTopo.(*spec.Specification).TiKVServers
+		if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
+			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+		}
 	}
 
 	clusterList, err := m.specManager.GetAllClusters()
