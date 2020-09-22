@@ -662,7 +662,7 @@ func (pc *PDClient) GetReplicateConfig() ([]byte, error) {
 	})
 }
 
-// GetLocationLabels gets the replication.location-labels from config
+// GetLocationLabels gets the replication.location-labels config from pd server
 func (pc *PDClient) GetLocationLabels() ([]string, error) {
 	config, err := pc.GetReplicateConfig()
 	if err != nil {
