@@ -23,7 +23,14 @@ function cmd_subtest() {
 
     tiup-cluster $client check $topo -i ~/.ssh/id_rsa --enable-mem --enable-cpu --apply
 
-    tiup-cluster $client --yes check $topo -i ~/.ssh/id_rsa
+    check_result=`tiup-cluster $client --yes check $topo -i ~/.ssh/id_rsa`
+
+    # check the check result
+    echo $check_result | grep "cpu-cores"
+    echo $check_result | grep "memory"
+    echo $check_result | grep "os-version"
+    echo $check_result | grep "selinux"
+    echo $check_result | grep "service"
 
     # This should fail because there is no such user: tidb
     ! tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa --skip-create-user
