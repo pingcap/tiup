@@ -1024,6 +1024,7 @@ type DeployOptions struct {
 	IdentityFile      string // path to the private key file
 	UsePassword       bool   // use password instead of identity file for ssh connection
 	IgnoreConfigCheck bool   // ignore config check result
+	NoLabels          bool   // don't check labels for TiKV instance
 }
 
 // DeployerInstance is a instance can deploy to a target deploy directory.
@@ -1069,6 +1070,15 @@ func (m *Manager) Deploy(
 	base := topo.BaseTopo()
 	if sshType != "" {
 		base.GlobalOptions.SSHType = sshType
+	}
+
+	if !opt.NoLabels {
+		// Check if TiKV's label set correctly
+		lbs := topo.(*spec.Specification).LocationLabels()
+		kvs := topo.(*spec.Specification).TiKVServers
+		if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
+			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+		}
 	}
 
 	clusterList, err := m.specManager.GetAllClusters()

@@ -210,6 +210,32 @@ func (s *Specification) BaseTopo() *BaseTopo {
 	}
 }
 
+// LocationLabels returns replication.location-labels in PD config
+func (s *Specification) LocationLabels() []string {
+	lbs := []string{}
+
+	if pdReplica := s.ServerConfigs.PD["replication"]; pdReplica != nil {
+		// server_configs:
+		//   pd:
+		//     replication:
+		//       location-labels: ["zone", "host"]
+		if repLbs := pdReplica.(map[interface{}]interface{})["location-labels"]; repLbs != nil {
+			for _, l := range repLbs.([]interface{}) {
+				lbs = append(lbs, l.(string))
+			}
+		}
+	} else if repLbs := s.ServerConfigs.PD["replication.location-labels"]; repLbs != nil {
+		// server_configs:
+		//   pd.replication:
+		//     location-labels: ["zone", "host"]
+		for _, l := range repLbs.([]interface{}) {
+			lbs = append(lbs, l.(string))
+		}
+	}
+
+	return lbs
+}
+
 // AllComponentNames contains the names of all components.
 // should include all components in ComponentsByStartOrder
 func AllComponentNames() (roles []string) {
