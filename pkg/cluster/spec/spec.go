@@ -226,8 +226,8 @@ func (s *Specification) LocationLabels() []string {
 		}
 	} else if repLbs := s.ServerConfigs.PD["replication.location-labels"]; repLbs != nil {
 		// server_configs:
-		//   pd.replication:
-		//     location-labels: ["zone", "host"]
+		//   pd:
+		//     replication.location-labels: ["zone", "host"]
 		for _, l := range repLbs.([]interface{}) {
 			lbs = append(lbs, l.(string))
 		}

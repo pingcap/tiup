@@ -471,3 +471,31 @@ item7 = 700
 	c.Assert(err, IsNil)
 	c.Assert(string(merge2), DeepEquals, expected)
 }
+
+func (s *metaSuiteTopo) TestLocationLabels(c *C) {
+	spec := Specification{}
+
+	c.Assert(len(spec.LocationLabels()), Equals, 0)
+
+	err := yaml.Unmarshal([]byte(`
+server_configs:
+  pd:
+    replication.location-labels: ["zone", "host"]
+`), &spec)
+	c.Assert(err, IsNil)
+	lbs := spec.LocationLabels()
+	c.Assert(lbs, DeepEquals, []string{"zone", "host"})
+
+	spec = Specification{}
+	err = yaml.Unmarshal([]byte(`
+server_configs:
+  pd:
+    replication:
+      location-labels:
+        - zone
+        - host
+`), &spec)
+	c.Assert(err, IsNil)
+	lbs = spec.LocationLabels()
+	c.Assert(lbs, DeepEquals, []string{"zone", "host"})
+}
