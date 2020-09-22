@@ -598,13 +598,11 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
 
 	// Check if TiKV's label set correctly
-	pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
-	lbs, err := pdClient.GetLocationLabels()
-	if err != nil {
-		return err
-	}
 	kvs := topo.(*spec.Specification).TiKVServers
-	if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
+	pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
+	if lbs, err := pdClient.GetLocationLabels(); err != nil {
+		color.Yellow("\nWARN: get location labels from pd failed: %v", err)
+	} else if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
 		color.Yellow("\nWARN: there is something wrong with TiKV labels, which may cause data losing:\n%v", err)
 	}
 
