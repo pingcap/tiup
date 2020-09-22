@@ -1,5 +1,4 @@
 ---
-
 name: integrate-cluster-cmd
 
 on:
@@ -35,19 +34,19 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.event.pull_request.head.sha  }}
-          path: go/src/github.com/${{ github.repository  }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: go/src/github.com/${{ github.repository }}
       - name: Build build_integration_test
-        working-directory: ${{env.working-directory}}
+        working-directory: ${{ env.working-directory }}
         run: |
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
           make build_integration_test
 
       - name: Build the docker-compose stack
-        working-directory: ${{env.working-directory}}
+        working-directory: ${{ env.working-directory }}
         # with --dev the first run will fail for unknow reason, just retry it and will success now..
-        run: TIUP_CLUSTER_ROOT=${{env.working-directory}} ./docker/up.sh --daemon --dev || TIUP_CLUSTER_ROOT=${{env.working-directory}} ./docker/up.sh --daemon --dev
+        run: TIUP_CLUSTER_ROOT=${{ env.working-directory }} ./docker/up.sh --daemon --dev || TIUP_CLUSTER_ROOT=${{ env.working-directory }} ./docker/up.sh --daemon --dev
 
       - name: Check running containers
         run: |
@@ -57,20 +56,20 @@ jobs:
 
       - name: Run test suite
         id: test
-        working-directory: ${{env.working-directory}}
+        working-directory: ${{ env.working-directory }}
         run: |
           # should not use -it
           # ref: https://stackoverflow.com/questions/43099116/error-the-input-device-is-not-a-tty
-          docker exec  tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/run.sh ${{matrix.cases}}
+          docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/run.sh ${{matrix.cases}}
 
       - name: Collect component log
-        working-directory: ${{env.working-directory}}
+        working-directory: ${{ env.working-directory }}
         # if: steps.test.outputs.exit_code != 0
         if: always()
         run: |
-          docker exec  tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/script/pull_log.sh /tiup-cluster/logs
-          ls ${{env.working-directory}}
-          tar czvf ${{env.working-directory}}/logs.tar.gz ${{env.working-directory}}/logs/
+          docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/script/pull_log.sh /tiup-cluster/logs
+          ls ${{ env.working-directory }}
+          tar czvf ${{ env.working-directory }}/logs.tar.gz ${{ env.working-directory }}/logs/
 
       - name: Upload component log
         # if: steps.test.outputs.exit_code != 0
@@ -78,10 +77,10 @@ jobs:
         uses: actions/upload-artifact@v1
         with:
           name: component_logs
-          path: ${{env.working-directory}}/logs.tar.gz
+          path: ${{ env.working-directory }}/logs.tar.gz
 
       - name: Output cluster debug log
-        working-directory: ${{env.working-directory}}
+        working-directory: ${{ env.working-directory }}
         if: always()
         run: |
           pwd
@@ -91,6 +90,6 @@ jobs:
           "cat ./tests/*.log" || true
 
       - name: Upload coverage to Codecov
-        working-directory: ${{env.working-directory}}
+        working-directory: ${{ env.working-directory }}
         run: |
-          curl -s https://codecov.io/bash | bash -s - -F integrate,cluster -s ${{env.working-directory}}/tests/tiup-cluster/cover -f '*.out'
+          curl -s https://codecov.io/bash | bash -s - -F integrate,cluster -s ${{ env.working-directory }}/tests/tiup-cluster/cover -f '*.out'

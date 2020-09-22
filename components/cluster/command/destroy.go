@@ -24,10 +24,11 @@ import (
 func newDestroyCmd() *cobra.Command {
 	destoyOpt := operator.Options{}
 	cmd := &cobra.Command{
-		Use: "destroy <cluster-name>",
+		Use:   "destroy <cluster-name>",
+		Short: "Destroy a specified cluster",
 		Long: `Destroy a specified cluster, which will clean the deployment binaries and data.
 You can retain some nodes and roles data when destroy cluster, eg:
-  
+
   $ tiup cluster destroy <cluster-name> --retain-role-data prometheus
   $ tiup cluster destroy <cluster-name> --retain-node-data 172.16.13.11:9000
   $ tiup cluster destroy <cluster-name> --retain-node-data 172.16.13.12`,

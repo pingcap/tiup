@@ -25,8 +25,8 @@ function tiup-cluster() {
     # echo "in function"
     if [ -f "./bin/tiup-cluster.test" ]; then
         ./bin/tiup-cluster.test -test.coverprofile=./cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
-        else
-        ../bin/tiup-cluster "$@"
+    else
+        ../../bin/tiup-cluster "$@"
     fi
 }
 
