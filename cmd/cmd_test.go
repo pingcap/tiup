@@ -43,6 +43,7 @@ type testCmdSuite struct {
 func (s *testCmdSuite) SetUpSuite(c *C) {
 	s.testDir = filepath.Join(currentDir(), "testdata")
 	s.mirror = repository.NewMirror(s.testDir, repository.MirrorOptions{})
+	_ = s.mirror.Open()
 }
 
 /*

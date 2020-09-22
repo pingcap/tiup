@@ -25,7 +25,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-func newDeploy() *cobra.Command {
+func newDeployCmd() *cobra.Command {
 	opt := cluster.DeployOptions{
 		IdentityFile: path.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}

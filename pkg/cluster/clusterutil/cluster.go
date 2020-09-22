@@ -14,7 +14,6 @@
 package clusterutil
 
 import (
-	"io"
 	"os"
 
 	"github.com/pingcap/tiup/pkg/environment"
@@ -41,6 +40,9 @@ func NewRepository(os, arch string) (Repository, error) {
 	mirror := repository.NewMirror(environment.Mirror(), repository.MirrorOptions{
 		Progress: repository.DisableProgress{},
 	})
+	if err := mirror.Open(); err != nil {
+		return nil, err
+	}
 	local, err := v1manifest.NewManifests(profile)
 	if err != nil {
 		return nil, err
@@ -59,19 +61,7 @@ func (r *repositoryT) DownloadComponent(comp, version, target string) error {
 		return err
 	}
 
-	reader, err := r.repo.FetchComponent(versionItem)
-	if err != nil {
-		return err
-	}
-
-	file, err := os.Create(target)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	_, err = io.Copy(file, reader)
-	return err
+	return r.repo.DownloadComponent(versionItem, target)
 }
 
 func (r *repositoryT) VerifyComponent(comp, version, target string) error {
