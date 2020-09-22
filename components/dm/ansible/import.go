@@ -140,6 +140,8 @@ func NewImporter(ansibleDir, inventoryFileName string, sshType executor.SSHType,
 		dir:               dir,
 		inventoryFileName: inventoryFileName,
 		sources:           make(map[string]*SourceConfig),
+		sshType:           sshType,
+		sshTimeout:        sshTimeout,
 	}, nil
 }
 
