@@ -171,8 +171,7 @@ tidb_servers:
 			},
 		},
 	}
-	got, err := flattenMap(topo.ServerConfigs.TiDB)
-	c.Assert(err, IsNil)
+	got := flattenMap(topo.ServerConfigs.TiDB)
 	c.Assert(got, DeepEquals, expected)
 	buf := &bytes.Buffer{}
 	err = toml.NewEncoder(buf).Encode(expected)
@@ -200,7 +199,7 @@ tidb_servers:
 			},
 		},
 	}
-	got, err = flattenMap(topo.TiDBServers[0].Config)
+	got = flattenMap(topo.TiDBServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 
@@ -214,7 +213,7 @@ tidb_servers:
 			},
 		},
 	}
-	got, err = flattenMap(topo.TiDBServers[1].Config)
+	got = flattenMap(topo.TiDBServers[1].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 }
@@ -244,7 +243,7 @@ tikv_servers:
 			},
 		},
 	}
-	got, err := flattenMap(topo.TiKVServers[0].Config)
+	got := flattenMap(topo.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 }
