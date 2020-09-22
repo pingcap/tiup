@@ -439,6 +439,8 @@ func CheckSELinux(e executor.Executor) *CheckResult {
 	out := strings.Trim(string(stdout), "\n")
 	if lines, err := strconv.Atoi(out); err != nil || lines > 0 {
 		result.Err = fmt.Errorf("SELinux is not disabled, %d %s", lines, err)
+	} else {
+		result.Msg = "SELinux is disabled"
 	}
 	return result
 }
