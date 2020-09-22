@@ -22,7 +22,6 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/utils"
-	tiupver "github.com/pingcap/tiup/pkg/version"
 )
 
 // Download the specific version of a component from
@@ -55,7 +54,7 @@ func Download(component, nodeOS, arch string, version string) error {
 	}
 
 	// Download from repository if not exists
-	if version == tiupver.NightlyVersion || utils.IsNotExist(srcPath) {
+	if utils.IsNotExist(srcPath) {
 		if err := repo.DownloadComponent(component, version, srcPath); err != nil {
 			return err
 		}
