@@ -211,8 +211,19 @@ func (s *Specification) BaseTopo() *BaseTopo {
 }
 
 // LocationLabels returns replication.location-labels in PD config
-func (s *Specification) LocationLabels() []string {
+func (s *Specification) LocationLabels() ([]string, error) {
 	lbs := []string{}
+
+	// We don't allow user define location-labels in instance config
+	for _, pd := range s.PDServers {
+		if GetValueFromPath(pd.Config, "replication.location-labels") != nil {
+			return nil, errors.Errorf(
+				"replication.location-labels can't be defined in instance %s:%d, please move it to the global server_configs field",
+				pd.Host,
+				pd.GetMainPort(),
+			)
+		}
+	}
 
 	if repLbs := GetValueFromPath(s.ServerConfigs.PD, "replication.location-labels"); repLbs != nil {
 		for _, l := range repLbs.([]interface{}) {
@@ -220,7 +231,7 @@ func (s *Specification) LocationLabels() []string {
 		}
 	}
 
-	return lbs
+	return lbs, nil
 }
 
 // AllComponentNames contains the names of all components.

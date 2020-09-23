@@ -1074,7 +1074,10 @@ func (m *Manager) Deploy(
 
 	if topo, ok := topo.(*spec.Specification); ok && !opt.NoLabels {
 		// Check if TiKV's label set correctly
-		lbs := topo.LocationLabels()
+		lbs, err := topo.LocationLabels()
+		if err != nil {
+			return err
+		}
 		kvs := topo.TiKVServers
 		if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
 			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)

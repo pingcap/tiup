@@ -474,15 +474,18 @@ item7 = 700
 func (s *metaSuiteTopo) TestLocationLabels(c *C) {
 	spec := Specification{}
 
-	c.Assert(len(spec.LocationLabels()), Equals, 0)
+	lbs, err := spec.LocationLabels()
+	c.Assert(err, IsNil)
+	c.Assert(len(lbs), Equals, 0)
 
-	err := yaml.Unmarshal([]byte(`
+	err = yaml.Unmarshal([]byte(`
 server_configs:
   pd:
     replication.location-labels: ["zone", "host"]
 `), &spec)
 	c.Assert(err, IsNil)
-	lbs := spec.LocationLabels()
+	lbs, err = spec.LocationLabels()
+	c.Assert(err, IsNil)
 	c.Assert(lbs, DeepEquals, []string{"zone", "host"})
 
 	spec = Specification{}
@@ -495,6 +498,21 @@ server_configs:
         - host
 `), &spec)
 	c.Assert(err, IsNil)
-	lbs = spec.LocationLabels()
+	lbs, err = spec.LocationLabels()
+	c.Assert(err, IsNil)
 	c.Assert(lbs, DeepEquals, []string{"zone", "host"})
+
+	spec = Specification{}
+	err = yaml.Unmarshal([]byte(`
+pd_servers:
+  - host: 172.16.5.140
+    config:
+      replication:
+        location-labels:
+          - zone
+          - host
+`), &spec)
+	c.Assert(err, IsNil)
+	_, err = spec.LocationLabels()
+	c.Assert(err, NotNil)
 }
