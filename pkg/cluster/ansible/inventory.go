@@ -556,6 +556,10 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if port, ok := grpVarsAll["drainer_port"]; ok {
 				tmpIns.Port, _ = strconv.Atoi(port)
 			}
+			// apply values from the host
+			if port, ok := srv.Vars["drainer_port"]; ok {
+				tmpIns.Port, _ = strconv.Atoi(port)
+			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
 
