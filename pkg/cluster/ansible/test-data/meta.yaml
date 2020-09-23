@@ -139,12 +139,20 @@ topology:
   - host: 172.16.1.220
     ssh_port: 9999
     imported: true
-    port: 8250
-    deploy_dir: /home/tiopsimport/ansible-deploy/pump-8250
-    data_dir: data/pump-8250
+    port: 8333
+    deploy_dir: /home/tiopsimport/ansible-deploy/pump-8333
+    data_dir: data/pump-8333
     arch: amd64
     os: linux
   drainer_servers:
+  - host: 172.16.1.220
+    ssh_port: 9999
+    imported: true
+    port: 8444
+    deploy_dir: /home/tiopsimport/ansible-deploy/drainer-8444
+    data_dir: data/drainer-8444
+    arch: amd64
+    os: linux
   - host: 172.16.1.221
     ssh_port: 9999
     imported: true
