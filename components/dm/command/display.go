@@ -21,7 +21,6 @@ import (
 	"github.com/pingcap/tiup/components/dm/spec"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
-	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -92,10 +91,6 @@ func clearOutDatedEtcdInfo(clusterName string, metadata *spec.Metadata, opt oper
 		}
 	}
 
-	timeoutOpt := &utils.RetryOption{
-		Timeout: time.Second * time.Duration(opt.APITimeout),
-		Delay:   time.Second * 2,
-	}
 	zap.L().Info("Outdated components needed to clear etcd info", zap.Strings("masters", mastersToDelete), zap.Strings("workers", workersToDelete))
 
 	errCh := make(chan error, len(existedMasters)+len(existedWorkers))
@@ -105,7 +100,7 @@ func clearOutDatedEtcdInfo(clusterName string, metadata *spec.Metadata, opt oper
 		master := master
 		wg.Add(1)
 		go func() {
-			errCh <- dmMasterClient.OfflineMaster(master, timeoutOpt)
+			errCh <- dmMasterClient.OfflineMaster(master, nil)
 			wg.Done()
 		}()
 	}
@@ -113,7 +108,7 @@ func clearOutDatedEtcdInfo(clusterName string, metadata *spec.Metadata, opt oper
 		worker := worker
 		wg.Add(1)
 		go func() {
-			errCh <- dmMasterClient.OfflineWorker(worker, timeoutOpt)
+			errCh <- dmMasterClient.OfflineWorker(worker, nil)
 			wg.Done()
 		}()
 	}
