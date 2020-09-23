@@ -1505,7 +1505,7 @@ func (m *Manager) ScaleOut(
 		return err
 	}
 
-	if !opt.NoLabels {
+	if topo, ok := topo.(*spec.Specification); ok && !opt.NoLabels {
 		// Check if TiKV's label set correctly
 		pdList := topo.BaseTopo().MasterList
 		tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
