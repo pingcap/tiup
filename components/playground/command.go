@@ -46,68 +46,29 @@ type Command struct {
 }
 
 func buildCommands(tp CommandType, opt *bootOptions) (cmds []Command) {
-	for i := 0; i < opt.pd.Num; i++ {
-		c := Command{
-			CommandType: tp,
-			ComponentID: "pd",
-			Config:      opt.pd,
-		}
-
-		cmds = append(cmds, c)
+	commands := []struct {
+		comp string
+		instance.Config
+	}{
+		{"pd", opt.pd},
+		{"tikv", opt.tikv},
+		{"pump", opt.pump},
+		{"tiflash", opt.tiflash},
+		{"tidb", opt.tidb},
+		{"ticdc", opt.ticdc},
+		{"drainer", opt.drainer},
 	}
-	for i := 0; i < opt.tikv.Num; i++ {
-		c := Command{
-			CommandType: tp,
-			ComponentID: "tikv",
-			Config:      opt.tikv,
-		}
 
-		cmds = append(cmds, c)
-	}
-	for i := 0; i < opt.pump.Num; i++ {
-		c := Command{
-			CommandType: tp,
-			ComponentID: "pump",
-			Config:      opt.pump,
-		}
+	for _, cmd := range commands {
+		for i := 0; i < cmd.Num; i++ {
+			c := Command{
+				CommandType: tp,
+				ComponentID: cmd.comp,
+				Config:      cmd.Config,
+			}
 
-		cmds = append(cmds, c)
-	}
-	for i := 0; i < opt.tiflash.Num; i++ {
-		c := Command{
-			CommandType: tp,
-			ComponentID: "tiflash",
-			Config:      opt.tiflash,
+			cmds = append(cmds, c)
 		}
-
-		cmds = append(cmds, c)
-	}
-	for i := 0; i < opt.tidb.Num; i++ {
-		c := Command{
-			CommandType: tp,
-			ComponentID: "tidb",
-			Config:      opt.tidb,
-		}
-
-		cmds = append(cmds, c)
-	}
-	for i := 0; i < opt.ticdc.Num; i++ {
-		c := Command{
-			CommandType: tp,
-			ComponentID: "ticdc",
-			Config:      opt.ticdc,
-		}
-
-		cmds = append(cmds, c)
-	}
-	for i := 0; i < opt.drainer.Num; i++ {
-		c := Command{
-			CommandType: tp,
-			ComponentID: "drainer",
-			Config:      opt.drainer,
-		}
-
-		cmds = append(cmds, c)
 	}
 	return
 }
