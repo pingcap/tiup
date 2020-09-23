@@ -345,7 +345,7 @@ func CheckTiKVLocationLabels(pdLocLabels []string, kvs []TiKVSpec) error {
 		if len(ls) == 0 && hosts[kv.Host] > 1 {
 			lerr.TiKVInstances[id] = append(
 				lerr.TiKVInstances[id],
-				errors.New("location label missing"),
+				errors.New("multiple TiKV instances are deployed at the same host but location label missing"),
 			)
 			continue
 		}
