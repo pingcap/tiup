@@ -40,7 +40,7 @@ func newReloadCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force reload without transferring PD leader")
+	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force reload without transferring PD leader and ignore any error")
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only start specified roles")
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only start specified nodes")
 	cmd.Flags().Int64Var(&gOpt.APITimeout, "transfer-timeout", 300, "Timeout in seconds when transferring PD and TiKV store leaders")

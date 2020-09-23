@@ -104,6 +104,6 @@ func postScaleOutHook(builder *task.Builder, newPart spec.Topology) {
 	}).BuildAsStep("Check status").SetHidden(true)
 
 	if report.Enable() {
-		builder.Parallel(convertStepDisplaysToTasks([]*task.StepDisplay{nodeInfoTask})...)
+		builder.Parallel(false, convertStepDisplaysToTasks([]*task.StepDisplay{nodeInfoTask})...)
 	}
 }

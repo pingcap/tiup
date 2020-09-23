@@ -374,7 +374,9 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
 		Func("StopCluster", func(ctx *task.Context) error {
-			return operator.Stop(ctx, topo, operator.Options{}, tlsCfg)
+			return operator.Stop(ctx, topo, operator.Options{
+				Force: destroyOpt.Force,
+			}, tlsCfg)
 		}).
 		Func("DestroyCluster", func(ctx *task.Context) error {
 			return operator.Destroy(ctx, topo, destroyOpt)
@@ -445,7 +447,7 @@ func (m *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Option
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
-		Parallel(shellTasks...).
+		Parallel(false, shellTasks...).
 		Build()
 
 	execCtx := task.NewContext()
@@ -741,10 +743,10 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
-		ParallelStep("+ Refresh instance configs", refreshConfigTasks...)
+		ParallelStep("+ Refresh instance configs", opt.Force, refreshConfigTasks...)
 
 	if len(monitorConfigTasks) > 0 {
-		tb = tb.ParallelStep("+ Refresh monitor configs", monitorConfigTasks...)
+		tb = tb.ParallelStep("+ Refresh monitor configs", opt.Force, monitorConfigTasks...)
 	}
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
@@ -901,8 +903,8 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
-		Parallel(downloadCompTasks...).
-		Parallel(copyCompTasks...).
+		Parallel(false, downloadCompTasks...).
+		Parallel(false, copyCompTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		}).
@@ -971,7 +973,7 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
-		Parallel(replacePackageTasks...).
+		Parallel(false, replacePackageTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		}).
@@ -1272,9 +1274,9 @@ func (m *Manager) Deploy(
 	builder := task.NewBuilder().
 		Step("+ Generate SSH keys",
 			task.NewBuilder().SSHKeyGen(m.specManager.Path(clusterName, "ssh", "id_rsa")).Build()).
-		ParallelStep("+ Download TiDB components", downloadCompTasks...).
-		ParallelStep("+ Initialize target host environments", envInitTasks...).
-		ParallelStep("+ Copy files", deployCompTasks...)
+		ParallelStep("+ Download TiDB components", false, downloadCompTasks...).
+		ParallelStep("+ Initialize target host environments", false, envInitTasks...).
+		ParallelStep("+ Copy files", false, deployCompTasks...)
 
 	if afterDeploy != nil {
 		afterDeploy(builder, topo)
@@ -1416,7 +1418,7 @@ func (m *Manager) ScaleIn(
 	// TODO: support command scale in operation.
 	scale(b, metadata, tlsCfg)
 
-	t := b.Parallel(regenConfigTasks...).Parallel(buildDynReloadProm(metadata.GetTopology())...).Build()
+	t := b.Parallel(force, regenConfigTasks...).Parallel(force, buildDynReloadProm(metadata.GetTopology())...).Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
@@ -2079,10 +2081,10 @@ func buildScaleOutTask(
 		SSHKeySet(
 			specManager.Path(clusterName, "ssh", "id_rsa"),
 			specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		Parallel(downloadCompTasks...).
-		Parallel(envInitTasks...).
+		Parallel(false, downloadCompTasks...).
+		Parallel(false, envInitTasks...).
 		ClusterSSH(topo, base.User, sshTimeout, sshType, topo.BaseTopo().GlobalOptions.SSHType).
-		Parallel(deployCompTasks...)
+		Parallel(false, deployCompTasks...)
 
 	if afterDeploy != nil {
 		afterDeploy(builder, newPart)
@@ -2101,8 +2103,8 @@ func buildScaleOutTask(
 		Func("StartCluster", func(ctx *task.Context) error {
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: optTimeout}, tlsCfg)
 		}).
-		Parallel(refreshConfigTasks...).
-		Parallel(buildDynReloadProm(metadata.GetTopology())...)
+		Parallel(false, refreshConfigTasks...).
+		Parallel(false, buildDynReloadProm(metadata.GetTopology())...)
 
 	if final != nil {
 		final(builder, clusterName, metadata)

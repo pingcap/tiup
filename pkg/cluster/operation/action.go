@@ -118,14 +118,14 @@ func Stop(
 	for _, com := range components {
 		insts := FilterInstance(com.Instances(), nodeFilter)
 		err := StopComponent(getter, insts, options.OptTimeout)
-		if err != nil {
+		if err != nil && !options.Force {
 			return errors.Annotatef(err, "failed to stop %s", com.Name())
 		}
 		for _, inst := range insts {
 			instCount[inst.GetHost()]--
 			if instCount[inst.GetHost()] == 0 {
 				if cluster.GetMonitoredOptions() != nil {
-					if err := StopMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil {
+					if err := StopMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
 						return err
 					}
 				}
