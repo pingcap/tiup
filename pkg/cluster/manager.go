@@ -904,7 +904,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
 		Parallel(false, downloadCompTasks...).
-		Parallel(false, copyCompTasks...).
+		Parallel(opt.Force, copyCompTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		}).
