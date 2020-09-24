@@ -128,11 +128,11 @@ func (s TiKVSpec) Labels() (map[string]string, error) {
 		for k, v := range serverLbs.(map[interface{}]interface{}) {
 			key, ok := k.(string)
 			if !ok {
-				return nil, errors.Errorf("TiKV label name %v is not a string", k)
+				return nil, errors.Errorf("TiKV label name %v is not a string, check the instance: %s:%d", k, s.Host, s.GetMainPort())
 			}
 			value, ok := v.(string)
 			if !ok {
-				return nil, errors.Errorf("TiKV label value %v is not a string", v)
+				return nil, errors.Errorf("TiKV label value %v is not a string, check the instance: %s:%d", v, s.Host, s.GetMainPort())
 			}
 
 			lbs[key] = value
