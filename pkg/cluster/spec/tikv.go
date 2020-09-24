@@ -121,16 +121,25 @@ func (s TiKVSpec) IsImported() bool {
 }
 
 // Labels returns the labels of TiKV
-func (s TiKVSpec) Labels() map[string]string {
+func (s TiKVSpec) Labels() (map[string]string, error) {
 	lbs := make(map[string]string)
 
 	if serverLbs := GetValueFromPath(s.Config, "server.labels"); serverLbs != nil {
 		for k, v := range serverLbs.(map[interface{}]interface{}) {
-			lbs[k.(string)] = v.(string)
+			key, ok := k.(string)
+			if !ok {
+				return nil, errors.Errorf("TiKV label name %v is not a string", k)
+			}
+			value, ok := v.(string)
+			if !ok {
+				return nil, errors.Errorf("TiKV label value %v is not a string", v)
+			}
+
+			lbs[key] = value
 		}
 	}
 
-	return lbs
+	return lbs, nil
 }
 
 // TiKVComponent represents TiKV component.

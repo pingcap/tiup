@@ -671,7 +671,7 @@ func (pc *PDClient) GetLocationLabels() ([]string, error) {
 
 	rc := pdconfig.ReplicationConfig{}
 	if err := json.Unmarshal(config, &rc); err != nil {
-		return nil, errors.Annotate(err, "unmarshal replication config")
+		return nil, errors.Annotatef(err, "unmarshal replication config: %s", string(config))
 	}
 
 	return rc.LocationLabels, nil

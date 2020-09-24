@@ -227,7 +227,11 @@ func (s *Specification) LocationLabels() ([]string, error) {
 
 	if repLbs := GetValueFromPath(s.ServerConfigs.PD, "replication.location-labels"); repLbs != nil {
 		for _, l := range repLbs.([]interface{}) {
-			lbs = append(lbs, l.(string))
+			lb, ok := l.(string)
+			if !ok {
+				return nil, errors.Errorf("replication.location-labels contains non-string label: %v", l)
+			}
+			lbs = append(lbs, lb)
 		}
 	}
 

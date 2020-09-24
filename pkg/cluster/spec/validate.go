@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -314,15 +315,26 @@ type TiKVLabelError struct {
 
 // Error implements error
 func (e *TiKVLabelError) Error() string {
+	ids := []string{}
+	for id := range e.TiKVInstances {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+
 	str := ""
-	for id, errs := range e.TiKVInstances {
-		if len(errs) == 0 {
+	for _, id := range ids {
+		if len(e.TiKVInstances[id]) == 0 {
 			continue
 		}
+		errs := []string{}
+		for _, e := range e.TiKVInstances[id] {
+			errs = append(errs, e.Error())
+		}
+		sort.Strings(errs)
 
 		str += fmt.Sprintf("%s:\n", id)
 		for _, e := range errs {
-			str += fmt.Sprintf("\t%s\n", e.Error())
+			str += fmt.Sprintf("\t%s\n", e)
 		}
 	}
 	return str
@@ -341,7 +353,10 @@ func CheckTiKVLocationLabels(pdLocLabels []string, kvs []TiKVSpec) error {
 	}
 	for _, kv := range kvs {
 		id := fmt.Sprintf("%s:%d", kv.Host, kv.GetMainPort())
-		ls := kv.Labels()
+		ls, err := kv.Labels()
+		if err != nil {
+			return err
+		}
 		if len(ls) == 0 && hosts[kv.Host] > 1 {
 			lerr.TiKVInstances[id] = append(
 				lerr.TiKVInstances[id],
