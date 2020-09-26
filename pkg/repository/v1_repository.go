@@ -188,7 +188,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			errs = append(errs, err.Error())
 		}
 
-		// remove the source gzip target if expand is on
+		// remove the source gzip target if expand is on && no keep source
 		if !r.DisableDecompress && !keepSource {
 			_ = os.Remove(target)
 		}

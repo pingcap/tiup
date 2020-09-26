@@ -294,8 +294,9 @@ type MockManifests struct {
 
 // MockInstalled is used by MockManifests to remember what was installed for a component.
 type MockInstalled struct {
-	Version  string
-	Contents string
+	Version    string
+	Contents   string
+	BinaryPath string
 }
 
 // NewMockManifests creates an empty MockManifests.
@@ -384,8 +385,9 @@ func (ms *MockManifests) InstallComponent(reader io.Reader, targetDir string, co
 		return err
 	}
 	ms.Installed[component] = MockInstalled{
-		Version:  version,
-		Contents: buf.String(),
+		Version:    version,
+		Contents:   buf.String(),
+		BinaryPath: filepath.Join(targetDir, filename),
 	}
 	return nil
 }
@@ -397,7 +399,7 @@ func (ms *MockManifests) KeyStore() *KeyStore {
 
 // TargetRootDir implements LocalManifests.
 func (ms *MockManifests) TargetRootDir() string {
-	return ""
+	return "/tmp/mock"
 }
 
 // ManifestVersion implements LocalManifests.
