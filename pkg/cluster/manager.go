@@ -1040,8 +1040,8 @@ func (m *Manager) Deploy(
 	opt DeployOptions,
 	afterDeploy func(b *task.Builder, newPart spec.Topology),
 	skipConfirm bool,
-	optTimeout int64,
-	sshTimeout int64,
+	optTimeout uint64,
+	sshTimeout uint64,
 	sshType executor.SSHType,
 ) error {
 	if err := clusterutil.ValidateClusterNameOrError(clusterName); err != nil {
@@ -1334,8 +1334,8 @@ func (m *Manager) Deploy(
 func (m *Manager) ScaleIn(
 	clusterName string,
 	skipConfirm bool,
-	optTimeout int64,
-	sshTimeout int64,
+	optTimeout uint64,
+	sshTimeout uint64,
 	sshType executor.SSHType,
 	force bool,
 	nodes []string,
@@ -1466,8 +1466,8 @@ func (m *Manager) ScaleOut(
 	final func(b *task.Builder, name string, meta spec.Metadata),
 	opt ScaleOutOptions,
 	skipConfirm bool,
-	optTimeout int64,
-	sshTimeout int64,
+	optTimeout uint64,
+	sshTimeout uint64,
 	sshType executor.SSHType,
 ) error {
 	metadata, err := m.meta(clusterName)
@@ -1898,8 +1898,8 @@ func buildScaleOutTask(
 	sshConnProps *cliutil.SSHConnectionProps,
 	newPart spec.Topology,
 	patchedComponents set.StringSet,
-	optTimeout int64,
-	sshTimeout int64,
+	optTimeout uint64,
+	sshTimeout uint64,
 	sshType executor.SSHType,
 	afterDeploy func(b *task.Builder, newPart spec.Topology),
 	final func(b *task.Builder, name string, meta spec.Metadata),
@@ -2180,7 +2180,7 @@ func buildMonitoredDeployTask(
 	globalOptions *spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
 	version string,
-	sshTimeout int64,
+	sshTimeout uint64,
 	sshType executor.SSHType,
 ) (downloadCompTasks []*task.StepDisplay, deployCompTasks []*task.StepDisplay) {
 	if monitoredOptions == nil {
@@ -2255,7 +2255,7 @@ func refreshMonitoredConfigTask(
 	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
 	globalOptions spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
-	sshTimeout int64,
+	sshTimeout uint64,
 	sshType executor.SSHType,
 ) []*task.StepDisplay {
 	if monitoredOptions == nil {

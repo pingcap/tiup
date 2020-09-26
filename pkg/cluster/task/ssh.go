@@ -33,7 +33,7 @@ type RootSSH struct {
 	password   string           // password of the user
 	keyFile    string           // path to the private key file
 	passphrase string           // passphrase of the private key file
-	timeout    int64            // timeout in seconds when connecting via SSH
+	timeout    uint64           // timeout in seconds when connecting via SSH
 	sshType    executor.SSHType // the type of SSH chanel
 }
 
@@ -77,7 +77,7 @@ type UserSSH struct {
 	host       string
 	port       int
 	deployUser string
-	timeout    int64
+	timeout    uint64
 	sshType    executor.SSHType
 }
 
