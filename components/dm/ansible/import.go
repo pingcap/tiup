@@ -117,7 +117,7 @@ type Importer struct {
 	dir               string // ansible directory.
 	inventoryFileName string
 	sshType           executor.SSHType
-	sshTimeout        int64
+	sshTimeout        uint64
 
 	// following vars parse from ansbile
 	user    string
@@ -130,7 +130,7 @@ type Importer struct {
 
 // NewImporter create an Importer.
 // @sshTimeout: set 0 to use a default value
-func NewImporter(ansibleDir, inventoryFileName string, sshType executor.SSHType, sshTimeout int64) (*Importer, error) {
+func NewImporter(ansibleDir, inventoryFileName string, sshType executor.SSHType, sshTimeout uint64) (*Importer, error) {
 	dir, err := filepath.Abs(ansibleDir)
 	if err != nil {
 		return nil, errors.AddStack(err)

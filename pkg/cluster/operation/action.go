@@ -383,7 +383,7 @@ func Restart(
 }
 
 // StartMonitored start BlackboxExporter and NodeExporter
-func StartMonitored(getter ExecutorGetter, instance spec.Instance, options *spec.MonitoredOptions, timeout int64) error {
+func StartMonitored(getter ExecutorGetter, instance spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
 	ports := map[string]int{
 		spec.ComponentNodeExporter:     options.NodeExporterPort,
 		spec.ComponentBlackboxExporter: options.BlackboxExporterPort,
@@ -425,7 +425,7 @@ func StartMonitored(getter ExecutorGetter, instance spec.Instance, options *spec
 	return nil
 }
 
-func restartInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) error {
+func restartInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) error {
 	e := getter.Get(ins.GetHost())
 	log.Infof("\tRestarting instance %s", ins.GetHost())
 
@@ -464,7 +464,7 @@ func restartInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) er
 }
 
 // RestartComponent restarts the component.
-func RestartComponent(getter ExecutorGetter, instances []spec.Instance, timeout int64) error {
+func RestartComponent(getter ExecutorGetter, instances []spec.Instance, timeout uint64) error {
 	if len(instances) <= 0 {
 		return nil
 	}
@@ -482,7 +482,7 @@ func RestartComponent(getter ExecutorGetter, instances []spec.Instance, timeout 
 	return nil
 }
 
-func enableInstance(getter ExecutorGetter, ins spec.Instance, timeout int64, isEnable bool) error {
+func enableInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64, isEnable bool) error {
 	e := getter.Get(ins.GetHost())
 	if isEnable {
 		log.Infof("\tEnabling instance %s %s:%d", ins.ComponentName(), ins.GetHost(), ins.GetPort())
@@ -528,7 +528,7 @@ func enableInstance(getter ExecutorGetter, ins spec.Instance, timeout int64, isE
 	return nil
 }
 
-func startInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) error {
+func startInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) error {
 	e := getter.Get(ins.GetHost())
 	log.Infof("\tStarting instance %s %s:%d",
 		ins.ComponentName(),
@@ -611,7 +611,7 @@ func EnableComponent(getter ExecutorGetter, instances []spec.Instance, options O
 // EnableMonitored enable/disable monitor service in a cluster
 func EnableMonitored(
 	getter ExecutorGetter, instance spec.Instance,
-	options *spec.MonitoredOptions, timeout int64, isEnable bool,
+	options *spec.MonitoredOptions, timeout uint64, isEnable bool,
 ) error {
 	action := "disable"
 	if isEnable {
@@ -687,7 +687,7 @@ func StartComponent(getter ExecutorGetter, instances []spec.Instance, options Op
 }
 
 // StopMonitored stop BlackboxExporter and NodeExporter
-func StopMonitored(getter ExecutorGetter, instance spec.Instance, options *spec.MonitoredOptions, timeout int64) error {
+func StopMonitored(getter ExecutorGetter, instance spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
 	ports := map[string]int{
 		spec.ComponentNodeExporter:     options.NodeExporterPort,
 		spec.ComponentBlackboxExporter: options.BlackboxExporterPort,
@@ -742,7 +742,7 @@ func StopMonitored(getter ExecutorGetter, instance spec.Instance, options *spec.
 	return nil
 }
 
-func stopInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) error {
+func stopInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) error {
 	e := getter.Get(ins.GetHost())
 	log.Infof("\tStopping instance %s", ins.GetHost())
 
@@ -788,7 +788,7 @@ func stopInstance(getter ExecutorGetter, ins spec.Instance, timeout int64) error
 }
 
 // StopComponent stop the instances.
-func StopComponent(getter ExecutorGetter, instances []spec.Instance, timeout int64) error {
+func StopComponent(getter ExecutorGetter, instances []spec.Instance, timeout uint64) error {
 	if len(instances) <= 0 {
 		return nil
 	}
