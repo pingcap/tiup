@@ -133,7 +133,7 @@ func DeleteGlobalDirs(getter ExecutorGetter, host string, options *spec.GlobalOp
 }
 
 // DestroyMonitored destroy the monitored service.
-func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.MonitoredOptions, timeout int64) error {
+func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
 	e := getter.Get(inst.GetHost())
 	log.Infof("Destroying monitored %s", inst.GetHost())
 

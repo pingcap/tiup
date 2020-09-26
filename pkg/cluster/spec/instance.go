@@ -70,7 +70,7 @@ type RollingUpdateInstance interface {
 type Instance interface {
 	InstanceSpec
 	ID() string
-	Ready(executor.Executor, int64) error
+	Ready(executor.Executor, uint64) error
 	InitConfig(e executor.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
 	ScaleConfig(e executor.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
 	PrepareStart(tlsCfg *tls.Config) error
@@ -91,7 +91,7 @@ type Instance interface {
 }
 
 // PortStarted wait until a port is being listened
-func PortStarted(e executor.Executor, port int, timeout int64) error {
+func PortStarted(e executor.Executor, port int, timeout uint64) error {
 	c := module.WaitForConfig{
 		Port:    port,
 		State:   "started",
@@ -102,7 +102,7 @@ func PortStarted(e executor.Executor, port int, timeout int64) error {
 }
 
 // PortStopped wait until a port is being released
-func PortStopped(e executor.Executor, port int, timeout int64) error {
+func PortStopped(e executor.Executor, port int, timeout uint64) error {
 	c := module.WaitForConfig{
 		Port:    port,
 		State:   "stopped",
@@ -128,7 +128,7 @@ type BaseInstance struct {
 }
 
 // Ready implements Instance interface
-func (i *BaseInstance) Ready(e executor.Executor, timeout int64) error {
+func (i *BaseInstance) Ready(e executor.Executor, timeout uint64) error {
 	return PortStarted(e, i.Port, timeout)
 }
 
