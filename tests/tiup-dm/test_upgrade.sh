@@ -17,7 +17,7 @@ yes | tiup-dm start $name
 
 # tiup-dm _test $name writable
 
-yes | tiup-dm upgrade $name $version --transfer-timeout 60
+yes | tiup-dm upgrade $name $version
 
 
 # test edit-config & reload
