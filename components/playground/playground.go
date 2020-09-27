@@ -666,7 +666,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	if options.pd.Num < 1 || options.tidb.Num < 1 || options.tikv.Num < 1 {
 		return fmt.Errorf("all components count must be great than 0 (tidb=%v, tikv=%v, pd=%v)",
-			options.pd.Num, options.tikv.Num, options.pd.Num)
+			options.tidb.Num, options.tikv.Num, options.pd.Num)
 	}
 
 	if options.version == "" {
