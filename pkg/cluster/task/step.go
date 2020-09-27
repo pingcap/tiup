@@ -140,7 +140,7 @@ type ParallelStepDisplay struct {
 	progressBar *progress.MultiBar
 }
 
-func newParallelStepDisplay(prefix string, sdTasks ...*StepDisplay) *ParallelStepDisplay {
+func newParallelStepDisplay(prefix string, ignoreError bool, sdTasks ...*StepDisplay) *ParallelStepDisplay {
 	bar := progress.NewMultiBar(prefix)
 	tasks := make([]Task, 0, len(sdTasks))
 	for _, t := range sdTasks {
@@ -150,7 +150,7 @@ func newParallelStepDisplay(prefix string, sdTasks ...*StepDisplay) *ParallelSte
 		tasks = append(tasks, t)
 	}
 	return &ParallelStepDisplay{
-		inner:       &Parallel{inner: tasks},
+		inner:       &Parallel{inner: tasks, ignoreError: ignoreError},
 		prefix:      prefix,
 		progressBar: bar,
 	}

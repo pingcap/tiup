@@ -55,18 +55,18 @@ func Upgrade(
 
 			if isRollingInstance {
 				err := rollingInstance.PreRestart(topo, int(options.APITimeout), tlsCfg)
-				if err != nil {
+				if err != nil && !options.Force {
 					return errors.AddStack(err)
 				}
 			}
 
-			if err := restartInstance(getter, instance, options.OptTimeout); err != nil {
+			if err := restartInstance(getter, instance, options.OptTimeout); err != nil && !options.Force {
 				return errors.AddStack(err)
 			}
 
 			if isRollingInstance {
 				err := rollingInstance.PostRestart(topo, tlsCfg)
-				if err != nil {
+				if err != nil && !options.Force {
 					return errors.AddStack(err)
 				}
 			}

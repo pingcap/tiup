@@ -63,12 +63,14 @@ type (
 
 	// Serial will execute a bundle of task in serialized way
 	Serial struct {
+		ignoreError       bool
 		hideDetailDisplay bool
 		inner             []Task
 	}
 
 	// Parallel will execute a bundle of task in parallelism way
 	Parallel struct {
+		ignoreError       bool
 		hideDetailDisplay bool
 		inner             []Task
 	}
@@ -188,7 +190,7 @@ func (s *Serial) Execute(ctx *Context) error {
 		ctx.ev.PublishTaskBegin(t)
 		err := t.Execute(ctx)
 		ctx.ev.PublishTaskFinish(t, err)
-		if err != nil {
+		if err != nil && !s.ignoreError {
 			return err
 		}
 	}
@@ -214,14 +216,6 @@ func (s *Serial) String() string {
 		ss = append(ss, t.String())
 	}
 	return strings.Join(ss, "\n")
-}
-
-// NewParallel create a Parallel task.
-func NewParallel(hideDetailDisplay bool, tasks ...Task) *Parallel {
-	return &Parallel{
-		hideDetailDisplay: hideDetailDisplay,
-		inner:             tasks,
-	}
 }
 
 // Execute implements the Task interface
@@ -251,6 +245,9 @@ func (pt *Parallel) Execute(ctx *Context) error {
 		}(t)
 	}
 	wg.Wait()
+	if pt.ignoreError {
+		return nil
+	}
 	return firstError
 }
 
