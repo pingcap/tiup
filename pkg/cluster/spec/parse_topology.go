@@ -36,7 +36,7 @@ var (
 )
 
 // ParseTopologyYaml read yaml content from `file` and unmarshal it to `out`
-func ParseTopologyYaml(file string, out interface{}) error {
+func ParseTopologyYaml(file string, out Topology) error {
 	suggestionProps := map[string]string{
 		"File": file,
 	}
@@ -63,11 +63,14 @@ Please check the syntax of your topology file {{ColorKeyword}}{{.File}}{{ColorRe
 `, suggestionProps))
 	}
 
-	fixRelativePath(deployUser(out), out)
-
 	zap.L().Debug("Parse topology file succeeded", zap.Any("topology", out))
 
 	return nil
+}
+
+// FixRelativeDir fill DeployDir, DataDir and LogDir to absolute path
+func FixRelativeDir(topo Topology) {
+	fixRelativePath(deployUser(topo), topo)
 }
 
 func fixRelativePath(user string, topo interface{}) {
@@ -105,8 +108,8 @@ func fixRelativePath(user string, topo interface{}) {
 	}
 }
 
-func deployUser(topo interface{}) string {
-	base := topo.(Topology).BaseTopo()
+func deployUser(topo Topology) string {
+	base := topo.BaseTopo()
 	if base.GlobalOptions == nil || base.GlobalOptions.User == "" {
 		return defaultDeployUser
 	}
