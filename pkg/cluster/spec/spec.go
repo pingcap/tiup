@@ -117,7 +117,7 @@ type BaseTopo struct {
 	MasterList       []string
 }
 
-// Topology represents specification of the  cluster.
+// Topology represents specification of the cluster.
 type Topology interface {
 	BaseTopo() *BaseTopo
 	// Validate validates the topology specification and produce error if the
@@ -208,6 +208,34 @@ func (s *Specification) BaseTopo() *BaseTopo {
 		MonitoredOptions: s.GetMonitoredOptions(),
 		MasterList:       s.GetPDList(),
 	}
+}
+
+// LocationLabels returns replication.location-labels in PD config
+func (s *Specification) LocationLabels() ([]string, error) {
+	lbs := []string{}
+
+	// We don't allow user define location-labels in instance config
+	for _, pd := range s.PDServers {
+		if GetValueFromPath(pd.Config, "replication.location-labels") != nil {
+			return nil, errors.Errorf(
+				"replication.location-labels can't be defined in instance %s:%d, please move it to the global server_configs field",
+				pd.Host,
+				pd.GetMainPort(),
+			)
+		}
+	}
+
+	if repLbs := GetValueFromPath(s.ServerConfigs.PD, "replication.location-labels"); repLbs != nil {
+		for _, l := range repLbs.([]interface{}) {
+			lb, ok := l.(string)
+			if !ok {
+				return nil, errors.Errorf("replication.location-labels contains non-string label: %v", l)
+			}
+			lbs = append(lbs, lb)
+		}
+	}
+
+	return lbs, nil
 }
 
 // AllComponentNames contains the names of all components.
