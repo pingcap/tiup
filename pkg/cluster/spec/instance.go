@@ -143,6 +143,7 @@ func (i *BaseInstance) InitConfig(e executor.Executor, opt GlobalOptions, user s
 	systemCfg := system.NewConfig(comp, user, paths.Deploy).
 		WithMemoryLimit(resource.MemoryLimit).
 		WithCPUQuota(resource.CPUQuota).
+		WithLimitCORE(resource.LimitCORE).
 		WithIOReadBandwidthMax(resource.IOReadBandwidthMax).
 		WithIOWriteBandwidthMax(resource.IOWriteBandwidthMax)
 
@@ -363,6 +364,9 @@ func MergeResourceControl(lhs, rhs meta.ResourceControl) meta.ResourceControl {
 	}
 	if rhs.IOWriteBandwidthMax != "" {
 		lhs.IOWriteBandwidthMax = rhs.IOWriteBandwidthMax
+	}
+	if rhs.LimitCORE != "" {
+		lhs.LimitCORE = rhs.LimitCORE
 	}
 	return lhs
 }

@@ -87,7 +87,7 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout uint64, ssh
 		}
 	}
 	t := task.NewBuilder().
-		Parallel(copyFileTasks...).
+		Parallel(false, copyFileTasks...).
 		Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
