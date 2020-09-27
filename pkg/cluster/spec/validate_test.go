@@ -606,3 +606,97 @@ func (s *metaSuiteTopo) TestRelativePathDetect(c *C) {
 		}
 	}
 }
+
+func (s *metaSuiteTopo) TestTiKVLocationLabelsCheck(c *C) {
+	// 2 tikv on different host
+	topo := Specification{}
+	err := yaml.Unmarshal([]byte(`
+tikv_servers:
+  - host: 172.16.5.140
+    port: 20160
+    status_port: 20180
+  - host: 172.16.5.139
+    port: 20160
+    status_port: 20180
+`), &topo)
+	c.Assert(err, IsNil)
+	err = CheckTiKVLocationLabels(nil, topo.TiKVServers)
+	c.Assert(err, IsNil)
+	err = CheckTiKVLocationLabels([]string{}, topo.TiKVServers)
+	c.Assert(err, IsNil)
+
+	// 2 tikv on the same host without label
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+tikv_servers:
+  - host: 172.16.5.140
+    port: 20160
+    status_port: 20180
+  - host: 172.16.5.140
+    port: 20161
+    status_port: 20181
+`), &topo)
+	c.Assert(err, IsNil)
+	err = CheckTiKVLocationLabels(nil, topo.TiKVServers)
+	c.Assert(err, NotNil)
+
+	// 2 tikv on the same host with unacquainted label
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+tikv_servers:
+  - host: 172.16.5.140
+    port: 20160
+    status_port: 20180
+    config:
+      server.labels: { zone: "zone1", host: "172.16.5.140" }
+  - host: 172.16.5.140
+    port: 20161
+    status_port: 20181
+    config:
+      server.labels: { zone: "zone1", host: "172.16.5.140" }
+`), &topo)
+	c.Assert(err, IsNil)
+	err = CheckTiKVLocationLabels(nil, topo.TiKVServers)
+	c.Assert(err, NotNil)
+
+	// 2 tikv on the same host with correct label
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+tikv_servers:
+  - host: 172.16.5.140
+    port: 20160
+    status_port: 20180
+    config:
+      server.labels: { zone: "zone1", host: "172.16.5.140" }
+  - host: 172.16.5.140
+    port: 20161
+    status_port: 20181
+    config:
+      server.labels: { zone: "zone1", host: "172.16.5.140" }
+`), &topo)
+	c.Assert(err, IsNil)
+	err = CheckTiKVLocationLabels([]string{"zone", "host"}, topo.TiKVServers)
+	c.Assert(err, IsNil)
+
+	// 2 tikv on the same host with diffrent config style
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+tikv_servers:
+  - host: 172.16.5.140
+    port: 20160
+    status_port: 20180
+    config:
+      server:
+        labels: { zone: "zone1", host: "172.16.5.140" }
+  - host: 172.16.5.140
+    port: 20161
+    status_port: 20181
+    config:
+      server.labels:
+        zone: "zone1"
+        host: "172.16.5.140"
+`), &topo)
+	c.Assert(err, IsNil)
+	err = CheckTiKVLocationLabels([]string{"zone", "host"}, topo.TiKVServers)
+	c.Assert(err, IsNil)
+}

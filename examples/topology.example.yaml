@@ -61,6 +61,8 @@ server_configs:
     schedule.leader-schedule-limit: 4
     schedule.region-schedule-limit: 2048
     schedule.replica-schedule-limit: 64
+    replication.location-labels: ["zone", "host"]
+    replication.strictly-match-label: true
   tiflash:
     # path_realtime_mode: false
     logger.level: "info"
@@ -112,11 +114,15 @@ tikv_servers:
     # log_dir: "/tidb-deploy/tikv-20160/log"
     # numa_node: "0,1"
     # # The following configs are used to overwrite the `server_configs.tikv` values.
-    # config:
+    config:
+        server.labels: { zone: "zone1", host: "host1" }
     #   server.grpc-concurrency: 4
-    #   server.labels: { zone: "zone1", dc: "dc1", host: "host1" }
   - host: 10.0.1.15
+    config:
+        server.labels: { zone: "zone1", host: "host2" }
   - host: 10.0.1.16
+    config:
+        server.labels: { zone: "zone2", host: "host3" }
 
 tiflash_servers:
   - host: 10.0.1.14

@@ -120,6 +120,28 @@ func (s TiKVSpec) IsImported() bool {
 	return s.Imported
 }
 
+// Labels returns the labels of TiKV
+func (s TiKVSpec) Labels() (map[string]string, error) {
+	lbs := make(map[string]string)
+
+	if serverLbs := GetValueFromPath(s.Config, "server.labels"); serverLbs != nil {
+		for k, v := range serverLbs.(map[interface{}]interface{}) {
+			key, ok := k.(string)
+			if !ok {
+				return nil, errors.Errorf("TiKV label name %v is not a string, check the instance: %s:%d", k, s.Host, s.GetMainPort())
+			}
+			value, ok := v.(string)
+			if !ok {
+				return nil, errors.Errorf("TiKV label value %v is not a string, check the instance: %s:%d", v, s.Host, s.GetMainPort())
+			}
+
+			lbs[key] = value
+		}
+	}
+
+	return lbs, nil
+}
+
 // TiKVComponent represents TiKV component.
 type TiKVComponent struct {
 	*Specification

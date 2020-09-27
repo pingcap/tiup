@@ -30,6 +30,7 @@ type Config struct {
 	CPUQuota            string
 	IOReadBandwidthMax  string
 	IOWriteBandwidthMax string
+	LimitCORE           string
 	DeployDir           string
 	DisableSendSigkill  bool
 	// Takes one of no, on-success, on-failure, on-abnormal, on-watchdog, on-abort, or always.
@@ -67,6 +68,12 @@ func (c *Config) WithIOReadBandwidthMax(io string) *Config {
 // WithIOWriteBandwidthMax set the IOWriteBandwidthMax field of Config
 func (c *Config) WithIOWriteBandwidthMax(io string) *Config {
 	c.IOWriteBandwidthMax = io
+	return c
+}
+
+// WithLimitCORE set the LimitCORE field of Config
+func (c *Config) WithLimitCORE(core string) *Config {
+	c.LimitCORE = core
 	return c
 }
 
