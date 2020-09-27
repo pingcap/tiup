@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -305,6 +306,78 @@ Please change to use another port or another host.
 	}
 
 	return nil
+}
+
+// TiKVLabelError indicates that some TiKV servers don't have correct labels
+type TiKVLabelError struct {
+	TiKVInstances map[string][]error
+}
+
+// Error implements error
+func (e *TiKVLabelError) Error() string {
+	ids := []string{}
+	for id := range e.TiKVInstances {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+
+	str := ""
+	for _, id := range ids {
+		if len(e.TiKVInstances[id]) == 0 {
+			continue
+		}
+		errs := []string{}
+		for _, e := range e.TiKVInstances[id] {
+			errs = append(errs, e.Error())
+		}
+		sort.Strings(errs)
+
+		str += fmt.Sprintf("%s:\n", id)
+		for _, e := range errs {
+			str += fmt.Sprintf("\t%s\n", e)
+		}
+	}
+	return str
+}
+
+// CheckTiKVLocationLabels will check if tikv missing label or have wrong label
+func CheckTiKVLocationLabels(pdLocLabels []string, kvs []TiKVSpec) error {
+	lerr := &TiKVLabelError{
+		TiKVInstances: make(map[string][]error),
+	}
+	lbs := set.NewStringSet(pdLocLabels...)
+	hosts := make(map[string]int)
+
+	for _, kv := range kvs {
+		hosts[kv.Host] = hosts[kv.Host] + 1
+	}
+	for _, kv := range kvs {
+		id := fmt.Sprintf("%s:%d", kv.Host, kv.GetMainPort())
+		ls, err := kv.Labels()
+		if err != nil {
+			return err
+		}
+		if len(ls) == 0 && hosts[kv.Host] > 1 {
+			lerr.TiKVInstances[id] = append(
+				lerr.TiKVInstances[id],
+				errors.New("multiple TiKV instances are deployed at the same host but location label missing"),
+			)
+			continue
+		}
+		for lname := range ls {
+			if !lbs.Exist(lname) {
+				lerr.TiKVInstances[id] = append(
+					lerr.TiKVInstances[id],
+					fmt.Errorf("label name '%s' is not specified in pd config (replication.location-labels: %v)", lname, pdLocLabels),
+				)
+			}
+		}
+	}
+
+	if len(lerr.TiKVInstances) == 0 {
+		return nil
+	}
+	return lerr
 }
 
 // platformConflictsDetect checks for conflicts in topology for different OS / Arch

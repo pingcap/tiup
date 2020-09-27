@@ -15,8 +15,10 @@ IOReadBandwidthMax={{.IOReadBandwidthMax}}
 {{- if .IOWriteBandwidthMax}}
 IOWriteBandwidthMax={{.IOWriteBandwidthMax}}
 {{- end}}
+{{- if .LimitCORE}}
+LimitCORE={{.LimitCORE}}
+{{- end}}
 LimitNOFILE=1000000
-#LimitCORE=infinity
 LimitSTACK=10485760
 
 User={{.User}}

@@ -20,4 +20,5 @@ type ResourceControl struct {
 	CPUQuota            string `yaml:"cpu_quota,omitempty" validate:"cpu_quota:editable"`
 	IOReadBandwidthMax  string `yaml:"io_read_bandwidth_max,omitempty" validate:"io_read_bandwidth_max:editable"`
 	IOWriteBandwidthMax string `yaml:"io_write_bandwidth_max,omitempty" validate:"io_write_bandwidth_max:editable"`
+	LimitCORE           string `yaml:"limit_core,omitempty" validate:"limit_core:editable"`
 }

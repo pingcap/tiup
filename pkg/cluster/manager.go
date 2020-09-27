@@ -28,11 +28,13 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -184,7 +186,7 @@ func (m *Manager) StopCluster(clusterName string, options operator.Options) erro
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	t := task.NewBuilder().
@@ -221,7 +223,7 @@ func (m *Manager) RestartCluster(clusterName string, options operator.Options) e
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	t := task.NewBuilder().
@@ -291,7 +293,7 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	if !skipConfirm {
@@ -354,7 +356,7 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	if !skipConfirm {
@@ -374,7 +376,9 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
 		Func("StopCluster", func(ctx *task.Context) error {
-			return operator.Stop(ctx, topo, operator.Options{}, tlsCfg)
+			return operator.Stop(ctx, topo, operator.Options{
+				Force: destroyOpt.Force,
+			}, tlsCfg)
 		}).
 		Func("DestroyCluster", func(ctx *task.Context) error {
 			return operator.Destroy(ctx, topo, destroyOpt)
@@ -445,7 +449,7 @@ func (m *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Option
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
-		Parallel(shellTasks...).
+		Parallel(false, shellTasks...).
 		Build()
 
 	execCtx := task.NewContext()
@@ -529,6 +533,10 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	filterRoles := set.NewStringSet(opt.Roles...)
 	filterNodes := set.NewStringSet(opt.Nodes...)
 	pdList := topo.BaseTopo().MasterList
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return err
+	}
 	for _, comp := range topo.ComponentsByStartOrder() {
 		for _, ins := range comp.Instances() {
 			// apply role filter
@@ -547,10 +555,6 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 				dataDir = insDirs[1]
 			}
 
-			tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
-			if err != nil {
-				return perrs.AddStack(err)
-			}
 			status := ins.Status(tlsCfg, pdList...)
 			// Query the service status
 			if status == "-" {
@@ -594,6 +598,17 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 
 	cliutil.PrintTable(clusterTable, true)
 	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
+
+	if topo, ok := topo.(*spec.Specification); ok {
+		// Check if TiKV's label set correctly
+		kvs := topo.TiKVServers
+		pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
+		if lbs, err := pdClient.GetLocationLabels(); err != nil {
+			color.Yellow("\nWARN: get location labels from pd failed: %v", err)
+		} else if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
+			color.Yellow("\nWARN: there is something wrong with TiKV labels, which may cause data losing:\n%v", err)
+		}
+	}
 
 	return nil
 }
@@ -741,15 +756,15 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
-		ParallelStep("+ Refresh instance configs", refreshConfigTasks...)
+		ParallelStep("+ Refresh instance configs", opt.Force, refreshConfigTasks...)
 
 	if len(monitorConfigTasks) > 0 {
-		tb = tb.ParallelStep("+ Refresh monitor configs", monitorConfigTasks...)
+		tb = tb.ParallelStep("+ Refresh monitor configs", opt.Force, monitorConfigTasks...)
 	}
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 	if !skipRestart {
 		tb = tb.Func("UpgradeCluster", func(ctx *task.Context) error {
@@ -894,15 +909,15 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 	t := task.NewBuilder().
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
-		Parallel(downloadCompTasks...).
-		Parallel(copyCompTasks...).
+		Parallel(false, downloadCompTasks...).
+		Parallel(opt.Force, copyCompTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		}).
@@ -964,14 +979,14 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 	t := task.NewBuilder().
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
-		Parallel(replacePackageTasks...).
+		Parallel(false, replacePackageTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		}).
@@ -1000,6 +1015,7 @@ type ScaleOutOptions struct {
 	SkipCreateUser bool   // don't create user
 	IdentityFile   string // path to the private key file
 	UsePassword    bool   // use password instead of identity file for ssh connection
+	NoLabels       bool   // don't check labels for TiKV instance
 }
 
 // DeployOptions contains the options for scale out.
@@ -1010,6 +1026,7 @@ type DeployOptions struct {
 	IdentityFile      string // path to the private key file
 	UsePassword       bool   // use password instead of identity file for ssh connection
 	IgnoreConfigCheck bool   // ignore config check result
+	NoLabels          bool   // don't check labels for TiKV instance
 }
 
 // DeployerInstance is a instance can deploy to a target deploy directory.
@@ -1055,6 +1072,18 @@ func (m *Manager) Deploy(
 	base := topo.BaseTopo()
 	if sshType != "" {
 		base.GlobalOptions.SSHType = sshType
+	}
+
+	if topo, ok := topo.(*spec.Specification); ok && !opt.NoLabels {
+		// Check if TiKV's label set correctly
+		lbs, err := topo.LocationLabels()
+		if err != nil {
+			return err
+		}
+		kvs := topo.TiKVServers
+		if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
+			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+		}
 	}
 
 	clusterList, err := m.specManager.GetAllClusters()
@@ -1272,9 +1301,9 @@ func (m *Manager) Deploy(
 	builder := task.NewBuilder().
 		Step("+ Generate SSH keys",
 			task.NewBuilder().SSHKeyGen(m.specManager.Path(clusterName, "ssh", "id_rsa")).Build()).
-		ParallelStep("+ Download TiDB components", downloadCompTasks...).
-		ParallelStep("+ Initialize target host environments", envInitTasks...).
-		ParallelStep("+ Copy files", deployCompTasks...)
+		ParallelStep("+ Download TiDB components", false, downloadCompTasks...).
+		ParallelStep("+ Initialize target host environments", false, envInitTasks...).
+		ParallelStep("+ Copy files", false, deployCompTasks...)
 
 	if afterDeploy != nil {
 		afterDeploy(builder, topo)
@@ -1404,7 +1433,7 @@ func (m *Manager) ScaleIn(
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	b := task.NewBuilder().
@@ -1416,7 +1445,7 @@ func (m *Manager) ScaleIn(
 	// TODO: support command scale in operation.
 	scale(b, metadata, tlsCfg)
 
-	t := b.Parallel(regenConfigTasks...).Parallel(buildDynReloadProm(metadata.GetTopology())...).Build()
+	t := b.Parallel(force, regenConfigTasks...).Parallel(force, buildDynReloadProm(metadata.GetTopology())...).Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
@@ -1476,6 +1505,24 @@ func (m *Manager) ScaleOut(
 	mergedTopo := topo.MergeTopo(newPart)
 	if err := mergedTopo.Validate(); err != nil {
 		return err
+	}
+
+	if topo, ok := topo.(*spec.Specification); ok && !opt.NoLabels {
+		// Check if TiKV's label set correctly
+		pdList := topo.BaseTopo().MasterList
+		tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+		if err != nil {
+			return err
+		}
+		pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
+		lbs, err := pdClient.GetLocationLabels()
+		if err != nil {
+			return err
+		}
+		kvs := mergedTopo.(*spec.Specification).TiKVServers
+		if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
+			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+		}
 	}
 
 	clusterList, err := m.specManager.GetAllClusters()
@@ -1872,7 +1919,7 @@ func buildScaleOutTask(
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return nil, perrs.AddStack(err)
+		return nil, err
 	}
 
 	// Initialize the environments
@@ -2079,10 +2126,10 @@ func buildScaleOutTask(
 		SSHKeySet(
 			specManager.Path(clusterName, "ssh", "id_rsa"),
 			specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		Parallel(downloadCompTasks...).
-		Parallel(envInitTasks...).
+		Parallel(false, downloadCompTasks...).
+		Parallel(false, envInitTasks...).
 		ClusterSSH(topo, base.User, sshTimeout, sshType, topo.BaseTopo().GlobalOptions.SSHType).
-		Parallel(deployCompTasks...)
+		Parallel(false, deployCompTasks...)
 
 	if afterDeploy != nil {
 		afterDeploy(builder, newPart)
@@ -2101,8 +2148,8 @@ func buildScaleOutTask(
 		Func("StartCluster", func(ctx *task.Context) error {
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: optTimeout}, tlsCfg)
 		}).
-		Parallel(refreshConfigTasks...).
-		Parallel(buildDynReloadProm(metadata.GetTopology())...)
+		Parallel(false, refreshConfigTasks...).
+		Parallel(false, buildDynReloadProm(metadata.GetTopology())...)
 
 	if final != nil {
 		final(builder, clusterName, metadata)
