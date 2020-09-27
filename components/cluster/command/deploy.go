@@ -111,12 +111,12 @@ func postDeployHook(builder *task.Builder, topo spec.Topology) {
 	}).BuildAsStep("Check status").SetHidden(true)
 
 	if report.Enable() {
-		builder.ParallelStep("+ Check status", nodeInfoTask)
+		builder.ParallelStep("+ Check status", false, nodeInfoTask)
 	}
 
 	enableTask := task.NewBuilder().Func("Enable cluster", func(ctx *task.Context) error {
 		return operator.Enable(ctx, topo, operator.Options{}, true)
 	}).BuildAsStep("Enable cluster").SetHidden(true)
 
-	builder.ParallelStep("+ Enable cluster", enableTask)
+	builder.ParallelStep("+ Enable cluster", false, enableTask)
 }

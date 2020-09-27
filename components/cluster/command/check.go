@@ -301,10 +301,10 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 	})
 
 	t := task.NewBuilder().
-		ParallelStep("+ Download necessary tools", downloadTasks...).
-		ParallelStep("+ Collect basic system information", collectTasks...).
-		ParallelStep("+ Check system requirements", checkSysTasks...).
-		ParallelStep("+ Cleanup check files", cleanTasks...).
+		ParallelStep("+ Download necessary tools", false, downloadTasks...).
+		ParallelStep("+ Collect basic system information", false, collectTasks...).
+		ParallelStep("+ Check system requirements", false, checkSysTasks...).
+		ParallelStep("+ Cleanup check files", false, cleanTasks...).
 		Build()
 
 	ctx := task.NewContext()
@@ -349,7 +349,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 
 	if opt.applyFix {
 		tc := task.NewBuilder().
-			ParallelStep("+ Try to apply changes to fix failed checks", applyFixTasks...).
+			ParallelStep("+ Try to apply changes to fix failed checks", false, applyFixTasks...).
 			Build()
 		if err := tc.Execute(ctx); err != nil {
 			if errorx.Cast(err) != nil {
