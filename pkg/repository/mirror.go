@@ -108,6 +108,11 @@ func (l *localFilesystem) Download(resource, targetDir string) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
+	defer reader.Close()
+
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return errors.Trace(err)
+	}
 	outPath := filepath.Join(targetDir, resource)
 	writer, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 	if err != nil {
@@ -116,6 +121,8 @@ func (l *localFilesystem) Download(resource, targetDir string) error {
 		}
 		return errors.Trace(err)
 	}
+	defer writer.Close()
+
 	_, err = io.Copy(writer, reader)
 	return err
 }
