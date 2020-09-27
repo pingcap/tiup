@@ -24,6 +24,7 @@ jobs:
           sh install.sh
           source ~/.profile
           which tiup || (echo "no tiup found" && exit 1)
+          cp ./bin/tiup $(which tiup)
           ! tiup update --self | grep -i "WARN: adding root certificate"
           tiup --version
   local_install:
@@ -53,5 +54,6 @@ jobs:
           sh local_install.sh
           source ~/.profile
           which tiup || (echo "no tiup found" && exit 1)
+          cp ./bin/tiup $(which tiup)
           ! tiup update --self | grep -i "WARN: adding root certificate"
           tiup --version
