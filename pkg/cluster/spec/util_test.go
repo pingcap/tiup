@@ -1,4 +1,4 @@
-package clusterutil
+package spec
 
 import (
 	"github.com/pingcap/check"

@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -104,7 +103,7 @@ func DeleteGlobalDirs(getter ExecutorGetter, host string, options *spec.GlobalOp
 		if dir == "" {
 			continue
 		}
-		dir = clusterutil.Abs(options.User, dir)
+		dir = spec.Abs(options.User, dir)
 
 		log.Infof("\tClean directory %s on instance %s", dir, host)
 

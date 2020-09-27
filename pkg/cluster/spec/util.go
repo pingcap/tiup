@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"strings"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -132,4 +133,25 @@ func statusByURL(url string, tlsCfg *tls.Config) string {
 		return "Down"
 	}
 	return "Up"
+}
+
+// Abs returns the absolute path
+func Abs(user, path string) string {
+	if !strings.HasPrefix(path, "/") {
+		return filepath.Join("/home", user, path)
+	}
+	return path
+}
+
+// MultiDirAbs returns the absolute path for multi-dir separated by comma
+func MultiDirAbs(user, paths string) []string {
+	var dirs []string
+	for _, path := range strings.Split(paths, ",") {
+		path = strings.TrimSpace(path)
+		if path == "" {
+			continue
+		}
+		dirs = append(dirs, Abs(user, path))
+	}
+	return dirs
 }

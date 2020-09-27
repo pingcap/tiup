@@ -11,10 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package clusterutil
+package spec
 
 import (
 	"io/ioutil"
+	"path"
+	"reflect"
+	"strings"
 
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/tiup/pkg/cliutil"
@@ -24,7 +27,8 @@ import (
 )
 
 var (
-	errNSTopolohy = errorx.NewNamespace("topology")
+	defaultDeployUser = "tidb"
+	errNSTopolohy     = errorx.NewNamespace("topology")
 	// ErrTopologyReadFailed is ErrTopologyReadFailed
 	ErrTopologyReadFailed = errNSTopolohy.NewType("read_failed", errutil.ErrTraitPreCheck)
 	// ErrTopologyParseFailed is ErrTopologyParseFailed
@@ -59,7 +63,52 @@ Please check the syntax of your topology file {{ColorKeyword}}{{.File}}{{ColorRe
 `, suggestionProps))
 	}
 
+	fixRelativePath(deployUser(out), out)
+
 	zap.L().Debug("Parse topology file succeeded", zap.Any("topology", out))
 
 	return nil
+}
+
+func fixRelativePath(user string, topo interface{}) {
+	v := reflect.ValueOf(topo).Elem()
+
+	switch v.Kind() {
+	case reflect.Slice:
+		for i := 0; i < v.Len(); i++ {
+			ref := reflect.New(v.Index(i).Type())
+			ref.Elem().Set(v.Index(i))
+			fixRelativePath(user, ref.Interface())
+			v.Index(i).Set(ref.Elem())
+		}
+	case reflect.Struct:
+		dirs := []string{"DeployDir", "DataDir", "LogDir"}
+		for _, dir := range dirs {
+			f := v.FieldByName(dir)
+			if !f.IsValid() || f.String() == "" {
+				continue
+			}
+			if dir == "DeployDir" {
+				f.SetString(Abs(user, f.String()))
+			} else if !strings.HasPrefix(f.String(), "/") {
+				f.SetString(path.Join(v.FieldByName("DeployDir").String(), f.String()))
+			}
+		}
+		for i := 0; i < v.NumField(); i++ {
+			ref := reflect.New(v.Field(i).Type())
+			ref.Elem().Set(v.Field(i))
+			fixRelativePath(user, ref.Interface())
+			v.Field(i).Set(ref.Elem())
+		}
+	case reflect.Ptr:
+		fixRelativePath(user, v.Interface())
+	}
+}
+
+func deployUser(topo interface{}) string {
+	base := topo.(Topology).BaseTopo()
+	if base.GlobalOptions == nil || base.GlobalOptions.User == "" {
+		return defaultDeployUser
+	}
+	return base.GlobalOptions.User
 }
