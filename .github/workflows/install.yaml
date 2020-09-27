@@ -18,6 +18,9 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           path: go/src/github.com/${{ github.repository }}
+      - name: Build TiUP
+        working-directory: ${{ env.working-directory }}
+        run: make build
       - name: Install And Check
         working-directory: ${{ env.working-directory }}
         run: |
@@ -54,6 +57,6 @@ jobs:
           sh local_install.sh
           source ~/.profile
           which tiup || (echo "no tiup found" && exit 1)
-          cp ./bin/tiup $(which tiup)
+          cp ../bin/tiup $(which tiup)
           ! tiup update --self | grep -i "WARN: adding root certificate"
           tiup --version
