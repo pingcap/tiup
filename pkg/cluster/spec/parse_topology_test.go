@@ -181,7 +181,23 @@ tikv_servers:
 		c.Assert(topo.TiKVServers[1].LogDir, check.Equals, "/home/tidb/deploy/tikv-20161/my-global-log")
 	})
 
-	// test global options, case 5
+	// test multiple dir, case 5
+	withTempFile(`
+tiflash_servers:
+  - host: 172.16.5.140
+    data_dir: /path/to/my-first-data,my-second-data
+`, func(file string) {
+		topo := Specification{}
+		err := ParseTopologyYaml(file, &topo)
+		c.Assert(err, check.IsNil)
+		FixRelativeDir(&topo)
+
+		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
+		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/path/to/my-first-data,/home/tidb/deploy/tiflash-9000/my-second-data")
+		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
+	})
+
+	// test global options, case 6
 	withTempFile(`
 global:
   data_dir: my-global-data

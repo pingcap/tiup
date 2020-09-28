@@ -85,18 +85,33 @@ func fixRelativePath(user string, topo interface{}) {
 			v.Index(i).Set(ref.Elem())
 		}
 	case reflect.Struct:
+		// We should deal with DeployDir first, because DataDir and LogDir depends on it
 		dirs := []string{"DeployDir", "DataDir", "LogDir"}
 		for _, dir := range dirs {
 			f := v.FieldByName(dir)
 			if !f.IsValid() || f.String() == "" {
 				continue
 			}
-			if dir == "DeployDir" {
+			switch dir {
+			case "DeployDir":
 				f.SetString(Abs(user, f.String()))
-			} else if !strings.HasPrefix(f.String(), "/") {
+			case "DataDir":
+				// Some components supports multiple data dirs split by comma
+				ds := strings.Split(f.String(), ",")
+				ads := []string{}
+				for _, d := range ds {
+					if strings.HasPrefix(d, "/") {
+						ads = append(ads, d)
+					} else {
+						ads = append(ads, path.Join(v.FieldByName("DeployDir").String(), d))
+					}
+				}
+				f.SetString(strings.Join(ads, ","))
+			case "LogDir":
 				f.SetString(path.Join(v.FieldByName("DeployDir").String(), f.String()))
 			}
 		}
+		// Deal with all fields (fixRelativePath will do nothing on string filed)
 		for i := 0; i < v.NumField(); i++ {
 			ref := reflect.New(v.Field(i).Type())
 			ref.Elem().Set(v.Field(i))
