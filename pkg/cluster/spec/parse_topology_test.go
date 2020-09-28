@@ -157,9 +157,18 @@ tikv_servers:
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
 		c.Assert(err, check.IsNil)
+
+		c.Assert(topo.MonitoredOptions.DeployDir, check.Equals, "my-deploy/monitor-9100")
+		c.Assert(topo.MonitoredOptions.DataDir, check.Equals, "data/monitor-9100")
+		c.Assert(topo.MonitoredOptions.LogDir, check.Equals, "my-deploy/monitor-9100/log")
+
 		ExpandRelativeDir(&topo)
 		c.Assert(topo.GlobalOptions.DeployDir, check.Equals, "my-deploy")
 		c.Assert(topo.GlobalOptions.DataDir, check.Equals, "data")
+
+		c.Assert(topo.MonitoredOptions.DeployDir, check.Equals, "/home/tidb/my-deploy/monitor-9100")
+		c.Assert(topo.MonitoredOptions.DataDir, check.Equals, "/home/tidb/my-deploy/monitor-9100/data/monitor-9100")
+		c.Assert(topo.MonitoredOptions.LogDir, check.Equals, "/home/tidb/my-deploy/monitor-9100/my-deploy/monitor-9100/log")
 
 		c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/tidb/my-deploy/tikv-20160")
 		c.Assert(topo.TiKVServers[0].DataDir, check.Equals, "/home/tidb/my-deploy/tikv-20160/my-data")
@@ -193,6 +202,10 @@ tikv_servers:
 		c.Assert(topo.GlobalOptions.DeployDir, check.Equals, "deploy")
 		c.Assert(topo.GlobalOptions.DataDir, check.Equals, "my-global-data")
 		c.Assert(topo.GlobalOptions.LogDir, check.Equals, "my-global-log")
+
+		c.Assert(topo.MonitoredOptions.DeployDir, check.Equals, "/home/tidb/deploy/monitor-9100")
+		c.Assert(topo.MonitoredOptions.DataDir, check.Equals, "/home/tidb/deploy/monitor-9100/my-global-data/monitor-9100")
+		c.Assert(topo.MonitoredOptions.LogDir, check.Equals, "/home/tidb/deploy/monitor-9100/deploy/monitor-9100/log")
 
 		c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tikv-20160")
 		c.Assert(topo.TiKVServers[0].DataDir, check.Equals, "/home/tidb/deploy/tikv-20160/my-local-data")
@@ -286,6 +299,7 @@ tiflash_servers:
 		topo, err := merge4test(base, scale)
 		c.Assert(err, check.IsNil)
 		ExpandRelativeDir(topo)
+		ExpandRelativeDir(topo) // should be idempotent
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
 		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/home/tidb/deploy/tiflash-9000/data")

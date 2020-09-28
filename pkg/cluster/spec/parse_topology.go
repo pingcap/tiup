@@ -108,7 +108,9 @@ func expandRelativePath(user string, topo interface{}) {
 				}
 				f.SetString(strings.Join(ads, ","))
 			case "LogDir":
-				f.SetString(path.Join(v.FieldByName("DeployDir").String(), f.String()))
+				if !strings.HasPrefix(f.String(), "/") {
+					f.SetString(path.Join(v.FieldByName("DeployDir").String(), f.String()))
+				}
 			}
 		}
 		// Deal with all fields (expandRelativePath will do nothing on string filed)

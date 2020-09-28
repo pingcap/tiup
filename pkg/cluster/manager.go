@@ -1068,6 +1068,7 @@ func (m *Manager) Deploy(
 	if err := spec.ParseTopologyYaml(topoFile, topo); err != nil {
 		return err
 	}
+
 	spec.ExpandRelativeDir(topo)
 
 	base := topo.BaseTopo()
