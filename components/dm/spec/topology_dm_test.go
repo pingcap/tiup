@@ -326,7 +326,7 @@ worker_servers:
 		topo := Topology{}
 		err := spec.ParseTopologyYaml(file, &topo)
 		assert.Nil(t, err)
-		spec.ExtendRelativeDir(&topo)
+		spec.ExpandRelativeDir(&topo)
 		assert.Equal(t, "/home/tidb/deploy/dm-master-8261", topo.Masters[0].DeployDir)
 		assert.Equal(t, "/home/tidb/deploy/dm-worker-8262", topo.Workers[0].DeployDir)
 	})
@@ -342,7 +342,7 @@ master_servers:
 		topo := Topology{}
 		err := spec.ParseTopologyYaml(file, &topo)
 		assert.Nil(t, err)
-		spec.ExtendRelativeDir(&topo)
+		spec.ExpandRelativeDir(&topo)
 
 		assert.Equal(t, "/home/tidb/my-deploy", topo.Masters[0].DeployDir)
 		assert.Equal(t, "/home/tidb/my-deploy/my-data", topo.Masters[0].DataDir)
@@ -359,7 +359,7 @@ master_servers:
 		topo := Topology{}
 		err := spec.ParseTopologyYaml(file, &topo)
 		assert.Nil(t, err)
-		spec.ExtendRelativeDir(&topo)
+		spec.ExpandRelativeDir(&topo)
 
 		assert.Equal(t, "/home/tidb/my-deploy/dm-master-8261", topo.Masters[0].DeployDir)
 		assert.Equal(t, "/home/tidb/my-deploy/dm-master-8261/data", topo.Masters[0].DataDir)
@@ -381,7 +381,7 @@ worker_servers:
 		topo := Topology{}
 		err := spec.ParseTopologyYaml(file, &topo)
 		assert.Nil(t, err)
-		spec.ExtendRelativeDir(&topo)
+		spec.ExpandRelativeDir(&topo)
 
 		assert.Equal(t, "my-deploy", topo.GlobalOptions.DeployDir)
 		assert.Equal(t, "data", topo.GlobalOptions.DataDir)
@@ -410,7 +410,7 @@ worker_servers:
 		topo := Topology{}
 		err := spec.ParseTopologyYaml(file, &topo)
 		assert.Nil(t, err)
-		spec.ExtendRelativeDir(&topo)
+		spec.ExpandRelativeDir(&topo)
 
 		assert.Equal(t, "my-deploy", topo.GlobalOptions.DeployDir)
 		assert.Equal(t, "data", topo.GlobalOptions.DataDir)
@@ -442,7 +442,7 @@ worker_servers:
 		topo := Topology{}
 		err := spec.ParseTopologyYaml(file, &topo)
 		assert.Nil(t, err)
-		spec.ExtendRelativeDir(&topo)
+		spec.ExpandRelativeDir(&topo)
 
 		assert.Equal(t, "deploy", topo.GlobalOptions.DeployDir)
 		assert.Equal(t, "my-global-data", topo.GlobalOptions.DataDir)
@@ -471,7 +471,7 @@ worker_servers:
 `, func(base, scale string) {
 		topo, err := merge4test(base, scale)
 		assert.Nil(t, err)
-		spec.ExtendRelativeDir(topo)
+		spec.ExpandRelativeDir(topo)
 
 		assert.Equal(t, "/home/tidb/deploy/dm-worker-8262", topo.Workers[0].DeployDir)
 		assert.Equal(t, "/home/tidb/deploy/dm-worker-8262/data", topo.Workers[0].DataDir)
@@ -505,7 +505,7 @@ worker_servers:
 		topo, err := merge4test(base, scale)
 		assert.Nil(t, err)
 
-		spec.ExtendRelativeDir(topo)
+		spec.ExpandRelativeDir(topo)
 
 		assert.Equal(t, "/my-global-deploy/dm-worker-8262", topo.Workers[0].DeployDir)
 		assert.Equal(t, "/my-global-deploy/dm-worker-8262/my-local-data", topo.Workers[0].DataDir)

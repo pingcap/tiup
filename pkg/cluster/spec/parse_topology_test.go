@@ -59,7 +59,7 @@ tikv_servers:
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
 		c.Assert(err, check.IsNil)
-		ExtendRelativeDir(&topo)
+		ExpandRelativeDir(&topo)
 		c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/tidb/my-deploy")
 	})
 
@@ -74,7 +74,7 @@ tikv_servers:
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
 		c.Assert(err, check.IsNil)
-		ExtendRelativeDir(&topo)
+		ExpandRelativeDir(&topo)
 		c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/tidb/my-deploy")
 		c.Assert(topo.TiKVServers[0].DataDir, check.Equals, "/home/tidb/my-deploy/my-data")
 		c.Assert(topo.TiKVServers[0].LogDir, check.Equals, "/home/tidb/my-deploy/my-log")
@@ -91,7 +91,7 @@ tikv_servers:
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
 		c.Assert(err, check.IsNil)
-		ExtendRelativeDir(&topo)
+		ExpandRelativeDir(&topo)
 		c.Assert(topo.GlobalOptions.DeployDir, check.Equals, "my-deploy")
 		c.Assert(topo.GlobalOptions.DataDir, check.Equals, "data")
 
@@ -115,7 +115,7 @@ tikv_servers:
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
 		c.Assert(err, check.IsNil)
-		ExtendRelativeDir(&topo)
+		ExpandRelativeDir(&topo)
 		c.Assert(topo.GlobalOptions.DeployDir, check.Equals, "my-deploy")
 		c.Assert(topo.GlobalOptions.DataDir, check.Equals, "data")
 
@@ -144,7 +144,7 @@ tikv_servers:
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
 		c.Assert(err, check.IsNil)
-		ExtendRelativeDir(&topo)
+		ExpandRelativeDir(&topo)
 		c.Assert(topo.GlobalOptions.DeployDir, check.Equals, "my-deploy")
 		c.Assert(topo.GlobalOptions.DataDir, check.Equals, "data")
 
@@ -176,7 +176,7 @@ tikv_servers:
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
 		c.Assert(err, check.IsNil)
-		ExtendRelativeDir(&topo)
+		ExpandRelativeDir(&topo)
 		c.Assert(topo.GlobalOptions.DeployDir, check.Equals, "deploy")
 		c.Assert(topo.GlobalOptions.DataDir, check.Equals, "my-global-data")
 		c.Assert(topo.GlobalOptions.LogDir, check.Equals, "my-global-log")
@@ -199,7 +199,7 @@ tiflash_servers:
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
 		c.Assert(err, check.IsNil)
-		ExtendRelativeDir(&topo)
+		ExpandRelativeDir(&topo)
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
 		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/path/to/my-first-data,/home/tidb/deploy/tiflash-9000/my-second-data")
@@ -227,7 +227,7 @@ tikv_servers:
 		topo := Specification{}
 		err := ParseTopologyYaml(file, &topo)
 		c.Assert(err, check.IsNil)
-		ExtendRelativeDir(&topo)
+		ExpandRelativeDir(&topo)
 		c.Assert(topo.GlobalOptions.DeployDir, check.Equals, "deploy")
 		c.Assert(topo.GlobalOptions.DataDir, check.Equals, "my-global-data")
 		c.Assert(topo.GlobalOptions.LogDir, check.Equals, "my-global-log")
@@ -272,7 +272,7 @@ tiflash_servers:
 `, func(base, scale string) {
 		topo, err := merge4test(base, scale)
 		c.Assert(err, check.IsNil)
-		ExtendRelativeDir(topo)
+		ExpandRelativeDir(topo)
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
 		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/home/tidb/deploy/tiflash-9000/data")
@@ -303,7 +303,7 @@ tiflash_servers:
 		topo, err := merge4test(base, scale)
 		c.Assert(err, check.IsNil)
 
-		ExtendRelativeDir(topo)
+		ExpandRelativeDir(topo)
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/my-global-deploy/tiflash-9000")
 		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/my-global-deploy/tiflash-9000/my-local-data-tiflash")
@@ -330,7 +330,7 @@ func (s *topoSuite) TestFixRelativePath(c *check.C) {
 			},
 		},
 	}
-	extendRelativePath("tidb", &topo)
+	expandRelativePath("tidb", &topo)
 	c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/tidb/my-deploy")
 
 	// test data dir & log dir
@@ -343,7 +343,7 @@ func (s *topoSuite) TestFixRelativePath(c *check.C) {
 			},
 		},
 	}
-	extendRelativePath("tidb", &topo)
+	expandRelativePath("tidb", &topo)
 	c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/tidb/my-deploy")
 	c.Assert(topo.TiKVServers[0].DataDir, check.Equals, "/home/tidb/my-deploy/my-data")
 	c.Assert(topo.TiKVServers[0].LogDir, check.Equals, "/home/tidb/my-deploy/my-log")
@@ -359,7 +359,7 @@ func (s *topoSuite) TestFixRelativePath(c *check.C) {
 			{},
 		},
 	}
-	extendRelativePath("tidb", &topo)
+	expandRelativePath("tidb", &topo)
 	c.Assert(topo.GlobalOptions.DeployDir, check.Equals, "my-deploy")
 	c.Assert(topo.GlobalOptions.DataDir, check.Equals, "my-data")
 	c.Assert(topo.GlobalOptions.LogDir, check.Equals, "my-log")

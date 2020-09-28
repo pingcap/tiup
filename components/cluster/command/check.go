@@ -84,7 +84,7 @@ conflict checks with other clusters`,
 				if err := spec.ParseTopologyYaml(args[0], &topo); err != nil {
 					return err
 				}
-				spec.ExtendRelativeDir(&topo)
+				spec.ExpandRelativeDir(&topo)
 
 				clusterList, err := tidbSpec.GetAllClusters()
 				if err != nil {
