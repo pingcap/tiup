@@ -27,7 +27,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
-	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -66,7 +65,6 @@ func newScaleInCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Specify the nodes")
-	cmd.Flags().Uint64Var(&gOpt.APITimeout, "transfer-timeout", 300, "Timeout in seconds when transferring dm-master leaders")
 	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force just try stop and destroy instance before removing the instance from topo")
 
 	_ = cmd.MarkFlagRequired("node")
@@ -137,10 +135,6 @@ func ScaleInDMCluster(
 		return errors.New("cannot find available dm-master instance")
 	}
 
-	retryOpt := &utils.RetryOption{
-		Timeout: time.Second * time.Duration(options.APITimeout),
-		Delay:   time.Second * 2,
-	}
 	dmMasterClient = api.NewDMMasterClient(dmMasterEndpoint, 10*time.Second, nil)
 
 	// Delete member from cluster
@@ -157,13 +151,13 @@ func ScaleInDMCluster(
 			switch component.Name() {
 			case dm.ComponentDMMaster:
 				name := instance.(*dm.MasterInstance).Name
-				err := dmMasterClient.OfflineMaster(name, retryOpt)
+				err := dmMasterClient.OfflineMaster(name, nil)
 				if err != nil {
 					return errors.AddStack(err)
 				}
 			case dm.ComponentDMWorker:
 				name := instance.(*dm.WorkerInstance).Name
-				err := dmMasterClient.OfflineWorker(name, retryOpt)
+				err := dmMasterClient.OfflineWorker(name, nil)
 				if err != nil {
 					return errors.AddStack(err)
 				}
