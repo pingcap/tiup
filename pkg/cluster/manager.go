@@ -1068,7 +1068,7 @@ func (m *Manager) Deploy(
 	if err := spec.ParseTopologyYaml(topoFile, topo); err != nil {
 		return err
 	}
-	spec.FixRelativeDir(&topo)
+	spec.FixRelativeDir(topo)
 
 	base := topo.BaseTopo()
 	if sshType != "" {
@@ -1507,7 +1507,7 @@ func (m *Manager) ScaleOut(
 	if err := mergedTopo.Validate(); err != nil {
 		return err
 	}
-	spec.FixRelativeDir(&mergedTopo)
+	spec.FixRelativeDir(mergedTopo)
 
 	if topo, ok := topo.(*spec.Specification); ok && !opt.NoLabels {
 		// Check if TiKV's label set correctly
