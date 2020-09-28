@@ -34,6 +34,14 @@ func withTempFile(content string, fn func(string)) {
 	fn(file.Name())
 }
 
+func with2TempFile(content1, content2 string, fn func(string, string)) {
+	withTempFile(content1, func(file1 string) {
+		withTempFile(content2, func(file2 string) {
+			fn(file1, file2)
+		})
+	})
+}
+
 func (s *topoSuite) TestParseTopologyYaml(c *check.C) {
 	file := filepath.Join("testdata", "topology_err.yaml")
 	topo := Specification{}
@@ -200,6 +208,7 @@ tiflash_servers:
 	// test global options, case 6
 	withTempFile(`
 global:
+  user: test
   data_dir: my-global-data
   log_dir: my-global-log
 
@@ -218,17 +227,96 @@ tikv_servers:
 		err := ParseTopologyYaml(file, &topo)
 		c.Assert(err, check.IsNil)
 		FixRelativeDir(&topo)
-		c.Assert(topo.GlobalOptions.DeployDir, check.Equals, "/home/tidb/deploy")
-		c.Assert(topo.GlobalOptions.DataDir, check.Equals, "/home/tidb/deploy/my-global-data")
-		c.Assert(topo.GlobalOptions.LogDir, check.Equals, "/home/tidb/deploy/my-global-log")
+		c.Assert(topo.GlobalOptions.DeployDir, check.Equals, "/home/test/deploy")
+		c.Assert(topo.GlobalOptions.DataDir, check.Equals, "/home/test/deploy/my-global-data")
+		c.Assert(topo.GlobalOptions.LogDir, check.Equals, "/home/test/deploy/my-global-log")
 
-		c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/tidb/my-local-deploy")
-		c.Assert(topo.TiKVServers[0].DataDir, check.Equals, "/home/tidb/my-local-deploy/my-local-data")
-		c.Assert(topo.TiKVServers[0].LogDir, check.Equals, "/home/tidb/my-local-deploy/my-local-log")
+		c.Assert(topo.TiKVServers[0].DeployDir, check.Equals, "/home/test/my-local-deploy")
+		c.Assert(topo.TiKVServers[0].DataDir, check.Equals, "/home/test/my-local-deploy/my-local-data")
+		c.Assert(topo.TiKVServers[0].LogDir, check.Equals, "/home/test/my-local-deploy/my-local-log")
 
-		c.Assert(topo.TiKVServers[1].DeployDir, check.Equals, "/home/tidb/deploy/tikv-20161")
-		c.Assert(topo.TiKVServers[1].DataDir, check.Equals, "/home/tidb/deploy/tikv-20161/my-global-data")
-		c.Assert(topo.TiKVServers[1].LogDir, check.Equals, "/home/tidb/deploy/tikv-20161/my-global-log")
+		c.Assert(topo.TiKVServers[1].DeployDir, check.Equals, "/home/test/deploy/tikv-20161")
+		c.Assert(topo.TiKVServers[1].DataDir, check.Equals, "/home/test/deploy/tikv-20161/my-global-data")
+		c.Assert(topo.TiKVServers[1].LogDir, check.Equals, "/home/test/deploy/tikv-20161/my-global-log")
+	})
+}
+
+func merge4test(base, scale string) (*Specification, error) {
+	baseTopo := Specification{}
+	if err := ParseTopologyYaml(base, &baseTopo); err != nil {
+		return nil, err
+	}
+
+	scaleTopo := baseTopo.NewPart()
+	if err := ParseTopologyYaml(scale, scaleTopo); err != nil {
+		return nil, err
+	}
+
+	mergedTopo := baseTopo.MergeTopo(scaleTopo)
+	if err := mergedTopo.Validate(); err != nil {
+		return nil, err
+	}
+
+	return mergedTopo.(*Specification), nil
+}
+
+func (s *topoSuite) TestTopologyMerge(c *check.C) {
+	// base test
+	with2TempFile(`
+tiflash_servers:
+  - host: 172.16.5.140
+`, `
+tiflash_servers:
+  - host: 172.16.5.139
+`, func(base, scale string) {
+		topo, err := merge4test(base, scale)
+		c.Assert(err, check.IsNil)
+		FixRelativeDir(topo)
+
+		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
+		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/home/tidb/deploy/tiflash-9000/data")
+
+		c.Assert(topo.TiFlashServers[1].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
+		c.Assert(topo.TiFlashServers[1].DataDir, check.Equals, "/home/tidb/deploy/tiflash-9000/data")
+	})
+
+	// test global option overwrite
+	with2TempFile(`
+global:
+  user: test
+  deploy_dir: /my-global-deploy
+
+tiflash_servers:
+  - host: 172.16.5.140
+    log_dir: my-local-log-tiflash
+    data_dir: my-local-data-tiflash
+  - host: 172.16.5.175
+    deploy_dir: flash-deploy
+  - host: 172.16.5.141
+`, `
+tiflash_servers:
+  - host: 172.16.5.139
+    deploy_dir: flash-deploy
+  - host: 172.16.5.134
+`, func(base, scale string) {
+		topo, err := merge4test(base, scale)
+		c.Assert(err, check.IsNil)
+
+		FixRelativeDir(topo)
+
+		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/my-global-deploy/tiflash-9000")
+		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/my-global-deploy/tiflash-9000/my-local-data-tiflash")
+		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "/my-global-deploy/tiflash-9000/my-local-log-tiflash")
+
+		c.Assert(topo.TiFlashServers[1].DeployDir, check.Equals, "/home/test/flash-deploy")
+		c.Assert(topo.TiFlashServers[1].DataDir, check.Equals, "/home/test/flash-deploy/data")
+		c.Assert(topo.TiFlashServers[3].DeployDir, check.Equals, "/home/test/flash-deploy")
+		c.Assert(topo.TiFlashServers[3].DataDir, check.Equals, "/home/test/flash-deploy/data")
+
+		c.Assert(topo.TiFlashServers[2].DeployDir, check.Equals, "/my-global-deploy/tiflash-9000")
+		c.Assert(topo.TiFlashServers[2].DataDir, check.Equals, "/my-global-deploy/tiflash-9000/data")
+		c.Assert(topo.TiFlashServers[4].DeployDir, check.Equals, "/my-global-deploy/tiflash-9000")
+		c.Assert(topo.TiFlashServers[4].DataDir, check.Equals, "/my-global-deploy/tiflash-9000/data")
 	})
 }
 
