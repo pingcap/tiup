@@ -68,12 +68,12 @@ Please check the syntax of your topology file {{ColorKeyword}}{{.File}}{{ColorRe
 	return nil
 }
 
-// FixRelativeDir fill DeployDir, DataDir and LogDir to absolute path
-func FixRelativeDir(topo Topology) {
-	fixRelativePath(deployUser(topo), topo)
+// ExtendRelativeDir fill DeployDir, DataDir and LogDir to absolute path
+func ExtendRelativeDir(topo Topology) {
+	extendRelativePath(deployUser(topo), topo)
 }
 
-func fixRelativePath(user string, topo interface{}) {
+func extendRelativePath(user string, topo interface{}) {
 	v := reflect.ValueOf(topo).Elem()
 
 	switch v.Kind() {
@@ -81,7 +81,7 @@ func fixRelativePath(user string, topo interface{}) {
 		for i := 0; i < v.Len(); i++ {
 			ref := reflect.New(v.Index(i).Type())
 			ref.Elem().Set(v.Index(i))
-			fixRelativePath(user, ref.Interface())
+			extendRelativePath(user, ref.Interface())
 			v.Index(i).Set(ref.Elem())
 		}
 	case reflect.Struct:
@@ -111,15 +111,19 @@ func fixRelativePath(user string, topo interface{}) {
 				f.SetString(path.Join(v.FieldByName("DeployDir").String(), f.String()))
 			}
 		}
-		// Deal with all fields (fixRelativePath will do nothing on string filed)
+		// Deal with all fields (extendRelativePath will do nothing on string filed)
 		for i := 0; i < v.NumField(); i++ {
+			// We don't deal with GlobalOptions because relative path in GlobalOptions.Data has special meaning
+			if v.Type().Field(i).Name == "GlobalOptions" {
+				continue
+			}
 			ref := reflect.New(v.Field(i).Type())
 			ref.Elem().Set(v.Field(i))
-			fixRelativePath(user, ref.Interface())
+			extendRelativePath(user, ref.Interface())
 			v.Field(i).Set(ref.Elem())
 		}
 	case reflect.Ptr:
-		fixRelativePath(user, v.Interface())
+		extendRelativePath(user, v.Interface())
 	}
 }
 

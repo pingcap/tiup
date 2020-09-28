@@ -681,6 +681,7 @@ func setDMCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) erro
 				)))
 				continue
 			}
+
 			// If the data dir in global options is empty or a relative path, keep it be relative
 			// Our run_*.sh start scripts are run inside deploy_path, so the final location
 			// will be deploy_path/global.data_dir
