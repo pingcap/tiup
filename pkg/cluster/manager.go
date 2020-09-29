@@ -701,11 +701,11 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 			}
 		}
 
-		deployDir := clusterutil.Abs(base.User, inst.DeployDir())
+		deployDir := spec.Abs(base.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
-		dataDirs := clusterutil.MultiDirAbs(base.User, inst.DataDir())
+		dataDirs := spec.MultiDirAbs(base.User, inst.DataDir())
 		// log dir will always be with values, but might not used by the component
-		logDir := clusterutil.Abs(base.User, inst.LogDir())
+		logDir := spec.Abs(base.User, inst.LogDir())
 
 		// Download and copy the latest component to remote if the cluster is imported from Ansible
 		tb := task.NewBuilder().UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
@@ -830,11 +830,11 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 				downloadCompTasks = append(downloadCompTasks, t)
 			}
 
-			deployDir := clusterutil.Abs(base.User, inst.DeployDir())
+			deployDir := spec.Abs(base.User, inst.DeployDir())
 			// data dir would be empty for components which don't need it
-			dataDirs := clusterutil.MultiDirAbs(base.User, inst.DataDir())
+			dataDirs := spec.MultiDirAbs(base.User, inst.DataDir())
 			// log dir will always be with values, but might not used by the component
-			logDir := clusterutil.Abs(base.User, inst.LogDir())
+			logDir := spec.Abs(base.User, inst.LogDir())
 
 			// Deploy component
 			tb := task.NewBuilder()
@@ -970,7 +970,7 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 
 	var replacePackageTasks []task.Task
 	for _, inst := range insts {
-		deployDir := clusterutil.Abs(base.User, inst.DeployDir())
+		deployDir := spec.Abs(base.User, inst.DeployDir())
 		tb := task.NewBuilder()
 		tb.BackupComponent(inst.ComponentName(), base.Version, inst.GetHost(), deployDir).
 			InstallPackage(packagePath, inst.GetHost(), deployDir)
@@ -1065,9 +1065,11 @@ func (m *Manager) Deploy(
 	metadata := m.specManager.NewMetadata()
 	topo := metadata.GetTopology()
 
-	if err := clusterutil.ParseTopologyYaml(topoFile, topo); err != nil {
+	if err := spec.ParseTopologyYaml(topoFile, topo); err != nil {
 		return err
 	}
+
+	spec.ExpandRelativeDir(topo)
 
 	base := topo.BaseTopo()
 	if sshType != "" {
@@ -1169,7 +1171,7 @@ func (m *Manager) Deploy(
 				if dir == "" {
 					continue
 				}
-				dirs = append(dirs, clusterutil.Abs(globalOptions.User, dir))
+				dirs = append(dirs, spec.Abs(globalOptions.User, dir))
 			}
 			// the default, relative path of data dir is under deploy dir
 			if strings.HasPrefix(globalOptions.DataDir, "/") {
@@ -1204,11 +1206,11 @@ func (m *Manager) Deploy(
 	// Deploy components to remote
 	topo.IterInstance(func(inst spec.Instance) {
 		version := m.bindVersion(inst.ComponentName(), clusterVersion)
-		deployDir := clusterutil.Abs(globalOptions.User, inst.DeployDir())
+		deployDir := spec.Abs(globalOptions.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
-		dataDirs := clusterutil.MultiDirAbs(globalOptions.User, inst.DataDir())
+		dataDirs := spec.MultiDirAbs(globalOptions.User, inst.DataDir())
 		// log dir will always be with values, but might not used by the component
-		logDir := clusterutil.Abs(globalOptions.User, inst.LogDir())
+		logDir := spec.Abs(globalOptions.User, inst.LogDir())
 		// Deploy component
 		// prepare deployment server
 		deployDirs := []string{
@@ -1381,11 +1383,11 @@ func (m *Manager) ScaleIn(
 			if deletedNodes.Exist(instance.ID()) {
 				continue
 			}
-			deployDir := clusterutil.Abs(base.User, instance.DeployDir())
+			deployDir := spec.Abs(base.User, instance.DeployDir())
 			// data dir would be empty for components which don't need it
-			dataDirs := clusterutil.MultiDirAbs(base.User, instance.DataDir())
+			dataDirs := spec.MultiDirAbs(base.User, instance.DataDir())
 			// log dir will always be with values, but might not used by the component
-			logDir := clusterutil.Abs(base.User, instance.LogDir())
+			logDir := spec.Abs(base.User, instance.LogDir())
 
 			// Download and copy the latest component to remote if the cluster is imported from Ansible
 			tb := task.NewBuilder()
@@ -1492,7 +1494,7 @@ func (m *Manager) ScaleOut(
 	// The no tispark master error is ignored, as if the tispark master is removed from the topology
 	// file for some reason (manual edit, for example), it is still possible to scale-out it to make
 	// the whole topology back to normal state.
-	if err := clusterutil.ParseTopologyYaml(topoFile, newPart); err != nil &&
+	if err := spec.ParseTopologyYaml(topoFile, newPart); err != nil &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return err
 	}
@@ -1506,6 +1508,7 @@ func (m *Manager) ScaleOut(
 	if err := mergedTopo.Validate(); err != nil {
 		return err
 	}
+	spec.ExpandRelativeDir(mergedTopo)
 
 	if topo, ok := topo.(*spec.Specification); ok && !opt.NoLabels {
 		// Check if TiKV's label set correctly
@@ -1948,7 +1951,7 @@ func buildScaleOutTask(
 					if dirname == "" {
 						continue
 					}
-					dirs = append(dirs, clusterutil.Abs(globalOptions.User, dirname))
+					dirs = append(dirs, spec.Abs(globalOptions.User, dirname))
 				}
 			}
 			t := task.NewBuilder().
@@ -1977,11 +1980,11 @@ func buildScaleOutTask(
 	// Deploy the new topology and refresh the configuration
 	newPart.IterInstance(func(inst spec.Instance) {
 		version := m.bindVersion(inst.ComponentName(), base.Version)
-		deployDir := clusterutil.Abs(base.User, inst.DeployDir())
+		deployDir := spec.Abs(base.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
-		dataDirs := clusterutil.MultiDirAbs(base.User, inst.DataDir())
+		dataDirs := spec.MultiDirAbs(base.User, inst.DataDir())
 		// log dir will always be with values, but might not used by the component
-		logDir := clusterutil.Abs(base.User, inst.LogDir())
+		logDir := spec.Abs(base.User, inst.LogDir())
 
 		deployDirs := []string{
 			deployDir, logDir,
@@ -2065,11 +2068,11 @@ func buildScaleOutTask(
 	hasImported := false
 
 	mergedTopo.IterInstance(func(inst spec.Instance) {
-		deployDir := clusterutil.Abs(base.User, inst.DeployDir())
+		deployDir := spec.Abs(base.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
-		dataDirs := clusterutil.MultiDirAbs(base.User, inst.DataDir())
+		dataDirs := spec.MultiDirAbs(base.User, inst.DataDir())
 		// log dir will always be with values, but might not used by the component
-		logDir := clusterutil.Abs(base.User, inst.LogDir())
+		logDir := spec.Abs(base.User, inst.LogDir())
 
 		// Download and copy the latest component to remote if the cluster is imported from Ansible
 		tb := task.NewBuilder()
@@ -2204,7 +2207,7 @@ func buildMonitoredDeployTask(
 					BuildAsStep(fmt.Sprintf("  - Download %s:%s (%s/%s)", comp, version, info.os, info.arch)))
 			}
 
-			deployDir := clusterutil.Abs(globalOptions.User, monitoredOptions.DeployDir)
+			deployDir := spec.Abs(globalOptions.User, monitoredOptions.DeployDir)
 			// data dir would be empty for components which don't need it
 			dataDir := monitoredOptions.DataDir
 			// the default data_dir is relative to deploy_dir
@@ -2212,7 +2215,7 @@ func buildMonitoredDeployTask(
 				dataDir = filepath.Join(deployDir, dataDir)
 			}
 			// log dir will always be with values, but might not used by the component
-			logDir := clusterutil.Abs(globalOptions.User, monitoredOptions.LogDir)
+			logDir := spec.Abs(globalOptions.User, monitoredOptions.LogDir)
 			// Deploy component
 			t := task.NewBuilder().
 				UserSSH(host, info.ssh, globalOptions.User, sshTimeout, sshType, globalOptions.SSHType).
@@ -2268,7 +2271,7 @@ func refreshMonitoredConfigTask(
 	// monitoring agents
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
 		for host, info := range uniqueHosts {
-			deployDir := clusterutil.Abs(globalOptions.User, monitoredOptions.DeployDir)
+			deployDir := spec.Abs(globalOptions.User, monitoredOptions.DeployDir)
 			// data dir would be empty for components which don't need it
 			dataDir := monitoredOptions.DataDir
 			// the default data_dir is relative to deploy_dir
@@ -2276,7 +2279,7 @@ func refreshMonitoredConfigTask(
 				dataDir = filepath.Join(deployDir, dataDir)
 			}
 			// log dir will always be with values, but might not used by the component
-			logDir := clusterutil.Abs(globalOptions.User, monitoredOptions.LogDir)
+			logDir := spec.Abs(globalOptions.User, monitoredOptions.LogDir)
 			// Generate configs
 			t := task.NewBuilder().
 				UserSSH(host, info.ssh, globalOptions.User, sshTimeout, sshType, globalOptions.SSHType).

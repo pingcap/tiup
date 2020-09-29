@@ -23,7 +23,6 @@ import (
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -82,9 +81,10 @@ conflict checks with other clusters`,
 
 				topo = *metadata.Topology
 			} else { // check before cluster is deployed
-				if err := clusterutil.ParseTopologyYaml(args[0], &topo); err != nil {
+				if err := spec.ParseTopologyYaml(args[0], &topo); err != nil {
 					return err
 				}
+				spec.ExpandRelativeDir(&topo)
 
 				clusterList, err := tidbSpec.GetAllClusters()
 				if err != nil {
@@ -266,7 +266,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 			// if the data dir set in topology is relative, and the home dir of deploy user
 			// and the user run the check command is on different partitions, the disk detection
 			// may be using incorrect partition for validations.
-			for _, dataDir := range clusterutil.MultiDirAbs(opt.user, inst.DataDir()) {
+			for _, dataDir := range spec.MultiDirAbs(opt.user, inst.DataDir()) {
 				// build checking tasks
 				t2 = t2.
 					CheckSys(

@@ -23,7 +23,6 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
@@ -43,7 +42,7 @@ var (
 func fixDir(topo Topology) func(string) string {
 	return func(dir string) string {
 		if dir != "" {
-			return clusterutil.Abs(topo.BaseTopo().GlobalOptions.User, dir)
+			return Abs(topo.BaseTopo().GlobalOptions.User, dir)
 		}
 		return dir
 	}
@@ -651,7 +650,7 @@ func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 	dirStats := make(map[string]int)
 	count := 0
 	topoSpec := reflect.ValueOf(s).Elem()
-	dirPrefix = clusterutil.Abs(s.GlobalOptions.User, dirPrefix)
+	dirPrefix = Abs(s.GlobalOptions.User, dirPrefix)
 
 	for i := 0; i < topoSpec.NumField(); i++ {
 		if isSkipField(topoSpec.Field(i)) {
@@ -688,7 +687,7 @@ func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 							dir = filepath.Join(deployDir, dir)
 						}
 					}
-					dir = clusterutil.Abs(s.GlobalOptions.User, dir)
+					dir = Abs(s.GlobalOptions.User, dir)
 					dirStats[host+dir]++
 				}
 			}

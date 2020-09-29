@@ -23,7 +23,6 @@ import (
 
 	"github.com/AstroProfundis/sysinfo"
 	"github.com/pingcap/tidb-insight/collector/insight"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -499,7 +498,7 @@ func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, r
 		if inst.GetHost() != host {
 			return
 		}
-		for _, dataDir := range clusterutil.MultiDirAbs(topo.GlobalOptions.User, inst.DataDir()) {
+		for _, dataDir := range spec.MultiDirAbs(topo.GlobalOptions.User, inst.DataDir()) {
 			if dataDir == "" {
 				continue
 			}

@@ -23,7 +23,6 @@ import (
 
 	"github.com/creasty/defaults"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -597,7 +596,7 @@ func IterHost(topo Topology, fn func(instance Instance)) {
 func (s *Specification) Endpoints(user string) []*scripts.PDScript {
 	var ends []*scripts.PDScript
 	for _, spec := range s.PDServers {
-		deployDir := clusterutil.Abs(user, spec.DeployDir)
+		deployDir := Abs(user, spec.DeployDir)
 		// data dir would be empty for components which don't need it
 		dataDir := spec.DataDir
 		// the default data_dir is relative to deploy_dir
@@ -605,7 +604,7 @@ func (s *Specification) Endpoints(user string) []*scripts.PDScript {
 			dataDir = filepath.Join(deployDir, dataDir)
 		}
 		// log dir will always be with values, but might not used by the component
-		logDir := clusterutil.Abs(user, spec.LogDir)
+		logDir := Abs(user, spec.LogDir)
 
 		script := scripts.NewPDScript(
 			spec.Name,
@@ -629,7 +628,7 @@ func (s *Specification) Endpoints(user string) []*scripts.PDScript {
 func AlertManagerEndpoints(alertmanager []AlertManagerSpec, user string, enableTLS bool) []*scripts.AlertManagerScript {
 	var ends []*scripts.AlertManagerScript
 	for _, spec := range alertmanager {
-		deployDir := clusterutil.Abs(user, spec.DeployDir)
+		deployDir := Abs(user, spec.DeployDir)
 		// data dir would be empty for components which don't need it
 		dataDir := spec.DataDir
 		// the default data_dir is relative to deploy_dir
@@ -637,7 +636,7 @@ func AlertManagerEndpoints(alertmanager []AlertManagerSpec, user string, enableT
 			dataDir = filepath.Join(deployDir, dataDir)
 		}
 		// log dir will always be with values, but might not used by the component
-		logDir := clusterutil.Abs(user, spec.LogDir)
+		logDir := Abs(user, spec.LogDir)
 
 		script := scripts.NewAlertManagerScript(
 			spec.Host,
