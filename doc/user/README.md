@@ -4,6 +4,8 @@
 
 For detailed documentation, see the manual which starts with an [overview](overview.md).
 
+To get started with TiDB using TiUp, see the [TiDB quick start guide](https://docs.pingcap.com/tidb/stable/quick-start-with-tidb). To deploy TiDB using TiUp in a production-like environment, see the [TiDB deploymeny guide](https://docs.pingcap.com/tidb/stable/production-deployment-using-tiup).
+
 ## Installation
 
 ```sh
@@ -40,8 +42,7 @@ tiup update --all
 After installing `tiup`, you can use it to install binaries of TiDB components and create clusters.
 
 ```
-Use "tiup [command] --help" for more information about a command.Use "tiup [command] --help" for more information about a command.
-s a command-line component management tool that can help to download and install
+TiUP is a command-line component management tool that can help to download and install
 TiDB platform components to the local system. You can run a specific version of a component via
 "tiup <component>[:version]". If no version number is specified, the latest version installed
 locally will be used. If the specified component does not have any version installed locally,
@@ -58,36 +59,23 @@ Available Commands:
   update      Update tiup components to the latest version
   status      List the status of instantiated components
   clean       Clean the data of instantiated components
+  mirror      Manage a repository mirror for TiUP components
+  telemetry   Controls things about telemetry
+  completion  Output shell completion code for the specified shell (bash or zsh)
+  env         Show the list of system environment variable that related to TiUP
   help        Help about any command or component
 
-Available Components:
-  tidb                TiDB is an open source distributed HTAP database compatible with the MySQL protocol
-  tikv                Distributed transactional key-value database, originally created to complement TiDB
-  pd                  PD is the abbreviation for Placement Driver. It is used to manage and schedule the TiKV cluster
-  playground          Bootstrap a local TiDB cluster
-  client              A simple mysql client to connect TiDB
-  prometheus          The Prometheus monitoring system and time series database.
-  tpc                 A toolbox to benchmark workloads in TPC
-  package             A toolbox to package tiup component
-  tiops               Bootstrap a remote TiDB cluster
-  grafana             Grafana is the open source analytics & monitoring solution for every database
-  alertmanager        Prometheus Alertmanager
-  blackbox_exporter   Blackbox prober exporter
-  node_exporter       Blackbox prober exporter
-  pushgateway         Blackbox prober exporter
-  tiflash             
-  drainer             The drainer componet of TiDB binlog service
-  pump                The pump componet of TiDB binlog service
-  cluster             Deploy a TiDB cluster for production
+Components Manifest:
+  use "tiup list" to fetch the latest components manifest
 
 Flags:
   -B, --binary <component>[:version]   Print binary path of a specific version of a component <component>[:version]
                                        and the latest version installed will be selected if no version specified
       --binpath string                 Specify the binary path of component instance
-  -h, --help                           help for tiup
+      --help                           Help for this command
       --skip-version-check             Skip the strict version check, by default a version must be a valid SemVer string
   -T, --tag string                     Specify a tag for component instance
-      --version                        version for tiup
+  -v, --version                        Print the version of tiup
 
 Component instances with the same "tag" will share a data directory ($TIUP_HOME/data/$tag):
   $ tiup --tag mycluster playground
@@ -105,4 +93,40 @@ Examples:
   $ tiup clean --all                   # Clean the data of all running/terminated instances
 
 Use "tiup [command] --help" for more information about a command.
+```
+
+The components available are
+
+```
+Name               Owner    Description
+----               -----    -----------
+alertmanager       pingcap  Prometheus alertmanager
+bench              pingcap  Benchmark database with different workloads
+blackbox_exporter  pingcap  Blackbox prober exporter
+br                 pingcap  TiDB/TiKV cluster backup restore tool
+cdc                pingcap  CDC is a change data capture tool for TiDB
+client             pingcap  A simple mysql client to connect TiDB
+cluster            pingcap  Deploy a TiDB cluster for production
+ctl                pingcap  TiDB controller suite
+dm                 pingcap  Data Migration Platform manager
+dm-master          pingcap  dm-master component of Data Migration Platform
+dm-worker          pingcap  dm-worker component of Data Migration Platform
+dmctl              pingcap  dmctl component of Data Migration Platform
+drainer            pingcap  The drainer componet of TiDB binlog service
+dumpling           pingcap  Dumpling is a CLI tool that helps you dump MySQL/TiDB data
+grafana            pingcap  Grafana is the open source analytics & monitoring solution for every database
+insight            pingcap  TiDB-Insight collector
+node_exporter      pingcap  Exporter for machine metrics
+package            pingcap  A toolbox to package tiup component
+pd                 pingcap  PD is the abbreviation for Placement Driver. It is used to manage and schedule the TiKV cluster
+pd-recover         pingcap  PD Recover is a disaster recovery tool of PD, used to recover the PD cluster which cannot start or provide services normally
+playground         pingcap  Bootstrap a local TiDB cluster
+prometheus         pingcap  The Prometheus monitoring system and time series database
+pump               pingcap  The pump componet of TiDB binlog service
+pushgateway        pingcap  Push acceptor for ephemeral and batch jobs
+tidb               pingcap  TiDB is an open source distributed HTAP database compatible with the MySQL protocol
+tidb-lightning     pingcap  TiDB Lightning is a tool used for fast full import of large amounts of data into a TiDB cluster
+tiflash            pingcap  The TiFlash Columnar Storage Engine
+tikv               pingcap  Distributed transactional key-value database, originally created to complement TiDB
+tiup               pingcap  TiUP is a command-line component management tool that can help to download and install TiDB platform components to the local system
 ```
