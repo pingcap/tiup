@@ -108,6 +108,11 @@ func (l *localFilesystem) Download(resource, targetDir string) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
+	defer reader.Close()
+
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return errors.Trace(err)
+	}
 	outPath := filepath.Join(targetDir, resource)
 	writer, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 	if err != nil {
@@ -116,6 +121,8 @@ func (l *localFilesystem) Download(resource, targetDir string) error {
 		}
 		return errors.Trace(err)
 	}
+	defer writer.Close()
+
 	_, err = io.Copy(writer, reader)
 	return err
 }
@@ -253,6 +260,10 @@ func (l *httpMirror) Download(resource, targetDir string) error {
 		return errors.Trace(err)
 	}
 	defer r.Close()
+
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return errors.Trace(err)
+	}
 	return utils.Move(tmpFilePath, dstFilePath)
 }
 
@@ -287,7 +298,23 @@ func (l *MockMirror) Open() error {
 
 // Download implements Mirror.
 func (l *MockMirror) Download(resource, targetDir string) error {
-	return errors.New("MockMirror::Download not implemented")
+	content, ok := l.Resources[resource]
+	if !ok {
+		return errors.Annotatef(ErrNotFound, "resource %s", resource)
+	}
+
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return err
+	}
+	target := filepath.Join(targetDir, resource)
+
+	file, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = file.Write([]byte(content))
+	return err
 }
 
 // Fetch implements Mirror.

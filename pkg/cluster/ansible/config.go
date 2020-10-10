@@ -25,7 +25,7 @@ import (
 )
 
 // ImportConfig copies config files from cluster which deployed through tidb-ansible
-func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout int64, sshType executor.SSHType) error {
+func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout uint64, sshType executor.SSHType) error {
 	// there may be already cluster dir, skip create
 	//if err := os.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
 	//	return err
@@ -87,7 +87,7 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout int64, sshT
 		}
 	}
 	t := task.NewBuilder().
-		Parallel(copyFileTasks...).
+		Parallel(false, copyFileTasks...).
 		Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {

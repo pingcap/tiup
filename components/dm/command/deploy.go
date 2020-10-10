@@ -25,7 +25,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-func newDeploy() *cobra.Command {
+func newDeployCmd() *cobra.Command {
 	opt := cluster.DeployOptions{
 		IdentityFile: path.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
@@ -73,7 +73,6 @@ func newDeploy() *cobra.Command {
 	cmd.Flags().StringVarP(&opt.User, "user", "u", utils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
 	cmd.Flags().StringVarP(&opt.IdentityFile, "identity_file", "i", opt.IdentityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.UsePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
-	cmd.Flags().BoolVarP(&opt.IgnoreConfigCheck, "ignore-config-check", "", opt.IgnoreConfigCheck, "Ignore the config check result")
 
 	return cmd
 }

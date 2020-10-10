@@ -171,8 +171,7 @@ tidb_servers:
 			},
 		},
 	}
-	got, err := flattenMap(topo.ServerConfigs.TiDB)
-	c.Assert(err, IsNil)
+	got := flattenMap(topo.ServerConfigs.TiDB)
 	c.Assert(got, DeepEquals, expected)
 	buf := &bytes.Buffer{}
 	err = toml.NewEncoder(buf).Encode(expected)
@@ -200,7 +199,7 @@ tidb_servers:
 			},
 		},
 	}
-	got, err = flattenMap(topo.TiDBServers[0].Config)
+	got = flattenMap(topo.TiDBServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 
@@ -214,7 +213,7 @@ tidb_servers:
 			},
 		},
 	}
-	got, err = flattenMap(topo.TiDBServers[1].Config)
+	got = flattenMap(topo.TiDBServers[1].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 }
@@ -244,7 +243,7 @@ tikv_servers:
 			},
 		},
 	}
-	got, err := flattenMap(topo.TiKVServers[0].Config)
+	got := flattenMap(topo.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 }
@@ -470,4 +469,50 @@ item7 = 700
 	merge2, err := merge2Toml(ComponentTiKV, merge1, spec.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(merge2), DeepEquals, expected)
+}
+
+func (s *metaSuiteTopo) TestLocationLabels(c *C) {
+	spec := Specification{}
+
+	lbs, err := spec.LocationLabels()
+	c.Assert(err, IsNil)
+	c.Assert(len(lbs), Equals, 0)
+
+	err = yaml.Unmarshal([]byte(`
+server_configs:
+  pd:
+    replication.location-labels: ["zone", "host"]
+`), &spec)
+	c.Assert(err, IsNil)
+	lbs, err = spec.LocationLabels()
+	c.Assert(err, IsNil)
+	c.Assert(lbs, DeepEquals, []string{"zone", "host"})
+
+	spec = Specification{}
+	err = yaml.Unmarshal([]byte(`
+server_configs:
+  pd:
+    replication:
+      location-labels:
+        - zone
+        - host
+`), &spec)
+	c.Assert(err, IsNil)
+	lbs, err = spec.LocationLabels()
+	c.Assert(err, IsNil)
+	c.Assert(lbs, DeepEquals, []string{"zone", "host"})
+
+	spec = Specification{}
+	err = yaml.Unmarshal([]byte(`
+pd_servers:
+  - host: 172.16.5.140
+    config:
+      replication:
+        location-labels:
+          - zone
+          - host
+`), &spec)
+	c.Assert(err, IsNil)
+	_, err = spec.LocationLabels()
+	c.Assert(err, NotNil)
 }

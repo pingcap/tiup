@@ -18,6 +18,7 @@ import (
 	"os"
 
 	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -54,7 +55,7 @@ latest version. All other flags will be ignored if the flag --self is given.
 
 				var err error
 				defer func() {
-					if err != nil {
+					if err != nil || utils.IsNotExist(originFile) {
 						if err := os.Rename(renameFile, originFile); err != nil {
 							fmt.Printf("Please rename `%s` to `%s` manually.\n", renameFile, originFile)
 						}

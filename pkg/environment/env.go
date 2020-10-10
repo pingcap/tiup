@@ -55,7 +55,7 @@ func Mirror() string {
 	m := os.Getenv(repository.EnvMirrors)
 	if m != "" {
 		if cfg.Mirror != m {
-			fmt.Printf(`WARNING: both mirror config(%s) 
+			fmt.Printf(`WARNING: both mirror config(%s)
 and TIUP_MIRRORS(%s) have been set.
 Setting mirror to TIUP_MIRRORS(%s)
 `, cfg.Mirror, m, m)
@@ -94,6 +94,9 @@ func InitEnv(options repository.Options) (*Environment, error) {
 	// Replace the mirror if some sub-commands use different mirror address
 	mirrorAddr := Mirror()
 	mirror := repository.NewMirror(mirrorAddr, repository.MirrorOptions{})
+	if err := mirror.Open(); err != nil {
+		return nil, err
+	}
 
 	var repo *repository.Repository
 	var v1repo *repository.V1Repository

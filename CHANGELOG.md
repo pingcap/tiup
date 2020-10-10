@@ -1,5 +1,32 @@
 TiUP Changelog
 
+## [1.2.0] 2020.09.29
+
+### New Features
+
+- Support tiup env sub command ([#788](https://github.com/pingcap/tiup/pull/788), [@lucklove](https://github.com/lucklove))
+- Support TiCDC for playground ([#777](https://github.com/pingcap/tiup/pull/777), [@leoppro](https://github.com/leoppro))
+- Support limiting core dump size ([#817](https://github.com/pingcap/tiup/pull/817), [@lucklove](https://github.com/lucklove))
+- Support using latest Spark and TiSpark release ([#779](https://github.com/pingcap/tiup/pull/779), [@lucklove](https://github.com/lucklove))
+- Support new cdc arguments `gc-ttl` and `tz` ([#770](https://github.com/pingcap/tiup/pull/770), [@lichunzhu](https://github.com/lichunzhu))
+- Support specifing custom ssh and scp path ([#734](https://github.com/pingcap/tiup/pull/734), [@9547](https://github.com/9547))
+
+### Fixes
+
+- Fix `tiup update --self` results to tiup's binary file deleted ([#816](https://github.com/pingcap/tiup/pull/816), [@lucklove](https://github.com/lucklove))
+- Fix per-host custom port for drainer not handled correctly on importing ([#806](https://github.com/pingcap/tiup/pull/806), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix the issue that help message is inconsistent ([#758](https://github.com/pingcap/tiup/pull/758), [@9547](https://github.com/9547))
+- Fix the issue that dm not applying config files correctly ([#810](https://github.com/pingcap/tiup/pull/810), [@lucklove](https://github.com/lucklove))
+- Fix the issue that playground display wrong TiDB number in error message ([#821](https://github.com/pingcap/tiup/pull/821), [@SwanSpouse](https://github.com/SwanSpouse))
+
+### Improvements
+
+- Automaticlly check if TiKV's label is set ([#800](https://github.com/pingcap/tiup/pull/800), [@lucklove](https://github.com/lucklove))
+- Download component with stream mode to avoid memory explosion ([#755](https://github.com/pingcap/tiup/pull/755), [@9547](https://github.com/9547))
+- Save and display absolute path for deploy directory, data dirctory and log directory to avoid confusion ([#822](https://github.com/pingcap/tiup/pull/822), [@lucklove](https://github.com/lucklove))
+- Redirect DM stdout to log files ([#815](https://github.com/pingcap/tiup/pull/815), [@csuzhangxc](https://github.com/csuzhangxc))
+- Skip download nightly package when it exists ([#793](https://github.com/pingcap/tiup/pull/793), [@lucklove](https://github.com/lucklove))
+
 ## [1.1.2] 2020.09.11
 
 ### Fixes

@@ -28,16 +28,15 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Set up Go ${{ matrix.go }}
-      uses: actions/setup-go@v2
-      with:
-        go-version: ${{ matrix.go }}
+      - name: Set up Go ${{ matrix.go }}
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go }}
 
-    - name: Install reprotest
-      run: sudo apt-get update && sudo apt-get -qy install reprotest
+      - name: Install reprotest
+        run: sudo apt-get update && sudo apt-get -qy install reprotest
 
-    - name: Check for reproducible build
-      run: sudo reprotest "make clean && BUILD_FLAG='-trimpath -buildmode=pie' make build" bin
-
+      - name: Check for reproducible build
+        run: sudo reprotest "make clean && BUILD_FLAG='-trimpath -buildmode=pie' make build" bin

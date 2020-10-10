@@ -23,7 +23,6 @@ import (
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -82,9 +81,10 @@ conflict checks with other clusters`,
 
 				topo = *metadata.Topology
 			} else { // check before cluster is deployed
-				if err := clusterutil.ParseTopologyYaml(args[0], &topo); err != nil {
+				if err := spec.ParseTopologyYaml(args[0], &topo); err != nil {
 					return err
 				}
+				spec.ExpandRelativeDir(&topo)
 
 				clusterList, err := tidbSpec.GetAllClusters()
 				if err != nil {
@@ -266,7 +266,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 			// if the data dir set in topology is relative, and the home dir of deploy user
 			// and the user run the check command is on different partitions, the disk detection
 			// may be using incorrect partition for validations.
-			for _, dataDir := range clusterutil.MultiDirAbs(opt.user, inst.DataDir()) {
+			for _, dataDir := range spec.MultiDirAbs(opt.user, inst.DataDir()) {
 				// build checking tasks
 				t2 = t2.
 					CheckSys(
@@ -301,10 +301,10 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 	})
 
 	t := task.NewBuilder().
-		ParallelStep("+ Download necessary tools", downloadTasks...).
-		ParallelStep("+ Collect basic system information", collectTasks...).
-		ParallelStep("+ Check system requirements", checkSysTasks...).
-		ParallelStep("+ Cleanup check files", cleanTasks...).
+		ParallelStep("+ Download necessary tools", false, downloadTasks...).
+		ParallelStep("+ Collect basic system information", false, collectTasks...).
+		ParallelStep("+ Check system requirements", false, checkSysTasks...).
+		ParallelStep("+ Cleanup check files", false, cleanTasks...).
 		Build()
 
 	ctx := task.NewContext()
@@ -349,7 +349,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 
 	if opt.applyFix {
 		tc := task.NewBuilder().
-			ParallelStep("+ Try to apply changes to fix failed checks", applyFixTasks...).
+			ParallelStep("+ Try to apply changes to fix failed checks", false, applyFixTasks...).
 			Build()
 		if err := tc.Execute(ctx); err != nil {
 			if errorx.Cast(err) != nil {

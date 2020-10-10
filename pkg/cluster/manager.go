@@ -28,11 +28,13 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -220,7 +222,7 @@ func (m *Manager) StopCluster(clusterName string, options operator.Options) erro
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	t := task.NewBuilder().
@@ -258,7 +260,7 @@ func (m *Manager) RestartCluster(clusterName string, options operator.Options) e
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	t := task.NewBuilder().
@@ -358,7 +360,7 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	if !skipConfirm {
@@ -432,7 +434,7 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	if !skipConfirm {
@@ -452,7 +454,9 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
 		Func("StopCluster", func(ctx *task.Context) error {
-			return operator.Stop(ctx, topo, operator.Options{}, tlsCfg)
+			return operator.Stop(ctx, topo, operator.Options{
+				Force: destroyOpt.Force,
+			}, tlsCfg)
 		}).
 		Func("DestroyCluster", func(ctx *task.Context) error {
 			return operator.Destroy(ctx, topo, destroyOpt)
@@ -523,7 +527,7 @@ func (m *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Option
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
-		Parallel(shellTasks...).
+		Parallel(false, shellTasks...).
 		Build()
 
 	execCtx := task.NewContext()
@@ -618,6 +622,18 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 
 	cliutil.PrintTable(clusterTable, true)
 	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
+
+	if topo, ok := topo.(*spec.Specification); ok {
+		// Check if TiKV's label set correctly
+		kvs := topo.TiKVServers
+		pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
+		if lbs, err := pdClient.GetLocationLabels(); err != nil {
+			color.Yellow("\nWARN: get location labels from pd failed: %v", err)
+		} else if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
+			color.Yellow("\nWARN: there is something wrong with TiKV labels, which may cause data losing:\n%v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -649,6 +665,10 @@ func (m *Manager) GetClusterTopology(clusterName string, opt operator.Options) (
 	filterRoles := set.NewStringSet(opt.Roles...)
 	filterNodes := set.NewStringSet(opt.Nodes...)
 	pdList := topo.BaseTopo().MasterList
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return err
+	}
 	for _, comp := range topo.ComponentsByStartOrder() {
 		for _, ins := range comp.Instances() {
 			// apply role filter
@@ -667,10 +687,6 @@ func (m *Manager) GetClusterTopology(clusterName string, opt operator.Options) (
 				dataDir = insDirs[1]
 			}
 
-			tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
-			if err != nil {
-				return nil, perrs.AddStack(err)
-			}
 			status := ins.Status(tlsCfg, pdList...)
 			// Query the service status
 			if status == "-" {
@@ -802,11 +818,11 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 			}
 		}
 
-		deployDir := clusterutil.Abs(base.User, inst.DeployDir())
+		deployDir := spec.Abs(base.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
-		dataDirs := clusterutil.MultiDirAbs(base.User, inst.DataDir())
+		dataDirs := spec.MultiDirAbs(base.User, inst.DataDir())
 		// log dir will always be with values, but might not used by the component
-		logDir := clusterutil.Abs(base.User, inst.LogDir())
+		logDir := spec.Abs(base.User, inst.LogDir())
 
 		// Download and copy the latest component to remote if the cluster is imported from Ansible
 		tb := task.NewBuilder().UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
@@ -857,15 +873,15 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
-		ParallelStep("+ Refresh instance configs", refreshConfigTasks...)
+		ParallelStep("+ Refresh instance configs", opt.Force, refreshConfigTasks...)
 
 	if len(monitorConfigTasks) > 0 {
-		tb = tb.ParallelStep("+ Refresh monitor configs", monitorConfigTasks...)
+		tb = tb.ParallelStep("+ Refresh monitor configs", opt.Force, monitorConfigTasks...)
 	}
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 	if !skipRestart {
 		tb = tb.Func("UpgradeCluster", func(ctx *task.Context) error {
@@ -931,11 +947,11 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 				downloadCompTasks = append(downloadCompTasks, t)
 			}
 
-			deployDir := clusterutil.Abs(base.User, inst.DeployDir())
+			deployDir := spec.Abs(base.User, inst.DeployDir())
 			// data dir would be empty for components which don't need it
-			dataDirs := clusterutil.MultiDirAbs(base.User, inst.DataDir())
+			dataDirs := spec.MultiDirAbs(base.User, inst.DataDir())
 			// log dir will always be with values, but might not used by the component
-			logDir := clusterutil.Abs(base.User, inst.LogDir())
+			logDir := spec.Abs(base.User, inst.LogDir())
 
 			// Deploy component
 			tb := task.NewBuilder()
@@ -1010,15 +1026,15 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 	t := task.NewBuilder().
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
-		Parallel(downloadCompTasks...).
-		Parallel(copyCompTasks...).
+		Parallel(false, downloadCompTasks...).
+		Parallel(opt.Force, copyCompTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		}).
@@ -1071,7 +1087,7 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 
 	var replacePackageTasks []task.Task
 	for _, inst := range insts {
-		deployDir := clusterutil.Abs(base.User, inst.DeployDir())
+		deployDir := spec.Abs(base.User, inst.DeployDir())
 		tb := task.NewBuilder()
 		tb.BackupComponent(inst.ComponentName(), base.Version, inst.GetHost(), deployDir).
 			InstallPackage(packagePath, inst.GetHost(), deployDir)
@@ -1080,14 +1096,14 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 	t := task.NewBuilder().
 		SSHKeySet(
 			m.specManager.Path(clusterName, "ssh", "id_rsa"),
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
-		Parallel(replacePackageTasks...).
+		Parallel(false, replacePackageTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		}).
@@ -1117,7 +1133,8 @@ type ScaleOutOptions struct {
 	IdentityFile   string // path to the private key file
 	UsePassword    bool   // use password instead of identity file for ssh connection
 
-	Pass *string // password for login User or passphrase for IdentityFile
+	Pass     *string // password for login User or passphrase for IdentityFile
+	NoLabels bool    // don't check labels for TiKV instance
 }
 
 // DeployOptions contains the options for scale out.
@@ -1129,7 +1146,8 @@ type DeployOptions struct {
 	UsePassword       bool   // use password instead of identity file for ssh connection
 	IgnoreConfigCheck bool   // ignore config check result
 
-	Pass *string // password for login User or passphrase for IdentityFile
+	Pass     *string // password for login User or passphrase for IdentityFile
+	NoLabels bool    // don't check labels for TiKV instance
 }
 
 // DeployerInstance is a instance can deploy to a target deploy directory.
@@ -1172,8 +1190,8 @@ func (m *Manager) Deploy(
 	opt DeployOptions,
 	afterDeploy func(b *task.Builder, newPart spec.Topology),
 	skipConfirm bool,
-	optTimeout int64,
-	sshTimeout int64,
+	optTimeout uint64,
+	sshTimeout uint64,
 	sshType executor.SSHType,
 ) error {
 	if err := clusterutil.ValidateClusterNameOrError(clusterName); err != nil {
@@ -1195,13 +1213,27 @@ func (m *Manager) Deploy(
 	metadata := m.specManager.NewMetadata()
 	topo := metadata.GetTopology()
 
-	if err := clusterutil.ParseTopologyYaml(topoFile, topo); err != nil {
+	if err := spec.ParseTopologyYaml(topoFile, topo); err != nil {
 		return err
 	}
+
+	spec.ExpandRelativeDir(topo)
 
 	base := topo.BaseTopo()
 	if sshType != "" {
 		base.GlobalOptions.SSHType = sshType
+	}
+
+	if topo, ok := topo.(*spec.Specification); ok && !opt.NoLabels {
+		// Check if TiKV's label set correctly
+		lbs, err := topo.LocationLabels()
+		if err != nil {
+			return err
+		}
+		kvs := topo.TiKVServers
+		if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
+			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+		}
 	}
 
 	clusterList, err := m.specManager.GetAllClusters()
@@ -1287,7 +1319,7 @@ func (m *Manager) Deploy(
 				if dir == "" {
 					continue
 				}
-				dirs = append(dirs, clusterutil.Abs(globalOptions.User, dir))
+				dirs = append(dirs, spec.Abs(globalOptions.User, dir))
 			}
 			// the default, relative path of data dir is under deploy dir
 			if strings.HasPrefix(globalOptions.DataDir, "/") {
@@ -1322,11 +1354,11 @@ func (m *Manager) Deploy(
 	// Deploy components to remote
 	topo.IterInstance(func(inst spec.Instance) {
 		version := m.bindVersion(inst.ComponentName(), clusterVersion)
-		deployDir := clusterutil.Abs(globalOptions.User, inst.DeployDir())
+		deployDir := spec.Abs(globalOptions.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
-		dataDirs := clusterutil.MultiDirAbs(globalOptions.User, inst.DataDir())
+		dataDirs := spec.MultiDirAbs(globalOptions.User, inst.DataDir())
 		// log dir will always be with values, but might not used by the component
-		logDir := clusterutil.Abs(globalOptions.User, inst.LogDir())
+		logDir := spec.Abs(globalOptions.User, inst.LogDir())
 		// Deploy component
 		// prepare deployment server
 		deployDirs := []string{
@@ -1419,9 +1451,9 @@ func (m *Manager) Deploy(
 	builder := task.NewBuilder().
 		Step("+ Generate SSH keys",
 			task.NewBuilder().SSHKeyGen(m.specManager.Path(clusterName, "ssh", "id_rsa")).Build()).
-		ParallelStep("+ Download TiDB components", downloadCompTasks...).
-		ParallelStep("+ Initialize target host environments", envInitTasks...).
-		ParallelStep("+ Copy files", deployCompTasks...)
+		ParallelStep("+ Download TiDB components", false, downloadCompTasks...).
+		ParallelStep("+ Initialize target host environments", false, envInitTasks...).
+		ParallelStep("+ Copy files", false, deployCompTasks...)
 
 	if afterDeploy != nil {
 		afterDeploy(builder, topo)
@@ -1513,8 +1545,8 @@ func (m *Manager) DoScaleIn(
 func (m *Manager) ScaleIn(
 	clusterName string,
 	skipConfirm bool,
-	optTimeout int64,
-	sshTimeout int64,
+	optTimeout uint64,
+	sshTimeout uint64,
 	sshType executor.SSHType,
 	force bool,
 	nodes []string,
@@ -1558,11 +1590,11 @@ func (m *Manager) ScaleIn(
 			if deletedNodes.Exist(instance.ID()) {
 				continue
 			}
-			deployDir := clusterutil.Abs(base.User, instance.DeployDir())
+			deployDir := spec.Abs(base.User, instance.DeployDir())
 			// data dir would be empty for components which don't need it
-			dataDirs := clusterutil.MultiDirAbs(base.User, instance.DataDir())
+			dataDirs := spec.MultiDirAbs(base.User, instance.DataDir())
 			// log dir will always be with values, but might not used by the component
-			logDir := clusterutil.Abs(base.User, instance.LogDir())
+			logDir := spec.Abs(base.User, instance.LogDir())
 
 			// Download and copy the latest component to remote if the cluster is imported from Ansible
 			tb := task.NewBuilder()
@@ -1610,7 +1642,7 @@ func (m *Manager) ScaleIn(
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	b := task.NewBuilder().
@@ -1622,7 +1654,7 @@ func (m *Manager) ScaleIn(
 	// TODO: support command scale in operation.
 	scale(b, metadata, tlsCfg)
 
-	t := b.Parallel(regenConfigTasks...).Parallel(buildDynReloadProm(metadata.GetTopology())...).Build()
+	t := b.Parallel(force, regenConfigTasks...).Parallel(force, buildDynReloadProm(metadata.GetTopology())...).Build()
 	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(task.NewContext()); err != nil {
@@ -1672,8 +1704,8 @@ func (m *Manager) ScaleOut(
 	final func(b *task.Builder, name string, meta spec.Metadata),
 	opt ScaleOutOptions,
 	skipConfirm bool,
-	optTimeout int64,
-	sshTimeout int64,
+	optTimeout uint64,
+	sshTimeout uint64,
 	sshType executor.SSHType,
 ) error {
 	metadata, err := m.meta(clusterName)
@@ -1696,7 +1728,7 @@ func (m *Manager) ScaleOut(
 	// The no tispark master error is ignored, as if the tispark master is removed from the topology
 	// file for some reason (manual edit, for example), it is still possible to scale-out it to make
 	// the whole topology back to normal state.
-	if err := clusterutil.ParseTopologyYaml(topoFile, newPart); err != nil &&
+	if err := spec.ParseTopologyYaml(topoFile, newPart); err != nil &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return err
 	}
@@ -1709,6 +1741,25 @@ func (m *Manager) ScaleOut(
 	mergedTopo := topo.MergeTopo(newPart)
 	if err := mergedTopo.Validate(); err != nil {
 		return err
+	}
+	spec.ExpandRelativeDir(mergedTopo)
+
+	if topo, ok := topo.(*spec.Specification); ok && !opt.NoLabels {
+		// Check if TiKV's label set correctly
+		pdList := topo.BaseTopo().MasterList
+		tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+		if err != nil {
+			return err
+		}
+		pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
+		lbs, err := pdClient.GetLocationLabels()
+		if err != nil {
+			return err
+		}
+		kvs := mergedTopo.(*spec.Specification).TiKVServers
+		if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
+			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+		}
 	}
 
 	clusterList, err := m.specManager.GetAllClusters()
@@ -2088,8 +2139,8 @@ func buildScaleOutTask(
 	sshConnProps *cliutil.SSHConnectionProps,
 	newPart spec.Topology,
 	patchedComponents set.StringSet,
-	optTimeout int64,
-	sshTimeout int64,
+	optTimeout uint64,
+	sshTimeout uint64,
 	sshType executor.SSHType,
 	afterDeploy func(b *task.Builder, newPart spec.Topology),
 	final func(b *task.Builder, name string, meta spec.Metadata),
@@ -2107,7 +2158,7 @@ func buildScaleOutTask(
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return nil, perrs.AddStack(err)
+		return nil, err
 	}
 
 	// Initialize the environments
@@ -2136,7 +2187,7 @@ func buildScaleOutTask(
 					if dirname == "" {
 						continue
 					}
-					dirs = append(dirs, clusterutil.Abs(globalOptions.User, dirname))
+					dirs = append(dirs, spec.Abs(globalOptions.User, dirname))
 				}
 			}
 			t := task.NewBuilder().
@@ -2165,11 +2216,11 @@ func buildScaleOutTask(
 	// Deploy the new topology and refresh the configuration
 	newPart.IterInstance(func(inst spec.Instance) {
 		version := m.bindVersion(inst.ComponentName(), base.Version)
-		deployDir := clusterutil.Abs(base.User, inst.DeployDir())
+		deployDir := spec.Abs(base.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
-		dataDirs := clusterutil.MultiDirAbs(base.User, inst.DataDir())
+		dataDirs := spec.MultiDirAbs(base.User, inst.DataDir())
 		// log dir will always be with values, but might not used by the component
-		logDir := clusterutil.Abs(base.User, inst.LogDir())
+		logDir := spec.Abs(base.User, inst.LogDir())
 
 		deployDirs := []string{
 			deployDir, logDir,
@@ -2253,11 +2304,11 @@ func buildScaleOutTask(
 	hasImported := false
 
 	mergedTopo.IterInstance(func(inst spec.Instance) {
-		deployDir := clusterutil.Abs(base.User, inst.DeployDir())
+		deployDir := spec.Abs(base.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
-		dataDirs := clusterutil.MultiDirAbs(base.User, inst.DataDir())
+		dataDirs := spec.MultiDirAbs(base.User, inst.DataDir())
 		// log dir will always be with values, but might not used by the component
-		logDir := clusterutil.Abs(base.User, inst.LogDir())
+		logDir := spec.Abs(base.User, inst.LogDir())
 
 		// Download and copy the latest component to remote if the cluster is imported from Ansible
 		tb := task.NewBuilder()
@@ -2314,10 +2365,10 @@ func buildScaleOutTask(
 		SSHKeySet(
 			specManager.Path(clusterName, "ssh", "id_rsa"),
 			specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		Parallel(downloadCompTasks...).
-		Parallel(envInitTasks...).
+		Parallel(false, downloadCompTasks...).
+		Parallel(false, envInitTasks...).
 		ClusterSSH(topo, base.User, sshTimeout, sshType, topo.BaseTopo().GlobalOptions.SSHType).
-		Parallel(deployCompTasks...)
+		Parallel(false, deployCompTasks...)
 
 	if afterDeploy != nil {
 		afterDeploy(builder, newPart)
@@ -2336,8 +2387,8 @@ func buildScaleOutTask(
 		Func("StartCluster", func(ctx *task.Context) error {
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: optTimeout}, tlsCfg)
 		}).
-		Parallel(refreshConfigTasks...).
-		Parallel(buildDynReloadProm(metadata.GetTopology())...)
+		Parallel(false, refreshConfigTasks...).
+		Parallel(false, buildDynReloadProm(metadata.GetTopology())...)
 
 	if final != nil {
 		final(builder, clusterName, metadata)
@@ -2370,7 +2421,7 @@ func buildMonitoredDeployTask(
 	globalOptions *spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
 	version string,
-	sshTimeout int64,
+	sshTimeout uint64,
 	sshType executor.SSHType,
 ) (downloadCompTasks []*task.StepDisplay, deployCompTasks []*task.StepDisplay) {
 	if monitoredOptions == nil {
@@ -2392,7 +2443,7 @@ func buildMonitoredDeployTask(
 					BuildAsStep(fmt.Sprintf("  - Download %s:%s (%s/%s)", comp, version, info.os, info.arch)))
 			}
 
-			deployDir := clusterutil.Abs(globalOptions.User, monitoredOptions.DeployDir)
+			deployDir := spec.Abs(globalOptions.User, monitoredOptions.DeployDir)
 			// data dir would be empty for components which don't need it
 			dataDir := monitoredOptions.DataDir
 			// the default data_dir is relative to deploy_dir
@@ -2400,7 +2451,7 @@ func buildMonitoredDeployTask(
 				dataDir = filepath.Join(deployDir, dataDir)
 			}
 			// log dir will always be with values, but might not used by the component
-			logDir := clusterutil.Abs(globalOptions.User, monitoredOptions.LogDir)
+			logDir := spec.Abs(globalOptions.User, monitoredOptions.LogDir)
 			// Deploy component
 			t := task.NewBuilder().
 				UserSSH(host, info.ssh, globalOptions.User, sshTimeout, sshType, globalOptions.SSHType).
@@ -2445,7 +2496,7 @@ func refreshMonitoredConfigTask(
 	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
 	globalOptions spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
-	sshTimeout int64,
+	sshTimeout uint64,
 	sshType executor.SSHType,
 ) []*task.StepDisplay {
 	if monitoredOptions == nil {
@@ -2456,7 +2507,7 @@ func refreshMonitoredConfigTask(
 	// monitoring agents
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
 		for host, info := range uniqueHosts {
-			deployDir := clusterutil.Abs(globalOptions.User, monitoredOptions.DeployDir)
+			deployDir := spec.Abs(globalOptions.User, monitoredOptions.DeployDir)
 			// data dir would be empty for components which don't need it
 			dataDir := monitoredOptions.DataDir
 			// the default data_dir is relative to deploy_dir
@@ -2464,7 +2515,7 @@ func refreshMonitoredConfigTask(
 				dataDir = filepath.Join(deployDir, dataDir)
 			}
 			// log dir will always be with values, but might not used by the component
-			logDir := clusterutil.Abs(globalOptions.User, monitoredOptions.LogDir)
+			logDir := spec.Abs(globalOptions.User, monitoredOptions.LogDir)
 			// Generate configs
 			t := task.NewBuilder().
 				UserSSH(host, info.ssh, globalOptions.User, sshTimeout, sshType, globalOptions.SSHType).

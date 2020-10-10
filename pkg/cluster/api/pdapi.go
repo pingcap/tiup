@@ -31,6 +31,7 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/utils"
 	pdserverapi "github.com/tikv/pd/server/api"
+	pdconfig "github.com/tikv/pd/server/config"
 )
 
 // PDClient is an HTTP client of the PD server
@@ -659,6 +660,21 @@ func (pc *PDClient) GetReplicateConfig() ([]byte, error) {
 	return tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		return pc.httpClient.Get(endpoint)
 	})
+}
+
+// GetLocationLabels gets the replication.location-labels config from pd server
+func (pc *PDClient) GetLocationLabels() ([]string, error) {
+	config, err := pc.GetReplicateConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	rc := pdconfig.ReplicationConfig{}
+	if err := json.Unmarshal(config, &rc); err != nil {
+		return nil, errors.Annotatef(err, "unmarshal replication config: %s", string(config))
+	}
+
+	return rc.LocationLabels, nil
 }
 
 // UpdateScheduleConfig updates the PD schedule config

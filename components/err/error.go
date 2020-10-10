@@ -126,7 +126,7 @@ func loadIndex() (bleve.Index, map[string]*errorSpec, error) {
 
 	if needIndex {
 		indexMapping := buildIndexMapping()
-		if err := os.MkdirAll(indexPath, 0644); err != nil {
+		if err := os.MkdirAll(indexPath, 0755); err != nil {
 			return nil, nil, err
 		}
 		index, err = bleve.New(indexPath, indexMapping)

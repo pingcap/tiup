@@ -49,6 +49,9 @@ type LocalManifests interface {
 	// ManifestVersion opens filename, if it exists and is a manifest, returns its manifest version number. Otherwise
 	// returns 0.
 	ManifestVersion(filename string) uint
+
+	// TargetRootDir returns the root directory of target
+	TargetRootDir() string
 }
 
 // FsManifests represents a collection of v1 manifests on disk.
@@ -230,11 +233,6 @@ func (ms *FsManifests) ComponentInstalled(component, version string) (bool, erro
 
 // InstallComponent implements LocalManifests.
 func (ms *FsManifests) InstallComponent(reader io.Reader, targetDir, component, version, filename string, noExpand bool) error {
-	// TODO factor path construction to profile (also used by v0 repo).
-	if targetDir == "" {
-		targetDir = ms.profile.Path(localdata.ComponentParentDir, component, version)
-	}
-
 	if !noExpand {
 		return utils.Untar(reader, targetDir)
 	}
@@ -281,6 +279,11 @@ func (ms *FsManifests) ManifestVersion(filename string) uint {
 	return base.Version
 }
 
+// TargetRootDir implements LocalManifests.
+func (ms *FsManifests) TargetRootDir() string {
+	return ms.profile.Root()
+}
+
 // MockManifests is a LocalManifests implementation for testing.
 type MockManifests struct {
 	Manifests map[string]*Manifest
@@ -291,8 +294,9 @@ type MockManifests struct {
 
 // MockInstalled is used by MockManifests to remember what was installed for a component.
 type MockInstalled struct {
-	Version  string
-	Contents string
+	Version    string
+	Contents   string
+	BinaryPath string
 }
 
 // NewMockManifests creates an empty MockManifests.
@@ -381,8 +385,9 @@ func (ms *MockManifests) InstallComponent(reader io.Reader, targetDir string, co
 		return err
 	}
 	ms.Installed[component] = MockInstalled{
-		Version:  version,
-		Contents: buf.String(),
+		Version:    version,
+		Contents:   buf.String(),
+		BinaryPath: filepath.Join(targetDir, filename),
 	}
 	return nil
 }
@@ -390,6 +395,11 @@ func (ms *MockManifests) InstallComponent(reader io.Reader, targetDir string, co
 // KeyStore implements LocalManifests.
 func (ms *MockManifests) KeyStore() *KeyStore {
 	return ms.Ks
+}
+
+// TargetRootDir implements LocalManifests.
+func (ms *MockManifests) TargetRootDir() string {
+	return "/tmp/mock"
 }
 
 // ManifestVersion implements LocalManifests.

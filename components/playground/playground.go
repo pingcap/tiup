@@ -218,7 +218,7 @@ func (p *Playground) removeDrainerWhenTombstone(c *api.BinlogClient, inst *insta
 	}
 }
 
-func (p *Playground) killFlashIfTombstone(inst *instance.TiFlashInstance) {
+func (p *Playground) killTiFlashIfTombstone(inst *instance.TiFlashInstance) {
 	defer logIfErr(p.renderSDFile())
 
 	for {
@@ -311,7 +311,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 					return errors.AddStack(err)
 				}
 
-				go p.killFlashIfTombstone(inst)
+				go p.killTiFlashIfTombstone(inst)
 				fmt.Fprintf(w, "tiflash will be stop when tombstone\n")
 				return nil
 			}
@@ -666,7 +666,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	if options.pd.Num < 1 || options.tidb.Num < 1 || options.tikv.Num < 1 {
 		return fmt.Errorf("all components count must be great than 0 (tidb=%v, tikv=%v, pd=%v)",
-			options.pd.Num, options.tikv.Num, options.pd.Num)
+			options.tidb.Num, options.tikv.Num, options.pd.Num)
 	}
 
 	if options.version == "" {
@@ -695,46 +695,25 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 	}
 
-	for i := 0; i < options.pd.Num; i++ {
-		_, err := p.addInstance("pd", options.pd)
-		if err != nil {
-			return errors.AddStack(err)
-		}
+	instances := []struct {
+		comp string
+		instance.Config
+	}{
+		{"pd", options.pd},
+		{"tikv", options.tikv},
+		{"pump", options.pump},
+		{"tidb", options.tidb},
+		{"ticdc", options.ticdc},
+		{"drainer", options.drainer},
+		{"tiflash", options.tiflash},
 	}
-	for i := 0; i < options.tikv.Num; i++ {
-		_, err := p.addInstance("tikv", options.tikv)
-		if err != nil {
-			return errors.AddStack(err)
-		}
-	}
-	for i := 0; i < options.pump.Num; i++ {
-		_, err := p.addInstance("pump", options.pump)
-		if err != nil {
-			return errors.AddStack(err)
-		}
-	}
-	for i := 0; i < options.tidb.Num; i++ {
-		_, err := p.addInstance("tidb", options.tidb)
-		if err != nil {
-			return errors.AddStack(err)
-		}
-	}
-	for i := 0; i < options.ticdc.Num; i++ {
-		_, err := p.addInstance("ticdc", options.ticdc)
-		if err != nil {
-			return errors.AddStack(err)
-		}
-	}
-	for i := 0; i < options.drainer.Num; i++ {
-		_, err := p.addInstance("drainer", options.drainer)
-		if err != nil {
-			return errors.AddStack(err)
-		}
-	}
-	for i := 0; i < options.tiflash.Num; i++ {
-		_, err := p.addInstance("tiflash", options.tiflash)
-		if err != nil {
-			return errors.AddStack(err)
+
+	for _, inst := range instances {
+		for i := 0; i < inst.Num; i++ {
+			_, err := p.addInstance(inst.comp, inst.Config)
+			if err != nil {
+				return errors.AddStack(err)
+			}
 		}
 	}
 
@@ -928,6 +907,19 @@ func (p *Playground) wait() error {
 }
 
 func (p *Playground) terminate(sig syscall.Signal) {
+	kill := func(pid int, wait func() error) {
+		if sig != syscall.SIGINT {
+			_ = syscall.Kill(pid, sig)
+		}
+
+		timer := time.AfterFunc(forceKillAfterDuration, func() {
+			_ = syscall.Kill(pid, syscall.SIGKILL)
+		})
+
+		_ = wait()
+		timer.Stop()
+	}
+
 	for _, inst := range p.startedInstances {
 		if sig == syscall.SIGKILL {
 			fmt.Printf("Force %s(%d) to quit...\n", inst.Component(), inst.Pid())
@@ -935,43 +927,15 @@ func (p *Playground) terminate(sig syscall.Signal) {
 			fmt.Printf("Wait %s(%d) to quit...\n", inst.Component(), inst.Pid())
 		}
 
-		if sig != syscall.SIGINT {
-			_ = syscall.Kill(inst.Pid(), sig)
-		}
-
-		inst := inst
-		timer := time.AfterFunc(forceKillAfterDuration, func() {
-			_ = syscall.Kill(inst.Pid(), syscall.SIGKILL)
-		})
-
-		_ = inst.Wait()
-		timer.Stop()
+		kill(inst.Pid(), inst.Wait)
 	}
 
 	if p.monitor != nil {
-		if sig != syscall.SIGINT {
-			_ = syscall.Kill(p.monitor.cmd.Process.Pid, sig)
-		}
-
-		timer := time.AfterFunc(forceKillAfterDuration, func() {
-			_ = syscall.Kill(p.monitor.cmd.Process.Pid, syscall.SIGKILL)
-		})
-
-		_ = p.monitor.wait()
-		timer.Stop()
+		kill(p.monitor.cmd.Process.Pid, p.monitor.wait)
 	}
 
 	if p.grafana != nil {
-		if sig != syscall.SIGINT {
-			_ = syscall.Kill(p.grafana.cmd.Process.Pid, sig)
-		}
-
-		timer := time.AfterFunc(forceKillAfterDuration, func() {
-			_ = syscall.Kill(p.grafana.cmd.Process.Pid, syscall.SIGKILL)
-		})
-
-		_ = p.grafana.wait()
-		timer.Stop()
+		kill(p.grafana.cmd.Process.Pid, p.grafana.wait)
 	}
 }
 

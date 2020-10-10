@@ -87,7 +87,7 @@ kill $pid
 sleep 5
 echo "*display after kill:"
 tiup-playground display
-tiup-playground display | grep "exit" | wc -l | grep -q "1"
+tiup-playground display | grep -E "terminated|exit" | wc -l | grep -q "1"
 
 killall -2 tiup-playground.test || killall -2 tiup-playground
 wait

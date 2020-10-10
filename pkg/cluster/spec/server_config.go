@@ -99,30 +99,63 @@ func patch(origin map[string]interface{}, key string, val interface{}) {
 	}
 }
 
-func flattenMap(ms map[string]interface{}) (map[string]interface{}, error) {
+func flattenMap(ms map[string]interface{}) map[string]interface{} {
 	result := map[string]interface{}{}
 	for k, v := range ms {
 		key, val := flattenKey(k, v)
 		patch(result, key, val)
 	}
-	return result, nil
+	return result
 }
 
 func merge(orig map[string]interface{}, overwrites ...map[string]interface{}) (map[string]interface{}, error) {
-	lhs, err := flattenMap(orig)
-	if err != nil {
-		return nil, err
-	}
+	lhs := flattenMap(orig)
 	for _, overwrite := range overwrites {
-		rhs, err := flattenMap(overwrite)
-		if err != nil {
-			return nil, err
-		}
+		rhs := flattenMap(overwrite)
 		for k, v := range rhs {
 			patch(lhs, k, v)
 		}
 	}
 	return lhs, nil
+}
+
+// GetValueFromPath try to find the value by path recursively
+func GetValueFromPath(m map[string]interface{}, p string) interface{} {
+	ss := strings.Split(p, ".")
+
+	searchMap := make(map[interface{}]interface{})
+	for k, v := range m {
+		searchMap[k] = v
+	}
+
+	return searchValue(searchMap, ss)
+}
+
+func searchValue(m map[interface{}]interface{}, ss []string) interface{} {
+	l := len(ss)
+	switch l {
+	case 0:
+		return m
+	case 1:
+		return m[ss[0]]
+	}
+
+	if m[strings.Join(ss, ".")] != nil {
+		return m[strings.Join(ss, ".")]
+	}
+
+	for i := l - 1; i > 0; i-- {
+		key := strings.Join(ss[:i], ".")
+		if m[key] == nil {
+			continue
+		}
+		if pm, ok := m[key].(map[interface{}]interface{}); ok {
+			return searchValue(pm, ss[i:])
+		}
+		return nil
+	}
+
+	return nil
 }
 
 // Merge2Toml merge the config of global.

@@ -63,6 +63,7 @@ type (
 
 	// Serial will execute a bundle of task in serialized way
 	Serial struct {
+		ignoreError       bool
 		hideDetailDisplay bool
 		inner             []Task
 
@@ -74,6 +75,7 @@ type (
 
 	// Parallel will execute a bundle of task in parallelism way
 	Parallel struct {
+		ignoreError       bool
 		hideDetailDisplay bool
 		inner             []Task
 	}
@@ -203,7 +205,7 @@ func (s *Serial) Execute(ctx *Context) error {
 		ctx.ev.PublishTaskBegin(t)
 		err := t.Execute(ctx)
 		ctx.ev.PublishTaskFinish(t, err)
-		if err != nil {
+		if err != nil && !s.ignoreError {
 			s.saveSteps(t, "Error")
 			return err
 		}
@@ -298,14 +300,6 @@ func (s *Serial) ComputeProgress() ([]string, int) {
 	return stepsStatus, totalProgress
 }
 
-// NewParallel create a Parallel task.
-func NewParallel(hideDetailDisplay bool, tasks ...Task) *Parallel {
-	return &Parallel{
-		hideDetailDisplay: hideDetailDisplay,
-		inner:             tasks,
-	}
-}
-
 // Execute implements the Task interface
 func (pt *Parallel) Execute(ctx *Context) error {
 	var firstError error
@@ -333,6 +327,9 @@ func (pt *Parallel) Execute(ctx *Context) error {
 		}(t)
 	}
 	wg.Wait()
+	if pt.ignoreError {
+		return nil
+	}
 	return firstError
 }
 

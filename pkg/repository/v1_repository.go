@@ -20,6 +20,8 @@ import (
 	stderrors "errors"
 	"fmt"
 	"io"
+	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -29,6 +31,7 @@ import (
 	"github.com/fatih/color"
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -101,6 +104,10 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 		return errors.Trace(err)
 	}
 
+	keepSource := false
+	if v := os.Getenv(localdata.EnvNameKeepSourceTarget); v == "enable" || v == "true" {
+		keepSource = true
+	}
 	var errs []string
 	for _, spec := range specs {
 		manifest, err := r.updateComponentManifest(spec.ID, false)
@@ -153,19 +160,37 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			}
 		}
 
-		reader, err := r.FetchComponent(versionItem)
+		if spec.Version == "" {
+			spec.Version = version
+		}
+
+		targetDir := filepath.Join(r.local.TargetRootDir(), localdata.ComponentParentDir, spec.ID, spec.Version)
+		if spec.TargetDir != "" {
+			targetDir = spec.TargetDir
+		}
+		target := filepath.Join(targetDir, versionItem.URL)
+		err = r.DownloadComponent(versionItem, target)
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
 		}
 
-		if spec.Version == "" {
-			spec.Version = version
-		}
-		err = r.local.InstallComponent(reader, spec.TargetDir, spec.ID, spec.Version, versionItem.URL, r.DisableDecompress)
+		reader, err := os.Open(target)
 		if err != nil {
 			errs = append(errs, err.Error())
 			continue
+		}
+
+		err = r.local.InstallComponent(reader, targetDir, spec.ID, spec.Version, versionItem.URL, r.DisableDecompress)
+		reader.Close()
+
+		if err != nil {
+			errs = append(errs, err.Error())
+		}
+
+		// remove the source gzip target if expand is on && no keep source
+		if !r.DisableDecompress && !keepSource {
+			_ = os.Remove(target)
 		}
 	}
 
@@ -484,6 +509,38 @@ func (r *V1Repository) FetchComponent(item *v1manifest.VersionItem) (io.Reader, 
 	defer reader.Close()
 
 	return checkHash(reader, item.Hashes[v1manifest.SHA256])
+}
+
+// DownloadComponent downloads the component specified by item into local file,
+// the component will be removed if hash is not correct
+func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target string) error {
+	targetDir := filepath.Dir(target)
+	err := r.mirror.Download(item.URL, targetDir)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// the downloaded file is named by item.URL, which maybe differ to target name
+	if downloaded := path.Join(targetDir, item.URL); downloaded != target {
+		err := os.Rename(downloaded, target)
+		if err != nil {
+			return errors.Trace(err)
+		}
+	}
+
+	reader, err := os.Open(target)
+	if err != nil {
+		return err
+	}
+
+	_, err = checkHash(reader, item.Hashes[v1manifest.SHA256])
+	reader.Close()
+
+	// remove the target compoonent to avoid attacking
+	if err != nil {
+		_ = os.Remove(target)
+	}
+	return err
 }
 
 // FetchTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash in it

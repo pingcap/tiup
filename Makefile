@@ -111,7 +111,7 @@ tools/bin/failpoint-ctl: go.mod
 	$(GO) build -o $@ github.com/pingcap/failpoint/failpoint-ctl
 
 pkger:
-	 $(GO) run tools/pkger/main.go -s templates -d pkg/cluster/embed
+	$(GO) run tools/pkger/main.go -s templates -d pkg/cluster/embed
 
 fmt:
 	@echo "gofmt (simplify)"
@@ -129,4 +129,3 @@ tools/bin/revive: tools/check/go.mod
 
 tools/bin/golangci-lint:
 	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b ./tools/bin v1.27.0
-

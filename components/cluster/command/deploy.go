@@ -97,6 +97,7 @@ func newDeploy() *cobra.Command {
 	cmd.Flags().StringVarP(&opt.IdentityFile, "identity_file", "i", opt.IdentityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.UsePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.IgnoreConfigCheck, "ignore-config-check", "", opt.IgnoreConfigCheck, "Ignore the config check result")
+	cmd.Flags().BoolVarP(&opt.NoLabels, "no-labels", "", false, "Don't check TiKV labels")
 
 	return cmd
 }
@@ -111,12 +112,12 @@ func postDeployHook(builder *task.Builder, topo spec.Topology) {
 	}).BuildAsStep("Check status").SetHidden(true)
 
 	if report.Enable() {
-		builder.ParallelStep("+ Check status", nodeInfoTask)
+		builder.ParallelStep("+ Check status", false, nodeInfoTask)
 	}
 
 	enableTask := task.NewBuilder().Func("Enable cluster", func(ctx *task.Context) error {
 		return operator.Enable(ctx, topo, operator.Options{}, true)
 	}).BuildAsStep("Enable cluster").SetHidden(true)
 
-	builder.ParallelStep("+ Enable cluster", enableTask)
+	builder.ParallelStep("+ Enable cluster", false, enableTask)
 }

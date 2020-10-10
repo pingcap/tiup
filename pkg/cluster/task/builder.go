@@ -40,7 +40,7 @@ func (b *Builder) RootSSH(
 	host string,
 	port int,
 	user, password, keyFile, passphrase string,
-	sshTimeout int64,
+	sshTimeout uint64,
 	sshType executor.SSHType,
 	defaultSSHType executor.SSHType,
 ) *Builder {
@@ -61,7 +61,7 @@ func (b *Builder) RootSSH(
 }
 
 // UserSSH append a UserSSH task to the current task collection
-func (b *Builder) UserSSH(host string, port int, deployUser string, sshTimeout int64, sshType, defaultSSHType executor.SSHType) *Builder {
+func (b *Builder) UserSSH(host string, port int, deployUser string, sshTimeout uint64, sshType, defaultSSHType executor.SSHType) *Builder {
 	if sshType == "" {
 		sshType = defaultSSHType
 	}
@@ -85,7 +85,7 @@ func (b *Builder) Func(name string, fn func(ctx *Context) error) *Builder {
 }
 
 // ClusterSSH init all UserSSH need for the cluster.
-func (b *Builder) ClusterSSH(spec spec.Topology, deployUser string, sshTimeout int64, sshType, defaultSSHType executor.SSHType) *Builder {
+func (b *Builder) ClusterSSH(spec spec.Topology, deployUser string, sshTimeout uint64, sshType, defaultSSHType executor.SSHType) *Builder {
 	if sshType == "" {
 		sshType = defaultSSHType
 	}
@@ -395,9 +395,9 @@ func (b *Builder) TLSCert(inst spec.Instance, ca *crypto.CertificateAuthority, p
 }
 
 // Parallel appends a parallel task to the current task collection
-func (b *Builder) Parallel(tasks ...Task) *Builder {
+func (b *Builder) Parallel(ignoreError bool, tasks ...Task) *Builder {
 	if len(tasks) > 0 {
-		b.tasks = append(b.tasks, &Parallel{inner: tasks})
+		b.tasks = append(b.tasks, &Parallel{ignoreError: ignoreError, inner: tasks})
 	}
 	return b
 }
@@ -427,8 +427,8 @@ func (b *Builder) Step(prefix string, inner Task) *Builder {
 
 // ParallelStep appends a new ParallelStepDisplay task, which will print multi line progress in parallel
 // for inner tasks. Inner tasks must be a StepDisplay task.
-func (b *Builder) ParallelStep(prefix string, tasks ...*StepDisplay) *Builder {
-	b.tasks = append(b.tasks, newParallelStepDisplay(prefix, tasks...))
+func (b *Builder) ParallelStep(prefix string, ignoreError bool, tasks ...*StepDisplay) *Builder {
+	b.tasks = append(b.tasks, newParallelStepDisplay(prefix, ignoreError, tasks...))
 	return b
 }
 

@@ -21,7 +21,6 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -365,25 +364,25 @@ func (topo *Topology) IterHost(fn func(instance Instance)) {
 // Endpoints returns the PD endpoints configurations
 func (topo *Topology) Endpoints(user string) []*scripts.DMMasterScript {
 	var ends []*scripts.DMMasterScript
-	for _, spec := range topo.Masters {
-		deployDir := clusterutil.Abs(user, spec.DeployDir)
+	for _, s := range topo.Masters {
+		deployDir := spec.Abs(user, s.DeployDir)
 		// data dir would be empty for components which don't need it
-		dataDir := spec.DataDir
+		dataDir := s.DataDir
 		// the default data_dir is relative to deploy_dir
 		if dataDir != "" && !strings.HasPrefix(dataDir, "/") {
 			dataDir = filepath.Join(deployDir, dataDir)
 		}
 		// log dir will always be with values, but might not used by the component
-		logDir := clusterutil.Abs(user, spec.LogDir)
+		logDir := spec.Abs(user, s.LogDir)
 
 		script := scripts.NewDMMasterScript(
-			spec.Name,
-			spec.Host,
+			s.Name,
+			s.Host,
 			deployDir,
 			dataDir,
 			logDir).
-			WithPort(spec.Port).
-			WithPeerPort(spec.PeerPort)
+			WithPort(s.Port).
+			WithPeerPort(s.PeerPort)
 		ends = append(ends, script)
 	}
 	return ends
