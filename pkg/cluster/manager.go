@@ -623,6 +623,11 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	cliutil.PrintTable(clusterTable, true)
 	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
 
+	pdList := topo.BaseTopo().MasterList
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return err
+	}
 	if topo, ok := topo.(*spec.Specification); ok {
 		// Check if TiKV's label set correctly
 		kvs := topo.TiKVServers
@@ -667,7 +672,7 @@ func (m *Manager) GetClusterTopology(clusterName string, opt operator.Options) (
 	pdList := topo.BaseTopo().MasterList
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, comp := range topo.ComponentsByStartOrder() {
 		for _, ins := range comp.Instances() {
@@ -1164,8 +1169,8 @@ func (m *Manager) DoDeploy(
 	opt DeployOptions,
 	afterDeploy func(b *task.Builder, newPart spec.Topology),
 	skipConfirm bool,
-	optTimeout int64,
-	sshTimeout int64,
+	optTimeout uint64,
+	sshTimeout uint64,
 	sshType executor.SSHType,
 ) {
 	operationInfo = OperationInfo{operationType: operationDeploy, clusterName: clusterName}
@@ -1521,8 +1526,8 @@ func (m *Manager) GetOperationStatus() OperationStatus {
 func (m *Manager) DoScaleIn(
 	clusterName string,
 	skipConfirm bool,
-	optTimeout int64,
-	sshTimeout int64,
+	optTimeout uint64,
+	sshTimeout uint64,
 	sshType executor.SSHType,
 	force bool,
 	nodes []string,
@@ -1678,8 +1683,8 @@ func (m *Manager) DoScaleOut(
 	final func(b *task.Builder, name string, meta spec.Metadata),
 	opt ScaleOutOptions,
 	skipConfirm bool,
-	optTimeout int64,
-	sshTimeout int64,
+	optTimeout uint64,
+	sshTimeout uint64,
 	sshType executor.SSHType,
 ) {
 	operationInfo = OperationInfo{operationType: operationScaleOut, clusterName: clusterName}
