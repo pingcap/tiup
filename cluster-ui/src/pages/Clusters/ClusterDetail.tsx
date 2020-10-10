@@ -149,6 +149,27 @@ export default function ClusterDetailPage() {
     navigate(`/clusters/${clusterName}/scaleout`)
   }
 
+  function handleConfigCluster() {
+    const dashboardPD = clusterInstInfos.find(
+      (el) =>
+        el.role === 'pd' &&
+        el.status.indexOf('UI') !== -1 &&
+        el.status.indexOf('Up') !== -1
+    )
+    if (dashboardPD === undefined) {
+      Modal.error({
+        title: '没有找到相应的 PD 节点',
+        content:
+          '请检查相应的 PD 节点是否工作正常，如果集群未启动，请先启动集群。',
+      })
+      return
+    }
+
+    navigate(
+      `/clusters/${clusterName}/config?pd=${dashboardPD.id}&tidb_version=${cluster?.version}`
+    )
+  }
+
   return (
     <Root>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -170,18 +191,20 @@ export default function ClusterDetailPage() {
             <Button>停止集群</Button>
           </Popconfirm>
           <Button onClick={handleScaleOutCluster}>扩容</Button>
+          <Button onClick={handleConfigCluster}>修改配置</Button>
         </Space>
         <Button danger onClick={handleDestroyCluster}>
           销毁集群
         </Button>
       </div>
+
       {cluster && (
         <div style={{ marginTop: 16 }}>
-          <p>Name: {cluster.name}</p>
-          <p>User: {cluster.user}</p>
+          {/* <p>Name: {cluster.name}</p>
+          <p>User: {cluster.user}</p> */}
           <p>Version: {cluster.version}</p>
-          <p>Path: {cluster.path}</p>
-          <p>PrivateKey: {cluster.private_key}</p>
+          {/* <p>Path: {cluster.path}</p>
+          <p>PrivateKey: {cluster.private_key}</p> */}
         </div>
       )}
 

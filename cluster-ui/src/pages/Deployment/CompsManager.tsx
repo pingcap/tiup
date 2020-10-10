@@ -197,7 +197,7 @@ export default function CompsManager({
           <Form.Item
             label="集群名字"
             name="cluster_name"
-            rules={[{ required: true, message: '请输出集群名字' }]}
+            rules={[{ required: true, message: '请输入集群名字' }]}
           >
             <Input />
           </Form.Item>
