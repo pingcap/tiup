@@ -12,6 +12,7 @@ export default function request(
     ...options,
     method: method || 'GET',
     headers: {
+      ...options?.headers,
       Accept: 'application/json',
       'Content-Type': 'application/json',
     },
@@ -35,11 +36,16 @@ function parseResponse(response: Response) {
   } else if (response.status >= 200 && response.status < 300) {
     return response.json()
   } else {
-    return response.json().then((resData: any) => {
-      const errMsg = resData.msg || response.statusText
-      const error: ResError = new Error(errMsg)
-      error.response = response
-      throw error
-    })
+    let errMsg = response.statusText
+    return response
+      .json()
+      .then((resData: any) => {
+        errMsg = resData.msg || response.statusText
+      })
+      .finally(() => {
+        const error: ResError = new Error(errMsg)
+        error.response = response
+        throw error
+      })
   }
 }

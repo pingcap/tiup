@@ -35,22 +35,52 @@ export default function ClusterConfigPage() {
             content: err.message,
           })
         } else {
-          setVerified(true)
           const { token } = data
-          const iframe = refIframe.current
-          iframe &&
-            iframe.contentWindow!.postMessage(
-              {
-                token,
-                lang: 'zh',
-                hideNav: true,
-                redirectPath: '/statement',
-              },
-              '*'
-            )
+          checkFeatureEnabled(token)
         }
       }
     )
+  }
+
+  function checkFeatureEnabled(token: string) {
+    request(`http://${pd}/dashboard/api/configuration/all`, 'GET', undefined, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }).then(({ data, err }) => {
+      if (err) {
+        const { response } = err
+        if (response.status === 404) {
+          Modal.error({
+            title: '修改配置的功能在此 TiDB 版本上不存在',
+            content: '请检查该 TiDB 版本是否包含此功能',
+          })
+        } else if (response.status === 403) {
+          Modal.error({
+            title: '修改配置的功能在此 TiDB 版本未开启',
+            content: '请检查该 TiDB 版本是否已开启此功能',
+          })
+        } else {
+          Modal.error({
+            title: '遇到错误',
+            content: err.message,
+          })
+        }
+      } else {
+        setVerified(true)
+        const iframe = refIframe.current
+        iframe &&
+          iframe.contentWindow!.postMessage(
+            {
+              token,
+              lang: 'zh',
+              hideNav: true,
+              redirectPath: '/configuration',
+            },
+            '*'
+          )
+      }
+    })
   }
 
   return (
