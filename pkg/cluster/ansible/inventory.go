@@ -49,7 +49,7 @@ var (
 )
 
 // ParseAndImportInventory builds a basic ClusterMeta from the main Ansible inventory
-func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini.InventoryData, sshTimeout int64, sshType executor.SSHType) error {
+func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini.InventoryData, sshTimeout uint64, sshType executor.SSHType) error {
 	if err := parseGroupVars(dir, ansCfgFile, clsMeta, inv); err != nil {
 		return err
 	}
@@ -554,6 +554,10 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 
 			// nothing in drainer_servers.yml
 			if port, ok := grpVarsAll["drainer_port"]; ok {
+				tmpIns.Port, _ = strconv.Atoi(port)
+			}
+			// apply values from the host
+			if port, ok := srv.Vars["drainer_port"]; ok {
 				tmpIns.Port, _ = strconv.Atoi(port)
 			}
 

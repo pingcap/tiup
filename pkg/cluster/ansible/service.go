@@ -16,6 +16,7 @@ package ansible
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,7 +32,7 @@ var (
 )
 
 // parseDirs sets values of directories of component
-func parseDirs(user string, ins spec.InstanceSpec, sshTimeout int64, sshType executor.SSHType) (spec.InstanceSpec, error) {
+func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType executor.SSHType) (spec.InstanceSpec, error) {
 	hostName, sshPort := ins.SSH()
 
 	e, err := executor.New(sshType, false, executor.SSHConfig{
@@ -182,6 +183,11 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout int64, sshType exe
 					"--log-file=\""), "/drainer.log\"")
 				newIns.LogDir = logDir
 				continue
+			}
+			if strings.Contains(line, "--initial-commit-ts=") {
+				tsArg := strings.Split(line, " ")[4] // 4 whitespaces ahead
+				tmpTs, _ := strconv.Atoi(strings.TrimPrefix(tsArg, "--initial-commit-ts="))
+				newIns.CommitTS = int64(tmpTs)
 			}
 		}
 		return newIns, nil

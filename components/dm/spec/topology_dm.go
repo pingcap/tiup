@@ -24,7 +24,6 @@ import (
 	"github.com/creasty/defaults"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
@@ -479,7 +478,7 @@ func (topo *Topology) CountDir(targetHost, dirPrefix string) int {
 	dirStats := make(map[string]int)
 	count := 0
 	topoSpec := reflect.ValueOf(topo).Elem()
-	dirPrefix = clusterutil.Abs(topo.GlobalOptions.User, dirPrefix)
+	dirPrefix = spec.Abs(topo.GlobalOptions.User, dirPrefix)
 
 	for i := 0; i < topoSpec.NumField(); i++ {
 		if isSkipField(topoSpec.Field(i)) {
@@ -516,7 +515,7 @@ func (topo *Topology) CountDir(targetHost, dirPrefix string) int {
 							dir = filepath.Join(deployDir, dir)
 						}
 					}
-					dir = clusterutil.Abs(topo.GlobalOptions.User, dir)
+					dir = spec.Abs(topo.GlobalOptions.User, dir)
 					dirStats[host+dir]++
 				}
 			}
@@ -682,6 +681,7 @@ func setDMCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) erro
 				)))
 				continue
 			}
+
 			// If the data dir in global options is empty or a relative path, keep it be relative
 			// Our run_*.sh start scripts are run inside deploy_path, so the final location
 			// will be deploy_path/global.data_dir

@@ -291,7 +291,7 @@ func deleteMember(
 	instance spec.Instance,
 	pdClient *api.PDClient,
 	binlogClient *api.BinlogClient,
-	timeoutSecond int64,
+	timeoutSecond uint64,
 ) error {
 	timeoutOpt := &utils.RetryOption{
 		Timeout: time.Second * time.Duration(timeoutSecond),

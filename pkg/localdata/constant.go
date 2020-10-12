@@ -21,6 +21,8 @@ var DefaultTiupHome string
 // ProfileDirName is the name of the profile directory to be used
 var ProfileDirName = ".tiup"
 
+// Notice: if you try to add a new env name which is notable by the user, shou should
+// add it to cmd/env.go:envList so that the command `tiup env` will show that env.
 const (
 	// ComponentParentDir represent the parent directory of all downloaded components
 	ComponentParentDir = "components"
@@ -75,6 +77,9 @@ const (
 
 	// EnvNameSCPPath is the variable name by which user can specific the executable scp binary path
 	EnvNameSCPPath = "TIUP_SCP_PATH"
+
+	// EnvNameKeepSourceTarget is the variable name by which user can keep the source target or not
+	EnvNameKeepSourceTarget = "TIUP_KEEP_SOURCE_TARGET"
 
 	// MetaFilename represents the process meta file name
 	MetaFilename = "tiup_process_meta"

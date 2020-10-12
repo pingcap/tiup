@@ -35,3 +35,30 @@ server_configs:
 	decimal = bytes.Contains(get, []byte("0.0"))
 	c.Assert(decimal, check.IsTrue)
 }
+
+func (s *configSuite) TestGetValueFromPath(c *check.C) {
+	yamlData := []byte(`
+server_configs:
+  tidb:
+    a.b.c.d: 1
+    a:
+      b:
+        c:
+          d: 2
+    a.b:
+        c.e: 3
+    a.b.c:
+          f: 4
+    h.i.j.k: [1, 2, 3]  
+`)
+
+	topo := new(Specification)
+
+	err := yaml.Unmarshal(yamlData, topo)
+	c.Assert(err, check.IsNil)
+
+	c.Assert(GetValueFromPath(topo.ServerConfigs.TiDB, "a.b.c.d"), check.Equals, 1)
+	c.Assert(GetValueFromPath(topo.ServerConfigs.TiDB, "a.b.c.e"), check.Equals, nil)
+	c.Assert(GetValueFromPath(topo.ServerConfigs.TiDB, "a.b.c.f"), check.Equals, 4)
+	c.Assert(GetValueFromPath(topo.ServerConfigs.TiDB, "h.i.j.k"), check.DeepEquals, []interface{}{1, 2, 3})
+}

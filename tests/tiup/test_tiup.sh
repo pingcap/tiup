@@ -30,9 +30,12 @@ tiup
 tiup help
 tiup install tidb:v3.0.13
 tiup update tidb
+tiup update --self
 tiup status
 tiup clean --all
 tiup help tidb
+tiup env
+TIUP_SSHPASS_PROMPT="password" tiup env TIUP_SSHPASS_PROMPT | grep password
 tiup uninstall
 tiup uninstall tidb:v3.0.13
 tiup uninstall tidb --all

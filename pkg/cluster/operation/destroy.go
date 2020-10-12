@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -67,14 +66,14 @@ func Destroy(
 	for _, com := range coms {
 		insts := com.Instances()
 		err := DestroyComponent(getter, insts, cluster, options)
-		if err != nil {
+		if err != nil && !options.Force {
 			return errors.Annotatef(err, "failed to destroy %s", com.Name())
 		}
 		for _, inst := range insts {
 			instCount[inst.GetHost()]--
 			if instCount[inst.GetHost()] == 0 {
 				if cluster.GetMonitoredOptions() != nil {
-					if err := DestroyMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil {
+					if err := DestroyMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
 						return err
 					}
 				}
@@ -104,7 +103,7 @@ func DeleteGlobalDirs(getter ExecutorGetter, host string, options *spec.GlobalOp
 		if dir == "" {
 			continue
 		}
-		dir = clusterutil.Abs(options.User, dir)
+		dir = spec.Abs(options.User, dir)
 
 		log.Infof("\tClean directory %s on instance %s", dir, host)
 
@@ -133,7 +132,7 @@ func DeleteGlobalDirs(getter ExecutorGetter, host string, options *spec.GlobalOp
 }
 
 // DestroyMonitored destroy the monitored service.
-func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.MonitoredOptions, timeout int64) error {
+func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
 	e := getter.Get(inst.GetHost())
 	log.Infof("Destroying monitored %s", inst.GetHost())
 

@@ -23,7 +23,6 @@ import (
 
 	"github.com/creasty/defaults"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -117,7 +116,7 @@ type BaseTopo struct {
 	MasterList       []string
 }
 
-// Topology represents specification of the  cluster.
+// Topology represents specification of the cluster.
 type Topology interface {
 	BaseTopo() *BaseTopo
 	// Validate validates the topology specification and produce error if the
@@ -208,6 +207,34 @@ func (s *Specification) BaseTopo() *BaseTopo {
 		MonitoredOptions: s.GetMonitoredOptions(),
 		MasterList:       s.GetPDList(),
 	}
+}
+
+// LocationLabels returns replication.location-labels in PD config
+func (s *Specification) LocationLabels() ([]string, error) {
+	lbs := []string{}
+
+	// We don't allow user define location-labels in instance config
+	for _, pd := range s.PDServers {
+		if GetValueFromPath(pd.Config, "replication.location-labels") != nil {
+			return nil, errors.Errorf(
+				"replication.location-labels can't be defined in instance %s:%d, please move it to the global server_configs field",
+				pd.Host,
+				pd.GetMainPort(),
+			)
+		}
+	}
+
+	if repLbs := GetValueFromPath(s.ServerConfigs.PD, "replication.location-labels"); repLbs != nil {
+		for _, l := range repLbs.([]interface{}) {
+			lb, ok := l.(string)
+			if !ok {
+				return nil, errors.Errorf("replication.location-labels contains non-string label: %v", l)
+			}
+			lbs = append(lbs, lb)
+		}
+	}
+
+	return lbs, nil
 }
 
 // AllComponentNames contains the names of all components.
@@ -569,7 +596,7 @@ func IterHost(topo Topology, fn func(instance Instance)) {
 func (s *Specification) Endpoints(user string) []*scripts.PDScript {
 	var ends []*scripts.PDScript
 	for _, spec := range s.PDServers {
-		deployDir := clusterutil.Abs(user, spec.DeployDir)
+		deployDir := Abs(user, spec.DeployDir)
 		// data dir would be empty for components which don't need it
 		dataDir := spec.DataDir
 		// the default data_dir is relative to deploy_dir
@@ -577,7 +604,7 @@ func (s *Specification) Endpoints(user string) []*scripts.PDScript {
 			dataDir = filepath.Join(deployDir, dataDir)
 		}
 		// log dir will always be with values, but might not used by the component
-		logDir := clusterutil.Abs(user, spec.LogDir)
+		logDir := Abs(user, spec.LogDir)
 
 		script := scripts.NewPDScript(
 			spec.Name,
@@ -601,7 +628,7 @@ func (s *Specification) Endpoints(user string) []*scripts.PDScript {
 func AlertManagerEndpoints(alertmanager []AlertManagerSpec, user string, enableTLS bool) []*scripts.AlertManagerScript {
 	var ends []*scripts.AlertManagerScript
 	for _, spec := range alertmanager {
-		deployDir := clusterutil.Abs(user, spec.DeployDir)
+		deployDir := Abs(user, spec.DeployDir)
 		// data dir would be empty for components which don't need it
 		dataDir := spec.DataDir
 		// the default data_dir is relative to deploy_dir
@@ -609,7 +636,7 @@ func AlertManagerEndpoints(alertmanager []AlertManagerSpec, user string, enableT
 			dataDir = filepath.Join(deployDir, dataDir)
 		}
 		// log dir will always be with values, but might not used by the component
-		logDir := clusterutil.Abs(user, spec.LogDir)
+		logDir := Abs(user, spec.LogDir)
 
 		script := scripts.NewAlertManagerScript(
 			spec.Host,

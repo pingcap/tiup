@@ -19,7 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 )
@@ -149,7 +148,7 @@ func (c *CheckSys) runFIO(ctx *Context) (outRR []byte, outRW []byte, outLat []by
 		return
 	}
 
-	dataDir := clusterutil.Abs(c.topo.GlobalOptions.User, c.dataDir)
+	dataDir := spec.Abs(c.topo.GlobalOptions.User, c.dataDir)
 	testWd := filepath.Join(dataDir, "tiup-fio-test")
 	fioBin := filepath.Join(CheckToolsPathDir, "bin", "fio")
 

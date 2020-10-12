@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
@@ -669,7 +670,11 @@ func newMirrorCloneCmd() *cobra.Command {
 			}
 			defer repo.Mirror().Close()
 
-			return repository.CloneMirror(repo, components, args[0], args[1:], options)
+			var versionMapper = func(ver string) string {
+				return spec.TiDBComponentVersion(ver, "")
+			}
+
+			return repository.CloneMirror(repo, components, versionMapper, args[0], args[1:], options)
 		},
 	}
 

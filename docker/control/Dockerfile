@@ -12,6 +12,7 @@ FROM golang:1.14
      apt-get install -qqy \
          dos2unix \
          default-mysql-client \
+         psmisc \
          vim # not required by tiup-cluster itself, just for ease of use
 
 
