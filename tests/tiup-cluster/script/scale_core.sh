@@ -61,7 +61,7 @@ function scale_core() {
 
     # validate https://github.com/pingcap/tiup/issues/786
     # ensure that this instance is removed from the startup scripts of other components that need to rely on PD
-    tiup-cluster $client exec $name -N $ipprefix.101 --command "grep -q $ipprefix.103:2379 /home/tidb/deploy/tidb-4000/scripts/run_tidb.sh && exit 1 || exit 0"
+    ! tiup-cluster $client exec $name -N $ipprefix.101 --command "grep -q $ipprefix.103:2379 /home/tidb/deploy/tidb-4000/scripts/run_tidb.sh"
     echo "start scale out pd"
     topo=./topo/full_scale_in_pd.yaml
     sed "s/__IPPREFIX__/$ipprefix/g" $topo.tpl > $topo
