@@ -11,7 +11,10 @@ import (
 	"github.com/pingcap/errors"
 )
 
-var fileLocks = make(map[string]*sync.Mutex)
+var (
+	fileLocks = make(map[string]*sync.Mutex)
+	filesLock = sync.Mutex{}
+)
 
 // SaveFileWithBackup will backup the file before save it.
 // e.g., backup meta.yaml as meta-2006-01-02T15:04:05Z07:00.yaml
@@ -28,6 +31,8 @@ func SaveFileWithBackup(path string, data []byte, backupDir string) error {
 		return errors.Errorf("%s is directory", path)
 	}
 
+	filesLock.Lock()
+	defer filesLock.Unlock()
 	if _, ok := fileLocks[path]; !ok {
 		fileLocks[path] = &sync.Mutex{}
 	}
