@@ -38,6 +38,7 @@ const AUTO_COMPLETE_OPTIONS = TIDB_VERSIONS.map((v) => ({ value: v }))
 export interface IDeployReq {
   cluster_name: string
   tidb_version: string
+  mirror_address: string
 }
 
 export interface ICompsManagerProps {
@@ -58,7 +59,7 @@ export default function CompsManager({
 
   const [deployReq, setDeployReq] = useLocalStorageState<IDeployReq>(
     'deploy_req',
-    { cluster_name: '', tidb_version: '' }
+    { cluster_name: '', tidb_version: '', mirror_address: '' }
   )
   const [, setCurScaleOutNodes] = useLocalStorageState(
     'cur_scale_out_nodes',
@@ -202,13 +203,19 @@ export default function CompsManager({
             <Input />
           </Form.Item>
           <Form.Item
-            label="TiDB 版本或离线包地址"
+            label="TiDB 版本"
             name="tidb_version"
             rules={[{ required: true, message: '请选择 TiDB 版本' }]}
           >
             <AutoComplete
-              style={{ width: 300 }}
+              style={{ width: 100 }}
               options={AUTO_COMPLETE_OPTIONS}
+            />
+          </Form.Item>
+          <Form.Item label="镜像服务器地址" name="mirror_address">
+            <Input
+              placeholder="https://tiup-mirrors.pingcap.com"
+              style={{ width: 250 }}
             />
           </Form.Item>
           <Form.Item>

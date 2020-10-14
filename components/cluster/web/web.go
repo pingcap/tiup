@@ -15,6 +15,8 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/repository"
 	cors "github.com/rs/cors/wrapper/gin"
 )
 
@@ -69,6 +71,7 @@ type GlobalLoginOptions struct {
 type DeployReq struct {
 	ClusterName        string             `json:"cluster_name"`
 	TiDBVersion        string             `json:"tidb_version"`
+	MirrorAddress      string             `json:"mirror_address"`
 	TopoYaml           string             `json:"topo_yaml"`
 	GlobalLoginOptions GlobalLoginOptions `json:"global_login_options"`
 }
@@ -83,6 +86,18 @@ func deployHandler(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		_ = c.Error(err)
 		return
+	}
+
+	// set mirror address
+	if req.MirrorAddress == "" {
+		req.MirrorAddress = repository.DefaultMirror
+	}
+	if req.MirrorAddress != environment.Mirror() {
+		profile := environment.GlobalEnv().Profile()
+		if err := profile.ResetMirror(req.MirrorAddress, ""); err != nil {
+			_ = c.Error(err)
+			return
+		}
 	}
 
 	// create temp topo yaml file
