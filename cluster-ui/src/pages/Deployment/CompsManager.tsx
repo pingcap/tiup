@@ -202,12 +202,12 @@ export default function CompsManager({
             <Input />
           </Form.Item>
           <Form.Item
-            label="TiDB 版本"
+            label="TiDB 版本或离线包地址"
             name="tidb_version"
             rules={[{ required: true, message: '请选择 TiDB 版本' }]}
           >
             <AutoComplete
-              style={{ width: 100 }}
+              style={{ width: 300 }}
               options={AUTO_COMPLETE_OPTIONS}
             />
           </Form.Item>
