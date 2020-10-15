@@ -237,6 +237,35 @@ func (s *Specification) LocationLabels() ([]string, error) {
 	return lbs, nil
 }
 
+// StoreList implements StoreLabelProvider
+func (s *Specification) StoreList() ([]string, error) {
+	kvs := s.TiKVServers
+	addrs := []string{}
+	for _, kv := range kvs {
+		if kv.IsImported() {
+			// FIXME: this function implements StoreLabelProvider, which is used to
+			//        deletec if there is label config missing. However, we do that
+			//        based on the meta.yaml, whose server.labels field will be empty
+			//        for imported TiKV servers, to workaround that, we just skip the
+			//        imported TiKV servers at this time.
+			continue
+		}
+		addrs = append(addrs, fmt.Sprintf("%s:%d", kv.Host, kv.GetMainPort()))
+	}
+	return addrs, nil
+}
+
+// GetStoreLabels implements StoreLabelProvider
+func (s *Specification) GetStoreLabels(address string) (map[string]string, error) {
+	kvs := s.TiKVServers
+	for _, kv := range kvs {
+		if address == fmt.Sprintf("%s:%d", kv.Host, kv.GetMainPort()) {
+			return kv.Labels()
+		}
+	}
+	return nil, errors.Errorf("store %s not found", address)
+}
+
 // AllComponentNames contains the names of all components.
 // should include all components in ComponentsByStartOrder
 func AllComponentNames() (roles []string) {
