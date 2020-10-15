@@ -14,18 +14,19 @@
 package ansible
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
+	"reflect"
 	"strconv"
 	"strings"
 
+	"github.com/BurntSushi/toml"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/set"
 	"github.com/relex/aini"
 )
 
@@ -84,7 +85,7 @@ func parseInventoryFile(invFile io.Reader) (string, *spec.ClusterMeta, *aini.Inv
 		clsMeta.Topology.GlobalOptions.DeployDir = grp.Vars["deploy_dir"]
 		// deploy_dir and data_dir of monitored need to be set, otherwise they will be
 		// subdirs of deploy_dir in global options
-		allSame := CheckVarSame("deploy_dir", inventory.Groups["monitored_servers"].Hosts)
+		allSame := uniqueVar("deploy_dir", inventory.Groups["monitored_servers"].Hosts)
 		if len(allSame) == 1 {
 			clsMeta.Topology.MonitoredOptions.DeployDir = allSame[0]
 			clsMeta.Topology.MonitoredOptions.DataDir = filepath.Join(
@@ -98,7 +99,6 @@ func parseInventoryFile(invFile io.Reader) (string, *spec.ClusterMeta, *aini.Inv
 				"data",
 			)
 		}
-
 
 		if grp.Vars["process_supervision"] != "systemd" {
 			return "", nil, inventory, errors.New("only support cluster deployed with systemd")
@@ -114,14 +114,14 @@ func parseInventoryFile(invFile io.Reader) (string, *spec.ClusterMeta, *aini.Inv
 		return "", nil, inventory, errors.New("no available host in the inventory file")
 	}
 
-	// get location_labels variables
-	if location_labels, ok := inventory.Groups["pd_servers"]; ok && len(location_labels.Vars["location_labels"]) > 0 {
-		val := strings.ReplaceAll(strings.Trim(strings.Trim(location_labels.Vars["location_labels"],"["),"]"),"\"","")
-        label_var := strings.Split(val,",")
+	// get locationLabels variables
+	if locationLabels, ok := inventory.Groups["pd_servers"]; ok && len(locationLabels.Vars["location_labels"]) > 0 {
+		val := strings.ReplaceAll(strings.Trim(strings.Trim(locationLabels.Vars["location_labels"], "["), "]"), "\"", "")
+		labelVar := strings.Split(val, ",")
 		if clsMeta.Topology.ServerConfigs.PD == nil {
 			clsMeta.Topology.ServerConfigs.PD = make(map[string]interface{})
 		}
-		clsMeta.Topology.ServerConfigs.PD["replication.location-labels"] = label_var
+		clsMeta.Topology.ServerConfigs.PD["replication.location-labels"] = labelVar
 	}
 
 	return clsName, clsMeta, inventory, err
@@ -138,236 +138,110 @@ func SSHKeyPath() string {
 	return fmt.Sprintf("%s/.ssh/id_rsa", homeDir)
 }
 
-// CheckVarSame compare the variable in all Hosts same or not
-func CheckVarSame (key string, hosts map[string]*aini.Host) ([]string) {
-	var allVarSame []string
-	for _,v := range hosts {
-		if len(allVarSame) == 0 || v.Vars[key] != allVarSame[0]  {
-			allVarSame = append(allVarSame,v.Vars[key])
-		}
+func uniqueVar(key string, hosts map[string]*aini.Host) []string {
+	vars := set.NewStringSet()
+	for _, h := range hosts {
+		vars.Insert(h.Vars[key])
 	}
-	return allVarSame
+	return vars.Slice()
 }
 
 // parse config files
-func ParseConfigFile( cfgfile string ) (map[string]interface{} , error) {
-	srvConfigs :=make(map[string]interface{})
-	sectionRegex := regexp.MustCompile(`^\[([^:\]\s]+)(?::(\w+))?\]\s*(?:\#.*)?$`)
-	reader, err := os.Open(cfgfile)
-	if err != nil {
-		return nil, err
+func parseConfigFile(cfgfile string) (map[string]interface{}, error) {
+	srvConfigs := make(map[string]interface{})
+	if _, err := toml.DecodeFile(cfgfile, &srvConfigs); err != nil {
+		return nil, errors.Annotate(err, "decode toml file")
 	}
-	defer reader.Close()
-	bufreader := bufio.NewReader(reader)
-	scanner := bufio.NewScanner(bufreader)
-	prefixkey := ""
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(line, ";") || strings.HasPrefix(line, "#") || line == "" {
-			continue
-		}
-		matches := sectionRegex.FindAllStringSubmatch(line, -1)
-		if matches != nil {
-			prefixkey = matches[0][1]
-			continue
-		} else if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
-			return nil,fmt.Errorf("Invalid section entry: '%s'. Please make sure that there are no spaces in the section entry, and that there are no other invalid characters", line)
-		} else {
-			keyval := strings.SplitN(strings.ReplaceAll(line," ",""),"=",2)
-
-			if len(keyval) == 1 {
-				return nil,fmt.Errorf("Bad key=value pair supplied: %s", line)
-			}
-
-			if strings.Trim(keyval[1], "\"") == "" ||strings.Contains(keyval[0],"host") || strings.Contains(keyval[0],"port") {
-				continue
-			}
-
-			if prefixkey != "" {
-				keyval[0] = prefixkey+"."+keyval[0]
-			}
-
-			if keyval[0] == "server.labels" {
-				val := strings.Split(strings.ReplaceAll(strings.ReplaceAll(strings.Trim(strings.Trim(keyval[1],"{"),"}"),"\"","")," ",""),",")
-				label_val := make(map[string]interface{})
-				for i:=0;i<len(val);i++ {
-					kv := strings.SplitN(val[i],"=",2)
-					label_val[kv[0]] = kv[1]
-				}
-				srvConfigs[keyval[0]] = label_val
-			} else if keyval[0] == "replication.location-labels" {
-               val := strings.Split(strings.ReplaceAll(strings.ReplaceAll(strings.Trim(strings.Trim(keyval[1],"["),"]"),"\"","")," ",""),",")
-               srvConfigs[keyval[0]] = val
-			} else {
-				srvConfigs[keyval[0]] = strings.ReplaceAll(keyval[1],"\"","")
-			}
-		}
-	}
-	return srvConfigs, nil
+	return spec.FlattenMap(srvConfigs), nil
 }
 
+func diffConfigs(configs []map[string]interface{}) (global map[string]interface{}, locals []map[string]interface{}) {
+	global = make(map[string]interface{})
+	keySet := set.NewStringSet()
 
-// Load config files to clusterMeta ,just include tidbservers, tikvservers and pdservers
-func LoadConfig(clsName string ,cls *spec.ClusterMeta) error {
-	prefixkey := ""
-	var err error
-	Configs :=  make(map[string]interface{})
-	gConfigs := make(map[string]interface{})
-	initflag := false
-	for i := 0 ; i < len(cls.Topology.TiDBServers); i++ {
-		prefixkey = "tidb"
-		srv := cls.Topology.TiDBServers[i]
-		fname := spec.ClusterPath(clsName,spec.AnsibleImportedConfigPath,fmt.Sprintf("%s-%s-%d.toml",prefixkey,srv.Host, srv.Port))
-
-		Configs , err  = ParseConfigFile(fname)
-		if initflag == false {
-			gConfigs = Configs
-			initflag = true
-		}
-		// make Configs containts global Config variables
-		for k, _ := range gConfigs {
-			if Configs[k] == nil && gConfigs[k] != nil {
-				Configs[k] = k
-			}
-		}
-
-		for k, v := range  Configs {
-            //make sure variables should be put in Server Configs or Global Configs
-			if cls.Topology.ServerConfigs.TiDB == nil {
-				cls.Topology.ServerConfigs.TiDB = make(map[string]interface{})
-			}
-
-			if i == 0 && cls.Topology.ServerConfigs.TiDB[k] == nil {
-				cls.Topology.ServerConfigs.TiDB[k] = v
-			} else if cls.Topology.ServerConfigs.TiDB[k] == v {
-				continue
-			} else if cls.Topology.ServerConfigs.TiDB[k] == nil {
-				if cls.Topology.TiDBServers[i].Config == nil {
-					cls.Topology.TiDBServers[i].Config = make(map[string]interface{})
-				}
-				if Configs[k] != k {
-					cls.Topology.TiDBServers[i].Config[k] = v
-				}
-			} else {
-				for j := 0 ; j < i ; j++  {
-					if cls.Topology.TiDBServers[j].Config == nil {
-						cls.Topology.TiDBServers[j].Config = make(map[string]interface{})
-					}
-					cls.Topology.TiDBServers[j].Config[k] = cls.Topology.ServerConfigs.TiDB[k]
-				}
-				if Configs[k] != k {
-					if cls.Topology.TiDBServers[i].Config == nil {
-						cls.Topology.TiDBServers[i].Config = make(map[string]interface{})
-					}
-					cls.Topology.TiDBServers[i].Config[k] = v
-				}
-				delete(cls.Topology.ServerConfigs.TiDB,k)
-			}
+	// parse all configs from file
+	for _, config := range configs {
+		locals = append(locals, config)
+		for k := range config {
+			keySet.Insert(k)
 		}
 	}
 
-	Configs =  make(map[string]interface{})
-	gConfigs = make(map[string]interface{})
-	initflag = false
-	for i := 0 ; i < len(cls.Topology.TiKVServers); i++ {
-		prefixkey = "tikv"
-		srv := cls.Topology.TiKVServers[i]
-		fname := spec.ClusterPath(clsName,spec.AnsibleImportedConfigPath,fmt.Sprintf("%s-%s-%d.toml",prefixkey,srv.Host, srv.Port))
-
-		Configs , err  = ParseConfigFile(fname)
-		if initflag == false {
-			gConfigs = Configs
-			initflag = true
+	// summary global config
+	for k := range keySet {
+		valSet := set.NewAnySet(reflect.DeepEqual)
+		for _, config := range locals {
+			valSet.Insert(config[k])
 		}
-
-		for k, _ := range gConfigs {
-			if Configs[k] == nil && gConfigs[k] != nil {
-				Configs[k] = k
-			}
+		if len(valSet.Slice()) > 1 {
+			// this key can't be put into global
+			continue
 		}
+		global[k] = valSet.Slice()[0]
+	}
 
-		for k, v := range  Configs {
-
-			if cls.Topology.ServerConfigs.TiKV == nil {
-				cls.Topology.ServerConfigs.TiKV = make(map[string]interface{})
-			}
-			if cls.Topology.TiKVServers[i].Config == nil {
-				cls.Topology.TiKVServers[i].Config = make(map[string]interface{})
-			}
-
-			if  k == "server.labels" {
-				cls.Topology.TiKVServers[i].Config[k] = v
-			} else if i == 0 && cls.Topology.ServerConfigs.TiKV[k] == nil {
-				cls.Topology.ServerConfigs.TiKV[k] = v
-			} else if cls.Topology.ServerConfigs.TiKV[k] == v {
-				continue
-			} else if cls.Topology.ServerConfigs.TiKV[k] == nil {
-				if Configs[k] != k {
-					cls.Topology.TiKVServers[i].Config[k] = v
-				}
-			} else {
-				for j := 0 ; j < i ; j++  {
-					cls.Topology.TiKVServers[j].Config[k] = cls.Topology.ServerConfigs.TiKV[k]
-				}
-				if Configs[k] != k {
-					cls.Topology.TiKVServers[i].Config[k] = v
-				}
-				delete(cls.Topology.ServerConfigs.TiKV,k)
-			}
+	// delete global config from local
+	for _, config := range locals {
+		for k := range global {
+			delete(config, k)
 		}
 	}
 
-	Configs =  make(map[string]interface{})
-	gConfigs = make(map[string]interface{})
-	initflag = false
-	for i := 0 ; i < len(cls.Topology.PDServers); i++ {
-		prefixkey = "pd"
-		srv := cls.Topology.PDServers[i]
-		fname := spec.ClusterPath(clsName,spec.AnsibleImportedConfigPath,fmt.Sprintf("%s-%s-%d.toml",prefixkey,srv.Host, srv.ClientPort))
+	return
+}
 
-		Configs , err  = ParseConfigFile(fname)
-		if initflag == false {
-			gConfigs = Configs
-			initflag = true
-		}
-
-		for k, _ := range gConfigs {
-			if Configs[k] == nil && gConfigs[k] != nil {
-				Configs[k] = k
-			}
-		}
-
-		for k, v := range  Configs {
-
-			if cls.Topology.ServerConfigs.PD == nil {
-				cls.Topology.ServerConfigs.PD = make(map[string]interface{})
-			}
-			if cls.Topology.PDServers[i].Config == nil {
-				cls.Topology.PDServers[i].Config = make(map[string]interface{})
-			}
-
-			if   k == "replication.location-labels" && v != nil {
-				cls.Topology.ServerConfigs.PD[k] = v
-			} else if i == 0 && cls.Topology.ServerConfigs.PD[k] == nil {
-				cls.Topology.ServerConfigs.PD[k] = v
-			} else if cls.Topology.ServerConfigs.PD[k] == v {
-				continue
-			} else if cls.Topology.ServerConfigs.PD[k] == nil {
-				if Configs[k] != k {
-					cls.Topology.PDServers[i].Config[k] = v
-				}
-			} else {
-				for j := 0 ; j < i ; j++  {
-					cls.Topology.PDServers[j].Config[k] = cls.Topology.ServerConfigs.PD[k]
-				}
-				if Configs[k] != k {
-					cls.Topology.PDServers[i].Config[k] = v
-				}
-				delete(cls.Topology.ServerConfigs.PD,k)
-			}
+// LoadConfig files to clusterMeta, just include tidbservers, tikvservers and pdservers
+func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
+	// deal with tidb config
+	configs := []map[string]interface{}{}
+	for _, srv := range cls.Topology.TiDBServers {
+		prefixkey := spec.ComponentTiDB
+		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.Port))
+		if config, err := parseConfigFile(fname); err == nil {
+			configs = append(configs, config)
+		} else {
+			return err
 		}
 	}
+	global, locals := diffConfigs(configs)
+	cls.Topology.ServerConfigs.TiDB = global
+	for i, local := range locals {
+		cls.Topology.TiDBServers[i].Config = local
+	}
 
+	// deal with tikv config
+	configs = []map[string]interface{}{}
+	for _, srv := range cls.Topology.TiKVServers {
+		prefixkey := spec.ComponentTiKV
+		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.Port))
+		if config, err := parseConfigFile(fname); err == nil {
+			configs = append(configs, config)
+		} else {
+			return err
+		}
+	}
+	global, locals = diffConfigs(configs)
+	cls.Topology.ServerConfigs.TiKV = global
+	for i, local := range locals {
+		cls.Topology.TiKVServers[i].Config = local
+	}
 
-	return err
+	// deal with pd config
+	configs = []map[string]interface{}{}
+	for _, srv := range cls.Topology.PDServers {
+		prefixkey := spec.ComponentPD
+		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.ClientPort))
+		if config, err := parseConfigFile(fname); err == nil {
+			configs = append(configs, config)
+		} else {
+			return err
+		}
+	}
+	global, locals = diffConfigs(configs)
+	cls.Topology.ServerConfigs.PD = global
+	for i, local := range locals {
+		cls.Topology.PDServers[i].Config = local
+	}
+
+	return nil
 }

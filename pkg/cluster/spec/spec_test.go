@@ -171,7 +171,7 @@ tidb_servers:
 			},
 		},
 	}
-	got := flattenMap(topo.ServerConfigs.TiDB)
+	got := FoldMap(topo.ServerConfigs.TiDB)
 	c.Assert(got, DeepEquals, expected)
 	buf := &bytes.Buffer{}
 	err = toml.NewEncoder(buf).Encode(expected)
@@ -199,7 +199,7 @@ tidb_servers:
 			},
 		},
 	}
-	got = flattenMap(topo.TiDBServers[0].Config)
+	got = FoldMap(topo.TiDBServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 
@@ -213,7 +213,7 @@ tidb_servers:
 			},
 		},
 	}
-	got = flattenMap(topo.TiDBServers[1].Config)
+	got = FoldMap(topo.TiDBServers[1].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 }
@@ -243,7 +243,7 @@ tikv_servers:
 			},
 		},
 	}
-	got := flattenMap(topo.TiKVServers[0].Config)
+	got := FoldMap(topo.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(got, DeepEquals, expected)
 }
@@ -469,6 +469,47 @@ item7 = 700
 	merge2, err := merge2Toml(ComponentTiKV, merge1, spec.TiKVServers[0].Config)
 	c.Assert(err, IsNil)
 	c.Assert(string(merge2), DeepEquals, expected)
+}
+
+func (s *metaSuiteTopo) TestTiKVLabels(c *C) {
+	spec := Specification{}
+	err := yaml.Unmarshal([]byte(`
+tikv_servers:
+  - host: 172.16.5.138
+    config:
+      server.labels:
+        dc: dc1
+        zone: zone1
+        host: host1
+`), &spec)
+	c.Assert(err, IsNil)
+	labels, err := spec.TiKVServers[0].Labels()
+	c.Assert(err, IsNil)
+	c.Assert(labels, DeepEquals, map[string]string{
+		"dc":   "dc1",
+		"zone": "zone1",
+		"host": "host1",
+	})
+
+	spec = Specification{}
+	err = yaml.Unmarshal([]byte(`
+tikv_servers:
+  - host: 172.16.5.138
+    config:
+      server.labels.dc: dc1
+      server.labels.zone: zone1
+      server.labels.host: host1
+`), &spec)
+	c.Assert(err, IsNil)
+	/*
+		labels, err = spec.TiKVServers[0].Labels()
+		c.Assert(err, IsNil)
+		c.Assert(labels, DeepEquals, map[string]string{
+			"dc":   "dc1",
+			"zone": "zone1",
+			"host": "host1",
+		})
+	*/
 }
 
 func (s *metaSuiteTopo) TestLocationLabels(c *C) {

@@ -17,14 +17,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
-	"sort"
 	"testing"
 
-	"github.com/creasty/defaults"
 	. "github.com/pingcap/check"
-	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"gopkg.in/yaml.v2"
 )
 
 type ansSuite struct {
@@ -36,6 +31,7 @@ func TestAnsible(t *testing.T) {
 	TestingT(t)
 }
 
+/*
 func (s *ansSuite) TestParseInventoryFile(c *C) {
 	dir := "test-data"
 	invData, err := os.Open(filepath.Join(dir, "inventory.ini"))
@@ -146,4 +142,62 @@ func sortClusterMeta(clsMeta *spec.ClusterMeta) {
 	sort.Slice(clsMeta.Topology.Alertmanager, func(i, j int) bool {
 		return clsMeta.Topology.Alertmanager[i].Host < clsMeta.Topology.Alertmanager[j].Host
 	})
+}
+*/
+func withTempFile(content string, fn func(string)) {
+	file, err := ioutil.TempFile("/tmp", "topology-test")
+	if err != nil {
+		panic(fmt.Sprintf("create temp file: %s", err))
+	}
+	defer os.Remove(file.Name())
+
+	_, err = file.WriteString(content)
+	if err != nil {
+		panic(fmt.Sprintf("write temp file: %s", err))
+	}
+	file.Close()
+
+	fn(file.Name())
+}
+
+func (s *ansSuite) TestParseConfig(c *C) {
+	// base test
+	withTempFile(`
+a = true
+
+[b]
+c = 1
+d = "\""
+`, func(file string) {
+		m, err := parseConfigFile(file)
+		c.Assert(err, IsNil)
+		c.Assert(m["x"], IsNil)
+		c.Assert(m["a"], Equals, true)
+		c.Assert(m["b.c"], Equals, int64(1))
+		c.Assert(m["b.d"], Equals, "\"")
+	})
+}
+
+func (s *ansSuite) TestDiffConfig(c *C) {
+	global, locals := diffConfigs([]map[string]interface{}{
+		{
+			"a": true,
+			"b": 1,
+		},
+		{
+			"a": true,
+			"b": 2,
+		},
+		{
+			"a": true,
+			"b": 3,
+		},
+	})
+
+	c.Assert(global["a"], NotNil)
+	c.Assert(global["b"], IsNil)
+	c.Assert(global["a"], Equals, true)
+	c.Assert(locals[0]["b"], Equals, 1)
+	c.Assert(locals[1]["b"], Equals, 2)
+	c.Assert(locals[2]["b"], Equals, 3)
 }

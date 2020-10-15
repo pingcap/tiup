@@ -15,6 +15,7 @@ package set
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/pingcap/check"
@@ -65,4 +66,16 @@ func (s *stringSetTestSuite) TestStringSet(c *check.C) {
 
 	s6 := NewStringSet()
 	c.Assert(s3.Intersection(s6), check.DeepEquals, NewStringSet())
+}
+
+func (s *stringSetTestSuite) TestAnySet(c *check.C) {
+	set := NewAnySet(reflect.DeepEqual)
+	set.Insert(true)
+	set.Insert(9527)
+
+	c.Assert(set.slice[0], check.DeepEquals, true)
+	c.Assert(set.Slice()[0], check.DeepEquals, true)
+
+	c.Assert(set.slice[1], check.DeepEquals, 9527)
+	c.Assert(set.Slice()[1], check.DeepEquals, 9527)
 }
