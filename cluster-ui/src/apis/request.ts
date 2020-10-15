@@ -40,7 +40,7 @@ function parseResponse(response: Response) {
     return response
       .json()
       .then((resData: any) => {
-        errMsg = resData.msg || response.statusText
+        errMsg = resData.msg || resData.message || response.statusText
       })
       .finally(() => {
         const error: ResError = new Error(errMsg)

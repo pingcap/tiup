@@ -5,6 +5,7 @@ import {
   HddOutlined,
   DeploymentUnitOutlined,
   ClusterOutlined,
+  SettingOutlined,
 } from '@ant-design/icons'
 
 import { getStatus } from '_apis'
@@ -31,6 +32,9 @@ function SiderMenu() {
         </Menu.Item>
         <Menu.Item key="deploy" icon={<DeploymentUnitOutlined />}>
           <NavLink to="/deploy">部署</NavLink>
+        </Menu.Item>
+        <Menu.Item key="setting" icon={<SettingOutlined />}>
+          <NavLink to="/setting">设置</NavLink>
         </Menu.Item>
       </Menu>
     </Sider>

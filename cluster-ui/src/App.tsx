@@ -9,6 +9,7 @@ import ClustersPage from '_pages/Clusters'
 import ClusterDetailPage from '_pages/Clusters/ClusterDetail'
 import ClusterScaleOutPage from '_pages/Clusters/ClusterScaleOut'
 import ClusterConfigPage from '_pages/Clusters/ClusterConfig'
+import SettingPage from '_pages/Setting'
 
 import './App.less'
 
@@ -26,13 +27,11 @@ function App() {
               path=":clusterName/scaleout"
               element={<ClusterScaleOutPage />}
             />
-            <Route
-              path=":clusterName/config"
-              element={<ClusterConfigPage/>}
-            />
+            <Route path=":clusterName/config" element={<ClusterConfigPage />} />
           </Route>
           <Route path="/machines" element={<MachinesPage />} />
           <Route path="/deploy" element={<DeploymentPage />} />
+          <Route path="/setting" element={<SettingPage />} />
         </Route>
       </Routes>
     </Router>

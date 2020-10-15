@@ -212,12 +212,6 @@ export default function CompsManager({
               options={AUTO_COMPLETE_OPTIONS}
             />
           </Form.Item>
-          <Form.Item label="镜像服务器地址" name="mirror_address">
-            <Input
-              placeholder="https://tiup-mirrors.pingcap.com"
-              style={{ width: 250 }}
-            />
-          </Form.Item>
           <Form.Item>
             <Button type="primary" onClick={() => setPreviewYaml(true)}>
               预览部署拓扑

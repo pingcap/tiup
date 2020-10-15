@@ -55,3 +55,13 @@ export function scaleOutCluster(clusterName: string, scaleOutOpts: any) {
     scaleOutOpts
   )
 }
+
+export function getMirrorAddress() {
+  return request(fullUrl(`mirror`))
+}
+
+export function setMirrorAddress(newAddress: string) {
+  return request(fullUrl(`mirror`), 'POST', {
+    mirror_address: newAddress,
+  })
+}

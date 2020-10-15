@@ -27,6 +27,31 @@ var (
 	skipConfirm = true
 )
 
+// MWHandleErrors creates a middleware that turns (last) error in the context into an APIError json response.
+// In handlers, `c.Error(err)` can be used to attach the error to the context.
+// When error is attached in the context:
+// - The handler can optionally assign the HTTP status code.
+// - The handler must not self-generate a response body.
+func MWHandleErrors() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+
+		err := c.Errors.Last()
+		if err == nil {
+			return
+		}
+
+		statusCode := c.Writer.Status()
+		if statusCode == http.StatusOK {
+			statusCode = http.StatusInternalServerError
+		}
+
+		c.AbortWithStatusJSON(statusCode, gin.H{
+			"message": err.Error(),
+		})
+	}
+}
+
 // Run starts web ui for cluster
 func Run(_tidbSpec *spec.SpecManager, _manager *cluster.Manager, _gOpt operator.Options) {
 	tidbSpec = _tidbSpec
@@ -35,6 +60,7 @@ func Run(_tidbSpec *spec.SpecManager, _manager *cluster.Manager, _gOpt operator.
 
 	router := gin.Default()
 	router.Use(cors.AllowAll())
+	router.Use(MWHandleErrors())
 	// Backend API
 	api := router.Group("/api")
 	{
@@ -48,6 +74,9 @@ func Run(_tidbSpec *spec.SpecManager, _manager *cluster.Manager, _gOpt operator.
 		api.POST("/clusters/:clusterName/stop", stopClusterHandler)
 		api.POST("/clusters/:clusterName/scale_in", scaleInClusterHandler)
 		api.POST("/clusters/:clusterName/scale_out", scaleOutClusterHandler)
+
+		api.GET("/mirror", mirrorHandler)
+		api.POST("/mirror", setMirrorHandler)
 	}
 	// Frontend assets
 	router.StaticFS("/tiup", uiserver.Assets)
@@ -71,7 +100,6 @@ type GlobalLoginOptions struct {
 type DeployReq struct {
 	ClusterName        string             `json:"cluster_name"`
 	TiDBVersion        string             `json:"tidb_version"`
-	MirrorAddress      string             `json:"mirror_address"`
 	TopoYaml           string             `json:"topo_yaml"`
 	GlobalLoginOptions GlobalLoginOptions `json:"global_login_options"`
 }
@@ -86,18 +114,6 @@ func deployHandler(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		_ = c.Error(err)
 		return
-	}
-
-	// set mirror address
-	if req.MirrorAddress == "" {
-		req.MirrorAddress = repository.DefaultMirror
-	}
-	if req.MirrorAddress != environment.Mirror() {
-		profile := environment.GlobalEnv().Profile()
-		if err := profile.ResetMirror(req.MirrorAddress, ""); err != nil {
-			_ = c.Error(err)
-			return
-		}
 	}
 
 	// create temp topo yaml file
@@ -336,6 +352,41 @@ func scaleOutClusterHandler(c *gin.Context) {
 			gOpt.SSHType,
 		)
 	}()
+
+	c.Status(http.StatusNoContent)
+}
+
+func mirrorHandler(c *gin.Context) {
+	mirror := environment.Mirror()
+	c.JSON(http.StatusOK, gin.H{
+		"mirror_address": mirror,
+	})
+}
+
+// MirrorReq represents for the request of setting mirror address
+type MirrorReq struct {
+	MirrorAddress string `json:"mirror_address"`
+}
+
+func setMirrorHandler(c *gin.Context) {
+	var req MirrorReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	// set mirror address
+	req.MirrorAddress = strings.TrimSpace(req.MirrorAddress)
+	if req.MirrorAddress == "" {
+		req.MirrorAddress = repository.DefaultMirror
+	}
+	if req.MirrorAddress != environment.Mirror() {
+		profile := environment.GlobalEnv().Profile()
+		if err := profile.ResetMirror(req.MirrorAddress, ""); err != nil {
+			_ = c.Error(err)
+			return
+		}
+	}
 
 	c.Status(http.StatusNoContent)
 }
