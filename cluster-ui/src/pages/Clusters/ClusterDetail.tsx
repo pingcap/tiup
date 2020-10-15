@@ -15,7 +15,7 @@ import { Root } from '_components'
 import { useComps } from '_hooks'
 import { ICluster, IClusterInstInfo } from '_types'
 
-export default function ClusterDetailPage() {
+function ClusterDetailPage() {
   const navigate = useNavigate()
   const [clustersList] = useSessionStorageState<ICluster[]>('clusters', [])
   const { clusterName } = useParams()
@@ -219,4 +219,9 @@ export default function ClusterDetailPage() {
       </Space>
     </Root>
   )
+}
+
+export default function ClusterDetailPageWrapper() {
+  const { clusterName } = useParams()
+  return <ClusterDetailPage key={clusterName} />
 }

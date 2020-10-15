@@ -85,6 +85,7 @@ export default function ClusterConfigPage() {
 
   return (
     <Root>
+      <h1>修改配置</h1>
       {!verified && (
         <Space direction="vertical">
           <Alert

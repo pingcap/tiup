@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -381,6 +382,7 @@ func setMirrorHandler(c *gin.Context) {
 		req.MirrorAddress = repository.DefaultMirror
 	}
 	if req.MirrorAddress != environment.Mirror() {
+		os.Setenv("TIUP_MIRRORS", "")
 		profile := environment.GlobalEnv().Profile()
 		if err := profile.ResetMirror(req.MirrorAddress, ""); err != nil {
 			_ = c.Error(err)
