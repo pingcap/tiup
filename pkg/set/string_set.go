@@ -86,11 +86,7 @@ func (s *AnySet) Difference(rhs *AnySet) *AnySet {
 
 // Slice converts the set to a slice
 func (s *AnySet) Slice() []interface{} {
-	res := []interface{}{}
-	for _, val := range s.slice {
-		res = append(res, val)
-	}
-	return res
+	return append([]interface{}{}, s.slice...)
 }
 
 // StringSet is a string set.
