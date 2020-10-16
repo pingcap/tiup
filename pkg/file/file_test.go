@@ -1,13 +1,17 @@
 package file
 
 import (
+	"bytes"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/pingcap/check"
 )
@@ -77,4 +81,43 @@ func (s *fileSuite) TestSaveFileWithBackup(c *check.C) {
 	data, err := ioutil.ReadFile(filepath.Join(dir, name))
 	c.Assert(err, check.IsNil)
 	c.Assert(string(data), check.Equals, "9")
+}
+
+func (s *fileSuite) TestConcurrentSaveFileWithBackup(c *check.C) {
+	dir := c.MkDir()
+	name := "meta.yaml"
+	data := []byte("concurrent-save-file-with-backup")
+
+	rand.Seed(time.Now().UnixNano())
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			time.Sleep(time.Duration(rand.Intn(100)+4) * time.Millisecond)
+			err := SaveFileWithBackup(filepath.Join(dir, name), data, "")
+			c.Assert(err, check.IsNil)
+		}()
+	}
+
+	wg.Wait()
+
+	// Verify the saved files.
+	var paths []string
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		// simply filter the not relate files.
+		if strings.Contains(path, "meta") {
+			paths = append(paths, path)
+		}
+		return nil
+	})
+
+	c.Assert(err, check.IsNil)
+	c.Assert(len(paths), check.Equals, 10)
+	for _, path := range paths {
+		body, err := ioutil.ReadFile(path)
+		c.Assert(err, check.IsNil)
+		c.Assert(len(body), check.Equals, len(data))
+		c.Assert(bytes.Equal(body, data), check.IsTrue)
+	}
 }
