@@ -1,6 +1,6 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react'
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Space, Button, Modal, Table, Popconfirm } from 'antd'
+import { Space, Button, Modal, Table, Popconfirm, Divider } from 'antd'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { useSessionStorageState, useLocalStorageState } from 'ahooks'
 
@@ -16,6 +16,8 @@ import { useComps } from '_hooks'
 import { ICluster, IClusterInstInfo } from '_types'
 
 function ClusterDetailPage() {
+  const refIframe = useRef<HTMLIFrameElement>(null)
+
   const navigate = useNavigate()
   const [clustersList] = useSessionStorageState<ICluster[]>('clusters', [])
   const { clusterName } = useParams()
@@ -27,6 +29,15 @@ function ClusterDetailPage() {
   const [clusterInstInfos, setClusterInstInfos] = useSessionStorageState<
     IClusterInstInfo[]
   >(`${clusterName}_cluster_topo`, [])
+
+  const dashboardPD = useMemo(() => {
+    return clusterInstInfos.find(
+      (el) =>
+        el.role === 'pd' &&
+        el.status.indexOf('UI') !== -1 &&
+        el.status.indexOf('Up') !== -1
+    )
+  }, [clusterInstInfos])
 
   const [curScaleOutNodes] = useLocalStorageState<{
     cluster_name: string
@@ -101,6 +112,11 @@ function ClusterDetailPage() {
     // eslint-disable-next-line
   }, [])
 
+  const [dashboardToken] = useSessionStorageState(
+    `${clusterName}_dashboard_token`,
+    ''
+  )
+
   function updateLocalTopo(clusters: IClusterInstInfo[]) {
     if (
       curScaleOutNodes.cluster_name !== clusterName ||
@@ -149,13 +165,7 @@ function ClusterDetailPage() {
     navigate(`/clusters/${clusterName}/scaleout`)
   }
 
-  function handleConfigCluster() {
-    const dashboardPD = clusterInstInfos.find(
-      (el) =>
-        el.role === 'pd' &&
-        el.status.indexOf('UI') !== -1 &&
-        el.status.indexOf('Up') !== -1
-    )
+  function handleOpenDashboard(targetFeature: string) {
     if (dashboardPD === undefined) {
       Modal.error({
         title: '没有找到相应的 PD 节点',
@@ -164,9 +174,22 @@ function ClusterDetailPage() {
       })
       return
     }
+    if (targetFeature === 'full') {
+      refIframe.current?.contentWindow?.postMessage(
+        {
+          token: dashboardToken,
+          lang: 'zh',
+          hideNav: false,
+          redirectPath: '/diagnose',
+        },
+        '*'
+      )
+      window.open(`http://${dashboardPD.id}/dashboard/`, '_blank')
+      return
+    }
 
     navigate(
-      `/clusters/${clusterName}/config?pd=${dashboardPD.id}&tidb_version=${cluster?.version}`
+      `/clusters/${clusterName}/dashboard?pd=${dashboardPD.id}&tidb_version=${cluster?.version}&target=${targetFeature}`
     )
   }
 
@@ -191,7 +214,15 @@ function ClusterDetailPage() {
             <Button>停止集群</Button>
           </Popconfirm>
           <Button onClick={handleScaleOutCluster}>扩容</Button>
-          <Button onClick={handleConfigCluster}>修改配置</Button>
+          <Divider type="vertical" />
+          <Button onClick={() => handleOpenDashboard('configuration')}>
+            修改配置
+          </Button>
+          <Button onClick={() => handleOpenDashboard('data')}>数据管理</Button>
+          <Button onClick={() => handleOpenDashboard('dbusers')}>
+            用户管理
+          </Button>
+          <Button onClick={() => handleOpenDashboard('full')}>更多功能</Button>
         </Space>
         <Button danger onClick={handleDestroyCluster}>
           销毁集群
@@ -208,15 +239,22 @@ function ClusterDetailPage() {
         </div>
       )}
 
-      <Space direction="vertical">
-        <Table
-          dataSource={clusterInstInfos}
-          columns={columns}
-          pagination={false}
-          rowKey={'id'}
-          loading={loadingTopo}
-        />
-      </Space>
+      <Table
+        dataSource={clusterInstInfos}
+        columns={columns}
+        pagination={false}
+        rowKey={'id'}
+        loading={loadingTopo}
+      />
+
+      <iframe
+        ref={refIframe}
+        frameBorder="none"
+        title="TiDB Configuration"
+        width="100%"
+        height="0"
+        src={`http://${dashboardPD?.id}/dashboard/#/portal`}
+      />
     </Root>
   )
 }
