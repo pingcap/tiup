@@ -30,7 +30,7 @@ export default function SettingPage() {
   return (
     <Root>
       <Form layout="vertical" onFinish={handleFinish}>
-        <Form.Item label="镜像服务器地址：" name="mirror_address">
+        <Form.Item label="镜像服务器地址或路径：" name="mirror_address">
           <Input style={{ width: 400 }} placeholder={curMirrorAddress} />
         </Form.Item>
         <Form.Item>
