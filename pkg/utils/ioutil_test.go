@@ -68,3 +68,21 @@ func (s *TestIOUtilSuite) TestUntar(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(IsExist(path.Join(currentDir(), "testdata", "parent", "child", "content")), IsTrue)
 }
+
+func (s *TestIOUtilSuite) TestCopy(c *C) {
+	c.Assert(Copy(path.Join(currentDir(), "testdata", "test.tar.gz"), "/tmp/not-exists/test.tar.gz"), NotNil)
+	c.Assert(Copy(path.Join(currentDir(), "testdata", "test.tar.gz"), "/tmp/test.tar.gz"), IsNil)
+	fi, err := os.Stat(path.Join(currentDir(), "testdata", "test.tar.gz"))
+	c.Assert(err, IsNil)
+	fii, err := os.Stat("/tmp/test.tar.gz")
+	c.Assert(err, IsNil)
+	c.Assert(fi.Mode(), Equals, fii.Mode())
+
+	c.Assert(os.Chmod("/tmp/test.tar.gz", 0777), IsNil)
+	c.Assert(Copy(path.Join(currentDir(), "testdata", "test.tar.gz"), "/tmp/test.tar.gz"), IsNil)
+	fi, err = os.Stat(path.Join(currentDir(), "testdata", "test.tar.gz"))
+	c.Assert(err, IsNil)
+	fii, err = os.Stat("/tmp/test.tar.gz")
+	c.Assert(err, IsNil)
+	c.Assert(fi.Mode(), Equals, fii.Mode())
+}
