@@ -339,34 +339,49 @@ func (e *TiKVLabelError) Error() string {
 	return str
 }
 
+// StoreLabelProvider provide store labels information
+type StoreLabelProvider interface {
+	StoreList() ([]string, error)
+	GetStoreLabels(address string) (map[string]string, error)
+}
+
+func getHostFromAddress(addr string) string {
+	return strings.Split(addr, ":")[0]
+}
+
 // CheckTiKVLocationLabels will check if tikv missing label or have wrong label
-func CheckTiKVLocationLabels(pdLocLabels []string, kvs []TiKVSpec) error {
+func CheckTiKVLocationLabels(pdLocLabels []string, slp StoreLabelProvider) error {
 	lerr := &TiKVLabelError{
 		TiKVInstances: make(map[string][]error),
 	}
 	lbs := set.NewStringSet(pdLocLabels...)
 	hosts := make(map[string]int)
 
-	for _, kv := range kvs {
-		hosts[kv.Host] = hosts[kv.Host] + 1
+	kvs, err := slp.StoreList()
+	if err != nil {
+		return err
 	}
 	for _, kv := range kvs {
-		id := fmt.Sprintf("%s:%d", kv.Host, kv.GetMainPort())
-		ls, err := kv.Labels()
+		host := getHostFromAddress(kv)
+		hosts[host] = hosts[host] + 1
+	}
+	for _, kv := range kvs {
+		host := getHostFromAddress(kv)
+		ls, err := slp.GetStoreLabels(kv)
 		if err != nil {
 			return err
 		}
-		if len(ls) == 0 && hosts[kv.Host] > 1 {
-			lerr.TiKVInstances[id] = append(
-				lerr.TiKVInstances[id],
+		if len(ls) == 0 && hosts[host] > 1 {
+			lerr.TiKVInstances[kv] = append(
+				lerr.TiKVInstances[kv],
 				errors.New("multiple TiKV instances are deployed at the same host but location label missing"),
 			)
 			continue
 		}
 		for lname := range ls {
 			if !lbs.Exist(lname) {
-				lerr.TiKVInstances[id] = append(
-					lerr.TiKVInstances[id],
+				lerr.TiKVInstances[kv] = append(
+					lerr.TiKVInstances[kv],
 					fmt.Errorf("label name '%s' is not specified in pd config (replication.location-labels: %v)", lname, pdLocLabels),
 				)
 			}
