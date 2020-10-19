@@ -143,7 +143,7 @@ func main() {
 	}
 
 	sort.Slice(sorted, func(i, j int) bool {
-		# TiDB exits duplicated code
+		// TiDB exits duplicated code
 		if sorted[i].Code == sorted[j].Code {
 			return sorted[i].Message < sorted[j].Message
 		}
