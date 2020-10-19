@@ -75,7 +75,7 @@ func main() {
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		fatal("Cannot create the errdoc: %+v", err)
 	}
-	//defer os.RemoveAll(targetDir)
+	defer os.RemoveAll(targetDir)
 
 	tmpl := `
 package main
