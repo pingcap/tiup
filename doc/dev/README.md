@@ -20,7 +20,7 @@ For development, you don't want to use any global directories. You may also want
 * `TIUP_MIRRORS` set the location of TiUp's registry, can be a directory or URL. If not set, `https://tiup-mirrors.pingcap.com` will be used.
 
 > **Note**
-> TiUP need a certificate file (root.json) installed in `${TIUP_HOME}/bin` directory. If this is your first time getting TiUP, you can run `tiup mirror set <tiup-mirror>` to get it installed.
+> TiUP need a certificate file (root.json) installed in `${TIUP_HOME}/bin` directory. If this is your first time getting TiUP, you can run `curl https://tiup-mirrors.pingcap.com/root.json -o ${TIUP_HOME}/bin/root.json` to get it installed.
 
 ## Testing
 

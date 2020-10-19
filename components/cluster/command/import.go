@@ -116,10 +116,10 @@ func newImportCmd() *cobra.Command {
 			srcKeyPathPub := srcKeyPathPriv + ".pub"
 			dstKeyPathPriv := spec.ClusterPath(clsName, "ssh", "id_rsa")
 			dstKeyPathPub := dstKeyPathPriv + ".pub"
-			if err = tiuputils.CopyFile(srcKeyPathPriv, dstKeyPathPriv); err != nil {
+			if err = tiuputils.Copy(srcKeyPathPriv, dstKeyPathPriv); err != nil {
 				return err
 			}
-			if err = tiuputils.CopyFile(srcKeyPathPub, dstKeyPathPub); err != nil {
+			if err = tiuputils.Copy(srcKeyPathPub, dstKeyPathPub); err != nil {
 				return err
 			}
 

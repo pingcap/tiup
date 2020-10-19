@@ -55,7 +55,7 @@ func main() {
 
 type errorSpec struct {
 	Code        string   `toml:"code" json:"code"`
-	Message     string   `toml:"message" json:"message"`
+	Error       string   `toml:"error" json:"error"`
 	Description string   `toml:"description" json:"description"`
 	Tags        []string `toml:"tags" json:"tags"`
 	Workaround  string   `toml:"workaround" json:"workaround"`
@@ -81,7 +81,7 @@ func (f errorSpec) String() string {
 ## Description
 %s
 ## Workaround
-%s`, header, f.Message, f.Description, f.Workaround))
+%s`, header, f.Error, f.Description, f.Workaround))
 }
 
 func searchError(args []string) error {
@@ -112,9 +112,7 @@ func loadIndex() (bleve.Index, map[string]*errorSpec, error) {
 		return nil, nil, errors.New("component `doc` doesn't running in TiUP mode")
 	}
 
-	type tomlFile struct {
-		Errors map[string]*errorSpec `toml:"error"`
-	}
+	type tomlFile map[string]*errorSpec
 	indexPath := filepath.Join(dir, "index")
 
 	index, err := bleve.Open(indexPath)
@@ -156,7 +154,7 @@ func loadIndex() (bleve.Index, map[string]*errorSpec, error) {
 		if _, err := toml.DecodeReader(reader, &file); err != nil {
 			return nil
 		}
-		for code, spec := range file.Errors {
+		for code, spec := range file {
 			spec.Code = code
 			errStore[code] = spec
 			if !needIndex {
@@ -177,7 +175,7 @@ func buildIndexMapping() mapping.IndexMapping {
 
 	documentMapping := bleve.NewDocumentMapping()
 
-	documentMapping.AddFieldMappingsAt("message", englishTextFieldMapping)
+	documentMapping.AddFieldMappingsAt("error", englishTextFieldMapping)
 	documentMapping.AddFieldMappingsAt("description", englishTextFieldMapping)
 	documentMapping.AddFieldMappingsAt("workaround", englishTextFieldMapping)
 	documentMapping.AddFieldMappingsAt("tags", englishTextFieldMapping)
