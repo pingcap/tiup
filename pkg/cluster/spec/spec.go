@@ -244,8 +244,8 @@ func (s *Specification) StoreList() ([]string, error) {
 	for _, kv := range kvs {
 		if kv.IsImported() {
 			// FIXME: this function implements StoreLabelProvider, which is used to
-			//        deletec if there is label config missing. However, we do that
-			//        based on the meta.yaml, whose server.labels field will be empty
+			//        detect if the label config is missing. However, we do that
+			//        base on the meta.yaml, whose server.labels field is empty
 			//        for imported TiKV servers, to workaround that, we just skip the
 			//        imported TiKV servers at this time.
 			continue
