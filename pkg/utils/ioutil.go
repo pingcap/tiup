@@ -19,7 +19,6 @@ import (
 	"compress/gzip"
 	"crypto/sha1"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"os"
 	"path"
@@ -149,7 +148,13 @@ func Copy(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	return out.Close()
+
+	err = out.Close()
+	if err != nil {
+		return err
+	}
+
+	return os.Chmod(dst, fi.Mode())
 }
 
 // Move moves a file from src to dst, this is done by copying the file and then
@@ -168,29 +173,6 @@ func CreateDir(path string) error {
 		if os.IsNotExist(err) {
 			return os.MkdirAll(path, 0755)
 		}
-		return err
-	}
-	return nil
-}
-
-// CopyFile copies a file from src to dst
-func CopyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	if IsExist(dst) {
-		return fmt.Errorf("destination path %s already exist", dst)
-	}
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	if _, err = io.Copy(out, in); err != nil {
 		return err
 	}
 	return nil
