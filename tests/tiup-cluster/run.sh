@@ -21,7 +21,7 @@ cp -r ./local /tmp/local
 ls -lh /tmp/local
 
 function tiup-cluster() {
-    mkdir -p "~/.tiup/bin" && cp -f ./root.json ~/.tiup/bin/
+    mkdir -p ~/.tiup/bin && cp -f ./root.json ~/.tiup/bin/
     # echo "in function"
     if [ -f "./bin/tiup-cluster.test" ]; then
         ./bin/tiup-cluster.test -test.coverprofile=./cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
