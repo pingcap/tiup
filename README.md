@@ -51,7 +51,7 @@ Contributions of code, tests, docs, and bug reports are welcome! To get started 
 
 For docs on how to build, test, and run TiUp, see our [dev docs](doc/dev/README.md).
 
-See also the [Contribution Guide](https://github.com/pingcap/community/blob/master/CONTRIBUTING.md) in PingCAP's
+See also the [Contribution Guide](https://github.com/pingcap/community/blob/master/contributors/README.md) in PingCAP's
 [community](https://github.com/pingcap/community) repo.
 
 
