@@ -1801,7 +1801,7 @@ func overwritePatch(specManager *spec.SpecManager, clusterName, comp, packagePat
 
 	tg := specManager.Path(clusterName, spec.PatchDirName, comp+"-"+checksum[:7]+".tar.gz")
 	if !utils.IsExist(tg) {
-		if err := utils.CopyFile(packagePath, tg); err != nil {
+		if err := utils.Copy(packagePath, tg); err != nil {
 			return err
 		}
 	}

@@ -386,7 +386,7 @@ func (p *Profile) ResetMirror(addr, root string) error {
 			fmt.Printf("WARN: adding root certificate via internet: %s\n", root)
 			fmt.Printf("You can revoke this by remove %s\n", localRoot)
 		}
-		_ = utils.CopyFile(p.Path("bin", "root.json"), localRoot)
+		_ = utils.Copy(p.Path("bin", "root.json"), localRoot)
 	}
 
 	if err := os.RemoveAll(p.Path(ManifestParentDir)); err != nil {
