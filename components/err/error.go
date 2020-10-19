@@ -55,7 +55,7 @@ func main() {
 
 type errorSpec struct {
 	Code        string   `toml:"code" json:"code"`
-	Error     string   `toml:"error" json:"error"`
+	Error       string   `toml:"error" json:"error"`
 	Description string   `toml:"description" json:"description"`
 	Tags        []string `toml:"tags" json:"tags"`
 	Workaround  string   `toml:"workaround" json:"workaround"`
