@@ -599,13 +599,12 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	cliutil.PrintTable(clusterTable, true)
 	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
 
-	if topo, ok := topo.(*spec.Specification); ok {
+	if _, ok := topo.(*spec.Specification); ok {
 		// Check if TiKV's label set correctly
-		kvs := topo.TiKVServers
 		pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
 		if lbs, err := pdClient.GetLocationLabels(); err != nil {
 			color.Yellow("\nWARN: get location labels from pd failed: %v", err)
-		} else if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
+		} else if err := spec.CheckTiKVLocationLabels(lbs, pdClient); err != nil {
 			color.Yellow("\nWARN: there is something wrong with TiKV labels, which may cause data losing:\n%v", err)
 		}
 	}
@@ -1082,8 +1081,7 @@ func (m *Manager) Deploy(
 		if err != nil {
 			return err
 		}
-		kvs := topo.TiKVServers
-		if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
+		if err := spec.CheckTiKVLocationLabels(lbs, topo); err != nil {
 			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
 		}
 	}
@@ -1522,8 +1520,7 @@ func (m *Manager) ScaleOut(
 		if err != nil {
 			return err
 		}
-		kvs := mergedTopo.(*spec.Specification).TiKVServers
-		if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
+		if err := spec.CheckTiKVLocationLabels(lbs, mergedTopo.(*spec.Specification)); err != nil {
 			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
 		}
 	}
