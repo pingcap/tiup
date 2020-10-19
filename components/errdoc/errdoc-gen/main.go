@@ -143,7 +143,7 @@ func main() {
 	}
 
 	sort.Slice(sorted, func(i, j int) bool {
-		return sorted[i].Code < sorted[j].Code
+		return sorted[i].Code < sorted[j].Code || sorted[i].Message < sorted[j].Message
 	})
 
 	// We don't use toml library to serialize it due to cannot reserve the order for map[string]spec
