@@ -124,8 +124,7 @@ func main() {
 		Description string
 		Workaround  string
 	}
-	var sorted []spec
-	var dedup = map[string]struct{}{}
+	var dedup = map[string]spec{}
 	for _, e := range allErrors {
 		terr, ok := e.(*errors.Error)
 		if !ok {
@@ -133,12 +132,13 @@ func main() {
 		} else {
 			val := reflect.ValueOf(terr).Elem()
 			codeText := val.FieldByName("codeText")
-			if _, found := dedup[codeText.String()]; found {
-				println("Duplicated error code:", codeText.String())
-				continue
-			}
-			dedup[codeText.String()] = struct{}{}
 			message := val.FieldByName("message")
+			if previous, found := dedup[codeText.String()]; found {
+				println("Duplicated error code:", codeText.String())
+				if message.String() < previous.Message {
+					continue
+				}
+			}
 			description := val.FieldByName("description")
 			workaround := val.FieldByName("workaround ")
 			s := spec{
@@ -151,10 +151,14 @@ func main() {
 			if workaround.IsValid() {
 				s.Workaround = workaround.String()
 			}
-			sorted = append(sorted, s)
+			dedup[codeText.String()] = s
 		}
 	}
 
+	var sorted []spec
+	for _, item := range dedup {
+		sorted = append(sorted, item)
+	}
 	sort.Slice(sorted, func(i, j int) bool {
 		// TiDB exits duplicated code
 		if sorted[i].Code == sorted[j].Code {
