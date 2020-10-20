@@ -25,7 +25,6 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/spf13/cobra"
 )
@@ -75,14 +74,14 @@ func newScaleInCmd() *cobra.Command {
 // ScaleInDMCluster scale in dm cluster.
 func ScaleInDMCluster(
 	getter operator.ExecutorGetter,
-	spec *dm.Topology,
+	topo *dm.Topology,
 	options operator.Options,
 ) error {
 	// instances by uuid
 	instances := map[string]dm.Instance{}
 
 	// make sure all nodeIds exists in topology
-	for _, component := range spec.ComponentsByStartOrder() {
+	for _, component := range topo.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
 			instances[instance.ID()] = instance
 		}
@@ -100,23 +99,17 @@ func ScaleInDMCluster(
 	}
 
 	// Cannot delete all DM DMMaster servers
-	if len(deletedDiff[dm.ComponentDMMaster]) == len(spec.Masters) {
+	if len(deletedDiff[dm.ComponentDMMaster]) == len(topo.Masters) {
 		return errors.New("cannot delete all dm-master servers")
 	}
 
 	if options.Force {
-		for _, component := range spec.ComponentsByStartOrder() {
+		for _, component := range topo.ComponentsByStartOrder() {
 			for _, instance := range component.Instances() {
 				if !deletedNodes.Exist(instance.ID()) {
 					continue
 				}
-				// just try stop and destroy
-				if err := operator.StopComponent(getter, []dm.Instance{instance}, options.OptTimeout); err != nil {
-					log.Warnf("failed to stop %s: %v", component.Name(), err)
-				}
-				if err := operator.DestroyComponent(getter, []dm.Instance{instance}, spec, options); err != nil {
-					log.Warnf("failed to destroy %s: %v", component.Name(), err)
-				}
+				_ = operator.StopAndDestroyInstance(getter, component, topo, instance, options, false)
 			}
 		}
 		return nil
@@ -125,7 +118,7 @@ func ScaleInDMCluster(
 	// At least a DMMaster server exists
 	var dmMasterClient *api.DMMasterClient
 	var dmMasterEndpoint []string
-	for _, instance := range (&dm.DMMasterComponent{Topology: spec}).Instances() {
+	for _, instance := range (&dm.DMMasterComponent{Topology: topo}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
 			dmMasterEndpoint = append(dmMasterEndpoint, operator.Addr(instance))
 		}
@@ -138,7 +131,7 @@ func ScaleInDMCluster(
 	dmMasterClient = api.NewDMMasterClient(dmMasterEndpoint, 10*time.Second, nil)
 
 	// Delete member from cluster
-	for _, component := range spec.ComponentsByStartOrder() {
+	for _, component := range topo.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
 			if !deletedNodes.Exist(instance.ID()) {
 				continue
@@ -163,7 +156,7 @@ func ScaleInDMCluster(
 				}
 			}
 
-			if err := operator.DestroyComponent(getter, []dm.Instance{instance}, spec, options); err != nil {
+			if err := operator.DestroyComponent(getter, []dm.Instance{instance}, topo, options); err != nil {
 				return errors.Annotatef(err, "failed to destroy %s", component.Name())
 			}
 		}
