@@ -58,6 +58,12 @@ func main() {
 		fatal("The source directory cannot be empty")
 	}
 
+	source, err := filepath.EvalSymlinks(opt.source)
+	if err != nil {
+		fatal("Evaluate symbol link path %s failed: %v", opt.source, err)
+	}
+	opt.source = source
+
 	if !utils.IsExist(filepath.Join(opt.source, "go.mod")) {
 		fatal("The source directory is not the root path of codebase(go.mod not found)")
 	}
