@@ -64,6 +64,7 @@ func main() {
 
 	if opt.output == "" {
 		opt.output = filepath.Join(opt.source, "errors.toml")
+		log("The --output argument is missing, default to %s", opt.output)
 	}
 
 	errNames, err := errdoc(opt.source, opt.module)
@@ -185,7 +186,12 @@ func main() {
 		fatal("Render template failed: %+v", err)
 	}
 
-	cmd := exec.Command("go", "run", filepath.Join(autoDirectoryName, entryFileName), "--output", opt.output)
+	output, err := filepath.Abs(opt.output)
+	if err != nil {
+		fatal("Evaluate the absolute path of output failed: %+v", err)
+	}
+
+	cmd := exec.Command("go", "run", filepath.Join(autoDirectoryName, entryFileName), "--output", output)
 	cmd.Dir = opt.source
 	data, err := cmd.CombinedOutput()
 	if err != nil {
