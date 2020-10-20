@@ -56,8 +56,8 @@ bench:
 doc:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-doc ./components/doc
 
-err:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-err ./components/err
+errdoc:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-errdoc ./components/errdoc
 
 server:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-server ./server
