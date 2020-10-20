@@ -34,11 +34,6 @@ func Cleanup(
 ) error {
 	coms := cluster.ComponentsByStopOrder()
 
-	instCount := map[string]int{}
-	cluster.IterInstance(func(inst spec.Instance) {
-		instCount[inst.GetHost()] = instCount[inst.GetHost()] + 1
-	})
-
 	for _, com := range coms {
 		insts := com.Instances()
 		if err := CleanupComponent(getter, insts, cluster, options); err != nil {

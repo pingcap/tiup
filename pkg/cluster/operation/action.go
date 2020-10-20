@@ -42,20 +42,22 @@ func Enable(
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := cluster.ComponentsByStartOrder()
 	components = FilterComponent(components, roleFilter)
+	monitoredOptions := cluster.GetMonitoredOptions()
 
-	for _, com := range components {
-		insts := FilterInstance(com.Instances(), nodeFilter)
+	for _, comp := range components {
+		insts := FilterInstance(comp.Instances(), nodeFilter)
 		err := EnableComponent(getter, insts, options, isEnable)
 		if err != nil {
-			return errors.Annotatef(err, "failed to start %s", com.Name())
+			return errors.Annotatef(err, "failed to enable %s", comp.Name())
+		}
+		if monitoredOptions == nil {
+			continue
 		}
 		for _, inst := range insts {
 			if !uniqueHosts.Exist(inst.GetHost()) {
 				uniqueHosts.Insert(inst.GetHost())
-				if cluster.GetMonitoredOptions() != nil {
-					if err := EnableMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout, isEnable); err != nil {
-						return err
-					}
+				if err := EnableMonitored(getter, inst, monitoredOptions, options.OptTimeout, isEnable); err != nil {
+					return err
 				}
 			}
 		}
@@ -76,20 +78,22 @@ func Start(
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := cluster.ComponentsByStartOrder()
 	components = FilterComponent(components, roleFilter)
+	monitoredOptions := cluster.GetMonitoredOptions()
 
-	for _, com := range components {
-		insts := FilterInstance(com.Instances(), nodeFilter)
+	for _, comp := range components {
+		insts := FilterInstance(comp.Instances(), nodeFilter)
 		err := StartComponent(getter, insts, options, tlsCfg)
 		if err != nil {
-			return errors.Annotatef(err, "failed to start %s", com.Name())
+			return errors.Annotatef(err, "failed to start %s", comp.Name())
+		}
+		if monitoredOptions == nil {
+			continue
 		}
 		for _, inst := range insts {
 			if !uniqueHosts.Exist(inst.GetHost()) {
 				uniqueHosts.Insert(inst.GetHost())
-				if cluster.GetMonitoredOptions() != nil {
-					if err := StartMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil {
-						return err
-					}
+				if err := StartMonitored(getter, inst, monitoredOptions, options.OptTimeout); err != nil {
+					return err
 				}
 			}
 		}
@@ -115,19 +119,20 @@ func Stop(
 		instCount[inst.GetHost()] = instCount[inst.GetHost()] + 1
 	})
 
-	for _, com := range components {
-		insts := FilterInstance(com.Instances(), nodeFilter)
+	for _, comp := range components {
+		insts := FilterInstance(comp.Instances(), nodeFilter)
 		err := StopComponent(getter, insts, options.OptTimeout)
 		if err != nil && !options.Force {
-			return errors.Annotatef(err, "failed to stop %s", com.Name())
+			return errors.Annotatef(err, "failed to stop %s", comp.Name())
+		}
+		if cluster.GetMonitoredOptions() == nil {
+			continue
 		}
 		for _, inst := range insts {
 			instCount[inst.GetHost()]--
 			if instCount[inst.GetHost()] == 0 {
-				if cluster.GetMonitoredOptions() != nil {
-					if err := StopMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
-						return err
-					}
+				if err := StopMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
+					return err
 				}
 			}
 		}
