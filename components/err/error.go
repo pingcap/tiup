@@ -14,7 +14,6 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -37,7 +36,7 @@ func init() {
 
 func main() {
 	rootCmd := &cobra.Command{
-		Use:          "tiup err",
+		Use:          "tiup errdoc",
 		Short:        "Show detailed error message via error code or keyword",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -97,9 +96,9 @@ func searchError(args []string) error {
 
 	for i, match := range result.Hits {
 		spec := errStore[match.ID]
-		fmt.Println(spec)
+		fmt.Print(spec)
 		if i != len(result.Hits)-1 {
-			fmt.Println(string(bytes.Repeat([]byte("-"), 80)))
+			fmt.Println()
 		}
 	}
 
@@ -109,7 +108,7 @@ func searchError(args []string) error {
 func loadIndex() (bleve.Index, map[string]*errorSpec, error) {
 	dir := os.Getenv(localdata.EnvNameComponentInstallDir)
 	if dir == "" {
-		return nil, nil, errors.New("component `doc` doesn't running in TiUP mode")
+		return nil, nil, errors.New("component `errdoc` doesn't running in TiUP mode")
 	}
 
 	type tomlFile map[string]*errorSpec
