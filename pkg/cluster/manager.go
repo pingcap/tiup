@@ -628,13 +628,12 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	if err != nil {
 		return err
 	}
-	if topo, ok := topo.(*spec.Specification); ok {
+	if _, ok := topo.(*spec.Specification); ok {
 		// Check if TiKV's label set correctly
-		kvs := topo.TiKVServers
 		pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
 		if lbs, err := pdClient.GetLocationLabels(); err != nil {
 			color.Yellow("\nWARN: get location labels from pd failed: %v", err)
-		} else if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
+		} else if err := spec.CheckTiKVLocationLabels(lbs, pdClient); err != nil {
 			color.Yellow("\nWARN: there is something wrong with TiKV labels, which may cause data losing:\n%v", err)
 		}
 	}
@@ -1235,8 +1234,7 @@ func (m *Manager) Deploy(
 		if err != nil {
 			return err
 		}
-		kvs := topo.TiKVServers
-		if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
+		if err := spec.CheckTiKVLocationLabels(lbs, topo); err != nil {
 			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
 		}
 	}
@@ -1761,8 +1759,7 @@ func (m *Manager) ScaleOut(
 		if err != nil {
 			return err
 		}
-		kvs := mergedTopo.(*spec.Specification).TiKVServers
-		if err := spec.CheckTiKVLocationLabels(lbs, kvs); err != nil {
+		if err := spec.CheckTiKVLocationLabels(lbs, mergedTopo.(*spec.Specification)); err != nil {
 			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
 		}
 	}
@@ -2042,7 +2039,7 @@ func overwritePatch(specManager *spec.SpecManager, clusterName, comp, packagePat
 
 	tg := specManager.Path(clusterName, spec.PatchDirName, comp+"-"+checksum[:7]+".tar.gz")
 	if !utils.IsExist(tg) {
-		if err := utils.CopyFile(packagePath, tg); err != nil {
+		if err := utils.Copy(packagePath, tg); err != nil {
 			return err
 		}
 	}
@@ -2379,11 +2376,7 @@ func buildScaleOutTask(
 		afterDeploy(builder, newPart)
 	}
 
-	// TODO: find another way to make sure current cluster started
 	builder.
-		Func("StartCluster", func(ctx *task.Context) error {
-			return operator.Start(ctx, metadata.GetTopology(), operator.Options{OptTimeout: optTimeout}, tlsCfg)
-		}).
 		ClusterSSH(newPart, base.User, sshTimeout, sshType, topo.BaseTopo().GlobalOptions.SSHType).
 		Func("Save meta", func(_ *task.Context) error {
 			metadata.SetTopology(mergedTopo)

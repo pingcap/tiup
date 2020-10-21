@@ -26,9 +26,9 @@ import (
 	"github.com/blevesearch/bleve/analysis/lang/en"
 	_ "github.com/blevesearch/bleve/index/store/goleveldb"
 	"github.com/blevesearch/bleve/mapping"
+	"github.com/pingcap/tiup/components/errdoc/spec"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/spf13/cobra"
-	"github.com/tj/go-termd"
 )
 
 func init() {
@@ -53,37 +53,6 @@ func main() {
 	}
 }
 
-type errorSpec struct {
-	Code        string   `toml:"code" json:"code"`
-	Error       string   `toml:"error" json:"error"`
-	Description string   `toml:"description" json:"description"`
-	Tags        []string `toml:"tags" json:"tags"`
-	Workaround  string   `toml:"workaround" json:"workaround"`
-}
-
-func newCompiler() *termd.Compiler {
-	return &termd.Compiler{
-		Columns: 80,
-	}
-}
-
-// String implements the fmt.Stringer interface
-func (f errorSpec) String() string {
-	var header string
-	if len(f.Tags) > 0 {
-		header = fmt.Sprintf("# Error: **%s**, Tags: %v", f.Code, f.Tags)
-	} else {
-		header = fmt.Sprintf("# Error: **%s**", f.Code)
-	}
-
-	return newCompiler().Compile(fmt.Sprintf(`%s
-%s
-## Description
-%s
-## Workaround
-%s`, header, f.Error, f.Description, f.Workaround))
-}
-
 func searchError(args []string) error {
 	index, errStore, err := loadIndex()
 	if err != nil {
@@ -106,13 +75,13 @@ func searchError(args []string) error {
 	return nil
 }
 
-func loadIndex() (bleve.Index, map[string]*errorSpec, error) {
+func loadIndex() (bleve.Index, map[string]*spec.ErrorSpec, error) {
 	dir := os.Getenv(localdata.EnvNameComponentInstallDir)
 	if dir == "" {
 		return nil, nil, errors.New("component `doc` doesn't running in TiUP mode")
 	}
 
-	type tomlFile map[string]*errorSpec
+	type tomlFile map[string]*spec.ErrorSpec
 	indexPath := filepath.Join(dir, "index")
 
 	index, err := bleve.Open(indexPath)
@@ -133,7 +102,7 @@ func loadIndex() (bleve.Index, map[string]*errorSpec, error) {
 		}
 	}
 
-	errStore := map[string]*errorSpec{}
+	errStore := map[string]*spec.ErrorSpec{}
 
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {

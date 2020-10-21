@@ -677,6 +677,39 @@ func (pc *PDClient) GetLocationLabels() ([]string, error) {
 	return rc.LocationLabels, nil
 }
 
+// StoreList implements StoreLabelProvider
+func (pc *PDClient) StoreList() ([]string, error) {
+	r, err := pc.GetStores()
+	if err != nil {
+		return nil, err
+	}
+	addrs := []string{}
+	for _, s := range r.Stores {
+		addrs = append(addrs, s.Store.GetAddress())
+	}
+	return addrs, nil
+}
+
+// GetStoreLabels implements StoreLabelProvider
+func (pc *PDClient) GetStoreLabels(address string) (map[string]string, error) {
+	r, err := pc.GetStores()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, s := range r.Stores {
+		if address == s.Store.GetAddress() {
+			lbs := s.Store.GetLabels()
+			labels := map[string]string{}
+			for _, lb := range lbs {
+				labels[lb.GetKey()] = lb.GetValue()
+			}
+			return labels, nil
+		}
+	}
+	return nil, errors.Errorf("store %s not found", address)
+}
+
 // UpdateScheduleConfig updates the PD schedule config
 func (pc *PDClient) UpdateScheduleConfig(body io.Reader) error {
 	return pc.updateConfig(body, pdConfigSchedule)

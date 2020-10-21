@@ -60,8 +60,8 @@ bench:
 doc:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-doc ./components/doc
 
-err:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-err ./components/err
+errdoc:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-errdoc ./components/errdoc
 
 embed_cluster_ui:
 	cd cluster-ui && yarn && yarn build
