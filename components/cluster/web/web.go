@@ -128,7 +128,8 @@ func deployHandler(c *gin.Context) {
 	tmpfile.Close()
 
 	opt := cluster.DeployOptions{
-		User: req.GlobalLoginOptions.Username,
+		User:     req.GlobalLoginOptions.Username,
+		NoLabels: true,
 	}
 	if req.GlobalLoginOptions.Password != "" {
 		opt.UsePassword = true
@@ -311,7 +312,8 @@ func scaleOutClusterHandler(c *gin.Context) {
 	tmpfile.Close()
 
 	opt := cluster.ScaleOutOptions{
-		User: req.GlobalLoginOptions.Username,
+		User:     req.GlobalLoginOptions.Username,
+		NoLabels: true,
 	}
 	if req.GlobalLoginOptions.Password != "" {
 		opt.UsePassword = true
