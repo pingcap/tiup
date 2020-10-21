@@ -244,7 +244,8 @@ func errdoc(source, module string) ([]*errDecl, error) {
 		fset := token.NewFileSet()
 		file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 		if err != nil {
-			return err
+			// Ignore invalid source file
+			return nil
 		}
 		errNames := export(file)
 		if len(errNames) < 1 {
