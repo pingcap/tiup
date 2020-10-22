@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"bytes"
 	"encoding/json"
 	stderrors "errors"
 	"fmt"
@@ -28,6 +29,7 @@ import (
 	"time"
 
 	"github.com/cavaliercoder/grab"
+	"github.com/google/uuid"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/repository/model"
 	"github.com/pingcap/tiup/pkg/repository/store"
@@ -306,7 +308,62 @@ func (l *httpMirror) prepareURL(resource string) string {
 
 // Publish implements the model.Model interface
 func (l *httpMirror) Publish(manifest *v1manifest.Manifest, info model.ComponentInfo) error {
-	return nil
+	sid := uuid.New().String()
+
+	if info.Filename() != "" {
+		tarAddr := fmt.Sprintf("%s/api/v1/tarball/%s", l.Source(), sid)
+		resp, err := utils.PostFile(info, tarAddr, "file", info.Filename())
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode >= 300 {
+			return errors.Errorf("error on uplaod tarbal, server returns %d", resp.StatusCode)
+		}
+	}
+
+	payload, err := json.Marshal(manifest)
+	if err != nil {
+		return err
+	}
+	bodyBuf := bytes.NewBuffer(payload)
+	qpairs := []string{}
+	if info.Yanked() != nil {
+		qpairs = append(qpairs, fmt.Sprintf("%s=%t", "yanked", *info.Yanked()))
+	}
+	if info.Standalone() != nil {
+		qpairs = append(qpairs, fmt.Sprintf("%s=%t", "standalone", *info.Standalone()))
+	}
+	if info.Hidden() != nil {
+		qpairs = append(qpairs, fmt.Sprintf("%s=%t", "hidden", *info.Hidden()))
+	}
+	qstr := ""
+	if len(qpairs) > 0 {
+		qstr = "?" + strings.Join(qpairs, "&")
+	}
+	manifestAddr := fmt.Sprintf("%s/api/v1/component/%s/%s%s", l.Source(), sid, manifest.Signed.(*v1manifest.Component).ID, qstr)
+
+	resp, err := http.Post(manifestAddr, "text/json", bodyBuf)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 300 {
+		return nil
+	} else if resp.StatusCode == http.StatusConflict {
+		return errors.Errorf("Local component manifest is not new enough, update it first")
+	} else if resp.StatusCode == http.StatusForbidden {
+		return errors.Errorf("The server refused, make sure you have access to this component")
+	}
+
+	buf := new(strings.Builder)
+	if _, err := io.Copy(buf, resp.Body); err != nil {
+		return err
+	}
+
+	return fmt.Errorf("Unknow error from server, response body: %s", buf.String())
 }
 
 // Download implements the Mirror interface
