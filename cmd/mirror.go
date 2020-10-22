@@ -29,8 +29,8 @@ import (
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/model"
-	"github.com/pingcap/tiup/pkg/repository/remote"
 	ru "github.com/pingcap/tiup/pkg/repository/utils"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -229,7 +229,6 @@ func newMirrorSetCmd() *cobra.Command {
 // the `mirror modify` sub command
 func newMirrorModifyCmd() *cobra.Command {
 	var privPath string
-	endpoint := ""
 	desc := ""
 	standalone := false
 	hidden := false
@@ -242,53 +241,63 @@ func newMirrorModifyCmd() *cobra.Command {
 			if len(args) != 1 {
 				return cmd.Help()
 			}
+
+			component := args[0]
+
 			env := environment.GlobalEnv()
-			if privPath == "" {
-				privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
-			}
 
-			// Get the private key
-			f, err := os.Open(privPath)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-
-			ki := v1manifest.KeyInfo{}
-			if err := json.NewDecoder(f).Decode(&ki); err != nil {
-				return err
-			}
-
-			comp, ver := environment.ParseCompVersion(args[0])
+			comp, ver := environment.ParseCompVersion(component)
 			m, err := env.V1Repository().FetchComponentManifest(comp, true)
 			if err != nil {
 				return err
 			}
 
-			if endpoint == "" {
-				endpoint = environment.Mirror()
+			v1manifest.RenewManifest(m, time.Now())
+			m.Version++
+			if desc != "" {
+				m.Description = desc
 			}
-			e := remote.NewEditor(endpoint, comp).WithDesc(desc).WithVersion(ver.String())
+
 			flagSet := set.NewStringSet()
 			cmd.Flags().Visit(func(f *pflag.Flag) {
 				flagSet.Insert(f.Name)
 			})
-			if flagSet.Exist("standalone") {
-				e.Standalone(standalone)
-			}
-			if flagSet.Exist("hide") {
-				e.Hide(hidden)
-			}
-			if flagSet.Exist("yank") {
-				e.Yank(yanked)
+
+			publishInfo := &model.PublishInfo{}
+			if ver == "" {
+				if flagSet.Exist("standalone") {
+					publishInfo.Stand = &standalone
+				}
+				if flagSet.Exist("hide") {
+					publishInfo.Hide = &hidden
+				}
+				if flagSet.Exist("yank") {
+					publishInfo.Yank = &yanked
+				}
+			} else if flagSet.Exist("yank") {
+				if v0manifest.Version(ver).IsNightly() {
+					return errors.New("nightly version can't be yanked")
+				}
+				for p := range m.Platforms {
+					vi, ok := m.Platforms[p][ver.String()]
+					if !ok {
+						continue
+					}
+					vi.Yanked = yanked
+					m.Platforms[p][ver.String()] = vi
+				}
 			}
 
-			return e.Sign(&ki, m)
+			manifest, err := sign(privPath, m)
+			if err != nil {
+				return err
+			}
+
+			return env.V1Repository().Mirror().Publish(manifest, publishInfo)
 		},
 	}
 
 	cmd.Flags().StringVarP(&privPath, "key", "k", "", "private key path")
-	cmd.Flags().StringVarP(&endpoint, "endpoint", "", endpoint, "endpoint of the server")
 	cmd.Flags().StringVarP(&desc, "desc", "", desc, "description of the component")
 	cmd.Flags().BoolVarP(&standalone, "standalone", "", standalone, "can this component run directly")
 	cmd.Flags().BoolVarP(&hidden, "hide", "", hidden, "is this component visible in list")
@@ -346,7 +355,7 @@ func sign(privPath string, m v1manifest.ValidManifest) (*v1manifest.Manifest, er
 	return manifest, nil
 }
 
-func updateManifest(m *v1manifest.Component,
+func updateManifestForPublish(m *v1manifest.Component,
 	name, ver, entry, os, arch, desc string,
 	filehash v1manifest.FileHash) *v1manifest.Component {
 	initTime := time.Now()
@@ -393,7 +402,6 @@ func updateManifest(m *v1manifest.Component,
 // the `mirror publish` sub command
 func newMirrorPublishCmd() *cobra.Command {
 	var privPath string
-	endpoint := environment.Mirror()
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH
 	desc := ""
@@ -445,7 +453,7 @@ func newMirrorPublishCmd() *cobra.Command {
 				fmt.Println("This is not a new component, --standalone and --hide flag will be omited")
 			}
 
-			m = updateManifest(m, component, version, entry, goos, goarch, desc, v1manifest.FileHash{
+			m = updateManifestForPublish(m, component, version, entry, goos, goarch, desc, v1manifest.FileHash{
 				Hashes: hashes,
 				Length: uint(length),
 			})
@@ -463,7 +471,6 @@ func newMirrorPublishCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&goos, "os", "", goos, "the target operation system")
 	cmd.Flags().StringVarP(&goarch, "arch", "", goarch, "the target system architecture")
 	cmd.Flags().StringVarP(&desc, "desc", "", desc, "description of the component")
-	cmd.Flags().StringVarP(&endpoint, "endpoint", "", endpoint, "endpoint of the server")
 	cmd.Flags().BoolVarP(&standalone, "standalone", "", standalone, "can this component run directly")
 	cmd.Flags().BoolVarP(&hidden, "hide", "", hidden, "is this component invisible on listing")
 	return cmd
