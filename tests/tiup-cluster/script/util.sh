@@ -16,7 +16,6 @@ function instance_num() {
         client="--native-ssh"
     fi
 
-    tiup-cluster $client prune $name --yes
     count=$(tiup-cluster $client display $name | grep "Total nodes" | awk -F ' ' '{print $3}')
 
     echo $count
@@ -37,6 +36,7 @@ function wait_instance_num_reach() {
 
     for ((i=0;i<120;i++))
     do
+        tiup-cluster $client prune $name --yes
         count=$(instance_num $name $native_ssh)
         if [ "$count" == "$target_num" ]; then
             echo "instance number reach $target_num"
