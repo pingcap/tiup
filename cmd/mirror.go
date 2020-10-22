@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -27,10 +28,13 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
+	"github.com/pingcap/tiup/pkg/repository/model"
 	"github.com/pingcap/tiup/pkg/repository/remote"
+	ru "github.com/pingcap/tiup/pkg/repository/utils"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -78,6 +82,7 @@ of components or the repository itself.`,
 		newMirrorDelCompCmd(),
 		newMirrorGenkeyCmd(),
 		newMirrorCloneCmd(),
+		newMirrorMergeCmd(),
 		newMirrorPublishCmd(),
 		newMirrorSetCmd(),
 		newMirrorModifyCmd(),
@@ -291,6 +296,100 @@ func newMirrorModifyCmd() *cobra.Command {
 	return cmd
 }
 
+func loadPrivKey(privPath string) (*v1manifest.KeyInfo, error) {
+	env := environment.GlobalEnv()
+	if privPath == "" {
+		privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
+	}
+
+	// Get the private key
+	f, err := os.Open(privPath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	ki := v1manifest.KeyInfo{}
+	if err := json.NewDecoder(f).Decode(&ki); err != nil {
+		return nil, errors.Annotate(err, "decode key")
+	}
+
+	return &ki, nil
+}
+
+func sign(privPath string, m v1manifest.ValidManifest) (*v1manifest.Manifest, error) {
+	ki, err := loadPrivKey(privPath)
+	if err != nil {
+		return nil, err
+	}
+
+	kid, err := ki.ID()
+	if err != nil {
+		return nil, err
+	}
+
+	sig, err := ki.SignManifest(m)
+	if err != nil {
+		return nil, err
+	}
+
+	manifest := &v1manifest.Manifest{
+		Signatures: []v1manifest.Signature{
+			{
+				KeyID: kid,
+				Sig:   sig,
+			},
+		},
+		Signed: m,
+	}
+
+	return manifest, nil
+}
+
+func updateManifest(m *v1manifest.Component,
+	name, ver, entry, os, arch, desc string,
+	filehash v1manifest.FileHash) *v1manifest.Component {
+	initTime := time.Now()
+
+	// update manifest
+	if m == nil {
+		m = v1manifest.NewComponent(name, desc, initTime)
+	} else {
+		v1manifest.RenewManifest(m, initTime)
+		m.Version++
+		if desc != "" {
+			m.Description = desc
+		}
+	}
+
+	if strings.Contains(ver, version.NightlyVersion) {
+		m.Nightly = ver
+	}
+
+	// Remove history nightly
+	for plat := range m.Platforms {
+		for v := range m.Platforms[plat] {
+			if strings.Contains(v, version.NightlyVersion) && v != m.Nightly {
+				delete(m.Platforms[plat], v)
+			}
+		}
+	}
+
+	platformStr := fmt.Sprintf("%s/%s", os, arch)
+	if m.Platforms[platformStr] == nil {
+		m.Platforms[platformStr] = map[string]v1manifest.VersionItem{}
+	}
+
+	m.Platforms[platformStr][ver] = v1manifest.VersionItem{
+		Entry:    entry,
+		Released: initTime.Format(time.RFC3339),
+		URL:      fmt.Sprintf("/%s-%s-%s-%s.tar.gz", name, ver, os, arch),
+		FileHash: filehash,
+	}
+
+	return m
+}
+
 // the `mirror publish` sub command
 func newMirrorPublishCmd() *cobra.Command {
 	var privPath string
@@ -310,64 +409,53 @@ func newMirrorPublishCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
+			component, version, tarpath, entry := args[0], args[1], args[2], args[3]
+
 			if err := validatePlatform(goos, goarch); err != nil {
 				return err
 			}
 
-			env := environment.GlobalEnv()
-			if privPath == "" {
-				privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
-			}
-
-			// Get the private key
-			f, err := os.Open(privPath)
+			hashes, length, err := ru.HashFile(tarpath)
 			if err != nil {
 				return err
 			}
-			defer f.Close()
 
-			ki := v1manifest.KeyInfo{}
-			if err := json.NewDecoder(f).Decode(&ki); err != nil {
-				return err
+			tarfile, err := os.Open(args[2])
+			if err != nil {
+				return errors.Annotate(err, "open tarbal")
+			}
+			defer tarfile.Close()
+
+			publishInfo := &model.PublishInfo{
+				ComponentData: &model.TarInfo{tarfile, fmt.Sprintf("%s-%s-%s-%s.tar.gz", component, version, goos, goarch)},
 			}
 
 			flagSet := set.NewStringSet()
 			cmd.Flags().Visit(func(f *pflag.Flag) {
 				flagSet.Insert(f.Name)
 			})
-			m, err := env.V1Repository().FetchComponentManifest(args[0], true)
+			env := environment.GlobalEnv()
+			m, err := env.V1Repository().FetchComponentManifest(component, true)
 			if err != nil {
 				fmt.Printf("Fetch local manifest: %s\n", err.Error())
 				fmt.Printf("Failed to load component manifest, create a new one\n")
+				publishInfo.Stand = &standalone
+				publishInfo.Hide = &hidden
 			} else if flagSet.Exist("standalone") || flagSet.Exist("hide") {
 				fmt.Println("This is not a new component, --standalone and --hide flag will be omited")
 			}
 
-			t := remote.NewTransporter(endpoint, args[0], args[1], args[3]).WithDesc(desc).WithOS(goos).WithArch(goarch)
-			if m == nil && standalone {
-				t = t.Standalone()
-			}
-			if m == nil && hidden {
-				t = t.Hide()
-			}
+			m = updateManifest(m, component, version, entry, goos, goarch, desc, v1manifest.FileHash{
+				Hashes: hashes,
+				Length: uint(length),
+			})
 
-			if err := t.Open(args[2]); err != nil {
-				return err
-			}
-			defer t.Close()
-
-			if err := t.Upload(); err != nil {
-				fmt.Printf("Failed to upload component: %s\n", err.Error())
+			manifest, err := sign(privPath, m)
+			if err != nil {
 				return err
 			}
 
-			if err := t.Sign(&ki, m); err != nil {
-				fmt.Printf("Sign component manifest: %s\n", err.Error())
-				return err
-			}
-			fmt.Printf("Upload %s(%s) for platform %s/%s success\n", args[0], args[1], goos, goarch)
-
-			return nil
+			return env.V1Repository().Mirror().Publish(manifest, publishInfo)
 		},
 	}
 
@@ -603,6 +691,28 @@ from the repository in the future.`,
 func yankComp(repo, id, version string) error {
 	// TODO
 	return nil
+}
+
+// the `mirror merge` sub command
+func newMirrorMergeCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use: "merge <base> <mirror-dir-1> [mirror-dir-N]",
+		Example: `	tiup mirror merge tidb-community-v4.0.0 tidb-community-v4.0.1					# merge v4.0.1 into v4.0.0
+	tiup mirror merge tidb-community-v4.0.0 tidb-community-v4.0.1 tidb-community-v4.0.2		# merge v4.0.1 and v4.0.2 into v4.0.0`,
+		Short: "Merge two or more offline mirror",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) < 2 {
+				return cmd.Help()
+			}
+
+			base := args[0]
+			sources := args[1:]
+
+			return repository.MergeMirror(base, sources)
+		},
+	}
+
+	return cmd
 }
 
 // the `mirror clone` sub command

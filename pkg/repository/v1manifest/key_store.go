@@ -85,6 +85,10 @@ func (s *SignatureError) Error() string {
 // transitionRoot checks that signed is verified by signatures using newThreshold, and if so, updates the keys for the root
 // role in the key store.
 func (s *KeyStore) transitionRoot(signed []byte, newThreshold uint, expiry string, signatures []Signature, newKeys map[string]*KeyInfo) error {
+	if s == nil {
+		return nil
+	}
+
 	oldKeys, hasOldKeys := s.Load(ManifestTypeRoot)
 
 	err := s.AddKeys(ManifestTypeRoot, newThreshold, expiry, newKeys)

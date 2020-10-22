@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"encoding/json"
 	stderrors "errors"
 	"fmt"
 	"io"
@@ -28,6 +29,9 @@ import (
 
 	"github.com/cavaliercoder/grab"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/repository/model"
+	"github.com/pingcap/tiup/pkg/repository/store"
+	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/verbose"
 )
@@ -46,11 +50,13 @@ type (
 	// MirrorOptions is used to customize the mirror download options
 	MirrorOptions struct {
 		Progress DownloadProgress
+		Upstream string
 	}
 
 	// Mirror represents a repository mirror, which can be remote HTTP
 	// server or a local file system directory
 	Mirror interface {
+		model.Model
 		// Source returns the address of the mirror
 		Source() string
 		// Open initialize the mirror.
@@ -78,11 +84,13 @@ func NewMirror(mirror string, options MirrorOptions) Mirror {
 			options: options,
 		}
 	}
-	return &localFilesystem{rootPath: mirror}
+	return &localFilesystem{rootPath: mirror, upstream: options.Upstream}
 }
 
 type localFilesystem struct {
 	rootPath string
+	upstream string
+	keys     map[string]*v1manifest.KeyInfo
 }
 
 // Source implements the Mirror interface
@@ -99,6 +107,54 @@ func (l *localFilesystem) Open() error {
 	if !fi.IsDir() {
 		return errors.Errorf("local system mirror `%s` should be a directory", l.rootPath)
 	}
+
+	if utils.IsNotExist(filepath.Join(l.rootPath, "keys")) {
+		return nil
+	}
+
+	return l.loadKeys()
+}
+
+// load mirror keys
+func (l *localFilesystem) loadKeys() error {
+	l.keys = make(map[string]*v1manifest.KeyInfo)
+	return filepath.Walk(filepath.Join(l.rootPath, "keys"), func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			return nil
+		}
+		f, err := os.Open(path)
+		if err != nil {
+			return errors.Annotate(err, "open file while loadKeys")
+		}
+		defer f.Close()
+
+		ki := v1manifest.KeyInfo{}
+		if err := json.NewDecoder(f).Decode(&ki); err != nil {
+			return errors.Annotate(err, "decode key")
+		}
+
+		id, err := ki.ID()
+		if err != nil {
+			return err
+		}
+
+		l.keys[id] = &ki
+		return nil
+	})
+}
+
+// Publish implements the model.Model interface
+func (l *localFilesystem) Publish(manifest *v1manifest.Manifest, info model.ComponentInfo) error {
+	txn, err := store.New(l.rootPath, l.upstream).Begin()
+	if err != nil {
+		return err
+	}
+
+	if err := model.New(txn, l.keys).Publish(manifest, info); err != nil {
+		txn.Rollback()
+		return err
+	}
+
 	return nil
 }
 
@@ -246,6 +302,11 @@ func (l *httpMirror) prepareURL(resource string) string {
 	}
 
 	return url
+}
+
+// Publish implements the model.Model interface
+func (l *httpMirror) Publish(manifest *v1manifest.Manifest, info model.ComponentInfo) error {
+	return nil
 }
 
 // Download implements the Mirror interface

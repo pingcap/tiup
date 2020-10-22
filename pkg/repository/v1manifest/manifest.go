@@ -385,9 +385,9 @@ func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifes
 	}
 
 	err := keys.verifySignature(rawM.Signed, role.Base().Ty, rawM.Signatures, role.Base().Filename())
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
+	//if err != nil {
+	//	return nil, errors.Trace(err)
+	//}
 
 	m := &Manifest{
 		Signatures: rawM.Signatures,

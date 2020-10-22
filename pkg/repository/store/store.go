@@ -16,6 +16,8 @@ package store
 import (
 	"io"
 	"os"
+
+	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 )
 
 // Store represents the storage level
@@ -27,8 +29,8 @@ type Store interface {
 type FsTxn interface {
 	Write(filename string, reader io.Reader) error
 	Read(filename string) (io.ReadCloser, error)
-	WriteManifest(filename string, manifest interface{}) error
-	ReadManifest(filename string, manifest interface{}) error
+	WriteManifest(filename string, manifest *v1manifest.Manifest) error
+	ReadManifest(filename string, role v1manifest.ValidManifest) (*v1manifest.Manifest, error)
 	Stat(filename string) (os.FileInfo, error)
 	// ResetManifest should reset the manifest state
 	ResetManifest() error
@@ -36,7 +38,7 @@ type FsTxn interface {
 	Rollback() error
 }
 
-// NewStore returns a Store, curretly only qcloud supported
-func NewStore(root string, upstream string) Store {
-	return newQCloudStore(root, upstream)
+// New returns a Store, curretly only qcloud supported
+func New(root string, upstream string) Store {
+	return newLocalStore(root, upstream)
 }
