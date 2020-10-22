@@ -49,5 +49,6 @@ function wait_instance_num_reach() {
 
     echo "fail to wait instance number reach $target_num, retry num: $i"
     tiup-cluster $client display $name
+    tiup-cluster $client prune $name --yes
     exit -1
 }
