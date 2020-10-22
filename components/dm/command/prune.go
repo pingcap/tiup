@@ -80,7 +80,6 @@ func clearOutDatedEtcdInfo(clusterName string, metadata *spec.Metadata, opt oper
 		}
 	}
 
-	panic(len(registeredMasters) + len(registeredWorkers))
 	zap.L().Info("Outdated components needed to clear etcd info", zap.Strings("masters", mastersToDelete), zap.Strings("workers", workersToDelete))
 
 	errCh := make(chan error, len(existedMasters)+len(existedWorkers))
