@@ -15,7 +15,6 @@ package command
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/fatih/color"
 	perrs "github.com/pingcap/errors"
@@ -50,41 +49,11 @@ func newPruneCmd() *cobra.Command {
 	return cmd
 }
 
-func confirmTombstone(tombs []spec.InstanceSpec) error {
-	printTable := [][]string{}
-	printTable = append(printTable, []string{
-		"ID", "Role", "Host", "Main Port",
-	})
-
-	for _, inst := range tombs {
-		host, _ := inst.SSH()
-		role := inst.Role()
-		port := inst.GetMainPort()
-		id := fmt.Sprintf("%s:%d", host, port)
-
-		printTable = append(printTable, []string{
-			id, role, host, strconv.Itoa(port),
-		})
-	}
-
-	fmt.Println(color.HiYellowString("These instances will be destroyed:"))
-	cliutil.PrintTable(printTable, true)
-	return cliutil.PromptForConfirmOrAbortError(color.HiYellowString("Do you confirm this action? [y/N]:"))
-}
-
 func destroyTombstoneIfNeed(clusterName string, metadata *spec.ClusterMeta, opt operator.Options, skipConfirm bool) error {
 	topo := metadata.Topology
 
-	tombs := operator.NeedCheckTomebsome(topo)
-	if len(tombs) == 0 {
-		fmt.Println("There is no instance in tombstone state")
+	if !operator.NeedCheckTomebsome(topo) {
 		return nil
-	}
-
-	if !skipConfirm {
-		if err := confirmTombstone(tombs); err != nil {
-			return err
-		}
 	}
 
 	tlsCfg, err := topo.TLSConfig(tidbSpec.Path(clusterName, spec.TLSCertKeyDir))
@@ -111,6 +80,13 @@ func destroyTombstoneIfNeed(clusterName string, metadata *spec.ClusterMeta, opt 
 
 	if len(nodes) == 0 {
 		return nil
+	}
+
+	err = cliutil.PromptForConfirmOrAbortError(
+		color.HiYellowString(fmt.Sprintf("Will destroy these nodes: %v\nDo you confirm this action? [y/N]:", nodes)),
+	)
+	if err != nil {
+		return err
 	}
 
 	log.Infof("Start destroy Tombstone nodes: %v ...", nodes)

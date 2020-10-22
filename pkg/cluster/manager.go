@@ -599,13 +599,19 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	cliutil.PrintTable(clusterTable, true)
 	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
 
-	if _, ok := topo.(*spec.Specification); ok {
+	if t, ok := topo.(*spec.Specification); ok {
 		// Check if TiKV's label set correctly
 		pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
 		if lbs, err := pdClient.GetLocationLabels(); err != nil {
 			color.Yellow("\nWARN: get location labels from pd failed: %v", err)
 		} else if err := spec.CheckTiKVLocationLabels(lbs, pdClient); err != nil {
 			color.Yellow("\nWARN: there is something wrong with TiKV labels, which may cause data losing:\n%v", err)
+		}
+
+		// Check if there is some instance in tombstone state
+		nodes, _ := operator.DestroyTombstone(ctx, t, true /* returnNodesOnly */, opt, tlsCfg)
+		if len(nodes) != 0 {
+			color.Green("There is some nodes in state Tombstone, you can destroy them with the command `tiup cluster prune %s`", clusterName)
 		}
 	}
 

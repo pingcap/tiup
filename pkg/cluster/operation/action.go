@@ -136,31 +136,29 @@ func Stop(
 }
 
 // NeedCheckTomebsome return true if we need to check and destroy some node.
-func NeedCheckTomebsome(topo *spec.Specification) []spec.InstanceSpec {
-	tombs := []spec.InstanceSpec{}
-
+func NeedCheckTomebsome(topo *spec.Specification) bool {
 	for _, s := range topo.TiKVServers {
 		if s.Offline {
-			tombs = append(tombs, s)
+			return true
 		}
 	}
 	for _, s := range topo.TiFlashServers {
 		if s.Offline {
-			tombs = append(tombs, s)
+			return true
 		}
 	}
 	for _, s := range topo.PumpServers {
 		if s.Offline {
-			tombs = append(tombs, s)
+			return true
 		}
 	}
 	for _, s := range topo.Drainers {
 		if s.Offline {
-			tombs = append(tombs, s)
+			return true
 		}
 	}
 
-	return tombs
+	return false
 }
 
 // DestroyTombstone remove the tombstone node in spec and destroy them.
