@@ -82,11 +82,13 @@ func destroyTombstoneIfNeed(clusterName string, metadata *spec.ClusterMeta, opt 
 		return nil
 	}
 
-	err = cliutil.PromptForConfirmOrAbortError(
-		color.HiYellowString(fmt.Sprintf("Will destroy these nodes: %v\nDo you confirm this action? [y/N]:", nodes)),
-	)
-	if err != nil {
-		return err
+	if !skipConfirm {
+		err = cliutil.PromptForConfirmOrAbortError(
+			color.HiYellowString(fmt.Sprintf("Will destroy these nodes: %v\nDo you confirm this action? [y/N]:", nodes)),
+		)
+		if err != nil {
+			return err
+		}
 	}
 
 	log.Infof("Start destroy Tombstone nodes: %v ...", nodes)
