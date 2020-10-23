@@ -237,7 +237,7 @@ func ScaleInCluster(
 					return errors.Annotatef(err, "failed to destroy %s", component.Name())
 				}
 			} else {
-				log.Warnf(color.YellowString("The component `%s` will be destroyed when display cluster info when it become tombstone, maybe exists in several minutes or hours",
+				log.Warnf(color.YellowString("The component `%s` will become tombstone, maybe exists in several minutes or hours, after that you can use the prune command to clean it",
 					component.Name()))
 			}
 		}
