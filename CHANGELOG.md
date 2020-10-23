@@ -5,12 +5,12 @@ TiUP Changelog
 ### Improvements
 
 - Introduce a more safe way to cleanup tombstone nodes ([#858](https://github.com/pingcap/tiup/pull/858), [@lucklove](https://github.com/lucklove))
-  - When the user scale-in a TiKV server, it's data will not be deleted until he executes a display command, it's risky because there is no choise for user to confirm
+  - When an user `scale-in` a TiKV server, it's data is not deleted until the user executes a `display` command, it's risky because there is no choice for user to confirm
   - We have add a `prune` command for the cleanup stage, the display command will not cleanup tombstone instance any more
 - Skip auto-start the cluster before the scale-out action because there may be some damaged instance that can't be started ([#848](https://github.com/pingcap/tiup/pull/848), [@lucklove](https://github.com/lucklove))
-  - In this version, the user should make sure the cluster work correctly himself before he execute tiup cluster scale-out
+  - In this version, the user should make sure the cluster is working correctly by themselves before executing `scale-out`
 - Introduce a more graceful way to check TiKV labels ([#843](https://github.com/pingcap/tiup/pull/843), [@lucklove](https://github.com/lucklove))
-  - Before, we check TiKV labels from the config file of TiKV and PD servers, however, servers imported from tidb-ansible don't store labels in local config, this cause misinformation
+  - Before this change, we check TiKV labels from the config files of TiKV and PD servers, however, servers imported from tidb-ansible deployment don't store latest labels in local config, this causes inaccurate label information
   - After this we will fetch PD and TiKV labels with PD api in display command
 
 ### Fixes
@@ -19,7 +19,7 @@ TiUP Changelog
   - We found that while the cluster deployed with TLS supported, the ca.crt file was saved multi times in parallel, this may lead to the ca.crt file to be left empty
   - The influence of this issue is that the tiup client may not communicate with the cluster
 - Fix the issue that files copied by TiUP may have different mode with origin files ([#844](https://github.com/pingcap/tiup/pull/844), [@lucklove](https://github.com/lucklove))
-- Fix the issue that the tiup script doesn't update after scale-in PD ([#824](https://github.com/pingcap/tiup/pull/824), [@9547](https://github.com/9547))
+- Fix the issue that the tiup script not updated after `scale-in` PD ([#824](https://github.com/pingcap/tiup/pull/824), [@9547](https://github.com/9547))
 
 ## [1.2.0] 2020.09.29
 
