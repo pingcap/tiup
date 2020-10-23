@@ -124,6 +124,7 @@ func init() {
 		newExecCmd(),
 		newEditConfigCmd(),
 		newDisplayCmd(),
+		newPruneCmd(),
 		newReloadCmd(),
 		newUpgradeCmd(),
 		newPatchCmd(),

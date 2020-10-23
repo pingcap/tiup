@@ -136,27 +136,28 @@ func Stop(
 }
 
 // NeedCheckTomebsome return true if we need to check and destroy some node.
-func NeedCheckTomebsome(spec *spec.Specification) bool {
-	for _, s := range spec.TiKVServers {
+func NeedCheckTomebsome(topo *spec.Specification) bool {
+	for _, s := range topo.TiKVServers {
 		if s.Offline {
 			return true
 		}
 	}
-	for _, s := range spec.TiFlashServers {
+	for _, s := range topo.TiFlashServers {
 		if s.Offline {
 			return true
 		}
 	}
-	for _, s := range spec.PumpServers {
+	for _, s := range topo.PumpServers {
 		if s.Offline {
 			return true
 		}
 	}
-	for _, s := range spec.Drainers {
+	for _, s := range topo.Drainers {
 		if s.Offline {
 			return true
 		}
 	}
+
 	return false
 }
 
