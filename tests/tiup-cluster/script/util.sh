@@ -36,6 +36,7 @@ function wait_instance_num_reach() {
 
     for ((i=0;i<120;i++))
     do
+        tiup-cluster $client prune $name --yes
         count=$(instance_num $name $native_ssh)
         if [ "$count" == "$target_num" ]; then
             echo "instance number reach $target_num"
@@ -47,7 +48,7 @@ function wait_instance_num_reach() {
         sleep 1
     done
 
-    echo "fail to wait instance number reach $target_num, retry num: $i"
+    echo "fail to wait instance number reach $target_num, count $count, retry num: $i"
     tiup-cluster $client display $name
     exit -1
 }

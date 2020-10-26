@@ -44,10 +44,18 @@ func (f ErrorSpec) String() string {
 		header = fmt.Sprintf("# Error: **%s**", f.Code)
 	}
 
-	return newCompiler().Compile(fmt.Sprintf(`%s
-%s
-## Description
-%s
-## Workaround
-%s`, header, f.Error, f.Description, f.Workaround))
+	tmpl := header + "\n" + f.Error
+
+	description := f.Description
+	if description != "" {
+		tmpl += `## Description
+		` + description
+	}
+	workaround := f.Workaround
+	if workaround != "" {
+		tmpl += `## Workaround
+		` + workaround
+	}
+
+	return newCompiler().Compile(tmpl)
 }

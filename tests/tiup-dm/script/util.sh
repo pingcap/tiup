@@ -9,6 +9,7 @@ set -eu
 # coverage: 12.7% of statements in github.com/pingcap/tiup/components/dm/...
 function instance_num() {
 	name=$1
+
 	count=$(tiup-dm display $name | grep "Total nodes" | awk -F ' ' '{print $3}')
 
 	echo $count
@@ -23,6 +24,7 @@ function wait_instance_num_reach() {
 
 	for ((i=0;i<120;i++))
 	do
+		tiup-dm prune $name --yes
 		count=$(instance_num $name)
 		if [ "$count" == "$target_num" ]; then
 			echo "instance number reach $target_num"
@@ -34,7 +36,7 @@ function wait_instance_num_reach() {
 		sleep 1
 	done
 
-	echo "fail to wait instance number reach $target_num, retry num: $i"
+	echo "fail to wait instance number reach $target_num, count $count, retry num: $i"
 	tiup-dm display $name
 	exit -1
 }

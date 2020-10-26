@@ -14,15 +14,7 @@
 package command
 
 import (
-	"sync"
-	"time"
-
-	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/components/dm/spec"
-	"github.com/pingcap/tiup/pkg/cluster/api"
-	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 func newDisplayCmd() *cobra.Command {
@@ -39,85 +31,11 @@ func newDisplayCmd() *cobra.Command {
 
 			clusterName = args[0]
 
-			err := manager.Display(clusterName, gOpt)
-			if err != nil {
-				return perrs.AddStack(err)
-			}
-
-			metadata := new(spec.Metadata)
-			err = dmspec.Metadata(clusterName, metadata)
-			if err != nil {
-				return perrs.AddStack(err)
-			}
-
-			return clearOutDatedEtcdInfo(clusterName, metadata, gOpt)
+			return manager.Display(clusterName, gOpt)
 		},
 	}
 
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only display specified roles")
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only display specified nodes")
 	return cmd
-}
-
-func clearOutDatedEtcdInfo(clusterName string, metadata *spec.Metadata, opt operator.Options) error {
-	topo := metadata.Topology
-
-	existedMasters := make(map[string]struct{})
-	existedWorkers := make(map[string]struct{})
-	mastersToDelete := make([]string, 0)
-	workersToDelete := make([]string, 0)
-
-	for _, masterSpec := range topo.Masters {
-		existedMasters[masterSpec.Name] = struct{}{}
-	}
-	for _, workerSpec := range topo.Workers {
-		existedWorkers[workerSpec.Name] = struct{}{}
-	}
-
-	dmMasterClient := api.NewDMMasterClient(topo.GetMasterList(), 10*time.Second, nil)
-	registeredMasters, registeredWorkers, err := dmMasterClient.GetRegisteredMembers()
-	if err != nil {
-		return err
-	}
-
-	for _, master := range registeredMasters {
-		if _, ok := existedMasters[master]; !ok {
-			mastersToDelete = append(mastersToDelete, master)
-		}
-	}
-	for _, worker := range registeredWorkers {
-		if _, ok := existedWorkers[worker]; !ok {
-			workersToDelete = append(workersToDelete, worker)
-		}
-	}
-
-	zap.L().Info("Outdated components needed to clear etcd info", zap.Strings("masters", mastersToDelete), zap.Strings("workers", workersToDelete))
-
-	errCh := make(chan error, len(existedMasters)+len(existedWorkers))
-	var wg sync.WaitGroup
-
-	for _, master := range mastersToDelete {
-		master := master
-		wg.Add(1)
-		go func() {
-			errCh <- dmMasterClient.OfflineMaster(master, nil)
-			wg.Done()
-		}()
-	}
-	for _, worker := range workersToDelete {
-		worker := worker
-		wg.Add(1)
-		go func() {
-			errCh <- dmMasterClient.OfflineWorker(worker, nil)
-			wg.Done()
-		}()
-	}
-
-	wg.Wait()
-	if len(errCh) == 0 {
-		return nil
-	}
-
-	// return any one error
-	return <-errCh
 }
