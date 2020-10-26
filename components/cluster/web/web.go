@@ -178,7 +178,8 @@ func clustersHandler(c *gin.Context) {
 
 func clusterHandler(c *gin.Context) {
 	clusterName := c.Param("clusterName")
-	instInfos, err := manager.GetClusterTopology(clusterName, gOpt)
+	ctx := task.NewContext()
+	instInfos, err := manager.GetClusterTopology(ctx, clusterName, gOpt)
 	if err != nil {
 		_ = c.Error(err)
 		return

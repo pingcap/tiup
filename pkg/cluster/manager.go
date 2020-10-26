@@ -573,7 +573,8 @@ type InstInfo struct {
 
 // Display cluster meta and topology.
 func (m *Manager) Display(clusterName string, opt operator.Options) error {
-	clusterInstInfos, err := m.GetClusterTopology(clusterName, opt)
+	ctx := task.NewContext()
+	clusterInstInfos, err := m.GetClusterTopology(ctx, clusterName, opt)
 	if err != nil {
 		return err
 	}
@@ -648,7 +649,8 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 }
 
 // GetClusterTopology get the topology of the cluster.
-func (m *Manager) GetClusterTopology(clusterName string, opt operator.Options) ([]InstInfo, error) {
+// TODO: handle param: ctx
+func (m *Manager) GetClusterTopology(ctx *task.Context, clusterName string, opt operator.Options) ([]InstInfo, error) {
 	metadata, err := m.meta(clusterName)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
@@ -658,7 +660,6 @@ func (m *Manager) GetClusterTopology(clusterName string, opt operator.Options) (
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	ctx := task.NewContext()
 	err = ctx.SetSSHKeySet(m.specManager.Path(clusterName, "ssh", "id_rsa"),
 		m.specManager.Path(clusterName, "ssh", "id_rsa.pub"))
 	if err != nil {
