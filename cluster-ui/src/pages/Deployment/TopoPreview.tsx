@@ -74,6 +74,9 @@ export function genTopo(
         if (key === 'data_dir_prefix' && comp[key] !== undefined) {
           m['data_dir'] = comp.dataPathFull(globalDir)
         }
+        if (key === 'numa_node' && (comp as any)[key] !== undefined) {
+          m['numa_node'] = (comp as any)[key]
+        }
       }
 
       // location labels

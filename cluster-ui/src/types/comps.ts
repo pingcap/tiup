@@ -171,6 +171,7 @@ export const DEF_TIDB_STATUS_PORT = 10080
 export class TiDBComp extends BaseComp {
   port?: number
   status_port?: number
+  numa_node?: string
 
   constructor(machineID: string, for_scale_out: boolean) {
     super(machineID, 'TiDB', for_scale_out)
@@ -204,6 +205,7 @@ export const DEF_TIKV_STATUS_PORT = 20180
 export class TiKVComp extends BaseComp {
   port?: number
   status_port?: number
+  numa_node?: string
 
   constructor(machineID: string, for_scale_out: boolean) {
     super(machineID, 'TiKV', for_scale_out)
@@ -241,6 +243,7 @@ export class TiFlashComp extends BaseComp {
   flash_proxy_port?: number
   flash_proxy_status_port?: number
   metrics_port?: number
+  numa_node?: string
 
   constructor(machineID: string, for_scale_out: boolean) {
     super(machineID, 'TiFlash', for_scale_out)
@@ -280,6 +283,7 @@ export const DEF_PD_PEER_PORT = 2380
 export class PDComp extends BaseComp {
   client_port?: number
   peer_port?: number
+  numa_node?: string
 
   constructor(machineID: string, for_scale_out: boolean) {
     super(machineID, 'PD', for_scale_out)

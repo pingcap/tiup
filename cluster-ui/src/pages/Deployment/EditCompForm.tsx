@@ -36,7 +36,11 @@ function correctFormValues(values: any) {
       values[key] = undefined
       continue
     }
-    if (key === 'deploy_dir_prefix' || key === 'data_dir_prefix') {
+    if (
+      key === 'deploy_dir_prefix' ||
+      key === 'data_dir_prefix' ||
+      key === 'numa_node'
+    ) {
       continue
     }
     // kinds of port, number
@@ -171,6 +175,11 @@ export default function EditCompForm({
             <Input placeholder={DEF_ALERT_CLUSTER_PORT + ''} />
           </Form.Item>
         </>
+      )}
+      {['TiDB', 'TiKV', 'PD', 'TiFlash'].indexOf(componentType) !== -1 && (
+        <Form.Item label="NUMA Node" name="numa_node">
+          <Input />
+        </Form.Item>
       )}
       <Form.Item>
         <Button type="primary" htmlType="submit">
