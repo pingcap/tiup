@@ -93,10 +93,10 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 				compItem.Yanked = *info.Yanked()
 			}
 			if info.Hidden() != nil {
-				compItem.Yanked = *info.Hidden()
+				compItem.Hidden = *info.Hidden()
 			}
 			if info.Standalone() != nil {
-				compItem.Yanked = *info.Standalone()
+				compItem.Standalone = *info.Standalone()
 			}
 
 			signed.Components[componentName] = compItem

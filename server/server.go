@@ -18,44 +18,29 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"sync"
 
+	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/server/session"
-	"github.com/pingcap/tiup/server/store"
 )
 
 type server struct {
-	root     string
-	upstream string
-	keys     map[string]*v1manifest.KeyInfo
+	mirror   repository.Mirror
 	sm       session.Manager
+	upstream string
 }
 
 // NewServer returns a pointer to server
-func newServer(rootDir, upstream, indexKey, snapshotKey, timestampKey string) (*server, error) {
+func newServer(rootDir, upstream string) (*server, error) {
+	mirror := repository.NewMirror(rootDir, repository.MirrorOptions{Upstream: upstream})
+	if err := mirror.Open(); err != nil {
+		return nil, err
+	}
+
 	s := &server{
-		root:     rootDir,
+		mirror:   mirror,
+		sm:       session.New(),
 		upstream: upstream,
-		keys:     make(map[string]*v1manifest.KeyInfo),
-		sm:       session.New(store.NewStore(rootDir, upstream), new(sync.Map)),
-	}
-
-	kmap := map[string]string{
-		v1manifest.ManifestTypeIndex:     indexKey,
-		v1manifest.ManifestTypeSnapshot:  snapshotKey,
-		v1manifest.ManifestTypeTimestamp: timestampKey,
-	}
-
-	for ty, kfile := range kmap {
-		if kfile == "" {
-			continue
-		}
-		k, err := loadPrivateKey(kfile)
-		if err != nil {
-			return nil, err
-		}
-		s.keys[ty] = k
 	}
 
 	return s, nil
