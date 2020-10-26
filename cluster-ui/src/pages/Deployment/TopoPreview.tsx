@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react'
+import { Button, Space } from 'antd'
+import React, { useEffect, useMemo, useState } from 'react'
 import yaml from 'yaml'
 
 import { COMP_TYPES_ARR, CompMap, MachineMap, GlobalDir } from '_types'
@@ -8,6 +9,8 @@ interface ITopoPreviewProps {
   machines: MachineMap
   components: CompMap
   forScaleOut: boolean
+
+  onTopoYamlChange: (yaml: string) => void
 }
 
 export function genTopo(
@@ -106,23 +109,36 @@ export default function TopoPreview({
   machines,
   components,
   forScaleOut,
+  onTopoYamlChange,
 }: ITopoPreviewProps) {
-  const topo = useMemo(
-    () => genTopo(globalDir, machines, components, forScaleOut),
-    [globalDir, machines, components, forScaleOut]
+  const [topoYaml, setTopoYaml] = useState(() =>
+    yaml.stringify(genTopo(globalDir, machines, components, forScaleOut))
   )
+  const [editable, setEditable] = useState(false)
+
+  function handleTopoYamlChange(event: any) {
+    const val = event.target.value
+    setTopoYaml(val)
+    onTopoYamlChange(val)
+  }
+
+  useEffect(() => {
+    onTopoYamlChange(topoYaml)
+  }, [])
 
   return (
-    <div
-      style={{
-        maxHeight: 400,
-        padding: 12,
-        border: '1px solid #ccc',
-        overflowY: 'auto',
-      }}
-    >
-      {/* TODO: syntax highlight */}
-      <pre>{yaml.stringify(topo)}</pre>
+    <div>
+      <Space style={{ marginBottom: 8 }}>
+        <Button onClick={() => setEditable(true)}>手动微调</Button>
+      </Space>
+      <pre>
+        <textarea
+          disabled={!editable}
+          value={topoYaml}
+          onChange={handleTopoYamlChange}
+          style={{ width: '100%', height: 400, padding: 8 }}
+        />
+      </pre>
     </div>
   )
 }

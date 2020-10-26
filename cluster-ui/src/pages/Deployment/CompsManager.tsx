@@ -126,10 +126,8 @@ export default function CompsManager({
     [comps, setCompObjs]
   )
 
+  const [topoYaml, setTopoYaml] = useState('')
   function handleDeploy(values: any) {
-    const topoYaml = yaml.stringify(
-      genTopo(globalDir, machines, comps, forScaleOut)
-    )
     deployCluster({
       ...values,
       topo_yaml: topoYaml,
@@ -259,15 +257,17 @@ export default function CompsManager({
         title="Topology YAML"
         visible={previewYaml}
         okText={forScaleOut ? '开始扩容' : '开始部署'}
-        cancelText="返回修改"
+        cancelText="返回"
         onOk={startOperate}
         onCancel={() => setPreviewYaml(false)}
+        destroyOnClose={true}
       >
         <TopoPreview
           globalDir={globalDir}
           machines={machines}
           components={comps}
           forScaleOut={forScaleOut}
+          onTopoYamlChange={setTopoYaml}
         />
       </Modal>
     </Root>
