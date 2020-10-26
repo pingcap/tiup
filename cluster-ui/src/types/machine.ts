@@ -28,8 +28,8 @@ export class Machine {
   username?: string
   password?: string
 
+  zone?: string
   dc?: string
-  rack?: string
 
   constructor() {
     this.id = uniqid()

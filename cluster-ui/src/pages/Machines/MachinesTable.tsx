@@ -44,14 +44,14 @@ export default function MachinesTable({
       //   render: (text: any, rec: any) => (rec.isPubKeyAuth ? '是' : '否'),
       // },
       {
+        title: '标签: Zone',
+        key: 'label_zone',
+        dataIndex: 'zone',
+      },
+      {
         title: '标签: DC',
         key: 'label_dc',
         dataIndex: 'dc',
-      },
-      {
-        title: '标签: Rack',
-        key: 'label_rack',
-        dataIndex: 'rack',
       },
       {
         title: '操作',

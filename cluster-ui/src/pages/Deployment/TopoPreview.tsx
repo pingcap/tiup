@@ -33,6 +33,7 @@ export function genTopo(
         // },
         pd: {
           'replication.enable-placement-rules': true,
+          'replication.location-labels': ['zone', 'dc', 'host'],
         },
       },
     }
@@ -73,11 +74,12 @@ export function genTopo(
       }
 
       // location labels
-      if (compType === 'TiKV' && (targetMachine.dc || targetMachine.rack)) {
+      if (compType === 'TiKV') {
         m.config = {
           'server.labels': {
+            zone: targetMachine.zone || '',
             dc: targetMachine.dc || '',
-            rack: targetMachine.rack || '',
+            host: targetMachine.name || targetMachine.id,
           },
         }
       }

@@ -223,10 +223,10 @@ export default function MachineForm({
         </Collapse.Panel>
 
         <Collapse.Panel key="advance" header="高级配置">
-          <Form.Item label="位置标签: DC" name="dc">
+          <Form.Item label="位置标签: Zone" name="zone">
             <Input />
           </Form.Item>
-          <Form.Item label="位置标签: Rack" name="rack">
+          <Form.Item label="位置标签: DC" name="dc">
             <Input />
           </Form.Item>
         </Collapse.Panel>
