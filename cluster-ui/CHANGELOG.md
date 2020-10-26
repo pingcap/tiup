@@ -1,5 +1,10 @@
 # TiUP Cluster UI Changelog
 
+## 2020.10.26
+
+- Enable manually edit the topo yaml configuration
+- Support config the numa_node option for TiDB/TiKV/PD/TiFlash
+
 ## 2020.10.21
 
 - Skip check TiKV location labels when deploying or scaling out to enable deploy multiple TiKV instances in a same host
