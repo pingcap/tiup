@@ -1,5 +1,5 @@
 import { Button, Space } from 'antd'
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import yaml from 'yaml'
 
 import { COMP_TYPES_ARR, CompMap, MachineMap, GlobalDir } from '_types'
@@ -127,6 +127,7 @@ export default function TopoPreview({
 
   useEffect(() => {
     onTopoYamlChange(topoYaml)
+    // eslint-disable-next-line
   }, [])
 
   return (
