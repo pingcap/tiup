@@ -21,11 +21,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/blevesearch/bleve/search/query"
-
 	"github.com/BurntSushi/toml"
 	"github.com/blevesearch/bleve"
 	_ "github.com/blevesearch/bleve/index/store/goleveldb"
+	"github.com/blevesearch/bleve/search/query"
 	"github.com/pingcap/tiup/components/errdoc/spec"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/spf13/cobra"
