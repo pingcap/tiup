@@ -84,6 +84,7 @@ of components or the repository itself.`,
 		newMirrorPublishCmd(),
 		newMirrorSetCmd(),
 		newMirrorModifyCmd(),
+		newMirrorIntroduceCmd(),
 	)
 
 	return cmd
@@ -224,6 +225,45 @@ func newMirrorSetCmd() *cobra.Command {
 	return cmd
 }
 
+// the `mirror introduce` sub command
+func newMirrorIntroduceCmd() *cobra.Command {
+	name := ""
+	privPath := ""
+
+	cmd := &cobra.Command{
+		Use:   "introduce <id>",
+		Short: "introduce a new owner",
+		Long:  "introduce a new owner to current mirror",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) < 1 {
+				return cmd.Help()
+			}
+
+			id := args[0]
+			if name == "" {
+				name = id
+			}
+
+			privKey, err := loadPrivKey(privPath)
+			if err != nil {
+				return err
+			}
+			pubKey, err := privKey.Public()
+			if err != nil {
+				return err
+			}
+
+			env := environment.GlobalEnv()
+			return env.V1Repository().Mirror().Introduce(id, name, pubKey)
+		},
+	}
+
+	cmd.Flags().StringVarP(&name, "name", "n", "", "the name of the owner, default: id of the owner")
+	cmd.Flags().StringVarP(&privPath, "key", "k", "", "private key path")
+
+	return cmd
+}
+
 // the `mirror modify` sub command
 func newMirrorModifyCmd() *cobra.Command {
 	var privPath string
@@ -233,8 +273,9 @@ func newMirrorModifyCmd() *cobra.Command {
 	yanked := false
 
 	cmd := &cobra.Command{
-		Use:  "modify <component>[:version] [flags]",
-		Long: "modify component attributes (hidden, standalone, yanked)",
+		Use:   "modify <component>[:version] [flags]",
+		Short: "modify published component",
+		Long:  "modify component attributes (hidden, standalone, yanked)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()

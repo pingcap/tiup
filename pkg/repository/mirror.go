@@ -160,6 +160,21 @@ func (l *localFilesystem) Publish(manifest *v1manifest.Manifest, info model.Comp
 	return nil
 }
 
+// Introduce implements the model.Model interface
+func (l *localFilesystem) Introduce(id, name string, key *v1manifest.KeyInfo) error {
+	txn, err := store.New(l.rootPath, l.upstream).Begin()
+	if err != nil {
+		return err
+	}
+
+	if err := model.New(txn, l.keys).Introduce(id, name, key); err != nil {
+		txn.Rollback()
+		return err
+	}
+
+	return nil
+}
+
 // Download implements the Mirror interface
 func (l *localFilesystem) Download(resource, targetDir string) error {
 	reader, err := l.Fetch(resource, 0)
@@ -306,6 +321,11 @@ func (l *httpMirror) prepareURL(resource string) string {
 	return url
 }
 
+// Introduce implements the model.Model interface
+func (l *httpMirror) Introduce(id, name string, key *v1manifest.KeyInfo) error {
+	return errors.Errorf("introduce a fresher via the internet is not allowd, please set you mirror to a local one")
+}
+
 // Publish implements the model.Model interface
 func (l *httpMirror) Publish(manifest *v1manifest.Manifest, info model.ComponentInfo) error {
 	sid := uuid.New().String()
@@ -433,6 +453,11 @@ func (l *MockMirror) Download(resource, targetDir string) error {
 	defer file.Close()
 	_, err = file.Write([]byte(content))
 	return err
+}
+
+// Introduce implements the model.Model interface
+func (l *MockMirror) Introduce(id, name string, key *v1manifest.KeyInfo) error {
+	return nil
 }
 
 // Publish implements the Mirror interface

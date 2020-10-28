@@ -29,6 +29,8 @@ import (
 type Model interface {
 	// Publish push a new component to mirror or modify an exists component
 	Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
+	// Introduce add a new owner to mirror
+	Introduce(id, name string, key *v1manifest.KeyInfo) error
 }
 
 type model struct {
@@ -41,6 +43,75 @@ func New(txn store.FsTxn, keys map[string]*v1manifest.KeyInfo) Model {
 	return &model{txn, keys}
 }
 
+// Introduce implements Model
+func (m *model) Introduce(id, name string, key *v1manifest.KeyInfo) error {
+	initTime := time.Now()
+
+	keyID, err := key.ID()
+	if err != nil {
+		return err
+	}
+
+	return utils.RetryUntil(func() error {
+		var indexFileVersion *v1manifest.FileVersion
+		if err := m.updateIndexManifest(initTime, func(im *v1manifest.Manifest) (*v1manifest.Manifest, error) {
+			signed := im.Signed.(*v1manifest.Index)
+
+			for oid, owner := range signed.Owners {
+				if oid == id {
+					return nil, errors.Errorf("owner %s exists", id)
+				}
+
+				for kid := range owner.Keys {
+					if kid == keyID {
+						return nil, errors.Errorf("key %s exists", keyID)
+					}
+				}
+			}
+
+			signed.Owners[id] = v1manifest.Owner{
+				Name: name,
+				Keys: map[string]*v1manifest.KeyInfo{
+					keyID: key,
+				},
+				// TODO: support configable threshold
+				Threshold: 1,
+			}
+
+			indexFileVersion = &v1manifest.FileVersion{Version: signed.Version + 1}
+			return im, nil
+		}); err != nil {
+			return err
+		}
+
+		if indexFi, err := m.txn.Stat(fmt.Sprintf("%d.index.json", indexFileVersion.Version)); err == nil {
+			indexFileVersion.Length = uint(indexFi.Size())
+		} else {
+			return err
+		}
+
+		if err := m.updateSnapshotManifest(initTime, func(om *v1manifest.Manifest) *v1manifest.Manifest {
+			signed := om.Signed.(*v1manifest.Snapshot)
+			if indexFileVersion != nil {
+				signed.Meta["/index.json"] = *indexFileVersion
+			}
+			return om
+		}); err != nil {
+			return err
+		}
+
+		// Update timestamp.json and signature
+		if err := m.updateTimestampManifest(initTime); err != nil {
+			return err
+		}
+
+		return m.txn.Commit()
+	}, func(err error) bool {
+		return err == store.ErrorFsCommitConflict && m.txn.ResetManifest() == nil
+	})
+}
+
+// Publish implements Model
 func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error {
 	signed := manifest.Signed.(*v1manifest.Component)
 	initTime := time.Now()
@@ -58,7 +129,7 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 
 		var indexFileVersion *v1manifest.FileVersion
 		var owner *v1manifest.Owner
-		if err := m.updateIndexManifest(initTime, func(im *v1manifest.Manifest) *v1manifest.Manifest {
+		if err := m.updateIndexManifest(initTime, func(im *v1manifest.Manifest) (*v1manifest.Manifest, error) {
 			// We only update index.json when it's a new component
 			// or the yanked, standalone, hidden fileds changed
 			var (
@@ -74,7 +145,7 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 				owner = &o
 				if info.Yanked() == nil && info.Hidden() == nil && info.Standalone() == nil {
 					// No changes on index.json
-					return nil
+					return nil, nil
 				}
 			} else {
 				var ownerID string
@@ -101,7 +172,7 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 
 			signed.Components[componentName] = compItem
 			indexFileVersion = &v1manifest.FileVersion{Version: signed.Version + 1}
-			return im
+			return im, nil
 		}); err != nil {
 			return err
 		}
@@ -177,7 +248,7 @@ func (m *model) updateComponentManifest(manifest *v1manifest.Manifest) error {
 	return m.txn.WriteManifest(fmt.Sprintf("%d.%s.json", signed.Version, signed.ID), manifest)
 }
 
-func (m *model) updateIndexManifest(initTime time.Time, f func(*v1manifest.Manifest) *v1manifest.Manifest) error {
+func (m *model) updateIndexManifest(initTime time.Time, f func(*v1manifest.Manifest) (*v1manifest.Manifest, error)) error {
 	snap, err := m.readSnapshotManifest()
 	if err != nil {
 		return err
@@ -189,7 +260,10 @@ func (m *model) updateIndexManifest(initTime time.Time, f func(*v1manifest.Manif
 	if err != nil {
 		return err
 	}
-	manifest := f(last)
+	manifest, err := f(last)
+	if err != nil {
+		return err
+	}
 	if manifest == nil {
 		return nil
 	}
