@@ -43,18 +43,6 @@ type CloneOptions struct {
 	Prefix     bool
 }
 
-// MergeMirror merges two or more mirrors
-func MergeMirror(base string, sources []string) error {
-	if utils.IsNotExist(base) {
-		return errors.Errorf("base mirror(%s) not exists", base)
-	}
-	if utils.IsNotExist(path.Join(base, "keys")) {
-		return errors.Errorf("keys missing for mirror %s, please re-download this mirror", base)
-	}
-
-	return nil
-}
-
 // CloneMirror clones a local mirror from the remote repository
 func CloneMirror(repo *V1Repository,
 	components []string,

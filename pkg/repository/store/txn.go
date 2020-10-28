@@ -125,7 +125,7 @@ func (t *localTxn) ReadManifest(filename string, role v1manifest.ValidManifest) 
 	}
 	defer wc.Close()
 
-	return v1manifest.ReadManifest(wc, role, nil)
+	return v1manifest.ReadNoVerify(wc, role)
 }
 
 func (t *localTxn) ResetManifest() error {

@@ -153,6 +153,7 @@ func RootManifestFilename(version uint) string {
 func (s *SignedBase) Filename() string {
 	fname := ManifestsConfig[s.Ty].Filename
 	if fname == "" {
+		panic(s.Ty)
 		panic("Unreachable")
 	}
 	return fname
@@ -360,11 +361,11 @@ func ReadComponentManifest(input io.Reader, com *Component, item *ComponentItem,
 
 // ReadNoVerify will read role from input and will not do any validation or verification. It is very dangerous to use
 // this function and it should only be used to read trusted data from local storage.
-func ReadNoVerify(input io.Reader, role ValidManifest) error {
+func ReadNoVerify(input io.Reader, role ValidManifest) (*Manifest, error) {
 	decoder := json.NewDecoder(input)
 	var m Manifest
 	m.Signed = role
-	return decoder.Decode(&m)
+	return &m, decoder.Decode(&m)
 }
 
 // ReadManifest reads a manifest from input and validates it, the result is stored in role, which must be a pointer type.
@@ -385,9 +386,9 @@ func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifes
 	}
 
 	err := keys.verifySignature(rawM.Signed, role.Base().Ty, rawM.Signatures, role.Base().Filename())
-	//if err != nil {
-	//	return nil, errors.Trace(err)
-	//}
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
 
 	m := &Manifest{
 		Signatures: rawM.Signatures,

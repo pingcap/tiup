@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -34,7 +33,6 @@ import (
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
-	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -78,7 +76,6 @@ of components or the repository itself.`,
 		newMirrorOwnerCmd(),
 		newMirrorCompCmd(),
 		newMirrorAddCompCmd(),
-		newMirrorYankCompCmd(),
 		newMirrorDelCompCmd(),
 		newMirrorGenkeyCmd(),
 		newMirrorCloneCmd(),
@@ -326,77 +323,46 @@ func loadPrivKey(privPath string) (*v1manifest.KeyInfo, error) {
 	return &ki, nil
 }
 
-func sign(privPath string, m v1manifest.ValidManifest) (*v1manifest.Manifest, error) {
+func loadPrivKeys(keysDir string) (map[string]*v1manifest.KeyInfo, error) {
+	keys := map[string]*v1manifest.KeyInfo{}
+
+	err := filepath.Walk(keysDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		ki, err := loadPrivKey(path)
+		if err != nil {
+			return err
+		}
+
+		id, err := ki.ID()
+		if err != nil {
+			return err
+		}
+
+		keys[id] = ki
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return keys, nil
+}
+
+func sign(privPath string, signed v1manifest.ValidManifest) (*v1manifest.Manifest, error) {
 	ki, err := loadPrivKey(privPath)
 	if err != nil {
 		return nil, err
 	}
 
-	kid, err := ki.ID()
-	if err != nil {
-		return nil, err
-	}
-
-	sig, err := ki.SignManifest(m)
-	if err != nil {
-		return nil, err
-	}
-
-	manifest := &v1manifest.Manifest{
-		Signatures: []v1manifest.Signature{
-			{
-				KeyID: kid,
-				Sig:   sig,
-			},
-		},
-		Signed: m,
-	}
-
-	return manifest, nil
-}
-
-func updateManifestForPublish(m *v1manifest.Component,
-	name, ver, entry, os, arch, desc string,
-	filehash v1manifest.FileHash) *v1manifest.Component {
-	initTime := time.Now()
-
-	// update manifest
-	if m == nil {
-		m = v1manifest.NewComponent(name, desc, initTime)
-	} else {
-		v1manifest.RenewManifest(m, initTime)
-		m.Version++
-		if desc != "" {
-			m.Description = desc
-		}
-	}
-
-	if strings.Contains(ver, version.NightlyVersion) {
-		m.Nightly = ver
-	}
-
-	// Remove history nightly
-	for plat := range m.Platforms {
-		for v := range m.Platforms[plat] {
-			if strings.Contains(v, version.NightlyVersion) && v != m.Nightly {
-				delete(m.Platforms[plat], v)
-			}
-		}
-	}
-
-	platformStr := fmt.Sprintf("%s/%s", os, arch)
-	if m.Platforms[platformStr] == nil {
-		m.Platforms[platformStr] = map[string]v1manifest.VersionItem{}
-	}
-
-	m.Platforms[platformStr][ver] = v1manifest.VersionItem{
-		Entry:    entry,
-		Released: initTime.Format(time.RFC3339),
-		URL:      fmt.Sprintf("/%s-%s-%s-%s.tar.gz", name, ver, os, arch),
-		FileHash: filehash,
-	}
-
-	return m
+	return v1manifest.SignManifest(signed, ki)
 }
 
 // the `mirror publish` sub command
@@ -453,7 +419,7 @@ func newMirrorPublishCmd() *cobra.Command {
 				fmt.Println("This is not a new component, --standalone and --hide flag will be omited")
 			}
 
-			m = updateManifestForPublish(m, component, version, entry, goos, goarch, desc, v1manifest.FileHash{
+			m = repository.UpdateManifestForPublish(m, component, version, entry, goos, goarch, desc, v1manifest.FileHash{
 				Hashes: hashes,
 				Length: uint(length),
 			})
@@ -668,54 +634,40 @@ func createOwner(repo, id, name string) error {
 	return nil
 }
 
-// the `mirror yank` sub command
-func newMirrorYankCompCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "yank <component> [version]",
-		Short: "Yank a component in the repository",
-		Long: `Yank a component in the repository. If version is not specified, all versions
-of the given component will be yanked.
-A yanked component is still in the repository, but not visible to client, and is
-no longer considered stable to use. A yanked component is expected to be removed
-from the repository in the future.`,
-		Hidden: true, // WIP, remove when it becomes working and stable
-		RunE: func(cmd *cobra.Command, args []string) error {
-			compVer := ""
-			switch len(args) {
-			case 2:
-				compVer = args[1]
-			default:
-				return cmd.Help()
-			}
-
-			return yankComp(repoPath, args[0], compVer)
-		},
-	}
-
-	return cmd
-}
-
-func yankComp(repo, id, version string) error {
-	// TODO
-	return nil
-}
-
 // the `mirror merge` sub command
 func newMirrorMergeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "merge <base> <mirror-dir-1> [mirror-dir-N]",
-		Example: `	tiup mirror merge tidb-community-v4.0.0 tidb-community-v4.0.1					# merge v4.0.1 into v4.0.0
-	tiup mirror merge tidb-community-v4.0.0 tidb-community-v4.0.1 tidb-community-v4.0.2		# merge v4.0.1 and v4.0.2 into v4.0.0`,
+		Example: `	tiup mirror merge tidb-community-v4.0.1					# merge v4.0.1 into current mirror
+	tiup mirror merge tidb-community-v4.0.1 tidb-community-v4.0.2		# merge v4.0.1 and v4.0.2 into current mirror`,
 		Short: "Merge two or more offline mirror",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) < 2 {
+			if len(args) < 1 {
 				return cmd.Help()
 			}
 
-			base := args[0]
-			sources := args[1:]
+			sources := args
 
-			return repository.MergeMirror(base, sources)
+			env := environment.GlobalEnv()
+			baseMirror := env.V1Repository().Mirror()
+
+			sourceMirrors := []repository.Mirror{}
+			for _, source := range sources {
+				sourceMirror := repository.NewMirror(source, repository.MirrorOptions{})
+				if err := sourceMirror.Open(); err != nil {
+					return err
+				}
+				defer sourceMirror.Close()
+
+				sourceMirrors = append(sourceMirrors, sourceMirror)
+			}
+
+			keys, err := loadPrivKeys(env.Profile().Path(localdata.KeyInfoParentDir))
+			if err != nil {
+				return err
+			}
+
+			return repository.MergeMirror(keys, baseMirror, sourceMirrors...)
 		},
 	}
 

@@ -435,6 +435,11 @@ func (l *MockMirror) Download(resource, targetDir string) error {
 	return err
 }
 
+// Publish implements the Mirror interface
+func (l *MockMirror) Publish(manifest *v1manifest.Manifest, info model.ComponentInfo) error {
+	return nil
+}
+
 // Fetch implements Mirror.
 func (l *MockMirror) Fetch(resource string, maxSize int64) (io.ReadCloser, error) {
 	content, ok := l.Resources[resource]
