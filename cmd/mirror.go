@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -596,6 +597,9 @@ current working directory (".") will be used.`,
 				return errors.Errorf("the target path '%s' is not an empty directory", repoPath)
 			}
 
+			if keyDir == "" {
+				keyDir = path.Join(repoPath, "keys")
+			}
 			return initRepo(repoPath, keyDir)
 		},
 	}
