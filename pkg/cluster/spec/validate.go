@@ -652,8 +652,8 @@ func (s *Specification) dirConflictsDetect() error {
 // prefix, useful to find potential path conflicts
 func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 	dirTypes := []string{
-		"DataDir",
 		"DeployDir",
+		"DataDir",
 		"LogDir",
 	}
 
@@ -663,6 +663,14 @@ func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 	topoSpec := reflect.ValueOf(s).Elem()
 	dirPrefix = Abs(s.GlobalOptions.User, dirPrefix)
 
+	addHostDir := func(host, deployDir, dir string) {
+		if !strings.HasPrefix(dir, "/") {
+			dir = filepath.Join(deployDir, dir)
+		}
+		dir = Abs(s.GlobalOptions.User, dir)
+		dirStats[host+dir]++
+	}
+
 	for i := 0; i < topoSpec.NumField(); i++ {
 		if isSkipField(topoSpec.Field(i)) {
 			continue
@@ -671,21 +679,28 @@ func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
 			compSpec := compSpecs.Index(index)
-			// Directory conflicts
+			deployDir := compSpec.FieldByName("DeployDir").String()
+			host := compSpec.FieldByName("Host").String()
+
 			for _, dirType := range dirTypes {
 				if j, found := findField(compSpec, dirType); found {
 					dir := compSpec.Field(j).String()
-					host := compSpec.FieldByName("Host").String()
 
 					switch dirType { // the same as in instance.go for (*instance)
+					case "DeployDir":
+						addHostDir(host, deployDir, "")
 					case "DataDir":
-						deployDir := compSpec.FieldByName("DeployDir").String()
 						// the default data_dir is relative to deploy_dir
-						if dir != "" && !strings.HasPrefix(dir, "/") {
-							dir = filepath.Join(deployDir, dir)
+						if dir == "" {
+							addHostDir(host, deployDir, dir)
+							continue
+						}
+						for _, dataDir := range strings.Split(dir, ",") {
+							if dataDir != "" {
+								addHostDir(host, deployDir, dataDir)
+							}
 						}
 					case "LogDir":
-						deployDir := compSpec.FieldByName("DeployDir").String()
 						field := compSpec.FieldByName("LogDir")
 						if field.IsValid() {
 							dir = field.Interface().(string)
@@ -694,12 +709,8 @@ func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 						if dir == "" {
 							dir = "log"
 						}
-						if !strings.HasPrefix(dir, "/") {
-							dir = filepath.Join(deployDir, dir)
-						}
+						addHostDir(host, deployDir, dir)
 					}
-					dir = Abs(s.GlobalOptions.User, dir)
-					dirStats[host+dir]++
 				}
 			}
 		}

@@ -116,7 +116,7 @@ global:
   user: "test1"
   ssh_port: 220
   deploy_dir: "test-deploy"
-  data_dir: "test-data" 
+  data_dir: "test-data"
 tidb_servers:
   - host: 172.16.5.138
     port: 1234
@@ -699,4 +699,50 @@ tikv_servers:
 	c.Assert(err, IsNil)
 	err = CheckTiKVLabels([]string{"zone", "host"}, &topo)
 	c.Assert(err, IsNil)
+}
+
+func (s *metaSuiteTopo) TestCountDirMultiPath(c *C) {
+	topo := Specification{}
+
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+tiflash_servers:
+  - host: 172.19.0.104
+    data_dir: "/home/tidb/birdstorm/data1,/home/tidb/birdstorm/data3"
+`), &topo)
+	c.Assert(err, IsNil)
+	cnt := topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data1")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data2")
+	c.Assert(cnt, Equals, 0)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data3")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm")
+	c.Assert(cnt, Equals, 2)
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+tiflash_servers:
+  - host: 172.19.0.104
+    data_dir: "birdstorm/data1,/birdstorm/data3"
+`), &topo)
+	c.Assert(err, IsNil)
+	cnt = topo.CountDir("172.19.0.104", "/home/test1/test-deploy/tiflash-9000/birdstorm/data1")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.19.0.104", "/birdstorm/data3")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data3")
+	c.Assert(cnt, Equals, 0)
+	cnt = topo.CountDir("172.19.0.104", "/home/test1/test-deploy/tiflash-9000/birdstorm/data3")
+	c.Assert(cnt, Equals, 0)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm")
+	c.Assert(cnt, Equals, 0)
+	cnt = topo.CountDir("172.19.0.104", "/birdstorm")
+	c.Assert(cnt, Equals, 1)
 }
