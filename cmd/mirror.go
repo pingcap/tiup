@@ -244,6 +244,7 @@ func newMirrorIntroduceCmd() *cobra.Command {
 				name = id
 			}
 
+			// the privPath can point to a public key becase the Public method of KeyInfo works on both priv and pub key
 			privKey, err := loadPrivKey(privPath)
 			if err != nil {
 				return err
@@ -259,7 +260,7 @@ func newMirrorIntroduceCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "the name of the owner, default: id of the owner")
-	cmd.Flags().StringVarP(&privPath, "key", "k", "", "private key path")
+	cmd.Flags().StringVarP(&privPath, "key", "k", "", "private/public key path of the owner")
 
 	return cmd
 }
@@ -520,15 +521,11 @@ func newMirrorGenkeyCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var ki *v1manifest.KeyInfo
+			var err error
 			if showPublic {
-				f, err := os.Open(privPath)
+				ki, err = loadPrivKey(privPath)
 				if err != nil {
-					return err
-				}
-				defer f.Close()
-
-				ki := v1manifest.KeyInfo{}
-				if err := json.NewDecoder(f).Decode(&ki); err != nil {
 					return err
 				}
 				pki, err := ki.Public()
@@ -545,55 +542,41 @@ func newMirrorGenkeyCmd() *cobra.Command {
 				}
 
 				fmt.Printf("KeyID: %s\nKeyContent: \n%s\n", id, string(content))
-
-				// TODO: suggest key type from input, there will also be owner keys
-				if saveKey {
-					pubKey, err := ki.Public()
-					if err != nil {
-						return err
-					}
-					if err = v1manifest.SaveKeyInfo(pubKey, "root", ""); err != nil {
-						return err
-					}
-					fmt.Printf("public key have been write to current working dir\n")
+			} else {
+				if utils.IsExist(privPath) {
+					fmt.Println("Key already exists, skipped")
+					return nil
 				}
-				return nil
-			}
 
-			if utils.IsExist(privPath) {
-				fmt.Println("Key already exists, skipped")
-				return nil
-			}
-
-			key, err := v1manifest.GenKeyInfo()
-			if err != nil {
-				return err
-			}
-
-			f, err := os.Create(privPath)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-
-			// set private key permission
-			if err = f.Chmod(0600); err != nil {
-				return err
-			}
-
-			if err := json.NewEncoder(f).Encode(key); err != nil {
-				return err
-			}
-
-			fmt.Printf("private key have been write to %s\n", privPath)
-
-			// TODO: suggest key type from input, there will also be owner keys
-			if saveKey {
-				pubKey, err := key.Public()
+				ki, err = v1manifest.GenKeyInfo()
 				if err != nil {
 					return err
 				}
-				if err = v1manifest.SaveKeyInfo(pubKey, "root", ""); err != nil {
+
+				f, err := os.Create(privPath)
+				if err != nil {
+					return err
+				}
+				defer f.Close()
+
+				// set private key permission
+				if err = f.Chmod(0600); err != nil {
+					return err
+				}
+
+				if err := json.NewEncoder(f).Encode(ki); err != nil {
+					return err
+				}
+
+				fmt.Printf("private key have been write to %s\n", privPath)
+			}
+
+			if saveKey {
+				pubKey, err := ki.Public()
+				if err != nil {
+					return err
+				}
+				if err = v1manifest.SaveKeyInfo(pubKey, "public", ""); err != nil {
 					return err
 				}
 				fmt.Printf("public key have been write to current working dir\n")
@@ -601,7 +584,8 @@ func newMirrorGenkeyCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&showPublic, "public", "p", showPublic, fmt.Sprintf("show public content of %s", privPath))
+
+	cmd.Flags().BoolVarP(&showPublic, "public", "p", showPublic, "show public content")
 	cmd.Flags().BoolVar(&saveKey, "save", false, "Save public key to a file at current working dir")
 
 	return cmd

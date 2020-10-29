@@ -114,6 +114,12 @@ func SaveKeyInfo(key *KeyInfo, ty, dir string) error {
 		return err
 	}
 
+	if dir == "" {
+		dir, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	}
 	if utils.IsNotExist(dir) {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return errors.Annotate(err, "create key directory")
