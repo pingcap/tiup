@@ -64,6 +64,9 @@ func (s *localStore) lock() error {
 	return s.flock.Lock()
 }
 
-func (s *localStore) unlock() error {
-	return s.flock.Unlock()
+func (s *localStore) unlock() {
+	// The unlock operation must success, otherwise the later operation will stuck
+	if err := s.flock.Unlock(); err != nil {
+		panic(errors.Annotate(err, "unlock filesystem failed"))
+	}
 }
