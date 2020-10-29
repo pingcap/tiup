@@ -155,7 +155,7 @@ func ScaleInCluster(
 
 		monitoredOptions := cluster.GetMonitoredOptions()
 		instCount[instance.GetHost()]--
-		if instCount[instance.GetHost()] == 0 && cluster.GetMonitoredOptions() != nil {
+		if instCount[instance.GetHost()] == 0 {
 			if err := StopMonitored(getter, instance, monitoredOptions, options.OptTimeout); err != nil {
 				if !ignoreErr {
 					return errors.Annotatef(err, "failed to stop monitor")
