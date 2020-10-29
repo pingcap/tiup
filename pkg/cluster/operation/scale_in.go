@@ -136,42 +136,6 @@ func ScaleInCluster(
 		return err
 	}
 
-	offlineInstance := func(component spec.Component, instance spec.Instance) error {
-		ignoreErr := options.Force
-
-		// just try to stop and destroy
-		if err := StopComponent(getter, []spec.Instance{instance}, options.OptTimeout); err != nil {
-			if !ignoreErr {
-				return errors.Annotatef(err, "failed to stop %s", component.Name())
-			}
-			log.Warnf("failed to stop %s: %v", component.Name(), err)
-		}
-		if err := DestroyComponent(getter, []spec.Instance{instance}, cluster, options); err != nil {
-			if !ignoreErr {
-				return errors.Annotatef(err, "failed to destroy %s", component.Name())
-			}
-			log.Warnf("failed to destroy %s: %v", component.Name(), err)
-		}
-
-		monitoredOptions := cluster.GetMonitoredOptions()
-		instCount[instance.GetHost()]--
-		if instCount[instance.GetHost()] == 0 {
-			if err := StopMonitored(getter, instance, monitoredOptions, options.OptTimeout); err != nil {
-				if !ignoreErr {
-					return errors.Annotatef(err, "failed to stop monitor")
-				}
-				log.Warnf("failed to stop %s: %v", "monitor", err)
-			}
-			if err := DestroyMonitored(getter, instance, monitoredOptions, options.OptTimeout); err != nil {
-				if !ignoreErr {
-					return errors.Annotatef(err, "failed to destroy monitor")
-				}
-				log.Warnf("failed to destroy %s: %v", "monitor", err)
-			}
-		}
-		return nil
-	}
-
 	if options.Force {
 		for _, component := range cluster.ComponentsByStartOrder() {
 			for _, instance := range component.Instances() {
@@ -185,7 +149,8 @@ func ScaleInCluster(
 					}
 				}
 
-				_ = offlineInstance(component, instance)
+				instCount[instance.GetHost()]--
+				_ = StopAndDestroyInstance(getter, component, cluster, instance, options, instCount[instance.GetHost()] == 0)
 
 				// directly update pump&drainer 's state as offline in etcd.
 				if binlogClient != nil {
@@ -255,7 +220,8 @@ func ScaleInCluster(
 			}
 
 			if !asyncOfflineComps.Exist(instance.ComponentName()) {
-				if err := offlineInstance(component, instance); err != nil {
+				instCount[instance.GetHost()]--
+				if err := StopAndDestroyInstance(getter, component, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
 					return err
 				}
 			} else {
