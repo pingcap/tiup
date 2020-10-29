@@ -353,7 +353,7 @@ func newMirrorPublishCmd() *cobra.Command {
 			defer tarfile.Close()
 
 			publishInfo := &model.PublishInfo{
-				ComponentData: &model.TarInfo{tarfile, fmt.Sprintf("%s-%s-%s-%s.tar.gz", component, version, goos, goarch)},
+				ComponentData: &model.TarInfo{Reader: tarfile, Name: fmt.Sprintf("%s-%s-%s-%s.tar.gz", component, version, goos, goarch)},
 			}
 
 			flagSet := set.NewStringSet()

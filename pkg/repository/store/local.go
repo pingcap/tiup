@@ -60,10 +60,10 @@ func (s *localStore) path(filename string) string {
 	return path.Join(s.root, filename)
 }
 
-func (s *localStore) lock() {
-	s.flock.Lock()
+func (s *localStore) lock() error {
+	return s.flock.Lock()
 }
 
-func (s *localStore) unlock() {
-	s.flock.Unlock()
+func (s *localStore) unlock() error {
+	return s.flock.Unlock()
 }

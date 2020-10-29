@@ -24,6 +24,7 @@ import (
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -44,7 +45,10 @@ type localTxn struct {
 
 func newLocalTxn(store *localStore) (*localTxn, error) {
 	syncer := newFsSyncer(path.Join(store.root, "commits"))
-	root, err := ioutil.TempDir("/tmp", "tiup-commit-*")
+	if script := os.Getenv(localdata.EnvNameMirrorSyncScript); script != "" {
+		syncer = combine(syncer, newExternalSyncer(script))
+	}
+	root, err := ioutil.TempDir(os.Getenv(localdata.EnvNameComponentDataDir), "tiup-commit-*")
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +155,9 @@ func (t *localTxn) Stat(filename string) (os.FileInfo, error) {
 }
 
 func (t *localTxn) Commit() error {
-	t.store.lock()
+	if err := t.store.lock(); err != nil {
+		return err
+	}
 	defer t.store.unlock()
 
 	if err := t.checkConflict(); err != nil {

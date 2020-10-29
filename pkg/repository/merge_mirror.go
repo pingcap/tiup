@@ -148,7 +148,7 @@ func MergeMirror(keys map[string]*v1manifest.KeyInfo, base Mirror, sources ...Mi
 			defer tarfile.Close()
 
 			publishInfo := &model.PublishInfo{
-				ComponentData: &model.TarInfo{tarfile, resource},
+				ComponentData: &model.TarInfo{Reader: tarfile, Name: resource},
 				Stand:         &diff.componentItem.Standalone,
 				Hide:          &diff.componentItem.Hidden,
 			}

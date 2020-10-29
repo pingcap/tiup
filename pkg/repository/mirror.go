@@ -121,6 +121,9 @@ func (l *localFilesystem) Open() error {
 func (l *localFilesystem) loadKeys() error {
 	l.keys = make(map[string]*v1manifest.KeyInfo)
 	return filepath.Walk(filepath.Join(l.rootPath, "keys"), func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if info.IsDir() {
 			return nil
 		}
@@ -153,7 +156,7 @@ func (l *localFilesystem) Publish(manifest *v1manifest.Manifest, info model.Comp
 	}
 
 	if err := model.New(txn, l.keys).Publish(manifest, info); err != nil {
-		txn.Rollback()
+		_ = txn.Rollback()
 		return err
 	}
 
@@ -168,7 +171,7 @@ func (l *localFilesystem) Introduce(id, name string, key *v1manifest.KeyInfo) er
 	}
 
 	if err := model.New(txn, l.keys).Introduce(id, name, key); err != nil {
-		txn.Rollback()
+		_ = txn.Rollback()
 		return err
 	}
 

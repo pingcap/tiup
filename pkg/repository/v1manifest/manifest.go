@@ -153,7 +153,6 @@ func RootManifestFilename(version uint) string {
 func (s *SignedBase) Filename() string {
 	fname := ManifestsConfig[s.Ty].Filename
 	if fname == "" {
-		panic(s.Ty)
 		panic("Unreachable")
 	}
 	return fname

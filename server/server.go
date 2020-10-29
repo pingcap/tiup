@@ -14,13 +14,10 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/pingcap/tiup/pkg/repository"
-	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/server/session"
 )
 
@@ -49,24 +46,4 @@ func newServer(rootDir, upstream string) (*server, error) {
 func (s *server) run(addr string) error {
 	fmt.Println(addr)
 	return http.ListenAndServe(addr, s.router())
-}
-
-func loadPrivateKey(keyFile string) (*v1manifest.KeyInfo, error) {
-	var key v1manifest.KeyInfo
-	f, err := os.Open(keyFile)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	if err := json.NewDecoder(f).Decode(&key); err != nil {
-		return nil, err
-	}
-
-	// Check if key is valid
-	_, err = key.ID()
-	if err != nil {
-		return nil, err
-	}
-
-	return &key, nil
 }
