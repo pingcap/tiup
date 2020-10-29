@@ -620,9 +620,9 @@ tikv_servers:
     status_port: 20180
 `), &topo)
 	c.Assert(err, IsNil)
-	err = CheckTiKVLocationLabels(nil, topo.TiKVServers)
+	err = CheckTiKVLocationLabels(nil, &topo)
 	c.Assert(err, IsNil)
-	err = CheckTiKVLocationLabels([]string{}, topo.TiKVServers)
+	err = CheckTiKVLocationLabels([]string{}, &topo)
 	c.Assert(err, IsNil)
 
 	// 2 tikv on the same host without label
@@ -637,7 +637,7 @@ tikv_servers:
     status_port: 20181
 `), &topo)
 	c.Assert(err, IsNil)
-	err = CheckTiKVLocationLabels(nil, topo.TiKVServers)
+	err = CheckTiKVLocationLabels(nil, &topo)
 	c.Assert(err, NotNil)
 
 	// 2 tikv on the same host with unacquainted label
@@ -656,7 +656,7 @@ tikv_servers:
       server.labels: { zone: "zone1", host: "172.16.5.140" }
 `), &topo)
 	c.Assert(err, IsNil)
-	err = CheckTiKVLocationLabels(nil, topo.TiKVServers)
+	err = CheckTiKVLocationLabels(nil, &topo)
 	c.Assert(err, NotNil)
 
 	// 2 tikv on the same host with correct label
@@ -675,7 +675,7 @@ tikv_servers:
       server.labels: { zone: "zone1", host: "172.16.5.140" }
 `), &topo)
 	c.Assert(err, IsNil)
-	err = CheckTiKVLocationLabels([]string{"zone", "host"}, topo.TiKVServers)
+	err = CheckTiKVLocationLabels([]string{"zone", "host"}, &topo)
 	c.Assert(err, IsNil)
 
 	// 2 tikv on the same host with diffrent config style
@@ -697,6 +697,6 @@ tikv_servers:
         host: "172.16.5.140"
 `), &topo)
 	c.Assert(err, IsNil)
-	err = CheckTiKVLocationLabels([]string{"zone", "host"}, topo.TiKVServers)
+	err = CheckTiKVLocationLabels([]string{"zone", "host"}, &topo)
 	c.Assert(err, IsNil)
 }
