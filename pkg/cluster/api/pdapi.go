@@ -685,6 +685,9 @@ func (pc *PDClient) StoreList() ([]string, error) {
 	}
 	addrs := []string{}
 	for _, s := range r.Stores {
+		if s.Store.StateName != "Up" {
+			continue
+		}
 		addrs = append(addrs, s.Store.GetAddress())
 	}
 	return addrs, nil
@@ -698,6 +701,9 @@ func (pc *PDClient) GetStoreLabels(address string) (map[string]string, error) {
 	}
 
 	for _, s := range r.Stores {
+		if s.Store.StateName != "Up" {
+			continue
+		}
 		if address == s.Store.GetAddress() {
 			lbs := s.Store.GetLabels()
 			labels := map[string]string{}

@@ -361,16 +361,24 @@ func CheckTiKVLocationLabels(pdLocLabels []string, slp StoreLabelProvider) error
 	if err != nil {
 		return err
 	}
+
+	storeLabels := map[string]map[string]string{}
 	for _, kv := range kvs {
-		host := getHostFromAddress(kv)
-		hosts[host] = hosts[host] + 1
-	}
-	for _, kv := range kvs {
-		host := getHostFromAddress(kv)
 		ls, err := slp.GetStoreLabels(kv)
 		if err != nil {
 			return err
 		}
+		// Skip tiflash
+		if ls["engine"] == "tiflash" {
+			continue
+		}
+		storeLabels[kv] = ls
+		host := getHostFromAddress(kv)
+		hosts[host] = hosts[host] + 1
+	}
+
+	for kv, ls := range storeLabels {
+		host := getHostFromAddress(kv)
 		if len(ls) == 0 && hosts[host] > 1 {
 			lerr.TiKVInstances[kv] = append(
 				lerr.TiKVInstances[kv],
