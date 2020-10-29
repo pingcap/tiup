@@ -74,10 +74,6 @@ of components or the repository itself.`,
 	cmd.AddCommand(
 		newMirrorInitCmd(),
 		newMirrorSignCmd(),
-		newMirrorOwnerCmd(),
-		newMirrorCompCmd(),
-		newMirrorAddCompCmd(),
-		newMirrorDelCompCmd(),
 		newMirrorGenkeyCmd(),
 		newMirrorCloneCmd(),
 		newMirrorMergeCmd(),
@@ -110,93 +106,6 @@ func newMirrorSignCmd() *cobra.Command {
 	}
 
 	return cmd
-}
-
-// the `mirror add` sub command
-func newMirrorAddCompCmd() *cobra.Command {
-	var nightly bool // if this is a nightly version
-	cmd := &cobra.Command{
-		Use:    "add <component-id> <platform> <version> <file>",
-		Short:  "Add a file to a component",
-		Long:   `Add a file to a component, and set its metadata of platform ID and version.`,
-		Hidden: true, // WIP, remove when it becomes working and stable
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) < 4 {
-				return cmd.Help()
-			}
-
-			return addCompFile(repoPath, args[0], args[1], args[2], args[3], nightly)
-		},
-	}
-
-	// If adding legacy nightly build (e.g., add a version from yesterday), just
-	// omit the flag to treat it as normal versions
-	cmd.Flags().BoolVar(&nightly, "nightly", false, "Mark this version as the latest nightly build")
-
-	return cmd
-}
-
-func addCompFile(repo, id, platform, version, file string, nightly bool) error {
-	// TODO
-	return nil
-}
-
-// the `mirror component` sub command
-func newMirrorCompCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:    "component <id> <description>",
-		Short:  "Create a new component in the repository",
-		Long:   `Create a new component in the repository, and sign with the local owner key.`,
-		Hidden: true, // WIP, remove when it becomes working and stable
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) < 2 {
-				return cmd.Help()
-			}
-
-			return createComp(repoPath, args[0], args[1])
-		},
-	}
-
-	return cmd
-}
-
-func createComp(repo, id, name string) error {
-	// TODO
-	return nil
-}
-
-// the `mirror del` sub command
-func newMirrorDelCompCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "del <component> [version]",
-		Short: "Delete a component from the repository",
-		Long: `Delete a component from the repository. If version is not specified, all versions
-of the given component will be deleted.
-Manifests and files of a deleted component will be removed from the repository,
-clients can no longer fetch the component, but files already download by clients
-may still be available for them.`,
-		Hidden: true, // WIP, remove when it becomes working and stable
-		RunE: func(cmd *cobra.Command, args []string) error {
-			compVer := ""
-			switch len(args) {
-			case 2:
-				compVer = args[1]
-			default:
-				return cmd.Help()
-			}
-
-			return delComp(repoPath, args[0], compVer)
-		},
-	}
-
-	return cmd
-}
-
-func delComp(repo, id, version string) error {
-	// TODO: implement the func
-
-	// TODO: check if version is the latest nightly, refuse if it is
-	return nil
 }
 
 // the `mirror set` sub command
@@ -636,31 +545,6 @@ current working directory (".") will be used.`,
 
 func initRepo(path, keyDir string) error {
 	return v1manifest.Init(path, keyDir, time.Now().UTC())
-}
-
-// the `mirror owner` sub command
-func newMirrorOwnerCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "owner <id> <name>",
-		Short: "Create a new owner for the repository",
-		Long: `Create a new owner role for the repository, the owner can then perform management
-actions on authorized resources.`,
-		Hidden: true, // WIP, remove when it becomes working and stable
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) < 2 {
-				return cmd.Help()
-			}
-
-			return createOwner(repoPath, args[0], args[1])
-		},
-	}
-
-	return cmd
-}
-
-func createOwner(repo, id, name string) error {
-	// TODO
-	return nil
 }
 
 // the `mirror merge` sub command
