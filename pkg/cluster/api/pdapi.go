@@ -677,43 +677,30 @@ func (pc *PDClient) GetLocationLabels() ([]string, error) {
 	return rc.LocationLabels, nil
 }
 
-// StoreList implements StoreLabelProvider
-func (pc *PDClient) StoreList() ([]string, error) {
-	r, err := pc.GetStores()
-	if err != nil {
-		return nil, err
-	}
-	addrs := []string{}
-	for _, s := range r.Stores {
-		if s.Store.StateName != "Up" {
-			continue
-		}
-		addrs = append(addrs, s.Store.GetAddress())
-	}
-	return addrs, nil
-}
-
-// GetStoreLabels implements StoreLabelProvider
-func (pc *PDClient) GetStoreLabels(address string) (map[string]string, error) {
+// GetTiKVLabels implements TiKVLabelProvider
+func (pc *PDClient) GetTiKVLabels() (map[string]map[string]string, error) {
 	r, err := pc.GetStores()
 	if err != nil {
 		return nil, err
 	}
 
+	locationLabels := map[string]map[string]string{}
 	for _, s := range r.Stores {
 		if s.Store.StateName != "Up" {
 			continue
 		}
-		if address == s.Store.GetAddress() {
-			lbs := s.Store.GetLabels()
-			labels := map[string]string{}
-			for _, lb := range lbs {
-				labels[lb.GetKey()] = lb.GetValue()
-			}
-			return labels, nil
+		lbs := s.Store.GetLabels()
+		labels := map[string]string{}
+		for _, lb := range lbs {
+			labels[lb.GetKey()] = lb.GetValue()
 		}
+		// Skip tiflash
+		if labels["engine"] == "tiflash" {
+			continue
+		}
+		locationLabels[s.Store.GetAddress()] = labels
 	}
-	return nil, errors.Errorf("store %s not found", address)
+	return locationLabels, nil
 }
 
 // UpdateScheduleConfig updates the PD schedule config
