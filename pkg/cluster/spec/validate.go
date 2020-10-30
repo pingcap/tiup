@@ -339,38 +339,34 @@ func (e *TiKVLabelError) Error() string {
 	return str
 }
 
-// StoreLabelProvider provide store labels information
-type StoreLabelProvider interface {
-	StoreList() ([]string, error)
-	GetStoreLabels(address string) (map[string]string, error)
+// TiKVLabelProvider provide store labels information
+type TiKVLabelProvider interface {
+	GetTiKVLabels() (map[string]map[string]string, error)
 }
 
 func getHostFromAddress(addr string) string {
 	return strings.Split(addr, ":")[0]
 }
 
-// CheckTiKVLocationLabels will check if tikv missing label or have wrong label
-func CheckTiKVLocationLabels(pdLocLabels []string, slp StoreLabelProvider) error {
+// CheckTiKVLabels will check if tikv missing label or have wrong label
+func CheckTiKVLabels(pdLocLabels []string, slp TiKVLabelProvider) error {
 	lerr := &TiKVLabelError{
 		TiKVInstances: make(map[string][]error),
 	}
 	lbs := set.NewStringSet(pdLocLabels...)
 	hosts := make(map[string]int)
 
-	kvs, err := slp.StoreList()
+	storeLabels, err := slp.GetTiKVLabels()
 	if err != nil {
 		return err
 	}
-	for _, kv := range kvs {
+	for kv := range storeLabels {
 		host := getHostFromAddress(kv)
 		hosts[host] = hosts[host] + 1
 	}
-	for _, kv := range kvs {
+
+	for kv, ls := range storeLabels {
 		host := getHostFromAddress(kv)
-		ls, err := slp.GetStoreLabels(kv)
-		if err != nil {
-			return err
-		}
 		if len(ls) == 0 && hosts[host] > 1 {
 			lerr.TiKVInstances[kv] = append(
 				lerr.TiKVInstances[kv],
