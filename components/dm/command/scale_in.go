@@ -109,7 +109,7 @@ func ScaleInDMCluster(
 				if !deletedNodes.Exist(instance.ID()) {
 					continue
 				}
-				_ = operator.StopAndDestroyInstance(getter, component, topo, instance, options, false)
+				_ = operator.StopAndDestroyInstance(getter, component.Name(), topo, instance, options, false)
 			}
 		}
 		return nil

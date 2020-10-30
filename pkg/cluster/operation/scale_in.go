@@ -142,26 +142,27 @@ func ScaleInCluster(
 				if !deletedNodes.Exist(instance.ID()) {
 					continue
 				}
+				compName := component.Name()
 
-				if component.Name() != spec.ComponentPump && component.Name() != spec.ComponentDrainer {
+				if compName != spec.ComponentPump && compName != spec.ComponentDrainer {
 					if err := deleteMember(component, instance, pdClient, binlogClient, options.APITimeout); err != nil {
-						log.Warnf("failed to delete %s: %v", component.Name(), err)
+						log.Warnf("failed to delete %s: %v", compName, err)
 					}
 				}
 
 				instCount[instance.GetHost()]--
-				_ = StopAndDestroyInstance(getter, component, cluster, instance, options, instCount[instance.GetHost()] == 0)
+				_ = StopAndDestroyInstance(getter, compName, cluster, instance, options, instCount[instance.GetHost()] == 0)
 
 				// directly update pump&drainer 's state as offline in etcd.
 				if binlogClient != nil {
 					id := instance.ID()
-					if component.Name() == spec.ComponentPump {
+					if compName == spec.ComponentPump {
 						if err := binlogClient.UpdatePumpState(id, "offline"); err != nil {
-							log.Warnf("failed to update %s state as offline: %v", component.Name(), err)
+							log.Warnf("failed to update %s state as offline: %v", compName, err)
 						}
-					} else if component.Name() == spec.ComponentDrainer {
+					} else if compName == spec.ComponentDrainer {
 						if err := binlogClient.UpdateDrainerState(id, "offline"); err != nil {
-							log.Warnf("failed to update %s state as offline: %v", component.Name(), err)
+							log.Warnf("failed to update %s state as offline: %v", compName, err)
 						}
 					}
 				}
@@ -221,7 +222,7 @@ func ScaleInCluster(
 
 			if !asyncOfflineComps.Exist(instance.ComponentName()) {
 				instCount[instance.GetHost()]--
-				if err := StopAndDestroyInstance(getter, component, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
+				if err := StopAndDestroyInstance(getter, component.Name(), cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
 					return err
 				}
 			} else {

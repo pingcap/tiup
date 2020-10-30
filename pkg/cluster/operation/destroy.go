@@ -93,24 +93,24 @@ func Destroy(
 // StopAndDestroyInstance stop and destroy the instance,
 // if this instance is the host's last one, and the host has monitor deployed,
 // we need to destroy the monitor, either
-func StopAndDestroyInstance(getter ExecutorGetter, component spec.Component, cluster spec.Topology, instance spec.Instance, options Options, destroyMonitor bool) error {
+func StopAndDestroyInstance(getter ExecutorGetter, compName string, cluster spec.Topology, instance spec.Instance, options Options, destroyMonitor bool) error {
 	ignoreErr := options.Force
 
 	// just try to stop and destroy
 	if err := StopComponent(getter, []spec.Instance{instance}, options.OptTimeout); err != nil {
 		if !ignoreErr {
-			return errors.Annotatef(err, "failed to stop %s", component.Name())
+			return errors.Annotatef(err, "failed to stop %s", compName)
 		}
-		log.Warnf("failed to stop %s: %v", component.Name(), err)
+		log.Warnf("failed to stop %s: %v", compName, err)
 	}
 	if err := DestroyComponent(getter, []spec.Instance{instance}, cluster, options); err != nil {
 		if !ignoreErr {
-			return errors.Annotatef(err, "failed to destroy %s", component.Name())
+			return errors.Annotatef(err, "failed to destroy %s", compName)
 		}
-		log.Warnf("failed to destroy %s: %v", component.Name(), err)
+		log.Warnf("failed to destroy %s: %v", compName, err)
 	}
 
-	// monitoredOptions for db cluster is nil
+	// monitoredOptions for dm cluster is nil
 	monitoredOptions := cluster.GetMonitoredOptions()
 
 	if destroyMonitor && monitoredOptions != nil {
@@ -457,7 +457,7 @@ func DestroyClusterTombstone(
 
 		for _, instance := range instances {
 			instCount[instance.GetHost()]--
-			err := StopAndDestroyInstance(getter, comp, cluster, instance, options, instCount[instance.GetHost()] == 0)
+			err := StopAndDestroyInstance(getter, comp.Name(), cluster, instance, options, instCount[instance.GetHost()] == 0)
 			if err != nil {
 				return errors.AddStack(err)
 			}
