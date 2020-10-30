@@ -1,5 +1,5 @@
 <!--
-Thank you for contributing to TiUP! Please read TiUP's [CONTRIBUTING](https://github.com/pingcap/community/blob/master/CONTRIBUTING.md) document **BEFORE** filing this PR.
+Thank you for contributing to TiUP! Please read TiUP's [CONTRIBUTING](https://github.com/pingcap/community/blob/master/contributors/README.md) document **BEFORE** filing this PR.
 -->
 
 ### What problem does this PR solve? <!--add issue link with summary if exists-->
