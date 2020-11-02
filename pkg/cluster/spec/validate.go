@@ -616,10 +616,11 @@ func (s *Specification) dirConflictsDetect() error {
 
 				// `yaml:"data_dir,omitempty"`
 				tp := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
-				for _, part := range strings.Split(compSpec.Field(j).String(), ",") {
+				for _, dir := range strings.Split(compSpec.Field(j).String(), ",") {
+					dir = strings.TrimSpace(dir)
 					item := usedDir{
 						host: host,
-						dir:  part,
+						dir:  dir,
 					}
 					// data_dir is relative to deploy_dir by default, so they can be with
 					// same (sub) paths as long as the deploy_dirs are different
@@ -688,34 +689,38 @@ func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 			host := compSpec.FieldByName("Host").String()
 
 			for _, dirType := range dirTypes {
-				if j, found := findField(compSpec, dirType); found {
-					dir := compSpec.Field(j).String()
+				j, found := findField(compSpec, dirType)
+				if !found {
+					continue
+				}
 
-					switch dirType { // the same as in instance.go for (*instance)
-					case "DeployDir":
-						addHostDir(host, deployDir, "")
-					case "DataDir":
-						// the default data_dir is relative to deploy_dir
-						if dir == "" {
-							addHostDir(host, deployDir, dir)
-							continue
-						}
-						for _, dataDir := range strings.Split(dir, ",") {
-							if dataDir != "" {
-								addHostDir(host, deployDir, dataDir)
-							}
-						}
-					case "LogDir":
-						field := compSpec.FieldByName("LogDir")
-						if field.IsValid() {
-							dir = field.Interface().(string)
-						}
+				dir := compSpec.Field(j).String()
 
-						if dir == "" {
-							dir = "log"
-						}
+				switch dirType { // the same as in instance.go for (*instance)
+				case "DeployDir":
+					addHostDir(host, deployDir, "")
+				case "DataDir":
+					// the default data_dir is relative to deploy_dir
+					if dir == "" {
 						addHostDir(host, deployDir, dir)
+						continue
 					}
+					for _, dataDir := range strings.Split(dir, ",") {
+						dataDir = strings.TrimSpace(dataDir)
+						if dataDir != "" {
+							addHostDir(host, deployDir, dataDir)
+						}
+					}
+				case "LogDir":
+					field := compSpec.FieldByName("LogDir")
+					if field.IsValid() {
+						dir = field.Interface().(string)
+					}
+
+					if dir == "" {
+						dir = "log"
+					}
+					addHostDir(host, deployDir, strings.TrimSpace(dir))
 				}
 			}
 		}

@@ -711,7 +711,7 @@ global:
   deploy_dir: "test-deploy"
 tiflash_servers:
   - host: 172.19.0.104
-    data_dir: "/home/tidb/birdstorm/data1,/home/tidb/birdstorm/data3"
+    data_dir: "/home/tidb/birdstorm/data1, /home/tidb/birdstorm/data3"
 `), &topo)
 	c.Assert(err, IsNil)
 	cnt := topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data1")
@@ -758,7 +758,7 @@ global:
   data_dir: "test-data"
 tiflash_servers:
   - host: 172.16.5.138
-    data_dir: "/test-1,/test-2"
+    data_dir: " /test-1, /test-2"
 pd_servers:
   - host: 172.16.5.138
     data_dir: "/test-2"
