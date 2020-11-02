@@ -746,3 +746,39 @@ tiflash_servers:
 	cnt = topo.CountDir("172.19.0.104", "/birdstorm")
 	c.Assert(cnt, Equals, 1)
 }
+
+func (s *metaSuiteTopo) TestDirectoryConflictsWithMultiDir(c *C) {
+	topo := Specification{}
+
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+  data_dir: "test-data"
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-1,/test-2"
+pd_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-2"
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "directory conflict for '/test-2' between 'tiflash_servers:172.16.5.138.data_dir' and 'pd_servers:172.16.5.138.data_dir'")
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+  data_dir: "test-data"
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-1,/test-1"
+pd_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-2"
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "directory conflict for '/test-1' between 'tiflash_servers:172.16.5.138.data_dir' and 'tiflash_servers:172.16.5.138.data_dir'")
+}

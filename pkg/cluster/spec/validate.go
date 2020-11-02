@@ -609,18 +609,23 @@ func (s *Specification) dirConflictsDetect() error {
 
 			// Directory conflicts
 			for _, dirType := range dirTypes {
-				if j, found := findField(compSpec, dirType); found {
+				j, found := findField(compSpec, dirType)
+				if !found {
+					continue
+				}
+
+				// `yaml:"data_dir,omitempty"`
+				tp := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
+				for _, part := range strings.Split(compSpec.Field(j).String(), ",") {
 					item := usedDir{
 						host: host,
-						dir:  compSpec.Field(j).String(),
+						dir:  part,
 					}
 					// data_dir is relative to deploy_dir by default, so they can be with
 					// same (sub) paths as long as the deploy_dirs are different
 					if item.dir != "" && !strings.HasPrefix(item.dir, "/") {
 						continue
 					}
-					// `yaml:"data_dir,omitempty"`
-					tp := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
 					prev, exist := dirStats[item]
 					// not checking between imported nodes
 					if exist &&
