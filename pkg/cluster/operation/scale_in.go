@@ -151,7 +151,9 @@ func ScaleInCluster(
 				}
 
 				instCount[instance.GetHost()]--
-				_ = StopAndDestroyInstance(getter, compName, cluster, instance, options, instCount[instance.GetHost()] == 0)
+				if err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
+					log.Warnf("failed to stop/destroy %s: %v", compName, err)
+				}
 
 				// directly update pump&drainer 's state as offline in etcd.
 				if binlogClient != nil {
@@ -222,7 +224,7 @@ func ScaleInCluster(
 
 			if !asyncOfflineComps.Exist(instance.ComponentName()) {
 				instCount[instance.GetHost()]--
-				if err := StopAndDestroyInstance(getter, component.Name(), cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
+				if err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
 					return err
 				}
 			} else {

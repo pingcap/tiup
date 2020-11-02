@@ -25,6 +25,7 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/spf13/cobra"
 )
@@ -109,7 +110,9 @@ func ScaleInDMCluster(
 				if !deletedNodes.Exist(instance.ID()) {
 					continue
 				}
-				_ = operator.StopAndDestroyInstance(getter, component.Name(), topo, instance, options, false)
+				if err := operator.StopAndDestroyInstance(getter, topo, instance, options, false); err != nil {
+					log.Warnf("failed to stop/destroy %s: %v", component.Name(), err)
+				}
 			}
 		}
 		return nil

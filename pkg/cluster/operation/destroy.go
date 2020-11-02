@@ -93,8 +93,9 @@ func Destroy(
 // StopAndDestroyInstance stop and destroy the instance,
 // if this instance is the host's last one, and the host has monitor deployed,
 // we need to destroy the monitor, either
-func StopAndDestroyInstance(getter ExecutorGetter, compName string, cluster spec.Topology, instance spec.Instance, options Options, destroyMonitor bool) error {
+func StopAndDestroyInstance(getter ExecutorGetter, cluster spec.Topology, instance spec.Instance, options Options, destroyMonitor bool) error {
 	ignoreErr := options.Force
+	compName := instance.ComponentName()
 
 	// just try to stop and destroy
 	if err := StopComponent(getter, []spec.Instance{instance}, options.OptTimeout); err != nil {
@@ -452,12 +453,12 @@ func DestroyClusterTombstone(
 		return
 	}
 
-	maybeDestroyMonitor := func(comp spec.Component, instances []spec.Instance, id string) error {
+	maybeDestroyMonitor := func(instances []spec.Instance, id string) error {
 		instances = filterID(instances, id)
 
 		for _, instance := range instances {
 			instCount[instance.GetHost()]--
-			err := StopAndDestroyInstance(getter, comp.Name(), cluster, instance, options, instCount[instance.GetHost()] == 0)
+			err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0)
 			if err != nil {
 				return errors.AddStack(err)
 			}
@@ -490,7 +491,7 @@ func DestroyClusterTombstone(
 		}
 
 		instances := (&spec.TiKVComponent{Specification: cluster}).Instances()
-		if err := maybeDestroyMonitor(&spec.TiKVComponent{}, instances, id); err != nil {
+		if err := maybeDestroyMonitor(instances, id); err != nil {
 			return nil, err
 		}
 	}
@@ -521,7 +522,7 @@ func DestroyClusterTombstone(
 
 		instances := (&spec.TiFlashComponent{Specification: cluster}).Instances()
 		id = s.Host + ":" + strconv.Itoa(s.GetMainPort())
-		if err := maybeDestroyMonitor(&spec.TiKVComponent{}, instances, id); err != nil {
+		if err := maybeDestroyMonitor(instances, id); err != nil {
 			return nil, err
 		}
 	}
@@ -550,7 +551,7 @@ func DestroyClusterTombstone(
 		}
 
 		instances := (&spec.PumpComponent{Specification: cluster}).Instances()
-		if err := maybeDestroyMonitor(&spec.TiKVComponent{}, instances, id); err != nil {
+		if err := maybeDestroyMonitor(instances, id); err != nil {
 			return nil, err
 		}
 	}
@@ -579,7 +580,7 @@ func DestroyClusterTombstone(
 		}
 
 		instances := (&spec.DrainerComponent{Specification: cluster}).Instances()
-		if err := maybeDestroyMonitor(&spec.TiKVComponent{}, instances, id); err != nil {
+		if err := maybeDestroyMonitor(instances, id); err != nil {
 			return nil, err
 		}
 	}
