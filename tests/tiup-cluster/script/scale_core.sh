@@ -76,12 +76,16 @@ function scale_core() {
     tiup-cluster $client --yes scale-in $name -N $ipprefix.102:4000
     wait_instance_num_reach $name $total_sub_one $native_ssh
     tiup-cluster $client --yes scale-in $name -N $ipprefix.102:20160
-    echo "after sclae in(without prune) tikv, the monitors should not be destroyed"
-    wait_instance_num_reach $name $total_sub_one $native_ssh
+    # `wait_instance_num_reach` will prune the tomestone nodes,
+    # here we use `instance_num` to avoid the side effect
+    if [ "$(instance_num $name $native_ssh)" != "$total_sub_one" ]; then
+        exit 1
+    fi
+    echo "after scale in(without prune) tikv, the monitors should not be destroyed"
     tiup-cluster $client exec $name -N $ipprefix.102 --command "ls /home/tidb/deploy/monitor-9100/deploy/monitor-9100"
     tiup-cluster $client exec $name -N $ipprefix.102 --command "ps aux | grep node_exporter | grep -qv grep"
     tiup-cluster $client exec $name -N $ipprefix.102 --command "ps aux | grep blackbox_exporter | grep -qv grep"
-    echo "after sclae in(with prune) tikv, the monitors should be destroyed"
+    echo "after scale in(with prune) tikv, the monitors should be destroyed"
     tiup-cluster -y prune $name
     wait_instance_num_reach $name $total_sub_two $native_ssh
     ! tiup-cluster $client exec $name -N $ipprefix.102 --command "ls /home/tidb/deploy/monitor-9100/deploy/monitor-9100"
