@@ -60,7 +60,7 @@ func ShowAuditList(dir string) error {
 		if err != nil {
 			continue
 		}
-		t := time.Unix(ts, 0)
+		t := time.Unix(ts/1e9, 0)
 		cmd, err := firstLine(fi.Name())
 		if err != nil {
 			continue
@@ -82,7 +82,7 @@ func ShowAuditList(dir string) error {
 
 // OutputAuditLog outputs audit log.
 func OutputAuditLog(dir string, data []byte) error {
-	fname := filepath.Join(dir, base52.Encode(time.Now().Unix()))
+	fname := filepath.Join(dir, base52.Encode(time.Now().UnixNano()))
 	return ioutil.WriteFile(fname, data, 0644)
 }
 
@@ -103,7 +103,7 @@ func ShowAuditLog(dir string, auditID string) error {
 		return errors.Trace(err)
 	}
 
-	t := time.Unix(ts, 0)
+	t := time.Unix(ts/1e9, 0)
 	hint := fmt.Sprintf("- OPERATION TIME: %s -", t.Format("2006-01-02T15:04:05"))
 	line := strings.Repeat("-", len(hint))
 	_, _ = os.Stdout.WriteString(color.MagentaString("%s\n%s\n%s\n", line, hint, line))
