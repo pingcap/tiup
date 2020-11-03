@@ -24,7 +24,7 @@ pd_servers:
 # Note if only 3 instance, when scale-in one of it.
 # It may not be tombstone.
 tikv_servers:
-  - host: __IPPREFIX__.102
+  - host: __IPPREFIX__.101
   - host: __IPPREFIX__.103
     data_dir: "/home/tidb/my_kv_data"
   - host: __IPPREFIX__.104
