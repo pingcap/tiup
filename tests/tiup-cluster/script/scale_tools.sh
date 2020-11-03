@@ -79,5 +79,25 @@ function scale_tools() {
     # make sure grafana dashboards has been set to default (since the full_sale_in_grafana.yaml didn't provide a local dashboards dir)
     ! tiup-cluster $client exec $name -N $ipprefix.101 --command "grep magic-string-for-test /home/tidb/deploy/grafana-3000/dashboards/tidb.json"
 
+    # currently tiflash is not supported in TLS enabled cluster
+    # and only Tiflash support data-dir in multipath
+    if [ $test_tls = false ]; then
+        # ensure tiflash's data dir exists
+        tiup-cluster $client exec $name -N $ipprefix.103 --command "ls /home/tidb/deploy/tiflash-9000/data1"
+        tiup-cluster $client exec $name -N $ipprefix.103 --command "ls /data/tiflash-data"
+        echo "start scale in tiflash"
+        tiup-cluster $client --yes scale-in $name -N $ipprefix.103:9000
+        tiup-cluster $client display $name | grep Tombstone
+        echo "start prune tiflash"
+        yes | tiup-cluster $client prune $name
+        wait_instance_num_reach $name $total_sub_one $native_ssh
+        ! tiup-cluster $client exec $name -N $ipprefix.103 --command "ls /home/tidb/deploy/tiflash-9000/data1"
+        ! tiup-cluster $client exec $name -N $ipprefix.103 --command "ls /data/tiflash-data"
+        echo "start scale out tiflash"
+        topo=./topo/full_scale_in_tiflash.yaml
+        sed "s/__IPPREFIX__/$ipprefix/g" $topo.tpl > $topo
+        tiup-cluster $client --yes scale-out $name $topo
+    fi
+
     tiup-cluster $client _test $name writable
 }

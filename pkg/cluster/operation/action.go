@@ -135,8 +135,8 @@ func Stop(
 	return nil
 }
 
-// NeedCheckTomebsome return true if we need to check and destroy some node.
-func NeedCheckTomebsome(topo *spec.Specification) bool {
+// NeedCheckTombstone return true if we need to check and destroy some node.
+func NeedCheckTombstone(topo *spec.Specification) bool {
 	for _, s := range topo.TiKVServers {
 		if s.Offline {
 			return true
