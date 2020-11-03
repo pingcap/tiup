@@ -237,33 +237,18 @@ func (s *Specification) LocationLabels() ([]string, error) {
 	return lbs, nil
 }
 
-// StoreList implements StoreLabelProvider
-func (s *Specification) StoreList() ([]string, error) {
+// GetTiKVLabels implements TiKVLabelProvider
+func (s *Specification) GetTiKVLabels() (map[string]map[string]string, error) {
 	kvs := s.TiKVServers
-	addrs := []string{}
+	locationLabels := map[string]map[string]string{}
 	for _, kv := range kvs {
-		if kv.IsImported() {
-			// FIXME: this function implements StoreLabelProvider, which is used to
-			//        detect if the label config is missing. However, we do that
-			//        base on the meta.yaml, whose server.labels field is empty
-			//        for imported TiKV servers, to workaround that, we just skip the
-			//        imported TiKV servers at this time.
-			continue
-		}
-		addrs = append(addrs, fmt.Sprintf("%s:%d", kv.Host, kv.GetMainPort()))
-	}
-	return addrs, nil
-}
-
-// GetStoreLabels implements StoreLabelProvider
-func (s *Specification) GetStoreLabels(address string) (map[string]string, error) {
-	kvs := s.TiKVServers
-	for _, kv := range kvs {
-		if address == fmt.Sprintf("%s:%d", kv.Host, kv.GetMainPort()) {
-			return kv.Labels()
+		address := fmt.Sprintf("%s:%d", kv.Host, kv.GetMainPort())
+		var err error
+		if locationLabels[address], err = kv.Labels(); err != nil {
+			return nil, err
 		}
 	}
-	return nil, errors.Errorf("store %s not found", address)
+	return locationLabels, nil
 }
 
 // AllComponentNames contains the names of all components.
