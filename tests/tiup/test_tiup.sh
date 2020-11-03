@@ -36,6 +36,32 @@ tiup clean --all
 tiup help tidb
 tiup env
 TIUP_SSHPASS_PROMPT="password" tiup env TIUP_SSHPASS_PROMPT | grep password
+
+# test mirror
+cat > /tmp/hello.sh << EOF
+#! /bin/sh
+
+echo "hello, TiDB"
+EOF
+chmod 755 /tmp/hello.sh
+tar -C /tmp -czf /tmp/hello.tar.gz hello.sh
+
+tiup mirror genkey
+
+tiup mirror init /tmp/test-mirror-a
+tiup mirror set /tmp/test-mirror-a
+tiup mirror introduce pingcap
+tiup mirror publish hello v0.0.1 /tmp/hello.tar.gz hello.sh
+tiup hello:v0.0.1 | grep TiDB
+
+tiup mirror init /tmp/test-mirror-b
+tiup mirror set /tmp/test-mirror-b
+tiup mirror introduce pingcap
+tiup mirror publish hello v0.0.2 /tmp/hello.tar.gz hello.sh
+tiup mirror set /tmp/test-mirror-a
+tiup mirror merge /tmp/test-mirror-b
+tiup hello:v0.0.2 | grep TiDB
+
 tiup uninstall
 tiup uninstall tidb:v3.0.13
 tiup uninstall tidb --all

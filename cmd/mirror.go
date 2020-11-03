@@ -38,10 +38,6 @@ import (
 	"github.com/spf13/pflag"
 )
 
-var (
-	repoPath string
-)
-
 func newMirrorCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "mirror <command>",
@@ -51,16 +47,6 @@ it to create a private repository, or to add new component to an existing reposi
 The repository can be used either online or offline.
 It also provides some useful utilities to help managing keys, users and versions
 of components or the repository itself.`,
-		Args: func(cmd *cobra.Command, args []string) error {
-			if repoPath == "" {
-				var err error
-				repoPath, err = os.Getwd()
-				if err != nil {
-					return err
-				}
-			}
-			return nil
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return cmd.Help()
@@ -68,8 +54,6 @@ of components or the repository itself.`,
 			return nil
 		},
 	}
-
-	cmd.PersistentFlags().StringVar(&repoPath, "repo", "", "Path to the repository")
 
 	cmd.AddCommand(
 		newMirrorInitCmd(),
@@ -413,23 +397,23 @@ func newMirrorGenkeyCmd() *cobra.Command {
 	var (
 		showPublic bool
 		saveKey    bool
-		privPath   string
+		name       string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "genkey",
 		Short: "Generate a new key pair",
 		Long:  `Generate a new key pair that can be used to sign components.`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			env := environment.GlobalEnv()
-			privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
+			privPath := env.Profile().Path(localdata.KeyInfoParentDir, name+".json")
 			keyDir := filepath.Dir(privPath)
 			if utils.IsNotExist(keyDir) {
-				return os.Mkdir(keyDir, 0755)
+				if err := os.Mkdir(keyDir, 0755); err != nil {
+					return errors.Annotate(err, "create private key dir")
+				}
 			}
-			return nil
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
+
 			var ki *v1manifest.KeyInfo
 			var err error
 			if showPublic {
@@ -496,6 +480,7 @@ func newMirrorGenkeyCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&showPublic, "public", "p", showPublic, "show public content")
 	cmd.Flags().BoolVar(&saveKey, "save", false, "Save public key to a file at current working dir")
+	cmd.Flags().StringVarP(&name, "name", "n", "private", "the file name of the key")
 
 	return cmd
 }
@@ -506,14 +491,15 @@ func newMirrorInitCmd() *cobra.Command {
 		keyDir string // Directory to write genreated key files
 	)
 	cmd := &cobra.Command{
-		Use:   "init [path]",
+		Use:   "init <path>",
 		Short: "Initialize an empty repository",
 		Long: `Initialize an empty TiUP repository at given path. If path is not specified, the
 current working directory (".") will be used.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 1 {
-				repoPath = args[0]
+			if len(args) != 1 {
+				return cmd.Help()
 			}
+			repoPath := args[0]
 
 			// create the target path if not exist
 			if utils.IsNotExist(repoPath) {
