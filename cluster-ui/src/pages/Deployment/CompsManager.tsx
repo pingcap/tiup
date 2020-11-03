@@ -5,7 +5,7 @@ import yaml from 'yaml'
 import { useNavigate } from 'react-router-dom'
 
 import { Root } from '_components'
-import { BaseComp, CompTypes, Machine } from '_types'
+import { BaseComp, CompTypes, DEF_UESRNAME, Machine } from '_types'
 import {
   useComps,
   useGlobalLoginOptions,
@@ -131,7 +131,10 @@ export default function CompsManager({
     deployCluster({
       ...values,
       topo_yaml: topoYaml,
-      global_login_options: globalLoginOptions,
+      global_login_options: {
+        ...globalLoginOptions,
+        username: globalLoginOptions.username || DEF_UESRNAME,
+      },
     })
     navigate('/status')
   }
@@ -173,16 +176,23 @@ export default function CompsManager({
   }
 
   function startOperate() {
-    setPreviewYaml(false)
+    Modal.confirm({
+      title: '请确保关键组件都已添加',
+      cancelText: '再检查一下',
+      okText: '开始',
+      onOk: () => {
+        setPreviewYaml(false)
 
-    if (forScaleOut) {
-      handleScaleOut()
-    } else {
-      form.validateFields().then((values) => {
-        setDeployReq(values as any)
-        handleDeploy(values)
-      })
-    }
+        if (forScaleOut) {
+          handleScaleOut()
+        } else {
+          form.validateFields().then((values) => {
+            setDeployReq(values as any)
+            handleDeploy(values)
+          })
+        }
+      },
+    })
   }
 
   return (

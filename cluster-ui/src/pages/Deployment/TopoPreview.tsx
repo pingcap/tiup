@@ -83,8 +83,8 @@ export function genTopo(
       if (compType === 'TiKV') {
         m.config = {
           'server.labels': {
-            zone: targetMachine.zone || '',
-            dc: targetMachine.dc || '',
+            zone: targetMachine.zone || 'zone1',
+            dc: targetMachine.dc || 'dc1',
             host: targetMachine.name || targetMachine.id,
           },
         }
