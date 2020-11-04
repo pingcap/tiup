@@ -32,7 +32,6 @@ tiup
 tiup help
 tiup install tidb:v3.0.13
 tiup update tidb
-tiup update --self
 tiup status
 tiup clean --all
 tiup help tidb
@@ -54,7 +53,7 @@ tiup mirror init /tmp/test-mirror-a
 tiup mirror set /tmp/test-mirror-a
 tiup mirror introduce pingcap
 echo "should fail"
-tiup mirror introduce pingcap # this should failed
+! tiup mirror introduce pingcap # this should failed
 tiup mirror publish hello v0.0.1 /tmp/hello.tar.gz hello.sh
 tiup hello:v0.0.1 | grep TiDB
 
