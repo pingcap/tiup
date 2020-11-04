@@ -64,6 +64,9 @@ func diffMirror(base, source Mirror) ([]diffItem, error) {
 		if err != nil {
 			return nil, err
 		}
+		if sourceComponent == nil {
+			return nil, errors.Errorf("component manifest for %s not in soure mirror", name)
+		}
 
 		items = append(items, component2Diff(name, baseComponents[name], baseComponent, comp, sourceComponent)...)
 	}

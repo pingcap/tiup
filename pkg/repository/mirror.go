@@ -35,6 +35,7 @@ import (
 	"github.com/pingcap/tiup/pkg/repository/store"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/utils/mock"
 	"github.com/pingcap/tiup/pkg/verbose"
 )
 
@@ -465,6 +466,10 @@ func (l *MockMirror) Introduce(id, name string, key *v1manifest.KeyInfo) error {
 
 // Publish implements the Mirror interface
 func (l *MockMirror) Publish(manifest *v1manifest.Manifest, info model.ComponentInfo) error {
+	// Mock point for unit test
+	if fn := mock.On("Publish"); fn != nil {
+		fn.(func(*v1manifest.Manifest, model.ComponentInfo))(manifest, info)
+	}
 	return nil
 }
 
