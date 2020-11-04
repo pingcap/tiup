@@ -1,5 +1,9 @@
 # TiUP Cluster UI Changelog
 
+## 2020.11.04
+
+- Support config arch for machine
+
 ## 2020.11.03
 
 - Use default "root" as the machine login user name if leave it empty
