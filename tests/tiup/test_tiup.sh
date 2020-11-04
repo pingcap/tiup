@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eu
+
 TEST_DIR=$(cd "$(dirname "$0")"; pwd)
 TMP_DIR=$TEST_DIR/_tmp
 
@@ -51,6 +53,8 @@ tiup mirror genkey
 tiup mirror init /tmp/test-mirror-a
 tiup mirror set /tmp/test-mirror-a
 tiup mirror introduce pingcap
+echo "should fail"
+tiup mirror introduce pingcap # this should failed
 tiup mirror publish hello v0.0.1 /tmp/hello.tar.gz hello.sh
 tiup hello:v0.0.1 | grep TiDB
 
