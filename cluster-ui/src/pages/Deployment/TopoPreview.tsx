@@ -61,6 +61,7 @@ export function genTopo(
       if (targetMachine.ssh_port !== undefined) {
         m.ssh_port = targetMachine.ssh_port
       }
+      m.arch = targetMachine.arch
       // TODO:
       // username / password / privateKey
 

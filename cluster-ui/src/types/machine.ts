@@ -10,9 +10,8 @@ export interface IGlobalLoginOptions {
 
 //////////////////////////
 
-export type MachineMap = {
-  [key: string]: Machine
-}
+export type MachineMap = Record<string, Machine>
+export type Arch = 'amd64' | 'arm64'
 
 export const DEF_SSH_PORT = 22
 export class Machine {
@@ -20,6 +19,7 @@ export class Machine {
   host: string = ''
   ssh_port?: number
   name?: string
+  arch: Arch = 'amd64'
 
   isPubKeyAuth: boolean = true
   privateKey?: string

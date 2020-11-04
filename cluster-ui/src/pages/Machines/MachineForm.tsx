@@ -8,6 +8,7 @@ import {
   Space,
   Select,
   Typography,
+  Radio,
 } from 'antd'
 
 import {
@@ -174,6 +175,12 @@ export default function MachineForm({
           </Form.Item>
           <Form.Item label="SSH 端口" name="ssh_port">
             <Input placeholder={DEF_SSH_PORT + ''} />
+          </Form.Item>
+          <Form.Item label="架构" name="arch">
+            <Radio.Group>
+              <Radio value="amd64">amd64</Radio>
+              <Radio value="arm64">arm64</Radio>
+            </Radio.Group>
           </Form.Item>
 
           {false && (
