@@ -20,7 +20,6 @@ do
         logs=$(ssh -o "StrictHostKeyChecking no" root@$h "find /home/tidb | grep '.*log/.*\.log'")
     fi
 
-
     for log in $logs
     do
         scp -o "StrictHostKeyChecking no" -r root@$h:$log "$out_dir/$h/"
