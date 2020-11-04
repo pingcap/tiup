@@ -28,6 +28,7 @@ import (
 
 	"github.com/cavaliercoder/grab"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/verbose"
 )
@@ -248,6 +249,21 @@ func (l *httpMirror) prepareURL(resource string) string {
 	return url
 }
 
+func (l *httpMirror) isRetryable(err error) bool {
+	retryableList := []string{
+		"unexpected EOF",
+		"stream error",
+		"server returned 502 Bad Gateway",
+	}
+
+	for _, text := range retryableList {
+		if strings.Contains(strings.ToLower(err.Error()), strings.ToLower(text)) {
+			return true
+		}
+	}
+	return false
+}
+
 // Download implements the Mirror interface
 func (l *httpMirror) Download(resource, targetDir string) error {
 	tmpFilePath := filepath.Join(l.tmpDir, resource)
@@ -255,11 +271,24 @@ func (l *httpMirror) Download(resource, targetDir string) error {
 	// downloaded file is stored in a temp directory and the temp directory is
 	// deleted at Close(), in this way an interrupted download won't remain
 	// any partial file on the disk
-	r, err := l.download(l.prepareURL(resource), tmpFilePath, 0)
+	var err error
+	_ = utils.Retry(func() error {
+		var r io.ReadCloser
+		if err != nil && l.isRetryable(err) {
+			log.Warnf("failed to download %s(%s), retrying...", resource, err.Error())
+		}
+		if r, err = l.download(l.prepareURL(resource), tmpFilePath, 0); err != nil {
+			if l.isRetryable(err) {
+				return err
+			}
+			// Abort retry
+			return nil
+		}
+		return r.Close()
+	})
 	if err != nil {
-		return errors.Trace(err)
+		return err
 	}
-	defer r.Close()
 
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		return errors.Trace(err)
