@@ -33,7 +33,7 @@ func newLocalStore(root, upstream string) *localStore {
 	return &localStore{
 		root:     root,
 		upstream: upstream,
-		flock:    flock.New(root),
+		flock:    flock.New(path.Join(root, "lock")),
 	}
 }
 
