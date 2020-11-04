@@ -1,5 +1,11 @@
 TiUP Changelog
 
+## [1.2.3] 2020.10.30
+
+### Fixes
+
+- Fix misleading warning message in the display command ([#869](https://github.com/pingcap/tiup/pull/869), [@lucklove](https://github.com/lucklove))
+
 ## [1.2.1] 2020.10.23
 
 ### Improvements
