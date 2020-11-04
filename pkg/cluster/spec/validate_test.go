@@ -116,7 +116,7 @@ global:
   user: "test1"
   ssh_port: 220
   deploy_dir: "test-deploy"
-  data_dir: "test-data" 
+  data_dir: "test-data"
 tidb_servers:
   - host: 172.16.5.138
     port: 1234
@@ -620,9 +620,9 @@ tikv_servers:
     status_port: 20180
 `), &topo)
 	c.Assert(err, IsNil)
-	err = CheckTiKVLocationLabels(nil, &topo)
+	err = CheckTiKVLabels(nil, &topo)
 	c.Assert(err, IsNil)
-	err = CheckTiKVLocationLabels([]string{}, &topo)
+	err = CheckTiKVLabels([]string{}, &topo)
 	c.Assert(err, IsNil)
 
 	// 2 tikv on the same host without label
@@ -637,7 +637,7 @@ tikv_servers:
     status_port: 20181
 `), &topo)
 	c.Assert(err, IsNil)
-	err = CheckTiKVLocationLabels(nil, &topo)
+	err = CheckTiKVLabels(nil, &topo)
 	c.Assert(err, NotNil)
 
 	// 2 tikv on the same host with unacquainted label
@@ -656,7 +656,7 @@ tikv_servers:
       server.labels: { zone: "zone1", host: "172.16.5.140" }
 `), &topo)
 	c.Assert(err, IsNil)
-	err = CheckTiKVLocationLabels(nil, &topo)
+	err = CheckTiKVLabels(nil, &topo)
 	c.Assert(err, NotNil)
 
 	// 2 tikv on the same host with correct label
@@ -675,7 +675,7 @@ tikv_servers:
       server.labels: { zone: "zone1", host: "172.16.5.140" }
 `), &topo)
 	c.Assert(err, IsNil)
-	err = CheckTiKVLocationLabels([]string{"zone", "host"}, &topo)
+	err = CheckTiKVLabels([]string{"zone", "host"}, &topo)
 	c.Assert(err, IsNil)
 
 	// 2 tikv on the same host with diffrent config style
@@ -697,6 +697,88 @@ tikv_servers:
         host: "172.16.5.140"
 `), &topo)
 	c.Assert(err, IsNil)
-	err = CheckTiKVLocationLabels([]string{"zone", "host"}, &topo)
+	err = CheckTiKVLabels([]string{"zone", "host"}, &topo)
 	c.Assert(err, IsNil)
+}
+
+func (s *metaSuiteTopo) TestCountDirMultiPath(c *C) {
+	topo := Specification{}
+
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+tiflash_servers:
+  - host: 172.19.0.104
+    data_dir: "/home/tidb/birdstorm/data1, /home/tidb/birdstorm/data3"
+`), &topo)
+	c.Assert(err, IsNil)
+	cnt := topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data1")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data2")
+	c.Assert(cnt, Equals, 0)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data3")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm")
+	c.Assert(cnt, Equals, 2)
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+tiflash_servers:
+  - host: 172.19.0.104
+    data_dir: "birdstorm/data1,/birdstorm/data3"
+`), &topo)
+	c.Assert(err, IsNil)
+	cnt = topo.CountDir("172.19.0.104", "/home/test1/test-deploy/tiflash-9000/birdstorm/data1")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.19.0.104", "/birdstorm/data3")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data3")
+	c.Assert(cnt, Equals, 0)
+	cnt = topo.CountDir("172.19.0.104", "/home/test1/test-deploy/tiflash-9000/birdstorm/data3")
+	c.Assert(cnt, Equals, 0)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm")
+	c.Assert(cnt, Equals, 0)
+	cnt = topo.CountDir("172.19.0.104", "/birdstorm")
+	c.Assert(cnt, Equals, 1)
+}
+
+func (s *metaSuiteTopo) TestDirectoryConflictsWithMultiDir(c *C) {
+	topo := Specification{}
+
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+  data_dir: "test-data"
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: " /test-1, /test-2"
+pd_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-2"
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "directory conflict for '/test-2' between 'tiflash_servers:172.16.5.138.data_dir' and 'pd_servers:172.16.5.138.data_dir'")
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+  data_dir: "test-data"
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-1,/test-1"
+pd_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-2"
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "directory conflict for '/test-1' between 'tiflash_servers:172.16.5.138.data_dir' and 'tiflash_servers:172.16.5.138.data_dir'")
 }

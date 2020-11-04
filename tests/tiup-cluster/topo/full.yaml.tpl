@@ -33,6 +33,7 @@ tikv_servers:
 # and binary is more than 1G..
 tiflash_servers:
   - host: __IPPREFIX__.103
+    data_dir: "data1,/data/tiflash-data"
 #   - host: __IPPREFIX__.104
 #   - host: __IPPREFIX__.105
 

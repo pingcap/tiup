@@ -52,7 +52,7 @@ func newPruneCmd() *cobra.Command {
 func destroyTombstoneIfNeed(clusterName string, metadata *spec.ClusterMeta, opt operator.Options, skipConfirm bool) error {
 	topo := metadata.Topology
 
-	if !operator.NeedCheckTomebsome(topo) {
+	if !operator.NeedCheckTombstone(topo) {
 		return nil
 	}
 
