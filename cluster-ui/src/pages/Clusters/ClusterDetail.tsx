@@ -77,10 +77,13 @@ function ClusterDetailPage() {
       title,
       key: title.toLowerCase(),
       dataIndex: title.toLowerCase(),
+      fixed: title === 'ID',
     }))
     _columns.push({
       title: '操作',
       key: 'action',
+      width: 100,
+      fixed: 'right',
       render: (text: any, rec: IClusterInstInfo) => {
         if (rec.status.toLowerCase().indexOf('offline') !== -1) {
           return null
@@ -195,7 +198,13 @@ function ClusterDetailPage() {
 
   return (
     <Root>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+        }}
+      >
         <Space>
           <Popconfirm
             title="你确定要启动集群吗？"
@@ -245,6 +254,7 @@ function ClusterDetailPage() {
         pagination={false}
         rowKey={'id'}
         loading={loadingTopo}
+        scroll={{ x: true }}
       />
 
       <iframe
