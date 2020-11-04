@@ -1758,12 +1758,12 @@ func instancesToPatch(topo spec.Topology, options operator.Options) ([]spec.Inst
 }
 
 func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, clusterName, comp, nodeOS, arch, packagePath string) error {
-	metadata, err := spec.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+	metadata := specManager.NewMetadata()
+	if err := specManager.Metadata(clusterName, metadata); err != nil {
 		return err
 	}
 
-	ver := bindVersion(comp, metadata.Version)
+	ver := bindVersion(comp, metadata.GetBaseMeta().Version)
 	repo, err := clusterutil.NewRepository(nodeOS, arch)
 	if err != nil {
 		return err
