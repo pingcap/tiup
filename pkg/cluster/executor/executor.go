@@ -70,7 +70,7 @@ func New(etype SSHType, sudo bool, c SSHConfig) (Executor, error) {
 	}
 
 	// Used in integration testing, to check if native ssh client is really used when it need to be.
-	if _, _err_ := failpoint.Eval(_curpkg_("assertNativeSSH")); _err_ == nil {
+	failpoint.Inject("assertNativeSSH", func() {
 		// XXX: We call system executor 'native' by mistake in commit f1142b1
 		// this should be fixed after we remove --native-ssh flag
 		if etype != SSHTypeSystem {
@@ -80,7 +80,7 @@ func New(etype SSHType, sudo bool, c SSHConfig) (Executor, error) {
 			)
 			panic(msg)
 		}
-	}
+	})
 
 	// set default values
 	if c.Port <= 0 {
