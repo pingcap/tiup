@@ -1,5 +1,11 @@
 # TiUP Cluster UI Changelog
 
+## 2020.11.03
+
+- Use default "root" as the machine login user name if leave it empty
+- Set default labels values if leave them empty
+- Add confirmation prompt when starting to deploy
+
 ## 2020.10.26
 
 - Enable manually edit the topo yaml configuration
