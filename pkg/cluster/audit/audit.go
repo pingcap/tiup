@@ -17,6 +17,7 @@ import (
 	"bufio"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"sort"
@@ -81,7 +82,7 @@ func ShowAuditList(dir string) error {
 
 // OutputAuditLog outputs audit log.
 func OutputAuditLog(dir string, data []byte) error {
-	fname := filepath.Join(dir, base52.Encode(time.Now().UnixNano()))
+	fname := filepath.Join(dir, base52.Encode(time.Now().UnixNano()+rand.Int63n(1000)))
 	return ioutil.WriteFile(fname, data, 0644)
 }
 
