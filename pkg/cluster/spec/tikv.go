@@ -124,13 +124,13 @@ func (s TiKVSpec) IsImported() bool {
 func (s TiKVSpec) Labels() (map[string]string, error) {
 	lbs := make(map[string]string)
 
-	if serverLbs := GetValueFromPath(s.Config, "server.labels"); serverLbs != nil {
+	if serverLabels := GetValueFromPath(s.Config, "server.labels"); serverLabels != nil {
 		m := map[interface{}]interface{}{}
-		if sm, ok := serverLbs.(map[string]interface{}); ok {
+		if sm, ok := serverLabels.(map[string]interface{}); ok {
 			for k, v := range sm {
 				m[k] = v
 			}
-		} else if im, ok := serverLbs.(map[interface{}]interface{}); ok {
+		} else if im, ok := serverLabels.(map[interface{}]interface{}); ok {
 			m = im
 		}
 		for k, v := range m {

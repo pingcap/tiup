@@ -15,21 +15,20 @@ package set
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/pingcap/check"
 )
 
-var _ = check.Suite(&stringSetTestSuite{})
+var _ = check.Suite(&setTestSuite{})
 
-type stringSetTestSuite struct{}
+type setTestSuite struct{}
 
 func TestNewStringSet(t *testing.T) {
 	check.TestingT(t)
 }
 
-func (s *stringSetTestSuite) TestStringSet(c *check.C) {
+func (s *setTestSuite) TestStringSet(c *check.C) {
 	set := NewStringSet()
 	vals := []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}
 	for i := range vals {
@@ -66,16 +65,4 @@ func (s *stringSetTestSuite) TestStringSet(c *check.C) {
 
 	s6 := NewStringSet()
 	c.Assert(s3.Intersection(s6), check.DeepEquals, NewStringSet())
-}
-
-func (s *stringSetTestSuite) TestAnySet(c *check.C) {
-	set := NewAnySet(reflect.DeepEqual)
-	set.Insert(true)
-	set.Insert(9527)
-
-	c.Assert(set.slice[0], check.DeepEquals, true)
-	c.Assert(set.Slice()[0], check.DeepEquals, true)
-
-	c.Assert(set.slice[1], check.DeepEquals, 9527)
-	c.Assert(set.Slice()[1], check.DeepEquals, 9527)
 }

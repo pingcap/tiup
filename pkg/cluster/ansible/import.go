@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
-	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/pingcap/errors"
@@ -114,16 +113,6 @@ func parseInventoryFile(invFile io.Reader) (string, *spec.ClusterMeta, *aini.Inv
 		return "", nil, inventory, errors.New("no available host in the inventory file")
 	}
 
-	// get locationLabels variables
-	if locationLabels, ok := inventory.Groups["pd_servers"]; ok && len(locationLabels.Vars["location_labels"]) > 0 {
-		val := strings.ReplaceAll(strings.Trim(strings.Trim(locationLabels.Vars["location_labels"], "["), "]"), "\"", "")
-		labelVar := strings.Split(val, ",")
-		if clsMeta.Topology.ServerConfigs.PD == nil {
-			clsMeta.Topology.ServerConfigs.PD = make(map[string]interface{})
-		}
-		clsMeta.Topology.ServerConfigs.PD["replication.location-labels"] = labelVar
-	}
-
 	return clsName, clsMeta, inventory, err
 }
 
@@ -190,7 +179,7 @@ func diffConfigs(configs []map[string]interface{}) (global map[string]interface{
 	return
 }
 
-// LoadConfig files to clusterMeta, just include tidbservers, tikvservers and pdservers
+// LoadConfig files to clusterMeta, include tidbservers, tikvservers, pdservers pumpservers and drainerservers
 func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 	// deal with tidb config
 	configs := []map[string]interface{}{}
@@ -241,6 +230,40 @@ func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 	cls.Topology.ServerConfigs.PD = global
 	for i, local := range locals {
 		cls.Topology.PDServers[i].Config = local
+	}
+
+	// deal with pump config
+	configs = []map[string]interface{}{}
+	for _, srv := range cls.Topology.PumpServers {
+		prefixkey := spec.ComponentPump
+		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.Port))
+		if config, err := parseConfigFile(fname); err == nil {
+			configs = append(configs, config)
+		} else {
+			return err
+		}
+	}
+	global, locals = diffConfigs(configs)
+	cls.Topology.ServerConfigs.Pump = global
+	for i, local := range locals {
+		cls.Topology.PumpServers[i].Config = local
+	}
+
+	// deal with drainer config
+	configs = []map[string]interface{}{}
+	for _, srv := range cls.Topology.Drainers {
+		prefixkey := spec.ComponentDrainer
+		fname := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath, fmt.Sprintf("%s-%s-%d.toml", prefixkey, srv.Host, srv.Port))
+		if config, err := parseConfigFile(fname); err == nil {
+			configs = append(configs, config)
+		} else {
+			return err
+		}
+	}
+	global, locals = diffConfigs(configs)
+	cls.Topology.ServerConfigs.Drainer = global
+	for i, local := range locals {
+		cls.Topology.Drainers[i].Config = local
 	}
 
 	return nil
