@@ -14,9 +14,12 @@
 package store
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"testing"
+	"time"
 
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/stretchr/testify/assert"
@@ -63,6 +66,7 @@ func TestConflict(t *testing.T) {
 	defer os.RemoveAll(root)
 
 	store := New(root, "")
+	fmt.Println("Begin", time.Now().Format(time.RFC3339))
 	txn1, err := store.Begin()
 	assert.Nil(t, err)
 	txn2, err := store.Begin()
@@ -90,6 +94,11 @@ func TestConflict(t *testing.T) {
 	err = txn1.Commit()
 	assert.Nil(t, err)
 	err = txn2.Commit()
+
+	info, err := os.Stat(path.Join(root, "test.json"))
+	assert.Nil(err)
+	fmt.Println(info.ModTime().Format(time.RFC3339))
+
 	assert.NotNil(t, err)
 }
 
