@@ -108,7 +108,7 @@ func (c *CDCComponent) Instances() []Instance {
 // CDCInstance represent the CDC instance.
 type CDCInstance struct {
 	BaseInstance
-	topo *Specification
+	topo Topology
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -137,11 +137,12 @@ func (i *CDCInstance) InitConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
+	topo := i.topo.(*Specification)
+	if err := i.BaseInstance.InitConfig(e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
-	enableTLS := i.topo.GlobalOptions.TLSEnabled
+	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(CDCSpec)
 	cfg := scripts.NewCDCScript(
 		i.GetHost(),
@@ -150,7 +151,7 @@ func (i *CDCInstance) InitConfig(
 		enableTLS,
 		spec.GCTTL,
 		spec.TZ,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.topo.Endpoints(deployUser)...)
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_cdc_%s_%d.sh", i.GetHost(), i.GetPort()))
 
@@ -168,5 +169,5 @@ func (i *CDCInstance) InitConfig(
 
 	specConfig := spec.Config
 
-	return i.MergeServerConfig(e, i.topo.ServerConfigs.CDC, specConfig, paths)
+	return i.MergeServerConfig(e, topo.ServerConfigs.CDC, specConfig, paths)
 }

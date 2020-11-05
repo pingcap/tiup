@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/pingcap/errors"
@@ -104,7 +105,7 @@ func (c *GrafanaComponent) Instances() []Instance {
 // GrafanaInstance represent the grafana instance
 type GrafanaInstance struct {
 	BaseInstance
-	topo *Specification
+	topo Topology
 }
 
 // InitConfig implement Instance interface
@@ -115,7 +116,8 @@ func (i *GrafanaInstance) InitConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
+	gOpts := i.topo.GetGlobalOptions()
+	if err := i.BaseInstance.InitConfig(e, gOpts, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -160,13 +162,22 @@ func (i *GrafanaInstance) InitConfig(
 		return err
 	}
 
+	topo := reflect.ValueOf(i.topo)
+	if topo.Kind() == reflect.Ptr {
+		topo = topo.Elem()
+	}
+	val := topo.FieldByName("Monitors")
+	if (val == reflect.Value{}) {
+		return errors.Errorf("field Monitors not found in topology: %v", topo)
+	}
+	monitors := val.Interface().([]PrometheusSpec)
 	// transfer datasource.yml
-	if len(i.topo.Monitors) == 0 {
+	if len(monitors) == 0 {
 		return errors.New("no prometheus found in topology")
 	}
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("datasource_%s.yml", i.GetHost()))
-	if err := config.NewDatasourceConfig(clusterName, i.topo.Monitors[0].Host).
-		WithPort(uint64(i.topo.Monitors[0].Port)).
+	if err := config.NewDatasourceConfig(clusterName, monitors[0].Host).
+		WithPort(uint64(monitors[0].Port)).
 		ConfigToFile(fp); err != nil {
 		return err
 	}
@@ -221,7 +232,6 @@ func (i *GrafanaInstance) ScaleConfig(
 ) error {
 	s := i.topo
 	defer func() { i.topo = s }()
-	cluster := mustBeClusterTopo(topo)
-	i.topo = cluster.Merge(i.topo)
+	i.topo = topo.Merge(i.topo)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }

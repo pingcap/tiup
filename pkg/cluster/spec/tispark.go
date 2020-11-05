@@ -163,7 +163,7 @@ func (c *TiSparkMasterComponent) Instances() []Instance {
 // TiSparkMasterInstance represent the TiSpark master instance
 type TiSparkMasterInstance struct {
 	BaseInstance
-	topo *Specification
+	topo Topology
 }
 
 // GetCustomFields get custom spark configs of the instance
@@ -201,6 +201,7 @@ func (i *TiSparkMasterInstance) InitConfig(
 	comp := i.Role()
 	host := i.GetHost()
 	port := i.GetPort()
+	topo := i.topo.(*Specification)
 	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
 
 	systemCfg := system.NewTiSparkConfig(comp, deployUser, paths.Deploy, i.GetJavaHome())
@@ -219,11 +220,11 @@ func (i *TiSparkMasterInstance) InitConfig(
 
 	// transfer default config
 	pdList := make([]string, 0)
-	for _, pd := range i.topo.Endpoints(deployUser) {
+	for _, pd := range topo.Endpoints(deployUser) {
 		pdList = append(pdList, fmt.Sprintf("%s:%d", pd.IP, pd.ClientPort))
 	}
 	masterList := make([]string, 0)
-	for _, master := range i.topo.TiSparkMasters {
+	for _, master := range topo.TiSparkMasters {
 		masterList = append(masterList, fmt.Sprintf("%s:%d", master.Host, master.Port))
 	}
 
@@ -327,7 +328,7 @@ func (c *TiSparkWorkerComponent) Instances() []Instance {
 // TiSparkWorkerInstance represent the TiSpark slave instance
 type TiSparkWorkerInstance struct {
 	BaseInstance
-	topo *Specification
+	topo Topology
 }
 
 // GetJavaHome returns the java_home value in spec
@@ -347,6 +348,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	comp := i.Role()
 	host := i.GetHost()
 	port := i.GetPort()
+	topo := i.topo.(*Specification)
 	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
 
 	systemCfg := system.NewTiSparkConfig(comp, deployUser, paths.Deploy, i.GetJavaHome())
@@ -365,16 +367,16 @@ func (i *TiSparkWorkerInstance) InitConfig(
 
 	// transfer default config
 	pdList := make([]string, 0)
-	for _, pd := range i.topo.Endpoints(deployUser) {
+	for _, pd := range topo.Endpoints(deployUser) {
 		pdList = append(pdList, fmt.Sprintf("%s:%d", pd.IP, pd.ClientPort))
 	}
 	masterList := make([]string, 0)
-	for _, master := range i.topo.TiSparkMasters {
+	for _, master := range topo.TiSparkMasters {
 		masterList = append(masterList, fmt.Sprintf("%s:%d", master.Host, master.Port))
 	}
 
 	cfg := config.NewTiSparkConfig(pdList).WithMasters(strings.Join(masterList, ",")).
-		WithCustomFields(i.topo.TiSparkMasters[0].SparkConfigs)
+		WithCustomFields(topo.TiSparkMasters[0].SparkConfigs)
 	// transfer spark-defaults.conf
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("spark-defaults-%s-%d.conf", host, port))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -387,10 +389,10 @@ func (i *TiSparkWorkerInstance) InitConfig(
 
 	env := scripts.NewTiSparkEnv(host).
 		WithLocalIP(i.GetListenHost()).
-		WithMaster(i.topo.TiSparkMasters[0].Host).
-		WithMasterPorts(i.topo.TiSparkMasters[0].Port, i.topo.TiSparkMasters[0].WebPort).
+		WithMaster(topo.TiSparkMasters[0].Host).
+		WithMasterPorts(topo.TiSparkMasters[0].Port, topo.TiSparkMasters[0].WebPort).
 		WithWorkerPorts(i.Ports[0], i.Ports[1]).
-		WithCustomEnv(i.topo.TiSparkMasters[0].SparkEnvs)
+		WithCustomEnv(topo.TiSparkMasters[0].SparkEnvs)
 	// transfer spark-env.sh file
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("spark-env-%s-%d.sh", host, port))
 	if err := env.ScriptToFile(fp); err != nil {
@@ -440,7 +442,6 @@ func (i *TiSparkWorkerInstance) ScaleConfig(
 ) error {
 	s := i.topo
 	defer func() { i.topo = s }()
-	cluster := mustBeClusterTopo(topo)
-	i.topo = cluster.Merge(i.topo)
+	i.topo = topo.Merge(i.topo)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }

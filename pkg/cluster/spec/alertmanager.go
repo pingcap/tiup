@@ -17,7 +17,9 @@ import (
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
+	"reflect"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -107,7 +109,7 @@ func (c *AlertManagerComponent) Instances() []Instance {
 // AlertManagerInstance represent the alert manager instance
 type AlertManagerInstance struct {
 	BaseInstance
-	topo *Specification
+	topo Topology
 }
 
 // InitConfig implement Instance interface
@@ -118,16 +120,27 @@ func (i *AlertManagerInstance) InitConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
+	gOpts := i.topo.GetGlobalOptions()
+	if err := i.BaseInstance.InitConfig(e, gOpts, deployUser, paths); err != nil {
 		return err
 	}
 
-	enableTLS := i.topo.GlobalOptions.TLSEnabled
+	topo := reflect.ValueOf(i.topo)
+	if topo.Kind() == reflect.Ptr {
+		topo = topo.Elem()
+	}
+	val := topo.FieldByName("Alertmanager")
+	if (val == reflect.Value{}) {
+		return errors.Errorf("field Alertmanager not found in topology: %v", topo)
+	}
+	alertmanagers := val.Interface().([]AlertManagerSpec)
+
+	enableTLS := gOpts.TLSEnabled
 	// Transfer start script
 	spec := i.InstanceSpec.(AlertManagerSpec)
 	cfg := scripts.NewAlertManagerScript(spec.Host, paths.Deploy, paths.Data[0], paths.Log, enableTLS).
 		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort).WithNumaNode(spec.NumaNode).
-		AppendEndpoints(AlertManagerEndpoints(i.topo.Alertmanager, deployUser, enableTLS))
+		AppendEndpoints(AlertManagerEndpoints(alertmanagers, deployUser, enableTLS))
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_alertmanager_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {

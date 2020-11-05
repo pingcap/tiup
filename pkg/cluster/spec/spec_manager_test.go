@@ -45,6 +45,10 @@ func (m *TestMetadata) GetBaseMeta() *BaseMeta {
 	return &m.BaseMeta
 }
 
+func (t *TestTopology) Merge(topo Topology) Topology {
+	panic("not support")
+}
+
 func (m *TestMetadata) SetTopology(topo Topology) {
 	testTopo, ok := topo.(*TestTopology)
 	if !ok {
@@ -95,6 +99,10 @@ func (t *TestTopology) IterInstance(fn func(instance Instance)) {
 
 func (t *TestTopology) GetMonitoredOptions() *MonitoredOptions {
 	return nil
+}
+
+func (t *TestTopology) GetGlobalOptions() GlobalOptions {
+	return GlobalOptions{}
 }
 
 func (t *TestTopology) CountDir(host string, dir string) int {

@@ -129,9 +129,11 @@ type Topology interface {
 	ComponentsByUpdateOrder() []Component
 	IterInstance(fn func(instance Instance))
 	GetMonitoredOptions() *MonitoredOptions
+	GetGlobalOptions() GlobalOptions
 	// count how many time a path is used by instances in cluster
 	CountDir(host string, dir string) int
 	TLSConfig(dir string) (*tls.Config, error)
+	Merge(that Topology) Topology
 
 	ScaleOutTopology
 }
@@ -190,6 +192,11 @@ func (s *Specification) MergeTopo(topo Topology) Topology {
 // GetMonitoredOptions implements Topology interface.
 func (s *Specification) GetMonitoredOptions() *MonitoredOptions {
 	return &s.MonitoredOptions
+}
+
+// GetGlobalOptions implements Topology interface.
+func (s *Specification) GetGlobalOptions() GlobalOptions {
+	return s.GlobalOptions
 }
 
 // TLSConfig generates a tls.Config for the specification as needed
@@ -333,23 +340,24 @@ func (s *Specification) GetEtcdClient(tlsCfg *tls.Config) (*clientv3.Client, err
 }
 
 // Merge returns a new Specification which sum old ones
-func (s *Specification) Merge(that *Specification) *Specification {
+func (s *Specification) Merge(that Topology) Topology {
+	spec := that.(*Specification)
 	return &Specification{
 		GlobalOptions:    s.GlobalOptions,
 		MonitoredOptions: s.MonitoredOptions,
 		ServerConfigs:    s.ServerConfigs,
-		TiDBServers:      append(s.TiDBServers, that.TiDBServers...),
-		TiKVServers:      append(s.TiKVServers, that.TiKVServers...),
-		PDServers:        append(s.PDServers, that.PDServers...),
-		TiFlashServers:   append(s.TiFlashServers, that.TiFlashServers...),
-		PumpServers:      append(s.PumpServers, that.PumpServers...),
-		Drainers:         append(s.Drainers, that.Drainers...),
-		CDCServers:       append(s.CDCServers, that.CDCServers...),
-		TiSparkMasters:   append(s.TiSparkMasters, that.TiSparkMasters...),
-		TiSparkWorkers:   append(s.TiSparkWorkers, that.TiSparkWorkers...),
-		Monitors:         append(s.Monitors, that.Monitors...),
-		Grafana:          append(s.Grafana, that.Grafana...),
-		Alertmanager:     append(s.Alertmanager, that.Alertmanager...),
+		TiDBServers:      append(s.TiDBServers, spec.TiDBServers...),
+		TiKVServers:      append(s.TiKVServers, spec.TiKVServers...),
+		PDServers:        append(s.PDServers, spec.PDServers...),
+		TiFlashServers:   append(s.TiFlashServers, spec.TiFlashServers...),
+		PumpServers:      append(s.PumpServers, spec.PumpServers...),
+		Drainers:         append(s.Drainers, spec.Drainers...),
+		CDCServers:       append(s.CDCServers, spec.CDCServers...),
+		TiSparkMasters:   append(s.TiSparkMasters, spec.TiSparkMasters...),
+		TiSparkWorkers:   append(s.TiSparkWorkers, spec.TiSparkWorkers...),
+		Monitors:         append(s.Monitors, spec.Monitors...),
+		Grafana:          append(s.Grafana, spec.Grafana...),
+		Alertmanager:     append(s.Alertmanager, spec.Alertmanager...),
 	}
 }
 

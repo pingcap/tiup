@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/pingcap/errors"
@@ -107,7 +108,7 @@ func (c *MonitorComponent) Instances() []Instance {
 // MonitorInstance represent the monitor instance
 type MonitorInstance struct {
 	BaseInstance
-	topo *Specification
+	topo Topology
 }
 
 // InitConfig implement Instance interface
@@ -118,11 +119,12 @@ func (i *MonitorInstance) InitConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
+	gOpts := i.topo.GetGlobalOptions()
+	if err := i.BaseInstance.InitConfig(e, gOpts, deployUser, paths); err != nil {
 		return err
 	}
 
-	enableTLS := i.topo.GlobalOptions.TLSEnabled
+	enableTLS := gOpts.TLSEnabled
 	// transfer run script
 	spec := i.InstanceSpec.(PrometheusSpec)
 	cfg := scripts.NewPrometheusScript(
@@ -147,53 +149,107 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 
-	topo := i.topo
+	topo := reflect.ValueOf(i.topo)
+	if topo.Kind() == reflect.Ptr {
+		topo = topo.Elem()
+	}
+
+	topoHasField := func(field string) (reflect.Value, bool) {
+		val := topo.FieldByName(field)
+		if (val != reflect.Value{} && (val.Kind() == reflect.Slice || val.Kind() == reflect.Array)) {
+			return val, true
+		}
+		return reflect.Value{}, false
+	}
+	monitoredOptions := i.topo.GetMonitoredOptions()
 
 	// transfer config
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
 	cfig := config.NewPrometheusConfig(clusterName, enableTLS)
-	cfig.AddBlackbox(i.GetHost(), uint64(topo.MonitoredOptions.BlackboxExporterPort))
+	cfig.AddBlackbox(i.GetHost(), uint64(monitoredOptions.BlackboxExporterPort))
 	uniqueHosts := set.NewStringSet()
-	for _, pd := range topo.PDServers {
-		uniqueHosts.Insert(pd.Host)
-		cfig.AddPD(pd.Host, uint64(pd.ClientPort))
+
+	if servers, found := topoHasField("PDServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			pd := servers.Index(i).Interface().(PDSpec)
+			uniqueHosts.Insert(pd.Host)
+			cfig.AddPD(pd.Host, uint64(pd.ClientPort))
+		}
 	}
-	for _, kv := range topo.TiKVServers {
-		uniqueHosts.Insert(kv.Host)
-		cfig.AddTiKV(kv.Host, uint64(kv.StatusPort))
+	if servers, found := topoHasField("TiKVServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			kv := servers.Index(i).Interface().(TiKVSpec)
+			uniqueHosts.Insert(kv.Host)
+			cfig.AddTiKV(kv.Host, uint64(kv.StatusPort))
+		}
 	}
-	for _, db := range topo.TiDBServers {
-		uniqueHosts.Insert(db.Host)
-		cfig.AddTiDB(db.Host, uint64(db.StatusPort))
+	if servers, found := topoHasField("TiDBServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			db := servers.Index(i).Interface().(TiDBSpec)
+			uniqueHosts.Insert(db.Host)
+			cfig.AddTiDB(db.Host, uint64(db.StatusPort))
+		}
 	}
-	for _, flash := range topo.TiFlashServers {
-		uniqueHosts.Insert(flash.Host)
-		cfig.AddTiFlashLearner(flash.Host, uint64(flash.FlashProxyStatusPort))
-		cfig.AddTiFlash(flash.Host, uint64(flash.StatusPort))
+	if servers, found := topoHasField("TiFlashServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			flash := servers.Index(i).Interface().(TiFlashSpec)
+			cfig.AddTiFlashLearner(flash.Host, uint64(flash.FlashProxyStatusPort))
+			cfig.AddTiFlash(flash.Host, uint64(flash.StatusPort))
+		}
 	}
-	for _, pump := range topo.PumpServers {
-		uniqueHosts.Insert(pump.Host)
-		cfig.AddPump(pump.Host, uint64(pump.Port))
+	if servers, found := topoHasField("PumpServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			pump := servers.Index(i).Interface().(PumpSpec)
+			uniqueHosts.Insert(pump.Host)
+			cfig.AddPump(pump.Host, uint64(pump.Port))
+		}
 	}
-	for _, drainer := range topo.Drainers {
-		uniqueHosts.Insert(drainer.Host)
-		cfig.AddDrainer(drainer.Host, uint64(drainer.Port))
+	if servers, found := topoHasField("Trainers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			drainer := servers.Index(i).Interface().(DrainerSpec)
+			uniqueHosts.Insert(drainer.Host)
+			cfig.AddDrainer(drainer.Host, uint64(drainer.Port))
+		}
 	}
-	for _, cdc := range topo.CDCServers {
-		uniqueHosts.Insert(cdc.Host)
-		cfig.AddCDC(cdc.Host, uint64(cdc.Port))
+	if servers, found := topoHasField("CDCServers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			cdc := servers.Index(i).Interface().(CDCSpec)
+			uniqueHosts.Insert(cdc.Host)
+			cfig.AddCDC(cdc.Host, uint64(cdc.Port))
+		}
 	}
-	for _, grafana := range topo.Grafana {
-		uniqueHosts.Insert(grafana.Host)
-		cfig.AddGrafana(grafana.Host, uint64(grafana.Port))
+	if servers, found := topoHasField("Grafana"); found {
+		for i := 0; i < servers.Len(); i++ {
+			grafana := servers.Index(i).Interface().(GrafanaSpec)
+			uniqueHosts.Insert(grafana.Host)
+			cfig.AddGrafana(grafana.Host, uint64(grafana.Port))
+		}
 	}
-	for _, alertmanager := range topo.Alertmanager {
-		uniqueHosts.Insert(alertmanager.Host)
-		cfig.AddAlertmanager(alertmanager.Host, uint64(alertmanager.WebPort))
+	if servers, found := topoHasField("Alertmanager"); found {
+		for i := 0; i < servers.Len(); i++ {
+			alertmanager := servers.Index(i).Interface().(AlertManagerSpec)
+			uniqueHosts.Insert(alertmanager.Host)
+			cfig.AddAlertmanager(alertmanager.Host, uint64(alertmanager.WebPort))
+		}
+	}
+	if servers, found := topoHasField("Masters"); found {
+		for i := 0; i < servers.Len(); i++ {
+			master := servers.Index(i)
+			host, port := master.FieldByName("Host").String(), master.FieldByName("Port").Int()
+			cfig.AddDMMaster(host, uint64(port))
+		}
+	}
+
+	if servers, found := topoHasField("Workers"); found {
+		for i := 0; i < servers.Len(); i++ {
+			master := servers.Index(i)
+			host, port := master.FieldByName("Host").String(), master.FieldByName("Port").Int()
+			cfig.AddDMWorker(host, uint64(port))
+		}
 	}
 	for host := range uniqueHosts {
-		cfig.AddNodeExpoertor(host, uint64(topo.MonitoredOptions.NodeExporterPort))
-		cfig.AddBlackboxExporter(host, uint64(topo.MonitoredOptions.BlackboxExporterPort))
+		cfig.AddNodeExpoertor(host, uint64(monitoredOptions.NodeExporterPort))
+		cfig.AddBlackboxExporter(host, uint64(monitoredOptions.BlackboxExporterPort))
 		cfig.AddMonitoredServer(host)
 	}
 

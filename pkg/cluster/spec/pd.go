@@ -153,7 +153,7 @@ func (c *PDComponent) Instances() []Instance {
 type PDInstance struct {
 	Name string
 	BaseInstance
-	topo *Specification
+	topo Topology
 }
 
 // InitConfig implement Instance interface
@@ -164,11 +164,12 @@ func (i *PDInstance) InitConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
+	topo := i.topo.(*Specification)
+	if err := i.BaseInstance.InitConfig(e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
-	enableTLS := i.topo.GlobalOptions.TLSEnabled
+	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(PDSpec)
 	cfg := scripts.NewPDScript(
 		spec.Name,
@@ -178,7 +179,7 @@ func (i *PDInstance) InitConfig(
 		paths.Log,
 	).WithClientPort(spec.ClientPort).
 		WithPeerPort(spec.PeerPort).
-		AppendEndpoints(i.topo.Endpoints(deployUser)...).
+		AppendEndpoints(topo.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost())
 
 	scheme := "http"
@@ -200,15 +201,15 @@ func (i *PDInstance) InitConfig(
 	}
 
 	// Set the PD metrics storage address
-	if semver.Compare(clusterVersion, "v3.1.0") >= 0 && len(i.topo.Monitors) > 0 {
+	if semver.Compare(clusterVersion, "v3.1.0") >= 0 && len(topo.Monitors) > 0 {
 		if spec.Config == nil {
 			spec.Config = map[string]interface{}{}
 		}
-		prom := i.topo.Monitors[0]
+		prom := topo.Monitors[0]
 		spec.Config["pd-server.metric-storage"] = fmt.Sprintf("%s://%s:%d", scheme, prom.Host, prom.Port)
 	}
 
-	globalConfig := i.topo.ServerConfigs.PD
+	globalConfig := topo.ServerConfigs.PD
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(

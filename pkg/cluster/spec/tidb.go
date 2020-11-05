@@ -110,7 +110,7 @@ func (c *TiDBComponent) Instances() []Instance {
 // TiDBInstance represent the TiDB instance
 type TiDBInstance struct {
 	BaseInstance
-	topo *Specification
+	topo Topology
 }
 
 // InitConfig implement Instance interface
@@ -121,11 +121,12 @@ func (i *TiDBInstance) InitConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
+	topo := i.topo.(*Specification)
+	if err := i.BaseInstance.InitConfig(e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
-	enableTLS := i.topo.GlobalOptions.TLSEnabled
+	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(TiDBSpec)
 	cfg := scripts.NewTiDBScript(
 		i.GetHost(),
@@ -133,7 +134,7 @@ func (i *TiDBInstance) InitConfig(
 		paths.Log,
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).
 		WithStatusPort(spec.StatusPort).
-		AppendEndpoints(i.topo.Endpoints(deployUser)...).
+		AppendEndpoints(topo.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost())
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -148,7 +149,7 @@ func (i *TiDBInstance) InitConfig(
 		return err
 	}
 
-	globalConfig := i.topo.ServerConfigs.TiDB
+	globalConfig := topo.ServerConfigs.TiDB
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(

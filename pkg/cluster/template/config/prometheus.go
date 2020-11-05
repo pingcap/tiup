@@ -46,6 +46,9 @@ type PrometheusConfig struct {
 	BlackboxAddr              string
 	KafkaExporterAddr         string
 	GrafanaAddr               string
+
+	DMMasterAddrs []string
+	DMWorkerAddrs []string
 }
 
 // NewPrometheusConfig returns a PrometheusConfig
@@ -167,6 +170,18 @@ func (c *PrometheusConfig) AddKafkaExporter(ip string, port uint64) *PrometheusC
 // AddGrafana add an kafka exporter address
 func (c *PrometheusConfig) AddGrafana(ip string, port uint64) *PrometheusConfig {
 	c.GrafanaAddr = fmt.Sprintf("%s:%d", ip, port)
+	return c
+}
+
+// AddDMMaster add an dm-master address
+func (c *PrometheusConfig) AddDMMaster(ip string, port uint64) *PrometheusConfig {
+	c.DMMasterAddrs = append(c.DMMasterAddrs, fmt.Sprintf("%s:%d", ip, port))
+	return c
+}
+
+// AddDMWorker add an dm-worker address
+func (c *PrometheusConfig) AddDMWorker(ip string, port uint64) *PrometheusConfig {
+	c.DMWorkerAddrs = append(c.DMWorkerAddrs, fmt.Sprintf("%s:%d", ip, port))
 	return c
 }
 
