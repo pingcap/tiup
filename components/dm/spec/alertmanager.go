@@ -31,7 +31,7 @@ import (
 )
 
 // AlertManagerComponent represents Alertmanager component.
-type AlertManagerComponent struct{ *Topology }
+type AlertManagerComponent struct{ *Specification }
 
 // Name implements Component interface.
 func (c *AlertManagerComponent) Name() string {
@@ -76,7 +76,7 @@ func (c *AlertManagerComponent) Instances() []Instance {
 // AlertManagerInstance represent the alert manager instance
 type AlertManagerInstance struct {
 	cspec.BaseInstance
-	topo *Topology
+	topo *Specification
 }
 
 var _ cluster.DeployerInstance = &AlertManagerInstance{}
@@ -168,6 +168,6 @@ func (i *AlertManagerInstance) ScaleConfig(
 ) error {
 	s := i.topo
 	defer func() { i.topo = s }()
-	i.topo = topo.(*Topology)
+	i.topo = topo.(*Specification)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }

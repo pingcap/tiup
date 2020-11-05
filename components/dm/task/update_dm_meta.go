@@ -44,7 +44,7 @@ func (u *UpdateDMMeta) Execute(ctx *task.Context) error {
 	// make a copy
 	newMeta := &dmspec.Metadata{}
 	*newMeta = *u.metadata
-	newMeta.Topology = &dmspec.Topology{
+	newMeta.Topology = &dmspec.Specification{
 		GlobalOptions: u.metadata.Topology.GlobalOptions,
 		// MonitoredOptions: u.metadata.Topology.MonitoredOptions,
 		ServerConfigs: u.metadata.Topology.ServerConfigs,

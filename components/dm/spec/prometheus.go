@@ -30,7 +30,7 @@ import (
 )
 
 // MonitorComponent represents Monitor component.
-type MonitorComponent struct{ *Topology }
+type MonitorComponent struct{ *Specification }
 
 // Name implements Component interface.
 func (c *MonitorComponent) Name() string {
@@ -71,7 +71,7 @@ func (c *MonitorComponent) Instances() []Instance {
 // MonitorInstance represent the monitor instance
 type MonitorInstance struct {
 	spec.BaseInstance
-	topo *Topology
+	topo *Specification
 }
 
 // InitConfig implement Instance interface
@@ -175,7 +175,7 @@ func (i *MonitorInstance) ScaleConfig(
 ) error {
 	s := i.topo
 	defer func() { i.topo = s }()
-	i.topo = topo.(*Topology)
+	i.topo = topo.(*Specification)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 

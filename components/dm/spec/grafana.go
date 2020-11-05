@@ -30,7 +30,7 @@ import (
 )
 
 // GrafanaComponent represents Grafana component.
-type GrafanaComponent struct{ *Topology }
+type GrafanaComponent struct{ *Specification }
 
 // Name implements Component interface.
 func (c *GrafanaComponent) Name() string {
@@ -73,7 +73,7 @@ func (c *GrafanaComponent) Instances() []Instance {
 // GrafanaInstance represent the grafana instance
 type GrafanaInstance struct {
 	spec.BaseInstance
-	topo *Topology
+	topo *Specification
 }
 
 // InitConfig implement Instance interface
@@ -193,7 +193,7 @@ func (i *GrafanaInstance) ScaleConfig(
 ) error {
 	s := i.topo
 	defer func() { i.topo = s }()
-	dmtopo := topo.(*Topology)
+	dmtopo := topo.(*Specification)
 	i.topo = dmtopo.Merge(i.topo)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }

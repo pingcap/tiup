@@ -52,7 +52,7 @@ type Component = spec.Component
 type Instance = spec.Instance
 
 // DMMasterComponent represents TiDB component.
-type DMMasterComponent struct{ *Topology }
+type DMMasterComponent struct{ *Specification }
 
 // Name implements Component interface.
 func (c *DMMasterComponent) Name() string {
@@ -98,7 +98,7 @@ func (c *DMMasterComponent) Instances() []Instance {
 type MasterInstance struct {
 	Name string
 	spec.BaseInstance
-	topo *Topology
+	topo *Specification
 }
 
 // InitConfig implement Instance interface
@@ -151,7 +151,7 @@ func (i *MasterInstance) ScaleConfig(
 		return err
 	}
 
-	c := topo.(*Topology)
+	c := topo.(*Specification)
 	spec := i.InstanceSpec.(MasterSpec)
 	cfg := scripts.NewDMMasterScaleScript(
 		spec.Name,
@@ -180,7 +180,7 @@ func (i *MasterInstance) ScaleConfig(
 
 // DMWorkerComponent represents DM worker component.
 type DMWorkerComponent struct {
-	*Topology
+	*Specification
 }
 
 // Name implements Component interface.
@@ -227,7 +227,7 @@ func (c *DMWorkerComponent) Instances() []Instance {
 type WorkerInstance struct {
 	Name string
 	spec.BaseInstance
-	topo *Topology
+	topo *Specification
 }
 
 // InitConfig implement Instance interface
@@ -280,22 +280,22 @@ func (i *WorkerInstance) ScaleConfig(
 	defer func() {
 		i.topo = s
 	}()
-	i.topo = topo.(*Topology)
+	i.topo = topo.(*Specification)
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
 
 // GetGlobalOptions returns cluster topology
-func (topo *Topology) GetGlobalOptions() spec.GlobalOptions {
+func (topo *Specification) GetGlobalOptions() spec.GlobalOptions {
 	return topo.GlobalOptions
 }
 
 // GetMonitoredOptions returns MonitoredOptions
-func (topo *Topology) GetMonitoredOptions() *spec.MonitoredOptions {
+func (topo *Specification) GetMonitoredOptions() *spec.MonitoredOptions {
 	return nil
 }
 
 // ComponentsByStopOrder return component in the order need to stop.
-func (topo *Topology) ComponentsByStopOrder() (comps []Component) {
+func (topo *Specification) ComponentsByStopOrder() (comps []Component) {
 	comps = topo.ComponentsByStartOrder()
 	// revert order
 	i := 0
@@ -309,7 +309,7 @@ func (topo *Topology) ComponentsByStopOrder() (comps []Component) {
 }
 
 // ComponentsByStartOrder return component in the order need to start.
-func (topo *Topology) ComponentsByStartOrder() (comps []Component) {
+func (topo *Specification) ComponentsByStartOrder() (comps []Component) {
 	// "dm-master", "dm-worker"
 	comps = append(comps, &DMMasterComponent{topo})
 	comps = append(comps, &DMWorkerComponent{topo})
@@ -320,7 +320,7 @@ func (topo *Topology) ComponentsByStartOrder() (comps []Component) {
 }
 
 // ComponentsByUpdateOrder return component in the order need to be updated.
-func (topo *Topology) ComponentsByUpdateOrder() (comps []Component) {
+func (topo *Specification) ComponentsByUpdateOrder() (comps []Component) {
 	// "dm-master", "dm-worker"
 	comps = append(comps, &DMMasterComponent{topo})
 	comps = append(comps, &DMWorkerComponent{topo})
@@ -331,14 +331,14 @@ func (topo *Topology) ComponentsByUpdateOrder() (comps []Component) {
 }
 
 // IterComponent iterates all components in component starting order
-func (topo *Topology) IterComponent(fn func(comp Component)) {
+func (topo *Specification) IterComponent(fn func(comp Component)) {
 	for _, comp := range topo.ComponentsByStartOrder() {
 		fn(comp)
 	}
 }
 
 // IterInstance iterates all instances in component starting order
-func (topo *Topology) IterInstance(fn func(instance Instance)) {
+func (topo *Specification) IterInstance(fn func(instance Instance)) {
 	for _, comp := range topo.ComponentsByStartOrder() {
 		for _, inst := range comp.Instances() {
 			fn(inst)
@@ -347,7 +347,7 @@ func (topo *Topology) IterInstance(fn func(instance Instance)) {
 }
 
 // IterHost iterates one instance for each host
-func (topo *Topology) IterHost(fn func(instance Instance)) {
+func (topo *Specification) IterHost(fn func(instance Instance)) {
 	hostMap := make(map[string]bool)
 	for _, comp := range topo.ComponentsByStartOrder() {
 		for _, inst := range comp.Instances() {
@@ -362,7 +362,7 @@ func (topo *Topology) IterHost(fn func(instance Instance)) {
 }
 
 // Endpoints returns the PD endpoints configurations
-func (topo *Topology) Endpoints(user string) []*scripts.DMMasterScript {
+func (topo *Specification) Endpoints(user string) []*scripts.DMMasterScript {
 	var ends []*scripts.DMMasterScript
 	for _, s := range topo.Masters {
 		deployDir := spec.Abs(user, s.DeployDir)

@@ -222,7 +222,7 @@ func (im *Importer) handleWorkerConfig(srv *spec.WorkerSpec, fname string) error
 
 // ScpSourceToMaster scp the source files to master,
 // and set V1SourcePath of the master spec.
-func (im *Importer) ScpSourceToMaster(topo *spec.Topology) (err error) {
+func (im *Importer) ScpSourceToMaster(topo *spec.Specification) (err error) {
 	for i := 0; i < len(topo.Masters); i++ {
 		master := &topo.Masters[i]
 		target := filepath.Join(firstNonEmpty(master.DeployDir, topo.GlobalOptions.DeployDir), "v1source")
@@ -293,7 +293,7 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 	}
 
 	meta = &spec.Metadata{
-		Topology: new(spec.Topology),
+		Topology: new(spec.Specification),
 	}
 	topo := meta.Topology
 
