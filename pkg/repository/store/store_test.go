@@ -66,7 +66,7 @@ func TestConflict(t *testing.T) {
 	defer os.RemoveAll(root)
 
 	store := New(root, "")
-	fmt.Println("Begin", time.Now().Format(time.RFC3339))
+	fmt.Println("Begin", time.Now().UnixNano())
 	txn1, err := store.Begin()
 	assert.Nil(t, err)
 	txn2, err := store.Begin()
@@ -96,7 +96,7 @@ func TestConflict(t *testing.T) {
 
 	info, err := os.Stat(path.Join(root, "test.json"))
 	assert.Nil(t, err)
-	fmt.Println(info.ModTime().Format(time.RFC3339))
+	fmt.Println("Now", info.ModTime().UnixNano())
 
 	err = txn2.Commit()
 	assert.NotNil(t, err)
