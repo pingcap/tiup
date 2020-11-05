@@ -93,12 +93,12 @@ func TestConflict(t *testing.T) {
 	assert.Equal(t, uint(9527), m.Signed.(*v1manifest.Timestamp).Meta["test"].Length)
 	err = txn1.Commit()
 	assert.Nil(t, err)
-	err = txn2.Commit()
 
 	info, err := os.Stat(path.Join(root, "test.json"))
-	assert.Nil(err)
+	assert.Nil(t, err)
 	fmt.Println(info.ModTime().Format(time.RFC3339))
 
+	err = txn2.Commit()
 	assert.NotNil(t, err)
 }
 
