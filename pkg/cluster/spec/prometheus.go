@@ -162,7 +162,9 @@ func (i *MonitorInstance) InitConfig(
 	// transfer config
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
 	cfig := config.NewPrometheusConfig(clusterName, enableTLS)
-	cfig.AddBlackbox(i.GetHost(), uint64(monitoredOptions.BlackboxExporterPort))
+	if monitoredOptions != nil {
+		cfig.AddBlackbox(i.GetHost(), uint64(monitoredOptions.BlackboxExporterPort))
+	}
 	uniqueHosts := set.NewStringSet()
 
 	if servers, found := topoHasField("PDServers"); found {
@@ -243,10 +245,12 @@ func (i *MonitorInstance) InitConfig(
 			cfig.AddDMWorker(host, uint64(port))
 		}
 	}
-	for host := range uniqueHosts {
-		cfig.AddNodeExpoertor(host, uint64(monitoredOptions.NodeExporterPort))
-		cfig.AddBlackboxExporter(host, uint64(monitoredOptions.BlackboxExporterPort))
-		cfig.AddMonitoredServer(host)
+	if monitoredOptions != nil {
+		for host := range uniqueHosts {
+			cfig.AddNodeExpoertor(host, uint64(monitoredOptions.NodeExporterPort))
+			cfig.AddBlackboxExporter(host, uint64(monitoredOptions.BlackboxExporterPort))
+			cfig.AddMonitoredServer(host)
+		}
 	}
 
 	if err := i.initRules(e, spec, paths); err != nil {
