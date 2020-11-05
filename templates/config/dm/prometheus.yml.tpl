@@ -14,11 +14,11 @@ rule_files:
 
 {{- if .AlertmanagerAddrs}}
 alerting:
- alertmanagers:
- - static_configs:
-   - targets:
+  alertmanagers:
+  - static_configs:
+    - targets:
 {{- range .AlertmanagerAddrs}}
-     - '{{.}}'
+    - '{{.}}'
 {{- end}}
 {{- end}}
 
