@@ -62,7 +62,7 @@ func (s CDCSpec) IsImported() bool {
 }
 
 // CDCComponent represents CDC component.
-type CDCComponent struct{ *Specification }
+type CDCComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *CDCComponent) Name() string {
@@ -76,8 +76,8 @@ func (c *CDCComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *CDCComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.CDCServers))
-	for _, s := range c.CDCServers {
+	ins := make([]Instance, 0, len(c.Topology.CDCServers))
+	for _, s := range c.Topology.CDCServers {
 		s := s
 		ins = append(ins, &CDCInstance{BaseInstance{
 			InstanceSpec: s,
@@ -100,7 +100,7 @@ func (c *CDCComponent) Instances() []Instance {
 				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
 				return statusByURL(url, tlsCfg)
 			},
-		}, c.Specification})
+		}, c.Topology})
 	}
 	return ins
 }

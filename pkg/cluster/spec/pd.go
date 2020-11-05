@@ -106,7 +106,7 @@ func (s PDSpec) IsImported() bool {
 }
 
 // PDComponent represents PD component.
-type PDComponent struct{ *Specification }
+type PDComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *PDComponent) Name() string {
@@ -120,8 +120,8 @@ func (c *PDComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *PDComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.PDServers))
-	for _, s := range c.PDServers {
+	ins := make([]Instance, 0, len(c.Topology.PDServers))
+	for _, s := range c.Topology.PDServers {
 		s := s
 		ins = append(ins, &PDInstance{
 			Name: s.Name,
@@ -143,7 +143,7 @@ func (c *PDComponent) Instances() []Instance {
 				},
 				StatusFn: s.Status,
 			},
-			topo: c.Specification,
+			topo: c.Topology,
 		})
 	}
 	return ins

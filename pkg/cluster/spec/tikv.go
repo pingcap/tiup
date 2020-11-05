@@ -143,9 +143,7 @@ func (s TiKVSpec) Labels() (map[string]string, error) {
 }
 
 // TiKVComponent represents TiKV component.
-type TiKVComponent struct {
-	*Specification
-}
+type TiKVComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *TiKVComponent) Name() string {
@@ -159,8 +157,8 @@ func (c *TiKVComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *TiKVComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.TiKVServers))
-	for _, s := range c.TiKVServers {
+	ins := make([]Instance, 0, len(c.Topology.TiKVServers))
+	for _, s := range c.Topology.TiKVServers {
 		s := s
 		ins = append(ins, &TiKVInstance{BaseInstance{
 			InstanceSpec: s,
@@ -179,7 +177,7 @@ func (c *TiKVComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: s.Status,
-		}, c.Specification})
+		}, c.Topology})
 	}
 	return ins
 }

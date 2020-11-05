@@ -63,7 +63,7 @@ func (s PumpSpec) IsImported() bool {
 }
 
 // PumpComponent represents Pump component.
-type PumpComponent struct{ *Specification }
+type PumpComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *PumpComponent) Name() string {
@@ -77,8 +77,8 @@ func (c *PumpComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *PumpComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.PumpServers))
-	for _, s := range c.PumpServers {
+	ins := make([]Instance, 0, len(c.Topology.PumpServers))
+	for _, s := range c.Topology.PumpServers {
 		s := s
 		ins = append(ins, &PumpInstance{BaseInstance{
 			InstanceSpec: s,
@@ -102,7 +102,7 @@ func (c *PumpComponent) Instances() []Instance {
 				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
 				return statusByURL(url, tlsCfg)
 			},
-		}, c.Specification})
+		}, c.Topology})
 	}
 	return ins
 }

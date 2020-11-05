@@ -320,6 +320,22 @@ func findField(v reflect.Value, fieldName string) (int, bool) {
 	return -1, false
 }
 
+func findSliceField(v Topology, fieldName string) (reflect.Value, bool) {
+	topo := reflect.ValueOf(v)
+	if topo.Kind() == reflect.Ptr {
+		topo = topo.Elem()
+	}
+
+	j, found := findField(topo, fieldName)
+	if found {
+		val := topo.Field(j)
+		if val.Kind() == reflect.Slice || val.Kind() == reflect.Array {
+			return val, true
+		}
+	}
+	return reflect.Value{}, false
+}
+
 // GetPDList returns a list of PD API hosts of the current cluster
 func (s *Specification) GetPDList() []string {
 	var pdList []string

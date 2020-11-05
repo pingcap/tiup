@@ -17,7 +17,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
-	"reflect"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -64,7 +63,7 @@ func (s AlertManagerSpec) IsImported() bool {
 }
 
 // AlertManagerComponent represents Alertmanager component.
-type AlertManagerComponent struct{ *Specification }
+type AlertManagerComponent struct{ Topology }
 
 // Name implements Component interface.
 func (c *AlertManagerComponent) Name() string {
@@ -78,8 +77,15 @@ func (c *AlertManagerComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *AlertManagerComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.Alertmanager))
-	for _, s := range c.Alertmanager {
+	val, found := findSliceField(c.Topology, "Alertmanager")
+	if !found {
+		return []Instance{}
+	}
+
+	ins := make([]Instance, 0, val.Len())
+
+	for i := 0; i < val.Len(); i++ {
+		s := val.Index(i).Interface().(AlertManagerSpec)
 		ins = append(ins, &AlertManagerInstance{
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
@@ -100,7 +106,7 @@ func (c *AlertManagerComponent) Instances() []Instance {
 					return "-"
 				},
 			},
-			topo: c.Specification,
+			topo: c.Topology,
 		})
 	}
 	return ins
@@ -125,13 +131,9 @@ func (i *AlertManagerInstance) InitConfig(
 		return err
 	}
 
-	topo := reflect.ValueOf(i.topo)
-	if topo.Kind() == reflect.Ptr {
-		topo = topo.Elem()
-	}
-	val := topo.FieldByName("Alertmanager")
-	if (val == reflect.Value{}) {
-		return errors.Errorf("field Alertmanager not found in topology: %v", topo)
+	val, found := findSliceField(i.topo, "Alertmanager")
+	if !found {
+		return errors.Errorf("field Alertmanager not found in topology: %v", i.topo)
 	}
 	alertmanagers := val.Interface().([]AlertManagerSpec)
 

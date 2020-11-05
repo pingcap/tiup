@@ -88,7 +88,7 @@ func (s TiFlashSpec) IsImported() bool {
 }
 
 // TiFlashComponent represents TiFlash component.
-type TiFlashComponent struct{ *Specification }
+type TiFlashComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *TiFlashComponent) Name() string {
@@ -102,8 +102,8 @@ func (c *TiFlashComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *TiFlashComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.TiFlashServers))
-	for _, s := range c.TiFlashServers {
+	ins := make([]Instance, 0, len(c.Topology.TiFlashServers))
+	for _, s := range c.Topology.TiFlashServers {
 		ins = append(ins, &TiFlashInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
@@ -124,7 +124,7 @@ func (c *TiFlashComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: s.Status,
-		}, c.Specification})
+		}, c.Topology})
 	}
 	return ins
 }

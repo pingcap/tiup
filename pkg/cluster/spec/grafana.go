@@ -62,7 +62,7 @@ func (s GrafanaSpec) IsImported() bool {
 }
 
 // GrafanaComponent represents Grafana component.
-type GrafanaComponent struct{ *Specification }
+type GrafanaComponent struct{ Topology }
 
 // Name implements Component interface.
 func (c *GrafanaComponent) Name() string {
@@ -76,8 +76,15 @@ func (c *GrafanaComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *GrafanaComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.Grafana))
-	for _, s := range c.Grafana {
+	val, found := findSliceField(c.Topology, "Grafana")
+	if !found {
+		return []Instance{}
+	}
+
+	ins := make([]Instance, 0, val.Len())
+
+	for i := 0; i < val.Len(); i++ {
+		s := val.Index(i).Interface().(GrafanaSpec)
 		ins = append(ins, &GrafanaInstance{
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
@@ -96,7 +103,7 @@ func (c *GrafanaComponent) Instances() []Instance {
 					return "-"
 				},
 			},
-			topo: c.Specification,
+			topo: c.Topology,
 		})
 	}
 	return ins

@@ -67,7 +67,7 @@ func (s PrometheusSpec) IsImported() bool {
 }
 
 // MonitorComponent represents Monitor component.
-type MonitorComponent struct{ *Specification }
+type MonitorComponent struct{ Topology }
 
 // Name implements Component interface.
 func (c *MonitorComponent) Name() string {
@@ -81,8 +81,13 @@ func (c *MonitorComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *MonitorComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.Monitors))
-	for _, s := range c.Monitors {
+	val, found := findSliceField(c.Topology, "Monitors")
+	if !found {
+		return []Instance{}
+	}
+	ins := make([]Instance, 0, val.Len())
+	for i := 0; i < val.Len(); i++ {
+		s := val.Index(i).Interface().(PrometheusSpec)
 		ins = append(ins, &MonitorInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
@@ -100,7 +105,7 @@ func (c *MonitorComponent) Instances() []Instance {
 			StatusFn: func(_ *tls.Config, _ ...string) string {
 				return "-"
 			},
-		}, c.Specification})
+		}, c.Topology})
 	}
 	return ins
 }
@@ -149,17 +154,8 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 
-	topo := reflect.ValueOf(i.topo)
-	if topo.Kind() == reflect.Ptr {
-		topo = topo.Elem()
-	}
-
 	topoHasField := func(field string) (reflect.Value, bool) {
-		val := topo.FieldByName(field)
-		if (val != reflect.Value{} && (val.Kind() == reflect.Slice || val.Kind() == reflect.Array)) {
-			return val, true
-		}
-		return reflect.Value{}, false
+		return findSliceField(i.topo, field)
 	}
 	monitoredOptions := i.topo.GetMonitoredOptions()
 

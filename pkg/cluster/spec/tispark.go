@@ -121,7 +121,7 @@ func (s TiSparkWorkerSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
 }
 
 // TiSparkMasterComponent represents TiSpark master component.
-type TiSparkMasterComponent struct{ *Specification }
+type TiSparkMasterComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *TiSparkMasterComponent) Name() string {
@@ -135,8 +135,8 @@ func (c *TiSparkMasterComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *TiSparkMasterComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.TiSparkMasters))
-	for _, s := range c.TiSparkMasters {
+	ins := make([]Instance, 0, len(c.Topology.TiSparkMasters))
+	for _, s := range c.Topology.TiSparkMasters {
 		ins = append(ins, &TiSparkMasterInstance{
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
@@ -154,7 +154,7 @@ func (c *TiSparkMasterComponent) Instances() []Instance {
 				},
 				StatusFn: s.Status,
 			},
-			topo: c.Specification,
+			topo: c.Topology,
 		})
 	}
 	return ins
@@ -286,7 +286,7 @@ func (i *TiSparkMasterInstance) ScaleConfig(
 }
 
 // TiSparkWorkerComponent represents TiSpark slave component.
-type TiSparkWorkerComponent struct{ *Specification }
+type TiSparkWorkerComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *TiSparkWorkerComponent) Name() string {
@@ -300,8 +300,8 @@ func (c *TiSparkWorkerComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *TiSparkWorkerComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.TiSparkWorkers))
-	for _, s := range c.TiSparkWorkers {
+	ins := make([]Instance, 0, len(c.Topology.TiSparkWorkers))
+	for _, s := range c.Topology.TiSparkWorkers {
 		ins = append(ins, &TiSparkWorkerInstance{
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
@@ -319,7 +319,7 @@ func (c *TiSparkWorkerComponent) Instances() []Instance {
 				},
 				StatusFn: s.Status,
 			},
-			topo: c.Specification,
+			topo: c.Topology,
 		})
 	}
 	return ins

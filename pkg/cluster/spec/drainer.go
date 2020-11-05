@@ -64,7 +64,7 @@ func (s DrainerSpec) IsImported() bool {
 }
 
 // DrainerComponent represents Drainer component.
-type DrainerComponent struct{ *Specification }
+type DrainerComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *DrainerComponent) Name() string {
@@ -78,8 +78,8 @@ func (c *DrainerComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *DrainerComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.Drainers))
-	for _, s := range c.Drainers {
+	ins := make([]Instance, 0, len(c.Topology.Drainers))
+	for _, s := range c.Topology.Drainers {
 		s := s
 		ins = append(ins, &DrainerInstance{BaseInstance{
 			InstanceSpec: s,
@@ -103,7 +103,7 @@ func (c *DrainerComponent) Instances() []Instance {
 				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
 				return statusByURL(url, tlsCfg)
 			},
-		}, c.Specification})
+		}, c.Topology})
 	}
 	return ins
 }

@@ -62,7 +62,7 @@ func (s TiDBSpec) IsImported() bool {
 }
 
 // TiDBComponent represents TiDB component.
-type TiDBComponent struct{ *Specification }
+type TiDBComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *TiDBComponent) Name() string {
@@ -76,8 +76,8 @@ func (c *TiDBComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *TiDBComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.TiDBServers))
-	for _, s := range c.TiDBServers {
+	ins := make([]Instance, 0, len(c.Topology.TiDBServers))
+	for _, s := range c.Topology.TiDBServers {
 		s := s
 		ins = append(ins, &TiDBInstance{BaseInstance{
 			InstanceSpec: s,
@@ -102,7 +102,7 @@ func (c *TiDBComponent) Instances() []Instance {
 				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.StatusPort)
 				return statusByURL(url, tlsCfg)
 			},
-		}, c.Specification})
+		}, c.Topology})
 	}
 	return ins
 }
