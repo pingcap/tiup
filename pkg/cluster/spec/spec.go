@@ -237,6 +237,20 @@ func (s *Specification) LocationLabels() ([]string, error) {
 	return lbs, nil
 }
 
+// GetTiKVLabels implements TiKVLabelProvider
+func (s *Specification) GetTiKVLabels() (map[string]map[string]string, error) {
+	kvs := s.TiKVServers
+	locationLabels := map[string]map[string]string{}
+	for _, kv := range kvs {
+		address := fmt.Sprintf("%s:%d", kv.Host, kv.GetMainPort())
+		var err error
+		if locationLabels[address], err = kv.Labels(); err != nil {
+			return nil, err
+		}
+	}
+	return locationLabels, nil
+}
+
 // AllComponentNames contains the names of all components.
 // should include all components in ComponentsByStartOrder
 func AllComponentNames() (roles []string) {

@@ -18,11 +18,9 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -42,20 +40,22 @@ func Enable(
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := cluster.ComponentsByStartOrder()
 	components = FilterComponent(components, roleFilter)
+	monitoredOptions := cluster.GetMonitoredOptions()
 
-	for _, com := range components {
-		insts := FilterInstance(com.Instances(), nodeFilter)
+	for _, comp := range components {
+		insts := FilterInstance(comp.Instances(), nodeFilter)
 		err := EnableComponent(getter, insts, options, isEnable)
 		if err != nil {
-			return errors.Annotatef(err, "failed to start %s", com.Name())
+			return errors.Annotatef(err, "failed to enable %s", comp.Name())
+		}
+		if monitoredOptions == nil {
+			continue
 		}
 		for _, inst := range insts {
 			if !uniqueHosts.Exist(inst.GetHost()) {
 				uniqueHosts.Insert(inst.GetHost())
-				if cluster.GetMonitoredOptions() != nil {
-					if err := EnableMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout, isEnable); err != nil {
-						return err
-					}
+				if err := EnableMonitored(getter, inst, monitoredOptions, options.OptTimeout, isEnable); err != nil {
+					return err
 				}
 			}
 		}
@@ -76,20 +76,22 @@ func Start(
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := cluster.ComponentsByStartOrder()
 	components = FilterComponent(components, roleFilter)
+	monitoredOptions := cluster.GetMonitoredOptions()
 
-	for _, com := range components {
-		insts := FilterInstance(com.Instances(), nodeFilter)
+	for _, comp := range components {
+		insts := FilterInstance(comp.Instances(), nodeFilter)
 		err := StartComponent(getter, insts, options, tlsCfg)
 		if err != nil {
-			return errors.Annotatef(err, "failed to start %s", com.Name())
+			return errors.Annotatef(err, "failed to start %s", comp.Name())
+		}
+		if monitoredOptions == nil {
+			continue
 		}
 		for _, inst := range insts {
 			if !uniqueHosts.Exist(inst.GetHost()) {
 				uniqueHosts.Insert(inst.GetHost())
-				if cluster.GetMonitoredOptions() != nil {
-					if err := StartMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil {
-						return err
-					}
+				if err := StartMonitored(getter, inst, monitoredOptions, options.OptTimeout); err != nil {
+					return err
 				}
 			}
 		}
@@ -115,19 +117,20 @@ func Stop(
 		instCount[inst.GetHost()] = instCount[inst.GetHost()] + 1
 	})
 
-	for _, com := range components {
-		insts := FilterInstance(com.Instances(), nodeFilter)
+	for _, comp := range components {
+		insts := FilterInstance(comp.Instances(), nodeFilter)
 		err := StopComponent(getter, insts, options.OptTimeout)
 		if err != nil && !options.Force {
-			return errors.Annotatef(err, "failed to stop %s", com.Name())
+			return errors.Annotatef(err, "failed to stop %s", comp.Name())
+		}
+		if cluster.GetMonitoredOptions() == nil {
+			continue
 		}
 		for _, inst := range insts {
 			instCount[inst.GetHost()]--
 			if instCount[inst.GetHost()] == 0 {
-				if cluster.GetMonitoredOptions() != nil {
-					if err := StopMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
-						return err
-					}
+				if err := StopMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
+					return err
 				}
 			}
 		}
@@ -135,231 +138,30 @@ func Stop(
 	return nil
 }
 
-// NeedCheckTomebsome return true if we need to check and destroy some node.
-func NeedCheckTomebsome(spec *spec.Specification) bool {
-	for _, s := range spec.TiKVServers {
+// NeedCheckTombstone return true if we need to check and destroy some node.
+func NeedCheckTombstone(topo *spec.Specification) bool {
+	for _, s := range topo.TiKVServers {
 		if s.Offline {
 			return true
 		}
 	}
-	for _, s := range spec.TiFlashServers {
+	for _, s := range topo.TiFlashServers {
 		if s.Offline {
 			return true
 		}
 	}
-	for _, s := range spec.PumpServers {
+	for _, s := range topo.PumpServers {
 		if s.Offline {
 			return true
 		}
 	}
-	for _, s := range spec.Drainers {
+	for _, s := range topo.Drainers {
 		if s.Offline {
 			return true
 		}
 	}
+
 	return false
-}
-
-// DestroyTombstone remove the tombstone node in spec and destroy them.
-// If returNodesOnly is true, it will only return the node id that can be destroy.
-func DestroyTombstone(
-	getter ExecutorGetter,
-	cluster *spec.Specification,
-	returNodesOnly bool,
-	options Options,
-	tlsCfg *tls.Config,
-) (nodes []string, err error) {
-	return DestroyClusterTombstone(getter, cluster, returNodesOnly, options, tlsCfg)
-}
-
-// DestroyClusterTombstone remove the tombstone node in spec and destroy them.
-// If returNodesOnly is true, it will only return the node id that can be destroy.
-func DestroyClusterTombstone(
-	getter ExecutorGetter,
-	cluster *spec.Specification,
-	returNodesOnly bool,
-	options Options,
-	tlsCfg *tls.Config,
-) (nodes []string, err error) {
-	var pdClient = api.NewPDClient(cluster.GetPDList(), 10*time.Second, tlsCfg)
-
-	binlogClient, err := api.NewBinlogClient(cluster.GetPDList(), tlsCfg)
-	if err != nil {
-		return nil, errors.AddStack(err)
-	}
-
-	filterID := func(instance []spec.Instance, id string) (res []spec.Instance) {
-		for _, ins := range instance {
-			if ins.ID() == id {
-				res = append(res, ins)
-			}
-		}
-		return
-	}
-
-	var kvServers []spec.TiKVSpec
-	for _, s := range cluster.TiKVServers {
-		if !s.Offline {
-			kvServers = append(kvServers, s)
-			continue
-		}
-
-		id := s.Host + ":" + strconv.Itoa(s.Port)
-
-		tombstone, err := pdClient.IsTombStone(id)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-
-		if !tombstone {
-			kvServers = append(kvServers, s)
-			continue
-		}
-
-		nodes = append(nodes, id)
-		if returNodesOnly {
-			continue
-		}
-
-		instances := (&spec.TiKVComponent{Specification: cluster}).Instances()
-		instances = filterID(instances, id)
-
-		err = StopComponent(getter, instances, options.OptTimeout)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-
-		err = DestroyComponent(getter, instances, cluster, options)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-
-	}
-
-	var flashServers []spec.TiFlashSpec
-	for _, s := range cluster.TiFlashServers {
-		if !s.Offline {
-			flashServers = append(flashServers, s)
-			continue
-		}
-
-		id := s.Host + ":" + strconv.Itoa(s.FlashServicePort)
-
-		tombstone, err := pdClient.IsTombStone(id)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-
-		if !tombstone {
-			flashServers = append(flashServers, s)
-			continue
-		}
-
-		nodes = append(nodes, id)
-		if returNodesOnly {
-			continue
-		}
-
-		instances := (&spec.TiFlashComponent{Specification: cluster}).Instances()
-		id = s.Host + ":" + strconv.Itoa(s.GetMainPort())
-		instances = filterID(instances, id)
-
-		err = StopComponent(getter, instances, options.OptTimeout)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-
-		err = DestroyComponent(getter, instances, cluster, options)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-
-	}
-
-	var pumpServers []spec.PumpSpec
-	for _, s := range cluster.PumpServers {
-		if !s.Offline {
-			pumpServers = append(pumpServers, s)
-			continue
-		}
-
-		id := s.Host + ":" + strconv.Itoa(s.Port)
-
-		tombstone, err := binlogClient.IsPumpTombstone(id)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-
-		if !tombstone {
-			pumpServers = append(pumpServers, s)
-		}
-
-		nodes = append(nodes, id)
-		if returNodesOnly {
-			continue
-		}
-
-		instances := (&spec.PumpComponent{Specification: cluster}).Instances()
-		instances = filterID(instances, id)
-		err = StopComponent(getter, instances, options.OptTimeout)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-
-		err = DestroyComponent(getter, instances, cluster, options)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-
-	}
-
-	var drainerServers []spec.DrainerSpec
-	for _, s := range cluster.Drainers {
-		if !s.Offline {
-			drainerServers = append(drainerServers, s)
-			continue
-		}
-
-		id := s.Host + ":" + strconv.Itoa(s.Port)
-
-		tombstone, err := binlogClient.IsDrainerTombstone(id)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-
-		if !tombstone {
-			drainerServers = append(drainerServers, s)
-		}
-
-		nodes = append(nodes, id)
-		if returNodesOnly {
-			continue
-		}
-
-		instances := (&spec.DrainerComponent{Specification: cluster}).Instances()
-		instances = filterID(instances, id)
-
-		err = StopComponent(getter, instances, options.OptTimeout)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-
-		err = DestroyComponent(getter, instances, cluster, options)
-		if err != nil {
-			return nil, errors.AddStack(err)
-		}
-	}
-
-	if returNodesOnly {
-		return
-	}
-
-	cluster.TiKVServers = kvServers
-	cluster.TiFlashServers = flashServers
-	cluster.PumpServers = pumpServers
-	cluster.Drainers = drainerServers
-
-	return
 }
 
 // Restart the cluster.

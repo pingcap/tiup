@@ -62,13 +62,29 @@ function scale_core() {
     # validate https://github.com/pingcap/tiup/issues/786
     # ensure that this instance is removed from the startup scripts of other components that need to rely on PD
     ! tiup-cluster $client exec $name -N $ipprefix.101 --command "grep -q $ipprefix.103:2379 /home/tidb/deploy/tidb-4000/scripts/run_tidb.sh"
+
     echo "start scale out pd"
     topo=./topo/full_scale_in_pd.yaml
     sed "s/__IPPREFIX__/$ipprefix/g" $topo.tpl > $topo
     tiup-cluster $client --yes scale-out $name $topo
-
     # after scalue-out, ensure this instance come back
     tiup-cluster $client exec $name -N $ipprefix.101 --command "grep -q $ipprefix.103:2379 /home/tidb/deploy/tidb-4000/scripts/run_tidb.sh"
+
+    echo "start scale in tidb"
+    tiup-cluster $client --yes scale-in $name -N $ipprefix.102:4000
+    wait_instance_num_reach $name $total_sub_one $native_ssh
+    ! tiup-cluster $client exec $name -N $ipprefix.102 --command "ls /home/tidb/deploy/monitor-9100/deploy/monitor-9100"
+    ! tiup-cluster $client exec $name -N $ipprefix.102 --command "ps aux | grep node_exporter | grep -qv grep"
+    ! tiup-cluster $client exec $name -N $ipprefix.102 --command "ps aux | grep blackbox_exporter | grep -qv grep"
+
+    echo "start scale out tidb"
+    topo=./topo/full_scale_in_tidb.yaml
+    sed "s/__IPPREFIX__.101/$ipprefix.102/g" $topo.tpl > $topo
+    tiup-cluster $client --yes scale-out $name $topo
+    # after scalue-out, ensure node_exporter and blackbox_exporter come back
+    tiup-cluster $client exec $name -N $ipprefix.102 --command "ls /home/tidb/deploy/monitor-9100/deploy/monitor-9100"
+    tiup-cluster $client exec $name -N $ipprefix.102 --command "ps aux | grep node_exporter | grep -qv grep"
+    tiup-cluster $client exec $name -N $ipprefix.102 --command "ps aux | grep blackbox_exporter | grep -qv grep"
 
     tiup-cluster $client _test $name writable
 }

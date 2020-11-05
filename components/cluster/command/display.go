@@ -23,11 +23,8 @@ import (
 	"github.com/fatih/color"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/crypto"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/spf13/cobra"
 )
@@ -70,12 +67,7 @@ func newDisplayCmd() *cobra.Command {
 				return displayDashboardInfo(clusterName, tlsCfg)
 			}
 
-			err = manager.Display(clusterName, gOpt)
-			if err != nil {
-				return perrs.AddStack(err)
-			}
-
-			return destroyTombstoneIfNeed(clusterName, metadata, gOpt)
+			return manager.Display(clusterName, gOpt)
 		},
 	}
 
@@ -132,49 +124,4 @@ func displayDashboardInfo(clusterName string, tlsCfg *tls.Config) error {
 	)
 
 	return nil
-}
-
-func destroyTombstoneIfNeed(clusterName string, metadata *spec.ClusterMeta, opt operator.Options) error {
-	topo := metadata.Topology
-
-	if !operator.NeedCheckTomebsome(topo) {
-		return nil
-	}
-
-	tlsCfg, err := topo.TLSConfig(tidbSpec.Path(clusterName, spec.TLSCertKeyDir))
-	if err != nil {
-		return perrs.AddStack(err)
-	}
-
-	ctx := task.NewContext()
-	err = ctx.SetSSHKeySet(spec.ClusterPath(clusterName, "ssh", "id_rsa"),
-		spec.ClusterPath(clusterName, "ssh", "id_rsa.pub"))
-	if err != nil {
-		return perrs.AddStack(err)
-	}
-
-	err = ctx.SetClusterSSH(topo, metadata.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
-	if err != nil {
-		return perrs.AddStack(err)
-	}
-
-	nodes, err := operator.DestroyTombstone(ctx, topo, true /* returnNodesOnly */, opt, tlsCfg)
-	if err != nil {
-		return perrs.AddStack(err)
-	}
-
-	if len(nodes) == 0 {
-		return nil
-	}
-
-	log.Infof("Start destroy Tombstone nodes: %v ...", nodes)
-
-	_, err = operator.DestroyTombstone(ctx, topo, false /* returnNodesOnly */, opt, tlsCfg)
-	if err != nil {
-		return perrs.AddStack(err)
-	}
-
-	log.Infof("Destroy success")
-
-	return spec.SaveClusterMeta(clusterName, metadata)
 }

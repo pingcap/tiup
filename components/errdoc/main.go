@@ -14,21 +14,20 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/blevesearch/bleve"
-	"github.com/blevesearch/bleve/analysis/lang/en"
 	_ "github.com/blevesearch/bleve/index/store/goleveldb"
-	"github.com/blevesearch/bleve/mapping"
+	"github.com/blevesearch/bleve/search/query"
+	"github.com/pingcap/tiup/components/errdoc/spec"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/spf13/cobra"
-	"github.com/tj/go-termd"
 )
 
 func init() {
@@ -37,7 +36,7 @@ func init() {
 
 func main() {
 	rootCmd := &cobra.Command{
-		Use:          "tiup err",
+		Use:          "tiup errdoc",
 		Short:        "Show detailed error message via error code or keyword",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -53,66 +52,69 @@ func main() {
 	}
 }
 
-type errorSpec struct {
-	Code        string   `toml:"code" json:"code"`
-	Error       string   `toml:"error" json:"error"`
-	Description string   `toml:"description" json:"description"`
-	Tags        []string `toml:"tags" json:"tags"`
-	Workaround  string   `toml:"workaround" json:"workaround"`
-}
-
-func newCompiler() *termd.Compiler {
-	return &termd.Compiler{
-		Columns: 80,
-	}
-}
-
-// String implements the fmt.Stringer interface
-func (f errorSpec) String() string {
-	var header string
-	if len(f.Tags) > 0 {
-		header = fmt.Sprintf("# Error: **%s**, Tags: %v", f.Code, f.Tags)
-	} else {
-		header = fmt.Sprintf("# Error: **%s**", f.Code)
-	}
-
-	return newCompiler().Compile(fmt.Sprintf(`%s
-%s
-## Description
-%s
-## Workaround
-%s`, header, f.Error, f.Description, f.Workaround))
-}
-
 func searchError(args []string) error {
 	index, errStore, err := loadIndex()
 	if err != nil {
 		return err
 	}
 
-	result, err := index.Search(bleve.NewSearchRequest(bleve.NewMatchPhraseQuery(strings.Join(args, " "))))
+	// Bleve search
+	queries := []query.Query{
+		bleve.NewMatchPhraseQuery(strings.Join(args, " ")),
+	}
+	var terms []query.Query
+	var prefix []query.Query
+	for _, arg := range args {
+		terms = append(terms, bleve.NewTermQuery(arg))
+		prefix = append(prefix, bleve.NewPrefixQuery(arg))
+	}
+	queries = append(queries, bleve.NewConjunctionQuery(terms...))
+	queries = append(queries, bleve.NewConjunctionQuery(prefix...))
+
+	result, err := index.Search(bleve.NewSearchRequest(bleve.NewDisjunctionQuery(queries...)))
 	if err != nil {
 		return err
 	}
 
-	for i, match := range result.Hits {
-		spec := errStore[match.ID]
-		fmt.Println(spec)
-		if i != len(result.Hits)-1 {
-			fmt.Println(string(bytes.Repeat([]byte("-"), 80)))
+	all := map[string]struct{}{}
+	for _, match := range result.Hits {
+		all[match.ID] = struct{}{}
+	}
+
+	// Error code prefix match
+	if len(args) == 1 {
+		c := strings.ToLower(args[0])
+		for code := range errStore {
+			if strings.HasPrefix(strings.ToLower(code), c) {
+				all[code] = struct{}{}
+			}
 		}
 	}
+
+	var sorted []string
+	for code := range all {
+		sorted = append(sorted, code)
+	}
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i] < sorted[j]
+	})
+	for _, code := range sorted {
+		spec := errStore[code]
+		fmt.Println(spec)
+	}
+
+	fmt.Printf("%d matched\n", len(sorted))
 
 	return nil
 }
 
-func loadIndex() (bleve.Index, map[string]*errorSpec, error) {
+func loadIndex() (bleve.Index, map[string]*spec.ErrorSpec, error) {
 	dir := os.Getenv(localdata.EnvNameComponentInstallDir)
 	if dir == "" {
-		return nil, nil, errors.New("component `doc` doesn't running in TiUP mode")
+		return nil, nil, errors.New("component `errdoc` doesn't running in TiUP mode")
 	}
 
-	type tomlFile map[string]*errorSpec
+	type tomlFile map[string]*spec.ErrorSpec
 	indexPath := filepath.Join(dir, "index")
 
 	index, err := bleve.Open(indexPath)
@@ -123,7 +125,7 @@ func loadIndex() (bleve.Index, map[string]*errorSpec, error) {
 	needIndex := err == bleve.ErrorIndexPathDoesNotExist
 
 	if needIndex {
-		indexMapping := buildIndexMapping()
+		indexMapping := bleve.NewIndexMapping()
 		if err := os.MkdirAll(indexPath, 0755); err != nil {
 			return nil, nil, err
 		}
@@ -133,7 +135,7 @@ func loadIndex() (bleve.Index, map[string]*errorSpec, error) {
 		}
 	}
 
-	errStore := map[string]*errorSpec{}
+	errStore := map[string]*spec.ErrorSpec{}
 
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -156,6 +158,8 @@ func loadIndex() (bleve.Index, map[string]*errorSpec, error) {
 		}
 		for code, spec := range file {
 			spec.Code = code
+			spec.ExtraCode = strings.ReplaceAll(code, ":", " ")
+			spec.ExtraError = strings.ReplaceAll(spec.Error, ":", " ")
 			errStore[code] = spec
 			if !needIndex {
 				continue
@@ -167,24 +171,4 @@ func loadIndex() (bleve.Index, map[string]*errorSpec, error) {
 		return nil
 	})
 	return index, errStore, err
-}
-
-func buildIndexMapping() mapping.IndexMapping {
-	englishTextFieldMapping := bleve.NewTextFieldMapping()
-	englishTextFieldMapping.Analyzer = en.AnalyzerName
-
-	documentMapping := bleve.NewDocumentMapping()
-
-	documentMapping.AddFieldMappingsAt("error", englishTextFieldMapping)
-	documentMapping.AddFieldMappingsAt("description", englishTextFieldMapping)
-	documentMapping.AddFieldMappingsAt("workaround", englishTextFieldMapping)
-	documentMapping.AddFieldMappingsAt("tags", englishTextFieldMapping)
-	documentMapping.AddFieldMappingsAt("code", englishTextFieldMapping)
-
-	indexMapping := bleve.NewIndexMapping()
-	indexMapping.DefaultMapping = documentMapping
-	indexMapping.TypeField = "type"
-	indexMapping.DefaultAnalyzer = "en"
-
-	return indexMapping
 }

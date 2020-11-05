@@ -339,34 +339,45 @@ func (e *TiKVLabelError) Error() string {
 	return str
 }
 
-// CheckTiKVLocationLabels will check if tikv missing label or have wrong label
-func CheckTiKVLocationLabels(pdLocLabels []string, kvs []TiKVSpec) error {
+// TiKVLabelProvider provide store labels information
+type TiKVLabelProvider interface {
+	GetTiKVLabels() (map[string]map[string]string, error)
+}
+
+func getHostFromAddress(addr string) string {
+	return strings.Split(addr, ":")[0]
+}
+
+// CheckTiKVLabels will check if tikv missing label or have wrong label
+func CheckTiKVLabels(pdLocLabels []string, slp TiKVLabelProvider) error {
 	lerr := &TiKVLabelError{
 		TiKVInstances: make(map[string][]error),
 	}
 	lbs := set.NewStringSet(pdLocLabels...)
 	hosts := make(map[string]int)
 
-	for _, kv := range kvs {
-		hosts[kv.Host] = hosts[kv.Host] + 1
+	storeLabels, err := slp.GetTiKVLabels()
+	if err != nil {
+		return err
 	}
-	for _, kv := range kvs {
-		id := fmt.Sprintf("%s:%d", kv.Host, kv.GetMainPort())
-		ls, err := kv.Labels()
-		if err != nil {
-			return err
-		}
-		if len(ls) == 0 && hosts[kv.Host] > 1 {
-			lerr.TiKVInstances[id] = append(
-				lerr.TiKVInstances[id],
+	for kv := range storeLabels {
+		host := getHostFromAddress(kv)
+		hosts[host] = hosts[host] + 1
+	}
+
+	for kv, ls := range storeLabels {
+		host := getHostFromAddress(kv)
+		if len(ls) == 0 && hosts[host] > 1 {
+			lerr.TiKVInstances[kv] = append(
+				lerr.TiKVInstances[kv],
 				errors.New("multiple TiKV instances are deployed at the same host but location label missing"),
 			)
 			continue
 		}
 		for lname := range ls {
 			if !lbs.Exist(lname) {
-				lerr.TiKVInstances[id] = append(
-					lerr.TiKVInstances[id],
+				lerr.TiKVInstances[kv] = append(
+					lerr.TiKVInstances[kv],
 					fmt.Errorf("label name '%s' is not specified in pd config (replication.location-labels: %v)", lname, pdLocLabels),
 				)
 			}
@@ -598,18 +609,24 @@ func (s *Specification) dirConflictsDetect() error {
 
 			// Directory conflicts
 			for _, dirType := range dirTypes {
-				if j, found := findField(compSpec, dirType); found {
+				j, found := findField(compSpec, dirType)
+				if !found {
+					continue
+				}
+
+				// `yaml:"data_dir,omitempty"`
+				tp := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
+				for _, dir := range strings.Split(compSpec.Field(j).String(), ",") {
+					dir = strings.TrimSpace(dir)
 					item := usedDir{
 						host: host,
-						dir:  compSpec.Field(j).String(),
+						dir:  dir,
 					}
 					// data_dir is relative to deploy_dir by default, so they can be with
 					// same (sub) paths as long as the deploy_dirs are different
 					if item.dir != "" && !strings.HasPrefix(item.dir, "/") {
 						continue
 					}
-					// `yaml:"data_dir,omitempty"`
-					tp := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
 					prev, exist := dirStats[item]
 					// not checking between imported nodes
 					if exist &&
@@ -641,8 +658,8 @@ func (s *Specification) dirConflictsDetect() error {
 // prefix, useful to find potential path conflicts
 func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 	dirTypes := []string{
-		"DataDir",
 		"DeployDir",
+		"DataDir",
 		"LogDir",
 	}
 
@@ -652,6 +669,14 @@ func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 	topoSpec := reflect.ValueOf(s).Elem()
 	dirPrefix = Abs(s.GlobalOptions.User, dirPrefix)
 
+	addHostDir := func(host, deployDir, dir string) {
+		if !strings.HasPrefix(dir, "/") {
+			dir = filepath.Join(deployDir, dir)
+		}
+		dir = Abs(s.GlobalOptions.User, dir)
+		dirStats[host+dir]++
+	}
+
 	for i := 0; i < topoSpec.NumField(); i++ {
 		if isSkipField(topoSpec.Field(i)) {
 			continue
@@ -660,35 +685,42 @@ func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
 			compSpec := compSpecs.Index(index)
-			// Directory conflicts
+			deployDir := compSpec.FieldByName("DeployDir").String()
+			host := compSpec.FieldByName("Host").String()
+
 			for _, dirType := range dirTypes {
-				if j, found := findField(compSpec, dirType); found {
-					dir := compSpec.Field(j).String()
-					host := compSpec.FieldByName("Host").String()
+				j, found := findField(compSpec, dirType)
+				if !found {
+					continue
+				}
 
-					switch dirType { // the same as in instance.go for (*instance)
-					case "DataDir":
-						deployDir := compSpec.FieldByName("DeployDir").String()
-						// the default data_dir is relative to deploy_dir
-						if dir != "" && !strings.HasPrefix(dir, "/") {
-							dir = filepath.Join(deployDir, dir)
-						}
-					case "LogDir":
-						deployDir := compSpec.FieldByName("DeployDir").String()
-						field := compSpec.FieldByName("LogDir")
-						if field.IsValid() {
-							dir = field.Interface().(string)
-						}
+				dir := compSpec.Field(j).String()
 
-						if dir == "" {
-							dir = "log"
-						}
-						if !strings.HasPrefix(dir, "/") {
-							dir = filepath.Join(deployDir, dir)
+				switch dirType { // the same as in instance.go for (*instance)
+				case "DeployDir":
+					addHostDir(host, deployDir, "")
+				case "DataDir":
+					// the default data_dir is relative to deploy_dir
+					if dir == "" {
+						addHostDir(host, deployDir, dir)
+						continue
+					}
+					for _, dataDir := range strings.Split(dir, ",") {
+						dataDir = strings.TrimSpace(dataDir)
+						if dataDir != "" {
+							addHostDir(host, deployDir, dataDir)
 						}
 					}
-					dir = Abs(s.GlobalOptions.User, dir)
-					dirStats[host+dir]++
+				case "LogDir":
+					field := compSpec.FieldByName("LogDir")
+					if field.IsValid() {
+						dir = field.Interface().(string)
+					}
+
+					if dir == "" {
+						dir = "log"
+					}
+					addHostDir(host, deployDir, strings.TrimSpace(dir))
 				}
 			}
 		}

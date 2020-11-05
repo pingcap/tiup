@@ -86,11 +86,13 @@ func ScaleInCluster(
 ) error {
 	// instances by uuid
 	instances := map[string]spec.Instance{}
+	instCount := map[string]int{}
 
 	// make sure all nodeIds exists in topology
 	for _, component := range cluster.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
 			instances[instance.ID()] = instance
+			instCount[instance.GetHost()] = instCount[instance.GetHost()] + 1
 		}
 	}
 
@@ -122,65 +124,56 @@ func ScaleInCluster(
 		}
 	}
 
+	// At least a PD server exists
+	if len(pdEndpoint) == 0 {
+		return errors.New("cannot find available PD instance")
+	}
+
+	pdClient := api.NewPDClient(pdEndpoint, 10*time.Second, tlsCfg)
+
+	binlogClient, err := api.NewBinlogClient(pdEndpoint, tlsCfg)
+	if err != nil {
+		return err
+	}
+
 	if options.Force {
 		for _, component := range cluster.ComponentsByStartOrder() {
 			for _, instance := range component.Instances() {
 				if !deletedNodes.Exist(instance.ID()) {
 					continue
 				}
+				compName := component.Name()
 
-				pdClient := api.NewPDClient(pdEndpoint, 10*time.Second, tlsCfg)
-				binlogClient, _ := api.NewBinlogClient(pdEndpoint, tlsCfg)
-
-				if component.Name() != spec.ComponentPump && component.Name() != spec.ComponentDrainer {
+				if compName != spec.ComponentPump && compName != spec.ComponentDrainer {
 					if err := deleteMember(component, instance, pdClient, binlogClient, options.APITimeout); err != nil {
-						log.Warnf("failed to delete %s: %v", component.Name(), err)
+						log.Warnf("failed to delete %s: %v", compName, err)
 					}
 				}
 
-				// just try stop and destroy
-				if err := StopComponent(getter, []spec.Instance{instance}, options.OptTimeout); err != nil {
-					log.Warnf("failed to stop %s: %v", component.Name(), err)
-				}
-				if err := DestroyComponent(getter, []spec.Instance{instance}, cluster, options); err != nil {
-					log.Warnf("failed to destroy %s: %v", component.Name(), err)
+				instCount[instance.GetHost()]--
+				if err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
+					log.Warnf("failed to stop/destroy %s: %v", compName, err)
 				}
 
 				// directly update pump&drainer 's state as offline in etcd.
 				if binlogClient != nil {
 					id := instance.ID()
-					if component.Name() == spec.ComponentPump {
+					if compName == spec.ComponentPump {
 						if err := binlogClient.UpdatePumpState(id, "offline"); err != nil {
-							log.Warnf("failed to update %s state as offline: %v", component.Name(), err)
+							log.Warnf("failed to update %s state as offline: %v", compName, err)
 						}
-					} else if component.Name() == spec.ComponentDrainer {
+					} else if compName == spec.ComponentDrainer {
 						if err := binlogClient.UpdateDrainerState(id, "offline"); err != nil {
-							log.Warnf("failed to update %s state as offline: %v", component.Name(), err)
+							log.Warnf("failed to update %s state as offline: %v", compName, err)
 						}
 					}
 				}
-
-				continue
 			}
 		}
 		return nil
 	}
 
 	// TODO if binlog is switch on, cannot delete all pump servers.
-
-	// At least a PD server exists
-	var pdClient *api.PDClient
-
-	if len(pdEndpoint) == 0 {
-		return errors.New("cannot find available PD instance")
-	}
-
-	pdClient = api.NewPDClient(pdEndpoint, 10*time.Second, tlsCfg)
-
-	binlogClient, err := api.NewBinlogClient(pdEndpoint, tlsCfg)
-	if err != nil {
-		return err
-	}
 
 	var tiflashInstances []spec.Instance
 	for _, instance := range (&spec.TiFlashComponent{Specification: cluster}).Instances() {
@@ -230,14 +223,12 @@ func ScaleInCluster(
 			}
 
 			if !asyncOfflineComps.Exist(instance.ComponentName()) {
-				if err := StopComponent(getter, []spec.Instance{instance}, options.OptTimeout); err != nil {
-					return errors.Annotatef(err, "failed to stop %s", component.Name())
-				}
-				if err := DestroyComponent(getter, []spec.Instance{instance}, cluster, options); err != nil {
-					return errors.Annotatef(err, "failed to destroy %s", component.Name())
+				instCount[instance.GetHost()]--
+				if err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
+					return err
 				}
 			} else {
-				log.Warnf(color.YellowString("The component `%s` will be destroyed when display cluster info when it become tombstone, maybe exists in several minutes or hours",
+				log.Warnf(color.YellowString("The component `%s` will become tombstone, maybe exists in several minutes or hours, after that you can use the prune command to clean it",
 					component.Name()))
 			}
 		}

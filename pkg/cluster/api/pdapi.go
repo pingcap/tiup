@@ -677,6 +677,32 @@ func (pc *PDClient) GetLocationLabels() ([]string, error) {
 	return rc.LocationLabels, nil
 }
 
+// GetTiKVLabels implements TiKVLabelProvider
+func (pc *PDClient) GetTiKVLabels() (map[string]map[string]string, error) {
+	r, err := pc.GetStores()
+	if err != nil {
+		return nil, err
+	}
+
+	locationLabels := map[string]map[string]string{}
+	for _, s := range r.Stores {
+		if s.Store.StateName != "Up" {
+			continue
+		}
+		lbs := s.Store.GetLabels()
+		labels := map[string]string{}
+		for _, lb := range lbs {
+			labels[lb.GetKey()] = lb.GetValue()
+		}
+		// Skip tiflash
+		if labels["engine"] == "tiflash" {
+			continue
+		}
+		locationLabels[s.Store.GetAddress()] = labels
+	}
+	return locationLabels, nil
+}
+
 // UpdateScheduleConfig updates the PD schedule config
 func (pc *PDClient) UpdateScheduleConfig(body io.Reader) error {
 	return pc.updateConfig(body, pdConfigSchedule)

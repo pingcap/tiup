@@ -46,7 +46,7 @@ function tiup-dm() {
     mkdir -p ~/.tiup/bin && cp -f ./root.json ~/.tiup/bin/
     # echo "in function"
     if [ -f "./bin/tiup-dm.test" ]; then
-        ./bin/tiup-dm.test  -test.coverprofile=./cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
+        ./bin/tiup-dm.test -test.coverprofile=./cover/cov.itest-$(date +'%s')-$RANDOM.out __DEVEL--i-heard-you-like-tests "$@"
     else
         ../../bin/tiup-dm "$@"
     fi
