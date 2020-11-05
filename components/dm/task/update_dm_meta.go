@@ -19,6 +19,7 @@ import (
 
 	dmspec "github.com/pingcap/tiup/components/dm/spec"
 
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/set"
 )
@@ -64,19 +65,19 @@ func (u *UpdateDMMeta) Execute(ctx *task.Context) error {
 		}
 		newMeta.Topology.Workers = append(newMeta.Topology.Workers, topo.Workers[i])
 	}
-	for i, instance := range (&dmspec.MonitorComponent{Topology: topo}).Instances() {
+	for i, instance := range (&spec.MonitorComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Monitors = append(newMeta.Topology.Monitors, topo.Monitors[i])
 	}
-	for i, instance := range (&dmspec.GrafanaComponent{Topology: topo}).Instances() {
+	for i, instance := range (&spec.GrafanaComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Grafana = append(newMeta.Topology.Grafana, topo.Grafana[i])
 	}
-	for i, instance := range (&dmspec.AlertManagerComponent{Topology: topo}).Instances() {
+	for i, instance := range (&spec.AlertManagerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}

@@ -52,7 +52,7 @@ type Component = spec.Component
 type Instance = spec.Instance
 
 // DMMasterComponent represents TiDB component.
-type DMMasterComponent struct{ *Specification }
+type DMMasterComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *DMMasterComponent) Name() string {
@@ -67,7 +67,7 @@ func (c *DMMasterComponent) Role() string {
 // Instances implements Component interface.
 func (c *DMMasterComponent) Instances() []Instance {
 	ins := make([]Instance, 0)
-	for _, s := range c.Masters {
+	for _, s := range c.Topology.Masters {
 		s := s
 		ins = append(ins, &MasterInstance{
 			Name: s.Name,
@@ -179,9 +179,7 @@ func (i *MasterInstance) ScaleConfig(
 }
 
 // DMWorkerComponent represents DM worker component.
-type DMWorkerComponent struct {
-	*Specification
-}
+type DMWorkerComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *DMWorkerComponent) Name() string {
@@ -196,7 +194,7 @@ func (c *DMWorkerComponent) Role() string {
 // Instances implements Component interface.
 func (c *DMWorkerComponent) Instances() []Instance {
 	ins := make([]Instance, 0)
-	for _, s := range c.Workers {
+	for _, s := range c.Topology.Workers {
 		s := s
 		ins = append(ins, &WorkerInstance{
 			Name: s.Name,
@@ -313,9 +311,9 @@ func (topo *Specification) ComponentsByStartOrder() (comps []Component) {
 	// "dm-master", "dm-worker"
 	comps = append(comps, &DMMasterComponent{topo})
 	comps = append(comps, &DMWorkerComponent{topo})
-	comps = append(comps, &MonitorComponent{topo})
-	comps = append(comps, &GrafanaComponent{topo})
-	comps = append(comps, &AlertManagerComponent{topo})
+	comps = append(comps, &spec.MonitorComponent{Topology: topo})
+	comps = append(comps, &spec.GrafanaComponent{Topology: topo})
+	comps = append(comps, &spec.AlertManagerComponent{Topology: topo})
 	return
 }
 
@@ -324,9 +322,9 @@ func (topo *Specification) ComponentsByUpdateOrder() (comps []Component) {
 	// "dm-master", "dm-worker"
 	comps = append(comps, &DMMasterComponent{topo})
 	comps = append(comps, &DMWorkerComponent{topo})
-	comps = append(comps, &MonitorComponent{topo})
-	comps = append(comps, &GrafanaComponent{topo})
-	comps = append(comps, &AlertManagerComponent{topo})
+	comps = append(comps, &spec.MonitorComponent{Topology: topo})
+	comps = append(comps, &spec.GrafanaComponent{Topology: topo})
+	comps = append(comps, &spec.AlertManagerComponent{Topology: topo})
 	return
 }
 

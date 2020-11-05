@@ -87,12 +87,12 @@ type (
 	Specification struct {
 		GlobalOptions GlobalOptions `yaml:"global,omitempty" validate:"global:editable"`
 		// MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty" validate:"monitored:editable"`
-		ServerConfigs DMServerConfigs    `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
-		Masters       []MasterSpec       `yaml:"master_servers"`
-		Workers       []WorkerSpec       `yaml:"worker_servers"`
-		Monitors      []PrometheusSpec   `yaml:"monitoring_servers"`
-		Grafana       []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
-		Alertmanager  []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
+		ServerConfigs DMServerConfigs         `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
+		Masters       []MasterSpec            `yaml:"master_servers"`
+		Workers       []WorkerSpec            `yaml:"worker_servers"`
+		Monitors      []spec.PrometheusSpec   `yaml:"monitoring_servers"`
+		Grafana       []spec.GrafanaSpec      `yaml:"grafana_servers,omitempty"`
+		Alertmanager  []spec.AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
 	}
 )
 
@@ -596,16 +596,17 @@ func (topo *Specification) GetMasterList() []string {
 }
 
 // Merge returns a new Topology which sum old ones
-func (topo *Specification) Merge(that *Specification) *Specification {
+func (topo *Specification) Merge(that spec.Topology) spec.Topology {
+	spec := that.(*Specification)
 	return &Specification{
 		GlobalOptions: topo.GlobalOptions,
 		// MonitoredOptions: topo.MonitoredOptions,
 		ServerConfigs: topo.ServerConfigs,
-		Masters:       append(topo.Masters, that.Masters...),
-		Workers:       append(topo.Workers, that.Workers...),
-		Monitors:      append(topo.Monitors, that.Monitors...),
-		Grafana:       append(topo.Grafana, that.Grafana...),
-		Alertmanager:  append(topo.Alertmanager, that.Alertmanager...),
+		Masters:       append(topo.Masters, spec.Masters...),
+		Workers:       append(topo.Workers, spec.Workers...),
+		Monitors:      append(topo.Monitors, spec.Monitors...),
+		Grafana:       append(topo.Grafana, spec.Grafana...),
+		Alertmanager:  append(topo.Alertmanager, spec.Alertmanager...),
 	}
 }
 
