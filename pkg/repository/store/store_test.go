@@ -14,7 +14,6 @@
 package store
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -64,10 +63,6 @@ func TestConflict(t *testing.T) {
 	defer os.RemoveAll(root)
 
 	store := New(root, "")
-
-	fi, err := os.Stat(root)
-	assert.Nil(t, err)
-	fmt.Println("begin", fi.ModTime().UnixNano())
 
 	txn1, err := store.Begin()
 	assert.Nil(t, err)

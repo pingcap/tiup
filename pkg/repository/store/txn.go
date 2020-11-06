@@ -191,6 +191,7 @@ func (t *localTxn) Rollback() error {
 }
 
 func (t *localTxn) checkConflict() error {
+	fmt.Println("======start of check conflict=======")
 	for file := range t.accessed {
 		mt, err := t.store.last(file)
 		if err != nil {
@@ -198,6 +199,10 @@ func (t *localTxn) checkConflict() error {
 		}
 		if mt != nil && mt.After(*t.first(file)) {
 			return ErrorFsCommitConflict
+		}
+		fmt.Printf("first modify time of %s: %d\n", file, t.first(file).UnixNano())
+		if mt != nil {
+			fmt.Printf("last modify time of %s: %d\n", file, mt.UnixNano())
 		}
 	}
 	return nil
