@@ -90,12 +90,15 @@ func TestConflict(t *testing.T) {
 	m, err := txn1.ReadManifest("test.json", &v1manifest.Timestamp{})
 	assert.Nil(t, err)
 	assert.Equal(t, uint(9527), m.Signed.(*v1manifest.Timestamp).Meta["test"].Length)
+
 	time.Sleep(3 * time.Second)
+
 	err = txn2.WriteManifest("test.json", test)
 	assert.Nil(t, err)
 	m, err = txn2.ReadManifest("test.json", &v1manifest.Timestamp{})
 	assert.Nil(t, err)
 	assert.Equal(t, uint(9527), m.Signed.(*v1manifest.Timestamp).Meta["test"].Length)
+
 	err = txn1.Commit()
 	assert.Nil(t, err)
 
@@ -103,15 +106,10 @@ func TestConflict(t *testing.T) {
 	fi, err = os.Stat(path.Join(root, "test.json"))
 	assert.Nil(t, err)
 	fmt.Println("txn1 commit", fi.ModTime().UnixNano())
-	fi, err = txn1.Stat("test.json")
-	assert.Nil(t, err)
-	fmt.Println("txn1", fi.ModTime().UnixNano())
-	fi, err = txn2.Stat("test.json")
-	assert.Nil(t, err)
-	fmt.Println("txn2", fi.ModTime().UnixNano())
 
 	err = txn2.Commit()
 	assert.NotNil(t, err)
+
 	t.Fail()
 }
 
