@@ -134,6 +134,7 @@ func newMirrorIntroduceCmd() *cobra.Command {
 
 			id := args[0]
 			if name == "" {
+				fmt.Printf("The --name hasn't specified value, default to %s\n", id)
 				name = id
 			}
 
@@ -152,8 +153,8 @@ func newMirrorIntroduceCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&name, "name", "n", "", "the name of the owner, default: id of the owner")
-	cmd.Flags().StringVarP(&privPath, "key", "k", "", "private/public key path of the owner")
+	cmd.Flags().StringVarP(&name, "name", "n", "", "Specify the name of the owner, default: id of the owner")
+	cmd.Flags().StringVarP(&privPath, "key", "k", "", "Specify the private key path of the owner")
 
 	return cmd
 }

@@ -14,8 +14,10 @@
 package store
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
@@ -63,6 +65,11 @@ func TestConflict(t *testing.T) {
 	defer os.RemoveAll(root)
 
 	store := New(root, "")
+
+	fi, err := os.Stat(root)
+	assert.Nil(t, err)
+	fmt.Println("begin", fi.ModTime().UnixNano())
+
 	txn1, err := store.Begin()
 	assert.Nil(t, err)
 	txn2, err := store.Begin()
@@ -89,6 +96,17 @@ func TestConflict(t *testing.T) {
 	assert.Equal(t, uint(9527), m.Signed.(*v1manifest.Timestamp).Meta["test"].Length)
 	err = txn1.Commit()
 	assert.Nil(t, err)
+
+	fi, err = os.Stat(path.Join(root, "test.json"))
+	assert.Nil(t, err)
+	fmt.Println("txn1 commit", fi.ModTime().UnixNano())
+	fi, err = txn1.Stat("test.json")
+	assert.Nil(t, err)
+	fmt.Println("txn1", fi.ModTime().UnixNano())
+	fi, err = txn2.Stat("test.json")
+	assert.Nil(t, err)
+	fmt.Println("txn2", fi.ModTime().UnixNano())
+
 	err = txn2.Commit()
 	assert.NotNil(t, err)
 }
