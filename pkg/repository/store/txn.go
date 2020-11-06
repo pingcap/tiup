@@ -199,14 +199,45 @@ func (t *localTxn) checkConflict() error {
 	return nil
 }
 
-func (t *localTxn) access(filename string) {
+func (t *localTxn) access(filename string) error {
 	// Use the earliest time
 	if t.accessed[filename] != nil {
-		return
+		return nil
 	}
 
-	at := time.Now()
-	t.accessed[filename] = &at
+	// Use the modify time of timestamp.json
+	timestamp := t.store.path("timestamp.json")
+	fi, err := os.Stat(timestamp)
+	if err == nil {
+		mt := fi.ModTime()
+		t.accessed[filename] = &mt
+	} else if !os.IsNotExist(err) {
+		return errors.Annotatef(err, "read timestamp.json: %s", timestamp)
+	}
+
+	// Use the newest file in t.store.root
+	files, err := ioutil.ReadDir(t.store.root)
+	if err != nil {
+		return errors.Annotatef(err, "read store root: %s", t.store.root)
+	}
+	for _, fi := range files {
+		if t.accessed[filename] == nil || t.accessed[filename].Before(fi.ModTime()) {
+			mt := fi.ModTime()
+			t.accessed[filename] = &mt
+		}
+	}
+	if t.accessed[filename] != nil {
+		return nil
+	}
+
+	// Use the mod time of t.store.root
+	fi, err = os.Stat(t.store.root)
+	if err != nil {
+		return errors.Annotatef(err, "read store root: %s", t.store.root)
+	}
+	mt := fi.ModTime()
+	t.accessed[filename] = &mt
+	return nil
 }
 
 // Returns the first access time
