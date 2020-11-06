@@ -151,7 +151,7 @@ func (t *localTxn) ResetManifest() error {
 
 func (t *localTxn) Stat(filename string) (os.FileInfo, error) {
 	if err := t.access(filename); err != nil {
-		return err
+		return nil, err
 	}
 	filepath := t.store.path(filename)
 	if utils.IsExist(path.Join(t.root, filename)) {
