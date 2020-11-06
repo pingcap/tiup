@@ -39,7 +39,6 @@ type localTxn struct {
 	syncer   Syncer
 	store    *localStore
 	root     string
-	begin    time.Time
 	accessed map[string]*time.Time
 }
 
@@ -56,7 +55,6 @@ func newLocalTxn(store *localStore) (*localTxn, error) {
 		syncer:   syncer,
 		store:    store,
 		root:     root,
-		begin:    time.Now(),
 		accessed: make(map[string]*time.Time),
 	}
 
@@ -145,7 +143,7 @@ func (t *localTxn) ResetManifest() error {
 			}
 		}
 	}
-	t.begin = time.Now()
+	t.accessed = make(map[string]*time.Time)
 	return nil
 }
 

@@ -19,6 +19,7 @@ import (
 	"os"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/stretchr/testify/assert"
@@ -89,6 +90,7 @@ func TestConflict(t *testing.T) {
 	m, err := txn1.ReadManifest("test.json", &v1manifest.Timestamp{})
 	assert.Nil(t, err)
 	assert.Equal(t, uint(9527), m.Signed.(*v1manifest.Timestamp).Meta["test"].Length)
+	time.Sleep(3 * time.Second)
 	err = txn2.WriteManifest("test.json", test)
 	assert.Nil(t, err)
 	m, err = txn2.ReadManifest("test.json", &v1manifest.Timestamp{})
@@ -97,6 +99,7 @@ func TestConflict(t *testing.T) {
 	err = txn1.Commit()
 	assert.Nil(t, err)
 
+	time.Sleep(3 * time.Second)
 	fi, err = os.Stat(path.Join(root, "test.json"))
 	assert.Nil(t, err)
 	fmt.Println("txn1 commit", fi.ModTime().UnixNano())
@@ -109,6 +112,7 @@ func TestConflict(t *testing.T) {
 
 	err = txn2.Commit()
 	assert.NotNil(t, err)
+	t.Fail()
 }
 
 func TestUpstream(t *testing.T) {
