@@ -87,7 +87,9 @@ func (t *localTxn) Read(filename string) (io.ReadCloser, error) {
 }
 
 func (t *localTxn) WriteManifest(filename string, manifest *v1manifest.Manifest) error {
-	t.access(filename)
+	if err := t.access(filename); err != nil {
+		return err
+	}
 	filepath := path.Join(t.root, filename)
 	file, err := os.Create(filepath)
 	if err != nil {
@@ -108,7 +110,9 @@ func (t *localTxn) WriteManifest(filename string, manifest *v1manifest.Manifest)
 }
 
 func (t *localTxn) ReadManifest(filename string, role v1manifest.ValidManifest) (*v1manifest.Manifest, error) {
-	t.access(filename)
+	if err := t.access(filename); err != nil {
+		return nil, err
+	}
 	filepath := t.store.path(filename)
 	if utils.IsExist(path.Join(t.root, filename)) {
 		filepath = path.Join(t.root, filename)
@@ -146,7 +150,9 @@ func (t *localTxn) ResetManifest() error {
 }
 
 func (t *localTxn) Stat(filename string) (os.FileInfo, error) {
-	t.access(filename)
+	if err := t.access(filename); err != nil {
+		return err
+	}
 	filepath := t.store.path(filename)
 	if utils.IsExist(path.Join(t.root, filename)) {
 		filepath = path.Join(t.root, filename)
