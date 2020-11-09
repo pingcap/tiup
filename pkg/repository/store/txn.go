@@ -91,17 +91,31 @@ func (t *localTxn) WriteManifest(filename string, manifest *v1manifest.Manifest)
 	filepath := path.Join(t.root, filename)
 	file, err := os.Create(filepath)
 	if err != nil {
-		return err
+		return errors.Annotate(err, "create file")
 	}
 	defer file.Close()
 
 	bytes, err := cjson.Marshal(manifest)
 	if err != nil {
-		return err
+		return errors.Annotate(err, "marshal manifest")
 	}
 
 	if _, err = file.Write(bytes); err != nil {
-		return err
+		return errors.Annotate(err, "write file")
+	}
+
+	if err = file.Close(); err != nil {
+		return errors.Annotate(err, "flush file content")
+	}
+
+	fi, err := os.Stat(filepath)
+	if err != nil {
+		return errors.Annotate(err, "stat file")
+	}
+	// The modify time must increase
+	if !t.first(filename).Before(fi.ModTime()) {
+		mt := time.Unix(0, t.first(filename).UnixNano()+1)
+		return os.Chtimes(filepath, mt, mt)
 	}
 
 	return nil

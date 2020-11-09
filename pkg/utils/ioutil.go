@@ -23,7 +23,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"time"
 
 	"github.com/otiai10/copy"
 	"github.com/pingcap/errors"
@@ -160,17 +159,16 @@ func Copy(src, dst string) error {
 		return err
 	}
 
-	// Make sure the created dst is newer than src
+	// Make sure the created dst's modify time is newer (at least equal) than src
 	// this is used to workaround github action virtual filesystem
 	ofi, err := os.Stat(dst)
 	if err != nil {
 		return err
 	}
-	if ofi.ModTime().UnixNano() > fi.ModTime().UnixNano() {
-		return nil
+	if fi.ModTime().After(ofi.ModTime()) {
+		return os.Chtimes(dst, fi.ModTime(), fi.ModTime())
 	}
-	t := time.Unix(0, fi.ModTime().UnixNano()+1)
-	return os.Chtimes(dst, t, t)
+	return nil
 }
 
 // Move moves a file from src to dst, this is done by copying the file and then
