@@ -169,8 +169,8 @@ func newMirrorModifyCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "modify <component>[:version] [flags]",
-		Short: "modify published component",
-		Long:  "modify component attributes (hidden, standalone, yanked)",
+		Short: "Modify published component",
+		Long:  "Modify component attributes (hidden, standalone, yanked)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
@@ -331,9 +331,9 @@ func newMirrorPublishCmd() *cobra.Command {
 				return err
 			}
 
-			tarfile, err := os.Open(args[2])
+			tarfile, err := os.Open(tarpath)
 			if err != nil {
-				return errors.Annotate(err, "open tarbal")
+				return errors.Annotatef(err, "open tarball: %s", tarpath)
 			}
 			defer tarfile.Close()
 
