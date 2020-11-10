@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -77,15 +76,11 @@ func (c *AlertManagerComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *AlertManagerComponent) Instances() []Instance {
-	val, found := findSliceField(c.Topology, "Alertmanager")
-	if !found {
-		return []Instance{}
-	}
+	alertmanagers := c.Topology.BaseTopo().Alertmanager
 
-	ins := make([]Instance, 0, val.Len())
+	ins := make([]Instance, 0, len(alertmanagers))
 
-	for i := 0; i < val.Len(); i++ {
-		s := val.Index(i).Interface().(AlertManagerSpec)
+	for _, s := range alertmanagers {
 		ins = append(ins, &AlertManagerInstance{
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
@@ -126,16 +121,12 @@ func (i *AlertManagerInstance) InitConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	gOpts := i.topo.GetGlobalOptions()
+	gOpts := *i.topo.BaseTopo().GlobalOptions
 	if err := i.BaseInstance.InitConfig(e, gOpts, deployUser, paths); err != nil {
 		return err
 	}
 
-	val, found := findSliceField(i.topo, "Alertmanager")
-	if !found {
-		return errors.Errorf("field Alertmanager not found in topology: %v", i.topo)
-	}
-	alertmanagers := val.Interface().([]AlertManagerSpec)
+	alertmanagers := i.topo.BaseTopo().Alertmanager
 
 	enableTLS := gOpts.TLSEnabled
 	// Transfer start script

@@ -563,6 +563,9 @@ func (topo *Specification) BaseTopo() *spec.BaseTopo {
 		GlobalOptions:    &topo.GlobalOptions,
 		MonitoredOptions: topo.GetMonitoredOptions(),
 		MasterList:       topo.GetMasterList(),
+		Monitors:         topo.Monitors,
+		Grafana:          topo.Grafana,
+		Alertmanager:     topo.Alertmanager,
 	}
 }
 

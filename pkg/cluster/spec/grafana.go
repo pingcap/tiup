@@ -76,15 +76,10 @@ func (c *GrafanaComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *GrafanaComponent) Instances() []Instance {
-	val, found := findSliceField(c.Topology, "Grafana")
-	if !found {
-		return []Instance{}
-	}
+	servers := c.BaseTopo().Grafana
+	ins := make([]Instance, 0, len(servers))
 
-	ins := make([]Instance, 0, val.Len())
-
-	for i := 0; i < val.Len(); i++ {
-		s := val.Index(i).Interface().(GrafanaSpec)
+	for _, s := range servers {
 		ins = append(ins, &GrafanaInstance{
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
@@ -123,7 +118,7 @@ func (i *GrafanaInstance) InitConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	gOpts := i.topo.GetGlobalOptions()
+	gOpts := *i.topo.BaseTopo().GlobalOptions
 	if err := i.BaseInstance.InitConfig(e, gOpts, deployUser, paths); err != nil {
 		return err
 	}

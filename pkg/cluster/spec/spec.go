@@ -114,6 +114,10 @@ type BaseTopo struct {
 	GlobalOptions    *GlobalOptions
 	MonitoredOptions *MonitoredOptions
 	MasterList       []string
+
+	Monitors     []PrometheusSpec
+	Grafana      []GrafanaSpec
+	Alertmanager []AlertManagerSpec
 }
 
 // Topology represents specification of the cluster.
@@ -129,7 +133,6 @@ type Topology interface {
 	ComponentsByUpdateOrder() []Component
 	IterInstance(fn func(instance Instance))
 	GetMonitoredOptions() *MonitoredOptions
-	GetGlobalOptions() GlobalOptions
 	// count how many time a path is used by instances in cluster
 	CountDir(host string, dir string) int
 	TLSConfig(dir string) (*tls.Config, error)
@@ -194,11 +197,6 @@ func (s *Specification) GetMonitoredOptions() *MonitoredOptions {
 	return &s.MonitoredOptions
 }
 
-// GetGlobalOptions implements Topology interface.
-func (s *Specification) GetGlobalOptions() GlobalOptions {
-	return s.GlobalOptions
-}
-
 // TLSConfig generates a tls.Config for the specification as needed
 func (s *Specification) TLSConfig(dir string) (*tls.Config, error) {
 	if !s.GlobalOptions.TLSEnabled {
@@ -213,6 +211,9 @@ func (s *Specification) BaseTopo() *BaseTopo {
 		GlobalOptions:    &s.GlobalOptions,
 		MonitoredOptions: s.GetMonitoredOptions(),
 		MasterList:       s.GetPDList(),
+		Monitors:         s.Monitors,
+		Grafana:          s.Grafana,
+		Alertmanager:     s.Alertmanager,
 	}
 }
 

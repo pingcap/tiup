@@ -81,13 +81,10 @@ func (c *MonitorComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *MonitorComponent) Instances() []Instance {
-	val, found := findSliceField(c.Topology, "Monitors")
-	if !found {
-		return []Instance{}
-	}
-	ins := make([]Instance, 0, val.Len())
-	for i := 0; i < val.Len(); i++ {
-		s := val.Index(i).Interface().(PrometheusSpec)
+	servers := c.BaseTopo().Monitors
+	ins := make([]Instance, 0, len(servers))
+
+	for _, s := range servers {
 		ins = append(ins, &MonitorInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
@@ -124,7 +121,7 @@ func (i *MonitorInstance) InitConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	gOpts := i.topo.GetGlobalOptions()
+	gOpts := *i.topo.BaseTopo().GlobalOptions
 	if err := i.BaseInstance.InitConfig(e, gOpts, deployUser, paths); err != nil {
 		return err
 	}
