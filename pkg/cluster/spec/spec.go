@@ -104,8 +104,8 @@ type (
 		TiSparkMasters   []TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
 		TiSparkWorkers   []TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
 		Monitors         []PrometheusSpec    `yaml:"monitoring_servers"`
-		Grafana          []GrafanaSpec       `yaml:"grafana_servers,omitempty"`
-		Alertmanager     []AlertManagerSpec  `yaml:"alertmanager_servers,omitempty"`
+		Grafanas         []GrafanaSpec       `yaml:"grafana_servers,omitempty"`
+		Alertmanagers    []AlertmanagerSpec  `yaml:"alertmanager_servers,omitempty"`
 	}
 )
 
@@ -115,9 +115,9 @@ type BaseTopo struct {
 	MonitoredOptions *MonitoredOptions
 	MasterList       []string
 
-	Monitors     []PrometheusSpec
-	Grafana      []GrafanaSpec
-	Alertmanager []AlertManagerSpec
+	Monitors      []PrometheusSpec
+	Grafanas      []GrafanaSpec
+	Alertmanagers []AlertmanagerSpec
 }
 
 // Topology represents specification of the cluster.
@@ -212,8 +212,8 @@ func (s *Specification) BaseTopo() *BaseTopo {
 		MonitoredOptions: s.GetMonitoredOptions(),
 		MasterList:       s.GetPDList(),
 		Monitors:         s.Monitors,
-		Grafana:          s.Grafana,
-		Alertmanager:     s.Alertmanager,
+		Grafanas:         s.Grafanas,
+		Alertmanagers:    s.Alertmanagers,
 	}
 }
 
@@ -373,8 +373,8 @@ func (s *Specification) Merge(that Topology) Topology {
 		TiSparkMasters:   append(s.TiSparkMasters, spec.TiSparkMasters...),
 		TiSparkWorkers:   append(s.TiSparkWorkers, spec.TiSparkWorkers...),
 		Monitors:         append(s.Monitors, spec.Monitors...),
-		Grafana:          append(s.Grafana, spec.Grafana...),
-		Alertmanager:     append(s.Alertmanager, spec.Alertmanager...),
+		Grafanas:         append(s.Grafanas, spec.Grafanas...),
+		Alertmanagers:    append(s.Alertmanagers, spec.Alertmanagers...),
 	}
 }
 
@@ -664,7 +664,7 @@ func (s *Specification) Endpoints(user string) []*scripts.PDScript {
 }
 
 // AlertManagerEndpoints returns the AlertManager endpoints configurations
-func AlertManagerEndpoints(alertmanager []AlertManagerSpec, user string, enableTLS bool) []*scripts.AlertManagerScript {
+func AlertManagerEndpoints(alertmanager []AlertmanagerSpec, user string, enableTLS bool) []*scripts.AlertManagerScript {
 	var ends []*scripts.AlertManagerScript
 	for _, spec := range alertmanager {
 		deployDir := Abs(user, spec.DeployDir)

@@ -105,13 +105,13 @@ func (u *UpdateMeta) Execute(ctx *Context) error {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Grafana = append(newMeta.Topology.Grafana, topo.Grafana[i])
+		newMeta.Topology.Grafanas = append(newMeta.Topology.Grafanas, topo.Grafanas[i])
 	}
 	for i, instance := range (&spec.AlertManagerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Alertmanager = append(newMeta.Topology.Alertmanager, topo.Alertmanager[i])
+		newMeta.Topology.Alertmanagers = append(newMeta.Topology.Alertmanagers, topo.Alertmanagers[i])
 	}
 	return spec.SaveClusterMeta(u.cluster, newMeta)
 }

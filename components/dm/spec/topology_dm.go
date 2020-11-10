@@ -70,8 +70,8 @@ type (
 	PrometheusSpec = spec.PrometheusSpec
 	// GrafanaSpec is the spec of Grafana
 	GrafanaSpec = spec.GrafanaSpec
-	// AlertManagerSpec is the spec of Alertmanager
-	AlertManagerSpec = spec.AlertManagerSpec
+	// AlertmanagerSpec is the spec of Alertmanager
+	AlertmanagerSpec = spec.AlertmanagerSpec
 	// ResourceControl is the spec of ResourceControl
 	ResourceControl = meta.ResourceControl
 )
@@ -91,8 +91,8 @@ type (
 		Masters       []MasterSpec            `yaml:"master_servers"`
 		Workers       []WorkerSpec            `yaml:"worker_servers"`
 		Monitors      []spec.PrometheusSpec   `yaml:"monitoring_servers"`
-		Grafana       []spec.GrafanaSpec      `yaml:"grafana_servers,omitempty"`
-		Alertmanager  []spec.AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
+		Grafanas      []spec.GrafanaSpec      `yaml:"grafana_servers,omitempty"`
+		Alertmanagers []spec.AlertmanagerSpec `yaml:"alertmanager_servers,omitempty"`
 	}
 )
 
@@ -564,8 +564,8 @@ func (topo *Specification) BaseTopo() *spec.BaseTopo {
 		MonitoredOptions: topo.GetMonitoredOptions(),
 		MasterList:       topo.GetMasterList(),
 		Monitors:         topo.Monitors,
-		Grafana:          topo.Grafana,
-		Alertmanager:     topo.Alertmanager,
+		Grafanas:         topo.Grafanas,
+		Alertmanagers:    topo.Alertmanagers,
 	}
 }
 
@@ -608,8 +608,8 @@ func (topo *Specification) Merge(that spec.Topology) spec.Topology {
 		Masters:       append(topo.Masters, spec.Masters...),
 		Workers:       append(topo.Workers, spec.Workers...),
 		Monitors:      append(topo.Monitors, spec.Monitors...),
-		Grafana:       append(topo.Grafana, spec.Grafana...),
-		Alertmanager:  append(topo.Alertmanager, spec.Alertmanager...),
+		Grafanas:      append(topo.Grafanas, spec.Grafanas...),
+		Alertmanagers: append(topo.Alertmanagers, spec.Alertmanagers...),
 	}
 }
 

@@ -480,7 +480,7 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 			}
 		case "alertmanager_servers":
 			for _, host := range group.Hosts {
-				srv := spec.AlertManagerSpec{
+				srv := spec.AlertmanagerSpec{
 					Host:      host.Vars["ansible_host"],
 					SSHPort:   ansible.GetHostPort(host, cfg),
 					DeployDir: firstNonEmpty(host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir),
@@ -521,9 +521,9 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 					}
 				}
 
-				srv.DeployDir = instancDeployDir(spec.ComponentAlertManager, srv.WebPort, host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir)
+				srv.DeployDir = instancDeployDir(spec.ComponentAlertmanager, srv.WebPort, host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir)
 
-				topo.Alertmanager = append(topo.Alertmanager, srv)
+				topo.Alertmanagers = append(topo.Alertmanagers, srv)
 			}
 		case "grafana_servers":
 			for _, host := range group.Hosts {
@@ -559,7 +559,7 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				}
 
 				srv.DeployDir = instancDeployDir(spec.ComponentGrafana, srv.Port, host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir)
-				topo.Grafana = append(topo.Grafana, srv)
+				topo.Grafanas = append(topo.Grafanas, srv)
 			}
 		case "all", "ungrouped":
 			// ignore intent

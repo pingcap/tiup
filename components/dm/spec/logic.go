@@ -32,7 +32,7 @@ const (
 	ComponentDMWorker     = "dm-worker"
 	ComponentPrometheus   = spec.ComponentPrometheus
 	ComponentGrafana      = spec.ComponentGrafana
-	ComponentAlertManager = spec.ComponentAlertManager
+	ComponentAlertmanager = spec.ComponentAlertmanager
 )
 
 type (

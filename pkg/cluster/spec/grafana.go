@@ -76,7 +76,7 @@ func (c *GrafanaComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *GrafanaComponent) Instances() []Instance {
-	servers := c.BaseTopo().Grafana
+	servers := c.BaseTopo().Grafanas
 	ins := make([]Instance, 0, len(servers))
 
 	for _, s := range servers {

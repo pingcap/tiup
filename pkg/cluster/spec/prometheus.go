@@ -222,7 +222,7 @@ func (i *MonitorInstance) InitConfig(
 	}
 	if servers, found := topoHasField("Alertmanager"); found {
 		for i := 0; i < servers.Len(); i++ {
-			alertmanager := servers.Index(i).Interface().(AlertManagerSpec)
+			alertmanager := servers.Index(i).Interface().(AlertmanagerSpec)
 			uniqueHosts.Insert(alertmanager.Host)
 			cfig.AddAlertmanager(alertmanager.Host, uint64(alertmanager.WebPort))
 		}

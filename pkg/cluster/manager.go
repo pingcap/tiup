@@ -716,7 +716,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 		tb := task.NewBuilder().UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
 		if inst.IsImported() {
 			switch compName := inst.ComponentName(); compName {
-			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
+			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
 				version := m.bindVersion(compName, base.Version)
 				tb.Download(compName, inst.OS(), inst.Arch(), version).
 					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetHost(), deployDir)
@@ -845,7 +845,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 			tb := task.NewBuilder()
 			if inst.IsImported() {
 				switch inst.ComponentName() {
-				case spec.ComponentPrometheus, spec.ComponentGrafana, spec.ComponentAlertManager:
+				case spec.ComponentPrometheus, spec.ComponentGrafana, spec.ComponentAlertmanager:
 					tb.CopyComponent(
 						inst.ComponentName(),
 						inst.OS(),
@@ -1397,7 +1397,7 @@ func (m *Manager) ScaleIn(
 			tb := task.NewBuilder()
 			if instance.IsImported() {
 				switch compName := instance.ComponentName(); compName {
-				case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
+				case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
 					version := m.bindVersion(compName, base.Version)
 					tb.Download(compName, instance.OS(), instance.Arch(), version).
 						CopyComponent(
@@ -2081,7 +2081,7 @@ func buildScaleOutTask(
 		tb := task.NewBuilder()
 		if inst.IsImported() {
 			switch compName := inst.ComponentName(); compName {
-			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
+			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
 				version := m.bindVersion(compName, base.Version)
 				tb.Download(compName, inst.OS(), inst.Arch(), version).
 					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetHost(), deployDir)

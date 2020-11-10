@@ -110,21 +110,21 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		}
 		clsMeta.Topology.Monitors[i] = ins.(spec.PrometheusSpec)
 	}
-	for i := 0; i < len(clsMeta.Topology.Alertmanager); i++ {
-		s := clsMeta.Topology.Alertmanager[i]
+	for i := 0; i < len(clsMeta.Topology.Alertmanagers); i++ {
+		s := clsMeta.Topology.Alertmanagers[i]
 		ins, err := parseDirs(clsMeta.User, s, sshTimeout, sshType)
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.Alertmanager[i] = ins.(spec.AlertManagerSpec)
+		clsMeta.Topology.Alertmanagers[i] = ins.(spec.AlertmanagerSpec)
 	}
-	for i := 0; i < len(clsMeta.Topology.Grafana); i++ {
-		s := clsMeta.Topology.Grafana[i]
+	for i := 0; i < len(clsMeta.Topology.Grafanas); i++ {
+		s := clsMeta.Topology.Grafanas[i]
 		ins, err := parseDirs(clsMeta.User, s, sshTimeout, sshType)
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.Grafana[i] = ins.(spec.GrafanaSpec)
+		clsMeta.Topology.Grafanas[i] = ins.(spec.GrafanaSpec)
 	}
 
 	// TODO: get values from templates of roles to overwrite defaults
@@ -429,7 +429,7 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.AlertManagerSpec{
+			tmpIns := spec.AlertmanagerSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
@@ -452,9 +452,9 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
 
-			clsMeta.Topology.Alertmanager = append(clsMeta.Topology.Alertmanager, tmpIns)
+			clsMeta.Topology.Alertmanagers = append(clsMeta.Topology.Alertmanagers, tmpIns)
 		}
-		log.Infof("Imported %d Alertmanager node(s).", len(clsMeta.Topology.Alertmanager))
+		log.Infof("Imported %d Alertmanager node(s).", len(clsMeta.Topology.Alertmanagers))
 	}
 
 	// grafana_servers
@@ -485,9 +485,9 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
 
-			clsMeta.Topology.Grafana = append(clsMeta.Topology.Grafana, tmpIns)
+			clsMeta.Topology.Grafanas = append(clsMeta.Topology.Grafanas, tmpIns)
 		}
-		log.Infof("Imported %d Grafana node(s).", len(clsMeta.Topology.Alertmanager))
+		log.Infof("Imported %d Grafana node(s).", len(clsMeta.Topology.Alertmanagers))
 	}
 
 	// kafka_exporter_servers

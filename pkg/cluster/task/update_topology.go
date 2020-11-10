@@ -98,7 +98,7 @@ func updateInstancesAndOps(ops []clientv3.Op, destInstances []spec.Instance, del
 //  for update it's topology.
 func updateTopologyOp(instance spec.Instance) (*clientv3.Op, error) {
 	switch instance.ComponentName() {
-	case spec.ComponentAlertManager, spec.ComponentPrometheus, spec.ComponentGrafana:
+	case spec.ComponentAlertmanager, spec.ComponentPrometheus, spec.ComponentGrafana:
 		topology := componentTopology{
 			IP:         instance.GetHost(),
 			Port:       instance.GetPort(),
