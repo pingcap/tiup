@@ -731,6 +731,13 @@ func (r *V1Repository) ComponentVersion(id, version string, includeYanked bool) 
 	if v0manifest.Version(version).IsNightly() && manifest.Nightly != "" {
 		version = manifest.Nightly
 	}
+	if version == "" {
+		v, _, err := r.LatestStableVersion(id, includeYanked)
+		if err != nil {
+			return nil, err
+		}
+		version = v.String()
+	}
 	vi := manifest.VersionItem(r.PlatformString(), version, includeYanked)
 	if vi == nil {
 		return nil, fmt.Errorf("version %s on %s for component %s not found", version, r.PlatformString(), id)

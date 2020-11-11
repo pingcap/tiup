@@ -670,8 +670,8 @@ func newMirrorCloneCmd() *cobra.Command {
 			}
 			defer repo.Mirror().Close()
 
-			var versionMapper = func(ver string) string {
-				return spec.TiDBComponentVersion(ver, "")
+			var versionMapper = func(comp string) string {
+				return spec.TiDBComponentVersion(comp, "")
 			}
 
 			return repository.CloneMirror(repo, components, versionMapper, args[0], args[1:], options)

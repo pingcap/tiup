@@ -31,6 +31,8 @@ func TiDBComponentVersion(comp, version string) string {
 		return "v0.7.0"
 	case ComponentCheckCollector:
 		return "v0.3.1"
+	case ComponentSpark, ComponentTiSpark:
+		return "" // empty version should be treate as the the last stable one
 	default:
 		return version
 	}
