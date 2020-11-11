@@ -817,9 +817,6 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 	for _, comp := range topo.ComponentsByUpdateOrder() {
 		for _, inst := range comp.Instances() {
 			version := m.bindVersion(inst.ComponentName(), clusterVersion)
-			if version == "" {
-				return perrs.Errorf("unsupported component: %v", inst.ComponentName())
-			}
 			compInfo := componentInfo{
 				component: inst.ComponentName(),
 				version:   version,
