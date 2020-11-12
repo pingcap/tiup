@@ -611,7 +611,7 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 		// Check if there is some instance in tombstone state
 		nodes, _ := operator.DestroyTombstone(ctx, t, true /* returnNodesOnly */, opt, tlsCfg)
 		if len(nodes) != 0 {
-			color.Green("There are some nodes in state: `Tombstone`\n\tNodes: %+v\n\tYou can destroy them with the command: `tiup cluster prune %s`", nodes, clusterName)
+			color.Green("There are some nodes can be pruned: `Tombstone`\n\tNodes: %+v\n\tYou can destroy them with the command: `tiup cluster prune %s`", nodes, clusterName)
 		}
 	}
 

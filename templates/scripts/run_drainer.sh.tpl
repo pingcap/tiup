@@ -22,7 +22,9 @@ exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/drainer \
 {{- else}}
 exec bin/drainer \
 {{- end}}
+{{- if .NodeID}}
     --node-id="{{.NodeID}}" \
+{{- end}}
     --addr="{{.IP}}:{{.Port}}" \
     --pd-urls="{{template "PDList" .Endpoints}}" \
     --data-dir="{{.DataDir}}" \

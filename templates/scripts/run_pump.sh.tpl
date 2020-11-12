@@ -22,7 +22,9 @@ exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/pump \
 {{- else}}
 exec bin/pump \
 {{- end}}
+{{- if .NodeID}}
     --node-id="{{.NodeID}}" \
+{{- end}}
     --addr="0.0.0.0:{{.Port}}" \
     --advertise-addr="{{.Host}}:{{.Port}}" \
     --pd-urls="{{template "PDList" .Endpoints}}" \

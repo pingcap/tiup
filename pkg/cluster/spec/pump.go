@@ -145,8 +145,13 @@ func (i *PumpInstance) InitConfig(
 
 	enableTLS := i.topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(PumpSpec)
+	nodeID := i.GetHost() + ":" + strconv.Itoa(i.GetPort())
+	// keep origin node id if is imported
+	if i.IsImported() {
+		nodeID = ""
+	}
 	cfg := scripts.NewPumpScript(
-		i.GetHost()+":"+strconv.Itoa(i.GetPort()),
+		nodeID,
 		i.GetHost(),
 		paths.Deploy,
 		paths.Data[0],
