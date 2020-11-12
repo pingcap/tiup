@@ -14,14 +14,11 @@
 package command
 
 import (
-	"context"
 	"io/ioutil"
 	"path/filepath"
 
 	"github.com/pingcap/tiup/pkg/cluster"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
-	operator "github.com/pingcap/tiup/pkg/cluster/operation"
-	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -78,15 +75,6 @@ func newScaleOutCmd() *cobra.Command {
 	return cmd
 }
 
-// Deprecated
-func convertStepDisplaysToTasks(t []*task.StepDisplay) []task.Task {
-	tasks := make([]task.Task, 0, len(t))
-	for _, sd := range t {
-		tasks = append(tasks, sd)
-	}
-	return tasks
-}
-
 func final(builder *task.Builder, name string, meta spec.Metadata) {
 	builder.UpdateTopology(name,
 		tidbSpec.Path(name),
@@ -96,15 +84,5 @@ func final(builder *task.Builder, name string, meta spec.Metadata) {
 }
 
 func postScaleOutHook(builder *task.Builder, newPart spec.Topology) {
-	nodeInfoTask := task.NewBuilder().Func("Check status", func(ctx *task.Context) error {
-		var err error
-		teleNodeInfos, err = operator.GetNodeInfo(context.Background(), ctx, newPart)
-		_ = err
-		// intend to never return error
-		return nil
-	}).BuildAsStep("Check status").SetHidden(true)
-
-	if report.Enable() {
-		builder.Parallel(false, convertStepDisplaysToTasks([]*task.StepDisplay{nodeInfoTask})...)
-	}
+	postDeployHook(builder, newPart)
 }
