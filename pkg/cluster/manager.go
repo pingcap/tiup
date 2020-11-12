@@ -634,7 +634,7 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 		pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
 		if lbs, err := pdClient.GetLocationLabels(); err != nil {
 			color.Yellow("\nWARN: get location labels from pd failed: %v", err)
-		} else if err := spec.CheckTiKVLocationLabels(lbs, pdClient); err != nil {
+		} else if err := spec.CheckTiKVLabels(lbs, pdClient); err != nil {
 			color.Yellow("\nWARN: there is something wrong with TiKV labels, which may cause data losing:\n%v", err)
 		}
 
@@ -940,9 +940,6 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 	for _, comp := range topo.ComponentsByUpdateOrder() {
 		for _, inst := range comp.Instances() {
 			version := m.bindVersion(inst.ComponentName(), clusterVersion)
-			if version == "" {
-				return perrs.Errorf("unsupported component: %v", inst.ComponentName())
-			}
 			compInfo := componentInfo{
 				component: inst.ComponentName(),
 				version:   version,
@@ -1241,7 +1238,7 @@ func (m *Manager) Deploy(
 		if err != nil {
 			return err
 		}
-		if err := spec.CheckTiKVLocationLabels(lbs, topo); err != nil {
+		if err := spec.CheckTiKVLabels(lbs, topo); err != nil {
 			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
 		}
 	}
@@ -1766,7 +1763,7 @@ func (m *Manager) ScaleOut(
 		if err != nil {
 			return err
 		}
-		if err := spec.CheckTiKVLocationLabels(lbs, mergedTopo.(*spec.Specification)); err != nil {
+		if err := spec.CheckTiKVLabels(lbs, mergedTopo.(*spec.Specification)); err != nil {
 			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
 		}
 	}
@@ -2000,12 +1997,12 @@ func instancesToPatch(topo spec.Topology, options operator.Options) ([]spec.Inst
 }
 
 func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, clusterName, comp, nodeOS, arch, packagePath string) error {
-	metadata, err := spec.ClusterMetadata(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+	metadata := specManager.NewMetadata()
+	if err := specManager.Metadata(clusterName, metadata); err != nil {
 		return err
 	}
 
-	ver := bindVersion(comp, metadata.Version)
+	ver := bindVersion(comp, metadata.GetBaseMeta().Version)
 	repo, err := clusterutil.NewRepository(nodeOS, arch)
 	if err != nil {
 		return err

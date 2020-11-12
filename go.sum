@@ -618,8 +618,8 @@ github.com/pingcap/failpoint v0.0.0-20200702092429-9f69995143ce/go.mod h1:w4PEZ5
 github.com/pingcap/fn v0.0.0-20191016082858-07623b84a47d/go.mod h1:fMRU1BA1y+r89AxUoaAar4JjrhUkVDt0o0Np6V8XbDQ=
 github.com/pingcap/fn v0.0.0-20200306044125-d5540d389059 h1:Pe2LbxRmbTfAoKJ65bZLmhahmvHm7n9DUxGRQT00208=
 github.com/pingcap/fn v0.0.0-20200306044125-d5540d389059/go.mod h1:fMRU1BA1y+r89AxUoaAar4JjrhUkVDt0o0Np6V8XbDQ=
-github.com/pingcap/go-tpc v1.0.4-0.20200525052430-dc963cdeef62 h1:Ssr4JKS/0jxI6Ye6x4v5DNOD5fjXYniy1sxVCkqkL08=
-github.com/pingcap/go-tpc v1.0.4-0.20200525052430-dc963cdeef62/go.mod h1:YToE6BW+r+aWksQm1kuFnzKgEzaTKsVIHD36rxVYaWc=
+github.com/pingcap/go-tpc v1.0.4-0.20201106030831-2cc8c0ab3409 h1:iD5yl4iZ1RDg6PgWKyclHS3OWh5y5fApNrQl1pyRmTA=
+github.com/pingcap/go-tpc v1.0.4-0.20201106030831-2cc8c0ab3409/go.mod h1:YToE6BW+r+aWksQm1kuFnzKgEzaTKsVIHD36rxVYaWc=
 github.com/pingcap/go-ycsb v0.0.0-20200226103513-00ca633a87d8 h1:Lem+5BTrGrzntgag8n38ZMwlYi9Wjzf5658p57mdO04=
 github.com/pingcap/go-ycsb v0.0.0-20200226103513-00ca633a87d8/go.mod h1:B9UJ3Lbpk4r+qFNDAeS2l6ORGkVaVwMPO1mSqDXiNQc=
 github.com/pingcap/gofail v0.0.0-20181217135706-6a951c1e42c3 h1:04yuCf5NMvLU8rB2m4Qs3rynH7EYpMno3lHkewIOdMo=

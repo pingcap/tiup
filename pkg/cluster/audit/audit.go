@@ -56,11 +56,10 @@ func ShowAuditList(dir string) error {
 		if fi.IsDir() {
 			continue
 		}
-		ts, err := base52.Decode(fi.Name())
+		t, err := decodeAuditID(fi.Name())
 		if err != nil {
 			continue
 		}
-		t := time.Unix(ts, 0)
 		cmd, err := firstLine(fi.Name())
 		if err != nil {
 			continue
@@ -82,7 +81,7 @@ func ShowAuditList(dir string) error {
 
 // OutputAuditLog outputs audit log.
 func OutputAuditLog(dir string, data []byte) error {
-	fname := filepath.Join(dir, base52.Encode(time.Now().Unix()))
+	fname := filepath.Join(dir, base52.Encode(time.Now().UnixNano()))
 	return ioutil.WriteFile(fname, data, 0644)
 }
 
@@ -93,7 +92,7 @@ func ShowAuditLog(dir string, auditID string) error {
 		return errors.Errorf("cannot find the audit log '%s'", auditID)
 	}
 
-	ts, err := base52.Decode(auditID)
+	t, err := decodeAuditID(auditID)
 	if err != nil {
 		return errors.Annotatef(err, "unrecognized audit id '%s'", auditID)
 	}
@@ -103,10 +102,23 @@ func ShowAuditLog(dir string, auditID string) error {
 		return errors.Trace(err)
 	}
 
-	t := time.Unix(ts, 0)
 	hint := fmt.Sprintf("- OPERATION TIME: %s -", t.Format("2006-01-02T15:04:05"))
 	line := strings.Repeat("-", len(hint))
 	_, _ = os.Stdout.WriteString(color.MagentaString("%s\n%s\n%s\n", line, hint, line))
 	_, _ = os.Stdout.Write(content)
 	return nil
+}
+
+//decodeAuditID decodes the auditID to unix timestamp
+func decodeAuditID(auditID string) (time.Time, error) {
+	ts, err := base52.Decode(auditID)
+	if err != nil {
+		return time.Time{}, err
+	}
+	// compatible with old second based ts
+	if ts>>32 > 0 {
+		ts = ts / 1e9
+	}
+	t := time.Unix(ts, 0)
+	return t, nil
 }

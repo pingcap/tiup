@@ -15,6 +15,7 @@ package spec
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/tj/go-termd"
 )
@@ -27,6 +28,9 @@ type ErrorSpec struct {
 	Description string   `toml:"description" json:"description"`
 	Tags        []string `toml:"tags" json:"tags"`
 	Workaround  string   `toml:"workaround" json:"workaround"`
+	// Used for indexes
+	ExtraCode  string `toml:"extracode" json:"extracode"`
+	ExtraError string `toml:"extraerror" json:"extraerror"`
 }
 
 func newCompiler() *termd.Compiler {
@@ -44,17 +48,17 @@ func (f ErrorSpec) String() string {
 		header = fmt.Sprintf("# Error: **%s**", f.Code)
 	}
 
-	tmpl := header + "\n" + f.Error
+	tmpl := header + "\n" + strings.TrimSpace(f.Error)
 
 	description := f.Description
 	if description != "" {
 		tmpl += `## Description
-		` + description
+		` + strings.TrimSpace(description)
 	}
 	workaround := f.Workaround
 	if workaround != "" {
 		tmpl += `## Workaround
-		` + workaround
+		` + strings.TrimSpace(workaround)
 	}
 
 	return newCompiler().Compile(tmpl)

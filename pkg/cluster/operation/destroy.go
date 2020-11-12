@@ -14,12 +14,16 @@
 package operator
 
 import (
+	"crypto/tls"
 	"fmt"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -33,11 +37,6 @@ func Cleanup(
 	options Options,
 ) error {
 	coms := cluster.ComponentsByStopOrder()
-
-	instCount := map[string]int{}
-	cluster.IterInstance(func(inst spec.Instance) {
-		instCount[inst.GetHost()] = instCount[inst.GetHost()] + 1
-	})
 
 	for _, com := range coms {
 		insts := com.Instances()
@@ -88,6 +87,47 @@ func Destroy(
 		}
 	}
 
+	return nil
+}
+
+// StopAndDestroyInstance stop and destroy the instance,
+// if this instance is the host's last one, and the host has monitor deployed,
+// we need to destroy the monitor, either
+func StopAndDestroyInstance(getter ExecutorGetter, cluster spec.Topology, instance spec.Instance, options Options, destroyMonitor bool) error {
+	ignoreErr := options.Force
+	compName := instance.ComponentName()
+
+	// just try to stop and destroy
+	if err := StopComponent(getter, []spec.Instance{instance}, options.OptTimeout); err != nil {
+		if !ignoreErr {
+			return errors.Annotatef(err, "failed to stop %s", compName)
+		}
+		log.Warnf("failed to stop %s: %v", compName, err)
+	}
+	if err := DestroyComponent(getter, []spec.Instance{instance}, cluster, options); err != nil {
+		if !ignoreErr {
+			return errors.Annotatef(err, "failed to destroy %s", compName)
+		}
+		log.Warnf("failed to destroy %s: %v", compName, err)
+	}
+
+	// monitoredOptions for dm cluster is nil
+	monitoredOptions := cluster.GetMonitoredOptions()
+
+	if destroyMonitor && monitoredOptions != nil {
+		if err := StopMonitored(getter, instance, monitoredOptions, options.OptTimeout); err != nil {
+			if !ignoreErr {
+				return errors.Annotatef(err, "failed to stop monitor")
+			}
+			log.Warnf("failed to stop %s: %v", "monitor", err)
+		}
+		if err := DestroyMonitored(getter, instance, monitoredOptions, options.OptTimeout); err != nil {
+			if !ignoreErr {
+				return errors.Annotatef(err, "failed to destroy monitor")
+			}
+			log.Warnf("failed to destroy %s: %v", "monitor", err)
+		}
+	}
 	return nil
 }
 
@@ -367,4 +407,192 @@ func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 	}
 
 	return nil
+}
+
+// DestroyTombstone remove the tombstone node in spec and destroy them.
+// If returNodesOnly is true, it will only return the node id that can be destroy.
+func DestroyTombstone(
+	getter ExecutorGetter,
+	cluster *spec.Specification,
+	returNodesOnly bool,
+	options Options,
+	tlsCfg *tls.Config,
+) (nodes []string, err error) {
+	return DestroyClusterTombstone(getter, cluster, returNodesOnly, options, tlsCfg)
+}
+
+// DestroyClusterTombstone remove the tombstone node in spec and destroy them.
+// If returNodesOnly is true, it will only return the node id that can be destroy.
+func DestroyClusterTombstone(
+	getter ExecutorGetter,
+	cluster *spec.Specification,
+	returNodesOnly bool,
+	options Options,
+	tlsCfg *tls.Config,
+) (nodes []string, err error) {
+	instCount := map[string]int{}
+	for _, component := range cluster.ComponentsByStartOrder() {
+		for _, instance := range component.Instances() {
+			instCount[instance.GetHost()] = instCount[instance.GetHost()] + 1
+		}
+	}
+
+	var pdClient = api.NewPDClient(cluster.GetPDList(), 10*time.Second, tlsCfg)
+
+	binlogClient, err := api.NewBinlogClient(cluster.GetPDList(), tlsCfg)
+	if err != nil {
+		return nil, errors.AddStack(err)
+	}
+
+	filterID := func(instance []spec.Instance, id string) (res []spec.Instance) {
+		for _, ins := range instance {
+			if ins.ID() == id {
+				res = append(res, ins)
+			}
+		}
+		return
+	}
+
+	maybeDestroyMonitor := func(instances []spec.Instance, id string) error {
+		instances = filterID(instances, id)
+
+		for _, instance := range instances {
+			instCount[instance.GetHost()]--
+			err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0)
+			if err != nil {
+				return errors.AddStack(err)
+			}
+		}
+		return nil
+	}
+
+	var kvServers []spec.TiKVSpec
+	for _, s := range cluster.TiKVServers {
+		if !s.Offline {
+			kvServers = append(kvServers, s)
+			continue
+		}
+
+		id := s.Host + ":" + strconv.Itoa(s.Port)
+
+		tombstone, err := pdClient.IsTombStone(id)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+
+		if !tombstone {
+			kvServers = append(kvServers, s)
+			continue
+		}
+
+		nodes = append(nodes, id)
+		if returNodesOnly {
+			continue
+		}
+
+		instances := (&spec.TiKVComponent{Specification: cluster}).Instances()
+		if err := maybeDestroyMonitor(instances, id); err != nil {
+			return nil, err
+		}
+	}
+
+	var flashServers []spec.TiFlashSpec
+	for _, s := range cluster.TiFlashServers {
+		if !s.Offline {
+			flashServers = append(flashServers, s)
+			continue
+		}
+
+		id := s.Host + ":" + strconv.Itoa(s.FlashServicePort)
+
+		tombstone, err := pdClient.IsTombStone(id)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+
+		if !tombstone {
+			flashServers = append(flashServers, s)
+			continue
+		}
+
+		nodes = append(nodes, id)
+		if returNodesOnly {
+			continue
+		}
+
+		instances := (&spec.TiFlashComponent{Specification: cluster}).Instances()
+		id = s.Host + ":" + strconv.Itoa(s.GetMainPort())
+		if err := maybeDestroyMonitor(instances, id); err != nil {
+			return nil, err
+		}
+	}
+
+	var pumpServers []spec.PumpSpec
+	for _, s := range cluster.PumpServers {
+		if !s.Offline {
+			pumpServers = append(pumpServers, s)
+			continue
+		}
+
+		id := s.Host + ":" + strconv.Itoa(s.Port)
+
+		tombstone, err := binlogClient.IsPumpTombstone(id)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+
+		if !tombstone {
+			pumpServers = append(pumpServers, s)
+		}
+
+		nodes = append(nodes, id)
+		if returNodesOnly {
+			continue
+		}
+
+		instances := (&spec.PumpComponent{Specification: cluster}).Instances()
+		if err := maybeDestroyMonitor(instances, id); err != nil {
+			return nil, err
+		}
+	}
+
+	var drainerServers []spec.DrainerSpec
+	for _, s := range cluster.Drainers {
+		if !s.Offline {
+			drainerServers = append(drainerServers, s)
+			continue
+		}
+
+		id := s.Host + ":" + strconv.Itoa(s.Port)
+
+		tombstone, err := binlogClient.IsDrainerTombstone(id)
+		if err != nil {
+			return nil, errors.AddStack(err)
+		}
+
+		if !tombstone {
+			drainerServers = append(drainerServers, s)
+		}
+
+		nodes = append(nodes, id)
+		if returNodesOnly {
+			continue
+		}
+
+		instances := (&spec.DrainerComponent{Specification: cluster}).Instances()
+		if err := maybeDestroyMonitor(instances, id); err != nil {
+			return nil, err
+		}
+	}
+
+	if returNodesOnly {
+		return
+	}
+
+	cluster.TiKVServers = kvServers
+	cluster.TiFlashServers = flashServers
+	cluster.PumpServers = pumpServers
+	cluster.Drainers = drainerServers
+
+	return
 }
