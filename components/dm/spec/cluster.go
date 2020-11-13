@@ -29,7 +29,7 @@ type Metadata struct {
 	Version string `yaml:"dm_version"` // the version of TiDB cluster
 	//EnableFirewall bool   `yaml:"firewall"`
 
-	Topology *Topology `yaml:"topology"`
+	Topology *Specification `yaml:"topology"`
 }
 
 var _ cspec.UpgradableMetadata = &Metadata{}
@@ -51,7 +51,7 @@ func (m *Metadata) GetTopology() cspec.Topology {
 
 // SetTopology implements Metadata interface.
 func (m *Metadata) SetTopology(topo cspec.Topology) {
-	dmTopo, ok := topo.(*Topology)
+	dmTopo, ok := topo.(*Specification)
 	if !ok {
 		panic(fmt.Sprintln("wrong type: ", reflect.TypeOf(topo)))
 	}
@@ -72,7 +72,7 @@ func GetSpecManager() *cspec.SpecManager {
 	if specManager == nil {
 		specManager = cspec.NewSpec(filepath.Join(cspec.ProfileDir(), cspec.TiOpsClusterDir), func() cspec.Metadata {
 			return &Metadata{
-				Topology: new(Topology),
+				Topology: new(Specification),
 			}
 		})
 	}

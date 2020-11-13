@@ -32,14 +32,14 @@ var _ = Suite(&metaSuiteDM{})
 
 func TestDefaultDataDir(t *testing.T) {
 	// Test with without global DataDir.
-	topo := new(Topology)
+	topo := new(Specification)
 	topo.Masters = append(topo.Masters, MasterSpec{Host: "1.1.1.1", Port: 1111})
 	topo.Workers = append(topo.Workers, WorkerSpec{Host: "1.1.2.1", Port: 2221})
 	data, err := yaml.Marshal(topo)
 	assert.Nil(t, err)
 
 	// Check default value.
-	topo = new(Topology)
+	topo = new(Specification)
 	err = yaml.Unmarshal(data, topo)
 	assert.Nil(t, err)
 	assert.Equal(t, "data", topo.GlobalOptions.DataDir)
@@ -49,7 +49,7 @@ func TestDefaultDataDir(t *testing.T) {
 	// Can keep the default value.
 	data, err = yaml.Marshal(topo)
 	assert.Nil(t, err)
-	topo = new(Topology)
+	topo = new(Specification)
 	err = yaml.Unmarshal(data, topo)
 	assert.Nil(t, err)
 	assert.Equal(t, "data", topo.GlobalOptions.DataDir)
@@ -57,7 +57,7 @@ func TestDefaultDataDir(t *testing.T) {
 	assert.Equal(t, "data", topo.Workers[0].DataDir)
 
 	// Test with global DataDir.
-	topo = new(Topology)
+	topo = new(Specification)
 	topo.GlobalOptions.DataDir = "/gloable_data"
 	topo.Masters = append(topo.Masters, MasterSpec{Host: "1.1.1.1", Port: 1111})
 	topo.Masters = append(topo.Masters, MasterSpec{Host: "1.1.1.2", Port: 1112, DataDir: "/my_data"})
@@ -66,7 +66,7 @@ func TestDefaultDataDir(t *testing.T) {
 	data, err = yaml.Marshal(topo)
 	assert.Nil(t, err)
 
-	topo = new(Topology)
+	topo = new(Specification)
 	err = yaml.Unmarshal(data, topo)
 
 	assert.Nil(t, err)
@@ -78,7 +78,7 @@ func TestDefaultDataDir(t *testing.T) {
 }
 
 func TestGlobalOptions(t *testing.T) {
-	topo := Topology{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
@@ -105,7 +105,7 @@ worker_servers:
 }
 
 func TestDirectoryConflicts(t *testing.T) {
-	topo := Topology{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
@@ -139,7 +139,7 @@ worker_servers:
 }
 
 func TestPortConflicts(t *testing.T) {
-	topo := Topology{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
@@ -159,7 +159,7 @@ worker_servers:
 
 func TestPlatformConflicts(t *testing.T) {
 	// aarch64 and arm64 are equal
-	topo := Topology{}
+	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`
 global:
   os: "linux"
@@ -173,7 +173,7 @@ worker_servers:
 	assert.Nil(t, err)
 
 	// different arch defined for the same host
-	topo = Topology{}
+	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
 global:
   os: "linux"
@@ -187,7 +187,7 @@ worker_servers:
 	assert.Equal(t, "platform mismatch for '172.16.5.138' between 'master_servers:linux/arm64' and 'worker_servers:linux/amd64'", err.Error())
 
 	// different os defined for the same host
-	topo = Topology{}
+	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
 global:
   os: "linux"
@@ -203,7 +203,7 @@ worker_servers:
 }
 
 func TestCountDir(t *testing.T) {
-	topo := Topology{}
+	topo := Specification{}
 
 	err := yaml.Unmarshal([]byte(`
 global:
@@ -296,8 +296,8 @@ func with2TempFile(content1, content2 string, fn func(string, string)) {
 	})
 }
 
-func merge4test(base, scale string) (*Topology, error) {
-	baseTopo := Topology{}
+func merge4test(base, scale string) (*Specification, error) {
+	baseTopo := Specification{}
 	if err := spec.ParseTopologyYaml(base, &baseTopo); err != nil {
 		return nil, err
 	}
@@ -312,7 +312,7 @@ func merge4test(base, scale string) (*Topology, error) {
 		return nil, err
 	}
 
-	return mergedTopo.(*Topology), nil
+	return mergedTopo.(*Specification), nil
 }
 
 func TestRelativePath(t *testing.T) {
@@ -323,7 +323,7 @@ master_servers:
 worker_servers:
   - host: 172.16.5.140
 `, func(file string) {
-		topo := Topology{}
+		topo := Specification{}
 		err := spec.ParseTopologyYaml(file, &topo)
 		assert.Nil(t, err)
 		spec.ExpandRelativeDir(&topo)
@@ -339,7 +339,7 @@ master_servers:
     data_dir: my-data
     log_dir: my-log
 `, func(file string) {
-		topo := Topology{}
+		topo := Specification{}
 		err := spec.ParseTopologyYaml(file, &topo)
 		assert.Nil(t, err)
 		spec.ExpandRelativeDir(&topo)
@@ -356,7 +356,7 @@ global:
 master_servers:
   - host: 172.16.5.140
 `, func(file string) {
-		topo := Topology{}
+		topo := Specification{}
 		err := spec.ParseTopologyYaml(file, &topo)
 		assert.Nil(t, err)
 		spec.ExpandRelativeDir(&topo)
@@ -378,7 +378,7 @@ worker_servers:
   - host: 172.16.5.140
     port: 20161
 `, func(file string) {
-		topo := Topology{}
+		topo := Specification{}
 		err := spec.ParseTopologyYaml(file, &topo)
 		assert.Nil(t, err)
 		spec.ExpandRelativeDir(&topo)
@@ -407,7 +407,7 @@ worker_servers:
   - host: 172.16.5.140
     port: 20161
 `, func(file string) {
-		topo := Topology{}
+		topo := Specification{}
 		err := spec.ParseTopologyYaml(file, &topo)
 		assert.Nil(t, err)
 		spec.ExpandRelativeDir(&topo)
@@ -439,7 +439,7 @@ worker_servers:
   - host: 172.16.5.140
     port: 20161
 `, func(file string) {
-		topo := Topology{}
+		topo := Specification{}
 		err := spec.ParseTopologyYaml(file, &topo)
 		assert.Nil(t, err)
 		spec.ExpandRelativeDir(&topo)

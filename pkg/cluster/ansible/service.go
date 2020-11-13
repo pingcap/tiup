@@ -214,9 +214,9 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 			}
 		}
 		return newIns, nil
-	case spec.ComponentAlertManager:
+	case spec.ComponentAlertmanager:
 		// parse dirs
-		newIns := ins.(spec.AlertManagerSpec)
+		newIns := ins.(spec.AlertmanagerSpec)
 		for _, line := range strings.Split(string(stdout), "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")

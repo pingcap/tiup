@@ -9,13 +9,21 @@ global:
 
 # Load and evaluate rules in this file every 'evaluation_interval' seconds.
 rule_files:
+{{- if .MonitoredServers}}
   - 'node.rules.yml'
   - 'blacker.rules.yml'
   - 'bypass.rules.yml'
+{{- end}}
+{{- if .PDAddrs}}
   - 'pd.rules.yml'
+{{- end}}
+{{- if .TiDBStatusAddrs}}
   - 'tidb.rules.yml'
+{{- end}}
+{{- if .TiKVStatusAddrs}}
   - 'tikv.rules.yml'
   - 'tikv.accelerate.rules.yml'
+{{- end}}
 {{- if .TiFlashStatusAddrs}}
   - 'tiflash.rules.yml'
 {{- end}}
@@ -30,6 +38,12 @@ rule_files:
 {{- end}}
 {{- if .LightningAddrs}}
   - 'lightning.rules.yml'
+{{- end}}
+{{- if .DMWorkerAddrs}}
+  - 'dm_worker.rules.yml'
+{{- end}}
+{{- if .DMMasterAddrs}}
+  - 'dm_master.rules.yml'
 {{- end}}
 
 {{- if .AlertmanagerAddrs}}
@@ -262,7 +276,7 @@ scrape_configs:
     static_configs:
     - targets:
     {{- range .TiDBStatusAddrs}}
-      - '{{.}}' 
+      - '{{.}}'
     {{- end}}
       labels:
         group: 'tidb'
@@ -341,4 +355,24 @@ scrape_configs:
         regex: .*
         target_label: __address__
         replacement: {{$addr}}
+{{- end}}
+
+{{- if .DMMasterAddrs}}
+  - job_name: "dm_master"
+    honor_labels: true # don't overwrite job & instance labels
+    static_configs:
+    - targets:
+    {{- range .DMMasterAddrs}}
+      - '{{.}}'
+    {{- end}}
+{{- end}}
+
+{{- if .DMWorkerAddrs}}
+  - job_name: "dm_worker"
+    honor_labels: true # don't overwrite job & instance labels
+    static_configs:
+    - targets:
+    {{- range .DMWorkerAddrs}}
+      - '{{.}}'
+    {{- end}}
 {{- end}}

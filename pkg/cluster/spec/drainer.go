@@ -64,7 +64,7 @@ func (s DrainerSpec) IsImported() bool {
 }
 
 // DrainerComponent represents Drainer component.
-type DrainerComponent struct{ *Specification }
+type DrainerComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *DrainerComponent) Name() string {
@@ -78,8 +78,8 @@ func (c *DrainerComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *DrainerComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.Drainers))
-	for _, s := range c.Drainers {
+	ins := make([]Instance, 0, len(c.Topology.Drainers))
+	for _, s := range c.Topology.Drainers {
 		s := s
 		ins = append(ins, &DrainerInstance{BaseInstance{
 			InstanceSpec: s,
@@ -103,7 +103,7 @@ func (c *DrainerComponent) Instances() []Instance {
 				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
 				return statusByURL(url, tlsCfg)
 			},
-		}, c.Specification})
+		}, c.Topology})
 	}
 	return ins
 }
@@ -111,7 +111,7 @@ func (c *DrainerComponent) Instances() []Instance {
 // DrainerInstance represent the Drainer instance.
 type DrainerInstance struct {
 	BaseInstance
-	topo *Specification
+	topo Topology
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -140,11 +140,12 @@ func (i *DrainerInstance) InitConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
+	topo := i.topo.(*Specification)
+	if err := i.BaseInstance.InitConfig(e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
-	enableTLS := i.topo.GlobalOptions.TLSEnabled
+	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(DrainerSpec)
 	cfg := scripts.NewDrainerScript(
 		i.GetHost()+":"+strconv.Itoa(i.GetPort()),
@@ -152,7 +153,7 @@ func (i *DrainerInstance) InitConfig(
 		paths.Deploy,
 		paths.Data[0],
 		paths.Log,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.topo.Endpoints(deployUser)...)
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...)
 
 	cfg.WithCommitTs(spec.CommitTS)
 
@@ -170,7 +171,7 @@ func (i *DrainerInstance) InitConfig(
 		return err
 	}
 
-	globalConfig := i.topo.ServerConfigs.Drainer
+	globalConfig := topo.ServerConfigs.Drainer
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(

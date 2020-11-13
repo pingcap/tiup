@@ -785,7 +785,7 @@ func (s *Specification) validateTLSEnabled() error {
 			ComponentDrainer,
 			ComponentCDC,
 			ComponentPrometheus,
-			ComponentAlertManager,
+			ComponentAlertmanager,
 			ComponentGrafana:
 		default:
 			return errors.Errorf("component %s is not supported in TLS enabled cluster", c.Name())
