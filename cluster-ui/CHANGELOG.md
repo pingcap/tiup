@@ -1,5 +1,9 @@
 # TiUP Cluster UI Changelog
 
+## 2020.11.13
+
+- Add audit for deploy/destroy/start/stop/scale_in/scale_out operations
+
 ## 2020.11.04
 
 - Support config arch for machine
