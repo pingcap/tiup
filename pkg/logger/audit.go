@@ -47,6 +47,13 @@ func newAuditLogCore() zapcore.Core {
 	return zapcore.NewCore(encoder, zapcore.Lock(zapcore.AddSync(auditBuffer)), zapcore.InfoLevel)
 }
 
+// AddCustomAuditLog adds a custom audit log
+func AddCustomAuditLog(log string) {
+	auditBuffer.Reset()
+	auditBuffer.WriteString(log + "\n")
+	_ = OutputAuditLogIfEnabled()
+}
+
 // OutputAuditLogIfEnabled outputs audit log if enabled.
 func OutputAuditLogIfEnabled() error {
 	if !auditEnabled.Load() {

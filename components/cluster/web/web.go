@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/repository"
 	cors "github.com/rs/cors/wrapper/gin"
 )
@@ -118,6 +120,7 @@ func deployHandler(c *gin.Context) {
 	}
 
 	// create temp topo yaml file
+	// TODO: move yaml to ~/.tiup folder
 	tmpfile, err := ioutil.TempFile("", "topo")
 	if err != nil {
 		_ = c.Error(err)
@@ -149,6 +152,10 @@ func deployHandler(c *gin.Context) {
 		opt.IdentityFile = identifyFile
 		opt.Pass = &req.GlobalLoginOptions.PrivateKeyPassword
 	}
+
+	// audit
+	// logger.AddCustomAuditLog(fmt.Sprintf("[web] deploy %s %s %s", req.ClusterName, req.TiDBVersion, topoFilePath))
+	logger.AddCustomAuditLog(fmt.Sprintf("[web] deploy %s %s", req.ClusterName, req.TiDBVersion))
 
 	go func() {
 		manager.DoDeploy(
@@ -189,6 +196,10 @@ func clusterHandler(c *gin.Context) {
 
 func destroyClusterHandler(c *gin.Context) {
 	clusterName := c.Param("clusterName")
+
+	// audit
+	logger.AddCustomAuditLog(fmt.Sprintf("[web] destroy %s", clusterName))
+
 	go func() {
 		manager.DoDestroyCluster(clusterName, gOpt, operator.Options{}, skipConfirm)
 	}()
@@ -198,6 +209,9 @@ func destroyClusterHandler(c *gin.Context) {
 
 func startClusterHandler(c *gin.Context) {
 	clusterName := c.Param("clusterName")
+
+	// audit
+	logger.AddCustomAuditLog(fmt.Sprintf("[web] start %s", clusterName))
 
 	go func() {
 		manager.DoStartCluster(clusterName, gOpt, func(b *task.Builder, metadata spec.Metadata) {
@@ -215,6 +229,10 @@ func startClusterHandler(c *gin.Context) {
 
 func stopClusterHandler(c *gin.Context) {
 	clusterName := c.Param("clusterName")
+
+	// audit
+	logger.AddCustomAuditLog(fmt.Sprintf("[web] stop %s", clusterName))
+
 	go func() {
 		manager.DoStopCluster(clusterName, gOpt)
 	}()
@@ -236,6 +254,9 @@ func scaleInClusterHandler(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
+
+	// audit
+	logger.AddCustomAuditLog(fmt.Sprintf("[web] scale_in %s -N %s", clusterName, strings.Join(req.Nodes, ",")))
 
 	go func() {
 		opt := operator.Options{
@@ -303,6 +324,7 @@ func scaleOutClusterHandler(c *gin.Context) {
 	}
 
 	// create temp topo yaml file
+	// TODO: move yaml to ~/.tiup folder
 	tmpfile, err := ioutil.TempFile("", "topo")
 	if err != nil {
 		_ = c.Error(err)
@@ -342,6 +364,10 @@ func scaleOutClusterHandler(c *gin.Context) {
 			nil, /* deleteNodeIds */
 		)
 	}
+
+	// audit
+	// logger.AddCustomAuditLog(fmt.Sprintf("[web] scale_out %s %s", clusterName, topoFilePath))
+	logger.AddCustomAuditLog(fmt.Sprintf("[web] scale_out %s", clusterName))
 
 	go func() {
 		manager.DoScaleOut(
