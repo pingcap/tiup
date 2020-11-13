@@ -21,7 +21,7 @@ import (
 // TiDBComponentVersion maps the TiDB version to the third components binding version
 func TiDBComponentVersion(comp, version string) string {
 	switch comp {
-	case ComponentAlertManager:
+	case ComponentAlertmanager:
 		return "v0.17.0"
 	case ComponentBlackboxExporter:
 		return "v0.12.0"

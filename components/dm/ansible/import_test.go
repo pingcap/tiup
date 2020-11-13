@@ -188,9 +188,9 @@ func TestImportFromAnsible(t *testing.T) {
 	assert.Equal(expectedWorker, worker)
 
 	// check Alertmanager
-	assert.Len(topo.Alertmanager, 1)
-	aler := topo.Alertmanager[0]
-	expectedAlter := spec.AlertManagerSpec{
+	assert.Len(topo.Alertmanagers, 1)
+	aler := topo.Alertmanagers[0]
+	expectedAlter := spec.AlertmanagerSpec{
 		Host:      "172.19.0.101",
 		SSHPort:   22,
 		WebPort:   9093,
@@ -201,8 +201,8 @@ func TestImportFromAnsible(t *testing.T) {
 	assert.Equal(expectedAlter, aler)
 
 	// Check Grafana
-	assert.Len(topo.Grafana, 1)
-	grafana := topo.Grafana[0]
+	assert.Len(topo.Grafanas, 1)
+	grafana := topo.Grafanas[0]
 	expectedGrafana := spec.GrafanaSpec{
 		Host:      "172.19.0.101",
 		SSHPort:   22,

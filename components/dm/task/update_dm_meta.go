@@ -19,6 +19,7 @@ import (
 
 	dmspec "github.com/pingcap/tiup/components/dm/spec"
 
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/set"
 )
@@ -44,7 +45,7 @@ func (u *UpdateDMMeta) Execute(ctx *task.Context) error {
 	// make a copy
 	newMeta := &dmspec.Metadata{}
 	*newMeta = *u.metadata
-	newMeta.Topology = &dmspec.Topology{
+	newMeta.Topology = &dmspec.Specification{
 		GlobalOptions: u.metadata.Topology.GlobalOptions,
 		// MonitoredOptions: u.metadata.Topology.MonitoredOptions,
 		ServerConfigs: u.metadata.Topology.ServerConfigs,
@@ -64,23 +65,23 @@ func (u *UpdateDMMeta) Execute(ctx *task.Context) error {
 		}
 		newMeta.Topology.Workers = append(newMeta.Topology.Workers, topo.Workers[i])
 	}
-	for i, instance := range (&dmspec.MonitorComponent{Topology: topo}).Instances() {
+	for i, instance := range (&spec.MonitorComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Monitors = append(newMeta.Topology.Monitors, topo.Monitors[i])
 	}
-	for i, instance := range (&dmspec.GrafanaComponent{Topology: topo}).Instances() {
+	for i, instance := range (&spec.GrafanaComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Grafana = append(newMeta.Topology.Grafana, topo.Grafana[i])
+		newMeta.Topology.Grafanas = append(newMeta.Topology.Grafanas, topo.Grafanas[i])
 	}
-	for i, instance := range (&dmspec.AlertManagerComponent{Topology: topo}).Instances() {
+	for i, instance := range (&spec.AlertManagerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Alertmanager = append(newMeta.Topology.Alertmanager, topo.Alertmanager[i])
+		newMeta.Topology.Alertmanagers = append(newMeta.Topology.Alertmanagers, topo.Alertmanagers[i])
 	}
 
 	return dmspec.GetSpecManager().SaveMeta(u.cluster, newMeta)
