@@ -70,8 +70,8 @@ type (
 	PrometheusSpec = spec.PrometheusSpec
 	// GrafanaSpec is the spec of Grafana
 	GrafanaSpec = spec.GrafanaSpec
-	// AlertManagerSpec is the spec of Alertmanager
-	AlertManagerSpec = spec.AlertManagerSpec
+	// AlertmanagerSpec is the spec of Alertmanager
+	AlertmanagerSpec = spec.AlertmanagerSpec
 	// ResourceControl is the spec of ResourceControl
 	ResourceControl = meta.ResourceControl
 )
@@ -83,23 +83,23 @@ type (
 		Worker map[string]interface{} `yaml:"worker"`
 	}
 
-	// Topology represents the specification of topology.yaml
-	Topology struct {
+	// Specification represents the specification of topology.yaml
+	Specification struct {
 		GlobalOptions GlobalOptions `yaml:"global,omitempty" validate:"global:editable"`
 		// MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty" validate:"monitored:editable"`
-		ServerConfigs DMServerConfigs    `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
-		Masters       []MasterSpec       `yaml:"master_servers"`
-		Workers       []WorkerSpec       `yaml:"worker_servers"`
-		Monitors      []PrometheusSpec   `yaml:"monitoring_servers"`
-		Grafana       []GrafanaSpec      `yaml:"grafana_servers,omitempty"`
-		Alertmanager  []AlertManagerSpec `yaml:"alertmanager_servers,omitempty"`
+		ServerConfigs DMServerConfigs         `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
+		Masters       []MasterSpec            `yaml:"master_servers"`
+		Workers       []WorkerSpec            `yaml:"worker_servers"`
+		Monitors      []spec.PrometheusSpec   `yaml:"monitoring_servers"`
+		Grafanas      []spec.GrafanaSpec      `yaml:"grafana_servers,omitempty"`
+		Alertmanagers []spec.AlertmanagerSpec `yaml:"alertmanager_servers,omitempty"`
 	}
 )
 
 // AllDMComponentNames contains the names of all dm components.
 // should include all components in ComponentsByStartOrder
 func AllDMComponentNames() (roles []string) {
-	tp := &Topology{}
+	tp := &Specification{}
 	tp.IterComponent(func(c Component) {
 		roles = append(roles, c.Name())
 	})
@@ -225,8 +225,8 @@ func (s WorkerSpec) IsImported() bool {
 }
 
 // UnmarshalYAML sets default values when unmarshaling the topology file
-func (topo *Topology) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	type topology Topology
+func (topo *Specification) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type topology Specification
 	if err := unmarshal((*topology)(topo)); err != nil {
 		return err
 	}
@@ -244,7 +244,7 @@ func (topo *Topology) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // platformConflictsDetect checks for conflicts in topology for different OS / Arch
 // for set to the same host / IP
-func (topo *Topology) platformConflictsDetect() error {
+func (topo *Specification) platformConflictsDetect() error {
 	type (
 		conflict struct {
 			os   string
@@ -305,7 +305,7 @@ func (topo *Topology) platformConflictsDetect() error {
 	return nil
 }
 
-func (topo *Topology) portConflictsDetect() error {
+func (topo *Specification) portConflictsDetect() error {
 	type (
 		usedPort struct {
 			host string
@@ -383,7 +383,7 @@ func (topo *Topology) portConflictsDetect() error {
 	return nil
 }
 
-func (topo *Topology) dirConflictsDetect() error {
+func (topo *Specification) dirConflictsDetect() error {
 	type (
 		usedDir struct {
 			host string
@@ -467,7 +467,7 @@ func (topo *Topology) dirConflictsDetect() error {
 
 // CountDir counts for dir paths used by any instance in the cluster with the same
 // prefix, useful to find potential path conflicts
-func (topo *Topology) CountDir(targetHost, dirPrefix string) int {
+func (topo *Specification) CountDir(targetHost, dirPrefix string) int {
 	dirTypes := []string{
 		"DataDir",
 		"DeployDir",
@@ -532,7 +532,7 @@ func (topo *Topology) CountDir(targetHost, dirPrefix string) int {
 }
 
 // TLSConfig generates a tls.Config for the specification as needed
-func (topo *Topology) TLSConfig(dir string) (*tls.Config, error) {
+func (topo *Specification) TLSConfig(dir string) (*tls.Config, error) {
 	if !topo.GlobalOptions.TLSEnabled {
 		return nil, nil
 	}
@@ -541,7 +541,7 @@ func (topo *Topology) TLSConfig(dir string) (*tls.Config, error) {
 
 // Validate validates the topology specification and produce error if the
 // specification invalid (e.g: port conflicts or directory conflicts)
-func (topo *Topology) Validate() error {
+func (topo *Specification) Validate() error {
 	if err := topo.platformConflictsDetect(); err != nil {
 		return err
 	}
@@ -558,25 +558,28 @@ func (topo *Topology) Validate() error {
 }
 
 // BaseTopo implements Topology interface.
-func (topo *Topology) BaseTopo() *spec.BaseTopo {
+func (topo *Specification) BaseTopo() *spec.BaseTopo {
 	return &spec.BaseTopo{
 		GlobalOptions:    &topo.GlobalOptions,
 		MonitoredOptions: topo.GetMonitoredOptions(),
 		MasterList:       topo.GetMasterList(),
+		Monitors:         topo.Monitors,
+		Grafanas:         topo.Grafanas,
+		Alertmanagers:    topo.Alertmanagers,
 	}
 }
 
 // NewPart implements ScaleOutTopology interface.
-func (topo *Topology) NewPart() spec.Topology {
-	return &Topology{
+func (topo *Specification) NewPart() spec.Topology {
+	return &Specification{
 		GlobalOptions: topo.GlobalOptions,
 		ServerConfigs: topo.ServerConfigs,
 	}
 }
 
 // MergeTopo implements ScaleOutTopology interface.
-func (topo *Topology) MergeTopo(rhs spec.Topology) spec.Topology {
-	other, ok := rhs.(*Topology)
+func (topo *Specification) MergeTopo(rhs spec.Topology) spec.Topology {
+	other, ok := rhs.(*Specification)
 	if !ok {
 		panic("topo should be DM Topology")
 	}
@@ -585,7 +588,7 @@ func (topo *Topology) MergeTopo(rhs spec.Topology) spec.Topology {
 }
 
 // GetMasterList returns a list of Master API hosts of the current cluster
-func (topo *Topology) GetMasterList() []string {
+func (topo *Specification) GetMasterList() []string {
 	var masterList []string
 
 	for _, master := range topo.Masters {
@@ -596,16 +599,17 @@ func (topo *Topology) GetMasterList() []string {
 }
 
 // Merge returns a new Topology which sum old ones
-func (topo *Topology) Merge(that *Topology) *Topology {
-	return &Topology{
+func (topo *Specification) Merge(that spec.Topology) spec.Topology {
+	spec := that.(*Specification)
+	return &Specification{
 		GlobalOptions: topo.GlobalOptions,
 		// MonitoredOptions: topo.MonitoredOptions,
 		ServerConfigs: topo.ServerConfigs,
-		Masters:       append(topo.Masters, that.Masters...),
-		Workers:       append(topo.Workers, that.Workers...),
-		Monitors:      append(topo.Monitors, that.Monitors...),
-		Grafana:       append(topo.Grafana, that.Grafana...),
-		Alertmanager:  append(topo.Alertmanager, that.Alertmanager...),
+		Masters:       append(topo.Masters, spec.Masters...),
+		Workers:       append(topo.Workers, spec.Workers...),
+		Monitors:      append(topo.Monitors, spec.Monitors...),
+		Grafanas:      append(topo.Grafanas, spec.Grafanas...),
+		Alertmanagers: append(topo.Alertmanagers, spec.Alertmanagers...),
 	}
 }
 

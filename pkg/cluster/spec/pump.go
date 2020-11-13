@@ -63,7 +63,7 @@ func (s PumpSpec) IsImported() bool {
 }
 
 // PumpComponent represents Pump component.
-type PumpComponent struct{ *Specification }
+type PumpComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *PumpComponent) Name() string {
@@ -77,8 +77,8 @@ func (c *PumpComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *PumpComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.PumpServers))
-	for _, s := range c.PumpServers {
+	ins := make([]Instance, 0, len(c.Topology.PumpServers))
+	for _, s := range c.Topology.PumpServers {
 		s := s
 		ins = append(ins, &PumpInstance{BaseInstance{
 			InstanceSpec: s,
@@ -102,7 +102,7 @@ func (c *PumpComponent) Instances() []Instance {
 				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
 				return statusByURL(url, tlsCfg)
 			},
-		}, c.Specification})
+		}, c.Topology})
 	}
 	return ins
 }
@@ -110,7 +110,7 @@ func (c *PumpComponent) Instances() []Instance {
 // PumpInstance represent the Pump instance.
 type PumpInstance struct {
 	BaseInstance
-	topo *Specification
+	topo Topology
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -139,11 +139,12 @@ func (i *PumpInstance) InitConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
+	topo := i.topo.(*Specification)
+	if err := i.BaseInstance.InitConfig(e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
-	enableTLS := i.topo.GlobalOptions.TLSEnabled
+	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(PumpSpec)
 	cfg := scripts.NewPumpScript(
 		i.GetHost()+":"+strconv.Itoa(i.GetPort()),
@@ -151,7 +152,7 @@ func (i *PumpInstance) InitConfig(
 		paths.Deploy,
 		paths.Data[0],
 		paths.Log,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.topo.Endpoints(deployUser)...)
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pump_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -166,7 +167,7 @@ func (i *PumpInstance) InitConfig(
 		return err
 	}
 
-	globalConfig := i.topo.ServerConfigs.Pump
+	globalConfig := topo.ServerConfigs.Pump
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(

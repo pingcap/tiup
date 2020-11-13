@@ -44,7 +44,7 @@ const (
 	ComponentCDC              = "cdc"
 	ComponentTiSpark          = "tispark"
 	ComponentSpark            = "spark"
-	ComponentAlertManager     = "alertmanager"
+	ComponentAlertmanager     = "alertmanager"
 	ComponentPrometheus       = "prometheus"
 	ComponentPushwaygate      = "pushgateway"
 	ComponentBlackboxExporter = "blackbox_exporter"

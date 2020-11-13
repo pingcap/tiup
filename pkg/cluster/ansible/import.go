@@ -68,8 +68,8 @@ func parseInventoryFile(invFile io.Reader) (string, *spec.ClusterMeta, *aini.Inv
 			PumpServers:      make([]spec.PumpSpec, 0),
 			Drainers:         make([]spec.DrainerSpec, 0),
 			Monitors:         make([]spec.PrometheusSpec, 0),
-			Grafana:          make([]spec.GrafanaSpec, 0),
-			Alertmanager:     make([]spec.AlertManagerSpec, 0),
+			Grafanas:         make([]spec.GrafanaSpec, 0),
+			Alertmanagers:    make([]spec.AlertmanagerSpec, 0),
 		},
 	}
 	clsName := ""

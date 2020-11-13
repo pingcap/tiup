@@ -35,7 +35,7 @@ func TestLocalDashboards(t *testing.T) {
 	assert.Nil(t, err)
 
 	topo := new(Specification)
-	topo.Grafana = append(topo.Grafana, GrafanaSpec{
+	topo.Grafanas = append(topo.Grafanas, GrafanaSpec{
 		Host:         "127.0.0.1",
 		Port:         3000,
 		DashboardDir: localDir,
@@ -53,7 +53,7 @@ func TestLocalDashboards(t *testing.T) {
 	assert.Nil(t, err)
 
 	clusterName := "tiup-test-cluster-" + uuid.New().String()
-	err = grafanaInstance.initDashboards(e, topo.Grafana[0], meta.DirPaths{Deploy: deployDir}, clusterName)
+	err = grafanaInstance.initDashboards(e, topo.Grafanas[0], meta.DirPaths{Deploy: deployDir}, clusterName)
 	assert.Nil(t, err)
 
 	assert.FileExists(t, path.Join(deployDir, "dashboards", "tidb.json"))

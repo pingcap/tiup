@@ -151,9 +151,7 @@ func (s TiKVSpec) Labels() (map[string]string, error) {
 }
 
 // TiKVComponent represents TiKV component.
-type TiKVComponent struct {
-	*Specification
-}
+type TiKVComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *TiKVComponent) Name() string {
@@ -167,8 +165,8 @@ func (c *TiKVComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *TiKVComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.TiKVServers))
-	for _, s := range c.TiKVServers {
+	ins := make([]Instance, 0, len(c.Topology.TiKVServers))
+	for _, s := range c.Topology.TiKVServers {
 		s := s
 		ins = append(ins, &TiKVInstance{BaseInstance{
 			InstanceSpec: s,
@@ -187,7 +185,7 @@ func (c *TiKVComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: s.Status,
-		}, c.Specification})
+		}, c.Topology})
 	}
 	return ins
 }
@@ -195,7 +193,7 @@ func (c *TiKVComponent) Instances() []Instance {
 // TiKVInstance represent the TiDB instance
 type TiKVInstance struct {
 	BaseInstance
-	topo *Specification
+	topo Topology
 }
 
 // InitConfig implement Instance interface
@@ -206,11 +204,12 @@ func (i *TiKVInstance) InitConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
+	topo := i.topo.(*Specification)
+	if err := i.BaseInstance.InitConfig(e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
-	enableTLS := i.topo.GlobalOptions.TLSEnabled
+	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(TiKVSpec)
 	cfg := scripts.NewTiKVScript(
 		i.GetHost(),
@@ -220,7 +219,7 @@ func (i *TiKVInstance) InitConfig(
 	).WithPort(spec.Port).
 		WithNumaNode(spec.NumaNode).
 		WithStatusPort(spec.StatusPort).
-		AppendEndpoints(i.topo.Endpoints(deployUser)...).
+		AppendEndpoints(topo.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost())
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tikv_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -236,7 +235,7 @@ func (i *TiKVInstance) InitConfig(
 		return err
 	}
 
-	globalConfig := i.topo.ServerConfigs.TiKV
+	globalConfig := topo.ServerConfigs.TiKV
 	// merge config files for imported instance
 	if i.IsImported() {
 		configPath := ClusterPath(
