@@ -46,6 +46,8 @@ function scale_core() {
     topo=./topo/full_scale_in_tidb.yaml
     sed "s/__IPPREFIX__/$ipprefix/g" $topo.tpl > $topo
     tiup-cluster $client --yes scale-out $name $topo
+    # after scale-out, ensure the service is enabled
+    tiup-cluster $client exec $name -N $ipprefix.101 --command "systemctl status tidb-4000 | grep Loaded |grep 'enabled; vendor'"
 
     # echo "start scale in tikv"
     # tiup-cluster --yes scale-in $name -N $ipprefix.103:20160
@@ -67,7 +69,7 @@ function scale_core() {
     topo=./topo/full_scale_in_pd.yaml
     sed "s/__IPPREFIX__/$ipprefix/g" $topo.tpl > $topo
     tiup-cluster $client --yes scale-out $name $topo
-    # after scalue-out, ensure this instance come back
+    # after scale-out, ensure this instance come back
     tiup-cluster $client exec $name -N $ipprefix.101 --command "grep -q $ipprefix.103:2379 /home/tidb/deploy/tidb-4000/scripts/run_tidb.sh"
 
     echo "start scale in tidb"
