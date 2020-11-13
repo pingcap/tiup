@@ -141,7 +141,6 @@ func (c *BinlogClient) nodeID(addr, ty string) (string, error) {
 		}
 	}
 
-	panic(addr)
 	return "", errors.Errorf("pump node id for address %s not found", addr)
 }
 
