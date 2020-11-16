@@ -36,7 +36,7 @@ func newDebugLogCore() zapcore.Core {
 }
 
 // OutputDebugLog outputs debug log in the current working directory.
-func OutputDebugLog() {
+func OutputDebugLog(prefix string) {
 	logDir := os.Getenv(localdata.EnvNameLogPath)
 	if logDir == "" {
 		profile := localdata.InitProfile()
@@ -48,7 +48,7 @@ func OutputDebugLog() {
 	}
 
 	// FIXME: Stupid go does not allow writing fraction seconds without a leading dot.
-	fileName := time.Now().Format("tiup-cluster-debug-2006-01-02-15-04-05.log")
+	fileName := time.Now().Format(fmt.Sprintf("%s-debug-2006-01-02-15-04-05.log", prefix))
 	filePath := filepath.Join(logDir, fileName)
 
 	err := ioutil.WriteFile(filePath, debugBuffer.Bytes(), 0644)
