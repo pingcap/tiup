@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/pingcap/tiup/pkg/colorutil"
+	"github.com/pingcap/tiup/pkg/localdata"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -36,19 +37,21 @@ func newDebugLogCore() zapcore.Core {
 
 // OutputDebugLog outputs debug log in the current working directory.
 func OutputDebugLog() {
-	if err := os.MkdirAll("./logs", 0755); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "\nCreate debug logs directory failed %v.\n", err)
+	logDir := os.Getenv(localdata.EnvNameLogPath)
+	if logDir == "" {
+		profile := localdata.InitProfile()
+		logDir = profile.Path("logs")
+	}
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "\nCreate debug logs(%s) directory failed %v.\n", logDir, err)
 		return
 	}
 
 	// FIXME: Stupid go does not allow writing fraction seconds without a leading dot.
-	fileName := time.Now().Format("./logs/tiup-cluster-debug-2006-01-02-15-04-05.log")
-	filePath, err := filepath.Abs(fileName)
-	if err != nil {
-		filePath = fileName
-	}
+	fileName := time.Now().Format("tiup-cluster-debug-2006-01-02-15-04-05.log")
+	filePath := filepath.Join(logDir, fileName)
 
-	err = ioutil.WriteFile(filePath, debugBuffer.Bytes(), 0644)
+	err := ioutil.WriteFile(filePath, debugBuffer.Bytes(), 0644)
 	if err != nil {
 		_, _ = colorutil.ColorWarningMsg.Fprint(os.Stderr, "\nWarn: Failed to write error debug log.\n")
 	} else {
