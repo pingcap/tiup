@@ -140,10 +140,10 @@ func sortClusterMeta(clsMeta *spec.ClusterMeta) {
 	sort.Slice(clsMeta.Topology.Monitors, func(i, j int) bool {
 		return clsMeta.Topology.Monitors[i].Host < clsMeta.Topology.Monitors[j].Host
 	})
-	sort.Slice(clsMeta.Topology.Grafana, func(i, j int) bool {
-		return clsMeta.Topology.Grafana[i].Host < clsMeta.Topology.Grafana[j].Host
+	sort.Slice(clsMeta.Topology.Grafanas, func(i, j int) bool {
+		return clsMeta.Topology.Grafanas[i].Host < clsMeta.Topology.Grafanas[j].Host
 	})
-	sort.Slice(clsMeta.Topology.Alertmanager, func(i, j int) bool {
-		return clsMeta.Topology.Alertmanager[i].Host < clsMeta.Topology.Alertmanager[j].Host
+	sort.Slice(clsMeta.Topology.Alertmanagers, func(i, j int) bool {
+		return clsMeta.Topology.Alertmanagers[i].Host < clsMeta.Topology.Alertmanagers[j].Host
 	})
 }

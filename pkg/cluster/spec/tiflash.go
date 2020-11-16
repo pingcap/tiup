@@ -88,7 +88,7 @@ func (s TiFlashSpec) IsImported() bool {
 }
 
 // TiFlashComponent represents TiFlash component.
-type TiFlashComponent struct{ *Specification }
+type TiFlashComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *TiFlashComponent) Name() string {
@@ -102,8 +102,8 @@ func (c *TiFlashComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *TiFlashComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.TiFlashServers))
-	for _, s := range c.TiFlashServers {
+	ins := make([]Instance, 0, len(c.Topology.TiFlashServers))
+	for _, s := range c.Topology.TiFlashServers {
 		ins = append(ins, &TiFlashInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
@@ -124,7 +124,7 @@ func (c *TiFlashComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: s.Status,
-		}, c.Specification})
+		}, c.Topology})
 	}
 	return ins
 }
@@ -132,7 +132,7 @@ func (c *TiFlashComponent) Instances() []Instance {
 // TiFlashInstance represent the TiFlash instance
 type TiFlashInstance struct {
 	BaseInstance
-	topo *Specification
+	topo Topology
 }
 
 // GetServicePort returns the service port of TiFlash
@@ -146,7 +146,7 @@ func (i *TiFlashInstance) checkIncorrectKey(key string) error {
 	if dir, ok := i.InstanceSpec.(TiFlashSpec).Config[key].(string); ok && dir != "" {
 		return fmt.Errorf(errMsg, key, "host")
 	}
-	if dir, ok := i.topo.ServerConfigs.TiFlash[key].(string); ok && dir != "" {
+	if dir, ok := i.topo.(*Specification).ServerConfigs.TiFlash[key].(string); ok && dir != "" {
 		return fmt.Errorf(errMsg, key, "server_configs")
 	}
 	return nil
@@ -298,14 +298,15 @@ func (i *TiFlashInstance) InitConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
+	topo := i.topo.(*Specification)
+	if err := i.BaseInstance.InitConfig(e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
 	spec := i.InstanceSpec.(TiFlashSpec)
 
 	tidbStatusAddrs := []string{}
-	for _, tidb := range i.topo.TiDBServers {
+	for _, tidb := range topo.TiDBServers {
 		tidbStatusAddrs = append(tidbStatusAddrs, fmt.Sprintf("%s:%d", tidb.Host, uint64(tidb.StatusPort)))
 	}
 	tidbStatusStr := strings.Join(tidbStatusAddrs, ",")
@@ -327,7 +328,7 @@ func (i *TiFlashInstance) InitConfig(
 		WithStatusPort(spec.StatusPort).
 		WithTmpDir(spec.TmpDir).
 		WithNumaNode(spec.NumaNode).
-		AppendEndpoints(i.topo.Endpoints(deployUser)...)
+		AppendEndpoints(topo.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tiflash_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
@@ -343,7 +344,7 @@ func (i *TiFlashInstance) InitConfig(
 		return err
 	}
 
-	conf, err := i.InitTiFlashLearnerConfig(cfg, clusterVersion, i.topo.ServerConfigs.TiFlashLearner)
+	conf, err := i.InitTiFlashLearnerConfig(cfg, clusterVersion, topo.ServerConfigs.TiFlashLearner)
 	if err != nil {
 		return err
 	}
@@ -375,7 +376,7 @@ func (i *TiFlashInstance) InitConfig(
 		return err
 	}
 
-	conf, err = i.InitTiFlashConfig(cfg, i.topo.ServerConfigs.TiFlash)
+	conf, err = i.InitTiFlashConfig(cfg, topo.ServerConfigs.TiFlash)
 	if err != nil {
 		return err
 	}
@@ -428,7 +429,7 @@ type replicateConfig struct {
 
 func (i *TiFlashInstance) getEndpoints() []string {
 	var endpoints []string
-	for _, pd := range i.topo.PDServers {
+	for _, pd := range i.topo.(*Specification).PDServers {
 		endpoints = append(endpoints, fmt.Sprintf("%s:%d", pd.Host, uint64(pd.ClientPort)))
 	}
 	return endpoints

@@ -490,7 +490,7 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		instances := (&spec.TiKVComponent{Specification: cluster}).Instances()
+		instances := (&spec.TiKVComponent{Topology: cluster}).Instances()
 		if err := maybeDestroyMonitor(instances, id); err != nil {
 			return nil, err
 		}
@@ -520,7 +520,7 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		instances := (&spec.TiFlashComponent{Specification: cluster}).Instances()
+		instances := (&spec.TiFlashComponent{Topology: cluster}).Instances()
 		id = s.Host + ":" + strconv.Itoa(s.GetMainPort())
 		if err := maybeDestroyMonitor(instances, id); err != nil {
 			return nil, err
@@ -550,7 +550,7 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		instances := (&spec.PumpComponent{Specification: cluster}).Instances()
+		instances := (&spec.PumpComponent{Topology: cluster}).Instances()
 		if err := maybeDestroyMonitor(instances, id); err != nil {
 			return nil, err
 		}
@@ -579,7 +579,7 @@ func DestroyClusterTombstone(
 			continue
 		}
 
-		instances := (&spec.DrainerComponent{Specification: cluster}).Instances()
+		instances := (&spec.DrainerComponent{Topology: cluster}).Instances()
 		if err := maybeDestroyMonitor(instances, id); err != nil {
 			return nil, err
 		}

@@ -104,8 +104,8 @@ type (
 		TiSparkMasters   []TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
 		TiSparkWorkers   []TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
 		Monitors         []PrometheusSpec    `yaml:"monitoring_servers"`
-		Grafana          []GrafanaSpec       `yaml:"grafana_servers,omitempty"`
-		Alertmanager     []AlertManagerSpec  `yaml:"alertmanager_servers,omitempty"`
+		Grafanas         []GrafanaSpec       `yaml:"grafana_servers,omitempty"`
+		Alertmanagers    []AlertmanagerSpec  `yaml:"alertmanager_servers,omitempty"`
 	}
 )
 
@@ -114,6 +114,10 @@ type BaseTopo struct {
 	GlobalOptions    *GlobalOptions
 	MonitoredOptions *MonitoredOptions
 	MasterList       []string
+
+	Monitors      []PrometheusSpec
+	Grafanas      []GrafanaSpec
+	Alertmanagers []AlertmanagerSpec
 }
 
 // Topology represents specification of the cluster.
@@ -132,6 +136,7 @@ type Topology interface {
 	// count how many time a path is used by instances in cluster
 	CountDir(host string, dir string) int
 	TLSConfig(dir string) (*tls.Config, error)
+	Merge(that Topology) Topology
 
 	ScaleOutTopology
 }
@@ -206,6 +211,9 @@ func (s *Specification) BaseTopo() *BaseTopo {
 		GlobalOptions:    &s.GlobalOptions,
 		MonitoredOptions: s.GetMonitoredOptions(),
 		MasterList:       s.GetPDList(),
+		Monitors:         s.Monitors,
+		Grafanas:         s.Grafanas,
+		Alertmanagers:    s.Alertmanagers,
 	}
 }
 
@@ -313,6 +321,22 @@ func findField(v reflect.Value, fieldName string) (int, bool) {
 	return -1, false
 }
 
+func findSliceField(v Topology, fieldName string) (reflect.Value, bool) {
+	topo := reflect.ValueOf(v)
+	if topo.Kind() == reflect.Ptr {
+		topo = topo.Elem()
+	}
+
+	j, found := findField(topo, fieldName)
+	if found {
+		val := topo.Field(j)
+		if val.Kind() == reflect.Slice || val.Kind() == reflect.Array {
+			return val, true
+		}
+	}
+	return reflect.Value{}, false
+}
+
 // GetPDList returns a list of PD API hosts of the current cluster
 func (s *Specification) GetPDList() []string {
 	var pdList []string
@@ -333,23 +357,24 @@ func (s *Specification) GetEtcdClient(tlsCfg *tls.Config) (*clientv3.Client, err
 }
 
 // Merge returns a new Specification which sum old ones
-func (s *Specification) Merge(that *Specification) *Specification {
+func (s *Specification) Merge(that Topology) Topology {
+	spec := that.(*Specification)
 	return &Specification{
 		GlobalOptions:    s.GlobalOptions,
 		MonitoredOptions: s.MonitoredOptions,
 		ServerConfigs:    s.ServerConfigs,
-		TiDBServers:      append(s.TiDBServers, that.TiDBServers...),
-		TiKVServers:      append(s.TiKVServers, that.TiKVServers...),
-		PDServers:        append(s.PDServers, that.PDServers...),
-		TiFlashServers:   append(s.TiFlashServers, that.TiFlashServers...),
-		PumpServers:      append(s.PumpServers, that.PumpServers...),
-		Drainers:         append(s.Drainers, that.Drainers...),
-		CDCServers:       append(s.CDCServers, that.CDCServers...),
-		TiSparkMasters:   append(s.TiSparkMasters, that.TiSparkMasters...),
-		TiSparkWorkers:   append(s.TiSparkWorkers, that.TiSparkWorkers...),
-		Monitors:         append(s.Monitors, that.Monitors...),
-		Grafana:          append(s.Grafana, that.Grafana...),
-		Alertmanager:     append(s.Alertmanager, that.Alertmanager...),
+		TiDBServers:      append(s.TiDBServers, spec.TiDBServers...),
+		TiKVServers:      append(s.TiKVServers, spec.TiKVServers...),
+		PDServers:        append(s.PDServers, spec.PDServers...),
+		TiFlashServers:   append(s.TiFlashServers, spec.TiFlashServers...),
+		PumpServers:      append(s.PumpServers, spec.PumpServers...),
+		Drainers:         append(s.Drainers, spec.Drainers...),
+		CDCServers:       append(s.CDCServers, spec.CDCServers...),
+		TiSparkMasters:   append(s.TiSparkMasters, spec.TiSparkMasters...),
+		TiSparkWorkers:   append(s.TiSparkWorkers, spec.TiSparkWorkers...),
+		Monitors:         append(s.Monitors, spec.Monitors...),
+		Grafanas:         append(s.Grafanas, spec.Grafanas...),
+		Alertmanagers:    append(s.Alertmanagers, spec.Alertmanagers...),
 	}
 }
 
@@ -639,7 +664,7 @@ func (s *Specification) Endpoints(user string) []*scripts.PDScript {
 }
 
 // AlertManagerEndpoints returns the AlertManager endpoints configurations
-func AlertManagerEndpoints(alertmanager []AlertManagerSpec, user string, enableTLS bool) []*scripts.AlertManagerScript {
+func AlertManagerEndpoints(alertmanager []AlertmanagerSpec, user string, enableTLS bool) []*scripts.AlertManagerScript {
 	var ends []*scripts.AlertManagerScript
 	for _, spec := range alertmanager {
 		deployDir := Abs(user, spec.DeployDir)

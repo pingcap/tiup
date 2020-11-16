@@ -10,8 +10,9 @@ function deploy_by_ansible() {
     apt-get -y install git curl sshpass python-pip sudo
 
     # step 2
-    useradd -m -d /home/tidb tidb
+    id tidb || useradd -m -d /home/tidb tidb
     echo "tidb:tidb" | chpasswd
+    sed -i '/tidb/d' /etc/sudoers
     echo "tidb ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
     # use the same key from root instead of create one.
@@ -22,7 +23,7 @@ function deploy_by_ansible() {
     # step 3
 su tidb <<EOF
     cd /home/tidb
-    wget https://download.pingcap.org/dm-ansible-v1.0.6.tar.gz
+    wget -c https://download.pingcap.org/dm-ansible-v1.0.6.tar.gz
 EOF
 
     # step 4

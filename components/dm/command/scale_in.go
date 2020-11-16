@@ -75,7 +75,7 @@ func newScaleInCmd() *cobra.Command {
 // ScaleInDMCluster scale in dm cluster.
 func ScaleInDMCluster(
 	getter operator.ExecutorGetter,
-	topo *dm.Topology,
+	topo *dm.Specification,
 	options operator.Options,
 ) error {
 	// instances by uuid
