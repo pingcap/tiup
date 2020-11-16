@@ -58,18 +58,18 @@ func (c *ClusterOperate) Execute(ctx *Context) error {
 		}
 		operator.PrintClusterStatus(ctx, c.spec)
 	case operator.DestroyOperation:
-		err := operator.Destroy(ctx, c.spec, c.options)
+		err := operator.Destroy(ctx, c.spec, ctx.PublicKeyPath, c.options)
 		if err != nil {
 			return errors.Annotate(err, "failed to destroy")
 		}
 	case operator.DestroyTombstoneOperation:
-		_, err := operator.DestroyTombstone(ctx, c.spec, false, c.options, c.tlsCfg)
+		_, err := operator.DestroyTombstone(ctx, c.spec, false, c.options, c.tlsCfg, ctx.PublicKeyPath)
 		if err != nil {
 			return errors.Annotate(err, "failed to destroy")
 		}
 	// print nothing
 	case operator.ScaleInOperation:
-		err := operator.ScaleIn(ctx, c.spec, c.options, c.tlsCfg)
+		err := operator.ScaleIn(ctx, c.spec, c.options, c.tlsCfg, ctx.PublicKeyPath)
 		if err != nil {
 			return errors.Annotate(err, "failed to scale in")
 		}

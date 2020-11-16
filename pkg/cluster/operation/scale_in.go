@@ -73,8 +73,9 @@ func ScaleIn(
 	cluster *spec.Specification,
 	options Options,
 	tlsCfg *tls.Config,
+	publicKeyPath string,
 ) error {
-	return ScaleInCluster(getter, cluster, options, tlsCfg)
+	return ScaleInCluster(getter, cluster, options, tlsCfg, publicKeyPath)
 }
 
 // ScaleInCluster scales in the cluster
@@ -83,6 +84,7 @@ func ScaleInCluster(
 	cluster *spec.Specification,
 	options Options,
 	tlsCfg *tls.Config,
+	publicKeyPath string,
 ) error {
 	// instances by uuid
 	instances := map[string]spec.Instance{}
@@ -169,7 +171,7 @@ func ScaleInCluster(
 				}
 
 				instCount[instance.GetHost()]--
-				if err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
+				if err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0, publicKeyPath); err != nil {
 					log.Warnf("failed to stop/destroy %s: %v", compName, err)
 				}
 
@@ -242,7 +244,7 @@ func ScaleInCluster(
 
 			if !asyncOfflineComps.Exist(instance.ComponentName()) {
 				instCount[instance.GetHost()]--
-				if err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
+				if err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0, publicKeyPath); err != nil {
 					return err
 				}
 			} else {

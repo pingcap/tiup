@@ -16,6 +16,7 @@ package operator
 import (
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -23,7 +24,9 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -52,14 +55,15 @@ func Cleanup(
 func Destroy(
 	getter ExecutorGetter,
 	cluster spec.Topology,
+	publicKeyPath string,
 	options Options,
 ) error {
-	uniqueHosts := set.NewStringSet()
 	coms := cluster.ComponentsByStopOrder()
 
 	instCount := map[string]int{}
 	cluster.IterInstance(func(inst spec.Instance) {
-		instCount[inst.GetHost()] = instCount[inst.GetHost()] + 1
+		host := inst.GetHost()
+		instCount[host] = instCount[host] + 1
 	})
 
 	for _, com := range coms {
@@ -80,9 +84,15 @@ func Destroy(
 		}
 	}
 
+	gOpts := cluster.BaseTopo().GlobalOptions
+
 	// Delete all global deploy directory
-	for host := range uniqueHosts {
-		if err := DeleteGlobalDirs(getter, host, cluster.BaseTopo().GlobalOptions); err != nil {
+	for host := range instCount {
+		if err := DeleteGlobalDirs(getter, host, gOpts); err != nil {
+			return nil
+		}
+
+		if err := DeletePublicKey(getter, host, publicKeyPath); err != nil {
 			return nil
 		}
 	}
@@ -93,7 +103,7 @@ func Destroy(
 // StopAndDestroyInstance stop and destroy the instance,
 // if this instance is the host's last one, and the host has monitor deployed,
 // we need to destroy the monitor, either
-func StopAndDestroyInstance(getter ExecutorGetter, cluster spec.Topology, instance spec.Instance, options Options, destroyMonitor bool) error {
+func StopAndDestroyInstance(getter ExecutorGetter, cluster spec.Topology, instance spec.Instance, options Options, destroyNode bool, publicKeyPath string) error {
 	ignoreErr := options.Force
 	compName := instance.ComponentName()
 
@@ -111,22 +121,32 @@ func StopAndDestroyInstance(getter ExecutorGetter, cluster spec.Topology, instan
 		log.Warnf("failed to destroy %s: %v", compName, err)
 	}
 
-	// monitoredOptions for dm cluster is nil
-	monitoredOptions := cluster.GetMonitoredOptions()
+	if destroyNode {
+		// monitoredOptions for dm cluster is nil
+		monitoredOptions := cluster.GetMonitoredOptions()
 
-	if destroyMonitor && monitoredOptions != nil {
-		if err := StopMonitored(getter, instance, monitoredOptions, options.OptTimeout); err != nil {
-			if !ignoreErr {
-				return errors.Annotatef(err, "failed to stop monitor")
+		if monitoredOptions != nil {
+			if err := StopMonitored(getter, instance, monitoredOptions, options.OptTimeout); err != nil {
+				if !ignoreErr {
+					return errors.Annotatef(err, "failed to stop monitor")
+				}
+				log.Warnf("failed to stop %s: %v", "monitor", err)
 			}
-			log.Warnf("failed to stop %s: %v", "monitor", err)
-		}
-		if err := DestroyMonitored(getter, instance, monitoredOptions, options.OptTimeout); err != nil {
-			if !ignoreErr {
-				return errors.Annotatef(err, "failed to destroy monitor")
+			if err := DestroyMonitored(getter, instance, monitoredOptions, options.OptTimeout); err != nil {
+				if !ignoreErr {
+					return errors.Annotatef(err, "failed to destroy monitor")
+				}
+				log.Warnf("failed to destroy %s: %v", "monitor", err)
 			}
-			log.Warnf("failed to destroy %s: %v", "monitor", err)
 		}
+
+		if err := DeletePublicKey(getter, instance.GetHost(), publicKeyPath); err != nil {
+			if !ignoreErr {
+				return errors.Annotatef(err, "failed to delete public key")
+			}
+			log.Warnf("failed to delete public key")
+		}
+
 	}
 	return nil
 }
@@ -168,6 +188,40 @@ func DeleteGlobalDirs(getter ExecutorGetter, host string, options *spec.GlobalOp
 	}
 
 	log.Infof("Clean global directories %s success", host)
+	return nil
+}
+
+// DeletePublicKey deletes the SSH public key from host
+func DeletePublicKey(getter ExecutorGetter, host, pubKeyPath string) error {
+	e := getter.Get(host)
+	log.Infof("Delete public key %s", host)
+	publicKey, err := ioutil.ReadFile(pubKeyPath)
+	if err != nil {
+		return perrs.Trace(err)
+	}
+	pubKey := strings.ReplaceAll(string(publicKey), "/", "\\/")
+	pubKeysFile := executor.FindSSHAuthorizedKeysFile(e)
+
+	c := module.ShellModuleConfig{
+		Command:  fmt.Sprintf("sed -i '/%s/d' %s", pubKey, pubKeysFile),
+		Chdir:    "",
+		UseShell: true,
+	}
+	shell := module.NewShellModule(c)
+	stdout, stderr, err := shell.Execute(e)
+
+	if len(stdout) > 0 {
+		fmt.Println(string(stdout))
+	}
+	if len(stderr) > 0 {
+		log.Errorf(string(stderr))
+	}
+
+	if err != nil {
+		return errors.Annotatef(err, "failed to delete pulblic key on: %s", host)
+	}
+
+	log.Infof("Delete public key %s success", host)
 	return nil
 }
 
@@ -417,8 +471,9 @@ func DestroyTombstone(
 	returNodesOnly bool,
 	options Options,
 	tlsCfg *tls.Config,
+	publicKey string,
 ) (nodes []string, err error) {
-	return DestroyClusterTombstone(getter, cluster, returNodesOnly, options, tlsCfg)
+	return DestroyClusterTombstone(getter, cluster, returNodesOnly, options, tlsCfg, publicKey)
 }
 
 // DestroyClusterTombstone remove the tombstone node in spec and destroy them.
@@ -429,6 +484,7 @@ func DestroyClusterTombstone(
 	returNodesOnly bool,
 	options Options,
 	tlsCfg *tls.Config,
+	publicKey string,
 ) (nodes []string, err error) {
 	instCount := map[string]int{}
 	for _, component := range cluster.ComponentsByStartOrder() {
@@ -458,7 +514,7 @@ func DestroyClusterTombstone(
 
 		for _, instance := range instances {
 			instCount[instance.GetHost()]--
-			err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0)
+			err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0, publicKey)
 			if err != nil {
 				return errors.AddStack(err)
 			}

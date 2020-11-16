@@ -384,7 +384,7 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 			}, tlsCfg)
 		}).
 		Func("DestroyCluster", func(ctx *task.Context) error {
-			return operator.Destroy(ctx, topo, destroyOpt)
+			return operator.Destroy(ctx, topo, ctx.PublicKeyPath, destroyOpt)
 		}).
 		Build()
 
@@ -612,7 +612,7 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 		}
 
 		// Check if there is some instance in tombstone state
-		nodes, _ := operator.DestroyTombstone(ctx, t, true /* returnNodesOnly */, opt, tlsCfg)
+		nodes, _ := operator.DestroyTombstone(ctx, t, true /* returnNodesOnly */, opt, tlsCfg, ctx.PublicKeyPath)
 		if len(nodes) != 0 {
 			color.Green("There are some nodes can be pruned: \n\tNodes: %+v\n\tYou can destroy them with the command: `tiup cluster prune %s`", nodes, clusterName)
 		}

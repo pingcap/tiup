@@ -73,7 +73,7 @@ func destroyTombstoneIfNeed(clusterName string, metadata *spec.ClusterMeta, opt 
 		return perrs.AddStack(err)
 	}
 
-	nodes, err := operator.DestroyTombstone(ctx, topo, true /* returnNodesOnly */, opt, tlsCfg)
+	nodes, err := operator.DestroyTombstone(ctx, topo, true /* returnNodesOnly */, opt, tlsCfg, ctx.PublicKeyPath)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -93,7 +93,7 @@ func destroyTombstoneIfNeed(clusterName string, metadata *spec.ClusterMeta, opt 
 
 	log.Infof("Start destroy Tombstone nodes: %v ...", nodes)
 
-	_, err = operator.DestroyTombstone(ctx, topo, false /* returnNodesOnly */, opt, tlsCfg)
+	_, err = operator.DestroyTombstone(ctx, topo, false /* returnNodesOnly */, opt, tlsCfg, ctx.PublicKeyPath)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
