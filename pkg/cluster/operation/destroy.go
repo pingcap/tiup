@@ -14,6 +14,7 @@
 package operator
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
@@ -91,7 +92,10 @@ func Destroy(
 		if err := DeleteGlobalDirs(getter, host, gOpts); err != nil {
 			return nil
 		}
+	}
 
+	// after all things done, try to remove SSH public key
+	for host := range instCount {
 		if err := DeletePublicKey(getter, host, publicKeyPath); err != nil {
 			return nil
 		}
@@ -199,13 +203,13 @@ func DeletePublicKey(getter ExecutorGetter, host, pubKeyPath string) error {
 	if err != nil {
 		return perrs.Trace(err)
 	}
-	pubKey := strings.ReplaceAll(string(publicKey), "/", "\\/")
+	pubKey := string(bytes.TrimSpace(publicKey))
+	pubKey = strings.ReplaceAll(pubKey, "/", "\\/")
 	pubKeysFile := executor.FindSSHAuthorizedKeysFile(e)
 
 	c := module.ShellModuleConfig{
 		Command:  fmt.Sprintf("sed -i '/%s/d' %s", pubKey, pubKeysFile),
-		Chdir:    "",
-		UseShell: true,
+		UseShell: false,
 	}
 	shell := module.NewShellModule(c)
 	stdout, stderr, err := shell.Execute(e)
