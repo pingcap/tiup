@@ -104,5 +104,10 @@ function cmd_subtest() {
 
     ! tiup-cluster $client _test $name data
 
+    cp "~/.tiup/storage/cluster/$name/ssh/id_rsa" "/tmp/$name.id_rsa"
     tiup-cluster $client --yes destroy $name
+
+    # after destroy the cluster, the public key should be deleted
+    ! ssh -i "/tmp/$name.id_rsa" tidb@$ipprefix.101 "ls"
+    unlink "/tmp/$name.id_rsa"
 }

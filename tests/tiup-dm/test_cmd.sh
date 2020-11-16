@@ -54,8 +54,8 @@ total_sub_one=12
 echo "start scale in dm-master"
 tiup-dm --yes scale-in $name -N $ipprefix.101:8261
 wait_instance_num_reach $name $total_sub_one false
-echo "start scale out dm-master"
 
+echo "start scale out dm-master"
 topo_master=./topo/full_scale_in_dm-master.yaml
 sed "s/__IPPREFIX__/$ipprefix/g" $topo_master.tpl > $topo_master
 tiup-dm --yes scale-out $name $topo_master
@@ -72,8 +72,13 @@ yes | tiup-dm scale-out $name $topo_worker
 # test create a task and can replicate data
 ./script/task/run.sh
 
-tiup-dm --yes destroy $name
-
 # test dm log dir
 tiup-dm notfound-command 2>&1 | grep $HOME/.tiup/logs/tiup-dm-debug
 TIUP_LOG_PATH=/tmp/a/b tiup-dm notfound-command 2>&1 | grep /tmp/a/b/tiup-dm-debug
+
+cp "~/.tiup/storage/dm/clusters/$name/ssh/id_rsa" "/tmp/$name.id_rsa"
+tiup-dm --yes destroy $name
+
+# after destroy the cluster, the public key should be deleted
+! ssh -i "/tmp/$name.id_rsa" tidb@$ipprefix.102 "ls"
+unlink "/tmp/$name.id_rsa"
