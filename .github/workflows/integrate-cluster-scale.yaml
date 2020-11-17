@@ -87,7 +87,6 @@ jobs:
           docker ps
           df -h
           free -h
-          "cat ./tests/*.log" || true
 
       - name: Upload coverage to Codecov
         working-directory: ${{ env.working-directory }}
