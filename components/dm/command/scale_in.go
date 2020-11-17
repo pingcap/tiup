@@ -114,7 +114,7 @@ func ScaleInDMCluster(
 					continue
 				}
 				instCount[instance.GetHost()]--
-				if err := operator.StopAndDestroyInstance(getter, topo, instance, options, instCount[instance.GetHost()] == 0, publicKeyPath); err != nil {
+				if err := operator.StopAndDestroyInstance(getter, topo, instance, options, instCount[instance.GetHost()] == 0); err != nil {
 					log.Warnf("failed to stop/destroy %s: %v", component.Name(), err)
 				}
 			}
@@ -169,7 +169,7 @@ func ScaleInDMCluster(
 
 			instCount[instance.GetHost()]--
 			if instCount[instance.GetHost()] == 0 {
-				if err := operator.DeletePublicKey(getter, instance.GetHost(), publicKeyPath); err != nil {
+				if err := operator.DeletePublicKey(getter, instance.GetHost()); err != nil {
 					return errors.Annotatef(err, "failed to delete public key")
 				}
 			}

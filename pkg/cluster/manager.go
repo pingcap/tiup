@@ -384,7 +384,7 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 			}, tlsCfg)
 		}).
 		Func("DestroyCluster", func(ctx *task.Context) error {
-			return operator.Destroy(ctx, topo, ctx.PublicKeyPath, destroyOpt)
+			return operator.Destroy(ctx, topo, destroyOpt)
 		}).
 		Build()
 

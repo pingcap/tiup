@@ -58,7 +58,7 @@ func (c *ClusterOperate) Execute(ctx *Context) error {
 		}
 		operator.PrintClusterStatus(ctx, c.spec)
 	case operator.DestroyOperation:
-		err := operator.Destroy(ctx, c.spec, ctx.PublicKeyPath, c.options)
+		err := operator.Destroy(ctx, c.spec, c.options)
 		if err != nil {
 			return errors.Annotate(err, "failed to destroy")
 		}

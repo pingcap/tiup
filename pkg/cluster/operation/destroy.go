@@ -56,7 +56,6 @@ func Cleanup(
 func Destroy(
 	getter ExecutorGetter,
 	cluster spec.Topology,
-	publicKeyPath string,
 	options Options,
 ) error {
 	coms := cluster.ComponentsByStopOrder()
@@ -96,7 +95,7 @@ func Destroy(
 
 	// after all things done, try to remove SSH public key
 	for host := range instCount {
-		if err := DeletePublicKey(getter, host, publicKeyPath); err != nil {
+		if err := DeletePublicKey(getter, host); err != nil {
 			return nil
 		}
 	}
@@ -107,7 +106,7 @@ func Destroy(
 // StopAndDestroyInstance stop and destroy the instance,
 // if this instance is the host's last one, and the host has monitor deployed,
 // we need to destroy the monitor, either
-func StopAndDestroyInstance(getter ExecutorGetter, cluster spec.Topology, instance spec.Instance, options Options, destroyNode bool, publicKeyPath string) error {
+func StopAndDestroyInstance(getter ExecutorGetter, cluster spec.Topology, instance spec.Instance, options Options, destroyNode bool) error {
 	ignoreErr := options.Force
 	compName := instance.ComponentName()
 
@@ -144,7 +143,7 @@ func StopAndDestroyInstance(getter ExecutorGetter, cluster spec.Topology, instan
 			}
 		}
 
-		if err := DeletePublicKey(getter, instance.GetHost(), publicKeyPath); err != nil {
+		if err := DeletePublicKey(getter, instance.GetHost()); err != nil {
 			if !ignoreErr {
 				return errors.Annotatef(err, "failed to delete public key")
 			}
@@ -196,17 +195,20 @@ func DeleteGlobalDirs(getter ExecutorGetter, host string, options *spec.GlobalOp
 }
 
 // DeletePublicKey deletes the SSH public key from host
-func DeletePublicKey(getter ExecutorGetter, host, pubKeyPath string) error {
+func DeletePublicKey(getter ExecutorGetter, host string) error {
 	e := getter.Get(host)
 	log.Infof("Delete public key %s", host)
+	_, pubKeyPath := getter.GetSSHKeySet()
 	publicKey, err := ioutil.ReadFile(pubKeyPath)
 	if err != nil {
 		return perrs.Trace(err)
 	}
+
 	pubKey := string(bytes.TrimSpace(publicKey))
 	pubKey = strings.ReplaceAll(pubKey, "/", "\\/")
 	pubKeysFile := executor.FindSSHAuthorizedKeysFile(e)
 
+	// delete the public key with Linux `sed` toolkit
 	c := module.ShellModuleConfig{
 		Command:  fmt.Sprintf("sed -i '/%s/d' %s", pubKey, pubKeysFile),
 		UseShell: false,
@@ -518,7 +520,7 @@ func DestroyClusterTombstone(
 
 		for _, instance := range instances {
 			instCount[instance.GetHost()]--
-			err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0, publicKey)
+			err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0)
 			if err != nil {
 				return errors.AddStack(err)
 			}
