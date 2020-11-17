@@ -76,9 +76,9 @@ yes | tiup-dm scale-out $name $topo_worker
 tiup-dm notfound-command 2>&1 | grep $HOME/.tiup/logs/tiup-dm-debug
 TIUP_LOG_PATH=/tmp/a/b tiup-dm notfound-command 2>&1 | grep /tmp/a/b/tiup-dm-debug
 
-cp "~/.tiup/storage/dm/clusters/$name/ssh/id_rsa" "/tmp/$name.id_rsa"
+cp ~/.tiup/storage/dm/clusters/$name/ssh/id_rsa "/tmp/$name.id_rsa"
 tiup-dm --yes destroy $name
 
 # after destroy the cluster, the public key should be deleted
-! ssh -i "/tmp/$name.id_rsa" tidb@$ipprefix.102 "ls"
+! ssh -o "PasswordAuthentication=no" -i "/tmp/$name.id_rsa" tidb@$ipprefix.102 "ls"
 unlink "/tmp/$name.id_rsa"
