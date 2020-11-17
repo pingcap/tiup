@@ -147,8 +147,13 @@ func (i *DrainerInstance) InitConfig(
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(DrainerSpec)
+	nodeID := i.GetHost() + ":" + strconv.Itoa(i.GetPort())
+	// keep origin node id if is imported
+	if i.IsImported() {
+		nodeID = ""
+	}
 	cfg := scripts.NewDrainerScript(
-		i.GetHost()+":"+strconv.Itoa(i.GetPort()),
+		nodeID,
 		i.GetHost(),
 		paths.Deploy,
 		paths.Data[0],

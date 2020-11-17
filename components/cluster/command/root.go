@@ -298,7 +298,7 @@ func Execute() {
 		}
 
 		if !errorx.HasTrait(err, errutil.ErrTraitPreCheck) {
-			logger.OutputDebugLog()
+			logger.OutputDebugLog("tiup-cluster")
 		}
 
 		if errx := errorx.Cast(err); errx != nil {
