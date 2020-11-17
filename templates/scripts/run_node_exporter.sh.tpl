@@ -20,5 +20,6 @@ exec bin/node_exporter/node_exporter \
     --collector.mountstats \
     --collector.meminfo_numa \
     --collector.interrupts \
+    --collector.buddyinfo \
     --collector.vmstat.fields="^.*" \
     --log.level="info"
