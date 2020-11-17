@@ -229,7 +229,7 @@ server_configs:
     users.readonly.quota: "default"
     users.readonly.networks.ip: "::/0"
     profiles.default.load_balancing: "random"
-    profiles.default.max_memory_usage: 10000000000
+    profiles.default.max_memory_usage: 0
     profiles.default.use_uncompressed_cache: 0
     profiles.readonly.readonly: 1
 `, cfg.DataDir, cfg.LogDir, cfg.TCPPort, cfg.HTTPPort, cfg.TiDBStatusAddrs, cfg.IP, cfg.FlashServicePort,
