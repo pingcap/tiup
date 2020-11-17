@@ -70,12 +70,12 @@ func strKeyMap(val interface{}) interface{} {
 	return val
 }
 
-func flattenKey(key string, val interface{}) (string, interface{}) {
+func foldKey(key string, val interface{}) (string, interface{}) {
 	parts := strings.SplitN(key, ".", 2)
 	if len(parts) == 1 {
 		return key, strKeyMap(val)
 	}
-	subKey, subVal := flattenKey(parts[1], val)
+	subKey, subVal := foldKey(parts[1], val)
 	return parts[0], map[string]interface{}{
 		subKey: strKeyMap(subVal),
 	}
@@ -99,19 +99,52 @@ func patch(origin map[string]interface{}, key string, val interface{}) {
 	}
 }
 
-func flattenMap(ms map[string]interface{}) map[string]interface{} {
+// FoldMap convert single layer map to multi-layer
+func FoldMap(ms map[string]interface{}) map[string]interface{} {
+	// we flatten map first to deal with the case like:
+	// a.b:
+	//   c.d: xxx
+	ms = FlattenMap(ms)
 	result := map[string]interface{}{}
 	for k, v := range ms {
-		key, val := flattenKey(k, v)
+		key, val := foldKey(k, v)
 		patch(result, key, val)
 	}
 	return result
 }
 
+// FlattenMap convert mutil-layer map to single layer
+func FlattenMap(ms map[string]interface{}) map[string]interface{} {
+	result := map[string]interface{}{}
+	for k, v := range ms {
+		var sub map[string]interface{}
+
+		if m, ok := v.(map[string]interface{}); ok {
+			sub = FlattenMap(m)
+		} else if m, ok := v.(map[interface{}]interface{}); ok {
+			fixM := map[string]interface{}{}
+			for k, v := range m {
+				if sk, ok := k.(string); ok {
+					fixM[sk] = v
+				}
+			}
+			sub = FlattenMap(fixM)
+		} else {
+			result[k] = v
+			continue
+		}
+
+		for sk, sv := range sub {
+			result[k+"."+sk] = sv
+		}
+	}
+	return result
+}
+
 func merge(orig map[string]interface{}, overwrites ...map[string]interface{}) (map[string]interface{}, error) {
-	lhs := flattenMap(orig)
+	lhs := FoldMap(orig)
 	for _, overwrite := range overwrites {
-		rhs := flattenMap(overwrite)
+		rhs := FoldMap(overwrite)
 		for k, v := range rhs {
 			patch(lhs, k, v)
 		}
@@ -124,6 +157,7 @@ func GetValueFromPath(m map[string]interface{}, p string) interface{} {
 	ss := strings.Split(p, ".")
 
 	searchMap := make(map[interface{}]interface{})
+	m = FoldMap(m)
 	for k, v := range m {
 		searchMap[k] = v
 	}
@@ -140,19 +174,15 @@ func searchValue(m map[interface{}]interface{}, ss []string) interface{} {
 		return m[ss[0]]
 	}
 
-	if m[strings.Join(ss, ".")] != nil {
-		return m[strings.Join(ss, ".")]
-	}
-
-	for i := l - 1; i > 0; i-- {
-		key := strings.Join(ss[:i], ".")
-		if m[key] == nil {
-			continue
+	key := ss[0]
+	if pm, ok := m[key].(map[interface{}]interface{}); ok {
+		return searchValue(pm, ss[1:])
+	} else if pm, ok := m[key].(map[string]interface{}); ok {
+		searchMap := make(map[interface{}]interface{})
+		for k, v := range pm {
+			searchMap[k] = v
 		}
-		if pm, ok := m[key].(map[interface{}]interface{}); ok {
-			return searchValue(pm, ss[i:])
-		}
-		return nil
+		return searchValue(searchMap, ss[1:])
 	}
 
 	return nil
