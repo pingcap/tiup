@@ -414,6 +414,7 @@ func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifes
 
 // RenewManifest resets and extends the expire time of manifest
 func RenewManifest(m ValidManifest, startTime time.Time) {
+	m.Base().Version++
 	m.Base().Expires = startTime.Add(
 		ManifestsConfig[m.Base().Ty].Expire,
 	).Format(time.RFC3339)

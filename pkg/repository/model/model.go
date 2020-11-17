@@ -30,7 +30,7 @@ type Model interface {
 	// Publish push a new component to mirror or modify an exists component
 	Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 	// Introduce add a new owner to mirror
-	Introduce(id, name string, key *v1manifest.KeyInfo) error
+	Grant(id, name string, key *v1manifest.KeyInfo) error
 }
 
 type model struct {
@@ -44,7 +44,7 @@ func New(txn store.FsTxn, keys map[string]*v1manifest.KeyInfo) Model {
 }
 
 // Introduce implements Model
-func (m *model) Introduce(id, name string, key *v1manifest.KeyInfo) error {
+func (m *model) Grant(id, name string, key *v1manifest.KeyInfo) error {
 	initTime := time.Now()
 
 	keyID, err := key.ID()
