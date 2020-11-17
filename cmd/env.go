@@ -28,6 +28,7 @@ var envList = []string{
 	localdata.EnvNameSSHPassPrompt,
 	localdata.EnvNameSSHPath,
 	localdata.EnvNameSCPPath,
+	localdata.EnvNameLogPath,
 }
 
 func newEnvCmd() *cobra.Command {

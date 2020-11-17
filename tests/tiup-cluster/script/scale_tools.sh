@@ -100,4 +100,8 @@ function scale_tools() {
     fi
 
     tiup-cluster $client _test $name writable
+
+    # test cluster log dir
+    tiup-cluster notfound-command 2>&1 | grep $HOME/.tiup/logs/tiup-cluster-debug
+    TIUP_LOG_PATH=/tmp/a/b tiup-cluster notfound-command 2>&1 | grep /tmp/a/b/tiup-cluster-debug
 }
