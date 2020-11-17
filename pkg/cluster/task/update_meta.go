@@ -41,77 +41,77 @@ func (u *UpdateMeta) Execute(ctx *Context) error {
 
 	deleted := set.NewStringSet(u.deletedNodesID...)
 	topo := u.metadata.Topology
-	for i, instance := range (&spec.TiDBComponent{Specification: topo}).Instances() {
+	for i, instance := range (&spec.TiDBComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.TiDBServers = append(newMeta.Topology.TiDBServers, topo.TiDBServers[i])
 	}
-	for i, instance := range (&spec.TiKVComponent{Specification: topo}).Instances() {
+	for i, instance := range (&spec.TiKVComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.TiKVServers = append(newMeta.Topology.TiKVServers, topo.TiKVServers[i])
 	}
-	for i, instance := range (&spec.PDComponent{Specification: topo}).Instances() {
+	for i, instance := range (&spec.PDComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.PDServers = append(newMeta.Topology.PDServers, topo.PDServers[i])
 	}
-	for i, instance := range (&spec.TiFlashComponent{Specification: topo}).Instances() {
+	for i, instance := range (&spec.TiFlashComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.TiFlashServers = append(newMeta.Topology.TiFlashServers, topo.TiFlashServers[i])
 	}
-	for i, instance := range (&spec.PumpComponent{Specification: topo}).Instances() {
+	for i, instance := range (&spec.PumpComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.PumpServers = append(newMeta.Topology.PumpServers, topo.PumpServers[i])
 	}
-	for i, instance := range (&spec.DrainerComponent{Specification: topo}).Instances() {
+	for i, instance := range (&spec.DrainerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Drainers = append(newMeta.Topology.Drainers, topo.Drainers[i])
 	}
-	for i, instance := range (&spec.CDCComponent{Specification: topo}).Instances() {
+	for i, instance := range (&spec.CDCComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.CDCServers = append(newMeta.Topology.CDCServers, topo.CDCServers[i])
 	}
-	for i, instance := range (&spec.TiSparkWorkerComponent{Specification: topo}).Instances() {
+	for i, instance := range (&spec.TiSparkWorkerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.TiSparkWorkers = append(newMeta.Topology.TiSparkWorkers, topo.TiSparkWorkers[i])
 	}
-	for i, instance := range (&spec.TiSparkMasterComponent{Specification: topo}).Instances() {
+	for i, instance := range (&spec.TiSparkMasterComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.TiSparkMasters = append(newMeta.Topology.TiSparkMasters, topo.TiSparkMasters[i])
 	}
-	for i, instance := range (&spec.MonitorComponent{Specification: topo}).Instances() {
+	for i, instance := range (&spec.MonitorComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
 		newMeta.Topology.Monitors = append(newMeta.Topology.Monitors, topo.Monitors[i])
 	}
-	for i, instance := range (&spec.GrafanaComponent{Specification: topo}).Instances() {
+	for i, instance := range (&spec.GrafanaComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Grafana = append(newMeta.Topology.Grafana, topo.Grafana[i])
+		newMeta.Topology.Grafanas = append(newMeta.Topology.Grafanas, topo.Grafanas[i])
 	}
-	for i, instance := range (&spec.AlertManagerComponent{Specification: topo}).Instances() {
+	for i, instance := range (&spec.AlertManagerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Alertmanager = append(newMeta.Topology.Alertmanager, topo.Alertmanager[i])
+		newMeta.Topology.Alertmanagers = append(newMeta.Topology.Alertmanagers, topo.Alertmanagers[i])
 	}
 	return spec.SaveClusterMeta(u.cluster, newMeta)
 }

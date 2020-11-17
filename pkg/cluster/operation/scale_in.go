@@ -118,7 +118,7 @@ func ScaleInCluster(
 	}
 
 	var pdEndpoint []string
-	for _, instance := range (&spec.PDComponent{Specification: cluster}).Instances() {
+	for _, instance := range (&spec.PDComponent{Topology: cluster}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
 			pdEndpoint = append(pdEndpoint, Addr(instance))
 		}
@@ -176,7 +176,7 @@ func ScaleInCluster(
 	// TODO if binlog is switch on, cannot delete all pump servers.
 
 	var tiflashInstances []spec.Instance
-	for _, instance := range (&spec.TiFlashComponent{Specification: cluster}).Instances() {
+	for _, instance := range (&spec.TiFlashComponent{Topology: cluster}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
 			tiflashInstances = append(tiflashInstances, instance)
 		}
@@ -184,7 +184,7 @@ func ScaleInCluster(
 
 	if len(tiflashInstances) > 0 {
 		var tikvInstances []spec.Instance
-		for _, instance := range (&spec.TiKVComponent{Specification: cluster}).Instances() {
+		for _, instance := range (&spec.TiKVComponent{Topology: cluster}).Instances() {
 			if !deletedNodes.Exist(instance.ID()) {
 				tikvInstances = append(tikvInstances, instance)
 			}
