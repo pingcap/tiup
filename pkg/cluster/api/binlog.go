@@ -84,12 +84,20 @@ type NodeStatus struct {
 }
 
 // IsPumpTombstone check if drainer is tombstone.
-func (c *BinlogClient) IsPumpTombstone(nodeID string) (bool, error) {
+func (c *BinlogClient) IsPumpTombstone(addr string) (bool, error) {
+	nodeID, err := c.nodeID(addr, "pumps")
+	if err != nil {
+		return false, err
+	}
 	return c.isTombstone("pumps", nodeID)
 }
 
 // IsDrainerTombstone check if drainer is tombstone.
-func (c *BinlogClient) IsDrainerTombstone(nodeID string) (bool, error) {
+func (c *BinlogClient) IsDrainerTombstone(addr string) (bool, error) {
+	nodeID, err := c.nodeID(addr, "drainers")
+	if err != nil {
+		return false, err
+	}
 	return c.isTombstone("drainer", nodeID)
 }
 
@@ -121,13 +129,36 @@ func (c *BinlogClient) drainerNodeStatus() (status []*NodeStatus, err error) {
 	return c.nodeStatus("drainers")
 }
 
+func (c *BinlogClient) nodeID(addr, ty string) (string, error) {
+	nodes, err := c.nodeStatus(ty)
+	if err != nil {
+		return "", err
+	}
+
+	for _, node := range nodes {
+		if addr == node.Addr {
+			return node.NodeID, nil
+		}
+	}
+
+	return "", errors.Errorf("pump node id for address %s not found", addr)
+}
+
 // UpdateDrainerState update the specify state as the specified state.
-func (c *BinlogClient) UpdateDrainerState(nodeID string, state string) error {
+func (c *BinlogClient) UpdateDrainerState(addr string, state string) error {
+	nodeID, err := c.nodeID(addr, "drainers")
+	if err != nil {
+		return err
+	}
 	return c.updateStatus("drainers", nodeID, state)
 }
 
 // UpdatePumpState update the specify state as the specified state.
-func (c *BinlogClient) UpdatePumpState(nodeID string, state string) error {
+func (c *BinlogClient) UpdatePumpState(addr string, state string) error {
+	nodeID, err := c.nodeID(addr, "pumps")
+	if err != nil {
+		return err
+	}
 	return c.updateStatus("pumps", nodeID, state)
 }
 
@@ -228,11 +259,19 @@ func (c *BinlogClient) offline(addr string, nodeID string) error {
 }
 
 // OfflinePump offline a pump.
-func (c *BinlogClient) OfflinePump(addr string, nodeID string) error {
+func (c *BinlogClient) OfflinePump(addr string) error {
+	nodeID, err := c.nodeID(addr, "pumps")
+	if err != nil {
+		return err
+	}
 	return c.offline(addr, nodeID)
 }
 
 // OfflineDrainer offline a drainer.
-func (c *BinlogClient) OfflineDrainer(addr string, nodeID string) error {
+func (c *BinlogClient) OfflineDrainer(addr string) error {
+	nodeID, err := c.nodeID(addr, "drainers")
+	if err != nil {
+		return err
+	}
 	return c.offline(addr, nodeID)
 }
