@@ -315,13 +315,13 @@ func deleteMember(
 		}
 	case spec.ComponentDrainer:
 		addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
-		err := binlogClient.OfflineDrainer(addr, addr)
+		err := binlogClient.OfflineDrainer(addr)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	case spec.ComponentPump:
 		addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
-		err := binlogClient.OfflinePump(addr, addr)
+		err := binlogClient.OfflinePump(addr)
 		if err != nil {
 			return errors.AddStack(err)
 		}

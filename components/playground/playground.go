@@ -176,7 +176,7 @@ func (p *Playground) removePumpWhenTombstone(c *api.BinlogClient, inst *instance
 	defer logIfErr(p.renderSDFile())
 
 	for {
-		tombstone, err := c.IsPumpTombstone(inst.NodeID())
+		tombstone, err := c.IsPumpTombstone(inst.Addr())
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -199,7 +199,7 @@ func (p *Playground) removeDrainerWhenTombstone(c *api.BinlogClient, inst *insta
 	defer logIfErr(p.renderSDFile())
 
 	for {
-		tombstone, err := c.IsDrainerTombstone(inst.NodeID())
+		tombstone, err := c.IsDrainerTombstone(inst.Addr())
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -325,7 +325,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				if err != nil {
 					return errors.AddStack(err)
 				}
-				err = c.OfflinePump(inst.Addr(), inst.NodeID())
+				err = c.OfflinePump(inst.Addr())
 				if err != nil {
 					return errors.AddStack(err)
 				}
@@ -344,7 +344,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				if err != nil {
 					return errors.AddStack(err)
 				}
-				err = c.OfflineDrainer(inst.Addr(), inst.NodeID())
+				err = c.OfflineDrainer(inst.Addr())
 				if err != nil {
 					return errors.AddStack(err)
 				}
