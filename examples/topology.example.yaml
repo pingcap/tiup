@@ -601,14 +601,14 @@ monitoring_servers:
   - host: 10.0.1.11
     # ssh_port: 22
     # port: 9090
-    # deploy_dir: "/tidb-deploy/prometheus-8249"
-    # data_dir: "/tidb-data/prometheus-8249"
-    # log_dir: "/tidb-deploy/prometheus-8249/log"
+    # deploy_dir: "/tidb-deploy/prometheus-9090"
+    # data_dir: "/tidb-data/prometheus-9090"
+    # log_dir: "/tidb-deploy/prometheus-9090/log"
 
 grafana_servers:
   - host: 10.0.1.11
     # port: 3000
-    # deploy_dir: /tidb-deploy/grafana-3000
+    # deploy_dir: "/tidb-deploy/grafana-3000"
 
 alertmanager_servers:
   - host: 10.0.1.11
