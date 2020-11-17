@@ -28,6 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/base52"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/utils/rand"
 )
 
 // ShowAuditList show the audit list.
@@ -81,7 +82,7 @@ func ShowAuditList(dir string) error {
 
 // OutputAuditLog outputs audit log.
 func OutputAuditLog(dir string, data []byte) error {
-	fname := filepath.Join(dir, base52.Encode(time.Now().UnixNano()))
+	fname := filepath.Join(dir, base52.Encode(time.Now().UnixNano()+rand.Int63n(1000)))
 	return ioutil.WriteFile(fname, data, 0644)
 }
 
