@@ -262,7 +262,8 @@ func (m *Manager) ListCluster() error {
 
 	for _, name := range names {
 		metadata, err := m.meta(name)
-		if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+		if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+			!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 			return perrs.Trace(err)
 		}
 
@@ -347,7 +348,9 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, destroyOpt operator.Options, skipConfirm bool) error {
 	metadata, err := m.meta(clusterName)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
-		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) &&
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTiSparkMaster) &&
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTisparkWorker) {
 		return perrs.AddStack(err)
 	}
 
@@ -1366,7 +1369,9 @@ func (m *Manager) ScaleIn(
 	}
 
 	metadata, err := m.meta(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTiSparkMaster) &&
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTisparkWorker) {
 		// ignore conflict check error, node may be deployed by former version
 		// that lack of some certain conflict checks
 		return perrs.AddStack(err)
