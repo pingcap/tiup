@@ -352,7 +352,7 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 				tmpIns.StatusPort, _ = strconv.Atoi(statusPort)
 			}
 			if dataDir, ok := srv.Vars["data_dir"]; ok {
-				tmpIns.DataDir = dataDir
+				tmpIns.SetDataDir(dataDir)
 			}
 			if logDir, ok := srv.Vars["tiflash_log_dir"]; ok {
 				tmpIns.LogDir = logDir

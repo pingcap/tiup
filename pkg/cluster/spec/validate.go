@@ -810,6 +810,16 @@ func (s *Specification) validatePDNames() error {
 	return nil
 }
 
+func (s *Specification) validateTiFlashConfiguration() error {
+	c := FindComponent(s, ComponentTiFlash)
+	for _, ins := range c.Instances() {
+		if err := ins.(*TiFlashInstance).CheckIncorrectConfigs(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Validate validates the topology specification and produce error if the
 // specification invalid (e.g: port conflicts or directory conflicts)
 func (s *Specification) Validate() error {
@@ -834,6 +844,10 @@ func (s *Specification) Validate() error {
 	}
 
 	if err := s.validatePDNames(); err != nil {
+		return err
+	}
+
+	if err := s.validateTiFlashConfiguration(); err != nil {
 		return err
 	}
 

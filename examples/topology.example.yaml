@@ -488,6 +488,10 @@ tiflash_servers:
     # flash_proxy_status_port: 20292
     # metrics_port: 8234
     # deploy_dir: /tidb-deploy/tiflash-9000
+    ## With cluster version >= v4.0.9 and you want to deploy a multi-disk TiFlash node, it is recommended to
+    ## check config.storage.* for details. The data_dir will be ignored if you defined those configurations.
+    ## Setting data_dir to a ','-joined string is still supported but deprecated.
+    ## Check https://docs.pingcap.com/tidb/stable/tiflash-configuration#multi-disk-deployment for more details.
     # data_dir: /tidb-data/tiflash-9000
     # log_dir: /tidb-deploy/tiflash-9000/log
     # numa_node: "0,1"
