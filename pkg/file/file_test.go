@@ -3,6 +3,7 @@ package file
 import (
 	"bytes"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"sort"
@@ -13,7 +14,6 @@ import (
 	"time"
 
 	"github.com/pingcap/check"
-	"github.com/pingcap/tiup/pkg/utils/rand"
 )
 
 func Test(t *testing.T) { check.TestingT(t) }
