@@ -217,7 +217,6 @@ func StartMonitored(getter ExecutorGetter, instance spec.Instance, options *spec
 		// Check ready.
 		if err := spec.PortStarted(e, ports[comp], timeout); err != nil {
 			str := fmt.Sprintf("\t%s failed to start: %s", instance.GetHost(), err)
-			log.Errorf(str)
 			return errors.Annotatef(err, str)
 		}
 
@@ -256,7 +255,6 @@ func restartInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) e
 	err = ins.Ready(e, timeout)
 	if err != nil {
 		str := fmt.Sprintf("\t%s failed to restart: %s", ins.GetHost(), err)
-		log.Errorf(str)
 		return errors.Annotatef(err, str)
 	}
 
@@ -368,7 +366,6 @@ func startInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) err
 			ins.ComponentName(),
 			ins.GetHost(),
 			ins.GetPort(), err)
-		log.Errorf(str)
 		return errors.Annotatef(err, str)
 	}
 
