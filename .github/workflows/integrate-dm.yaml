@@ -71,7 +71,7 @@ jobs:
         # if: steps.test.outputs.exit_code != 0
         if: always()
         run: |
-          docker exec tiup-cluster-control bash -c 'find ~/.tiup/logs -type f -name "*.log" -exec cp {} /tiup-cluster/logs \;'
+          docker exec tiup-cluster-control bash -c 'mkdir -p /tiup-cluster/logs; [[ -d ~/.tiup/logs ]] && find ~/.tiup/logs -type f -name "*.log" -exec cp {} /tiup-cluster/logs \; || true'
           ls ${{ env.working-directory }}
           tar czvf ${{ env.working-directory }}/dm.logs.tar.gz ${{ env.working-directory }}/logs/
 
