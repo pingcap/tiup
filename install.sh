@@ -68,8 +68,8 @@ echo "Shell profile:  ${bold}$PROFILE${sgr0}"
 
 case :$PATH: in
     *:$bin_dir:*) : "PATH already contains $bin_dir" ;;
-    *) printf 'export PATH=%s:$PATH\n' "$bin_dir" >> "$PROFILE"
-        echo "$PROFILE has been modified to to add tiup to PATH"
+    *) printf '\nexport PATH=%s:$PATH\n' "$bin_dir" >> "$PROFILE"
+        echo "$PROFILE has been modified to add tiup to PATH"
         echo "open a new terminal or ${bold}source ${PROFILE}${sgr0} to use it"
         ;;
 esac
