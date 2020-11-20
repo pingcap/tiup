@@ -782,3 +782,31 @@ pd_servers:
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "directory conflict for '/test-1' between 'tiflash_servers:172.16.5.138.data_dir' and 'tiflash_servers:172.16.5.138.data_dir'")
 }
+
+func (s *metaSuiteTopo) TestPdServerWithSameName(c *C) {
+	topo := Specification{}
+	err := yaml.Unmarshal([]byte(`
+pd_servers:
+  - host: 172.16.5.138
+    peer_port: 1234
+    name: name1
+  - host: 172.16.5.139
+    perr_port: 1234
+    name: name2
+`), &topo)
+	c.Assert(err, IsNil)
+
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+  pd_servers:
+  - host: 172.16.5.138
+    peer_port: 1234
+    name: name1
+  - host: 172.16.5.139
+    perr_port: 1234
+    name: name1
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "component pd_servers.name is not supported duplicated, the name name1 is duplicated")
+
+}
