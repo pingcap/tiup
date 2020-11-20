@@ -134,7 +134,7 @@ func newMirrorGrantCmd() *cobra.Command {
 
 			id := args[0]
 			if name == "" {
-				fmt.Printf("The --name hasn't specified value, default to %s\n", id)
+				fmt.Printf("The --name is not specified, using %s as default\n", id)
 				name = id
 			}
 
