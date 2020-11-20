@@ -1481,18 +1481,15 @@ func (m *Manager) ScaleOut(
 	sshType executor.SSHType,
 ) error {
 	metadata, err := m.meta(clusterName)
-	if err != nil { // not allowing validation errors
+	// allow specific validation errors so that user can recover a broken
+	// cluster if it is somehow in a bad state.
+	if err != nil &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return perrs.AddStack(err)
 	}
 
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
-
-	// not allowing validation errors
-	if err := topo.Validate(); err != nil {
-		return err
-	}
-
 	// Inherit existing global configuration. We must assign the inherited values before unmarshalling
 	// because some default value rely on the global options and monitored options.
 	newPart := topo.NewPart()

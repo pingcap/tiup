@@ -117,6 +117,24 @@ func ScaleInCluster(
 		return errors.New("cannot delete all TiKV servers")
 	}
 
+	// Cannot delete TiSpark master server if there's any TiSpark worker remains
+	if len(deletedDiff[spec.ComponentTiSpark]) > 0 {
+		var cntDiffTiSparkMaster int
+		var cntDiffTiSparkWorker int
+		for _, inst := range deletedDiff[spec.ComponentTiSpark] {
+			switch inst.Role() {
+			case spec.RoleTiSparkMaster:
+				cntDiffTiSparkMaster++
+			case spec.RoleTiSparkWorker:
+				cntDiffTiSparkWorker++
+			}
+		}
+		if cntDiffTiSparkMaster == len(cluster.TiSparkMasters) &&
+			cntDiffTiSparkWorker < len(cluster.TiSparkWorkers) {
+			return errors.New("cannot delete tispark master when there are workers left")
+		}
+	}
+
 	var pdEndpoint []string
 	for _, instance := range (&spec.PDComponent{Specification: cluster}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
