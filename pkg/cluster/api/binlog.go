@@ -135,13 +135,15 @@ func (c *BinlogClient) nodeID(addr, ty string) (string, error) {
 		return "", err
 	}
 
+	addrs := []string{}
 	for _, node := range nodes {
 		if addr == node.Addr {
 			return node.NodeID, nil
 		}
+		addrs = append(addrs, addr)
 	}
 
-	return "", errors.Errorf("pump node id for address %s not found", addr)
+	return "", errors.Errorf("%s node id for address %s not found, found address: %s", ty, addr, addrs)
 }
 
 // UpdateDrainerState update the specify state as the specified state.
