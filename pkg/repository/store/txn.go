@@ -35,6 +35,31 @@ var (
 	ErrorFsCommitConflict = errors.New("conflict on fs commit")
 )
 
+// The localTxn is used to implment a filesystem transaction, the basic principle is to
+// record the timestamp before access any manifest file, and when writing them back, check
+// if the origin files' timestamp is newer than recorded one, if so, a conflict is detected.
+//
+// To get current timestamp:
+// 1. check if there is timestamp.json in root directory, if so, return it's modify time
+// 2. check if there is any file in root directory, if so, return the newest one's modify time
+// 3. return the root directory's modify time
+// If the timestamp.json is in root directory, we always make sure it's newer than other files
+// So current timestamp is the modify time of the newest file in root directory
+//
+// To read a manifest file:
+// 1. get current timestamp and record it
+// 2. read the file from root directory
+//
+// To write a manifest file:
+// 1. get current timestamp and record it
+// 2. write the manifest file to temporary directory
+//
+// To commit a localTxn:
+// 1. for every accessed file, get the recorded timestamp
+// 2. for every accessed file, get the current modify time of their origin file in root directory
+// 3. check if the origin file is newer thant recorded timestamp, if so, there must be conflict
+// 4. copy every file in temporary directory to root directory, if there is a timestamp.json in
+//    temporary directory, it should be the last one to copy
 type localTxn struct {
 	syncer   Syncer
 	store    *localStore
@@ -134,7 +159,8 @@ func (t *localTxn) ReadManifest(filename string, role v1manifest.ValidManifest) 
 		wc = file
 	} else if os.IsNotExist(err) && t.store.upstream != "" {
 		url := fmt.Sprintf("%s/%s", t.store.upstream, filename)
-		if resp, err := http.Get(url); err == nil {
+		client := http.Client{Timeout: time.Minute}
+		if resp, err := client.Get(url); err == nil {
 			wc = resp.Body
 		} else {
 			return nil, errors.Annotatef(err, "fetch %s", url)
@@ -187,8 +213,19 @@ func (t *localTxn) Commit() error {
 		return err
 	}
 
+	hasTimestamp := false
 	for _, f := range files {
+		// Make sure modify time of the timestamp.json is the newest
+		if f.Name() == v1manifest.ManifestFilenameTimestamp {
+			hasTimestamp = true
+			continue
+		}
 		if err := utils.Copy(path.Join(t.root, f.Name()), t.store.path(f.Name())); err != nil {
+			return err
+		}
+	}
+	if hasTimestamp {
+		if err := utils.Copy(path.Join(t.root, v1manifest.ManifestFilenameTimestamp), t.store.path(v1manifest.ManifestFilenameTimestamp)); err != nil {
 			return err
 		}
 	}
@@ -224,13 +261,13 @@ func (t *localTxn) access(filename string) error {
 	}
 
 	// Use the modify time of timestamp.json
-	timestamp := t.store.path("timestamp.json")
+	timestamp := t.store.path(v1manifest.ManifestFilenameTimestamp)
 	fi, err := os.Stat(timestamp)
 	if err == nil {
 		mt := fi.ModTime()
 		t.accessed[filename] = &mt
 	} else if !os.IsNotExist(err) {
-		return errors.Annotatef(err, "read timestamp.json: %s", timestamp)
+		return errors.Annotatef(err, "read %s: %s", v1manifest.ManifestFilenameTimestamp, timestamp)
 	}
 
 	// Use the newest file in t.store.root

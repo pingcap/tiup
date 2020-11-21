@@ -206,7 +206,6 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 			return errors.Trace(err)
 		}
 		index = i.Signed.(*v1manifest.Index)
-		index.Base().Version++
 		v1manifest.RenewManifest(index, initTime)
 	} else {
 		root = v1manifest.NewRoot(initTime)

@@ -25,8 +25,8 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-// Model defines operations on the manifests
-type Model interface {
+// Backend defines operations on the manifests
+type Backend interface {
 	// Publish push a new component to mirror or modify an exists component
 	Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 	// Introduce add a new owner to mirror
@@ -38,12 +38,12 @@ type model struct {
 	keys map[string]*v1manifest.KeyInfo
 }
 
-// New returns a object implemented Model
-func New(txn store.FsTxn, keys map[string]*v1manifest.KeyInfo) Model {
+// New returns a object implemented Backend
+func New(txn store.FsTxn, keys map[string]*v1manifest.KeyInfo) Backend {
 	return &model{txn, keys}
 }
 
-// Introduce implements Model
+// Introduce implements Backend
 func (m *model) Grant(id, name string, key *v1manifest.KeyInfo) error {
 	initTime := time.Now()
 
@@ -111,7 +111,7 @@ func (m *model) Grant(id, name string, key *v1manifest.KeyInfo) error {
 	})
 }
 
-// Publish implements Model
+// Publish implements Backend
 func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error {
 	signed := manifest.Signed.(*v1manifest.Component)
 	initTime := time.Now()
@@ -268,8 +268,6 @@ func (m *model) updateIndexManifest(initTime time.Time, f func(*v1manifest.Manif
 		return nil
 	}
 	signed := manifest.Signed.(*v1manifest.Index)
-	lastSigned := last.Signed.(*v1manifest.Index)
-	signed.Version = lastSigned.Version + 1
 	v1manifest.RenewManifest(signed, initTime)
 	manifest.Signatures, err = m.sign(manifest.Signed)
 	if err != nil {
@@ -328,7 +326,6 @@ func (m *model) updateTimestampManifest(initTime time.Time) error {
 		return err
 	}
 	signed := manifest.Signed.(*v1manifest.Timestamp)
-	signed.Version++
 	signed.Meta[v1manifest.ManifestURLSnapshot] = v1manifest.FileHash{
 		Hashes: map[string]string{
 			v1manifest.SHA256: sha256,

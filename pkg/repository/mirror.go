@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -38,6 +39,15 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/utils/mock"
 	"github.com/pingcap/tiup/pkg/verbose"
+)
+
+const (
+	// OptionYanked is the key that represents a component is yanked or not
+	OptionYanked = "yanked"
+	// OptionStandalone is the key that represents a component is standalone or not
+	OptionStandalone = "standalone"
+	// OptionHidden is the key that represents a component is hidden or not
+	OptionHidden = "hidden"
 )
 
 // ErrNotFound represents the resource not exists.
@@ -60,7 +70,7 @@ type (
 	// Mirror represents a repository mirror, which can be remote HTTP
 	// server or a local file system directory
 	Mirror interface {
-		model.Model
+		model.Backend
 		// Source returns the address of the mirror
 		Source() string
 		// Open initialize the mirror.
@@ -150,7 +160,7 @@ func (l *localFilesystem) loadKeys() error {
 	})
 }
 
-// Publish implements the model.Model interface
+// Publish implements the model.Backend interface
 func (l *localFilesystem) Publish(manifest *v1manifest.Manifest, info model.ComponentInfo) error {
 	txn, err := store.New(l.rootPath, l.upstream).Begin()
 	if err != nil {
@@ -165,7 +175,7 @@ func (l *localFilesystem) Publish(manifest *v1manifest.Manifest, info model.Comp
 	return nil
 }
 
-// Introduce implements the model.Model interface
+// Introduce implements the model.Backend interface
 func (l *localFilesystem) Grant(id, name string, key *v1manifest.KeyInfo) error {
 	txn, err := store.New(l.rootPath, l.upstream).Begin()
 	if err != nil {
@@ -326,12 +336,12 @@ func (l *httpMirror) prepareURL(resource string) string {
 	return url
 }
 
-// Introduce implements the model.Model interface
+// Introduce implements the model.Backend interface
 func (l *httpMirror) Grant(id, name string, key *v1manifest.KeyInfo) error {
 	return errors.Errorf("introduce a fresher via the internet is not allowd, please set you mirror to a local one")
 }
 
-// Publish implements the model.Model interface
+// Publish implements the model.Backend interface
 func (l *httpMirror) Publish(manifest *v1manifest.Manifest, info model.ComponentInfo) error {
 	sid := uuid.New().String()
 
@@ -353,23 +363,24 @@ func (l *httpMirror) Publish(manifest *v1manifest.Manifest, info model.Component
 		return err
 	}
 	bodyBuf := bytes.NewBuffer(payload)
-	qpairs := []string{}
+	q := url.Values{}
 	if info.Yanked() != nil {
-		qpairs = append(qpairs, fmt.Sprintf("%s=%t", "yanked", *info.Yanked()))
+		q.Set(OptionYanked, fmt.Sprintf("%t", *info.Yanked()))
 	}
 	if info.Standalone() != nil {
-		qpairs = append(qpairs, fmt.Sprintf("%s=%t", "standalone", *info.Standalone()))
+		q.Set(OptionStandalone, fmt.Sprintf("%t", *info.Standalone()))
 	}
 	if info.Hidden() != nil {
-		qpairs = append(qpairs, fmt.Sprintf("%s=%t", "hidden", *info.Hidden()))
+		q.Set(OptionHidden, fmt.Sprintf("%t", *info.Hidden()))
 	}
 	qstr := ""
-	if len(qpairs) > 0 {
-		qstr = "?" + strings.Join(qpairs, "&")
+	if len(q) > 0 {
+		qstr = "?" + q.Encode()
 	}
 	manifestAddr := fmt.Sprintf("%s/api/v1/component/%s/%s%s", l.Source(), sid, manifest.Signed.(*v1manifest.Component).ID, qstr)
 
-	resp, err := http.Post(manifestAddr, "text/json", bodyBuf)
+	client := http.Client{Timeout: time.Minute}
+	resp, err := client.Post(manifestAddr, "text/json", bodyBuf)
 	if err != nil {
 		return err
 	}
@@ -488,7 +499,7 @@ func (l *MockMirror) Download(resource, targetDir string) error {
 	return err
 }
 
-// Introduce implements the model.Model interface
+// Introduce implements the model.Backend interface
 func (l *MockMirror) Grant(id, name string, key *v1manifest.KeyInfo) error {
 	return nil
 }

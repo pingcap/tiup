@@ -35,13 +35,13 @@ type diffItem struct {
 	desc          string
 }
 
-// returns component that exists in source but not in base
-func diffMirror(base, source Mirror) ([]diffItem, error) {
+// returns component that exists in addition but not in base
+func diffMirror(base, addition Mirror) ([]diffItem, error) {
 	baseIndex, err := fetchIndexManifestFromMirror(base)
 	if err != nil {
 		return nil, err
 	}
-	sourceIndex, err := fetchIndexManifestFromMirror(source)
+	additionIndex, err := fetchIndexManifestFromMirror(addition)
 	if err != nil {
 		return nil, err
 	}
@@ -49,9 +49,9 @@ func diffMirror(base, source Mirror) ([]diffItem, error) {
 	items := []diffItem{}
 
 	baseComponents := baseIndex.ComponentListWithYanked()
-	sourceComponents := sourceIndex.ComponentList()
+	additionComponents := additionIndex.ComponentList()
 
-	for name, comp := range sourceComponents {
+	for name, comp := range additionComponents {
 		if baseComponents[name].Yanked {
 			continue
 		}
@@ -60,26 +60,23 @@ func diffMirror(base, source Mirror) ([]diffItem, error) {
 		if err != nil {
 			return nil, err
 		}
-		sourceComponent, err := fetchComponentManifestFromMirror(source, name)
+		additionComponent, err := fetchComponentManifestFromMirror(addition, name)
 		if err != nil {
 			return nil, err
 		}
-		if sourceComponent == nil {
-			return nil, errors.Errorf("component manifest for %s not in soure mirror", name)
-		}
 
-		items = append(items, component2Diff(name, baseComponents[name], baseComponent, comp, sourceComponent)...)
+		items = append(items, component2Diff(name, baseComponents[name], baseComponent, comp, additionComponent)...)
 	}
 
 	return items, nil
 }
 
 func component2Diff(name string, baseItem v1manifest.ComponentItem, baseManifest *v1manifest.Component,
-	sourceItem v1manifest.ComponentItem, sourceManifest *v1manifest.Component) []diffItem {
+	additionItem v1manifest.ComponentItem, additionManifest *v1manifest.Component) []diffItem {
 	items := []diffItem{}
 
-	for plat := range sourceManifest.Platforms {
-		versions := sourceManifest.VersionList(plat)
+	for plat := range additionManifest.Platforms {
+		versions := additionManifest.VersionList(plat)
 		for ver, verinfo := range versions {
 			// Don't merge nightly this time
 			if v0manifest.Version(ver).IsNightly() {
@@ -100,11 +97,11 @@ func component2Diff(name string, baseItem v1manifest.ComponentItem, baseManifest
 					version:       ver,
 					os:            osArch[0],
 					arch:          osArch[1],
-					desc:          sourceManifest.Description,
+					desc:          additionManifest.Description,
 				}
 
 				if baseItem.URL == "" {
-					item.componentItem = sourceItem
+					item.componentItem = additionItem
 				}
 				items = append(items, item)
 			}
@@ -115,14 +112,14 @@ func component2Diff(name string, baseItem v1manifest.ComponentItem, baseManifest
 }
 
 // MergeMirror merges two or more mirrors
-func MergeMirror(keys map[string]*v1manifest.KeyInfo, base Mirror, sources ...Mirror) error {
+func MergeMirror(keys map[string]*v1manifest.KeyInfo, base Mirror, additions ...Mirror) error {
 	ownerKeys, err := mapOwnerKeys(base, keys)
 	if err != nil {
 		return err
 	}
 
-	for _, source := range sources {
-		diffs, err := diffMirror(base, source)
+	for _, addition := range additions {
+		diffs, err := diffMirror(base, addition)
 		if err != nil {
 			return err
 		}
@@ -144,7 +141,7 @@ func MergeMirror(keys map[string]*v1manifest.KeyInfo, base Mirror, sources ...Mi
 			}
 
 			resource := strings.TrimPrefix(diff.versionItem.URL, "/")
-			tarfile, err := source.Fetch(resource, 0)
+			tarfile, err := addition.Fetch(resource, 0)
 			if err != nil {
 				return err
 			}
@@ -178,6 +175,7 @@ func fetchComponentManifestFromMirror(mirror Mirror, component string) (*v1manif
 
 	v := snap.Meta[fmt.Sprintf("/%s.json", component)].Version
 	if v == 0 {
+		// nil means that the component manifest not found
 		return nil, nil
 	}
 
@@ -188,7 +186,7 @@ func fetchComponentManifestFromMirror(mirror Mirror, component string) (*v1manif
 	defer r.Close()
 
 	role := v1manifest.Component{}
-	// TODO: this time we just assume the source mirror is trusted
+	// TODO: this time we just assume the addition mirror is trusted
 	if _, err := v1manifest.ReadNoVerify(r, &role); err != nil {
 		return nil, err
 	}
@@ -260,7 +258,6 @@ func UpdateManifestForPublish(m *v1manifest.Component,
 		m = v1manifest.NewComponent(name, desc, initTime)
 	} else {
 		v1manifest.RenewManifest(m, initTime)
-		m.Version++
 		if desc != "" {
 			m.Description = desc
 		}

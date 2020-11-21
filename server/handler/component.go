@@ -44,9 +44,9 @@ func buildInfo(r *http.Request, sid string) *model.PublishInfo {
 	info := &model.PublishInfo{}
 
 	m := map[string]**bool{
-		"yanked":     &info.Yank,
-		"standalone": &info.Stand,
-		"hidden":     &info.Hide,
+		repository.OptionYanked:     &info.Yank,
+		repository.OptionStandalone: &info.Stand,
+		repository.OptionHidden:     &info.Hide,
 	}
 
 	for k, v := range m {
