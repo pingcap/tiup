@@ -210,8 +210,12 @@ func StartMonitored(getter ExecutorGetter, instance spec.Instance, options *spec
 			log.Errorf(string(stderr))
 		}
 
-		// error or not ready
-		if err != nil || spec.PortStarted(e, ports[comp], timeout) != nil {
+		if err != nil {
+			return errors.Annotatef(err, "failed to start: %s", instance.GetHost())
+		}
+
+		// Check ready.
+		if err := spec.PortStarted(e, ports[comp], timeout); err != nil {
 			return toFailedActionError(err, "start", instance)
 		}
 
@@ -242,9 +246,13 @@ func restartInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) e
 		log.Errorf(string(stderr))
 	}
 
-	// error or not ready
-	if err != nil || ins.Ready(e, timeout) != nil {
+	if err != nil {
 		return errors.Annotatef(err, "failed to restart: %s", ins.GetHost())
+	}
+
+	// Check ready.
+	if err := ins.Ready(e, timeout); err != nil {
+		return toFailedActionError(err, "restart", ins)
 	}
 
 	log.Infof("\tRestart %s success", ins.GetHost())
@@ -341,8 +349,12 @@ func startInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) err
 		log.Errorf(string(stderr))
 	}
 
-	// error or not ready
-	if err != nil || ins.Ready(e, timeout) != nil {
+	if err != nil {
+		return toFailedActionError(err, "start", ins)
+	}
+
+	// Check ready.
+	if err := ins.Ready(e, timeout); err != nil {
 		return toFailedActionError(err, "start", ins)
 	}
 
@@ -422,11 +434,7 @@ func EnableMonitored(
 		}
 
 		if err != nil {
-			return errors.Annotatef(err, "failed to %s: %s %s:%d",
-				action,
-				instance.ComponentName(),
-				instance.GetHost(),
-				instance.GetPort())
+			return toFailedActionError(err, action, instance)
 		}
 	}
 
@@ -498,7 +506,11 @@ func StopMonitored(getter ExecutorGetter, instance spec.Instance, options *spec.
 			}
 		}
 
-		if err != nil || spec.PortStopped(e, ports[comp], timeout) != nil {
+		if err != nil {
+			return toFailedActionError(err, "stop", instance)
+		}
+
+		if err := spec.PortStopped(e, ports[comp], timeout); err != nil {
 			return toFailedActionError(err, "stop", instance)
 		}
 	}
