@@ -69,7 +69,6 @@ jobs:
         run: |
           docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/script/pull_log.sh /tiup-cluster/logs
           ls ${{ env.working-directory }}
-          cat /tiup-cluster/logs/*.log || true
           tar czvf ${{ env.working-directory }}/logs.tar.gz ${{ env.working-directory }}/logs/
 
       - name: Upload component log
@@ -88,6 +87,7 @@ jobs:
           docker ps
           df -h
           free -h
+          cat /tiup-cluster/logs/*.log || true
 
       - name: Upload coverage to Codecov
         working-directory: ${{ env.working-directory }}
