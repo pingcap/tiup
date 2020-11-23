@@ -256,6 +256,9 @@ func (manifest *Component) VersionList(platform string) map[string]VersionItem {
 
 // VersionListWithYanked return all versions include yanked versions
 func (manifest *Component) VersionListWithYanked(platform string) map[string]VersionItem {
+	if manifest == nil {
+		return nil
+	}
 	vs, ok := manifest.Platforms[platform]
 	if !ok {
 		vs, ok = manifest.Platforms[AnyPlatform]

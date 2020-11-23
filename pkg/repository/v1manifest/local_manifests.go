@@ -78,7 +78,7 @@ func NewManifests(profile *localdata.Profile) (*FsManifests, error) {
 
 	// We must load without validation because we have no keys yet.
 	var root Root
-	err = ReadNoVerify(strings.NewReader(manifest), &root)
+	_, err = ReadNoVerify(strings.NewReader(manifest), &root)
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
