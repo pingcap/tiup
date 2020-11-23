@@ -26,6 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/verbose"
 	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
@@ -229,7 +230,7 @@ func (env *Environment) SelfUpdate() error {
 	return env.repo.DownloadTiup(env.LocalPath("bin"))
 }
 
-func (env *Environment) downloadComponentv1(component string, version v0manifest.Version, overwrite bool) error {
+func (env *Environment) downloadComponentv1(component string, version pkgver.Version, overwrite bool) error {
 	spec := repository.ComponentSpec{
 		ID:      component,
 		Version: string(version),
@@ -240,7 +241,7 @@ func (env *Environment) downloadComponentv1(component string, version v0manifest
 }
 
 // downloadComponent downloads the specific version of a component from repository
-func (env *Environment) downloadComponent(component string, version v0manifest.Version, overwrite bool) error {
+func (env *Environment) downloadComponent(component string, version pkgver.Version, overwrite bool) error {
 	if env.v1Repo != nil {
 		return env.downloadComponentv1(component, version, overwrite)
 	}
@@ -277,12 +278,12 @@ func (env *Environment) downloadComponent(component string, version v0manifest.V
 
 // SelectInstalledVersion selects the installed versions and the latest release version
 // will be chosen if there is an empty version
-func (env *Environment) SelectInstalledVersion(component string, version v0manifest.Version) (v0manifest.Version, error) {
+func (env *Environment) SelectInstalledVersion(component string, version pkgver.Version) (pkgver.Version, error) {
 	return env.profile.SelectInstalledVersion(component, version)
 }
 
 // DownloadComponentIfMissing downloads the specific version of a component if it is missing
-func (env *Environment) DownloadComponentIfMissing(component string, version v0manifest.Version) (v0manifest.Version, error) {
+func (env *Environment) DownloadComponentIfMissing(component string, version pkgver.Version) (pkgver.Version, error) {
 	versions, err := env.profile.InstalledVersions(component)
 	if err != nil {
 		return "", err
@@ -296,14 +297,14 @@ func (env *Environment) DownloadComponentIfMissing(component string, version v0m
 		sort.Slice(versions, func(i, j int) bool {
 			return semver.Compare(versions[i], versions[j]) < 0
 		})
-		version = v0manifest.Version(versions[len(versions)-1])
+		version = pkgver.Version(versions[len(versions)-1])
 	}
 
 	needDownload := version.IsEmpty()
 	if !version.IsEmpty() {
 		installed := false
 		for _, v := range versions {
-			if v0manifest.Version(v) == version {
+			if pkgver.Version(v) == version {
 				installed = true
 				break
 			}
@@ -339,12 +340,12 @@ func (env *Environment) latestManifest() (*v0manifest.ComponentManifest, error) 
 }
 
 // GetComponentInstalledVersion return the installed version of component.
-func (env *Environment) GetComponentInstalledVersion(component string, version v0manifest.Version) (v0manifest.Version, error) {
+func (env *Environment) GetComponentInstalledVersion(component string, version pkgver.Version) (pkgver.Version, error) {
 	return env.profile.GetComponentInstalledVersion(component, version)
 }
 
 // BinaryPath return the installed binary path.
-func (env *Environment) BinaryPath(component string, version v0manifest.Version) (string, error) {
+func (env *Environment) BinaryPath(component string, version pkgver.Version) (string, error) {
 	if env.v1Repo != nil {
 		installPath, err := env.profile.ComponentInstalledPath(component, version)
 		if err != nil {
@@ -357,10 +358,10 @@ func (env *Environment) BinaryPath(component string, version v0manifest.Version)
 }
 
 // ParseCompVersion parses component part from <component>[:version] specification
-func ParseCompVersion(spec string) (string, v0manifest.Version) {
+func ParseCompVersion(spec string) (string, pkgver.Version) {
 	if strings.Contains(spec, ":") {
 		parts := strings.SplitN(spec, ":", 2)
-		return parts[0], v0manifest.Version(parts[1])
+		return parts[0], pkgver.Version(parts[1])
 	}
 	return spec, ""
 }

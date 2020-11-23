@@ -32,8 +32,8 @@ import (
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/verbose"
 	"github.com/pingcap/tiup/pkg/version"
@@ -127,7 +127,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			spec.Force = true
 		}
 		specVersion := spec.Version
-		if v0manifest.Version(spec.Version).IsNightly() {
+		if pkgver.Version(spec.Version).IsNightly() {
 			specVersion = manifest.Nightly
 		}
 
@@ -239,7 +239,7 @@ func (r *V1Repository) selectVersion(id string, versions map[string]v1manifest.V
 		var latest string
 		var latestItem v1manifest.VersionItem
 		for version, item := range versions {
-			if v0manifest.Version(version).IsNightly() {
+			if pkgver.Version(version).IsNightly() {
 				continue
 			}
 
@@ -728,7 +728,7 @@ func (r *V1Repository) ComponentVersion(id, version string, includeYanked bool) 
 	if err != nil {
 		return nil, err
 	}
-	if v0manifest.Version(version).IsNightly() && manifest.Nightly != "" {
+	if pkgver.Version(version).IsNightly() && manifest.Nightly != "" {
 		version = manifest.Nightly
 	}
 	if version == "" {
@@ -746,7 +746,7 @@ func (r *V1Repository) ComponentVersion(id, version string, includeYanked bool) 
 }
 
 // LatestStableVersion returns the latest stable version of specific component
-func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (v0manifest.Version, *v1manifest.VersionItem, error) {
+func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (pkgver.Version, *v1manifest.VersionItem, error) {
 	com, err := r.FetchComponentManifest(id, withYanked)
 	if err != nil {
 		return "", nil, err
@@ -759,7 +759,7 @@ func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (v0manife
 
 	var last string
 	for v := range versions {
-		if v0manifest.Version(v).IsNightly() {
+		if pkgver.Version(v).IsNightly() {
 			continue
 		}
 
@@ -772,7 +772,7 @@ func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (v0manife
 		return "", nil, fmt.Errorf("component %s doesn't has a stable version", id)
 	}
 
-	return v0manifest.Version(last), com.VersionItem(r.PlatformString(), last, false), nil
+	return pkgver.Version(last), com.VersionItem(r.PlatformString(), last, false), nil
 }
 
 // BinaryPath return the binary path of the component.
@@ -800,7 +800,7 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, versio
 	}
 
 	specVersion := version
-	if v0manifest.Version(version).IsNightly() {
+	if pkgver.Version(version).IsNightly() {
 		specVersion = component.Nightly
 	}
 

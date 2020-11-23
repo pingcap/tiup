@@ -20,8 +20,8 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/version"
@@ -202,7 +202,7 @@ func showComponentVersions(env *environment.Environment, component string, opt l
 	for plat := range comp.Platforms {
 		versions := comp.VersionList(plat)
 		for ver, verinfo := range versions {
-			if v0manifest.Version(ver).IsNightly() && ver == comp.Nightly {
+			if pkgver.Version(ver).IsNightly() && ver == comp.Nightly {
 				platforms[version.NightlyVersion] = append(platforms[version.NightlyVersion], plat)
 				released[version.NightlyVersion] = verinfo.Released
 			} else {
@@ -213,7 +213,7 @@ func showComponentVersions(env *environment.Environment, component string, opt l
 	}
 	verList := []string{}
 	for v := range platforms {
-		if v0manifest.Version(v).IsNightly() {
+		if pkgver.Version(v).IsNightly() {
 			continue
 		}
 		verList = append(verList, v)

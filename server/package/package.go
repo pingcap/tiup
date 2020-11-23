@@ -33,6 +33,7 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
@@ -151,7 +152,7 @@ func manifestIndex(options packageOptions) error {
 	}
 	if err == errNotFound {
 		mIndex.Modified = time.Now().Format(time.RFC3339)
-		mIndex.TiUPVersion = v0manifest.Version(version.NewTiUPVersion().SemVer())
+		mIndex.TiUPVersion = pkgver.Version(version.NewTiUPVersion().SemVer())
 		mIndex.Description = "TiDB components manager"
 	}
 
@@ -198,7 +199,7 @@ func componentIndex(options packageOptions) error {
 		return err
 	}
 
-	version := v0manifest.Version(options.version)
+	version := pkgver.Version(options.version)
 
 	v := v0manifest.VersionInfo{
 		Version:   version,
