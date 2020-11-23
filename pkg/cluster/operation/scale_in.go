@@ -117,8 +117,26 @@ func ScaleInCluster(
 		return errors.New("cannot delete all TiKV servers")
 	}
 
+	// Cannot delete TiSpark master server if there's any TiSpark worker remains
+	if len(deletedDiff[spec.ComponentTiSpark]) > 0 {
+		var cntDiffTiSparkMaster int
+		var cntDiffTiSparkWorker int
+		for _, inst := range deletedDiff[spec.ComponentTiSpark] {
+			switch inst.Role() {
+			case spec.RoleTiSparkMaster:
+				cntDiffTiSparkMaster++
+			case spec.RoleTiSparkWorker:
+				cntDiffTiSparkWorker++
+			}
+		}
+		if cntDiffTiSparkMaster == len(cluster.TiSparkMasters) &&
+			cntDiffTiSparkWorker < len(cluster.TiSparkWorkers) {
+			return errors.New("cannot delete tispark master when there are workers left")
+		}
+	}
+
 	var pdEndpoint []string
-	for _, instance := range (&spec.PDComponent{Specification: cluster}).Instances() {
+	for _, instance := range (&spec.PDComponent{Topology: cluster}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
 			pdEndpoint = append(pdEndpoint, Addr(instance))
 		}
@@ -176,7 +194,7 @@ func ScaleInCluster(
 	// TODO if binlog is switch on, cannot delete all pump servers.
 
 	var tiflashInstances []spec.Instance
-	for _, instance := range (&spec.TiFlashComponent{Specification: cluster}).Instances() {
+	for _, instance := range (&spec.TiFlashComponent{Topology: cluster}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
 			tiflashInstances = append(tiflashInstances, instance)
 		}
@@ -184,7 +202,7 @@ func ScaleInCluster(
 
 	if len(tiflashInstances) > 0 {
 		var tikvInstances []spec.Instance
-		for _, instance := range (&spec.TiKVComponent{Specification: cluster}).Instances() {
+		for _, instance := range (&spec.TiKVComponent{Topology: cluster}).Instances() {
 			if !deletedNodes.Exist(instance.ID()) {
 				tikvInstances = append(tikvInstances, instance)
 			}
@@ -315,13 +333,13 @@ func deleteMember(
 		}
 	case spec.ComponentDrainer:
 		addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
-		err := binlogClient.OfflineDrainer(addr, addr)
+		err := binlogClient.OfflineDrainer(addr)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	case spec.ComponentPump:
 		addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
-		err := binlogClient.OfflinePump(addr, addr)
+		err := binlogClient.OfflinePump(addr)
 		if err != nil {
 			return errors.AddStack(err)
 		}

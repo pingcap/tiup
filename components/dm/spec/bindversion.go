@@ -5,7 +5,7 @@ import "github.com/pingcap/tiup/pkg/cluster/spec"
 // DMComponentVersion maps the dm version to the third components binding version
 func DMComponentVersion(comp, version string) string {
 	switch comp {
-	case spec.ComponentAlertManager:
+	case spec.ComponentAlertmanager:
 		return "v0.17.0"
 	case spec.ComponentGrafana, spec.ComponentPrometheus:
 		return "v4.0.3"

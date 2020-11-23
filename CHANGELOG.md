@@ -1,5 +1,28 @@
 TiUP Changelog
 
+## [1.2.4] 2020.11.19
+
+### Fixes
+
+- Fix the issue that Pump & Drainer has different node id between tidb-ansible and TiUP ([#903](https://github.com/pingcap/tiup/pull/903), [@lucklove](https://github.com/lucklove))
+  - For the cluster imported from tidb-ansible, if the pump or drainer is restarted, it will start with a new node id
+  - Risk of this issue: binlog may not work correctly after restart pump or drainer
+- Fix the issue that audit log may get lost in some special case ([#879](https://github.com/pingcap/tiup/pull/879), [#882](https://github.com/pingcap/tiup/pull/882), [@9547](https://github.com/9547))
+  - If the user execute two commands one follows the other, and the second one quit in 1 second, the audit log of the first command will be overwirten by the second one
+  - Risk caused by this issue: some audit logs may get lost in above case
+- Fix the issue that new component deployed with `tiup cluster scale-out` doesn't auto start when rebooting ([#905](https://github.com/pingcap/tiup/pull/905), [@9547](https://github.com/9547))
+  - Risk caused by this issue: the cluster may be unavailable after rebooting
+- Fix the issue that data directory of tiflash is not deleted if multiple data directories are specified ([#871](https://github.com/pingcap/tiup/pull/871), [@9547](https://github.com/9547))
+- Fix the issue that `node_exporter` and `blackbox_exporter` not cleaned up after scale-in all instances on specified host ([#857](https://github.com/pingcap/tiup/pull/857), [@9547](https://github.com/9547))
+- Fix the issue that the patch command will fail when try to patch dm cluster ([#884](https://github.com/pingcap/tiup/pull/884), [@lucklove](https://github.com/lucklove))
+- Fix the issue that the bench component report `Error 1105: client has multi-statement capability disabled` ([#887](https://github.com/pingcap/tiup/pull/887), [@mahjonp](https://github.com/mahjonp))
+- Fix the issue that the TiSpark node can't be upgraded ([#901](https://github.com/pingcap/tiup/pull/901), [@lucklove](https://github.com/lucklove))
+- Fix the issue that tiup-playground can't start TiFlash with newest nightly PD ([#902](https://github.com/pingcap/tiup/pull/902), [@lucklove](https://github.com/lucklove))
+
+### Improvements
+
+- Ignore no tispark master error when listing clusters since the master node may be remove by `scale-in --force` ([#920](https://github.com/pingcap/tiup/pull/920), [@AstroProfundis](https://github.com/AstroProfundis))
+
 ## [1.2.3] 2020.10.30
 
 ### Fixes

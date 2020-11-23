@@ -62,7 +62,7 @@ func (s CDCSpec) IsImported() bool {
 }
 
 // CDCComponent represents CDC component.
-type CDCComponent struct{ *Specification }
+type CDCComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *CDCComponent) Name() string {
@@ -76,8 +76,8 @@ func (c *CDCComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *CDCComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.CDCServers))
-	for _, s := range c.CDCServers {
+	ins := make([]Instance, 0, len(c.Topology.CDCServers))
+	for _, s := range c.Topology.CDCServers {
 		s := s
 		ins = append(ins, &CDCInstance{BaseInstance{
 			InstanceSpec: s,
@@ -100,7 +100,7 @@ func (c *CDCComponent) Instances() []Instance {
 				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
 				return statusByURL(url, tlsCfg)
 			},
-		}, c.Specification})
+		}, c.Topology})
 	}
 	return ins
 }
@@ -108,7 +108,7 @@ func (c *CDCComponent) Instances() []Instance {
 // CDCInstance represent the CDC instance.
 type CDCInstance struct {
 	BaseInstance
-	topo *Specification
+	topo Topology
 }
 
 // ScaleConfig deploy temporary config on scaling
@@ -137,11 +137,12 @@ func (i *CDCInstance) InitConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
+	topo := i.topo.(*Specification)
+	if err := i.BaseInstance.InitConfig(e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
-	enableTLS := i.topo.GlobalOptions.TLSEnabled
+	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(CDCSpec)
 	cfg := scripts.NewCDCScript(
 		i.GetHost(),
@@ -150,7 +151,7 @@ func (i *CDCInstance) InitConfig(
 		enableTLS,
 		spec.GCTTL,
 		spec.TZ,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(i.topo.Endpoints(deployUser)...)
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_cdc_%s_%d.sh", i.GetHost(), i.GetPort()))
 
@@ -168,5 +169,5 @@ func (i *CDCInstance) InitConfig(
 
 	specConfig := spec.Config
 
-	return i.MergeServerConfig(e, i.topo.ServerConfigs.CDC, specConfig, paths)
+	return i.MergeServerConfig(e, topo.ServerConfigs.CDC, specConfig, paths)
 }

@@ -262,7 +262,8 @@ func (m *Manager) ListCluster() error {
 
 	for _, name := range names {
 		metadata, err := m.meta(name)
-		if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+		if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+			!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 			return perrs.Trace(err)
 		}
 
@@ -347,7 +348,9 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, destroyOpt operator.Options, skipConfirm bool) error {
 	metadata, err := m.meta(clusterName)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
-		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) &&
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTiSparkMaster) &&
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTisparkWorker) {
 		return perrs.AddStack(err)
 	}
 
@@ -611,7 +614,7 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 		// Check if there is some instance in tombstone state
 		nodes, _ := operator.DestroyTombstone(ctx, t, true /* returnNodesOnly */, opt, tlsCfg)
 		if len(nodes) != 0 {
-			color.Green("There are some nodes in state: `Tombstone`\n\tNodes: %+v\n\tYou can destroy them with the command: `tiup cluster prune %s`", nodes, clusterName)
+			color.Green("There are some nodes can be pruned: \n\tNodes: %+v\n\tYou can destroy them with the command: `tiup cluster prune %s`", nodes, clusterName)
 		}
 	}
 
@@ -716,7 +719,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 		tb := task.NewBuilder().UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
 		if inst.IsImported() {
 			switch compName := inst.ComponentName(); compName {
-			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
+			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
 				version := m.bindVersion(compName, base.Version)
 				tb.Download(compName, inst.OS(), inst.Arch(), version).
 					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetHost(), deployDir)
@@ -817,9 +820,6 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 	for _, comp := range topo.ComponentsByUpdateOrder() {
 		for _, inst := range comp.Instances() {
 			version := m.bindVersion(inst.ComponentName(), clusterVersion)
-			if version == "" {
-				return perrs.Errorf("unsupported component: %v", inst.ComponentName())
-			}
 			compInfo := componentInfo{
 				component: inst.ComponentName(),
 				version:   version,
@@ -845,7 +845,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 			tb := task.NewBuilder()
 			if inst.IsImported() {
 				switch inst.ComponentName() {
-				case spec.ComponentPrometheus, spec.ComponentGrafana, spec.ComponentAlertManager:
+				case spec.ComponentPrometheus, spec.ComponentGrafana, spec.ComponentAlertmanager:
 					tb.CopyComponent(
 						inst.ComponentName(),
 						inst.OS(),
@@ -1369,7 +1369,9 @@ func (m *Manager) ScaleIn(
 	}
 
 	metadata, err := m.meta(clusterName)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTiSparkMaster) &&
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTisparkWorker) {
 		// ignore conflict check error, node may be deployed by former version
 		// that lack of some certain conflict checks
 		return perrs.AddStack(err)
@@ -1397,7 +1399,7 @@ func (m *Manager) ScaleIn(
 			tb := task.NewBuilder()
 			if instance.IsImported() {
 				switch compName := instance.ComponentName(); compName {
-				case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
+				case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
 					version := m.bindVersion(compName, base.Version)
 					tb.Download(compName, instance.OS(), instance.Arch(), version).
 						CopyComponent(
@@ -1479,18 +1481,15 @@ func (m *Manager) ScaleOut(
 	sshType executor.SSHType,
 ) error {
 	metadata, err := m.meta(clusterName)
-	if err != nil { // not allowing validation errors
+	// allow specific validation errors so that user can recover a broken
+	// cluster if it is somehow in a bad state.
+	if err != nil &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return perrs.AddStack(err)
 	}
 
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
-
-	// not allowing validation errors
-	if err := topo.Validate(); err != nil {
-		return err
-	}
-
 	// Inherit existing global configuration. We must assign the inherited values before unmarshalling
 	// because some default value rely on the global options and monitored options.
 	newPart := topo.NewPart()
@@ -2081,7 +2080,7 @@ func buildScaleOutTask(
 		tb := task.NewBuilder()
 		if inst.IsImported() {
 			switch compName := inst.ComponentName(); compName {
-			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertManager:
+			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
 				version := m.bindVersion(compName, base.Version)
 				tb.Download(compName, inst.OS(), inst.Arch(), version).
 					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetHost(), deployDir)

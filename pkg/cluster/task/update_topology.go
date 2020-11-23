@@ -46,11 +46,11 @@ func (u *UpdateTopology) Execute(ctx *Context) error {
 	var ops []clientv3.Op
 	var instances []spec.Instance
 
-	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.MonitorComponent{Specification: topo}).Instances(), "prometheus")
-	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.GrafanaComponent{Specification: topo}).Instances(), "grafana")
-	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.AlertManagerComponent{Specification: topo}).Instances(), "alertmanager")
+	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.MonitorComponent{Topology: topo}).Instances(), "prometheus")
+	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.GrafanaComponent{Topology: topo}).Instances(), "grafana")
+	ops, instances = updateInstancesAndOps(ops, instances, deleted, (&spec.AlertManagerComponent{Topology: topo}).Instances(), "alertmanager")
 
-	for _, instance := range (&spec.TiDBComponent{Specification: topo}).Instances() {
+	for _, instance := range (&spec.TiDBComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			ops = append(ops, clientv3.OpDelete(fmt.Sprintf("/topology/tidb/%s:%d", instance.GetHost(), instance.GetPort()), clientv3.WithPrefix()))
 		}
@@ -98,7 +98,7 @@ func updateInstancesAndOps(ops []clientv3.Op, destInstances []spec.Instance, del
 //  for update it's topology.
 func updateTopologyOp(instance spec.Instance) (*clientv3.Op, error) {
 	switch instance.ComponentName() {
-	case spec.ComponentAlertManager, spec.ComponentPrometheus, spec.ComponentGrafana:
+	case spec.ComponentAlertmanager, spec.ComponentPrometheus, spec.ComponentGrafana:
 		topology := componentTopology{
 			IP:         instance.GetHost(),
 			Port:       instance.GetPort(),

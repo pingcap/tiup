@@ -128,6 +128,11 @@ func newImportCmd() *cobra.Command {
 				return err
 			}
 
+			// copy config detail to meta file
+			if err = ansible.LoadConfig(clsName, clsMeta); err != nil {
+				return err
+			}
+
 			if err = spec.SaveClusterMeta(clsName, clsMeta); err != nil {
 				return err
 			}

@@ -222,7 +222,7 @@ func (im *Importer) handleWorkerConfig(srv *spec.WorkerSpec, fname string) error
 
 // ScpSourceToMaster scp the source files to master,
 // and set V1SourcePath of the master spec.
-func (im *Importer) ScpSourceToMaster(topo *spec.Topology) (err error) {
+func (im *Importer) ScpSourceToMaster(topo *spec.Specification) (err error) {
 	for i := 0; i < len(topo.Masters); i++ {
 		master := &topo.Masters[i]
 		target := filepath.Join(firstNonEmpty(master.DeployDir, topo.GlobalOptions.DeployDir), "v1source")
@@ -293,7 +293,7 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 	}
 
 	meta = &spec.Metadata{
-		Topology: new(spec.Topology),
+		Topology: new(spec.Specification),
 	}
 	topo := meta.Topology
 
@@ -480,7 +480,7 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 			}
 		case "alertmanager_servers":
 			for _, host := range group.Hosts {
-				srv := spec.AlertManagerSpec{
+				srv := spec.AlertmanagerSpec{
 					Host:      host.Vars["ansible_host"],
 					SSHPort:   ansible.GetHostPort(host, cfg),
 					DeployDir: firstNonEmpty(host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir),
@@ -521,9 +521,9 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 					}
 				}
 
-				srv.DeployDir = instancDeployDir(spec.ComponentAlertManager, srv.WebPort, host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir)
+				srv.DeployDir = instancDeployDir(spec.ComponentAlertmanager, srv.WebPort, host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir)
 
-				topo.Alertmanager = append(topo.Alertmanager, srv)
+				topo.Alertmanagers = append(topo.Alertmanagers, srv)
 			}
 		case "grafana_servers":
 			for _, host := range group.Hosts {
@@ -559,7 +559,7 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				}
 
 				srv.DeployDir = instancDeployDir(spec.ComponentGrafana, srv.Port, host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir)
-				topo.Grafana = append(topo.Grafana, srv)
+				topo.Grafanas = append(topo.Grafanas, srv)
 			}
 		case "all", "ungrouped":
 			// ignore intent

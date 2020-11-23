@@ -24,8 +24,8 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 )
 
-// AlertManagerSpec represents the AlertManager topology specification in topology.yaml
-type AlertManagerSpec struct {
+// AlertmanagerSpec represents the AlertManager topology specification in topology.yaml
+type AlertmanagerSpec struct {
 	Host            string               `yaml:"host"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
@@ -42,31 +42,31 @@ type AlertManagerSpec struct {
 }
 
 // Role returns the component role of the instance
-func (s AlertManagerSpec) Role() string {
-	return ComponentAlertManager
+func (s AlertmanagerSpec) Role() string {
+	return ComponentAlertmanager
 }
 
 // SSH returns the host and SSH port of the instance
-func (s AlertManagerSpec) SSH() (string, int) {
+func (s AlertmanagerSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s AlertManagerSpec) GetMainPort() int {
+func (s AlertmanagerSpec) GetMainPort() int {
 	return s.WebPort
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s AlertManagerSpec) IsImported() bool {
+func (s AlertmanagerSpec) IsImported() bool {
 	return s.Imported
 }
 
 // AlertManagerComponent represents Alertmanager component.
-type AlertManagerComponent struct{ *Specification }
+type AlertManagerComponent struct{ Topology }
 
 // Name implements Component interface.
 func (c *AlertManagerComponent) Name() string {
-	return ComponentAlertManager
+	return ComponentAlertmanager
 }
 
 // Role implements Component interface.
@@ -76,8 +76,11 @@ func (c *AlertManagerComponent) Role() string {
 
 // Instances implements Component interface.
 func (c *AlertManagerComponent) Instances() []Instance {
-	ins := make([]Instance, 0, len(c.Alertmanager))
-	for _, s := range c.Alertmanager {
+	alertmanagers := c.Topology.BaseTopo().Alertmanagers
+
+	ins := make([]Instance, 0, len(alertmanagers))
+
+	for _, s := range alertmanagers {
 		ins = append(ins, &AlertManagerInstance{
 			BaseInstance: BaseInstance{
 				InstanceSpec: s,
@@ -98,7 +101,7 @@ func (c *AlertManagerComponent) Instances() []Instance {
 					return "-"
 				},
 			},
-			topo: c.Specification,
+			topo: c.Topology,
 		})
 	}
 	return ins
@@ -107,7 +110,7 @@ func (c *AlertManagerComponent) Instances() []Instance {
 // AlertManagerInstance represent the alert manager instance
 type AlertManagerInstance struct {
 	BaseInstance
-	topo *Specification
+	topo Topology
 }
 
 // InitConfig implement Instance interface
@@ -118,16 +121,19 @@ func (i *AlertManagerInstance) InitConfig(
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
+	gOpts := *i.topo.BaseTopo().GlobalOptions
+	if err := i.BaseInstance.InitConfig(e, gOpts, deployUser, paths); err != nil {
 		return err
 	}
 
-	enableTLS := i.topo.GlobalOptions.TLSEnabled
+	alertmanagers := i.topo.BaseTopo().Alertmanagers
+
+	enableTLS := gOpts.TLSEnabled
 	// Transfer start script
-	spec := i.InstanceSpec.(AlertManagerSpec)
+	spec := i.InstanceSpec.(AlertmanagerSpec)
 	cfg := scripts.NewAlertManagerScript(spec.Host, paths.Deploy, paths.Data[0], paths.Log, enableTLS).
 		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort).WithNumaNode(spec.NumaNode).
-		AppendEndpoints(AlertManagerEndpoints(i.topo.Alertmanager, deployUser, enableTLS))
+		AppendEndpoints(AlertManagerEndpoints(alertmanagers, deployUser, enableTLS))
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_alertmanager_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {

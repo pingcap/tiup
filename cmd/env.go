@@ -30,6 +30,7 @@ var envList = []string{
 	localdata.EnvNameSCPPath,
 	localdata.EnvNameKeepSourceTarget,
 	localdata.EnvNameMirrorSyncScript,
+	localdata.EnvNameLogPath,
 }
 
 func newEnvCmd() *cobra.Command {
