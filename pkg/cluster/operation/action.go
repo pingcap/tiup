@@ -46,7 +46,7 @@ func Enable(
 		insts := FilterInstance(comp.Instances(), nodeFilter)
 		err := EnableComponent(getter, insts, options, isEnable)
 		if err != nil {
-			return errors.Annotatef(err, "failed to enable %s", comp.Name())
+			return errors.Annotatef(err, "failed to enable/disable %s", comp.Name())
 		}
 		if monitoredOptions == nil {
 			continue
@@ -216,9 +216,7 @@ func StartMonitored(getter ExecutorGetter, instance spec.Instance, options *spec
 
 		// Check ready.
 		if err := spec.PortStarted(e, ports[comp], timeout); err != nil {
-			str := fmt.Sprintf("\t%s failed to start: %s", instance.GetHost(), err)
-			log.Errorf(str)
-			return errors.Annotatef(err, str)
+			return toFailedActionError(err, "start", instance)
 		}
 
 		log.Infof("\tStart %s success", instance.GetHost())
@@ -253,11 +251,8 @@ func restartInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) e
 	}
 
 	// Check ready.
-	err = ins.Ready(e, timeout)
-	if err != nil {
-		str := fmt.Sprintf("\t%s failed to restart: %s", ins.GetHost(), err)
-		log.Errorf(str)
-		return errors.Annotatef(err, str)
+	if err := ins.Ready(e, timeout); err != nil {
+		return toFailedActionError(err, "restart", ins)
 	}
 
 	log.Infof("\tRestart %s success", ins.GetHost())
@@ -355,21 +350,12 @@ func startInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) err
 	}
 
 	if err != nil {
-		return errors.Annotatef(err, "failed to start: %s %s:%d",
-			ins.ComponentName(),
-			ins.GetHost(),
-			ins.GetPort())
+		return toFailedActionError(err, "start", ins)
 	}
 
 	// Check ready.
-	err = ins.Ready(e, timeout)
-	if err != nil {
-		str := fmt.Sprintf("\t%s %s:%d failed to start: %s, please check the log of the instance",
-			ins.ComponentName(),
-			ins.GetHost(),
-			ins.GetPort(), err)
-		log.Errorf(str)
-		return errors.Annotatef(err, str)
+	if err := ins.Ready(e, timeout); err != nil {
+		return toFailedActionError(err, "start", ins)
 	}
 
 	log.Infof("\tStart %s %s:%d success",
@@ -448,11 +434,7 @@ func EnableMonitored(
 		}
 
 		if err != nil {
-			return errors.Annotatef(err, "failed to %s: %s %s:%d",
-				action,
-				instance.ComponentName(),
-				instance.GetHost(),
-				instance.GetPort())
+			return toFailedActionError(err, action, instance)
 		}
 	}
 
@@ -525,19 +507,11 @@ func StopMonitored(getter ExecutorGetter, instance spec.Instance, options *spec.
 		}
 
 		if err != nil {
-			return errors.Annotatef(err, "failed to stop: %s %s:%d",
-				instance.ComponentName(),
-				instance.GetHost(),
-				instance.GetPort())
+			return toFailedActionError(err, "stop", instance)
 		}
 
 		if err := spec.PortStopped(e, ports[comp], timeout); err != nil {
-			str := fmt.Sprintf("\t%s %s:%d failed to stop: %s",
-				instance.ComponentName(),
-				instance.GetHost(),
-				instance.GetPort(), err)
-			log.Errorf(str)
-			return errors.Annotatef(err, str)
+			return toFailedActionError(err, "stop", instance)
 		}
 	}
 
@@ -575,10 +549,7 @@ func stopInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) erro
 	}
 
 	if err != nil {
-		return errors.Annotatef(err, "failed to stop: %s %s:%d",
-			ins.ComponentName(),
-			ins.GetHost(),
-			ins.GetPort())
+		return toFailedActionError(err, "stop", ins)
 	}
 
 	log.Infof("\tStop %s %s:%d success",
@@ -645,4 +616,16 @@ func PrintClusterStatus(getter ExecutorGetter, cluster *spec.Specification) (hea
 	}
 
 	return
+}
+
+// toFailedActionError formats the errror msg for failed action
+func toFailedActionError(err error, action string, inst spec.Instance) error {
+	return errors.Annotatef(err,
+		"failed to %s: %s %s:%d, please check the instance's log(%s) for more detail.",
+		action,
+		inst.ComponentName(),
+		inst.GetHost(),
+		inst.GetPort(),
+		inst.LogDir(),
+	)
 }
