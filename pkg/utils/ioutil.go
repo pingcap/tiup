@@ -154,7 +154,21 @@ func Copy(src, dst string) error {
 		return err
 	}
 
-	return os.Chmod(dst, fi.Mode())
+	err = os.Chmod(dst, fi.Mode())
+	if err != nil {
+		return err
+	}
+
+	// Make sure the created dst's modify time is newer (at least equal) than src
+	// this is used to workaround github action virtual filesystem
+	ofi, err := os.Stat(dst)
+	if err != nil {
+		return err
+	}
+	if fi.ModTime().After(ofi.ModTime()) {
+		return os.Chtimes(dst, fi.ModTime(), fi.ModTime())
+	}
+	return nil
 }
 
 // Move moves a file from src to dst, this is done by copying the file and then

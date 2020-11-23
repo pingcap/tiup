@@ -24,9 +24,6 @@ import (
 func main() {
 	addr := "0.0.0.0:8989"
 	upstream := "https://tiup-mirrors.pingcap.com"
-	indexKey := ""
-	snapshotKey := ""
-	timestampKey := ""
 
 	cmd := &cobra.Command{
 		Use:   fmt.Sprintf("%s <root-dir>", os.Args[0]),
@@ -36,7 +33,7 @@ func main() {
 				return cmd.Help()
 			}
 
-			s, err := newServer(args[0], upstream, indexKey, snapshotKey, timestampKey)
+			s, err := newServer(args[0], upstream)
 			if err != nil {
 				return err
 			}
@@ -45,9 +42,6 @@ func main() {
 		},
 	}
 	cmd.Flags().StringVarP(&addr, "addr", "", addr, "addr to listen")
-	cmd.Flags().StringVarP(&indexKey, "index", "", "", "specific the private key for index")
-	cmd.Flags().StringVarP(&snapshotKey, "snapshot", "", "", "specific the private key for snapshot")
-	cmd.Flags().StringVarP(&timestampKey, "timestamp", "", "", "specific the private key for timestamp")
 	cmd.Flags().StringVarP(&upstream, "upstream", "", upstream, "specific the upstream mirror")
 
 	if err := cmd.Execute(); err != nil {

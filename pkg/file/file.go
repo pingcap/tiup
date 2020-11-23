@@ -20,8 +20,6 @@ var (
 // e.g., backup meta.yaml as meta-2006-01-02T15:04:05Z07:00.yaml
 // backup the files in the same dir of path if backupDir is empty.
 func SaveFileWithBackup(path string, data []byte, backupDir string) error {
-	timestr := time.Now().Format(time.RFC3339Nano)
-
 	info, err := os.Stat(path)
 	if err != nil && !os.IsNotExist(err) {
 		return errors.AddStack(err)
@@ -46,6 +44,7 @@ func SaveFileWithBackup(path string, data []byte, backupDir string) error {
 		dir := filepath.Dir(path)
 
 		var backupName string
+		timestr := time.Now().Format(time.RFC3339Nano)
 		p := strings.Split(base, ".")
 		if len(p) == 1 {
 			backupName = base + "-" + timestr

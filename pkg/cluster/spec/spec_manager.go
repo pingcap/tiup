@@ -14,14 +14,16 @@
 package spec
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/file"
+	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"gopkg.in/yaml.v2"
@@ -122,12 +124,12 @@ func (s *SpecManager) Metadata(clusterName string, meta interface{}) error {
 
 	yamlFile, err := ioutil.ReadFile(fname)
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	err = yaml.Unmarshal(yamlFile, meta)
 	if err != nil {
-		return errors.AddStack(err)
+		return perrs.AddStack(err)
 	}
 
 	return nil
@@ -142,7 +144,7 @@ func (s *SpecManager) Exist(name string) (exist bool, err error) {
 		if os.IsNotExist(err) {
 			return false, nil
 		}
-		return false, errors.AddStack(err)
+		return false, perrs.AddStack(err)
 	}
 
 	return true, nil
@@ -160,7 +162,7 @@ func (s *SpecManager) List() (names []string, err error) {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
-		return nil, errors.AddStack(err)
+		return nil, perrs.AddStack(err)
 	}
 
 	for _, info := range fileInfos {
@@ -178,13 +180,15 @@ func (s *SpecManager) GetAllClusters() (map[string]Metadata, error) {
 	clusters := make(map[string]Metadata)
 	names, err := s.List()
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, perrs.AddStack(err)
 	}
 	for _, name := range names {
 		metadata := s.NewMetadata()
 		err = s.Metadata(name, metadata)
-		if err != nil {
-			return nil, errors.Trace(err)
+		// clusters with topology validation errors should also be listed
+		if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+			!errors.Is(perrs.Cause(err), ErrNoTiSparkMaster) {
+			return nil, perrs.Trace(err)
 		}
 		clusters[name] = metadata
 	}
