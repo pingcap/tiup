@@ -16,21 +16,18 @@ package v0manifest
 import (
 	"fmt"
 	"sort"
-	"strings"
 
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"golang.org/x/mod/semver"
 )
 
 type (
-	// Version represents a version string, like: v3.1.2
-	Version string
-
 	// VersionInfo represents the version information of component
 	VersionInfo struct {
-		Version   Version  `json:"version"`
-		Date      string   `json:"date"`
-		Entry     string   `json:"entry"`
-		Platforms []string `json:"platforms"`
+		Version   pkgver.Version `json:"version"`
+		Date      string         `json:"date"`
+		Entry     string         `json:"entry"`
+		Platforms []string       `json:"platforms"`
 	}
 
 	// VersionManifest represents the all versions information of specific component
@@ -42,26 +39,6 @@ type (
 	}
 )
 
-// IsValid checks whether is the version string valid
-func (v Version) IsValid() bool {
-	return v != "" && semver.IsValid(string(v))
-}
-
-// IsEmpty returns true if the `Version` is a empty string
-func (v Version) IsEmpty() bool {
-	return v == ""
-}
-
-// IsNightly returns true if the version is nightly
-func (v Version) IsNightly() bool {
-	return strings.Contains(string(v), "nightly")
-}
-
-// String implements the fmt.Stringer interface
-func (v Version) String() string {
-	return string(v)
-}
-
 // Sort sorts all versions
 func (manifest *VersionManifest) Sort() {
 	sort.Slice(manifest.Versions, func(i, j int) bool {
@@ -72,7 +49,7 @@ func (manifest *VersionManifest) Sort() {
 }
 
 // LatestVersion returns the latest stable version
-func (manifest *VersionManifest) LatestVersion() Version {
+func (manifest *VersionManifest) LatestVersion() pkgver.Version {
 	if len(manifest.Versions) > 0 {
 		return manifest.Versions[len(manifest.Versions)-1].Version
 	}
@@ -80,7 +57,7 @@ func (manifest *VersionManifest) LatestVersion() Version {
 }
 
 // ContainsVersion returns if the versions contain the specific version
-func (manifest *VersionManifest) ContainsVersion(version Version) bool {
+func (manifest *VersionManifest) ContainsVersion(version pkgver.Version) bool {
 	if version.IsNightly() && manifest.Nightly != nil {
 		return true
 	}
@@ -93,7 +70,7 @@ func (manifest *VersionManifest) ContainsVersion(version Version) bool {
 }
 
 // FindVersion returns the specific version info
-func (manifest *VersionManifest) FindVersion(version Version) (VersionInfo, bool) {
+func (manifest *VersionManifest) FindVersion(version pkgver.Version) (VersionInfo, bool) {
 	if version.IsNightly() {
 		if manifest.Nightly != nil {
 			return *manifest.Nightly, true

@@ -14,14 +14,14 @@
 package v0manifest
 
 import (
+	"testing"
+
 	. "github.com/pingcap/check"
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 )
 
-type manifestSuite struct{}
-
-var _ = Suite(&manifestSuite{})
-
-func (s *manifestSuite) TestVersions(c *C) {
+func TestVersions(t *testing.T) {
+	var c *C
 	vm := VersionManifest{
 		Description: "test",
 		Modified:    "test1",
@@ -61,17 +61,9 @@ func (s *manifestSuite) TestVersions(c *C) {
 		},
 	}
 
-	c.Assert(Version("").IsValid(), IsFalse)
-	c.Assert(Version("v3.0.").IsValid(), IsFalse)
-	c.Assert(Version("").IsEmpty(), IsTrue)
-	c.Assert(Version("").IsNightly(), IsFalse)
-	c.Assert(Version("nightly").IsNightly(), IsTrue)
-
-	c.Assert(Version("v3.0.0").String(), Equals, "v3.0.0")
-
 	vm.Sort()
-	c.Assert(vm.Versions[1].Version, Equals, Version("v0.0.2"))
-	c.Assert(vm.LatestVersion(), Equals, Version("v0.0.3"))
+	c.Assert(vm.Versions[1].Version, Equals, pkgver.Version("v0.0.2"))
+	c.Assert(vm.LatestVersion(), Equals, pkgver.Version("v0.0.3"))
 	c.Assert(vm.ContainsVersion("v0.0.3"), IsTrue)
 	c.Assert(vm.ContainsVersion("v0.0.4"), IsFalse)
 

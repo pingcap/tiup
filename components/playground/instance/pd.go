@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -66,7 +66,7 @@ func (inst *PDInstance) Name() string {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *PDInstance) Start(ctx context.Context, version v0manifest.Version) error {
+func (inst *PDInstance) Start(ctx context.Context, version pkgver.Version) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}

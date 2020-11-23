@@ -15,16 +15,13 @@ package meta
 
 import (
 	"errors"
+	"testing"
 
 	"github.com/pingcap/check"
 )
 
-type metaSuite struct {
-}
-
-var _ = check.Suite(&metaSuite{})
-
-func (s *metaSuite) TestValidateErrIs(c *check.C) {
+func TestValidateErrIs(t *testing.T) {
+	var c *check.C
 	err0 := &ValidateErr{
 		Type:   "dummy",
 		Target: "test",

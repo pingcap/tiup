@@ -20,8 +20,8 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/repository/model"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/version"
 )
 
@@ -79,7 +79,7 @@ func component2Diff(name string, baseItem v1manifest.ComponentItem, baseManifest
 		versions := additionManifest.VersionList(plat)
 		for ver, verinfo := range versions {
 			// Don't merge nightly this time
-			if v0manifest.Version(ver).IsNightly() {
+			if pkgver.Version(ver).IsNightly() {
 				continue
 			}
 

@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -71,7 +71,7 @@ func (d *Drainer) NodeID() string {
 }
 
 // Start implements Instance interface.
-func (d *Drainer) Start(ctx context.Context, version v0manifest.Version) error {
+func (d *Drainer) Start(ctx context.Context, version pkgver.Version) error {
 	if err := os.MkdirAll(d.Dir, 0755); err != nil {
 		return err
 	}
