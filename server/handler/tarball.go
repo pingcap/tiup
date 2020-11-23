@@ -42,23 +42,6 @@ func (h *tarballUploader) upload(r *http.Request) (*simpleResponse, statusError)
 	sid := mux.Vars(r)["sid"]
 	log.Infof("Uploading tarball, sid: %s", sid)
 
-	if err := h.sm.Begin(sid); err != nil {
-		if err == session.ErrorSessionConflict {
-			log.Warnf("Session already exists, this is a retransmission, try to restart session")
-			// Reset manifest to avoid conflict
-			if err := h.sm.Load(sid).ResetManifest(); err != nil {
-				log.Errorf("Failed to restart session: %s", err.Error())
-				return nil, ErrorInternalError
-			}
-			log.Infof("Restart session success")
-		} else {
-			log.Errorf("Failed to start session: %s", err.Error())
-			return nil, ErrorInternalError
-		}
-	}
-
-	txn := h.sm.Load(sid)
-
 	if err := r.ParseMultipartForm(MaxMemory); err != nil {
 		// TODO: log error here
 		return nil, ErrorInvalidTarball
@@ -71,7 +54,7 @@ func (h *tarballUploader) upload(r *http.Request) (*simpleResponse, statusError)
 	}
 	defer file.Close()
 
-	if err := txn.Write(handler.Filename, file); err != nil {
+	if err := h.sm.Write(sid, handler.Filename, file); err != nil {
 		log.Errorf("Error to write tarball: %s", err.Error())
 		return nil, ErrorInternalError
 	}

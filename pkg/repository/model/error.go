@@ -22,4 +22,8 @@ var (
 	ErrorConflict = errors.New("manifest conflict")
 	// ErrorMissingKey indicates that the private key is missing
 	ErrorMissingKey = errors.New("the private key is missing")
+	// ErrorMissingOwner indicates that the owner is not found
+	ErrorMissingOwner = errors.New("owner not found")
+	// ErrorWrongSignature indicates that the signature is not correct
+	ErrorWrongSignature = errors.New("the signature is not correct")
 )

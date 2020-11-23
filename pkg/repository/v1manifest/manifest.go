@@ -360,11 +360,11 @@ func ReadComponentManifest(input io.Reader, com *Component, item *ComponentItem,
 
 // ReadNoVerify will read role from input and will not do any validation or verification. It is very dangerous to use
 // this function and it should only be used to read trusted data from local storage.
-func ReadNoVerify(input io.Reader, role ValidManifest) error {
+func ReadNoVerify(input io.Reader, role ValidManifest) (*Manifest, error) {
 	decoder := json.NewDecoder(input)
 	var m Manifest
 	m.Signed = role
-	return decoder.Decode(&m)
+	return &m, decoder.Decode(&m)
 }
 
 // ReadManifest reads a manifest from input and validates it, the result is stored in role, which must be a pointer type.
@@ -414,6 +414,10 @@ func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifes
 
 // RenewManifest resets and extends the expire time of manifest
 func RenewManifest(m ValidManifest, startTime time.Time) {
+	// manifest with 0 version means it's unversioned
+	if m.Base().Version > 0 {
+		m.Base().Version++
+	}
 	m.Base().Expires = startTime.Add(
 		ManifestsConfig[m.Base().Ty].Expire,
 	).Format(time.RFC3339)

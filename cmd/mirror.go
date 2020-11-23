@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -27,16 +28,14 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
-	"github.com/pingcap/tiup/pkg/repository/remote"
+	"github.com/pingcap/tiup/pkg/repository/model"
+	ru "github.com/pingcap/tiup/pkg/repository/utils"
+	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-)
-
-var (
-	repoPath string
 )
 
 func newMirrorCmd() *cobra.Command {
@@ -48,16 +47,6 @@ it to create a private repository, or to add new component to an existing reposi
 The repository can be used either online or offline.
 It also provides some useful utilities to help managing keys, users and versions
 of components or the repository itself.`,
-		Args: func(cmd *cobra.Command, args []string) error {
-			if repoPath == "" {
-				var err error
-				repoPath, err = os.Getwd()
-				if err != nil {
-					return err
-				}
-			}
-			return nil
-		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return cmd.Help()
@@ -66,21 +55,16 @@ of components or the repository itself.`,
 		},
 	}
 
-	cmd.PersistentFlags().StringVar(&repoPath, "repo", "", "Path to the repository")
-
 	cmd.AddCommand(
 		newMirrorInitCmd(),
 		newMirrorSignCmd(),
-		newMirrorOwnerCmd(),
-		newMirrorCompCmd(),
-		newMirrorAddCompCmd(),
-		newMirrorYankCompCmd(),
-		newMirrorDelCompCmd(),
 		newMirrorGenkeyCmd(),
 		newMirrorCloneCmd(),
+		newMirrorMergeCmd(),
 		newMirrorPublishCmd(),
 		newMirrorSetCmd(),
 		newMirrorModifyCmd(),
+		newMirrorGrantCmd(),
 	)
 
 	return cmd
@@ -106,93 +90,6 @@ func newMirrorSignCmd() *cobra.Command {
 	}
 
 	return cmd
-}
-
-// the `mirror add` sub command
-func newMirrorAddCompCmd() *cobra.Command {
-	var nightly bool // if this is a nightly version
-	cmd := &cobra.Command{
-		Use:    "add <component-id> <platform> <version> <file>",
-		Short:  "Add a file to a component",
-		Long:   `Add a file to a component, and set its metadata of platform ID and version.`,
-		Hidden: true, // WIP, remove when it becomes working and stable
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) < 4 {
-				return cmd.Help()
-			}
-
-			return addCompFile(repoPath, args[0], args[1], args[2], args[3], nightly)
-		},
-	}
-
-	// If adding legacy nightly build (e.g., add a version from yesterday), just
-	// omit the flag to treat it as normal versions
-	cmd.Flags().BoolVar(&nightly, "nightly", false, "Mark this version as the latest nightly build")
-
-	return cmd
-}
-
-func addCompFile(repo, id, platform, version, file string, nightly bool) error {
-	// TODO
-	return nil
-}
-
-// the `mirror component` sub command
-func newMirrorCompCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:    "component <id> <description>",
-		Short:  "Create a new component in the repository",
-		Long:   `Create a new component in the repository, and sign with the local owner key.`,
-		Hidden: true, // WIP, remove when it becomes working and stable
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) < 2 {
-				return cmd.Help()
-			}
-
-			return createComp(repoPath, args[0], args[1])
-		},
-	}
-
-	return cmd
-}
-
-func createComp(repo, id, name string) error {
-	// TODO
-	return nil
-}
-
-// the `mirror del` sub command
-func newMirrorDelCompCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "del <component> [version]",
-		Short: "Delete a component from the repository",
-		Long: `Delete a component from the repository. If version is not specified, all versions
-of the given component will be deleted.
-Manifests and files of a deleted component will be removed from the repository,
-clients can no longer fetch the component, but files already download by clients
-may still be available for them.`,
-		Hidden: true, // WIP, remove when it becomes working and stable
-		RunE: func(cmd *cobra.Command, args []string) error {
-			compVer := ""
-			switch len(args) {
-			case 2:
-				compVer = args[1]
-			default:
-				return cmd.Help()
-			}
-
-			return delComp(repoPath, args[0], compVer)
-		},
-	}
-
-	return cmd
-}
-
-func delComp(repo, id, version string) error {
-	// TODO: implement the func
-
-	// TODO: check if version is the latest nightly, refuse if it is
-	return nil
 }
 
 // the `mirror set` sub command
@@ -221,69 +118,119 @@ func newMirrorSetCmd() *cobra.Command {
 	return cmd
 }
 
+// the `mirror grant` sub command
+func newMirrorGrantCmd() *cobra.Command {
+	name := ""
+	privPath := ""
+
+	cmd := &cobra.Command{
+		Use:   "grant <id>",
+		Short: "grant a new owner",
+		Long:  "grant a new owner to current mirror",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) < 1 {
+				return cmd.Help()
+			}
+
+			id := args[0]
+			if name == "" {
+				fmt.Printf("The --name is not specified, using %s as default\n", id)
+				name = id
+			}
+
+			// the privPath can point to a public key becase the Public method of KeyInfo works on both priv and pub key
+			privKey, err := loadPrivKey(privPath)
+			if err != nil {
+				return err
+			}
+			pubKey, err := privKey.Public()
+			if err != nil {
+				return err
+			}
+
+			env := environment.GlobalEnv()
+			return env.V1Repository().Mirror().Grant(id, name, pubKey)
+		},
+	}
+
+	cmd.Flags().StringVarP(&name, "name", "n", "", "Specify the name of the owner, default: id of the owner")
+	cmd.Flags().StringVarP(&privPath, "key", "k", "", "Specify the private key path of the owner")
+
+	return cmd
+}
+
 // the `mirror modify` sub command
 func newMirrorModifyCmd() *cobra.Command {
 	var privPath string
-	endpoint := ""
 	desc := ""
 	standalone := false
 	hidden := false
 	yanked := false
 
 	cmd := &cobra.Command{
-		Use:  "modify <component>[:version] [flags]",
-		Long: "modify component attributes (hidden, standalone, yanked)",
+		Use:   "modify <component>[:version] [flags]",
+		Short: "Modify published component",
+		Long:  "Modify component attributes (hidden, standalone, yanked)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
 			}
+
+			component := args[0]
+
 			env := environment.GlobalEnv()
-			if privPath == "" {
-				privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
-			}
 
-			// Get the private key
-			f, err := os.Open(privPath)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-
-			ki := v1manifest.KeyInfo{}
-			if err := json.NewDecoder(f).Decode(&ki); err != nil {
-				return err
-			}
-
-			comp, ver := environment.ParseCompVersion(args[0])
+			comp, ver := environment.ParseCompVersion(component)
 			m, err := env.V1Repository().FetchComponentManifest(comp, true)
 			if err != nil {
 				return err
 			}
 
-			if endpoint == "" {
-				endpoint = environment.Mirror()
+			v1manifest.RenewManifest(m, time.Now())
+			if desc != "" {
+				m.Description = desc
 			}
-			e := remote.NewEditor(endpoint, comp).WithDesc(desc).WithVersion(ver.String())
+
 			flagSet := set.NewStringSet()
 			cmd.Flags().Visit(func(f *pflag.Flag) {
 				flagSet.Insert(f.Name)
 			})
-			if flagSet.Exist("standalone") {
-				e.Standalone(standalone)
-			}
-			if flagSet.Exist("hide") {
-				e.Hide(hidden)
-			}
-			if flagSet.Exist("yank") {
-				e.Yank(yanked)
+
+			publishInfo := &model.PublishInfo{}
+			if ver == "" {
+				if flagSet.Exist("standalone") {
+					publishInfo.Stand = &standalone
+				}
+				if flagSet.Exist("hide") {
+					publishInfo.Hide = &hidden
+				}
+				if flagSet.Exist("yank") {
+					publishInfo.Yank = &yanked
+				}
+			} else if flagSet.Exist("yank") {
+				if v0manifest.Version(ver).IsNightly() {
+					return errors.New("nightly version can't be yanked")
+				}
+				for p := range m.Platforms {
+					vi, ok := m.Platforms[p][ver.String()]
+					if !ok {
+						continue
+					}
+					vi.Yanked = yanked
+					m.Platforms[p][ver.String()] = vi
+				}
 			}
 
-			return e.Sign(&ki, m)
+			manifest, err := sign(privPath, m)
+			if err != nil {
+				return err
+			}
+
+			return env.V1Repository().Mirror().Publish(manifest, publishInfo)
 		},
 	}
 
 	cmd.Flags().StringVarP(&privPath, "key", "k", "", "private key path")
-	cmd.Flags().StringVarP(&endpoint, "endpoint", "", endpoint, "endpoint of the server")
 	cmd.Flags().StringVarP(&desc, "desc", "", desc, "description of the component")
 	cmd.Flags().BoolVarP(&standalone, "standalone", "", standalone, "can this component run directly")
 	cmd.Flags().BoolVarP(&hidden, "hide", "", hidden, "is this component visible in list")
@@ -291,10 +238,72 @@ func newMirrorModifyCmd() *cobra.Command {
 	return cmd
 }
 
+func loadPrivKey(privPath string) (*v1manifest.KeyInfo, error) {
+	env := environment.GlobalEnv()
+	if privPath == "" {
+		privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
+	}
+
+	// Get the private key
+	f, err := os.Open(privPath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	ki := v1manifest.KeyInfo{}
+	if err := json.NewDecoder(f).Decode(&ki); err != nil {
+		return nil, errors.Annotate(err, "decode key")
+	}
+
+	return &ki, nil
+}
+
+func loadPrivKeys(keysDir string) (map[string]*v1manifest.KeyInfo, error) {
+	keys := map[string]*v1manifest.KeyInfo{}
+
+	err := filepath.Walk(keysDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		ki, err := loadPrivKey(path)
+		if err != nil {
+			return err
+		}
+
+		id, err := ki.ID()
+		if err != nil {
+			return err
+		}
+
+		keys[id] = ki
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return keys, nil
+}
+
+func sign(privPath string, signed v1manifest.ValidManifest) (*v1manifest.Manifest, error) {
+	ki, err := loadPrivKey(privPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return v1manifest.SignManifest(signed, ki)
+}
+
 // the `mirror publish` sub command
 func newMirrorPublishCmd() *cobra.Command {
 	var privPath string
-	endpoint := environment.Mirror()
 	goos := runtime.GOOS
 	goarch := runtime.GOARCH
 	desc := ""
@@ -310,64 +319,53 @@ func newMirrorPublishCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
+			component, version, tarpath, entry := args[0], args[1], args[2], args[3]
+
 			if err := validatePlatform(goos, goarch); err != nil {
 				return err
 			}
 
-			env := environment.GlobalEnv()
-			if privPath == "" {
-				privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
-			}
-
-			// Get the private key
-			f, err := os.Open(privPath)
+			hashes, length, err := ru.HashFile(tarpath)
 			if err != nil {
 				return err
 			}
-			defer f.Close()
 
-			ki := v1manifest.KeyInfo{}
-			if err := json.NewDecoder(f).Decode(&ki); err != nil {
-				return err
+			tarfile, err := os.Open(tarpath)
+			if err != nil {
+				return errors.Annotatef(err, "open tarball: %s", tarpath)
+			}
+			defer tarfile.Close()
+
+			publishInfo := &model.PublishInfo{
+				ComponentData: &model.TarInfo{Reader: tarfile, Name: fmt.Sprintf("%s-%s-%s-%s.tar.gz", component, version, goos, goarch)},
 			}
 
 			flagSet := set.NewStringSet()
 			cmd.Flags().Visit(func(f *pflag.Flag) {
 				flagSet.Insert(f.Name)
 			})
-			m, err := env.V1Repository().FetchComponentManifest(args[0], true)
+			env := environment.GlobalEnv()
+			m, err := env.V1Repository().FetchComponentManifest(component, true)
 			if err != nil {
 				fmt.Printf("Fetch local manifest: %s\n", err.Error())
 				fmt.Printf("Failed to load component manifest, create a new one\n")
+				publishInfo.Stand = &standalone
+				publishInfo.Hide = &hidden
 			} else if flagSet.Exist("standalone") || flagSet.Exist("hide") {
 				fmt.Println("This is not a new component, --standalone and --hide flag will be omited")
 			}
 
-			t := remote.NewTransporter(endpoint, args[0], args[1], args[3]).WithDesc(desc).WithOS(goos).WithArch(goarch)
-			if m == nil && standalone {
-				t = t.Standalone()
-			}
-			if m == nil && hidden {
-				t = t.Hide()
-			}
+			m = repository.UpdateManifestForPublish(m, component, version, entry, goos, goarch, desc, v1manifest.FileHash{
+				Hashes: hashes,
+				Length: uint(length),
+			})
 
-			if err := t.Open(args[2]); err != nil {
-				return err
-			}
-			defer t.Close()
-
-			if err := t.Upload(); err != nil {
-				fmt.Printf("Failed to upload component: %s\n", err.Error())
+			manifest, err := sign(privPath, m)
+			if err != nil {
 				return err
 			}
 
-			if err := t.Sign(&ki, m); err != nil {
-				fmt.Printf("Sign component manifest: %s\n", err.Error())
-				return err
-			}
-			fmt.Printf("Upload %s(%s) for platform %s/%s success\n", args[0], args[1], goos, goarch)
-
-			return nil
+			return env.V1Repository().Mirror().Publish(manifest, publishInfo)
 		},
 	}
 
@@ -375,7 +373,6 @@ func newMirrorPublishCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&goos, "os", "", goos, "the target operation system")
 	cmd.Flags().StringVarP(&goarch, "arch", "", goarch, "the target system architecture")
 	cmd.Flags().StringVarP(&desc, "desc", "", desc, "description of the component")
-	cmd.Flags().StringVarP(&endpoint, "endpoint", "", endpoint, "endpoint of the server")
 	cmd.Flags().BoolVarP(&standalone, "standalone", "", standalone, "can this component run directly")
 	cmd.Flags().BoolVarP(&hidden, "hide", "", hidden, "is this component invisible on listing")
 	return cmd
@@ -400,32 +397,28 @@ func newMirrorGenkeyCmd() *cobra.Command {
 	var (
 		showPublic bool
 		saveKey    bool
-		privPath   string
+		name       string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "genkey",
 		Short: "Generate a new key pair",
 		Long:  `Generate a new key pair that can be used to sign components.`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			env := environment.GlobalEnv()
-			privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
+			privPath := env.Profile().Path(localdata.KeyInfoParentDir, name+".json")
 			keyDir := filepath.Dir(privPath)
 			if utils.IsNotExist(keyDir) {
-				return os.Mkdir(keyDir, 0755)
-			}
-			return nil
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if showPublic {
-				f, err := os.Open(privPath)
-				if err != nil {
-					return err
+				if err := os.Mkdir(keyDir, 0755); err != nil {
+					return errors.Annotate(err, "create private key dir")
 				}
-				defer f.Close()
+			}
 
-				ki := v1manifest.KeyInfo{}
-				if err := json.NewDecoder(f).Decode(&ki); err != nil {
+			var ki *v1manifest.KeyInfo
+			var err error
+			if showPublic {
+				ki, err = loadPrivKey(privPath)
+				if err != nil {
 					return err
 				}
 				pki, err := ki.Public()
@@ -442,55 +435,41 @@ func newMirrorGenkeyCmd() *cobra.Command {
 				}
 
 				fmt.Printf("KeyID: %s\nKeyContent: \n%s\n", id, string(content))
-
-				// TODO: suggest key type from input, there will also be owner keys
-				if saveKey {
-					pubKey, err := ki.Public()
-					if err != nil {
-						return err
-					}
-					if err = v1manifest.SaveKeyInfo(pubKey, "root", ""); err != nil {
-						return err
-					}
-					fmt.Printf("public key have been write to current working dir\n")
+			} else {
+				if utils.IsExist(privPath) {
+					fmt.Println("Key already exists, skipped")
+					return nil
 				}
-				return nil
-			}
 
-			if utils.IsExist(privPath) {
-				fmt.Println("Key already exists, skipped")
-				return nil
-			}
-
-			key, err := v1manifest.GenKeyInfo()
-			if err != nil {
-				return err
-			}
-
-			f, err := os.Create(privPath)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-
-			// set private key permission
-			if err = f.Chmod(0600); err != nil {
-				return err
-			}
-
-			if err := json.NewEncoder(f).Encode(key); err != nil {
-				return err
-			}
-
-			fmt.Printf("private key have been write to %s\n", privPath)
-
-			// TODO: suggest key type from input, there will also be owner keys
-			if saveKey {
-				pubKey, err := key.Public()
+				ki, err = v1manifest.GenKeyInfo()
 				if err != nil {
 					return err
 				}
-				if err = v1manifest.SaveKeyInfo(pubKey, "root", ""); err != nil {
+
+				f, err := os.Create(privPath)
+				if err != nil {
+					return err
+				}
+				defer f.Close()
+
+				// set private key permission
+				if err = f.Chmod(0600); err != nil {
+					return err
+				}
+
+				if err := json.NewEncoder(f).Encode(ki); err != nil {
+					return err
+				}
+
+				fmt.Printf("private key have been write to %s\n", privPath)
+			}
+
+			if saveKey {
+				pubKey, err := ki.Public()
+				if err != nil {
+					return err
+				}
+				if err = v1manifest.SaveKeyInfo(pubKey, "public", ""); err != nil {
 					return err
 				}
 				fmt.Printf("public key have been write to current working dir\n")
@@ -498,8 +477,10 @@ func newMirrorGenkeyCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&showPublic, "public", "p", showPublic, fmt.Sprintf("show public content of %s", privPath))
+
+	cmd.Flags().BoolVarP(&showPublic, "public", "p", showPublic, "show public content")
 	cmd.Flags().BoolVar(&saveKey, "save", false, "Save public key to a file at current working dir")
+	cmd.Flags().StringVarP(&name, "name", "n", "private", "the file name of the key")
 
 	return cmd
 }
@@ -510,14 +491,15 @@ func newMirrorInitCmd() *cobra.Command {
 		keyDir string // Directory to write genreated key files
 	)
 	cmd := &cobra.Command{
-		Use:   "init [path]",
+		Use:   "init <path>",
 		Short: "Initialize an empty repository",
 		Long: `Initialize an empty TiUP repository at given path. If path is not specified, the
 current working directory (".") will be used.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 1 {
-				repoPath = args[0]
+			if len(args) != 1 {
+				return cmd.Help()
 			}
+			repoPath := args[0]
 
 			// create the target path if not exist
 			if utils.IsNotExist(repoPath) {
@@ -535,6 +517,9 @@ current working directory (".") will be used.`,
 				return errors.Errorf("the target path '%s' is not an empty directory", repoPath)
 			}
 
+			if keyDir == "" {
+				keyDir = path.Join(repoPath, "keys")
+			}
 			return initRepo(repoPath, keyDir)
 		},
 	}
@@ -548,61 +533,44 @@ func initRepo(path, keyDir string) error {
 	return v1manifest.Init(path, keyDir, time.Now().UTC())
 }
 
-// the `mirror owner` sub command
-func newMirrorOwnerCmd() *cobra.Command {
+// the `mirror merge` sub command
+func newMirrorMergeCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "owner <id> <name>",
-		Short: "Create a new owner for the repository",
-		Long: `Create a new owner role for the repository, the owner can then perform management
-actions on authorized resources.`,
-		Hidden: true, // WIP, remove when it becomes working and stable
+		Use: "merge <base> <mirror-dir-1> [mirror-dir-N]",
+		Example: `	tiup mirror merge tidb-community-v4.0.1					# merge v4.0.1 into current mirror
+	tiup mirror merge tidb-community-v4.0.1 tidb-community-v4.0.2		# merge v4.0.1 and v4.0.2 into current mirror`,
+		Short: "Merge two or more offline mirror",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) < 2 {
+			if len(args) < 1 {
 				return cmd.Help()
 			}
 
-			return createOwner(repoPath, args[0], args[1])
+			sources := args
+
+			env := environment.GlobalEnv()
+			baseMirror := env.V1Repository().Mirror()
+
+			sourceMirrors := []repository.Mirror{}
+			for _, source := range sources {
+				sourceMirror := repository.NewMirror(source, repository.MirrorOptions{})
+				if err := sourceMirror.Open(); err != nil {
+					return err
+				}
+				defer sourceMirror.Close()
+
+				sourceMirrors = append(sourceMirrors, sourceMirror)
+			}
+
+			keys, err := loadPrivKeys(env.Profile().Path(localdata.KeyInfoParentDir))
+			if err != nil {
+				return err
+			}
+
+			return repository.MergeMirror(keys, baseMirror, sourceMirrors...)
 		},
 	}
 
 	return cmd
-}
-
-func createOwner(repo, id, name string) error {
-	// TODO
-	return nil
-}
-
-// the `mirror yank` sub command
-func newMirrorYankCompCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "yank <component> [version]",
-		Short: "Yank a component in the repository",
-		Long: `Yank a component in the repository. If version is not specified, all versions
-of the given component will be yanked.
-A yanked component is still in the repository, but not visible to client, and is
-no longer considered stable to use. A yanked component is expected to be removed
-from the repository in the future.`,
-		Hidden: true, // WIP, remove when it becomes working and stable
-		RunE: func(cmd *cobra.Command, args []string) error {
-			compVer := ""
-			switch len(args) {
-			case 2:
-				compVer = args[1]
-			default:
-				return cmd.Help()
-			}
-
-			return yankComp(repoPath, args[0], compVer)
-		},
-	}
-
-	return cmd
-}
-
-func yankComp(repo, id, version string) error {
-	// TODO
-	return nil
 }
 
 // the `mirror clone` sub command
