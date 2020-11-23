@@ -250,6 +250,12 @@ func (i *MonitorInstance) InitConfig(
 		}
 	}
 
+	if i.topo.Type() == TopoTypeDM {
+		if err := i.installRules(e, paths.Deploy, clusterVersion); err != nil {
+			return errors.Annotate(err, "install rules")
+		}
+	}
+
 	if err := i.initRules(e, spec, paths); err != nil {
 		return errors.AddStack(err)
 	}
@@ -259,6 +265,50 @@ func (i *MonitorInstance) InitConfig(
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "prometheus.yml")
 	return e.Transfer(fp, dst, false)
+}
+
+// installRules is used by dm cluster
+func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVersion string) error {
+	tmp := filepath.Join(deployDir, "_tiup_tmp")
+	_, stderr, err := e.Execute(fmt.Sprintf("mkdir -p %s", tmp), false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	srcPath := PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
+	dstPath := filepath.Join(tmp, filepath.Base(srcPath))
+
+	err = e.Transfer(srcPath, dstPath, false)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	cmd := fmt.Sprintf(`tar --no-same-owner -zxf %s -C %s && rm %s`, dstPath, tmp, dstPath)
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	// copy dm-master/conf/*.rules.yml
+	targetDir := filepath.Join(deployDir, "bin", "prometheus")
+	_, stderr, err = e.Execute(fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*.rules.yml", targetDir), false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	cmd = fmt.Sprintf("cp %s/dm-master/conf/*.rules.yml %s", tmp, targetDir)
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	cmd = fmt.Sprintf("rm -rf %s", tmp)
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	return nil
 }
 
 func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, paths meta.DirPaths) error {
@@ -293,6 +343,6 @@ func (i *MonitorInstance) ScaleConfig(
 ) error {
 	s := i.topo
 	defer func() { i.topo = s }()
-	i.topo = mustBeClusterTopo(topo)
+	i.topo = topo
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }

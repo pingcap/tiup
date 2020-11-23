@@ -54,8 +54,8 @@ total_sub_one=12
 echo "start scale in dm-master"
 tiup-dm --yes scale-in $name -N $ipprefix.101:8261
 wait_instance_num_reach $name $total_sub_one false
-echo "start scale out dm-master"
 
+echo "start scale out dm-master"
 topo_master=./topo/full_scale_in_dm-master.yaml
 sed "s/__IPPREFIX__/$ipprefix/g" $topo_master.tpl > $topo_master
 tiup-dm --yes scale-out $name $topo_master
@@ -68,6 +68,15 @@ echo "start scale out dm-worker"
 topo_worker=./topo/full_scale_in_dm-worker.yaml
 sed "s/__IPPREFIX__/$ipprefix/g" $topo_worker.tpl > $topo_worker
 yes | tiup-dm scale-out $name $topo_worker
+
+echo "start scale in grafana"
+yes | tiup-dm scale-in $name -N $ipprefix.101:3000
+wait_instance_num_reach $name $total_sub_one
+
+echo "start scale out grafana"
+topo_grafana=./topo/full_scale_in_grafana.yaml
+sed "s/__IPPREFIX__/$ipprefix/g" $grafana.tpl > $grafana
+yes | tiup-dm scale-out $name $grafana
 
 # test create a task and can replicate data
 ./script/task/run.sh
