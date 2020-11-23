@@ -794,6 +794,22 @@ func (s *Specification) validateTLSEnabled() error {
 	return nil
 }
 
+func (s *Specification) validatePDNames() error {
+	// check pdserver name
+	pdNames := set.NewStringSet()
+	for _, pd := range s.PDServers {
+		if pd.Name == "" {
+			continue
+		}
+
+		if pdNames.Exist(pd.Name) {
+			return errors.Errorf("component pd_servers.name is not supported duplicated, the name %s is duplicated", pd.Name)
+		}
+		pdNames.Insert(pd.Name)
+	}
+	return nil
+}
+
 // Validate validates the topology specification and produce error if the
 // specification invalid (e.g: port conflicts or directory conflicts)
 func (s *Specification) Validate() error {
@@ -814,6 +830,10 @@ func (s *Specification) Validate() error {
 	}
 
 	if err := s.validateTiSparkSpec(); err != nil {
+		return err
+	}
+
+	if err := s.validatePDNames(); err != nil {
 		return err
 	}
 
