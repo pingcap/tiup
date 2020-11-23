@@ -76,15 +76,15 @@ func (s *fsSyncer) Sync(srcDir string) error {
 	return nil
 }
 
-type qcloudSyncer struct {
+type externalSyncer struct {
 	script string
 }
 
-func newQcloudSyncer(scriptPath string) Syncer {
-	return &qcloudSyncer{scriptPath}
+func newExternalSyncer(scriptPath string) Syncer {
+	return &externalSyncer{scriptPath}
 }
 
-func (s *qcloudSyncer) Sync(srcDir string) error {
+func (s *externalSyncer) Sync(srcDir string) error {
 	cmd := exec.Command(s.script, srcDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

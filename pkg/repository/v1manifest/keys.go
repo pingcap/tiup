@@ -96,6 +96,15 @@ func (ki *KeyInfo) Signature(payload []byte) (string, error) {
 	return pk.Signature(payload)
 }
 
+// SignManifest wrap Signature with the param manifest
+func (ki *KeyInfo) SignManifest(m ValidManifest) (string, error) {
+	payload, err := cjson.Marshal(m)
+	if err != nil {
+		return "", errors.Annotate(err, "marshal for signature")
+	}
+	return ki.Signature(payload)
+}
+
 // Verify check the signature is right
 func (ki *KeyInfo) Verify(payload []byte, sig string) error {
 	pk, err := ki.publicKey()
