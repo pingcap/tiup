@@ -51,6 +51,7 @@ func SaveFileWithBackup(path string, data []byte, backupDir string) error {
 		dir := filepath.Dir(path)
 
 		var backupName string
+		timestr := time.Now().Format(time.RFC3339Nano)
 		p := strings.Split(base, ".")
 		if len(p) == 1 {
 			backupName = base + "-" + timestr

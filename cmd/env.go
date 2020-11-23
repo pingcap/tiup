@@ -28,6 +28,8 @@ var envList = []string{
 	localdata.EnvNameSSHPassPrompt,
 	localdata.EnvNameSSHPath,
 	localdata.EnvNameSCPPath,
+	localdata.EnvNameKeepSourceTarget,
+	localdata.EnvNameMirrorSyncScript,
 	localdata.EnvNameLogPath,
 }
 
