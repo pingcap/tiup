@@ -175,7 +175,7 @@ func (l *localFilesystem) Publish(manifest *v1manifest.Manifest, info model.Comp
 	return nil
 }
 
-// Introduce implements the model.Backend interface
+// Grant implements the model.Backend interface
 func (l *localFilesystem) Grant(id, name string, key *v1manifest.KeyInfo) error {
 	txn, err := store.New(l.rootPath, l.upstream).Begin()
 	if err != nil {
@@ -336,7 +336,7 @@ func (l *httpMirror) prepareURL(resource string) string {
 	return url
 }
 
-// Introduce implements the model.Backend interface
+// Grant implements the model.Backend interface
 func (l *httpMirror) Grant(id, name string, key *v1manifest.KeyInfo) error {
 	return errors.Errorf("introduce a fresher via the internet is not allowd, please set you mirror to a local one")
 }
@@ -499,7 +499,7 @@ func (l *MockMirror) Download(resource, targetDir string) error {
 	return err
 }
 
-// Introduce implements the model.Backend interface
+// Grant implements the model.Backend interface
 func (l *MockMirror) Grant(id, name string, key *v1manifest.KeyInfo) error {
 	return nil
 }

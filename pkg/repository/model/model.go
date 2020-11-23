@@ -43,7 +43,7 @@ func New(txn store.FsTxn, keys map[string]*v1manifest.KeyInfo) Backend {
 	return &model{txn, keys}
 }
 
-// Introduce implements Backend
+// Grant implements Backend
 func (m *model) Grant(id, name string, key *v1manifest.KeyInfo) error {
 	initTime := time.Now()
 
