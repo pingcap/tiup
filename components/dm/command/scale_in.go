@@ -46,7 +46,7 @@ func newScaleInCmd() *cobra.Command {
 				b.Func(
 					fmt.Sprintf("ScaleInCluster: options=%+v", gOpt),
 					func(ctx *task.Context) error {
-						return ScaleInDMCluster(ctx, metadata.Topology, gOpt, ctx.PublicKeyPath)
+						return ScaleInDMCluster(ctx, metadata.Topology, gOpt)
 					},
 				).Serial(dmtask.NewUpdateDMMeta(clusterName, metadata, gOpt.Nodes))
 			}
@@ -77,7 +77,6 @@ func ScaleInDMCluster(
 	getter operator.ExecutorGetter,
 	topo *dm.Specification,
 	options operator.Options,
-	publicKeyPath string,
 ) error {
 	// instances by uuid
 	instances := map[string]dm.Instance{}

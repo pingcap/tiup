@@ -73,9 +73,8 @@ func ScaleIn(
 	cluster *spec.Specification,
 	options Options,
 	tlsCfg *tls.Config,
-	publicKeyPath string,
 ) error {
-	return ScaleInCluster(getter, cluster, options, tlsCfg, publicKeyPath)
+	return ScaleInCluster(getter, cluster, options, tlsCfg)
 }
 
 // ScaleInCluster scales in the cluster
@@ -84,7 +83,6 @@ func ScaleInCluster(
 	cluster *spec.Specification,
 	options Options,
 	tlsCfg *tls.Config,
-	publicKeyPath string,
 ) error {
 	// instances by uuid
 	instances := map[string]spec.Instance{}

@@ -477,9 +477,8 @@ func DestroyTombstone(
 	returNodesOnly bool,
 	options Options,
 	tlsCfg *tls.Config,
-	publicKey string,
 ) (nodes []string, err error) {
-	return DestroyClusterTombstone(getter, cluster, returNodesOnly, options, tlsCfg, publicKey)
+	return DestroyClusterTombstone(getter, cluster, returNodesOnly, options, tlsCfg)
 }
 
 // DestroyClusterTombstone remove the tombstone node in spec and destroy them.
@@ -490,7 +489,6 @@ func DestroyClusterTombstone(
 	returNodesOnly bool,
 	options Options,
 	tlsCfg *tls.Config,
-	publicKey string,
 ) (nodes []string, err error) {
 	instCount := map[string]int{}
 	for _, component := range cluster.ComponentsByStartOrder() {

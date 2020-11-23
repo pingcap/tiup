@@ -63,13 +63,13 @@ func (c *ClusterOperate) Execute(ctx *Context) error {
 			return errors.Annotate(err, "failed to destroy")
 		}
 	case operator.DestroyTombstoneOperation:
-		_, err := operator.DestroyTombstone(ctx, c.spec, false, c.options, c.tlsCfg, ctx.PublicKeyPath)
+		_, err := operator.DestroyTombstone(ctx, c.spec, false, c.options, c.tlsCfg)
 		if err != nil {
 			return errors.Annotate(err, "failed to destroy")
 		}
 	// print nothing
 	case operator.ScaleInOperation:
-		err := operator.ScaleIn(ctx, c.spec, c.options, c.tlsCfg, ctx.PublicKeyPath)
+		err := operator.ScaleIn(ctx, c.spec, c.options, c.tlsCfg)
 		if err != nil {
 			return errors.Annotate(err, "failed to scale in")
 		}
