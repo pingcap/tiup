@@ -34,8 +34,6 @@ func SaveFileWithBackup(path string, data []byte, backupDir string) error {
 	fileLock(path).Lock()
 	defer fileLock(path).Unlock()
 
-	timestr := time.Now().Format(time.RFC3339Nano)
-
 	info, err := os.Stat(path)
 	if err != nil && !os.IsNotExist(err) {
 		return errors.AddStack(err)

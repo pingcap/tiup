@@ -17,7 +17,6 @@ import (
 	"bufio"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"sort"
