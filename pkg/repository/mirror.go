@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -29,6 +28,7 @@ import (
 	"github.com/cavaliercoder/grab"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/utils/rand"
 	"github.com/pingcap/tiup/pkg/verbose"
 )
 

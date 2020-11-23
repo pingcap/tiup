@@ -88,7 +88,6 @@ func (s *fileSuite) TestConcurrentSaveFileWithBackup(c *check.C) {
 	name := "meta.yaml"
 	data := []byte("concurrent-save-file-with-backup")
 
-	rand.Seed(time.Now().UnixNano())
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
