@@ -14,12 +14,15 @@
 package session
 
 import (
-	"errors"
+	"io"
+	"os"
+	"path"
 	"sync"
 	"time"
 
+	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger/log"
-	"github.com/pingcap/tiup/server/store"
 )
 
 // Max alive time of a session
@@ -32,64 +35,100 @@ var (
 
 // Manager provide methods to operates on upload sessions
 type Manager interface {
-	Begin(id string) error
-	Load(id string) store.FsTxn
+	Write(id string, name string, reader io.Reader) error
+	Read(id string) (string, io.ReadCloser, error)
 	Delete(id string)
 }
 
 type sessionManager struct {
-	store store.Store
-	txns  *sync.Map
+	m *sync.Map
 }
 
 // New returns a session manager
-func New(store store.Store, txns *sync.Map) Manager {
+func New() Manager {
 	return &sessionManager{
-		store: store,
-		txns:  txns,
+		m: &sync.Map{},
 	}
 }
 
-// Begin start a new session and returns the session id
-func (s *sessionManager) Begin(id string) error {
-	if s.Load(id) != nil {
+// Write start a new session
+func (s *sessionManager) Write(id, name string, reader io.Reader) error {
+	if _, ok := s.m.Load(id); ok {
 		return ErrorSessionConflict
 	}
 	log.Debugf("Begin new session: %s", id)
-	txn, err := s.store.Begin()
-	if err != nil {
-		return err
-	}
-	s.txns.Store(id, txn)
+	s.m.Store(id, name)
 	go s.gc(id)
+
+	dataDir := os.Getenv(localdata.EnvNameComponentDataDir)
+	if dataDir == "" {
+		return errors.Errorf("cannot read environment variable %s", localdata.EnvNameComponentDataDir)
+	}
+
+	pkgDir := path.Join(dataDir, "packages")
+	if err := os.MkdirAll(pkgDir, 0755); err != nil {
+		return errors.Annotate(err, "create package dir")
+	}
+
+	filePath := path.Join(pkgDir, id+"_"+name)
+	file, err := os.Create(filePath)
+	if err != nil {
+		return errors.Annotate(err, "create tar file")
+	}
+	defer file.Close()
+
+	if _, err := io.Copy(file, reader); err != nil {
+		return errors.Annotate(err, "write tar file")
+	}
+
 	return nil
 }
 
-func (s *sessionManager) gc(id string) {
-	time.Sleep(maxAliveTime)
+// Read returns the tar file of given session
+func (s *sessionManager) Read(id string) (string, io.ReadCloser, error) {
+	n, ok := s.m.Load(id)
+	if !ok {
+		return "", nil, nil
+	}
+	name := n.(string)
 
-	txn := s.Load(id)
-	if txn == nil {
-		return
+	dataDir := os.Getenv(localdata.EnvNameComponentDataDir)
+	if dataDir == "" {
+		return "", nil, errors.Errorf("cannot read environment variable %s", localdata.EnvNameComponentDataDir)
 	}
 
-	s.Delete(id)
-	if err := txn.Rollback(); err != nil {
-		log.Errorf("Rollback: %s", err.Error())
+	pkgDir := path.Join(dataDir, "packages")
+	if err := os.MkdirAll(pkgDir, 0755); err != nil {
+		return "", nil, errors.Annotate(err, "create package dir")
 	}
-}
 
-// Get returns the txn of given session
-func (s *sessionManager) Load(id string) store.FsTxn {
-	txn, ok := s.txns.Load(id)
-	if ok {
-		return txn.(store.FsTxn)
+	filePath := path.Join(pkgDir, id+"_"+name)
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", nil, errors.Annotate(err, "open tar file")
 	}
-	return nil
+	return name, file, nil
 }
 
 // Delele delete a session
 func (s *sessionManager) Delete(id string) {
 	log.Debugf("Delete session: %s", id)
-	s.txns.Delete(id)
+	n, ok := s.m.Load(id)
+	if !ok {
+		return
+	}
+	name := n.(string)
+	os.Remove(path.Join(os.Getenv(localdata.EnvNameComponentDataDir), "packages", id+"_"+name))
+	s.m.Delete(id)
+}
+
+func (s *sessionManager) gc(id string) {
+	time.Sleep(maxAliveTime)
+
+	if _, ok := s.m.Load(id); !ok {
+		return
+	}
+
+	s.Delete(id)
 }
