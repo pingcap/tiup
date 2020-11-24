@@ -25,8 +25,8 @@ import (
 
 	"github.com/pingcap/errors"
 	ru "github.com/pingcap/tiup/pkg/repository/utils"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
@@ -435,7 +435,7 @@ func combineVersions(versions *[]string,
 					// Use the latest stable versionS if the selected version doesn't exist in specific platform
 					var latest string
 					for v := range versions {
-						if v0manifest.Version(v).IsNightly() {
+						if pkgver.Version(v).IsNightly() {
 							continue
 						}
 						if latest == "" || semver.Compare(v, latest) > 0 {

@@ -31,7 +31,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/telemetry"
 	"golang.org/x/mod/semver"
 )
@@ -134,7 +134,7 @@ func base62Tag() string {
 type PrepareCommandParams struct {
 	Ctx         context.Context
 	Component   string
-	Version     v0manifest.Version
+	Version     pkgver.Version
 	BinPath     string
 	Tag         string
 	InstanceDir string
@@ -241,7 +241,7 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 	return c, nil
 }
 
-func launchComponent(ctx context.Context, component string, version v0manifest.Version, binPath string, tag string, args []string, env *environment.Environment) (*localdata.Process, error) {
+func launchComponent(ctx context.Context, component string, version pkgver.Version, binPath string, tag string, args []string, env *environment.Environment) (*localdata.Process, error) {
 	instanceDir := os.Getenv(localdata.EnvNameInstanceDataDir)
 	if instanceDir == "" {
 		// Generate a tag for current instance if the tag doesn't specified

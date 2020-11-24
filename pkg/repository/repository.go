@@ -20,6 +20,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 )
 
 // Repository represents a components repository. All logic concerning manifests and the locations of tarballs
@@ -88,7 +89,7 @@ func (r *Repository) ComponentVersions(component string) (*v0manifest.VersionMan
 }
 
 // LatestStableVersion returns the latest stable version of specific component
-func (r *Repository) LatestStableVersion(component string) (v0manifest.Version, error) {
+func (r *Repository) LatestStableVersion(component string) (pkgver.Version, error) {
 	ver, err := r.ComponentVersions(component)
 	if err != nil {
 		return "", err
@@ -103,7 +104,7 @@ func (r *Repository) DownloadTiup(targetDir string) error {
 
 // DownloadComponent downloads a component with specific version from repository
 // support `<component>[:version]` format
-func (r *Repository) DownloadComponent(compsDir, component string, version v0manifest.Version) error {
+func (r *Repository) DownloadComponent(compsDir, component string, version pkgver.Version) error {
 	versions, err := r.ComponentVersions(component)
 	if err != nil {
 		return err
