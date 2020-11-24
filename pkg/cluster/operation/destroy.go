@@ -235,7 +235,6 @@ func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.M
 	e := getter.Get(inst.GetHost())
 	log.Infof("Destroying monitored %s", inst.GetHost())
 
-	log.Infof("Destroying monitored")
 	log.Infof("\tDestroying instance %s", inst.GetHost())
 
 	// Stop by systemd.
