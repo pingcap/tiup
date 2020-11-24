@@ -395,6 +395,21 @@ tiflash_servers:
 		err := ParseTopologyYaml(file, &topo)
 		c.Assert(err, check.NotNil)
 	})
+
+	// test tiflash storage section defined data dir
+	// storage.main.dir should always use absolute path
+	withTempFile(`
+tiflash_servers:
+  - host: 172.16.5.140
+    data_dir: /ssd0/tiflash
+    config:
+      storage.main.dir: [tiflash/data, ]
+      storage.latest.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash, /hdd0/tiflash]
+`, func(file string) {
+		topo := Specification{}
+		err := ParseTopologyYaml(file, &topo)
+		c.Assert(err, check.NotNil)
+	})
 }
 
 func merge4test(base, scale string) (*Specification, error) {

@@ -121,14 +121,24 @@ func (s TiFlashSpec) GetOverrideDataDir() (string, error) {
 	// If storage is defined, the path defined in "data_dir" will be ignored
 	// check whether the directories is uniq in the same configuration item
 	// and make the dirSet uniq
+	checkAbsolute := func(d, host, key string) error {
+		if !strings.HasPrefix(d, "/") {
+			return fmt.Errorf("directory '%s' should be an absolute path in 'tiflash_servers:%s.config.%s'", d, s.Host, key)
+		}
+		return nil
+	}
+
 	dirSet := set.NewStringSet()
 	for _, d := range latestDirs {
+		if err := checkAbsolute(d, s.Host, TiFlashStorageKeyLatestDirs); err != nil {
+			return "", err
+		}
 		if dirSet.Exist(d) {
 			return "", &meta.ValidateErr{
 				Type:   meta.TypeConflict,
 				Target: "directory",
-				LHS:    fmt.Sprintf("tiflash_servers:%s.config.%s", s.Host, TiFlashStorageKeyMainDirs),
-				RHS:    fmt.Sprintf("tiflash_servers:%s.config.%s", s.Host, TiFlashStorageKeyMainDirs),
+				LHS:    fmt.Sprintf("tiflash_servers:%s.config.%s", s.Host, TiFlashStorageKeyLatestDirs),
+				RHS:    fmt.Sprintf("tiflash_servers:%s.config.%s", s.Host, TiFlashStorageKeyLatestDirs),
 				Value:  d,
 			}
 		}
@@ -136,6 +146,9 @@ func (s TiFlashSpec) GetOverrideDataDir() (string, error) {
 	}
 	mainDirSet := set.NewStringSet()
 	for _, d := range mainDirs {
+		if err := checkAbsolute(d, s.Host, TiFlashStorageKeyMainDirs); err != nil {
+			return "", err
+		}
 		if mainDirSet.Exist(d) {
 			return "", &meta.ValidateErr{
 				Type:   meta.TypeConflict,

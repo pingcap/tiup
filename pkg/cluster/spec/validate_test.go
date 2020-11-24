@@ -745,6 +745,28 @@ tiflash_servers:
 	c.Assert(cnt, Equals, 0)
 	cnt = topo.CountDir("172.19.0.104", "/birdstorm")
 	c.Assert(cnt, Equals, 1)
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+tiflash_servers:
+  - host: 172.19.0.104
+    data_dir: /data1 # this is ignored
+    config:
+      # test with these paths
+      storage.main.dir: [ /home/tidb/birdstorm/data1,/home/tidb/birdstorm/data3]
+`), &topo)
+	c.Assert(err, IsNil)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data1")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data2")
+	c.Assert(cnt, Equals, 0)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm/data3")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.19.0.104", "/home/tidb/birdstorm")
+	c.Assert(cnt, Equals, 2)
 }
 
 func (s *metaSuiteTopo) TestDirectoryConflictsWithMultiDir(c *C) {
