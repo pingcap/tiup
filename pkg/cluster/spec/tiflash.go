@@ -28,6 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/set"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v2"
 )
@@ -122,12 +123,12 @@ func (s TiFlashSpec) GetDataDir() string {
 	}
 	// If storage is defined, the path defined in "data_dir" will be ignored
 	// make the dirs uniq
-	dirSet := make(map[string]bool)
+	dirSet := set.NewStringSet()
 	for _, s := range latestDirs {
-		dirSet[s] = true
+		dirSet.Insert(s)
 	}
 	for _, s := range mainDirs {
-		dirSet[s] = true
+		dirSet.Insert(s)
 	}
 	// keep the firstPath
 	var firstPath string
@@ -136,8 +137,8 @@ func (s TiFlashSpec) GetDataDir() string {
 	} else {
 		firstPath = mainDirs[0]
 	}
-	delete(dirSet, firstPath)
-	// join paths with ","
+	dirSet.Remove(firstPath)
+	// join (stable sorted) paths with ","
 	keys := make([]string, len(dirSet))
 	i := 0
 	for k := range dirSet {
