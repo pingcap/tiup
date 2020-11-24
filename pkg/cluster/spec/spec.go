@@ -309,6 +309,15 @@ func (s *Specification) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
+	// rewrite TiFlashSpec.DataDir since we may overwrite it with configurations
+	for i := 0; i < len(s.TiFlashServers); i++ {
+		dataDir, err := s.TiFlashServers[i].GetOverrideDataDir()
+		if err != nil {
+			return err
+		}
+		s.TiFlashServers[i].DataDir = dataDir
+	}
+
 	return s.Validate()
 }
 

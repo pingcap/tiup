@@ -87,11 +87,6 @@ func (s TiFlashSpec) IsImported() bool {
 	return s.Imported
 }
 
-// SetDataDir set the data dir of the instance
-func (s *TiFlashSpec) SetDataDir(d string) {
-	s.DataDir = d
-}
-
 // key names for storage config
 const (
 	TiFlashStorageKeyMainDirs   string = "storage.main.dir"
@@ -99,9 +94,10 @@ const (
 	TiFlashStorageKeyRaftDirs   string = "storage.raft.dir"
 )
 
-// GetDataDir returns the data dir.
-// If users have defined TiFlashStorageKeyMainDirs, then overwrite "DataDir"
-func (s TiFlashSpec) GetDataDir() string {
+// GetOverrideDataDir returns the data dir.
+// If users have defined TiFlashStorageKeyMainDirs, then override "DataDir" with
+// the directories defined in TiFlashStorageKeyMainDirs and TiFlashStorageKeyLatestDirs
+func (s TiFlashSpec) GetOverrideDataDir() (string, error) {
 	getStrings := func(key string) []string {
 		var strs []string
 		if dirsVal, ok := s.Config[key]; ok {
@@ -119,16 +115,38 @@ func (s TiFlashSpec) GetDataDir() string {
 	mainDirs := getStrings(TiFlashStorageKeyMainDirs)
 	latestDirs := getStrings(TiFlashStorageKeyLatestDirs)
 	if len(mainDirs) == 0 && len(latestDirs) == 0 {
-		return s.DataDir
+		return s.DataDir, nil
 	}
+
 	// If storage is defined, the path defined in "data_dir" will be ignored
-	// make the dirs uniq
+	// check whether the directories is uniq in the same configuration item
+	// and make the dirSet uniq
 	dirSet := set.NewStringSet()
-	for _, s := range latestDirs {
-		dirSet.Insert(s)
+	for _, d := range latestDirs {
+		if dirSet.Exist(d) {
+			return "", &meta.ValidateErr{
+				Type:   meta.TypeConflict,
+				Target: "directory",
+				LHS:    fmt.Sprintf("tiflash_servers:%s.config.%s", s.Host, TiFlashStorageKeyMainDirs),
+				RHS:    fmt.Sprintf("tiflash_servers:%s.config.%s", s.Host, TiFlashStorageKeyMainDirs),
+				Value:  d,
+			}
+		}
+		dirSet.Insert(d)
 	}
-	for _, s := range mainDirs {
-		dirSet.Insert(s)
+	mainDirSet := set.NewStringSet()
+	for _, d := range mainDirs {
+		if mainDirSet.Exist(d) {
+			return "", &meta.ValidateErr{
+				Type:   meta.TypeConflict,
+				Target: "directory",
+				LHS:    fmt.Sprintf("tiflash_servers:%s.config.%s", s.Host, TiFlashStorageKeyMainDirs),
+				RHS:    fmt.Sprintf("tiflash_servers:%s.config.%s", s.Host, TiFlashStorageKeyMainDirs),
+				Value:  d,
+			}
+		}
+		mainDirSet.Insert(d)
+		dirSet.Insert(d)
 	}
 	// keep the firstPath
 	var firstPath string
@@ -146,7 +164,7 @@ func (s TiFlashSpec) GetDataDir() string {
 		i++
 	}
 	sort.Strings(keys)
-	return firstPath + "," + strings.Join(keys, ",")
+	return firstPath + "," + strings.Join(keys, ","), nil
 }
 
 // TiFlashComponent represents TiFlash component.
@@ -183,7 +201,7 @@ func (c *TiFlashComponent) Instances() []Instance {
 			},
 			Dirs: []string{
 				s.DeployDir,
-				s.GetDataDir(),
+				s.DataDir,
 			},
 			StatusFn: s.Status,
 		}, c.Topology})
@@ -303,11 +321,6 @@ func (i *TiFlashInstance) CheckIncorrectConfigs() error {
 	// no matter storgae.latest.dir is defined or not, return err
 	_, err := isValidStringArray(TiFlashStorageKeyLatestDirs, i.InstanceSpec.(TiFlashSpec).Config, true)
 	return err
-}
-
-// DataDir represents TiFlash's DataDir
-func (i *TiFlashInstance) DataDir() string {
-	return i.InstanceSpec.(TiFlashSpec).GetDataDir()
 }
 
 // need to check the configuration after clusterVersion >= v4.0.9.

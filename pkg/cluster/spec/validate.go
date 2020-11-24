@@ -810,7 +810,7 @@ func (s *Specification) validatePDNames() error {
 	return nil
 }
 
-func (s *Specification) validateTiFlashConfiguration() error {
+func (s *Specification) validateTiFlashConfigs() error {
 	c := FindComponent(s, ComponentTiFlash)
 	for _, ins := range c.Instances() {
 		if err := ins.(*TiFlashInstance).CheckIncorrectConfigs(); err != nil {
@@ -847,7 +847,7 @@ func (s *Specification) Validate() error {
 		return err
 	}
 
-	if err := s.validateTiFlashConfiguration(); err != nil {
+	if err := s.validateTiFlashConfigs(); err != nil {
 		return err
 	}
 

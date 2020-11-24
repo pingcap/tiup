@@ -783,6 +783,65 @@ pd_servers:
 	c.Assert(err.Error(), Equals, "directory conflict for '/test-1' between 'tiflash_servers:172.16.5.138.data_dir' and 'tiflash_servers:172.16.5.138.data_dir'")
 }
 
+func (s *metaSuiteTopo) TestDirectoryConflictsWithTiFlashMultiDir2(c *C) {
+	topo := Specification{}
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+  data_dir: "test-data"
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-1" # this will be overwrite by storage.main.dir
+    config:
+      storage.main.dir: [ /test-1, /test-2]
+pd_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-2"
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "directory conflict for '/test-2' between 'tiflash_servers:172.16.5.138.data_dir' and 'pd_servers:172.16.5.138.data_dir'")
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+  data_dir: "test-data"
+tiflash_servers:
+  - host: 172.16.5.138
+    # this will be overwrite by storage.main.dir
+    data_dir: "/test-1" 
+    config:
+      storage.main.dir: [ /test-2, /test-2 ] # conflict inside
+pd_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-1"
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "directory conflict for '/test-2' between 'tiflash_servers:172.16.5.138.config.storage.main.dir' and 'tiflash_servers:172.16.5.138.config.storage.main.dir'")
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: "test-deploy"
+  data_dir: "test-data"
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-1" # this will be overwrite by storage.main.dir
+    config:
+      # no conflict between main and latest
+      storage.main.dir: [ /test-1, /test-2]
+      storage.latest.dir: [ /test-1, /test-2]
+pd_servers:
+  - host: 172.16.5.138
+    data_dir: "/test-3"
+`), &topo)
+	c.Assert(err, IsNil)
+}
+
 func (s *metaSuiteTopo) TestPdServerWithSameName(c *C) {
 	topo := Specification{}
 	err := yaml.Unmarshal([]byte(`

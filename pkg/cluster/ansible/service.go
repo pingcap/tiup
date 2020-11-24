@@ -274,7 +274,7 @@ func parseTiflashConfigFromFileData(spec *spec.TiFlashSpec, data []byte) error {
 	}
 
 	if path, ok := cfg["path"]; ok {
-		spec.SetDataDir(fmt.Sprintf("%v", path))
+		spec.DataDir = fmt.Sprintf("%v", path)
 	}
 
 	if tmpPath, ok := cfg["tmp_path"]; ok {

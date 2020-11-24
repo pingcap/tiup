@@ -228,7 +228,7 @@ tiflash_servers:
 		ExpandRelativeDir(&topo)
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[0].GetDataDir(), check.Equals, "/path/to/my-first-data,/home/tidb/deploy/tiflash-9000/my-second-data")
+		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/path/to/my-first-data,/home/tidb/deploy/tiflash-9000/my-second-data")
 		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
 	})
 
@@ -317,7 +317,7 @@ tiflash_servers:
 		ExpandRelativeDir(&topo)
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[0].GetDataDir(), check.Equals, "/ssd0/tiflash")
+		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash")
 		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
 	})
 
@@ -336,7 +336,7 @@ tiflash_servers:
 		ExpandRelativeDir(&topo)
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[0].GetDataDir(), check.Equals, "/ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash")
+		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash")
 		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
 	})
 
@@ -355,13 +355,13 @@ tiflash_servers:
 		ExpandRelativeDir(&topo)
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[0].GetDataDir(), check.Equals, "/ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash")
+		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash")
 		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
 	})
 
 	// test tiflash storage section defined data dir
 	// if storage.latest.dir is not empty, the first path in
-	// storage.latest.dir will be the first path in 'GetDataDir'
+	// storage.latest.dir will be the first path in 'DataDir'
 	// DataDir is the union set of storage.latest.dir and storage.main.dir
 	withTempFile(`
 tiflash_servers:
@@ -377,7 +377,7 @@ tiflash_servers:
 		ExpandRelativeDir(&topo)
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[0].GetDataDir(), check.Equals, "/ssd0/tiflash,/hdd0/tiflash,/hdd1/tiflash,/hdd2/tiflash,/ssd1/tiflash,/ssd2/tiflash")
+		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash,/hdd0/tiflash,/hdd1/tiflash,/hdd2/tiflash,/ssd1/tiflash,/ssd2/tiflash")
 		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
 	})
 
@@ -431,10 +431,10 @@ tiflash_servers:
 		ExpandRelativeDir(topo) // should be idempotent
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[0].GetDataDir(), check.Equals, "/home/tidb/deploy/tiflash-9000/data")
+		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/home/tidb/deploy/tiflash-9000/data")
 
 		c.Assert(topo.TiFlashServers[1].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[1].GetDataDir(), check.Equals, "/home/tidb/deploy/tiflash-9000/data")
+		c.Assert(topo.TiFlashServers[1].DataDir, check.Equals, "/home/tidb/deploy/tiflash-9000/data")
 	})
 
 	// test global option overwrite
@@ -462,18 +462,18 @@ tiflash_servers:
 		ExpandRelativeDir(topo)
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/my-global-deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[0].GetDataDir(), check.Equals, "/my-global-deploy/tiflash-9000/my-local-data-tiflash")
+		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/my-global-deploy/tiflash-9000/my-local-data-tiflash")
 		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "/my-global-deploy/tiflash-9000/my-local-log-tiflash")
 
 		c.Assert(topo.TiFlashServers[1].DeployDir, check.Equals, "/home/test/flash-deploy")
-		c.Assert(topo.TiFlashServers[1].GetDataDir(), check.Equals, "/home/test/flash-deploy/data")
+		c.Assert(topo.TiFlashServers[1].DataDir, check.Equals, "/home/test/flash-deploy/data")
 		c.Assert(topo.TiFlashServers[3].DeployDir, check.Equals, "/home/test/flash-deploy")
-		c.Assert(topo.TiFlashServers[3].GetDataDir(), check.Equals, "/home/test/flash-deploy/data")
+		c.Assert(topo.TiFlashServers[3].DataDir, check.Equals, "/home/test/flash-deploy/data")
 
 		c.Assert(topo.TiFlashServers[2].DeployDir, check.Equals, "/my-global-deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[2].GetDataDir(), check.Equals, "/my-global-deploy/tiflash-9000/data")
+		c.Assert(topo.TiFlashServers[2].DataDir, check.Equals, "/my-global-deploy/tiflash-9000/data")
 		c.Assert(topo.TiFlashServers[4].DeployDir, check.Equals, "/my-global-deploy/tiflash-9000")
-		c.Assert(topo.TiFlashServers[4].GetDataDir(), check.Equals, "/my-global-deploy/tiflash-9000/data")
+		c.Assert(topo.TiFlashServers[4].DataDir, check.Equals, "/my-global-deploy/tiflash-9000/data")
 	})
 }
 

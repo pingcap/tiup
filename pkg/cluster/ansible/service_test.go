@@ -56,6 +56,6 @@ func (s *parseSuite) TestParseTiflashConfigFromFileData(c *check.C) {
 	err := parseTiflashConfigFromFileData(spec, data)
 	c.Assert(err, check.IsNil)
 
-	c.Assert(spec.GetDataDir(), check.Equals, "/data1/test-cluster/leiysky-ansible-test-deploy/tiflash/data/db")
+	c.Assert(spec.DataDir, check.Equals, "/data1/test-cluster/leiysky-ansible-test-deploy/tiflash/data/db")
 	c.Assert(spec.TmpDir, check.Equals, "/data1/test-cluster/leiysky-ansible-test-deploy/tiflash/data/db/tmp")
 }
