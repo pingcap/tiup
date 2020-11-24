@@ -83,7 +83,7 @@ const (
 
 	// EnvNameMirrorSyncScript make it possible for user to sync mirror commit to other place (eg. CDN)
 	EnvNameMirrorSyncScript = "TIUP_MIRROR_SYNC_SCRIPT"
-  
+
 	// EnvNameLogPath is the variable name by which user can write the log files into
 	EnvNameLogPath = "TIUP_LOG_PATH"
 

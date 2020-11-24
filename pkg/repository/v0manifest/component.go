@@ -15,6 +15,8 @@ package v0manifest
 
 import (
 	"strings"
+
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 )
 
 type (
@@ -31,7 +33,7 @@ type (
 	ComponentManifest struct {
 		Description string          `json:"description"`
 		Modified    string          `json:"modified"`
-		TiUPVersion Version         `json:"tiup_version"`
+		TiUPVersion pkgver.Version  `json:"tiup_version"`
 		Components  []ComponentInfo `json:"components"`
 	}
 )

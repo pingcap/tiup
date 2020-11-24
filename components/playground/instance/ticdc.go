@@ -16,11 +16,12 @@ package instance
 import (
 	"context"
 	"fmt"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
-	"github.com/pingcap/tiup/pkg/utils"
 	"os"
 	"path/filepath"
 	"strings"
+
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TiCDC represent a ticdc instance.
@@ -50,7 +51,7 @@ func NewTiCDC(binPath string, dir, host, configPath string, id int, pds []*PDIns
 }
 
 // Start implements Instance interface.
-func (c *TiCDC) Start(ctx context.Context, version v0manifest.Version) error {
+func (c *TiCDC) Start(ctx context.Context, version pkgver.Version) error {
 	if err := os.MkdirAll(c.Dir, 0755); err != nil {
 		return err
 	}

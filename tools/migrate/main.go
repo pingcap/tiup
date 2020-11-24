@@ -28,6 +28,7 @@ import (
 	ru "github.com/pingcap/tiup/pkg/repository/utils"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 	tiupver "github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
@@ -334,7 +335,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		Description: tiupDesc,
 		Versions: []v0manifest.VersionInfo{
 			{
-				Version: v0manifest.Version(tiupver.NewTiUPVersion().SemVer()),
+				Version: pkgver.Version(tiupver.NewTiUPVersion().SemVer()),
 				Date:    time.Now().Format(time.RFC3339),
 				Entry:   "tiup",
 			},

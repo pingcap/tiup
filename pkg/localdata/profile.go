@@ -31,6 +31,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 )
@@ -80,7 +81,7 @@ func (p *Profile) Root() string {
 }
 
 // BinaryPathV0 returns the binary path of component specific version
-func (p *Profile) BinaryPathV0(component string, version v0manifest.Version) (string, error) {
+func (p *Profile) BinaryPathV0(component string, version pkgver.Version) (string, error) {
 	manifest := p.Versions(component)
 	if manifest == nil {
 		return "", errors.Errorf("component `%s` doesn't install", component)
@@ -106,7 +107,7 @@ func (p *Profile) BinaryPathV0(component string, version v0manifest.Version) (st
 }
 
 // GetComponentInstalledVersion return the installed version of component.
-func (p *Profile) GetComponentInstalledVersion(component string, version v0manifest.Version) (v0manifest.Version, error) {
+func (p *Profile) GetComponentInstalledVersion(component string, version pkgver.Version) (pkgver.Version, error) {
 	if !version.IsEmpty() {
 		return version, nil
 	}
@@ -123,7 +124,7 @@ func (p *Profile) GetComponentInstalledVersion(component string, version v0manif
 		sort.Slice(versions, func(i, j int) bool {
 			return semver.Compare(versions[i], versions[j]) < 0
 		})
-		version = v0manifest.Version(versions[len(versions)-1])
+		version = pkgver.Version(versions[len(versions)-1])
 	} else {
 		return "", fmt.Errorf("component not installed, please try `tiup install %s` to install it", component)
 	}
@@ -131,7 +132,7 @@ func (p *Profile) GetComponentInstalledVersion(component string, version v0manif
 }
 
 // ComponentInstalledPath returns the path where the component installed
-func (p *Profile) ComponentInstalledPath(component string, version v0manifest.Version) (string, error) {
+func (p *Profile) ComponentInstalledPath(component string, version pkgver.Version) (string, error) {
 	installedVersion, err := p.GetComponentInstalledVersion(component, version)
 	if err != nil {
 		return "", err
@@ -302,7 +303,7 @@ func (p *Profile) VersionIsInstalled(component, version string) (bool, error) {
 
 // SelectInstalledVersion selects the installed versions and the latest release version
 // will be chosen if there is an empty version
-func (p *Profile) SelectInstalledVersion(component string, version v0manifest.Version) (v0manifest.Version, error) {
+func (p *Profile) SelectInstalledVersion(component string, version pkgver.Version) (pkgver.Version, error) {
 	installed, err := p.InstalledVersions(component)
 	if err != nil {
 		return "", err
@@ -317,11 +318,11 @@ func (p *Profile) SelectInstalledVersion(component string, version v0manifest.Ve
 		sort.Slice(installed, func(i, j int) bool {
 			return semver.Compare(installed[i], installed[j]) < 0
 		})
-		version = v0manifest.Version(installed[len(installed)-1])
+		version = pkgver.Version(installed[len(installed)-1])
 	}
 	found := false
 	for _, v := range installed {
-		if v0manifest.Version(v) == version {
+		if pkgver.Version(v) == version {
 			found = true
 			break
 		}

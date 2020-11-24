@@ -46,7 +46,7 @@ import (
 	"github.com/pingcap/tiup/pkg/file"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
@@ -1238,7 +1238,7 @@ func (m *Manager) Deploy(
 			switch inst.ComponentName() {
 			case spec.ComponentTiSpark:
 				env := environment.GlobalEnv()
-				var sparkVer v0manifest.Version
+				var sparkVer pkgver.Version
 				if sparkVer, _, iterErr = env.V1Repository().LatestStableVersion(spec.ComponentSpark, false); iterErr != nil {
 					return
 				}
@@ -2015,7 +2015,7 @@ func buildScaleOutTask(
 			switch inst.ComponentName() {
 			case spec.ComponentTiSpark:
 				env := environment.GlobalEnv()
-				var sparkVer v0manifest.Version
+				var sparkVer pkgver.Version
 				if sparkVer, _, iterErr = env.V1Repository().LatestStableVersion(spec.ComponentSpark, false); iterErr != nil {
 					return
 				}

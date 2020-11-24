@@ -29,7 +29,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/repository"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -98,7 +98,7 @@ func (inst *TiFlashInstance) StatusAddrs() (addrs []string) {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiFlashInstance) Start(ctx context.Context, version v0manifest.Version) error {
+func (inst *TiFlashInstance) Start(ctx context.Context, version pkgver.Version) error {
 	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
 		return err
 	}
@@ -212,7 +212,7 @@ func (inst *TiFlashInstance) StoreAddr() string {
 	return fmt.Sprintf("%s:%d", advertiseHost(inst.Host), inst.ServicePort)
 }
 
-func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string, version v0manifest.Version, tidbStatusAddrs, endpoints []string) error {
+func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string, version pkgver.Version, tidbStatusAddrs, endpoints []string) error {
 	if inst.ConfigPath == "" {
 		inst.ConfigPath = path.Join(inst.Dir, "tiflash.toml")
 	}
