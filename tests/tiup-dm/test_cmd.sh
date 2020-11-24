@@ -80,5 +80,5 @@ cp ~/.tiup/storage/dm/clusters/$name/ssh/id_rsa "/tmp/$name.id_rsa"
 tiup-dm --yes destroy $name
 
 # after destroy the cluster, the public key should be deleted
-ssh -o "StrictHostKeyChecking=no" -o "PasswordAuthentication=no" -i "/tmp/$name.id_rsa" tidb@$ipprefix.102 "ls" 2>&1 | grep "Permission denied"
+! ssh -o "StrictHostKeyChecking=no" -o "PasswordAuthentication=no" -i "/tmp/$name.id_rsa" tidb@$ipprefix.102 "ls"
 unlink "/tmp/$name.id_rsa"
