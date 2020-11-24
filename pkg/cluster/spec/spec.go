@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"go.etcd.io/etcd/clientv3"
 )
@@ -315,7 +316,10 @@ func (s *Specification) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
-		s.TiFlashServers[i].DataDir = dataDir
+		if s.TiFlashServers[i].DataDir != dataDir {
+			log.Infof("'tiflash_server:%s.data_dir' is overwritten by its storage configuration. Now the data_dir is %s", s.TiFlashServers[i].Host, dataDir)
+			s.TiFlashServers[i].DataDir = dataDir
+		}
 	}
 
 	return s.Validate()
