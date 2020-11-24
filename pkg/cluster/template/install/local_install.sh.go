@@ -73,7 +73,7 @@ chmod 755 "$bin_dir/tiup"
 bold=$(tput bold 2>/dev/null)
 sgr0=$(tput sgr0 2>/dev/null)
 
-# Refrence: https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux-unix
+# Reference: https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux-unix
 shell=$(echo $SHELL | awk 'BEGIN {FS="/";} { print $NF }')
 echo "Detected shell: ${bold}$shell${sgr0}"
 if [ -f "${HOME}/.${shell}_profile" ]; then
