@@ -75,8 +75,8 @@ wait_instance_num_reach $name $total_sub_one
 
 echo "start scale out grafana"
 topo_grafana=./topo/full_scale_in_grafana.yaml
-sed "s/__IPPREFIX__/$ipprefix/g" $grafana.tpl > $grafana
-yes | tiup-dm scale-out $name $grafana
+sed "s/__IPPREFIX__/$ipprefix/g" $topo_grafana.tpl > $topo_grafana
+yes | tiup-dm scale-out $name $topo_grafana
 
 # test grafana config
 tiup-dm exec $name -N $ipprefix.101 --command "ls /home/tidb/deploy/grafana-3000/dashboards/dm.json && ! grep magic-string-for-test /home/tidb/deploy/grafana-3000/dashboards/dm.json"
