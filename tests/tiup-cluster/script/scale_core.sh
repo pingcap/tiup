@@ -78,8 +78,8 @@ function scale_core() {
     ! tiup-cluster $client exec $name -N $ipprefix.102 --command "ls /home/tidb/deploy/monitor-9100/deploy/monitor-9100"
     ! tiup-cluster $client exec $name -N $ipprefix.102 --command "ps aux | grep node_exporter | grep -qv grep"
     ! tiup-cluster $client exec $name -N $ipprefix.102 --command "ps aux | grep blackbox_exporter | grep -qv grep"
-    # public key should be deleted
-    ! ssh -i "~/.tiup/storage/cluster/$name/ssh/id_rsa" tidb@$ipprefix.102 "ls"
+    # after all components on the node were scale-ined, the SSH public is automatically deleted
+    ssh -o "StrictHostKeyChecking=no "-o "PasswordAuthentication=no" -i ~/.tiup/storage/cluster/$name/ssh/id_rsa tidb@$ipprefix.102 "ls" 2>&1 | grep "Permission denied"
 
     echo "start scale out tidb"
     topo=./topo/full_scale_in_tidb.yaml

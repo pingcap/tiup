@@ -108,6 +108,6 @@ function cmd_subtest() {
     tiup-cluster $client --yes destroy $name
 
     # after destroy the cluster, the public key should be deleted
-    ! ssh -o "PasswordAuthentication=no" -i "/tmp/$name.id_rsa" tidb@$ipprefix.101 "ls"
+    ssh -o "StrictHostKeyChecking=no" -o "PasswordAuthentication=no" -i "/tmp/$name.id_rsa" tidb@$ipprefix.102 "ls" 2>&1 | grep "Permission denied"
     unlink "/tmp/$name.id_rsa"
 }
