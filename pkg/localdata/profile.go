@@ -358,6 +358,7 @@ func (p *Profile) ResetMirror(addr, root string) error {
 		if resp, err := http.Get(root); err != nil {
 			return err
 		} else if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
 			return errors.Errorf("Fetch remote root.json returns http code %d", resp.StatusCode)
 		} else {
 			wc = resp.Body

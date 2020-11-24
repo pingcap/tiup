@@ -163,6 +163,7 @@ func (t *localTxn) ReadManifest(filename string, role v1manifest.ValidManifest) 
 		if resp, err := client.Get(url); err == nil {
 			wc = resp.Body
 		} else {
+			resp.Body.Close()
 			return nil, errors.Annotatef(err, "fetch %s", url)
 		}
 	} else {

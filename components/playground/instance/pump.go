@@ -65,6 +65,7 @@ func (p *Pump) Ready(ctx context.Context) error {
 		if err == nil && resp.StatusCode == 200 {
 			return nil
 		}
+		_ = resp.Body.Close()
 
 		select {
 		case <-ctx.Done():
