@@ -461,9 +461,6 @@ func SignManifest(role ValidManifest, keys ...*KeyInfo) (*Manifest, error) {
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
 		signs = append(signs, Signature{
 			KeyID: id,
 			Sig:   sign,
