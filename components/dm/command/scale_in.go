@@ -86,7 +86,7 @@ func ScaleInDMCluster(
 	for _, component := range topo.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
 			instances[instance.ID()] = instance
-			instCount[instance.GetHost()] = instCount[instance.GetHost()] + 1
+			instCount[instance.GetHost()]++
 		}
 	}
 

@@ -62,8 +62,7 @@ func Destroy(
 
 	instCount := map[string]int{}
 	cluster.IterInstance(func(inst spec.Instance) {
-		host := inst.GetHost()
-		instCount[host] = instCount[host] + 1
+		instCount[inst.GetHost()]++
 	})
 
 	for _, com := range coms {
