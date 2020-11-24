@@ -492,7 +492,7 @@ func DestroyClusterTombstone(
 	instCount := map[string]int{}
 	for _, component := range cluster.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
-			instCount[instance.GetHost()] = instCount[instance.GetHost()] + 1
+			instCount[instance.GetHost()]++
 		}
 	}
 
