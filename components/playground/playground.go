@@ -441,7 +441,7 @@ func (p *Playground) addWaitInstance(inst instance.Instance) {
 }
 
 func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
-	// Ignore Config.Num, alway one command as scale out one instance.
+	// Ignore Config.Num, always one command as scale out one instance.
 	err := p.sanitizeComponentConfig(cmd.ComponentID, &cmd.Config)
 	if err != nil {
 		return err
@@ -528,7 +528,7 @@ func (p *Playground) RWalkInstances(fn func(componentID string, ins instance.Ins
 	return nil
 }
 
-// WalkInstances call fn for every intance and stop if return not nil.
+// WalkInstances call fn for every instance and stop if return not nil.
 func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Instance) error) error {
 	for _, ins := range p.pds {
 		err := fn("pd", ins)
@@ -647,7 +647,7 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 		ins = inst
 		p.drainers = append(p.drainers, inst)
 	default:
-		return nil, errors.Errorf("unknow component: %s", componentID)
+		return nil, errors.Errorf("unknown component: %s", componentID)
 	}
 
 	return
@@ -919,7 +919,8 @@ func (p *Playground) terminate(sig syscall.Signal) {
 		timer.Stop()
 	}
 
-	for _, inst := range p.startedInstances {
+	for i := len(p.startedInstances); i > 0; i-- {
+		inst := p.startedInstances[i-1]
 		if sig == syscall.SIGKILL {
 			fmt.Printf("Force %s(%d) to quit...\n", inst.Component(), inst.Pid())
 		} else if atomic.LoadInt32(&p.curSig) == int32(sig) { // In case of double ctr+c
