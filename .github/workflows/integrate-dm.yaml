@@ -83,7 +83,7 @@ jobs:
           name: dm_logs
           path: ${{ env.working-directory }}/dm.logs.tar.gz
 
-      - name: Output cluster debug log
+      - name: Output dm debug log
         working-directory: ${{ env.working-directory }}
         if: ${{ failure() }}
         # if: always()
