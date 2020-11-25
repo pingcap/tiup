@@ -45,7 +45,7 @@ type TiFlashSpec struct {
 	FlashProxyStatusPort int                    `yaml:"flash_proxy_status_port" default:"20292"`
 	StatusPort           int                    `yaml:"metrics_port" default:"8234"`
 	DeployDir            string                 `yaml:"deploy_dir,omitempty"`
-	DataDir              string                 `yaml:"data_dir,omitempty"`
+	DataDir              string                 `yaml:"data_dir,omitempty" validate:"data_dir:expandable"`
 	LogDir               string                 `yaml:"log_dir,omitempty"`
 	TmpDir               string                 `yaml:"tmp_path,omitempty"`
 	Offline              bool                   `yaml:"offline,omitempty"`
