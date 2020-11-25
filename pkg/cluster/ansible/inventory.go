@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/creasty/defaults"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -481,6 +482,13 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			// apply values from the host
 			if port, ok := srv.Vars["grafana_port"]; ok {
 				tmpIns.Port, _ = strconv.Atoi(port)
+			}
+
+			if username, ok := srv.Vars["grafana_admin_user"]; ok {
+				tmpIns.Username = strings.Trim(username, "\"")
+			}
+			if passwd, ok := srv.Vars["grafana_admin_password"]; ok {
+				tmpIns.Password = strings.Trim(passwd, "\"")
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
