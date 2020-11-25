@@ -19,6 +19,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	. "github.com/pingcap/check"
+	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"gopkg.in/yaml.v2"
 )
 
@@ -556,4 +557,129 @@ pd_servers:
 	c.Assert(err, IsNil)
 	_, err = spec.LocationLabels()
 	c.Assert(err, NotNil)
+}
+
+func (s *metaSuiteTopo) TestTiFlashStorageSection(c *C) {
+	spec := &Specification{}
+	err := yaml.Unmarshal([]byte(`
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: /hdd0/tiflash,/hdd1/tiflash
+    config:
+      storage.main.dir: [/ssd0/tiflash, /ssd1/tiflash]
+      storage.latest.dir: [/ssd0/tiflash]
+`), spec)
+	c.Assert(err, IsNil)
+
+	flashComp := FindComponent(spec, ComponentTiFlash)
+	instances := flashComp.Instances()
+	c.Assert(len(instances), Equals, 1)
+	// parse using clusterVersion<"v4.0.9"
+	{
+		ins := instances[0]
+		// This should be the same with tiflash_server instance's "data_dir"
+		dataDir := "/hdd0/tiflash,/hdd1/tiflash"
+		cfg := scripts.NewTiFlashScript(ins.GetHost(), "", dataDir, "", "", "")
+		conf, err := ins.(*TiFlashInstance).initTiFlashConfig(cfg, "v4.0.8", spec.ServerConfigs.TiFlash)
+		c.Assert(err, IsNil)
+
+		path, ok := conf["path"]
+		c.Assert(ok, IsTrue)
+		c.Assert(path, Equals, dataDir)
+	}
+	// parse using clusterVersion>="v4.0.9"
+	checkWithVersion := func(ver string) {
+		ins := instances[0].(*TiFlashInstance)
+		dataDir := "/ssd0/tiflash"
+		cfg := scripts.NewTiFlashScript(ins.GetHost(), "", dataDir, "", "", "")
+		conf, err := ins.initTiFlashConfig(cfg, ver, spec.ServerConfigs.TiFlash)
+		c.Assert(err, IsNil)
+
+		_, ok := conf["path"]
+		c.Assert(ok, IsTrue)
+
+		// After merging instance configurations with "storgae", the "path" property should be removed.
+		conf, err = ins.mergeTiFlashInstanceConfig(ver, conf, ins.InstanceSpec.(TiFlashSpec).Config)
+		c.Assert(err, IsNil)
+		_, ok = conf["path"]
+		c.Assert(ok, IsFalse)
+
+		if storageSection, ok := conf["storage"]; ok {
+			if mainSection, ok := storageSection.(map[string]interface{})["main"]; ok {
+				if mainDirsSection, ok := mainSection.(map[string]interface{})["dir"]; ok {
+					var mainDirs []interface{} = mainDirsSection.([]interface{})
+					c.Assert(len(mainDirs), Equals, 2)
+					c.Assert(mainDirs[0].(string), Equals, "/ssd0/tiflash")
+					c.Assert(mainDirs[1].(string), Equals, "/ssd1/tiflash")
+				} else {
+					c.Error("Can not get storage.main.dir section")
+				}
+			} else {
+				c.Error("Can not get storage.main section")
+			}
+			if latestSection, ok := storageSection.(map[string]interface{})["latest"]; ok {
+				if latestDirsSection, ok := latestSection.(map[string]interface{})["dir"]; ok {
+					var latestDirs []interface{} = latestDirsSection.([]interface{})
+					c.Assert(len(latestDirs), Equals, 1)
+					c.Assert(latestDirs[0].(string), Equals, "/ssd0/tiflash")
+				} else {
+					c.Error("Can not get storage.main.dir section")
+				}
+
+			} else {
+				c.Error("Can not get storage.main section")
+			}
+		} else {
+			c.Error("Can not get storage section")
+		}
+	}
+	checkWithVersion("v4.0.9")
+	checkWithVersion("nightly")
+}
+
+func (s *metaSuiteTopo) TestTiFlashInvalidStorageSection(c *C) {
+	spec := &Specification{}
+
+	testCases := [][]byte{
+		[]byte(`
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: /hdd0/tiflash,/hdd1/tiflash
+    config:
+      # storage.main.dir is not defined
+      storage.latest.dir: ["/ssd0/tiflash"]
+`),
+		[]byte(`
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: /hdd0/tiflash,/hdd1/tiflash
+    config:
+      # storage.main.dir is empty string array
+      storage.main.dir: []
+      storage.latest.dir: ["/ssd0/tiflash"]
+`),
+		[]byte(`
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: /hdd0/tiflash,/hdd1/tiflash
+    config:
+      # storage.main.dir is not a string array
+      storage.main.dir: /hdd0/tiflash,/hdd1/tiflash
+      storage.latest.dir: ["/ssd0/tiflash"]
+`),
+		[]byte(`
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: /hdd0/tiflash,/hdd1/tiflash
+    config:
+      # storage.main.dir is not a string array
+      storage.main.dir: [0, 1]
+      storage.latest.dir: ["/ssd0/tiflash"]
+`),
+	}
+
+	for _, testCase := range testCases {
+		err := yaml.Unmarshal([]byte(testCase), spec)
+		c.Check(err, NotNil)
+	}
 }
