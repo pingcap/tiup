@@ -50,13 +50,13 @@ jobs:
 
       - name: Collect component log
         working-directory: ${{ env.working-directory }}
-        if: steps.test.outputs.exit_code != 0
+        if: ${{ failure() }}
         # if: always()
         run: |
           find ${{ env.working-directory }}/tests/tiup-playground/_tmp/home/data -type f | grep -E '*/ti.*/ti.*.log$' | xargs tar czvf ${{ env.working-directory }}/playground.logs.tar.gz
 
       - name: Upload component log
-        if: steps.test.outputs.exit_code != 0
+        if: ${{ failure() }}
         # if: always()
         uses: actions/upload-artifact@v1
         with:
