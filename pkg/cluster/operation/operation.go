@@ -34,8 +34,9 @@ type Options struct {
 	SSHType           executor.SSHType // the ssh type: 'builtin', 'system', 'none'
 
 	// What type of things should we cleanup in clean command
-	CleanupData bool // should we cleanup data
-	CleanupLog  bool // should we clenaup log
+	CleanupData    bool     // should we cleanup data
+	CleanupLog     bool     // should we clenaup log
+	CleanDataNodes []string // clean data on specific nodes.
 
 	// Some data will be retained when destroying instances
 	RetainDataRoles []string

@@ -94,6 +94,12 @@ function cmd_subtest() {
     tiup-cluster $client exec $name -R tidb --command="systemctl status tidb-4000|grep 'enabled;'"
     tiup-cluster $client exec $name -R pd --command="systemctl status pd-2379|grep 'enabled;'"
 
+    tiup-cluster $client --yes clean $name --log -n $ipprefix.102:9090
+
+    echo "checking clean specific node log"
+    tiup-cluster $client exec $name $ipprefix.101 --command "ls /home/tidb/deploy/prometheus-9090/log/prometheus.log"
+    ! tiup-cluster $client exec $name $ipprefix.102 --command "ls /home/tidb/deploy/tidb-4000/log/tidb.log"
+
     tiup-cluster $client --yes clean $name --data --all --ignore-node $ipprefix.101:9090
 
     echo "checking cleanup data and log"

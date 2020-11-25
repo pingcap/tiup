@@ -307,11 +307,12 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 			target = "log"
 		}
 		if err := cliutil.PromptForConfirmOrAbortError(
-			"This operation will clean %s %s cluster %s's %s.\nNodes will be ignored: %s\nRoles will be ignored: %s\nDo you want to continue? [y/N]:",
+			"This operation will clean %s %s cluster %s's %s.\nNodes will be included:%s\nNodes will be ignored: %s\nRoles will be ignored: %s\nDo you want to continue? [y/N]:",
 			m.sysName,
 			color.HiYellowString(base.Version),
 			color.HiYellowString(clusterName),
 			target,
+			cleanOpt.CleanDataNodes,
 			cleanOpt.RetainDataNodes,
 			cleanOpt.RetainDataRoles); err != nil {
 			return err

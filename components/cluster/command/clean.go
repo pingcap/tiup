@@ -32,7 +32,9 @@ You can retain some nodes and roles data when cleanup the cluster, eg:
     $ tiup cluster clean <cluster-name> --data
     $ tiup cluster clean <cluster-name> --all --ignore-role prometheus
     $ tiup cluster clean <cluster-name> --all --ignore-node 172.16.13.11:9000
-    $ tiup cluster clean <cluster-name> --all --ignore-node 172.16.13.12`,
+    $ tiup cluster clean <cluster-name> --all --ignore-node 172.16.13.12
+    $ tiup cluster clean <cluster-name> --all -n 172.16.13.12
+    $ tiup cluster clean <cluster-name> --all --node 172.16.13.11:9000`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
@@ -56,6 +58,7 @@ You can retain some nodes and roles data when cleanup the cluster, eg:
 
 	cmd.Flags().StringArrayVar(&cleanOpt.RetainDataNodes, "ignore-node", nil, "Specify the nodes or hosts whose data will be retained")
 	cmd.Flags().StringArrayVar(&cleanOpt.RetainDataRoles, "ignore-role", nil, "Specify the roles whose data will be retained")
+	cmd.Flags().StringArrayVarP(&cleanOpt.CleanDataNodes, "node", "n", nil, "Specify the nodes whose log will be clean")
 	cmd.Flags().BoolVar(&cleanOpt.CleanupData, "data", false, "Cleanup data")
 	cmd.Flags().BoolVar(&cleanOpt.CleanupLog, "log", false, "Cleanup log")
 	cmd.Flags().BoolVar(&cleanALl, "all", false, "Cleanup both log and data")

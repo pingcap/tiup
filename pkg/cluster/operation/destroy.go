@@ -237,10 +237,20 @@ func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.M
 func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec.Topology, options Options) error {
 	retainDataRoles := set.NewStringSet(options.RetainDataRoles...)
 	retainDataNodes := set.NewStringSet(options.RetainDataNodes...)
+	cleanDataNodes := set.NewStringSet(options.CleanDataNodes...)
 
 	for _, ins := range instances {
+		dataRetained := false
+		// cleanDataNodes specified, instance not included well be retained
+		if len(cleanDataNodes) > 0 {
+			dataRetained = !(cleanDataNodes.Exist(ins.ID()) || cleanDataNodes.Exist(ins.GetHost()))
+			if dataRetained {
+				continue
+			}
+		}
+
 		// Some data of instances will be retained
-		dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
+		dataRetained = retainDataRoles.Exist(ins.ComponentName()) ||
 			retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
 
 		if dataRetained {
