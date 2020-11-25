@@ -104,7 +104,7 @@ func (s TiFlashSpec) GetOverrideDataDir() (string, error) {
 			if dirs, ok := dirsVal.([]interface{}); ok && len(dirs) > 0 {
 				for _, elem := range dirs {
 					if elemStr, ok := elem.(string); ok {
-						elemStr := strings.TrimSuffix(elemStr, "/")
+						elemStr := strings.TrimSuffix(strings.TrimSpace(elemStr), "/")
 						strs = append(strs, elemStr)
 					}
 				}
