@@ -92,7 +92,7 @@ jobs:
           docker ps
           df -h
           free -h
-          cat /tiup-cluster/logs/*.log || true
+          find ${{ env.working-directory }}/logs -type f -exec sh -c 'echo "{}" && cat {} && echo "\n"' \; || true
 
       - name: Upload coverage to Codecov
         working-directory: ${{ env.working-directory }}
