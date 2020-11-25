@@ -16,7 +16,6 @@ package instance
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -67,9 +66,6 @@ func (inst *PDInstance) Name() string {
 
 // Start calls set inst.cmd and Start
 func (inst *PDInstance) Start(ctx context.Context, version pkgver.Version) error {
-	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
-		return err
-	}
 	uid := inst.Name()
 	args := []string{
 		"--name=" + uid,

@@ -16,7 +16,6 @@ package instance
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -72,20 +71,16 @@ func (d *Drainer) NodeID() string {
 
 // Start implements Instance interface.
 func (d *Drainer) Start(ctx context.Context, version pkgver.Version) error {
-	if err := os.MkdirAll(d.Dir, 0755); err != nil {
-		return err
-	}
-
-	var urls []string
+	var endpoints []string
 	for _, pd := range d.pds {
-		urls = append(urls, fmt.Sprintf("http://%s:%d", pd.Host, pd.StatusPort))
+		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", pd.Host, pd.StatusPort))
 	}
 
 	args := []string{
 		fmt.Sprintf("--node-id=%s", d.NodeID()),
 		fmt.Sprintf("--addr=%s:%d", d.Host, d.Port),
 		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(d.Host), d.Port),
-		fmt.Sprintf("--pd-urls=%s", strings.Join(urls, ",")),
+		fmt.Sprintf("--pd-urls=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", d.LogFile()),
 	}
 	if d.ConfigPath != "" {

@@ -56,9 +56,6 @@ func (inst *TiKVInstance) Addr() string {
 
 // Start calls set inst.cmd and Start
 func (inst *TiKVInstance) Start(ctx context.Context, version pkgver.Version) error {
-	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
-		return err
-	}
 	if err := inst.checkConfig(); err != nil {
 		return err
 	}
