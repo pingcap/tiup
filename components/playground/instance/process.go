@@ -24,7 +24,7 @@ type Process interface {
 	Cmd() *exec.Cmd
 }
 
-// process implementes Process
+// process implements Process
 type process struct {
 	cmd       *exec.Cmd
 	startTime time.Time
