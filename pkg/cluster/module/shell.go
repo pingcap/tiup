@@ -22,7 +22,7 @@ import (
 // ShellModuleConfig is the configurations used to initialize a TiOpsModuleSystemd
 type ShellModuleConfig struct {
 	Command  string // the command to run
-	Sudo     bool   // whether use root priviledge to run the command
+	Sudo     bool   // whether use root privilege to run the command
 	Chdir    string // change working directory before running the command
 	UseShell bool   // whether use shell to invoke the command
 }

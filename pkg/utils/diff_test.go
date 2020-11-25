@@ -71,7 +71,7 @@ strs:
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, IsNil)
 
-	// add editable element (without specifing alias)
+	// add editable element (without specifying alias)
 	err = yaml.Unmarshal([]byte(`
 ints: [11, 13, 12]
 strs:

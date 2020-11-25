@@ -678,7 +678,7 @@ tikv_servers:
 	err = CheckTiKVLabels([]string{"zone", "host"}, &topo)
 	c.Assert(err, IsNil)
 
-	// 2 tikv on the same host with diffrent config style
+	// 2 tikv on the same host with different config style
 	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
 tikv_servers:

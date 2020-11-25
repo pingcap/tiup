@@ -352,7 +352,7 @@ func newMirrorPublishCmd() *cobra.Command {
 				publishInfo.Stand = &standalone
 				publishInfo.Hide = &hidden
 			} else if flagSet.Exist("standalone") || flagSet.Exist("hide") {
-				fmt.Println("This is not a new component, --standalone and --hide flag will be omited")
+				fmt.Println("This is not a new component, --standalone and --hide flag will be omitted")
 			}
 
 			m = repository.UpdateManifestForPublish(m, component, version, entry, goos, goarch, desc, v1manifest.FileHash{

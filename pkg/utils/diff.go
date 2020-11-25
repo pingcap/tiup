@@ -30,7 +30,7 @@ const (
 	validateTagIgnore     = "ignore"
 	validateTagExpandable = "expandable"
 	// r3labs/diff drops everything after the first ',' in the tag value, so we use a different
-	// seperator for the tag value and its options
+	// separator for the tag value and its options
 	validateTagSeperator = ":"
 )
 

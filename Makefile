@@ -113,7 +113,7 @@ fmt:
 	@echo "gofmt (simplify)"
 	@gofmt -s -l -w $(FILES) 2>&1
 	@echo "goimports (if installed)"
-	$(shell gimports -w $(FILES) 2>/dev/null)
+	$(shell goimports -w $(FILES) 2>/dev/null)
 
 tools/bin/errcheck: tools/check/go.mod
 	cd tools/check; \
