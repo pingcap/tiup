@@ -19,14 +19,16 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pingcap/tiup/pkg/set"
 	"github.com/r3labs/diff"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 const (
-	validateTagName     = "validate"
-	validateTagEditable = "editable"
-	validateTagIgnore   = "ignore"
+	validateTagName       = "validate"
+	validateTagEditable   = "editable"
+	validateTagIgnore     = "ignore"
+	validateTagExpandable = "expandable"
 	// r3labs/diff drops everything after the first ',' in the tag value, so we use a different
 	// seperator for the tag value and its options
 	validateTagSeperator = ":"
@@ -40,6 +42,34 @@ func ShowDiff(t1 string, t2 string, w io.Writer) {
 	diffs = dmp.DiffCleanupSemantic(diffs)
 
 	fmt.Fprint(w, dmp.DiffPrettyText(diffs))
+}
+
+func validateExpandable(fromField, toField interface{}) bool {
+	fromStr, ok := fromField.(string)
+	if !ok {
+		return false
+	}
+	toStr, ok := toField.(string)
+	if !ok {
+		return false
+	}
+	tidyPaths := func(arr []string) []string {
+		for i := 0; i < len(arr); i++ {
+			arr[i] = strings.TrimSuffix(strings.TrimSpace(arr[i]), "/")
+		}
+		return arr
+	}
+	fromPaths := tidyPaths(strings.Split(fromStr, ","))
+	toPaths := tidyPaths(strings.Split(toStr, ","))
+	// The first path must be the same
+	if len(fromPaths) > 0 && len(toPaths) > 0 && fromPaths[0] != toPaths[0] {
+		return false
+	}
+	// The intersection size must be the same with from size
+	fromSet := set.NewStringSet(fromPaths...)
+	toSet := set.NewStringSet(toPaths...)
+	inter := fromSet.Intersection(toSet)
+	return len(inter) == len(fromSet)
 }
 
 // ValidateSpecDiff checks and validates the new spec to see if the modified
@@ -73,6 +103,7 @@ func ValidateSpecDiff(s1, s2 interface{}) error {
 
 			pathEditable := true
 			pathIgnore := false
+			pathExpandable := false
 			for _, p := range c.Path {
 				key, ctl := parseValidateTagValue(p)
 				if _, err := strconv.Atoi(key); err == nil {
@@ -83,12 +114,15 @@ func ValidateSpecDiff(s1, s2 interface{}) error {
 					pathIgnore = true
 					continue
 				}
+				if ctl == validateTagExpandable {
+					pathExpandable = validateExpandable(c.From, c.To)
+				}
 				if ctl != validateTagEditable {
 					pathEditable = false
 				}
 			}
 			// if the path has any ignorable item, just ignore it
-			if pathIgnore || pathEditable && (c.Type == diff.CREATE || c.Type == diff.DELETE) {
+			if pathIgnore || (pathEditable && (c.Type == diff.CREATE || c.Type == diff.DELETE)) || pathExpandable {
 				// If *every* parent elements on the path are all marked as editable,
 				// AND the field itself is marked as editable, it is allowed to add or delete
 				continue

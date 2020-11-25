@@ -64,8 +64,10 @@ server_configs:
     replication.location-labels: ["zone", "host"]
     replication.strictly-match-label: true
   tiflash:
-    # path_realtime_mode: false
     logger.level: "info"
+    ## Deprecated multi-disks storage path setting style since v4.0.9,
+    ## check storage.* configurations in host level for new style.
+    # path_realtime_mode: false
   tiflash-learner:
     log-level: "info"
     # raftstore.apply-pool-size: 4
@@ -134,37 +136,40 @@ tiflash_servers:
     # flash_proxy_status_port: 20292
     # metrics_port: 8234
     # deploy_dir: /tidb-deploy/tiflash-9000
+    ## With cluster version >= v4.0.9 and you want to deploy a multi-disk TiFlash node, it is recommended to
+    ## check config.storage.* for details. The data_dir will be ignored if you defined those configurations.
+    ## Setting data_dir to a ','-joined string is still supported but deprecated.
+    ## Check https://docs.pingcap.com/tidb/stable/tiflash-configuration#multi-disk-deployment for more details.
     # data_dir: /tidb-data/tiflash-9000
     # log_dir: /tidb-deploy/tiflash-9000/log
     # numa_node: "0,1"
-    # #
-    # # `path_realtime_mode` only works if `data_dir` is specified with multiple paths.
-    # #
-    # #  path_realtime_mode:
-    # #    "true" means only other paths instead of first path can be used to store older data.
-    # #    "false" means all paths can be used to store older data.
-    # #
-    # # TiFlash only uses the first path to store the latest data (i.e. "delta"). And others for the older data (i.e. "stable". which is the majority of data),
-    # #
-    # # E.g, if you intend to use an fast and smaller NVMe SSD (256GB) to speed up data ingestion speed in TiFlash,
-    # # and 4 extra normal SSDs (512GB each) for main storage. Then your configurations should be look like:
-    # #
-    # # data_dir: /nvme_ssd_256/data,/ssd1_512/data,/ssd2_512/data,/ssd3_512/data,/ssd4_512/data
-    # # config:
-    # #   path_realtime_mode: true
-    # #
-    # #
-    # # And if your first disk is big enough, to fully use the capacity of it, use configurations look like:
-    # #
-    # # data_dir: /nvme_ssd_512/data,/ssd1_512/data,/ssd2_512/data,/ssd3_512/data,/ssd4_512/data
-    # # config:
-    # #   path_realtime_mode: false
-    # #
-    # #
     # # The following configs are used to overwrite the `server_configs.tiflash` values.
     # config:
-    #   path_realtime_mode: false
     #   logger.level: "info"
+    #   ## Deprecated multi-disks storage path setting. Deprecated since v4.0.9,
+    #   ## check following storage.* configurations for new style.
+    #   # path_realtime_mode: false
+    #   #
+    #   ## Multi-disks storage paths settings. These will overwrite the `data_dir`.
+    #   ## If there are multiple SSD disks on the machine,
+    #   ## specify the path list on `storage.main.dir` can improve TiFlash performance.
+    #   # storage.main.dir: [ "/nvme_ssd0_512/tiflash", "/nvme_ssd1_512/tiflash" ]
+    #   ## Store capacity of each path, i.e. max data size allowed.
+    #   ## If it is not set, or is set to 0s, the actual disk capacity is used.
+    #   # storage.main.capacity = [ 536870912000, 536870912000 ]
+    #   #
+    #   ## If there are multiple disks with different IO metrics (e.g. one SSD and some HDDs)
+    #   ## on the machine, 
+    #   ## set `storage.latest.dir` to store the latest data on SSD (disks with higher IOPS metrics)
+    #   ## set `storage.main.dir` to store the main data on HDD (disks with lower IOPS metrics)
+    #   ## can improve TiFlash performance.
+    #   # storage.main.dir: [ "/hdd0_512/tiflash", "/hdd1_512/tiflash", "/hdd2_512/tiflash" ]
+    #   # storage.latest.dir: [ "/nvme_ssd0_100/tiflash" ]
+    #   ## Store capacity of each path, i.e. max data size allowed.
+    #   ## If it is not set, or is set to 0s, the actual disk capacity is used.
+    #   # storage.main.capacity = [ 536870912000, 536870912000 ]
+    #   # storage.latest.capacity = [ 107374182400 ]
+    #
     # # The following configs are used to overwrite the `server_configs.tiflash-learner` values.
     # learner_config:
     #   log-level: "info"

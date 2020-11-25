@@ -25,6 +25,7 @@ type sampleDataMeta struct {
 	StrSlice     []string                 `yaml:"strs,omitempty" validate:"strs:editable"`
 	MapSlice     []map[string]interface{} `yaml:"maps,omitempty" validate:"maps:ignore"`
 	StrElem      string                   `yaml:"stre" validate:"editable"`
+	StrElem2     string                   `yaml:"str2,omitempty" validate:"str2:expandable"`
 	StructSlice1 []sampleDataElem         `yaml:"slice1" validate:"slice1:editable"`
 	StructSlice2 []sampleDataElem         `yaml:"slice2,omitempty"`
 	StructSlice3 []sampleDataEditable     `yaml:"slice3,omitempty" validate:"slice3:editable"`
@@ -472,4 +473,47 @@ maps:
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)
 	c.Assert(err, IsNil)
+}
+
+func (d *diffSuite) TestValidateSpecDiffExpandable(c *C) {
+	var d1 sampleDataMeta
+	var d2 sampleDataMeta
+	var err error
+
+	err = yaml.Unmarshal([]byte(`
+str2: "/ssd0/tiflash,/ssd1/tiflash"
+`), &d1)
+	c.Assert(err, IsNil)
+
+	// Expand path
+	err = yaml.Unmarshal([]byte(`
+str2: "/ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash"
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+
+	// Expand path with non-sorted paths
+	err = yaml.Unmarshal([]byte(`
+str2: "/ssd0/tiflash,/ssd2/tiflash,/ssd1/tiflash"
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+
+	// Expand path with non-sorted paths. Changing the first path is not allowed.
+	err = yaml.Unmarshal([]byte(`
+str2: "/ssd1/tiflash,/ssd0/tiflash,/ssd2/tiflash"
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, NotNil)
+
+	// Shirnking paths is not allowed
+	err = yaml.Unmarshal([]byte(`
+str2: "/ssd0/tiflash"
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, NotNil)
 }
