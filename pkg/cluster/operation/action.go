@@ -574,7 +574,6 @@ func StopComponent(getter ExecutorGetter, instances []spec.Instance, timeout uin
 	for _, ins := range instances {
 		ins := ins
 		errg.Go(func() error {
-
 			err := stopInstance(getter, ins, timeout)
 			if err != nil {
 				return errors.AddStack(err)

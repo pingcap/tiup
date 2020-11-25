@@ -402,7 +402,6 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 
 	log.Infof("Destroyed cluster `%s` successfully", clusterName)
 	return nil
-
 }
 
 // ExecOptions for exec shell commanm.
@@ -583,7 +582,6 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 				dataDir,
 				deployDir,
 			})
-
 		}
 	}
 
@@ -1657,7 +1655,6 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool
 		}
 		log.Infof("Nothing changed.")
 		return nil, nil
-
 	}
 
 	origData, err := yaml.Marshal(origTopo)

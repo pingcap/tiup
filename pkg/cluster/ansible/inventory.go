@@ -600,7 +600,6 @@ func GetHostPort(host *aini.Host, cfg *ini.File) int {
 // 2. get from cfg.Section("defaults").Key("remote_port")
 // 3. get from srv.Port
 func getHostPort(srv *aini.Host, cfg *ini.File) int {
-
 	// parse per host config
 	// aini parse the port inline with hostnames (e.g., something like `host:22`)
 	// but not handling the "ansible_port" variable

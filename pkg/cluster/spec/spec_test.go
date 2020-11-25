@@ -625,7 +625,6 @@ tiflash_servers:
 				} else {
 					c.Error("Can not get storage.main.dir section")
 				}
-
 			} else {
 				c.Error("Can not get storage.main section")
 			}
