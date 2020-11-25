@@ -16,6 +16,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"runtime"
+	"strings"
+
 	"github.com/magiconair/properties"
 	_ "github.com/pingcap/go-ycsb/db/tikv"
 	"github.com/pingcap/go-ycsb/pkg/client"
@@ -23,8 +26,6 @@ import (
 	_ "github.com/pingcap/go-ycsb/pkg/workload"
 	"github.com/pingcap/go-ycsb/pkg/ycsb"
 	"github.com/spf13/cobra"
-	"runtime"
-	"strings"
 )
 
 type ycsbConfig struct {
