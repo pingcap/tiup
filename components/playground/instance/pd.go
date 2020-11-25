@@ -80,20 +80,21 @@ func (inst *PDInstance) Start(ctx context.Context, version pkgver.Version) error
 		args = append(args, fmt.Sprintf("--config=%s", inst.ConfigPath))
 	}
 
-	if len(inst.initEndpoints) > 0 {
+	switch {
+	case len(inst.initEndpoints) > 0:
 		endpoints := make([]string, 0)
 		for _, pd := range inst.initEndpoints {
 			uid := fmt.Sprintf("pd-%d", pd.ID)
 			endpoints = append(endpoints, fmt.Sprintf("%s=http://%s:%d", uid, advertiseHost(inst.Host), pd.Port))
 		}
 		args = append(args, fmt.Sprintf("--initial-cluster=%s", strings.Join(endpoints, ",")))
-	} else if len(inst.joinEndpoints) > 0 {
+	case len(inst.joinEndpoints) > 0:
 		endpoints := make([]string, 0)
 		for _, pd := range inst.joinEndpoints {
 			endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", advertiseHost(inst.Host), pd.Port))
 		}
 		args = append(args, fmt.Sprintf("--join=%s", strings.Join(endpoints, ",")))
-	} else {
+	default:
 		return errors.Errorf("must set the init or join instances.")
 	}
 

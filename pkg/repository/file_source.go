@@ -67,7 +67,7 @@ func (fs *mirrorSource) downloadTarFile(targetDir, resName string, expand bool) 
 	}
 
 	shaName := resName + ".sha1"
-	resName = resName + ".tar.gz"
+	resName += ".tar.gz"
 
 	shaReader, err := fs.mirror.Fetch(shaName, 0)
 	if err != nil {

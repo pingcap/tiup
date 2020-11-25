@@ -97,11 +97,11 @@ func RunComponent(env *environment.Environment, tag, spec, binPath string, args 
 		fmt.Printf("Got signal %v (Component: %v ; PID: %v)\n", s, component, p.Pid)
 		if component == "tidb" {
 			return syscall.Kill(p.Pid, syscall.SIGKILL)
-		} else if sig != syscall.SIGINT {
-			return syscall.Kill(p.Pid, sig)
-		} else {
-			return nil
 		}
+		if sig != syscall.SIGINT {
+			return syscall.Kill(p.Pid, sig)
+		}
+		return nil
 
 	case err := <-ch:
 		return errors.Annotatef(err, "run `%s` (wd:%s) failed", p.Exec, p.Dir)
@@ -225,13 +225,11 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetryUUID, teleMeta.UUID),
 		fmt.Sprintf("%s=%s", localdata.EnvTag, p.Tag),
 	}
+	envs = append(envs, os.Environ()...)
 
 	// init the command
 	c := exec.CommandContext(p.Ctx, binPath, p.Args...)
-	c.Env = append(
-		envs,
-		os.Environ()...,
-	)
+	c.Env = envs
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr

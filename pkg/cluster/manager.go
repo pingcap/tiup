@@ -299,11 +299,12 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 
 	if !skipConfirm {
 		target := ""
-		if cleanOpt.CleanupData && cleanOpt.CleanupLog {
+		switch {
+		case cleanOpt.CleanupData && cleanOpt.CleanupLog:
 			target = "data and log"
-		} else if cleanOpt.CleanupData {
+		case cleanOpt.CleanupData:
 			target = "data"
-		} else if cleanOpt.CleanupLog {
+		case cleanOpt.CleanupLog:
 			target = "log"
 		}
 		if err := cliutil.PromptForConfirmOrAbortError(
@@ -1846,7 +1847,7 @@ func (m *Manager) confirmTopology(clusterName, version string, topo spec.Topolog
 	topo.IterInstance(func(instance spec.Instance) {
 		comp := instance.ComponentName()
 		if patchedRoles.Exist(comp) {
-			comp = comp + " (patched)"
+			comp += " (patched)"
 		}
 		clusterTable = append(clusterTable, []string{
 			comp,

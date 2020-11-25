@@ -61,7 +61,8 @@ func (m *MonitoredConfig) Execute(ctx *Context) error {
 	}
 
 	var cfg template.ConfigGenerator
-	if m.component == spec.ComponentNodeExporter {
+	switch m.component {
+	case spec.ComponentNodeExporter:
 		if err := m.syncBlackboxConfig(exec, config.NewBlackboxConfig()); err != nil {
 			return err
 		}
@@ -70,12 +71,12 @@ func (m *MonitoredConfig) Execute(ctx *Context) error {
 			m.paths.Log,
 		).WithPort(uint64(m.options.NodeExporterPort)).
 			WithNumaNode(m.options.NumaNode)
-	} else if m.component == spec.ComponentBlackboxExporter {
+	case spec.ComponentBlackboxExporter:
 		cfg = scripts.NewBlackboxExporterScript(
 			m.paths.Deploy,
 			m.paths.Log,
 		).WithPort(uint64(m.options.BlackboxExporterPort))
-	} else {
+	default:
 		return fmt.Errorf("unknown monitored component %s", m.component)
 	}
 

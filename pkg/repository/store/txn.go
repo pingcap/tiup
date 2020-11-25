@@ -155,18 +155,20 @@ func (t *localTxn) ReadManifest(filename string, role v1manifest.ValidManifest) 
 		filepath = path.Join(t.root, filename)
 	}
 	var wc io.ReadCloser
-	if file, err := os.Open(filepath); err == nil {
+	file, err := os.Open(filepath)
+	switch {
+	case err == nil:
 		wc = file
-	} else if os.IsNotExist(err) && t.store.upstream != "" {
+	case os.IsNotExist(err) && t.store.upstream != "":
 		url := fmt.Sprintf("%s/%s", t.store.upstream, filename)
 		client := http.Client{Timeout: time.Minute}
-		if resp, err := client.Get(url); err == nil {
-			wc = resp.Body
-		} else {
+		resp, err := client.Get(url)
+		if err != nil {
 			resp.Body.Close()
 			return nil, errors.Annotatef(err, "fetch %s", url)
 		}
-	} else {
+		wc = resp.Body
+	default:
 		log.Errorf("Error on read manifest: %s, upstream: %s", err.Error(), t.store.upstream)
 		return nil, errors.Annotate(err, "open file")
 	}
