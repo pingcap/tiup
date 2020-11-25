@@ -51,10 +51,7 @@ func NewTiCDC(binPath string, dir, host, configPath string, id int, pds []*PDIns
 
 // Start implements Instance interface.
 func (c *TiCDC) Start(ctx context.Context, version pkgver.Version) error {
-	var endpoints []string
-	for _, pd := range c.pds {
-		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", pd.Host, pd.StatusPort))
-	}
+	endpoints := pdHTTPEndpoints(c.pds)
 
 	args := []string{
 		"server",

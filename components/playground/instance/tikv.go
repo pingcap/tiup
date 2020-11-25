@@ -59,10 +59,8 @@ func (inst *TiKVInstance) Start(ctx context.Context, version pkgver.Version) err
 	if err := inst.checkConfig(); err != nil {
 		return err
 	}
-	endpoints := make([]string, 0, len(inst.pds))
-	for _, pd := range inst.pds {
-		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", advertiseHost(inst.Host), pd.StatusPort))
-	}
+
+	endpoints := pdHTTPEndpoints(inst.pds)
 	args := []string{
 		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
 		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(inst.Host), inst.Port),

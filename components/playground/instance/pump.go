@@ -82,10 +82,7 @@ func (p *Pump) Addr() string {
 
 // Start implements Instance interface.
 func (p *Pump) Start(ctx context.Context, version pkgver.Version) error {
-	var endpoints []string
-	for _, pd := range p.pds {
-		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", pd.Host, pd.StatusPort))
-	}
+	endpoints := pdHTTPEndpoints(p.pds)
 
 	args := []string{
 		fmt.Sprintf("--node-id=%s", p.NodeID()),

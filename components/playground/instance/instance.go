@@ -85,3 +85,19 @@ func logIfErr(err error) {
 		fmt.Println(err)
 	}
 }
+
+func pdHTTPEndpoints(pds []*PDInstance) []string {
+	var endpoints []string
+	for _, pd := range pds {
+		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", advertiseHost(pd.Host), pd.StatusPort))
+	}
+	return endpoints
+}
+
+func pdEndpoints(pds []*PDInstance) []string {
+	var endpoints []string
+	for _, pd := range pds {
+		endpoints = append(endpoints, fmt.Sprintf("%s:%d", advertiseHost(pd.Host), pd.StatusPort))
+	}
+	return endpoints
+}

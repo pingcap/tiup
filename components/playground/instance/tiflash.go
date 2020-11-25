@@ -99,10 +99,8 @@ func (inst *TiFlashInstance) StatusAddrs() (addrs []string) {
 
 // Start calls set inst.cmd and Start
 func (inst *TiFlashInstance) Start(ctx context.Context, version pkgver.Version) error {
-	var endpoints []string
-	for _, pd := range inst.pds {
-		endpoints = append(endpoints, fmt.Sprintf("%s:%d", advertiseHost(inst.Host), pd.StatusPort))
-	}
+	endpoints := pdEndpoints(inst.pds)
+
 	tidbStatusAddrs := make([]string, 0, len(inst.dbs))
 	for _, db := range inst.dbs {
 		tidbStatusAddrs = append(tidbStatusAddrs, fmt.Sprintf("%s:%d", advertiseHost(db.Host), uint64(db.StatusPort)))
