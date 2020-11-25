@@ -56,7 +56,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 	case spec.ComponentTiDB:
 		// parse dirs
 		newIns := ins.(spec.TiDBSpec)
-		for _, line := range strings.Split(string(stdout), "\n") {
+		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
 				continue
