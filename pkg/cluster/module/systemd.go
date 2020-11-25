@@ -57,7 +57,7 @@ func NewSystemdModule(config SystemdModuleConfig) *SystemdModule {
 
 	switch config.Scope {
 	case SystemdScopeUser:
-		sudo = false // `--user` scope does not need root priviledge
+		sudo = false // `--user` scope does not need root privilege
 		fallthrough
 	case SystemdScopeGlobal:
 		systemctl = fmt.Sprintf("%s --%s", systemctl, config.Scope)
