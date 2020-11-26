@@ -25,7 +25,7 @@ exec bin/pd-server \
     --name="{{.Name}}" \
     --client-urls="{{.Scheme}}://{{.ListenHost}}:{{.ClientPort}}" \
     --advertise-client-urls="{{.Scheme}}://{{.IP}}:{{.ClientPort}}" \
-    --peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
+    --peer-urls="{{.Scheme}}://{{.ListenHost}}:{{.PeerPort}}" \
     --advertise-peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
     --data-dir="{{.DataDir}}" \
     --initial-cluster="{{template "PDList" .Endpoints}}" \
