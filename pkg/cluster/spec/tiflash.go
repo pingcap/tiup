@@ -177,7 +177,11 @@ func (s TiFlashSpec) GetOverrideDataDir() (string, error) {
 		i++
 	}
 	sort.Strings(keys)
-	return firstPath + "," + strings.Join(keys, ","), nil
+	joinedPaths := firstPath
+	if len(keys) > 0 {
+		joinedPaths += "," + strings.Join(keys, ",")
+	}
+	return joinedPaths, nil
 }
 
 // TiFlashComponent represents TiFlash component.
