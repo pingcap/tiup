@@ -96,6 +96,9 @@ func (inst *TiKVInstance) StoreAddr() string {
 }
 
 func (inst *TiKVInstance) checkConfig() error {
+	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
+		return err
+	}
 	if inst.ConfigPath == "" {
 		inst.ConfigPath = path.Join(inst.Dir, "tikv.toml")
 	}
