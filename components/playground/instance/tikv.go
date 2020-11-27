@@ -60,7 +60,7 @@ func (inst *TiKVInstance) Start(ctx context.Context, version pkgver.Version) err
 		return err
 	}
 
-	endpoints := pdHTTPEndpoints(inst.pds)
+	endpoints := pdEndpoints(inst.pds, true)
 	args := []string{
 		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
 		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(inst.Host), inst.Port),

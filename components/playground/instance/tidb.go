@@ -51,7 +51,7 @@ func NewTiDBInstance(binPath string, dir, host, configPath string, id int, pds [
 
 // Start calls set inst.cmd and Start
 func (inst *TiDBInstance) Start(ctx context.Context, version pkgver.Version) error {
-	endpoints := pdEndpoints(inst.pds)
+	endpoints := pdEndpoints(inst.pds, false)
 
 	args := []string{
 		"-P", strconv.Itoa(inst.Port),

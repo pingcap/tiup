@@ -51,7 +51,7 @@ func NewTiCDC(binPath string, dir, host, configPath string, id int, pds []*PDIns
 
 // Start implements Instance interface.
 func (c *TiCDC) Start(ctx context.Context, version pkgver.Version) error {
-	endpoints := pdHTTPEndpoints(c.pds)
+	endpoints := pdEndpoints(c.pds, true)
 
 	args := []string{
 		"server",

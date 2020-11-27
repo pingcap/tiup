@@ -71,7 +71,7 @@ func (d *Drainer) NodeID() string {
 
 // Start implements Instance interface.
 func (d *Drainer) Start(ctx context.Context, version pkgver.Version) error {
-	endpoints := pdHTTPEndpoints(d.pds)
+	endpoints := pdEndpoints(d.pds, true)
 
 	args := []string{
 		fmt.Sprintf("--node-id=%s", d.NodeID()),

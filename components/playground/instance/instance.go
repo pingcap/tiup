@@ -86,18 +86,14 @@ func logIfErr(err error) {
 	}
 }
 
-func pdHTTPEndpoints(pds []*PDInstance) []string {
+func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
 	var endpoints []string
 	for _, pd := range pds {
-		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", advertiseHost(pd.Host), pd.StatusPort))
-	}
-	return endpoints
-}
-
-func pdEndpoints(pds []*PDInstance) []string {
-	var endpoints []string
-	for _, pd := range pds {
-		endpoints = append(endpoints, fmt.Sprintf("%s:%d", advertiseHost(pd.Host), pd.StatusPort))
+		if isHTTP {
+			endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", advertiseHost(pd.Host), pd.StatusPort))
+		} else {
+			endpoints = append(endpoints, fmt.Sprintf("%s:%d", advertiseHost(pd.Host), pd.StatusPort))
+		}
 	}
 	return endpoints
 }
