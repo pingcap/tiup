@@ -250,10 +250,8 @@ func (i *MonitorInstance) InitConfig(
 		}
 	}
 
-	if i.topo.Type() == TopoTypeDM {
-		if err := i.installRules(e, paths.Deploy, clusterVersion); err != nil {
-			return errors.Annotate(err, "install rules")
-		}
+	if err := i.installRules(e, paths.Deploy, clusterVersion); err != nil {
+		return errors.Annotate(err, "install rules")
 	}
 
 	if err := i.initRules(e, spec, paths); err != nil {
@@ -267,12 +265,16 @@ func (i *MonitorInstance) InitConfig(
 	return e.Transfer(fp, dst, false)
 }
 
-// We only call installRules for dm cluster because the rules(*.rules.yml) packed with the prometheus
+// We only really installRules for dm cluster because the rules(*.rules.yml) packed with the prometheus
 // component is designed for tidb cluster (the dm cluster use the same prometheus component with tidb
 // cluster), and the rules for dm cluster is packed in the dm-master component. So if deploying tidb
 // cluster, the rules is correct, if deploying dm cluster, we should remove rules for tidb and install
 // rules for dm.
 func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVersion string) error {
+	if i.topo.Type() != TopoTypeDM {
+		return nil
+	}
+
 	tmp := filepath.Join(deployDir, "_tiup_tmp")
 	_, stderr, err := e.Execute(fmt.Sprintf("mkdir -p %s", tmp), false)
 	if err != nil {
