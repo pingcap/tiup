@@ -267,7 +267,11 @@ func (i *MonitorInstance) InitConfig(
 	return e.Transfer(fp, dst, false)
 }
 
-// installRules is used by dm cluster
+// We only call installRules for dm cluster because the rules(*.rules.yml) packed with the prometheus
+// component is designed for tidb cluster (the dm cluster use the same prometheus component with tidb
+// cluster), and the rules for dm cluster is packed in the dm-master component. So if deploying tidb
+// cluster, the rules is correct, if deploying dm cluster, we should remove rules for tidb and install
+// rules for dm.
 func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVersion string) error {
 	tmp := filepath.Join(deployDir, "_tiup_tmp")
 	_, stderr, err := e.Execute(fmt.Sprintf("mkdir -p %s", tmp), false)
