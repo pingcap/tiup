@@ -60,12 +60,19 @@ func (p *Pump) NodeID() string {
 func (p *Pump) Ready(ctx context.Context) error {
 	url := fmt.Sprintf("http://%s:%d/status", p.Host, p.Port)
 
-	for {
+	ready := func() bool {
 		resp, err := http.Get(url)
-		if err == nil && resp.StatusCode == 200 {
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		return resp.StatusCode == 200
+	}
+
+	for {
+		if ready() {
 			return nil
 		}
-		_ = resp.Body.Close()
 
 		select {
 		case <-ctx.Done():
