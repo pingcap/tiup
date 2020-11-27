@@ -381,6 +381,24 @@ tiflash_servers:
 		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
 	})
 
+	// test if there is only one path in storage.main.dir
+	withTempFile(`
+tiflash_servers:
+  - host: 172.16.5.140
+    data_dir: /hhd0/tiflash
+    config:
+      storage.main.dir: [/ssd0/tiflash]
+`, func(file string) {
+		topo := Specification{}
+		err := ParseTopologyYaml(file, &topo)
+		c.Assert(err, check.IsNil)
+		ExpandRelativeDir(&topo)
+
+		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
+		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash")
+		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
+	})
+
 	// test tiflash storage section defined data dir
 	// should always define storage.main.dir if any 'storage.*' is defined
 	withTempFile(`
