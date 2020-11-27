@@ -54,7 +54,7 @@ var (
 	ErrorManifestMissing = newHandlerError(http.StatusNotFound, "MANIFEST NOT FOUND", "that component doesn't have manifest yet")
 	// ErrorInvalidTarball indicates that the tarball is not valid (eg. too large)
 	ErrorInvalidTarball = newHandlerError(http.StatusBadRequest, "INVALID TARBALL", "the tarball content is not valid")
-	// ErrorInvalidManifest indicates that the manfiest is not valid
+	// ErrorInvalidManifest indicates that the manifest is not valid
 	ErrorInvalidManifest = newHandlerError(http.StatusBadRequest, "INVALID MANIFEST", "the manifest content is not valid")
 	// ErrorInternalError indicates that an internal error happened
 	ErrorInternalError = newHandlerError(http.StatusInternalServerError, "INTERNAL ERROR", "an internal error happened")
