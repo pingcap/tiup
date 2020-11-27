@@ -1395,53 +1395,51 @@ func (m *Manager) ScaleIn(
 	var regenConfigTasks []task.Task
 	hasImported := false
 	deletedNodes := set.NewStringSet(nodes...)
-	for _, component := range topo.ComponentsByStartOrder() {
-		for _, instance := range component.Instances() {
-			if deletedNodes.Exist(instance.ID()) {
-				continue
-			}
-			deployDir := spec.Abs(base.User, instance.DeployDir())
-			// data dir would be empty for components which don't need it
-			dataDirs := spec.MultiDirAbs(base.User, instance.DataDir())
-			// log dir will always be with values, but might not used by the component
-			logDir := spec.Abs(base.User, instance.LogDir())
-
-			// Download and copy the latest component to remote if the cluster is imported from Ansible
-			tb := task.NewBuilder()
-			if instance.IsImported() {
-				switch compName := instance.ComponentName(); compName {
-				case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
-					version := m.bindVersion(compName, base.Version)
-					tb.Download(compName, instance.OS(), instance.Arch(), version).
-						CopyComponent(
-							compName,
-							instance.OS(),
-							instance.Arch(),
-							version,
-							"", // use default srcPath
-							instance.GetHost(),
-							deployDir,
-						)
-				}
-				hasImported = true
-			}
-
-			t := tb.InitConfig(clusterName,
-				base.Version,
-				m.specManager,
-				instance,
-				base.User,
-				true, // always ignore config check result in scale in
-				meta.DirPaths{
-					Deploy: deployDir,
-					Data:   dataDirs,
-					Log:    logDir,
-					Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
-				},
-			).Build()
-			regenConfigTasks = append(regenConfigTasks, t)
+	topo.IterInstance(func(instance spec.Instance) {
+		if deletedNodes.Exist(instance.ID()) {
+			return
 		}
-	}
+		deployDir := spec.Abs(base.User, instance.DeployDir())
+		// data dir would be empty for components which don't need it
+		dataDirs := spec.MultiDirAbs(base.User, instance.DataDir())
+		// log dir will always be with values, but might not used by the component
+		logDir := spec.Abs(base.User, instance.LogDir())
+
+		// Download and copy the latest component to remote if the cluster is imported from Ansible
+		tb := task.NewBuilder()
+		if instance.IsImported() {
+			switch compName := instance.ComponentName(); compName {
+			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
+				version := m.bindVersion(compName, base.Version)
+				tb.Download(compName, instance.OS(), instance.Arch(), version).
+					CopyComponent(
+						compName,
+						instance.OS(),
+						instance.Arch(),
+						version,
+						"", // use default srcPath
+						instance.GetHost(),
+						deployDir,
+					)
+			}
+			hasImported = true
+		}
+
+		t := tb.InitConfig(clusterName,
+			base.Version,
+			m.specManager,
+			instance,
+			base.User,
+			true, // always ignore config check result in scale in
+			meta.DirPaths{
+				Deploy: deployDir,
+				Data:   dataDirs,
+				Log:    logDir,
+				Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
+			},
+		).Build()
+		regenConfigTasks = append(regenConfigTasks, t)
+	})
 
 	// handle dir scheme changes
 	if hasImported {
