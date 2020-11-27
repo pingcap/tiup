@@ -40,7 +40,7 @@ const (
 	migrateLockName = "tiup-migrate.lck"
 )
 
-// ErrorCheckConfig represent error occured in config check stage
+// ErrorCheckConfig represent error occurred in config check stage
 var ErrorCheckConfig = errors.New("check config failed")
 
 // strKeyMap tries to convert `map[interface{}]interface{}` to `map[string]interface{}`

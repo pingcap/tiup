@@ -53,7 +53,7 @@ func (e *ValidateErr) Is(target error) bool {
 		return false
 	}
 
-	// check for interface Value seperately
+	// check for interface Value separately
 	if e.Value != nil && t.Value != nil &&
 		(!reflect.ValueOf(e.Value).IsValid() && !reflect.ValueOf(t.Value).IsValid()) {
 		return false
