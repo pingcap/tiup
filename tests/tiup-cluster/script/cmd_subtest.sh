@@ -6,7 +6,6 @@ function cmd_subtest() {
     version=$1
     test_tls=$2
     native_ssh=$3
-    ipprefix=${TIUP_TEST_IP_PREFIX:-"$ipprefix"}
 
     name="test_cmd_$RANDOM"
     if [ $test_tls = true ]; then
@@ -14,7 +13,6 @@ function cmd_subtest() {
     else
         topo=./topo/full.yaml
     fi
-    sed "s/__IPPREFIX__/$ipprefix/g" $topo.tpl > $topo
 
     client=""
     if [ $native_ssh == true ]; then
@@ -41,9 +39,9 @@ function cmd_subtest() {
     tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa --skip-create-user
 
     # check the local config
-    tiup-cluster $client exec $name -N $ipprefix.101 --command "grep magic-string-for-test /home/tidb/deploy/prometheus-9090/conf/tidb.rules.yml"
-    tiup-cluster $client exec $name -N $ipprefix.101 --command "grep magic-string-for-test /home/tidb/deploy/grafana-3000/dashboards/tidb.json"
-    tiup-cluster $client exec $name -N $ipprefix.101 --command "grep magic-string-for-test /home/tidb/deploy/alertmanager-9093/conf/alertmanager.yml"
+    tiup-cluster $client exec $name -N n1 --command "grep magic-string-for-test /home/tidb/deploy/prometheus-9090/conf/tidb.rules.yml"
+    tiup-cluster $client exec $name -N n1 --command "grep magic-string-for-test /home/tidb/deploy/grafana-3000/dashboards/tidb.json"
+    tiup-cluster $client exec $name -N n1 --command "grep magic-string-for-test /home/tidb/deploy/alertmanager-9093/conf/alertmanager.yml"
 
     tiup-cluster $client list | grep "$name"
 
@@ -59,8 +57,8 @@ function cmd_subtest() {
 
     # check the data dir of tikv
     # it's ok to omit client type after deploy
-    tiup-cluster exec $name -N $ipprefix.101 --command "grep /home/tidb/deploy/tikv-20160/data /home/tidb/deploy/tikv-20160/scripts/run_tikv.sh"
-    tiup-cluster exec $name -N $ipprefix.103 --command "grep /home/tidb/my_kv_data /home/tidb/deploy/tikv-20160/scripts/run_tikv.sh"
+    tiup-cluster exec $name -N n1 --command "grep /home/tidb/deploy/tikv-20160/data /home/tidb/deploy/tikv-20160/scripts/run_tikv.sh"
+    tiup-cluster exec $name -N n3 --command "grep /home/tidb/my_kv_data /home/tidb/deploy/tikv-20160/scripts/run_tikv.sh"
 
     # test patch overwrite
     tiup-cluster $client --yes patch $name ~/.tiup/storage/cluster/packages/tidb-$version-linux-amd64.tar.gz -R tidb --overwrite
@@ -94,11 +92,11 @@ function cmd_subtest() {
     tiup-cluster $client exec $name -R tidb --command="systemctl status tidb-4000|grep 'enabled;'"
     tiup-cluster $client exec $name -R pd --command="systemctl status pd-2379|grep 'enabled;'"
 
-    tiup-cluster $client --yes clean $name --data --all --ignore-node $ipprefix.101:9090
+    tiup-cluster $client --yes clean $name --data --all --ignore-node n1:9090
 
     echo "checking cleanup data and log"
-    tiup-cluster $client exec $name -N $ipprefix.101 --command "ls /home/tidb/deploy/prometheus-9090/log/prometheus.log"
-    ! tiup-cluster $client exec $name -N $ipprefix.101 --command "ls /home/tidb/deploy/tikv-20160/log/tikv.log"
+    tiup-cluster $client exec $name -N n1 --command "ls /home/tidb/deploy/prometheus-9090/log/prometheus.log"
+    ! tiup-cluster $client exec $name -N n1 --command "ls /home/tidb/deploy/tikv-20160/log/tikv.log"
 
     tiup-cluster $client --yes start $name
 
