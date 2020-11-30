@@ -79,7 +79,7 @@ func GetNodeInfo(
 
 			resName := fmt.Sprintf("%s-%s", "cluster", ver)
 			fileName := fmt.Sprintf("%s-%s-%s.tar.gz", resName, inst.OS(), inst.Arch())
-			srcPath := spec.ProfilePath(spec.TiOpsPackageCacheDir, fileName)
+			srcPath := spec.ProfilePath(spec.TiUPPackageCacheDir, fileName)
 
 			dstDir := filepath.Join(dir, "bin")
 			dstPath := filepath.Join(dstDir, path.Base(srcPath))
