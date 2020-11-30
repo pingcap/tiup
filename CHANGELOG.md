@@ -1,5 +1,19 @@
 TiUP Changelog
 
+## [1.2.5] 2020.11.27
+
+### Fixes
+
+- Fix the issue that can't operate the cluster which have tispark workers without tispark master ([#924](https://github.com/pingcap/tiup/pull/924), [@AstroProfundis](https://github.com/AstroProfundis))
+  - Root cause: once the tispark master been removed from the cluster, any later action will be reject by TiUP
+  - Fix: make it possible for broken clusters to fix no tispark master error by scaling out a new tispark master node
+- Fix the issue that it report `pump node id not found` while drainer node id not found ([#925](https://github.com/pingcap/tiup/pull/925), [@lucklove](https://github.com/lucklove))
+
+### Improvements
+
+- Support deploy TiFlash on multi-disks with "storage" configurations since v4.0.9 ([#931](https://github.com/pingcap/tiup/pull/931), [#938](https://github.com/pingcap/tiup/pull/938), [@JaySon-Huang](https://github.com/JaySon-Huang))
+- Check duplicated pd_servers.name in the topology before truly deploy the cluster ([#922](https://github.com/pingcap/tiup/pull/922), [@anywhy](https://github.com/anywhy))
+
 ## [1.2.4] 2020.11.19
 
 ### Fixes

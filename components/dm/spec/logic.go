@@ -28,8 +28,8 @@ import (
 
 // Components names supported by TiOps
 const (
-	ComponentDMMaster     = "dm-master"
-	ComponentDMWorker     = "dm-worker"
+	ComponentDMMaster     = spec.ComponentDMMaster
+	ComponentDMWorker     = spec.ComponentDMWorker
 	ComponentPrometheus   = spec.ComponentPrometheus
 	ComponentGrafana      = spec.ComponentGrafana
 	ComponentAlertmanager = spec.ComponentAlertmanager

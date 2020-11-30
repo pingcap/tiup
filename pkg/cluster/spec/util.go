@@ -155,3 +155,9 @@ func MultiDirAbs(user, paths string) []string {
 	}
 	return dirs
 }
+
+// PackagePath return the tar bar path
+func PackagePath(comp string, version string, os string, arch string) string {
+	fileName := fmt.Sprintf("%s-%s-%s-%s.tar.gz", comp, version, os, arch)
+	return ProfilePath(TiUPPackageCacheDir, fileName)
+}

@@ -69,6 +69,18 @@ topo_worker=./topo/full_scale_in_dm-worker.yaml
 sed "s/__IPPREFIX__/$ipprefix/g" $topo_worker.tpl > $topo_worker
 yes | tiup-dm scale-out $name $topo_worker
 
+echo "start scale in grafana"
+yes | tiup-dm scale-in $name -N $ipprefix.101:3000
+wait_instance_num_reach $name $total_sub_one
+
+echo "start scale out grafana"
+topo_grafana=./topo/full_scale_in_grafana.yaml
+sed "s/__IPPREFIX__/$ipprefix/g" $topo_grafana.tpl > $topo_grafana
+yes | tiup-dm scale-out $name $topo_grafana
+
+# test grafana config
+tiup-dm exec $name -N $ipprefix.101 --command "ls /home/tidb/deploy/grafana-3000/dashboards/dm.json && ! grep magic-string-for-test /home/tidb/deploy/grafana-3000/dashboards/dm.json"
+
 # test create a task and can replicate data
 ./script/task/run.sh
 
