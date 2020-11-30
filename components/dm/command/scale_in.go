@@ -80,11 +80,13 @@ func ScaleInDMCluster(
 ) error {
 	// instances by uuid
 	instances := map[string]dm.Instance{}
+	instCount := map[string]int{}
 
 	// make sure all nodeIds exists in topology
 	for _, component := range topo.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
 			instances[instance.ID()] = instance
+			instCount[instance.GetHost()]++
 		}
 	}
 
@@ -110,7 +112,8 @@ func ScaleInDMCluster(
 				if !deletedNodes.Exist(instance.ID()) {
 					continue
 				}
-				if err := operator.StopAndDestroyInstance(getter, topo, instance, options, false); err != nil {
+				instCount[instance.GetHost()]--
+				if err := operator.StopAndDestroyInstance(getter, topo, instance, options, instCount[instance.GetHost()] == 0); err != nil {
 					log.Warnf("failed to stop/destroy %s: %v", component.Name(), err)
 				}
 			}
@@ -162,6 +165,14 @@ func ScaleInDMCluster(
 			if err := operator.DestroyComponent(getter, []dm.Instance{instance}, topo, options); err != nil {
 				return errors.Annotatef(err, "failed to destroy %s", component.Name())
 			}
+
+			instCount[instance.GetHost()]--
+			if instCount[instance.GetHost()] == 0 {
+				if err := operator.DeletePublicKey(getter, instance.GetHost()); err != nil {
+					return errors.Annotatef(err, "failed to delete public key")
+				}
+			}
+
 		}
 	}
 

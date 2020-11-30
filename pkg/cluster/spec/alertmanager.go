@@ -171,6 +171,6 @@ func (i *AlertManagerInstance) ScaleConfig(
 ) error {
 	s := i.topo
 	defer func() { i.topo = s }()
-	i.topo = mustBeClusterTopo(topo)
+	i.topo = topo
 	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
 }
