@@ -78,6 +78,10 @@ func (t *TestTopology) MergeTopo(topo Topology) Topology {
 	panic("not support")
 }
 
+func (t *TestTopology) Type() string {
+	return TopoTypeTiDB
+}
+
 func (t *TestTopology) BaseTopo() *BaseTopo {
 	return &t.base
 }

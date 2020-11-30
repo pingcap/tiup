@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"go.etcd.io/etcd/clientv3"
 )
@@ -39,6 +40,8 @@ var (
 	RoleMonitor       = "monitor"
 	RoleTiSparkMaster = "tispark-master"
 	RoleTiSparkWorker = "tispark-worker"
+	TopoTypeTiDB      = "tidb-cluster"
+	TopoTypeDM        = "dm-cluster"
 )
 
 type (
@@ -122,6 +125,7 @@ type BaseTopo struct {
 
 // Topology represents specification of the cluster.
 type Topology interface {
+	Type() string
 	BaseTopo() *BaseTopo
 	// Validate validates the topology specification and produce error if the
 	// specification invalid (e.g: port conflicts or directory conflicts)
@@ -203,6 +207,11 @@ func (s *Specification) TLSConfig(dir string) (*tls.Config, error) {
 		return nil, nil
 	}
 	return LoadClientCert(dir)
+}
+
+// Type implements Topology interface.
+func (s *Specification) Type() string {
+	return TopoTypeTiDB
 }
 
 // BaseTopo implements Topology interface.
@@ -307,6 +316,19 @@ func (s *Specification) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	// populate custom default values as needed
 	if err := fillCustomDefaults(&s.GlobalOptions, s); err != nil {
 		return err
+	}
+
+	// Rewrite TiFlashSpec.DataDir since we may override it with configurations.
+	// Should do it before validatation because we need to detect dir conflicts.
+	for i := 0; i < len(s.TiFlashServers); i++ {
+		dataDir, err := s.TiFlashServers[i].GetOverrideDataDir()
+		if err != nil {
+			return err
+		}
+		if s.TiFlashServers[i].DataDir != dataDir {
+			log.Infof("'tiflash_server:%s.data_dir' is overwritten by its storage configuration. Now the data_dir is %s", s.TiFlashServers[i].Host, dataDir)
+			s.TiFlashServers[i].DataDir = dataDir
+		}
 	}
 
 	return s.Validate()

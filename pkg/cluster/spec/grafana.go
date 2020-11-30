@@ -156,6 +156,10 @@ func (i *GrafanaInstance) InitConfig(
 		return err
 	}
 
+	if err := i.installDashboards(e, paths.Deploy, clusterName, clusterVersion); err != nil {
+		return errors.Annotate(err, "install dashboards")
+	}
+
 	// initial dashboards/*.json
 	if err := i.initDashboards(e, i.InstanceSpec.(GrafanaSpec), paths, clusterName); err != nil {
 		return errors.Annotate(err, "initial dashboards")
@@ -225,6 +229,57 @@ func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, 
 		if err != nil {
 			return errors.Annotatef(err, "stderr: %s", string(stderr))
 		}
+	}
+
+	return nil
+}
+
+// We only really installDashboards for dm cluster because the dashboards(*.json) packed with
+// the grafana component is designed for tidb cluster (the dm cluster use the same cluster
+// component with tidb cluster), and the dashboards for dm cluster is packed in the dm-master
+// component. So if deploying tidb cluster, the dashboards is correct, if deploying dm cluster,
+// we should remove dashboards for tidb and install dashboards for dm.
+func (i *GrafanaInstance) installDashboards(e executor.Executor, deployDir, clusterName, clusterVersion string) error {
+	if i.topo.Type() != TopoTypeDM {
+		return nil
+	}
+
+	tmp := filepath.Join(deployDir, "_tiup_tmp")
+	_, stderr, err := e.Execute(fmt.Sprintf("mkdir -p %s", tmp), false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	srcPath := PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
+	dstPath := filepath.Join(tmp, filepath.Base(srcPath))
+	err = e.Transfer(srcPath, dstPath, false)
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	cmd := fmt.Sprintf(`tar --no-same-owner -zxf %s -C %s && rm %s`, dstPath, tmp, dstPath)
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	// copy dm-master/scripts/*.json
+	targetDir := filepath.Join(deployDir, "bin")
+	_, stderr, err = e.Execute(fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*.json", targetDir), false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	cmd = fmt.Sprintf("cp %s/dm-master/scripts/*.json %s", tmp, targetDir)
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	}
+
+	cmd = fmt.Sprintf("rm -rf %s", tmp)
+	_, stderr, err = e.Execute(cmd, false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
 	return nil

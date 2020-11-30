@@ -20,15 +20,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"reflect"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/set"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v2"
 )
@@ -45,7 +45,7 @@ type TiFlashSpec struct {
 	FlashProxyStatusPort int                    `yaml:"flash_proxy_status_port" default:"20292"`
 	StatusPort           int                    `yaml:"metrics_port" default:"8234"`
 	DeployDir            string                 `yaml:"deploy_dir,omitempty"`
-	DataDir              string                 `yaml:"data_dir,omitempty"`
+	DataDir              string                 `yaml:"data_dir,omitempty" validate:"data_dir:expandable"`
 	LogDir               string                 `yaml:"log_dir,omitempty"`
 	TmpDir               string                 `yaml:"tmp_path,omitempty"`
 	Offline              bool                   `yaml:"offline,omitempty"`
@@ -85,6 +85,103 @@ func (s TiFlashSpec) GetMainPort() int {
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s TiFlashSpec) IsImported() bool {
 	return s.Imported
+}
+
+// key names for storage config
+const (
+	TiFlashStorageKeyMainDirs   string = "storage.main.dir"
+	TiFlashStorageKeyLatestDirs string = "storage.latest.dir"
+	TiFlashStorageKeyRaftDirs   string = "storage.raft.dir"
+)
+
+// GetOverrideDataDir returns the data dir.
+// If users have defined TiFlashStorageKeyMainDirs, then override "DataDir" with
+// the directories defined in TiFlashStorageKeyMainDirs and TiFlashStorageKeyLatestDirs
+func (s TiFlashSpec) GetOverrideDataDir() (string, error) {
+	getStrings := func(key string) []string {
+		var strs []string
+		if dirsVal, ok := s.Config[key]; ok {
+			if dirs, ok := dirsVal.([]interface{}); ok && len(dirs) > 0 {
+				for _, elem := range dirs {
+					if elemStr, ok := elem.(string); ok {
+						elemStr := strings.TrimSuffix(strings.TrimSpace(elemStr), "/")
+						strs = append(strs, elemStr)
+					}
+				}
+			}
+		}
+		return strs
+	}
+	mainDirs := getStrings(TiFlashStorageKeyMainDirs)
+	latestDirs := getStrings(TiFlashStorageKeyLatestDirs)
+	if len(mainDirs) == 0 && len(latestDirs) == 0 {
+		return s.DataDir, nil
+	}
+
+	// If storage is defined, the path defined in "data_dir" will be ignored
+	// check whether the directories is uniq in the same configuration item
+	// and make the dirSet uniq
+	checkAbsolute := func(d, host, key string) error {
+		if !strings.HasPrefix(d, "/") {
+			return fmt.Errorf("directory '%s' should be an absolute path in 'tiflash_servers:%s.config.%s'", d, s.Host, key)
+		}
+		return nil
+	}
+
+	dirSet := set.NewStringSet()
+	for _, d := range latestDirs {
+		if err := checkAbsolute(d, s.Host, TiFlashStorageKeyLatestDirs); err != nil {
+			return "", err
+		}
+		if dirSet.Exist(d) {
+			return "", &meta.ValidateErr{
+				Type:   meta.TypeConflict,
+				Target: "directory",
+				LHS:    fmt.Sprintf("tiflash_servers:%s.config.%s", s.Host, TiFlashStorageKeyLatestDirs),
+				RHS:    fmt.Sprintf("tiflash_servers:%s.config.%s", s.Host, TiFlashStorageKeyLatestDirs),
+				Value:  d,
+			}
+		}
+		dirSet.Insert(d)
+	}
+	mainDirSet := set.NewStringSet()
+	for _, d := range mainDirs {
+		if err := checkAbsolute(d, s.Host, TiFlashStorageKeyMainDirs); err != nil {
+			return "", err
+		}
+		if mainDirSet.Exist(d) {
+			return "", &meta.ValidateErr{
+				Type:   meta.TypeConflict,
+				Target: "directory",
+				LHS:    fmt.Sprintf("tiflash_servers:%s.config.%s", s.Host, TiFlashStorageKeyMainDirs),
+				RHS:    fmt.Sprintf("tiflash_servers:%s.config.%s", s.Host, TiFlashStorageKeyMainDirs),
+				Value:  d,
+			}
+		}
+		mainDirSet.Insert(d)
+		dirSet.Insert(d)
+	}
+	// keep the firstPath
+	var firstPath string
+	if len(latestDirs) != 0 {
+		firstPath = latestDirs[0]
+	} else {
+		firstPath = mainDirs[0]
+	}
+	dirSet.Remove(firstPath)
+	// join (stable sorted) paths with ","
+	keys := make([]string, len(dirSet))
+	i := 0
+	for k := range dirSet {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+	joinedPaths := firstPath
+	if len(keys) > 0 {
+		joinedPaths += "," + strings.Join(keys, ",")
+	}
+	return joinedPaths, nil
 }
 
 // TiFlashComponent represents TiFlash component.
@@ -140,9 +237,9 @@ func (i *TiFlashInstance) GetServicePort() int {
 	return i.InstanceSpec.(TiFlashSpec).FlashServicePort
 }
 
-// checkIncorrectDataDir checks TiFlash's key should not be set in config
+// checkIncorrectKey checks TiFlash's key should not be set in config
 func (i *TiFlashInstance) checkIncorrectKey(key string) error {
-	errMsg := "NOTE: TiFlash `%s` is should NOT be set in topo's \"%s\" config, its value will be ignored, you should set `data_dir` in each host instead, please check your topology"
+	errMsg := "NOTE: TiFlash `%s` should NOT be set in topo's \"%s\" config, its value will be ignored, you should set `data_dir` in each host instead, please check your topology"
 	if dir, ok := i.InstanceSpec.(TiFlashSpec).Config[key].(string); ok && dir != "" {
 		return fmt.Errorf(errMsg, key, "host")
 	}
@@ -152,42 +249,125 @@ func (i *TiFlashInstance) checkIncorrectKey(key string) error {
 	return nil
 }
 
-// checkIncorrectDataDir checks incorrect data_dir settings
-func (i *TiFlashInstance) checkIncorrectDataDir() error {
+// checkIncorrectServerConfigs checks TiFlash's key should not be set in server_config
+func (i *TiFlashInstance) checkIncorrectServerConfigs(key string) error {
+	errMsg := "NOTE: TiFlash `%[1]s` should NOT be set in topo's \"%[2]s\" config, you should set `%[1]s` in each host instead, please check your topology"
+	if _, ok := i.topo.(*Specification).ServerConfigs.TiFlash[key]; ok {
+		return fmt.Errorf(errMsg, key, "server_configs")
+	}
+	return nil
+}
+
+// isValidStringArray detect the key in `config` is valid or not.
+// The configuration is valid only the key-value is defined, and the
+// value is a non-empty string array.
+// Return (key is defined or not, the value is valid or not)
+func isValidStringArray(key string, config map[string]interface{}, couldEmpty bool) (bool, error) {
+	var (
+		dirsVal          interface{}
+		isKeyDefined     bool
+		isAllElemsString bool = true
+	)
+	if dirsVal, isKeyDefined = config[key]; !isKeyDefined {
+		return isKeyDefined, nil
+	}
+	if dirs, ok := dirsVal.([]interface{}); ok && (couldEmpty || len(dirs) > 0) {
+		// ensure dirs is non-empty string array
+		for _, elem := range dirs {
+			if _, ok := elem.(string); !ok {
+				isAllElemsString = false
+				break
+			}
+		}
+		if isAllElemsString {
+			return isKeyDefined, nil
+		}
+	}
+	return isKeyDefined, fmt.Errorf("'%s' should be a non-empty string array, please check the tiflash configuration in your yaml file", TiFlashStorageKeyMainDirs)
+}
+
+// checkTiFlashStorageConfig detect the "storage" section in `config`
+// is valid or not.
+func checkTiFlashStorageConfig(config map[string]interface{}) (bool, error) {
+	var (
+		isStorageDirsDefined bool
+		err                  error
+	)
+	if isStorageDirsDefined, err = isValidStringArray(TiFlashStorageKeyMainDirs, config, false); err != nil {
+		return isStorageDirsDefined, err
+	}
+	if !isStorageDirsDefined {
+		containsStorageSectionKey := func(config map[string]interface{}) (string, bool) {
+			for k := range config {
+				if strings.HasPrefix(k, "storage.") {
+					return k, true
+				}
+			}
+			return "", false
+		}
+		if key, contains := containsStorageSectionKey(config); contains {
+			return isStorageDirsDefined, fmt.Errorf("You must set '%s' before setting '%s', please check the tiflash configuration in your yaml file", TiFlashStorageKeyMainDirs, key)
+		}
+	}
+	return isStorageDirsDefined, nil
+}
+
+// CheckIncorrectConfigs checks incorrect settings
+func (i *TiFlashInstance) CheckIncorrectConfigs() error {
+	// data_dir / path should not be set in config
 	if err := i.checkIncorrectKey("data_dir"); err != nil {
 		return err
 	}
-	return i.checkIncorrectKey("path")
+	if err := i.checkIncorrectKey("path"); err != nil {
+		return err
+	}
+	// storage.main/latest/raft.dir should not be set in server_config
+	if err := i.checkIncorrectServerConfigs(TiFlashStorageKeyMainDirs); err != nil {
+		return err
+	}
+	if err := i.checkIncorrectServerConfigs(TiFlashStorageKeyLatestDirs); err != nil {
+		return err
+	}
+	if err := i.checkIncorrectServerConfigs(TiFlashStorageKeyRaftDirs); err != nil {
+		return err
+	}
+	// storage.* in instance level
+	if _, err := checkTiFlashStorageConfig(i.InstanceSpec.(TiFlashSpec).Config); err != nil {
+		return err
+	}
+	// no matter storgae.latest.dir is defined or not, return err
+	_, err := isValidStringArray(TiFlashStorageKeyLatestDirs, i.InstanceSpec.(TiFlashSpec).Config, true)
+	return err
 }
 
-// DataDir represents TiFlash's DataDir
-func (i *TiFlashInstance) DataDir() string {
-	if err := i.checkIncorrectDataDir(); err != nil {
-		log.Errorf(err.Error())
+// need to check the configuration after clusterVersion >= v4.0.9.
+func checkTiFlashStorageConfigWithVersion(clusterVersion string, config map[string]interface{}) (bool, error) {
+	if semver.Compare(clusterVersion, "v4.0.9") >= 0 || clusterVersion == "nightly" {
+		return checkTiFlashStorageConfig(config)
 	}
-	dataDir := reflect.ValueOf(i.InstanceSpec).FieldByName("DataDir")
-	if !dataDir.IsValid() {
-		return ""
-	}
-	var dirs []string
-	for _, dir := range strings.Split(dataDir.String(), ",") {
-		if dir == "" {
-			continue
-		}
-		if !strings.HasPrefix(dir, "/") {
-			dirs = append(dirs, filepath.Join(i.DeployDir(), dir))
-		} else {
-			dirs = append(dirs, dir)
-		}
-	}
-	return strings.Join(dirs, ",")
+	return false, nil
 }
 
-// InitTiFlashConfig initializes TiFlash config file
-func (i *TiFlashInstance) InitTiFlashConfig(cfg *scripts.TiFlashScript, src map[string]interface{}) (map[string]interface{}, error) {
+// InitTiFlashConfig initializes TiFlash config file with the configurations in server_configs
+func (i *TiFlashInstance) initTiFlashConfig(cfg *scripts.TiFlashScript, clusterVersion string, src map[string]interface{}) (map[string]interface{}, error) {
+	var (
+		pathConfig           string
+		isStorageDirsDefined bool
+		err                  error
+	)
+	if isStorageDirsDefined, err = checkTiFlashStorageConfigWithVersion(clusterVersion, src); err != nil {
+		return nil, err
+	}
+	// For backward compatibility, we need to rollback to set 'path'
+	if isStorageDirsDefined {
+		pathConfig = "#"
+	} else {
+		pathConfig = fmt.Sprintf(`path: "%s"`, cfg.DataDir)
+	}
+
 	topo := Specification{}
 
-	err := yaml.Unmarshal([]byte(fmt.Sprintf(`
+	err = yaml.Unmarshal([]byte(fmt.Sprintf(`
 server_configs:
   tiflash:
     default_profile: "default"
@@ -195,7 +375,7 @@ server_configs:
     listen_host: "0.0.0.0"
     mark_cache_size: 5368709120
     tmp_path: "%[11]s"
-    path: "%[1]s"
+    %[1]s
     tcp_port: %[3]d
     http_port: %[4]d
     flash.tidb_status_addr: "%[5]s"
@@ -232,7 +412,7 @@ server_configs:
     profiles.default.max_memory_usage: 0
     profiles.default.use_uncompressed_cache: 0
     profiles.readonly.readonly: 1
-`, cfg.DataDir, cfg.LogDir, cfg.TCPPort, cfg.HTTPPort, cfg.TiDBStatusAddrs, cfg.IP, cfg.FlashServicePort,
+`, pathConfig, cfg.LogDir, cfg.TCPPort, cfg.HTTPPort, cfg.TiDBStatusAddrs, cfg.IP, cfg.FlashServicePort,
 		cfg.StatusPort, cfg.PDAddrs, cfg.DeployDir, cfg.TmpDir)), &topo)
 
 	if err != nil {
@@ -244,6 +424,26 @@ server_configs:
 		return nil, err
 	}
 
+	return conf, nil
+}
+
+func (i *TiFlashInstance) mergeTiFlashInstanceConfig(clusterVersion string, globalConf, instanceConf map[string]interface{}) (map[string]interface{}, error) {
+	var (
+		isStorageDirsDefined bool
+		err                  error
+		conf                 map[string]interface{}
+	)
+	if isStorageDirsDefined, err = checkTiFlashStorageConfigWithVersion(clusterVersion, instanceConf); err != nil {
+		return nil, err
+	}
+	if isStorageDirsDefined {
+		delete(globalConf, "path")
+	}
+
+	conf, err = merge(globalConf, instanceConf)
+	if err != nil {
+		return nil, err
+	}
 	return conf, nil
 }
 
@@ -376,8 +576,8 @@ func (i *TiFlashInstance) InitConfig(
 		return err
 	}
 
-	conf, err = i.InitTiFlashConfig(cfg, topo.ServerConfigs.TiFlash)
-	if err != nil {
+	// Init the configuration using cfg and server_configs
+	if conf, err = i.initTiFlashConfig(cfg, clusterVersion, topo.ServerConfigs.TiFlash); err != nil {
 		return err
 	}
 
@@ -397,13 +597,22 @@ func (i *TiFlashInstance) InitConfig(
 		if err != nil {
 			return err
 		}
+		// TODO: maybe we also need to check the imported config?
+		// if _, err = checkTiFlashStorageConfigWithVersion(clusterVersion, importConfig); err != nil {
+		// 	return err
+		// }
 		conf, err = mergeImported(importConfig, conf)
 		if err != nil {
 			return err
 		}
 	}
 
-	return i.MergeServerConfig(e, conf, spec.Config, paths)
+	// Check the configuration of instance level
+	if conf, err = i.mergeTiFlashInstanceConfig(clusterVersion, conf, spec.Config); err != nil {
+		return err
+	}
+
+	return i.MergeServerConfig(e, conf, nil, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling

@@ -120,4 +120,6 @@ func FilterInstance(instances []spec.Instance, nodes set.StringSet) (res []spec.
 // ExecutorGetter get the executor by host.
 type ExecutorGetter interface {
 	Get(host string) (e executor.Executor)
+	// GetSSHKeySet gets the SSH private and public key path
+	GetSSHKeySet() (privateKeyPath, publicKeyPath string)
 }

@@ -68,7 +68,7 @@ jobs:
 
       - name: Collect component log
         working-directory: ${{ env.working-directory }}
-        # if: steps.test.outputs.exit_code != 0
+        # if: ${{ failure() }}
         if: always()
         run: |
           docker exec tiup-cluster-control bash -c 'mkdir -p /tiup-cluster/logs; [[ -d ~/.tiup/logs ]] && find ~/.tiup/logs -type f -name "*.log" -exec cp {} /tiup-cluster/logs \; || true'
@@ -76,23 +76,23 @@ jobs:
           tar czvf ${{ env.working-directory }}/dm.logs.tar.gz ${{ env.working-directory }}/logs/
 
       - name: Upload component log
-        if: steps.test.outputs.exit_code != 0
+        if: ${{ failure() }}
         # if: always()
         uses: actions/upload-artifact@v1
         with:
           name: dm_logs
           path: ${{ env.working-directory }}/dm.logs.tar.gz
 
-      - name: Output cluster debug log
+      - name: Output dm debug log
         working-directory: ${{ env.working-directory }}
-        if: steps.test.outputs.exit_code != 0
+        if: ${{ failure() }}
         # if: always()
         run: |
           pwd
           docker ps
           df -h
           free -h
-          cat /tiup-cluster/logs/*.log || true
+          find ${{ env.working-directory }}/logs -type f -exec sh -c 'echo "{}" && cat {} && echo "\n"' \; || true
 
       - name: Upload coverage to Codecov
         working-directory: ${{ env.working-directory }}
