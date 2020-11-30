@@ -362,7 +362,7 @@ func CheckTiKVLabels(pdLocLabels []string, slp TiKVLabelProvider) error {
 	}
 	for kv := range storeLabels {
 		host := getHostFromAddress(kv)
-		hosts[host] = hosts[host] + 1
+		hosts[host]++
 	}
 
 	for kv, ls := range storeLabels {

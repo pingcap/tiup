@@ -262,7 +262,7 @@ func restartInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) e
 
 // RestartComponent restarts the component.
 func RestartComponent(getter ExecutorGetter, instances []spec.Instance, timeout uint64) error {
-	if len(instances) <= 0 {
+	if len(instances) == 0 {
 		return nil
 	}
 
@@ -443,7 +443,7 @@ func EnableMonitored(
 
 // StartComponent start the instances.
 func StartComponent(getter ExecutorGetter, instances []spec.Instance, options Options, tlsCfg *tls.Config) error {
-	if len(instances) <= 0 {
+	if len(instances) == 0 {
 		return nil
 	}
 
@@ -562,7 +562,7 @@ func stopInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) erro
 
 // StopComponent stop the instances.
 func StopComponent(getter ExecutorGetter, instances []spec.Instance, timeout uint64) error {
-	if len(instances) <= 0 {
+	if len(instances) == 0 {
 		return nil
 	}
 
@@ -574,7 +574,6 @@ func StopComponent(getter ExecutorGetter, instances []spec.Instance, timeout uin
 	for _, ins := range instances {
 		ins := ins
 		errg.Go(func() error {
-
 			err := stopInstance(getter, ins, timeout)
 			if err != nil {
 				return errors.AddStack(err)

@@ -50,7 +50,6 @@ func CloneMirror(repo *V1Repository,
 	targetDir string,
 	selectedVersions []string,
 	options CloneOptions) error {
-
 	fmt.Printf("Start to clone mirror, targetDir is %s, selectedVersions are [%s]\n", targetDir, strings.Join(selectedVersions, ","))
 	fmt.Println("If this does not meet expectations, please abort this process, read `tiup mirror clone --help` and run again")
 
@@ -252,7 +251,6 @@ func cloneComponents(repo *V1Repository,
 	tidbClusterVersionMapper func(string) string,
 	targetDir, tmpDir string,
 	options CloneOptions) (map[string]*v1manifest.Component, error) {
-
 	compManifests := map[string]*v1manifest.Component{}
 	for _, name := range components {
 		manifest, err := repo.FetchComponentManifest(name, true)
@@ -389,7 +387,6 @@ func checkVersion(options CloneOptions, versions set.StringSet, version string) 
 	}
 	// prefix match
 	for v := range versions {
-
 		if options.Prefix && strings.HasPrefix(version, v) {
 			return true
 		} else if version == v {
@@ -403,7 +400,6 @@ func combineVersions(versions *[]string,
 	tidbClusterVersionMapper func(string) string,
 	manifest *v1manifest.Component, oss, archs,
 	selectedVersions []string) set.StringSet {
-
 	if (versions == nil || len(*versions) < 1) && len(selectedVersions) < 1 {
 		return nil
 	}

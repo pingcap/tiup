@@ -148,7 +148,6 @@ func (pc *PDClient) GetStores() (*pdserverapi.StoresInfo, error) {
 		}
 
 		return body, json.Unmarshal(body, &storesInfo)
-
 	})
 	if err != nil {
 		return nil, errors.AddStack(err)

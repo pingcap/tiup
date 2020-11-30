@@ -854,7 +854,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			ss := strings.Split(dbAddr, ":")
 			fmt.Println(color.GreenString("To connect TiDB: mysql --host %s --port %s -u root", ss[0], ss[1]))
 		}
-
 	}
 
 	if pdAddr := p.pds[0].Addr(); hasDashboard(pdAddr) {

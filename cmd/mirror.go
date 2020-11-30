@@ -31,7 +31,6 @@ import (
 	"github.com/pingcap/tiup/pkg/repository/model"
 	ru "github.com/pingcap/tiup/pkg/repository/utils"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -208,7 +207,7 @@ func newMirrorModifyCmd() *cobra.Command {
 					publishInfo.Yank = &yanked
 				}
 			} else if flagSet.Exist("yank") {
-				if pkgver.Version(ver).IsNightly() {
+				if ver.IsNightly() {
 					return errors.New("nightly version can't be yanked")
 				}
 				for p := range m.Platforms {

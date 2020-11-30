@@ -65,9 +65,9 @@ server:
 check: fmt lint tidy check-static vet
 
 check-static: tools/bin/golangci-lint
-	tools/bin/golangci-lint run ./... --deadline=3m
+	tools/bin/golangci-lint run --config tools/check/golangci.yaml ./... --deadline=3m --fix
 
-lint:tools/bin/revive
+lint: tools/bin/revive
 	@echo "linting"
 	@tools/bin/revive -formatter friendly -config tools/check/revive.toml $(FILES)
 
@@ -114,10 +114,6 @@ fmt:
 	@gofmt -s -l -w $(FILES) 2>&1
 	@echo "goimports (if installed)"
 	$(shell goimports -w $(FILES) 2>/dev/null)
-
-tools/bin/errcheck: tools/check/go.mod
-	cd tools/check; \
-	$(GO) build -o ../bin/errcheck github.com/kisielk/errcheck
 
 tools/bin/revive: tools/check/go.mod
 	cd tools/check; \
