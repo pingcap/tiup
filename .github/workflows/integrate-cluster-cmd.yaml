@@ -64,7 +64,7 @@ jobs:
 
       - name: Collect component log
         working-directory: ${{ env.working-directory }}
-        if: steps.test.outputs.exit_code != 0
+        if: ${{ failure() }}
         # if: always()
         run: |
           docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/script/pull_log.sh /tiup-cluster/logs
@@ -72,7 +72,7 @@ jobs:
           tar czvf ${{ env.working-directory }}/logs.tar.gz ${{ env.working-directory }}/logs/
 
       - name: Upload component log
-        if: steps.test.outputs.exit_code != 0
+        if: ${{ failure() }}
         # if: always()
         uses: actions/upload-artifact@v1
         with:
@@ -87,7 +87,7 @@ jobs:
           docker ps
           df -h
           free -h
-          cat /tiup-cluster/logs/*.log || true
+          find ${{ env.working-directory }}/logs -type f -exec sh -c 'echo "{}" && cat {} && echo "\n"' \; || true
 
       - name: Upload coverage to Codecov
         working-directory: ${{ env.working-directory }}

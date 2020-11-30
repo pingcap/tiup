@@ -268,6 +268,168 @@ tikv_servers:
 	})
 }
 
+func (s *topoSuite) TestTiFlashStorage(c *check.C) {
+	// test tiflash storage section, 'storage.main.dir' should not be defined in server_configs
+	withTempFile(`
+server_configs:
+  tiflash:
+    storage.main.dir: [/data1/tiflash]
+tiflash_servers:
+  - host: 172.16.5.140
+    data_dir: /ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash
+    config:
+      storage.main.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash]
+      storage.latest.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash]
+`, func(file string) {
+		topo := Specification{}
+		err := ParseTopologyYaml(file, &topo)
+		c.Assert(err, check.NotNil)
+	})
+
+	// test tiflash storage section, 'storage.latest.dir' should not be defined in server_configs
+	withTempFile(`
+server_configs:
+  tiflash:
+    storage.latest.dir: [/data1/tiflash]
+tiflash_servers:
+  - host: 172.16.5.140
+    data_dir: /ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash
+    config:
+      storage.main.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash]
+      storage.latest.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash]
+`, func(file string) {
+		topo := Specification{}
+		err := ParseTopologyYaml(file, &topo)
+		c.Assert(err, check.NotNil)
+	})
+
+	// test tiflash storage section defined data dir
+	// test for depreacated setting, for backward compatibility
+	withTempFile(`
+tiflash_servers:
+  - host: 172.16.5.140
+    data_dir: /ssd0/tiflash
+    config:
+`, func(file string) {
+		topo := Specification{}
+		err := ParseTopologyYaml(file, &topo)
+		c.Assert(err, check.IsNil)
+		ExpandRelativeDir(&topo)
+
+		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
+		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash")
+		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
+	})
+
+	// test tiflash storage section defined data dir
+	withTempFile(`
+tiflash_servers:
+  - host: 172.16.5.140
+    data_dir: /ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash
+    config:
+      storage.main.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash]
+      storage.latest.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash]
+`, func(file string) {
+		topo := Specification{}
+		err := ParseTopologyYaml(file, &topo)
+		c.Assert(err, check.IsNil)
+		ExpandRelativeDir(&topo)
+
+		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
+		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash")
+		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
+	})
+
+	// test tiflash storage section defined data dir, "data_dir" will be ignored
+	withTempFile(`
+tiflash_servers:
+  - host: 172.16.5.140
+    # if storage.main.dir is defined, data_dir will be ignored
+    data_dir: /hdd0/tiflash 
+    config:
+      storage.main.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash]
+`, func(file string) {
+		topo := Specification{}
+		err := ParseTopologyYaml(file, &topo)
+		c.Assert(err, check.IsNil)
+		ExpandRelativeDir(&topo)
+
+		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
+		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash")
+		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
+	})
+
+	// test tiflash storage section defined data dir
+	// if storage.latest.dir is not empty, the first path in
+	// storage.latest.dir will be the first path in 'DataDir'
+	// DataDir is the union set of storage.latest.dir and storage.main.dir
+	withTempFile(`
+tiflash_servers:
+  - host: 172.16.5.140
+    data_dir: /ssd0/tiflash
+    config:
+      storage.main.dir: [/hdd0/tiflash, /hdd1/tiflash, /hdd2/tiflash]
+      storage.latest.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash, /hdd0/tiflash]
+`, func(file string) {
+		topo := Specification{}
+		err := ParseTopologyYaml(file, &topo)
+		c.Assert(err, check.IsNil)
+		ExpandRelativeDir(&topo)
+
+		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
+		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash,/hdd0/tiflash,/hdd1/tiflash,/hdd2/tiflash,/ssd1/tiflash,/ssd2/tiflash")
+		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
+	})
+
+	// test if there is only one path in storage.main.dir
+	withTempFile(`
+tiflash_servers:
+  - host: 172.16.5.140
+    data_dir: /hhd0/tiflash
+    config:
+      storage.main.dir: [/ssd0/tiflash]
+`, func(file string) {
+		topo := Specification{}
+		err := ParseTopologyYaml(file, &topo)
+		c.Assert(err, check.IsNil)
+		ExpandRelativeDir(&topo)
+
+		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
+		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash")
+		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
+	})
+
+	// test tiflash storage section defined data dir
+	// should always define storage.main.dir if any 'storage.*' is defined
+	withTempFile(`
+tiflash_servers:
+  - host: 172.16.5.140
+    data_dir: /ssd0/tiflash
+    config:
+      #storage.main.dir: [/hdd0/tiflash, /hdd1/tiflash, /hdd2/tiflash]
+      storage.latest.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash, /hdd0/tiflash]
+`, func(file string) {
+		topo := Specification{}
+		err := ParseTopologyYaml(file, &topo)
+		c.Assert(err, check.NotNil)
+	})
+
+	// test tiflash storage section defined data dir
+	// storage.main.dir should always use absolute path
+	withTempFile(`
+tiflash_servers:
+  - host: 172.16.5.140
+    data_dir: /ssd0/tiflash
+    config:
+      storage.main.dir: [tiflash/data, ]
+      storage.latest.dir: [/ssd0/tiflash, /ssd1/tiflash, /ssd2/tiflash, /hdd0/tiflash]
+`, func(file string) {
+		topo := Specification{}
+		err := ParseTopologyYaml(file, &topo)
+		c.Assert(err, check.NotNil)
+	})
+}
+
 func merge4test(base, scale string) (*Specification, error) {
 	baseTopo := Specification{}
 	if err := ParseTopologyYaml(base, &baseTopo); err != nil {
