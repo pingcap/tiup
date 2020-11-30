@@ -229,10 +229,8 @@ func showComponentVersions(env *environment.Environment, component string, opt l
 		installStatus := ""
 		if installed.Exist(v) {
 			installStatus = "YES"
-		} else {
-			if opt.installedOnly {
-				continue
-			}
+		} else if opt.installedOnly {
+			continue
 		}
 		cmpTable = append(cmpTable, []string{v, installStatus, released[v], strings.Join(platforms[v], ",")})
 	}

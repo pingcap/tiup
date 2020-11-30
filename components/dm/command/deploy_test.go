@@ -26,5 +26,4 @@ func TestSupportVersion(t *testing.T) {
 			assert.NotNil(err)
 		}
 	}
-
 }

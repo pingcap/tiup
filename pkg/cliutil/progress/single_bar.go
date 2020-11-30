@@ -33,13 +33,14 @@ func (b *singleBarCore) renderDoneOrError(w io.Writer, dp *DisplayProps) {
 	width := int(termSizeWidth.Load())
 	var tail string
 	var tailColor *color.Color
-	if dp.Mode == ModeDone {
+	switch dp.Mode {
+	case ModeDone:
 		tail = doneTail
 		tailColor = colorDone
-	} else if dp.Mode == ModeError {
+	case ModeError:
 		tail = errorTail
 		tailColor = colorError
-	} else {
+	default:
 		panic("Unexpect dp.Mode")
 	}
 	var displayPrefix string
@@ -60,14 +61,15 @@ func (b *singleBarCore) renderSpinner(w io.Writer, dp *DisplayProps) {
 	midWidth := 1 + 3 + 1 + 1 + 1
 	prefixWidth := runewidth.StringWidth(dp.Prefix)
 	suffixWidth := runewidth.StringWidth(dp.Suffix)
-	if midWidth+prefixWidth+suffixWidth <= width || midWidth > width {
+	switch {
+	case midWidth+prefixWidth+suffixWidth <= width || midWidth > width:
 		// If screen is too small, do not fit it any more.
 		displayPrefix = dp.Prefix
 		displaySuffix = dp.Suffix
-	} else if midWidth+prefixWidth <= width {
+	case midWidth+prefixWidth <= width:
 		displayPrefix = dp.Prefix
 		displaySuffix = runewidth.Truncate(dp.Suffix, width-midWidth-prefixWidth, "...")
-	} else {
+	default:
 		displayPrefix = runewidth.Truncate(dp.Prefix, width-midWidth, "")
 		displaySuffix = ""
 	}

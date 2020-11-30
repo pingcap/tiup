@@ -57,6 +57,7 @@ func (t *Telemetry) Report(ctx context.Context, msg *Report) error {
 	if err != nil {
 		return errors.AddStack(err)
 	}
+	defer resp.Body.Close()
 
 	code := resp.StatusCode
 	if code < 200 || code >= 300 {

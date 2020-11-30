@@ -16,7 +16,6 @@ package instance
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -52,20 +51,13 @@ func NewTiCDC(binPath string, dir, host, configPath string, id int, pds []*PDIns
 
 // Start implements Instance interface.
 func (c *TiCDC) Start(ctx context.Context, version pkgver.Version) error {
-	if err := os.MkdirAll(c.Dir, 0755); err != nil {
-		return err
-	}
-
-	var urls []string
-	for _, pd := range c.pds {
-		urls = append(urls, fmt.Sprintf("http://%s:%d", pd.Host, pd.StatusPort))
-	}
+	endpoints := pdEndpoints(c.pds, true)
 
 	args := []string{
 		"server",
 		fmt.Sprintf("--addr=%s:%d", c.Host, c.Port),
 		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(c.Host), c.Port),
-		fmt.Sprintf("--pd=%s", strings.Join(urls, ",")),
+		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", c.LogFile()),
 	}
 

@@ -189,9 +189,9 @@ func (k *RSAPrivKey) Pem() []byte {
 }
 
 // CSR generates a new CSR from given private key
-func (k *RSAPrivKey) CSR(role, commonName string, hostList []string, IPList []string) ([]byte, error) {
+func (k *RSAPrivKey) CSR(role, commonName string, hostList, ipList []string) ([]byte, error) {
 	var ipAddrList []net.IP
-	for _, ip := range IPList {
+	for _, ip := range ipList {
 		ipAddr := net.ParseIP(ip)
 		ipAddrList = append(ipAddrList, ipAddr)
 	}

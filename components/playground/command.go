@@ -203,33 +203,24 @@ func display(args []string) error {
 
 func sendCommandsAndPrintResult(cmds []Command, addr string) error {
 	for _, cmd := range cmds {
-		rc, err := requestCommand(cmd, addr)
+		data, err := json.Marshal(&cmd)
 		if err != nil {
 			return errors.AddStack(err)
 		}
 
-		_, err = io.Copy(os.Stdout, rc)
-		rc.Close()
+		url := fmt.Sprintf("http://%s/command", addr)
+
+		resp, err := http.Post(url, "application/json", bytes.NewReader(data))
+		if err != nil {
+			return errors.AddStack(err)
+		}
+		defer resp.Body.Close()
+
+		_, err = io.Copy(os.Stdout, resp.Body)
 		if err != nil {
 			return errors.AddStack(err)
 		}
 	}
 
 	return nil
-}
-
-func requestCommand(cmd Command, addr string) (r io.ReadCloser, err error) {
-	data, err := json.Marshal(&cmd)
-	if err != nil {
-		return nil, errors.AddStack(err)
-	}
-
-	url := fmt.Sprintf("http://%s/command", addr)
-
-	resp, err := http.Post(url, "application/json", bytes.NewReader(data))
-	if err != nil {
-		return nil, errors.AddStack(err)
-	}
-
-	return resp.Body, nil
 }

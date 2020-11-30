@@ -15,6 +15,7 @@ package audit
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -49,7 +50,7 @@ func resetDir() {
 	_ = os.MkdirAll(auditDir(), 0777)
 }
 
-func readFakeStdout(f *os.File) string {
+func readFakeStdout(f io.ReadSeeker) string {
 	_, _ = f.Seek(0, 0)
 	read, _ := ioutil.ReadAll(f)
 	return string(read)

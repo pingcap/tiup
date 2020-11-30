@@ -28,8 +28,8 @@ func Encode(id int64) string {
 	var short []byte
 	for id > 0 {
 		i := id % int64(base)
-		short = append(short, byte(space[i]))
-		id = id / int64(base)
+		short = append(short, space[i])
+		id /= int64(base)
 	}
 	for i, j := 0, len(short)-1; i < j; i, j = i+1, j-1 {
 		short[i], short[j] = short[j], short[i]

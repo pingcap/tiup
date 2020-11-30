@@ -78,12 +78,10 @@ func externalHelp(env *environment.Environment, spec string, args ...string) {
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 	}
+	envs = append(envs, os.Environ()...)
 
 	comp := exec.Command(binaryPath, utils.RebuildArgs(args)...)
-	comp.Env = append(
-		envs,
-		os.Environ()...,
-	)
+	comp.Env = envs
 	comp.Stdout = os.Stdout
 	comp.Stderr = os.Stderr
 	if err := comp.Start(); err != nil {
@@ -127,7 +125,7 @@ Available Components:
 			if !comp.Standalone {
 				continue
 			}
-			installComps = installComps + fmt.Sprintf("  %s%s   %s\n", comp.Name, strings.Repeat(" ", maxNameLen-len(comp.Name)), comp.Desc)
+			installComps += fmt.Sprintf("  %s%s   %s\n", comp.Name, strings.Repeat(" ", maxNameLen-len(comp.Name)), comp.Desc)
 		}
 	} else {
 		installComps = `

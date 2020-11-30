@@ -56,16 +56,11 @@ func (inst *TiKVInstance) Addr() string {
 
 // Start calls set inst.cmd and Start
 func (inst *TiKVInstance) Start(ctx context.Context, version pkgver.Version) error {
-	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
-		return err
-	}
 	if err := inst.checkConfig(); err != nil {
 		return err
 	}
-	endpoints := make([]string, 0, len(inst.pds))
-	for _, pd := range inst.pds {
-		endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", advertiseHost(inst.Host), pd.StatusPort))
-	}
+
+	endpoints := pdEndpoints(inst.pds, true)
 	args := []string{
 		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
 		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(inst.Host), inst.Port),
@@ -101,6 +96,9 @@ func (inst *TiKVInstance) StoreAddr() string {
 }
 
 func (inst *TiKVInstance) checkConfig() error {
+	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
+		return err
+	}
 	if inst.ConfigPath == "" {
 		inst.ConfigPath = path.Join(inst.Dir, "tikv.toml")
 	}

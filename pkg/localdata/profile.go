@@ -343,11 +343,12 @@ func (p *Profile) ResetMirror(addr, root string) error {
 	localRoot := p.Path("bin", fmt.Sprintf("%s.root.json", hex.EncodeToString(shaWriter.Sum(nil))[:16]))
 
 	if root == "" {
-		if utils.IsExist(localRoot) {
+		switch {
+		case utils.IsExist(localRoot):
 			root = localRoot
-		} else if strings.HasSuffix(addr, "/") {
+		case strings.HasSuffix(addr, "/"):
 			root = addr + "root.json"
-		} else {
+		default:
 			root = addr + "/root.json"
 		}
 	}
@@ -355,19 +356,21 @@ func (p *Profile) ResetMirror(addr, root string) error {
 	// Fetch root.json
 	var wc io.ReadCloser
 	if strings.HasPrefix(root, "http") {
-		if resp, err := http.Get(root); err != nil {
+		resp, err := http.Get(root)
+		if err != nil {
 			return err
-		} else if resp.StatusCode != http.StatusOK {
+		}
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
 			return errors.Errorf("Fetch remote root.json returns http code %d", resp.StatusCode)
-		} else {
-			wc = resp.Body
 		}
+		wc = resp.Body
 	} else {
-		if file, err := os.Open(root); err == nil {
-			wc = file
-		} else {
+		file, err := os.Open(root)
+		if err != nil {
 			return err
 		}
+		wc = file
 	}
 	defer wc.Close()
 

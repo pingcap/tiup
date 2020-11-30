@@ -352,7 +352,7 @@ func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 
 // DestroyComponent destroy the instances.
 func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls spec.Topology, options Options) error {
-	if len(instances) <= 0 {
+	if len(instances) == 0 {
 		return nil
 	}
 

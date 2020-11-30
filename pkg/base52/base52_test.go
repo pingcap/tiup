@@ -11,40 +11,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package base52
 
 import (
-	"os"
-	"strings"
 	"testing"
+
+	. "github.com/pingcap/check"
 )
 
-// To build:
-// see build_integration_test in Makefile
-// To run:
-// tiup-dm.test -test.coverprofile={file} __DEVEL--i-heard-you-like-tests
+func Test(t *testing.T) { TestingT(t) }
 
-func TestMain(t *testing.T) {
-	var (
-		args []string
-		run  bool
-	)
+type base52Suite struct{}
 
-	for _, arg := range os.Args {
-		switch {
-		case arg == "__DEVEL--i-heard-you-like-tests":
-			run = true
-		case strings.HasPrefix(arg, "-test"):
-		case strings.HasPrefix(arg, "__DEVEL"):
-		default:
-			args = append(args, arg)
-		}
-	}
-	os.Args = args
+var _ = Suite(&base52Suite{})
 
-	// fmt.Println(os.Args)
+func (s *base52Suite) TestEncode(c *C) {
+	c.Assert(Encode(1000000000), Equals, "2TPzw7")
+}
 
-	if run {
-		main()
-	}
+func (s *base52Suite) TestDecode(c *C) {
+	decoded, err := Decode("2TPzw7")
+	c.Assert(decoded, Equals, int64(1000000000))
+	c.Assert(err, IsNil)
 }
