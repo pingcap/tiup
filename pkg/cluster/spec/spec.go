@@ -40,6 +40,8 @@ var (
 	RoleMonitor       = "monitor"
 	RoleTiSparkMaster = "tispark-master"
 	RoleTiSparkWorker = "tispark-worker"
+	TopoTypeTiDB      = "tidb-cluster"
+	TopoTypeDM        = "dm-cluster"
 )
 
 type (
@@ -123,6 +125,7 @@ type BaseTopo struct {
 
 // Topology represents specification of the cluster.
 type Topology interface {
+	Type() string
 	BaseTopo() *BaseTopo
 	// Validate validates the topology specification and produce error if the
 	// specification invalid (e.g: port conflicts or directory conflicts)
@@ -204,6 +207,11 @@ func (s *Specification) TLSConfig(dir string) (*tls.Config, error) {
 		return nil, nil
 	}
 	return LoadClientCert(dir)
+}
+
+// Type implements Topology interface.
+func (s *Specification) Type() string {
+	return TopoTypeTiDB
 }
 
 // BaseTopo implements Topology interface.

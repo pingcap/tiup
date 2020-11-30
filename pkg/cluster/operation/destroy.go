@@ -14,8 +14,10 @@
 package operator
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -23,7 +25,9 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -54,12 +58,11 @@ func Destroy(
 	cluster spec.Topology,
 	options Options,
 ) error {
-	uniqueHosts := set.NewStringSet()
 	coms := cluster.ComponentsByStopOrder()
 
 	instCount := map[string]int{}
 	cluster.IterInstance(func(inst spec.Instance) {
-		instCount[inst.GetHost()] = instCount[inst.GetHost()] + 1
+		instCount[inst.GetHost()]++
 	})
 
 	for _, com := range coms {
@@ -80,9 +83,18 @@ func Destroy(
 		}
 	}
 
+	gOpts := cluster.BaseTopo().GlobalOptions
+
 	// Delete all global deploy directory
-	for host := range uniqueHosts {
-		if err := DeleteGlobalDirs(getter, host, cluster.BaseTopo().GlobalOptions); err != nil {
+	for host := range instCount {
+		if err := DeleteGlobalDirs(getter, host, gOpts); err != nil {
+			return nil
+		}
+	}
+
+	// after all things done, try to remove SSH public key
+	for host := range instCount {
+		if err := DeletePublicKey(getter, host); err != nil {
 			return nil
 		}
 	}
@@ -93,7 +105,7 @@ func Destroy(
 // StopAndDestroyInstance stop and destroy the instance,
 // if this instance is the host's last one, and the host has monitor deployed,
 // we need to destroy the monitor, either
-func StopAndDestroyInstance(getter ExecutorGetter, cluster spec.Topology, instance spec.Instance, options Options, destroyMonitor bool) error {
+func StopAndDestroyInstance(getter ExecutorGetter, cluster spec.Topology, instance spec.Instance, options Options, destroyNode bool) error {
 	ignoreErr := options.Force
 	compName := instance.ComponentName()
 
@@ -111,22 +123,32 @@ func StopAndDestroyInstance(getter ExecutorGetter, cluster spec.Topology, instan
 		log.Warnf("failed to destroy %s: %v", compName, err)
 	}
 
-	// monitoredOptions for dm cluster is nil
-	monitoredOptions := cluster.GetMonitoredOptions()
+	if destroyNode {
+		// monitoredOptions for dm cluster is nil
+		monitoredOptions := cluster.GetMonitoredOptions()
 
-	if destroyMonitor && monitoredOptions != nil {
-		if err := StopMonitored(getter, instance, monitoredOptions, options.OptTimeout); err != nil {
-			if !ignoreErr {
-				return errors.Annotatef(err, "failed to stop monitor")
+		if monitoredOptions != nil {
+			if err := StopMonitored(getter, instance, monitoredOptions, options.OptTimeout); err != nil {
+				if !ignoreErr {
+					return errors.Annotatef(err, "failed to stop monitor")
+				}
+				log.Warnf("failed to stop %s: %v", "monitor", err)
 			}
-			log.Warnf("failed to stop %s: %v", "monitor", err)
-		}
-		if err := DestroyMonitored(getter, instance, monitoredOptions, options.OptTimeout); err != nil {
-			if !ignoreErr {
-				return errors.Annotatef(err, "failed to destroy monitor")
+			if err := DestroyMonitored(getter, instance, monitoredOptions, options.OptTimeout); err != nil {
+				if !ignoreErr {
+					return errors.Annotatef(err, "failed to destroy monitor")
+				}
+				log.Warnf("failed to destroy %s: %v", "monitor", err)
 			}
-			log.Warnf("failed to destroy %s: %v", "monitor", err)
 		}
+
+		if err := DeletePublicKey(getter, instance.GetHost()); err != nil {
+			if !ignoreErr {
+				return errors.Annotatef(err, "failed to delete public key")
+			}
+			log.Warnf("failed to delete public key")
+		}
+
 	}
 	return nil
 }
@@ -171,12 +193,48 @@ func DeleteGlobalDirs(getter ExecutorGetter, host string, options *spec.GlobalOp
 	return nil
 }
 
+// DeletePublicKey deletes the SSH public key from host
+func DeletePublicKey(getter ExecutorGetter, host string) error {
+	e := getter.Get(host)
+	log.Infof("Delete public key %s", host)
+	_, pubKeyPath := getter.GetSSHKeySet()
+	publicKey, err := ioutil.ReadFile(pubKeyPath)
+	if err != nil {
+		return perrs.Trace(err)
+	}
+
+	pubKey := string(bytes.TrimSpace(publicKey))
+	pubKey = strings.ReplaceAll(pubKey, "/", "\\/")
+	pubKeysFile := executor.FindSSHAuthorizedKeysFile(e)
+
+	// delete the public key with Linux `sed` toolkit
+	c := module.ShellModuleConfig{
+		Command:  fmt.Sprintf("sed -i '/%s/d' %s", pubKey, pubKeysFile),
+		UseShell: false,
+	}
+	shell := module.NewShellModule(c)
+	stdout, stderr, err := shell.Execute(e)
+
+	if len(stdout) > 0 {
+		fmt.Println(string(stdout))
+	}
+	if len(stderr) > 0 {
+		log.Errorf(string(stderr))
+	}
+
+	if err != nil {
+		return errors.Annotatef(err, "failed to delete pulblic key on: %s", host)
+	}
+
+	log.Infof("Delete public key %s success", host)
+	return nil
+}
+
 // DestroyMonitored destroy the monitored service.
 func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
 	e := getter.Get(inst.GetHost())
 	log.Infof("Destroying monitored %s", inst.GetHost())
 
-	log.Infof("Destroying monitored")
 	log.Infof("\tDestroying instance %s", inst.GetHost())
 
 	// Stop by systemd.
@@ -433,7 +491,7 @@ func DestroyClusterTombstone(
 	instCount := map[string]int{}
 	for _, component := range cluster.ComponentsByStartOrder() {
 		for _, instance := range component.Instances() {
-			instCount[instance.GetHost()] = instCount[instance.GetHost()] + 1
+			instCount[instance.GetHost()]++
 		}
 	}
 

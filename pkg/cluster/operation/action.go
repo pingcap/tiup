@@ -114,7 +114,7 @@ func Stop(
 
 	instCount := map[string]int{}
 	cluster.IterInstance(func(inst spec.Instance) {
-		instCount[inst.GetHost()] = instCount[inst.GetHost()] + 1
+		instCount[inst.GetHost()]++
 	})
 
 	for _, comp := range components {

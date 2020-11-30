@@ -36,9 +36,9 @@ func Download(component, nodeOS, arch string, version string) error {
 
 	resName := fmt.Sprintf("%s-%s", component, version)
 	fileName := fmt.Sprintf("%s-%s-%s.tar.gz", resName, nodeOS, arch)
-	srcPath := spec.ProfilePath(spec.TiOpsPackageCacheDir, fileName)
+	srcPath := spec.ProfilePath(spec.TiUPPackageCacheDir, fileName)
 
-	if err := os.MkdirAll(spec.ProfilePath(spec.TiOpsPackageCacheDir), 0755); err != nil {
+	if err := os.MkdirAll(spec.ProfilePath(spec.TiUPPackageCacheDir), 0755); err != nil {
 		return err
 	}
 
