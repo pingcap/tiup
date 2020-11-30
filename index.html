@@ -10,11 +10,10 @@
 
 <body>
 <div class="container">
+    <br/>
     <div class="row">
         <div class="col-sm-12 col-md-12 col-lg-10 col-lg-offset-1">
-            <br />
-            <h2>TiUP<small></small></h2>
-            <br />
+            <h2>TiUP</h2>
         </div>
     </div>
     <div class="row">
@@ -36,7 +35,79 @@
             <p>Need help? Read the document(<a href="https://pingcap.com/docs/stable/how-to/deploy/orchestrated/tiup/">English</a>/<a href="https://pingcap.com/docs-cn/stable/how-to/deploy/orchestrated/tiup/">Chinese</a>) or <a href="https://github.com/pingcap/tiup/issues/new">file a GitHub issue</a></p>
         </div>
     </div>
+    <br/>
+    <div class="row" id="component-list-title">
+    </div>
+    <div class="row">
+        <div class="col-10 col-sm-10 col-md-10 col-lg-10 col-lg-offset-1">
+            <div class="row" id="component-list">
+            </div>
+        </div>
+    </div>
 </div>
 </body>
 
+<script>
+    function ensure_component_list_title() {
+        let container = document.querySelector('#component-list-title');
+        if(container.children.length > 0) {
+            return
+        }
+
+        let div = document.createElement("div")
+        div.className = "col-sm-12 col-md-12 col-lg-10 col-lg-offset-1"
+        let h3 = document.createElement("h2")
+        h3.textContent = "Component List"
+        div.appendChild(h3)
+
+        container.appendChild(div)
+    }
+
+    function insert_component(name, desc) {
+        ensure_component_list_title();
+
+        let container = document.querySelector('#component-list');
+        let div = document.createElement("div")
+        div.className = "col-6 col-sm-6 col-md-4 col-lg-3"
+
+        let h3 = document.createElement("h3")
+        h3.textContent = name
+        div.appendChild(h3)
+
+        let p = document.createElement("p")
+        p.textContent = desc
+        div.appendChild(p)
+
+        container.appendChild(div)
+    }
+
+    (async function(){
+        let meta = await fetch("https://tiup-mirrors.pingcap.com/snapshot.json")
+            .then(resp => resp.json())
+            .then(data => data.signed.meta);
+        
+        let idx = meta["/index.json"].version;
+        let components = await fetch(`https://tiup-mirrors.pingcap.com/${idx}.index.json`)
+            .then(resp => resp.json())
+            .then(data => data.signed.components);
+
+        for(let key in meta) {
+            let black_list = ["root.json", "index.json", "tiup.json"];
+            if(black_list.indexOf(key.substring(1)) != -1) {
+                continue
+            }
+
+            let file = meta[key].version + "." + key.substring(1);
+            let component = await fetch("https://tiup-mirrors.pingcap.com/" + file)
+                .then(resp => resp.json())
+                .then(data => data.signed)
+
+            if(components[component.id].yanked || components[component.id].hidden) {
+                continue
+            }
+
+            insert_component(component.id, component.description);
+        }
+    })()
+</script>
 </html>
