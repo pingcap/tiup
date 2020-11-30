@@ -299,11 +299,12 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 
 	if !skipConfirm {
 		target := ""
-		if cleanOpt.CleanupData && cleanOpt.CleanupLog {
+		switch {
+		case cleanOpt.CleanupData && cleanOpt.CleanupLog:
 			target = "data and log"
-		} else if cleanOpt.CleanupData {
+		case cleanOpt.CleanupData:
 			target = "data"
-		} else if cleanOpt.CleanupLog {
+		case cleanOpt.CleanupLog:
 			target = "log"
 		}
 		if err := cliutil.PromptForConfirmOrAbortError(
@@ -402,7 +403,6 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 
 	log.Infof("Destroyed cluster `%s` successfully", clusterName)
 	return nil
-
 }
 
 // ExecOptions for exec shell commanm.
@@ -583,7 +583,6 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 				dataDir,
 				deployDir,
 			})
-
 		}
 	}
 
@@ -1657,7 +1656,6 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool
 		}
 		log.Infof("Nothing changed.")
 		return nil, nil
-
 	}
 
 	origData, err := yaml.Marshal(origTopo)
@@ -1849,7 +1847,7 @@ func (m *Manager) confirmTopology(clusterName, version string, topo spec.Topolog
 	topo.IterInstance(func(instance spec.Instance) {
 		comp := instance.ComponentName()
 		if patchedRoles.Exist(comp) {
-			comp = comp + " (patched)"
+			comp += " (patched)"
 		}
 		clusterTable = append(clusterTable, []string{
 			comp,

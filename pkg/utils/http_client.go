@@ -90,7 +90,7 @@ func checkHTTPResponse(res *http.Response) ([]byte, error) {
 	}
 	if res.StatusCode < 200 || res.StatusCode >= 400 {
 		return body, fmt.Errorf("error requesting %s, response: %s, code %d",
-			res.Request.URL, string(body[:]), res.StatusCode)
+			res.Request.URL, string(body), res.StatusCode)
 	}
 	return body, nil
 }

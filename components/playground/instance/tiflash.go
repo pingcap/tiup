@@ -99,13 +99,8 @@ func (inst *TiFlashInstance) StatusAddrs() (addrs []string) {
 
 // Start calls set inst.cmd and Start
 func (inst *TiFlashInstance) Start(ctx context.Context, version pkgver.Version) error {
-	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
-		return err
-	}
-	endpoints := make([]string, 0, len(inst.pds))
-	for _, pd := range inst.pds {
-		endpoints = append(endpoints, fmt.Sprintf("%s:%d", advertiseHost(inst.Host), pd.StatusPort))
-	}
+	endpoints := pdEndpoints(inst.pds, false)
+
 	tidbStatusAddrs := make([]string, 0, len(inst.dbs))
 	for _, db := range inst.dbs {
 		tidbStatusAddrs = append(tidbStatusAddrs, fmt.Sprintf("%s:%d", advertiseHost(db.Host), uint64(db.StatusPort)))
