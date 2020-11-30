@@ -297,6 +297,9 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 	}
 	topo := meta.Topology
 
+	// Grafana admin username and password
+	var grafanaUser string
+	var grafanaPass string
 	if group, ok := inventory.Groups["all"]; ok {
 		for k, v := range group.Vars {
 			switch k {
@@ -311,9 +314,10 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				topo.GlobalOptions.DeployDir = v
 				// ansible convention directory for log
 				topo.GlobalOptions.LogDir = filepath.Join(v, "log")
-			// ignore user/pass, we will deploy new one.
 			case "grafana_admin_user":
+				grafanaUser = strings.Trim(v, "\"")
 			case "grafana_admin_password":
+				grafanaPass = strings.Trim(v, "\"")
 			default:
 				fmt.Println("ignore unknown global var ", k, v)
 			}
@@ -536,9 +540,11 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 					}
 				}
 				srv := spec.GrafanaSpec{
-					Host:    host.Vars["ansible_host"],
-					SSHPort: ansible.GetHostPort(host, cfg),
-					Port:    port,
+					Host:     host.Vars["ansible_host"],
+					SSHPort:  ansible.GetHostPort(host, cfg),
+					Port:     port,
+					Username: grafanaUser,
+					Password: grafanaPass,
 				}
 
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_grafana.sh")

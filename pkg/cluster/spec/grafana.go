@@ -39,6 +39,8 @@ type GrafanaSpec struct {
 	Arch            string               `yaml:"arch,omitempty"`
 	OS              string               `yaml:"os,omitempty"`
 	DashboardDir    string               `yaml:"dashboard_dir,omitempty" validate:"dashboard_dir:editable"`
+	Username        string               `yaml:"username,omitempty" default:"admin" validate:"username:editable"`
+	Password        string               `yaml:"password,omitempty" default:"admin" validate:"password:editable"`
 }
 
 // Role returns the component role of the instance
@@ -140,8 +142,13 @@ func (i *GrafanaInstance) InitConfig(
 	}
 
 	// transfer config
+	spec := i.InstanceSpec.(GrafanaSpec)
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("grafana_%s.ini", i.GetHost()))
-	if err := config.NewGrafanaConfig(i.GetHost(), paths.Deploy).WithPort(uint64(i.GetPort())).ConfigToFile(fp); err != nil {
+	if err := config.NewGrafanaConfig(i.GetHost(), paths.Deploy).
+		WithPort(uint64(i.GetPort())).
+		WithUsername(spec.Username).
+		WithPassword(spec.Password).
+		ConfigToFile(fp); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "grafana.ini")
