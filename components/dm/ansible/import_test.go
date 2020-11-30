@@ -208,6 +208,8 @@ func TestImportFromAnsible(t *testing.T) {
 		SSHPort:   22,
 		DeployDir: "",
 		Port:      3001,
+		Username:  "foo",
+		Password:  "bar",
 	}
 	assert.Equal(expectedGrafana, grafana)
 
