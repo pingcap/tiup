@@ -44,7 +44,7 @@ const (
 	ManifestFilenameTimestamp = "timestamp.json"
 
 	// SpecVersion of current, maybe we could expand it later
-	CurrentSpecVersion = "0.1.0"
+	CurrentSpecVersion = "0.1.1"
 
 	// AnyPlatform is the ID for platform independent components
 	AnyPlatform = "any/any"
