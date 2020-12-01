@@ -100,11 +100,11 @@ type Owner struct {
 
 // VersionItem is the manifest structure of a version of a component
 type VersionItem struct {
-	URL          string   `json:"url"`
-	Yanked       bool     `json:"yanked"`
-	Entry        string   `json:"entry"`
-	Released     string   `json:"released"`
-	Dependencies []string `json:"dependencies"`
+	URL          string            `json:"url"`
+	Yanked       bool              `json:"yanked"`
+	Entry        string            `json:"entry"`
+	Released     string            `json:"released"`
+	Dependencies map[string]string `json:"dependencies"`
 
 	FileHash
 }
