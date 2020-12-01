@@ -20,4 +20,5 @@ import "syscall"
 // SysProcAttr to be use for every Process we start.
 var SysProcAttr = &syscall.SysProcAttr{
 	Pdeathsig: syscall.SIGKILL,
+	Setpgid:   true,
 }
