@@ -40,11 +40,15 @@ function scale_core() {
     echo "start scale in tidb"
     tiup-cluster $client --yes scale-in $name -N n1:4000
     wait_instance_num_reach $name $total_sub_one $native_ssh
+    # ensure Prometheus's configuration is updated automatically
+    ! tiup-cluster $client exec $name -N $ipprefix.101 --command "grep -q $ipprefix.101:10080 /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
+
     echo "start scale out tidb"
     topo=./topo/full_scale_in_tidb.yaml
     tiup-cluster $client --yes scale-out $name $topo
     # after scale-out, ensure the service is enabled
     tiup-cluster $client exec $name -N n1 --command "systemctl status tidb-4000 | grep Loaded |grep 'enabled; vendor'"
+    tiup-cluster $client exec $name -N n1 --command "grep -q $ipprefix.101:10080 /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
 
     # echo "start scale in tikv"
     # tiup-cluster --yes scale-in $name -N n3:20160
@@ -60,12 +64,15 @@ function scale_core() {
     # validate https://github.com/pingcap/tiup/issues/786
     # ensure that this instance is removed from the startup scripts of other components that need to rely on PD
     ! tiup-cluster $client exec $name -N n1 --command "grep -q n3:2379 /home/tidb/deploy/tidb-4000/scripts/run_tidb.sh"
+    # ensure Prometheus's configuration is updated automatically
+    ! tiup-cluster $client exec $name -N n1 --command "grep -q n3:2379 /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
 
     echo "start scale out pd"
     topo=./topo/full_scale_in_pd.yaml
     tiup-cluster $client --yes scale-out $name $topo
     # after scale-out, ensure this instance come back
     tiup-cluster $client exec $name -N n1 --command "grep -q n3:2379 /home/tidb/deploy/tidb-4000/scripts/run_tidb.sh"
+    tiup-cluster $client exec $name -N n1 --command "grep -q n3:2379 /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
 
     echo "start scale in tidb"
     tiup-cluster $client --yes scale-in $name -N n2:4000
