@@ -44,7 +44,7 @@ const (
 	ManifestFilenameTimestamp = "timestamp.json"
 
 	// SpecVersion of current, maybe we could expand it later
-	CurrentSpecVersion = "0.1.1"
+	CurrentSpecVersion = "0.1.0"
 
 	// AnyPlatform is the ID for platform independent components
 	AnyPlatform = "any/any"
@@ -98,7 +98,6 @@ var ManifestsConfig = map[string]ty{
 
 var knownVersions = map[string]bool{
 	"0.1.0": true,
-	"0.1.1": true,
 }
 
 // AddSignature adds one or more signatures to the manifest
