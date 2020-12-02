@@ -795,7 +795,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 }
 
 // Upgrade the cluster.
-func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operator.Options) error {
+func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operator.Options, skipConfirm bool) error {
 	metadata, err := m.meta(clusterName)
 	if err != nil {
 		return perrs.AddStack(err)
@@ -813,6 +813,18 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 
 	if err := versionCompare(base.Version, clusterVersion); err != nil {
 		return err
+	}
+
+	if !skipConfirm {
+		if err := cliutil.PromptForConfirmOrAbortError(
+			"This operation will upgrade %s %s cluster %s to %s.\nDo you want to continue? [y/N]:",
+			m.sysName,
+			color.HiYellowString(base.Version),
+			color.HiYellowString(clusterName),
+			color.HiYellowString(clusterVersion)); err != nil {
+			return err
+		}
+		log.Infof("Destroying cluster...")
 	}
 
 	hasImported := false
