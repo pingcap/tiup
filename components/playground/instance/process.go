@@ -89,6 +89,9 @@ func NewComponentProcess(ctx context.Context, dir, binPath, component string, ve
 	if dir == "" {
 		panic("dir must be set")
 	}
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, err
+	}
 
 	env := environment.GlobalEnv()
 	params := &tiupexec.PrepareCommandParams{

@@ -85,3 +85,15 @@ func logIfErr(err error) {
 		fmt.Println(err)
 	}
 }
+
+func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
+	var endpoints []string
+	for _, pd := range pds {
+		if isHTTP {
+			endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", advertiseHost(pd.Host), pd.StatusPort))
+		} else {
+			endpoints = append(endpoints, fmt.Sprintf("%s:%d", advertiseHost(pd.Host), pd.StatusPort))
+		}
+	}
+	return endpoints
+}

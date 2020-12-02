@@ -118,7 +118,7 @@ func decodeAuditID(auditID string) (time.Time, error) {
 	}
 	// compatible with old second based ts
 	if ts>>32 > 0 {
-		ts = ts / 1e9
+		ts /= 1e9
 	}
 	t := time.Unix(ts, 0)
 	return t, nil

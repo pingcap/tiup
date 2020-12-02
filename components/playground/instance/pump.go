@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -61,9 +60,17 @@ func (p *Pump) NodeID() string {
 func (p *Pump) Ready(ctx context.Context) error {
 	url := fmt.Sprintf("http://%s:%d/status", p.Host, p.Port)
 
-	for {
+	ready := func() bool {
 		resp, err := http.Get(url)
-		if err == nil && resp.StatusCode == 200 {
+		if err != nil {
+			return false
+		}
+		defer resp.Body.Close()
+		return resp.StatusCode == 200
+	}
+
+	for {
+		if ready() {
 			return nil
 		}
 
@@ -83,20 +90,13 @@ func (p *Pump) Addr() string {
 
 // Start implements Instance interface.
 func (p *Pump) Start(ctx context.Context, version pkgver.Version) error {
-	if err := os.MkdirAll(p.Dir, 0755); err != nil {
-		return err
-	}
-
-	var urls []string
-	for _, pd := range p.pds {
-		urls = append(urls, fmt.Sprintf("http://%s:%d", pd.Host, pd.StatusPort))
-	}
+	endpoints := pdEndpoints(p.pds, true)
 
 	args := []string{
 		fmt.Sprintf("--node-id=%s", p.NodeID()),
 		fmt.Sprintf("--addr=%s:%d", p.Host, p.Port),
 		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(p.Host), p.Port),
-		fmt.Sprintf("--pd-urls=%s", strings.Join(urls, ",")),
+		fmt.Sprintf("--pd-urls=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", p.LogFile()),
 	}
 	if p.ConfigPath != "" {

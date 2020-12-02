@@ -176,6 +176,8 @@ topology:
     ssh_port: 9999
     imported: true
     port: 3000
+    username: foo
+    password: bar
     deploy_dir: /home/tiopsimport/ansible-deploy/grafana-3000
     arch: amd64
     os: linux

@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/creasty/defaults"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -193,7 +194,7 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 				tmpIns.StatusPort, _ = strconv.Atoi(statusPort)
 			}
 			if logDir, ok := srv.Vars["tidb_log_dir"]; ok {
-				tmpIns.LogDir = logDir
+				tmpIns.LogDir = strings.Trim(logDir, "\"")
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
@@ -235,10 +236,10 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 				tmpIns.StatusPort, _ = strconv.Atoi(statusPort)
 			}
 			if dataDir, ok := srv.Vars["tikv_data_dir"]; ok {
-				tmpIns.DataDir = dataDir
+				tmpIns.DataDir = strings.Trim(dataDir, "\"")
 			}
 			if logDir, ok := srv.Vars["tikv_log_dir"]; ok {
-				tmpIns.LogDir = logDir
+				tmpIns.LogDir = strings.Trim(logDir, "\"")
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
@@ -283,10 +284,10 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 				tmpIns.PeerPort, _ = strconv.Atoi(peerPort)
 			}
 			if dataDir, ok := srv.Vars["pd_data_dir"]; ok {
-				tmpIns.DataDir = dataDir
+				tmpIns.DataDir = strings.Trim(dataDir, "\"")
 			}
 			if logDir, ok := srv.Vars["pd_log_dir"]; ok {
-				tmpIns.LogDir = logDir
+				tmpIns.LogDir = strings.Trim(logDir, "\"")
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
@@ -352,10 +353,10 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 				tmpIns.StatusPort, _ = strconv.Atoi(statusPort)
 			}
 			if dataDir, ok := srv.Vars["data_dir"]; ok {
-				tmpIns.DataDir = dataDir
+				tmpIns.DataDir = strings.Trim(dataDir, "\"")
 			}
 			if logDir, ok := srv.Vars["tiflash_log_dir"]; ok {
-				tmpIns.LogDir = logDir
+				tmpIns.LogDir = strings.Trim(logDir, "\"")
 			}
 			if tmpDir, ok := srv.Vars["tmp_path"]; ok {
 				tmpIns.TmpDir = tmpDir
@@ -483,6 +484,13 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 				tmpIns.Port, _ = strconv.Atoi(port)
 			}
 
+			if username, ok := srv.Vars["grafana_admin_user"]; ok {
+				tmpIns.Username = strings.Trim(username, "\"")
+			}
+			if passwd, ok := srv.Vars["grafana_admin_password"]; ok {
+				tmpIns.Password = strings.Trim(passwd, "\"")
+			}
+
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
 
 			clsMeta.Topology.Grafanas = append(clsMeta.Topology.Grafanas, tmpIns)
@@ -520,10 +528,10 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 				tmpIns.Port, _ = strconv.Atoi(port)
 			}
 			if dataDir, ok := srv.Vars["pump_data_dir"]; ok {
-				tmpIns.DataDir = dataDir
+				tmpIns.DataDir = strings.Trim(dataDir, "\"")
 			}
 			if logDir, ok := srv.Vars["pump_log_dir"]; ok {
-				tmpIns.LogDir = logDir
+				tmpIns.LogDir = strings.Trim(logDir, "\"")
 			}
 
 			log.Debugf("Imported %s node %s:%d.", tmpIns.Role(), tmpIns.Host, tmpIns.GetMainPort())
@@ -600,7 +608,6 @@ func GetHostPort(host *aini.Host, cfg *ini.File) int {
 // 2. get from cfg.Section("defaults").Key("remote_port")
 // 3. get from srv.Port
 func getHostPort(srv *aini.Host, cfg *ini.File) int {
-
 	// parse per host config
 	// aini parse the port inline with hostnames (e.g., something like `host:22`)
 	// but not handling the "ansible_port" variable

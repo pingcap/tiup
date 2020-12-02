@@ -32,7 +32,7 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 )
 
-// Components names supported by TiOps
+// Components names
 const (
 	ComponentTiDB             = "tidb"
 	ComponentTiKV             = "tikv"
@@ -45,6 +45,8 @@ const (
 	ComponentTiSpark          = "tispark"
 	ComponentSpark            = "spark"
 	ComponentAlertmanager     = "alertmanager"
+	ComponentDMMaster         = "dm-master"
+	ComponentDMWorker         = "dm-worker"
 	ComponentPrometheus       = "prometheus"
 	ComponentPushwaygate      = "pushgateway"
 	ComponentBlackboxExporter = "blackbox_exporter"

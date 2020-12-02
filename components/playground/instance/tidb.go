@@ -16,7 +16,6 @@ package instance
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -52,13 +51,8 @@ func NewTiDBInstance(binPath string, dir, host, configPath string, id int, pds [
 
 // Start calls set inst.cmd and Start
 func (inst *TiDBInstance) Start(ctx context.Context, version pkgver.Version) error {
-	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
-		return err
-	}
-	endpoints := make([]string, 0, len(inst.pds))
-	for _, pd := range inst.pds {
-		endpoints = append(endpoints, fmt.Sprintf("%s:%d", inst.Host, pd.StatusPort))
-	}
+	endpoints := pdEndpoints(inst.pds, false)
+
 	args := []string{
 		"-P", strconv.Itoa(inst.Port),
 		"--store=tikv",

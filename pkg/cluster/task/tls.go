@@ -16,6 +16,7 @@ package task
 import (
 	"encoding/pem"
 	"fmt"
+	"net"
 	"path/filepath"
 
 	"github.com/pingcap/errors"
@@ -38,8 +39,13 @@ func (c *TLSCert) Execute(ctx *Context) error {
 	if err != nil {
 		return err
 	}
-	// we don't support hostname yet, only iplist is used
-	csr, err := privKey.CSR(c.inst.Role(), c.inst.ComponentName(), []string{}, []string{c.inst.GetHost()})
+
+	hosts := []string{c.inst.GetHost()}
+	ips := []string{}
+	if net.ParseIP(c.inst.GetHost()) != nil {
+		hosts, ips = ips, hosts
+	}
+	csr, err := privKey.CSR(c.inst.Role(), c.inst.ComponentName(), hosts, ips)
 	if err != nil {
 		return err
 	}

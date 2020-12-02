@@ -10,15 +10,27 @@
 // distributed under the License is distributed on an "AS IS" BASIS,
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-// +build linux
 
-package instance
+package base52
 
-import "syscall"
+import (
+	"testing"
 
-// SysProcAttr to be use for every Process we start.
-var SysProcAttr = &syscall.SysProcAttr{
-	Pdeathsig: syscall.SIGKILL,
-	Setpgid:   true,
+	. "github.com/pingcap/check"
+)
+
+func Test(t *testing.T) { TestingT(t) }
+
+type base52Suite struct{}
+
+var _ = Suite(&base52Suite{})
+
+func (s *base52Suite) TestEncode(c *C) {
+	c.Assert(Encode(1000000000), Equals, "2TPzw7")
+}
+
+func (s *base52Suite) TestDecode(c *C) {
+	decoded, err := Decode("2TPzw7")
+	c.Assert(decoded, Equals, int64(1000000000))
+	c.Assert(err, IsNil)
 }

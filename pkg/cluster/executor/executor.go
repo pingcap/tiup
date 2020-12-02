@@ -47,6 +47,9 @@ var (
 	// It's used to predict if the connection can establish success in the future.
 	// Its main purpose is to avoid sshpass hang when user speficied a wrong prompt.
 	connectionTestCommand = "echo connection test, if killed, check the password prompt"
+
+	// SSH authorized_keys file
+	defaultSSHAuthorizedKeys = "~/.ssh/authorized_keys"
 )
 
 // Executor is the executor interface for TiOps, all tasks will in the end
@@ -154,4 +157,31 @@ func checkLocalIP(ip string) error {
 	}
 
 	return fmt.Errorf("address %s not found in all interfaces, found ips: %s", ip, strings.Join(foundIps, ","))
+}
+
+// FindSSHAuthorizedKeysFile finds the correct path of SSH authorized keys file
+func FindSSHAuthorizedKeysFile(exec Executor) string {
+	// detect if custom path of authorized keys file is set
+	// NOTE: we do not yet support:
+	//   - custom config for user (~/.ssh/config)
+	//   - sshd started with custom config (other than /etc/ssh/sshd_config)
+	//   - ssh server implementations other than OpenSSH (such as dropbear)
+	sshAuthorizedKeys := defaultSSHAuthorizedKeys
+	cmd := "grep -Ev '^\\s*#|^\\s*$' /etc/ssh/sshd_config"
+	stdout, _, _ := exec.Execute(cmd, true) // error ignored as we have default value
+	for _, line := range strings.Split(string(stdout), "\n") {
+		if !strings.Contains(line, "AuthorizedKeysFile") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) >= 2 {
+			sshAuthorizedKeys = fields[1]
+			break
+		}
+	}
+
+	if !strings.HasPrefix(sshAuthorizedKeys, "/") && !strings.HasPrefix(sshAuthorizedKeys, "~") {
+		sshAuthorizedKeys = fmt.Sprintf("~/%s", sshAuthorizedKeys)
+	}
+	return sshAuthorizedKeys
 }

@@ -56,7 +56,7 @@ type (
 			checkResults map[string][]*operator.CheckResult
 		}
 
-		// The public/private key is used to access remote server via the user `tidb`
+		// The private/public key is used to access remote server via the user `tidb`
 		PrivateKeyPath string
 		PublicKeyPath  string
 	}
@@ -95,7 +95,7 @@ func NewContext() *Context {
 	}
 }
 
-// Get implements operation ExecutorGetter interface.
+// Get implements the operation.ExecutorGetter interface.
 func (ctx *Context) Get(host string) (e executor.Executor) {
 	ctx.exec.Lock()
 	e, ok := ctx.exec.executors[host]
@@ -105,6 +105,11 @@ func (ctx *Context) Get(host string) (e executor.Executor) {
 		panic("no init executor for " + host)
 	}
 	return
+}
+
+// GetSSHKeySet implements the operation.ExecutorGetter interface.
+func (ctx *Context) GetSSHKeySet() (privateKeyPath, publicKeyPath string) {
+	return ctx.PrivateKeyPath, ctx.PublicKeyPath
 }
 
 // GetExecutor get the executor.

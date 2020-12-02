@@ -32,12 +32,6 @@ type CopyComponent struct {
 	dstDir    string
 }
 
-// PackagePath return the tar bar path
-func PackagePath(comp string, version string, os string, arch string) string {
-	fileName := fmt.Sprintf("%s-%s-%s-%s.tar.gz", comp, version, os, arch)
-	return spec.ProfilePath(spec.TiOpsPackageCacheDir, fileName)
-}
-
 // Execute implements the Task interface
 func (c *CopyComponent) Execute(ctx *Context) error {
 	// If the version is not specified, the last stable one will be used
@@ -53,7 +47,7 @@ func (c *CopyComponent) Execute(ctx *Context) error {
 	// Copy to remote server
 	srcPath := c.srcPath
 	if srcPath == "" {
-		srcPath = PackagePath(c.component, c.version, c.os, c.arch)
+		srcPath = spec.PackagePath(c.component, c.version, c.os, c.arch)
 	}
 
 	install := &InstallPackage{

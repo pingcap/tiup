@@ -388,18 +388,20 @@ func (l *httpMirror) Publish(manifest *v1manifest.Manifest, info model.Component
 
 	if resp.StatusCode < 300 {
 		return nil
-	} else if resp.StatusCode == http.StatusConflict {
+	}
+	switch resp.StatusCode {
+	case http.StatusConflict:
 		return errors.Errorf("Local component manifest is not new enough, update it first")
-	} else if resp.StatusCode == http.StatusForbidden {
+	case http.StatusForbidden:
 		return errors.Errorf("The server refused, make sure you have access to this component")
-	}
+	default:
+		buf := new(strings.Builder)
+		if _, err := io.Copy(buf, resp.Body); err != nil {
+			return err
+		}
 
-	buf := new(strings.Builder)
-	if _, err := io.Copy(buf, resp.Body); err != nil {
-		return err
+		return fmt.Errorf("Unknow error from server, response code: %d response body: %s", resp.StatusCode, buf.String())
 	}
-
-	return fmt.Errorf("Unknow error from server, response body: %s", buf.String())
 }
 
 func (l *httpMirror) isRetryable(err error) bool {

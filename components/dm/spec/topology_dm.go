@@ -557,6 +557,11 @@ func (topo *Specification) Validate() error {
 	return spec.RelativePathDetect(topo, isSkipField)
 }
 
+// Type implements Topology interface.
+func (topo *Specification) Type() string {
+	return spec.TopoTypeDM
+}
+
 // BaseTopo implements Topology interface.
 func (topo *Specification) BaseTopo() *spec.BaseTopo {
 	return &spec.BaseTopo{

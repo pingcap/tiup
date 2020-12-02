@@ -27,6 +27,8 @@ type GrafanaConfig struct {
 	DeployDir string
 	IP        string
 	Port      uint64
+	Username  string // admin_user
+	Password  string // admin_password
 }
 
 // NewGrafanaConfig returns a GrafanaConfig
@@ -41,6 +43,18 @@ func NewGrafanaConfig(ip, deployDir string) *GrafanaConfig {
 // WithPort set Port field of GrafanaConfig
 func (c *GrafanaConfig) WithPort(port uint64) *GrafanaConfig {
 	c.Port = port
+	return c
+}
+
+// WithUsername sets username of admin user
+func (c *GrafanaConfig) WithUsername(user string) *GrafanaConfig {
+	c.Username = user
+	return c
+}
+
+// WithPassword sets password of admin user
+func (c *GrafanaConfig) WithPassword(passwd string) *GrafanaConfig {
+	c.Password = passwd
 	return c
 }
 
