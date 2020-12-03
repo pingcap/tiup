@@ -70,6 +70,7 @@ func (c *CheckSys) Execute(ctx *Context) error {
 		results = append(
 			results,
 			operator.CheckSELinux(e),
+			operator.CheckTHP(e),
 		)
 		ctx.SetCheckResults(c.host, results)
 	case CheckTypePort:
