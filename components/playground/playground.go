@@ -795,7 +795,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			bar := bars.AddBar(prefix)
 			go func(dbInst *instance.TiDBInstance) {
 				defer wg.Done()
-				if s := checkDB(dbInst.Addr(), 0); s {
+				if s := checkDB(dbInst.Addr(), options.tidb.UpTimeout); s {
 					succ = append(succ, dbInst.Addr())
 					bar.UpdateDisplay(&progress.DisplayProps{
 						Prefix: prefix,
@@ -850,7 +850,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 					} else if state := cmd.ProcessState; state != nil && state.Exited() {
 						displayResult.Mode = progress.ModeError
 						displayResult.Suffix = fmt.Sprintf("process exited with code: %d", state.ExitCode())
-					} else if s := checkStoreStatus(pdClient, flashInst.Addr(), 0); s {
+					} else if s := checkStoreStatus(pdClient, flashInst.Addr(), options.tiflash.UpTimeout); s {
 						displayResult.Mode = progress.ModeDone
 					} else {
 						displayResult.Mode = progress.ModeError

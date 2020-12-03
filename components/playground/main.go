@@ -78,7 +78,8 @@ func installIfMissing(profile *localdata.Profile, component, version string) err
 func execute() error {
 	opt := &bootOptions{
 		tidb: instance.Config{
-			Num: 1,
+			Num:       1,
+			UpTimeout: 60,
 		},
 		tikv: instance.Config{
 			Num: 1,
@@ -87,7 +88,8 @@ func execute() error {
 			Num: 1,
 		},
 		tiflash: instance.Config{
-			Num: 1,
+			Num:       1,
+			UpTimeout: 120,
 		},
 		host:    "127.0.0.1",
 		monitor: true,
@@ -202,6 +204,9 @@ Examples:
 	rootCmd.Flags().IntVarP(&opt.pump.Num, "pump", "", opt.pump.Num, "Pump instance number")
 	rootCmd.Flags().IntVarP(&opt.drainer.Num, "drainer", "", opt.drainer.Num, "Drainer instance number")
 
+	rootCmd.Flags().IntVarP(&opt.tidb.UpTimeout, "db.timeout", "", opt.tidb.UpTimeout, "TiDB max wait time in seconds for staring, 0 means no limit")
+	rootCmd.Flags().IntVarP(&opt.tiflash.UpTimeout, "tiflash.timeout", "", opt.tiflash.UpTimeout, "TiFlash max wait time in seconds for staring, 0 means no limit")
+
 	rootCmd.Flags().StringVarP(&opt.host, "host", "", opt.host, "Playground cluster host")
 	rootCmd.Flags().StringVarP(&opt.tidb.Host, "db.host", "", opt.tidb.Host, "Playground TiDB host. If not provided, TiDB will still use `host` flag as its host")
 	rootCmd.Flags().StringVarP(&opt.pd.Host, "pd.host", "", opt.pd.Host, "Playground PD host. If not provided, PD will still use `host` flag as its host")
@@ -245,7 +250,7 @@ func tryConnect(dsn string) error {
 	return nil
 }
 
-// checkDB check if the addr is connectable by getting a connection from sql.DB.
+// checkDB check if the addr is connectable by getting a connection from sql.DB. timeout <=0 means no timeout
 func checkDB(dbAddr string, timeout int) bool {
 	dsn := fmt.Sprintf("root:@tcp(%s)/", dbAddr)
 	if timeout > 0 {
@@ -267,6 +272,7 @@ func checkDB(dbAddr string, timeout int) bool {
 
 }
 
+// checkStoreStatus uses pd client to check whether a store is up. timeout <= 0 means no timeout
 func checkStoreStatus(pdClient *api.PDClient, storeAddr string, timeout int) bool {
 	if timeout > 0 {
 		for i := 0; i < timeout; i++ {
