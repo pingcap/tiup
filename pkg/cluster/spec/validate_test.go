@@ -428,12 +428,12 @@ tidb_servers:
 	c.Assert(ok, IsTrue)
 	c.Assert(suggestion, Equals, `The port you specified in the topology file is:
   Port:      9100
-  Component: tidb 172.16.5.138
+  Component: monitor 172.16.5.138
 
 It conflicts to a port in the existing cluster:
   Existing Cluster Name: topo1
   Existing Port:         9100
-  Existing Component:    pd 172.16.5.138
+  Existing Component:    monitor 172.16.5.138
 
 Please change to use another port or another host.`)
 

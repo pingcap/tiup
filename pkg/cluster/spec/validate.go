@@ -199,9 +199,10 @@ Please change to use another directory or another host.
 // CheckClusterPortConflict checks cluster dir conflict
 func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName string, topo Topology) error {
 	type Entry struct {
-		clusterName string
-		instance    Instance
-		port        int
+		clusterName   string
+		componentName string
+		host          string
+		port          int
 	}
 
 	currentEntries := []Entry{}
@@ -222,23 +223,26 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 			blackboxExporterPort := mOpt.BlackboxExporterPort
 			for _, port := range inst.UsedPorts() {
 				existingEntries = append(existingEntries, Entry{
-					clusterName: name,
-					instance:    inst,
-					port:        port,
+					clusterName:   name,
+					componentName: inst.ComponentName(),
+					host:          inst.GetHost(),
+					port:          port,
 				})
 			}
 			if !uniqueHosts.Exist(inst.GetHost()) {
 				uniqueHosts.Insert(inst.GetHost())
 				existingEntries = append(existingEntries,
 					Entry{
-						clusterName: name,
-						instance:    inst,
-						port:        nodeExporterPort,
+						clusterName:   name,
+						componentName: RoleMonitor,
+						host:          inst.GetHost(),
+						port:          nodeExporterPort,
 					},
 					Entry{
-						clusterName: name,
-						instance:    inst,
-						port:        blackboxExporterPort,
+						clusterName:   name,
+						componentName: RoleMonitor,
+						host:          inst.GetHost(),
+						port:          blackboxExporterPort,
 					})
 			}
 		})
@@ -248,8 +252,9 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 	topo.IterInstance(func(inst Instance) {
 		for _, port := range inst.UsedPorts() {
 			currentEntries = append(currentEntries, Entry{
-				instance: inst,
-				port:     port,
+				componentName: inst.ComponentName(),
+				host:          inst.GetHost(),
+				port:          port,
 			})
 		}
 
@@ -261,31 +266,33 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 			uniqueHosts.Insert(inst.GetHost())
 			currentEntries = append(currentEntries,
 				Entry{
-					instance: inst,
-					port:     mOpt.NodeExporterPort,
+					componentName: RoleMonitor,
+					host:          inst.GetHost(),
+					port:          mOpt.NodeExporterPort,
 				},
 				Entry{
-					instance: inst,
-					port:     mOpt.BlackboxExporterPort,
+					componentName: RoleMonitor,
+					host:          inst.GetHost(),
+					port:          mOpt.BlackboxExporterPort,
 				})
 		}
 	})
 
 	for _, p1 := range currentEntries {
 		for _, p2 := range existingEntries {
-			if p1.instance.GetHost() != p2.instance.GetHost() {
+			if p1.host != p2.host {
 				continue
 			}
 
 			if p1.port == p2.port {
 				properties := map[string]string{
 					"ThisPort":       strconv.Itoa(p1.port),
-					"ThisComponent":  p1.instance.ComponentName(),
-					"ThisHost":       p1.instance.GetHost(),
+					"ThisComponent":  p1.componentName,
+					"ThisHost":       p1.host,
 					"ExistCluster":   p2.clusterName,
 					"ExistPort":      strconv.Itoa(p2.port),
-					"ExistComponent": p2.instance.ComponentName(),
-					"ExistHost":      p2.instance.GetHost(),
+					"ExistComponent": p2.componentName,
+					"ExistHost":      p2.host,
 				}
 				zap.L().Info("Meet deploy port conflict", zap.Any("info", properties))
 				return errDeployPortConflict.New("Deploy port conflicts to an existing cluster").WithProperty(cliutil.SuggestionFromTemplate(`
