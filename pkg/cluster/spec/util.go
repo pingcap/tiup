@@ -84,7 +84,7 @@ func (m *ClusterMeta) GetBaseMeta() *BaseMeta {
 
 // AuditDir return the directory for saving audit log.
 func AuditDir() string {
-	return filepath.Join(profileDir, TiOpsAuditDir)
+	return filepath.Join(profileDir, TiUpAuditDir)
 }
 
 // SaveClusterMeta saves the cluster meta information to profile directory

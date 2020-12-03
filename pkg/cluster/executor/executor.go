@@ -52,7 +52,7 @@ var (
 	defaultSSHAuthorizedKeys = "~/.ssh/authorized_keys"
 )
 
-// Executor is the executor interface for TiOps, all tasks will in the end
+// Executor is the executor interface for TiUp, all tasks will in the end
 // be passed to a executor and then be actually performed.
 type Executor interface {
 	// Execute run the command, then return it's stdout and stderr

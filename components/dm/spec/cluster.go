@@ -70,7 +70,7 @@ func (m *Metadata) GetBaseMeta() *cspec.BaseMeta {
 // GetSpecManager return the spec manager of dm cluster.
 func GetSpecManager() *cspec.SpecManager {
 	if specManager == nil {
-		specManager = cspec.NewSpec(filepath.Join(cspec.ProfileDir(), cspec.TiOpsClusterDir), func() cspec.Metadata {
+		specManager = cspec.NewSpec(filepath.Join(cspec.ProfileDir(), cspec.TiUpClusterDir), func() cspec.Metadata {
 			return &Metadata{
 				Topology: new(Specification),
 			}
