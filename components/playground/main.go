@@ -34,7 +34,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
-	"github.com/pingcap/tiup/pkg/cliutil/progress"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -247,46 +246,44 @@ func tryConnect(dsn string) error {
 }
 
 // checkDB check if the addr is connectable by getting a connection from sql.DB.
-func checkDB(dbAddr string) bool {
+func checkDB(dbAddr string, timeout int) bool {
 	dsn := fmt.Sprintf("root:@tcp(%s)/", dbAddr)
-	for i := 0; i < 60; i++ {
-		if err := tryConnect(dsn); err != nil {
-			time.Sleep(time.Second)
-		} else {
-			if i != 0 {
-				fmt.Println()
+	if timeout > 0 {
+		for i := 0; i < timeout; i++ {
+			if tryConnect(dsn) == nil {
+				return true
 			}
-			return true
+			time.Sleep(time.Second)
+		}
+		return false
+	} else {
+		for {
+			if err := tryConnect(dsn); err == nil {
+				return true
+			}
+			time.Sleep(time.Second)
 		}
 	}
-	return false
+
 }
 
-func checkStoreStatus(pdClient *api.PDClient, typ, storeAddr string) error {
-	prefix := color.YellowString("Waiting for %s %s ready ", typ, storeAddr)
-	bar := progress.NewSingleBar(prefix)
-	bar.StartRenderLoop()
-	defer bar.StopRenderLoop()
-
-	for i := 0; i < 180; i++ {
-		up, err := pdClient.IsUp(storeAddr)
-		if err != nil || !up {
+func checkStoreStatus(pdClient *api.PDClient, storeAddr string, timeout int) bool {
+	if timeout > 0 {
+		for i := 0; i < timeout; i++ {
+			if up, err := pdClient.IsUp(storeAddr); err == nil && up {
+				return true
+			}
 			time.Sleep(time.Second)
-		} else {
-			bar.UpdateDisplay(&progress.DisplayProps{
-				Prefix: prefix,
-				Mode:   progress.ModeDone,
-			})
-			return nil
+		}
+		return false
+	} else {
+		for {
+			if up, err := pdClient.IsUp(storeAddr); err == nil && up {
+				return true
+			}
+			time.Sleep(time.Second)
 		}
 	}
-
-	bar.UpdateDisplay(&progress.DisplayProps{
-		Prefix: prefix,
-		Mode:   progress.ModeError,
-	})
-
-	return errors.Errorf(fmt.Sprintf("store %s failed to up after timeout(180s)", storeAddr))
 }
 
 func hasDashboard(pdAddr string) bool {
