@@ -261,15 +261,13 @@ func checkDB(dbAddr string, timeout int) bool {
 			time.Sleep(time.Second)
 		}
 		return false
-	} else {
-		for {
-			if err := tryConnect(dsn); err == nil {
-				return true
-			}
-			time.Sleep(time.Second)
-		}
 	}
-
+	for {
+		if err := tryConnect(dsn); err == nil {
+			return true
+		}
+		time.Sleep(time.Second)
+	}
 }
 
 // checkStoreStatus uses pd client to check whether a store is up. timeout <= 0 means no timeout
@@ -282,13 +280,12 @@ func checkStoreStatus(pdClient *api.PDClient, storeAddr string, timeout int) boo
 			time.Sleep(time.Second)
 		}
 		return false
-	} else {
-		for {
-			if up, err := pdClient.IsUp(storeAddr); err == nil && up {
-				return true
-			}
-			time.Sleep(time.Second)
+	}
+	for {
+		if up, err := pdClient.IsUp(storeAddr); err == nil && up {
+			return true
 		}
+		time.Sleep(time.Second)
 	}
 }
 
