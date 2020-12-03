@@ -190,6 +190,21 @@ func (l *localFilesystem) Grant(id, name string, key *v1manifest.KeyInfo) error 
 	return nil
 }
 
+// Rotate implements the model.Backend interface
+func (l *localFilesystem) Rotate(m *v1manifest.Manifest) error {
+	txn, err := store.New(l.rootPath, l.upstream).Begin()
+	if err != nil {
+		return err
+	}
+
+	if err := model.New(txn, l.keys).Rotate(m); err != nil {
+		_ = txn.Rollback()
+		return err
+	}
+
+	return nil
+}
+
 // Download implements the Mirror interface
 func (l *localFilesystem) Download(resource, targetDir string) error {
 	reader, err := l.Fetch(resource, 0)
@@ -339,6 +354,39 @@ func (l *httpMirror) prepareURL(resource string) string {
 // Grant implements the model.Backend interface
 func (l *httpMirror) Grant(id, name string, key *v1manifest.KeyInfo) error {
 	return errors.Errorf("introduce a fresher via the internet is not allowd, please set you mirror to a local one")
+}
+
+// Rotate implements the model.Backend interface
+func (l *httpMirror) Rotate(m *v1manifest.Manifest) error {
+	rotateAddr := fmt.Sprintf("%s/api/v1/rotate", l.Source())
+	data, err := json.Marshal(m)
+	if err != nil {
+		return errors.Annotate(err, "marshal root manfiest")
+	}
+
+	client := http.Client{Timeout: time.Minute}
+	resp, err := client.Post(rotateAddr, "text/json", bytes.NewBuffer(data))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 300 {
+		return nil
+	}
+	switch resp.StatusCode {
+	case http.StatusConflict:
+		return errors.Errorf("The manifest has been modified after you fetch it, please try again")
+	case http.StatusBadRequest:
+		return errors.Errorf("The server refused the manifest, please check if it's a valid root manifest")
+	default:
+		buf := new(strings.Builder)
+		if _, err := io.Copy(buf, resp.Body); err != nil {
+			return err
+		}
+
+		return fmt.Errorf("Unknow error from server, response code: %d response body: %s", resp.StatusCode, buf.String())
+	}
 }
 
 // Publish implements the model.Backend interface
@@ -503,6 +551,11 @@ func (l *MockMirror) Download(resource, targetDir string) error {
 
 // Grant implements the model.Backend interface
 func (l *MockMirror) Grant(id, name string, key *v1manifest.KeyInfo) error {
+	return nil
+}
+
+// Rotate implements the model.Backend interface
+func (l *MockMirror) Rotate(m *v1manifest.Manifest) error {
 	return nil
 }
 

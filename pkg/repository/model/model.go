@@ -22,6 +22,7 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository/store"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -31,6 +32,8 @@ type Backend interface {
 	Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 	// Introduce add a new owner to mirror
 	Grant(id, name string, key *v1manifest.KeyInfo) error
+	// Rotate update root manifest
+	Rotate(manifest *v1manifest.Manifest) error
 }
 
 type model struct {
@@ -93,7 +96,57 @@ func (m *model) Grant(id, name string, key *v1manifest.KeyInfo) error {
 		if err := m.updateSnapshotManifest(initTime, func(om *v1manifest.Manifest) *v1manifest.Manifest {
 			signed := om.Signed.(*v1manifest.Snapshot)
 			if indexFileVersion != nil {
-				signed.Meta["/index.json"] = *indexFileVersion
+				signed.Meta[v1manifest.ManifestURLIndex] = *indexFileVersion
+			}
+			return om
+		}); err != nil {
+			return err
+		}
+
+		// Update timestamp.json and signature
+		if err := m.updateTimestampManifest(initTime); err != nil {
+			return err
+		}
+
+		return m.txn.Commit()
+	}, func(err error) bool {
+		return err == store.ErrorFsCommitConflict && m.txn.ResetManifest() == nil
+	})
+}
+
+// Rotate implements Backend
+func (m *model) Rotate(manifest *v1manifest.Manifest) error {
+	initTime := time.Now()
+	root, ok := manifest.Signed.(*v1manifest.Root)
+	if !ok {
+		return ErrorWrongManifestType
+	}
+
+	return utils.RetryUntil(func() error {
+		rm, err := m.readRootManifest()
+		if err != nil {
+			return err
+		}
+
+		if err := verifyRootManifest(rm, manifest); err != nil {
+			return err
+		}
+
+		manifestFilename := fmt.Sprintf("%d.root.json", root.Version)
+		if err := m.txn.WriteManifest(manifestFilename, manifest); err != nil {
+			return err
+		}
+
+		fi, err := m.txn.Stat(manifestFilename)
+		if err != nil {
+			return err
+		}
+
+		if err := m.updateSnapshotManifest(initTime, func(om *v1manifest.Manifest) *v1manifest.Manifest {
+			signed := om.Signed.(*v1manifest.Snapshot)
+			signed.Meta[v1manifest.ManifestURLRoot] = v1manifest.FileVersion{
+				Version: root.Version,
+				Length:  uint(fi.Size()),
 			}
 			return om
 		}); err != nil {
@@ -194,7 +247,7 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 			manifestVersion := signed.Version
 			signed := om.Signed.(*v1manifest.Snapshot)
 			if indexFileVersion != nil {
-				signed.Meta["/index.json"] = *indexFileVersion
+				signed.Meta[v1manifest.ManifestURLIndex] = *indexFileVersion
 			}
 			signed.Meta[fmt.Sprintf("/%s.json", componentName)] = v1manifest.FileVersion{
 				Version: manifestVersion,
@@ -400,4 +453,36 @@ func verifyComponentManifest(owner *v1manifest.Owner, m *v1manifest.Manifest) er
 	}
 
 	return ErrorWrongSignature
+}
+
+func verifyRootManifest(oldM *v1manifest.Manifest, newM *v1manifest.Manifest) error {
+	newRoot := newM.Signed.(*v1manifest.Root)
+	newKeys := set.NewStringSet()
+	payload, err := cjson.Marshal(newM.Signed)
+	if err != nil {
+		return err
+	}
+	for _, s := range newM.Signatures {
+		id := s.KeyID
+		k := newRoot.Roles[v1manifest.ManifestTypeRoot].Keys[id]
+		if err := k.Verify(payload, s.Sig); err == nil {
+			newKeys.Insert(s.KeyID)
+		}
+	}
+
+	oldRoot := oldM.Signed.(*v1manifest.Root)
+	oldKeys := set.NewStringSet()
+	for id := range oldRoot.Roles[v1manifest.ManifestTypeRoot].Keys {
+		oldKeys.Insert(id)
+	}
+
+	if len(oldKeys.Intersection(newKeys).Slice()) < int(oldRoot.Roles[v1manifest.ManifestTypeRoot].Threshold) {
+		return ErrorWrongSignature
+	}
+
+	if newRoot.Version != oldRoot.Version+1 {
+		return errors.Annotatef(ErrorWrongManifestVersion, "expect %d, got %d", oldRoot.Version+1, newRoot.Version)
+	}
+
+	return nil
 }

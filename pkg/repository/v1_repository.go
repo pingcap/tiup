@@ -665,6 +665,26 @@ func (r *V1Repository) loadRoot() (*v1manifest.Root, error) {
 	return root, nil
 }
 
+// FetchRootManfiest fetch the root manifest.
+func (r *V1Repository) FetchRootManfiest() (root *v1manifest.Root, err error) {
+	err = r.ensureManifests()
+	if err != nil {
+		return nil, err
+	}
+
+	root = new(v1manifest.Root)
+	_, exists, err := r.local.LoadManifest(root)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, errors.Errorf("no root manifest")
+	}
+
+	return root, nil
+}
+
 // FetchIndexManifest fetch the index manifest.
 func (r *V1Repository) FetchIndexManifest() (index *v1manifest.Index, err error) {
 	err = r.ensureManifests()

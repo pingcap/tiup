@@ -14,15 +14,19 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 	"time"
 
+	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
@@ -33,6 +37,7 @@ import (
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/server/rotate"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -64,6 +69,7 @@ of components or the repository itself.`,
 		newMirrorSetCmd(),
 		newMirrorModifyCmd(),
 		newMirrorGrantCmd(),
+		newMirrorRotateCmd(),
 	)
 
 	return cmd
@@ -71,6 +77,9 @@ of components or the repository itself.`,
 
 // the `mirror sign` sub command
 func newMirrorSignCmd() *cobra.Command {
+	privPath := ""
+	timeout := 10
+
 	cmd := &cobra.Command{
 		Use:   "sign <manifest-file> [key-files]",
 		Short: "Add signatures to a manifest file",
@@ -81,12 +90,41 @@ func newMirrorSignCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			if len(args) == 1 {
-				return v1manifest.SignManifestFile(args[0], env.Profile().Path(localdata.KeyInfoParentDir, "private.json"))
+			if privPath == "" {
+				privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
 			}
-			return v1manifest.SignManifestFile(args[0], args[1:]...)
+
+			if !strings.HasPrefix(args[0], "http") {
+				return v1manifest.SignManifestFile(args[0], args[1:]...)
+			}
+
+			client := utils.NewHTTPClient(time.Duration(timeout)*time.Second, nil)
+			data, err := client.Get(args[0])
+			if err != nil {
+				return err
+			}
+
+			m := &v1manifest.Manifest{Signed: &v1manifest.Root{}}
+			if err := cjson.Unmarshal(data, m); err != nil {
+				return errors.Annotate(err, "unmarshal response")
+			}
+			m, err = sign(privPath, m.Signed)
+			if err != nil {
+				return err
+			}
+			data, err = cjson.Marshal(m)
+			if err != nil {
+				return errors.Annotate(err, "marshal manifest")
+			}
+
+			if _, err = client.Post(args[0], bytes.NewBuffer(data)); err != nil {
+				return err
+			}
+			return nil
 		},
 	}
+	cmd.Flags().StringVarP(&privPath, "key", "k", "", "Specify the private key path")
+	cmd.Flags().IntVarP(&timeout, "timeout", "", timeout, "Specify the timeout when access the network")
 
 	return cmd
 }
@@ -235,6 +273,68 @@ func newMirrorModifyCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&hidden, "hide", "", hidden, "is this component visible in list")
 	cmd.Flags().BoolVarP(&yanked, "yank", "", yanked, "is this component deprecated")
 	return cmd
+}
+
+// the `mirror rotate` sub command
+func newMirrorRotateCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "rotate",
+		Short: "Rotate root.json",
+		Long:  "Rotate root.json make it possible to modify root.json",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root, err := editLatestRootManifest()
+			if err != nil {
+				return err
+			}
+
+			manifest, err := rotate.Serve(":8080", root)
+			if err != nil {
+				return err
+			}
+
+			return environment.GlobalEnv().V1Repository().Mirror().Rotate(manifest)
+		},
+	}
+
+	return cmd
+}
+
+func editLatestRootManifest() (*v1manifest.Root, error) {
+	root, err := environment.GlobalEnv().V1Repository().FetchRootManfiest()
+	if err != nil {
+		return nil, err
+	}
+
+	file, err := ioutil.TempFile(os.TempDir(), "*.root.json")
+	if err != nil {
+		return nil, errors.Annotate(err, "create temp file for root.json")
+	}
+	defer file.Close()
+	name := file.Name()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "    ")
+	if err := encoder.Encode(root); err != nil {
+		return nil, errors.Annotate(err, "encode root.json")
+	}
+	if err := file.Close(); err != nil {
+		return nil, errors.Annotatef(err, "close %s", name)
+	}
+	if err := utils.OpenFileInEditor(name); err != nil {
+		return nil, err
+	}
+
+	root = &v1manifest.Root{}
+	file, err = os.Open(name)
+	if err != nil {
+		return nil, errors.Annotatef(err, "open %s", name)
+	}
+	defer file.Close()
+	if err := json.NewDecoder(file).Decode(root); err != nil {
+		return nil, errors.Annotatef(err, "decode %s", name)
+	}
+
+	return root, nil
 }
 
 func loadPrivKey(privPath string) (*v1manifest.KeyInfo, error) {
