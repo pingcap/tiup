@@ -653,7 +653,7 @@ func CheckFIOResult(rr, rw, lat []byte) []*CheckResult {
 	return results
 }
 
-// CheckTHPEnabled checks THP in /sys/kernel/mm/transparent_hugepage/{enabled,defrag}
+// CheckTHP checks THP in /sys/kernel/mm/transparent_hugepage/{enabled,defrag}
 func CheckTHP(e executor.Executor) *CheckResult {
 	result := &CheckResult{
 		Name: CheckNameTHP,
