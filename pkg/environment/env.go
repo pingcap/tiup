@@ -219,7 +219,7 @@ func (env *Environment) PlatformString() string {
 // SelfUpdate updates TiUP.
 func (env *Environment) SelfUpdate() error {
 	if env.v1Repo != nil {
-		if err := env.v1Repo.DownloadTiup(env.LocalPath("bin")); err != nil {
+		if err := env.v1Repo.DownloadTiUP(env.LocalPath("bin")); err != nil {
 			return err
 		}
 
@@ -227,7 +227,7 @@ func (env *Environment) SelfUpdate() error {
 		return localdata.InitProfile().ResetMirror(Mirror(), "")
 	}
 
-	return env.repo.DownloadTiup(env.LocalPath("bin"))
+	return env.repo.DownloadTiUP(env.LocalPath("bin"))
 }
 
 func (env *Environment) downloadComponentv1(component string, version pkgver.Version, overwrite bool) error {

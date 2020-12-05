@@ -97,9 +97,9 @@ func (r *Repository) LatestStableVersion(component string) (pkgver.Version, erro
 	return ver.LatestVersion(), nil
 }
 
-// DownloadTiup downloads the tiup tarball and expands it into targetDir
-func (r *Repository) DownloadTiup(targetDir string) error {
-	return r.fileSource.downloadTarFile(targetDir, fmt.Sprintf("%s-%s-%s", TiupBinaryName, r.GOOS, r.GOARCH), true)
+// DownloadTiUP downloads the tiup tarball and expands it into targetDir
+func (r *Repository) DownloadTiUP(targetDir string) error {
+	return r.fileSource.downloadTarFile(targetDir, fmt.Sprintf("%s-%s-%s", TiUPBinaryName, r.GOOS, r.GOARCH), true)
 }
 
 // DownloadComponent downloads a component with specific version from repository
