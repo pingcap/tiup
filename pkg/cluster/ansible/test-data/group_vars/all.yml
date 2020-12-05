@@ -1,5 +1,4 @@
 ---
-
 # Variables here are applicable to all host groups
 deploy_user: "{{ ansible_user }}"
 status_dir: "{{ deploy_dir }}/status"
@@ -10,10 +9,10 @@ images_dir: "{{ deploy_dir }}/images"
 downloads_dir: "{{ playbook_dir }}/downloads"
 resources_dir: "{{ playbook_dir }}/resources"
 fetch_tmp_dir: "{{ playbook_dir }}/collect_diagnosis_data"
-fetch_dir:     "{{ playbook_dir }}/collect_diagnosis"
-cert_dir:      "{{ playbook_dir }}/conf/ssl"
-script_dir:    "{{ playbook_dir }}/scripts"
-binary_dir:    "{{ playbook_dir }}/resources/bin"
+fetch_dir: "{{ playbook_dir }}/collect_diagnosis"
+cert_dir: "{{ playbook_dir }}/conf/ssl"
+script_dir: "{{ playbook_dir }}/scripts"
+binary_dir: "{{ playbook_dir }}/resources/bin"
 
 # default configuration for multiple host groups and roles
 node_exporter_port: 9101

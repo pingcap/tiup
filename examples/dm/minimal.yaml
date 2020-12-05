@@ -4,7 +4,6 @@
 # - 3 worker nodes
 # You can change the hosts according your environment
 ---
-
 global:
   user: "tidb"
   ssh_port: 22
