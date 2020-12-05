@@ -25,7 +25,7 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 )
 
-// Builder is used to build TiUp task
+// Builder is used to build TiUP task
 type Builder struct {
 	tasks []Task
 }

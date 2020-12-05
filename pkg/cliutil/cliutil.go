@@ -39,7 +39,7 @@ var templateFuncs = template.FuncMap{
 	"OsArgs0": OsArgs0,
 }
 
-// FIXME: We should use TiUp's arg0 instead of hardcode
+// FIXME: We should use TiUP's arg0 instead of hardcode
 var arg0 = "tiup cluster"
 
 // RegisterArg0 register arg0

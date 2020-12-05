@@ -28,8 +28,8 @@ import (
 // sub directory names
 const (
 	TiUPPackageCacheDir = "packages"
-	TiUpClusterDir      = "clusters"
-	TiUpAuditDir        = "audit"
+	TiUPClusterDir      = "clusters"
+	TiUPAuditDir        = "audit"
 	TLSCertKeyDir       = "tls"
 	TLSCACert           = "ca.crt"
 	TLSCAKey            = "ca.pem"
@@ -68,7 +68,7 @@ func Initialize(base string) error {
 		profileDir = tiupData
 	}
 
-	clusterBaseDir := filepath.Join(profileDir, TiUpClusterDir)
+	clusterBaseDir := filepath.Join(profileDir, TiUPClusterDir)
 	tidbSpec = NewSpec(clusterBaseDir, func() Metadata {
 		return &ClusterMeta{
 			Topology: new(Specification),
@@ -79,7 +79,7 @@ func Initialize(base string) error {
 	return utils2.CreateDir(profileDir)
 }
 
-// ProfileDir returns the full profile directory path of TiUp.
+// ProfileDir returns the full profile directory path of TiUP.
 func ProfileDir() string {
 	return profileDir
 }

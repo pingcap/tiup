@@ -72,7 +72,7 @@ func (s *SpecManager) NewMetadata() Metadata {
 // as its name.
 func (s *SpecManager) Path(cluster string, subpath ...string) string {
 	if cluster == "" {
-		// keep the same behavior with legacy version of TiUp, we could change
+		// keep the same behavior with legacy version of TiUP, we could change
 		// it in the future if needed.
 		cluster = "default-cluster"
 	}

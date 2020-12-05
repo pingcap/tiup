@@ -204,7 +204,7 @@ func (s *SignedBase) isValid(filename string) error {
 	}
 
 	if !knownVersions[s.SpecVersion] {
-		return fmt.Errorf("unknown manifest version: `%s`, you might need to update TiUp", s.SpecVersion)
+		return fmt.Errorf("unknown manifest version: `%s`, you might need to update TiUP", s.SpecVersion)
 	}
 
 	// When updating root, we only check the newest version is not expire.
