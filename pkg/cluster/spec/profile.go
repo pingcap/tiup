@@ -54,7 +54,7 @@ var initialized = false
 
 // Initialize initializes the global variables of meta package. If the
 // environment variable TIUP_COMPONENT_DATA_DIR is set, it is used as root of
-// the profile directory, otherwise the `$HOME/.tiops` of current user is used.
+// the profile directory, otherwise the `$HOME/.tiup` of current user is used.
 // The directory will be created before return if it does not already exist.
 func Initialize(base string) error {
 	tiupData := os.Getenv(tiuplocaldata.EnvNameComponentDataDir)

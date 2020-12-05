@@ -54,12 +54,12 @@ func args() []string {
 	return os.Args
 }
 
-// OsArgs return the whole command line that user inputs, e.g. tiops deploy --xxx, or tiup cluster deploy --xxx
+// OsArgs return the whole command line that user inputs, e.g. tiup deploy --xxx, or tiup cluster deploy --xxx
 func OsArgs() string {
 	return strings.Join(args(), " ")
 }
 
-// OsArgs0 return the command name that user inputs, e.g. tiops, or tiup cluster.
+// OsArgs0 return the command name that user inputs, e.g. tiup, or tiup cluster.
 func OsArgs0() string {
 	if strings.Contains(args()[0], " ") {
 		return args()[0]
