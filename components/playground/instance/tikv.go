@@ -63,7 +63,7 @@ func (inst *TiKVInstance) Start(ctx context.Context, version pkgver.Version) err
 	endpoints := pdEndpoints(inst.pds, true)
 	args := []string{
 		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
-		fmt.Sprintf("--advertise-addr=%s:%d", inst.Host, inst.Port),
+		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(inst.Host), inst.Port),
 		fmt.Sprintf("--status-addr=%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--config=%s", inst.ConfigPath),
@@ -92,7 +92,7 @@ func (inst *TiKVInstance) LogFile() string {
 
 // StoreAddr return the store address of TiKV
 func (inst *TiKVInstance) StoreAddr() string {
-	return fmt.Sprintf("%s:%d", inst.Host, inst.Port)
+	return fmt.Sprintf("%s:%d", advertiseHost(inst.Host), inst.Port)
 }
 
 func (inst *TiKVInstance) checkConfig() error {
