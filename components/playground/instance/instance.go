@@ -72,14 +72,6 @@ func CompVersion(comp string, version pkgver.Version) string {
 	return fmt.Sprintf("%v:%v", comp, version)
 }
 
-func advertiseHost(listen string) string {
-	if listen == "0.0.0.0" {
-		return "localhost"
-	}
-
-	return listen
-}
-
 func logIfErr(err error) {
 	if err != nil {
 		fmt.Println(err)
