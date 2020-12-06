@@ -56,11 +56,20 @@ func (u *UpdateTopology) Execute(ctx *Context) error {
 		}
 	}
 
+	// the prometheus,grafana,alertmanager stored in etcd will be used by other components (tidb, pd, etc.)
+	// and they assume there is ONLY ONE prometheus.
+	// ref https://github.com/pingcap/tiup/issues/954#issuecomment-737002185
+	updated := set.NewStringSet()
 	for _, ins := range instances {
+		if updated.Exist(ins.ComponentName()) {
+			continue
+		}
 		op, err := updateTopologyOp(ins)
 		if err != nil {
 			return err
 		}
+
+		updated.Insert(ins.ComponentName())
 		ops = append(ops, *op)
 	}
 
@@ -75,9 +84,9 @@ type componentTopology struct {
 	DeployPath string `json:"deploy_path"`
 }
 
-// componentTopology update receives alertmanager, prometheus and grafana instance list, if the list has
-//  no member or all deleted, it will add a `OpDelete` in ops, otherwise it will push an operation to destInstances.
-func updateInstancesAndOps(ops []clientv3.Op, destInstances []spec.Instance, deleted set.StringSet, instances []spec.Instance, componentName string) ([]clientv3.Op, []spec.Instance) {
+// updateInstancesAndOps receives alertmanager, prometheus and grafana instance list, if the list has
+//  no member or all deleted, it will add a `OpDelete` in ops, otherwise it will push all current not deleted instances into instance list.
+func updateInstancesAndOps(ops []clientv3.Op, ins []spec.Instance, deleted set.StringSet, instances []spec.Instance, componentName string) ([]clientv3.Op, []spec.Instance) {
 	var currentInstances []spec.Instance
 	for _, instance := range instances {
 		if deleted.Exist(instance.ID()) {
@@ -89,15 +98,15 @@ func updateInstancesAndOps(ops []clientv3.Op, destInstances []spec.Instance, del
 	if len(currentInstances) == 0 {
 		ops = append(ops, clientv3.OpDelete("/topology/"+componentName))
 	} else {
-		destInstances = append(destInstances, currentInstances...)
+		ins = append(ins, currentInstances...)
 	}
-	return ops, destInstances
+	return ops, ins
 }
 
-// updateTopologyOp receive a  alertmanager, prometheus or grafana instance, and return an operation
+// updateTopologyOp receive an alertmanager, prometheus or grafana instance, and return an operation
 //  for update it's topology.
 func updateTopologyOp(instance spec.Instance) (*clientv3.Op, error) {
-	switch instance.ComponentName() {
+	switch compName := instance.ComponentName(); compName {
 	case spec.ComponentAlertmanager, spec.ComponentPrometheus, spec.ComponentGrafana:
 		topology := componentTopology{
 			IP:         instance.GetHost(),
@@ -108,10 +117,10 @@ func updateTopologyOp(instance spec.Instance) (*clientv3.Op, error) {
 		if err != nil {
 			return nil, err
 		}
-		op := clientv3.OpPut("/topology/"+instance.ComponentName(), string(data))
+		op := clientv3.OpPut("/topology/"+compName, string(data))
 		return &op, nil
 	default:
-		return nil, errors.New("Wrong arguments: updateTopologyOp receive wrong arguments")
+		return nil, errors.New("Wrong arguments: updateTopologyOp receives wrong arguments")
 	}
 }
 
