@@ -82,9 +82,9 @@ func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
 	var endpoints []string
 	for _, pd := range pds {
 		if isHTTP {
-			endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", advertiseHost(pd.Host), pd.StatusPort))
+			endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", pd.Host, pd.StatusPort))
 		} else {
-			endpoints = append(endpoints, fmt.Sprintf("%s:%d", advertiseHost(pd.Host), pd.StatusPort))
+			endpoints = append(endpoints, fmt.Sprintf("%s:%d", pd.Host, pd.StatusPort))
 		}
 	}
 	return endpoints

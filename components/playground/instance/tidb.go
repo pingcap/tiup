@@ -89,5 +89,5 @@ func (inst *TiDBInstance) LogFile() string {
 
 // Addr return the listen address of TiDB
 func (inst *TiDBInstance) Addr() string {
-	return fmt.Sprintf("%s:%d", advertiseHost(inst.Host), inst.Port)
+	return fmt.Sprintf("%s:%d", inst.Host, inst.Port)
 }

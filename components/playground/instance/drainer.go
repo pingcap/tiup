@@ -61,7 +61,7 @@ func (d *Drainer) LogFile() string {
 
 // Addr return the address of Drainer.
 func (d *Drainer) Addr() string {
-	return fmt.Sprintf("%s:%d", advertiseHost(d.Host), d.Port)
+	return fmt.Sprintf("%s:%d", d.Host, d.Port)
 }
 
 // NodeID return the node id of drainer.
@@ -76,7 +76,7 @@ func (d *Drainer) Start(ctx context.Context, version pkgver.Version) error {
 	args := []string{
 		fmt.Sprintf("--node-id=%s", d.NodeID()),
 		fmt.Sprintf("--addr=%s:%d", d.Host, d.Port),
-		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(d.Host), d.Port),
+		fmt.Sprintf("--advertise-addr=%s:%d", d.Host, d.Port),
 		fmt.Sprintf("--pd-urls=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", d.LogFile()),
 	}
