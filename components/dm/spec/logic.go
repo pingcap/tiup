@@ -26,7 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 )
 
-// Components names supported by TiOps
+// Components names supported by TiUP
 const (
 	ComponentDMMaster     = spec.ComponentDMMaster
 	ComponentDMWorker     = spec.ComponentDMWorker

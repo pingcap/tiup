@@ -1,4 +1,2 @@
 ---
-
 node_exporter_log_dir: "{{ deploy_dir }}/log"
-

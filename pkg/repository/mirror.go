@@ -327,8 +327,8 @@ L:
 
 func (l *httpMirror) prepareURL(resource string) string {
 	url := strings.TrimSuffix(l.server, "/") + "/" + strings.TrimPrefix(resource, "/")
-	// Force CDN to refresh if the resource name starts with TiupBinaryName.
-	if strings.HasPrefix(resource, TiupBinaryName) {
+	// Force CDN to refresh if the resource name starts with TiUPBinaryName.
+	if strings.HasPrefix(resource, TiUPBinaryName) {
 		nano := time.Now().UnixNano()
 		url = fmt.Sprintf("%s?v=%d", url, nano)
 	}

@@ -32,7 +32,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// EnvNameV0 is the name of the env var used to direct TiUp to use old manifests.
+// EnvNameV0 is the name of the env var used to direct TiUP to use old manifests.
 const EnvNameV0 = "TIUP_USE_V0"
 
 // Name of components
@@ -216,10 +216,10 @@ func (env *Environment) PlatformString() string {
 	return repository.PlatformString(env.repo.GOOS, env.repo.GOARCH)
 }
 
-// SelfUpdate updates TiUp.
+// SelfUpdate updates TiUP.
 func (env *Environment) SelfUpdate() error {
 	if env.v1Repo != nil {
-		if err := env.v1Repo.DownloadTiup(env.LocalPath("bin")); err != nil {
+		if err := env.v1Repo.DownloadTiUP(env.LocalPath("bin")); err != nil {
 			return err
 		}
 
@@ -227,7 +227,7 @@ func (env *Environment) SelfUpdate() error {
 		return localdata.InitProfile().ResetMirror(Mirror(), "")
 	}
 
-	return env.repo.DownloadTiup(env.LocalPath("bin"))
+	return env.repo.DownloadTiUP(env.LocalPath("bin"))
 }
 
 func (env *Environment) downloadComponentv1(component string, version pkgver.Version, overwrite bool) error {

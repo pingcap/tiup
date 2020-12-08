@@ -13,10 +13,10 @@
 
 package localdata
 
-// DefaultTiupHome represents the default home directory for this build of tiup
+// DefaultTiUPHome represents the default home directory for this build of tiup
 // If this is left empty, the default will be thee combination of the running
 // user's home directory and ProfileDirName
-var DefaultTiupHome string
+var DefaultTiUPHome string
 
 // ProfileDirName is the name of the profile directory to be used
 var ProfileDirName = ".tiup"
