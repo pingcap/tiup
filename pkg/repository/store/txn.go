@@ -25,7 +25,6 @@ import (
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -169,8 +168,7 @@ func (t *localTxn) ReadManifest(filename string, role v1manifest.ValidManifest) 
 		}
 		wc = resp.Body
 	default:
-		log.Errorf("Error on read manifest: %s, upstream: %s", err.Error(), t.store.upstream)
-		return nil, errors.Annotate(err, "open file")
+		return nil, errors.Annotatef(err, "error on read manifest: %s, upstream %s", err.Error(), t.store.upstream)
 	}
 	defer wc.Close()
 

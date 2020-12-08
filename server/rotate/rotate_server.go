@@ -18,9 +18,9 @@ type statusRender struct {
 	bars map[string]*progress.MultiBarItem
 }
 
-func newStatusRender(manifest *v1manifest.Manifest) *statusRender {
+func newStatusRender(manifest *v1manifest.Manifest, addr string) *statusRender {
 	status := &statusRender{
-		mbar: progress.NewMultiBar("Waiting all administrators to sign"),
+		mbar: progress.NewMultiBar(fmt.Sprintf("Waiting all administrators to sign %s", addr)),
 		bars: make(map[string]*progress.MultiBarItem),
 	}
 	root := manifest.Signed.(*v1manifest.Root)
@@ -67,14 +67,18 @@ func Serve(addr string, root *v1manifest.Root) (*v1manifest.Manifest, error) {
 
 	srv := &http.Server{Addr: addr, Handler: r}
 	go func() {
-		if err = srv.ListenAndServe(); err != http.ErrServerClosed {
-			close(sigCh)
+		err = srv.ListenAndServe()
+		if err == http.ErrServerClosed {
+			err = nil
 		}
+		close(sigCh)
 	}()
 
 	manifest := &v1manifest.Manifest{Signed: root}
-	status := newStatusRender(manifest)
+	status := newStatusRender(manifest, fmt.Sprintf("%s/rotate/root.json", addr))
 	defer status.stop()
+
+SIGLOOP:
 	for sig := range sigCh {
 		k := root.Roles[v1manifest.ManifestTypeRoot].Keys[sig.KeyID]
 		if k == nil {
@@ -88,7 +92,7 @@ func Serve(addr string, root *v1manifest.Root) (*v1manifest.Manifest, error) {
 		for _, s := range manifest.Signatures {
 			if s.KeyID == sig.KeyID {
 				// Duplicate signature
-				continue
+				continue SIGLOOP
 			}
 		}
 		manifest.Signatures = append(manifest.Signatures, sig)

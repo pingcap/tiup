@@ -353,9 +353,23 @@ func (m *model) readSnapshotManifest() (*v1manifest.Manifest, error) {
 	return m.txn.ReadManifest(v1manifest.ManifestFilenameSnapshot, &v1manifest.Snapshot{})
 }
 
-// readRootManifest returns root.json
+// readRootManifest returns newest root.json
 func (m *model) readRootManifest() (*v1manifest.Manifest, error) {
-	return m.txn.ReadManifest(v1manifest.ManifestFilenameRoot, &v1manifest.Root{})
+	root, err := m.txn.ReadManifest(v1manifest.ManifestFilenameRoot, &v1manifest.Root{})
+	if err != nil {
+		return root, err
+	}
+
+	for {
+		last, err := m.txn.ReadManifest(
+			fmt.Sprintf("%d.%s", root.Signed.(*v1manifest.Root).Version+1, v1manifest.ManifestFilenameRoot),
+			&v1manifest.Root{},
+		)
+		if err != nil {
+			return root, nil
+		}
+		root = last
+	}
 }
 
 func (m *model) updateTimestampManifest(initTime time.Time) error {
@@ -477,7 +491,11 @@ func verifyRootManifest(oldM *v1manifest.Manifest, newM *v1manifest.Manifest) er
 	}
 
 	if len(oldKeys.Intersection(newKeys).Slice()) < int(oldRoot.Roles[v1manifest.ManifestTypeRoot].Threshold) {
-		return ErrorWrongSignature
+		return errors.Annotatef(ErrorWrongSignature,
+			"need %d valid signatures, only got %d",
+			oldRoot.Roles[v1manifest.ManifestTypeRoot].Threshold,
+			len(oldKeys.Intersection(newKeys).Slice()),
+		)
 	}
 
 	if newRoot.Version != oldRoot.Version+1 {
