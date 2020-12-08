@@ -824,7 +824,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 			color.HiYellowString(clusterVersion)); err != nil {
 			return err
 		}
-		log.Infof("Destroying cluster...")
+		log.Infof("Upgrading cluster...")
 	}
 
 	hasImported := false
