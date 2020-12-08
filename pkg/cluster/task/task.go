@@ -35,7 +35,7 @@ var (
 )
 
 type (
-	// Task represents a operation while TiOps execution
+	// Task represents a operation while TiUP execution
 	Task interface {
 		fmt.Stringer
 		Execute(ctx *Context) error

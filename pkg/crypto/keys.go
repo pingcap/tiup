@@ -57,7 +57,7 @@ type Serializable interface {
 	Deserialize([]byte) error
 }
 
-// PubKey is a public key available to TiUp
+// PubKey is a public key available to TiUP
 type PubKey interface {
 	Serializable
 	// Type returns the type of the key, e.g. RSA

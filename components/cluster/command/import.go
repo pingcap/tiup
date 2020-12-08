@@ -108,7 +108,7 @@ func newImportCmd() *cobra.Command {
 				return err
 			}
 
-			// copy SSH key to TiOps profile directory
+			// copy SSH key to TiUP profile directory
 			if err = tiuputils.CreateDir(spec.ClusterPath(clsName, "ssh")); err != nil {
 				return err
 			}

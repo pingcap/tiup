@@ -53,8 +53,8 @@ func InitProfile() *Profile {
 	switch {
 	case os.Getenv(EnvNameHome) != "":
 		profileDir = os.Getenv(EnvNameHome)
-	case DefaultTiupHome != "":
-		profileDir = DefaultTiupHome
+	case DefaultTiUPHome != "":
+		profileDir = DefaultTiUPHome
 	default:
 		u, err := user.Current()
 		if err != nil {
