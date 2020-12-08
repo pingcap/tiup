@@ -277,6 +277,8 @@ func newMirrorModifyCmd() *cobra.Command {
 
 // the `mirror rotate` sub command
 func newMirrorRotateCmd() *cobra.Command {
+	addr := "0.0.0.0:8080"
+
 	cmd := &cobra.Command{
 		Use:   "rotate",
 		Short: "Rotate root.json",
@@ -287,7 +289,7 @@ func newMirrorRotateCmd() *cobra.Command {
 				return err
 			}
 
-			manifest, err := rotate.Serve(":8080", root)
+			manifest, err := rotate.Serve(addr, root)
 			if err != nil {
 				return err
 			}
@@ -295,6 +297,7 @@ func newMirrorRotateCmd() *cobra.Command {
 			return environment.GlobalEnv().V1Repository().Mirror().Rotate(manifest)
 		},
 	}
+	cmd.Flags().StringVarP(&addr, "addr", "", addr, "listen address of rotate server")
 
 	return cmd
 }

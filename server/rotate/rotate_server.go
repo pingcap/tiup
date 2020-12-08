@@ -3,7 +3,9 @@ package rotate
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
+	"strings"
 
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/gorilla/mux"
@@ -19,8 +21,19 @@ type statusRender struct {
 }
 
 func newStatusRender(manifest *v1manifest.Manifest, addr string) *statusRender {
+	ss := strings.Split(addr, ":")
+	if strings.Trim(ss[0], " ") == "" || strings.Trim(ss[0], " ") == "0.0.0.0" {
+		addrs, _ := net.InterfaceAddrs()
+		for _, addr := range addrs {
+			if ip, ok := addr.(*net.IPNet); ok && !ip.IP.IsLoopback() && ip.IP.To4() != nil {
+				ss[0] = ip.IP.To4().String()
+				break
+			}
+		}
+	}
+
 	status := &statusRender{
-		mbar: progress.NewMultiBar(fmt.Sprintf("Waiting all administrators to sign %s", addr)),
+		mbar: progress.NewMultiBar(fmt.Sprintf("Waiting all administrators to sign http://%s/rotate/root.json", strings.Join(ss, ":"))),
 		bars: make(map[string]*progress.MultiBarItem),
 	}
 	root := manifest.Signed.(*v1manifest.Root)
@@ -75,7 +88,7 @@ func Serve(addr string, root *v1manifest.Root) (*v1manifest.Manifest, error) {
 	}()
 
 	manifest := &v1manifest.Manifest{Signed: root}
-	status := newStatusRender(manifest, fmt.Sprintf("%s/rotate/root.json", addr))
+	status := newStatusRender(manifest, addr)
 	defer status.stop()
 
 SIGLOOP:
