@@ -23,6 +23,6 @@ const (
 	// EnvMirrors is the name of an env var the user can set to specify a mirror.
 	EnvMirrors = "TIUP_MIRRORS"
 
-	// TiupBinaryName is the name of the tiup binary, both in the repository and locally.
-	TiupBinaryName = "tiup"
+	// TiUPBinaryName is the name of the tiup binary, both in the repository and locally.
+	TiUPBinaryName = "tiup"
 )

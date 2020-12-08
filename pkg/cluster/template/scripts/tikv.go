@@ -20,30 +20,37 @@ import (
 	"text/template"
 
 	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"golang.org/x/mod/semver"
+)
+
+const (
+	advertiseStatusAddrSupportedFrom = "v4.0.1"
 )
 
 // TiKVScript represent the data to generate TiKV config
 type TiKVScript struct {
-	IP         string
-	ListenHost string
-	Port       int
-	StatusPort int
-	DeployDir  string
-	DataDir    string
-	LogDir     string
-	NumaNode   string
-	Endpoints  []*PDScript
+	IP                         string
+	ListenHost                 string
+	Port                       int
+	StatusPort                 int
+	DeployDir                  string
+	DataDir                    string
+	LogDir                     string
+	SupportAdvertiseStatusAddr bool
+	NumaNode                   string
+	Endpoints                  []*PDScript
 }
 
 // NewTiKVScript returns a TiKVScript with given arguments
-func NewTiKVScript(ip, deployDir, dataDir, logDir string) *TiKVScript {
+func NewTiKVScript(version, ip, deployDir, dataDir, logDir string) *TiKVScript {
 	return &TiKVScript{
-		IP:         ip,
-		Port:       20160,
-		StatusPort: 20180,
-		DeployDir:  deployDir,
-		DataDir:    dataDir,
-		LogDir:     logDir,
+		IP:                         ip,
+		Port:                       20160,
+		StatusPort:                 20180,
+		DeployDir:                  deployDir,
+		DataDir:                    dataDir,
+		LogDir:                     logDir,
+		SupportAdvertiseStatusAddr: semver.Compare(version, advertiseStatusAddrSupportedFrom) >= 0,
 	}
 }
 

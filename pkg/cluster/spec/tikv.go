@@ -212,6 +212,7 @@ func (i *TiKVInstance) InitConfig(
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(TiKVSpec)
 	cfg := scripts.NewTiKVScript(
+		clusterVersion,
 		i.GetHost(),
 		paths.Deploy,
 		paths.Data[0],
