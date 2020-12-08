@@ -201,8 +201,8 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 	type Entry struct {
 		clusterName   string
 		componentName string
-		host          string
 		port          int
+		instance      Instance
 	}
 
 	currentEntries := []Entry{}
@@ -225,8 +225,8 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 				existingEntries = append(existingEntries, Entry{
 					clusterName:   name,
 					componentName: inst.ComponentName(),
-					host:          inst.GetHost(),
 					port:          port,
+					instance:      inst,
 				})
 			}
 			if !uniqueHosts.Exist(inst.GetHost()) {
@@ -235,14 +235,14 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 					Entry{
 						clusterName:   name,
 						componentName: RoleMonitor,
-						host:          inst.GetHost(),
 						port:          nodeExporterPort,
+						instance:      inst,
 					},
 					Entry{
 						clusterName:   name,
 						componentName: RoleMonitor,
-						host:          inst.GetHost(),
 						port:          blackboxExporterPort,
+						instance:      inst,
 					})
 			}
 		})
@@ -253,8 +253,8 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 		for _, port := range inst.UsedPorts() {
 			currentEntries = append(currentEntries, Entry{
 				componentName: inst.ComponentName(),
-				host:          inst.GetHost(),
 				port:          port,
+				instance:      inst,
 			})
 		}
 
@@ -267,20 +267,20 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 			currentEntries = append(currentEntries,
 				Entry{
 					componentName: RoleMonitor,
-					host:          inst.GetHost(),
 					port:          mOpt.NodeExporterPort,
+					instance:      inst,
 				},
 				Entry{
 					componentName: RoleMonitor,
-					host:          inst.GetHost(),
 					port:          mOpt.BlackboxExporterPort,
+					instance:      inst,
 				})
 		}
 	})
 
 	for _, p1 := range currentEntries {
 		for _, p2 := range existingEntries {
-			if p1.host != p2.host {
+			if p1.instance.GetHost() != p2.instance.GetHost() {
 				continue
 			}
 
@@ -288,11 +288,11 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 				properties := map[string]string{
 					"ThisPort":       strconv.Itoa(p1.port),
 					"ThisComponent":  p1.componentName,
-					"ThisHost":       p1.host,
+					"ThisHost":       p1.instance.GetHost(),
 					"ExistCluster":   p2.clusterName,
 					"ExistPort":      strconv.Itoa(p2.port),
 					"ExistComponent": p2.componentName,
-					"ExistHost":      p2.host,
+					"ExistHost":      p2.instance.GetHost(),
 				}
 				zap.L().Info("Meet deploy port conflict", zap.Any("info", properties))
 				return errDeployPortConflict.New("Deploy port conflicts to an existing cluster").WithProperty(cliutil.SuggestionFromTemplate(`
