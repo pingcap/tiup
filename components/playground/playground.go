@@ -788,6 +788,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	var succ []string
 	if len(p.tidbs) > 0 {
 		var wg sync.WaitGroup
+		var appendMutex sync.Mutex
 		bars := progress.NewMultiBar(color.YellowString("Waiting for tidb instances ready\n"))
 		for _, db := range p.tidbs {
 			wg.Add(1)
@@ -796,7 +797,11 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			go func(dbInst *instance.TiDBInstance) {
 				defer wg.Done()
 				if s := checkDB(dbInst.Addr(), options.tidb.UpTimeout); s {
-					succ = append(succ, dbInst.Addr())
+					{
+						appendMutex.Lock()
+						succ = append(succ, dbInst.Addr())
+						appendMutex.Unlock()
+					}
 					bar.UpdateDisplay(&progress.DisplayProps{
 						Prefix: prefix,
 						Mode:   progress.ModeDone,
@@ -850,11 +855,11 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 					} else if state := cmd.ProcessState; state != nil && state.Exited() {
 						displayResult.Mode = progress.ModeError
 						displayResult.Suffix = fmt.Sprintf("process exited with code: %d", state.ExitCode())
-					} else if s := checkStoreStatus(pdClient, flashInst.Addr(), options.tiflash.UpTimeout); s {
-						displayResult.Mode = progress.ModeDone
-					} else {
+					} else if s := checkStoreStatus(pdClient, flashInst.Addr(), options.tiflash.UpTimeout); !s {
 						displayResult.Mode = progress.ModeError
 						displayResult.Suffix = "failed to up after timeout"
+					} else {
+						displayResult.Mode = progress.ModeDone
 					}
 					bar.UpdateDisplay(displayResult)
 				}(flash)
