@@ -34,7 +34,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
-	"github.com/pingcap/tiup/pkg/cliutil/progress"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -79,7 +78,8 @@ func installIfMissing(profile *localdata.Profile, component, version string) err
 func execute() error {
 	opt := &bootOptions{
 		tidb: instance.Config{
-			Num: 1,
+			Num:       1,
+			UpTimeout: 60,
 		},
 		tikv: instance.Config{
 			Num: 1,
@@ -88,7 +88,8 @@ func execute() error {
 			Num: 1,
 		},
 		tiflash: instance.Config{
-			Num: 1,
+			Num:       1,
+			UpTimeout: 120,
 		},
 		host:    "127.0.0.1",
 		monitor: true,
@@ -203,6 +204,9 @@ Examples:
 	rootCmd.Flags().IntVarP(&opt.pump.Num, "pump", "", opt.pump.Num, "Pump instance number")
 	rootCmd.Flags().IntVarP(&opt.drainer.Num, "drainer", "", opt.drainer.Num, "Drainer instance number")
 
+	rootCmd.Flags().IntVarP(&opt.tidb.UpTimeout, "db.timeout", "", opt.tidb.UpTimeout, "TiDB max wait time in seconds for starting, 0 means no limit")
+	rootCmd.Flags().IntVarP(&opt.tiflash.UpTimeout, "tiflash.timeout", "", opt.tiflash.UpTimeout, "TiFlash max wait time in seconds for starting, 0 means no limit")
+
 	rootCmd.Flags().StringVarP(&opt.host, "host", "", opt.host, "Playground cluster host")
 	rootCmd.Flags().StringVarP(&opt.tidb.Host, "db.host", "", opt.tidb.Host, "Playground TiDB host. If not provided, TiDB will still use `host` flag as its host")
 	rootCmd.Flags().StringVarP(&opt.pd.Host, "pd.host", "", opt.pd.Host, "Playground PD host. If not provided, PD will still use `host` flag as its host")
@@ -246,47 +250,43 @@ func tryConnect(dsn string) error {
 	return nil
 }
 
-// checkDB check if the addr is connectable by getting a connection from sql.DB.
-func checkDB(dbAddr string) bool {
+// checkDB check if the addr is connectable by getting a connection from sql.DB. timeout <=0 means no timeout
+func checkDB(dbAddr string, timeout int) bool {
 	dsn := fmt.Sprintf("root:@tcp(%s)/", dbAddr)
-	for i := 0; i < 60; i++ {
-		if err := tryConnect(dsn); err != nil {
-			time.Sleep(time.Second)
-		} else {
-			if i != 0 {
-				fmt.Println()
+	if timeout > 0 {
+		for i := 0; i < timeout; i++ {
+			if tryConnect(dsn) == nil {
+				return true
 			}
+			time.Sleep(time.Second)
+		}
+		return false
+	}
+	for {
+		if err := tryConnect(dsn); err == nil {
 			return true
 		}
+		time.Sleep(time.Second)
 	}
-	return false
 }
 
-func checkStoreStatus(pdClient *api.PDClient, typ, storeAddr string) error {
-	prefix := color.YellowString("Waiting for %s %s ready ", typ, storeAddr)
-	bar := progress.NewSingleBar(prefix)
-	bar.StartRenderLoop()
-	defer bar.StopRenderLoop()
-
-	for i := 0; i < 180; i++ {
-		up, err := pdClient.IsUp(storeAddr)
-		if err != nil || !up {
+// checkStoreStatus uses pd client to check whether a store is up. timeout <= 0 means no timeout
+func checkStoreStatus(pdClient *api.PDClient, storeAddr string, timeout int) bool {
+	if timeout > 0 {
+		for i := 0; i < timeout; i++ {
+			if up, err := pdClient.IsUp(storeAddr); err == nil && up {
+				return true
+			}
 			time.Sleep(time.Second)
-		} else {
-			bar.UpdateDisplay(&progress.DisplayProps{
-				Prefix: prefix,
-				Mode:   progress.ModeDone,
-			})
-			return nil
 		}
+		return false
 	}
-
-	bar.UpdateDisplay(&progress.DisplayProps{
-		Prefix: prefix,
-		Mode:   progress.ModeError,
-	})
-
-	return errors.Errorf(fmt.Sprintf("store %s failed to up after timeout(180s)", storeAddr))
+	for {
+		if up, err := pdClient.IsUp(storeAddr); err == nil && up {
+			return true
+		}
+		time.Sleep(time.Second)
+	}
 }
 
 func hasDashboard(pdAddr string) bool {

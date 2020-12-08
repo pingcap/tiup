@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/pingcap/tiup/pkg/cliutil/progress"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -26,6 +27,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"text/tabwriter"
@@ -35,7 +37,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
-	"github.com/pingcap/tiup/pkg/cliutil/progress"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/environment"
 	pkgver "github.com/pingcap/tiup/pkg/repository/version"
@@ -407,7 +408,7 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 	case "drainer":
 		return p.sanitizeConfig(p.bootOptions.drainer, cfg)
 	default:
-		return fmt.Errorf("unknow %s in sanitizeConfig", cid)
+		return fmt.Errorf("unknown %s in sanitizeConfig", cid)
 	}
 }
 
@@ -785,68 +786,87 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	p.booted = true
 
 	var succ []string
-	for _, db := range p.tidbs {
-		prefix := color.YellowString("Waiting for tidb %s ready ", db.Addr())
-		bar := progress.NewSingleBar(prefix)
-		bar.StartRenderLoop()
-		if s := checkDB(db.Addr()); s {
-			succ = append(succ, db.Addr())
-			bar.UpdateDisplay(&progress.DisplayProps{
-				Prefix: prefix,
-				Mode:   progress.ModeDone,
-			})
-		} else {
-			bar.UpdateDisplay(&progress.DisplayProps{
-				Prefix: prefix,
-				Mode:   progress.ModeError,
-			})
+	if len(p.tidbs) > 0 {
+		var wg sync.WaitGroup
+		var appendMutex sync.Mutex
+		bars := progress.NewMultiBar(color.YellowString("Waiting for tidb instances ready\n"))
+		for _, db := range p.tidbs {
+			wg.Add(1)
+			prefix := color.YellowString(db.Addr())
+			bar := bars.AddBar(prefix)
+			go func(dbInst *instance.TiDBInstance) {
+				defer wg.Done()
+				if s := checkDB(dbInst.Addr(), options.tidb.UpTimeout); s {
+					{
+						appendMutex.Lock()
+						succ = append(succ, dbInst.Addr())
+						appendMutex.Unlock()
+					}
+					bar.UpdateDisplay(&progress.DisplayProps{
+						Prefix: prefix,
+						Mode:   progress.ModeDone,
+					})
+				} else {
+					bar.UpdateDisplay(&progress.DisplayProps{
+						Prefix: prefix,
+						Mode:   progress.ModeError,
+					})
+				}
+			}(db)
 		}
-		bar.StopRenderLoop()
+		bars.StartRenderLoop()
+		wg.Wait()
+		bars.StopRenderLoop()
 	}
 
 	if len(succ) > 0 {
 		// start TiFlash after at least one TiDB is up.
-		startTiFlash := func() error {
+		var started []*instance.TiFlashInstance
+		for _, flash := range p.tiflashs {
+			if err := p.startInstance(ctx, flash); err != nil {
+				fmt.Println(color.RedString("TiFlash %s failed to start: %s", flash.Addr(), err))
+			} else {
+				started = append(started, flash)
+			}
+		}
+		p.tiflashs = started
+
+		if len(p.tiflashs) > 0 {
 			var endpoints []string
 			for _, pd := range p.pds {
 				endpoints = append(endpoints, pd.Addr())
 			}
 			pdClient := api.NewPDClient(endpoints, 10*time.Second, nil)
 
-			// make sure TiKV are all up
-			for _, kv := range p.tikvs {
-				if err := checkStoreStatus(pdClient, "tikv", kv.StoreAddr()); err != nil {
-					return err
-				}
-			}
-
+			var wg sync.WaitGroup
+			bars := progress.NewMultiBar(color.YellowString("Waiting for tiflash instances ready\n"))
 			for _, flash := range p.tiflashs {
-				if err := p.startInstance(ctx, flash); err != nil {
-					return err
-				}
+				wg.Add(1)
+				prefix := color.YellowString(flash.Addr())
+				bar := bars.AddBar(prefix)
+				go func(flashInst *instance.TiFlashInstance) {
+					defer wg.Done()
+					displayResult := &progress.DisplayProps{
+						Prefix: prefix,
+					}
+					if cmd := flashInst.Cmd(); cmd == nil {
+						displayResult.Mode = progress.ModeError
+						displayResult.Suffix = "initialize command failed"
+					} else if state := cmd.ProcessState; state != nil && state.Exited() {
+						displayResult.Mode = progress.ModeError
+						displayResult.Suffix = fmt.Sprintf("process exited with code: %d", state.ExitCode())
+					} else if s := checkStoreStatus(pdClient, flashInst.Addr(), options.tiflash.UpTimeout); !s {
+						displayResult.Mode = progress.ModeError
+						displayResult.Suffix = "failed to up after timeout"
+					} else {
+						displayResult.Mode = progress.ModeDone
+					}
+					bar.UpdateDisplay(displayResult)
+				}(flash)
 			}
-
-			// check if all TiFlash is up
-			for _, flash := range p.tiflashs {
-				cmd := flash.Cmd()
-				if cmd == nil {
-					return errors.Errorf("tiflash %s initialize command failed", flash.StoreAddr())
-				}
-				if state := cmd.ProcessState; state != nil && state.Exited() {
-					return errors.Errorf("tiflash process exited with code: %d", state.ExitCode())
-				}
-				if err := checkStoreStatus(pdClient, "tiflash", flash.StoreAddr()); err != nil {
-					return err
-				}
-			}
-
-			return nil
-		}
-		if len(p.tiflashs) > 0 {
-			err := startTiFlash()
-			if err != nil {
-				fmt.Println(color.RedString("TiFlash failed to start: %s", err))
-			}
+			bars.StartRenderLoop()
+			wg.Wait()
+			bars.StopRenderLoop()
 		}
 
 		fmt.Println(color.GreenString("CLUSTER START SUCCESSFULLY, Enjoy it ^-^"))
