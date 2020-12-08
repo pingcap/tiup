@@ -51,7 +51,7 @@ monitoring_servers:
 
 grafana_servers:
   - host: 172.19.0.101
-    port: 14409    
+    port: 14409
 
 alertmanager_servers:
   #- host: 172.16.4.51
