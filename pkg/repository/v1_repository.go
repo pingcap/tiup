@@ -348,8 +348,8 @@ func (r *V1Repository) updateLocalRoot() error {
 	keyStore := *r.local.KeyStore()
 
 	var newManifest *v1manifest.Manifest
-	var newRoot v1manifest.Root
 	for {
+		var newRoot v1manifest.Root
 		url := FnameWithVersion(v1manifest.ManifestURLRoot, oldRoot.Version+1)
 		nextManifest, err := r.fetchManifestWithKeyStore(url, &newRoot, maxRootSize, &keyStore)
 		if err != nil {
