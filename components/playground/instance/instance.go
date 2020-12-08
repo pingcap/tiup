@@ -16,6 +16,7 @@ package instance
 import (
 	"context"
 	"fmt"
+	"net"
 
 	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 )
@@ -74,6 +75,16 @@ func CompVersion(comp string, version pkgver.Version) string {
 
 func advertiseHost(listen string) string {
 	if listen == "0.0.0.0" {
+		addrs, err := net.InterfaceAddrs()
+		if err != nil || len(addrs) == 0 {
+			return "localhost"
+		}
+
+		for _, addr := range addrs {
+			if ip, ok := addr.(*net.IPNet); ok && !ip.IP.IsLoopback() && ip.IP.To4() != nil {
+				return ip.IP.To4().String()
+			}
+		}
 		return "localhost"
 	}
 
