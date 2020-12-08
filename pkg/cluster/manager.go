@@ -691,11 +691,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	var refreshConfigTasks []*task.StepDisplay
-
-	hasImported := false
 	uniqueHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
-
 	topo.IterInstance(func(inst spec.Instance) {
 		if _, found := uniqueHosts[inst.GetHost()]; !found {
 			uniqueHosts[inst.GetHost()] = hostInfo{
@@ -704,41 +700,9 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 				arch: inst.Arch(),
 			}
 		}
-
-		deployDir := spec.Abs(base.User, inst.DeployDir())
-		// data dir would be empty for components which don't need it
-		dataDirs := spec.MultiDirAbs(base.User, inst.DataDir())
-		// log dir will always be with values, but might not used by the component
-		logDir := spec.Abs(base.User, inst.LogDir())
-
-		// Download and copy the latest component to remote if the cluster is imported from Ansible
-		tb := task.NewBuilder().UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
-		if inst.IsImported() {
-			switch compName := inst.ComponentName(); compName {
-			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
-				version := m.bindVersion(compName, base.Version)
-				tb.Download(compName, inst.OS(), inst.Arch(), version).
-					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetHost(), deployDir)
-			}
-			hasImported = true
-		}
-
-		// Refresh all configuration
-		t := tb.InitConfig(clusterName,
-			base.Version,
-			m.specManager,
-			inst, base.User,
-			opt.IgnoreConfigCheck,
-			meta.DirPaths{
-				Deploy: deployDir,
-				Data:   dataDirs,
-				Log:    logDir,
-				Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
-			}).
-			BuildAsStep(fmt.Sprintf("  - Refresh config %s -> %s", inst.ComponentName(), inst.ID()))
-		refreshConfigTasks = append(refreshConfigTasks, t)
 	})
 
+	refreshConfigTasks, hasImported := regenConfigTasks(m, clusterName, topo, base, nil)
 	monitorConfigTasks := refreshMonitoredConfigTask(
 		m.specManager,
 		clusterName,
@@ -1386,54 +1350,7 @@ func (m *Manager) ScaleIn(
 	base := metadata.GetBaseMeta()
 
 	// Regenerate configuration
-	var regenConfigTasks []task.Task
-	hasImported := false
-	deletedNodes := set.NewStringSet(nodes...)
-	topo.IterInstance(func(instance spec.Instance) {
-		if deletedNodes.Exist(instance.ID()) {
-			return
-		}
-		deployDir := spec.Abs(base.User, instance.DeployDir())
-		// data dir would be empty for components which don't need it
-		dataDirs := spec.MultiDirAbs(base.User, instance.DataDir())
-		// log dir will always be with values, but might not used by the component
-		logDir := spec.Abs(base.User, instance.LogDir())
-
-		// Download and copy the latest component to remote if the cluster is imported from Ansible
-		tb := task.NewBuilder()
-		if instance.IsImported() {
-			switch compName := instance.ComponentName(); compName {
-			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
-				version := m.bindVersion(compName, base.Version)
-				tb.Download(compName, instance.OS(), instance.Arch(), version).
-					CopyComponent(
-						compName,
-						instance.OS(),
-						instance.Arch(),
-						version,
-						"", // use default srcPath
-						instance.GetHost(),
-						deployDir,
-					)
-			}
-			hasImported = true
-		}
-
-		t := tb.InitConfig(clusterName,
-			base.Version,
-			m.specManager,
-			instance,
-			base.User,
-			true, // always ignore config check result in scale in
-			meta.DirPaths{
-				Deploy: deployDir,
-				Data:   dataDirs,
-				Log:    logDir,
-				Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
-			},
-		).Build()
-		regenConfigTasks = append(regenConfigTasks, t)
-	})
+	regenConfigTasks, hasImported := regenConfigTasks(m, clusterName, topo, base, nodes)
 
 	// handle dir scheme changes
 	if hasImported {
@@ -1455,7 +1372,7 @@ func (m *Manager) ScaleIn(
 
 	scale(b, metadata, tlsCfg)
 
-	t := b.Parallel(force, regenConfigTasks...).Parallel(force, buildDynReloadPromTasks(metadata.GetTopology())...).Build()
+	t := b.ParallelStep("+ Refresh instance configs", force, regenConfigTasks...).Parallel(force, buildDynReloadPromTasks(metadata.GetTopology())...).Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
@@ -1645,54 +1562,8 @@ func (m *Manager) DestroyTombstone(
 		UpdateMeta(clusterName, clusterMeta, nodes).
 		UpdateTopology(clusterName, m.specManager.Path(clusterName), clusterMeta, nodes)
 
-	var regenConfigTasks []task.Task
-	deletedNodes := set.NewStringSet(nodes...)
-	topo.IterInstance(func(instance spec.Instance) {
-		if deletedNodes.Exist(instance.ID()) {
-			return
-		}
-		deployDir := spec.Abs(base.User, instance.DeployDir())
-		// data dir would be empty for components which don't need it
-		dataDirs := spec.MultiDirAbs(base.User, instance.DataDir())
-		// log dir will always be with values, but might not used by the component
-		logDir := spec.Abs(base.User, instance.LogDir())
-
-		// Download and copy the latest component to remote if the cluster is imported from Ansible
-		tb := task.NewBuilder()
-		if instance.IsImported() {
-			switch compName := instance.ComponentName(); compName {
-			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
-				version := m.bindVersion(compName, base.Version)
-				tb.Download(compName, instance.OS(), instance.Arch(), version).
-					CopyComponent(
-						compName,
-						instance.OS(),
-						instance.Arch(),
-						version,
-						"", // use default srcPath
-						instance.GetHost(),
-						deployDir,
-					)
-			}
-		}
-
-		t := tb.InitConfig(clusterName,
-			base.Version,
-			m.specManager,
-			instance,
-			base.User,
-			true, // always ignore config check result in scale in
-			meta.DirPaths{
-				Deploy: deployDir,
-				Data:   dataDirs,
-				Log:    logDir,
-				Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
-			},
-		).Build()
-		regenConfigTasks = append(regenConfigTasks, t)
-	})
-
-	t := b.Parallel(true, regenConfigTasks...).Parallel(true, buildDynReloadPromTasks(metadata.GetTopology())...).Build()
+	regenConfigTasks, _ := regenConfigTasks(m, clusterName, topo, base, nodes)
+	t := b.ParallelStep("+ Refresh instance configs", true, regenConfigTasks...).Parallel(true, buildDynReloadPromTasks(metadata.GetTopology())...).Build()
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
