@@ -96,7 +96,9 @@ var ManifestsConfig = map[string]ty{
 	},
 }
 
-var knownVersions = map[string]struct{}{"0.1.0": {}}
+var knownVersions = map[string]bool{
+	"0.1.0": true,
+}
 
 // AddSignature adds one or more signatures to the manifest
 func (manifest *Manifest) AddSignature(sigs []Signature) {
@@ -201,8 +203,8 @@ func (s *SignedBase) isValid(filename string) error {
 		return fmt.Errorf("unknown manifest type: `%s`", s.Ty)
 	}
 
-	if _, ok := knownVersions[s.SpecVersion]; !ok {
-		return fmt.Errorf("unknown manifest version: `%s`, you might need to update TiUp", s.SpecVersion)
+	if !knownVersions[s.SpecVersion] {
+		return fmt.Errorf("unknown manifest version: `%s`, you might need to update TiUP", s.SpecVersion)
 	}
 
 	// When updating root, we only check the newest version is not expire.

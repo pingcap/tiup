@@ -58,6 +58,7 @@ function cmd_subtest() {
     # check the data dir of tikv
     # it's ok to omit client type after deploy
     tiup-cluster exec $name -N n1 --command "grep /home/tidb/deploy/tikv-20160/data /home/tidb/deploy/tikv-20160/scripts/run_tikv.sh"
+    tiup-cluster exec $name -N n1 --command "grep advertise-status-addr /home/tidb/deploy/tikv-20160/scripts/run_tikv.sh"
     tiup-cluster exec $name -N n3 --command "grep /home/tidb/my_kv_data /home/tidb/deploy/tikv-20160/scripts/run_tikv.sh"
 
     # test patch overwrite
