@@ -148,7 +148,6 @@ func StopAndDestroyInstance(getter ExecutorGetter, cluster spec.Topology, instan
 			}
 			log.Warnf("failed to delete public key")
 		}
-
 	}
 	return nil
 }

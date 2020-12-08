@@ -45,124 +45,124 @@ monitored:
 
 server_configs:
   tidb:
-    # run-ddl: true
-    # lease: "45s"
-    # split-table: true
-    # token-limit: 1000
-    # mem-quota-query: 1073741824
-    # nested-loop-join-cache-capacity: 20971520
-    # oom-use-tmp-storage: true
-    # tmp-storage-path: "/tmp/<os/user.Current().Uid>_tidb/MC4wLjAuMDo0MDAwLzAuMC4wLjA6MTAwODA=/tmp-storage"
-    # tmp-storage-quota: -1
-    # oom-action: "cancel"
-    # enable-streaming: false
-    # enable-batch-dml: false
-    # lower-case-table-names: 2
-    # compatible-kill-query: false
-    # check-mb4-value-in-utf8: true
-    # treat-old-version-utf8-as-utf8mb4: true
-    # max-index-length: 3072
-    # enable-table-lock: false
-    # delay-clean-table-lock: 0
-    # split-region-max-num: 1000
-    # alter-primary-key: false
-    # server-version: ""
-    # repair-mode: false
-    # repair-table-list: []
-    # max-server-connections: 0
-    # new_collations_enabled_on_first_bootstrap: false
-    # skip-register-to-dashboard: false
-    # enable-telemetry: true
-    # deprecate-integer-display-length: false
-    # log.level: "info"
-    # log.format: "text"
-    # log.enable-slow-log: true
-    # log.slow-query-file: "tidb-slow.log"
-    # log.slow-threshold: 300
-    # log.record-plan-in-slow-log: 1
-    # log.expensive-threshold: 10000
-    # log.query-log-max-len: 4096
-    # log.file.filename: ""
-    # log.file.max-size: 300
-    # log.file.max-days: 0
-    # log.file.max-backups: 0
-    # security.ssl-ca: ""
-    # security.ssl-cert: ""
-    # security.ssl-key: ""
-    # security.cluster-ssl-ca: ""
-    # security.cluster-ssl-cert: ""
-    # security.cluster-ssl-key: ""
-    # security.spilled-file-encryption-method: "plaintext"
-    # status.report-status: true
-    # status.metrics-addr: ""
-    # status.metrics-interval: 15
-    # status.record-db-qps: false
-    # performance.max-procs: 0
-    # performance.server-memory-quota: 0
-    # performance.stmt-count-limit: 5000
-    # performance.tcp-keep-alive: true
-    # performance.cross-join: true
-    # performance.stats-lease: "3s"
-    # performance.run-auto-analyze: true
-    # performance.feedback-probability: 0.05
-    # performance.query-feedback-limit: 512
-    # performance.pseudo-estimate-ratio: 0.8
-    # performance.force-priority: "NO_PRIORITY"
-    # performance.bind-info-lease: "3s"
-    # performance.distinct-agg-push-down: false
-    # performance.txn-total-size-limit: 104857600
-    # performance.txn-entry-size-limit: 6291456
-    # performance.committer-concurrency: 16
-    # performance.max-txn-ttl: 3600000
-    # performance.mem-profile-interval: "1m"
-    # proxy-protocol.networks: ""
-    # proxy-protocol.header-timeout: 5
-    # prepared-plan-cache.enabled: false
-    # prepared-plan-cache.capacity: 100
-    # prepared-plan-cache.memory-guard-ratio: 0.1
-    # opentracing.enable: false
-    # opentracing.rpc-metrics: false
-    # opentracing.sampler.type: "const"
-    # opentracing.sampler.param: 1.0
-    # opentracing.sampler.sampling-server-url: ""
-    # opentracing.sampler.max-operations: 0
-    # opentracing.sampler.sampling-refresh-interval: 0
-    # opentracing.reporter.queue-size: 0
-    # opentracing.reporter.buffer-flush-interval: 0
-    # opentracing.reporter.log-spans: false
-    # opentracing.reporter.local-agent-host-port: ""
-    # tikv-client.grpc-connection-count: 4
-    # tikv-client.grpc-keepalive-time: 10
-    # tikv-client.grpc-keepalive-timeout: 3
-    # tikv-client.commit-timeout: "41s"
-    # tikv-client.max-batch-size: 128
-    # tikv-client.overload-threshold: 200
-    # tikv-client.max-batch-wait-time: 0
-    # tikv-client.batch-wait-size: 8
-    # tikv-client.enable-chunk-rpc: true
-    # tikv-client.region-cache-ttl: 600
-    # tikv-client.store-limit: 0
-    # tikv-client.store-liveness-timeout: "5s"
-    # tikv-client.ttl-refreshed-txn-size: 33554432
-    # tikv-client.async-commit.enable: false
-    # tikv-client.async-commit.keys-limit: 256
-    # tikv-client.async-commit.total-key-size-limit: 4096
-    # tikv-client.copr-cache.enable: true
-    # tikv-client.copr-cache.capacity-mb: 1000.0
-    # tikv-client.copr-cache.admission-max-result-mb: 10.0
-    # tikv-client.copr-cache.admission-min-process-ms: 5
-    # binlog.enable: false
-    # binlog.write-timeout: "15s"
-    # binlog.ignore-error: false
-    # binlog.binlog-socket: ""
-    # binlog.strategy: "range"
-    # pessimistic-txn.max-retry-count: 256
-    # stmt-summary.enable: true
-    # stmt-summary.enable-internal-query: false
-    # stmt-summary.max-stmt-count: 200
-    # stmt-summary.max-sql-length: 4096
-    # stmt-summary.refresh-interval: 1800
-    # stmt-summary.history-size: 24
+  # run-ddl: true
+  # lease: "45s"
+  # split-table: true
+  # token-limit: 1000
+  # mem-quota-query: 1073741824
+  # nested-loop-join-cache-capacity: 20971520
+  # oom-use-tmp-storage: true
+  # tmp-storage-path: "/tmp/<os/user.Current().Uid>_tidb/MC4wLjAuMDo0MDAwLzAuMC4wLjA6MTAwODA=/tmp-storage"
+  # tmp-storage-quota: -1
+  # oom-action: "cancel"
+  # enable-streaming: false
+  # enable-batch-dml: false
+  # lower-case-table-names: 2
+  # compatible-kill-query: false
+  # check-mb4-value-in-utf8: true
+  # treat-old-version-utf8-as-utf8mb4: true
+  # max-index-length: 3072
+  # enable-table-lock: false
+  # delay-clean-table-lock: 0
+  # split-region-max-num: 1000
+  # alter-primary-key: false
+  # server-version: ""
+  # repair-mode: false
+  # repair-table-list: []
+  # max-server-connections: 0
+  # new_collations_enabled_on_first_bootstrap: false
+  # skip-register-to-dashboard: false
+  # enable-telemetry: true
+  # deprecate-integer-display-length: false
+  # log.level: "info"
+  # log.format: "text"
+  # log.enable-slow-log: true
+  # log.slow-query-file: "tidb-slow.log"
+  # log.slow-threshold: 300
+  # log.record-plan-in-slow-log: 1
+  # log.expensive-threshold: 10000
+  # log.query-log-max-len: 4096
+  # log.file.filename: ""
+  # log.file.max-size: 300
+  # log.file.max-days: 0
+  # log.file.max-backups: 0
+  # security.ssl-ca: ""
+  # security.ssl-cert: ""
+  # security.ssl-key: ""
+  # security.cluster-ssl-ca: ""
+  # security.cluster-ssl-cert: ""
+  # security.cluster-ssl-key: ""
+  # security.spilled-file-encryption-method: "plaintext"
+  # status.report-status: true
+  # status.metrics-addr: ""
+  # status.metrics-interval: 15
+  # status.record-db-qps: false
+  # performance.max-procs: 0
+  # performance.server-memory-quota: 0
+  # performance.stmt-count-limit: 5000
+  # performance.tcp-keep-alive: true
+  # performance.cross-join: true
+  # performance.stats-lease: "3s"
+  # performance.run-auto-analyze: true
+  # performance.feedback-probability: 0.05
+  # performance.query-feedback-limit: 512
+  # performance.pseudo-estimate-ratio: 0.8
+  # performance.force-priority: "NO_PRIORITY"
+  # performance.bind-info-lease: "3s"
+  # performance.distinct-agg-push-down: false
+  # performance.txn-total-size-limit: 104857600
+  # performance.txn-entry-size-limit: 6291456
+  # performance.committer-concurrency: 16
+  # performance.max-txn-ttl: 3600000
+  # performance.mem-profile-interval: "1m"
+  # proxy-protocol.networks: ""
+  # proxy-protocol.header-timeout: 5
+  # prepared-plan-cache.enabled: false
+  # prepared-plan-cache.capacity: 100
+  # prepared-plan-cache.memory-guard-ratio: 0.1
+  # opentracing.enable: false
+  # opentracing.rpc-metrics: false
+  # opentracing.sampler.type: "const"
+  # opentracing.sampler.param: 1.0
+  # opentracing.sampler.sampling-server-url: ""
+  # opentracing.sampler.max-operations: 0
+  # opentracing.sampler.sampling-refresh-interval: 0
+  # opentracing.reporter.queue-size: 0
+  # opentracing.reporter.buffer-flush-interval: 0
+  # opentracing.reporter.log-spans: false
+  # opentracing.reporter.local-agent-host-port: ""
+  # tikv-client.grpc-connection-count: 4
+  # tikv-client.grpc-keepalive-time: 10
+  # tikv-client.grpc-keepalive-timeout: 3
+  # tikv-client.commit-timeout: "41s"
+  # tikv-client.max-batch-size: 128
+  # tikv-client.overload-threshold: 200
+  # tikv-client.max-batch-wait-time: 0
+  # tikv-client.batch-wait-size: 8
+  # tikv-client.enable-chunk-rpc: true
+  # tikv-client.region-cache-ttl: 600
+  # tikv-client.store-limit: 0
+  # tikv-client.store-liveness-timeout: "5s"
+  # tikv-client.ttl-refreshed-txn-size: 33554432
+  # tikv-client.async-commit.enable: false
+  # tikv-client.async-commit.keys-limit: 256
+  # tikv-client.async-commit.total-key-size-limit: 4096
+  # tikv-client.copr-cache.enable: true
+  # tikv-client.copr-cache.capacity-mb: 1000.0
+  # tikv-client.copr-cache.admission-max-result-mb: 10.0
+  # tikv-client.copr-cache.admission-min-process-ms: 5
+  # binlog.enable: false
+  # binlog.write-timeout: "15s"
+  # binlog.ignore-error: false
+  # binlog.binlog-socket: ""
+  # binlog.strategy: "range"
+  # pessimistic-txn.max-retry-count: 256
+  # stmt-summary.enable: true
+  # stmt-summary.enable-internal-query: false
+  # stmt-summary.max-stmt-count: 200
+  # stmt-summary.max-sql-length: 4096
+  # stmt-summary.refresh-interval: 1800
+  # stmt-summary.history-size: 24
   tikv:
     # log-level: "info"
     # readpool.unified.min-thread-count: 1
@@ -382,7 +382,7 @@ server_configs:
     # gc.batch-keys: 512
     # gc.max-write-bytes-per-sec: "0"
     # gc.enable-compaction-filter: false
-    # gc.ratio-threshold: 1.1 
+    # gc.ratio-threshold: 1.1
   pd:
     # lease: 3
     # tso-save-interval: "3s"
@@ -471,14 +471,14 @@ tikv_servers:
     # numa_node: "0,1"
     # # The following configs are used to overwrite the `server_configs.tikv` values.
     config:
-        server.labels: { zone: "zone1", host: "host1" }
+      server.labels: { zone: "zone1", host: "host1" }
     #   server.grpc-concurrency: 4
   - host: 10.0.1.15
     config:
-        server.labels: { zone: "zone1", host: "host2" }
+      server.labels: { zone: "zone1", host: "host2" }
   - host: 10.0.1.16
     config:
-        server.labels: { zone: "zone2", host: "host3" }
+      server.labels: { zone: "zone2", host: "host3" }
 
 tiflash_servers:
   - host: 10.0.1.14
@@ -513,7 +513,7 @@ tiflash_servers:
     #   # storage.main.capacity = [ 536870912000, 536870912000 ]
     #   #
     #   ## If there are multiple disks with different IO metrics (e.g. one SSD and some HDDs)
-    #   ## on the machine, 
+    #   ## on the machine,
     #   ## set `storage.latest.dir` to store the latest data on SSD (disks with higher IOPS metrics)
     #   ## set `storage.main.dir` to store the main data on HDD (disks with lower IOPS metrics)
     #   ## can improve TiFlash performance.

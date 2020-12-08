@@ -172,7 +172,6 @@ func ScaleInDMCluster(
 					return errors.Annotatef(err, "failed to delete public key")
 				}
 			}
-
 		}
 	}
 
