@@ -827,14 +827,11 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 	hasImported := false
 	for _, comp := range topo.ComponentsByUpdateOrder() {
 		for _, inst := range comp.Instances() {
+			compName := inst.ComponentName()
 			version := m.bindVersion(inst.ComponentName(), clusterVersion)
-			compInfo := componentInfo{
-				component: inst.ComponentName(),
-				version:   version,
-			}
 
 			// Download component from repository
-			key := fmt.Sprintf("%s-%s-%s-%s", compInfo.component, compInfo.version, inst.OS(), inst.Arch())
+			key := fmt.Sprintf("%s-%s-%s-%s", compName, version, inst.OS(), inst.Arch())
 			if _, found := uniqueComps[key]; !found {
 				uniqueComps[key] = struct{}{}
 				t := task.NewBuilder().
@@ -1847,11 +1844,6 @@ func versionCompare(curVersion, newVersion string) error {
 	default:
 		return perrs.Errorf("unreachable")
 	}
-}
-
-type componentInfo struct {
-	component string
-	version   string
 }
 
 func instancesToPatch(topo spec.Topology, options operator.Options) ([]spec.Instance, error) {
