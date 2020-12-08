@@ -148,6 +148,6 @@ func (s *repositorySuite) TestDownloadTiup(c *C) {
 		c.Assert(resName, Equals, "tiup-baz-bar")
 	}
 	repo := Repository{fileSource: fs, Options: Options{GOARCH: "bar", GOOS: "baz"}}
-	err := repo.DownloadTiup("foo")
+	err := repo.DownloadTiUP("foo")
 	c.Assert(err, IsNil, Commentf("error: %+v", err))
 }

@@ -1,4 +1,3 @@
 ---
-
 alertmanager_port: 9093
 alertmanager_cluster_port: 9094

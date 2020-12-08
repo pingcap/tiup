@@ -685,11 +685,11 @@ func (r *V1Repository) FetchIndexManifest() (index *v1manifest.Index, err error)
 	return index, nil
 }
 
-// DownloadTiup downloads the tiup tarball and expands it into targetDir
-func (r *V1Repository) DownloadTiup(targetDir string) error {
+// DownloadTiUP downloads the tiup tarball and expands it into targetDir
+func (r *V1Repository) DownloadTiUP(targetDir string) error {
 	var spec = ComponentSpec{
 		TargetDir: targetDir,
-		ID:        TiupBinaryName,
+		ID:        TiUPBinaryName,
 		Version:   "",
 		Force:     false,
 	}
