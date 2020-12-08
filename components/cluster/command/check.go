@@ -446,7 +446,7 @@ func fixFailedChecks(ctx *task.Context, host string, res *operator.CheckResult, 
 		t.Shell(host,
 			"echo never > /sys/kernel/mm/transparent_hugepage/enabled && echo never > /sys/kernel/mm/transparent_hugepage/defrag",
 			true)
-		msg = fmt.Sprintf("will try to %s", color.HiBlueString("disable THP"))
+		msg = fmt.Sprintf("will try to %s, please check again after reboot", color.HiBlueString("disable THP"))
 	default:
 		msg = fmt.Sprintf("%s, auto fixing not supported", res)
 	}
