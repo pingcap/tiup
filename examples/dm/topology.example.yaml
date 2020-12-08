@@ -1,5 +1,4 @@
 ---
-
 # Global variables are applied to all deployments and as the default value of
 # them if the specific deployment value missing.
 global:
@@ -16,7 +15,6 @@ server_configs:
     # rpc-rate-burst: 40
   worker:
     log-level: info
-
 
 master_servers:
   - host: 10.0.1.11

@@ -321,10 +321,10 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		}
 	}
 
-	hasTiup := false
+	hasTiUP := false
 	for _, comp := range m.Components {
 		if comp.Name == "tiup" {
-			hasTiup = true
+			hasTiUP = true
 			break
 		}
 	}
@@ -351,7 +351,7 @@ func migrate(srcDir, dstDir string, rehash bool) error {
 		}
 	}
 
-	if !hasTiup {
+	if !hasTiUP {
 		// Treat TiUP as a component
 		tiup := v0manifest.ComponentInfo{
 			Name:       "tiup",

@@ -19,7 +19,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 )
 
-// ShellModuleConfig is the configurations used to initialize a TiOpsModuleSystemd
+// ShellModuleConfig is the configurations used to initialize a TiUPModuleSystemd
 type ShellModuleConfig struct {
 	Command  string // the command to run
 	Sudo     bool   // whether use root privilege to run the command
