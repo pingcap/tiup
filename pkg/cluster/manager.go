@@ -92,11 +92,7 @@ func (m *Manager) EnableCluster(name string, options operator.Options, isEnable 
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	b := task.NewBuilder().
-		SSHKeySet(
-			m.specManager.Path(name, "ssh", "id_rsa"),
-			m.specManager.Path(name, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, options.SSHTimeout, options.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
+	b := m.sshTaskBuilder(name, topo, base.User, options)
 
 	if isEnable {
 		b = b.Func("EnableCluster", func(ctx *task.Context) error {
@@ -144,11 +140,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 		return perrs.AddStack(err)
 	}
 
-	b := task.NewBuilder().
-		SSHKeySet(
-			m.specManager.Path(name, "ssh", "id_rsa"),
-			m.specManager.Path(name, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, options.SSHTimeout, options.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
+	b := m.sshTaskBuilder(name, topo, base.User, options).
 		Func("StartCluster", func(ctx *task.Context) error {
 			return operator.Start(ctx, topo, options, tlsCfg)
 		})
@@ -186,11 +178,7 @@ func (m *Manager) StopCluster(clusterName string, options operator.Options) erro
 		return err
 	}
 
-	t := task.NewBuilder().
-		SSHKeySet(
-			m.specManager.Path(clusterName, "ssh", "id_rsa"),
-			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(metadata.GetTopology(), base.User, options.SSHTimeout, options.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
+	t := m.sshTaskBuilder(clusterName, topo, base.User, options).
 		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, options, tlsCfg)
 		}).
@@ -223,11 +211,7 @@ func (m *Manager) RestartCluster(clusterName string, options operator.Options) e
 		return err
 	}
 
-	t := task.NewBuilder().
-		SSHKeySet(
-			m.specManager.Path(clusterName, "ssh", "id_rsa"),
-			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, options.SSHTimeout, options.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
+	t := m.sshTaskBuilder(clusterName, topo, base.User, options).
 		Func("RestartCluster", func(ctx *task.Context) error {
 			return operator.Restart(ctx, topo, options, tlsCfg)
 		}).
@@ -317,11 +301,7 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 		log.Infof("Cleanup cluster...")
 	}
 
-	t := task.NewBuilder().
-		SSHKeySet(
-			m.specManager.Path(clusterName, "ssh", "id_rsa"),
-			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
+	t := m.sshTaskBuilder(clusterName, topo, base.User, gOpt).
 		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, operator.Options{}, tlsCfg)
 		}).
@@ -371,15 +351,9 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 		log.Infof("Destroying cluster...")
 	}
 
-	t := task.NewBuilder().
-		SSHKeySet(
-			m.specManager.Path(clusterName, "ssh", "id_rsa"),
-			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
+	t := m.sshTaskBuilder(clusterName, topo, base.User, gOpt).
 		Func("StopCluster", func(ctx *task.Context) error {
-			return operator.Stop(ctx, topo, operator.Options{
-				Force: destroyOpt.Force,
-			}, tlsCfg)
+			return operator.Stop(ctx, topo, operator.Options{Force: destroyOpt.Force}, tlsCfg)
 		}).
 		Func("DestroyCluster", func(ctx *task.Context) error {
 			return operator.Destroy(ctx, topo, destroyOpt)
@@ -444,11 +418,7 @@ func (m *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Option
 				Build())
 	}
 
-	t := task.NewBuilder().
-		SSHKeySet(
-			m.specManager.Path(clusterName, "ssh", "id_rsa"),
-			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
+	t := m.sshTaskBuilder(clusterName, topo, base.User, gOpt).
 		Parallel(false, shellTasks...).
 		Build()
 
@@ -719,11 +689,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 		}
 	}
 
-	tb := task.NewBuilder().
-		SSHKeySet(
-			m.specManager.Path(clusterName, "ssh", "id_rsa"),
-			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
+	tb := m.sshTaskBuilder(clusterName, topo, base.User, opt).
 		ParallelStep("+ Refresh instance configs", opt.Force, refreshConfigTasks...)
 
 	if len(monitorConfigTasks) > 0 {
@@ -885,11 +851,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 	if err != nil {
 		return err
 	}
-	t := task.NewBuilder().
-		SSHKeySet(
-			m.specManager.Path(clusterName, "ssh", "id_rsa"),
-			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
+	t := m.sshTaskBuilder(clusterName, topo, base.User, opt).
 		Parallel(false, downloadCompTasks...).
 		Parallel(opt.Force, copyCompTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
@@ -955,11 +917,7 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 	if err != nil {
 		return err
 	}
-	t := task.NewBuilder().
-		SSHKeySet(
-			m.specManager.Path(clusterName, "ssh", "id_rsa"),
-			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
+	t := m.sshTaskBuilder(clusterName, topo, base.User, opt).
 		Parallel(false, replacePackageTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
@@ -1311,13 +1269,13 @@ func (m *Manager) Deploy(
 func (m *Manager) ScaleIn(
 	clusterName string,
 	skipConfirm bool,
-	optTimeout uint64,
-	sshTimeout uint64,
-	sshType executor.SSHType,
-	force bool,
-	nodes []string,
+	gOpt operator.Options,
 	scale func(builer *task.Builder, metadata spec.Metadata, tlsCfg *tls.Config),
 ) error {
+	var (
+		force bool     = gOpt.Force
+		nodes []string = gOpt.Nodes
+	)
 	if !skipConfirm {
 		if err := cliutil.PromptForConfirmOrAbortError(
 			"This operation will delete the %s nodes in `%s` and all their data.\nDo you want to continue? [y/N]:",
@@ -1364,15 +1322,14 @@ func (m *Manager) ScaleIn(
 		return err
 	}
 
-	b := task.NewBuilder().
-		SSHKeySet(
-			m.specManager.Path(clusterName, "ssh", "id_rsa"),
-			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, sshTimeout, sshType, metadata.GetTopology().BaseTopo().GlobalOptions.SSHType)
+	b := m.sshTaskBuilder(clusterName, topo, base.User, gOpt)
 
 	scale(b, metadata, tlsCfg)
 
-	t := b.ParallelStep("+ Refresh instance configs", force, regenConfigTasks...).Parallel(force, buildDynReloadPromTasks(metadata.GetTopology())...).Build()
+	t := b.
+		ParallelStep("+ Refresh instance configs", force, regenConfigTasks...).
+		Parallel(force, buildDynReloadPromTasks(metadata.GetTopology())...).
+		Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
@@ -1509,11 +1466,6 @@ func (m *Manager) DestroyTombstone(
 	gOpt operator.Options,
 	skipConfirm bool,
 ) error {
-	var (
-		sshTimeout = gOpt.SSHTimeout
-		sshType    = gOpt.SSHType
-	)
-
 	metadata, err := m.meta(clusterName)
 	// allow specific validation errors so that user can recover a broken
 	// cluster if it is somehow in a bad state.
@@ -1537,11 +1489,7 @@ func (m *Manager) DestroyTombstone(
 		return err
 	}
 
-	b := task.NewBuilder().
-		SSHKeySet(
-			m.specManager.Path(clusterName, "ssh", "id_rsa"),
-			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
-		ClusterSSH(topo, base.User, sshTimeout, sshType, metadata.GetTopology().BaseTopo().GlobalOptions.SSHType)
+	b := m.sshTaskBuilder(clusterName, topo, base.User, gOpt)
 
 	var nodes []string
 	b.
@@ -1867,4 +1815,13 @@ You may read the OpenJDK doc for a reference: https://openjdk.java.net/install/
 	}
 
 	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
+}
+
+func (m *Manager) sshTaskBuilder(clusterName string, topo spec.Topology, user string, opts operator.Options) *task.Builder {
+	return task.NewBuilder().
+		SSHKeySet(
+			m.specManager.Path(clusterName, "ssh", "id_rsa"),
+			m.specManager.Path(clusterName, "ssh", "id_rsa.pub"),
+		).
+		ClusterSSH(topo, user, opts.SSHTimeout, opts.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
 }
