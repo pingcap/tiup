@@ -605,7 +605,7 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 		// Check if TiKV's label set correctly
 		pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
 		if lbs, err := pdClient.GetLocationLabels(); err != nil {
-			color.Yellow("\nWARN: get location labels from pd failed: %v", err)
+			log.Debugf("get location labels from pd failed: %v", err)
 		} else if err := spec.CheckTiKVLabels(lbs, pdClient); err != nil {
 			color.Yellow("\nWARN: there is something wrong with TiKV labels, which may cause data losing:\n%v", err)
 		}
@@ -1395,53 +1395,51 @@ func (m *Manager) ScaleIn(
 	var regenConfigTasks []task.Task
 	hasImported := false
 	deletedNodes := set.NewStringSet(nodes...)
-	for _, component := range topo.ComponentsByStartOrder() {
-		for _, instance := range component.Instances() {
-			if deletedNodes.Exist(instance.ID()) {
-				continue
-			}
-			deployDir := spec.Abs(base.User, instance.DeployDir())
-			// data dir would be empty for components which don't need it
-			dataDirs := spec.MultiDirAbs(base.User, instance.DataDir())
-			// log dir will always be with values, but might not used by the component
-			logDir := spec.Abs(base.User, instance.LogDir())
-
-			// Download and copy the latest component to remote if the cluster is imported from Ansible
-			tb := task.NewBuilder()
-			if instance.IsImported() {
-				switch compName := instance.ComponentName(); compName {
-				case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
-					version := m.bindVersion(compName, base.Version)
-					tb.Download(compName, instance.OS(), instance.Arch(), version).
-						CopyComponent(
-							compName,
-							instance.OS(),
-							instance.Arch(),
-							version,
-							"", // use default srcPath
-							instance.GetHost(),
-							deployDir,
-						)
-				}
-				hasImported = true
-			}
-
-			t := tb.InitConfig(clusterName,
-				base.Version,
-				m.specManager,
-				instance,
-				base.User,
-				true, // always ignore config check result in scale in
-				meta.DirPaths{
-					Deploy: deployDir,
-					Data:   dataDirs,
-					Log:    logDir,
-					Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
-				},
-			).Build()
-			regenConfigTasks = append(regenConfigTasks, t)
+	topo.IterInstance(func(instance spec.Instance) {
+		if deletedNodes.Exist(instance.ID()) {
+			return
 		}
-	}
+		deployDir := spec.Abs(base.User, instance.DeployDir())
+		// data dir would be empty for components which don't need it
+		dataDirs := spec.MultiDirAbs(base.User, instance.DataDir())
+		// log dir will always be with values, but might not used by the component
+		logDir := spec.Abs(base.User, instance.LogDir())
+
+		// Download and copy the latest component to remote if the cluster is imported from Ansible
+		tb := task.NewBuilder()
+		if instance.IsImported() {
+			switch compName := instance.ComponentName(); compName {
+			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
+				version := m.bindVersion(compName, base.Version)
+				tb.Download(compName, instance.OS(), instance.Arch(), version).
+					CopyComponent(
+						compName,
+						instance.OS(),
+						instance.Arch(),
+						version,
+						"", // use default srcPath
+						instance.GetHost(),
+						deployDir,
+					)
+			}
+			hasImported = true
+		}
+
+		t := tb.InitConfig(clusterName,
+			base.Version,
+			m.specManager,
+			instance,
+			base.User,
+			true, // always ignore config check result in scale in
+			meta.DirPaths{
+				Deploy: deployDir,
+				Data:   dataDirs,
+				Log:    logDir,
+				Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
+			},
+		).Build()
+		regenConfigTasks = append(regenConfigTasks, t)
+	})
 
 	// handle dir scheme changes
 	if hasImported {
@@ -1461,7 +1459,6 @@ func (m *Manager) ScaleIn(
 			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
 		ClusterSSH(topo, base.User, sshTimeout, sshType, metadata.GetTopology().BaseTopo().GlobalOptions.SSHType)
 
-	// TODO: support command scale in operation.
 	scale(b, metadata, tlsCfg)
 
 	t := b.Parallel(force, regenConfigTasks...).Parallel(force, buildDynReloadProm(metadata.GetTopology())...).Build()
@@ -1591,6 +1588,126 @@ func (m *Manager) ScaleOut(
 	}
 
 	log.Infof("Scaled cluster `%s` out successfully", clusterName)
+
+	return nil
+}
+
+// DestroyTombstone destroy and remove instances that is in tombstone state
+func (m *Manager) DestroyTombstone(
+	clusterName string,
+	gOpt operator.Options,
+	skipConfirm bool,
+) error {
+	var (
+		sshTimeout = gOpt.SSHTimeout
+		sshType    = gOpt.SSHType
+	)
+
+	metadata, err := m.meta(clusterName)
+	// allow specific validation errors so that user can recover a broken
+	// cluster if it is somehow in a bad state.
+	if err != nil &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+		return perrs.AddStack(err)
+	}
+
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
+
+	clusterMeta := metadata.(*spec.ClusterMeta)
+	cluster := clusterMeta.Topology
+
+	if !operator.NeedCheckTombstone(cluster) {
+		return nil
+	}
+
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return err
+	}
+
+	b := task.NewBuilder().
+		SSHKeySet(
+			m.specManager.Path(clusterName, "ssh", "id_rsa"),
+			m.specManager.Path(clusterName, "ssh", "id_rsa.pub")).
+		ClusterSSH(topo, base.User, sshTimeout, sshType, metadata.GetTopology().BaseTopo().GlobalOptions.SSHType)
+
+	var nodes []string
+	b.
+		Func("FindTomestoneNodes", func(ctx *task.Context) (err error) {
+			nodes, err = operator.DestroyTombstone(ctx, cluster, true /* returnNodesOnly */, gOpt, tlsCfg)
+			if !skipConfirm {
+				err = cliutil.PromptForConfirmOrAbortError(
+					color.HiYellowString(fmt.Sprintf("Will destroy these nodes: %v\nDo you confirm this action? [y/N]:", nodes)),
+				)
+				if err != nil {
+					return err
+				}
+			}
+			log.Infof("Start destroy Tombstone nodes: %v ...", nodes)
+			return err
+		}).
+		ClusterOperate(cluster, operator.DestroyTombstoneOperation, gOpt, tlsCfg).
+		UpdateMeta(clusterName, clusterMeta, nodes).
+		UpdateTopology(clusterName, m.specManager.Path(clusterName), clusterMeta, nodes)
+
+	var regenConfigTasks []task.Task
+	deletedNodes := set.NewStringSet(nodes...)
+	topo.IterInstance(func(instance spec.Instance) {
+		if deletedNodes.Exist(instance.ID()) {
+			return
+		}
+		deployDir := spec.Abs(base.User, instance.DeployDir())
+		// data dir would be empty for components which don't need it
+		dataDirs := spec.MultiDirAbs(base.User, instance.DataDir())
+		// log dir will always be with values, but might not used by the component
+		logDir := spec.Abs(base.User, instance.LogDir())
+
+		// Download and copy the latest component to remote if the cluster is imported from Ansible
+		tb := task.NewBuilder()
+		if instance.IsImported() {
+			switch compName := instance.ComponentName(); compName {
+			case spec.ComponentGrafana, spec.ComponentPrometheus, spec.ComponentAlertmanager:
+				version := m.bindVersion(compName, base.Version)
+				tb.Download(compName, instance.OS(), instance.Arch(), version).
+					CopyComponent(
+						compName,
+						instance.OS(),
+						instance.Arch(),
+						version,
+						"", // use default srcPath
+						instance.GetHost(),
+						deployDir,
+					)
+			}
+		}
+
+		t := tb.InitConfig(clusterName,
+			base.Version,
+			m.specManager,
+			instance,
+			base.User,
+			true, // always ignore config check result in scale in
+			meta.DirPaths{
+				Deploy: deployDir,
+				Data:   dataDirs,
+				Log:    logDir,
+				Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
+			},
+		).Build()
+		regenConfigTasks = append(regenConfigTasks, t)
+	})
+
+	t := b.Parallel(true, regenConfigTasks...).Parallel(true, buildDynReloadProm(metadata.GetTopology())...).Build()
+	if err := t.Execute(task.NewContext()); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.Trace(err)
+	}
+
+	log.Infof("Destroy success")
 
 	return nil
 }
