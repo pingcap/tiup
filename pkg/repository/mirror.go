@@ -378,7 +378,7 @@ func (l *httpMirror) Rotate(m *v1manifest.Manifest) error {
 	case http.StatusConflict:
 		return errors.Errorf("The manifest has been modified after you fetch it, please try again")
 	case http.StatusBadRequest:
-		return errors.Errorf("The server refused the manifest, please check if it's a valid root manifest")
+		return errors.Errorf("The server rejected the manifest, please check if it's a valid root manifest")
 	default:
 		buf := new(strings.Builder)
 		if _, err := io.Copy(buf, resp.Body); err != nil {
