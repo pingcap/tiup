@@ -58,6 +58,7 @@ var (
 	CheckNameSELinux     = "selinux"
 	CheckNameCommand     = "command"
 	CheckNameFio         = "fio"
+	CheckNameTHP         = "thp"
 )
 
 // CheckResult is the result of a check
@@ -650,4 +651,31 @@ func CheckFIOResult(rr, rw, lat []byte) []*CheckResult {
 	}
 
 	return results
+}
+
+// CheckTHP checks THP in /sys/kernel/mm/transparent_hugepage/{enabled,defrag}
+func CheckTHP(e executor.Executor) *CheckResult {
+	result := &CheckResult{
+		Name: CheckNameTHP,
+	}
+
+	m := module.NewShellModule(module.ShellModuleConfig{
+		Command: "cat /sys/kernel/mm/transparent_hugepage/{enabled,defrag}",
+		Sudo:    false,
+	})
+	stdout, stderr, err := m.Execute(e)
+	if err != nil {
+		result.Err = fmt.Errorf("%w %s", err, stderr)
+		return result
+	}
+
+	for _, line := range strings.Split(string(stdout), "\n") {
+		if !strings.Contains(line, "[never]") {
+			result.Err = fmt.Errorf("THP is enabled, please disable it for best performance")
+			return result
+		}
+	}
+
+	result.Msg = "THP is disabled"
+	return result
 }

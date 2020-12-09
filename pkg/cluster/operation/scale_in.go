@@ -252,16 +252,6 @@ func ScaleInCluster(
 		}
 	}
 
-	pdServers := make([]spec.PDSpec, 0, len(cluster.PDServers))
-	for i := 0; i < len(cluster.PDServers); i++ {
-		s := cluster.PDServers[i]
-		id := s.Host + ":" + strconv.Itoa(s.ClientPort)
-		if !deletedNodes.Exist(id) {
-			pdServers = append(pdServers, s)
-		}
-	}
-	cluster.PDServers = pdServers
-
 	for i := 0; i < len(cluster.TiKVServers); i++ {
 		s := cluster.TiKVServers[i]
 		id := s.Host + ":" + strconv.Itoa(s.Port)
