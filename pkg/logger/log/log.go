@@ -21,10 +21,8 @@ import (
 )
 
 // Debugf output the debug message to console
-// Deprecated: Use zap.L().Debug() instead
 func Debugf(format string, args ...interface{}) {
 	zap.L().Debug(fmt.Sprintf(format, args...))
-	_, _ = fmt.Fprintf(os.Stderr, format+"\n", args...)
 }
 
 // Infof output the log message to console
