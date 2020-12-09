@@ -1,0 +1,148 @@
+// Copyright 2020 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package manager
+
+import (
+	"errors"
+	"fmt"
+
+	"github.com/fatih/color"
+	"github.com/joomcode/errorx"
+	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cliutil"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/meta"
+)
+
+// DestroyCluster destroy the cluster.
+func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, destroyOpt operator.Options, skipConfirm bool) error {
+	metadata, err := m.meta(clusterName)
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) &&
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTiSparkMaster) &&
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTisparkWorker) {
+		return perrs.AddStack(err)
+	}
+
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
+
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return err
+	}
+
+	if !skipConfirm {
+		if err := cliutil.PromptForConfirmOrAbortError(
+			"This operation will destroy %s %s cluster %s and its data.\nDo you want to continue? [y/N]:",
+			m.sysName,
+			color.HiYellowString(base.Version),
+			color.HiYellowString(clusterName)); err != nil {
+			return err
+		}
+		log.Infof("Destroying cluster...")
+	}
+
+	t := m.sshTaskBuilder(clusterName, topo, base.User, gOpt).
+		Func("StopCluster", func(ctx *task.Context) error {
+			return operator.Stop(ctx, topo, operator.Options{Force: destroyOpt.Force}, tlsCfg)
+		}).
+		Func("DestroyCluster", func(ctx *task.Context) error {
+			return operator.Destroy(ctx, topo, destroyOpt)
+		}).
+		Build()
+
+	if err := t.Execute(task.NewContext()); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.Trace(err)
+	}
+
+	if err := m.specManager.Remove(clusterName); err != nil {
+		return perrs.Trace(err)
+	}
+
+	log.Infof("Destroyed cluster `%s` successfully", clusterName)
+	return nil
+}
+
+// DestroyTombstone destroy and remove instances that is in tombstone state
+func (m *Manager) DestroyTombstone(
+	clusterName string,
+	gOpt operator.Options,
+	skipConfirm bool,
+) error {
+	metadata, err := m.meta(clusterName)
+	// allow specific validation errors so that user can recover a broken
+	// cluster if it is somehow in a bad state.
+	if err != nil &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+		return perrs.AddStack(err)
+	}
+
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
+
+	clusterMeta := metadata.(*spec.ClusterMeta)
+	cluster := clusterMeta.Topology
+
+	if !operator.NeedCheckTombstone(cluster) {
+		return nil
+	}
+
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return err
+	}
+
+	b := m.sshTaskBuilder(clusterName, topo, base.User, gOpt)
+
+	var nodes []string
+	b.
+		Func("FindTomestoneNodes", func(ctx *task.Context) (err error) {
+			nodes, err = operator.DestroyTombstone(ctx, cluster, true /* returnNodesOnly */, gOpt, tlsCfg)
+			if !skipConfirm {
+				err = cliutil.PromptForConfirmOrAbortError(
+					color.HiYellowString(fmt.Sprintf("Will destroy these nodes: %v\nDo you confirm this action? [y/N]:", nodes)),
+				)
+				if err != nil {
+					return err
+				}
+			}
+			log.Infof("Start destroy Tombstone nodes: %v ...", nodes)
+			return err
+		}).
+		ClusterOperate(cluster, operator.DestroyTombstoneOperation, gOpt, tlsCfg).
+		UpdateMeta(clusterName, clusterMeta, nodes).
+		UpdateTopology(clusterName, m.specManager.Path(clusterName), clusterMeta, nodes)
+
+	regenConfigTasks, _ := regenConfigTasks(m, clusterName, topo, base, nodes)
+	t := b.ParallelStep("+ Refresh instance configs", true, regenConfigTasks...).Parallel(true, buildDynReloadPromTasks(metadata.GetTopology())...).Build()
+	if err := t.Execute(task.NewContext()); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.Trace(err)
+	}
+
+	log.Infof("Destroy success")
+
+	return nil
+}

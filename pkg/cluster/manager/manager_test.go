@@ -45,7 +45,7 @@ global:
   user: "test1"
   ssh_port: 220
   deploy_dir: "test-deploy"
-  data_dir: "test-data" 
+  data_dir: "test-data"
 tidb_servers:
   - host: 172.16.5.138
     deploy_dir: "tidb-deploy"

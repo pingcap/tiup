@@ -1,0 +1,174 @@
+// Copyright 2020 PingCAP, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package manager
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path"
+
+	"github.com/joomcode/errorx"
+	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
+)
+
+// Patch the cluster.
+func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Options, overwrite bool) error {
+	metadata, err := m.meta(clusterName)
+	if err != nil {
+		return perrs.AddStack(err)
+	}
+
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
+
+	if exist := utils.IsExist(packagePath); !exist {
+		return perrs.New("specified package not exists")
+	}
+
+	insts, err := instancesToPatch(topo, opt)
+	if err != nil {
+		return err
+	}
+	if err := checkPackage(m.bindVersion, m.specManager, clusterName, insts[0].ComponentName(), insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
+		return err
+	}
+
+	var replacePackageTasks []task.Task
+	for _, inst := range insts {
+		deployDir := spec.Abs(base.User, inst.DeployDir())
+		tb := task.NewBuilder()
+		tb.BackupComponent(inst.ComponentName(), base.Version, inst.GetHost(), deployDir).
+			InstallPackage(packagePath, inst.GetHost(), deployDir)
+		replacePackageTasks = append(replacePackageTasks, tb.Build())
+	}
+
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return err
+	}
+	t := m.sshTaskBuilder(clusterName, topo, base.User, opt).
+		Parallel(false, replacePackageTasks...).
+		Func("UpgradeCluster", func(ctx *task.Context) error {
+			return operator.Upgrade(ctx, topo, opt, tlsCfg)
+		}).
+		Build()
+
+	if err := t.Execute(task.NewContext()); err != nil {
+		if errorx.Cast(err) != nil {
+			// FIXME: Map possible task errors and give suggestions.
+			return err
+		}
+		return perrs.Trace(err)
+	}
+
+	if overwrite {
+		if err := overwritePatch(m.specManager, clusterName, insts[0].ComponentName(), packagePath); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, clusterName, comp, nodeOS, arch, packagePath string) error {
+	metadata := specManager.NewMetadata()
+	if err := specManager.Metadata(clusterName, metadata); err != nil {
+		return err
+	}
+
+	ver := bindVersion(comp, metadata.GetBaseMeta().Version)
+	repo, err := clusterutil.NewRepository(nodeOS, arch)
+	if err != nil {
+		return err
+	}
+	entry, err := repo.ComponentBinEntry(comp, ver)
+	if err != nil {
+		return err
+	}
+
+	checksum, err := utils.Checksum(packagePath)
+	if err != nil {
+		return err
+	}
+	cacheDir := specManager.Path(clusterName, "cache", comp+"-"+checksum[:7])
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		return err
+	}
+	if err := exec.Command("tar", "-xvf", packagePath, "-C", cacheDir).Run(); err != nil {
+		return err
+	}
+
+	if exists := utils.IsExist(path.Join(cacheDir, entry)); !exists {
+		return fmt.Errorf("entry %s not found in package %s", entry, packagePath)
+	}
+
+	return nil
+}
+
+func overwritePatch(specManager *spec.SpecManager, clusterName, comp, packagePath string) error {
+	if err := os.MkdirAll(specManager.Path(clusterName, spec.PatchDirName), 0755); err != nil {
+		return err
+	}
+
+	checksum, err := utils.Checksum(packagePath)
+	if err != nil {
+		return err
+	}
+
+	tg := specManager.Path(clusterName, spec.PatchDirName, comp+"-"+checksum[:7]+".tar.gz")
+	if !utils.IsExist(tg) {
+		if err := utils.Copy(packagePath, tg); err != nil {
+			return err
+		}
+	}
+
+	symlink := specManager.Path(clusterName, spec.PatchDirName, comp+".tar.gz")
+	if utils.IsSymExist(symlink) {
+		os.Remove(symlink)
+	}
+	return os.Symlink(tg, symlink)
+}
+
+func instancesToPatch(topo spec.Topology, options operator.Options) ([]spec.Instance, error) {
+	roleFilter := set.NewStringSet(options.Roles...)
+	nodeFilter := set.NewStringSet(options.Nodes...)
+	components := topo.ComponentsByStartOrder()
+	components = operator.FilterComponent(components, roleFilter)
+
+	instances := []spec.Instance{}
+	comps := []string{}
+	for _, com := range components {
+		insts := operator.FilterInstance(com.Instances(), nodeFilter)
+		if len(insts) > 0 {
+			comps = append(comps, com.Name())
+		}
+		instances = append(instances, insts...)
+	}
+	if len(comps) > 1 {
+		return nil, fmt.Errorf("can't patch more than one component at once: %v", comps)
+	}
+
+	if len(instances) == 0 {
+		return nil, fmt.Errorf("no instance found on specifid role(%v) and nodes(%v)", options.Roles, options.Nodes)
+	}
+
+	return instances, nil
+}
