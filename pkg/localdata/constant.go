@@ -33,6 +33,9 @@ const (
 	// KeyInfoParentDir represent the parent directory of all keys
 	KeyInfoParentDir = "keys"
 
+	// DefaultPrivateKeyName represents the default private key file stored in ${TIUP_HOME}/keys
+	DefaultPrivateKeyName = "private.json"
+
 	// DataParentDir represent the parent directory of all running instances
 	DataParentDir = "data"
 
