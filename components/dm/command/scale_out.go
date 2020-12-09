@@ -43,17 +43,7 @@ func newScaleOutCmd() *cobra.Command {
 			clusterName := args[0]
 			topoFile := args[1]
 
-			return cm.ScaleOut(
-				clusterName,
-				topoFile,
-				nil,
-				nil,
-				opt,
-				skipConfirm,
-				gOpt.OptTimeout,
-				gOpt.SSHTimeout,
-				gOpt.SSHType,
-			)
+			return cm.ScaleOut(clusterName, topoFile, nil, nil, opt, skipConfirm, gOpt)
 		},
 	}
 

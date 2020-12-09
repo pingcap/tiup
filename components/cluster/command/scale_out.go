@@ -58,9 +58,7 @@ func newScaleOutCmd() *cobra.Command {
 				final,
 				opt,
 				skipConfirm,
-				gOpt.OptTimeout,
-				gOpt.SSHTimeout,
-				gOpt.SSHType,
+				gOpt,
 			)
 		},
 	}

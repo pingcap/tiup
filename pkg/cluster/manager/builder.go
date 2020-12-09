@@ -56,9 +56,7 @@ func buildScaleOutTask(
 	sshConnProps *cliutil.SSHConnectionProps,
 	newPart spec.Topology,
 	patchedComponents set.StringSet,
-	optTimeout uint64,
-	sshTimeout uint64,
-	sshType executor.SSHType,
+	gOpt operator.Options,
 	afterDeploy func(b *task.Builder, newPart spec.Topology),
 	final func(b *task.Builder, name string, meta spec.Metadata),
 ) (task.Task, error) {
@@ -115,8 +113,8 @@ func buildScaleOutTask(
 					sshConnProps.Password,
 					sshConnProps.IdentityFile,
 					sshConnProps.IdentityFilePassphrase,
-					sshTimeout,
-					sshType,
+					gOpt.SSHTimeout,
+					gOpt.SSHType,
 					globalOptions.SSHType,
 				).
 				EnvInit(instance.GetHost(), base.User, base.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
@@ -150,7 +148,7 @@ func buildScaleOutTask(
 		}
 		// Deploy component
 		tb := task.NewBuilder().
-			UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, sshTimeout, sshType, topo.BaseTopo().GlobalOptions.SSHType).
+			UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
 			Mkdir(base.User, inst.GetHost(), deployDirs...).
 			Mkdir(base.User, inst.GetHost(), dataDirs...)
 
@@ -272,8 +270,7 @@ func buildScaleOutTask(
 		topo.BaseTopo().GlobalOptions,
 		topo.BaseTopo().MonitoredOptions,
 		base.Version,
-		sshTimeout,
-		sshType,
+		gOpt,
 	)
 	downloadCompTasks = append(downloadCompTasks, convertStepDisplaysToTasks(dlTasks)...)
 	deployCompTasks = append(deployCompTasks, convertStepDisplaysToTasks(dpTasks)...)
@@ -284,7 +281,7 @@ func buildScaleOutTask(
 			specManager.Path(name, "ssh", "id_rsa.pub")).
 		Parallel(false, downloadCompTasks...).
 		Parallel(false, envInitTasks...).
-		ClusterSSH(topo, base.User, sshTimeout, sshType, topo.BaseTopo().GlobalOptions.SSHType).
+		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
 		Parallel(false, deployCompTasks...)
 
 	if afterDeploy != nil {
@@ -292,13 +289,13 @@ func buildScaleOutTask(
 	}
 
 	builder.
-		ClusterSSH(newPart, base.User, sshTimeout, sshType, topo.BaseTopo().GlobalOptions.SSHType).
+		ClusterSSH(newPart, base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
 		Func("Save meta", func(_ *task.Context) error {
 			metadata.SetTopology(mergedTopo)
 			return m.specManager.SaveMeta(name, metadata)
 		}).
 		Func("StartCluster", func(ctx *task.Context) error {
-			return operator.Start(ctx, newPart, operator.Options{OptTimeout: optTimeout}, tlsCfg)
+			return operator.Start(ctx, newPart, operator.Options{OptTimeout: gOpt.OptTimeout}, tlsCfg)
 		}).
 		Parallel(false, refreshConfigTasks...).
 		Parallel(false, buildDynReloadPromTasks(metadata.GetTopology())...)
@@ -334,23 +331,22 @@ func buildMonitoredDeployTask(
 	globalOptions *spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
 	version string,
-	sshTimeout uint64,
-	sshType executor.SSHType,
+	gOpt operator.Options,
 ) (downloadCompTasks []*task.StepDisplay, deployCompTasks []*task.StepDisplay) {
 	if monitoredOptions == nil {
 		return
 	}
 
-	uniqueCompOSArch := make(map[string]struct{}) // comp-os-arch -> {}
+	uniqueCompOSArch := set.NewStringSet()
 	// monitoring agents
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
 		version := bindVersion(comp, version)
 
 		for host, info := range uniqueHosts {
-			// populate unique os/arch set
+			// populate unique comp-os-arch set
 			key := fmt.Sprintf("%s-%s-%s", comp, info.os, info.arch)
-			if _, found := uniqueCompOSArch[key]; !found {
-				uniqueCompOSArch[key] = struct{}{}
+			if found := uniqueCompOSArch.Exist(key); !found {
+				uniqueCompOSArch.Insert(key)
 				downloadCompTasks = append(downloadCompTasks, task.NewBuilder().
 					Download(comp, info.os, info.arch, version).
 					BuildAsStep(fmt.Sprintf("  - Download %s:%s (%s/%s)", comp, version, info.os, info.arch)))
@@ -367,7 +363,7 @@ func buildMonitoredDeployTask(
 			logDir := spec.Abs(globalOptions.User, monitoredOptions.LogDir)
 			// Deploy component
 			t := task.NewBuilder().
-				UserSSH(host, info.ssh, globalOptions.User, sshTimeout, sshType, globalOptions.SSHType).
+				UserSSH(host, info.ssh, globalOptions.User, gOpt.SSHTimeout, gOpt.SSHType, globalOptions.SSHType).
 				Mkdir(globalOptions.User, host,
 					deployDir, dataDir, logDir,
 					filepath.Join(deployDir, "bin"),

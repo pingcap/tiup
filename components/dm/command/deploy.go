@@ -56,17 +56,7 @@ func newDeployCmd() *cobra.Command {
 				return err
 			}
 
-			return cm.Deploy(
-				clusterName,
-				version,
-				topoFile,
-				opt,
-				nil,
-				skipConfirm,
-				gOpt.OptTimeout,
-				gOpt.SSHTimeout,
-				gOpt.SSHType,
-			)
+			return cm.Deploy(clusterName, version, topoFile, opt, nil, skipConfirm, gOpt)
 		},
 	}
 

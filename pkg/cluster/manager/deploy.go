@@ -26,6 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/crypto"
@@ -61,9 +62,7 @@ func (m *Manager) Deploy(
 	opt DeployOptions,
 	afterDeploy func(b *task.Builder, newPart spec.Topology),
 	skipConfirm bool,
-	optTimeout uint64,
-	sshTimeout uint64,
-	sshType executor.SSHType,
+	gOpt operator.Options,
 ) error {
 	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
 		return err
@@ -91,7 +90,7 @@ func (m *Manager) Deploy(
 	spec.ExpandRelativeDir(topo)
 
 	base := topo.BaseTopo()
-	if sshType != "" {
+	if sshType := gOpt.SSHType; sshType != "" {
 		base.GlobalOptions.SSHType = sshType
 	}
 
@@ -124,7 +123,7 @@ func (m *Manager) Deploy(
 	}
 
 	var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
-	if sshType != executor.SSHTypeNone {
+	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
 		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
 			return err
@@ -203,8 +202,8 @@ func (m *Manager) Deploy(
 					sshConnProps.Password,
 					sshConnProps.IdentityFile,
 					sshConnProps.IdentityFilePassphrase,
-					sshTimeout,
-					sshType,
+					gOpt.SSHTimeout,
+					gOpt.SSHType,
 					globalOptions.SSHType,
 				).
 				EnvInit(inst.GetHost(), globalOptions.User, globalOptions.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
@@ -241,7 +240,7 @@ func (m *Manager) Deploy(
 			deployDirs = append(deployDirs, filepath.Join(deployDir, "tls"))
 		}
 		t := task.NewBuilder().
-			UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, sshTimeout, sshType, globalOptions.SSHType).
+			UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, gOpt.SSHTimeout, gOpt.SSHType, globalOptions.SSHType).
 			Mkdir(globalOptions.User, inst.GetHost(), deployDirs...).
 			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
 
@@ -312,8 +311,7 @@ func (m *Manager) Deploy(
 		globalOptions,
 		topo.GetMonitoredOptions(),
 		clusterVersion,
-		sshTimeout,
-		sshType,
+		gOpt,
 	)
 	downloadCompTasks = append(downloadCompTasks, dlTasks...)
 	deployCompTasks = append(deployCompTasks, dpTasks...)

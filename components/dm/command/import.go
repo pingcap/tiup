@@ -100,9 +100,7 @@ func newImportCmd() *cobra.Command {
 				},
 				nil,
 				skipConfirm,
-				gOpt.OptTimeout,
-				gOpt.SSHTimeout,
-				gOpt.SSHType,
+				gOpt,
 			)
 
 			if err != nil {

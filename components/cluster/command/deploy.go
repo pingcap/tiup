@@ -77,17 +77,7 @@ func newDeploy() *cobra.Command {
 				teleTopology = string(data)
 			}
 
-			return cm.Deploy(
-				clusterName,
-				version,
-				topoFile,
-				opt,
-				postDeployHook,
-				skipConfirm,
-				gOpt.OptTimeout,
-				gOpt.SSHTimeout,
-				gOpt.SSHType,
-			)
+			return cm.Deploy(clusterName, version, topoFile, opt, postDeployHook, skipConfirm, gOpt)
 		},
 	}
 

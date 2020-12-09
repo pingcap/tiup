@@ -22,6 +22,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -46,9 +47,7 @@ func (m *Manager) ScaleOut(
 	final func(b *task.Builder, name string, meta spec.Metadata),
 	opt ScaleOutOptions,
 	skipConfirm bool,
-	optTimeout uint64,
-	sshTimeout uint64,
-	sshType executor.SSHType,
+	gOpt operator.Options,
 ) error {
 	metadata, err := m.meta(name)
 	// allow specific validation errors so that user can recover a broken
@@ -126,7 +125,7 @@ func (m *Manager) ScaleOut(
 	}
 
 	var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
-	if sshType != executor.SSHTypeNone {
+	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
 		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
 			return err
@@ -136,7 +135,7 @@ func (m *Manager) ScaleOut(
 	// Build the scale out tasks
 	t, err := buildScaleOutTask(
 		m, name, metadata, mergedTopo, opt, sshConnProps, newPart,
-		patchedComponents, optTimeout, sshTimeout, sshType, afterDeploy, final)
+		patchedComponents, gOpt, afterDeploy, final)
 	if err != nil {
 		return err
 	}
