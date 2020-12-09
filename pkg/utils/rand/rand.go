@@ -21,10 +21,8 @@ import (
 )
 
 var (
-	r *rand.Rand
-
-	// Reader wraps cr.Reader
-	Reader = cr.Reader
+	// Reader is a global random number source
+	Reader *rand.Rand
 )
 
 func init() {
@@ -33,20 +31,20 @@ func init() {
 		panic(fmt.Sprintf("initial random: %s", err.Error()))
 	}
 	seed := binary.BigEndian.Uint64(src)
-	r = rand.New(rand.NewSource(int64(seed)))
+	Reader = rand.New(rand.NewSource(int64(seed)))
 }
 
 // Int wraps Rand.Int
 func Int() int {
-	return r.Int()
+	return Reader.Int()
 }
 
 // Intn wraps Rand.Intn
 func Intn(n int) int {
-	return r.Intn(n)
+	return Reader.Intn(n)
 }
 
 // Int63n wraps Rand.Int63n
 func Int63n(n int64) int64 {
-	return r.Int63n(n)
+	return Reader.Int63n(n)
 }
