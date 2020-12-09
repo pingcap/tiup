@@ -29,8 +29,8 @@ import (
 )
 
 // DestroyCluster destroy the cluster.
-func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, destroyOpt operator.Options, skipConfirm bool) error {
-	metadata, err := m.meta(clusterName)
+func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt operator.Options, skipConfirm bool) error {
+	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) &&
 		!errors.Is(perrs.Cause(err), spec.ErrMultipleTiSparkMaster) &&
@@ -41,7 +41,7 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return err
 	}
@@ -51,13 +51,13 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 			"This operation will destroy %s %s cluster %s and its data.\nDo you want to continue? [y/N]:",
 			m.sysName,
 			color.HiYellowString(base.Version),
-			color.HiYellowString(clusterName)); err != nil {
+			color.HiYellowString(name)); err != nil {
 			return err
 		}
 		log.Infof("Destroying cluster...")
 	}
 
-	t := m.sshTaskBuilder(clusterName, topo, base.User, gOpt).
+	t := m.sshTaskBuilder(name, topo, base.User, gOpt).
 		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, operator.Options{Force: destroyOpt.Force}, tlsCfg)
 		}).
@@ -74,21 +74,21 @@ func (m *Manager) DestroyCluster(clusterName string, gOpt operator.Options, dest
 		return perrs.Trace(err)
 	}
 
-	if err := m.specManager.Remove(clusterName); err != nil {
+	if err := m.specManager.Remove(name); err != nil {
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Destroyed cluster `%s` successfully", clusterName)
+	log.Infof("Destroyed cluster `%s` successfully", name)
 	return nil
 }
 
 // DestroyTombstone destroy and remove instances that is in tombstone state
 func (m *Manager) DestroyTombstone(
-	clusterName string,
+	name string,
 	gOpt operator.Options,
 	skipConfirm bool,
 ) error {
-	metadata, err := m.meta(clusterName)
+	metadata, err := m.meta(name)
 	// allow specific validation errors so that user can recover a broken
 	// cluster if it is somehow in a bad state.
 	if err != nil &&
@@ -106,12 +106,12 @@ func (m *Manager) DestroyTombstone(
 		return nil
 	}
 
-	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return err
 	}
 
-	b := m.sshTaskBuilder(clusterName, topo, base.User, gOpt)
+	b := m.sshTaskBuilder(name, topo, base.User, gOpt)
 
 	var nodes []string
 	b.
@@ -129,10 +129,10 @@ func (m *Manager) DestroyTombstone(
 			return err
 		}).
 		ClusterOperate(cluster, operator.DestroyTombstoneOperation, gOpt, tlsCfg).
-		UpdateMeta(clusterName, clusterMeta, nodes).
-		UpdateTopology(clusterName, m.specManager.Path(clusterName), clusterMeta, nodes)
+		UpdateMeta(name, clusterMeta, nodes).
+		UpdateTopology(name, m.specManager.Path(name), clusterMeta, nodes)
 
-	regenConfigTasks, _ := regenConfigTasks(m, clusterName, topo, base, nodes)
+	regenConfigTasks, _ := regenConfigTasks(m, name, topo, base, nodes)
 	t := b.ParallelStep("+ Refresh instance configs", true, regenConfigTasks...).Parallel(true, buildDynReloadPromTasks(metadata.GetTopology())...).Build()
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {

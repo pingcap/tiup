@@ -31,8 +31,8 @@ type ExecOptions struct {
 }
 
 // Exec shell command on host in the tidb cluster.
-func (m *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Options) error {
-	metadata, err := m.meta(clusterName)
+func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) error {
+	metadata, err := m.meta(name)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -66,7 +66,7 @@ func (m *Manager) Exec(clusterName string, opt ExecOptions, gOpt operator.Option
 				Build())
 	}
 
-	t := m.sshTaskBuilder(clusterName, topo, base.User, gOpt).
+	t := m.sshTaskBuilder(name, topo, base.User, gOpt).
 		Parallel(false, shellTasks...).
 		Build()
 

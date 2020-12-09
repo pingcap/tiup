@@ -25,8 +25,8 @@ import (
 )
 
 // CleanCluster cleans the cluster without destroying it
-func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanOpt operator.Options, skipConfirm bool) error {
-	metadata, err := m.meta(clusterName)
+func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt operator.Options, skipConfirm bool) error {
+	metadata, err := m.meta(name)
 	if err != nil {
 		return err
 	}
@@ -34,7 +34,7 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 			"This operation will clean %s %s cluster %s's %s.\nNodes will be ignored: %s\nRoles will be ignored: %s\nDo you want to continue? [y/N]:",
 			m.sysName,
 			color.HiYellowString(base.Version),
-			color.HiYellowString(clusterName),
+			color.HiYellowString(name),
 			target,
 			cleanOpt.RetainDataNodes,
 			cleanOpt.RetainDataRoles); err != nil {
@@ -62,7 +62,7 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 		log.Infof("Cleanup cluster...")
 	}
 
-	t := m.sshTaskBuilder(clusterName, topo, base.User, gOpt).
+	t := m.sshTaskBuilder(name, topo, base.User, gOpt).
 		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, operator.Options{}, tlsCfg)
 		}).
@@ -79,6 +79,6 @@ func (m *Manager) CleanCluster(clusterName string, gOpt operator.Options, cleanO
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Cleanup cluster `%s` successfully", clusterName)
+	log.Infof("Cleanup cluster `%s` successfully", name)
 	return nil
 }

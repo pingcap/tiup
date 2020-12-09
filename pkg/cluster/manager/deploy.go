@@ -50,12 +50,12 @@ type DeployOptions struct {
 
 // DeployerInstance is a instance can deploy to a target deploy directory.
 type DeployerInstance interface {
-	Deploy(b *task.Builder, srcPath string, deployDir string, version string, clusterName string, clusterVersion string)
+	Deploy(b *task.Builder, srcPath string, deployDir string, version string, name string, clusterVersion string)
 }
 
 // Deploy a cluster.
 func (m *Manager) Deploy(
-	clusterName string,
+	name string,
 	clusterVersion string,
 	topoFile string,
 	opt DeployOptions,
@@ -65,11 +65,11 @@ func (m *Manager) Deploy(
 	sshTimeout uint64,
 	sshType executor.SSHType,
 ) error {
-	if err := clusterutil.ValidateClusterNameOrError(clusterName); err != nil {
+	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
 		return err
 	}
 
-	exist, err := m.specManager.Exist(clusterName)
+	exist, err := m.specManager.Exist(name)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -77,7 +77,7 @@ func (m *Manager) Deploy(
 	if exist {
 		// FIXME: When change to use args, the suggestion text need to be updatem.
 		return errDeployNameDuplicate.
-			New("Cluster name '%s' is duplicated", clusterName).
+			New("Cluster name '%s' is duplicated", name).
 			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
 	}
 
@@ -110,15 +110,15 @@ func (m *Manager) Deploy(
 	if err != nil {
 		return err
 	}
-	if err := spec.CheckClusterPortConflict(clusterList, clusterName, topo); err != nil {
+	if err := spec.CheckClusterPortConflict(clusterList, name, topo); err != nil {
 		return err
 	}
-	if err := spec.CheckClusterDirConflict(clusterList, clusterName, topo); err != nil {
+	if err := spec.CheckClusterDirConflict(clusterList, name, topo); err != nil {
 		return err
 	}
 
 	if !skipConfirm {
-		if err := m.confirmTopology(clusterName, clusterVersion, topo, set.NewStringSet()); err != nil {
+		if err := m.confirmTopology(name, clusterVersion, topo, set.NewStringSet()); err != nil {
 			return err
 		}
 	}
@@ -131,9 +131,9 @@ func (m *Manager) Deploy(
 		}
 	}
 
-	if err := os.MkdirAll(m.specManager.Path(clusterName), 0755); err != nil {
+	if err := os.MkdirAll(m.specManager.Path(name), 0755); err != nil {
 		return errorx.InitializationFailed.
-			Wrap(err, "Failed to create cluster metadata directory '%s'", m.specManager.Path(clusterName)).
+			Wrap(err, "Failed to create cluster metadata directory '%s'", m.specManager.Path(name)).
 			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
 	}
 
@@ -151,17 +151,17 @@ func (m *Manager) Deploy(
 	var ca *crypto.CertificateAuthority
 	if globalOptions.TLSEnabled {
 		// generate CA
-		tlsPath := m.specManager.Path(clusterName, spec.TLSCertKeyDir)
+		tlsPath := m.specManager.Path(name, spec.TLSCertKeyDir)
 		if err := utils.CreateDir(tlsPath); err != nil {
 			return err
 		}
-		ca, err = genAndSaveClusterCA(clusterName, tlsPath)
+		ca, err = genAndSaveClusterCA(name, tlsPath)
 		if err != nil {
 			return err
 		}
 
 		// generate client cert
-		if err = genAndSaveClientCert(ca, clusterName, tlsPath); err != nil {
+		if err = genAndSaveClientCert(ca, name, tlsPath); err != nil {
 			return err
 		}
 	}
@@ -246,7 +246,7 @@ func (m *Manager) Deploy(
 			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
 
 		if deployerInstance, ok := inst.(DeployerInstance); ok {
-			deployerInstance.Deploy(t, "", deployDir, version, clusterName, clusterVersion)
+			deployerInstance.Deploy(t, "", deployDir, version, name, clusterVersion)
 		} else {
 			// copy dependency component if needed
 			switch inst.ComponentName() {
@@ -274,13 +274,13 @@ func (m *Manager) Deploy(
 		if globalOptions.TLSEnabled {
 			t = t.TLSCert(inst, ca, meta.DirPaths{
 				Deploy: deployDir,
-				Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
+				Cache:  m.specManager.Path(name, spec.TempConfigPath),
 			})
 		}
 
 		// generate configs for the component
 		t = t.InitConfig(
-			clusterName,
+			name,
 			clusterVersion,
 			m.specManager,
 			inst,
@@ -290,7 +290,7 @@ func (m *Manager) Deploy(
 				Deploy: deployDir,
 				Data:   dataDirs,
 				Log:    logDir,
-				Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
+				Cache:  m.specManager.Path(name, spec.TempConfigPath),
 			},
 		)
 
@@ -307,7 +307,7 @@ func (m *Manager) Deploy(
 	dlTasks, dpTasks := buildMonitoredDeployTask(
 		m.bindVersion,
 		m.specManager,
-		clusterName,
+		name,
 		uniqueHosts,
 		globalOptions,
 		topo.GetMonitoredOptions(),
@@ -320,7 +320,7 @@ func (m *Manager) Deploy(
 
 	builder := task.NewBuilder().
 		Step("+ Generate SSH keys",
-			task.NewBuilder().SSHKeyGen(m.specManager.Path(clusterName, "ssh", "id_rsa")).Build()).
+			task.NewBuilder().SSHKeyGen(m.specManager.Path(name, "ssh", "id_rsa")).Build()).
 		ParallelStep("+ Download TiDB components", false, downloadCompTasks...).
 		ParallelStep("+ Initialize target host environments", false, envInitTasks...).
 		ParallelStep("+ Copy files", false, deployCompTasks...)
@@ -341,13 +341,13 @@ func (m *Manager) Deploy(
 
 	metadata.SetUser(globalOptions.User)
 	metadata.SetVersion(clusterVersion)
-	err = m.specManager.SaveMeta(clusterName, metadata)
+	err = m.specManager.SaveMeta(name, metadata)
 
 	if err != nil {
 		return perrs.AddStack(err)
 	}
 
-	hint := color.New(color.Bold).Sprintf("%s start %s", cliutil.OsArgs0(), clusterName)
-	log.Infof("Deployed cluster `%s` successfully, you can start the cluster via `%s`", clusterName, hint)
+	hint := color.New(color.Bold).Sprintf("%s start %s", cliutil.OsArgs0(), name)
+	log.Infof("Deployed cluster `%s` successfully, you can start the cluster via `%s`", name, hint)
 	return nil
 }

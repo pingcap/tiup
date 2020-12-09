@@ -31,7 +31,7 @@ import (
 
 // ScaleIn the cluster.
 func (m *Manager) ScaleIn(
-	clusterName string,
+	name string,
 	skipConfirm bool,
 	gOpt operator.Options,
 	scale func(builer *task.Builder, metadata spec.Metadata, tlsCfg *tls.Config),
@@ -44,7 +44,7 @@ func (m *Manager) ScaleIn(
 		if err := cliutil.PromptForConfirmOrAbortError(
 			"This operation will delete the %s nodes in `%s` and all their data.\nDo you want to continue? [y/N]:",
 			strings.Join(nodes, ","),
-			color.HiYellowString(clusterName)); err != nil {
+			color.HiYellowString(name)); err != nil {
 			return err
 		}
 
@@ -59,7 +59,7 @@ func (m *Manager) ScaleIn(
 		log.Infof("Scale-in nodes...")
 	}
 
-	metadata, err := m.meta(clusterName)
+	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrMultipleTiSparkMaster) &&
 		!errors.Is(perrs.Cause(err), spec.ErrMultipleTisparkWorker) {
@@ -72,21 +72,21 @@ func (m *Manager) ScaleIn(
 	base := metadata.GetBaseMeta()
 
 	// Regenerate configuration
-	regenConfigTasks, hasImported := regenConfigTasks(m, clusterName, topo, base, nodes)
+	regenConfigTasks, hasImported := regenConfigTasks(m, name, topo, base, nodes)
 
 	// handle dir scheme changes
 	if hasImported {
-		if err := spec.HandleImportPathMigration(clusterName); err != nil {
+		if err := spec.HandleImportPathMigration(name); err != nil {
 			return err
 		}
 	}
 
-	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return err
 	}
 
-	b := m.sshTaskBuilder(clusterName, topo, base.User, gOpt)
+	b := m.sshTaskBuilder(name, topo, base.User, gOpt)
 
 	scale(b, metadata, tlsCfg)
 
@@ -103,7 +103,7 @@ func (m *Manager) ScaleIn(
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Scaled cluster `%s` in successfully", clusterName)
+	log.Infof("Scaled cluster `%s` in successfully", name)
 
 	return nil
 }

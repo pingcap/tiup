@@ -40,7 +40,7 @@ type ScaleOutOptions struct {
 
 // ScaleOut scale out the cluster.
 func (m *Manager) ScaleOut(
-	clusterName string,
+	name string,
 	topoFile string,
 	afterDeploy func(b *task.Builder, newPart spec.Topology),
 	final func(b *task.Builder, name string, meta spec.Metadata),
@@ -50,7 +50,7 @@ func (m *Manager) ScaleOut(
 	sshTimeout uint64,
 	sshType executor.SSHType,
 ) error {
-	metadata, err := m.meta(clusterName)
+	metadata, err := m.meta(name)
 	// allow specific validation errors so that user can recover a broken
 	// cluster if it is somehow in a bad state.
 	if err != nil &&
@@ -86,7 +86,7 @@ func (m *Manager) ScaleOut(
 	if topo, ok := topo.(*spec.Specification); ok && !opt.NoLabels {
 		// Check if TiKV's label set correctly
 		pdList := topo.BaseTopo().MasterList
-		tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+		tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 		if err != nil {
 			return err
 		}
@@ -104,23 +104,23 @@ func (m *Manager) ScaleOut(
 	if err != nil {
 		return err
 	}
-	if err := spec.CheckClusterPortConflict(clusterList, clusterName, mergedTopo); err != nil {
+	if err := spec.CheckClusterPortConflict(clusterList, name, mergedTopo); err != nil {
 		return err
 	}
-	if err := spec.CheckClusterDirConflict(clusterList, clusterName, mergedTopo); err != nil {
+	if err := spec.CheckClusterDirConflict(clusterList, name, mergedTopo); err != nil {
 		return err
 	}
 
 	patchedComponents := set.NewStringSet()
 	newPart.IterInstance(func(instance spec.Instance) {
-		if utils.IsExist(m.specManager.Path(clusterName, spec.PatchDirName, instance.ComponentName()+".tar.gz")) {
+		if utils.IsExist(m.specManager.Path(name, spec.PatchDirName, instance.ComponentName()+".tar.gz")) {
 			patchedComponents.Insert(instance.ComponentName())
 		}
 	})
 
 	if !skipConfirm {
 		// patchedComponents are components that have been patched and overwrited
-		if err := m.confirmTopology(clusterName, base.Version, newPart, patchedComponents); err != nil {
+		if err := m.confirmTopology(name, base.Version, newPart, patchedComponents); err != nil {
 			return err
 		}
 	}
@@ -135,7 +135,7 @@ func (m *Manager) ScaleOut(
 
 	// Build the scale out tasks
 	t, err := buildScaleOutTask(
-		m, clusterName, metadata, mergedTopo, opt, sshConnProps, newPart,
+		m, name, metadata, mergedTopo, opt, sshConnProps, newPart,
 		patchedComponents, optTimeout, sshTimeout, sshType, afterDeploy, final)
 	if err != nil {
 		return err
@@ -149,7 +149,7 @@ func (m *Manager) ScaleOut(
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Scaled cluster `%s` out successfully", clusterName)
+	log.Infof("Scaled cluster `%s` out successfully", name)
 
 	return nil
 }

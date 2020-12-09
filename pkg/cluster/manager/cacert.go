@@ -25,15 +25,15 @@ import (
 	"github.com/pingcap/tiup/pkg/file"
 )
 
-func genAndSaveClusterCA(clusterName, tlsPath string) (*crypto.CertificateAuthority, error) {
-	ca, err := crypto.NewCA(clusterName)
+func genAndSaveClusterCA(name, tlsPath string) (*crypto.CertificateAuthority, error) {
+	ca, err := crypto.NewCA(name)
 	if err != nil {
 		return nil, err
 	}
 
 	// save CA private key
 	if err := file.SaveFileWithBackup(filepath.Join(tlsPath, spec.TLSCAKey), ca.Key.Pem(), ""); err != nil {
-		return nil, perrs.Annotatef(err, "cannot save CA private key for %s", clusterName)
+		return nil, perrs.Annotatef(err, "cannot save CA private key for %s", name)
 	}
 
 	// save CA certificate
@@ -43,13 +43,13 @@ func genAndSaveClusterCA(clusterName, tlsPath string) (*crypto.CertificateAuthor
 			Type:  "CERTIFICATE",
 			Bytes: ca.Cert.Raw,
 		}), ""); err != nil {
-		return nil, perrs.Annotatef(err, "cannot save CA certificate for %s", clusterName)
+		return nil, perrs.Annotatef(err, "cannot save CA certificate for %s", name)
 	}
 
 	return ca, nil
 }
 
-func genAndSaveClientCert(ca *crypto.CertificateAuthority, clusterName, tlsPath string) error {
+func genAndSaveClientCert(ca *crypto.CertificateAuthority, name, tlsPath string) error {
 	privKey, err := crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
 	if err != nil {
 		return perrs.AddStack(err)
@@ -57,20 +57,20 @@ func genAndSaveClientCert(ca *crypto.CertificateAuthority, clusterName, tlsPath 
 
 	// save client private key
 	if err := file.SaveFileWithBackup(filepath.Join(tlsPath, spec.TLSClientKey), privKey.Pem(), ""); err != nil {
-		return perrs.Annotatef(err, "cannot save client private key for %s", clusterName)
+		return perrs.Annotatef(err, "cannot save client private key for %s", name)
 	}
 
 	csr, err := privKey.CSR(
 		"tiup-cluster-client",
-		fmt.Sprintf("%s-client", clusterName),
+		fmt.Sprintf("%s-client", name),
 		[]string{}, []string{},
 	)
 	if err != nil {
-		return perrs.Annotatef(err, "cannot generate CSR of client certificate for %s", clusterName)
+		return perrs.Annotatef(err, "cannot generate CSR of client certificate for %s", name)
 	}
 	cert, err := ca.Sign(csr)
 	if err != nil {
-		return perrs.Annotatef(err, "cannot sign client certificate for %s", clusterName)
+		return perrs.Annotatef(err, "cannot sign client certificate for %s", name)
 	}
 
 	// save client certificate
@@ -80,23 +80,23 @@ func genAndSaveClientCert(ca *crypto.CertificateAuthority, clusterName, tlsPath 
 			Type:  "CERTIFICATE",
 			Bytes: cert,
 		}), ""); err != nil {
-		return perrs.Annotatef(err, "cannot save client PEM certificate for %s", clusterName)
+		return perrs.Annotatef(err, "cannot save client PEM certificate for %s", name)
 	}
 
 	// save pfx format certificate
 	clientCert, err := x509.ParseCertificate(cert)
 	if err != nil {
-		return perrs.Annotatef(err, "cannot decode signed client certificate for %s", clusterName)
+		return perrs.Annotatef(err, "cannot decode signed client certificate for %s", name)
 	}
 	pfxData, err := privKey.PKCS12(clientCert, ca)
 	if err != nil {
-		return perrs.Annotatef(err, "cannot encode client certificate to PKCS#12 format for %s", clusterName)
+		return perrs.Annotatef(err, "cannot encode client certificate to PKCS#12 format for %s", name)
 	}
 	if err := file.SaveFileWithBackup(
 		filepath.Join(tlsPath, spec.PFXClientCert),
 		pfxData,
 		""); err != nil {
-		return perrs.Annotatef(err, "cannot save client PKCS#12 certificate for %s", clusterName)
+		return perrs.Annotatef(err, "cannot save client PKCS#12 certificate for %s", name)
 	}
 
 	return nil

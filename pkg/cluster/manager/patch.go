@@ -30,8 +30,8 @@ import (
 )
 
 // Patch the cluster.
-func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Options, overwrite bool) error {
-	metadata, err := m.meta(clusterName)
+func (m *Manager) Patch(name string, packagePath string, opt operator.Options, overwrite bool) error {
+	metadata, err := m.meta(name)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -47,7 +47,7 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 	if err != nil {
 		return err
 	}
-	if err := checkPackage(m.bindVersion, m.specManager, clusterName, insts[0].ComponentName(), insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
+	if err := checkPackage(m.bindVersion, m.specManager, name, insts[0].ComponentName(), insts[0].OS(), insts[0].Arch(), packagePath); err != nil {
 		return err
 	}
 
@@ -60,11 +60,11 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 		replacePackageTasks = append(replacePackageTasks, tb.Build())
 	}
 
-	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return err
 	}
-	t := m.sshTaskBuilder(clusterName, topo, base.User, opt).
+	t := m.sshTaskBuilder(name, topo, base.User, opt).
 		Parallel(false, replacePackageTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
@@ -80,7 +80,7 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 	}
 
 	if overwrite {
-		if err := overwritePatch(m.specManager, clusterName, insts[0].ComponentName(), packagePath); err != nil {
+		if err := overwritePatch(m.specManager, name, insts[0].ComponentName(), packagePath); err != nil {
 			return err
 		}
 	}
@@ -88,9 +88,9 @@ func (m *Manager) Patch(clusterName string, packagePath string, opt operator.Opt
 	return nil
 }
 
-func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, clusterName, comp, nodeOS, arch, packagePath string) error {
+func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, name, comp, nodeOS, arch, packagePath string) error {
 	metadata := specManager.NewMetadata()
-	if err := specManager.Metadata(clusterName, metadata); err != nil {
+	if err := specManager.Metadata(name, metadata); err != nil {
 		return err
 	}
 
@@ -108,7 +108,7 @@ func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, c
 	if err != nil {
 		return err
 	}
-	cacheDir := specManager.Path(clusterName, "cache", comp+"-"+checksum[:7])
+	cacheDir := specManager.Path(name, "cache", comp+"-"+checksum[:7])
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		return err
 	}
@@ -123,8 +123,8 @@ func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, c
 	return nil
 }
 
-func overwritePatch(specManager *spec.SpecManager, clusterName, comp, packagePath string) error {
-	if err := os.MkdirAll(specManager.Path(clusterName, spec.PatchDirName), 0755); err != nil {
+func overwritePatch(specManager *spec.SpecManager, name, comp, packagePath string) error {
+	if err := os.MkdirAll(specManager.Path(name, spec.PatchDirName), 0755); err != nil {
 		return err
 	}
 
@@ -133,14 +133,14 @@ func overwritePatch(specManager *spec.SpecManager, clusterName, comp, packagePat
 		return err
 	}
 
-	tg := specManager.Path(clusterName, spec.PatchDirName, comp+"-"+checksum[:7]+".tar.gz")
+	tg := specManager.Path(name, spec.PatchDirName, comp+"-"+checksum[:7]+".tar.gz")
 	if !utils.IsExist(tg) {
 		if err := utils.Copy(packagePath, tg); err != nil {
 			return err
 		}
 	}
 
-	symlink := specManager.Path(clusterName, spec.PatchDirName, comp+".tar.gz")
+	symlink := specManager.Path(name, spec.PatchDirName, comp+".tar.gz")
 	if utils.IsSymExist(symlink) {
 		os.Remove(symlink)
 	}

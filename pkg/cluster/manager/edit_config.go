@@ -32,8 +32,8 @@ import (
 )
 
 // EditConfig lets the user edit the cluster's config.
-func (m *Manager) EditConfig(clusterName string, skipConfirm bool) error {
-	metadata, err := m.meta(clusterName)
+func (m *Manager) EditConfig(name string, skipConfirm bool) error {
+	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return perrs.AddStack(err)
 	}
@@ -56,12 +56,12 @@ func (m *Manager) EditConfig(clusterName string, skipConfirm bool) error {
 
 	log.Infof("Apply the change...")
 	metadata.SetTopology(newTopo)
-	err = m.specManager.SaveMeta(clusterName, metadata)
+	err = m.specManager.SaveMeta(name, metadata)
 	if err != nil {
 		return perrs.Annotate(err, "failed to save meta")
 	}
 
-	log.Infof("Apply change successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", cliutil.OsArgs0(), clusterName)
+	log.Infof("Apply change successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", cliutil.OsArgs0(), name)
 	return nil
 }
 

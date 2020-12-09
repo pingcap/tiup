@@ -32,8 +32,8 @@ import (
 )
 
 // Upgrade the cluster.
-func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operator.Options, skipConfirm bool) error {
-	metadata, err := m.meta(clusterName)
+func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Options, skipConfirm bool) error {
+	metadata, err := m.meta(name)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -57,7 +57,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 			"This operation will upgrade %s %s cluster %s to %s.\nDo you want to continue? [y/N]:",
 			m.sysName,
 			color.HiYellowString(base.Version),
-			color.HiYellowString(clusterName),
+			color.HiYellowString(name),
 			color.HiYellowString(clusterVersion)); err != nil {
 			return err
 		}
@@ -108,7 +108,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 			tb = tb.BackupComponent(inst.ComponentName(), base.Version, inst.GetHost(), deployDir)
 
 			if deployerInstance, ok := inst.(DeployerInstance); ok {
-				deployerInstance.Deploy(tb, "", deployDir, version, clusterName, clusterVersion)
+				deployerInstance.Deploy(tb, "", deployDir, version, name, clusterVersion)
 			} else {
 				// copy dependency component if needed
 				switch inst.ComponentName() {
@@ -133,7 +133,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 			}
 
 			tb.InitConfig(
-				clusterName,
+				name,
 				clusterVersion,
 				m.specManager,
 				inst,
@@ -143,7 +143,7 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 					Deploy: deployDir,
 					Data:   dataDirs,
 					Log:    logDir,
-					Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
+					Cache:  m.specManager.Path(name, spec.TempConfigPath),
 				},
 			)
 			copyCompTasks = append(copyCompTasks, tb.Build())
@@ -152,16 +152,16 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 
 	// handle dir scheme changes
 	if hasImported {
-		if err := spec.HandleImportPathMigration(clusterName); err != nil {
+		if err := spec.HandleImportPathMigration(name); err != nil {
 			return err
 		}
 	}
 
-	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return err
 	}
-	t := m.sshTaskBuilder(clusterName, topo, base.User, opt).
+	t := m.sshTaskBuilder(name, topo, base.User, opt).
 		Parallel(false, downloadCompTasks...).
 		Parallel(opt.Force, copyCompTasks...).
 		Func("UpgradeCluster", func(ctx *task.Context) error {
@@ -179,15 +179,15 @@ func (m *Manager) Upgrade(clusterName string, clusterVersion string, opt operato
 
 	metadata.SetVersion(clusterVersion)
 
-	if err := m.specManager.SaveMeta(clusterName, metadata); err != nil {
+	if err := m.specManager.SaveMeta(name, metadata); err != nil {
 		return perrs.Trace(err)
 	}
 
-	if err := os.RemoveAll(m.specManager.Path(clusterName, "patch")); err != nil {
+	if err := os.RemoveAll(m.specManager.Path(name, "patch")); err != nil {
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Upgraded cluster `%s` successfully", clusterName)
+	log.Infof("Upgraded cluster `%s` successfully", name)
 
 	return nil
 }

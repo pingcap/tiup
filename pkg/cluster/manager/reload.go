@@ -23,10 +23,10 @@ import (
 )
 
 // Reload the cluster.
-func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart bool) error {
+func (m *Manager) Reload(name string, opt operator.Options, skipRestart bool) error {
 	sshTimeout := opt.SSHTimeout
 
-	metadata, err := m.meta(clusterName)
+	metadata, err := m.meta(name)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -45,10 +45,10 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 		}
 	})
 
-	refreshConfigTasks, hasImported := regenConfigTasks(m, clusterName, topo, base, nil)
+	refreshConfigTasks, hasImported := regenConfigTasks(m, name, topo, base, nil)
 	monitorConfigTasks := refreshMonitoredConfigTask(
 		m.specManager,
-		clusterName,
+		name,
 		uniqueHosts,
 		*topo.BaseTopo().GlobalOptions,
 		topo.GetMonitoredOptions(),
@@ -57,19 +57,19 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 
 	// handle dir scheme changes
 	if hasImported {
-		if err := spec.HandleImportPathMigration(clusterName); err != nil {
+		if err := spec.HandleImportPathMigration(name); err != nil {
 			return perrs.AddStack(err)
 		}
 	}
 
-	tb := m.sshTaskBuilder(clusterName, topo, base.User, opt).
+	tb := m.sshTaskBuilder(name, topo, base.User, opt).
 		ParallelStep("+ Refresh instance configs", opt.Force, refreshConfigTasks...)
 
 	if len(monitorConfigTasks) > 0 {
 		tb = tb.ParallelStep("+ Refresh monitor configs", opt.Force, monitorConfigTasks...)
 	}
 
-	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (m *Manager) Reload(clusterName string, opt operator.Options, skipRestart b
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Reloaded cluster `%s` successfully", clusterName)
+	log.Infof("Reloaded cluster `%s` successfully", name)
 
 	return nil
 }

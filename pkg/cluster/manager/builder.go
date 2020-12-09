@@ -49,7 +49,7 @@ func buildDynReloadPromTasks(topo spec.Topology) []task.Task {
 
 func buildScaleOutTask(
 	m *Manager,
-	clusterName string,
+	name string,
 	metadata spec.Metadata,
 	mergedTopo spec.Topology,
 	opt ScaleOutOptions,
@@ -73,7 +73,7 @@ func buildScaleOutTask(
 	base := metadata.GetBaseMeta()
 	specManager := m.specManager
 
-	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return nil, err
 	}
@@ -156,11 +156,11 @@ func buildScaleOutTask(
 
 		srcPath := ""
 		if patchedComponents.Exist(inst.ComponentName()) {
-			srcPath = specManager.Path(clusterName, spec.PatchDirName, inst.ComponentName()+".tar.gz")
+			srcPath = specManager.Path(name, spec.PatchDirName, inst.ComponentName()+".tar.gz")
 		}
 
 		if deployerInstance, ok := inst.(DeployerInstance); ok {
-			deployerInstance.Deploy(tb, srcPath, deployDir, version, clusterName, version)
+			deployerInstance.Deploy(tb, srcPath, deployDir, version, name, version)
 		} else {
 			// copy dependency component if needed
 			switch inst.ComponentName() {
@@ -186,9 +186,9 @@ func buildScaleOutTask(
 		// generate and transfer tls cert for instance
 		if topo.BaseTopo().GlobalOptions.TLSEnabled {
 			ca, err := crypto.ReadCA(
-				clusterName,
-				m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSCACert),
-				m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSCAKey),
+				name,
+				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
+				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCAKey),
 			)
 			if err != nil {
 				iterErr = err
@@ -196,11 +196,11 @@ func buildScaleOutTask(
 			}
 			tb = tb.TLSCert(inst, ca, meta.DirPaths{
 				Deploy: deployDir,
-				Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
+				Cache:  m.specManager.Path(name, spec.TempConfigPath),
 			})
 		}
 
-		t := tb.ScaleConfig(clusterName,
+		t := tb.ScaleConfig(name,
 			base.Version,
 			m.specManager,
 			topo,
@@ -240,7 +240,7 @@ func buildScaleOutTask(
 		}
 
 		// Refresh all configuration
-		t := tb.InitConfig(clusterName,
+		t := tb.InitConfig(name,
 			base.Version,
 			m.specManager,
 			inst,
@@ -250,7 +250,7 @@ func buildScaleOutTask(
 				Deploy: deployDir,
 				Data:   dataDirs,
 				Log:    logDir,
-				Cache:  specManager.Path(clusterName, spec.TempConfigPath),
+				Cache:  specManager.Path(name, spec.TempConfigPath),
 			},
 		).Build()
 		refreshConfigTasks = append(refreshConfigTasks, t)
@@ -258,7 +258,7 @@ func buildScaleOutTask(
 
 	// handle dir scheme changes
 	if hasImported {
-		if err := spec.HandleImportPathMigration(clusterName); err != nil {
+		if err := spec.HandleImportPathMigration(name); err != nil {
 			return task.NewBuilder().Build(), err
 		}
 	}
@@ -267,7 +267,7 @@ func buildScaleOutTask(
 	dlTasks, dpTasks := buildMonitoredDeployTask(
 		m.bindVersion,
 		specManager,
-		clusterName,
+		name,
 		uninitializedHosts,
 		topo.BaseTopo().GlobalOptions,
 		topo.BaseTopo().MonitoredOptions,
@@ -280,8 +280,8 @@ func buildScaleOutTask(
 
 	builder := task.NewBuilder().
 		SSHKeySet(
-			specManager.Path(clusterName, "ssh", "id_rsa"),
-			specManager.Path(clusterName, "ssh", "id_rsa.pub")).
+			specManager.Path(name, "ssh", "id_rsa"),
+			specManager.Path(name, "ssh", "id_rsa.pub")).
 		Parallel(false, downloadCompTasks...).
 		Parallel(false, envInitTasks...).
 		ClusterSSH(topo, base.User, sshTimeout, sshType, topo.BaseTopo().GlobalOptions.SSHType).
@@ -295,7 +295,7 @@ func buildScaleOutTask(
 		ClusterSSH(newPart, base.User, sshTimeout, sshType, topo.BaseTopo().GlobalOptions.SSHType).
 		Func("Save meta", func(_ *task.Context) error {
 			metadata.SetTopology(mergedTopo)
-			return m.specManager.SaveMeta(clusterName, metadata)
+			return m.specManager.SaveMeta(name, metadata)
 		}).
 		Func("StartCluster", func(ctx *task.Context) error {
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: optTimeout}, tlsCfg)
@@ -304,7 +304,7 @@ func buildScaleOutTask(
 		Parallel(false, buildDynReloadPromTasks(metadata.GetTopology())...)
 
 	if final != nil {
-		final(builder, clusterName, metadata)
+		final(builder, name, metadata)
 	}
 
 	return builder.Build(), nil
@@ -329,7 +329,7 @@ func convertStepDisplaysToTasks(t []*task.StepDisplay) []task.Task {
 func buildMonitoredDeployTask(
 	bindVersion spec.BindVersion,
 	specManager *spec.SpecManager,
-	clusterName string,
+	name string,
 	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
 	globalOptions *spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
@@ -383,7 +383,7 @@ func buildMonitoredDeployTask(
 					deployDir,
 				).
 				MonitoredConfig(
-					clusterName,
+					name,
 					comp,
 					host,
 					globalOptions.ResourceControl,
@@ -393,7 +393,7 @@ func buildMonitoredDeployTask(
 						Deploy: deployDir,
 						Data:   []string{dataDir},
 						Log:    logDir,
-						Cache:  specManager.Path(clusterName, spec.TempConfigPath),
+						Cache:  specManager.Path(name, spec.TempConfigPath),
 					},
 				).
 				BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", comp, host))
@@ -405,7 +405,7 @@ func buildMonitoredDeployTask(
 
 func refreshMonitoredConfigTask(
 	specManager *spec.SpecManager,
-	clusterName string,
+	name string,
 	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
 	globalOptions spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
@@ -433,7 +433,7 @@ func refreshMonitoredConfigTask(
 			t := task.NewBuilder().
 				UserSSH(host, info.ssh, globalOptions.User, sshTimeout, sshType, globalOptions.SSHType).
 				MonitoredConfig(
-					clusterName,
+					name,
 					comp,
 					host,
 					globalOptions.ResourceControl,
@@ -443,7 +443,7 @@ func refreshMonitoredConfigTask(
 						Deploy: deployDir,
 						Data:   []string{dataDir},
 						Log:    logDir,
-						Cache:  specManager.Path(clusterName, spec.TempConfigPath),
+						Cache:  specManager.Path(name, spec.TempConfigPath),
 					},
 				).
 				BuildAsStep(fmt.Sprintf("  - Refresh config %s -> %s", comp, host))
@@ -453,7 +453,7 @@ func refreshMonitoredConfigTask(
 	return tasks
 }
 
-func regenConfigTasks(m *Manager, clusterName string, topo spec.Topology, base *spec.BaseMeta, nodes []string) ([]*task.StepDisplay, bool) {
+func regenConfigTasks(m *Manager, name string, topo spec.Topology, base *spec.BaseMeta, nodes []string) ([]*task.StepDisplay, bool) {
 	var regenConfigTasks []*task.StepDisplay
 	hasImported := false
 	deletedNodes := set.NewStringSet(nodes...)
@@ -491,7 +491,7 @@ func regenConfigTasks(m *Manager, clusterName string, topo spec.Topology, base *
 
 		t := tb.
 			InitConfig(
-				clusterName,
+				name,
 				base.Version,
 				m.specManager,
 				instance,
@@ -501,7 +501,7 @@ func regenConfigTasks(m *Manager, clusterName string, topo spec.Topology, base *
 					Deploy: deployDir,
 					Data:   dataDirs,
 					Log:    logDir,
-					Cache:  m.specManager.Path(clusterName, spec.TempConfigPath),
+					Cache:  m.specManager.Path(name, spec.TempConfigPath),
 				},
 			).
 			BuildAsStep(fmt.Sprintf("  - Refresh config %s -> %s", compName, instance.ID()))

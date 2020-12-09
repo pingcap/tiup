@@ -25,10 +25,10 @@ import (
 )
 
 // Rename the cluster
-func (m *Manager) Rename(clusterName string, opt operator.Options, newName string) error {
-	if !utils.IsExist(m.specManager.Path(clusterName)) {
+func (m *Manager) Rename(name string, opt operator.Options, newName string) error {
+	if !utils.IsExist(m.specManager.Path(name)) {
 		return errorRenameNameNotExist.
-			New("Cluster name '%s' not exist", clusterName).
+			New("Cluster name '%s' not exist", name).
 			WithProperty(cliutil.SuggestionFromFormat("Please double check your cluster name"))
 	}
 	if utils.IsExist(m.specManager.Path(newName)) {
@@ -37,16 +37,16 @@ func (m *Manager) Rename(clusterName string, opt operator.Options, newName strin
 			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
 	}
 
-	_, err := m.meta(clusterName)
+	_, err := m.meta(name)
 	if err != nil { // refuse renaming if current cluster topology is not valid
 		return perrs.AddStack(err)
 	}
 
-	if err := os.Rename(m.specManager.Path(clusterName), m.specManager.Path(newName)); err != nil {
+	if err := os.Rename(m.specManager.Path(name), m.specManager.Path(newName)); err != nil {
 		return perrs.AddStack(err)
 	}
 
-	log.Infof("Rename cluster `%s` -> `%s` successfully", clusterName, newName)
+	log.Infof("Rename cluster `%s` -> `%s` successfully", name, newName)
 
 	opt.Roles = []string{spec.ComponentGrafana, spec.ComponentPrometheus}
 	return m.Reload(newName, opt, false)

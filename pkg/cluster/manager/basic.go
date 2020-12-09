@@ -113,8 +113,8 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 }
 
 // StopCluster stop the cluster.
-func (m *Manager) StopCluster(clusterName string, options operator.Options) error {
-	metadata, err := m.meta(clusterName)
+func (m *Manager) StopCluster(name string, options operator.Options) error {
+	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return perrs.AddStack(err)
 	}
@@ -122,12 +122,12 @@ func (m *Manager) StopCluster(clusterName string, options operator.Options) erro
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return err
 	}
 
-	t := m.sshTaskBuilder(clusterName, topo, base.User, options).
+	t := m.sshTaskBuilder(name, topo, base.User, options).
 		Func("StopCluster", func(ctx *task.Context) error {
 			return operator.Stop(ctx, topo, options, tlsCfg)
 		}).
@@ -141,13 +141,13 @@ func (m *Manager) StopCluster(clusterName string, options operator.Options) erro
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Stopped cluster `%s` successfully", clusterName)
+	log.Infof("Stopped cluster `%s` successfully", name)
 	return nil
 }
 
 // RestartCluster restart the cluster.
-func (m *Manager) RestartCluster(clusterName string, options operator.Options) error {
-	metadata, err := m.meta(clusterName)
+func (m *Manager) RestartCluster(name string, options operator.Options) error {
+	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return perrs.AddStack(err)
 	}
@@ -155,12 +155,12 @@ func (m *Manager) RestartCluster(clusterName string, options operator.Options) e
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return err
 	}
 
-	t := m.sshTaskBuilder(clusterName, topo, base.User, options).
+	t := m.sshTaskBuilder(name, topo, base.User, options).
 		Func("RestartCluster", func(ctx *task.Context) error {
 			return operator.Restart(ctx, topo, options, tlsCfg)
 		}).
@@ -174,6 +174,6 @@ func (m *Manager) RestartCluster(clusterName string, options operator.Options) e
 		return perrs.Trace(err)
 	}
 
-	log.Infof("Restarted cluster `%s` successfully", clusterName)
+	log.Infof("Restarted cluster `%s` successfully", name)
 	return nil
 }

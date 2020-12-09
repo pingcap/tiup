@@ -34,8 +34,8 @@ import (
 )
 
 // Display cluster meta and topology.
-func (m *Manager) Display(clusterName string, opt operator.Options) error {
-	metadata, err := m.meta(clusterName)
+func (m *Manager) Display(name string, opt operator.Options) error {
+	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return perrs.AddStack(err)
@@ -46,7 +46,7 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	// display cluster meta
 	cyan := color.New(color.FgCyan, color.Bold)
 	fmt.Printf("Cluster type:    %s\n", cyan.Sprint(m.sysName))
-	fmt.Printf("Cluster name:    %s\n", cyan.Sprint(clusterName))
+	fmt.Printf("Cluster name:    %s\n", cyan.Sprint(name))
 	fmt.Printf("Cluster version: %s\n", cyan.Sprint(base.Version))
 	fmt.Printf("SSH type:        %s\n", cyan.Sprint(topo.BaseTopo().GlobalOptions.SSHType))
 
@@ -54,13 +54,13 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	if topo.BaseTopo().GlobalOptions.TLSEnabled {
 		fmt.Printf("TLS encryption:  %s\n", cyan.Sprint("enabled"))
 		fmt.Printf("CA certificate:     %s\n", cyan.Sprint(
-			m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSCACert),
+			m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
 		))
 		fmt.Printf("Client private key: %s\n", cyan.Sprint(
-			m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSClientKey),
+			m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientKey),
 		))
 		fmt.Printf("Client certificate: %s\n", cyan.Sprint(
-			m.specManager.Path(clusterName, spec.TLSCertKeyDir, spec.TLSClientCert),
+			m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientCert),
 		))
 	}
 
@@ -71,8 +71,8 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	}
 
 	ctx := task.NewContext()
-	err = ctx.SetSSHKeySet(m.specManager.Path(clusterName, "ssh", "id_rsa"),
-		m.specManager.Path(clusterName, "ssh", "id_rsa.pub"))
+	err = ctx.SetSSHKeySet(m.specManager.Path(name, "ssh", "id_rsa"),
+		m.specManager.Path(name, "ssh", "id_rsa.pub"))
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -85,7 +85,7 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 	filterRoles := set.NewStringSet(opt.Roles...)
 	filterNodes := set.NewStringSet(opt.Nodes...)
 	pdList := topo.BaseTopo().MasterList
-	tlsCfg, err := topo.TLSConfig(m.specManager.Path(clusterName, spec.TLSCertKeyDir))
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return err
 	}
@@ -162,7 +162,7 @@ func (m *Manager) Display(clusterName string, opt operator.Options) error {
 		// Check if there is some instance in tombstone state
 		nodes, _ := operator.DestroyTombstone(ctx, t, true /* returnNodesOnly */, opt, tlsCfg)
 		if len(nodes) != 0 {
-			color.Green("There are some nodes can be pruned: \n\tNodes: %+v\n\tYou can destroy them with the command: `tiup cluster prune %s`", nodes, clusterName)
+			color.Green("There are some nodes can be pruned: \n\tNodes: %+v\n\tYou can destroy them with the command: `tiup cluster prune %s`", nodes, name)
 		}
 	}
 

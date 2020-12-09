@@ -74,12 +74,12 @@ func (m *Manager) meta(name string) (metadata spec.Metadata, err error) {
 	return metadata, nil
 }
 
-func (m *Manager) confirmTopology(clusterName, version string, topo spec.Topology, patchedRoles set.StringSet) error {
+func (m *Manager) confirmTopology(name, version string, topo spec.Topology, patchedRoles set.StringSet) error {
 	log.Infof("Please confirm your topology:")
 
 	cyan := color.New(color.FgCyan, color.Bold)
 	fmt.Printf("Cluster type:    %s\n", cyan.Sprint(m.sysName))
-	fmt.Printf("Cluster name:    %s\n", cyan.Sprint(clusterName))
+	fmt.Printf("Cluster name:    %s\n", cyan.Sprint(name))
 	fmt.Printf("Cluster version: %s\n", cyan.Sprint(version))
 	if topo.BaseTopo().GlobalOptions.TLSEnabled {
 		fmt.Printf("TLS encryption:  %s\n", cyan.Sprint("enabled"))
@@ -126,11 +126,11 @@ You may read the OpenJDK doc for a reference: https://openjdk.java.net/install/
 	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 }
 
-func (m *Manager) sshTaskBuilder(clusterName string, topo spec.Topology, user string, opts operator.Options) *task.Builder {
+func (m *Manager) sshTaskBuilder(name string, topo spec.Topology, user string, opts operator.Options) *task.Builder {
 	return task.NewBuilder().
 		SSHKeySet(
-			m.specManager.Path(clusterName, "ssh", "id_rsa"),
-			m.specManager.Path(clusterName, "ssh", "id_rsa.pub"),
+			m.specManager.Path(name, "ssh", "id_rsa"),
+			m.specManager.Path(name, "ssh", "id_rsa.pub"),
 		).
 		ClusterSSH(topo, user, opts.SSHTimeout, opts.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
 }
