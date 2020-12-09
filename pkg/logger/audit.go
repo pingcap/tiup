@@ -44,7 +44,7 @@ func DisableAuditLog() {
 func newAuditLogCore() zapcore.Core {
 	auditBuffer = bytes.NewBufferString(strings.Join(os.Args, " ") + "\n")
 	encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
-	return zapcore.NewCore(encoder, zapcore.Lock(zapcore.AddSync(auditBuffer)), zapcore.InfoLevel)
+	return zapcore.NewCore(encoder, zapcore.Lock(zapcore.AddSync(auditBuffer)), zapcore.DebugLevel)
 }
 
 // OutputAuditLogIfEnabled outputs audit log if enabled.
