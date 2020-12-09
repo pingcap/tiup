@@ -29,91 +29,122 @@ type UpdateMeta struct {
 }
 
 // Execute implements the Task interface
+// the metadata especially the topology is in wide use,
+// the other callers point to this field by a pointer,
+// so we should update the original topology directly, and don't make a copy
 func (u *UpdateMeta) Execute(ctx *Context) error {
-	// make a copy
-	newMeta := &spec.ClusterMeta{}
-	*newMeta = *u.metadata
-	newMeta.Topology = &spec.Specification{
-		GlobalOptions:    u.metadata.Topology.GlobalOptions,
-		MonitoredOptions: u.metadata.Topology.MonitoredOptions,
-		ServerConfigs:    u.metadata.Topology.ServerConfigs,
-	}
-
 	deleted := set.NewStringSet(u.deletedNodesID...)
 	topo := u.metadata.Topology
+
+	tidbServers := make([]spec.TiDBSpec, 0)
 	for i, instance := range (&spec.TiDBComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.TiDBServers = append(newMeta.Topology.TiDBServers, topo.TiDBServers[i])
+		tidbServers = append(tidbServers, topo.TiDBServers[i])
 	}
+	topo.TiDBServers = tidbServers
+
+	tikvServers := make([]spec.TiKVSpec, 0)
 	for i, instance := range (&spec.TiKVComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.TiKVServers = append(newMeta.Topology.TiKVServers, topo.TiKVServers[i])
+		tikvServers = append(tikvServers, topo.TiKVServers[i])
 	}
+	topo.TiKVServers = tikvServers
+
+	pdServers := make([]spec.PDSpec, 0)
 	for i, instance := range (&spec.PDComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.PDServers = append(newMeta.Topology.PDServers, topo.PDServers[i])
+		pdServers = append(pdServers, topo.PDServers[i])
 	}
+	topo.PDServers = pdServers
+
+	tiflashServers := make([]spec.TiFlashSpec, 0)
 	for i, instance := range (&spec.TiFlashComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.TiFlashServers = append(newMeta.Topology.TiFlashServers, topo.TiFlashServers[i])
+		tiflashServers = append(tiflashServers, topo.TiFlashServers[i])
 	}
+	topo.TiFlashServers = tiflashServers
+
+	pumpServers := make([]spec.PumpSpec, 0)
 	for i, instance := range (&spec.PumpComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.PumpServers = append(newMeta.Topology.PumpServers, topo.PumpServers[i])
+		pumpServers = append(pumpServers, topo.PumpServers[i])
 	}
+	topo.PumpServers = pumpServers
+
+	drainerServers := make([]spec.DrainerSpec, 0)
 	for i, instance := range (&spec.DrainerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Drainers = append(newMeta.Topology.Drainers, topo.Drainers[i])
+		drainerServers = append(drainerServers, topo.Drainers[i])
 	}
+	topo.Drainers = drainerServers
+
+	cdcServers := make([]spec.CDCSpec, 0)
 	for i, instance := range (&spec.CDCComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.CDCServers = append(newMeta.Topology.CDCServers, topo.CDCServers[i])
+		cdcServers = append(cdcServers, topo.CDCServers[i])
 	}
+	topo.CDCServers = cdcServers
+
+	tisparkWorkers := make([]spec.TiSparkWorkerSpec, 0)
 	for i, instance := range (&spec.TiSparkWorkerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.TiSparkWorkers = append(newMeta.Topology.TiSparkWorkers, topo.TiSparkWorkers[i])
+		tisparkWorkers = append(tisparkWorkers, topo.TiSparkWorkers[i])
 	}
+	topo.TiSparkWorkers = tisparkWorkers
+
+	tisparkMasters := make([]spec.TiSparkMasterSpec, 0)
 	for i, instance := range (&spec.TiSparkMasterComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.TiSparkMasters = append(newMeta.Topology.TiSparkMasters, topo.TiSparkMasters[i])
+		tisparkMasters = append(tisparkMasters, topo.TiSparkMasters[i])
 	}
+	topo.TiSparkMasters = tisparkMasters
+
+	monitors := make([]spec.PrometheusSpec, 0)
 	for i, instance := range (&spec.MonitorComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Monitors = append(newMeta.Topology.Monitors, topo.Monitors[i])
+		monitors = append(monitors, topo.Monitors[i])
 	}
+	topo.Monitors = monitors
+
+	grafanas := make([]spec.GrafanaSpec, 0)
 	for i, instance := range (&spec.GrafanaComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Grafanas = append(newMeta.Topology.Grafanas, topo.Grafanas[i])
+		grafanas = append(grafanas, topo.Grafanas[i])
 	}
+	topo.Grafanas = grafanas
+
+	alertmanagers := make([]spec.AlertmanagerSpec, 0)
 	for i, instance := range (&spec.AlertManagerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
 		}
-		newMeta.Topology.Alertmanagers = append(newMeta.Topology.Alertmanagers, topo.Alertmanagers[i])
+		alertmanagers = append(alertmanagers, topo.Alertmanagers[i])
 	}
-	return spec.SaveClusterMeta(u.cluster, newMeta)
+	topo.Alertmanagers = alertmanagers
+
+	return spec.SaveClusterMeta(u.cluster, u.metadata)
 }
 
 // Rollback implements the Task interface
