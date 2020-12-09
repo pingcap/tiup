@@ -29,6 +29,7 @@ function cmd_subtest() {
     echo $check_result | grep "os-version"
     echo $check_result | grep "selinux"
     echo $check_result | grep "service"
+    echo $check_result | grep "thp"
 
     # This should fail because there is no such user: tidb
     ! tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa --skip-create-user
