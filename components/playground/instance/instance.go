@@ -27,6 +27,7 @@ type Config struct {
 	BinPath    string
 	Num        int
 	Host       string
+	UpTimeout  int
 }
 
 type instance struct {
