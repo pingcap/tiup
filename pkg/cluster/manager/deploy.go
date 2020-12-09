@@ -219,7 +219,7 @@ func (m *Manager) Deploy(
 	}
 
 	// Download missing component
-	downloadCompTasks = BuildDownloadCompTasks(clusterVersion, topo, m.bindVersion)
+	downloadCompTasks = buildDownloadCompTasks(clusterVersion, topo, m.bindVersion)
 
 	// Deploy components to remote
 	topo.IterInstance(func(inst spec.Instance) {

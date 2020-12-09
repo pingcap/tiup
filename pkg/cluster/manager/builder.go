@@ -127,7 +127,7 @@ func buildScaleOutTask(
 	})
 
 	// Download missing component
-	downloadCompTasks = convertStepDisplaysToTasks(BuildDownloadCompTasks(base.Version, newPart, m.bindVersion))
+	downloadCompTasks = convertStepDisplaysToTasks(buildDownloadCompTasks(base.Version, newPart, m.bindVersion))
 
 	var iterErr error
 	// Deploy the new topology and refresh the configuration
@@ -403,7 +403,7 @@ func buildMonitoredDeployTask(
 	return
 }
 
-func refreshMonitoredConfigTask(
+func buildRefreshMonitoredConfigTasks(
 	specManager *spec.SpecManager,
 	name string,
 	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
@@ -453,8 +453,8 @@ func refreshMonitoredConfigTask(
 	return tasks
 }
 
-func regenConfigTasks(m *Manager, name string, topo spec.Topology, base *spec.BaseMeta, nodes []string) ([]*task.StepDisplay, bool) {
-	var regenConfigTasks []*task.StepDisplay
+func buildRegenConfigTasks(m *Manager, name string, topo spec.Topology, base *spec.BaseMeta, nodes []string) ([]*task.StepDisplay, bool) {
+	var tasks []*task.StepDisplay
 	hasImported := false
 	deletedNodes := set.NewStringSet(nodes...)
 
@@ -504,9 +504,46 @@ func regenConfigTasks(m *Manager, name string, topo spec.Topology, base *spec.Ba
 					Cache:  m.specManager.Path(name, spec.TempConfigPath),
 				},
 			).
-			BuildAsStep(fmt.Sprintf("  - Refresh config %s -> %s", compName, instance.ID()))
-		regenConfigTasks = append(regenConfigTasks, t)
+			BuildAsStep(fmt.Sprintf("  - Regenerate config %s -> %s", compName, instance.ID()))
+		tasks = append(tasks, t)
 	})
 
-	return regenConfigTasks, hasImported
+	return tasks, hasImported
+}
+
+// buildDownloadCompTasks build download component tasks
+func buildDownloadCompTasks(clusterVersion string, topo spec.Topology, bindVersion spec.BindVersion) []*task.StepDisplay {
+	var tasks []*task.StepDisplay
+	uniqueTaskList := set.NewStringSet()
+	topo.IterInstance(func(inst spec.Instance) {
+		key := fmt.Sprintf("%s-%s-%s", inst.ComponentName(), inst.OS(), inst.Arch())
+		if found := uniqueTaskList.Exist(key); !found {
+			uniqueTaskList.Insert(key)
+
+			// we don't set version for tispark, so the lastest tispark will be used
+			var version string
+			if inst.ComponentName() == spec.ComponentTiSpark {
+				// download spark as dependency of tispark
+				tasks = append(tasks, buildDownloadSparkTask(inst))
+			} else {
+				version = bindVersion(inst.ComponentName(), clusterVersion)
+			}
+
+			t := task.NewBuilder().
+				Download(inst.ComponentName(), inst.OS(), inst.Arch(), version).
+				BuildAsStep(fmt.Sprintf("  - Download %s:%s (%s/%s)",
+					inst.ComponentName(), version, inst.OS(), inst.Arch()))
+			tasks = append(tasks, t)
+		}
+	})
+	return tasks
+}
+
+// buildDownloadSparkTask build download task for spark, which is a dependency of tispark
+// FIXME: this is a hack and should be replaced by dependency handling in manifest processing
+func buildDownloadSparkTask(inst spec.Instance) *task.StepDisplay {
+	return task.NewBuilder().
+		Download(spec.ComponentSpark, inst.OS(), inst.Arch(), "").
+		BuildAsStep(fmt.Sprintf("  - Download %s: (%s/%s)",
+			spec.ComponentSpark, inst.OS(), inst.Arch()))
 }
