@@ -26,4 +26,8 @@ var (
 	ErrorMissingOwner = errors.New("owner not found")
 	// ErrorWrongSignature indicates that the signature is not correct
 	ErrorWrongSignature = errors.New("the signature is not correct")
+	// ErrorWrongManifestType indicates that the manifest type is not expected
+	ErrorWrongManifestType = errors.New("the manifest type is not expected")
+	// ErrorWrongManifestVersion indicates that the manifest version is not expected
+	ErrorWrongManifestVersion = errors.New("the manifest version is not expected")
 )

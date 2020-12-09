@@ -14,10 +14,10 @@
 package store
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path"
 	"time"
@@ -25,7 +25,6 @@ import (
 	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
-	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -154,25 +153,23 @@ func (t *localTxn) ReadManifest(filename string, role v1manifest.ValidManifest) 
 	if utils.IsExist(path.Join(t.root, filename)) {
 		filepath = path.Join(t.root, filename)
 	}
-	var wc io.ReadCloser
+	var wc io.Reader
 	file, err := os.Open(filepath)
 	switch {
 	case err == nil:
 		wc = file
+		defer file.Close()
 	case os.IsNotExist(err) && t.store.upstream != "":
 		url := fmt.Sprintf("%s/%s", t.store.upstream, filename)
-		client := http.Client{Timeout: time.Minute}
-		resp, err := client.Get(url)
+		client := utils.NewHTTPClient(time.Minute, nil)
+		body, err := client.Get(url)
 		if err != nil {
-			resp.Body.Close()
 			return nil, errors.Annotatef(err, "fetch %s", url)
 		}
-		wc = resp.Body
+		wc = bytes.NewBuffer(body)
 	default:
-		log.Errorf("Error on read manifest: %s, upstream: %s", err.Error(), t.store.upstream)
-		return nil, errors.Annotate(err, "open file")
+		return nil, errors.Annotatef(err, "error on read manifest: %s, upstream %s", err.Error(), t.store.upstream)
 	}
-	defer wc.Close()
 
 	return v1manifest.ReadNoVerify(wc, role)
 }
