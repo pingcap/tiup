@@ -348,8 +348,8 @@ func (r *V1Repository) updateLocalRoot() error {
 	keyStore := *r.local.KeyStore()
 
 	var newManifest *v1manifest.Manifest
-	var newRoot v1manifest.Root
 	for {
+		var newRoot v1manifest.Root
 		url := FnameWithVersion(v1manifest.ManifestURLRoot, oldRoot.Version+1)
 		nextManifest, err := r.fetchManifestWithKeyStore(url, &newRoot, maxRootSize, &keyStore)
 		if err != nil {
@@ -662,6 +662,26 @@ func (r *V1Repository) loadRoot() (*v1manifest.Root, error) {
 	if !exists {
 		return nil, errors.New("no trusted root in the local manifests")
 	}
+	return root, nil
+}
+
+// FetchRootManfiest fetch the root manifest.
+func (r *V1Repository) FetchRootManfiest() (root *v1manifest.Root, err error) {
+	err = r.ensureManifests()
+	if err != nil {
+		return nil, err
+	}
+
+	root = new(v1manifest.Root)
+	_, exists, err := r.local.LoadManifest(root)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, errors.Errorf("no root manifest")
+	}
+
 	return root, nil
 }
 
