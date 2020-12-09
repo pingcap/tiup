@@ -361,7 +361,7 @@ func (m *model) readRootManifest() (*v1manifest.Manifest, error) {
 	}
 
 	for {
-		file := fmt.Sprintf("%d.%s", root.Signed.Base().Version+1, v1manifest.ManifestFilenameRoot)
+		file := fmt.Sprintf("%d.%s", root.Signed.Base().Version+1, root.Signed.Filename())
 		last, err := m.txn.ReadManifest(file, &v1manifest.Root{})
 		if err != nil {
 			return root, nil

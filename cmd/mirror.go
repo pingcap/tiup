@@ -81,9 +81,9 @@ func newMirrorSignCmd() *cobra.Command {
 	timeout := 10
 
 	cmd := &cobra.Command{
-		Use:   "sign <manifest-file> [key-files]",
+		Use:   "sign <manifest-file>",
 		Short: "Add signatures to a manifest file",
-		Long:  "Add signatures to a manifest file, if no key file specified, the ~/.tiup/keys/private.json will be used",
+		Long:  fmt.Sprintf("Add signatures to a manifest file, if no key file specified, the ~/.tiup/keys/%s will be used", localdata.DefaultPrivateKeyName),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			env := environment.GlobalEnv()
 			if len(args) < 1 {
@@ -91,7 +91,7 @@ func newMirrorSignCmd() *cobra.Command {
 			}
 
 			if privPath == "" {
-				privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
+				privPath = env.Profile().Path(localdata.KeyInfoParentDir, localdata.DefaultPrivateKeyName)
 			}
 
 			if !strings.HasPrefix(args[0], "http") {
@@ -343,7 +343,7 @@ func editLatestRootManifest() (*v1manifest.Root, error) {
 func loadPrivKey(privPath string) (*v1manifest.KeyInfo, error) {
 	env := environment.GlobalEnv()
 	if privPath == "" {
-		privPath = env.Profile().Path(localdata.KeyInfoParentDir, "private.json")
+		privPath = env.Profile().Path(localdata.KeyInfoParentDir, localdata.DefaultPrivateKeyName)
 	}
 
 	// Get the private key

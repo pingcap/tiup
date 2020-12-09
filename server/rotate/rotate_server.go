@@ -12,6 +12,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/fn"
 	"github.com/pingcap/tiup/pkg/cliutil/progress"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 )
 
@@ -59,11 +60,6 @@ func (s *statusRender) stop() {
 
 // Serve starts a temp server for receiving signatures from administrators
 func Serve(addr string, root *v1manifest.Root) (*v1manifest.Manifest, error) {
-	payload, err := cjson.Marshal(root)
-	if err != nil {
-		return nil, fn.ErrorWithStatusCode(errors.Annotate(err, "marshal root manifest"), http.StatusInternalServerError)
-	}
-
 	r := mux.NewRouter()
 
 	r.Handle("/rotate/root.json", fn.Wrap(func() (*v1manifest.Manifest, error) {
@@ -73,6 +69,9 @@ func Serve(addr string, root *v1manifest.Root) (*v1manifest.Manifest, error) {
 	sigCh := make(chan v1manifest.Signature)
 	r.Handle("/rotate/root.json", fn.Wrap(func(m *v1manifest.RawManifest) (*v1manifest.Manifest /* always nil */, error) {
 		for _, sig := range m.Signatures {
+			if err := verifySig(sig, root); err != nil {
+				return nil, err
+			}
 			sigCh <- sig
 		}
 		return nil, nil
@@ -80,9 +79,8 @@ func Serve(addr string, root *v1manifest.Root) (*v1manifest.Manifest, error) {
 
 	srv := &http.Server{Addr: addr, Handler: r}
 	go func() {
-		err = srv.ListenAndServe()
-		if err == http.ErrServerClosed {
-			err = nil
+		if err := srv.ListenAndServe(); err != nil {
+			log.Errorf("server closed: %s", err.Error())
 		}
 		close(sigCh)
 	}()
@@ -93,15 +91,6 @@ func Serve(addr string, root *v1manifest.Root) (*v1manifest.Manifest, error) {
 
 SIGLOOP:
 	for sig := range sigCh {
-		k := root.Roles[v1manifest.ManifestTypeRoot].Keys[sig.KeyID]
-		if k == nil {
-			// Received a signature signed by an invalid key
-			continue
-		}
-		if err := k.Verify(payload, sig.Sig); err != nil {
-			// Received an invalid signature
-			continue
-		}
 		for _, s := range manifest.Signatures {
 			if s.KeyID == sig.KeyID {
 				// Duplicate signature
@@ -117,7 +106,25 @@ SIGLOOP:
 	}
 
 	if len(manifest.Signatures) != len(root.Roles[v1manifest.ManifestTypeRoot].Keys) {
-		return nil, err
+		return nil, errors.New("no enough signature collected before server shutdown")
 	}
 	return manifest, nil
+}
+
+func verifySig(sig v1manifest.Signature, root *v1manifest.Root) error {
+	payload, err := cjson.Marshal(root)
+	if err != nil {
+		return fn.ErrorWithStatusCode(errors.Annotate(err, "marshal root manifest"), http.StatusInternalServerError)
+	}
+
+	k := root.Roles[v1manifest.ManifestTypeRoot].Keys[sig.KeyID]
+	if k == nil {
+		// Received a signature signed by an invalid key
+		return fn.ErrorWithStatusCode(errors.New("the key is not valid"), http.StatusNotAcceptable)
+	}
+	if err := k.Verify(payload, sig.Sig); err != nil {
+		// Received an invalid signature
+		return fn.ErrorWithStatusCode(errors.New("the signature is not valid"), http.StatusNotAcceptable)
+	}
+	return nil
 }
