@@ -353,7 +353,7 @@ func (m *model) readSnapshotManifest() (*v1manifest.Manifest, error) {
 	return m.txn.ReadManifest(v1manifest.ManifestFilenameSnapshot, &v1manifest.Snapshot{})
 }
 
-// readRootManifest returns newest root.json
+// readRootManifest returns the latest root.json
 func (m *model) readRootManifest() (*v1manifest.Manifest, error) {
 	root, err := m.txn.ReadManifest(v1manifest.ManifestFilenameRoot, &v1manifest.Root{})
 	if err != nil {

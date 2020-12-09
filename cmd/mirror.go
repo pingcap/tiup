@@ -297,7 +297,7 @@ func newMirrorRotateCmd() *cobra.Command {
 			return environment.GlobalEnv().V1Repository().Mirror().Rotate(manifest)
 		},
 	}
-	cmd.Flags().StringVarP(&addr, "addr", "", addr, "listen address of rotate server")
+	cmd.Flags().StringVarP(&addr, "addr", "", addr, "listen address:port when starting the temp server for rotating")
 
 	return cmd
 }
