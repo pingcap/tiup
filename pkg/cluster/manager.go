@@ -1592,7 +1592,7 @@ func (m *Manager) ScaleOut(
 	return nil
 }
 
-// DestroyTombstone destory and remove instances that is in tombstone state
+// DestroyTombstone destroy and remove instances that is in tombstone state
 func (m *Manager) DestroyTombstone(
 	clusterName string,
 	gOpt operator.Options,
