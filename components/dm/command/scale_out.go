@@ -16,14 +16,14 @@ package command
 import (
 	"path/filepath"
 
-	"github.com/pingcap/tiup/pkg/cluster"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/manager"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 func newScaleOutCmd() *cobra.Command {
-	opt := cluster.ScaleOutOptions{
+	opt := manager.ScaleOutOptions{
 		IdentityFile: filepath.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
@@ -43,7 +43,7 @@ func newScaleOutCmd() *cobra.Command {
 			clusterName := args[0]
 			topoFile := args[1]
 
-			return manager.ScaleOut(
+			return cm.ScaleOut(
 				clusterName,
 				topoFile,
 				nil,

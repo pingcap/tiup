@@ -22,9 +22,9 @@ import (
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/tiup/components/dm/spec"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/flags"
+	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	cspec "github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/colorutil"
@@ -47,7 +47,7 @@ var (
 )
 
 var dmspec *cspec.SpecManager
-var manager *cluster.Manager
+var cm *manager.Manager
 
 func init() {
 	logger.InitGlobalLogger()
@@ -78,7 +78,7 @@ func init() {
 
 			dmspec = spec.GetSpecManager()
 			logger.EnableAuditLog(cspec.AuditDir())
-			manager = cluster.NewManager("dm", dmspec, spec.DMComponentVersion)
+			cm = manager.NewManager("dm", dmspec, spec.DMComponentVersion)
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.
 			env, err = tiupmeta.InitEnv(repository.Options{

@@ -18,15 +18,15 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/manager"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
 )
 
 func newDeployCmd() *cobra.Command {
-	opt := cluster.DeployOptions{
+	opt := manager.DeployOptions{
 		IdentityFile: path.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
@@ -56,7 +56,7 @@ func newDeployCmd() *cobra.Command {
 				return err
 			}
 
-			return manager.Deploy(
+			return cm.Deploy(
 				clusterName,
 				version,
 				topoFile,

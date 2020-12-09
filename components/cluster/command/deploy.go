@@ -19,8 +19,8 @@ import (
 	"path"
 
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -45,7 +45,7 @@ var (
 )
 
 func newDeploy() *cobra.Command {
-	opt := cluster.DeployOptions{
+	opt := manager.DeployOptions{
 		IdentityFile: path.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
@@ -77,7 +77,7 @@ func newDeploy() *cobra.Command {
 				teleTopology = string(data)
 			}
 
-			return manager.Deploy(
+			return cm.Deploy(
 				clusterName,
 				version,
 				topoFile,

@@ -31,7 +31,7 @@ func newUpgradeCmd() *cobra.Command {
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			teleCommand = append(teleCommand, version)
 
-			return manager.Upgrade(clusterName, version, gOpt, skipConfirm)
+			return cm.Upgrade(clusterName, version, gOpt, skipConfirm)
 		},
 	}
 	cmd.Flags().BoolVar(&gOpt.Force, "force", false, "Force upgrade without transferring PD leader")

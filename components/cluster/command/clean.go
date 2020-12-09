@@ -50,7 +50,7 @@ You can retain some nodes and roles data when cleanup the cluster, eg:
 				return cmd.Help()
 			}
 
-			return manager.CleanCluster(clusterName, gOpt, cleanOpt, skipConfirm)
+			return cm.CleanCluster(clusterName, gOpt, cleanOpt, skipConfirm)
 		},
 	}
 

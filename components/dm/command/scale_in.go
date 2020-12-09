@@ -51,7 +51,7 @@ func newScaleInCmd() *cobra.Command {
 				).Serial(dmtask.NewUpdateDMMeta(clusterName, metadata, gOpt.Nodes))
 			}
 
-			return manager.ScaleIn(clusterName, skipConfirm, gOpt, scale)
+			return cm.ScaleIn(clusterName, skipConfirm, gOpt, scale)
 		},
 	}
 

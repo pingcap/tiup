@@ -47,7 +47,7 @@ func newScaleInCmd() *cobra.Command {
 					UpdateTopology(clusterName, tidbSpec.Path(clusterName), metadata, nodes)
 			}
 
-			return manager.ScaleIn(clusterName, skipConfirm, gOpt, scale)
+			return cm.ScaleIn(clusterName, skipConfirm, gOpt, scale)
 		},
 	}
 

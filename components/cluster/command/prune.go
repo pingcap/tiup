@@ -28,7 +28,7 @@ func newPruneCmd() *cobra.Command {
 
 			clusterName := args[0]
 
-			return manager.DestroyTombstone(clusterName, gOpt, skipConfirm)
+			return cm.DestroyTombstone(clusterName, gOpt, skipConfirm)
 		},
 	}
 

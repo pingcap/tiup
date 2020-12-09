@@ -21,8 +21,8 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/dm/ansible"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster"
 	cansible "github.com/pingcap/tiup/pkg/cluster/ansible"
+	"github.com/pingcap/tiup/pkg/cluster/manager"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -90,11 +90,11 @@ func newImportCmd() *cobra.Command {
 				}
 			}
 
-			err = manager.Deploy(
+			err = cm.Deploy(
 				clusterName,
 				clusterVersion,
 				f.Name(),
-				cluster.DeployOptions{
+				manager.DeployOptions{
 					IdentityFile: cansible.SSHKeyPath(),
 					User:         tiuputils.CurrentUser(),
 				},

@@ -67,7 +67,7 @@ func newDisplayCmd() *cobra.Command {
 				return displayDashboardInfo(clusterName, tlsCfg)
 			}
 
-			return manager.Display(clusterName, gOpt)
+			return cm.Display(clusterName, gOpt)
 		},
 	}
 
