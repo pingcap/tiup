@@ -208,6 +208,9 @@ func (inst *TiFlashInstance) StoreAddr() string {
 }
 
 func (inst *TiFlashInstance) checkConfig(deployDir, clusterManagerPath string, version pkgver.Version, tidbStatusAddrs, endpoints []string) error {
+	if err := os.MkdirAll(inst.Dir, 0755); err != nil {
+		return errors.Trace(err)
+	}
 	if inst.ConfigPath == "" {
 		inst.ConfigPath = path.Join(inst.Dir, "tiflash.toml")
 	}
