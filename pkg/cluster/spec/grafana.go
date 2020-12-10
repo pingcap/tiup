@@ -201,7 +201,7 @@ func (i *GrafanaInstance) InitConfig(
 func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, paths meta.DirPaths, clusterName string) error {
 	dashboardsDir := filepath.Join(paths.Deploy, "dashboards")
 	// To make this step idempotent, we need cleanup old dashboards first
-	cmd := fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*.json", dashboardsDir)
+	cmd := fmt.Sprintf(`mkdir -p %[1]s && rm -f "%[1]s/*.json"`, dashboardsDir)
 	if _, stderr, err := e.Execute(cmd, false); err != nil {
 		return errors.Annotatef(err, "cleanup old dashboards: %s, cmd: %s", string(stderr), cmd)
 	}
@@ -212,7 +212,7 @@ func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, 
 		})
 	}
 
-	cmd = fmt.Sprintf("cp %[1]s/bin/*.json %[1]s/dashboards/", paths.Deploy)
+	cmd = fmt.Sprintf(`cp "%[1]s/bin/*.json" %[1]s/dashboards/`, paths.Deploy)
 	if _, _, err := e.Execute(cmd, false); err != nil {
 		return errors.Annotatef(err, "execute command failed: %s", err)
 	}
@@ -265,12 +265,12 @@ func (i *GrafanaInstance) installDashboards(e executor.Executor, deployDir, clus
 
 	// copy dm-master/scripts/*.json
 	targetDir := filepath.Join(deployDir, "bin")
-	_, stderr, err = e.Execute(fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*.json", targetDir), false)
+	_, stderr, err = e.Execute(fmt.Sprintf(`mkdir -p %[1]s && rm -f "%[1]s/*.json"`, targetDir), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
-	cmd = fmt.Sprintf("cp %s/dm-master/scripts/*.json %s", tmp, targetDir)
+	cmd = fmt.Sprintf(`cp "%s/dm-master/scripts/*.json" %s`, tmp, targetDir)
 	_, stderr, err = e.Execute(cmd, false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))

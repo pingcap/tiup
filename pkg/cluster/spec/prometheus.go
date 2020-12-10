@@ -297,12 +297,15 @@ func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVe
 
 	// copy dm-master/conf/*.rules.yml
 	targetDir := filepath.Join(deployDir, "bin", "prometheus")
-	_, stderr, err = e.Execute(fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*.rules.yml", targetDir), false)
+	_, stderr, err = e.Execute(fmt.Sprintf(`mkdir -p %[1]s && rm -f "%[1]s/*.rules.yml"`, targetDir), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
-	cmd = fmt.Sprintf("cp %s/dm-master/conf/*.rules.yml %s", tmp, targetDir)
+	// in zsh, if a wildcard pattern doesn't match any file, you'll get an error,
+	// use quote to prevent this.
+	// ref https://github.com/pingcap/tiup/issues/974#issuecomment-740462495
+	cmd = fmt.Sprintf(`cp "%s/dm-master/conf/*.rules.yml" %s`, tmp, targetDir)
 	_, stderr, err = e.Execute(cmd, false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
@@ -319,7 +322,7 @@ func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVe
 
 func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, paths meta.DirPaths) error {
 	// To make this step idempotent, we need cleanup old rules first
-	if _, _, err := e.Execute(fmt.Sprintf("rm -f %s/*.rules.yml", path.Join(paths.Deploy, "conf")), false); err != nil {
+	if _, _, err := e.Execute(fmt.Sprintf(`rm -f "%s/*.rules.yml"`, path.Join(paths.Deploy, "conf")), false); err != nil {
 		return err
 	}
 
@@ -330,7 +333,7 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 	}
 
 	// Use the default ones
-	cmd := fmt.Sprintf("cp %[1]s/bin/prometheus/*.rules.yml %[1]s/conf/", paths.Deploy)
+	cmd := fmt.Sprintf(`cp "%[1]s/bin/prometheus/*.rules.yml" %[1]s/conf/`, paths.Deploy)
 	if _, _, err := e.Execute(cmd, false); err != nil {
 		return err
 	}
