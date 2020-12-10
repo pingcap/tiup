@@ -297,7 +297,8 @@ func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVe
 
 	// copy dm-master/conf/*.rules.yml
 	targetDir := filepath.Join(deployDir, "bin", "prometheus")
-	_, stderr, err = e.Execute(fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*.rules.yml", targetDir), false)
+	// ignore the `not_match` error if files were not found in zsh
+	_, stderr, err = e.Execute(fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*.rules.yml || exit 0", targetDir), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
@@ -319,7 +320,8 @@ func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVe
 
 func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, paths meta.DirPaths) error {
 	// To make this step idempotent, we need cleanup old rules first
-	if _, _, err := e.Execute(fmt.Sprintf("rm -f %s/*.rules.yml", path.Join(paths.Deploy, "conf")), false); err != nil {
+	// ignore the `not_match` error if files were not found in zsh
+	if _, _, err := e.Execute(fmt.Sprintf("rm -f %s/*.rules.yml || exit 0", path.Join(paths.Deploy, "conf")), false); err != nil {
 		return err
 	}
 

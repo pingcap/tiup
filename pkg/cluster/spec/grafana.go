@@ -201,7 +201,8 @@ func (i *GrafanaInstance) InitConfig(
 func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, paths meta.DirPaths, clusterName string) error {
 	dashboardsDir := filepath.Join(paths.Deploy, "dashboards")
 	// To make this step idempotent, we need cleanup old dashboards first
-	cmd := fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*.json", dashboardsDir)
+	// ignore the `not_match` error if files were not found in zsh
+	cmd := fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*.json || exit 0", dashboardsDir)
 	if _, stderr, err := e.Execute(cmd, false); err != nil {
 		return errors.Annotatef(err, "cleanup old dashboards: %s, cmd: %s", string(stderr), cmd)
 	}
@@ -265,7 +266,8 @@ func (i *GrafanaInstance) installDashboards(e executor.Executor, deployDir, clus
 
 	// copy dm-master/scripts/*.json
 	targetDir := filepath.Join(deployDir, "bin")
-	_, stderr, err = e.Execute(fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*.json", targetDir), false)
+	// ignore the `not_match` error if files were not found in zsh
+	_, stderr, err = e.Execute(fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*.json || exit 0", targetDir), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
