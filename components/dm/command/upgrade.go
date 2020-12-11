@@ -26,7 +26,7 @@ func newUpgradeCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			return manager.Upgrade(args[0], args[1], gOpt, skipConfirm)
+			return cm.Upgrade(args[0], args[1], gOpt, skipConfirm)
 		},
 	}
 

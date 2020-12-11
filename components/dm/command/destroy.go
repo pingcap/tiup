@@ -30,7 +30,7 @@ func newDestroyCmd() *cobra.Command {
 
 			clusterName := args[0]
 
-			return manager.DestroyCluster(clusterName, gOpt, operator.Options{}, skipConfirm)
+			return cm.DestroyCluster(clusterName, gOpt, operator.Options{}, skipConfirm)
 		},
 	}
 

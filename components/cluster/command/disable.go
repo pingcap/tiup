@@ -33,7 +33,7 @@ func newDisableCmd() *cobra.Command {
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			return manager.EnableCluster(clusterName, gOpt, false)
+			return cm.EnableCluster(clusterName, gOpt, false)
 		},
 	}
 

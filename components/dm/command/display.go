@@ -31,7 +31,7 @@ func newDisplayCmd() *cobra.Command {
 
 			clusterName = args[0]
 
-			return manager.Display(clusterName, gOpt)
+			return cm.Display(clusterName, gOpt)
 		},
 	}
 
