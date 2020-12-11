@@ -65,7 +65,7 @@ func (m *Manager) ScaleIn(
 		!errors.Is(perrs.Cause(err), spec.ErrMultipleTisparkWorker) {
 		// ignore conflict check error, node may be deployed by former version
 		// that lack of some certain conflict checks
-		return perrs.AddStack(err)
+		return err
 	}
 
 	topo := metadata.GetTopology()

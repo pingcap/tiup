@@ -28,7 +28,7 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart bool) er
 
 	metadata, err := m.meta(name)
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	topo := metadata.GetTopology()
@@ -58,7 +58,7 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart bool) er
 	// handle dir scheme changes
 	if hasImported {
 		if err := spec.HandleImportPathMigration(name); err != nil {
-			return perrs.AddStack(err)
+			return err
 		}
 	}
 

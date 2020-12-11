@@ -47,7 +47,7 @@ func newDisplayCmd() *cobra.Command {
 
 			exist, err := tidbSpec.Exist(clusterName)
 			if err != nil {
-				return perrs.AddStack(err)
+				return err
 			}
 
 			if !exist {
@@ -57,12 +57,12 @@ func newDisplayCmd() *cobra.Command {
 			metadata, err := spec.ClusterMetadata(clusterName)
 			if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 				!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-				return perrs.AddStack(err)
+				return err
 			}
 			if showDashboardOnly {
 				tlsCfg, err := metadata.Topology.TLSConfig(tidbSpec.Path(clusterName, spec.TLSCertKeyDir))
 				if err != nil {
-					return perrs.AddStack(err)
+					return err
 				}
 				return displayDashboardInfo(clusterName, tlsCfg)
 			}

@@ -272,7 +272,7 @@ func RestartComponent(getter ExecutorGetter, instances []spec.Instance, timeout 
 	for _, ins := range instances {
 		err := restartInstance(getter, ins, timeout)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 
@@ -387,7 +387,7 @@ func EnableComponent(getter ExecutorGetter, instances []spec.Instance, options O
 		errg.Go(func() error {
 			err := enableInstance(getter, ins, options.OptTimeout, isEnable)
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 			return nil
 		})
@@ -461,7 +461,7 @@ func StartComponent(getter ExecutorGetter, instances []spec.Instance, options Op
 			}
 			err := startInstance(getter, ins, options.OptTimeout)
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 			return nil
 		})
@@ -576,7 +576,7 @@ func StopComponent(getter ExecutorGetter, instances []spec.Instance, timeout uin
 		errg.Go(func() error {
 			err := stopInstance(getter, ins, timeout)
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 			return nil
 		})

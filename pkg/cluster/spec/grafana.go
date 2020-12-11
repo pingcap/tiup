@@ -254,7 +254,7 @@ func (i *GrafanaInstance) installDashboards(e executor.Executor, deployDir, clus
 	dstPath := filepath.Join(tmp, filepath.Base(srcPath))
 	err = e.Transfer(srcPath, dstPath, false)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	cmd := fmt.Sprintf(`tar --no-same-owner -zxf %s -C %s && rm %s`, dstPath, tmp, dstPath)

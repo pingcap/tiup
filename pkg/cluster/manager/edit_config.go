@@ -35,7 +35,7 @@ import (
 func (m *Manager) EditConfig(name string, skipConfirm bool) error {
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	topo := metadata.GetTopology()
@@ -47,7 +47,7 @@ func (m *Manager) EditConfig(name string, skipConfirm bool) error {
 
 	newTopo, err := m.editTopo(topo, data, skipConfirm)
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	if newTopo == nil {
@@ -89,7 +89,7 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool
 
 	err = utils.OpenFileInEditor(name)
 	if err != nil {
-		return nil, perrs.AddStack(err)
+		return nil, err
 	}
 
 	// Now user finish editing the file.

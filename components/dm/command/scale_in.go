@@ -143,13 +143,13 @@ func ScaleInDMCluster(
 				name := instance.(*dm.MasterInstance).Name
 				err := dmMasterClient.OfflineMaster(name, nil)
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 			case dm.ComponentDMWorker:
 				name := instance.(*dm.WorkerInstance).Name
 				err := dmMasterClient.OfflineWorker(name, nil)
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 			}
 

@@ -211,7 +211,7 @@ func (s *SignedBase) isValid(filename string) error {
 	// This checking should be done by the update root flow.
 	if s.Ty != ManifestTypeRoot {
 		if err := CheckExpiry(filename, s.Expires); err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 

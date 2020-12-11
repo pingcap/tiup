@@ -116,7 +116,7 @@ func (p *Playground) handleDisplay(r io.Writer) (err error) {
 	})
 
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	t.Print()
@@ -257,7 +257,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 		return nil
 	})
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	if inst == nil {
@@ -272,7 +272,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				inst := p.pds[i]
 				err := p.pdClient().DelPD(inst.Name(), timeoutOpt)
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 				p.pds = append(p.pds[:i], p.pds[i+1:]...)
 			}
@@ -283,7 +283,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				inst := p.tikvs[i]
 				err := p.pdClient().DelStore(inst.Addr(), timeoutOpt)
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 
 				go p.killKVIfTombstone(inst)
@@ -309,7 +309,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				inst := p.tiflashs[i]
 				err := p.pdClient().DelStore(inst.Addr(), timeoutOpt)
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 
 				go p.killTiFlashIfTombstone(inst)
@@ -324,11 +324,11 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 
 				c, err := p.binlogClient()
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 				err = c.OfflinePump(inst.Addr())
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 
 				go p.removePumpWhenTombstone(c, inst)
@@ -343,11 +343,11 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 
 				c, err := p.binlogClient()
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 				err = c.OfflineDrainer(inst.Addr())
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 
 				go p.removeDrainerWhenTombstone(c, inst)
@@ -416,7 +416,7 @@ func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) 
 	fmt.Printf("Start %s instance\n", inst.Component())
 	err := inst.Start(ctx, pkgver.Version(p.bootOptions.version))
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 	p.addWaitInstance(inst)
 	return nil
@@ -449,12 +449,12 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 	}
 	inst, err := p.addInstance(cmd.ComponentID, cmd.Config)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	err = p.startInstance(context.Background(), inst)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	logIfErr(p.renderSDFile())
@@ -523,7 +523,7 @@ func (p *Playground) RWalkInstances(fn func(componentID string, ins instance.Ins
 	for i := len(ids); i > 0; i-- {
 		err := fn(ids[i-1], instances[i-1])
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 	return nil
@@ -534,48 +534,48 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 	for _, ins := range p.pds {
 		err := fn("pd", ins)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 	for _, ins := range p.tikvs {
 		err := fn("tikv", ins)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 
 	for _, ins := range p.pumps {
 		err := fn("pump", ins)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 
 	for _, ins := range p.tidbs {
 		err := fn("tidb", ins)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 
 	for _, ins := range p.ticdcs {
 		err := fn("ticdc", ins)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 
 	for _, ins := range p.drainers {
 		err := fn("drainer", ins)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 
 	for _, ins := range p.tiflashs {
 		err := fn("tiflash", ins)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 	return nil
@@ -712,7 +712,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		for i := 0; i < inst.Num; i++ {
 			_, err := p.addInstance(inst.comp, inst.Config)
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 		}
 	}
@@ -725,7 +725,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		p.monitor, monitorInfo, err = p.bootMonitor(ctx, env)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 
 		p.instanceWaiter.Go(func() error {
@@ -740,7 +740,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		p.grafana, err = p.bootGrafana(ctx, env, monitorInfo)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 
 		p.instanceWaiter.Go(func() error {
@@ -780,7 +780,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		return nil
 	})
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	p.booted = true
@@ -918,7 +918,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 func (p *Playground) wait() error {
 	err := p.instanceWaiter.Wait()
 	if err != nil && atomic.LoadInt32(&p.curSig) == 0 {
-		return errors.AddStack(err)
+		return err
 	}
 
 	return nil
@@ -975,7 +975,7 @@ func (p *Playground) renderSDFile() error {
 
 	err := p.monitor.renderSDFile(cid2targets)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	return nil
@@ -1010,7 +1010,7 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 	monitor.cmd.Stdout = os.Stdout
 
 	if err := monitor.cmd.Start(); err != nil {
-		return nil, nil, errors.AddStack(err)
+		return nil, nil, err
 	}
 
 	return monitor, monitorInfo, nil
@@ -1021,11 +1021,11 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 	// set up grafana
 	options := p.bootOptions
 	if err := installIfMissing(env.Profile(), "grafana", options.version); err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 	installPath, err := env.Profile().ComponentInstalledPath("grafana", pkgver.Version(options.version))
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	dataDir := p.dataDir
@@ -1057,19 +1057,19 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 		return nil
 	})
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	err = replaceDatasource(dashboardDir, clusterName)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	grafana := newGrafana(options.version, options.host)
 	// fmt.Println("Start Grafana instance...")
 	err = grafana.start(ctx, grafanaDir, fmt.Sprintf("http://%s:%d", monitorInfo.IP, monitorInfo.Port))
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	return grafana, nil

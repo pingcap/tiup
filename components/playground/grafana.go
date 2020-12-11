@@ -54,7 +54,7 @@ func newGrafana(version string, host string) *grafana {
 func writeDatasourceConfig(fname string, clusterName string, p8sURL string) error {
 	err := makeSureDir(fname)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	tpl := `apiVersion: 1
@@ -100,7 +100,7 @@ func replaceDatasource(dashboardDir string, datasourceName string) error {
 
 		data, err := ioutil.ReadFile(path)
 		if err != nil {
-			return err
+			return errors.AddStack(err)
 		}
 
 		s := string(data)
@@ -113,7 +113,7 @@ func replaceDatasource(dashboardDir string, datasourceName string) error {
 	})
 
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	return nil
@@ -122,7 +122,7 @@ func replaceDatasource(dashboardDir string, datasourceName string) error {
 func writeDashboardConfig(fname string, clusterName string, dir string) error {
 	err := makeSureDir(fname)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	tpl := `apiVersion: 1
@@ -157,19 +157,19 @@ var clusterName string = "playground"
 func (g *grafana) start(ctx context.Context, dir string, p8sURL string) (err error) {
 	g.port, err = utils.GetFreePort(g.host, 3000)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	fname := filepath.Join(dir, "conf", "provisioning", "dashboards", "dashboard.yml")
 	err = writeDashboardConfig(fname, clusterName, filepath.Join(dir, "dashboards"))
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	fname = filepath.Join(dir, "conf", "provisioning", "datasources", "datasource.yml")
 	err = writeDatasourceConfig(fname, clusterName, p8sURL)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	tpl := `
@@ -214,7 +214,7 @@ http_port = %d
 	}
 	cmd, err := tiupexec.PrepareCommand(params)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 	cmd.Stdout = nil
 	cmd.Stderr = nil

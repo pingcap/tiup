@@ -135,7 +135,7 @@ func (dm *DMMasterClient) GetMaster(name string) (isFound bool, isActive bool, i
 
 	if err != nil {
 		zap.L().Error("get dm master status failed", zap.Error(err))
-		return false, false, false, errors.AddStack(err)
+		return false, false, false, err
 	}
 
 	for _, member := range memberResp.GetMembers() {
@@ -201,7 +201,7 @@ func (dm *DMMasterClient) GetLeader(retryOpt *utils.RetryOption) (string, error)
 
 	if err := utils.Retry(func() error {
 		memberResp, err = dm.getMember(endpoints)
-		return errors.AddStack(err)
+		return err
 	}, *retryOpt); err != nil {
 		return "", err
 	}
@@ -228,7 +228,7 @@ func (dm *DMMasterClient) GetRegisteredMembers() ([]string, []string, error) {
 
 	if err != nil {
 		zap.L().Error("get dm master status failed", zap.Error(err))
-		return registeredMasters, registeredWorkers, errors.AddStack(err)
+		return registeredMasters, registeredWorkers, err
 	}
 
 	for _, member := range memberResp.Members {

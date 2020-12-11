@@ -76,7 +76,7 @@ func searchConfigFile(dir string) (fname string, err error) {
 func readConfigFile(dir string) (file *ini.File, err error) {
 	fname, err := searchConfigFile(dir)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	file, err = ini.Load(fname)
@@ -205,7 +205,7 @@ func setConfig(config *map[string]interface{}, k string, v interface{}) {
 func (im *Importer) handleWorkerConfig(srv *spec.WorkerSpec, fname string) error {
 	data, err := im.fetchFile(srv.Host, srv.SSHPort, fname)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	config := new(Config)
@@ -255,7 +255,7 @@ func (im *Importer) ScpSourceToMaster(topo *spec.Specification) (err error) {
 
 			err = e.Transfer(f.Name(), filepath.Join(target, addr+".yml"), false)
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 		}
 	}
@@ -278,7 +278,7 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 
 	cfg, err := readConfigFile(dir)
 	if err != nil {
-		return "", nil, errors.AddStack(err)
+		return "", nil, err
 	}
 
 	fname := filepath.Join(dir, inventoryFileName)
@@ -336,11 +336,11 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_dm-master.sh")
 				data, err := im.fetchFile(srv.Host, srv.SSHPort, runFileName)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 				deployDir, flags, err := parseRunScript(data)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 
 				if deployDir == "" {
@@ -384,11 +384,11 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_dm-worker.sh")
 				data, err := im.fetchFile(srv.Host, srv.SSHPort, runFileName)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 				deployDir, flags, err := parseRunScript(data)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 
 				if deployDir == "" {
@@ -427,7 +427,7 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 
 				err = im.handleWorkerConfig(&srv, configFileName)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 
 				topo.Workers = append(topo.Workers, srv)
@@ -445,12 +445,12 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_prometheus.sh")
 				data, err := im.fetchFile(srv.Host, srv.SSHPort, runFileName)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 
 				deployDir, flags, err := parseRunScript(data)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 
 				if deployDir == "" {
@@ -493,12 +493,12 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_alertmanager.sh")
 				data, err := im.fetchFile(srv.Host, srv.SSHPort, runFileName)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 
 				deployDir, flags, err := parseRunScript(data)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 
 				if deployDir == "" {
@@ -550,11 +550,11 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_grafana.sh")
 				data, err := im.fetchFile(srv.Host, srv.SSHPort, runFileName)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 				_, flags, err := parseRunScript(data)
 				if err != nil {
-					return "", nil, errors.AddStack(err)
+					return "", nil, err
 				}
 
 				for k, v := range flags {

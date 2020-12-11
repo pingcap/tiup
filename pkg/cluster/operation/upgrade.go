@@ -17,7 +17,6 @@ import (
 	"crypto/tls"
 	"strconv"
 
-	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
@@ -56,18 +55,18 @@ func Upgrade(
 			if isRollingInstance {
 				err := rollingInstance.PreRestart(topo, int(options.APITimeout), tlsCfg)
 				if err != nil && !options.Force {
-					return errors.AddStack(err)
+					return err
 				}
 			}
 
 			if err := restartInstance(getter, instance, options.OptTimeout); err != nil && !options.Force {
-				return errors.AddStack(err)
+				return err
 			}
 
 			if isRollingInstance {
 				err := rollingInstance.PostRestart(topo, tlsCfg)
 				if err != nil && !options.Force {
-					return errors.AddStack(err)
+					return err
 				}
 			}
 		}
