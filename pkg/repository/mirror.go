@@ -361,7 +361,7 @@ func (l *httpMirror) Rotate(m *v1manifest.Manifest) error {
 	rotateAddr := fmt.Sprintf("%s/api/v1/rotate", l.Source())
 	data, err := json.Marshal(m)
 	if err != nil {
-		return errors.Annotate(err, "marshal root manfiest")
+		return errors.Annotate(err, "marshal root manifest")
 	}
 
 	client := http.Client{Timeout: time.Minute}

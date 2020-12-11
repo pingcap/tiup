@@ -29,7 +29,7 @@ func newEditConfigCmd() *cobra.Command {
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			return manager.EditConfig(clusterName, skipConfirm)
+			return cm.EditConfig(clusterName, skipConfirm)
 		},
 	}
 

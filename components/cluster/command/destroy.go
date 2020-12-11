@@ -50,7 +50,7 @@ You can retain some nodes and roles data when destroy cluster, eg:
 				}
 			}
 
-			return manager.DestroyCluster(clusterName, gOpt, destoyOpt, skipConfirm)
+			return cm.DestroyCluster(clusterName, gOpt, destoyOpt, skipConfirm)
 		},
 	}
 
