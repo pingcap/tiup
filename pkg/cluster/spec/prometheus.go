@@ -297,20 +297,13 @@ func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVe
 
 	// copy dm-master/conf/*.rules.yml
 	targetDir := filepath.Join(deployDir, "bin", "prometheus")
-	// ignore the `not_match` error if files were not found in zsh
-	_, stderr, err = e.Execute(fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*.rules.yml || exit 0", targetDir), false)
-	if err != nil {
-		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	cmds := []string{
+		"mkdir -p %[1]s",
+		`find %[1]s -type f -name "*.rules.yml" -delete`,
+		"cp %[2]s/dm-master/conf/*.rules.yml %[3]s",
+		"rm -rf %[2]s",
 	}
-
-	cmd = fmt.Sprintf("cp %s/dm-master/conf/*.rules.yml %s", tmp, targetDir)
-	_, stderr, err = e.Execute(cmd, false)
-	if err != nil {
-		return errors.Annotatef(err, "stderr: %s", string(stderr))
-	}
-
-	cmd = fmt.Sprintf("rm -rf %s", tmp)
-	_, stderr, err = e.Execute(cmd, false)
+	_, stderr, err = e.Execute(fmt.Sprintf(strings.Join(cmds, " && "), targetDir, tmp, targetDir), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
@@ -319,22 +312,22 @@ func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVe
 }
 
 func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, paths meta.DirPaths) error {
-	// To make this step idempotent, we need cleanup old rules first
-	// ignore the `not_match` error if files were not found in zsh
-	if _, _, err := e.Execute(fmt.Sprintf("rm -f %s/*.rules.yml || exit 0", path.Join(paths.Deploy, "conf")), false); err != nil {
-		return err
-	}
-
 	if spec.RuleDir != "" {
 		return i.TransferLocalConfigDir(e, spec.RuleDir, path.Join(paths.Deploy, "conf"), func(name string) bool {
 			return strings.HasSuffix(name, ".rules.yml")
 		})
 	}
 
-	// Use the default ones
-	cmd := fmt.Sprintf("cp %[1]s/bin/prometheus/*.rules.yml %[1]s/conf/", paths.Deploy)
-	if _, _, err := e.Execute(cmd, false); err != nil {
-		return err
+	// To make this step idempotent, we need cleanup old rules first
+	targetDir := path.Join(paths.Deploy, "conf")
+	cmds := []string{
+		"mkdir -p %[1]s",
+		`find %[1]s -type f -name "*.rules.yml" -delete`,
+		`cp %[2]s/bin/prometheus/*.rules.yml %[2]s/conf/`,
+	}
+	_, stderr, err := e.Execute(fmt.Sprintf(strings.Join(cmds, " && "), targetDir, paths.Deploy), false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
 	return nil
