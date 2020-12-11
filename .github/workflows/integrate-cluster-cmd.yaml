@@ -60,7 +60,6 @@ jobs:
         run: |
           # should not use -it
           # ref: https://stackoverflow.com/questions/43099116/error-the-input-device-is-not-a-tty
-          docker exec tiup-cluster-n1 /bin/bash -c "apt install -y zsh && sed -i '/tidb/s/bash/zsh/g' /etc/passwd"
           docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/run.sh ${{ matrix.cases }}
 
       - name: Collect component log
