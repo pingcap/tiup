@@ -71,8 +71,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	}
 
 	ctx := task.NewContext()
-	err = ctx.SetSSHKeySet(m.specManager.Path(name, "ssh", "id_rsa"),
-		m.specManager.Path(name, "ssh", "id_rsa.pub"))
+	err = ctx.SetSSHKeySet(m.specManager.Path(name, "ssh", "id_rsa"), m.specManager.Path(name, "ssh", "id_rsa.pub"))
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -89,51 +88,80 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	if err != nil {
 		return err
 	}
-	for _, comp := range topo.ComponentsByStartOrder() {
-		for _, ins := range comp.Instances() {
-			// apply role filter
-			if len(filterRoles) > 0 && !filterRoles.Exist(ins.Role()) {
-				continue
-			}
-			// apply node filter
-			if len(filterNodes) > 0 && !filterNodes.Exist(ins.ID()) {
-				continue
-			}
 
-			dataDir := "-"
-			insDirs := ins.UsedDirs()
-			deployDir := insDirs[0]
-			if len(insDirs) > 1 {
-				dataDir = insDirs[1]
-			}
+	pdActive := make([]string, 0)
+	pdStatus := make(map[string]string)
 
-			status := ins.Status(tlsCfg, pdList...)
-			// Query the service status
-			if status == "-" {
-				e, found := ctx.GetExecutor(ins.GetHost())
-				if found {
-					active, _ := operator.GetServiceStatus(e, ins.ServiceName())
-					if parts := strings.Split(strings.TrimSpace(active), " "); len(parts) > 2 {
-						if parts[1] == "active" {
-							status = "Up"
-						} else {
-							status = parts[1]
-						}
+	topo.IterInstance(func(ins spec.Instance) {
+		if ins.ComponentName() != spec.ComponentPD {
+			return
+		}
+		status := ins.Status(tlsCfg, pdList...)
+		if strings.HasPrefix(status, "Up") {
+			instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
+			pdActive = append(pdActive, instAddr)
+		}
+		pdStatus[ins.ID()] = status
+	})
+
+	var dashboardAddr string
+	if t, ok := topo.(*spec.Specification); ok {
+		dashboardAddr, _ = t.GetDashboardAddress(tlsCfg, pdActive...)
+	}
+
+	topo.IterInstance(func(ins spec.Instance) {
+		// apply role filter
+		if len(filterRoles) > 0 && !filterRoles.Exist(ins.Role()) {
+			return
+		}
+		// apply node filter
+		if len(filterNodes) > 0 && !filterNodes.Exist(ins.ID()) {
+			return
+		}
+
+		dataDir := "-"
+		insDirs := ins.UsedDirs()
+		deployDir := insDirs[0]
+		if len(insDirs) > 1 {
+			dataDir = insDirs[1]
+		}
+
+		var status string
+		if ins.ComponentName() == spec.ComponentPD {
+			status = pdStatus[ins.ID()]
+			instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
+			if dashboardAddr == instAddr {
+				status += "|UI"
+			}
+		} else {
+			status = ins.Status(tlsCfg, pdActive...)
+		}
+
+		// Query the service status
+		if status == "-" {
+			e, found := ctx.GetExecutor(ins.GetHost())
+			if found {
+				active, _ := operator.GetServiceStatus(e, ins.ServiceName())
+				if parts := strings.Split(strings.TrimSpace(active), " "); len(parts) > 2 {
+					if parts[1] == "active" {
+						status = "Up"
+					} else {
+						status = parts[1]
 					}
 				}
 			}
-			clusterTable = append(clusterTable, []string{
-				color.CyanString(ins.ID()),
-				ins.Role(),
-				ins.GetHost(),
-				utils.JoinInt(ins.UsedPorts(), "/"),
-				cliutil.OsArch(ins.OS(), ins.Arch()),
-				formatInstanceStatus(status),
-				dataDir,
-				deployDir,
-			})
 		}
-	}
+		clusterTable = append(clusterTable, []string{
+			color.CyanString(ins.ID()),
+			ins.Role(),
+			ins.GetHost(),
+			utils.JoinInt(ins.UsedPorts(), "/"),
+			cliutil.OsArch(ins.OS(), ins.Arch()),
+			formatInstanceStatus(status),
+			dataDir,
+			deployDir,
+		})
+	})
 
 	// Sort by role,host,ports
 	sort.Slice(clusterTable[1:], func(i, j int) bool {
@@ -152,7 +180,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 
 	if t, ok := topo.(*spec.Specification); ok {
 		// Check if TiKV's label set correctly
-		pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
+		pdClient := api.NewPDClient(pdActive, 10*time.Second, tlsCfg)
 		if lbs, err := pdClient.GetLocationLabels(); err != nil {
 			log.Debugf("get location labels from pd failed: %v", err)
 		} else if err := spec.CheckTiKVLabels(lbs, pdClient); err != nil {
