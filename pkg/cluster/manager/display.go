@@ -45,14 +45,14 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	base := metadata.GetBaseMeta()
 	// display cluster meta
 	cyan := color.New(color.FgCyan, color.Bold)
-	fmt.Printf("Cluster type:    %s\n", cyan.Sprint(m.sysName))
-	fmt.Printf("Cluster name:    %s\n", cyan.Sprint(name))
-	fmt.Printf("Cluster version: %s\n", cyan.Sprint(base.Version))
-	fmt.Printf("SSH type:        %s\n", cyan.Sprint(topo.BaseTopo().GlobalOptions.SSHType))
+	fmt.Printf("Cluster type:       %s\n", cyan.Sprint(m.sysName))
+	fmt.Printf("Cluster name:       %s\n", cyan.Sprint(name))
+	fmt.Printf("Cluster version:    %s\n", cyan.Sprint(base.Version))
+	fmt.Printf("SSH type:           %s\n", cyan.Sprint(topo.BaseTopo().GlobalOptions.SSHType))
 
 	// display TLS info
 	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		fmt.Printf("TLS encryption:  %s\n", cyan.Sprint("enabled"))
+		fmt.Printf("TLS encryption:  	%s\n", cyan.Sprint("enabled"))
 		fmt.Printf("CA certificate:     %s\n", cyan.Sprint(
 			m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
 		))
@@ -106,7 +106,15 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 
 	var dashboardAddr string
 	if t, ok := topo.(*spec.Specification); ok {
-		dashboardAddr, _ = t.GetDashboardAddress(tlsCfg, pdActive...)
+		var err error
+		dashboardAddr, err = t.GetDashboardAddress(tlsCfg, pdActive...)
+		if dashboardAddr != "" && err == nil {
+			schema := "http"
+			if tlsCfg != nil {
+				schema = "https"
+			}
+			fmt.Printf("Dashboard URL:        %s\n", cyan.Sprintf("%s://%s/dashboard", schema, dashboardAddr))
+		}
 	}
 
 	topo.IterInstance(func(ins spec.Instance) {
