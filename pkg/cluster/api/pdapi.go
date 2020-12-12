@@ -99,14 +99,14 @@ func tryURLs(endpoints []string, f func(endpoint string) ([]byte, error)) ([]byt
 		return bytes, nil
 	}
 	if len(endpoints) > 1 && err != nil {
-		err = errors.Errorf("no endpoint available, the last err is: %s", err)
+		err = errors.Errorf("no endpoint available, the last err was: %s", err)
 	}
 	return bytes, err
 }
 
-func (pc *PDClient) getEndpoints(cmd string) (endpoints []string) {
+func (pc *PDClient) getEndpoints(uri string) (endpoints []string) {
 	for _, addr := range pc.addrs {
-		endpoint := fmt.Sprintf("%s/%s", pc.GetURL(addr), cmd)
+		endpoint := fmt.Sprintf("%s/%s", pc.GetURL(addr), uri)
 		endpoints = append(endpoints, endpoint)
 	}
 
