@@ -126,10 +126,7 @@ func statusByURL(url string, tlsCfg *tls.Config) string {
 
 	// body doesn't have any status section needed
 	body, err := client.Get(url)
-	if err != nil {
-		return "Down"
-	}
-	if body == nil {
+	if err != nil || body == nil {
 		return "Down"
 	}
 	return "Up"
