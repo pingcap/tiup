@@ -113,7 +113,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 			if tlsCfg != nil {
 				schema = "https"
 			}
-			fmt.Printf("Dashboard URL:        %s\n", cyan.Sprintf("%s://%s/dashboard", schema, dashboardAddr))
+			fmt.Printf("Dashboard URL:      %s\n", cyan.Sprintf("%s://%s/dashboard", schema, dashboardAddr))
 		}
 	}
 
