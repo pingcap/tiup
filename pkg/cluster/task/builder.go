@@ -112,7 +112,7 @@ func (b *Builder) UpdateMeta(cluster string, metadata *spec.ClusterMeta, deleted
 	b.tasks = append(b.tasks, &UpdateMeta{
 		cluster:        cluster,
 		metadata:       metadata,
-		deletedNodesID: deletedNodeIds,
+		deletedNodeIDs: deletedNodeIds,
 	})
 	return b
 }
@@ -123,7 +123,7 @@ func (b *Builder) UpdateTopology(cluster, profile string, metadata *spec.Cluster
 		metadata:       metadata,
 		cluster:        cluster,
 		profileDir:     profile,
-		deletedNodesID: deletedNodeIds,
+		deletedNodeIDs: deletedNodeIds,
 	})
 	return b
 }
