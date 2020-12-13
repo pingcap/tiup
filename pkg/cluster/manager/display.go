@@ -83,35 +83,31 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 
 	filterRoles := set.NewStringSet(opt.Roles...)
 	filterNodes := set.NewStringSet(opt.Nodes...)
-	pdList := topo.BaseTopo().MasterList
+	masterList := topo.BaseTopo().MasterList
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return err
 	}
 
-	pdActive := make([]string, 0)
-	pdStatus := make(map[string]string)
+	masterActive := make([]string, 0)
+	masterStatus := make(map[string]string)
 
-	pd := spec.FindComponent(topo, spec.ComponentPD)
-	if pd == nil {
-		return nil
-	}
 	topo.IterInstance(func(ins spec.Instance) {
-		if ins.ComponentName() != spec.ComponentPD {
+		if ins.ComponentName() != spec.ComponentPD && ins.ComponentName() != spec.ComponentDMMaster {
 			return
 		}
-		status := ins.Status(tlsCfg, pdList...)
-		if strings.HasPrefix(status, "Up") {
+		status := ins.Status(tlsCfg, masterList...)
+		if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
 			instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
-			pdActive = append(pdActive, instAddr)
+			masterActive = append(masterActive, instAddr)
 		}
-		pdStatus[ins.ID()] = status
+		masterStatus[ins.ID()] = status
 	})
 
 	var dashboardAddr string
 	if t, ok := topo.(*spec.Specification); ok {
 		var err error
-		dashboardAddr, err = t.GetDashboardAddress(tlsCfg, pdActive...)
+		dashboardAddr, err = t.GetDashboardAddress(tlsCfg, masterActive...)
 		if dashboardAddr != "" && err == nil {
 			schema := "http"
 			if tlsCfg != nil {
@@ -139,14 +135,17 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 		}
 
 		var status string
-		if ins.ComponentName() == spec.ComponentPD {
-			status = pdStatus[ins.ID()]
+		switch ins.ComponentName() {
+		case spec.ComponentPD:
+			status = masterStatus[ins.ID()]
 			instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
 			if dashboardAddr == instAddr {
 				status += "|UI"
 			}
-		} else {
-			status = ins.Status(tlsCfg, pdActive...)
+		case spec.ComponentDMMaster:
+			status = masterStatus[ins.ID()]
+		default:
+			status = ins.Status(tlsCfg, masterActive...)
 		}
 
 		// Query the service status
@@ -192,7 +191,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 
 	if t, ok := topo.(*spec.Specification); ok {
 		// Check if TiKV's label set correctly
-		pdClient := api.NewPDClient(pdActive, 10*time.Second, tlsCfg)
+		pdClient := api.NewPDClient(masterActive, 10*time.Second, tlsCfg)
 		if lbs, err := pdClient.GetLocationLabels(); err != nil {
 			log.Debugf("get location labels from pd failed: %v", err)
 		} else if err := spec.CheckTiKVLabels(lbs, pdClient); err != nil {
