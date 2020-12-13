@@ -221,9 +221,9 @@ func formatInstanceStatus(status string) string {
 	}
 
 	switch {
-	case startsWith("up|l"): // up|l, up|l|ui
+	case startsWith("up|l", "healthy|l"): // up|l, up|l|ui, healthy|l
 		return color.HiGreenString(status)
-	case startsWith("up"):
+	case startsWith("up", "healthy", "free"):
 		return color.GreenString(status)
 	case startsWith("down", "err"): // down, down|ui
 		return color.RedString(status)
