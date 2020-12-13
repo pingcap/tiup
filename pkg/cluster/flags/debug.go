@@ -24,7 +24,6 @@ var (
 )
 
 func init() {
-	if s := os.Getenv("TIUP_CLUSTER_DEBUG"); s == "enable" {
-		DebugMode = true
-	}
+	ShowBacktrace = len(os.Getenv("TIUP_BACKTRACE")) > 0
+	DebugMode = os.Getenv("TIUP_CLUSTER_DEBUG") == "enable"
 }
