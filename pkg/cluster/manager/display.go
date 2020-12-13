@@ -92,6 +92,10 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	pdActive := make([]string, 0)
 	pdStatus := make(map[string]string)
 
+	pd := spec.FindComponent(topo, spec.ComponentPD)
+	if pd == nil {
+		return nil
+	}
 	topo.IterInstance(func(ins spec.Instance) {
 		if ins.ComponentName() != spec.ComponentPD {
 			return
