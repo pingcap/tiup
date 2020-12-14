@@ -308,18 +308,22 @@ func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 		log.Infof("Cleanup instance %s", ins.GetHost())
 
 		delFiles := set.NewStringSet()
+		dataPaths := set.NewStringSet()
+		logPaths := set.NewStringSet()
 
 		if options.CleanupData && len(ins.DataDir()) > 0 {
 			for _, dataDir := range strings.Split(ins.DataDir(), ",") {
-				delFiles.Insert(path.Join(dataDir, "*"))
+				dataPaths.Insert(path.Join(dataDir, "*"))
 			}
 		}
 
 		if options.CleanupLog && len(ins.LogDir()) > 0 {
 			for _, logDir := range strings.Split(ins.LogDir(), ",") {
-				delFiles.Insert(path.Join(logDir, "*"))
+				logPaths.Insert(path.Join(logDir, "*.log"))
 			}
 		}
+
+		delFiles.Join(logPaths).Join(dataPaths)
 
 		log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delFiles.Slice(), " "))
 		c := module.ShellModuleConfig{
