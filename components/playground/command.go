@@ -157,7 +157,7 @@ func newDisplay() *cobra.Command {
 func scaleIn(pids []int) error {
 	port, err := targetTag()
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	var cmds []Command
@@ -176,7 +176,7 @@ func scaleIn(pids []int) error {
 func scaleOut(args []string, opt *bootOptions) (num int, err error) {
 	port, err := targetTag()
 	if err != nil {
-		return 0, errors.AddStack(err)
+		return 0, err
 	}
 
 	cmds := buildCommands(ScaleOutCommandType, opt)
@@ -191,7 +191,7 @@ func scaleOut(args []string, opt *bootOptions) (num int, err error) {
 func display(args []string) error {
 	port, err := targetTag()
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 	c := Command{
 		CommandType: DisplayCommandType,

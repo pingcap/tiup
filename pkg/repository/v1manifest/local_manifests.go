@@ -73,26 +73,26 @@ func NewManifests(profile *localdata.Profile) (*FsManifests, error) {
 	// Load the root manifest.
 	manifest, err := result.load(ManifestFilenameRoot)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	// We must load without validation because we have no keys yet.
 	var root Root
 	_, err = ReadNoVerify(strings.NewReader(manifest), &root)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	// Populate our key store from the root manifest.
 	err = loadKeys(&root, result.keys)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	// Now that we've bootstrapped the key store, we can verify the root manifest we loaded earlier.
 	_, err = ReadManifest(strings.NewReader(manifest), &root, result.keys)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	result.cache.Store(ManifestFilenameRoot, manifest)
@@ -349,7 +349,7 @@ func (ms *MockManifests) LoadManifest(role ValidManifest) (*Manifest, bool, erro
 
 	err := loadKeys(role, ms.Ks)
 	if err != nil {
-		return nil, false, errors.AddStack(err)
+		return nil, false, err
 	}
 	return manifest, true, nil
 }

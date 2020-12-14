@@ -65,7 +65,7 @@ conflict checks with other clusters`,
 
 				exist, err := tidbSpec.Exist(clusterName)
 				if err != nil {
-					return perrs.AddStack(err)
+					return err
 				}
 
 				if !exist {

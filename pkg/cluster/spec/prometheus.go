@@ -255,7 +255,7 @@ func (i *MonitorInstance) InitConfig(
 	}
 
 	if err := i.initRules(e, spec, paths); err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	if err := cfig.ConfigToFile(fp); err != nil {
@@ -286,7 +286,7 @@ func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVe
 
 	err = e.Transfer(srcPath, dstPath, false)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	cmd := fmt.Sprintf(`tar --no-same-owner -zxf %s -C %s && rm %s`, dstPath, tmp, dstPath)

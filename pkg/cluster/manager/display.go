@@ -38,7 +38,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	topo := metadata.GetTopology()
@@ -73,12 +73,12 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	ctx := task.NewContext()
 	err = ctx.SetSSHKeySet(m.specManager.Path(name, "ssh", "id_rsa"), m.specManager.Path(name, "ssh", "id_rsa.pub"))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	err = ctx.SetClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	filterRoles := set.NewStringSet(opt.Roles...)

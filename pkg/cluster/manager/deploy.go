@@ -70,7 +70,7 @@ func (m *Manager) Deploy(
 
 	exist, err := m.specManager.Exist(name)
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	if exist {
@@ -334,7 +334,7 @@ func (m *Manager) Deploy(
 			// FIXME: Map possible task errors and give suggestions.
 			return err
 		}
-		return perrs.AddStack(err)
+		return err
 	}
 
 	metadata.SetUser(globalOptions.User)
@@ -342,7 +342,7 @@ func (m *Manager) Deploy(
 	err = m.specManager.SaveMeta(name, metadata)
 
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	hint := color.New(color.Bold).Sprintf("%s start %s", cliutil.OsArgs0(), name)

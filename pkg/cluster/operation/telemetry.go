@@ -53,7 +53,7 @@ func GetNodeInfo(
 
 	err = errg.Wait()
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	// Copy and get info per host.
@@ -112,7 +112,7 @@ func GetNodeInfo(
 
 	err = errg.Wait()
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	return

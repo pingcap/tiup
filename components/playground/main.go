@@ -124,17 +124,17 @@ Examples:
 
 			port, err := utils.GetFreePort("0.0.0.0", 9527)
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 			err = dumpPort(filepath.Join(dataDir, "port"), port)
 			p := NewPlayground(dataDir, port)
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 
 			env, err := environment.InitEnv(repository.Options{})
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 			environment.SetGlobalEnv(env)
 
@@ -189,7 +189,7 @@ Examples:
 
 			waitErr := p.wait()
 			if waitErr != nil {
-				return errors.AddStack(waitErr)
+				return waitErr
 			}
 
 			return nil

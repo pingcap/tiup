@@ -58,7 +58,7 @@ func NewManager(sysName string, specManager *spec.SpecManager, bindVersion spec.
 func (m *Manager) meta(name string) (metadata spec.Metadata, err error) {
 	exist, err := m.specManager.Exist(name)
 	if err != nil {
-		return nil, perrs.AddStack(err)
+		return nil, err
 	}
 
 	if !exist {
@@ -68,7 +68,7 @@ func (m *Manager) meta(name string) (metadata spec.Metadata, err error) {
 	metadata = m.specManager.NewMetadata()
 	err = m.specManager.Metadata(name, metadata)
 	if err != nil {
-		return metadata, perrs.AddStack(err)
+		return metadata, err
 	}
 
 	return metadata, nil

@@ -180,7 +180,7 @@ func (s *SpecManager) GetAllClusters() (map[string]Metadata, error) {
 	clusters := make(map[string]Metadata)
 	names, err := s.List()
 	if err != nil {
-		return nil, perrs.AddStack(err)
+		return nil, err
 	}
 	for _, name := range names {
 		metadata := s.NewMetadata()
