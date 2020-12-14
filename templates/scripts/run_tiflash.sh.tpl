@@ -16,8 +16,8 @@ echo ok
 echo $stat
 
 {{- if .NumaNode}}
-exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}}  \
+exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/tiflash/tiflash server \
 {{- else}}
-exec \
+exec bin/tiflash/tiflash server \
 {{- end}}
-    bin/tiflash/tiflash server --config-file conf/tiflash.toml
+    --config-file conf/tiflash.toml 2>> "{{.LogDir}}/tiflash_stderr.log"
