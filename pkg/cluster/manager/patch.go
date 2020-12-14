@@ -33,7 +33,7 @@ import (
 func (m *Manager) Patch(name string, packagePath string, opt operator.Options, overwrite bool) error {
 	metadata, err := m.meta(name)
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	topo := metadata.GetTopology()

@@ -20,7 +20,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"go.etcd.io/etcd/pkg/transport"
@@ -105,7 +104,7 @@ func ClusterMetadata(clusterName string) (*ClusterMeta, error) {
 		// validated `edit-config`, or by some unexpected operations from a broken legacy
 		// release, we could provide max possibility that operations like `display`, `scale`
 		// and `destroy` are still (more or less) working, by ignoring certain errors.
-		return &cm, errors.AddStack(err)
+		return &cm, err
 	}
 
 	return &cm, nil

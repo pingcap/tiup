@@ -35,7 +35,7 @@ import (
 func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Options, skipConfirm bool) error {
 	metadata, err := m.meta(name)
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	topo := metadata.GetTopology()

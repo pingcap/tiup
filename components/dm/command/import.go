@@ -39,17 +39,17 @@ func newImportCmd() *cobra.Command {
 		Short: "Import an exist DM 1.0 cluster from dm-ansible and re-deploy 2.0 version",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := supportVersion(clusterVersion); err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 
 			importer, err := ansible.NewImporter(ansibleDir, inventoryFileName, gOpt.SSHType, gOpt.SSHTimeout)
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 
 			clusterName, meta, err := importer.ImportFromAnsibleDir()
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 
 			if rename != "" {
@@ -58,7 +58,7 @@ func newImportCmd() *cobra.Command {
 
 			err = importer.ScpSourceToMaster(meta.Topology)
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 
 			data, err := yaml.Marshal(meta.Topology)
@@ -86,7 +86,7 @@ func newImportCmd() *cobra.Command {
 						clusterName,
 					))
 				if err != nil {
-					return errors.AddStack(err)
+					return err
 				}
 			}
 
@@ -104,7 +104,7 @@ func newImportCmd() *cobra.Command {
 			)
 
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 
 			return nil

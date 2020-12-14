@@ -35,7 +35,7 @@ func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt 
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) &&
 		!errors.Is(perrs.Cause(err), spec.ErrMultipleTiSparkMaster) &&
 		!errors.Is(perrs.Cause(err), spec.ErrMultipleTisparkWorker) {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	topo := metadata.GetTopology()
@@ -93,7 +93,7 @@ func (m *Manager) DestroyTombstone(
 	// cluster if it is somehow in a bad state.
 	if err != nil &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	topo := metadata.GetTopology()

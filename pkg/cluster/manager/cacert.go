@@ -52,7 +52,7 @@ func genAndSaveClusterCA(name, tlsPath string) (*crypto.CertificateAuthority, er
 func genAndSaveClientCert(ca *crypto.CertificateAuthority, name, tlsPath string) error {
 	privKey, err := crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	// save client private key

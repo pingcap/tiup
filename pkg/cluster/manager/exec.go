@@ -34,7 +34,7 @@ type ExecOptions struct {
 func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) error {
 	metadata, err := m.meta(name)
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	topo := metadata.GetTopology()

@@ -18,7 +18,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/audit"
 	utils2 "github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/atomic"
@@ -54,12 +53,12 @@ func OutputAuditLogIfEnabled() error {
 	}
 
 	if err := utils2.CreateDir(auditDir); err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	err := audit.OutputAuditLog(auditDir, auditBuffer.Bytes())
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 	auditBuffer.Reset()
 

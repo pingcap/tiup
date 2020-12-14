@@ -196,7 +196,7 @@ func Merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, 
 func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
 	lhs, err := merge(global, overwrite)
 	if err != nil {
-		return nil, perrs.AddStack(err)
+		return nil, err
 	}
 
 	buf := bytes.NewBufferString(fmt.Sprintf(`# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
