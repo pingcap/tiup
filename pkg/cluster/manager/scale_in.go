@@ -92,7 +92,7 @@ func (m *Manager) ScaleIn(
 
 	t := b.
 		ParallelStep("+ Refresh instance configs", force, regenConfigTasks...).
-		Parallel(force, buildDynReloadPromTasks(metadata.GetTopology())...).
+		Parallel(force, buildReloadPromTasks(metadata.GetTopology(), nodes...)...).
 		Build()
 
 	if err := t.Execute(task.NewContext()); err != nil {

@@ -135,7 +135,7 @@ func (m *Manager) DestroyTombstone(
 	regenConfigTasks, _ := buildRegenConfigTasks(m, name, topo, base, nodes)
 	t := b.
 		ParallelStep("+ Refresh instance configs", true, regenConfigTasks...).
-		Parallel(true, buildDynReloadPromTasks(metadata.GetTopology())...).
+		Parallel(true, buildReloadPromTasks(metadata.GetTopology())...).
 		Build()
 	if err := t.Execute(task.NewContext()); err != nil {
 		if errorx.Cast(err) != nil {
