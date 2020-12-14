@@ -267,10 +267,10 @@ func (i *GrafanaInstance) installDashboards(e executor.Executor, deployDir, clus
 	cmds := []string{
 		"mkdir -p %[1]s",
 		`find %[1]s -type f -name "*.json" -delete`,
-		"cp %[2]s/dm-master/scripts/*.json %[3]s",
+		"cp %[2]s/dm-master/scripts/*.json %[1]s",
 		"rm -rf %[2]s",
 	}
-	_, stderr, err = e.Execute(fmt.Sprintf(strings.Join(cmds, " && "), targetDir, tmp, targetDir), false)
+	_, stderr, err = e.Execute(fmt.Sprintf(strings.Join(cmds, " && "), targetDir, tmp), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}

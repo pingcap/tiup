@@ -300,10 +300,10 @@ func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVe
 	cmds := []string{
 		"mkdir -p %[1]s",
 		`find %[1]s -type f -name "*.rules.yml" -delete`,
-		"cp %[2]s/dm-master/conf/*.rules.yml %[3]s",
+		"cp %[2]s/dm-master/conf/*.rules.yml %[1]s",
 		"rm -rf %[2]s",
 	}
-	_, stderr, err = e.Execute(fmt.Sprintf(strings.Join(cmds, " && "), targetDir, tmp, targetDir), false)
+	_, stderr, err = e.Execute(fmt.Sprintf(strings.Join(cmds, " && "), targetDir, tmp), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
@@ -319,7 +319,6 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 	}
 
 	// To make this step idempotent, we need cleanup old rules first
-	targetDir := path.Join(paths.Deploy, "conf")
 	cmds := []string{
 		"mkdir -p %[1]s/conf",
 		`find %[1]s/conf -type f -name "*.rules.yml" -delete`,
