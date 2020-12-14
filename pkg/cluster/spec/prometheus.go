@@ -321,11 +321,11 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 	// To make this step idempotent, we need cleanup old rules first
 	targetDir := path.Join(paths.Deploy, "conf")
 	cmds := []string{
-		"mkdir -p %[1]s",
-		`find %[1]s -type f -name "*.rules.yml" -delete`,
-		`cp %[2]s/bin/prometheus/*.rules.yml %[2]s/conf/`,
+		"mkdir -p %[1]s/conf",
+		`find %[1]s/conf -type f -name "*.rules.yml" -delete`,
+		`cp %[1]s/bin/prometheus/*.rules.yml %[1]s/conf/`,
 	}
-	_, stderr, err := e.Execute(fmt.Sprintf(strings.Join(cmds, " && "), targetDir, paths.Deploy), false)
+	_, stderr, err := e.Execute(fmt.Sprintf(strings.Join(cmds, " && "), paths.Deploy), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
