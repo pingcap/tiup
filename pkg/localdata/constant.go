@@ -90,6 +90,9 @@ const (
 	// EnvNameLogPath is the variable name by which user can write the log files into
 	EnvNameLogPath = "TIUP_LOG_PATH"
 
+	// EnvNameDebug is the variable name by which user can set tiup runs in debug mode(eg. print panic logs)
+	EnvNameDebug = "TIUP_CLUSTER_DEBUG"
+
 	// MetaFilename represents the process meta file name
 	MetaFilename = "tiup_process_meta"
 )
