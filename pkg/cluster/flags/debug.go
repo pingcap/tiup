@@ -15,16 +15,16 @@ package flags
 
 import (
 	"os"
+
+	"github.com/pingcap/tiup/pkg/localdata"
 )
 
 // Global flags
 var (
-	ShowBacktrace = false
-	DebugMode     = false
+	DebugMode = false
 )
 
 func init() {
-	if s := os.Getenv("TIUP_CLUSTER_DEBUG"); s == "enable" {
-		DebugMode = true
-	}
+	val := os.Getenv(localdata.EnvNameDebug)
+	DebugMode = val == "enable" || val == "enabled"
 }

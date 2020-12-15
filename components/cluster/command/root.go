@@ -77,8 +77,6 @@ func init() {
 
 	colorutil.AddColorFunctionsForCobra()
 
-	// Initialize the global variables
-	flags.ShowBacktrace = len(os.Getenv("TIUP_BACKTRACE")) > 0
 	cobra.EnableCommandSorting = false
 
 	nativeEnvVar := strings.ToLower(os.Getenv(localdata.EnvNameNativeSSHClient))
