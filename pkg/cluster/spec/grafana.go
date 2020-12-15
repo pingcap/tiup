@@ -200,21 +200,20 @@ func (i *GrafanaInstance) InitConfig(
 
 func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, paths meta.DirPaths, clusterName string) error {
 	dashboardsDir := filepath.Join(paths.Deploy, "dashboards")
-	// To make this step idempotent, we need cleanup old dashboards first
-	cmd := fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*.json", dashboardsDir)
-	if _, stderr, err := e.Execute(cmd, false); err != nil {
-		return errors.Annotatef(err, "cleanup old dashboards: %s, cmd: %s", string(stderr), cmd)
-	}
-
 	if spec.DashboardDir != "" {
 		return i.TransferLocalConfigDir(e, spec.DashboardDir, dashboardsDir, func(name string) bool {
 			return strings.HasSuffix(name, ".json")
 		})
 	}
 
-	cmd = fmt.Sprintf("cp %[1]s/bin/*.json %[1]s/dashboards/", paths.Deploy)
-	if _, _, err := e.Execute(cmd, false); err != nil {
-		return errors.Annotatef(err, "execute command failed: %s", err)
+	cmds := []string{
+		"mkdir -p %[1]s",
+		`find %[1]s -type f -name "*.json" -delete`,
+		"cp %[2]s/bin/*.json %[1]s",
+	}
+	_, stderr, err := e.Execute(fmt.Sprintf(strings.Join(cmds, " && "), dashboardsDir, paths.Deploy), false)
+	if err != nil {
+		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
 	// Deal with the cluster name
@@ -265,19 +264,13 @@ func (i *GrafanaInstance) installDashboards(e executor.Executor, deployDir, clus
 
 	// copy dm-master/scripts/*.json
 	targetDir := filepath.Join(deployDir, "bin")
-	_, stderr, err = e.Execute(fmt.Sprintf("mkdir -p %[1]s && rm -f %[1]s/*.json", targetDir), false)
-	if err != nil {
-		return errors.Annotatef(err, "stderr: %s", string(stderr))
+	cmds := []string{
+		"mkdir -p %[1]s",
+		`find %[1]s -type f -name "*.json" -delete`,
+		"cp %[2]s/dm-master/scripts/*.json %[1]s",
+		"rm -rf %[2]s",
 	}
-
-	cmd = fmt.Sprintf("cp %s/dm-master/scripts/*.json %s", tmp, targetDir)
-	_, stderr, err = e.Execute(cmd, false)
-	if err != nil {
-		return errors.Annotatef(err, "stderr: %s", string(stderr))
-	}
-
-	cmd = fmt.Sprintf("rm -rf %s", tmp)
-	_, stderr, err = e.Execute(cmd, false)
+	_, stderr, err = e.Execute(fmt.Sprintf(strings.Join(cmds, " && "), targetDir, tmp), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
