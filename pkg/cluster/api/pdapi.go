@@ -127,7 +127,7 @@ func (pc *PDClient) CheckHealth() error {
 	})
 
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	return nil
@@ -150,7 +150,7 @@ func (pc *PDClient) GetStores() (*pdserverapi.StoresInfo, error) {
 		return body, json.Unmarshal(body, &storesInfo)
 	})
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	sort.Slice(storesInfo.Stores, func(i int, j int) bool {
@@ -200,7 +200,7 @@ func (pc *PDClient) GetLeader() (*pdpb.Member, error) {
 	})
 
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	return &leader, nil
@@ -221,7 +221,7 @@ func (pc *PDClient) GetMembers() (*pdpb.GetMembersResponse, error) {
 	})
 
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	return &members, nil
@@ -244,7 +244,7 @@ func (pc *PDClient) GetDashboardAddress() (string, error) {
 		return body, json.Unmarshal(body, &pdConfig)
 	})
 	if err != nil {
-		return "", errors.AddStack(err)
+		return "", err
 	}
 
 	cfg, err := flatten.Flatten(pdConfig, "", flatten.DotStyle)
@@ -285,7 +285,7 @@ func (pc *PDClient) EvictPDLeader(retryOpt *utils.RetryOption) error {
 	})
 
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	// wait for the transfer to complete
@@ -376,7 +376,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 		return pc.httpClient.Post(endpoint, bytes.NewBuffer(scheduler))
 	})
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	// wait for the transfer to complete
@@ -463,7 +463,7 @@ func (pc *PDClient) RemoveStoreEvict(host string) error {
 		return body, nil
 	})
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	log.Debugf("Removed store leader evicting scheduler from %s.", latestStore.Store.Address)
@@ -498,7 +498,7 @@ func (pc *PDClient) DelPD(name string, retryOpt *utils.RetryOption) error {
 		return body, nil
 	})
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	// wait for the deletion to complete
@@ -532,7 +532,7 @@ func (pc *PDClient) isSameState(host string, state metapb.StoreState) (bool, err
 	// get info of current stores
 	stores, err := pc.GetStores()
 	if err != nil {
-		return false, errors.AddStack(err)
+		return false, err
 	}
 
 	for _, storeInfo := range stores.Stores {
@@ -603,7 +603,7 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 		return body, nil
 	})
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	// wait for the deletion to complete

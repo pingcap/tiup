@@ -26,7 +26,7 @@ import (
 func (m *Manager) ListCluster() error {
 	names, err := m.specManager.List()
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	clusterTable := [][]string{

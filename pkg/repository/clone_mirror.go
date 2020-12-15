@@ -340,7 +340,7 @@ func download(targetDir, tmpDir string, repo *V1Repository, item *v1manifest.Ver
 	validate := func(dir string) error {
 		hashes, n, err := ru.HashFile(path.Join(dir, item.URL))
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 		if uint(n) != item.Length {
 			return errors.Errorf("file length mismatch, expected: %d, got: %v", item.Length, n)

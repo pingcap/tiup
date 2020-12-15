@@ -328,7 +328,7 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *
 	// But when there's only one PD instance the pd might not serve request right away after restart.
 	err := pdClient.WaitLeader(timeoutOpt)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	if err := pdClient.EvictStoreLeader(addr(i), timeoutOpt, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {

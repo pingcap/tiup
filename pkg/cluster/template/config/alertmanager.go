@@ -34,7 +34,7 @@ func (c *AlertManagerConfig) Config() ([]byte, error) {
 	fp := path.Join("/templates", "config", "alertmanager.yml")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 	return c.ConfigWithTemplate(string(tpl))
 }

@@ -23,7 +23,6 @@ import (
 	"github.com/pingcap/tiup/components/dm/spec"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
-	"github.com/pingcap/tiup/pkg/cluster/flags"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	cspec "github.com/pingcap/tiup/pkg/cluster/spec"
@@ -54,8 +53,6 @@ func init() {
 
 	colorutil.AddColorFunctionsForCobra()
 
-	// Initialize the global variables
-	flags.ShowBacktrace = len(os.Getenv("TIUP_BACKTRACE")) > 0
 	cobra.EnableCommandSorting = false
 
 	nativeEnvVar := strings.ToLower(os.Getenv(localdata.EnvNameNativeSSHClient))
@@ -64,8 +61,10 @@ func init() {
 	}
 
 	rootCmd = &cobra.Command{
-		Use:           cliutil.OsArgs0(),
-		Short:         "Deploy a DM cluster (experimental)",
+		Use:   cliutil.OsArgs0(),
+		Short: "(EXPERIMENTAL) Deploy a DM cluster",
+		Long: `EXPERIMENTAL: This is an experimental feature, things may or may not work,
+please backup your data before process.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       version.NewTiUPVersion().String(),

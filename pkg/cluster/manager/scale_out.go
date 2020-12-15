@@ -54,7 +54,7 @@ func (m *Manager) ScaleOut(
 	// cluster if it is somehow in a bad state.
 	if err != nil &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	topo := metadata.GetTopology()

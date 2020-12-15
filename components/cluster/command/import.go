@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 
 	"github.com/fatih/color"
-	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/ansible"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -66,7 +65,7 @@ func newImportCmd() *cobra.Command {
 
 			exist, err := tidbSpec.Exist(clsName)
 			if err != nil {
-				return errors.AddStack(err)
+				return err
 			}
 
 			if exist {

@@ -92,7 +92,7 @@ func newMonitor(ctx context.Context, version string, host, dir string) (*monitor
 
 	port, err := utils.GetFreePort(host, 9090)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 	addr := fmt.Sprintf("%s:%d", host, port)
 

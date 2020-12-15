@@ -35,7 +35,7 @@ func (m *Manager) EnableCluster(name string, options operator.Options, isEnable 
 
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	topo := metadata.GetTopology()
@@ -78,7 +78,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	topo := metadata.GetTopology()
@@ -86,7 +86,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	b := m.sshTaskBuilder(name, topo, base.User, options).
@@ -116,7 +116,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 func (m *Manager) StopCluster(name string, options operator.Options) error {
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	topo := metadata.GetTopology()
@@ -149,7 +149,7 @@ func (m *Manager) StopCluster(name string, options operator.Options) error {
 func (m *Manager) RestartCluster(name string, options operator.Options) error {
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	topo := metadata.GetTopology()

@@ -16,7 +16,6 @@ package manager
 import (
 	"os"
 
-	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -39,11 +38,11 @@ func (m *Manager) Rename(name string, opt operator.Options, newName string) erro
 
 	_, err := m.meta(name)
 	if err != nil { // refuse renaming if current cluster topology is not valid
-		return perrs.AddStack(err)
+		return err
 	}
 
 	if err := os.Rename(m.specManager.Path(name), m.specManager.Path(newName)); err != nil {
-		return perrs.AddStack(err)
+		return err
 	}
 
 	log.Infof("Rename cluster `%s` -> `%s` successfully", name, newName)

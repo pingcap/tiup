@@ -331,7 +331,7 @@ func deleteMember(
 		addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
 		err := binlogClient.OfflinePump(addr)
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 	}
 

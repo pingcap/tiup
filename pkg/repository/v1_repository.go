@@ -342,7 +342,7 @@ func (r *V1Repository) updateLocalRoot() error {
 
 	oldRoot, err := r.loadRoot()
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 	startVersion := oldRoot.Version
 	keyStore := *r.local.KeyStore()
@@ -357,7 +357,7 @@ func (r *V1Repository) updateLocalRoot() error {
 			if errors.Cause(err) == ErrNotFound {
 				break
 			}
-			return errors.AddStack(err)
+			return err
 		}
 		newManifest = nextManifest
 
@@ -366,13 +366,13 @@ func (r *V1Repository) updateLocalRoot() error {
 		}
 
 		if err = v1manifest.ExpiresAfter(&newRoot, oldRoot); err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 
 		// This is a valid new version.
 		err = r.local.SaveManifest(newManifest, v1manifest.RootManifestFilename(newRoot.Version))
 		if err != nil {
-			return errors.AddStack(err)
+			return err
 		}
 		oldRoot = &newRoot
 	}
@@ -385,14 +385,14 @@ func (r *V1Repository) updateLocalRoot() error {
 	// Check expire of this version.
 	err = v1manifest.CheckExpiry(v1manifest.ManifestFilenameRoot, oldRoot.Expires)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	// Save the new trusted root without a version number. This action will also update the key store in r.local from
 	// the new root.
 	err = r.local.SaveManifest(newManifest, v1manifest.ManifestFilenameRoot)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	return nil
@@ -408,7 +408,7 @@ func (r *V1Repository) updateLocalIndex(snapshot *v1manifest.Snapshot) error {
 	var oldIndex v1manifest.Index
 	_, exists, err := r.local.LoadManifest(&oldIndex)
 	if err != nil {
-		return errors.AddStack(err)
+		return err
 	}
 
 	snapIndexVersion := snapshot.Meta[v1manifest.ManifestURLIndex].Version
@@ -461,7 +461,7 @@ func (r *V1Repository) updateComponentManifest(id string, withYanked bool) (*v1m
 
 	item, ok := components[id]
 	if !ok {
-		return nil, errors.AddStack(errUnknownComponent)
+		return nil, errUnknownComponent
 	}
 	var snapshot v1manifest.Snapshot
 	_, _, err = r.local.LoadManifest(&snapshot)
@@ -656,7 +656,7 @@ func (r *V1Repository) loadRoot() (*v1manifest.Root, error) {
 	root := new(v1manifest.Root)
 	_, exists, err := r.local.LoadManifest(root)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	if !exists {
@@ -689,13 +689,13 @@ func (r *V1Repository) FetchRootManfiest() (root *v1manifest.Root, err error) {
 func (r *V1Repository) FetchIndexManifest() (index *v1manifest.Index, err error) {
 	err = r.ensureManifests()
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	index = new(v1manifest.Index)
 	_, exists, err := r.local.LoadManifest(index)
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	if !exists {
@@ -737,7 +737,7 @@ func (r *V1Repository) UpdateComponentManifests() error {
 func (r *V1Repository) FetchComponentManifest(id string, withYanked bool) (com *v1manifest.Component, err error) {
 	err = r.ensureManifests()
 	if err != nil {
-		return nil, errors.AddStack(err)
+		return nil, err
 	}
 
 	return r.updateComponentManifest(id, withYanked)

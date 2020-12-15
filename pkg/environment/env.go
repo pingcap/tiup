@@ -113,7 +113,7 @@ func InitEnv(options repository.Options) (*Environment, error) {
 	} else {
 		repo, err = repository.NewRepository(mirror, options)
 		if err != nil {
-			return nil, errors.AddStack(err)
+			return nil, err
 		}
 	}
 
