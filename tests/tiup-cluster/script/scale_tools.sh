@@ -35,11 +35,13 @@ function scale_tools() {
     tiup-cluster $client display $name
 
     if [ $test_tls = true ]; then
-        total=19
         total_sub_one=18
+        total=19
+        total_add_one=20
     else
-        total=22
         total_sub_one=21
+        total=22
+        total_add_one=23
     fi
 
     echo "start scale in pump"
@@ -74,8 +76,8 @@ function scale_tools() {
 
     echo "start scale out prometheus"
     topo=./topo/full_scale_in_prometheus.yaml
+    wait_instance_num_reach $name $total_add_one $native_ssh
     tiup-cluster $client --yes scale-out $name $topo
-    wait_instance_num_reach $name $total $native_ssh
     echo "start scale in prometheus"
     tiup-cluster $client --yes scale-in $name -N n2:9090
     wait_instance_num_reach $name $total $native_ssh
