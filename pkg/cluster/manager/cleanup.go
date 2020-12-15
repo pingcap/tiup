@@ -67,7 +67,7 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 			return operator.Stop(ctx, topo, operator.Options{}, tlsCfg)
 		}).
 		Func("CleanupCluster", func(ctx *task.Context) error {
-			return operator.Cleanup(ctx, topo, cleanOpt)
+			return operator.CleanupComponent(ctx, topo, cleanOpt)
 		}).
 		Build()
 

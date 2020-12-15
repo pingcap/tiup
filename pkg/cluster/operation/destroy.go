@@ -34,24 +34,6 @@ import (
 	"github.com/pingcap/tiup/pkg/set"
 )
 
-// Cleanup the cluster
-func Cleanup(
-	getter ExecutorGetter,
-	cluster spec.Topology,
-	options Options,
-) error {
-	coms := cluster.ComponentsByStopOrder()
-
-	for _, com := range coms {
-		insts := com.Instances()
-		if err := CleanupComponent(getter, insts, cluster, options); err != nil {
-			return errors.Annotatef(err, "failed to cleanup %s", com.Name())
-		}
-	}
-
-	return nil
-}
-
 // Destroy the cluster.
 func Destroy(
 	getter ExecutorGetter,
@@ -291,63 +273,68 @@ func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.M
 }
 
 // CleanupComponent cleanup the instances
-func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec.Topology, options Options) error {
-	retainDataRoles := set.NewStringSet(options.RetainDataRoles...)
-	retainDataNodes := set.NewStringSet(options.RetainDataNodes...)
+func CleanupComponent(getter ExecutorGetter, cls spec.Topology, options Options) error {
+	coms := cls.ComponentsByStopOrder()
 
-	for _, ins := range instances {
-		// Some data of instances will be retained
-		dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
-			retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
+	for _, com := range coms {
+		instances := com.Instances()
+		retainDataRoles := set.NewStringSet(options.RetainDataRoles...)
+		retainDataNodes := set.NewStringSet(options.RetainDataNodes...)
 
-		if dataRetained {
-			continue
-		}
+		for _, ins := range instances {
+			// Some data of instances will be retained
+			dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
+				retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
 
-		e := getter.Get(ins.GetHost())
-		log.Infof("Cleanup instance %s", ins.GetHost())
-
-		delFiles := set.NewStringSet()
-		dataPaths := set.NewStringSet()
-		logPaths := set.NewStringSet()
-
-		if options.CleanupData && len(ins.DataDir()) > 0 {
-			for _, dataDir := range strings.Split(ins.DataDir(), ",") {
-				dataPaths.Insert(path.Join(dataDir, "*"))
+			if dataRetained {
+				continue
 			}
-		}
 
-		if options.CleanupLog && len(ins.LogDir()) > 0 {
-			for _, logDir := range strings.Split(ins.LogDir(), ",") {
-				logPaths.Insert(path.Join(logDir, "*.log"))
+			e := getter.Get(ins.GetHost())
+			log.Infof("Cleanup instance %s", ins.GetHost())
+
+			delFiles := set.NewStringSet()
+			dataPaths := set.NewStringSet()
+			logPaths := set.NewStringSet()
+
+			if options.CleanupData && len(ins.DataDir()) > 0 {
+				for _, dataDir := range strings.Split(ins.DataDir(), ",") {
+					dataPaths.Insert(path.Join(dataDir, "*"))
+				}
 			}
-		}
 
-		delFiles.Join(logPaths).Join(dataPaths)
+			if options.CleanupLog && len(ins.LogDir()) > 0 {
+				for _, logDir := range strings.Split(ins.LogDir(), ",") {
+					logPaths.Insert(path.Join(logDir, "*.log"))
+				}
+			}
 
-		log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delFiles.Slice(), " "))
-		c := module.ShellModuleConfig{
-			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delFiles.Slice(), " ")),
-			Sudo:     true, // the .service files are in a directory owned by root
-			Chdir:    "",
-			UseShell: true,
-		}
-		shell := module.NewShellModule(c)
-		stdout, stderr, err := shell.Execute(e)
+			delFiles.Join(logPaths).Join(dataPaths)
 
-		if len(stdout) > 0 {
-			fmt.Println(string(stdout))
-		}
-		if len(stderr) > 0 {
-			log.Errorf(string(stderr))
-		}
+			log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delFiles.Slice(), " "))
+			c := module.ShellModuleConfig{
+				Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delFiles.Slice(), " ")),
+				Sudo:     true, // the .service files are in a directory owned by root
+				Chdir:    "",
+				UseShell: true,
+			}
+			shell := module.NewShellModule(c)
+			stdout, stderr, err := shell.Execute(e)
 
-		if err != nil {
-			return errors.Annotatef(err, "failed to cleanup: %s", ins.GetHost())
-		}
+			if len(stdout) > 0 {
+				fmt.Println(string(stdout))
+			}
+			if len(stderr) > 0 {
+				log.Errorf(string(stderr))
+			}
 
-		log.Infof("Cleanup %s success", ins.GetHost())
-		log.Infof("- Clanup %s files: %v", ins.ComponentName(), delFiles.Slice())
+			if err != nil {
+				return errors.Annotatef(err, "failed to cleanup: %s", ins.GetHost())
+			}
+
+			log.Infof("Cleanup %s success", ins.GetHost())
+			log.Infof("- Clanup %s files: %v", ins.ComponentName(), delFiles.Slice())
+		}
 	}
 
 	return nil
