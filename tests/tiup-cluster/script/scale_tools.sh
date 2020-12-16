@@ -76,8 +76,8 @@ function scale_tools() {
 
     echo "start scale out prometheus"
     topo=./topo/full_scale_in_prometheus.yaml
-    wait_instance_num_reach $name $total_add_one $native_ssh
     tiup-cluster $client --yes scale-out $name $topo
+    wait_instance_num_reach $name $total_add_one $native_ssh
     echo "start scale in prometheus"
     tiup-cluster $client --yes scale-in $name -N n2:9090
     wait_instance_num_reach $name $total $native_ssh
