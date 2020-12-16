@@ -18,7 +18,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -33,24 +32,6 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
 )
-
-// Cleanup the cluster
-func Cleanup(
-	getter ExecutorGetter,
-	cluster spec.Topology,
-	options Options,
-) error {
-	coms := cluster.ComponentsByStopOrder()
-
-	for _, com := range coms {
-		insts := com.Instances()
-		if err := CleanupComponent(getter, insts, cluster, options); err != nil {
-			return errors.Annotatef(err, "failed to cleanup %s", com.Name())
-		}
-	}
-
-	return nil
-}
 
 // Destroy the cluster.
 func Destroy(
@@ -291,41 +272,11 @@ func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.M
 }
 
 // CleanupComponent cleanup the instances
-func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec.Topology, options Options) error {
-	retainDataRoles := set.NewStringSet(options.RetainDataRoles...)
-	retainDataNodes := set.NewStringSet(options.RetainDataNodes...)
-
-	for _, ins := range instances {
-		// Some data of instances will be retained
-		dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
-			retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
-
-		if dataRetained {
-			continue
-		}
-
-		e := getter.Get(ins.GetHost())
-		log.Infof("Cleanup instance %s", ins.GetHost())
-
-		delFiles := set.NewStringSet()
-		dataPaths := set.NewStringSet()
-		logPaths := set.NewStringSet()
-
-		if options.CleanupData && len(ins.DataDir()) > 0 {
-			for _, dataDir := range strings.Split(ins.DataDir(), ",") {
-				dataPaths.Insert(path.Join(dataDir, "*"))
-			}
-		}
-
-		if options.CleanupLog && len(ins.LogDir()) > 0 {
-			for _, logDir := range strings.Split(ins.LogDir(), ",") {
-				logPaths.Insert(path.Join(logDir, "*.log"))
-			}
-		}
-
-		delFiles.Join(logPaths).Join(dataPaths)
-
-		log.Debugf("Deleting paths on %s: %s", ins.GetHost(), strings.Join(delFiles.Slice(), " "))
+func CleanupComponent(getter ExecutorGetter, delFileMaps map[string]set.StringSet) error {
+	for host, delFiles := range delFileMaps {
+		e := getter.Get(host)
+		log.Infof("Cleanup instance %s", host)
+		log.Debugf("Deleting paths on %s: %s", host, strings.Join(delFiles.Slice(), " "))
 		c := module.ShellModuleConfig{
 			Command:  fmt.Sprintf("rm -rf %s;", strings.Join(delFiles.Slice(), " ")),
 			Sudo:     true, // the .service files are in a directory owned by root
@@ -343,11 +294,10 @@ func CleanupComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 		}
 
 		if err != nil {
-			return errors.Annotatef(err, "failed to cleanup: %s", ins.GetHost())
+			return errors.Annotatef(err, "failed to cleanup: %s", host)
 		}
 
-		log.Infof("Cleanup %s success", ins.GetHost())
-		log.Infof("- Clanup %s files: %v", ins.ComponentName(), delFiles.Slice())
+		log.Infof("Cleanup %s success", host)
 	}
 
 	return nil

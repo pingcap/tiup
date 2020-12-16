@@ -48,7 +48,7 @@ jobs:
         run: |
           export PATH=$PATH:${{ env.working-directory }}/bin/
           echo $PATH
-          bash ${{ env.working-directory }}/tests/tiup/${{matrix.cases}}.sh
+          bash ${{ env.working-directory }}/tests/tiup/${{ matrix.cases }}.sh
 
       - name: Upload coverage to Codecov
         working-directory: ${{ env.working-directory }}
