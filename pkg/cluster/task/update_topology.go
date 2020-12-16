@@ -17,7 +17,7 @@ type UpdateTopology struct {
 	cluster        string
 	profileDir     string
 	metadata       *spec.ClusterMeta
-	deletedNodesID []string
+	deletedNodeIDs []string
 }
 
 // String implements the fmt.Stringer interface
@@ -41,7 +41,7 @@ func (u *UpdateTopology) Execute(ctx *Context) error {
 
 	topo := u.metadata.Topology
 
-	deleted := set.NewStringSet(u.deletedNodesID...)
+	deleted := set.NewStringSet(u.deletedNodeIDs...)
 
 	var ops []clientv3.Op
 	var instances []spec.Instance

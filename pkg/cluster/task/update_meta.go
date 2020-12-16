@@ -25,7 +25,7 @@ import (
 type UpdateMeta struct {
 	cluster        string
 	metadata       *spec.ClusterMeta
-	deletedNodesID []string
+	deletedNodeIDs []string
 }
 
 // Execute implements the Task interface
@@ -33,7 +33,7 @@ type UpdateMeta struct {
 // the other callers point to this field by a pointer,
 // so we should update the original topology directly, and don't make a copy
 func (u *UpdateMeta) Execute(ctx *Context) error {
-	deleted := set.NewStringSet(u.deletedNodesID...)
+	deleted := set.NewStringSet(u.deletedNodeIDs...)
 	topo := u.metadata.Topology
 
 	tidbServers := make([]spec.TiDBSpec, 0)
@@ -154,5 +154,5 @@ func (u *UpdateMeta) Rollback(ctx *Context) error {
 
 // String implements the fmt.Stringer interface
 func (u *UpdateMeta) String() string {
-	return fmt.Sprintf("UpdateMeta: cluster=%s, deleted=`'%s'`", u.cluster, strings.Join(u.deletedNodesID, "','"))
+	return fmt.Sprintf("UpdateMeta: cluster=%s, deleted=`'%s'`", u.cluster, strings.Join(u.deletedNodeIDs, "','"))
 }
