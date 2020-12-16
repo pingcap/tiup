@@ -45,7 +45,7 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 	}
 
 	// calculate file paths to be deleted before the prompt
-	delFileMaps := make(map[string]set.StringSet)
+	delFileMap := make(map[string]set.StringSet)
 	for _, com := range topo.ComponentsByStopOrder() {
 		instances := com.Instances()
 		retainDataRoles := set.NewStringSet(cleanOpt.RetainDataRoles...)
@@ -75,10 +75,10 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 				}
 			}
 
-			if delFileMaps[ins.GetHost()] == nil {
-				delFileMaps[ins.GetHost()] = set.NewStringSet()
+			if delFileMap[ins.GetHost()] == nil {
+				delFileMap[ins.GetHost()] = set.NewStringSet()
 			}
-			delFileMaps[ins.GetHost()].Join(logPaths).Join(dataPaths)
+			delFileMap[ins.GetHost()].Join(logPaths).Join(dataPaths)
 		}
 	}
 
@@ -95,7 +95,7 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 
 		// build file list string
 		delFileList := ""
-		for host, fileList := range delFileMaps {
+		for host, fileList := range delFileMap {
 			delFileList += fmt.Sprintf("\n%s:", color.CyanString(host))
 			for _, dfp := range fileList.Slice() {
 				delFileList += fmt.Sprintf("\n %s", dfp)
@@ -121,7 +121,7 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 			return operator.Stop(ctx, topo, operator.Options{}, tlsCfg)
 		}).
 		Func("CleanupCluster", func(ctx *task.Context) error {
-			return operator.CleanupComponent(ctx, delFileMaps)
+			return operator.CleanupComponent(ctx, delFileMap)
 		}).
 		Build()
 
