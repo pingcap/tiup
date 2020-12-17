@@ -26,7 +26,6 @@ import (
 	"strings"
 	"time"
 
-	cjson "github.com/gibson042/canonicaljson-go"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
@@ -94,32 +93,42 @@ func newMirrorSignCmd() *cobra.Command {
 				privPath = env.Profile().Path(localdata.KeyInfoParentDir, localdata.DefaultPrivateKeyName)
 			}
 
-			if !strings.HasPrefix(args[0], "http") {
-				return v1manifest.SignManifestFile(args[0], args[1:]...)
-			}
-
-			client := utils.NewHTTPClient(time.Duration(timeout)*time.Second, nil)
-			data, err := client.Get(args[0])
+			privKey, err := loadPrivKey(privPath)
 			if err != nil {
 				return err
 			}
 
-			m := &v1manifest.Manifest{Signed: &v1manifest.Root{}}
-			if err := cjson.Unmarshal(data, m); err != nil {
-				return errors.Annotate(err, "unmarshal response")
-			}
-			m, err = sign(privPath, m.Signed)
-			if err != nil {
-				return err
-			}
-			data, err = cjson.Marshal(m)
-			if err != nil {
-				return errors.Annotate(err, "marshal manifest")
+			if strings.HasPrefix(args[0], "http") {
+				client := utils.NewHTTPClient(time.Duration(timeout)*time.Second, nil)
+				data, err := client.Get(args[0])
+				if err != nil {
+					return err
+				}
+
+				if data, err = v1manifest.SignManifestData(data, privKey); err != nil {
+					return err
+				}
+
+				if _, err = client.Post(args[0], bytes.NewBuffer(data)); err != nil {
+					return err
+				}
+
+				return nil
 			}
 
-			if _, err = client.Post(args[0], bytes.NewBuffer(data)); err != nil {
+			data, err := ioutil.ReadFile(args[0])
+			if err != nil {
+				return errors.Annotatef(err, "open manifest file %s", args[0])
+			}
+
+			if data, err = v1manifest.SignManifestData(data, privKey); err != nil {
 				return err
 			}
+
+			if err = ioutil.WriteFile(args[0], data, 0664); err != nil {
+				return errors.Annotatef(err, "write manifest file %s", args[0])
+			}
+
 			return nil
 		},
 	}
