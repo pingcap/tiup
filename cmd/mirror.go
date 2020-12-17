@@ -626,7 +626,7 @@ current working directory (".") will be used.`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&keyDir, "", "i", "", "Path to write the private key file")
+	cmd.Flags().StringVarP(&keyDir, "key-dir", "k", "", "Path to write the private key file")
 
 	return cmd
 }

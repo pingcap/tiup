@@ -36,8 +36,12 @@ function scale_tools() {
 
     if [ $test_tls = true ]; then
         total_sub_one=18
+        total=19
+        total_add_one=20
     else
         total_sub_one=21
+        total=22
+        total_add_one=23
     fi
 
     echo "start scale in pump"
@@ -69,6 +73,14 @@ function scale_tools() {
     echo "start scale out grafana"
     topo=./topo/full_scale_in_grafana.yaml
     tiup-cluster $client --yes scale-out $name $topo
+
+    echo "start scale out prometheus"
+    topo=./topo/full_scale_in_prometheus.yaml
+    tiup-cluster $client --yes scale-out $name $topo
+    wait_instance_num_reach $name $total_add_one $native_ssh
+    echo "start scale in prometheus"
+    tiup-cluster $client --yes scale-in $name -N n2:9090
+    wait_instance_num_reach $name $total $native_ssh
 
     # make sure grafana dashboards has been set to default (since the full_sale_in_grafana.yaml didn't provide a local dashboards dir)
     ! tiup-cluster $client exec $name -N n1 --command "grep magic-string-for-test /home/tidb/deploy/grafana-3000/dashboards/tidb.json"

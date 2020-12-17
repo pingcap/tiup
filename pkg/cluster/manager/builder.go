@@ -30,8 +30,8 @@ import (
 	"github.com/pingcap/tiup/pkg/set"
 )
 
-// Dynamic reload Prometheus configuration
-func buildDynReloadPromTasks(topo spec.Topology) []task.Task {
+// buildReloadPromTasks reloads Prometheus configuration
+func buildReloadPromTasks(topo spec.Topology, nodes ...string) []task.Task {
 	monitor := spec.FindComponent(topo, spec.ComponentPrometheus)
 	if monitor == nil {
 		return nil
@@ -40,11 +40,18 @@ func buildDynReloadPromTasks(topo spec.Topology) []task.Task {
 	if len(instances) == 0 {
 		return nil
 	}
-	var dynReloadTasks []task.Task
+	var tasks []task.Task
+	deletedNodes := set.NewStringSet(nodes...)
 	for _, inst := range monitor.Instances() {
-		dynReloadTasks = append(dynReloadTasks, task.NewBuilder().SystemCtl(inst.GetHost(), inst.ServiceName(), "reload", true).Build())
+		if deletedNodes.Exist(inst.ID()) {
+			continue
+		}
+		t := task.NewBuilder().
+			SystemCtl(inst.GetHost(), inst.ServiceName(), "reload", true).
+			Build()
+		tasks = append(tasks, t)
 	}
-	return dynReloadTasks
+	return tasks
 }
 
 func buildScaleOutTask(
@@ -298,7 +305,7 @@ func buildScaleOutTask(
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: gOpt.OptTimeout}, tlsCfg)
 		}).
 		Parallel(false, refreshConfigTasks...).
-		Parallel(false, buildDynReloadPromTasks(metadata.GetTopology())...)
+		Parallel(false, buildReloadPromTasks(metadata.GetTopology())...)
 
 	if final != nil {
 		final(builder, name, metadata)

@@ -1,0 +1,3 @@
+monitoring_servers:
+  - host: n2
+    rule_dir: /tmp/local/prometheus
