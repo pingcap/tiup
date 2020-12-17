@@ -21,7 +21,6 @@ import (
 	stderrors "errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -158,76 +157,52 @@ func GenAndSaveKeys(keys map[string][]*KeyInfo, ty string, num int, dir string) 
 	return nil
 }
 
-// SignManifestFile add signatures to a manifest file
-func SignManifestFile(mfile string, kfiles ...string) error {
-	type manifestT struct {
-		// Signatures value
-		Signatures []*Signature `json:"signatures"`
-		// Signed value
-		Signed interface{} `json:"signed"`
+// SignManifestData add signatures to a manifest data
+func SignManifestData(data []byte, ki *KeyInfo) ([]byte, error) {
+	m := RawManifest{}
+
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, errors.Annotate(err, "unmarshal manifest")
 	}
 
-	fi, err := os.Open(mfile)
+	var signed interface{}
+	if err := json.Unmarshal(m.Signed, &signed); err != nil {
+		return nil, errors.Annotate(err, "unmarshal manifest.signed")
+	}
+
+	payload, err := cjson.Marshal(signed)
 	if err != nil {
-		return err
+		return nil, errors.Annotate(err, "marshal manifest.signed")
 	}
-	defer fi.Close()
 
-	m := manifestT{}
-	content, err := ioutil.ReadFile(mfile)
+	id, err := ki.ID()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if err := json.Unmarshal(content, &m); err != nil {
-		return err
-	}
-	payload, err := cjson.Marshal(m.Signed)
+
+	sig, err := ki.Signature(payload)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-NextKey:
-	for _, kf := range kfiles {
-		f, err := os.Open(kf)
-		if err != nil {
-			return err
+	for _, s := range m.Signatures {
+		if s.KeyID == id {
+			s.Sig = sig
+			return nil, errors.New("this manifest file has already been signed by specified key")
 		}
-		defer f.Close()
-
-		ki := KeyInfo{}
-		if err := json.NewDecoder(f).Decode(&ki); err != nil {
-			return err
-		}
-
-		id, err := ki.ID()
-		if err != nil {
-			return err
-		}
-
-		sig, err := ki.Signature(payload)
-		if err != nil {
-			return err
-		}
-
-		for _, s := range m.Signatures {
-			if s.KeyID == id {
-				s.Sig = sig
-				continue NextKey
-			}
-		}
-
-		m.Signatures = append(m.Signatures, &Signature{
-			KeyID: id,
-			Sig:   sig,
-		})
 	}
 
-	content, err = cjson.Marshal(m)
+	m.Signatures = append(m.Signatures, Signature{
+		KeyID: id,
+		Sig:   sig,
+	})
+
+	content, err := cjson.Marshal(m)
 	if err != nil {
-		return err
+		return nil, errors.Annotate(err, "marshal signed manifest")
 	}
 
-	return ioutil.WriteFile(mfile, content, 0664)
+	return content, nil
 }
 
 // NewRoot creates a Root object
