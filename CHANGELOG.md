@@ -4,7 +4,7 @@ TiUP Changelog
 
 ### New Features
 
-- Modify TiFlash's query memory limit from 10GB to 0(unlimited) in tiup-playground ([#907](https://github.com/pingcap/tiup/pull/907), [@LittleFall](https://github.com/LittleFall))
+- Modify TiFlash's query memory limit from 10GB to 0(unlimited) in playground cluster ([#907](https://github.com/pingcap/tiup/pull/907), [@LittleFall](https://github.com/LittleFall))
 - Import configuration into topology meta when migrating a cluster from Ansible ([#766](https://github.com/pingcap/tiup/pull/766), [@yuzhibotao](https://github.com/yuzhibotao))
   - Before, we stored imported ansible config in ansible-imported-configs which is hidden for users, in this release, we merge the configs into meta.yaml so that the user can see the config with the command `tiup cluster edit`
 - Enhance the `tiup mirror` command ([#860](https://github.com/pingcap/tiup/pull/860), [@lucklove](https://github.com/lucklove))
@@ -13,7 +13,7 @@ TiUP Changelog
   - Support add component owner to local mirror
 - Partially support deploy cluster with hostname besides ip address (**EXPERIMENTAL**) ([#948](https://github.com/pingcap/tiup/pull/948),[#949](https://github.com/pingcap/tiup/pull/949), [@fln](https://github.com/fln))
   - Not usable for production, as there would be issue if a hostname resolves to a new IP address after deployment
-- Support setting custom timeout for waiting instances up in tiup-playground ([#968](https://github.com/pingcap/tiup/pull/968), [@unbyte](https://github.com/unbyte))
+- Support setting custom timeout for waiting instances up in playground-cluster ([#968](https://github.com/pingcap/tiup/pull/968), [@unbyte](https://github.com/unbyte))
 - Support check and disable THP in `tiup cluster check` ([#964](https://github.com/pingcap/tiup/pull/964), [@anywhy](https://github.com/anywhy))
 - Support sign remote manifest and rotate root.json ([#967](https://github.com/pingcap/tiup/pull/967), [@lucklove](https://github.com/lucklove))
 
@@ -21,11 +21,10 @@ TiUP Changelog
 
 - Fixed the issue that the public key created by TiUP was not removed after the cluster was destroyed ([#910](https://github.com/pingcap/tiup/pull/910), [@9547](https://github.com/9547))
 - Fix the issue that user defined grafana username and password not imported from tidb-ansible cluster correctly ([#937](https://github.com/pingcap/tiup/pull/937), [@AstroProfundis](https://github.com/AstroProfundis))
-- Fix the issue that tiup-playground not quiting components with correct order: TiDB -> TiKV -> PD ([#933](https://github.com/pingcap/tiup/pull/933), [@unbyte](https://github.com/unbyte))
+- Fix the issue that playground cluster not quiting components with correct order: TiDB -> TiKV -> PD ([#933](https://github.com/pingcap/tiup/pull/933), [@unbyte](https://github.com/unbyte))
 - Fix the issue that TiKV reports wrong advertise address when `--status-addr` is set to a wildcard address like `0.0.0.0` ([#951](https://github.com/pingcap/tiup/pull/951), [@lucklove](https://github.com/lucklove))
-- Fix the issue that the cluster can't start when there are multiple Prometheus ([#972](https://github.com/pingcap/tiup/pull/972), [@9547](https://github.com/9547))
 - Fix the issue that Prometheus doesn't reload target after scale-in action ([#958](https://github.com/pingcap/tiup/pull/958), [@9547](https://github.com/9547))
-- Fix the issue that the config file for TiFlash missing in tiup-palyground ([#969](https://github.com/pingcap/tiup/pull/969), [@unbyte](https://github.com/unbyte))
+- Fix the issue that the config file for TiFlash missing in playground cluster ([#969](https://github.com/pingcap/tiup/pull/969), [@unbyte](https://github.com/unbyte))
 - Fix the issue that the TiFlash doesn't create err log when numactl is missing ([#984](https://github.com/pingcap/tiup/pull/984), [@lucklove](https://github.com/lucklove))
 - Fix the issue that deploy failed when remote is using zsh ([#982](https://github.com/pingcap/tiup/pull/982), [@9547](https://github.com/9547))
 
@@ -33,7 +32,7 @@ TiUP Changelog
 
 - Enable memory buddyinfo monitoring on node_exporter to collect exposes statistics of memory fragments ([#904](https://github.com/pingcap/tiup/pull/904), [@9547](https://github.com/9547))
 - Move error logs dumped by tiup-dm and tiup-cluster to `${TIUP_HOME}/logs` ([#908](https://github.com/pingcap/tiup/pull/908), [@9547](https://github.com/9547))
-- Allow run pure TiKV (without TiDB) cluster in tiup-playground ([#926](https://github.com/pingcap/tiup/pull/926), [@sticnarf](https://github.com/sticnarf))
+- Allow run pure TiKV (without TiDB) cluster in playground cluster ([#926](https://github.com/pingcap/tiup/pull/926), [@sticnarf](https://github.com/sticnarf))
 - Add confirm stage for upgrade action ([#963](https://github.com/pingcap/tiup/pull/963), [@Win-Man](https://github.com/Win-Man))
 - Omit debug log from console output in tiup-cluster ([#977](https://github.com/pingcap/tiup/pull/977), [@AstroProfundis](https://github.com/AstroProfundis))
 - Prompt list of paths to be deleted before processing in the clean action of tiup-cluster ([#981](https://github.com/pingcap/tiup/pull/981), [#993](https://github.com/pingcap/tiup/pull/993), [@AstroProfundis](https://github.com/AstroProfundis))
@@ -70,7 +69,7 @@ TiUP Changelog
 - Fix the issue that the patch command will fail when try to patch dm cluster ([#884](https://github.com/pingcap/tiup/pull/884), [@lucklove](https://github.com/lucklove))
 - Fix the issue that the bench component report `Error 1105: client has multi-statement capability disabled` ([#887](https://github.com/pingcap/tiup/pull/887), [@mahjonp](https://github.com/mahjonp))
 - Fix the issue that the TiSpark node can't be upgraded ([#901](https://github.com/pingcap/tiup/pull/901), [@lucklove](https://github.com/lucklove))
-- Fix the issue that tiup-playground can't start TiFlash with newest nightly PD ([#902](https://github.com/pingcap/tiup/pull/902), [@lucklove](https://github.com/lucklove))
+- Fix the issue that playground cluster can't start TiFlash with newest nightly PD ([#902](https://github.com/pingcap/tiup/pull/902), [@lucklove](https://github.com/lucklove))
 
 ### Improvements
 
