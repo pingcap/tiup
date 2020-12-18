@@ -25,8 +25,8 @@ TiUP Changelog
 - Fix the issue that TiKV reports wrong advertise address when `--status-addr` is set to a wildcard address like `0.0.0.0` ([#951](https://github.com/pingcap/tiup/pull/951), [@lucklove](https://github.com/lucklove))
 - Fix the issue that Prometheus doesn't reload target after scale-in action ([#958](https://github.com/pingcap/tiup/pull/958), [@9547](https://github.com/9547))
 - Fix the issue that the config file for TiFlash missing in playground cluster ([#969](https://github.com/pingcap/tiup/pull/969), [@unbyte](https://github.com/unbyte))
-- Fix the issue that the TiFlash doesn't create err log when numactl is missing ([#984](https://github.com/pingcap/tiup/pull/984), [@lucklove](https://github.com/lucklove))
-- Fix the issue that deploy failed when remote is using zsh ([#982](https://github.com/pingcap/tiup/pull/982), [@9547](https://github.com/9547))
+- Fix Tilfash startup failed without stderr output when numa is enabled but numactl cannot be found ([#984](https://github.com/pingcap/tiup/pull/984), [@lucklove](https://github.com/lucklove))
+- Fix the issue that the deployment environment fail to copy config file when zsh is configured ([#982](https://github.com/pingcap/tiup/pull/982), [@9547](https://github.com/9547))
 
 ### Improvements
 
