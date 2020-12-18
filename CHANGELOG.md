@@ -20,7 +20,7 @@ TiUP Changelog
 ### Fixes
 
 - Fixed the issue that the public key created by TiUP was not removed after the cluster was destroyed ([#910](https://github.com/pingcap/tiup/pull/910), [@9547](https://github.com/9547))
-- Fix the issue that user defined username and password not imported from tidb-ansible cluster correctly ([#937](https://github.com/pingcap/tiup/pull/937), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix the issue that user defined grafana username and password not imported from tidb-ansible cluster correctly ([#937](https://github.com/pingcap/tiup/pull/937), [@AstroProfundis](https://github.com/AstroProfundis))
 - Fix the issue that tiup-playground not quiting components with correct order: TiDB -> TiKV -> PD ([#933](https://github.com/pingcap/tiup/pull/933), [@unbyte](https://github.com/unbyte))
 - Fix the issue that TiKV reports wrong advertise address when `--status-addr` is set to a wildcard address like `0.0.0.0` ([#951](https://github.com/pingcap/tiup/pull/951), [@lucklove](https://github.com/lucklove))
 - Fix the issue that the cluster can't start when there are multiple Prometheus ([#972](https://github.com/pingcap/tiup/pull/972), [@9547](https://github.com/9547))
