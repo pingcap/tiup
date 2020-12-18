@@ -23,7 +23,6 @@ TiUP Changelog
 - Fix the issue that user defined username and password not imported from tidb-ansible cluster correctly ([#937](https://github.com/pingcap/tiup/pull/937), [@AstroProfundis](https://github.com/AstroProfundis))
 - Fix the issue that tiup-playground not quiting components with correct order: TiDB -> TiKV -> PD ([#933](https://github.com/pingcap/tiup/pull/933), [@unbyte](https://github.com/unbyte))
 - Fix the issue that tikv reports wrong advertise address when `--status-addr` is set to a wildcard address like `0.0.0.0` ([#951](https://github.com/pingcap/tiup/pull/951), [@lucklove](https://github.com/lucklove))
-- Make error message of monitor port conflict more readable ([#966](https://github.com/pingcap/tiup/pull/966), [@JaySon-Huang](https://github.com/JaySon-Huang))
 - Fix the issue that the cluster can't start when there are multiple prometheus ([#972](https://github.com/pingcap/tiup/pull/972), [@9547](https://github.com/9547))
 - Fix the issue that prometheus doesn't reload target after scale-in action ([#958](https://github.com/pingcap/tiup/pull/958), [@9547](https://github.com/9547))
 - Fix the issue that the config file for tiflash missing in tiup-palyground ([#969](https://github.com/pingcap/tiup/pull/969), [@unbyte](https://github.com/unbyte))
@@ -38,6 +37,7 @@ TiUP Changelog
 - Add confirm stage for upgrade action ([#963](https://github.com/pingcap/tiup/pull/963), [@Win-Man](https://github.com/Win-Man))
 - Omit debug log from console output in tiup-cluster ([#977](https://github.com/pingcap/tiup/pull/977), [@AstroProfundis](https://github.com/AstroProfundis))
 - Prompt list of paths to be delete before processing in the clean action of tiup-cluster ([#981](https://github.com/pingcap/tiup/pull/981), [#993](https://github.com/pingcap/tiup/pull/993), [@AstroProfundis](https://github.com/AstroProfundis))
+- Make error message of monitor port conflict more readable ([#966](https://github.com/pingcap/tiup/pull/966), [@JaySon-Huang](https://github.com/JaySon-Huang))
 
 ## [1.2.5] 2020.11.27
 
