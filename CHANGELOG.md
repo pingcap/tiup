@@ -11,16 +11,17 @@ TiUP Changelog
   - **Support merge two or more mirrors into one**
   - Support publish component to local mirror besides remote mirror
   - Support add component owner to local mirror
-- Support deploy cluster with hostname besides ip address (EXPERIMENTAL) ([#948](https://github.com/pingcap/tiup/pull/948),[#949](https://github.com/pingcap/tiup/pull/949), [@fln](https://github.com/fln))
+- Partially support deploy cluster with hostname besides ip address (**EXPERIMENTAL**) ([#948](https://github.com/pingcap/tiup/pull/948),[#949](https://github.com/pingcap/tiup/pull/949), [@fln](https://github.com/fln))
+  - Not usable for production, as there would be issue if a hostname resolves to a new IP address after deployment
 - Support setting custom timeout for waiting instances up in tiup-playground ([#968](https://github.com/pingcap/tiup/pull/968), [@unbyte](https://github.com/unbyte))
-- Support check and disable THP in tiup cluster check ([#964](https://github.com/pingcap/tiup/pull/964), [@anywhy](https://github.com/anywhy))
+- Support check and disable THP in `tiup cluster check` ([#964](https://github.com/pingcap/tiup/pull/964), [@anywhy](https://github.com/anywhy))
 - Support sign remote manifest and rotate root.json ([#967](https://github.com/pingcap/tiup/pull/967), [@lucklove](https://github.com/lucklove))
 
 ### Fixes
 
 - Fix the issue that public key created by TiUP not removed after the cluster destroyed ([#910](https://github.com/pingcap/tiup/pull/910), [@9547](https://github.com/9547))
 - Fix the issue that user defined username and password not imported from tidb-ansible cluster correctly ([#937](https://github.com/pingcap/tiup/pull/937), [@AstroProfundis](https://github.com/AstroProfundis))
-- Fix the issue that tiup-playground not quit components with correct order: TiDB -> TiKV -> PD ([#933](https://github.com/pingcap/tiup/pull/933), [@unbyte](https://github.com/unbyte))
+- Fix the issue that tiup-playground not quiting components with correct order: TiDB -> TiKV -> PD ([#933](https://github.com/pingcap/tiup/pull/933), [@unbyte](https://github.com/unbyte))
 - Fix the issue that tikv reports wrong advertise address when `--status-addr` is set to a wildcard address like `0.0.0.0` ([#951](https://github.com/pingcap/tiup/pull/951), [@lucklove](https://github.com/lucklove))
 - Make error message of monitor port conflict more readable ([#966](https://github.com/pingcap/tiup/pull/966), [@JaySon-Huang](https://github.com/JaySon-Huang))
 - Fix the issue that the cluster can't start when there are multiple prometheus ([#972](https://github.com/pingcap/tiup/pull/972), [@9547](https://github.com/9547))
