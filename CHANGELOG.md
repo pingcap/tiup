@@ -1,5 +1,43 @@
 TiUP Changelog
 
+## [1.3.0] 2020.12.17
+
+### New Features
+
+- Modify TiFlash's query memory limit from 10GB to 0(unlimited) in playground cluster ([#907](https://github.com/pingcap/tiup/pull/907), [@LittleFall](https://github.com/LittleFall))
+- Import configuration into topology meta when migrating a cluster from Ansible ([#766](https://github.com/pingcap/tiup/pull/766), [@yuzhibotao](https://github.com/yuzhibotao))
+  - Before, we stored imported ansible config in ansible-imported-configs which is hidden for users, in this release, we merge the configs into meta.yaml so that the user can see the config with the command `tiup cluster edit`
+- Enhance the `tiup mirror` command ([#860](https://github.com/pingcap/tiup/pull/860), [@lucklove](https://github.com/lucklove))
+  - **Support merge two or more mirrors into one**
+  - Support publish component to local mirror besides remote mirror
+  - Support add component owner to local mirror
+- Partially support deploy cluster with hostname besides ip address (**EXPERIMENTAL**) ([#948](https://github.com/pingcap/tiup/pull/948),[#949](https://github.com/pingcap/tiup/pull/949), [@fln](https://github.com/fln))
+  - Not usable for production, as there would be issue if a hostname resolves to a new IP address after deployment
+- Support setting custom timeout for waiting instances up in playground-cluster ([#968](https://github.com/pingcap/tiup/pull/968), [@unbyte](https://github.com/unbyte))
+- Support check and disable THP in `tiup cluster check` ([#964](https://github.com/pingcap/tiup/pull/964), [@anywhy](https://github.com/anywhy))
+- Support sign remote manifest and rotate root.json ([#967](https://github.com/pingcap/tiup/pull/967), [@lucklove](https://github.com/lucklove))
+
+### Fixes
+
+- Fixed the issue that the public key created by TiUP was not removed after the cluster was destroyed ([#910](https://github.com/pingcap/tiup/pull/910), [@9547](https://github.com/9547))
+- Fix the issue that user defined grafana username and password not imported from tidb-ansible cluster correctly ([#937](https://github.com/pingcap/tiup/pull/937), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix the issue that playground cluster not quiting components with correct order: TiDB -> TiKV -> PD ([#933](https://github.com/pingcap/tiup/pull/933), [@unbyte](https://github.com/unbyte))
+- Fix the issue that TiKV reports wrong advertise address when `--status-addr` is set to a wildcard address like `0.0.0.0` ([#951](https://github.com/pingcap/tiup/pull/951), [@lucklove](https://github.com/lucklove))
+- Fix the issue that Prometheus doesn't reload target after scale-in action ([#958](https://github.com/pingcap/tiup/pull/958), [@9547](https://github.com/9547))
+- Fix the issue that the config file for TiFlash missing in playground cluster ([#969](https://github.com/pingcap/tiup/pull/969), [@unbyte](https://github.com/unbyte))
+- Fix Tilfash startup failed without stderr output when numa is enabled but numactl cannot be found ([#984](https://github.com/pingcap/tiup/pull/984), [@lucklove](https://github.com/lucklove))
+- Fix the issue that the deployment environment fail to copy config file when zsh is configured ([#982](https://github.com/pingcap/tiup/pull/982), [@9547](https://github.com/9547))
+
+### Improvements
+
+- Enable memory buddyinfo monitoring on node_exporter to collect exposes statistics of memory fragments ([#904](https://github.com/pingcap/tiup/pull/904), [@9547](https://github.com/9547))
+- Move error logs dumped by tiup-dm and tiup-cluster to `${TIUP_HOME}/logs` ([#908](https://github.com/pingcap/tiup/pull/908), [@9547](https://github.com/9547))
+- Allow run pure TiKV (without TiDB) cluster in playground cluster ([#926](https://github.com/pingcap/tiup/pull/926), [@sticnarf](https://github.com/sticnarf))
+- Add confirm stage for upgrade action ([#963](https://github.com/pingcap/tiup/pull/963), [@Win-Man](https://github.com/Win-Man))
+- Omit debug log from console output in tiup-cluster ([#977](https://github.com/pingcap/tiup/pull/977), [@AstroProfundis](https://github.com/AstroProfundis))
+- Prompt list of paths to be deleted before processing in the clean action of tiup-cluster ([#981](https://github.com/pingcap/tiup/pull/981), [#993](https://github.com/pingcap/tiup/pull/993), [@AstroProfundis](https://github.com/AstroProfundis))
+- Make error message of monitor port conflict more readable ([#966](https://github.com/pingcap/tiup/pull/966), [@JaySon-Huang](https://github.com/JaySon-Huang))
+
 ## [1.2.5] 2020.11.27
 
 ### Fixes
@@ -26,12 +64,12 @@ TiUP Changelog
   - Risk caused by this issue: some audit logs may get lost in above case
 - Fix the issue that new component deployed with `tiup cluster scale-out` doesn't auto start when rebooting ([#905](https://github.com/pingcap/tiup/pull/905), [@9547](https://github.com/9547))
   - Risk caused by this issue: the cluster may be unavailable after rebooting
-- Fix the issue that data directory of tiflash is not deleted if multiple data directories are specified ([#871](https://github.com/pingcap/tiup/pull/871), [@9547](https://github.com/9547))
+- Fix the issue that data directory of TiFlash is not deleted if multiple data directories are specified ([#871](https://github.com/pingcap/tiup/pull/871), [@9547](https://github.com/9547))
 - Fix the issue that `node_exporter` and `blackbox_exporter` not cleaned up after scale-in all instances on specified host ([#857](https://github.com/pingcap/tiup/pull/857), [@9547](https://github.com/9547))
 - Fix the issue that the patch command will fail when try to patch dm cluster ([#884](https://github.com/pingcap/tiup/pull/884), [@lucklove](https://github.com/lucklove))
 - Fix the issue that the bench component report `Error 1105: client has multi-statement capability disabled` ([#887](https://github.com/pingcap/tiup/pull/887), [@mahjonp](https://github.com/mahjonp))
 - Fix the issue that the TiSpark node can't be upgraded ([#901](https://github.com/pingcap/tiup/pull/901), [@lucklove](https://github.com/lucklove))
-- Fix the issue that tiup-playground can't start TiFlash with newest nightly PD ([#902](https://github.com/pingcap/tiup/pull/902), [@lucklove](https://github.com/lucklove))
+- Fix the issue that playground cluster can't start TiFlash with newest nightly PD ([#902](https://github.com/pingcap/tiup/pull/902), [@lucklove](https://github.com/lucklove))
 
 ### Improvements
 
@@ -95,8 +133,8 @@ TiUP Changelog
 
 ### Fixes
 
-- Fix the issue that tikv store leader count is not correct ([#762](https://github.com/pingcap/tiup/pull/762))
-- Fix the issue that tiflash's data is not clean up ([#768](https://github.com/pingcap/tiup/pull/768))
+- Fix the issue that TiKV store leader count is not correct ([#762](https://github.com/pingcap/tiup/pull/762))
+- Fix the issue that TiFlash's data is not clean up ([#768](https://github.com/pingcap/tiup/pull/768))
 - Fix the issue that `tiup cluster deploy --help` display wrong help message ([#758](https://github.com/pingcap/tiup/pull/758))
 - Fix the issue that tiup-playground can't display and scale ([#749](https://github.com/pingcap/tiup/pull/749))
 
@@ -122,10 +160,10 @@ TiUP Changelog
   - Cleanup all data in specified cluster: `tiup cluster clean ${cluster-name} --data`
   - Cleanup all logs in specified cluster: `tiup cluster clean ${cluster-name} --log`
   - Cleanup all logs and data in specified cluster: `tiup cluster clean ${cluster-name} --all`
-  - Cleanup all logs and data in specified cluster, excepting the prometheus service: `tiup cluster clean ${cluster-name} --all --ignore-role prometheus`
+  - Cleanup all logs and data in specified cluster, excepting the Prometheus service: `tiup cluster clean ${cluster-name} --all --ignore-role Prometheus`
   - Cleanup all logs and data in specified cluster, expecting the node `172.16.13.11:9000`: `tiup cluster clean ${cluster-name} --all --ignore-node 172.16.13.11:9000`
   - Cleanup all logs and data in specified cluster, expecting the host `172.16.13.11`: `tiup cluster clean ${cluster-name} --all --ignore-node 172.16.13.12`
-- Support skipping evicting store when there is only 1 tikv ([#662](https://github.com/pingcap/tiup/pull/662), [@lucklove](https://github.com/lucklove))
+- Support skipping evicting store when there is only 1 TiKV ([#662](https://github.com/pingcap/tiup/pull/662), [@lucklove](https://github.com/lucklove))
 - Support importing clusters with binlog enabled ([#652](https://github.com/pingcap/tiup/pull/652), [@AstroProfundis](https://github.com/AstroProfundis))
 - Support yml source format with tiup-dm ([#655](https://github.com/pingcap/tiup/pull/655), [@july2993](https://github.com/july2993))
 - Support detecting port conflict of monitoring agents between different clusters ([#623](https://github.com/pingcap/tiup/pull/623), [@AstroProfundis](https://github.com/AstroProfundis))
@@ -137,7 +175,7 @@ TiUP Changelog
 
 ### Improvements
 
-- Add `advertise-status-addr` for tiflash to support host name ([#676](https://github.com/pingcap/tiup/pull/676), [@birdstorm](https://github.com/birdstorm))
+- Add `advertise-status-addr` for TiFlash to support host name ([#676](https://github.com/pingcap/tiup/pull/676), [@birdstorm](https://github.com/birdstorm))
 
 ## [1.0.9] 2020.08.03
 
@@ -153,7 +191,7 @@ TiUP Changelog
 
 * Validate topology changes after edit-config [#609](https://github.com/pingcap/tiup/pull/609)
 * Allow continue editing when new topology has errors [#624](https://github.com/pingcap/tiup/pull/624)
-* Fix wrongly setted data_dir of tiflash when import from ansible [#612](https://github.com/pingcap/tiup/pull/612)
+* Fix wrongly setted data_dir of TiFlash when import from ansible [#612](https://github.com/pingcap/tiup/pull/612)
 * Support native ssh client [#615](https://github.com/pingcap/tiup/pull/615)
 * Support refresh configuration only when reload [#625](https://github.com/pingcap/tiup/pull/625)
 * Apply config file on scaled pd server [#627](https://github.com/pingcap/tiup/pull/627)
