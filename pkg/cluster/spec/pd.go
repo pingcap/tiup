@@ -66,7 +66,7 @@ func (s PDSpec) Status(tlsCfg *tls.Config, _ ...string) string {
 	if err != nil {
 		return "ERR"
 	}
-	res := "UP"
+	res := "Up"
 	if s.Name == leader.Name {
 		res += "|L"
 	}
