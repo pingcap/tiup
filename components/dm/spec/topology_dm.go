@@ -128,12 +128,10 @@ type MasterSpec struct {
 }
 
 // Status queries current status of the instance
-func (s MasterSpec) Status(tlsCfg *tls.Config, masterList ...string) string {
-	if len(masterList) < 1 {
-		return "N/A"
-	}
-	masterapi := api.NewDMMasterClient(masterList, statusQueryTimeout, tlsCfg)
-	isFound, isActive, isLeader, err := masterapi.GetMaster(s.Name)
+func (s MasterSpec) Status(tlsCfg *tls.Config, _ ...string) string {
+	addr := fmt.Sprintf("%s:%d", s.Host, s.Port)
+	dc := api.NewDMMasterClient([]string{addr}, statusQueryTimeout, tlsCfg)
+	isFound, isActive, isLeader, err := dc.GetMaster(s.Name)
 	if err != nil {
 		return "Down"
 	}
@@ -193,8 +191,8 @@ func (s WorkerSpec) Status(tlsCfg *tls.Config, masterList ...string) string {
 	if len(masterList) < 1 {
 		return "N/A"
 	}
-	masterapi := api.NewDMMasterClient(masterList, statusQueryTimeout, tlsCfg)
-	stage, err := masterapi.GetWorker(s.Name)
+	dc := api.NewDMMasterClient(masterList, statusQueryTimeout, tlsCfg)
+	stage, err := dc.GetWorker(s.Name)
 	if err != nil {
 		return "Down"
 	}

@@ -23,6 +23,7 @@ import (
 
 	"github.com/creasty/defaults"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -368,6 +369,20 @@ func (s *Specification) GetPDList() []string {
 	}
 
 	return pdList
+}
+
+// GetDashboardAddress returns the cluster's dashboard addr
+func (s *Specification) GetDashboardAddress(tlsCfg *tls.Config, pdList ...string) (string, error) {
+	pc := api.NewPDClient(pdList, statusQueryTimeout, tlsCfg)
+	dashboardAddr, err := pc.GetDashboardAddress()
+	if err != nil {
+		return "", err
+	}
+	if strings.HasPrefix(dashboardAddr, "http") {
+		r := strings.NewReplacer("http://", "", "https://", "")
+		dashboardAddr = r.Replace(dashboardAddr)
+	}
+	return dashboardAddr, nil
 }
 
 // GetEtcdClient load EtcdClient of current cluster

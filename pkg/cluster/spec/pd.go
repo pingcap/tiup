@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -52,37 +51,26 @@ type PDSpec struct {
 }
 
 // Status queries current status of the instance
-func (s PDSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
-	curAddr := fmt.Sprintf("%s:%d", s.Host, s.ClientPort)
-	curPdAPI := api.NewPDClient([]string{curAddr}, statusQueryTimeout, tlsCfg)
-	allPdAPI := api.NewPDClient(pdList, statusQueryTimeout, tlsCfg)
-	suffix := ""
-
-	// find dashboard node
-	dashboardAddr, _ := allPdAPI.GetDashboardAddress()
-	if strings.HasPrefix(dashboardAddr, "http") {
-		r := strings.NewReplacer("http://", "", "https://", "")
-		dashboardAddr = r.Replace(dashboardAddr)
-	}
-	if dashboardAddr == curAddr {
-		suffix = "|UI"
-	}
+func (s PDSpec) Status(tlsCfg *tls.Config, _ ...string) string {
+	addr := fmt.Sprintf("%s:%d", s.Host, s.ClientPort)
+	pc := api.NewPDClient([]string{addr}, statusQueryTimeout, tlsCfg)
 
 	// check health
-	err := curPdAPI.CheckHealth()
+	err := pc.CheckHealth()
 	if err != nil {
-		return "Down" + suffix
+		return "Down"
 	}
 
 	// find leader node
-	leader, err := curPdAPI.GetLeader()
+	leader, err := pc.GetLeader()
 	if err != nil {
-		return "ERR" + suffix
+		return "ERR"
 	}
+	res := "Up"
 	if s.Name == leader.Name {
-		suffix = "|L" + suffix
+		res += "|L"
 	}
-	return "Up" + suffix
+	return res
 }
 
 // Role returns the component role of the instance
