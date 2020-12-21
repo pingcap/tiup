@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"time"
 )
@@ -37,6 +38,7 @@ func NewHTTPClient(timeout time.Duration, tlsConfig *tls.Config) *HTTPClient {
 			Timeout: timeout,
 			Transport: &http.Transport{
 				TLSClientConfig: tlsConfig,
+				Dial:            (&net.Dialer{Timeout: 5 * time.Second}).Dial,
 			},
 		},
 	}

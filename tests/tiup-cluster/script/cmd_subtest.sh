@@ -75,7 +75,12 @@ function cmd_subtest() {
 
     tiup-cluster $client _test $name data
 
-    tiup-cluster $client display $name
+    display_result=`tiup-cluster $client display $name`
+    echo "$display_result" | grep "Cluster type"
+    echo "$display_result" | grep "Cluster name"
+    echo "$display_result" | grep "Cluster version"
+    echo "$display_result" | grep "Dashboard URL"
+    echo "$display_result" | grep "Total nodes"
 
     # Test rename
     tiup-cluster $client rename $name "tmp-cluster-name"
