@@ -62,14 +62,16 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart bool) er
 		}
 	}
 
-	tb := m.sshTaskBuilder(name, topo, base.User, opt).
-		UpdateTopology(
+	tb := m.sshTaskBuilder(name, topo, base.User, opt)
+	if topo.Type() == spec.TopoTypeTiDB {
+		tb = tb.UpdateTopology(
 			name,
 			m.specManager.Path(name),
 			metadata.(*spec.ClusterMeta),
 			nil, /* deleteNodeIds */
-		).
-		ParallelStep("+ Refresh instance configs", opt.Force, refreshConfigTasks...)
+		)
+	}
+	tb = tb.ParallelStep("+ Refresh instance configs", opt.Force, refreshConfigTasks...)
 
 	if len(monitorConfigTasks) > 0 {
 		tb = tb.ParallelStep("+ Refresh monitor configs", opt.Force, monitorConfigTasks...)
