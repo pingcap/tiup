@@ -669,7 +669,7 @@ func CheckTHP(e executor.Executor) *CheckResult {
 		return result
 	}
 
-	for _, line := range strings.Split(string(stdout), "\n") {
+	for _, line := range strings.Split(strings.Trim(string(stdout), "\n"), "\n") {
 		if !strings.Contains(line, "[never]") {
 			result.Err = fmt.Errorf("THP is enabled, please disable it for best performance")
 			return result
