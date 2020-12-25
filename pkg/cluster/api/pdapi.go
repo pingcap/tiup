@@ -391,7 +391,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 		return nil
 	}
 
-	log.Infof("Evicting %d leaders from store %s...", leaderCount, latestStore.Store.Address)
+	log.Infof("\tEvicting %d leaders from store %s...", leaderCount, latestStore.Store.Address)
 
 	// set scheduler for stores
 	scheduler, err := json.Marshal(pdSchedulerRequest{
@@ -431,8 +431,8 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 		if leaderCount == 0 {
 			return nil
 		}
-		log.Debugf(
-			"Still waitting for %d store leaders to transfer...",
+		log.Infof(
+			"\t  Still waitting for %d store leaders to transfer...",
 			leaderCount,
 		)
 
