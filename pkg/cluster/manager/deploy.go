@@ -363,6 +363,6 @@ func (m *Manager) Deploy(
 	}
 
 	hint := color.New(color.Bold).Sprintf("%s start %s", cliutil.OsArgs0(), name)
-	log.Infof("Deployed cluster `%s` successfully, you can start the cluster via `%s`", name, hint)
+	log.Infof("Cluster `%s` deployed successfully, you can start it with command: `%s`", name, hint)
 	return nil
 }
