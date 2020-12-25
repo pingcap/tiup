@@ -54,14 +54,14 @@ func (m *Manager) EditConfig(name string, skipConfirm bool) error {
 		return nil
 	}
 
-	log.Infof("Apply the change...")
+	log.Infof("Applying changes...")
 	metadata.SetTopology(newTopo)
 	err = m.specManager.SaveMeta(name, metadata)
 	if err != nil {
 		return perrs.Annotate(err, "failed to save meta")
 	}
 
-	log.Infof("Apply change successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", cliutil.OsArgs0(), name)
+	log.Infof("Applied successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", cliutil.OsArgs0(), name)
 	return nil
 }
 
