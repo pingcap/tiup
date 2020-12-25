@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/kvproto/pkg/metapb"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -70,15 +71,31 @@ func checkStoreStatus(storeAddr string, tlsCfg *tls.Config, pdList ...string) st
 		return "Down"
 	}
 
-	// only get status of the latest store, it is the store with lagest ID number
+	// only get status of the latest store, it is the store with largest ID number
 	// older stores might be legacy ones that already offlined
 	var latestStore *pdserverapi.StoreInfo
+
 	for _, store := range stores.Stores {
 		if storeAddr == store.Store.Address {
 			if latestStore == nil {
 				latestStore = store
 				continue
 			}
+
+			// If the PD leader has been switched multiple times, the store IDs
+			// may be not monitonically assigned. To workaround this, we iterate
+			// over the whole store list to see if any of the store's state is
+			// not marked as "tombstone", then use that as the result.
+			// See: https://github.com/tikv/pd/issues/3303
+			//
+			// It's logically not necessary to find the store with largest ID
+			// number anymore in this process, but we're keeping the behavior
+			// as the reasonable approach would still be using the state from
+			// latest store, and this is only a workaround.
+			if store.Store.State != metapb.StoreState_Tombstone {
+				return store.Store.StateName
+			}
+
 			if store.Store.Id > latestStore.Store.Id {
 				latestStore = store
 			}
