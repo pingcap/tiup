@@ -21,7 +21,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"sort"
 	"time"
 
 	"github.com/jeremywohl/flatten"
@@ -153,11 +152,55 @@ func (pc *PDClient) GetStores() (*pdserverapi.StoresInfo, error) {
 		return nil, err
 	}
 
-	sort.Slice(storesInfo.Stores, func(i int, j int) bool {
-		return storesInfo.Stores[i].Store.Id > storesInfo.Stores[j].Store.Id
-	})
+	// Desc sorting the store list, we assume the store with largest ID is the
+	// latest one.
+	// Not necessary when we implement the workaround pd-3303 in GetCurrentStore()
+	//sort.Slice(storesInfo.Stores, func(i int, j int) bool {
+	//	return storesInfo.Stores[i].Store.Id > storesInfo.Stores[j].Store.Id
+	//})
 
 	return &storesInfo, nil
+}
+
+// GetCurrentStore gets the current store info of a given host
+func (pc *PDClient) GetCurrentStore(addr string) (*pdserverapi.StoreInfo, error) {
+	stores, err := pc.GetStores()
+	if err != nil {
+		return nil, err
+	}
+
+	// Find the store with largest ID
+	var latestStore *pdserverapi.StoreInfo
+	for _, store := range stores.Stores {
+		if store.Store.Address == addr {
+			// Workaround of pd-3303:
+			// If the PD leader has been switched multiple times, the store IDs
+			// may be not monitonically assigned. To workaround this, we iterate
+			// over the whole store list to see if any of the store's state is
+			// not marked as "tombstone", then use that as the result.
+			// See: https://github.com/tikv/pd/issues/3303
+			//
+			// It's logically not necessary to find the store with largest ID
+			// number anymore in this process, but we're keeping the behavior
+			// as the reasonable approach would still be using the state from
+			// latest store, and this is only a workaround.
+			if store.Store.State != metapb.StoreState_Tombstone {
+				return store, nil
+			}
+
+			if latestStore == nil {
+				latestStore = store
+				continue
+			}
+			if store.Store.Id > latestStore.Store.Id {
+				latestStore = store
+			}
+		}
+	}
+	if latestStore != nil {
+		return latestStore, nil
+	}
+	return nil, fmt.Errorf("no store matching address \"%s\" found", addr)
 }
 
 // WaitLeader wait until there's a leader or timeout.
@@ -330,21 +373,10 @@ type pdSchedulerRequest struct {
 // The host parameter should be in format of IP:Port, that matches store's address
 func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, countLeader func(string) (int, error)) error {
 	// get info of current stores
-	stores, err := pc.GetStores()
+	latestStore, err := pc.GetCurrentStore(host)
 	if err != nil {
 		return err
 	}
-
-	// get store info of host
-	var latestStore *pdserverapi.StoreInfo
-	for _, storeInfo := range stores.Stores {
-		if storeInfo.Store.Address != host {
-			continue
-		}
-		latestStore = storeInfo
-		break
-	}
-
 	if latestStore == nil {
 		return nil
 	}
@@ -387,28 +419,22 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 		}
 	}
 	if err := utils.Retry(func() error {
-		currStores, err := pc.GetStores()
+		currStore, err := pc.GetCurrentStore(host)
 		if err != nil {
 			return err
 		}
 
 		// check if all leaders are evicted
-		for _, currStoreInfo := range currStores.Stores {
-			if currStoreInfo.Store.Address != host {
-				continue
-			}
-			if leaderCount, err = countLeader(latestStore.Store.Address); err != nil {
-				return err
-			}
-			if leaderCount == 0 {
-				return nil
-			}
-			log.Debugf(
-				"Still waitting for %d store leaders to transfer...",
-				leaderCount,
-			)
-			break
+		if leaderCount, err = countLeader(currStore.Store.Address); err != nil {
+			return err
 		}
+		if leaderCount == 0 {
+			return nil
+		}
+		log.Debugf(
+			"Still waitting for %d store leaders to transfer...",
+			leaderCount,
+		)
 
 		// return error by default, to make the retry work
 		return errors.New("still waiting for the store leaders to transfer")
@@ -422,21 +448,10 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 // leaders to be transffered to it again.
 func (pc *PDClient) RemoveStoreEvict(host string) error {
 	// get info of current stores
-	stores, err := pc.GetStores()
+	latestStore, err := pc.GetCurrentStore(host)
 	if err != nil {
 		return err
 	}
-
-	// get store info of host
-	var latestStore *pdserverapi.StoreInfo
-	for _, storeInfo := range stores.Stores {
-		if storeInfo.Store.Address != host {
-			continue
-		}
-		latestStore = storeInfo
-		break
-	}
-
 	if latestStore == nil {
 		// no store matches, just skip
 		return nil
@@ -530,23 +545,19 @@ func (pc *PDClient) DelPD(name string, retryOpt *utils.RetryOption) error {
 
 func (pc *PDClient) isSameState(host string, state metapb.StoreState) (bool, error) {
 	// get info of current stores
-	stores, err := pc.GetStores()
+	storeInfo, err := pc.GetCurrentStore(host)
 	if err != nil {
 		return false, err
 	}
-
-	for _, storeInfo := range stores.Stores {
-		if storeInfo.Store.Address != host {
-			continue
-		}
-
-		if storeInfo.Store.State == state {
-			return true, nil
-		}
-		return false, nil
+	if storeInfo == nil {
+		return false, errors.New("node not exists")
 	}
 
-	return false, errors.New("node not exists")
+	if storeInfo.Store.State == state {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // IsTombStone check if the node is Tombstone.
@@ -568,24 +579,16 @@ var ErrStoreNotExists = errors.New("store not exists")
 // The host parameter should be in format of IP:Port, that matches store's address
 func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 	// get info of current stores
-	stores, err := pc.GetStores()
+	storeInfo, err := pc.GetCurrentStore(host)
 	if err != nil {
 		return err
 	}
-
-	// get store ID of host
-	var storeID uint64
-	for _, storeInfo := range stores.Stores {
-		if storeInfo.Store.Address != host {
-			continue
-		}
-		storeID = storeInfo.Store.Id
-		break
-	}
-
-	if storeID == 0 {
+	if storeInfo == nil {
 		return errors.Annotatef(ErrStoreNotExists, "id: %s", host)
 	}
+
+	// get store ID of host
+	storeID := storeInfo.Store.Id
 
 	cmd := fmt.Sprintf("%s/%d", pdStoreURI, storeID)
 	endpoints := pc.getEndpoints(cmd)
@@ -614,23 +617,24 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 		}
 	}
 	if err := utils.Retry(func() error {
-		currStores, err := pc.GetStores()
+		currStore, err := pc.GetCurrentStore(host)
 		if err != nil {
 			return err
 		}
+		if currStore == nil {
+			// the store does not exist anymore, just ignore and skip
+			return nil
+		}
 
-		// check if the deleted member still present
-		for _, store := range currStores.Stores {
-			if store.Store.Id == storeID {
-				// deleting a store may take long time to transfer data, so we
-				// return success once it get to "Offline" status and not waiting
-				// for the whole process to complete.
-				// When finished, the store's state will be "Tombstone".
-				if store.Store.StateName != metapb.StoreState_name[0] {
-					return nil
-				}
-				return errors.New("still waiting for the store to be deleted")
+		if currStore.Store.Id == storeID {
+			// deleting a store may take long time to transfer data, so we
+			// return success once it get to "Offline" status and not waiting
+			// for the whole process to complete.
+			// When finished, the store's state will be "Tombstone".
+			if currStore.Store.State != metapb.StoreState_Up {
+				return nil
 			}
+			return errors.New("still waiting for the store to be deleted")
 		}
 
 		return nil
@@ -685,7 +689,7 @@ func (pc *PDClient) GetTiKVLabels() (map[string]map[string]string, error) {
 
 	locationLabels := map[string]map[string]string{}
 	for _, s := range r.Stores {
-		if s.Store.StateName != "Up" {
+		if s.Store.State != metapb.StoreState_Up {
 			continue
 		}
 		lbs := s.Store.GetLabels()
