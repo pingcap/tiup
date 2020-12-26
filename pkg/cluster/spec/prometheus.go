@@ -199,7 +199,7 @@ func (i *MonitorInstance) InitConfig(
 			cfig.AddPump(pump.Host, uint64(pump.Port))
 		}
 	}
-	if servers, found := topoHasField("Trainers"); found {
+	if servers, found := topoHasField("Drainers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			drainer := servers.Index(i).Interface().(DrainerSpec)
 			uniqueHosts.Insert(drainer.Host)
