@@ -207,14 +207,13 @@ func (r *V1Repository) ensureManifests() error {
 		verbose.Log("Ensure manifests finished in %s", time.Since(start))
 	}(time.Now())
 
-	// Update snapshot.
-	snapshot, err := r.updateLocalSnapshot()
-	if err != nil {
+	// Update root before anything else.
+	if err := r.updateLocalRoot(); err != nil {
 		return errors.Trace(err)
 	}
 
-	// Update root.
-	err = r.updateLocalRoot()
+	// Update snapshot.
+	snapshot, err := r.updateLocalSnapshot()
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -353,7 +352,7 @@ func (r *V1Repository) updateLocalRoot() error {
 		url := FnameWithVersion(v1manifest.ManifestURLRoot, oldRoot.Version+1)
 		nextManifest, err := r.fetchManifestWithKeyStore(url, &newRoot, maxRootSize, &keyStore)
 		if err != nil {
-			// Break if we have read the newest version.
+			// Break if we have read the latest version.
 			if errors.Cause(err) == ErrNotFound {
 				break
 			}
@@ -825,7 +824,7 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, versio
 		specVersion = component.Nightly
 	}
 
-	// We need yanked version because we may install that version before it was yanked
+	// We need yanked version because we may have installed that version before it was yanked
 	versionItem, ok := component.VersionListWithYanked(r.PlatformString())[specVersion]
 	if !ok {
 		return "", errors.Errorf("no version: %s", version)
