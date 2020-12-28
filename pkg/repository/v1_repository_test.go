@@ -443,7 +443,7 @@ func TestEnsureManifests(t *testing.T) {
 	assert.NotContains(t, local.Saved, v1manifest.ManifestFilenameRoot)
 
 	// Happy update
-	root2, priv2 := rootManifest(t)
+	root2, priv2 := rootManifest(t) // generate new root key
 	root, _ := repo.loadRoot()
 	root2.Version = root.Version + 1
 	mirror.Resources["/43.root.json"] = serialize(t, root2, priv, priv2)
@@ -451,11 +451,11 @@ func TestEnsureManifests(t *testing.T) {
 	rootMeta := snapshot.Meta[v1manifest.ManifestURLRoot]
 	rootMeta.Version = root2.Version
 	snapshot.Meta[v1manifest.ManifestURLRoot] = rootMeta
-	snapStr = serialize(t, snapshot, priv)
+	snapStr = serialize(t, snapshot, priv2) // sign snapshot with new key
 	ts.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = hash(snapStr)
 	ts.Version++
 	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
-	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
+	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv2)
 	local.Saved = []string{}
 
 	err = repo.ensureManifests()
