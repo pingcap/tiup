@@ -148,8 +148,8 @@ server_configs:
   # tikv-client.async-commit.keys-limit: 256
   # tikv-client.async-commit.total-key-size-limit: 4096
   # tikv-client.copr-cache.enable: true
-  # tikv-client.copr-cache.capacity-mb: 1000.0
-  # tikv-client.copr-cache.admission-max-result-mb: 10.0
+  # tikv-client.copr-cache.capacity-mb: 1000
+  # tikv-client.copr-cache.admission-max-result-mb: 10
   # tikv-client.copr-cache.admission-min-process-ms: 5
   # binlog.enable: false
   # binlog.write-timeout: "15s"
