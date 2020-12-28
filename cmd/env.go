@@ -23,8 +23,6 @@ import (
 
 var envList = []string{
 	localdata.EnvNameHome,
-	localdata.EnvNameTelemetryStatus,
-	localdata.EnvNameTelemetryUUID,
 	localdata.EnvNameSSHPassPrompt,
 	localdata.EnvNameSSHPath,
 	localdata.EnvNameSCPPath,
