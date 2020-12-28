@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,7 +25,7 @@ import (
 	"time"
 
 	"github.com/jeremywohl/flatten"
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/kvproto/pkg/metapb"
 	"github.com/pingcap/kvproto/pkg/pdpb"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -86,7 +87,7 @@ func tryURLs(endpoints []string, f func(endpoint string) ([]byte, error)) ([]byt
 		u, err = url.Parse(endpoint)
 
 		if err != nil {
-			return bytes, errors.AddStack(err)
+			return bytes, perrs.AddStack(err)
 		}
 
 		endpoint = u.String()
@@ -98,7 +99,7 @@ func tryURLs(endpoints []string, f func(endpoint string) ([]byte, error)) ([]byt
 		return bytes, nil
 	}
 	if len(endpoints) > 1 && err != nil {
-		err = errors.Errorf("no endpoint available, the last err was: %s", err)
+		err = perrs.Errorf("no endpoint available, the last err was: %s", err)
 	}
 	return bytes, err
 }
@@ -200,7 +201,7 @@ func (pc *PDClient) GetCurrentStore(addr string) (*pdserverapi.StoreInfo, error)
 	if latestStore != nil {
 		return latestStore, nil
 	}
-	return nil, fmt.Errorf("no store matching address \"%s\" found", addr)
+	return nil, &NoStoreErr{addr: addr}
 }
 
 // WaitLeader wait until there's a leader or timeout.
@@ -220,7 +221,7 @@ func (pc *PDClient) WaitLeader(retryOpt *utils.RetryOption) error {
 
 		// return error by default, to make the retry work
 		log.Debugf("Still waitting for the PD leader to be elected")
-		return errors.New("still waitting for the PD leader to be elected")
+		return perrs.New("still waitting for the PD leader to be elected")
 	}, *retryOpt); err != nil {
 		return fmt.Errorf("error getting PD leader, %v", err)
 	}
@@ -292,12 +293,12 @@ func (pc *PDClient) GetDashboardAddress() (string, error) {
 
 	cfg, err := flatten.Flatten(pdConfig, "", flatten.DotStyle)
 	if err != nil {
-		return "", errors.AddStack(err)
+		return "", perrs.AddStack(err)
 	}
 
 	addr, ok := cfg["pd-server.dashboard-address"].(string)
 	if !ok {
-		return "", errors.New("cannot found dashboard address")
+		return "", perrs.New("cannot found dashboard address")
 	}
 	return addr, nil
 }
@@ -351,7 +352,7 @@ func (pc *PDClient) EvictPDLeader(retryOpt *utils.RetryOption) error {
 
 		// return error by default, to make the retry work
 		log.Debugf("Still waitting for the PD leader to transfer")
-		return errors.New("still waitting for the PD leader to transfer")
+		return perrs.New("still waitting for the PD leader to transfer")
 	}, *retryOpt); err != nil {
 		return fmt.Errorf("error evicting PD leader, %v", err)
 	}
@@ -375,10 +376,10 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 	// get info of current stores
 	latestStore, err := pc.GetCurrentStore(host)
 	if err != nil {
+		if errors.Is(err, ErrNoStore) {
+			return nil
+		}
 		return err
-	}
-	if latestStore == nil {
-		return nil
 	}
 
 	// XXX: the status address in store will be something like 0.0.0.0:20180
@@ -421,6 +422,9 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 	if err := utils.Retry(func() error {
 		currStore, err := pc.GetCurrentStore(host)
 		if err != nil {
+			if errors.Is(err, ErrNoStore) {
+				return nil
+			}
 			return err
 		}
 
@@ -437,7 +441,7 @@ func (pc *PDClient) EvictStoreLeader(host string, retryOpt *utils.RetryOption, c
 		)
 
 		// return error by default, to make the retry work
-		return errors.New("still waiting for the store leaders to transfer")
+		return perrs.New("still waiting for the store leaders to transfer")
 	}, *retryOpt); err != nil {
 		return fmt.Errorf("error evicting store leader from %s, %v", host, err)
 	}
@@ -451,10 +455,6 @@ func (pc *PDClient) RemoveStoreEvict(host string) error {
 	latestStore, err := pc.GetCurrentStore(host)
 	if err != nil {
 		return err
-	}
-	if latestStore == nil {
-		// no store matches, just skip
-		return nil
 	}
 
 	// remove scheduler for the store
@@ -493,7 +493,7 @@ func (pc *PDClient) DelPD(name string, retryOpt *utils.RetryOption) error {
 		return err
 	}
 	if len(members.Members) == 1 {
-		return errors.New("at least 1 PD node must be online, can not delete")
+		return perrs.New("at least 1 PD node must be online, can not delete")
 	}
 
 	// try to delete the node
@@ -532,7 +532,7 @@ func (pc *PDClient) DelPD(name string, retryOpt *utils.RetryOption) error {
 		// check if the deleted member still present
 		for _, member := range currMembers.Members {
 			if member.Name == name {
-				return errors.New("still waitting for the PD node to be deleted")
+				return perrs.New("still waitting for the PD node to be deleted")
 			}
 		}
 
@@ -548,9 +548,6 @@ func (pc *PDClient) isSameState(host string, state metapb.StoreState) (bool, err
 	storeInfo, err := pc.GetCurrentStore(host)
 	if err != nil {
 		return false, err
-	}
-	if storeInfo == nil {
-		return false, errors.New("node not exists")
 	}
 
 	if storeInfo.Store.State == state {
@@ -572,19 +569,16 @@ func (pc *PDClient) IsUp(host string) (bool, error) {
 	return pc.isSameState(host, metapb.StoreState_Up)
 }
 
-// ErrStoreNotExists represents the store not exists.
-var ErrStoreNotExists = errors.New("store not exists")
-
 // DelStore deletes stores from a (TiKV) host
 // The host parameter should be in format of IP:Port, that matches store's address
 func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 	// get info of current stores
 	storeInfo, err := pc.GetCurrentStore(host)
 	if err != nil {
+		if errors.Is(err, ErrNoStore) {
+			return nil
+		}
 		return err
-	}
-	if storeInfo == nil {
-		return errors.Annotatef(ErrStoreNotExists, "id: %s", host)
 	}
 
 	// get store ID of host
@@ -619,11 +613,11 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 	if err := utils.Retry(func() error {
 		currStore, err := pc.GetCurrentStore(host)
 		if err != nil {
-			return err
-		}
-		if currStore == nil {
 			// the store does not exist anymore, just ignore and skip
-			return nil
+			if errors.Is(err, ErrNoStore) {
+				return nil
+			}
+			return err
 		}
 
 		if currStore.Store.Id == storeID {
@@ -634,7 +628,7 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 			if currStore.Store.State != metapb.StoreState_Up {
 				return nil
 			}
-			return errors.New("still waiting for the store to be deleted")
+			return perrs.New("still waiting for the store to be deleted")
 		}
 
 		return nil
@@ -674,7 +668,7 @@ func (pc *PDClient) GetLocationLabels() ([]string, error) {
 
 	rc := pdconfig.ReplicationConfig{}
 	if err := json.Unmarshal(config, &rc); err != nil {
-		return nil, errors.Annotatef(err, "unmarshal replication config: %s", string(config))
+		return nil, perrs.Annotatef(err, "unmarshal replication config: %s", string(config))
 	}
 
 	return rc.LocationLabels, nil

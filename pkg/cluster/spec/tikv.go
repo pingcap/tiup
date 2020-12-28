@@ -15,6 +15,7 @@ package spec
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -23,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -66,12 +67,12 @@ func checkStoreStatus(storeAddr string, tlsCfg *tls.Config, pdList ...string) st
 	pdapi := api.NewPDClient(pdList, statusQueryTimeout, tlsCfg)
 	store, err := pdapi.GetCurrentStore(storeAddr)
 	if err != nil {
+		if errors.Is(err, api.ErrNoStore) {
+			return "N/A"
+		}
 		return "Down"
 	}
 
-	if store == nil {
-		return "N/A"
-	}
 	return store.Store.StateName
 }
 
@@ -121,11 +122,11 @@ func (s TiKVSpec) Labels() (map[string]string, error) {
 		for k, v := range m {
 			key, ok := k.(string)
 			if !ok {
-				return nil, errors.Errorf("TiKV label name %v is not a string, check the instance: %s:%d", k, s.Host, s.GetMainPort())
+				return nil, perrs.Errorf("TiKV label name %v is not a string, check the instance: %s:%d", k, s.Host, s.GetMainPort())
 			}
 			value, ok := v.(string)
 			if !ok {
-				return nil, errors.Errorf("TiKV label value %v is not a string, check the instance: %s:%d", v, s.Host, s.GetMainPort())
+				return nil, perrs.Errorf("TiKV label value %v is not a string, check the instance: %s:%d", v, s.Host, s.GetMainPort())
 			}
 
 			lbs[key] = value
@@ -320,7 +321,7 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *
 		if utils.IsTimeoutOrMaxRetry(err) {
 			log.Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
 		} else {
-			return errors.Annotatef(err, "failed to evict store leader %s", i.GetHost())
+			return perrs.Annotatef(err, "failed to evict store leader %s", i.GetHost())
 		}
 	}
 	return nil
@@ -341,7 +342,7 @@ func (i *TiKVInstance) PostRestart(topo Topology, tlsCfg *tls.Config) error {
 
 	// remove store leader evict scheduler after restart
 	if err := pdClient.RemoveStoreEvict(addr(i)); err != nil {
-		return errors.Annotatef(err, "failed to remove evict store scheduler for %s", i.GetHost())
+		return perrs.Annotatef(err, "failed to remove evict store scheduler for %s", i.GetHost())
 	}
 
 	return nil
@@ -403,7 +404,7 @@ func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int
 			}
 		}
 
-		return 0, errors.Errorf("metric %s{type=\"%s\"} not found", metricNameRegionCount, labelNameLeaderCount)
+		return 0, perrs.Errorf("metric %s{type=\"%s\"} not found", metricNameRegionCount, labelNameLeaderCount)
 	}
 }
 
@@ -428,13 +429,13 @@ func checkHTTPS(url string, tlsCfg *tls.Config) error {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return errors.Annotatef(err, "creating GET request for URL %q failed", url)
+		return perrs.Annotatef(err, "creating GET request for URL %q failed", url)
 	}
 
 	client := http.Client{Transport: transport}
 	resp, err := client.Do(req)
 	if err != nil {
-		return errors.Annotatef(err, "executing GET request for URL %q failed", url)
+		return perrs.Annotatef(err, "executing GET request for URL %q failed", url)
 	}
 	resp.Body.Close()
 	return nil
