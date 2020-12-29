@@ -14,6 +14,8 @@ func (s *TestSemverSuite) TestSemverc(c *C) {
 		{"0.0.1", "v0.0.1", true},
 		{"invalid", "vinvalid", false},
 		{"", "v", false},
+		{"nightly", "nightly", true},
+		{"Nightly", "Nightly", true},
 	}
 
 	for _, cas := range cases {

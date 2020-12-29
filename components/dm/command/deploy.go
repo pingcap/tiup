@@ -49,7 +49,10 @@ func newDeployCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			version := args[1]
+			version, err := utils.FmtVer(args[1])
+			if err != nil {
+				return err
+			}
 			topoFile := args[2]
 
 			if err := supportVersion(version); err != nil {
