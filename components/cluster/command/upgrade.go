@@ -14,6 +14,7 @@
 package command
 
 import (
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +28,10 @@ func newUpgradeCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			version := args[1]
+			version, err := utils.FmtVer(args[1])
+			if err != nil {
+				return err
+			}
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			teleCommand = append(teleCommand, version)
 
