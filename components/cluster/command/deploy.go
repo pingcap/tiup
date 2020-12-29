@@ -68,7 +68,10 @@ func newDeploy() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			version := args[1]
+			version, err := utils.FmtVer(args[1])
+			if err != nil {
+				return err
+			}
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			teleCommand = append(teleCommand, version)
 
@@ -104,9 +107,9 @@ func postDeployHook(builder *task.Builder, topo spec.Topology) {
 		builder.ParallelStep("+ Check status", false, nodeInfoTask)
 	}
 
-	enableTask := task.NewBuilder().Func("Enable cluster", func(ctx *task.Context) error {
+	enableTask := task.NewBuilder().Func("Setting service auto start on boot", func(ctx *task.Context) error {
 		return operator.Enable(ctx, topo, operator.Options{}, true)
-	}).BuildAsStep("Enable cluster").SetHidden(true)
+	}).BuildAsStep("Enable service").SetHidden(true)
 
-	builder.ParallelStep("+ Enable cluster", false, enableTask)
+	builder.Parallel(false, enableTask)
 }

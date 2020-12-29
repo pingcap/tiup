@@ -647,7 +647,7 @@ func initRepo(path, keyDir string) error {
 // the `mirror merge` sub command
 func newMirrorMergeCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "merge <base> <mirror-dir-1> [mirror-dir-N]",
+		Use: "merge <mirror-dir-1> [mirror-dir-N]",
 		Example: `	tiup mirror merge tidb-community-v4.0.1					# merge v4.0.1 into current mirror
 	tiup mirror merge tidb-community-v4.0.1 tidb-community-v4.0.2		# merge v4.0.1 and v4.0.2 into current mirror`,
 		Short: "Merge two or more offline mirror",

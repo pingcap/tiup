@@ -24,6 +24,12 @@ import (
 // SemVer and fails to parse and convert it, an error is raised.
 func FmtVer(ver string) (string, error) {
 	v := ver
+
+	// nightly version is an alias
+	if strings.ToLower(v) == "nightly" {
+		return v, nil
+	}
+
 	if !strings.HasPrefix(ver, "v") {
 		v = fmt.Sprintf("v%s", ver)
 	}
