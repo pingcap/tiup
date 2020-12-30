@@ -68,14 +68,13 @@ func execute() error {
 	rootCmd.Flags().StringVarP(&options.dir, "", "C", "", "Change directory before compress")
 	rootCmd.Flags().StringVar(&options.name, "name", "", "Name of the package")
 	rootCmd.Flags().StringVar(&options.version, "release", "", "Version of the package")
-	rootCmd.Flags().StringVar(&options.entry, "entry", "", "Entry point of the package")
-	rootCmd.Flags().StringVar(&options.desc, "desc", "", "Description of the package")
-	rootCmd.Flags().BoolVar(&options.standalone, "standalone", false, "Can the component run standalone")
-	rootCmd.Flags().BoolVar(&options.hide, "hide", false, "Don't show the component in `tiup list`")
+	rootCmd.Flags().StringVar(&options.entry, "entry", "", "(deprecated) Entry point of the package")
+	rootCmd.Flags().StringVar(&options.desc, "desc", "", "(deprecated) Description of the package")
+	rootCmd.Flags().BoolVar(&options.standalone, "standalone", false, "(deprecated) Can the component run standalone")
+	rootCmd.Flags().BoolVar(&options.hide, "hide", false, "(deprecated) Don't show the component in `tiup list`")
 
 	_ = rootCmd.MarkFlagRequired("name")
 	_ = rootCmd.MarkFlagRequired("release")
-	_ = rootCmd.MarkFlagRequired("entry")
 
 	return rootCmd.Execute()
 }
