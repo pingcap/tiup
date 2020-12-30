@@ -169,10 +169,8 @@ func (i *PDInstance) InitConfig(
 		AppendEndpoints(topo.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost())
 
-	scheme := "http"
 	if enableTLS {
-		scheme = "https"
-		cfg = cfg.WithScheme(scheme)
+		cfg = cfg.WithScheme("https")
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
