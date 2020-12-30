@@ -27,7 +27,6 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
-	"golang.org/x/mod/semver"
 )
 
 // PDSpec represents the PD topology specification in topology.yaml
@@ -170,10 +169,8 @@ func (i *PDInstance) InitConfig(
 		AppendEndpoints(topo.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost())
 
-	scheme := "http"
 	if enableTLS {
-		scheme = "https"
-		cfg = cfg.WithScheme(scheme)
+		cfg = cfg.WithScheme("https")
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -186,15 +183,6 @@ func (i *PDInstance) InitConfig(
 	}
 	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
 		return err
-	}
-
-	// Set the PD metrics storage address
-	if semver.Compare(clusterVersion, "v3.1.0") >= 0 && len(topo.Monitors) > 0 {
-		if spec.Config == nil {
-			spec.Config = map[string]interface{}{}
-		}
-		prom := topo.Monitors[0]
-		spec.Config["pd-server.metric-storage"] = fmt.Sprintf("%s://%s:%d", scheme, prom.Host, prom.Port)
 	}
 
 	globalConfig := topo.ServerConfigs.PD
