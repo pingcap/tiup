@@ -103,7 +103,7 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 		}
 
 		if err := cliutil.PromptForConfirmOrAbortError(
-			"This operation will clean %s %s cluster %s's %s.\nNodes will be ignored: %s\nRoles will be ignored: %s\nFiles to be deleted are: %s\nDo you want to continue? [y/N]:",
+			"This operation will stop %s %s cluster %s and clean its' %s.\nNodes will be ignored: %s\nRoles will be ignored: %s\nFiles to be deleted are: %s\nDo you want to continue? [y/N]:",
 			m.sysName,
 			color.HiYellowString(base.Version),
 			color.HiYellowString(name),
