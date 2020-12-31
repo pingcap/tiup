@@ -316,6 +316,20 @@ func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tl
 
 // PostRestart implements RollingUpdateInstance interface.
 func (i *PDInstance) PostRestart(topo Topology, tlsCfg *tls.Config) error {
-	// intend to do nothing
+	// When restarting the next PD, if the PD has not been fully started and has become the target of
+	// the transfer leader, this may cause the PD service to be unavailable for about 10 seconds.
+
+	timeoutOpt := utils.RetryOption{
+		Attempts: 100,
+		Delay:    time.Second,
+		Timeout:  120 * time.Second,
+	}
+	currentPDAddrs := []string{fmt.Sprintf("%s:%d", i.Host, i.Port)}
+	pdClient := api.NewPDClient(currentPDAddrs, 5*time.Second, tlsCfg)
+
+	if err := utils.Retry(pdClient.CheckHealth, timeoutOpt); err != nil {
+		return errors.Annotatef(err, "failed to start PD peer %s", i.GetHost())
+	}
+
 	return nil
 }
