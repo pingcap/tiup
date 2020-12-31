@@ -1,5 +1,26 @@
 TiUP Changelog
 
+## [1.3.1] 2020.12.31
+
+### Fixes
+
+- Workaround the issue that store IDs in PDs are not monotonically assigned ([#1011](https://github.com/pingcap/tiup/pull/1011), [@AstroProfundis](https://github.com/AstroProfundis))
+  - For tiup < v1.2.1, the command `tiup cluster display` may detete store (without confirm) by mistake since this issue (high risk)
+  - For tiup >= v1.2.1 and <= v1.3.0, the command `tiup cluster display` may display `up` stores as `tombstone`, and encourages the user to detete them with the command `tiup cluster prune` (medium risk)
+- Fix the issue that the `cluster check` always fail on thp check even though the thp is disabled ([#1005](https://github.com/pingcap/tiup/pull/1005), [@lucklove](https://github.com/lucklove))
+- Fix the issue that the command `tiup mirror merge -h` outputs wrong usage ([#1008](https://github.com/pingcap/tiup/pull/1008), [@lucklove](https://github.com/lucklove))
+  - The syntax of this command should be `tiup mirror merge <mirror-dir-1> [mirror-dir-N]` but it outputs `tiup mirror merge <base> <mirror-dir-1> [mirror-dir-N]`
+- Fix the issue that prometheus doesn't collect drainer metrics ([#1012](https://github.com/pingcap/tiup/pull/1012), [@SE-Bin](https://github.com/SE-Bin))
+- 
+
+### Improvements
+
+- Reduce display duration when PD nodes encounter network problems and droping packages ([#986](https://github.com/pingcap/tiup/pull/986), [@9547](https://github.com/9547))
+- cluster, dm: support version input without leading 'v' ([#1009](https://github.com/pingcap/tiup/pull/1009), [@AstroProfundis](https://github.com/AstroProfundis))
+- Add a warning to explain that we will stop the cluster before clean logs ([#1029](https://github.com/pingcap/tiup/pull/1029), [@lucklove](https://github.com/lucklove))
+  - When a user try to clean logs with the command `tiup cluster clean --logs`, he may expect that the cluster is still running during the clean operation
+  - The actual situation is not what he expect, which may suprise the user (risk)
+
 ## [1.3.0] 2020.12.17
 
 ### New Features
