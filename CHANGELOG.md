@@ -4,7 +4,8 @@ TiUP Changelog
 
 ### Fixes
 
-- Workaround the issue that store IDs in PDs are not monotonically assigned ([#1011](https://github.com/pingcap/tiup/pull/1011), [@AstroProfundis](https://github.com/AstroProfundis))
+- Workaround the issue that store IDs in PDs may not monotonically assigned ([#1011](https://github.com/pingcap/tiup/pull/1011), [@AstroProfundis](https://github.com/AstroProfundis))
+  - Currently, the ID allocator is guaranteed not to allocate duplicated IDs, but when PD leader changes multiple times, the IDs may not be monotonic
   - For tiup < v1.2.1, the command `tiup cluster display` may delete store (without confirm) by mistake due to this issue (high risk)
   - For tiup >= v1.2.1 and <= v1.3.0, the command `tiup cluster display` may display `up` stores as `tombstone`, and encourages the user to delete them with the command `tiup cluster prune` (medium risk)
 - Fix the issue that the `cluster check` always fail on thp check even though the thp is disabled ([#1005](https://github.com/pingcap/tiup/pull/1005), [@lucklove](https://github.com/lucklove))
