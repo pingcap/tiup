@@ -5,8 +5,8 @@ TiUP Changelog
 ### Fixes
 
 - Workaround the issue that store IDs in PDs are not monotonically assigned ([#1011](https://github.com/pingcap/tiup/pull/1011), [@AstroProfundis](https://github.com/AstroProfundis))
-  - For tiup < v1.2.1, the command `tiup cluster display` may detete store (without confirm) by mistake since this issue (high risk)
-  - For tiup >= v1.2.1 and <= v1.3.0, the command `tiup cluster display` may display `up` stores as `tombstone`, and encourages the user to detete them with the command `tiup cluster prune` (medium risk)
+  - For tiup < v1.2.1, the command `tiup cluster display` may delete store (without confirm) by mistake due to this issue (high risk)
+  - For tiup >= v1.2.1 and <= v1.3.0, the command `tiup cluster display` may display `up` stores as `tombstone`, and encourages the user to delete them with the command `tiup cluster prune` (medium risk)
 - Fix the issue that the `cluster check` always fail on thp check even though the thp is disabled ([#1005](https://github.com/pingcap/tiup/pull/1005), [@lucklove](https://github.com/lucklove))
 - Fix the issue that the command `tiup mirror merge -h` outputs wrong usage ([#1008](https://github.com/pingcap/tiup/pull/1008), [@lucklove](https://github.com/lucklove))
   - The syntax of this command should be `tiup mirror merge <mirror-dir-1> [mirror-dir-N]` but it outputs `tiup mirror merge <base> <mirror-dir-1> [mirror-dir-N]`
