@@ -27,7 +27,6 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
-	"golang.org/x/mod/semver"
 )
 
 // PDSpec represents the PD topology specification in topology.yaml
@@ -170,10 +169,8 @@ func (i *PDInstance) InitConfig(
 		AppendEndpoints(topo.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost())
 
-	scheme := "http"
 	if enableTLS {
-		scheme = "https"
-		cfg = cfg.WithScheme(scheme)
+		cfg = cfg.WithScheme("https")
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
@@ -186,15 +183,6 @@ func (i *PDInstance) InitConfig(
 	}
 	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
 		return err
-	}
-
-	// Set the PD metrics storage address
-	if semver.Compare(clusterVersion, "v3.1.0") >= 0 && len(topo.Monitors) > 0 {
-		if spec.Config == nil {
-			spec.Config = map[string]interface{}{}
-		}
-		prom := topo.Monitors[0]
-		spec.Config["pd-server.metric-storage"] = fmt.Sprintf("%s://%s:%d", scheme, prom.Host, prom.Port)
 	}
 
 	globalConfig := topo.ServerConfigs.PD
@@ -328,6 +316,20 @@ func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tl
 
 // PostRestart implements RollingUpdateInstance interface.
 func (i *PDInstance) PostRestart(topo Topology, tlsCfg *tls.Config) error {
-	// intend to do nothing
+	// When restarting the next PD, if the PD has not been fully started and has become the target of
+	// the transfer leader, this may cause the PD service to be unavailable for about 10 seconds.
+
+	timeoutOpt := utils.RetryOption{
+		Attempts: 100,
+		Delay:    time.Second,
+		Timeout:  120 * time.Second,
+	}
+	currentPDAddrs := []string{fmt.Sprintf("%s:%d", i.Host, i.Port)}
+	pdClient := api.NewPDClient(currentPDAddrs, 5*time.Second, tlsCfg)
+
+	if err := utils.Retry(pdClient.CheckHealth, timeoutOpt); err != nil {
+		return errors.Annotatef(err, "failed to start PD peer %s", i.GetHost())
+	}
+
 	return nil
 }
