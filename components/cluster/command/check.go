@@ -28,6 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -112,13 +113,15 @@ conflict checks with other clusters`,
 				}
 			}
 
-			return checkSystemInfo(sshConnProps, &topo, &opt)
+			return checkSystemInfo(sshConnProps, &topo, &gOpt, &opt)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opt.user, "user", "u", utils.CurrentUser(), "The user name to login via SSH. The user must has root (or sudo) privilege.")
 	cmd.Flags().StringVarP(&opt.identityFile, "identity_file", "i", opt.identityFile, "The path of the SSH identity file. If specified, public key authentication will be used.")
 	cmd.Flags().BoolVarP(&opt.usePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
+	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only start specified roles")
+	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only start specified nodes")
 
 	cmd.Flags().BoolVar(&opt.opr.EnableCPU, "enable-cpu", false, "Enable CPU thread count check")
 	cmd.Flags().BoolVar(&opt.opr.EnableMem, "enable-mem", false, "Enable memory size check")
@@ -130,7 +133,7 @@ conflict checks with other clusters`,
 }
 
 // checkSystemInfo performs series of checks and tests of the deploy server
-func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, opt *checkOptions) error {
+func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gOpt *operator.Options, opt *checkOptions) error {
 	var (
 		collectTasks  []*task.StepDisplay
 		checkSysTasks []*task.StepDisplay
@@ -142,21 +145,37 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 
 	uniqueHosts := map[string]int{}             // host -> ssh-port
 	uniqueArchList := make(map[string]struct{}) // map["os-arch"]{}
-	topo.IterInstance(func(inst spec.Instance) {
-		archKey := fmt.Sprintf("%s-%s", inst.OS(), inst.Arch())
-		if _, found := uniqueArchList[archKey]; !found {
-			uniqueArchList[archKey] = struct{}{}
-			t0 := task.NewBuilder().
-				Download(
-					spec.ComponentCheckCollector,
-					inst.OS(),
-					inst.Arch(),
-					insightVer,
-				).
-				BuildAsStep(fmt.Sprintf("  - Downloading check tools for %s/%s", inst.OS(), inst.Arch()))
-			downloadTasks = append(downloadTasks, t0)
+
+	roleFilter := set.NewStringSet(gOpt.Roles...)
+	nodeFilter := set.NewStringSet(gOpt.Nodes...)
+	components := topo.ComponentsByUpdateOrder()
+	components = operator.FilterComponent(components, roleFilter)
+
+	for _, comp := range components {
+		instances := operator.FilterInstance(comp.Instances(), nodeFilter)
+		if len(instances) < 1 {
+			continue
 		}
-		if _, found := uniqueHosts[inst.GetHost()]; !found {
+
+		for _, inst := range instances {
+			archKey := fmt.Sprintf("%s-%s", inst.OS(), inst.Arch())
+			if _, found := uniqueArchList[archKey]; !found {
+				uniqueArchList[archKey] = struct{}{}
+				t0 := task.NewBuilder().
+					Download(
+						spec.ComponentCheckCollector,
+						inst.OS(),
+						inst.Arch(),
+						insightVer,
+					).
+					BuildAsStep(fmt.Sprintf("  - Downloading check tools for %s/%s", inst.OS(), inst.Arch()))
+				downloadTasks = append(downloadTasks, t0)
+			}
+
+			if _, found := uniqueHosts[inst.GetHost()]; found {
+				continue
+			}
+
 			uniqueHosts[inst.GetHost()] = inst.GetSSHPort()
 
 			// build system info collecting tasks
@@ -298,7 +317,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, op
 				BuildAsStep(fmt.Sprintf("  - Cleanup check files on %s:%d", inst.GetHost(), inst.GetSSHPort()))
 			cleanTasks = append(cleanTasks, t3)
 		}
-	})
+	}
 
 	t := task.NewBuilder().
 		ParallelStep("+ Download necessary tools", false, downloadTasks...).
