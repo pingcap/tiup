@@ -27,7 +27,7 @@ function scale_tools() {
     tiup-cluster $client exec $name -N n1 --command "grep magic-string-for-test /home/tidb/deploy/alertmanager-9093/conf/alertmanager.yml"
     tiup-cluster $client exec $name -N n1 --command "grep alertmanagers /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
     for item in pump drainer tidb tikv pd tiflash grafana node_exporter blackbox_exporter; do
-        tiup-cluster $client exec $name -N n1 --command "grep group: '$item' /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
+        tiup-cluster $client exec $name -N n1 --command "grep $item /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
     done
 
     tiup-cluster $client list | grep "$name"
