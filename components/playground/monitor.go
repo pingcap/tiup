@@ -135,7 +135,7 @@ scrape_configs:
 		fmt.Sprintf("--config.file=%s", filepath.Join(dir, "prometheus.yml")),
 		fmt.Sprintf("--web.external-url=http://%s", addr),
 		fmt.Sprintf("--web.listen-address=%s:%d", host, port),
-		fmt.Sprintf("--storage.tsdb.path='%s'", filepath.Join(dir, "data")),
+		fmt.Sprintf("--storage.tsdb.path=%s", filepath.Join(dir, "data")),
 	}
 
 	env := environment.GlobalEnv()
