@@ -14,7 +14,7 @@
 package tui
 
 import (
-	"github.com/cheynewallace/tabby"
+	"github.com/AstroProfundis/tabby"
 	"github.com/pingcap/tiup/pkg/utils/mock"
 )
 
