@@ -149,7 +149,6 @@ func init() {
 		newDestroyCmd(),
 		newCleanCmd(),
 		newUpgradeCmd(),
-		newExecCmd(),
 		newDisplayCmd(),
 		newPruneCmd(),
 		newListCmd(),
@@ -161,6 +160,9 @@ func init() {
 		newRenameCmd(),
 		newEnableCmd(),
 		newDisableCmd(),
+		newExecCmd(),
+		newPullCmd(),
+		newPushCmd(),
 		newTestCmd(), // hidden command for test internally
 		newTelemetryCmd(),
 	)
