@@ -213,14 +213,14 @@ func (i *MonitorInstance) InitConfig(
 			cfig.AddCDC(cdc.Host, uint64(cdc.Port))
 		}
 	}
-	if servers, found := topoHasField("Grafana"); found {
+	if servers, found := topoHasField("Grafanas"); found {
 		for i := 0; i < servers.Len(); i++ {
 			grafana := servers.Index(i).Interface().(GrafanaSpec)
 			uniqueHosts.Insert(grafana.Host)
 			cfig.AddGrafana(grafana.Host, uint64(grafana.Port))
 		}
 	}
-	if servers, found := topoHasField("Alertmanager"); found {
+	if servers, found := topoHasField("Alertmanagers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			alertmanager := servers.Index(i).Interface().(AlertmanagerSpec)
 			uniqueHosts.Insert(alertmanager.Host)
