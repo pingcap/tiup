@@ -62,6 +62,10 @@ tiup-playground display | grep -qv "exit"
 tiup-playground scale-out --db 2
 sleep 5
 
+# ensure prometheus/data dir exists,
+# fix https://github.com/pingcap/tiup/issues/1039
+ls "${TIUP_HOME}/data/test_play/prometheus/data"
+
 # 1(init) + 2(scale-out)
 check_tidb_num 3
 
