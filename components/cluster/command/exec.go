@@ -21,8 +21,9 @@ import (
 func newExecCmd() *cobra.Command {
 	opt := manager.ExecOptions{}
 	cmd := &cobra.Command{
-		Use:   "exec <cluster-name>",
-		Short: "Run shell command on host in the tidb cluster",
+		Use:    "exec <cluster-name>",
+		Short:  "Run shell command on host in the tidb cluster",
+		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()

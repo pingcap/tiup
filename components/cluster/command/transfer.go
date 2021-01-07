@@ -29,7 +29,7 @@ func newPullCmd() *cobra.Command {
 	opt := manager.TransferOptions{Pull: true}
 	cmd := &cobra.Command{
 		Use:    "pull <cluster-name> <remote-path> <local-path>",
-		Short:  "Transfer files or directories from host in the tidb cluster to local",
+		Short:  "(EXPERIMENTAL) Transfer files or directories from host in the tidb cluster to local",
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 3 {
@@ -55,7 +55,7 @@ func newPushCmd() *cobra.Command {
 	opt := manager.TransferOptions{Pull: false}
 	cmd := &cobra.Command{
 		Use:    "push <cluster-name> <local-path> <remote-path>",
-		Short:  "Transfer files or directories from local to host in the tidb cluster",
+		Short:  "(EXPERIMENTAL) Transfer files or directories from local to host in the tidb cluster",
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 3 {
