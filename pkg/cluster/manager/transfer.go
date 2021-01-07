@@ -1,4 +1,4 @@
-// Copyright 2020 PingCAP, Inc.
+// Copyright 2021 PingCAP, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ func (m *Manager) Transfer(name string, opt TransferOptions, gOpt operator.Optio
 			instPath := opt.Remote
 			paths, err := renderInstanceSpec(instPath, inst)
 			if err != nil {
-				return
+				return // skip
 			}
 			pathSet := set.NewStringSet(paths...)
 			if _, ok := uniqueHosts[inst.GetHost()]; ok {
@@ -82,11 +82,17 @@ func (m *Manager) Transfer(name string, opt TransferOptions, gOpt operator.Optio
 		}
 	})
 
-	for host := range uniqueHosts {
-		shellTasks = append(shellTasks,
-			task.NewBuilder().
-				CopyFile(opt.Local, opt.Remote, host, opt.Pull).
-				Build())
+	srcPath := opt.Local
+	for host, i := range uniqueHosts {
+		for _, p := range i.remotePaths.Slice() {
+			t := task.NewBuilder()
+			if opt.Pull {
+				t.CopyFile(p, srcPath, host, opt.Pull)
+			} else {
+				t.CopyFile(srcPath, p, host, opt.Pull)
+			}
+			shellTasks = append(shellTasks, t.Build())
+		}
 	}
 
 	t := m.sshTaskBuilder(name, topo, base.User, gOpt).
