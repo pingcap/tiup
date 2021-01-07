@@ -49,13 +49,10 @@ func (m *Manager) Transfer(name string, opt TransferOptions, gOpt operator.Optio
 
 	var shellTasks []task.Task
 
-	type transferInfo struct {
-		sshPort     int
-		remotePaths set.StringSet
-	}
-	uniqueHosts := map[string]transferInfo{} // host -> {ssh-port, remote-path}
+	uniqueHosts := map[string]set.StringSet{} // host-sshPort-port -> {remote-path}
 	topo.IterInstance(func(inst spec.Instance) {
-		if _, found := uniqueHosts[inst.GetHost()]; !found {
+		key := fmt.Sprintf("%s-%d-%d", inst.GetHost(), inst.GetSSHPort(), inst.GetPort())
+		if _, found := uniqueHosts[key]; !found {
 			if len(gOpt.Roles) > 0 && !filterRoles.Exist(inst.Role()) {
 				return
 			}
@@ -71,20 +68,18 @@ func (m *Manager) Transfer(name string, opt TransferOptions, gOpt operator.Optio
 				return // skip
 			}
 			pathSet := set.NewStringSet(paths...)
-			if _, ok := uniqueHosts[inst.GetHost()]; ok {
-				uniqueHosts[inst.GetHost()].remotePaths.Join(pathSet)
+			if _, ok := uniqueHosts[key]; ok {
+				uniqueHosts[key].Join(pathSet)
 				return
 			}
-			uniqueHosts[inst.GetHost()] = transferInfo{
-				sshPort:     inst.GetSSHPort(),
-				remotePaths: pathSet,
-			}
+			uniqueHosts[key] = pathSet
 		}
 	})
 
 	srcPath := opt.Local
-	for host, i := range uniqueHosts {
-		for _, p := range i.remotePaths.Slice() {
+	for hostKey, i := range uniqueHosts {
+		host := strings.Split(hostKey, "-")[0]
+		for _, p := range i.Slice() {
 			t := task.NewBuilder()
 			if opt.Pull {
 				t.CopyFile(p, srcPath, host, opt.Pull)
