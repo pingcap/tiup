@@ -29,11 +29,11 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
-	"text/tabwriter"
 	"time"
 
-	"github.com/cheynewallace/tabby"
+	"github.com/AstroProfundis/tabby"
 	"github.com/fatih/color"
+	"github.com/juju/ansiterm"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cliutil/progress"
@@ -99,7 +99,7 @@ func (p *Playground) allocID(componentID string) int {
 }
 
 func (p *Playground) handleDisplay(r io.Writer) (err error) {
-	w := tabwriter.NewWriter(r, 0, 0, 2, ' ', 0)
+	w := ansiterm.NewTabWriter(r, 0, 0, 2, ' ', 0)
 	t := tabby.NewCustom(w)
 
 	// TODO add more info.
