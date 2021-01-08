@@ -77,6 +77,7 @@ func validateExpandable(fromField, toField interface{}) bool {
 func ValidateSpecDiff(s1, s2 interface{}) error {
 	differ, err := diff.NewDiffer(
 		diff.TagName(validateTagName),
+		diff.AllowTypeMismatch(true),
 	)
 	if err != nil {
 		return err
