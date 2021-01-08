@@ -14,6 +14,9 @@
 package manager
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
@@ -44,9 +47,10 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 	filterNodes := set.NewStringSet(gOpt.Nodes...)
 
 	var shellTasks []task.Task
-	uniqueHosts := map[string]int{} // host -> ssh-port
+	uniqueHosts := map[string]set.StringSet{} // host-sshPort-port -> {command}
 	topo.IterInstance(func(inst spec.Instance) {
-		if _, found := uniqueHosts[inst.GetHost()]; !found {
+		key := fmt.Sprintf("%s-%d-%d", inst.GetHost(), inst.GetSSHPort(), inst.GetPort())
+		if _, found := uniqueHosts[key]; !found {
 			if len(gOpt.Roles) > 0 && !filterRoles.Exist(inst.Role()) {
 				return
 			}
@@ -55,15 +59,28 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 				return
 			}
 
-			uniqueHosts[inst.GetHost()] = inst.GetSSHPort()
+			cmds, err := renderInstanceSpec(opt.Command, inst)
+			if err != nil {
+				log.Debugf("error rendering command with spec: %s", err)
+				return // skip
+			}
+			cmdSet := set.NewStringSet(cmds...)
+			if _, ok := uniqueHosts[key]; ok {
+				uniqueHosts[key].Join(cmdSet)
+				return
+			}
+			uniqueHosts[key] = cmdSet
 		}
 	})
 
-	for host := range uniqueHosts {
-		shellTasks = append(shellTasks,
-			task.NewBuilder().
-				Shell(host, opt.Command, opt.Sudo).
-				Build())
+	for hostKey, i := range uniqueHosts {
+		host := strings.Split(hostKey, "-")[0]
+		for _, cmd := range i.Slice() {
+			shellTasks = append(shellTasks,
+				task.NewBuilder().
+					Shell(host, cmd, hostKey+cmd, opt.Sudo).
+					Build())
+		}
 	}
 
 	t := m.sshTaskBuilder(name, topo, base.User, gOpt).
@@ -80,19 +97,22 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 	}
 
 	// print outputs
-	for host := range uniqueHosts {
-		stdout, stderr, ok := execCtx.GetOutputs(host)
-		if !ok {
-			continue
-		}
-		log.Infof("Outputs of %s on %s:",
-			color.CyanString(opt.Command),
-			color.CyanString(host))
-		if len(stdout) > 0 {
-			log.Infof("%s:\n%s", color.GreenString("stdout"), stdout)
-		}
-		if len(stderr) > 0 {
-			log.Infof("%s:\n%s", color.RedString("stderr"), stderr)
+	for hostKey, i := range uniqueHosts {
+		host := strings.Split(hostKey, "-")[0]
+		for _, cmd := range i.Slice() {
+			stdout, stderr, ok := execCtx.GetOutputs(hostKey + cmd)
+			if !ok {
+				continue
+			}
+			log.Infof("Outputs of %s on %s:",
+				color.CyanString(cmd),
+				color.CyanString(host))
+			if len(stdout) > 0 {
+				log.Infof("%s:\n%s", color.GreenString("stdout"), stdout)
+			}
+			if len(stderr) > 0 {
+				log.Infof("%s:\n%s", color.RedString("stderr"), stderr)
+			}
 		}
 	}
 

@@ -67,6 +67,7 @@ func (m *Manager) Transfer(name string, opt TransferOptions, gOpt operator.Optio
 			instPath := opt.Remote
 			paths, err := renderInstanceSpec(instPath, inst)
 			if err != nil {
+				log.Debugf("error rendering remote path with spec: %s", err)
 				return // skip
 			}
 			pathSet := set.NewStringSet(paths...)
@@ -113,8 +114,7 @@ func renderInstanceSpec(t string, inst spec.Instance) ([]string, error) {
 	switch inst.ComponentName() {
 	case spec.ComponentTiFlash:
 		for _, d := range strings.Split(inst.DataDir(), ",") {
-			tf := inst
-			tfs, ok := tf.(*spec.TiFlashInstance).InstanceSpec.(spec.TiFlashSpec)
+			tfs, ok := inst.(*spec.TiFlashInstance).InstanceSpec.(spec.TiFlashSpec)
 			if !ok {
 				return result, fmt.Errorf("instance type mismatch for %v", inst)
 			}

@@ -133,19 +133,19 @@ func (ctx *Context) SetExecutor(host string, e executor.Executor) {
 }
 
 // GetOutputs get the outputs of a host (if has any)
-func (ctx *Context) GetOutputs(host string) ([]byte, []byte, bool) {
+func (ctx *Context) GetOutputs(hostID string) ([]byte, []byte, bool) {
 	ctx.exec.RLock()
-	stdout, ok1 := ctx.exec.stderrs[host]
-	stderr, ok2 := ctx.exec.stdouts[host]
+	stdout, ok1 := ctx.exec.stderrs[hostID]
+	stderr, ok2 := ctx.exec.stdouts[hostID]
 	ctx.exec.RUnlock()
 	return stdout, stderr, ok1 && ok2
 }
 
 // SetOutputs set the outputs of a host
-func (ctx *Context) SetOutputs(host string, stdout []byte, stderr []byte) {
+func (ctx *Context) SetOutputs(hostID string, stdout []byte, stderr []byte) {
 	ctx.exec.Lock()
-	ctx.exec.stderrs[host] = stdout
-	ctx.exec.stdouts[host] = stderr
+	ctx.exec.stderrs[hostID] = stdout
+	ctx.exec.stdouts[hostID] = stderr
 	ctx.exec.Unlock()
 }
 
