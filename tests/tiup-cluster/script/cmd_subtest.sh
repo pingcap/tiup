@@ -103,8 +103,8 @@ function cmd_subtest() {
 
     # Test push and pull
     echo "test_transfer $name $RANDOM `date`" > test_transfer_1.txt
-    tiup-cluster $client push $name test_transfer_1.txt "{{ .LogDir }}/test_transfer.txt" -R grafana
-    tiup-cluster $client pull $name "{{ .LogDir }}/test_transfer.txt" test_transfer_2.txt -R grafana
+    tiup-cluster $client push $name test_transfer_1.txt "{{ .DeployDir }}/test_transfer.txt" -R grafana
+    tiup-cluster $client pull $name "{{ .DeployDir }}/test_transfer.txt" test_transfer_2.txt -R grafana
     diff test_transfer_1.txt test_transfer_2.txt
 
     echo "checking cleanup data and log"
