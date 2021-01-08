@@ -19,11 +19,13 @@ import (
 	"html/template"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
 )
 
@@ -117,7 +119,8 @@ func renderInstanceSpec(t string, inst spec.Instance) ([]string, error) {
 				return result, fmt.Errorf("instance type mismatch for %v", inst)
 			}
 			tfs.DataDir = d
-			if s, err := renderSpec(t, tfs, inst.ID()+d); err == nil {
+			key := inst.ID() + d + uuid.New().String()
+			if s, err := renderSpec(t, tfs, key); err == nil {
 				result = append(result, s)
 			}
 		}
@@ -139,6 +142,7 @@ func renderSpec(t string, s interface{}, id string) (string, error) {
 
 	result := bytes.NewBufferString("")
 	if err := tpl.Execute(result, s); err != nil {
+		log.Debugf("missing key when parsing: %s", err)
 		return "", err
 	}
 	return result.String(), nil
