@@ -101,6 +101,12 @@ function cmd_subtest() {
 
     tiup-cluster $client --yes clean $name --data --all --ignore-node n1:9090
 
+    # Test push and pull
+    echo "test_transfer $name $RANDOM `date`" > test_transfer_1.txt
+    tiup-cluster $client push $name test_transfer_1.txt "{{ .LogDir }}/test_transfer.txt" -R grafana
+    tiup-cluster $client pull $name "{{ .LogDir }}/test_transfer.txt" test_transfer_2.txt -R grafana
+    diff test_transfer_1.txt test_transfer_2.txt
+
     echo "checking cleanup data and log"
     tiup-cluster $client exec $name -N n1 --command "ls /home/tidb/deploy/prometheus-9090/log/prometheus.log"
     ! tiup-cluster $client exec $name -N n1 --command "ls /home/tidb/deploy/tikv-20160/log/tikv.log"
