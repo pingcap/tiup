@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"reflect"
 	"strings"
 
 	"github.com/google/uuid"
@@ -135,6 +136,10 @@ func renderInstanceSpec(t string, inst spec.Instance) ([]string, error) {
 }
 
 func renderSpec(t string, s interface{}, id string) (string, error) {
+	if reflect.ValueOf(s).Kind() == reflect.Ptr {
+		s = reflect.ValueOf(s).Elem().Interface()
+	}
+
 	tpl, err := template.New(id).Option("missingkey=error").Parse(t)
 	if err != nil {
 		return "", err
