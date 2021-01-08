@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/pingcap/tiup/pkg/localdata"
-	"github.com/tj/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPlaygroundAbsDir(t *testing.T) {
