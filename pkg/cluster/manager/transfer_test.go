@@ -33,7 +33,24 @@ func TestRenderSpec(t *testing.T) {
 			OS:         "linux",
 		},
 	}}
-	dir, err := renderSpec("{{.DataDir}}", s, "test")
+	dir, err := renderSpec("{{.DataDir}}", s, "test-tidb")
 	assert.NotNil(t, err)
 	assert.Empty(t, dir)
+
+	s = &spec.PDInstance{BaseInstance: spec.BaseInstance{
+		InstanceSpec: spec.PDSpec{
+			Host:       "172.16.5.140",
+			SSHPort:    22,
+			Imported:   false,
+			Name:       "pd-1",
+			ClientPort: 2379,
+			PeerPort:   2380,
+			DeployDir:  "/home/test/deploy/pd-2379",
+			DataDir:    "/home/test/deploy/pd-2379/data",
+		},
+	}}
+	//s.BaseInstance.InstanceSpec
+	dir, err = renderSpec("{{.DataDir}}", s, "test-pd")
+	assert.Nil(t, err)
+	assert.NotEmpty(t, dir)
 }
