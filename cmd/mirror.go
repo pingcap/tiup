@@ -548,7 +548,7 @@ func newMirrorGenkeyCmd() *cobra.Command {
 				fmt.Printf("KeyID: %s\nKeyContent: \n%s\n", id, string(content))
 			} else {
 				if utils.IsExist(privPath) {
-					fmt.Println("Key already exists, skipped")
+					fmt.Println("Warning: Key already exists, skipped")
 					return nil
 				}
 
@@ -572,7 +572,7 @@ func newMirrorGenkeyCmd() *cobra.Command {
 					return err
 				}
 
-				fmt.Printf("private key have been write to %s\n", privPath)
+				fmt.Printf("Private key has been writeen to %s\n", privPath)
 			}
 
 			if saveKey {
@@ -583,7 +583,7 @@ func newMirrorGenkeyCmd() *cobra.Command {
 				if err = v1manifest.SaveKeyInfo(pubKey, "public", ""); err != nil {
 					return err
 				}
-				fmt.Printf("public key have been write to current working dir\n")
+				fmt.Printf("Public key has been written to current working dir\n")
 			}
 			return nil
 		},
