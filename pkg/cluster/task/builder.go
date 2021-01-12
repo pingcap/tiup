@@ -291,11 +291,12 @@ func (b *Builder) Rmdir(host string, dirs ...string) *Builder {
 }
 
 // Shell command on cluster host
-func (b *Builder) Shell(host, command string, sudo bool) *Builder {
+func (b *Builder) Shell(host, command, cmdID string, sudo bool) *Builder {
 	b.tasks = append(b.tasks, &Shell{
 		host:    host,
 		command: command,
 		sudo:    sudo,
+		cmdID:   cmdID,
 	})
 	return b
 }
@@ -364,6 +365,7 @@ func (b *Builder) DeploySpark(inst spec.Instance, sparkVersion, srcPath, deployD
 			deployDir,
 			filepath.Join(deployDir, sparkSubPath),
 		),
+		"",
 		false, // (not) sudo
 	).CopyComponent(
 		inst.ComponentName(),
@@ -380,6 +382,7 @@ func (b *Builder) DeploySpark(inst spec.Instance, sparkVersion, srcPath, deployD
 			filepath.Join(deployDir, "bin"),
 			deployDir,
 		),
+		"",
 		false, // (not) sudo
 	)
 }

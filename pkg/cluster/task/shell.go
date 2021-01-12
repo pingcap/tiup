@@ -25,6 +25,7 @@ type Shell struct {
 	host    string
 	command string
 	sudo    bool
+	cmdID   string
 }
 
 // Execute implements the Task interface
@@ -37,7 +38,11 @@ func (m *Shell) Execute(ctx *Context) error {
 	log.Infof("Run command on %s(sudo:%v): %s", m.host, m.sudo, m.command)
 
 	stdout, stderr, err := exec.Execute(m.command, m.sudo)
-	ctx.SetOutputs(m.host, stdout, stderr)
+	outputID := m.host
+	if m.cmdID != "" {
+		outputID = m.cmdID
+	}
+	ctx.SetOutputs(outputID, stdout, stderr)
 	if err != nil {
 		return errors.Trace(err)
 	}
