@@ -32,11 +32,11 @@ type sampleDataMeta struct {
 }
 
 type sampleDataElem struct {
-	StrElem1       string                   `yaml:"str1" validate:"str1:editable"`
-	StrElem2       string                   `yaml:"str2,omitempty" validate:"str2:editable"`
-	IntElem        int                      `yaml:"int"`
-	InterfaceElem  interface{}              `yaml:"interface,omitempty" validate:"interface:editable"`
-	InterfaceSlice []map[string]interface{} `yaml:"mapslice,omitempty" validate:"mapslice:editable"`
+	StrElem1       string                 `yaml:"str1" validate:"str1:editable"`
+	StrElem2       string                 `yaml:"str2,omitempty" validate:"str2:editable"`
+	IntElem        int                    `yaml:"int"`
+	InterfaceElem  interface{}            `yaml:"interface,omitempty" validate:"interface:editable"`
+	InterfaceSlice map[string]interface{} `yaml:"mapslice,omitempty" validate:"mapslice:editable"`
 }
 
 type sampleDataEditable struct {
@@ -469,6 +469,49 @@ maps:
   - key0: 0
   - dot.key1: 1
   - dotkey.subkey.1: "12"
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+}
+
+func (d *diffSuite) TestValidateSpecDiffType(c *C) {
+	var d1 sampleDataMeta
+	var d2 sampleDataMeta
+	var err error
+
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+slice3:
+  - key0: 0
+`), &d1)
+	c.Assert(err, IsNil)
+
+	// Modify key in editable map, with the same type
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+slice3:
+  - key0: 1
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+
+	// Modify key in editable map, with value type changed
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+slice3:
+  - key0: 2.0
+`), &d2)
+	c.Assert(err, IsNil)
+	err = ValidateSpecDiff(d1, d2)
+	c.Assert(err, IsNil)
+
+	// Modify key in editable map, with value type changed
+	err = yaml.Unmarshal([]byte(`
+ints: [11, 12, 13]
+slice3:
+  - key0: sss
 `), &d2)
 	c.Assert(err, IsNil)
 	err = ValidateSpecDiff(d1, d2)
