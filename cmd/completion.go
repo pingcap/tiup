@@ -38,10 +38,10 @@ func newCompletionCmd() *cobra.Command {
   ## Load the tiup completion code for bash into the current shell
   source <(tiup completion bash)
   ## Write bash completion code to a file and source if from .bash_profile
-  tiup completion bash > ~/.completion.bash.inc
+  tiup completion bash > ~/.tiup.completion.bash
   printf "
   # tiup shell completion
-  source '$HOME/.completion.bash.inc'
+  source '$HOME/.tiup.completion.bash'
   " >> $HOME/.bash_profile
   source $HOME/.bash_profile
 
