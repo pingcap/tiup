@@ -37,19 +37,19 @@ func newCompletionCmd() *cobra.Command {
   ## If bash-completion is not installed on Linux, please install the 'bash-completion' package
   ## via your distribution's package manager.
   ## Load the %[1]s completion code for bash into the current shell
-  source <(%[1]s completion bash)
+  source <(%[2]s completion bash)
   ## Write bash completion code to a file and source if from .bash_profile
-  %[1]s completion bash > ~/.%[1]s.completion.bash
+  %[2]s completion bash > ~/.%[2]s.completion.bash
   printf "
   # %[1]s shell completion
-  source '$HOME/.%[1]s.completion.bash'
+  source '$HOME/.%[2]s.completion.bash'
   " >> $HOME/.bash_profile
   source $HOME/.bash_profile
 
   # Load the %[1]s completion code for zsh[1] into the current shell
-  source <(%[1]s completion zsh)
+  source <(%[2]s completion zsh)
   # Set the %[1]s completion code for zsh[1] to autoload on startup
-  %[1]s completion zsh > "${fpath[1]}/_%[1]s"`, brand),
+  %[2]s completion zsh > "${fpath[1]}/_%[2]s"`, tiupVer.Name(), tiupVer.LowerName()),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

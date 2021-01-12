@@ -32,7 +32,7 @@ You can install multiple components at once, or install multiple versions
 of the same component:
 
   %[1]s install tidb:v4.0.8 tikv pd
-  %[1]s install tidb:v4.0.7 tidb:v4.0.8 tikv:v4.0.9`, brand),
+  %[1]s install tidb:v4.0.7 tidb:v4.0.8 tikv:v4.0.9`, tiupVer.LowerName()),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			env := environment.GlobalEnv()
 			if len(args) == 0 {

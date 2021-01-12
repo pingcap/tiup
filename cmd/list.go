@@ -49,7 +49,7 @@ components or versions which have not been installed.
   %[1]s list --installed
 
   # List all installed versions of TiDB
-  %[1]s list tidb --installed`, brand),
+  %[1]s list tidb --installed`, tiupVer.LowerName()),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

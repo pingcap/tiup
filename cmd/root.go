@@ -28,7 +28,7 @@ import (
 
 var rootCmd *cobra.Command
 var repoOpts repository.Options
-var brand = version.TiUPBrand
+var tiupVer = version.NewTiUPVersion()
 
 func init() {
 	cobra.EnableCommandSorting = false
@@ -42,12 +42,12 @@ func init() {
 
 	rootCmd = &cobra.Command{
 		Use: fmt.Sprintf(`%[1]s [flags] <command> [args...]
-  %[1]s [flags] <component> [args...]`, brand),
-		Long: fmt.Sprintf(`This is a command-line component management tool that can help to download and install components
-to the local system. You can run a specific version of a component via "%[1]s <component>[:version]".
+  %[1]s [flags] <component> [args...]`, tiupVer.LowerName()),
+		Long: fmt.Sprintf(`%[1]s is a command-line component management tool that can help to download and install %[2]s components
+to the local system. You can run a specific version of a %[2]s component via "%[3]s <component>[:version]".
 If no version number is specified, the latest version installed locally will be used. If the specified
 component does not have any version installed locally, the latest stable version will be downloaded
-from the repository.`, brand),
+from the repository.`, tiupVer.Name(), tiupVer.TiDBName(), tiupVer.LowerName()),
 
 		SilenceErrors:      true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
@@ -68,7 +68,7 @@ from the repository.`, brand),
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if printVersion && len(args) == 0 {
-				fmt.Println(version.NewTiUPVersion().String())
+				fmt.Println(tiupVer.String())
 				return nil
 			}
 			env := environment.GlobalEnv()

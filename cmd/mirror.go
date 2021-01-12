@@ -649,7 +649,7 @@ func newMirrorMergeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "merge <mirror-dir-1> [mirror-dir-N]",
 		Example: fmt.Sprintf(`	%[1]s mirror merge tidb-community-v4.0.1					# merge v4.0.1 into current mirror
-	%[1]s mirror merge tidb-community-v4.0.1 tidb-community-v4.0.2		# merge v4.0.1 and v4.0.2 into current mirror`, brand),
+	%[1]s mirror merge tidb-community-v4.0.1 tidb-community-v4.0.2		# merge v4.0.1 and v4.0.2 into current mirror`, tiupVer.LowerName()),
 		Short: "Merge two or more offline mirror",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
@@ -720,7 +720,7 @@ func newMirrorCloneCmd() *cobra.Command {
 		Example: fmt.Sprintf(`  %[1]s mirror clone /path/to/local --arch amd64,arm --os linux,darwin    # Specify the architectures and OSs
   %[1]s mirror clone /path/to/local --full                                # Build a full local mirror
   %[1]s mirror clone /path/to/local --tikv v4  --prefix                   # Specify the version via prefix
-  %[1]s mirror clone /path/to/local --tidb all --pd all                   # Download all version for specific component`, brand),
+  %[1]s mirror clone /path/to/local --tidb all --pd all                   # Download all version for specific component`, tiupVer.LowerName()),
 		Short:              "Clone a local mirror from remote mirror and download all selected components",
 		SilenceUsage:       true,
 		DisableFlagParsing: true,

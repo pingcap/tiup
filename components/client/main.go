@@ -37,7 +37,7 @@ import (
 	"github.com/xo/usql/rline"
 )
 
-var brand = version.TiUPBrand
+var tiupVer = version.NewTiUPVersion()
 
 func main() {
 	if err := execute(); err != nil {
@@ -47,7 +47,7 @@ func main() {
 
 func execute() error {
 	rootCmd := &cobra.Command{
-		Use:          fmt.Sprintf("%s client", brand),
+		Use:          fmt.Sprintf("%s client", tiupVer.LowerName()),
 		Short:        "Connect a TiDB cluster in your local host",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -65,14 +65,14 @@ func execute() error {
 func connect(target string) error {
 	tiupHome := os.Getenv(localdata.EnvNameHome)
 	if tiupHome == "" {
-		return fmt.Errorf("env variable %s not set, are you running client out of %s?", localdata.EnvNameHome, brand)
+		return fmt.Errorf("env variable %s not set, are you running client out of %s?", localdata.EnvNameHome, tiupVer.Name())
 	}
 	endpoints, err := scanEndpoint(tiupHome)
 	if err != nil {
 		return fmt.Errorf("error on read files: %s", err.Error())
 	}
 	if len(endpoints) == 0 {
-		return fmt.Errorf("It seems no playground is running, execute `%s playground` to start one", brand)
+		return fmt.Errorf("It seems no playground is running, execute `%s playground` to start one", tiupVer.LowerName())
 	}
 	var ep *endpoint
 	if target == "" {
@@ -86,7 +86,7 @@ func connect(target string) error {
 			}
 		}
 		if ep == nil {
-			return fmt.Errorf("specified instance %s not found, maybe it's not alive now, execute `%s status` to see instance list", target, brand)
+			return fmt.Errorf("specified instance %s not found, maybe it's not alive now, execute `%s status` to see instance list", target, tiupVer.LowerName())
 		}
 	}
 	u, err := user.Current()

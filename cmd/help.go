@@ -31,7 +31,7 @@ func newHelpCmd() *cobra.Command {
 		Use:   "help [command]",
 		Short: "Help about any command or component",
 		Long: fmt.Sprintf(`Help provides help for any command or component in the application.
-Simply type %[1]s help <command>|<component> for full details.`, brand),
+Simply type %[1]s help <command>|<component> for full details.`, tiupVer.LowerName()),
 		Run: func(cmd *cobra.Command, args []string) {
 			env := environment.GlobalEnv()
 			cmd, n, e := cmd.Root().Find(args)
@@ -131,7 +131,7 @@ Available Components:
 		installComps = fmt.Sprintf(`
 Components Manifest:
   use "%[1]s list" to fetch the latest components manifest
-`, brand)
+`, tiupVer.LowerName())
 	}
 
 	return fmt.Sprintf(`Usage:{{if .Runnable}}
@@ -171,5 +171,5 @@ Examples:
   $ %[1]s clean --all                   # Clean the data of all running/terminated instances{{end}}{{if .HasAvailableSubCommands}}
 
 Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
-`, brand)
+`, tiupVer.LowerName())
 }

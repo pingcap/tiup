@@ -16,6 +16,7 @@ package version
 import (
 	"fmt"
 	"runtime"
+	"strings"
 )
 
 var (
@@ -25,8 +26,10 @@ var (
 	TiUPVerMinor = 3
 	// TiUPVerPatch is the patch version of TiUP
 	TiUPVerPatch = 1
-	// TiUPBrand is alternative name of the version
-	TiUPBrand = "tiup"
+	// TiUPBrand is the white branded name of TiUP
+	TiUPBrand = "TiUP"
+	// TiDBBrand is the white branded name of TiDB
+	TiDBBrand = "TiDB"
 	// GitHash is the current git commit hash
 	GitHash = "Unknown"
 	// GitBranch is the current git branch name
@@ -38,25 +41,42 @@ const NightlyVersion = "nightly"
 
 // TiUPVersion is the semver of TiUP
 type TiUPVersion struct {
-	major int
-	minor int
-	patch int
-	name  string
+	major    int
+	minor    int
+	patch    int
+	name     string
+	tidbName string
 }
 
 // NewTiUPVersion creates a TiUPVersion object
 func NewTiUPVersion() *TiUPVersion {
 	return &TiUPVersion{
-		major: TiUPVerMajor,
-		minor: TiUPVerMinor,
-		patch: TiUPVerPatch,
-		name:  TiUPBrand,
+		major:    TiUPVerMajor,
+		minor:    TiUPVerMinor,
+		patch:    TiUPVerPatch,
+		name:     TiUPBrand,
+		tidbName: TiDBBrand,
 	}
 }
 
-// Name returns the alternave name of TiUPVersion
+// Name returns the white branded name of TiUP
 func (v *TiUPVersion) Name() string {
 	return v.name
+}
+
+// LowerName is the Name() in lower case
+func (v *TiUPVersion) LowerName() string {
+	return strings.ToLower(v.Name())
+}
+
+// TiDBName returns the white branded name of TiDB
+func (v *TiUPVersion) TiDBName() string {
+	return v.tidbName
+}
+
+// LowerTiDBName is the TiDBName() in lower case
+func (v *TiUPVersion) LowerTiDBName() string {
+	return strings.ToLower(v.TiDBName())
 }
 
 // SemVer returns TiUPVersion in semver format
@@ -71,9 +91,9 @@ func (v *TiUPVersion) String() string {
 
 // TiUPBuild is the info of building environment
 type TiUPBuild struct {
-	GitHash   string `json:"gitHash"`
-	GitBranch string `json:"gitBranch"`
-	GoVersion string `json:"goVersion"`
+	GitHash   string
+	GitBranch string
+	GoVersion string
 }
 
 // NewTiUPBuildInfo creates a TiUPBuild object

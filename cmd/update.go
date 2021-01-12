@@ -26,7 +26,7 @@ func newUpdateCmd() *cobra.Command {
 	var all, nightly, force, self bool
 	cmd := &cobra.Command{
 		Use:   "update [component1][:version] [component2..N]",
-		Short: fmt.Sprintf("Update %[1]s components to the latest version", brand),
+		Short: fmt.Sprintf("Update %s components to the latest version", tiupVer.Name()),
 		Long: fmt.Sprintf(`Update some components to the latest version. Use --nightly
 to update to the latest nightly version. Use --all to update all components 
 installed locally. Use <component>:<version> to update to the specified 
@@ -35,10 +35,10 @@ installed locally, but you can use --force explicitly to overwrite an
 existing installation. Use --self which is used to update %[1]s to the 
 latest version. All other flags will be ignored if the flag --self is given.
 
-  $ %[1]s update --all                     # Update all components to the latest stable version
-  $ %[1]s update --nightly --all           # Update all components to the latest nightly version
-  $ %[1]s update playground:v0.0.3 --force # Overwrite an existing local installation
-  $ %[1]s update --self                    # Update %[1]s to the latest version`, brand),
+  $ %[2]s update --all                     # Update all components to the latest stable version
+  $ %[2]s update --nightly --all           # Update all components to the latest nightly version
+  $ %[2]s update playground:v0.0.3 --force # Overwrite an existing local installation
+  $ %[2]s update --self                    # Update %[1]s to the latest version`, tiupVer.Name(), tiupVer.LowerName()),
 		RunE: func(cmd *cobra.Command, components []string) error {
 			if (len(components) == 0 && !all && !force && !self) || (len(components) > 0 && all) {
 				return cmd.Help()
@@ -46,8 +46,8 @@ latest version. All other flags will be ignored if the flag --self is given.
 
 			env := environment.GlobalEnv()
 			if self {
-				originFile := env.LocalPath("bin", brand)
-				renameFile := env.LocalPath("bin", fmt.Sprintf("%s.tmp", brand))
+				originFile := env.LocalPath("bin", tiupVer.LowerName())
+				renameFile := env.LocalPath("bin", fmt.Sprintf("%s.tmp", tiupVer.LowerName()))
 				if err := os.Rename(originFile, renameFile); err != nil {
 					fmt.Printf("Backup of `%s` to `%s` failed.\n", originFile, renameFile)
 					return err
@@ -84,7 +84,7 @@ latest version. All other flags will be ignored if the flag --self is given.
 	cmd.Flags().BoolVar(&all, "all", false, "Update all components")
 	cmd.Flags().BoolVar(&nightly, "nightly", false, "Update the components to nightly version")
 	cmd.Flags().BoolVar(&force, "force", false, "Force update a component to the latest version")
-	cmd.Flags().BoolVar(&self, "self", false, fmt.Sprintf("Update %s to the latest version", brand))
+	cmd.Flags().BoolVar(&self, "self", false, fmt.Sprintf("Update %s to the latest version", tiupVer.Name()))
 	return cmd
 }
 
