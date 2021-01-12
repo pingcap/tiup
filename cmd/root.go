@@ -28,6 +28,7 @@ import (
 
 var rootCmd *cobra.Command
 var repoOpts repository.Options
+var brand = version.TiUPBrand
 
 func init() {
 	cobra.EnableCommandSorting = false
@@ -40,13 +41,13 @@ func init() {
 	)
 
 	rootCmd = &cobra.Command{
-		Use: `tiup [flags] <command> [args...]
-  tiup [flags] <component> [args...]`,
-		Long: `TiUP is a command-line component management tool that can help to download and install
-TiDB platform components to the local system. You can run a specific version of a component via
-"tiup <component>[:version]". If no version number is specified, the latest version installed
-locally will be used. If the specified component does not have any version installed locally,
-the latest stable version will be downloaded from the repository.`,
+		Use: fmt.Sprintf(`%[1]s [flags] <command> [args...]
+  %[1]s [flags] <component> [args...]`, brand),
+		Long: fmt.Sprintf(`This is a command-line component management tool that can help to download and install components
+to the local system. You can run a specific version of a component via "%[1]s <component>[:version]".
+If no version number is specified, the latest version installed locally will be used. If the specified
+component does not have any version installed locally, the latest stable version will be downloaded
+from the repository.`, brand),
 
 		SilenceErrors:      true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},

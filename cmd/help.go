@@ -30,8 +30,8 @@ func newHelpCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "help [command]",
 		Short: "Help about any command or component",
-		Long: `Help provides help for any command or component in the application.
-Simply type tiup help <command>|<component> for full details.`,
+		Long: fmt.Sprintf(`Help provides help for any command or component in the application.
+Simply type %[1]s help <command>|<component> for full details.`, brand),
 		Run: func(cmd *cobra.Command, args []string) {
 			env := environment.GlobalEnv()
 			cmd, n, e := cmd.Root().Find(args)
@@ -128,13 +128,13 @@ Available Components:
 			installComps += fmt.Sprintf("  %s%s   %s\n", comp.Name, strings.Repeat(" ", maxNameLen-len(comp.Name)), comp.Desc)
 		}
 	} else {
-		installComps = `
+		installComps = fmt.Sprintf(`
 Components Manifest:
-  use "tiup list" to fetch the latest components manifest
-`
+  use "%[1]s list" to fetch the latest components manifest
+`, brand)
 	}
 
-	return `Usage:{{if .Runnable}}
+	return fmt.Sprintf(`Usage:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if gt (len .Aliases) 0}}
 
 Aliases:
@@ -145,7 +145,7 @@ Examples:
 
 Available Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
   {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
-{{if not .HasParent}}` + installComps + `{{end}}
+{{if not .HasParent}}`+installComps+`{{end}}
 Flags:
 {{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
 
@@ -156,20 +156,20 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
   {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if not .HasParent}}
 
 Component instances with the same "tag" will share a data directory ($TIUP_HOME/data/$tag):
-  $ tiup --tag mycluster playground
+  $ %[1]s --tag mycluster playground
 
 Examples:
-  $ tiup playground                    # Quick start
-  $ tiup playground nightly            # Start a playground with the latest nightly version
-  $ tiup install <component>[:version] # Install a component of specific version
-  $ tiup update --all                  # Update all installed components to the latest version
-  $ tiup update --nightly              # Update all installed components to the nightly version
-  $ tiup update --self                 # Update the "tiup" to the latest version
-  $ tiup list                          # Fetch the latest supported components list
-  $ tiup status                        # Display all running/terminated instances
-  $ tiup clean <name>                  # Clean the data of running/terminated instance (Kill process if it's running)
-  $ tiup clean --all                   # Clean the data of all running/terminated instances{{end}}{{if .HasAvailableSubCommands}}
+  $ %[1]s playground                    # Quick start
+  $ %[1]s playground nightly            # Start a playground with the latest nightly version
+  $ %[1]s install <component>[:version] # Install a component of specific version
+  $ %[1]s update --all                  # Update all installed components to the latest version
+  $ %[1]s update --nightly              # Update all installed components to the nightly version
+  $ %[1]s update --self                 # Update the "%[1]s" to the latest version
+  $ %[1]s list                          # Fetch the latest supported components list
+  $ %[1]s status                        # Display all running/terminated instances
+  $ %[1]s clean <name>                  # Clean the data of running/terminated instance (Kill process if it's running)
+  $ %[1]s clean --all                   # Clean the data of all running/terminated instances{{end}}{{if .HasAvailableSubCommands}}
 
 Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
-`
+`, brand)
 }

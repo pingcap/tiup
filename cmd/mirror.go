@@ -44,9 +44,9 @@ import (
 func newMirrorCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "mirror <command>",
-		Short: "Manage a repository mirror for TiUP components",
-		Long: `The 'mirror' command is used to manage a component repository for TiUP, you can use
-it to create a private repository, or to add new component to an existing repository.
+		Short: "Manage a repository mirror for components",
+		Long: `The 'mirror' command is used to manage a component repository, you can use it to
+create a private repository, or to add new component to an existing repository.
 The repository can be used either online or offline.
 It also provides some useful utilities to help managing keys, users and versions
 of components or the repository itself.`,
@@ -604,7 +604,7 @@ func newMirrorInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init <path>",
 		Short: "Initialize an empty repository",
-		Long: `Initialize an empty TiUP repository at given path. If path is not specified, the
+		Long: `Initialize an empty repository at given path. If path is not specified, the
 current working directory (".") will be used.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
@@ -648,8 +648,8 @@ func initRepo(path, keyDir string) error {
 func newMirrorMergeCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "merge <mirror-dir-1> [mirror-dir-N]",
-		Example: `	tiup mirror merge tidb-community-v4.0.1					# merge v4.0.1 into current mirror
-	tiup mirror merge tidb-community-v4.0.1 tidb-community-v4.0.2		# merge v4.0.1 and v4.0.2 into current mirror`,
+		Example: fmt.Sprintf(`	%[1]s mirror merge tidb-community-v4.0.1					# merge v4.0.1 into current mirror
+	%[1]s mirror merge tidb-community-v4.0.1 tidb-community-v4.0.2		# merge v4.0.1 and v4.0.2 into current mirror`, brand),
 		Short: "Merge two or more offline mirror",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
@@ -717,10 +717,10 @@ func newMirrorCloneCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use: "clone <target-dir> [global version]",
-		Example: `  tiup mirror clone /path/to/local --arch amd64,arm --os linux,darwin    # Specify the architectures and OSs
-  tiup mirror clone /path/to/local --full                                # Build a full local mirror
-  tiup mirror clone /path/to/local --tikv v4  --prefix                   # Specify the version via prefix
-  tiup mirror clone /path/to/local --tidb all --pd all                   # Download all version for specific component`,
+		Example: fmt.Sprintf(`  %[1]s mirror clone /path/to/local --arch amd64,arm --os linux,darwin    # Specify the architectures and OSs
+  %[1]s mirror clone /path/to/local --full                                # Build a full local mirror
+  %[1]s mirror clone /path/to/local --tikv v4  --prefix                   # Specify the version via prefix
+  %[1]s mirror clone /path/to/local --tidb all --pd all                   # Download all version for specific component`, brand),
 		Short:              "Clone a local mirror from remote mirror and download all selected components",
 		SilenceUsage:       true,
 		DisableFlagParsing: true,

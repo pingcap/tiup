@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 
@@ -26,7 +27,7 @@ func newCompletionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "completion SHELL",
 		Short: "Output shell completion code for the specified shell (bash or zsh)",
-		Example: `  # Installing bash completion on macOS using homebrew
+		Example: fmt.Sprintf(`  # Installing bash completion on macOS using homebrew
   ## If running Bash 3.2 included with macOS
   brew install bash-completion
   ## or, if running Bash 4.1+
@@ -35,20 +36,20 @@ func newCompletionCmd() *cobra.Command {
   # Installing bash completion on Linux
   ## If bash-completion is not installed on Linux, please install the 'bash-completion' package
   ## via your distribution's package manager.
-  ## Load the tiup completion code for bash into the current shell
-  source <(tiup completion bash)
+  ## Load the %[1]s completion code for bash into the current shell
+  source <(%[1]s completion bash)
   ## Write bash completion code to a file and source if from .bash_profile
-  tiup completion bash > ~/.tiup.completion.bash
+  %[1]s completion bash > ~/.%[1]s.completion.bash
   printf "
-  # tiup shell completion
-  source '$HOME/.tiup.completion.bash'
+  # %[1]s shell completion
+  source '$HOME/.%[1]s.completion.bash'
   " >> $HOME/.bash_profile
   source $HOME/.bash_profile
 
-  # Load the tiup completion code for zsh[1] into the current shell
-  source <(tiup completion zsh)
-  # Set the tiup completion code for zsh[1] to autoload on startup
-  tiup completion zsh > "${fpath[1]}/_tiup"`,
+  # Load the %[1]s completion code for zsh[1] into the current shell
+  source <(%[1]s completion zsh)
+  # Set the %[1]s completion code for zsh[1] to autoload on startup
+  %[1]s completion zsh > "${fpath[1]}/_%[1]s"`, brand),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

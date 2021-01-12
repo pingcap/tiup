@@ -40,16 +40,16 @@ func newListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list [component]",
 		Short: "List the available TiDB components or versions",
-		Long: `List the available TiDB components if you don't specify any component name,
+		Long: fmt.Sprintf(`List the available TiDB components if you don't specify any component name,
 or list the available versions of a specific component. Display a list of
 local caches by default. Use the --installed flag to hide
 components or versions which have not been installed.
 
   # List all installed components
-  tiup list --installed
+  %[1]s list --installed
 
   # List all installed versions of TiDB
-  tiup list tidb --installed`,
+  %[1]s list tidb --installed`, brand),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

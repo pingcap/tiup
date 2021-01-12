@@ -30,23 +30,23 @@ func newUninstallCmd() *cobra.Command {
 	cmdUnInst := &cobra.Command{
 		Use:   "uninstall <component1>:<version>",
 		Short: "Uninstall components or versions of a component",
-		Long: `If you specify a version number, uninstall the specified version of
+		Long: fmt.Sprintf(`If you specify a version number, uninstall the specified version of
 the component. You must use --all explicitly if you want to remove all
 components or versions which are installed. You can uninstall multiple
 components or multiple versions of a component at once. The --self flag
-which is used to uninstall tiup.
+which is used to uninstall %[1]s.
 
-  # Uninstall tiup
-  tiup uninstall --self
+  # Uninstall %[1]s
+  %[1]s uninstall --self
 
   # Uninstall the specific version a component
-  tiup uninstall tidb:v3.0.10
+  %[1]s uninstall tidb:v3.0.10
 
   # Uninstall all version of specific component
-  tiup uninstall tidb --all
+  %[1]s uninstall tidb --all
 
   # Uninstall all installed components
-  tiup uninstall --all`,
+  %[1]s uninstall --all`, brand),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			env := environment.GlobalEnv()
 			if self {
@@ -57,7 +57,7 @@ which is used to uninstall tiup.
 					}
 					fmt.Printf("Remove directory '%s' successfully!\n", env.Profile().Path(dir))
 				}
-				fmt.Printf("Uninstalled TiUP successfully! (User data reserved, you can delete '%s' manually if you confirm userdata useless)\n", env.Profile().Root())
+				fmt.Printf("Uninstalled %s successfully! (User data reserved, you can delete '%s' manually if you confirm userdata useless)\n", brand, env.Profile().Root())
 				return nil
 			}
 			switch {
@@ -75,7 +75,7 @@ which is used to uninstall tiup.
 		},
 	}
 	cmdUnInst.Flags().BoolVar(&all, "all", false, "Remove all components or versions.")
-	cmdUnInst.Flags().BoolVar(&self, "self", false, "Uninstall tiup and clean all local data")
+	cmdUnInst.Flags().BoolVar(&self, "self", false, fmt.Sprintf("Uninstall %s and clean all local data", brand))
 	return cmdUnInst
 }
 
@@ -92,7 +92,7 @@ func removeComponents(env *environment.Environment, specs []string, all bool) er
 			}
 		} else {
 			if !all {
-				fmt.Printf("Use `tiup uninstall %s --all` if you want to remove all versions.\n", spec)
+				fmt.Printf("Use `%s uninstall %s --all` if you want to remove all versions.\n", brand, spec)
 				continue
 			}
 			path = env.LocalPath(localdata.ComponentParentDir, spec)
