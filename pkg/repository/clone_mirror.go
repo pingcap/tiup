@@ -300,7 +300,8 @@ func cloneComponents(repo *V1Repository,
 							continue
 						}
 					}
-					if versionItem.Yanked {
+					if _, err := repo.FetchComponentManifest(name, false); err != nil || versionItem.Yanked {
+						// The component or the version is yanked, skip download binary
 						continue
 					}
 					if err := download(targetDir, tmpDir, repo, &versionItem); err != nil {
