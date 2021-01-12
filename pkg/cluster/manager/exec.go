@@ -47,9 +47,9 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 	filterNodes := set.NewStringSet(gOpt.Nodes...)
 
 	var shellTasks []task.Task
-	uniqueHosts := map[string]set.StringSet{} // host-sshPort-port -> {command}
+	uniqueHosts := map[string]set.StringSet{} // host-sshPort -> {command}
 	topo.IterInstance(func(inst spec.Instance) {
-		key := fmt.Sprintf("%s-%d-%d", inst.GetHost(), inst.GetSSHPort(), inst.GetPort())
+		key := fmt.Sprintf("%s-%d", inst.GetHost(), inst.GetSSHPort())
 		if _, found := uniqueHosts[key]; !found {
 			if len(gOpt.Roles) > 0 && !filterRoles.Exist(inst.Role()) {
 				return
