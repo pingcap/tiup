@@ -108,7 +108,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	if t, ok := topo.(*spec.Specification); ok {
 		var err error
 		dashboardAddr, err = t.GetDashboardAddress(tlsCfg, masterActive...)
-		if dashboardAddr != "" && err == nil {
+		if err == nil && !set.NewStringSet("", "auto", "none").Exist(dashboardAddr) {
 			schema := "http"
 			if tlsCfg != nil {
 				schema = "https"
