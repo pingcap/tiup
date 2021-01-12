@@ -2,6 +2,7 @@
 .DEFAULT_GOAL := default
 
 REPO := github.com/pingcap/tiup
+BRAND := $(if $(BRAND),$(BRAND),tiup)
 
 GOVER := $(shell go version)
 
@@ -19,6 +20,7 @@ BRANCH    := $(shell git rev-parse --abbrev-ref HEAD)
 LDFLAGS := -w -s
 LDFLAGS += -X "$(REPO)/pkg/version.GitHash=$(COMMIT)"
 LDFLAGS += -X "$(REPO)/pkg/version.GitBranch=$(BRANCH)"
+LDFLAGS += -X "$(REPO)/pkg/version.TiUPBrand=$(BRAND)"
 LDFLAGS += $(EXTRA_LDFLAGS)
 
 FILES     := $$(find . -name "*.go")
@@ -36,31 +38,31 @@ build: tiup components
 components: playground client cluster dm bench server
 
 tiup:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BRAND)
 
 playground:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-playground ./components/playground
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BRAND)-playground ./components/playground
 
 client:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-client ./components/client
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BRAND)-client ./components/client
 
 cluster:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster ./components/cluster
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BRAND)-cluster ./components/cluster
 
 dm:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./components/dm
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BRAND)-dm ./components/dm
 
 bench:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-bench ./components/bench
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BRAND)-bench ./components/bench
 
 doc:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-doc ./components/doc
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BRAND)-doc ./components/doc
 
 errdoc:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-errdoc ./components/errdoc
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BRAND)-errdoc ./components/errdoc
 
 server:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-server ./server
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BRAND)-server ./server
 
 check: fmt lint tidy check-static vet
 

@@ -25,8 +25,8 @@ var (
 	TiUPVerMinor = 3
 	// TiUPVerPatch is the patch version of TiUP
 	TiUPVerPatch = 1
-	// TiUPVerName is alternative name of the version
-	TiUPVerName = "tiup"
+	// TiUPBrand is alternative name of the version
+	TiUPBrand = "tiup"
 	// GitHash is the current git commit hash
 	GitHash = "Unknown"
 	// GitBranch is the current git branch name
@@ -50,7 +50,7 @@ func NewTiUPVersion() *TiUPVersion {
 		major: TiUPVerMajor,
 		minor: TiUPVerMinor,
 		patch: TiUPVerPatch,
-		name:  TiUPVerName,
+		name:  TiUPBrand,
 	}
 }
 
