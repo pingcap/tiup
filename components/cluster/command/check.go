@@ -204,6 +204,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 				Shell(
 					inst.GetHost(),
 					filepath.Join(task.CheckToolsPathDir, "bin", "insight"),
+					"",
 					false,
 				).
 				BuildAsStep(fmt.Sprintf("  - Getting system info of %s:%d", inst.GetHost(), inst.GetSSHPort()))
@@ -230,6 +231,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 				Shell(
 					inst.GetHost(),
 					"ss -lnt",
+					"",
 					false,
 				).
 				CheckSys(
@@ -243,6 +245,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 				Shell(
 					inst.GetHost(),
 					"cat /etc/security/limits.conf",
+					"",
 					false,
 				).
 				CheckSys(
@@ -256,6 +259,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 				Shell(
 					inst.GetHost(),
 					"sysctl -a",
+					"",
 					true,
 				).
 				CheckSys(
@@ -459,11 +463,13 @@ func fixFailedChecks(ctx *task.Context, host string, res *operator.CheckResult, 
 				"/etc/selinux/config",
 				"setenforce 0",
 			),
+			"",
 			true)
 		msg = fmt.Sprintf("will try to %s, reboot might be needed", color.HiBlueString("disable SELinux"))
 	case operator.CheckNameTHP:
 		t.Shell(host,
 			"echo never > /sys/kernel/mm/transparent_hugepage/enabled && echo never > /sys/kernel/mm/transparent_hugepage/defrag",
+			"",
 			true)
 		msg = fmt.Sprintf("will try to %s, please check again after reboot", color.HiBlueString("disable THP"))
 	default:
