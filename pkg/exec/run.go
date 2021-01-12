@@ -33,14 +33,17 @@ import (
 	"github.com/pingcap/tiup/pkg/localdata"
 	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
+
+var tiupVer = version.NewTiUPVersion()
 
 // RunComponent start a component and wait it
 func RunComponent(env *environment.Environment, tag, spec, binPath string, args []string) error {
 	component, version := environment.ParseCompVersion(spec)
 	if !env.IsSupportedComponent(component) {
-		return fmt.Errorf("component `%s` does not support `%s/%s` (see `tiup list`)", component, runtime.GOOS, runtime.GOARCH)
+		return fmt.Errorf("component `%s` does not support `%s/%s` (see `%s list`)", component, runtime.GOOS, runtime.GOARCH, tiupVer.LowerName())
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -164,16 +167,16 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 
     The latest version:         %[2]s
     Local installed version:    %[3]s
-    Update current component:   tiup update %[1]s
-    Update all components:      tiup update --all
+    Update current component:   %[4]s update %[1]s
+    Update all components:      %[4]s update --all
 `,
-				p.Component, latestV.String(), selectVer.String()))
+				p.Component, latestV.String(), selectVer.String(), tiupVer.LowerName()))
 		}
 	}
 
 	// playground && cluster version must greater than v1.0.0
 	if (p.Component == "playground" || p.Component == "cluster") && semver.Compare(selectVer.String(), "v1.0.0") < 0 {
-		return nil, errors.Errorf("incompatible component version, please use `tiup update %s` to upgrade to the latest version", p.Component)
+		return nil, errors.Errorf("incompatible component version, please use `%s update %s` to upgrade to the latest version", tiupVer.LowerName(), p.Component)
 	}
 
 	profile := env.Profile()

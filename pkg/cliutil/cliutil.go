@@ -25,6 +25,7 @@ import (
 	"github.com/pingcap/tiup/pkg/colorutil"
 	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
 
@@ -32,6 +33,8 @@ var (
 	errNS             = errorx.NewNamespace("cliutil")
 	errMismatchArgs   = errNS.NewType("mismatch_args", errutil.ErrTraitPreCheck)
 	errOperationAbort = errNS.NewType("operation_aborted", errutil.ErrTraitPreCheck)
+
+	tiupVer = version.NewTiUPVersion()
 )
 
 var templateFuncs = template.FuncMap{
@@ -40,7 +43,7 @@ var templateFuncs = template.FuncMap{
 }
 
 // FIXME: We should use TiUP's arg0 instead of hardcode
-var arg0 = "tiup cluster"
+var arg0 = fmt.Sprintf("%s cluster", tiupVer.LowerName())
 
 // RegisterArg0 register arg0
 func RegisterArg0(s string) {

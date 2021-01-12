@@ -15,11 +15,15 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
+	"github.com/pingcap/tiup/pkg/version"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 )
+
+var tiupVer = version.NewTiUPVersion()
 
 func main() {
 	if err := execute(); err != nil {
@@ -31,8 +35,8 @@ func execute() error {
 	lang := "en"
 
 	rootCmd := &cobra.Command{
-		Use:          "tiup doc",
-		Short:        "TiDB document summary page",
+		Use:          fmt.Sprintf("%s doc", tiupVer.LowerName()),
+		Short:        fmt.Sprintf("%s document summary page", tiupVer.TiDBName()),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var url string

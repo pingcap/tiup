@@ -20,8 +20,11 @@ import (
 	"runtime"
 
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
+
+var tiupVer = version.NewTiUPVersion()
 
 func main() {
 	if err := execute(); err != nil {
@@ -46,8 +49,8 @@ func execute() error {
 	options := packageOptions{}
 
 	rootCmd := &cobra.Command{
-		Use:          "tiup package target",
-		Short:        "Package a tiup component and generate package directory",
+		Use:          fmt.Sprintf("%s package target", tiupVer.LowerName()),
+		Short:        fmt.Sprintf("Package a %s component and generate package directory", tiupVer.Name()),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := chwd(); err != nil {
@@ -71,7 +74,7 @@ func execute() error {
 	rootCmd.Flags().StringVar(&options.entry, "entry", "", "(deprecated) Entry point of the package")
 	rootCmd.Flags().StringVar(&options.desc, "desc", "", "(deprecated) Description of the package")
 	rootCmd.Flags().BoolVar(&options.standalone, "standalone", false, "(deprecated) Can the component run standalone")
-	rootCmd.Flags().BoolVar(&options.hide, "hide", false, "(deprecated) Don't show the component in `tiup list`")
+	rootCmd.Flags().BoolVar(&options.hide, "hide", false, "(deprecated) Don't show the component in list")
 
 	_ = rootCmd.MarkFlagRequired("name")
 	_ = rootCmd.MarkFlagRequired("release")
@@ -107,7 +110,7 @@ func packTarget(targets []string, options packageOptions) error {
 func chwd() error {
 	pwd, found := os.LookupEnv(localdata.EnvNameWorkDir)
 	if !found {
-		return fmt.Errorf("cannot get tiup work directory")
+		return fmt.Errorf("cannot get %s work directory", tiupVer.Name())
 	}
 	return os.Chdir(pwd)
 }

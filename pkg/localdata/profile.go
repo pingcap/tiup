@@ -33,8 +33,11 @@ import (
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
+
+var tiupVer = version.NewTiUPVersion()
 
 // Profile represents the `tiup` profile
 type Profile struct {
@@ -126,7 +129,7 @@ func (p *Profile) GetComponentInstalledVersion(component string, version pkgver.
 		})
 		version = pkgver.Version(versions[len(versions)-1])
 	} else {
-		return "", fmt.Errorf("component not installed, please try `tiup install %s` to install it", component)
+		return "", fmt.Errorf("component not installed, please try `%s install %s` to install it", tiupVer.LowerName(), component)
 	}
 	return version, nil
 }
@@ -309,7 +312,7 @@ func (p *Profile) SelectInstalledVersion(component string, version pkgver.Versio
 		return "", err
 	}
 
-	errInstallFirst := fmt.Errorf("use `tiup install %[1]s` to install `%[1]s` first", component)
+	errInstallFirst := fmt.Errorf("use `%s install %[1]s` to install `%[1]s` first", tiupVer.LowerName(), component)
 	if len(installed) < 1 {
 		return "", errInstallFirst
 	}
