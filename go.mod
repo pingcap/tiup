@@ -50,7 +50,7 @@ require (
 	github.com/pingcap/tidb-insight v0.3.1
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/prom2json v1.3.0
-	github.com/r3labs/diff v0.0.0-20200627101315-aecd9dd05dd2
+	github.com/r3labs/diff v0.0.0-20201223155434-f54a0724e0a9
 	github.com/relex/aini v1.2.1
 	github.com/sergi/go-diff v1.0.1-0.20180205163309-da645544ed44
 	github.com/shirou/gopsutil v2.20.3+incompatible
