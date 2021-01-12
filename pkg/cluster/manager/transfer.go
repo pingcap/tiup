@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"reflect"
 	"strings"
 
 	"github.com/google/uuid"
@@ -116,7 +117,7 @@ func renderInstanceSpec(t string, inst spec.Instance) ([]string, error) {
 		for _, d := range strings.Split(inst.DataDir(), ",") {
 			tfs, ok := inst.(*spec.TiFlashInstance).InstanceSpec.(spec.TiFlashSpec)
 			if !ok {
-				return result, fmt.Errorf("instance type mismatch for %v", inst)
+				return result, perrs.Errorf("instance type mismatch for %v", inst)
 			}
 			tfs.DataDir = d
 			key := inst.ID() + d + uuid.New().String()
@@ -127,7 +128,7 @@ func renderInstanceSpec(t string, inst spec.Instance) ([]string, error) {
 	default:
 		s, err := renderSpec(t, inst, inst.ID())
 		if err != nil {
-			return result, fmt.Errorf("error rendering path for instance %v", inst)
+			return result, perrs.Errorf("error rendering path for instance %v", inst)
 		}
 		result = append(result, s)
 	}
@@ -135,6 +136,20 @@ func renderInstanceSpec(t string, inst spec.Instance) ([]string, error) {
 }
 
 func renderSpec(t string, s interface{}, id string) (string, error) {
+	// Only apply on *spec.TiDBInstance and *spec.PDInstance etc.
+	if v := reflect.ValueOf(s); v.Kind() == reflect.Ptr {
+		if v = v.Elem(); !v.IsValid() {
+			return "", perrs.Errorf("invalid spec")
+		}
+		if v = v.FieldByName("BaseInstance"); !v.IsValid() {
+			return "", perrs.Errorf("field BaseInstance not found")
+		}
+		if v = v.FieldByName("InstanceSpec"); !v.IsValid() {
+			return "", perrs.Errorf("field InstanceSpec not found")
+		}
+		s = v.Interface()
+	}
+
 	tpl, err := template.New(id).Option("missingkey=error").Parse(t)
 	if err != nil {
 		return "", err
