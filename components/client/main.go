@@ -28,6 +28,7 @@ import (
 	"github.com/gizak/termui/v3/widgets"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/version"
 	gops "github.com/shirou/gopsutil/process"
 	"github.com/spf13/cobra"
 	_ "github.com/xo/usql/drivers/mysql"
@@ -35,6 +36,8 @@ import (
 	"github.com/xo/usql/handler"
 	"github.com/xo/usql/rline"
 )
+
+var brand = version.TiUPBrand
 
 func main() {
 	if err := execute(); err != nil {
@@ -44,7 +47,7 @@ func main() {
 
 func execute() error {
 	rootCmd := &cobra.Command{
-		Use:          "tiup client",
+		Use:          fmt.Sprintf("%s client", brand),
 		Short:        "Connect a TiDB cluster in your local host",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -62,14 +65,14 @@ func execute() error {
 func connect(target string) error {
 	tiupHome := os.Getenv(localdata.EnvNameHome)
 	if tiupHome == "" {
-		return fmt.Errorf("env variable %s not set, are you running client out of tiup?", localdata.EnvNameHome)
+		return fmt.Errorf("env variable %s not set, are you running client out of %s?", localdata.EnvNameHome, brand)
 	}
 	endpoints, err := scanEndpoint(tiupHome)
 	if err != nil {
 		return fmt.Errorf("error on read files: %s", err.Error())
 	}
 	if len(endpoints) == 0 {
-		return fmt.Errorf("It seems no playground is running, execute `tiup playground` to start one")
+		return fmt.Errorf("It seems no playground is running, execute `%s playground` to start one", brand)
 	}
 	var ep *endpoint
 	if target == "" {
@@ -83,7 +86,7 @@ func connect(target string) error {
 			}
 		}
 		if ep == nil {
-			return fmt.Errorf("specified instance %s not found, maybe it's not alive now, execute `tiup status` to see instance list", target)
+			return fmt.Errorf("specified instance %s not found, maybe it's not alive now, execute `%s status` to see instance list", target, brand)
 		}
 	}
 	u, err := user.Current()
