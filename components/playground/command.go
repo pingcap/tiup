@@ -24,8 +24,11 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
+	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
+
+var tiupVer = version.NewTiUPVersion()
 
 // CommandType send to playground.
 type CommandType string
@@ -77,7 +80,7 @@ func newScaleOut() *cobra.Command {
 	var opt bootOptions
 	cmd := &cobra.Command{
 		Use:     "scale-out instances",
-		Example: "tiup playground scale-out --db 1",
+		Example: fmt.Sprintf("%s playground scale-out --db 1", tiupVer.LowerName()),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			num, err := scaleOut(args, &opt)
 			if err != nil {
@@ -93,7 +96,7 @@ func newScaleOut() *cobra.Command {
 		Hidden: false,
 	}
 
-	cmd.Flags().IntVarP(&opt.tidb.Num, "db", "", opt.tidb.Num, "TiDB instance number")
+	cmd.Flags().IntVarP(&opt.tidb.Num, "db", "", opt.tidb.Num, fmt.Sprintf("%s instance number", tiupVer.TiDBName()))
 	cmd.Flags().IntVarP(&opt.tikv.Num, "kv", "", opt.tikv.Num, "TiKV instance number")
 	cmd.Flags().IntVarP(&opt.pd.Num, "pd", "", opt.pd.Num, "PD instance number")
 	cmd.Flags().IntVarP(&opt.tiflash.Num, "tiflash", "", opt.tiflash.Num, "TiFlash instance number")
@@ -101,17 +104,17 @@ func newScaleOut() *cobra.Command {
 	cmd.Flags().IntVarP(&opt.pump.Num, "pump", "", opt.pump.Num, "Pump instance number")
 	cmd.Flags().IntVarP(&opt.drainer.Num, "drainer", "", opt.pump.Num, "Drainer instance number")
 
-	cmd.Flags().StringVarP(&opt.tidb.Host, "db.host", "", opt.tidb.Host, "Playground TiDB host. If not provided, TiDB will still use `host` flag as its host")
+	cmd.Flags().StringVarP(&opt.tidb.Host, "db.host", "", opt.tidb.Host, fmt.Sprintf("Playground %[1]s host. If not provided, %[1]s will still use `host` flag as its host", tiupVer.TiDBName()))
 	cmd.Flags().StringVarP(&opt.pd.Host, "pd.host", "", opt.pd.Host, "Playground PD host. If not provided, PD will still use `host` flag as its host")
 
-	cmd.Flags().StringVarP(&opt.tidb.ConfigPath, "db.config", "", opt.tidb.ConfigPath, "TiDB instance configuration file")
+	cmd.Flags().StringVarP(&opt.tidb.ConfigPath, "db.config", "", opt.tidb.ConfigPath, fmt.Sprintf("%s instance configuration file", tiupVer.TiDBName()))
 	cmd.Flags().StringVarP(&opt.tikv.ConfigPath, "kv.config", "", opt.tikv.ConfigPath, "TiKV instance configuration file")
 	cmd.Flags().StringVarP(&opt.pd.ConfigPath, "pd.config", "", opt.pd.ConfigPath, "PD instance configuration file")
 	cmd.Flags().StringVarP(&opt.tidb.ConfigPath, "tiflash.config", "", opt.tidb.ConfigPath, "TiFlash instance configuration file")
 	cmd.Flags().StringVarP(&opt.pump.ConfigPath, "pump.config", "", opt.pump.ConfigPath, "Pump instance configuration file")
 	cmd.Flags().StringVarP(&opt.drainer.ConfigPath, "drainer.config", "", opt.drainer.ConfigPath, "Drainer instance configuration file")
 
-	cmd.Flags().StringVarP(&opt.tidb.BinPath, "db.binpath", "", opt.tidb.BinPath, "TiDB instance binary path")
+	cmd.Flags().StringVarP(&opt.tidb.BinPath, "db.binpath", "", opt.tidb.BinPath, fmt.Sprintf("%s instance binary path", tiupVer.TiDBName()))
 	cmd.Flags().StringVarP(&opt.tikv.BinPath, "kv.binpath", "", opt.tikv.BinPath, "TiKV instance binary path")
 	cmd.Flags().StringVarP(&opt.pd.BinPath, "pd.binpath", "", opt.pd.BinPath, "PD instance binary path")
 	cmd.Flags().StringVarP(&opt.tiflash.BinPath, "tiflash.binpath", "", opt.tiflash.BinPath, "TiFlash instance binary path")
@@ -127,7 +130,7 @@ func newScaleIn() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "scale-in a instance with specified pid",
-		Example: "tiup playground scale-in --pid 234 # You can get pid by `tiup playground display`",
+		Example: fmt.Sprintf("%[1]s playground scale-in --pid 234 # You can get pid by `%[1]s playground display`", tiupVer.LowerName()),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(pids) == 0 {
 				return cmd.Help()

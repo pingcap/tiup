@@ -676,12 +676,12 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 		options.version = version.String()
 
-		fmt.Println(color.YellowString(`Use the latest stable version: %s
+		fmt.Println(color.YellowString(`Use the latest stable version: %[1]s
 
-    Specify version manually:   tiup playground <version>
-    The stable version:         tiup playground v4.0.0
-    The nightly version:        tiup playground nightly
-`, options.version))
+    Specify version manually:   %[2]s playground <version>
+    The stable version:         %[2]s playground v4.0.0
+    The nightly version:        %[2]s playground nightly
+`, options.version, tiupVer.LowerName()))
 	}
 
 	if options.version != "nightly" {
@@ -872,7 +872,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		fmt.Println(color.GreenString("CLUSTER START SUCCESSFULLY, Enjoy it ^-^"))
 		for _, dbAddr := range succ {
 			ss := strings.Split(dbAddr, ":")
-			fmt.Println(color.GreenString("To connect TiDB: mysql --host %s --port %s -u root", ss[0], ss[1]))
+			fmt.Println(color.GreenString("To connect %s: mysql --host %s --port %s -u root", tiupVer.TiDBName(), ss[0], ss[1]))
 		}
 	}
 
