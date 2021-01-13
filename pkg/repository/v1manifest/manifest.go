@@ -420,9 +420,18 @@ func RenewManifest(m ValidManifest, startTime time.Time) {
 	if m.Base().Version > 0 {
 		m.Base().Version++
 	}
-	m.Base().Expires = startTime.Add(
-		ManifestsConfig[m.Base().Ty].Expire,
-	).Format(time.RFC3339)
+
+	// only update expire field when it's old than target expire time
+	targetExpire := startTime.Add(ManifestsConfig[m.Base().Ty].Expire)
+	currentExpire, err := time.Parse(time.RFC3339, m.Base().Expires)
+	if err != nil {
+		m.Base().Expires = targetExpire.Format(time.RFC3339)
+		return
+	}
+
+	if currentExpire.Before(targetExpire) {
+		m.Base().Expires = targetExpire.Format(time.RFC3339)
+	}
 }
 
 // loadKeys stores all keys declared in manifest into ks.
