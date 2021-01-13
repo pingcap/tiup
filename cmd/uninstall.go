@@ -57,7 +57,7 @@ which is used to uninstall %[1]s.
 					}
 					fmt.Printf("Remove directory '%s' successfully!\n", env.Profile().Path(dir))
 				}
-				fmt.Printf("Uninstalled %s successfully! (User data reserved, you can delete '%s' manually if you confirm userdata useless)\n", tiupVer.LowerName(), env.Profile().Root())
+				fmt.Printf("Uninstalled %s successfully! (User data reserved, you can delete '%s' manually if you confirm userdata useless)\n", tiupVer.Name(), env.Profile().Root())
 				return nil
 			}
 			switch {

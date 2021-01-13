@@ -13,6 +13,8 @@
 
 package localdata
 
+import "fmt"
+
 // DefaultTiUPHome represents the default home directory for this build of tiup
 // If this is left empty, the default will be thee combination of the running
 // user's home directory and ProfileDirName
@@ -96,3 +98,9 @@ const (
 	// MetaFilename represents the process meta file name
 	MetaFilename = "tiup_process_meta"
 )
+
+func init() {
+	if !tiupVer.IsVanilla() {
+		ProfileDirName = fmt.Sprintf(".%s", tiupVer.LowerName())
+	}
+}

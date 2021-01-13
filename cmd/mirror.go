@@ -82,7 +82,7 @@ func newMirrorSignCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sign <manifest-file>",
 		Short: "Add signatures to a manifest file",
-		Long:  fmt.Sprintf("Add signatures to a manifest file, if no key file specified, the ~/.tiup/keys/%s will be used", localdata.DefaultPrivateKeyName),
+		Long:  fmt.Sprintf("Add signatures to a manifest file, if no key file specified, the ~/.%s/keys/%s will be used", tiupVer.LowerName(), localdata.DefaultPrivateKeyName),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			env := environment.GlobalEnv()
 			if len(args) < 1 {
