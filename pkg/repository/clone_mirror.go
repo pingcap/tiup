@@ -279,34 +279,37 @@ func cloneComponents(repo *V1Repository,
 			}
 		}
 
+		platforms := []string{}
 		for _, goos := range options.OSs {
 			for _, goarch := range options.Archs {
-				platform := PlatformString(goos, goarch)
-				versions := manifest.VersionListWithYanked(platform)
-				if versions == nil {
-					fmt.Printf("The component '%s' donesn't have %s/%s, skipped\n", name, goos, goarch)
-				}
-				for v, versionItem := range versions {
-					if !options.Full {
-						newVersions := newManifest.VersionListWithYanked(platform)
-						if newVersions == nil {
-							newVersions = map[string]v1manifest.VersionItem{}
-							newManifest.Platforms[platform] = newVersions
-						}
-						newVersions[v] = versionItem
-						if !checkVersion(options, vs, v) {
-							versionItem.Yanked = true
-							newVersions[v] = versionItem
-							continue
-						}
+				platforms = append(platforms, PlatformString(goos, goarch))
+			}
+		}
+		if len(platforms) > 0 {
+			platforms = append(platforms, v1manifest.AnyPlatform)
+		}
+
+		for _, platform := range platforms {
+			for v, versionItem := range manifest.Platforms[platform] {
+				if !options.Full {
+					newVersions := newManifest.Platforms[platform]
+					if newVersions == nil {
+						newVersions = map[string]v1manifest.VersionItem{}
+						newManifest.Platforms[platform] = newVersions
 					}
-					if _, err := repo.FetchComponentManifest(name, false); err != nil || versionItem.Yanked {
-						// The component or the version is yanked, skip download binary
+					newVersions[v] = versionItem
+					if !checkVersion(options, vs, v) {
+						versionItem.Yanked = true
+						newVersions[v] = versionItem
 						continue
 					}
-					if err := download(targetDir, tmpDir, repo, &versionItem); err != nil {
-						return nil, errors.Annotatef(err, "download resource: %s", name)
-					}
+				}
+			  if _, err := repo.FetchComponentManifest(name, false); err != nil || versionItem.Yanked {
+				  // The component or the version is yanked, skip download binary
+					continue
+				}
+				if err := download(targetDir, tmpDir, repo, &versionItem); err != nil {
+					return nil, errors.Annotatef(err, "download resource: %s", name)
 				}
 			}
 		}
