@@ -107,38 +107,39 @@ func Init(dst, keyDir string, initTime time.Time) (err error) {
 }
 
 // SaveKeyInfo saves a KeyInfo object to a JSON file
-func SaveKeyInfo(key *KeyInfo, ty, dir string) error {
+func SaveKeyInfo(key *KeyInfo, ty, dir string) (string, error) {
 	id, err := key.ID()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if dir == "" {
 		dir, err = os.Getwd()
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 	if utils.IsNotExist(dir) {
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			return errors.Annotate(err, "create key directory")
+			return "", errors.Annotate(err, "create key directory")
 		}
 	}
 
-	f, err := os.Create(path.Join(dir, fmt.Sprintf("%s-%s.json", id[:ShortKeyIDLength], ty)))
+	pubPath := path.Join(dir, fmt.Sprintf("%s-%s.json", id[:ShortKeyIDLength], ty))
+	f, err := os.Create(pubPath)
 	if err != nil {
-		return err
+		return pubPath, err
 	}
 	defer f.Close()
 
 	if _, found := key.Value["private"]; found {
 		err = f.Chmod(0600)
 		if err != nil {
-			return err
+			return pubPath, err
 		}
 	}
 
-	return json.NewEncoder(f).Encode(key)
+	return pubPath, json.NewEncoder(f).Encode(key)
 }
 
 // GenAndSaveKeys generate private keys to keys param and save key file to dir
@@ -150,7 +151,7 @@ func GenAndSaveKeys(keys map[string][]*KeyInfo, ty string, num int, dir string) 
 		}
 		keys[ty] = append(keys[ty], k)
 
-		if err := SaveKeyInfo(k, ty, dir); err != nil {
+		if _, err := SaveKeyInfo(k, ty, dir); err != nil {
 			return err
 		}
 	}

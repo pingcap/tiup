@@ -132,7 +132,7 @@ func CloneMirror(repo *V1Repository,
 		return errors.Trace(err)
 	}
 	// save owner key
-	if err := v1manifest.SaveKeyInfo(ownerkeyInfo, "pingcap", keyDir); err != nil {
+	if _, err := v1manifest.SaveKeyInfo(ownerkeyInfo, "pingcap", keyDir); err != nil {
 		return errors.Trace(err)
 	}
 
@@ -304,8 +304,8 @@ func cloneComponents(repo *V1Repository,
 						continue
 					}
 				}
-			  if _, err := repo.FetchComponentManifest(name, false); err != nil || versionItem.Yanked {
-				  // The component or the version is yanked, skip download binary
+				if _, err := repo.FetchComponentManifest(name, false); err != nil || versionItem.Yanked {
+					// The component or the version is yanked, skip download binary
 					continue
 				}
 				if err := download(targetDir, tmpDir, repo, &versionItem); err != nil {
