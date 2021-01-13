@@ -14,6 +14,8 @@
 package command
 
 import (
+	"fmt"
+
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/spf13/cobra"
 )
@@ -25,17 +27,17 @@ func newCleanCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "clean <cluster-name>",
 		Short: "(EXPERIMENTAL) Cleanup a specified cluster",
-		Long: `EXPERIMENTAL: This is an experimental feature, things may or may not work,
+		Long: fmt.Sprintf(`EXPERIMENTAL: This is an experimental feature, things may or may not work,
 please backup your data before process.
 
 Cleanup a specified cluster without destroying it.
 You can retain some nodes and roles data when cleanup the cluster, eg:
-    $ tiup cluster clean <cluster-name> --all
-    $ tiup cluster clean <cluster-name> --log
-    $ tiup cluster clean <cluster-name> --data
-    $ tiup cluster clean <cluster-name> --all --ignore-role prometheus
-    $ tiup cluster clean <cluster-name> --all --ignore-node 172.16.13.11:9000
-    $ tiup cluster clean <cluster-name> --all --ignore-node 172.16.13.12`,
+    $ %[1]s cluster clean <cluster-name> --all
+    $ %[1]s cluster clean <cluster-name> --log
+    $ %[1]s cluster clean <cluster-name> --data
+    $ %[1]s cluster clean <cluster-name> --all --ignore-role prometheus
+    $ %[1]s cluster clean <cluster-name> --all --ignore-node 172.16.13.11:9000
+    $ %[1]s cluster clean <cluster-name> --all --ignore-node 172.16.13.12`, tiupVer.LowerName()),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()

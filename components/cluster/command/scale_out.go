@@ -31,7 +31,7 @@ func newScaleOutCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:          "scale-out <cluster-name> <topology.yaml>",
-		Short:        "Scale out a TiDB cluster",
+		Short:        "Scale out a cluster",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 2 {

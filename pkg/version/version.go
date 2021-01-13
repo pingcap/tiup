@@ -19,6 +19,8 @@ import (
 	"strings"
 )
 
+const defaultTiDBName = "TiDB"
+
 var (
 	// TiUPVerMajor is the major version of TiUP
 	TiUPVerMajor = 1
@@ -29,7 +31,7 @@ var (
 	// TiUPBrand is the white branded name of TiUP
 	TiUPBrand = "TiUP"
 	// TiDBBrand is the white branded name of TiDB
-	TiDBBrand = "TiDB"
+	TiDBBrand = defaultTiDBName
 	// GitHash is the current git commit hash
 	GitHash = "Unknown"
 	// GitBranch is the current git branch name
@@ -87,6 +89,11 @@ func (v *TiUPVersion) SemVer() string {
 // String converts TiUPVersion to a string
 func (v *TiUPVersion) String() string {
 	return fmt.Sprintf("v%d.%d.%d %s\n%s", v.major, v.minor, v.patch, v.name, NewTiUPBuildInfo())
+}
+
+// IsVanilla checks if the build is a non-distribution version
+func (v *TiUPVersion) IsVanilla() bool {
+	return v.tidbName == defaultTiDBName
 }
 
 // TiUPBuild is the info of building environment

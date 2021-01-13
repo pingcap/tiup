@@ -32,6 +32,7 @@ type TiDBScript struct {
 	LogDir     string
 	NumaNode   string
 	Endpoints  []*PDScript
+	Brand      string
 }
 
 // NewTiDBScript returns a TiDBScript with given arguments
@@ -66,6 +67,12 @@ func (c *TiDBScript) WithStatusPort(port int) *TiDBScript {
 // WithNumaNode set NumaNode field of TiDBScript
 func (c *TiDBScript) WithNumaNode(numa string) *TiDBScript {
 	c.NumaNode = numa
+	return c
+}
+
+// WithBrand set the brand name of TiDBScript
+func (c *TiDBScript) WithBrand(brand string) *TiDBScript {
+	c.Brand = brand
 	return c
 }
 

@@ -43,6 +43,9 @@ type TiDBSpec struct {
 
 // Role returns the component role of the instance
 func (s TiDBSpec) Role() string {
+	if !tiupVer.IsVanilla() {
+		return tiupVer.TiDBName()
+	}
 	return ComponentTiDB
 }
 
@@ -66,11 +69,17 @@ type TiDBComponent struct{ Topology *Specification }
 
 // Name implements Component interface.
 func (c *TiDBComponent) Name() string {
+	if !tiupVer.IsVanilla() {
+		return tiupVer.TiDBName()
+	}
 	return ComponentTiDB
 }
 
 // Role implements Component interface.
 func (c *TiDBComponent) Role() string {
+	if !tiupVer.IsVanilla() {
+		return tiupVer.TiDBName()
+	}
 	return ComponentTiDB
 }
 

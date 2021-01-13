@@ -23,7 +23,7 @@ func newReloadCmd() *cobra.Command {
 	var skipRestart bool
 	cmd := &cobra.Command{
 		Use:   "reload <cluster-name>",
-		Short: "Reload a TiDB cluster's config and restart if needed",
+		Short: "Reload a cluster's config and restart if needed",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()

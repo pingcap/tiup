@@ -14,11 +14,16 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/pingcap/tiup/components/cluster/command"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/version"
 )
 
+var tiupVer = version.NewTiUPVersion()
+
 func main() {
-	cliutil.RegisterArg0("tiup cluster")
+	cliutil.RegisterArg0(fmt.Sprintf("%s cluster", tiupVer.LowerName()))
 	command.Execute()
 }

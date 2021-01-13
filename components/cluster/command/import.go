@@ -37,8 +37,9 @@ func newImportCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "import",
-		Short: "Import an exist TiDB cluster from TiDB-Ansible",
+		Use:    "import",
+		Short:  "Import an exist TiDB cluster from TiDB-Ansible",
+		Hidden: !tiupVer.IsVanilla(), // hide for distribution builds
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Use current directory as ansibleDir by default
 			if ansibleDir == "" {

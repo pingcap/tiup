@@ -28,6 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/version"
 	"go.etcd.io/etcd/clientv3"
 )
 
@@ -43,6 +44,7 @@ var (
 	RoleTiSparkWorker = "tispark-worker"
 	TopoTypeTiDB      = "tidb-cluster"
 	TopoTypeDM        = "dm-cluster"
+	tiupVer           = version.NewTiUPVersion()
 )
 
 type (
