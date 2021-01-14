@@ -15,6 +15,8 @@ package spec
 
 import (
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 
 	"github.com/joomcode/errorx"
 	. "github.com/pingcap/check"
@@ -276,6 +278,34 @@ pd_servers:
 	c.Assert(err, IsNil)
 	cnt = topo.CountDir("172.16.4.190", "/home/tidb/deploy")
 	c.Assert(cnt, Equals, 5)
+}
+
+func (s *metaSuiteTopo) TestCountDir2(c *C) {
+	file := filepath.Join("testdata", "countdir.yaml")
+	meta := ClusterMeta{}
+	yamlFile, err := ioutil.ReadFile(file)
+	c.Assert(err, IsNil)
+	err = yaml.UnmarshalStrict(yamlFile, &meta)
+	c.Assert(err, IsNil)
+	topo := meta.Topology
+
+	// If the imported dir is somehow containing paths ens with slash,
+	// or having multiple slash in it, the count result should not
+	// be different.
+	cnt := topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123")
+	c.Assert(cnt, Equals, 3)
+	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123/")
+	c.Assert(cnt, Equals, 3)
+	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123//")
+	c.Assert(cnt, Equals, 3)
+	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123/log")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123//log")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123/log/")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123//log/")
+	c.Assert(cnt, Equals, 1)
 }
 
 func (s *metaSuiteTopo) TestTiSparkSpecValidation(c *C) {
