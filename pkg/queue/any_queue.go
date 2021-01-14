@@ -21,12 +21,7 @@ type AnyQueue struct {
 
 // NewAnyQueue builds a AnyQueue
 func NewAnyQueue(eq func(a interface{}, b interface{}) bool, aa ...interface{}) *AnyQueue {
-	slice := []interface{}{}
-
-	for _, a := range aa {
-		slice = append(slice, a)
-	}
-	return &AnyQueue{eq, slice}
+	return &AnyQueue{eq, aa}
 }
 
 // Get returns previews stored val that equals to val and remove it from queue, if not found, nil
