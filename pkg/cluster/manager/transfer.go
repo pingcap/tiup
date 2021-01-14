@@ -52,9 +52,9 @@ func (m *Manager) Transfer(name string, opt TransferOptions, gOpt operator.Optio
 
 	var shellTasks []task.Task
 
-	uniqueHosts := map[string]set.StringSet{} // host-sshPort-port -> {remote-path}
+	uniqueHosts := map[string]set.StringSet{} // host-sshPort -> {remote-path}
 	topo.IterInstance(func(inst spec.Instance) {
-		key := fmt.Sprintf("%s-%d-%d", inst.GetHost(), inst.GetSSHPort(), inst.GetPort())
+		key := fmt.Sprintf("%s-%d", inst.GetHost(), inst.GetSSHPort())
 		if _, found := uniqueHosts[key]; !found {
 			if len(gOpt.Roles) > 0 && !filterRoles.Exist(inst.Role()) {
 				return
@@ -68,6 +68,7 @@ func (m *Manager) Transfer(name string, opt TransferOptions, gOpt operator.Optio
 			instPath := opt.Remote
 			paths, err := renderInstanceSpec(instPath, inst)
 			if err != nil {
+				log.Debugf("error rendering remote path with spec: %s", err)
 				return // skip
 			}
 			pathSet := set.NewStringSet(paths...)
@@ -114,8 +115,7 @@ func renderInstanceSpec(t string, inst spec.Instance) ([]string, error) {
 	switch inst.ComponentName() {
 	case spec.ComponentTiFlash:
 		for _, d := range strings.Split(inst.DataDir(), ",") {
-			tf := inst
-			tfs, ok := tf.(*spec.TiFlashInstance).InstanceSpec.(spec.TiFlashSpec)
+			tfs, ok := inst.(*spec.TiFlashInstance).InstanceSpec.(spec.TiFlashSpec)
 			if !ok {
 				return result, perrs.Errorf("instance type mismatch for %v", inst)
 			}
