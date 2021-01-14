@@ -286,7 +286,11 @@ func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 
 	err := command.Run()
 
-	zap.L().Info("SSHCommand",
+	logfn := zap.L().Info
+	if err != nil {
+		logfn = zap.L().Error
+	}
+	logfn("SSHCommand",
 		zap.String("host", e.Config.Host),
 		zap.Int("port", e.Config.Port),
 		zap.String("cmd", cmd),
@@ -350,7 +354,11 @@ func (e *NativeSSHExecutor) Transfer(src string, dst string, download bool) erro
 
 	err := command.Run()
 
-	zap.L().Info("SCPCommand",
+	logfn := zap.L().Info
+	if err != nil {
+		logfn = zap.L().Error
+	}
+	logfn("SCPCommand",
 		zap.String("host", e.Config.Host),
 		zap.Int("port", e.Config.Port),
 		zap.String("cmd", strings.Join(args, " ")),

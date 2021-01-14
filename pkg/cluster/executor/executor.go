@@ -67,6 +67,8 @@ type Executor interface {
 }
 
 // New create a new Executor
+// The checkpoint param should be the path point to previews audit file which represents
+// current cluster state.
 func New(etype SSHType, sudo bool, c SSHConfig) (Executor, error) {
 	if etype == "" {
 		etype = SSHTypeBuiltin
@@ -94,6 +96,7 @@ func New(etype SSHType, sudo bool, c SSHConfig) (Executor, error) {
 		c.Timeout = time.Second * 5 // default timeout is 5 sec
 	}
 
+	var executor Executor
 	switch etype {
 	case SSHTypeBuiltin:
 		e := &EasySSHExecutor{
@@ -101,7 +104,7 @@ func New(etype SSHType, sudo bool, c SSHConfig) (Executor, error) {
 			Sudo:   sudo,
 		}
 		e.initialize(c)
-		return e, nil
+		executor = e
 	case SSHTypeSystem:
 		e := &NativeSSHExecutor{
 			Config: &c,
@@ -111,7 +114,7 @@ func New(etype SSHType, sudo bool, c SSHConfig) (Executor, error) {
 		if c.Password != "" || (c.KeyFile != "" && c.Passphrase != "") {
 			_, _, e.ConnectionTestResult = e.Execute(connectionTestCommand, false, executeDefaultTimeout)
 		}
-		return e, nil
+		executor = e
 	case SSHTypeNone:
 		if err := checkLocalIP(c.Host); err != nil {
 			return nil, err
@@ -121,10 +124,12 @@ func New(etype SSHType, sudo bool, c SSHConfig) (Executor, error) {
 			Sudo:   sudo,
 			Locale: "C",
 		}
-		return e, nil
+		executor = e
 	default:
-		return nil, fmt.Errorf("unregistered executor: %s", etype)
+		return nil, errors.Errorf("unregistered executor: %s", etype)
 	}
+
+	return &CheckPointExecutor{executor, &c}, nil
 }
 
 func checkLocalIP(ip string) error {
