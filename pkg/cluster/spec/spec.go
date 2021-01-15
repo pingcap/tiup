@@ -58,7 +58,7 @@ type (
 	// specification in topology.yaml
 	GlobalOptions struct {
 		User            string               `yaml:"user,omitempty" default:"tidb"`
-		Group           string               `yaml:"group,omitempty"`
+		Group           string               `yaml:"group,omitempty" default:"pingcap"`
 		SSHPort         int                  `yaml:"ssh_port,omitempty" default:"22" validate:"ssh_port:editable"`
 		SSHType         executor.SSHType     `yaml:"ssh_type,omitempty" default:"builtin"`
 		TLSEnabled      bool                 `yaml:"enable_tls,omitempty"`
