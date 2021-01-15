@@ -921,7 +921,7 @@ pd_servers:
 	c.Assert(err.Error(), Equals, "component pd_servers.name is not supported duplicated, the name name1 is duplicated")
 }
 
-func (s *metaSuiteTopo) TestPortInvalid(c *C) {
+func (s *metaSuiteTopo) TestInvalidPort(c *C) {
 	topo := Specification{}
 
 	err := yaml.Unmarshal([]byte(`
@@ -947,4 +947,35 @@ monitored:
 `), &topo)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "`monitored` of node_exporter_port=102400 is invalid")
+}
+
+func (s *metaSuiteTopo) TestInvalidUserGroup(c *C) {
+	topo := Specification{}
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: helloworldtidb-_-_
+  group: wor_l-d
+`), &topo)
+	c.Assert(err, IsNil)
+
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: ../hello
+`), &topo)
+	c.Assert(err, NotNil)
+
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: hel.lo
+`), &topo)
+	c.Assert(err, NotNil)
+
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+global:
+  group: hello123456789012
+`), &topo)
+	c.Assert(err, NotNil)
 }
