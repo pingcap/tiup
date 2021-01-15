@@ -460,6 +460,61 @@ func (s *Specification) platformConflictsDetect() error {
 	return nil
 }
 
+func (s *Specification) portInvalidDetect() error {
+	portTypes := []string{
+		"SSHPort",
+		"Port",
+		"StatusPort",
+		"PeerPort",
+		"ClientPort",
+		"WebPort",
+		"TCPPort",
+		"HTTPPort",
+		"ClusterPort",
+		"NodeExporterPort",
+		"BlackboxExporterPort",
+	}
+
+	topoSpec := reflect.ValueOf(s).Elem()
+	topoType := reflect.TypeOf(s).Elem()
+
+	checkPort := func(idx int, compSpec reflect.Value) error {
+		cfg := strings.Split(topoType.Field(idx).Tag.Get("yaml"), ",")[0]
+		for _, portType := range portTypes {
+			if j, found := findField(compSpec, portType); found {
+				port := int(compSpec.Field(j).Int())
+				if port <= 0 || port >= 65535 {
+					portField := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
+					return errors.Errorf("`%s` of %s=%d is invalid", cfg, portField, port)
+				}
+			}
+		}
+		return nil
+	}
+
+	for i := 0; i < topoSpec.NumField(); i++ {
+		compSpecs := topoSpec.Field(i)
+
+		// check on struct
+		if compSpecs.Kind() == reflect.Struct {
+			if err := checkPort(i, compSpecs); err != nil {
+				return err
+			}
+			continue
+		}
+
+		// check on slice
+		for index := 0; index < compSpecs.Len(); index++ {
+			compSpec := compSpecs.Index(index)
+			if err := checkPort(i, compSpec); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func (s *Specification) portConflictsDetect() error {
 	type (
 		usedPort struct {
@@ -835,6 +890,10 @@ func (s *Specification) Validate() error {
 	}
 
 	if err := s.platformConflictsDetect(); err != nil {
+		return err
+	}
+
+	if err := s.portInvalidDetect(); err != nil {
 		return err
 	}
 

@@ -864,7 +864,7 @@ global:
 tiflash_servers:
   - host: 172.16.5.138
     # this will be overwrite by storage.main.dir
-    data_dir: "/test-1" 
+    data_dir: "/test-1"
     config:
       storage.main.dir: [ /test-2, /test-2 ] # conflict inside
 pd_servers:
@@ -919,4 +919,32 @@ pd_servers:
 `), &topo)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "component pd_servers.name is not supported duplicated, the name name1 is duplicated")
+}
+
+func (s *metaSuiteTopo) TestPortInvalid(c *C) {
+	topo := Specification{}
+
+	err := yaml.Unmarshal([]byte(`
+global:
+  ssh_port: 65536
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "`global` of ssh_port=65536 is invalid")
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  ssh_port: 655
+tidb_servers:
+  - host: 172.16.5.138
+    port: -1
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "`tidb_servers` of port=-1 is invalid")
+
+	err = yaml.Unmarshal([]byte(`
+monitored:
+    node_exporter_port: 102400
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "`monitored` of node_exporter_port=102400 is invalid")
 }
