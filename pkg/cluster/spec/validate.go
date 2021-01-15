@@ -38,11 +38,10 @@ var (
 	ErrNoTiSparkMaster       = errors.New("there must be a Spark master node if you want to use the TiSpark component")
 	ErrMultipleTiSparkMaster = errors.New("a TiSpark enabled cluster with more than 1 Spark master node is not supported")
 	ErrMultipleTisparkWorker = errors.New("multiple TiSpark workers on the same host is not supported by Spark")
-	ErrUserOrGroupInvalid    = errors.New(`linux username and groupname must start with a lower case letter or an underscore,
-followed by lower case letters, digits, underscores, or dashes.
-Usernames may only be up to 32 characters long.
-Groupnames may only be up to 16 characters long.
-`)
+	ErrUserOrGroupInvalid    = errors.New(`linux username and groupname must start with a lower case letter or an underscore, ` +
+		`followed by lower case letters, digits, underscores, or dashes. ` +
+		`Usernames may only be up to 32 characters long. ` +
+		`Groupnames may only be up to 16 characters long.`)
 )
 
 // Linux username and groupname must start with a lower case letter or an underscore,
