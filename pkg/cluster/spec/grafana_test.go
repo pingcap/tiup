@@ -42,6 +42,9 @@ func TestLocalDashboards(t *testing.T) {
 	localDir, err := filepath.Abs("./testdata/dashboards")
 	assert.Nil(t, err)
 
+	err = ioutil.WriteFile(path.Join(deployDir, "bin", "dummy.json"), []byte(`{"dummy": "dummy"}`), 0644)
+	assert.Nil(t, err)
+
 	topo := new(Specification)
 	topo.Grafanas = append(topo.Grafanas, GrafanaSpec{
 		Host:         "127.0.0.1",
@@ -64,7 +67,7 @@ func TestLocalDashboards(t *testing.T) {
 	err = grafanaInstance.initDashboards(ctx, e, topo.Grafanas[0], meta.DirPaths{Deploy: deployDir}, clusterName)
 	assert.Nil(t, err)
 
-	assert.FileExists(t, path.Join(deployDir, "dashboards", "tidb.json"))
+	assert.FileExists(t, path.Join(deployDir, "dashboards", "dummy.json"))
 	fs, err := ioutil.ReadDir(localDir)
 	assert.Nil(t, err)
 	for _, f := range fs {
