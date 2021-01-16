@@ -343,6 +343,17 @@ func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec P
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
+	// The original Prometheus-v4.0.x.tar.gz contained a rule file for each component maintained by PingCAP
+	// such as tidb.rules.yml, tiflash.rules.yml ...
+	// These rules files are sufficient for normal use case,
+	// if you want to specify other rules, use the `RuleDir`.
+	// WARNING: RuleDir will overwrite a file with same name.
+	if spec.RuleDir != "" {
+		return i.TransferLocalConfigDir(ctx, e, spec.RuleDir, path.Join(paths.Deploy, "conf"), func(name string) bool {
+			return strings.HasSuffix(name, ".rules.yml")
+		})
+	}
+
 	return nil
 }
 
