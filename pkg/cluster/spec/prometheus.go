@@ -336,7 +336,7 @@ func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec P
 	cmds := []string{
 		"mkdir -p %[1]s/conf",
 		`find %[1]s/conf -type f -name "*.rules.yml" -delete`,
-		`find %[2]s/bin/prometheus -maxdepth 1 -type f -name "*.rules.yml" -exec cp {} %[1]s/conf/ \;`,
+		`find %[1]s/bin/prometheus -maxdepth 1 -type f -name "*.rules.yml" -exec cp {} %[1]s/conf/ \;`,
 	}
 	_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), paths.Deploy), false)
 	if err != nil {
