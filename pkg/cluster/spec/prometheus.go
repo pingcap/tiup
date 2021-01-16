@@ -314,7 +314,7 @@ func (i *MonitorInstance) installRules(ctx context.Context, e ctxt.Executor, dep
 	cmds := []string{
 		"mkdir -p %[1]s",
 		`find %[1]s -type f -name "*.rules.yml" -delete`,
-		"cp %[2]s/dm-master/conf/*.rules.yml %[1]s",
+		`find %[2]s/dm-master/conf -type f -name "*.rules.yml" -exec cp %[1]s \;`,
 		"rm -rf %[2]s",
 	}
 	_, stderr, err = e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), targetDir, tmp), false)
