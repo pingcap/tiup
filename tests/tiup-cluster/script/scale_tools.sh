@@ -22,6 +22,8 @@ function scale_tools() {
     tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa
 
     # check the local config
+    tiup-cluster $client exec $name -N n1 --command "ls /home/tidb/deploy/prometheus-9090/conf/{nodes,tidb,tikv}.rules.yml"
+    tiup-cluster $client exec $name -N n1 --command "ls /home/tidb/deploy/grafana-3000/dashboards/{tidb,tidb_summary,tikv_summary}.json"
     tiup-cluster $client exec $name -N n1 --command "grep magic-string-for-test /home/tidb/deploy/prometheus-9090/conf/tidb.rules.yml"
     tiup-cluster $client exec $name -N n1 --command "grep magic-string-for-test /home/tidb/deploy/grafana-3000/dashboards/tidb.json"
     tiup-cluster $client exec $name -N n1 --command "grep magic-string-for-test /home/tidb/deploy/alertmanager-9093/conf/alertmanager.yml"
