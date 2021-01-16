@@ -27,6 +27,7 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -235,36 +236,45 @@ func mergeImported(importConfig []byte, specConfigs ...map[string]interface{}) (
 // BindVersion map the cluster version to the third components binding version.
 type BindVersion func(comp string, version string) (bindVersion string)
 
-func checkConfig(ctx context.Context, e ctxt.Executor, componentName, clusterVersion, nodeOS, arch, config string, paths meta.DirPaths, bindVersion BindVersion) error {
-	repo, err := clusterutil.NewRepository(nodeOS, arch)
-	if err != nil {
-		return perrs.Annotate(ErrorCheckConfig, err.Error())
-	}
-
-	ver := clusterVersion
-	if bindVersion != nil {
-		ver = bindVersion(componentName, clusterVersion)
-	}
-
-	entry, err := repo.ComponentBinEntry(componentName, ver)
-	if err != nil {
-		return perrs.Annotate(ErrorCheckConfig, err.Error())
-	}
-
-	binPath := path.Join(paths.Deploy, "bin", entry)
-	// Skip old versions
-	if !hasConfigCheckFlag(ctx, e, binPath) {
-		return nil
-	}
-
-	// Hack tikv --pd flag
-	extra := ""
-	if componentName == ComponentTiKV {
-		extra = `--pd=""`
-	}
-
+func checkConfig(ctx context.Context, e executor.Executor, componentName, clusterVersion, nodeOS, arch, config string, paths meta.DirPaths, bindVersion BindVersion) error {
+	var cmd string
 	configPath := path.Join(paths.Deploy, "conf", config)
-	_, _, err = e.Execute(ctx, fmt.Sprintf("%s --config-check --config=%s %s", binPath, configPath, extra), false)
+	switch componentName {
+	case ComponentPrometheus:
+		cmd = fmt.Sprintf("%s/bin/prometheus/promtool check config %s", paths.Deploy, configPath)
+	case ComponentAlertmanager:
+		cmd = fmt.Sprintf("%s/bin/alertmanager/amtool check-config %s", paths.Deploy, configPath)
+	default:
+		repo, err := clusterutil.NewRepository(nodeOS, arch)
+		if err != nil {
+			return perrs.Annotate(ErrorCheckConfig, err.Error())
+		}
+
+		ver := clusterVersion
+		if bindVersion != nil {
+			ver = bindVersion(componentName, clusterVersion)
+		}
+
+		entry, err := repo.ComponentBinEntry(componentName, ver)
+		if err != nil {
+			return perrs.Annotate(ErrorCheckConfig, err.Error())
+		}
+		binPath := path.Join(paths.Deploy, "bin", entry)
+
+		// Skip old versions
+		if !hasConfigCheckFlag(ctx, e, binPath) {
+			return nil
+		}
+
+		// Hack tikv --pd flag
+		extra := ""
+		if componentName == ComponentTiKV {
+			extra = `--pd=""`
+		}
+		cmd = fmt.Sprintf("%s --config-check --config=%s %s", binPath, configPath, extra)
+	}
+
+	_, _, err := e.Execute(cmd, false)
 	if err != nil {
 		return perrs.Annotate(ErrorCheckConfig, err.Error())
 	}

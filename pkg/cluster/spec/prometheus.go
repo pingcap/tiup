@@ -276,7 +276,11 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "prometheus.yml")
-	return e.Transfer(ctx, fp, dst, false)
+	if err := e.Transfer(ctx, fp, dst, false); err != nil {
+		return err
+	}
+
+	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths, nil)
 }
 
 // We only really installRules for dm cluster because the rules(*.rules.yml) packed with the prometheus
