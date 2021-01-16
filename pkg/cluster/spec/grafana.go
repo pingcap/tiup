@@ -212,7 +212,7 @@ func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, s
 	cmds := []string{
 		"mkdir -p %[1]s",
 		`find %[1]s -maxdepth 1 -type f -name "*.json" -delete`,
-		"cp %[2]s/bin/*.json %[1]s",
+		`find %[2]s/bin -maxdepth 1 -type f -name "*.json" -exec cp {} %[1]s \;`,
 	}
 	_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), dashboardsDir, paths.Deploy), false)
 	if err != nil {
