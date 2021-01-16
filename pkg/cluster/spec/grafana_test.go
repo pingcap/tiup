@@ -35,6 +35,10 @@ func TestLocalDashboards(t *testing.T) {
 	deployDir, err := ioutil.TempDir("", "tiup-*")
 	assert.Nil(t, err)
 	defer os.RemoveAll(deployDir)
+	// the dashboard json files are under the bin dir,
+	// which is needed to copy into the dashboard dir
+	err = os.MkdirAll(path.Join(deployDir, "bin"), 0755)
+	assert.Nil(t, err)
 	localDir, err := filepath.Abs("./testdata/dashboards")
 	assert.Nil(t, err)
 
