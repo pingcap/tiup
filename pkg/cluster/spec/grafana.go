@@ -208,11 +208,6 @@ func (i *GrafanaInstance) InitConfig(
 
 func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, spec GrafanaSpec, paths meta.DirPaths, clusterName string) error {
 	dashboardsDir := filepath.Join(paths.Deploy, "dashboards")
-	if spec.DashboardDir != "" {
-		return i.TransferLocalConfigDir(ctx, e, spec.DashboardDir, dashboardsDir, func(name string) bool {
-			return strings.HasSuffix(name, ".json")
-		})
-	}
 
 	cmds := []string{
 		"mkdir -p %[1]s",
@@ -236,6 +231,16 @@ func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, s
 		if err != nil {
 			return errors.Annotatef(err, "stderr: %s", string(stderr))
 		}
+	}
+
+	// The original Prometheus-v4.0.x.tar.gz contained some useful dashboards maintained by PingCAP
+	// These dashboards are sufficient for normal use case,
+	// if you want to specify other dashboards, use the `DashboardDir`.
+	// WARNING: RuleDir will overwrite a file with same name.
+	if spec.DashboardDir != "" {
+		return i.TransferLocalConfigDir(ctx, e, spec.DashboardDir, dashboardsDir, func(name string) bool {
+			return strings.HasSuffix(name, ".json")
+		})
 	}
 
 	return nil
