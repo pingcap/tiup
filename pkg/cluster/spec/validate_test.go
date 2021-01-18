@@ -957,6 +957,8 @@ global:
   group: wor_l-d
 `), &topo)
 	c.Assert(err, IsNil)
+	c.Assert(topo.GlobalOptions.User, Equals, "helloworldtidb-_-_")
+	c.Assert(topo.GlobalOptions.Group, Equals, "wor_l-d")
 
 	topo = Specification{}
 	err = yaml.Unmarshal([]byte(`
@@ -978,4 +980,15 @@ global:
   group: hello123456789012
 `), &topo)
 	c.Assert(err, NotNil)
+}
+
+func (s *metaSuiteTopo) TestMissingGroup(c *C) {
+	topo := Specification{}
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: tidb
+`), &topo)
+	c.Assert(err, IsNil)
+	c.Assert(topo.GlobalOptions.User, Equals, "tidb")
+	c.Assert(topo.GlobalOptions.Group, Equals, "")
 }

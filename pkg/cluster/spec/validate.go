@@ -475,30 +475,17 @@ func (s *Specification) platformConflictsDetect() error {
 }
 
 func (s *Specification) portInvalidDetect() error {
-	portTypes := []string{
-		"SSHPort",
-		"Port",
-		"StatusPort",
-		"PeerPort",
-		"ClientPort",
-		"WebPort",
-		"TCPPort",
-		"HTTPPort",
-		"ClusterPort",
-		"NodeExporterPort",
-		"BlackboxExporterPort",
-	}
-
 	topoSpec := reflect.ValueOf(s).Elem()
 	topoType := reflect.TypeOf(s).Elem()
 
 	checkPort := func(idx int, compSpec reflect.Value) error {
 		cfg := strings.Split(topoType.Field(idx).Tag.Get("yaml"), ",")[0]
-		for _, portType := range portTypes {
-			if j, found := findField(compSpec, portType); found {
-				port := int(compSpec.Field(j).Int())
+
+		for i := 0; i < compSpec.NumField(); i++ {
+			if strings.HasSuffix(compSpec.Type().Field(i).Name, "Port") {
+				port := int(compSpec.Field(i).Int())
 				if port <= 0 || port >= 65535 {
-					portField := strings.Split(compSpec.Type().Field(j).Tag.Get("yaml"), ",")[0]
+					portField := strings.Split(compSpec.Type().Field(i).Tag.Get("yaml"), ",")[0]
 					return errors.Errorf("`%s` of %s=%d is invalid", cfg, portField, port)
 				}
 			}
