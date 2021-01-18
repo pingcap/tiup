@@ -862,7 +862,8 @@ func (s *Specification) validateUserGroup() error {
 	if user := gOpts.User; !reUser.MatchString(user) {
 		return errors.Annotatef(ErrUserOrGroupInvalid, "`global` of user='%s' is invalid", user)
 	}
-	if group := gOpts.Group; !reGroup.MatchString(group) {
+	// if group is nil, then we'll set it to the same as user
+	if group := gOpts.Group; group != "" && !reGroup.MatchString(group) {
 		return errors.Annotatef(ErrUserOrGroupInvalid, "`global` of group='%s' is invalid", group)
 	}
 	return nil
