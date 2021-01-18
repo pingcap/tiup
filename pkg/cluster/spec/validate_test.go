@@ -992,3 +992,42 @@ global:
 	c.Assert(topo.GlobalOptions.User, Equals, "tidb")
 	c.Assert(topo.GlobalOptions.Group, Equals, "")
 }
+
+func (s *metaSuiteTopo) TestLogDirUnderDataDir(c *C) {
+	topo := Specification{}
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: deploy
+  data_dir: data
+tikv_servers:
+  - host: n1
+    port: 32160
+    status_port: 32180
+    log_dir: "/home/tidb6wu/tidb1-data/tikv-32160-log"
+    data_dir: "/home/tidb6wu/tidb1-data/tikv-32160"
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "directory conflict for '/home/tidb/deploy' between 'tidb_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'")
+}
+
+func (s *metaSuiteTopo) TestDataDirUnderlogDir(c *C) {
+	topo := Specification{}
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: "test1"
+  ssh_port: 220
+  deploy_dir: deploy
+  data_dir: data
+tikv_servers:
+  - host: n1
+    port: 32160
+    status_port: 32180
+    data_dir: "/home/tidb6wu/tidb1-data/logs/tikv-32160-data"
+    log_dir: "/home/tidb6wu/tidb1-data/logs"
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "directory conflict for '/home/tidb/deploy' between 'tidb_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'")
+
+}

@@ -27,6 +27,7 @@ import (
 	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
 
@@ -34,6 +35,7 @@ import (
 var (
 	errNSDeploy              = errNS.NewSubNamespace("deploy")
 	errDeployDirConflict     = errNSDeploy.NewType("dir_conflict", errutil.ErrTraitPreCheck)
+	errDeployDirOverlap      = errNSDeploy.NewType("dir_overlap", errutil.ErrTraitPreCheck)
 	errDeployPortConflict    = errNSDeploy.NewType("port_conflict", errutil.ErrTraitPreCheck)
 	ErrNoTiSparkMaster       = errors.New("there must be a Spark master node if you want to use the TiSpark component")
 	ErrMultipleTiSparkMaster = errors.New("a TiSpark enabled cluster with more than 1 Spark master node is not supported")
@@ -62,13 +64,12 @@ func fixDir(topo Topology) func(string) string {
 	}
 }
 
-// CheckClusterDirConflict checks cluster dir conflict
-func CheckClusterDirConflict(clusterList map[string]Metadata, clusterName string, topo Topology) error {
-	type DirAccessor struct {
-		dirKind  string
-		accessor func(Instance, Topology) string
-	}
+type DirAccessor struct {
+	dirKind  string
+	accessor func(Instance, Topology) string
+}
 
+func dirAccessors() ([]DirAccessor, []DirAccessor) {
 	instanceDirAccessor := []DirAccessor{
 		{dirKind: "deploy directory", accessor: func(instance Instance, topo Topology) string { return instance.DeployDir() }},
 		{dirKind: "data directory", accessor: func(instance Instance, topo Topology) string { return instance.DataDir() }},
@@ -80,34 +81,54 @@ func CheckClusterDirConflict(clusterList map[string]Metadata, clusterName string
 			if m == nil {
 				return ""
 			}
-			return topo.BaseTopo().MonitoredOptions.DeployDir
+			return m.DeployDir
 		}},
 		{dirKind: "monitor data directory", accessor: func(instance Instance, topo Topology) string {
 			m := topo.BaseTopo().MonitoredOptions
 			if m == nil {
 				return ""
 			}
-			return topo.BaseTopo().MonitoredOptions.DataDir
+			return m.DataDir
 		}},
 		{dirKind: "monitor log directory", accessor: func(instance Instance, topo Topology) string {
 			m := topo.BaseTopo().MonitoredOptions
 			if m == nil {
 				return ""
 			}
-			return topo.BaseTopo().MonitoredOptions.LogDir
+			return m.LogDir
 		}},
 	}
 
-	type Entry struct {
-		clusterName string
-		dirKind     string
-		dir         string
-		instance    Instance
+	return instanceDirAccessor, hostDirAccessor
+}
+
+type DirEntry struct {
+	clusterName string
+	dirKind     string
+	dir         string
+	instance    Instance
+}
+
+func appendEntries(name string, topo Topology, inst Instance, dirAccessor DirAccessor, targets []DirEntry) []DirEntry {
+	for _, dir := range strings.Split(fixDir(topo)(dirAccessor.accessor(inst, topo)), ",") {
+		targets = append(targets, DirEntry{
+			clusterName: name,
+			dirKind:     dirAccessor.dirKind,
+			dir:         dir,
+			instance:    inst,
+		})
 	}
 
-	currentEntries := []Entry{}
-	existingEntries := []Entry{}
+	return targets
+}
 
+// CheckClusterDirConflict checks cluster dir conflict or overlap
+func CheckClusterDirConflict(clusterList map[string]Metadata, clusterName string, topo Topology) error {
+	instanceDirAccessor, hostDirAccessor := dirAccessors()
+	currentEntries := []DirEntry{}
+	existingEntries := []DirEntry{}
+
+	// rebuild existing disk status
 	for name, metadata := range clusterList {
 		if name == clusterName {
 			continue
@@ -115,55 +136,26 @@ func CheckClusterDirConflict(clusterList map[string]Metadata, clusterName string
 
 		topo := metadata.GetTopology()
 
-		f := fixDir(topo)
 		topo.IterInstance(func(inst Instance) {
 			for _, dirAccessor := range instanceDirAccessor {
-				for _, dir := range strings.Split(f(dirAccessor.accessor(inst, topo)), ",") {
-					existingEntries = append(existingEntries, Entry{
-						clusterName: name,
-						dirKind:     dirAccessor.dirKind,
-						dir:         dir,
-						instance:    inst,
-					})
-				}
+				existingEntries = appendEntries(name, topo, inst, dirAccessor, existingEntries)
 			}
 		})
 		IterHost(topo, func(inst Instance) {
 			for _, dirAccessor := range hostDirAccessor {
-				for _, dir := range strings.Split(f(dirAccessor.accessor(inst, topo)), ",") {
-					existingEntries = append(existingEntries, Entry{
-						clusterName: name,
-						dirKind:     dirAccessor.dirKind,
-						dir:         dir,
-						instance:    inst,
-					})
-				}
+				existingEntries = appendEntries(name, topo, inst, dirAccessor, existingEntries)
 			}
 		})
 	}
 
-	f := fixDir(topo)
 	topo.IterInstance(func(inst Instance) {
 		for _, dirAccessor := range instanceDirAccessor {
-			for _, dir := range strings.Split(f(dirAccessor.accessor(inst, topo)), ",") {
-				currentEntries = append(currentEntries, Entry{
-					dirKind:  dirAccessor.dirKind,
-					dir:      dir,
-					instance: inst,
-				})
-			}
+			currentEntries = appendEntries(clusterName, topo, inst, dirAccessor, currentEntries)
 		}
 	})
-
 	IterHost(topo, func(inst Instance) {
 		for _, dirAccessor := range hostDirAccessor {
-			for _, dir := range strings.Split(f(dirAccessor.accessor(inst, topo)), ",") {
-				currentEntries = append(currentEntries, Entry{
-					dirKind:  dirAccessor.dirKind,
-					dir:      dir,
-					instance: inst,
-				})
-			}
+			currentEntries = appendEntries(clusterName, topo, inst, dirAccessor, currentEntries)
 		}
 	})
 
@@ -202,6 +194,54 @@ It conflicts to a directory in the existing cluster:
   Existing Component:    {{ColorKeyword}}{{.ExistComponent}} {{.ExistHost}}{{ColorReset}}
 
 Please change to use another directory or another host.
+`, properties))
+			}
+		}
+	}
+
+	return CheckClusterDirOverlap(currentEntries)
+}
+
+// CheckClusterDirOverlap checks cluster dir overlaps with data or log
+// we don't allow to deploy log under data, and vise versa
+// ref https://github.com/pingcap/tiup/issues/1047#issuecomment-761711508
+func CheckClusterDirOverlap(entries []DirEntry) error {
+	ignore := func(d1, d2 DirEntry) bool {
+		return (d1.instance.GetHost() != d2.instance.GetHost()) ||
+			d1.dir == "" || d2.dir == "" ||
+			strings.HasSuffix(d1.dirKind, "deploy directory") ||
+			strings.HasSuffix(d2.dirKind, "deploy directory")
+	}
+	for i := 0; i < len(entries)-1; i++ {
+		d1 := entries[i]
+		for j := i + 1; j < len(entries); j++ {
+			d2 := entries[j]
+			if ignore(d1, d2) {
+				continue
+			}
+
+			if utils.IsSubDir(d1.dir, d2.dir) || utils.IsSubDir(d2.dir, d1.dir) {
+				properties := map[string]string{
+					"ThisDirKind":   d1.dirKind,
+					"ThisDir":       d1.dir,
+					"ThisComponent": d1.instance.ComponentName(),
+					"ThisHost":      d1.instance.GetHost(),
+					"ThatDirKind":   d2.dirKind,
+					"ThatDir":       d2.dir,
+					"ThatComponent": d2.instance.ComponentName(),
+					"ThatHost":      d2.instance.GetHost(),
+				}
+				zap.L().Info("Meet deploy directory overlap", zap.Any("info", properties))
+				return errDeployDirOverlap.New("Deploy directory overlaps to another instance").WithProperty(cliutil.SuggestionFromTemplate(`
+The directory you specified in the topology file is:
+  Directory: {{ColorKeyword}}{{.ThisDirKind}} {{.ThisDir}}{{ColorReset}}
+  Component: {{ColorKeyword}}{{.ThisComponent}} {{.ThisHost}}{{ColorReset}}
+
+It overlaps to another instance:
+  Other Directory: {{ColorKeyword}}{{.ThatDirKind}} {{.ThatDir}}{{ColorReset}}
+  Other Component: {{ColorKeyword}}{{.ThatComponent}} {{.ThatHost}}{{ColorReset}}
+
+Please modify the topology file and try again.
 `, properties))
 			}
 		}
