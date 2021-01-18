@@ -133,10 +133,13 @@ func statusByURL(url string, tlsCfg *tls.Config) string {
 
 // Abs returns the absolute path
 func Abs(user, path string) string {
+	// trim whitespaces before joining
+	user = strings.TrimSpace(user)
+	path = strings.TrimSpace(path)
 	if !strings.HasPrefix(path, "/") {
-		return filepath.Join("/home", user, path)
+		path = filepath.Join("/home", user, path)
 	}
-	return path
+	return filepath.Clean(path)
 }
 
 // MultiDirAbs returns the absolute path for multi-dir separated by comma
