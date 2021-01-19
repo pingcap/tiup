@@ -204,8 +204,8 @@ func setConfig(config *map[string]interface{}, k string, v interface{}) {
 
 // handleWorkerConfig fetch the config file of worker and generate the source
 // which we need for the master.
-func (im *Importer) handleWorkerConfig(srv *spec.WorkerSpec, fname string) error {
-	data, err := im.fetchFile(srv.Host, srv.SSHPort, fname)
+func (im *Importer) handleWorkerConfig(ctx context.Context, srv *spec.WorkerSpec, fname string) error {
+	data, err := im.fetchFile(ctx, srv.Host, srv.SSHPort, fname)
 	if err != nil {
 		return err
 	}
@@ -274,7 +274,7 @@ func instancDeployDir(comp string, port int, hostDir string, globalDir string) s
 }
 
 // ImportFromAnsibleDir generate the metadata from ansible deployed cluster.
-func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metadata, err error) {
+func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName string, meta *spec.Metadata, err error) {
 	dir := im.dir
 	inventoryFileName := im.inventoryFileName
 
@@ -336,7 +336,7 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				}
 
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_dm-master.sh")
-				data, err := im.fetchFile(srv.Host, srv.SSHPort, runFileName)
+				data, err := im.fetchFile(ctx, srv.Host, srv.SSHPort, runFileName)
 				if err != nil {
 					return "", nil, err
 				}
@@ -384,7 +384,7 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				}
 
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_dm-worker.sh")
-				data, err := im.fetchFile(srv.Host, srv.SSHPort, runFileName)
+				data, err := im.fetchFile(ctx, srv.Host, srv.SSHPort, runFileName)
 				if err != nil {
 					return "", nil, err
 				}
@@ -427,7 +427,7 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				// We will always set the wd as DeployDir.
 				srv.DeployDir = deployDir
 
-				err = im.handleWorkerConfig(&srv, configFileName)
+				err = im.handleWorkerConfig(ctx, &srv, configFileName)
 				if err != nil {
 					return "", nil, err
 				}
@@ -445,7 +445,7 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				}
 
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_prometheus.sh")
-				data, err := im.fetchFile(srv.Host, srv.SSHPort, runFileName)
+				data, err := im.fetchFile(ctx, srv.Host, srv.SSHPort, runFileName)
 				if err != nil {
 					return "", nil, err
 				}
@@ -493,7 +493,7 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				}
 
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_alertmanager.sh")
-				data, err := im.fetchFile(srv.Host, srv.SSHPort, runFileName)
+				data, err := im.fetchFile(ctx, srv.Host, srv.SSHPort, runFileName)
 				if err != nil {
 					return "", nil, err
 				}
@@ -550,7 +550,7 @@ func (im *Importer) ImportFromAnsibleDir() (clusterName string, meta *spec.Metad
 				}
 
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_grafana.sh")
-				data, err := im.fetchFile(srv.Host, srv.SSHPort, runFileName)
+				data, err := im.fetchFile(ctx, srv.Host, srv.SSHPort, runFileName)
 				if err != nil {
 					return "", nil, err
 				}

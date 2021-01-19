@@ -20,6 +20,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync/atomic"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/queue"
@@ -31,7 +32,8 @@ import (
 type contextKey string
 
 const (
-	semKey = contextKey("CHECKPOINT_ONCE")
+	semKey       = contextKey("CHECKPOINT_SEMAPHORE")
+	goroutineKey = contextKey("CHECKPOINT_GOROUTINE")
 )
 
 var (
@@ -57,6 +59,15 @@ func SetCheckPoint(file string) error {
 
 // Acquire wraps CheckPoint.Acquire
 func Acquire(ctx context.Context, point map[string]interface{}) *Point {
+	// Check goroutine if we are in test
+	gptr := ctx.Value(goroutineKey).(*goroutineLock)
+	g := atomic.LoadUint64((*uint64)(gptr))
+	if g == 0 {
+		atomic.StoreUint64((*uint64)(gptr), uint64(newGoroutineLock()))
+	} else {
+		goroutineLock(g).check()
+	}
+
 	// If checkpoint is disabled, return a mock point
 	if checkpoint == nil {
 		return &Point{nil, nil, true}
@@ -68,14 +79,14 @@ func Acquire(ctx context.Context, point map[string]interface{}) *Point {
 // NewContext wraps given context with value needed by checkpoint
 func NewContext(ctx context.Context) context.Context {
 	if ctx.Value(semKey) == nil {
-		return context.WithValue(ctx, semKey, semaphore.NewWeighted(1))
-	}
-	if ctx.Value(semKey).(*semaphore.Weighted).TryAcquire(1) {
+		ctx = context.WithValue(ctx, semKey, semaphore.NewWeighted(1))
+	} else if ctx.Value(semKey).(*semaphore.Weighted).TryAcquire(1) {
 		defer ctx.Value(semKey).(*semaphore.Weighted).Release(1)
-		return context.WithValue(ctx, semKey, semaphore.NewWeighted(1))
+		ctx = context.WithValue(ctx, semKey, semaphore.NewWeighted(1))
+	} else {
+		ctx = context.WithValue(ctx, semKey, semaphore.NewWeighted(0))
 	}
-
-	return context.WithValue(ctx, semKey, semaphore.NewWeighted(0))
+	return context.WithValue(ctx, goroutineKey, new(goroutineLock))
 }
 
 // CheckPoint provides the ability to recover from a failed command at the failpoint
