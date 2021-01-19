@@ -22,7 +22,7 @@ import (
 )
 
 func newDestroyCmd() *cobra.Command {
-	destoyOpt := operator.Options{}
+	destroyOpt := operator.Options{}
 	cmd := &cobra.Command{
 		Use:   "destroy <cluster-name>",
 		Short: "Destroy a specified cluster",
@@ -41,22 +41,22 @@ You can retain some nodes and roles data when destroy cluster, eg:
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			// Validate the retained roles to prevent unexpected deleting data
-			if len(destoyOpt.RetainDataRoles) > 0 {
+			if len(destroyOpt.RetainDataRoles) > 0 {
 				validRoles := set.NewStringSet(spec.AllComponentNames()...)
-				for _, role := range destoyOpt.RetainDataRoles {
+				for _, role := range destroyOpt.RetainDataRoles {
 					if !validRoles.Exist(role) {
 						return perrs.Errorf("role name `%s` invalid", role)
 					}
 				}
 			}
 
-			return cm.DestroyCluster(clusterName, gOpt, destoyOpt, skipConfirm)
+			return cm.DestroyCluster(clusterName, gOpt, destroyOpt, skipConfirm)
 		},
 	}
 
-	cmd.Flags().StringArrayVar(&destoyOpt.RetainDataNodes, "retain-node-data", nil, "Specify the nodes or hosts whose data will be retained")
-	cmd.Flags().StringArrayVar(&destoyOpt.RetainDataRoles, "retain-role-data", nil, "Specify the roles whose data will be retained")
-	cmd.Flags().BoolVar(&destoyOpt.Force, "force", false, "Force will ignore remote error while destroy the cluster")
+	cmd.Flags().StringArrayVar(&destroyOpt.RetainDataNodes, "retain-node-data", nil, "Specify the nodes or hosts whose data will be retained")
+	cmd.Flags().StringArrayVar(&destroyOpt.RetainDataRoles, "retain-role-data", nil, "Specify the roles whose data will be retained")
+	cmd.Flags().BoolVar(&destroyOpt.Force, "force", false, "Force will ignore remote error while destroy the cluster")
 
 	return cmd
 }
