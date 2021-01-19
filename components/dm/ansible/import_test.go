@@ -48,13 +48,13 @@ func (g *executorGetter) Get(host string) ctxt.Executor {
 
 // Transfer implements executor interface.
 // Replace the deploy directory as the local one in testdata, so we can fetch it.
-func (l *localExecutor) Transfer(src string, target string, download bool) error {
+func (l *localExecutor) Transfer(ctx context.Context, src string, target string, download bool) error {
 	mydeploy, err := filepath.Abs("./testdata/deploy_dir/" + l.host)
 	if err != nil {
 		return errors.AddStack(err)
 	}
 	src = strings.Replace(src, "/home/tidb/deploy", mydeploy, 1)
-	return l.Local.Transfer(src, target, download)
+	return l.Local.Transfer(ctx, src, target, download)
 }
 
 func TestParseRunScript(t *testing.T) {

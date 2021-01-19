@@ -21,16 +21,19 @@ import (
 	"os/user"
 	"testing"
 
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/stretchr/testify/require"
 )
 
 func TestLocal(t *testing.T) {
+	ctx := ctxt.New(context.Background())
+
 	assert := require.New(t)
 	user, err := user.Current()
 	assert.Nil(err)
 	local, err := New(SSHTypeNone, false, SSHConfig{Host: "127.0.0.1", User: user.Username})
 	assert.Nil(err)
-	_, _, err = local.Execute(context.Background(), "ls .", false)
+	_, _, err = local.Execute(ctx, "ls .", false)
 	assert.Nil(err)
 
 	// generate a src file and write some data
@@ -52,7 +55,7 @@ func TestLocal(t *testing.T) {
 	defer os.Remove(dst.Name())
 
 	// Transfer src to dst and check it.
-	err = local.Transfer(src.Name(), dst.Name(), false)
+	err = local.Transfer(ctx, src.Name(), dst.Name(), false)
 	assert.Nil(err)
 
 	data, err := ioutil.ReadFile(dst.Name())
@@ -70,6 +73,8 @@ func TestWrongIP(t *testing.T) {
 }
 
 func TestLocalExecuteWithQuotes(t *testing.T) {
+	ctx := ctxt.New(context.Background())
+
 	assert := require.New(t)
 	user, err := user.Current()
 	assert.Nil(err)
@@ -87,7 +92,7 @@ func TestLocalExecuteWithQuotes(t *testing.T) {
 	}
 	for _, cmd := range cmds {
 		for _, sudo := range []bool{true, false} {
-			_, _, err = local.Execute(cmd, sudo)
+			_, _, err = local.Execute(ctx, cmd, sudo)
 			assert.Nil(err)
 		}
 	}

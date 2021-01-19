@@ -33,11 +33,11 @@ type initConfigSuite struct {
 type fakeExecutor struct {
 }
 
-func (e *fakeExecutor) Execute(cmd string, sudo bool, timeout ...time.Duration) (stdout []byte, stderr []byte, err error) {
+func (e *fakeExecutor) Execute(ctx context.Context, cmd string, sudo bool, timeout ...time.Duration) (stdout []byte, stderr []byte, err error) {
 	return []byte{}, []byte{}, nil
 }
 
-func (e *fakeExecutor) Transfer(src string, dst string, download bool) error {
+func (e *fakeExecutor) Transfer(ctx context.Context, src string, dst string, download bool) error {
 	return nil
 }
 
@@ -73,6 +73,7 @@ func Test(t *testing.T) { check.TestingT(t) }
 var _ = check.Suite(&initConfigSuite{})
 
 func (s *initConfigSuite) TestCheckConfig(c *check.C) {
+	ctx := ctxt.New(context.Background())
 	defer mock.With("FakeExecutor", &fakeExecutor{})()
 
 	t := &InitConfig{
@@ -94,9 +95,9 @@ func (s *initConfigSuite) TestCheckConfig(c *check.C) {
 		t.instance = &fakeInstance{test[0], nil}
 		t.ignoreCheck = test[1]
 		if test[2] {
-			c.Assert(t.Execute(nil), check.NotNil)
+			c.Assert(t.Execute(ctx), check.NotNil)
 		} else {
-			c.Assert(t.Execute(nil), check.IsNil)
+			c.Assert(t.Execute(ctx), check.IsNil)
 		}
 	}
 }
