@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -37,6 +38,19 @@ var (
 	ErrNoTiSparkMaster       = errors.New("there must be a Spark master node if you want to use the TiSpark component")
 	ErrMultipleTiSparkMaster = errors.New("a TiSpark enabled cluster with more than 1 Spark master node is not supported")
 	ErrMultipleTisparkWorker = errors.New("multiple TiSpark workers on the same host is not supported by Spark")
+	ErrUserOrGroupInvalid    = errors.New(`linux username and groupname must start with a lower case letter or an underscore, ` +
+		`followed by lower case letters, digits, underscores, or dashes. ` +
+		`Usernames may only be up to 32 characters long. ` +
+		`Groupnames may only be up to 16 characters long.`)
+)
+
+// Linux username and groupname must start with a lower case letter or an underscore,
+// followed by lower case letters, digits, underscores, or dashes.
+// ref https://man7.org/linux/man-pages/man8/useradd.8.html
+// ref https://man7.org/linux/man-pages/man8/groupadd.8.html
+var (
+	reUser  = regexp.MustCompile(`^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$`)
+	reGroup = regexp.MustCompile(`^[a-z_]([a-z0-9_-]{0,15})$`)
 )
 
 func fixDir(topo Topology) func(string) string {
@@ -460,6 +474,48 @@ func (s *Specification) platformConflictsDetect() error {
 	return nil
 }
 
+func (s *Specification) portInvalidDetect() error {
+	topoSpec := reflect.ValueOf(s).Elem()
+	topoType := reflect.TypeOf(s).Elem()
+
+	checkPort := func(idx int, compSpec reflect.Value) error {
+		cfg := strings.Split(topoType.Field(idx).Tag.Get("yaml"), ",")[0]
+
+		for i := 0; i < compSpec.NumField(); i++ {
+			if strings.HasSuffix(compSpec.Type().Field(i).Name, "Port") {
+				port := int(compSpec.Field(i).Int())
+				if port <= 0 || port >= 65535 {
+					portField := strings.Split(compSpec.Type().Field(i).Tag.Get("yaml"), ",")[0]
+					return errors.Errorf("`%s` of %s=%d is invalid", cfg, portField, port)
+				}
+			}
+		}
+		return nil
+	}
+
+	for i := 0; i < topoSpec.NumField(); i++ {
+		compSpecs := topoSpec.Field(i)
+
+		// check on struct
+		if compSpecs.Kind() == reflect.Struct {
+			if err := checkPort(i, compSpecs); err != nil {
+				return err
+			}
+			continue
+		}
+
+		// check on slice
+		for index := 0; index < compSpecs.Len(); index++ {
+			compSpec := compSpecs.Index(index)
+			if err := checkPort(i, compSpec); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func (s *Specification) portConflictsDetect() error {
 	type (
 		usedPort struct {
@@ -801,6 +857,18 @@ func (s *Specification) validateTLSEnabled() error {
 	return nil
 }
 
+func (s *Specification) validateUserGroup() error {
+	gOpts := s.GlobalOptions
+	if user := gOpts.User; !reUser.MatchString(user) {
+		return errors.Annotatef(ErrUserOrGroupInvalid, "`global` of user='%s' is invalid", user)
+	}
+	// if group is nil, then we'll set it to the same as user
+	if group := gOpts.Group; group != "" && !reGroup.MatchString(group) {
+		return errors.Annotatef(ErrUserOrGroupInvalid, "`global` of group='%s' is invalid", group)
+	}
+	return nil
+}
+
 func (s *Specification) validatePDNames() error {
 	// check pdserver name
 	pdNames := set.NewStringSet()
@@ -838,6 +906,10 @@ func (s *Specification) Validate() error {
 		return err
 	}
 
+	if err := s.portInvalidDetect(); err != nil {
+		return err
+	}
+
 	if err := s.portConflictsDetect(); err != nil {
 		return err
 	}
@@ -847,6 +919,10 @@ func (s *Specification) Validate() error {
 	}
 
 	if err := s.validateTiSparkSpec(); err != nil {
+		return err
+	}
+
+	if err := s.validateUserGroup(); err != nil {
 		return err
 	}
 
