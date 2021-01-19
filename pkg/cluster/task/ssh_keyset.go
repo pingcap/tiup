@@ -13,7 +13,12 @@
 
 package task
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+)
 
 // SSHKeySet is used to set the Context private/public key path
 type SSHKeySet struct {
@@ -22,16 +27,16 @@ type SSHKeySet struct {
 }
 
 // Execute implements the Task interface
-func (s *SSHKeySet) Execute(ctx *Context) error {
-	ctx.PublicKeyPath = s.publicKeyPath
-	ctx.PrivateKeyPath = s.privateKeyPath
+func (s *SSHKeySet) Execute(ctx context.Context) error {
+	ctxt.GetInner(ctx).PublicKeyPath = s.publicKeyPath
+	ctxt.GetInner(ctx).PrivateKeyPath = s.privateKeyPath
 	return nil
 }
 
 // Rollback implements the Task interface
-func (s *SSHKeySet) Rollback(ctx *Context) error {
-	ctx.PublicKeyPath = ""
-	ctx.PrivateKeyPath = ""
+func (s *SSHKeySet) Rollback(ctx context.Context) error {
+	ctxt.GetInner(ctx).PublicKeyPath = ""
+	ctxt.GetInner(ctx).PrivateKeyPath = ""
 	return nil
 }
 

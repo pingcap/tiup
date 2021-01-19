@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"path"
@@ -22,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -114,14 +115,15 @@ type GrafanaInstance struct {
 
 // InitConfig implement Instance interface
 func (i *GrafanaInstance) InitConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	clusterName,
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
 	gOpts := *i.topo.BaseTopo().GlobalOptions
-	if err := i.BaseInstance.InitConfig(e, gOpts, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(ctx, e, gOpts, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -133,11 +135,11 @@ func (i *GrafanaInstance) InitConfig(
 	}
 
 	dst := filepath.Join(paths.Deploy, "scripts", "run_grafana.sh")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false); err != nil {
 		return err
 	}
 
-	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
 		return err
 	}
 
@@ -152,16 +154,16 @@ func (i *GrafanaInstance) InitConfig(
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "grafana.ini")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false); err != nil {
 		return err
 	}
 
-	if err := i.installDashboards(e, paths.Deploy, clusterName, clusterVersion); err != nil {
+	if err := i.installDashboards(ctx, e, paths.Deploy, clusterName, clusterVersion); err != nil {
 		return errors.Annotate(err, "install dashboards")
 	}
 
 	// initial dashboards/*.json
-	if err := i.initDashboards(e, i.InstanceSpec.(GrafanaSpec), paths, clusterName); err != nil {
+	if err := i.initDashboards(ctx, e, i.InstanceSpec.(GrafanaSpec), paths, clusterName); err != nil {
 		return errors.Annotate(err, "initial dashboards")
 	}
 
@@ -171,7 +173,7 @@ func (i *GrafanaInstance) InitConfig(
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "provisioning", "dashboards", "dashboard.yml")
-	if err := i.TransferLocalConfigFile(e, fp, dst); err != nil {
+	if err := i.TransferLocalConfigFile(ctx, e, fp, dst); err != nil {
 		return err
 	}
 
@@ -195,13 +197,13 @@ func (i *GrafanaInstance) InitConfig(
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "provisioning", "datasources", "datasource.yml")
-	return i.TransferLocalConfigFile(e, fp, dst)
+	return i.TransferLocalConfigFile(ctx, e, fp, dst)
 }
 
-func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, paths meta.DirPaths, clusterName string) error {
+func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, spec GrafanaSpec, paths meta.DirPaths, clusterName string) error {
 	dashboardsDir := filepath.Join(paths.Deploy, "dashboards")
 	if spec.DashboardDir != "" {
-		return i.TransferLocalConfigDir(e, spec.DashboardDir, dashboardsDir, func(name string) bool {
+		return i.TransferLocalConfigDir(ctx, e, spec.DashboardDir, dashboardsDir, func(name string) bool {
 			return strings.HasSuffix(name, ".json")
 		})
 	}
@@ -211,7 +213,7 @@ func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, 
 		`find %[1]s -maxdepth 1 -type f -name "*.json" -delete`,
 		"cp %[2]s/bin/*.json %[1]s",
 	}
-	_, stderr, err := e.Execute(fmt.Sprintf(strings.Join(cmds, " && "), dashboardsDir, paths.Deploy), false)
+	_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), dashboardsDir, paths.Deploy), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
@@ -224,7 +226,7 @@ func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, 
 		`find %s -type f -exec sed -i "s/Test-Cluster/%s/g" {} \;`,
 	} {
 		cmd := fmt.Sprintf(cmd, path.Join(paths.Deploy, "dashboards"), clusterName)
-		_, stderr, err := e.Execute(cmd, false)
+		_, stderr, err := e.Execute(ctx, cmd, false)
 		if err != nil {
 			return errors.Annotatef(err, "stderr: %s", string(stderr))
 		}
@@ -238,26 +240,26 @@ func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, 
 // component with tidb cluster), and the dashboards for dm cluster is packed in the dm-master
 // component. So if deploying tidb cluster, the dashboards is correct, if deploying dm cluster,
 // we should remove dashboards for tidb and install dashboards for dm.
-func (i *GrafanaInstance) installDashboards(e executor.Executor, deployDir, clusterName, clusterVersion string) error {
+func (i *GrafanaInstance) installDashboards(ctx context.Context, e ctxt.Executor, deployDir, clusterName, clusterVersion string) error {
 	if i.topo.Type() != TopoTypeDM {
 		return nil
 	}
 
 	tmp := filepath.Join(deployDir, "_tiup_tmp")
-	_, stderr, err := e.Execute(fmt.Sprintf("mkdir -p %s", tmp), false)
+	_, stderr, err := e.Execute(ctx, fmt.Sprintf("mkdir -p %s", tmp), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
 
 	srcPath := PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
 	dstPath := filepath.Join(tmp, filepath.Base(srcPath))
-	err = e.Transfer(srcPath, dstPath, false)
+	err = e.Transfer(ctx, srcPath, dstPath, false)
 	if err != nil {
 		return err
 	}
 
 	cmd := fmt.Sprintf(`tar --no-same-owner -zxf %s -C %s && rm %s`, dstPath, tmp, dstPath)
-	_, stderr, err = e.Execute(cmd, false)
+	_, stderr, err = e.Execute(ctx, cmd, false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
@@ -270,7 +272,7 @@ func (i *GrafanaInstance) installDashboards(e executor.Executor, deployDir, clus
 		"cp %[2]s/dm-master/scripts/*.json %[1]s",
 		"rm -rf %[2]s",
 	}
-	_, stderr, err = e.Execute(fmt.Sprintf(strings.Join(cmds, " && "), targetDir, tmp), false)
+	_, stderr, err = e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), targetDir, tmp), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
@@ -280,7 +282,8 @@ func (i *GrafanaInstance) installDashboards(e executor.Executor, deployDir, clus
 
 // ScaleConfig deploy temporary config on scaling
 func (i *GrafanaInstance) ScaleConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	topo Topology,
 	clusterName string,
 	clusterVersion string,
@@ -290,5 +293,5 @@ func (i *GrafanaInstance) ScaleConfig(
 	s := i.topo
 	defer func() { i.topo = s }()
 	i.topo = topo.Merge(i.topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
 }

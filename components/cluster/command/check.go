@@ -14,6 +14,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -23,6 +24,7 @@ import (
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -330,7 +332,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 		ParallelStep("+ Cleanup check files", false, cleanTasks...).
 		Build()
 
-	ctx := task.NewContext()
+	ctx := ctxt.New(context.Background())
 	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
@@ -387,10 +389,14 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 }
 
 // handleCheckResults parses the result of checks
-func handleCheckResults(ctx *task.Context, host string, opt *checkOptions, t *task.Builder) ([][]string, error) {
-	results, _ := ctx.GetCheckResults(host)
-	if len(results) < 1 {
+func handleCheckResults(ctx context.Context, host string, opt *checkOptions, t *task.Builder) ([][]string, error) {
+	rr, _ := ctxt.GetInner(ctx).GetCheckResults(host)
+	if len(rr) < 1 {
 		return nil, fmt.Errorf("no check results found for %s", host)
+	}
+	results := []*operator.CheckResult{}
+	for _, r := range rr {
+		results = append(results, r.(*operator.CheckResult))
 	}
 
 	lines := make([][]string, 0)
@@ -407,7 +413,7 @@ func handleCheckResults(ctx *task.Context, host string, opt *checkOptions, t *ta
 				lines = append(lines, line)
 				continue
 			}
-			msg, err := fixFailedChecks(ctx, host, r, t)
+			msg, err := fixFailedChecks(host, r, t)
 			if err != nil {
 				log.Debugf("%s: fail to apply fix to %s (%s)", host, r.Name, err)
 			}
@@ -429,7 +435,7 @@ func handleCheckResults(ctx *task.Context, host string, opt *checkOptions, t *ta
 }
 
 // fixFailedChecks tries to automatically apply changes to fix failed checks
-func fixFailedChecks(ctx *task.Context, host string, res *operator.CheckResult, t *task.Builder) (string, error) {
+func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder) (string, error) {
 	msg := ""
 	switch res.Name {
 	case operator.CheckNameSysService:

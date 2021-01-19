@@ -14,13 +14,14 @@
 package spec
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
 
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 )
@@ -115,7 +116,8 @@ type PumpInstance struct {
 
 // ScaleConfig deploy temporary config on scaling
 func (i *PumpInstance) ScaleConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	topo Topology,
 	clusterName,
 	clusterVersion,
@@ -128,19 +130,20 @@ func (i *PumpInstance) ScaleConfig(
 	}()
 	i.topo = mustBeClusterTopo(topo)
 
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
 }
 
 // InitConfig implements Instance interface.
 func (i *PumpInstance) InitConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	clusterName,
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
 	topo := i.topo.(*Specification)
-	if err := i.BaseInstance.InitConfig(e, topo.GlobalOptions, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(ctx, e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -164,11 +167,11 @@ func (i *PumpInstance) InitConfig(
 		return err
 	}
 	dst := filepath.Join(paths.Deploy, "scripts", "run_pump.sh")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false); err != nil {
 		return err
 	}
 
-	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
 		return err
 	}
 
@@ -215,5 +218,5 @@ func (i *PumpInstance) InitConfig(
 			i.Role())
 	}
 
-	return i.MergeServerConfig(e, globalConfig, spec.Config, paths)
+	return i.MergeServerConfig(ctx, e, globalConfig, spec.Config, paths)
 }

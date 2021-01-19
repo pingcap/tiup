@@ -16,6 +16,7 @@ package ansible
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -28,6 +29,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/dm/spec"
 	"github.com/pingcap/tiup/pkg/cluster/ansible"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/relex/aini"
@@ -108,7 +110,7 @@ func getAbsPath(dir string, path string) string {
 
 // ExecutorGetter get the executor by host.
 type ExecutorGetter interface {
-	Get(host string) (e executor.Executor)
+	Get(host string) (e ctxt.Executor)
 }
 
 // Importer used for import from ansible.
@@ -145,7 +147,7 @@ func NewImporter(ansibleDir, inventoryFileName string, sshType executor.SSHType,
 	}, nil
 }
 
-func (im *Importer) getExecutor(host string, port int) (e executor.Executor, err error) {
+func (im *Importer) getExecutor(host string, port int) (e ctxt.Executor, err error) {
 	if im.testExecutorGetter != nil {
 		return im.testExecutorGetter.Get(host), nil
 	}
@@ -165,7 +167,7 @@ func (im *Importer) getExecutor(host string, port int) (e executor.Executor, err
 	return
 }
 
-func (im *Importer) fetchFile(host string, port int, fname string) (data []byte, err error) {
+func (im *Importer) fetchFile(ctx context.Context, host string, port int, fname string) (data []byte, err error) {
 	e, err := im.getExecutor(host, port)
 	if err != nil {
 		return nil, errors.Annotatef(err, "failed to get executor, target: %s:%d", host, port)
@@ -179,7 +181,7 @@ func (im *Importer) fetchFile(host string, port int, fname string) (data []byte,
 
 	tmp = filepath.Join(tmp, filepath.Base(fname))
 
-	err = e.Transfer(fname, tmp, true /*download*/)
+	err = e.Transfer(ctx, fname, tmp, true /*download*/)
 	if err != nil {
 		return nil, errors.Annotatef(err, "transfer %s from %s:%d", fname, host, port)
 	}
@@ -222,7 +224,7 @@ func (im *Importer) handleWorkerConfig(srv *spec.WorkerSpec, fname string) error
 
 // ScpSourceToMaster scp the source files to master,
 // and set V1SourcePath of the master spec.
-func (im *Importer) ScpSourceToMaster(topo *spec.Specification) (err error) {
+func (im *Importer) ScpSourceToMaster(ctx context.Context, topo *spec.Specification) (err error) {
 	for i := 0; i < len(topo.Masters); i++ {
 		master := &topo.Masters[i]
 		target := filepath.Join(firstNonEmpty(master.DeployDir, topo.GlobalOptions.DeployDir), "v1source")
@@ -232,7 +234,7 @@ func (im *Importer) ScpSourceToMaster(topo *spec.Specification) (err error) {
 		if err != nil {
 			return errors.Annotatef(err, "failed to get executor, target: %s:%d", master.Host, master.SSHPort)
 		}
-		_, stderr, err := e.Execute("mkdir -p "+target, false)
+		_, stderr, err := e.Execute(ctx, "mkdir -p "+target, false)
 		if err != nil {
 			return errors.Annotatef(err, "failed to execute: %s", string(stderr))
 		}
@@ -253,7 +255,7 @@ func (im *Importer) ScpSourceToMaster(topo *spec.Specification) (err error) {
 				return errors.AddStack(err)
 			}
 
-			err = e.Transfer(f.Name(), filepath.Join(target, addr+".yml"), false)
+			err = e.Transfer(ctx, f.Name(), filepath.Join(target, addr+".yml"), false)
 			if err != nil {
 				return err
 			}

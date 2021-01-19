@@ -14,17 +14,29 @@
 package operator
 
 import (
+	"context"
 	"crypto/tls"
+	"reflect"
 	"strconv"
 
+	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
+	"go.uber.org/zap"
 )
+
+func init() {
+	// register checkpoint for upgrade operation
+	checkpoint.RegisterField(
+		checkpoint.Field("operation", reflect.DeepEqual),
+		checkpoint.Field("instance", reflect.DeepEqual),
+	)
+}
 
 // Upgrade the cluster.
 func Upgrade(
-	getter ExecutorGetter,
+	ctx context.Context,
 	topo spec.Topology,
 	options Options,
 	tlsCfg *tls.Config,
@@ -45,30 +57,53 @@ func Upgrade(
 		log.Infof("Restarting component %s", component.Name())
 
 		for _, instance := range instances {
-			var rollingInstance spec.RollingUpdateInstance
-			var isRollingInstance bool
-
-			if !options.Force {
-				rollingInstance, isRollingInstance = instance.(spec.RollingUpdateInstance)
-			}
-
-			if isRollingInstance {
-				err := rollingInstance.PreRestart(topo, int(options.APITimeout), tlsCfg)
-				if err != nil && !options.Force {
-					return err
-				}
-			}
-
-			if err := restartInstance(getter, instance, options.OptTimeout); err != nil && !options.Force {
+			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
 				return err
 			}
+		}
+	}
 
-			if isRollingInstance {
-				err := rollingInstance.PostRestart(topo, tlsCfg)
-				if err != nil && !options.Force {
-					return err
-				}
-			}
+	return nil
+}
+
+func upgradeInstance(ctx context.Context, topo spec.Topology, instance spec.Instance, options Options, tlsCfg *tls.Config) (err error) {
+	// insert checkpoint
+	point := checkpoint.Acquire(ctx, map[string]interface{}{
+		"operation": "upgrade",
+		"instance":  instance.ID(),
+	})
+	defer func() {
+		point.Release(err,
+			zap.String("operation", "upgrade"),
+			zap.String("instance", instance.ID()))
+	}()
+
+	if point.Hit() != nil {
+		return nil
+	}
+
+	var rollingInstance spec.RollingUpdateInstance
+	var isRollingInstance bool
+
+	if !options.Force {
+		rollingInstance, isRollingInstance = instance.(spec.RollingUpdateInstance)
+	}
+
+	if isRollingInstance {
+		err := rollingInstance.PreRestart(topo, int(options.APITimeout), tlsCfg)
+		if err != nil && !options.Force {
+			return err
+		}
+	}
+
+	if err := restartInstance(ctx, instance, options.OptTimeout); err != nil && !options.Force {
+		return err
+	}
+
+	if isRollingInstance {
+		err := rollingInstance.PostRestart(topo, tlsCfg)
+		if err != nil && !options.Force {
+			return err
 		}
 	}
 

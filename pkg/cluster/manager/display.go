@@ -14,6 +14,7 @@
 package manager
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -24,9 +25,10 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
@@ -70,13 +72,13 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 		{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Data Dir", "Deploy Dir"},
 	}
 
-	ctx := task.NewContext()
-	err = ctx.SetSSHKeySet(m.specManager.Path(name, "ssh", "id_rsa"), m.specManager.Path(name, "ssh", "id_rsa.pub"))
+	ctx := ctxt.New(context.Background())
+	err = SetSSHKeySet(ctx, m.specManager.Path(name, "ssh", "id_rsa"), m.specManager.Path(name, "ssh", "id_rsa.pub"))
 	if err != nil {
 		return err
 	}
 
-	err = ctx.SetClusterSSH(topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
+	err = SetClusterSSH(ctx, topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
 	if err != nil {
 		return err
 	}
@@ -150,9 +152,9 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 
 		// Query the service status
 		if status == "-" {
-			e, found := ctx.GetExecutor(ins.GetHost())
+			e, found := ctxt.GetInner(ctx).GetExecutor(ins.GetHost())
 			if found {
-				active, _ := operator.GetServiceStatus(e, ins.ServiceName())
+				active, _ := operator.GetServiceStatus(ctx, e, ins.ServiceName())
 				if parts := strings.Split(strings.TrimSpace(active), " "); len(parts) > 2 {
 					if parts[1] == "active" {
 						status = "Up"
@@ -232,4 +234,41 @@ func formatInstanceStatus(status string) string {
 	default:
 		return status
 	}
+}
+
+// SetSSHKeySet set ssh key set.
+func SetSSHKeySet(ctx context.Context, privateKeyPath string, publicKeyPath string) error {
+	ctxt.GetInner(ctx).PrivateKeyPath = privateKeyPath
+	ctxt.GetInner(ctx).PublicKeyPath = publicKeyPath
+	return nil
+}
+
+// SetClusterSSH set cluster user ssh executor in context.
+func SetClusterSSH(ctx context.Context, topo spec.Topology, deployUser string, sshTimeout uint64, sshType, defaultSSHType executor.SSHType) error {
+	if sshType == "" {
+		sshType = defaultSSHType
+	}
+	if len(ctxt.GetInner(ctx).PrivateKeyPath) == 0 {
+		return perrs.Errorf("context has no PrivateKeyPath")
+	}
+
+	for _, com := range topo.ComponentsByStartOrder() {
+		for _, in := range com.Instances() {
+			cf := executor.SSHConfig{
+				Host:    in.GetHost(),
+				Port:    in.GetSSHPort(),
+				KeyFile: ctxt.GetInner(ctx).PrivateKeyPath,
+				User:    deployUser,
+				Timeout: time.Second * time.Duration(sshTimeout),
+			}
+
+			e, err := executor.New(sshType, false, cf)
+			if err != nil {
+				return err
+			}
+			ctxt.GetInner(ctx).SetExecutor(in.GetHost(), e)
+		}
+	}
+
+	return nil
 }

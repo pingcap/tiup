@@ -14,15 +14,15 @@
 package task
 
 import (
+	"context"
 	stderrors "errors"
 	"fmt"
 	"strings"
 	"sync"
 
-	"github.com/pingcap/tiup/pkg/cluster/executor"
-	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/checkpoint"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/logger/log"
-	"github.com/pingcap/tiup/pkg/utils/mock"
 )
 
 var (
@@ -38,27 +38,8 @@ type (
 	// Task represents a operation while TiUP execution
 	Task interface {
 		fmt.Stringer
-		Execute(ctx *Context) error
-		Rollback(ctx *Context) error
-	}
-
-	// Context is used to share state while multiple tasks execution.
-	// We should use mutex to prevent concurrent R/W for some fields
-	// because of the same context can be shared in parallel tasks.
-	Context struct {
-		ev EventBus
-
-		exec struct {
-			sync.RWMutex
-			executors    map[string]executor.Executor
-			stdouts      map[string][]byte
-			stderrs      map[string][]byte
-			checkResults map[string][]*operator.CheckResult
-		}
-
-		// The private/public key is used to access remote server via the user `tidb`
-		PrivateKeyPath string
-		PublicKeyPath  string
+		Execute(ctx context.Context) error
+		Rollback(ctx context.Context) error
 	}
 
 	// Serial will execute a bundle of task in serialized way
@@ -75,98 +56,6 @@ type (
 		inner             []Task
 	}
 )
-
-// NewContext create a context instance.
-func NewContext() *Context {
-	return &Context{
-		ev: NewEventBus(),
-		exec: struct {
-			sync.RWMutex
-			executors    map[string]executor.Executor
-			stdouts      map[string][]byte
-			stderrs      map[string][]byte
-			checkResults map[string][]*operator.CheckResult
-		}{
-			executors:    make(map[string]executor.Executor),
-			stdouts:      make(map[string][]byte),
-			stderrs:      make(map[string][]byte),
-			checkResults: make(map[string][]*operator.CheckResult),
-		},
-	}
-}
-
-// Get implements the operation.ExecutorGetter interface.
-func (ctx *Context) Get(host string) (e executor.Executor) {
-	ctx.exec.Lock()
-	e, ok := ctx.exec.executors[host]
-	ctx.exec.Unlock()
-
-	if !ok {
-		panic("no init executor for " + host)
-	}
-	return
-}
-
-// GetSSHKeySet implements the operation.ExecutorGetter interface.
-func (ctx *Context) GetSSHKeySet() (privateKeyPath, publicKeyPath string) {
-	return ctx.PrivateKeyPath, ctx.PublicKeyPath
-}
-
-// GetExecutor get the executor.
-func (ctx *Context) GetExecutor(host string) (e executor.Executor, ok bool) {
-	// Mock point for unit test
-	if e := mock.On("FakeExecutor"); e != nil {
-		return e.(executor.Executor), true
-	}
-
-	ctx.exec.RLock()
-	e, ok = ctx.exec.executors[host]
-	ctx.exec.RUnlock()
-	return
-}
-
-// SetExecutor set the executor.
-func (ctx *Context) SetExecutor(host string, e executor.Executor) {
-	ctx.exec.Lock()
-	ctx.exec.executors[host] = e
-	ctx.exec.Unlock()
-}
-
-// GetOutputs get the outputs of a host (if has any)
-func (ctx *Context) GetOutputs(hostID string) ([]byte, []byte, bool) {
-	ctx.exec.RLock()
-	stdout, ok1 := ctx.exec.stderrs[hostID]
-	stderr, ok2 := ctx.exec.stdouts[hostID]
-	ctx.exec.RUnlock()
-	return stdout, stderr, ok1 && ok2
-}
-
-// SetOutputs set the outputs of a host
-func (ctx *Context) SetOutputs(hostID string, stdout []byte, stderr []byte) {
-	ctx.exec.Lock()
-	ctx.exec.stderrs[hostID] = stdout
-	ctx.exec.stdouts[hostID] = stderr
-	ctx.exec.Unlock()
-}
-
-// GetCheckResults get the the check result of a host (if has any)
-func (ctx *Context) GetCheckResults(host string) (results []*operator.CheckResult, ok bool) {
-	ctx.exec.RLock()
-	results, ok = ctx.exec.checkResults[host]
-	ctx.exec.RUnlock()
-	return
-}
-
-// SetCheckResults append the check result of a host to the list
-func (ctx *Context) SetCheckResults(host string, results []*operator.CheckResult) {
-	ctx.exec.Lock()
-	if currResult, ok := ctx.exec.checkResults[host]; ok {
-		ctx.exec.checkResults[host] = append(currResult, results...)
-	} else {
-		ctx.exec.checkResults[host] = results
-	}
-	ctx.exec.Unlock()
-}
 
 func isDisplayTask(t Task) bool {
 	if _, ok := t.(*Serial); ok {
@@ -185,16 +74,16 @@ func isDisplayTask(t Task) bool {
 }
 
 // Execute implements the Task interface
-func (s *Serial) Execute(ctx *Context) error {
+func (s *Serial) Execute(ctx context.Context) error {
 	for _, t := range s.inner {
 		if !isDisplayTask(t) {
 			if !s.hideDetailDisplay {
 				log.Infof("+ [ Serial ] - %s", t.String())
 			}
 		}
-		ctx.ev.PublishTaskBegin(t)
+		ctxt.GetInner(ctx).Ev.PublishTaskBegin(t)
 		err := t.Execute(ctx)
-		ctx.ev.PublishTaskFinish(t, err)
+		ctxt.GetInner(ctx).Ev.PublishTaskFinish(t, err)
 		if err != nil && !s.ignoreError {
 			return err
 		}
@@ -203,7 +92,7 @@ func (s *Serial) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (s *Serial) Rollback(ctx *Context) error {
+func (s *Serial) Rollback(ctx context.Context) error {
 	// Rollback in reverse order
 	for i := len(s.inner) - 1; i >= 0; i-- {
 		err := s.inner[i].Rollback(ctx)
@@ -224,22 +113,22 @@ func (s *Serial) String() string {
 }
 
 // Execute implements the Task interface
-func (pt *Parallel) Execute(ctx *Context) error {
+func (pt *Parallel) Execute(ctx context.Context) error {
 	var firstError error
 	var mu sync.Mutex
 	wg := sync.WaitGroup{}
 	for _, t := range pt.inner {
 		wg.Add(1)
-		go func(t Task) {
+		go func(ctx context.Context, t Task) {
 			defer wg.Done()
 			if !isDisplayTask(t) {
 				if !pt.hideDetailDisplay {
 					log.Infof("+ [Parallel] - %s", t.String())
 				}
 			}
-			ctx.ev.PublishTaskBegin(t)
+			ctxt.GetInner(ctx).Ev.PublishTaskBegin(t)
 			err := t.Execute(ctx)
-			ctx.ev.PublishTaskFinish(t, err)
+			ctxt.GetInner(ctx).Ev.PublishTaskFinish(t, err)
 			if err != nil {
 				mu.Lock()
 				if firstError == nil {
@@ -247,7 +136,7 @@ func (pt *Parallel) Execute(ctx *Context) error {
 				}
 				mu.Unlock()
 			}
-		}(t)
+		}(checkpoint.NewContext(ctx), t)
 	}
 	wg.Wait()
 	if pt.ignoreError {
@@ -257,13 +146,13 @@ func (pt *Parallel) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (pt *Parallel) Rollback(ctx *Context) error {
+func (pt *Parallel) Rollback(ctx context.Context) error {
 	var firstError error
 	var mu sync.Mutex
 	wg := sync.WaitGroup{}
 	for _, t := range pt.inner {
 		wg.Add(1)
-		go func(t Task) {
+		go func(ctx context.Context, t Task) {
 			defer wg.Done()
 			err := t.Rollback(ctx)
 			if err != nil {
@@ -273,7 +162,7 @@ func (pt *Parallel) Rollback(ctx *Context) error {
 				}
 				mu.Unlock()
 			}
-		}(t)
+		}(checkpoint.NewContext(ctx), t)
 	}
 	wg.Wait()
 	return firstError

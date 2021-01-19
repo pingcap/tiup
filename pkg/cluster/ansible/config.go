@@ -14,10 +14,12 @@
 package ansible
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -90,7 +92,7 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout uint64, ssh
 		Parallel(false, copyFileTasks...).
 		Build()
 
-	if err := t.Execute(task.NewContext()); err != nil {
+	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		return errors.Trace(err)
 	}
 	log.Infof("Finished copying configs.")

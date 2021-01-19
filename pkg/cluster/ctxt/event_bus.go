@@ -11,9 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package task
+package ctxt
 
 import (
+	"fmt"
+
 	ev "github.com/asaskevich/EventBus"
 	"go.uber.org/zap"
 )
@@ -43,19 +45,19 @@ func NewEventBus() EventBus {
 }
 
 // PublishTaskBegin publishes a TaskBegin event. This should be called only by Parallel or Serial.
-func (ev *EventBus) PublishTaskBegin(task Task) {
+func (ev *EventBus) PublishTaskBegin(task fmt.Stringer) {
 	zap.L().Debug("TaskBegin", zap.String("task", task.String()))
 	ev.eventBus.Publish(string(EventTaskBegin), task)
 }
 
 // PublishTaskFinish publishes a TaskFinish event. This should be called only by Parallel or Serial.
-func (ev *EventBus) PublishTaskFinish(task Task, err error) {
+func (ev *EventBus) PublishTaskFinish(task fmt.Stringer, err error) {
 	zap.L().Debug("TaskFinish", zap.String("task", task.String()), zap.Error(err))
 	ev.eventBus.Publish(string(EventTaskFinish), task, err)
 }
 
 // PublishTaskProgress publishes a TaskProgress event.
-func (ev *EventBus) PublishTaskProgress(task Task, progress string) {
+func (ev *EventBus) PublishTaskProgress(task fmt.Stringer, progress string) {
 	zap.L().Debug("TaskProgress", zap.String("task", task.String()), zap.String("progress", progress))
 	ev.eventBus.Publish(string(EventTaskProgress), task, progress)
 }

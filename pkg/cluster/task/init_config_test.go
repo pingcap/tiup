@@ -14,15 +14,16 @@
 package task
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
 
 	"github.com/pingcap/check"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/utils/mock"
 )
 
@@ -46,7 +47,8 @@ type fakeInstance struct {
 }
 
 func (i *fakeInstance) InitConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	clusterName string,
 	clusterVersion string,
 	deployUser string,

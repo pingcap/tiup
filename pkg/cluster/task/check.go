@@ -14,11 +14,13 @@
 package task
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 )
@@ -49,34 +51,42 @@ type CheckSys struct {
 	dataDir string
 }
 
+func storeResults(ctx context.Context, host string, results []*operator.CheckResult) {
+	rr := []interface{}{}
+	for _, r := range results {
+		rr = append(rr, r)
+	}
+	ctxt.GetInner(ctx).SetCheckResults(host, rr)
+}
+
 // Execute implements the Task interface
-func (c *CheckSys) Execute(ctx *Context) error {
-	stdout, stderr, _ := ctx.GetOutputs(c.host)
+func (c *CheckSys) Execute(ctx context.Context) error {
+	stdout, stderr, _ := ctxt.GetInner(ctx).GetOutputs(c.host)
 	if len(stderr) > 0 && len(stdout) == 0 {
 		return ErrNoOutput
 	}
 
 	switch c.check {
 	case CheckTypeSystemInfo:
-		ctx.SetCheckResults(c.host, operator.CheckSystemInfo(c.opt, stdout))
+		storeResults(ctx, c.host, operator.CheckSystemInfo(c.opt, stdout))
 	case CheckTypeSystemLimits:
-		ctx.SetCheckResults(c.host, operator.CheckSysLimits(c.opt, c.topo.GlobalOptions.User, stdout))
+		storeResults(ctx, c.host, operator.CheckSysLimits(c.opt, c.topo.GlobalOptions.User, stdout))
 	case CheckTypeSystemConfig:
 		results := operator.CheckKernelParameters(c.opt, stdout)
-		e, ok := ctx.GetExecutor(c.host)
+		e, ok := ctxt.GetInner(ctx).GetExecutor(c.host)
 		if !ok {
 			return ErrNoExecutor
 		}
 		results = append(
 			results,
-			operator.CheckSELinux(e),
-			operator.CheckTHP(e),
+			operator.CheckSELinux(ctx, e),
+			operator.CheckTHP(ctx, e),
 		)
-		ctx.SetCheckResults(c.host, results)
+		storeResults(ctx, c.host, results)
 	case CheckTypePort:
-		ctx.SetCheckResults(c.host, operator.CheckListeningPort(c.opt, c.host, c.topo, stdout))
+		storeResults(ctx, c.host, operator.CheckListeningPort(c.opt, c.host, c.topo, stdout))
 	case CheckTypeService:
-		e, ok := ctx.GetExecutor(c.host)
+		e, ok := ctxt.GetInner(ctx).GetExecutor(c.host)
 		if !ok {
 			return ErrNoExecutor
 		}
@@ -85,20 +95,20 @@ func (c *CheckSys) Execute(ctx *Context) error {
 		// check services
 		results = append(
 			results,
-			operator.CheckServices(e, c.host, "irqbalance", false),
+			operator.CheckServices(ctx, e, c.host, "irqbalance", false),
 			// FIXME: set firewalld rules in deploy, and not disabling it anymore
-			operator.CheckServices(e, c.host, "firewalld", true),
+			operator.CheckServices(ctx, e, c.host, "firewalld", true),
 		)
-		ctx.SetCheckResults(c.host, results)
+		storeResults(ctx, c.host, results)
 	case CheckTypePackage: // check if a command present, and if a package installed
-		e, ok := ctx.GetExecutor(c.host)
+		e, ok := ctxt.GetInner(ctx).GetExecutor(c.host)
 		if !ok {
 			return ErrNoExecutor
 		}
 		var results []*operator.CheckResult
 
 		// check if numactl is installed
-		stdout, stderr, err := e.Execute("numactl --show", false)
+		stdout, stderr, err := e.Execute(ctx, "numactl --show", false)
 		if err != nil || len(stderr) > 0 {
 			results = append(results, &operator.CheckResult{
 				Name: operator.CheckNameCommand,
@@ -111,10 +121,10 @@ func (c *CheckSys) Execute(ctx *Context) error {
 				Msg:  "numactl: " + strings.Split(string(stdout), "\n")[0],
 			})
 		}
-		ctx.SetCheckResults(c.host, results)
+		storeResults(ctx, c.host, results)
 	case CheckTypePartitions:
 		// check partition mount options for data_dir
-		ctx.SetCheckResults(c.host, operator.CheckPartitions(c.opt, c.host, c.topo, stdout))
+		storeResults(ctx, c.host, operator.CheckPartitions(c.opt, c.host, c.topo, stdout))
 	case CheckTypeFIO:
 		if !c.opt.EnableDisk || c.dataDir == "" {
 			break
@@ -125,14 +135,14 @@ func (c *CheckSys) Execute(ctx *Context) error {
 			return err
 		}
 
-		ctx.SetCheckResults(c.host, operator.CheckFIOResult(rr, rw, lat))
+		storeResults(ctx, c.host, operator.CheckFIOResult(rr, rw, lat))
 	}
 
 	return nil
 }
 
 // Rollback implements the Task interface
-func (c *CheckSys) Rollback(ctx *Context) error {
+func (c *CheckSys) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 
@@ -142,8 +152,8 @@ func (c *CheckSys) String() string {
 }
 
 // runFIO performs FIO checks
-func (c *CheckSys) runFIO(ctx *Context) (outRR []byte, outRW []byte, outLat []byte, err error) {
-	e, ok := ctx.GetExecutor(c.host)
+func (c *CheckSys) runFIO(ctx context.Context) (outRR []byte, outRW []byte, outLat []byte, err error) {
+	e, ok := ctxt.GetInner(ctx).GetExecutor(c.host)
 	if !ok {
 		err = ErrNoExecutor
 		return
@@ -184,7 +194,7 @@ func (c *CheckSys) runFIO(ctx *Context) (outRR []byte, outRW []byte, outLat []by
 		fmt.Sprintf("cat %s", resRR),
 	}, " && ")
 
-	outRR, stderr, err = e.Execute(cmdRR, false, time.Second*600)
+	outRR, stderr, err = e.Execute(ctx, cmdRR, false, time.Second*600)
 	if err != nil {
 		return
 	}
@@ -223,7 +233,7 @@ func (c *CheckSys) runFIO(ctx *Context) (outRR []byte, outRW []byte, outLat []by
 		fmt.Sprintf("cat %s", resRW),
 	}, " && ")
 
-	outRW, stderr, err = e.Execute(cmdRW, false, time.Second*600)
+	outRW, stderr, err = e.Execute(ctx, cmdRW, false, time.Second*600)
 	if err != nil {
 		return
 	}
@@ -262,7 +272,7 @@ func (c *CheckSys) runFIO(ctx *Context) (outRR []byte, outRW []byte, outLat []by
 		fmt.Sprintf("cat %s", resLat),
 	}, " && ")
 
-	outLat, stderr, err = e.Execute(cmdLat, false, time.Second*600)
+	outLat, stderr, err = e.Execute(ctx, cmdLat, false, time.Second*600)
 	if err != nil {
 		return
 	}
@@ -273,6 +283,7 @@ func (c *CheckSys) runFIO(ctx *Context) (outRR []byte, outRW []byte, outLat []by
 
 	// cleanup
 	_, stderr, err = e.Execute(
+		ctx,
 		fmt.Sprintf("rm -rf %s", testWd),
 		false,
 	)

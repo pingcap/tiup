@@ -14,6 +14,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -23,6 +24,7 @@ import (
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/failpoint"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/localdata"
 )
 
@@ -52,24 +54,8 @@ var (
 	defaultSSHAuthorizedKeys = "~/.ssh/authorized_keys"
 )
 
-// Executor is the executor interface for TiUP, all tasks will in the end
-// be passed to a executor and then be actually performed.
-type Executor interface {
-	// Execute run the command, then return it's stdout and stderr
-	// NOTE: stdin is not supported as it seems we don't need it (for now). If
-	// at some point in the future we need to pass stdin to a command, we'll
-	// need to refactor this function and its implementations.
-	// If the cmd can't quit in timeout, it will return error, the default timeout is 60 seconds.
-	Execute(cmd string, sudo bool, timeout ...time.Duration) (stdout []byte, stderr []byte, err error)
-
-	// Transfer copies files from or to a target
-	Transfer(src string, dst string, download bool) error
-}
-
 // New create a new Executor
-// The checkpoint param should be the path point to previews audit file which represents
-// current cluster state.
-func New(etype SSHType, sudo bool, c SSHConfig) (Executor, error) {
+func New(etype SSHType, sudo bool, c SSHConfig) (ctxt.Executor, error) {
 	if etype == "" {
 		etype = SSHTypeBuiltin
 	}
@@ -96,7 +82,7 @@ func New(etype SSHType, sudo bool, c SSHConfig) (Executor, error) {
 		c.Timeout = time.Second * 5 // default timeout is 5 sec
 	}
 
-	var executor Executor
+	var executor ctxt.Executor
 	switch etype {
 	case SSHTypeBuiltin:
 		e := &EasySSHExecutor{
@@ -112,7 +98,7 @@ func New(etype SSHType, sudo bool, c SSHConfig) (Executor, error) {
 			Sudo:   sudo,
 		}
 		if c.Password != "" || (c.KeyFile != "" && c.Passphrase != "") {
-			_, _, e.ConnectionTestResult = e.Execute(connectionTestCommand, false, executeDefaultTimeout)
+			_, _, e.ConnectionTestResult = e.Execute(context.Background(), connectionTestCommand, false, executeDefaultTimeout)
 		}
 		executor = e
 	case SSHTypeNone:
@@ -165,7 +151,7 @@ func checkLocalIP(ip string) error {
 }
 
 // FindSSHAuthorizedKeysFile finds the correct path of SSH authorized keys file
-func FindSSHAuthorizedKeysFile(exec Executor) string {
+func FindSSHAuthorizedKeysFile(ctx context.Context, exec ctxt.Executor) string {
 	// detect if custom path of authorized keys file is set
 	// NOTE: we do not yet support:
 	//   - custom config for user (~/.ssh/config)
@@ -173,7 +159,7 @@ func FindSSHAuthorizedKeysFile(exec Executor) string {
 	//   - ssh server implementations other than OpenSSH (such as dropbear)
 	sshAuthorizedKeys := defaultSSHAuthorizedKeys
 	cmd := "grep -Ev '^\\s*#|^\\s*$' /etc/ssh/sshd_config"
-	stdout, _, _ := exec.Execute(cmd, true) // error ignored as we have default value
+	stdout, _, _ := exec.Execute(ctx, cmd, true) // error ignored as we have default value
 	for _, line := range strings.Split(string(stdout), "\n") {
 		if !strings.Contains(line, "AuthorizedKeysFile") {
 			continue

@@ -14,6 +14,7 @@
 package manager
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"strings"
@@ -22,9 +23,9 @@ import (
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
 )
@@ -117,15 +118,15 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 	}
 
 	t := m.sshTaskBuilder(name, topo, base.User, gOpt).
-		Func("StopCluster", func(ctx *task.Context) error {
+		Func("StopCluster", func(ctx context.Context) error {
 			return operator.Stop(ctx, topo, operator.Options{}, tlsCfg)
 		}).
-		Func("CleanupCluster", func(ctx *task.Context) error {
+		Func("CleanupCluster", func(ctx context.Context) error {
 			return operator.CleanupComponent(ctx, delFileMap)
 		}).
 		Build()
 
-	if err := t.Execute(task.NewContext()); err != nil {
+	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err

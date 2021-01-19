@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"path"
@@ -22,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -115,14 +116,15 @@ type MonitorInstance struct {
 
 // InitConfig implement Instance interface
 func (i *MonitorInstance) InitConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	clusterName,
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
 	gOpts := *i.topo.BaseTopo().GlobalOptions
-	if err := i.BaseInstance.InitConfig(e, gOpts, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(ctx, e, gOpts, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -143,11 +145,11 @@ func (i *MonitorInstance) InitConfig(
 	}
 
 	dst := filepath.Join(paths.Deploy, "scripts", "run_prometheus.sh")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false); err != nil {
 		return err
 	}
 
-	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
 		return err
 	}
 
@@ -250,11 +252,11 @@ func (i *MonitorInstance) InitConfig(
 		}
 	}
 
-	if err := i.installRules(e, paths.Deploy, clusterVersion); err != nil {
+	if err := i.installRules(ctx, e, paths.Deploy, clusterVersion); err != nil {
 		return errors.Annotate(err, "install rules")
 	}
 
-	if err := i.initRules(e, spec, paths); err != nil {
+	if err := i.initRules(ctx, e, spec, paths); err != nil {
 		return err
 	}
 
@@ -262,7 +264,7 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "prometheus.yml")
-	return e.Transfer(fp, dst, false)
+	return e.Transfer(ctx, fp, dst, false)
 }
 
 // We only really installRules for dm cluster because the rules(*.rules.yml) packed with the prometheus
@@ -270,13 +272,13 @@ func (i *MonitorInstance) InitConfig(
 // cluster), and the rules for dm cluster is packed in the dm-master component. So if deploying tidb
 // cluster, the rules is correct, if deploying dm cluster, we should remove rules for tidb and install
 // rules for dm.
-func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVersion string) error {
+func (i *MonitorInstance) installRules(ctx context.Context, e ctxt.Executor, deployDir, clusterVersion string) error {
 	if i.topo.Type() != TopoTypeDM {
 		return nil
 	}
 
 	tmp := filepath.Join(deployDir, "_tiup_tmp")
-	_, stderr, err := e.Execute(fmt.Sprintf("mkdir -p %s", tmp), false)
+	_, stderr, err := e.Execute(ctx, fmt.Sprintf("mkdir -p %s", tmp), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
@@ -284,13 +286,13 @@ func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVe
 	srcPath := PackagePath(ComponentDMMaster, clusterVersion, i.OS(), i.Arch())
 	dstPath := filepath.Join(tmp, filepath.Base(srcPath))
 
-	err = e.Transfer(srcPath, dstPath, false)
+	err = e.Transfer(ctx, srcPath, dstPath, false)
 	if err != nil {
 		return err
 	}
 
 	cmd := fmt.Sprintf(`tar --no-same-owner -zxf %s -C %s && rm %s`, dstPath, tmp, dstPath)
-	_, stderr, err = e.Execute(cmd, false)
+	_, stderr, err = e.Execute(ctx, cmd, false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
@@ -303,7 +305,7 @@ func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVe
 		"cp %[2]s/dm-master/conf/*.rules.yml %[1]s",
 		"rm -rf %[2]s",
 	}
-	_, stderr, err = e.Execute(fmt.Sprintf(strings.Join(cmds, " && "), targetDir, tmp), false)
+	_, stderr, err = e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), targetDir, tmp), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
@@ -311,9 +313,9 @@ func (i *MonitorInstance) installRules(e executor.Executor, deployDir, clusterVe
 	return nil
 }
 
-func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, paths meta.DirPaths) error {
+func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec PrometheusSpec, paths meta.DirPaths) error {
 	if spec.RuleDir != "" {
-		return i.TransferLocalConfigDir(e, spec.RuleDir, path.Join(paths.Deploy, "conf"), func(name string) bool {
+		return i.TransferLocalConfigDir(ctx, e, spec.RuleDir, path.Join(paths.Deploy, "conf"), func(name string) bool {
 			return strings.HasSuffix(name, ".rules.yml")
 		})
 	}
@@ -324,7 +326,7 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 		`find %[1]s/conf -type f -name "*.rules.yml" -delete`,
 		`cp %[1]s/bin/prometheus/*.rules.yml %[1]s/conf/`,
 	}
-	_, stderr, err := e.Execute(fmt.Sprintf(strings.Join(cmds, " && "), paths.Deploy), false)
+	_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), paths.Deploy), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
@@ -334,7 +336,8 @@ func (i *MonitorInstance) initRules(e executor.Executor, spec PrometheusSpec, pa
 
 // ScaleConfig deploy temporary config on scaling
 func (i *MonitorInstance) ScaleConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	topo Topology,
 	clusterName string,
 	clusterVersion string,
@@ -344,5 +347,5 @@ func (i *MonitorInstance) ScaleConfig(
 	s := i.topo
 	defer func() { i.topo = s }()
 	i.topo = topo
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
 }

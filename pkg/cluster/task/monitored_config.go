@@ -14,12 +14,13 @@
 package task
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/google/uuid"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/template"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
@@ -41,13 +42,13 @@ type MonitoredConfig struct {
 }
 
 // Execute implements the Task interface
-func (m *MonitoredConfig) Execute(ctx *Context) error {
+func (m *MonitoredConfig) Execute(ctx context.Context) error {
 	ports := map[string]int{
 		spec.ComponentNodeExporter:     m.options.NodeExporterPort,
 		spec.ComponentBlackboxExporter: m.options.BlackboxExporterPort,
 	}
 	// Copy to remote server
-	exec, found := ctx.GetExecutor(m.host)
+	exec, found := ctxt.GetInner(ctx).GetExecutor(m.host)
 	if !found {
 		return ErrNoExecutor
 	}
@@ -56,14 +57,14 @@ func (m *MonitoredConfig) Execute(ctx *Context) error {
 		return err
 	}
 
-	if err := m.syncMonitoredSystemConfig(exec, m.component, ports[m.component]); err != nil {
+	if err := m.syncMonitoredSystemConfig(ctx, exec, m.component, ports[m.component]); err != nil {
 		return err
 	}
 
 	var cfg template.ConfigGenerator
 	switch m.component {
 	case spec.ComponentNodeExporter:
-		if err := m.syncBlackboxConfig(exec, config.NewBlackboxConfig()); err != nil {
+		if err := m.syncBlackboxConfig(ctx, exec, config.NewBlackboxConfig()); err != nil {
 			return err
 		}
 		cfg = scripts.NewNodeExporterScript(
@@ -80,10 +81,10 @@ func (m *MonitoredConfig) Execute(ctx *Context) error {
 		return fmt.Errorf("unknown monitored component %s", m.component)
 	}
 
-	return m.syncMonitoredScript(exec, m.component, cfg)
+	return m.syncMonitoredScript(ctx, exec, m.component, cfg)
 }
 
-func (m *MonitoredConfig) syncMonitoredSystemConfig(exec executor.Executor, comp string, port int) error {
+func (m *MonitoredConfig) syncMonitoredSystemConfig(ctx context.Context, exec ctxt.Executor, comp string, port int) error {
 	sysCfg := filepath.Join(m.paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, m.host, port))
 
 	resource := spec.MergeResourceControl(m.globResCtl, m.options.ResourceControl)
@@ -97,10 +98,10 @@ func (m *MonitoredConfig) syncMonitoredSystemConfig(exec executor.Executor, comp
 		return err
 	}
 	tgt := filepath.Join("/tmp", comp+"_"+uuid.New().String()+".service")
-	if err := exec.Transfer(sysCfg, tgt, false); err != nil {
+	if err := exec.Transfer(ctx, sysCfg, tgt, false); err != nil {
 		return err
 	}
-	if outp, errp, err := exec.Execute(fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port), true); err != nil {
+	if outp, errp, err := exec.Execute(ctx, fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port), true); err != nil {
 		if len(outp) > 0 {
 			fmt.Println(string(outp))
 		}
@@ -112,33 +113,33 @@ func (m *MonitoredConfig) syncMonitoredSystemConfig(exec executor.Executor, comp
 	return nil
 }
 
-func (m *MonitoredConfig) syncMonitoredScript(exec executor.Executor, comp string, cfg template.ConfigGenerator) error {
+func (m *MonitoredConfig) syncMonitoredScript(ctx context.Context, exec ctxt.Executor, comp string, cfg template.ConfigGenerator) error {
 	fp := filepath.Join(m.paths.Cache, fmt.Sprintf("run_%s_%s.sh", comp, m.host))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
 	dst := filepath.Join(m.paths.Deploy, "scripts", fmt.Sprintf("run_%s.sh", comp))
-	if err := exec.Transfer(fp, dst, false); err != nil {
+	if err := exec.Transfer(ctx, fp, dst, false); err != nil {
 		return err
 	}
-	if _, _, err := exec.Execute("chmod +x "+dst, false); err != nil {
+	if _, _, err := exec.Execute(ctx, "chmod +x "+dst, false); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (m *MonitoredConfig) syncBlackboxConfig(exec executor.Executor, cfg template.ConfigGenerator) error {
+func (m *MonitoredConfig) syncBlackboxConfig(ctx context.Context, exec ctxt.Executor, cfg template.ConfigGenerator) error {
 	fp := filepath.Join(m.paths.Cache, fmt.Sprintf("blackbox_%s.yaml", m.host))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
 	}
 	dst := filepath.Join(m.paths.Deploy, "conf", "blackbox.yml")
-	return exec.Transfer(fp, dst, false)
+	return exec.Transfer(ctx, fp, dst, false)
 }
 
 // Rollback implements the Task interface
-func (m *MonitoredConfig) Rollback(ctx *Context) error {
+func (m *MonitoredConfig) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 

@@ -14,6 +14,7 @@
 package task
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 
@@ -31,7 +32,7 @@ type ClusterOperate struct {
 }
 
 // Execute implements the Task interface
-func (c *ClusterOperate) Execute(ctx *Context) error {
+func (c *ClusterOperate) Execute(ctx context.Context) error {
 	var (
 		err         error
 		printStatus bool = true
@@ -79,7 +80,7 @@ func (c *ClusterOperate) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (c *ClusterOperate) Rollback(ctx *Context) error {
+func (c *ClusterOperate) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 

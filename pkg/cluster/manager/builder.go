@@ -14,6 +14,7 @@
 package manager
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -297,11 +298,11 @@ func buildScaleOutTask(
 
 	builder.
 		ClusterSSH(newPart, base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
-		Func("Save meta", func(_ *task.Context) error {
+		Func("Save meta", func(_ context.Context) error {
 			metadata.SetTopology(mergedTopo)
 			return m.specManager.SaveMeta(name, metadata)
 		}).
-		Func("StartCluster", func(ctx *task.Context) error {
+		Func("StartCluster", func(ctx context.Context) error {
 			return operator.Start(ctx, newPart, operator.Options{OptTimeout: gOpt.OptTimeout}, tlsCfg)
 		}).
 		Parallel(false, refreshConfigTasks...).

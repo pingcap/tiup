@@ -22,6 +22,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/dm/spec"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/stretchr/testify/require"
 )
@@ -38,7 +39,7 @@ type executorGetter struct {
 var _ ExecutorGetter = &executorGetter{}
 
 // Get implements ExecutorGetter interface.
-func (g *executorGetter) Get(host string) executor.Executor {
+func (g *executorGetter) Get(host string) ctxt.Executor {
 	return &localExecutor{
 		host: host,
 	}

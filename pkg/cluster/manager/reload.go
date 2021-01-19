@@ -14,11 +14,13 @@
 package manager
 
 import (
+	"context"
+
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
@@ -82,14 +84,14 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart bool) er
 		return err
 	}
 	if !skipRestart {
-		tb = tb.Func("UpgradeCluster", func(ctx *task.Context) error {
+		tb = tb.Func("UpgradeCluster", func(ctx context.Context) error {
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		})
 	}
 
 	t := tb.Build()
 
-	if err := t.Execute(task.NewContext()); err != nil {
+	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err

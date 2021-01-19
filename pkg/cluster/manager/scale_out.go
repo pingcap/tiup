@@ -14,6 +14,7 @@
 package manager
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -140,7 +142,7 @@ func (m *Manager) ScaleOut(
 		return err
 	}
 
-	if err := t.Execute(task.NewContext()); err != nil {
+	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err

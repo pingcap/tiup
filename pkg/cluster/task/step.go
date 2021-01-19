@@ -14,9 +14,11 @@
 package task
 
 import (
+	"context"
 	"strings"
 
 	"github.com/pingcap/tiup/pkg/cliutil/progress"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 )
 
 // StepDisplay is a task that will display a progress bar for inner task.
@@ -72,7 +74,7 @@ func (s *StepDisplay) resetAsMultiBarItem(b *progress.MultiBar) {
 }
 
 // Execute implements the Task interface
-func (s *StepDisplay) Execute(ctx *Context) error {
+func (s *StepDisplay) Execute(ctx context.Context) error {
 	if s.hidden {
 		return s.inner.Execute(ctx)
 	}
@@ -80,11 +82,11 @@ func (s *StepDisplay) Execute(ctx *Context) error {
 	if singleBar, ok := s.progressBar.(*progress.SingleBar); ok {
 		singleBar.StartRenderLoop()
 	}
-	ctx.ev.Subscribe(EventTaskBegin, s.handleTaskBegin)
-	ctx.ev.Subscribe(EventTaskProgress, s.handleTaskProgress)
+	ctxt.GetInner(ctx).Ev.Subscribe(ctxt.EventTaskBegin, s.handleTaskBegin)
+	ctxt.GetInner(ctx).Ev.Subscribe(ctxt.EventTaskProgress, s.handleTaskProgress)
 	err := s.inner.Execute(ctx)
-	ctx.ev.Unsubscribe(EventTaskProgress, s.handleTaskProgress)
-	ctx.ev.Unsubscribe(EventTaskBegin, s.handleTaskBegin)
+	ctxt.GetInner(ctx).Ev.Unsubscribe(ctxt.EventTaskProgress, s.handleTaskProgress)
+	ctxt.GetInner(ctx).Ev.Unsubscribe(ctxt.EventTaskBegin, s.handleTaskBegin)
 	if err != nil {
 		s.progressBar.UpdateDisplay(&progress.DisplayProps{
 			Prefix: s.prefix,
@@ -103,7 +105,7 @@ func (s *StepDisplay) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (s *StepDisplay) Rollback(ctx *Context) error {
+func (s *StepDisplay) Rollback(ctx context.Context) error {
 	return s.inner.Rollback(ctx)
 }
 
@@ -157,7 +159,7 @@ func newParallelStepDisplay(prefix string, ignoreError bool, sdTasks ...*StepDis
 }
 
 // Execute implements the Task interface
-func (ps *ParallelStepDisplay) Execute(ctx *Context) error {
+func (ps *ParallelStepDisplay) Execute(ctx context.Context) error {
 	ps.progressBar.StartRenderLoop()
 	err := ps.inner.Execute(ctx)
 	ps.progressBar.StopRenderLoop()
@@ -165,7 +167,7 @@ func (ps *ParallelStepDisplay) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (ps *ParallelStepDisplay) Rollback(ctx *Context) error {
+func (ps *ParallelStepDisplay) Rollback(ctx context.Context) error {
 	return ps.inner.Rollback(ctx)
 }
 

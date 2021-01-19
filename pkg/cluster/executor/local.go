@@ -25,6 +25,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
@@ -36,10 +37,10 @@ type Local struct {
 	Locale string // the locale used when executing the command
 }
 
-var _ Executor = &Local{}
+var _ ctxt.Executor = &Local{}
 
 // Execute implements Executor interface.
-func (l *Local) Execute(cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
+func (l *Local) Execute(ctx context.Context, cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
 	// try to acquire root permission
 	if l.Sudo || sudo {
 		cmd = fmt.Sprintf("sudo -H -u root bash -c 'cd; %s'", cmd)
@@ -60,7 +61,6 @@ func (l *Local) Execute(cmd string, sudo bool, timeout ...time.Duration) ([]byte
 		timeout = append(timeout, executeDefaultTimeout)
 	}
 
-	ctx := context.Background()
 	if len(timeout) > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(context.Background(), timeout[0])
@@ -100,7 +100,7 @@ func (l *Local) Execute(cmd string, sudo bool, timeout ...time.Duration) ([]byte
 }
 
 // Transfer implements Executer interface.
-func (l *Local) Transfer(src string, dst string, download bool) error {
+func (l *Local) Transfer(ctx context.Context, src string, dst string, download bool) error {
 	targetPath := filepath.Dir(dst)
 	if err := utils.CreateDir(targetPath); err != nil {
 		return err

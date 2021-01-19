@@ -14,10 +14,12 @@
 package task
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 )
 
 // Rmdir is used to delete directory on the target host
@@ -27,14 +29,14 @@ type Rmdir struct {
 }
 
 // Execute implements the Task interface
-func (r *Rmdir) Execute(ctx *Context) error {
-	exec, found := ctx.GetExecutor(r.host)
+func (r *Rmdir) Execute(ctx context.Context) error {
+	exec, found := ctxt.GetInner(ctx).GetExecutor(r.host)
 	if !found {
 		return ErrNoExecutor
 	}
 
 	cmd := fmt.Sprintf(`rm -rf %s`, strings.Join(r.dirs, " "))
-	_, _, err := exec.Execute(cmd, false)
+	_, _, err := exec.Execute(ctx, cmd, false)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -43,7 +45,7 @@ func (r *Rmdir) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (r *Rmdir) Rollback(ctx *Context) error {
+func (r *Rmdir) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 

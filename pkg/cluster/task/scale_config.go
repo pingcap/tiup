@@ -14,9 +14,11 @@
 package task
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
 )
@@ -33,9 +35,9 @@ type ScaleConfig struct {
 }
 
 // Execute implements the Task interface
-func (c *ScaleConfig) Execute(ctx *Context) error {
+func (c *ScaleConfig) Execute(ctx context.Context) error {
 	// Copy to remote server
-	exec, found := ctx.GetExecutor(c.instance.GetHost())
+	exec, found := ctxt.GetInner(ctx).GetExecutor(c.instance.GetHost())
 	if !found {
 		return ErrNoExecutor
 	}
@@ -45,11 +47,11 @@ func (c *ScaleConfig) Execute(ctx *Context) error {
 		return err
 	}
 
-	return c.instance.ScaleConfig(exec, c.base, c.clusterName, c.clusterVersion, c.deployUser, c.paths)
+	return c.instance.ScaleConfig(ctx, exec, c.base, c.clusterName, c.clusterVersion, c.deployUser, c.paths)
 }
 
 // Rollback implements the Task interface
-func (c *ScaleConfig) Rollback(ctx *Context) error {
+func (c *ScaleConfig) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 

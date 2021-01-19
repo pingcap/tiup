@@ -14,6 +14,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -29,7 +30,7 @@ func TestLocal(t *testing.T) {
 	assert.Nil(err)
 	local, err := New(SSHTypeNone, false, SSHConfig{Host: "127.0.0.1", User: user.Username})
 	assert.Nil(err)
-	_, _, err = local.Execute("ls .", false)
+	_, _, err = local.Execute(context.Background(), "ls .", false)
 	assert.Nil(err)
 
 	// generate a src file and write some data

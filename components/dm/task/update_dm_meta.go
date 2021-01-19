@@ -14,13 +14,13 @@
 package task
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	dmspec "github.com/pingcap/tiup/components/dm/spec"
 
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/set"
 )
 
@@ -44,7 +44,7 @@ func NewUpdateDMMeta(cluster string, metadata *dmspec.Metadata, deletedNodesID [
 // the metadata especially the topology is in wide use,
 // the other callers point to this field by a pointer,
 // so we should update the original topology directly, and don't make a copy
-func (u *UpdateDMMeta) Execute(ctx *task.Context) error {
+func (u *UpdateDMMeta) Execute(ctx context.Context) error {
 	deleted := set.NewStringSet(u.deletedNodesID...)
 	topo := u.metadata.Topology
 	masters := make([]dmspec.MasterSpec, 0)
@@ -96,7 +96,7 @@ func (u *UpdateDMMeta) Execute(ctx *task.Context) error {
 }
 
 // Rollback implements the Task interface
-func (u *UpdateDMMeta) Rollback(ctx *task.Context) error {
+func (u *UpdateDMMeta) Rollback(ctx context.Context) error {
 	return dmspec.GetSpecManager().SaveMeta(u.cluster, u.metadata)
 }
 

@@ -11,33 +11,77 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package executor
+package checkpoint
 
 import (
+	"context"
+	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
+func setup() {
+	checkfields = nil
+	RegisterField(
+		Field("host", reflect.DeepEqual),
+		Field("user", reflect.DeepEqual),
+		Field("cmd", reflect.DeepEqual),
+		Field("port", func(a, b interface{}) bool {
+			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
+		}),
+	)
+}
+
 func TestCheckPointSimple(t *testing.T) {
+	setup()
+
 	assert := require.New(t)
 	r := strings.NewReader(`2021-01-14T12:16:54.579+0800    INFO    CheckPoint      {"host": "172.16.5.140", "port": "22", "user": "tidb", "cmd": "test  cmd", "stdout": "success", "stderr": ""}`)
 
 	c, err := NewCheckPoint(r)
 	assert.Nil(err)
+	ctx := NewContext(context.Background())
 
-	p := c.Check(map[string]interface{}{
+	p := c.Acquire(ctx, map[string]interface{}{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
 		"cmd":  "test  cmd",
 	})
-	assert.NotNil(p)
-	assert.Equal(p["stdout"], "success")
+	assert.NotNil(p.Hit())
+	assert.Equal(p.Hit()["stdout"], "success")
+	assert.True(p.acquired)
+
+	p1 := c.Acquire(ctx, map[string]interface{}{
+		"host": "172.16.5.139",
+	})
+	assert.Nil(p1.Hit())
+	assert.False(p1.acquired)
+	p1.Release(nil)
+
+	p2 := c.Acquire(ctx, map[string]interface{}{
+		"host": "172.16.5.138",
+	})
+	assert.Nil(p2.Hit())
+	assert.False(p2.acquired)
+	p1.Release(nil)
+
+	p.Release(nil)
+
+	p3 := c.Acquire(ctx, map[string]interface{}{
+		"host": "172.16.5.137",
+	})
+	assert.Nil(p3.Hit())
+	assert.True(p3.acquired)
+	p3.Release(nil)
 }
 
 func TestCheckPointMultiple(t *testing.T) {
+	setup()
+
 	assert := require.New(t)
 	r := strings.NewReader(`
 		2021-01-14T12:16:54.579+0800    INFO    CheckPoint      {"host": "172.16.5.140", "port": "22", "user": "tidb", "cmd": "test  cmd", "sudo": false, "stdout": "success", "stderr": ""}
@@ -48,18 +92,20 @@ func TestCheckPointMultiple(t *testing.T) {
 
 	c, err := NewCheckPoint(r)
 	assert.Nil(err)
+	ctx := NewContext(context.Background())
 
-	p := c.Check(map[string]interface{}{
+	p := c.Acquire(ctx, map[string]interface{}{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
 		"sudo": false,
 		"cmd":  "test  cmd",
 	})
-	assert.NotNil(p)
-	assert.Equal(p["stdout"], "success")
+	assert.NotNil(p.Hit())
+	assert.Equal(p.Hit()["stdout"], "success")
+	p.Release(nil)
 
-	p = c.Check(map[string]interface{}{
+	p = c.Acquire(ctx, map[string]interface{}{
 		"host":     "172.16.5.141",
 		"port":     22,
 		"user":     "tidb",
@@ -67,24 +113,28 @@ func TestCheckPointMultiple(t *testing.T) {
 		"dst":      "dst",
 		"download": false,
 	})
-	assert.NotNil(p)
+	assert.NotNil(p.Hit())
+	p.Release(nil)
 }
 
 func TestCheckPointNil(t *testing.T) {
+	setup()
+
 	assert := require.New(t)
 	// With wrong log level
 	r := strings.NewReader(`2021-01-14T12:16:54.579+0800    ERROR    CheckPoint      {"host": "172.16.5.140", "port": "22", "user": "tidb", "cmd": "test  cmd", "stdout": "success", "stderr": ""}`)
 
 	c, err := NewCheckPoint(r)
-	assert.Nil(err)
+	ctx := NewContext(context.Background())
 
-	p := c.Check(map[string]interface{}{
+	p := c.Acquire(ctx, map[string]interface{}{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
 		"cmd":  "test  cmd",
 	})
-	assert.Nil(p)
+	assert.Nil(p.Hit())
+	p.Release(nil)
 
 	// With wrong log title
 	r = strings.NewReader(`2021-01-14T12:16:54.579+0800    INFO    XXXCommand      {"host": "172.16.5.140", "port": "22", "user": "tidb", "cmd": "test  cmd", "stdout": "success", "stderr": ""}`)
@@ -92,13 +142,14 @@ func TestCheckPointNil(t *testing.T) {
 	c, err = NewCheckPoint(r)
 	assert.Nil(err)
 
-	p = c.Check(map[string]interface{}{
+	p = c.Acquire(ctx, map[string]interface{}{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
 		"cmd":  "test  cmd",
 	})
-	assert.Nil(p)
+	assert.Nil(p.Hit())
+	p.Release(nil)
 
 	// With wrong log host
 	r = strings.NewReader(`2021-01-14T12:16:54.579+0800    INFO    CheckPoint      {"host": "172.16.5.141", "port": "22", "user": "tidb", "cmd": "test  cmd", "stdout": "success", "stderr": ""}`)
@@ -106,13 +157,14 @@ func TestCheckPointNil(t *testing.T) {
 	c, err = NewCheckPoint(r)
 	assert.Nil(err)
 
-	p = c.Check(map[string]interface{}{
+	p = c.Acquire(ctx, map[string]interface{}{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
 		"cmd":  "test  cmd",
 	})
-	assert.Nil(p)
+	assert.Nil(p.Hit())
+	p.Release(nil)
 
 	// With wrong port
 	r = strings.NewReader(`2021-01-14T12:16:54.579+0800    INFO    CheckPoint      {"host": "172.16.5.140", "port": "23", "user": "tidb", "cmd": "test  cmd", "stdout": "success", "stderr": ""}`)
@@ -120,13 +172,14 @@ func TestCheckPointNil(t *testing.T) {
 	c, err = NewCheckPoint(r)
 	assert.Nil(err)
 
-	p = c.Check(map[string]interface{}{
+	p = c.Acquire(ctx, map[string]interface{}{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
 		"cmd":  "test  cmd",
 	})
-	assert.Nil(p)
+	assert.Nil(p.Hit())
+	p.Release(nil)
 
 	// With wrong user
 	r = strings.NewReader(`2021-01-14T12:16:54.579+0800    INFO    CheckPoint      {"host": "172.16.5.140", "port": "22", "user": "yidb", "cmd": "test  cmd", "stdout": "success", "stderr": ""}`)
@@ -134,13 +187,14 @@ func TestCheckPointNil(t *testing.T) {
 	c, err = NewCheckPoint(r)
 	assert.Nil(err)
 
-	p = c.Check(map[string]interface{}{
+	p = c.Acquire(ctx, map[string]interface{}{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
 		"cmd":  "test  cmd",
 	})
-	assert.Nil(p)
+	assert.Nil(p.Hit())
+	p.Release(nil)
 
 	// With wrong cmd
 	r = strings.NewReader(`2021-01-14T12:16:54.579+0800    INFO    CheckPoint      {"host": "172.16.5.140", "port": "22", "user": "tidb", "cmd": "test cmd", "stdout": "success", "stderr": ""}`)
@@ -148,11 +202,13 @@ func TestCheckPointNil(t *testing.T) {
 	c, err = NewCheckPoint(r)
 	assert.Nil(err)
 
-	p = c.Check(map[string]interface{}{
+	p = c.Acquire(ctx, map[string]interface{}{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
 		"cmd":  "test  cmd",
 	})
-	assert.Nil(p)
+	assert.Nil(p.Hit())
+	assert.True(p.acquired)
+	p.Release(nil)
 }

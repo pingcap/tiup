@@ -23,6 +23,7 @@ import (
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/dm/spec"
+	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
@@ -99,7 +100,7 @@ please backup your data before process.`,
 			}
 
 			if gOpt.CheckPoint != "" {
-				if err := executor.SetCheckPoint(path.Join(cspec.AuditDir(), gOpt.CheckPoint)); err != nil {
+				if err := checkpoint.SetCheckPoint(path.Join(cspec.AuditDir(), gOpt.CheckPoint)); err != nil {
 					return errors.Annotate(err, "set checkpoint failed")
 				}
 			}

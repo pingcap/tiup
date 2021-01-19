@@ -14,10 +14,12 @@
 package task
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 )
 
 // Mkdir is used to create directory on the target host
@@ -28,8 +30,8 @@ type Mkdir struct {
 }
 
 // Execute implements the Task interface
-func (m *Mkdir) Execute(ctx *Context) error {
-	exec, found := ctx.GetExecutor(m.host)
+func (m *Mkdir) Execute(ctx context.Context) error {
+	exec, found := ctxt.GetInner(ctx).GetExecutor(m.host)
 	if !found {
 		panic(ErrNoExecutor)
 	}
@@ -56,7 +58,7 @@ func (m *Mkdir) Execute(ctx *Context) error {
 				strings.Join(xs[:i+1], "/"),
 				m.user,
 			)
-			_, _, err := exec.Execute(cmd, true) // use root to create the dir
+			_, _, err := exec.Execute(ctx, cmd, true) // use root to create the dir
 			if err != nil {
 				return errors.Trace(err)
 			}
@@ -67,7 +69,7 @@ func (m *Mkdir) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (m *Mkdir) Rollback(ctx *Context) error {
+func (m *Mkdir) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 

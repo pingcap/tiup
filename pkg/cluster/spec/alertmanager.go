@@ -14,11 +14,12 @@
 package spec
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
 
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -115,14 +116,15 @@ type AlertManagerInstance struct {
 
 // InitConfig implement Instance interface
 func (i *AlertManagerInstance) InitConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	clusterName,
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
 	gOpts := *i.topo.BaseTopo().GlobalOptions
-	if err := i.BaseInstance.InitConfig(e, gOpts, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(ctx, e, gOpts, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -141,28 +143,29 @@ func (i *AlertManagerInstance) InitConfig(
 	}
 
 	dst := filepath.Join(paths.Deploy, "scripts", "run_alertmanager.sh")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false); err != nil {
 		return err
 	}
-	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
 		return err
 	}
 
 	// transfer config
 	dst = filepath.Join(paths.Deploy, "conf", "alertmanager.yml")
 	if spec.ConfigFilePath != "" {
-		return i.TransferLocalConfigFile(e, spec.ConfigFilePath, dst)
+		return i.TransferLocalConfigFile(ctx, e, spec.ConfigFilePath, dst)
 	}
 	configPath := filepath.Join(paths.Cache, fmt.Sprintf("alertmanager_%s.yml", i.GetHost()))
 	if err := config.NewAlertManagerConfig().ConfigToFile(configPath); err != nil {
 		return err
 	}
-	return i.TransferLocalConfigFile(e, configPath, dst)
+	return i.TransferLocalConfigFile(ctx, e, configPath, dst)
 }
 
 // ScaleConfig deploy temporary config on scaling
 func (i *AlertManagerInstance) ScaleConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	topo Topology,
 	clusterName string,
 	clusterVersion string,
@@ -172,5 +175,5 @@ func (i *AlertManagerInstance) ScaleConfig(
 	s := i.topo
 	defer func() { i.topo = s }()
 	i.topo = topo
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
 }

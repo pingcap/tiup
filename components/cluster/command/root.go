@@ -26,6 +26,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/flags"
@@ -123,7 +124,7 @@ func init() {
 			}
 
 			if gOpt.CheckPoint != "" {
-				if err := executor.SetCheckPoint(path.Join(spec.AuditDir(), gOpt.CheckPoint)); err != nil {
+				if err := checkpoint.SetCheckPoint(path.Join(spec.AuditDir(), gOpt.CheckPoint)); err != nil {
 					return errors.Annotate(err, "set checkpoint failed")
 				}
 			}

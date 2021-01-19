@@ -14,6 +14,7 @@
 package manager
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"strings"
@@ -22,6 +23,7 @@ import (
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -95,7 +97,7 @@ func (m *Manager) ScaleIn(
 		Parallel(force, buildReloadPromTasks(metadata.GetTopology(), nodes...)...).
 		Build()
 
-	if err := t.Execute(task.NewContext()); err != nil {
+	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err

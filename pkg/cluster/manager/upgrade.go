@@ -14,6 +14,7 @@
 package manager
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -164,12 +166,12 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 	t := m.sshTaskBuilder(name, topo, base.User, opt).
 		Parallel(false, downloadCompTasks...).
 		Parallel(opt.Force, copyCompTasks...).
-		Func("UpgradeCluster", func(ctx *task.Context) error {
+		Func("UpgradeCluster", func(ctx context.Context) error {
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		}).
 		Build()
 
-	if err := t.Execute(task.NewContext()); err != nil {
+	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err

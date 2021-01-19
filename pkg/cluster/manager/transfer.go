@@ -15,6 +15,7 @@ package manager
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"html/template"
 	"reflect"
@@ -23,6 +24,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -98,7 +100,7 @@ func (m *Manager) Transfer(name string, opt TransferOptions, gOpt operator.Optio
 		Parallel(false, shellTasks...).
 		Build()
 
-	execCtx := task.NewContext()
+	execCtx := ctxt.New(context.Background())
 	if err := t.Execute(execCtx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.

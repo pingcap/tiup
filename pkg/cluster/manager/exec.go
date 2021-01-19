@@ -14,12 +14,14 @@
 package manager
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -87,7 +89,7 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 		Parallel(false, shellTasks...).
 		Build()
 
-	execCtx := task.NewContext()
+	execCtx := ctxt.New(context.Background())
 	if err := t.Execute(execCtx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
@@ -100,7 +102,7 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 	for hostKey, i := range uniqueHosts {
 		host := strings.Split(hostKey, "-")[0]
 		for _, cmd := range i.Slice() {
-			stdout, stderr, ok := execCtx.GetOutputs(hostKey + cmd)
+			stdout, stderr, ok := ctxt.GetInner(execCtx).GetOutputs(hostKey + cmd)
 			if !ok {
 				continue
 			}
