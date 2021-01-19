@@ -13,18 +13,11 @@
 
 package repository
 
-import (
-	"fmt"
-	"runtime"
-)
-
 // Repository represents a components repository. All logic concerning manifests and the locations of tarballs
 // is contained in the Repository object. Any IO is delegated to mirrorSource, which in turn will delegate fetching
 // files to a Mirror.
 type Repository struct {
 	Options
-	mirror     Mirror
-	fileSource fileSource
 }
 
 // Options represents options for a repository
@@ -33,39 +26,4 @@ type Options struct {
 	GOOS              string
 	GOARCH            string
 	DisableDecompress bool
-}
-
-// NewRepository returns a repository instance based on mirror. mirror should be in an open state.
-func NewRepository(mirror Mirror, opts Options) (*Repository, error) {
-	if opts.GOOS == "" {
-		opts.GOOS = runtime.GOOS
-	}
-	if opts.GOARCH == "" {
-		opts.GOARCH = runtime.GOARCH
-	}
-	fileSource := &mirrorSource{mirror: mirror}
-	if err := fileSource.open(); err != nil {
-		return nil, err
-	}
-
-	return &Repository{
-		Options:    opts,
-		mirror:     mirror,
-		fileSource: fileSource,
-	}, nil
-}
-
-// Close shuts down the repository, including any open mirrors.
-func (r *Repository) Close() error {
-	return r.fileSource.close()
-}
-
-// Mirror returns the mirror of the repository
-func (r *Repository) Mirror() Mirror {
-	return r.mirror
-}
-
-// DownloadTiUP downloads the tiup tarball and expands it into targetDir
-func (r *Repository) DownloadTiUP(targetDir string) error {
-	return r.fileSource.downloadTarFile(targetDir, fmt.Sprintf("%s-%s-%s", TiUPBinaryName, r.GOOS, r.GOARCH), true)
 }
