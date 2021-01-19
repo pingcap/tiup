@@ -15,12 +15,7 @@ package repository
 
 import (
 	"fmt"
-	"path/filepath"
 	"runtime"
-
-	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 )
 
 // Repository represents a components repository. All logic concerning manifests and the locations of tarballs
@@ -65,61 +60,12 @@ func (r *Repository) Close() error {
 	return r.fileSource.close()
 }
 
-// Manifest returns the v0 component manifest fetched from repository
-func (r *Repository) Manifest() (*v0manifest.ComponentManifest, error) {
-	var manifest v0manifest.ComponentManifest
-	err := r.fileSource.downloadJSON(ManifestFileName, &manifest)
-	return &manifest, err
-}
-
 // Mirror returns the mirror of the repository
 func (r *Repository) Mirror() Mirror {
 	return r.mirror
 }
 
-// ComponentVersions returns the version manifest of specific component
-func (r *Repository) ComponentVersions(component string) (*v0manifest.VersionManifest, error) {
-	var vers v0manifest.VersionManifest
-	err := r.fileSource.downloadJSON(fmt.Sprintf("tiup-component-%s.index", component), &vers)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	vers.Sort()
-	return &vers, nil
-}
-
-// LatestStableVersion returns the latest stable version of specific component
-func (r *Repository) LatestStableVersion(component string) (pkgver.Version, error) {
-	ver, err := r.ComponentVersions(component)
-	if err != nil {
-		return "", err
-	}
-	return ver.LatestVersion(), nil
-}
-
 // DownloadTiUP downloads the tiup tarball and expands it into targetDir
 func (r *Repository) DownloadTiUP(targetDir string) error {
 	return r.fileSource.downloadTarFile(targetDir, fmt.Sprintf("%s-%s-%s", TiUPBinaryName, r.GOOS, r.GOARCH), true)
-}
-
-// DownloadComponent downloads a component with specific version from repository
-// support `<component>[:version]` format
-func (r *Repository) DownloadComponent(compsDir, component string, version pkgver.Version) error {
-	versions, err := r.ComponentVersions(component)
-	if err != nil {
-		return err
-	}
-	if version.IsEmpty() {
-		version = versions.LatestVersion()
-	} else if !version.IsNightly() {
-		if !versions.ContainsVersion(version) {
-			return fmt.Errorf("component `%s` doesn't release the version `%s`", component, version)
-		}
-	}
-	if !r.SkipVersionCheck && !version.IsNightly() && !version.IsValid() {
-		return errors.Errorf("invalid version `%s`", version)
-	}
-	resName := fmt.Sprintf("%s-%s", component, version)
-	targetDir := filepath.Join(compsDir, component, version.String())
-	return r.fileSource.downloadTarFile(targetDir, fmt.Sprintf("%s-%s-%s", resName, r.GOOS, r.GOARCH), !r.DisableDecompress)
 }

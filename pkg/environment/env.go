@@ -24,11 +24,9 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/verbose"
-	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
 
@@ -77,7 +75,6 @@ type Environment struct {
 	profile *localdata.Profile
 	// repo represents the components repository of TiUP, it can be a
 	// local file system or a HTTP URL
-	repo   *repository.Repository
 	v1Repo *repository.V1Repository
 }
 
@@ -99,38 +96,19 @@ func InitEnv(options repository.Options) (*Environment, error) {
 		return nil, err
 	}
 
-	var repo *repository.Repository
 	var v1repo *repository.V1Repository
 	var err error
 
-	if env := os.Getenv(EnvNameV0); env == "" || env == "disable" || env == "false" {
-		var local v1manifest.LocalManifests
-		local, err = v1manifest.NewManifests(profile)
-		if err != nil {
-			return nil, errors.Annotatef(err, "initial repository from mirror(%s) failed", mirrorAddr)
-		}
-		v1repo = repository.NewV1Repo(mirror, options, local)
-	} else {
-		repo, err = repository.NewRepository(mirror, options)
-		if err != nil {
-			return nil, err
-		}
+	var local v1manifest.LocalManifests
+	local, err = v1manifest.NewManifests(profile)
+	if err != nil {
+		return nil, errors.Annotatef(err, "initial repository from mirror(%s) failed", mirrorAddr)
 	}
+	v1repo = repository.NewV1Repo(mirror, options, local)
 
 	verbose.Log("Initialize repository finished in %s", time.Since(initRepo))
 
-	return &Environment{profile, repo, v1repo}, nil
-}
-
-// NewV0 creates a new Environment with the provided data. Note that environments created with this function do not
-// support v1 repositories.
-func NewV0(profile *localdata.Profile, repo *repository.Repository) *Environment {
-	return &Environment{profile, repo, nil}
-}
-
-// Repository returns the initialized repository
-func (env *Environment) Repository() *repository.Repository {
-	return env.repo
+	return &Environment{profile, v1repo}, nil
 }
 
 // V1Repository returns the initialized v1 repository
@@ -145,11 +123,8 @@ func (env *Environment) Profile() *localdata.Profile {
 
 // Close release resource of env.
 func (env *Environment) Close() error {
-	if env.v1Repo != nil {
-		return nil
-	}
-
-	return env.repo.Close()
+	// no need for v1manifest
+	return nil
 }
 
 // SetProfile exports for test
@@ -164,70 +139,30 @@ func (env *Environment) LocalPath(path ...string) string {
 
 // UpdateComponents updates or installs all components described by specs.
 func (env *Environment) UpdateComponents(specs []string, nightly, force bool) error {
-	if env.v1Repo != nil {
-		var v1specs []repository.ComponentSpec
-		for _, spec := range specs {
-			component, v := ParseCompVersion(spec)
-			if component == TiUPName {
-				continue
-			}
-			v1specs = append(v1specs, repository.ComponentSpec{ID: component, Version: v.String(), Force: force, Nightly: nightly})
-		}
-		return env.v1Repo.UpdateComponents(v1specs)
-	}
-
-	manifest, err := env.latestManifest()
-	if err != nil {
-		return err
-	}
+	var v1specs []repository.ComponentSpec
 	for _, spec := range specs {
 		component, v := ParseCompVersion(spec)
 		if component == TiUPName {
 			continue
 		}
-		if nightly {
-			v = version.NightlyVersion
-		}
-		if !manifest.HasComponent(component) {
-			compInfo, found := manifest.FindComponent(component)
-			if !found {
-				return fmt.Errorf("component `%s` not found", component)
-			}
-
-			if !compInfo.IsSupport(env.PlatformString()) {
-				return fmt.Errorf("component `%s` does not support `%s`", component, env.PlatformString())
-			}
-		}
-
-		err := env.downloadComponent(component, v, v.IsNightly() || force)
-		if err != nil {
-			return err
-		}
+		v1specs = append(v1specs, repository.ComponentSpec{ID: component, Version: v.String(), Force: force, Nightly: nightly})
 	}
-	return nil
+	return env.v1Repo.UpdateComponents(v1specs)
 }
 
 // PlatformString returns a string identifying the current system.
 func (env *Environment) PlatformString() string {
-	if env.v1Repo != nil {
-		return env.v1Repo.PlatformString()
-	}
-
-	return repository.PlatformString(env.repo.GOOS, env.repo.GOARCH)
+	return env.v1Repo.PlatformString()
 }
 
 // SelfUpdate updates TiUP.
 func (env *Environment) SelfUpdate() error {
-	if env.v1Repo != nil {
-		if err := env.v1Repo.DownloadTiUP(env.LocalPath("bin")); err != nil {
-			return err
-		}
-
-		// Cover the root.json from tiup.bar.gz
-		return localdata.InitProfile().ResetMirror(Mirror(), "")
+	if err := env.v1Repo.DownloadTiUP(env.LocalPath("bin")); err != nil {
+		return err
 	}
 
-	return env.repo.DownloadTiUP(env.LocalPath("bin"))
+	// Cover the root.json from tiup.bar.gz
+	return localdata.InitProfile().ResetMirror(Mirror(), "")
 }
 
 func (env *Environment) downloadComponentv1(component string, version pkgver.Version, overwrite bool) error {
@@ -242,38 +177,7 @@ func (env *Environment) downloadComponentv1(component string, version pkgver.Ver
 
 // downloadComponent downloads the specific version of a component from repository
 func (env *Environment) downloadComponent(component string, version pkgver.Version, overwrite bool) error {
-	if env.v1Repo != nil {
-		return env.downloadComponentv1(component, version, overwrite)
-	}
-
-	versions, err := env.repo.ComponentVersions(component)
-	if err != nil {
-		return err
-	}
-	err = env.profile.SaveVersions(component, versions)
-	if err != nil {
-		return err
-	}
-	if version.IsNightly() && versions.Nightly == nil {
-		fmt.Printf("The component `%s` does not have a nightly version; skipped.\n", component)
-		return nil
-	}
-	if version.IsEmpty() {
-		version = versions.LatestVersion()
-	}
-	if !overwrite {
-		// Ignore if installed
-		found, err := env.profile.VersionIsInstalled(component, version.String())
-		if err != nil {
-			return err
-		}
-		if found {
-			fmt.Printf("The component `%s:%s` has been installed.\n", component, version)
-			return nil
-		}
-	}
-
-	return env.repo.DownloadComponent(env.LocalPath(localdata.ComponentParentDir), component, version)
+	return env.downloadComponentv1(component, version, overwrite)
 }
 
 // SelectInstalledVersion selects the installed versions and the latest release version
@@ -327,18 +231,6 @@ func (env *Environment) DownloadComponentIfMissing(component string, version pkg
 	return version, nil
 }
 
-// latestManifest returns the latest v0 component manifest and refresh the local cache
-func (env *Environment) latestManifest() (*v0manifest.ComponentManifest, error) {
-	manifest, err := env.repo.Manifest()
-	if err != nil {
-		return nil, err
-	}
-	if err := env.profile.SaveManifest(manifest); err != nil {
-		return nil, err
-	}
-	return manifest, err
-}
-
 // GetComponentInstalledVersion return the installed version of component.
 func (env *Environment) GetComponentInstalledVersion(component string, version pkgver.Version) (pkgver.Version, error) {
 	return env.profile.GetComponentInstalledVersion(component, version)
@@ -346,15 +238,11 @@ func (env *Environment) GetComponentInstalledVersion(component string, version p
 
 // BinaryPath return the installed binary path.
 func (env *Environment) BinaryPath(component string, version pkgver.Version) (string, error) {
-	if env.v1Repo != nil {
-		installPath, err := env.profile.ComponentInstalledPath(component, version)
-		if err != nil {
-			return "", err
-		}
-		return env.v1Repo.BinaryPath(installPath, component, string(version))
+	installPath, err := env.profile.ComponentInstalledPath(component, version)
+	if err != nil {
+		return "", err
 	}
-
-	return env.profile.BinaryPathV0(component, version)
+	return env.v1Repo.BinaryPath(installPath, component, string(version))
 }
 
 // ParseCompVersion parses component part from <component>[:version] specification
@@ -368,28 +256,6 @@ func ParseCompVersion(spec string) (string, pkgver.Version) {
 
 // IsSupportedComponent return true if support if platform support the component.
 func (env *Environment) IsSupportedComponent(component string) bool {
-	if env.v1Repo != nil {
-		// TODO
-		return true
-	}
-
-	// check local manifest
-	manifest := env.Profile().Manifest()
-	if manifest != nil && manifest.HasComponent(component) {
-		return true
-	}
-
-	manifest, err := env.Repository().Manifest()
-	if err != nil {
-		fmt.Println("Fetch latest manifest error:", err)
-		return false
-	}
-	if err := env.Profile().SaveManifest(manifest); err != nil {
-		fmt.Println("Save latest manifest error:", err)
-	}
-	comp, found := manifest.FindComponent(component)
-	if !found {
-		return false
-	}
-	return comp.IsSupport(env.PlatformString())
+	// TODO
+	return true
 }
