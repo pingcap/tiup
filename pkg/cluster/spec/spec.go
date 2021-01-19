@@ -287,7 +287,8 @@ func AllComponentNames() (roles []string) {
 	return
 }
 
-// UnmarshalYAML sets default values when unmarshaling the topology file
+// UnmarshalYAML implements the yaml.Unmarshaler interface,
+// it sets the default values when unmarshaling the topology file
 func (s *Specification) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	type topology Specification
 	if err := unmarshal((*topology)(s)); err != nil {

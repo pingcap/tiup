@@ -134,7 +134,7 @@ func CloneMirror(repo *V1Repository,
 		return errors.Trace(err)
 	}
 	// save owner key
-	if err := v1manifest.SaveKeyInfo(ownerkeyInfo, "pingcap", keyDir); err != nil {
+	if _, err := v1manifest.SaveKeyInfo(ownerkeyInfo, "pingcap", keyDir); err != nil {
 		return errors.Trace(err)
 	}
 

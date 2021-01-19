@@ -30,6 +30,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/model"
 	ru "github.com/pingcap/tiup/pkg/repository/utils"
@@ -153,7 +154,7 @@ func newMirrorSetCmd() *cobra.Command {
 			addr := args[0]
 			profile := environment.GlobalEnv().Profile()
 			if err := profile.ResetMirror(addr, root); err != nil {
-				fmt.Printf("Failed to set mirror: %s\n", err.Error())
+				log.Errorf("Failed to set mirror: %s\n", err.Error())
 				return err
 			}
 			fmt.Printf("Set mirror to %s success\n", addr)
@@ -548,7 +549,7 @@ func newMirrorGenkeyCmd() *cobra.Command {
 				fmt.Printf("KeyID: %s\nKeyContent: \n%s\n", id, string(content))
 			} else {
 				if utils.IsExist(privPath) {
-					fmt.Println("Key already exists, skipped")
+					log.Warnf("Warning: private key already exists(%s), skip", privPath)
 					return nil
 				}
 
@@ -572,7 +573,7 @@ func newMirrorGenkeyCmd() *cobra.Command {
 					return err
 				}
 
-				fmt.Printf("private key have been write to %s\n", privPath)
+				fmt.Printf("Private key has been writeen to %s\n", privPath)
 			}
 
 			if saveKey {
@@ -580,10 +581,11 @@ func newMirrorGenkeyCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				if err = v1manifest.SaveKeyInfo(pubKey, "public", ""); err != nil {
+				pubPath, err := v1manifest.SaveKeyInfo(pubKey, "public", "")
+				if err != nil {
 					return err
 				}
-				fmt.Printf("public key have been write to current working dir\n")
+				fmt.Printf("Public key has been written to current working dir: %s\n", pubPath)
 			}
 			return nil
 		},

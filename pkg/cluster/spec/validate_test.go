@@ -15,6 +15,8 @@ package spec
 
 import (
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 
 	"github.com/joomcode/errorx"
 	. "github.com/pingcap/check"
@@ -276,6 +278,34 @@ pd_servers:
 	c.Assert(err, IsNil)
 	cnt = topo.CountDir("172.16.4.190", "/home/tidb/deploy")
 	c.Assert(cnt, Equals, 5)
+}
+
+func (s *metaSuiteTopo) TestCountDir2(c *C) {
+	file := filepath.Join("testdata", "countdir.yaml")
+	meta := ClusterMeta{}
+	yamlFile, err := ioutil.ReadFile(file)
+	c.Assert(err, IsNil)
+	err = yaml.UnmarshalStrict(yamlFile, &meta)
+	c.Assert(err, IsNil)
+	topo := meta.Topology
+
+	// If the imported dir is somehow containing paths ens with slash,
+	// or having multiple slash in it, the count result should not
+	// be different.
+	cnt := topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123")
+	c.Assert(cnt, Equals, 3)
+	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123/")
+	c.Assert(cnt, Equals, 3)
+	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123//")
+	c.Assert(cnt, Equals, 3)
+	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123/log")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123//log")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123/log/")
+	c.Assert(cnt, Equals, 1)
+	cnt = topo.CountDir("172.17.0.4", "/foo/bar/sometidbpath123//log/")
+	c.Assert(cnt, Equals, 1)
 }
 
 func (s *metaSuiteTopo) TestTiSparkSpecValidation(c *C) {
@@ -834,7 +864,7 @@ global:
 tiflash_servers:
   - host: 172.16.5.138
     # this will be overwrite by storage.main.dir
-    data_dir: "/test-1" 
+    data_dir: "/test-1"
     config:
       storage.main.dir: [ /test-2, /test-2 ] # conflict inside
 pd_servers:
@@ -889,4 +919,76 @@ pd_servers:
 `), &topo)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "component pd_servers.name is not supported duplicated, the name name1 is duplicated")
+}
+
+func (s *metaSuiteTopo) TestInvalidPort(c *C) {
+	topo := Specification{}
+
+	err := yaml.Unmarshal([]byte(`
+global:
+  ssh_port: 65536
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "`global` of ssh_port=65536 is invalid")
+
+	err = yaml.Unmarshal([]byte(`
+global:
+  ssh_port: 655
+tidb_servers:
+  - host: 172.16.5.138
+    port: -1
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "`tidb_servers` of port=-1 is invalid")
+
+	err = yaml.Unmarshal([]byte(`
+monitored:
+    node_exporter_port: 102400
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "`monitored` of node_exporter_port=102400 is invalid")
+}
+
+func (s *metaSuiteTopo) TestInvalidUserGroup(c *C) {
+	topo := Specification{}
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: helloworldtidb-_-_
+  group: wor_l-d
+`), &topo)
+	c.Assert(err, IsNil)
+	c.Assert(topo.GlobalOptions.User, Equals, "helloworldtidb-_-_")
+	c.Assert(topo.GlobalOptions.Group, Equals, "wor_l-d")
+
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: ../hello
+`), &topo)
+	c.Assert(err, NotNil)
+
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+global:
+  user: hel.lo
+`), &topo)
+	c.Assert(err, NotNil)
+
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+global:
+  group: hello123456789012
+`), &topo)
+	c.Assert(err, NotNil)
+}
+
+func (s *metaSuiteTopo) TestMissingGroup(c *C) {
+	topo := Specification{}
+	err := yaml.Unmarshal([]byte(`
+global:
+  user: tidb
+`), &topo)
+	c.Assert(err, IsNil)
+	c.Assert(topo.GlobalOptions.User, Equals, "tidb")
+	c.Assert(topo.GlobalOptions.Group, Equals, "")
 }

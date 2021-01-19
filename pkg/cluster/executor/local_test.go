@@ -14,6 +14,7 @@
 package executor
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -65,4 +66,28 @@ func TestWrongIP(t *testing.T) {
 	_, err = New(SSHTypeNone, false, SSHConfig{Host: "127.0.0.2", User: user.Username})
 	assert.NotNil(err)
 	assert.Contains(err.Error(), "not found")
+}
+
+func TestLocalExecuteWithQuotes(t *testing.T) {
+	assert := require.New(t)
+	user, err := user.Current()
+	assert.Nil(err)
+	local, err := New(SSHTypeNone, false, SSHConfig{Host: "127.0.0.1", User: user.Username})
+	assert.Nil(err)
+
+	deployDir, err := ioutil.TempDir("", "tiup-*")
+	assert.Nil(err)
+	defer os.RemoveAll(deployDir)
+
+	cmds := []string{
+		fmt.Sprintf(`find %s -type f -exec sed -i "s/\${DS_.*-CLUSTER}/hello/g" {} \;`, deployDir),
+		fmt.Sprintf(`find %s -type f -exec sed -i "s/DS_.*-CLUSTER/hello/g" {} \;`, deployDir),
+		`ls '/tmp'`,
+	}
+	for _, cmd := range cmds {
+		for _, sudo := range []bool{true, false} {
+			_, _, err = local.Execute(cmd, sudo)
+			assert.Nil(err)
+		}
+	}
 }

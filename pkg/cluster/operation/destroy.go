@@ -385,7 +385,7 @@ func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 				dpCnt++
 			}
 		}
-		if cls.CountDir(ins.GetHost(), deployDir)-dpCnt == 1 {
+		if !ins.IsImported() && cls.CountDir(ins.GetHost(), deployDir)-dpCnt == 1 {
 			delPaths.Insert(deployDir)
 		}
 
