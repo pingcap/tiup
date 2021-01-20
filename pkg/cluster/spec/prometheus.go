@@ -188,6 +188,7 @@ func (i *MonitorInstance) InitConfig(
 	if servers, found := topoHasField("TiFlashServers"); found {
 		for i := 0; i < servers.Len(); i++ {
 			flash := servers.Index(i).Interface().(TiFlashSpec)
+			uniqueHosts.Insert(flash.Host)
 			cfig.AddTiFlashLearner(flash.Host, uint64(flash.FlashProxyStatusPort))
 			cfig.AddTiFlash(flash.Host, uint64(flash.StatusPort))
 		}
