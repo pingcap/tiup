@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -30,7 +29,6 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
@@ -78,32 +76,6 @@ func (p *Profile) Path(relpath ...string) string {
 // Root returns the root path of the `tiup`
 func (p *Profile) Root() string {
 	return p.root
-}
-
-// BinaryPathV0 returns the binary path of component specific version
-func (p *Profile) BinaryPathV0(component string, version pkgver.Version) (string, error) {
-	manifest := p.Versions(component)
-	if manifest == nil {
-		return "", errors.Errorf("component `%s` doesn't install", component)
-	}
-	var entry string
-	if version.IsNightly() && manifest.Nightly != nil {
-		entry = manifest.Nightly.Entry
-	} else {
-		for _, v := range manifest.Versions {
-			if v.Version == version {
-				entry = v.Entry
-			}
-		}
-	}
-	if entry == "" {
-		return "", errors.Errorf("cannot found entry for %s:%s", component, version)
-	}
-	installPath, err := p.ComponentInstalledPath(component, version)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(installPath, entry), nil
 }
 
 // GetComponentInstalledVersion return the installed version of component.
@@ -184,61 +156,6 @@ func (p *Profile) ReadMetaFile(dirName string) (*Process, error) {
 	var process Process
 	err := p.readJSON(metaFile, &process)
 	return &process, err
-}
-
-func (p *Profile) versionFileName(component string) string {
-	return fmt.Sprintf("manifest/tiup-component-%s.index", component)
-}
-
-func (p *Profile) v0ManifestFileName() string {
-	return "manifest/tiup-manifest.index"
-}
-
-func (p *Profile) isNotExist(path string) bool {
-	return utils.IsNotExist(p.Path(path))
-}
-
-// Manifest returns the components manifest
-func (p *Profile) Manifest() *v0manifest.ComponentManifest {
-	if p.isNotExist(p.v0ManifestFileName()) {
-		return nil
-	}
-
-	var manifest v0manifest.ComponentManifest
-	if err := p.readJSON(p.v0ManifestFileName(), &manifest); err != nil {
-		// The manifest was marshaled and stored by `tiup`, it should
-		// be a valid JSON file
-		log.Fatal(err)
-	}
-
-	return &manifest
-}
-
-// SaveManifest saves the latest components manifest to local profile
-func (p *Profile) SaveManifest(manifest *v0manifest.ComponentManifest) error {
-	return p.WriteJSON(p.v0ManifestFileName(), manifest)
-}
-
-// Versions returns the version manifest of specific component
-func (p *Profile) Versions(component string) *v0manifest.VersionManifest {
-	file := p.versionFileName(component)
-	if p.isNotExist(file) {
-		return nil
-	}
-
-	var manifest v0manifest.VersionManifest
-	if err := p.readJSON(file, &manifest); err != nil {
-		// The manifest was marshaled and stored by `tiup`, it should
-		// be a valid JSON file
-		log.Fatal(err)
-	}
-
-	return &manifest
-}
-
-// SaveVersions saves the latest version manifest to local profile of specific component
-func (p *Profile) SaveVersions(component string, manifest *v0manifest.VersionManifest) error {
-	return p.WriteJSON(p.versionFileName(component), manifest)
 }
 
 // InstalledComponents returns the installed components
