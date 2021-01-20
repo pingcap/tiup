@@ -14,11 +14,16 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/pingcap/tiup/components/dm/command"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/version"
 )
 
+var tiupVer = version.NewTiUPVersion()
+
 func main() {
-	cliutil.RegisterArg0("tiup dm")
+	cliutil.RegisterArg0(fmt.Sprintf("%s dm", tiupVer.LowerName()))
 	command.Execute()
 }

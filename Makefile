@@ -2,6 +2,9 @@
 .DEFAULT_GOAL := default
 
 REPO := github.com/pingcap/tiup
+TIUP_BRAND := $(if $(TIUP_BRAND),$(TIUP_BRAND),TiUP)
+TIDB_BRAND := $(if $(TIDB_BRAND),$(TIDB_BRAND),TiDB)
+BIN_NAME := $(shell echo $(TIUP_BRAND) | tr '[:upper:]' '[:lower:]')
 
 GOVER := $(shell go version)
 
@@ -19,6 +22,8 @@ BRANCH    := $(shell git rev-parse --abbrev-ref HEAD)
 LDFLAGS := -w -s
 LDFLAGS += -X "$(REPO)/pkg/version.GitHash=$(COMMIT)"
 LDFLAGS += -X "$(REPO)/pkg/version.GitBranch=$(BRANCH)"
+LDFLAGS += -X "$(REPO)/pkg/version.TiUPBrand=$(TIUP_BRAND)"
+LDFLAGS += -X "$(REPO)/pkg/version.TiDBBrand=$(TIDB_BRAND)"
 LDFLAGS += $(EXTRA_LDFLAGS)
 
 FILES     := $$(find . -name "*.go")
@@ -36,31 +41,31 @@ build: tiup components
 components: playground client cluster dm bench server
 
 tiup:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BIN_NAME)
 
 playground:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-playground ./components/playground
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BIN_NAME)-playground ./components/playground
 
 client:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-client ./components/client
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BIN_NAME)-client ./components/client
 
 cluster:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster ./components/cluster
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BIN_NAME)-cluster ./components/cluster
 
 dm:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./components/dm
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BIN_NAME)-dm ./components/dm
 
 bench:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-bench ./components/bench
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BIN_NAME)-bench ./components/bench
 
 doc:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-doc ./components/doc
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BIN_NAME)-doc ./components/doc
 
 errdoc:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-errdoc ./components/errdoc
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BIN_NAME)-errdoc ./components/errdoc
 
 server:
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-server ./server
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/$(BIN_NAME)-server ./server
 
 check: fmt lint tidy check-static vet
 

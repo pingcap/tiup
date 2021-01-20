@@ -79,7 +79,7 @@ func newTelemetryCmd() *cobra.Command {
 
 	cmd.AddCommand(&cobra.Command{
 		Use:   "status",
-		Short: "Display the current status of tiup telemetry",
+		Short: "Display the current status of telemetry",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			env := environment.GlobalEnv()
 			teleMeta, _, err := telemetry.GetMeta(env)

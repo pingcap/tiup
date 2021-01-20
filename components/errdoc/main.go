@@ -14,7 +14,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -27,8 +26,11 @@ import (
 	"github.com/blevesearch/bleve/search/query"
 	"github.com/pingcap/tiup/components/errdoc/spec"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
+
+var tiupVer = version.NewTiUPVersion()
 
 func init() {
 	bleve.Config.DefaultKVStore = "goleveldb"
@@ -36,7 +38,7 @@ func init() {
 
 func main() {
 	rootCmd := &cobra.Command{
-		Use:          "tiup errdoc",
+		Use:          fmt.Sprintf("%s errdoc", tiupVer.LowerName()),
 		Short:        "Show detailed error message via error code or keyword",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -111,7 +113,7 @@ func searchError(args []string) error {
 func loadIndex() (bleve.Index, map[string]*spec.ErrorSpec, error) {
 	dir := os.Getenv(localdata.EnvNameComponentInstallDir)
 	if dir == "" {
-		return nil, nil, errors.New("component `errdoc` doesn't running in TiUP mode")
+		return nil, nil, fmt.Errorf("component `errdoc` doesn't running in %s mode", tiupVer.Name())
 	}
 
 	type tomlFile map[string]*spec.ErrorSpec

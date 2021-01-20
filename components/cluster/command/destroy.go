@@ -14,6 +14,8 @@
 package command
 
 import (
+	"fmt"
+
 	perrs "github.com/pingcap/errors"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -26,12 +28,12 @@ func newDestroyCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "destroy <cluster-name>",
 		Short: "Destroy a specified cluster",
-		Long: `Destroy a specified cluster, which will clean the deployment binaries and data.
+		Long: fmt.Sprintf(`Destroy a specified cluster, which will clean the deployment binaries and data.
 You can retain some nodes and roles data when destroy cluster, eg:
 
-  $ tiup cluster destroy <cluster-name> --retain-role-data prometheus
-  $ tiup cluster destroy <cluster-name> --retain-node-data 172.16.13.11:9000
-  $ tiup cluster destroy <cluster-name> --retain-node-data 172.16.13.12`,
+  $ %[1]s cluster destroy <cluster-name> --retain-role-data prometheus
+  $ %[1]s cluster destroy <cluster-name> --retain-node-data 172.16.13.11:9000
+  $ %[1]s cluster destroy <cluster-name> --retain-node-data 172.16.13.12`, tiupVer.LowerName()),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()

@@ -28,7 +28,10 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/version"
 )
+
+var tiupVer = version.NewTiUPVersion()
 
 var (
 	errNSDeploy            = errorx.NewNamespace("deploy")

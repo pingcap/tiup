@@ -13,14 +13,20 @@
 
 package install
 
-import "io/ioutil"
+import (
+	"fmt"
+	"io/ioutil"
+
+	"github.com/pingcap/tiup/pkg/version"
+)
 
 // WriteLocalInstallScript writes the install script into specified path
 func WriteLocalInstallScript(path string) error {
 	return ioutil.WriteFile(path, []byte(script), 0755)
 }
 
-var script = `#!/bin/sh
+var tiupVer = version.NewTiUPVersion()
+var script = fmt.Sprintf(`#!/bin/sh
 
 case $(uname -s) in
     Linux|linux) os=linux ;;
@@ -45,7 +51,7 @@ if [ -z "$arch" ]; then
 fi
 
 if [ -z "$TIUP_HOME" ]; then
-    TIUP_HOME=$HOME/.tiup
+    TIUP_HOME=$HOME/.%[1]s
 fi
 bin_dir=$TIUP_HOME/bin
 mkdir -p "$bin_dir"
@@ -53,7 +59,7 @@ mkdir -p "$bin_dir"
 script_dir=$(cd $(dirname $0) && pwd)
 
 install_binary() {
-  tar -zxf "$script_dir/tiup-$os-$arch.tar.gz" -C "$bin_dir" || return 1
+  tar -zxf "$script_dir/%[1]s-$os-$arch.tar.gz" -C "$bin_dir" || return 1
   # Use the offline root.json
   cp "$script_dir/root.json" "$bin_dir" || return 1
   # Remove old manifests
@@ -62,13 +68,13 @@ install_binary() {
 }
 
 if ! install_binary; then
-    echo "Failed to download and/or extract tiup archive."
+    echo "Failed to download and/or extract %[1]s archive."
     exit 1
 fi
 
-chmod 755 "$bin_dir/tiup"
+chmod 755 "$bin_dir/%[1]s"
 
-"$bin_dir/tiup" mirror set ${script_dir}
+"$bin_dir/%[1]s" mirror set ${script_dir}
 
 bold=$(tput bold 2>/dev/null)
 sgr0=$(tput sgr0 2>/dev/null)
@@ -89,15 +95,15 @@ echo "Shell profile:  ${bold}$PROFILE${sgr0}"
 
 case :$PATH: in
     *:$bin_dir:*) : "PATH already contains $bin_dir" ;;
-    *) printf 'export PATH=%s:$PATH\n' "$bin_dir" >> "$PROFILE"
-        echo "$PROFILE has been modified to to add tiup to PATH"
+    *) printf 'export PATH=`, tiupVer.LowerName()) + "%s" + fmt.Sprintf(`:$PATH\n' "$bin_dir" >> "$PROFILE"
+        echo "$PROFILE has been modified to to add %[1]s to PATH"
         echo "open a new terminal or ${bold}source ${PROFILE}${sgr0} to use it"
         ;;
 esac
 
-echo "Installed path: ${bold}$bin_dir/tiup${sgr0}"
+echo "Installed path: ${bold}$bin_dir/%[1]s${sgr0}"
 echo "==============================================="
 echo "1. ${bold}source ${PROFILE}${sgr0}"
-echo "2. Have a try:   ${bold}tiup playground${sgr0}"
+echo "2. Have a try:   ${bold}%[1]s playground${sgr0}"
 echo "==============================================="
-`
+`, tiupVer.LowerName())

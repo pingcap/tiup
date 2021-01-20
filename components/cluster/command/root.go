@@ -53,6 +53,7 @@ var (
 
 var tidbSpec *spec.SpecManager
 var cm *manager.Manager
+var tiupVer = version.NewTiUPVersion()
 
 func scrubClusterName(n string) string {
 	return "cluster_" + telemetry.HashReport(n)
@@ -86,7 +87,7 @@ func init() {
 
 	rootCmd = &cobra.Command{
 		Use:           cliutil.OsArgs0(),
-		Short:         "Deploy a TiDB cluster for production",
+		Short:         fmt.Sprintf("Deploy a cluster of %s for production", tiupVer.TiDBName()),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       version.NewTiUPVersion().String(),
@@ -98,7 +99,7 @@ func init() {
 			}
 
 			tidbSpec = spec.GetSpecManager()
-			cm = manager.NewManager("tidb", tidbSpec, spec.TiDBComponentVersion)
+			cm = manager.NewManager(tiupVer.LowerTiDBName(), tidbSpec, spec.TiDBComponentVersion)
 			logger.EnableAuditLog(spec.AuditDir())
 
 			// Running in other OS/ARCH Should be fine we only download manifest file.

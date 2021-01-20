@@ -20,7 +20,7 @@ cd "${DEPLOY_DIR}" || exit 1
 {{- if .NumaNode}}
 exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} env GODEBUG=madvdontneed=1 bin/tidb-server \
 {{- else}}
-exec env GODEBUG=madvdontneed=1 bin/tidb-server \
+exec env GODEBUG=madvdontneed=1 bin/{{.Brand}}-server \
 {{- end}}
     -P {{.Port}} \
     --status="{{.StatusPort}}" \
@@ -28,6 +28,6 @@ exec env GODEBUG=madvdontneed=1 bin/tidb-server \
     --advertise-address="{{.IP}}" \
     --store="tikv" \
     --path="{{template "PDList" .Endpoints}}" \
-    --log-slow-query="log/tidb_slow_query.log" \
-    --config=conf/tidb.toml \
-    --log-file="{{.LogDir}}/tidb.log" 2>> "{{.LogDir}}/tidb_stderr.log"
+    --log-slow-query="log/{{.Brand}}_slow_query.log" \
+    --config=conf/{{.Brand}}.toml \
+    --log-file="{{.LogDir}}/{{.Brand}}.log" 2>> "{{.LogDir}}/{{.Brand}}_stderr.log"

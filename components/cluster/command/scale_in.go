@@ -25,7 +25,7 @@ import (
 func newScaleInCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "scale-in <cluster-name>",
-		Short: "Scale in a TiDB cluster",
+		Short: "Scale in a cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()

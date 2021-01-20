@@ -33,6 +33,8 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+var tiupVer = version.NewTiUPVersion()
+
 // CloneOptions represents the options of clone a remote mirror
 type CloneOptions struct {
 	Archs      []string
@@ -51,7 +53,7 @@ func CloneMirror(repo *V1Repository,
 	selectedVersions []string,
 	options CloneOptions) error {
 	fmt.Printf("Start to clone mirror, targetDir is %s, selectedVersions are [%s]\n", targetDir, strings.Join(selectedVersions, ","))
-	fmt.Println("If this does not meet expectations, please abort this process, read `tiup mirror clone --help` and run again")
+	fmt.Printf("If this does not meet expectations, please abort this process, read `%s mirror clone --help` and run again\n", tiupVer.LowerName())
 
 	if utils.IsNotExist(targetDir) {
 		if err := os.MkdirAll(targetDir, 0755); err != nil {
@@ -325,7 +327,7 @@ func cloneComponents(repo *V1Repository,
 
 			if err := repo.Mirror().Download(url, tmpDir); err != nil {
 				if errors.Cause(err) == ErrNotFound {
-					fmt.Printf("TiUP donesn't have %s/%s, skipped\n", goos, goarch)
+					fmt.Printf("%s donesn't have %s/%s, skipped\n", tiupVer.Name(), goos, goarch)
 					continue
 				}
 				return nil, err

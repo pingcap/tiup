@@ -11,8 +11,11 @@ import (
 	"github.com/fatih/color"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
+
+var tiupVer = version.NewTiUPVersion()
 
 func main() {
 	if err := execute(); err != nil {
@@ -26,8 +29,8 @@ func execute() error {
 		return errors.New("component `ctl` cannot run in standalone mode")
 	}
 	rootCmd := &cobra.Command{
-		Use:                "tiup ctl {tidb/pd/tikv/binlog/etcd/cdc}",
-		Short:              "TiDB controllers",
+		Use:                fmt.Sprintf("%s ctl {%s/pd/tikv/binlog/etcd/cdc}", tiupVer.LowerName(), tiupVer.LowerTiDBName()),
+		Short:              fmt.Sprintf("%s controllers", tiupVer.TiDBName()),
 		SilenceUsage:       true,
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
 		RunE: func(cmd *cobra.Command, args []string) error {
