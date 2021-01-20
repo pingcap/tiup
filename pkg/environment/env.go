@@ -30,12 +30,9 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// EnvNameV0 is the name of the env var used to direct TiUP to use old manifests.
-const EnvNameV0 = "TIUP_USE_V0"
-
 // Name of components
 const (
-	TiUPName = "tiup"
+	tiupName = "tiup"
 )
 
 // Mirror return mirror of tiup.
@@ -78,8 +75,7 @@ type Environment struct {
 	v1Repo *repository.V1Repository
 }
 
-// InitEnv creates a new Environment object configured using env vars and defaults. Uses the EnvNameV0 env var to
-// determine whether to use v0 or v1 manifests.
+// InitEnv creates a new Environment object configured using env vars and defaults.
 func InitEnv(options repository.Options) (*Environment, error) {
 	if env := GlobalEnv(); env != nil {
 		return env, nil
@@ -142,7 +138,7 @@ func (env *Environment) UpdateComponents(specs []string, nightly, force bool) er
 	var v1specs []repository.ComponentSpec
 	for _, spec := range specs {
 		component, v := ParseCompVersion(spec)
-		if component == TiUPName {
+		if component == tiupName {
 			continue
 		}
 		v1specs = append(v1specs, repository.ComponentSpec{ID: component, Version: v.String(), Force: force, Nightly: nightly})
@@ -252,10 +248,4 @@ func ParseCompVersion(spec string) (string, pkgver.Version) {
 		return parts[0], pkgver.Version(parts[1])
 	}
 	return spec, ""
-}
-
-// IsSupportedComponent return true if support if platform support the component.
-func (env *Environment) IsSupportedComponent(component string) bool {
-	// TODO
-	return true
 }

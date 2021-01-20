@@ -22,7 +22,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -39,10 +38,6 @@ import (
 // RunComponent start a component and wait it
 func RunComponent(env *environment.Environment, tag, spec, binPath string, args []string) error {
 	component, version := environment.ParseCompVersion(spec)
-	if !env.IsSupportedComponent(component) {
-		return fmt.Errorf("component `%s` does not support `%s/%s` (see `tiup list`)", component, runtime.GOOS, runtime.GOARCH)
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
