@@ -125,6 +125,7 @@ func TestCheckPointNil(t *testing.T) {
 	r := strings.NewReader(`2021-01-14T12:16:54.579+0800    ERROR    CheckPoint      {"host": "172.16.5.140", "port": "22", "user": "tidb", "cmd": "test  cmd", "stdout": "success", "stderr": ""}`)
 
 	c, err := NewCheckPoint(r)
+	assert.Nil(err)
 	ctx := NewContext(context.Background())
 
 	p := c.Acquire(ctx, map[string]interface{}{

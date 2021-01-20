@@ -78,14 +78,16 @@ func Acquire(ctx context.Context, point map[string]interface{}) *Point {
 
 // NewContext wraps given context with value needed by checkpoint
 func NewContext(ctx context.Context) context.Context {
-	if ctx.Value(semKey) == nil {
+	switch {
+	case ctx.Value(semKey) == nil:
 		ctx = context.WithValue(ctx, semKey, semaphore.NewWeighted(1))
-	} else if ctx.Value(semKey).(*semaphore.Weighted).TryAcquire(1) {
+	case ctx.Value(semKey).(*semaphore.Weighted).TryAcquire(1):
 		defer ctx.Value(semKey).(*semaphore.Weighted).Release(1)
 		ctx = context.WithValue(ctx, semKey, semaphore.NewWeighted(1))
-	} else {
+	default:
 		ctx = context.WithValue(ctx, semKey, semaphore.NewWeighted(0))
 	}
+
 	return context.WithValue(ctx, goroutineKey, new(goroutineLock))
 }
 
