@@ -109,30 +109,10 @@ func rebuildArgs(args []string) []string {
 }
 
 func usageTemplate(profile *localdata.Profile) string {
-	var installComps string
-	if repo := profile.Manifest(); repo != nil && len(repo.Components) > 0 {
-		installComps = `
-Available Components:
-`
-		var maxNameLen int
-		for _, comp := range repo.Components {
-			if len(comp.Name) > maxNameLen {
-				maxNameLen = len(comp.Name)
-			}
-		}
-
-		for _, comp := range repo.Components {
-			if !comp.Standalone {
-				continue
-			}
-			installComps += fmt.Sprintf("  %s%s   %s\n", comp.Name, strings.Repeat(" ", maxNameLen-len(comp.Name)), comp.Desc)
-		}
-	} else {
-		installComps = `
+	installComps := `
 Components Manifest:
   use "tiup list" to fetch the latest components manifest
 `
-	}
 
 	return `Usage:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if gt (len .Aliases) 0}}
