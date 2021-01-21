@@ -24,11 +24,13 @@ import (
 
 // GrafanaConfig represent the data to generate Grafana config
 type GrafanaConfig struct {
-	DeployDir string
-	IP        string
-	Port      uint64
-	Username  string // admin_user
-	Password  string // admin_password
+	DeployDir       string
+	IP              string
+	Port            uint64
+	Username        string // admin_user
+	Password        string // admin_password
+	AnonymousEnable bool   // anonymous enable
+	RootURL         string //root_url
 }
 
 // NewGrafanaConfig returns a GrafanaConfig
@@ -55,6 +57,18 @@ func (c *GrafanaConfig) WithUsername(user string) *GrafanaConfig {
 // WithPassword sets password of admin user
 func (c *GrafanaConfig) WithPassword(passwd string) *GrafanaConfig {
 	c.Password = passwd
+	return c
+}
+
+// WithAnonymousenable sets anonymousEnable of anonymousEnable
+func (c *GrafanaConfig) WithAnonymousenable(anonymousEnable bool) *GrafanaConfig {
+	c.AnonymousEnable = anonymousEnable
+	return c
+}
+
+// WithRootURL sets rootURL of root url
+func (c *GrafanaConfig) WithRootURL(rootURL string) *GrafanaConfig {
+	c.RootURL = rootURL
 	return c
 }
 
