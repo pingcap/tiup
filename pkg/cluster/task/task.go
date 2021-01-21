@@ -119,6 +119,10 @@ func (pt *Parallel) Execute(ctx context.Context) error {
 	wg := sync.WaitGroup{}
 	for _, t := range pt.inner {
 		wg.Add(1)
+
+		// the checkpoint part of context can't be shared between goroutines
+		// since it's used to trace the stack, so we must create a new layer
+		// of checkpoint context every time put it into a new goroutine.
 		go func(ctx context.Context, t Task) {
 			defer wg.Done()
 			if !isDisplayTask(t) {
@@ -152,6 +156,10 @@ func (pt *Parallel) Rollback(ctx context.Context) error {
 	wg := sync.WaitGroup{}
 	for _, t := range pt.inner {
 		wg.Add(1)
+
+		// the checkpoint part of context can't be shared between goroutines
+		// since it's used to trace the stack, so we must create a new layer
+		// of checkpoint context every time put it into a new goroutine.
 		go func(ctx context.Context, t Task) {
 			defer wg.Done()
 			err := t.Rollback(ctx)

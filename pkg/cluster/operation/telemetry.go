@@ -69,6 +69,9 @@ func GetNodeInfo(
 		}
 		foundHosts[host] = struct{}{}
 
+		// the checkpoint part of context can't be shared between goroutines
+		// since it's used to trace the stack, so we must create a new layer
+		// of checkpoint context every time put it into a new goroutine.
 		nctx := checkpoint.NewContext(ctx)
 		errg.Go(func() error {
 			exec := ctxt.GetInner(nctx).Get(host)

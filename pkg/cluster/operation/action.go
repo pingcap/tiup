@@ -386,6 +386,9 @@ func EnableComponent(ctx context.Context, instances []spec.Instance, options Opt
 	for _, ins := range instances {
 		ins := ins
 
+		// the checkpoint part of context can't be shared between goroutines
+		// since it's used to trace the stack, so we must create a new layer
+		// of checkpoint context every time put it into a new goroutine.
 		nctx := checkpoint.NewContext(ctx)
 		errg.Go(func() error {
 			err := enableInstance(nctx, ins, options.OptTimeout, isEnable)
@@ -458,6 +461,9 @@ func StartComponent(ctx context.Context, instances []spec.Instance, options Opti
 	for _, ins := range instances {
 		ins := ins
 
+		// the checkpoint part of context can't be shared between goroutines
+		// since it's used to trace the stack, so we must create a new layer
+		// of checkpoint context every time put it into a new goroutine.
 		nctx := checkpoint.NewContext(ctx)
 		errg.Go(func() error {
 			if err := ins.PrepareStart(tlsCfg); err != nil {
@@ -577,6 +583,10 @@ func StopComponent(ctx context.Context, instances []spec.Instance, timeout uint6
 
 	for _, ins := range instances {
 		ins := ins
+
+		// the checkpoint part of context can't be shared between goroutines
+		// since it's used to trace the stack, so we must create a new layer
+		// of checkpoint context every time put it into a new goroutine.
 		nctx := checkpoint.NewContext(ctx)
 		errg.Go(func() error {
 			err := stopInstance(nctx, ins, timeout)
@@ -604,6 +614,9 @@ func PrintClusterStatus(ctx context.Context, cluster *spec.Specification) (healt
 		for _, ins := range com.Instances() {
 			ins := ins
 
+			// the checkpoint part of context can't be shared between goroutines
+			// since it's used to trace the stack, so we must create a new layer
+			// of checkpoint context every time put it into a new goroutine.
 			nctx := checkpoint.NewContext(ctx)
 			errg.Go(func() error {
 				e := ctxt.GetInner(nctx).Get(ins.GetHost())
