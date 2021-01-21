@@ -24,7 +24,7 @@ func NewAnyQueue(eq func(a interface{}, b interface{}) bool, aa ...interface{}) 
 	return &AnyQueue{eq, aa}
 }
 
-// Get returns previews stored val that equals to val and remove it from queue, if not found, nil
+// Get returns previous stored value that equals to val and remove it from the queue, if not found, return nil
 func (q *AnyQueue) Get(val interface{}) interface{} {
 	for i, a := range q.slice {
 		if q.eq(a, val) {
