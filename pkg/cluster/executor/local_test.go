@@ -91,7 +91,7 @@ func TestLocalExecuteWithQuotes(t *testing.T) {
 		`ls '/tmp'`,
 	}
 	for _, cmd := range cmds {
-		_, _, err = local.Execute(cmd, false)
+		_, _, err = local.Execute(ctx, cmd, false)
 		assert.Nil(err)
 	}
 }
