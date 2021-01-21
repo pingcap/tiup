@@ -141,7 +141,7 @@ type Point struct {
 	acquired bool
 }
 
-// Hit check if point contains a valid value, if hit, return that value, otherwise, nil
+// Hit returns value of the point, it will be nil if not hit.
 func (p *Point) Hit() map[string]interface{} {
 	return p.point
 }
