@@ -121,6 +121,7 @@ please backup your data before process.`,
 	rootCmd.PersistentFlags().StringVar((*string)(&gOpt.SSHType), "ssh", "", "The executor type: 'builtin', 'system', 'none'")
 	rootCmd.PersistentFlags().StringVar(&gOpt.CheckPoint, "checkpoint", "", "(EXPERIMENTAL) The audit log ID this command should recover from.")
 	_ = rootCmd.PersistentFlags().MarkHidden("native-ssh")
+	_ = rootCmd.PersistentFlags().MarkHidden("checkpoint")
 
 	rootCmd.AddCommand(
 		newDeployCmd(),
