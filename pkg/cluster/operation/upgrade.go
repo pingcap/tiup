@@ -40,38 +40,75 @@ func Upgrade(
 			continue
 		}
 
-		// Transfer leader of evict leader if the component is TiKV/PD in non-force mode
+		log.Infof("Upgrading component %s", component.Name())
 
-		log.Infof("Restarting component %s", component.Name())
+		// some instances are upgraded after others
+		deferInstances := make([]spec.Instance, 0)
 
 		for _, instance := range instances {
-			var rollingInstance spec.RollingUpdateInstance
-			var isRollingInstance bool
-
-			if !options.Force {
-				rollingInstance, isRollingInstance = instance.(spec.RollingUpdateInstance)
-			}
-
-			if isRollingInstance {
-				err := rollingInstance.PreRestart(topo, int(options.APITimeout), tlsCfg)
-				if err != nil && !options.Force {
+			switch component.Name() {
+			case spec.ComponentPD:
+				// defer PD leader to be upgraded after others
+				isLeader, err := instance.(*spec.PDInstance).IsLeader(topo, int(options.APITimeout), tlsCfg)
+				if err != nil {
 					return err
 				}
+				if isLeader {
+					deferInstances = append(deferInstances, instance)
+					log.Debugf("Defferred upgrading of PD leader %s", instance.ID())
+					continue
+				}
+			default:
+				// do nothing, kept for future usage with other components
 			}
 
-			if err := restartInstance(getter, instance, options.OptTimeout); err != nil && !options.Force {
+			if err := doUpgrade(getter, topo, instance, options, tlsCfg); err != nil {
 				return err
 			}
+		}
 
-			if isRollingInstance {
-				err := rollingInstance.PostRestart(topo, tlsCfg)
-				if err != nil && !options.Force {
-					return err
-				}
+		// process defferred instances
+		for _, instance := range deferInstances {
+			log.Debugf("Upgrading defferred instance %s...", instance.ID())
+			if err := doUpgrade(getter, topo, instance, options, tlsCfg); err != nil {
+				return err
 			}
 		}
 	}
 
+	return nil
+}
+
+func doUpgrade(getter ExecutorGetter,
+	topo spec.Topology,
+	instance spec.Instance,
+	options Options,
+	tlsCfg *tls.Config,
+) error {
+	var rollingInstance spec.RollingUpdateInstance
+	var isRollingInstance bool
+
+	if !options.Force {
+		rollingInstance, isRollingInstance = instance.(spec.RollingUpdateInstance)
+	}
+
+	if isRollingInstance {
+		err := rollingInstance.PreRestart(topo, int(options.APITimeout), tlsCfg)
+		if err != nil && !options.Force {
+			return err
+		}
+	}
+
+	if err := restartInstance(getter, instance, options.OptTimeout); err != nil && !options.Force {
+		return err
+	}
+
+	if isRollingInstance {
+		err := rollingInstance.PostRestart(topo, tlsCfg)
+		if err != nil && !options.Force {
+			return err
+		}
+	}
 	return nil
 }
 
