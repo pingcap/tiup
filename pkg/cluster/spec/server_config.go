@@ -15,6 +15,7 @@ package spec
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -25,7 +26,7 @@ import (
 	"github.com/BurntSushi/toml"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -234,7 +235,7 @@ func mergeImported(importConfig []byte, specConfigs ...map[string]interface{}) (
 // BindVersion map the cluster version to the third components binding version.
 type BindVersion func(comp string, version string) (bindVersion string)
 
-func checkConfig(e executor.Executor, componentName, clusterVersion, nodeOS, arch, config string, paths meta.DirPaths, bindVersion BindVersion) error {
+func checkConfig(ctx context.Context, e ctxt.Executor, componentName, clusterVersion, nodeOS, arch, config string, paths meta.DirPaths, bindVersion BindVersion) error {
 	repo, err := clusterutil.NewRepository(nodeOS, arch)
 	if err != nil {
 		return perrs.Annotate(ErrorCheckConfig, err.Error())
@@ -252,7 +253,7 @@ func checkConfig(e executor.Executor, componentName, clusterVersion, nodeOS, arc
 
 	binPath := path.Join(paths.Deploy, "bin", entry)
 	// Skip old versions
-	if !hasConfigCheckFlag(e, binPath) {
+	if !hasConfigCheckFlag(ctx, e, binPath) {
 		return nil
 	}
 
@@ -263,15 +264,15 @@ func checkConfig(e executor.Executor, componentName, clusterVersion, nodeOS, arc
 	}
 
 	configPath := path.Join(paths.Deploy, "conf", config)
-	_, _, err = e.Execute(fmt.Sprintf("%s --config-check --config=%s %s", binPath, configPath, extra), false)
+	_, _, err = e.Execute(ctx, fmt.Sprintf("%s --config-check --config=%s %s", binPath, configPath, extra), false)
 	if err != nil {
 		return perrs.Annotate(ErrorCheckConfig, err.Error())
 	}
 	return nil
 }
 
-func hasConfigCheckFlag(e executor.Executor, binPath string) bool {
-	stdout, stderr, _ := e.Execute(fmt.Sprintf("%s --help", binPath), false)
+func hasConfigCheckFlag(ctx context.Context, e ctxt.Executor, binPath string) bool {
+	stdout, stderr, _ := e.Execute(ctx, fmt.Sprintf("%s --help", binPath), false)
 	return strings.Contains(string(stdout), "config-check") || strings.Contains(string(stderr), "config-check")
 }
 

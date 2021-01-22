@@ -14,6 +14,7 @@
 package task
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -32,7 +33,7 @@ type UpdateMeta struct {
 // the metadata especially the topology is in wide use,
 // the other callers point to this field by a pointer,
 // so we should update the original topology directly, and don't make a copy
-func (u *UpdateMeta) Execute(ctx *Context) error {
+func (u *UpdateMeta) Execute(ctx context.Context) error {
 	deleted := set.NewStringSet(u.deletedNodeIDs...)
 	topo := u.metadata.Topology
 
@@ -148,7 +149,7 @@ func (u *UpdateMeta) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (u *UpdateMeta) Rollback(ctx *Context) error {
+func (u *UpdateMeta) Rollback(ctx context.Context) error {
 	return spec.SaveClusterMeta(u.cluster, u.metadata)
 }
 

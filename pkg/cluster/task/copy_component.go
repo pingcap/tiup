@@ -14,6 +14,7 @@
 package task
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -33,7 +34,7 @@ type CopyComponent struct {
 }
 
 // Execute implements the Task interface
-func (c *CopyComponent) Execute(ctx *Context) error {
+func (c *CopyComponent) Execute(ctx context.Context) error {
 	// If the version is not specified, the last stable one will be used
 	if c.version == "" {
 		env := environment.GlobalEnv()
@@ -60,7 +61,7 @@ func (c *CopyComponent) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (c *CopyComponent) Rollback(ctx *Context) error {
+func (c *CopyComponent) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 

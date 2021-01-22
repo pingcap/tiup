@@ -14,11 +14,12 @@
 package module
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 )
 
 // scope can be either "system", "user" or "global"
@@ -88,6 +89,6 @@ func NewSystemdModule(config SystemdModuleConfig) *SystemdModule {
 
 // Execute passes the command to executor and returns its results, the executor
 // should be already initialized.
-func (mod *SystemdModule) Execute(exec executor.Executor) ([]byte, []byte, error) {
-	return exec.Execute(mod.cmd, mod.sudo, mod.timeout)
+func (mod *SystemdModule) Execute(ctx context.Context, exec ctxt.Executor) ([]byte, []byte, error) {
+	return exec.Execute(ctx, mod.cmd, mod.sudo, mod.timeout)
 }

@@ -14,6 +14,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/pingcap/tiup/components/dm/ansible"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	cansible "github.com/pingcap/tiup/pkg/cluster/ansible"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -47,7 +49,8 @@ func newImportCmd() *cobra.Command {
 				return err
 			}
 
-			clusterName, meta, err := importer.ImportFromAnsibleDir()
+			ctx := ctxt.New(context.Background())
+			clusterName, meta, err := importer.ImportFromAnsibleDir(ctx)
 			if err != nil {
 				return err
 			}
@@ -56,7 +59,7 @@ func newImportCmd() *cobra.Command {
 				clusterName = rename
 			}
 
-			err = importer.ScpSourceToMaster(meta.Topology)
+			err = importer.ScpSourceToMaster(ctx, meta.Topology)
 			if err != nil {
 				return err
 			}

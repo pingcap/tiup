@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
@@ -26,7 +27,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -72,9 +73,9 @@ type RollingUpdateInstance interface {
 type Instance interface {
 	InstanceSpec
 	ID() string
-	Ready(executor.Executor, uint64) error
-	InitConfig(e executor.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
-	ScaleConfig(e executor.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
+	Ready(context.Context, ctxt.Executor, uint64) error
+	InitConfig(ctx context.Context, e ctxt.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
+	ScaleConfig(ctx context.Context, e ctxt.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
 	PrepareStart(tlsCfg *tls.Config) error
 	ComponentName() string
 	InstanceName() string
@@ -93,25 +94,25 @@ type Instance interface {
 }
 
 // PortStarted wait until a port is being listened
-func PortStarted(e executor.Executor, port int, timeout uint64) error {
+func PortStarted(ctx context.Context, e ctxt.Executor, port int, timeout uint64) error {
 	c := module.WaitForConfig{
 		Port:    port,
 		State:   "started",
 		Timeout: time.Second * time.Duration(timeout),
 	}
 	w := module.NewWaitFor(c)
-	return w.Execute(e)
+	return w.Execute(ctx, e)
 }
 
 // PortStopped wait until a port is being released
-func PortStopped(e executor.Executor, port int, timeout uint64) error {
+func PortStopped(ctx context.Context, e ctxt.Executor, port int, timeout uint64) error {
 	c := module.WaitForConfig{
 		Port:    port,
 		State:   "stopped",
 		Timeout: time.Second * time.Duration(timeout),
 	}
 	w := module.NewWaitFor(c)
-	return w.Execute(e)
+	return w.Execute(ctx, e)
 }
 
 // BaseInstance implements some method of Instance interface..
@@ -130,12 +131,12 @@ type BaseInstance struct {
 }
 
 // Ready implements Instance interface
-func (i *BaseInstance) Ready(e executor.Executor, timeout uint64) error {
-	return PortStarted(e, i.Port, timeout)
+func (i *BaseInstance) Ready(ctx context.Context, e ctxt.Executor, timeout uint64) error {
+	return PortStarted(ctx, e, i.Port, timeout)
 }
 
 // InitConfig init the service configuration.
-func (i *BaseInstance) InitConfig(e executor.Executor, opt GlobalOptions, user string, paths meta.DirPaths) error {
+func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt GlobalOptions, user string, paths meta.DirPaths) error {
 	comp := i.ComponentName()
 	host := i.GetHost()
 	port := i.GetPort()
@@ -159,11 +160,11 @@ func (i *BaseInstance) InitConfig(e executor.Executor, opt GlobalOptions, user s
 		return errors.Trace(err)
 	}
 	tgt := filepath.Join("/tmp", comp+"_"+uuid.New().String()+".service")
-	if err := e.Transfer(sysCfg, tgt, false); err != nil {
+	if err := e.Transfer(ctx, sysCfg, tgt, false); err != nil {
 		return errors.Annotatef(err, "transfer from %s to %s failed", sysCfg, tgt)
 	}
 	cmd := fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port)
-	if _, _, err := e.Execute(cmd, true); err != nil {
+	if _, _, err := e.Execute(ctx, cmd, true); err != nil {
 		return errors.Annotatef(err, "execute: %s", cmd)
 	}
 
@@ -172,15 +173,15 @@ func (i *BaseInstance) InitConfig(e executor.Executor, opt GlobalOptions, user s
 
 // TransferLocalConfigFile scp local config file to remote
 // Precondition: the user on remote have permission to access & mkdir of dest files
-func (i *BaseInstance) TransferLocalConfigFile(e executor.Executor, local, remote string) error {
+func (i *BaseInstance) TransferLocalConfigFile(ctx context.Context, e ctxt.Executor, local, remote string) error {
 	remoteDir := filepath.Dir(remote)
 	// make sure the directory exists
 	cmd := fmt.Sprintf("mkdir -p %s", remoteDir)
-	if _, _, err := e.Execute(cmd, false); err != nil {
+	if _, _, err := e.Execute(ctx, cmd, false); err != nil {
 		return errors.Annotatef(err, "execute: %s", cmd)
 	}
 
-	if err := e.Transfer(local, remote, false); err != nil {
+	if err := e.Transfer(ctx, local, remote, false); err != nil {
 		return errors.Annotatef(err, "transfer from %s to %s failed", local, remote)
 	}
 
@@ -189,7 +190,7 @@ func (i *BaseInstance) TransferLocalConfigFile(e executor.Executor, local, remot
 
 // TransferLocalConfigDir scp local config directory to remote
 // Precondition: the user on remote have right to access & mkdir of dest files
-func (i *BaseInstance) TransferLocalConfigDir(e executor.Executor, local, remote string, filter func(string) bool) error {
+func (i *BaseInstance) TransferLocalConfigDir(ctx context.Context, e ctxt.Executor, local, remote string, filter func(string) bool) error {
 	files, err := ioutil.ReadDir(local)
 	if err != nil {
 		return errors.Annotatef(err, "read local directory %s failed", local)
@@ -201,7 +202,7 @@ func (i *BaseInstance) TransferLocalConfigDir(e executor.Executor, local, remote
 		}
 		localPath := path.Join(local, f.Name())
 		remotePath := path.Join(remote, f.Name())
-		if err := i.TransferLocalConfigFile(e, localPath, remotePath); err != nil {
+		if err := i.TransferLocalConfigFile(ctx, e, localPath, remotePath); err != nil {
 			return errors.Annotatef(err, "transfer local config (%s -> %s) failed", localPath, remotePath)
 		}
 	}
@@ -210,7 +211,7 @@ func (i *BaseInstance) TransferLocalConfigDir(e executor.Executor, local, remote
 }
 
 // MergeServerConfig merges the server configuration and overwrite the global configuration
-func (i *BaseInstance) MergeServerConfig(e executor.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
+func (i *BaseInstance) MergeServerConfig(ctx context.Context, e ctxt.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
 	conf, err := merge2Toml(i.ComponentName(), globalConf, instanceConf)
 	if err != nil {
@@ -222,11 +223,11 @@ func (i *BaseInstance) MergeServerConfig(e executor.Executor, globalConf, instan
 	}
 	dst := filepath.Join(paths.Deploy, "conf", fmt.Sprintf("%s.toml", i.ComponentName()))
 	// transfer config
-	return e.Transfer(fp, dst, false)
+	return e.Transfer(ctx, fp, dst, false)
 }
 
 // mergeTiFlashLearnerServerConfig merges the server configuration and overwrite the global configuration
-func (i *BaseInstance) mergeTiFlashLearnerServerConfig(e executor.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
+func (i *BaseInstance) mergeTiFlashLearnerServerConfig(ctx context.Context, e ctxt.Executor, globalConf, instanceConf map[string]interface{}, paths meta.DirPaths) error {
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("%s-learner-%s-%d.toml", i.ComponentName(), i.GetHost(), i.GetPort()))
 	conf, err := merge2Toml(i.ComponentName()+"-learner", globalConf, instanceConf)
 	if err != nil {
@@ -238,7 +239,7 @@ func (i *BaseInstance) mergeTiFlashLearnerServerConfig(e executor.Executor, glob
 	}
 	dst := filepath.Join(paths.Deploy, "conf", fmt.Sprintf("%s-learner.toml", i.ComponentName()))
 	// transfer config
-	return e.Transfer(fp, dst, false)
+	return e.Transfer(ctx, fp, dst, false)
 }
 
 // ID returns the identifier of this instance, the ID is constructed by host:port

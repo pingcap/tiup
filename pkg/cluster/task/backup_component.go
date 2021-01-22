@@ -15,10 +15,12 @@ package task
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"path/filepath"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 )
 
 // BackupComponent is used to copy all files related the specific version a component
@@ -31,9 +33,9 @@ type BackupComponent struct {
 }
 
 // Execute implements the Task interface
-func (c *BackupComponent) Execute(ctx *Context) error {
+func (c *BackupComponent) Execute(ctx context.Context) error {
 	// Copy to remote server
-	exec, found := ctx.GetExecutor(c.host)
+	exec, found := ctxt.GetInner(ctx).GetExecutor(c.host)
 	if !found {
 		return ErrNoExecutor
 	}
@@ -43,7 +45,7 @@ func (c *BackupComponent) Execute(ctx *Context) error {
 	// Make upgrade idempotent
 	// The old version has been backup if upgrade abort
 	cmd := fmt.Sprintf(`test -d %[2]s || cp -r %[1]s %[2]s`, binDir, binDir+".old."+c.fromVer)
-	_, stderr, err := exec.Execute(cmd, false)
+	_, stderr, err := exec.Execute(ctx, cmd, false)
 	if err != nil {
 		// ignore error if the source path does not exist, this is possible when
 		// there are multiple instances share the same deploy_dir, typical case
@@ -60,7 +62,7 @@ func (c *BackupComponent) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (c *BackupComponent) Rollback(ctx *Context) error {
+func (c *BackupComponent) Rollback(ctx context.Context) error {
 	return nil
 }
 

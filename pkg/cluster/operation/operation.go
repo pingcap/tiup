@@ -29,6 +29,7 @@ type Options struct {
 	SSHTimeout        uint64           // timeout in seconds when connecting an SSH server
 	OptTimeout        uint64           // timeout in seconds for operations that support it, not to confuse with SSH timeout
 	APITimeout        uint64           // timeout in seconds for API operations that support it, like transferring store leader
+	CheckPoint        string           // the audit log ID where we should recover from, this is useful when an action failed and we want to continue that action
 	IgnoreConfigCheck bool             // should we ignore the config check result after init config
 	NativeSSH         bool             // should use native ssh client or builtin easy ssh (deprecated, shoule use SSHType)
 	SSHType           executor.SSHType // the ssh type: 'builtin', 'system', 'none'
@@ -115,11 +116,4 @@ func FilterInstance(instances []spec.Instance, nodes set.StringSet) (res []spec.
 	}
 
 	return
-}
-
-// ExecutorGetter get the executor by host.
-type ExecutorGetter interface {
-	Get(host string) (e executor.Executor)
-	// GetSSHKeySet gets the SSH private and public key path
-	GetSSHKeySet() (privateKeyPath, publicKeyPath string)
 }

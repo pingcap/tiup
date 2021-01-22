@@ -14,6 +14,7 @@
 package ansible
 
 import (
+	"context"
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/dm/spec"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/stretchr/testify/require"
 )
@@ -38,7 +40,7 @@ type executorGetter struct {
 var _ ExecutorGetter = &executorGetter{}
 
 // Get implements ExecutorGetter interface.
-func (g *executorGetter) Get(host string) executor.Executor {
+func (g *executorGetter) Get(host string) ctxt.Executor {
 	return &localExecutor{
 		host: host,
 	}
@@ -46,13 +48,13 @@ func (g *executorGetter) Get(host string) executor.Executor {
 
 // Transfer implements executor interface.
 // Replace the deploy directory as the local one in testdata, so we can fetch it.
-func (l *localExecutor) Transfer(src string, target string, download bool) error {
+func (l *localExecutor) Transfer(ctx context.Context, src string, target string, download bool) error {
 	mydeploy, err := filepath.Abs("./testdata/deploy_dir/" + l.host)
 	if err != nil {
 		return errors.AddStack(err)
 	}
 	src = strings.Replace(src, "/home/tidb/deploy", mydeploy, 1)
-	return l.Local.Transfer(src, target, download)
+	return l.Local.Transfer(ctx, src, target, download)
 }
 
 func TestParseRunScript(t *testing.T) {
@@ -140,7 +142,7 @@ func TestImportFromAnsible(t *testing.T) {
 	im, err := NewImporter(dir, "inventory.ini", executor.SSHTypeBuiltin, 0)
 	assert.Nil(err)
 	im.testExecutorGetter = &executorGetter{}
-	clusterName, meta, err := im.ImportFromAnsibleDir()
+	clusterName, meta, err := im.ImportFromAnsibleDir(ctxt.New(context.Background()))
 	assert.Nil(err, "verbose: %+v", err)
 	assert.Equal("test-cluster", clusterName)
 

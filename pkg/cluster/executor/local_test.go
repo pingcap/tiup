@@ -14,22 +14,26 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/user"
 	"testing"
 
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/stretchr/testify/require"
 )
 
 func TestLocal(t *testing.T) {
+	ctx := ctxt.New(context.Background())
+
 	assert := require.New(t)
 	user, err := user.Current()
 	assert.Nil(err)
 	local, err := New(SSHTypeNone, false, SSHConfig{Host: "127.0.0.1", User: user.Username})
 	assert.Nil(err)
-	_, _, err = local.Execute("ls .", false)
+	_, _, err = local.Execute(ctx, "ls .", false)
 	assert.Nil(err)
 
 	// generate a src file and write some data
@@ -51,7 +55,7 @@ func TestLocal(t *testing.T) {
 	defer os.Remove(dst.Name())
 
 	// Transfer src to dst and check it.
-	err = local.Transfer(src.Name(), dst.Name(), false)
+	err = local.Transfer(ctx, src.Name(), dst.Name(), false)
 	assert.Nil(err)
 
 	data, err := ioutil.ReadFile(dst.Name())
@@ -69,6 +73,8 @@ func TestWrongIP(t *testing.T) {
 }
 
 func TestLocalExecuteWithQuotes(t *testing.T) {
+	ctx := ctxt.New(context.Background())
+
 	assert := require.New(t)
 	user, err := user.Current()
 	assert.Nil(err)
@@ -85,7 +91,7 @@ func TestLocalExecuteWithQuotes(t *testing.T) {
 		`ls '/tmp'`,
 	}
 	for _, cmd := range cmds {
-		_, _, err = local.Execute(cmd, false)
+		_, _, err = local.Execute(ctx, cmd, false)
 		assert.Nil(err)
 	}
 }

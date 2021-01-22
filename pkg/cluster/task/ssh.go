@@ -14,10 +14,12 @@
 package task
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/joomcode/errorx"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 )
 
@@ -38,7 +40,7 @@ type RootSSH struct {
 }
 
 // Execute implements the Task interface
-func (s *RootSSH) Execute(ctx *Context) error {
+func (s *RootSSH) Execute(ctx context.Context) error {
 	e, err := executor.New(s.sshType, s.user != "root", executor.SSHConfig{
 		Host:       s.host,
 		Port:       s.port,
@@ -52,15 +54,13 @@ func (s *RootSSH) Execute(ctx *Context) error {
 		return err
 	}
 
-	ctx.SetExecutor(s.host, e)
+	ctxt.GetInner(ctx).SetExecutor(s.host, e)
 	return nil
 }
 
 // Rollback implements the Task interface
-func (s *RootSSH) Rollback(ctx *Context) error {
-	ctx.exec.Lock()
-	delete(ctx.exec.executors, s.host)
-	ctx.exec.Unlock()
+func (s *RootSSH) Rollback(ctx context.Context) error {
+	ctxt.GetInner(ctx).SetExecutor(s.host, nil)
 	return nil
 }
 
@@ -82,11 +82,11 @@ type UserSSH struct {
 }
 
 // Execute implements the Task interface
-func (s *UserSSH) Execute(ctx *Context) error {
+func (s *UserSSH) Execute(ctx context.Context) error {
 	e, err := executor.New(s.sshType, false, executor.SSHConfig{
 		Host:    s.host,
 		Port:    s.port,
-		KeyFile: ctx.PrivateKeyPath,
+		KeyFile: ctxt.GetInner(ctx).PrivateKeyPath,
 		User:    s.deployUser,
 		Timeout: time.Second * time.Duration(s.timeout),
 	})
@@ -94,15 +94,13 @@ func (s *UserSSH) Execute(ctx *Context) error {
 		return err
 	}
 
-	ctx.SetExecutor(s.host, e)
+	ctxt.GetInner(ctx).SetExecutor(s.host, e)
 	return nil
 }
 
 // Rollback implements the Task interface
-func (s *UserSSH) Rollback(ctx *Context) error {
-	ctx.exec.Lock()
-	delete(ctx.exec.executors, s.host)
-	ctx.exec.Unlock()
+func (s *UserSSH) Rollback(ctx context.Context) error {
+	ctxt.GetInner(ctx).SetExecutor(s.host, nil)
 	return nil
 }
 

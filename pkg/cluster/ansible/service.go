@@ -14,6 +14,7 @@
 package ansible
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -34,6 +36,7 @@ var (
 // parseDirs sets values of directories of component
 func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType executor.SSHType) (spec.InstanceSpec, error) {
 	hostName, sshPort := ins.SSH()
+	ctx := context.Background()
 
 	e, err := executor.New(sshType, false, executor.SSHConfig{
 		Host:    hostName,
@@ -47,7 +50,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 	}
 	log.Debugf("Detecting deploy paths on %s...", hostName)
 
-	stdout, err := readStartScript(e, ins.Role(), hostName, ins.GetMainPort())
+	stdout, err := readStartScript(ctx, e, ins.Role(), hostName, ins.GetMainPort())
 	if len(stdout) <= 1 || err != nil {
 		return ins, err
 	}
@@ -139,7 +142,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 				if !filepath.IsAbs(fname) {
 					fname = filepath.Join(newIns.DeployDir, fname)
 				}
-				err := parseTiflashConfig(e, &newIns, fname)
+				err := parseTiflashConfig(ctx, e, &newIns, fname)
 				if err != nil {
 					return nil, err
 				}
@@ -251,8 +254,8 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 	return ins, nil
 }
 
-func parseTiflashConfig(e executor.Executor, spec *spec.TiFlashSpec, fname string) error {
-	data, err := readFile(e, fname)
+func parseTiflashConfig(ctx context.Context, e ctxt.Executor, spec *spec.TiFlashSpec, fname string) error {
+	data, err := readFile(ctx, e, fname)
 	if err != nil {
 		return err
 	}
@@ -284,9 +287,9 @@ func parseTiflashConfigFromFileData(spec *spec.TiFlashSpec, data []byte) error {
 	return nil
 }
 
-func readFile(e executor.Executor, fname string) (data []byte, err error) {
+func readFile(ctx context.Context, e ctxt.Executor, fname string) (data []byte, err error) {
 	cmd := fmt.Sprintf("cat %s", fname)
-	stdout, stderr, err := e.Execute(cmd, false)
+	stdout, stderr, err := e.Execute(ctx, cmd, false)
 	if err != nil {
 		return nil, errors.Annotatef(err, "stderr: %s", stderr)
 	}
@@ -294,13 +297,13 @@ func readFile(e executor.Executor, fname string) (data []byte, err error) {
 	return stdout, nil
 }
 
-func readStartScript(e executor.Executor, component, host string, port int) (string, error) {
+func readStartScript(ctx context.Context, e ctxt.Executor, component, host string, port int) (string, error) {
 	serviceFile := fmt.Sprintf("%s/%s-%d.service",
 		systemdUnitPath,
 		component,
 		port)
 	cmd := fmt.Sprintf("cat `grep 'ExecStart' %s | sed 's/ExecStart=//'`", serviceFile)
-	stdout, stderr, err := e.Execute(cmd, false)
+	stdout, stderr, err := e.Execute(ctx, cmd, false)
 	if err != nil {
 		return string(stdout), err
 	}

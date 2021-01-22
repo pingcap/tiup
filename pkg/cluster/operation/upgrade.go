@@ -14,17 +14,29 @@
 package operator
 
 import (
+	"context"
 	"crypto/tls"
+	"reflect"
 	"strconv"
 
+	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
+	"go.uber.org/zap"
 )
+
+func init() {
+	// register checkpoint for upgrade operation
+	checkpoint.RegisterField(
+		checkpoint.Field("operation", reflect.DeepEqual),
+		checkpoint.Field("instance", reflect.DeepEqual),
+	)
+}
 
 // Upgrade the cluster.
 func Upgrade(
-	getter ExecutorGetter,
+	ctx context.Context,
 	topo spec.Topology,
 	options Options,
 	tlsCfg *tls.Config,
@@ -62,7 +74,7 @@ func Upgrade(
 				// do nothing, kept for future usage with other components
 			}
 
-			if err := doUpgrade(getter, topo, instance, options, tlsCfg); err != nil {
+			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
 				return err
 			}
 		}
@@ -70,7 +82,7 @@ func Upgrade(
 		// process defferred instances
 		for _, instance := range deferInstances {
 			log.Debugf("Upgrading defferred instance %s...", instance.ID())
-			if err := doUpgrade(getter, topo, instance, options, tlsCfg); err != nil {
+			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
 				return err
 			}
 		}
@@ -79,12 +91,22 @@ func Upgrade(
 	return nil
 }
 
-func doUpgrade(getter ExecutorGetter,
-	topo spec.Topology,
-	instance spec.Instance,
-	options Options,
-	tlsCfg *tls.Config,
-) error {
+func upgradeInstance(ctx context.Context, topo spec.Topology, instance spec.Instance, options Options, tlsCfg *tls.Config) (err error) {
+	// insert checkpoint
+	point := checkpoint.Acquire(ctx, map[string]interface{}{
+		"operation": "upgrade",
+		"instance":  instance.ID(),
+	})
+	defer func() {
+		point.Release(err,
+			zap.String("operation", "upgrade"),
+			zap.String("instance", instance.ID()))
+	}()
+
+	if point.Hit() != nil {
+		return nil
+	}
+
 	var rollingInstance spec.RollingUpdateInstance
 	var isRollingInstance bool
 
@@ -99,7 +121,7 @@ func doUpgrade(getter ExecutorGetter,
 		}
 	}
 
-	if err := restartInstance(getter, instance, options.OptTimeout); err != nil && !options.Force {
+	if err := restartInstance(ctx, instance, options.OptTimeout); err != nil && !options.Force {
 		return err
 	}
 
@@ -109,6 +131,7 @@ func doUpgrade(getter ExecutorGetter,
 			return err
 		}
 	}
+
 	return nil
 }
 

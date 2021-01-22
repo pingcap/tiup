@@ -14,12 +14,14 @@
 package task
 
 import (
+	"context"
 	"encoding/pem"
 	"fmt"
 	"net"
 	"path/filepath"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/file"
@@ -34,7 +36,7 @@ type TLSCert struct {
 }
 
 // Execute implements the Task interface
-func (c *TLSCert) Execute(ctx *Context) error {
+func (c *TLSCert) Execute(ctx context.Context) error {
 	privKey, err := crypto.NewKeyPair(crypto.KeyTypeRSA, crypto.KeySchemeRSASSAPSSSHA256)
 	if err != nil {
 		return err
@@ -83,21 +85,21 @@ func (c *TLSCert) Execute(ctx *Context) error {
 	}
 
 	// transfer file to remote
-	e, ok := ctx.GetExecutor(c.inst.GetHost())
+	e, ok := ctxt.GetInner(ctx).GetExecutor(c.inst.GetHost())
 	if !ok {
 		return ErrNoExecutor
 	}
-	if err := e.Transfer(caFile,
+	if err := e.Transfer(ctx, caFile,
 		filepath.Join(c.paths.Deploy, "tls", spec.TLSCACert),
 		false /* download */); err != nil {
 		return errors.Annotate(err, "failed to transfer CA cert to server")
 	}
-	if err := e.Transfer(keyFile,
+	if err := e.Transfer(ctx, keyFile,
 		filepath.Join(c.paths.Deploy, "tls", fmt.Sprintf("%s.pem", c.inst.Role())),
 		false /* download */); err != nil {
 		return errors.Annotate(err, "failed to transfer TLS private key to server")
 	}
-	if err := e.Transfer(certFile,
+	if err := e.Transfer(ctx, certFile,
 		filepath.Join(c.paths.Deploy, "tls", fmt.Sprintf("%s.crt", c.inst.Role())),
 		false /* download */); err != nil {
 		return errors.Annotate(err, "failed to transfer TLS cert to server")
@@ -107,7 +109,7 @@ func (c *TLSCert) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (c *TLSCert) Rollback(ctx *Context) error {
+func (c *TLSCert) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 

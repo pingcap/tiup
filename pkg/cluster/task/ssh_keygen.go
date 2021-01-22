@@ -14,6 +14,7 @@
 package task
 
 import (
+	"context"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -23,6 +24,7 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/utils/rand"
 	"golang.org/x/crypto/ssh"
@@ -34,28 +36,28 @@ type SSHKeyGen struct {
 }
 
 // Execute implements the Task interface
-func (s *SSHKeyGen) Execute(ctx *Context) error {
-	ctx.ev.PublishTaskProgress(s, "Generate SSH keys")
+func (s *SSHKeyGen) Execute(ctx context.Context) error {
+	ctxt.GetInner(ctx).Ev.PublishTaskProgress(s, "Generate SSH keys")
 
 	savePrivateFileTo := s.keypath
 	savePublicFileTo := s.keypath + ".pub"
 
 	// Skip ssh key generate
 	if utils.IsExist(savePrivateFileTo) && utils.IsExist(savePublicFileTo) {
-		ctx.PublicKeyPath = savePublicFileTo
-		ctx.PrivateKeyPath = savePrivateFileTo
+		ctxt.GetInner(ctx).PublicKeyPath = savePublicFileTo
+		ctxt.GetInner(ctx).PrivateKeyPath = savePrivateFileTo
 		return nil
 	}
 
 	bitSize := 4096
 
-	ctx.ev.PublishTaskProgress(s, "Generate private key")
+	ctxt.GetInner(ctx).Ev.PublishTaskProgress(s, "Generate private key")
 	privateKey, err := s.generatePrivateKey(bitSize)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	ctx.ev.PublishTaskProgress(s, "Generate public key")
+	ctxt.GetInner(ctx).Ev.PublishTaskProgress(s, "Generate public key")
 	publicKeyBytes, err := s.generatePublicKey(&privateKey.PublicKey)
 	if err != nil {
 		return errors.Trace(err)
@@ -63,7 +65,7 @@ func (s *SSHKeyGen) Execute(ctx *Context) error {
 
 	privateKeyBytes := s.encodePrivateKeyToPEM(privateKey)
 
-	ctx.ev.PublishTaskProgress(s, "Persist keys")
+	ctxt.GetInner(ctx).Ev.PublishTaskProgress(s, "Persist keys")
 	err = s.writeKeyToFile(privateKeyBytes, savePrivateFileTo)
 	if err != nil {
 		return errors.Trace(err)
@@ -74,8 +76,8 @@ func (s *SSHKeyGen) Execute(ctx *Context) error {
 		return errors.Trace(err)
 	}
 
-	ctx.PublicKeyPath = savePublicFileTo
-	ctx.PrivateKeyPath = savePrivateFileTo
+	ctxt.GetInner(ctx).PublicKeyPath = savePublicFileTo
+	ctxt.GetInner(ctx).PrivateKeyPath = savePrivateFileTo
 	return nil
 }
 
@@ -132,7 +134,7 @@ func (s *SSHKeyGen) writeKeyToFile(keyBytes []byte, saveFileTo string) error {
 }
 
 // Rollback implements the Task interface
-func (s *SSHKeyGen) Rollback(ctx *Context) error {
+func (s *SSHKeyGen) Rollback(ctx context.Context) error {
 	return os.Remove(s.keypath)
 }
 

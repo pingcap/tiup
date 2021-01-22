@@ -15,6 +15,7 @@ package spec
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -25,7 +26,7 @@ import (
 	"time"
 
 	"github.com/pingcap/tiup/pkg/cluster/api"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
@@ -492,14 +493,15 @@ server_configs:
 
 // InitConfig implement Instance interface
 func (i *TiFlashInstance) InitConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	clusterName,
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
 	topo := i.topo.(*Specification)
-	if err := i.BaseInstance.InitConfig(e, topo.GlobalOptions, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(ctx, e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -536,11 +538,11 @@ func (i *TiFlashInstance) InitConfig(
 	}
 	dst := filepath.Join(paths.Deploy, "scripts", "run_tiflash.sh")
 
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false); err != nil {
 		return err
 	}
 
-	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
 		return err
 	}
 
@@ -571,7 +573,7 @@ func (i *TiFlashInstance) InitConfig(
 		}
 	}
 
-	err = i.mergeTiFlashLearnerServerConfig(e, conf, spec.LearnerConfig, paths)
+	err = i.mergeTiFlashLearnerServerConfig(ctx, e, conf, spec.LearnerConfig, paths)
 	if err != nil {
 		return err
 	}
@@ -612,12 +614,13 @@ func (i *TiFlashInstance) InitConfig(
 		return err
 	}
 
-	return i.MergeServerConfig(e, conf, nil, paths)
+	return i.MergeServerConfig(ctx, e, conf, nil, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
 func (i *TiFlashInstance) ScaleConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	topo Topology,
 	clusterName,
 	clusterVersion,
@@ -629,7 +632,7 @@ func (i *TiFlashInstance) ScaleConfig(
 		i.topo = s
 	}()
 	i.topo = mustBeClusterTopo(topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
 }
 
 type replicateConfig struct {
