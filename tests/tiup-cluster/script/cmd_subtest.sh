@@ -62,6 +62,14 @@ function cmd_subtest() {
     tiup-cluster exec $name -N n1 --command "grep advertise-status-addr /home/tidb/deploy/tikv-20160/scripts/run_tikv.sh"
     tiup-cluster exec $name -N n3 --command "grep /home/tidb/my_kv_data /home/tidb/deploy/tikv-20160/scripts/run_tikv.sh"
 
+    # test checkpoint
+    tiup-cluster exec $name -N n1 --command "touch /tmp/checkpoint"
+    tiup-cluster exec $name -N n1 --command "ls /tmp/checkpoint"
+    tiup-cluster exec $name -N n1 --command "rm -f /tmp/checkpoint"
+    id=`tiup-cluster audit | grep "exec $name" | grep "ls /tmp/checkpoint" | awk '{print $1}'`
+    tiup-cluster exec $name -N n1 --command "ls /tmp/checkpoint" --checkpoint $id
+    ! tiup-cluster exec $name -N n1 --command "ls /tmp/checkpoint"
+
     # test patch overwrite
     tiup-cluster $client --yes patch $name ~/.tiup/storage/cluster/packages/tidb-v$version-linux-amd64.tar.gz -R tidb --overwrite
     # overwrite with the same tarball twice

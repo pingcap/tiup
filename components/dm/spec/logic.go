@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -21,7 +22,7 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 )
@@ -103,13 +104,14 @@ type MasterInstance struct {
 
 // InitConfig implement Instance interface
 func (i *MasterInstance) InitConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	clusterName,
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(ctx, e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -127,27 +129,28 @@ func (i *MasterInstance) InitConfig(
 		return err
 	}
 	dst := filepath.Join(paths.Deploy, "scripts", "run_dm-master.sh")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false); err != nil {
 		return err
 	}
-	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
 		return err
 	}
 
 	specConfig := spec.Config
-	return i.MergeServerConfig(e, i.topo.ServerConfigs.Master, specConfig, paths)
+	return i.MergeServerConfig(ctx, e, i.topo.ServerConfigs.Master, specConfig, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
 func (i *MasterInstance) ScaleConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	topo spec.Topology,
 	clusterName,
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	if err := i.InitConfig(e, clusterName, clusterVersion, deployUser, paths); err != nil {
+	if err := i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -168,10 +171,10 @@ func (i *MasterInstance) ScaleConfig(
 	}
 
 	dst := filepath.Join(paths.Deploy, "scripts", "run_dm-master.sh")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false); err != nil {
 		return err
 	}
-	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
 		return err
 	}
 
@@ -230,13 +233,14 @@ type WorkerInstance struct {
 
 // InitConfig implement Instance interface
 func (i *WorkerInstance) InitConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	clusterName,
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
 ) error {
-	if err := i.BaseInstance.InitConfig(e, i.topo.GlobalOptions, deployUser, paths); err != nil {
+	if err := i.BaseInstance.InitConfig(ctx, e, i.topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
 
@@ -253,21 +257,22 @@ func (i *WorkerInstance) InitConfig(
 	}
 	dst := filepath.Join(paths.Deploy, "scripts", "run_dm-worker.sh")
 
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false); err != nil {
 		return err
 	}
 
-	if _, _, err := e.Execute("chmod +x "+dst, false); err != nil {
+	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
 		return err
 	}
 
 	specConfig := spec.Config
-	return i.MergeServerConfig(e, i.topo.ServerConfigs.Worker, specConfig, paths)
+	return i.MergeServerConfig(ctx, e, i.topo.ServerConfigs.Worker, specConfig, paths)
 }
 
 // ScaleConfig deploy temporary config on scaling
 func (i *WorkerInstance) ScaleConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	topo spec.Topology,
 	clusterName,
 	clusterVersion,
@@ -279,7 +284,7 @@ func (i *WorkerInstance) ScaleConfig(
 		i.topo = s
 	}()
 	i.topo = topo.(*Specification)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
 }
 
 // GetGlobalOptions returns cluster topology

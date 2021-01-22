@@ -26,7 +26,7 @@ func (u *UpdateTopology) String() string {
 }
 
 // Execute implements the Task interface
-func (u *UpdateTopology) Execute(ctx *Context) error {
+func (u *UpdateTopology) Execute(ctx context.Context) error {
 	tlsCfg, err := u.metadata.Topology.TLSConfig(
 		filepath.Join(u.profileDir, spec.TLSCertKeyDir),
 	)
@@ -37,7 +37,7 @@ func (u *UpdateTopology) Execute(ctx *Context) error {
 	if err != nil {
 		return err
 	}
-	txn := client.Txn(context.Background())
+	txn := client.Txn(ctx)
 
 	topo := u.metadata.Topology
 
@@ -125,6 +125,6 @@ func updateTopologyOp(instance spec.Instance) (*clientv3.Op, error) {
 }
 
 // Rollback implements the Task interface
-func (u *UpdateTopology) Rollback(ctx *Context) error {
+func (u *UpdateTopology) Rollback(ctx context.Context) error {
 	return nil
 }

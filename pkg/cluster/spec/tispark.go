@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
@@ -23,7 +24,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
@@ -191,7 +192,8 @@ func (i *TiSparkMasterInstance) GetJavaHome() string {
 
 // InitConfig implement Instance interface
 func (i *TiSparkMasterInstance) InitConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	clusterName,
 	clusterVersion,
 	deployUser string,
@@ -210,11 +212,11 @@ func (i *TiSparkMasterInstance) InitConfig(
 		return errors.Trace(err)
 	}
 	tgt := filepath.Join("/tmp", comp+"_"+uuid.New().String()+".service")
-	if err := e.Transfer(sysCfg, tgt, false); err != nil {
+	if err := e.Transfer(ctx, sysCfg, tgt, false); err != nil {
 		return errors.Annotatef(err, "transfer from %s to %s failed", sysCfg, tgt)
 	}
 	cmd := fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port)
-	if _, _, err := e.Execute(cmd, true); err != nil {
+	if _, _, err := e.Execute(ctx, cmd, true); err != nil {
 		return errors.Annotatef(err, "execute: %s", cmd)
 	}
 
@@ -236,7 +238,7 @@ func (i *TiSparkMasterInstance) InitConfig(
 		return err
 	}
 	dst := filepath.Join(paths.Deploy, "conf", "spark-defaults.conf")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false); err != nil {
 		return err
 	}
 
@@ -252,7 +254,7 @@ func (i *TiSparkMasterInstance) InitConfig(
 	}
 	// tispark files are all in a "spark" sub-directory of deploy dir
 	dst = filepath.Join(paths.Deploy, "conf", "spark-env.sh")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false); err != nil {
 		return err
 	}
 
@@ -266,12 +268,13 @@ func (i *TiSparkMasterInstance) InitConfig(
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "log4j.properties")
-	return e.Transfer(fp, dst, false)
+	return e.Transfer(ctx, fp, dst, false)
 }
 
 // ScaleConfig deploy temporary config on scaling
 func (i *TiSparkMasterInstance) ScaleConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	topo Topology,
 	clusterName,
 	clusterVersion,
@@ -282,7 +285,7 @@ func (i *TiSparkMasterInstance) ScaleConfig(
 	defer func() { i.topo = s }()
 	cluster := mustBeClusterTopo(topo)
 	i.topo = cluster.Merge(i.topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
 }
 
 // TiSparkWorkerComponent represents TiSpark slave component.
@@ -338,7 +341,8 @@ func (i *TiSparkWorkerInstance) GetJavaHome() string {
 
 // InitConfig implement Instance interface
 func (i *TiSparkWorkerInstance) InitConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	clusterName,
 	clusterVersion,
 	deployUser string,
@@ -357,11 +361,11 @@ func (i *TiSparkWorkerInstance) InitConfig(
 		return errors.Trace(err)
 	}
 	tgt := filepath.Join("/tmp", comp+"_"+uuid.New().String()+".service")
-	if err := e.Transfer(sysCfg, tgt, false); err != nil {
+	if err := e.Transfer(ctx, sysCfg, tgt, false); err != nil {
 		return errors.Annotatef(err, "transfer from %s to %s failed", sysCfg, tgt)
 	}
 	cmd := fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port)
-	if _, _, err := e.Execute(cmd, true); err != nil {
+	if _, _, err := e.Execute(ctx, cmd, true); err != nil {
 		return errors.Annotatef(err, "execute: %s", cmd)
 	}
 
@@ -383,7 +387,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 		return err
 	}
 	dst := filepath.Join(paths.Deploy, "conf", "spark-defaults.conf")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false); err != nil {
 		return err
 	}
 
@@ -400,7 +404,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	}
 	// tispark files are all in a "spark" sub-directory of deploy dir
 	dst = filepath.Join(paths.Deploy, "conf", "spark-env.sh")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false); err != nil {
 		return err
 	}
 
@@ -414,7 +418,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "sbin", "start-slave.sh")
-	if err := e.Transfer(fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false); err != nil {
 		return err
 	}
 
@@ -428,12 +432,13 @@ func (i *TiSparkWorkerInstance) InitConfig(
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "log4j.properties")
-	return e.Transfer(fp, dst, false)
+	return e.Transfer(ctx, fp, dst, false)
 }
 
 // ScaleConfig deploy temporary config on scaling
 func (i *TiSparkWorkerInstance) ScaleConfig(
-	e executor.Executor,
+	ctx context.Context,
+	e ctxt.Executor,
 	topo Topology,
 	clusterName,
 	clusterVersion,
@@ -443,5 +448,5 @@ func (i *TiSparkWorkerInstance) ScaleConfig(
 	s := i.topo
 	defer func() { i.topo = s }()
 	i.topo = topo.Merge(i.topo)
-	return i.InitConfig(e, clusterName, clusterVersion, deployUser, paths)
+	return i.InitConfig(ctx, e, clusterName, clusterVersion, deployUser, paths)
 }

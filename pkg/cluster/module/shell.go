@@ -14,9 +14,10 @@
 package module
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 )
 
 // ShellModuleConfig is the configurations used to initialize a TiUPModuleSystemd
@@ -55,6 +56,6 @@ func NewShellModule(config ShellModuleConfig) *ShellModule {
 
 // Execute passes the command to executor and returns its results, the executor
 // should be already initialized.
-func (mod *ShellModule) Execute(exec executor.Executor) ([]byte, []byte, error) {
-	return exec.Execute(mod.cmd, mod.sudo)
+func (mod *ShellModule) Execute(ctx context.Context, exec ctxt.Executor) ([]byte, []byte, error) {
+	return exec.Execute(ctx, mod.cmd, mod.sudo)
 }

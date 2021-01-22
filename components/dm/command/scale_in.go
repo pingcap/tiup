@@ -14,6 +14,7 @@
 package command
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"time"
@@ -45,7 +46,7 @@ func newScaleInCmd() *cobra.Command {
 				metadata := imetadata.(*dm.Metadata)
 				b.Func(
 					fmt.Sprintf("ScaleInCluster: options=%+v", gOpt),
-					func(ctx *task.Context) error {
+					func(ctx context.Context) error {
 						return ScaleInDMCluster(ctx, metadata.Topology, gOpt)
 					},
 				).Serial(dmtask.NewUpdateDMMeta(clusterName, metadata, gOpt.Nodes))
@@ -65,7 +66,7 @@ func newScaleInCmd() *cobra.Command {
 
 // ScaleInDMCluster scale in dm cluster.
 func ScaleInDMCluster(
-	getter operator.ExecutorGetter,
+	ctx context.Context,
 	topo *dm.Specification,
 	options operator.Options,
 ) error {
@@ -104,7 +105,7 @@ func ScaleInDMCluster(
 					continue
 				}
 				instCount[instance.GetHost()]--
-				if err := operator.StopAndDestroyInstance(getter, topo, instance, options, instCount[instance.GetHost()] == 0); err != nil {
+				if err := operator.StopAndDestroyInstance(ctx, topo, instance, options, instCount[instance.GetHost()] == 0); err != nil {
 					log.Warnf("failed to stop/destroy %s: %v", component.Name(), err)
 				}
 			}
@@ -134,7 +135,7 @@ func ScaleInDMCluster(
 				continue
 			}
 
-			if err := operator.StopComponent(getter, []dm.Instance{instance}, options.OptTimeout); err != nil {
+			if err := operator.StopComponent(ctx, []dm.Instance{instance}, options.OptTimeout); err != nil {
 				return errors.Annotatef(err, "failed to stop %s", component.Name())
 			}
 
@@ -153,13 +154,13 @@ func ScaleInDMCluster(
 				}
 			}
 
-			if err := operator.DestroyComponent(getter, []dm.Instance{instance}, topo, options); err != nil {
+			if err := operator.DestroyComponent(ctx, []dm.Instance{instance}, topo, options); err != nil {
 				return errors.Annotatef(err, "failed to destroy %s", component.Name())
 			}
 
 			instCount[instance.GetHost()]--
 			if instCount[instance.GetHost()] == 0 {
-				if err := operator.DeletePublicKey(getter, instance.GetHost()); err != nil {
+				if err := operator.DeletePublicKey(ctx, instance.GetHost()); err != nil {
 					return errors.Annotatef(err, "failed to delete public key")
 				}
 			}

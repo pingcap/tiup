@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/checkpoint"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -30,7 +32,7 @@ import (
 
 // Enable will enable/disable the cluster
 func Enable(
-	getter ExecutorGetter,
+	ctx context.Context,
 	cluster spec.Topology,
 	options Options,
 	isEnable bool,
@@ -44,7 +46,7 @@ func Enable(
 
 	for _, comp := range components {
 		insts := FilterInstance(comp.Instances(), nodeFilter)
-		err := EnableComponent(getter, insts, options, isEnable)
+		err := EnableComponent(ctx, insts, options, isEnable)
 		if err != nil {
 			return errors.Annotatef(err, "failed to enable/disable %s", comp.Name())
 		}
@@ -54,7 +56,7 @@ func Enable(
 		for _, inst := range insts {
 			if !uniqueHosts.Exist(inst.GetHost()) {
 				uniqueHosts.Insert(inst.GetHost())
-				if err := EnableMonitored(getter, inst, monitoredOptions, options.OptTimeout, isEnable); err != nil {
+				if err := EnableMonitored(ctx, inst, monitoredOptions, options.OptTimeout, isEnable); err != nil {
 					return err
 				}
 			}
@@ -66,7 +68,7 @@ func Enable(
 
 // Start the cluster.
 func Start(
-	getter ExecutorGetter,
+	ctx context.Context,
 	cluster spec.Topology,
 	options Options,
 	tlsCfg *tls.Config,
@@ -80,7 +82,7 @@ func Start(
 
 	for _, comp := range components {
 		insts := FilterInstance(comp.Instances(), nodeFilter)
-		err := StartComponent(getter, insts, options, tlsCfg)
+		err := StartComponent(ctx, insts, options, tlsCfg)
 		if err != nil {
 			return errors.Annotatef(err, "failed to start %s", comp.Name())
 		}
@@ -90,7 +92,7 @@ func Start(
 		for _, inst := range insts {
 			if !uniqueHosts.Exist(inst.GetHost()) {
 				uniqueHosts.Insert(inst.GetHost())
-				if err := StartMonitored(getter, inst, monitoredOptions, options.OptTimeout); err != nil {
+				if err := StartMonitored(ctx, inst, monitoredOptions, options.OptTimeout); err != nil {
 					return err
 				}
 			}
@@ -102,7 +104,7 @@ func Start(
 
 // Stop the cluster.
 func Stop(
-	getter ExecutorGetter,
+	ctx context.Context,
 	cluster spec.Topology,
 	options Options,
 	tlsCfg *tls.Config,
@@ -119,7 +121,7 @@ func Stop(
 
 	for _, comp := range components {
 		insts := FilterInstance(comp.Instances(), nodeFilter)
-		err := StopComponent(getter, insts, options.OptTimeout)
+		err := StopComponent(ctx, insts, options.OptTimeout)
 		if err != nil && !options.Force {
 			return errors.Annotatef(err, "failed to stop %s", comp.Name())
 		}
@@ -129,7 +131,7 @@ func Stop(
 		for _, inst := range insts {
 			instCount[inst.GetHost()]--
 			if instCount[inst.GetHost()] == 0 {
-				if err := StopMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
+				if err := StopMonitored(ctx, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
 					return err
 				}
 			}
@@ -166,17 +168,17 @@ func NeedCheckTombstone(topo *spec.Specification) bool {
 
 // Restart the cluster.
 func Restart(
-	getter ExecutorGetter,
+	ctx context.Context,
 	cluster spec.Topology,
 	options Options,
 	tlsCfg *tls.Config,
 ) error {
-	err := Stop(getter, cluster, options, tlsCfg)
+	err := Stop(ctx, cluster, options, tlsCfg)
 	if err != nil {
 		return errors.Annotatef(err, "failed to stop")
 	}
 
-	err = Start(getter, cluster, options, tlsCfg)
+	err = Start(ctx, cluster, options, tlsCfg)
 	if err != nil {
 		return errors.Annotatef(err, "failed to start")
 	}
@@ -185,12 +187,12 @@ func Restart(
 }
 
 // StartMonitored start BlackboxExporter and NodeExporter
-func StartMonitored(getter ExecutorGetter, instance spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
+func StartMonitored(ctx context.Context, instance spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
 	ports := map[string]int{
 		spec.ComponentNodeExporter:     options.NodeExporterPort,
 		spec.ComponentBlackboxExporter: options.BlackboxExporterPort,
 	}
-	e := getter.Get(instance.GetHost())
+	e := ctxt.GetInner(ctx).Get(instance.GetHost())
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
 		log.Infof("Starting component %s", comp)
 		log.Infof("\tStarting instance %s", instance.GetHost())
@@ -201,7 +203,7 @@ func StartMonitored(getter ExecutorGetter, instance spec.Instance, options *spec
 			Timeout:      time.Second * time.Duration(timeout),
 		}
 		systemd := module.NewSystemdModule(c)
-		stdout, stderr, err := systemd.Execute(e)
+		stdout, stderr, err := systemd.Execute(ctx, e)
 
 		if len(stdout) > 0 {
 			fmt.Println(string(stdout))
@@ -215,7 +217,7 @@ func StartMonitored(getter ExecutorGetter, instance spec.Instance, options *spec
 		}
 
 		// Check ready.
-		if err := spec.PortStarted(e, ports[comp], timeout); err != nil {
+		if err := spec.PortStarted(ctx, e, ports[comp], timeout); err != nil {
 			return toFailedActionError(err, "start", instance)
 		}
 
@@ -225,8 +227,8 @@ func StartMonitored(getter ExecutorGetter, instance spec.Instance, options *spec
 	return nil
 }
 
-func restartInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) error {
-	e := getter.Get(ins.GetHost())
+func restartInstance(ctx context.Context, ins spec.Instance, timeout uint64) error {
+	e := ctxt.GetInner(ctx).Get(ins.GetHost())
 	log.Infof("\tRestarting instance %s", ins.GetHost())
 
 	// Restart by systemd.
@@ -237,7 +239,7 @@ func restartInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) e
 		Timeout:      time.Second * time.Duration(timeout),
 	}
 	systemd := module.NewSystemdModule(c)
-	stdout, stderr, err := systemd.Execute(e)
+	stdout, stderr, err := systemd.Execute(ctx, e)
 
 	if len(stdout) > 0 {
 		fmt.Println(string(stdout))
@@ -251,7 +253,7 @@ func restartInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) e
 	}
 
 	// Check ready.
-	if err := ins.Ready(e, timeout); err != nil {
+	if err := ins.Ready(ctx, e, timeout); err != nil {
 		return toFailedActionError(err, "restart", ins)
 	}
 
@@ -261,7 +263,7 @@ func restartInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) e
 }
 
 // RestartComponent restarts the component.
-func RestartComponent(getter ExecutorGetter, instances []spec.Instance, timeout uint64) error {
+func RestartComponent(ctx context.Context, instances []spec.Instance, timeout uint64) error {
 	if len(instances) == 0 {
 		return nil
 	}
@@ -270,7 +272,7 @@ func RestartComponent(getter ExecutorGetter, instances []spec.Instance, timeout 
 	log.Infof("Restarting component %s", name)
 
 	for _, ins := range instances {
-		err := restartInstance(getter, ins, timeout)
+		err := restartInstance(ctx, ins, timeout)
 		if err != nil {
 			return err
 		}
@@ -279,8 +281,8 @@ func RestartComponent(getter ExecutorGetter, instances []spec.Instance, timeout 
 	return nil
 }
 
-func enableInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64, isEnable bool) error {
-	e := getter.Get(ins.GetHost())
+func enableInstance(ctx context.Context, ins spec.Instance, timeout uint64, isEnable bool) error {
+	e := ctxt.GetInner(ctx).Get(ins.GetHost())
 	if isEnable {
 		log.Infof("\tEnabling instance %s %s:%d", ins.ComponentName(), ins.GetHost(), ins.GetPort())
 	} else {
@@ -299,7 +301,7 @@ func enableInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64, is
 		Timeout: time.Second * time.Duration(timeout),
 	}
 	systemd := module.NewSystemdModule(c)
-	stdout, stderr, err := systemd.Execute(e)
+	stdout, stderr, err := systemd.Execute(ctx, e)
 
 	if len(stdout) > 0 {
 		fmt.Println(string(stdout))
@@ -325,8 +327,8 @@ func enableInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64, is
 	return nil
 }
 
-func startInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) error {
-	e := getter.Get(ins.GetHost())
+func startInstance(ctx context.Context, ins spec.Instance, timeout uint64) error {
+	e := ctxt.GetInner(ctx).Get(ins.GetHost())
 	log.Infof("\tStarting instance %s %s:%d",
 		ins.ComponentName(),
 		ins.GetHost(),
@@ -340,7 +342,7 @@ func startInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) err
 		Timeout:      time.Second * time.Duration(timeout),
 	}
 	systemd := module.NewSystemdModule(c)
-	stdout, stderr, err := systemd.Execute(e)
+	stdout, stderr, err := systemd.Execute(ctx, e)
 
 	if len(stdout) > 0 {
 		fmt.Println(string(stdout))
@@ -354,7 +356,7 @@ func startInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) err
 	}
 
 	// Check ready.
-	if err := ins.Ready(e, timeout); err != nil {
+	if err := ins.Ready(ctx, e, timeout); err != nil {
 		return toFailedActionError(err, "start", ins)
 	}
 
@@ -367,7 +369,7 @@ func startInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) err
 }
 
 // EnableComponent enable/disable the instances
-func EnableComponent(getter ExecutorGetter, instances []spec.Instance, options Options, isEnable bool) error {
+func EnableComponent(ctx context.Context, instances []spec.Instance, options Options, isEnable bool) error {
 	if len(instances) == 0 {
 		return nil
 	}
@@ -379,13 +381,17 @@ func EnableComponent(getter ExecutorGetter, instances []spec.Instance, options O
 		log.Infof("Disabling component %s", name)
 	}
 
-	errg, _ := errgroup.WithContext(context.Background())
+	errg, _ := errgroup.WithContext(ctx)
 
 	for _, ins := range instances {
 		ins := ins
 
+		// the checkpoint part of context can't be shared between goroutines
+		// since it's used to trace the stack, so we must create a new layer
+		// of checkpoint context every time put it into a new goroutine.
+		nctx := checkpoint.NewContext(ctx)
 		errg.Go(func() error {
-			err := enableInstance(getter, ins, options.OptTimeout, isEnable)
+			err := enableInstance(nctx, ins, options.OptTimeout, isEnable)
 			if err != nil {
 				return err
 			}
@@ -398,7 +404,7 @@ func EnableComponent(getter ExecutorGetter, instances []spec.Instance, options O
 
 // EnableMonitored enable/disable monitor service in a cluster
 func EnableMonitored(
-	getter ExecutorGetter, instance spec.Instance,
+	ctx context.Context, instance spec.Instance,
 	options *spec.MonitoredOptions, timeout uint64, isEnable bool,
 ) error {
 	action := "disable"
@@ -410,7 +416,7 @@ func EnableMonitored(
 		spec.ComponentNodeExporter:     options.NodeExporterPort,
 		spec.ComponentBlackboxExporter: options.BlackboxExporterPort,
 	}
-	e := getter.Get(instance.GetHost())
+	e := ctxt.GetInner(ctx).Get(instance.GetHost())
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
 		if isEnable {
 			log.Infof("Enabling component %s", comp)
@@ -424,7 +430,7 @@ func EnableMonitored(
 			Timeout: time.Second * time.Duration(timeout),
 		}
 		systemd := module.NewSystemdModule(c)
-		stdout, stderr, err := systemd.Execute(e)
+		stdout, stderr, err := systemd.Execute(ctx, e)
 
 		if len(stdout) > 0 {
 			fmt.Println(string(stdout))
@@ -442,7 +448,7 @@ func EnableMonitored(
 }
 
 // StartComponent start the instances.
-func StartComponent(getter ExecutorGetter, instances []spec.Instance, options Options, tlsCfg *tls.Config) error {
+func StartComponent(ctx context.Context, instances []spec.Instance, options Options, tlsCfg *tls.Config) error {
 	if len(instances) == 0 {
 		return nil
 	}
@@ -450,16 +456,20 @@ func StartComponent(getter ExecutorGetter, instances []spec.Instance, options Op
 	name := instances[0].ComponentName()
 	log.Infof("Starting component %s", name)
 
-	errg, _ := errgroup.WithContext(context.Background())
+	errg, _ := errgroup.WithContext(ctx)
 
 	for _, ins := range instances {
 		ins := ins
 
+		// the checkpoint part of context can't be shared between goroutines
+		// since it's used to trace the stack, so we must create a new layer
+		// of checkpoint context every time put it into a new goroutine.
+		nctx := checkpoint.NewContext(ctx)
 		errg.Go(func() error {
 			if err := ins.PrepareStart(tlsCfg); err != nil {
 				return err
 			}
-			err := startInstance(getter, ins, options.OptTimeout)
+			err := startInstance(nctx, ins, options.OptTimeout)
 			if err != nil {
 				return err
 			}
@@ -471,12 +481,12 @@ func StartComponent(getter ExecutorGetter, instances []spec.Instance, options Op
 }
 
 // StopMonitored stop BlackboxExporter and NodeExporter
-func StopMonitored(getter ExecutorGetter, instance spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
+func StopMonitored(ctx context.Context, instance spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
 	ports := map[string]int{
 		spec.ComponentNodeExporter:     options.NodeExporterPort,
 		spec.ComponentBlackboxExporter: options.BlackboxExporterPort,
 	}
-	e := getter.Get(instance.GetHost())
+	e := ctxt.GetInner(ctx).Get(instance.GetHost())
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
 		log.Infof("Stopping component %s", comp)
 
@@ -487,7 +497,7 @@ func StopMonitored(getter ExecutorGetter, instance spec.Instance, options *spec.
 			Timeout:      time.Second * time.Duration(timeout),
 		}
 		systemd := module.NewSystemdModule(c)
-		stdout, stderr, err := systemd.Execute(e)
+		stdout, stderr, err := systemd.Execute(ctx, e)
 
 		if len(stdout) > 0 {
 			fmt.Println(string(stdout))
@@ -510,7 +520,7 @@ func StopMonitored(getter ExecutorGetter, instance spec.Instance, options *spec.
 			return toFailedActionError(err, "stop", instance)
 		}
 
-		if err := spec.PortStopped(e, ports[comp], timeout); err != nil {
+		if err := spec.PortStopped(ctx, e, ports[comp], timeout); err != nil {
 			return toFailedActionError(err, "stop", instance)
 		}
 	}
@@ -518,8 +528,8 @@ func StopMonitored(getter ExecutorGetter, instance spec.Instance, options *spec.
 	return nil
 }
 
-func stopInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) error {
-	e := getter.Get(ins.GetHost())
+func stopInstance(ctx context.Context, ins spec.Instance, timeout uint64) error {
+	e := ctxt.GetInner(ctx).Get(ins.GetHost())
 	log.Infof("\tStopping instance %s", ins.GetHost())
 
 	// Stop by systemd.
@@ -530,7 +540,7 @@ func stopInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) erro
 		Timeout:      time.Second * time.Duration(timeout),
 	}
 	systemd := module.NewSystemdModule(c)
-	stdout, stderr, err := systemd.Execute(e)
+	stdout, stderr, err := systemd.Execute(ctx, e)
 
 	if len(stdout) > 0 {
 		fmt.Println(string(stdout))
@@ -561,7 +571,7 @@ func stopInstance(getter ExecutorGetter, ins spec.Instance, timeout uint64) erro
 }
 
 // StopComponent stop the instances.
-func StopComponent(getter ExecutorGetter, instances []spec.Instance, timeout uint64) error {
+func StopComponent(ctx context.Context, instances []spec.Instance, timeout uint64) error {
 	if len(instances) == 0 {
 		return nil
 	}
@@ -569,12 +579,17 @@ func StopComponent(getter ExecutorGetter, instances []spec.Instance, timeout uin
 	name := instances[0].ComponentName()
 	log.Infof("Stopping component %s", name)
 
-	errg, _ := errgroup.WithContext(context.Background())
+	errg, _ := errgroup.WithContext(ctx)
 
 	for _, ins := range instances {
 		ins := ins
+
+		// the checkpoint part of context can't be shared between goroutines
+		// since it's used to trace the stack, so we must create a new layer
+		// of checkpoint context every time put it into a new goroutine.
+		nctx := checkpoint.NewContext(ctx)
 		errg.Go(func() error {
-			err := stopInstance(getter, ins, timeout)
+			err := stopInstance(nctx, ins, timeout)
 			if err != nil {
 				return err
 			}
@@ -586,7 +601,7 @@ func StopComponent(getter ExecutorGetter, instances []spec.Instance, timeout uin
 }
 
 // PrintClusterStatus print cluster status into the io.Writer.
-func PrintClusterStatus(getter ExecutorGetter, cluster *spec.Specification) (health bool) {
+func PrintClusterStatus(ctx context.Context, cluster *spec.Specification) (health bool) {
 	health = true
 
 	for _, com := range cluster.ComponentsByStartOrder() {
@@ -595,13 +610,17 @@ func PrintClusterStatus(getter ExecutorGetter, cluster *spec.Specification) (hea
 		}
 
 		log.Infof("Checking service state of %s", com.Name())
-		errg, _ := errgroup.WithContext(context.Background())
+		errg, _ := errgroup.WithContext(ctx)
 		for _, ins := range com.Instances() {
 			ins := ins
 
+			// the checkpoint part of context can't be shared between goroutines
+			// since it's used to trace the stack, so we must create a new layer
+			// of checkpoint context every time put it into a new goroutine.
+			nctx := checkpoint.NewContext(ctx)
 			errg.Go(func() error {
-				e := getter.Get(ins.GetHost())
-				active, err := GetServiceStatus(e, ins.ServiceName())
+				e := ctxt.GetInner(nctx).Get(ins.GetHost())
+				active, err := GetServiceStatus(nctx, e, ins.ServiceName())
 				if err != nil {
 					health = false
 					log.Errorf("\t%s\t%v", ins.GetHost(), err)

@@ -14,9 +14,10 @@
 package module
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 )
 
 const (
@@ -122,8 +123,8 @@ func NewUserModule(config UserModuleConfig) *UserModule {
 
 // Execute passes the command to executor and returns its results, the executor
 // should be already initialized.
-func (mod *UserModule) Execute(exec executor.Executor) ([]byte, []byte, error) {
-	a, b, err := exec.Execute(mod.cmd, true)
+func (mod *UserModule) Execute(ctx context.Context, exec ctxt.Executor) ([]byte, []byte, error) {
+	a, b, err := exec.Execute(ctx, mod.cmd, true)
 	if err != nil {
 		switch mod.config.Action {
 		case UserActionAdd:

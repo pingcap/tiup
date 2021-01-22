@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -22,12 +23,15 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLocalDashboards(t *testing.T) {
+	ctx := ctxt.New(context.Background())
+
 	deployDir, err := ioutil.TempDir("", "tiup-*")
 	assert.Nil(t, err)
 	defer os.RemoveAll(deployDir)
@@ -53,7 +57,7 @@ func TestLocalDashboards(t *testing.T) {
 	assert.Nil(t, err)
 
 	clusterName := "tiup-test-cluster-" + uuid.New().String()
-	err = grafanaInstance.initDashboards(e, topo.Grafanas[0], meta.DirPaths{Deploy: deployDir}, clusterName)
+	err = grafanaInstance.initDashboards(ctx, e, topo.Grafanas[0], meta.DirPaths{Deploy: deployDir}, clusterName)
 	assert.Nil(t, err)
 
 	assert.FileExists(t, path.Join(deployDir, "dashboards", "tidb.json"))

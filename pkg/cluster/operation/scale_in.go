@@ -14,6 +14,7 @@
 package operator
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -69,17 +70,17 @@ func AsyncNodes(spec *spec.Specification, nodes []string, async bool) []string {
 
 // ScaleIn scales in the cluster
 func ScaleIn(
-	getter ExecutorGetter,
+	ctx context.Context,
 	cluster *spec.Specification,
 	options Options,
 	tlsCfg *tls.Config,
 ) error {
-	return ScaleInCluster(getter, cluster, options, tlsCfg)
+	return ScaleInCluster(ctx, cluster, options, tlsCfg)
 }
 
 // ScaleInCluster scales in the cluster
 func ScaleInCluster(
-	getter ExecutorGetter,
+	ctx context.Context,
 	cluster *spec.Specification,
 	options Options,
 	tlsCfg *tls.Config,
@@ -169,7 +170,7 @@ func ScaleInCluster(
 				}
 
 				instCount[instance.GetHost()]--
-				if err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
+				if err := StopAndDestroyInstance(ctx, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
 					log.Warnf("failed to stop/destroy %s: %v", compName, err)
 				}
 
@@ -242,7 +243,7 @@ func ScaleInCluster(
 
 			if !asyncOfflineComps.Exist(instance.ComponentName()) {
 				instCount[instance.GetHost()]--
-				if err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
+				if err := StopAndDestroyInstance(ctx, cluster, instance, options, instCount[instance.GetHost()] == 0); err != nil {
 					return err
 				}
 			} else {

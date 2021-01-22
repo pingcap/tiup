@@ -14,6 +14,7 @@
 package task
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
@@ -76,7 +77,7 @@ func (b *Builder) UserSSH(host string, port int, deployUser string, sshTimeout u
 }
 
 // Func append a func task.
-func (b *Builder) Func(name string, fn func(ctx *Context) error) *Builder {
+func (b *Builder) Func(name string, fn func(ctx context.Context) error) *Builder {
 	b.tasks = append(b.tasks, &Func{
 		name: name,
 		fn:   fn,

@@ -14,6 +14,7 @@
 package manager
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -21,9 +22,9 @@ import (
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 )
@@ -58,15 +59,15 @@ func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt 
 	}
 
 	t := m.sshTaskBuilder(name, topo, base.User, gOpt).
-		Func("StopCluster", func(ctx *task.Context) error {
+		Func("StopCluster", func(ctx context.Context) error {
 			return operator.Stop(ctx, topo, operator.Options{Force: destroyOpt.Force}, tlsCfg)
 		}).
-		Func("DestroyCluster", func(ctx *task.Context) error {
+		Func("DestroyCluster", func(ctx context.Context) error {
 			return operator.Destroy(ctx, topo, destroyOpt)
 		}).
 		Build()
 
-	if err := t.Execute(task.NewContext()); err != nil {
+	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -115,7 +116,7 @@ func (m *Manager) DestroyTombstone(
 
 	var nodes []string
 	b.
-		Func("FindTomestoneNodes", func(ctx *task.Context) (err error) {
+		Func("FindTomestoneNodes", func(ctx context.Context) (err error) {
 			nodes, err = operator.DestroyTombstone(ctx, cluster, true /* returnNodesOnly */, gOpt, tlsCfg)
 			if !skipConfirm {
 				err = cliutil.PromptForConfirmOrAbortError(
@@ -137,7 +138,7 @@ func (m *Manager) DestroyTombstone(
 		ParallelStep("+ Refresh instance configs", true, regenConfigTasks...).
 		Parallel(true, buildReloadPromTasks(metadata.GetTopology())...).
 		Build()
-	if err := t.Execute(task.NewContext()); err != nil {
+	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err

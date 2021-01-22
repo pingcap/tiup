@@ -14,6 +14,7 @@
 package operator
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -23,7 +24,7 @@ import (
 
 	"github.com/AstroProfundis/sysinfo"
 	"github.com/pingcap/tidb-insight/collector/insight"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -378,13 +379,14 @@ func CheckKernelParameters(opt *CheckOptions, p []byte) []*CheckResult {
 }
 
 // CheckServices checks if a service is running on the host
-func CheckServices(e executor.Executor, host, service string, disable bool) *CheckResult {
+func CheckServices(ctx context.Context, e ctxt.Executor, host, service string, disable bool) *CheckResult {
 	result := &CheckResult{
 		Name: CheckNameSysService,
 	}
 
 	// check if the service exist before checking its status, ignore when non-exist
 	stdout, _, err := e.Execute(
+		ctx,
 		fmt.Sprintf(
 			"systemctl list-unit-files --type service | grep -i %s.service | wc -l", service),
 		true)
@@ -400,7 +402,7 @@ func CheckServices(e executor.Executor, host, service string, disable bool) *Che
 		return result
 	}
 
-	active, err := GetServiceStatus(e, service+".service")
+	active, err := GetServiceStatus(ctx, e, service+".service")
 	if err != nil {
 		result.Err = err
 	}
@@ -422,7 +424,7 @@ func CheckServices(e executor.Executor, host, service string, disable bool) *Che
 }
 
 // CheckSELinux checks if SELinux is enabled on the host
-func CheckSELinux(e executor.Executor) *CheckResult {
+func CheckSELinux(ctx context.Context, e ctxt.Executor) *CheckResult {
 	result := &CheckResult{
 		Name: CheckNameSELinux,
 	}
@@ -431,7 +433,7 @@ func CheckSELinux(e executor.Executor) *CheckResult {
 		Command: "grep -E '^\\s*SELINUX=enforcing' /etc/selinux/config 2>/dev/null | wc -l",
 		Sudo:    true,
 	})
-	stdout, stderr, err := m.Execute(e)
+	stdout, stderr, err := m.Execute(ctx, e)
 	if err != nil {
 		result.Err = fmt.Errorf("%w %s", err, stderr)
 		return result
@@ -654,7 +656,7 @@ func CheckFIOResult(rr, rw, lat []byte) []*CheckResult {
 }
 
 // CheckTHP checks THP in /sys/kernel/mm/transparent_hugepage/{enabled,defrag}
-func CheckTHP(e executor.Executor) *CheckResult {
+func CheckTHP(ctx context.Context, e ctxt.Executor) *CheckResult {
 	result := &CheckResult{
 		Name: CheckNameTHP,
 	}
@@ -663,7 +665,7 @@ func CheckTHP(e executor.Executor) *CheckResult {
 		Command: "cat /sys/kernel/mm/transparent_hugepage/{enabled,defrag}",
 		Sudo:    false,
 	})
-	stdout, stderr, err := m.Execute(e)
+	stdout, stderr, err := m.Execute(ctx, e)
 	if err != nil {
 		result.Err = fmt.Errorf("%w %s", err, stderr)
 		return result

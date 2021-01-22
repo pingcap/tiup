@@ -29,6 +29,7 @@ import (
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
@@ -92,8 +93,8 @@ type (
 	}
 )
 
-var _ Executor = &EasySSHExecutor{}
-var _ Executor = &NativeSSHExecutor{}
+var _ ctxt.Executor = &EasySSHExecutor{}
+var _ ctxt.Executor = &NativeSSHExecutor{}
 
 // Initialize builds and initializes a EasySSHExecutor
 func (e *EasySSHExecutor) initialize(config SSHConfig) {
@@ -115,7 +116,7 @@ func (e *EasySSHExecutor) initialize(config SSHConfig) {
 }
 
 // Execute run the command via SSH, it's not invoking any specific shell by default.
-func (e *EasySSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
+func (e *EasySSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
 	// try to acquire root permission
 	if e.Sudo || sudo {
 		cmd = fmt.Sprintf("sudo -H bash -c \"%s\"", cmd)
@@ -179,7 +180,7 @@ func (e *EasySSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duratio
 // This function depends on `scp` (a tool from OpenSSH or other SSH implementation)
 // This function is based on easyssh.MakeConfig.Scp() but with support of copying
 // file from remote to local.
-func (e *EasySSHExecutor) Transfer(src string, dst string, download bool) error {
+func (e *EasySSHExecutor) Transfer(ctx context.Context, src string, dst string, download bool) error {
 	if !download {
 		err := e.Config.Scp(src, dst)
 		if err != nil {
@@ -233,7 +234,7 @@ func (e *NativeSSHExecutor) configArgs(args []string) []string {
 }
 
 // Execute run the command via SSH, it's not invoking any specific shell by default.
-func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
+func (e *NativeSSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, timeout ...time.Duration) ([]byte, []byte, error) {
 	if e.ConnectionTestResult != nil {
 		return nil, nil, e.ConnectionTestResult
 	}
@@ -256,7 +257,6 @@ func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 		timeout = append(timeout, executeDefaultTimeout)
 	}
 
-	ctx := context.Background()
 	if len(timeout) > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(context.Background(), timeout[0])
@@ -286,7 +286,11 @@ func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 
 	err := command.Run()
 
-	zap.L().Info("SSHCommand",
+	logfn := zap.L().Info
+	if err != nil {
+		logfn = zap.L().Error
+	}
+	logfn("SSHCommand",
 		zap.String("host", e.Config.Host),
 		zap.Int("port", e.Config.Port),
 		zap.String("cmd", cmd),
@@ -315,7 +319,7 @@ func (e *NativeSSHExecutor) Execute(cmd string, sudo bool, timeout ...time.Durat
 
 // Transfer copies files via SCP
 // This function depends on `scp` (a tool from OpenSSH or other SSH implementation)
-func (e *NativeSSHExecutor) Transfer(src string, dst string, download bool) error {
+func (e *NativeSSHExecutor) Transfer(ctx context.Context, src string, dst string, download bool) error {
 	if e.ConnectionTestResult != nil {
 		return e.ConnectionTestResult
 	}
@@ -350,7 +354,11 @@ func (e *NativeSSHExecutor) Transfer(src string, dst string, download bool) erro
 
 	err := command.Run()
 
-	zap.L().Info("SCPCommand",
+	logfn := zap.L().Info
+	if err != nil {
+		logfn = zap.L().Error
+	}
+	logfn("SCPCommand",
 		zap.String("host", e.Config.Host),
 		zap.Int("port", e.Config.Port),
 		zap.String("cmd", strings.Join(args, " ")),

@@ -14,9 +14,11 @@
 package task
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 )
 
@@ -29,8 +31,8 @@ type SystemCtl struct {
 }
 
 // Execute implements the Task interface
-func (c *SystemCtl) Execute(ctx *Context) error {
-	e, ok := ctx.GetExecutor(c.host)
+func (c *SystemCtl) Execute(ctx context.Context) error {
+	e, ok := ctxt.GetInner(ctx).GetExecutor(c.host)
 	if !ok {
 		return ErrNoExecutor
 	}
@@ -41,8 +43,8 @@ func (c *SystemCtl) Execute(ctx *Context) error {
 		ReloadDaemon: c.daemonReload,
 	}
 	systemd := module.NewSystemdModule(cfg)
-	stdout, stderr, err := systemd.Execute(e)
-	ctx.SetOutputs(c.host, stdout, stderr)
+	stdout, stderr, err := systemd.Execute(ctx, e)
+	ctxt.GetInner(ctx).SetOutputs(c.host, stdout, stderr)
 	if err != nil {
 		return errors.Annotatef(err, "stdout: %s, stderr:%s", string(stdout), string(stderr))
 	}
@@ -51,7 +53,7 @@ func (c *SystemCtl) Execute(ctx *Context) error {
 }
 
 // Rollback implements the Task interface
-func (c *SystemCtl) Rollback(ctx *Context) error {
+func (c *SystemCtl) Rollback(ctx context.Context) error {
 	return ErrUnsupportedRollback
 }
 

@@ -15,6 +15,7 @@ package operator
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
@@ -26,6 +27,7 @@ import (
 	"github.com/pingcap/errors"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -35,7 +37,7 @@ import (
 
 // Destroy the cluster.
 func Destroy(
-	getter ExecutorGetter,
+	ctx context.Context,
 	cluster spec.Topology,
 	options Options,
 ) error {
@@ -48,7 +50,7 @@ func Destroy(
 
 	for _, com := range coms {
 		insts := com.Instances()
-		err := DestroyComponent(getter, insts, cluster, options)
+		err := DestroyComponent(ctx, insts, cluster, options)
 		if err != nil && !options.Force {
 			return errors.Annotatef(err, "failed to destroy %s", com.Name())
 		}
@@ -56,7 +58,7 @@ func Destroy(
 			instCount[inst.GetHost()]--
 			if instCount[inst.GetHost()] == 0 {
 				if cluster.GetMonitoredOptions() != nil {
-					if err := DestroyMonitored(getter, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
+					if err := DestroyMonitored(ctx, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
 						return err
 					}
 				}
@@ -68,14 +70,14 @@ func Destroy(
 
 	// Delete all global deploy directory
 	for host := range instCount {
-		if err := DeleteGlobalDirs(getter, host, gOpts); err != nil {
+		if err := DeleteGlobalDirs(ctx, host, gOpts); err != nil {
 			return nil
 		}
 	}
 
 	// after all things done, try to remove SSH public key
 	for host := range instCount {
-		if err := DeletePublicKey(getter, host); err != nil {
+		if err := DeletePublicKey(ctx, host); err != nil {
 			return nil
 		}
 	}
@@ -86,18 +88,18 @@ func Destroy(
 // StopAndDestroyInstance stop and destroy the instance,
 // if this instance is the host's last one, and the host has monitor deployed,
 // we need to destroy the monitor, either
-func StopAndDestroyInstance(getter ExecutorGetter, cluster spec.Topology, instance spec.Instance, options Options, destroyNode bool) error {
+func StopAndDestroyInstance(ctx context.Context, cluster spec.Topology, instance spec.Instance, options Options, destroyNode bool) error {
 	ignoreErr := options.Force
 	compName := instance.ComponentName()
 
 	// just try to stop and destroy
-	if err := StopComponent(getter, []spec.Instance{instance}, options.OptTimeout); err != nil {
+	if err := StopComponent(ctx, []spec.Instance{instance}, options.OptTimeout); err != nil {
 		if !ignoreErr {
 			return errors.Annotatef(err, "failed to stop %s", compName)
 		}
 		log.Warnf("failed to stop %s: %v", compName, err)
 	}
-	if err := DestroyComponent(getter, []spec.Instance{instance}, cluster, options); err != nil {
+	if err := DestroyComponent(ctx, []spec.Instance{instance}, cluster, options); err != nil {
 		if !ignoreErr {
 			return errors.Annotatef(err, "failed to destroy %s", compName)
 		}
@@ -109,13 +111,13 @@ func StopAndDestroyInstance(getter ExecutorGetter, cluster spec.Topology, instan
 		monitoredOptions := cluster.GetMonitoredOptions()
 
 		if monitoredOptions != nil {
-			if err := StopMonitored(getter, instance, monitoredOptions, options.OptTimeout); err != nil {
+			if err := StopMonitored(ctx, instance, monitoredOptions, options.OptTimeout); err != nil {
 				if !ignoreErr {
 					return errors.Annotatef(err, "failed to stop monitor")
 				}
 				log.Warnf("failed to stop %s: %v", "monitor", err)
 			}
-			if err := DestroyMonitored(getter, instance, monitoredOptions, options.OptTimeout); err != nil {
+			if err := DestroyMonitored(ctx, instance, monitoredOptions, options.OptTimeout); err != nil {
 				if !ignoreErr {
 					return errors.Annotatef(err, "failed to destroy monitor")
 				}
@@ -123,7 +125,7 @@ func StopAndDestroyInstance(getter ExecutorGetter, cluster spec.Topology, instan
 			}
 		}
 
-		if err := DeletePublicKey(getter, instance.GetHost()); err != nil {
+		if err := DeletePublicKey(ctx, instance.GetHost()); err != nil {
 			if !ignoreErr {
 				return errors.Annotatef(err, "failed to delete public key")
 			}
@@ -134,12 +136,12 @@ func StopAndDestroyInstance(getter ExecutorGetter, cluster spec.Topology, instan
 }
 
 // DeleteGlobalDirs deletes all global directories if they are empty
-func DeleteGlobalDirs(getter ExecutorGetter, host string, options *spec.GlobalOptions) error {
+func DeleteGlobalDirs(ctx context.Context, host string, options *spec.GlobalOptions) error {
 	if options == nil {
 		return nil
 	}
 
-	e := getter.Get(host)
+	e := ctxt.GetInner(ctx).Get(host)
 	log.Infof("Clean global directories %s", host)
 	for _, dir := range []string{options.LogDir, options.DeployDir, options.DataDir} {
 		if dir == "" {
@@ -155,7 +157,7 @@ func DeleteGlobalDirs(getter ExecutorGetter, host string, options *spec.GlobalOp
 			UseShell: false,
 		}
 		shell := module.NewShellModule(c)
-		stdout, stderr, err := shell.Execute(e)
+		stdout, stderr, err := shell.Execute(ctx, e)
 
 		if len(stdout) > 0 {
 			fmt.Println(string(stdout))
@@ -174,10 +176,10 @@ func DeleteGlobalDirs(getter ExecutorGetter, host string, options *spec.GlobalOp
 }
 
 // DeletePublicKey deletes the SSH public key from host
-func DeletePublicKey(getter ExecutorGetter, host string) error {
-	e := getter.Get(host)
+func DeletePublicKey(ctx context.Context, host string) error {
+	e := ctxt.GetInner(ctx).Get(host)
 	log.Infof("Delete public key %s", host)
-	_, pubKeyPath := getter.GetSSHKeySet()
+	_, pubKeyPath := ctxt.GetInner(ctx).GetSSHKeySet()
 	publicKey, err := ioutil.ReadFile(pubKeyPath)
 	if err != nil {
 		return perrs.Trace(err)
@@ -185,7 +187,7 @@ func DeletePublicKey(getter ExecutorGetter, host string) error {
 
 	pubKey := string(bytes.TrimSpace(publicKey))
 	pubKey = strings.ReplaceAll(pubKey, "/", "\\/")
-	pubKeysFile := executor.FindSSHAuthorizedKeysFile(e)
+	pubKeysFile := executor.FindSSHAuthorizedKeysFile(ctx, e)
 
 	// delete the public key with Linux `sed` toolkit
 	c := module.ShellModuleConfig{
@@ -193,7 +195,7 @@ func DeletePublicKey(getter ExecutorGetter, host string) error {
 		UseShell: false,
 	}
 	shell := module.NewShellModule(c)
-	stdout, stderr, err := shell.Execute(e)
+	stdout, stderr, err := shell.Execute(ctx, e)
 
 	if len(stdout) > 0 {
 		fmt.Println(string(stdout))
@@ -211,8 +213,8 @@ func DeletePublicKey(getter ExecutorGetter, host string) error {
 }
 
 // DestroyMonitored destroy the monitored service.
-func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
-	e := getter.Get(inst.GetHost())
+func DestroyMonitored(ctx context.Context, inst spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
+	e := ctxt.GetInner(ctx).Get(inst.GetHost())
 	log.Infof("Destroying monitored %s", inst.GetHost())
 
 	log.Infof("\tDestroying instance %s", inst.GetHost())
@@ -242,7 +244,7 @@ func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.M
 		UseShell: false,
 	}
 	shell := module.NewShellModule(c)
-	stdout, stderr, err := shell.Execute(e)
+	stdout, stderr, err := shell.Execute(ctx, e)
 
 	if len(stdout) > 0 {
 		fmt.Println(string(stdout))
@@ -255,12 +257,12 @@ func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.M
 		return errors.Annotatef(err, "failed to destroy monitored: %s", inst.GetHost())
 	}
 
-	if err := spec.PortStopped(e, options.NodeExporterPort, timeout); err != nil {
+	if err := spec.PortStopped(ctx, e, options.NodeExporterPort, timeout); err != nil {
 		str := fmt.Sprintf("%s failed to destroy node exportoer: %s", inst.GetHost(), err)
 		log.Errorf(str)
 		return errors.Annotatef(err, str)
 	}
-	if err := spec.PortStopped(e, options.BlackboxExporterPort, timeout); err != nil {
+	if err := spec.PortStopped(ctx, e, options.BlackboxExporterPort, timeout); err != nil {
 		str := fmt.Sprintf("%s failed to destroy blackbox exportoer: %s", inst.GetHost(), err)
 		log.Errorf(str)
 		return errors.Annotatef(err, str)
@@ -272,9 +274,9 @@ func DestroyMonitored(getter ExecutorGetter, inst spec.Instance, options *spec.M
 }
 
 // CleanupComponent cleanup the instances
-func CleanupComponent(getter ExecutorGetter, delFileMaps map[string]set.StringSet) error {
+func CleanupComponent(ctx context.Context, delFileMaps map[string]set.StringSet) error {
 	for host, delFiles := range delFileMaps {
-		e := getter.Get(host)
+		e := ctxt.GetInner(ctx).Get(host)
 		log.Infof("Cleanup instance %s", host)
 		log.Debugf("Deleting paths on %s: %s", host, strings.Join(delFiles.Slice(), " "))
 		c := module.ShellModuleConfig{
@@ -284,7 +286,7 @@ func CleanupComponent(getter ExecutorGetter, delFileMaps map[string]set.StringSe
 			UseShell: true,
 		}
 		shell := module.NewShellModule(c)
-		stdout, stderr, err := shell.Execute(e)
+		stdout, stderr, err := shell.Execute(ctx, e)
 
 		if len(stdout) > 0 {
 			fmt.Println(string(stdout))
@@ -304,7 +306,7 @@ func CleanupComponent(getter ExecutorGetter, delFileMaps map[string]set.StringSe
 }
 
 // DestroyComponent destroy the instances.
-func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls spec.Topology, options Options) error {
+func DestroyComponent(ctx context.Context, instances []spec.Instance, cls spec.Topology, options Options) error {
 	if len(instances) == 0 {
 		return nil
 	}
@@ -320,7 +322,7 @@ func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 		dataRetained := retainDataRoles.Exist(ins.ComponentName()) ||
 			retainDataNodes.Exist(ins.ID()) || retainDataNodes.Exist(ins.GetHost())
 
-		e := getter.Get(ins.GetHost())
+		e := ctxt.GetInner(ctx).Get(ins.GetHost())
 		log.Infof("Destroying instance %s", ins.GetHost())
 
 		var dataDirs []string
@@ -400,7 +402,7 @@ func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 			UseShell: false,
 		}
 		shell := module.NewShellModule(c)
-		stdout, stderr, err := shell.Execute(e)
+		stdout, stderr, err := shell.Execute(ctx, e)
 
 		if len(stdout) > 0 {
 			fmt.Println(string(stdout))
@@ -423,19 +425,19 @@ func DestroyComponent(getter ExecutorGetter, instances []spec.Instance, cls spec
 // DestroyTombstone remove the tombstone node in spec and destroy them.
 // If returNodesOnly is true, it will only return the node id that can be destroy.
 func DestroyTombstone(
-	getter ExecutorGetter,
+	ctx context.Context,
 	cluster *spec.Specification,
 	returNodesOnly bool,
 	options Options,
 	tlsCfg *tls.Config,
 ) (nodes []string, err error) {
-	return DestroyClusterTombstone(getter, cluster, returNodesOnly, options, tlsCfg)
+	return DestroyClusterTombstone(ctx, cluster, returNodesOnly, options, tlsCfg)
 }
 
 // DestroyClusterTombstone remove the tombstone node in spec and destroy them.
 // If returNodesOnly is true, it will only return the node id that can be destroy.
 func DestroyClusterTombstone(
-	getter ExecutorGetter,
+	ctx context.Context,
 	cluster *spec.Specification,
 	returNodesOnly bool,
 	options Options,
@@ -469,7 +471,7 @@ func DestroyClusterTombstone(
 
 		for _, instance := range instances {
 			instCount[instance.GetHost()]--
-			err := StopAndDestroyInstance(getter, cluster, instance, options, instCount[instance.GetHost()] == 0)
+			err := StopAndDestroyInstance(ctx, cluster, instance, options, instCount[instance.GetHost()] == 0)
 			if err != nil {
 				return err
 			}

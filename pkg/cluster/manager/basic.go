@@ -14,10 +14,12 @@
 package manager
 
 import (
+	"context"
 	"errors"
 
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -44,18 +46,18 @@ func (m *Manager) EnableCluster(name string, options operator.Options, isEnable 
 	b := m.sshTaskBuilder(name, topo, base.User, options)
 
 	if isEnable {
-		b = b.Func("EnableCluster", func(ctx *task.Context) error {
+		b = b.Func("EnableCluster", func(ctx context.Context) error {
 			return operator.Enable(ctx, topo, options, isEnable)
 		})
 	} else {
-		b = b.Func("DisableCluster", func(ctx *task.Context) error {
+		b = b.Func("DisableCluster", func(ctx context.Context) error {
 			return operator.Enable(ctx, topo, options, isEnable)
 		})
 	}
 
 	t := b.Build()
 
-	if err := t.Execute(task.NewContext()); err != nil {
+	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -90,7 +92,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 	}
 
 	b := m.sshTaskBuilder(name, topo, base.User, options).
-		Func("StartCluster", func(ctx *task.Context) error {
+		Func("StartCluster", func(ctx context.Context) error {
 			return operator.Start(ctx, topo, options, tlsCfg)
 		})
 
@@ -100,7 +102,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 
 	t := b.Build()
 
-	if err := t.Execute(task.NewContext()); err != nil {
+	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -128,12 +130,12 @@ func (m *Manager) StopCluster(name string, options operator.Options) error {
 	}
 
 	t := m.sshTaskBuilder(name, topo, base.User, options).
-		Func("StopCluster", func(ctx *task.Context) error {
+		Func("StopCluster", func(ctx context.Context) error {
 			return operator.Stop(ctx, topo, options, tlsCfg)
 		}).
 		Build()
 
-	if err := t.Execute(task.NewContext()); err != nil {
+	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -161,12 +163,12 @@ func (m *Manager) RestartCluster(name string, options operator.Options) error {
 	}
 
 	t := m.sshTaskBuilder(name, topo, base.User, options).
-		Func("RestartCluster", func(ctx *task.Context) error {
+		Func("RestartCluster", func(ctx context.Context) error {
 			return operator.Restart(ctx, topo, options, tlsCfg)
 		}).
 		Build()
 
-	if err := t.Execute(task.NewContext()); err != nil {
+	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err

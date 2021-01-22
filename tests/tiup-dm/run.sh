@@ -32,6 +32,7 @@ done
 PATH=$PATH:/tiup-cluster/bin
 export TIUP_CLUSTER_PROGRESS_REFRESH_RATE=10s
 export TIUP_CLUSTER_EXECUTE_DEFAULT_TIMEOUT=300s
+export DEBUG_CHECKPOINT_GOROUTINES=1
 
 export version=${version-nightly}
 
