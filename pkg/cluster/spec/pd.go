@@ -289,6 +289,26 @@ func (i *PDInstance) ScaleConfig(
 
 var _ RollingUpdateInstance = &PDInstance{}
 
+// IsLeader checks if the instance is PD leader
+func (i *PDInstance) IsLeader(topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) (bool, error) {
+	tidbTopo, ok := topo.(*Specification)
+	if !ok {
+		panic("topo should be type of tidb topology")
+	}
+	pdClient := api.NewPDClient(tidbTopo.GetPDList(), time.Second*5, tlsCfg)
+
+	return i.isLeader(pdClient)
+}
+
+func (i *PDInstance) isLeader(pdClient *api.PDClient) (bool, error) {
+	leader, err := pdClient.GetLeader()
+	if err != nil {
+		return false, errors.Annotatef(err, "failed to get PD leader %s", i.GetHost())
+	}
+
+	return leader.Name == i.Name, nil
+}
+
 // PreRestart implements RollingUpdateInstance interface.
 func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tls.Config) error {
 	timeoutOpt := &utils.RetryOption{
@@ -300,15 +320,13 @@ func (i *PDInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *tl
 	if !ok {
 		panic("topo should be type of tidb topology")
 	}
+	pdClient := api.NewPDClient(tidbTopo.GetPDList(), time.Second*5, tlsCfg)
 
-	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
-
-	leader, err := pdClient.GetLeader()
+	isLeader, err := i.isLeader(pdClient)
 	if err != nil {
-		return errors.Annotatef(err, "failed to get PD leader %s", i.GetHost())
+		return err
 	}
-
-	if len(tidbTopo.PDServers) > 1 && leader.Name == i.Name {
+	if len(tidbTopo.PDServers) > 1 && isLeader {
 		if err := pdClient.EvictPDLeader(timeoutOpt); err != nil {
 			return errors.Annotatef(err, "failed to evict PD leader %s", i.GetHost())
 		}
