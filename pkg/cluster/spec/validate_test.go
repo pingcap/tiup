@@ -995,39 +995,140 @@ global:
 
 func (s *metaSuiteTopo) TestLogDirUnderDataDir(c *C) {
 	topo := Specification{}
+	clsList := make(map[string]Metadata)
+
 	err := yaml.Unmarshal([]byte(`
 global:
   user: "test1"
   ssh_port: 220
   deploy_dir: deploy
   data_dir: data
+tikv_servers:
+  - host: n1
+    port: 32160
+    status_port: 32180
+    log_dir: "/home/tidb6wu/tidb1-data/tikv-32160/log"
+    data_dir: "/home/tidb6wu/tidb1-data/tikv-32160"
+`), &topo)
+	c.Assert(err, IsNil)
+	err = CheckClusterDirConflict(clsList, "topo", &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "spec.deploy.dir_overlap: Deploy directory overlaps to another instance")
+	suggestion, ok := errorx.ExtractProperty(err, errutil.ErrPropSuggestion)
+	c.Assert(ok, IsTrue)
+	c.Assert(suggestion, Equals, `The directory you specified in the topology file is:
+  Directory: data directory /home/tidb6wu/tidb1-data/tikv-32160
+  Component: tikv n1
+
+It overlaps to another instance:
+  Other Directory: log directory /home/tidb6wu/tidb1-data/tikv-32160/log
+  Other Component: tikv n1
+
+Please modify the topology file and try again.`)
+
+	goodTopos := []string{
+		`
+tikv_servers:
+  - host: n1
+    log_dir: 'tikv-data/log'
+  - host: n2
+    data_dir: 'tikv-data'
+`,
+		`
 tikv_servers:
   - host: n1
     port: 32160
     status_port: 32180
     log_dir: "/home/tidb6wu/tidb1-data/tikv-32160-log"
     data_dir: "/home/tidb6wu/tidb1-data/tikv-32160"
-`), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "directory conflict for '/home/tidb/deploy' between 'tidb_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'")
-}
+`,
+	}
+	for _, s := range goodTopos {
+		err = yaml.Unmarshal([]byte(s), &topo)
+		c.Assert(err, IsNil)
+		err = CheckClusterDirConflict(clsList, "topo", &topo)
+		c.Assert(err, IsNil)
+	}
 
-func (s *metaSuiteTopo) TestDataDirUnderlogDir(c *C) {
-	topo := Specification{}
-	err := yaml.Unmarshal([]byte(`
+	overlapTopos := []string{
+		`
+tikv_servers:
+  - host: n1
+    log_dir: 'tikv-data/log'
+    data_dir: 'tikv-data'
+`,
+		`
+tikv_servers:
+  - host: n1
+    log_dir: '/home/tidb6wu/tidb1-data/tikv-32160/log'
+    data_dir: '/home/tidb6wu/tidb1-data/tikv-32160'
+`,
+		`
+tikv_servers:
+  - host: n1
+    log_dir: '/home/tidb6wu/tidb1-data/tikv-32160/log'
+    data_dir: '/home/tidb6wu/tidb1-data/tikv-32160/log/data'
+`,
+		`
+tikv_servers:
+  - host: n1
+    log_dir: 'tikv-log'
+    data_dir: 'tikv-log/data'
+`,
+		`
+tikv_servers:
+  - host: n1
+    data_dir: '/home/tidb6wu/tidb1-data/tikv-32160/log'
+
+tidb_servers:
+  - host: n1
+    log_dir: '/home/tidb6wu/tidb1-data/tikv-32160/log/data'
+`,
+		`
+tikv_servers:
+  - host: n1
+    log_dir: '/home/tidb6wu/tidb1-data/tikv-32160/log'
+
+tidb_servers:
+  - host: n1
+    log_dir: '/home/tidb6wu/tidb1-data/tikv-32160/log/log'
+`,
+		`
+tikv_servers:
+  - host: n1
+    data_dir: '/home/tidb6wu/tidb1-data/tikv-32160/data'
+
+pd_servers:
+  - host: n1
+    data_dir: '/home/tidb6wu/tidb1-data/tikv-32160'
+`,
+		`
 global:
   user: "test1"
-  ssh_port: 220
   deploy_dir: deploy
   data_dir: data
 tikv_servers:
   - host: n1
-    port: 32160
-    status_port: 32180
-    data_dir: "/home/tidb6wu/tidb1-data/logs/tikv-32160-data"
-    log_dir: "/home/tidb6wu/tidb1-data/logs"
-`), &topo)
-	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "directory conflict for '/home/tidb/deploy' between 'tidb_servers:172.16.4.190.deploy_dir' and 'pd_servers:172.16.4.190.deploy_dir'")
+    log_dir: "/home/test1/deploy/tikv-20160/ddd/log"
+    data_dir: "ddd"
+`,
+		`
+global:
+  user: "test1"
+  deploy_dir: deploy
+  data_dir: data
+tikv_servers:
+  - host: n1
+    log_dir: "log"
+    data_dir: "/home/test1/deploy/tikv-20160/log/data"
+`,
+	}
 
+	for _, s := range overlapTopos {
+		err = yaml.Unmarshal([]byte(s), &topo)
+		c.Assert(err, IsNil)
+		err = CheckClusterDirConflict(clsList, "topo", &topo)
+		c.Assert(err, NotNil)
+		c.Assert(err.Error(), Equals, "spec.deploy.dir_overlap: Deploy directory overlaps to another instance")
+	}
 }
