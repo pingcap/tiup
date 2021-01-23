@@ -23,6 +23,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/otiai10/copy"
 	"github.com/pingcap/errors"
@@ -68,6 +69,20 @@ func IsExecBinary(path string) bool {
 		return false
 	}
 	return !info.IsDir() && info.Mode()&0111 == 0111
+}
+
+// IsSubDir returns if sub is a sub directory of parent
+func IsSubDir(parent, sub string) bool {
+	up := ".." + string(os.PathSeparator)
+
+	rel, err := filepath.Rel(parent, sub)
+	if err != nil {
+		return false
+	}
+	if !strings.HasPrefix(rel, up) && rel != ".." {
+		return true
+	}
+	return false
 }
 
 // Untar decompresses the tarball
