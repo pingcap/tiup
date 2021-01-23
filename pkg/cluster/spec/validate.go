@@ -64,6 +64,7 @@ func fixDir(topo Topology) func(string) string {
 	}
 }
 
+// DirAccessor stands for a directory accessor for an instance
 type DirAccessor struct {
 	dirKind  string
 	accessor func(Instance, Topology) string
@@ -102,6 +103,7 @@ func dirAccessors() ([]DirAccessor, []DirAccessor) {
 	return instanceDirAccessor, hostDirAccessor
 }
 
+// DirEntry stands for a directory with attributes and instance
 type DirEntry struct {
 	clusterName string
 	dirKind     string
