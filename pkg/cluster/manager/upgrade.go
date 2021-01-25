@@ -34,7 +34,7 @@ import (
 )
 
 // Upgrade the cluster.
-func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Options, skipConfirm bool) error {
+func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Options, skipConfirm, offline bool) error {
 	metadata, err := m.meta(name)
 	if err != nil {
 		return err
@@ -167,6 +167,9 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 		Parallel(false, downloadCompTasks...).
 		Parallel(opt.Force, copyCompTasks...).
 		Func("UpgradeCluster", func(ctx context.Context) error {
+			if offline {
+				return nil
+			}
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		}).
 		Build()

@@ -20,7 +20,8 @@ import (
 
 func newPatchCmd() *cobra.Command {
 	var (
-		overwrite bool
+		overwrite   bool
+		offlineMode bool
 	)
 	cmd := &cobra.Command{
 		Use:   "patch <cluster-name> <package-path>",
@@ -40,7 +41,7 @@ func newPatchCmd() *cobra.Command {
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			return cm.Patch(clusterName, args[1], gOpt, overwrite)
+			return cm.Patch(clusterName, args[1], gOpt, overwrite, offlineMode)
 		},
 	}
 
@@ -48,5 +49,6 @@ func newPatchCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Specify the nodes")
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Specify the roles")
 	cmd.Flags().Uint64Var(&gOpt.APITimeout, "transfer-timeout", 300, "Timeout in seconds when transferring PD and TiKV store leaders")
+	cmd.Flags().BoolVarP(&offlineMode, "offline", "", false, "Patch a stopped cluster")
 	return cmd
 }
