@@ -20,6 +20,7 @@ import (
 	"path"
 
 	"github.com/joomcode/errorx"
+	"github.com/pingcap/errors"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -116,8 +117,18 @@ func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, n
 		return err
 	}
 
-	if exists := utils.IsExist(path.Join(cacheDir, entry)); !exists {
-		return fmt.Errorf("entry %s not found in package %s", entry, packagePath)
+	fi, err := os.Stat(path.Join(cacheDir, entry))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return errors.Errorf("entry %s not found in package %s", entry, packagePath)
+		}
+		return errors.AddStack(err)
+	}
+	if !fi.Mode().IsRegular() {
+		return errors.Errorf("entry %s in package %s is not a regular file", entry, packagePath)
+	}
+	if fi.Mode()&0500 != 0500 {
+		return errors.Errorf("entry %s in package %s is not executable", entry, packagePath)
 	}
 
 	return nil

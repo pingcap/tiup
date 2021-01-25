@@ -66,6 +66,16 @@ function cmd_subtest() {
     tiup-cluster $client --yes patch $name ~/.tiup/storage/cluster/packages/tidb-v$version-linux-amd64.tar.gz -R tidb --overwrite
     # overwrite with the same tarball twice
     tiup-cluster $client --yes patch $name ~/.tiup/storage/cluster/packages/tidb-v$version-linux-amd64.tar.gz -R tidb --overwrite
+    # test patch with a non-executable entry
+    rm -rf tidb-server
+    touch tidb-server # this is a non-executable regular file
+    tar -czf tidb-non-executable.tar.gz tidb-server
+    ! tiup-cluster $client --yes patch $name ./tidb-non-executable.tar.gz -R tidb
+    # test patch with a dir entry
+    rm -rf tidb-server
+    mkdir tidb-server
+    tar -czf tidb-dir-entry.tar.gz tidb-server
+    ! tiup-cluster $client --yes patch $name ./tidb-dir-entry.tar.gz -R tidb
 
     tiup-cluster $client --yes stop $name
 
