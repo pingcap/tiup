@@ -253,6 +253,17 @@ func (i *MonitorInstance) InitConfig(
 		}
 	}
 
+	if spec.RuleDir != "" {
+		filter := func(name string) bool { return strings.HasSuffix(name, ".rules.yml") }
+		err := i.IteratorLocalConfigDir(ctx, spec.RuleDir, filter, func(name string) error {
+			cfig.AddLocalRule(name)
+			return nil
+		})
+		if err != nil {
+			return errors.Annotate(err, "add local rule")
+		}
+	}
+
 	if err := i.installRules(ctx, e, paths.Deploy, clusterVersion); err != nil {
 		return errors.Annotate(err, "install rules")
 	}

@@ -49,6 +49,8 @@ type PrometheusConfig struct {
 
 	DMMasterAddrs []string
 	DMWorkerAddrs []string
+
+	LocalRules []string
 }
 
 // NewPrometheusConfig returns a PrometheusConfig
@@ -182,6 +184,12 @@ func (c *PrometheusConfig) AddDMMaster(ip string, port uint64) *PrometheusConfig
 // AddDMWorker add an dm-worker address
 func (c *PrometheusConfig) AddDMWorker(ip string, port uint64) *PrometheusConfig {
 	c.DMWorkerAddrs = append(c.DMWorkerAddrs, fmt.Sprintf("%s:%d", ip, port))
+	return c
+}
+
+// AddLocalRule add a local rule
+func (c *PrometheusConfig) AddLocalRule(rule string) *PrometheusConfig {
+	c.LocalRules = append(c.LocalRules, rule)
 	return c
 }
 
