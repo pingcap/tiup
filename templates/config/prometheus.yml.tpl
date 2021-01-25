@@ -14,6 +14,9 @@ rule_files:
   - 'blacker.rules.yml'
   - 'bypass.rules.yml'
 {{- end}}
+{{- range .LocalRules}}
+  - '{{.}}'
+{{- end}}
 {{- if .PDAddrs}}
   - 'pd.rules.yml'
 {{- end}}
@@ -48,11 +51,11 @@ rule_files:
 
 {{- if .AlertmanagerAddrs}}
 alerting:
- alertmanagers:
- - static_configs:
-   - targets:
+  alertmanagers:
+  - static_configs:
+    - targets:
 {{- range .AlertmanagerAddrs}}
-     - '{{.}}'
+      - '{{.}}'
 {{- end}}
 {{- end}}
 
