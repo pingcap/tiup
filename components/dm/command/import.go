@@ -117,7 +117,7 @@ func newImportCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&ansibleDir, "dir", "d", "./", "The path to DM-Ansible directory")
 	cmd.Flags().StringVar(&inventoryFileName, "inventory", cansible.AnsibleInventoryFile, "The name of inventory file")
 	cmd.Flags().StringVarP(&rename, "rename", "r", "", "Rename the imported cluster to `NAME`")
-	cmd.Flags().StringVarP(&clusterVersion, "cluster-version", "v", "", "cluster version of DM to deploy")
+	cmd.Flags().StringVarP(&clusterVersion, "cluster-version", "v", "", "cluster version of DM to deploy (required)")
 
 	err := cmd.MarkFlagRequired("cluster-version")
 	if err != nil { // if no this flag
