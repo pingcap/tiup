@@ -191,19 +191,29 @@ func (i *BaseInstance) TransferLocalConfigFile(ctx context.Context, e ctxt.Execu
 // TransferLocalConfigDir scp local config directory to remote
 // Precondition: the user on remote have right to access & mkdir of dest files
 func (i *BaseInstance) TransferLocalConfigDir(ctx context.Context, e ctxt.Executor, local, remote string, filter func(string) bool) error {
+	return i.IteratorLocalConfigDir(ctx, local, filter, func(fname string) error {
+		localPath := path.Join(local, fname)
+		remotePath := path.Join(remote, fname)
+		if err := i.TransferLocalConfigFile(ctx, e, localPath, remotePath); err != nil {
+			return errors.Annotatef(err, "transfer local config (%s -> %s) failed", localPath, remotePath)
+		}
+		return nil
+	})
+}
+
+// IteratorLocalConfigDir iterators the local dir with filter, then invoke f for each found fileName
+func (i *BaseInstance) IteratorLocalConfigDir(ctx context.Context, local string, filter func(string) bool, f func(string) error) error {
 	files, err := ioutil.ReadDir(local)
 	if err != nil {
 		return errors.Annotatef(err, "read local directory %s failed", local)
 	}
 
-	for _, f := range files {
-		if filter != nil && !filter(f.Name()) {
+	for _, file := range files {
+		if filter != nil && !filter(file.Name()) {
 			continue
 		}
-		localPath := path.Join(local, f.Name())
-		remotePath := path.Join(remote, f.Name())
-		if err := i.TransferLocalConfigFile(ctx, e, localPath, remotePath); err != nil {
-			return errors.Annotatef(err, "transfer local config (%s -> %s) failed", localPath, remotePath)
+		if err := f(file.Name()); err != nil {
+			return err
 		}
 	}
 
