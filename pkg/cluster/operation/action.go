@@ -37,12 +37,16 @@ func Enable(
 	options Options,
 	isEnable bool,
 ) error {
-	uniqueHosts := set.NewStringSet()
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := cluster.ComponentsByStartOrder()
 	components = FilterComponent(components, roleFilter)
 	monitoredOptions := cluster.GetMonitoredOptions()
+
+	instCount := map[string]int{}
+	cluster.IterInstance(func(inst spec.Instance) {
+		instCount[inst.GetHost()]++
+	})
 
 	for _, comp := range components {
 		insts := FilterInstance(comp.Instances(), nodeFilter)
@@ -54,8 +58,8 @@ func Enable(
 			continue
 		}
 		for _, inst := range insts {
-			if !uniqueHosts.Exist(inst.GetHost()) {
-				uniqueHosts.Insert(inst.GetHost())
+			instCount[inst.GetHost()]--
+			if instCount[inst.GetHost()] == 0 {
 				if err := EnableMonitored(ctx, inst, monitoredOptions, options.OptTimeout, isEnable); err != nil {
 					return err
 				}
