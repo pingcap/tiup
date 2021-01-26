@@ -497,6 +497,13 @@ func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, r
 	flt := flatPartitions(insightInfo.Partitions)
 	parts := sortPartitions(flt)
 
+	// check if multiple instances are using the same partition as data storeage
+	type storePartitionInfo struct {
+		comp string
+		path string
+	}
+	uniqueStores := make(map[string][]storePartitionInfo) // host+partition -> info
+
 	topo.IterInstance(func(inst spec.Instance) {
 		if inst.GetHost() != host {
 			return
@@ -509,6 +516,17 @@ func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, r
 			blk := getDisk(parts, dataDir)
 			if blk == nil {
 				return
+			}
+
+			// only check for TiKV and TiFlash, other components are not that I/O sensitive
+			switch inst.ComponentName() {
+			case spec.ComponentTiKV,
+				spec.ComponentTiFlash:
+				usKey := fmt.Sprintf("%s:%s", host, blk.Mount.MountPoint)
+				uniqueStores[usKey] = append(uniqueStores[usKey], storePartitionInfo{
+					comp: inst.ComponentName(),
+					path: dataDir,
+				})
 			}
 
 			switch blk.Mount.FSType {
@@ -537,6 +555,25 @@ func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, r
 			}
 		}
 	})
+
+	for key, parts := range uniqueStores {
+		if len(parts) > 1 {
+			pathList := make([]string, 0)
+			for _, p := range parts {
+				pathList = append(pathList,
+					fmt.Sprintf("%s:%s", p.comp, p.path),
+				)
+			}
+			results = append(results, &CheckResult{
+				Name: CheckNameDisks,
+				Err: fmt.Errorf(
+					"multiple components %s are using the same partition %s as data dir",
+					strings.Join(pathList, ","),
+					key,
+				),
+			})
+		}
+	}
 
 	return results
 }
