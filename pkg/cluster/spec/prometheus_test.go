@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -21,6 +22,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/stretchr/testify/assert"
@@ -58,7 +60,8 @@ func TestLocalRuleDirs(t *testing.T) {
 	e, err := executor.New(executor.SSHTypeNone, false, executor.SSHConfig{Host: "127.0.0.1", User: user.Username})
 	assert.Nil(t, err)
 
-	err = promInstance.initRules(e, promInstance.InstanceSpec.(PrometheusSpec), meta.DirPaths{Deploy: deployDir})
+	ctx := checkpoint.NewContext(context.Background())
+	err = promInstance.initRules(ctx, e, promInstance.InstanceSpec.(PrometheusSpec), meta.DirPaths{Deploy: deployDir})
 	assert.Nil(t, err)
 
 	assert.FileExists(t, path.Join(deployDir, "conf", "dummy.rules.yml"))

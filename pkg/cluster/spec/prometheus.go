@@ -326,12 +326,6 @@ func (i *MonitorInstance) installRules(ctx context.Context, e ctxt.Executor, dep
 }
 
 func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec PrometheusSpec, paths meta.DirPaths) error {
-	if spec.RuleDir != "" {
-		return i.TransferLocalConfigDir(ctx, e, spec.RuleDir, path.Join(paths.Deploy, "conf"), func(name string) bool {
-			return strings.HasSuffix(name, ".rules.yml")
-		})
-	}
-
 	// To make this step idempotent, we need cleanup old rules first
 	cmds := []string{
 		"mkdir -p %[1]s/conf",
