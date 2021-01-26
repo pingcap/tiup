@@ -213,3 +213,10 @@ func TestCheckPointNil(t *testing.T) {
 	assert.True(p.acquired)
 	p.Release(nil)
 }
+
+func TestCheckPointNotInited(t *testing.T) {
+	setup()
+
+	assert := require.New(t)
+	assert.Panics(func() { Acquire(context.Background(), map[string]interface{}{}) })
+}

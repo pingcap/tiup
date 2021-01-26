@@ -59,6 +59,9 @@ func SetCheckPoint(file string) error {
 
 // Acquire wraps CheckPoint.Acquire
 func Acquire(ctx context.Context, point map[string]interface{}) *Point {
+	if ctx.Value(goroutineKey) == nil {
+		panic("the value of the key " + goroutineKey + " not found in context, use the ctx from checkpoint.NewContext please")
+	}
 	// Check goroutine if we are in test
 	gptr := ctx.Value(goroutineKey).(*goroutineLock)
 	g := atomic.LoadUint64((*uint64)(gptr))
