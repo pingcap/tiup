@@ -718,3 +718,51 @@ func CheckTHP(ctx context.Context, e ctxt.Executor) *CheckResult {
 	result.Msg = "THP is disabled"
 	return result
 }
+
+// CheckJRE checks if java command is available for TiSpark nodes
+func CheckJRE(ctx context.Context, e ctxt.Executor, host string, topo *spec.Specification) []*CheckResult {
+	var results []*CheckResult
+
+	topo.IterInstance(func(inst spec.Instance) {
+		if inst.ComponentName() != spec.ComponentTiSpark {
+			return
+		}
+
+		// check if java cli is available
+		stdout, stderr, err := e.Execute(ctx, "java -version", false)
+		if err != nil {
+			results = append(results, &CheckResult{
+				Name: CheckNameCommand,
+				Err:  fmt.Errorf("java not usable, %s", strings.Trim(string(stderr), "\n")),
+				Msg:  "JRE is not installed properly or not set in PATH",
+			})
+			return
+		}
+		if len(stderr) > 0 {
+			line := strings.Split(string(stderr), "\n")[0]
+			fields := strings.Split(line, " ")
+			ver := strings.Trim(fields[len(fields)-1], "\"")
+			if !strings.HasPrefix(ver, "1.8.") {
+				results = append(results, &CheckResult{
+					Name: CheckNameCommand,
+					Err:  fmt.Errorf("java version %s is not supported, use Java 8 (1.8)", ver),
+					Msg:  "Installed JRE is not Java 8",
+				})
+			} else {
+				results = append(results, &CheckResult{
+					Name: CheckNameCommand,
+					Msg:  "java: " + strings.Split(string(stderr), "\n")[0],
+				})
+			}
+		} else {
+			results = append(results, &CheckResult{
+				Name: CheckNameCommand,
+				Err:  fmt.Errorf("unknown output of java %s", stdout),
+				Msg:  "java: " + strings.Split(string(stdout), "\n")[0],
+				Warn: true,
+			})
+		}
+	})
+
+	return results
+}

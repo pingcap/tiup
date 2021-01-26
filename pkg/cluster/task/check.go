@@ -121,6 +121,10 @@ func (c *CheckSys) Execute(ctx context.Context) error {
 				Msg:  "numactl: " + strings.Split(string(stdout), "\n")[0],
 			})
 		}
+
+		// check if JRE is available for TiSpark
+		results = append(results, operator.CheckJRE(ctx, e, c.host, c.topo)...)
+
 		storeResults(ctx, c.host, results)
 	case CheckTypePartitions:
 		// check partition mount options for data_dir
