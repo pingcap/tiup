@@ -27,7 +27,6 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -236,7 +235,7 @@ func mergeImported(importConfig []byte, specConfigs ...map[string]interface{}) (
 // BindVersion map the cluster version to the third components binding version.
 type BindVersion func(comp string, version string) (bindVersion string)
 
-func checkConfig(ctx context.Context, e executor.Executor, componentName, clusterVersion, nodeOS, arch, config string, paths meta.DirPaths, bindVersion BindVersion) error {
+func checkConfig(ctx context.Context, e ctxt.Executor, componentName, clusterVersion, nodeOS, arch, config string, paths meta.DirPaths, bindVersion BindVersion) error {
 	var cmd string
 	configPath := path.Join(paths.Deploy, "conf", config)
 	switch componentName {
@@ -274,7 +273,7 @@ func checkConfig(ctx context.Context, e executor.Executor, componentName, cluste
 		cmd = fmt.Sprintf("%s --config-check --config=%s %s", binPath, configPath, extra)
 	}
 
-	_, _, err := e.Execute(cmd, false)
+	_, _, err := e.Execute(ctx, cmd, false)
 	if err != nil {
 		return perrs.Annotate(ErrorCheckConfig, err.Error())
 	}
