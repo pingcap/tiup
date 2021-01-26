@@ -68,6 +68,7 @@ type (
 		ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 		OS              string               `yaml:"os,omitempty" default:"linux"`
 		Arch            string               `yaml:"arch,omitempty" default:"amd64"`
+		Custom          interface{}          `yaml:"custom,omitempty" validate:"custom:ignore"`
 	}
 
 	// MonitoredOptions represents the monitored node configuration

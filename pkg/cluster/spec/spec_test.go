@@ -682,3 +682,20 @@ tiflash_servers:
 		c.Check(err, NotNil)
 	}
 }
+
+func (s *metaSuiteTopo) TestYAMLAnchor(c *C) {
+	topo := Specification{}
+	err := yaml.UnmarshalStrict([]byte(`
+global:
+  custom:
+    tidb_spec: &tidb_spec
+      deploy_dir: "test-deploy"
+      log_dir: "test-deploy/log"
+
+tidb_servers:
+  - <<: *tidb_spec
+    host: 172.16.5.138
+`), &topo)
+	c.Assert(err, IsNil)
+	c.Assert(topo.TiDBServers[0].LogDir, Equals, "test-deploy/log")
+}
