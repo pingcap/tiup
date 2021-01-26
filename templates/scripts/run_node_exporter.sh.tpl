@@ -9,10 +9,15 @@ cd "${DEPLOY_DIR}" || exit 1
 exec > >(tee -i -a "{{.LogDir}}/node_exporter.log")
 exec 2>&1
 
+EXPORTER_BIN=bin/node_exporter/node_exporter
+if [ ! -f $EXPORTER_BIN ]; then
+  EXPORTER_BIN=bin/node_exporter
+fi
+
 {{- if .NumaNode}}
-exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/node_exporter/node_exporter \
+exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} $EXPORTER_BIN \
 {{- else}}
-exec bin/node_exporter/node_exporter \
+exec $EXPORTER_BIN \
 {{- end}}
     --web.listen-address=":{{.Port}}" \
     --collector.tcpstat \
