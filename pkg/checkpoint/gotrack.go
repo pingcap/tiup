@@ -24,27 +24,22 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"os"
 	"runtime"
 	"strconv"
 	"sync"
 )
 
-// DebugGoroutines is a switch used to debug if multilple context acquire applied
-// to the same context belone to the sampe goroutine
-var DebugGoroutines = os.Getenv("DEBUG_CHECKPOINT_GOROUTINES") == "1"
-
 type goroutineLock uint64
 
 func newGoroutineLock() goroutineLock {
-	if !DebugGoroutines {
+	if !DebugCheckpoint {
 		return 0
 	}
 	return goroutineLock(curGoroutineID())
 }
 
 func (g goroutineLock) check() {
-	if !DebugGoroutines {
+	if !DebugCheckpoint {
 		return
 	}
 	if curGoroutineID() != uint64(g) {
