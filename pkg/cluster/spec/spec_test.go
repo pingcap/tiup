@@ -15,6 +15,7 @@ package spec
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/BurntSushi/toml"
@@ -695,7 +696,28 @@ global:
 tidb_servers:
   - <<: *tidb_spec
     host: 172.16.5.138
+    deploy_dir: "fake-deploy"
 `), &topo)
 	c.Assert(err, IsNil)
+	c.Assert(topo.TiDBServers[0].Host, Equals, "172.16.5.138")
+	c.Assert(topo.TiDBServers[0].DeployDir, Equals, "fake-deploy")
 	c.Assert(topo.TiDBServers[0].LogDir, Equals, "test-deploy/log")
+}
+
+func (s *metaSuiteTopo) TestYAMLAnchorWithUndeclared(c *C) {
+	topo := Specification{}
+	err := yaml.UnmarshalStrict([]byte(`
+global:
+  custom:
+    tidb_spec: &tidb_spec
+      deploy_dir: "test-deploy"
+      log_dir: "test-deploy/log"
+      undeclared: "some stuff"
+
+tidb_servers:
+  - <<: *tidb_spec
+    host: 172.16.5.138
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(strings.Contains(err.Error(), "not found"), IsTrue)
 }
