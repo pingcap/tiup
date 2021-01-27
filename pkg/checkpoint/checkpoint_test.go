@@ -24,6 +24,8 @@ import (
 )
 
 func setup() {
+	DebugCheckpoint = true
+
 	checkfields = nil
 	RegisterField(
 		Field("host", reflect.DeepEqual),
