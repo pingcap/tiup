@@ -549,7 +549,7 @@ func DestroyClusterTombstone(
 
 		id := s.Host + ":" + strconv.Itoa(s.Port)
 
-		tombstone, err := binlogClient.IsPumpTombstone(id)
+		tombstone, err := binlogClient.IsPumpTombstone(ctx, id)
 		if err != nil {
 			return nil, err
 		}
@@ -578,7 +578,7 @@ func DestroyClusterTombstone(
 
 		id := s.Host + ":" + strconv.Itoa(s.Port)
 
-		tombstone, err := binlogClient.IsDrainerTombstone(id)
+		tombstone, err := binlogClient.IsDrainerTombstone(ctx, id)
 		if err != nil {
 			return nil, err
 		}
