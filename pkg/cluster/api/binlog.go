@@ -84,25 +84,25 @@ type NodeStatus struct {
 }
 
 // IsPumpTombstone check if drainer is tombstone.
-func (c *BinlogClient) IsPumpTombstone(addr string) (bool, error) {
-	nodeID, err := c.nodeID(addr, "pumps")
+func (c *BinlogClient) IsPumpTombstone(ctx context.Context, addr string) (bool, error) {
+	nodeID, err := c.nodeID(ctx, addr, "pumps")
 	if err != nil {
 		return false, err
 	}
-	return c.isTombstone("pumps", nodeID)
+	return c.isTombstone(ctx, "pumps", nodeID)
 }
 
 // IsDrainerTombstone check if drainer is tombstone.
-func (c *BinlogClient) IsDrainerTombstone(addr string) (bool, error) {
-	nodeID, err := c.nodeID(addr, "drainers")
+func (c *BinlogClient) IsDrainerTombstone(ctx context.Context, addr string) (bool, error) {
+	nodeID, err := c.nodeID(ctx, addr, "drainers")
 	if err != nil {
 		return false, err
 	}
-	return c.isTombstone("drainer", nodeID)
+	return c.isTombstone(ctx, "drainer", nodeID)
 }
 
-func (c *BinlogClient) isTombstone(ty string, nodeID string) (bool, error) {
-	status, err := c.nodeStatus(ty)
+func (c *BinlogClient) isTombstone(ctx context.Context, ty string, nodeID string) (bool, error) {
+	status, err := c.nodeStatus(ctx, ty)
 	if err != nil {
 		return false, err
 	}
@@ -120,17 +120,17 @@ func (c *BinlogClient) isTombstone(ty string, nodeID string) (bool, error) {
 }
 
 // nolint (unused)
-func (c *BinlogClient) pumpNodeStatus() (status []*NodeStatus, err error) {
-	return c.nodeStatus("pumps")
+func (c *BinlogClient) pumpNodeStatus(ctx context.Context) (status []*NodeStatus, err error) {
+	return c.nodeStatus(ctx, "pumps")
 }
 
 // nolint (unused)
-func (c *BinlogClient) drainerNodeStatus() (status []*NodeStatus, err error) {
-	return c.nodeStatus("drainers")
+func (c *BinlogClient) drainerNodeStatus(ctx context.Context) (status []*NodeStatus, err error) {
+	return c.nodeStatus(ctx, "drainers")
 }
 
-func (c *BinlogClient) nodeID(addr, ty string) (string, error) {
-	nodes, err := c.nodeStatus(ty)
+func (c *BinlogClient) nodeID(ctx context.Context, addr, ty string) (string, error) {
+	nodes, err := c.nodeStatus(ctx, ty)
 	if err != nil {
 		return "", err
 	}
@@ -147,28 +147,27 @@ func (c *BinlogClient) nodeID(addr, ty string) (string, error) {
 }
 
 // UpdateDrainerState update the specify state as the specified state.
-func (c *BinlogClient) UpdateDrainerState(addr string, state string) error {
-	nodeID, err := c.nodeID(addr, "drainers")
+func (c *BinlogClient) UpdateDrainerState(ctx context.Context, addr string, state string) error {
+	nodeID, err := c.nodeID(ctx, addr, "drainers")
 	if err != nil {
 		return err
 	}
-	return c.updateStatus("drainers", nodeID, state)
+	return c.updateStatus(ctx, "drainers", nodeID, state)
 }
 
 // UpdatePumpState update the specify state as the specified state.
-func (c *BinlogClient) UpdatePumpState(addr string, state string) error {
-	nodeID, err := c.nodeID(addr, "pumps")
+func (c *BinlogClient) UpdatePumpState(ctx context.Context, addr string, state string) error {
+	nodeID, err := c.nodeID(ctx, addr, "pumps")
 	if err != nil {
 		return err
 	}
-	return c.updateStatus("pumps", nodeID, state)
+	return c.updateStatus(ctx, "pumps", nodeID, state)
 }
 
 // updateStatus update the specify state as the specified state.
-func (c *BinlogClient) updateStatus(ty string, nodeID string, state string) error {
+func (c *BinlogClient) updateStatus(ctx context.Context, ty string, nodeID string, state string) error {
 	key := fmt.Sprintf("/tidb-binlog/v1/%s/%s", ty, nodeID)
 
-	ctx := context.Background()
 	resp, err := c.etcdClient.KV.Get(ctx, key)
 	if err != nil {
 		return errors.AddStack(err)
@@ -203,10 +202,10 @@ func (c *BinlogClient) updateStatus(ty string, nodeID string, state string) erro
 	return nil
 }
 
-func (c *BinlogClient) nodeStatus(ty string) (status []*NodeStatus, err error) {
+func (c *BinlogClient) nodeStatus(ctx context.Context, ty string) (status []*NodeStatus, err error) {
 	key := fmt.Sprintf("/tidb-binlog/v1/%s", ty)
 
-	resp, err := c.etcdClient.KV.Get(context.Background(), key, clientv3.WithPrefix())
+	resp, err := c.etcdClient.KV.Get(ctx, key, clientv3.WithPrefix())
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
@@ -261,8 +260,8 @@ func (c *BinlogClient) offline(addr string, nodeID string) error {
 }
 
 // OfflinePump offline a pump.
-func (c *BinlogClient) OfflinePump(addr string) error {
-	nodeID, err := c.nodeID(addr, "pumps")
+func (c *BinlogClient) OfflinePump(ctx context.Context, addr string) error {
+	nodeID, err := c.nodeID(ctx, addr, "pumps")
 	if err != nil {
 		return err
 	}
@@ -270,8 +269,8 @@ func (c *BinlogClient) OfflinePump(addr string) error {
 }
 
 // OfflineDrainer offline a drainer.
-func (c *BinlogClient) OfflineDrainer(addr string) error {
-	nodeID, err := c.nodeID(addr, "drainers")
+func (c *BinlogClient) OfflineDrainer(ctx context.Context, addr string) error {
+	nodeID, err := c.nodeID(ctx, addr, "drainers")
 	if err != nil {
 		return err
 	}

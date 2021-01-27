@@ -164,7 +164,7 @@ func ScaleInCluster(
 				compName := component.Name()
 
 				if compName != spec.ComponentPump && compName != spec.ComponentDrainer {
-					if err := deleteMember(component, instance, pdClient, binlogClient, options.APITimeout); err != nil {
+					if err := deleteMember(ctx, component, instance, pdClient, binlogClient, options.APITimeout); err != nil {
 						log.Warnf("failed to delete %s: %v", compName, err)
 					}
 				}
@@ -178,11 +178,11 @@ func ScaleInCluster(
 				if binlogClient != nil {
 					id := instance.ID()
 					if compName == spec.ComponentPump {
-						if err := binlogClient.UpdatePumpState(id, "offline"); err != nil {
+						if err := binlogClient.UpdatePumpState(ctx, id, "offline"); err != nil {
 							log.Warnf("failed to update %s state as offline: %v", compName, err)
 						}
 					} else if compName == spec.ComponentDrainer {
-						if err := binlogClient.UpdateDrainerState(id, "offline"); err != nil {
+						if err := binlogClient.UpdateDrainerState(ctx, id, "offline"); err != nil {
 							log.Warnf("failed to update %s state as offline: %v", compName, err)
 						}
 					}
@@ -236,7 +236,7 @@ func ScaleInCluster(
 				continue
 			}
 
-			err := deleteMember(component, instance, pdClient, binlogClient, options.APITimeout)
+			err := deleteMember(ctx, component, instance, pdClient, binlogClient, options.APITimeout)
 			if err != nil {
 				return errors.Trace(err)
 			}
@@ -297,6 +297,7 @@ func ScaleInCluster(
 }
 
 func deleteMember(
+	ctx context.Context,
 	component spec.Component,
 	instance spec.Instance,
 	pdClient *api.PDClient,
@@ -324,13 +325,13 @@ func deleteMember(
 		}
 	case spec.ComponentDrainer:
 		addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
-		err := binlogClient.OfflineDrainer(addr)
+		err := binlogClient.OfflineDrainer(ctx, addr)
 		if err != nil {
 			return err
 		}
 	case spec.ComponentPump:
 		addr := instance.GetHost() + ":" + strconv.Itoa(instance.GetPort())
-		err := binlogClient.OfflinePump(addr)
+		err := binlogClient.OfflinePump(ctx, addr)
 		if err != nil {
 			return err
 		}
