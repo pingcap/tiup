@@ -39,14 +39,21 @@ provisioning = {{.DeployDir}}/provisioning
 http_port = {{.Port}}
 
 # The public facing domain name used to access grafana from a browser
+{{- if .Domain}}
+domain = {{.Domain}}
+{{- else}}
 domain = {{.IP}}
+{{- end}}
 
 # Redirect to correct domain if host header does not match domain
 # Prevents DNS rebinding attacks
 ;enforce_domain = false
 
 # The full public facing url
-;root_url = %(protocol)s://%(domain)s:%(http_port)s/
+{{- if .RootURL}}
+root_url = {{.RootURL}}
+server_from_sub_path = true
+{{- end}}
 
 # Log web requests
 ;router_logging = false
@@ -166,8 +173,9 @@ admin_password = {{.Password}}
 
 #################################### Anonymous Auth ##########################
 [auth.anonymous]
-# enable anonymous access
-;enabled = false
+{{- if .AnonymousEnable}}
+enabled = true
+{{- end}}
 
 # specify organization name that should be used for unauthenticated users
 ;org_name = Main Org.

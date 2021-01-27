@@ -42,6 +42,9 @@ type GrafanaSpec struct {
 	DashboardDir    string               `yaml:"dashboard_dir,omitempty" validate:"dashboard_dir:editable"`
 	Username        string               `yaml:"username,omitempty" default:"admin" validate:"username:editable"`
 	Password        string               `yaml:"password,omitempty" default:"admin" validate:"password:editable"`
+	AnonymousEnable bool                 `yaml:"anonymous_enable" default:"false" validate:"anonymous_enable:editable"`
+	RootURL         string               `yaml:"root_url" validate:"root_url:editable"`
+	Domain          string               `yaml:"domain" validate:"domain:editable"`
 }
 
 // Role returns the component role of the instance
@@ -150,6 +153,9 @@ func (i *GrafanaInstance) InitConfig(
 		WithPort(uint64(i.GetPort())).
 		WithUsername(spec.Username).
 		WithPassword(spec.Password).
+		WithAnonymousenable(spec.AnonymousEnable).
+		WithRootURL(spec.RootURL).
+		WithDomain(spec.Domain).
 		ConfigToFile(fp); err != nil {
 		return err
 	}

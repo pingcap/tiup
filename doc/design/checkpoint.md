@@ -1,6 +1,6 @@
 # The checkpoint implemention for tiup-cluster and tiup-dm
 
-When there is occasional error on `tiup cluster` or `tiup dm` command, some users may want to retry previews action from the fail point instead of from scratch.
+When there is an occasional error on `tiup cluster` or `tiup dm` command, some users may want to retry previews action from the fail point instead of from scratch.
 
 For example, the following tasks:
 
@@ -14,11 +14,11 @@ For example, the following tasks:
 4. start service
 ```
 
-If something wrong with the third task, retry from the first task is OK because TiUP provides guarantee that all commands are idempotent. However, for some large cluster, it may waste a lot of time on successed tasks (task 1 and stpe 2) and the user may want to restart the process from task 3.
+If something wrong with the third task, retry from the first task is OK because TiUP provides a guarantee that all commands are idempotent. However, for some large clusters, it may waste a lot of time on successful tasks (task 1 and stpe 2) and the user may want to restart the process from task 3.
 
 ## The audit log
 
-tiup-cluster and tiup-dm will generate an audit log file in `${TIUP_HOME}/storage/{cluster,dm}/audit/`, you can view the audit list with the command `tiup cluster audit` or `tiup dm audit`. The list looks like:
+tiup-cluster and tiup-dm will generate an audit log file in `${TIUP_HOME}/storage/{cluster,dm}/audit/`, you can view the audit list with the command `tiup cluster audit` or `tiup dm audit`. The list looks like this:
 
 ```
 ID           Time                       Command
@@ -35,11 +35,11 @@ The first column is the id of the audit, to view a specified audit log, use the 
 2021-01-21T18:36:09.805+0800    INFO    SSHCommand      {"host": "172.16.5.140", "port": "22", "cmd": "xxx command", "stdout": "xxxx", "stderr": ""}
 ```
 
-The first line of the file is the command the user execute, the following lines are structure logs.
+The first line of the file is the command the user executed, the following lines are structure logs.
 
 ## The checkpoint
 
-In the implemention of checkpoint, we mix checkpoint in audit log, like this: 
+In the implementation of the checkpoint, we mix checkpoint in the audit log, like this:
 
 ```
 /home/tidb/.tiup/components/cluster/v1.3.1/tiup-cluster display test
@@ -52,20 +52,20 @@ In the implemention of checkpoint, we mix checkpoint in audit log, like this:
 2021-01-21T18:36:09.806+0800    INFO    CheckPoint      {"host": "172.16.5.140", "action": "task", "n": 3, "result": true}
 ```
 
-If the user run tiup-cluster or tiup-dm in replay mode by giving an audit id, we will parse that audit log file and pick up all `CheckPoint` by order into a queue, then in corresponding functions we check if the checkpoint is in the queue, if hit, we dequeue the checkpoint and return the result directlly instead of do the real work. Example:
+If the user runs tiup-cluster or tiup-dm in replay mode by giving an audit id, we will parse that audit log file and pick up all `CheckPoint` by order into a queue, then in corresponding functions, we check if the checkpoint is in the queue, if hit, we dequeue the checkpoint and return the result directly instead of doing the real work. Example:
 
 ```golang
 func init() {
     // Register checkpoint fields so that we know how to compare checkpoints
     checkpoint.RegisterField(
         checkpoint.Field("action", reflect.DeepEqual),
-		checkpoint.Field("host", reflect.DeepEqual),
-		checkpoint.Field("n", func(a, b interface{}) bool {
+        checkpoint.Field("host", reflect.DeepEqual),
+        checkpoint.Field("n", func(a, b interface{}) bool {
             // the n is a int, however, it will be float after it write to json because json only has float number.
             // so we just compare the string format.
-			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
-		}),
-	)
+            return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
+        }),
+    )
 }
 
 func processCommand() {
@@ -84,25 +84,25 @@ func task(ctx context.Context, host string, n int) (result bool, err error) {
     point := checkpoint.Acquire(ctx, map[string]interface{}{
         "action": "task",
         "host": host,
-		"n":  n,
-	})
-	defer func() {
-        // we must call point.Release, otherwise there will be resource leak.
+        "n":  n,
+    })
+    defer func() {
+        // we must call point.Release, otherwise there will be a resource leak.
         // the release function will write the checkpoint into current audit log (not the one user specified)
         // for latter replay.
-		point.Release(err,
+        point.Release(err,
             zap.String("action", "task"),
             zap.String("host", host),
             zap.Int("n", n),
             zap.Bool("result", result),
-		)
+        )
     }()
-    // If the checkpoint not exist, point.Hit() will return nil, otherwise, the checkpoint with the type map[string]interface{}
-	if point.Hit() != nil {
-		return point.Hit()["result"].(bool), nil
+    // Then, if the checkpoint exists in the specified audit file, point.Hit() will return map[string]interface{}
+    if point.Hit() != nil {
+        return point.Hit()["result"].(bool), nil
     }
-    
-    // If the checkpoint not exist in specified audit file, we should do real work and return the result
+
+    // Last, if the checkpoint does not exist in the specified audit file, we should do real work and return the result
     return do_real_work(host, n)
 }
 ```
@@ -136,7 +136,7 @@ func task(ctx context.Context, host string, n int) (result bool, err error) {
 }
 ```
 
-The execute flow and return value will be:
+The execution flow and return value will be:
 
 ```
 task(1)[called by processCommand]:  return true
@@ -154,7 +154,7 @@ the checkpoint in audit log will be:
 ... {"host": "...", "action": "task", "n": 0, "result": false}
 ```
 
-There is three checkpoints, but when we try to replay the process, the `task(0)[called by task(1)]` will not be called at all since `task(1)` will return early with the cached result, so the execute flow will be:
+There are three checkpoints, but when we try to replay the process, the `task(0)[called by task(1)]` will not be called at all since `task(1)` will return early with the cached result, so the execution flow will be:
 
 ```
 task(1)[called by processCommand]:  return true (cached by {"host": "...", "action": "task", "n": 1, "result": true})
@@ -164,11 +164,11 @@ task(0)[called by processCommand]:  return true (cached by {"host": "...", "acti
 
 The trouble is coming: in the real case the `task(0)[called by processCommand]` returns false but in replay case it return true because it takes the result of `task(0)[called by task(1)]` by mistake. The problem is that the `CheckPoint` of `task(0)[called by task(1)]` should not be record because it's parent, `task(0)[called by processCommand]`, has record a `CheckPoint`.
 
-So we implement a semaphore and insert it into the context passed to `checkpoint.Acquire`, the context or it's ancestor must be generated by `checkpoint.NewContext` where the semaphore is generated. When `checkpoint.Acquire` called, it will try to acquire the semaphore and record if it success in the returned value, when we call `Release` on the returned value, it will check if previews semaphore acuire success, if not, the `Release` will not writing checkpoint.
+So we implement a semaphore and insert it into the context passed to `checkpoint.Acquire`, the context or it's ancestor must be generated by `checkpoint.NewContext` where the semaphore is generated. When `checkpoint.Acquire` called, it will try to acquire the semaphore and record if it success in the returned value, when we call `Release` on the returned value, it will check if previews semaphore acquire success, if not, the `Release` will not writing checkpoint.
 
 ## Parallel task
 
-Because we use a semaphore in the context to trace if it's the first stack layer who want to write checkpoint, the context can't be shared between goroutines:
+Because we use a semaphore in the context to trace if it's the first stack layer that wants to write checkpoint, the context can't be shared between goroutines:
 
 ```golang
 func processCommand() {
@@ -188,7 +188,7 @@ There are three tasks, `task(1)`, `task(2)` and `task(3)`, they run parallelly. 
 ```
 task(1): start -------------------------------------------> return
 task(2):         start ------------------------> return
-task(3):         start ------------------------> return 
+task(3):         start ------------------------> return
 ```
 
 The checkpoint of `task(2)` and `task(3)` will not be recorded because they think they are called by `task(1)`. The solution is to add a semaphore for every goroutine:
@@ -206,7 +206,7 @@ func processCommand() {
 }
 ```
 
-What if the `processCommand` or its' ancestor has its' own checkpoint? 
+What if the `processCommand` or its' ancestor has its' own checkpoint?
 
 ```golang
 func processTask(ctx context.Context) {
@@ -227,6 +227,6 @@ func processCommand(ctx context.Context) {
 }
 ```
 
-If `checkpoint.NewContext` just append a unacquired semaphore, the checkpoint of `processTask` and it's children(`task(1..3)`) will be all recored, that's not correct (we have talked this before). 
+If `checkpoint.NewContext` just append a unacquired semaphore, the checkpoint of `processTask` and it's children(`task(1..3)`) will be all recorded, that's not correct (we have talked this before).
 
-So the `checkpoint.NewContext` should check if there is alread a semaphore in current context, if there is, just copy it's value. By this way, if `processTask` has acquired the semaphore, the `task(1..3)` will get their own acuired semaphore, otherwise, they will get their own unacquired semaphore.
+So the `checkpoint.NewContext` should check if there is already a semaphore in current context, if there is, just copy it's value. By this way, if `processTask` has acquired the semaphore, the `task(1..3)` will get their own acquired semaphore, otherwise, they will get their own unacquired semaphore.
