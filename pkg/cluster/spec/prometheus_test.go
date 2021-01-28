@@ -14,6 +14,7 @@
 package spec
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -21,6 +22,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/stretchr/testify/assert"
@@ -30,8 +32,6 @@ func TestLocalRuleDirs(t *testing.T) {
 	deployDir, err := ioutil.TempDir("", "tiup-*")
 	assert.Nil(t, err)
 	defer os.RemoveAll(deployDir)
-	// the dashboard json files are under the bin dir,
-	// which is needed to copy into the dashboard dir
 	err = os.MkdirAll(path.Join(deployDir, "bin/prometheus"), 0755)
 	assert.Nil(t, err)
 	localDir, err := filepath.Abs("./testdata/rules")
@@ -58,13 +58,55 @@ func TestLocalRuleDirs(t *testing.T) {
 	e, err := executor.New(executor.SSHTypeNone, false, executor.SSHConfig{Host: "127.0.0.1", User: user.Username})
 	assert.Nil(t, err)
 
-	err = promInstance.initRules(e, promInstance.InstanceSpec.(PrometheusSpec), meta.DirPaths{Deploy: deployDir})
+	ctx := checkpoint.NewContext(context.Background())
+	err = promInstance.initRules(ctx, e, promInstance.InstanceSpec.(PrometheusSpec), meta.DirPaths{Deploy: deployDir})
+	assert.Nil(t, err)
+
+	assert.NoFileExists(t, path.Join(deployDir, "conf", "dummy.rules.yml"))
+	fs, err := ioutil.ReadDir(localDir)
+	assert.Nil(t, err)
+	for _, f := range fs {
+		assert.FileExists(t, path.Join(deployDir, "conf", f.Name()))
+	}
+}
+
+func TestNoLocalRuleDirs(t *testing.T) {
+	deployDir, err := ioutil.TempDir("", "tiup-*")
+	assert.Nil(t, err)
+	defer os.RemoveAll(deployDir)
+	err = os.MkdirAll(path.Join(deployDir, "bin/prometheus"), 0755)
+	assert.Nil(t, err)
+	localDir, err := filepath.Abs("./testdata/rules")
+	assert.Nil(t, err)
+
+	err = ioutil.WriteFile(path.Join(deployDir, "bin/prometheus", "dummy.rules.yml"), []byte("dummy"), 0644)
+	assert.Nil(t, err)
+
+	topo := new(Specification)
+	topo.Monitors = append(topo.Monitors, PrometheusSpec{
+		Host: "127.0.0.1",
+		Port: 9090,
+	})
+
+	comp := MonitorComponent{topo}
+	ints := comp.Instances()
+
+	assert.Equal(t, len(ints), 1)
+	promInstance := ints[0].(*MonitorInstance)
+
+	user, err := user.Current()
+	assert.Nil(t, err)
+	e, err := executor.New(executor.SSHTypeNone, false, executor.SSHConfig{Host: "127.0.0.1", User: user.Username})
+	assert.Nil(t, err)
+
+	ctx := checkpoint.NewContext(context.Background())
+	err = promInstance.initRules(ctx, e, promInstance.InstanceSpec.(PrometheusSpec), meta.DirPaths{Deploy: deployDir})
 	assert.Nil(t, err)
 
 	assert.FileExists(t, path.Join(deployDir, "conf", "dummy.rules.yml"))
 	fs, err := ioutil.ReadDir(localDir)
 	assert.Nil(t, err)
 	for _, f := range fs {
-		assert.FileExists(t, path.Join(deployDir, "conf", f.Name()))
+		assert.NoFileExists(t, path.Join(deployDir, "conf", f.Name()))
 	}
 }
