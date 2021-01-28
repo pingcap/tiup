@@ -9,10 +9,15 @@ cd "${DEPLOY_DIR}" || exit 1
 exec > >(tee -i -a "{{.LogDir}}/blackbox_exporter.log")
 exec 2>&1
 
+EXPORTER_BIN=bin/blackbox_exporter/blackbox_exporter
+if [ ! -f $EXPORTER_BIN ]; then
+  EXPORTER_BIN=bin/blackbox_exporter
+fi
+
 {{- if .NumaNode}}
-exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/blackbox_exporter/blackbox_exporter \
+exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} $EXPORTER_BIN \
 {{- else}}
-exec bin/blackbox_exporter/blackbox_exporter \
+exec $EXPORTER_BIN \
 {{- end}}
     --web.listen-address=":{{.Port}}" \
     --log.level="info" \

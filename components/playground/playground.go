@@ -177,7 +177,7 @@ func (p *Playground) removePumpWhenTombstone(c *api.BinlogClient, inst *instance
 	defer logIfErr(p.renderSDFile())
 
 	for {
-		tombstone, err := c.IsPumpTombstone(inst.Addr())
+		tombstone, err := c.IsPumpTombstone(context.TODO(), inst.Addr())
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -200,7 +200,7 @@ func (p *Playground) removeDrainerWhenTombstone(c *api.BinlogClient, inst *insta
 	defer logIfErr(p.renderSDFile())
 
 	for {
-		tombstone, err := c.IsDrainerTombstone(inst.Addr())
+		tombstone, err := c.IsDrainerTombstone(context.TODO(), inst.Addr())
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -326,7 +326,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				if err != nil {
 					return err
 				}
-				err = c.OfflinePump(inst.Addr())
+				err = c.OfflinePump(context.TODO(), inst.Addr())
 				if err != nil {
 					return err
 				}
@@ -345,7 +345,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				if err != nil {
 					return err
 				}
-				err = c.OfflineDrainer(inst.Addr())
+				err = c.OfflineDrainer(context.TODO(), inst.Addr())
 				if err != nil {
 					return err
 				}
@@ -452,7 +452,7 @@ func (p *Playground) handleScaleOut(w io.Writer, cmd *Command) error {
 		return err
 	}
 
-	err = p.startInstance(context.Background(), inst)
+	err = p.startInstance(context.TODO(), inst)
 	if err != nil {
 		return err
 	}
@@ -768,7 +768,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 		// if no any pump, tidb will quit right away.
 		if cid == "pump" && !anyPumpReady {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*120)
+			ctx, cancel := context.WithTimeout(context.TODO(), time.Second*120)
 			err = ins.(*instance.Pump).Ready(ctx)
 			cancel()
 			if err != nil {

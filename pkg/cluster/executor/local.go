@@ -63,7 +63,7 @@ func (l *Local) Execute(ctx context.Context, cmd string, sudo bool, timeout ...t
 
 	if len(timeout) > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(context.Background(), timeout[0])
+		ctx, cancel = context.WithTimeout(ctx, timeout[0])
 		defer cancel()
 	}
 
