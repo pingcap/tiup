@@ -497,6 +497,13 @@ func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, r
 	flt := flatPartitions(insightInfo.Partitions)
 	parts := sortPartitions(flt)
 
+	// check if multiple instances are using the same partition as data storeage
+	type storePartitionInfo struct {
+		comp string
+		path string
+	}
+	uniqueStores := make(map[string][]storePartitionInfo) // host+partition -> info
+
 	topo.IterInstance(func(inst spec.Instance) {
 		if inst.GetHost() != host {
 			return
@@ -509,6 +516,17 @@ func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, r
 			blk := getDisk(parts, dataDir)
 			if blk == nil {
 				return
+			}
+
+			// only check for TiKV and TiFlash, other components are not that I/O sensitive
+			switch inst.ComponentName() {
+			case spec.ComponentTiKV,
+				spec.ComponentTiFlash:
+				usKey := fmt.Sprintf("%s:%s", host, blk.Mount.MountPoint)
+				uniqueStores[usKey] = append(uniqueStores[usKey], storePartitionInfo{
+					comp: inst.ComponentName(),
+					path: dataDir,
+				})
 			}
 
 			switch blk.Mount.FSType {
@@ -537,6 +555,25 @@ func CheckPartitions(opt *CheckOptions, host string, topo *spec.Specification, r
 			}
 		}
 	})
+
+	for key, parts := range uniqueStores {
+		if len(parts) > 1 {
+			pathList := make([]string, 0)
+			for _, p := range parts {
+				pathList = append(pathList,
+					fmt.Sprintf("%s:%s", p.comp, p.path),
+				)
+			}
+			results = append(results, &CheckResult{
+				Name: CheckNameDisks,
+				Err: fmt.Errorf(
+					"multiple components %s are using the same partition %s as data dir",
+					strings.Join(pathList, ","),
+					key,
+				),
+			})
+		}
+	}
 
 	return results
 }
@@ -680,4 +717,52 @@ func CheckTHP(ctx context.Context, e ctxt.Executor) *CheckResult {
 
 	result.Msg = "THP is disabled"
 	return result
+}
+
+// CheckJRE checks if java command is available for TiSpark nodes
+func CheckJRE(ctx context.Context, e ctxt.Executor, host string, topo *spec.Specification) []*CheckResult {
+	var results []*CheckResult
+
+	topo.IterInstance(func(inst spec.Instance) {
+		if inst.ComponentName() != spec.ComponentTiSpark {
+			return
+		}
+
+		// check if java cli is available
+		stdout, stderr, err := e.Execute(ctx, "java -version", false)
+		if err != nil {
+			results = append(results, &CheckResult{
+				Name: CheckNameCommand,
+				Err:  fmt.Errorf("java not usable, %s", strings.Trim(string(stderr), "\n")),
+				Msg:  "JRE is not installed properly or not set in PATH",
+			})
+			return
+		}
+		if len(stderr) > 0 {
+			line := strings.Split(string(stderr), "\n")[0]
+			fields := strings.Split(line, " ")
+			ver := strings.Trim(fields[len(fields)-1], "\"")
+			if !strings.HasPrefix(ver, "1.8.") {
+				results = append(results, &CheckResult{
+					Name: CheckNameCommand,
+					Err:  fmt.Errorf("java version %s is not supported, use Java 8 (1.8)", ver),
+					Msg:  "Installed JRE is not Java 8",
+				})
+			} else {
+				results = append(results, &CheckResult{
+					Name: CheckNameCommand,
+					Msg:  "java: " + strings.Split(string(stderr), "\n")[0],
+				})
+			}
+		} else {
+			results = append(results, &CheckResult{
+				Name: CheckNameCommand,
+				Err:  fmt.Errorf("unknown output of java %s", stdout),
+				Msg:  "java: " + strings.Split(string(stdout), "\n")[0],
+				Warn: true,
+			})
+		}
+	})
+
+	return results
 }
