@@ -146,7 +146,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 	insightVer := spec.TiDBComponentVersion(spec.ComponentCheckCollector, "")
 
 	uniqueHosts := map[string]int{}             // host -> ssh-port
-	uniqueComps := make(map[string]struct{})    // host+component -> {}
+	uniqueInsts := make(map[string]struct{})    // host+component -> {}
 	uniqueArchList := make(map[string]struct{}) // map["os-arch"]{}
 
 	roleFilter := set.NewStringSet(gOpt.Roles...)
@@ -175,13 +175,13 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 				downloadTasks = append(downloadTasks, t0)
 			}
 
-			if _, found := uniqueComps[inst.GetHost()+inst.ComponentName()]; found {
+			if _, found := uniqueInsts[inst.ID()]; found {
 				continue
 			}
-			uniqueComps[inst.GetHost()+inst.ComponentName()] = struct{}{}
+			uniqueInsts[inst.ID()] = struct{}{}
 
-			// checks that applies to each (host, components)
 			t1 := task.NewBuilder()
+			// checks that applies to each instance
 			if opt.existCluster {
 				t1 = t1.CheckSys(
 					inst.GetHost(),
