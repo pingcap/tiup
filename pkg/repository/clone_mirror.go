@@ -15,6 +15,7 @@ package repository
 
 import (
 	"fmt"
+	"github.com/pingcap/tiup/pkg/colorutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -309,7 +310,11 @@ func cloneComponents(repo *V1Repository,
 					continue
 				}
 				if err := download(targetDir, tmpDir, repo, &versionItem); err != nil {
-					return nil, errors.Annotatef(err, "download resource: %s", name)
+					if strings.Contains(err.Error(), "not found") {
+						_, _ = colorutil.ColorErrorMsg.Printf("download resource: %s.err:%s\n", name, err)
+					} else {
+						return nil, errors.Annotatef(err, "download resource: %s", name)
+					}
 				}
 			}
 		}
