@@ -20,7 +20,7 @@ import (
 func newDisableCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "disable <cluster-name>",
-		Short: "Disable starting a TiDB cluster automatically at boot",
+		Short: "Disable automatic enabling of TiDB clusters at boot",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
