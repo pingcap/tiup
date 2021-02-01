@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -65,6 +66,7 @@ type (
 	MirrorOptions struct {
 		Progress DownloadProgress
 		Upstream string
+		KeyDir   string
 	}
 
 	// Mirror represents a repository mirror, which can be remote HTTP
@@ -88,7 +90,7 @@ type (
 )
 
 // NewMirror returns a mirror instance Base on the schema of mirror
-func NewMirror(mirror, keyDir string, options MirrorOptions) Mirror {
+func NewMirror(mirror string, options MirrorOptions) Mirror {
 	if options.Progress == nil {
 		options.Progress = &ProgressBar{}
 	}
@@ -98,7 +100,7 @@ func NewMirror(mirror, keyDir string, options MirrorOptions) Mirror {
 			options: options,
 		}
 	}
-	return &localFilesystem{rootPath: mirror, keyDir: keyDir, upstream: options.Upstream}
+	return &localFilesystem{rootPath: mirror, keyDir: options.KeyDir, upstream: options.Upstream}
 }
 
 type localFilesystem struct {
@@ -123,10 +125,12 @@ func (l *localFilesystem) Open() error {
 		return errors.Errorf("local system mirror `%s` should be a directory", l.rootPath)
 	}
 
+	if l.keyDir == "" {
+		l.keyDir = path.Join(l.rootPath, "keys")
+	}
 	if utils.IsNotExist(l.keyDir) {
 		return nil
 	}
-
 	return l.loadKeys()
 }
 

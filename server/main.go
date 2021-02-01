@@ -16,7 +16,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
 
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/spf13/cobra"
@@ -35,10 +34,6 @@ func main() {
 				return cmd.Help()
 			}
 
-			if keyDir == "" {
-				keyDir = path.Join(args[0], "keys")
-			}
-
 			s, err := newServer(args[0], keyDir, upstream)
 			if err != nil {
 				return err
@@ -48,7 +43,7 @@ func main() {
 		},
 	}
 	cmd.Flags().StringVarP(&addr, "addr", "", addr, "addr to listen")
-	cmd.Flags().StringVarP(&keyDir, "keys", "", keyDir, "specify the directory where stores the private keys")
+	cmd.Flags().StringVarP(&keyDir, "key-dir", "", keyDir, "specify the directory where stores the private keys")
 	cmd.Flags().StringVarP(&upstream, "upstream", "", upstream, "specify the upstream mirror")
 
 	if err := cmd.Execute(); err != nil {
