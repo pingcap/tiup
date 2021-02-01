@@ -1,4 +1,4 @@
-// Copyright 2020 PingCAP, Inc.
+// Copyright 2021 PingCAP, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import (
 func newDisableCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "disable <cluster-name>",
-		Short: "Disable automatic enabling of TiDB clusters at boot",
+		Short: "Disable automatic enabling of DM clusters at boot",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
@@ -31,7 +31,6 @@ func newDisableCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			return cm.EnableCluster(clusterName, gOpt, false)
 		},

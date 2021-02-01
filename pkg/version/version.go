@@ -24,7 +24,7 @@ var (
 	// TiUPVerMinor is the minor version of TiUP
 	TiUPVerMinor = 3
 	// TiUPVerPatch is the patch version of TiUP
-	TiUPVerPatch = 1
+	TiUPVerPatch = 2
 	// TiUPVerName is alternative name of the version
 	TiUPVerName = "tiup"
 	// GitHash is the current git commit hash

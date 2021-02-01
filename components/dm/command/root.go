@@ -141,6 +141,8 @@ please backup your data before process.`,
 		newScaleOutCmd(),
 		newScaleInCmd(),
 		newImportCmd(),
+		newEnableCmd(),
+		newDisableCmd(),
 	)
 }
 

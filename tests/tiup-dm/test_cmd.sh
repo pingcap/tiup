@@ -43,6 +43,18 @@ tiup-dm --yes start $name
 tiup-dm exec $name -N $ipprefix.102 --command "grep /home/tidb/deploy/dm-master-8261/data /home/tidb/deploy/dm-master-8261/scripts/run_dm-master.sh"
 tiup-dm exec $name -N $ipprefix.103 --command "grep /home/tidb/my_master_data /home/tidb/deploy/dm-master-8261/scripts/run_dm-master.sh"
 
+# check the service enabled
+tiup-dm exec $name -N $ipprefix.102 --command "systemctl status dm-master-8261 | grep 'enabled;'"
+tiup-dm exec $name -N $ipprefix.102 --command "systemctl status dm-worker-8262 | grep 'enabled;'"
+
+# check enable/disable service
+tiup-dm disable $name -R dm-master
+tiup-dm exec $name -N $ipprefix.102 --command "systemctl status dm-master-8261 | grep 'disabled;'"
+tiup-dm exec $name -N $ipprefix.102 --command "systemctl status dm-worker-8262 | grep 'enabled;'"
+tiup-dm enable $name -R dm-master
+tiup-dm exec $name -N $ipprefix.102 --command "systemctl status dm-master-8261 | grep 'enabled;'"
+tiup-dm exec $name -N $ipprefix.102 --command "systemctl status dm-worker-8262 | grep 'enabled;'"
+
 tiup-dm --yes stop $name
 
 tiup-dm --yes restart $name
@@ -62,6 +74,7 @@ topo_master=./topo/full_scale_in_dm-master.yaml
 sed "s/__IPPREFIX__/$ipprefix/g" $topo_master.tpl > $topo_master
 tiup-dm --yes scale-out $name $topo_master
 tiup-dm exec $name -N $ipprefix.101 --command "grep -q $ipprefix.101:8261 /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
+tiup-dm exec $name -N $ipprefix.101 --command "systemctl status dm-master-8261 | grep 'enabled;'"
 
 echo "start scale in dm-worker"
 yes | tiup-dm scale-in $name -N $ipprefix.102:8262
@@ -74,6 +87,7 @@ topo_worker=./topo/full_scale_in_dm-worker.yaml
 sed "s/__IPPREFIX__/$ipprefix/g" $topo_worker.tpl > $topo_worker
 yes | tiup-dm scale-out $name $topo_worker
 tiup-dm exec $name -N $ipprefix.101 --command "grep -q $ipprefix.102:8262 /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
+tiup-dm exec $name -N $ipprefix.101 --command "systemctl status dm-worker-8262 | grep 'enabled;'"
 
 echo "start scale in grafana"
 yes | tiup-dm scale-in $name -N $ipprefix.101:3000
