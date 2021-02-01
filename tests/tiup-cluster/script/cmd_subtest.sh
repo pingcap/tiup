@@ -56,6 +56,9 @@ function cmd_subtest() {
 
     tiup-cluster $client --yes start $name
 
+    # Patch a stopped cluster
+    tiup-cluster $client --yes patch $name ~/.tiup/storage/cluster/packages/tidb-v$version-linux-amd64.tar.gz -R tidb --offline
+
     tiup-cluster $client _test $name writable
 
     # check the data dir of tikv
