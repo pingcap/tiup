@@ -20,7 +20,8 @@ import (
 
 func newPatchCmd() *cobra.Command {
 	var (
-		overwrite bool
+		overwrite   bool
+		offlineMode bool
 	)
 	cmd := &cobra.Command{
 		Use:   "patch <cluster-name> <package-path>",
@@ -40,12 +41,13 @@ func newPatchCmd() *cobra.Command {
 
 			clusterName := args[0]
 
-			return cm.Patch(clusterName, args[1], gOpt, overwrite)
+			return cm.Patch(clusterName, args[1], gOpt, overwrite, offlineMode)
 		},
 	}
 
 	cmd.Flags().BoolVar(&overwrite, "overwrite", false, "Use this package in the future scale-out operations")
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Specify the nodes")
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Specify the roles")
+	cmd.Flags().BoolVarP(&offlineMode, "offline", "", false, "Patch a stopped cluster")
 	return cmd
 }
