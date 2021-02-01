@@ -35,6 +35,7 @@ var (
 	CheckTypePackage      = "package"
 	CheckTypePartitions   = "partitions"
 	CheckTypeFIO          = "fio"
+	CheckTypePermission   = "permission"
 )
 
 // place the check utilities are stored
@@ -44,11 +45,11 @@ const (
 
 // CheckSys performs checks of system information
 type CheckSys struct {
-	host    string
-	topo    *spec.Specification
-	opt     *operator.CheckOptions
-	check   string // check type name
-	dataDir string
+	host     string
+	topo     *spec.Specification
+	opt      *operator.CheckOptions
+	check    string // check type name
+	checkDir string
 }
 
 func storeResults(ctx context.Context, host string, results []*operator.CheckResult) {
@@ -130,7 +131,7 @@ func (c *CheckSys) Execute(ctx context.Context) error {
 		// check partition mount options for data_dir
 		storeResults(ctx, c.host, operator.CheckPartitions(c.opt, c.host, c.topo, stdout))
 	case CheckTypeFIO:
-		if !c.opt.EnableDisk || c.dataDir == "" {
+		if !c.opt.EnableDisk || c.checkDir == "" {
 			break
 		}
 
@@ -140,6 +141,12 @@ func (c *CheckSys) Execute(ctx context.Context) error {
 		}
 
 		storeResults(ctx, c.host, operator.CheckFIOResult(rr, rw, lat))
+	case CheckTypePermission:
+		e, ok := ctxt.GetInner(ctx).GetExecutor(c.host)
+		if !ok {
+			return ErrNoExecutor
+		}
+		storeResults(ctx, c.host, operator.CheckDirPermission(ctx, e, c.topo.GlobalOptions.User, c.checkDir))
 	}
 
 	return nil
@@ -163,8 +170,8 @@ func (c *CheckSys) runFIO(ctx context.Context) (outRR []byte, outRW []byte, outL
 		return
 	}
 
-	dataDir := spec.Abs(c.topo.GlobalOptions.User, c.dataDir)
-	testWd := filepath.Join(dataDir, "tiup-fio-test")
+	checkDir := spec.Abs(c.topo.GlobalOptions.User, c.checkDir)
+	testWd := filepath.Join(checkDir, "tiup-fio-test")
 	fioBin := filepath.Join(CheckToolsPathDir, "bin", "fio")
 
 	var stderr []byte
