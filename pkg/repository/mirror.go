@@ -88,7 +88,7 @@ type (
 )
 
 // NewMirror returns a mirror instance Base on the schema of mirror
-func NewMirror(mirror string, options MirrorOptions) Mirror {
+func NewMirror(mirror, keyDir string, options MirrorOptions) Mirror {
 	if options.Progress == nil {
 		options.Progress = &ProgressBar{}
 	}
@@ -98,11 +98,12 @@ func NewMirror(mirror string, options MirrorOptions) Mirror {
 			options: options,
 		}
 	}
-	return &localFilesystem{rootPath: mirror, upstream: options.Upstream}
+	return &localFilesystem{rootPath: mirror, keyDir: keyDir, upstream: options.Upstream}
 }
 
 type localFilesystem struct {
 	rootPath string
+	keyDir   string
 	upstream string
 	keys     map[string]*v1manifest.KeyInfo
 }
@@ -122,7 +123,7 @@ func (l *localFilesystem) Open() error {
 		return errors.Errorf("local system mirror `%s` should be a directory", l.rootPath)
 	}
 
-	if utils.IsNotExist(filepath.Join(l.rootPath, "keys")) {
+	if utils.IsNotExist(l.keyDir) {
 		return nil
 	}
 
@@ -132,7 +133,7 @@ func (l *localFilesystem) Open() error {
 // load mirror keys
 func (l *localFilesystem) loadKeys() error {
 	l.keys = make(map[string]*v1manifest.KeyInfo)
-	return filepath.Walk(filepath.Join(l.rootPath, "keys"), func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(l.keyDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
