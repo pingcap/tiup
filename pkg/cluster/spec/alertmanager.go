@@ -159,7 +159,10 @@ func (i *AlertManagerInstance) InitConfig(
 	if err := config.NewAlertManagerConfig().ConfigToFile(configPath); err != nil {
 		return err
 	}
-	return i.TransferLocalConfigFile(ctx, e, configPath, dst)
+	if err := i.TransferLocalConfigFile(ctx, e, configPath, dst); err != nil {
+		return err
+	}
+	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths, nil)
 }
 
 // ScaleConfig deploy temporary config on scaling

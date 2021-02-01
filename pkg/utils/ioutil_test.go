@@ -86,3 +86,24 @@ func (s *TestIOUtilSuite) TestCopy(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(fi.Mode(), Equals, fii.Mode())
 }
+
+func (s *TestIOUtilSuite) TestIsSubDir(c *C) {
+	paths := [][]string{
+		{"a", "a"},
+		{"../a", "../a/b"},
+		{"a", "a/b"},
+		{"/a", "/a/b"},
+	}
+	for _, p := range paths {
+		c.Assert(IsSubDir(p[0], p[1]), IsTrue)
+	}
+
+	paths = [][]string{
+		{"/a", "a/b"},
+		{"/a/b/c", "/a/b"},
+		{"/a/b", "/a/b1"},
+	}
+	for _, p := range paths {
+		c.Assert(IsSubDir(p[0], p[1]), IsFalse)
+	}
+}

@@ -40,6 +40,8 @@ function cmd_subtest() {
     tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa --skip-create-user
 
     # check the local config
+    tiup-cluster $client exec $name -N n1 --command "grep tidb.rules.yml /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
+    ! tiup-cluster $client exec $name -N n1 --command "grep node.rules.yml /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
     tiup-cluster $client exec $name -N n1 --command "grep magic-string-for-test /home/tidb/deploy/prometheus-9090/conf/tidb.rules.yml"
     tiup-cluster $client exec $name -N n1 --command "grep magic-string-for-test /home/tidb/deploy/grafana-3000/dashboards/tidb.json"
     tiup-cluster $client exec $name -N n1 --command "grep magic-string-for-test /home/tidb/deploy/alertmanager-9093/conf/alertmanager.yml"
@@ -127,6 +129,7 @@ function cmd_subtest() {
     tiup-cluster $client push $name test_transfer_1.txt "{{ .DeployDir }}/test_transfer.txt" -R grafana
     tiup-cluster $client pull $name "{{ .DeployDir }}/test_transfer.txt" test_transfer_2.txt -R grafana
     diff test_transfer_1.txt test_transfer_2.txt
+    rm -f test_transfer_{1,2}.txt
 
     echo "checking cleanup data and log"
     tiup-cluster $client exec $name -N n1 --command "ls /home/tidb/deploy/prometheus-9090/log/prometheus.log"
