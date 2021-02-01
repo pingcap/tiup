@@ -33,7 +33,7 @@ import (
 )
 
 // Patch the cluster.
-func (m *Manager) Patch(name string, packagePath string, opt operator.Options, overwrite bool) error {
+func (m *Manager) Patch(name string, packagePath string, opt operator.Options, overwrite, offline bool) error {
 	metadata, err := m.meta(name)
 	if err != nil {
 		return err
@@ -70,6 +70,9 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 	t := m.sshTaskBuilder(name, topo, base.User, opt).
 		Parallel(false, replacePackageTasks...).
 		Func("UpgradeCluster", func(ctx context.Context) error {
+			if offline {
+				return nil
+			}
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		}).
 		Build()
