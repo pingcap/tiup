@@ -146,7 +146,6 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 	insightVer := spec.TiDBComponentVersion(spec.ComponentCheckCollector, "")
 
 	uniqueHosts := map[string]int{}             // host -> ssh-port
-	uniqueInsts := make(map[string]struct{})    // host+component -> {}
 	uniqueArchList := make(map[string]struct{}) // map["os-arch"]{}
 
 	roleFilter := set.NewStringSet(gOpt.Roles...)
@@ -174,11 +173,6 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 					BuildAsStep(fmt.Sprintf("  - Downloading check tools for %s/%s", inst.OS(), inst.Arch()))
 				downloadTasks = append(downloadTasks, t0)
 			}
-
-			if _, found := uniqueInsts[inst.ID()]; found {
-				continue
-			}
-			uniqueInsts[inst.ID()] = struct{}{}
 
 			t1 := task.NewBuilder()
 			// checks that applies to each instance
