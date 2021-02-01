@@ -49,7 +49,6 @@ require (
 	github.com/prometheus/prom2json v1.3.0
 	github.com/r3labs/diff v0.0.0-20201223155434-f54a0724e0a9
 	github.com/relex/aini v1.2.1
-	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b // indirect
 	github.com/sergi/go-diff v1.0.1-0.20180205163309-da645544ed44
 	github.com/shirou/gopsutil v3.20.12+incompatible
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
