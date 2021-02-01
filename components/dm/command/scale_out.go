@@ -18,6 +18,8 @@ import (
 
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -43,7 +45,7 @@ func newScaleOutCmd() *cobra.Command {
 			clusterName := args[0]
 			topoFile := args[1]
 
-			return cm.ScaleOut(clusterName, topoFile, nil, nil, opt, skipConfirm, gOpt)
+			return cm.ScaleOut(clusterName, topoFile, postScaleOutHook, nil, opt, skipConfirm, gOpt)
 		},
 	}
 
@@ -52,4 +54,8 @@ func newScaleOutCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&opt.UsePassword, "password", "p", false, "Use password of target hosts. If specified, password authentication will be used.")
 
 	return cmd
+}
+
+func postScaleOutHook(builder *task.Builder, newPart spec.Topology) {
+	postDeployHook(builder, newPart)
 }

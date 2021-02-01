@@ -276,7 +276,11 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "prometheus.yml")
-	return e.Transfer(ctx, fp, dst, false)
+	if err := e.Transfer(ctx, fp, dst, false); err != nil {
+		return err
+	}
+
+	return checkConfig(ctx, e, i.ComponentName(), clusterVersion, i.OS(), i.Arch(), i.ComponentName()+".yml", paths, nil)
 }
 
 // We only really installRules for dm cluster because the rules(*.rules.yml) packed with the prometheus
@@ -314,7 +318,7 @@ func (i *MonitorInstance) installRules(ctx context.Context, e ctxt.Executor, dep
 	cmds := []string{
 		"mkdir -p %[1]s",
 		`find %[1]s -type f -name "*.rules.yml" -delete`,
-		"cp %[2]s/dm-master/conf/*.rules.yml %[1]s",
+		`find %[2]s/dm-master/conf -type f -name "*.rules.yml" -exec cp %[1]s \;`,
 		"rm -rf %[2]s",
 	}
 	_, stderr, err = e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), targetDir, tmp), false)
@@ -336,7 +340,7 @@ func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec P
 	cmds := []string{
 		"mkdir -p %[1]s/conf",
 		`find %[1]s/conf -type f -name "*.rules.yml" -delete`,
-		`cp %[1]s/bin/prometheus/*.rules.yml %[1]s/conf/`,
+		`find %[1]s/bin/prometheus -maxdepth 1 -type f -name "*.rules.yml" -exec cp {} %[1]s/conf/ \;`,
 	}
 	_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), paths.Deploy), false)
 	if err != nil {

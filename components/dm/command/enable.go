@@ -1,4 +1,4 @@
-// Copyright 2020 PingCAP, Inc.
+// Copyright 2021 PingCAP, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newDisableCmd() *cobra.Command {
+func newEnableCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "disable <cluster-name>",
-		Short: "Disable automatic enabling of TiDB clusters at boot",
+		Use:   "enable <cluster-name>",
+		Short: "Enable a DM cluster automatically at boot",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
@@ -31,14 +31,13 @@ func newDisableCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
-			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			return cm.EnableCluster(clusterName, gOpt, false)
+			return cm.EnableCluster(clusterName, gOpt, true)
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only disable specified roles")
-	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only disable specified nodes")
+	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only enable specified roles")
+	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only enable specified nodes")
 
 	return cmd
 }

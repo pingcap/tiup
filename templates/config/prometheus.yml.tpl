@@ -9,13 +9,15 @@ global:
 
 # Load and evaluate rules in this file every 'evaluation_interval' seconds.
 rule_files:
+{{- if .LocalRules}}
+{{- range .LocalRules}}
+  - '{{.}}'
+{{- end}}
+{{- else}}
 {{- if .MonitoredServers}}
   - 'node.rules.yml'
   - 'blacker.rules.yml'
   - 'bypass.rules.yml'
-{{- end}}
-{{- range .LocalRules}}
-  - '{{.}}'
 {{- end}}
 {{- if .PDAddrs}}
   - 'pd.rules.yml'
@@ -47,6 +49,7 @@ rule_files:
 {{- end}}
 {{- if .DMMasterAddrs}}
   - 'dm_master.rules.yml'
+{{- end}}
 {{- end}}
 
 {{- if .AlertmanagerAddrs}}

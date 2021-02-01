@@ -14,12 +14,16 @@
 package command
 
 import (
+	"context"
 	"path"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
@@ -59,7 +63,7 @@ func newDeployCmd() *cobra.Command {
 				return err
 			}
 
-			return cm.Deploy(clusterName, version, topoFile, opt, nil, skipConfirm, gOpt)
+			return cm.Deploy(clusterName, version, topoFile, opt, postDeployHook, skipConfirm, gOpt)
 		},
 	}
 
@@ -81,4 +85,12 @@ func supportVersion(vs string) error {
 	}
 
 	return nil
+}
+
+func postDeployHook(builder *task.Builder, topo spec.Topology) {
+	enableTask := task.NewBuilder().Func("Setting service auto start on boot", func(ctx context.Context) error {
+		return operator.Enable(ctx, topo, operator.Options{}, true)
+	}).BuildAsStep("Enable service").SetHidden(true)
+
+	builder.Parallel(false, enableTask)
 }

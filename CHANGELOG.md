@@ -1,5 +1,20 @@
 TiUP Changelog
 
+## [1.3.2] 2021.01.29
+
+### Fixes
+
+- Fix the issue that the grafana and alertmanager target not set in prometheus.yaml ([#1041](https://github.com/pingcap/tiup/pull/1041), [@9547](https://github.com/9547))
+- Fix the issue that grafana deployed by tiup-dm missing home.json ([#1056](https://github.com/pingcap/tiup/pull/1056), [@lucklove](https://github.com/lucklove))
+- Fix the issue that the expires of cloned mirror is shourened after publish component to it ([#1051](https://github.com/pingcap/tiup/pull/1051), [@lucklove](https://github.com/lucklove))
+- Fix the issue that tiup-cluster may remove wrong paths for imported cluster on scale-in ([#1068](https://github.com/pingcap/tiup/pull/1068), [@AstroProfundis](https://github.com/AstroProfundis))
+  - Risk of this issue: If an imported cluster has deploy dir ending with `/`, and sub dirs as `<deploy-dir>//sub`, it could results to delete wrong paths on scale-in
+- Fix the issue that imported `*_exporter` has wrong binary path ([#1101](https://github.com/pingcap/tiup/pull/1101), [@AstroProfundis](https://github.com/AstroProfundis))
+
+### Improvements
+
+- Apply more strict check on tar.gz file for `patch` command: check if the entry is an executable file ([#1091](https://github.com/pingcap/tiup/pull/1091), [@lucklove](https://github.com/lucklove))
+
 ## [1.3.1] 2020.12.31
 
 ### Fixes
@@ -12,7 +27,6 @@ TiUP Changelog
 - Fix the issue that the command `tiup mirror merge -h` outputs wrong usage ([#1008](https://github.com/pingcap/tiup/pull/1008), [@lucklove](https://github.com/lucklove))
   - The syntax of this command should be `tiup mirror merge <mirror-dir-1> [mirror-dir-N]` but it outputs `tiup mirror merge <base> <mirror-dir-1> [mirror-dir-N]`
 - Fix the issue that prometheus doesn't collect drainer metrics ([#1012](https://github.com/pingcap/tiup/pull/1012), [@SE-Bin](https://github.com/SE-Bin))
-- 
 
 ### Improvements
 
