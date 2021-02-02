@@ -28,8 +28,8 @@ type server struct {
 }
 
 // NewServer returns a pointer to server
-func newServer(rootDir, upstream string) (*server, error) {
-	mirror := repository.NewMirror(rootDir, repository.MirrorOptions{Upstream: upstream})
+func newServer(rootDir, keyDir, upstream string) (*server, error) {
+	mirror := repository.NewMirror(rootDir, repository.MirrorOptions{Upstream: upstream, KeyDir: keyDir})
 	if err := mirror.Open(); err != nil {
 		return nil, err
 	}

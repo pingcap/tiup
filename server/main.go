@@ -23,6 +23,7 @@ import (
 
 func main() {
 	addr := "0.0.0.0:8989"
+	keyDir := ""
 	upstream := "https://tiup-mirrors.pingcap.com"
 
 	cmd := &cobra.Command{
@@ -33,7 +34,7 @@ func main() {
 				return cmd.Help()
 			}
 
-			s, err := newServer(args[0], upstream)
+			s, err := newServer(args[0], keyDir, upstream)
 			if err != nil {
 				return err
 			}
@@ -42,7 +43,8 @@ func main() {
 		},
 	}
 	cmd.Flags().StringVarP(&addr, "addr", "", addr, "addr to listen")
-	cmd.Flags().StringVarP(&upstream, "upstream", "", upstream, "specific the upstream mirror")
+	cmd.Flags().StringVarP(&keyDir, "key-dir", "", keyDir, "specify the directory where stores the private keys")
+	cmd.Flags().StringVarP(&upstream, "upstream", "", upstream, "specify the upstream mirror")
 
 	if err := cmd.Execute(); err != nil {
 		log.Errorf("Execute command: %s", err.Error())
