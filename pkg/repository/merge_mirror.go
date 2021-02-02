@@ -84,7 +84,7 @@ func component2Diff(name string, baseItem v1manifest.ComponentItem, baseManifest
 			}
 
 			// this version not exits in base
-			if baseManifest.VersionListWithYanked(plat)[ver].URL == "" {
+			if baseManifest.VersionList(plat)[ver].URL == "" {
 				osArch := strings.Split(plat, "/")
 				if len(osArch) != 2 {
 					continue
