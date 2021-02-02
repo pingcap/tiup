@@ -272,17 +272,17 @@ func (i *BaseInstance) InstanceName() string {
 
 // ServiceName implements Instance interface
 func (i *BaseInstance) ServiceName() string {
+	var name string
 	switch i.ComponentName() {
 	case ComponentSpark, ComponentTiSpark:
-		if i.Port > 0 {
-			return fmt.Sprintf("%s-%d.service", i.Role(), i.Port)
-		}
-		return fmt.Sprintf("%s.service", i.Role())
+		name = i.Role()
+	default:
+		name = i.Name
 	}
 	if i.Port > 0 {
-		return fmt.Sprintf("%s-%d.service", i.Name, i.Port)
+		return fmt.Sprintf("%s-%d.service", name, i.Port)
 	}
-	return fmt.Sprintf("%s.service", i.Name)
+	return fmt.Sprintf("%s.service", name)
 }
 
 // GetHost implements Instance interface

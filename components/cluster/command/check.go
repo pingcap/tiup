@@ -174,126 +174,23 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 				downloadTasks = append(downloadTasks, t0)
 			}
 
-			if _, found := uniqueHosts[inst.GetHost()]; found {
-				continue
-			}
-
-			uniqueHosts[inst.GetHost()] = inst.GetSSHPort()
-
-			// build system info collecting tasks
-			t1 := task.NewBuilder().
-				RootSSH(
+			t1 := task.NewBuilder()
+			// checks that applies to each instance
+			if opt.existCluster {
+				t1 = t1.CheckSys(
 					inst.GetHost(),
-					inst.GetSSHPort(),
-					opt.user,
-					s.Password,
-					s.IdentityFile,
-					s.IdentityFilePassphrase,
-					gOpt.SSHTimeout,
-					gOpt.SSHType,
-					topo.GlobalOptions.SSHType,
-				).
-				Mkdir(opt.user, inst.GetHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
-				CopyComponent(
-					spec.ComponentCheckCollector,
-					inst.OS(),
-					inst.Arch(),
-					insightVer,
-					"", // use default srcPath
-					inst.GetHost(),
-					task.CheckToolsPathDir,
-				).
-				Shell(
-					inst.GetHost(),
-					filepath.Join(task.CheckToolsPathDir, "bin", "insight"),
-					"",
-					false,
-				).
-				BuildAsStep(fmt.Sprintf("  - Getting system info of %s:%d", inst.GetHost(), inst.GetSSHPort()))
-			collectTasks = append(collectTasks, t1)
-
-			// build checking tasks
-			t2 := task.NewBuilder().
-				// check for general system info
-				CheckSys(
-					inst.GetHost(),
-					"",
-					task.CheckTypeSystemInfo,
-					topo,
-					opt.opr,
-				).
-				CheckSys(
-					inst.GetHost(),
-					"",
-					task.CheckTypePartitions,
-					topo,
-					opt.opr,
-				).
-				// check for listening port
-				Shell(
-					inst.GetHost(),
-					"ss -lnt",
-					"",
-					false,
-				).
-				CheckSys(
-					inst.GetHost(),
-					"",
-					task.CheckTypePort,
-					topo,
-					opt.opr,
-				).
-				// check for system limits
-				Shell(
-					inst.GetHost(),
-					"cat /etc/security/limits.conf",
-					"",
-					false,
-				).
-				CheckSys(
-					inst.GetHost(),
-					"",
-					task.CheckTypeSystemLimits,
-					topo,
-					opt.opr,
-				).
-				// check for kernel params
-				Shell(
-					inst.GetHost(),
-					"sysctl -a",
-					"",
-					true,
-				).
-				CheckSys(
-					inst.GetHost(),
-					"",
-					task.CheckTypeSystemConfig,
-					topo,
-					opt.opr,
-				).
-				// check for needed system service
-				CheckSys(
-					inst.GetHost(),
-					"",
-					task.CheckTypeService,
-					topo,
-					opt.opr,
-				).
-				// check for needed packages
-				CheckSys(
-					inst.GetHost(),
-					"",
-					task.CheckTypePackage,
+					inst.DeployDir(),
+					task.CheckTypePermission,
 					topo,
 					opt.opr,
 				)
-
+			}
 			// if the data dir set in topology is relative, and the home dir of deploy user
 			// and the user run the check command is on different partitions, the disk detection
 			// may be using incorrect partition for validations.
 			for _, dataDir := range spec.MultiDirAbs(opt.user, inst.DataDir()) {
 				// build checking tasks
-				t2 = t2.
+				t1 = t1.
 					CheckSys(
 						inst.GetHost(),
 						dataDir,
@@ -301,10 +198,132 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 						topo,
 						opt.opr,
 					)
+				if opt.existCluster {
+					t1 = t1.CheckSys(
+						inst.GetHost(),
+						dataDir,
+						task.CheckTypePermission,
+						topo,
+						opt.opr,
+					)
+				}
 			}
+
+			// checks that applies to each host
+			if _, found := uniqueHosts[inst.GetHost()]; !found {
+				uniqueHosts[inst.GetHost()] = inst.GetSSHPort()
+				// build system info collecting tasks
+				t2 := task.NewBuilder().
+					RootSSH(
+						inst.GetHost(),
+						inst.GetSSHPort(),
+						opt.user,
+						s.Password,
+						s.IdentityFile,
+						s.IdentityFilePassphrase,
+						gOpt.SSHTimeout,
+						gOpt.SSHType,
+						topo.GlobalOptions.SSHType,
+					).
+					Mkdir(opt.user, inst.GetHost(), filepath.Join(task.CheckToolsPathDir, "bin")).
+					CopyComponent(
+						spec.ComponentCheckCollector,
+						inst.OS(),
+						inst.Arch(),
+						insightVer,
+						"", // use default srcPath
+						inst.GetHost(),
+						task.CheckToolsPathDir,
+					).
+					Shell(
+						inst.GetHost(),
+						filepath.Join(task.CheckToolsPathDir, "bin", "insight"),
+						"",
+						false,
+					).
+					BuildAsStep(fmt.Sprintf("  - Getting system info of %s:%d", inst.GetHost(), inst.GetSSHPort()))
+				collectTasks = append(collectTasks, t2)
+
+				// build checking tasks
+				t1 = t1.
+					// check for general system info
+					CheckSys(
+						inst.GetHost(),
+						"",
+						task.CheckTypeSystemInfo,
+						topo,
+						opt.opr,
+					).
+					CheckSys(
+						inst.GetHost(),
+						"",
+						task.CheckTypePartitions,
+						topo,
+						opt.opr,
+					).
+					// check for listening port
+					Shell(
+						inst.GetHost(),
+						"ss -lnt",
+						"",
+						false,
+					).
+					CheckSys(
+						inst.GetHost(),
+						"",
+						task.CheckTypePort,
+						topo,
+						opt.opr,
+					).
+					// check for system limits
+					Shell(
+						inst.GetHost(),
+						"cat /etc/security/limits.conf",
+						"",
+						false,
+					).
+					CheckSys(
+						inst.GetHost(),
+						"",
+						task.CheckTypeSystemLimits,
+						topo,
+						opt.opr,
+					).
+					// check for kernel params
+					Shell(
+						inst.GetHost(),
+						"sysctl -a",
+						"",
+						true,
+					).
+					CheckSys(
+						inst.GetHost(),
+						"",
+						task.CheckTypeSystemConfig,
+						topo,
+						opt.opr,
+					).
+					// check for needed system service
+					CheckSys(
+						inst.GetHost(),
+						"",
+						task.CheckTypeService,
+						topo,
+						opt.opr,
+					).
+					// check for needed packages
+					CheckSys(
+						inst.GetHost(),
+						"",
+						task.CheckTypePackage,
+						topo,
+						opt.opr,
+					)
+			}
+
 			checkSysTasks = append(
 				checkSysTasks,
-				t2.BuildAsStep(fmt.Sprintf("  - Checking node %s", inst.GetHost())),
+				t1.BuildAsStep(fmt.Sprintf("  - Checking node %s", inst.GetHost())),
 			)
 
 			t3 := task.NewBuilder().

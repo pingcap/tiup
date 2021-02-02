@@ -43,23 +43,24 @@ type CheckOptions struct {
 
 // Names of checks
 var (
-	CheckNameGeneral     = "general" // errors that don't fit any specific check
-	CheckNameNTP         = "ntp"
-	CheckNameOSVer       = "os-version"
-	CheckNameSwap        = "swap"
-	CheckNameSysctl      = "sysctl"
-	CheckNameCPUThreads  = "cpu-cores"
-	CheckNameCPUGovernor = "cpu-governor"
-	CheckNameDisks       = "disk"
-	CheckNamePortListen  = "listening-port"
-	CheckNameEpoll       = "epoll-exclusive"
-	CheckNameMem         = "memory"
-	CheckNameLimits      = "limits"
-	CheckNameSysService  = "service"
-	CheckNameSELinux     = "selinux"
-	CheckNameCommand     = "command"
-	CheckNameFio         = "fio"
-	CheckNameTHP         = "thp"
+	CheckNameGeneral       = "general" // errors that don't fit any specific check
+	CheckNameNTP           = "ntp"
+	CheckNameOSVer         = "os-version"
+	CheckNameSwap          = "swap"
+	CheckNameSysctl        = "sysctl"
+	CheckNameCPUThreads    = "cpu-cores"
+	CheckNameCPUGovernor   = "cpu-governor"
+	CheckNameDisks         = "disk"
+	CheckNamePortListen    = "listening-port"
+	CheckNameEpoll         = "epoll-exclusive"
+	CheckNameMem           = "memory"
+	CheckNameLimits        = "limits"
+	CheckNameSysService    = "service"
+	CheckNameSELinux       = "selinux"
+	CheckNameCommand       = "command"
+	CheckNameFio           = "fio"
+	CheckNameTHP           = "thp"
+	CheckNameDirPermission = "permission"
 )
 
 // CheckResult is the result of a check
@@ -763,6 +764,33 @@ func CheckJRE(ctx context.Context, e ctxt.Executor, host string, topo *spec.Spec
 			})
 		}
 	})
+
+	return results
+}
+
+// CheckDirPermission checks if the user can write to given path
+func CheckDirPermission(ctx context.Context, e ctxt.Executor, user, path string) []*CheckResult {
+	var results []*CheckResult
+
+	_, stderr, err := e.Execute(ctx,
+		fmt.Sprintf(
+			"sudo -u %[1]s touch %[2]s/.tiup_cluster_check_file && rm -f %[2]s/.tiup_cluster_check_file",
+			user,
+			path,
+		),
+		false)
+	if err != nil || len(stderr) > 0 {
+		results = append(results, &CheckResult{
+			Name: CheckNameDirPermission,
+			Err:  fmt.Errorf("unable to write to dir %s: %s", path, strings.Split(string(stderr), "\n")[0]),
+			Msg:  fmt.Sprintf("%s: %s", path, err),
+		})
+	} else {
+		results = append(results, &CheckResult{
+			Name: CheckNameDirPermission,
+			Msg:  fmt.Sprintf("%s is writable", path),
+		})
+	}
 
 	return results
 }
