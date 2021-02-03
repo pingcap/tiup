@@ -21,7 +21,6 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/version"
@@ -202,24 +201,18 @@ func showComponentVersions(env *environment.Environment, component string, opt l
 	for plat := range comp.Platforms {
 		versions := comp.VersionList(plat)
 		for ver, verinfo := range versions {
-			if pkgver.Version(ver).IsNightly() && ver == comp.Nightly {
-				platforms[version.NightlyVersion] = append(platforms[version.NightlyVersion], plat)
-				released[version.NightlyVersion] = verinfo.Released
-			} else {
-				platforms[ver] = append(platforms[ver], plat)
-				released[ver] = verinfo.Released
+			if ver == comp.Nightly {
+				key := fmt.Sprintf("%s -> %s", version.NightlyVersion, comp.Nightly)
+				platforms[key] = append(platforms[key], plat)
+				released[key] = verinfo.Released
 			}
+			platforms[ver] = append(platforms[ver], plat)
+			released[ver] = verinfo.Released
 		}
 	}
 	verList := []string{}
 	for v := range platforms {
-		if pkgver.Version(v).IsNightly() {
-			continue
-		}
 		verList = append(verList, v)
-	}
-	if comp.Nightly != "" {
-		verList = append(verList, version.NightlyVersion)
 	}
 	sort.Slice(verList, func(p, q int) bool {
 		return semver.Compare(verList[p], verList[q]) < 0

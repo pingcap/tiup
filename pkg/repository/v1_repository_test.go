@@ -78,7 +78,7 @@ func TestPollutedManifest(t *testing.T) {
 	// Mock remote correct but local throw sign error
 	mirror = MockMirror{
 		Resources: map[string]string{
-			/* these files will expire after 2120 */
+			// these files will expire after 2120
 			"/timestamp.json": `{"signatures":[{"keyid":"66d4ea1da00076c822a6e1b4df5eb1e529eb38f6edcedff323e62f2bfe3eaddd","sig":"Mkrw+6H7hQATE0BpjOJ/f7GZlnDzADbxSqWS6+JxW6Dhw/17N+S/K127+7DnBhHNq7+uoiC7jPcCAxYXv2f096fowod9rqvYq47dMLMzNHZ/e63SNeI9B57m9wR58ljkH1cRY0dtJqMVESot0RMDRArYRRzs2kvPp8LvzfJqLP0IXPS/VWrOOyzSJoIuvaNyWY+dNrqM7XYI+y0TWIl06r00TwOjLKjjzLbJcqTBETharQ6o7O7U+V6H3QnmgRa0LtwKIpuDl52PSWhuKRhgfWB4sKfirVlTopGVDI7GmdrvCKlAY8x1tcXrlbDQAEKhHfJXTCO1MBaLToqHug3tMQ=="}],"signed":{"_type":"timestamp","expires":"2120-08-01T14:47:48+08:00","meta":{"/snapshot.json":{"hashes":{"sha256":"aba19fedb329be3c8a08291e06f9849997ca5a9c62f6b429865987c932488249"},"length":1760}},"spec_version":"0.1.0","version":639}}`,
 			"/420.index.json": `{"signatures":[{"keyid":"7fce7ec4f9c36d51dec7ec96065bb64958b743e46ea8141da668cd2ce58a9e61","sig":"MFVJxmU1ErcobtRcssvQiHQLTAVyCVieVpSNlgIAv6FSGN8utFpKuV3RKgelgJskt2j/gJ6k+ITpUqd1Y9iiff44N9u9oov0CBR7gYoSfSum8yEqI0AeJKePUu40959xe/1WU881npF50+LE8ovk0MC8mXzNDoe4kHWFZBve9s+VbPS1KwD2jdnf9sR95rJLF8vxMwnDwsXmdf5Y4TV9nUvQ996BRmr0YFQKBVl9DqxQ+Y2KyXjrNaZwJhKdF7I3W6fCOF4Cf5QMbZ6SG4TrPsscjscZQKJHox3iMuL6NGEem2B2lEJovrlBh0U9/cN4y6CZvEnL3uGYp7gxVvTe7A=="}],"signed":{"_type":"index","components":{"tidb":{"hidden":false,"owner":"pingcap","standalone":false,"url":"/tidb.json","yanked":false}},"default_components":[],"expires":"2121-06-23T12:05:15+08:00","owners":{"pingcap":{"keys":{"a61b695e2b86097d993e94e99fd15ec6d8fc8e9522948c9ff21c2f2c881093ae":{"keytype":"rsa","keyval":{"public":"-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnayxhw6KeoKK+Ax9RW6v\n66YjrpRpGLewLmSSAzJGX8nL5/a2nEbXbeF9po265KcBSFWol8jLBsmG56ruwwxp\noWWhJPncqGqy8wMeRMmTf7ATGa+tk+To7UAQD0MYzt7rRlIdpqi9Us3J6076Z83k\n2sxFnX9sVflhOsotGWL7hmrn/CJWxKsO6OVCoqbIlnJV8xFazE2eCfaDTIEEEgnh\nLIGDsmv1AN8ImUIn/hyKcm1PfhDZrF5qhEVhfz5D8aX3cUcEJw8BvCaNloXyHf+y\nDKjqO/dJ7YFWVt7nPqOvaEkBQGMd54ETJ/BbO9r3WTsjXKleoPovBSQ/oOxApypb\nNQIDAQAB\n-----END PUBLIC KEY-----\n"},"scheme":"rsassa-pss-sha256"}},"name":"PingCAP","threshold":1}},"spec_version":"0.1.0","version":420}}`,
 		},
@@ -384,37 +384,6 @@ func TestDownloadManifest(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestSelectVersion(t *testing.T) {
-	mirror := MockMirror{
-		Resources: map[string]string{},
-	}
-	local := v1manifest.NewMockManifests()
-	setNewRoot(t, local)
-	repo := NewV1Repo(&mirror, Options{}, local)
-
-	// Simple case
-	s, i, err := repo.selectVersion("foo", map[string]v1manifest.VersionItem{"v0.1.0": {URL: "1"}}, "")
-	assert.Nil(t, err)
-	assert.Equal(t, "v0.1.0", s)
-	assert.Equal(t, "1", i.URL)
-
-	// Choose by order
-	s, i, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"v0.1.0": {URL: "1"}, "v0.1.1": {URL: "2"}, "v0.2.0": {URL: "3"}}, "")
-	assert.Nil(t, err)
-	assert.Equal(t, "v0.2.0", s)
-	assert.Equal(t, "3", i.URL)
-
-	// Choose specific
-	s, i, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"v0.1.0": {URL: "1"}, "v0.1.1": {URL: "2"}, "v0.2.0": {URL: "3"}}, "v0.1.1")
-	assert.Nil(t, err)
-	assert.Equal(t, "v0.1.1", s)
-	assert.Equal(t, "2", i.URL)
-
-	// Target doesn't exists
-	_, _, err = repo.selectVersion("foo", map[string]v1manifest.VersionItem{"v0.1.0": {URL: "1"}, "v0.1.1": {URL: "2"}, "v0.2.0": {URL: "3"}}, "v0.2.1")
-	assert.NotNil(t, err)
-}
-
 func TestEnsureManifests(t *testing.T) {
 	mirror := MockMirror{
 		Resources: map[string]string{},
@@ -501,6 +470,7 @@ func TestUpdateComponents(t *testing.T) {
 	err := repo.UpdateComponents([]ComponentSpec{{
 		ID: "foo",
 	}})
+
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(local.Installed))
 	assert.Equal(t, "v2.0.1", local.Installed["foo"].Version)
@@ -656,7 +626,8 @@ func componentManifest() *v1manifest.Component {
 
 func versionItem() v1manifest.VersionItem {
 	return v1manifest.VersionItem{
-		URL: "/foo-2.0.1.tar.gz",
+		URL:   "/foo-2.0.1.tar.gz",
+		Entry: "dummy",
 		FileHash: v1manifest.FileHash{
 			Hashes: map[string]string{v1manifest.SHA256: "8dc7102c0d675dfa53da273317b9f627e96ed24efeecc8c5ebd00dc06f4e09c3"},
 			Length: 28,
@@ -666,7 +637,8 @@ func versionItem() v1manifest.VersionItem {
 
 func versionItem2() v1manifest.VersionItem {
 	return v1manifest.VersionItem{
-		URL: "/foo-2.0.2.tar.gz",
+		URL:   "/foo-2.0.2.tar.gz",
+		Entry: "dummy",
 		FileHash: v1manifest.FileHash{
 			Hashes: map[string]string{v1manifest.SHA256: "5abe91bc22039c15c05580062357be7ab0bfd7968582a118fbb4eb817ddc2e76"},
 			Length: 12,
@@ -677,6 +649,7 @@ func versionItem2() v1manifest.VersionItem {
 func versionItem3() v1manifest.VersionItem {
 	return v1manifest.VersionItem{
 		URL:    "/foo-2.0.3.tar.gz",
+		Entry:  "dummy",
 		Yanked: true,
 		FileHash: v1manifest.FileHash{
 			Hashes: map[string]string{v1manifest.SHA256: "5abe91bc22039c15c05580062357be7ab0bfd7968582a118fbb4eb817ddc2e76"},
