@@ -56,6 +56,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
 	github.com/tikv/pd v0.0.0-20210105064748-f4e7924b50b6
+	github.com/tj/assert v0.0.0-20190920132354-ee03d75cd160
 	github.com/tj/go-termd v0.0.2-0.20200115111609-7f6aeb166380
 	github.com/xo/usql v0.7.8
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20191023171146-3cf2f69b5738
