@@ -250,7 +250,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 		// check if the role is patched
 		roleName := ins.Role()
 		if ins.IsPatched() {
-			roleName += "(patched)"
+			roleName += " (patched)"
 		}
 		clusterInstInfos = append(clusterInstInfos, InstInfo{
 			ID:            ins.ID(),
