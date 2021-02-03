@@ -36,6 +36,7 @@ type PDSpec struct {
 	ListenHost string `yaml:"listen_host,omitempty"`
 	SSHPort    int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported   bool   `yaml:"imported,omitempty"`
+	Patched    bool   `yaml:"patched,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
 	Name            string                 `yaml:"name"`
 	ClientPort      int                    `yaml:"client_port" default:"2379"`

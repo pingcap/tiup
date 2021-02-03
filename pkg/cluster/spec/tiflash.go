@@ -39,6 +39,7 @@ type TiFlashSpec struct {
 	Host                 string                 `yaml:"host"`
 	SSHPort              int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported             bool                   `yaml:"imported,omitempty"`
+	Patched              bool                   `yaml:"patched,omitempty"`
 	TCPPort              int                    `yaml:"tcp_port" default:"9000"`
 	HTTPPort             int                    `yaml:"http_port" default:"8123"`
 	FlashServicePort     int                    `yaml:"flash_service_port" default:"3930"`

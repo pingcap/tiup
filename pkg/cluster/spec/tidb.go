@@ -31,6 +31,7 @@ type TiDBSpec struct {
 	ListenHost      string                 `yaml:"listen_host,omitempty"`
 	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                   `yaml:"imported,omitempty"`
+	Patched         bool                   `yaml:"patched,omitempty"`
 	Port            int                    `yaml:"port" default:"4000"`
 	StatusPort      int                    `yaml:"status_port" default:"10080"`
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`

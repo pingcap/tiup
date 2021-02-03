@@ -91,6 +91,7 @@ type Instance interface {
 	LogDir() string
 	OS() string // only linux supported now
 	Arch() string
+	IsPatched() bool
 }
 
 // PortStarted wait until a port is being listened
@@ -357,6 +358,15 @@ func (i *BaseInstance) Arch() string {
 		return ""
 	}
 	return v.Interface().(string)
+}
+
+// IsPatched implements Instance interface
+func (i *BaseInstance) IsPatched() bool {
+	v := reflect.ValueOf(i.InstanceSpec).FieldByName("Patched")
+	if !v.IsValid() {
+		return false
+	}
+	return v.Bool()
 }
 
 // PrepareStart checks instance requirements before starting

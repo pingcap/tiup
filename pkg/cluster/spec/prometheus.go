@@ -35,6 +35,7 @@ type PrometheusSpec struct {
 	Host                  string                 `yaml:"host"`
 	SSHPort               int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported              bool                   `yaml:"imported,omitempty"`
+	Patched               bool                   `yaml:"patched,omitempty"`
 	Port                  int                    `yaml:"port" default:"9090"`
 	DeployDir             string                 `yaml:"deploy_dir,omitempty"`
 	DataDir               string                 `yaml:"data_dir,omitempty"`

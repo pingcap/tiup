@@ -30,6 +30,7 @@ type AlertmanagerSpec struct {
 	Host            string               `yaml:"host"`
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
+	Patched         bool                 `yaml:"patched,omitempty"`
 	WebPort         int                  `yaml:"web_port" default:"9093"`
 	ClusterPort     int                  `yaml:"cluster_port" default:"9094"`
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`

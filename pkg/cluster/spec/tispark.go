@@ -37,6 +37,7 @@ type TiSparkMasterSpec struct {
 	ListenHost   string                 `yaml:"listen_host,omitempty"`
 	SSHPort      int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported     bool                   `yaml:"imported,omitempty"`
+	Patched      bool                   `yaml:"patched,omitempty"`
 	Port         int                    `yaml:"port" default:"7077"`
 	WebPort      int                    `yaml:"web_port" default:"8080"`
 	DeployDir    string                 `yaml:"deploy_dir,omitempty"`
@@ -83,6 +84,7 @@ type TiSparkWorkerSpec struct {
 	ListenHost string `yaml:"listen_host,omitempty"`
 	SSHPort    int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported   bool   `yaml:"imported,omitempty"`
+	Patched    bool   `yaml:"patched,omitempty"`
 	Port       int    `yaml:"port" default:"7078"`
 	WebPort    int    `yaml:"web_port" default:"8081"`
 	DeployDir  string `yaml:"deploy_dir,omitempty"`
