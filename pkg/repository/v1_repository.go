@@ -135,7 +135,6 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			}
 			spec.Version = ver.String()
 		}
-
 		if !spec.Force {
 			installed, err := r.local.ComponentInstalled(spec.ID, spec.Version)
 			if err != nil {
@@ -737,7 +736,12 @@ func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (pkgver.V
 		return "", nil, err
 	}
 
-	versions := com.VersionList(r.PlatformString())
+	var versions map[string]v1manifest.VersionItem
+	if withYanked {
+		versions = com.VersionListWithYanked(r.PlatformString())
+	} else {
+		versions = com.VersionList(r.PlatformString())
+	}
 	if versions == nil {
 		return "", nil, fmt.Errorf("component %s doesn't support platform %s", id, r.PlatformString())
 	}
@@ -751,9 +755,9 @@ func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (pkgver.V
 
 		if last == "" || semver.Compare(last, v) < 0 {
 			last = v
-			if semver.Prerelease(v) == "" {
-				lastStable = v
-			}
+		}
+		if semver.Prerelease(v) == "" && (lastStable == "" || semver.Compare(lastStable, v) < 0) {
+			lastStable = v
 		}
 	}
 

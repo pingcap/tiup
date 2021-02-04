@@ -150,7 +150,7 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 	}
 
 	if p.Version.IsEmpty() && p.CheckUpdate {
-		latestV, _, err := env.V1Repository().LatestStableVersion(p.Component, true)
+		latestV, _, err := env.V1Repository().LatestStableVersion(p.Component, false)
 		if err != nil {
 			return nil, err
 		}
