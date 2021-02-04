@@ -104,8 +104,8 @@ func (p *Profile) GetComponentInstalledVersion(component string, ver pkgver.Vers
 			if pkgver.Version(versions[i-1]).IsNightly() {
 				return pkgver.Version(versions[i-1]), nil
 			}
-			return "", errors.Errorf("component(nightly) not installed, please try `tiup install %s:nightly` to install it", component)
 		}
+		return "", errors.Errorf("component(nightly) not installed, please try `tiup install %s:nightly` to install it", component)
 	}
 	return pkgver.Version(versions[len(versions)-1]), nil
 }
