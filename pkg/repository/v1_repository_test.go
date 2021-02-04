@@ -458,13 +458,15 @@ func TestLatestStableVersion(t *testing.T) {
 	snapStr := serialize(t, snapshot, priv)
 	ts := timestampManifest()
 	ts.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = hash(snapStr)
+	// v2.0.1: unyanked
+	// v2.0.3: yanked
+	// v3.0.0-rc: unyanked
 	foo := componentManifest()
 	indexURL, _, _ := snapshot.VersionedURL(v1manifest.ManifestURLIndex)
 	mirror.Resources[indexURL] = serialize(t, index, priv)
 	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
 	mirror.Resources["/7.foo.json"] = serialize(t, foo, indexPriv)
-	mirror.Resources["/foo-2.0.1.tar.gz"] = "foo201"
 
 	v, _, err := repo.LatestStableVersion("foo", false)
 	assert.Nil(t, err)
@@ -473,6 +475,40 @@ func TestLatestStableVersion(t *testing.T) {
 	v, _, err = repo.LatestStableVersion("foo", true)
 	assert.Nil(t, err)
 	assert.Equal(t, "v2.0.3", v.String())
+}
+
+func TestLatestStableVersionWithPrerelease(t *testing.T) {
+	mirror := MockMirror{
+		Resources: map[string]string{},
+	}
+	local := v1manifest.NewMockManifests()
+	priv := setNewRoot(t, local)
+
+	repo := NewV1Repo(&mirror, Options{GOOS: "plat", GOARCH: "form"}, local)
+
+	index, indexPriv := indexManifest(t)
+	snapshot := snapshotManifest()
+	snapStr := serialize(t, snapshot, priv)
+	ts := timestampManifest()
+	ts.Meta[v1manifest.ManifestURLSnapshot].Hashes[v1manifest.SHA256] = hash(snapStr)
+	foo := componentManifest()
+
+	// v2.0.1: yanked
+	// v2.0.3: yanked
+	// v3.0.0-rc: unyanked
+	item := foo.Platforms["plat/form"]["v2.0.1"]
+	item.Yanked = true
+	foo.Platforms["plat/form"]["v2.0.1"] = item
+
+	indexURL, _, _ := snapshot.VersionedURL(v1manifest.ManifestURLIndex)
+	mirror.Resources[indexURL] = serialize(t, index, priv)
+	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
+	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
+	mirror.Resources["/7.foo.json"] = serialize(t, foo, indexPriv)
+
+	v, _, err := repo.LatestStableVersion("foo", false)
+	assert.Nil(t, err)
+	assert.Equal(t, "v3.0.0-rc", v.String())
 }
 
 func TestUpdateComponents(t *testing.T) {

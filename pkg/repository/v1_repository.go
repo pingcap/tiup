@@ -748,7 +748,9 @@ func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (pkgver.V
 
 	var last string
 	var lastStable string
+	fmt.Println("-------------")
 	for v := range versions {
+		fmt.Println("version", v, withYanked)
 		if pkgver.Version(v).IsNightly() {
 			continue
 		}
