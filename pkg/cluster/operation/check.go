@@ -54,7 +54,6 @@ var (
 	CheckNamePortListen    = "listening-port"
 	CheckNameEpoll         = "epoll-exclusive"
 	CheckNameMem           = "memory"
-	CheckNameNet           = "network"
 	CheckNameLimits        = "limits"
 	CheckNameSysService    = "service"
 	CheckNameSELinux       = "selinux"
@@ -135,9 +134,6 @@ func checkSysInfo(opt *CheckOptions, sysInfo *sysinfo.SysInfo) []*CheckResult {
 
 	// check memory size
 	results = append(results, checkMem(opt, &sysInfo.Memory)...)
-
-	// check network
-	results = append(results, checkNetwork(opt, sysInfo.Network)...)
 
 	return results
 }
@@ -232,29 +228,6 @@ func checkMem(opt *CheckOptions, memInfo *sysinfo.Memory) []*CheckResult {
 			Name: CheckNameMem,
 			Msg:  fmt.Sprintf("memory size is %dMB", memInfo.Size),
 		})
-	}
-
-	return results
-}
-
-func checkNetwork(opt *CheckOptions, networkDevices []sysinfo.NetworkDevice) []*CheckResult {
-	var results []*CheckResult
-	for _, netdev := range networkDevices {
-		// ignore the network devices that cannot be detected
-		if netdev.Speed == 0 {
-			continue
-		}
-		if netdev.Speed > 1000 {
-			results = append(results, &CheckResult{
-				Name: CheckNameNet,
-				Msg:  fmt.Sprintf("network speed of %s is %dMB", netdev.Name, netdev.Speed),
-			})
-		} else {
-			results = append(results, &CheckResult{
-				Name: CheckNameNet,
-				Err:  fmt.Errorf("network speed of %s is %dMB too low, needs 1GB or more", netdev.Name, netdev.Speed),
-			})
-		}
 	}
 
 	return results
