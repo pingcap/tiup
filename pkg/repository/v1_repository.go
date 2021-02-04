@@ -120,7 +120,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 
 		if spec.Version == version.NightlyVersion {
 			if !manifest.HasNightly(r.PlatformString()) {
-				fmt.Printf("The component `%s` does not have a nightly version; skipped\n", spec.ID)
+				fmt.Printf("The component `%s` on platform %s does not have a nightly version; skipped\n", spec.ID, r.PlatformString())
 				continue
 			}
 
@@ -729,6 +729,20 @@ func (r *V1Repository) ComponentVersion(id, ver string, includeYanked bool) (*v1
 	return vi, nil
 }
 
+// LatestNightlyVersion returns the latest nightly version of specific component
+func (r *V1Repository) LatestNightlyVersion(id string) (pkgver.Version, *v1manifest.VersionItem, error) {
+	com, err := r.FetchComponentManifest(id, false)
+	if err != nil {
+		return "", nil, err
+	}
+
+	if !com.HasNightly(r.PlatformString()) {
+		return "", nil, fmt.Errorf("component %s doesn't have nightly version on platform %s", id, r.PlatformString())
+	}
+
+	return pkgver.Version(com.Nightly), com.VersionItem(r.PlatformString(), com.Nightly, false), nil
+}
+
 // LatestStableVersion returns the latest stable version of specific component
 func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (pkgver.Version, *v1manifest.VersionItem, error) {
 	com, err := r.FetchComponentManifest(id, withYanked)
@@ -748,9 +762,7 @@ func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (pkgver.V
 
 	var last string
 	var lastStable string
-	fmt.Println("-------------")
 	for v := range versions {
-		fmt.Println("version", v, withYanked)
 		if pkgver.Version(v).IsNightly() {
 			continue
 		}
@@ -786,7 +798,7 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, ver st
 	// Because the one the user installed may be scraped.
 	if pkgver.Version(ver).IsNightly() {
 		if !component.HasNightly(r.PlatformString()) {
-			return "", errors.Errorf("the component `%s` does not have a nightly version", componentID)
+			return "", errors.Errorf("the component `%s` on platform %s does not have a nightly version", componentID, r.PlatformString())
 		}
 
 		ver = component.Nightly

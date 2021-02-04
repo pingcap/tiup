@@ -27,6 +27,7 @@ import (
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/verbose"
+	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
 
@@ -183,28 +184,34 @@ func (env *Environment) SelectInstalledVersion(component string, version pkgver.
 }
 
 // DownloadComponentIfMissing downloads the specific version of a component if it is missing
-func (env *Environment) DownloadComponentIfMissing(component string, version pkgver.Version) (pkgver.Version, error) {
+func (env *Environment) DownloadComponentIfMissing(component string, ver pkgver.Version) (pkgver.Version, error) {
 	versions, err := env.profile.InstalledVersions(component)
 	if err != nil {
 		return "", err
+	}
+
+	if ver.String() == version.NightlyVersion {
+		if ver, _, err = env.v1Repo.LatestNightlyVersion(component); err != nil {
+			return "", err
+		}
 	}
 
 	// Use the latest version if user doesn't specify a specific version and
 	// download the latest version if the specific component doesn't be installed
 
 	// Check whether the specific version exist in local
-	if version.IsEmpty() && len(versions) > 0 {
+	if ver.IsEmpty() && len(versions) > 0 {
 		sort.Slice(versions, func(i, j int) bool {
 			return semver.Compare(versions[i], versions[j]) < 0
 		})
-		version = pkgver.Version(versions[len(versions)-1])
+		ver = pkgver.Version(versions[len(versions)-1])
 	}
 
-	needDownload := version.IsEmpty()
-	if !version.IsEmpty() {
+	needDownload := ver.IsEmpty()
+	if !ver.IsEmpty() {
 		installed := false
 		for _, v := range versions {
-			if pkgver.Version(v) == version {
+			if pkgver.Version(v) == ver {
 				installed = true
 				break
 			}
@@ -213,18 +220,18 @@ func (env *Environment) DownloadComponentIfMissing(component string, version pkg
 	}
 
 	if needDownload {
-		fmt.Printf("The component `%s` is not installed; downloading from repository.\n", component)
-		err := env.downloadComponent(component, version, false)
+		fmt.Printf("The component `%s` version %s is not installed; downloading from repository.\n", component, ver.String())
+		err := env.downloadComponent(component, ver, false)
 		if err != nil {
 			return "", err
 		}
 	}
 
-	if version.IsEmpty() {
-		return env.SelectInstalledVersion(component, version)
+	if ver.IsEmpty() {
+		return env.SelectInstalledVersion(component, ver)
 	}
 
-	return version, nil
+	return ver, nil
 }
 
 // GetComponentInstalledVersion return the installed version of component.
@@ -233,12 +240,13 @@ func (env *Environment) GetComponentInstalledVersion(component string, version p
 }
 
 // BinaryPath return the installed binary path.
-func (env *Environment) BinaryPath(component string, version pkgver.Version) (string, error) {
-	installPath, err := env.profile.ComponentInstalledPath(component, version)
+func (env *Environment) BinaryPath(component string, ver pkgver.Version) (string, error) {
+	installPath, err := env.profile.ComponentInstalledPath(component, ver)
 	if err != nil {
 		return "", err
 	}
-	return env.v1Repo.BinaryPath(installPath, component, string(version))
+
+	return env.v1Repo.BinaryPath(installPath, component, ver.String())
 }
 
 // ParseCompVersion parses component part from <component>[:version] specification
