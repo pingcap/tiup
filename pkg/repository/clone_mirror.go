@@ -428,6 +428,9 @@ func combineVersions(versions *[]string,
 				continue
 			}
 			for _, selectedVersion := range selectedVersions {
+				if selectedVersion == version.NightlyVersion {
+					selectedVersion = manifest.Nightly
+				}
 				_, found := versions[selectedVersion]
 				// Some TiUP components won't be bound version with TiDB, if cannot find
 				// selected version we download the latest version to as a alternative
