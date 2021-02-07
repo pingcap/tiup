@@ -83,7 +83,7 @@ func PromptForConfirmYes(format string, a ...interface{}) (bool, string) {
 // PromptForConfirmNo accepts yes / no from console by user, default to Yes and only return true
 // if the user input is No
 func PromptForConfirmNo(format string, a ...interface{}) (bool, string) {
-	ans := Prompt(fmt.Sprintf(format, a...))
+	ans := Prompt(fmt.Sprintf(format, a...)+"(default=N)")
 	switch strings.TrimSpace(strings.ToLower(ans)) {
 	case "n", "no":
 		return true, ans
