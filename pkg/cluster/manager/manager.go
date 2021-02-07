@@ -123,7 +123,7 @@ You may read the OpenJDK doc for a reference: https://openjdk.java.net/install/
 		}
 	}
 
-	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N] (default=N): ")
+	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 }
 
 func (m *Manager) sshTaskBuilder(name string, topo spec.Topology, user string, opts operator.Options) *task.Builder {
