@@ -3,7 +3,7 @@ module github.com/pingcap/tiup
 go 1.13
 
 require (
-	github.com/AstroProfundis/sysinfo v0.0.0-20200423033635-f6f7687215fd
+	github.com/AstroProfundis/sysinfo v0.0.0-20210201035811-eb96b87c86b3
 	github.com/AstroProfundis/tabby v1.1.1-color
 	github.com/BurntSushi/toml v0.3.1
 	github.com/ScaleFT/sshkeys v0.0.0-20181112160850-82451a803681
@@ -24,7 +24,7 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gofrs/flock v0.8.0
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/protobuf v1.3.4
+	github.com/golang/protobuf v1.4.2
 	github.com/google/uuid v1.1.4
 	github.com/gorilla/mux v1.7.4
 	github.com/jeremywohl/flatten v1.0.1
@@ -44,13 +44,13 @@ require (
 	github.com/pingcap/go-tpc v1.0.4-0.20201106030831-2cc8c0ab3409
 	github.com/pingcap/go-ycsb v0.0.0-20200226103513-00ca633a87d8
 	github.com/pingcap/kvproto v0.0.0-20201210033455-35030157bad5
-	github.com/pingcap/tidb-insight v0.3.1
+	github.com/pingcap/tidb-insight v0.3.2
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/prom2json v1.3.0
 	github.com/r3labs/diff v0.0.0-20201223155434-f54a0724e0a9
 	github.com/relex/aini v1.2.1
 	github.com/sergi/go-diff v1.0.1-0.20180205163309-da645544ed44
-	github.com/shirou/gopsutil v2.20.3+incompatible
+	github.com/shirou/gopsutil v3.20.12+incompatible
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
@@ -61,10 +61,10 @@ require (
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20191023171146-3cf2f69b5738
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.16.0
-	golang.org/x/crypto v0.0.0-20200204104054-c9f3fb736b72
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/mod v0.2.0
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	golang.org/x/sys v0.0.0-20200420163511-1957bb5e6d1f
+	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
 	gopkg.in/VividCortex/ewma.v1 v1.1.1 // indirect
 	gopkg.in/cheggaaa/pb.v2 v2.0.7 // indirect
 	gopkg.in/fatih/color.v1 v1.7.0 // indirect
@@ -72,7 +72,7 @@ require (
 	gopkg.in/mattn/go-colorable.v0 v0.1.0 // indirect
 	gopkg.in/mattn/go-isatty.v0 v0.0.4 // indirect
 	gopkg.in/mattn/go-runewidth.v0 v0.0.4 // indirect
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
