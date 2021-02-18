@@ -64,6 +64,11 @@ func (pc *PDClient) GetURL(addr string) string {
 	return fmt.Sprintf("%s://%s", httpPrefix, addr)
 }
 
+const (
+	// pdEvictLeaderName is evict leader scheduler name.
+	pdEvictLeaderName = "evict-leader-scheduler"
+)
+
 // nolint (some is unused now)
 var (
 	pdPingURI           = "pd/ping"
@@ -77,6 +82,7 @@ var (
 	pdLeaderTransferURI = "pd/api/v1/leader/transfer"
 	pdConfigReplicate   = "pd/api/v1/config/replicate"
 	pdConfigSchedule    = "pd/api/v1/config/schedule"
+	pdRegionsCheckURI   = "pd/api/v1/regions/check"
 )
 
 func tryURLs(endpoints []string, f func(endpoint string) ([]byte, error)) ([]byte, error) {
@@ -358,11 +364,6 @@ func (pc *PDClient) EvictPDLeader(retryOpt *utils.RetryOption) error {
 	}
 	return nil
 }
-
-const (
-	// pdEvictLeaderName is evict leader scheduler name.
-	pdEvictLeaderName = "evict-leader-scheduler"
-)
 
 // pdSchedulerRequest is the request body when evicting store leader
 type pdSchedulerRequest struct {
@@ -703,4 +704,21 @@ func (pc *PDClient) GetTiKVLabels() (map[string]map[string]string, error) {
 // UpdateScheduleConfig updates the PD schedule config
 func (pc *PDClient) UpdateScheduleConfig(body io.Reader) error {
 	return pc.updateConfig(body, pdConfigSchedule)
+}
+
+// CheckRegion queries for the region with specific status
+func (pc *PDClient) CheckRegion(state string) (*pdserverapi.RegionsInfo, error) {
+	uri := pdRegionsCheckURI + "/" + state
+	endpoints := pc.getEndpoints(uri)
+	regionsInfo := pdserverapi.RegionsInfo{}
+
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := pc.httpClient.Get(endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, json.Unmarshal(body, &regionsInfo)
+	})
+	return &regionsInfo, err
 }
