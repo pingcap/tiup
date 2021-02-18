@@ -35,14 +35,30 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
+// InstInfo represents an instance info
+type InstInfo struct {
+	ID        string `json:"id"`
+	Role      string `json:"role"`
+	Host      string `json:"host"`
+	Ports     string `json:"ports"`
+	OsArch    string `json:"os_arch"`
+	Status    string `json:"status"`
+	DataDir   string `json:"data_dir"`
+	DeployDir string `json:"deploy_dir"`
+
+	ComponentName string
+	Port          int
+}
+
 // Display cluster meta and topology.
 func (m *Manager) Display(name string, opt operator.Options) error {
-	metadata, err := m.meta(name)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
-		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+	ctx := ctxt.New(context.Background())
+	clusterInstInfos, err := m.GetClusterTopology(ctx, name, opt)
+	if err != nil {
 		return err
 	}
 
+	metadata, _ := m.meta(name)
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 	// display cluster meta
@@ -71,16 +87,87 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 		// Header
 		{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Data Dir", "Deploy Dir"},
 	}
+	masterActive := make([]string, 0)
+	for _, v := range clusterInstInfos {
+		clusterTable = append(clusterTable, []string{
+			color.CyanString(v.ID),
+			v.Role,
+			v.Host,
+			v.Ports,
+			v.OsArch,
+			formatInstanceStatus(v.Status),
+			v.DataDir,
+			v.DeployDir,
+		})
 
-	ctx := ctxt.New(context.Background())
-	err = SetSSHKeySet(ctx, m.specManager.Path(name, "ssh", "id_rsa"), m.specManager.Path(name, "ssh", "id_rsa.pub"))
+		if v.ComponentName != spec.ComponentPD && v.ComponentName != spec.ComponentDMMaster {
+			continue
+		}
+		if strings.HasPrefix(v.Status, "Up") || strings.HasPrefix(v.Status, "Healthy") {
+			instAddr := fmt.Sprintf("%s:%d", v.Host, v.Port)
+			masterActive = append(masterActive, instAddr)
+		}
+	}
+
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return err
 	}
 
+	var dashboardAddr string
+	if t, ok := topo.(*spec.Specification); ok {
+		var err error
+		dashboardAddr, err = t.GetDashboardAddress(tlsCfg, masterActive...)
+		if err == nil && !set.NewStringSet("", "auto", "none").Exist(dashboardAddr) {
+			schema := "http"
+			if tlsCfg != nil {
+				schema = "https"
+			}
+			fmt.Printf("Dashboard URL:      %s\n", cyan.Sprintf("%s://%s/dashboard", schema, dashboardAddr))
+		}
+	}
+
+	cliutil.PrintTable(clusterTable, true)
+	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
+
+	if t, ok := topo.(*spec.Specification); ok {
+		// Check if TiKV's label set correctly
+		pdClient := api.NewPDClient(masterActive, 10*time.Second, tlsCfg)
+		if lbs, err := pdClient.GetLocationLabels(); err != nil {
+			log.Debugf("get location labels from pd failed: %v", err)
+		} else if err := spec.CheckTiKVLabels(lbs, pdClient); err != nil {
+			color.Yellow("\nWARN: there is something wrong with TiKV labels, which may cause data losing:\n%v", err)
+		}
+
+		// Check if there is some instance in tombstone state
+		nodes, _ := operator.DestroyTombstone(ctx, t, true /* returnNodesOnly */, opt, tlsCfg)
+		if len(nodes) != 0 {
+			color.Green("There are some nodes can be pruned: \n\tNodes: %+v\n\tYou can destroy them with the command: `tiup cluster prune %s`", nodes, name)
+		}
+	}
+
+	return nil
+}
+
+// GetClusterTopology get the topology of the cluster.
+func (m *Manager) GetClusterTopology(ctx context.Context, name string, opt operator.Options) ([]InstInfo, error) {
+	metadata, err := m.meta(name)
+	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+		return nil, err
+	}
+
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
+
+	err = SetSSHKeySet(ctx, m.specManager.Path(name, "ssh", "id_rsa"), m.specManager.Path(name, "ssh", "id_rsa.pub"))
+	if err != nil {
+		return nil, err
+	}
+
 	err = SetClusterSSH(ctx, topo, base.User, opt.SSHTimeout, opt.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	filterRoles := set.NewStringSet(opt.Roles...)
@@ -88,7 +175,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	masterList := topo.BaseTopo().MasterList
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	masterActive := make([]string, 0)
@@ -108,16 +195,10 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 
 	var dashboardAddr string
 	if t, ok := topo.(*spec.Specification); ok {
-		var err error
-		dashboardAddr, err = t.GetDashboardAddress(tlsCfg, masterActive...)
-		if err == nil && !set.NewStringSet("", "auto", "none").Exist(dashboardAddr) {
-			schema := "http"
-			if tlsCfg != nil {
-				schema = "https"
-			}
-			fmt.Printf("Dashboard URL:      %s\n", cyan.Sprintf("%s://%s/dashboard", schema, dashboardAddr))
-		}
+		dashboardAddr, _ = t.GetDashboardAddress(tlsCfg, masterActive...)
 	}
+
+	clusterInstInfos := []InstInfo{}
 
 	topo.IterInstance(func(ins spec.Instance) {
 		// apply role filter
@@ -164,50 +245,33 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 				}
 			}
 		}
-		clusterTable = append(clusterTable, []string{
-			color.CyanString(ins.ID()),
-			ins.Role(),
-			ins.GetHost(),
-			utils.JoinInt(ins.UsedPorts(), "/"),
-			cliutil.OsArch(ins.OS(), ins.Arch()),
-			formatInstanceStatus(status),
-			dataDir,
-			deployDir,
+		clusterInstInfos = append(clusterInstInfos, InstInfo{
+			ID:            ins.ID(),
+			Role:          ins.Role(),
+			Host:          ins.GetHost(),
+			Ports:         utils.JoinInt(ins.UsedPorts(), "/"),
+			OsArch:        cliutil.OsArch(ins.OS(), ins.Arch()),
+			Status:        status,
+			DataDir:       dataDir,
+			DeployDir:     deployDir,
+			ComponentName: ins.ComponentName(),
+			Port:          ins.GetPort(),
 		})
 	})
 
 	// Sort by role,host,ports
-	sort.Slice(clusterTable[1:], func(i, j int) bool {
-		lhs, rhs := clusterTable[i+1], clusterTable[j+1]
-		// column: 1 => role, 2 => host, 3 => ports
-		for _, col := range []int{1, 2} {
-			if lhs[col] != rhs[col] {
-				return lhs[col] < rhs[col]
-			}
+	sort.Slice(clusterInstInfos, func(i, j int) bool {
+		lhs, rhs := clusterInstInfos[i], clusterInstInfos[j]
+		if lhs.Role != rhs.Role {
+			return lhs.Role < rhs.Role
 		}
-		return lhs[3] < rhs[3]
+		if lhs.Host != rhs.Host {
+			return lhs.Host < rhs.Host
+		}
+		return lhs.Ports < rhs.Ports
 	})
 
-	cliutil.PrintTable(clusterTable, true)
-	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
-
-	if t, ok := topo.(*spec.Specification); ok {
-		// Check if TiKV's label set correctly
-		pdClient := api.NewPDClient(masterActive, 10*time.Second, tlsCfg)
-		if lbs, err := pdClient.GetLocationLabels(); err != nil {
-			log.Debugf("get location labels from pd failed: %v", err)
-		} else if err := spec.CheckTiKVLabels(lbs, pdClient); err != nil {
-			color.Yellow("\nWARN: there is something wrong with TiKV labels, which may cause data losing:\n%v", err)
-		}
-
-		// Check if there is some instance in tombstone state
-		nodes, _ := operator.DestroyTombstone(ctx, t, true /* returnNodesOnly */, opt, tlsCfg)
-		if len(nodes) != 0 {
-			color.Green("There are some nodes can be pruned: \n\tNodes: %+v\n\tYou can destroy them with the command: `tiup cluster prune %s`", nodes, name)
-		}
-	}
-
-	return nil
+	return clusterInstInfos, nil
 }
 
 func formatInstanceStatus(status string) string {
