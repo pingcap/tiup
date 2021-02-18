@@ -22,9 +22,18 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 )
 
+// Cluster represents a clsuter
+type Cluster struct {
+	Name       string `json:"name"`
+	User       string `json:"user"`
+	Version    string `json:"version"`
+	Path       string `json:"path"`
+	PrivateKey string `json:"private_key"`
+}
+
 // ListCluster list the clusters.
 func (m *Manager) ListCluster() error {
-	names, err := m.specManager.List()
+	clusters, err := m.GetClusterList()
 	if err != nil {
 		return err
 	}
@@ -33,25 +42,46 @@ func (m *Manager) ListCluster() error {
 		// Header
 		{"Name", "User", "Version", "Path", "PrivateKey"},
 	}
-
-	for _, name := range names {
-		metadata, err := m.meta(name)
-		if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
-			!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
-			return perrs.Trace(err)
-		}
-
-		base := metadata.GetBaseMeta()
-
+	for _, v := range clusters {
 		clusterTable = append(clusterTable, []string{
-			name,
-			base.User,
-			base.Version,
-			m.specManager.Path(name),
-			m.specManager.Path(name, "ssh", "id_rsa"),
+			v.Name,
+			v.User,
+			v.Version,
+			v.Path,
+			v.PrivateKey,
 		})
 	}
 
 	cliutil.PrintTable(clusterTable, true)
 	return nil
+}
+
+// GetClusterList get the clusters list.
+func (m *Manager) GetClusterList() ([]Cluster, error) {
+	names, err := m.specManager.List()
+	if err != nil {
+		return nil, err
+	}
+
+	var clusters = []Cluster{}
+
+	for _, name := range names {
+		metadata, err := m.meta(name)
+		if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+			!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
+			return nil, perrs.Trace(err)
+		}
+
+		base := metadata.GetBaseMeta()
+
+		clusters = append(clusters, Cluster{
+			Name:       name,
+			User:       base.User,
+			Version:    base.Version,
+			Path:       m.specManager.Path(name),
+			PrivateKey: m.specManager.Path(name, "ssh", "id_rsa"),
+		})
+	}
+
+	return clusters, nil
 }
