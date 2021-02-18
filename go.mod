@@ -15,9 +15,6 @@ require (
 	github.com/cheggaaa/pb v2.0.7+incompatible
 	github.com/creasty/defaults v1.5.1
 	github.com/cznic/b v0.0.0-20181122101859-a26611c4d92d // indirect
-	github.com/cznic/strutil v0.0.0-20181122101858-275e90344537 // indirect
-	github.com/facebookgo/ensure v0.0.0-20200202191622-63f1cf65ac4c // indirect
-	github.com/facebookgo/subset v0.0.0-20200203212716-c811ad88dec4 // indirect
 	github.com/fatih/color v1.10.0
 	github.com/gibson042/canonicaljson-go v1.0.3
 	github.com/gizak/termui/v3 v3.1.0
@@ -61,10 +58,11 @@ require (
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20191023171146-3cf2f69b5738
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.16.0
-	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	golang.org/x/mod v0.2.0
-	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
+	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
+	golang.org/x/mod v0.4.1
+	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
+	golang.org/x/sys v0.0.0-20210218085108-9555bcde0c6a
+	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf
 	gopkg.in/VividCortex/ewma.v1 v1.1.1 // indirect
 	gopkg.in/cheggaaa/pb.v2 v2.0.7 // indirect
 	gopkg.in/fatih/color.v1 v1.7.0 // indirect
@@ -74,8 +72,6 @@ require (
 	gopkg.in/mattn/go-runewidth.v0 v0.0.4 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
-	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
-	sigs.k8s.io/yaml v1.2.0 // indirect
 	software.sslmate.com/src/go-pkcs12 v0.0.0-20200619203921-c9ed90bd32dc
 )
 
