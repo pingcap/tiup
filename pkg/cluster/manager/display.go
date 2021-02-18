@@ -52,8 +52,7 @@ type InstInfo struct {
 
 // Display cluster meta and topology.
 func (m *Manager) Display(name string, opt operator.Options) error {
-	ctx := ctxt.New(context.Background())
-	clusterInstInfos, err := m.GetClusterTopology(ctx, name, opt)
+	clusterInstInfos, err := m.GetClusterTopology(name, opt)
 	if err != nil {
 		return err
 	}
@@ -130,6 +129,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	cliutil.PrintTable(clusterTable, true)
 	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
 
+	ctx := ctxt.New(context.Background())
 	if t, ok := topo.(*spec.Specification); ok {
 		// Check if TiKV's label set correctly
 		pdClient := api.NewPDClient(masterActive, 10*time.Second, tlsCfg)
@@ -150,7 +150,8 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 }
 
 // GetClusterTopology get the topology of the cluster.
-func (m *Manager) GetClusterTopology(ctx context.Context, name string, opt operator.Options) ([]InstInfo, error) {
+func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstInfo, error) {
+	ctx := ctxt.New(context.Background())
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
@@ -245,6 +246,7 @@ func (m *Manager) GetClusterTopology(ctx context.Context, name string, opt opera
 				}
 			}
 		}
+
 		clusterInstInfos = append(clusterInstInfos, InstInfo{
 			ID:            ins.ID(),
 			Role:          ins.Role(),
