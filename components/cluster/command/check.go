@@ -19,11 +19,13 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -115,7 +117,17 @@ conflict checks with other clusters`,
 				}
 			}
 
-			return checkSystemInfo(sshConnProps, &topo, &gOpt, &opt)
+			if err := checkSystemInfo(sshConnProps, &topo, &gOpt, &opt); err != nil {
+				return err
+			}
+
+			if !opt.existCluster {
+				return nil
+			}
+			// following checks are all for existing cluster
+
+			// check PD status
+			return checkRegionsInfo(args[0], &topo, &gOpt)
 		},
 	}
 
@@ -130,6 +142,7 @@ conflict checks with other clusters`,
 	cmd.Flags().BoolVar(&opt.opr.EnableDisk, "enable-disk", false, "Enable disk IO (fio) check")
 	cmd.Flags().BoolVar(&opt.applyFix, "apply", false, "Try to fix failed checks")
 	cmd.Flags().BoolVar(&opt.existCluster, "cluster", false, "Check existing cluster, the input is a cluster name.")
+	cmd.Flags().Uint64Var(&gOpt.APITimeout, "api-timeout", 10, "Timeout in seconds when querying PD APIs.")
 
 	return cmd
 }
@@ -501,4 +514,43 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder) (s
 		msg = fmt.Sprintf("%s, auto fixing not supported", res)
 	}
 	return msg, nil
+}
+
+// checkRegionsInfo checks peer status from PD
+func checkRegionsInfo(clusterName string, topo *spec.Specification, gOpt *operator.Options) error {
+	log.Infof("Checking region status of the cluster %s...", clusterName)
+
+	tlsConfig, err := topo.TLSConfig(tidbSpec.Path(clusterName, spec.TLSCertKeyDir))
+	if err != nil {
+		return err
+	}
+	pdClient := api.NewPDClient(
+		topo.GetPDList(),
+		time.Second*time.Duration(gOpt.APITimeout),
+		tlsConfig,
+	)
+
+	hasUnhealthy := false
+	for _, state := range []string{
+		"miss-peer",
+		"pending-peer",
+	} {
+		rInfo, err := pdClient.CheckRegion(state)
+		if err != nil {
+			return err
+		}
+		if rInfo.Count > 0 {
+			log.Warnf(
+				"Regions are not fully healthy: %s",
+				color.YellowString("%d %s", rInfo.Count, state),
+			)
+			hasUnhealthy = true
+		}
+	}
+	if hasUnhealthy {
+		log.Warnf("Please fix unhealthy regions before other operations.")
+	} else {
+		log.Infof("All regions are healthy.")
+	}
+	return nil
 }
