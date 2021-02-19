@@ -1,0 +1,57 @@
+---
+name: release-tiup
+
+on:
+  push:
+    tags:
+      - "ci/**"
+
+jobs:
+  tiup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: true
+      matrix:
+        os:
+          - "linux"
+          - "darwin"
+        arch:
+          - "amd64"
+          - "arm64"
+    env:
+      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
+    steps:
+      - name: Set up Go 1.16
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+        id: go
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: go/src/github.com/${{ github.repository }}
+
+      - name: Build build_tiup_test
+        working-directory: ${{ env.working-directory }}
+        run: |
+          export GOPATH=${GITHUB_WORKSPACE}/go
+          export PATH=$PATH:$GOPATH/bin
+          export GOOS=${{ matrix.os }}
+          export GOARCH=${{ matrix.arch }}
+          BUILD_FLAG='-trimpath -buildmode=pie' make tiup
+
+      - name: Publish packages
+        working-directory: ${{ env.working-directory }}
+        run: |
+          TMP_DIR=`mktemp -d`
+          export TIUP_HOME="$TMP_DIR/home"
+          wget -O $TMP_DIR/tiup-linux-amd64.tar.gz -q https://tiup-mirrors.pingcap.com/tiup-linux-amd64.tar.gz
+          tar -zxf $TMP_DIR/tiup-linux-amd64.tar.gz -C $TMP_DIR && chmod 755 $TMP_DIR/tiup
+          rm -rf $TIUP_HOME && mkdir -p $TIUP_HOME/{bin,keys}
+          curl https://tiup-mirrors.pingcap.com/root.json -o $TIUP_HOME/bin/root.json
+          echo "ZHVtbXkga2V5Cg==" | base64 -d > $TIUP_HOME/keys/private.json
+          $TMP_DIR/tiup list
+          $TMP_DIR/tiup mirror -h
