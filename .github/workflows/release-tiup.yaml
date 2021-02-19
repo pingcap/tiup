@@ -34,16 +34,22 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           path: go/src/github.com/${{ github.repository }}
 
+      - name: Get tag name
+        id: get_tag
+        run: echo ::set-output name=GIT_REF::${GITHUB_REF/refs\/tags\//}
+
       - name: Build tiup for ${{ matrix.os }}-${{ matrix.arch }}
         working-directory: ${{ env.working-directory }}
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          COMMIT: ${GITHUB_SHA}
+          #GITREF: ${{ github.event.release.tag_name }}
+          GITREF: ${{ steps.get_tag.outputs.GIT_REF }}
         run: |
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
-          export GOOS=${{ matrix.os }}
-          export GOARCH=${{ matrix.arch }}
           sed -i '/shell git /d' Makefile
-          export COMMIT=${GITHUB_SHA}
-          export BRANCH=${GITHUB_REF#refs/tags/}
           BUILD_FLAG='-trimpath -buildmode=pie' make tiup && echo "Build success."
 
       - name: Publish packages
