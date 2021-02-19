@@ -21,7 +21,7 @@ import (
 	"syscall"
 
 	"github.com/AstroProfundis/tabby"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 // PrintTable accepts a matrix of strings and print them as ASCII table to terminal
@@ -71,7 +71,7 @@ func Prompt(prompt string) string {
 // PromptForConfirmYes accepts yes / no from console by user, default to No and only return true
 // if the user input is Yes
 func PromptForConfirmYes(format string, a ...interface{}) (bool, string) {
-	ans := Prompt(fmt.Sprintf(format, a...)+"(default=N)")
+	ans := Prompt(fmt.Sprintf(format, a...) + "(default=N)")
 	switch strings.TrimSpace(strings.ToLower(ans)) {
 	case "y", "yes":
 		return true, ans
@@ -83,7 +83,7 @@ func PromptForConfirmYes(format string, a ...interface{}) (bool, string) {
 // PromptForConfirmNo accepts yes / no from console by user, default to Yes and only return true
 // if the user input is No
 func PromptForConfirmNo(format string, a ...interface{}) (bool, string) {
-	ans := Prompt(fmt.Sprintf(format, a...)+"(default=Y)")
+	ans := Prompt(fmt.Sprintf(format, a...) + "(default=Y)")
 	switch strings.TrimSpace(strings.ToLower(ans)) {
 	case "n", "no":
 		return true, ans
@@ -106,7 +106,7 @@ func PromptForPassword(format string, a ...interface{}) string {
 
 	fmt.Printf(format, a...)
 
-	input, err := terminal.ReadPassword(syscall.Stdin)
+	input, err := term.ReadPassword(syscall.Stdin)
 
 	if err != nil {
 		return ""
