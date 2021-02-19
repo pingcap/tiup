@@ -14,11 +14,11 @@ GOTEST  := GO111MODULE=on CGO_ENABLED=1 go test -p 3
 SHELL   := /usr/bin/env bash
 
 COMMIT    := $(shell git describe --no-match --always --dirty)
-BRANCH    := $(shell git rev-parse --abbrev-ref HEAD)
+GITREF    := $(shell git rev-parse --abbrev-ref HEAD)
 
 LDFLAGS := -w -s
 LDFLAGS += -X "$(REPO)/pkg/version.GitHash=$(COMMIT)"
-LDFLAGS += -X "$(REPO)/pkg/version.GitBranch=$(BRANCH)"
+LDFLAGS += -X "$(REPO)/pkg/version.GitRef=$(GITREF)"
 LDFLAGS += $(EXTRA_LDFLAGS)
 
 FILES     := $$(find . -name "*.go")
