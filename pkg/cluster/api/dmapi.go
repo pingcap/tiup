@@ -98,8 +98,8 @@ func (dm *DMMasterClient) getMember(endpoints []string) (*dmpb.ListMemberRespons
 	return resp, err
 }
 
-func (dm *DMMasterClient) deleteMember(endpoints []string) (*dmpb.OfflineWorkerResponse, error) {
-	resp := &dmpb.OfflineWorkerResponse{}
+func (dm *DMMasterClient) deleteMember(endpoints []string) (*dmpb.OfflineMemberResponse, error) {
+	resp := &dmpb.OfflineMemberResponse{}
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, statusCode, err := dm.httpClient.Delete(endpoint, nil)
 
