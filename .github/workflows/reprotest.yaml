@@ -23,8 +23,7 @@ jobs:
       matrix:
         go:
           - 1.13
-          - 1.14
-          - 1.15
+          - 1.16
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
