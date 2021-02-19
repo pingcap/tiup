@@ -34,14 +34,17 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           path: go/src/github.com/${{ github.repository }}
 
-      - name: Build build_tiup_test
+      - name: Build tiup for ${{ matrix.os }}-${{ matrix.arch }}
         working-directory: ${{ env.working-directory }}
         run: |
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
           export GOOS=${{ matrix.os }}
           export GOARCH=${{ matrix.arch }}
-          BUILD_FLAG='-trimpath -buildmode=pie' make tiup
+          sed -i '/shell git /d' Makefile
+          export COMMIT=${GITHUB_SHA}
+          export BRANCH=${GITHUB_REF#refs/tags/}
+          BUILD_FLAG='-trimpath -buildmode=pie' make tiup && echo "Build success."
 
       - name: Publish packages
         working-directory: ${{ env.working-directory }}
@@ -51,7 +54,7 @@ jobs:
           wget -O $TMP_DIR/tiup-linux-amd64.tar.gz -q https://tiup-mirrors.pingcap.com/tiup-linux-amd64.tar.gz
           tar -zxf $TMP_DIR/tiup-linux-amd64.tar.gz -C $TMP_DIR && chmod 755 $TMP_DIR/tiup
           rm -rf $TIUP_HOME && mkdir -p $TIUP_HOME/{bin,keys}
-          curl https://tiup-mirrors.pingcap.com/root.json -o $TIUP_HOME/bin/root.json
+          curl -s https://tiup-mirrors.pingcap.com/root.json -o $TIUP_HOME/bin/root.json
           echo "ZHVtbXkga2V5Cg==" | base64 -d > $TIUP_HOME/keys/private.json
           $TMP_DIR/tiup list
           $TMP_DIR/tiup mirror -h
