@@ -382,3 +382,7 @@ scrape_configs:
       - '{{.}}'
     {{- end}}
 {{- end}}
+
+{{- if .RemoteConfig}}
+{{.RemoteConfig}}
+{{- end}}

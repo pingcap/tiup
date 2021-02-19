@@ -40,11 +40,18 @@ type PrometheusSpec struct {
 	DataDir         string               `yaml:"data_dir,omitempty"`
 	LogDir          string               `yaml:"log_dir,omitempty"`
 	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	RemoteConfig    Remote               `yaml:"remote_config,omitempty" validate:"remote_config:ignore"`
 	Retention       string               `yaml:"storage_retention,omitempty" validate:"storage_retention:editable"`
 	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 	Arch            string               `yaml:"arch,omitempty"`
 	OS              string               `yaml:"os,omitempty"`
 	RuleDir         string               `yaml:"rule_dir,omitempty" validate:"rule_dir:editable"`
+}
+
+// Remote prometheus remote config
+type Remote struct {
+	RemoteWrite []map[string]interface{} `yaml:"remote_write,omitempty" validate:"remote_write:ignore"`
+	RemoteRead  []map[string]interface{} `yaml:"remote_read,omitempty" validate:"remote_read:ignore"`
 }
 
 // Role returns the component role of the instance
@@ -245,6 +252,7 @@ func (i *MonitorInstance) InitConfig(
 			cfig.AddDMWorker(host, uint64(port))
 		}
 	}
+
 	if monitoredOptions != nil {
 		for host := range uniqueHosts {
 			cfig.AddNodeExpoertor(host, uint64(monitoredOptions.NodeExporterPort))
@@ -252,6 +260,12 @@ func (i *MonitorInstance) InitConfig(
 			cfig.AddMonitoredServer(host)
 		}
 	}
+
+	remoteCfg, err := encodeRemoteCfg2Yaml(spec.RemoteConfig)
+	if err != nil {
+		return err
+	}
+	cfig.SetRemoteConfig(string(remoteCfg))
 
 	if spec.RuleDir != "" {
 		filter := func(name string) bool { return strings.HasSuffix(name, ".rules.yml") }
