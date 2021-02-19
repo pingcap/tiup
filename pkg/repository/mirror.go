@@ -488,6 +488,9 @@ func (l *httpMirror) Download(resource, targetDir string) error {
 			return nil
 		}
 		return r.Close()
+	}, utils.RetryOption{
+		Timeout:  time.Hour,
+		Attempts: 3,
 	})
 	if err != nil {
 		return err
