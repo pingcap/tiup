@@ -4,7 +4,8 @@ name: release-tiup
 on:
   push:
     tags:
-      - "ci/**"
+      - ci/**
+      - v*
 
 jobs:
   tiup:
@@ -49,7 +50,6 @@ jobs:
         run: |
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
-          sed -i '/shell git /d' Makefile
           BUILD_FLAG='-trimpath -buildmode=pie' make tiup && echo "Build success."
 
       - name: Publish packages

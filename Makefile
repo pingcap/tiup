@@ -11,8 +11,10 @@ GOBUILD := $(GO) build $(BUILD_FLAG)
 GOTEST  := GO111MODULE=on CGO_ENABLED=1 go test -p 3
 SHELL   := /usr/bin/env bash
 
-COMMIT  := $(shell git describe --no-match --always --dirty)
-GITREF  := $(shell git rev-parse --abbrev-ref HEAD)
+_COMMIT := $(shell git describe --no-match --always --dirty)
+_GITREF := $(shell git rev-parse --abbrev-ref HEAD)
+COMMIT  := $(if $(COMMIT),$(COMMIT),$(_COMMIT))
+GITREF  := $(if $(GITREF),$(GITREF),$(_GITREF))
 
 LDFLAGS := -w -s
 LDFLAGS += -X "$(REPO)/pkg/version.GitHash=$(COMMIT)"
