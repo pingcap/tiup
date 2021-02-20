@@ -27,7 +27,7 @@ if [ -z "$arch" ]; then
     exit 1
 fi
 
-if [ "$os-$arch" == "darwin-arm64" ]; then
+if [ "$os-$arch" = "darwin-arm64" ]; then
     echo "Architecture darwin-arm64 not supported." >&2
     exit 1
 fi

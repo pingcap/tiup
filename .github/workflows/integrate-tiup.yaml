@@ -6,9 +6,6 @@ on:
     branches:
       - master
       - release-*
-  push:
-    branches:
-      - ci/**
 
 jobs:
   tiup:
