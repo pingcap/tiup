@@ -4,8 +4,13 @@ name: release-tiup
 on:
   push:
     tags:
-      - ci/**
-      - v*
+      - ci/v*
+    branches:
+      - ci/gh-*
+      - release-*
+  release:
+    types:
+      - created
 
 jobs:
   release:
@@ -34,26 +39,46 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           path: go/src/github.com/${{ github.repository }}
+          fetch-depth: 0
 
-      - name: Get tag name
-        id: get_tag
-        run: echo ::set-output name=GIT_REF::${GITHUB_REF/refs\/tags\//}
+      - name: Check if this is a staging release
+        id: rel_staging
+        working-directory: ${{ env.working-directory }}
+        if: github.event_name != 'release'
+        run: |
+          STAGING_VER=`git describe --tags | sed -r "s/([^-]*-g)/r\1/;s/(^.*)r\d*/staging-r/"`
+          echo ::set-output name=STAGING::$STAGING_VER
 
-      - name: Build tiup for ${{ matrix.os }}-${{ matrix.arch }}
+      - name: Get git ref
+        id: get_ref
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo ::set-output name=GIT_REF::${GITHUB_REF/refs\/tags\//}
+          elif [[ $GITHUB_REF == refs/heads/* ]]; then
+            echo ::set-output name=GIT_REF::${GITHUB_REF/refs\/heads\//}
+          fi
+
+      - name: Build for ${{ matrix.os }}-${{ matrix.arch }}
         working-directory: ${{ env.working-directory }}
         env:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
           COMMIT: ${GITHUB_SHA}
-          GITREF: ${{ steps.get_tag.outputs.GIT_REF }}
+          GITREF: ${{ steps.get_ref.outputs.GIT_REF }}
         run: |
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
+          if [ ! -z ${{ steps.rel_staging.outputs.STAGING }} ]; then
+            export EXTRA_LDFLAGS="-X \"github.com/pingcap/tiup/pkg/version.TiUPVerName=${{ steps.rel_staging.outputs.STAGING }}\""
+          fi
           BUILD_FLAG='-trimpath -buildmode=pie' make build && echo "Build success."
 
       - name: Publish packages
         working-directory: ${{ env.working-directory }}
+        env:
+          TIUP_MIRROR_BASE: "dummy.mirror.tld"
         run: |
+          echo "::add-mask::${TIUP_MIRROR_BASE}"
           TMP_DIR=`mktemp -d`
           export TIUP_HOME="$TMP_DIR/home"
           wget -O $TMP_DIR/tiup-linux-amd64.tar.gz -q https://tiup-mirrors.pingcap.com/tiup-linux-amd64.tar.gz
@@ -61,5 +86,11 @@ jobs:
           rm -rf $TIUP_HOME && mkdir -p $TIUP_HOME/{bin,keys}
           curl -s https://tiup-mirrors.pingcap.com/root.json -o $TIUP_HOME/bin/root.json
           echo "ZHVtbXkga2V5Cg==" | base64 -d > $TIUP_HOME/keys/private.json
+
+          REL_VER=`git describe --tags`
+          if [ ! -z ${{ steps.rel_staging.outputs.STAGING }} ]; then
+            REL_VER=$REL_VER-staging
+          fi
+          echo $REL_VER
           $TMP_DIR/tiup list
           $TMP_DIR/tiup mirror -h
