@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -37,7 +38,12 @@ func (u *UpdateTopology) Execute(ctx *Context) error {
 	if err != nil {
 		return err
 	}
-	txn := client.Txn(context.Background())
+	// fix https://github.com/pingcap/tiup/issues/333
+	// etcd client defaults to wait forever
+	// if all pd were down, don't hang forever
+	ctxt, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+	defer cancel()
+	txn := client.Txn(ctxt)
 
 	topo := u.metadata.Topology
 
