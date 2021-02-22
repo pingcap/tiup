@@ -247,7 +247,7 @@ func (i *MonitorInstance) InitConfig(
 	}
 	if servers, found := topoHasField("Masters"); found {
 		for i := 0; i < servers.Len(); i++ {
-			master := servers.Index(i)
+			master := reflect.Indirect(servers.Index(i))
 			host, port := master.FieldByName("Host").String(), master.FieldByName("Port").Int()
 			cfig.AddDMMaster(host, uint64(port))
 		}
@@ -255,8 +255,8 @@ func (i *MonitorInstance) InitConfig(
 
 	if servers, found := topoHasField("Workers"); found {
 		for i := 0; i < servers.Len(); i++ {
-			master := servers.Index(i)
-			host, port := master.FieldByName("Host").String(), master.FieldByName("Port").Int()
+			worker := reflect.Indirect(servers.Index(i))
+			host, port := worker.FieldByName("Host").String(), worker.FieldByName("Port").Int()
 			cfig.AddDMWorker(host, uint64(port))
 		}
 	}

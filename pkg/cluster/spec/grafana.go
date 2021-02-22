@@ -192,7 +192,7 @@ func (i *GrafanaInstance) InitConfig(
 	if (val == reflect.Value{}) {
 		return errors.Errorf("field Monitors not found in topology: %v", topo)
 	}
-	monitors := val.Interface().([]PrometheusSpec)
+	monitors := val.Interface().([]*PrometheusSpec)
 	// transfer datasource.yml
 	if len(monitors) == 0 {
 		return errors.New("no prometheus found in topology")

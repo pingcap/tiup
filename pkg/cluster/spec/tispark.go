@@ -171,7 +171,7 @@ type TiSparkMasterInstance struct {
 
 // GetCustomFields get custom spark configs of the instance
 func (i *TiSparkMasterInstance) GetCustomFields() map[string]interface{} {
-	v := reflect.ValueOf(i.InstanceSpec).FieldByName("SparkConfigs")
+	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("SparkConfigs")
 	if !v.IsValid() {
 		return nil
 	}
@@ -180,7 +180,7 @@ func (i *TiSparkMasterInstance) GetCustomFields() map[string]interface{} {
 
 // GetCustomEnvs get custom spark envionment variables of the instance
 func (i *TiSparkMasterInstance) GetCustomEnvs() map[string]string {
-	v := reflect.ValueOf(i.InstanceSpec).FieldByName("SparkEnvs")
+	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("SparkEnvs")
 	if !v.IsValid() {
 		return nil
 	}
@@ -189,7 +189,7 @@ func (i *TiSparkMasterInstance) GetCustomEnvs() map[string]string {
 
 // GetJavaHome returns the java_home value in spec
 func (i *TiSparkMasterInstance) GetJavaHome() string {
-	return reflect.ValueOf(i.InstanceSpec).FieldByName("JavaHome").String()
+	return reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("JavaHome").String()
 }
 
 // InitConfig implement Instance interface
@@ -338,7 +338,7 @@ type TiSparkWorkerInstance struct {
 
 // GetJavaHome returns the java_home value in spec
 func (i *TiSparkWorkerInstance) GetJavaHome() string {
-	return reflect.ValueOf(i.InstanceSpec).FieldByName("JavaHome").String()
+	return reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("JavaHome").String()
 }
 
 // InitConfig implement Instance interface

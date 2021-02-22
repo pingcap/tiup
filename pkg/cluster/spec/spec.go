@@ -494,11 +494,11 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 			if field.Field(j).String() != "" {
 				continue
 			}
-			host := field.FieldByName("Host").String()
-			clientPort := field.FieldByName("ClientPort").Int()
+			host := reflect.Indirect(field).FieldByName("Host").String()
+			clientPort := reflect.Indirect(field).FieldByName("ClientPort").Int()
 			field.Field(j).Set(reflect.ValueOf(fmt.Sprintf("pd-%s-%d", host, clientPort)))
 		case "DataDir":
-			if field.FieldByName("Imported").Interface().(bool) {
+			if reflect.Indirect(field).FieldByName("Imported").Interface().(bool) {
 				setDefaultDir(globalOptions.DataDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
 			}
 
