@@ -85,7 +85,7 @@ func (p *Pump) Ready(ctx context.Context) error {
 
 // Addr return the address of Pump.
 func (p *Pump) Addr() string {
-	return fmt.Sprintf("%s:%d", advertiseHost(p.Host), p.Port)
+	return fmt.Sprintf("%s:%d", AdvertiseHost(p.Host), p.Port)
 }
 
 // Start implements Instance interface.
@@ -95,7 +95,7 @@ func (p *Pump) Start(ctx context.Context, version pkgver.Version) error {
 	args := []string{
 		fmt.Sprintf("--node-id=%s", p.NodeID()),
 		fmt.Sprintf("--addr=%s:%d", p.Host, p.Port),
-		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(p.Host), p.Port),
+		fmt.Sprintf("--advertise-addr=%s:%d", AdvertiseHost(p.Host), p.Port),
 		fmt.Sprintf("--pd-urls=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--log-file=%s", p.LogFile()),
 	}

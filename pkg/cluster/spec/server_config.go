@@ -30,6 +30,7 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -214,6 +215,20 @@ func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, 
 	err = enc.Encode(lhs)
 	if err != nil {
 		return nil, perrs.Trace(err)
+	}
+	return buf.Bytes(), nil
+}
+
+func encodeRemoteCfg2Yaml(remote Remote) ([]byte, error) {
+	if len(remote.RemoteRead) == 0 && len(remote.RemoteWrite) == 0 {
+		return []byte{}, nil
+	}
+
+	buf := bytes.NewBufferString("")
+	enc := yaml.NewEncoder(buf)
+	err := enc.Encode(remote)
+	if err != nil {
+		return nil, err
 	}
 	return buf.Bytes(), nil
 }

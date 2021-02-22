@@ -74,7 +74,8 @@ func CompVersion(comp string, version pkgver.Version) string {
 	return fmt.Sprintf("%v:%v", comp, version)
 }
 
-func advertiseHost(listen string) string {
+// AdvertiseHost returns the interface's ip addr if listen host is 0.0.0.0
+func AdvertiseHost(listen string) string {
 	if listen == "0.0.0.0" {
 		addrs, err := net.InterfaceAddrs()
 		if err != nil || len(addrs) == 0 {
@@ -102,9 +103,9 @@ func pdEndpoints(pds []*PDInstance, isHTTP bool) []string {
 	var endpoints []string
 	for _, pd := range pds {
 		if isHTTP {
-			endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", advertiseHost(pd.Host), pd.StatusPort))
+			endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", AdvertiseHost(pd.Host), pd.StatusPort))
 		} else {
-			endpoints = append(endpoints, fmt.Sprintf("%s:%d", advertiseHost(pd.Host), pd.StatusPort))
+			endpoints = append(endpoints, fmt.Sprintf("%s:%d", AdvertiseHost(pd.Host), pd.StatusPort))
 		}
 	}
 	return endpoints

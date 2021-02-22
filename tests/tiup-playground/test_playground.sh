@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eu
+set -eux
 
 TEST_DIR=$(cd "$(dirname "$0")"; pwd)
 TMP_DIR=$TEST_DIR/_tmp
@@ -50,7 +50,7 @@ function kill_all() {
 }
 
 outfile=/tmp/tiup-playground-test.out
-tiup-playground v4.0.4 --tiflash 0 > $outfile 2>&1 &
+tiup-playground v4.0.10 --tiflash 0 > $outfile 2>&1 &
 
 
 trap "kill_all > /dev/null 2>&1" EXIT
@@ -94,6 +94,5 @@ tiup-playground display
 tiup-playground display | grep -E "terminated|exit" | wc -l | grep -q "1"
 
 killall -2 tiup-playground.test || killall -2 tiup-playground
-wait
 
 echo -e "\033[0;36m<<< Run all test success >>>\033[0m"

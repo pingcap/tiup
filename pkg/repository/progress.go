@@ -16,7 +16,7 @@ package repository
 import (
 	"fmt"
 
-	"github.com/cheggaaa/pb"
+	"github.com/cheggaaa/pb/v3"
 )
 
 // DisableProgress implement the DownloadProgress interface and disable download progress
