@@ -263,7 +263,7 @@ func UpdateManifestForPublish(m *v1manifest.Component,
 		}
 	}
 
-	if strings.Contains(ver, version.NightlyVersion) {
+	if pkgver.Version(ver).IsNightly() {
 		m.Nightly = ver
 	}
 
