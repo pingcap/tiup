@@ -39,7 +39,7 @@ func TestLocalDashboards(t *testing.T) {
 	assert.Nil(t, err)
 
 	topo := new(Specification)
-	topo.Grafanas = append(topo.Grafanas, GrafanaSpec{
+	topo.Grafanas = append(topo.Grafanas, &GrafanaSpec{
 		Host:         "127.0.0.1",
 		Port:         3000,
 		DashboardDir: localDir,

@@ -44,22 +44,22 @@ type AlertmanagerSpec struct {
 }
 
 // Role returns the component role of the instance
-func (s AlertmanagerSpec) Role() string {
+func (s *AlertmanagerSpec) Role() string {
 	return ComponentAlertmanager
 }
 
 // SSH returns the host and SSH port of the instance
-func (s AlertmanagerSpec) SSH() (string, int) {
+func (s *AlertmanagerSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s AlertmanagerSpec) GetMainPort() int {
+func (s *AlertmanagerSpec) GetMainPort() int {
 	return s.WebPort
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s AlertmanagerSpec) IsImported() bool {
+func (s *AlertmanagerSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -133,7 +133,7 @@ func (i *AlertManagerInstance) InitConfig(
 
 	enableTLS := gOpts.TLSEnabled
 	// Transfer start script
-	spec := i.InstanceSpec.(AlertmanagerSpec)
+	spec := i.InstanceSpec.(*AlertmanagerSpec)
 	cfg := scripts.NewAlertManagerScript(spec.Host, paths.Deploy, paths.Data[0], paths.Log, enableTLS).
 		WithWebPort(spec.WebPort).WithClusterPort(spec.ClusterPort).WithNumaNode(spec.NumaNode).
 		AppendEndpoints(AlertManagerEndpoints(alertmanagers, deployUser, enableTLS))

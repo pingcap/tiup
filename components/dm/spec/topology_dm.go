@@ -87,12 +87,12 @@ type (
 	Specification struct {
 		GlobalOptions GlobalOptions `yaml:"global,omitempty" validate:"global:editable"`
 		// MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty" validate:"monitored:editable"`
-		ServerConfigs DMServerConfigs         `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
-		Masters       []MasterSpec            `yaml:"master_servers"`
-		Workers       []WorkerSpec            `yaml:"worker_servers"`
-		Monitors      []spec.PrometheusSpec   `yaml:"monitoring_servers"`
-		Grafanas      []spec.GrafanaSpec      `yaml:"grafana_servers,omitempty"`
-		Alertmanagers []spec.AlertmanagerSpec `yaml:"alertmanager_servers,omitempty"`
+		ServerConfigs DMServerConfigs          `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
+		Masters       []*MasterSpec            `yaml:"master_servers"`
+		Workers       []*WorkerSpec            `yaml:"worker_servers"`
+		Monitors      []*spec.PrometheusSpec   `yaml:"monitoring_servers"`
+		Grafanas      []*spec.GrafanaSpec      `yaml:"grafana_servers,omitempty"`
+		Alertmanagers []*spec.AlertmanagerSpec `yaml:"alertmanager_servers,omitempty"`
 	}
 )
 
@@ -128,7 +128,7 @@ type MasterSpec struct {
 }
 
 // Status queries current status of the instance
-func (s MasterSpec) Status(tlsCfg *tls.Config, _ ...string) string {
+func (s *MasterSpec) Status(tlsCfg *tls.Config, _ ...string) string {
 	addr := fmt.Sprintf("%s:%d", s.Host, s.Port)
 	dc := api.NewDMMasterClient([]string{addr}, statusQueryTimeout, tlsCfg)
 	isFound, isActive, isLeader, err := dc.GetMaster(s.Name)
@@ -149,22 +149,22 @@ func (s MasterSpec) Status(tlsCfg *tls.Config, _ ...string) string {
 }
 
 // Role returns the component role of the instance
-func (s MasterSpec) Role() string {
+func (s *MasterSpec) Role() string {
 	return ComponentDMMaster
 }
 
 // SSH returns the host and SSH port of the instance
-func (s MasterSpec) SSH() (string, int) {
+func (s *MasterSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s MasterSpec) GetMainPort() int {
+func (s *MasterSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s MasterSpec) IsImported() bool {
+func (s *MasterSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -187,7 +187,7 @@ type WorkerSpec struct {
 }
 
 // Status queries current status of the instance
-func (s WorkerSpec) Status(tlsCfg *tls.Config, masterList ...string) string {
+func (s *WorkerSpec) Status(tlsCfg *tls.Config, masterList ...string) string {
 	if len(masterList) < 1 {
 		return "N/A"
 	}
@@ -203,22 +203,22 @@ func (s WorkerSpec) Status(tlsCfg *tls.Config, masterList ...string) string {
 }
 
 // Role returns the component role of the instance
-func (s WorkerSpec) Role() string {
+func (s *WorkerSpec) Role() string {
 	return ComponentDMWorker
 }
 
 // SSH returns the host and SSH port of the instance
-func (s WorkerSpec) SSH() (string, int) {
+func (s *WorkerSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s WorkerSpec) GetMainPort() int {
+func (s *WorkerSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s WorkerSpec) IsImported() bool {
+func (s *WorkerSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -262,9 +262,9 @@ func (topo *Specification) platformConflictsDetect() error {
 
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
-			compSpec := compSpecs.Index(index)
+			compSpec := reflect.Indirect(compSpecs.Index(index))
 			// skip nodes imported from TiDB-Ansible
-			if compSpec.Interface().(InstanceSpec).IsImported() {
+			if compSpec.Addr().Interface().(InstanceSpec).IsImported() {
 				continue
 			}
 			// check hostname
@@ -338,9 +338,9 @@ func (topo *Specification) portConflictsDetect() error {
 
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
-			compSpec := compSpecs.Index(index)
+			compSpec := reflect.Indirect(compSpecs.Index(index))
 			// skip nodes imported from TiDB-Ansible
-			if compSpec.Interface().(InstanceSpec).IsImported() {
+			if compSpec.Addr().Interface().(InstanceSpec).IsImported() {
 				continue
 			}
 			// check hostname
@@ -414,9 +414,9 @@ func (topo *Specification) dirConflictsDetect() error {
 
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
-			compSpec := compSpecs.Index(index)
+			compSpec := reflect.Indirect(compSpecs.Index(index))
 			// skip nodes imported from TiDB-Ansible
-			if compSpec.Interface().(InstanceSpec).IsImported() {
+			if compSpec.Addr().Interface().(InstanceSpec).IsImported() {
 				continue
 			}
 			// check hostname
@@ -485,7 +485,7 @@ func (topo *Specification) CountDir(targetHost, dirPrefix string) int {
 
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
-			compSpec := compSpecs.Index(index)
+			compSpec := reflect.Indirect(compSpecs.Index(index))
 			// Directory conflicts
 			for _, dirType := range dirTypes {
 				if j, found := findField(compSpec, dirType); found {
@@ -684,7 +684,7 @@ func setDMCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) erro
 			if strings.HasPrefix(globalOptions.DataDir, "/") {
 				field.Field(j).Set(reflect.ValueOf(filepath.Join(
 					globalOptions.DataDir,
-					fmt.Sprintf("%s-%s", field.Interface().(InstanceSpec).Role(), getPort(field)),
+					fmt.Sprintf("%s-%s", field.Addr().Interface().(InstanceSpec).Role(), getPort(field)),
 				)))
 				continue
 			}
@@ -699,7 +699,7 @@ func setDMCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) erro
 				field.Field(j).Set(reflect.ValueOf(globalOptions.DataDir))
 			}
 		case "DeployDir":
-			setDefaultDir(globalOptions.DeployDir, field.Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
+			setDefaultDir(globalOptions.DeployDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
 		case "LogDir":
 			if field.Field(j).String() == "" && defaults.CanUpdate(field.Field(j).Interface()) {
 				field.Field(j).Set(reflect.ValueOf(globalOptions.LogDir))

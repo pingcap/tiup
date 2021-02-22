@@ -49,22 +49,22 @@ type GrafanaSpec struct {
 }
 
 // Role returns the component role of the instance
-func (s GrafanaSpec) Role() string {
+func (s *GrafanaSpec) Role() string {
 	return ComponentGrafana
 }
 
 // SSH returns the host and SSH port of the instance
-func (s GrafanaSpec) SSH() (string, int) {
+func (s *GrafanaSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s GrafanaSpec) GetMainPort() int {
+func (s *GrafanaSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s GrafanaSpec) IsImported() bool {
+func (s *GrafanaSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -148,7 +148,7 @@ func (i *GrafanaInstance) InitConfig(
 	}
 
 	// transfer config
-	spec := i.InstanceSpec.(GrafanaSpec)
+	spec := i.InstanceSpec.(*GrafanaSpec)
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("grafana_%s.ini", i.GetHost()))
 	if err := config.NewGrafanaConfig(i.GetHost(), paths.Deploy).
 		WithPort(uint64(i.GetPort())).
@@ -170,7 +170,7 @@ func (i *GrafanaInstance) InitConfig(
 	}
 
 	// initial dashboards/*.json
-	if err := i.initDashboards(ctx, e, i.InstanceSpec.(GrafanaSpec), paths, clusterName); err != nil {
+	if err := i.initDashboards(ctx, e, i.InstanceSpec.(*GrafanaSpec), paths, clusterName); err != nil {
 		return errors.Annotate(err, "initial dashboards")
 	}
 
@@ -207,7 +207,7 @@ func (i *GrafanaInstance) InitConfig(
 	return i.TransferLocalConfigFile(ctx, e, fp, dst)
 }
 
-func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, spec GrafanaSpec, paths meta.DirPaths, clusterName string) error {
+func (i *GrafanaInstance) initDashboards(ctx context.Context, e ctxt.Executor, spec *GrafanaSpec, paths meta.DirPaths, clusterName string) error {
 	dashboardsDir := filepath.Join(paths.Deploy, "dashboards")
 	if spec.DashboardDir != "" {
 		return i.TransferLocalConfigDir(ctx, e, spec.DashboardDir, dashboardsDir, func(name string) bool {

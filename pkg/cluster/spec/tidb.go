@@ -44,22 +44,22 @@ type TiDBSpec struct {
 }
 
 // Role returns the component role of the instance
-func (s TiDBSpec) Role() string {
+func (s *TiDBSpec) Role() string {
 	return ComponentTiDB
 }
 
 // SSH returns the host and SSH port of the instance
-func (s TiDBSpec) SSH() (string, int) {
+func (s *TiDBSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s TiDBSpec) GetMainPort() int {
+func (s *TiDBSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s TiDBSpec) IsImported() bool {
+func (s *TiDBSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -130,7 +130,7 @@ func (i *TiDBInstance) InitConfig(
 	}
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
-	spec := i.InstanceSpec.(TiDBSpec)
+	spec := i.InstanceSpec.(*TiDBSpec)
 	cfg := scripts.NewTiDBScript(
 		i.GetHost(),
 		paths.Deploy,

@@ -22,7 +22,7 @@ import (
 
 func TestRenderSpec(t *testing.T) {
 	var s spec.Instance = &spec.TiDBInstance{BaseInstance: spec.BaseInstance{
-		InstanceSpec: spec.TiDBSpec{
+		InstanceSpec: &spec.TiDBSpec{
 			Host:       "172.16.5.140",
 			SSHPort:    22,
 			Imported:   false,
@@ -38,7 +38,7 @@ func TestRenderSpec(t *testing.T) {
 	assert.Empty(t, dir)
 
 	s = &spec.PDInstance{BaseInstance: spec.BaseInstance{
-		InstanceSpec: spec.PDSpec{
+		InstanceSpec: &spec.PDSpec{
 			Host:       "172.16.5.140",
 			SSHPort:    22,
 			Imported:   false,

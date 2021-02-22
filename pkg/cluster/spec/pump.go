@@ -45,22 +45,22 @@ type PumpSpec struct {
 }
 
 // Role returns the component role of the instance
-func (s PumpSpec) Role() string {
+func (s *PumpSpec) Role() string {
 	return ComponentPump
 }
 
 // SSH returns the host and SSH port of the instance
-func (s PumpSpec) SSH() (string, int) {
+func (s *PumpSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s PumpSpec) GetMainPort() int {
+func (s *PumpSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s PumpSpec) IsImported() bool {
+func (s *PumpSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -149,7 +149,7 @@ func (i *PumpInstance) InitConfig(
 	}
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
-	spec := i.InstanceSpec.(PumpSpec)
+	spec := i.InstanceSpec.(*PumpSpec)
 	nodeID := i.GetHost() + ":" + strconv.Itoa(i.GetPort())
 	// keep origin node id if is imported
 	if i.IsImported() {

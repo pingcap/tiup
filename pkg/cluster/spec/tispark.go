@@ -49,27 +49,27 @@ type TiSparkMasterSpec struct {
 }
 
 // Role returns the component role of the instance
-func (s TiSparkMasterSpec) Role() string {
+func (s *TiSparkMasterSpec) Role() string {
 	return RoleTiSparkMaster
 }
 
 // SSH returns the host and SSH port of the instance
-func (s TiSparkMasterSpec) SSH() (string, int) {
+func (s *TiSparkMasterSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s TiSparkMasterSpec) GetMainPort() int {
+func (s *TiSparkMasterSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s TiSparkMasterSpec) IsImported() bool {
+func (s *TiSparkMasterSpec) IsImported() bool {
 	return s.Imported
 }
 
 // Status queries current status of the instance
-func (s TiSparkMasterSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
+func (s *TiSparkMasterSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
 	scheme := "http"
 	if tlsCfg != nil {
 		scheme = "https"
@@ -94,27 +94,27 @@ type TiSparkWorkerSpec struct {
 }
 
 // Role returns the component role of the instance
-func (s TiSparkWorkerSpec) Role() string {
+func (s *TiSparkWorkerSpec) Role() string {
 	return RoleTiSparkWorker
 }
 
 // SSH returns the host and SSH port of the instance
-func (s TiSparkWorkerSpec) SSH() (string, int) {
+func (s *TiSparkWorkerSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s TiSparkWorkerSpec) GetMainPort() int {
+func (s *TiSparkWorkerSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s TiSparkWorkerSpec) IsImported() bool {
+func (s *TiSparkWorkerSpec) IsImported() bool {
 	return s.Imported
 }
 
 // Status queries current status of the instance
-func (s TiSparkWorkerSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
+func (s *TiSparkWorkerSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
 	scheme := "http"
 	if tlsCfg != nil {
 		scheme = "https"
