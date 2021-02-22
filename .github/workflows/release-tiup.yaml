@@ -8,7 +8,7 @@ on:
       - v*
 
 jobs:
-  tiup:
+  release:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -45,12 +45,11 @@ jobs:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
           COMMIT: ${GITHUB_SHA}
-          #GITREF: ${{ github.event.release.tag_name }}
           GITREF: ${{ steps.get_tag.outputs.GIT_REF }}
         run: |
           export GOPATH=${GITHUB_WORKSPACE}/go
           export PATH=$PATH:$GOPATH/bin
-          BUILD_FLAG='-trimpath -buildmode=pie' make tiup && echo "Build success."
+          BUILD_FLAG='-trimpath -buildmode=pie' make build && echo "Build success."
 
       - name: Publish packages
         working-directory: ${{ env.working-directory }}
