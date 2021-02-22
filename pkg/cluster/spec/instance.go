@@ -92,6 +92,7 @@ type Instance interface {
 	OS() string // only linux supported now
 	Arch() string
 	IsPatched() bool
+	SetPatched(bool)
 }
 
 // PortStarted wait until a port is being listened
@@ -367,6 +368,15 @@ func (i *BaseInstance) IsPatched() bool {
 		return false
 	}
 	return v.Bool()
+}
+
+// SetPatched implements the Instance interface
+func (i *BaseInstance) SetPatched(p bool) {
+	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("Patched")
+	if !v.CanSet() {
+		return
+	}
+	v.SetBool(p)
 }
 
 // PrepareStart checks instance requirements before starting

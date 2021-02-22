@@ -91,6 +91,19 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 		}
 	}
 
+	// mark instance as patched in meta
+	topo.IterInstance(func(ins spec.Instance) {
+		for _, pachedIns := range insts {
+			if ins.ID() == pachedIns.ID() {
+				ins.SetPatched(true)
+				break
+			}
+		}
+	})
+	if err := m.specManager.SaveMeta(name, metadata); err != nil {
+		return perrs.Trace(err)
+	}
+
 	return nil
 }
 
