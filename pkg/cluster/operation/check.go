@@ -767,14 +767,17 @@ func CheckJRE(ctx context.Context, e ctxt.Executor, host string, topo *spec.Spec
 			return
 		}
 		if len(stderr) > 0 {
+			// java -version returns as below:
+			// openjdk version "1.8.0_265"
+			// openjdk version "11.0.8" 2020-07-14
 			line := strings.Split(string(stderr), "\n")[0]
-			fields := strings.Split(line, " ")
-			ver := strings.Trim(fields[len(fields)-1], "\"")
-			if !strings.HasPrefix(ver, "1.8.") {
+			fields := strings.Split(line, `"`)
+			ver := strings.TrimSpace(fields[1])
+			if strings.Compare(ver, "1.8") < 0 {
 				results = append(results, &CheckResult{
 					Name: CheckNameCommand,
-					Err:  fmt.Errorf("java version %s is not supported, use Java 8 (1.8)", ver),
-					Msg:  "Installed JRE is not Java 8",
+					Err:  fmt.Errorf("java version %s is not supported, use Java 8 (1.8)+", ver),
+					Msg:  "Installed JRE is not Java 8+",
 				})
 			} else {
 				results = append(results, &CheckResult{

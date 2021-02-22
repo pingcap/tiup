@@ -19,6 +19,7 @@ import (
 )
 
 func newInstallCmd() *cobra.Command {
+	var force bool
 	cmd := &cobra.Command{
 		Use:   "install <component1>[:version] [component2...N]",
 		Short: "Install a specific version of a component",
@@ -36,12 +37,9 @@ of the same component:
 			if len(args) == 0 {
 				return cmd.Help()
 			}
-			return installComponents(env, args)
+			return env.UpdateComponents(args, false, force)
 		},
 	}
+	cmd.Flags().BoolVar(&force, "force", false, "If the specified version was already installed, force a reinstallation")
 	return cmd
-}
-
-func installComponents(env *environment.Environment, specs []string) error {
-	return env.UpdateComponents(specs, false, false)
 }
