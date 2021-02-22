@@ -22,7 +22,13 @@ import (
 // Empty version should be treate as the the last stable one
 func TiDBComponentVersion(comp, version string) string {
 	switch comp {
-	case ComponentAlertmanager, ComponentBlackboxExporter, ComponentNodeExporter, ComponentPushwaygate, ComponentCheckCollector, ComponentSpark, ComponentTiSpark:
+	case ComponentAlertmanager,
+		ComponentBlackboxExporter,
+		ComponentNodeExporter,
+		ComponentPushwaygate,
+		ComponentCheckCollector,
+		ComponentSpark,
+		ComponentTiSpark:
 		return ""
 	default:
 		return version

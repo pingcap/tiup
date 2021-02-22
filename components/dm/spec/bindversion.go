@@ -6,7 +6,9 @@ import "github.com/pingcap/tiup/pkg/cluster/spec"
 // Empty version means the latest stable one
 func DMComponentVersion(comp, version string) string {
 	switch comp {
-	case spec.ComponentAlertmanager, spec.ComponentGrafana, spec.ComponentPrometheus:
+	case spec.ComponentAlertmanager,
+		spec.ComponentGrafana,
+		spec.ComponentPrometheus:
 		return ""
 	default:
 		return version
