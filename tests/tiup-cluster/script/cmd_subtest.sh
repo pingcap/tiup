@@ -92,6 +92,10 @@ function cmd_subtest() {
 
     tiup-cluster $client --yes stop $name
 
+    # test start prometheus,grafana won't hang-forever(can't update topology)
+    # let the CI to stop the job if hang forever
+    ! tiup-cluster $client --yes start $name -R prometheus,grafana
+
     tiup-cluster $client --yes restart $name
 
     tiup-cluster $client _test $name writable
