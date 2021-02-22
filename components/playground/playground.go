@@ -880,18 +880,8 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		fmt.Println(color.GreenString("To view the dashboard: http://%s/dashboard", pdAddr))
 	}
 
-	if monitorInfo != nil && len(p.pds) != 0 {
-		client, err := newEtcdClient(p.pds[0].Addr())
-		if err == nil && client != nil {
-			promBinary, err := json.Marshal(monitorInfo)
-			if err == nil {
-				_, err = client.Put(context.TODO(), "/topology/prometheus", string(promBinary))
-				if err != nil {
-					fmt.Println("Set the PD metrics storage failed")
-				}
-				fmt.Print(color.GreenString("To view the Prometheus: http://%s:%d\n", monitorInfo.IP, monitorInfo.Port))
-			}
-		}
+	if monitorInfo != nil {
+		p.updateMonitorTopology("prometheus", *monitorInfo)
 	}
 
 	dumpDSN(filepath.Join(p.dataDir, "dsn"), p.tidbs)
@@ -906,11 +896,29 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	logIfErr(p.renderSDFile())
 
-	if p.grafana != nil {
-		fmt.Print(color.GreenString("To view the Grafana: http://%s:%d\n", p.grafana.host, p.grafana.port))
+	if g := p.grafana; g != nil {
+		p.updateMonitorTopology("grafana", MonitorInfo{g.host, g.port, g.cmd.Path})
 	}
 
 	return nil
+}
+
+func (p *Playground) updateMonitorTopology(componentID string, info MonitorInfo) {
+	info.IP = instance.AdvertiseHost(info.IP)
+	fmt.Print(color.GreenString("To view the %s: http://%s:%d\n", strings.Title(componentID), info.IP, info.Port))
+	if len(p.pds) == 0 {
+		return
+	}
+
+	client, err := newEtcdClient(p.pds[0].Addr())
+	if err == nil && client != nil {
+		if promBinary, err := json.Marshal(info); err == nil {
+			_, err = client.Put(context.TODO(), "/topology/"+componentID, string(promBinary))
+			if err != nil {
+				fmt.Println("Set the PD metrics storage failed")
+			}
+		}
+	}
 }
 
 // Wait all instance quit and return the first non-nil err.
@@ -995,7 +1003,7 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 		return nil, nil, err
 	}
 
-	monitorInfo.IP = options.host
+	monitorInfo.IP = instance.AdvertiseHost(options.host)
 	monitorInfo.BinaryPath = promDir
 	monitorInfo.Port = monitor.port
 
