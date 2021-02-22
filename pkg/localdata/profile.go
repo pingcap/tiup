@@ -33,6 +33,7 @@ import (
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
 
@@ -107,9 +108,9 @@ func (p *Profile) BinaryPathV0(component string, version pkgver.Version) (string
 }
 
 // GetComponentInstalledVersion return the installed version of component.
-func (p *Profile) GetComponentInstalledVersion(component string, version pkgver.Version) (pkgver.Version, error) {
-	if !version.IsEmpty() {
-		return version, nil
+func (p *Profile) GetComponentInstalledVersion(component string, ver pkgver.Version) (pkgver.Version, error) {
+	if !ver.IsEmpty() && ver.String() != version.NightlyVersion {
+		return ver, nil
 	}
 	versions, err := p.InstalledVersions(component)
 	if err != nil {
@@ -120,15 +121,21 @@ func (p *Profile) GetComponentInstalledVersion(component string, version pkgver.
 	// report an error if the specific component doesn't be installed
 
 	// Check whether the specific version exist in local
-	if len(versions) > 0 {
-		sort.Slice(versions, func(i, j int) bool {
-			return semver.Compare(versions[i], versions[j]) < 0
-		})
-		version = pkgver.Version(versions[len(versions)-1])
-	} else {
-		return "", fmt.Errorf("component not installed, please try `tiup install %s` to install it", component)
+	if len(versions) == 0 {
+		return "", errors.Errorf("component not installed, please try `tiup install %s` to install it", component)
 	}
-	return version, nil
+	sort.Slice(versions, func(i, j int) bool {
+		return semver.Compare(versions[i], versions[j]) < 0
+	})
+	if ver.String() != version.NightlyVersion {
+		for i := len(versions); i > 0; i-- {
+			if pkgver.Version(versions[i-1]).IsNightly() {
+				return pkgver.Version(versions[i-1]), nil
+			}
+		}
+		return "", errors.Errorf("component(nightly) not installed, please try `tiup install %s:nightly` to install it", component)
+	}
+	return pkgver.Version(versions[len(versions)-1]), nil
 }
 
 // ComponentInstalledPath returns the path where the component installed

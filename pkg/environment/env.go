@@ -164,47 +164,15 @@ func (env *Environment) LocalPath(path ...string) string {
 
 // UpdateComponents updates or installs all components described by specs.
 func (env *Environment) UpdateComponents(specs []string, nightly, force bool) error {
-	if env.v1Repo != nil {
-		var v1specs []repository.ComponentSpec
-		for _, spec := range specs {
-			component, v := ParseCompVersion(spec)
-			if component == TiUPName {
-				continue
-			}
-			v1specs = append(v1specs, repository.ComponentSpec{ID: component, Version: v.String(), Force: force, Nightly: nightly})
-		}
-		return env.v1Repo.UpdateComponents(v1specs)
-	}
-
-	manifest, err := env.latestManifest()
-	if err != nil {
-		return err
-	}
+	var v1specs []repository.ComponentSpec
 	for _, spec := range specs {
 		component, v := ParseCompVersion(spec)
 		if component == TiUPName {
 			continue
 		}
-		if nightly {
-			v = version.NightlyVersion
-		}
-		if !manifest.HasComponent(component) {
-			compInfo, found := manifest.FindComponent(component)
-			if !found {
-				return fmt.Errorf("component `%s` not found", component)
-			}
-
-			if !compInfo.IsSupport(env.PlatformString()) {
-				return fmt.Errorf("component `%s` does not support `%s`", component, env.PlatformString())
-			}
-		}
-
-		err := env.downloadComponent(component, v, v.IsNightly() || force)
-		if err != nil {
-			return err
-		}
+		v1specs = append(v1specs, repository.ComponentSpec{ID: component, Version: v.String(), Force: force})
 	}
-	return nil
+	return env.v1Repo.UpdateComponents(v1specs)
 }
 
 // PlatformString returns a string identifying the current system.
@@ -283,28 +251,34 @@ func (env *Environment) SelectInstalledVersion(component string, version pkgver.
 }
 
 // DownloadComponentIfMissing downloads the specific version of a component if it is missing
-func (env *Environment) DownloadComponentIfMissing(component string, version pkgver.Version) (pkgver.Version, error) {
+func (env *Environment) DownloadComponentIfMissing(component string, ver pkgver.Version) (pkgver.Version, error) {
 	versions, err := env.profile.InstalledVersions(component)
 	if err != nil {
 		return "", err
+	}
+
+	if ver.String() == version.NightlyVersion {
+		if ver, _, err = env.v1Repo.LatestNightlyVersion(component); err != nil {
+			return "", err
+		}
 	}
 
 	// Use the latest version if user doesn't specify a specific version and
 	// download the latest version if the specific component doesn't be installed
 
 	// Check whether the specific version exist in local
-	if version.IsEmpty() && len(versions) > 0 {
+	if ver.IsEmpty() && len(versions) > 0 {
 		sort.Slice(versions, func(i, j int) bool {
 			return semver.Compare(versions[i], versions[j]) < 0
 		})
-		version = pkgver.Version(versions[len(versions)-1])
+		ver = pkgver.Version(versions[len(versions)-1])
 	}
 
-	needDownload := version.IsEmpty()
-	if !version.IsEmpty() {
+	needDownload := ver.IsEmpty()
+	if !ver.IsEmpty() {
 		installed := false
 		for _, v := range versions {
-			if pkgver.Version(v) == version {
+			if pkgver.Version(v) == ver {
 				installed = true
 				break
 			}
@@ -313,18 +287,18 @@ func (env *Environment) DownloadComponentIfMissing(component string, version pkg
 	}
 
 	if needDownload {
-		fmt.Printf("The component `%s` is not installed; downloading from repository.\n", component)
-		err := env.downloadComponent(component, version, false)
+		fmt.Printf("The component `%s` version %s is not installed; downloading from repository.\n", component, ver.String())
+		err := env.downloadComponent(component, ver, false)
 		if err != nil {
 			return "", err
 		}
 	}
 
-	if version.IsEmpty() {
-		return env.SelectInstalledVersion(component, version)
+	if ver.IsEmpty() {
+		return env.SelectInstalledVersion(component, ver)
 	}
 
-	return version, nil
+	return ver, nil
 }
 
 // latestManifest returns the latest v0 component manifest and refresh the local cache
@@ -345,16 +319,13 @@ func (env *Environment) GetComponentInstalledVersion(component string, version p
 }
 
 // BinaryPath return the installed binary path.
-func (env *Environment) BinaryPath(component string, version pkgver.Version) (string, error) {
-	if env.v1Repo != nil {
-		installPath, err := env.profile.ComponentInstalledPath(component, version)
-		if err != nil {
-			return "", err
-		}
-		return env.v1Repo.BinaryPath(installPath, component, string(version))
+func (env *Environment) BinaryPath(component string, ver pkgver.Version) (string, error) {
+	installPath, err := env.profile.ComponentInstalledPath(component, ver)
+	if err != nil {
+		return "", err
 	}
 
-	return env.profile.BinaryPathV0(component, version)
+	return env.v1Repo.BinaryPath(installPath, component, ver.String())
 }
 
 // ParseCompVersion parses component part from <component>[:version] specification
