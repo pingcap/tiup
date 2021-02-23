@@ -120,7 +120,7 @@ func (c *TiFlashScript) AppendEndpoints(ends ...*PDScript) *TiFlashScript {
 
 // Config generate the config file data.
 func (c *TiFlashScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_tiflash.sh.tpl")
+	fp := path.Join("templates", "scripts", "run_tiflash.sh.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

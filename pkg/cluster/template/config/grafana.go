@@ -81,7 +81,7 @@ func (c *GrafanaConfig) WithDomain(domain string) *GrafanaConfig {
 
 // Config generate the config file data.
 func (c *GrafanaConfig) Config() ([]byte, error) {
-	fp := path.Join("/templates", "config", "grafana.ini.tpl")
+	fp := path.Join("templates", "config", "grafana.ini.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

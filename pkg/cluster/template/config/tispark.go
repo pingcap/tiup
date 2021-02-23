@@ -48,7 +48,7 @@ func (c *TiSparkConfig) WithCustomFields(m map[string]interface{}) *TiSparkConfi
 
 // Config generate the config file data.
 func (c *TiSparkConfig) Config() ([]byte, error) {
-	fp := filepath.Join("/templates", "config", "spark-defaults.conf.tpl")
+	fp := filepath.Join("templates", "config", "spark-defaults.conf.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

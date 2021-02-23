@@ -53,7 +53,7 @@ func (c *NodeExporterScript) WithNumaNode(numa string) *NodeExporterScript {
 
 // Config generate the config file data.
 func (c *NodeExporterScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_node_exporter.sh.tpl")
+	fp := path.Join("templates", "scripts", "run_node_exporter.sh.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

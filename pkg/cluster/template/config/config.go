@@ -21,6 +21,6 @@ import (
 
 // GetConfig returns a raw config file from embed templates
 func GetConfig(filename string) ([]byte, error) {
-	fp := filepath.Join("/templates", "config", filename)
+	fp := filepath.Join("templates", "config", filename)
 	return embed.ReadFile(fp)
 }

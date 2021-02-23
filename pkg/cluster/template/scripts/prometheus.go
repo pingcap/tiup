@@ -79,7 +79,7 @@ func (c *PrometheusScript) WithTPLFile(fname string) *PrometheusScript {
 func (c *PrometheusScript) Config() ([]byte, error) {
 	fp := c.tplFile
 	if fp == "" {
-		fp = path.Join("/templates", "scripts", "run_prometheus.sh.tpl")
+		fp = path.Join("templates", "scripts", "run_prometheus.sh.tpl")
 	}
 
 	tpl, err := embed.ReadFile(fp)

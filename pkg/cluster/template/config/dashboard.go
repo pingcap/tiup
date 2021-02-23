@@ -38,7 +38,7 @@ func NewDashboardConfig(cluster, deployDir string) *DashboardConfig {
 
 // Config generate the config file data.
 func (c *DashboardConfig) Config() ([]byte, error) {
-	fp := path.Join("/templates", "config", "dashboard.yml.tpl")
+	fp := path.Join("templates", "config", "dashboard.yml.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

@@ -83,7 +83,7 @@ func (c *AlertManagerScript) ConfigToFile(file string) error {
 
 // Config generate the config file data.
 func (c *AlertManagerScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_alertmanager.sh.tpl")
+	fp := path.Join("templates", "scripts", "run_alertmanager.sh.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

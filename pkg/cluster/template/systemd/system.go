@@ -88,7 +88,7 @@ func (c *Config) ConfigToFile(file string) error {
 
 // Config generate the config file data.
 func (c *Config) Config() ([]byte, error) {
-	fp := path.Join("/templates", "systemd", "system.service.tpl")
+	fp := path.Join("templates", "systemd", "system.service.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

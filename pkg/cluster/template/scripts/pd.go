@@ -91,7 +91,7 @@ func (c *PDScript) AppendEndpoints(ends ...*PDScript) *PDScript {
 
 // Config generate the config file data.
 func (c *PDScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_pd.sh.tpl")
+	fp := path.Join("templates", "scripts", "run_pd.sh.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
@@ -180,7 +180,7 @@ func (c *PDScaleScript) WithListenHost(listenHost string) *PDScaleScript {
 
 // Config generate the config file data.
 func (c *PDScaleScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_pd_scale.sh.tpl")
+	fp := path.Join("templates", "scripts", "run_pd_scale.sh.tpl")
 	log.Infof("script path: %s", fp)
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {

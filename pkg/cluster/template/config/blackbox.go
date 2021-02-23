@@ -30,7 +30,7 @@ func NewBlackboxConfig() *BlackboxConfig {
 
 // Config generate the config file data.
 func (c *BlackboxConfig) Config() ([]byte, error) {
-	fp := path.Join("/templates", "config", "blackbox.yml")
+	fp := path.Join("templates", "config", "blackbox.yml")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
