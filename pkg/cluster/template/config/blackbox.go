@@ -17,7 +17,7 @@ import (
 	"io/ioutil"
 	"path"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // BlackboxConfig represent the data to generate AlertManager config

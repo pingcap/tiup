@@ -21,7 +21,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // TiFlashScript represent the data to generate TiFlash config

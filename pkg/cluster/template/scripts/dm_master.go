@@ -20,7 +20,7 @@ import (
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // DMMasterScript represent the data to generate TiDB config

@@ -19,7 +19,7 @@ import (
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // NodeExporterScript represent the data to generate NodeExporter config

@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // TiSparkConfig represent the data to generate TiSpark configs

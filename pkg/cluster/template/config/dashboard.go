@@ -19,7 +19,7 @@ import (
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // DashboardConfig represent the data to generate Dashboard config

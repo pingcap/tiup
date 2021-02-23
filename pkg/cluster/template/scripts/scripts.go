@@ -16,7 +16,7 @@ package scripts
 import (
 	"path/filepath"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // GetScript returns a raw config file from embed templates

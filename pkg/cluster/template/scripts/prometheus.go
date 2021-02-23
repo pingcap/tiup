@@ -20,7 +20,7 @@ import (
 	"regexp"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // PrometheusScript represent the data to generate Prometheus config
