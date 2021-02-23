@@ -22,6 +22,8 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
+	pkgver "github.com/pingcap/tiup/pkg/repository/version"
+	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
 
@@ -81,26 +83,39 @@ which is used to uninstall tiup.
 
 func removeComponents(env *environment.Environment, specs []string, all bool) error {
 	for _, spec := range specs {
-		var path string
+		paths := []string{}
 		if strings.Contains(spec, ":") {
 			parts := strings.SplitN(spec, ":", 2)
 			// after this version is deleted, component will have no version left. delete the whole component dir directly
-			if dir, err := ioutil.ReadDir(env.LocalPath(localdata.ComponentParentDir, parts[0])); err == nil && len(dir) <= 1 {
-				path = env.LocalPath(localdata.ComponentParentDir, parts[0])
+			dir, err := ioutil.ReadDir(env.LocalPath(localdata.ComponentParentDir, parts[0]))
+			if err != nil {
+				return errors.Trace(err)
+			}
+			if parts[1] == version.NightlyVersion {
+				for _, fi := range dir {
+					if pkgver.Version(fi.Name()).IsNightly() {
+						paths = append(paths, env.LocalPath(localdata.ComponentParentDir, parts[0], fi.Name()))
+					}
+				}
 			} else {
-				path = env.LocalPath(localdata.ComponentParentDir, parts[0], parts[1])
+				paths = append(paths, env.LocalPath(localdata.ComponentParentDir, parts[0], parts[1]))
+			}
+			if len(dir)-len(paths) < 1 {
+				paths = append(paths, env.LocalPath(localdata.ComponentParentDir, parts[0]))
 			}
 		} else {
 			if !all {
 				fmt.Printf("Use `tiup uninstall %s --all` if you want to remove all versions.\n", spec)
 				continue
 			}
-			path = env.LocalPath(localdata.ComponentParentDir, spec)
+			paths = append(paths, env.LocalPath(localdata.ComponentParentDir, spec))
 		}
-		err := os.RemoveAll(path)
-		if err != nil {
-			return err
+		for _, path := range paths {
+			if err := os.RemoveAll(path); err != nil {
+				return errors.Trace(err)
+			}
 		}
+
 		fmt.Printf("Uninstalled component `%s` successfully!\n", spec)
 	}
 	return nil
