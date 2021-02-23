@@ -15,7 +15,6 @@ package store
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -62,7 +61,7 @@ func (s *fsSyncer) Sync(srcDir string) error {
 		return err
 	}
 
-	files, err := ioutil.ReadDir(srcDir)
+	files, err := os.ReadDir(srcDir)
 	if err != nil {
 		return err
 	}

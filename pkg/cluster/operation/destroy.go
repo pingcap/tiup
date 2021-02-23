@@ -18,7 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -180,7 +180,7 @@ func DeletePublicKey(ctx context.Context, host string) error {
 	e := ctxt.GetInner(ctx).Get(host)
 	log.Infof("Delete public key %s", host)
 	_, pubKeyPath := ctxt.GetInner(ctx).GetSSHKeySet()
-	publicKey, err := ioutil.ReadFile(pubKeyPath)
+	publicKey, err := os.ReadFile(pubKeyPath)
 	if err != nil {
 		return perrs.Trace(err)
 	}

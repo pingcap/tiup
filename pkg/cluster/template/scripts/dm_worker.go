@@ -15,7 +15,7 @@ package scripts
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path"
 	"text/template"
 
@@ -78,7 +78,7 @@ func (c *DMWorkerScript) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }
 
 // ConfigWithTemplate generate the DM worker config content by tpl

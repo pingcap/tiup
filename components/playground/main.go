@@ -17,7 +17,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -330,11 +329,11 @@ func getAbsolutePath(path string) (string, error) {
 }
 
 func dumpPort(fname string, port int) error {
-	return ioutil.WriteFile(fname, []byte(strconv.Itoa(port)), 0644)
+	return os.WriteFile(fname, []byte(strconv.Itoa(port)), 0644)
 }
 
 func loadPort(dir string) (port int, err error) {
-	data, err := ioutil.ReadFile(filepath.Join(dir, "port"))
+	data, err := os.ReadFile(filepath.Join(dir, "port"))
 	if err != nil {
 		return 0, err
 	}
@@ -348,7 +347,7 @@ func dumpDSN(fname string, dbs []*instance.TiDBInstance) {
 	for _, db := range dbs {
 		dsn = append(dsn, fmt.Sprintf("mysql://root@%s", db.Addr()))
 	}
-	_ = ioutil.WriteFile(fname, []byte(strings.Join(dsn, "\n")), 0644)
+	_ = os.WriteFile(fname, []byte(strings.Join(dsn, "\n")), 0644)
 }
 
 func newEtcdClient(endpoint string) (*clientv3.Client, error) {

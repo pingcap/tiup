@@ -15,7 +15,7 @@ package command
 
 import (
 	"context"
-	"io/ioutil"
+	"os"
 	"path"
 
 	"github.com/pingcap/tiup/pkg/cliutil"
@@ -76,7 +76,7 @@ func newDeploy() *cobra.Command {
 			teleCommand = append(teleCommand, version)
 
 			topoFile := args[2]
-			if data, err := ioutil.ReadFile(topoFile); err == nil {
+			if data, err := os.ReadFile(topoFile); err == nil {
 				teleTopology = string(data)
 			}
 

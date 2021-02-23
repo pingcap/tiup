@@ -16,7 +16,7 @@ package telemetry
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -33,7 +33,7 @@ type TelemetrySuite struct {
 
 func (s *TelemetrySuite) TestReport(c *check.C) {
 	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		dst, err := ioutil.ReadAll(r.Body)
+		dst, err := io.ReadAll(r.Body)
 		if err != nil {
 			w.WriteHeader(400)
 			return

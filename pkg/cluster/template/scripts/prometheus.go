@@ -15,7 +15,7 @@ package scripts
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path"
 	"regexp"
 	"text/template"
@@ -110,5 +110,5 @@ func (c *PrometheusScript) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }

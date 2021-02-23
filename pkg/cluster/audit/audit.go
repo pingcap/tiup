@@ -16,7 +16,6 @@ package audit
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -49,7 +48,7 @@ func ShowAuditList(dir string) error {
 
 	// Header
 	clusterTable := [][]string{{"ID", "Time", "Command"}}
-	fileInfos, err := ioutil.ReadDir(dir)
+	fileInfos, err := os.ReadDir(dir)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -83,7 +82,7 @@ func ShowAuditList(dir string) error {
 // OutputAuditLog outputs audit log.
 func OutputAuditLog(dir string, data []byte) error {
 	fname := filepath.Join(dir, base52.Encode(time.Now().UnixNano()+rand.Int63n(1000)))
-	return ioutil.WriteFile(fname, data, 0644)
+	return os.WriteFile(fname, data, 0644)
 }
 
 // ShowAuditLog show the audit with the specified auditID
@@ -98,7 +97,7 @@ func ShowAuditLog(dir string, auditID string) error {
 		return errors.Annotatef(err, "unrecognized audit id '%s'", auditID)
 	}
 
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return errors.Trace(err)
 	}

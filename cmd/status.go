@@ -14,7 +14,6 @@
 package cmd
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -47,7 +46,7 @@ func showStatus(env *environment.Environment) error {
 	var table [][]string
 	table = append(table, []string{"Name", "Component", "PID", "Status", "Created Time", "Directory", "Binary", "Args"})
 	if dataDir := env.LocalPath(localdata.DataParentDir); utils.IsExist(dataDir) {
-		dirs, err := ioutil.ReadDir(dataDir)
+		dirs, err := os.ReadDir(dataDir)
 		if err != nil {
 			return err
 		}

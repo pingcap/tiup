@@ -14,7 +14,7 @@
 package telemetry
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -26,7 +26,7 @@ type scrubSuite struct{}
 var _ = check.Suite(&scrubSuite{})
 
 func (s *scrubSuite) testScrubYaml(c *check.C, generate bool) {
-	files, err := ioutil.ReadDir("./testdata")
+	files, err := os.ReadDir("./testdata")
 	c.Assert(err, check.IsNil)
 
 	for _, f := range files {
@@ -36,7 +36,7 @@ func (s *scrubSuite) testScrubYaml(c *check.C, generate bool) {
 
 		c.Log("file: ", f.Name())
 
-		data, err := ioutil.ReadFile(filepath.Join("./testdata", f.Name()))
+		data, err := os.ReadFile(filepath.Join("./testdata", f.Name()))
 		c.Assert(err, check.IsNil)
 
 		hashs := make(map[string]struct{})
@@ -47,10 +47,10 @@ func (s *scrubSuite) testScrubYaml(c *check.C, generate bool) {
 
 		outName := filepath.Join("./testdata", f.Name()+".out")
 		if generate {
-			err = ioutil.WriteFile(outName, scrubed, 0644)
+			err = os.WriteFile(outName, scrubed, 0644)
 			c.Assert(err, check.IsNil)
 		} else {
-			out, err := ioutil.ReadFile(outName)
+			out, err := os.ReadFile(outName)
 			c.Assert(err, check.IsNil)
 			c.Assert(scrubed, check.BytesEquals, out)
 		}
@@ -63,7 +63,7 @@ func (s *scrubSuite) TestScrubYaml(c *check.C) {
 
 // alertmanager_servers will contains a nil value in the yaml.
 func (s *scrubSuite) TestNilValueNotPanic(c *check.C) {
-	data, err := ioutil.ReadFile(filepath.Join("./testdata", "single/nilvalue.yaml"))
+	data, err := os.ReadFile(filepath.Join("./testdata", "single/nilvalue.yaml"))
 	c.Assert(err, check.IsNil)
 
 	hashs := make(map[string]struct{})

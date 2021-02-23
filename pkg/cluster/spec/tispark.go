@@ -17,7 +17,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -264,7 +264,7 @@ func (i *TiSparkMasterInstance) InitConfig(
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(fp, log4jFile, 0644); err != nil {
+	if err := os.WriteFile(fp, log4jFile, 0644); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "log4j.properties")
@@ -414,7 +414,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(fp, slaveSh, 0755); err != nil {
+	if err := os.WriteFile(fp, slaveSh, 0755); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "sbin", "start-slave.sh")
@@ -428,7 +428,7 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(fp, log4jFile, 0644); err != nil {
+	if err := os.WriteFile(fp, log4jFile, 0644); err != nil {
 		return err
 	}
 	dst = filepath.Join(paths.Deploy, "conf", "log4j.properties")

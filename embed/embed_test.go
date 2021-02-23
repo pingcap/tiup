@@ -1,7 +1,6 @@
 package embed
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -45,7 +44,7 @@ func (s *embedSuite) TestCanReadTemplates(c *check.C) {
 	for _, path := range paths {
 		c.Log("check file: ", path)
 
-		data, err := ioutil.ReadFile(path)
+		data, err := os.ReadFile(path)
 		c.Assert(err, check.IsNil)
 
 		embedData, err := ReadFile(path)

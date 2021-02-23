@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -173,7 +172,7 @@ func (im *Importer) fetchFile(ctx context.Context, host string, port int, fname 
 		return nil, errors.Annotatef(err, "failed to get executor, target: %s:%d", host, port)
 	}
 
-	tmp, err := ioutil.TempDir("", "tiup")
+	tmp, err := os.MkdirTemp("", "tiup")
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
@@ -186,7 +185,7 @@ func (im *Importer) fetchFile(ctx context.Context, host string, port int, fname 
 		return nil, errors.Annotatef(err, "transfer %s from %s:%d", fname, host, port)
 	}
 
-	data, err = ioutil.ReadFile(tmp)
+	data, err = os.ReadFile(tmp)
 	if err != nil {
 		return nil, errors.AddStack(err)
 	}
@@ -240,7 +239,7 @@ func (im *Importer) ScpSourceToMaster(ctx context.Context, topo *spec.Specificat
 		}
 
 		for addr, source := range im.sources {
-			f, err := ioutil.TempFile("", "tiup-dm-*")
+			f, err := os.CreateTemp("", "tiup-dm-*")
 			if err != nil {
 				return errors.AddStack(err)
 			}

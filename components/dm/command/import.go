@@ -16,7 +16,7 @@ package command
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/fatih/color"
 	"github.com/pingcap/errors"
@@ -69,7 +69,7 @@ func newImportCmd() *cobra.Command {
 				return errors.AddStack(err)
 			}
 
-			f, err := ioutil.TempFile("", "tiup-*")
+			f, err := os.CreateTemp("", "tiup-*")
 			if err != nil {
 				return errors.AddStack(err)
 			}

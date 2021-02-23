@@ -15,7 +15,7 @@ package system
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 	"text/template"
@@ -55,7 +55,7 @@ func (c *TiSparkConfig) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }
 
 // Config generate the config file data.

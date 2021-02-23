@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"github.com/fatih/color"
@@ -70,7 +69,7 @@ func (m *Manager) EditConfig(name string, skipConfirm bool) error {
 // 3. Check and update Topology.
 // 4. Save meta file.
 func (m *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool) (spec.Topology, error) {
-	file, err := ioutil.TempFile(os.TempDir(), "*")
+	file, err := os.CreateTemp(os.TempDir(), "*")
 	if err != nil {
 		return nil, perrs.AddStack(err)
 	}
@@ -93,7 +92,7 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool
 	}
 
 	// Now user finish editing the file.
-	newData, err := ioutil.ReadFile(name)
+	newData, err := os.ReadFile(name)
 	if err != nil {
 		return nil, perrs.AddStack(err)
 	}

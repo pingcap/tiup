@@ -19,7 +19,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -130,7 +129,7 @@ func (s *SSHKeyGen) writeKeyToFile(keyBytes []byte, saveFileTo string) error {
 	if err := os.MkdirAll(filepath.Dir(saveFileTo), 0700); err != nil {
 		return err
 	}
-	return ioutil.WriteFile(saveFileTo, keyBytes, 0600)
+	return os.WriteFile(saveFileTo, keyBytes, 0600)
 }
 
 // Rollback implements the Task interface

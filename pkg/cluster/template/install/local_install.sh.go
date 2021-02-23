@@ -13,11 +13,13 @@
 
 package install
 
-import "io/ioutil"
+import (
+	"os"
+)
 
 // WriteLocalInstallScript writes the install script into specified path
 func WriteLocalInstallScript(path string) error {
-	return ioutil.WriteFile(path, []byte(script), 0755)
+	return os.WriteFile(path, []byte(script), 0755)
 }
 
 var script = `#!/bin/sh

@@ -15,7 +15,6 @@ package spec
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path"
@@ -29,7 +28,7 @@ import (
 )
 
 func TestLocalRuleDirs(t *testing.T) {
-	deployDir, err := ioutil.TempDir("", "tiup-*")
+	deployDir, err := os.MkdirTemp("", "tiup-*")
 	assert.Nil(t, err)
 	defer os.RemoveAll(deployDir)
 	err = os.MkdirAll(path.Join(deployDir, "bin/prometheus"), 0755)
@@ -37,7 +36,7 @@ func TestLocalRuleDirs(t *testing.T) {
 	localDir, err := filepath.Abs("./testdata/rules")
 	assert.Nil(t, err)
 
-	err = ioutil.WriteFile(path.Join(deployDir, "bin/prometheus", "dummy.rules.yml"), []byte("dummy"), 0644)
+	err = os.WriteFile(path.Join(deployDir, "bin/prometheus", "dummy.rules.yml"), []byte("dummy"), 0644)
 	assert.Nil(t, err)
 
 	topo := new(Specification)
@@ -63,7 +62,7 @@ func TestLocalRuleDirs(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.NoFileExists(t, path.Join(deployDir, "conf", "dummy.rules.yml"))
-	fs, err := ioutil.ReadDir(localDir)
+	fs, err := os.ReadDir(localDir)
 	assert.Nil(t, err)
 	for _, f := range fs {
 		assert.FileExists(t, path.Join(deployDir, "conf", f.Name()))
@@ -71,7 +70,7 @@ func TestLocalRuleDirs(t *testing.T) {
 }
 
 func TestNoLocalRuleDirs(t *testing.T) {
-	deployDir, err := ioutil.TempDir("", "tiup-*")
+	deployDir, err := os.MkdirTemp("", "tiup-*")
 	assert.Nil(t, err)
 	defer os.RemoveAll(deployDir)
 	err = os.MkdirAll(path.Join(deployDir, "bin/prometheus"), 0755)
@@ -79,7 +78,7 @@ func TestNoLocalRuleDirs(t *testing.T) {
 	localDir, err := filepath.Abs("./testdata/rules")
 	assert.Nil(t, err)
 
-	err = ioutil.WriteFile(path.Join(deployDir, "bin/prometheus", "dummy.rules.yml"), []byte("dummy"), 0644)
+	err = os.WriteFile(path.Join(deployDir, "bin/prometheus", "dummy.rules.yml"), []byte("dummy"), 0644)
 	assert.Nil(t, err)
 
 	topo := new(Specification)
@@ -104,7 +103,7 @@ func TestNoLocalRuleDirs(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.FileExists(t, path.Join(deployDir, "conf", "dummy.rules.yml"))
-	fs, err := ioutil.ReadDir(localDir)
+	fs, err := os.ReadDir(localDir)
 	assert.Nil(t, err)
 	for _, f := range fs {
 		assert.NoFileExists(t, path.Join(deployDir, "conf", f.Name()))

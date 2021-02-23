@@ -95,7 +95,6 @@ package main
 import (
 	"bytes"
 	"flag"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"fmt"
@@ -120,7 +119,7 @@ func main() {
 
 	// Read-in the exists file and merge the description/workaround from exists file
 	existDefinition := map[string]spec{}
-	if file, err := ioutil.ReadFile(outpath); err == nil {
+	if file, err := os.ReadFile(outpath); err == nil {
 		err = toml.Unmarshal(file, &existDefinition)
 		if err != nil {
 			println(fmt.Sprintf("Invalid toml file %s when merging exists description/workaround: %v", outpath, err))
@@ -187,7 +186,7 @@ func main() {
 		}
 		buffer.WriteString("\n")
 	}
-	if err := ioutil.WriteFile(outpath, buffer.Bytes(), os.ModePerm); err != nil {
+	if err := os.WriteFile(outpath, buffer.Bytes(), os.ModePerm); err != nil {
 		panic(err)
 	}
 }

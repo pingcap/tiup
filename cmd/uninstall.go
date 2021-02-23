@@ -15,7 +15,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -87,7 +86,7 @@ func removeComponents(env *environment.Environment, specs []string, all bool) er
 		if strings.Contains(spec, ":") {
 			parts := strings.SplitN(spec, ":", 2)
 			// after this version is deleted, component will have no version left. delete the whole component dir directly
-			dir, err := ioutil.ReadDir(env.LocalPath(localdata.ComponentParentDir, parts[0]))
+			dir, err := os.ReadDir(env.LocalPath(localdata.ComponentParentDir, parts[0]))
 			if err != nil {
 				return errors.Trace(err)
 			}

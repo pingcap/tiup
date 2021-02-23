@@ -15,7 +15,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -49,7 +48,7 @@ func cleanData(env *environment.Environment, names []string, all bool) error {
 	if utils.IsNotExist(dataDir) {
 		return nil
 	}
-	dirs, err := ioutil.ReadDir(dataDir)
+	dirs, err := os.ReadDir(dataDir)
 	if err != nil {
 		return err
 	}

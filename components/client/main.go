@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
@@ -107,7 +106,7 @@ func connect(target string) error {
 func scanEndpoint(tiupHome string) ([]*endpoint, error) {
 	endpoints := []*endpoint{}
 
-	files, err := ioutil.ReadDir(path.Join(tiupHome, localdata.DataParentDir))
+	files, err := os.ReadDir(path.Join(tiupHome, localdata.DataParentDir))
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +202,7 @@ func selectEndpoint(endpoints []*endpoint) *endpoint {
 	uiEvents := ui.PollEvents()
 	for {
 		e := <-uiEvents
-		_ = ioutil.WriteFile("/tmp/log", []byte(e.ID+"\n"), 0664)
+		_ = os.WriteFile("/tmp/log", []byte(e.ID+"\n"), 0664)
 		switch e.ID {
 		case "q", "<C-c>":
 			return nil
