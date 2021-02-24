@@ -16,7 +16,7 @@ package scripts
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 	"text/template"
@@ -134,7 +134,7 @@ func (c *TiFlashScript) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }
 
 // ConfigWithTemplate generate the TiFlash config content by tpl

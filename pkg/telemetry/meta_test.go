@@ -1,7 +1,6 @@
 package telemetry
 
 import (
-	"io/ioutil"
 	"os"
 
 	"github.com/pingcap/check"
@@ -13,7 +12,7 @@ var _ = check.Suite(&teleSuite{})
 
 func (s *teleSuite) TestTelemetry(c *check.C) {
 	// get a temp file and remove it.
-	file, err := ioutil.TempFile("", "")
+	file, err := os.CreateTemp("", "")
 	c.Assert(err, check.IsNil)
 
 	fname := file.Name()

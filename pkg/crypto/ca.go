@@ -18,8 +18,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"io/ioutil"
 	"math/big"
+	"os"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -136,7 +136,7 @@ func (ca *CertificateAuthority) Sign(csrBytes []byte) ([]byte, error) {
 // ReadCA reads an existing CA certificate from disk
 func ReadCA(clsName, certPath, keyPath string) (*CertificateAuthority, error) {
 	// read private key
-	rawKey, err := ioutil.ReadFile(keyPath)
+	rawKey, err := os.ReadFile(keyPath)
 	if err != nil {
 		return nil, errors.Annotatef(err, "error reading CA private key for %s", clsName)
 	}
@@ -157,7 +157,7 @@ func ReadCA(clsName, certPath, keyPath string) (*CertificateAuthority, error) {
 	}
 
 	// read certificate
-	rawCert, err := ioutil.ReadFile(certPath)
+	rawCert, err := os.ReadFile(certPath)
 	if err != nil {
 		return nil, errors.Annotatef(err, "error reading CA certificate for %s", clsName)
 	}

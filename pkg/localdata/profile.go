@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -127,7 +126,7 @@ func (p *Profile) SaveTo(path string, data []byte, perm os.FileMode) error {
 	if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
 		return errors.Trace(err)
 	}
-	return ioutil.WriteFile(fullPath, data, perm)
+	return os.WriteFile(fullPath, data, perm)
 }
 
 // WriteJSON writes struct to a file (in the profile directory) in JSON format
@@ -168,7 +167,7 @@ func (p *Profile) ReadMetaFile(dirName string) (*Process, error) {
 // InstalledComponents returns the installed components
 func (p *Profile) InstalledComponents() ([]string, error) {
 	compDir := filepath.Join(p.root, ComponentParentDir)
-	fileInfos, err := ioutil.ReadDir(compDir)
+	fileInfos, err := os.ReadDir(compDir)
 	if err != nil && os.IsNotExist(err) {
 		return nil, nil
 	}
@@ -193,7 +192,7 @@ func (p *Profile) InstalledVersions(component string) ([]string, error) {
 		return nil, nil
 	}
 
-	fileInfos, err := ioutil.ReadDir(path)
+	fileInfos, err := os.ReadDir(path)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -202,7 +201,7 @@ func (p *Profile) InstalledVersions(component string) ([]string, error) {
 		if !fi.IsDir() {
 			continue
 		}
-		sub, err := ioutil.ReadDir(filepath.Join(path, fi.Name()))
+		sub, err := os.ReadDir(filepath.Join(path, fi.Name()))
 		if err != nil || len(sub) < 1 {
 			continue
 		}

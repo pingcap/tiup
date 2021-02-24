@@ -14,7 +14,7 @@
 package spec
 
 import (
-	"io/ioutil"
+	"os"
 	"path"
 	"reflect"
 	"strings"
@@ -43,7 +43,7 @@ func ParseTopologyYaml(file string, out Topology) error {
 
 	zap.L().Debug("Parse topology file", zap.String("file", file))
 
-	yamlFile, err := ioutil.ReadFile(file)
+	yamlFile, err := os.ReadFile(file)
 	if err != nil {
 		return ErrTopologyReadFailed.
 			Wrap(err, "Failed to read topology file %s", file).

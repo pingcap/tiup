@@ -15,7 +15,7 @@ package repository
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/pingcap/tiup/pkg/repository/model"
@@ -194,7 +194,7 @@ func TestMergeMirror(t *testing.T) {
 			"test-v1.0.1-linux-amd64.tar.gz",
 		}, info.Filename())
 
-		b, err := ioutil.ReadAll(info)
+		b, err := io.ReadAll(info)
 		assert.Nil(t, err)
 		assert.Contains(t, []string{
 			"hello-v1.0.0-linux-amd64.tar.gz",

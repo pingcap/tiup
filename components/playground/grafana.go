@@ -16,7 +16,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -74,7 +73,7 @@ datasources:
 `
 
 	s := fmt.Sprintf(tpl, clusterName, clusterName, p8sURL)
-	err = ioutil.WriteFile(fname, []byte(s), 0644)
+	err = os.WriteFile(fname, []byte(s), 0644)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -98,7 +97,7 @@ func replaceDatasource(dashboardDir string, datasourceName string) error {
 			return nil
 		}
 
-		data, err := ioutil.ReadFile(path)
+		data, err := os.ReadFile(path)
 		if err != nil {
 			return errors.AddStack(err)
 		}
@@ -109,7 +108,7 @@ func replaceDatasource(dashboardDir string, datasourceName string) error {
 		s = strings.Replace(s, "${DS_LIGHTNING}", datasourceName, -1)
 		s = re.ReplaceAllLiteralString(s, datasourceName)
 
-		return ioutil.WriteFile(path, []byte(s), 0644)
+		return os.WriteFile(path, []byte(s), 0644)
 	})
 
 	if err != nil {
@@ -138,7 +137,7 @@ providers:
 `
 	s := fmt.Sprintf(tpl, clusterName, clusterName, dir)
 
-	err = ioutil.WriteFile(fname, []byte(s), 0644)
+	err = os.WriteFile(fname, []byte(s), 0644)
 	if err != nil {
 		return errors.AddStack(err)
 	}
@@ -188,7 +187,7 @@ http_port = %d
 	custome := fmt.Sprintf(tpl, g.host, g.port)
 	customeFName := filepath.Join(dir, "conf", "custom.ini")
 
-	err = ioutil.WriteFile(customeFName, []byte(custome), 0644)
+	err = os.WriteFile(customeFName, []byte(custome), 0644)
 	if err != nil {
 		return errors.AddStack(err)
 	}

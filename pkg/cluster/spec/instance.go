@@ -17,7 +17,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -205,7 +204,7 @@ func (i *BaseInstance) TransferLocalConfigDir(ctx context.Context, e ctxt.Execut
 
 // IteratorLocalConfigDir iterators the local dir with filter, then invoke f for each found fileName
 func (i *BaseInstance) IteratorLocalConfigDir(ctx context.Context, local string, filter func(string) bool, f func(string) error) error {
-	files, err := ioutil.ReadDir(local)
+	files, err := os.ReadDir(local)
 	if err != nil {
 		return errors.Annotatef(err, "read local directory %s failed", local)
 	}
@@ -229,7 +228,7 @@ func (i *BaseInstance) MergeServerConfig(ctx context.Context, e ctxt.Executor, g
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(fp, conf, os.ModePerm)
+	err = os.WriteFile(fp, conf, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -245,7 +244,7 @@ func (i *BaseInstance) mergeTiFlashLearnerServerConfig(ctx context.Context, e ct
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(fp, conf, os.ModePerm)
+	err = os.WriteFile(fp, conf, os.ModePerm)
 	if err != nil {
 		return err
 	}

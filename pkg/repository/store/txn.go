@@ -17,7 +17,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"time"
@@ -71,7 +70,7 @@ func newLocalTxn(store *localStore) (*localTxn, error) {
 	if script := os.Getenv(localdata.EnvNameMirrorSyncScript); script != "" {
 		syncer = combine(syncer, newExternalSyncer(script))
 	}
-	root, err := ioutil.TempDir(os.Getenv(localdata.EnvNameComponentDataDir), "tiup-commit-*")
+	root, err := os.MkdirTemp(os.Getenv(localdata.EnvNameComponentDataDir), "tiup-commit-*")
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +207,7 @@ func (t *localTxn) Commit() error {
 		return err
 	}
 
-	files, err := ioutil.ReadDir(t.root)
+	files, err := os.ReadDir(t.root)
 	if err != nil {
 		return err
 	}
@@ -271,11 +270,15 @@ func (t *localTxn) access(filename string) error {
 	}
 
 	// Use the newest file in t.store.root
-	files, err := ioutil.ReadDir(t.store.root)
+	files, err := os.ReadDir(t.store.root)
 	if err != nil {
 		return errors.Annotatef(err, "read store root: %s", t.store.root)
 	}
-	for _, fi := range files {
+	for _, f := range files {
+		fi, err := f.Info()
+		if err != nil {
+			return err
+		}
 		if t.accessed[filename] == nil || t.accessed[filename].Before(fi.ModTime()) {
 			mt := fi.ModTime()
 			t.accessed[filename] = &mt

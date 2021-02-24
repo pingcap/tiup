@@ -15,7 +15,6 @@ package spec
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path"
@@ -32,7 +31,7 @@ import (
 func TestLocalDashboards(t *testing.T) {
 	ctx := ctxt.New(context.Background())
 
-	deployDir, err := ioutil.TempDir("", "tiup-*")
+	deployDir, err := os.MkdirTemp("", "tiup-*")
 	assert.Nil(t, err)
 	defer os.RemoveAll(deployDir)
 	localDir, err := filepath.Abs("./testdata/dashboards")
@@ -61,7 +60,7 @@ func TestLocalDashboards(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.FileExists(t, path.Join(deployDir, "dashboards", "tidb.json"))
-	fs, err := ioutil.ReadDir(localDir)
+	fs, err := os.ReadDir(localDir)
 	assert.Nil(t, err)
 	for _, f := range fs {
 		assert.FileExists(t, path.Join(deployDir, "dashboards", f.Name()))

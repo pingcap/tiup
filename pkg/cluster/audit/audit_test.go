@@ -16,7 +16,6 @@ package audit
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -52,7 +51,7 @@ func resetDir() {
 
 func readFakeStdout(f io.ReadSeeker) string {
 	_, _ = f.Seek(0, 0)
-	read, _ := ioutil.ReadAll(f)
+	read, _ := io.ReadAll(f)
 	return string(read)
 }
 
@@ -110,9 +109,9 @@ func (s *testAuditSuite) TestShowAuditLog(c *C) {
 	nanoSecond := int64(1604413624836105381)
 
 	fname := filepath.Join(dir, base52.Encode(second))
-	c.Assert(ioutil.WriteFile(fname, []byte("test with second"), 0644), IsNil)
+	c.Assert(os.WriteFile(fname, []byte("test with second"), 0644), IsNil)
 	fname = filepath.Join(dir, base52.Encode(nanoSecond))
-	c.Assert(ioutil.WriteFile(fname, []byte("test with nanosecond"), 0644), IsNil)
+	c.Assert(os.WriteFile(fname, []byte("test with nanosecond"), 0644), IsNil)
 
 	f := openStdout()
 	c.Assert(ShowAuditList(dir), IsNil)

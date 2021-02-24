@@ -14,7 +14,7 @@
 package config
 
 import (
-	"io/ioutil"
+	"os"
 	"path"
 
 	"github.com/pingcap/errors"
@@ -50,7 +50,7 @@ func (c *AlertManagerConfig) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(file, config, 0755); err != nil {
+	if err := os.WriteFile(file, config, 0755); err != nil {
 		return errors.AddStack(err)
 	}
 	return nil

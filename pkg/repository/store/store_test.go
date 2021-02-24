@@ -14,7 +14,6 @@
 package store
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -23,7 +22,7 @@ import (
 )
 
 func TestEmptyCommit(t *testing.T) {
-	root, err := ioutil.TempDir("", "")
+	root, err := os.MkdirTemp("", "")
 	assert.Nil(t, err)
 	defer os.RemoveAll(root)
 
@@ -35,7 +34,7 @@ func TestEmptyCommit(t *testing.T) {
 }
 
 func TestSingleWrite(t *testing.T) {
-	root, err := ioutil.TempDir("", "")
+	root, err := os.MkdirTemp("", "")
 	assert.Nil(t, err)
 	defer os.RemoveAll(root)
 
@@ -58,7 +57,7 @@ func TestSingleWrite(t *testing.T) {
 }
 
 func TestConflict(t *testing.T) {
-	root, err := ioutil.TempDir("", "")
+	root, err := os.MkdirTemp("", "")
 	assert.Nil(t, err)
 	defer os.RemoveAll(root)
 
@@ -98,7 +97,7 @@ func TestConflict(t *testing.T) {
 }
 
 func TestUpstream(t *testing.T) {
-	root, err := ioutil.TempDir("", "")
+	root, err := os.MkdirTemp("", "")
 	assert.Nil(t, err)
 	defer os.RemoveAll(root)
 

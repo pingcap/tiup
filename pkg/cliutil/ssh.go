@@ -14,7 +14,7 @@
 package cliutil
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/ScaleFT/sshkeys"
 	"github.com/pingcap/tiup/pkg/errutil"
@@ -46,7 +46,7 @@ func ReadIdentityFileOrPassword(identityFilePath string, usePass bool) (*SSHConn
 	}
 
 	// Identity file is specified, check identity file
-	buf, err := ioutil.ReadFile(identityFilePath)
+	buf, err := os.ReadFile(identityFilePath)
 	if err != nil {
 		return nil, ErrIdentityFileReadFiled.
 			Wrap(err, "Failed to read SSH identity file '%s'", identityFilePath).

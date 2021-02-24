@@ -15,7 +15,6 @@ package spec
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -122,7 +121,7 @@ func (s *SpecManager) SaveMeta(clusterName string, meta Metadata) error {
 func (s *SpecManager) Metadata(clusterName string, meta interface{}) error {
 	fname := s.Path(clusterName, metaFileName)
 
-	yamlFile, err := ioutil.ReadFile(fname)
+	yamlFile, err := os.ReadFile(fname)
 	if err != nil {
 		return perrs.AddStack(err)
 	}
@@ -157,7 +156,7 @@ func (s *SpecManager) Remove(name string) error {
 
 // List return the cluster names.
 func (s *SpecManager) List() (names []string, err error) {
-	fileInfos, err := ioutil.ReadDir(s.base)
+	fileInfos, err := os.ReadDir(s.base)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil

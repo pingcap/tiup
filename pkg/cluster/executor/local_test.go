@@ -16,7 +16,6 @@ package executor
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"testing"
@@ -37,7 +36,7 @@ func TestLocal(t *testing.T) {
 	assert.Nil(err)
 
 	// generate a src file and write some data
-	src, err := ioutil.TempFile("", "")
+	src, err := os.CreateTemp("", "")
 	assert.Nil(err)
 	defer os.Remove(src.Name())
 
@@ -48,7 +47,7 @@ func TestLocal(t *testing.T) {
 	assert.Nil(err)
 
 	// generate a dst file and just close it.
-	dst, err := ioutil.TempFile("", "")
+	dst, err := os.CreateTemp("", "")
 	assert.Nil(err)
 	err = dst.Close()
 	assert.Nil(err)
@@ -58,7 +57,7 @@ func TestLocal(t *testing.T) {
 	err = local.Transfer(ctx, src.Name(), dst.Name(), false)
 	assert.Nil(err)
 
-	data, err := ioutil.ReadFile(dst.Name())
+	data, err := os.ReadFile(dst.Name())
 	assert.Nil(err)
 	assert.Equal("src", string(data))
 }
@@ -81,7 +80,7 @@ func TestLocalExecuteWithQuotes(t *testing.T) {
 	local, err := New(SSHTypeNone, false, SSHConfig{Host: "127.0.0.1", User: user.Username})
 	assert.Nil(err)
 
-	deployDir, err := ioutil.TempDir("", "tiup-*")
+	deployDir, err := os.MkdirTemp("", "tiup-*")
 	assert.Nil(err)
 	defer os.RemoveAll(deployDir)
 

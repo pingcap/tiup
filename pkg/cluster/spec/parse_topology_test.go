@@ -15,7 +15,6 @@ package spec
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -32,7 +31,7 @@ type topoSuite struct{}
 var _ = check.Suite(&topoSuite{})
 
 func withTempFile(content string, fn func(string)) {
-	file, err := ioutil.TempFile("/tmp", "topology-test")
+	file, err := os.CreateTemp("/tmp", "topology-test")
 	if err != nil {
 		panic(fmt.Sprintf("create temp file: %s", err))
 	}

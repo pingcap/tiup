@@ -1,7 +1,6 @@
 package file
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,7 +56,7 @@ func SaveFileWithBackup(path string, data []byte, backupDir string) error {
 			backupName = strings.Join(p[0:len(p)-1], ".") + "-" + timestr + "." + p[len(p)-1]
 		}
 
-		backupData, err := ioutil.ReadFile(path)
+		backupData, err := os.ReadFile(path)
 		if err != nil {
 			return errors.AddStack(err)
 		}
@@ -68,13 +67,13 @@ func SaveFileWithBackup(path string, data []byte, backupDir string) error {
 		} else {
 			backupPath = filepath.Join(dir, backupName)
 		}
-		err = ioutil.WriteFile(backupPath, backupData, 0644)
+		err = os.WriteFile(backupPath, backupData, 0644)
 		if err != nil {
 			return errors.AddStack(err)
 		}
 	}
 
-	err = ioutil.WriteFile(path, data, 0644)
+	err = os.WriteFile(path, data, 0644)
 	if err != nil {
 		return errors.AddStack(err)
 	}

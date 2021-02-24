@@ -15,7 +15,6 @@ package spec
 
 import (
 	"crypto/tls"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -114,7 +113,7 @@ func (t *TestTopology) CountDir(host string, dir string) int {
 }
 
 func TestSpec(t *testing.T) {
-	dir, err := ioutil.TempDir("", "test-*")
+	dir, err := os.MkdirTemp("", "test-*")
 	assert.Nil(t, err)
 
 	spec := NewSpec(dir, func() Metadata {

@@ -14,7 +14,6 @@
 package ansible
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -587,7 +586,7 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 func readGroupVars(dir, filename string) (map[string]string, error) {
 	result := make(map[string]string)
 
-	fileData, err := ioutil.ReadFile(filepath.Join(dir, filename))
+	fileData, err := os.ReadFile(filepath.Join(dir, filename))
 	if err != nil {
 		return nil, err
 	}
@@ -644,7 +643,7 @@ func readAnsibleCfg(cfgFile string) (*ini.File, error) {
 		}
 		cfgData = []byte(data)
 	} else {
-		cfgData, err = ioutil.ReadFile(cfgFile)
+		cfgData, err = os.ReadFile(cfgFile)
 		if err != nil {
 			return nil, err
 		}

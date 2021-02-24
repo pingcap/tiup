@@ -14,7 +14,7 @@
 package command
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -47,7 +47,7 @@ func newScaleOutCmd() *cobra.Command {
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			topoFile := args[1]
-			if data, err := ioutil.ReadFile(topoFile); err == nil {
+			if data, err := os.ReadFile(topoFile); err == nil {
 				teleTopology = string(data)
 			}
 

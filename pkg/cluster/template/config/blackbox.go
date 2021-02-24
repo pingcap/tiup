@@ -14,7 +14,7 @@
 package config
 
 import (
-	"io/ioutil"
+	"os"
 	"path"
 
 	"github.com/pingcap/tiup/embed"
@@ -44,7 +44,7 @@ func (c *BlackboxConfig) ConfigToFile(file string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, config, 0755)
+	return os.WriteFile(file, config, 0755)
 }
 
 // ConfigWithTemplate generate the AlertManager config content by tpl

@@ -14,7 +14,6 @@
 package telemetry
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -61,7 +60,7 @@ func NewMeta() *Meta {
 // return a default Meta and save it if the file not exist.
 func LoadFrom(fname string) (meta *Meta, err error) {
 	var data []byte
-	data, err = ioutil.ReadFile(fname)
+	data, err = os.ReadFile(fname)
 
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -84,7 +83,7 @@ func (m *Meta) SaveTo(fname string) error {
 		return errors.AddStack(err)
 	}
 
-	return ioutil.WriteFile(fname, data, 0644)
+	return os.WriteFile(fname, data, 0644)
 }
 
 // GetMeta read the telemeta from disk

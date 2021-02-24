@@ -16,7 +16,7 @@ package task
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/joomcode/errorx"
@@ -71,7 +71,7 @@ func (e *EnvInit) execute(ctx context.Context) error {
 		}
 	}
 
-	pubKey, err := ioutil.ReadFile(ctxt.GetInner(ctx).PublicKeyPath)
+	pubKey, err := os.ReadFile(ctxt.GetInner(ctx).PublicKeyPath)
 	if err != nil {
 		return wrapError(err)
 	}

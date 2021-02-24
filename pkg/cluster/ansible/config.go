@@ -32,7 +32,7 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout uint64, ssh
 	//if err := os.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
 	//	return err
 	//}
-	//if err := ioutil.WriteFile(meta.ClusterPath(name, "topology.yaml"), yamlFile, 0664); err != nil {
+	//if err := os.WriteFile(meta.ClusterPath(name, "topology.yaml"), yamlFile, 0664); err != nil {
 	//	return err
 	//}
 	var copyFileTasks []task.Task

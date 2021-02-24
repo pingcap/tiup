@@ -19,7 +19,6 @@ import (
 	stderrors "errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -585,7 +584,7 @@ func (l *MockMirror) Fetch(resource string, maxSize int64) (io.ReadCloser, error
 	if maxSize > 0 && int64(len(content)) > maxSize {
 		return nil, fmt.Errorf("oversized resource %s in mock mirror %v > %v", resource, len(content), maxSize)
 	}
-	return ioutil.NopCloser(strings.NewReader(content)), nil
+	return io.NopCloser(strings.NewReader(content)), nil
 }
 
 // Close implements Mirror.

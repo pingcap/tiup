@@ -2,7 +2,6 @@ package file
 
 import (
 	"bytes"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -46,7 +45,7 @@ func (s *fileSuite) TestSaveFileWithBackup(c *check.C) {
 
 	sort.Strings(paths)
 	for i, path := range paths {
-		data, err := ioutil.ReadFile(path)
+		data, err := os.ReadFile(path)
 		c.Assert(err, check.IsNil)
 		c.Assert(string(data), check.Equals, strconv.Itoa(i))
 	}
@@ -72,13 +71,13 @@ func (s *fileSuite) TestSaveFileWithBackup(c *check.C) {
 
 	sort.Strings(paths)
 	for i, path := range paths {
-		data, err := ioutil.ReadFile(path)
+		data, err := os.ReadFile(path)
 		c.Assert(err, check.IsNil)
 		c.Assert(string(data), check.Equals, strconv.Itoa(i))
 	}
 
 	// Verify the latest saved file.
-	data, err := ioutil.ReadFile(filepath.Join(dir, name))
+	data, err := os.ReadFile(filepath.Join(dir, name))
 	c.Assert(err, check.IsNil)
 	c.Assert(string(data), check.Equals, "9")
 }
@@ -114,7 +113,7 @@ func (s *fileSuite) TestConcurrentSaveFileWithBackup(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(len(paths), check.Equals, 10)
 	for _, path := range paths {
-		body, err := ioutil.ReadFile(path)
+		body, err := os.ReadFile(path)
 		c.Assert(err, check.IsNil)
 		c.Assert(len(body), check.Equals, len(data))
 		c.Assert(bytes.Equal(body, data), check.IsTrue)

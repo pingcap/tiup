@@ -15,7 +15,7 @@ package ansible
 
 import (
 	"context"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -61,7 +61,7 @@ func TestParseRunScript(t *testing.T) {
 	assert := require.New(t)
 
 	// parse run_dm-master.sh
-	data, err := ioutil.ReadFile("./testdata/deploy_dir/172.19.0.101/scripts/run_dm-master.sh")
+	data, err := os.ReadFile("./testdata/deploy_dir/172.19.0.101/scripts/run_dm-master.sh")
 	assert.Nil(err)
 	dir, flags, err := parseRunScript(data)
 	assert.Nil(err)
@@ -75,7 +75,7 @@ func TestParseRunScript(t *testing.T) {
 	assert.Equal(expectedFlags, flags)
 
 	// parse run_dm-worker.sh
-	data, err = ioutil.ReadFile("./testdata/deploy_dir/172.19.0.101/scripts/run_dm-worker.sh")
+	data, err = os.ReadFile("./testdata/deploy_dir/172.19.0.101/scripts/run_dm-worker.sh")
 	assert.Nil(err)
 	dir, flags, err = parseRunScript(data)
 	assert.Nil(err)
@@ -90,7 +90,7 @@ func TestParseRunScript(t *testing.T) {
 	assert.Equal(expectedFlags, flags)
 
 	// parse run_prometheus.sh
-	data, err = ioutil.ReadFile("./testdata/deploy_dir/172.19.0.101/scripts/run_prometheus.sh")
+	data, err = os.ReadFile("./testdata/deploy_dir/172.19.0.101/scripts/run_prometheus.sh")
 	assert.Nil(err)
 	dir, flags, err = parseRunScript(data)
 	assert.Nil(err)
@@ -107,7 +107,7 @@ func TestParseRunScript(t *testing.T) {
 	assert.Equal(expectedFlags, flags)
 
 	// parse run_grafana.sh
-	data, err = ioutil.ReadFile("./testdata/deploy_dir/172.19.0.101/scripts/run_grafana.sh")
+	data, err = os.ReadFile("./testdata/deploy_dir/172.19.0.101/scripts/run_grafana.sh")
 	assert.Nil(err)
 	dir, flags, err = parseRunScript(data)
 	assert.Nil(err)
@@ -119,7 +119,7 @@ func TestParseRunScript(t *testing.T) {
 	assert.Equal(expectedFlags, flags)
 
 	// parse run_alertmanager.sh
-	data, err = ioutil.ReadFile("./testdata/deploy_dir/172.19.0.101/scripts/run_alertmanager.sh")
+	data, err = os.ReadFile("./testdata/deploy_dir/172.19.0.101/scripts/run_alertmanager.sh")
 	assert.Nil(err)
 	dir, flags, err = parseRunScript(data)
 	assert.Nil(err)

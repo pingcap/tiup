@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -128,7 +127,7 @@ func (ms *FsManifests) save(manifest *Manifest, filename string) error {
 		return errors.Trace(err)
 	}
 
-	err = ioutil.WriteFile(path, bytes, 0644)
+	err = os.WriteFile(path, bytes, 0644)
 	if err != nil {
 		return err
 	}
@@ -205,7 +204,7 @@ func (ms *FsManifests) load(filename string) (string, error) {
 				if err != nil {
 					return "", errors.Trace(err)
 				}
-				bytes, err := ioutil.ReadFile(initRoot)
+				bytes, err := os.ReadFile(initRoot)
 				if err != nil {
 					return "", errors.Errorf("cannot open the initial root.json at %s", initRoot)
 				}

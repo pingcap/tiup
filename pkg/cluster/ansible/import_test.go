@@ -15,7 +15,6 @@ package ansible
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -155,7 +154,7 @@ func (s *ansSuite) TestParseGroupVars(c *C) {
 	var expected spec.ClusterMeta
 	var metaFull spec.ClusterMeta
 
-	expectedTopo, err := ioutil.ReadFile(filepath.Join(dir, "meta.yaml"))
+	expectedTopo, err := os.ReadFile(filepath.Join(dir, "meta.yaml"))
 	c.Assert(err, IsNil)
 	err = yaml.Unmarshal(expectedTopo, &expected)
 	c.Assert(err, IsNil)
@@ -208,7 +207,7 @@ func sortClusterMeta(clsMeta *spec.ClusterMeta) {
 }
 
 func withTempFile(content string, fn func(string)) {
-	file, err := ioutil.TempFile("/tmp", "topology-test")
+	file, err := os.CreateTemp("/tmp", "topology-test")
 	if err != nil {
 		panic(fmt.Sprintf("create temp file: %s", err))
 	}

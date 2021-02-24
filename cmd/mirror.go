@@ -17,7 +17,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -117,7 +116,7 @@ func newMirrorSignCmd() *cobra.Command {
 				return nil
 			}
 
-			data, err := ioutil.ReadFile(args[0])
+			data, err := os.ReadFile(args[0])
 			if err != nil {
 				return errors.Annotatef(err, "open manifest file %s", args[0])
 			}
@@ -126,7 +125,7 @@ func newMirrorSignCmd() *cobra.Command {
 				return err
 			}
 
-			if err = ioutil.WriteFile(args[0], data, 0664); err != nil {
+			if err = os.WriteFile(args[0], data, 0664); err != nil {
 				return errors.Annotatef(err, "write manifest file %s", args[0])
 			}
 
@@ -318,7 +317,7 @@ func editLatestRootManifest() (*v1manifest.Root, error) {
 		return nil, err
 	}
 
-	file, err := ioutil.TempFile(os.TempDir(), "*.root.json")
+	file, err := os.CreateTemp(os.TempDir(), "*.root.json")
 	if err != nil {
 		return nil, errors.Annotate(err, "create temp file for root.json")
 	}

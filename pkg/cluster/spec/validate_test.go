@@ -15,7 +15,7 @@ package spec
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/joomcode/errorx"
@@ -283,7 +283,7 @@ pd_servers:
 func (s *metaSuiteTopo) TestCountDir2(c *C) {
 	file := filepath.Join("testdata", "countdir.yaml")
 	meta := ClusterMeta{}
-	yamlFile, err := ioutil.ReadFile(file)
+	yamlFile, err := os.ReadFile(file)
 	c.Assert(err, IsNil)
 	err = yaml.UnmarshalStrict(yamlFile, &meta)
 	c.Assert(err, IsNil)
