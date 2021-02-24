@@ -222,57 +222,29 @@ func newMirrorModifyCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			component := args[0]
-
-			env := environment.GlobalEnv()
-
-			comp, ver := environment.ParseCompVersion(component)
-			m, err := env.V1Repository().FetchComponentManifest(comp, true)
-			if err != nil {
-				return err
-			}
-
-			v1manifest.RenewManifest(m, time.Now())
-			if desc != "" {
-				m.Description = desc
-			}
-
 			flagSet := set.NewStringSet()
 			cmd.Flags().Visit(func(f *pflag.Flag) {
 				flagSet.Insert(f.Name)
 			})
 
-			publishInfo := &model.PublishInfo{}
-			if ver == "" {
-				if flagSet.Exist("standalone") {
-					publishInfo.Stand = &standalone
+			var reqErr error
+			pubErr := utils.Retry(func() error {
+				err := doPublish(args[0], desc, privPath, standalone, hidden, yanked, flagSet)
+				if err != nil && err == repository.ErrManifestTooOld {
+					// retry if the error is manifest too old
+					return err // return err to trigger next retry
 				}
-				if flagSet.Exist("hide") {
-					publishInfo.Hide = &hidden
-				}
-				if flagSet.Exist("yank") {
-					publishInfo.Yank = &yanked
-				}
-			} else if flagSet.Exist("yank") {
-				if ver.IsNightly() {
-					return errors.New("nightly version can't be yanked")
-				}
-				for p := range m.Platforms {
-					vi, ok := m.Platforms[p][ver.String()]
-					if !ok {
-						continue
-					}
-					vi.Yanked = yanked
-					m.Platforms[p][ver.String()] = vi
-				}
-			}
+				reqErr = err // keep the error info
+				return nil   // return nil to end the retry loop
+			}, utils.RetryOption{
+				Attempts: 5,
+				Timeout:  time.Minute * 3,
+			})
 
-			manifest, err := sign(privPath, m)
-			if err != nil {
-				return err
+			if reqErr != nil {
+				return reqErr
 			}
-
-			return env.V1Repository().Mirror().Publish(manifest, publishInfo)
+			return pubErr
 		},
 	}
 
@@ -282,6 +254,58 @@ func newMirrorModifyCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&hidden, "hide", "", hidden, "is this component visible in list")
 	cmd.Flags().BoolVarP(&yanked, "yank", "", yanked, "is this component deprecated")
 	return cmd
+}
+
+// request mirror to publish
+func doPublish(
+	component, desc, privPath string,
+	standalone, hidden, yanked bool,
+	flagSet set.StringSet,
+) error {
+	env := environment.GlobalEnv()
+
+	comp, ver := environment.ParseCompVersion(component)
+	m, err := env.V1Repository().FetchComponentManifest(comp, true)
+	if err != nil {
+		return err
+	}
+
+	v1manifest.RenewManifest(m, time.Now())
+	if desc != "" {
+		m.Description = desc
+	}
+
+	publishInfo := &model.PublishInfo{}
+	if ver == "" {
+		if flagSet.Exist("standalone") {
+			publishInfo.Stand = &standalone
+		}
+		if flagSet.Exist("hide") {
+			publishInfo.Hide = &hidden
+		}
+		if flagSet.Exist("yank") {
+			publishInfo.Yank = &yanked
+		}
+	} else if flagSet.Exist("yank") {
+		if ver.IsNightly() {
+			return errors.New("nightly version can't be yanked")
+		}
+		for p := range m.Platforms {
+			vi, ok := m.Platforms[p][ver.String()]
+			if !ok {
+				continue
+			}
+			vi.Yanked = yanked
+			m.Platforms[p][ver.String()] = vi
+		}
+	}
+
+	manifest, err := sign(privPath, m)
+	if err != nil {
+		return err
+	}
+
+	return env.V1Repository().Mirror().Publish(manifest, publishInfo)
 }
 
 // the `mirror rotate` sub command
