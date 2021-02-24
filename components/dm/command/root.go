@@ -143,6 +143,7 @@ please backup your data before process.`,
 		newImportCmd(),
 		newEnableCmd(),
 		newDisableCmd(),
+		newTemplateCmd(),
 	)
 }
 
