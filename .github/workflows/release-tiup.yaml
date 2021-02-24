@@ -132,6 +132,11 @@ jobs:
 
           echo ${{ secrets.TIUP_COMP_KEY_PINGCAP }} | base64 -d > $TIUP_HOME/keys/private.json
 
+          # build the latest tiup to use for publish, this is a workaround and should
+          # be removed after this PR is merged and released
+          GOOS=linux GOARCH=amd64 make tiup
+          cp bin/tiup ${TIUP_BIN}
+
           ${TIUP_BIN} mirror publish tiup ${REL_VER} package/tiup-${REL_VER}-${ARCH}.tar.gz tiup --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${tiup_desc}"
           ${TIUP_BIN} mirror publish cluster ${REL_VER} package/cluster-${REL_VER}-${ARCH}.tar.gz tiup-cluster --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${cluster_desc}"
           ${TIUP_BIN} mirror publish dm ${REL_VER} package/dm-${REL_VER}-${ARCH}.tar.gz tiup-dm --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${dm_desc}" --standalone
