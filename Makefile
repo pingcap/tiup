@@ -106,9 +106,6 @@ failpoint-disable: tools/bin/failpoint-ctl
 tools/bin/failpoint-ctl: go.mod
 	$(GO) build -o $@ github.com/pingcap/failpoint/failpoint-ctl
 
-pkger:
-	$(GO) run tools/pkger/main.go -s templates -d pkg/cluster/embed
-
 fmt:
 	@echo "gofmt (simplify)"
 	@gofmt -s -l -w $(FILES) 2>&1

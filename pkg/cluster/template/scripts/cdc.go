@@ -19,7 +19,7 @@ import (
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // CDCScript represent the data to generate cdc config
@@ -62,7 +62,7 @@ func (c *CDCScript) WithNumaNode(numa string) *CDCScript {
 
 // Config generate the config file data.
 func (c *CDCScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_cdc.sh.tpl")
+	fp := path.Join("templates", "scripts", "run_cdc.sh.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
