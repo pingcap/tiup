@@ -100,11 +100,7 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 			}
 		}
 	})
-	if err := m.specManager.SaveMeta(name, metadata); err != nil {
-		return perrs.Trace(err)
-	}
-
-	return nil
+	return m.specManager.SaveMeta(name, metadata)
 }
 
 func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, name, comp, nodeOS, arch, packagePath string) error {

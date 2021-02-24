@@ -116,6 +116,7 @@ func (m *Manager) ScaleOut(
 	newPart.IterInstance(func(instance spec.Instance) {
 		if utils.IsExist(m.specManager.Path(name, spec.PatchDirName, instance.ComponentName()+".tar.gz")) {
 			patchedComponents.Insert(instance.ComponentName())
+			instance.SetPatched(true)
 		}
 	})
 
