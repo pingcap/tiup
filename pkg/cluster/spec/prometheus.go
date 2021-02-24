@@ -32,26 +32,33 @@ import (
 
 // PrometheusSpec represents the Prometheus Server topology specification in topology.yaml
 type PrometheusSpec struct {
-	Host            string               `yaml:"host"`
-	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                 `yaml:"imported,omitempty"`
-	Port            int                  `yaml:"port" default:"9090"`
-	DeployDir       string               `yaml:"deploy_dir,omitempty"`
-	DataDir         string               `yaml:"data_dir,omitempty"`
-	LogDir          string               `yaml:"log_dir,omitempty"`
-	NumaNode        string               `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	RemoteConfig    Remote               `yaml:"remote_config,omitempty" validate:"remote_config:ignore"`
-	Retention       string               `yaml:"storage_retention,omitempty" validate:"storage_retention:editable"`
-	ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string               `yaml:"arch,omitempty"`
-	OS              string               `yaml:"os,omitempty"`
-	RuleDir         string               `yaml:"rule_dir,omitempty" validate:"rule_dir:editable"`
+	Host                  string                 `yaml:"host"`
+	SSHPort               int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported              bool                   `yaml:"imported,omitempty"`
+	Port                  int                    `yaml:"port" default:"9090"`
+	DeployDir             string                 `yaml:"deploy_dir,omitempty"`
+	DataDir               string                 `yaml:"data_dir,omitempty"`
+	LogDir                string                 `yaml:"log_dir,omitempty"`
+	NumaNode              string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	RemoteConfig          Remote                 `yaml:"remote_config,omitempty" validate:"remote_config:ignore"`
+	ExternalAlertmanagers []ExternalAlertmanager `yaml:"external_alertmanagers" validate:"external_alertmanagers:ignore"`
+	Retention             string                 `yaml:"storage_retention,omitempty" validate:"storage_retention:editable"`
+	ResourceControl       meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch                  string                 `yaml:"arch,omitempty"`
+	OS                    string                 `yaml:"os,omitempty"`
+	RuleDir               string                 `yaml:"rule_dir,omitempty" validate:"rule_dir:editable"`
 }
 
 // Remote prometheus remote config
 type Remote struct {
 	RemoteWrite []map[string]interface{} `yaml:"remote_write,omitempty" validate:"remote_write:ignore"`
 	RemoteRead  []map[string]interface{} `yaml:"remote_read,omitempty" validate:"remote_read:ignore"`
+}
+
+// ExternalAlertmanager configs prometheus to include alertmanagers not deployed in current cluster
+type ExternalAlertmanager struct {
+	Host    string `yaml:"host"`
+	WebPort int    `yaml:"web_port" default:"9093"`
 }
 
 // Role returns the component role of the instance
@@ -266,6 +273,10 @@ func (i *MonitorInstance) InitConfig(
 		return err
 	}
 	cfig.SetRemoteConfig(string(remoteCfg))
+
+	for _, alertmanager := range spec.ExternalAlertmanagers {
+		cfig.AddAlertmanager(alertmanager.Host, uint64(alertmanager.WebPort))
+	}
 
 	if spec.RuleDir != "" {
 		filter := func(name string) bool { return strings.HasSuffix(name, ".rules.yml") }

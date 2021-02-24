@@ -169,6 +169,7 @@ topology:
       deploy_dir: /home/tiopsimport/ansible-deploy/prometheus-9090
       data_dir: data/prometheus-9090
       storage_retention: 30d
+      external_alertmanagers: []
       arch: amd64
       os: linux
   grafana_servers:
