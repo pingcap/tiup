@@ -380,7 +380,7 @@ func (p *Playground) sanitizeConfig(boot instance.Config, cfg *instance.Config) 
 		cfg.ConfigPath = boot.ConfigPath
 	}
 	if cfg.Host == "" {
-		cfg.Host = boot.ConfigPath
+		cfg.Host = boot.Host
 	}
 
 	path, err := getAbsolutePath(cfg.ConfigPath)
@@ -609,6 +609,9 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 	if cfg.Host != "" {
 		host = cfg.Host
 	}
+
+	// use the advertised host instead of 0.0.0.0
+	host = instance.AdvertiseHost(host)
 
 	switch componentID {
 	case "pd":
