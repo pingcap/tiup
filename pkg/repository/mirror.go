@@ -50,8 +50,11 @@ const (
 	OptionHidden = "hidden"
 )
 
-// ErrNotFound represents the resource not exists.
-var ErrNotFound = stderrors.New("not found")
+// predefined errors
+var (
+	ErrNotFound       = stderrors.New("not found") // resource does not exists
+	ErrManifestTooOld = stderrors.New("component manifest is too old, update it before publish")
+)
 
 type (
 	// DownloadProgress represents the download progress notifier
@@ -443,7 +446,7 @@ func (l *httpMirror) Publish(manifest *v1manifest.Manifest, info model.Component
 	}
 	switch resp.StatusCode {
 	case http.StatusConflict:
-		return errors.Errorf("Local component manifest is not new enough, update it first")
+		return ErrManifestTooOld
 	case http.StatusForbidden:
 		return errors.Errorf("The server refused, make sure you have access to this component")
 	default:

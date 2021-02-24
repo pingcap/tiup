@@ -431,52 +431,37 @@ func newMirrorPublishCmd() *cobra.Command {
 			}
 
 			component, version, tarpath, entry := args[0], args[1], args[2], args[3]
+			flagSet := set.NewStringSet()
+			cmd.Flags().Visit(func(f *pflag.Flag) {
+				flagSet.Insert(f.Name)
+			})
 
 			if err := validatePlatform(goos, goarch); err != nil {
 				return err
 			}
 
-			hashes, length, err := ru.HashFile(tarpath)
-			if err != nil {
-				return err
-			}
-
-			tarfile, err := os.Open(tarpath)
-			if err != nil {
-				return errors.Annotatef(err, "open tarball: %s", tarpath)
-			}
-			defer tarfile.Close()
-
-			publishInfo := &model.PublishInfo{
-				ComponentData: &model.TarInfo{Reader: tarfile, Name: fmt.Sprintf("%s-%s-%s-%s.tar.gz", component, version, goos, goarch)},
-			}
-
-			flagSet := set.NewStringSet()
-			cmd.Flags().Visit(func(f *pflag.Flag) {
-				flagSet.Insert(f.Name)
+			var reqErr error
+			pubErr := utils.Retry(func() error {
+				err := doPublish(component, version, tarpath, entry,
+					desc, standalone, hidden, privPath,
+					goos, goarch, flagSet,
+				)
+				if err != nil {
+					// retry if the error is manifest too old
+					if err == repository.ErrManifestTooOld {
+						return err // return err to trigger next retry
+					}
+					reqErr = err // keep the error info
+				}
+				return nil // return nil to end the retry loop
+			}, utils.RetryOption{
+				Attempts: 5,
+				Timeout:  time.Minute * 3,
 			})
-			env := environment.GlobalEnv()
-			m, err := env.V1Repository().FetchComponentManifest(component, true)
-			if err != nil {
-				fmt.Printf("Fetch local manifest: %s\n", err.Error())
-				fmt.Printf("Failed to load component manifest, create a new one\n")
-				publishInfo.Stand = &standalone
-				publishInfo.Hide = &hidden
-			} else if flagSet.Exist("standalone") || flagSet.Exist("hide") {
-				fmt.Println("This is not a new component, --standalone and --hide flag will be omitted")
+			if reqErr != nil {
+				return reqErr
 			}
-
-			m = repository.UpdateManifestForPublish(m, component, version, entry, goos, goarch, desc, v1manifest.FileHash{
-				Hashes: hashes,
-				Length: uint(length),
-			})
-
-			manifest, err := sign(privPath, m)
-			if err != nil {
-				return err
-			}
-
-			return env.V1Repository().Mirror().Publish(manifest, publishInfo)
+			return pubErr
 		},
 	}
 
@@ -487,6 +472,51 @@ func newMirrorPublishCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&standalone, "standalone", "", standalone, "can this component run directly")
 	cmd.Flags().BoolVarP(&hidden, "hide", "", hidden, "is this component invisible on listing")
 	return cmd
+}
+
+func doPublish(
+	component, version, tarpath, entry, desc string,
+	standalone, hidden bool,
+	privPath, goos, goarch string,
+	flagSet set.StringSet,
+) error {
+	hashes, length, err := ru.HashFile(tarpath)
+	if err != nil {
+		return err
+	}
+
+	tarfile, err := os.Open(tarpath)
+	if err != nil {
+		return errors.Annotatef(err, "open tarball: %s", tarpath)
+	}
+	defer tarfile.Close()
+
+	publishInfo := &model.PublishInfo{
+		ComponentData: &model.TarInfo{Reader: tarfile, Name: fmt.Sprintf("%s-%s-%s-%s.tar.gz", component, version, goos, goarch)},
+	}
+
+	env := environment.GlobalEnv()
+	m, err := env.V1Repository().FetchComponentManifest(component, true)
+	if err != nil {
+		fmt.Printf("Fetch local manifest: %s\n", err.Error())
+		fmt.Printf("Failed to load component manifest, create a new one\n")
+		publishInfo.Stand = &standalone
+		publishInfo.Hide = &hidden
+	} else if flagSet.Exist("standalone") || flagSet.Exist("hide") {
+		fmt.Println("This is not a new component, --standalone and --hide flag will be omitted")
+	}
+
+	m = repository.UpdateManifestForPublish(m, component, version, entry, goos, goarch, desc, v1manifest.FileHash{
+		Hashes: hashes,
+		Length: uint(length),
+	})
+
+	manifest, err := sign(privPath, m)
+	if err != nil {
+		return err
+	}
+
+	return env.V1Repository().Mirror().Publish(manifest, publishInfo)
 }
 
 func validatePlatform(goos, goarch string) error {
