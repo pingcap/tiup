@@ -225,7 +225,7 @@ func (im *Importer) handleWorkerConfig(ctx context.Context, srv *spec.WorkerSpec
 // and set V1SourcePath of the master spec.
 func (im *Importer) ScpSourceToMaster(ctx context.Context, topo *spec.Specification) (err error) {
 	for i := 0; i < len(topo.Masters); i++ {
-		master := &topo.Masters[i]
+		master := topo.Masters[i]
 		target := filepath.Join(firstNonEmpty(master.DeployDir, topo.GlobalOptions.DeployDir), "v1source")
 		master.V1SourcePath = target
 
@@ -329,7 +329,7 @@ func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName strin
 		switch gname {
 		case "dm_master_servers":
 			for _, host := range group.Hosts {
-				srv := spec.MasterSpec{
+				srv := &spec.MasterSpec{
 					Host:    host.Vars["ansible_host"],
 					SSHPort: ansible.GetHostPort(host, cfg),
 				}
@@ -376,7 +376,7 @@ func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName strin
 			}
 		case "dm_worker_servers":
 			for _, host := range group.Hosts {
-				srv := spec.WorkerSpec{
+				srv := &spec.WorkerSpec{
 					Host:      host.Vars["ansible_host"],
 					SSHPort:   ansible.GetHostPort(host, cfg),
 					DeployDir: firstNonEmpty(host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir),
@@ -426,7 +426,7 @@ func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName strin
 				// We will always set the wd as DeployDir.
 				srv.DeployDir = deployDir
 
-				err = im.handleWorkerConfig(ctx, &srv, configFileName)
+				err = im.handleWorkerConfig(ctx, srv, configFileName)
 				if err != nil {
 					return "", nil, err
 				}
@@ -437,7 +437,7 @@ func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName strin
 			fmt.Println("ignore deprecated dm_portal_servers")
 		case "prometheus_servers":
 			for _, host := range group.Hosts {
-				srv := spec.PrometheusSpec{
+				srv := &spec.PrometheusSpec{
 					Host:      host.Vars["ansible_host"],
 					SSHPort:   ansible.GetHostPort(host, cfg),
 					DeployDir: firstNonEmpty(host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir),
@@ -485,7 +485,7 @@ func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName strin
 			}
 		case "alertmanager_servers":
 			for _, host := range group.Hosts {
-				srv := spec.AlertmanagerSpec{
+				srv := &spec.AlertmanagerSpec{
 					Host:      host.Vars["ansible_host"],
 					SSHPort:   ansible.GetHostPort(host, cfg),
 					DeployDir: firstNonEmpty(host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir),
@@ -540,7 +540,7 @@ func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName strin
 						port = iv
 					}
 				}
-				srv := spec.GrafanaSpec{
+				srv := &spec.GrafanaSpec{
 					Host:     host.Vars["ansible_host"],
 					SSHPort:  ansible.GetHostPort(host, cfg),
 					Port:     port,

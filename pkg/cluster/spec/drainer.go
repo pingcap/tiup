@@ -31,6 +31,7 @@ type DrainerSpec struct {
 	Host            string                 `yaml:"host"`
 	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                   `yaml:"imported,omitempty"`
+	Patched         bool                   `yaml:"patched,omitempty"`
 	Port            int                    `yaml:"port" default:"8249"`
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	DataDir         string                 `yaml:"data_dir,omitempty"`
@@ -45,22 +46,22 @@ type DrainerSpec struct {
 }
 
 // Role returns the component role of the instance
-func (s DrainerSpec) Role() string {
+func (s *DrainerSpec) Role() string {
 	return ComponentDrainer
 }
 
 // SSH returns the host and SSH port of the instance
-func (s DrainerSpec) SSH() (string, int) {
+func (s *DrainerSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s DrainerSpec) GetMainPort() int {
+func (s *DrainerSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s DrainerSpec) IsImported() bool {
+func (s *DrainerSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -149,7 +150,7 @@ func (i *DrainerInstance) InitConfig(
 	}
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
-	spec := i.InstanceSpec.(DrainerSpec)
+	spec := i.InstanceSpec.(*DrainerSpec)
 	nodeID := i.GetHost() + ":" + strconv.Itoa(i.GetPort())
 	// keep origin node id if is imported
 	if i.IsImported() {

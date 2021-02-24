@@ -37,6 +37,7 @@ type TiSparkMasterSpec struct {
 	ListenHost   string                 `yaml:"listen_host,omitempty"`
 	SSHPort      int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported     bool                   `yaml:"imported,omitempty"`
+	Patched      bool                   `yaml:"patched,omitempty"`
 	Port         int                    `yaml:"port" default:"7077"`
 	WebPort      int                    `yaml:"web_port" default:"8080"`
 	DeployDir    string                 `yaml:"deploy_dir,omitempty"`
@@ -48,27 +49,27 @@ type TiSparkMasterSpec struct {
 }
 
 // Role returns the component role of the instance
-func (s TiSparkMasterSpec) Role() string {
+func (s *TiSparkMasterSpec) Role() string {
 	return RoleTiSparkMaster
 }
 
 // SSH returns the host and SSH port of the instance
-func (s TiSparkMasterSpec) SSH() (string, int) {
+func (s *TiSparkMasterSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s TiSparkMasterSpec) GetMainPort() int {
+func (s *TiSparkMasterSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s TiSparkMasterSpec) IsImported() bool {
+func (s *TiSparkMasterSpec) IsImported() bool {
 	return s.Imported
 }
 
 // Status queries current status of the instance
-func (s TiSparkMasterSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
+func (s *TiSparkMasterSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
 	scheme := "http"
 	if tlsCfg != nil {
 		scheme = "https"
@@ -83,6 +84,7 @@ type TiSparkWorkerSpec struct {
 	ListenHost string `yaml:"listen_host,omitempty"`
 	SSHPort    int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported   bool   `yaml:"imported,omitempty"`
+	Patched    bool   `yaml:"patched,omitempty"`
 	Port       int    `yaml:"port" default:"7078"`
 	WebPort    int    `yaml:"web_port" default:"8081"`
 	DeployDir  string `yaml:"deploy_dir,omitempty"`
@@ -92,27 +94,27 @@ type TiSparkWorkerSpec struct {
 }
 
 // Role returns the component role of the instance
-func (s TiSparkWorkerSpec) Role() string {
+func (s *TiSparkWorkerSpec) Role() string {
 	return RoleTiSparkWorker
 }
 
 // SSH returns the host and SSH port of the instance
-func (s TiSparkWorkerSpec) SSH() (string, int) {
+func (s *TiSparkWorkerSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s TiSparkWorkerSpec) GetMainPort() int {
+func (s *TiSparkWorkerSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s TiSparkWorkerSpec) IsImported() bool {
+func (s *TiSparkWorkerSpec) IsImported() bool {
 	return s.Imported
 }
 
 // Status queries current status of the instance
-func (s TiSparkWorkerSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
+func (s *TiSparkWorkerSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
 	scheme := "http"
 	if tlsCfg != nil {
 		scheme = "https"
@@ -169,7 +171,7 @@ type TiSparkMasterInstance struct {
 
 // GetCustomFields get custom spark configs of the instance
 func (i *TiSparkMasterInstance) GetCustomFields() map[string]interface{} {
-	v := reflect.ValueOf(i.InstanceSpec).FieldByName("SparkConfigs")
+	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("SparkConfigs")
 	if !v.IsValid() {
 		return nil
 	}
@@ -178,7 +180,7 @@ func (i *TiSparkMasterInstance) GetCustomFields() map[string]interface{} {
 
 // GetCustomEnvs get custom spark envionment variables of the instance
 func (i *TiSparkMasterInstance) GetCustomEnvs() map[string]string {
-	v := reflect.ValueOf(i.InstanceSpec).FieldByName("SparkEnvs")
+	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("SparkEnvs")
 	if !v.IsValid() {
 		return nil
 	}
@@ -187,7 +189,7 @@ func (i *TiSparkMasterInstance) GetCustomEnvs() map[string]string {
 
 // GetJavaHome returns the java_home value in spec
 func (i *TiSparkMasterInstance) GetJavaHome() string {
-	return reflect.ValueOf(i.InstanceSpec).FieldByName("JavaHome").String()
+	return reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("JavaHome").String()
 }
 
 // InitConfig implement Instance interface
@@ -336,7 +338,7 @@ type TiSparkWorkerInstance struct {
 
 // GetJavaHome returns the java_home value in spec
 func (i *TiSparkWorkerInstance) GetJavaHome() string {
-	return reflect.ValueOf(i.InstanceSpec).FieldByName("JavaHome").String()
+	return reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("JavaHome").String()
 }
 
 // InitConfig implement Instance interface

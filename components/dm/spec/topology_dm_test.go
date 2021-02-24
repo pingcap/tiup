@@ -32,8 +32,8 @@ var _ = Suite(&metaSuiteDM{})
 func TestDefaultDataDir(t *testing.T) {
 	// Test with without global DataDir.
 	topo := new(Specification)
-	topo.Masters = append(topo.Masters, MasterSpec{Host: "1.1.1.1", Port: 1111})
-	topo.Workers = append(topo.Workers, WorkerSpec{Host: "1.1.2.1", Port: 2221})
+	topo.Masters = append(topo.Masters, &MasterSpec{Host: "1.1.1.1", Port: 1111})
+	topo.Workers = append(topo.Workers, &WorkerSpec{Host: "1.1.2.1", Port: 2221})
 	data, err := yaml.Marshal(topo)
 	assert.Nil(t, err)
 
@@ -58,10 +58,10 @@ func TestDefaultDataDir(t *testing.T) {
 	// Test with global DataDir.
 	topo = new(Specification)
 	topo.GlobalOptions.DataDir = "/gloable_data"
-	topo.Masters = append(topo.Masters, MasterSpec{Host: "1.1.1.1", Port: 1111})
-	topo.Masters = append(topo.Masters, MasterSpec{Host: "1.1.1.2", Port: 1112, DataDir: "/my_data"})
-	topo.Workers = append(topo.Workers, WorkerSpec{Host: "1.1.2.1", Port: 2221})
-	topo.Workers = append(topo.Workers, WorkerSpec{Host: "1.1.2.2", Port: 2222, DataDir: "/my_data"})
+	topo.Masters = append(topo.Masters, &MasterSpec{Host: "1.1.1.1", Port: 1111})
+	topo.Masters = append(topo.Masters, &MasterSpec{Host: "1.1.1.2", Port: 1112, DataDir: "/my_data"})
+	topo.Workers = append(topo.Workers, &WorkerSpec{Host: "1.1.2.1", Port: 2221})
+	topo.Workers = append(topo.Workers, &WorkerSpec{Host: "1.1.2.2", Port: 2222, DataDir: "/my_data"})
 	data, err = yaml.Marshal(topo)
 	assert.Nil(t, err)
 

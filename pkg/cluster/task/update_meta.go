@@ -37,7 +37,7 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	deleted := set.NewStringSet(u.deletedNodeIDs...)
 	topo := u.metadata.Topology
 
-	tidbServers := make([]spec.TiDBSpec, 0)
+	tidbServers := make([]*spec.TiDBSpec, 0)
 	for i, instance := range (&spec.TiDBComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
@@ -46,7 +46,7 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	}
 	topo.TiDBServers = tidbServers
 
-	tikvServers := make([]spec.TiKVSpec, 0)
+	tikvServers := make([]*spec.TiKVSpec, 0)
 	for i, instance := range (&spec.TiKVComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
@@ -55,7 +55,7 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	}
 	topo.TiKVServers = tikvServers
 
-	pdServers := make([]spec.PDSpec, 0)
+	pdServers := make([]*spec.PDSpec, 0)
 	for i, instance := range (&spec.PDComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
@@ -64,7 +64,7 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	}
 	topo.PDServers = pdServers
 
-	tiflashServers := make([]spec.TiFlashSpec, 0)
+	tiflashServers := make([]*spec.TiFlashSpec, 0)
 	for i, instance := range (&spec.TiFlashComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
@@ -73,7 +73,7 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	}
 	topo.TiFlashServers = tiflashServers
 
-	pumpServers := make([]spec.PumpSpec, 0)
+	pumpServers := make([]*spec.PumpSpec, 0)
 	for i, instance := range (&spec.PumpComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
@@ -82,7 +82,7 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	}
 	topo.PumpServers = pumpServers
 
-	drainerServers := make([]spec.DrainerSpec, 0)
+	drainerServers := make([]*spec.DrainerSpec, 0)
 	for i, instance := range (&spec.DrainerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
@@ -91,7 +91,7 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	}
 	topo.Drainers = drainerServers
 
-	cdcServers := make([]spec.CDCSpec, 0)
+	cdcServers := make([]*spec.CDCSpec, 0)
 	for i, instance := range (&spec.CDCComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
@@ -100,7 +100,7 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	}
 	topo.CDCServers = cdcServers
 
-	tisparkWorkers := make([]spec.TiSparkWorkerSpec, 0)
+	tisparkWorkers := make([]*spec.TiSparkWorkerSpec, 0)
 	for i, instance := range (&spec.TiSparkWorkerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
@@ -109,7 +109,7 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	}
 	topo.TiSparkWorkers = tisparkWorkers
 
-	tisparkMasters := make([]spec.TiSparkMasterSpec, 0)
+	tisparkMasters := make([]*spec.TiSparkMasterSpec, 0)
 	for i, instance := range (&spec.TiSparkMasterComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
@@ -118,7 +118,7 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	}
 	topo.TiSparkMasters = tisparkMasters
 
-	monitors := make([]spec.PrometheusSpec, 0)
+	monitors := make([]*spec.PrometheusSpec, 0)
 	for i, instance := range (&spec.MonitorComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
@@ -127,7 +127,7 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	}
 	topo.Monitors = monitors
 
-	grafanas := make([]spec.GrafanaSpec, 0)
+	grafanas := make([]*spec.GrafanaSpec, 0)
 	for i, instance := range (&spec.GrafanaComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
@@ -136,7 +136,7 @@ func (u *UpdateMeta) Execute(ctx context.Context) error {
 	}
 	topo.Grafanas = grafanas
 
-	alertmanagers := make([]spec.AlertmanagerSpec, 0)
+	alertmanagers := make([]*spec.AlertmanagerSpec, 0)
 	for i, instance := range (&spec.AlertManagerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue

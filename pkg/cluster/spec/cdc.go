@@ -29,6 +29,7 @@ type CDCSpec struct {
 	Host            string                 `yaml:"host"`
 	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                   `yaml:"imported,omitempty"`
+	Patched         bool                   `yaml:"patched,omitempty"`
 	Port            int                    `yaml:"port" default:"8300"`
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
@@ -43,22 +44,22 @@ type CDCSpec struct {
 }
 
 // Role returns the component role of the instance
-func (s CDCSpec) Role() string {
+func (s *CDCSpec) Role() string {
 	return ComponentCDC
 }
 
 // SSH returns the host and SSH port of the instance
-func (s CDCSpec) SSH() (string, int) {
+func (s *CDCSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s CDCSpec) GetMainPort() int {
+func (s *CDCSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s CDCSpec) IsImported() bool {
+func (s *CDCSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -146,7 +147,7 @@ func (i *CDCInstance) InitConfig(
 	}
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
-	spec := i.InstanceSpec.(CDCSpec)
+	spec := i.InstanceSpec.(*CDCSpec)
 	cfg := scripts.NewCDCScript(
 		i.GetHost(),
 		paths.Deploy,

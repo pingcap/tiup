@@ -512,7 +512,7 @@ tiflash_servers:
 func (s *topoSuite) TestFixRelativePath(c *check.C) {
 	// base test
 	topo := Specification{
-		TiKVServers: []TiKVSpec{
+		TiKVServers: []*TiKVSpec{
 			{
 				DeployDir: "my-deploy",
 			},
@@ -523,7 +523,7 @@ func (s *topoSuite) TestFixRelativePath(c *check.C) {
 
 	// test data dir & log dir
 	topo = Specification{
-		TiKVServers: []TiKVSpec{
+		TiKVServers: []*TiKVSpec{
 			{
 				DeployDir: "my-deploy",
 				DataDir:   "my-data",
@@ -543,7 +543,7 @@ func (s *topoSuite) TestFixRelativePath(c *check.C) {
 			DataDir:   "my-data",
 			LogDir:    "my-log",
 		},
-		TiKVServers: []TiKVSpec{
+		TiKVServers: []*TiKVSpec{
 			{},
 		},
 	}

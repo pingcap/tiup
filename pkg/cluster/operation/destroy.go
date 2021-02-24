@@ -479,7 +479,7 @@ func DestroyClusterTombstone(
 		return nil
 	}
 
-	var kvServers []spec.TiKVSpec
+	var kvServers []*spec.TiKVSpec
 	for _, s := range cluster.TiKVServers {
 		if !s.Offline {
 			kvServers = append(kvServers, s)
@@ -509,7 +509,7 @@ func DestroyClusterTombstone(
 		}
 	}
 
-	var flashServers []spec.TiFlashSpec
+	var flashServers []*spec.TiFlashSpec
 	for _, s := range cluster.TiFlashServers {
 		if !s.Offline {
 			flashServers = append(flashServers, s)
@@ -540,7 +540,7 @@ func DestroyClusterTombstone(
 		}
 	}
 
-	var pumpServers []spec.PumpSpec
+	var pumpServers []*spec.PumpSpec
 	for _, s := range cluster.PumpServers {
 		if !s.Offline {
 			pumpServers = append(pumpServers, s)
@@ -569,7 +569,7 @@ func DestroyClusterTombstone(
 		}
 	}
 
-	var drainerServers []spec.DrainerSpec
+	var drainerServers []*spec.DrainerSpec
 	for _, s := range cluster.Drainers {
 		if !s.Offline {
 			drainerServers = append(drainerServers, s)

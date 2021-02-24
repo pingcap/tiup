@@ -475,9 +475,9 @@ func (s *Specification) platformConflictsDetect() error {
 
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
-			compSpec := compSpecs.Index(index)
+			compSpec := reflect.Indirect(compSpecs.Index(index))
 			// skip nodes imported from TiDB-Ansible
-			if compSpec.Interface().(InstanceSpec).IsImported() {
+			if compSpec.Addr().Interface().(InstanceSpec).IsImported() {
 				continue
 			}
 			// check hostname
@@ -521,6 +521,7 @@ func (s *Specification) portInvalidDetect() error {
 	topoType := reflect.TypeOf(s).Elem()
 
 	checkPort := func(idx int, compSpec reflect.Value) error {
+		compSpec = reflect.Indirect(compSpec)
 		cfg := strings.Split(topoType.Field(idx).Tag.Get("yaml"), ",")[0]
 
 		for i := 0; i < compSpec.NumField(); i++ {
@@ -548,7 +549,7 @@ func (s *Specification) portInvalidDetect() error {
 
 		// check on slice
 		for index := 0; index < compSpecs.Len(); index++ {
-			compSpec := compSpecs.Index(index)
+			compSpec := reflect.Indirect(compSpecs.Index(index))
 			if err := checkPort(i, compSpec); err != nil {
 				return err
 			}
@@ -593,9 +594,9 @@ func (s *Specification) portConflictsDetect() error {
 
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
-			compSpec := compSpecs.Index(index)
+			compSpec := reflect.Indirect(compSpecs.Index(index))
 			// skip nodes imported from TiDB-Ansible
-			if compSpec.Interface().(InstanceSpec).IsImported() {
+			if compSpec.Addr().Interface().(InstanceSpec).IsImported() {
 				continue
 			}
 			// check hostname
@@ -704,7 +705,7 @@ func (s *Specification) dirConflictsDetect() error {
 
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
-			compSpec := compSpecs.Index(index)
+			compSpec := reflect.Indirect(compSpecs.Index(index))
 			// check hostname
 			host := compSpec.FieldByName("Host").String()
 			cfg := strings.Split(topoType.Field(i).Tag.Get("yaml"), ",")[0] // without meta
@@ -735,7 +736,7 @@ func (s *Specification) dirConflictsDetect() error {
 					prev, exist := dirStats[item]
 					// not checking between imported nodes
 					if exist &&
-						!(compSpec.Interface().(InstanceSpec).IsImported() && prev.imported) {
+						!(compSpec.Addr().Interface().(InstanceSpec).IsImported() && prev.imported) {
 						return &meta.ValidateErr{
 							Type:   meta.TypeConflict,
 							Target: "directory",
@@ -749,7 +750,7 @@ func (s *Specification) dirConflictsDetect() error {
 					dirStats[item] = conflict{
 						tp:       tp,
 						cfg:      cfg,
-						imported: compSpec.Interface().(InstanceSpec).IsImported(),
+						imported: compSpec.Addr().Interface().(InstanceSpec).IsImported(),
 					}
 				}
 			}
@@ -789,7 +790,7 @@ func (s *Specification) CountDir(targetHost, dirPrefix string) int {
 
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
-			compSpec := compSpecs.Index(index)
+			compSpec := reflect.Indirect(compSpecs.Index(index))
 			deployDir := compSpec.FieldByName("DeployDir").String()
 			host := compSpec.FieldByName("Host").String()
 
@@ -996,7 +997,7 @@ func RelativePathDetect(topo interface{}, isSkipField func(reflect.Value) bool) 
 
 		compSpecs := topoSpec.Field(i)
 		for index := 0; index < compSpecs.Len(); index++ {
-			compSpec := compSpecs.Index(index)
+			compSpec := reflect.Indirect(compSpecs.Index(index))
 
 			// Relateve path detect
 			for _, field := range pathTypes {

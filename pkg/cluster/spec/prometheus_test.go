@@ -40,7 +40,7 @@ func TestLocalRuleDirs(t *testing.T) {
 	assert.Nil(t, err)
 
 	topo := new(Specification)
-	topo.Monitors = append(topo.Monitors, PrometheusSpec{
+	topo.Monitors = append(topo.Monitors, &PrometheusSpec{
 		Host:    "127.0.0.1",
 		Port:    9090,
 		RuleDir: localDir,
@@ -58,7 +58,7 @@ func TestLocalRuleDirs(t *testing.T) {
 	assert.Nil(t, err)
 
 	ctx := checkpoint.NewContext(context.Background())
-	err = promInstance.initRules(ctx, e, promInstance.InstanceSpec.(PrometheusSpec), meta.DirPaths{Deploy: deployDir})
+	err = promInstance.initRules(ctx, e, promInstance.InstanceSpec.(*PrometheusSpec), meta.DirPaths{Deploy: deployDir})
 	assert.Nil(t, err)
 
 	assert.NoFileExists(t, path.Join(deployDir, "conf", "dummy.rules.yml"))
@@ -82,7 +82,7 @@ func TestNoLocalRuleDirs(t *testing.T) {
 	assert.Nil(t, err)
 
 	topo := new(Specification)
-	topo.Monitors = append(topo.Monitors, PrometheusSpec{
+	topo.Monitors = append(topo.Monitors, &PrometheusSpec{
 		Host: "127.0.0.1",
 		Port: 9090,
 	})
@@ -99,7 +99,7 @@ func TestNoLocalRuleDirs(t *testing.T) {
 	assert.Nil(t, err)
 
 	ctx := checkpoint.NewContext(context.Background())
-	err = promInstance.initRules(ctx, e, promInstance.InstanceSpec.(PrometheusSpec), meta.DirPaths{Deploy: deployDir})
+	err = promInstance.initRules(ctx, e, promInstance.InstanceSpec.(*PrometheusSpec), meta.DirPaths{Deploy: deployDir})
 	assert.Nil(t, err)
 
 	assert.FileExists(t, path.Join(deployDir, "conf", "dummy.rules.yml"))

@@ -36,7 +36,7 @@ func TestMeta(t *testing.T) {
 func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 	// Test with without global DataDir.
 	topo := new(Specification)
-	topo.TiKVServers = append(topo.TiKVServers, TiKVSpec{Host: "1.1.1.1", Port: 22})
+	topo.TiKVServers = append(topo.TiKVServers, &TiKVSpec{Host: "1.1.1.1", Port: 22})
 	data, err := yaml.Marshal(topo)
 	c.Assert(err, IsNil)
 
@@ -59,8 +59,8 @@ func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 	// Test with global DataDir.
 	topo = new(Specification)
 	topo.GlobalOptions.DataDir = "/gloable_data"
-	topo.TiKVServers = append(topo.TiKVServers, TiKVSpec{Host: "1.1.1.1", Port: 22})
-	topo.TiKVServers = append(topo.TiKVServers, TiKVSpec{Host: "1.1.1.2", Port: 33, DataDir: "/my_data"})
+	topo.TiKVServers = append(topo.TiKVServers, &TiKVSpec{Host: "1.1.1.1", Port: 22})
+	topo.TiKVServers = append(topo.TiKVServers, &TiKVSpec{Host: "1.1.1.2", Port: 33, DataDir: "/my_data"})
 	data, err = yaml.Marshal(topo)
 	c.Assert(err, IsNil)
 
@@ -600,7 +600,7 @@ tiflash_servers:
 		c.Assert(ok, IsTrue)
 
 		// After merging instance configurations with "storgae", the "path" property should be removed.
-		conf, err = ins.mergeTiFlashInstanceConfig(ver, conf, ins.InstanceSpec.(TiFlashSpec).Config)
+		conf, err = ins.mergeTiFlashInstanceConfig(ver, conf, ins.InstanceSpec.(*TiFlashSpec).Config)
 		c.Assert(err, IsNil)
 		_, ok = conf["path"]
 		c.Assert(ok, IsFalse)

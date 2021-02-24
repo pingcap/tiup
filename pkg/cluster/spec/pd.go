@@ -36,6 +36,7 @@ type PDSpec struct {
 	ListenHost string `yaml:"listen_host,omitempty"`
 	SSHPort    int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported   bool   `yaml:"imported,omitempty"`
+	Patched    bool   `yaml:"patched,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
 	Name            string                 `yaml:"name"`
 	ClientPort      int                    `yaml:"client_port" default:"2379"`
@@ -51,7 +52,7 @@ type PDSpec struct {
 }
 
 // Status queries current status of the instance
-func (s PDSpec) Status(tlsCfg *tls.Config, _ ...string) string {
+func (s *PDSpec) Status(tlsCfg *tls.Config, _ ...string) string {
 	addr := fmt.Sprintf("%s:%d", s.Host, s.ClientPort)
 	pc := api.NewPDClient([]string{addr}, statusQueryTimeout, tlsCfg)
 
@@ -74,22 +75,22 @@ func (s PDSpec) Status(tlsCfg *tls.Config, _ ...string) string {
 }
 
 // Role returns the component role of the instance
-func (s PDSpec) Role() string {
+func (s *PDSpec) Role() string {
 	return ComponentPD
 }
 
 // SSH returns the host and SSH port of the instance
-func (s PDSpec) SSH() (string, int) {
+func (s *PDSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s PDSpec) GetMainPort() int {
+func (s *PDSpec) GetMainPort() int {
 	return s.ClientPort
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s PDSpec) IsImported() bool {
+func (s *PDSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -159,7 +160,7 @@ func (i *PDInstance) InitConfig(
 	}
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
-	spec := i.InstanceSpec.(PDSpec)
+	spec := i.InstanceSpec.(*PDSpec)
 	cfg := scripts.NewPDScript(
 		spec.Name,
 		i.GetHost(),
@@ -255,7 +256,7 @@ func (i *PDInstance) ScaleConfig(
 
 	cluster := mustBeClusterTopo(topo)
 
-	spec := i.InstanceSpec.(PDSpec)
+	spec := i.InstanceSpec.(*PDSpec)
 	cfg := scripts.NewPDScaleScript(
 		i.Name,
 		i.GetHost(),

@@ -47,6 +47,7 @@ type TiKVSpec struct {
 	ListenHost      string                 `yaml:"listen_host,omitempty"`
 	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                   `yaml:"imported,omitempty"`
+	Patched         bool                   `yaml:"patched,omitempty"`
 	Port            int                    `yaml:"port" default:"20160"`
 	StatusPort      int                    `yaml:"status_port" default:"20180"`
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
@@ -78,7 +79,7 @@ func checkStoreStatus(storeAddr string, tlsCfg *tls.Config, pdList ...string) st
 }
 
 // Status queries current status of the instance
-func (s TiKVSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
+func (s *TiKVSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
 	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.Port)
 	state := checkStoreStatus(storeAddr, tlsCfg, pdList...)
 	if s.Offline && strings.ToLower(state) == "offline" {
@@ -88,27 +89,27 @@ func (s TiKVSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
 }
 
 // Role returns the component role of the instance
-func (s TiKVSpec) Role() string {
+func (s *TiKVSpec) Role() string {
 	return ComponentTiKV
 }
 
 // SSH returns the host and SSH port of the instance
-func (s TiKVSpec) SSH() (string, int) {
+func (s *TiKVSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s TiKVSpec) GetMainPort() int {
+func (s *TiKVSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s TiKVSpec) IsImported() bool {
+func (s *TiKVSpec) IsImported() bool {
 	return s.Imported
 }
 
 // Labels returns the labels of TiKV
-func (s TiKVSpec) Labels() (map[string]string, error) {
+func (s *TiKVSpec) Labels() (map[string]string, error) {
 	lbs := make(map[string]string)
 
 	if serverLabels := GetValueFromPath(s.Config, "server.labels"); serverLabels != nil {
@@ -198,7 +199,7 @@ func (i *TiKVInstance) InitConfig(
 	}
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
-	spec := i.InstanceSpec.(TiKVSpec)
+	spec := i.InstanceSpec.(*TiKVSpec)
 	cfg := scripts.NewTiKVScript(
 		clusterVersion,
 		i.GetHost(),

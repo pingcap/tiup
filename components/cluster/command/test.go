@@ -82,9 +82,9 @@ func data(topo *spec.Specification) error {
 	errg, _ := errgroup.WithContext(context.Background())
 
 	for _, spec := range topo.TiDBServers {
-		spec := spec
+		specVal := *spec
 		errg.Go(func() error {
-			db, err := createDB(spec)
+			db, err := createDB(specVal)
 			if err != nil {
 				return err
 			}
@@ -111,9 +111,9 @@ func writable(topo *spec.Specification) error {
 	errg, _ := errgroup.WithContext(context.Background())
 
 	for _, spec := range topo.TiDBServers {
-		spec := spec
+		specVal := *spec
 		errg.Go(func() error {
-			db, err := createDB(spec)
+			db, err := createDB(specVal)
 			if err != nil {
 				return err
 			}

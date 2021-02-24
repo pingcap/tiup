@@ -96,21 +96,21 @@ type (
 
 	// Specification represents the specification of topology.yaml
 	Specification struct {
-		GlobalOptions    GlobalOptions       `yaml:"global,omitempty" validate:"global:editable"`
-		MonitoredOptions MonitoredOptions    `yaml:"monitored,omitempty" validate:"monitored:editable"`
-		ServerConfigs    ServerConfigs       `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
-		TiDBServers      []TiDBSpec          `yaml:"tidb_servers"`
-		TiKVServers      []TiKVSpec          `yaml:"tikv_servers"`
-		TiFlashServers   []TiFlashSpec       `yaml:"tiflash_servers"`
-		PDServers        []PDSpec            `yaml:"pd_servers"`
-		PumpServers      []PumpSpec          `yaml:"pump_servers,omitempty"`
-		Drainers         []DrainerSpec       `yaml:"drainer_servers,omitempty"`
-		CDCServers       []CDCSpec           `yaml:"cdc_servers,omitempty"`
-		TiSparkMasters   []TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
-		TiSparkWorkers   []TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
-		Monitors         []PrometheusSpec    `yaml:"monitoring_servers"`
-		Grafanas         []GrafanaSpec       `yaml:"grafana_servers,omitempty"`
-		Alertmanagers    []AlertmanagerSpec  `yaml:"alertmanager_servers,omitempty"`
+		GlobalOptions    GlobalOptions        `yaml:"global,omitempty" validate:"global:editable"`
+		MonitoredOptions MonitoredOptions     `yaml:"monitored,omitempty" validate:"monitored:editable"`
+		ServerConfigs    ServerConfigs        `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
+		TiDBServers      []*TiDBSpec          `yaml:"tidb_servers"`
+		TiKVServers      []*TiKVSpec          `yaml:"tikv_servers"`
+		TiFlashServers   []*TiFlashSpec       `yaml:"tiflash_servers"`
+		PDServers        []*PDSpec            `yaml:"pd_servers"`
+		PumpServers      []*PumpSpec          `yaml:"pump_servers,omitempty"`
+		Drainers         []*DrainerSpec       `yaml:"drainer_servers,omitempty"`
+		CDCServers       []*CDCSpec           `yaml:"cdc_servers,omitempty"`
+		TiSparkMasters   []*TiSparkMasterSpec `yaml:"tispark_masters,omitempty"`
+		TiSparkWorkers   []*TiSparkWorkerSpec `yaml:"tispark_workers,omitempty"`
+		Monitors         []*PrometheusSpec    `yaml:"monitoring_servers"`
+		Grafanas         []*GrafanaSpec       `yaml:"grafana_servers,omitempty"`
+		Alertmanagers    []*AlertmanagerSpec  `yaml:"alertmanager_servers,omitempty"`
 	}
 )
 
@@ -120,9 +120,9 @@ type BaseTopo struct {
 	MonitoredOptions *MonitoredOptions
 	MasterList       []string
 
-	Monitors      []PrometheusSpec
-	Grafanas      []GrafanaSpec
-	Alertmanagers []AlertmanagerSpec
+	Monitors      []*PrometheusSpec
+	Grafanas      []*GrafanaSpec
+	Alertmanagers []*AlertmanagerSpec
 }
 
 // Topology represents specification of the cluster.
@@ -338,8 +338,8 @@ func (s *Specification) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func findField(v reflect.Value, fieldName string) (int, bool) {
-	for i := 0; i < v.NumField(); i++ {
-		if v.Type().Field(i).Name == fieldName {
+	for i := 0; i < reflect.Indirect(v).NumField(); i++ {
+		if reflect.Indirect(v).Type().Field(i).Name == fieldName {
 			return i, true
 		}
 	}
@@ -494,12 +494,12 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 			if field.Field(j).String() != "" {
 				continue
 			}
-			host := field.FieldByName("Host").String()
-			clientPort := field.FieldByName("ClientPort").Int()
+			host := reflect.Indirect(field).FieldByName("Host").String()
+			clientPort := reflect.Indirect(field).FieldByName("ClientPort").Int()
 			field.Field(j).Set(reflect.ValueOf(fmt.Sprintf("pd-%s-%d", host, clientPort)))
 		case "DataDir":
-			if field.FieldByName("Imported").Interface().(bool) {
-				setDefaultDir(globalOptions.DataDir, field.Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
+			if reflect.Indirect(field).FieldByName("Imported").Interface().(bool) {
+				setDefaultDir(globalOptions.DataDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
 			}
 
 			dataDir := field.Field(j).String()
@@ -515,7 +515,7 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 			if strings.HasPrefix(globalOptions.DataDir, "/") {
 				field.Field(j).Set(reflect.ValueOf(filepath.Join(
 					globalOptions.DataDir,
-					fmt.Sprintf("%s-%s", field.Interface().(InstanceSpec).Role(), getPort(field)),
+					fmt.Sprintf("%s-%s", field.Addr().Interface().(InstanceSpec).Role(), getPort(field)),
 				)))
 				continue
 			}
@@ -529,7 +529,7 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 				field.Field(j).Set(reflect.ValueOf(globalOptions.DataDir))
 			}
 		case "DeployDir":
-			setDefaultDir(globalOptions.DeployDir, field.Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
+			setDefaultDir(globalOptions.DeployDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
 		case "LogDir":
 			if field.Field(j).String() == "" && defaults.CanUpdate(field.Field(j).Interface()) {
 				field.Field(j).Set(reflect.ValueOf(globalOptions.LogDir))
@@ -703,7 +703,7 @@ func (s *Specification) Endpoints(user string) []*scripts.PDScript {
 }
 
 // AlertManagerEndpoints returns the AlertManager endpoints configurations
-func AlertManagerEndpoints(alertmanager []AlertmanagerSpec, user string, enableTLS bool) []*scripts.AlertManagerScript {
+func AlertManagerEndpoints(alertmanager []*AlertmanagerSpec, user string, enableTLS bool) []*scripts.AlertManagerScript {
 	var ends []*scripts.AlertManagerScript
 	for _, spec := range alertmanager {
 		deployDir := Abs(user, spec.DeployDir)
