@@ -1,6 +1,6 @@
 module github.com/pingcap/tiup
 
-go 1.13
+go 1.16
 
 require (
 	github.com/AstroProfundis/sysinfo v0.0.0-20210201035811-eb96b87c86b3
@@ -28,7 +28,6 @@ require (
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.4
-	github.com/markbates/pkger v0.17.1
 	github.com/mattn/go-runewidth v0.0.10
 	github.com/otiai10/copy v1.4.2
 	github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712
@@ -51,7 +50,6 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.0
 	github.com/tikv/pd v1.1.0-beta.0.20210105064748-f4e7924b50b6
-	github.com/tj/assert v0.0.0-20190920132354-ee03d75cd160
 	github.com/tj/go-termd v0.0.2-0.20200115111609-7f6aeb166380
 	github.com/xo/usql v0.7.8
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200824191128-ae9734ed278b

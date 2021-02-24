@@ -19,7 +19,7 @@ import (
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // AlertManagerScript represent the data to generate AlertManager start script
@@ -83,7 +83,7 @@ func (c *AlertManagerScript) ConfigToFile(file string) error {
 
 // Config generate the config file data.
 func (c *AlertManagerScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_alertmanager.sh.tpl")
+	fp := path.Join("templates", "scripts", "run_alertmanager.sh.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

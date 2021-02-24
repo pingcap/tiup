@@ -17,7 +17,7 @@ import (
 	"io/ioutil"
 	"path"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // BlackboxConfig represent the data to generate AlertManager config
@@ -30,7 +30,7 @@ func NewBlackboxConfig() *BlackboxConfig {
 
 // Config generate the config file data.
 func (c *BlackboxConfig) Config() ([]byte, error) {
-	fp := path.Join("/templates", "config", "blackbox.yml")
+	fp := path.Join("templates", "config", "blackbox.yml")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

@@ -19,7 +19,7 @@ import (
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // PumpScript represent the data to generate Pump config
@@ -67,7 +67,7 @@ func (c *PumpScript) AppendEndpoints(ends ...*PDScript) *PumpScript {
 
 // Config generate the config file data.
 func (c *PumpScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_pump.sh.tpl")
+	fp := path.Join("templates", "scripts", "run_pump.sh.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

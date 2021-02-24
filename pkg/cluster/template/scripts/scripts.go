@@ -16,11 +16,11 @@ package scripts
 import (
 	"path/filepath"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // GetScript returns a raw config file from embed templates
 func GetScript(filename string) ([]byte, error) {
-	fp := filepath.Join("/templates", "scripts", filename)
+	fp := filepath.Join("templates", "scripts", filename)
 	return embed.ReadFile(fp)
 }

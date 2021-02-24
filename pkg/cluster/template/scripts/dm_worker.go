@@ -19,7 +19,7 @@ import (
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // DMWorkerScript represent the data to generate TiDB config
@@ -64,7 +64,7 @@ func (c *DMWorkerScript) AppendEndpoints(ends ...*DMMasterScript) *DMWorkerScrip
 
 // Config generate the config file data.
 func (c *DMWorkerScript) Config() ([]byte, error) {
-	fp := path.Join("/templates", "scripts", "run_dm-worker.sh.tpl")
+	fp := path.Join("templates", "scripts", "run_dm-worker.sh.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

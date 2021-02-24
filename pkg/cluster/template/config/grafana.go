@@ -19,7 +19,7 @@ import (
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // GrafanaConfig represent the data to generate Grafana config
@@ -81,7 +81,7 @@ func (c *GrafanaConfig) WithDomain(domain string) *GrafanaConfig {
 
 // Config generate the config file data.
 func (c *GrafanaConfig) Config() ([]byte, error) {
-	fp := path.Join("/templates", "config", "grafana.ini.tpl")
+	fp := path.Join("templates", "config", "grafana.ini.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

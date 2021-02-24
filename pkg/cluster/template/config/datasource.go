@@ -19,7 +19,7 @@ import (
 	"path"
 	"text/template"
 
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // DatasourceConfig represent the data to generate Datasource config
@@ -46,7 +46,7 @@ func (c *DatasourceConfig) WithPort(port uint64) *DatasourceConfig {
 
 // Config generate the config file data.
 func (c *DatasourceConfig) Config() ([]byte, error) {
-	fp := path.Join("/templates", "config", "datasource.yml.tpl")
+	fp := path.Join("templates", "config", "datasource.yml.tpl")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err

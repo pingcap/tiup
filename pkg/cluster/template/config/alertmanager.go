@@ -18,7 +18,7 @@ import (
 	"path"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cluster/embed"
+	"github.com/pingcap/tiup/embed"
 )
 
 // AlertManagerConfig represent the data to generate AlertManager config
@@ -31,7 +31,7 @@ func NewAlertManagerConfig() *AlertManagerConfig {
 
 // Config generate the config file data.
 func (c *AlertManagerConfig) Config() ([]byte, error) {
-	fp := path.Join("/templates", "config", "alertmanager.yml")
+	fp := path.Join("templates", "config", "alertmanager.yml")
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
