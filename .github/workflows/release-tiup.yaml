@@ -3,8 +3,6 @@ name: release-tiup
 
 on:
   push:
-    tags:
-      - ci/v*
     branches:
       - ci/gh-*
       - release-*
@@ -46,7 +44,7 @@ jobs:
         working-directory: ${{ env.working-directory }}
         if: github.event_name != 'release'
         run: |
-          STAGING_VER=`git describe --tags | sed -r "s/([^-]*-g)/r\1/;s/(^.*)r\d*/staging-r/"`
+          STAGING_VER=`git describe --tags | sed -r "s/([^-]*-g)/r\1/"`
           echo ::set-output name=STAGING::$STAGING_VER
 
       - name: Get git ref
@@ -73,24 +71,71 @@ jobs:
           fi
           BUILD_FLAG='-trimpath -buildmode=pie' make build && echo "Build success."
 
-      - name: Publish packages
+      - name: Package components
+        id: packaging
         working-directory: ${{ env.working-directory }}
         env:
-          TIUP_MIRROR_BASE: "dummy.mirror.tld"
+          ARCH: ${{ matrix.os }}-${{ matrix.arch }}
         run: |
-          echo "::add-mask::${TIUP_MIRROR_BASE}"
           TMP_DIR=`mktemp -d`
           export TIUP_HOME="$TMP_DIR/home"
+          echo ::set-output name=TIUP_HOME::$TIUP_HOME
+          echo ::set-output name=TIUP_BIN::$TMP_DIR/tiup
+
+          if [ ! -z ${{ steps.rel_staging.outputs.STAGING }} ]; then
+            REL_VER=${{ steps.rel_staging.outputs.STAGING }}+staging
+          else
+            REL_VER=`git describe --tags`
+          fi
+          echo ::set-output name=REL_VER::$REL_VER
+
           wget -O $TMP_DIR/tiup-linux-amd64.tar.gz -q https://tiup-mirrors.pingcap.com/tiup-linux-amd64.tar.gz
           tar -zxf $TMP_DIR/tiup-linux-amd64.tar.gz -C $TMP_DIR && chmod 755 $TMP_DIR/tiup
           rm -rf $TIUP_HOME && mkdir -p $TIUP_HOME/{bin,keys}
           curl -s https://tiup-mirrors.pingcap.com/root.json -o $TIUP_HOME/bin/root.json
-          echo "ZHVtbXkga2V5Cg==" | base64 -d > $TIUP_HOME/keys/private.json
 
-          REL_VER=`git describe --tags`
+          mkdir -p bin package
+          cp $TIUP_HOME/bin/root.json bin/root.json
+
+          tar -C bin -czf package/tiup-${REL_VER}-${ARCH}.tar.gz tiup
+          cp package/tiup-${REL_VER}-${ARCH}.tar.gz tiup-${ARCH}.tar.gz
+
+          tar -C bin -czf package/cluster-${REL_VER}-${ARCH}.tar.gz tiup-cluster
+          tar -C bin -czf package/dm-${REL_VER}-${ARCH}.tar.gz tiup-dm
+          tar -C bin -czf package/playground-${REL_VER}-${ARCH}.tar.gz tiup-playground
+          tar -C bin -czf package/client-${REL_VER}-${ARCH}.tar.gz tiup-client
+          tar -C bin -czf package/bench-${REL_VER}-${ARCH}.tar.gz tiup-bench
+          tar -C bin -czf package/server-${REL_VER}-${ARCH}.tar.gz tiup-server
+
+      - name: Publish packages
+        working-directory: ${{ env.working-directory }}
+        env:
+          TIUP_MIRRORS: ${{ secrets.TIUP_MIRROR_STAGING }}
+          TIUP_HOME: ${{ steps.packaging.outputs.TIUP_HOME }}
+          TIUP_BIN: ${{ steps.packaging.outputs.TIUP_BIN }}
+          REL_VER: ${{ steps.packaging.outputs.REL_VER }}
+          ARCH: ${{ matrix.os }}-${{ matrix.arch }}
+          tiup_desc: "TiUP is a command-line component management tool that can help to download and install TiDB platform components to the local system"
+          cluster_desc: "Deploy a TiDB cluster for production"
+          dm_desc: "Data Migration Platform manager"
+          playground_desc: "Bootstrap a local TiDB cluster for fun"
+          client_desc: "Client to connect playground"
+          bench_desc: "Benchmark database with different workloads"
+          server_desc: "TiUP publish/cache server"
+        run: |
           if [ ! -z ${{ steps.rel_staging.outputs.STAGING }} ]; then
-            REL_VER=$REL_VER-staging
+            TIUP_MIRRORS=${{ secrets.TIUP_MIRROR_STAGING }}
+          else
+            TIUP_MIRRORS=${{ secrets.TIUP_MIRROR_PROD }}
           fi
-          echo $REL_VER
-          $TMP_DIR/tiup list
-          $TMP_DIR/tiup mirror -h
+          ${TIUP_BIN} mirror set ${TIUP_MIRRORS}
+
+          echo ${{ secrets.TIUP_COMP_KEY_PINGCAP }} | base64 -d > $TIUP_HOME/keys/private.json
+
+          ${TIUP_BIN} mirror publish tiup ${REL_VER} package/tiup-${REL_VER}-${ARCH}.tar.gz tiup --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${tiup_desc}"
+          ${TIUP_BIN} mirror publish cluster ${REL_VER} package/cluster-${REL_VER}-${ARCH}.tar.gz tiup-cluster --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${cluster_desc}"
+          ${TIUP_BIN} mirror publish dm ${REL_VER} package/dm-${REL_VER}-${ARCH}.tar.gz tiup-dm --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${dm_desc}" --standalone
+          ${TIUP_BIN} mirror publish playground ${REL_VER} package/playground-${REL_VER}-${ARCH}.tar.gz tiup-playground --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${playground_desc}"
+          ${TIUP_BIN} mirror publish client ${REL_VER} package/client-${REL_VER}-${ARCH}.tar.gz tiup-client --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${client_desc}"
+          ${TIUP_BIN} mirror publish bench ${REL_VER} package/bench-${REL_VER}-${ARCH}.tar.gz tiup-bench --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${bench_desc}"
+          ${TIUP_BIN} mirror publish server ${REL_VER} package/server-${REL_VER}-${ARCH}.tar.gz tiup-server --arch ${{ matrix.arch }} --os ${{ matrix.os }} --desc="${server_desc}" --hide --standalone

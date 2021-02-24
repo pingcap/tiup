@@ -496,7 +496,10 @@ func validatePlatform(goos, goarch string) error {
 	}
 
 	switch goos + "/" + goarch {
-	case "linux/amd64", "linux/arm64", "darwin/amd64":
+	case "linux/amd64",
+		"linux/arm64",
+		"darwin/amd64",
+		"darwin/arm64":
 		return nil
 	default:
 		return errors.Errorf("platform %s/%s not supported", goos, goarch)
