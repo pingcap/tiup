@@ -536,9 +536,9 @@ tiflash_servers:
 #   - host: 10.0.1.17
 #     ssh_port: 22
 #     port: 8250
-#     deploy_dir: "/tidb-deploy/pump-8249"
-#     data_dir: "/tidb-data/pump-8249"
-#     log_dir: "/tidb-deploy/pump-8249/log"
+#     deploy_dir: "/tidb-deploy/pump-8250"
+#     data_dir: "/tidb-data/pump-8250"
+#     log_dir: "/tidb-deploy/pump-8250/log"
 #     numa_node: "0,1"
 #     # The following configs are used to overwrite the `server_configs.drainer` values.
 #     config:
@@ -606,14 +606,14 @@ monitoring_servers:
   - host: 10.0.1.11
     # ssh_port: 22
     # port: 9090
-    # deploy_dir: "/tidb-deploy/prometheus-8249"
-    # data_dir: "/tidb-data/prometheus-8249"
-    # log_dir: "/tidb-deploy/prometheus-8249/log"
+    # deploy_dir: "/tidb-deploy/prometheus-9090"
+    # data_dir: "/tidb-data/prometheus-9090"
+    # log_dir: "/tidb-deploy/prometheus-8249/9090"
 
 grafana_servers:
   - host: 10.0.1.11
     # port: 3000
-    # deploy_dir: /tidb-deploy/grafana-3000
+    # deploy_dir: "/tidb-deploy/grafana-3000"
 
 alertmanager_servers:
   - host: 10.0.1.11
