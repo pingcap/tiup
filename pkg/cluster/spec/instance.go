@@ -91,6 +91,8 @@ type Instance interface {
 	LogDir() string
 	OS() string // only linux supported now
 	Arch() string
+	IsPatched() bool
+	SetPatched(bool)
 }
 
 // PortStarted wait until a port is being listened
@@ -305,12 +307,12 @@ func (i *BaseInstance) GetSSHPort() int {
 
 // DeployDir implements Instance interface
 func (i *BaseInstance) DeployDir() string {
-	return reflect.ValueOf(i.InstanceSpec).FieldByName("DeployDir").String()
+	return reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("DeployDir").String()
 }
 
 // DataDir implements Instance interface
 func (i *BaseInstance) DataDir() string {
-	dataDir := reflect.ValueOf(i.InstanceSpec).FieldByName("DataDir")
+	dataDir := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("DataDir")
 	if !dataDir.IsValid() {
 		return ""
 	}
@@ -327,7 +329,7 @@ func (i *BaseInstance) DataDir() string {
 func (i *BaseInstance) LogDir() string {
 	logDir := ""
 
-	field := reflect.ValueOf(i.InstanceSpec).FieldByName("LogDir")
+	field := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("LogDir")
 	if field.IsValid() {
 		logDir = field.Interface().(string)
 	}
@@ -343,7 +345,7 @@ func (i *BaseInstance) LogDir() string {
 
 // OS implements Instance interface
 func (i *BaseInstance) OS() string {
-	v := reflect.ValueOf(i.InstanceSpec).FieldByName("OS")
+	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("OS")
 	if !v.IsValid() {
 		return ""
 	}
@@ -352,11 +354,29 @@ func (i *BaseInstance) OS() string {
 
 // Arch implements Instance interface
 func (i *BaseInstance) Arch() string {
-	v := reflect.ValueOf(i.InstanceSpec).FieldByName("Arch")
+	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("Arch")
 	if !v.IsValid() {
 		return ""
 	}
 	return v.Interface().(string)
+}
+
+// IsPatched implements Instance interface
+func (i *BaseInstance) IsPatched() bool {
+	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("Patched")
+	if !v.IsValid() {
+		return false
+	}
+	return v.Bool()
+}
+
+// SetPatched implements the Instance interface
+func (i *BaseInstance) SetPatched(p bool) {
+	v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("Patched")
+	if !v.CanSet() {
+		return
+	}
+	v.SetBool(p)
 }
 
 // PrepareStart checks instance requirements before starting
@@ -385,7 +405,7 @@ func MergeResourceControl(lhs, rhs meta.ResourceControl) meta.ResourceControl {
 }
 
 func (i *BaseInstance) resourceControl() meta.ResourceControl {
-	if v := reflect.ValueOf(i.InstanceSpec).FieldByName("ResourceControl"); v.IsValid() {
+	if v := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("ResourceControl"); v.IsValid() {
 		return v.Interface().(meta.ResourceControl)
 	}
 	return meta.ResourceControl{}

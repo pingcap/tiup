@@ -61,7 +61,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.TiDBServers[i] = ins.(spec.TiDBSpec)
+		clsMeta.Topology.TiDBServers[i] = ins.(*spec.TiDBSpec)
 	}
 	for i := 0; i < len(clsMeta.Topology.TiKVServers); i++ {
 		s := clsMeta.Topology.TiKVServers[i]
@@ -69,7 +69,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.TiKVServers[i] = ins.(spec.TiKVSpec)
+		clsMeta.Topology.TiKVServers[i] = ins.(*spec.TiKVSpec)
 	}
 	for i := 0; i < len(clsMeta.Topology.PDServers); i++ {
 		s := clsMeta.Topology.PDServers[i]
@@ -77,7 +77,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.PDServers[i] = ins.(spec.PDSpec)
+		clsMeta.Topology.PDServers[i] = ins.(*spec.PDSpec)
 	}
 	for i := 0; i < len(clsMeta.Topology.TiFlashServers); i++ {
 		s := clsMeta.Topology.TiFlashServers[i]
@@ -85,7 +85,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.TiFlashServers[i] = ins.(spec.TiFlashSpec)
+		clsMeta.Topology.TiFlashServers[i] = ins.(*spec.TiFlashSpec)
 	}
 	for i := 0; i < len(clsMeta.Topology.PumpServers); i++ {
 		s := clsMeta.Topology.PumpServers[i]
@@ -93,7 +93,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.PumpServers[i] = ins.(spec.PumpSpec)
+		clsMeta.Topology.PumpServers[i] = ins.(*spec.PumpSpec)
 	}
 	for i := 0; i < len(clsMeta.Topology.Drainers); i++ {
 		s := clsMeta.Topology.Drainers[i]
@@ -101,7 +101,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.Drainers[i] = ins.(spec.DrainerSpec)
+		clsMeta.Topology.Drainers[i] = ins.(*spec.DrainerSpec)
 	}
 	for i := 0; i < len(clsMeta.Topology.Monitors); i++ {
 		s := clsMeta.Topology.Monitors[i]
@@ -109,7 +109,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.Monitors[i] = ins.(spec.PrometheusSpec)
+		clsMeta.Topology.Monitors[i] = ins.(*spec.PrometheusSpec)
 	}
 	for i := 0; i < len(clsMeta.Topology.Alertmanagers); i++ {
 		s := clsMeta.Topology.Alertmanagers[i]
@@ -117,7 +117,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.Alertmanagers[i] = ins.(spec.AlertmanagerSpec)
+		clsMeta.Topology.Alertmanagers[i] = ins.(*spec.AlertmanagerSpec)
 	}
 	for i := 0; i < len(clsMeta.Topology.Grafanas); i++ {
 		s := clsMeta.Topology.Grafanas[i]
@@ -125,7 +125,7 @@ func ParseAndImportInventory(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, 
 		if err != nil {
 			return err
 		}
-		clsMeta.Topology.Grafanas[i] = ins.(spec.GrafanaSpec)
+		clsMeta.Topology.Grafanas[i] = ins.(*spec.GrafanaSpec)
 	}
 
 	// TODO: get values from templates of roles to overwrite defaults
@@ -173,7 +173,7 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.TiDBSpec{
+			tmpIns := &spec.TiDBSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
@@ -215,7 +215,7 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.TiKVSpec{
+			tmpIns := &spec.TiKVSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
@@ -260,7 +260,7 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.PDSpec{
+			tmpIns := &spec.PDSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
@@ -308,7 +308,7 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.TiFlashSpec{
+			tmpIns := &spec.TiFlashSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
@@ -385,7 +385,7 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.PrometheusSpec{
+			tmpIns := &spec.PrometheusSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
@@ -430,7 +430,7 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.AlertmanagerSpec{
+			tmpIns := &spec.AlertmanagerSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
@@ -469,7 +469,7 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.GrafanaSpec{
+			tmpIns := &spec.GrafanaSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
@@ -513,7 +513,7 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.PumpSpec{
+			tmpIns := &spec.PumpSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,
@@ -554,7 +554,7 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 			if host == "" {
 				host = srv.Name
 			}
-			tmpIns := spec.DrainerSpec{
+			tmpIns := &spec.DrainerSpec{
 				Host:     host,
 				SSHPort:  getHostPort(srv, ansCfg),
 				Imported: true,

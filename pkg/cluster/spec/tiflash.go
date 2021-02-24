@@ -39,6 +39,7 @@ type TiFlashSpec struct {
 	Host                 string                 `yaml:"host"`
 	SSHPort              int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported             bool                   `yaml:"imported,omitempty"`
+	Patched              bool                   `yaml:"patched,omitempty"`
 	TCPPort              int                    `yaml:"tcp_port" default:"9000"`
 	HTTPPort             int                    `yaml:"http_port" default:"8123"`
 	FlashServicePort     int                    `yaml:"flash_service_port" default:"3930"`
@@ -59,7 +60,7 @@ type TiFlashSpec struct {
 }
 
 // Status queries current status of the instance
-func (s TiFlashSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
+func (s *TiFlashSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
 	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.FlashServicePort)
 	state := checkStoreStatus(storeAddr, tlsCfg, pdList...)
 	if s.Offline && strings.ToLower(state) == "offline" {
@@ -69,22 +70,22 @@ func (s TiFlashSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
 }
 
 // Role returns the component role of the instance
-func (s TiFlashSpec) Role() string {
+func (s *TiFlashSpec) Role() string {
 	return ComponentTiFlash
 }
 
 // SSH returns the host and SSH port of the instance
-func (s TiFlashSpec) SSH() (string, int) {
+func (s *TiFlashSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s TiFlashSpec) GetMainPort() int {
+func (s *TiFlashSpec) GetMainPort() int {
 	return s.TCPPort
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s TiFlashSpec) IsImported() bool {
+func (s *TiFlashSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -98,7 +99,7 @@ const (
 // GetOverrideDataDir returns the data dir.
 // If users have defined TiFlashStorageKeyMainDirs, then override "DataDir" with
 // the directories defined in TiFlashStorageKeyMainDirs and TiFlashStorageKeyLatestDirs
-func (s TiFlashSpec) GetOverrideDataDir() (string, error) {
+func (s *TiFlashSpec) GetOverrideDataDir() (string, error) {
 	getStrings := func(key string) []string {
 		var strs []string
 		if dirsVal, ok := s.Config[key]; ok {
@@ -235,13 +236,13 @@ type TiFlashInstance struct {
 
 // GetServicePort returns the service port of TiFlash
 func (i *TiFlashInstance) GetServicePort() int {
-	return i.InstanceSpec.(TiFlashSpec).FlashServicePort
+	return i.InstanceSpec.(*TiFlashSpec).FlashServicePort
 }
 
 // checkIncorrectKey checks TiFlash's key should not be set in config
 func (i *TiFlashInstance) checkIncorrectKey(key string) error {
 	errMsg := "NOTE: TiFlash `%s` should NOT be set in topo's \"%s\" config, its value will be ignored, you should set `data_dir` in each host instead, please check your topology"
-	if dir, ok := i.InstanceSpec.(TiFlashSpec).Config[key].(string); ok && dir != "" {
+	if dir, ok := i.InstanceSpec.(*TiFlashSpec).Config[key].(string); ok && dir != "" {
 		return fmt.Errorf(errMsg, key, "host")
 	}
 	if dir, ok := i.topo.(*Specification).ServerConfigs.TiFlash[key].(string); ok && dir != "" {
@@ -333,11 +334,11 @@ func (i *TiFlashInstance) CheckIncorrectConfigs() error {
 		return err
 	}
 	// storage.* in instance level
-	if _, err := checkTiFlashStorageConfig(i.InstanceSpec.(TiFlashSpec).Config); err != nil {
+	if _, err := checkTiFlashStorageConfig(i.InstanceSpec.(*TiFlashSpec).Config); err != nil {
 		return err
 	}
 	// no matter storgae.latest.dir is defined or not, return err
-	_, err := isValidStringArray(TiFlashStorageKeyLatestDirs, i.InstanceSpec.(TiFlashSpec).Config, true)
+	_, err := isValidStringArray(TiFlashStorageKeyLatestDirs, i.InstanceSpec.(*TiFlashSpec).Config, true)
 	return err
 }
 
@@ -505,7 +506,7 @@ func (i *TiFlashInstance) InitConfig(
 		return err
 	}
 
-	spec := i.InstanceSpec.(TiFlashSpec)
+	spec := i.InstanceSpec.(*TiFlashSpec)
 
 	tidbStatusAddrs := []string{}
 	for _, tidb := range topo.TiDBServers {

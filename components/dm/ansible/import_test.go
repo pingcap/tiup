@@ -157,7 +157,7 @@ func TestImportFromAnsible(t *testing.T) {
 	// check master
 	assert.Len(topo.Masters, 1)
 	master := topo.Masters[0]
-	expectedMaster := spec.MasterSpec{
+	expectedMaster := &spec.MasterSpec{
 		Host:      "172.19.0.101",
 		SSHPort:   22,
 		Port:      8261,
@@ -173,7 +173,7 @@ func TestImportFromAnsible(t *testing.T) {
 		topo.Workers[0], topo.Workers[1] = topo.Workers[1], topo.Workers[0]
 	}
 
-	expectedWorker := spec.WorkerSpec{
+	expectedWorker := &spec.WorkerSpec{
 		Host:      "172.19.0.101",
 		SSHPort:   22,
 		Port:      8262,
@@ -192,7 +192,7 @@ func TestImportFromAnsible(t *testing.T) {
 	// check Alertmanager
 	assert.Len(topo.Alertmanagers, 1)
 	aler := topo.Alertmanagers[0]
-	expectedAlter := spec.AlertmanagerSpec{
+	expectedAlter := &spec.AlertmanagerSpec{
 		Host:      "172.19.0.101",
 		SSHPort:   22,
 		WebPort:   9093,
@@ -205,7 +205,7 @@ func TestImportFromAnsible(t *testing.T) {
 	// Check Grafana
 	assert.Len(topo.Grafanas, 1)
 	grafana := topo.Grafanas[0]
-	expectedGrafana := spec.GrafanaSpec{
+	expectedGrafana := &spec.GrafanaSpec{
 		Host:      "172.19.0.101",
 		SSHPort:   22,
 		DeployDir: "",
@@ -218,7 +218,7 @@ func TestImportFromAnsible(t *testing.T) {
 	// Check Monitor(Prometheus)
 	assert.Len(topo.Monitors, 1)
 	monitor := topo.Monitors[0]
-	expectedMonitor := spec.PrometheusSpec{
+	expectedMonitor := &spec.PrometheusSpec{
 		Host:      "172.19.0.101",
 		SSHPort:   22,
 		DeployDir: "",

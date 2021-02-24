@@ -182,14 +182,20 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 		return perrs.Trace(err)
 	}
 
+	// clear patched packages and tags
+	if err := os.RemoveAll(m.specManager.Path(name, "patch")); err != nil {
+		return perrs.Trace(err)
+	}
+	topo.IterInstance(func(ins spec.Instance) {
+		if ins.IsPatched() {
+			ins.SetPatched(false)
+		}
+	})
+
 	metadata.SetVersion(clusterVersion)
 
 	if err := m.specManager.SaveMeta(name, metadata); err != nil {
-		return perrs.Trace(err)
-	}
-
-	if err := os.RemoveAll(m.specManager.Path(name, "patch")); err != nil {
-		return perrs.Trace(err)
+		return err
 	}
 
 	log.Infof("Upgraded cluster `%s` successfully", name)

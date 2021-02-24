@@ -35,6 +35,7 @@ type PrometheusSpec struct {
 	Host                  string                 `yaml:"host"`
 	SSHPort               int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported              bool                   `yaml:"imported,omitempty"`
+	Patched               bool                   `yaml:"patched,omitempty"`
 	Port                  int                    `yaml:"port" default:"9090"`
 	DeployDir             string                 `yaml:"deploy_dir,omitempty"`
 	DataDir               string                 `yaml:"data_dir,omitempty"`
@@ -62,22 +63,22 @@ type ExternalAlertmanager struct {
 }
 
 // Role returns the component role of the instance
-func (s PrometheusSpec) Role() string {
+func (s *PrometheusSpec) Role() string {
 	return ComponentPrometheus
 }
 
 // SSH returns the host and SSH port of the instance
-func (s PrometheusSpec) SSH() (string, int) {
+func (s *PrometheusSpec) SSH() (string, int) {
 	return s.Host, s.SSHPort
 }
 
 // GetMainPort returns the main port of the instance
-func (s PrometheusSpec) GetMainPort() int {
+func (s *PrometheusSpec) GetMainPort() int {
 	return s.Port
 }
 
 // IsImported returns if the node is imported from TiDB-Ansible
-func (s PrometheusSpec) IsImported() bool {
+func (s *PrometheusSpec) IsImported() bool {
 	return s.Imported
 }
 
@@ -144,7 +145,7 @@ func (i *MonitorInstance) InitConfig(
 
 	enableTLS := gOpts.TLSEnabled
 	// transfer run script
-	spec := i.InstanceSpec.(PrometheusSpec)
+	spec := i.InstanceSpec.(*PrometheusSpec)
 	cfg := scripts.NewPrometheusScript(
 		i.GetHost(),
 		paths.Deploy,
@@ -182,28 +183,28 @@ func (i *MonitorInstance) InitConfig(
 
 	if servers, found := topoHasField("PDServers"); found {
 		for i := 0; i < servers.Len(); i++ {
-			pd := servers.Index(i).Interface().(PDSpec)
+			pd := servers.Index(i).Interface().(*PDSpec)
 			uniqueHosts.Insert(pd.Host)
 			cfig.AddPD(pd.Host, uint64(pd.ClientPort))
 		}
 	}
 	if servers, found := topoHasField("TiKVServers"); found {
 		for i := 0; i < servers.Len(); i++ {
-			kv := servers.Index(i).Interface().(TiKVSpec)
+			kv := servers.Index(i).Interface().(*TiKVSpec)
 			uniqueHosts.Insert(kv.Host)
 			cfig.AddTiKV(kv.Host, uint64(kv.StatusPort))
 		}
 	}
 	if servers, found := topoHasField("TiDBServers"); found {
 		for i := 0; i < servers.Len(); i++ {
-			db := servers.Index(i).Interface().(TiDBSpec)
+			db := servers.Index(i).Interface().(*TiDBSpec)
 			uniqueHosts.Insert(db.Host)
 			cfig.AddTiDB(db.Host, uint64(db.StatusPort))
 		}
 	}
 	if servers, found := topoHasField("TiFlashServers"); found {
 		for i := 0; i < servers.Len(); i++ {
-			flash := servers.Index(i).Interface().(TiFlashSpec)
+			flash := servers.Index(i).Interface().(*TiFlashSpec)
 			uniqueHosts.Insert(flash.Host)
 			cfig.AddTiFlashLearner(flash.Host, uint64(flash.FlashProxyStatusPort))
 			cfig.AddTiFlash(flash.Host, uint64(flash.StatusPort))
@@ -211,42 +212,42 @@ func (i *MonitorInstance) InitConfig(
 	}
 	if servers, found := topoHasField("PumpServers"); found {
 		for i := 0; i < servers.Len(); i++ {
-			pump := servers.Index(i).Interface().(PumpSpec)
+			pump := servers.Index(i).Interface().(*PumpSpec)
 			uniqueHosts.Insert(pump.Host)
 			cfig.AddPump(pump.Host, uint64(pump.Port))
 		}
 	}
 	if servers, found := topoHasField("Drainers"); found {
 		for i := 0; i < servers.Len(); i++ {
-			drainer := servers.Index(i).Interface().(DrainerSpec)
+			drainer := servers.Index(i).Interface().(*DrainerSpec)
 			uniqueHosts.Insert(drainer.Host)
 			cfig.AddDrainer(drainer.Host, uint64(drainer.Port))
 		}
 	}
 	if servers, found := topoHasField("CDCServers"); found {
 		for i := 0; i < servers.Len(); i++ {
-			cdc := servers.Index(i).Interface().(CDCSpec)
+			cdc := servers.Index(i).Interface().(*CDCSpec)
 			uniqueHosts.Insert(cdc.Host)
 			cfig.AddCDC(cdc.Host, uint64(cdc.Port))
 		}
 	}
 	if servers, found := topoHasField("Grafanas"); found {
 		for i := 0; i < servers.Len(); i++ {
-			grafana := servers.Index(i).Interface().(GrafanaSpec)
+			grafana := servers.Index(i).Interface().(*GrafanaSpec)
 			uniqueHosts.Insert(grafana.Host)
 			cfig.AddGrafana(grafana.Host, uint64(grafana.Port))
 		}
 	}
 	if servers, found := topoHasField("Alertmanagers"); found {
 		for i := 0; i < servers.Len(); i++ {
-			alertmanager := servers.Index(i).Interface().(AlertmanagerSpec)
+			alertmanager := servers.Index(i).Interface().(*AlertmanagerSpec)
 			uniqueHosts.Insert(alertmanager.Host)
 			cfig.AddAlertmanager(alertmanager.Host, uint64(alertmanager.WebPort))
 		}
 	}
 	if servers, found := topoHasField("Masters"); found {
 		for i := 0; i < servers.Len(); i++ {
-			master := servers.Index(i)
+			master := reflect.Indirect(servers.Index(i))
 			host, port := master.FieldByName("Host").String(), master.FieldByName("Port").Int()
 			cfig.AddDMMaster(host, uint64(port))
 		}
@@ -254,8 +255,8 @@ func (i *MonitorInstance) InitConfig(
 
 	if servers, found := topoHasField("Workers"); found {
 		for i := 0; i < servers.Len(); i++ {
-			master := servers.Index(i)
-			host, port := master.FieldByName("Host").String(), master.FieldByName("Port").Int()
+			worker := reflect.Indirect(servers.Index(i))
+			host, port := worker.FieldByName("Host").String(), worker.FieldByName("Port").Int()
 			cfig.AddDMWorker(host, uint64(port))
 		}
 	}
@@ -354,7 +355,7 @@ func (i *MonitorInstance) installRules(ctx context.Context, e ctxt.Executor, dep
 	return nil
 }
 
-func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec PrometheusSpec, paths meta.DirPaths) error {
+func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec *PrometheusSpec, paths meta.DirPaths) error {
 	if spec.RuleDir != "" {
 		return i.TransferLocalConfigDir(ctx, e, spec.RuleDir, path.Join(paths.Deploy, "conf"), func(name string) bool {
 			return strings.HasSuffix(name, ".rules.yml")

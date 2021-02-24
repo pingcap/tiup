@@ -74,7 +74,7 @@ func ExpandRelativeDir(topo Topology) {
 }
 
 func expandRelativePath(user string, topo interface{}) {
-	v := reflect.ValueOf(topo).Elem()
+	v := reflect.Indirect(reflect.ValueOf(topo).Elem())
 
 	switch v.Kind() {
 	case reflect.Slice:

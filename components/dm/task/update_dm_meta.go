@@ -47,7 +47,7 @@ func NewUpdateDMMeta(cluster string, metadata *dmspec.Metadata, deletedNodesID [
 func (u *UpdateDMMeta) Execute(ctx context.Context) error {
 	deleted := set.NewStringSet(u.deletedNodesID...)
 	topo := u.metadata.Topology
-	masters := make([]dmspec.MasterSpec, 0)
+	masters := make([]*dmspec.MasterSpec, 0)
 	for i, instance := range (&dmspec.DMMasterComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
@@ -56,7 +56,7 @@ func (u *UpdateDMMeta) Execute(ctx context.Context) error {
 	}
 	topo.Masters = masters
 
-	workers := make([]dmspec.WorkerSpec, 0)
+	workers := make([]*dmspec.WorkerSpec, 0)
 	for i, instance := range (&dmspec.DMWorkerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
@@ -65,7 +65,7 @@ func (u *UpdateDMMeta) Execute(ctx context.Context) error {
 	}
 	topo.Workers = workers
 
-	monitors := make([]spec.PrometheusSpec, 0)
+	monitors := make([]*spec.PrometheusSpec, 0)
 	for i, instance := range (&spec.MonitorComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
@@ -74,7 +74,7 @@ func (u *UpdateDMMeta) Execute(ctx context.Context) error {
 	}
 	topo.Monitors = monitors
 
-	grafanas := make([]spec.GrafanaSpec, 0)
+	grafanas := make([]*spec.GrafanaSpec, 0)
 	for i, instance := range (&spec.GrafanaComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue
@@ -83,7 +83,7 @@ func (u *UpdateDMMeta) Execute(ctx context.Context) error {
 	}
 	topo.Grafanas = grafanas
 
-	alertmanagers := make([]spec.AlertmanagerSpec, 0)
+	alertmanagers := make([]*spec.AlertmanagerSpec, 0)
 	for i, instance := range (&spec.AlertManagerComponent{Topology: topo}).Instances() {
 		if deleted.Exist(instance.ID()) {
 			continue

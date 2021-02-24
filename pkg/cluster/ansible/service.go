@@ -58,7 +58,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 	switch ins.Role() {
 	case spec.ComponentTiDB:
 		// parse dirs
-		newIns := ins.(spec.TiDBSpec)
+		newIns := ins.(*spec.TiDBSpec)
 		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
@@ -75,7 +75,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 		return newIns, nil
 	case spec.ComponentTiKV:
 		// parse dirs
-		newIns := ins.(spec.TiKVSpec)
+		newIns := ins.(*spec.TiKVSpec)
 		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "cd \"") {
 				newIns.DeployDir = strings.Trim(strings.Split(line, " ")[1], "\"")
@@ -97,7 +97,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 		return newIns, nil
 	case spec.ComponentPD:
 		// parse dirs
-		newIns := ins.(spec.PDSpec)
+		newIns := ins.(*spec.PDSpec)
 		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
@@ -126,7 +126,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 		return newIns, nil
 	case spec.ComponentTiFlash:
 		// parse dirs
-		newIns := ins.(spec.TiFlashSpec)
+		newIns := ins.(*spec.TiFlashSpec)
 		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "cd \"") {
 				newIns.DeployDir = strings.Trim(strings.Split(line, " ")[1], "\"")
@@ -142,7 +142,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 				if !filepath.IsAbs(fname) {
 					fname = filepath.Join(newIns.DeployDir, fname)
 				}
-				err := parseTiflashConfig(ctx, e, &newIns, fname)
+				err := parseTiflashConfig(ctx, e, newIns, fname)
 				if err != nil {
 					return nil, err
 				}
@@ -151,7 +151,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 		return newIns, nil
 	case spec.ComponentPump:
 		// parse dirs
-		newIns := ins.(spec.PumpSpec)
+		newIns := ins.(*spec.PumpSpec)
 		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
@@ -174,7 +174,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 		return newIns, nil
 	case spec.ComponentDrainer:
 		// parse dirs
-		newIns := ins.(spec.DrainerSpec)
+		newIns := ins.(*spec.DrainerSpec)
 		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
@@ -196,7 +196,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 		return newIns, nil
 	case spec.ComponentPrometheus:
 		// parse dirs
-		newIns := ins.(spec.PrometheusSpec)
+		newIns := ins.(*spec.PrometheusSpec)
 		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
@@ -219,7 +219,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 		return newIns, nil
 	case spec.ComponentAlertmanager:
 		// parse dirs
-		newIns := ins.(spec.AlertmanagerSpec)
+		newIns := ins.(*spec.AlertmanagerSpec)
 		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
@@ -242,7 +242,7 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 		return newIns, nil
 	case spec.ComponentGrafana:
 		// parse dirs
-		newIns := ins.(spec.GrafanaSpec)
+		newIns := ins.(*spec.GrafanaSpec)
 		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")

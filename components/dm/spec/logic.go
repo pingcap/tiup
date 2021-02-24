@@ -115,7 +115,7 @@ func (i *MasterInstance) InitConfig(
 		return err
 	}
 
-	spec := i.InstanceSpec.(MasterSpec)
+	spec := i.InstanceSpec.(*MasterSpec)
 	cfg := scripts.NewDMMasterScript(
 		spec.Name,
 		i.GetHost(),
@@ -155,7 +155,7 @@ func (i *MasterInstance) ScaleConfig(
 	}
 
 	c := topo.(*Specification)
-	spec := i.InstanceSpec.(MasterSpec)
+	spec := i.InstanceSpec.(*MasterSpec)
 	cfg := scripts.NewDMMasterScaleScript(
 		spec.Name,
 		i.GetHost(),
@@ -244,7 +244,7 @@ func (i *WorkerInstance) InitConfig(
 		return err
 	}
 
-	spec := i.InstanceSpec.(WorkerSpec)
+	spec := i.InstanceSpec.(*WorkerSpec)
 	cfg := scripts.NewDMWorkerScript(
 		i.Name,
 		i.GetHost(),

@@ -91,7 +91,16 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 		}
 	}
 
-	return nil
+	// mark instance as patched in meta
+	topo.IterInstance(func(ins spec.Instance) {
+		for _, pachedIns := range insts {
+			if ins.ID() == pachedIns.ID() {
+				ins.SetPatched(true)
+				break
+			}
+		}
+	})
+	return m.specManager.SaveMeta(name, metadata)
 }
 
 func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, name, comp, nodeOS, arch, packagePath string) error {
