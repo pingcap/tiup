@@ -16,14 +16,11 @@ package command
 import (
 	"fmt"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/dm/spec"
-	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
@@ -97,12 +94,6 @@ please backup your data before process.`,
 				zap.L().Info("System ssh client will be used",
 					zap.String(localdata.EnvNameNativeSSHClient, os.Getenv(localdata.EnvNameNativeSSHClient)))
 				fmt.Println("The --native-ssh flag has been deprecated, please use --ssh=system")
-			}
-
-			if gOpt.CheckPoint != "" {
-				if err := checkpoint.SetCheckPoint(path.Join(cspec.AuditDir(), gOpt.CheckPoint)); err != nil {
-					return errors.Annotate(err, "set checkpoint failed")
-				}
 			}
 
 			return nil
