@@ -47,7 +47,7 @@ var (
 	DebugCheckpoint = os.Getenv("DEBUG_CHECKPOINT") == "1"
 )
 
-// SetCheckPoint set global checkpoint for executor
+// SetCheckPoint set global checkpoint for replay
 func SetCheckPoint(file string) error {
 	pointReader, err := os.Open(file)
 	if err != nil {
@@ -61,6 +61,11 @@ func SetCheckPoint(file string) error {
 	}
 
 	return nil
+}
+
+// HasCheckPoint returns if SetCheckPoint has been called
+func HasCheckPoint() bool {
+	return checkpoint != nil
 }
 
 // Acquire wraps CheckPoint.Acquire

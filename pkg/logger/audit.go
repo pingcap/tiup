@@ -41,7 +41,8 @@ func DisableAuditLog() {
 }
 
 func newAuditLogCore() zapcore.Core {
-	auditBuffer = bytes.NewBufferString(strings.Join(os.Args, " ") + "\n")
+	args := audit.EncodeCommandArgs(os.Args)
+	auditBuffer = bytes.NewBufferString(strings.Join(args, " ") + "\n")
 	encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
 	return zapcore.NewCore(encoder, zapcore.Lock(zapcore.AddSync(auditBuffer)), zapcore.DebugLevel)
 }
