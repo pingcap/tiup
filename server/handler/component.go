@@ -105,6 +105,7 @@ func (h *componentSigner) sign(r *http.Request, m *v1manifest.RawManifest) (sr *
 		return nil, nil
 	default:
 		h.sm.Delete(sid)
+		log.Errorf("Publish component: %s", err.Error())
 		return nil, ErrorInternalError
 	}
 }
