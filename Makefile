@@ -59,6 +59,9 @@ doc:
 errdoc:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-errdoc ./components/errdoc
 
+ctl:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-ctl ./components/ctl
+
 server:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-server ./server
 

@@ -10,9 +10,8 @@ on:
       - master
       - release-*
   push:
-    tags:
-      - ci/**
-      - v*
+    branches:
+      - release-*
 
 jobs:
   reprotest:

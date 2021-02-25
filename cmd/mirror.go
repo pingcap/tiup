@@ -440,15 +440,37 @@ func newMirrorPublishCmd() *cobra.Command {
 				return err
 			}
 
+			hashes, length, err := ru.HashFile(tarpath)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("uploading %s with %d bytes, sha256: %v ...\n",
+				tarpath, length, hashes[v1manifest.SHA256])
+
+			tarfile, err := os.Open(tarpath)
+			if err != nil {
+				return errors.Annotatef(err, "open tarball: %s", tarpath)
+			}
+			defer tarfile.Close()
+
+			publishInfo := &model.PublishInfo{
+				ComponentData: &model.TarInfo{Reader: tarfile, Name: fmt.Sprintf("%s-%s-%s-%s.tar.gz", component, version, goos, goarch)},
+			}
+
 			var reqErr error
 			pubErr := utils.Retry(func() error {
-				err := doPublish(component, version, tarpath, entry,
-					desc, standalone, hidden, privPath,
+				err := doPublish(component, version, entry, desc,
+					publishInfo, hashes, length,
+					standalone, hidden, privPath,
 					goos, goarch, flagSet,
 				)
 				if err != nil {
 					// retry if the error is manifest too old
 					if err == repository.ErrManifestTooOld {
+						fmt.Printf("server returned an error: %s, retry...\n", err)
+						if _, ferr := tarfile.Seek(0, 0); ferr != nil { // reset the reader
+							return ferr
+						}
 						return err // return err to trigger next retry
 					}
 					reqErr = err // keep the error info
@@ -456,7 +478,8 @@ func newMirrorPublishCmd() *cobra.Command {
 				return nil // return nil to end the retry loop
 			}, utils.RetryOption{
 				Attempts: 5,
-				Timeout:  time.Minute * 3,
+				Delay:    time.Second * 2,
+				Timeout:  time.Minute * 10,
 			})
 			if reqErr != nil {
 				return reqErr
@@ -475,30 +498,17 @@ func newMirrorPublishCmd() *cobra.Command {
 }
 
 func doPublish(
-	component, version, tarpath, entry, desc string,
+	component, version, entry, desc string,
+	publishInfo *model.PublishInfo,
+	hashes map[string]string, length int64,
 	standalone, hidden bool,
 	privPath, goos, goarch string,
 	flagSet set.StringSet,
 ) error {
-	hashes, length, err := ru.HashFile(tarpath)
-	if err != nil {
-		return err
-	}
-
-	tarfile, err := os.Open(tarpath)
-	if err != nil {
-		return errors.Annotatef(err, "open tarball: %s", tarpath)
-	}
-	defer tarfile.Close()
-
-	publishInfo := &model.PublishInfo{
-		ComponentData: &model.TarInfo{Reader: tarfile, Name: fmt.Sprintf("%s-%s-%s-%s.tar.gz", component, version, goos, goarch)},
-	}
-
 	env := environment.GlobalEnv()
 	m, err := env.V1Repository().FetchComponentManifest(component, true)
 	if err != nil {
-		fmt.Printf("Fetch local manifest: %s\n", err.Error())
+		fmt.Printf("Update local manifest: %s\n", err.Error())
 		fmt.Printf("Failed to load component manifest, create a new one\n")
 		publishInfo.Stand = &standalone
 		publishInfo.Hide = &hidden
