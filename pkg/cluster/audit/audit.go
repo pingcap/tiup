@@ -45,11 +45,11 @@ func CommandArgs(fp string) ([]string, error) {
 	}
 
 	args := strings.Split(scanner.Text(), " ")
-	return DecodeCommandArgs(args)
+	return decodeCommandArgs(args)
 }
 
-// EncodeCommandArgs encode args with url.QueryEscape
-func EncodeCommandArgs(args []string) []string {
+// encodeCommandArgs encode args with url.QueryEscape
+func encodeCommandArgs(args []string) []string {
 	encoded := []string{}
 
 	for _, arg := range args {
@@ -59,8 +59,8 @@ func EncodeCommandArgs(args []string) []string {
 	return encoded
 }
 
-// DecodeCommandArgs decode args with url.QueryUnescape
-func DecodeCommandArgs(args []string) ([]string, error) {
+// decodeCommandArgs decode args with url.QueryUnescape
+func decodeCommandArgs(args []string) ([]string, error) {
 	decoded := []string{}
 
 	for _, arg := range args {
@@ -113,7 +113,20 @@ func ShowAuditList(dir string) error {
 // OutputAuditLog outputs audit log.
 func OutputAuditLog(dir string, data []byte) error {
 	fname := filepath.Join(dir, base52.Encode(time.Now().UnixNano()+rand.Int63n(1000)))
-	return os.WriteFile(fname, data, 0644)
+	f, err := os.Create(fname)
+	if err != nil {
+		return errors.Annotate(err, "create audit log")
+	}
+	defer f.Close()
+
+	args := encodeCommandArgs(os.Args)
+	if _, err := f.Write([]byte(strings.Join(args, " ") + "\n")); err != nil {
+		return errors.Annotate(err, "write audit log")
+	}
+	if _, err := f.Write(data); err != nil {
+		return errors.Annotate(err, "write audit log")
+	}
+	return nil
 }
 
 // ShowAuditLog show the audit with the specified auditID
