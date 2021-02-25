@@ -176,6 +176,7 @@ func init() {
 		newPushCmd(),
 		newTestCmd(), // hidden command for test internally
 		newTelemetryCmd(),
+		newTemplateCmd(),
 	)
 }
 
