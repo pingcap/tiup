@@ -8,7 +8,7 @@ on:
       - release-*
   release:
     types:
-      - created
+      - published
 
 jobs:
   release:
