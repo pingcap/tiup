@@ -133,6 +133,7 @@ please backup your data before process.`,
 		newEnableCmd(),
 		newDisableCmd(),
 		newReplayCmd(),
+		newTemplateCmd(),
 	)
 }
 

@@ -166,6 +166,7 @@ func init() {
 		newTestCmd(), // hidden command for test internally
 		newTelemetryCmd(),
 		newReplayCmd(),
+		newTemplateCmd(),
 	)
 }
 
