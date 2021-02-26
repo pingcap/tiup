@@ -26,6 +26,10 @@ var (
 	ErrorMissingOwner = errors.New("owner not found")
 	// ErrorWrongSignature indicates that the signature is not correct
 	ErrorWrongSignature = errors.New("the signature is not correct")
+	// ErrorWrongChecksum indicates that the checksum of tar file is not correct
+	ErrorWrongChecksum = errors.New("the checksum is not correct")
+	// ErrorWrongFileName indicates that the name of tar file is not correct
+	ErrorWrongFileName = errors.New("the file name is not correct")
 	// ErrorWrongManifestType indicates that the manifest type is not expected
 	ErrorWrongManifestType = errors.New("the manifest type is not expected")
 	// ErrorWrongManifestVersion indicates that the manifest version is not expected

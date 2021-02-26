@@ -264,7 +264,7 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 		}
 
 		if info.Filename() != "" {
-			if err := m.txn.Write(info.Filename(), info); err != nil {
+			if err := m.checkAndWrite(signed, info); err != nil {
 				return err
 			}
 		}
@@ -272,6 +272,29 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 	}, func(err error) bool {
 		return err == store.ErrorFsCommitConflict && m.txn.ResetManifest() == nil
 	})
+}
+
+func (m *model) checkAndWrite(manifest *v1manifest.Component, info ComponentInfo) error {
+	fname := info.Filename()
+	for _, plat := range manifest.Platforms {
+		for _, vi := range plat {
+			if vi.URL[1:] == fname {
+				if err := m.txn.Write(fname, info); err != nil {
+					return err
+				}
+				reader, err := m.txn.Read(fname)
+				if err != nil {
+					return err
+				}
+				defer reader.Close()
+				if err := utils.CheckSHA256(reader, vi.Hashes["sha256"]); err == nil {
+					return nil
+				}
+				return ErrorWrongChecksum
+			}
+		}
+	}
+	return ErrorWrongFileName
 }
 
 func findKeyOwnerFromIndex(signed *v1manifest.Index, keyID string) (string, *v1manifest.Owner) {
