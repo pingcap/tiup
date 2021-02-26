@@ -431,6 +431,10 @@ func newMirrorPublishCmd() *cobra.Command {
 			}
 
 			component, version, tarpath, entry := args[0], args[1], args[2], args[3]
+			flagSet := set.NewStringSet()
+			cmd.Flags().Visit(func(f *pflag.Flag) {
+				flagSet.Insert(f.Name)
+			})
 
 			if err := validatePlatform(goos, goarch); err != nil {
 				return err
@@ -440,6 +444,8 @@ func newMirrorPublishCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			fmt.Printf("uploading %s with %d bytes, sha256: %v ...\n",
+				tarpath, length, hashes[v1manifest.SHA256])
 
 			tarfile, err := os.Open(tarpath)
 			if err != nil {
@@ -451,32 +457,34 @@ func newMirrorPublishCmd() *cobra.Command {
 				ComponentData: &model.TarInfo{Reader: tarfile, Name: fmt.Sprintf("%s-%s-%s-%s.tar.gz", component, version, goos, goarch)},
 			}
 
-			flagSet := set.NewStringSet()
-			cmd.Flags().Visit(func(f *pflag.Flag) {
-				flagSet.Insert(f.Name)
+			var reqErr error
+			pubErr := utils.Retry(func() error {
+				err := doPublish(component, version, entry, desc,
+					publishInfo, hashes, length,
+					standalone, hidden, privPath,
+					goos, goarch, flagSet,
+				)
+				if err != nil {
+					// retry if the error is manifest too old
+					if err == repository.ErrManifestTooOld {
+						fmt.Printf("server returned an error: %s, retry...\n", err)
+						if _, ferr := tarfile.Seek(0, 0); ferr != nil { // reset the reader
+							return ferr
+						}
+						return err // return err to trigger next retry
+					}
+					reqErr = err // keep the error info
+				}
+				return nil // return nil to end the retry loop
+			}, utils.RetryOption{
+				Attempts: 5,
+				Delay:    time.Second * 2,
+				Timeout:  time.Minute * 10,
 			})
-			env := environment.GlobalEnv()
-			m, err := env.V1Repository().FetchComponentManifest(component, true)
-			if err != nil {
-				fmt.Printf("Fetch local manifest: %s\n", err.Error())
-				fmt.Printf("Failed to load component manifest, create a new one\n")
-				publishInfo.Stand = &standalone
-				publishInfo.Hide = &hidden
-			} else if flagSet.Exist("standalone") || flagSet.Exist("hide") {
-				fmt.Println("This is not a new component, --standalone and --hide flag will be omitted")
+			if reqErr != nil {
+				return reqErr
 			}
-
-			m = repository.UpdateManifestForPublish(m, component, version, entry, goos, goarch, desc, v1manifest.FileHash{
-				Hashes: hashes,
-				Length: uint(length),
-			})
-
-			manifest, err := sign(privPath, m)
-			if err != nil {
-				return err
-			}
-
-			return env.V1Repository().Mirror().Publish(manifest, publishInfo)
+			return pubErr
 		},
 	}
 
@@ -489,6 +497,38 @@ func newMirrorPublishCmd() *cobra.Command {
 	return cmd
 }
 
+func doPublish(
+	component, version, entry, desc string,
+	publishInfo *model.PublishInfo,
+	hashes map[string]string, length int64,
+	standalone, hidden bool,
+	privPath, goos, goarch string,
+	flagSet set.StringSet,
+) error {
+	env := environment.GlobalEnv()
+	m, err := env.V1Repository().FetchComponentManifest(component, true)
+	if err != nil {
+		fmt.Printf("Update local manifest: %s\n", err.Error())
+		fmt.Printf("Failed to load component manifest, create a new one\n")
+		publishInfo.Stand = &standalone
+		publishInfo.Hide = &hidden
+	} else if flagSet.Exist("standalone") || flagSet.Exist("hide") {
+		fmt.Println("This is not a new component, --standalone and --hide flag will be omitted")
+	}
+
+	m = repository.UpdateManifestForPublish(m, component, version, entry, goos, goarch, desc, v1manifest.FileHash{
+		Hashes: hashes,
+		Length: uint(length),
+	})
+
+	manifest, err := sign(privPath, m)
+	if err != nil {
+		return err
+	}
+
+	return env.V1Repository().Mirror().Publish(manifest, publishInfo)
+}
+
 func validatePlatform(goos, goarch string) error {
 	// Only support any/any, don't support linux/any, any/amd64 .etc.
 	if goos == "any" && goarch == "any" {
@@ -496,7 +536,10 @@ func validatePlatform(goos, goarch string) error {
 	}
 
 	switch goos + "/" + goarch {
-	case "linux/amd64", "linux/arm64", "darwin/amd64":
+	case "linux/amd64",
+		"linux/arm64",
+		"darwin/amd64",
+		"darwin/arm64":
 		return nil
 	default:
 		return errors.Errorf("platform %s/%s not supported", goos, goarch)

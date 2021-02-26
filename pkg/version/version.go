@@ -29,8 +29,8 @@ var (
 	TiUPVerName = "tiup"
 	// GitHash is the current git commit hash
 	GitHash = "Unknown"
-	// GitBranch is the current git branch name
-	GitBranch = "Unknown"
+	// GitRef is the current git reference name (branch or tag)
+	GitRef = "Unknown"
 )
 
 // NightlyVersion represents latest build of master branch.
@@ -61,18 +61,18 @@ func (v *TiUPVersion) Name() string {
 
 // SemVer returns TiUPVersion in semver format
 func (v *TiUPVersion) SemVer() string {
-	return fmt.Sprintf("v%d.%d.%d", v.major, v.minor, v.patch)
+	return fmt.Sprintf("%d.%d.%d", v.major, v.minor, v.patch)
 }
 
 // String converts TiUPVersion to a string
 func (v *TiUPVersion) String() string {
-	return fmt.Sprintf("v%d.%d.%d %s\n%s", v.major, v.minor, v.patch, v.name, NewTiUPBuildInfo())
+	return fmt.Sprintf("%s %s\n%s", v.SemVer(), v.name, NewTiUPBuildInfo())
 }
 
 // TiUPBuild is the info of building environment
 type TiUPBuild struct {
 	GitHash   string `json:"gitHash"`
-	GitBranch string `json:"gitBranch"`
+	GitRef    string `json:"gitRef"`
 	GoVersion string `json:"goVersion"`
 }
 
@@ -80,12 +80,12 @@ type TiUPBuild struct {
 func NewTiUPBuildInfo() *TiUPBuild {
 	return &TiUPBuild{
 		GitHash:   GitHash,
-		GitBranch: GitBranch,
+		GitRef:    GitRef,
 		GoVersion: runtime.Version(),
 	}
 }
 
 // String converts TiUPBuild to a string
 func (v *TiUPBuild) String() string {
-	return fmt.Sprintf("Go Version: %s\nGit Branch: %s\nGitHash: %s", v.GoVersion, v.GitBranch, v.GitHash)
+	return fmt.Sprintf("Go Version: %s\nGit Ref: %s\nGitHash: %s", v.GoVersion, v.GitRef, v.GitHash)
 }

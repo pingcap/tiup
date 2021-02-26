@@ -1,9 +1,7 @@
 .PHONY: cmd components server
 .DEFAULT_GOAL := default
 
-REPO := github.com/pingcap/tiup
-
-GOVER := $(shell go version)
+REPO    := github.com/pingcap/tiup
 
 GOOS    := $(if $(GOOS),$(GOOS),$(shell go env GOOS))
 GOARCH  := $(if $(GOARCH),$(GOARCH),amd64)
@@ -13,15 +11,17 @@ GOBUILD := $(GO) build $(BUILD_FLAG)
 GOTEST  := GO111MODULE=on CGO_ENABLED=1 go test -p 3
 SHELL   := /usr/bin/env bash
 
-COMMIT    := $(shell git describe --no-match --always --dirty)
-BRANCH    := $(shell git rev-parse --abbrev-ref HEAD)
+_COMMIT := $(shell git describe --no-match --always --dirty)
+_GITREF := $(shell git rev-parse --abbrev-ref HEAD)
+COMMIT  := $(if $(COMMIT),$(COMMIT),$(_COMMIT))
+GITREF  := $(if $(GITREF),$(GITREF),$(_GITREF))
 
 LDFLAGS := -w -s
 LDFLAGS += -X "$(REPO)/pkg/version.GitHash=$(COMMIT)"
-LDFLAGS += -X "$(REPO)/pkg/version.GitBranch=$(BRANCH)"
+LDFLAGS += -X "$(REPO)/pkg/version.GitRef=$(GITREF)"
 LDFLAGS += $(EXTRA_LDFLAGS)
 
-FILES     := $$(find . -name "*.go")
+FILES   := $$(find . -name "*.go")
 
 FAILPOINT_ENABLE  := $$(tools/bin/failpoint-ctl enable)
 FAILPOINT_DISABLE := $$(tools/bin/failpoint-ctl disable)
@@ -58,6 +58,9 @@ doc:
 
 errdoc:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-errdoc ./components/errdoc
+
+ctl:
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-ctl ./components/ctl
 
 server:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-server ./server

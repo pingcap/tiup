@@ -33,10 +33,9 @@ func init() {
 	cobra.EnableCommandSorting = false
 
 	var (
-		binary       string
-		binPath      string
-		tag          string
-		printVersion bool
+		binary  string
+		binPath string
+		tag     string
 	)
 
 	rootCmd = &cobra.Command{
@@ -49,15 +48,13 @@ locally will be used. If the specified component does not have any version insta
 the latest stable version will be downloaded from the repository.`,
 
 		SilenceErrors:      true,
+		Version:            version.NewTiUPVersion().String(),
 		FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
 		Args: func(cmd *cobra.Command, args []string) error {
 			// Support `tiup <component>`
 			return nil
 		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if printVersion && len(args) == 0 {
-				return nil
-			}
 			e, err := environment.InitEnv(repoOpts)
 			if err != nil {
 				return err
@@ -66,10 +63,6 @@ the latest stable version will be downloaded from the repository.`,
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if printVersion && len(args) == 0 {
-				fmt.Println(version.NewTiUPVersion().String())
-				return nil
-			}
 			env := environment.GlobalEnv()
 			if binary != "" {
 				component, ver := environment.ParseCompVersion(binary)
@@ -113,7 +106,6 @@ the latest stable version will be downloaded from the repository.`,
 	}
 
 	rootCmd.PersistentFlags().BoolVarP(&repoOpts.SkipVersionCheck, "skip-version-check", "", false, "Skip the strict version check, by default a version must be a valid SemVer string")
-	rootCmd.Flags().BoolVarP(&printVersion, "version", "v", false, "Print the version of tiup")
 	rootCmd.Flags().StringVarP(&binary, "binary", "B", "", "Print binary path of a specific version of a component `<component>[:version]`\n"+
 		"and the latest version installed will be selected if no version specified")
 	rootCmd.Flags().StringVarP(&tag, "tag", "T", "", "Specify a tag for component instance")
