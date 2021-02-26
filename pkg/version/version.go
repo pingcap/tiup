@@ -61,12 +61,12 @@ func (v *TiUPVersion) Name() string {
 
 // SemVer returns TiUPVersion in semver format
 func (v *TiUPVersion) SemVer() string {
-	return fmt.Sprintf("v%d.%d.%d", v.major, v.minor, v.patch)
+	return fmt.Sprintf("%d.%d.%d", v.major, v.minor, v.patch)
 }
 
 // String converts TiUPVersion to a string
 func (v *TiUPVersion) String() string {
-	return fmt.Sprintf("v%d.%d.%d %s\n%s", v.major, v.minor, v.patch, v.name, NewTiUPBuildInfo())
+	return fmt.Sprintf("%s %s\n%s", v.SemVer(), v.name, NewTiUPBuildInfo())
 }
 
 // TiUPBuild is the info of building environment

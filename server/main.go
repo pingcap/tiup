@@ -18,6 +18,7 @@ import (
 	"os"
 
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
 
@@ -27,8 +28,9 @@ func main() {
 	upstream := "https://tiup-mirrors.pingcap.com"
 
 	cmd := &cobra.Command{
-		Use:   fmt.Sprintf("%s <root-dir>", os.Args[0]),
-		Short: "bootstrap a mirror server",
+		Use:     fmt.Sprintf("%s <root-dir>", os.Args[0]),
+		Short:   "bootstrap a mirror server",
+		Version: version.NewTiUPVersion().String(),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()

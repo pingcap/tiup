@@ -38,6 +38,7 @@ import (
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 	"go.etcd.io/etcd/clientv3"
 	"go.uber.org/zap"
@@ -108,6 +109,7 @@ Examples:
   $ tiup playground --db.binpath /xx/tidb-server    # Start a local cluster with component binary path`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		Version:       version.NewTiUPVersion().String(),
 		Args: func(cmd *cobra.Command, args []string) error {
 			return nil
 		},
