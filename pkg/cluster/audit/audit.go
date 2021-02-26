@@ -16,6 +16,7 @@ package audit
 import (
 	"bufio"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -30,22 +31,51 @@ import (
 	"github.com/pingcap/tiup/pkg/utils/rand"
 )
 
-// ShowAuditList show the audit list.
-func ShowAuditList(dir string) error {
-	firstLine := func(fileName string) (string, error) {
-		file, err := os.Open(filepath.Join(dir, fileName))
-		if err != nil {
-			return "", errors.Trace(err)
-		}
-		defer file.Close()
+// CommandArgs returns the original commands from the first line of a file
+func CommandArgs(fp string) ([]string, error) {
+	file, err := os.Open(fp)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	defer file.Close()
 
-		scanner := bufio.NewScanner(file)
-		if scanner.Scan() {
-			return scanner.Text(), nil
-		}
-		return "", errors.New("unknown audit log format")
+	scanner := bufio.NewScanner(file)
+	if !scanner.Scan() {
+		return nil, errors.New("unknown audit log format")
 	}
 
+	args := strings.Split(scanner.Text(), " ")
+	return decodeCommandArgs(args)
+}
+
+// encodeCommandArgs encode args with url.QueryEscape
+func encodeCommandArgs(args []string) []string {
+	encoded := []string{}
+
+	for _, arg := range args {
+		encoded = append(encoded, url.QueryEscape(arg))
+	}
+
+	return encoded
+}
+
+// decodeCommandArgs decode args with url.QueryUnescape
+func decodeCommandArgs(args []string) ([]string, error) {
+	decoded := []string{}
+
+	for _, arg := range args {
+		a, err := url.QueryUnescape(arg)
+		if err != nil {
+			return nil, errors.Annotate(err, "failed on decode the command line of audit log")
+		}
+		decoded = append(decoded, a)
+	}
+
+	return decoded, nil
+}
+
+// ShowAuditList show the audit list.
+func ShowAuditList(dir string) error {
 	// Header
 	clusterTable := [][]string{{"ID", "Time", "Command"}}
 	fileInfos, err := os.ReadDir(dir)
@@ -60,10 +90,11 @@ func ShowAuditList(dir string) error {
 		if err != nil {
 			continue
 		}
-		cmd, err := firstLine(fi.Name())
+		args, err := CommandArgs(filepath.Join(dir, fi.Name()))
 		if err != nil {
 			continue
 		}
+		cmd := strings.Join(args, " ")
 		clusterTable = append(clusterTable, []string{
 			fi.Name(),
 			t.Format(time.RFC3339),
@@ -82,7 +113,20 @@ func ShowAuditList(dir string) error {
 // OutputAuditLog outputs audit log.
 func OutputAuditLog(dir string, data []byte) error {
 	fname := filepath.Join(dir, base52.Encode(time.Now().UnixNano()+rand.Int63n(1000)))
-	return os.WriteFile(fname, data, 0644)
+	f, err := os.Create(fname)
+	if err != nil {
+		return errors.Annotate(err, "create audit log")
+	}
+	defer f.Close()
+
+	args := encodeCommandArgs(os.Args)
+	if _, err := f.Write([]byte(strings.Join(args, " ") + "\n")); err != nil {
+		return errors.Annotate(err, "write audit log")
+	}
+	if _, err := f.Write(data); err != nil {
+		return errors.Annotate(err, "write audit log")
+	}
+	return nil
 }
 
 // ShowAuditLog show the audit with the specified auditID
