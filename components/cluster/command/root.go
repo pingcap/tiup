@@ -18,15 +18,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path"
 	"strings"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/flags"
@@ -123,12 +120,6 @@ func init() {
 				fmt.Println("The --native-ssh flag has been deprecated, please use --ssh=system")
 			}
 
-			if gOpt.CheckPoint != "" {
-				if err := checkpoint.SetCheckPoint(path.Join(spec.AuditDir(), gOpt.CheckPoint)); err != nil {
-					return errors.Annotate(err, "set checkpoint failed")
-				}
-			}
-
 			return nil
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
@@ -145,9 +136,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
 	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "(EXPERIMENTAL) Use the native SSH client installed on local system instead of the build-in one.")
 	rootCmd.PersistentFlags().StringVar((*string)(&gOpt.SSHType), "ssh", "", "(EXPERIMENTAL) The executor type: 'builtin', 'system', 'none'.")
-	rootCmd.PersistentFlags().StringVar(&gOpt.CheckPoint, "checkpoint", "", "(EXPERIMENTAL) The audit log ID this command should recover from.")
 	_ = rootCmd.PersistentFlags().MarkHidden("native-ssh")
-	_ = rootCmd.PersistentFlags().MarkHidden("checkpoint")
 
 	rootCmd.AddCommand(
 		newCheckCmd(),
@@ -176,6 +165,7 @@ func init() {
 		newPushCmd(),
 		newTestCmd(), // hidden command for test internally
 		newTelemetryCmd(),
+		newReplayCmd(),
 		newTemplateCmd(),
 	)
 }

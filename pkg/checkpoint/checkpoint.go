@@ -47,7 +47,7 @@ var (
 	DebugCheckpoint = os.Getenv("DEBUG_CHECKPOINT") == "1"
 )
 
-// SetCheckPoint set global checkpoint for executor
+// SetCheckPoint set global checkpoint for replay
 func SetCheckPoint(file string) error {
 	pointReader, err := os.Open(file)
 	if err != nil {
@@ -61,6 +61,11 @@ func SetCheckPoint(file string) error {
 	}
 
 	return nil
+}
+
+// HasCheckPoint returns if SetCheckPoint has been called
+func HasCheckPoint() bool {
+	return checkpoint != nil
 }
 
 // Acquire wraps CheckPoint.Acquire
@@ -202,11 +207,16 @@ next_set:
 			if cf.eq == nil {
 				continue
 			}
-			if !cf.eq(ma[cf.field], mb[cf.field]) {
+			if !contains(ma, cf.field) || !contains(mb, cf.field) || !cf.eq(ma[cf.field], mb[cf.field]) {
 				continue next_set
 			}
 		}
 		return true
 	}
 	return false
+}
+
+func contains(m map[string]interface{}, f string) bool {
+	_, ok := m[f]
+	return ok
 }

@@ -73,7 +73,7 @@ function cmd_subtest() {
     tiup-cluster exec $name -N n1 --command "ls /tmp/checkpoint"
     tiup-cluster exec $name -N n1 --command "rm -f /tmp/checkpoint"
     id=`tiup-cluster audit | grep "exec $name" | grep "ls /tmp/checkpoint" | awk '{print $1}'`
-    tiup-cluster exec $name -N n1 --command "ls /tmp/checkpoint" --checkpoint $id
+    tiup-cluster replay --yes $id
     ! tiup-cluster exec $name -N n1 --command "ls /tmp/checkpoint"
 
     # test patch overwrite

@@ -15,8 +15,6 @@ package logger
 
 import (
 	"bytes"
-	"os"
-	"strings"
 
 	"github.com/pingcap/tiup/pkg/cluster/audit"
 	utils2 "github.com/pingcap/tiup/pkg/utils"
@@ -41,7 +39,7 @@ func DisableAuditLog() {
 }
 
 func newAuditLogCore() zapcore.Core {
-	auditBuffer = bytes.NewBufferString(strings.Join(os.Args, " ") + "\n")
+	auditBuffer = bytes.NewBuffer([]byte{})
 	encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
 	return zapcore.NewCore(encoder, zapcore.Lock(zapcore.AddSync(auditBuffer)), zapcore.DebugLevel)
 }

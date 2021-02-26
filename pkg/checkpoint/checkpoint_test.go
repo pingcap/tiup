@@ -35,6 +35,17 @@ func setup() {
 			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
 		}),
 	)
+
+	RegisterField(
+		Field("host", reflect.DeepEqual),
+		Field("port", func(a, b interface{}) bool {
+			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
+		}),
+		Field("user", reflect.DeepEqual),
+		Field("src", reflect.DeepEqual),
+		Field("dst", reflect.DeepEqual),
+		Field("download", reflect.DeepEqual),
+	)
 }
 
 func TestCheckPointSimple(t *testing.T) {
