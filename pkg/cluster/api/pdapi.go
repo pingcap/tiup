@@ -32,6 +32,7 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 	pdserverapi "github.com/tikv/pd/server/api"
 	pdconfig "github.com/tikv/pd/server/config"
+	pdsp "github.com/tikv/pd/server/schedule/placement"
 )
 
 // PDClient is an HTTP client of the PD server
@@ -71,18 +72,21 @@ const (
 
 // nolint (some is unused now)
 var (
-	pdPingURI           = "pd/ping"
-	pdMembersURI        = "pd/api/v1/members"
-	pdStoresURI         = "pd/api/v1/stores"
-	pdStoreURI          = "pd/api/v1/store"
-	pdConfigURI         = "pd/api/v1/config"
-	pdClusterIDURI      = "pd/api/v1/cluster"
-	pdSchedulersURI     = "pd/api/v1/schedulers"
-	pdLeaderURI         = "pd/api/v1/leader"
-	pdLeaderTransferURI = "pd/api/v1/leader/transfer"
-	pdConfigReplicate   = "pd/api/v1/config/replicate"
-	pdConfigSchedule    = "pd/api/v1/config/schedule"
-	pdRegionsCheckURI   = "pd/api/v1/regions/check"
+	pdPingURI            = "pd/ping"
+	pdConfigURI          = "pd/api/v1/config"
+	pdClusterIDURI       = "pd/api/v1/cluster"
+	pdConfigReplicate    = "pd/api/v1/config/replicate"
+	pdReplicationModeURI = "pd/api/v1/config/replication-mode"
+	pdRulesURI           = "pd/api/v1/config/rules"
+	pdConfigSchedule     = "pd/api/v1/config/schedule"
+	pdLeaderURI          = "pd/api/v1/leader"
+	pdLeaderTransferURI  = "pd/api/v1/leader/transfer"
+	pdMembersURI         = "pd/api/v1/members"
+	pdSchedulersURI      = "pd/api/v1/schedulers"
+	pdStoreURI           = "pd/api/v1/store"
+	pdStoresURI          = "pd/api/v1/stores"
+	pdStoresLimitURI     = "pd/api/v1/stores/limit"
+	pdRegionsCheckURI    = "pd/api/v1/regions/check"
 )
 
 func tryURLs(endpoints []string, f func(endpoint string) ([]byte, error)) ([]byte, error) {
@@ -277,8 +281,8 @@ func (pc *PDClient) GetMembers() (*pdpb.GetMembersResponse, error) {
 	return &members, nil
 }
 
-// GetDashboardAddress get the PD node address which runs dashboard
-func (pc *PDClient) GetDashboardAddress() (string, error) {
+// GetConfig returns all PD configs
+func (pc *PDClient) GetConfig() (map[string]interface{}, error) {
 	endpoints := pc.getEndpoints(pdConfigURI)
 
 	// We don't use the `github.com/tikv/pd/server/config` directly because
@@ -294,10 +298,15 @@ func (pc *PDClient) GetDashboardAddress() (string, error) {
 		return body, json.Unmarshal(body, &pdConfig)
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	cfg, err := flatten.Flatten(pdConfig, "", flatten.DotStyle)
+	return flatten.Flatten(pdConfig, "", flatten.DotStyle)
+}
+
+// GetDashboardAddress get the PD node address which runs dashboard
+func (pc *PDClient) GetDashboardAddress() (string, error) {
+	cfg, err := pc.GetConfig()
 	if err != nil {
 		return "", perrs.AddStack(err)
 	}
@@ -639,7 +648,7 @@ func (pc *PDClient) DelStore(host string, retryOpt *utils.RetryOption) error {
 	return nil
 }
 
-func (pc *PDClient) updateConfig(body io.Reader, url string) error {
+func (pc *PDClient) updateConfig(url string, body io.Reader) error {
 	endpoints := pc.getEndpoints(url)
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		return pc.httpClient.Post(endpoint, body)
@@ -649,7 +658,7 @@ func (pc *PDClient) updateConfig(body io.Reader, url string) error {
 
 // UpdateReplicateConfig updates the PD replication config
 func (pc *PDClient) UpdateReplicateConfig(body io.Reader) error {
-	return pc.updateConfig(body, pdConfigReplicate)
+	return pc.updateConfig(pdConfigReplicate, body)
 }
 
 // GetReplicateConfig gets the PD replication config
@@ -703,7 +712,7 @@ func (pc *PDClient) GetTiKVLabels() (map[string]map[string]string, error) {
 
 // UpdateScheduleConfig updates the PD schedule config
 func (pc *PDClient) UpdateScheduleConfig(body io.Reader) error {
-	return pc.updateConfig(body, pdConfigSchedule)
+	return pc.updateConfig(pdConfigSchedule, body)
 }
 
 // CheckRegion queries for the region with specific status
@@ -721,4 +730,48 @@ func (pc *PDClient) CheckRegion(state string) (*pdserverapi.RegionsInfo, error) 
 		return body, json.Unmarshal(body, &regionsInfo)
 	})
 	return &regionsInfo, err
+}
+
+// GetPlacementRules queries for all placement rules
+func (pc *PDClient) GetPlacementRules() ([]*pdsp.Rule, error) {
+	endpoints := pc.getEndpoints(pdRulesURI)
+	var rules []*pdsp.Rule
+
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := pc.httpClient.Get(endpoint)
+		if err != nil {
+			return body, err
+		}
+		return body, json.Unmarshal(body, &rules)
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return rules, nil
+}
+
+// SetReplicationConfig sets a config key value of PD replication, it has the
+// same effect as `pd-ctl config set key value`
+func (pc *PDClient) SetReplicationConfig(key string, value int) error {
+	data := map[string]interface{}{"set": map[string]interface{}{key: value}}
+	body, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	log.Debugf("setting replication config: %s=%d", key, value)
+	return pc.updateConfig(pdReplicationModeURI, bytes.NewBuffer(body))
+}
+
+// SetAllStoreLimits sets store for all stores and types, it has the same effect
+// as `pd-ctl store limit all value`
+func (pc *PDClient) SetAllStoreLimits(value int) error {
+	data := map[string]interface{}{"rate": value}
+	body, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	log.Debugf("setting store limit: %d", value)
+	return pc.updateConfig(pdStoresLimitURI, bytes.NewBuffer(body))
 }
