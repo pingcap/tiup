@@ -207,11 +207,16 @@ next_set:
 			if cf.eq == nil {
 				continue
 			}
-			if !cf.eq(ma[cf.field], mb[cf.field]) {
+			if !contains(ma, cf.field) || !contains(mb, cf.field) || !cf.eq(ma[cf.field], mb[cf.field]) {
 				continue next_set
 			}
 		}
 		return true
 	}
 	return false
+}
+
+func contains(m map[string]interface{}, f string) bool {
+	_, ok := m[f]
+	return ok
 }
