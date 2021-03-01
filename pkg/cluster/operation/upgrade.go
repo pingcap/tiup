@@ -47,18 +47,11 @@ func Upgrade(
 	topo spec.Topology,
 	options Options,
 	tlsCfg *tls.Config,
-) error {
+) (upgErr error) {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := topo.ComponentsByUpdateOrder()
 	components = FilterComponent(components, roleFilter)
-
-	pdList := make([]string, 0)
-	tidbTopo, isTidbTopo := topo.(*spec.Specification)
-	if isTidbTopo {
-		pdList = tidbTopo.GetPDList()
-	}
-	pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
 
 	for _, component := range components {
 		instances := FilterInstance(component.Instances(), nodeFilter)
@@ -73,10 +66,14 @@ func Upgrade(
 		var err error
 		switch component.Name() {
 		case spec.ComponentTiKV:
+			pdClient := api.NewPDClient(topo.(*spec.Specification).GetPDList(), 10*time.Second, tlsCfg)
 			origLeaderScheduleLimit, origRegionScheduleLimit, err = increaseScheduleLimit(ctx, pdClient)
 			if err != nil {
 				return err
 			}
+			defer func() {
+				upgErr = decreaseScheduleLimit(pdClient, origLeaderScheduleLimit, origRegionScheduleLimit)
+			}()
 		default:
 			// do nothing, kept for future usage with other components
 		}
@@ -112,16 +109,6 @@ func Upgrade(
 			if err := upgradeInstance(ctx, topo, instance, options, tlsCfg); err != nil {
 				return err
 			}
-		}
-
-		// perform post-upgrade actions for component
-		switch component.Name() {
-		case spec.ComponentTiKV:
-			if err := decreaseScheduleLimit(pdClient, origLeaderScheduleLimit, origRegionScheduleLimit); err != nil {
-				return err
-			}
-		default:
-			// do nothing, kept for future usage with other components
 		}
 	}
 
