@@ -8,4 +8,3 @@ if [[ ! -z $GREP_IOUTIL ]]; then
     echo "use of \"io/ioutil\" is deprecated in Go 1.16, please update to use \"io\" and \"os\""
     exit 1
 fi
-
