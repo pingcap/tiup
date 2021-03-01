@@ -274,7 +274,7 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 	})
 }
 
-func (m *model) checkAndWrite(manifest *v1manifest.Component, info ComponentInfo) error {
+func (m *model) checkAndWrite(manifest *v1manifest.Component, info ComponentData) error {
 	fname := info.Filename()
 	for _, plat := range manifest.Platforms {
 		for _, vi := range plat {
