@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 
 # check for io/ioutil
 GREP_IOUTIL=`find -name "*.go" | xargs grep -ns "io\/ioutil"`
