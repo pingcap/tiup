@@ -234,6 +234,9 @@ func increaseScheduleLimit(ctx context.Context, pc *api.PDClient) (
 			newLimit = regionScheduleLimitThreshold
 		}
 		if err := pc.SetReplicationConfig("region-schedule-limit", newLimit); err != nil {
+			// try to revert leader scheduler limit by our best effort, does not make sence
+			// to handle this error again
+			_ = pc.SetReplicationConfig("leader-schedule-limit", currLeaderScheduleLimit)
 			return currLeaderScheduleLimit, currRegionScheduleLimit, err
 		}
 	}
