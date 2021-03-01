@@ -22,6 +22,12 @@ case $(uname -m) in
     *) arch= ;;
 esac
 
+# FIXME: Apple M1 is not supported yet
+if [ $os = "darwin" ] && [ $arch = "arm64" ]; then
+    echo "Apple Silicon not supported." >&2
+    exit 1
+fi
+
 if [ -z "$arch" ]; then
     echo "Architecture  $(uname -m) not supported." >&2
     exit 1
