@@ -210,8 +210,8 @@ func increaseScheduleLimit(ctx context.Context, pc *api.PDClient) (
 	}()
 
 	if data := point.Hit(); data != nil {
-		currLeaderScheduleLimit = data["currLeaderScheduleLimit"].(int)
-		currRegionScheduleLimit = data["currRegionScheduleLimit"].(int)
+		currLeaderScheduleLimit = int(data["currLeaderScheduleLimit"].(float64))
+		currRegionScheduleLimit = int(data["currRegionScheduleLimit"].(float64))
 		return
 	}
 
