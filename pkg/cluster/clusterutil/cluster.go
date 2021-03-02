@@ -14,9 +14,9 @@
 package clusterutil
 
 import (
-	"fmt"
 	"os"
 
+	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
@@ -78,7 +78,7 @@ func (r *repositoryT) VerifyComponent(comp, version, target string) error {
 	defer file.Close()
 
 	if err := utils.CheckSHA256(file, versionItem.Hashes[v1manifest.SHA256]); err != nil {
-		return fmt.Errorf("validation failed for %s: %s", target, err)
+		return errors.Errorf("validation failed for %s: %s", target, err)
 	}
 	return nil
 }

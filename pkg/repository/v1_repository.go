@@ -483,12 +483,12 @@ func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target st
 
 	_, err = checkHash(reader, item.Hashes[v1manifest.SHA256])
 	reader.Close()
-
-	// remove the target compoonent to avoid attacking
 	if err != nil {
+		// remove the target compoonent to avoid attacking
 		_ = os.Remove(target)
+		return errors.Errorf("validation failed for %s: %s", target, err)
 	}
-	return err
+	return nil
 }
 
 // FetchTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash in it
