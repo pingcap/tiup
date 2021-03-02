@@ -459,17 +459,6 @@ func (r *V1Repository) updateComponentManifest(id string, withYanked bool) (*v1m
 	return &component, nil
 }
 
-// FetchComponent downloads the component specified by item.
-func (r *V1Repository) FetchComponent(item *v1manifest.VersionItem) (io.Reader, error) {
-	reader, err := r.mirror.Fetch(item.URL, int64(item.Length))
-	if err != nil {
-		return nil, err
-	}
-	defer reader.Close()
-
-	return checkHash(reader, item.Hashes[v1manifest.SHA256])
-}
-
 // DownloadComponent downloads the component specified by item into local file,
 // the component will be removed if hash is not correct
 func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target string) error {
@@ -494,12 +483,12 @@ func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target st
 
 	_, err = checkHash(reader, item.Hashes[v1manifest.SHA256])
 	reader.Close()
-
-	// remove the target compoonent to avoid attacking
 	if err != nil {
+		// remove the target compoonent to avoid attacking
 		_ = os.Remove(target)
+		return errors.Errorf("validation failed for %s: %s", target, err)
 	}
-	return err
+	return nil
 }
 
 // FetchTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash in it
@@ -569,7 +558,7 @@ func (r *V1Repository) fetchManifestWithHash(url string, role v1manifest.ValidMa
 	return r.fetchBase(url, hash.Length, func(reader io.Reader) (*v1manifest.Manifest, error) {
 		bufReader, err := checkHash(reader, hash.Hashes[v1manifest.SHA256])
 		if err != nil {
-			return nil, err
+			return nil, errors.Errorf("validation failed for %s: %s", url, err)
 		}
 
 		return v1manifest.ReadManifest(bufReader, role, r.local.KeyStore())
