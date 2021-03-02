@@ -17,9 +17,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
-
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/utils"
 )

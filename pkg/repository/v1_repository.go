@@ -459,17 +459,6 @@ func (r *V1Repository) updateComponentManifest(id string, withYanked bool) (*v1m
 	return &component, nil
 }
 
-// FetchComponent downloads the component specified by item.
-func (r *V1Repository) FetchComponent(item *v1manifest.VersionItem) (io.Reader, error) {
-	reader, err := r.mirror.Fetch(item.URL, int64(item.Length))
-	if err != nil {
-		return nil, err
-	}
-	defer reader.Close()
-
-	return checkHash(reader, item.Hashes[v1manifest.SHA256])
-}
-
 // DownloadComponent downloads the component specified by item into local file,
 // the component will be removed if hash is not correct
 func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target string) error {
