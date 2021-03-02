@@ -301,7 +301,7 @@ func TestYanked(t *testing.T) {
 
 	_, err = repo.updateComponentManifest("bar", false)
 	assert.NotNil(t, err)
-	assert.Equal(t, errors.Cause(err), errUnknownComponent)
+	assert.Equal(t, errors.Cause(err), ErrUnknownComponent)
 }
 
 func TestUpdateComponent(t *testing.T) {

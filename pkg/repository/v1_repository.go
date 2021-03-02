@@ -40,8 +40,8 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// errUnknownComponent represents the specific component cannot be found in index.json
-var errUnknownComponent = stderrors.New("unknown component")
+// ErrUnknownComponent represents the specific component cannot be found in index.json
+var ErrUnknownComponent = stderrors.New("unknown component")
 
 // V1Repository represents a remote repository viewed with the v1 manifest design.
 type V1Repository struct {
@@ -110,7 +110,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 	for _, spec := range specs {
 		manifest, err := r.updateComponentManifest(spec.ID, false)
 		if err != nil {
-			if errors.Cause(err) == errUnknownComponent {
+			if errors.Cause(err) == ErrUnknownComponent {
 				fmt.Println(color.YellowString("The component `%s` not found (may be deleted from repository); skipped", spec.ID))
 			} else {
 				errs = append(errs, err.Error())
@@ -420,7 +420,7 @@ func (r *V1Repository) updateComponentManifest(id string, withYanked bool) (*v1m
 
 	item, ok := components[id]
 	if !ok {
-		return nil, errUnknownComponent
+		return nil, ErrUnknownComponent
 	}
 	var snapshot v1manifest.Snapshot
 	_, _, err = r.local.LoadManifest(&snapshot)
@@ -673,7 +673,7 @@ func (r *V1Repository) UpdateComponentManifests() error {
 
 	for name := range index.Components {
 		_, err = r.updateComponentManifest(name, false)
-		if err != nil && errors.Cause(err) != errUnknownComponent {
+		if err != nil && errors.Cause(err) != ErrUnknownComponent {
 			return err
 		}
 	}
