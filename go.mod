@@ -16,6 +16,7 @@ require (
 	github.com/creasty/defaults v1.5.1
 	github.com/fatih/color v1.10.0
 	github.com/gibson042/canonicaljson-go v1.0.3
+	github.com/gin-gonic/gin v1.5.0
 	github.com/gizak/termui/v3 v3.1.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gofrs/flock v0.8.0
@@ -43,8 +44,11 @@ require (
 	github.com/prometheus/prom2json v1.3.0
 	github.com/r3labs/diff v1.1.1-0.20201223155434-f54a0724e0a9
 	github.com/relex/aini v1.2.1
+	github.com/rs/cors v1.7.0
 	github.com/sergi/go-diff v1.1.0
 	github.com/shirou/gopsutil v3.21.1+incompatible
+	github.com/shurcooL/httpgzip v0.0.0-20190720172056-320755c1c1b0
+	github.com/shurcooL/vfsgen v0.0.0-20181202132449-6a9ea43bcacd
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5

@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/pingcap/tiup/components/cluster/web/uiserver"
 
-	"github.com/pingcap/tiup/pkg/cluster"
+	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -25,7 +25,7 @@ import (
 
 var (
 	tidbSpec    *spec.SpecManager
-	manager     *cluster.Manager
+	cm          *manager.Manager
 	gOpt        operator.Options
 	skipConfirm = true
 )
@@ -56,9 +56,9 @@ func MWHandleErrors() gin.HandlerFunc {
 }
 
 // Run starts web ui for cluster
-func Run(_tidbSpec *spec.SpecManager, _manager *cluster.Manager, _gOpt operator.Options) {
+func Run(_tidbSpec *spec.SpecManager, _manager *manager.Manager, _gOpt operator.Options) {
 	tidbSpec = _tidbSpec
-	manager = _manager
+	cm = _manager
 	gOpt = _gOpt
 
 	router := gin.Default()
@@ -108,7 +108,7 @@ type DeployReq struct {
 }
 
 func statusHandler(c *gin.Context) {
-	status := manager.GetOperationStatus()
+	status := cm.GetOperationStatus()
 	c.JSON(http.StatusOK, status)
 }
 
@@ -130,7 +130,7 @@ func deployHandler(c *gin.Context) {
 	topoFilePath := tmpfile.Name()
 	tmpfile.Close()
 
-	opt := cluster.DeployOptions{
+	opt := manager.DeployOptions{
 		User:     req.GlobalLoginOptions.Username,
 		NoLabels: true,
 	}
@@ -158,16 +158,14 @@ func deployHandler(c *gin.Context) {
 	logger.AddCustomAuditLog(fmt.Sprintf("[web] deploy %s %s", req.ClusterName, req.TiDBVersion))
 
 	go func() {
-		manager.DoDeploy(
+		cm.DoDeploy(
 			req.ClusterName,
 			req.TiDBVersion,
 			topoFilePath,
 			opt,
 			postDeployHook,
 			skipConfirm,
-			gOpt.OptTimeout,
-			gOpt.SSHTimeout,
-			gOpt.SSHType,
+			gOpt,
 		)
 	}()
 
@@ -175,7 +173,7 @@ func deployHandler(c *gin.Context) {
 }
 
 func clustersHandler(c *gin.Context) {
-	clusters, err := manager.GetClusterList()
+	clusters, err := cm.GetClusterList()
 	if err != nil {
 		_ = c.Error(err)
 		return
@@ -185,8 +183,7 @@ func clustersHandler(c *gin.Context) {
 
 func clusterHandler(c *gin.Context) {
 	clusterName := c.Param("clusterName")
-	ctx := task.NewContext()
-	instInfos, err := manager.GetClusterTopology(ctx, clusterName, gOpt)
+	instInfos, err := cm.GetClusterTopology(clusterName, gOpt)
 	if err != nil {
 		_ = c.Error(err)
 		return
@@ -201,7 +198,7 @@ func destroyClusterHandler(c *gin.Context) {
 	logger.AddCustomAuditLog(fmt.Sprintf("[web] destroy %s", clusterName))
 
 	go func() {
-		manager.DoDestroyCluster(clusterName, gOpt, operator.Options{}, skipConfirm)
+		cm.DoDestroyCluster(clusterName, gOpt, operator.Options{}, skipConfirm)
 	}()
 
 	c.Status(http.StatusNoContent)
@@ -214,7 +211,7 @@ func startClusterHandler(c *gin.Context) {
 	logger.AddCustomAuditLog(fmt.Sprintf("[web] start %s", clusterName))
 
 	go func() {
-		manager.DoStartCluster(clusterName, gOpt, func(b *task.Builder, metadata spec.Metadata) {
+		cm.DoStartCluster(clusterName, gOpt, func(b *task.Builder, metadata spec.Metadata) {
 			b.UpdateTopology(
 				clusterName,
 				tidbSpec.Path(clusterName),
@@ -234,7 +231,7 @@ func stopClusterHandler(c *gin.Context) {
 	logger.AddCustomAuditLog(fmt.Sprintf("[web] stop %s", clusterName))
 
 	go func() {
-		manager.DoStopCluster(clusterName, gOpt)
+		cm.DoStopCluster(clusterName, gOpt)
 	}()
 
 	c.Status(http.StatusNoContent)
@@ -272,35 +269,20 @@ func scaleInClusterHandler(c *gin.Context) {
 		scale := func(b *task.Builder, imetadata spec.Metadata, tlsCfg *tls.Config) {
 			metadata := imetadata.(*spec.ClusterMeta)
 
+			nodes := opt.Nodes
 			if !opt.Force {
-				b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, opt, tlsCfg).
-					UpdateMeta(clusterName, metadata, operator.AsyncNodes(metadata.Topology, opt.Nodes, false)).
-					UpdateTopology(
-						clusterName,
-						tidbSpec.Path(clusterName),
-						metadata,
-						operator.AsyncNodes(metadata.Topology, opt.Nodes, false), /* deleteNodeIds */
-					)
-			} else {
-				b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, opt, tlsCfg).
-					UpdateMeta(clusterName, metadata, opt.Nodes).
-					UpdateTopology(
-						clusterName,
-						tidbSpec.Path(clusterName),
-						metadata,
-						opt.Nodes,
-					)
+				nodes = operator.AsyncNodes(metadata.Topology, nodes, false)
 			}
+
+			b.ClusterOperate(metadata.Topology, operator.ScaleInOperation, opt, tlsCfg).
+				UpdateMeta(clusterName, metadata, nodes).
+				UpdateTopology(clusterName, tidbSpec.Path(clusterName), metadata, nodes)
 		}
 
-		manager.DoScaleIn(
+		cm.DoScaleIn(
 			clusterName,
 			skipConfirm,
-			opt.OptTimeout,
-			opt.SSHTimeout,
-			opt.SSHType,
-			opt.Force,
-			opt.Nodes,
+			opt,
 			scale,
 		)
 	}()
@@ -334,7 +316,7 @@ func scaleOutClusterHandler(c *gin.Context) {
 	topoFilePath := tmpfile.Name()
 	tmpfile.Close()
 
-	opt := cluster.ScaleOutOptions{
+	opt := manager.ScaleOutOptions{
 		User:     req.GlobalLoginOptions.Username,
 		NoLabels: true,
 	}
@@ -370,16 +352,14 @@ func scaleOutClusterHandler(c *gin.Context) {
 	logger.AddCustomAuditLog(fmt.Sprintf("[web] scale_out %s", clusterName))
 
 	go func() {
-		manager.DoScaleOut(
+		cm.DoScaleOut(
 			clusterName,
 			topoFilePath,
 			postScaleOutHook,
 			final,
 			opt,
 			skipConfirm,
-			gOpt.OptTimeout,
-			gOpt.SSHTimeout,
-			gOpt.SSHType,
+			gOpt,
 		)
 	}()
 
@@ -425,18 +405,12 @@ func setMirrorHandler(c *gin.Context) {
 //////////////////////////////////////
 // The following code are copied from command package to avoid cycle import
 
-// Deprecated
-func convertStepDisplaysToTasks(t []*task.StepDisplay) []task.Task {
-	tasks := make([]task.Task, 0, len(t))
-	for _, sd := range t {
-		tasks = append(tasks, sd)
-	}
-	return tasks
-}
-
 func postDeployHook(builder *task.Builder, topo spec.Topology) {
-	nodeInfoTask := task.NewBuilder().Func("Check status", func(ctx *task.Context) error {
-		_, _ = operator.GetNodeInfo(context.Background(), ctx, topo)
+	nodeInfoTask := task.NewBuilder().Func("Check status", func(ctx context.Context) error {
+		var err error
+		// teleNodeInfos, err = operator.GetNodeInfo(ctx, topo)
+		_, err = operator.GetNodeInfo(ctx, topo)
+		_ = err
 		// intend to never return error
 		return nil
 	}).BuildAsStep("Check status").SetHidden(true)
@@ -445,21 +419,13 @@ func postDeployHook(builder *task.Builder, topo spec.Topology) {
 		builder.ParallelStep("+ Check status", false, nodeInfoTask)
 	}
 
-	enableTask := task.NewBuilder().Func("Enable cluster", func(ctx *task.Context) error {
+	enableTask := task.NewBuilder().Func("Setting service auto start on boot", func(ctx context.Context) error {
 		return operator.Enable(ctx, topo, operator.Options{}, true)
-	}).BuildAsStep("Enable cluster").SetHidden(true)
+	}).BuildAsStep("Enable service").SetHidden(true)
 
-	builder.ParallelStep("+ Enable cluster", false, enableTask)
+	builder.Parallel(false, enableTask)
 }
 
 func postScaleOutHook(builder *task.Builder, newPart spec.Topology) {
-	nodeInfoTask := task.NewBuilder().Func("Check status", func(ctx *task.Context) error {
-		_, _ = operator.GetNodeInfo(context.Background(), ctx, newPart)
-		// intend to never return error
-		return nil
-	}).BuildAsStep("Check status").SetHidden(true)
-
-	if report.Enable() {
-		builder.Parallel(false, convertStepDisplaysToTasks([]*task.StepDisplay{nodeInfoTask})...)
-	}
+	postDeployHook(builder, newPart)
 }

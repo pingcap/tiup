@@ -51,9 +51,7 @@ func (m *Manager) DoScaleOut(
 	final func(b *task.Builder, name string, meta spec.Metadata),
 	opt ScaleOutOptions,
 	skipConfirm bool,
-	optTimeout uint64,
-	sshTimeout uint64,
-	sshType executor.SSHType,
+	gOpt operator.Options,
 ) {
 	operationInfo = OperationInfo{operationType: operationScaleOut, clusterName: clusterName}
 	operationInfo.err = m.ScaleOut(
@@ -63,9 +61,7 @@ func (m *Manager) DoScaleOut(
 		final,
 		opt,
 		skipConfirm,
-		optTimeout,
-		sshTimeout,
-		sshType,
+		gOpt,
 	)
 }
 

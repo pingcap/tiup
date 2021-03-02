@@ -67,9 +67,7 @@ func (m *Manager) DoDeploy(
 	opt DeployOptions,
 	afterDeploy func(b *task.Builder, newPart spec.Topology),
 	skipConfirm bool,
-	optTimeout uint64,
-	sshTimeout uint64,
-	sshType executor.SSHType,
+	gOpt operator.Options,
 ) {
 	operationInfo = OperationInfo{operationType: operationDeploy, clusterName: clusterName}
 	operationInfo.err = m.Deploy(
@@ -79,9 +77,7 @@ func (m *Manager) DoDeploy(
 		opt,
 		afterDeploy,
 		skipConfirm,
-		optTimeout,
-		sshTimeout,
-		sshType,
+		gOpt,
 	)
 }
 

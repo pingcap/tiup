@@ -109,7 +109,7 @@ func (s *Serial) Execute(ctx context.Context) error {
 }
 
 // stepStatus: Starting, Error, Done
-func (s *Serial) saveSteps(curTask Task, stepStatus string) {
+func (s *Serial) saveSteps(curTask fmt.Stringer, stepStatus string) {
 	curTaskSteps := strings.Split(curTask.String(), "\n")
 	s.CurTaskSteps = []string{}
 	for _, l := range curTaskSteps {

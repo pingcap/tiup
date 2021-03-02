@@ -24,7 +24,6 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -36,22 +35,14 @@ import (
 func (m *Manager) DoScaleIn(
 	clusterName string,
 	skipConfirm bool,
-	optTimeout uint64,
-	sshTimeout uint64,
-	sshType executor.SSHType,
-	force bool,
-	nodes []string,
+	gOpt operator.Options,
 	scale func(builer *task.Builder, metadata spec.Metadata, tlsCfg *tls.Config),
 ) {
 	operationInfo = OperationInfo{operationType: operationScaleIn, clusterName: clusterName}
 	operationInfo.err = m.ScaleIn(
 		clusterName,
 		skipConfirm,
-		optTimeout,
-		sshTimeout,
-		sshType,
-		force,
-		nodes,
+		gOpt,
 		scale,
 	)
 }
