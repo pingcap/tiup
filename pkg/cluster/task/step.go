@@ -28,6 +28,9 @@ type StepDisplay struct {
 	prefix      string
 	children    map[Task]struct{}
 	progressBar progress.Bar
+
+	startedTask int
+	progress    int // 0~100
 }
 
 func addChildren(m map[Task]struct{}, task Task) {
@@ -76,7 +79,12 @@ func (s *StepDisplay) resetAsMultiBarItem(b *progress.MultiBar) {
 // Execute implements the Task interface
 func (s *StepDisplay) Execute(ctx context.Context) error {
 	if s.hidden {
-		return s.inner.Execute(ctx)
+		s.progress = 10
+		err := s.inner.Execute(ctx)
+		if err == nil {
+			s.progress = 100
+		}
+		return err
 	}
 
 	if singleBar, ok := s.progressBar.(*progress.SingleBar); ok {
@@ -98,6 +106,7 @@ func (s *StepDisplay) Execute(ctx context.Context) error {
 			Mode:   progress.ModeDone,
 		})
 	}
+	s.progress = 100
 	if singleBar, ok := s.progressBar.(*progress.SingleBar); ok {
 		singleBar.StopRenderLoop()
 	}
@@ -118,6 +127,14 @@ func (s *StepDisplay) handleTaskBegin(task Task) {
 	if _, ok := s.children[task]; !ok {
 		return
 	}
+
+	oneTaskPercentHalf := (100 / len(s.children)) / 2
+	if oneTaskPercentHalf == 0 {
+		oneTaskPercentHalf = 1
+	}
+	s.progress = s.startedTask*100/len(s.children) + oneTaskPercentHalf
+	s.startedTask++
+
 	s.progressBar.UpdateDisplay(&progress.DisplayProps{
 		Prefix: s.prefix,
 		Suffix: strings.Split(task.String(), "\n")[0],

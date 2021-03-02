@@ -112,7 +112,7 @@ conflict checks with other clusters`,
 			var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
 			if gOpt.SSHType != executor.SSHTypeNone {
 				var err error
-				if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.identityFile, opt.usePassword); err != nil {
+				if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.identityFile, opt.usePassword, nil); err != nil {
 					return err
 				}
 			}

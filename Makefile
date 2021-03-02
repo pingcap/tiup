@@ -45,7 +45,11 @@ client:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-client ./components/client
 
 cluster:
+ifeq ($(UI),1)
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -tags ui_server -o bin/tiup-cluster ./components/cluster
+else
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster ./components/cluster
+endif
 
 dm:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-dm ./components/dm
@@ -64,6 +68,10 @@ ctl:
 
 server:
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-server ./server
+
+embed_cluster_ui:
+	cd cluster-ui && yarn && yarn build
+	tools/embed_assets/embed_cluster_ui_assets.sh
 
 check: fmt lint tidy check-static vet
 

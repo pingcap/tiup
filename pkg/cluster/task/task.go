@@ -47,6 +47,11 @@ type (
 		ignoreError       bool
 		hideDetailDisplay bool
 		inner             []Task
+
+		startedTasks int
+		Progress     int // 0~100
+		CurTaskSteps []string
+		Steps        []string
 	}
 
 	// Parallel will execute a bundle of task in parallelism way
@@ -81,14 +86,41 @@ func (s *Serial) Execute(ctx context.Context) error {
 				log.Infof("+ [ Serial ] - %s", t.String())
 			}
 		}
+
+		// save progress internal
+		oneTaskPercentHalf := (100 / len(s.inner)) / 2
+		if oneTaskPercentHalf == 0 {
+			oneTaskPercentHalf = 1
+		}
+		s.Progress = s.startedTasks*100/len(s.inner) + oneTaskPercentHalf
+		s.startedTasks++
+		s.saveSteps(t, "Starting")
+
 		ctxt.GetInner(ctx).Ev.PublishTaskBegin(t)
 		err := t.Execute(ctx)
 		ctxt.GetInner(ctx).Ev.PublishTaskFinish(t, err)
 		if err != nil && !s.ignoreError {
+			s.saveSteps(t, "Error")
 			return err
 		}
 	}
+	s.Progress = 100
 	return nil
+}
+
+// stepStatus: Starting, Error, Done
+func (s *Serial) saveSteps(curTask Task, stepStatus string) {
+	curTaskSteps := strings.Split(curTask.String(), "\n")
+	s.CurTaskSteps = []string{}
+	for _, l := range curTaskSteps {
+		if strings.TrimSpace(l) != "" {
+			s.CurTaskSteps = append(s.CurTaskSteps, fmt.Sprintf("- %s ... %s", l, stepStatus))
+		}
+	}
+	if stepStatus == "Done" {
+		s.Steps = append(s.Steps, s.CurTaskSteps...)
+		s.CurTaskSteps = []string{}
+	}
 }
 
 // Rollback implements the Task interface
@@ -110,6 +142,55 @@ func (s *Serial) String() string {
 		ss = append(ss, t.String())
 	}
 	return strings.Join(ss, "\n")
+}
+
+// ComputeProgress compute whole progress
+func (s *Serial) ComputeProgress() ([]string, int) {
+	stepsStatus := []string{}
+	allStepsCount := 0
+	finishedSteps := 0
+
+	handleStepDisplay := func(sd *StepDisplay) string {
+		allStepsCount++
+		if sd.progress == 100 {
+			finishedSteps++
+		}
+		if sd.progress > 0 {
+			return fmt.Sprintf("%s ... %d%%", sd.prefix, sd.progress)
+		}
+		return ""
+	}
+
+	for _, step := range s.inner {
+		if sd, ok := step.(*StepDisplay); ok {
+			s := handleStepDisplay(sd)
+			if s != "" {
+				stepsStatus = append(stepsStatus, s)
+			}
+		}
+		if psd, ok := step.(*ParallelStepDisplay); ok {
+			steps := []string{}
+			for _, t := range psd.inner.inner {
+				if sd, ok := t.(*StepDisplay); ok {
+					s := handleStepDisplay(sd)
+					if s != "" {
+						steps = append(steps, s)
+					}
+				}
+			}
+			if len(steps) > 0 {
+				stepsStatus = append(stepsStatus, psd.prefix)
+				stepsStatus = append(stepsStatus, steps...)
+			}
+		}
+	}
+
+	totalProgress := 0
+	if allStepsCount > 0 {
+		totalProgress = finishedSteps * 100 / allStepsCount
+	}
+
+	return stepsStatus, totalProgress
 }
 
 // Execute implements the Task interface
