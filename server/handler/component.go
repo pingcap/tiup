@@ -99,10 +99,15 @@ func (h *componentSigner) sign(r *http.Request, m *v1manifest.RawManifest) (sr *
 	switch err := h.mirror.Publish(manifest, info); err {
 	case model.ErrorConflict:
 		return nil, ErrorManifestConflict
+	case model.ErrorWrongSignature:
+		return nil, ErrorForbiden
+	case model.ErrorWrongChecksum, model.ErrorWrongFileName:
+		return nil, ErrorInvalidTarball
 	case nil:
 		return nil, nil
 	default:
 		h.sm.Delete(sid)
+		log.Errorf("Publish component: %s", err.Error())
 		return nil, ErrorInternalError
 	}
 }
