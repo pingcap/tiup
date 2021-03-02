@@ -37,7 +37,29 @@ var (
 	errNSRename              = errorx.NewNamespace("rename")
 	errorRenameNameNotExist  = errNSRename.NewType("name_not_exist", errutil.ErrTraitPreCheck)
 	errorRenameNameDuplicate = errNSRename.NewType("name_dup", errutil.ErrTraitPreCheck)
+
+	operationInfo OperationInfo = OperationInfo{}
 )
+
+// OperationType represents the operation type
+type OperationType string
+
+const (
+	operationDeploy   OperationType = "deploy"
+	operationStart    OperationType = "start"
+	operationStop     OperationType = "stop"
+	operationScaleIn  OperationType = "scaleIn"
+	operationScaleOut OperationType = "scaleOut"
+	operationDestroy  OperationType = "destroy"
+)
+
+// OperationInfo records latest operation task and related info
+type OperationInfo struct {
+	operationType OperationType
+	clusterName   string
+	curTask       *task.Serial
+	err           error
+}
 
 // Manager to deploy a cluster.
 type Manager struct {
@@ -133,4 +155,38 @@ func (m *Manager) sshTaskBuilder(name string, topo spec.Topology, user string, o
 			m.specManager.Path(name, "ssh", "id_rsa.pub"),
 		).
 		ClusterSSH(topo, user, opts.SSHTimeout, opts.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
+}
+
+// OperationStatus represents the current deployment status
+type OperationStatus struct {
+	OperationType OperationType `json:"operation_type"`
+	ClusterName   string        `json:"cluster_name"`
+	TotalProgress int           `json:"total_progress"`
+	Steps         []string      `json:"steps"`
+	ErrMsg        string        `json:"err_msg"`
+}
+
+// GetOperationStatus returns the current operations status, including progress, steps, err message
+func (m *Manager) GetOperationStatus() OperationStatus {
+	operationStatus := OperationStatus{
+		OperationType: operationInfo.operationType,
+		ClusterName:   operationInfo.clusterName,
+		Steps:         []string{},
+	}
+	if operationInfo.curTask != nil {
+		if operationInfo.operationType == operationDeploy {
+			steps, progress := operationInfo.curTask.ComputeProgress()
+			operationStatus.TotalProgress = progress
+			operationStatus.Steps = steps
+		} else {
+			operationStatus.TotalProgress = operationInfo.curTask.Progress
+			operationStatus.Steps = []string{}
+			operationStatus.Steps = append(operationStatus.Steps, operationInfo.curTask.Steps...)
+			operationStatus.Steps = append(operationStatus.Steps, operationInfo.curTask.CurTaskSteps...)
+		}
+	}
+	if operationInfo.err != nil {
+		operationStatus.ErrMsg = operationInfo.err.Error()
+	}
+	return operationStatus
 }

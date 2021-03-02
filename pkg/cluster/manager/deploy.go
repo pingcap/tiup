@@ -49,11 +49,40 @@ type DeployOptions struct {
 	UsePassword       bool   // use password instead of identity file for ssh connection
 	IgnoreConfigCheck bool   // ignore config check result
 	NoLabels          bool   // don't check labels for TiKV instance
+
+	Pass *string // password for login User or passphrase for IdentityFile
 }
 
 // DeployerInstance is a instance can deploy to a target deploy directory.
 type DeployerInstance interface {
 	Deploy(b *task.Builder, srcPath string, deployDir string, version string, name string, clusterVersion string)
+}
+
+// DoDeploy do things about deploy
+// TODO: change a method name
+func (m *Manager) DoDeploy(
+	clusterName string,
+	clusterVersion string,
+	topoFile string,
+	opt DeployOptions,
+	afterDeploy func(b *task.Builder, newPart spec.Topology),
+	skipConfirm bool,
+	optTimeout uint64,
+	sshTimeout uint64,
+	sshType executor.SSHType,
+) {
+	operationInfo = OperationInfo{operationType: operationDeploy, clusterName: clusterName}
+	operationInfo.err = m.Deploy(
+		clusterName,
+		clusterVersion,
+		topoFile,
+		opt,
+		afterDeploy,
+		skipConfirm,
+		optTimeout,
+		sshTimeout,
+		sshType,
+	)
 }
 
 // Deploy a cluster.
@@ -144,7 +173,7 @@ func (m *Manager) Deploy(
 	var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
-		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
+		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword, opt.Pass); err != nil {
 			return err
 		}
 	}
@@ -347,6 +376,7 @@ func (m *Manager) Deploy(
 	}
 
 	t := builder.Build()
+	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {

@@ -39,6 +39,34 @@ type ScaleOutOptions struct {
 	IdentityFile   string // path to the private key file
 	UsePassword    bool   // use password instead of identity file for ssh connection
 	NoLabels       bool   // don't check labels for TiKV instance
+
+	Pass *string // password for login User or passphrase for IdentityFile
+}
+
+// DoScaleOut scale out the cluster.
+func (m *Manager) DoScaleOut(
+	clusterName string,
+	topoFile string,
+	afterDeploy func(b *task.Builder, newPart spec.Topology),
+	final func(b *task.Builder, name string, meta spec.Metadata),
+	opt ScaleOutOptions,
+	skipConfirm bool,
+	optTimeout uint64,
+	sshTimeout uint64,
+	sshType executor.SSHType,
+) {
+	operationInfo = OperationInfo{operationType: operationScaleOut, clusterName: clusterName}
+	operationInfo.err = m.ScaleOut(
+		clusterName,
+		topoFile,
+		afterDeploy,
+		final,
+		opt,
+		skipConfirm,
+		optTimeout,
+		sshTimeout,
+		sshType,
+	)
 }
 
 // ScaleOut scale out the cluster.
@@ -130,7 +158,7 @@ func (m *Manager) ScaleOut(
 	var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
-		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
+		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword, opt.Pass); err != nil {
 			return err
 		}
 	}
@@ -142,6 +170,8 @@ func (m *Manager) ScaleOut(
 	if err != nil {
 		return err
 	}
+
+	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {

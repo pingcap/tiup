@@ -24,12 +24,37 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 )
+
+// DoScaleIn the cluster.
+func (m *Manager) DoScaleIn(
+	clusterName string,
+	skipConfirm bool,
+	optTimeout uint64,
+	sshTimeout uint64,
+	sshType executor.SSHType,
+	force bool,
+	nodes []string,
+	scale func(builer *task.Builder, metadata spec.Metadata, tlsCfg *tls.Config),
+) {
+	operationInfo = OperationInfo{operationType: operationScaleIn, clusterName: clusterName}
+	operationInfo.err = m.ScaleIn(
+		clusterName,
+		skipConfirm,
+		optTimeout,
+		sshTimeout,
+		sshType,
+		force,
+		nodes,
+		scale,
+	)
+}
 
 // ScaleIn the cluster.
 func (m *Manager) ScaleIn(
@@ -96,6 +121,7 @@ func (m *Manager) ScaleIn(
 		ParallelStep("+ Refresh instance configs", force, regenConfigTasks...).
 		Parallel(force, buildReloadPromTasks(metadata.GetTopology(), nodes...)...).
 		Build()
+	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {
