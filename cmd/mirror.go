@@ -465,8 +465,9 @@ func newMirrorPublishCmd() *cobra.Command {
 					goos, goarch, flagSet,
 				)
 				if err != nil {
-					// retry if the error is manifest too old
-					if err == repository.ErrManifestTooOld {
+					// retry if the error is manifest too old or validation failed
+					if err == repository.ErrManifestTooOld ||
+						strings.Contains(err.Error(), "INVALID TARBALL") {
 						fmt.Printf("server returned an error: %s, retry...\n", err)
 						if _, ferr := tarfile.Seek(0, 0); ferr != nil { // reset the reader
 							return ferr
