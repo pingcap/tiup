@@ -14,6 +14,7 @@
 package clusterutil
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/pingcap/tiup/pkg/environment"
@@ -76,7 +77,10 @@ func (r *repositoryT) VerifyComponent(comp, version, target string) error {
 	}
 	defer file.Close()
 
-	return utils.CheckSHA256(file, versionItem.Hashes["sha256"])
+	if err := utils.CheckSHA256(file, versionItem.Hashes["sha256"]); err != nil {
+		return fmt.Errorf("validation failed for %s: %s", target, err)
+	}
+	return nil
 }
 
 func (r *repositoryT) ComponentBinEntry(comp, version string) (string, error) {

@@ -569,7 +569,7 @@ func (r *V1Repository) fetchManifestWithHash(url string, role v1manifest.ValidMa
 	return r.fetchBase(url, hash.Length, func(reader io.Reader) (*v1manifest.Manifest, error) {
 		bufReader, err := checkHash(reader, hash.Hashes[v1manifest.SHA256])
 		if err != nil {
-			return nil, err
+			return nil, errors.Errorf("validation failed for %s: %s", url, err)
 		}
 
 		return v1manifest.ReadManifest(bufReader, role, r.local.KeyStore())
