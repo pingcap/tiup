@@ -31,22 +31,6 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 )
 
-// DoScaleIn the cluster.
-func (m *Manager) DoScaleIn(
-	clusterName string,
-	skipConfirm bool,
-	gOpt operator.Options,
-	scale func(builer *task.Builder, metadata spec.Metadata, tlsCfg *tls.Config),
-) {
-	operationInfo = OperationInfo{operationType: operationScaleIn, clusterName: clusterName}
-	operationInfo.err = m.ScaleIn(
-		clusterName,
-		skipConfirm,
-		gOpt,
-		scale,
-	)
-}
-
 // ScaleIn the cluster.
 func (m *Manager) ScaleIn(
 	name string,

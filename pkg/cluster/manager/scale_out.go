@@ -43,28 +43,6 @@ type ScaleOutOptions struct {
 	Pass *string // password for login User or passphrase for IdentityFile
 }
 
-// DoScaleOut scale out the cluster.
-func (m *Manager) DoScaleOut(
-	clusterName string,
-	topoFile string,
-	afterDeploy func(b *task.Builder, newPart spec.Topology),
-	final func(b *task.Builder, name string, meta spec.Metadata),
-	opt ScaleOutOptions,
-	skipConfirm bool,
-	gOpt operator.Options,
-) {
-	operationInfo = OperationInfo{operationType: operationScaleOut, clusterName: clusterName}
-	operationInfo.err = m.ScaleOut(
-		clusterName,
-		topoFile,
-		afterDeploy,
-		final,
-		opt,
-		skipConfirm,
-		gOpt,
-	)
-}
-
 // ScaleOut scale out the cluster.
 func (m *Manager) ScaleOut(
 	name string,

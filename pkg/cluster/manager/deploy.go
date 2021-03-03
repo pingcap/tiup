@@ -58,29 +58,6 @@ type DeployerInstance interface {
 	Deploy(b *task.Builder, srcPath string, deployDir string, version string, name string, clusterVersion string)
 }
 
-// DoDeploy do things about deploy
-// TODO: change a method name
-func (m *Manager) DoDeploy(
-	clusterName string,
-	clusterVersion string,
-	topoFile string,
-	opt DeployOptions,
-	afterDeploy func(b *task.Builder, newPart spec.Topology),
-	skipConfirm bool,
-	gOpt operator.Options,
-) {
-	operationInfo = OperationInfo{operationType: operationDeploy, clusterName: clusterName}
-	operationInfo.err = m.Deploy(
-		clusterName,
-		clusterVersion,
-		topoFile,
-		opt,
-		afterDeploy,
-		skipConfirm,
-		gOpt,
-	)
-}
-
 // Deploy a cluster.
 func (m *Manager) Deploy(
 	name string,

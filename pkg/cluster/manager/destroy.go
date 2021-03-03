@@ -30,17 +30,6 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 )
 
-// DoDestroyCluster destroy the cluster.
-func (m *Manager) DoDestroyCluster(clusterName string, gOpt operator.Options, destroyOpt operator.Options, skipConfirm bool) {
-	operationInfo = OperationInfo{operationType: operationDestroy, clusterName: clusterName}
-	operationInfo.err = m.DestroyCluster(
-		clusterName,
-		gOpt,
-		destroyOpt,
-		skipConfirm,
-	)
-}
-
 // DestroyCluster destroy the cluster.
 func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt operator.Options, skipConfirm bool) error {
 	metadata, err := m.meta(name)

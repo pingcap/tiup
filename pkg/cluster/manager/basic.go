@@ -74,12 +74,6 @@ func (m *Manager) EnableCluster(name string, options operator.Options, isEnable 
 	return nil
 }
 
-// DoStartCluster start the cluster with specified name.
-func (m *Manager) DoStartCluster(name string, options operator.Options, fn ...func(b *task.Builder, metadata spec.Metadata)) {
-	operationInfo = OperationInfo{operationType: operationStart, clusterName: name}
-	operationInfo.err = m.StartCluster(name, options, fn...)
-}
-
 // StartCluster start the cluster with specified name.
 func (m *Manager) StartCluster(name string, options operator.Options, fn ...func(b *task.Builder, metadata spec.Metadata)) error {
 	log.Infof("Starting cluster %s...", name)
@@ -119,12 +113,6 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 
 	log.Infof("Started cluster `%s` successfully", name)
 	return nil
-}
-
-// DoStopCluster stop the cluster.
-func (m *Manager) DoStopCluster(clusterName string, options operator.Options) {
-	operationInfo = OperationInfo{operationType: operationStop, clusterName: clusterName}
-	operationInfo.err = m.StopCluster(clusterName, options)
 }
 
 // StopCluster stop the cluster.
