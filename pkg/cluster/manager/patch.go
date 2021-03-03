@@ -125,10 +125,10 @@ func checkPackage(bindVersion spec.BindVersion, specManager *spec.SpecManager, n
 	}
 	cacheDir := specManager.Path(name, "cache", comp+"-"+checksum[:7])
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		return err
+		return errors.Annotatef(err, "create cache directory %s", cacheDir)
 	}
 	if err := exec.Command("tar", "-xvf", packagePath, "-C", cacheDir).Run(); err != nil {
-		return err
+		return errors.Annotatef(err, "decompress %s", packagePath)
 	}
 
 	fi, err := os.Stat(path.Join(cacheDir, entry))
