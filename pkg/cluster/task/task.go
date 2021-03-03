@@ -103,6 +103,7 @@ func (s *Serial) Execute(ctx context.Context) error {
 			s.saveSteps(t, "Error")
 			return err
 		}
+		s.saveSteps(t, "Done")
 	}
 	s.Progress = 100
 	return nil
