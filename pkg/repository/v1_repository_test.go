@@ -301,7 +301,7 @@ func TestYanked(t *testing.T) {
 
 	_, err = repo.updateComponentManifest("bar", false)
 	assert.NotNil(t, err)
-	assert.Equal(t, errors.Cause(err), errUnknownComponent)
+	assert.Equal(t, errors.Cause(err), ErrUnknownComponent)
 }
 
 func TestUpdateComponent(t *testing.T) {
@@ -345,43 +345,6 @@ func TestUpdateComponent(t *testing.T) {
 
 	// TODO check that the correct files were created
 	// TODO test that invalid signature of component manifest causes an error
-}
-
-func TestDownloadManifest(t *testing.T) {
-	mirror := MockMirror{
-		Resources: map[string]string{},
-	}
-	someString := "foo201"
-	mirror.Resources["/foo-2.0.1.tar.gz"] = someString
-	local := v1manifest.NewMockManifests()
-	setNewRoot(t, local)
-	repo := NewV1Repo(&mirror, Options{}, local)
-	item := versionItem()
-
-	// Happy path file is as expected
-	reader, err := repo.FetchComponent(&item)
-	assert.Nil(t, err)
-	buf := new(strings.Builder)
-	_, err = io.Copy(buf, reader)
-	assert.Nil(t, err)
-	assert.Equal(t, someString, buf.String())
-
-	// Sad paths
-
-	// bad hash
-	item.Hashes[v1manifest.SHA256] = "Not a hash"
-	_, err = repo.FetchComponent(&item)
-	assert.NotNil(t, err)
-
-	//  Too long
-	item.Length = 26
-	_, err = repo.FetchComponent(&item)
-	assert.NotNil(t, err)
-
-	// missing tar ball/bad url
-	item.URL = "/bar-2.0.1.tar.gz"
-	_, err = repo.FetchComponent(&item)
-	assert.NotNil(t, err)
 }
 
 func TestEnsureManifests(t *testing.T) {

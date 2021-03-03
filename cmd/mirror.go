@@ -465,8 +465,9 @@ func newMirrorPublishCmd() *cobra.Command {
 					goos, goarch, flagSet,
 				)
 				if err != nil {
-					// retry if the error is manifest too old
-					if err == repository.ErrManifestTooOld {
+					// retry if the error is manifest too old or validation failed
+					if err == repository.ErrManifestTooOld ||
+						strings.Contains(err.Error(), "INVALID TARBALL") {
 						fmt.Printf("server returned an error: %s, retry...\n", err)
 						if _, ferr := tarfile.Seek(0, 0); ferr != nil { // reset the reader
 							return ferr
@@ -508,10 +509,13 @@ func doPublish(
 	env := environment.GlobalEnv()
 	m, err := env.V1Repository().FetchComponentManifest(component, true)
 	if err != nil {
-		fmt.Printf("Update local manifest: %s\n", err.Error())
-		fmt.Printf("Failed to load component manifest, create a new one\n")
-		publishInfo.Stand = &standalone
-		publishInfo.Hide = &hidden
+		if errors.Cause(err) == repository.ErrUnknownComponent {
+			fmt.Printf("Creating component %s\n", component)
+			publishInfo.Stand = &standalone
+			publishInfo.Hide = &hidden
+		} else {
+			return err
+		}
 	} else if flagSet.Exist("standalone") || flagSet.Exist("hide") {
 		fmt.Println("This is not a new component, --standalone and --hide flag will be omitted")
 	}

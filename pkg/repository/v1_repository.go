@@ -40,8 +40,8 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// errUnknownComponent represents the specific component cannot be found in index.json
-var errUnknownComponent = stderrors.New("unknown component")
+// ErrUnknownComponent represents the specific component cannot be found in index.json
+var ErrUnknownComponent = stderrors.New("unknown component")
 
 // V1Repository represents a remote repository viewed with the v1 manifest design.
 type V1Repository struct {
@@ -110,7 +110,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 	for _, spec := range specs {
 		manifest, err := r.updateComponentManifest(spec.ID, false)
 		if err != nil {
-			if errors.Cause(err) == errUnknownComponent {
+			if errors.Cause(err) == ErrUnknownComponent {
 				fmt.Println(color.YellowString("The component `%s` not found (may be deleted from repository); skipped", spec.ID))
 			} else {
 				errs = append(errs, err.Error())
@@ -420,7 +420,7 @@ func (r *V1Repository) updateComponentManifest(id string, withYanked bool) (*v1m
 
 	item, ok := components[id]
 	if !ok {
-		return nil, errUnknownComponent
+		return nil, ErrUnknownComponent
 	}
 	var snapshot v1manifest.Snapshot
 	_, _, err = r.local.LoadManifest(&snapshot)
@@ -459,17 +459,6 @@ func (r *V1Repository) updateComponentManifest(id string, withYanked bool) (*v1m
 	return &component, nil
 }
 
-// FetchComponent downloads the component specified by item.
-func (r *V1Repository) FetchComponent(item *v1manifest.VersionItem) (io.Reader, error) {
-	reader, err := r.mirror.Fetch(item.URL, int64(item.Length))
-	if err != nil {
-		return nil, err
-	}
-	defer reader.Close()
-
-	return checkHash(reader, item.Hashes[v1manifest.SHA256])
-}
-
 // DownloadComponent downloads the component specified by item into local file,
 // the component will be removed if hash is not correct
 func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target string) error {
@@ -494,12 +483,12 @@ func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target st
 
 	_, err = checkHash(reader, item.Hashes[v1manifest.SHA256])
 	reader.Close()
-
-	// remove the target compoonent to avoid attacking
 	if err != nil {
+		// remove the target compoonent to avoid attacking
 		_ = os.Remove(target)
+		return errors.Errorf("validation failed for %s: %s", target, err)
 	}
-	return err
+	return nil
 }
 
 // FetchTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash in it
@@ -569,7 +558,7 @@ func (r *V1Repository) fetchManifestWithHash(url string, role v1manifest.ValidMa
 	return r.fetchBase(url, hash.Length, func(reader io.Reader) (*v1manifest.Manifest, error) {
 		bufReader, err := checkHash(reader, hash.Hashes[v1manifest.SHA256])
 		if err != nil {
-			return nil, err
+			return nil, errors.Errorf("validation failed for %s: %s", url, err)
 		}
 
 		return v1manifest.ReadManifest(bufReader, role, r.local.KeyStore())
@@ -684,7 +673,7 @@ func (r *V1Repository) UpdateComponentManifests() error {
 
 	for name := range index.Components {
 		_, err = r.updateComponentManifest(name, false)
-		if err != nil && errors.Cause(err) != errUnknownComponent {
+		if err != nil && errors.Cause(err) != ErrUnknownComponent {
 			return err
 		}
 	}

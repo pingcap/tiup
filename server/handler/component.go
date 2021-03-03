@@ -101,10 +101,14 @@ func (h *componentSigner) sign(r *http.Request, m *v1manifest.RawManifest) (sr *
 		return nil, ErrorManifestConflict
 	case model.ErrorWrongSignature:
 		return nil, ErrorForbiden
+	case model.ErrorWrongChecksum, model.ErrorWrongFileName:
+		log.Errorf("Publish component: %s", err.Error())
+		return nil, ErrorInvalidTarball
 	case nil:
 		return nil, nil
 	default:
 		h.sm.Delete(sid)
+		log.Errorf("Publish component: %s", err.Error())
 		return nil, ErrorInternalError
 	}
 }
