@@ -65,3 +65,7 @@ export function setMirrorAddress(newAddress: string) {
     mirror_address: newAddress,
   })
 }
+
+export function getTiDBVersions() {
+  return request(fullUrl(`tidb_versions`))
+}

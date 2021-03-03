@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pingcap/tiup/cmd"
 	"github.com/pingcap/tiup/components/cluster/web/uiserver"
 
 	"github.com/pingcap/tiup/pkg/cluster/manager"
@@ -80,6 +81,8 @@ func Run(_tidbSpec *spec.SpecManager, _manager *manager.Manager, _gOpt operator.
 
 		api.GET("/mirror", mirrorHandler)
 		api.POST("/mirror", setMirrorHandler)
+
+		api.GET("/tidb_versions", tidbVersionsHandler)
 	}
 	// Frontend assets
 	router.StaticFS("/tiup", uiserver.Assets)
@@ -400,6 +403,29 @@ func setMirrorHandler(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+func tidbVersionsHandler(c *gin.Context) {
+	env := environment.GlobalEnv()
+	var opt cmd.ListOptions
+	result, err := cmd.ShowComponentVersions(env, "tidb", opt)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	versions := []string{}
+	for _, lines := range result.CmpTable {
+		for _, col := range lines {
+			if strings.HasPrefix(col, "v") {
+				versions = append(versions, col)
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"versions": versions,
+	})
 }
 
 //////////////////////////////////////

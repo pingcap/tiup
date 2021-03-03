@@ -28,14 +28,15 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-type listOptions struct {
+// ListOptions represents the command options for `tiup list` command
+type ListOptions struct {
 	installedOnly bool
 	verbose       bool
 	showAll       bool
 }
 
 func newListCmd() *cobra.Command {
-	var opt listOptions
+	var opt ListOptions
 	cmd := &cobra.Command{
 		Use:   "list [component]",
 		Short: "List the available TiDB components or versions",
@@ -59,7 +60,7 @@ components or versions which have not been installed.
 				result.print()
 				return err
 			case 1:
-				result, err := showComponentVersions(env, args[0], opt)
+				result, err := ShowComponentVersions(env, args[0], opt)
 				result.print()
 				return err
 			default:
@@ -75,20 +76,21 @@ components or versions which have not been installed.
 	return cmd
 }
 
-type listResult struct {
+// ListResult represents the result of `tiup list` command
+type ListResult struct {
 	header   string
-	cmpTable [][]string
+	CmpTable [][]string
 }
 
-func (lr *listResult) print() {
+func (lr *ListResult) print() {
 	if lr == nil {
 		return
 	}
 	fmt.Printf(lr.header)
-	tui.PrintTable(lr.cmpTable, true)
+	tui.PrintTable(lr.CmpTable, true)
 }
 
-func showComponentList(env *environment.Environment, opt listOptions) (*listResult, error) {
+func showComponentList(env *environment.Environment, opt ListOptions) (*ListResult, error) {
 	err := env.V1Repository().UpdateComponentManifests()
 	if err != nil {
 		return nil, err
@@ -172,13 +174,16 @@ func showComponentList(env *environment.Environment, opt listOptions) (*listResu
 		}
 	}
 
-	return &listResult{
+	return &ListResult{
 		header:   "Available components:\n",
-		cmpTable: cmpTable,
+		CmpTable: cmpTable,
 	}, nil
 }
 
-func showComponentVersions(env *environment.Environment, component string, opt listOptions) (*listResult, error) {
+// should move to pkg folder
+
+// ShowComponentVersions shows all versions of a certain component
+func ShowComponentVersions(env *environment.Environment, component string, opt ListOptions) (*ListResult, error) {
 	var comp *v1manifest.Component
 	var err error
 	comp, err = env.V1Repository().FetchComponentManifest(component, false)
@@ -228,8 +233,8 @@ func showComponentVersions(env *environment.Environment, component string, opt l
 		cmpTable = append(cmpTable, []string{v, installStatus, released[v], strings.Join(platforms[v], ",")})
 	}
 
-	return &listResult{
+	return &ListResult{
 		header:   fmt.Sprintf("Available versions for %s:\n", component),
-		cmpTable: cmpTable,
+		CmpTable: cmpTable,
 	}, nil
 }

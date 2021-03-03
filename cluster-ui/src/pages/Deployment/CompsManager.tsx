@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useLocalStorageState } from 'ahooks'
 import { Drawer, Button, Modal, Form, Input, AutoComplete } from 'antd'
 import yaml from 'yaml'
@@ -12,16 +12,20 @@ import {
   useMachines,
   useGlobalDir,
 } from '_hooks'
-import { deployCluster, scaleOutCluster } from '_apis'
+import { deployCluster, getTiDBVersions, scaleOutCluster } from '_apis'
 
 import DeploymentTable from './DeploymentTable'
 import EditCompForm from './EditCompForm'
 import TopoPreview, { genTopo } from './TopoPreview'
 import GlobalDirForm from './GlobalDirForm'
 
-// TODO: fetch from API
 const TIDB_VERSIONS = [
   'nightly',
+  'v4.0.11',
+  'v4.0.10',
+  'v4.0.9',
+  'v4.0.8',
+  'v4.0.7',
   'v4.0.6',
   'v4.0.5',
   'v4.0.4',
@@ -29,11 +33,7 @@ const TIDB_VERSIONS = [
   'v4.0.2',
   'v4.0.1',
   'v4.0.0',
-  'v3.1.2',
-  'v3.1.1',
-  'v3.1.0',
-]
-const AUTO_COMPLETE_OPTIONS = TIDB_VERSIONS.map((v) => ({ value: v }))
+].map((v) => ({ value: v }))
 
 export interface IDeployReq {
   cluster_name: string
@@ -66,6 +66,17 @@ export default function CompsManager({
     {}
   )
   const { globalDir, setGlobalDirObj } = useGlobalDir()
+
+  const [tidbVersions, setTiDBVersions] = useState(TIDB_VERSIONS)
+  useEffect(() => {
+    getTiDBVersions().then(({ data, err }) => {
+      if (data !== undefined) {
+        const versions = data.versions as string[]
+        versions.reverse()
+        setTiDBVersions(['nightly'].concat(versions).map((v) => ({ value: v })))
+      }
+    })
+  }, [])
 
   const navigate = useNavigate()
 
@@ -215,10 +226,7 @@ export default function CompsManager({
             name="tidb_version"
             rules={[{ required: true, message: '请选择 TiDB 版本' }]}
           >
-            <AutoComplete
-              style={{ width: 100 }}
-              options={AUTO_COMPLETE_OPTIONS}
-            />
+            <AutoComplete style={{ width: 200 }} options={tidbVersions} />
           </Form.Item>
           <Form.Item>
             <Button type="primary" onClick={() => setPreviewYaml(true)}>
