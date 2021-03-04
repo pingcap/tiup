@@ -1,14 +1,18 @@
 # # Global variables are applied to all deployments and used as the default value of
 # # the deployments if a specific deployment value is missing.
-
 global:
+  # # The user who runs the tidb cluster.
   user: "tidb"
   # # group is used to specify the group name the user belong to.
   # group: "tidb"
+  # # ssh port of TiUP management cluster.
   ssh_port: 22
+  # # Storage directory for cluster deployment files, startup scripts, and configuration files.
   deploy_dir: "/tidb-deploy"
+  # # TiDB Cluster data storage directory
   data_dir: "/tidb-data"
-  arch: "amd64" # Supported values: "amd64", "arm64" (default: "amd64")
+  # # Supported values: "amd64", "arm64" (default: "amd64")
+  arch: "amd64"
   # # Resource Control is used to limit the resource of an instance.
   # # See: https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html
   # # Supports using instance-level `resource_control` to override global `resource_control`.
@@ -25,601 +29,415 @@ global:
 
 # # Monitored variables are applied to all the machines.
 monitored:
+  # # The communication port for reporting system information of each node in the TiDB cluster.
   node_exporter_port: 9100
+  # # Blackbox_exporter communication port, used for TiDB cluster port monitoring.
   blackbox_exporter_port: 9115
+  # # Storage directory for deployment files, startup scripts, and configuration files of monitoring components.
   # deploy_dir: "/tidb-deploy/monitored-9100"
+  # # Data storage directory of monitoring components.
   # data_dir: "/tidb-data/monitored-9100"
+  # # Log storage directory of the monitoring component.
   # log_dir: "/tidb-deploy/monitored-9100/log"
 
 # # Server configs are used to specify the runtime configuration of TiDB components.
 # # All configuration items can be found in TiDB docs:
-# #
 # # - TiDB: https://pingcap.com/docs/stable/reference/configuration/tidb-server/configuration-file/
 # # - TiKV: https://pingcap.com/docs/stable/reference/configuration/tikv-server/configuration-file/
 # # - PD: https://pingcap.com/docs/stable/reference/configuration/pd-server/configuration-file/
+# # - TiFlash: https://docs.pingcap.com/tidb/stable/tiflash-configuration
 # #
 # # All configuration items use points to represent the hierarchy, e.g:
 # #   readpool.storage.use-unified-pool
 # #           ^       ^
+# # - example: https://github.com/pingcap/tiup/blob/master/examples/topology.example.yaml.
 # # You can overwrite this configuration via the instance-level `config` field.
+# server_configs:
+  # tidb:
+  # tikv:
+  # pd:
+  # tiflash:
+  # tiflash-learner:
 
-server_configs:
-  tidb:
-  # run-ddl: true
-  # lease: "45s"
-  # split-table: true
-  # token-limit: 1000
-  # mem-quota-query: 1073741824
-  # nested-loop-join-cache-capacity: 20971520
-  # oom-use-tmp-storage: true
-  # tmp-storage-path: "/tmp/<os/user.Current().Uid>_tidb/MC4wLjAuMDo0MDAwLzAuMC4wLjA6MTAwODA=/tmp-storage"
-  # tmp-storage-quota: -1
-  # oom-action: "cancel"
-  # enable-streaming: false
-  # enable-batch-dml: false
-  # lower-case-table-names: 2
-  # compatible-kill-query: false
-  # check-mb4-value-in-utf8: true
-  # treat-old-version-utf8-as-utf8mb4: true
-  # max-index-length: 3072
-  # enable-table-lock: false
-  # delay-clean-table-lock: 0
-  # split-region-max-num: 1000
-  # alter-primary-key: false
-  # server-version: ""
-  # repair-mode: false
-  # repair-table-list: []
-  # max-server-connections: 0
-  # new_collations_enabled_on_first_bootstrap: false
-  # skip-register-to-dashboard: false
-  # enable-telemetry: true
-  # deprecate-integer-display-length: false
-  # log.level: "info"
-  # log.format: "text"
-  # log.enable-slow-log: true
-  # log.slow-query-file: "tidb-slow.log"
-  # log.slow-threshold: 300
-  # log.record-plan-in-slow-log: 1
-  # log.expensive-threshold: 10000
-  # log.query-log-max-len: 4096
-  # log.file.filename: ""
-  # log.file.max-size: 300
-  # log.file.max-days: 0
-  # log.file.max-backups: 0
-  # security.ssl-ca: ""
-  # security.ssl-cert: ""
-  # security.ssl-key: ""
-  # security.cluster-ssl-ca: ""
-  # security.cluster-ssl-cert: ""
-  # security.cluster-ssl-key: ""
-  # security.spilled-file-encryption-method: "plaintext"
-  # status.report-status: true
-  # status.metrics-addr: ""
-  # status.metrics-interval: 15
-  # status.record-db-qps: false
-  # performance.max-procs: 0
-  # performance.server-memory-quota: 0
-  # performance.stmt-count-limit: 5000
-  # performance.tcp-keep-alive: true
-  # performance.cross-join: true
-  # performance.stats-lease: "3s"
-  # performance.run-auto-analyze: true
-  # performance.feedback-probability: 0.05
-  # performance.query-feedback-limit: 512
-  # performance.pseudo-estimate-ratio: 0.8
-  # performance.force-priority: "NO_PRIORITY"
-  # performance.bind-info-lease: "3s"
-  # performance.distinct-agg-push-down: false
-  # performance.txn-total-size-limit: 104857600
-  # performance.txn-entry-size-limit: 6291456
-  # performance.committer-concurrency: 16
-  # performance.max-txn-ttl: 3600000
-  # performance.mem-profile-interval: "1m"
-  # proxy-protocol.networks: ""
-  # proxy-protocol.header-timeout: 5
-  # prepared-plan-cache.enabled: false
-  # prepared-plan-cache.capacity: 100
-  # prepared-plan-cache.memory-guard-ratio: 0.1
-  # opentracing.enable: false
-  # opentracing.rpc-metrics: false
-  # opentracing.sampler.type: "const"
-  # opentracing.sampler.param: 1.0
-  # opentracing.sampler.sampling-server-url: ""
-  # opentracing.sampler.max-operations: 0
-  # opentracing.sampler.sampling-refresh-interval: 0
-  # opentracing.reporter.queue-size: 0
-  # opentracing.reporter.buffer-flush-interval: 0
-  # opentracing.reporter.log-spans: false
-  # opentracing.reporter.local-agent-host-port: ""
-  # tikv-client.grpc-connection-count: 4
-  # tikv-client.grpc-keepalive-time: 10
-  # tikv-client.grpc-keepalive-timeout: 3
-  # tikv-client.commit-timeout: "41s"
-  # tikv-client.max-batch-size: 128
-  # tikv-client.overload-threshold: 200
-  # tikv-client.max-batch-wait-time: 0
-  # tikv-client.batch-wait-size: 8
-  # tikv-client.enable-chunk-rpc: true
-  # tikv-client.region-cache-ttl: 600
-  # tikv-client.store-limit: 0
-  # tikv-client.store-liveness-timeout: "5s"
-  # tikv-client.ttl-refreshed-txn-size: 33554432
-  # tikv-client.async-commit.enable: false
-  # tikv-client.async-commit.keys-limit: 256
-  # tikv-client.async-commit.total-key-size-limit: 4096
-  # tikv-client.copr-cache.enable: true
-  # tikv-client.copr-cache.capacity-mb: 1000.0
-  # tikv-client.copr-cache.admission-max-result-mb: 10.0
-  # tikv-client.copr-cache.admission-min-process-ms: 5
-  # binlog.enable: false
-  # binlog.write-timeout: "15s"
-  # binlog.ignore-error: false
-  # binlog.binlog-socket: ""
-  # binlog.strategy: "range"
-  # pessimistic-txn.max-retry-count: 256
-  # stmt-summary.enable: true
-  # stmt-summary.enable-internal-query: false
-  # stmt-summary.max-stmt-count: 200
-  # stmt-summary.max-sql-length: 4096
-  # stmt-summary.refresh-interval: 1800
-  # stmt-summary.history-size: 24
-  tikv:
-    # log-level: "info"
-    # readpool.unified.min-thread-count: 1
-    # readpool.unified.max-thread-count: 8
-    # readpool.unified.stack-size: "10MB"
-    # readpool.unified.max-tasks-per-worker: 2000
-    # readpool.storage.use-unified-pool: false
-    # readpool.storage.high-concurrency: 4
-    # readpool.storage.normal-concurrency: 4
-    # readpool.storage.low-concurrency: 4
-    # readpool.storage.max-tasks-per-worker-high: 2000
-    # readpool.storage.max-tasks-per-worker-normal: 2000
-    # readpool.storage.max-tasks-per-worker-low: 2000
-    # readpool.storage.stack-size: "10MB"
-    # readpool.coprocessor.use-unified-pool: true
-    # readpool.coprocessor.high-concurrency: 8
-    # readpool.coprocessor.normal-concurrency: 8
-    # readpool.coprocessor.low-concurrency: 8
-    # readpool.coprocessor.max-tasks-per-worker-high: 2000
-    # readpool.coprocessor.max-tasks-per-worker-normal: 2000
-    # readpool.coprocessor.max-tasks-per-worker-low: 2000
-    # server.status-thread-pool-size: 1
-    # server.grpc-compression-type: "none"
-    # server.grpc-concurrency: 4
-    # server.grpc-concurrent-stream: 1024
-    # server.grpc-memory-pool-quota: "32G"
-    # server.grpc-raft-conn-num: 1
-    # server.grpc-stream-initial-window-size: "2MB"
-    # server.grpc-keepalive-time: "10s"
-    # server.grpc-keepalive-timeout: "3s"
-    # server.concurrent-send-snap-limit: 32
-    # server.concurrent-recv-snap-limit: 32
-    # server.end-point-recursion-limit: 1000
-    # server.end-point-request-max-handle-duration: "60s"
-    # server.snap-max-write-bytes-per-sec: "100MB"
-    # server.enable-request-batch: true
-    # #server.request-batch-enable-cross-command: true
-    # #server.request-batch-wait-duration: "1ms"
-    # storage.scheduler-concurrency: 2048000
-    # storage.scheduler-worker-pool-size: 4
-    # storage.scheduler-pending-write-threshold: "100MB"
-    # storage.block-cache.shared: true
-    # storage.block-cache.capacity: "1GB"
-    # raftstore.prevote: true
-    # #raftstore.raftdb-path: ""
-    # raftstore.capacity: 0
-    # raftstore.notify-capacity: 40960
-    # raftstore.messages-per-tick: 4096
-    # raftstore.pd-heartbeat-tick-interval: "60s"
-    # raftstore.pd-store-heartbeat-tick-interval: "10s"
-    # raftstore.region-split-check-diff: "6MB"
-    # raftstore.split-region-check-tick-interval: "10s"
-    # raftstore.raft-entry-max-size: "8MB"
-    # raftstore.raft-log-gc-tick-interval: "10s"
-    # raftstore.raft-log-gc-threshold: 50
-    # raftstore.raft-log-gc-count-limit: 72000
-    # raftstore.raft-log-gc-size-limit: "72MB"
-    # raftstore.raft-engine-purge-interval: "10s"
-    # raftstore.max-peer-down-duration: "5m"
-    # raftstore.region-compact-check-interval: "5m"
-    # raftstore.region-compact-check-step: 100
-    # raftstore.region-compact-min-tombstones: 10000
-    # raftstore.region-compact-tombstones-percent: 30
-    # raftstore.lock-cf-compact-interval: "10m"
-    # raftstore.lock-cf-compact-bytes-threshold: "256MB"
-    # raftstore.consistency-check-interval: "0s"
-    # raftstore.cleanup-import-sst-interval: "10m"
-    # raftstore.apply-pool-size: 2
-    # raftstore.store-pool-size: 2
-    # coprocessor.split-region-on-table: false
-    # coprocessor.batch-split-limit: 10
-    # coprocessor.region-max-size: "144MB"
-    # coprocessor.region-split-size: "96MB"
-    # coprocessor.region-max-keys: 1440000
-    # coprocessor.region-split-keys: 960000
-    # coprocessor.consistency-check-method: "mvcc"
-    # rocksdb.max-background-jobs: 8
-    # rocksdb.max-sub-compactions: 3
-    # rocksdb.max-open-files: 40960
-    # rocksdb.max-manifest-file-size: "128MB"
-    # rocksdb.create-if-missing: true
-    # rocksdb.wal-recovery-mode: 2
-    # rocksdb.wal-dir: "/tmp/tikv/store"
-    # rocksdb.wal-ttl-seconds: 0
-    # rocksdb.wal-size-limit: 0
-    # rocksdb.max-total-wal-size: "4GB"
-    # rocksdb.enable-statistics: true
-    # rocksdb.stats-dump-period: "10m"
-    # rocksdb.compaction-readahead-size: 0
-    # rocksdb.writable-file-max-buffer-size: "1MB"
-    # rocksdb.use-direct-io-for-flush-and-compaction: false
-    # rocksdb.rate-bytes-per-sec: 0
-    # rocksdb.rate-limiter-refill-period: "100ms"
-    # rocksdb.rate-limiter-mode: 2
-    # rocksdb.auto-tuned: false
-    # rocksdb.enable-pipelined-write: true
-    # rocksdb.bytes-per-sync: "1MB"
-    # rocksdb.wal-bytes-per-sync: "512KB"
-    # rocksdb.info-log-max-size: "1GB"
-    # rocksdb.info-log-roll-time: "0s"
-    # rocksdb.info-log-keep-log-file-num: 10
-    # rocksdb.info-log-dir: ""
-    # rocksdb.info-log-level: "info"
-    # rocksdb.titan.enabled: false
-    # rocksdb.titan.max-background-gc: 4
-    # rocksdb.defaultcf.compression-per-level: ["no", "no", "lz4", "lz4", "lz4", "zstd", "zstd"]
-    # rocksdb.defaultcf.block-size: "64KB"
-    # rocksdb.defaultcf.bloom-filter-bits-per-key: 10
-    # rocksdb.defaultcf.block-based-bloom-filter: false
-    # rocksdb.defaultcf.level0-file-num-compaction-trigger: 4
-    # rocksdb.defaultcf.level0-slowdown-writes-trigger: 20
-    # rocksdb.defaultcf.level0-stop-writes-trigger: 36
-    # rocksdb.defaultcf.write-buffer-size: "128MB"
-    # rocksdb.defaultcf.max-write-buffer-number: 5
-    # rocksdb.defaultcf.min-write-buffer-number-to-merge: 1
-    # rocksdb.defaultcf.max-bytes-for-level-base: "512MB"
-    # rocksdb.defaultcf.target-file-size-base: "8MB"
-    # rocksdb.defaultcf.max-compaction-bytes: "2GB"
-    # rocksdb.defaultcf.compaction-pri: 3
-    # rocksdb.defaultcf.cache-index-and-filter-blocks: true
-    # rocksdb.defaultcf.pin-l0-filter-and-index-blocks: true
-    # rocksdb.defaultcf.read-amp-bytes-per-bit: 0
-    # rocksdb.defaultcf.dynamic-level-bytes: true
-    # rocksdb.defaultcf.optimize-filters-for-hits: true
-    # rocksdb.defaultcf.titan.min-blob-size: "1KB"
-    # rocksdb.defaultcf.titan.blob-file-compression: "lz4"
-    # rocksdb.defaultcf.titan.blob-cache-size: "0GB"
-    # rocksdb.defaultcf.titan.discardable-ratio: 0.5
-    # rocksdb.defaultcf.titan.blob-run-mode: "normal"
-    # rocksdb.defaultcf.titan.level_merge: false
-    # rocksdb.defaultcf.titan.gc-merge-rewrite: false
-    # rocksdb.writecf.block-size: "64KB"
-    # rocksdb.writecf.write-buffer-size: "128MB"
-    # rocksdb.writecf.max-write-buffer-number: 5
-    # rocksdb.writecf.min-write-buffer-number-to-merge: 1
-    # rocksdb.writecf.max-bytes-for-level-base: "512MB"
-    # rocksdb.writecf.target-file-size-base: "8MB"
-    # rocksdb.writecf.level0-file-num-compaction-trigger: 4
-    # rocksdb.writecf.level0-slowdown-writes-trigger: 20
-    # rocksdb.writecf.level0-stop-writes-trigger: 36
-    # rocksdb.writecf.cache-index-and-filter-blocks: true
-    # rocksdb.writecf.pin-l0-filter-and-index-blocks: true
-    # rocksdb.writecf.compaction-pri: 3
-    # rocksdb.writecf.read-amp-bytes-per-bit: 0
-    # rocksdb.writecf.dynamic-level-bytes: true
-    # rocksdb.writecf.optimize-filters-for-hits: false
-    # rocksdb.lockcf.compression-per-level: ["no", "no", "no", "no", "no", "no", "no"]
-    # rocksdb.lockcf.block-size: "16KB"
-    # rocksdb.lockcf.write-buffer-size: "32MB"
-    # rocksdb.lockcf.max-write-buffer-number: 5
-    # rocksdb.lockcf.min-write-buffer-number-to-merge: 1
-    # rocksdb.lockcf.max-bytes-for-level-base: "128MB"
-    # rocksdb.lockcf.target-file-size-base: "8MB"
-    # rocksdb.lockcf.level0-file-num-compaction-trigger: 1
-    # rocksdb.lockcf.level0-slowdown-writes-trigger: 20
-    # rocksdb.lockcf.level0-stop-writes-trigger: 36
-    # rocksdb.lockcf.cache-index-and-filter-blocks: true
-    # rocksdb.lockcf.pin-l0-filter-and-index-blocks: true
-    # rocksdb.lockcf.compaction-pri: 0
-    # rocksdb.lockcf.read-amp-bytes-per-bit: 0
-    # rocksdb.lockcf.dynamic-level-bytes: true
-    # rocksdb.lockcf.optimize-filters-for-hits: false
-    # raftdb.max-background-jobs: 4
-    # raftdb.max-sub-compactions: 2
-    # raftdb.max-open-files: 40960
-    # raftdb.max-manifest-file-size: "20MB"
-    # raftdb.create-if-missing: true
-    # raftdb.enable-statistics: true
-    # raftdb.stats-dump-period: "10m"
-    # raftdb.compaction-readahead-size: 0
-    # raftdb.writable-file-max-buffer-size: "1MB"
-    # raftdb.use-direct-io-for-flush-and-compaction: false
-    # raftdb.enable-pipelined-write: true
-    # raftdb.allow-concurrent-memtable-write: false
-    # raftdb.bytes-per-sync: "1MB"
-    # raftdb.wal-bytes-per-sync: "512KB"
-    # raftdb.info-log-max-size: "1GB"
-    # raftdb.info-log-roll-time: "0s"
-    # raftdb.info-log-keep-log-file-num: 10
-    # raftdb.info-log-dir: ""
-    # raftdb.info-log-level: "info"
-    # raftdb.optimize-filters-for-hits: true
-    # raftdb.defaultcf.compression-per-level: ["no", "no", "lz4", "lz4", "lz4", "zstd", "zstd"]
-    # raftdb.defaultcf.block-size: "64KB"
-    # raftdb.defaultcf.write-buffer-size: "128MB"
-    # raftdb.defaultcf.max-write-buffer-number: 5
-    # raftdb.defaultcf.min-write-buffer-number-to-merge: 1
-    # raftdb.defaultcf.max-bytes-for-level-base: "512MB"
-    # raftdb.defaultcf.target-file-size-base: "8MB"
-    # raftdb.defaultcf.level0-file-num-compaction-trigger: 4
-    # raftdb.defaultcf.level0-slowdown-writes-trigger: 20
-    # raftdb.defaultcf.level0-stop-writes-trigger: 36
-    # raftdb.defaultcf.cache-index-and-filter-blocks: true
-    # raftdb.defaultcf.pin-l0-filter-and-index-blocks: true
-    # raftdb.defaultcf.compaction-pri: 0
-    # raftdb.defaultcf.read-amp-bytes-per-bit: 0
-    # raftdb.defaultcf.dynamic-level-bytes: true
-    # raftdb.defaultcf.optimize-filters-for-hits: true
-    # raft-engine.enable: false
-    # raft-engine.recovery_mode: "tolerate-corrupted-tail-records"
-    # raft-engine.bytes-per-sync: "256KB"
-    # raft-engine.target-file-size: "128MB"
-    # raft-engine.purge-threshold: "10GB"
-    # raft-engine.cache-limit: "1GB"
-    # security.ca-path: ""
-    # security.cert-path: ""
-    # security.key-path: ""
-    # security.cert-allowed-cn: []
-    # security.redact-info-log: false
-    # import.num-threads: 8
-    # import.stream-channel-window: 128
-    # backup.num-threads: 24
-    # pessimistic-txn.enabled: true
-    # pessimistic-txn.wait-for-lock-timeout: "1s"
-    # pessimistic-txn.wake-up-delay-duration: "20ms"
-    # pessimistic-txn.pipelined: true
-    # gc.batch-keys: 512
-    # gc.max-write-bytes-per-sec: "0"
-    # gc.enable-compaction-filter: false
-    # gc.ratio-threshold: 1.1
-  pd:
-    # lease: 3
-    # tso-save-interval: "3s"
-    # enable-prevote: true
-    # security.cacert-path: ""
-    # security.cert-path: ""
-    # security.key-path: ""
-    # security.cert-allowed-cn: ["example.com"]
-    # log.level: "info"
-    # log.format: "text"
-    # log.disable-timestamp: false
-    # log.file.filename: ""
-    # log.file.max-size: 300
-    # log.file.max-days: 28
-    # log.file.max-backups: 7
-    # schedule.max-merge-region-size: 20
-    # schedule.max-merge-region-keys: 200000
-    # schedule.split-merge-interval: "1h"
-    # schedule.max-snapshot-count: 3
-    # schedule.max-pending-peer-count: 16
-    # schedule.max-store-down-time: "30m"
-    # schedule.leader-schedule-limit: 4
-    # schedule.region-schedule-limit: 2048
-    # schedule.replica-schedule-limit: 64
-    # schedule.merge-schedule-limit: 8
-    # schedule.hot-region-schedule-limit: 4
-    # schedule.enable-one-way-merge: false
-    # schedule.enable-cross-table-merge: false
-    # replication.max-replicas: 3
-    # replication.location-labels: ["dc","zone","rack","host"]
-    # label-property:
-    #    reject-leader:
-    #      - key: "dc"
-    #        value: "sha"
-  tiflash:
-    logger.level: "info"
-    ## Deprecated multi-disks storage path setting style since v4.0.9,
-    ## check storage.* configurations in host level for new style.
-    # path_realtime_mode: false
-  tiflash-learner:
-    log-level: "info"
-    # raftstore.apply-pool-size: 4
-    # raftstore.store-pool-size: 4
-  pump:
-    gc: 7
-
+# # Server configs are used to specify the configuration of PD Servers.
 pd_servers:
+  # # The ip address of the PD Server.
   - host: 10.0.1.11
+    # # ssh port of TiUP management cluster.
     # ssh_port: 22
+    # # PD Server name
     # name: "pd-1"
+    # # communication port between TiDB Server and PD Server.
     # client_port: 2379
+    # # Communication port between PD Server cluster nodes.
     # peer_port: 2380
+    # # PD Server deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/pd-2379"
+    # # PD Server data storage directory.
     # data_dir: "/tidb-data/pd-2379"
+    # # PD Server log file storage directory.
     # log_dir: "/tidb-deploy/pd-2379/log"
+    # # numa node bindings.
     # numa_node: "0,1"
     # # The following configs are used to overwrite the `server_configs.pd` values.
     # config:
     #   schedule.max-merge-region-size: 20
     #   schedule.max-merge-region-keys: 200000
+  # # The ip address of the PD Server
   - host: 10.0.1.12
-  - host: 10.0.1.13
-
-tidb_servers:
-  - host: 10.0.1.11
+    # # ssh port of TiUP management cluster.
     # ssh_port: 22
-    # port: 4000
-    # status_port: 10080
-    # deploy_dir: "/tidb-deploy/tidb-4000"
-    # log_dir: "/tidb-deploy/tidb-4000/log"
+    # # PD Server name
+    # name: "pd-1"
+    # # communication port between TiDB Server and PD Server.
+    # client_port: 2379
+    # # Communication port between PD Server cluster nodes.
+    # peer_port: 2380
+    # # PD Server deployment file, startup script, configuration file storage directory.
+    # deploy_dir: "/tidb-deploy/pd-2379"
+    # # PD Server data storage directory.
+    # data_dir: "/tidb-data/pd-2379"
+    # # PD Server log file storage directory.
+    # log_dir: "/tidb-deploy/pd-2379/log"
+    # # numa node bindings.
     # numa_node: "0,1"
-    # # The following configs are used to overwrite the `server_configs.tidb` values.
+    # # The following configs are used to overwrite the `server_configs.pd` values.
+    # config:
+    #   schedule.max-merge-region-size: 20
+    #   schedule.max-merge-region-keys: 200000
+  # # The ip address of the PD Server
+  - host: 10.0.1.13
+    # # ssh port of TiUP management cluster.
+    # ssh_port: 22
+    # # PD Server name
+    # name: "pd-1"
+    # # communication port between TiDB Server and PD Server.
+    # client_port: 2379
+    # # Communication port between PD Server cluster nodes.
+    # peer_port: 2380
+    # # PD Server deployment file, startup script, configuration file storage directory.
+    # deploy_dir: "/tidb-deploy/pd-2379"
+    # # PD Server data storage directory.
+    # data_dir: "/tidb-data/pd-2379"
+    # # PD Server log file storage directory.
+    # log_dir: "/tidb-deploy/pd-2379/log"
+    # # numa node bindings.
+    # numa_node: "0,1"
+    # # The following configs are used to overwrite the `server_configs.pd` values.
+    # config:
+    #   schedule.max-merge-region-size: 20
+    #   schedule.max-merge-region-keys: 200000
+
+# # Server configs are used to specify the configuration of TiDB Servers.
+tidb_servers:
+  # # The ip address of the TiDB Server.
+  - host: 10.0.1.14
+    # # ssh port of TiUP management cluster.
+    # ssh_port: 22
+    # # Access the TiDB cluster port.
+    port: 4000
+    # # TiDB Server status information reporting port.
+    status_port: 10080
+    # # TiDB Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: "/tidb-deploy/tidb-4000"
+    # # TiDB Server log file storage directory.
+    log_dir: "/tidb-deploy/tidb-4000/log"
+    numa_node: "0" # suggest numa node bindings.
+  # # The ip address of the TiDB Server.
+  - host: 10.0.1.14
+    # # ssh port of TiUP management cluster.
+    # ssh_port: 22
+    # # Access the TiDB cluster port.
+    port: 4001
+    # # TiDB Server status information reporting port.
+    status_port: 10081
+    # # TiDB Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: "/tidb-deploy/tidb-4001"
+    # # TiDB Server log file storage directory.
+    log_dir: "/tidb-deploy/tidb-4001/log"
+    numa_node: "1" # suggest numa node bindings.   
+  # # The ip address of the TiDB Server.
+  - host: 10.0.1.15
+    # # ssh port of TiUP management cluster.
+    # ssh_port: 22
+    # # Access the TiDB cluster port.
+    port: 4000
+    # # TiDB Server status information reporting port.
+    status_port: 10080
+    # # TiDB Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: "/tidb-deploy/tidb-4000"
+    # # TiDB Server log file storage directory.
+    log_dir: "/tidb-deploy/tidb-4000/log"
+    numa_node: "0" # suggest numa node bindings.
+  # # The ip address of the TiDB Server.
+  - host: 10.0.1.15
+    # # ssh port of TiUP management cluster.
+    # ssh_port: 22
+    # # Access the TiDB cluster port.
+    port: 4001
+    # # TiDB Server status information reporting port.
+    status_port: 10081
+    # # TiDB Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: "/tidb-deploy/tidb-4001"
+    # # TiDB Server log file storage directory.
+    log_dir: "/tidb-deploy/tidb-4001/log"
+    numa_node: "1" # suggest numa node bindings.  
+
+# # Server configs are used to specify the configuration of TiKV Servers.
+tikv_servers:
+  # # The ip address of the TiKV Server.
+  - host: 10.0.1.16
+    # # ssh port of TiUP management cluster.
+    # ssh_port: 22
+    # # TiKV Server communication port.
+    port: 20160
+    # # Communication port for reporting TiKV Server status.
+    status_port: 20180
+    # # TiKV Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: "/data1/tidb-deploy/tikv-20160"
+    # # TiKV Server data storage directory.
+    data_dir: "/data1/tidb-data/tikv-20160"
+    # # TiKV Server log file storage directory.
+    log_dir: "/data1/tidb-deploy/tikv-20160/log"
+    numa_node: "0" # suggest numa node bindings.
+    # # The following configs are used to overwrite the `server_configs.tikv` values.
     # config:
     #   log.level: warn
-    #   log.slow-query-file: tidb-slow-overwrited.log
-  - host: 10.0.1.12
-
-tikv_servers:
-  - host: 10.0.1.14
-    # ssh_port: 22
-    # port: 20160
-    # status_port: 20180
-    # deploy_dir: "/tidb-deploy/tikv-20160"
-    # data_dir: "/tidb-data/tikv-20160"
-    # log_dir: "/tidb-deploy/tikv-20160/log"
-    # numa_node: "0,1"
-    # # The following configs are used to overwrite the `server_configs.tikv` values.
-    config:
-      server.labels: { zone: "zone1", host: "host1" }
-    #   server.grpc-concurrency: 4
-  - host: 10.0.1.15
-    config:
-      server.labels: { zone: "zone1", host: "host2" }
+  # # The ip address of the TiKV Server.
   - host: 10.0.1.16
-    config:
-      server.labels: { zone: "zone2", host: "host3" }
-
-tiflash_servers:
-  - host: 10.0.1.14
+    # # ssh port of TiUP management cluster.
     # ssh_port: 22
-    # tcp_port: 9000
-    # http_port: 8123
-    # flash_service_port: 3930
-    # flash_proxy_port: 20170
-    # flash_proxy_status_port: 20292
-    # metrics_port: 8234
-    # deploy_dir: /tidb-deploy/tiflash-9000
+    # # TiKV Server communication port.
+    port: 20161
+    # # Communication port for reporting TiKV Server status.
+    status_port: 20181
+    # # TiKV Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: "/data2/tidb-deploy/tikv-20161"
+    # # TiKV Server data storage directory.
+    data_dir: "/data2/tidb-data/tikv-20161"
+    # # TiKV Server log file storage directory.
+    log_dir: "/data2/tidb-deploy/tikv-20161/log"
+    numa_node: "1" # suggest numa node bindings.
+    # # The following configs are used to overwrite the `server_configs.tikv` values.
+    # config:
+    #   log.level: warn
+  # # The ip address of the TiKV Server.
+  - host: 10.0.1.17
+    # # ssh port of TiUP management cluster.
+    # ssh_port: 22
+    # # TiKV Server communication port.
+    port: 20160
+    # # Communication port for reporting TiKV Server status.
+    status_port: 20180
+    # # TiKV Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: "/data1/tidb-deploy/tikv-20160"
+    # # TiKV Server data storage directory.
+    data_dir: "/data1/tidb-data/tikv-20160"
+    # # TiKV Server log file storage directory.
+    log_dir: "/data1/tidb-deploy/tikv-20160/log"
+    numa_node: "0" # suggest numa node bindings.
+    # # The following configs are used to overwrite the `server_configs.tikv` values.
+    # config:
+    #   log.level: warn
+  # # The ip address of the TiKV Server.
+  - host: 10.0.1.17
+    # # ssh port of TiUP management cluster.
+    # ssh_port: 22
+    # # TiKV Server communication port.
+    port: 20161
+    # # Communication port for reporting TiKV Server status.
+    status_port: 20181
+    # # TiKV Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: "/data2/tidb-deploy/tikv-20161"
+    # # TiKV Server data storage directory.
+    data_dir: "/data2/tidb-data/tikv-20161"
+    # # TiKV Server log file storage directory.
+    log_dir: "/data2/tidb-deploy/tikv-20161/log"
+    numa_node: "1" # suggest numa node bindings.
+    # # The following configs are used to overwrite the `server_configs.tikv` values.
+    # config:
+    #   log.level: warn
+  # # The ip address of the TiKV Server.
+  - host: 10.0.1.18
+    # # ssh port of TiUP management cluster.
+    # ssh_port: 22
+    # # TiKV Server communication port.
+    port: 20160
+    # # Communication port for reporting TiKV Server status.
+    status_port: 20180
+    # # TiKV Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: "/data1/tidb-deploy/tikv-20160"
+    # # TiKV Server data storage directory.
+    data_dir: "/data1/tidb-data/tikv-20160"
+    # # TiKV Server log file storage directory.
+    log_dir: "/data1/tidb-deploy/tikv-20160/log"
+    numa_node: "0" # suggest numa node bindings.
+    # # The following configs are used to overwrite the `server_configs.tikv` values.
+    # config:
+    #   log.level: warn
+  # # The ip address of the TiKV Server.
+  - host: 10.0.1.18
+    # # ssh port of TiUP management cluster.
+    # ssh_port: 22
+    # # TiKV Server communication port.
+    port: 20161
+    # # Communication port for reporting TiKV Server status.
+    status_port: 20181
+    # # TiKV Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: "/data2/tidb-deploy/tikv-20161"
+    # # TiKV Server data storage directory.
+    data_dir: "/data2/tidb-data/tikv-20161"
+    # # TiKV Server log file storage directory.
+    log_dir: "/data2/tidb-deploy/tikv-20161/log"
+    numa_node: "1" # suggest numa node bindings.
+    # # The following configs are used to overwrite the `server_configs.tikv` values.
+    # config:
+    #   log.level: warn
+
+# # Server configs are used to specify the configuration of TiFlash Servers.
+tiflash_servers:
+  # # The ip address of the TiFlash Server.
+  - host: 10.0.1.19
+    # # ssh port of TiUP management cluster.
+    # ssh_port: 22
+    # # TiFlash TCP Service port.
+    tcp_port: 9000
+    # # TiFlash HTTP Service port.
+    http_port: 8123
+    # # TiFlash raft service and coprocessor service listening address.
+    flash_service_port: 3930
+    # # TiFlash Proxy service port.
+    flash_proxy_port: 20170
+    # # Prometheus pulls TiFlash Proxy metrics port.
+    flash_proxy_status_port: 20292
+    # # Prometheus pulls the TiFlash metrics port.
+    metrics_port: 8234
+    # # TiFlash Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: /data1/tidb-deploy/tiflash-9000
     ## With cluster version >= v4.0.9 and you want to deploy a multi-disk TiFlash node, it is recommended to
     ## check config.storage.* for details. The data_dir will be ignored if you defined those configurations.
     ## Setting data_dir to a ','-joined string is still supported but deprecated.
     ## Check https://docs.pingcap.com/tidb/stable/tiflash-configuration#multi-disk-deployment for more details.
-    # data_dir: /tidb-data/tiflash-9000
-    # log_dir: /tidb-deploy/tiflash-9000/log
-    # numa_node: "0,1"
-    # # The following configs are used to overwrite the `server_configs.tiflash` values.
-    # config:
-    #   logger.level: "info"
-    #   ## Deprecated multi-disks storage path setting. Deprecated since v4.0.9,
-    #   ## check following storage.* configurations for new style.
-    #   # path_realtime_mode: false
-    #   #
-    #   ## Multi-disks storage paths settings. These will overwrite the `data_dir`.
-    #   ## If there are multiple SSD disks on the machine,
-    #   ## specify the path list on `storage.main.dir` can improve TiFlash performance.
-    #   # storage.main.dir: [ "/nvme_ssd0_512/tiflash", "/nvme_ssd1_512/tiflash" ]
-    #   ## Store capacity of each path, i.e. max data size allowed.
-    #   ## If it is not set, or is set to 0s, the actual disk capacity is used.
-    #   # storage.main.capacity = [ 536870912000, 536870912000 ]
-    #   #
-    #   ## If there are multiple disks with different IO metrics (e.g. one SSD and some HDDs)
-    #   ## on the machine,
-    #   ## set `storage.latest.dir` to store the latest data on SSD (disks with higher IOPS metrics)
-    #   ## set `storage.main.dir` to store the main data on HDD (disks with lower IOPS metrics)
-    #   ## can improve TiFlash performance.
-    #   # storage.main.dir: [ "/hdd0_512/tiflash", "/hdd1_512/tiflash", "/hdd2_512/tiflash" ]
-    #   # storage.latest.dir: [ "/nvme_ssd0_100/tiflash" ]
-    #   ## Store capacity of each path, i.e. max data size allowed.
-    #   ## If it is not set, or is set to 0s, the actual disk capacity is used.
-    #   # storage.main.capacity = [ 536870912000, 536870912000 ]
-    #   # storage.latest.capacity = [ 107374182400 ]
-    #
-    # # The following configs are used to overwrite the `server_configs.tiflash-learner` values.
-    # learner_config:
-    #   log-level: "info"
-    #   raftstore.apply-pool-size: 4
-    #   raftstore.store-pool-size: 4
-  - host: 10.0.1.15
-  - host: 10.0.1.16
+    # # TiFlash Server data storage directory.
+    data_dir: /data1/tidb-data/tiflash-9000
+    # # TiFlash Server log file storage directory.
+    log_dir: /data1/tidb-deploy/tiflash-9000/log
+  # # The ip address of the TiFlash Server.
+  - host: 10.0.1.19
+    # # ssh port of TiUP management cluster.
+    # ssh_port: 22
+    # # TiFlash TCP Service port.
+    tcp_port: 9001
+    # # TiFlash HTTP Service port.
+    http_port: 8124
+    # # TiFlash raft service and coprocessor service listening address.
+    flash_service_port: 3931
+    # # TiFlash Proxy service port.
+    flash_proxy_port: 20171
+    # # Prometheus pulls TiFlash Proxy metrics port.
+    flash_proxy_status_port: 20293
+    # # Prometheus pulls the TiFlash metrics port.
+    metrics_port: 8235
+    # # TiFlash Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: /data2/tidb-deploy/tiflash-9001
+    ## With cluster version >= v4.0.9 and you want to deploy a multi-disk TiFlash node, it is recommended to
+    ## check config.storage.* for details. The data_dir will be ignored if you defined those configurations.
+    ## Setting data_dir to a ','-joined string is still supported but deprecated.
+    ## Check https://docs.pingcap.com/tidb/stable/tiflash-configuration#multi-disk-deployment for more details.
+    # # TiFlash Server data storage directory.
+    data_dir: /data2/tidb-data/tiflash-9001
+    # # TiFlash Server log file storage directory.
+    log_dir: /data2/tidb-deploy/tiflash-9001/log
+  # # The ip address of the TiFlash Server.
+  - host: 10.0.1.20
+    # # ssh port of TiUP management cluster.
+    # ssh_port: 22
+    # # TiFlash TCP Service port.
+    tcp_port: 9000
+    # # TiFlash HTTP Service port.
+    http_port: 8123
+    # # TiFlash raft service and coprocessor service listening address.
+    flash_service_port: 3930
+    # # TiFlash Proxy service port.
+    flash_proxy_port: 20170
+    # # Prometheus pulls TiFlash Proxy metrics port.
+    flash_proxy_status_port: 20292
+    # # Prometheus pulls the TiFlash metrics port.
+    metrics_port: 8234
+    # # TiFlash Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: /data1/tidb-deploy/tiflash-9000
+    ## With cluster version >= v4.0.9 and you want to deploy a multi-disk TiFlash node, it is recommended to
+    ## check config.storage.* for details. The data_dir will be ignored if you defined those configurations.
+    ## Setting data_dir to a ','-joined string is still supported but deprecated.
+    ## Check https://docs.pingcap.com/tidb/stable/tiflash-configuration#multi-disk-deployment for more details.
+    # # TiFlash Server data storage directory.
+    data_dir: /data1/tidb-data/tiflash-9000
+    # # TiFlash Server log file storage directory.
+    log_dir: /data1/tidb-deploy/tiflash-9000/log
+  # # The ip address of the TiFlash Server.
+  - host: 10.0.1.20
+    # # ssh port of TiUP management cluster.
+    # ssh_port: 22
+    # # TiFlash TCP Service port.
+    tcp_port: 9001
+    # # TiFlash HTTP Service port.
+    http_port: 8124
+    # # TiFlash raft service and coprocessor service listening address.
+    flash_service_port: 3931
+    # # TiFlash Proxy service port.
+    flash_proxy_port: 20171
+    # # Prometheus pulls TiFlash Proxy metrics port.
+    flash_proxy_status_port: 20293
+    # # Prometheus pulls the TiFlash metrics port.
+    metrics_port: 8235
+    # # TiFlash Server deployment file, startup script, configuration file storage directory.
+    deploy_dir: /data2/tidb-deploy/tiflash-9001
+    ## With cluster version >= v4.0.9 and you want to deploy a multi-disk TiFlash node, it is recommended to
+    ## check config.storage.* for details. The data_dir will be ignored if you defined those configurations.
+    ## Setting data_dir to a ','-joined string is still supported but deprecated.
+    ## Check https://docs.pingcap.com/tidb/stable/tiflash-configuration#multi-disk-deployment for more details.
+    # # TiFlash Server data storage directory.
+    data_dir: /data2/tidb-data/tiflash-9001
+    # # TiFlash Server log file storage directory.
+    log_dir: /data2/tidb-deploy/tiflash-9001/log
 
-# pump_servers:
-#   - host: 10.0.1.17
-#     ssh_port: 22
-#     port: 8250
-#     deploy_dir: "/tidb-deploy/pump-8250"
-#     data_dir: "/tidb-data/pump-8250"
-#     log_dir: "/tidb-deploy/pump-8250/log"
-#     numa_node: "0,1"
-#     # The following configs are used to overwrite the `server_configs.drainer` values.
-#     config:
-#       gc: 7
-#   - host: 10.0.1.18
-#   - host: 10.0.1.19
-
-# drainer_servers:
-#   - host: 10.0.1.17
-#     port: 8249
-#     data_dir: "/tidb-data/drainer-8249"
-#     # If drainer doesn't have a checkpoint, use initial commitTS as the initial checkpoint.
-#     # Will get a latest timestamp from pd if commit_ts is set to -1 (the default value).
-#     commit_ts: -1
-#     deploy_dir: "/tidb-deploy/drainer-8249"
-#     log_dir: "/tidb-deploy/drainer-8249/log"
-#     numa_node: "0,1"
-#     # The following configs are used to overwrite the `server_configs.drainer` values.
-#     config:
-#       syncer.db-type: "mysql"
-#       syncer.to.host: "127.0.0.1"
-#       syncer.to.user: "root"
-#       syncer.to.password: ""
-#       syncer.to.port: 3306
-#       syncer.ignore-table:
-#         - db-name: test
-#           tbl-name: log
-#         - db-name: test
-#           tbl-name: audit
-#   - host: 10.0.1.19
-
-# cdc_servers:
-#   - host: 10.0.1.20
-#     ssh_port: 22
-#     port: 8300
-#     deploy_dir: "/tidb-deploy/cdc-8300"
-#     log_dir: "/tidb-deploy/cdc-8300/log"
-#     numa_node: "0,1"
-#   - host: 10.0.1.21
-#   - host: 10.0.1.22
-
-# NOTE: Only 1 master node is supported for now
-tispark_masters:
-  - host: 10.0.1.21
-    #spark_config:
-    #  spark.driver.memory: "2g"
-    #  spark.eventLog.enabled: "False"
-    #  spark.tispark.grpc.framesize: 2147483647
-    #  spark.tispark.grpc.timeout_in_sec: 100
-    #  spark.tispark.meta.reload_period_in_sec: 60
-    #  spark.tispark.request.command.priority: "Low"
-    #  spark.tispark.table.scan_concurrency: 256
-    #spark_env:
-    #  SPARK_EXECUTOR_CORES: 5
-    #  SPARK_EXECUTOR_MEMORY: "10g"
-    #  SPARK_WORKER_CORES: 5
-    #  SPARK_WORKER_MEMORY: "10g"
-
-# NOTE: multiple worker nodes on the same host is not supported
-tispark_workers:
-  - host: 10.0.1.22
-  - host: 10.0.1.23
-
+# # Server configs are used to specify the configuration of Prometheus Server.  
 monitoring_servers:
-  - host: 10.0.1.11
+  # # The ip address of the Monitoring Server.
+  - host: 10.0.1.21
+    # # ssh port of TiUP management cluster.
     # ssh_port: 22
+    # # Prometheus Service communication port.
     # port: 9090
-    # deploy_dir: "/tidb-deploy/prometheus-9090"
-    # data_dir: "/tidb-data/prometheus-9090"
-    # log_dir: "/tidb-deploy/prometheus-8249/9090"
+    # # Prometheus deployment file, startup script, configuration file storage directory.
+    # deploy_dir: "/tidb-deploy/prometheus-8249"
+    # # Prometheus data storage directory.
+    # data_dir: "/tidb-data/prometheus-8249"
+    # # Prometheus log file storage directory.
+    # log_dir: "/tidb-deploy/prometheus-8249/log"
 
+# # Server configs are used to specify the configuration of Grafana Servers.  
 grafana_servers:
-  - host: 10.0.1.11
+  # # The ip address of the Grafana Server.
+  - host: 10.0.1.21
+    # # Grafana Web monitoring service client (browser) access port
     # port: 3000
-    # deploy_dir: "/tidb-deploy/grafana-3000"
+    # # Grafana deployment file, startup script, configuration file storage directory.
+    # deploy_dir: /tidb-deploy/grafana-3000
 
+# # Server configs are used to specify the configuration of Alertmanager Servers.  
 alertmanager_servers:
-  - host: 10.0.1.11
+  # # The ip address of the Alertmanager Server.
+  - host: 10.0.1.21
+    # # ssh port of TiUP management cluster.
     # ssh_port: 22
+    # # Alertmanager alert web service port.
     # web_port: 9093
+    # # Alertmanager alert communication port.
     # cluster_port: 9094
+    # # Alertmanager deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/alertmanager-9093"
+    # # Alertmanager data storage directory.
     # data_dir: "/tidb-data/alertmanager-9093"
+    # # Alertmanager log file storage directory.
     # log_dir: "/tidb-deploy/alertmanager-9093/log"
