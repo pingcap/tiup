@@ -17,6 +17,7 @@ import (
 	"os"
 
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -25,10 +26,17 @@ import (
 
 // Rename the cluster
 func (m *Manager) Rename(name string, opt operator.Options, newName string) error {
+	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
+		return err
+	}
 	if !utils.IsExist(m.specManager.Path(name)) {
 		return errorRenameNameNotExist.
 			New("Cluster name '%s' not exist", name).
 			WithProperty(cliutil.SuggestionFromFormat("Please double check your cluster name"))
+	}
+
+	if err := clusterutil.ValidateClusterNameOrError(newName); err != nil {
+		return err
 	}
 	if utils.IsExist(m.specManager.Path(newName)) {
 		return errorRenameNameDuplicate.
