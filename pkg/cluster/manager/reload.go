@@ -52,7 +52,7 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart bool) er
 		}
 	})
 
-	refreshConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, nil)
+	refreshConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, nil, false)
 	monitorConfigTasks := buildRefreshMonitoredConfigTasks(
 		m.specManager,
 		name,
