@@ -1,5 +1,24 @@
 TiUP Changelog
 
+## [1.3.3] 2021.03.04
+
+### Fixes
+
+- Fix the issue that tiup will hang forever when reloading a stopped cluster ([#1044](https://github.com/pingcap/tiup/pull/1044), [@9547](https://github.com/9547))
+- Fix the issue that `tiup mirror merge` not work on official offline package ([#1121](https://github.com/pingcap/tiup/pull/1121), [@lucklove](https://github.com/lucklove))
+- Fix the issue that there may be no retry when download component failed ([#1137](https://github.com/pingcap/tiup/pull/1137), [@lucklove](https://github.com/lucklove))
+- Fix the issue that PD dashboard not report grafana address in playground ([#1142](https://github.com/pingcap/tiup/pull/1142), [@9547](https://github.com/9547))
+- Fix the issue that the default selected version may be a preprelease version ([#1128](https://github.com/pingcap/tiup/pull/1128), [@lucklove](https://github.com/lucklove))
+- Fix the issue that the error message is confused when the patched tar is not correct ([#1175](https://github.com/pingcap/tiup/pull/1175), [@lucklove](https://github.com/lucklove))
+
+### Improvements
+
+- Add darwin-arm64 not support hint in install script ([#1123](https://github.com/pingcap/tiup/pull/1123), [@terasum](https://github.com/terasum))
+- Improve playground welcome information for connecting TiDB ([#1133](https://github.com/pingcap/tiup/pull/1133), [@dveeden](https://github.com/dveeden))
+- Bind newest stable grafana and prometheus in DM Deploying ([#1129](https://github.com/pingcap/tiup/pull/1129), [@lucklove](https://github.com/lucklove))
+- Use the advertised host instead of 0.0.0.0 for tiup-playground ([#1152](https://github.com/pingcap/tiup/pull/1152), [@9547](https://github.com/9547))
+- Check tarball checksum on tiup-server when publish component ([#1163](https://github.com/pingcap/tiup/pull/1163), [@lucklove](https://github.com/lucklove))
+
 ## [1.3.2] 2021.01.29
 
 ### Fixes
