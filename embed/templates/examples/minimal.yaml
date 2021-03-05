@@ -296,7 +296,7 @@ alertmanager_servers:
     # ssh_port: 22
     # # Alertmanager web service port.
     # web_port: 9093
-    # # Alertmanager alert communication port.
+    # # Alertmanager communication port.
     # cluster_port: 9094
     # # Alertmanager deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/alertmanager-9093"
