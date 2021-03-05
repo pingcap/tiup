@@ -187,24 +187,24 @@ func (env *Environment) downloadComponent(component string, version pkgver.Versi
 func (env *Environment) SelectInstalledVersion(component string, ver pkgver.Version) (pkgver.Version, error) {
 	installed, err := env.Profile().InstalledVersions(component)
 	if err != nil {
-		return "", err
-	}
-
-	errInstallFirst := errors.Annotatef(ErrInstallFirst, "use `tiup install %s` to install component `%s` first", component, component)
-	if len(installed) < 1 {
-		return "", errInstallFirst
+		return ver, err
 	}
 
 	versions := []string{}
 	for _, v := range installed {
 		vi, err := env.v1Repo.ComponentVersion(component, v, true)
 		if err != nil {
-			return "", err
+			return ver, err
 		}
 		if vi.Yanked {
 			continue
 		}
 		versions = append(versions, v)
+	}
+
+	errInstallFirst := errors.Annotatef(ErrInstallFirst, "use `tiup install %s` to install component `%s` first", component, component)
+	if len(installed) == 0 {
+		return ver, errInstallFirst
 	}
 
 	if !ver.IsEmpty() {
@@ -213,7 +213,7 @@ func (env *Environment) SelectInstalledVersion(component string, ver pkgver.Vers
 				return ver, nil
 			}
 		}
-		return "", errInstallFirst
+		return ver, errInstallFirst
 	}
 
 	sort.Slice(versions, func(i, j int) bool {
@@ -234,7 +234,7 @@ func (env *Environment) SelectInstalledVersion(component string, ver pkgver.Vers
 	}
 
 	if ver.IsEmpty() {
-		return "", errInstallFirst
+		return ver, errInstallFirst
 	}
 	return ver, nil
 }
@@ -252,13 +252,10 @@ func (env *Environment) DownloadComponentIfMissing(component string, ver pkgver.
 	// download the latest version if the specific component doesn't be installed
 
 	// Check whether the specific version exist in local
-	needDownload := false
-	if ver.IsEmpty() {
-		ver, err = env.SelectInstalledVersion(component, ver)
-		needDownload = errors.Cause(err) == ErrInstallFirst
-		if err != nil && !needDownload {
-			return "", err
-		}
+	ver, err = env.SelectInstalledVersion(component, ver)
+	needDownload := errors.Cause(err) == ErrInstallFirst
+	if err != nil && !needDownload {
+		return "", err
 	}
 
 	if needDownload {
