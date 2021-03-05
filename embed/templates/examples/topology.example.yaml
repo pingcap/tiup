@@ -83,47 +83,27 @@ pd_servers:
     # config:
     #   schedule.max-merge-region-size: 20
     #   schedule.max-merge-region-keys: 200000
-  # # The ip address of the PD Server
   - host: 10.0.1.12
-    # # SSH port of the server.
     # ssh_port: 22
-    # # PD Server name
     # name: "pd-1"
-    # # communication port for TiDB Servers to connect.
     # client_port: 2379
-    # # communication port among PD Server nodes.
     # peer_port: 2380
-    # # PD Server deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/pd-2379"
-    # # PD Server data storage directory.
     # data_dir: "/tidb-data/pd-2379"
-    # # PD Server log file storage directory.
     # log_dir: "/tidb-deploy/pd-2379/log"
-    # # numa node bindings.
     # numa_node: "0,1"
-    # # The following configs are used to overwrite the `server_configs.pd` values.
     # config:
     #   schedule.max-merge-region-size: 20
     #   schedule.max-merge-region-keys: 200000
-  # # The ip address of the PD Server
   - host: 10.0.1.13
-    # # SSH port of the server.
     # ssh_port: 22
-    # # PD Server name
     # name: "pd-1"
-    # # communication port for TiDB Servers to connect.
     # client_port: 2379
-    # # communication port among PD Server nodes.
     # peer_port: 2380
-    # # PD Server deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/pd-2379"
-    # # PD Server data storage directory.
     # data_dir: "/tidb-data/pd-2379"
-    # # PD Server log file storage directory.
     # log_dir: "/tidb-deploy/pd-2379/log"
-    # # numa node bindings.
     # numa_node: "0,1"
-    # # The following configs are used to overwrite the `server_configs.pd` values.
     # config:
     #   schedule.max-merge-region-size: 20
     #   schedule.max-merge-region-keys: 200000
@@ -142,46 +122,28 @@ tidb_servers:
     deploy_dir: "/tidb-deploy/tidb-4000"
     # # TiDB Server log file storage directory.
     log_dir: "/tidb-deploy/tidb-4000/log"
-    numa_node: "0" # suggest numa node bindings.
-  # # The ip address of the TiDB Server.
+    # numa_node: "0" # suggest numa node bindings.
   - host: 10.0.1.14
-    # # SSH port of the server.
     # ssh_port: 22
-    # # Access the TiDB cluster port.
     port: 4001
-    # # TiDB Server status information reporting port.
     status_port: 10081
-    # # TiDB Server deployment file, startup script, configuration file storage directory.
     deploy_dir: "/tidb-deploy/tidb-4001"
-    # # TiDB Server log file storage directory.
     log_dir: "/tidb-deploy/tidb-4001/log"
-    numa_node: "1" # suggest numa node bindings.   
-  # # The ip address of the TiDB Server.
+    # numa_node: "1" # suggest numa node bindings.   
   - host: 10.0.1.15
-    # # SSH port of the server.
     # ssh_port: 22
-    # # Access the TiDB cluster port.
     port: 4000
-    # # TiDB Server status information reporting port.
     status_port: 10080
-    # # TiDB Server deployment file, startup script, configuration file storage directory.
     deploy_dir: "/tidb-deploy/tidb-4000"
-    # # TiDB Server log file storage directory.
     log_dir: "/tidb-deploy/tidb-4000/log"
-    numa_node: "0" # suggest numa node bindings.
-  # # The ip address of the TiDB Server.
+    # numa_node: "0" # suggest numa node bindings.
   - host: 10.0.1.15
-    # # SSH port of the server.
     # ssh_port: 22
-    # # Access the TiDB cluster port.
     port: 4001
-    # # TiDB Server status information reporting port.
     status_port: 10081
-    # # TiDB Server deployment file, startup script, configuration file storage directory.
     deploy_dir: "/tidb-deploy/tidb-4001"
-    # # TiDB Server log file storage directory.
     log_dir: "/tidb-deploy/tidb-4001/log"
-    numa_node: "1" # suggest numa node bindings.  
+    # numa_node: "1" # suggest numa node bindings.  
 
 # # Server configs are used to specify the configuration of TiKV Servers.
 tikv_servers:
@@ -199,98 +161,58 @@ tikv_servers:
     data_dir: "/data1/tidb-data/tikv-20160"
     # # TiKV Server log file storage directory.
     log_dir: "/data1/tidb-deploy/tikv-20160/log"
-    numa_node: "0" # suggest numa node bindings.
+    # numa_node: "0" # suggest numa node bindings.
     # # The following configs are used to overwrite the `server_configs.tikv` values.
     # config:
     #   log.level: warn
-  # # The ip address of the TiKV Server.
   - host: 10.0.1.16
-    # # SSH port of the server.
     # ssh_port: 22
-    # # TiKV Server communication port.
     port: 20161
-    # # Communication port for reporting TiKV Server status.
     status_port: 20181
-    # # TiKV Server deployment file, startup script, configuration file storage directory.
     deploy_dir: "/data2/tidb-deploy/tikv-20161"
-    # # TiKV Server data storage directory.
     data_dir: "/data2/tidb-data/tikv-20161"
-    # # TiKV Server log file storage directory.
     log_dir: "/data2/tidb-deploy/tikv-20161/log"
-    numa_node: "1" # suggest numa node bindings.
-    # # The following configs are used to overwrite the `server_configs.tikv` values.
+    # numa_node: "1" # suggest numa node bindings.
     # config:
     #   log.level: warn
-  # # The ip address of the TiKV Server.
   - host: 10.0.1.17
-    # # SSH port of the server.
     # ssh_port: 22
-    # # TiKV Server communication port.
     port: 20160
-    # # Communication port for reporting TiKV Server status.
     status_port: 20180
-    # # TiKV Server deployment file, startup script, configuration file storage directory.
     deploy_dir: "/data1/tidb-deploy/tikv-20160"
-    # # TiKV Server data storage directory.
     data_dir: "/data1/tidb-data/tikv-20160"
-    # # TiKV Server log file storage directory.
     log_dir: "/data1/tidb-deploy/tikv-20160/log"
-    numa_node: "0" # suggest numa node bindings.
-    # # The following configs are used to overwrite the `server_configs.tikv` values.
+    # numa_node: "0" # suggest numa node bindings.
     # config:
     #   log.level: warn
-  # # The ip address of the TiKV Server.
   - host: 10.0.1.17
-    # # SSH port of the server.
     # ssh_port: 22
-    # # TiKV Server communication port.
     port: 20161
-    # # Communication port for reporting TiKV Server status.
     status_port: 20181
-    # # TiKV Server deployment file, startup script, configuration file storage directory.
     deploy_dir: "/data2/tidb-deploy/tikv-20161"
-    # # TiKV Server data storage directory.
     data_dir: "/data2/tidb-data/tikv-20161"
-    # # TiKV Server log file storage directory.
     log_dir: "/data2/tidb-deploy/tikv-20161/log"
-    numa_node: "1" # suggest numa node bindings.
-    # # The following configs are used to overwrite the `server_configs.tikv` values.
+    # numa_node: "1" # suggest numa node bindings.
     # config:
     #   log.level: warn
-  # # The ip address of the TiKV Server.
   - host: 10.0.1.18
-    # # SSH port of the server.
     # ssh_port: 22
-    # # TiKV Server communication port.
     port: 20160
-    # # Communication port for reporting TiKV Server status.
     status_port: 20180
-    # # TiKV Server deployment file, startup script, configuration file storage directory.
     deploy_dir: "/data1/tidb-deploy/tikv-20160"
-    # # TiKV Server data storage directory.
     data_dir: "/data1/tidb-data/tikv-20160"
-    # # TiKV Server log file storage directory.
     log_dir: "/data1/tidb-deploy/tikv-20160/log"
-    numa_node: "0" # suggest numa node bindings.
-    # # The following configs are used to overwrite the `server_configs.tikv` values.
+    # numa_node: "0" # suggest numa node bindings.
     # config:
     #   log.level: warn
-  # # The ip address of the TiKV Server.
   - host: 10.0.1.18
-    # # SSH port of the server.
     # ssh_port: 22
-    # # TiKV Server communication port.
     port: 20161
-    # # Communication port for reporting TiKV Server status.
     status_port: 20181
-    # # TiKV Server deployment file, startup script, configuration file storage directory.
     deploy_dir: "/data2/tidb-deploy/tikv-20161"
-    # # TiKV Server data storage directory.
     data_dir: "/data2/tidb-data/tikv-20161"
-    # # TiKV Server log file storage directory.
     log_dir: "/data2/tidb-deploy/tikv-20161/log"
-    numa_node: "1" # suggest numa node bindings.
-    # # The following configs are used to overwrite the `server_configs.tikv` values.
+    # numa_node: "1" # suggest numa node bindings.
     # config:
     #   log.level: warn
 
@@ -322,83 +244,38 @@ tiflash_servers:
     data_dir: /data1/tidb-data/tiflash-9000
     # # TiFlash Server log file storage directory.
     log_dir: /data1/tidb-deploy/tiflash-9000/log
-  # # The ip address of the TiFlash Server.
   - host: 10.0.1.19
-    # # SSH port of the server.
     # ssh_port: 22
-    # # TiFlash TCP Service port.
     tcp_port: 9001
-    # # TiFlash HTTP Service port.
     http_port: 8124
-    # # TiFlash raft service and coprocessor service listening address.
     flash_service_port: 3931
-    # # TiFlash Proxy service port.
     flash_proxy_port: 20171
-    # # Prometheus pulls TiFlash Proxy metrics port.
     flash_proxy_status_port: 20293
-    # # Prometheus pulls the TiFlash metrics port.
     metrics_port: 8235
-    # # TiFlash Server deployment file, startup script, configuration file storage directory.
     deploy_dir: /data2/tidb-deploy/tiflash-9001
-    ## With cluster version >= v4.0.9 and you want to deploy a multi-disk TiFlash node, it is recommended to
-    ## check config.storage.* for details. The data_dir will be ignored if you defined those configurations.
-    ## Setting data_dir to a ','-joined string is still supported but deprecated.
-    ## Check https://docs.pingcap.com/tidb/stable/tiflash-configuration#multi-disk-deployment for more details.
-    # # TiFlash Server data storage directory.
     data_dir: /data2/tidb-data/tiflash-9001
-    # # TiFlash Server log file storage directory.
     log_dir: /data2/tidb-deploy/tiflash-9001/log
-  # # The ip address of the TiFlash Server.
   - host: 10.0.1.20
-    # # SSH port of the server.
     # ssh_port: 22
-    # # TiFlash TCP Service port.
     tcp_port: 9000
-    # # TiFlash HTTP Service port.
     http_port: 8123
-    # # TiFlash raft service and coprocessor service listening address.
     flash_service_port: 3930
-    # # TiFlash Proxy service port.
     flash_proxy_port: 20170
-    # # Prometheus pulls TiFlash Proxy metrics port.
     flash_proxy_status_port: 20292
-    # # Prometheus pulls the TiFlash metrics port.
     metrics_port: 8234
-    # # TiFlash Server deployment file, startup script, configuration file storage directory.
     deploy_dir: /data1/tidb-deploy/tiflash-9000
-    ## With cluster version >= v4.0.9 and you want to deploy a multi-disk TiFlash node, it is recommended to
-    ## check config.storage.* for details. The data_dir will be ignored if you defined those configurations.
-    ## Setting data_dir to a ','-joined string is still supported but deprecated.
-    ## Check https://docs.pingcap.com/tidb/stable/tiflash-configuration#multi-disk-deployment for more details.
-    # # TiFlash Server data storage directory.
     data_dir: /data1/tidb-data/tiflash-9000
-    # # TiFlash Server log file storage directory.
     log_dir: /data1/tidb-deploy/tiflash-9000/log
-  # # The ip address of the TiFlash Server.
   - host: 10.0.1.20
-    # # SSH port of the server.
     # ssh_port: 22
-    # # TiFlash TCP Service port.
     tcp_port: 9001
-    # # TiFlash HTTP Service port.
     http_port: 8124
-    # # TiFlash raft service and coprocessor service listening address.
     flash_service_port: 3931
-    # # TiFlash Proxy service port.
     flash_proxy_port: 20171
-    # # Prometheus pulls TiFlash Proxy metrics port.
     flash_proxy_status_port: 20293
-    # # Prometheus pulls the TiFlash metrics port.
     metrics_port: 8235
-    # # TiFlash Server deployment file, startup script, configuration file storage directory.
     deploy_dir: /data2/tidb-deploy/tiflash-9001
-    ## With cluster version >= v4.0.9 and you want to deploy a multi-disk TiFlash node, it is recommended to
-    ## check config.storage.* for details. The data_dir will be ignored if you defined those configurations.
-    ## Setting data_dir to a ','-joined string is still supported but deprecated.
-    ## Check https://docs.pingcap.com/tidb/stable/tiflash-configuration#multi-disk-deployment for more details.
-    # # TiFlash Server data storage directory.
     data_dir: /data2/tidb-data/tiflash-9001
-    # # TiFlash Server log file storage directory.
     log_dir: /data2/tidb-deploy/tiflash-9001/log
 
 # # Server configs are used to specify the configuration of Prometheus Server.  
