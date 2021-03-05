@@ -294,7 +294,7 @@ alertmanager_servers:
   - host: 10.0.1.21
     # # ssh port of TiUP management cluster.
     # ssh_port: 22
-    # # Alertmanager alert web service port.
+    # # Alertmanager web service port.
     # web_port: 9093
     # # Alertmanager alert communication port.
     # cluster_port: 9094
