@@ -5,7 +5,7 @@ global:
   user: "tidb"
   # # group is used to specify the group name the user belong to if it's not the same as user.
   # group: "tidb"
-  # # ssh port of TiUP management cluster.
+  # # SSH port of servers in the managed cluster.
   ssh_port: 22
   # # Storage directory for cluster deployment files, startup scripts, and configuration files.
   deploy_dir: "/tidb-deploy"
