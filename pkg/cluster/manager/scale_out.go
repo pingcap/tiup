@@ -22,6 +22,7 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -53,6 +54,10 @@ func (m *Manager) ScaleOut(
 	skipConfirm bool,
 	gOpt operator.Options,
 ) error {
+	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
+		return err
+	}
+
 	metadata, err := m.meta(name)
 	// allow specific validation errors so that user can recover a broken
 	// cluster if it is somehow in a bad state.

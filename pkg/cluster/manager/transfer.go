@@ -24,6 +24,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -41,6 +42,10 @@ type TransferOptions struct {
 
 // Transfer copies files from or to host in the tidb cluster.
 func (m *Manager) Transfer(name string, opt TransferOptions, gOpt operator.Options) error {
+	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
+		return err
+	}
+
 	metadata, err := m.meta(name)
 	if err != nil {
 		return err
