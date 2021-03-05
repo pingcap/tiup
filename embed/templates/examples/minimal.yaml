@@ -292,7 +292,7 @@ grafana_servers:
 alertmanager_servers:
   # # The ip address of the Alertmanager Server.
   - host: 10.0.1.21
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # Alertmanager web service port.
     # web_port: 9093
