@@ -225,7 +225,7 @@ tiflash_servers:
     # flash_proxy_port: 20170
     # # Prometheus pulls TiFlash Proxy metrics port.
     # flash_proxy_status_port: 20292
-    # # Prometheus pulls the TiFlash metrics port.
+    # # TiFlash metrics port.
     # metrics_port: 8234
     # # TiFlash Server deployment file, startup script, configuration file storage directory.
     # deploy_dir: /tidb-deploy/tiflash-9000
