@@ -63,7 +63,7 @@ monitored:
 pd_servers:
   # # The ip address of the PD Server.
   - host: 10.0.1.11
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # PD Server name
     # name: "pd-1"
