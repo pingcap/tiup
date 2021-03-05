@@ -79,7 +79,7 @@ func (m *Manager) ScaleIn(
 	base := metadata.GetBaseMeta()
 
 	// Regenerate configuration
-	regenConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, nodes)
+	regenConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, nodes, true)
 
 	// handle dir scheme changes
 	if hasImported {

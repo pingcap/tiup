@@ -457,7 +457,7 @@ func buildRefreshMonitoredConfigTasks(
 	return tasks
 }
 
-func buildRegenConfigTasks(m *Manager, name string, topo spec.Topology, base *spec.BaseMeta, nodes []string) ([]*task.StepDisplay, bool) {
+func buildRegenConfigTasks(m *Manager, name string, topo spec.Topology, base *spec.BaseMeta, nodes []string, ignoreCheck bool) ([]*task.StepDisplay, bool) {
 	var tasks []*task.StepDisplay
 	hasImported := false
 	deletedNodes := set.NewStringSet(nodes...)
@@ -500,7 +500,7 @@ func buildRegenConfigTasks(m *Manager, name string, topo spec.Topology, base *sp
 				m.specManager,
 				instance,
 				base.User,
-				true, // always ignore config check result in scale in
+				ignoreCheck,
 				meta.DirPaths{
 					Deploy: deployDir,
 					Data:   dataDirs,
