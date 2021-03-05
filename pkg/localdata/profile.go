@@ -224,38 +224,6 @@ func (p *Profile) VersionIsInstalled(component, version string) (bool, error) {
 	return false, nil
 }
 
-// SelectInstalledVersion selects the installed versions and the latest release version
-// will be chosen if there is an empty version
-func (p *Profile) SelectInstalledVersion(component string, version pkgver.Version) (pkgver.Version, error) {
-	installed, err := p.InstalledVersions(component)
-	if err != nil {
-		return "", err
-	}
-
-	errInstallFirst := fmt.Errorf("use `tiup install %[1]s` to install `%[1]s` first", component)
-	if len(installed) < 1 {
-		return "", errInstallFirst
-	}
-
-	if version.IsEmpty() {
-		sort.Slice(installed, func(i, j int) bool {
-			return semver.Compare(installed[i], installed[j]) < 0
-		})
-		version = pkgver.Version(installed[len(installed)-1])
-	}
-	found := false
-	for _, v := range installed {
-		if pkgver.Version(v) == version {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return "", errInstallFirst
-	}
-	return version, nil
-}
-
 // ResetMirror reset root.json and cleanup manifests directory
 func (p *Profile) ResetMirror(addr, root string) error {
 	// Calculating root.json path
