@@ -38,7 +38,7 @@ const (
 
 var (
 	// ErrInstallFirst indicates that a component/version is not installed
-	ErrInstallFirst = errors.New("component not install")
+	ErrInstallFirst = errors.New("component not installed")
 )
 
 // Mirror return mirror of tiup.
@@ -256,7 +256,7 @@ func (env *Environment) DownloadComponentIfMissing(component string, ver pkgver.
 	if ver.IsEmpty() {
 		ver, err = env.SelectInstalledVersion(component, ver)
 		needDownload = errors.Cause(err) == ErrInstallFirst
-		if err != nil && errors.Cause(err) != ErrInstallFirst {
+		if err != nil && !needDownload {
 			return "", err
 		}
 	}
