@@ -69,7 +69,7 @@ pd_servers:
     # name: "pd-1"
     # # communication port between TiDB Server and PD Server.
     # client_port: 2379
-    # # Communication port between PD Server cluster nodes.
+    # # Communication port among PD Server nodes.
     # peer_port: 2380
     # # PD Server deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/pd-2379"
