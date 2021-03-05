@@ -489,41 +489,6 @@ func newMirrorPublishCmd() *cobra.Command {
 	return cmd
 }
 
-func doPublish(
-	component, version, entry, desc string,
-	publishInfo *model.PublishInfo,
-	hashes map[string]string, length int64,
-	standalone, hidden bool,
-	privPath, goos, goarch string,
-	flagSet set.StringSet,
-) error {
-	env := environment.GlobalEnv()
-	m, err := env.V1Repository().FetchComponentManifest(component, true)
-	if err != nil {
-		if errors.Cause(err) == repository.ErrUnknownComponent {
-			fmt.Printf("Creating component %s\n", component)
-			publishInfo.Stand = &standalone
-			publishInfo.Hide = &hidden
-		} else {
-			return err
-		}
-	} else if flagSet.Exist("standalone") || flagSet.Exist("hide") {
-		fmt.Println("This is not a new component, --standalone and --hide flag will be omitted")
-	}
-
-	m = repository.UpdateManifestForPublish(m, component, version, entry, goos, goarch, desc, v1manifest.FileHash{
-		Hashes: hashes,
-		Length: uint(length),
-	})
-
-	manifest, err := sign(privPath, m)
-	if err != nil {
-		return err
-	}
-
-	return env.V1Repository().Mirror().Publish(manifest, publishInfo)
-}
-
 func validatePlatform(goos, goarch string) error {
 	// Only support any/any, don't support linux/any, any/amd64 .etc.
 	if goos == "any" && goarch == "any" {

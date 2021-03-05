@@ -24,7 +24,6 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
-	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/verbose"
@@ -299,18 +298,6 @@ func (env *Environment) DownloadComponentIfMissing(component string, ver pkgver.
 	}
 
 	return ver, nil
-}
-
-// latestManifest returns the latest v0 component manifest and refresh the local cache
-func (env *Environment) latestManifest() (*v0manifest.ComponentManifest, error) {
-	manifest, err := env.repo.Manifest()
-	if err != nil {
-		return nil, err
-	}
-	if err := env.profile.SaveManifest(manifest); err != nil {
-		return nil, err
-	}
-	return manifest, err
 }
 
 // GetComponentInstalledVersion return the installed version of component.
