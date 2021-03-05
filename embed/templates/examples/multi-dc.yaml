@@ -94,47 +94,27 @@ pd_servers:
     # config:
     #   schedule.max-merge-region-size: 20
     #   schedule.max-merge-region-keys: 200000
-  # # The ip address of the PD Server
   - host: 10.0.1.13
-    # # SSH port of the server.
     # ssh_port: 22
-    # # PD Server name
     # name: "pd-1"
-    # # communication port for TiDB Servers to connect.
     # client_port: 2379
-    # # communication port among PD Server nodes.
     # peer_port: 2380
-    # # PD Server deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/pd-2379"
-    # # PD Server data storage directory.
     # data_dir: "/tidb-data/pd-2379"
-    # # PD Server log file storage directory.
     # log_dir: "/tidb-deploy/pd-2379/log"
-    # # numa node bindings.
     # numa_node: "0,1"
-    # # The following configs are used to overwrite the `server_configs.pd` values.
     # config:
     #   schedule.max-merge-region-size: 20
     #   schedule.max-merge-region-keys: 200000
-  # # The ip address of the PD Server
   - host: 10.0.1.15
-    # # SSH port of the server.
     # ssh_port: 22
-    # # PD Server name
     # name: "pd-1"
-    # # communication port for TiDB Servers to connect.
     # client_port: 2379
-    # # communication port among PD Server nodes.
     # peer_port: 2380
-    # # PD Server deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/pd-2379"
-    # # PD Server data storage directory.
     # data_dir: "/tidb-data/pd-2379"
-    # # PD Server log file storage directory.
     # log_dir: "/tidb-deploy/pd-2379/log"
-    # # numa node bindings.
     # numa_node: "0,1"
-    # # The following configs are used to overwrite the `server_configs.pd` values.
     # config:
     #   schedule.max-merge-region-size: 20
     #   schedule.max-merge-region-keys: 200000
@@ -155,40 +135,20 @@ tidb_servers:
     # log_dir: "/tidb-deploy/tidb-4000/log"
   # # The ip address of the TiDB Server.
   - host: 10.0.1.17
-    # # SSH port of the server.
     # ssh_port: 22
-    # # Access the TiDB cluster port.
     # port: 4000
-    # # TiDB Server status information reporting port.
     # status_port: 10080
-    # # TiDB Server deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/tidb-4000"
-    # # TiDB Server log file storage directory.
+    # log_dir: "/tidb-deploy/tidb-4000/log"
+  - host: 10.0.1.18
+    # ssh_port: 22
+    # port: 4000
+    # status_port: 10080
+    # deploy_dir: "/tidb-deploy/tidb-4000"
     # log_dir: "/tidb-deploy/tidb-4000/log"
 
 # # Server configs are used to specify the configuration of TiKV Servers.
 tikv_servers:
-  # # The ip address of the TiKV Server.
-  - host: 10.0.1.18
-    # # SSH port of the server.
-    # ssh_port: 22
-    # # TiKV Server communication port.
-    # port: 20160
-    # # Communication port for reporting TiKV Server status.
-    # status_port: 20180
-    # # TiKV Server deployment file, startup script, configuration file storage directory.
-    # deploy_dir: "/tidb-deploy/tikv-20160"
-    # # TiKV Server data storage directory.
-    # data_dir: "/tidb-data/tikv-20160"
-    # # TiKV Server log file storage directory.
-    # log_dir: "/tidb-deploy/tikv-20160/log"
-    # # The following configs are used to overwrite the `server_configs.tikv` values.
-    config:
-      server.labels:
-        zone: bj
-        dc: bja
-        rack: rack1
-        host: host1
   # # The ip address of the TiKV Server.
   - host: 10.0.1.19
     # # SSH port of the server.
@@ -209,64 +169,54 @@ tikv_servers:
         zone: bj
         dc: bja
         rack: rack1
-        host: host2
+        host: host1
   # # The ip address of the TiKV Server.
   - host: 10.0.1.20
-    # # SSH port of the server.
     # ssh_port: 22
-    # # TiKV Server communication port.
     # port: 20160
-    # # Communication port for reporting TiKV Server status.
     # status_port: 20180
-    # # TiKV Server deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/tikv-20160"
-    # # TiKV Server data storage directory.
     # data_dir: "/tidb-data/tikv-20160"
-    # # TiKV Server log file storage directory.
     # log_dir: "/tidb-deploy/tikv-20160/log"
-    # # The following configs are used to overwrite the `server_configs.tikv` values.
+    config:
+      server.labels:
+        zone: bj
+        dc: bja
+        rack: rack1
+        host: host2
+  - host: 10.0.1.21
+    # ssh_port: 22
+    # port: 20160
+    # status_port: 20180
+    # deploy_dir: "/tidb-deploy/tikv-20160"
+    # data_dir: "/tidb-data/tikv-20160"
+    # log_dir: "/tidb-deploy/tikv-20160/log"
     config:
       server.labels:
         zone: bj
         dc: bjb
         rack: rack1
         host: host1
-  # # The ip address of the TiKV Server.
-  - host: 10.0.1.21
-    # # SSH port of the server.
+  - host: 10.0.1.22
     # ssh_port: 22
-    # # TiKV Server communication port.
     # port: 20160
-    # # Communication port for reporting TiKV Server status.
     # status_port: 20180
-    # # TiKV Server deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/tikv-20160"
-    # # TiKV Server data storage directory.
     # data_dir: "/tidb-data/tikv-20160"
-    # # TiKV Server log file storage directory.
     # log_dir: "/tidb-deploy/tikv-20160/log"
-    # # The following configs are used to overwrite the `server_configs.tikv` values.
     config:
       server.labels:
         zone: bj
         dc: bjb
         rack: rack1
         host: host2
-  # # The ip address of the TiKV Server.
-  - host: 10.0.1.22
-    # # SSH port of the server.
+  - host: 10.0.1.23
     # ssh_port: 22
-    # # TiKV Server communication port.
     # port: 20160
-    # # Communication port for reporting TiKV Server status.
     # status_port: 20180
-    # # TiKV Server deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/tikv-20160"
-    # # TiKV Server data storage directory.
     # data_dir: "/tidb-data/tikv-20160"
-    # # TiKV Server log file storage directory.
     # log_dir: "/tidb-deploy/tikv-20160/log"
-    # # The following configs are used to overwrite the `server_configs.tikv` values.
     config:
       server.labels:
         zone: sh
@@ -281,32 +231,6 @@ tikv_servers:
 # # Server configs are used to specify the configuration of TiFlash Servers.
 tiflash_servers:
   # # The ip address of the TiFlash Server.
-  - host: 10.0.1.23
-    # # SSH port of the server.
-    # ssh_port: 22
-    # # TiFlash TCP Service port.
-    # tcp_port: 9000
-    # # TiFlash HTTP Service port.
-    # http_port: 8123
-    # # TiFlash raft service and coprocessor service listening address.
-    # flash_service_port: 3930
-    # # TiFlash Proxy service port.
-    # flash_proxy_port: 20170
-    # # Prometheus pulls TiFlash Proxy metrics port.
-    # flash_proxy_status_port: 20292
-    # # Prometheus pulls the TiFlash metrics port.
-    # metrics_port: 8234
-    # # TiFlash Server deployment file, startup script, configuration file storage directory.
-    # deploy_dir: /tidb-deploy/tiflash-9000
-    ## With cluster version >= v4.0.9 and you want to deploy a multi-disk TiFlash node, it is recommended to
-    ## check config.storage.* for details. The data_dir will be ignored if you defined those configurations.
-    ## Setting data_dir to a ','-joined string is still supported but deprecated.
-    ## Check https://docs.pingcap.com/tidb/stable/tiflash-configuration#multi-disk-deployment for more details.
-    # # TiFlash Server data storage directory.
-    # data_dir: /tidb-data/tiflash-9000
-    # # TiFlash Server log file storage directory.
-    # log_dir: /tidb-deploy/tiflash-9000/log
-  # # The ip address of the TiKV Server.
   - host: 10.0.1.24
     # # SSH port of the server.
     # ssh_port: 22
@@ -332,11 +256,22 @@ tiflash_servers:
     # data_dir: /tidb-data/tiflash-9000
     # # TiFlash Server log file storage directory.
     # log_dir: /tidb-deploy/tiflash-9000/log
+  - host: 10.0.1.25
+    # ssh_port: 22
+    # tcp_port: 9000
+    # http_port: 8123
+    # flash_service_port: 3930
+    # flash_proxy_port: 20170
+    # flash_proxy_status_port: 20292
+    # metrics_port: 8234
+    # deploy_dir: /tidb-deploy/tiflash-9000
+    # data_dir: /tidb-data/tiflash-9000
+    # log_dir: /tidb-deploy/tiflash-9000/log
 
 # # Server configs are used to specify the configuration of Prometheus Server.  
 monitoring_servers:
   # # The ip address of the Monitoring Server.
-  - host: 10.0.1.25
+  - host: 10.0.1.26
     # # SSH port of the server.
     # ssh_port: 22
     # # Prometheus Service communication port.
@@ -351,7 +286,7 @@ monitoring_servers:
 # # Server configs are used to specify the configuration of Grafana Servers.  
 grafana_servers:
   # # The ip address of the Grafana Server.
-  - host: 10.0.1.25
+  - host: 10.0.1.26
     # # Grafana Web monitoring service client (browser) access port
     # port: 3000
     # # Grafana deployment file, startup script, configuration file storage directory.
@@ -360,7 +295,7 @@ grafana_servers:
 # # Server configs are used to specify the configuration of Alertmanager Servers.  
 alertmanager_servers:
   # # The ip address of the Alertmanager Server.
-  - host: 10.0.1.25
+  - host: 10.0.1.26
     # # SSH port of the server.
     # ssh_port: 22
     # # Alertmanager web service port.
