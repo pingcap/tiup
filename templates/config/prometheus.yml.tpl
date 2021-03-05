@@ -42,7 +42,6 @@ rule_files:
 {{- if .DMWorkerAddrs}}
   - 'dm_worker.rules.yml'
 {{- end}}
-{{- end}}
 
 {{- if .AlertmanagerAddrs}}
 alerting:
