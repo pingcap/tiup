@@ -3,9 +3,9 @@
 global:
   # # The user who runs the tidb cluster.
   user: "tidb"
-  # # group is used to specify the group name the user belong to.
+  # # group is used to specify the group name the user belong to,if it's not the same as user.
   # group: "tidb"
-  # # ssh port of TiUP management cluster.
+  # # SSH port of servers in the managed cluster.
   ssh_port: 22
   # # Storage directory for cluster deployment files, startup scripts, and configuration files.
   deploy_dir: "/tidb-deploy"
@@ -74,35 +74,13 @@ server_configs:
 pd_servers:
   # # The ip address of the PD Server.
   - host: 10.0.1.11
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # PD Server name
     # name: "pd-1"
-    # # communication port between TiDB Server and PD Server.
+    # # communication port for TiDB Servers to connect.
     # client_port: 2379
-    # # Communication port between PD Server cluster nodes.
-    # peer_port: 2380
-    # # PD Server deployment file, startup script, configuration file storage directory.
-    # deploy_dir: "/tidb-deploy/pd-2379"
-    # # PD Server data storage directory.
-    # data_dir: "/tidb-data/pd-2379"
-    # # PD Server log file storage directory.
-    # log_dir: "/tidb-deploy/pd-2379/log"
-    # # numa node bindings.
-    # numa_node: "0,1"
-    # # The following configs are used to overwrite the `server_configs.pd` values.
-    # config:
-    #   schedule.max-merge-region-size: 20
-    #   schedule.max-merge-region-keys: 200000
-  # # The ip address of the PD Server
-  - host: 10.0.1.12
-    # # ssh port of TiUP management cluster.
-    # ssh_port: 22
-    # # PD Server name
-    # name: "pd-1"
-    # # communication port between TiDB Server and PD Server.
-    # client_port: 2379
-    # # Communication port between PD Server cluster nodes.
+    # # communication port among PD Server nodes.
     # peer_port: 2380
     # # PD Server deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/pd-2379"
@@ -118,35 +96,13 @@ pd_servers:
     #   schedule.max-merge-region-keys: 200000
   # # The ip address of the PD Server
   - host: 10.0.1.13
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # PD Server name
     # name: "pd-1"
-    # # communication port between TiDB Server and PD Server.
+    # # communication port for TiDB Servers to connect.
     # client_port: 2379
-    # # Communication port between PD Server cluster nodes.
-    # peer_port: 2380
-    # # PD Server deployment file, startup script, configuration file storage directory.
-    # deploy_dir: "/tidb-deploy/pd-2379"
-    # # PD Server data storage directory.
-    # data_dir: "/tidb-data/pd-2379"
-    # # PD Server log file storage directory.
-    # log_dir: "/tidb-deploy/pd-2379/log"
-    # # numa node bindings.
-    # numa_node: "0,1"
-    # # The following configs are used to overwrite the `server_configs.pd` values.
-    # config:
-    #   schedule.max-merge-region-size: 20
-    #   schedule.max-merge-region-keys: 200000
-  # # The ip address of the PD Server
-  - host: 10.0.1.14
-    # # ssh port of TiUP management cluster.
-    # ssh_port: 22
-    # # PD Server name
-    # name: "pd-1"
-    # # communication port between TiDB Server and PD Server.
-    # client_port: 2379
-    # # Communication port between PD Server cluster nodes.
+    # # communication port among PD Server nodes.
     # peer_port: 2380
     # # PD Server deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/pd-2379"
@@ -162,13 +118,13 @@ pd_servers:
     #   schedule.max-merge-region-keys: 200000
   # # The ip address of the PD Server
   - host: 10.0.1.15
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # PD Server name
     # name: "pd-1"
-    # # communication port between TiDB Server and PD Server.
+    # # communication port for TiDB Servers to connect.
     # client_port: 2379
-    # # Communication port between PD Server cluster nodes.
+    # # communication port among PD Server nodes.
     # peer_port: 2380
     # # PD Server deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/pd-2379"
@@ -187,7 +143,7 @@ pd_servers:
 tidb_servers:
   # # The ip address of the TiDB Server.
   - host: 10.0.1.16
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # Access the TiDB cluster port.
     # port: 4000
@@ -199,7 +155,7 @@ tidb_servers:
     # log_dir: "/tidb-deploy/tidb-4000/log"
   # # The ip address of the TiDB Server.
   - host: 10.0.1.17
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # Access the TiDB cluster port.
     # port: 4000
@@ -214,7 +170,7 @@ tidb_servers:
 tikv_servers:
   # # The ip address of the TiKV Server.
   - host: 10.0.1.18
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # TiKV Server communication port.
     # port: 20160
@@ -235,7 +191,7 @@ tikv_servers:
         host: host1
   # # The ip address of the TiKV Server.
   - host: 10.0.1.19
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # TiKV Server communication port.
     # port: 20160
@@ -256,7 +212,7 @@ tikv_servers:
         host: host2
   # # The ip address of the TiKV Server.
   - host: 10.0.1.20
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # TiKV Server communication port.
     # port: 20160
@@ -277,7 +233,7 @@ tikv_servers:
         host: host1
   # # The ip address of the TiKV Server.
   - host: 10.0.1.21
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # TiKV Server communication port.
     # port: 20160
@@ -298,7 +254,7 @@ tikv_servers:
         host: host2
   # # The ip address of the TiKV Server.
   - host: 10.0.1.22
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # TiKV Server communication port.
     # port: 20160
@@ -326,7 +282,7 @@ tikv_servers:
 tiflash_servers:
   # # The ip address of the TiFlash Server.
   - host: 10.0.1.23
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # TiFlash TCP Service port.
     # tcp_port: 9000
@@ -352,7 +308,7 @@ tiflash_servers:
     # log_dir: /tidb-deploy/tiflash-9000/log
   # # The ip address of the TiKV Server.
   - host: 10.0.1.24
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # TiFlash TCP Service port.
     # tcp_port: 9000
@@ -381,7 +337,7 @@ tiflash_servers:
 monitoring_servers:
   # # The ip address of the Monitoring Server.
   - host: 10.0.1.25
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # Prometheus Service communication port.
     # port: 9090
@@ -405,11 +361,11 @@ grafana_servers:
 alertmanager_servers:
   # # The ip address of the Alertmanager Server.
   - host: 10.0.1.25
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
-    # # Alertmanager alert web service port.
+    # # Alertmanager web service port.
     # web_port: 9093
-    # # Alertmanager alert communication port.
+    # # Alertmanager communication port.
     # cluster_port: 9094
     # # Alertmanager deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/alertmanager-9093"
