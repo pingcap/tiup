@@ -283,7 +283,7 @@ monitoring_servers:
 grafana_servers:
   # # The ip address of the Grafana Server.
   - host: 10.0.1.21
-    # # Grafana Web monitoring service client (browser) access port
+    # # Grafana web port (browser access)
     # port: 3000
     # # Grafana deployment file, startup script, configuration file storage directory.
     # deploy_dir: /tidb-deploy/grafana-3000
