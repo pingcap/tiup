@@ -161,7 +161,7 @@ tikv_servers:
     data_dir: "/data1/tidb-data/tikv-20160"
     # # TiKV Server log file storage directory.
     log_dir: "/data1/tidb-deploy/tikv-20160/log"
-    # numa_node: "0" # suggest numa node bindings.
+    # numa_node: "0"
     # # The following configs are used to overwrite the `server_configs.tikv` values.
     # config:
     #   log.level: warn
@@ -172,7 +172,7 @@ tikv_servers:
     deploy_dir: "/data2/tidb-deploy/tikv-20161"
     data_dir: "/data2/tidb-data/tikv-20161"
     log_dir: "/data2/tidb-deploy/tikv-20161/log"
-    # numa_node: "1" # suggest numa node bindings.
+    # numa_node: "1"
     # config:
     #   log.level: warn
   - host: 10.0.1.17
@@ -182,7 +182,7 @@ tikv_servers:
     deploy_dir: "/data1/tidb-deploy/tikv-20160"
     data_dir: "/data1/tidb-data/tikv-20160"
     log_dir: "/data1/tidb-deploy/tikv-20160/log"
-    # numa_node: "0" # suggest numa node bindings.
+    # numa_node: "0"
     # config:
     #   log.level: warn
   - host: 10.0.1.17
@@ -192,7 +192,7 @@ tikv_servers:
     deploy_dir: "/data2/tidb-deploy/tikv-20161"
     data_dir: "/data2/tidb-data/tikv-20161"
     log_dir: "/data2/tidb-deploy/tikv-20161/log"
-    # numa_node: "1" # suggest numa node bindings.
+    # numa_node: "1"
     # config:
     #   log.level: warn
   - host: 10.0.1.18
@@ -202,7 +202,7 @@ tikv_servers:
     deploy_dir: "/data1/tidb-deploy/tikv-20160"
     data_dir: "/data1/tidb-data/tikv-20160"
     log_dir: "/data1/tidb-deploy/tikv-20160/log"
-    # numa_node: "0" # suggest numa node bindings.
+    # numa_node: "0"
     # config:
     #   log.level: warn
   - host: 10.0.1.18
@@ -212,7 +212,7 @@ tikv_servers:
     deploy_dir: "/data2/tidb-deploy/tikv-20161"
     data_dir: "/data2/tidb-data/tikv-20161"
     log_dir: "/data2/tidb-deploy/tikv-20161/log"
-    # numa_node: "1" # suggest numa node bindings.
+    # numa_node: "1"
     # config:
     #   log.level: warn
 
