@@ -39,6 +39,11 @@ const (
 	TiUPName = "tiup"
 )
 
+var (
+	// ErrInstallFirst indicates that a component/version is not installed
+	ErrInstallFirst = errors.New("component not installed")
+)
+
 // Mirror return mirror of tiup.
 // If it's not defined, it will use "https://tiup-mirrors.pingcap.com/".
 func Mirror() string {
@@ -245,17 +250,64 @@ func (env *Environment) downloadComponent(component string, version pkgver.Versi
 
 // SelectInstalledVersion selects the installed versions and the latest release version
 // will be chosen if there is an empty version
-func (env *Environment) SelectInstalledVersion(component string, version pkgver.Version) (pkgver.Version, error) {
-	return env.profile.SelectInstalledVersion(component, version)
+func (env *Environment) SelectInstalledVersion(component string, ver pkgver.Version) (pkgver.Version, error) {
+	installed, err := env.Profile().InstalledVersions(component)
+	if err != nil {
+		return ver, err
+	}
+
+	versions := []string{}
+	for _, v := range installed {
+		vi, err := env.v1Repo.ComponentVersion(component, v, true)
+		if err != nil {
+			return ver, err
+		}
+		if vi.Yanked {
+			continue
+		}
+		versions = append(versions, v)
+	}
+
+	errInstallFirst := errors.Annotatef(ErrInstallFirst, "use `tiup install %s` to install component `%s` first", component, component)
+	if len(installed) == 0 {
+		return ver, errInstallFirst
+	}
+
+	if !ver.IsEmpty() {
+		for _, v := range versions {
+			if pkgver.Version(v) == ver {
+				return ver, nil
+			}
+		}
+		return ver, errInstallFirst
+	}
+
+	sort.Slice(versions, func(i, j int) bool {
+		// Reverse sort: v5.0.0-rc,v5.0.0-nightly-20210305,v4.0.11
+		return semver.Compare(versions[i], versions[j]) > 0
+	})
+
+	for _, v := range versions {
+		if pkgver.Version(v).IsNightly() {
+			continue
+		}
+		if semver.Prerelease(v) == "" {
+			ver = pkgver.Version(v)
+			break
+		} else if ver.IsEmpty() {
+			ver = pkgver.Version(v)
+		}
+	}
+
+	if ver.IsEmpty() {
+		return ver, errInstallFirst
+	}
+	return ver, nil
 }
 
 // DownloadComponentIfMissing downloads the specific version of a component if it is missing
 func (env *Environment) DownloadComponentIfMissing(component string, ver pkgver.Version) (pkgver.Version, error) {
-	versions, err := env.profile.InstalledVersions(component)
-	if err != nil {
-		return "", err
-	}
-
+	var err error
 	if ver.String() == version.NightlyVersion {
 		if ver, _, err = env.v1Repo.LatestNightlyVersion(component); err != nil {
 			return "", err
@@ -266,23 +318,10 @@ func (env *Environment) DownloadComponentIfMissing(component string, ver pkgver.
 	// download the latest version if the specific component doesn't be installed
 
 	// Check whether the specific version exist in local
-	if ver.IsEmpty() && len(versions) > 0 {
-		sort.Slice(versions, func(i, j int) bool {
-			return semver.Compare(versions[i], versions[j]) < 0
-		})
-		ver = pkgver.Version(versions[len(versions)-1])
-	}
-
-	needDownload := ver.IsEmpty()
-	if !ver.IsEmpty() {
-		installed := false
-		for _, v := range versions {
-			if pkgver.Version(v) == ver {
-				installed = true
-				break
-			}
-		}
-		needDownload = !installed
+	ver, err = env.SelectInstalledVersion(component, ver)
+	needDownload := errors.Cause(err) == ErrInstallFirst
+	if err != nil && !needDownload {
+		return "", err
 	}
 
 	if needDownload {
