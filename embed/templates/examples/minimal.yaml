@@ -136,7 +136,7 @@ tidb_servers:
     # ssh_port: 22
     # # The port for clients to access the TiDB cluster.
     # port: 4000
-    # # TiDB Server status information reporting port.
+    # # TiDB Server status API port.
     # status_port: 10080
     # # TiDB Server deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/tidb-4000"
