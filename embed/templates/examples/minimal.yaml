@@ -85,7 +85,7 @@ pd_servers:
     #   schedule.max-merge-region-keys: 200000
   # # The ip address of the PD Server
   - host: 10.0.1.12
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # PD Server name
     # name: "pd-1"
@@ -107,7 +107,7 @@ pd_servers:
     #   schedule.max-merge-region-keys: 200000
   # # The ip address of the PD Server
   - host: 10.0.1.13
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # PD Server name
     # name: "pd-1"
@@ -144,7 +144,7 @@ tidb_servers:
     # log_dir: "/tidb-deploy/tidb-4000/log"
   # # The ip address of the TiDB Server.
   - host: 10.0.1.15
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # Access the TiDB cluster port.
     # port: 4000
@@ -159,7 +159,7 @@ tidb_servers:
 tikv_servers:
   # # The ip address of the TiKV Server.
   - host: 10.0.1.16
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # TiKV Server communication port.
     # port: 20160
@@ -176,7 +176,7 @@ tikv_servers:
     #   log.level: warn
   # # The ip address of the TiKV Server.
   - host: 10.0.1.17
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # TiKV Server communication port.
     # port: 20160
@@ -193,7 +193,7 @@ tikv_servers:
     #   log.level: warn
   # # The ip address of the TiKV Server.
   - host: 10.0.1.18
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # TiKV Server communication port.
     # port: 20160
@@ -213,7 +213,7 @@ tikv_servers:
 tiflash_servers:
   # # The ip address of the TiFlash Server.
   - host: 10.0.1.19
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # TiFlash TCP Service port.
     # tcp_port: 9000
@@ -239,7 +239,7 @@ tiflash_servers:
     # log_dir: /tidb-deploy/tiflash-9000/log
   # # The ip address of the TiKV Server.
   - host: 10.0.1.20
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # TiFlash TCP Service port.
     # tcp_port: 9000
@@ -268,7 +268,7 @@ tiflash_servers:
 monitoring_servers:
   # # The ip address of the Monitoring Server.
   - host: 10.0.1.21
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # Prometheus Service communication port.
     # port: 9090
