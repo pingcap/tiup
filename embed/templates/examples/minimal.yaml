@@ -163,7 +163,7 @@ tikv_servers:
     # ssh_port: 22
     # # TiKV Server communication port.
     # port: 20160
-    # # Communication port for reporting TiKV Server status.
+    # # TiKV Server status API port.
     # status_port: 20180
     # # TiKV Server deployment file, startup script, configuration file storage directory.
     # deploy_dir: "/tidb-deploy/tikv-20160"
