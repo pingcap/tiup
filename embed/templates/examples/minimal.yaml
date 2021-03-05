@@ -134,7 +134,7 @@ tidb_servers:
   - host: 10.0.1.14
     # # SSH port of the server.
     # ssh_port: 22
-    # # Access the TiDB cluster port.
+    # # The port for clients to access the TiDB cluster.
     # port: 4000
     # # TiDB Server status information reporting port.
     # status_port: 10080
