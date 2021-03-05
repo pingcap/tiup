@@ -67,7 +67,7 @@ pd_servers:
     # ssh_port: 22
     # # PD Server name
     # name: "pd-1"
-    # # communication port between TiDB Server and PD Server.
+    # # communication port for TiDB Servers to connect.
     # client_port: 2379
     # # Communication port among PD Server nodes.
     # peer_port: 2380
