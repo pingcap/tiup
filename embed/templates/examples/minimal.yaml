@@ -132,7 +132,7 @@ pd_servers:
 tidb_servers:
   # # The ip address of the TiDB Server.
   - host: 10.0.1.14
-    # # ssh port of TiUP management cluster.
+    # # SSH port of the server.
     # ssh_port: 22
     # # Access the TiDB cluster port.
     # port: 4000
