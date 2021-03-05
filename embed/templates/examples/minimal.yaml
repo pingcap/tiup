@@ -223,7 +223,7 @@ tiflash_servers:
     # flash_service_port: 3930
     # # TiFlash Proxy service port.
     # flash_proxy_port: 20170
-    # # Prometheus pulls TiFlash Proxy metrics port.
+    # # TiFlash Proxy metrics port.
     # flash_proxy_status_port: 20292
     # # TiFlash metrics port.
     # metrics_port: 8234
