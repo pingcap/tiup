@@ -14,6 +14,8 @@
 package checkpoint
 
 import (
+	"reflect"
+
 	"github.com/pingcap/tiup/pkg/set"
 )
 
@@ -42,23 +44,18 @@ func Field(name string, eq func(interface{}, interface{}) bool) CheckField {
 	return CheckField{name, eq}
 }
 
-// RegisterField register FieldSet to global for latter comparing
+// Register register FieldSet to global for latter comparing
 // If there are two fields with the same name, the first one will
 // be used
-func RegisterField(fields ...CheckField) {
-	eqNum := 0
+func Register(fields ...CheckField) FieldSet {
 	s := set.NewAnySet(func(a, b interface{}) bool {
 		return a.(CheckField).field == b.(CheckField).field
 	})
 
+	fields = append(fields, Field(hashKey, reflect.DeepEqual), Field(funcKey, reflect.DeepEqual))
 	for _, f := range fields {
 		s.Insert(f)
-		if f.eq != nil {
-			eqNum++
-		}
 	}
 
-	if eqNum > 0 {
-		checkfields = append(checkfields, FieldSet{*s})
-	}
+	return FieldSet{*s}
 }

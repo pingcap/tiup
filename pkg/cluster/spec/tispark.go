@@ -24,11 +24,13 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
 	"github.com/pingcap/tiup/pkg/meta"
+	"go.uber.org/zap"
 )
 
 // TiSparkMasterSpec is the topology specification for TiSpark master node
@@ -200,13 +202,22 @@ func (i *TiSparkMasterInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-) error {
+) (err error) {
 	// generate systemd service to invoke spark's start/stop scripts
 	comp := i.Role()
 	host := i.GetHost()
 	port := i.GetPort()
 	topo := i.topo.(*Specification)
 	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
+
+	// insert checkpoint
+	point := checkpoint.Acquire(ctx, CopyConfigFile, map[string]interface{}{"config-file": sysCfg})
+	defer func() {
+		point.Release(err, zap.String("config-file", sysCfg))
+	}()
+	if point.Hit() != nil {
+		return nil
+	}
 
 	systemCfg := system.NewTiSparkConfig(comp, deployUser, paths.Deploy, i.GetJavaHome())
 
@@ -349,13 +360,22 @@ func (i *TiSparkWorkerInstance) InitConfig(
 	clusterVersion,
 	deployUser string,
 	paths meta.DirPaths,
-) error {
+) (err error) {
 	// generate systemd service to invoke spark's start/stop scripts
 	comp := i.Role()
 	host := i.GetHost()
 	port := i.GetPort()
 	topo := i.topo.(*Specification)
 	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
+
+	// insert checkpoint
+	point := checkpoint.Acquire(ctx, CopyConfigFile, map[string]interface{}{"config-file": sysCfg})
+	defer func() {
+		point.Release(err, zap.String("config-file", sysCfg))
+	}()
+	if point.Hit() != nil {
+		return nil
+	}
 
 	systemCfg := system.NewTiSparkConfig(comp, deployUser, paths.Deploy, i.GetJavaHome())
 

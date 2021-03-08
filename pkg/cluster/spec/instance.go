@@ -26,10 +26,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
 	"github.com/pingcap/tiup/pkg/meta"
+	"go.uber.org/zap"
 )
 
 // Components names
@@ -52,6 +54,12 @@ const (
 	ComponentBlackboxExporter = "blackbox_exporter"
 	ComponentNodeExporter     = "node_exporter"
 	ComponentCheckCollector   = "insight"
+)
+
+var (
+	CopyConfigFile = checkpoint.Register(
+		checkpoint.Field("config-file", reflect.DeepEqual),
+	)
 )
 
 // Component represents a component of the cluster.
@@ -137,11 +145,21 @@ func (i *BaseInstance) Ready(ctx context.Context, e ctxt.Executor, timeout uint6
 }
 
 // InitConfig init the service configuration.
-func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt GlobalOptions, user string, paths meta.DirPaths) error {
+func (i *BaseInstance) InitConfig(ctx context.Context, e ctxt.Executor, opt GlobalOptions, user string, paths meta.DirPaths) (err error) {
 	comp := i.ComponentName()
 	host := i.GetHost()
 	port := i.GetPort()
 	sysCfg := filepath.Join(paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, host, port))
+
+	// insert checkpoint
+	point := checkpoint.Acquire(ctx, CopyConfigFile, map[string]interface{}{"config-file": sysCfg})
+	defer func() {
+		point.Release(err, zap.String("config-file", sysCfg))
+	}()
+
+	if point.Hit() != nil {
+		return nil
+	}
 
 	resource := MergeResourceControl(opt.ResourceControl, i.resourceControl())
 	systemCfg := system.NewConfig(comp, user, paths.Deploy).
