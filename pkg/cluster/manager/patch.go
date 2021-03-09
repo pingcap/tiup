@@ -34,6 +34,10 @@ import (
 
 // Patch the cluster.
 func (m *Manager) Patch(name string, packagePath string, opt operator.Options, overwrite, offline bool) error {
+	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
+		return err
+	}
+
 	metadata, err := m.meta(name)
 	if err != nil {
 		return err

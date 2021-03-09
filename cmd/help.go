@@ -48,7 +48,7 @@ Simply type tiup help <command>|<component> for full details.`,
 func externalHelp(env *environment.Environment, spec string, args ...string) {
 	profile := env.Profile()
 	component, version := environment.ParseCompVersion(spec)
-	selectVer, err := profile.SelectInstalledVersion(component, version)
+	selectVer, err := env.SelectInstalledVersion(component, version)
 	if err != nil {
 		fmt.Println(err)
 		return

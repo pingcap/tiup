@@ -6,15 +6,49 @@ on:
     branches:
       - master
       - release-*
+    paths-ignore:
+      - '**.html'
+      - '**.md'
+      - 'CNAME'
+      - 'LICENSE'
+      - 'doc/**'
+      - 'embed/templates/examples/**'
+      - 'components/bench/**'
+      - 'components/client/**'
+      - 'components/ctl/**'
+      - 'components/dm/**'
+      - 'components/doc/**'
+      - 'components/errdoc/**'
+      - 'components/playground/**'
+      - '.github/workflows/integrate-tiup**'
+      - '.github/workflows/integrate-dm**'
+      - '.github/workflows/integrate-playground**'
   push:
     branches:
       - master
+    paths-ignore:
+      - '**.html'
+      - '**.md'
+      - 'CNAME'
+      - 'LICENSE'
+      - 'doc/**'
+      - 'embed/templates/examples/**'
+      - 'components/bench/**'
+      - 'components/client/**'
+      - 'components/ctl/**'
+      - 'components/dm/**'
+      - 'components/doc/**'
+      - 'components/errdoc/**'
+      - 'components/playground/**'
+      - '.github/workflows/integrate-tiup**'
+      - '.github/workflows/integrate-dm**'
+      - '.github/workflows/integrate-playground**'
 
 jobs:
   cluster:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         cases:
           - "test_scale_core"

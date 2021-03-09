@@ -23,20 +23,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var (
+	sshCmd FieldSet
+	scpCmd FieldSet
+)
+
 func setup() {
 	DebugCheckpoint = true
 
-	checkfields = nil
-	RegisterField(
+	// register checkpoint for ssh command
+	sshCmd = Register(
 		Field("host", reflect.DeepEqual),
-		Field("user", reflect.DeepEqual),
-		Field("cmd", reflect.DeepEqual),
 		Field("port", func(a, b interface{}) bool {
 			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
 		}),
+		Field("user", reflect.DeepEqual),
+		Field("sudo", reflect.DeepEqual),
+		Field("cmd", reflect.DeepEqual),
 	)
 
-	RegisterField(
+	// register checkpoint for scp command
+	scpCmd = Register(
 		Field("host", reflect.DeepEqual),
 		Field("port", func(a, b interface{}) bool {
 			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
@@ -52,30 +59,31 @@ func TestCheckPointSimple(t *testing.T) {
 	setup()
 
 	assert := require.New(t)
-	r := strings.NewReader(`2021-01-14T12:16:54.579+0800    INFO    CheckPoint      {"host": "172.16.5.140", "port": "22", "user": "tidb", "cmd": "test  cmd", "stdout": "success", "stderr": ""}`)
+	r := strings.NewReader(`2021-01-14T12:16:54.579+0800    INFO    CheckPoint      {"host": "172.16.5.140", "port": "22", "sudo": false, "user": "tidb", "cmd": "test  cmd", "stdout": "success", "stderr": "", "__func__": "test", "__hash__": "Unknown"}`)
 
 	c, err := NewCheckPoint(r)
 	assert.Nil(err)
 	ctx := NewContext(context.Background())
 
-	p := c.Acquire(ctx, map[string]interface{}{
+	p := c.acquire(ctx, sshCmd, "test", map[string]interface{}{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
 		"cmd":  "test  cmd",
+		"sudo": false,
 	})
 	assert.NotNil(p.Hit())
 	assert.Equal(p.Hit()["stdout"], "success")
 	assert.True(p.acquired)
 
-	p1 := c.Acquire(ctx, map[string]interface{}{
+	p1 := c.acquire(ctx, sshCmd, "test", map[string]interface{}{
 		"host": "172.16.5.139",
 	})
 	assert.Nil(p1.Hit())
 	assert.False(p1.acquired)
 	p1.Release(nil)
 
-	p2 := c.Acquire(ctx, map[string]interface{}{
+	p2 := c.acquire(ctx, sshCmd, "test", map[string]interface{}{
 		"host": "172.16.5.138",
 	})
 	assert.Nil(p2.Hit())
@@ -84,7 +92,7 @@ func TestCheckPointSimple(t *testing.T) {
 
 	p.Release(nil)
 
-	p3 := c.Acquire(ctx, map[string]interface{}{
+	p3 := c.acquire(ctx, sshCmd, "test", map[string]interface{}{
 		"host": "172.16.5.137",
 	})
 	assert.Nil(p3.Hit())
@@ -97,17 +105,17 @@ func TestCheckPointMultiple(t *testing.T) {
 
 	assert := require.New(t)
 	r := strings.NewReader(`
-		2021-01-14T12:16:54.579+0800    INFO    CheckPoint      {"host": "172.16.5.140", "port": "22", "user": "tidb", "cmd": "test  cmd", "sudo": false, "stdout": "success", "stderr": ""}
+		2021-01-14T12:16:54.579+0800    INFO    CheckPoint      {"host": "172.16.5.140", "port": "22", "user": "tidb", "cmd": "test  cmd", "sudo": false, "stdout": "success", "stderr": "", "__func__": "test", "__hash__": "Unknown"}
 		2021-01-14T12:17:32.222+0800    DEBUG   Environment variables {"env": ["TIUP_HOME=/home/tidb/.tiup"}
 		2021-01-14T12:17:33.579+0800    INFO    Execute command {"command": "tiup cluster deploy test v4.0.9 /Users/joshua/test.yaml"}
-		2021-01-14T12:16:54.579+0800    INFO    CheckPoint      {"host": "172.16.5.141", "port": "22", "user": "tidb", "src": "src", "dst": "dst", "download": false}
+		2021-01-14T12:16:54.579+0800    INFO    CheckPoint      {"host": "172.16.5.141", "port": "22", "user": "tidb", "src": "src", "dst": "dst", "download": false, "__func__": "test", "__hash__": "Unknown"}
 	`)
 
 	c, err := NewCheckPoint(r)
 	assert.Nil(err)
 	ctx := NewContext(context.Background())
 
-	p := c.Acquire(ctx, map[string]interface{}{
+	p := c.acquire(ctx, sshCmd, "test", map[string]interface{}{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
@@ -118,7 +126,7 @@ func TestCheckPointMultiple(t *testing.T) {
 	assert.Equal(p.Hit()["stdout"], "success")
 	p.Release(nil)
 
-	p = c.Acquire(ctx, map[string]interface{}{
+	p = c.acquire(ctx, scpCmd, "test", map[string]interface{}{
 		"host":     "172.16.5.141",
 		"port":     22,
 		"user":     "tidb",
@@ -141,7 +149,7 @@ func TestCheckPointNil(t *testing.T) {
 	assert.Nil(err)
 	ctx := NewContext(context.Background())
 
-	p := c.Acquire(ctx, map[string]interface{}{
+	p := c.acquire(ctx, sshCmd, "test", map[string]interface{}{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
@@ -156,7 +164,7 @@ func TestCheckPointNil(t *testing.T) {
 	c, err = NewCheckPoint(r)
 	assert.Nil(err)
 
-	p = c.Acquire(ctx, map[string]interface{}{
+	p = c.acquire(ctx, scpCmd, "test", map[string]interface{}{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
@@ -171,7 +179,7 @@ func TestCheckPointNil(t *testing.T) {
 	c, err = NewCheckPoint(r)
 	assert.Nil(err)
 
-	p = c.Acquire(ctx, map[string]interface{}{
+	p = c.acquire(ctx, sshCmd, "test", map[string]interface{}{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
@@ -186,7 +194,7 @@ func TestCheckPointNil(t *testing.T) {
 	c, err = NewCheckPoint(r)
 	assert.Nil(err)
 
-	p = c.Acquire(ctx, map[string]interface{}{
+	p = c.acquire(ctx, sshCmd, "test", map[string]interface{}{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
@@ -201,7 +209,7 @@ func TestCheckPointNil(t *testing.T) {
 	c, err = NewCheckPoint(r)
 	assert.Nil(err)
 
-	p = c.Acquire(ctx, map[string]interface{}{
+	p = c.acquire(ctx, sshCmd, "test", map[string]interface{}{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
@@ -216,7 +224,7 @@ func TestCheckPointNil(t *testing.T) {
 	c, err = NewCheckPoint(r)
 	assert.Nil(err)
 
-	p = c.Acquire(ctx, map[string]interface{}{
+	p = c.acquire(ctx, sshCmd, "test", map[string]interface{}{
 		"host": "172.16.5.140",
 		"port": 22,
 		"user": "tidb",
@@ -231,5 +239,5 @@ func TestCheckPointNotInited(t *testing.T) {
 	setup()
 
 	assert := require.New(t)
-	assert.Panics(func() { Acquire(context.Background(), map[string]interface{}{}) })
+	assert.Panics(func() { Acquire(context.Background(), sshCmd, map[string]interface{}{}) })
 }

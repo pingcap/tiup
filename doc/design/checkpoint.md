@@ -45,11 +45,11 @@ In the implementation of the checkpoint, we mix checkpoint in the audit log, lik
 /home/tidb/.tiup/components/cluster/v1.3.1/tiup-cluster display test
 2021-01-21T18:36:08.380+0800    INFO    Execute command {"command": "tiup cluster display test"}
 2021-01-21T18:36:09.805+0800    INFO    SSHCommand      {"host": "172.16.5.140", "port": "22", "cmd": "echo task 1", "stdout": "task 1", "stderr": ""}
-2021-01-21T18:36:09.806+0800    INFO    CheckPoint      {"host": "172.16.5.140", "action": "task", "n": 1, "result": true}
+2021-01-21T18:36:09.806+0800    INFO    CheckPoint      {"host": "172.16.5.140", "n": 1, "result": true}
 2021-01-21T18:36:09.805+0800    INFO    SSHCommand      {"host": "172.16.5.140", "port": "22", "cmd": "echo task 2", "stdout": "task 2", "stderr": ""}
-2021-01-21T18:36:09.806+0800    INFO    CheckPoint      {"host": "172.16.5.140", "action": "task", "n": 2, "result": true}
+2021-01-21T18:36:09.806+0800    INFO    CheckPoint      {"host": "172.16.5.140", "n": 2, "result": true}
 2021-01-21T18:36:09.805+0800    INFO    SSHCommand      {"host": "172.16.5.140", "port": "22", "cmd": "echo task 3", "stdout": "task 2", "stderr": ""}
-2021-01-21T18:36:09.806+0800    INFO    CheckPoint      {"host": "172.16.5.140", "action": "task", "n": 3, "result": true}
+2021-01-21T18:36:09.806+0800    INFO    CheckPoint      {"host": "172.16.5.140", "n": 3, "result": true}
 ```
 
 If the user runs tiup-cluster or tiup-dm in replay mode by giving an audit id, we will parse that audit log file and pick up all `CheckPoint` by order into a queue, then in corresponding functions, we check if the checkpoint is in the queue, if hit, we dequeue the checkpoint and return the result directly instead of doing the real work. Example:
@@ -57,8 +57,7 @@ If the user runs tiup-cluster or tiup-dm in replay mode by giving an audit id, w
 ```golang
 func init() {
     // Register checkpoint fields so that we know how to compare checkpoints
-    checkpoint.RegisterField(
-        checkpoint.Field("action", reflect.DeepEqual),
+    countHost := checkpoint.Register(
         checkpoint.Field("host", reflect.DeepEqual),
         checkpoint.Field("n", func(a, b interface{}) bool {
             // the n is a int, however, it will be float after it write to json because json only has float number.
@@ -81,8 +80,7 @@ func processCommand() {
 
 func task(ctx context.Context, host string, n int) (result bool, err error) {
     // first, we get the checkpoint from audit log
-    point := checkpoint.Acquire(ctx, map[string]interface{}{
-        "action": "task",
+    point := checkpoint.Acquire(ctx, countHost, map[string]interface{}{
         "host": host,
         "n":  n,
     })
@@ -91,7 +89,6 @@ func task(ctx context.Context, host string, n int) (result bool, err error) {
         // the release function will write the checkpoint into current audit log (not the one user specified)
         // for latter replay.
         point.Release(err,
-            zap.String("action", "task"),
             zap.String("host", host),
             zap.Int("n", n),
             zap.Bool("result", result),
@@ -123,7 +120,7 @@ func processCommand() {
 // we use a flag mock that the task only return true once
 var flag = true
 func task(ctx context.Context, host string, n int) (result bool, err error) {
-    point := checkpoint.Acquire(ctx, map[string]interface{}{ ... }
+    point := checkpoint.Acquire(ctx, countHost, map[string]interface{}{ ... }
     defer func() { point.Release( ... ) }
     if point.Hit() != nil { ... }
 
@@ -149,17 +146,17 @@ task(0)[called by processCommand]:  return false
 the checkpoint in audit log will be:
 
 ```
-... {"host": "...", "action": "task", "n": 1, "result": true}
-... {"host": "...", "action": "task", "n": 0, "result": true}
-... {"host": "...", "action": "task", "n": 0, "result": false}
+... {"host": "...", "n": 1, "result": true}
+... {"host": "...", "n": 0, "result": true}
+... {"host": "...", "n": 0, "result": false}
 ```
 
 There are three checkpoints, but when we try to replay the process, the `task(0)[called by task(1)]` will not be called at all since `task(1)` will return early with the cached result, so the execution flow will be:
 
 ```
-task(1)[called by processCommand]:  return true (cached by {"host": "...", "action": "task", "n": 1, "result": true})
+task(1)[called by processCommand]:  return true (cached by {"host": "...", "n": 1, "result": true})
 |
-task(0)[called by processCommand]:  return true (cached by {"host": "...", "action": "task", "n": 0, "result": true})
+task(0)[called by processCommand]:  return true (cached by {"host": "...", "n": 0, "result": true})
 ```
 
 The trouble is coming: in the real case the `task(0)[called by processCommand]` returns false but in replay case it return true because it takes the result of `task(0)[called by task(1)]` by mistake. The problem is that the `CheckPoint` of `task(0)[called by task(1)]` should not be record because it's parent, `task(0)[called by processCommand]`, has record a `CheckPoint`.
