@@ -57,25 +57,19 @@ func CloneMirror(repo *V1Repository,
 	fmt.Printf("Start to clone mirror, targetDir is %s, selectedVersions are [%s]\n", targetDir, strings.Join(selectedVersions, ","))
 	fmt.Println("If this does not meet expectations, please abort this process, read `tiup mirror clone --help` and run again")
 
-	if utils.IsNotExist(targetDir) {
-		if err := os.MkdirAll(targetDir, 0755); err != nil {
-			return err
-		}
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return err
 	}
 
 	// Temporary directory is used to save the unverified tarballs
 	tmpDir := filepath.Join(targetDir, fmt.Sprintf("_tmp_%d", time.Now().UnixNano()))
 	keyDir := filepath.Join(targetDir, "keys")
 
-	if utils.IsNotExist(tmpDir) {
-		if err := os.MkdirAll(tmpDir, 0755); err != nil {
-			return err
-		}
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		return err
 	}
-	if utils.IsNotExist(keyDir) {
-		if err := os.MkdirAll(keyDir, 0755); err != nil {
-			return err
-		}
+	if err := os.MkdirAll(keyDir, 0755); err != nil {
+		return err
 	}
 	defer os.RemoveAll(tmpDir)
 
