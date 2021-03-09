@@ -13,6 +13,9 @@ on:
       - 'LICENSE'
       - 'doc/**'
       - 'embed/templates/examples/**'
+      - '.github/workflows/integrate-cluster**'
+      - '.github/workflows/integrate-dm**'
+      - '.github/workflows/integrate-playground**'
   push:
     branches:
       - master
@@ -23,6 +26,9 @@ on:
       - 'LICENSE'
       - 'doc/**'
       - 'embed/templates/examples/**'
+      - '.github/workflows/integrate-cluster**'
+      - '.github/workflows/integrate-dm**'
+      - '.github/workflows/integrate-playground**'
 
 jobs:
   tiup:
