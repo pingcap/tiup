@@ -315,12 +315,16 @@ func cloneComponents(repo *V1Repository,
 					// The component or the version is yanked, skip download binary
 					continue
 				}
-				versionItem := versionItem
+				name, versionItem := name, versionItem
 				errG.Go(func() error {
 					tickets <- struct{}{}
 					defer func() { <-tickets }()
 
-					return download(targetDir, tmpDir, repo, &versionItem)
+					err := download(targetDir, tmpDir, repo, &versionItem)
+					if err != nil {
+						return errors.Annotatef(err, "download resource: %s", name)
+					}
+					return nil
 				})
 			}
 		}
