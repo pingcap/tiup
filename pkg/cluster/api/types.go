@@ -22,6 +22,7 @@ import (
 
 	"github.com/pingcap/kvproto/pkg/metapb"
 	"github.com/pingcap/kvproto/pkg/pdpb"
+	"github.com/pingcap/tiup/pkg/cluster/api/typeutil"
 )
 
 // PDReplicationConfig is the replication type configuration ReplicationConfig from PD.
@@ -33,7 +34,7 @@ type PDReplicationConfig struct {
 	// The placement priorities is implied by the order of label keys.
 	// For example, ["zone", "rack"] means that we should place replicas to
 	// different zones first, then to different racks if we don't have enough zones.
-	LocationLabels []string `toml:"location-labels" json:"location-labels"`
+	LocationLabels typeutil.StringSlice `toml:"location-labels" json:"location-labels"`
 	// StrictlyMatchLabel strictly checks if the label of TiKV is matched with LocationLabels.
 	StrictlyMatchLabel bool `toml:"strictly-match-label" json:"strictly-match-label,string"`
 
@@ -59,26 +60,24 @@ type MetaStore struct {
 
 // StoreStatus contains status about a store.
 type StoreStatus struct {
-	Capacity           uint64     `json:"capacity"`
-	Available          uint64     `json:"available"`
-	UsedSize           uint64     `json:"used_size"`
-	LeaderCount        int        `json:"leader_count"`
-	LeaderWeight       float64    `json:"leader_weight"`
-	LeaderScore        float64    `json:"leader_score"`
-	LeaderSize         int64      `json:"leader_size"`
-	RegionCount        int        `json:"region_count"`
-	RegionWeight       float64    `json:"region_weight"`
-	RegionScore        float64    `json:"region_score"`
-	RegionSize         int64      `json:"region_size"`
-	SendingSnapCount   uint32     `json:"sending_snap_count,omitempty"`
-	ReceivingSnapCount uint32     `json:"receiving_snap_count,omitempty"`
-	ApplyingSnapCount  uint32     `json:"applying_snap_count,omitempty"`
-	IsBusy             bool       `json:"is_busy,omitempty"`
-	StartTS            *time.Time `json:"start_ts,omitempty"`
-	LastHeartbeatTS    *time.Time `json:"last_heartbeat_ts,omitempty"`
-	Uptime             *struct {
-		time.Duration
-	} `json:"uptime,omitempty"`
+	Capacity           typeutil.ByteSize  `json:"capacity"`
+	Available          typeutil.ByteSize  `json:"available"`
+	UsedSize           typeutil.ByteSize  `json:"used_size"`
+	LeaderCount        int                `json:"leader_count"`
+	LeaderWeight       float64            `json:"leader_weight"`
+	LeaderScore        float64            `json:"leader_score"`
+	LeaderSize         int64              `json:"leader_size"`
+	RegionCount        int                `json:"region_count"`
+	RegionWeight       float64            `json:"region_weight"`
+	RegionScore        float64            `json:"region_score"`
+	RegionSize         int64              `json:"region_size"`
+	SendingSnapCount   uint32             `json:"sending_snap_count,omitempty"`
+	ReceivingSnapCount uint32             `json:"receiving_snap_count,omitempty"`
+	ApplyingSnapCount  uint32             `json:"applying_snap_count,omitempty"`
+	IsBusy             bool               `json:"is_busy,omitempty"`
+	StartTS            *time.Time         `json:"start_ts,omitempty"`
+	LastHeartbeatTS    *time.Time         `json:"last_heartbeat_ts,omitempty"`
+	Uptime             *typeutil.Duration `json:"uptime,omitempty"`
 }
 
 // StoreInfo contains information about a store.

@@ -16,6 +16,7 @@ require (
 	github.com/cheggaaa/pb/v3 v3.0.6
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f // indirect
 	github.com/creasty/defaults v1.5.1
+	github.com/docker/go-units v0.4.0
 	github.com/fatih/color v1.10.0
 	github.com/gibson042/canonicaljson-go v1.0.3
 	github.com/gizak/termui/v3 v3.1.0
