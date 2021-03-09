@@ -18,6 +18,7 @@ import (
 
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -26,6 +27,10 @@ import (
 
 // Reload the cluster.
 func (m *Manager) Reload(name string, opt operator.Options, skipRestart bool) error {
+	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
+		return err
+	}
+
 	sshTimeout := opt.SSHTimeout
 
 	metadata, err := m.meta(name)
@@ -47,7 +52,7 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart bool) er
 		}
 	})
 
-	refreshConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, nil)
+	refreshConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, nil, false)
 	monitorConfigTasks := buildRefreshMonitoredConfigTasks(
 		m.specManager,
 		name,

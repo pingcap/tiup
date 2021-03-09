@@ -29,17 +29,11 @@ import (
 	"go.uber.org/zap"
 )
 
-func init() {
+var (
 	// register checkpoint for upgrade operation
-	checkpoint.RegisterField(
-		checkpoint.Field("operation", reflect.DeepEqual),
-		checkpoint.Field("instance", reflect.DeepEqual),
-	)
-	checkpoint.RegisterField(
-		checkpoint.Field("operation", reflect.DeepEqual),
-		checkpoint.Field("func", reflect.DeepEqual),
-	)
-}
+	upgradePoint       = checkpoint.Register(checkpoint.Field("instance", reflect.DeepEqual))
+	increaseLimitPoint = checkpoint.Register()
+)
 
 // Upgrade the cluster.
 func Upgrade(
@@ -117,14 +111,9 @@ func Upgrade(
 
 func upgradeInstance(ctx context.Context, topo spec.Topology, instance spec.Instance, options Options, tlsCfg *tls.Config) (err error) {
 	// insert checkpoint
-	point := checkpoint.Acquire(ctx, map[string]interface{}{
-		"operation": "upgrade",
-		"instance":  instance.ID(),
-	})
+	point := checkpoint.Acquire(ctx, upgradePoint, map[string]interface{}{"instance": instance.ID()})
 	defer func() {
-		point.Release(err,
-			zap.String("operation", "upgrade"),
-			zap.String("instance", instance.ID()))
+		point.Release(err, zap.String("instance", instance.ID()))
 	}()
 
 	if point.Hit() != nil {
@@ -183,14 +172,9 @@ func increaseScheduleLimit(ctx context.Context, pc *api.PDClient) (
 	currRegionScheduleLimit int,
 	err error) {
 	// insert checkpoint
-	point := checkpoint.Acquire(ctx, map[string]interface{}{
-		"operation": "upgrade",
-		"func":      "increaseScheduleLimit",
-	})
+	point := checkpoint.Acquire(ctx, increaseLimitPoint, map[string]interface{}{})
 	defer func() {
 		point.Release(err,
-			zap.String("operation", "upgrade"),
-			zap.String("func", "increaseScheduleLimit"),
 			zap.Int("currLeaderScheduleLimit", currLeaderScheduleLimit),
 			zap.Int("currRegionScheduleLimit", currRegionScheduleLimit),
 		)

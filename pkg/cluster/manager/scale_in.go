@@ -23,6 +23,7 @@ import (
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -38,6 +39,10 @@ func (m *Manager) ScaleIn(
 	gOpt operator.Options,
 	scale func(builer *task.Builder, metadata spec.Metadata, tlsCfg *tls.Config),
 ) error {
+	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
+		return err
+	}
+
 	var (
 		force bool     = gOpt.Force
 		nodes []string = gOpt.Nodes
@@ -74,7 +79,7 @@ func (m *Manager) ScaleIn(
 	base := metadata.GetBaseMeta()
 
 	// Regenerate configuration
-	regenConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, nodes)
+	regenConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, nodes, true)
 
 	// handle dir scheme changes
 	if hasImported {

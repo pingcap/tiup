@@ -6,6 +6,13 @@ on:
     branches:
       - ci/gh-*
       - release-*
+    paths-ignore:
+      - '**.html'
+      - '**.md'
+      - 'CNAME'
+      - 'LICENSE'
+      - 'doc/**'
+      - 'embed/templates/examples/**'
   release:
     types:
       - published
