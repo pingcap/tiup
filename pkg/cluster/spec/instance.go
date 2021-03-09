@@ -57,6 +57,7 @@ const (
 )
 
 var (
+	// CopyConfigFile is the checkpoint to cache config file transfer action
 	CopyConfigFile = checkpoint.Register(
 		checkpoint.Field("config-file", reflect.DeepEqual),
 	)
