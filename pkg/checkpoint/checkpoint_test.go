@@ -31,7 +31,6 @@ var (
 func setup() {
 	DebugCheckpoint = true
 
-	checkfields = nil
 	// register checkpoint for ssh command
 	sshCmd = Register(
 		Field("host", reflect.DeepEqual),
