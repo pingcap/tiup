@@ -13,6 +13,16 @@ on:
       - 'LICENSE'
       - 'doc/**'
       - 'embed/templates/examples/**'
+      - 'components/bench/**'
+      - 'components/client/**'
+      - 'components/ctl/**'
+      - 'components/dm/**'
+      - 'components/doc/**'
+      - 'components/errdoc/**'
+      - 'components/playground/**'
+      - '.github/workflows/integrate-tiup**'
+      - '.github/workflows/integrate-dm**'
+      - '.github/workflows/integrate-playground**'
   push:
     branches:
       - master
@@ -23,6 +33,16 @@ on:
       - 'LICENSE'
       - 'doc/**'
       - 'embed/templates/examples/**'
+      - 'components/bench/**'
+      - 'components/client/**'
+      - 'components/ctl/**'
+      - 'components/dm/**'
+      - 'components/doc/**'
+      - 'components/errdoc/**'
+      - 'components/playground/**'
+      - '.github/workflows/integrate-tiup**'
+      - '.github/workflows/integrate-dm**'
+      - '.github/workflows/integrate-playground**'
 
 jobs:
   cluster:

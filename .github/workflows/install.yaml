@@ -5,23 +5,13 @@ on:
     branches:
       - master
       - release-*
-    paths-ignore:
-      - '**.html'
-      - '**.md'
-      - 'CNAME'
-      - 'LICENSE'
-      - 'doc/**'
-      - 'embed/templates/examples/**'
+    paths:
+      - 'install.sh'
   push:
     branches:
       - release-*
-    paths-ignore:
-      - '**.html'
-      - '**.md'
-      - 'CNAME'
-      - 'LICENSE'
-      - 'doc/**'
-      - 'embed/templates/examples/**'
+    paths:
+      - 'install.sh'
 
 jobs:
   install:
