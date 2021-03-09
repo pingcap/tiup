@@ -25,6 +25,7 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -52,6 +53,10 @@ type InstInfo struct {
 
 // Display cluster meta and topology.
 func (m *Manager) Display(name string, opt operator.Options) error {
+	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
+		return err
+	}
+
 	clusterInstInfos, err := m.GetClusterTopology(name, opt)
 	if err != nil {
 		return err

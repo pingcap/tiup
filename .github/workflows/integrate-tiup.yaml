@@ -6,9 +6,29 @@ on:
     branches:
       - master
       - release-*
+    paths-ignore:
+      - '**.html'
+      - '**.md'
+      - 'CNAME'
+      - 'LICENSE'
+      - 'doc/**'
+      - 'embed/templates/examples/**'
+      - '.github/workflows/integrate-cluster**'
+      - '.github/workflows/integrate-dm**'
+      - '.github/workflows/integrate-playground**'
   push:
     branches:
       - master
+    paths-ignore:
+      - '**.html'
+      - '**.md'
+      - 'CNAME'
+      - 'LICENSE'
+      - 'doc/**'
+      - 'embed/templates/examples/**'
+      - '.github/workflows/integrate-cluster**'
+      - '.github/workflows/integrate-dm**'
+      - '.github/workflows/integrate-playground**'
 
 jobs:
   tiup:
