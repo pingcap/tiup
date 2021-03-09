@@ -34,7 +34,6 @@ func newTemplateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "template",
 		Short:  "Print topology template",
-		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opt.Full && opt.MultiDC {
 				return errors.New("at most one of 'full' and 'multi-dc' can be specified")
