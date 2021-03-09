@@ -24,9 +24,9 @@ import (
 	"go.uber.org/zap"
 )
 
-func init() {
+var (
 	// register checkpoint for ssh command
-	checkpoint.RegisterField(
+	sshPoint = checkpoint.Register(
 		checkpoint.Field("host", reflect.DeepEqual),
 		checkpoint.Field("port", func(a, b interface{}) bool {
 			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
@@ -37,7 +37,7 @@ func init() {
 	)
 
 	// register checkpoint for scp command
-	checkpoint.RegisterField(
+	scpPoint = checkpoint.Register(
 		checkpoint.Field("host", reflect.DeepEqual),
 		checkpoint.Field("port", func(a, b interface{}) bool {
 			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
@@ -47,7 +47,7 @@ func init() {
 		checkpoint.Field("dst", reflect.DeepEqual),
 		checkpoint.Field("download", reflect.DeepEqual),
 	)
-}
+)
 
 // CheckPointExecutor wraps Executor and inject checkpoints
 //   ATTENTION please: the result of CheckPointExecutor shouldn't be used to impact
@@ -60,7 +60,7 @@ type CheckPointExecutor struct {
 
 // Execute implements Executor interface.
 func (c *CheckPointExecutor) Execute(ctx context.Context, cmd string, sudo bool, timeout ...time.Duration) (stdout []byte, stderr []byte, err error) {
-	point := checkpoint.Acquire(ctx, map[string]interface{}{
+	point := checkpoint.Acquire(ctx, sshPoint, map[string]interface{}{
 		"host": c.config.Host,
 		"port": c.config.Port,
 		"user": c.config.User,
@@ -87,7 +87,7 @@ func (c *CheckPointExecutor) Execute(ctx context.Context, cmd string, sudo bool,
 
 // Transfer implements Executer interface.
 func (c *CheckPointExecutor) Transfer(ctx context.Context, src string, dst string, download bool) (err error) {
-	point := checkpoint.Acquire(ctx, map[string]interface{}{
+	point := checkpoint.Acquire(ctx, scpPoint, map[string]interface{}{
 		"host":     c.config.Host,
 		"port":     c.config.Port,
 		"user":     c.config.User,
@@ -102,8 +102,7 @@ func (c *CheckPointExecutor) Transfer(ctx context.Context, src string, dst strin
 			zap.String("user", c.config.User),
 			zap.String("src", src),
 			zap.String("dst", dst),
-			zap.Bool("download", download),
-			zap.Bool("hit", point != nil))
+			zap.Bool("download", download))
 	}()
 	if point.Hit() != nil {
 		return nil

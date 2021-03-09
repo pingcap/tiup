@@ -99,7 +99,7 @@ func data(topo *spec.Specification) error {
 				return errors.New("table test.ti_cluster is empty")
 			}
 
-			fmt.Printf("check data %s:%d success\n", spec.Host, spec.Port)
+			fmt.Printf("check data %s:%d success\n", specVal.Host, specVal.Port)
 			return nil
 		})
 	}
@@ -128,7 +128,7 @@ func writable(topo *spec.Specification) error {
 				return err
 			}
 
-			fmt.Printf("write %s:%d success\n", spec.Host, spec.Port)
+			fmt.Printf("write %s:%d success\n", specVal.Host, specVal.Port)
 			return nil
 		})
 	}

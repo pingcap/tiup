@@ -30,8 +30,8 @@ func newTemplateCmd() *cobra.Command {
 	opt := TemplateOptions{}
 
 	cmd := &cobra.Command{
-		Use:    "template",
-		Short:  "Print topology template",
+		Use:   "template",
+		Short: "Print topology template",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := "minimal.yaml"
 			if opt.Full {

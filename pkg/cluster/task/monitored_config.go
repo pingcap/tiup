@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	"github.com/google/uuid"
+	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/template"
@@ -28,6 +29,7 @@ import (
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
+	"go.uber.org/zap"
 )
 
 // MonitoredConfig is used to generate the monitor node configuration
@@ -84,8 +86,17 @@ func (m *MonitoredConfig) Execute(ctx context.Context) error {
 	return m.syncMonitoredScript(ctx, exec, m.component, cfg)
 }
 
-func (m *MonitoredConfig) syncMonitoredSystemConfig(ctx context.Context, exec ctxt.Executor, comp string, port int) error {
+func (m *MonitoredConfig) syncMonitoredSystemConfig(ctx context.Context, exec ctxt.Executor, comp string, port int) (err error) {
 	sysCfg := filepath.Join(m.paths.Cache, fmt.Sprintf("%s-%s-%d.service", comp, m.host, port))
+
+	// insert checkpoint
+	point := checkpoint.Acquire(ctx, spec.CopyConfigFile, map[string]interface{}{"config-file": sysCfg})
+	defer func() {
+		point.Release(err, zap.String("config-file", sysCfg))
+	}()
+	if point.Hit() != nil {
+		return nil
+	}
 
 	resource := spec.MergeResourceControl(m.globResCtl, m.options.ResourceControl)
 	systemCfg := system.NewConfig(comp, m.deployUser, m.paths.Deploy).
