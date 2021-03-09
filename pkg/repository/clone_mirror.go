@@ -31,7 +31,10 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
+	"golang.org/x/sync/errgroup"
 )
+
+const defaultJobs = 1
 
 // CloneOptions represents the options of clone a remote mirror
 type CloneOptions struct {
@@ -41,6 +44,7 @@ type CloneOptions struct {
 	Full       bool
 	Components map[string]*[]string
 	Prefix     bool
+	Jobs       uint
 }
 
 // CloneMirror clones a local mirror from the remote repository
@@ -252,6 +256,15 @@ func cloneComponents(repo *V1Repository,
 	targetDir, tmpDir string,
 	options CloneOptions) (map[string]*v1manifest.Component, error) {
 	compManifests := map[string]*v1manifest.Component{}
+
+	jobs := options.Jobs
+	if jobs <= 0 {
+		jobs = defaultJobs
+	}
+	errG := &errgroup.Group{}
+	tickets := make(chan struct{}, jobs)
+	defer func() { close(tickets) }()
+
 	for _, name := range components {
 		manifest, err := repo.FetchComponentManifest(name, true)
 		if err != nil {
@@ -308,12 +321,19 @@ func cloneComponents(repo *V1Repository,
 					// The component or the version is yanked, skip download binary
 					continue
 				}
-				if err := download(targetDir, tmpDir, repo, &versionItem); err != nil {
-					return nil, errors.Annotatef(err, "download resource: %s", name)
-				}
+				versionItem := versionItem
+				errG.Go(func() error {
+					tickets <- struct{}{}
+					defer func() { <-tickets }()
+
+					return download(targetDir, tmpDir, repo, &versionItem)
+				})
 			}
 		}
 		compManifests[name] = newManifest
+	}
+	if err := errG.Wait(); err != nil {
+		return nil, err
 	}
 
 	// Download TiUP binary
