@@ -810,6 +810,7 @@ func newMirrorCloneCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&options.Archs, "arch", "a", []string{"amd64", "arm64"}, "Specify the downloading architecture")
 	cmd.Flags().StringSliceVarP(&options.OSs, "os", "o", []string{"linux", "darwin"}, "Specify the downloading os")
 	cmd.Flags().BoolVarP(&options.Prefix, "prefix", "", false, "Download the version with matching prefix")
+	cmd.Flags().UintVarP(&options.Jobs, "jobs", "", 1, "Specify the number of concurrent download jobs")
 
 	originHelpFunc := cmd.HelpFunc()
 	cmd.SetHelpFunc(func(command *cobra.Command, args []string) {
