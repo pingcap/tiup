@@ -259,6 +259,9 @@ func (env *Environment) SelectInstalledVersion(component string, ver pkgver.Vers
 	versions := []string{}
 	for _, v := range installed {
 		vi, err := env.v1Repo.ComponentVersion(component, v, true)
+		if errors.Cause(err) == repository.ErrUnknownVersion {
+			continue
+		}
 		if err != nil {
 			return ver, err
 		}
