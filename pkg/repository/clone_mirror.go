@@ -31,7 +31,10 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
+	"golang.org/x/sync/errgroup"
 )
+
+const defaultJobs = 1
 
 // CloneOptions represents the options of clone a remote mirror
 type CloneOptions struct {
@@ -41,6 +44,7 @@ type CloneOptions struct {
 	Full       bool
 	Components map[string]*[]string
 	Prefix     bool
+	Jobs       uint
 }
 
 // CloneMirror clones a local mirror from the remote repository
@@ -53,25 +57,19 @@ func CloneMirror(repo *V1Repository,
 	fmt.Printf("Start to clone mirror, targetDir is %s, selectedVersions are [%s]\n", targetDir, strings.Join(selectedVersions, ","))
 	fmt.Println("If this does not meet expectations, please abort this process, read `tiup mirror clone --help` and run again")
 
-	if utils.IsNotExist(targetDir) {
-		if err := os.MkdirAll(targetDir, 0755); err != nil {
-			return err
-		}
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return err
 	}
 
 	// Temporary directory is used to save the unverified tarballs
 	tmpDir := filepath.Join(targetDir, fmt.Sprintf("_tmp_%d", time.Now().UnixNano()))
 	keyDir := filepath.Join(targetDir, "keys")
 
-	if utils.IsNotExist(tmpDir) {
-		if err := os.MkdirAll(tmpDir, 0755); err != nil {
-			return err
-		}
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		return err
 	}
-	if utils.IsNotExist(keyDir) {
-		if err := os.MkdirAll(keyDir, 0755); err != nil {
-			return err
-		}
+	if err := os.MkdirAll(keyDir, 0755); err != nil {
+		return err
 	}
 	defer os.RemoveAll(tmpDir)
 
@@ -252,6 +250,15 @@ func cloneComponents(repo *V1Repository,
 	targetDir, tmpDir string,
 	options CloneOptions) (map[string]*v1manifest.Component, error) {
 	compManifests := map[string]*v1manifest.Component{}
+
+	jobs := options.Jobs
+	if jobs <= 0 {
+		jobs = defaultJobs
+	}
+	errG := &errgroup.Group{}
+	tickets := make(chan struct{}, jobs)
+	defer func() { close(tickets) }()
+
 	for _, name := range components {
 		manifest, err := repo.FetchComponentManifest(name, true)
 		if err != nil {
@@ -308,12 +315,23 @@ func cloneComponents(repo *V1Repository,
 					// The component or the version is yanked, skip download binary
 					continue
 				}
-				if err := download(targetDir, tmpDir, repo, &versionItem); err != nil {
-					return nil, errors.Annotatef(err, "download resource: %s", name)
-				}
+				name, versionItem := name, versionItem
+				errG.Go(func() error {
+					tickets <- struct{}{}
+					defer func() { <-tickets }()
+
+					err := download(targetDir, tmpDir, repo, &versionItem)
+					if err != nil {
+						return errors.Annotatef(err, "download resource: %s", name)
+					}
+					return nil
+				})
 			}
 		}
 		compManifests[name] = newManifest
+	}
+	if err := errG.Wait(); err != nil {
+		return nil, err
 	}
 
 	// Download TiUP binary
