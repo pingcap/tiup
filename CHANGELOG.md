@@ -1,5 +1,12 @@
 TiUP Changelog
 
+## [1.3.4] 2021.03.05
+
+### Fixes
+
+- Fix the issue that tiup-cluster can't gernerate prometheus config ([#1185](https://github.com/pingcap/tiup/pull/1185), [@lucklove](https://github.com/lucklove))
+- Fix the issue that tiup may choose yanked version if it's already installed ([#1191](https://github.com/pingcap/tiup/pull/1191), [@lucklove](https://github.com/lucklove))
+
 ## [1.3.3] 2021.03.04
 
 ### Fixes

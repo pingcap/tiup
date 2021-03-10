@@ -140,7 +140,7 @@ func (m *Manager) DestroyTombstone(
 		UpdateMeta(name, clusterMeta, nodes).
 		UpdateTopology(name, m.specManager.Path(name), clusterMeta, nodes)
 
-	regenConfigTasks, _ := buildRegenConfigTasks(m, name, topo, base, nodes)
+	regenConfigTasks, _ := buildRegenConfigTasks(m, name, topo, base, nodes, true)
 	t := b.
 		ParallelStep("+ Refresh instance configs", true, regenConfigTasks...).
 		Parallel(true, buildReloadPromTasks(metadata.GetTopology())...).

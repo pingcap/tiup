@@ -5,9 +5,13 @@ on:
     branches:
       - master
       - release-*
+    paths:
+      - 'install.sh'
   push:
     branches:
       - release-*
+    paths:
+      - 'install.sh'
 
 jobs:
   install:
