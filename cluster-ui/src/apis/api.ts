@@ -56,6 +56,10 @@ export function scaleOutCluster(clusterName: string, scaleOutOpts: any) {
   )
 }
 
+export function checkCluster(clusterName: string) {
+  return request(fullUrl(`clusters/${clusterName}/check`), 'POST')
+}
+
 export function getMirrorAddress() {
   return request(fullUrl(`mirror`))
 }

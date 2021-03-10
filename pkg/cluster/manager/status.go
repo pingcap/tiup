@@ -35,6 +35,7 @@ const (
 	operationScaleIn  OperationType = "scaleIn"
 	operationScaleOut OperationType = "scaleOut"
 	operationDestroy  OperationType = "destroy"
+	operationCheck    OperationType = "check"
 )
 
 // OperationInfo records latest operation task and related info
@@ -91,6 +92,12 @@ func (m *Manager) DoStartCluster(name string, options operator.Options, fn ...fu
 func (m *Manager) DoStopCluster(clusterName string, options operator.Options) {
 	operationInfo = OperationInfo{operationType: operationStop, clusterName: clusterName}
 	operationInfo.err = m.StopCluster(clusterName, options)
+}
+
+// DoCheckCluster check the cluster.
+func (m *Manager) DoCheckCluster(clusterName string, options CheckOptions, gOpt operator.Options) {
+	operationInfo = OperationInfo{operationType: operationCheck, clusterName: clusterName}
+	operationInfo.err = m.CheckCluster(clusterName, options, gOpt)
 }
 
 // DoDeploy deploy the cluster

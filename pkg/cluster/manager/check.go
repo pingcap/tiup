@@ -330,6 +330,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 		ParallelStep("+ Check system requirements", false, checkSysTasks...).
 		ParallelStep("+ Cleanup check files", false, cleanTasks...).
 		Build()
+	operationInfo.curTask = t.(*task.Serial)
 
 	ctx := ctxt.New(context.Background())
 	if err := t.Execute(ctx); err != nil {

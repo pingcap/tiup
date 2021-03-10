@@ -10,6 +10,7 @@ import {
   startCluster,
   stopCluster,
   scaleInCluster,
+  checkCluster,
 } from '_apis'
 import { Root } from '_components'
 import { useComps } from '_hooks'
@@ -168,6 +169,22 @@ function ClusterDetailPage() {
     navigate(`/clusters/${clusterName}/scaleout`)
   }
 
+  function handleCheckCluster() {
+    checkCluster(clusterName)
+    navigate('/status')
+  }
+
+  function handleUpgradeCluster() {
+    Modal.confirm({
+      title: `升级 ${cluster?.name} 集群`,
+      icon: <ExclamationCircleOutlined />,
+      content: '升级前先执行环境检查',
+      okText: '开始',
+      cancelText: '取消',
+      onOk: () => handleCheckCluster(),
+    })
+  }
+
   function handleOpenDashboard(targetFeature: string) {
     if (dashboardPD === undefined) {
       Modal.error({
@@ -223,6 +240,7 @@ function ClusterDetailPage() {
             <Button>停止集群</Button>
           </Popconfirm>
           <Button onClick={handleScaleOutCluster}>扩容</Button>
+          <Button onClick={handleUpgradeCluster}>升级</Button>
           <Divider type="vertical" />
           <Button onClick={() => handleOpenDashboard('configuration')}>
             修改配置

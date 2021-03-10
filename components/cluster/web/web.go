@@ -78,6 +78,7 @@ func Run(_tidbSpec *spec.SpecManager, _manager *manager.Manager, _gOpt operator.
 		api.POST("/clusters/:clusterName/stop", stopClusterHandler)
 		api.POST("/clusters/:clusterName/scale_in", scaleInClusterHandler)
 		api.POST("/clusters/:clusterName/scale_out", scaleOutClusterHandler)
+		api.POST("/clusters/:clusterName/check", checkClusterHandler)
 
 		api.GET("/mirror", mirrorHandler)
 		api.POST("/mirror", setMirrorHandler)
@@ -235,6 +236,23 @@ func stopClusterHandler(c *gin.Context) {
 
 	go func() {
 		cm.DoStopCluster(clusterName, gOpt)
+	}()
+
+	c.Status(http.StatusNoContent)
+}
+
+func checkClusterHandler(c *gin.Context) {
+	clusterName := c.Param("clusterName")
+
+	// audit
+	logger.AddCustomAuditLog(fmt.Sprintf("[web] check %s", clusterName))
+
+	go func() {
+		opt := manager.CheckOptions{
+			Opr:          &operator.CheckOptions{},
+			ExistCluster: true,
+		}
+		cm.DoCheckCluster(clusterName, opt, gOpt)
 	}()
 
 	c.Status(http.StatusNoContent)
