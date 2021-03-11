@@ -32,7 +32,11 @@ func CheckSHA256(reader io.Reader, sha string) error {
 
 	checksum := hex.EncodeToString(shaWriter.Sum(nil))
 	if checksum != strings.TrimSpace(sha) {
-		return errors.Errorf("sha256 checksum mismatch, expect: %v, got: %v", sha, checksum)
+		return &HashValidationErr{
+			cipher: "sha256",
+			expect: sha,
+			actual: checksum,
+		}
 	}
 	return nil
 }
