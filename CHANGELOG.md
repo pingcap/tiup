@@ -1,5 +1,59 @@
 TiUP Changelog
 
+## [1.4.0] 2021.03.31
+
+### New Features
+
+- EXPERIMENTAL: Add support of Apple M1 devices ([#1122](https://github.com/pingcap/tiup/issues/1122), [@terasum](https://github.com/terasum) [@AstroProfundis](https://github.com/AstroProfundis) [@sunxiaoguang](https://github.com/sunxiaoguang))
+  - Playground may not fully work as some components don't yet have packages for `darwin-arm64` released
+- Not displaying dashboard address if it's "none" or "auto" ([#1054](https://github.com/pingcap/tiup/pull/1054), [@9547](https://github.com/9547))
+- Support filtering nodes and roles in `check` subcommand of tiup-cluster ([#1030](https://github.com/pingcap/tiup/pull/1030), [@AstroProfundis](https://github.com/AstroProfundis))
+- Support retry of failed operations from where it broke with `replay` command of tiup-cluster ([#1069](https://github.com/pingcap/tiup/pull/1069) [#1157](https://github.com/pingcap/tiup/pull/1157), [@lucklove](https://github.com/lucklove))
+- Support upgrade and patch a stopped TiDB / DM cluster ([#1096](https://github.com/pingcap/tiup/pull/1096), [@lucklove](https://github.com/lucklove))
+- Support setting global custom values for topology of tiup-cluster ([#1098](https://github.com/pingcap/tiup/pull/1098), [@lucklove](https://github.com/lucklove))
+- Support custom `root_url` and anonymous login for Grafana in tiup-cluster ([#1085](https://github.com/pingcap/tiup/pull/1085), [@mianhk](https://github.com/mianhk))
+- Support remote read and remote write for Prometheus node in tiup-cluster ([#1070](https://github.com/pingcap/tiup/pull/1070), [@XSHui](https://github.com/XSHui))
+- Support custom external AlertManager target for Prometheus node in tiup-cluster ([#1149](https://github.com/pingcap/tiup/pull/1149), [@lucklove](https://github.com/lucklove))
+- Support force reinstallation of already installed component ([#1145](https://github.com/pingcap/tiup/pull/1145), [@9547](https://github.com/9547))
+- Add `--force` and retain data options to tiup-dm ([#1080](https://github.com/pingcap/tiup/pull/1080), [@9547](https://github.com/9547))
+- Add `enable`/`disable` subcommands to tiup-dm ([#1114](https://github.com/pingcap/tiup/pull/1114), [@9547](https://github.com/9547))
+- Add `template` subcommand to tiup-cluster to print pre-defined topology templates ([#1156](https://github.com/pingcap/tiup/pull/1156), [@lucklove](https://github.com/lucklove))
+- Add `--version` option to `display` subcommand of tiup-cluster to print the cluster version ([#1207](https://github.com/pingcap/tiup/pull/1207), [@AstroProfundis](https://github.com/AstroProfundis))
+- Allow value type change when editing topology with `edit-config` subcommand of tiup-cluster ([#1050](https://github.com/pingcap/tiup/pull/1050), [@AstroProfundis](https://github.com/AstroProfundis))
+
+### Fixes
+
+- Not allowing deployment if the input topology file is empty ([#994](https://github.com/pingcap/tiup/pull/994), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix data dir setting for Prometheus ([#1040](https://github.com/pingcap/tiup/pull/1040), [@9547](https://github.com/9547))
+- Fix the issue that pre-defined Prometheus rules may be missing if a custom `rule_dir` is set ([#1073](https://github.com/pingcap/tiup/pull/1073), [@9547](https://github.com/9547))
+- Fix the issue that config files of Prometheus and Grafana are not checked before start ([#1074](https://github.com/pingcap/tiup/pull/1074), [@9547](https://github.com/9547))
+- Fix the issue that cluster name is not validated for some operations ([#1177](https://github.com/pingcap/tiup/pull/1177), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix the issue that tiup-cluster reloads a cluster even if the config may contain errors ([#1183](https://github.com/pingcap/tiup/pull/1183), [@9547](https://github.com/9547))
+- Fix the issue that `publish` command may fail when uploading files without retry ([#1174](https://github.com/pingcap/tiup/pull/1174) [#1202](https://github.com/pingcap/tiup/pull/1202), [@AstroProfundis](https://github.com/AstroProfundis); [#1167](https://github.com/pingcap/tiup/pull/1163), [@lucklove](https://github.com/lucklove))
+- Fix the issue that newly added TiFlash nodes may fail to start during `scale-out` in tiup-cluster ([#1227](https://github.com/pingcap/tiup/pull/1227), [@9547](https://github.com/9547))
+- Fix incorrect cluster name in alert messages ([#1238](https://github.com/pingcap/tiup/pull/1238), [@9547](https://github.com/9547))
+- Fix the issue that blackbox_exporter may not collecting ping metrics correctly ([#1250](https://github.com/pingcap/tiup/pull/1250), [@STRRL](https://github.com/STRRL))
+
+### Improvements
+
+- Reduce jitter during upgrade process of TiDB cluster
+  - Make sure PD node is online and serving before upgrading the next one ([#1032](https://github.com/pingcap/tiup/pull/1032), [@HunDunDM](https://github.com/HunDunDM))
+  - Upgrade PD leader node after upgrading other PD nodes ([#1086](https://github.com/pingcap/tiup/pull/1086), [@AstroProfundis](https://github.com/AstroProfundis))
+  - Increase schedule limit during upgrade of TiKV nodes ([#1661](https://github.com/pingcap/tiup/pull/1161), [@AstroProfundis](https://github.com/AstroProfundis))
+  - Add check to validate if all regions are healthy ([#1126](https://github.com/pingcap/tiup/pull/1126), [@AstroProfundis](https://github.com/AstroProfundis))
+- Only reload Prometheus configs when needed ([#989](https://github.com/pingcap/tiup/pull/989), [@9547](https://github.com/9547))
+- Show default option on prompted input messages ([#1132](https://github.com/pingcap/tiup/pull/1132) [#1134](https://github.com/pingcap/tiup/pull/1134), [@wangbinhe3db](https://github.com/wangbinhe3db))
+- Include user's input in error message if prompted challenge didn't pass ([#1104](https://github.com/pingcap/tiup/pull/1104), [@AstroProfundis](https://github.com/AstroProfundis))
+- Check for `data_dir` and `log_dir` overlap before deploying a cluster ([#1093](https://github.com/pingcap/tiup/pull/1093), [@9547](https://github.com/9547))
+- Improve checking rules in `tiup cluster check` command ([#1099](https://github.com/pingcap/tiup/pull/1099) [#1107](https://github.com/pingcap/tiup/pull/1107), [@AstroProfundis](https://github.com/AstroProfundis); [#1118](https://github.com/pingcap/tiup/pull/1118) [#1124](https://github.com/pingcap/tiup/pull/1124), [@9547](https://github.com/9547))
+- Refine `list` and `display` command for tiup-cluster ([#1139](https://github.com/pingcap/tiup/pull/1139), [@baurine](https://github.com/baurine))
+- Mark patched nodes in `display` output of tiup-cluster and tiup-dm ([#1125](https://github.com/pingcap/tiup/pull/1125), [@AstroProfundis](https://github.com/AstroProfundis))
+- Ignore `users.*` settings for TiFlash if the cluster version is later than v4.0.12 and v5.0.0-rc ([#1211](https://github.com/pingcap/tiup/pull/1211), [@JaySon-Huang](https://github.com/JaySon-Huang))
+- Cache `timestamp` manifest in memory to reduce network requests ([#1212](https://github.com/pingcap/tiup/pull/1212), [@lucklove](https://github.com/lucklove))
+- Upgrade toolchain to Go 1.16 ([#1151](https://github.com/pingcap/tiup/pull/1151) [#1153](https://github.com/pingcap/tiup/pull/1153) [#1130](https://github.com/pingcap/tiup/pull/1130), [@AstroProfundis](https://github.com/AstroProfundis))
+- Use GitHub Actions to build and release TiUP components ([#1158](https://github.com/pingcap/tiup/pull/1158), [@AstroProfundis](https://github.com/AstroProfundis))
+- Remove deprecated `v0manifest` support, TiUP version before v1.0.0 may not be able to download latest packages anymore ([#906](https://github.com/pingcap/tiup/issues/906))
+
 ## [1.3.7] 2021.03.25
 
 ### Fixes
@@ -7,7 +61,7 @@ TiUP Changelog
 - Fix the issue that metrics of tiflash-server instance may not collected correctly ([#1083](https://github.com/pingcap/tiup/pull/1083), [@yuzhibotao](https://github.com/yuzhibotao))
 - Fix the issue that tiup-cluster disables monitoring services unexpectedly ([#1088](https://github.com/pingcap/tiup/pull/1088), [@lucklove](https://github.com/lucklove))
 - Fix wrong dashboard name for lightning in Grafana after renaming a cluster with tiup-cluster ([#1196](https://github.com/pingcap/tiup/pull/1196), [@9547](https://github.com/9547))
-- Fix the issue that tiup-cluster `prune` command may generage config for removed nodes ([#1237](https://github.com/pingcap/tiup/pull/1237), [@lucklove](https://github.com/lucklove))
+- Fix the issue that tiup-cluster `prune` command may try to generate config for removed nodes ([#1237](https://github.com/pingcap/tiup/pull/1237), [@lucklove](https://github.com/lucklove))
 
 ## [1.3.6] 2021.03.19
 

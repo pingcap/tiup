@@ -25,28 +25,6 @@ on:
       - '.github/workflows/integrate-tiup**'
       - '.github/workflows/integrate-dm**'
       - '.github/workflows/integrate-playground**'
-  push:
-    branches:
-      - master
-    paths-ignore:
-      - '**.html'
-      - '**.md'
-      - 'CNAME'
-      - 'LICENSE'
-      - 'doc/**'
-      - 'embed/templates/examples/**'
-      - 'components/bench/**'
-      - 'components/client/**'
-      - 'components/ctl/**'
-      - 'components/dm/**'
-      - 'components/doc/**'
-      - 'components/errdoc/**'
-      - 'components/playground/**'
-      - 'server/**'
-      - 'pkg/version/version.go'
-      - '.github/workflows/integrate-tiup**'
-      - '.github/workflows/integrate-dm**'
-      - '.github/workflows/integrate-playground**'
 
 jobs:
   cluster:
