@@ -341,12 +341,12 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 		return perrs.Trace(err)
 	}
 
-	var checkResultTable [][]string
 	// FIXME: add fix result to output
-	checkResultTable = [][]string{
+	checkResultTable := [][]string{
 		// Header
 		{"Node", "Check", "Result", "Message"},
 	}
+	checkResults := make([]HostCheckResult, 0)
 	for host := range uniqueHosts {
 		tf := task.NewBuilder().
 			RootSSH(
@@ -360,13 +360,15 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 				gOpt.SSHType,
 				topo.GlobalOptions.SSHType,
 			)
-		resLines, err := handleCheckResults(ctx, host, opt, tf)
+		res, err := handleCheckResults(ctx, host, opt, tf)
 		if err != nil {
 			continue
 		}
+		checkResults = append(checkResults, res...)
 		applyFixTasks = append(applyFixTasks, tf.BuildAsStep(fmt.Sprintf("  - Applying changes on %s", host)))
-		checkResultTable = append(checkResultTable, resLines...)
 	}
+	resLines := formatHostCheckResults(checkResults)
+	checkResultTable = append(checkResultTable, resLines...)
 
 	// print check results *before* trying to applying checks
 	// FIXME: add fix result to output, and display the table after fixing
@@ -388,8 +390,16 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 	return nil
 }
 
+// HostCheckResult represents the check result of each node
+type HostCheckResult struct {
+	Node    string
+	Name    string
+	Status  string
+	Message string
+}
+
 // handleCheckResults parses the result of checks
-func handleCheckResults(ctx context.Context, host string, opt *CheckOptions, t *task.Builder) ([][]string, error) {
+func handleCheckResults(ctx context.Context, host string, opt *CheckOptions, t *task.Builder) ([]HostCheckResult, error) {
 	rr, _ := ctxt.GetInner(ctx).GetCheckResults(host)
 	if len(rr) < 1 {
 		return nil, fmt.Errorf("no check results found for %s", host)
@@ -399,18 +409,18 @@ func handleCheckResults(ctx context.Context, host string, opt *CheckOptions, t *
 		results = append(results, r.(*operator.CheckResult))
 	}
 
-	lines := make([][]string, 0)
+	items := make([]HostCheckResult, 0)
 	//log.Infof("Check results of %s: (only errors and important info are displayed)", color.HiCyanString(host))
 	for _, r := range results {
-		var line []string
+		var item HostCheckResult
 		if r.Err != nil {
 			if r.IsWarning() {
-				line = []string{host, r.Name, color.YellowString("Warn"), r.Error()}
+				item = HostCheckResult{Node: host, Name: r.Name, Status: "Warn", Message: r.Error()}
 			} else {
-				line = []string{host, r.Name, color.HiRedString("Fail"), r.Error()}
+				item = HostCheckResult{Node: host, Name: r.Name, Status: "Fail", Message: r.Error()}
 			}
 			if !opt.ApplyFix {
-				lines = append(lines, line)
+				items = append(items, item)
 				continue
 			}
 			msg, err := fixFailedChecks(host, r, t)
@@ -419,19 +429,38 @@ func handleCheckResults(ctx context.Context, host string, opt *CheckOptions, t *
 			}
 			if msg != "" {
 				// show auto fixing info
-				line[len(line)-1] = msg
+				item.Message = msg
 			}
 		} else if r.Msg != "" {
-			line = []string{host, r.Name, color.GreenString("Pass"), r.Msg}
+			item = HostCheckResult{Node: host, Name: r.Name, Status: "Pass", Message: r.Msg}
 		}
 
 		// show errors and messages only, ignore empty lines
-		if len(line) > 0 {
-			lines = append(lines, line)
+		// if len(line) > 0 {
+		if len(item.Node) > 0 {
+			items = append(items, item)
 		}
 	}
 
-	return lines, nil
+	return items, nil
+}
+
+func formatHostCheckResults(results []HostCheckResult) [][]string {
+	lines := make([][]string, 0)
+	for _, r := range results {
+		var coloredStatus string
+		switch r.Status {
+		case "Warn":
+			coloredStatus = color.YellowString(r.Status)
+		case "Fail":
+			coloredStatus = color.HiRedString(r.Status)
+		default:
+			coloredStatus = color.GreenString(r.Status)
+		}
+		line := []string{r.Node, r.Name, coloredStatus, r.Message}
+		lines = append(lines, line)
+	}
+	return lines
 }
 
 // fixFailedChecks tries to automatically apply changes to fix failed checks
