@@ -16,7 +16,6 @@ package spec
 import (
 	"crypto/tls"
 	"fmt"
-	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -220,10 +219,12 @@ func (i *GrafanaInstance) initDashboards(e executor.Executor, spec GrafanaSpec, 
 	for _, cmd := range []string{
 		`find %s -type f -exec sed -i "s/\${DS_.*-CLUSTER}/%s/g" {} \;`,
 		`find %s -type f -exec sed -i "s/DS_.*-CLUSTER/%s/g" {} \;`,
+		`find %s -type f -exec sed -i "s/\${DS_LIGHTNING}/%s/g" {} \;`,
+		`find %s -type f -exec sed -i "s/DS_LIGHTNING/%s/g" {} \;`,
 		`find %s -type f -exec sed -i "s/test-cluster/%s/g" {} \;`,
 		`find %s -type f -exec sed -i "s/Test-Cluster/%s/g" {} \;`,
 	} {
-		cmd := fmt.Sprintf(cmd, path.Join(paths.Deploy, "dashboards"), clusterName)
+		cmd := fmt.Sprintf(cmd, dashboardsDir, clusterName)
 		_, stderr, err := e.Execute(cmd, false)
 		if err != nil {
 			return errors.Annotatef(err, "stderr: %s", string(stderr))

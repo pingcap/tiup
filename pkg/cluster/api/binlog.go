@@ -56,12 +56,12 @@ func NewBinlogClient(pdEndpoint []string, tlsConfig *tls.Config) (*BinlogClient,
 }
 
 func (c *BinlogClient) getURL(addr string) string {
-	schema := "http"
+	scheme := "http"
 	if c.tls != nil {
-		schema = "https"
+		scheme = "https"
 	}
 
-	return fmt.Sprintf("%s://%s", schema, addr)
+	return fmt.Sprintf("%s://%s", scheme, addr)
 }
 
 func (c *BinlogClient) getOfflineURL(addr string, nodeID string) string {
