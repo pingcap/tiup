@@ -402,7 +402,7 @@ func (e *TiKVLabelError) Error() string {
 	return str
 }
 
-// TiKVLabelProvider provide store labels information
+// TiKVLabelProvider provides the store labels information
 type TiKVLabelProvider interface {
 	GetTiKVLabels() (map[string]map[string]string, error)
 }
