@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React from 'react'
 import { Progress } from 'antd'
 
 import { IOperationStatus } from '_types'
@@ -17,7 +17,6 @@ export default function OperationStatus({
     steps,
     err_msg,
   } = operationStatus
-  const detailInfoRef = useRef<HTMLDivElement>(null)
 
   function result() {
     if (err_msg) {
@@ -60,7 +59,6 @@ export default function OperationStatus({
           <>
             <p>详细信息：</p>
             <div
-              ref={detailInfoRef}
               style={{
                 maxHeight: 300,
                 padding: 8,

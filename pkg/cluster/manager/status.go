@@ -44,6 +44,7 @@ type OperationInfo struct {
 	clusterName   string
 	curTask       *task.Serial
 	err           error
+	extra         interface{}
 }
 
 // OperationStatus represents the current deployment status
@@ -78,6 +79,11 @@ func (m *Manager) GetOperationStatus() OperationStatus {
 		operationStatus.ErrMsg = operationInfo.err.Error()
 	}
 	return operationStatus
+}
+
+// GetOperationExtra get the operation extra information
+func (m *Manager) GetOperationExtra() interface{} {
+	return operationInfo.extra
 }
 
 ////////////////////////////////////////////////////////

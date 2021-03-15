@@ -367,6 +367,8 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 		checkResults = append(checkResults, res...)
 		applyFixTasks = append(applyFixTasks, tf.BuildAsStep(fmt.Sprintf("  - Applying changes on %s", host)))
 	}
+	operationInfo.extra = checkResults
+
 	resLines := formatHostCheckResults(checkResults)
 	checkResultTable = append(checkResultTable, resLines...)
 

@@ -6,6 +6,7 @@ import { getStatus } from '_apis'
 import { IOperationStatus } from '_types'
 
 import OperationStatus from './OperationStatus'
+import CheckResult from './CheckResult'
 
 export default function StatusPage() {
   const [operationStatus, setOperationStatus] = useState<
@@ -40,6 +41,9 @@ export default function StatusPage() {
           ) : (
             <div>Loading...</div>
           )}
+          {operationStatus &&
+            operationStatus.total_progress === 100 &&
+            operationStatus.operation_type === 'check' && <CheckResult />}
           {operationStatus &&
             (operationStatus.total_progress === 100 ||
               operationStatus.err_msg ||

@@ -5,6 +5,7 @@ export type OperationType =
   | 'scaleIn'
   | 'scaleOut'
   | 'destroy'
+  | 'check'
 
 export interface IOperationStatus {
   operation_type: OperationType
@@ -31,4 +32,11 @@ export interface IClusterInstInfo {
   status: string
   data_dir: string
   deploy_dir: string
+}
+
+export interface IClusterCheckResult {
+  Node: string
+  Name: string
+  Status: string
+  Message: string
 }

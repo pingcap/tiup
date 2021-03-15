@@ -79,6 +79,7 @@ func Run(_tidbSpec *spec.SpecManager, _manager *manager.Manager, _gOpt operator.
 		api.POST("/clusters/:clusterName/scale_in", scaleInClusterHandler)
 		api.POST("/clusters/:clusterName/scale_out", scaleOutClusterHandler)
 		api.POST("/clusters/:clusterName/check", checkClusterHandler)
+		api.GET("/clusters/:clusterName/check_result", checkResultHandler)
 
 		api.GET("/mirror", mirrorHandler)
 		api.POST("/mirror", setMirrorHandler)
@@ -256,6 +257,18 @@ func checkClusterHandler(c *gin.Context) {
 	}()
 
 	c.Status(http.StatusNoContent)
+}
+
+func checkResultHandler(c *gin.Context) {
+	extra := cm.GetOperationExtra()
+	if extra == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "checking",
+		})
+	} else {
+		results := extra.([]manager.HostCheckResult)
+		c.JSON(http.StatusOK, results)
+	}
 }
 
 // ScaleInReq represents the request for scale in cluster

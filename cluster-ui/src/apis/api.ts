@@ -60,6 +60,10 @@ export function checkCluster(clusterName: string) {
   return request(fullUrl(`clusters/${clusterName}/check`), 'POST')
 }
 
+export function getCheckClusterResult(clusterName: string) {
+  return request(fullUrl(`clusters/${clusterName}/check_result`), 'GET')
+}
+
 export function getMirrorAddress() {
   return request(fullUrl(`mirror`))
 }
