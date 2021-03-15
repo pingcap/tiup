@@ -417,6 +417,9 @@ func upgradeClusterHandler(c *gin.Context) {
 		return
 	}
 
+	// audit
+	logger.AddCustomAuditLog(fmt.Sprintf("[web] upgrade %s", clusterName))
+
 	go func() {
 		cm.DoUpgrade(
 			clusterName,
