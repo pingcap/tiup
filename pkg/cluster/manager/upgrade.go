@@ -178,6 +178,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		}).
 		Build()
+	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {

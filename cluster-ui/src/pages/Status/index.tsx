@@ -7,6 +7,7 @@ import { IOperationStatus } from '_types'
 
 import OperationStatus from './OperationStatus'
 import CheckResult from './CheckResult'
+import { Space } from 'antd'
 
 export default function StatusPage() {
   const [operationStatus, setOperationStatus] = useState<
@@ -49,13 +50,29 @@ export default function StatusPage() {
               operationStatus.err_msg ||
               operationStatus.cluster_name === '') && (
               <div style={{ marginTop: 16 }}>
-                {operationStatus.operation_type === 'destroy' ? (
-                  <Link to="/clusters">进入集群管理</Link>
-                ) : (
-                  <Link to={`/clusters/${operationStatus.cluster_name}`}>
-                    进入集群管理
-                  </Link>
-                )}
+                <Space>
+                  {operationStatus.operation_type === 'destroy' && (
+                    <Link to="/clusters">进入集群管理</Link>
+                  )}
+                  {operationStatus.operation_type !== 'destroy' &&
+                    operationStatus.operation_type !== 'check' && (
+                      <Link to={`/clusters/${operationStatus.cluster_name}`}>
+                        进入集群管理
+                      </Link>
+                    )}
+                  {operationStatus.operation_type === 'check' && (
+                    <>
+                      <Link to={`/clusters/${operationStatus.cluster_name}`}>
+                        修复后再升级
+                      </Link>
+                      <Link
+                        to={`/clusters/${operationStatus.cluster_name}/upgrade`}
+                      >
+                        继续升级
+                      </Link>
+                    </>
+                  )}
+                </Space>
               </div>
             )}
         </div>

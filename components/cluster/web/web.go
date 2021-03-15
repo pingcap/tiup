@@ -80,6 +80,7 @@ func Run(_tidbSpec *spec.SpecManager, _manager *manager.Manager, _gOpt operator.
 		api.POST("/clusters/:clusterName/scale_out", scaleOutClusterHandler)
 		api.POST("/clusters/:clusterName/check", checkClusterHandler)
 		api.GET("/clusters/:clusterName/check_result", checkResultHandler)
+		api.POST("/clusters/:clusterName/upgrade", upgradeClusterHandler)
 
 		api.GET("/mirror", mirrorHandler)
 		api.POST("/mirror", setMirrorHandler)
@@ -393,6 +394,33 @@ func scaleOutClusterHandler(c *gin.Context) {
 			final,
 			opt,
 			skipConfirm,
+			gOpt,
+		)
+	}()
+
+	c.Status(http.StatusNoContent)
+}
+
+// upgrade
+
+// UpgradeReq represents the request for upgrade a cluster
+type UpgradeReq struct {
+	TargetVersion string `json:"target_version"`
+}
+
+func upgradeClusterHandler(c *gin.Context) {
+	clusterName := c.Param("clusterName")
+
+	var req UpgradeReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	go func() {
+		cm.DoUpgrade(
+			clusterName,
+			req.TargetVersion,
 			gOpt,
 		)
 	}()

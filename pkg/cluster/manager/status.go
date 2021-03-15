@@ -36,6 +36,7 @@ const (
 	operationScaleOut OperationType = "scaleOut"
 	operationDestroy  OperationType = "destroy"
 	operationCheck    OperationType = "check"
+	operationUpgrade  OperationType = "upgrade"
 )
 
 // OperationInfo records latest operation task and related info
@@ -174,5 +175,21 @@ func (m *Manager) DoScaleOut(
 		opt,
 		skipConfirm,
 		gOpt,
+	)
+}
+
+// DoUpgrade upgrade a cluster
+func (m *Manager) DoUpgrade(
+	clusterName string,
+	targetVersion string,
+	gOpt operator.Options,
+) {
+	operationInfo = OperationInfo{operationType: operationUpgrade, clusterName: clusterName}
+	operationInfo.err = m.Upgrade(
+		clusterName,
+		targetVersion,
+		gOpt,
+		true,
+		false,
 	)
 }

@@ -64,6 +64,12 @@ export function getCheckClusterResult(clusterName: string) {
   return request(fullUrl(`clusters/${clusterName}/check_result`), 'GET')
 }
 
+export function upgradeCluster(clusterName: string, targetVersion: string) {
+  return request(fullUrl(`clusters/${clusterName}/upgrade`), 'POST', {
+    target_version: targetVersion,
+  })
+}
+
 export function getMirrorAddress() {
   return request(fullUrl(`mirror`))
 }

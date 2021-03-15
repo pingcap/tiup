@@ -76,6 +76,8 @@ export default function DashboardPortalPage() {
   function loginTiDB(values: any) {
     const { tidb_user, tidb_pwd } = values
     // 要根据 tidb 版本进行判断，4.0.6 及以上用 type，以下用 is_tidb_auth
+    // shit! 'v4.0.11' < 'v4.0.6'
+    // FIX ME
     let loginOptions
     if (tidb_version >= 'v4.0.6') {
       loginOptions = {
