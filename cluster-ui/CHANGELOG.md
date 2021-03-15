@@ -1,5 +1,10 @@
 # TiUP Cluster UI Changelog
 
+## 2021.03.15
+
+- Support check a cluster before upgrading
+- Support upgrade a cluster
+
 ## 2020.11.13
 
 - Add audit for deploy/destroy/start/stop/scale_in/scale_out operations
