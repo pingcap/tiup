@@ -14,12 +14,19 @@
 package command
 
 import (
+	"errors"
+	"fmt"
+
+	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/spf13/cobra"
 )
 
 func newDisplayCmd() *cobra.Command {
 	var (
-		clusterName string
+		clusterName     string
+		showVersionOnly bool
 	)
 	cmd := &cobra.Command{
 		Use:   "display <cluster-name>",
@@ -31,11 +38,22 @@ func newDisplayCmd() *cobra.Command {
 
 			clusterName = args[0]
 
+			if showVersionOnly {
+				metadata, err := spec.ClusterMetadata(clusterName)
+				if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
+					return err
+				}
+				fmt.Println(metadata.Version)
+				return nil
+			}
+
 			return cm.Display(clusterName, gOpt)
 		},
 	}
 
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only display specified roles")
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only display specified nodes")
+	cmd.Flags().BoolVar(&showVersionOnly, "version", false, "Only display DM cluster version")
+
 	return cmd
 }

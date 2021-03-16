@@ -1,5 +1,11 @@
 TiUP Changelog
 
+## [1.3.5] 2021.03.11
+
+### Fixes
+
+- Fix the issue that old nighlty may cause error ([#1198](https://github.com/pingcap/tiup/pull/1198), [@lucklove](https://github.com/lucklove))
+
 ## [1.3.4] 2021.03.05
 
 ### Fixes
