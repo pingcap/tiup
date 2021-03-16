@@ -26,7 +26,6 @@ import (
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/environment"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -141,7 +140,7 @@ scrape_configs:
 	params := &tiupexec.PrepareCommandParams{
 		Ctx:         ctx,
 		Component:   "prometheus",
-		Version:     pkgver.Version(version),
+		Version:     utils.Version(version),
 		InstanceDir: dir,
 		WD:          dir,
 		Args:        args,

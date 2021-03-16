@@ -25,9 +25,8 @@ import (
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/verbose"
-	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
 
@@ -167,7 +166,7 @@ func (env *Environment) SelfUpdate() error {
 	return localdata.InitProfile().ResetMirror(Mirror(), "")
 }
 
-func (env *Environment) downloadComponentv1(component string, version pkgver.Version, overwrite bool) error {
+func (env *Environment) downloadComponentv1(component string, version utils.Version, overwrite bool) error {
 	spec := repository.ComponentSpec{
 		ID:      component,
 		Version: string(version),
@@ -178,13 +177,13 @@ func (env *Environment) downloadComponentv1(component string, version pkgver.Ver
 }
 
 // downloadComponent downloads the specific version of a component from repository
-func (env *Environment) downloadComponent(component string, version pkgver.Version, overwrite bool) error {
+func (env *Environment) downloadComponent(component string, version utils.Version, overwrite bool) error {
 	return env.downloadComponentv1(component, version, overwrite)
 }
 
 // SelectInstalledVersion selects the installed versions and the latest release version
 // will be chosen if there is an empty version
-func (env *Environment) SelectInstalledVersion(component string, ver pkgver.Version) (pkgver.Version, error) {
+func (env *Environment) SelectInstalledVersion(component string, ver utils.Version) (utils.Version, error) {
 	installed, err := env.Profile().InstalledVersions(component)
 	if err != nil {
 		return ver, err
@@ -212,7 +211,7 @@ func (env *Environment) SelectInstalledVersion(component string, ver pkgver.Vers
 
 	if !ver.IsEmpty() {
 		for _, v := range versions {
-			if pkgver.Version(v) == ver {
+			if utils.Version(v) == ver {
 				return ver, nil
 			}
 		}
@@ -225,14 +224,14 @@ func (env *Environment) SelectInstalledVersion(component string, ver pkgver.Vers
 	})
 
 	for _, v := range versions {
-		if pkgver.Version(v).IsNightly() {
+		if utils.Version(v).IsNightly() {
 			continue
 		}
 		if semver.Prerelease(v) == "" {
-			ver = pkgver.Version(v)
+			ver = utils.Version(v)
 			break
 		} else if ver.IsEmpty() {
-			ver = pkgver.Version(v)
+			ver = utils.Version(v)
 		}
 	}
 
@@ -243,9 +242,9 @@ func (env *Environment) SelectInstalledVersion(component string, ver pkgver.Vers
 }
 
 // DownloadComponentIfMissing downloads the specific version of a component if it is missing
-func (env *Environment) DownloadComponentIfMissing(component string, ver pkgver.Version) (pkgver.Version, error) {
+func (env *Environment) DownloadComponentIfMissing(component string, ver utils.Version) (utils.Version, error) {
 	var err error
-	if ver.String() == version.NightlyVersion {
+	if ver.String() == utils.NightlyVersionAlias {
 		if ver, _, err = env.v1Repo.LatestNightlyVersion(component); err != nil {
 			return "", err
 		}
@@ -277,12 +276,12 @@ func (env *Environment) DownloadComponentIfMissing(component string, ver pkgver.
 }
 
 // GetComponentInstalledVersion return the installed version of component.
-func (env *Environment) GetComponentInstalledVersion(component string, version pkgver.Version) (pkgver.Version, error) {
+func (env *Environment) GetComponentInstalledVersion(component string, version utils.Version) (utils.Version, error) {
 	return env.profile.GetComponentInstalledVersion(component, version)
 }
 
 // BinaryPath return the installed binary path.
-func (env *Environment) BinaryPath(component string, ver pkgver.Version) (string, error) {
+func (env *Environment) BinaryPath(component string, ver utils.Version) (string, error) {
 	installPath, err := env.profile.ComponentInstalledPath(component, ver)
 	if err != nil {
 		return "", err
@@ -292,10 +291,10 @@ func (env *Environment) BinaryPath(component string, ver pkgver.Version) (string
 }
 
 // ParseCompVersion parses component part from <component>[:version] specification
-func ParseCompVersion(spec string) (string, pkgver.Version) {
+func ParseCompVersion(spec string) (string, utils.Version) {
 	if strings.Contains(spec, ":") {
 		parts := strings.SplitN(spec, ":", 2)
-		return parts[0], pkgver.Version(parts[1])
+		return parts[0], utils.Version(parts[1])
 	}
 	return spec, ""
 }

@@ -21,8 +21,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
-	"github.com/pingcap/tiup/pkg/version"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -90,9 +89,9 @@ func removeComponents(env *environment.Environment, specs []string, all bool) er
 			if err != nil {
 				return errors.Trace(err)
 			}
-			if parts[1] == version.NightlyVersion {
+			if parts[1] == utils.NightlyVersionAlias {
 				for _, fi := range dir {
-					if pkgver.Version(fi.Name()).IsNightly() {
+					if utils.Version(fi.Name()).IsNightly() {
 						paths = append(paths, env.LocalPath(localdata.ComponentParentDir, parts[0], fi.Name()))
 					}
 				}

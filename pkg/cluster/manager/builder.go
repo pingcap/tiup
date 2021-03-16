@@ -27,8 +27,8 @@ import (
 	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/meta"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // buildReloadPromTasks reloads Prometheus configuration
@@ -172,7 +172,7 @@ func buildScaleOutTask(
 			switch inst.ComponentName() {
 			case spec.ComponentTiSpark:
 				env := environment.GlobalEnv()
-				var sparkVer pkgver.Version
+				var sparkVer utils.Version
 				if sparkVer, _, iterErr = env.V1Repository().LatestStableVersion(spec.ComponentSpark, false); iterErr != nil {
 					return
 				}
