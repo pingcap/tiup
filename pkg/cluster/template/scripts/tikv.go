@@ -15,6 +15,8 @@ package scripts
 
 import (
 	"bytes"
+	"fmt"
+	"net"
 	"os"
 	"path"
 	"text/template"
@@ -31,6 +33,8 @@ const (
 type TiKVScript struct {
 	IP                         string
 	ListenHost                 string
+	AdvertiseAddr              string
+	AdvertiseStatusAddr        string
 	Port                       int
 	StatusPort                 int
 	DeployDir                  string
@@ -45,6 +49,8 @@ type TiKVScript struct {
 func NewTiKVScript(version, ip, deployDir, dataDir, logDir string) *TiKVScript {
 	return &TiKVScript{
 		IP:                         ip,
+		AdvertiseAddr:              fmt.Sprintf("%s:%d", ip, 20160),
+		AdvertiseStatusAddr:        fmt.Sprintf("%s:%d", ip, 20180),
 		Port:                       20160,
 		StatusPort:                 20180,
 		DeployDir:                  deployDir,
@@ -63,6 +69,32 @@ func (c *TiKVScript) WithListenHost(listenHost string) *TiKVScript {
 // WithPort set Port field of TiKVScript
 func (c *TiKVScript) WithPort(port int) *TiKVScript {
 	c.Port = port
+	return c
+}
+
+// WithAdvertiseAddr set AdvertiseAddr of TiKVScript
+func (c *TiKVScript) WithAdvertiseAddr(addr string) *TiKVScript {
+	if addr != "" {
+		// advertise_addr is ip, use port instead
+		if ip := net.ParseIP(addr); ip != nil {
+			c.AdvertiseAddr = fmt.Sprintf("%s:%d", ip, c.Port)
+		} else if ip, port, err := net.SplitHostPort(addr); err == nil {
+			c.AdvertiseAddr = fmt.Sprintf("%s:%s", ip, port)
+		}
+	}
+	return c
+}
+
+// WithAdvertiseStatusAddr set AdvertiseStatusAddr of TiKVScript
+func (c *TiKVScript) WithAdvertiseStatusAddr(addr string) *TiKVScript {
+	if addr != "" {
+		// advertise_status_addr is ip, use status_port instead
+		if ip := net.ParseIP(addr); ip != nil {
+			c.AdvertiseAddr = fmt.Sprintf("%s:%d", ip, c.StatusPort)
+		} else if ip, port, err := net.SplitHostPort(addr); err == nil {
+			c.AdvertiseAddr = fmt.Sprintf("%s:%s", ip, port)
+		}
+	}
 	return c
 }
 

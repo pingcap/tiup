@@ -31,4 +31,3 @@ exec bin/pd-server \
     --initial-cluster="{{template "PDList" .Endpoints}}" \
     --config=conf/pd.toml \
     --log-file="{{.LogDir}}/pd.log" 2>> "{{.LogDir}}/pd_stderr.log"
-  
