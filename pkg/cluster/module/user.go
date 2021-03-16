@@ -27,7 +27,7 @@ const (
 	UserActionAdd = "add"
 	// UserActionDel delete user.
 	UserActionDel = "del"
-	//UserActionModify = "modify"
+	// UserActionModify = "modify"
 
 	// TODO: in RHEL/CentOS, the commands are in /usr/sbin, but in some
 	// other distros they may be in other location such as /usr/bin, we'll
@@ -35,7 +35,7 @@ const (
 	useraddCmd  = "/usr/sbin/useradd"
 	userdelCmd  = "/usr/sbin/userdel"
 	groupaddCmd = "/usr/sbin/groupadd"
-	//usermodCmd = "/usr/sbin/usermod"
+	// usermodCmd = "/usr/sbin/usermod"
 )
 
 var (
