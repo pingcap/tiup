@@ -391,10 +391,10 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 
 // HostCheckResult represents the check result of each node
 type HostCheckResult struct {
-	Node    string
-	Name    string
-	Status  string
-	Message string
+	Node    string `json:"node"`
+	Name    string `json:"name"`
+	Status  string `json:"status"`
+	Message string `json:"message"`
 }
 
 // handleCheckResults parses the result of checks
@@ -409,7 +409,7 @@ func handleCheckResults(ctx context.Context, host string, opt *CheckOptions, t *
 	}
 
 	items := make([]HostCheckResult, 0)
-	//log.Infof("Check results of %s: (only errors and important info are displayed)", color.HiCyanString(host))
+	// log.Infof("Check results of %s: (only errors and important info are displayed)", color.HiCyanString(host))
 	for _, r := range results {
 		var item HostCheckResult
 		if r.Err != nil {
