@@ -35,10 +35,10 @@ export interface IClusterInstInfo {
 }
 
 export interface IClusterCheckResult {
-  Node: string
-  Name: string
-  Status: string
-  Message: string
+  node: string
+  name: string
+  status: string
+  message: string
 }
 
 export interface IAuditLogItem {

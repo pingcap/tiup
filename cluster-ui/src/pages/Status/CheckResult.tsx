@@ -12,18 +12,18 @@ export default function CheckResult() {
     return [
       {
         title: 'Node',
-        key: 'Node',
-        dataIndex: 'Node',
+        key: 'node',
+        dataIndex: 'node',
       },
       {
         title: 'Name',
-        key: 'Name',
-        dataIndex: 'Name',
+        key: 'name',
+        dataIndex: 'name',
       },
       {
         title: 'Status',
-        key: 'Status',
-        dataIndex: 'Status',
+        key: 'status',
+        dataIndex: 'status',
         render: (text: any) => {
           if (text === 'Fail') {
             return <Text type="danger">{text}</Text>
@@ -36,8 +36,8 @@ export default function CheckResult() {
       },
       {
         title: 'Message',
-        key: 'Message',
-        dataIndex: 'Message',
+        key: 'message',
+        dataIndex: 'message',
       },
     ]
   }, [])
@@ -45,9 +45,6 @@ export default function CheckResult() {
   useEffect(() => {
     const id = setInterval(function () {
       getCheckClusterResult('_any_').then(({ data, err }) => {
-        console.log('data:', data)
-        // setCheckResults(data)
-
         if (data !== undefined && data.message !== 'checking') {
           setCheckResults(data)
           clearInterval(id)
