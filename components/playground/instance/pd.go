@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -65,7 +64,7 @@ func (inst *PDInstance) Name() string {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *PDInstance) Start(ctx context.Context, version pkgver.Version) error {
+func (inst *PDInstance) Start(ctx context.Context, version utils.Version) error {
 	uid := inst.Name()
 	args := []string{
 		"--name=" + uid,

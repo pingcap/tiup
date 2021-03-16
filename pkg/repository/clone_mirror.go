@@ -26,10 +26,8 @@ import (
 	"github.com/pingcap/errors"
 	ru "github.com/pingcap/tiup/pkg/repository/utils"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
-	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 )
@@ -280,7 +278,7 @@ func cloneComponents(repo *V1Repository,
 				Platforms:   map[string]map[string]v1manifest.VersionItem{},
 			}
 			// Include the nightly reference version
-			if vs.Exist(version.NightlyVersion) {
+			if vs.Exist(utils.NightlyVersionAlias) {
 				newManifest.Nightly = manifest.Nightly
 				vs.Insert(manifest.Nightly)
 			}
@@ -446,7 +444,7 @@ func combineVersions(versions *[]string,
 				continue
 			}
 			for _, selectedVersion := range selectedVersions {
-				if selectedVersion == version.NightlyVersion {
+				if selectedVersion == utils.NightlyVersionAlias {
 					selectedVersion = manifest.Nightly
 				}
 				_, found := versions[selectedVersion]
@@ -456,7 +454,7 @@ func combineVersions(versions *[]string,
 					// Use the latest stable versionS if the selected version doesn't exist in specific platform
 					var latest string
 					for v := range versions {
-						if pkgver.Version(v).IsNightly() {
+						if utils.Version(v).IsNightly() {
 							continue
 						}
 						if latest == "" || semver.Compare(v, latest) > 0 {

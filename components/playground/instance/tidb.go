@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"strings"
 
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -50,7 +49,7 @@ func NewTiDBInstance(binPath string, dir, host, configPath string, id int, pds [
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiDBInstance) Start(ctx context.Context, version pkgver.Version) error {
+func (inst *TiDBInstance) Start(ctx context.Context, version utils.Version) error {
 	endpoints := pdEndpoints(inst.pds, false)
 
 	args := []string{

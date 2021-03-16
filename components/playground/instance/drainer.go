@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -70,7 +69,7 @@ func (d *Drainer) NodeID() string {
 }
 
 // Start implements Instance interface.
-func (d *Drainer) Start(ctx context.Context, version pkgver.Version) error {
+func (d *Drainer) Start(ctx context.Context, version utils.Version) error {
 	endpoints := pdEndpoints(d.pds, true)
 
 	args := []string{

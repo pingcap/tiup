@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"net"
 
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // Config of the instance.
@@ -45,7 +45,7 @@ type Instance interface {
 	Pid() int
 	// Start the instance process.
 	// Will kill the process once the context is done.
-	Start(ctx context.Context, version pkgver.Version) error
+	Start(ctx context.Context, version utils.Version) error
 	// Component Return the component name.
 	Component() string
 	// LogFile return the log file name
@@ -67,7 +67,7 @@ func (inst *instance) StatusAddrs() (addrs []string) {
 }
 
 // CompVersion return the format to run specified version of a component.
-func CompVersion(comp string, version pkgver.Version) string {
+func CompVersion(comp string, version utils.Version) string {
 	if version.IsEmpty() {
 		return comp
 	}
