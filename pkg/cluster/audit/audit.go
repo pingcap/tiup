@@ -45,12 +45,6 @@ func CommandArgs(fp string) ([]string, error) {
 	}
 
 	args := strings.Split(scanner.Text(), " ")
-	// support for operations from the tiup web ui
-	if args[1] == "--ui" {
-		if scanner.Scan() {
-			args = strings.Split(scanner.Text(), " ")
-		}
-	}
 	return decodeCommandArgs(args)
 }
 
@@ -102,21 +96,21 @@ func ShowAuditList(dir string) error {
 	return nil
 }
 
-// AuditLogItem represents a single audit item
-type AuditLogItem struct {
+// Item represents a single audit item
+type Item struct {
 	ID      string `json:"id"`
 	Time    string `json:"time"`
 	Command string `json:"command"`
 }
 
 // GetAuditList get the audit item list
-func GetAuditList(dir string) ([]AuditLogItem, error) {
+func GetAuditList(dir string) ([]Item, error) {
 	fileInfos, err := os.ReadDir(dir)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
 
-	auditList := []AuditLogItem{}
+	auditList := []Item{}
 	for _, fi := range fileInfos {
 		if fi.IsDir() {
 			continue
@@ -130,7 +124,7 @@ func GetAuditList(dir string) ([]AuditLogItem, error) {
 			continue
 		}
 		cmd := strings.Join(args, " ")
-		auditList = append(auditList, AuditLogItem{
+		auditList = append(auditList, Item{
 			ID:      fi.Name(),
 			Time:    t.Format(time.RFC3339),
 			Command: cmd,
