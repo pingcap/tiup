@@ -43,22 +43,24 @@ const (
 
 // TiKVSpec represents the TiKV topology specification in topology.yaml
 type TiKVSpec struct {
-	Host            string                 `yaml:"host"`
-	ListenHost      string                 `yaml:"listen_host,omitempty"`
-	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                   `yaml:"imported,omitempty"`
-	Patched         bool                   `yaml:"patched,omitempty"`
-	Port            int                    `yaml:"port" default:"20160"`
-	StatusPort      int                    `yaml:"status_port" default:"20180"`
-	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
-	DataDir         string                 `yaml:"data_dir,omitempty"`
-	LogDir          string                 `yaml:"log_dir,omitempty"`
-	Offline         bool                   `yaml:"offline,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string                 `yaml:"arch,omitempty"`
-	OS              string                 `yaml:"os,omitempty"`
+	Host                string                 `yaml:"host"`
+	ListenHost          string                 `yaml:"listen_host,omitempty"`
+	AdvertiseAddr       string                 `yaml:"advertise_addr,omitempty"`
+	SSHPort             int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported            bool                   `yaml:"imported,omitempty"`
+	Patched             bool                   `yaml:"patched,omitempty"`
+	Port                int                    `yaml:"port" default:"20160"`
+	StatusPort          int                    `yaml:"status_port" default:"20180"`
+	AdvertiseStatusAddr string                 `yaml:"advertise_status_addr,omitempty"`
+	DeployDir           string                 `yaml:"deploy_dir,omitempty"`
+	DataDir             string                 `yaml:"data_dir,omitempty"`
+	LogDir              string                 `yaml:"log_dir,omitempty"`
+	Offline             bool                   `yaml:"offline,omitempty"`
+	NumaNode            string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config              map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl     meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch                string                 `yaml:"arch,omitempty"`
+	OS                  string                 `yaml:"os,omitempty"`
 }
 
 // checkStoreStatus checks the store status in current cluster
@@ -200,17 +202,15 @@ func (i *TiKVInstance) InitConfig(
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*TiKVSpec)
-	cfg := scripts.NewTiKVScript(
-		clusterVersion,
-		i.GetHost(),
-		paths.Deploy,
-		paths.Data[0],
-		paths.Log,
-	).WithPort(spec.Port).
+	cfg := scripts.
+		NewTiKVScript(clusterVersion, i.GetHost(), paths.Deploy, paths.Data[0], paths.Log).
+		WithPort(spec.Port).
 		WithNumaNode(spec.NumaNode).
 		WithStatusPort(spec.StatusPort).
 		AppendEndpoints(topo.Endpoints(deployUser)...).
-		WithListenHost(i.GetListenHost())
+		WithListenHost(i.GetListenHost()).
+		WithAdvertiseAddr(spec.AdvertiseAddr).
+		WithAdvertiseStatusAddr(spec.AdvertiseStatusAddr)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tikv_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err

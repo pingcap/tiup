@@ -26,10 +26,10 @@ exec numactl --cpunodebind={{.NumaNode}} --membind={{.NumaNode}} bin/tikv-server
 exec bin/tikv-server \
 {{- end}}
     --addr "{{.ListenHost}}:{{.Port}}" \
-    --advertise-addr "{{.IP}}:{{.Port}}" \
+    --advertise-addr "{{.AdvertiseAddr}}" \
     --status-addr "{{.ListenHost}}:{{.StatusPort}}" \
 {{- if .SupportAdvertiseStatusAddr}}
-    --advertise-status-addr "{{.IP}}:{{.StatusPort}}" \
+    --advertise-status-addr "{{.AdvertiseStatusAddr}}" \
 {{- end}}
     --pd "{{template "PDList" .Endpoints}}" \
     --data-dir "{{.DataDir}}" \
