@@ -32,11 +32,13 @@ import (
 
 // PDSpec represents the PD topology specification in topology.yaml
 type PDSpec struct {
-	Host       string `yaml:"host"`
-	ListenHost string `yaml:"listen_host,omitempty"`
-	SSHPort    int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported   bool   `yaml:"imported,omitempty"`
-	Patched    bool   `yaml:"patched,omitempty"`
+	Host                string `yaml:"host"`
+	ListenHost          string `yaml:"listen_host,omitempty"`
+	AdvertiseClientAddr string `yaml:"advertise_client_addr,omitempty"`
+	AdvertisePeerAddr   string `yaml:"advertise_peer_addr,omitempty"`
+	SSHPort             int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported            bool   `yaml:"imported,omitempty"`
+	Patched             bool   `yaml:"patched,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
 	Name            string                 `yaml:"name"`
 	ClientPort      int                    `yaml:"client_port" default:"2379"`
@@ -164,16 +166,14 @@ func (i *PDInstance) InitConfig(
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*PDSpec)
-	cfg := scripts.NewPDScript(
-		spec.Name,
-		i.GetHost(),
-		paths.Deploy,
-		paths.Data[0],
-		paths.Log,
-	).WithClientPort(spec.ClientPort).
+	cfg := scripts.
+		NewPDScript(spec.Name, i.GetHost(), paths.Deploy, paths.Data[0], paths.Log).
+		WithClientPort(spec.ClientPort).
 		WithPeerPort(spec.PeerPort).
 		AppendEndpoints(topo.Endpoints(deployUser)...).
-		WithListenHost(i.GetListenHost())
+		WithListenHost(i.GetListenHost()).
+		WithAdvertiseClientAddr(spec.AdvertiseClientAddr).
+		WithAdvertisePeerAddr(spec.AdvertisePeerAddr)
 
 	if enableTLS {
 		cfg = cfg.WithScheme("https")
