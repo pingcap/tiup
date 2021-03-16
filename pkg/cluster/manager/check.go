@@ -96,7 +96,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 	var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
-		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword, nil); err != nil {
+		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
 			return err
 		}
 	}
