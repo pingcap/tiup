@@ -1,5 +1,10 @@
 # TiUP Cluster UI Changelog
 
+## 2021.03.16
+
+- Support show audit list
+
+  ![audit list](https://user-images.githubusercontent.com/1284531/111284708-5760e780-867b-11eb-91d0-ea06b94ef203.png)
 ## 2021.03.15
 
 - Support check a cluster before upgrading
