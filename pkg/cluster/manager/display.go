@@ -123,11 +123,11 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 		var err error
 		dashboardAddr, err = t.GetDashboardAddress(tlsCfg, masterActive...)
 		if err == nil && !set.NewStringSet("", "auto", "none").Exist(dashboardAddr) {
-			schema := "http"
+			scheme := "http"
 			if tlsCfg != nil {
-				schema = "https"
+				scheme = "https"
 			}
-			fmt.Printf("Dashboard URL:      %s\n", cyan.Sprintf("%s://%s/dashboard", schema, dashboardAddr))
+			fmt.Printf("Dashboard URL:      %s\n", cyan.Sprintf("%s://%s/dashboard", scheme, dashboardAddr))
 		}
 	}
 

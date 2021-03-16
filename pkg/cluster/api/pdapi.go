@@ -30,9 +30,6 @@ import (
 	"github.com/pingcap/kvproto/pkg/pdpb"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/utils"
-	pdserverapi "github.com/tikv/pd/server/api"
-	pdconfig "github.com/tikv/pd/server/config"
-	pdsp "github.com/tikv/pd/server/schedule/placement"
 )
 
 // PDClient is an HTTP client of the PD server
@@ -144,12 +141,12 @@ func (pc *PDClient) CheckHealth() error {
 }
 
 // GetStores queries the stores info from PD server
-func (pc *PDClient) GetStores() (*pdserverapi.StoresInfo, error) {
+func (pc *PDClient) GetStores() (*StoresInfo, error) {
 	// Return all stores
 	query := "?state=0&state=1&state=2"
 	endpoints := pc.getEndpoints(pdStoresURI + query)
 
-	storesInfo := pdserverapi.StoresInfo{}
+	storesInfo := StoresInfo{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := pc.httpClient.Get(endpoint)
@@ -174,14 +171,14 @@ func (pc *PDClient) GetStores() (*pdserverapi.StoresInfo, error) {
 }
 
 // GetCurrentStore gets the current store info of a given host
-func (pc *PDClient) GetCurrentStore(addr string) (*pdserverapi.StoreInfo, error) {
+func (pc *PDClient) GetCurrentStore(addr string) (*StoreInfo, error) {
 	stores, err := pc.GetStores()
 	if err != nil {
 		return nil, err
 	}
 
 	// Find the store with largest ID
-	var latestStore *pdserverapi.StoreInfo
+	var latestStore *StoreInfo
 	for _, store := range stores.Stores {
 		if store.Store.Address == addr {
 			// Workaround of pd-3303:
@@ -676,7 +673,7 @@ func (pc *PDClient) GetLocationLabels() ([]string, error) {
 		return nil, err
 	}
 
-	rc := pdconfig.ReplicationConfig{}
+	rc := PDReplicationConfig{}
 	if err := json.Unmarshal(config, &rc); err != nil {
 		return nil, perrs.Annotatef(err, "unmarshal replication config: %s", string(config))
 	}
@@ -716,10 +713,10 @@ func (pc *PDClient) UpdateScheduleConfig(body io.Reader) error {
 }
 
 // CheckRegion queries for the region with specific status
-func (pc *PDClient) CheckRegion(state string) (*pdserverapi.RegionsInfo, error) {
+func (pc *PDClient) CheckRegion(state string) (*RegionsInfo, error) {
 	uri := pdRegionsCheckURI + "/" + state
 	endpoints := pc.getEndpoints(uri)
-	regionsInfo := pdserverapi.RegionsInfo{}
+	regionsInfo := RegionsInfo{}
 
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
 		body, err := pc.httpClient.Get(endpoint)
@@ -730,26 +727,6 @@ func (pc *PDClient) CheckRegion(state string) (*pdserverapi.RegionsInfo, error) 
 		return body, json.Unmarshal(body, &regionsInfo)
 	})
 	return &regionsInfo, err
-}
-
-// GetPlacementRules queries for all placement rules
-func (pc *PDClient) GetPlacementRules() ([]*pdsp.Rule, error) {
-	endpoints := pc.getEndpoints(pdRulesURI)
-	var rules []*pdsp.Rule
-
-	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := pc.httpClient.Get(endpoint)
-		if err != nil {
-			return body, err
-		}
-		return body, json.Unmarshal(body, &rules)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return rules, nil
 }
 
 // SetReplicationConfig sets a config key value of PD replication, it has the
