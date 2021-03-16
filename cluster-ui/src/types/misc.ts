@@ -40,3 +40,9 @@ export interface IClusterCheckResult {
   Status: string
   Message: string
 }
+
+export interface IAuditLogItem {
+  id: string
+  time: string
+  command: string
+}

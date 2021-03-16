@@ -11,6 +11,7 @@ import ClusterScaleOutPage from '_pages/Clusters/ClusterScaleOut'
 import DashboardPortalPage from '_pages/Clusters/DashboardPortal'
 import SettingPage from '_pages/Setting'
 import ClusterUpgradePage from '_pages/Clusters/ClusterUpgrade'
+import AuditPage from '_pages/Audit'
 
 import './App.less'
 
@@ -40,6 +41,7 @@ function App() {
           <Route path="/machines" element={<MachinesPage />} />
           <Route path="/deploy" element={<DeploymentPage />} />
           <Route path="/setting" element={<SettingPage />} />
+          <Route path="/audit" element={<AuditPage />} />
         </Route>
       </Routes>
     </Router>

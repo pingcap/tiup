@@ -13,6 +13,7 @@ import (
 	"github.com/pingcap/tiup/cmd"
 	"github.com/pingcap/tiup/components/cluster/web/uiserver"
 
+	"github.com/pingcap/tiup/pkg/cluster/audit"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/report"
@@ -86,6 +87,8 @@ func Run(_tidbSpec *spec.SpecManager, _manager *manager.Manager, _gOpt operator.
 		api.POST("/mirror", setMirrorHandler)
 
 		api.GET("/tidb_versions", tidbVersionsHandler)
+
+		api.GET("/audit", auditLogListHandler)
 	}
 	// Frontend assets
 	router.StaticFS("/tiup", uiserver.Assets)
@@ -488,6 +491,15 @@ func tidbVersionsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"versions": versions,
 	})
+}
+
+func auditLogListHandler(c *gin.Context) {
+	auditLogList, err := audit.GetAuditList(spec.AuditDir())
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, auditLogList)
 }
 
 //////////////////////////////////////

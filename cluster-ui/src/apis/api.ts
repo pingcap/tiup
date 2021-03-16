@@ -83,3 +83,7 @@ export function setMirrorAddress(newAddress: string) {
 export function getTiDBVersions() {
   return request(fullUrl(`tidb_versions`))
 }
+
+export function getAuditList() {
+  return request(fullUrl(`audit`))
+}
