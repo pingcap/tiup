@@ -48,8 +48,9 @@ var ErrUnknownVersion = errors.New("unknown version")
 // V1Repository represents a remote repository viewed with the v1 manifest design.
 type V1Repository struct {
 	Options
-	mirror Mirror
-	local  v1manifest.LocalManifests
+	mirror    Mirror
+	local     v1manifest.LocalManifests
+	timestamp *v1manifest.Manifest
 }
 
 // ComponentSpec describes a component a user would like to have or use.
@@ -297,6 +298,11 @@ func FnameWithVersion(fname string, version uint) string {
 }
 
 func (r *V1Repository) updateLocalRoot() error {
+	// There is no need to update root.json if other manifest not changed
+	if r.timestamp != nil {
+		return nil
+	}
+
 	defer func(start time.Time) {
 		verbose.Log("Update local root finished in %s", time.Since(start))
 	}(time.Now())
@@ -493,12 +499,23 @@ func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target st
 	return nil
 }
 
+// PurgeTimestamp remove timestamp cache from repository
+func (r *V1Repository) PurgeTimestamp() {
+	r.timestamp = nil
+}
+
 // FetchTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash in it
 // has the same value of our local one. (not hashing the snapshot file itself)
 // Return weather the manifest is changed compared to the one in local ts and the FileHash of snapshot.
 func (r *V1Repository) fetchTimestamp() (changed bool, manifest *v1manifest.Manifest, err error) {
+	// check cache first
+	if r.timestamp != nil {
+		return false, r.timestamp, nil
+	}
+
 	defer func(start time.Time) {
 		verbose.Log("Fetch timestamp finished in %s", time.Since(start))
+		r.timestamp = manifest
 	}(time.Now())
 
 	var ts v1manifest.Timestamp

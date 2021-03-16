@@ -509,6 +509,7 @@ func doPublish(
 	flagSet set.StringSet,
 ) error {
 	env := environment.GlobalEnv()
+	env.V1Repository().PurgeTimestamp()
 	m, err := env.V1Repository().FetchComponentManifest(component, true)
 	if err != nil {
 		if perrs.Cause(err) == repository.ErrUnknownComponent {
