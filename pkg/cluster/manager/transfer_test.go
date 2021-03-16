@@ -49,7 +49,7 @@ func TestRenderSpec(t *testing.T) {
 			DataDir:    "/home/test/deploy/pd-2379/data",
 		},
 	}}
-	//s.BaseInstance.InstanceSpec
+	// s.BaseInstance.InstanceSpec
 	dir, err = renderSpec("{{.DataDir}}", s, "test-pd")
 	assert.Nil(t, err)
 	assert.NotEmpty(t, dir)
