@@ -1,0 +1,11 @@
+codecov:
+  require_ci_to_pass: no
+  notify:
+    wait_for_ci: no
+
+coverage:
+  range: 30..70
+
+ignore:
+  - "pkg/cluster/api/dmpb"
+  - "pkg/cluster/api/typeutil"

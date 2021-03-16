@@ -33,6 +33,7 @@ func newDisplayCmd() *cobra.Command {
 	var (
 		clusterName       string
 		showDashboardOnly bool
+		showVersionOnly   bool
 	)
 	cmd := &cobra.Command{
 		Use:   "display <cluster-name>",
@@ -59,6 +60,12 @@ func newDisplayCmd() *cobra.Command {
 				!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 				return err
 			}
+
+			if showVersionOnly {
+				fmt.Println(metadata.Version)
+				return nil
+			}
+
 			if showDashboardOnly {
 				tlsCfg, err := metadata.Topology.TLSConfig(tidbSpec.Path(clusterName, spec.TLSCertKeyDir))
 				if err != nil {
@@ -74,6 +81,7 @@ func newDisplayCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only display specified roles")
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only display specified nodes")
 	cmd.Flags().BoolVar(&showDashboardOnly, "dashboard", false, "Only display TiDB Dashboard information")
+	cmd.Flags().BoolVar(&showVersionOnly, "version", false, "Only display TiDB cluster version")
 
 	return cmd
 }

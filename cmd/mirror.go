@@ -16,6 +16,7 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -25,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pingcap/errors"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -118,7 +119,7 @@ func newMirrorSignCmd() *cobra.Command {
 
 			data, err := os.ReadFile(args[0])
 			if err != nil {
-				return errors.Annotatef(err, "open manifest file %s", args[0])
+				return perrs.Annotatef(err, "open manifest file %s", args[0])
 			}
 
 			if data, err = v1manifest.SignManifestData(data, privKey); err != nil {
@@ -126,7 +127,7 @@ func newMirrorSignCmd() *cobra.Command {
 			}
 
 			if err = os.WriteFile(args[0], data, 0664); err != nil {
-				return errors.Annotatef(err, "write manifest file %s", args[0])
+				return perrs.Annotatef(err, "write manifest file %s", args[0])
 			}
 
 			return nil
@@ -255,7 +256,7 @@ func newMirrorModifyCmd() *cobra.Command {
 				}
 			} else if flagSet.Exist("yank") {
 				if ver.IsNightly() {
-					return errors.New("nightly version can't be yanked")
+					return perrs.New("nightly version can't be yanked")
 				}
 				for p := range m.Platforms {
 					vi, ok := m.Platforms[p][ver.String()]
@@ -319,7 +320,7 @@ func editLatestRootManifest() (*v1manifest.Root, error) {
 
 	file, err := os.CreateTemp(os.TempDir(), "*.root.json")
 	if err != nil {
-		return nil, errors.Annotate(err, "create temp file for root.json")
+		return nil, perrs.Annotate(err, "create temp file for root.json")
 	}
 	defer file.Close()
 	name := file.Name()
@@ -327,10 +328,10 @@ func editLatestRootManifest() (*v1manifest.Root, error) {
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "    ")
 	if err := encoder.Encode(root); err != nil {
-		return nil, errors.Annotate(err, "encode root.json")
+		return nil, perrs.Annotate(err, "encode root.json")
 	}
 	if err := file.Close(); err != nil {
-		return nil, errors.Annotatef(err, "close %s", name)
+		return nil, perrs.Annotatef(err, "close %s", name)
 	}
 	if err := utils.OpenFileInEditor(name); err != nil {
 		return nil, err
@@ -339,11 +340,11 @@ func editLatestRootManifest() (*v1manifest.Root, error) {
 	root = &v1manifest.Root{}
 	file, err = os.Open(name)
 	if err != nil {
-		return nil, errors.Annotatef(err, "open %s", name)
+		return nil, perrs.Annotatef(err, "open %s", name)
 	}
 	defer file.Close()
 	if err := json.NewDecoder(file).Decode(root); err != nil {
-		return nil, errors.Annotatef(err, "decode %s", name)
+		return nil, perrs.Annotatef(err, "decode %s", name)
 	}
 
 	return root, nil
@@ -364,7 +365,7 @@ func loadPrivKey(privPath string) (*v1manifest.KeyInfo, error) {
 
 	ki := v1manifest.KeyInfo{}
 	if err := json.NewDecoder(f).Decode(&ki); err != nil {
-		return nil, errors.Annotate(err, "decode key")
+		return nil, perrs.Annotate(err, "decode key")
 	}
 
 	return &ki, nil
@@ -449,7 +450,7 @@ func newMirrorPublishCmd() *cobra.Command {
 
 			tarfile, err := os.Open(tarpath)
 			if err != nil {
-				return errors.Annotatef(err, "open tarball: %s", tarpath)
+				return perrs.Annotatef(err, "open tarball: %s", tarpath)
 			}
 			defer tarfile.Close()
 
@@ -467,6 +468,7 @@ func newMirrorPublishCmd() *cobra.Command {
 				if err != nil {
 					// retry if the error is manifest too old or validation failed
 					if err == repository.ErrManifestTooOld ||
+						errors.Is(perrs.Cause(err), utils.ErrValidateChecksum) ||
 						strings.Contains(err.Error(), "INVALID TARBALL") {
 						fmt.Printf("server returned an error: %s, retry...\n", err)
 						if _, ferr := tarfile.Seek(0, 0); ferr != nil { // reset the reader
@@ -478,7 +480,7 @@ func newMirrorPublishCmd() *cobra.Command {
 				}
 				return nil // return nil to end the retry loop
 			}, utils.RetryOption{
-				Attempts: 5,
+				Attempts: 10,
 				Delay:    time.Second * 2,
 				Timeout:  time.Minute * 10,
 			})
@@ -509,7 +511,7 @@ func doPublish(
 	env := environment.GlobalEnv()
 	m, err := env.V1Repository().FetchComponentManifest(component, true)
 	if err != nil {
-		if errors.Cause(err) == repository.ErrUnknownComponent {
+		if perrs.Cause(err) == repository.ErrUnknownComponent {
 			fmt.Printf("Creating component %s\n", component)
 			publishInfo.Stand = &standalone
 			publishInfo.Hide = &hidden
@@ -546,7 +548,7 @@ func validatePlatform(goos, goarch string) error {
 		"darwin/arm64":
 		return nil
 	default:
-		return errors.Errorf("platform %s/%s not supported", goos, goarch)
+		return perrs.Errorf("platform %s/%s not supported", goos, goarch)
 	}
 }
 
@@ -568,7 +570,7 @@ func newMirrorGenkeyCmd() *cobra.Command {
 			keyDir := filepath.Dir(privPath)
 			if utils.IsNotExist(keyDir) {
 				if err := os.Mkdir(keyDir, 0755); err != nil {
-					return errors.Annotate(err, "create private key dir")
+					return perrs.Annotate(err, "create private key dir")
 				}
 			}
 
@@ -673,7 +675,7 @@ current working directory (".") will be used.`,
 				return err
 			}
 			if !empty {
-				return errors.Errorf("the target path '%s' is not an empty directory", repoPath)
+				return perrs.Errorf("the target path '%s' is not an empty directory", repoPath)
 			}
 
 			if keyDir == "" {
@@ -789,7 +791,7 @@ func newMirrorCloneCmd() *cobra.Command {
 			}
 
 			if len(components) < 1 {
-				return errors.New("component list doesn't contain components")
+				return perrs.New("component list doesn't contain components")
 			}
 
 			if err = repo.Mirror().Open(); err != nil {
@@ -810,6 +812,7 @@ func newMirrorCloneCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&options.Archs, "arch", "a", []string{"amd64", "arm64"}, "Specify the downloading architecture")
 	cmd.Flags().StringSliceVarP(&options.OSs, "os", "o", []string{"linux", "darwin"}, "Specify the downloading os")
 	cmd.Flags().BoolVarP(&options.Prefix, "prefix", "", false, "Download the version with matching prefix")
+	cmd.Flags().UintVarP(&options.Jobs, "jobs", "", 1, "Specify the number of concurrent download jobs")
 
 	originHelpFunc := cmd.HelpFunc()
 	cmd.SetHelpFunc(func(command *cobra.Command, args []string) {

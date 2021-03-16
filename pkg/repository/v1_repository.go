@@ -17,7 +17,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	stderrors "errors"
 	"fmt"
 	"io"
 	"os"
@@ -41,7 +40,10 @@ import (
 )
 
 // ErrUnknownComponent represents the specific component cannot be found in index.json
-var ErrUnknownComponent = stderrors.New("unknown component")
+var ErrUnknownComponent = errors.New("unknown component")
+
+// ErrUnknownVersion represents the specific component version cannot be found in component.json
+var ErrUnknownVersion = errors.New("unknown version")
 
 // V1Repository represents a remote repository viewed with the v1 manifest design.
 type V1Repository struct {
@@ -558,7 +560,7 @@ func (r *V1Repository) fetchManifestWithHash(url string, role v1manifest.ValidMa
 	return r.fetchBase(url, hash.Length, func(reader io.Reader) (*v1manifest.Manifest, error) {
 		bufReader, err := checkHash(reader, hash.Hashes[v1manifest.SHA256])
 		if err != nil {
-			return nil, errors.Errorf("validation failed for %s: %s", url, err)
+			return nil, errors.Annotatef(err, "validation failed for %s", url)
 		}
 
 		return v1manifest.ReadManifest(bufReader, role, r.local.KeyStore())
@@ -713,7 +715,7 @@ func (r *V1Repository) ComponentVersion(id, ver string, includeYanked bool) (*v1
 	}
 	vi := manifest.VersionItem(r.PlatformString(), ver, includeYanked)
 	if vi == nil {
-		return nil, errors.Errorf("version %s on %s for component %s not found", ver, r.PlatformString(), id)
+		return nil, errors.Annotatef(ErrUnknownVersion, "version %s on %s for component %s not found", ver, r.PlatformString(), id)
 	}
 	return vi, nil
 }
