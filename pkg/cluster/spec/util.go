@@ -39,7 +39,7 @@ func GetSpecManager() *SpecManager {
 type ClusterMeta struct {
 	User    string `yaml:"user"`         // the user to run and manage cluster on remote
 	Version string `yaml:"tidb_version"` // the version of TiDB cluster
-	//EnableFirewall bool   `yaml:"firewall"`
+	// EnableFirewall bool   `yaml:"firewall"`
 	OpsVer string `yaml:"last_ops_ver,omitempty"` // the version of ourself that updated the meta last time
 
 	Topology *Specification `yaml:"topology"`

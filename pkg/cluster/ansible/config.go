@@ -29,12 +29,12 @@ import (
 // ImportConfig copies config files from cluster which deployed through tidb-ansible
 func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout uint64, sshType executor.SSHType) error {
 	// there may be already cluster dir, skip create
-	//if err := os.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
-	//	return err
-	//}
-	//if err := os.WriteFile(meta.ClusterPath(name, "topology.yaml"), yamlFile, 0664); err != nil {
-	//	return err
-	//}
+	// if err := os.MkdirAll(meta.ClusterPath(name), 0755); err != nil {
+	// 	 return err
+	// }
+	// if err := os.WriteFile(meta.ClusterPath(name, "topology.yaml"), yamlFile, 0664); err != nil {
+	// 	 return err
+	// }
 	var copyFileTasks []task.Task
 	for _, comp := range clsMeta.Topology.ComponentsByStartOrder() {
 		log.Infof("Copying config file(s) of %s...", comp.Name())

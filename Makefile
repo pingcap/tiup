@@ -4,7 +4,7 @@
 REPO    := github.com/pingcap/tiup
 
 GOOS    := $(if $(GOOS),$(GOOS),$(shell go env GOOS))
-GOARCH  := $(if $(GOARCH),$(GOARCH),amd64)
+GOARCH  := $(if $(GOARCH),$(GOARCH),$(shell go env GOARCH))
 GOENV   := GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH)
 GO      := $(GOENV) go
 GOBUILD := $(GO) build $(BUILD_FLAG)
@@ -121,4 +121,4 @@ tools/bin/revive: tools/check/go.mod
 	$(GO) build -o ../bin/revive github.com/mgechev/revive
 
 tools/bin/golangci-lint:
-	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b ./tools/bin v1.27.0
+	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b ./tools/bin v1.38.0
