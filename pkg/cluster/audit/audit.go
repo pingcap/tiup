@@ -45,6 +45,12 @@ func CommandArgs(fp string) ([]string, error) {
 	}
 
 	args := strings.Split(scanner.Text(), " ")
+	// support for operations from the tiup web ui
+	if args[1] == "--ui" {
+		if scanner.Scan() {
+			args = strings.Split(scanner.Text(), " ")
+		}
+	}
 	return decodeCommandArgs(args)
 }
 
@@ -78,10 +84,39 @@ func decodeCommandArgs(args []string) ([]string, error) {
 func ShowAuditList(dir string) error {
 	// Header
 	clusterTable := [][]string{{"ID", "Time", "Command"}}
-	fileInfos, err := os.ReadDir(dir)
-	if err != nil && !os.IsNotExist(err) {
+
+	auditList, err := GetAuditList(dir)
+	if err != nil {
 		return err
 	}
+
+	for _, item := range auditList {
+		clusterTable = append(clusterTable, []string{
+			item.ID,
+			item.Time,
+			item.Command,
+		})
+	}
+
+	cliutil.PrintTable(clusterTable, true)
+	return nil
+}
+
+// AuditLogItem represents a single audit item
+type AuditLogItem struct {
+	ID      string `json:"id"`
+	Time    string `json:"time"`
+	Command string `json:"command"`
+}
+
+// GetAuditList get the audit item list
+func GetAuditList(dir string) ([]AuditLogItem, error) {
+	fileInfos, err := os.ReadDir(dir)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	auditList := []AuditLogItem{}
 	for _, fi := range fileInfos {
 		if fi.IsDir() {
 			continue
@@ -95,19 +130,18 @@ func ShowAuditList(dir string) error {
 			continue
 		}
 		cmd := strings.Join(args, " ")
-		clusterTable = append(clusterTable, []string{
-			fi.Name(),
-			t.Format(time.RFC3339),
-			cmd,
+		auditList = append(auditList, AuditLogItem{
+			ID:      fi.Name(),
+			Time:    t.Format(time.RFC3339),
+			Command: cmd,
 		})
 	}
 
-	sort.Slice(clusterTable[1:], func(i, j int) bool {
-		return clusterTable[i+1][1] > clusterTable[j+1][1]
+	sort.Slice(auditList, func(i, j int) bool {
+		return auditList[i].Time > auditList[j].Time
 	})
 
-	cliutil.PrintTable(clusterTable, true)
-	return nil
+	return auditList, nil
 }
 
 // OutputAuditLog outputs audit log.
