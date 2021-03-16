@@ -175,7 +175,7 @@ func TestCacheTimestamp(t *testing.T) {
 	assert.False(t, changed)
 
 	repo.PurgeTimestamp()
-	changed, _, err = repo.fetchTimestamp()
+	_, _, err = repo.fetchTimestamp()
 	assert.NotNil(t, err)
 }
 
