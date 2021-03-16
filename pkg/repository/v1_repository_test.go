@@ -155,6 +155,30 @@ func TestCheckTimestamp(t *testing.T) {
 	// TODO test that a bad signature causes an error
 }
 
+func TestCacheTimestamp(t *testing.T) {
+	mirror := MockMirror{
+		Resources: map[string]string{},
+	}
+	local := v1manifest.NewMockManifests()
+	privk := setNewRoot(t, local)
+	repo := NewV1Repo(&mirror, Options{}, local)
+
+	repoTimestamp := timestampManifest()
+	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, repoTimestamp, privk)
+	changed, _, err := repo.fetchTimestamp()
+	assert.Nil(t, err)
+	assert.True(t, changed)
+
+	delete(mirror.Resources, v1manifest.ManifestURLTimestamp)
+	changed, _, err = repo.fetchTimestamp()
+	assert.Nil(t, err)
+	assert.False(t, changed)
+
+	repo.PurgeTimestamp()
+	changed, _, err = repo.fetchTimestamp()
+	assert.NotNil(t, err)
+}
+
 func TestUpdateLocalSnapshot(t *testing.T) {
 	mirror := MockMirror{
 		Resources: map[string]string{},
