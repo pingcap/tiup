@@ -213,6 +213,7 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 	envs := []string{
 		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameWorkDir, tiupWd),
+		fmt.Sprintf("%s=%s", localdata.EnvNameUserInputVersion, p.Version.String()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, p.InstanceDir),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
