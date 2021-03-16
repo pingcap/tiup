@@ -29,6 +29,7 @@ import (
 type TiDBSpec struct {
 	Host            string                 `yaml:"host"`
 	ListenHost      string                 `yaml:"listen_host,omitempty"`
+	AdvertiseAddr   string                 `yaml:"advertise_address,omitempty"`
 	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                   `yaml:"imported,omitempty"`
 	Patched         bool                   `yaml:"patched,omitempty"`
@@ -131,14 +132,14 @@ func (i *TiDBInstance) InitConfig(
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*TiDBSpec)
-	cfg := scripts.NewTiDBScript(
-		i.GetHost(),
-		paths.Deploy,
-		paths.Log,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).
+	cfg := scripts.
+		NewTiDBScript(i.GetHost(), paths.Deploy, paths.Log).
+		WithPort(spec.Port).
+		WithNumaNode(spec.NumaNode).
 		WithStatusPort(spec.StatusPort).
 		AppendEndpoints(topo.Endpoints(deployUser)...).
-		WithListenHost(i.GetListenHost())
+		WithListenHost(i.GetListenHost()).
+		WithAdvertiseAddr(spec.Host)
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tidb_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
