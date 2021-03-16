@@ -21,6 +21,7 @@ on:
       - 'components/errdoc/**'
       - 'components/playground/**'
       - 'server/**'
+      - 'pkg/version/version.go'
       - '.github/workflows/integrate-tiup**'
       - '.github/workflows/integrate-dm**'
       - '.github/workflows/integrate-playground**'
@@ -42,6 +43,7 @@ on:
       - 'components/errdoc/**'
       - 'components/playground/**'
       - 'server/**'
+      - 'pkg/version/version.go'
       - '.github/workflows/integrate-tiup**'
       - '.github/workflows/integrate-dm**'
       - '.github/workflows/integrate-playground**'
@@ -63,7 +65,7 @@ jobs:
       - name: Set up Go 1.16
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16
+          go-version: 1.16.x
         id: go
 
       - name: Check out code into the Go module directory

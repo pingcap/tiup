@@ -11,7 +11,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // Process represent process to be run by playground
@@ -85,7 +85,7 @@ func (p *process) Cmd() *exec.Cmd {
 }
 
 // NewComponentProcess create a Process instance.
-func NewComponentProcess(ctx context.Context, dir, binPath, component string, version pkgver.Version, arg ...string) (Process, error) {
+func NewComponentProcess(ctx context.Context, dir, binPath, component string, version utils.Version, arg ...string) (Process, error) {
 	if dir == "" {
 		panic("dir must be set")
 	}

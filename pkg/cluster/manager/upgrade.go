@@ -30,7 +30,7 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
-	"github.com/pingcap/tiup/pkg/version"
+	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 )
 
@@ -210,7 +210,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 
 func versionCompare(curVersion, newVersion string) error {
 	// Can always upgrade to 'nightly' event the current version is 'nightly'
-	if newVersion == version.NightlyVersion {
+	if newVersion == utils.NightlyVersionAlias {
 		return nil
 	}
 
