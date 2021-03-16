@@ -22,7 +22,7 @@ const TITLES: any = {
 export default function DashboardPortalPage() {
   const refIframe = useRef<HTMLIFrameElement>(null)
   const { clusterName } = useParams()
-  const { pd, tidb_version, target } = useQueryParams()
+  const { pd, target } = useQueryParams()
   const [verified, setVerified] = useState<VerifyStatus>(VerifyStatus.Start)
   const [dashboardToken, setDashboardToken] = useSessionStorageState(
     `${clusterName}_dashboard_token`,
@@ -75,22 +75,11 @@ export default function DashboardPortalPage() {
 
   function loginTiDB(values: any) {
     const { tidb_user, tidb_pwd } = values
-    // 要根据 tidb 版本进行判断，4.0.6 及以上用 type，以下用 is_tidb_auth
-    // shit! 'v4.0.11' < 'v4.0.6'
-    // FIX ME
-    let loginOptions
-    if (tidb_version >= 'v4.0.6') {
-      loginOptions = {
-        username: tidb_user,
-        password: tidb_pwd,
-        type: 0,
-      }
-    } else {
-      loginOptions = {
-        username: tidb_user,
-        password: tidb_pwd,
-        is_tidb_auth: true,
-      }
+    const loginOptions = {
+      username: tidb_user,
+      password: tidb_pwd,
+      type: 0, // version >= v4.0.6
+      is_tidb_auth: true, // version < v4.0.6
     }
     request(`http://${pd}/dashboard/api/user/login`, 'POST', loginOptions).then(
       ({ data, err }) => {
