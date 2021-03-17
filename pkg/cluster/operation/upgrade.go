@@ -41,7 +41,7 @@ func Upgrade(
 	topo spec.Topology,
 	options Options,
 	tlsCfg *tls.Config,
-) (upgErr error) {
+) error {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := topo.ComponentsByUpdateOrder()
@@ -66,7 +66,10 @@ func Upgrade(
 				return err
 			}
 			defer func() {
-				upgErr = decreaseScheduleLimit(pdClient, origLeaderScheduleLimit, origRegionScheduleLimit)
+				upgErr := decreaseScheduleLimit(pdClient, origLeaderScheduleLimit, origRegionScheduleLimit)
+				if upgErr != nil {
+					log.Warnf("failed decreasing schedule limit, please check if they are too high: %s", upgErr)
+				}
 			}()
 		default:
 			// do nothing, kept for future usage with other components
