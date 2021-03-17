@@ -244,7 +244,7 @@ func checkNetwork(opt *CheckOptions, networkDevices []sysinfo.NetworkDevice) []*
 		if netdev.Speed == 0 {
 			continue
 		}
-		if netdev.Speed > 1000 {
+		if netdev.Speed >= 1000 {
 			results = append(results, &CheckResult{
 				Name: CheckNameNet,
 				Msg:  fmt.Sprintf("network speed of %s is %dMB", netdev.Name, netdev.Speed),
