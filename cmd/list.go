@@ -23,7 +23,7 @@ import (
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
-	"github.com/pingcap/tiup/pkg/version"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
 )
@@ -207,7 +207,7 @@ func ShowComponentVersions(env *environment.Environment, component string, opt L
 		versions := comp.VersionList(plat)
 		for ver, verinfo := range versions {
 			if ver == comp.Nightly {
-				key := fmt.Sprintf("%s -> %s", version.NightlyVersion, comp.Nightly)
+				key := fmt.Sprintf("%s -> %s", utils.NightlyVersionAlias, comp.Nightly)
 				platforms[key] = append(platforms[key], plat)
 				released[key] = verinfo.Released
 			}

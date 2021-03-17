@@ -32,10 +32,8 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/verbose"
-	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
 
@@ -48,8 +46,9 @@ var ErrUnknownVersion = errors.New("unknown version")
 // V1Repository represents a remote repository viewed with the v1 manifest design.
 type V1Repository struct {
 	Options
-	mirror Mirror
-	local  v1manifest.LocalManifests
+	mirror    Mirror
+	local     v1manifest.LocalManifests
+	timestamp *v1manifest.Manifest
 }
 
 // ComponentSpec describes a component a user would like to have or use.
@@ -120,7 +119,7 @@ func (r *V1Repository) UpdateComponents(specs []ComponentSpec) error {
 			continue
 		}
 
-		if spec.Version == version.NightlyVersion {
+		if spec.Version == utils.NightlyVersionAlias {
 			if !manifest.HasNightly(r.PlatformString()) {
 				fmt.Printf("The component `%s` on platform %s does not have a nightly version; skipped\n", spec.ID, r.PlatformString())
 				continue
@@ -297,6 +296,11 @@ func FnameWithVersion(fname string, version uint) string {
 }
 
 func (r *V1Repository) updateLocalRoot() error {
+	// There is no need to update root.json if other manifest not changed
+	if r.timestamp != nil {
+		return nil
+	}
+
 	defer func(start time.Time) {
 		verbose.Log("Update local root finished in %s", time.Since(start))
 	}(time.Now())
@@ -493,12 +497,23 @@ func (r *V1Repository) DownloadComponent(item *v1manifest.VersionItem, target st
 	return nil
 }
 
+// PurgeTimestamp remove timestamp cache from repository
+func (r *V1Repository) PurgeTimestamp() {
+	r.timestamp = nil
+}
+
 // FetchTimestamp downloads the timestamp file, validates it, and checks if the snapshot hash in it
 // has the same value of our local one. (not hashing the snapshot file itself)
 // Return weather the manifest is changed compared to the one in local ts and the FileHash of snapshot.
 func (r *V1Repository) fetchTimestamp() (changed bool, manifest *v1manifest.Manifest, err error) {
+	// check cache first
+	if r.timestamp != nil {
+		return false, r.timestamp, nil
+	}
+
 	defer func(start time.Time) {
 		verbose.Log("Fetch timestamp finished in %s", time.Since(start))
+		r.timestamp = manifest
 	}(time.Now())
 
 	var ts v1manifest.Timestamp
@@ -699,7 +714,7 @@ func (r *V1Repository) ComponentVersion(id, ver string, includeYanked bool) (*v1
 	if err != nil {
 		return nil, err
 	}
-	if ver == version.NightlyVersion {
+	if ver == utils.NightlyVersionAlias {
 		if !manifest.HasNightly(r.PlatformString()) {
 			return nil, errors.Errorf("component %s does not have nightly on %s", id, r.PlatformString())
 		}
@@ -721,7 +736,7 @@ func (r *V1Repository) ComponentVersion(id, ver string, includeYanked bool) (*v1
 }
 
 // LatestNightlyVersion returns the latest nightly version of specific component
-func (r *V1Repository) LatestNightlyVersion(id string) (pkgver.Version, *v1manifest.VersionItem, error) {
+func (r *V1Repository) LatestNightlyVersion(id string) (utils.Version, *v1manifest.VersionItem, error) {
 	com, err := r.FetchComponentManifest(id, false)
 	if err != nil {
 		return "", nil, err
@@ -731,11 +746,11 @@ func (r *V1Repository) LatestNightlyVersion(id string) (pkgver.Version, *v1manif
 		return "", nil, fmt.Errorf("component %s doesn't have nightly version on platform %s", id, r.PlatformString())
 	}
 
-	return pkgver.Version(com.Nightly), com.VersionItem(r.PlatformString(), com.Nightly, false), nil
+	return utils.Version(com.Nightly), com.VersionItem(r.PlatformString(), com.Nightly, false), nil
 }
 
 // LatestStableVersion returns the latest stable version of specific component
-func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (pkgver.Version, *v1manifest.VersionItem, error) {
+func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (utils.Version, *v1manifest.VersionItem, error) {
 	com, err := r.FetchComponentManifest(id, withYanked)
 	if err != nil {
 		return "", nil, err
@@ -754,7 +769,7 @@ func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (pkgver.V
 	var last string
 	var lastStable string
 	for v := range versions {
-		if pkgver.Version(v).IsNightly() {
+		if utils.Version(v).IsNightly() {
 			continue
 		}
 
@@ -770,10 +785,10 @@ func (r *V1Repository) LatestStableVersion(id string, withYanked bool) (pkgver.V
 		if last == "" {
 			return "", nil, fmt.Errorf("component %s doesn't has a stable version", id)
 		}
-		return pkgver.Version(last), com.VersionItem(r.PlatformString(), last, false), nil
+		return utils.Version(last), com.VersionItem(r.PlatformString(), last, false), nil
 	}
 
-	return pkgver.Version(lastStable), com.VersionItem(r.PlatformString(), lastStable, false), nil
+	return utils.Version(lastStable), com.VersionItem(r.PlatformString(), lastStable, false), nil
 }
 
 // BinaryPath return the binary path of the component.
@@ -787,7 +802,7 @@ func (r *V1Repository) BinaryPath(installPath string, componentID string, ver st
 
 	// Always use the newest nightly entry.
 	// Because the one the user installed may be scraped.
-	if pkgver.Version(ver).IsNightly() {
+	if utils.Version(ver).IsNightly() {
 		if !component.HasNightly(r.PlatformString()) {
 			return "", errors.Errorf("the component `%s` on platform %s does not have a nightly version", componentID, r.PlatformString())
 		}

@@ -30,8 +30,8 @@ type GrafanaConfig struct {
 	Username        string // admin_user
 	Password        string // admin_password
 	AnonymousEnable bool   // anonymous enable
-	RootURL         string //root_url
-	Domain          string //domain
+	RootURL         string // root_url
+	Domain          string // domain
 }
 
 // NewGrafanaConfig returns a GrafanaConfig

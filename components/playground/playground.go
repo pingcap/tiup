@@ -38,7 +38,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cliutil/progress"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/environment"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
@@ -413,7 +412,7 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
 	fmt.Printf("Start %s instance\n", inst.Component())
-	err := inst.Start(ctx, pkgver.Version(p.bootOptions.version))
+	err := inst.Start(ctx, utils.Version(p.bootOptions.version))
 	if err != nil {
 		return err
 	}
@@ -1033,7 +1032,7 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 	if err := installIfMissing(env.Profile(), "grafana", options.version); err != nil {
 		return nil, err
 	}
-	installPath, err := env.Profile().ComponentInstalledPath("grafana", pkgver.Version(options.version))
+	installPath, err := env.Profile().ComponentInstalledPath("grafana", utils.Version(options.version))
 	if err != nil {
 		return nil, err
 	}

@@ -21,6 +21,7 @@ func main() {
 }
 
 func execute() error {
+	ignoreVersion := false
 	home := os.Getenv(localdata.EnvNameComponentInstallDir)
 	if home == "" {
 		return errors.New("component `ctl` cannot run in standalone mode")
@@ -42,6 +43,17 @@ func execute() error {
 					transparentParams = os.Args[i+1:]
 					break
 				}
+			}
+
+			if ignoreVersion {
+				for i, arg := range transparentParams {
+					if arg == "--ignore-version" {
+						transparentParams = append(transparentParams[:i], transparentParams[i+1:]...)
+					}
+				}
+			} else if os.Getenv(localdata.EnvNameUserInputVersion) == "" {
+				// if user not set component version explicitly
+				return errors.New("ctl need an explicit version, please run with `tiup ctl:<cluster-version>`")
 			}
 
 			bin, err := binaryPath(home, componentSpec)
@@ -68,6 +80,7 @@ func execute() error {
 			fmt.Println(color.RedString("Error: %v", err))
 		}
 	})
+	rootCmd.Flags().BoolVar(&ignoreVersion, "ignore-version", false, "Skip explicit version check")
 
 	return rootCmd.Execute()
 }

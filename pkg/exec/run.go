@@ -30,8 +30,8 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 )
 
@@ -129,7 +129,7 @@ func base62Tag() string {
 type PrepareCommandParams struct {
 	Ctx         context.Context
 	Component   string
-	Version     pkgver.Version
+	Version     utils.Version
 	BinPath     string
 	Tag         string
 	InstanceDir string
@@ -213,6 +213,7 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 	envs := []string{
 		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameWorkDir, tiupWd),
+		fmt.Sprintf("%s=%s", localdata.EnvNameUserInputVersion, p.Version.String()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, p.InstanceDir),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
@@ -234,7 +235,7 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 	return c, nil
 }
 
-func launchComponent(ctx context.Context, component string, version pkgver.Version, binPath string, tag string, args []string, env *environment.Environment) (*localdata.Process, error) {
+func launchComponent(ctx context.Context, component string, version utils.Version, binPath string, tag string, args []string, env *environment.Environment) (*localdata.Process, error) {
 	instanceDir := os.Getenv(localdata.EnvNameInstanceDataDir)
 	if instanceDir == "" {
 		// Generate a tag for current instance if the tag doesn't specified

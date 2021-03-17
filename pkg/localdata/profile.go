@@ -28,9 +28,7 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
-	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
 
@@ -79,8 +77,8 @@ func (p *Profile) Root() string {
 }
 
 // GetComponentInstalledVersion return the installed version of component.
-func (p *Profile) GetComponentInstalledVersion(component string, ver pkgver.Version) (pkgver.Version, error) {
-	if !ver.IsEmpty() && ver.String() != version.NightlyVersion {
+func (p *Profile) GetComponentInstalledVersion(component string, ver utils.Version) (utils.Version, error) {
+	if !ver.IsEmpty() && ver.String() != utils.NightlyVersionAlias {
 		return ver, nil
 	}
 	versions, err := p.InstalledVersions(component)
@@ -98,19 +96,19 @@ func (p *Profile) GetComponentInstalledVersion(component string, ver pkgver.Vers
 	sort.Slice(versions, func(i, j int) bool {
 		return semver.Compare(versions[i], versions[j]) < 0
 	})
-	if ver.String() != version.NightlyVersion {
+	if ver.String() != utils.NightlyVersionAlias {
 		for i := len(versions); i > 0; i-- {
-			if pkgver.Version(versions[i-1]).IsNightly() {
-				return pkgver.Version(versions[i-1]), nil
+			if utils.Version(versions[i-1]).IsNightly() {
+				return utils.Version(versions[i-1]), nil
 			}
 		}
 		return "", errors.Errorf("component(nightly) not installed, please try `tiup install %s:nightly` to install it", component)
 	}
-	return pkgver.Version(versions[len(versions)-1]), nil
+	return utils.Version(versions[len(versions)-1]), nil
 }
 
 // ComponentInstalledPath returns the path where the component installed
-func (p *Profile) ComponentInstalledPath(component string, version pkgver.Version) (string, error) {
+func (p *Profile) ComponentInstalledPath(component string, version utils.Version) (string, error) {
 	installedVersion, err := p.GetComponentInstalledVersion(component, version)
 	if err != nil {
 		return "", err

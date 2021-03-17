@@ -142,6 +142,7 @@ func TestCheckTimestamp(t *testing.T) {
 	expiredTimestamp := timestampManifest()
 	expiredTimestamp.Expires = "2000-05-12T04:51:08Z"
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, expiredTimestamp)
+	repo.PurgeTimestamp()
 	_, _, err = repo.fetchTimestamp()
 	assert.NotNil(t, err)
 
@@ -152,6 +153,30 @@ func TestCheckTimestamp(t *testing.T) {
 	assert.NotNil(t, err)
 
 	// TODO test that a bad signature causes an error
+}
+
+func TestCacheTimestamp(t *testing.T) {
+	mirror := MockMirror{
+		Resources: map[string]string{},
+	}
+	local := v1manifest.NewMockManifests()
+	privk := setNewRoot(t, local)
+	repo := NewV1Repo(&mirror, Options{}, local)
+
+	repoTimestamp := timestampManifest()
+	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, repoTimestamp, privk)
+	changed, _, err := repo.fetchTimestamp()
+	assert.Nil(t, err)
+	assert.True(t, changed)
+
+	delete(mirror.Resources, v1manifest.ManifestURLTimestamp)
+	changed, _, err = repo.fetchTimestamp()
+	assert.Nil(t, err)
+	assert.False(t, changed)
+
+	repo.PurgeTimestamp()
+	_, _, err = repo.fetchTimestamp()
+	assert.NotNil(t, err)
 }
 
 func TestUpdateLocalSnapshot(t *testing.T) {
@@ -390,6 +415,7 @@ func TestEnsureManifests(t *testing.T) {
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv2)
 	local.Saved = []string{}
 
+	repo.PurgeTimestamp()
 	err = repo.ensureManifests()
 	assert.Nil(t, err)
 	assert.Contains(t, local.Saved, v1manifest.ManifestFilenameRoot)
@@ -403,6 +429,7 @@ func TestEnsureManifests(t *testing.T) {
 	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
 
+	repo.PurgeTimestamp()
 	err = repo.ensureManifests()
 	assert.NotNil(t, err)
 }
@@ -522,6 +549,7 @@ func TestUpdateComponents(t *testing.T) {
 	ts.Version++
 	mirror.Resources[v1manifest.ManifestURLSnapshot] = snapStr
 	mirror.Resources[v1manifest.ManifestURLTimestamp] = serialize(t, ts, priv)
+	repo.PurgeTimestamp()
 	err = repo.UpdateComponents([]ComponentSpec{{
 		ID:        "foo",
 		TargetDir: "/tmp/mock-mock",

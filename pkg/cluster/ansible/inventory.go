@@ -44,8 +44,8 @@ var (
 	groupVarsGrafana      = "group_vars/grafana_servers.yml"
 	// groupVarsMonitorAgent = "group_vars/monitored_servers.yml"
 	groupVarsPrometheus = "group_vars/monitoring_servers.yml"
-	//groupVarsLightning    = "group_vars/lightning_server.yml"
-	//groupVarsImporter     = "group_vars/importer_server.yml"
+	// groupVarsLightning    = "group_vars/lightning_server.yml"
+	// groupVarsImporter     = "group_vars/importer_server.yml"
 )
 
 // ParseAndImportInventory builds a basic ClusterMeta from the main Ansible inventory

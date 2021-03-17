@@ -159,10 +159,10 @@ func Addr(ins spec.Instance) string {
 var (
 	leaderScheduleLimitOffset = 32
 	regionScheduleLimitOffset = 512
-	//storeLimitOffset             = 512
+	// storeLimitOffset             = 512
 	leaderScheduleLimitThreshold = 64
 	regionScheduleLimitThreshold = 1024
-	//storeLimitThreshold          = 1024
+	// storeLimitThreshold          = 1024
 )
 
 // increaseScheduleLimit increases the schedule limit of leader and region for faster

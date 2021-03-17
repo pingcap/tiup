@@ -21,8 +21,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/repository/model"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
-	"github.com/pingcap/tiup/pkg/version"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 type diffItem struct {
@@ -79,7 +78,7 @@ func component2Diff(name string, baseItem v1manifest.ComponentItem, baseManifest
 		versions := additionManifest.VersionList(plat)
 		for ver, verinfo := range versions {
 			// Don't merge nightly this time
-			if pkgver.Version(ver).IsNightly() {
+			if utils.Version(ver).IsNightly() {
 				continue
 			}
 
@@ -263,14 +262,14 @@ func UpdateManifestForPublish(m *v1manifest.Component,
 		}
 	}
 
-	if pkgver.Version(ver).IsNightly() {
+	if utils.Version(ver).IsNightly() {
 		m.Nightly = ver
 	}
 
 	// Remove history nightly
 	for plat := range m.Platforms {
 		for v := range m.Platforms[plat] {
-			if strings.Contains(v, version.NightlyVersion) && v != m.Nightly {
+			if strings.Contains(v, utils.NightlyVersionAlias) && v != m.Nightly {
 				delete(m.Platforms[plat], v)
 			}
 		}
