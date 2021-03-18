@@ -60,7 +60,7 @@ func buildScaleOutTask(
 	name string,
 	metadata spec.Metadata,
 	mergedTopo spec.Topology,
-	opt ScaleOutOptions,
+	opt DeployOptions,
 	sshConnProps *cliutil.SSHConnectionProps,
 	newPart spec.Topology,
 	patchedComponents set.StringSet,
