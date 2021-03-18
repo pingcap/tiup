@@ -92,7 +92,7 @@ function scale_tools() {
     # currently tiflash is not supported in TLS enabled cluster
     # and only Tiflash support data-dir in multipath
     if [ $test_tls = false ]; then
-        echo "start scale out tiflash"
+        echo "start scale out tiflash(first time)"
         topo=./topo/full_scale_in_tiflash.yaml
         tiup-cluster $client --yes scale-out $name $topo
         tiup-cluster $client exec $name -N n1 --command "grep tiflash /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
@@ -110,7 +110,7 @@ function scale_tools() {
         wait_instance_num_reach $name $total $native_ssh
         ! tiup-cluster $client exec $name -N n3 --command "ls /home/tidb/deploy/tiflash-9000/data1"
         ! tiup-cluster $client exec $name -N n3 --command "ls /data/tiflash-data"
-        echo "start scale out tiflash"
+        echo "start scale out tiflash(second time)"
         topo=./topo/full_scale_in_tiflash.yaml
         tiup-cluster $client --yes scale-out $name $topo
     fi
