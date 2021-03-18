@@ -16,6 +16,7 @@ package operator
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"reflect"
 	"strconv"
 	"time"
@@ -68,7 +69,12 @@ func Upgrade(
 			defer func() {
 				upgErr := decreaseScheduleLimit(pdClient, origLeaderScheduleLimit, origRegionScheduleLimit)
 				if upgErr != nil {
-					log.Warnf("failed decreasing schedule limit, please check if they are too high: %s", upgErr)
+					log.Warnf(
+						"failed decreasing schedule limit (original values should be: %s, %s), please check if their current values are reasonable: %s",
+						fmt.Sprintf("leader-schedule-limit=%d", origLeaderScheduleLimit),
+						fmt.Sprintf("region-schedule-limit=%d", origRegionScheduleLimit),
+						upgErr,
+					)
 				}
 			}()
 		default:
