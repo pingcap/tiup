@@ -97,7 +97,7 @@ function scale_tools() {
         tiup-cluster $client --yes scale-out $name $topo
         tiup-cluster $client exec $name -N n1 --command "grep tiflash /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
         # ensure scale-out will mark pd.enable-placement-rules to true. ref https://github.com/pingcap/tiup/issues/1226
-        curl n1:2379/pd/api/v1/config 2>/dev/null | grep '"enable-placement-rules": "true"'
+        curl n3:2379/pd/api/v1/config 2>/dev/null | grep '"enable-placement-rules": "true"'
 
         # ensure tiflash's data dir exists
         tiup-cluster $client exec $name -N n3 --command "ls /home/tidb/deploy/tiflash-9000/data1"
