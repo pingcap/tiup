@@ -16,7 +16,7 @@ function scale_tools() {
     if [ $test_tls = true ]; then
         topo=./topo/full_tls.yaml
     else
-        topo=./topo/full.yaml
+        topo=./topo/full_without_tiflash.yaml
     fi
 
     tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa
@@ -29,9 +29,6 @@ function scale_tools() {
     for item in pump drainer tidb tikv pd grafana node_exporter blackbox_exporter; do
         tiup-cluster $client exec $name -N n1 --command "grep $item /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
     done
-    if [ $test_tls = false ]; then
-        tiup-cluster $client exec $name -N n1 --command "grep tiflash /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
-    fi
 
     tiup-cluster $client list | grep "$name"
 
@@ -46,9 +43,9 @@ function scale_tools() {
         total=19
         total_add_one=20
     else
-        total_sub_one=21
-        total=22
-        total_add_one=23
+        total_sub_one=20
+        total=21
+        total_add_one=22
     fi
 
     echo "start scale in pump"
@@ -95,6 +92,13 @@ function scale_tools() {
     # currently tiflash is not supported in TLS enabled cluster
     # and only Tiflash support data-dir in multipath
     if [ $test_tls = false ]; then
+        echo "start scale out tiflash"
+        topo=./topo/full_scale_in_tiflash.yaml
+        tiup-cluster $client --yes scale-out $name $topo
+        tiup-cluster $client exec $name -N n1 --command "grep tiflash /home/tidb/deploy/prometheus-9090/conf/prometheus.yml"
+        # ensure scale-out will mark pd.enable-placement-rules to true. ref https://github.com/pingcap/tiup/issues/1226
+        curl n1:2379/pd/api/v1/config 2>/dev/null | grep '"enable-placement-rules": "true"'
+
         # ensure tiflash's data dir exists
         tiup-cluster $client exec $name -N n3 --command "ls /home/tidb/deploy/tiflash-9000/data1"
         tiup-cluster $client exec $name -N n3 --command "ls /data/tiflash-data"
@@ -103,7 +107,7 @@ function scale_tools() {
         tiup-cluster $client display $name | grep Tombstone
         echo "start prune tiflash"
         yes | tiup-cluster $client prune $name
-        wait_instance_num_reach $name $total_sub_one $native_ssh
+        wait_instance_num_reach $name $total $native_ssh
         ! tiup-cluster $client exec $name -N n3 --command "ls /home/tidb/deploy/tiflash-9000/data1"
         ! tiup-cluster $client exec $name -N n3 --command "ls /data/tiflash-data"
         echo "start scale out tiflash"
