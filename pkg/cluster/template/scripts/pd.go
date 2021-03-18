@@ -17,8 +17,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"net"
-	"net/url"
 	"os"
 	"path"
 	"text/template"
@@ -83,17 +81,10 @@ func (c *PDScript) WithPeerPort(port int) *PDScript {
 	return c
 }
 
-// WithAdvertisWithAdvertiseClientAddr set AdvertiseClientAddr field of PDScript
+// WithAdvertiseClientAddr set AdvertiseClientAddr field of PDScript
 func (c *PDScript) WithAdvertiseClientAddr(addr string) *PDScript {
 	if addr != "" {
-		// advertise_status_addr is ip, use status_port instead
-		if ip := net.ParseIP(addr); ip != nil {
-			c.AdvertiseClientAddr = fmt.Sprintf("%s://%s:%d", c.Scheme, ip, c.ClientPort)
-		} else if ip, port, err := net.SplitHostPort(addr); err == nil {
-			c.AdvertiseClientAddr = fmt.Sprintf("%s://%s:%s", c.Scheme, ip, port)
-		} else if _, err := url.Parse(addr); err == nil {
-			c.AdvertiseClientAddr = addr
-		}
+		c.AdvertiseClientAddr = fmt.Sprintf("%s://%s", c.Scheme, addr)
 	}
 	return c
 }
@@ -101,14 +92,7 @@ func (c *PDScript) WithAdvertiseClientAddr(addr string) *PDScript {
 // WithAdvertisePeerAddr set AdvertisePeerAddr field of PDScript
 func (c *PDScript) WithAdvertisePeerAddr(addr string) *PDScript {
 	if addr != "" {
-		// advertise_status_addr is ip, use status_port instead
-		if ip := net.ParseIP(addr); ip != nil {
-			c.AdvertisePeerAddr = fmt.Sprintf("%s://%s:%d", c.Scheme, ip, c.PeerPort)
-		} else if ip, port, err := net.SplitHostPort(addr); err == nil {
-			c.AdvertisePeerAddr = fmt.Sprintf("%s://%s:%s", c.Scheme, ip, port)
-		} else if _, err := url.Parse(addr); err == nil {
-			c.AdvertisePeerAddr = addr
-		}
+		c.AdvertisePeerAddr = fmt.Sprintf("%s://%s", c.Scheme, addr)
 	}
 	return c
 }

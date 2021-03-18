@@ -82,7 +82,7 @@ func checkStoreStatus(storeAddr string, tlsCfg *tls.Config, pdList ...string) st
 
 // Status queries current status of the instance
 func (s *TiKVSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
-	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.Port)
+	storeAddr := addr(s)
 	state := checkStoreStatus(storeAddr, tlsCfg, pdList...)
 	if s.Offline && strings.ToLower(state) == "offline" {
 		state = "Pending Offline" // avoid misleading
@@ -214,6 +214,7 @@ func (i *TiKVInstance) InitConfig(
 		WithListenHost(i.GetListenHost()).
 		WithAdvertiseAddr(spec.AdvertiseAddr).
 		WithAdvertiseStatusAddr(spec.AdvertiseStatusAddr)
+
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tikv_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -324,7 +325,7 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *
 		return err
 	}
 
-	if err := pdClient.EvictStoreLeader(addr(i), timeoutOpt, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
+	if err := pdClient.EvictStoreLeader(addr(i.InstanceSpec.(*TiKVSpec)), timeoutOpt, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
 		if utils.IsTimeoutOrMaxRetry(err) {
 			log.Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
 		} else {
@@ -348,18 +349,22 @@ func (i *TiKVInstance) PostRestart(topo Topology, tlsCfg *tls.Config) error {
 	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
 
 	// remove store leader evict scheduler after restart
-	if err := pdClient.RemoveStoreEvict(addr(i)); err != nil {
+	if err := pdClient.RemoveStoreEvict(addr(i.InstanceSpec.(*TiKVSpec))); err != nil {
 		return perrs.Annotatef(err, "failed to remove evict store scheduler for %s", i.GetHost())
 	}
 
 	return nil
 }
 
-func addr(ins Instance) string {
-	if ins.GetPort() == 0 || ins.GetPort() == 80 {
-		panic(ins)
+func addr(spec *TiKVSpec) string {
+	if spec.AdvertiseAddr != "" {
+		return spec.AdvertiseAddr
 	}
-	return ins.GetHost() + ":" + strconv.Itoa(ins.GetPort())
+
+	if spec.Port == 0 || spec.Port == 80 {
+		panic(fmt.Sprintf("invalid TiKV port %d", spec.Port))
+	}
+	return spec.Host + ":" + strconv.Itoa(spec.Port)
 }
 
 func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int, error) {

@@ -16,7 +16,6 @@ package scripts
 import (
 	"bytes"
 	"fmt"
-	"net"
 	"os"
 	"path"
 	"text/template"
@@ -75,12 +74,7 @@ func (c *TiKVScript) WithPort(port int) *TiKVScript {
 // WithAdvertiseAddr set AdvertiseAddr of TiKVScript
 func (c *TiKVScript) WithAdvertiseAddr(addr string) *TiKVScript {
 	if addr != "" {
-		// advertise_addr is ip, use port instead
-		if ip := net.ParseIP(addr); ip != nil {
-			c.AdvertiseAddr = fmt.Sprintf("%s:%d", ip, c.Port)
-		} else if ip, port, err := net.SplitHostPort(addr); err == nil {
-			c.AdvertiseAddr = fmt.Sprintf("%s:%s", ip, port)
-		}
+		c.AdvertiseAddr = addr
 	}
 	return c
 }
@@ -88,12 +82,7 @@ func (c *TiKVScript) WithAdvertiseAddr(addr string) *TiKVScript {
 // WithAdvertiseStatusAddr set AdvertiseStatusAddr of TiKVScript
 func (c *TiKVScript) WithAdvertiseStatusAddr(addr string) *TiKVScript {
 	if addr != "" {
-		// advertise_status_addr is ip, use status_port instead
-		if ip := net.ParseIP(addr); ip != nil {
-			c.AdvertiseAddr = fmt.Sprintf("%s:%d", ip, c.StatusPort)
-		} else if ip, port, err := net.SplitHostPort(addr); err == nil {
-			c.AdvertiseAddr = fmt.Sprintf("%s:%s", ip, port)
-		}
+		c.AdvertiseStatusAddr = addr
 	}
 	return c
 }

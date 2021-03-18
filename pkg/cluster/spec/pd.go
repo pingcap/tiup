@@ -171,13 +171,13 @@ func (i *PDInstance) InitConfig(
 		WithClientPort(spec.ClientPort).
 		WithPeerPort(spec.PeerPort).
 		AppendEndpoints(topo.Endpoints(deployUser)...).
-		WithListenHost(i.GetListenHost()).
-		WithAdvertiseClientAddr(spec.AdvertiseClientAddr).
-		WithAdvertisePeerAddr(spec.AdvertisePeerAddr)
+		WithListenHost(i.GetListenHost())
 
 	if enableTLS {
 		cfg = cfg.WithScheme("https")
 	}
+	cfg = cfg.WithAdvertiseClientAddr(spec.AdvertiseClientAddr).
+		WithAdvertisePeerAddr(spec.AdvertisePeerAddr)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
