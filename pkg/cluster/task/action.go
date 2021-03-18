@@ -49,7 +49,7 @@ func (c *ClusterOperate) Execute(ctx context.Context) error {
 	}
 	switch c.op {
 	case operator.StartOperation:
-		err = operator.Start(ctx, c.spec, c.options, c.tlsCfg)
+		err = operator.Start(ctx, c.spec, c.options, c.tlsCfg, c.spec)
 	case operator.StopOperation:
 		err = operator.Stop(ctx, c.spec, c.options, c.tlsCfg)
 	case operator.RestartOperation:
