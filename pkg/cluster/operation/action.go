@@ -76,7 +76,6 @@ func Start(
 	cluster spec.Topology,
 	options Options,
 	tlsCfg *tls.Config,
-	finalCluster spec.Topology,
 ) error {
 	uniqueHosts := set.NewStringSet()
 	roleFilter := set.NewStringSet(options.Roles...)
@@ -87,7 +86,7 @@ func Start(
 
 	for _, comp := range components {
 		insts := FilterInstance(comp.Instances(), nodeFilter)
-		err := StartComponent(ctx, insts, options, tlsCfg, finalCluster)
+		err := StartComponent(ctx, insts, options, tlsCfg)
 		if err != nil {
 			return errors.Annotatef(err, "failed to start %s", comp.Name())
 		}
@@ -183,7 +182,7 @@ func Restart(
 		return errors.Annotatef(err, "failed to stop")
 	}
 
-	err = Start(ctx, cluster, options, tlsCfg, cluster)
+	err = Start(ctx, cluster, options, tlsCfg)
 	if err != nil {
 		return errors.Annotatef(err, "failed to start")
 	}
@@ -453,13 +452,7 @@ func EnableMonitored(
 }
 
 // StartComponent start the instances.
-func StartComponent(
-	ctx context.Context,
-	instances []spec.Instance,
-	options Options,
-	tlsCfg *tls.Config,
-	finalCluster spec.Topology,
-) error {
+func StartComponent(ctx context.Context, instances []spec.Instance, options Options, tlsCfg *tls.Config) error {
 	if len(instances) == 0 {
 		return nil
 	}
@@ -477,7 +470,7 @@ func StartComponent(
 		// of checkpoint context every time put it into a new goroutine.
 		nctx := checkpoint.NewContext(ctx)
 		errg.Go(func() error {
-			if err := ins.PrepareStart(finalCluster, tlsCfg); err != nil {
+			if err := ins.PrepareStart(tlsCfg); err != nil {
 				return err
 			}
 			err := startInstance(nctx, ins, options.OptTimeout)

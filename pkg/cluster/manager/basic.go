@@ -93,7 +93,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 
 	b := m.sshTaskBuilder(name, topo, base.User, options).
 		Func("StartCluster", func(ctx context.Context) error {
-			return operator.Start(ctx, topo, options, tlsCfg, topo)
+			return operator.Start(ctx, topo, options, tlsCfg)
 		})
 
 	for _, f := range fn {
