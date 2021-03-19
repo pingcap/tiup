@@ -18,6 +18,7 @@ import (
 
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/repository"
 )
 
 // Downloader is used to download the specific version of a component from
@@ -44,7 +45,10 @@ func (d *Downloader) Execute(_ *Context) error {
 	// If the version is not specified, the last stable one will be used
 	if d.version == "" {
 		env := environment.GlobalEnv()
-		ver, _, err := env.V1Repository().LatestStableVersion(d.component, false)
+		ver, _, err := env.V1Repository().WithOptions(repository.Options{
+			GOOS:   d.os,
+			GOARCH: d.arch,
+		}).LatestStableVersion(d.component, false)
 		if err != nil {
 			return err
 		}

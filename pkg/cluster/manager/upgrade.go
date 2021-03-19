@@ -27,6 +27,7 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
@@ -114,7 +115,10 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 				switch inst.ComponentName() {
 				case spec.ComponentTiSpark:
 					env := environment.GlobalEnv()
-					sparkVer, _, err := env.V1Repository().LatestStableVersion(spec.ComponentSpark, false)
+					sparkVer, _, err := env.V1Repository().WithOptions(repository.Options{
+						GOOS:   inst.OS(),
+						GOARCH: inst.Arch(),
+					}).LatestStableVersion(spec.ComponentSpark, false)
 					if err != nil {
 						return err
 					}
