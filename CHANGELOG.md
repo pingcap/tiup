@@ -1,5 +1,11 @@
 TiUP Changelog
 
+## [1.3.6] 2021.03.19
+
+### Fixes
+
+- Fix the issue that can't deploy arm64 binary with offline mirror ([#1229](https://github.com/pingcap/tiup/pull/1229), [@lucklove](https://github.com/lucklove))
+
 ## [1.3.5] 2021.03.11
 
 ### Fixes
