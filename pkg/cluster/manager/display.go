@@ -45,7 +45,7 @@ type InstInfo struct {
 	Ports     string `json:"ports"`
 	OsArch    string `json:"os_arch"`
 	Status    string `json:"status"`
-	Uptime    string `json:uptime`
+	Uptime    string `json:"uptime"`
 	DataDir   string `json:"data_dir"`
 	DeployDir string `json:"deploy_dir"`
 
