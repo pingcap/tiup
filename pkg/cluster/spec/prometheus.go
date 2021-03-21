@@ -117,7 +117,7 @@ func (c *MonitorComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: func(_ *tls.Config, _ ...string) string {
-				return "-"
+				return statusByURL(fmt.Sprintf("http://%s:%d/-/ready", s.Host, s.Port), nil)
 			},
 			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
 				return uptimeByHost(s.Host, s.Port, tlsCfg)
