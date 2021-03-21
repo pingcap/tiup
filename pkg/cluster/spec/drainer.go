@@ -107,7 +107,7 @@ func (c *DrainerComponent) Instances() []Instance {
 				return statusByURL(url, tlsCfg)
 			},
 			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
-				return uptimeByHost(s.Host, s.Port, tlsCfg)
+				return UptimeByHost(s.Host, s.Port, tlsCfg)
 			},
 		}, c.Topology})
 	}

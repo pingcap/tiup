@@ -105,7 +105,7 @@ func (c *GrafanaComponent) Instances() []Instance {
 					return statusByURL(fmt.Sprintf("http://%s:%d", s.Host, s.Port), nil)
 				},
 				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
-					return uptimeByHost(s.Host, s.Port, tlsCfg)
+					return UptimeByHost(s.Host, s.Port, tlsCfg)
 				},
 			},
 			topo: c.Topology,

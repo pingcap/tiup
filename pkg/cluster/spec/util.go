@@ -138,8 +138,8 @@ func statusByURL(url string, tlsCfg *tls.Config) string {
 	return "Up"
 }
 
-// uptimeByHost queries current uptime of the instance by http Prometheus metric api.
-func uptimeByHost(host string, port int, tlsCfg *tls.Config) time.Duration {
+// UptimeByHost queries current uptime of the instance by http Prometheus metric api.
+func UptimeByHost(host string, port int, tlsCfg *tls.Config) time.Duration {
 	scheme := "http"
 	if tlsCfg != nil {
 		scheme = "https"

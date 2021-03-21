@@ -106,7 +106,7 @@ func (c *TiDBComponent) Instances() []Instance {
 				return statusByURL(url, tlsCfg)
 			},
 			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
-				return uptimeByHost(s.Host, s.StatusPort, tlsCfg)
+				return UptimeByHost(s.Host, s.StatusPort, tlsCfg)
 			},
 		}, c.Topology})
 	}

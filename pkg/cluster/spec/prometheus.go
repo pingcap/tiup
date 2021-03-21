@@ -120,7 +120,7 @@ func (c *MonitorComponent) Instances() []Instance {
 				return statusByURL(fmt.Sprintf("http://%s:%d/-/ready", s.Host, s.Port), nil)
 			},
 			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
-				return uptimeByHost(s.Host, s.Port, tlsCfg)
+				return UptimeByHost(s.Host, s.Port, tlsCfg)
 			},
 		}, c.Topology})
 	}

@@ -104,7 +104,7 @@ func (c *AlertManagerComponent) Instances() []Instance {
 					return statusByURL(fmt.Sprintf("http://%s:%d/-/ready", s.Host, s.WebPort), nil)
 				},
 				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
-					return uptimeByHost(s.Host, s.WebPort, tlsCfg)
+					return UptimeByHost(s.Host, s.WebPort, tlsCfg)
 				},
 			},
 			topo: c.Topology,

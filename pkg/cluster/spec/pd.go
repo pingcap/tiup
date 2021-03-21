@@ -132,7 +132,7 @@ func (c *PDComponent) Instances() []Instance {
 				},
 				StatusFn: s.Status,
 				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
-					return uptimeByHost(s.Host, s.ClientPort, tlsCfg)
+					return UptimeByHost(s.Host, s.ClientPort, tlsCfg)
 				},
 			},
 			topo: c.Topology,
