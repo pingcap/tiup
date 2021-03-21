@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -49,6 +50,7 @@ type InstInfo struct {
 
 	ComponentName string
 	Port          int
+	Uptime        time.Duration
 }
 
 // Display cluster meta and topology.
@@ -89,7 +91,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	// display topology
 	clusterTable := [][]string{
 		// Header
-		{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Data Dir", "Deploy Dir"},
+		{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Uptime", "Data Dir", "Deploy Dir"},
 	}
 	masterActive := make([]string, 0)
 	for _, v := range clusterInstInfos {
@@ -100,6 +102,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 			v.Ports,
 			v.OsArch,
 			formatInstanceStatus(v.Status),
+			formatInstanceUptime(v.Uptime),
 			v.DataDir,
 			v.DeployDir,
 		})
@@ -237,6 +240,8 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 			status = ins.Status(tlsCfg, masterActive...)
 		}
 
+		uptime := ins.Uptime(tlsCfg)
+
 		// Query the service status
 		if status == "-" {
 			e, found := ctxt.GetInner(ctx).GetExecutor(ins.GetHost())
@@ -268,6 +273,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 			DeployDir:     deployDir,
 			ComponentName: ins.ComponentName(),
 			Port:          ins.GetPort(),
+			Uptime:        uptime,
 		})
 	})
 
@@ -310,6 +316,38 @@ func formatInstanceStatus(status string) string {
 	default:
 		return status
 	}
+}
+
+func formatInstanceUptime(uptime time.Duration) string {
+	if uptime == 0 {
+		return "-"
+	}
+
+	d := int64(uptime.Hours() / 24)
+	h := int64(math.Mod(uptime.Hours(), 24))
+	m := int64(math.Mod(uptime.Minutes(), 60))
+
+	chunks := []struct {
+		unit  string
+		value int64
+	}{
+		{"d", d},
+		{"h", h},
+		{"m", m},
+	}
+
+	parts := []string{}
+
+	for _, chunk := range chunks {
+		switch chunk.value {
+		case 0:
+			continue
+		default:
+			parts = append(parts, fmt.Sprintf("%d%s", chunk.value, chunk.unit))
+		}
+	}
+
+	return strings.Join(parts, "")
 }
 
 // SetSSHKeySet set ssh key set.
