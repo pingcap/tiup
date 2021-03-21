@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -104,6 +105,9 @@ func (c *DrainerComponent) Instances() []Instance {
 				}
 				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
 				return statusByURL(url, tlsCfg)
+			},
+			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+				return uptimeByHost(s.Host, s.Port, tlsCfg)
 			},
 		}, c.Topology})
 	}

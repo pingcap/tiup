@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -102,6 +103,9 @@ func (c *GrafanaComponent) Instances() []Instance {
 				},
 				StatusFn: func(_ *tls.Config, _ ...string) string {
 					return "-"
+				},
+				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+					return uptimeByHost(s.Host, s.Port, tlsCfg)
 				},
 			},
 			topo: c.Topology,

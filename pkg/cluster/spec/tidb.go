@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -103,6 +104,9 @@ func (c *TiDBComponent) Instances() []Instance {
 				}
 				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.StatusPort)
 				return statusByURL(url, tlsCfg)
+			},
+			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+				return uptimeByHost(s.Host, s.StatusPort, tlsCfg)
 			},
 		}, c.Topology})
 	}

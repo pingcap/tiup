@@ -122,6 +122,10 @@ func LoadClientCert(dir string) (*tls.Config, error) {
 	}.ClientConfig()
 }
 
+// // statusByHost queries current status of the instance by http status api.
+// func statusByHost(host string, port int, tlsCfg *tls.Config) string {
+// }
+
 // statusByURL queries current status of the instance by http status api.
 func statusByURL(url string, tlsCfg *tls.Config) string {
 	client := utils.NewHTTPClient(statusQueryTimeout, tlsCfg)
@@ -134,8 +138,14 @@ func statusByURL(url string, tlsCfg *tls.Config) string {
 	return "Up"
 }
 
-// uptimeByURL queries current uptime of the instance by http Prometheus metric api.
-func uptimeByURL(url string, tlsCfg *tls.Config) time.Duration {
+// uptimeByHost queries current uptime of the instance by http Prometheus metric api.
+func uptimeByHost(host string, port int, tlsCfg *tls.Config) time.Duration {
+	scheme := "http"
+	if tlsCfg != nil {
+		scheme = "https"
+	}
+	url := fmt.Sprintf("%s://%s:%d/metrics", scheme, host, port)
+
 	client := utils.NewHTTPClient(statusQueryTimeout, tlsCfg)
 
 	body, err := client.Get(url)

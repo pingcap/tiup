@@ -131,6 +131,9 @@ func (c *PDComponent) Instances() []Instance {
 					s.DataDir,
 				},
 				StatusFn: s.Status,
+				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+					return uptimeByHost(s.Host, s.ClientPort, tlsCfg)
+				},
 			},
 			topo: c.Topology,
 		})

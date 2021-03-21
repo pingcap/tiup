@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/pingcap/errors"
@@ -158,6 +159,9 @@ func (c *TiSparkMasterComponent) Instances() []Instance {
 					s.DeployDir,
 				},
 				StatusFn: s.Status,
+				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+					return 0
+				},
 			},
 			topo: c.Topology,
 		})
@@ -334,6 +338,9 @@ func (c *TiSparkWorkerComponent) Instances() []Instance {
 					s.DeployDir,
 				},
 				StatusFn: s.Status,
+				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+					return 0
+				},
 			},
 			topo: c.Topology,
 		})
