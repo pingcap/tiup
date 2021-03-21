@@ -122,13 +122,18 @@ func LoadClientCert(dir string) (*tls.Config, error) {
 	}.ClientConfig()
 }
 
-// // statusByHost queries current status of the instance by http status api.
-// func statusByHost(host string, port int, tlsCfg *tls.Config) string {
-// }
-
-// statusByURL queries current status of the instance by http status api.
-func statusByURL(url string, tlsCfg *tls.Config) string {
+// statusByHost queries current status of the instance by http status api.
+func statusByHost(host string, port int, path string, tlsCfg *tls.Config) string {
 	client := utils.NewHTTPClient(statusQueryTimeout, tlsCfg)
+
+	scheme := "http"
+	if tlsCfg != nil {
+		scheme = "https"
+	}
+	if path == "" {
+		path = "/"
+	}
+	url := fmt.Sprintf("%s://%s:%d%s", scheme, host, port, path)
 
 	// body doesn't have any status section needed
 	body, err := client.Get(url)

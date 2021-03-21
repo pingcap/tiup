@@ -71,16 +71,6 @@ func (s *TiSparkMasterSpec) IsImported() bool {
 	return s.Imported
 }
 
-// Status queries current status of the instance
-func (s *TiSparkMasterSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
-	scheme := "http"
-	if tlsCfg != nil {
-		scheme = "https"
-	}
-	url := fmt.Sprintf("%s://%s:%d/", scheme, s.Host, s.WebPort)
-	return statusByURL(url, tlsCfg)
-}
-
 // TiSparkWorkerSpec is the topology specification for TiSpark slave nodes
 type TiSparkWorkerSpec struct {
 	Host       string `yaml:"host"`
@@ -116,16 +106,6 @@ func (s *TiSparkWorkerSpec) IsImported() bool {
 	return s.Imported
 }
 
-// Status queries current status of the instance
-func (s *TiSparkWorkerSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
-	scheme := "http"
-	if tlsCfg != nil {
-		scheme = "https"
-	}
-	url := fmt.Sprintf("%s://%s:%d/", scheme, s.Host, s.WebPort)
-	return statusByURL(url, tlsCfg)
-}
-
 // TiSparkMasterComponent represents TiSpark master component.
 type TiSparkMasterComponent struct{ Topology *Specification }
 
@@ -158,7 +138,9 @@ func (c *TiSparkMasterComponent) Instances() []Instance {
 				Dirs: []string{
 					s.DeployDir,
 				},
-				StatusFn: s.Status,
+				StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
+					return statusByHost(s.Host, s.WebPort, "", tlsCfg)
+				},
 				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
 					return 0
 				},
@@ -337,7 +319,9 @@ func (c *TiSparkWorkerComponent) Instances() []Instance {
 				Dirs: []string{
 					s.DeployDir,
 				},
-				StatusFn: s.Status,
+				StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
+					return statusByHost(s.Host, s.WebPort, "", tlsCfg)
+				},
 				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
 					return 0
 				},

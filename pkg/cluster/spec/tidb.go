@@ -98,12 +98,7 @@ func (c *TiDBComponent) Instances() []Instance {
 				s.DeployDir,
 			},
 			StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
-				scheme := "http"
-				if tlsCfg != nil {
-					scheme = "https"
-				}
-				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.StatusPort)
-				return statusByURL(url, tlsCfg)
+				return statusByHost(s.Host, s.StatusPort, "/status", tlsCfg)
 			},
 			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.Host, s.StatusPort, tlsCfg)

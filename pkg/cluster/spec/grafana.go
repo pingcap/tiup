@@ -102,7 +102,7 @@ func (c *GrafanaComponent) Instances() []Instance {
 					s.DeployDir,
 				},
 				StatusFn: func(_ *tls.Config, _ ...string) string {
-					return statusByURL(fmt.Sprintf("http://%s:%d", s.Host, s.Port), nil)
+					return statusByHost(s.Host, s.Port, "", nil)
 				},
 				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
 					return UptimeByHost(s.Host, s.Port, tlsCfg)
