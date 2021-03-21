@@ -45,12 +45,12 @@ type InstInfo struct {
 	Ports     string `json:"ports"`
 	OsArch    string `json:"os_arch"`
 	Status    string `json:"status"`
+	Uptime    string `json:uptime`
 	DataDir   string `json:"data_dir"`
 	DeployDir string `json:"deploy_dir"`
 
 	ComponentName string
 	Port          int
-	Uptime        time.Duration
 }
 
 // Display cluster meta and topology.
@@ -102,7 +102,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 			v.Ports,
 			v.OsArch,
 			formatInstanceStatus(v.Status),
-			formatInstanceUptime(v.Uptime),
+			v.Uptime,
 			v.DataDir,
 			v.DeployDir,
 		})
@@ -240,18 +240,25 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 			status = ins.Status(tlsCfg, masterActive...)
 		}
 
-		uptime := ins.Uptime(tlsCfg)
+		uptime := formatInstanceUptime(ins.Uptime(tlsCfg))
 
-		// Query the service status
-		if status == "-" {
+		// Query the service status and uptime
+		if status == "-" || uptime == "-" {
 			e, found := ctxt.GetInner(ctx).GetExecutor(ins.GetHost())
 			if found {
 				active, _ := operator.GetServiceStatus(ctx, e, ins.ServiceName())
-				if parts := strings.Split(strings.TrimSpace(active), " "); len(parts) > 2 {
-					if parts[1] == "active" {
-						status = "Up"
-					} else {
-						status = parts[1]
+				if status == "-" {
+					if parts := strings.Split(strings.TrimSpace(active), " "); len(parts) > 2 {
+						if parts[1] == "active" {
+							status = "Up"
+						} else {
+							status = parts[1]
+						}
+					}
+				} else {
+					if parts := strings.Split(strings.TrimSpace(active), ";"); len(parts) > 1 {
+						uptime = strings.ReplaceAll(parts[1], " ago", "")
+						uptime = strings.TrimSpace(strings.ReplaceAll(uptime, " ", ""))
 					}
 				}
 			}
