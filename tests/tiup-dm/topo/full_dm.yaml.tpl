@@ -35,3 +35,7 @@ grafana_servers:
 alertmanager_servers:
   - host: __IPPREFIX__.101
     config_file: /tmp/local/alertmanager/alertmanager.yml
+
+monitored:
+  node_exporter_port: 39100
+  blackbox_exporter_port: 39115
