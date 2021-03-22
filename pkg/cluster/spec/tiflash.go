@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -526,7 +527,7 @@ func (i *TiFlashInstance) InitConfig(
 	}
 	tidbStatusStr := strings.Join(tidbStatusAddrs, ",")
 
-	pdStr := strings.Join(i.getEndpoints(), ",")
+	pdStr := strings.Join(i.getEndpoints(i.topo), ",")
 
 	cfg := scripts.NewTiFlashScript(
 		i.GetHost(),
@@ -652,16 +653,16 @@ type replicateConfig struct {
 	EnablePlacementRules string `json:"enable-placement-rules"`
 }
 
-func (i *TiFlashInstance) getEndpoints() []string {
+func (i *TiFlashInstance) getEndpoints(topo Topology) []string {
 	var endpoints []string
-	for _, pd := range i.topo.(*Specification).PDServers {
+	for _, pd := range topo.(*Specification).PDServers {
 		endpoints = append(endpoints, fmt.Sprintf("%s:%d", pd.Host, uint64(pd.ClientPort)))
 	}
 	return endpoints
 }
 
 // PrepareStart checks TiFlash requirements before starting
-func (i *TiFlashInstance) PrepareStart(tlsCfg *tls.Config) error {
+func (i *TiFlashInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config) error {
 	// set enable-placement-rules to true via PDClient
 	enablePlacementRules, err := json.Marshal(replicateConfig{
 		EnablePlacementRules: "true",
@@ -671,7 +672,17 @@ func (i *TiFlashInstance) PrepareStart(tlsCfg *tls.Config) error {
 		return err
 	}
 
-	endpoints := i.getEndpoints()
+	topo := ctx.Value(ctxt.CtxBaseTopo)
+	if topo == nil {
+		topo = i.topo
+	}
+
+	topo, ok := topo.(Topology)
+	if !ok {
+		return perrs.New("base topology in context is invalid")
+	}
+
+	endpoints := i.getEndpoints(topo.(Topology))
 	pdClient := api.NewPDClient(endpoints, 10*time.Second, tlsCfg)
 	return pdClient.UpdateReplicateConfig(bytes.NewBuffer(enablePlacementRules))
 }

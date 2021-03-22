@@ -470,7 +470,7 @@ func StartComponent(ctx context.Context, instances []spec.Instance, options Opti
 		// of checkpoint context every time put it into a new goroutine.
 		nctx := checkpoint.NewContext(ctx)
 		errg.Go(func() error {
-			if err := ins.PrepareStart(tlsCfg); err != nil {
+			if err := ins.PrepareStart(ctx, tlsCfg); err != nil {
 				return err
 			}
 			err := startInstance(nctx, ins, options.OptTimeout)

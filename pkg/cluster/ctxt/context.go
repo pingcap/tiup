@@ -28,6 +28,11 @@ const (
 	ctxKey = contextKey("TASK_CONTEXT")
 )
 
+const (
+	// CtxBaseTopo is key of store the base topology in context.Context
+	CtxBaseTopo = contextKey("BASE_TOPO")
+)
+
 type (
 	// Executor is the executor interface for TiUP, all tasks will in the end
 	// be passed to a executor and then be actually performed.
