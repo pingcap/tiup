@@ -35,6 +35,7 @@ const (
 
 var (
 	globalOptionTypeName  = reflect.TypeOf(GlobalOptions{}).Name()
+	monitorOptionTypeName = reflect.TypeOf(MonitoredOptions{}).Name()
 	serverConfigsTypeName = reflect.TypeOf(DMServerConfigs{}).Name()
 )
 
@@ -60,12 +61,14 @@ func findField(v reflect.Value, fieldName string) (int, bool) {
 // Skip global/monitored/job options
 func isSkipField(field reflect.Value) bool {
 	tp := field.Type().Name()
-	return tp == globalOptionTypeName || tp == serverConfigsTypeName
+	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName
 }
 
 type (
 	// GlobalOptions of spec.
 	GlobalOptions = spec.GlobalOptions
+	// MonitoredOptions is the spec of Monitored
+	MonitoredOptions = spec.MonitoredOptions
 	// PrometheusSpec is the spec of Prometheus
 	PrometheusSpec = spec.PrometheusSpec
 	// GrafanaSpec is the spec of Grafana
@@ -85,14 +88,14 @@ type (
 
 	// Specification represents the specification of topology.yaml
 	Specification struct {
-		GlobalOptions GlobalOptions `yaml:"global,omitempty" validate:"global:editable"`
-		// MonitoredOptions MonitoredOptions   `yaml:"monitored,omitempty" validate:"monitored:editable"`
-		ServerConfigs DMServerConfigs          `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
-		Masters       []*MasterSpec            `yaml:"master_servers"`
-		Workers       []*WorkerSpec            `yaml:"worker_servers"`
-		Monitors      []*spec.PrometheusSpec   `yaml:"monitoring_servers"`
-		Grafanas      []*spec.GrafanaSpec      `yaml:"grafana_servers,omitempty"`
-		Alertmanagers []*spec.AlertmanagerSpec `yaml:"alertmanager_servers,omitempty"`
+		GlobalOptions    GlobalOptions            `yaml:"global,omitempty" validate:"global:editable"`
+		MonitoredOptions MonitoredOptions         `yaml:"monitored,omitempty" validate:"monitored:editable"`
+		ServerConfigs    DMServerConfigs          `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
+		Masters          []*MasterSpec            `yaml:"master_servers"`
+		Workers          []*WorkerSpec            `yaml:"worker_servers"`
+		Monitors         []*spec.PrometheusSpec   `yaml:"monitoring_servers"`
+		Grafanas         []*spec.GrafanaSpec      `yaml:"grafana_servers,omitempty"`
+		Alertmanagers    []*spec.AlertmanagerSpec `yaml:"alertmanager_servers,omitempty"`
 	}
 )
 
@@ -225,21 +228,38 @@ func (s *WorkerSpec) IsImported() bool {
 }
 
 // UnmarshalYAML sets default values when unmarshaling the topology file
-func (topo *Specification) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (s *Specification) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	type topology Specification
-	if err := unmarshal((*topology)(topo)); err != nil {
+	if err := unmarshal((*topology)(s)); err != nil {
 		return err
 	}
 
-	if err := defaults.Set(topo); err != nil {
+	if err := defaults.Set(s); err != nil {
 		return errors.Trace(err)
 	}
 
-	if err := fillDMCustomDefaults(&topo.GlobalOptions, topo); err != nil {
+	// Set monitored options
+	if s.MonitoredOptions.DeployDir == "" {
+		s.MonitoredOptions.DeployDir = filepath.Join(s.GlobalOptions.DeployDir,
+			fmt.Sprintf("%s-%d", spec.RoleMonitor, s.MonitoredOptions.NodeExporterPort))
+	}
+	if s.MonitoredOptions.DataDir == "" {
+		s.MonitoredOptions.DataDir = filepath.Join(s.GlobalOptions.DataDir,
+			fmt.Sprintf("%s-%d", spec.RoleMonitor, s.MonitoredOptions.NodeExporterPort))
+	}
+	if s.MonitoredOptions.LogDir == "" {
+		s.MonitoredOptions.LogDir = "log"
+	}
+	if !strings.HasPrefix(s.MonitoredOptions.LogDir, "/") &&
+		!strings.HasPrefix(s.MonitoredOptions.LogDir, s.MonitoredOptions.DeployDir) {
+		s.MonitoredOptions.LogDir = filepath.Join(s.MonitoredOptions.DeployDir, s.MonitoredOptions.LogDir)
+	}
+
+	if err := fillDMCustomDefaults(&s.GlobalOptions, s); err != nil {
 		return err
 	}
 
-	return topo.Validate()
+	return s.Validate()
 }
 
 // platformConflictsDetect checks for conflicts in topology for different OS / Arch
@@ -607,14 +627,14 @@ func (topo *Specification) GetMasterList() []string {
 func (topo *Specification) Merge(that spec.Topology) spec.Topology {
 	spec := that.(*Specification)
 	return &Specification{
-		GlobalOptions: topo.GlobalOptions,
-		// MonitoredOptions: topo.MonitoredOptions,
-		ServerConfigs: topo.ServerConfigs,
-		Masters:       append(topo.Masters, spec.Masters...),
-		Workers:       append(topo.Workers, spec.Workers...),
-		Monitors:      append(topo.Monitors, spec.Monitors...),
-		Grafanas:      append(topo.Grafanas, spec.Grafanas...),
-		Alertmanagers: append(topo.Alertmanagers, spec.Alertmanagers...),
+		GlobalOptions:    topo.GlobalOptions,
+		MonitoredOptions: topo.MonitoredOptions,
+		ServerConfigs:    topo.ServerConfigs,
+		Masters:          append(topo.Masters, spec.Masters...),
+		Workers:          append(topo.Workers, spec.Workers...),
+		Monitors:         append(topo.Monitors, spec.Monitors...),
+		Grafanas:         append(topo.Grafanas, spec.Grafanas...),
+		Alertmanagers:    append(topo.Alertmanagers, spec.Alertmanagers...),
 	}
 }
 
