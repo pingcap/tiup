@@ -45,7 +45,7 @@ type InstInfo struct {
 	Ports     string `json:"ports"`
 	OsArch    string `json:"os_arch"`
 	Status    string `json:"status"`
-	Uptime    string `json:"uptime"`
+	Since     string `json:"since"`
 	DataDir   string `json:"data_dir"`
 	DeployDir string `json:"deploy_dir"`
 
@@ -91,7 +91,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	// display topology
 	clusterTable := [][]string{
 		// Header
-		{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Uptime", "Data Dir", "Deploy Dir"},
+		{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Since", "Data Dir", "Deploy Dir"},
 	}
 	masterActive := make([]string, 0)
 	for _, v := range clusterInstInfos {
@@ -102,7 +102,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 			v.Ports,
 			v.OsArch,
 			formatInstanceStatus(v.Status),
-			v.Uptime,
+			v.Since,
 			v.DataDir,
 			v.DeployDir,
 		})
@@ -240,10 +240,13 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 			status = ins.Status(tlsCfg, masterActive...)
 		}
 
-		uptime := formatInstanceUptime(ins.Uptime(tlsCfg))
+		since := "-"
+		if !opt.ShowUptime {
+			since = formatInstanceSince(ins.Uptime(tlsCfg))
+		}
 
 		// Query the service status and uptime
-		if status == "-" || uptime == "-" {
+		if status == "-" || (opt.ShowUptime && since == "-") {
 			e, found := ctxt.GetInner(ctx).GetExecutor(ins.GetHost())
 			if found {
 				active, _ := operator.GetServiceStatus(ctx, e, ins.ServiceName())
@@ -255,10 +258,11 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 							status = parts[1]
 						}
 					}
-				} else {
+				}
+				if opt.ShowUptime && since == "-" {
 					if parts := strings.Split(strings.TrimSpace(active), ";"); len(parts) > 1 {
-						uptime = strings.ReplaceAll(parts[1], " ago", "")
-						uptime = strings.TrimSpace(strings.ReplaceAll(uptime, " ", ""))
+						since = strings.ReplaceAll(parts[1], " ago", "")
+						since = strings.TrimSpace(strings.ReplaceAll(since, " ", ""))
 					}
 				}
 			}
@@ -280,7 +284,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 			DeployDir:     deployDir,
 			ComponentName: ins.ComponentName(),
 			Port:          ins.GetPort(),
-			Uptime:        uptime,
+			Since:         since,
 		})
 	})
 
@@ -325,7 +329,7 @@ func formatInstanceStatus(status string) string {
 	}
 }
 
-func formatInstanceUptime(uptime time.Duration) string {
+func formatInstanceSince(uptime time.Duration) string {
 	if uptime == 0 {
 		return "-"
 	}
