@@ -274,6 +274,8 @@ func (i *PDInstance) ScaleConfig(
 	if topo.BaseTopo().GlobalOptions.TLSEnabled {
 		cfg0 = cfg0.WithScheme("https")
 	}
+	cfg0 = cfg0.WithAdvertiseClientAddr(spec.AdvertiseClientAddr).
+		WithAdvertisePeerAddr(spec.AdvertisePeerAddr)
 	cfg := scripts.NewPDScaleScript(cfg0)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
