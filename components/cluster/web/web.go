@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/pingcap/tiup/cmd"
+	"github.com/pingcap/tiup/components/cluster/web/backup"
 	"github.com/pingcap/tiup/components/cluster/web/uiserver"
 
 	"github.com/pingcap/tiup/pkg/cluster/audit"
@@ -23,6 +24,9 @@ import (
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/repository"
 	cors "github.com/rs/cors/wrapper/gin"
+
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 var (
@@ -63,11 +67,19 @@ func Run(_tidbSpec *spec.SpecManager, _manager *manager.Manager, _gOpt operator.
 	cm = _manager
 	gOpt = _gOpt
 
+	// sqlite db
+	db, err := gorm.Open(sqlite.Open("tiup-ui.db"), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	backupSrv := backup.NewService(db)
+
 	router := gin.Default()
 	router.Use(cors.AllowAll())
 	router.Use(MWHandleErrors())
 	// Backend API
 	api := router.Group("/api")
+	backup.RegisterRouter(api, backupSrv)
 	{
 		api.GET("/status", statusHandler)
 

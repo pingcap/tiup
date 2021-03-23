@@ -46,3 +46,17 @@ export interface IAuditLogItem {
   time: string
   command: string
 }
+
+export interface IBackupModel {
+  plan_time: string
+  start_time?: string
+  folder: string
+  sub_folder: string
+  status: string
+  message: string
+}
+
+export interface INextBackup {
+  enable_backup: boolean
+  next?: IBackupModel
+}

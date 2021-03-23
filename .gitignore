@@ -37,3 +37,4 @@ docker/secret/
 # NPM packages
 node_modules/
 build/
+*.db

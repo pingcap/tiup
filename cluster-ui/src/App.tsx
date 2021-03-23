@@ -11,6 +11,7 @@ import ClusterScaleOutPage from '_pages/Clusters/ClusterScaleOut'
 import DashboardPortalPage from '_pages/Clusters/DashboardPortal'
 import SettingPage from '_pages/Setting'
 import ClusterUpgradePage from '_pages/Clusters/ClusterUpgrade'
+import ClusterBackupPage from '_pages/Clusters/ClusterBackup'
 import AuditPage from '_pages/Audit'
 
 import './App.less'
@@ -37,6 +38,7 @@ function App() {
               path=":clusterName/upgrade"
               element={<ClusterUpgradePage />}
             />
+            <Route path=":clusterName/backup" element={<ClusterBackupPage />} />
           </Route>
           <Route path="/machines" element={<MachinesPage />} />
           <Route path="/deploy" element={<DeploymentPage />} />

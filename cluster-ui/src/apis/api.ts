@@ -87,3 +87,11 @@ export function getTiDBVersions() {
 export function getAuditList() {
   return request(fullUrl(`audit`))
 }
+
+export function getNextBackup(clusterName: string) {
+  return request(fullUrl(`backup/${clusterName}/next_backup`))
+}
+
+export function getBackupList(clusterName: string) {
+  return request(fullUrl(`backup/${clusterName}/backups`))
+}

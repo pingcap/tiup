@@ -169,6 +169,10 @@ function ClusterDetailPage() {
     navigate(`/clusters/${clusterName}/scaleout`)
   }
 
+  function handleBackupCluster() {
+    navigate(`/clusters/${clusterName}/backup`)
+  }
+
   function handleCheckCluster() {
     checkCluster(clusterName)
     navigate('/status')
@@ -241,6 +245,7 @@ function ClusterDetailPage() {
           </Popconfirm>
           <Button onClick={handleScaleOutCluster}>扩容</Button>
           <Button onClick={handleUpgradeCluster}>升级</Button>
+          <Button onClick={handleBackupCluster}>备份</Button>
           <Divider type="vertical" />
           <Button onClick={() => handleOpenDashboard('configuration')}>
             修改配置
