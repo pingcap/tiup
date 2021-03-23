@@ -682,7 +682,7 @@ func (i *TiFlashInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config) 
 		return perrs.New("base topology in context is invalid")
 	}
 
-	endpoints := i.getEndpoints(topo.(Topology))
+	endpoints := i.getEndpoints(topo)
 	pdClient := api.NewPDClient(endpoints, 10*time.Second, tlsCfg)
 	return pdClient.UpdateReplicateConfig(bytes.NewBuffer(enablePlacementRules))
 }
