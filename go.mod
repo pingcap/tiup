@@ -30,11 +30,13 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.14.3
 	github.com/jeremywohl/flatten v1.0.1
+	github.com/jinzhu/now v1.1.2 // indirect
 	github.com/joomcode/errorx v1.0.3
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.4
 	github.com/mattn/go-runewidth v0.0.10
+	github.com/mattn/go-sqlite3 v2.0.3+incompatible // indirect
 	github.com/otiai10/copy v1.5.0
 	github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712
 	github.com/pingcap/errors v0.11.5-0.20201126102027-b0a155152ca3
@@ -80,6 +82,8 @@ require (
 	gopkg.in/ini.v1 v1.62.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	gorm.io/driver/sqlite v1.1.4
+	gorm.io/gorm v1.21.4
 	software.sslmate.com/src/go-pkcs12 v0.0.0-20201103104416-57fc603b7f52
 )
 
