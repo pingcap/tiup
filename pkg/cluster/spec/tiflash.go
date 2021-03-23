@@ -30,6 +30,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v2"
 )
@@ -344,7 +345,7 @@ func (i *TiFlashInstance) CheckIncorrectConfigs() error {
 
 // need to check the configuration after clusterVersion >= v4.0.9.
 func checkTiFlashStorageConfigWithVersion(clusterVersion string, config map[string]interface{}) (bool, error) {
-	if semver.Compare(clusterVersion, "v4.0.9") >= 0 || clusterVersion == "nightly" {
+	if semver.Compare(clusterVersion, "v4.0.9") >= 0 || utils.Version(clusterVersion).IsNightly() {
 		return checkTiFlashStorageConfig(config)
 	}
 	return false, nil
@@ -368,7 +369,7 @@ func (i *TiFlashInstance) initTiFlashConfig(cfg *scripts.TiFlashScript, clusterV
 		pathConfig = fmt.Sprintf(`path: "%s"`, cfg.DataDir)
 	}
 
-	if (semver.Compare(clusterVersion, "v4.0.12") >= 0 && semver.Compare(clusterVersion, "v5.0.0-rc") != 0) || clusterVersion == "nightly" {
+	if (semver.Compare(clusterVersion, "v4.0.12") >= 0 && semver.Compare(clusterVersion, "v5.0.0-rc") != 0) || utils.Version(clusterVersion).IsNightly() {
 		// For v4.0.12 or later, 5.0.0 or later, TiFlash can ignore these `user.*`, `quotas.*` settings
 		deprecatedUsersConfig = "#"
 	} else {
@@ -467,7 +468,7 @@ func (i *TiFlashInstance) InitTiFlashLearnerConfig(cfg *scripts.TiFlashScript, c
 
 	firstDataDir := strings.Split(cfg.DataDir, ",")[0]
 
-	if semver.Compare(clusterVersion, "v4.0.5") >= 0 || clusterVersion == "nightly" {
+	if semver.Compare(clusterVersion, "v4.0.5") >= 0 || utils.Version(clusterVersion).IsNightly() {
 		statusAddr = fmt.Sprintf(`server.status-addr: "0.0.0.0:%[2]d"
     server.advertise-status-addr: "%[1]s:%[2]d"`, cfg.IP, cfg.FlashProxyStatusPort)
 	} else {

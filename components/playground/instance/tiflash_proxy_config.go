@@ -51,7 +51,7 @@ func writeTiFlashProxyConfig(w io.Writer, version utils.Version, ip, deployDir s
 	dataDir := fmt.Sprintf("%s/flash", deployDir)
 	logDir := fmt.Sprintf("%s/log", deployDir)
 	var statusAddr string
-	if semver.Compare(version.String(), "v4.0.5") >= 0 || version.String() == "nightly" {
+	if semver.Compare(version.String(), "v4.0.5") >= 0 || version.IsNightly() {
 		statusAddr = fmt.Sprintf(`status-addr = "0.0.0.0:%[2]d"
 advertise-status-addr = "%[1]s:%[2]d"`, ip, proxyStatusPort)
 	} else {
