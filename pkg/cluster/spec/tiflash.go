@@ -672,14 +672,15 @@ func (i *TiFlashInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config) 
 		return err
 	}
 
-	topo := ctx.Value(ctxt.CtxBaseTopo)
-	if topo == nil {
+	var topo Topology
+	if topoVal := ctx.Value(ctxt.CtxBaseTopo); topoVal != nil { // in scale-out phase
+		var ok bool
+		topo, ok = topoVal.(Topology)
+		if !ok {
+			return perrs.New("base topology in context is invalid")
+		}
+	} else { // in start phase
 		topo = i.topo
-	}
-
-	topo, ok := topo.(Topology)
-	if !ok {
-		return perrs.New("base topology in context is invalid")
 	}
 
 	endpoints := i.getEndpoints(topo)
