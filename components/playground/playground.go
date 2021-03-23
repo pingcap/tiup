@@ -685,7 +685,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 `, options.version))
 	}
 
-	if options.version != "nightly" {
+	if !utils.Version(options.version).IsNightly() {
 		if semver.Compare(options.version, "v3.1.0") < 0 && options.tiflash.Num != 0 {
 			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.version))
 			options.tiflash.Num = 0
