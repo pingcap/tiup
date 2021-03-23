@@ -19,6 +19,7 @@ import (
 
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/repository"
 )
 
 // CopyComponent is used to copy all files related the specific version a component
@@ -38,7 +39,10 @@ func (c *CopyComponent) Execute(ctx context.Context) error {
 	// If the version is not specified, the last stable one will be used
 	if c.version == "" {
 		env := environment.GlobalEnv()
-		ver, _, err := env.V1Repository().LatestStableVersion(c.component, false)
+		ver, _, err := env.V1Repository().WithOptions(repository.Options{
+			GOOS:   c.os,
+			GOARCH: c.arch,
+		}).LatestStableVersion(c.component, false)
 		if err != nil {
 			return err
 		}
