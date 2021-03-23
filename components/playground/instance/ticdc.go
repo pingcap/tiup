@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -50,7 +49,7 @@ func NewTiCDC(binPath string, dir, host, configPath string, id int, pds []*PDIns
 }
 
 // Start implements Instance interface.
-func (c *TiCDC) Start(ctx context.Context, version pkgver.Version) error {
+func (c *TiCDC) Start(ctx context.Context, version utils.Version) error {
 	endpoints := pdEndpoints(c.pds, true)
 
 	args := []string{

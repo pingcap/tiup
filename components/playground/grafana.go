@@ -28,7 +28,6 @@ import (
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/environment"
 	tiupexec "github.com/pingcap/tiup/pkg/exec"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -103,9 +102,9 @@ func replaceDatasource(dashboardDir string, datasourceName string) error {
 		}
 
 		s := string(data)
-		s = strings.Replace(s, "test-cluster", datasourceName, -1)
-		s = strings.Replace(s, "Test-Cluster", datasourceName, -1)
-		s = strings.Replace(s, "${DS_LIGHTNING}", datasourceName, -1)
+		s = strings.ReplaceAll(s, "test-cluster", datasourceName)
+		s = strings.ReplaceAll(s, "Test-Cluster", datasourceName)
+		s = strings.ReplaceAll(s, "${DS_LIGHTNING}", datasourceName)
 		s = re.ReplaceAllLiteralString(s, datasourceName)
 
 		return os.WriteFile(path, []byte(s), 0644)
@@ -204,7 +203,7 @@ http_port = %d
 	params := &tiupexec.PrepareCommandParams{
 		Ctx:         ctx,
 		Component:   "grafana",
-		Version:     pkgver.Version(g.version),
+		Version:     utils.Version(g.version),
 		InstanceDir: dir,
 		WD:          dir,
 		Args:        args,

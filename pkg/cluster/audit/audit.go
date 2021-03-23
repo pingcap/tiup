@@ -78,10 +78,39 @@ func decodeCommandArgs(args []string) ([]string, error) {
 func ShowAuditList(dir string) error {
 	// Header
 	clusterTable := [][]string{{"ID", "Time", "Command"}}
-	fileInfos, err := os.ReadDir(dir)
-	if err != nil && !os.IsNotExist(err) {
+
+	auditList, err := GetAuditList(dir)
+	if err != nil {
 		return err
 	}
+
+	for _, item := range auditList {
+		clusterTable = append(clusterTable, []string{
+			item.ID,
+			item.Time,
+			item.Command,
+		})
+	}
+
+	cliutil.PrintTable(clusterTable, true)
+	return nil
+}
+
+// Item represents a single audit item
+type Item struct {
+	ID      string `json:"id"`
+	Time    string `json:"time"`
+	Command string `json:"command"`
+}
+
+// GetAuditList get the audit item list
+func GetAuditList(dir string) ([]Item, error) {
+	fileInfos, err := os.ReadDir(dir)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	auditList := []Item{}
 	for _, fi := range fileInfos {
 		if fi.IsDir() {
 			continue
@@ -95,19 +124,18 @@ func ShowAuditList(dir string) error {
 			continue
 		}
 		cmd := strings.Join(args, " ")
-		clusterTable = append(clusterTable, []string{
-			fi.Name(),
-			t.Format(time.RFC3339),
-			cmd,
+		auditList = append(auditList, Item{
+			ID:      fi.Name(),
+			Time:    t.Format(time.RFC3339),
+			Command: cmd,
 		})
 	}
 
-	sort.Slice(clusterTable[1:], func(i, j int) bool {
-		return clusterTable[i+1][1] > clusterTable[j+1][1]
+	sort.Slice(auditList, func(i, j int) bool {
+		return auditList[i].Time > auditList[j].Time
 	})
 
-	cliutil.PrintTable(clusterTable, true)
-	return nil
+	return auditList, nil
 }
 
 // OutputAuditLog outputs audit log.
@@ -153,7 +181,7 @@ func ShowAuditLog(dir string, auditID string) error {
 	return nil
 }
 
-//decodeAuditID decodes the auditID to unix timestamp
+// decodeAuditID decodes the auditID to unix timestamp
 func decodeAuditID(auditID string) (time.Time, error) {
 	ts, err := base52.Decode(auditID)
 	if err != nil {

@@ -16,6 +16,7 @@ package operator
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"reflect"
 	"strconv"
 	"time"
@@ -41,7 +42,7 @@ func Upgrade(
 	topo spec.Topology,
 	options Options,
 	tlsCfg *tls.Config,
-) (upgErr error) {
+) error {
 	roleFilter := set.NewStringSet(options.Roles...)
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := topo.ComponentsByUpdateOrder()
@@ -66,7 +67,15 @@ func Upgrade(
 				return err
 			}
 			defer func() {
-				upgErr = decreaseScheduleLimit(pdClient, origLeaderScheduleLimit, origRegionScheduleLimit)
+				upgErr := decreaseScheduleLimit(pdClient, origLeaderScheduleLimit, origRegionScheduleLimit)
+				if upgErr != nil {
+					log.Warnf(
+						"failed decreasing schedule limit (original values should be: %s, %s), please check if their current values are reasonable: %s",
+						fmt.Sprintf("leader-schedule-limit=%d", origLeaderScheduleLimit),
+						fmt.Sprintf("region-schedule-limit=%d", origRegionScheduleLimit),
+						upgErr,
+					)
+				}
 			}()
 		default:
 			// do nothing, kept for future usage with other components
@@ -159,10 +168,10 @@ func Addr(ins spec.Instance) string {
 var (
 	leaderScheduleLimitOffset = 32
 	regionScheduleLimitOffset = 512
-	//storeLimitOffset             = 512
+	// storeLimitOffset             = 512
 	leaderScheduleLimitThreshold = 64
 	regionScheduleLimitThreshold = 1024
-	//storeLimitThreshold          = 1024
+	// storeLimitThreshold          = 1024
 )
 
 // increaseScheduleLimit increases the schedule limit of leader and region for faster

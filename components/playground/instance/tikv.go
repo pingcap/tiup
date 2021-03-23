@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -55,7 +54,7 @@ func (inst *TiKVInstance) Addr() string {
 }
 
 // Start calls set inst.cmd and Start
-func (inst *TiKVInstance) Start(ctx context.Context, version pkgver.Version) error {
+func (inst *TiKVInstance) Start(ctx context.Context, version utils.Version) error {
 	if err := inst.checkConfig(); err != nil {
 		return err
 	}

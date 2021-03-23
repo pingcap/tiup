@@ -509,6 +509,7 @@ func doPublish(
 	flagSet set.StringSet,
 ) error {
 	env := environment.GlobalEnv()
+	env.V1Repository().PurgeTimestamp()
 	m, err := env.V1Repository().FetchComponentManifest(component, true)
 	if err != nil {
 		if perrs.Cause(err) == repository.ErrUnknownComponent {
@@ -797,7 +798,12 @@ func newMirrorCloneCmd() *cobra.Command {
 			if err = repo.Mirror().Open(); err != nil {
 				return err
 			}
-			defer repo.Mirror().Close()
+			defer func() {
+				err = repo.Mirror().Close()
+				if err != nil {
+					log.Errorf("Failed to close mirror: %s\n", err.Error())
+				}
+			}()
 
 			var versionMapper = func(comp string) string {
 				return spec.TiDBComponentVersion(comp, "")

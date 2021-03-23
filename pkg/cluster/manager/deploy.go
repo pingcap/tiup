@@ -35,7 +35,7 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
-	pkgver "github.com/pingcap/tiup/pkg/repository/version"
+	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -270,8 +270,11 @@ func (m *Manager) Deploy(
 			switch inst.ComponentName() {
 			case spec.ComponentTiSpark:
 				env := environment.GlobalEnv()
-				var sparkVer pkgver.Version
-				if sparkVer, _, iterErr = env.V1Repository().LatestStableVersion(spec.ComponentSpark, false); iterErr != nil {
+				var sparkVer utils.Version
+				if sparkVer, _, iterErr = env.V1Repository().WithOptions(repository.Options{
+					GOOS:   inst.OS(),
+					GOARCH: inst.Arch(),
+				}).LatestStableVersion(spec.ComponentSpark, false); iterErr != nil {
 					return
 				}
 				t = t.DeploySpark(inst, sparkVer.String(), "" /* default srcPath */, deployDir)
