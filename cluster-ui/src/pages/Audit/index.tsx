@@ -35,7 +35,7 @@ export default function AuditPage() {
         dataIndex: 'command',
       },
     ]
-  }, [auditList])
+  }, [])
 
   return (
     <Root>
