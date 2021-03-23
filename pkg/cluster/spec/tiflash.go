@@ -30,6 +30,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v2"
 )
@@ -337,14 +338,14 @@ func (i *TiFlashInstance) CheckIncorrectConfigs() error {
 	if _, err := checkTiFlashStorageConfig(i.InstanceSpec.(*TiFlashSpec).Config); err != nil {
 		return err
 	}
-	// no matter storgae.latest.dir is defined or not, return err
+	// no matter storage.latest.dir is defined or not, return err
 	_, err := isValidStringArray(TiFlashStorageKeyLatestDirs, i.InstanceSpec.(*TiFlashSpec).Config, true)
 	return err
 }
 
 // need to check the configuration after clusterVersion >= v4.0.9.
 func checkTiFlashStorageConfigWithVersion(clusterVersion string, config map[string]interface{}) (bool, error) {
-	if semver.Compare(clusterVersion, "v4.0.9") >= 0 || clusterVersion == "nightly" {
+	if semver.Compare(clusterVersion, "v4.0.9") >= 0 || utils.Version(clusterVersion).IsNightly() {
 		return checkTiFlashStorageConfig(config)
 	}
 	return false, nil
@@ -353,9 +354,10 @@ func checkTiFlashStorageConfigWithVersion(clusterVersion string, config map[stri
 // InitTiFlashConfig initializes TiFlash config file with the configurations in server_configs
 func (i *TiFlashInstance) initTiFlashConfig(cfg *scripts.TiFlashScript, clusterVersion string, src map[string]interface{}) (map[string]interface{}, error) {
 	var (
-		pathConfig           string
-		isStorageDirsDefined bool
-		err                  error
+		pathConfig            string
+		isStorageDirsDefined  bool
+		deprecatedUsersConfig string
+		err                   error
 	)
 	if isStorageDirsDefined, err = checkTiFlashStorageConfigWithVersion(clusterVersion, src); err != nil {
 		return nil, err
@@ -365,6 +367,32 @@ func (i *TiFlashInstance) initTiFlashConfig(cfg *scripts.TiFlashScript, clusterV
 		pathConfig = "#"
 	} else {
 		pathConfig = fmt.Sprintf(`path: "%s"`, cfg.DataDir)
+	}
+
+	if (semver.Compare(clusterVersion, "v4.0.12") >= 0 && semver.Compare(clusterVersion, "v5.0.0-rc") != 0) || utils.Version(clusterVersion).IsNightly() {
+		// For v4.0.12 or later, 5.0.0 or later, TiFlash can ignore these `user.*`, `quotas.*` settings
+		deprecatedUsersConfig = "#"
+	} else {
+		// These settings is required when the version is earlier than v4.0.12 and v5.0.0
+		deprecatedUsersConfig = `
+    quotas.default.interval.duration: 3600
+    quotas.default.interval.errors: 0
+    quotas.default.interval.execution_time: 0
+    quotas.default.interval.queries: 0
+    quotas.default.interval.read_rows: 0
+    quotas.default.interval.result_rows: 0
+    users.default.password: ""
+    users.default.profile: "default"
+    users.default.quota: "default"
+    users.default.networks.ip: "::/0"
+    users.readonly.password: ""
+    users.readonly.profile: "readonly"
+    users.readonly.quota: "default"
+    users.readonly.networks.ip: "::/0"
+    profiles.default.load_balancing: "random"
+    profiles.default.use_uncompressed_cache: 0
+    profiles.readonly.readonly: 1
+`
 	}
 
 	topo := Specification{}
@@ -396,26 +424,10 @@ server_configs:
     logger.size: "1000M"
     application.runAsDaemon: true
     raft.pd_addr: "%[9]s"
-    quotas.default.interval.duration: 3600
-    quotas.default.interval.errors: 0
-    quotas.default.interval.execution_time: 0
-    quotas.default.interval.queries: 0
-    quotas.default.interval.read_rows: 0
-    quotas.default.interval.result_rows: 0
-    users.default.password: ""
-    users.default.profile: "default"
-    users.default.quota: "default"
-    users.default.networks.ip: "::/0"
-    users.readonly.password: ""
-    users.readonly.profile: "readonly"
-    users.readonly.quota: "default"
-    users.readonly.networks.ip: "::/0"
-    profiles.default.load_balancing: "random"
     profiles.default.max_memory_usage: 0
-    profiles.default.use_uncompressed_cache: 0
-    profiles.readonly.readonly: 1
+    %[12]s
 `, pathConfig, cfg.LogDir, cfg.TCPPort, cfg.HTTPPort, cfg.TiDBStatusAddrs, cfg.IP, cfg.FlashServicePort,
-		cfg.StatusPort, cfg.PDAddrs, cfg.DeployDir, cfg.TmpDir)), &topo)
+		cfg.StatusPort, cfg.PDAddrs, cfg.DeployDir, cfg.TmpDir, deprecatedUsersConfig)), &topo)
 
 	if err != nil {
 		return nil, err
@@ -456,7 +468,7 @@ func (i *TiFlashInstance) InitTiFlashLearnerConfig(cfg *scripts.TiFlashScript, c
 
 	firstDataDir := strings.Split(cfg.DataDir, ",")[0]
 
-	if semver.Compare(clusterVersion, "v4.0.5") >= 0 || clusterVersion == "nightly" {
+	if semver.Compare(clusterVersion, "v4.0.5") >= 0 || utils.Version(clusterVersion).IsNightly() {
 		statusAddr = fmt.Sprintf(`server.status-addr: "0.0.0.0:%[2]d"
     server.advertise-status-addr: "%[1]s:%[2]d"`, cfg.IP, cfg.FlashProxyStatusPort)
 	} else {
