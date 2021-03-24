@@ -290,11 +290,11 @@ func (i *MonitorInstance) InitConfig(
 		}
 	}
 
-	if err := i.installRules(ctx, e, paths.Deploy, clusterVersion); err != nil {
+	if err := i.installRules(ctx, e, paths.Deploy, clusterName, clusterVersion); err != nil {
 		return errors.Annotate(err, "install rules")
 	}
 
-	if err := i.initRules(ctx, e, spec, paths); err != nil {
+	if err := i.initRules(ctx, e, spec, paths, clusterName); err != nil {
 		return err
 	}
 
@@ -314,7 +314,7 @@ func (i *MonitorInstance) InitConfig(
 // cluster), and the rules for dm cluster is packed in the dm-master component. So if deploying tidb
 // cluster, the rules is correct, if deploying dm cluster, we should remove rules for tidb and install
 // rules for dm.
-func (i *MonitorInstance) installRules(ctx context.Context, e ctxt.Executor, deployDir, clusterVersion string) error {
+func (i *MonitorInstance) installRules(ctx context.Context, e ctxt.Executor, deployDir, clusterName, clusterVersion string) error {
 	if i.topo.Type() != TopoTypeDM {
 		return nil
 	}
@@ -346,8 +346,9 @@ func (i *MonitorInstance) installRules(ctx context.Context, e ctxt.Executor, dep
 		`find %[1]s -type f -name "*.rules.yml" -delete`,
 		`find %[2]s/dm-master/conf -type f -name "*.rules.yml" -exec cp {} %[1]s \;`,
 		"rm -rf %[2]s",
+		`find %[1]s -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i "s/ENV_LABELS_ENV/%[3]s/g" {} \;`,
 	}
-	_, stderr, err = e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), targetDir, tmp), false)
+	_, stderr, err = e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), targetDir, tmp, clusterName), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
@@ -355,7 +356,7 @@ func (i *MonitorInstance) installRules(ctx context.Context, e ctxt.Executor, dep
 	return nil
 }
 
-func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec *PrometheusSpec, paths meta.DirPaths) error {
+func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec *PrometheusSpec, paths meta.DirPaths, clusterName string) error {
 	if spec.RuleDir != "" {
 		return i.TransferLocalConfigDir(ctx, e, spec.RuleDir, path.Join(paths.Deploy, "conf"), func(name string) bool {
 			return strings.HasSuffix(name, ".rules.yml")
@@ -367,8 +368,9 @@ func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec *
 		"mkdir -p %[1]s/conf",
 		`find %[1]s/conf -type f -name "*.rules.yml" -delete`,
 		`find %[1]s/bin/prometheus -maxdepth 1 -type f -name "*.rules.yml" -exec cp {} %[1]s/conf/ \;`,
+		`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i "s/ENV_LABELS_ENV/%[2]s/g" {} \;`,
 	}
-	_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), paths.Deploy), false)
+	_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), paths.Deploy, clusterName), false)
 	if err != nil {
 		return errors.Annotatef(err, "stderr: %s", string(stderr))
 	}
