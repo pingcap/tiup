@@ -669,7 +669,7 @@ func (i *TiFlashInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config) 
 	})
 	// this should not failed, else exit
 	if err != nil {
-		return err
+		return perrs.Annotate(err, "failed to marshal replicate config")
 	}
 
 	var topo Topology
