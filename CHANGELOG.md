@@ -1,5 +1,14 @@
 TiUP Changelog
 
+## [1.3.7] 2021.03.25
+
+### Fixes
+
+- Fix the issue that metrics of tiflash-server instance may not collected correctly ([#1083](https://github.com/pingcap/tiup/pull/1083), [@yuzhibotao](https://github.com/yuzhibotao))
+- Fix the issue that tiup-cluster disables monitoring services unexpectedly ([#1088](https://github.com/pingcap/tiup/pull/1088), [@lucklove](https://github.com/lucklove))
+- Fix wrong dashboard name for lightning in Grafana after renaming a cluster with tiup-cluster ([#1196](https://github.com/pingcap/tiup/pull/1196), [@9547](https://github.com/9547))
+- Fix the issue that tiup-cluster `prune` command may generage config for removed nodes ([#1237](https://github.com/pingcap/tiup/pull/1237), [@lucklove](https://github.com/lucklove))
+
 ## [1.3.6] 2021.03.19
 
 ### Fixes
