@@ -400,6 +400,43 @@ func (s *Specification) portConflictsDetect() error {
 		}
 	}
 
+	// Port conflicts in monitored components
+	monitoredPortTypes := []string{
+		"NodeExporterPort",
+		"BlackboxExporterPort",
+	}
+	monitoredOpt := topoSpec.FieldByName(monitorOptionTypeName)
+	for host := range uniqueHosts {
+		cfg := "monitored"
+		for _, portType := range monitoredPortTypes {
+			f := monitoredOpt.FieldByName(portType)
+			item := usedPort{
+				host: host,
+				port: int(f.Int()),
+			}
+			ft, found := monitoredOpt.Type().FieldByName(portType)
+			if !found {
+				return errors.Errorf("incompatible change `%s.%s`", monitorOptionTypeName, portType)
+			}
+			// `yaml:"node_exporter_port,omitempty"`
+			tp := strings.Split(ft.Tag.Get("yaml"), ",")[0]
+			prev, exist := portStats[item]
+			if exist {
+				return &meta.ValidateErr{
+					Type:   meta.TypeConflict,
+					Target: "port",
+					LHS:    fmt.Sprintf("%s:%s.%s", prev.cfg, item.host, prev.tp),
+					RHS:    fmt.Sprintf("%s:%s.%s", cfg, item.host, tp),
+					Value:  item.port,
+				}
+			}
+			portStats[item] = conflict{
+				tp:  tp,
+				cfg: cfg,
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -597,8 +634,9 @@ func (s *Specification) BaseTopo() *spec.BaseTopo {
 // NewPart implements ScaleOutTopology interface.
 func (s *Specification) NewPart() spec.Topology {
 	return &Specification{
-		GlobalOptions: s.GlobalOptions,
-		ServerConfigs: s.ServerConfigs,
+		GlobalOptions:    s.GlobalOptions,
+		MonitoredOptions: s.MonitoredOptions,
+		ServerConfigs:    s.ServerConfigs,
 	}
 }
 
