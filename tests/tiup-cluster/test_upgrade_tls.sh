@@ -12,6 +12,8 @@ mkdir -p ~/.tiup/bin && cp -f ./root.json ~/.tiup/bin/
 yes | tiup-cluster deploy $name $old_version $topo -i ~/.ssh/id_rsa
 
 yes | tiup-cluster start $name
+tiup-cluster exec $name -N n1 --command "grep -q ${name} /home/tidb/deploy/prometheus-9090/conf/*.rules.yml"
+! tiup-cluster exec $name -N n1 --command "grep -q ENV_LABELS_ENV /home/tidb/deploy/prometheus-9090/conf/*.rules.yml"
 
 tiup-cluster _test $name writable
 

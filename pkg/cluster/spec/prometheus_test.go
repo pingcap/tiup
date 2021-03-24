@@ -58,7 +58,7 @@ func TestLocalRuleDirs(t *testing.T) {
 	assert.Nil(t, err)
 
 	ctx := checkpoint.NewContext(context.Background())
-	err = promInstance.initRules(ctx, e, promInstance.InstanceSpec.(*PrometheusSpec), meta.DirPaths{Deploy: deployDir})
+	err = promInstance.initRules(ctx, e, promInstance.InstanceSpec.(*PrometheusSpec), meta.DirPaths{Deploy: deployDir}, "dummy-cluster")
 	assert.Nil(t, err)
 
 	assert.NoFileExists(t, path.Join(deployDir, "conf", "dummy.rules.yml"))
@@ -78,7 +78,22 @@ func TestNoLocalRuleDirs(t *testing.T) {
 	localDir, err := filepath.Abs("./testdata/rules")
 	assert.Nil(t, err)
 
-	err = os.WriteFile(path.Join(deployDir, "bin/prometheus", "dummy.rules.yml"), []byte("dummy"), 0644)
+	err = os.WriteFile(path.Join(deployDir, "bin/prometheus", "dummy.rules.yml"), []byte(`
+groups:
+  - name: alert.rules
+    rules:
+      - alert: TiDB_schema_error
+        expr: increase(tidb_session_schema_lease_error_total{type="outdated"}[15m]) > 0
+        for: 1m
+        labels:
+          env: ENV_LABELS_ENV
+          level: emergency
+          expr: increase(tidb_session_schema_lease_error_total{type="outdated"}[15m]) > 0
+        annotations:
+          description: "cluster: ENV_LABELS_ENV, instance: {{ $labels.instance }}, values:{{ $value }}"
+          value: "{{ $value }}"
+          summary: TiDB schema error
+`), 0644)
 	assert.Nil(t, err)
 
 	topo := new(Specification)
@@ -99,8 +114,12 @@ func TestNoLocalRuleDirs(t *testing.T) {
 	assert.Nil(t, err)
 
 	ctx := checkpoint.NewContext(context.Background())
-	err = promInstance.initRules(ctx, e, promInstance.InstanceSpec.(*PrometheusSpec), meta.DirPaths{Deploy: deployDir})
+	err = promInstance.initRules(ctx, e, promInstance.InstanceSpec.(*PrometheusSpec), meta.DirPaths{Deploy: deployDir}, "dummy-cluster")
 	assert.Nil(t, err)
+	body, err := os.ReadFile(path.Join(deployDir, "conf", "dummy.rules.yml"))
+	assert.Nil(t, err)
+	assert.Contains(t, string(body), "dummy-cluster")
+	assert.NotContains(t, string(body), "ENV_LABELS_ENV")
 
 	assert.FileExists(t, path.Join(deployDir, "conf", "dummy.rules.yml"))
 	fs, err := os.ReadDir(localDir)
