@@ -113,10 +113,15 @@ func (m *Manager) DestroyTombstone(
 
 	b := m.sshTaskBuilder(name, topo, base.User, gOpt)
 
-	var nodes []string
-	b.
+	ctx := task.NewContext()
+	nodes, err := operator.DestroyTombstone(ctx, cluster, true /* returnNodesOnly */, gOpt, tlsCfg)
+	if err != nil {
+		return err
+	}
+	regenConfigTasks, _ := buildRegenConfigTasks(m, name, topo, base, nodes)
+
+	t := b.
 		Func("FindTomestoneNodes", func(ctx *task.Context) (err error) {
-			nodes, err = operator.DestroyTombstone(ctx, cluster, true /* returnNodesOnly */, gOpt, tlsCfg)
 			if !skipConfirm {
 				err = cliutil.PromptForConfirmOrAbortError(
 					color.HiYellowString(fmt.Sprintf("Will destroy these nodes: %v\nDo you confirm this action? [y/N]:", nodes)),
@@ -130,14 +135,12 @@ func (m *Manager) DestroyTombstone(
 		}).
 		ClusterOperate(cluster, operator.DestroyTombstoneOperation, gOpt, tlsCfg).
 		UpdateMeta(name, clusterMeta, nodes).
-		UpdateTopology(name, m.specManager.Path(name), clusterMeta, nodes)
-
-	regenConfigTasks, _ := buildRegenConfigTasks(m, name, topo, base, nodes)
-	t := b.
+		UpdateTopology(name, m.specManager.Path(name), clusterMeta, nodes).
 		ParallelStep("+ Refresh instance configs", true, regenConfigTasks...).
 		Parallel(true, buildReloadPromTasks(metadata.GetTopology())...).
 		Build()
-	if err := t.Execute(task.NewContext()); err != nil {
+
+	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
