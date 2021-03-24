@@ -86,6 +86,11 @@ func NewV1Repo(mirror Mirror, opts Options, local v1manifest.LocalManifests) *V1
 const maxTimeStampSize uint = 1024
 const maxRootSize uint = 1024 * 1024
 
+// WithOptions clone a new V1Repository with given options
+func (r *V1Repository) WithOptions(opts Options) *V1Repository {
+	return NewV1Repo(r.Mirror(), opts, r.Local())
+}
+
 // Mirror returns Mirror
 func (r *V1Repository) Mirror() Mirror {
 	return r.mirror
