@@ -891,7 +891,7 @@ func hash(s string) string {
 
 // Test we can correctly load manifests generate by tools/migrate
 // which generate the v1manifest from the v0manifest.
-//func TestWithMigrate(t *testing.T) {
+// func TestWithMigrate(t *testing.T) {
 //	// generate using tools/migrate
 //	mdir := "./testdata/manifests"
 //
@@ -948,7 +948,7 @@ func hash(s string) string {
 //			assert.Nil(t, err)
 //		}
 //	}
-//}
+// }
 
 /*
 func createMigrateRepo(t *testing.T, mdir string) (repo *V1Repository, profileDir string) {

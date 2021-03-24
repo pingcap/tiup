@@ -110,7 +110,7 @@ func ShowAuditLog(dir string, auditID string) error {
 	return nil
 }
 
-//decodeAuditID decodes the auditID to unix timestamp
+// decodeAuditID decodes the auditID to unix timestamp
 func decodeAuditID(auditID string) (time.Time, error) {
 	ts, err := base52.Decode(auditID)
 	if err != nil {

@@ -27,7 +27,7 @@ var specManager *cspec.SpecManager
 type Metadata struct {
 	User    string `yaml:"user"`       // the user to run and manage cluster on remote
 	Version string `yaml:"dm_version"` // the version of TiDB cluster
-	//EnableFirewall bool   `yaml:"firewall"`
+	// EnableFirewall bool   `yaml:"firewall"`
 
 	Topology *Specification `yaml:"topology"`
 }

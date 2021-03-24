@@ -156,9 +156,9 @@ func (pc *PDClient) GetStores() (*pdserverapi.StoresInfo, error) {
 	// Desc sorting the store list, we assume the store with largest ID is the
 	// latest one.
 	// Not necessary when we implement the workaround pd-3303 in GetCurrentStore()
-	//sort.Slice(storesInfo.Stores, func(i int, j int) bool {
-	//	return storesInfo.Stores[i].Store.Id > storesInfo.Stores[j].Store.Id
-	//})
+	// sort.Slice(storesInfo.Stores, func(i int, j int) bool {
+	// 	return storesInfo.Stores[i].Store.Id > storesInfo.Stores[j].Store.Id
+	// })
 
 	return &storesInfo, nil
 }

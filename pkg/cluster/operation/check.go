@@ -37,7 +37,7 @@ type CheckOptions struct {
 	EnableDisk bool
 
 	// pre-defined goups of checks
-	//GroupMinimal bool // a minimal set of checks
+	// GroupMinimal bool // a minimal set of checks
 }
 
 // Names of checks

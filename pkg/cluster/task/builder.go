@@ -413,9 +413,9 @@ func (b *Builder) Serial(tasks ...Task) *Builder {
 // Build returns a task that contains all tasks appended by previous operation
 func (b *Builder) Build() Task {
 	// Serial handles event internally. So the following 3 lines are commented out.
-	//if len(b.tasks) == 1 {
+	// if len(b.tasks) == 1 {
 	//	return b.tasks[0]
-	//}
+	// }
 	return &Serial{inner: b.tasks}
 }
 

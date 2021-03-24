@@ -371,7 +371,7 @@ func handleCheckResults(ctx *task.Context, host string, opt *checkOptions, t *ta
 	}
 
 	lines := make([][]string, 0)
-	//log.Infof("Check results of %s: (only errors and important info are displayed)", color.HiCyanString(host))
+	// log.Infof("Check results of %s: (only errors and important info are displayed)", color.HiCyanString(host))
 	for _, r := range results {
 		var line []string
 		if r.Err != nil {

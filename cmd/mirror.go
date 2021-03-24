@@ -30,6 +30,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/model"
 	ru "github.com/pingcap/tiup/pkg/repository/utils"
@@ -747,7 +748,12 @@ func newMirrorCloneCmd() *cobra.Command {
 			if err = repo.Mirror().Open(); err != nil {
 				return err
 			}
-			defer repo.Mirror().Close()
+			defer func() {
+				err = repo.Mirror().Close()
+				if err != nil {
+					log.Errorf("Failed to close mirror: %s\n", err.Error())
+				}
+			}()
 
 			var versionMapper = func(comp string) string {
 				return spec.TiDBComponentVersion(comp, "")

@@ -185,8 +185,8 @@ func TestMergeMirror(t *testing.T) {
 	base := baseMirror4test(keys)
 	source := sourceMirror4test()
 
-	//manifestList := []*v1manifest.Manifest{}
-	//componentInfoList := []model.ComponentInfo{}
+	// manifestList := []*v1manifest.Manifest{}
+	// componentInfoList := []model.ComponentInfo{}
 	defer mock.With("Publish", func(manifest *v1manifest.Manifest, info model.ComponentInfo) {
 		assert.Contains(t, []string{
 			"hello-v1.0.0-linux-amd64.tar.gz",
