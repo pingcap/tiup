@@ -60,6 +60,7 @@ tiup-dm --yes stop $name
 tiup-dm --yes restart $name
 
 tiup-dm display $name
+tiup-dm display $name --uptime
 
 total_sub_one=12
 
