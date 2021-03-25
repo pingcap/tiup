@@ -241,7 +241,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 		}
 
 		since := "-"
-		if !opt.ShowUptime {
+		if opt.ShowUptime {
 			since = formatInstanceSince(ins.Uptime(tlsCfg))
 		}
 
