@@ -1,3 +1,4 @@
+import { IBackupSetting } from '_types'
 import request from './request'
 
 const API_URL =
@@ -94,4 +95,11 @@ export function getNextBackup(clusterName: string) {
 
 export function getBackupList(clusterName: string) {
   return request(fullUrl(`backup/${clusterName}/backups`))
+}
+
+export function updateBackupSetting(
+  clusterName: string,
+  setting: IBackupSetting
+) {
+  return request(fullUrl(`backup/${clusterName}/setting`), 'POST', setting)
 }

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pingcap/tiup/cmd"
@@ -108,6 +109,8 @@ func Run(_tidbSpec *spec.SpecManager, _manager *manager.Manager, _gOpt operator.
 		c.Redirect(http.StatusMovedPermanently, "/tiup")
 		c.Abort()
 	})
+
+	test()
 
 	_ = router.Run()
 }
@@ -540,4 +543,19 @@ func postDeployHook(builder *task.Builder, topo spec.Topology) {
 
 func postScaleOutHook(builder *task.Builder, newPart spec.Topology) {
 	postDeployHook(builder, newPart)
+}
+
+//////////////////////////
+
+func test() {
+	// func Now() Time
+	fmt.Println(time.Now())
+
+	// func Parse(layout, value string) (Time, error)
+	t, _ := time.Parse("2006-01-02 15:04:05", "2018-04-23 12:24:51")
+	fmt.Println(t)
+
+	// func ParseInLocation(layout, value string, loc *Location) (Time, error) (layout已带时区时可直接用Parse)
+	t, _ = time.ParseInLocation("2006-01-02 15:04:05", "2017-05-11 14:06:06", time.Local)
+	fmt.Println(t)
 }

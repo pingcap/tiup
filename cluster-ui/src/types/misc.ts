@@ -60,3 +60,9 @@ export interface INextBackup {
   enable_backup: boolean
   next?: IBackupModel
 }
+
+export interface IBackupSetting {
+  enable: boolean
+  folder?: string
+  day_minutes?: number
+}
