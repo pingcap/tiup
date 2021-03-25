@@ -74,19 +74,26 @@ func enableAutoBackup(db *gorm.DB, dayMinutes int, folder string, clusterName st
 func checkBackup(db *gorm.DB) {
 	// first, check whether has running backup
 	// if does, return
-	var item *model
-	db.Where("status = ?", statusRunning).Find(item)
-	if item != nil {
+	var item model
+	ret := db.Where("status = ?", statusRunning).Find(&item)
+	if ret.Error != nil {
+		fmt.Println("meet error:", ret.Error)
+		return
+	}
+	if item.Status != "" {
 		fmt.Println("has running backup task:", item.ClusterName)
 		return
 	}
-	item = nil
-	db.Where("plan_time <= ?", time.Now()).Where("status = ?", statusNotStart).Find(item)
-	if item == nil {
+	ret = db.Where(`strftime("%s", plan_time) < ?`, time.Now().Unix()).Where("status = ?", statusNotStart).Find(&item)
+	if ret.Error != nil {
+		fmt.Println("meet error:", ret.Error)
+		return
+	}
+	if item.Status == "" {
 		fmt.Println("has no backup task")
 		return
 	}
-	startBackup(db, *item)
+	startBackup(db, item)
 }
 
 func startBackup(db *gorm.DB, item model) {
