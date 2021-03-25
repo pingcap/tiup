@@ -25,22 +25,14 @@ func NewService(db *gorm.DB) *service {
 func RegisterRouter(r *gin.RouterGroup, s *service) {
 	endpoint := r.Group("/backup")
 	{
-		endpoint.GET("/:clusterName/next_backup", s.getNextBackup)
 		endpoint.GET("/:clusterName/backups", s.getBackupList)
-		endpoint.POST("/:clusterName/setting", s.getBackupList)
+		endpoint.POST("/:clusterName/setting", s.updateBackupSetting)
 	}
 }
 
-func (s *service) getNextBackup(c *gin.Context) {
-	model := nextBackup(s.db)
-	c.JSON(http.StatusOK, gin.H{
-		"enable_backup": model != nil,
-		"next":          model,
-	})
-}
-
 func (s *service) getBackupList(c *gin.Context) {
-	models := backupList(s.db)
+	clusterName := c.Param("clusterName")
+	models := backupList(s.db, clusterName)
 	c.JSON(http.StatusOK, models)
 }
 
@@ -51,6 +43,8 @@ type settingReq struct {
 }
 
 func (s *service) updateBackupSetting(c *gin.Context) {
+	clusterName := c.Param("clusterName")
+
 	var req settingReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		_ = c.Error(err)
@@ -58,9 +52,9 @@ func (s *service) updateBackupSetting(c *gin.Context) {
 	}
 
 	if req.Enable {
-		enableAutoBackup(s.db, req.DayMinutes, req.Folder)
+		enableAutoBackup(s.db, req.DayMinutes, req.Folder, clusterName)
 	} else {
-		disableAutoBackup(s.db)
+		disableAutoBackup(s.db, clusterName)
 	}
 	c.Status(http.StatusNoContent)
 }

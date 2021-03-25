@@ -1,49 +1,60 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { Root } from '_components'
-import { IBackupModel, INextBackup } from '_types'
-import { getBackupList, getNextBackup, updateBackupSetting } from '_apis'
+import { IBackupModel } from '_types'
+import { getBackupList, updateBackupSetting } from '_apis'
 import { Button, Drawer, Form, Input, Select, Space, Switch, Table } from 'antd'
 
 const clocks = new Array(48).fill(1).map((_, idx) => {
-  const mins = idx * 30
-  const hours = Math.floor(mins / 60)
-  const remainMins = mins % 60
-  const hoursStr = (hours + '').padStart(2, '0')
-  const remainMinsStr = (remainMins + '').padEnd(2, '0')
-  const text = `${hoursStr}:${remainMinsStr}`
+  const dayMinutes = idx * 30
   return {
-    val: mins,
-    text,
+    val: dayMinutes,
+    text: formatDayMinutes(dayMinutes),
   }
 })
 
+function formatDayMinutes(dayMinutes: number) {
+  const hours = Math.floor(dayMinutes / 60)
+  const remainMins = dayMinutes % 60
+  const hoursStr = (hours + '').padStart(2, '0')
+  const remainMinsStr = (remainMins + '').padEnd(2, '0')
+  return `${hoursStr}:${remainMinsStr}`
+}
+
 function ClusterBackupPage() {
   const { clusterName } = useParams()
-  const [nextBackup, setNextBackup] = useState<INextBackup | undefined>(
-    undefined
-  )
 
   const [backups, setBackups] = useState<IBackupModel[]>([])
 
   const [showBackupSetting, setShowBackupSetting] = useState(false)
+  const [updating, setUpdating] = useState(false)
 
-  useEffect(() => {
-    getNextBackup(clusterName).then(({ data, err }) => {
-      if (data !== undefined) {
-        setNextBackup(data)
-      }
-    })
-  }, [clusterName])
-
-  useEffect(() => {
+  const queryBackupList = useCallback(() => {
     getBackupList(clusterName).then(({ data, err }) => {
       if (data !== undefined) {
         setBackups(data)
       }
     })
   }, [clusterName])
+
+  useEffect(() => {
+    queryBackupList()
+  }, [queryBackupList])
+
+  const nextBackup = useMemo(() => {
+    const next = backups.find((el) => el.status === 'not_start')
+    if (next) {
+      const nextClock = clocks.find((c) => c.val === next.day_minutes)
+      if (nextClock === undefined) {
+        clocks.push({
+          val: next.day_minutes,
+          text: formatDayMinutes(next.day_minutes),
+        })
+      }
+    }
+    return next
+  }, [backups])
 
   const columns = useMemo(() => {
     return [
@@ -77,25 +88,23 @@ function ClusterBackupPage() {
     ]
   }, [])
 
-  function handleSubmitSetting(vals: any) {
-    // console.log('vals:', vals)
-    updateBackupSetting(clusterName, vals)
-    setShowBackupSetting(false)
+  async function handleSubmitSetting(vals: any) {
+    try {
+      setUpdating(true)
+      await updateBackupSetting(clusterName, vals)
+    } finally {
+      setUpdating(false)
+      setShowBackupSetting(false)
+      queryBackupList()
+    }
   }
 
   return (
     <Root>
       <h1>备份</h1>
-      {nextBackup?.enable_backup === false && (
-        <Button type="primary" onClick={() => setShowBackupSetting(true)}>
-          开启备份
-        </Button>
-      )}
-      {nextBackup?.enable_backup === true && (
-        <Button type="primary" onClick={() => setShowBackupSetting(true)}>
-          备份设置
-        </Button>
-      )}
+      <Button type="primary" onClick={() => setShowBackupSetting(true)}>
+        {nextBackup ? '备份设置' : '开启备份'}
+      </Button>
       <div style={{ marginTop: 16 }}>
         <Table dataSource={backups} columns={columns} pagination={false} />
       </div>
@@ -112,7 +121,9 @@ function ClusterBackupPage() {
           layout="vertical"
           onFinish={handleSubmitSetting}
           initialValues={{
-            enable: nextBackup?.enable_backup,
+            enable: nextBackup !== undefined,
+            folder: nextBackup?.folder,
+            day_minutes: nextBackup?.day_minutes,
           }}
         >
           <Form.Item name="enable" valuePropName="checked" label="总开关">
@@ -157,7 +168,7 @@ function ClusterBackupPage() {
           </Form.Item>
           <Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit">
+              <Button type="primary" htmlType="submit" loading={updating}>
                 保存
               </Button>
               <Button onClick={() => setShowBackupSetting(false)}>取消</Button>

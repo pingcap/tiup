@@ -50,6 +50,7 @@ export interface IAuditLogItem {
 export interface IBackupModel {
   plan_time: string
   start_time?: string
+  day_minutes: number
   folder: string
   sub_folder: string
   status: string
