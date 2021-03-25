@@ -3,12 +3,14 @@ import { useParams } from 'react-router-dom'
 
 import { Root } from '_components'
 import { IBackupModel } from '_types'
-import { getBackupList, updateBackupSetting } from '_apis'
+import { deleteBackup, getBackupList, updateBackupSetting } from '_apis'
 import {
   Button,
+  Divider,
   Drawer,
   Form,
   Input,
+  Popconfirm,
   Select,
   Space,
   Switch,
@@ -111,6 +113,34 @@ function ClusterBackupPage() {
       {
         title: '操作',
         key: 'action',
+        render: (text: any, rec: IBackupModel) =>
+          rec.status === 'success' && (
+            <Space>
+              {rec.status === 'success' && (
+                <>
+                  <Popconfirm
+                    title="你确定要恢复这个备份吗？"
+                    onConfirm={() => onRestore(rec)}
+                    okText="恢复"
+                    cancelText="取消"
+                  >
+                    <a>恢复</a>
+                  </Popconfirm>
+                  <Divider type="vertical" />
+                </>
+              )}
+              {(rec.status === 'success' || rec.status === 'fail') && (
+                <Popconfirm
+                  title="你确定要删除这个备份吗？"
+                  onConfirm={() => onDelete(rec)}
+                  okText="删除"
+                  cancelText="取消"
+                >
+                  <a>删除</a>
+                </Popconfirm>
+              )}
+            </Space>
+          ),
       },
     ]
   }, [])
@@ -124,6 +154,18 @@ function ClusterBackupPage() {
       setShowBackupSetting(false)
       queryBackupList()
     }
+  }
+
+  async function onDelete(item: IBackupModel) {
+    try {
+      await deleteBackup(clusterName, item.ID)
+    } finally {
+      queryBackupList()
+    }
+  }
+
+  async function onRestore(item: IBackupModel) {
+    // todo
   }
 
   return (

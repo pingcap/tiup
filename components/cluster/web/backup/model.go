@@ -40,20 +40,27 @@ func backupList(db *gorm.DB, clusterName string) []model {
 	return items
 }
 
+func deleteBackup(db *gorm.DB, id string) {
+	db.Delete(&model{}, id)
+}
+
 func disableAutoBackup(db *gorm.DB, clusterName string) {
 	db.Where("cluster_name = ?", clusterName).Where("status = ?", statusNotStart).Delete(&model{})
 }
 
 func enableAutoBackup(db *gorm.DB, dayMinutes int, folder string, clusterName string) {
 	disableAutoBackup(db, clusterName)
+	createNextBackupRecord(db, dayMinutes, folder, clusterName, false)
+}
 
+func createNextBackupRecord(db *gorm.DB, dayMinutes int, folder string, clusterName string, forceNextDay bool) {
 	// compute nex plan time
 	targetHour := dayMinutes / 60
 	targetMinute := dayMinutes % 60
 	now := time.Now()
 	planTime := time.Date(now.Year(), now.Month(), now.Day(), targetHour, targetMinute, 0, 0, time.Local)
 	nowHour, nowMinute, _ := now.Clock()
-	if (nowHour*60 + nowMinute) > dayMinutes {
+	if (nowHour*60+nowMinute) > dayMinutes || forceNextDay {
 		planTime = planTime.AddDate(0, 0, 1) // tommorrow
 	}
 	subFolderName := clusterName + "/" + planTime.Format(timeLayout)
@@ -72,35 +79,38 @@ func enableAutoBackup(db *gorm.DB, dayMinutes int, folder string, clusterName st
 }
 
 func checkBackup(db *gorm.DB) {
-	// first, check whether has running backup
-	// if does, return
-	var item model
-	ret := db.Where("status = ?", statusRunning).Find(&item)
+	var items []model
+	// ret := db.Where(`strftime("%s", plan_time) < ?`, time.Now().Unix()).Where("status = ?", statusNotStart).Find(&items)
+	ret := db.Where("status = ?", statusNotStart).Order("plan_time desc").Find(&items)
 	if ret.Error != nil {
 		fmt.Println("meet error:", ret.Error)
 		return
 	}
-	if item.Status != "" {
-		fmt.Println("has running backup task:", item.ClusterName)
-		return
+	now := time.Now()
+	filteredItems := make([]model, 0)
+	for _, v := range items {
+		if now.Sub(v.PlanTime) > 0 {
+			filteredItems = append(filteredItems, v)
+		}
 	}
-	ret = db.Where(`strftime("%s", plan_time) < ?`, time.Now().Unix()).Where("status = ?", statusNotStart).Find(&item)
-	if ret.Error != nil {
-		fmt.Println("meet error:", ret.Error)
-		return
-	}
-	if item.Status == "" {
+	if len(filteredItems) == 0 {
 		fmt.Println("has no backup task")
 		return
 	}
-	startBackup(db, item)
+	for _, v := range filteredItems {
+		go startBackup(db, v)
+	}
 }
 
 func startBackup(db *gorm.DB, item model) {
 	// update status
 	item.Status = statusRunning
+	item.StartTime = new(time.Time)
 	*item.StartTime = time.Now()
 	db.Save(&item)
+
+	// create next backup plan
+	createNextBackupRecord(db, item.DayMinutes, item.Folder, item.ClusterName, true)
 
 	// run
 	fmt.Println("start to backup...")

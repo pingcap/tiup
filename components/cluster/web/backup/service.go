@@ -29,6 +29,7 @@ func RegisterRouter(r *gin.RouterGroup, s *service) {
 	{
 		endpoint.GET("/:clusterName/backups", s.getBackupList)
 		endpoint.POST("/:clusterName/setting", s.updateBackupSetting)
+		endpoint.DELETE("/:clusterName/backup", s.deleteBackup)
 	}
 }
 
@@ -58,6 +59,12 @@ func (s *service) updateBackupSetting(c *gin.Context) {
 	} else {
 		disableAutoBackup(s.db, clusterName)
 	}
+	c.Status(http.StatusNoContent)
+}
+
+func (s *service) deleteBackup(c *gin.Context) {
+	id := c.Query("id")
+	deleteBackup(s.db, id)
 	c.Status(http.StatusNoContent)
 }
 

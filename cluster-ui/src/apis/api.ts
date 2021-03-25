@@ -103,3 +103,7 @@ export function updateBackupSetting(
 ) {
   return request(fullUrl(`backup/${clusterName}/setting`), 'POST', setting)
 }
+
+export function deleteBackup(clusterName: string, id: string) {
+  return request(fullUrl(`backup/${clusterName}/backup?id=${id}`), 'DELETE')
+}
