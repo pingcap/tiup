@@ -17,6 +17,7 @@ import {
   Table,
   Typography,
 } from 'antd'
+import { useQueryParams } from '_hooks'
 
 const { Text } = Typography
 
@@ -44,6 +45,8 @@ function ClusterBackupPage() {
   const [showBackupSetting, setShowBackupSetting] = useState(false)
   const [updating, setUpdating] = useState(false)
 
+  const { test } = useQueryParams()
+
   const queryBackupList = useCallback(() => {
     getBackupList(clusterName).then(({ data, err }) => {
       if (data !== undefined) {
@@ -69,6 +72,17 @@ function ClusterBackupPage() {
     }
     return next
   }, [backups])
+
+  const onDelete = useCallback(
+    async (item: IBackupModel) => {
+      try {
+        await deleteBackup(clusterName, item.ID)
+      } finally {
+        queryBackupList()
+      }
+    },
+    [clusterName, queryBackupList]
+  )
 
   const columns = useMemo(() => {
     return [
@@ -97,18 +111,13 @@ function ClusterBackupPage() {
             case 'not_start':
               return <Text>未开始</Text>
             case 'running':
-              return <Text type="secondary">备份中</Text>
+              return <Text type="secondary">备份中...</Text>
             case 'success':
               return <Text type="success">备份成功</Text>
             case 'fail':
               return <Text type="danger">备份失败</Text>
           }
         },
-      },
-      {
-        title: '备注',
-        key: 'message',
-        dataIndex: 'message',
       },
       {
         title: '操作',
@@ -143,7 +152,7 @@ function ClusterBackupPage() {
           ),
       },
     ]
-  }, [])
+  }, [onDelete])
 
   async function handleSubmitSetting(vals: any) {
     try {
@@ -156,16 +165,30 @@ function ClusterBackupPage() {
     }
   }
 
-  async function onDelete(item: IBackupModel) {
-    try {
-      await deleteBackup(clusterName, item.ID)
-    } finally {
-      queryBackupList()
-    }
-  }
+  // async function onDelete(item: IBackupModel) {
+  //   try {
+  //     await deleteBackup(clusterName, item.ID)
+  //   } finally {
+  //     queryBackupList()
+  //   }
+  // }
 
   async function onRestore(item: IBackupModel) {
     // todo
+  }
+
+  async function updateBackuptime() {
+    if (nextBackup === undefined) {
+      return
+    }
+    const now = new Date()
+    const hours = now.getHours()
+    const minutes = now.getMinutes()
+    handleSubmitSetting({
+      enable: true,
+      folder: nextBackup.folder,
+      day_minutes: hours * 60 + minutes + 2,
+    })
   }
 
   return (
@@ -174,8 +197,14 @@ function ClusterBackupPage() {
       <Button type="primary" onClick={() => setShowBackupSetting(true)}>
         {nextBackup ? '备份设置' : '开启备份'}
       </Button>
+      {test && <Button onClick={updateBackuptime}>修改备份时间</Button>}
       <div style={{ marginTop: 16 }}>
-        <Table dataSource={backups} columns={columns} pagination={false} />
+        <Table
+          dataSource={backups}
+          columns={columns}
+          pagination={false}
+          rowKey="ID"
+        />
       </div>
 
       <Drawer
@@ -195,7 +224,7 @@ function ClusterBackupPage() {
             day_minutes: nextBackup?.day_minutes,
           }}
         >
-          <Form.Item name="enable" valuePropName="checked" label="总开关">
+          <Form.Item name="enable" valuePropName="checked" label="开启">
             <Switch />
           </Form.Item>
           <Form.Item
