@@ -35,7 +35,7 @@ const (
 
 var (
 	globalOptionTypeName  = reflect.TypeOf(GlobalOptions{}).Name()
-	monitorOptionTypeName = reflect.TypeOf(MonitoredOptions{}).Name()
+	monitorOptionTypeName = reflect.TypeOf(&MonitoredOptions{}).Name()
 	serverConfigsTypeName = reflect.TypeOf(DMServerConfigs{}).Name()
 )
 
@@ -89,7 +89,7 @@ type (
 	// Specification represents the specification of topology.yaml
 	Specification struct {
 		GlobalOptions    GlobalOptions            `yaml:"global,omitempty" validate:"global:editable"`
-		MonitoredOptions MonitoredOptions         `yaml:"monitored,omitempty" validate:"monitored:editable"`
+		MonitoredOptions *MonitoredOptions        `yaml:"monitored,omitempty" validate:"monitored:editable"`
 		ServerConfigs    DMServerConfigs          `yaml:"server_configs,omitempty" validate:"server_configs:ignore"`
 		Masters          []*MasterSpec            `yaml:"master_servers"`
 		Workers          []*WorkerSpec            `yaml:"worker_servers"`
@@ -238,21 +238,23 @@ func (s *Specification) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return errors.Trace(err)
 	}
 
-	// Set monitored options
-	if s.MonitoredOptions.DeployDir == "" {
-		s.MonitoredOptions.DeployDir = filepath.Join(s.GlobalOptions.DeployDir,
-			fmt.Sprintf("%s-%d", spec.RoleMonitor, s.MonitoredOptions.NodeExporterPort))
-	}
-	if s.MonitoredOptions.DataDir == "" {
-		s.MonitoredOptions.DataDir = filepath.Join(s.GlobalOptions.DataDir,
-			fmt.Sprintf("%s-%d", spec.RoleMonitor, s.MonitoredOptions.NodeExporterPort))
-	}
-	if s.MonitoredOptions.LogDir == "" {
-		s.MonitoredOptions.LogDir = "log"
-	}
-	if !strings.HasPrefix(s.MonitoredOptions.LogDir, "/") &&
-		!strings.HasPrefix(s.MonitoredOptions.LogDir, s.MonitoredOptions.DeployDir) {
-		s.MonitoredOptions.LogDir = filepath.Join(s.MonitoredOptions.DeployDir, s.MonitoredOptions.LogDir)
+	if s.MonitoredOptions != nil {
+		// Set monitored options
+		if s.MonitoredOptions.DeployDir == "" {
+			s.MonitoredOptions.DeployDir = filepath.Join(s.GlobalOptions.DeployDir,
+				fmt.Sprintf("%s-%d", spec.RoleMonitor, s.MonitoredOptions.NodeExporterPort))
+		}
+		if s.MonitoredOptions.DataDir == "" {
+			s.MonitoredOptions.DataDir = filepath.Join(s.GlobalOptions.DataDir,
+				fmt.Sprintf("%s-%d", spec.RoleMonitor, s.MonitoredOptions.NodeExporterPort))
+		}
+		if s.MonitoredOptions.LogDir == "" {
+			s.MonitoredOptions.LogDir = "log"
+		}
+		if !strings.HasPrefix(s.MonitoredOptions.LogDir, "/") &&
+			!strings.HasPrefix(s.MonitoredOptions.LogDir, s.MonitoredOptions.DeployDir) {
+			s.MonitoredOptions.LogDir = filepath.Join(s.MonitoredOptions.DeployDir, s.MonitoredOptions.LogDir)
+		}
 	}
 
 	if err := fillDMCustomDefaults(&s.GlobalOptions, s); err != nil {

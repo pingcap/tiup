@@ -294,7 +294,7 @@ func (topo *Specification) GetGlobalOptions() spec.GlobalOptions {
 
 // GetMonitoredOptions returns MonitoredOptions
 func (topo *Specification) GetMonitoredOptions() *spec.MonitoredOptions {
-	return &topo.MonitoredOptions
+	return topo.MonitoredOptions
 }
 
 // ComponentsByStopOrder return component in the order need to stop.
