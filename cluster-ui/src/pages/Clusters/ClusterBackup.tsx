@@ -4,7 +4,19 @@ import { useParams } from 'react-router-dom'
 import { Root } from '_components'
 import { IBackupModel } from '_types'
 import { getBackupList, updateBackupSetting } from '_apis'
-import { Button, Drawer, Form, Input, Select, Space, Switch, Table } from 'antd'
+import {
+  Button,
+  Drawer,
+  Form,
+  Input,
+  Select,
+  Space,
+  Switch,
+  Table,
+  Typography,
+} from 'antd'
+
+const { Text } = Typography
 
 const clocks = new Array(48).fill(1).map((_, idx) => {
   const dayMinutes = idx * 30
@@ -63,6 +75,9 @@ function ClusterBackupPage() {
         key: 'start_time',
         dataIndex: 'start_time',
         width: 260,
+        render: (text: any, _rec: IBackupModel) => {
+          return text || '还未开始'
+        },
       },
       {
         title: '备份目录',
@@ -75,6 +90,18 @@ function ClusterBackupPage() {
         title: '备份结果',
         key: 'result',
         dataIndex: 'status',
+        render: (text: any, _rec: IBackupModel) => {
+          switch (text) {
+            case 'not_start':
+              return <Text>未开始</Text>
+            case 'running':
+              return <Text type="secondary">备份中</Text>
+            case 'success':
+              return <Text type="success">备份成功</Text>
+            case 'fail':
+              return <Text type="danger">备份失败</Text>
+          }
+        },
       },
       {
         title: '备注',

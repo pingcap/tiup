@@ -74,6 +74,7 @@ func Run(_tidbSpec *spec.SpecManager, _manager *manager.Manager, _gOpt operator.
 		panic("failed to connect database")
 	}
 	backupSrv := backup.NewService(db)
+	backupSrv.StartTicker()
 
 	router := gin.Default()
 	router.Use(cors.AllowAll())

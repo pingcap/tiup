@@ -1,7 +1,9 @@
 package backup
 
 import (
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -57,4 +59,16 @@ func (s *service) updateBackupSetting(c *gin.Context) {
 		disableAutoBackup(s.db, clusterName)
 	}
 	c.Status(http.StatusNoContent)
+}
+
+/////
+// StartTicker run an interval task to check whether should backup
+func (s *service) StartTicker() {
+	ticker := time.NewTicker(time.Second * 10) // 60
+	go func() {
+		for t := range ticker.C {
+			fmt.Println("Tick at", t)
+			checkBackup(s.db)
+		}
+	}()
 }
