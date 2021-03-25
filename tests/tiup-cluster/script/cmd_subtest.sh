@@ -113,6 +113,8 @@ function cmd_subtest() {
 
     # display default don't show uptime
     tiup-cluster $client display $name | grep pd | awk '{print $7}' | grep '-'
+    # sleep 10 seconds too ensure that all components are up
+    sleep 10
     # display with --uptime should show process uptime
     tiup-cluster $client display $name --uptime | grep pd | awk '{print $7}' | grep -v '-'
 
