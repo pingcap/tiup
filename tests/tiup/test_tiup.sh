@@ -32,6 +32,8 @@ tiup
 tiup help
 tiup install tidb:v3.0.13
 tiup update tidb
+tiup update tidb --nightly
+tiup --binary tidb:nightly
 tiup status
 tiup clean --all
 tiup help tidb
