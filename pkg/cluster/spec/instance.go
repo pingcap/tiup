@@ -84,7 +84,7 @@ type Instance interface {
 	Ready(context.Context, ctxt.Executor, uint64) error
 	InitConfig(ctx context.Context, e ctxt.Executor, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
 	ScaleConfig(ctx context.Context, e ctxt.Executor, topo Topology, clusterName string, clusterVersion string, deployUser string, paths meta.DirPaths) error
-	PrepareStart(tlsCfg *tls.Config) error
+	PrepareStart(ctx context.Context, tlsCfg *tls.Config) error
 	ComponentName() string
 	InstanceName() string
 	ServiceName() string
@@ -398,7 +398,7 @@ func (i *BaseInstance) SetPatched(p bool) {
 }
 
 // PrepareStart checks instance requirements before starting
-func (i *BaseInstance) PrepareStart(tlsCfg *tls.Config) error {
+func (i *BaseInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config) error {
 	return nil
 }
 
