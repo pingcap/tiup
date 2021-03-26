@@ -146,6 +146,9 @@ func (env *Environment) UpdateComponents(specs []string, nightly, force bool) er
 		if component == tiupName {
 			continue
 		}
+		if v == "" && nightly {
+			v = utils.NightlyVersionAlias
+		}
 		v1specs = append(v1specs, repository.ComponentSpec{ID: component, Version: v.String(), Force: force})
 	}
 	return env.v1Repo.UpdateComponents(v1specs)
