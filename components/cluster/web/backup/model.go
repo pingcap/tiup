@@ -2,9 +2,13 @@ package backup
 
 import (
 	"fmt"
+	"os/exec"
 	"path"
+	"strings"
 	"time"
 
+	"github.com/pingcap/tiup/pkg/cluster/manager"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"gorm.io/gorm"
 )
 
@@ -78,7 +82,7 @@ func createNextBackupRecord(db *gorm.DB, dayMinutes int, folder string, clusterN
 	db.Create(&item)
 }
 
-func checkBackup(db *gorm.DB) {
+func checkBackup(db *gorm.DB, cm *manager.Manager, gOpt operator.Options) {
 	var items []model
 	// ret := db.Where(`strftime("%s", plan_time) < ?`, time.Now().Unix()).Where("status = ?", statusNotStart).Find(&items)
 	ret := db.Where("status = ?", statusNotStart).Order("plan_time desc").Find(&items)
@@ -98,11 +102,11 @@ func checkBackup(db *gorm.DB) {
 		return
 	}
 	for _, v := range filteredItems {
-		go startBackup(db, v)
+		go startBackup(db, v, cm, gOpt)
 	}
 }
 
-func startBackup(db *gorm.DB, item model) {
+func startBackup(db *gorm.DB, item model, cm *manager.Manager, gOpt operator.Options) {
 	// update status
 	item.Status = statusRunning
 	item.StartTime = new(time.Time)
@@ -116,7 +120,48 @@ func startBackup(db *gorm.DB, item model) {
 	fmt.Println("start to backup...")
 	fullPath := path.Join(item.Folder, item.SubFolder)
 	fmt.Println("backup folder:", fullPath)
-	time.Sleep(time.Second * 60)
+	time.Sleep(time.Second * 10)
+
+	// get pd
+	instInfos, err := cm.GetClusterTopology(item.ClusterName, gOpt)
+	if err != nil {
+		fmt.Println("back failed:", err)
+		item.Status = statusFail
+		item.Message = err.Error()
+		db.Save(&item)
+		return
+	}
+	var availabePD *manager.InstInfo = nil
+	for _, v := range instInfos {
+		if v.Role == "pd" && strings.HasPrefix(v.Status, "Up") {
+			availabePD = &v
+			break
+		}
+	}
+	if availabePD == nil {
+		fmt.Println("back failed:", "has no availabel PD node")
+		item.Status = statusFail
+		item.Message = "has no avaialbe PD node"
+		db.Save(&item)
+		return
+	}
+
+	logFileName := strings.ReplaceAll(item.SubFolder, "/", "_")
+	fullCmd := fmt.Sprintf(`tiup br backup full --pd "%s" -s "%s" --log-file "%s.log"`, availabePD.ID, fullPath, logFileName)
+	// tiup br backup full --pd "10.0.1.21:2379" -s "/var/nfs/multi-host/2021-0326-1022" --log-file "multi-host_2021-0326-1022.log"
+	fmt.Println("full cmd:", fullCmd)
+
+	// run command by os/exec
+	// out, err := exec.Command("tiup", "br", "backup", "full", "--pd", `"`+availabePD.ID+`"`, "-s", `"`+fullPath+`"`, "--log-file", `"`+logFileName+`.log"`).Output()
+	out, err := exec.Command("tiup", "br", "backup", "full", "--pd", availabePD.ID, "-s", fullPath, "--log-file", logFileName+".log").Output()
+	if err != nil {
+		fmt.Println("back failed:", err)
+		item.Status = statusFail
+		item.Message = err.Error() + string(out)
+		db.Save(&item)
+		return
+	}
+	fmt.Println("result:", out)
 	fmt.Println("finish backup")
 
 	// done

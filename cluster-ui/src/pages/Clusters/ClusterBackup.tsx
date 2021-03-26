@@ -15,6 +15,7 @@ import {
   Space,
   Switch,
   Table,
+  Tooltip,
   Typography,
 } from 'antd'
 import { useQueryParams } from '_hooks'
@@ -106,7 +107,7 @@ function ClusterBackupPage() {
         title: '备份结果',
         key: 'result',
         dataIndex: 'status',
-        render: (text: any, _rec: IBackupModel) => {
+        render: (text: any, rec: IBackupModel) => {
           switch (text) {
             case 'not_start':
               return <Text>未开始</Text>
@@ -115,7 +116,11 @@ function ClusterBackupPage() {
             case 'success':
               return <Text type="success">备份成功</Text>
             case 'fail':
-              return <Text type="danger">备份失败</Text>
+              return (
+                <Tooltip title={rec.message}>
+                  <Text type="danger">备份失败</Text>
+                </Tooltip>
+              )
           }
         },
       },

@@ -6,21 +6,25 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pingcap/tiup/pkg/cluster/manager"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"gorm.io/gorm"
 )
 
 type service struct {
-	db *gorm.DB
+	db   *gorm.DB
+	cm   *manager.Manager
+	gOpt operator.Options
 }
 
 // NewService creates new backup service
-func NewService(db *gorm.DB) *service {
+func NewService(db *gorm.DB, cm *manager.Manager, gOpt operator.Options) *service {
 	err := autoMigrate(db)
 	if err != nil {
 		panic("failed to init database")
 	}
 
-	return &service{db}
+	return &service{db, cm, gOpt}
 }
 
 // RegisterRouter registers routers for backup
@@ -75,7 +79,7 @@ func (s *service) StartTicker() {
 	go func() {
 		for t := range ticker.C {
 			fmt.Println("Tick at", t)
-			checkBackup(s.db)
+			checkBackup(s.db, s.cm, s.gOpt)
 		}
 	}()
 }

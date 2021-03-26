@@ -73,7 +73,7 @@ func Run(_tidbSpec *spec.SpecManager, _manager *manager.Manager, _gOpt operator.
 	if err != nil {
 		panic("failed to connect database")
 	}
-	backupSrv := backup.NewService(db)
+	backupSrv := backup.NewService(db, cm, gOpt)
 	backupSrv.StartTicker()
 
 	router := gin.Default()
