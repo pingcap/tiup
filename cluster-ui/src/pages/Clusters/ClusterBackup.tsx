@@ -6,7 +6,7 @@ import { IBackupModel } from '_types'
 import { deleteBackup, getBackupList, updateBackupSetting } from '_apis'
 import {
   Button,
-  Divider,
+  // Divider,
   Drawer,
   Form,
   Input,
@@ -19,6 +19,7 @@ import {
   Typography,
 } from 'antd'
 import { useQueryParams } from '_hooks'
+import { ExclamationCircleOutlined } from '@ant-design/icons'
 
 const { Text } = Typography
 
@@ -92,8 +93,8 @@ function ClusterBackupPage() {
         key: 'start_time',
         dataIndex: 'start_time',
         width: 260,
-        render: (text: any, _rec: IBackupModel) => {
-          return text || '还未开始'
+        render: (text: any, rec: IBackupModel) => {
+          return new Date(text || rec.plan_time).toLocaleString()
         },
       },
       {
@@ -118,7 +119,9 @@ function ClusterBackupPage() {
             case 'fail':
               return (
                 <Tooltip title={rec.message}>
-                  <Text type="danger">备份失败</Text>
+                  <Text type="danger">
+                    备份失败 <ExclamationCircleOutlined />
+                  </Text>
                 </Tooltip>
               )
           }
@@ -127,10 +130,9 @@ function ClusterBackupPage() {
       {
         title: '操作',
         key: 'action',
-        render: (text: any, rec: IBackupModel) =>
-          rec.status === 'success' && (
-            <Space>
-              {rec.status === 'success' && (
+        render: (text: any, rec: IBackupModel) => (
+          <Space>
+            {/* {rec.status === 'success' && (
                 <>
                   <Popconfirm
                     title="你确定要恢复这个备份吗？"
@@ -142,19 +144,19 @@ function ClusterBackupPage() {
                   </Popconfirm>
                   <Divider type="vertical" />
                 </>
-              )}
-              {(rec.status === 'success' || rec.status === 'fail') && (
-                <Popconfirm
-                  title="你确定要删除这个备份吗？"
-                  onConfirm={() => onDelete(rec)}
-                  okText="删除"
-                  cancelText="取消"
-                >
-                  <a>删除</a>
-                </Popconfirm>
-              )}
-            </Space>
-          ),
+              )} */}
+            {(rec.status === 'success' || rec.status === 'fail') && (
+              <Popconfirm
+                title="你确定要删除这个备份吗？"
+                onConfirm={() => onDelete(rec)}
+                okText="删除"
+                cancelText="取消"
+              >
+                <a>删除</a>
+              </Popconfirm>
+            )}
+          </Space>
+        ),
       },
     ]
   }, [onDelete])
@@ -170,17 +172,9 @@ function ClusterBackupPage() {
     }
   }
 
-  // async function onDelete(item: IBackupModel) {
-  //   try {
-  //     await deleteBackup(clusterName, item.ID)
-  //   } finally {
-  //     queryBackupList()
-  //   }
+  // async function onRestore(item: IBackupModel) {
+  //   // todo
   // }
-
-  async function onRestore(item: IBackupModel) {
-    // todo
-  }
 
   async function updateBackuptime() {
     if (nextBackup === undefined) {

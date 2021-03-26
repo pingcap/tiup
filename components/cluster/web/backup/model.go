@@ -2,6 +2,7 @@ package backup
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"path"
 	"strings"
@@ -45,7 +46,15 @@ func backupList(db *gorm.DB, clusterName string) []model {
 }
 
 func deleteBackup(db *gorm.DB, id string) {
-	db.Delete(&model{}, id)
+	// db.Delete(&model{}, id)
+
+	var item model
+	db.First(&item, id)
+	if item.ID > 0 {
+		db.Delete(&item)
+		// remove folders
+		_ = os.RemoveAll(path.Join(item.Folder, item.SubFolder))
+	}
 }
 
 func disableAutoBackup(db *gorm.DB, clusterName string) {
@@ -65,7 +74,7 @@ func createNextBackupRecord(db *gorm.DB, dayMinutes int, folder string, clusterN
 	planTime := time.Date(now.Year(), now.Month(), now.Day(), targetHour, targetMinute, 0, 0, time.Local)
 	nowHour, nowMinute, _ := now.Clock()
 	if (nowHour*60+nowMinute) > dayMinutes || forceNextDay {
-		planTime = planTime.AddDate(0, 0, 1) // tommorrow
+		planTime = planTime.AddDate(0, 0, 1) // tomorrow
 	}
 	subFolderName := clusterName + "/" + planTime.Format(timeLayout)
 
