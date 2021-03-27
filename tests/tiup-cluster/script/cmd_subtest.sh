@@ -109,10 +109,11 @@ function cmd_subtest() {
     echo "$display_result" | grep "Cluster version"
     echo "$display_result" | grep "Dashboard URL"
     echo "$display_result" | grep "Total nodes"
-    echo "$display_result" | grep "Since"
+    echo "$display_result" | grep -v "Since"
 
     # display with --uptime should show process uptime
-    tiup-cluster $client display $name --uptime
+    display_result=`tiup-cluster $client display $name --uptime`
+    echo "$display_result" | grep "Since"
 
     # Test rename
     tiup-cluster $client rename $name "tmp-cluster-name"

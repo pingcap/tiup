@@ -89,23 +89,28 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	}
 
 	// display topology
-	clusterTable := [][]string{
-		// Header
-		{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Since", "Data Dir", "Deploy Dir"},
+	var clusterTable [][]string
+	if opt.ShowUptime {
+		clusterTable = append(clusterTable, []string{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Since", "Data Dir", "Deploy Dir"})
+	} else {
+		clusterTable = append(clusterTable, []string{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Data Dir", "Deploy Dir"})
 	}
+
 	masterActive := make([]string, 0)
 	for _, v := range clusterInstInfos {
-		clusterTable = append(clusterTable, []string{
+		row := []string{
 			color.CyanString(v.ID),
 			v.Role,
 			v.Host,
 			v.Ports,
 			v.OsArch,
 			formatInstanceStatus(v.Status),
-			v.Since,
-			v.DataDir,
-			v.DeployDir,
-		})
+		}
+		if opt.ShowUptime {
+			row = append(row, v.Since)
+		}
+		row = append(row, v.DataDir, v.DeployDir)
+		clusterTable = append(clusterTable, row)
 
 		if v.ComponentName != spec.ComponentPD && v.ComponentName != spec.ComponentDMMaster {
 			continue
