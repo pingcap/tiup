@@ -35,7 +35,7 @@ const (
 
 var (
 	globalOptionTypeName  = reflect.TypeOf(GlobalOptions{}).Name()
-	monitorOptionTypeName = reflect.TypeOf(&MonitoredOptions{}).Name()
+	monitorOptionTypeName = reflect.TypeOf(MonitoredOptions{}).Name()
 	serverConfigsTypeName = reflect.TypeOf(DMServerConfigs{}).Name()
 )
 
@@ -60,6 +60,12 @@ func findField(v reflect.Value, fieldName string) (int, bool) {
 
 // Skip global/monitored/job options
 func isSkipField(field reflect.Value) bool {
+	if field.Kind() == reflect.Ptr {
+		if field.IsZero() {
+			return true
+		}
+		field = field.Elem()
+	}
 	tp := field.Type().Name()
 	return tp == globalOptionTypeName || tp == monitorOptionTypeName || tp == serverConfigsTypeName
 }
@@ -408,6 +414,10 @@ func (s *Specification) portConflictsDetect() error {
 		"BlackboxExporterPort",
 	}
 	monitoredOpt := topoSpec.FieldByName(monitorOptionTypeName)
+	if monitoredOpt.IsZero() {
+		return nil
+	}
+	monitoredOpt = monitoredOpt.Elem()
 	for host := range uniqueHosts {
 		cfg := "monitored"
 		for _, portType := range monitoredPortTypes {
