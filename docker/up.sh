@@ -179,7 +179,7 @@ exists pip ||
 exists j2 ||
     {
         INFO "Install j2cli from https://github.com/kolypto/j2cli";
-        pip install -y j2cli || exit 1;
+        pip install j2cli || exit 1;
     }
 
 exist_network=$(docker network ls | awk '{if($2 == "tiops") print $1}')
