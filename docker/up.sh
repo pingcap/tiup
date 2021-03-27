@@ -173,11 +173,13 @@ exists docker-compose ||
 
 exists pip ||
     {
+        INFO "Install pip from https://bootstrap.pypa.io/get-pip.py";
         curl -sSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py || exit 1;
     }
 exists j2 ||
     {
-        pip install -y j2 || exit 1;
+        INFO "Install j2cli from https://github.com/kolypto/j2cli";
+        pip install -y j2cli || exit 1;
     }
 
 exist_network=$(docker network ls | awk '{if($2 == "tiops") print $1}')
