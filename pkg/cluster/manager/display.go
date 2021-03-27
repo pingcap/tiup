@@ -265,10 +265,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 					}
 				}
 				if opt.ShowUptime && since == "-" {
-					if parts := strings.Split(strings.TrimSpace(active), ";"); len(parts) > 1 {
-						since = strings.ReplaceAll(parts[1], " ago", "")
-						since = strings.TrimSpace(strings.ReplaceAll(since, " ", ""))
-					}
+					since = formatInstanceSince(parseSystemctlSince(active))
 				}
 			}
 		}
@@ -342,6 +339,7 @@ func formatInstanceSince(uptime time.Duration) string {
 	d := int64(uptime.Hours() / 24)
 	h := int64(math.Mod(uptime.Hours(), 24))
 	m := int64(math.Mod(uptime.Minutes(), 60))
+	s := int64(math.Mod(uptime.Seconds(), 60))
 
 	chunks := []struct {
 		unit  string
@@ -350,6 +348,7 @@ func formatInstanceSince(uptime time.Duration) string {
 		{"d", d},
 		{"h", h},
 		{"m", m},
+		{"s", s},
 	}
 
 	parts := []string{}
@@ -364,6 +363,37 @@ func formatInstanceSince(uptime time.Duration) string {
 	}
 
 	return strings.Join(parts, "")
+}
+
+// `systemctl status xxx.service` returns as below
+// Active: active (running) since Sat 2021-03-27 10:51:11 CST; 41min ago
+func parseSystemctlSince(str string) (dur time.Duration) {
+	// if service is not found or other error, don't need to parse it
+	if str == "" {
+		return 0
+	}
+	defer func() {
+		if dur == 0 {
+			log.Warnf("failed to parse systemctl since '%s'", str)
+		}
+	}()
+	parts := strings.Split(str, ";")
+	if len(parts) != 2 {
+		return
+	}
+	parts = strings.Split(parts[0], " ")
+	if len(parts) < 3 {
+		return
+	}
+
+	dateStr := strings.Join(parts[len(parts)-3:], " ")
+
+	tm, err := time.Parse("2006-01-02 15:04:05 MST", dateStr)
+	if err != nil {
+		return
+	}
+
+	return time.Since(tm)
 }
 
 // SetSSHKeySet set ssh key set.
