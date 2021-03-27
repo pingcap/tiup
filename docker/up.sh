@@ -176,11 +176,7 @@ exists pip ||
         INFO "Install pip from https://bootstrap.pypa.io/get-pip.py";
         curl -sSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py || exit 1;
     }
-exists j2 ||
-    {
-        INFO "Install j2cli from https://github.com/kolypto/j2cli";
-        pip install j2cli || exit 1;
-    }
+pip install -U jinja2
 
 exist_network=$(docker network ls | awk '{if($2 == "tiops") print $1}')
 if [[ "$exist_network" == "" ]]; then
@@ -196,7 +192,7 @@ else
     ipprefix=${SUBNET%.*}
 fi
 
-echo "{\"nodes\":$NODES, \"ipprefix\":\"$ipprefix\"}" | j2 -f json docker-compose.yml.tpl -o docker-compose.yml
+python -c "from jinja2 import Template; print(Template(open('docker-compose.yml.tpl').read()).render(nodes=$NODES, ipprefix='$ipprefix'))" > docker-compose.yml
 sed "s/__IPPREFIX__/$ipprefix/g" docker-compose.dm.yml.tpl > docker-compose.dm.yml
 sed -i '/TIUP_TEST_IP_PREFIX/d' ./secret/control.env
 echo "TIUP_TEST_IP_PREFIX=$ipprefix" >> ./secret/control.env
