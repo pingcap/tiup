@@ -29,14 +29,6 @@ tikv_servers:
   - host: n4
   - host: n5
 
-# tiflash eat too much memory
-# and binary is more than 1G..
-tiflash_servers:
-  - host: n3
-    data_dir: "data1,/data/tiflash-data"
-#   - host: n4
-#   - host: n5
-
 pump_servers:
   - host: n3
   - host: n4
@@ -69,7 +61,3 @@ grafana_servers:
 alertmanager_servers:
   - host: n1
     config_file: /tmp/local/alertmanager/alertmanager.yml
-
-monitored:
-  node_exporter_port: 9100
-  blackbox_exporter_port: 9115
