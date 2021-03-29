@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -97,12 +98,10 @@ func (c *PumpComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
-				scheme := "http"
-				if tlsCfg != nil {
-					scheme = "https"
-				}
-				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
-				return statusByURL(url, tlsCfg)
+				return statusByHost(s.Host, s.Port, "/status", tlsCfg)
+			},
+			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+				return UptimeByHost(s.Host, s.Port, tlsCfg)
 			},
 		}, c.Topology})
 	}

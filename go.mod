@@ -46,6 +46,7 @@ require (
 	github.com/pingcap/log v0.0.0-20201112100606-8f1e84a3abc8 // indirect
 	github.com/pingcap/tidb-insight v0.3.2
 	github.com/prometheus/client_model v0.2.0
+	github.com/prometheus/common v0.15.0
 	github.com/prometheus/prom2json v1.3.0
 	github.com/r3labs/diff/v2 v2.12.0
 	github.com/relex/aini v1.2.1

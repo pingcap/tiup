@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -44,6 +45,7 @@ type InstInfo struct {
 	Ports     string `json:"ports"`
 	OsArch    string `json:"os_arch"`
 	Status    string `json:"status"`
+	Since     string `json:"since"`
 	DataDir   string `json:"data_dir"`
 	DeployDir string `json:"deploy_dir"`
 
@@ -87,22 +89,28 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	}
 
 	// display topology
-	clusterTable := [][]string{
-		// Header
-		{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Data Dir", "Deploy Dir"},
+	var clusterTable [][]string
+	if opt.ShowUptime {
+		clusterTable = append(clusterTable, []string{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Since", "Data Dir", "Deploy Dir"})
+	} else {
+		clusterTable = append(clusterTable, []string{"ID", "Role", "Host", "Ports", "OS/Arch", "Status", "Data Dir", "Deploy Dir"})
 	}
+
 	masterActive := make([]string, 0)
 	for _, v := range clusterInstInfos {
-		clusterTable = append(clusterTable, []string{
+		row := []string{
 			color.CyanString(v.ID),
 			v.Role,
 			v.Host,
 			v.Ports,
 			v.OsArch,
 			formatInstanceStatus(v.Status),
-			v.DataDir,
-			v.DeployDir,
-		})
+		}
+		if opt.ShowUptime {
+			row = append(row, v.Since)
+		}
+		row = append(row, v.DataDir, v.DeployDir)
+		clusterTable = append(clusterTable, row)
 
 		if v.ComponentName != spec.ComponentPD && v.ComponentName != spec.ComponentDMMaster {
 			continue
@@ -237,17 +245,27 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 			status = ins.Status(tlsCfg, masterActive...)
 		}
 
-		// Query the service status
-		if status == "-" {
+		since := "-"
+		if opt.ShowUptime {
+			since = formatInstanceSince(ins.Uptime(tlsCfg))
+		}
+
+		// Query the service status and uptime
+		if status == "-" || (opt.ShowUptime && since == "-") {
 			e, found := ctxt.GetInner(ctx).GetExecutor(ins.GetHost())
 			if found {
 				active, _ := operator.GetServiceStatus(ctx, e, ins.ServiceName())
-				if parts := strings.Split(strings.TrimSpace(active), " "); len(parts) > 2 {
-					if parts[1] == "active" {
-						status = "Up"
-					} else {
-						status = parts[1]
+				if status == "-" {
+					if parts := strings.Split(strings.TrimSpace(active), " "); len(parts) > 2 {
+						if parts[1] == "active" {
+							status = "Up"
+						} else {
+							status = parts[1]
+						}
 					}
+				}
+				if opt.ShowUptime && since == "-" {
+					since = formatInstanceSince(parseSystemctlSince(active))
 				}
 			}
 		}
@@ -268,6 +286,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 			DeployDir:     deployDir,
 			ComponentName: ins.ComponentName(),
 			Port:          ins.GetPort(),
+			Since:         since,
 		})
 	})
 
@@ -303,13 +322,78 @@ func formatInstanceStatus(status string) string {
 		return color.HiGreenString(status)
 	case startsWith("up", "healthy", "free"):
 		return color.GreenString(status)
-	case startsWith("down", "err"): // down, down|ui
+	case startsWith("down", "err", "inactive"): // down, down|ui
 		return color.RedString(status)
 	case startsWith("tombstone", "disconnected", "n/a"), strings.Contains(status, "offline"):
 		return color.YellowString(status)
 	default:
 		return status
 	}
+}
+
+func formatInstanceSince(uptime time.Duration) string {
+	if uptime == 0 {
+		return "-"
+	}
+
+	d := int64(uptime.Hours() / 24)
+	h := int64(math.Mod(uptime.Hours(), 24))
+	m := int64(math.Mod(uptime.Minutes(), 60))
+	s := int64(math.Mod(uptime.Seconds(), 60))
+
+	chunks := []struct {
+		unit  string
+		value int64
+	}{
+		{"d", d},
+		{"h", h},
+		{"m", m},
+		{"s", s},
+	}
+
+	parts := []string{}
+
+	for _, chunk := range chunks {
+		switch chunk.value {
+		case 0:
+			continue
+		default:
+			parts = append(parts, fmt.Sprintf("%d%s", chunk.value, chunk.unit))
+		}
+	}
+
+	return strings.Join(parts, "")
+}
+
+// `systemctl status xxx.service` returns as below
+// Active: active (running) since Sat 2021-03-27 10:51:11 CST; 41min ago
+func parseSystemctlSince(str string) (dur time.Duration) {
+	// if service is not found or other error, don't need to parse it
+	if str == "" {
+		return 0
+	}
+	defer func() {
+		if dur == 0 {
+			log.Warnf("failed to parse systemctl since '%s'", str)
+		}
+	}()
+	parts := strings.Split(str, ";")
+	if len(parts) != 2 {
+		return
+	}
+	parts = strings.Split(parts[0], " ")
+	if len(parts) < 3 {
+		return
+	}
+
+	dateStr := strings.Join(parts[len(parts)-3:], " ")
+
+	tm, err := time.Parse("2006-01-02 15:04:05 MST", dateStr)
+	if err != nil {
+		return
+	}
+
+	return time.Since(tm)
 }
 
 // SetSSHKeySet set ssh key set.

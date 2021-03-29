@@ -15,9 +15,11 @@ package spec
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
@@ -88,6 +90,9 @@ func (c *DMMasterComponent) Instances() []Instance {
 					s.DataDir,
 				},
 				StatusFn: s.Status,
+				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+					return spec.UptimeByHost(s.Host, s.Port, tlsCfg)
+				},
 			},
 			topo: c.Topology,
 		})
@@ -216,6 +221,9 @@ func (c *DMWorkerComponent) Instances() []Instance {
 					s.DataDir,
 				},
 				StatusFn: s.Status,
+				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+					return spec.UptimeByHost(s.Host, s.Port, tlsCfg)
+				},
 			},
 			topo: c.Topology,
 		})
