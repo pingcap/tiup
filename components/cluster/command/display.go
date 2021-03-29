@@ -80,6 +80,7 @@ func newDisplayCmd() *cobra.Command {
 
 	cmd.Flags().StringSliceVarP(&gOpt.Roles, "role", "R", nil, "Only display specified roles")
 	cmd.Flags().StringSliceVarP(&gOpt.Nodes, "node", "N", nil, "Only display specified nodes")
+	cmd.Flags().BoolVar(&gOpt.ShowUptime, "uptime", false, "Display with uptime")
 	cmd.Flags().BoolVar(&showDashboardOnly, "dashboard", false, "Only display TiDB Dashboard information")
 	cmd.Flags().BoolVar(&showVersionOnly, "version", false, "Only display TiDB cluster version")
 

@@ -8,7 +8,9 @@ func DMComponentVersion(comp, version string) string {
 	switch comp {
 	case spec.ComponentAlertmanager,
 		spec.ComponentGrafana,
-		spec.ComponentPrometheus:
+		spec.ComponentPrometheus,
+		spec.ComponentBlackboxExporter,
+		spec.ComponentNodeExporter:
 		return ""
 	default:
 		return version

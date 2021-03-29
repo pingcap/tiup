@@ -85,6 +85,7 @@ tidy:
 clean:
 	@rm -rf bin
 	@rm -rf cover
+	@rm -rf tests/*/{bin/*.test,logs,cover/*.out}
 
 test: failpoint-enable run-tests failpoint-disable
 

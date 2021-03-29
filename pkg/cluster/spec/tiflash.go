@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
@@ -224,6 +225,9 @@ func (c *TiFlashComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: s.Status,
+			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+				return 0
+			},
 		}, c.Topology})
 	}
 	return ins
@@ -526,7 +530,7 @@ func (i *TiFlashInstance) InitConfig(
 	}
 	tidbStatusStr := strings.Join(tidbStatusAddrs, ",")
 
-	pdStr := strings.Join(i.getEndpoints(), ",")
+	pdStr := strings.Join(i.getEndpoints(i.topo), ",")
 
 	cfg := scripts.NewTiFlashScript(
 		i.GetHost(),
@@ -652,25 +656,37 @@ type replicateConfig struct {
 	EnablePlacementRules string `json:"enable-placement-rules"`
 }
 
-func (i *TiFlashInstance) getEndpoints() []string {
+func (i *TiFlashInstance) getEndpoints(topo Topology) []string {
 	var endpoints []string
-	for _, pd := range i.topo.(*Specification).PDServers {
+	for _, pd := range topo.(*Specification).PDServers {
 		endpoints = append(endpoints, fmt.Sprintf("%s:%d", pd.Host, uint64(pd.ClientPort)))
 	}
 	return endpoints
 }
 
 // PrepareStart checks TiFlash requirements before starting
-func (i *TiFlashInstance) PrepareStart(tlsCfg *tls.Config) error {
-	endPoints := i.getEndpoints()
+func (i *TiFlashInstance) PrepareStart(ctx context.Context, tlsCfg *tls.Config) error {
 	// set enable-placement-rules to true via PDClient
-	pdClient := api.NewPDClient(endPoints, 10*time.Second, tlsCfg)
 	enablePlacementRules, err := json.Marshal(replicateConfig{
 		EnablePlacementRules: "true",
 	})
+	// this should not failed, else exit
 	if err != nil {
-		return nil
+		return perrs.Annotate(err, "failed to marshal replicate config")
 	}
 
+	var topo Topology
+	if topoVal := ctx.Value(ctxt.CtxBaseTopo); topoVal != nil { // in scale-out phase
+		var ok bool
+		topo, ok = topoVal.(Topology)
+		if !ok {
+			return perrs.New("base topology in context is invalid")
+		}
+	} else { // in start phase
+		topo = i.topo
+	}
+
+	endpoints := i.getEndpoints(topo)
+	pdClient := api.NewPDClient(endpoints, 10*time.Second, tlsCfg)
 	return pdClient.UpdateReplicateConfig(bytes.NewBuffer(enablePlacementRules))
 }
