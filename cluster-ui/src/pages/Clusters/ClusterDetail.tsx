@@ -173,8 +173,12 @@ function ClusterDetailPage() {
     navigate(`/clusters/${clusterName}/backup`)
   }
 
-  function handleCheckCluster() {
-    checkCluster(clusterName)
+  function handleCheckCluster(upgrade: boolean) {
+    if (upgrade) {
+      checkCluster(clusterName, 'upgrade')
+    } else {
+      checkCluster(clusterName, 'downgrade')
+    }
     navigate('/status')
   }
 
@@ -185,7 +189,18 @@ function ClusterDetailPage() {
       content: '升级前先执行环境检查',
       okText: '开始',
       cancelText: '取消',
-      onOk: () => handleCheckCluster(),
+      onOk: () => handleCheckCluster(true),
+    })
+  }
+
+  function handleDowngradeCluster() {
+    Modal.confirm({
+      title: `降级 ${cluster?.name} 集群`,
+      icon: <ExclamationCircleOutlined />,
+      content: '降级前先执行环境检查',
+      okText: '开始',
+      cancelText: '取消',
+      onOk: () => handleCheckCluster(false),
     })
   }
 
@@ -245,6 +260,7 @@ function ClusterDetailPage() {
           </Popconfirm>
           <Button onClick={handleScaleOutCluster}>扩容</Button>
           <Button onClick={handleUpgradeCluster}>升级</Button>
+          <Button onClick={handleDowngradeCluster}>降级</Button>
           <Button onClick={handleBackupCluster}>备份</Button>
           <Divider type="vertical" />
           <Button onClick={() => handleOpenDashboard('configuration')}>

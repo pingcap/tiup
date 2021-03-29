@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -96,6 +97,7 @@ func Run(_tidbSpec *spec.SpecManager, _manager *manager.Manager, _gOpt operator.
 		api.POST("/clusters/:clusterName/check", checkClusterHandler)
 		api.GET("/clusters/:clusterName/check_result", checkResultHandler)
 		api.POST("/clusters/:clusterName/upgrade", upgradeClusterHandler)
+		api.POST("/clusters/:clusterName/downgrade", downgradeClusterHandler)
 
 		api.GET("/mirror", mirrorHandler)
 		api.POST("/mirror", setMirrorHandler)
@@ -264,6 +266,14 @@ func stopClusterHandler(c *gin.Context) {
 
 func checkClusterHandler(c *gin.Context) {
 	clusterName := c.Param("clusterName")
+	checkType := c.Query("type")
+	if checkType == "" {
+		checkType = "upgrade"
+	}
+	if checkType != "upgrade" && checkType != "downgrade" {
+		_ = c.Error(errors.New("request parameters are not correct"))
+		return
+	}
 
 	// audit
 	logger.AddCustomAuditLog(fmt.Sprintf("[web] check %s", clusterName))
@@ -273,7 +283,7 @@ func checkClusterHandler(c *gin.Context) {
 			Opr:          &operator.CheckOptions{},
 			ExistCluster: true,
 		}
-		cm.DoCheckCluster(clusterName, opt, gOpt)
+		cm.DoCheckCluster(clusterName, checkType == "upgrade", opt, gOpt)
 	}()
 
 	c.Status(http.StatusNoContent)
@@ -420,17 +430,16 @@ func scaleOutClusterHandler(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// upgrade
-
-// UpgradeReq represents the request for upgrade a cluster
-type UpgradeReq struct {
-	TargetVersion string `json:"target_version"`
+// UpOrDowngradeReq represents the request for upgrade or downgrade a cluster
+type UpOrDowngradeReq struct {
+	TargetVersion  string `json:"target_version"`
+	SiblingVersion string `json:"sibling_version"`
 }
 
 func upgradeClusterHandler(c *gin.Context) {
 	clusterName := c.Param("clusterName")
 
-	var req UpgradeReq
+	var req UpOrDowngradeReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		_ = c.Error(err)
 		return
@@ -443,6 +452,34 @@ func upgradeClusterHandler(c *gin.Context) {
 		cm.DoUpgrade(
 			clusterName,
 			req.TargetVersion,
+			gOpt,
+		)
+	}()
+
+	c.Status(http.StatusNoContent)
+}
+
+func downgradeClusterHandler(c *gin.Context) {
+	clusterName := c.Param("clusterName")
+
+	var req UpOrDowngradeReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		_ = c.Error(err)
+		return
+	}
+	if req.SiblingVersion == "" {
+		_ = c.Error(errors.New("sibling_version is empty"))
+		return
+	}
+
+	// audit
+	logger.AddCustomAuditLog(fmt.Sprintf("[web] downgrade %s", clusterName))
+
+	go func() {
+		cm.DoDowngrade(
+			clusterName,
+			req.TargetVersion,
+			req.SiblingVersion,
 			gOpt,
 		)
 	}()

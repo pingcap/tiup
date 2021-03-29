@@ -44,7 +44,9 @@ export default function StatusPage() {
           )}
           {operationStatus &&
             operationStatus.total_progress === 100 &&
-            operationStatus.operation_type === 'check' && <CheckResult />}
+            operationStatus.operation_type.startsWith('check') && (
+              <CheckResult />
+            )}
           {operationStatus &&
             (operationStatus.total_progress === 100 ||
               operationStatus.err_msg ||
@@ -55,12 +57,12 @@ export default function StatusPage() {
                     <Link to="/clusters">进入集群管理</Link>
                   )}
                   {operationStatus.operation_type !== 'destroy' &&
-                    operationStatus.operation_type !== 'check' && (
+                    !operationStatus.operation_type.startsWith('check') && (
                       <Link to={`/clusters/${operationStatus.cluster_name}`}>
                         进入集群管理
                       </Link>
                     )}
-                  {operationStatus.operation_type === 'check' && (
+                  {operationStatus.operation_type === 'check_upgrade' && (
                     <>
                       <Link to={`/clusters/${operationStatus.cluster_name}`}>
                         修复后再升级
@@ -69,6 +71,18 @@ export default function StatusPage() {
                         to={`/clusters/${operationStatus.cluster_name}/upgrade`}
                       >
                         继续升级
+                      </Link>
+                    </>
+                  )}
+                  {operationStatus.operation_type === 'check_downgrade' && (
+                    <>
+                      <Link to={`/clusters/${operationStatus.cluster_name}`}>
+                        修复后再降级
+                      </Link>
+                      <Link
+                        to={`/clusters/${operationStatus.cluster_name}/downgrade`}
+                      >
+                        继续降级
                       </Link>
                     </>
                   )}

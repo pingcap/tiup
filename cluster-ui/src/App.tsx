@@ -11,6 +11,7 @@ import ClusterScaleOutPage from '_pages/Clusters/ClusterScaleOut'
 import DashboardPortalPage from '_pages/Clusters/DashboardPortal'
 import SettingPage from '_pages/Setting'
 import ClusterUpgradePage from '_pages/Clusters/ClusterUpgrade'
+import ClusterDowngradePage from '_pages/Clusters/ClusterDowngrade'
 import ClusterBackupPage from '_pages/Clusters/ClusterBackup'
 import AuditPage from '_pages/Audit'
 
@@ -37,6 +38,10 @@ function App() {
             <Route
               path=":clusterName/upgrade"
               element={<ClusterUpgradePage />}
+            />
+            <Route
+              path=":clusterName/downgrade"
+              element={<ClusterDowngradePage />}
             />
             <Route path=":clusterName/backup" element={<ClusterBackupPage />} />
           </Route>

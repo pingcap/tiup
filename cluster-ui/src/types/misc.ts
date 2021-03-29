@@ -5,7 +5,10 @@ export type OperationType =
   | 'scaleIn'
   | 'scaleOut'
   | 'destroy'
-  | 'check'
+  | 'check_upgrade'
+  | 'check_downgrade'
+  | 'upgrade'
+  | 'downgrade'
 
 export interface IOperationStatus {
   operation_type: OperationType

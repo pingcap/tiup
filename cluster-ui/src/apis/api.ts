@@ -57,8 +57,11 @@ export function scaleOutCluster(clusterName: string, scaleOutOpts: any) {
   )
 }
 
-export function checkCluster(clusterName: string) {
-  return request(fullUrl(`clusters/${clusterName}/check`), 'POST')
+export function checkCluster(
+  clusterName: string,
+  type: 'upgrade' | 'downgrade'
+) {
+  return request(fullUrl(`clusters/${clusterName}/check?type=${type}`), 'POST')
 }
 
 export function getCheckClusterResult(clusterName: string) {
@@ -68,6 +71,17 @@ export function getCheckClusterResult(clusterName: string) {
 export function upgradeCluster(clusterName: string, targetVersion: string) {
   return request(fullUrl(`clusters/${clusterName}/upgrade`), 'POST', {
     target_version: targetVersion,
+  })
+}
+
+export function downgradeCluster(
+  clusterName: string,
+  targetVersion: string,
+  siblingVersion: string
+) {
+  return request(fullUrl(`clusters/${clusterName}/downgrade`), 'POST', {
+    target_version: targetVersion,
+    sibling_version: siblingVersion,
   })
 }
 

@@ -29,14 +29,16 @@ var (
 type OperationType string
 
 const (
-	operationDeploy   OperationType = "deploy"
-	operationStart    OperationType = "start"
-	operationStop     OperationType = "stop"
-	operationScaleIn  OperationType = "scaleIn"
-	operationScaleOut OperationType = "scaleOut"
-	operationDestroy  OperationType = "destroy"
-	operationCheck    OperationType = "check"
-	operationUpgrade  OperationType = "upgrade"
+	operationDeploy         OperationType = "deploy"
+	operationStart          OperationType = "start"
+	operationStop           OperationType = "stop"
+	operationScaleIn        OperationType = "scaleIn"
+	operationScaleOut       OperationType = "scaleOut"
+	operationDestroy        OperationType = "destroy"
+	operationCheckUpgrade   OperationType = "check_upgrade"
+	operationCheckDowngrade OperationType = "check_downgrade"
+	operationUpgrade        OperationType = "upgrade"
+	operationDowngrade      OperationType = "downgrade"
 )
 
 // OperationInfo records latest operation task and related info
@@ -102,8 +104,14 @@ func (m *Manager) DoStopCluster(clusterName string, options operator.Options) {
 }
 
 // DoCheckCluster check the cluster.
-func (m *Manager) DoCheckCluster(clusterName string, options CheckOptions, gOpt operator.Options) {
-	operationInfo = OperationInfo{operationType: operationCheck, clusterName: clusterName}
+func (m *Manager) DoCheckCluster(clusterName string, upgrade bool, options CheckOptions, gOpt operator.Options) {
+	var operationType OperationType
+	if upgrade {
+		operationType = operationCheckUpgrade
+	} else {
+		operationType = operationCheckDowngrade
+	}
+	operationInfo = OperationInfo{operationType: operationType, clusterName: clusterName}
 	operationInfo.err = m.CheckCluster(clusterName, options, gOpt)
 }
 
@@ -191,5 +199,48 @@ func (m *Manager) DoUpgrade(
 		gOpt,
 		true,
 		false,
+		false,
 	)
+}
+
+// DoDowngrade upgrade a cluster
+func (m *Manager) DoDowngrade(
+	clusterName string,
+	targetVersion string,
+	siblingVersion string,
+	gOpt operator.Options,
+) {
+	operationInfo = OperationInfo{operationType: operationDowngrade, clusterName: clusterName}
+
+	metadata, err := m.meta(clusterName)
+	if err != nil {
+		operationInfo.err = err
+		return
+	}
+	originalVersion := metadata.GetBaseMeta().Version
+
+	// hack, modify the version of the meta first
+	metadata.SetVersion(siblingVersion)
+	err = m.specManager.SaveMeta(clusterName, metadata)
+	if err != nil {
+		operationInfo.err = err
+		return
+	}
+
+	// use Upgrade to mock downgrade
+	operationInfo.err = m.Upgrade(
+		clusterName,
+		targetVersion,
+		gOpt,
+		true,
+		false,
+		true,
+	)
+
+	// if fail, recover the original version
+	if operationInfo.err != nil {
+		metadata, _ = m.meta(clusterName)
+		metadata.SetVersion(originalVersion)
+		_ = m.specManager.SaveMeta(clusterName, metadata)
+	}
 }
