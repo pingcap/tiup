@@ -16,6 +16,8 @@ mkdir -p ~/.tiup/bin && cp -f ./root.json ~/.tiup/bin/
 
 tiup-dm --yes deploy $name $version $topo -i ~/.ssh/id_rsa
 
+# topology doesn't contains the section `monitored` will not deploy node_exporter, blackbox_exporter
+! tiup-dm exec $name -N $ipprefix.101 --command "ls /etc/systemd/system/{node,blackbox}_exporter-*.service"
 tiup-dm list | grep "$name"
 
 # debug https://github.com/pingcap/tiup/issues/666
@@ -115,3 +117,14 @@ tiup-dm --yes destroy $name
 # after destroy the cluster, the public key should be deleted
 ! ssh -o "StrictHostKeyChecking=no" -o "PasswordAuthentication=no" -i "/tmp/$name.id_rsa" tidb@$ipprefix.102 "ls"
 unlink "/tmp/$name.id_rsa"
+
+topo=./topo/full_dm_monitored.yaml
+
+ipprefix=${TIUP_TEST_IP_PREFIX:-"172.19.0"}
+sed "s/__IPPREFIX__/$ipprefix/g" $topo.tpl > $topo
+tiup-dm --yes deploy $name $version $topo -i ~/.ssh/id_rsa
+
+# topology contains the section `monitored` will deploy node_exporter, blackbox_exporter
+tiup-dm exec $name -N $ipprefix.101 --command "ls /etc/systemd/system/{node,blackbox}_exporter-*.service"
+
+tiup-dm --yes destroy $name

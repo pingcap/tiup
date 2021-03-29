@@ -14,7 +14,7 @@ rule_files:
   - '{{.}}'
 {{- end}}
 {{- else}}
-{{- if .MonitoredServers}}
+{{- if and .MonitoredServers .PDAddrs}}
   - 'node.rules.yml'
   - 'blacker.rules.yml'
   - 'bypass.rules.yml'
