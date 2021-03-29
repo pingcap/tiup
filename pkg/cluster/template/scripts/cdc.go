@@ -24,15 +24,16 @@ import (
 
 // CDCScript represent the data to generate cdc config
 type CDCScript struct {
-	IP         string
-	Port       int
-	DeployDir  string
-	LogDir     string
-	NumaNode   string
-	GCTTL      int64
-	TZ         string
-	TLSEnabled bool
-	Endpoints  []*PDScript
+	IP                string
+	Port              int
+	DeployDir         string
+	LogDir            string
+	NumaNode          string
+	GCTTL             int64
+	TZ                string
+	TLSEnabled        bool
+	Endpoints         []*PDScript
+	ConfigFileEnabled bool
 }
 
 // NewCDCScript returns a CDCScript with given arguments
@@ -48,15 +49,21 @@ func NewCDCScript(ip, deployDir, logDir string, enableTLS bool, gcTTL int64, tz 
 	}
 }
 
-// WithPort set Port field of TiKVScript
+// WithPort set Port field of TiCDCScript
 func (c *CDCScript) WithPort(port int) *CDCScript {
 	c.Port = port
 	return c
 }
 
-// WithNumaNode set NumaNode field of TiKVScript
+// WithNumaNode set NumaNode field of TiCDCScript
 func (c *CDCScript) WithNumaNode(numa string) *CDCScript {
 	c.NumaNode = numa
+	return c
+}
+
+// WitWithConfigFileEnabled enables config file
+func (c *CDCScript) WithConfigFileEnabled() *CDCScript {
+	c.ConfigFileEnabled = true
 	return c
 }
 
