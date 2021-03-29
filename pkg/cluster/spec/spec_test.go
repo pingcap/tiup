@@ -684,6 +684,59 @@ tiflash_servers:
 	}
 }
 
+func (s *metaSuiteTopo) TestTiFlashUsersSettings(c *C) {
+	spec := &Specification{}
+	err := yaml.Unmarshal([]byte(`
+tiflash_servers:
+  - host: 172.16.5.138
+    data_dir: /ssd0/tiflash
+`), spec)
+	c.Assert(err, IsNil)
+
+	flashComp := FindComponent(spec, ComponentTiFlash)
+	instances := flashComp.Instances()
+	c.Assert(len(instances), Equals, 1)
+
+	// parse using clusterVersion<"v4.0.12" || == "5.0.0-rc"
+	checkBackwardCompatibility := func(ver string) {
+		ins := instances[0].(*TiFlashInstance)
+		dataDir := "/ssd0/tiflash"
+		cfg := scripts.NewTiFlashScript(ins.GetHost(), "", dataDir, "", "", "")
+		conf, err := ins.initTiFlashConfig(cfg, ver, spec.ServerConfigs.TiFlash)
+		c.Assert(err, IsNil)
+
+		// We need an empty string for 'users.default.password' for backward compatibility. Or the TiFlash process will fail to start with older versions
+		if usersSection, ok := conf["users"]; !ok {
+			c.Error("Can not get users section")
+		} else {
+			if defaultUser, ok := usersSection.(map[string]interface{})["default"]; !ok {
+				c.Error("Can not get default users section")
+			} else {
+				var password = defaultUser.(map[string]interface{})["password"]
+				c.Assert(password.(string), Equals, "")
+			}
+		}
+	}
+	checkBackwardCompatibility("v4.0.11")
+	checkBackwardCompatibility("v5.0.0-rc")
+
+	// parse using clusterVersion>="v4.0.12"
+	checkWithVersion := func(ver string) {
+		ins := instances[0].(*TiFlashInstance)
+		dataDir := "/ssd0/tiflash"
+		cfg := scripts.NewTiFlashScript(ins.GetHost(), "", dataDir, "", "", "")
+		conf, err := ins.initTiFlashConfig(cfg, ver, spec.ServerConfigs.TiFlash)
+		c.Assert(err, IsNil)
+
+		// Those deprecated settings are ignored in newer versions
+		_, ok := conf["users"]
+		c.Assert(ok, IsFalse)
+	}
+	checkWithVersion("v4.0.12")
+	checkWithVersion("v5.0.0")
+	checkWithVersion("nightly")
+}
+
 func (s *metaSuiteTopo) TestYAMLAnchor(c *C) {
 	topo := Specification{}
 	err := yaml.UnmarshalStrict([]byte(`
