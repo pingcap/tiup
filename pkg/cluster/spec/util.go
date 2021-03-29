@@ -14,14 +14,17 @@
 package spec
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
+	"github.com/prometheus/common/expfmt"
 	"go.etcd.io/etcd/pkg/transport"
 )
 
@@ -119,9 +122,18 @@ func LoadClientCert(dir string) (*tls.Config, error) {
 	}.ClientConfig()
 }
 
-// statusByURL queries current status of the instance by http status api.
-func statusByURL(url string, tlsCfg *tls.Config) string {
+// statusByHost queries current status of the instance by http status api.
+func statusByHost(host string, port int, path string, tlsCfg *tls.Config) string {
 	client := utils.NewHTTPClient(statusQueryTimeout, tlsCfg)
+
+	scheme := "http"
+	if tlsCfg != nil {
+		scheme = "https"
+	}
+	if path == "" {
+		path = "/"
+	}
+	url := fmt.Sprintf("%s://%s:%d%s", scheme, host, port, path)
 
 	// body doesn't have any status section needed
 	body, err := client.Get(url)
@@ -129,6 +141,43 @@ func statusByURL(url string, tlsCfg *tls.Config) string {
 		return "Down"
 	}
 	return "Up"
+}
+
+// UptimeByHost queries current uptime of the instance by http Prometheus metric api.
+func UptimeByHost(host string, port int, tlsCfg *tls.Config) time.Duration {
+	scheme := "http"
+	if tlsCfg != nil {
+		scheme = "https"
+	}
+	url := fmt.Sprintf("%s://%s:%d/metrics", scheme, host, port)
+
+	client := utils.NewHTTPClient(statusQueryTimeout, tlsCfg)
+
+	body, err := client.Get(url)
+	if err != nil || body == nil {
+		return 0
+	}
+
+	var parser expfmt.TextParser
+	reader := bytes.NewReader(body)
+	mf, err := parser.TextToMetricFamilies(reader)
+	if err != nil {
+		return 0
+	}
+
+	now := time.Now()
+	for k, v := range mf {
+		if k == promMetricStartTimeSeconds {
+			ms := v.GetMetric()
+			if len(ms) >= 1 {
+				startTime := ms[0].Gauge.GetValue()
+				return now.Sub(time.Unix(int64(startTime), 0))
+			}
+			return 0
+		}
+	}
+
+	return 0
 }
 
 // Abs returns the absolute path

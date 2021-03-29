@@ -95,6 +95,7 @@ type Instance interface {
 	UsedPorts() []int
 	UsedDirs() []string
 	Status(tlsCfg *tls.Config, pdList ...string) string
+	Uptime(tlsCfg *tls.Config) time.Duration
 	DataDir() string
 	LogDir() string
 	OS() string // only linux supported now
@@ -138,6 +139,7 @@ type BaseInstance struct {
 	Ports    []int
 	Dirs     []string
 	StatusFn func(tlsCfg *tls.Config, pdHosts ...string) string
+	UptimeFn func(tlsCfg *tls.Config) time.Duration
 }
 
 // Ready implements Instance interface
@@ -447,4 +449,9 @@ func (i *BaseInstance) UsedDirs() []string {
 // Status implements Instance interface
 func (i *BaseInstance) Status(tlsCfg *tls.Config, pdList ...string) string {
 	return i.StatusFn(tlsCfg, pdList...)
+}
+
+// Uptime implements Instance interface
+func (i *BaseInstance) Uptime(tlsCfg *tls.Config) time.Duration {
+	return i.UptimeFn(tlsCfg)
 }
