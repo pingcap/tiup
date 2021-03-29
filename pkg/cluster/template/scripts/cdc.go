@@ -61,7 +61,7 @@ func (c *CDCScript) WithNumaNode(numa string) *CDCScript {
 	return c
 }
 
-// WitWithConfigFileEnabled enables config file
+// WithConfigFileEnabled enables config file
 func (c *CDCScript) WithConfigFileEnabled() *CDCScript {
 	c.ConfigFileEnabled = true
 	return c
