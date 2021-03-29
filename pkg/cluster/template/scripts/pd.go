@@ -141,8 +141,8 @@ type PDScaleScript struct {
 }
 
 // NewPDScaleScript return a new PDScaleScript
-func NewPDScaleScript(name, ip, deployDir, dataDir, logDir string) *PDScaleScript {
-	return &PDScaleScript{*NewPDScript(name, ip, deployDir, dataDir, logDir)}
+func NewPDScaleScript(pdScript *PDScript) *PDScaleScript {
+	return &PDScaleScript{*pdScript}
 }
 
 // Config generate the config file data.
