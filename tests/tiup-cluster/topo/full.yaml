@@ -69,3 +69,7 @@ grafana_servers:
 alertmanager_servers:
   - host: n1
     config_file: /tmp/local/alertmanager/alertmanager.yml
+
+monitored:
+  node_exporter_port: 9100
+  blackbox_exporter_port: 9115

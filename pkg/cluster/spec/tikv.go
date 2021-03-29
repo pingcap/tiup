@@ -173,6 +173,9 @@ func (c *TiKVComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: s.Status,
+			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+				return UptimeByHost(s.Host, s.StatusPort, tlsCfg)
+			},
 		}, c.Topology})
 	}
 	return ins
