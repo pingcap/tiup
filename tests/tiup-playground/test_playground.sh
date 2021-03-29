@@ -52,6 +52,8 @@ function kill_all() {
 outfile=/tmp/tiup-playground-test.out
 tiup-playground v4.0.10 --tiflash 0 > $outfile 2>&1 &
 
+# wait $outfile generated
+sleep 3
 
 trap "kill_all > /dev/null 2>&1" EXIT
 
