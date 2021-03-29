@@ -131,6 +131,31 @@ func startBackup(db *gorm.DB, item model, cm *manager.Manager, gOpt operator.Opt
 	fmt.Println("backup folder:", fullPath)
 	time.Sleep(time.Second * 10)
 
+	// check cluster still exist
+	clusters, err := cm.GetClusterList()
+	if err != nil {
+		fmt.Println("back failed:", err)
+		item.Status = statusFail
+		item.Message = err.Error()
+		db.Save(&item)
+		return
+	}
+	var targetCluster *manager.Cluster = nil
+	for _, v := range clusters {
+		if v.Name == item.ClusterName {
+			targetCluster = &v
+			break
+		}
+	}
+	if targetCluster == nil {
+		fmt.Println("back failed:", "target cluster doesn't exist any more")
+		item.Status = statusFail
+		item.Message = "target cluster doesn't exist any more"
+		db.Save(&item)
+		disableAutoBackup(db, item.ClusterName)
+		return
+	}
+
 	// get pd
 	instInfos, err := cm.GetClusterTopology(item.ClusterName, gOpt)
 	if err != nil {
