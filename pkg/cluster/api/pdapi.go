@@ -87,6 +87,9 @@ var (
 )
 
 func tryURLs(endpoints []string, f func(endpoint string) ([]byte, error)) ([]byte, error) {
+	if len(endpoints) == 0 {
+		return nil, errors.New("no endpoint available")
+	}
 	var err error
 	var bytes []byte
 	for _, endpoint := range endpoints {

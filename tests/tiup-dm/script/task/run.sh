@@ -27,8 +27,8 @@ $ctl --master-addr n1:8261 start-task $wd/task.yaml
 sleep 10 # wait to replicate
 line=$(echo "select * from db_target.t_target" | mysql -h tidb1 -P 4000 | wc -l)
 if [ $line = 10 ];then
-	echo "replicate data success"
+    echo "replicate data success"
 else
-	echo "fail to replicate data, line is $line"
-	exit -1
+    echo "fail to replicate data, line is $line"
+    exit -1
 fi

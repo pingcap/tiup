@@ -521,3 +521,21 @@ worker_servers:
 		assert.Equal(t, "/my-global-deploy/dm-worker-8262/data", topo.Workers[4].DataDir)
 	})
 }
+
+func TestMonitorLogDir(t *testing.T) {
+	withTempFile(`
+monitored:
+  node_exporter_port: 39100
+  blackbox_exporter_port: 39115
+  deploy_dir: "test-deploy"
+  log_dir: "test-deploy/log"
+`, func(file string) {
+		topo := Specification{}
+		err := spec.ParseTopologyYaml(file, &topo)
+		assert.Nil(t, err)
+		assert.Equal(t, 39100, topo.MonitoredOptions.NodeExporterPort)
+		assert.Equal(t, 39115, topo.MonitoredOptions.BlackboxExporterPort)
+		assert.Equal(t, "test-deploy/log", topo.MonitoredOptions.LogDir)
+		assert.Equal(t, "test-deploy", topo.MonitoredOptions.DeployDir)
+	})
+}

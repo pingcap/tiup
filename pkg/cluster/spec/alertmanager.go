@@ -18,6 +18,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/config"
@@ -100,7 +101,10 @@ func (c *AlertManagerComponent) Instances() []Instance {
 					s.DataDir,
 				},
 				StatusFn: func(_ *tls.Config, _ ...string) string {
-					return "-"
+					return statusByHost(s.Host, s.WebPort, "/-/ready", nil)
+				},
+				UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+					return UptimeByHost(s.Host, s.WebPort, tlsCfg)
 				},
 			},
 			topo: c.Topology,
