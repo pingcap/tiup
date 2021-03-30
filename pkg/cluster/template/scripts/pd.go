@@ -149,3 +149,12 @@ func NewPDScaleScript(pdScript *PDScript) *PDScaleScript {
 func (c *PDScaleScript) Config() ([]byte, error) {
 	return c.configWithScript("run_pd_scale.sh.tpl")
 }
+
+// ConfigToFile write config content to specific path
+func (c *PDScaleScript) ConfigToFile(file string) error {
+	config, err := c.Config()
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(file, config, 0755)
+}
