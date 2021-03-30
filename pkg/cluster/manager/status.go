@@ -89,7 +89,7 @@ func (m *Manager) GetOperationExtra() interface{} {
 	return operationInfo.extra
 }
 
-////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////
 
 // DoStartCluster start the cluster with specified name.
 func (m *Manager) DoStartCluster(name string, options operator.Options, fn ...func(b *task.Builder, metadata spec.Metadata)) {

@@ -555,7 +555,7 @@ func auditLogListHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, auditLogList)
 }
 
-//////////////////////////////////////
+// ////////////////////////////////////
 // The following code are copied from command package to avoid cycle import
 
 func postDeployHook(builder *task.Builder, topo spec.Topology) {
@@ -583,7 +583,7 @@ func postScaleOutHook(builder *task.Builder, newPart spec.Topology) {
 	postDeployHook(builder, newPart)
 }
 
-//////////////////////////
+// ////////////////////////
 
 func test() {
 	// func Now() Time
