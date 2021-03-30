@@ -11,6 +11,7 @@ import {
   stopCluster,
   scaleInCluster,
   checkCluster,
+  getClusterList,
 } from '_apis'
 import { Root } from '_components'
 import { useComps } from '_hooks'
@@ -20,7 +21,18 @@ function ClusterDetailPage() {
   const refIframe = useRef<HTMLIFrameElement>(null)
 
   const navigate = useNavigate()
-  const [clustersList] = useSessionStorageState<ICluster[]>('clusters', [])
+  const [clustersList, setClustersList] = useSessionStorageState<ICluster[]>(
+    'clusters',
+    []
+  )
+  // to update the cluster version instanly after upgrading or downgrading
+  useEffect(() => {
+    getClusterList().then((res) => {
+      setClustersList(res.data || [])
+    })
+    // eslint-disable-next-line
+  }, [])
+
   const { clusterName } = useParams()
   const cluster = useMemo(
     () => clustersList.find((el) => el.name === clusterName),
