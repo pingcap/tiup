@@ -105,6 +105,11 @@ func (m *MonitoredConfig) syncMonitoredSystemConfig(ctx context.Context, exec ct
 		WithIOReadBandwidthMax(resource.IOReadBandwidthMax).
 		WithIOWriteBandwidthMax(resource.IOWriteBandwidthMax)
 
+	// blackbox_exporter needs cap_net_raw to send ICMP ping packets
+	if comp == spec.ComponentBlackboxExporter {
+		systemCfg.GrantCapNetRaw = true
+	}
+
 	if err := systemCfg.ConfigToFile(sysCfg); err != nil {
 		return err
 	}
