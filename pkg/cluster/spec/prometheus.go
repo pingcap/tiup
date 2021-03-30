@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -116,7 +117,10 @@ func (c *MonitorComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: func(_ *tls.Config, _ ...string) string {
-				return "-"
+				return statusByHost(s.Host, s.Port, "/-/ready", nil)
+			},
+			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+				return UptimeByHost(s.Host, s.Port, tlsCfg)
 			},
 		}, c.Topology})
 	}

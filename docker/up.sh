@@ -35,6 +35,7 @@ INIT_ONLY=0
 DEV=""
 COMPOSE=${COMPOSE:-""}
 SUBNET=${SUBNET:-"172.19.0.0/24"}
+NODES=${NODES:-5}
 RUN_AS_DAEMON=0
 POSITIONAL=()
 
@@ -70,6 +71,11 @@ do
             shift # past argument
             shift # past value
             ;;
+        -n|--nodes)
+            NODES="$2"
+            shift # past argument
+            shift # past value
+            ;;
         -d|--daemon)
             INFO "Running docker-compose as daemon"
             RUN_AS_DAEMON=1
@@ -95,6 +101,7 @@ if [ "${HELP}" -eq 1 ]; then
     echo "  --dev                                                 Mounts dir at host's TIUP_CLUSTER_ROOT to /tiup-cluster on tiup-cluster-control container, syncing files for development"
     echo "  --compose PATH                                        Path to an additional docker-compose yml config."
     echo "  --subnet SUBNET                                       Subnet in 24 bit netmask"
+    echo "  --nodes NODES                                         Start how much nodes"
     echo "To provide multiple additional docker-compose args, set the COMPOSE var directly, with the -f flag. Ex: COMPOSE=\"-f FILE_PATH_HERE -f ANOTHER_PATH\" ./up.sh --dev"
     exit 0
 fi
@@ -149,12 +156,27 @@ if [ ${SUBNET##*/} -ne 24 ]; then
     exit 1
 fi
 
+if [ "$NODES" -gt "64" ]; then
+    ERROR "At most 64 nodes is supported"
+    exit 1
+fi
+
+exists python ||
+    { ERROR "Please install python (https://www.python.org/downloads/)";
+      exit 1; }
 exists docker ||
     { ERROR "Please install docker (https://docs.docker.com/engine/installation/)";
       exit 1; }
 exists docker-compose ||
     { ERROR "Please install docker-compose (https://docs.docker.com/compose/install/)";
       exit 1; }
+
+exists pip ||
+    {
+        INFO "Install pip from https://bootstrap.pypa.io/get-pip.py";
+        curl -sSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py || exit 1;
+    }
+pip install -U jinja2
 
 exist_network=$(docker network ls | awk '{if($2 == "tiops") print $1}')
 if [[ "$exist_network" == "" ]]; then
@@ -170,7 +192,7 @@ else
     ipprefix=${SUBNET%.*}
 fi
 
-sed "s/__IPPREFIX__/$ipprefix/g" docker-compose.yml.tpl > docker-compose.yml
+python -c "from jinja2 import Template; print(Template(open('docker-compose.yml.tpl').read()).render(nodes=$NODES, ipprefix='$ipprefix'))" > docker-compose.yml
 sed "s/__IPPREFIX__/$ipprefix/g" docker-compose.dm.yml.tpl > docker-compose.dm.yml
 sed -i '/TIUP_TEST_IP_PREFIX/d' ./secret/control.env
 echo "TIUP_TEST_IP_PREFIX=$ipprefix" >> ./secret/control.env

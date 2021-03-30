@@ -225,6 +225,9 @@ func (c *TiFlashComponent) Instances() []Instance {
 				s.DataDir,
 			},
 			StatusFn: s.Status,
+			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+				return 0
+			},
 		}, c.Topology})
 	}
 	return ins
