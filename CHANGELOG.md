@@ -8,7 +8,7 @@ TiUP Changelog
   - Playground may not fully work as some components don't yet have packages for `darwin-arm64` released
 - Not displaying dashboard address if it's "none" or "auto" ([#1054](https://github.com/pingcap/tiup/pull/1054), [@9547](https://github.com/9547))
 - Support filtering nodes and roles in `check` subcommand of tiup-cluster ([#1030](https://github.com/pingcap/tiup/pull/1030), [@AstroProfundis](https://github.com/AstroProfundis))
-- Support retry of failed operations from where it broke with `replay` command of tiup-cluster ([#1069](https://github.com/pingcap/tiup/pull/1069) [#1157](https://github.com/pingcap/tiup/pull/1157), [@lucklove](https://github.com/lucklove))
+- Support retry of failed operations from where it broke with `replay` command of tiup-cluster and tiup-dm ([#1069](https://github.com/pingcap/tiup/pull/1069) [#1157](https://github.com/pingcap/tiup/pull/1157), [@lucklove](https://github.com/lucklove))
 - Support upgrade and patch a stopped TiDB / DM cluster ([#1096](https://github.com/pingcap/tiup/pull/1096), [@lucklove](https://github.com/lucklove))
 - Support setting global custom values for topology of tiup-cluster ([#1098](https://github.com/pingcap/tiup/pull/1098), [@lucklove](https://github.com/lucklove))
 - Support custom `root_url` and anonymous login for Grafana in tiup-cluster ([#1085](https://github.com/pingcap/tiup/pull/1085), [@mianhk](https://github.com/mianhk))
