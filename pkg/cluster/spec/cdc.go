@@ -152,7 +152,7 @@ func (i *CDCInstance) InitConfig(
 	instanceConfig := spec.Config
 
 	configFileSupported := false
-	if semver.Compare(clusterVersion, "v4.0.13") >= 0 {
+	if semver.Compare(clusterVersion, "v4.0.13") >= 0 && clusterVersion != "v5.0.0-rc" {
 		configFileSupported = true
 	} else if len(globalConfig)+len(instanceConfig) > 0 {
 		return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
