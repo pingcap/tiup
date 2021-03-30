@@ -1,10 +1,23 @@
 # TiUP Cluster UI Changelog
 
+## 2021.03.30
+
+- Support backup a cluster periodically
+
+  ![](https://user-images.githubusercontent.com/1284531/112600028-9e08cb80-8e4b-11eb-946a-8b654e1eeb4a.png)
+
+  ![](https://user-images.githubusercontent.com/1284531/112600034-9fd28f00-8e4b-11eb-9421-5fe8a984eda7.png)
+
+- Support downgrade a cluster
+
+  ![image](https://user-images.githubusercontent.com/1284531/113009801-dd684c80-91aa-11eb-8cbf-0a57b4ecd19f.png)
+
 ## 2021.03.16
 
 - Support show audit list
 
   ![audit list](https://user-images.githubusercontent.com/1284531/111284708-5760e780-867b-11eb-91d0-ea06b94ef203.png)
+
 ## 2021.03.15
 
 - Support check a cluster before upgrading
