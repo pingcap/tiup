@@ -33,6 +33,7 @@ type Config struct {
 	LimitCORE           string
 	DeployDir           string
 	DisableSendSigkill  bool
+	GrantCapNetRaw      bool
 	// Takes one of no, on-success, on-failure, on-abnormal, on-watchdog, on-abort, or always.
 	// The Template set as always if this is not setted.
 	Restart string

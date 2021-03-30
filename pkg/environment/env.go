@@ -146,6 +146,9 @@ func (env *Environment) UpdateComponents(specs []string, nightly, force bool) er
 		if component == tiupName {
 			continue
 		}
+		if v == "" && nightly {
+			v = utils.NightlyVersionAlias
+		}
 		v1specs = append(v1specs, repository.ComponentSpec{ID: component, Version: v.String(), Force: force})
 	}
 	return env.v1Repo.UpdateComponents(v1specs)
@@ -184,6 +187,13 @@ func (env *Environment) downloadComponent(component string, version utils.Versio
 // SelectInstalledVersion selects the installed versions and the latest release version
 // will be chosen if there is an empty version
 func (env *Environment) SelectInstalledVersion(component string, ver utils.Version) (utils.Version, error) {
+	if ver == utils.NightlyVersionAlias {
+		var err error
+		if ver, _, err = env.v1Repo.LatestNightlyVersion(component); err != nil {
+			return ver, err
+		}
+	}
+
 	installed, err := env.Profile().InstalledVersions(component)
 	if err != nil {
 		return ver, err
