@@ -21,6 +21,9 @@ LimitCORE={{.LimitCORE}}
 LimitNOFILE=1000000
 LimitSTACK=10485760
 
+{{- if .GrantCapNetRaw}}
+AmbientCapabilities=CAP_NET_RAW
+{{- end}}
 User={{.User}}
 ExecStart={{.DeployDir}}/scripts/run_{{.ServiceName}}.sh
 {{- if eq .ServiceName "prometheus"}}
