@@ -55,7 +55,7 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 
 	if !skipConfirm {
 		if err := cliutil.PromptForConfirmOrAbortError(
-			fmt.Sprintf("Will patch the cluster %s with package path is %s nodes: %s, roles: %s.\nDo you watn to continue? [y/N]:",
+			fmt.Sprintf("Will patch the cluster %s with package path is %s, nodes: %s, roles: %s.\nDo you want to continue? [y/N]:",
 				color.HiYellowString(name),
 				color.HiYellowString(packagePath),
 				color.HiRedString(strings.Join(opt.Nodes, ",")),
