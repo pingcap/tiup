@@ -460,6 +460,14 @@ func StartComponent(ctx context.Context, instances []spec.Instance, options Opti
 	name := instances[0].ComponentName()
 	log.Infof("Starting component %s", name)
 
+	// start instances in serial for Raft related components
+	// eg: PD has more strict restrictions on the capacity expansion process,
+	// that is, there should be only one node in the peer-join stage at most
+	// ref https://github.com/tikv/pd/blob/d38b36714ccee70480c39e07126e3456b5fb292d/server/join/join.go#L179-L191
+	if name == spec.ComponentPD || name == spec.ComponentDMMaster {
+		return serialStartInstances(ctx, instances, options, tlsCfg)
+	}
+
 	errg, _ := errgroup.WithContext(ctx)
 
 	for _, ins := range instances {
@@ -482,6 +490,18 @@ func StartComponent(ctx context.Context, instances []spec.Instance, options Opti
 	}
 
 	return errg.Wait()
+}
+
+func serialStartInstances(ctx context.Context, instances []spec.Instance, options Options, tlsCfg *tls.Config) error {
+	for _, ins := range instances {
+		if err := ins.PrepareStart(ctx, tlsCfg); err != nil {
+			return err
+		}
+		if err := startInstance(ctx, ins, options.OptTimeout); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // StopMonitored stop BlackboxExporter and NodeExporter
