@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
@@ -54,7 +55,12 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 
 	if !skipConfirm {
 		if err := cliutil.PromptForConfirmOrAbortError(
-			fmt.Sprintf("Will patch the cluster %s with package path is %s.\nDo you watn to continue? [y/N]:", color.HiYellowString(name), color.HiYellowString(packagePath)),
+			fmt.Sprintf("Will patch the cluster %s with package path is %s nodes: %s, roles: %s.\nDo you watn to continue? [y/N]:",
+				color.HiYellowString(name),
+				color.HiYellowString(packagePath),
+				color.HiRedString(strings.Join(opt.Nodes, ",")),
+				color.HiRedString(strings.Join(opt.Roles, ",")),
+			),
 		); err != nil {
 			return err
 		}

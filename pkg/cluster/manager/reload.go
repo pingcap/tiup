@@ -16,6 +16,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
@@ -43,7 +44,12 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart, skipCon
 
 	if !skipConfirm {
 		if err := cliutil.PromptForConfirmOrAbortError(
-			fmt.Sprintf("Will reload the cluster %s with restart policy is %s.\nDo you want to continue? [y/N]:", color.HiYellowString(name), color.HiRedString(fmt.Sprintf("%v", !skipRestart))),
+			fmt.Sprintf("Will reload the cluster %s with restart policy is %s, nodes: %s, roles: %s.\nDo you want to continue? [y/N]:",
+				color.HiYellowString(name),
+				color.HiRedString(fmt.Sprintf("%v", !skipRestart)),
+				color.HiRedString(strings.Join(opt.Nodes, ",")),
+				color.HiRedString(strings.Join(opt.Roles, ",")),
+			),
 		); err != nil {
 			return err
 		}
