@@ -16,9 +16,13 @@ package manager
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
+	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -148,7 +152,7 @@ func (m *Manager) StopCluster(name string, options operator.Options) error {
 }
 
 // RestartCluster restart the cluster.
-func (m *Manager) RestartCluster(name string, options operator.Options) error {
+func (m *Manager) RestartCluster(name string, options operator.Options, skipConfirm bool) error {
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
@@ -160,6 +164,18 @@ func (m *Manager) RestartCluster(name string, options operator.Options) error {
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return err
+	}
+
+	if !skipConfirm {
+		if err := cliutil.PromptForConfirmOrAbortError(
+			fmt.Sprintf("Will restart the cluster %s with nodes: %s roles: %s.\nDo you want to continue? [y/N]:",
+				color.HiYellowString(name),
+				color.HiYellowString(strings.Join(options.Nodes, ",")),
+				color.HiYellowString(strings.Join(options.Roles, ",")),
+			),
+		); err != nil {
+			return err
+		}
 	}
 
 	t := m.sshTaskBuilder(name, topo, base.User, options).
