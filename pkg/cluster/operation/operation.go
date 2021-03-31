@@ -43,6 +43,7 @@ type Options struct {
 
 	// Show uptime or not
 	ShowUptime bool
+	Operation  Operation
 }
 
 // Operation represents the type of cluster operation
