@@ -35,4 +35,7 @@ exec bin/cdc server \
 {{- if .TZ}}
     --tz "{{.TZ}}" \
 {{- end}}
+{{- if .ConfigFileEnabled}}
+    --config conf/cdc.toml \
+{{- end}}
     --log-file "{{.LogDir}}/cdc.log" 2>> "{{.LogDir}}/cdc_stderr.log"
