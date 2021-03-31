@@ -34,7 +34,7 @@ func newRenameCmd() *cobra.Command {
 			newClusterName := args[1]
 			teleCommand = append(teleCommand, scrubClusterName(oldClusterName))
 
-			return cm.Rename(oldClusterName, gOpt, newClusterName)
+			return cm.Rename(oldClusterName, gOpt, newClusterName, skipConfirm)
 		},
 	}
 
