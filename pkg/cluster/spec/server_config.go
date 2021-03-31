@@ -143,7 +143,7 @@ func FlattenMap(ms map[string]interface{}) map[string]interface{} {
 	return result
 }
 
-func merge(orig map[string]interface{}, overwrites ...map[string]interface{}) (map[string]interface{}, error) {
+func MergeConfig(orig map[string]interface{}, overwrites ...map[string]interface{}) map[string]interface{} {
 	lhs := FoldMap(orig)
 	for _, overwrite := range overwrites {
 		rhs := FoldMap(overwrite)
@@ -151,7 +151,7 @@ func merge(orig map[string]interface{}, overwrites ...map[string]interface{}) (m
 			patch(lhs, k, v)
 		}
 	}
-	return lhs, nil
+	return lhs
 }
 
 // GetValueFromPath try to find the value by path recursively
@@ -196,11 +196,7 @@ func Merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, 
 }
 
 func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
-	lhs, err := merge(global, overwrite)
-	if err != nil {
-		return nil, err
-	}
-
+	lhs := MergeConfig(global, overwrite)
 	buf := bytes.NewBufferString(fmt.Sprintf(`# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
 # You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
 # All configuration items you want to change can be added to:
@@ -212,7 +208,7 @@ func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, 
 
 	enc := toml.NewEncoder(buf)
 	enc.Indent = ""
-	err = enc.Encode(lhs)
+	err := enc.Encode(lhs)
 	if err != nil {
 		return nil, perrs.Trace(err)
 	}
@@ -240,10 +236,7 @@ func mergeImported(importConfig []byte, specConfigs ...map[string]interface{}) (
 	}
 
 	// overwrite topology specifieced configs upon the imported configs
-	lhs, err := merge(configData, specConfigs...)
-	if err != nil {
-		return nil, perrs.Trace(err)
-	}
+	lhs := MergeConfig(configData, specConfigs...)
 	return lhs, nil
 }
 
