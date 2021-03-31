@@ -21,7 +21,6 @@ import (
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
-	"github.com/pingcap/tiup/pkg/logger/log"
 )
 
 // PDScript represent the data to generate pd config
@@ -91,7 +90,11 @@ func (c *PDScript) AppendEndpoints(ends ...*PDScript) *PDScript {
 
 // Config generate the config file data.
 func (c *PDScript) Config() ([]byte, error) {
-	fp := path.Join("templates", "scripts", "run_pd.sh.tpl")
+	return c.configWithScript("run_pd.sh.tpl")
+}
+
+func (c *PDScript) configWithScript(script string) ([]byte, error) {
+	fp := path.Join("templates", "scripts", script)
 	tpl, err := embed.ReadFile(fp)
 	if err != nil {
 		return nil, err
@@ -138,55 +141,13 @@ type PDScaleScript struct {
 }
 
 // NewPDScaleScript return a new PDScaleScript
-func NewPDScaleScript(name, ip, deployDir, dataDir, logDir string) *PDScaleScript {
-	return &PDScaleScript{*NewPDScript(name, ip, deployDir, dataDir, logDir)}
-}
-
-// WithScheme set Scheme field of PDScaleScript
-func (c *PDScaleScript) WithScheme(scheme string) *PDScaleScript {
-	c.Scheme = scheme
-	return c
-}
-
-// WithClientPort set ClientPort field of PDScaleScript
-func (c *PDScaleScript) WithClientPort(port int) *PDScaleScript {
-	c.ClientPort = port
-	return c
-}
-
-// WithPeerPort set PeerPort field of PDScript
-func (c *PDScaleScript) WithPeerPort(port int) *PDScaleScript {
-	c.PeerPort = port
-	return c
-}
-
-// WithNumaNode set NumaNode field of PDScaleScript
-func (c *PDScaleScript) WithNumaNode(numa string) *PDScaleScript {
-	c.NumaNode = numa
-	return c
-}
-
-// AppendEndpoints add new PDScaleScript to Endpoints field
-func (c *PDScaleScript) AppendEndpoints(ends ...*PDScript) *PDScaleScript {
-	c.Endpoints = append(c.Endpoints, ends...)
-	return c
-}
-
-// WithListenHost set listenHost field of PDScript
-func (c *PDScaleScript) WithListenHost(listenHost string) *PDScaleScript {
-	c.ListenHost = listenHost
-	return c
+func NewPDScaleScript(pdScript *PDScript) *PDScaleScript {
+	return &PDScaleScript{*pdScript}
 }
 
 // Config generate the config file data.
 func (c *PDScaleScript) Config() ([]byte, error) {
-	fp := path.Join("templates", "scripts", "run_pd_scale.sh.tpl")
-	log.Infof("script path: %s", fp)
-	tpl, err := embed.ReadFile(fp)
-	if err != nil {
-		return nil, err
-	}
-	return c.ConfigWithTemplate(string(tpl))
+	return c.configWithScript("run_pd_scale.sh.tpl")
 }
 
 // ConfigToFile write config content to specific path

@@ -257,7 +257,7 @@ func (i *PDInstance) ScaleConfig(
 	cluster := mustBeClusterTopo(topo)
 
 	spec := i.InstanceSpec.(*PDSpec)
-	cfg := scripts.NewPDScaleScript(
+	cfg0 := scripts.NewPDScript(
 		i.Name,
 		i.GetHost(),
 		paths.Deploy,
@@ -269,8 +269,9 @@ func (i *PDInstance) ScaleConfig(
 		AppendEndpoints(cluster.Endpoints(deployUser)...).
 		WithListenHost(i.GetListenHost())
 	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		cfg = cfg.WithScheme("https")
+		cfg0 = cfg0.WithScheme("https")
 	}
+	cfg := scripts.NewPDScaleScript(cfg0)
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_pd_%s_%d.sh", i.GetHost(), i.GetPort()))
 	log.Infof("script path: %s", fp)
