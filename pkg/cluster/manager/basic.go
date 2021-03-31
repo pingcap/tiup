@@ -119,7 +119,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 }
 
 // StopCluster stop the cluster.
-func (m *Manager) StopCluster(name string, options operator.Options) error {
+func (m *Manager) StopCluster(name string, options operator.Options, skipConfirm bool) error {
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
@@ -131,6 +131,18 @@ func (m *Manager) StopCluster(name string, options operator.Options) error {
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
 	if err != nil {
 		return err
+	}
+
+	if !skipConfirm {
+		if err := cliutil.PromptForConfirmOrAbortError(
+			fmt.Sprintf("Will stop the cluster %s with nodes: %s, roles: %s.\nDo you want to continue? [y/N]:",
+				color.HiYellowString(name),
+				color.HiRedString(strings.Join(options.Nodes, ",")),
+				color.HiRedString(strings.Join(options.Roles, ",")),
+			),
+		); err != nil {
+			return err
+		}
 	}
 
 	t := m.sshTaskBuilder(name, topo, base.User, options).
