@@ -90,15 +90,17 @@ func Start(
 		if err != nil {
 			return errors.Annotatef(err, "failed to start %s", comp.Name())
 		}
-		if monitoredOptions == nil {
-			continue
-		}
-		for _, inst := range insts {
-			if !uniqueHosts.Exist(inst.GetHost()) {
-				uniqueHosts.Insert(inst.GetHost())
-				if err := StartMonitored(ctx, inst, monitoredOptions, options.OptTimeout); err != nil {
-					return err
-				}
+		uniqueHosts.Join(insts...)
+	}
+
+	if monitoredOptions == nil {
+		return nil
+	}
+	for _, inst := range insts {
+		if !uniqueHosts.Exist(inst.GetHost()) {
+			uniqueHosts.Insert(inst.GetHost())
+			if err := StartMonitored(ctx, inst, monitoredOptions, options.OptTimeout); err != nil {
+				return err
 			}
 		}
 	}
