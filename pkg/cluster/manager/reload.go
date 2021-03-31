@@ -15,9 +15,12 @@ package manager
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -26,7 +29,7 @@ import (
 )
 
 // Reload the cluster.
-func (m *Manager) Reload(name string, opt operator.Options, skipRestart bool) error {
+func (m *Manager) Reload(name string, opt operator.Options, skipRestart, skipConfirm bool) error {
 	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
 		return err
 	}
@@ -36,6 +39,14 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart bool) er
 	metadata, err := m.meta(name)
 	if err != nil {
 		return err
+	}
+
+	if !skipConfirm {
+		if err := cliutil.PromptForConfirmOrAbortError(
+			fmt.Sprintf("Will reload the cluster %s with restart policy is %s.\nDo you want to continue? [y/N]:", color.HiYellowString(name), color.HiRedString(fmt.Sprintf("%v", !skipRestart))),
+		); err != nil {
+			return err
+		}
 	}
 
 	topo := metadata.GetTopology()
