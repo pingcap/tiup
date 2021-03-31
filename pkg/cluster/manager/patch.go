@@ -20,9 +20,11 @@ import (
 	"os/exec"
 	"path"
 
+	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -33,7 +35,7 @@ import (
 )
 
 // Patch the cluster.
-func (m *Manager) Patch(name string, packagePath string, opt operator.Options, overwrite, offline bool) error {
+func (m *Manager) Patch(name string, packagePath string, opt operator.Options, overwrite, offline, skipConfirm bool) error {
 	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
 		return err
 	}
@@ -48,6 +50,14 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 
 	if exist := utils.IsExist(packagePath); !exist {
 		return perrs.New("specified package not exists")
+	}
+
+	if !skipConfirm {
+		if err := cliutil.PromptForConfirmOrAbortError(
+			fmt.Sprintf("Will patch the cluster %s with package path is %s.\nDo you watn to continue? [y/N]:", color.HiYellowString(name), color.HiYellowString(packagePath)),
+		); err != nil {
+			return err
+		}
 	}
 
 	insts, err := instancesToPatch(topo, opt)
