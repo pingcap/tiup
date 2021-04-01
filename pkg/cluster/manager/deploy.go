@@ -41,7 +41,6 @@ import (
 )
 
 // DeployOptions contains the options for scale out.
-// TODO: merge ScaleOutOptions, should check config too when scale out.
 type DeployOptions struct {
 	User              string // username to login to the SSH server
 	SkipCreateUser    bool   // don't create the user

@@ -60,7 +60,7 @@ func buildScaleOutTask(
 	name string,
 	metadata spec.Metadata,
 	mergedTopo spec.Topology,
-	opt ScaleOutOptions,
+	opt DeployOptions,
 	sshConnProps *cliutil.SSHConnectionProps,
 	newPart spec.Topology,
 	patchedComponents set.StringSet,
@@ -92,44 +92,46 @@ func buildScaleOutTask(
 	// uninitializedHosts are hosts which haven't been initialized yet
 	uninitializedHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
 	newPart.IterInstance(func(instance spec.Instance) {
-		if host := instance.GetHost(); !initializedHosts.Exist(host) {
-			if _, found := uninitializedHosts[host]; found {
-				return
-			}
-
-			uninitializedHosts[host] = hostInfo{
-				ssh:  instance.GetSSHPort(),
-				os:   instance.OS(),
-				arch: instance.Arch(),
-			}
-
-			var dirs []string
-			globalOptions := metadata.GetTopology().BaseTopo().GlobalOptions
-			for _, dir := range []string{globalOptions.DeployDir, globalOptions.DataDir, globalOptions.LogDir} {
-				for _, dirname := range strings.Split(dir, ",") {
-					if dirname == "" {
-						continue
-					}
-					dirs = append(dirs, spec.Abs(globalOptions.User, dirname))
-				}
-			}
-			t := task.NewBuilder().
-				RootSSH(
-					instance.GetHost(),
-					instance.GetSSHPort(),
-					opt.User,
-					sshConnProps.Password,
-					sshConnProps.IdentityFile,
-					sshConnProps.IdentityFilePassphrase,
-					gOpt.SSHTimeout,
-					gOpt.SSHType,
-					globalOptions.SSHType,
-				).
-				EnvInit(instance.GetHost(), base.User, base.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
-				Mkdir(globalOptions.User, instance.GetHost(), dirs...).
-				Build()
-			envInitTasks = append(envInitTasks, t)
+		host := instance.GetHost()
+		if initializedHosts.Exist(host) {
+			return
 		}
+		if _, found := uninitializedHosts[host]; found {
+			return
+		}
+
+		uninitializedHosts[host] = hostInfo{
+			ssh:  instance.GetSSHPort(),
+			os:   instance.OS(),
+			arch: instance.Arch(),
+		}
+
+		var dirs []string
+		globalOptions := metadata.GetTopology().BaseTopo().GlobalOptions
+		for _, dir := range []string{globalOptions.DeployDir, globalOptions.DataDir, globalOptions.LogDir} {
+			for _, dirname := range strings.Split(dir, ",") {
+				if dirname == "" {
+					continue
+				}
+				dirs = append(dirs, spec.Abs(globalOptions.User, dirname))
+			}
+		}
+		t := task.NewBuilder().
+			RootSSH(
+				instance.GetHost(),
+				instance.GetSSHPort(),
+				opt.User,
+				sshConnProps.Password,
+				sshConnProps.IdentityFile,
+				sshConnProps.IdentityFilePassphrase,
+				gOpt.SSHTimeout,
+				gOpt.SSHType,
+				globalOptions.SSHType,
+			).
+			EnvInit(instance.GetHost(), base.User, base.Group, opt.SkipCreateUser || globalOptions.User == opt.User).
+			Mkdir(globalOptions.User, instance.GetHost(), dirs...).
+			Build()
+		envInitTasks = append(envInitTasks, t)
 	})
 
 	// Download missing component
@@ -146,7 +148,7 @@ func buildScaleOutTask(
 		logDir := spec.Abs(base.User, inst.LogDir())
 
 		deployDirs := []string{
-			deployDir, logDir,
+			deployDir,
 			filepath.Join(deployDir, "bin"),
 			filepath.Join(deployDir, "conf"),
 			filepath.Join(deployDir, "scripts"),
@@ -158,7 +160,8 @@ func buildScaleOutTask(
 		tb := task.NewBuilder().
 			UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
 			Mkdir(base.User, inst.GetHost(), deployDirs...).
-			Mkdir(base.User, inst.GetHost(), dataDirs...)
+			Mkdir(base.User, inst.GetHost(), dataDirs...).
+			Mkdir(base.User, inst.GetHost(), logDir)
 
 		srcPath := ""
 		if patchedComponents.Exist(inst.ComponentName()) {

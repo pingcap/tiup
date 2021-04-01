@@ -33,22 +33,13 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
-// ScaleOutOptions contains the options for scale out.
-type ScaleOutOptions struct {
-	User           string // username to login to the SSH server
-	SkipCreateUser bool   // don't create user
-	IdentityFile   string // path to the private key file
-	UsePassword    bool   // use password instead of identity file for ssh connection
-	NoLabels       bool   // don't check labels for TiKV instance
-}
-
 // ScaleOut scale out the cluster.
 func (m *Manager) ScaleOut(
 	name string,
 	topoFile string,
 	afterDeploy func(b *task.Builder, newPart spec.Topology),
 	final func(b *task.Builder, name string, meta spec.Metadata),
-	opt ScaleOutOptions,
+	opt DeployOptions,
 	skipConfirm bool,
 	gOpt operator.Options,
 ) error {

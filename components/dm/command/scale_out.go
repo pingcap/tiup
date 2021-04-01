@@ -25,7 +25,7 @@ import (
 )
 
 func newScaleOutCmd() *cobra.Command {
-	opt := manager.ScaleOutOptions{
+	opt := manager.DeployOptions{
 		IdentityFile: filepath.Join(utils.UserHome(), ".ssh", "id_rsa"),
 	}
 	cmd := &cobra.Command{
