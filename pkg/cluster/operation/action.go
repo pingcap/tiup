@@ -54,20 +54,28 @@ func Enable(
 		if err != nil {
 			return errors.Annotatef(err, "failed to enable/disable %s", comp.Name())
 		}
-		if monitoredOptions == nil {
-			continue
-		}
+
 		for _, inst := range insts {
 			instCount[inst.GetHost()]--
-			if instCount[inst.GetHost()] == 0 {
-				if err := EnableMonitored(ctx, inst.GetHost(), monitoredOptions, options.OptTimeout, isEnable); err != nil {
-					return err
-				}
-			}
 		}
 	}
 
-	return nil
+	if monitoredOptions == nil {
+		return nil
+	}
+
+	errg, _ := errgroup.WithContext(ctx)
+	for host, count := range instCount {
+		if count != 0 {
+			continue
+		}
+		nctx := checkpoint.NewContext(ctx)
+		errg.Go(func() error {
+			return EnableMonitored(nctx, host, monitoredOptions, options.OptTimeout, isEnable)
+		})
+	}
+
+	return errg.Wait()
 }
 
 // Start the cluster.
@@ -90,20 +98,24 @@ func Start(
 		if err != nil {
 			return errors.Annotatef(err, "failed to start %s", comp.Name())
 		}
-		if monitoredOptions == nil {
-			continue
-		}
 		for _, inst := range insts {
-			if !uniqueHosts.Exist(inst.GetHost()) {
-				uniqueHosts.Insert(inst.GetHost())
-				if err := StartMonitored(ctx, inst.GetHost(), monitoredOptions, options.OptTimeout); err != nil {
-					return err
-				}
-			}
+			uniqueHosts.Insert(inst.GetHost())
 		}
 	}
 
-	return nil
+	if monitoredOptions == nil {
+		return nil
+	}
+	errg, _ := errgroup.WithContext(ctx)
+	for host := range uniqueHosts {
+		host := host
+		nctx := checkpoint.NewContext(ctx)
+		errg.Go(func() error {
+			return StartMonitored(nctx, host, monitoredOptions, options.OptTimeout)
+		})
+	}
+
+	return errg.Wait()
 }
 
 // Stop the cluster.
@@ -117,6 +129,7 @@ func Stop(
 	nodeFilter := set.NewStringSet(options.Nodes...)
 	components := cluster.ComponentsByStopOrder()
 	components = FilterComponent(components, roleFilter)
+	monitoredOptions := cluster.GetMonitoredOptions()
 
 	instCount := map[string]int{}
 	cluster.IterInstance(func(inst spec.Instance) {
@@ -129,19 +142,30 @@ func Stop(
 		if err != nil && !options.Force {
 			return errors.Annotatef(err, "failed to stop %s", comp.Name())
 		}
-		if cluster.GetMonitoredOptions() == nil {
-			continue
-		}
 		for _, inst := range insts {
 			instCount[inst.GetHost()]--
-			if instCount[inst.GetHost()] == 0 {
-				if err := StopMonitored(ctx, inst.GetHost(), cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
-					return err
-				}
-			}
 		}
 	}
-	return nil
+
+	if monitoredOptions == nil {
+		return nil
+	}
+
+	errg, _ := errgroup.WithContext(ctx)
+	for host, count := range instCount {
+		if count != 0 {
+			continue
+		}
+		nctx := checkpoint.NewContext(ctx)
+		errg.Go(func() error {
+			if err := StopMonitored(nctx, host, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
+				return err
+			}
+			return nil
+		})
+	}
+
+	return errg.Wait()
 }
 
 // NeedCheckTombstone return true if we need to check and destroy some node.
@@ -330,7 +354,7 @@ func enableInstance(ctx context.Context, ins spec.Instance, timeout uint64, isEn
 
 func startInstance(ctx context.Context, ins spec.Instance, timeout uint64) error {
 	e := ctxt.GetInner(ctx).Get(ins.GetHost())
-	log.Infof("\tStarting instance %s %s:%d",
+	log.Infof("\tStarting instance %s %s",
 		ins.ComponentName(),
 		ins.GetHost(),
 		ins.GetPort())
@@ -475,11 +499,7 @@ func StartComponent(ctx context.Context, instances []spec.Instance, options Opti
 			if err := ins.PrepareStart(nctx, tlsCfg); err != nil {
 				return err
 			}
-			err := startInstance(nctx, ins, options.OptTimeout)
-			if err != nil {
-				return err
-			}
-			return nil
+			return startInstance(nctx, ins, options.OptTimeout)
 		})
 	}
 
