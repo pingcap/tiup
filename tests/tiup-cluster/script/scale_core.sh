@@ -29,7 +29,7 @@ function scale_core() {
 
     tiup-cluster $client display $name
 
-    tiup-cluster $client reload $name --skip-restart
+    tiup-cluster $client --yes reload $name --skip-restart
 
     if [ $test_tls = true ]; then
         total_sub_one=18
