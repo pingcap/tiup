@@ -71,7 +71,9 @@ func (inst *TiKVInstance) Start(ctx context.Context, version utils.Version) erro
 	}
 
 	var err error
-	if inst.Process, err = NewComponentProcess(ctx, inst.Dir, inst.BinPath, "tikv", version, args...); err != nil {
+	envs := make(map[string]string)
+	envs["MALLOC_CONF"] = "prof:true,prof_active:true,prof.active:false"
+	if inst.Process, err = NewComponentProcessWithEnvs(ctx, inst.Dir, inst.BinPath, "tikv", version, envs, args...); err != nil {
 		return err
 	}
 	logIfErr(inst.Process.SetOutputFile(inst.LogFile()))
