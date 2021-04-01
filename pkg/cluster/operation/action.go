@@ -193,17 +193,18 @@ func Restart(
 }
 
 // StartMonitored start BlackboxExporter and NodeExporter
-func StartMonitored(ctx context.Context, instance spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
+func StartMonitored(ctx context.Context, host string, options *spec.MonitoredOptions, timeout uint64) error {
 	ports := map[string]int{
 		spec.ComponentNodeExporter:     options.NodeExporterPort,
 		spec.ComponentBlackboxExporter: options.BlackboxExporterPort,
 	}
-	e := ctxt.GetInner(ctx).Get(instance.GetHost())
+	e := ctxt.GetInner(ctx).Get(host)
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
 		log.Infof("Starting component %s", comp)
-		log.Infof("\tStarting instance %s", instance.GetHost())
+		log.Infof("\tStarting instance %s", host)
+		unit := fmt.Sprintf("%s-%d.service", comp, ports[comp])
 		c := module.SystemdModuleConfig{
-			Unit:         fmt.Sprintf("%s-%d.service", comp, ports[comp]),
+			Unit:         unit,
 			ReloadDaemon: true,
 			Action:       "start",
 			Timeout:      time.Second * time.Duration(timeout),
@@ -219,15 +220,15 @@ func StartMonitored(ctx context.Context, instance spec.Instance, options *spec.M
 		}
 
 		if err != nil {
-			return errors.Annotatef(err, "failed to start: %s", instance.GetHost())
+			return errors.Annotatef(err, "failed to start: %s", unit)
 		}
 
 		// Check ready.
 		if err := spec.PortStarted(ctx, e, ports[comp], timeout); err != nil {
-			return toFailedActionError(err, "start", instance)
+			return toFailedActionError(err, "start", comp, host, ports[comp], "")
 		}
 
-		log.Infof("\tStart %s success", instance.GetHost())
+		log.Infof("\tStart %s success", host)
 	}
 
 	return nil
@@ -663,13 +664,9 @@ func PrintClusterStatus(ctx context.Context, cluster *spec.Specification) (healt
 }
 
 // toFailedActionError formats the errror msg for failed action
-func toFailedActionError(err error, action string, inst spec.Instance) error {
+func toFailedActionError(err error, action string, comp, host string, port int, logDir string) error {
 	return errors.Annotatef(err,
 		"failed to %s: %s %s:%d, please check the instance's log(%s) for more detail.",
-		action,
-		inst.ComponentName(),
-		inst.GetHost(),
-		inst.GetPort(),
-		inst.LogDir(),
+		action, comp, host, port, logDir,
 	)
 }
