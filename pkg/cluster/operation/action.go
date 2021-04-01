@@ -60,7 +60,7 @@ func Enable(
 		for _, inst := range insts {
 			instCount[inst.GetHost()]--
 			if instCount[inst.GetHost()] == 0 {
-				if err := EnableMonitored(ctx, inst, monitoredOptions, options.OptTimeout, isEnable); err != nil {
+				if err := EnableMonitored(ctx, inst.GetHost(), monitoredOptions, options.OptTimeout, isEnable); err != nil {
 					return err
 				}
 			}
@@ -96,7 +96,7 @@ func Start(
 		for _, inst := range insts {
 			if !uniqueHosts.Exist(inst.GetHost()) {
 				uniqueHosts.Insert(inst.GetHost())
-				if err := StartMonitored(ctx, inst, monitoredOptions, options.OptTimeout); err != nil {
+				if err := StartMonitored(ctx, inst.GetHost(), monitoredOptions, options.OptTimeout); err != nil {
 					return err
 				}
 			}
@@ -135,7 +135,7 @@ func Stop(
 		for _, inst := range insts {
 			instCount[inst.GetHost()]--
 			if instCount[inst.GetHost()] == 0 {
-				if err := StopMonitored(ctx, inst, cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
+				if err := StopMonitored(ctx, inst.GetHost(), cluster.GetMonitoredOptions(), options.OptTimeout); err != nil && !options.Force {
 					return err
 				}
 			}
@@ -223,7 +223,7 @@ func StartMonitored(ctx context.Context, host string, options *spec.MonitoredOpt
 
 		// Check ready.
 		if err := spec.PortStarted(ctx, e, ports[comp], timeout); err != nil {
-			return toFailedActionError(err, "start", comp, host, ports[comp], "")
+			return toFailedActionError(err, "start", host, unit, "")
 		}
 
 		log.Infof("\tStart %s success", host)
@@ -254,12 +254,12 @@ func restartInstance(ctx context.Context, ins spec.Instance, timeout uint64) err
 	}
 
 	if err != nil {
-		return errors.Annotatef(err, "failed to restart: %s", ins.GetHost())
+		return toFailedActionError(err, "restart", ins.GetHost(), ins.ServiceName(), ins.LogDir())
 	}
 
 	// Check ready.
 	if err := ins.Ready(ctx, e, timeout); err != nil {
-		return toFailedActionError(err, "restart", ins)
+		return toFailedActionError(err, "restart", ins.GetHost(), ins.ServiceName(), ins.LogDir())
 	}
 
 	log.Infof("\tRestart %s success", ins.GetHost())
@@ -316,11 +316,7 @@ func enableInstance(ctx context.Context, ins spec.Instance, timeout uint64, isEn
 	}
 
 	if err != nil {
-		return errors.Annotatef(err, "failed to %s: %s %s:%d",
-			action,
-			ins.ComponentName(),
-			ins.GetHost(),
-			ins.GetPort())
+		return toFailedActionError(err, action, ins.GetHost(), ins.ServiceName(), ins.LogDir())
 	}
 
 	if isEnable {
@@ -357,12 +353,12 @@ func startInstance(ctx context.Context, ins spec.Instance, timeout uint64) error
 	}
 
 	if err != nil {
-		return toFailedActionError(err, "start", ins)
+		return toFailedActionError(err, "start", ins.GetHost(), ins.ServiceName(), ins.LogDir())
 	}
 
 	// Check ready.
 	if err := ins.Ready(ctx, e, timeout); err != nil {
-		return toFailedActionError(err, "start", ins)
+		return toFailedActionError(err, "start", ins.GetHost(), ins.ServiceName(), ins.LogDir())
 	}
 
 	log.Infof("\tStart %s %s:%d success",
@@ -408,10 +404,7 @@ func EnableComponent(ctx context.Context, instances []spec.Instance, options Opt
 }
 
 // EnableMonitored enable/disable monitor service in a cluster
-func EnableMonitored(
-	ctx context.Context, instance spec.Instance,
-	options *spec.MonitoredOptions, timeout uint64, isEnable bool,
-) error {
+func EnableMonitored(ctx context.Context, host string, options *spec.MonitoredOptions, timeout uint64, isEnable bool) error {
 	action := "disable"
 	if isEnable {
 		action = "enable"
@@ -421,16 +414,16 @@ func EnableMonitored(
 		spec.ComponentNodeExporter:     options.NodeExporterPort,
 		spec.ComponentBlackboxExporter: options.BlackboxExporterPort,
 	}
-	e := ctxt.GetInner(ctx).Get(instance.GetHost())
+	e := ctxt.GetInner(ctx).Get(host)
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
 		if isEnable {
 			log.Infof("Enabling component %s", comp)
 		} else {
 			log.Infof("Disabling component %s", comp)
 		}
-
+		unit := fmt.Sprintf("%s-%d.service", comp, ports[comp])
 		c := module.SystemdModuleConfig{
-			Unit:    fmt.Sprintf("%s-%d.service", comp, ports[comp]),
+			Unit:    unit,
 			Action:  action,
 			Timeout: time.Second * time.Duration(timeout),
 		}
@@ -445,7 +438,7 @@ func EnableMonitored(
 		}
 
 		if err != nil {
-			return toFailedActionError(err, action, instance)
+			return toFailedActionError(err, action, host, unit, "")
 		}
 	}
 
@@ -506,17 +499,18 @@ func serialStartInstances(ctx context.Context, instances []spec.Instance, option
 }
 
 // StopMonitored stop BlackboxExporter and NodeExporter
-func StopMonitored(ctx context.Context, instance spec.Instance, options *spec.MonitoredOptions, timeout uint64) error {
+func StopMonitored(ctx context.Context, host string, options *spec.MonitoredOptions, timeout uint64) error {
 	ports := map[string]int{
 		spec.ComponentNodeExporter:     options.NodeExporterPort,
 		spec.ComponentBlackboxExporter: options.BlackboxExporterPort,
 	}
-	e := ctxt.GetInner(ctx).Get(instance.GetHost())
+	e := ctxt.GetInner(ctx).Get(host)
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
 		log.Infof("Stopping component %s", comp)
 
+		unit := fmt.Sprintf("%s-%d.service", comp, ports[comp])
 		c := module.SystemdModuleConfig{
-			Unit:         fmt.Sprintf("%s-%d.service", comp, ports[comp]),
+			Unit:         unit,
 			Action:       "stop",
 			ReloadDaemon: true,
 			Timeout:      time.Second * time.Duration(timeout),
@@ -542,11 +536,11 @@ func StopMonitored(ctx context.Context, instance spec.Instance, options *spec.Mo
 		}
 
 		if err != nil {
-			return toFailedActionError(err, "stop", instance)
+			return toFailedActionError(err, "stop", host, unit, "")
 		}
 
 		if err := spec.PortStopped(ctx, e, ports[comp], timeout); err != nil {
-			return toFailedActionError(err, "stop", instance)
+			return toFailedActionError(err, "stop", host, unit, "")
 		}
 	}
 
@@ -584,7 +578,7 @@ func stopInstance(ctx context.Context, ins spec.Instance, timeout uint64) error 
 	}
 
 	if err != nil {
-		return toFailedActionError(err, "stop", ins)
+		return toFailedActionError(err, "stop", ins.GetHost(), ins.ServiceName(), ins.LogDir())
 	}
 
 	log.Infof("\tStop %s %s:%d success",
@@ -662,9 +656,9 @@ func PrintClusterStatus(ctx context.Context, cluster *spec.Specification) (healt
 }
 
 // toFailedActionError formats the errror msg for failed action
-func toFailedActionError(err error, action string, comp, host string, port int, logDir string) error {
+func toFailedActionError(err error, action string, host, service, logDir string) error {
 	return errors.Annotatef(err,
-		"failed to %s: %s %s:%d, please check the instance's log(%s) for more detail.",
-		action, comp, host, port, logDir,
+		"failed to %s: %s %s, please check the instance's log(%s) for more detail.",
+		action, host, service, logDir,
 	)
 }
