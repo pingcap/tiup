@@ -40,6 +40,10 @@ type Options struct {
 	// Some data will be retained when destroying instances
 	RetainDataRoles []string
 	RetainDataNodes []string
+
+	// Show uptime or not
+	ShowUptime bool
+	Operation  Operation
 }
 
 // Operation represents the type of cluster operation

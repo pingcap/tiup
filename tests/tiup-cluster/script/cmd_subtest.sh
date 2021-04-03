@@ -109,11 +109,16 @@ function cmd_subtest() {
     echo "$display_result" | grep "Cluster version"
     echo "$display_result" | grep "Dashboard URL"
     echo "$display_result" | grep "Total nodes"
+    echo "$display_result" | grep -v "Since"
+
+    # display with --uptime should show process uptime
+    display_result=`tiup-cluster $client display $name --uptime`
+    echo "$display_result" | grep "Since"
 
     # Test rename
-    tiup-cluster $client rename $name "tmp-cluster-name"
+    tiup-cluster $client --yes rename $name "tmp-cluster-name"
     tiup-cluster $client display "tmp-cluster-name"
-    tiup-cluster $client rename "tmp-cluster-name" $name
+    tiup-cluster $client --yes rename "tmp-cluster-name" $name
 
     # Test enable & disable
     tiup-cluster $client exec $name -R tidb --command="systemctl status tidb-4000|grep 'enabled;'"

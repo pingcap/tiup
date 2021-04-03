@@ -41,7 +41,7 @@ func newPatchCmd() *cobra.Command {
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			return cm.Patch(clusterName, args[1], gOpt, overwrite, offlineMode)
+			return cm.Patch(clusterName, args[1], gOpt, overwrite, offlineMode, skipConfirm)
 		},
 	}
 

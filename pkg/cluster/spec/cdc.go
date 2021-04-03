@@ -18,10 +18,13 @@ import (
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
+	"time"
 
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
+	"golang.org/x/mod/semver"
 )
 
 // CDCSpec represents the Drainer topology specification in topology.yaml
@@ -95,12 +98,10 @@ func (c *CDCComponent) Instances() []Instance {
 				s.DeployDir,
 			},
 			StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
-				scheme := "http"
-				if tlsCfg != nil {
-					scheme = "https"
-				}
-				url := fmt.Sprintf("%s://%s:%d/status", scheme, s.Host, s.Port)
-				return statusByURL(url, tlsCfg)
+				return statusByHost(s.Host, s.Port, "/status", tlsCfg)
+			},
+			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
+				return UptimeByHost(s.Host, s.Port, tlsCfg)
 			},
 		}, c.Topology})
 	}
@@ -145,9 +146,18 @@ func (i *CDCInstance) InitConfig(
 	if err := i.BaseInstance.InitConfig(ctx, e, topo.GlobalOptions, deployUser, paths); err != nil {
 		return err
 	}
-
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*CDCSpec)
+	globalConfig := topo.ServerConfigs.CDC
+	instanceConfig := spec.Config
+
+	configFileSupported := false
+	if semver.Compare(clusterVersion, "v4.0.13") >= 0 && clusterVersion != "v5.0.0-rc" {
+		configFileSupported = true
+	} else if len(globalConfig)+len(instanceConfig) > 0 {
+		return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
+	}
+
 	cfg := scripts.NewCDCScript(
 		i.GetHost(),
 		paths.Deploy,
@@ -156,6 +166,10 @@ func (i *CDCInstance) InitConfig(
 		spec.GCTTL,
 		spec.TZ,
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...)
+
+	if configFileSupported {
+		cfg = cfg.WithConfigFileEnabled()
+	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_cdc_%s_%d.sh", i.GetHost(), i.GetPort()))
 
@@ -171,7 +185,5 @@ func (i *CDCInstance) InitConfig(
 		return err
 	}
 
-	specConfig := spec.Config
-
-	return i.MergeServerConfig(ctx, e, topo.ServerConfigs.CDC, specConfig, paths)
+	return i.MergeServerConfig(ctx, e, globalConfig, instanceConfig, paths)
 }

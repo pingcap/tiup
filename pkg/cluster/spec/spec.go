@@ -34,6 +34,9 @@ import (
 const (
 	// Timeout in second when quering node status
 	statusQueryTimeout = 10 * time.Second
+
+	// the prometheus metric name of start time of the process since unix epoch in seconds.
+	promMetricStartTimeSeconds = "process_start_time_seconds"
 )
 
 // general role names

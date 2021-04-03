@@ -87,7 +87,7 @@ func (m *Manager) confirmTopology(name, version string, topo spec.Topology, patc
 
 	clusterTable := [][]string{
 		// Header
-		{"Type", "Host", "Ports", "OS/Arch", "Directories"},
+		{"Role", "Host", "Ports", "OS/Arch", "Directories"},
 	}
 
 	topo.IterInstance(func(instance spec.Instance) {
