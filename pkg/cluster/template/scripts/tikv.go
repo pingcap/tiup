@@ -15,6 +15,7 @@ package scripts
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path"
 	"text/template"
@@ -31,6 +32,8 @@ const (
 type TiKVScript struct {
 	IP                         string
 	ListenHost                 string
+	AdvertiseAddr              string
+	AdvertiseStatusAddr        string
 	Port                       int
 	StatusPort                 int
 	DeployDir                  string
@@ -42,11 +45,13 @@ type TiKVScript struct {
 }
 
 // NewTiKVScript returns a TiKVScript with given arguments
-func NewTiKVScript(version, ip, deployDir, dataDir, logDir string) *TiKVScript {
+func NewTiKVScript(version, ip string, port, statusPort int, deployDir, dataDir, logDir string) *TiKVScript {
 	return &TiKVScript{
 		IP:                         ip,
-		Port:                       20160,
-		StatusPort:                 20180,
+		AdvertiseAddr:              fmt.Sprintf("%s:%d", ip, port),
+		AdvertiseStatusAddr:        fmt.Sprintf("%s:%d", ip, statusPort),
+		Port:                       port,
+		StatusPort:                 statusPort,
 		DeployDir:                  deployDir,
 		DataDir:                    dataDir,
 		LogDir:                     logDir,
@@ -60,15 +65,19 @@ func (c *TiKVScript) WithListenHost(listenHost string) *TiKVScript {
 	return c
 }
 
-// WithPort set Port field of TiKVScript
-func (c *TiKVScript) WithPort(port int) *TiKVScript {
-	c.Port = port
+// WithAdvertiseAddr set AdvertiseAddr of TiKVScript
+func (c *TiKVScript) WithAdvertiseAddr(addr string) *TiKVScript {
+	if addr != "" {
+		c.AdvertiseAddr = addr
+	}
 	return c
 }
 
-// WithStatusPort set StatusPort field of TiKVScript
-func (c *TiKVScript) WithStatusPort(port int) *TiKVScript {
-	c.StatusPort = port
+// WithAdvertiseStatusAddr set AdvertiseStatusAddr of TiKVScript
+func (c *TiKVScript) WithAdvertiseStatusAddr(addr string) *TiKVScript {
+	if addr != "" {
+		c.AdvertiseStatusAddr = addr
+	}
 	return c
 }
 

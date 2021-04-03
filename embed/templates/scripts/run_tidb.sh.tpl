@@ -25,7 +25,7 @@ exec env GODEBUG=madvdontneed=1 bin/tidb-server \
     -P {{.Port}} \
     --status="{{.StatusPort}}" \
     --host="{{.ListenHost}}" \
-    --advertise-address="{{.IP}}" \
+    --advertise-address="{{.AdvertiseAddr}}" \
     --store="tikv" \
     --path="{{template "PDList" .Endpoints}}" \
     --log-slow-query="log/tidb_slow_query.log" \

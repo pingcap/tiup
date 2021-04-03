@@ -30,10 +30,12 @@ import (
 	"github.com/pingcap/kvproto/pkg/pdpb"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/utils"
+	"golang.org/x/mod/semver"
 )
 
 // PDClient is an HTTP client of the PD server
 type PDClient struct {
+	version    string
 	addrs      []string
 	tlsEnabled bool
 	httpClient *utils.HTTPClient
@@ -46,10 +48,29 @@ func NewPDClient(addrs []string, timeout time.Duration, tlsConfig *tls.Config) *
 		enableTLS = true
 	}
 
-	return &PDClient{
+	cli := &PDClient{
 		addrs:      addrs,
 		tlsEnabled: enableTLS,
 		httpClient: utils.NewHTTPClient(timeout, tlsConfig),
+	}
+
+	cli.tryIdentifyVersion()
+	return cli
+}
+
+func (pc *PDClient) tryIdentifyVersion() {
+	endpoints := pc.getEndpoints(pdVersionURI)
+	response := map[string]string{}
+	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
+		body, err := pc.httpClient.Get(endpoint)
+		if err != nil {
+			return body, err
+		}
+
+		return body, json.Unmarshal(body, &response)
+	})
+	if err == nil {
+		pc.version = response["version"]
 	}
 }
 
@@ -70,6 +91,7 @@ const (
 // nolint (some is unused now)
 var (
 	pdPingURI            = "pd/ping"
+	pdVersionURI         = "pd/api/v1/version"
 	pdConfigURI          = "pd/api/v1/config"
 	pdClusterIDURI       = "pd/api/v1/cluster"
 	pdConfigReplicate    = "pd/api/v1/config/replicate"
@@ -735,6 +757,11 @@ func (pc *PDClient) CheckRegion(state string) (*RegionsInfo, error) {
 // SetReplicationConfig sets a config key value of PD replication, it has the
 // same effect as `pd-ctl config set key value`
 func (pc *PDClient) SetReplicationConfig(key string, value int) error {
+	// Only support for pd version >= v4.0.0
+	if pc.version == "" || semver.Compare(pc.version, "v4.0.0") < 0 {
+		return nil
+	}
+
 	data := map[string]interface{}{"set": map[string]interface{}{key: value}}
 	body, err := json.Marshal(data)
 	if err != nil {
@@ -747,6 +774,11 @@ func (pc *PDClient) SetReplicationConfig(key string, value int) error {
 // SetAllStoreLimits sets store for all stores and types, it has the same effect
 // as `pd-ctl store limit all value`
 func (pc *PDClient) SetAllStoreLimits(value int) error {
+	// Only support for pd version >= v4.0.0
+	if pc.version == "" || semver.Compare(pc.version, "v4.0.0") < 0 {
+		return nil
+	}
+
 	data := map[string]interface{}{"rate": value}
 	body, err := json.Marshal(data)
 	if err != nil {
