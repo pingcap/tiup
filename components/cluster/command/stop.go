@@ -33,7 +33,7 @@ func newStopCmd() *cobra.Command {
 			clusterName := args[0]
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
-			return cm.StopCluster(clusterName, gOpt)
+			return cm.StopCluster(clusterName, gOpt, skipConfirm)
 		},
 	}
 

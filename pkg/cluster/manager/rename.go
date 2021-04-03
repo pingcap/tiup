@@ -14,8 +14,10 @@
 package manager
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -25,7 +27,7 @@ import (
 )
 
 // Rename the cluster
-func (m *Manager) Rename(name string, opt operator.Options, newName string) error {
+func (m *Manager) Rename(name string, opt operator.Options, newName string, skipConfirm bool) error {
 	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
 		return err
 	}
@@ -44,6 +46,14 @@ func (m *Manager) Rename(name string, opt operator.Options, newName string) erro
 			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
 	}
 
+	if !skipConfirm {
+		if err := cliutil.PromptForConfirmOrAbortError(
+			fmt.Sprintf("Will rename the cluster name from %s to %s.\nDo you confirm this action? [y/N]:", color.HiYellowString(name), color.HiYellowString(newName)),
+		); err != nil {
+			return err
+		}
+	}
+
 	_, err := m.meta(name)
 	if err != nil { // refuse renaming if current cluster topology is not valid
 		return err
@@ -56,5 +66,5 @@ func (m *Manager) Rename(name string, opt operator.Options, newName string) erro
 	log.Infof("Rename cluster `%s` -> `%s` successfully", name, newName)
 
 	opt.Roles = []string{spec.ComponentGrafana, spec.ComponentPrometheus}
-	return m.Reload(newName, opt, false)
+	return m.Reload(newName, opt, false, skipConfirm)
 }
