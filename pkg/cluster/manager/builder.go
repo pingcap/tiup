@@ -306,7 +306,7 @@ func buildScaleOutTask(
 			return m.specManager.SaveMeta(name, metadata)
 		}).
 		Func("StartCluster", func(ctx context.Context) error {
-			return operator.Start(ctx, newPart, operator.Options{OptTimeout: gOpt.OptTimeout}, tlsCfg)
+			return operator.Start(ctx, newPart, operator.Options{OptTimeout: gOpt.OptTimeout, Operation: operator.ScaleOutOperation}, tlsCfg)
 		}).
 		Parallel(false, refreshConfigTasks...).
 		Parallel(false, buildReloadPromTasks(metadata.GetTopology())...)

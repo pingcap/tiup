@@ -16,6 +16,7 @@ package scripts
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"path"
 	"text/template"
@@ -25,30 +26,34 @@ import (
 
 // PDScript represent the data to generate pd config
 type PDScript struct {
-	Name       string
-	Scheme     string
-	IP         string
-	ListenHost string
-	ClientPort int
-	PeerPort   int
-	DeployDir  string
-	DataDir    string
-	LogDir     string
-	NumaNode   string
-	Endpoints  []*PDScript
+	Name                string
+	Scheme              string
+	IP                  string
+	ListenHost          string
+	AdvertiseClientAddr string
+	AdvertisePeerAddr   string
+	ClientPort          int
+	PeerPort            int
+	DeployDir           string
+	DataDir             string
+	LogDir              string
+	NumaNode            string
+	Endpoints           []*PDScript
 }
 
 // NewPDScript returns a PDScript with given arguments
 func NewPDScript(name, ip, deployDir, dataDir, logDir string) *PDScript {
 	return &PDScript{
-		Name:       name,
-		Scheme:     "http",
-		IP:         ip,
-		ClientPort: 2379,
-		PeerPort:   2380,
-		DeployDir:  deployDir,
-		DataDir:    dataDir,
-		LogDir:     logDir,
+		Name:                name,
+		Scheme:              "http",
+		IP:                  ip,
+		AdvertiseClientAddr: fmt.Sprintf("http://%s:%d", ip, 2379),
+		AdvertisePeerAddr:   fmt.Sprintf("http://%s:%d", ip, 2380),
+		ClientPort:          2379,
+		PeerPort:            2380,
+		DeployDir:           deployDir,
+		DataDir:             dataDir,
+		LogDir:              logDir,
 	}
 }
 
@@ -73,6 +78,22 @@ func (c *PDScript) WithClientPort(port int) *PDScript {
 // WithPeerPort set PeerPort field of PDScript
 func (c *PDScript) WithPeerPort(port int) *PDScript {
 	c.PeerPort = port
+	return c
+}
+
+// WithAdvertiseClientAddr set AdvertiseClientAddr field of PDScript
+func (c *PDScript) WithAdvertiseClientAddr(addr string) *PDScript {
+	if addr != "" {
+		c.AdvertiseClientAddr = fmt.Sprintf("%s://%s", c.Scheme, addr)
+	}
+	return c
+}
+
+// WithAdvertisePeerAddr set AdvertisePeerAddr field of PDScript
+func (c *PDScript) WithAdvertisePeerAddr(addr string) *PDScript {
+	if addr != "" {
+		c.AdvertisePeerAddr = fmt.Sprintf("%s://%s", c.Scheme, addr)
+	}
 	return c
 }
 
