@@ -111,7 +111,7 @@ func StopAndDestroyInstance(ctx context.Context, cluster spec.Topology, instance
 		monitoredOptions := cluster.GetMonitoredOptions()
 
 		if monitoredOptions != nil {
-			if err := StopMonitored(ctx, instance.GetHost(), monitoredOptions, options.OptTimeout); err != nil {
+			if err := StopMonitored(ctx, []string{instance.GetHost()}, monitoredOptions, options.OptTimeout); err != nil {
 				if !ignoreErr {
 					return errors.Annotatef(err, "failed to stop monitor")
 				}
