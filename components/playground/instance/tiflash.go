@@ -152,7 +152,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 		if err != nil {
 			return err
 		}
-		if version, err = env.GetComponentInstalledVersion("tiflash", version); err != nil {
+		if version, err = env.DownloadComponentIfMissing("tiflash", version); err != nil {
 			return err
 		}
 		// version may be empty, we will use the latest stable version later in Start cmd.
