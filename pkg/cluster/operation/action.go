@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/pingcap/errors"
@@ -29,6 +30,22 @@ import (
 	"github.com/pingcap/tiup/pkg/set"
 	"golang.org/x/sync/errgroup"
 )
+
+var (
+	actionPrevMsgs = map[string]string{
+		"start":   "Starting",
+		"stop":    "Stopping",
+		"enable":  "Enabling",
+		"disable": "Disabling",
+	}
+	actionPostMsgs = map[string]string{}
+)
+
+func init() {
+	for action := range actionPrevMsgs {
+		actionPostMsgs[action] = strings.Title(action)
+	}
+}
 
 // Enable will enable/disable the cluster
 func Enable(
@@ -207,29 +224,59 @@ func Restart(
 
 // StartMonitored start BlackboxExporter and NodeExporter
 func StartMonitored(ctx context.Context, hosts []string, options *spec.MonitoredOptions, timeout uint64) error {
+	return systemctlMonitor(ctx, hosts, options, "start", timeout)
+}
+
+// StopMonitored stop BlackboxExporter and NodeExporter
+func StopMonitored(ctx context.Context, hosts []string, options *spec.MonitoredOptions, timeout uint64) error {
+	return systemctlMonitor(ctx, hosts, options, "stop", timeout)
+}
+
+// EnableMonitored enable/disable monitor service in a cluster
+func EnableMonitored(ctx context.Context, hosts []string, options *spec.MonitoredOptions, timeout uint64, isEnable bool) error {
+	action := "disable"
+	if isEnable {
+		action = "enable"
+	}
+
+	return systemctlMonitor(ctx, hosts, options, action, timeout)
+}
+
+func systemctlMonitor(ctx context.Context, hosts []string, options *spec.MonitoredOptions, action string, timeout uint64) error {
 	ports := monitorPortMap(options)
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
-		log.Infof("Starting component %s", comp)
+		log.Infof("%s component %s", actionPrevMsgs[action], comp)
+
 		errg, _ := errgroup.WithContext(ctx)
 		for _, host := range hosts {
 			host := host
 			nctx := checkpoint.NewContext(ctx)
 			errg.Go(func() error {
-				log.Infof("\tStarting instance %s", host)
+				log.Infof("\t%s instance %s", actionPrevMsgs[action], host)
 				e := ctxt.GetInner(nctx).Get(host)
 				service := fmt.Sprintf("%s-%d.service", comp, ports[comp])
-				if err := systemctl(nctx, e, service, "start", timeout); err != nil {
-					return errors.Annotatef(err, "failed to start: %s", service)
+
+				if err := systemctl(nctx, e, service, action, timeout); err != nil {
+					return toFailedActionError(err, action, host, service, "")
 				}
 
-				// Check ready.
-				if err := spec.PortStarted(ctx, e, ports[comp], timeout); err != nil {
-					return toFailedActionError(err, "start", host, service, "")
+				var err error
+				switch action {
+				case "start":
+					err = spec.PortStarted(ctx, e, ports[comp], timeout)
+				case "stop":
+					err = spec.PortStopped(ctx, e, ports[comp], timeout)
 				}
 
-				log.Infof("\tStart %s success", host)
+				if err != nil {
+					return toFailedActionError(err, action, host, service, "")
+				}
+				log.Infof("\t%s %s success", actionPostMsgs[action], host)
 				return nil
 			})
+		}
+		if err := errg.Wait(); err != nil {
+			return err
 		}
 	}
 
@@ -238,7 +285,7 @@ func StartMonitored(ctx context.Context, hosts []string, options *spec.Monitored
 
 func restartInstance(ctx context.Context, ins spec.Instance, timeout uint64) error {
 	e := ctxt.GetInner(ctx).Get(ins.GetHost())
-	log.Infof("\tRestarting instance %s", ins.GetHost())
+	log.Infof("\tRestarting instance %s", ins.ID())
 
 	if err := systemctl(ctx, e, ins.ServiceName(), "restart", timeout); err != nil {
 		return toFailedActionError(err, "restart", ins.GetHost(), ins.ServiceName(), ins.LogDir())
@@ -249,7 +296,7 @@ func restartInstance(ctx context.Context, ins spec.Instance, timeout uint64) err
 		return toFailedActionError(err, "restart", ins.GetHost(), ins.ServiceName(), ins.LogDir())
 	}
 
-	log.Infof("\tRestart %s success", ins.GetHost())
+	log.Infof("\tRestart instance %s success", ins.ID())
 
 	return nil
 }
@@ -275,34 +322,26 @@ func RestartComponent(ctx context.Context, instances []spec.Instance, timeout ui
 
 func enableInstance(ctx context.Context, ins spec.Instance, timeout uint64, isEnable bool) error {
 	e := ctxt.GetInner(ctx).Get(ins.GetHost())
-	if isEnable {
-		log.Infof("\tEnabling instance %s %s", ins.ComponentName(), ins.ID())
-	} else {
-		log.Infof("\tDisabling instance %s %s", ins.ComponentName(), ins.ID())
-	}
 
 	action := "disable"
 	if isEnable {
 		action = "enable"
 	}
+	log.Infof("\t%s instance %s", actionPrevMsgs[action], ins.ID())
 
 	// Enable/Disable by systemd.
 	if err := systemctl(ctx, e, ins.ServiceName(), action, timeout); err != nil {
 		return toFailedActionError(err, action, ins.GetHost(), ins.ServiceName(), ins.LogDir())
 	}
 
-	if isEnable {
-		log.Infof("\tEnable %s %s success", ins.ComponentName(), ins.ID())
-	} else {
-		log.Infof("\tDisable %s %s success", ins.ComponentName(), ins.ID())
-	}
+	log.Infof("\t%s instance %s success", actionPostMsgs[action], ins.ID())
 
 	return nil
 }
 
 func startInstance(ctx context.Context, ins spec.Instance, timeout uint64) error {
 	e := ctxt.GetInner(ctx).Get(ins.GetHost())
-	log.Infof("\tStarting instance %s %s", ins.ComponentName(), ins.ID())
+	log.Infof("\tStarting instance %s", ins.ID())
 
 	if err := systemctl(ctx, e, ins.ServiceName(), "start", timeout); err != nil {
 		return toFailedActionError(err, "start", ins.GetHost(), ins.ServiceName(), ins.LogDir())
@@ -313,7 +352,7 @@ func startInstance(ctx context.Context, ins spec.Instance, timeout uint64) error
 		return toFailedActionError(err, "start", ins.GetHost(), ins.ServiceName(), ins.LogDir())
 	}
 
-	log.Infof("\tStart %s %s success", ins.ComponentName(), ins.ID())
+	log.Infof("\tStart instance %s success", ins.ID())
 
 	return nil
 }
@@ -383,51 +422,6 @@ func EnableComponent(ctx context.Context, instances []spec.Instance, options Opt
 	return errg.Wait()
 }
 
-// EnableMonitored enable/disable monitor service in a cluster
-func EnableMonitored(ctx context.Context, hosts []string, options *spec.MonitoredOptions, timeout uint64, isEnable bool) error {
-	action := "disable"
-	if isEnable {
-		action = "enable"
-	}
-
-	ports := monitorPortMap(options)
-	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
-		if isEnable {
-			log.Infof("Enabling component %s", comp)
-		} else {
-			log.Infof("Disabling component %s", comp)
-		}
-		errg, _ := errgroup.WithContext(ctx)
-		for _, host := range hosts {
-			host := host
-			nctx := checkpoint.NewContext(ctx)
-			errg.Go(func() error {
-				if isEnable {
-					log.Infof("\tEnabling instance %s", host)
-				} else {
-					log.Infof("\tDisabling instance %s", host)
-				}
-				e := ctxt.GetInner(nctx).Get(host)
-				service := fmt.Sprintf("%s-%d.service", comp, ports[comp])
-				if err := systemctl(nctx, e, service, action, timeout); err != nil {
-					return toFailedActionError(err, action, host, service, "")
-				}
-				if isEnable {
-					log.Infof("\tEnable instance %s success", host)
-				} else {
-					log.Infof("\tDisable instance %s success", host)
-				}
-				return nil
-			})
-		}
-		if err := errg.Wait(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // StartComponent start the instances.
 func StartComponent(ctx context.Context, instances []spec.Instance, options Options, tlsCfg *tls.Config) error {
 	if len(instances) == 0 {
@@ -474,40 +468,6 @@ func serialStartInstances(ctx context.Context, instances []spec.Instance, option
 			return err
 		}
 	}
-	return nil
-}
-
-// StopMonitored stop BlackboxExporter and NodeExporter
-func StopMonitored(ctx context.Context, hosts []string, options *spec.MonitoredOptions, timeout uint64) error {
-	ports := monitorPortMap(options)
-	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
-		log.Infof("Stopping component %s", comp)
-
-		errg, _ := errgroup.WithContext(ctx)
-		for _, host := range hosts {
-			host := host
-			nctx := checkpoint.NewContext(ctx)
-			errg.Go(func() error {
-				log.Infof("\tStopping instance %s", host)
-				e := ctxt.GetInner(nctx).Get(host)
-				service := fmt.Sprintf("%s-%d.service", comp, ports[comp])
-
-				if err := systemctl(nctx, e, service, "stop", timeout); err != nil {
-					return toFailedActionError(err, "stop", host, service, "")
-				}
-
-				if err := spec.PortStopped(ctx, e, ports[comp], timeout); err != nil {
-					return toFailedActionError(err, "stop", host, service, "")
-				}
-				log.Infof("\tStop %s success", host)
-				return nil
-			})
-		}
-		if err := errg.Wait(); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
