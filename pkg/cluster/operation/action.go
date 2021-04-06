@@ -276,9 +276,9 @@ func RestartComponent(ctx context.Context, instances []spec.Instance, timeout ui
 func enableInstance(ctx context.Context, ins spec.Instance, timeout uint64, isEnable bool) error {
 	e := ctxt.GetInner(ctx).Get(ins.GetHost())
 	if isEnable {
-		log.Infof("\tEnabling instance %s %s:%d", ins.ComponentName(), ins.GetHost(), ins.GetPort())
+		log.Infof("\tEnabling instance %s %s", ins.ComponentName(), ins.ID())
 	} else {
-		log.Infof("\tDisabling instance %s %s:%d", ins.ComponentName(), ins.GetHost(), ins.GetPort())
+		log.Infof("\tDisabling instance %s %s", ins.ComponentName(), ins.ID())
 	}
 
 	action := "disable"
@@ -402,10 +402,20 @@ func EnableMonitored(ctx context.Context, hosts []string, options *spec.Monitore
 			host := host
 			nctx := checkpoint.NewContext(ctx)
 			errg.Go(func() error {
+				if isEnable {
+					log.Infof("\tEnabling instance %s", host)
+				} else {
+					log.Infof("\tDisabling instance %s", host)
+				}
 				e := ctxt.GetInner(nctx).Get(host)
 				service := fmt.Sprintf("%s-%d.service", comp, ports[comp])
 				if err := systemctl(nctx, e, service, action, timeout); err != nil {
 					return toFailedActionError(err, action, host, service, "")
+				}
+				if isEnable {
+					log.Infof("\tEnable instance %s success", host)
+				} else {
+					log.Infof("\tDisable instance %s success", host)
 				}
 				return nil
 			})
