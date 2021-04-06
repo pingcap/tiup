@@ -381,9 +381,8 @@ func systemctl(ctx context.Context, executor ctxt.Executor, service string, acti
 		if bytes.Contains(stderr, []byte(" not loaded.")) {
 			log.Warnf(string(stderr))
 			return nil // reset the error to avoid exiting
-		} else {
-			log.Errorf(string(stderr))
 		}
+		log.Errorf(string(stderr))
 	}
 	return err
 }
