@@ -368,7 +368,7 @@ func (i *MonitorInstance) initRules(ctx context.Context, e ctxt.Executor, spec *
 		"mkdir -p %[1]s/conf",
 		`find %[1]s/conf -type f -name "*.rules.yml" -delete`,
 		`find %[1]s/bin/prometheus -maxdepth 1 -type f -name "*.rules.yml" -exec cp {} %[1]s/conf/ \;`,
-		`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i "s/ENV_LABELS_ENV/%[2]s/g" {} \;`,
+		`find %[1]s/conf -maxdepth 1 -type f -name "*.rules.yml" -exec sed -i -e "s/ENV_LABELS_ENV/%[2]s/g" {} \;`,
 	}
 	_, stderr, err := e.Execute(ctx, fmt.Sprintf(strings.Join(cmds, " && "), paths.Deploy, clusterName), false)
 	if err != nil {
