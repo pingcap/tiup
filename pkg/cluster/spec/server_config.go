@@ -274,9 +274,14 @@ func checkConfig(ctx context.Context, e ctxt.Executor, componentName, clusterVer
 			return perrs.Annotate(ErrorCheckConfig, err.Error())
 		}
 
+		clsVer := utils.Version(clusterVersion)
 		ver := clusterVersion
+		if clsVer.IsNightly() {
+			ver = utils.NightlyVersionAlias
+		}
+		// FIXME: workaround for nightly versions, need refactor
 		if bindVersion != nil {
-			ver = bindVersion(componentName, clusterVersion)
+			ver = bindVersion(componentName, ver)
 		}
 
 		entry, err := repo.ComponentBinEntry(componentName, ver)
