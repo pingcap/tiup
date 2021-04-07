@@ -76,8 +76,7 @@ type scheduleConfig struct {
 }
 
 type replicateMaxReplicaConfig struct {
-	MaxReplicas          int    `json:"max-replicas"`
-	EnablePlacementRules string `json:"enable-placement-rules"`
+	MaxReplicas int `json:"max-replicas"`
 }
 
 type replicateEnablePlacementRulesConfig struct {
@@ -123,8 +122,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 	}
 	// Update maxReplicas before placement rules so that it would not be overwritten
 	maxReplicas, err := json.Marshal(replicateMaxReplicaConfig{
-		MaxReplicas:          1,
-		EnablePlacementRules: "false",
+		MaxReplicas: 1,
 	})
 	if err != nil {
 		return err
@@ -154,7 +152,7 @@ func (inst *TiFlashInstance) Start(ctx context.Context, version utils.Version) e
 		if err != nil {
 			return err
 		}
-		if version, err = env.GetComponentInstalledVersion("tiflash", version); err != nil {
+		if version, err = env.DownloadComponentIfMissing("tiflash", version); err != nil {
 			return err
 		}
 		// version may be empty, we will use the latest stable version later in Start cmd.
