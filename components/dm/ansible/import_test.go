@@ -164,6 +164,7 @@ func TestImportFromAnsible(t *testing.T) {
 		DeployDir: "",
 		LogDir:    "/home/tidb/deploy/log",
 		Config:    map[string]interface{}{"log-level": "info"},
+		Imported:  true,
 	}
 	assert.Equal(expectedMaster, master)
 
@@ -180,6 +181,7 @@ func TestImportFromAnsible(t *testing.T) {
 		DeployDir: "/home/tidb/deploy",
 		LogDir:    "/home/tidb/deploy/log",
 		Config:    map[string]interface{}{"log-level": "info"},
+		Imported:  true,
 	}
 
 	worker := topo.Workers[0]
@@ -199,6 +201,7 @@ func TestImportFromAnsible(t *testing.T) {
 		DeployDir: "",
 		DataDir:   "/home/tidb/deploy/data.alertmanager",
 		LogDir:    "/home/tidb/deploy/log",
+		Imported:  true,
 	}
 	assert.Equal(expectedAlter, aler)
 
@@ -212,6 +215,7 @@ func TestImportFromAnsible(t *testing.T) {
 		Port:      3001,
 		Username:  "foo",
 		Password:  "bar",
+		Imported:  true,
 	}
 	assert.Equal(expectedGrafana, grafana)
 
@@ -225,6 +229,7 @@ func TestImportFromAnsible(t *testing.T) {
 		DataDir:   "/home/tidb/deploy/prometheus.data.metrics",
 		LogDir:    "/home/tidb/deploy/log",
 		Port:      9090,
+		Imported:  true,
 	}
 	assert.Equal(expectedMonitor, monitor)
 
