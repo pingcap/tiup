@@ -10,9 +10,9 @@ cd "${DEPLOY_DIR}" || exit 1
 {{- define "PDList"}}
   {{- range $idx, $pd := .}}
     {{- if eq $idx 0}}
-      {{- $pd.Name}}={{$pd.AdvertisePeerAddr}}
+      {{- $pd.AdvertiseClientAddr}}
     {{- else -}}
-      ,{{- $pd.Name}}={{$pd.AdvertisePeerAddr}}
+      ,{{- $pd.AdvertiseClientAddr}}
     {{- end}}
   {{- end}}
 {{- end}}
