@@ -66,6 +66,8 @@ func (c *PDScript) WithListenHost(listenHost string) *PDScript {
 // WithScheme set Scheme field of PDScript
 func (c *PDScript) WithScheme(scheme string) *PDScript {
 	c.Scheme = scheme
+	c.AdvertiseClientAddr = fmt.Sprintf("%s://%s:%d", c.Scheme, c.IP, c.ClientPort)
+	c.AdvertisePeerAddr = fmt.Sprintf("%s://%s:%d", c.Scheme, c.IP, c.PeerPort)
 	return c
 }
 

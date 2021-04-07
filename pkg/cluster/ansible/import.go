@@ -193,9 +193,9 @@ func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 		}
 	}
 	global, locals := diffConfigs(configs)
-	cls.Topology.ServerConfigs.TiDB = global
+	cls.Topology.ServerConfigs.TiDB = spec.MergeConfig(cls.Topology.ServerConfigs.TiDB, global)
 	for i, local := range locals {
-		cls.Topology.TiDBServers[i].Config = local
+		cls.Topology.TiDBServers[i].Config = spec.MergeConfig(cls.Topology.TiDBServers[i].Config, local)
 	}
 
 	// deal with tikv config
@@ -210,9 +210,9 @@ func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 		}
 	}
 	global, locals = diffConfigs(configs)
-	cls.Topology.ServerConfigs.TiKV = global
+	cls.Topology.ServerConfigs.TiKV = spec.MergeConfig(cls.Topology.ServerConfigs.TiKV, global)
 	for i, local := range locals {
-		cls.Topology.TiKVServers[i].Config = local
+		cls.Topology.TiKVServers[i].Config = spec.MergeConfig(cls.Topology.TiKVServers[i].Config, local)
 	}
 
 	// deal with pd config
@@ -227,9 +227,9 @@ func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 		}
 	}
 	global, locals = diffConfigs(configs)
-	cls.Topology.ServerConfigs.PD = global
+	cls.Topology.ServerConfigs.PD = spec.MergeConfig(cls.Topology.ServerConfigs.PD, global)
 	for i, local := range locals {
-		cls.Topology.PDServers[i].Config = local
+		cls.Topology.PDServers[i].Config = spec.MergeConfig(cls.Topology.PDServers[i].Config, local)
 	}
 
 	// deal with pump config
@@ -244,9 +244,9 @@ func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 		}
 	}
 	global, locals = diffConfigs(configs)
-	cls.Topology.ServerConfigs.Pump = global
+	cls.Topology.ServerConfigs.Pump = spec.MergeConfig(cls.Topology.ServerConfigs.Pump, global)
 	for i, local := range locals {
-		cls.Topology.PumpServers[i].Config = local
+		cls.Topology.PumpServers[i].Config = spec.MergeConfig(cls.Topology.PumpServers[i].Config, local)
 	}
 
 	// deal with drainer config
@@ -261,9 +261,9 @@ func LoadConfig(clsName string, cls *spec.ClusterMeta) error {
 		}
 	}
 	global, locals = diffConfigs(configs)
-	cls.Topology.ServerConfigs.Drainer = global
+	cls.Topology.ServerConfigs.Drainer = spec.MergeConfig(cls.Topology.ServerConfigs.Drainer, global)
 	for i, local := range locals {
-		cls.Topology.Drainers[i].Config = local
+		cls.Topology.Drainers[i].Config = spec.MergeConfig(cls.Topology.Drainers[i].Config, local)
 	}
 
 	return nil

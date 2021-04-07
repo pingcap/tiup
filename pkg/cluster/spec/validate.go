@@ -223,6 +223,9 @@ func CheckClusterDirOverlap(entries []DirEntry) error {
 			}
 
 			if utils.IsSubDir(d1.dir, d2.dir) || utils.IsSubDir(d2.dir, d1.dir) {
+				if d1.instance.IsImported() && d2.instance.IsImported() {
+					continue
+				}
 				properties := map[string]string{
 					"ThisDirKind":   d1.dirKind,
 					"ThisDir":       d1.dir,

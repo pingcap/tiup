@@ -330,8 +330,9 @@ func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName strin
 		case "dm_master_servers":
 			for _, host := range group.Hosts {
 				srv := &spec.MasterSpec{
-					Host:    host.Vars["ansible_host"],
-					SSHPort: ansible.GetHostPort(host, cfg),
+					Host:     host.Vars["ansible_host"],
+					SSHPort:  ansible.GetHostPort(host, cfg),
+					Imported: true,
 				}
 
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_dm-master.sh")
@@ -380,6 +381,7 @@ func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName strin
 					Host:      host.Vars["ansible_host"],
 					SSHPort:   ansible.GetHostPort(host, cfg),
 					DeployDir: firstNonEmpty(host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir),
+					Imported:  true,
 				}
 
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_dm-worker.sh")
@@ -441,6 +443,7 @@ func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName strin
 					Host:      host.Vars["ansible_host"],
 					SSHPort:   ansible.GetHostPort(host, cfg),
 					DeployDir: firstNonEmpty(host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir),
+					Imported:  true,
 				}
 
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_prometheus.sh")
@@ -489,6 +492,7 @@ func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName strin
 					Host:      host.Vars["ansible_host"],
 					SSHPort:   ansible.GetHostPort(host, cfg),
 					DeployDir: firstNonEmpty(host.Vars["deploy_dir"], topo.GlobalOptions.DeployDir),
+					Imported:  true,
 				}
 
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_alertmanager.sh")
@@ -546,6 +550,7 @@ func (im *Importer) ImportFromAnsibleDir(ctx context.Context) (clusterName strin
 					Port:     port,
 					Username: grafanaUser,
 					Password: grafanaPass,
+					Imported: true,
 				}
 
 				runFileName := filepath.Join(host.Vars["deploy_dir"], "scripts", "run_grafana.sh")
