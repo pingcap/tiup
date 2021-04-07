@@ -1,5 +1,25 @@
 TiUP Changelog
 
+## [1.4.1] 2021.04.07
+
+### Fixes
+
+- Fix pprof failing for TiKV in playground ([#1272](https://github.com/pingcap/tiup/pull/1272), [@hicqu](https://github.com/hicqu))
+- Fix the issue that TiFlash node may be failed to restart in playground ([#1280](https://github.com/pingcap/tiup/pull/1280), [@lucklove](https://github.com/lucklove))
+- Fix the issue that `binlog_enable` is not imported from tidb-ansible correctly ([#1261](https://github.com/pingcap/tiup/pull/1261), [@lucklove](https://github.com/lucklove))
+- Fix directory conflict check error for TiDB and DM clusters imported from ansible deployment ([#1273](https://github.com/pingcap/tiup/pull/1273), [@lucklove](https://github.com/lucklove))
+- Fix compatibility issue during upgrade for PD v3.x ([#1274](https://github.com/pingcap/tiup/pull/1274), [@lucklove](https://github.com/lucklove))
+- Fix failure of parsing very long audit log in replay for tiup-cluster ([#1259](https://github.com/pingcap/tiup/pull/1259), [@lucklove](https://github.com/lucklove))
+- Fix log dir path of Grafana for tiup-cluster ([#1276](https://github.com/pingcap/tiup/pull/1276), [@rkazak](https://github.com/rkazak))
+- Fix config check error when the cluster was deployed with an legacy nightly version in tiup-cluster ([#1281](https://github.com/pingcap/tiup/pull/1281), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix error when using nightly version while the actual component is not available in repo ([#1294](https://github.com/pingcap/tiup/pull/1294), [@lucklove](https://github.com/lucklove))
+
+### Improvements
+
+- Refine PD scaling script rendering to optimize the code ([#1253](https://github.com/pingcap/tiup/pull/1253), [@9547](https://github.com/9547))
+- Start PD and DM master nodes sequentially in ([#1262](https://github.com/pingcap/tiup/pull/1262), [@9547](https://github.com/9547))
+- Properly follow the ignore config check argument in reload for tiup-cluster ([#1265](https://github.com/pingcap/tiup/pull/1265), [@9547](https://github.com/9547))
+
 ## [1.4.0] 2021.03.31
 
 ### New Features
