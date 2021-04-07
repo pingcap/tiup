@@ -38,6 +38,9 @@ const (
 	goroutineKey = contextKey("CHECKPOINT_GOROUTINE")
 	funcKey      = "__func__"
 	hashKey      = "__hash__"
+
+	// At most 10M for each line in audit log
+	maxTokenSize = 10 * 1024 * 1024
 )
 
 var (
@@ -125,6 +128,7 @@ func NewCheckPoint(r io.Reader) (*CheckPoint, error) {
 	cp := CheckPoint{points: make([]map[string]interface{}, 0)}
 
 	scanner := bufio.NewScanner(r)
+	scanner.Buffer(nil, maxTokenSize)
 	for scanner.Scan() {
 		line := scanner.Text()
 		m, err := checkLine(line)
