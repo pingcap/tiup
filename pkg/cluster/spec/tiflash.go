@@ -434,11 +434,7 @@ server_configs:
 		return nil, err
 	}
 
-	conf, err := merge(topo.ServerConfigs.TiFlash, src)
-	if err != nil {
-		return nil, err
-	}
-
+	conf := MergeConfig(topo.ServerConfigs.TiFlash, src)
 	return conf, nil
 }
 
@@ -455,10 +451,7 @@ func (i *TiFlashInstance) mergeTiFlashInstanceConfig(clusterVersion string, glob
 		delete(globalConf, "path")
 	}
 
-	conf, err = merge(globalConf, instanceConf)
-	if err != nil {
-		return nil, err
-	}
+	conf = MergeConfig(globalConf, instanceConf)
 	return conf, nil
 }
 
@@ -497,11 +490,7 @@ server_configs:
 		return nil, err
 	}
 
-	conf, err := merge(topo.ServerConfigs.TiFlashLearner, src)
-	if err != nil {
-		return nil, err
-	}
-
+	conf := MergeConfig(topo.ServerConfigs.TiFlashLearner, src)
 	return conf, nil
 }
 
