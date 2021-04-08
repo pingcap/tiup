@@ -263,9 +263,9 @@ func systemctlMonitor(ctx context.Context, hosts []string, options *spec.Monitor
 				var err error
 				switch action {
 				case "start":
-					err = spec.PortStarted(ctx, e, ports[comp], timeout)
+					err = spec.PortStarted(nctx, e, ports[comp], timeout)
 				case "stop":
-					err = spec.PortStopped(ctx, e, ports[comp], timeout)
+					err = spec.PortStopped(nctx, e, ports[comp], timeout)
 				}
 
 				if err != nil {
