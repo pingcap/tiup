@@ -156,7 +156,7 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 			return nil, err
 		}
 		if semver.Compare(selectVer.String(), latestV.String()) < 0 {
-			fmt.Println(color.YellowString(`Found %[1]s newer version:
+			fmt.Fprintln(os.Stderr, color.YellowString(`Found %[1]s newer version:
 
     The latest version:         %[2]s
     Local installed version:    %[3]s
@@ -275,7 +275,7 @@ func launchComponent(ctx context.Context, component string, version utils.Versio
 		Cmd:         c,
 	}
 
-	fmt.Printf("Starting component `%s`: %s\n", component, strings.Join(append([]string{p.Exec}, p.Args...), " "))
+	fmt.Fprintf(os.Stderr, "Starting component `%s`: %s\n", component, strings.Join(append([]string{p.Exec}, p.Args...), " "))
 	err = p.Cmd.Start()
 	if p.Cmd.Process != nil {
 		p.Pid = p.Cmd.Process.Pid
