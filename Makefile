@@ -1,6 +1,7 @@
 .PHONY: components server targets
 .DEFAULT_GOAL := default
 
+LANG=C
 MAKEOVERRIDES =
 targets:
 	@printf "%-30s %s\n" "Target" "Description"
@@ -162,4 +163,3 @@ tools/bin/revive: tools/check/go.mod
 tools/bin/golangci-lint:
 	@# Target: pull in specific version of golangci-lint (v1.38.0)
 	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b ./tools/bin v1.38.0
-
