@@ -58,11 +58,20 @@ the latest stable version will be downloaded from the repository.`,
 			if printVersion && len(args) == 0 {
 				return nil
 			}
-			e, err := environment.InitEnv(repoOpts)
-			if err != nil {
-				return err
+			switch cmd.Name() {
+			case "init":
+				if cmd.HasParent() && cmd.Parent().Name() == "mirror" {
+					// skip environment init
+					break
+				}
+				fallthrough
+			default:
+				e, err := environment.InitEnv(repoOpts)
+				if err != nil {
+					return err
+				}
+				environment.SetGlobalEnv(e)
 			}
-			environment.SetGlobalEnv(e)
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
