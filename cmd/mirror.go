@@ -655,8 +655,8 @@ func newMirrorInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init <path>",
 		Short: "Initialize an empty repository",
-		Long: `Initialize an empty TiUP repository at given path. If path is not specified, the
-current working directory (".") will be used.`,
+		Long: `Initialize an empty TiUP repository at given path.
+The specified path must be an empty directory.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
