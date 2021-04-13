@@ -831,7 +831,17 @@ func newMirrorCloneCmd() *cobra.Command {
 				return spec.TiDBComponentVersion(comp, "")
 			}
 
-			return repository.CloneMirror(repo, components, versionMapper, args[0], args[1:], options)
+			// format input versions
+			versionList := make([]string, 0)
+			for _, ver := range args[1:] {
+				v, err := utils.FmtVer(ver)
+				if err != nil {
+					return err
+				}
+				versionList = append(versionList, v)
+			}
+
+			return repository.CloneMirror(repo, components, versionMapper, args[0], versionList, options)
 		},
 	}
 
