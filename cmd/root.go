@@ -59,7 +59,8 @@ the latest stable version will be downloaded from the repository.`,
 				return nil
 			}
 			switch cmd.Name() {
-			case "init":
+			case "init",
+				"set":
 				if cmd.HasParent() && cmd.Parent().Name() == "mirror" {
 					// skip environment init
 					break

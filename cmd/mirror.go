@@ -141,18 +141,28 @@ func newMirrorSignCmd() *cobra.Command {
 
 // the `mirror set` sub command
 func newMirrorSetCmd() *cobra.Command {
-	root := ""
+	var (
+		root  string
+		reset bool
+	)
 	cmd := &cobra.Command{
 		Use:   "set <mirror-addr>",
-		Short: "set mirror address",
-		Long:  "set mirror address, will replace the root certificate",
+		Short: "Set mirror address",
+		Long: `Set mirror address, the address could be an URL or a path to the repository
+directory. Relative paths will not be expanded, so absolute paths are recommended.
+The root manifest in $TIUP_HOME will be replaced with the one in given repository automatically.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
+			if !reset && len(args) != 1 {
 				return cmd.Help()
 			}
 
-			addr := args[0]
-			profile := environment.GlobalEnv().Profile()
+			var addr string
+			if reset {
+				addr = repository.DefaultMirror
+			} else {
+				addr = args[0]
+			}
+			profile := localdata.InitProfile()
 			if err := profile.ResetMirror(addr, root); err != nil {
 				log.Errorf("Failed to set mirror: %s\n", err.Error())
 				return err
@@ -162,6 +172,8 @@ func newMirrorSetCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&root, "root", "r", root, "Specify the path of `root.json`")
+	cmd.Flags().BoolVar(&reset, "reset", false, "Reset mirror to use the default address.")
+
 	return cmd
 }
 
@@ -656,7 +668,8 @@ func newMirrorInitCmd() *cobra.Command {
 		Use:   "init <path>",
 		Short: "Initialize an empty repository",
 		Long: `Initialize an empty TiUP repository at given path.
-The specified path must be an empty directory.`,
+The specified path must be an empty directory.
+If the path does not exist, a new directory will be created.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return cmd.Help()
@@ -666,6 +679,7 @@ The specified path must be an empty directory.`,
 			// create the target path if not exist
 			if utils.IsNotExist(repoPath) {
 				var err error
+				log.Infof("Target path \"%s\" does not exist, creating new directory...", repoPath)
 				if err = os.Mkdir(repoPath, 0755); err != nil {
 					return err
 				}
@@ -686,13 +700,21 @@ The specified path must be an empty directory.`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&keyDir, "key-dir", "k", "", "Path to write the private key file")
+	cmd.Flags().StringVarP(&keyDir, "key-dir", "k", "", "Path to write the private key files")
 
 	return cmd
 }
 
 func initRepo(path, keyDir string) error {
-	return v1manifest.Init(path, keyDir, time.Now().UTC())
+	log.Infof("Initializing empty new repository at \"%s\", private keys will be stored in \"%s\"...", path, keyDir)
+	err := v1manifest.Init(path, keyDir, time.Now().UTC())
+	if err != nil {
+		log.Errorf("Initializing new repository failed.")
+		return err
+	}
+	log.Infof("New repository initialized at \"%s\", private keys are stored in \"%s\".", path, keyDir)
+	log.Infof("Use `tiup mirror set` command to set and use the new repository.")
+	return nil
 }
 
 // the `mirror merge` sub command
