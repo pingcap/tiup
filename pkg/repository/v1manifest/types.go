@@ -15,6 +15,8 @@ package v1manifest
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"time"
 )
 
@@ -268,4 +270,35 @@ func (manifest *Component) VersionListWithYanked(platform string) map[string]Ver
 	}
 
 	return vs
+}
+
+// ErrLoadManifest is an empty object of LoadManifestError, useful for type check
+var ErrLoadManifest = &LoadManifestError{}
+
+// LoadManifestError is the error type used when loading manifest failes
+type LoadManifestError struct {
+	manifest string // manifest name
+	err      error  // wrapped error
+}
+
+// Error implements the error interface
+func (e *LoadManifestError) Error() string {
+	return fmt.Sprintf(
+		"error loading manifest %s: %s",
+		e.manifest, e.err,
+	)
+}
+
+// Unwrap implements the error interface
+func (e *LoadManifestError) Unwrap() error { return e.err }
+
+// Is implements the error interface
+func (e *LoadManifestError) Is(target error) bool {
+	t, ok := target.(*LoadManifestError)
+	if !ok {
+		return false
+	}
+
+	return (e.manifest == t.manifest || t.manifest == "") &&
+		(errors.Is(e.err, t) || t.err == nil)
 }
