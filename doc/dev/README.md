@@ -61,4 +61,4 @@ Some key concepts:
 
 ### Manifest formats
 
-See `ComponentManifest` and `VersionManifest` data structures in [component.go](../../server/handler/component.go) and [version.go](../../pkg/version/version.go).
+See `ComponentManifest` and `VersionManifest` data structures in [component.go](../../pkg/repository/types.go) and [version.go](../../pkg/version/version.go).
