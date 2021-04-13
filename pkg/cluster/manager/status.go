@@ -100,7 +100,7 @@ func (m *Manager) DoStartCluster(name string, options operator.Options, fn ...fu
 // DoStopCluster stop the cluster.
 func (m *Manager) DoStopCluster(clusterName string, options operator.Options) {
 	operationInfo = OperationInfo{operationType: operationStop, clusterName: clusterName}
-	operationInfo.err = m.StopCluster(clusterName, options)
+	operationInfo.err = m.StopCluster(clusterName, options, true)
 }
 
 // DoCheckCluster check the cluster.
@@ -170,7 +170,7 @@ func (m *Manager) DoScaleOut(
 	topoFile string,
 	afterDeploy func(b *task.Builder, newPart spec.Topology),
 	final func(b *task.Builder, name string, meta spec.Metadata),
-	opt ScaleOutOptions,
+	opt DeployOptions,
 	skipConfirm bool,
 	gOpt operator.Options,
 ) {

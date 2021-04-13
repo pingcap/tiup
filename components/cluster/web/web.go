@@ -380,7 +380,7 @@ func scaleOutClusterHandler(c *gin.Context) {
 	topoFilePath := tmpfile.Name()
 	tmpfile.Close()
 
-	opt := manager.ScaleOutOptions{
+	opt := manager.DeployOptions{
 		User:     req.GlobalLoginOptions.Username,
 		NoLabels: true,
 	}
