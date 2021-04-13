@@ -47,15 +47,16 @@ function kill_all() {
     killall -9 grafana-server || true
     killall -9 tiup-playground || true
     killall -9 prometheus || true
+    cat $outfile
 }
 
 outfile=/tmp/tiup-playground-test.out
-tiup-playground v4.0.10 --tiflash 0 > $outfile 2>&1 &
+tiup-playground nightly > $outfile 2>&1 &
 
 # wait $outfile generated
 sleep 3
 
-trap "kill_all > /dev/null 2>&1" EXIT
+trap "kill_all" EXIT
 
 # wait start cluster successfully
 timeout 300 grep -q "CLUSTER START SUCCESSFULLY" <(tail -f $outfile)
@@ -96,5 +97,18 @@ tiup-playground display
 tiup-playground display | grep -E "terminated|exit" | wc -l | grep -q "1"
 
 killall -2 tiup-playground.test || killall -2 tiup-playground
+
+sleep 60
+
+# test restart with same data
+tiup-playground nightly > $outfile 2>&1 &
+
+# wait $outfile generated
+sleep 3
+
+# wait start cluster successfully
+timeout 300 grep -q "CLUSTER START SUCCESSFULLY" <(tail -f $outfile)
+
+cat $outfile | grep ":3930" | grep -q "Done"
 
 echo -e "\033[0;36m<<< Run all test success >>>\033[0m"

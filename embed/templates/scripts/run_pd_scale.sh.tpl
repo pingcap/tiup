@@ -10,9 +10,9 @@ cd "${DEPLOY_DIR}" || exit 1
 {{- define "PDList"}}
   {{- range $idx, $pd := .}}
     {{- if eq $idx 0}}
-      {{- $pd.Scheme}}://{{$pd.IP}}:{{$pd.ClientPort}}
+      {{- $pd.AdvertiseClientAddr}}
     {{- else -}}
-      ,{{- $pd.Scheme}}://{{$pd.IP}}:{{$pd.ClientPort}}
+      ,{{- $pd.AdvertiseClientAddr}}
     {{- end}}
   {{- end}}
 {{- end}}
@@ -24,9 +24,9 @@ exec bin/pd-server \
 {{- end}}
     --name="{{.Name}}" \
     --client-urls="{{.Scheme}}://{{.ListenHost}}:{{.ClientPort}}" \
-    --advertise-client-urls="{{.Scheme}}://{{.IP}}:{{.ClientPort}}" \
+    --advertise-client-urls="{{.AdvertiseClientAddr}}" \
     --peer-urls="{{.Scheme}}://{{.ListenHost}}:{{.PeerPort}}" \
-    --advertise-peer-urls="{{.Scheme}}://{{.IP}}:{{.PeerPort}}" \
+    --advertise-peer-urls="{{.AdvertisePeerAddr}}" \
     --data-dir="{{.DataDir}}" \
     --join="{{template "PDList" .Endpoints}}" \
     --config=conf/pd.toml \

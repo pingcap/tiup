@@ -2,8 +2,8 @@
 
 set -eu
 
-version=${version-v4.0.4}
-old_version=${old_version-v3.0.16}
+version=${version-v4.0.12}
+old_version=${old_version-v3.0.20}
 name=test_upgrade_tls
 topo=./topo/upgrade_tls.yaml
 

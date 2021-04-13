@@ -721,7 +721,7 @@ func (r *V1Repository) ComponentVersion(id, ver string, includeYanked bool) (*v1
 	}
 	if ver == utils.NightlyVersionAlias {
 		if !manifest.HasNightly(r.PlatformString()) {
-			return nil, errors.Errorf("component %s does not have nightly on %s", id, r.PlatformString())
+			return nil, errors.Annotatef(ErrUnknownVersion, "component %s does not have nightly on %s", id, r.PlatformString())
 		}
 
 		ver = manifest.Nightly

@@ -17,7 +17,7 @@ data = {{.DeployDir}}/data
 #
 # Directory where grafana can store logs
 #
-logs = {{.DeployDir}}/logs
+logs = {{.DeployDir}}/log
 #
 # Directory where grafana will automatically scan and look for plugins
 #
