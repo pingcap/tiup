@@ -700,6 +700,8 @@ func (s *Specification) Endpoints(user string) []*scripts.PDScript {
 		if s.GlobalOptions.TLSEnabled {
 			script = script.WithScheme("https")
 		}
+		script = script.WithAdvertiseClientAddr(spec.AdvertiseClientAddr).
+			WithAdvertisePeerAddr(spec.AdvertisePeerAddr)
 		ends = append(ends, script)
 	}
 	return ends

@@ -127,17 +127,18 @@ func base62Tag() string {
 
 // PrepareCommandParams for PrepareCommand.
 type PrepareCommandParams struct {
-	Ctx         context.Context
-	Component   string
-	Version     utils.Version
-	BinPath     string
-	Tag         string
-	InstanceDir string
-	WD          string
-	Args        []string
-	SysProcAttr *syscall.SysProcAttr
-	Env         *environment.Environment
-	CheckUpdate bool
+	Ctx          context.Context
+	Component    string
+	Version      utils.Version
+	BinPath      string
+	Tag          string
+	InstanceDir  string
+	WD           string
+	Args         []string
+	EnvVariables []string
+	SysProcAttr  *syscall.SysProcAttr
+	Env          *environment.Environment
+	CheckUpdate  bool
 }
 
 // PrepareCommand will download necessary component and returns a *exec.Cmd
@@ -155,7 +156,7 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 			return nil, err
 		}
 		if semver.Compare(selectVer.String(), latestV.String()) < 0 {
-			fmt.Println(color.YellowString(`Found %[1]s newer version:
+			fmt.Fprintln(os.Stderr, color.YellowString(`Found %[1]s newer version:
 
     The latest version:         %[2]s
     Local installed version:    %[3]s
@@ -222,6 +223,7 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 		fmt.Sprintf("%s=%s", localdata.EnvTag, p.Tag),
 	}
 	envs = append(envs, os.Environ()...)
+	envs = append(envs, p.EnvVariables...)
 
 	// init the command
 	c := exec.CommandContext(p.Ctx, binPath, p.Args...)
@@ -273,7 +275,7 @@ func launchComponent(ctx context.Context, component string, version utils.Versio
 		Cmd:         c,
 	}
 
-	fmt.Printf("Starting component `%s`: %s\n", component, strings.Join(append([]string{p.Exec}, p.Args...), " "))
+	fmt.Fprintf(os.Stderr, "Starting component `%s`: %s\n", component, strings.Join(append([]string{p.Exec}, p.Args...), " "))
 	err = p.Cmd.Start()
 	if p.Cmd.Process != nil {
 		p.Pid = p.Cmd.Process.Pid

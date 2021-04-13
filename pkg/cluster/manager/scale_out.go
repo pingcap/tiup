@@ -50,7 +50,7 @@ func (m *Manager) ScaleOut(
 	topoFile string,
 	afterDeploy func(b *task.Builder, newPart spec.Topology),
 	final func(b *task.Builder, name string, meta spec.Metadata),
-	opt ScaleOutOptions,
+	opt DeployOptions,
 	skipConfirm bool,
 	gOpt operator.Options,
 ) error {

@@ -143,7 +143,24 @@ func FlattenMap(ms map[string]interface{}) map[string]interface{} {
 	return result
 }
 
-func merge(orig map[string]interface{}, overwrites ...map[string]interface{}) (map[string]interface{}, error) {
+// MergeConfig merge two or more config into one and unflat them
+// config1:
+//   a.b.a: 1
+//   a.b.b: 2
+// config2:
+//   a.b.a: 3
+//   a.b.c: 4
+// config3:
+//   b.c = 5
+// After MergeConfig(config1, config2, config3):
+//   a:
+//     b:
+//       a: 3
+//       b: 2
+//       c: 4
+//   b:
+//     c: 5
+func MergeConfig(orig map[string]interface{}, overwrites ...map[string]interface{}) map[string]interface{} {
 	lhs := FoldMap(orig)
 	for _, overwrite := range overwrites {
 		rhs := FoldMap(overwrite)
@@ -151,7 +168,7 @@ func merge(orig map[string]interface{}, overwrites ...map[string]interface{}) (m
 			patch(lhs, k, v)
 		}
 	}
-	return lhs, nil
+	return lhs
 }
 
 // GetValueFromPath try to find the value by path recursively
@@ -196,11 +213,7 @@ func Merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, 
 }
 
 func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, error) {
-	lhs, err := merge(global, overwrite)
-	if err != nil {
-		return nil, err
-	}
-
+	lhs := MergeConfig(global, overwrite)
 	buf := bytes.NewBufferString(fmt.Sprintf(`# WARNING: This file is auto-generated. Do not edit! All your modification will be overwritten!
 # You can use 'tiup cluster edit-config' and 'tiup cluster reload' to update the configuration
 # All configuration items you want to change can be added to:
@@ -212,7 +225,7 @@ func merge2Toml(comp string, global, overwrite map[string]interface{}) ([]byte, 
 
 	enc := toml.NewEncoder(buf)
 	enc.Indent = ""
-	err = enc.Encode(lhs)
+	err := enc.Encode(lhs)
 	if err != nil {
 		return nil, perrs.Trace(err)
 	}
@@ -240,10 +253,7 @@ func mergeImported(importConfig []byte, specConfigs ...map[string]interface{}) (
 	}
 
 	// overwrite topology specifieced configs upon the imported configs
-	lhs, err := merge(configData, specConfigs...)
-	if err != nil {
-		return nil, perrs.Trace(err)
-	}
+	lhs := MergeConfig(configData, specConfigs...)
 	return lhs, nil
 }
 
@@ -264,9 +274,14 @@ func checkConfig(ctx context.Context, e ctxt.Executor, componentName, clusterVer
 			return perrs.Annotate(ErrorCheckConfig, err.Error())
 		}
 
+		clsVer := utils.Version(clusterVersion)
 		ver := clusterVersion
+		if clsVer.IsNightly() {
+			ver = utils.NightlyVersionAlias
+		}
+		// FIXME: workaround for nightly versions, need refactor
 		if bindVersion != nil {
-			ver = bindVersion(componentName, clusterVersion)
+			ver = bindVersion(componentName, ver)
 		}
 
 		entry, err := repo.ComponentBinEntry(componentName, ver)

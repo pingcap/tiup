@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -149,7 +148,7 @@ func (i *PumpInstance) InitConfig(
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*PumpSpec)
-	nodeID := i.GetHost() + ":" + strconv.Itoa(i.GetPort())
+	nodeID := i.ID()
 	// keep origin node id if is imported
 	if i.IsImported() {
 		nodeID = ""

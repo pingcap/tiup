@@ -43,22 +43,24 @@ const (
 
 // TiKVSpec represents the TiKV topology specification in topology.yaml
 type TiKVSpec struct {
-	Host            string                 `yaml:"host"`
-	ListenHost      string                 `yaml:"listen_host,omitempty"`
-	SSHPort         int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported        bool                   `yaml:"imported,omitempty"`
-	Patched         bool                   `yaml:"patched,omitempty"`
-	Port            int                    `yaml:"port" default:"20160"`
-	StatusPort      int                    `yaml:"status_port" default:"20180"`
-	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
-	DataDir         string                 `yaml:"data_dir,omitempty"`
-	LogDir          string                 `yaml:"log_dir,omitempty"`
-	Offline         bool                   `yaml:"offline,omitempty"`
-	NumaNode        string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
-	Config          map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
-	ResourceControl meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
-	Arch            string                 `yaml:"arch,omitempty"`
-	OS              string                 `yaml:"os,omitempty"`
+	Host                string                 `yaml:"host"`
+	ListenHost          string                 `yaml:"listen_host,omitempty"`
+	AdvertiseAddr       string                 `yaml:"advertise_addr,omitempty"`
+	SSHPort             int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported            bool                   `yaml:"imported,omitempty"`
+	Patched             bool                   `yaml:"patched,omitempty"`
+	Port                int                    `yaml:"port" default:"20160"`
+	StatusPort          int                    `yaml:"status_port" default:"20180"`
+	AdvertiseStatusAddr string                 `yaml:"advertise_status_addr,omitempty"`
+	DeployDir           string                 `yaml:"deploy_dir,omitempty"`
+	DataDir             string                 `yaml:"data_dir,omitempty"`
+	LogDir              string                 `yaml:"log_dir,omitempty"`
+	Offline             bool                   `yaml:"offline,omitempty"`
+	NumaNode            string                 `yaml:"numa_node,omitempty" validate:"numa_node:editable"`
+	Config              map[string]interface{} `yaml:"config,omitempty" validate:"config:ignore"`
+	ResourceControl     meta.ResourceControl   `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
+	Arch                string                 `yaml:"arch,omitempty"`
+	OS                  string                 `yaml:"os,omitempty"`
 }
 
 // checkStoreStatus checks the store status in current cluster
@@ -80,7 +82,7 @@ func checkStoreStatus(storeAddr string, tlsCfg *tls.Config, pdList ...string) st
 
 // Status queries current status of the instance
 func (s *TiKVSpec) Status(tlsCfg *tls.Config, pdList ...string) string {
-	storeAddr := fmt.Sprintf("%s:%d", s.Host, s.Port)
+	storeAddr := addr(s)
 	state := checkStoreStatus(storeAddr, tlsCfg, pdList...)
 	if s.Offline && strings.ToLower(state) == "offline" {
 		state = "Pending Offline" // avoid misleading
@@ -203,17 +205,14 @@ func (i *TiKVInstance) InitConfig(
 
 	enableTLS := topo.GlobalOptions.TLSEnabled
 	spec := i.InstanceSpec.(*TiKVSpec)
-	cfg := scripts.NewTiKVScript(
-		clusterVersion,
-		i.GetHost(),
-		paths.Deploy,
-		paths.Data[0],
-		paths.Log,
-	).WithPort(spec.Port).
+	cfg := scripts.
+		NewTiKVScript(clusterVersion, i.GetHost(), spec.Port, spec.StatusPort, paths.Deploy, paths.Data[0], paths.Log).
 		WithNumaNode(spec.NumaNode).
-		WithStatusPort(spec.StatusPort).
 		AppendEndpoints(topo.Endpoints(deployUser)...).
-		WithListenHost(i.GetListenHost())
+		WithListenHost(i.GetListenHost()).
+		WithAdvertiseAddr(spec.AdvertiseAddr).
+		WithAdvertiseStatusAddr(spec.AdvertiseStatusAddr)
+
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_tikv_%s_%d.sh", i.GetHost(), i.GetPort()))
 	if err := cfg.ConfigToFile(fp); err != nil {
 		return err
@@ -324,7 +323,7 @@ func (i *TiKVInstance) PreRestart(topo Topology, apiTimeoutSeconds int, tlsCfg *
 		return err
 	}
 
-	if err := pdClient.EvictStoreLeader(addr(i), timeoutOpt, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
+	if err := pdClient.EvictStoreLeader(addr(i.InstanceSpec.(*TiKVSpec)), timeoutOpt, genLeaderCounter(tidbTopo, tlsCfg)); err != nil {
 		if utils.IsTimeoutOrMaxRetry(err) {
 			log.Warnf("Ignore evicting store leader from %s, %v", i.ID(), err)
 		} else {
@@ -348,18 +347,22 @@ func (i *TiKVInstance) PostRestart(topo Topology, tlsCfg *tls.Config) error {
 	pdClient := api.NewPDClient(tidbTopo.GetPDList(), 5*time.Second, tlsCfg)
 
 	// remove store leader evict scheduler after restart
-	if err := pdClient.RemoveStoreEvict(addr(i)); err != nil {
+	if err := pdClient.RemoveStoreEvict(addr(i.InstanceSpec.(*TiKVSpec))); err != nil {
 		return perrs.Annotatef(err, "failed to remove evict store scheduler for %s", i.GetHost())
 	}
 
 	return nil
 }
 
-func addr(ins Instance) string {
-	if ins.GetPort() == 0 || ins.GetPort() == 80 {
-		panic(ins)
+func addr(spec *TiKVSpec) string {
+	if spec.AdvertiseAddr != "" {
+		return spec.AdvertiseAddr
 	}
-	return ins.GetHost() + ":" + strconv.Itoa(ins.GetPort())
+
+	if spec.Port == 0 || spec.Port == 80 {
+		panic(fmt.Sprintf("invalid TiKV port %d", spec.Port))
+	}
+	return spec.Host + ":" + strconv.Itoa(spec.Port)
 }
 
 func genLeaderCounter(topo *Specification, tlsCfg *tls.Config) func(string) (int, error) {

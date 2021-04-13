@@ -26,25 +26,25 @@ For development, you don't want to use any global directories. You may also want
 
 TiUP has unit and integration tests; you can run unit tests by running `make test`.
 
-Unit tests are alongside the code they test, following the Go convention of using a `_test` suffix for test files. Integration tests are in the [tests](tests) directory.
+Unit tests are alongside the code they test, following the Go convention of using a `_test` suffix for test files. Integration tests are in the [tests](../../tests) directory.
 
 ## Architecture overview
 
-Each TiUP command has its own executable, their source is in the [cmd](cmd) directory. The main TiUP executable is [root.go](cmd/root.go).
+Each TiUP command has its own executable, their source is in the [cmd](../../cmd) directory. The main TiUP executable is [root.go](../../cmd/root.go).
 
-The core of TiUP is defined in the [pkg](pkg) directory.
+The core of TiUP is defined in the [pkg](../../pkg) directory.
 
-[localdata](pkg/localdata) manages TiUP's metadata held on the user's computer.
+[localdata](../../pkg/localdata) manages TiUP's metadata held on the user's computer.
 
-[meta](pkg/meta) contains high-level functions for managing components.
+[meta](../../pkg/meta) contains high-level functions for managing components.
 
-[repository](pkg/repository) handles remote repositories.
+[repository](../../pkg/repository) handles remote repositories.
 
-The [set](pkg/set), [tui](pkg/tui), and [utils](pkg/utils) packages contain utility types and functions. The [version](pkg/version) package contains version data for TiUP and utility functions for handling that data.
+The [set](../../pkg/set), [tui](../../pkg/tui), and [utils](../../pkg/utils) packages contain utility types and functions. The [version](../../pkg/version) package contains version data for TiUP and utility functions for handling that data.
 
-The [mock](pkg/mock) package is a utility for testing.
+The [mock](../../pkg/utils/mock) package is a utility for testing.
 
-[embed](embed) contains static files used by builtin components (mainly `cluster` as of now), the template files are in [embed/templates](embed/templates) directory.
+[embed](../../embed) contains static files used by builtin components (mainly `cluster` as of now), the template files are in [embed/templates](../../embed/templates) directory.
 
 Some key concepts:
 
@@ -61,4 +61,4 @@ Some key concepts:
 
 ### Manifest formats
 
-See `ComponentManifest` and `VersionManifest` data structures in [component.go](pkg/repository/component.go) and [version.go](pkg/repository/version.go).
+See `ComponentManifest` and `VersionManifest` data structures in [component.go](../../pkg/repository/types.go) and [version.go](../../pkg/version/version.go).

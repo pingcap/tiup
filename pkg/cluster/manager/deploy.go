@@ -41,7 +41,6 @@ import (
 )
 
 // DeployOptions contains the options for scale out.
-// TODO: merge ScaleOutOptions, should check config too when scale out.
 type DeployOptions struct {
 	User              string // username to login to the SSH server
 	SkipCreateUser    bool   // don't create the user
@@ -190,8 +189,9 @@ func (m *Manager) Deploy(
 	iterErr = nil
 	topo.IterInstance(func(inst spec.Instance) {
 		if _, found := uniqueHosts[inst.GetHost()]; !found {
-			// check for "imported" parameter, it can not be true when scaling out
-			if inst.IsImported() {
+			// check for "imported" parameter, it can not be true when deploying and scaling out
+			// only for tidb now, need to support dm
+			if inst.IsImported() && m.sysName == "tidb" {
 				iterErr = errors.New(
 					"'imported' is set to 'true' for new instance, this is only used " +
 						"for instances imported from tidb-ansible and make no sense when " +
