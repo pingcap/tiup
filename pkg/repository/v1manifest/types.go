@@ -300,5 +300,5 @@ func (e *LoadManifestError) Is(target error) bool {
 	}
 
 	return (e.manifest == t.manifest || t.manifest == "") &&
-		(errors.Is(e.err, t) || t.err == nil)
+		(errors.Is(e.err, t.err) || t.err == nil)
 }
