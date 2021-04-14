@@ -56,9 +56,9 @@ func Mirror() string {
 	m := os.Getenv(repository.EnvMirrors)
 	if m != "" {
 		if cfg.Mirror != m {
-			fmt.Printf(`WARNING: both mirror config(%s)
-and TIUP_MIRRORS(%s) have been set.
-Setting mirror to TIUP_MIRRORS(%s)
+			fmt.Printf(`WARNING: both mirror config (%s)
+and TIUP_MIRRORS (%s) have been set.
+Setting mirror to TIUP_MIRRORS (%s)
 `, cfg.Mirror, m, m)
 			reset(m)
 		}
