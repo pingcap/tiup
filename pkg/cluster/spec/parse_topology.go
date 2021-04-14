@@ -35,6 +35,26 @@ var (
 	ErrTopologyParseFailed = errNSTopolohy.NewType("parse_failed", errutil.ErrTraitPreCheck)
 )
 
+// ReadYamlFile read yaml content from file`
+func ReadYamlFile(file string) ([]byte, error) {
+	suggestionProps := map[string]string{
+		"File": file,
+	}
+
+	yamlFile, err := os.ReadFile(file)
+	if err != nil {
+		return nil, ErrTopologyReadFailed.
+			Wrap(err, "Failed to read topology file %s", file).
+			WithProperty(cliutil.SuggestionFromTemplate(`
+Please check whether your topology file {{ColorKeyword}}{{.File}}{{ColorReset}} exists and try again.
+
+To generate a sample topology file:
+  {{ColorCommand}}{{OsArgs0}} template topology > topo.yaml{{ColorReset}}
+`, suggestionProps))
+	}
+	return yamlFile, nil
+}
+
 // ParseTopologyYaml read yaml content from `file` and unmarshal it to `out`
 func ParseTopologyYaml(file string, out Topology) error {
 	suggestionProps := map[string]string{
@@ -43,16 +63,9 @@ func ParseTopologyYaml(file string, out Topology) error {
 
 	zap.L().Debug("Parse topology file", zap.String("file", file))
 
-	yamlFile, err := os.ReadFile(file)
+	yamlFile, err := ReadYamlFile(file)
 	if err != nil {
-		return ErrTopologyReadFailed.
-			Wrap(err, "Failed to read topology file %s", file).
-			WithProperty(cliutil.SuggestionFromTemplate(`
-Please check whether your topology file {{ColorKeyword}}{{.File}}{{ColorReset}} exists and try again.
-
-To generate a sample topology file:
-  {{ColorCommand}}{{OsArgs0}} template topology > topo.yaml{{ColorReset}}
-`, suggestionProps))
+		return err
 	}
 
 	if err = yaml.UnmarshalStrict(yamlFile, out); err != nil {
