@@ -383,7 +383,7 @@ func download(targetDir, tmpDir string, repo *V1Repository, item *v1manifest.Ver
 	// Skip installed file if exists file valid
 	if utils.IsExist(dstFile) {
 		if err := validate(targetDir); err == nil {
-			fmt.Println("Skip exists file:", filepath.Join(targetDir, item.URL))
+			fmt.Println("Skipping existing file:", filepath.Join(targetDir, item.URL))
 			return nil
 		}
 	}
