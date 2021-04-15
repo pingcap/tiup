@@ -464,6 +464,9 @@ func combineVersions(versions *[]string,
 					if latest == "" {
 						continue
 					}
+					if selectedVersion != utils.LatestVersionAlias {
+						fmt.Printf("%s %s/%s %s not found, using %s instead.\n", manifest.ID, os, arch, selectedVersion, latest)
+					}
 					selectedVersion = latest
 				}
 				if !result.Exist(selectedVersion) {
