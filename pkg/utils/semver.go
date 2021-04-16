@@ -23,6 +23,9 @@ import (
 // NightlyVersionAlias represents latest build of master branch.
 const NightlyVersionAlias = "nightly"
 
+// LatestVersionAlias represents the latest build (excluding nightly versions).
+const LatestVersionAlias = "latest"
+
 // FmtVer converts a version string to SemVer format, if the string is not a valid
 // SemVer and fails to parse and convert it, an error is raised.
 func FmtVer(ver string) (string, error) {
@@ -30,6 +33,11 @@ func FmtVer(ver string) (string, error) {
 
 	// nightly version is an alias
 	if strings.ToLower(v) == NightlyVersionAlias {
+		return v, nil
+	}
+
+	// latest version is an alias
+	if strings.ToLower(v) == LatestVersionAlias {
 		return v, nil
 	}
 
