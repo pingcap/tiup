@@ -83,7 +83,7 @@ func newMirrorSignCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sign <manifest-file>",
 		Short: "Add signatures to a manifest file",
-		Long:  fmt.Sprintf("Add signatures to a manifest file, if no key file specified, the ~/.tiup/keys/%s will be used", localdata.DefaultPrivateKeyName),
+		Long:  fmt.Sprintf("Add signatures to a manifest file; if no key file is specified, ~/.tiup/keys/%s will be used", localdata.DefaultPrivateKeyName),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			env := environment.GlobalEnv()
 			if len(args) < 1 {
@@ -167,7 +167,7 @@ The root manifest in $TIUP_HOME will be replaced with the one in given repositor
 				log.Errorf("Failed to set mirror: %s\n", err.Error())
 				return err
 			}
-			fmt.Printf("Set mirror to %s success\n", addr)
+			fmt.Printf("Successfully set mirror to %s\n", addr)
 			return nil
 		},
 	}
@@ -193,7 +193,7 @@ func newMirrorGrantCmd() *cobra.Command {
 
 			id := args[0]
 			if name == "" {
-				fmt.Printf("The --name is not specified, using %s as default\n", id)
+				fmt.Printf("No --name is given, using %s as default\n", id)
 				name = id
 			}
 
@@ -610,7 +610,7 @@ func newMirrorGenkeyCmd() *cobra.Command {
 				fmt.Printf("KeyID: %s\nKeyContent: \n%s\n", id, string(content))
 			} else {
 				if utils.IsExist(privPath) {
-					log.Warnf("Warning: private key already exists(%s), skip", privPath)
+					log.Warnf("Warning: private key already exists (%s), skipped", privPath)
 					return nil
 				}
 
@@ -634,7 +634,7 @@ func newMirrorGenkeyCmd() *cobra.Command {
 					return err
 				}
 
-				fmt.Printf("Private key has been writeen to %s\n", privPath)
+				fmt.Printf("Private key has been written to %s\n", privPath)
 			}
 
 			if saveKey {
@@ -652,9 +652,9 @@ func newMirrorGenkeyCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVarP(&showPublic, "public", "p", showPublic, "show public content")
-	cmd.Flags().BoolVar(&saveKey, "save", false, "Save public key to a file at current working dir")
-	cmd.Flags().StringVarP(&name, "name", "n", "private", "the file name of the key")
+	cmd.Flags().BoolVarP(&showPublic, "public", "p", showPublic, "Show public content")
+	cmd.Flags().BoolVar(&saveKey, "save", false, "Save public key to a file in the current working dir")
+	cmd.Flags().StringVarP(&name, "name", "n", "private", "The file name of the key")
 
 	return cmd
 }
