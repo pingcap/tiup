@@ -72,7 +72,6 @@ func (s *service) deleteBackup(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-/////
 // StartTicker run an interval task to check whether should backup
 func (s *service) StartTicker() {
 	ticker := time.NewTicker(time.Second * 10) // 60

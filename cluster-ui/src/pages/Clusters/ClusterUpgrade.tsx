@@ -41,9 +41,11 @@ function ClusterUpgradePage() {
         versions.reverse()
         const curVersionIdx = versions.indexOf(cluster!.version)
         if (curVersionIdx > 0) {
-          versions = versions.slice(0, curVersionIdx + 1)
+          versions = versions.slice(0, curVersionIdx)
+        } else {
+          versions = []
         }
-        setTiDBVersions(['nightly'].concat(versions).map((v) => ({ value: v })))
+        setTiDBVersions(versions.map((v) => ({ value: v })))
       }
     })
   }, [cluster])
@@ -80,13 +82,17 @@ function ClusterUpgradePage() {
               name="tidb_version"
               rules={[{ required: true, message: '请选择 TiDB 版本' }]}
             >
-              <Select defaultValue={cluster.version} style={{ width: 200 }}>
-                {tidbVersions.map((v) => (
-                  <Select.Option value={v.value} key={v.value}>
-                    {v.value}
-                  </Select.Option>
-                ))}
-              </Select>
+              {tidbVersions.length === 0 ? (
+                <span>没有可升级的目标版本</span>
+              ) : (
+                <Select defaultValue={cluster.version} style={{ width: 200 }}>
+                  {tidbVersions.map((v) => (
+                    <Select.Option value={v.value} key={v.value}>
+                      {v.value}
+                    </Select.Option>
+                  ))}
+                </Select>
+              )}
             </Form.Item>
             <Form.Item>
               <Button type="primary" htmlType="submit">

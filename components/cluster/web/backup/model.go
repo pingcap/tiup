@@ -186,7 +186,7 @@ func startBackup(db *gorm.DB, item model, cm *manager.Manager, gOpt operator.Opt
 	fmt.Println("full cmd:", fullCmd)
 
 	// run command by os/exec
-	out, err := exec.Command("tiup", "br", "backup", "full", "--pd", availabePD.ID, "-s", fullPath, "--log-file", logFileName+".log").Output()
+	out, err := exec.Command("tiup", "br", "backup", "full", "--pd", availabePD.ID, "--storage", fullPath, "--log-file", logFileName+".log").Output()
 	if err != nil {
 		fmt.Println("back failed:", err)
 		item.Status = statusFail

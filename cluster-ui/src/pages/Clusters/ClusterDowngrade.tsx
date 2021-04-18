@@ -41,6 +41,8 @@ function ClusterDowngradePage() {
         const curVersionIdx = versions.indexOf(cluster!.version)
         if (curVersionIdx > 0) {
           versions = versions.slice(curVersionIdx + 1)
+        } else {
+          versions = []
         }
         setTiDBVersions(versions.map((v) => ({ value: v })))
       }
@@ -95,13 +97,17 @@ function ClusterDowngradePage() {
               name="tidb_version"
               rules={[{ required: true, message: '请选择 TiDB 版本' }]}
             >
-              <Select defaultValue={cluster.version} style={{ width: 200 }}>
-                {tidbVersions.map((v) => (
-                  <Select.Option value={v.value} key={v.value}>
-                    {v.value}
-                  </Select.Option>
-                ))}
-              </Select>
+              {tidbVersions.length <= 1 ? (
+                <span>没有可降级的目标版本</span>
+              ) : (
+                <Select defaultValue={cluster.version} style={{ width: 200 }}>
+                  {tidbVersions.slice(0, tidbVersions.length - 1).map((v) => (
+                    <Select.Option value={v.value} key={v.value}>
+                      {v.value}
+                    </Select.Option>
+                  ))}
+                </Select>
+              )}
             </Form.Item>
             <Form.Item>
               <Button type="primary" htmlType="submit">
