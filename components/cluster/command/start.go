@@ -33,6 +33,7 @@ func newStartCmd() *cobra.Command {
 			}
 
 			clusterName := args[0]
+			clusterReport.ID = scrubClusterName(clusterName)
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			return cm.StartCluster(clusterName, gOpt, func(b *task.Builder, metadata spec.Metadata) {

@@ -45,17 +45,21 @@ import (
 )
 
 var (
-	errNS       = errorx.NewNamespace("cmd")
-	rootCmd     *cobra.Command
-	gOpt        operator.Options
-	skipConfirm bool
+	errNS         = errorx.NewNamespace("cmd")
+	rootCmd       *cobra.Command
+	gOpt          operator.Options
+	skipConfirm   bool
+	reportEnabled bool // is telemetry report enabled
 )
 
 var tidbSpec *spec.SpecManager
 var cm *manager.Manager
 
 func scrubClusterName(n string) string {
-	return "cluster_" + telemetry.HashReport(n)
+	// prepend the telemetry uuid to cluster name, so that two installations
+	// of tiup with the same cluster name produce different hashs
+	cls := report.TelemetryUUID() + ":" + n
+	return "cluster_" + telemetry.HashReport(cls)
 }
 
 func getParentNames(cmd *cobra.Command) []string {
@@ -240,10 +244,11 @@ func Execute() {
 	teleReport = new(telemetry.Report)
 	clusterReport = new(telemetry.ClusterReport)
 	teleReport.EventDetail = &telemetry.Report_Cluster{Cluster: clusterReport}
-	if report.Enable() {
+	reportEnabled = report.Enabled()
+	if reportEnabled {
+		teleReport.InstallationUUID = report.TelemetryUUID()
 		teleReport.EventUUID = uuid.New().String()
 		teleReport.EventUnixTimestamp = time.Now().Unix()
-		clusterReport.UUID = report.UUID()
 	}
 
 	start := time.Now()
@@ -255,12 +260,12 @@ func Execute() {
 
 	zap.L().Info("Execute command finished", zap.Int("code", code), zap.Error(err))
 
-	if report.Enable() {
+	if reportEnabled {
 		f := func() {
 			defer func() {
 				if r := recover(); r != nil {
 					if flags.DebugMode {
-						fmt.Println("Recovered in telemetry report", r)
+						log.Debugf("Recovered in telemetry report: %v", r)
 					}
 				}
 			}()
@@ -283,7 +288,7 @@ func Execute() {
 				}
 				fmt.Printf("report: %s\n", teleReport.String())
 				if data, err := json.Marshal(teleReport); err == nil {
-					fmt.Printf("report: %s\n", string(data))
+					log.Debugf("report: %s\n", string(data))
 				}
 			}
 			cancel()

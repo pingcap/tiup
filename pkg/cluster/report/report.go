@@ -22,15 +22,15 @@ import (
 	tiuptele "github.com/pingcap/tiup/pkg/telemetry"
 )
 
-// Enable return true if we enable telemetry.
-func Enable() bool {
+// Enabled return true if we enable telemetry.
+func Enabled() bool {
 	s := os.Getenv(localdata.EnvNameTelemetryStatus)
 	status := tiuptele.Status(s)
 	return status == tiuptele.EnableStatus
 }
 
-// UUID return telemetry uuid.
-func UUID() string {
+// TelemetryUUID return telemetry uuid.
+func TelemetryUUID() string {
 	return os.Getenv(localdata.EnvNameTelemetryUUID)
 }
 

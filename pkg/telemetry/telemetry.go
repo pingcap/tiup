@@ -17,9 +17,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"net/http"
+	"time"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 var defaultURL = "https://telemetry.pingcap.com/api/v1/clusters/report"
@@ -27,12 +28,12 @@ var defaultURL = "https://telemetry.pingcap.com/api/v1/clusters/report"
 // Telemetry control telemetry.
 type Telemetry struct {
 	url string
-	cli *http.Client
+	cli *utils.HTTPClient
 }
 
 // NewTelemetry return a new Telemetry instance.
 func NewTelemetry() *Telemetry {
-	cli := new(http.Client)
+	cli := utils.NewHTTPClient(time.Second*10, nil)
 
 	return &Telemetry{
 		url: defaultURL,
@@ -47,21 +48,8 @@ func (t *Telemetry) Report(ctx context.Context, msg *Report) error {
 		return errors.AddStack(err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", t.url, bytes.NewReader(dst))
-	if err != nil {
+	if _, err = t.cli.Post(t.url, bytes.NewReader(dst)); err != nil {
 		return errors.AddStack(err)
-	}
-
-	req.Header.Add("Content-Type", "application/json")
-	resp, err := t.cli.Do(req)
-	if err != nil {
-		return errors.AddStack(err)
-	}
-	defer resp.Body.Close()
-
-	code := resp.StatusCode
-	if code < 200 || code >= 300 {
-		return errors.Errorf("StatusCode: %d, Status: %s", resp.StatusCode, resp.Status)
 	}
 
 	return nil
