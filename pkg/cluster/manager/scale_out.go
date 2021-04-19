@@ -18,6 +18,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
@@ -195,11 +196,11 @@ func checkForGlobalConfigs(topoFile string) error {
 		case "global",
 			"monitored",
 			"server_configs":
-			log.Warnf(
+			log.Warnf(color.YellowString(
 				`You have one or more of ["global", "monitored", "server_configs"] fields configured in
 the scale out topology, but they will be ignored during the scaling out process.
 If you want to use configs different from the existing cluster, cancel now and
-set them in the specification fileds for each host.`)
+set them in the specification fileds for each host.`))
 			if err := cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
 				return err
 			}
