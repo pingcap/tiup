@@ -677,12 +677,12 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 		options.version = version.String()
 
-		fmt.Println(color.YellowString(`Use the latest stable version: %s
+		fmt.Println(color.YellowString(`No TiDB version specified, using the latest stable version: %s
 
+If you'd like to use a TiDB version other than %s, cancel and retry with the following arguments:
     Specify version manually:   tiup playground <version>
-    The stable version:         tiup playground v4.0.0
     The nightly version:        tiup playground nightly
-`, options.version))
+`, options.version, options.version))
 	}
 
 	if !utils.Version(options.version).IsNightly() {
