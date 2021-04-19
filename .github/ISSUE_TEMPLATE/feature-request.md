@@ -12,8 +12,11 @@ labels: type/feature-request
 **Describe the feature you'd like:**
 <!-- A clear and concise description of what you want to happen. -->
 
+**Why the featue is needed:**
+<!-- Why the feature is needed by users? If you can, explain some scenarios how users might use this. -->
+
 **Describe alternatives you've considered:**
 <!-- A clear and concise description of any alternative solutions or features you've considered. -->
 
 **Teachability, Documentation, Adoption, Migration Strategy:**
-<!-- If you can, explain some scenarios how users might use this, situations it would be helpful in. Any API designs, mockups, or diagrams are also helpful. -->
+<!-- Any API designs, mockups, or diagrams are helpful. -->
