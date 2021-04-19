@@ -66,6 +66,7 @@ of components or the repository itself.`,
 		newMirrorCloneCmd(),
 		newMirrorMergeCmd(),
 		newMirrorPublishCmd(),
+		newMirrorShowCmd(),
 		newMirrorSetCmd(),
 		newMirrorModifyCmd(),
 		newMirrorGrantCmd(),
@@ -135,6 +136,21 @@ func newMirrorSignCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&privPath, "key", "k", "", "Specify the private key path")
 	cmd.Flags().IntVarP(&timeout, "timeout", "", timeout, "Specify the timeout when access the network")
+
+	return cmd
+}
+
+// the `mirror show` sub command
+func newMirrorShowCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "show",
+		Short: "Show mirror address",
+		Long:  `Show current mirror address`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Println(environment.Mirror())
+			return nil
+		},
+	}
 
 	return cmd
 }
