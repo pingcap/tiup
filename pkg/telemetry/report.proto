@@ -4,11 +4,12 @@ package telemetry;
 import "gogoproto/gogo.proto";
 
 message Report {
-	string eventUUID = 1;
-	int64 event_unix_timestamp = 2; // unix time second
+	string installUUID = 1;
+	string eventUUID = 2;
+	int64 event_unix_timestamp = 3; // unix time second
 	
 	oneof event_detail {
-		ClusterReport cluster = 3;
+		ClusterReport cluster = 4;
 	}
 }
 
