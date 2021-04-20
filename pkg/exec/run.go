@@ -32,6 +32,7 @@ import (
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/version"
 	"golang.org/x/mod/semver"
 )
 
@@ -215,6 +216,7 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 		fmt.Sprintf("%s=%s", localdata.EnvNameHome, profile.Root()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameWorkDir, tiupWd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameUserInputVersion, p.Version.String()),
+		fmt.Sprintf("%s=%s", localdata.EnvNameTiUPVersion, version.NewTiUPVersion().SemVer()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameInstanceDataDir, p.InstanceDir),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentDataDir, sd),
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),

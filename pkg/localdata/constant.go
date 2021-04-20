@@ -60,6 +60,9 @@ const (
 	// EnvNameUserInputVersion represents the version user specified when running a component by `tiup component:version`
 	EnvNameUserInputVersion = "TIUP_USER_INPUT_VERSION"
 
+	// EnvNameTiUPVersion represents the version of TiUP itself, not the version of component
+	EnvNameTiUPVersion = "TIUP_VERSION"
+
 	// EnvNameHome represents the environment name of tiup home directory
 	EnvNameHome = "TIUP_HOME"
 

@@ -249,6 +249,7 @@ func Execute() {
 		teleReport.InstallationUUID = report.TelemetryUUID()
 		teleReport.EventUUID = uuid.New().String()
 		teleReport.EventUnixTimestamp = time.Now().Unix()
+		teleReport.Tiup = report.TiUPMeta()
 	}
 
 	start := time.Now()

@@ -11,6 +11,7 @@ message Report {
 	oneof event_detail {
 		ClusterReport cluster = 4;
 	}
+	TiUPInfo tiup = 5;
 }
 
 message ClusterReport {
@@ -22,6 +23,14 @@ message ClusterReport {
 	// only deploy and scale-out is setted:
 	string topology = 5;// topology.yaml of the cluster, with all the value scrubbed.
 	repeated NodeInfo nodes = 6;
+}
+
+message TiUPInfo {
+	string TiUPVersion = 1;
+	string ComponentVersion = 2;
+	string GitCommit = 3;
+	string os = 4;
+	string arch = 5;
 }
 
 message NodeInfo {

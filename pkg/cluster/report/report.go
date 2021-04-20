@@ -16,10 +16,12 @@ package report
 import (
 	"bytes"
 	"os"
+	"runtime"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/pingcap/tiup/pkg/localdata"
 	tiuptele "github.com/pingcap/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/version"
 )
 
 // Enabled return true if we enable telemetry.
@@ -32,6 +34,17 @@ func Enabled() bool {
 // TelemetryUUID return telemetry uuid.
 func TelemetryUUID() string {
 	return os.Getenv(localdata.EnvNameTelemetryUUID)
+}
+
+// TiUPMeta returns metadata of TiUP Cluster itself
+func TiUPMeta() *tiuptele.TiUPInfo {
+	return &tiuptele.TiUPInfo{
+		TiUPVersion:      os.Getenv(localdata.EnvNameTiUPVersion),
+		ComponentVersion: version.NewTiUPVersion().SemVer(),
+		GitCommit:        version.NewTiUPBuildInfo().GitHash,
+		Os:               runtime.GOOS,
+		Arch:             runtime.GOARCH,
+	}
 }
 
 // NodeInfoFromText get telemetry.NodeInfo from the text.
