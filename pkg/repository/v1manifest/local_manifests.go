@@ -206,7 +206,10 @@ func (ms *FsManifests) load(filename string) (string, error) {
 				}
 				bytes, err := os.ReadFile(initRoot)
 				if err != nil {
-					return "", errors.Errorf("cannot open the initial root.json at %s", initRoot)
+					return "", &LoadManifestError{
+						manifest: "root.json",
+						err:      err,
+					}
 				}
 				return string(bytes), nil
 			}
