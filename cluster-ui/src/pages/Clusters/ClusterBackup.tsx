@@ -240,7 +240,7 @@ function ClusterBackupPage() {
                         label="备份目录"
                         style={{ marginBottom: 0 }}
                       >
-                        <Input />
+                        <Input placeholder="local:///..." />
                       </Form.Item>
                       <p style={{ fontStyle: 'italic', fontSize: 12 }}>
                         确保 nfs server

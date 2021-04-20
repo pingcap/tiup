@@ -46,7 +46,7 @@ func CommandArgs(fp string) ([]string, error) {
 
 	args := strings.Split(scanner.Text(), " ")
 	// support for operations from the tiup web ui
-	if args[1] == "--ui" {
+	if len(args) > 1 && args[1] == "--ui" {
 		if scanner.Scan() {
 			args = strings.Split(scanner.Text(), " ")
 		}
