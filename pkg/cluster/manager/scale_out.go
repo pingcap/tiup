@@ -18,6 +18,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
@@ -31,6 +32,7 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
+	"gopkg.in/yaml.v3"
 )
 
 // ScaleOut scale out the cluster.
@@ -47,6 +49,12 @@ func (m *Manager) ScaleOut(
 		return err
 	}
 
+	// check for the input topology to let user confirm if there're any
+	// global configs set
+	if err := checkForGlobalConfigs(topoFile); err != nil {
+		return err
+	}
+
 	metadata, err := m.meta(name)
 	// allow specific validation errors so that user can recover a broken
 	// cluster if it is somehow in a bad state.
@@ -57,6 +65,7 @@ func (m *Manager) ScaleOut(
 
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
+
 	// Inherit existing global configuration. We must assign the inherited values before unmarshalling
 	// because some default value rely on the global options and monitored options.
 	newPart := topo.NewPart()
@@ -167,4 +176,36 @@ func validateNewTopo(topo spec.Topology) (err error) {
 		}
 	})
 	return err
+}
+
+// checkForGlobalConfigs checks the input scale out topology to make sure users are aware
+// of the global config fields in it will be ignored.
+func checkForGlobalConfigs(topoFile string) error {
+	yamlFile, err := spec.ReadYamlFile(topoFile)
+	if err != nil {
+		return err
+	}
+
+	var newPart map[string]interface{}
+	if err := yaml.Unmarshal(yamlFile, &newPart); err != nil {
+		return err
+	}
+
+	for k := range newPart {
+		switch k {
+		case "global",
+			"monitored",
+			"server_configs":
+			log.Warnf(color.YellowString(
+				`You have one or more of ["global", "monitored", "server_configs"] fields configured in
+the scale out topology, but they will be ignored during the scaling out process.
+If you want to use configs different from the existing cluster, cancel now and
+set them in the specification fileds for each host.`))
+			if err := cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
+				return err
+			}
+			return nil // user confirmed, skip futher checks
+		}
+	}
+	return nil
 }
