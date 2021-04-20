@@ -14,14 +14,18 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/fatih/color"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/exec"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository"
+	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
@@ -69,6 +73,9 @@ the latest stable version will be downloaded from the repository.`,
 			default:
 				e, err := environment.InitEnv(repoOpts)
 				if err != nil {
+					if errors.Is(perrs.Cause(err), v1manifest.ErrLoadManifest) {
+						log.Warnf("Please check for root manifest file, you may download one from the repository mirror, or try `tiup mirror set` to force reset it.")
+					}
 					return err
 				}
 				environment.SetGlobalEnv(e)

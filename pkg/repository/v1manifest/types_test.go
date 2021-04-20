@@ -14,6 +14,8 @@
 package v1manifest
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/alecthomas/assert"
@@ -82,4 +84,38 @@ func TestVersionList(t *testing.T) {
 
 	versions = manifest.VersionList("windows/amd64")
 	assert.Equal(t, len(versions), 0)
+}
+
+func TestLoadManifestError(t *testing.T) {
+	err0 := &LoadManifestError{
+		manifest: "root.json",
+		err:      fmt.Errorf("dummy error"),
+	}
+	// identical errors are equal
+	assert.True(t, errors.Is(err0, err0))
+	assert.True(t, errors.Is(ErrLoadManifest, ErrLoadManifest))
+	assert.True(t, errors.Is(ErrLoadManifest, &LoadManifestError{}))
+	assert.True(t, errors.Is(&LoadManifestError{}, ErrLoadManifest))
+	// not equal for different error types
+	assert.False(t, errors.Is(err0, errors.New("")))
+	// default Value matches any error
+	assert.True(t, errors.Is(err0, ErrLoadManifest))
+	// error with values are not matching default ones
+	assert.False(t, errors.Is(ErrLoadManifest, err0))
+
+	err1 := &LoadManifestError{
+		manifest: "root.json",
+		err:      fmt.Errorf("dummy error 2"),
+	}
+	assert.True(t, errors.Is(err1, ErrLoadManifest))
+	// errors with different errors are different
+	assert.False(t, errors.Is(err0, err1))
+	assert.False(t, errors.Is(err1, err0))
+
+	err2 := &LoadManifestError{
+		manifest: "root.json",
+	}
+	// nil errors can be match with any error, but not vise vera
+	assert.True(t, errors.Is(err1, err2))
+	assert.False(t, errors.Is(err2, err1))
 }
