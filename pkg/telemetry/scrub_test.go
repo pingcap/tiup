@@ -14,6 +14,7 @@
 package telemetry
 
 import (
+	fmt "fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,7 +43,7 @@ func (s *scrubSuite) testScrubYaml(c *check.C, generate bool) {
 		hashs := make(map[string]struct{})
 		hashs["host"] = struct{}{}
 
-		scrubed, err := ScrubYaml(data, hashs)
+		scrubed, err := ScrubYaml(data, hashs, "dummy-salt-string")
 		c.Assert(err, check.IsNil)
 
 		outName := filepath.Join("./testdata", f.Name()+".out")
@@ -52,6 +53,7 @@ func (s *scrubSuite) testScrubYaml(c *check.C, generate bool) {
 		} else {
 			out, err := os.ReadFile(outName)
 			c.Assert(err, check.IsNil)
+			fmt.Printf("%s\n%s\n", outName, scrubed)
 			c.Assert(scrubed, check.BytesEquals, out)
 		}
 	}
@@ -69,7 +71,7 @@ func (s *scrubSuite) TestNilValueNotPanic(c *check.C) {
 	hashs := make(map[string]struct{})
 	hashs["host"] = struct{}{}
 
-	scrubed, err := ScrubYaml(data, hashs)
+	scrubed, err := ScrubYaml(data, hashs, "dummy-salt-string")
 	c.Assert(err, check.IsNil)
 
 	var _ = scrubed

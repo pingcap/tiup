@@ -33,19 +33,19 @@ func HashReport(val string) string {
 // ScrubYaml scrub the value.
 // for string type, replace as "_", unless the field name is in the hashFieldNames.
 // for any other type set as the zero value of the according type.
-func ScrubYaml(data []byte, hashFieldNames map[string]struct{}) (scrubed []byte, err error) {
+func ScrubYaml(data []byte, hashFieldNames map[string]struct{}, salt string) (scrubed []byte, err error) {
 	mp := make(map[interface{}]interface{})
 	err = yaml.Unmarshal(data, mp)
 	if err != nil {
 		return nil, err
 	}
 
-	smp := scrupMap(mp, hashFieldNames, false).(map[string]interface{})
+	smp := scrupMap(mp, hashFieldNames, false, salt).(map[string]interface{})
 	scrubed, err = yaml.Marshal(smp)
 	return
 }
 
-func scrupMap(val interface{}, hashFieldNames map[string]struct{}, hash bool) interface{} {
+func scrupMap(val interface{}, hashFieldNames map[string]struct{}, hash bool, salt string) interface{} {
 	if val == nil {
 		return nil
 	}
@@ -59,7 +59,7 @@ func scrupMap(val interface{}, hashFieldNames map[string]struct{}, hash bool) in
 				return val
 			}
 			_, hash = hashFieldNames[kk]
-			ret[kk] = scrupMap(v, hashFieldNames, hash)
+			ret[kk] = scrupMap(v, hashFieldNames, hash, salt)
 		}
 		return ret
 	}
@@ -68,14 +68,14 @@ func scrupMap(val interface{}, hashFieldNames map[string]struct{}, hash bool) in
 	if rv.Kind() == reflect.Slice {
 		var ret []interface{}
 		for i := 0; i < rv.Len(); i++ {
-			ret = append(ret, scrupMap(rv.Index(i).Interface(), hashFieldNames, false))
+			ret = append(ret, scrupMap(rv.Index(i).Interface(), hashFieldNames, false, salt))
 		}
 		return ret
 	}
 
 	if rv.Kind() == reflect.String {
 		if hash {
-			return HashReport(rv.String())
+			return HashReport(salt + ":" + rv.String())
 		}
 		return "_"
 	}

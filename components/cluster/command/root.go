@@ -274,7 +274,7 @@ func Execute() {
 			clusterReport.ExitCode = int32(code)
 			clusterReport.Nodes = teleNodeInfos
 			if teleTopology != "" {
-				if data, err := telemetry.ScrubYaml([]byte(teleTopology), map[string]struct{}{"host": {}}); err == nil {
+				if data, err := telemetry.ScrubYaml([]byte(teleTopology), map[string]struct{}{"host": {}}, report.TelemetryUUID()); err == nil {
 					clusterReport.Topology = (string(data))
 				}
 			}
