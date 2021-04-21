@@ -204,7 +204,7 @@ set them in the specification fileds for each host.`))
 			if err := cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
 				return err
 			}
-			return nil // user confirmed, skip futher checks
+			return nil // user confirmed, skip further checks
 		}
 	}
 	return nil
