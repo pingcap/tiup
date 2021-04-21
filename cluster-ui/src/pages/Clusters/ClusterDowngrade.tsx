@@ -39,7 +39,7 @@ function ClusterDowngradePage() {
         let versions = data.versions as string[]
         versions.reverse()
         const curVersionIdx = versions.indexOf(cluster!.version)
-        if (curVersionIdx > 0) {
+        if (curVersionIdx >= 0) {
           versions = versions.slice(curVersionIdx + 1)
         } else {
           versions = []
