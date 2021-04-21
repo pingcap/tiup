@@ -40,3 +40,8 @@ func IsFlagSetByUser(flagSet *pflag.FlagSet, flagName string) bool {
 	})
 	return setByUser
 }
+
+func MustAtoI(a string) int {
+	v, _ := strconv.Atoi(a)
+	return v
+}

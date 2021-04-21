@@ -37,6 +37,7 @@ import (
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cliutil/progress"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/mod/semver"
@@ -264,7 +265,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 	}
 
 	switch cid {
-	case "pd":
+	case spec.ComponentPD:
 		for i := 0; i < len(p.pds); i++ {
 			if p.pds[i].Pid() == pid {
 				inst := p.pds[i]
@@ -275,7 +276,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				p.pds = append(p.pds[:i], p.pds[i+1:]...)
 			}
 		}
-	case "tikv":
+	case spec.ComponentTiKV:
 		for i := 0; i < len(p.tikvs); i++ {
 			if p.tikvs[i].Pid() == pid {
 				inst := p.tikvs[i]
@@ -289,19 +290,19 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				return nil
 			}
 		}
-	case "tidb":
+	case spec.ComponentTiDB:
 		for i := 0; i < len(p.tidbs); i++ {
 			if p.tidbs[i].Pid() == pid {
 				p.tidbs = append(p.tidbs[:i], p.tidbs[i+1:]...)
 			}
 		}
-	case "ticdc":
+	case spec.ComponentCDC:
 		for i := 0; i < len(p.ticdcs); i++ {
 			if p.ticdcs[i].Pid() == pid {
 				p.ticdcs = append(p.ticdcs[:i], p.ticdcs[i+1:]...)
 			}
 		}
-	case "tiflash":
+	case spec.ComponentTiFlash:
 		for i := 0; i < len(p.tiflashs); i++ {
 			if p.tiflashs[i].Pid() == pid {
 				inst := p.tiflashs[i]
@@ -315,7 +316,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				return nil
 			}
 		}
-	case "pump":
+	case spec.ComponentPump:
 		for i := 0; i < len(p.pumps); i++ {
 			if p.pumps[i].Pid() == pid {
 				inst := p.pumps[i]
@@ -334,7 +335,7 @@ func (p *Playground) handleScaleIn(w io.Writer, pid int) error {
 				return nil
 			}
 		}
-	case "drainer":
+	case spec.ComponentDrainer:
 		for i := 0; i < len(p.drainers); i++ {
 			if p.drainers[i].Pid() == pid {
 				inst := p.drainers[i]
@@ -391,19 +392,19 @@ func (p *Playground) sanitizeConfig(boot instance.Config, cfg *instance.Config) 
 
 func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) error {
 	switch cid {
-	case "pd":
+	case spec.ComponentPD:
 		return p.sanitizeConfig(p.bootOptions.pd, cfg)
-	case "tikv":
+	case spec.ComponentTiKV:
 		return p.sanitizeConfig(p.bootOptions.tikv, cfg)
-	case "tidb":
+	case spec.ComponentTiDB:
 		return p.sanitizeConfig(p.bootOptions.tidb, cfg)
-	case "tiflash":
+	case spec.ComponentTiFlash:
 		return p.sanitizeConfig(p.bootOptions.tiflash, cfg)
-	case "ticdc":
+	case spec.ComponentCDC:
 		return p.sanitizeConfig(p.bootOptions.ticdc, cfg)
-	case "pump":
+	case spec.ComponentPump:
 		return p.sanitizeConfig(p.bootOptions.pump, cfg)
-	case "drainer":
+	case spec.ComponentDrainer:
 		return p.sanitizeConfig(p.bootOptions.drainer, cfg)
 	default:
 		return fmt.Errorf("unknown %s in sanitizeConfig", cid)
@@ -530,48 +531,48 @@ func (p *Playground) RWalkInstances(fn func(componentID string, ins instance.Ins
 // WalkInstances call fn for every instance and stop if return not nil.
 func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Instance) error) error {
 	for _, ins := range p.pds {
-		err := fn("pd", ins)
+		err := fn(spec.ComponentPD, ins)
 		if err != nil {
 			return err
 		}
 	}
 	for _, ins := range p.tikvs {
-		err := fn("tikv", ins)
+		err := fn(spec.ComponentTiKV, ins)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, ins := range p.pumps {
-		err := fn("pump", ins)
+		err := fn(spec.ComponentPump, ins)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, ins := range p.tidbs {
-		err := fn("tidb", ins)
+		err := fn(spec.ComponentTiDB, ins)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, ins := range p.ticdcs {
-		err := fn("ticdc", ins)
+		err := fn(spec.ComponentCDC, ins)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, ins := range p.drainers {
-		err := fn("drainer", ins)
+		err := fn(spec.ComponentDrainer, ins)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, ins := range p.tiflashs {
-		err := fn("tiflash", ins)
+		err := fn(spec.ComponentTiFlash, ins)
 		if err != nil {
 			return err
 		}
@@ -612,7 +613,7 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 	host = instance.AdvertiseHost(host)
 
 	switch componentID {
-	case "pd":
+	case spec.ComponentPD:
 		inst := instance.NewPDInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id)
 		ins = inst
 		if p.booted {
@@ -624,27 +625,27 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 				pd.InitCluster(p.pds)
 			}
 		}
-	case "tidb":
+	case spec.ComponentTiDB:
 		inst := instance.NewTiDBInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.enableBinlog())
 		ins = inst
 		p.tidbs = append(p.tidbs, inst)
-	case "tikv":
+	case spec.ComponentTiKV:
 		inst := instance.NewTiKVInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
 		p.tikvs = append(p.tikvs, inst)
-	case "tiflash":
+	case spec.ComponentTiFlash:
 		inst := instance.NewTiFlashInstance(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds, p.tidbs)
 		ins = inst
 		p.tiflashs = append(p.tiflashs, inst)
-	case "ticdc":
+	case spec.ComponentCDC:
 		inst := instance.NewTiCDC(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
 		p.ticdcs = append(p.ticdcs, inst)
-	case "pump":
+	case spec.ComponentPump:
 		inst := instance.NewPump(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
 		p.pumps = append(p.pumps, inst)
-	case "drainer":
+	case spec.ComponentDrainer:
 		inst := instance.NewDrainer(cfg.BinPath, dir, host, cfg.ConfigPath, id, p.pds)
 		ins = inst
 		p.drainers = append(p.drainers, inst)
@@ -670,19 +671,20 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		return fmt.Errorf("all components count must be great than 0 (tikv=%v, pd=%v)", options.tikv.Num, options.pd.Num)
 	}
 
-	if options.version == "" {
-		version, _, err := env.V1Repository().LatestStableVersion("tidb", false)
+	{
+		version, err := env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, options.version)
 		if err != nil {
 			return err
 		}
-		options.version = version.String()
-
-		fmt.Println(color.YellowString(`No TiDB version specified, using the latest stable version: %s
+		fmt.Println(color.YellowString(`Using the version %s for version constraint "%s".
 
 If you'd like to use a TiDB version other than %s, cancel and retry with the following arguments:
     Specify version manually:   tiup playground <version>
+    Specify version range:      tiup playground ^5
     The nightly version:        tiup playground nightly
-`, options.version, options.version))
+`, version, options.version, version))
+
+		options.version = version.String()
 	}
 
 	if !utils.Version(options.version).IsNightly() {
@@ -700,13 +702,13 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 		comp string
 		instance.Config
 	}{
-		{"pd", options.pd},
-		{"tikv", options.tikv},
-		{"pump", options.pump},
-		{"tidb", options.tidb},
-		{"ticdc", options.ticdc},
-		{"drainer", options.drainer},
-		{"tiflash", options.tiflash},
+		{spec.ComponentPD, options.pd},
+		{spec.ComponentTiKV, options.tikv},
+		{spec.ComponentPump, options.pump},
+		{spec.ComponentTiDB, options.tidb},
+		{spec.ComponentCDC, options.ticdc},
+		{spec.ComponentDrainer, options.drainer},
+		{spec.ComponentTiFlash, options.tiflash},
 	}
 
 	for _, inst := range instances {
@@ -758,7 +760,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	anyPumpReady := false
 	// Start all instance except tiflash.
 	err := p.WalkInstances(func(cid string, ins instance.Instance) error {
-		if cid == "tiflash" {
+		if cid == spec.ComponentTiFlash {
 			return nil
 		}
 
@@ -768,7 +770,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 		}
 
 		// if no any pump, tidb will quit right away.
-		if cid == "pump" && !anyPumpReady {
+		if cid == spec.ComponentPump && !anyPumpReady {
 			ctx, cancel := context.WithTimeout(context.TODO(), time.Second*120)
 			err = ins.(*instance.Pump).Ready(ctx)
 			cancel()
@@ -882,7 +884,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	}
 
 	if monitorInfo != nil {
-		p.updateMonitorTopology("prometheus", *monitorInfo)
+		p.updateMonitorTopology(spec.ComponentPrometheus, *monitorInfo)
 	}
 
 	dumpDSN(filepath.Join(p.dataDir, "dsn"), p.tidbs)
@@ -898,7 +900,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	logIfErr(p.renderSDFile())
 
 	if g := p.grafana; g != nil {
-		p.updateMonitorTopology("grafana", MonitorInfo{g.host, g.port, g.cmd.Path})
+		p.updateMonitorTopology(spec.ComponentGrafana, MonitorInfo{g.host, g.port, g.cmd.Path})
 	}
 
 	return nil
