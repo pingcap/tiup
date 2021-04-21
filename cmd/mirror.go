@@ -792,12 +792,14 @@ func newMirrorCloneCmd() *cobra.Command {
 		}
 
 		if index != nil && len(index.Components) > 0 {
-			for name := range index.Components {
+			for name, comp := range index.Components {
+				if comp.Yanked {
+					continue
+				}
 				components = append(components, name)
 			}
 		}
 		sort.Strings(components)
-
 		for _, name := range components {
 			options.Components[name] = new([]string)
 			cmd.Flags().StringSliceVar(options.Components[name], name, nil, "Specify the versions for component "+name)
