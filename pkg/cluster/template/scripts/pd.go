@@ -57,6 +57,11 @@ func NewPDScript(name, ip, deployDir, dataDir, logDir string) *PDScript {
 	}
 }
 
+func (c *PDScript) resetAdvertise() {
+	c.AdvertiseClientAddr = fmt.Sprintf("%s://%s:%d", c.Scheme, c.IP, c.ClientPort)
+	c.AdvertisePeerAddr = fmt.Sprintf("%s://%s:%d", c.Scheme, c.IP, c.PeerPort)
+}
+
 // WithListenHost set listenHost field of PDScript
 func (c *PDScript) WithListenHost(listenHost string) *PDScript {
 	c.ListenHost = listenHost
@@ -66,20 +71,21 @@ func (c *PDScript) WithListenHost(listenHost string) *PDScript {
 // WithScheme set Scheme field of PDScript
 func (c *PDScript) WithScheme(scheme string) *PDScript {
 	c.Scheme = scheme
-	c.AdvertiseClientAddr = fmt.Sprintf("%s://%s:%d", c.Scheme, c.IP, c.ClientPort)
-	c.AdvertisePeerAddr = fmt.Sprintf("%s://%s:%d", c.Scheme, c.IP, c.PeerPort)
+	c.resetAdvertise()
 	return c
 }
 
 // WithClientPort set ClientPort field of PDScript
 func (c *PDScript) WithClientPort(port int) *PDScript {
 	c.ClientPort = port
+	c.resetAdvertise()
 	return c
 }
 
 // WithPeerPort set PeerPort field of PDScript
 func (c *PDScript) WithPeerPort(port int) *PDScript {
 	c.PeerPort = port
+	c.resetAdvertise()
 	return c
 }
 
