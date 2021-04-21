@@ -873,7 +873,8 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 		fmt.Println(color.GreenString("CLUSTER START SUCCESSFULLY, Enjoy it ^-^"))
 		for _, dbAddr := range succ {
 			ss := strings.Split(dbAddr, ":")
-			fmt.Println(color.GreenString("To connect TiDB: mysql --host %s --port %s -u root -p (no password)", ss[0], ss[1]))
+			connectMsg := "To connect TiDB: mysql --host %s --port %s -u root -p (no password) --comments"
+			fmt.Println(color.GreenString(connectMsg, ss[0], ss[1]))
 		}
 	}
 
