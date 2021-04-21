@@ -98,6 +98,7 @@ func (v *ver) Compare(other *ver) int {
 	return comparePrerelease(v.Prerelease, other.Prerelease)
 }
 
+// Constraint for semver
 type Constraint struct {
 	// [min, max)
 	min ver // min ver
@@ -184,6 +185,7 @@ func NewConstraint(raw string) (*Constraint, error) {
 	return c, nil
 }
 
+// Check checks whether a version is satisfies the constraint
 func (c *Constraint) Check(v string) bool {
 	result := MatchGroups(versionRegexp, strings.ToLower(strings.TrimSpace(v)))
 	if len(result) == 0 {

@@ -41,6 +41,7 @@ func IsFlagSetByUser(flagSet *pflag.FlagSet, flagName string) bool {
 	return setByUser
 }
 
+// MustAtoI calls strconv.Atoi and ignores error
 func MustAtoI(a string) int {
 	v, _ := strconv.Atoi(a)
 	return v
