@@ -177,7 +177,7 @@ func NewConstraint(raw string) (*Constraint, error) {
 			c.max.Patch = 0
 		}
 	} else if l := len(c.max.Prerelease); l > 0 {
-		c.max.Prerelease[l-1] = c.max.Prerelease[l-1] + " "
+		c.max.Prerelease[l-1] += " "
 	} else {
 		c.max.Patch++
 	}
