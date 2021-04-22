@@ -341,7 +341,7 @@ func newMirrorRotateCmd() *cobra.Command {
 }
 
 func editLatestRootManifest() (*v1manifest.Root, error) {
-	root, err := environment.GlobalEnv().V1Repository().FetchRootManfiest()
+	root, err := environment.GlobalEnv().V1Repository().FetchRootManifest()
 	if err != nil {
 		return nil, err
 	}
