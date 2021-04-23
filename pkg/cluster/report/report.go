@@ -36,6 +36,11 @@ func TelemetryUUID() string {
 	return os.Getenv(localdata.EnvNameTelemetryUUID)
 }
 
+// TelemetrySecret return telemetry uuid.
+func TelemetrySecret() string {
+	return os.Getenv(localdata.EnvNameTelemetrySecret)
+}
+
 // TiUPMeta returns metadata of TiUP Cluster itself
 func TiUPMeta() *tiuptele.TiUPInfo {
 	return &tiuptele.TiUPInfo{

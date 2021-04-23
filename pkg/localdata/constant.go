@@ -72,6 +72,9 @@ const (
 	// EnvNameTelemetryUUID represents the environment name of tiup telemetry uuid
 	EnvNameTelemetryUUID = "TIUP_TELEMETRY_UUID"
 
+	// EnvNameTelemetrySecret represents the environment name of tiup telemetry secret
+	EnvNameTelemetrySecret = "TIUP_TELEMETRY_SECRET"
+
 	// EnvTag is the tag of the running component
 	EnvTag = "TIUP_TAG"
 

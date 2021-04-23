@@ -25,6 +25,8 @@ tikv_servers:
   - host: 172.19.0.103
     data_dir: "/home/tidb/my_kv_data"
   - host: 172.19.0.104
+    config:
+      server.labels: { zone: "us-west-1", disk: "ssd" }
   - host: 172.19.0.105
 
 # tiflash eat too much memory

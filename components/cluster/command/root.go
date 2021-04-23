@@ -56,9 +56,9 @@ var tidbSpec *spec.SpecManager
 var cm *manager.Manager
 
 func scrubClusterName(n string) string {
-	// prepend the telemetry uuid to cluster name, so that two installations
+	// prepend the telemetry secret to cluster name, so that two installations
 	// of tiup with the same cluster name produce different hashs
-	cls := report.TelemetryUUID() + ":" + n
+	cls := report.TelemetrySecret() + ":" + n
 	return "cluster_" + telemetry.HashReport(cls)
 }
 
@@ -274,7 +274,23 @@ func Execute() {
 			clusterReport.ExitCode = int32(code)
 			clusterReport.Nodes = teleNodeInfos
 			if teleTopology != "" {
-				if data, err := telemetry.ScrubYaml([]byte(teleTopology), map[string]struct{}{"host": {}}, report.TelemetryUUID()); err == nil {
+				if data, err := telemetry.ScrubYaml(
+					[]byte(teleTopology),
+					map[string]struct{}{
+						"host":       {},
+						"name":       {},
+						"user":       {},
+						"group":      {},
+						"deploy_dir": {},
+						"data_dir":   {},
+						"log_dir":    {},
+					}, // fields to hash
+					map[string]struct{}{
+						"config":         {},
+						"server_configs": {},
+					}, // fields to omit
+					report.TelemetrySecret(),
+				); err == nil {
 					clusterReport.Topology = (string(data))
 				}
 			}

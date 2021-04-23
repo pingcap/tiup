@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/pingcap/tiup/pkg/set"
 	"gopkg.in/yaml.v2"
 )
 
@@ -30,22 +31,36 @@ func HashReport(val string) string {
 	return s
 }
 
-// ScrubYaml scrub the value.
-// for string type, replace as "_", unless the field name is in the hashFieldNames.
-// for any other type set as the zero value of the according type.
-func ScrubYaml(data []byte, hashFieldNames map[string]struct{}, salt string) (scrubed []byte, err error) {
+// ScrubYaml scrub the values in yaml
+func ScrubYaml(
+	data []byte,
+	hashFieldNames set.StringSet,
+	omitFieldNames set.StringSet,
+	salt string,
+) (scrubed []byte, err error) {
 	mp := make(map[interface{}]interface{})
 	err = yaml.Unmarshal(data, mp)
 	if err != nil {
 		return nil, err
 	}
 
-	smp := scrupMap(mp, hashFieldNames, false, salt).(map[string]interface{})
+	smp := scrupMap(mp, hashFieldNames, omitFieldNames, false, false, salt).(map[string]interface{})
 	scrubed, err = yaml.Marshal(smp)
 	return
 }
 
-func scrupMap(val interface{}, hashFieldNames map[string]struct{}, hash bool, salt string) interface{} {
+// scrupMap scrub the values in map
+// for string type, replace as "_" if the field is in the omit list,
+// for any other type set as the zero value of the according type if it's in the omit list.
+// so configs are ended up with only keys reported, and all field values are hash masked
+// or with zero values.
+func scrupMap(
+	val interface{},
+	hashFieldNames set.StringSet,
+	omitFieldNames set.StringSet,
+	hash, omit bool,
+	salt string,
+) interface{} {
 	if val == nil {
 		return nil
 	}
@@ -58,27 +73,37 @@ func scrupMap(val interface{}, hashFieldNames map[string]struct{}, hash bool, sa
 			if !ok {
 				return val
 			}
-			_, hash = hashFieldNames[kk]
-			ret[kk] = scrupMap(v, hashFieldNames, hash, salt)
+			khash := hash || hashFieldNames.Exist(kk)
+			komit := omit || omitFieldNames.Exist(kk)
+			ret[kk] = scrupMap(v, hashFieldNames, omitFieldNames, khash, komit, salt)
 		}
 		return ret
 	}
 
 	rv := reflect.ValueOf(val)
-	if rv.Kind() == reflect.Slice {
+	switch rv.Kind() {
+	case reflect.Slice:
 		var ret []interface{}
 		for i := 0; i < rv.Len(); i++ {
-			ret = append(ret, scrupMap(rv.Index(i).Interface(), hashFieldNames, false, salt))
+			ret = append(ret,
+				scrupMap(rv.Index(i).Interface(), hashFieldNames, omitFieldNames, hash, omit, salt))
 		}
 		return ret
-	}
-
-	if rv.Kind() == reflect.String {
+	case reflect.Map,
+		reflect.Struct,
+		reflect.Interface:
+		return scrupMap(val, hashFieldNames, omitFieldNames, hash, omit, salt)
+	case reflect.String:
 		if hash {
 			return HashReport(salt + ":" + rv.String())
 		}
-		return "_"
+		if omit {
+			return "_"
+		}
 	}
 
-	return reflect.Zero(rv.Type()).Interface()
+	if omit {
+		return reflect.Zero(rv.Type()).Interface()
+	}
+	return rv.Interface()
 }

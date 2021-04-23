@@ -48,3 +48,8 @@ func Intn(n int) int {
 func Int63n(n int64) int64 {
 	return Reader.Int63n(n)
 }
+
+// Read wraps Rand.Read
+func Read(b []byte) (int, error) {
+	return Reader.Read(b)
+}
