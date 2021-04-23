@@ -11,6 +11,7 @@ server_configs:
 
 tidb_servers:
   - host: 172.19.0.101
+    arch: arm64
   - host: 172.19.0.102
 
 pd_servers:

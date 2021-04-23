@@ -33,7 +33,8 @@ server_configs:
   tikv:
     storage.reserve-space: _
 tidb_servers:
-- host: badee9e1e6212d0c4f6bdc58e55198ca
+- arch: arm64
+  host: badee9e1e6212d0c4f6bdc58e55198ca
 - host: 54ab9723ff45bb84558ba1e2582be534
 tiflash_servers:
 - host: 237459442b7b33b83cb17c7d8e28d1dc
