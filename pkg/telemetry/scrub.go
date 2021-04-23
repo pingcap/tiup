@@ -89,10 +89,15 @@ func scrupMap(
 				scrupMap(rv.Index(i).Interface(), hashFieldNames, omitFieldNames, hash, omit, salt))
 		}
 		return ret
-	case reflect.Map,
-		reflect.Struct,
-		reflect.Interface:
-		return scrupMap(val, hashFieldNames, omitFieldNames, hash, omit, salt)
+	case reflect.Map:
+		ret := make(map[string]interface{})
+		iter := rv.MapRange()
+		for iter.Next() {
+			k := iter.Key().String()
+			v := iter.Value().Interface()
+			ret[k] = scrupMap(v, hashFieldNames, omitFieldNames, hash, omit, salt)
+		}
+		return ret
 	case reflect.String:
 		if hash {
 			return HashReport(salt + ":" + rv.String())
