@@ -14,7 +14,6 @@
 package telemetry
 
 import (
-	fmt "fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -65,7 +64,6 @@ func (s *scrubSuite) testScrubYaml(c *check.C, generate bool) {
 		} else {
 			out, err := os.ReadFile(outName)
 			c.Assert(err, check.IsNil)
-			fmt.Printf("%s\n%s\n", outName, scrubed)
 			c.Assert(scrubed, check.BytesEquals, out)
 		}
 	}

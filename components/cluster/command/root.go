@@ -57,7 +57,7 @@ var cm *manager.Manager
 
 func scrubClusterName(n string) string {
 	// prepend the telemetry secret to cluster name, so that two installations
-	// of tiup with the same cluster name produce different hashs
+	// of tiup with the same cluster name produce different hashes
 	cls := report.TelemetrySecret() + ":" + n
 	return "cluster_" + telemetry.HashReport(cls)
 }
