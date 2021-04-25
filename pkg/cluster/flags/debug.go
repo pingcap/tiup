@@ -26,5 +26,5 @@ var (
 
 func init() {
 	val := os.Getenv(localdata.EnvNameDebug)
-	DebugMode = val == "enable" || val == "enabled"
+	DebugMode = (val == "enable" || val == "enabled" || val == "true")
 }

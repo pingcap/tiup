@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/pingcap/check"
+	"github.com/pingcap/tiup/pkg/set"
 )
 
 type scrubSuite struct{}
@@ -39,10 +40,21 @@ func (s *scrubSuite) testScrubYaml(c *check.C, generate bool) {
 		data, err := os.ReadFile(filepath.Join("./testdata", f.Name()))
 		c.Assert(err, check.IsNil)
 
-		hashs := make(map[string]struct{})
-		hashs["host"] = struct{}{}
+		hashs := map[string]struct{}{
+			"host":       {},
+			"name":       {},
+			"user":       {},
+			"group":      {},
+			"deploy_dir": {},
+			"data_dir":   {},
+			"log_dir":    {},
+		}
+		omits := set.NewStringSet(
+			"config",
+			"server_configs",
+		)
 
-		scrubed, err := ScrubYaml(data, hashs)
+		scrubed, err := ScrubYaml(data, hashs, omits, "dummy-salt-string")
 		c.Assert(err, check.IsNil)
 
 		outName := filepath.Join("./testdata", f.Name()+".out")
@@ -68,8 +80,10 @@ func (s *scrubSuite) TestNilValueNotPanic(c *check.C) {
 
 	hashs := make(map[string]struct{})
 	hashs["host"] = struct{}{}
+	omits := make(map[string]struct{})
+	omits["config"] = struct{}{}
 
-	scrubed, err := ScrubYaml(data, hashs)
+	scrubed, err := ScrubYaml(data, hashs, omits, "dummy-salt-string")
 	c.Assert(err, check.IsNil)
 
 	var _ = scrubed

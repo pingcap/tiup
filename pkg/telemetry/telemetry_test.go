@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/pingcap/check"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 func Test(t *testing.T) { check.TestingT(t) }
@@ -55,7 +56,8 @@ func (s *TelemetrySuite) TestReport(c *check.C) {
 	defer ts.Close()
 
 	tele := NewTelemetry()
-	tele.cli = ts.Client()
+	tele.cli = &utils.HTTPClient{}
+	tele.cli.WithClient(ts.Client())
 	tele.url = ts.URL
 
 	msg := new(Report)
