@@ -1,8 +1,9 @@
 package utils
 
 import (
-	. "github.com/pingcap/check"
 	"regexp"
+
+	. "github.com/pingcap/check"
 )
 
 var _ = Suite(&TestRegexpSuite{})

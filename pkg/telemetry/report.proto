@@ -4,16 +4,18 @@ package telemetry;
 import "gogoproto/gogo.proto";
 
 message Report {
-	string eventUUID = 1;
-	int64 event_unix_timestamp = 2; // unix time second
+	string installationUUID = 1;
+	string eventUUID = 2;
+	int64 event_unix_timestamp = 3; // unix time second
 	
 	oneof event_detail {
-		ClusterReport cluster = 3;
+		ClusterReport cluster = 4;
 	}
+	TiUPInfo tiup = 5;
 }
 
 message ClusterReport {
-	string UUID = 1;
+	string ID = 1;
 	string command = 2;
 	uint64 take_milliseconds = 3;
 	int32 exit_code = 4;
@@ -21,6 +23,14 @@ message ClusterReport {
 	// only deploy and scale-out is setted:
 	string topology = 5;// topology.yaml of the cluster, with all the value scrubbed.
 	repeated NodeInfo nodes = 6;
+}
+
+message TiUPInfo {
+	string TiUPVersion = 1;
+	string ComponentVersion = 2;
+	string GitCommit = 3;
+	string os = 4;
+	string arch = 5;
 }
 
 message NodeInfo {

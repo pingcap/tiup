@@ -44,6 +44,7 @@ func newDisplayCmd() *cobra.Command {
 			}
 
 			clusterName = args[0]
+			clusterReport.ID = scrubClusterName(clusterName)
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 
 			exist, err := tidbSpec.Exist(clusterName)

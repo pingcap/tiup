@@ -60,6 +60,9 @@ const (
 	// EnvNameUserInputVersion represents the version user specified when running a component by `tiup component:version`
 	EnvNameUserInputVersion = "TIUP_USER_INPUT_VERSION"
 
+	// EnvNameTiUPVersion represents the version of TiUP itself, not the version of component
+	EnvNameTiUPVersion = "TIUP_VERSION"
+
 	// EnvNameHome represents the environment name of tiup home directory
 	EnvNameHome = "TIUP_HOME"
 
@@ -68,6 +71,9 @@ const (
 
 	// EnvNameTelemetryUUID represents the environment name of tiup telemetry uuid
 	EnvNameTelemetryUUID = "TIUP_TELEMETRY_UUID"
+
+	// EnvNameTelemetrySecret represents the environment name of tiup telemetry secret
+	EnvNameTelemetrySecret = "TIUP_TELEMETRY_SECRET"
 
 	// EnvTag is the tag of the running component
 	EnvTag = "TIUP_TAG"
