@@ -1,5 +1,21 @@
 TiUP Changelog
 
+## [1.4.2] 2021.04.26
+
+### Fixes
+
+- Send meta output from `tiup` to `stderr` to not to mix with output of components ([#1298](https://github.com/pingcap/tiup/pull/1298), [@dveeden](https://github.com/dveeden))
+- Update confusing version selection examples in help message of `playground` ([#1318](https://github.com/pingcap/tiup/pull/1318), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix the issue that `tiup mirror clone` command does exclude yanked component correctly ([#1321](https://github.com/pingcap/tiup/pull/1321), [@lucklove](https://github.com/lucklove))
+
+### Improvements
+
+- Adjust output messages and operation processes of `tiup mirror` command ([#1302](https://github.com/pingcap/tiup/pull/1302), [@AstroProfundis](https://github.com/AstroProfundis))
+- Add `tiup mirror show` subcommand to display current mirror address in use ([#1317](https://github.com/pingcap/tiup/pull/1317), [@baurine](https://github.com/baurine))
+- Optimize error handling if `root.json` fails to load ([#1303](https://github.com/pingcap/tiup/pull/1303), [@AstroProfundis](https://github.com/AstroProfundis))
+- Update MySQL client connection example in `playground` ([#1323](https://github.com/pingcap/tiup/pull/1323), [@tangenta](https://github.com/tangenta))
+- Adjust data and fields report via telemetry ([#1327](https://github.com/pingcap/tiup/pull/1327), [@AstroProfundis](https://github.com/AstroProfundis))
+
 ## [1.4.1] 2021.04.07
 
 ### Fixes
