@@ -72,6 +72,7 @@ func newDeploy() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			clusterReport.ID = scrubClusterName(clusterName)
 			teleCommand = append(teleCommand, scrubClusterName(clusterName))
 			teleCommand = append(teleCommand, version)
 
@@ -103,7 +104,7 @@ func postDeployHook(builder *task.Builder, topo spec.Topology) {
 		return nil
 	}).BuildAsStep("Check status").SetHidden(true)
 
-	if report.Enable() {
+	if report.Enabled() {
 		builder.ParallelStep("+ Check status", false, nodeInfoTask)
 	}
 
