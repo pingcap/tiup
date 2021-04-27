@@ -23,6 +23,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -635,8 +636,8 @@ func (r *V1Repository) loadRoot() (*v1manifest.Root, error) {
 	return root, nil
 }
 
-// FetchRootManfiest fetch the root manifest.
-func (r *V1Repository) FetchRootManfiest() (root *v1manifest.Root, err error) {
+// FetchRootManifest fetch the root manifest.
+func (r *V1Repository) FetchRootManifest() (root *v1manifest.Root, err error) {
 	err = r.ensureManifests()
 	if err != nil {
 		return nil, err
@@ -738,6 +739,58 @@ func (r *V1Repository) ComponentVersion(id, ver string, includeYanked bool) (*v1
 		return nil, errors.Annotatef(ErrUnknownVersion, "version %s on %s for component %s not found", ver, r.PlatformString(), id)
 	}
 	return vi, nil
+}
+
+// ResolveComponentVersion resolves the latest version of a component that satisfies the constraint
+func (r *V1Repository) ResolveComponentVersion(id, constraint string) (utils.Version, error) {
+	manifest, err := r.FetchComponentManifest(id, false)
+	if err != nil {
+		return "", err
+	}
+	var ver string
+	switch constraint {
+	case "", utils.LatestVersionAlias:
+		v, _, err := r.LatestStableVersion(id, false)
+		if err != nil {
+			return "", err
+		}
+		ver = v.String()
+	case utils.NightlyVersionAlias:
+		if !manifest.HasNightly(r.PlatformString()) {
+			return "", errors.Annotatef(ErrUnknownVersion, "component %s does not have nightly on %s", id, r.PlatformString())
+		}
+		ver = manifest.Nightly
+	default:
+		cons, err := utils.NewConstraint(constraint)
+		if err != nil {
+			return "", err
+		}
+		versions := manifest.VersionList(r.PlatformString())
+		verList := make([]string, 0, len(versions))
+		for v := range versions {
+			if v == manifest.Nightly {
+				continue
+			}
+			verList = append(verList, v)
+		}
+		sort.Slice(verList, func(p, q int) bool {
+			return semver.Compare(verList[p], verList[q]) > 0
+		})
+		for _, v := range verList {
+			if cons.Check(v) {
+				ver = v
+				break
+			}
+		}
+	}
+	if ver == "" {
+		return "", fmt.Errorf(`no version on %s for component %s satisfies constraint "%s"`, r.PlatformString(), id, constraint)
+	}
+	vi := manifest.VersionItem(r.PlatformString(), ver, false)
+	if vi == nil {
+		return "", errors.Annotatef(ErrUnknownVersion, "version %s on %s for component %s not found", ver, r.PlatformString(), id)
+	}
+	return utils.Version(ver), nil
 }
 
 // LatestNightlyVersion returns the latest nightly version of specific component

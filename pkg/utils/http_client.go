@@ -83,6 +83,12 @@ func (c *HTTPClient) Delete(url string, body io.Reader) ([]byte, int, error) {
 	return b, statusCode, err
 }
 
+// WithClient uses the specified HTTP client
+func (c *HTTPClient) WithClient(client *http.Client) *HTTPClient {
+	c.client = client
+	return c
+}
+
 // checkHTTPResponse checks if an HTTP response is with normal status codes
 func checkHTTPResponse(res *http.Response) ([]byte, error) {
 	body, err := io.ReadAll(res.Body)
