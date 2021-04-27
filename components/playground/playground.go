@@ -676,6 +676,7 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		options.tiflash.Num = 0
 	case options.tidb.Num < 0:
 		options.tidb.Num = 1
+		fallthrough
 	case options.tiflash.Num < 0:
 		options.tiflash.Num = 1
 	}
