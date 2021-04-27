@@ -89,7 +89,7 @@ func execute() error {
 			Num: 1,
 		},
 		tiflash: instance.Config{
-			Num:       1,
+			Num:       -1,
 			UpTimeout: 120,
 		},
 		host:    "127.0.0.1",

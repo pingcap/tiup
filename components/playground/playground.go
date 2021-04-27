@@ -667,13 +667,17 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 	p.bootOptions = options
 
 	// If the startup mode is not kv-only mode, set the default count of TiDB instances to 1.
-	if options.kvOnly {
+	switch {
+	case options.kvOnly:
 		if options.tidb.Num > 0 || options.tiflash.Num > 0 || options.pump.Num > 0 || options.drainer.Num > 0 {
 			return fmt.Errorf("in kv-only mode, TiDB related component are not allowed")
 		}
 		options.tidb.Num = 0
-	} else if options.tidb.Num < 0 {
+		options.tiflash.Num = 0
+	case options.tidb.Num < 0:
 		options.tidb.Num = 1
+	case options.tiflash.Num < 0:
+		options.tiflash.Num = 1
 	}
 
 	if options.pd.Num < 1 || options.tikv.Num < 1 {
