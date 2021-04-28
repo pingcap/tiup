@@ -150,15 +150,33 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 
 	// check OS vendor
 	switch osInfo.Vendor {
-	case "centos", "redhat":
+	case "centos", "redhat", "rhel":
 		// check version
 		if ver, _ := strconv.Atoi(osInfo.Version); ver < 7 {
 			result.Err = fmt.Errorf("%s %s not supported, use version 7 or higher",
 				osInfo.Name, osInfo.Release)
 			return result
 		}
-	case "debian", "ubuntu":
-		// check version
+	case "debian":
+		// debian support is not fully tested, but we suppose it should work
+		result.Err = fmt.Errorf("debian support is not fully tested, be careful")
+		result.Warn = true
+		if ver, _ := strconv.Atoi(osInfo.Version); ver < 9 {
+			result.Err = fmt.Errorf("%s %s not supported, use version 9 or higher (%s)",
+				osInfo.Name, osInfo.Release, result.Err)
+			result.Warn = false
+			return result
+		}
+	case "ubuntu":
+		// ubuntu support is not fully tested, but we suppose it should work
+		result.Err = fmt.Errorf("ubuntu support is not fully tested, be careful")
+		result.Warn = true
+		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 18.04 {
+			result.Err = fmt.Errorf("%s %s not supported, use version 18.04 or higher (%s)",
+				osInfo.Name, osInfo.Release, result.Err)
+			result.Warn = false
+			return result
+		}
 	default:
 		result.Err = fmt.Errorf("os vendor %s not supported", osInfo.Vendor)
 		return result
