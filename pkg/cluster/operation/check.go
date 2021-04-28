@@ -159,21 +159,23 @@ func checkOSInfo(opt *CheckOptions, osInfo *sysinfo.OS) *CheckResult {
 		}
 	case "debian":
 		// debian support is not fully tested, but we suppose it should work
-		result.Err = fmt.Errorf("debian support is not fully tested, be careful")
+		msg := "debian support is not fully tested, be careful"
+		result.Err = fmt.Errorf("%s (%s)", result.Msg, msg)
 		result.Warn = true
 		if ver, _ := strconv.Atoi(osInfo.Version); ver < 9 {
 			result.Err = fmt.Errorf("%s %s not supported, use version 9 or higher (%s)",
-				osInfo.Name, osInfo.Release, result.Err)
+				osInfo.Name, osInfo.Release, msg)
 			result.Warn = false
 			return result
 		}
 	case "ubuntu":
 		// ubuntu support is not fully tested, but we suppose it should work
-		result.Err = fmt.Errorf("ubuntu support is not fully tested, be careful")
+		msg := "ubuntu support is not fully tested, be careful"
+		result.Err = fmt.Errorf("%s (%s)", result.Msg, msg)
 		result.Warn = true
 		if ver, _ := strconv.ParseFloat(osInfo.Version, 64); ver < 18.04 {
 			result.Err = fmt.Errorf("%s %s not supported, use version 18.04 or higher (%s)",
-				osInfo.Name, osInfo.Release, result.Err)
+				osInfo.Name, osInfo.Release, msg)
 			result.Warn = false
 			return result
 		}
