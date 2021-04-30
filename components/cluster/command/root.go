@@ -246,10 +246,14 @@ func Execute() {
 	teleReport.EventDetail = &telemetry.Report_Cluster{Cluster: clusterReport}
 	reportEnabled = report.Enabled()
 	if reportEnabled {
+		eventUUID := os.Getenv(localdata.EnvNameTelemetryEventUUID)
+		if eventUUID == "" {
+			eventUUID = uuid.New().String()
+		}
 		teleReport.InstallationUUID = report.TelemetryUUID()
-		teleReport.EventUUID = uuid.New().String()
+		teleReport.EventUUID = eventUUID
 		teleReport.EventUnixTimestamp = time.Now().Unix()
-		teleReport.Tiup = report.TiUPMeta()
+		teleReport.Version = report.TiUPMeta()
 	}
 
 	start := time.Now()
