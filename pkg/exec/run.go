@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/google/uuid"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
@@ -223,7 +222,6 @@ func PrepareCommand(p *PrepareCommandParams) (*exec.Cmd, error) {
 		fmt.Sprintf("%s=%s", localdata.EnvNameComponentInstallDir, installPath),
 		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetryStatus, teleMeta.Status),
 		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetryUUID, teleMeta.UUID),
-		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetryEventUUID, uuid.New().String()),
 		fmt.Sprintf("%s=%s", localdata.EnvNameTelemetrySecret, teleMeta.Secret),
 		fmt.Sprintf("%s=%s", localdata.EnvTag, p.Tag),
 	}

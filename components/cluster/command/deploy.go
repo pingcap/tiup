@@ -22,19 +22,18 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
-	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/errutil"
-	telemetry2 "github.com/pingcap/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 var (
-	teleReport    *telemetry2.Report
-	clusterReport *telemetry2.ClusterReport
-	teleNodeInfos []*telemetry2.NodeInfo
+	teleReport    *telemetry.Report
+	clusterReport *telemetry.ClusterReport
+	teleNodeInfos []*telemetry.NodeInfo
 	teleTopology  string
 	teleCommand   []string
 )
@@ -104,7 +103,7 @@ func postDeployHook(builder *task.Builder, topo spec.Topology) {
 		return nil
 	}).BuildAsStep("Check status").SetHidden(true)
 
-	if report.Enabled() {
+	if telemetry.Enabled() {
 		builder.ParallelStep("+ Check status", false, nodeInfoTask)
 	}
 

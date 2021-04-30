@@ -18,6 +18,7 @@ func newTelemetryCmd() *cobra.Command {
 		Use:   "reset",
 		Short: "Reset the uuid used for telemetry",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			teleMeta, fname, err := telemetry.GetMeta(env)
 			if err != nil {
@@ -39,6 +40,7 @@ func newTelemetryCmd() *cobra.Command {
 		Use:   "enable",
 		Short: "Enable telemetry of tiup",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			teleMeta, fname, err := telemetry.GetMeta(env)
 			if err != nil {
@@ -60,6 +62,7 @@ func newTelemetryCmd() *cobra.Command {
 		Use:   "disable",
 		Short: "Disable telemetry of tiup",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			teleMeta, fname, err := telemetry.GetMeta(env)
 			if err != nil {
@@ -81,6 +84,7 @@ func newTelemetryCmd() *cobra.Command {
 		Use:   "status",
 		Short: "Display the current status of tiup telemetry",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			teleMeta, _, err := telemetry.GetMeta(env)
 			if err != nil {

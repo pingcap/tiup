@@ -14,27 +14,39 @@
 package cmd
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/fatih/color"
+	"github.com/google/uuid"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/exec"
+	"github.com/pingcap/tiup/pkg/flags"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
+	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 )
 
-var rootCmd *cobra.Command
-var repoOpts repository.Options
+var (
+	rootCmd       *cobra.Command
+	repoOpts      repository.Options
+	reportEnabled bool // is telemetry report enabled
+	eventUUID     = uuid.New().String()
+	teleCommand   string
+)
 
 func init() {
 	cobra.EnableCommandSorting = false
+	_ = os.Setenv(localdata.EnvNameTelemetryEventUUID, eventUUID)
 
 	var (
 		binary       string
@@ -59,6 +71,7 @@ the latest stable version will be downloaded from the repository.`,
 			return nil
 		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
 			if printVersion && len(args) == 0 {
 				return nil
 			}
@@ -116,6 +129,7 @@ the latest stable version will be downloaded from the repository.`,
 						break
 					}
 				}
+				teleCommand = fmt.Sprintf("%s %s", cmd.CommandPath(), componentSpec)
 				return exec.RunComponent(env, tag, componentSpec, binPath, transparentParams)
 			}
 			return cmd.Help()
@@ -177,8 +191,74 @@ the latest stable version will be downloaded from the repository.`,
 
 // Execute parses the command line arguments and calls proper functions
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	start := time.Now()
+	code := 0
+
+	err := rootCmd.Execute()
+	if err != nil {
 		fmt.Println(color.RedString("Error: %v", err))
-		os.Exit(1)
+		code = 1
+	}
+
+	teleReport := new(telemetry.Report)
+	tiupReport := new(telemetry.TiUPReport)
+	teleReport.EventDetail = &telemetry.Report_Tiup{Tiup: tiupReport}
+
+	env := environment.GlobalEnv()
+	if env == nil {
+		// if the env is not initialized, skip telemetry upload
+		// as many info are read from the env.
+		// TODO: split pure meta information from env object and
+		// us a dedicated package for that
+		reportEnabled = false
+	} else {
+		teleMeta, _, err := telemetry.GetMeta(env)
+		if err == nil {
+			reportEnabled = teleMeta.Status == telemetry.EnableStatus
+			teleReport.InstallationUUID = teleMeta.UUID
+		} // default to false on errors
+	}
+	fmt.Println(reportEnabled)
+	if reportEnabled {
+		teleReport.EventUUID = eventUUID
+		teleReport.EventUnixTimestamp = start.Unix()
+		teleReport.Version = telemetry.TiUPMeta()
+		teleReport.Version.TiUPVersion = version.NewTiUPVersion().SemVer()
+		tiupReport.Command = teleCommand
+		tiupReport.CustomMirror = env.Profile().Config.Mirror != repository.DefaultMirror
+
+		f := func() {
+			defer func() {
+				if r := recover(); r != nil {
+					if flags.DebugMode {
+						log.Debugf("Recovered in telemetry report: %v", r)
+					}
+				}
+			}()
+
+			tiupReport.ExitCode = int32(code)
+			tiupReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
+			tele := telemetry.NewTelemetry()
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+			err := tele.Report(ctx, teleReport)
+			if flags.DebugMode {
+				if err != nil {
+					log.Infof("report failed: %v", err)
+				}
+				fmt.Printf("report: %s\n", teleReport.String())
+				if data, err := json.Marshal(teleReport); err == nil {
+					log.Debugf("report: %s\n", string(data))
+				}
+			}
+			cancel()
+		}
+
+		f()
+	}
+
+	color.Unset()
+
+	if code != 0 {
+		os.Exit(code)
 	}
 }
