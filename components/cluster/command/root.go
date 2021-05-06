@@ -57,7 +57,7 @@ var cm *manager.Manager
 func scrubClusterName(n string) string {
 	// prepend the telemetry secret to cluster name, so that two installations
 	// of tiup with the same cluster name produce different hashes
-	cls := telemetry.GetTelemetrySecret() + ":" + n
+	cls := telemetry.GetSecret() + ":" + n
 	return "cluster_" + telemetry.HashReport(cls)
 }
 
@@ -249,7 +249,7 @@ func Execute() {
 		if eventUUID == "" {
 			eventUUID = uuid.New().String()
 		}
-		teleReport.InstallationUUID = telemetry.GetTelemetryUUID()
+		teleReport.InstallationUUID = telemetry.GetUUID()
 		teleReport.EventUUID = eventUUID
 		teleReport.EventUnixTimestamp = time.Now().Unix()
 		teleReport.Version = telemetry.TiUPMeta()
@@ -292,7 +292,7 @@ func Execute() {
 						"config":         {},
 						"server_configs": {},
 					}, // fields to omit
-					telemetry.GetTelemetrySecret(),
+					telemetry.GetSecret(),
 				); err == nil {
 					clusterReport.Topology = (string(data))
 				}

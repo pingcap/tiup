@@ -30,13 +30,13 @@ func Enabled() bool {
 	return status == EnableStatus
 }
 
-// GetTelemetryUUID return telemetry uuid.
-func GetTelemetryUUID() string {
+// GetUUID return telemetry uuid.
+func GetUUID() string {
 	return os.Getenv(localdata.EnvNameTelemetryUUID)
 }
 
-// GetTelemetrySecret return telemetry uuid.
-func GetTelemetrySecret() string {
+// GetSecret return telemetry encrypt secret.
+func GetSecret() string {
 	return os.Getenv(localdata.EnvNameTelemetrySecret)
 }
 

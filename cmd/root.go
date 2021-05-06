@@ -218,7 +218,7 @@ func Execute() {
 			teleReport.InstallationUUID = teleMeta.UUID
 		} // default to false on errors
 	}
-	fmt.Println(reportEnabled)
+
 	if reportEnabled {
 		teleReport.EventUUID = eventUUID
 		teleReport.EventUnixTimestamp = start.Unix()
