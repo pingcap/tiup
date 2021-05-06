@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
@@ -178,6 +179,15 @@ The root manifest in $TIUP_HOME will be replaced with the one in given repositor
 			} else {
 				addr = args[0]
 			}
+			// expand relative path
+			if !strings.HasPrefix(addr, "http") {
+				var err error
+				addr, err = filepath.Abs(addr)
+				if err != nil {
+					return err
+				}
+			}
+
 			profile := localdata.InitProfile()
 			if err := profile.ResetMirror(addr, root); err != nil {
 				log.Errorf("Failed to set mirror: %s\n", err.Error())
@@ -213,7 +223,7 @@ func newMirrorGrantCmd() *cobra.Command {
 				name = id
 			}
 
-			// the privPath can point to a public key becase the Public method of KeyInfo works on both priv and pub key
+			// the privPath can point to a public key becase the Public method of KeyInfo works on both priv and pub keys
 			privKey, err := loadPrivKey(privPath)
 			if err != nil {
 				return err
@@ -222,14 +232,22 @@ func newMirrorGrantCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			keyID, err := pubKey.ID()
+			if err != nil {
+				return err
+			}
 
 			env := environment.GlobalEnv()
-			return env.V1Repository().Mirror().Grant(id, name, pubKey)
+			err = env.V1Repository().Mirror().Grant(id, name, pubKey)
+			if err == nil {
+				log.Infof("Granted new owner %s(%s) with public key %s.", id, name, keyID)
+			}
+			return err
 		},
 	}
 
 	cmd.Flags().StringVarP(&name, "name", "n", "", "Specify the name of the owner, default: id of the owner")
-	cmd.Flags().StringVarP(&privPath, "key", "k", "", "Specify the private key path of the owner")
+	cmd.Flags().StringVarP(&privPath, "key", "k", "", "Specify the path to the private or public key of the owner")
 
 	return cmd
 }
@@ -729,7 +747,7 @@ func initRepo(path, keyDir string) error {
 		return err
 	}
 	log.Infof("New repository initialized at \"%s\", private keys are stored in \"%s\".", path, keyDir)
-	log.Infof("Use `tiup mirror set` command to set and use the new repository.")
+	log.Infof("Use `%s` command to set and use the new repository.", color.CyanString("tiup mirror set %s", path))
 	return nil
 }
 
