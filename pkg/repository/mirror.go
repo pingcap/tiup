@@ -39,6 +39,7 @@ import (
 	"github.com/pingcap/tiup/pkg/utils/mock"
 	"github.com/pingcap/tiup/pkg/utils/rand"
 	"github.com/pingcap/tiup/pkg/verbose"
+	"github.com/pingcap/tiup/pkg/version"
 )
 
 const (
@@ -293,6 +294,7 @@ func (l *httpMirror) download(url string, to string, maxSize int64) (io.ReadClos
 	}(time.Now())
 
 	client := grab.NewClient()
+	client.UserAgent = fmt.Sprintf("tiup/%s", version.NewTiUPVersion().SemVer())
 	req, err := grab.NewRequest(to, url)
 	if err != nil {
 		return nil, errors.Trace(err)
