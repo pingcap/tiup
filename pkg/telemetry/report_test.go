@@ -11,13 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package report
+package telemetry
 
 import (
 	"context"
 	"testing"
-
-	telemetry2 "github.com/pingcap/tiup/pkg/telemetry"
 
 	"github.com/pingcap/check"
 )
@@ -29,8 +27,8 @@ var _ = check.Suite(&reportSuite{})
 func TestT(t *testing.T) { check.TestingT(t) }
 
 func (s *reportSuite) TestNodeInfo(c *check.C) {
-	info := new(telemetry2.NodeInfo)
-	err := telemetry2.FillNodeInfo(context.Background(), info)
+	info := new(NodeInfo)
+	err := FillNodeInfo(context.Background(), info)
 	c.Assert(err, check.IsNil)
 
 	text, err := NodeInfoToText(info)

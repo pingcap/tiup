@@ -40,6 +40,7 @@ latest version. All other flags will be ignored if the flag --self is given.
   $ tiup update playground:v0.0.3 --force # Overwrite an existing local installation
   $ tiup update --self                    # Update TiUP to the latest version`,
 		RunE: func(cmd *cobra.Command, components []string) error {
+			teleCommand = cmd.CommandPath()
 			if (len(components) == 0 && !all && !force && !self) || (len(components) > 0 && all) {
 				return cmd.Help()
 			}
