@@ -25,10 +25,21 @@ import (
 // ScrubStrategy for scrub sensible value.
 type ScrubStrategy int
 
-// HashReport return the hash value of val.
-func HashReport(val string) string {
+// hashReport return the hash value of val.
+func hashReport(val string) string {
 	s := fmt.Sprintf("%x", md5.Sum([]byte(val)))
 	return s
+}
+
+// SaltedHash preprend the secret before hashing input
+func SaltedHash(val string, salt ...string) string {
+	var s string
+	if len(salt) > 0 {
+		s = salt[0]
+	} else {
+		s = GetSecret()
+	}
+	return hashReport(s + ":" + val)
 }
 
 // ScrubYaml scrub the values in yaml
@@ -100,7 +111,7 @@ func scrupMap(
 		return ret
 	case reflect.String:
 		if hash {
-			return HashReport(salt + ":" + rv.String())
+			return hashReport(salt + ":" + rv.String())
 		}
 		if omit {
 			return "_"
