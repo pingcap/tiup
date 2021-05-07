@@ -16,10 +16,12 @@ package ansible
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/pingcap/errors"
@@ -177,6 +179,31 @@ func diffConfigs(configs []map[string]interface{}) (global map[string]interface{
 	}
 
 	return
+}
+
+// CommentConfig add `#` to the head of each lines for imported configs
+func CommentConfig(clsName string) error {
+	dir := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath)
+	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+		if err != nil || info.IsDir() && !strings.HasSuffix(info.Name(), ".toml") {
+			return nil
+		}
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return errors.Annotatef(err, "read config file %s", path)
+		}
+		lines := strings.Split(string(content), "\n")
+		for idx := range lines {
+			lines[idx] = "# " + lines[idx]
+		}
+		if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0644); err != nil {
+			return errors.Annotatef(err, "write config file %s", path)
+		}
+
+		return nil
+	})
+	return errors.Annotate(err, "comment imported config")
 }
 
 // LoadConfig files to clusterMeta, include tidbservers, tikvservers, pdservers pumpservers and drainerservers
