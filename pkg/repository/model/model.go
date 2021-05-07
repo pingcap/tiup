@@ -296,10 +296,7 @@ func (m *model) copyTiUP(origin string) error {
 		return err
 	}
 	defer reader.Close()
-	if err := m.txn.Write(tiupTar, reader); err != nil {
-		return err
-	}
-	return nil
+	return m.txn.Write(tiupTar, reader)
 }
 
 func (m *model) checkAndWrite(manifest *v1manifest.Component, info ComponentData) error {
