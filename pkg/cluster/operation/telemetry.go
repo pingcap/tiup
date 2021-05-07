@@ -23,7 +23,6 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/checkpoint"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
-	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/version"
@@ -103,7 +102,7 @@ func GetNodeInfo(
 			cmd = fmt.Sprintf("%s/cluster _telemetry node_info", dstDir)
 			stdout, _, err := exec.Execute(nctx, cmd, false)
 			if err == nil {
-				nodeInfo, err := report.NodeInfoFromText(string(stdout))
+				nodeInfo, err := telemetry.NodeInfoFromText(string(stdout))
 				if err == nil {
 					nodeInfo.NodeId = telemetry.HashReport(host)
 					nodesMu.Lock()
