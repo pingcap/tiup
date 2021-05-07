@@ -9,9 +9,17 @@ message Report {
 	int64 event_unix_timestamp = 3; // unix time second
 	
 	oneof event_detail {
-		ClusterReport cluster = 4;
+		TiUPReport tiup = 4;
+		ClusterReport cluster = 5;
 	}
-	TiUPInfo tiup = 5;
+	TiUPInfo version = 6;
+}
+
+message TiUPReport {
+	string command = 1;
+	uint64 take_milliseconds = 2;
+	int32 exit_code = 3;
+	bool custom_mirror = 4;
 }
 
 message ClusterReport {
