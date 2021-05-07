@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	cjson "github.com/gibson042/canonicaljson-go"
@@ -24,6 +25,7 @@ import (
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/version"
 )
 
 // Backend defines operations on the manifests
@@ -267,11 +269,34 @@ func (m *model) Publish(manifest *v1manifest.Manifest, info ComponentInfo) error
 			if err := m.checkAndWrite(signed, info); err != nil {
 				return err
 			}
+			if signed.ID == version.TiUPVerName {
+				if err := m.copyTiUP(info.Filename()); err != nil {
+					return err
+				}
+			}
 		}
 		return m.txn.Commit()
 	}, func(err error) bool {
 		return err == store.ErrorFsCommitConflict && m.txn.ResetManifest() == nil
 	})
+}
+
+func (m *model) copyTiUP(origin string) error {
+	xs := strings.Split(origin, "-")
+	if len(xs) < 4 {
+		return ErrorWrongFileName
+	}
+	// convert
+	//	`tiup-${version}-linux-arm64.tar.gz`  -> `tiup-linux-arm64.tar.gz`
+	//  `tiup-v1.4.0-darwin-amd64.tar.gz` -> `tiup-darwin-amd64.tar.gz`
+	//  `tiup-v1.4.0-r13-gcd19b75+staging-darwin-amd64.tar.gz` -> `tiup-darwin-amd64.tar.gz`
+	tiupTar := strings.Join(append(xs[:1], xs[len(xs)-2:]...), "-")
+	reader, err := m.txn.Read(origin)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+	return m.txn.Write(tiupTar, reader)
 }
 
 func (m *model) checkAndWrite(manifest *v1manifest.Component, info ComponentData) error {
