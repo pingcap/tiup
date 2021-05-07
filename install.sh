@@ -43,11 +43,11 @@ install_binary() {
 check_depends() {
     pass=0
     command -v curl >/dev/null || {
-        echo "Dependency check failed: please install 'curl' before installing."
-	pass=1
+        echo "Dependency check failed: please install 'curl' before proceeding."
+        pass=1
     }
     command -v tar >/dev/null || {
-        echo "Dependency check failed: please install 'tar' before installing."
+        echo "Dependency check failed: please install 'tar' before proceeding."
         pass=1
     }
     return $pass
