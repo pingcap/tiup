@@ -52,6 +52,7 @@ func newCompletionCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
 			if len(args) == 1 {
 				switch args[0] {
 				case "bash":
