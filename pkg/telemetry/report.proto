@@ -36,8 +36,9 @@ message ClusterReport {
 }
 
 message PlaygroundReport {
-	string command = 2;
-	string topology = 3;
+	string topology = 1;
+	uint64 take_milliseconds = 2;
+	int32 exit_code = 3;
 }
 
 message TiUPInfo {

@@ -49,6 +49,11 @@ var (
 	gOpt          operator.Options
 	skipConfirm   bool
 	reportEnabled bool // is telemetry report enabled
+	teleReport    *telemetry.Report
+	clusterReport *telemetry.ClusterReport
+	teleNodeInfos []*telemetry.NodeInfo
+	teleTopology  string
+	teleCommand   []string
 )
 
 var tidbSpec *spec.SpecManager

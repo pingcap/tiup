@@ -110,7 +110,7 @@ func scrupMap(
 		}
 		return ret
 	case reflect.String:
-		if hash {
+		if hash && !rv.IsZero() {
 			return hashReport(salt + ":" + rv.String())
 		}
 		if omit {

@@ -31,14 +31,6 @@ import (
 )
 
 var (
-	teleReport    *telemetry.Report
-	clusterReport *telemetry.ClusterReport
-	teleNodeInfos []*telemetry.NodeInfo
-	teleTopology  string
-	teleCommand   []string
-)
-
-var (
 	errNSDeploy            = errNS.NewSubNamespace("deploy")
 	errDeployNameDuplicate = errNSDeploy.NewType("name_dup", errutil.ErrTraitPreCheck)
 )
