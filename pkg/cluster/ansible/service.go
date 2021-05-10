@@ -180,6 +180,12 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
 				continue
 			}
+			if strings.Contains(line, "--data-dir") {
+				dataArg := strings.Split(line, " ")[4] // 4 whitespaces ahead
+				dataDir := strings.TrimPrefix(dataArg, "--data-dir=")
+				newIns.DataDir = strings.Trim(dataDir, "\"")
+				continue
+			}
 			if strings.Contains(line, "--log-file=") {
 				fullLog := strings.Split(line, " ")[4] // 4 whitespaces ahead
 				logDir := strings.TrimSuffix(strings.TrimPrefix(fullLog,
