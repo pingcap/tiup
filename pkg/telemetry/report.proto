@@ -44,9 +44,12 @@ message PlaygroundReport {
 message TiUPInfo {
 	string TiUPVersion = 1;
 	string ComponentVersion = 2;
-	string GitCommit = 3;
-	string os = 4;
-	string arch = 5;
+	string GitRef = 3;
+	string GitCommit = 4;
+	string VerName = 5;
+	string os = 6;
+	string arch = 7;
+	string go = 8;
 }
 
 message NodeInfo {
