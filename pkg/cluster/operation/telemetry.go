@@ -104,7 +104,7 @@ func GetNodeInfo(
 			if err == nil {
 				nodeInfo, err := telemetry.NodeInfoFromText(string(stdout))
 				if err == nil {
-					nodeInfo.NodeId = telemetry.HashReport(host)
+					nodeInfo.NodeId = telemetry.SaltedHash(host)
 					nodesMu.Lock()
 					nodes = append(nodes, nodeInfo)
 					nodesMu.Unlock()

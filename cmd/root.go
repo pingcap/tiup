@@ -44,16 +44,17 @@ var (
 	teleCommand   string
 )
 
+// arguments
+var (
+	binary       string
+	binPath      string
+	tag          string
+	printVersion bool // not using cobra.Command.Version to make it possible to show component versions
+)
+
 func init() {
 	cobra.EnableCommandSorting = false
 	_ = os.Setenv(localdata.EnvNameTelemetryEventUUID, eventUUID)
-
-	var (
-		binary       string
-		binPath      string
-		tag          string
-		printVersion bool // not using cobra.Command.Version to make it possible to show component versions
-	)
 
 	rootCmd = &cobra.Command{
 		Use: `tiup [flags] <command> [args...]
@@ -226,6 +227,9 @@ func Execute() {
 		teleReport.Version.TiUPVersion = version.NewTiUPVersion().SemVer()
 		tiupReport.Command = teleCommand
 		tiupReport.CustomMirror = env.Profile().Config.Mirror != repository.DefaultMirror
+		if tag != "" {
+			tiupReport.Tag = telemetry.SaltedHash(tag)
+		}
 
 		f := func() {
 			defer func() {
