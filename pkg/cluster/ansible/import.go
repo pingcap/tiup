@@ -185,7 +185,7 @@ func diffConfigs(configs []map[string]interface{}) (global map[string]interface{
 func CommentConfig(clsName string) error {
 	dir := spec.ClusterPath(clsName, spec.AnsibleImportedConfigPath)
 	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
-		if err != nil || info.IsDir() && !strings.HasSuffix(info.Name(), ".toml") {
+		if err != nil || info.IsDir() || !strings.HasSuffix(info.Name(), ".toml") {
 			return nil
 		}
 
