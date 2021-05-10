@@ -26,14 +26,13 @@ import (
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
-	"github.com/pingcap/tiup/pkg/cluster/flags"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
-	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/colorutil"
 	tiupmeta "github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/errutil"
+	"github.com/pingcap/tiup/pkg/flags"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -50,6 +49,11 @@ var (
 	gOpt          operator.Options
 	skipConfirm   bool
 	reportEnabled bool // is telemetry report enabled
+	teleReport    *telemetry.Report
+	clusterReport *telemetry.ClusterReport
+	teleNodeInfos []*telemetry.NodeInfo
+	teleTopology  string
+	teleCommand   []string
 )
 
 var tidbSpec *spec.SpecManager
@@ -58,8 +62,7 @@ var cm *manager.Manager
 func scrubClusterName(n string) string {
 	// prepend the telemetry secret to cluster name, so that two installations
 	// of tiup with the same cluster name produce different hashes
-	cls := report.TelemetrySecret() + ":" + n
-	return "cluster_" + telemetry.HashReport(cls)
+	return "cluster_" + telemetry.SaltedHash(n)
 }
 
 func getParentNames(cmd *cobra.Command) []string {
@@ -244,12 +247,16 @@ func Execute() {
 	teleReport = new(telemetry.Report)
 	clusterReport = new(telemetry.ClusterReport)
 	teleReport.EventDetail = &telemetry.Report_Cluster{Cluster: clusterReport}
-	reportEnabled = report.Enabled()
+	reportEnabled = telemetry.Enabled()
 	if reportEnabled {
-		teleReport.InstallationUUID = report.TelemetryUUID()
-		teleReport.EventUUID = uuid.New().String()
+		eventUUID := os.Getenv(localdata.EnvNameTelemetryEventUUID)
+		if eventUUID == "" {
+			eventUUID = uuid.New().String()
+		}
+		teleReport.InstallationUUID = telemetry.GetUUID()
+		teleReport.EventUUID = eventUUID
 		teleReport.EventUnixTimestamp = time.Now().Unix()
-		teleReport.Tiup = report.TiUPMeta()
+		teleReport.Version = telemetry.TiUPMeta()
 	}
 
 	start := time.Now()
@@ -289,7 +296,7 @@ func Execute() {
 						"config":         {},
 						"server_configs": {},
 					}, // fields to omit
-					report.TelemetrySecret(),
+					telemetry.GetSecret(),
 				); err == nil {
 					clusterReport.Topology = (string(data))
 				}

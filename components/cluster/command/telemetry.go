@@ -17,9 +17,7 @@ import (
 	"context"
 	"fmt"
 
-	telemetry2 "github.com/pingcap/tiup/pkg/telemetry"
-
-	"github.com/pingcap/tiup/pkg/cluster/report"
+	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -48,13 +46,13 @@ func newTelemetryCmd() *cobra.Command {
 
 // nodeInfo dispaly telemetry.NodeInfo in stdout.
 func nodeInfo(ctx context.Context) error {
-	info := new(telemetry2.NodeInfo)
-	err := telemetry2.FillNodeInfo(ctx, info)
+	info := new(telemetry.NodeInfo)
+	err := telemetry.FillNodeInfo(ctx, info)
 	if err != nil {
 		return err
 	}
 
-	text, err := report.NodeInfoToText(info)
+	text, err := telemetry.NodeInfoToText(info)
 	if err != nil {
 		return err
 	}
