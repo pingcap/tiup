@@ -26,14 +26,15 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 type Report struct {
-	InstallationUUID   string `protobuf:"bytes,1,opt,name=installationUUID,proto3" json:"installationUUID,omitempty"`
-	EventUUID          string `protobuf:"bytes,2,opt,name=eventUUID,proto3" json:"eventUUID,omitempty"`
-	EventUnixTimestamp int64  `protobuf:"varint,3,opt,name=event_unix_timestamp,json=eventUnixTimestamp,proto3" json:"event_unix_timestamp,omitempty"`
+	InstallationUUID   string    `protobuf:"bytes,1,opt,name=installationUUID,proto3" json:"installationUUID,omitempty"`
+	EventUUID          string    `protobuf:"bytes,2,opt,name=eventUUID,proto3" json:"eventUUID,omitempty"`
+	EventUnixTimestamp int64     `protobuf:"varint,3,opt,name=event_unix_timestamp,json=eventUnixTimestamp,proto3" json:"event_unix_timestamp,omitempty"`
+	Version            *TiUPInfo `protobuf:"bytes,4,opt,name=version,proto3" json:"version,omitempty"`
 	// Types that are valid to be assigned to EventDetail:
 	//	*Report_Tiup
 	//	*Report_Cluster
+	//	*Report_Playground
 	EventDetail          isReport_EventDetail `protobuf_oneof:"event_detail"`
-	Version              *TiUPInfo            `protobuf:"bytes,6,opt,name=version,proto3" json:"version,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
 	XXX_unrecognized     []byte               `json:"-"`
 	XXX_sizecache        int32                `json:"-"`
@@ -79,14 +80,18 @@ type isReport_EventDetail interface {
 }
 
 type Report_Tiup struct {
-	Tiup *TiUPReport `protobuf:"bytes,4,opt,name=tiup,proto3,oneof" json:"tiup,omitempty"`
+	Tiup *TiUPReport `protobuf:"bytes,5,opt,name=tiup,proto3,oneof" json:"tiup,omitempty"`
 }
 type Report_Cluster struct {
-	Cluster *ClusterReport `protobuf:"bytes,5,opt,name=cluster,proto3,oneof" json:"cluster,omitempty"`
+	Cluster *ClusterReport `protobuf:"bytes,6,opt,name=cluster,proto3,oneof" json:"cluster,omitempty"`
+}
+type Report_Playground struct {
+	Playground *PlaygroundReport `protobuf:"bytes,7,opt,name=playground,proto3,oneof" json:"playground,omitempty"`
 }
 
-func (*Report_Tiup) isReport_EventDetail()    {}
-func (*Report_Cluster) isReport_EventDetail() {}
+func (*Report_Tiup) isReport_EventDetail()       {}
+func (*Report_Cluster) isReport_EventDetail()    {}
+func (*Report_Playground) isReport_EventDetail() {}
 
 func (m *Report) GetEventDetail() isReport_EventDetail {
 	if m != nil {
@@ -116,6 +121,13 @@ func (m *Report) GetEventUnixTimestamp() int64 {
 	return 0
 }
 
+func (m *Report) GetVersion() *TiUPInfo {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
+
 func (m *Report) GetTiup() *TiUPReport {
 	if x, ok := m.GetEventDetail().(*Report_Tiup); ok {
 		return x.Tiup
@@ -130,9 +142,9 @@ func (m *Report) GetCluster() *ClusterReport {
 	return nil
 }
 
-func (m *Report) GetVersion() *TiUPInfo {
-	if m != nil {
-		return m.Version
+func (m *Report) GetPlayground() *PlaygroundReport {
+	if x, ok := m.GetEventDetail().(*Report_Playground); ok {
+		return x.Playground
 	}
 	return nil
 }
@@ -142,14 +154,16 @@ func (*Report) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
 		(*Report_Tiup)(nil),
 		(*Report_Cluster)(nil),
+		(*Report_Playground)(nil),
 	}
 }
 
 type TiUPReport struct {
 	Command              string   `protobuf:"bytes,1,opt,name=command,proto3" json:"command,omitempty"`
-	TakeMilliseconds     uint64   `protobuf:"varint,2,opt,name=take_milliseconds,json=takeMilliseconds,proto3" json:"take_milliseconds,omitempty"`
-	ExitCode             int32    `protobuf:"varint,3,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
-	CustomMirror         bool     `protobuf:"varint,4,opt,name=custom_mirror,json=customMirror,proto3" json:"custom_mirror,omitempty"`
+	Tag                  string   `protobuf:"bytes,2,opt,name=tag,proto3" json:"tag,omitempty"`
+	TakeMilliseconds     uint64   `protobuf:"varint,3,opt,name=take_milliseconds,json=takeMilliseconds,proto3" json:"take_milliseconds,omitempty"`
+	ExitCode             int32    `protobuf:"varint,4,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
+	CustomMirror         bool     `protobuf:"varint,5,opt,name=custom_mirror,json=customMirror,proto3" json:"custom_mirror,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -191,6 +205,13 @@ var xxx_messageInfo_TiUPReport proto.InternalMessageInfo
 func (m *TiUPReport) GetCommand() string {
 	if m != nil {
 		return m.Command
+	}
+	return ""
+}
+
+func (m *TiUPReport) GetTag() string {
+	if m != nil {
+		return m.Tag
 	}
 	return ""
 }
@@ -304,12 +325,78 @@ func (m *ClusterReport) GetNodes() []*NodeInfo {
 	return nil
 }
 
+type PlaygroundReport struct {
+	Topology             string   `protobuf:"bytes,1,opt,name=topology,proto3" json:"topology,omitempty"`
+	TakeMilliseconds     uint64   `protobuf:"varint,2,opt,name=take_milliseconds,json=takeMilliseconds,proto3" json:"take_milliseconds,omitempty"`
+	ExitCode             int32    `protobuf:"varint,3,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *PlaygroundReport) Reset()         { *m = PlaygroundReport{} }
+func (m *PlaygroundReport) String() string { return proto.CompactTextString(m) }
+func (*PlaygroundReport) ProtoMessage()    {}
+func (*PlaygroundReport) Descriptor() ([]byte, []int) {
+	return fileDescriptor_3eedb623aa6ca98c, []int{3}
+}
+func (m *PlaygroundReport) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PlaygroundReport) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PlaygroundReport.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PlaygroundReport) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PlaygroundReport.Merge(m, src)
+}
+func (m *PlaygroundReport) XXX_Size() int {
+	return m.Size()
+}
+func (m *PlaygroundReport) XXX_DiscardUnknown() {
+	xxx_messageInfo_PlaygroundReport.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PlaygroundReport proto.InternalMessageInfo
+
+func (m *PlaygroundReport) GetTopology() string {
+	if m != nil {
+		return m.Topology
+	}
+	return ""
+}
+
+func (m *PlaygroundReport) GetTakeMilliseconds() uint64 {
+	if m != nil {
+		return m.TakeMilliseconds
+	}
+	return 0
+}
+
+func (m *PlaygroundReport) GetExitCode() int32 {
+	if m != nil {
+		return m.ExitCode
+	}
+	return 0
+}
+
 type TiUPInfo struct {
 	TiUPVersion          string   `protobuf:"bytes,1,opt,name=TiUPVersion,proto3" json:"TiUPVersion,omitempty"`
 	ComponentVersion     string   `protobuf:"bytes,2,opt,name=ComponentVersion,proto3" json:"ComponentVersion,omitempty"`
-	GitCommit            string   `protobuf:"bytes,3,opt,name=GitCommit,proto3" json:"GitCommit,omitempty"`
-	Os                   string   `protobuf:"bytes,4,opt,name=os,proto3" json:"os,omitempty"`
-	Arch                 string   `protobuf:"bytes,5,opt,name=arch,proto3" json:"arch,omitempty"`
+	GitRef               string   `protobuf:"bytes,3,opt,name=GitRef,proto3" json:"GitRef,omitempty"`
+	GitCommit            string   `protobuf:"bytes,4,opt,name=GitCommit,proto3" json:"GitCommit,omitempty"`
+	VerName              string   `protobuf:"bytes,5,opt,name=VerName,proto3" json:"VerName,omitempty"`
+	Os                   string   `protobuf:"bytes,6,opt,name=os,proto3" json:"os,omitempty"`
+	Arch                 string   `protobuf:"bytes,7,opt,name=arch,proto3" json:"arch,omitempty"`
+	Go                   string   `protobuf:"bytes,8,opt,name=go,proto3" json:"go,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -319,7 +406,7 @@ func (m *TiUPInfo) Reset()         { *m = TiUPInfo{} }
 func (m *TiUPInfo) String() string { return proto.CompactTextString(m) }
 func (*TiUPInfo) ProtoMessage()    {}
 func (*TiUPInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_3eedb623aa6ca98c, []int{3}
+	return fileDescriptor_3eedb623aa6ca98c, []int{4}
 }
 func (m *TiUPInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -362,9 +449,23 @@ func (m *TiUPInfo) GetComponentVersion() string {
 	return ""
 }
 
+func (m *TiUPInfo) GetGitRef() string {
+	if m != nil {
+		return m.GitRef
+	}
+	return ""
+}
+
 func (m *TiUPInfo) GetGitCommit() string {
 	if m != nil {
 		return m.GitCommit
+	}
+	return ""
+}
+
+func (m *TiUPInfo) GetVerName() string {
+	if m != nil {
+		return m.VerName
 	}
 	return ""
 }
@@ -383,6 +484,13 @@ func (m *TiUPInfo) GetArch() string {
 	return ""
 }
 
+func (m *TiUPInfo) GetGo() string {
+	if m != nil {
+		return m.Go
+	}
+	return ""
+}
+
 type NodeInfo struct {
 	NodeId               string       `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
 	Hardware             HardwareInfo `protobuf:"bytes,6,opt,name=hardware,proto3" json:"hardware"`
@@ -396,7 +504,7 @@ func (m *NodeInfo) Reset()         { *m = NodeInfo{} }
 func (m *NodeInfo) String() string { return proto.CompactTextString(m) }
 func (*NodeInfo) ProtoMessage()    {}
 func (*NodeInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_3eedb623aa6ca98c, []int{4}
+	return fileDescriptor_3eedb623aa6ca98c, []int{5}
 }
 func (m *NodeInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -462,7 +570,7 @@ func (m *CPUInfo) Reset()         { *m = CPUInfo{} }
 func (m *CPUInfo) String() string { return proto.CompactTextString(m) }
 func (*CPUInfo) ProtoMessage()    {}
 func (*CPUInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_3eedb623aa6ca98c, []int{5}
+	return fileDescriptor_3eedb623aa6ca98c, []int{6}
 }
 func (m *CPUInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -547,7 +655,7 @@ func (m *HardwareInfo) Reset()         { *m = HardwareInfo{} }
 func (m *HardwareInfo) String() string { return proto.CompactTextString(m) }
 func (*HardwareInfo) ProtoMessage()    {}
 func (*HardwareInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_3eedb623aa6ca98c, []int{6}
+	return fileDescriptor_3eedb623aa6ca98c, []int{7}
 }
 func (m *HardwareInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -617,7 +725,7 @@ func (m *OSInfo) Reset()         { *m = OSInfo{} }
 func (m *OSInfo) String() string { return proto.CompactTextString(m) }
 func (*OSInfo) ProtoMessage()    {}
 func (*OSInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_3eedb623aa6ca98c, []int{7}
+	return fileDescriptor_3eedb623aa6ca98c, []int{8}
 }
 func (m *OSInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -679,7 +787,7 @@ func (m *MemInfo) Reset()         { *m = MemInfo{} }
 func (m *MemInfo) String() string { return proto.CompactTextString(m) }
 func (*MemInfo) ProtoMessage()    {}
 func (*MemInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_3eedb623aa6ca98c, []int{8}
+	return fileDescriptor_3eedb623aa6ca98c, []int{9}
 }
 func (m *MemInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -726,6 +834,7 @@ func init() {
 	proto.RegisterType((*Report)(nil), "telemetry.Report")
 	proto.RegisterType((*TiUPReport)(nil), "telemetry.TiUPReport")
 	proto.RegisterType((*ClusterReport)(nil), "telemetry.ClusterReport")
+	proto.RegisterType((*PlaygroundReport)(nil), "telemetry.PlaygroundReport")
 	proto.RegisterType((*TiUPInfo)(nil), "telemetry.TiUPInfo")
 	proto.RegisterType((*NodeInfo)(nil), "telemetry.NodeInfo")
 	proto.RegisterType((*CPUInfo)(nil), "telemetry.CPUInfo")
@@ -737,55 +846,60 @@ func init() {
 func init() { proto.RegisterFile("report.proto", fileDescriptor_3eedb623aa6ca98c) }
 
 var fileDescriptor_3eedb623aa6ca98c = []byte{
-	// 754 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x54, 0xcd, 0x4e, 0x2b, 0x37,
-	0x18, 0x65, 0x26, 0xbf, 0xf3, 0x11, 0x50, 0x70, 0x69, 0x19, 0xd1, 0x2a, 0x8d, 0xa6, 0x52, 0x4b,
-	0x41, 0xa5, 0xff, 0x8b, 0x2e, 0xba, 0x21, 0x48, 0x25, 0x0b, 0x5a, 0xe4, 0x12, 0xb6, 0x91, 0x99,
-	0x71, 0x82, 0x85, 0x3d, 0x1e, 0x79, 0x3c, 0x29, 0xf0, 0x02, 0x7d, 0x82, 0x4a, 0x55, 0x1f, 0xa0,
-	0xab, 0x3e, 0x08, 0xea, 0xaa, 0x4f, 0x50, 0x5d, 0x71, 0x5f, 0xe4, 0xca, 0xf6, 0x4c, 0x32, 0x84,
-	0x0d, 0xbb, 0x39, 0xc7, 0xc7, 0xe1, 0x9c, 0xf3, 0x7d, 0x18, 0x7a, 0x8a, 0x66, 0x52, 0xe9, 0xe3,
-	0x4c, 0x49, 0x2d, 0x51, 0xa0, 0x29, 0xa7, 0x82, 0x6a, 0x75, 0xbf, 0xbf, 0x3b, 0x97, 0x73, 0x69,
-	0xd9, 0x2f, 0xcd, 0x97, 0x13, 0x44, 0x7f, 0xfb, 0xd0, 0xc6, 0xf6, 0x06, 0x3a, 0x84, 0x3e, 0x4b,
-	0x73, 0x4d, 0x38, 0x27, 0x9a, 0xc9, 0x74, 0x32, 0x19, 0x9f, 0x86, 0xde, 0xd0, 0x3b, 0x08, 0xf0,
-	0x0b, 0x1e, 0x7d, 0x04, 0x01, 0x5d, 0xd0, 0x54, 0x5b, 0x91, 0x6f, 0x45, 0x2b, 0x02, 0x7d, 0x05,
-	0xbb, 0x16, 0x4c, 0x8b, 0x94, 0xdd, 0x4d, 0x35, 0x13, 0x34, 0xd7, 0x44, 0x64, 0x61, 0x63, 0xe8,
-	0x1d, 0x34, 0x30, 0x72, 0xc2, 0x94, 0xdd, 0x5d, 0x56, 0x27, 0xe8, 0x08, 0x9a, 0x9a, 0x15, 0x59,
-	0xd8, 0x1c, 0x7a, 0x07, 0x9b, 0xdf, 0xbc, 0x7f, 0xbc, 0xb4, 0x7d, 0x7c, 0xc9, 0x26, 0x17, 0xce,
-	0xe0, 0xd9, 0x06, 0xb6, 0x22, 0xf4, 0x1d, 0x74, 0x62, 0x5e, 0xe4, 0x9a, 0xaa, 0xb0, 0x65, 0xf5,
-	0x61, 0x4d, 0x3f, 0x72, 0x27, 0xcb, 0x2b, 0x95, 0x14, 0x7d, 0x01, 0x9d, 0x05, 0x55, 0x39, 0x93,
-	0x69, 0xd8, 0xb6, 0xb7, 0xde, 0x5b, 0xfb, 0x2b, 0xe3, 0x74, 0x26, 0x71, 0xa5, 0x39, 0xd9, 0x86,
-	0x9e, 0xcb, 0x90, 0x50, 0x4d, 0x18, 0x8f, 0xfe, 0xf0, 0x00, 0x56, 0x5e, 0x50, 0x08, 0x9d, 0x58,
-	0x0a, 0x41, 0xd2, 0xa4, 0xec, 0xa8, 0x82, 0xe8, 0x08, 0x76, 0x34, 0xb9, 0xa5, 0x53, 0xc1, 0x38,
-	0x67, 0x39, 0x8d, 0x65, 0x9a, 0xe4, 0xb6, 0xa2, 0x26, 0xee, 0x9b, 0x83, 0xf3, 0x1a, 0x8f, 0x3e,
-	0x84, 0x80, 0xde, 0x31, 0x3d, 0x8d, 0x65, 0x42, 0x6d, 0x3d, 0x2d, 0xdc, 0x35, 0xc4, 0x48, 0x26,
-	0x14, 0x7d, 0x02, 0x5b, 0x71, 0x91, 0x6b, 0x29, 0xa6, 0x82, 0x29, 0x25, 0x95, 0x6d, 0xa7, 0x8b,
-	0x7b, 0x8e, 0x3c, 0xb7, 0x5c, 0xf4, 0xaf, 0x07, 0x5b, 0xcf, 0x32, 0xa3, 0x6d, 0xf0, 0x97, 0x93,
-	0xf3, 0xc7, 0xa7, 0x75, 0xab, 0xfe, 0x2b, 0xac, 0x36, 0x5e, 0x63, 0xb5, 0xb9, 0x66, 0x75, 0x1f,
-	0xba, 0x5a, 0x66, 0x92, 0xcb, 0xf9, 0xbd, 0x9d, 0x49, 0x80, 0x97, 0x18, 0x7d, 0x0e, 0xad, 0x54,
-	0x26, 0x34, 0x0f, 0xdb, 0xc3, 0xc6, 0x5a, 0xed, 0x3f, 0xcb, 0x84, 0xda, 0xda, 0x9d, 0x22, 0xfa,
-	0xcb, 0x83, 0x6e, 0x35, 0x0a, 0x34, 0x84, 0x4d, 0xf3, 0x7d, 0x55, 0x0e, 0xcd, 0x05, 0xaa, 0x53,
-	0x66, 0x63, 0x47, 0x52, 0x64, 0x32, 0xa5, 0xa9, 0xae, 0x64, 0x2e, 0xe2, 0x0b, 0xde, 0x6c, 0xec,
-	0x4f, 0xc6, 0xac, 0x10, 0x4c, 0xdb, 0x8c, 0x01, 0x5e, 0x11, 0xa6, 0x33, 0x99, 0xdb, 0x54, 0x01,
-	0xf6, 0x65, 0x8e, 0x10, 0x34, 0x89, 0x8a, 0x6f, 0xca, 0x2c, 0xf6, 0x3b, 0xfa, 0xdd, 0x83, 0x6e,
-	0x65, 0x18, 0xed, 0x41, 0xc7, 0x58, 0x9e, 0xb2, 0x6a, 0xfe, 0x6d, 0x03, 0xc7, 0x09, 0xfa, 0x01,
-	0xba, 0x37, 0x44, 0x25, 0xbf, 0x11, 0x45, 0xcb, 0x3d, 0xdb, 0xab, 0x05, 0x3e, 0x2b, 0x8f, 0xcc,
-	0x6f, 0x9c, 0x34, 0x1f, 0xff, 0xff, 0x78, 0x03, 0x2f, 0xe5, 0xe8, 0x33, 0x6b, 0xa2, 0x63, 0x2f,
-	0xed, 0xd4, 0x2e, 0xfd, 0xf2, 0x6b, 0x4d, 0xee, 0xcb, 0xdc, 0xec, 0x62, 0x67, 0x74, 0x31, 0xb1,
-	0x46, 0x3e, 0x80, 0x76, 0x5a, 0x88, 0x38, 0x2b, 0xac, 0x8f, 0x16, 0x2e, 0x91, 0x99, 0x7a, 0x2e,
-	0xe3, 0x5b, 0xaa, 0xdd, 0xf2, 0xb5, 0x70, 0x05, 0xd1, 0x2e, 0xb4, 0x62, 0xa9, 0x68, 0x5e, 0xee,
-	0x9b, 0x03, 0x86, 0x15, 0x32, 0xa1, 0xbc, 0x2c, 0xc1, 0x01, 0xd4, 0x87, 0x86, 0xb8, 0x79, 0xb0,
-	0x35, 0xf8, 0xd8, 0x7c, 0x9a, 0x49, 0xcf, 0x28, 0xd1, 0x85, 0x2a, 0x07, 0x1a, 0xe0, 0x25, 0x8e,
-	0xfe, 0xf1, 0xa0, 0x57, 0x4f, 0x88, 0x3e, 0x85, 0xed, 0x05, 0x53, 0xba, 0x20, 0x9c, 0x3d, 0xd8,
-	0xc7, 0xa3, 0x2c, 0x6b, 0x8d, 0x45, 0x87, 0xd0, 0x30, 0x09, 0x7c, 0x1b, 0x1d, 0xd5, 0xff, 0x9b,
-	0x5d, 0xca, 0x32, 0xbb, 0x11, 0x19, 0xad, 0xa0, 0xc2, 0x9a, 0x7f, 0xae, 0x3d, 0xa7, 0xa2, 0xae,
-	0x15, 0x54, 0x98, 0xa1, 0x73, 0x49, 0x12, 0xb2, 0x98, 0x7f, 0xfd, 0xbd, 0x0d, 0xe6, 0xe3, 0x15,
-	0x11, 0x5d, 0x41, 0xdb, 0x55, 0x6b, 0x4a, 0x9c, 0x11, 0xc1, 0xf8, 0x7d, 0x35, 0x4c, 0x87, 0x4c,
-	0xd8, 0x8c, 0x13, 0x3d, 0x93, 0x4a, 0x94, 0x8b, 0xb5, 0xc4, 0xa6, 0xe0, 0xea, 0x3d, 0x71, 0xeb,
-	0x54, 0xc1, 0xe8, 0x47, 0xe8, 0x94, 0x5e, 0x4c, 0xab, 0x5a, 0x6a, 0xc2, 0xed, 0xef, 0x36, 0xb1,
-	0x03, 0xc6, 0x16, 0x59, 0x10, 0xc6, 0xc9, 0x35, 0xa7, 0xe5, 0xd3, 0xb0, 0x22, 0x4e, 0xfa, 0x8f,
-	0x4f, 0x03, 0xef, 0xbf, 0xa7, 0x81, 0xf7, 0xe6, 0x69, 0xe0, 0xfd, 0xf9, 0x76, 0xb0, 0x71, 0xdd,
-	0xb6, 0x6f, 0xf5, 0xb7, 0xef, 0x02, 0x00, 0x00, 0xff, 0xff, 0x71, 0xb9, 0x6a, 0x62, 0xdc, 0x05,
-	0x00, 0x00,
+	// 842 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x55, 0xcd, 0x6e, 0xdc, 0x36,
+	0x10, 0xb6, 0xb4, 0xbf, 0x9a, 0x38, 0xc6, 0x86, 0x75, 0x13, 0x21, 0x29, 0xdc, 0x85, 0x0a, 0xb4,
+	0x6e, 0x82, 0xba, 0xff, 0x87, 0x1e, 0x72, 0xb1, 0x03, 0x24, 0x3e, 0x38, 0x35, 0xd8, 0xd8, 0xd7,
+	0x05, 0x23, 0x71, 0xd7, 0x44, 0x44, 0x8d, 0x40, 0x51, 0xdb, 0x75, 0x5e, 0xa0, 0x4f, 0x50, 0xa0,
+	0x6f, 0xd0, 0x4b, 0x1f, 0x24, 0xe8, 0xa9, 0x0f, 0x50, 0x14, 0x85, 0x8b, 0xbe, 0x47, 0xc1, 0x1f,
+	0x69, 0xb5, 0x9b, 0x1e, 0x7a, 0xe8, 0x8d, 0xdf, 0xc7, 0x6f, 0xa8, 0x99, 0x8f, 0x33, 0x14, 0xec,
+	0x2a, 0x5e, 0xa2, 0xd2, 0x47, 0xa5, 0x42, 0x8d, 0x24, 0xd2, 0x3c, 0xe7, 0x92, 0x6b, 0x75, 0x7d,
+	0x7f, 0x7f, 0x81, 0x0b, 0xb4, 0xec, 0xa7, 0x66, 0xe5, 0x04, 0xc9, 0xdf, 0x21, 0x0c, 0xa9, 0x8d,
+	0x20, 0x0f, 0x61, 0x22, 0x8a, 0x4a, 0xb3, 0x3c, 0x67, 0x5a, 0x60, 0x71, 0x71, 0x71, 0xfa, 0x24,
+	0x0e, 0xa6, 0xc1, 0x61, 0x44, 0xdf, 0xe2, 0xc9, 0x7b, 0x10, 0xf1, 0x25, 0x2f, 0xb4, 0x15, 0x85,
+	0x56, 0xb4, 0x26, 0xc8, 0x67, 0xb0, 0x6f, 0xc1, 0xac, 0x2e, 0xc4, 0x6a, 0xa6, 0x85, 0xe4, 0x95,
+	0x66, 0xb2, 0x8c, 0x7b, 0xd3, 0xe0, 0xb0, 0x47, 0x89, 0x13, 0x16, 0x62, 0xf5, 0xa2, 0xd9, 0x21,
+	0x9f, 0xc0, 0x68, 0xc9, 0x55, 0x25, 0xb0, 0x88, 0xfb, 0xd3, 0xe0, 0xf0, 0xd6, 0x17, 0xef, 0x1c,
+	0xb5, 0x99, 0x1f, 0xbd, 0x10, 0x17, 0xe7, 0xa7, 0xc5, 0x1c, 0x69, 0xa3, 0x21, 0x8f, 0xa0, 0xaf,
+	0x45, 0x5d, 0xc6, 0x03, 0xab, 0x7d, 0x77, 0x4b, 0xeb, 0xea, 0x79, 0xb6, 0x43, 0xad, 0x88, 0x7c,
+	0x05, 0xa3, 0x34, 0xaf, 0x2b, 0xcd, 0x55, 0x3c, 0xb4, 0xfa, 0xb8, 0xa3, 0x3f, 0x71, 0x3b, 0x6d,
+	0x48, 0x23, 0x25, 0x8f, 0x01, 0xca, 0x9c, 0x5d, 0x2f, 0x14, 0xd6, 0x45, 0x16, 0x8f, 0x6c, 0xe0,
+	0x83, 0x4e, 0xe0, 0x79, 0xbb, 0xd9, 0xc6, 0x76, 0x02, 0x8e, 0xf7, 0x60, 0xd7, 0x59, 0x90, 0x71,
+	0xcd, 0x44, 0x9e, 0xfc, 0x1c, 0x00, 0xac, 0x73, 0x23, 0x31, 0x8c, 0x52, 0x94, 0x92, 0x15, 0x99,
+	0xb7, 0xb8, 0x81, 0x64, 0x02, 0x3d, 0xcd, 0x16, 0xde, 0x53, 0xb3, 0x24, 0x8f, 0xe0, 0x8e, 0x66,
+	0xaf, 0xf8, 0x4c, 0x8a, 0x3c, 0x17, 0x15, 0x4f, 0xb1, 0xc8, 0x2a, 0x6b, 0x65, 0x9f, 0x4e, 0xcc,
+	0xc6, 0x59, 0x87, 0x27, 0x0f, 0x20, 0xe2, 0x2b, 0xa1, 0x67, 0x29, 0x66, 0xdc, 0x5a, 0x39, 0xa0,
+	0x63, 0x43, 0x9c, 0x60, 0xc6, 0xc9, 0x07, 0x70, 0x3b, 0xad, 0x2b, 0x8d, 0x72, 0x26, 0x85, 0x52,
+	0xa8, 0xac, 0x7f, 0x63, 0xba, 0xeb, 0xc8, 0x33, 0xcb, 0x25, 0xbf, 0x06, 0x70, 0x7b, 0xc3, 0x15,
+	0xb2, 0x07, 0x61, 0xdb, 0x0a, 0xe1, 0xe9, 0x93, 0x6e, 0xf2, 0xe1, 0x66, 0xf2, 0xff, 0x5f, 0xaa,
+	0xf7, 0x61, 0xac, 0xb1, 0xc4, 0x1c, 0x17, 0xd7, 0x36, 0xcb, 0x88, 0xb6, 0x98, 0x7c, 0x0c, 0x83,
+	0x02, 0x33, 0x5e, 0xc5, 0xc3, 0x69, 0x6f, 0xab, 0x55, 0x9e, 0x63, 0xc6, 0x6d, 0xab, 0x38, 0x45,
+	0xb2, 0x82, 0xc9, 0xf6, 0x45, 0x6d, 0x1c, 0x1d, 0x6c, 0x1d, 0xfd, 0xaf, 0x05, 0x84, 0xff, 0xa5,
+	0x80, 0xde, 0x66, 0x01, 0xc9, 0xef, 0x01, 0x8c, 0x9b, 0xc6, 0x25, 0x53, 0xb8, 0x65, 0xd6, 0x97,
+	0xbe, 0xc5, 0xdd, 0x57, 0xbb, 0x94, 0x19, 0xbe, 0x13, 0x94, 0x25, 0x16, 0xbc, 0xd0, 0x8d, 0xcc,
+	0x99, 0xfb, 0x16, 0x4f, 0xee, 0xc2, 0xf0, 0xa9, 0xd0, 0x94, 0xcf, 0xed, 0x47, 0x23, 0xea, 0x91,
+	0x19, 0xca, 0xa7, 0xe6, 0xeb, 0x52, 0x0a, 0x6d, 0x0d, 0x8d, 0xe8, 0x9a, 0x30, 0xb7, 0x76, 0xc9,
+	0xd5, 0x73, 0x26, 0xb9, 0x37, 0xb4, 0x81, 0xe6, 0x7e, 0xb1, 0xb2, 0xb3, 0x11, 0xd1, 0x10, 0x2b,
+	0x42, 0xa0, 0xcf, 0x54, 0x7a, 0x65, 0x9b, 0x3e, 0xa2, 0x76, 0x6d, 0x34, 0x0b, 0x8c, 0xc7, 0x4e,
+	0xb3, 0xc0, 0xe4, 0x87, 0x00, 0xc6, 0x8d, 0xd9, 0xe4, 0x1e, 0x8c, 0x8c, 0xdd, 0x33, 0xd1, 0x74,
+	0xf3, 0xd0, 0xc0, 0xd3, 0x8c, 0x7c, 0x03, 0xe3, 0x2b, 0xa6, 0xb2, 0xef, 0x99, 0xe2, 0x7e, 0xf6,
+	0xee, 0x75, 0x2e, 0xeb, 0x99, 0xdf, 0x32, 0x67, 0x1c, 0xf7, 0xdf, 0xfc, 0xf1, 0xfe, 0x0e, 0x6d,
+	0xe5, 0xe4, 0x23, 0x9b, 0x94, 0x9b, 0xbb, 0x3b, 0x9d, 0xa0, 0x6f, 0xbf, 0xeb, 0xc8, 0x43, 0xac,
+	0x92, 0x1f, 0x03, 0x18, 0x9d, 0x9c, 0x5f, 0xd8, 0x44, 0xee, 0xc2, 0xb0, 0xa8, 0x65, 0x5a, 0xd6,
+	0x36, 0x8f, 0x01, 0xf5, 0xc8, 0xd4, 0x5e, 0x61, 0xfa, 0x8a, 0x6b, 0x77, 0x99, 0x03, 0xda, 0x40,
+	0xb2, 0x0f, 0x83, 0x14, 0x15, 0xaf, 0xfc, 0xfd, 0x39, 0x60, 0x58, 0x89, 0x19, 0xcf, 0xbd, 0x8b,
+	0x0e, 0x98, 0xd1, 0x94, 0x57, 0xaf, 0xad, 0x7b, 0x21, 0x35, 0x4b, 0xd3, 0x4a, 0x73, 0xce, 0x74,
+	0xad, 0x7c, 0x33, 0x46, 0xb4, 0xc5, 0xc9, 0x2f, 0x01, 0xec, 0x76, 0x2b, 0x24, 0x1f, 0xc2, 0xde,
+	0x52, 0x28, 0x5d, 0xb3, 0x5c, 0xbc, 0xb6, 0x2f, 0xa9, 0x37, 0x6b, 0x8b, 0x25, 0x0f, 0xa1, 0x67,
+	0x2a, 0x08, 0x6d, 0xe9, 0xa4, 0xfb, 0x56, 0xb9, 0x2a, 0x7d, 0xed, 0x46, 0x64, 0xb4, 0x92, 0x4b,
+	0x9b, 0xfc, 0xa6, 0xf6, 0x8c, 0xcb, 0xae, 0x56, 0x72, 0x69, 0xda, 0x23, 0x47, 0x96, 0xb1, 0xe5,
+	0xe2, 0xf3, 0xaf, 0x6d, 0x61, 0x21, 0x5d, 0x13, 0xc9, 0x25, 0x0c, 0x9d, 0xb5, 0xc6, 0xc4, 0x39,
+	0x93, 0x22, 0x6f, 0xa6, 0xc3, 0x23, 0x53, 0x6c, 0x99, 0x33, 0x3d, 0x47, 0x25, 0x7d, 0x6b, 0xb6,
+	0xd8, 0x18, 0xdc, 0xbc, 0xdf, 0xae, 0x27, 0x1b, 0x98, 0x3c, 0x86, 0x91, 0xcf, 0xc5, 0xb8, 0xaa,
+	0x51, 0xb3, 0xdc, 0x9e, 0xdb, 0xa7, 0x0e, 0x98, 0xb4, 0xd8, 0x92, 0x89, 0x9c, 0xbd, 0xcc, 0xb9,
+	0x1f, 0xb5, 0x35, 0x71, 0x3c, 0x79, 0x73, 0x73, 0x10, 0xfc, 0x76, 0x73, 0x10, 0xfc, 0x79, 0x73,
+	0x10, 0xfc, 0xf4, 0xd7, 0xc1, 0xce, 0xcb, 0xa1, 0xfd, 0x71, 0x7d, 0xf9, 0x4f, 0x00, 0x00, 0x00,
+	0xff, 0xff, 0x73, 0x63, 0x75, 0xc2, 0xe9, 0x06, 0x00, 0x00,
 }
 
 func (m *Report) Marshal() (dAtA []byte, err error) {
@@ -812,6 +926,15 @@ func (m *Report) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
+	if m.EventDetail != nil {
+		{
+			size := m.EventDetail.Size()
+			i -= size
+			if _, err := m.EventDetail.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+		}
+	}
 	if m.Version != nil {
 		{
 			size, err := m.Version.MarshalToSizedBuffer(dAtA[:i])
@@ -822,16 +945,7 @@ func (m *Report) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			i = encodeVarintReport(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0x32
-	}
-	if m.EventDetail != nil {
-		{
-			size := m.EventDetail.Size()
-			i -= size
-			if _, err := m.EventDetail.MarshalTo(dAtA[i:]); err != nil {
-				return 0, err
-			}
-		}
+		dAtA[i] = 0x22
 	}
 	if m.EventUnixTimestamp != 0 {
 		i = encodeVarintReport(dAtA, i, uint64(m.EventUnixTimestamp))
@@ -872,7 +986,7 @@ func (m *Report_Tiup) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			i = encodeVarintReport(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0x22
+		dAtA[i] = 0x2a
 	}
 	return len(dAtA) - i, nil
 }
@@ -893,7 +1007,28 @@ func (m *Report_Cluster) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			i = encodeVarintReport(dAtA, i, uint64(size))
 		}
 		i--
-		dAtA[i] = 0x2a
+		dAtA[i] = 0x32
+	}
+	return len(dAtA) - i, nil
+}
+func (m *Report_Playground) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Report_Playground) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.Playground != nil {
+		{
+			size, err := m.Playground.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintReport(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x3a
 	}
 	return len(dAtA) - i, nil
 }
@@ -929,17 +1064,24 @@ func (m *TiUPReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			dAtA[i] = 0
 		}
 		i--
-		dAtA[i] = 0x20
+		dAtA[i] = 0x28
 	}
 	if m.ExitCode != 0 {
 		i = encodeVarintReport(dAtA, i, uint64(m.ExitCode))
 		i--
-		dAtA[i] = 0x18
+		dAtA[i] = 0x20
 	}
 	if m.TakeMilliseconds != 0 {
 		i = encodeVarintReport(dAtA, i, uint64(m.TakeMilliseconds))
 		i--
-		dAtA[i] = 0x10
+		dAtA[i] = 0x18
+	}
+	if len(m.Tag) > 0 {
+		i -= len(m.Tag)
+		copy(dAtA[i:], m.Tag)
+		i = encodeVarintReport(dAtA, i, uint64(len(m.Tag)))
+		i--
+		dAtA[i] = 0x12
 	}
 	if len(m.Command) > 0 {
 		i -= len(m.Command)
@@ -1023,6 +1165,50 @@ func (m *ClusterReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *PlaygroundReport) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PlaygroundReport) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PlaygroundReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.ExitCode != 0 {
+		i = encodeVarintReport(dAtA, i, uint64(m.ExitCode))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.TakeMilliseconds != 0 {
+		i = encodeVarintReport(dAtA, i, uint64(m.TakeMilliseconds))
+		i--
+		dAtA[i] = 0x10
+	}
+	if len(m.Topology) > 0 {
+		i -= len(m.Topology)
+		copy(dAtA[i:], m.Topology)
+		i = encodeVarintReport(dAtA, i, uint64(len(m.Topology)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *TiUPInfo) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -1047,24 +1233,45 @@ func (m *TiUPInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
+	if len(m.Go) > 0 {
+		i -= len(m.Go)
+		copy(dAtA[i:], m.Go)
+		i = encodeVarintReport(dAtA, i, uint64(len(m.Go)))
+		i--
+		dAtA[i] = 0x42
+	}
 	if len(m.Arch) > 0 {
 		i -= len(m.Arch)
 		copy(dAtA[i:], m.Arch)
 		i = encodeVarintReport(dAtA, i, uint64(len(m.Arch)))
 		i--
-		dAtA[i] = 0x2a
+		dAtA[i] = 0x3a
 	}
 	if len(m.Os) > 0 {
 		i -= len(m.Os)
 		copy(dAtA[i:], m.Os)
 		i = encodeVarintReport(dAtA, i, uint64(len(m.Os)))
 		i--
-		dAtA[i] = 0x22
+		dAtA[i] = 0x32
+	}
+	if len(m.VerName) > 0 {
+		i -= len(m.VerName)
+		copy(dAtA[i:], m.VerName)
+		i = encodeVarintReport(dAtA, i, uint64(len(m.VerName)))
+		i--
+		dAtA[i] = 0x2a
 	}
 	if len(m.GitCommit) > 0 {
 		i -= len(m.GitCommit)
 		copy(dAtA[i:], m.GitCommit)
 		i = encodeVarintReport(dAtA, i, uint64(len(m.GitCommit)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.GitRef) > 0 {
+		i -= len(m.GitRef)
+		copy(dAtA[i:], m.GitRef)
+		i = encodeVarintReport(dAtA, i, uint64(len(m.GitRef)))
 		i--
 		dAtA[i] = 0x1a
 	}
@@ -1376,12 +1583,12 @@ func (m *Report) Size() (n int) {
 	if m.EventUnixTimestamp != 0 {
 		n += 1 + sovReport(uint64(m.EventUnixTimestamp))
 	}
-	if m.EventDetail != nil {
-		n += m.EventDetail.Size()
-	}
 	if m.Version != nil {
 		l = m.Version.Size()
 		n += 1 + l + sovReport(uint64(l))
+	}
+	if m.EventDetail != nil {
+		n += m.EventDetail.Size()
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -1413,6 +1620,18 @@ func (m *Report_Cluster) Size() (n int) {
 	}
 	return n
 }
+func (m *Report_Playground) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Playground != nil {
+		l = m.Playground.Size()
+		n += 1 + l + sovReport(uint64(l))
+	}
+	return n
+}
 func (m *TiUPReport) Size() (n int) {
 	if m == nil {
 		return 0
@@ -1420,6 +1639,10 @@ func (m *TiUPReport) Size() (n int) {
 	var l int
 	_ = l
 	l = len(m.Command)
+	if l > 0 {
+		n += 1 + l + sovReport(uint64(l))
+	}
+	l = len(m.Tag)
 	if l > 0 {
 		n += 1 + l + sovReport(uint64(l))
 	}
@@ -1474,6 +1697,28 @@ func (m *ClusterReport) Size() (n int) {
 	return n
 }
 
+func (m *PlaygroundReport) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Topology)
+	if l > 0 {
+		n += 1 + l + sovReport(uint64(l))
+	}
+	if m.TakeMilliseconds != 0 {
+		n += 1 + sovReport(uint64(m.TakeMilliseconds))
+	}
+	if m.ExitCode != 0 {
+		n += 1 + sovReport(uint64(m.ExitCode))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
 func (m *TiUPInfo) Size() (n int) {
 	if m == nil {
 		return 0
@@ -1488,7 +1733,15 @@ func (m *TiUPInfo) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovReport(uint64(l))
 	}
+	l = len(m.GitRef)
+	if l > 0 {
+		n += 1 + l + sovReport(uint64(l))
+	}
 	l = len(m.GitCommit)
+	if l > 0 {
+		n += 1 + l + sovReport(uint64(l))
+	}
+	l = len(m.VerName)
 	if l > 0 {
 		n += 1 + l + sovReport(uint64(l))
 	}
@@ -1497,6 +1750,10 @@ func (m *TiUPInfo) Size() (n int) {
 		n += 1 + l + sovReport(uint64(l))
 	}
 	l = len(m.Arch)
+	if l > 0 {
+		n += 1 + l + sovReport(uint64(l))
+	}
+	l = len(m.Go)
 	if l > 0 {
 		n += 1 + l + sovReport(uint64(l))
 	}
@@ -1745,6 +2002,42 @@ func (m *Report) Unmarshal(dAtA []byte) error {
 			}
 		case 4:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowReport
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthReport
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthReport
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Version == nil {
+				m.Version = &TiUPInfo{}
+			}
+			if err := m.Version.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Tiup", wireType)
 			}
 			var msglen int
@@ -1778,7 +2071,7 @@ func (m *Report) Unmarshal(dAtA []byte) error {
 			}
 			m.EventDetail = &Report_Tiup{v}
 			iNdEx = postIndex
-		case 5:
+		case 6:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Cluster", wireType)
 			}
@@ -1813,9 +2106,9 @@ func (m *Report) Unmarshal(dAtA []byte) error {
 			}
 			m.EventDetail = &Report_Cluster{v}
 			iNdEx = postIndex
-		case 6:
+		case 7:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Playground", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -1842,12 +2135,11 @@ func (m *Report) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.Version == nil {
-				m.Version = &TiUPInfo{}
-			}
-			if err := m.Version.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			v := &PlaygroundReport{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			m.EventDetail = &Report_Playground{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -1933,6 +2225,38 @@ func (m *TiUPReport) Unmarshal(dAtA []byte) error {
 			m.Command = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Tag", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowReport
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthReport
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthReport
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Tag = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field TakeMilliseconds", wireType)
 			}
@@ -1951,7 +2275,7 @@ func (m *TiUPReport) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 3:
+		case 4:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ExitCode", wireType)
 			}
@@ -1970,7 +2294,7 @@ func (m *TiUPReport) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 4:
+		case 5:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field CustomMirror", wireType)
 			}
@@ -2231,6 +2555,127 @@ func (m *ClusterReport) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *PlaygroundReport) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowReport
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PlaygroundReport: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PlaygroundReport: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Topology", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowReport
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthReport
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthReport
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Topology = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TakeMilliseconds", wireType)
+			}
+			m.TakeMilliseconds = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowReport
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TakeMilliseconds |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ExitCode", wireType)
+			}
+			m.ExitCode = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowReport
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ExitCode |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipReport(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthReport
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *TiUPInfo) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -2326,6 +2771,38 @@ func (m *TiUPInfo) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field GitRef", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowReport
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthReport
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthReport
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.GitRef = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field GitCommit", wireType)
 			}
 			var stringLen uint64
@@ -2356,7 +2833,39 @@ func (m *TiUPInfo) Unmarshal(dAtA []byte) error {
 			}
 			m.GitCommit = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 4:
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field VerName", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowReport
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthReport
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthReport
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.VerName = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Os", wireType)
 			}
@@ -2388,7 +2897,7 @@ func (m *TiUPInfo) Unmarshal(dAtA []byte) error {
 			}
 			m.Os = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 5:
+		case 7:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Arch", wireType)
 			}
@@ -2419,6 +2928,38 @@ func (m *TiUPInfo) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Arch = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Go", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowReport
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthReport
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthReport
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Go = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

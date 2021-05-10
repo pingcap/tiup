@@ -45,9 +45,12 @@ func TiUPMeta() *TiUPInfo {
 	return &TiUPInfo{
 		TiUPVersion:      os.Getenv(localdata.EnvNameTiUPVersion),
 		ComponentVersion: version.NewTiUPVersion().SemVer(),
-		GitCommit:        version.NewTiUPBuildInfo().GitHash,
+		GitRef:           version.GitRef,
+		GitCommit:        version.GitHash,
+		VerName:          version.TiUPVerName,
 		Os:               runtime.GOOS,
 		Arch:             runtime.GOARCH,
+		Go:               runtime.Version(),
 	}
 }
 
