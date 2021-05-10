@@ -53,7 +53,7 @@ type Playground struct {
 	booted  bool
 	// the latest receive signal
 	curSig      int32
-	bootOptions *bootOptions
+	bootOptions *BootOptions
 	port        int
 
 	pds              []*instance.PDInstance
@@ -393,19 +393,19 @@ func (p *Playground) sanitizeConfig(boot instance.Config, cfg *instance.Config) 
 func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) error {
 	switch cid {
 	case spec.ComponentPD:
-		return p.sanitizeConfig(p.bootOptions.pd, cfg)
+		return p.sanitizeConfig(p.bootOptions.PD, cfg)
 	case spec.ComponentTiKV:
-		return p.sanitizeConfig(p.bootOptions.tikv, cfg)
+		return p.sanitizeConfig(p.bootOptions.TiKV, cfg)
 	case spec.ComponentTiDB:
-		return p.sanitizeConfig(p.bootOptions.tidb, cfg)
+		return p.sanitizeConfig(p.bootOptions.TiDB, cfg)
 	case spec.ComponentTiFlash:
-		return p.sanitizeConfig(p.bootOptions.tiflash, cfg)
+		return p.sanitizeConfig(p.bootOptions.TiFlash, cfg)
 	case spec.ComponentCDC:
-		return p.sanitizeConfig(p.bootOptions.ticdc, cfg)
+		return p.sanitizeConfig(p.bootOptions.TiCDC, cfg)
 	case spec.ComponentPump:
-		return p.sanitizeConfig(p.bootOptions.pump, cfg)
+		return p.sanitizeConfig(p.bootOptions.Pump, cfg)
 	case spec.ComponentDrainer:
-		return p.sanitizeConfig(p.bootOptions.drainer, cfg)
+		return p.sanitizeConfig(p.bootOptions.Drainer, cfg)
 	default:
 		return fmt.Errorf("unknown %s in sanitizeConfig", cid)
 	}
@@ -413,7 +413,7 @@ func (p *Playground) sanitizeComponentConfig(cid string, cfg *instance.Config) e
 
 func (p *Playground) startInstance(ctx context.Context, inst instance.Instance) error {
 	fmt.Printf("Start %s instance\n", inst.Component())
-	err := inst.Start(ctx, utils.Version(p.bootOptions.version))
+	err := inst.Start(ctx, utils.Version(p.bootOptions.Version))
 	if err != nil {
 		return err
 	}
@@ -581,7 +581,7 @@ func (p *Playground) WalkInstances(fn func(componentID string, ins instance.Inst
 }
 
 func (p *Playground) enableBinlog() bool {
-	return p.bootOptions.pump.Num > 0
+	return p.bootOptions.Pump.Num > 0
 }
 
 func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins instance.Instance, err error) {
@@ -604,7 +604,7 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 	id := p.allocID(componentID)
 	dir := filepath.Join(dataDir, fmt.Sprintf("%s-%d", componentID, id))
 	// look more like listen ip?
-	host := p.bootOptions.host
+	host := p.bootOptions.Host
 	if cfg.Host != "" {
 		host = cfg.Host
 	}
@@ -656,8 +656,15 @@ func (p *Playground) addInstance(componentID string, cfg instance.Config) (ins i
 	return
 }
 
-func (p *Playground) bootCluster(ctx context.Context, env *environment.Environment, options *bootOptions) error {
-	for _, cfg := range []*instance.Config{&options.pd, &options.tidb, &options.tikv, &options.tiflash, &options.pump, &options.drainer} {
+func (p *Playground) bootCluster(ctx context.Context, env *environment.Environment, options *BootOptions) error {
+	for _, cfg := range []*instance.Config{
+		&options.PD,
+		&options.TiDB,
+		&options.TiKV,
+		&options.TiFlash,
+		&options.Pump,
+		&options.Drainer,
+	} {
 		path, err := getAbsolutePath(cfg.ConfigPath)
 		if err != nil {
 			return errors.Annotatef(err, "cannot eval absolute directory: %s", cfg.ConfigPath)
@@ -669,25 +676,25 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 
 	// If the startup mode is not kv-only mode, set the default count of TiDB instances to 1.
 	switch {
-	case options.kvOnly:
-		if options.tidb.Num > 0 || options.tiflash.Num > 0 || options.pump.Num > 0 || options.drainer.Num > 0 {
+	case options.KVOnly:
+		if options.TiDB.Num > 0 || options.TiFlash.Num > 0 || options.Pump.Num > 0 || options.Drainer.Num > 0 {
 			return fmt.Errorf("in kv-only mode, TiDB related component are not allowed")
 		}
-		options.tidb.Num = 0
-		options.tiflash.Num = 0
-	case options.tidb.Num < 0:
-		options.tidb.Num = 1
+		options.TiDB.Num = 0
+		options.TiFlash.Num = 0
+	case options.TiDB.Num < 0:
+		options.TiDB.Num = 1
 		fallthrough
-	case options.tiflash.Num < 0:
-		options.tiflash.Num = 1
+	case options.TiFlash.Num < 0:
+		options.TiFlash.Num = 1
 	}
 
-	if options.pd.Num < 1 || options.tikv.Num < 1 {
-		return fmt.Errorf("all components count must be great than 0 (tikv=%v, pd=%v)", options.tikv.Num, options.pd.Num)
+	if options.PD.Num < 1 || options.TiKV.Num < 1 {
+		return fmt.Errorf("all components count must be great than 0 (tikv=%v, pd=%v)", options.TiKV.Num, options.PD.Num)
 	}
 
 	{
-		version, err := env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, options.version)
+		version, err := env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, options.Version)
 		if err != nil {
 			return err
 		}
@@ -697,19 +704,19 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
     Specify version manually:   tiup playground <version>
     Specify version range:      tiup playground ^5
     The nightly version:        tiup playground nightly
-`, version, options.version, version))
+`, version, options.Version, version))
 
-		options.version = version.String()
+		options.Version = version.String()
 	}
 
-	if !utils.Version(options.version).IsNightly() {
-		if semver.Compare(options.version, "v3.1.0") < 0 && options.tiflash.Num != 0 {
-			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.version))
-			options.tiflash.Num = 0
-		} else if runtime.GOOS == "darwin" && semver.Compare(options.version, "v4.0.0") < 0 {
+	if !utils.Version(options.Version).IsNightly() {
+		if semver.Compare(options.Version, "v3.1.0") < 0 && options.TiFlash.Num != 0 {
+			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.Version))
+			options.TiFlash.Num = 0
+		} else if runtime.GOOS == "darwin" && semver.Compare(options.Version, "v4.0.0") < 0 {
 			// only runs tiflash on version later than v4.0.0 when executing on darwin
-			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash on darwin", options.version))
-			options.tiflash.Num = 0
+			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash on darwin", options.Version))
+			options.TiFlash.Num = 0
 		}
 	}
 
@@ -717,13 +724,13 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 		comp string
 		instance.Config
 	}{
-		{spec.ComponentPD, options.pd},
-		{spec.ComponentTiKV, options.tikv},
-		{spec.ComponentPump, options.pump},
-		{spec.ComponentTiDB, options.tidb},
-		{spec.ComponentCDC, options.ticdc},
-		{spec.ComponentDrainer, options.drainer},
-		{spec.ComponentTiFlash, options.tiflash},
+		{spec.ComponentPD, options.PD},
+		{spec.ComponentTiKV, options.TiKV},
+		{spec.ComponentPump, options.Pump},
+		{spec.ComponentTiDB, options.TiDB},
+		{spec.ComponentCDC, options.TiCDC},
+		{spec.ComponentDrainer, options.Drainer},
+		{spec.ComponentTiFlash, options.TiFlash},
 	}
 
 	for _, inst := range instances {
@@ -738,7 +745,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	fmt.Println("Playground Bootstrapping...")
 
 	var monitorInfo *MonitorInfo
-	if options.monitor {
+	if options.Monitor {
 		var err error
 
 		p.monitor, monitorInfo, err = p.bootMonitor(ctx, env)
@@ -814,7 +821,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 			bar := bars.AddBar(prefix)
 			go func(dbInst *instance.TiDBInstance) {
 				defer wg.Done()
-				if s := checkDB(dbInst.Addr(), options.tidb.UpTimeout); s {
+				if s := checkDB(dbInst.Addr(), options.TiDB.UpTimeout); s {
 					{
 						appendMutex.Lock()
 						succ = append(succ, dbInst.Addr())
@@ -873,7 +880,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 					} else if state := cmd.ProcessState; state != nil && state.Exited() {
 						displayResult.Mode = progress.ModeError
 						displayResult.Suffix = fmt.Sprintf("process exited with code: %d", state.ExitCode())
-					} else if s := checkStoreStatus(pdClient, flashInst.Addr(), options.tiflash.UpTimeout); !s {
+					} else if s := checkStoreStatus(pdClient, flashInst.Addr(), options.TiFlash.UpTimeout); !s {
 						displayResult.Mode = progress.ModeError
 						displayResult.Suffix = "failed to up after timeout"
 					} else {
@@ -1017,12 +1024,12 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 	dataDir := p.dataDir
 	promDir := filepath.Join(dataDir, "prometheus")
 
-	monitor, err := newMonitor(ctx, options.version, options.host, promDir)
+	monitor, err := newMonitor(ctx, options.Version, options.Host, promDir)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	monitorInfo.IP = instance.AdvertiseHost(options.host)
+	monitorInfo.IP = instance.AdvertiseHost(options.Host)
 	monitorInfo.BinaryPath = promDir
 	monitorInfo.Port = monitor.port
 
@@ -1047,10 +1054,10 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environment, monitorInfo *MonitorInfo) (*grafana, error) {
 	// set up grafana
 	options := p.bootOptions
-	if err := installIfMissing(env.Profile(), "grafana", options.version); err != nil {
+	if err := installIfMissing(env.Profile(), "grafana", options.Version); err != nil {
 		return nil, err
 	}
-	installPath, err := env.Profile().ComponentInstalledPath("grafana", utils.Version(options.version))
+	installPath, err := env.Profile().ComponentInstalledPath("grafana", utils.Version(options.Version))
 	if err != nil {
 		return nil, err
 	}
@@ -1092,7 +1099,7 @@ func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environme
 		return nil, err
 	}
 
-	grafana := newGrafana(options.version, options.host)
+	grafana := newGrafana(options.Version, options.Host)
 	// fmt.Println("Start Grafana instance...")
 	err = grafana.start(ctx, grafanaDir, fmt.Sprintf("http://%s:%d", monitorInfo.IP, monitorInfo.Port))
 	if err != nil {
