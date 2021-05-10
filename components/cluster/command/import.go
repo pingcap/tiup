@@ -136,6 +136,11 @@ func newImportCmd() *cobra.Command {
 				return err
 			}
 
+			// comment config to avoid duplicated copy
+			if err = ansible.CommentConfig(clsName); err != nil {
+				return err
+			}
+
 			// backup ansible files
 			if noBackup {
 				// rename original TiDB-Ansible inventory file
