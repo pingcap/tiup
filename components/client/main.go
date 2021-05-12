@@ -15,6 +15,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -94,7 +95,7 @@ func connect(target string) error {
 		return fmt.Errorf("can't open history file: %s", err.Error())
 	}
 	h := handler.New(l, u, os.Getenv(localdata.EnvNameInstanceDataDir), true)
-	if err = h.Open(ep.dsn); err != nil {
+	if err = h.Open(context.Background(), ep.dsn); err != nil {
 		return fmt.Errorf("can't open connection to %s: %s", ep.dsn, err.Error())
 	}
 	if err = h.Run(); err != io.EOF {
