@@ -15,6 +15,7 @@ package manager
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -53,6 +54,25 @@ type InstInfo struct {
 	Port          int
 }
 
+// DashboardInfo hold the structure for the JSON output of the dashboard info
+type DashboardInfo struct {
+	ClusterType    string `json:"cluster_type"`
+	ClusterName    string `json:"cluster_name"`
+	ClusterVersion string `json:"cluster_version"`
+	SSHType        string `json:"ssh_type"`
+	TLSEnabled     bool   `json:"tls_enabled"`
+	TLSCACert      string `json:"tls_ca_cert"`
+	TLSClientCert  string `json:"tls_client_cert"`
+	TLSClientKey   string `json:"tls_client_key"`
+	DashboardURL   string `json:"dashboard_url"`
+}
+
+// JSONOutput holds the structure for the JSON output of `tiup cluster display --json`
+type JSONOutput struct {
+	DashboardInfo DashboardInfo `json:"dashboard"`
+	InstanceInfos []InstInfo    `json:"instances"`
+}
+
 // Display cluster meta and topology.
 func (m *Manager) Display(name string, opt operator.Options) error {
 	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
@@ -67,25 +87,49 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	metadata, _ := m.meta(name)
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
-	// display cluster meta
 	cyan := color.New(color.FgCyan, color.Bold)
-	fmt.Printf("Cluster type:       %s\n", cyan.Sprint(m.sysName))
-	fmt.Printf("Cluster name:       %s\n", cyan.Sprint(name))
-	fmt.Printf("Cluster version:    %s\n", cyan.Sprint(base.Version))
-	fmt.Printf("SSH type:           %s\n", cyan.Sprint(topo.BaseTopo().GlobalOptions.SSHType))
+	// display cluster meta
+	var j *JSONOutput
+	if opt.JSON {
+		j = &JSONOutput{
+			DashboardInfo: DashboardInfo{
+				m.sysName,
+				name,
+				base.Version,
+				string(topo.BaseTopo().GlobalOptions.SSHType),
+				topo.BaseTopo().GlobalOptions.TLSEnabled,
+				"", // CA Cert
+				"", // Client Cert
+				"", // Client Key
+				"",
+			},
+			InstanceInfos: clusterInstInfos,
+		}
 
-	// display TLS info
-	if topo.BaseTopo().GlobalOptions.TLSEnabled {
-		fmt.Printf("TLS encryption:  	%s\n", cyan.Sprint("enabled"))
-		fmt.Printf("CA certificate:     %s\n", cyan.Sprint(
-			m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
-		))
-		fmt.Printf("Client private key: %s\n", cyan.Sprint(
-			m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientKey),
-		))
-		fmt.Printf("Client certificate: %s\n", cyan.Sprint(
-			m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientCert),
-		))
+		if topo.BaseTopo().GlobalOptions.TLSEnabled {
+			j.DashboardInfo.TLSCACert = m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert)
+			j.DashboardInfo.TLSClientKey = m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientKey)
+			j.DashboardInfo.TLSClientCert = m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientCert)
+		}
+	} else {
+		fmt.Printf("Cluster type:       %s\n", cyan.Sprint(m.sysName))
+		fmt.Printf("Cluster name:       %s\n", cyan.Sprint(name))
+		fmt.Printf("Cluster version:    %s\n", cyan.Sprint(base.Version))
+		fmt.Printf("SSH type:           %s\n", cyan.Sprint(topo.BaseTopo().GlobalOptions.SSHType))
+
+		// display TLS info
+		if topo.BaseTopo().GlobalOptions.TLSEnabled {
+			fmt.Printf("TLS encryption:  	%s\n", cyan.Sprint("enabled"))
+			fmt.Printf("CA certificate:     %s\n", cyan.Sprint(
+				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
+			))
+			fmt.Printf("Client private key: %s\n", cyan.Sprint(
+				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientKey),
+			))
+			fmt.Printf("Client certificate: %s\n", cyan.Sprint(
+				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientCert),
+			))
+		}
 	}
 
 	// display topology
@@ -135,8 +179,21 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 			if tlsCfg != nil {
 				scheme = "https"
 			}
-			fmt.Printf("Dashboard URL:      %s\n", cyan.Sprintf("%s://%s/dashboard", scheme, dashboardAddr))
+			if opt.JSON {
+				j.DashboardInfo.DashboardURL = fmt.Sprintf("%s://%s/dashboard", scheme, dashboardAddr)
+			} else {
+				fmt.Printf("Dashboard URL:      %s\n", cyan.Sprintf("%s://%s/dashboard", scheme, dashboardAddr))
+			}
 		}
+	}
+
+	if opt.JSON {
+		d, err := json.MarshalIndent(j, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(d))
+		return nil
 	}
 
 	cliutil.PrintTable(clusterTable, true)
