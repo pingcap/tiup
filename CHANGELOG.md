@@ -1,5 +1,20 @@
 TiUP Changelog
 
+## [1.4.3] 2021.05.13
+
+### Fixes
+
+- Fix OS check for RHEL in `tiup-cluster` ([#1336](https://github.com/pingcap/tiup/pull/1336), [@AstroProfundis](https://github.com/AstroProfundis))
+- Check for command depends before downloading packages in install script ([#1348](https://github.com/pingcap/tiup/pull/1348), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix the issue that install script downloads an old TiUP package ([#1349](https://github.com/pingcap/tiup/pull/1349), [@lucklove](https://github.com/lucklove))
+- Fix the issue that drainer node imported from TiDB-Ansible may have incorrect `data_dir` ([#1346](https://github.com/pingcap/tiup/pull/1346), [@AstroProfundis](https://github.com/AstroProfundis))
+
+### Improvements
+
+- Optimize some subcommands of `tiup mirror` ([#1331](https://github.com/pingcap/tiup/pull/1331), [@AstroProfundis](https://github.com/AstroProfundis))
+- Set proper User-Agent for requests downloading manifests and files from remote ([#1342](https://github.com/pingcap/tiup/pull/1342), [@AstroProfundis](https://github.com/AstroProfundis))
+- Add basic telemetry report for `tiup` and `playground` ([#1341](https://github.com/pingcap/tiup/pull/1341) [#1353](https://github.com/pingcap/tiup/pull/1353), [@AstroProfundis](https://github.com/AstroProfundis))
+
 ## [1.4.2] 2021.04.26
 
 ### Fixes
