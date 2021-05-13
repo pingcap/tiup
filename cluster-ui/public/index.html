@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="TiUP UI" />
+    <title>TiUP</title>
+
+    <style>
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background: #fff;
+      }
+
+      #page_spinner {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+      }
+
+      .dot-flashing {
+        position: relative;
+        width: 10px;
+        height: 10px;
+        border-radius: 5px;
+        background-color: #aaa;
+        -webkit-animation: dot-flashing 1s infinite linear alternate;
+        animation: dot-flashing 1s infinite linear alternate;
+        -webkit-animation-delay: 0.5s;
+        animation-delay: 0.5s;
+      }
+
+      .dot-flashing::before,
+      .dot-flashing::after {
+        content: '';
+        display: inline-block;
+        position: absolute;
+        top: 0;
+      }
+
+      .dot-flashing::before {
+        left: -15px;
+        width: 10px;
+        height: 10px;
+        border-radius: 5px;
+        background-color: #aaa;
+        -webkit-animation: dot-flashing 1s infinite alternate;
+        animation: dot-flashing 1s infinite alternate;
+        -webkit-animation-delay: 0s;
+        animation-delay: 0s;
+      }
+
+      .dot-flashing::after {
+        left: 15px;
+        width: 10px;
+        height: 10px;
+        border-radius: 5px;
+        background-color: #aaa;
+        -webkit-animation: dot-flashing 1s infinite alternate;
+        animation: dot-flashing 1s infinite alternate;
+        -webkit-animation-delay: 1s;
+        animation-delay: 1s;
+      }
+
+      @-webkit-keyframes dot-flashing {
+        0% {
+          background-color: #aaa;
+        }
+        50%,
+        100% {
+          background-color: #ddd;
+        }
+      }
+
+      @keyframes dot-flashing {
+        0% {
+          background-color: #aaa;
+        }
+        50%,
+        100% {
+          background-color: #ddd;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root">
+      <div id="page_spinner"><div class="dot-flashing"></div></div>
+    </div>
+  </body>
+</html>

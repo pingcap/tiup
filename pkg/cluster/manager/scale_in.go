@@ -103,6 +103,7 @@ func (m *Manager) ScaleIn(
 		ParallelStep("+ Refresh instance configs", force, regenConfigTasks...).
 		Parallel(force, buildReloadPromTasks(metadata.GetTopology(), nodes...)...).
 		Build()
+	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {

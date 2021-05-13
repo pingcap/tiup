@@ -19,6 +19,7 @@ require (
 	github.com/docker/go-units v0.4.0
 	github.com/fatih/color v1.10.0
 	github.com/gibson042/canonicaljson-go v1.0.3
+	github.com/gin-gonic/gin v1.5.0
 	github.com/gizak/termui/v3 v3.1.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gofrs/flock v0.8.0
@@ -29,11 +30,13 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.14.3
 	github.com/jeremywohl/flatten v1.0.1
+	github.com/jinzhu/now v1.1.2 // indirect
 	github.com/joomcode/errorx v1.0.3
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.4
 	github.com/mattn/go-runewidth v0.0.10
+	github.com/mattn/go-sqlite3 v2.0.3+incompatible // indirect
 	github.com/otiai10/copy v1.5.0
 	github.com/pingcap/check v0.0.0-20200212061837-5e12011dc712
 	github.com/pingcap/errors v0.11.5-0.20201126102027-b0a155152ca3
@@ -50,8 +53,12 @@ require (
 	github.com/prometheus/prom2json v1.3.0
 	github.com/r3labs/diff/v2 v2.12.0
 	github.com/relex/aini v1.2.1
+	github.com/rs/cors v1.7.0
 	github.com/sergi/go-diff v1.1.0
-	github.com/shirou/gopsutil v3.21.2+incompatible
+	github.com/shirou/gopsutil v3.21.1+incompatible
+	github.com/shurcooL/httpfs v0.0.0-20190707220628-8d4bc4ba7749 // indirect
+	github.com/shurcooL/httpgzip v0.0.0-20190720172056-320755c1c1b0
+	github.com/shurcooL/vfsgen v0.0.0-20181202132449-6a9ea43bcacd
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
@@ -59,7 +66,6 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20190625010220-02440ea7a285 // indirect
 	github.com/tidwall/pretty v1.0.2 // indirect
 	github.com/tj/go-termd v0.0.2-0.20200115111609-7f6aeb166380
-	github.com/tklauser/go-sysconf v0.3.4 // indirect
 	github.com/unrolled/render v1.0.1 // indirect
 	github.com/xo/usql v0.7.8
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20210226220824-aa7126864d82
@@ -77,6 +83,8 @@ require (
 	gopkg.in/ini.v1 v1.62.0
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	gorm.io/driver/sqlite v1.1.4
+	gorm.io/gorm v1.21.4
 	software.sslmate.com/src/go-pkcs12 v0.0.0-20201103104416-57fc603b7f52
 )
 

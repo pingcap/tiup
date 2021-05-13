@@ -48,6 +48,8 @@ type DeployOptions struct {
 	UsePassword       bool   // use password instead of identity file for ssh connection
 	IgnoreConfigCheck bool   // ignore config check result
 	NoLabels          bool   // don't check labels for TiKV instance
+
+	Pass *string // password for login User or passphrase for IdentityFile
 }
 
 // DeployerInstance is a instance can deploy to a target deploy directory.
@@ -143,7 +145,7 @@ func (m *Manager) Deploy(
 	var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
-		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
+		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword, opt.Pass); err != nil {
 			return err
 		}
 	}
@@ -350,6 +352,7 @@ func (m *Manager) Deploy(
 	}
 
 	t := builder.Build()
+	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {

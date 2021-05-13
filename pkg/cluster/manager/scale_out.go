@@ -135,7 +135,7 @@ func (m *Manager) ScaleOut(
 	var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
-		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
+		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword, opt.Pass); err != nil {
 			return err
 		}
 	}
@@ -147,6 +147,7 @@ func (m *Manager) ScaleOut(
 	if err != nil {
 		return err
 	}
+	operationInfo.curTask = t.(*task.Serial)
 
 	ctx := ctxt.New(context.Background())
 	ctx = context.WithValue(ctx, ctxt.CtxBaseTopo, topo)

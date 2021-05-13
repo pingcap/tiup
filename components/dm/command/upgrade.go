@@ -28,7 +28,7 @@ func newUpgradeCmd() *cobra.Command {
 				return cmd.Help()
 			}
 
-			return cm.Upgrade(args[0], args[1], gOpt, skipConfirm, offlineMode)
+			return cm.Upgrade(args[0], args[1], gOpt, skipConfirm, offlineMode, false)
 		},
 	}
 

@@ -26,6 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 )
@@ -71,6 +72,7 @@ func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt 
 			return operator.Destroy(ctx, topo, destroyOpt)
 		}).
 		Build()
+	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {

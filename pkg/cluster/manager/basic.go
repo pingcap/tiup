@@ -105,6 +105,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 	}
 
 	t := b.Build()
+	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {
@@ -150,6 +151,7 @@ func (m *Manager) StopCluster(name string, options operator.Options, skipConfirm
 			return operator.Stop(ctx, topo, options, tlsCfg)
 		}).
 		Build()
+	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {

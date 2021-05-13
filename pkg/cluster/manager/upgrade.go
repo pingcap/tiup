@@ -36,7 +36,7 @@ import (
 )
 
 // Upgrade the cluster.
-func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Options, skipConfirm, offline bool) error {
+func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Options, skipConfirm, offline bool, downgrade bool) error {
 	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
 		return err
 	}
@@ -172,16 +172,21 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 	if err != nil {
 		return err
 	}
+	taskName := "UpgradeCluster"
+	if downgrade {
+		taskName = "DowngradeCluster"
+	}
 	t := m.sshTaskBuilder(name, topo, base.User, opt).
 		Parallel(false, downloadCompTasks...).
 		Parallel(opt.Force, copyCompTasks...).
-		Func("UpgradeCluster", func(ctx context.Context) error {
+		Func(taskName, func(ctx context.Context) error {
 			if offline {
 				return nil
 			}
 			return operator.Upgrade(ctx, topo, opt, tlsCfg)
 		}).
 		Build()
+	operationInfo.curTask = t.(*task.Serial)
 
 	if err := t.Execute(ctxt.New(context.Background())); err != nil {
 		if errorx.Cast(err) != nil {
@@ -207,7 +212,11 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 		return err
 	}
 
-	log.Infof("Upgraded cluster `%s` successfully", name)
+	if !downgrade {
+		log.Infof("Upgraded cluster `%s` successfully", name)
+	} else {
+		log.Infof("Downgraded cluster `%s` successfully", name)
+	}
 
 	return nil
 }

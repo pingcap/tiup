@@ -96,7 +96,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 	var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
-		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
+		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword, nil); err != nil {
 			return err
 		}
 	}
@@ -330,6 +330,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 		ParallelStep("+ Check system requirements", false, checkSysTasks...).
 		ParallelStep("+ Cleanup check files", false, cleanTasks...).
 		Build()
+	operationInfo.curTask = t.(*task.Serial)
 
 	ctx := ctxt.New(context.Background())
 	if err := t.Execute(ctx); err != nil {
@@ -366,6 +367,8 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 		checkResults = append(checkResults, res...)
 		applyFixTasks = append(applyFixTasks, tf.BuildAsStep(fmt.Sprintf("  - Applying changes on %s", host)))
 	}
+	operationInfo.extra = checkResults
+
 	resLines := formatHostCheckResults(checkResults)
 	checkResultTable = append(checkResultTable, resLines...)
 

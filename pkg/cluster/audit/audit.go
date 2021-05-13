@@ -45,6 +45,12 @@ func CommandArgs(fp string) ([]string, error) {
 	}
 
 	args := strings.Split(scanner.Text(), " ")
+	// support for operations from the tiup web ui
+	if len(args) > 1 && args[1] == "--ui" {
+		if scanner.Scan() {
+			args = strings.Split(scanner.Text(), " ")
+		}
+	}
 	return decodeCommandArgs(args)
 }
 
@@ -96,7 +102,7 @@ func ShowAuditList(dir string) error {
 	return nil
 }
 
-// Item represents a single audit item
+// Item represents a single audit log item
 type Item struct {
 	ID      string `json:"id"`
 	Time    string `json:"time"`

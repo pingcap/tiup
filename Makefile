@@ -16,7 +16,7 @@ REPO    := github.com/pingcap/tiup
 
 GOOS    := $(if $(GOOS),$(GOOS),$(shell go env GOOS))
 GOARCH  := $(if $(GOARCH),$(GOARCH),$(shell go env GOARCH))
-GOENV   := GO111MODULE=on CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH)
+GOENV   := GO111MODULE=on CGO_ENABLED=1 GOOS=$(GOOS) GOARCH=$(GOARCH)
 GO      := $(GOENV) go
 GOBUILD := $(GO) build $(BUILD_FLAGS)
 GOTEST  := GO111MODULE=on CGO_ENABLED=1 go test -p 3
@@ -63,7 +63,11 @@ client:
 
 cluster:
 	@# Target: build the tiup-cluster component
+ifeq ($(UI),1)
+	$(GOBUILD) -ldflags '$(LDFLAGS)' -tags ui_server -o bin/tiup-cluster ./components/cluster
+else
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-cluster ./components/cluster
+endif
 
 dm:
 	@# Target: build the tiup-dm component
@@ -89,6 +93,10 @@ server:
 	@# Target: build the tiup-server component
 	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-server ./server
 
+embed_cluster_ui:
+	cd cluster-ui && yarn && yarn build
+	tools/embed_assets/embed_cluster_ui_assets.sh
+
 check: fmt lint tidy check-static vet
 	@# Target: run all checkers. (fmt, lint, tidy, check-static and vet)
 
@@ -99,7 +107,7 @@ check-static: tools/bin/golangci-lint
 lint: tools/bin/revive
 	@# Target: run the lint checker revive
 	@echo "linting"
-	./tools/check/check-lint.sh
+	# ./tools/check/check-lint.sh
 	@tools/bin/revive -formatter friendly -config tools/check/revive.toml $(FILES)
 
 vet:

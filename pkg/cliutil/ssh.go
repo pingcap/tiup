@@ -34,10 +34,15 @@ type SSHConnectionProps struct {
 }
 
 // ReadIdentityFileOrPassword is ReadIdentityFileOrPassword
-func ReadIdentityFileOrPassword(identityFilePath string, usePass bool) (*SSHConnectionProps, error) {
+func ReadIdentityFileOrPassword(identityFilePath string, usePass bool, pwd *string) (*SSHConnectionProps, error) {
 	// If identity file is not specified, prompt to read password
 	if usePass {
-		password := PromptForPassword("Input SSH password: ")
+		var password string
+		if pwd != nil {
+			password = *pwd
+		} else {
+			password = PromptForPassword("Input SSH password: ")
+		}
 		return &SSHConnectionProps{
 			Password: password,
 		}, nil
@@ -77,7 +82,12 @@ Looks like your SSH private key {{ColorKeyword}}{{.File}}{{ColorReset}} is inval
 	}
 
 	// SSH key is passphrase protected
-	passphrase := PromptForPassword("The SSH identity key is encrypted. Input its passphrase: ")
+	var passphrase string
+	if pwd != nil {
+		passphrase = *pwd
+	} else {
+		passphrase = PromptForPassword("The SSH identity key is encrypted. Input its passphrase: ")
+	}
 	if _, err := sshkeys.ParseEncryptedPrivateKey(buf, []byte(passphrase)); err != nil {
 		return nil, ErrIdentityFileReadFiled.
 			Wrap(err, "Failed to decrypt SSH identity file '%s'", identityFilePath)
