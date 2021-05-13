@@ -104,7 +104,7 @@ func connect(target string) error {
 		return fmt.Errorf("can't open history file: %s", err.Error())
 	}
 	h := handler.New(l, u, os.Getenv(EnvNameInstanceDataDir), true)
-	if err = h.Open(context.Background(), ep.dsn); err != nil {
+	if err = h.Open(context.TODO(), ep.dsn); err != nil {
 		return fmt.Errorf("can't open connection to %s: %s", ep.dsn, err.Error())
 	}
 	if err = h.Run(); err != io.EOF {
