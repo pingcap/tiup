@@ -592,7 +592,7 @@ func main() {
 						"host":        {},
 						"config_path": {},
 						"bin_path":    {},
-					},                     // fields to hash
+					}, // fields to hash
 					map[string]struct{}{}, // fields to omit
 					telemetry.GetSecret(),
 				); err == nil {
