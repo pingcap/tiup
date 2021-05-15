@@ -1039,7 +1039,7 @@ func (p *Playground) bootMonitor(ctx context.Context, env *environment.Environme
 func (p *Playground) bootGrafana(ctx context.Context, env *environment.Environment, monitorInfo *MonitorInfo) (*grafana, error) {
 	// set up grafana
 	options := p.bootOptions
-	if err := installIfMissing(env.Profile(), "grafana", options.Version); err != nil {
+	if err := installIfMissing("grafana", options.Version); err != nil {
 		return nil, err
 	}
 	installPath, err := env.Profile().ComponentInstalledPath("grafana", utils.Version(options.Version))
