@@ -324,7 +324,7 @@ func populateOpt(flagSet *pflag.FlagSet) (err error) {
 		return
 	}
 
-	if options.Monitor, err = flagSet.GetBool(withMonitor); err != nil {
+	if err = populateBoolOptIfChanged(flagSet, withMonitor, &options.Monitor); err != nil {
 		return
 	}
 
@@ -406,6 +406,16 @@ func populateOpt(flagSet *pflag.FlagSet) (err error) {
 	}
 	if err = populateStringOptIfChanged(flagSet, drainerBinpath, &options.Drainer.BinPath); err != nil {
 		return
+	}
+	return
+}
+
+func populateBoolOptIfChanged(flagSet *pflag.FlagSet, name string, p *bool) (err error) {
+	if flagSet.Changed(name) {
+		*p, err = flagSet.GetBool(name)
+		if err != nil {
+			return
+		}
 	}
 	return
 }
