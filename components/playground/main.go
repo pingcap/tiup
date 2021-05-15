@@ -70,7 +70,7 @@ var (
 	reportEnabled    bool // is telemetry report enabled
 	teleReport       *telemetry.Report
 	playgroundReport *telemetry.PlaygroundReport
-	options          *BootOptions
+	options          = &BootOptions{}
 )
 
 const (
@@ -592,7 +592,7 @@ func main() {
 						"host":        {},
 						"config_path": {},
 						"bin_path":    {},
-					}, // fields to hash
+					},                     // fields to hash
 					map[string]struct{}{}, // fields to omit
 					telemetry.GetSecret(),
 				); err == nil {
