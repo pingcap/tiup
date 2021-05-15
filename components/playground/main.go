@@ -18,7 +18,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/pflag"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -30,6 +29,8 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/spf13/pflag"
 
 	"github.com/fatih/color"
 	_ "github.com/go-sql-driver/mysql"
@@ -591,7 +592,7 @@ func main() {
 						"host":        {},
 						"config_path": {},
 						"bin_path":    {},
-					},                     // fields to hash
+					}, // fields to hash
 					map[string]struct{}{}, // fields to omit
 					telemetry.GetSecret(),
 				); err == nil {
