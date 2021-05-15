@@ -320,7 +320,7 @@ func populateOpt(flagSet *pflag.FlagSet) (err error) {
 		options.Host = "127.0.0.1"
 		options.Monitor = true
 	default:
-		err = errors.Errorf("unknown playground mode: %s", mode)
+		err = errors.Errorf("unknown playground mode: %s", modeVal)
 		return
 	}
 
