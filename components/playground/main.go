@@ -323,119 +323,100 @@ func populateOpt(flagSet *pflag.FlagSet) (err error) {
 		return
 	}
 
-	if err = populateBoolOptIfChanged(flagSet, withMonitor, &options.Monitor); err != nil {
-		return
-	}
+	flagSet.Visit(func(flag *pflag.Flag) {
+		switch flag.Name {
+		case withMonitor:
+			options.Monitor, err = strconv.ParseBool(flag.Value.String())
+			if err != nil {
+				return
+			}
 
-	if err = populateIntOptIfChanged(flagSet, db, &options.TiDB.Num); err != nil {
-		return
-	}
-	if err = populateIntOptIfChanged(flagSet, kv, &options.TiKV.Num); err != nil {
-		return
-	}
-	if err = populateIntOptIfChanged(flagSet, pd, &options.PD.Num); err != nil {
-		return
-	}
-	if err = populateIntOptIfChanged(flagSet, tiflash, &options.TiFlash.Num); err != nil {
-		return
-	}
-	if err = populateIntOptIfChanged(flagSet, ticdc, &options.TiCDC.Num); err != nil {
-		return
-	}
-	if err = populateIntOptIfChanged(flagSet, pump, &options.Pump.Num); err != nil {
-		return
-	}
-	if err = populateIntOptIfChanged(flagSet, drainer, &options.Drainer.Num); err != nil {
-		return
-	}
-	if err = populateIntOptIfChanged(flagSet, dbTimeout, &options.TiDB.UpTimeout); err != nil {
-		return
-	}
-	if err = populateIntOptIfChanged(flagSet, tiflashTimeout, &options.TiFlash.UpTimeout); err != nil {
-		return
-	}
+		case db:
+			options.TiDB.Num, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+		case kv:
+			options.TiKV.Num, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+		case pd:
+			options.PD.Num, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+		case tiflash:
+			options.TiFlash.Num, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+		case ticdc:
+			options.TiCDC.Num, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+		case pump:
+			options.Pump.Num, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+		case drainer:
+			options.Drainer.Num, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
 
-	if err = populateStringOptIfChanged(flagSet, clusterHost, &options.Host); err != nil {
-		return
-	}
-	if err = populateStringOptIfChanged(flagSet, dbHost, &options.TiDB.Host); err != nil {
-		return
-	}
-	if err = populateStringOptIfChanged(flagSet, pdHost, &options.PD.Host); err != nil {
-		return
-	}
-	if err = populateStringOptIfChanged(flagSet, dbConfig, &options.TiDB.ConfigPath); err != nil {
-		return
-	}
-	if err = populateStringOptIfChanged(flagSet, kvConfig, &options.TiKV.ConfigPath); err != nil {
-		return
-	}
-	if err = populateStringOptIfChanged(flagSet, pdConfig, &options.PD.ConfigPath); err != nil {
-		return
-	}
-	if err = populateStringOptIfChanged(flagSet, tiflashConfig, &options.TiFlash.ConfigPath); err != nil {
-		return
-	}
-	if err = populateStringOptIfChanged(flagSet, ticdcConfig, &options.TiCDC.ConfigPath); err != nil {
-		return
-	}
-	if err = populateStringOptIfChanged(flagSet, pumpConfig, &options.Pump.ConfigPath); err != nil {
-		return
-	}
-	if err = populateStringOptIfChanged(flagSet, drainerConfig, &options.Drainer.ConfigPath); err != nil {
-		return
-	}
-	if err = populateStringOptIfChanged(flagSet, dbBinpath, &options.TiDB.BinPath); err != nil {
-		return
-	}
-	if err = populateStringOptIfChanged(flagSet, kvBinpath, &options.TiKV.BinPath); err != nil {
-		return
-	}
-	if err = populateStringOptIfChanged(flagSet, pdBinpath, &options.PD.BinPath); err != nil {
-		return
-	}
-	if err = populateStringOptIfChanged(flagSet, tiflashBinpath, &options.TiFlash.BinPath); err != nil {
-		return
-	}
-	if err = populateStringOptIfChanged(flagSet, ticdcBinpath, &options.TiCDC.BinPath); err != nil {
-		return
-	}
-	if err = populateStringOptIfChanged(flagSet, pumpBinpath, &options.Pump.BinPath); err != nil {
-		return
-	}
-	if err = populateStringOptIfChanged(flagSet, drainerBinpath, &options.Drainer.BinPath); err != nil {
-		return
-	}
-	return
-}
+		case dbConfig:
+			options.TiDB.ConfigPath = flag.Value.String()
+		case kvConfig:
+			options.TiKV.ConfigPath = flag.Value.String()
+		case pdConfig:
+			options.PD.ConfigPath = flag.Value.String()
+		case tiflashConfig:
+			options.TiFlash.ConfigPath = flag.Value.String()
+		case ticdcConfig:
+			options.TiCDC.ConfigPath = flag.Value.String()
+		case pumpConfig:
+			options.Pump.ConfigPath = flag.Value.String()
+		case drainerConfig:
+			options.Drainer.ConfigPath = flag.Value.String()
 
-func populateBoolOptIfChanged(flagSet *pflag.FlagSet, name string, p *bool) (err error) {
-	if flagSet.Changed(name) {
-		*p, err = flagSet.GetBool(name)
-		if err != nil {
-			return
+		case dbBinpath:
+			options.TiDB.BinPath = flag.Value.String()
+		case kvBinpath:
+			options.TiKV.BinPath = flag.Value.String()
+		case pdBinpath:
+			options.PD.BinPath = flag.Value.String()
+		case tiflashBinpath:
+			options.TiFlash.BinPath = flag.Value.String()
+		case ticdcBinpath:
+			options.TiCDC.BinPath = flag.Value.String()
+		case pumpBinpath:
+			options.Pump.BinPath = flag.Value.String()
+		case drainerBinpath:
+			options.Drainer.BinPath = flag.Value.String()
+
+		case dbTimeout:
+			options.TiDB.UpTimeout, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+		case tiflashTimeout:
+			options.TiFlash.UpTimeout, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+
+		case clusterHost:
+			options.Host = flag.Value.String()
+		case dbHost:
+			options.TiDB.Host = flag.Value.String()
+		case pdHost:
+			options.PD.Host = flag.Value.String()
 		}
-	}
-	return
-}
+	})
 
-func populateIntOptIfChanged(flagSet *pflag.FlagSet, name string, p *int) (err error) {
-	if flagSet.Changed(name) {
-		*p, err = flagSet.GetInt(name)
-		if err != nil {
-			return
-		}
-	}
-	return
-}
-
-func populateStringOptIfChanged(flagSet *pflag.FlagSet, name string, p *string) (err error) {
-	if flagSet.Changed(name) {
-		*p, err = flagSet.GetString(name)
-		if err != nil {
-			return
-		}
-	}
 	return
 }
 
