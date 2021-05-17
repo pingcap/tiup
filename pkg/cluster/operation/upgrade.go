@@ -64,7 +64,10 @@ func Upgrade(
 			pdClient := api.NewPDClient(topo.(*spec.Specification).GetPDList(), 10*time.Second, tlsCfg)
 			origLeaderScheduleLimit, origRegionScheduleLimit, err = increaseScheduleLimit(ctx, pdClient)
 			if err != nil {
-				return err
+				// the config modifing error should be able to be safely ignored, as it will
+				// be processed with current settings anyway.
+				log.Warnf("failed increasing schedule limit: %s, ignore", err)
+				continue
 			}
 			defer func() {
 				upgErr := decreaseScheduleLimit(pdClient, origLeaderScheduleLimit, origRegionScheduleLimit)
