@@ -67,9 +67,11 @@ func (m *Manager) ScaleIn(
 	}
 
 	metadata, err := m.meta(name)
-	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
+	if err != nil &&
+		!errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrMultipleTiSparkMaster) &&
-		!errors.Is(perrs.Cause(err), spec.ErrMultipleTisparkWorker) {
+		!errors.Is(perrs.Cause(err), spec.ErrMultipleTisparkWorker) &&
+		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		// ignore conflict check error, node may be deployed by former version
 		// that lack of some certain conflict checks
 		return err
