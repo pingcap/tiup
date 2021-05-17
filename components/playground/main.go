@@ -30,8 +30,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/spf13/pflag"
-
 	"github.com/fatih/color"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
@@ -47,6 +45,7 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
