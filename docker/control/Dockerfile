@@ -1,4 +1,4 @@
-FROM golang:1.14
+FROM debian:latest
 
 
 # Use mirrors for poor network...
