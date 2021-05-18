@@ -45,6 +45,7 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
@@ -62,35 +63,57 @@ type BootOptions struct {
 	Drainer instance.Config `yaml:"drainer"`
 	Host    string          `yaml:"host"`
 	Monitor bool            `yaml:"monitor"`
-	KVOnly  bool            `yaml:"kv_only"`
 }
 
 var (
 	reportEnabled    bool // is telemetry report enabled
 	teleReport       *telemetry.Report
 	playgroundReport *telemetry.PlaygroundReport
-	opt              = &BootOptions{
-		TiDB: instance.Config{
-			Num:       -1,
-			UpTimeout: 60,
-		},
-		TiKV: instance.Config{
-			Num: 1,
-		},
-		PD: instance.Config{
-			Num: 1,
-		},
-		TiFlash: instance.Config{
-			Num:       -1,
-			UpTimeout: 120,
-		},
-		Host:    "127.0.0.1",
-		Monitor: true,
-		Version: "",
-	}
+	options          = &BootOptions{}
 )
 
-func installIfMissing(profile *localdata.Profile, component, version string) error {
+const (
+	mode        = "mode"
+	withMonitor = "monitor"
+
+	// instance numbers
+	db      = "db"
+	kv      = "kv"
+	pd      = "pd"
+	tiflash = "tiflash"
+	ticdc   = "ticdc"
+	pump    = "pump"
+	drainer = "drainer"
+
+	// up timeouts
+	dbTimeout      = "db.timeout"
+	tiflashTimeout = "tiflash.timeout"
+
+	// hosts
+	clusterHost = "host"
+	dbHost      = "db.Host"
+	pdHost      = "pd.Host"
+
+	// config paths
+	dbConfig      = "db.config"
+	kvConfig      = "kv.config"
+	pdConfig      = "pd.config"
+	tiflashConfig = "tiflash.config"
+	ticdcConfig   = "ticdc.config"
+	pumpConfig    = "pump.config"
+	drainerConfig = "drainer.config"
+
+	// binary path
+	dbBinpath      = "db.binpath"
+	kvBinpath      = "kv.binpath"
+	pdBinpath      = "pd.binpath"
+	tiflashBinpath = "tiflash.binpath"
+	ticdcBinpath   = "ticdc.binpath"
+	pumpBinpath    = "pump.binpath"
+	drainerBinpath = "drainer.binpath"
+)
+
+func installIfMissing(component, version string) error {
 	env := environment.GlobalEnv()
 
 	installed, err := env.V1Repository().Local().ComponentInstalled(component, version)
@@ -120,7 +143,8 @@ Examples:
   $ tiup playground nightly --monitor=false         # Start a local cluster and disable monitor system
   $ tiup playground --pd.config ~/config/pd.toml    # Start a local cluster with specified configuration file
   $ tiup playground --db.binpath /xx/tidb-server    # Start a local cluster with component binary path
-  $ tiup playground --kv-mode --pd 3 --kv 3 		# Start a local cluster in KV mode (No TiDB Available)`,
+  $ tiup playground --mode tikv-slim                # Start a local tikv only cluster (No TiDB or TiFlash Available)
+  $ tiup playground --mode tikv-slim --kv 3 --pd 3  # Start a local tikv only cluster with 6 nodes`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       version.NewTiUPVersion().String(),
@@ -144,7 +168,11 @@ Examples:
 			}
 
 			if len(args) > 0 {
-				opt.Version = args[0]
+				options.Version = args[0]
+			}
+
+			if err := populateOpt(cmd.Flags()); err != nil {
+				return err
 			}
 
 			dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
@@ -206,7 +234,7 @@ Examples:
 				}
 			}()
 
-			bootErr := p.bootCluster(ctx, env, opt)
+			bootErr := p.bootCluster(ctx, env, options)
 			if bootErr != nil {
 				// always kill all process started and wait before quit.
 				atomic.StoreInt32(&p.curSig, int32(syscall.SIGKILL))
@@ -226,44 +254,171 @@ Examples:
 		},
 	}
 
-	rootCmd.Flags().IntVarP(&opt.TiDB.Num, "db", "", opt.TiDB.Num, "TiDB instance number")
-	rootCmd.Flags().IntVarP(&opt.TiKV.Num, "kv", "", opt.TiKV.Num, "TiKV instance number")
-	rootCmd.Flags().IntVarP(&opt.PD.Num, "pd", "", opt.PD.Num, "PD instance number")
-	rootCmd.Flags().IntVarP(&opt.TiFlash.Num, "tiflash", "", opt.TiFlash.Num, "TiFlash instance number")
-	rootCmd.Flags().IntVarP(&opt.TiCDC.Num, "ticdc", "", opt.TiCDC.Num, "TiCDC instance number")
-	rootCmd.Flags().IntVarP(&opt.Pump.Num, "pump", "", opt.Pump.Num, "Pump instance number")
-	rootCmd.Flags().IntVarP(&opt.Drainer.Num, "drainer", "", opt.Drainer.Num, "Drainer instance number")
+	defaultMode := "tidb"
+	defaultOptions := &BootOptions{}
 
-	rootCmd.Flags().IntVarP(&opt.TiDB.UpTimeout, "db.timeout", "", opt.TiDB.UpTimeout, "TiDB max wait time in seconds for starting, 0 means no limit")
-	rootCmd.Flags().IntVarP(&opt.TiFlash.UpTimeout, "tiflash.timeout", "", opt.TiFlash.UpTimeout, "TiFlash max wait time in seconds for starting, 0 means no limit")
+	rootCmd.Flags().String(mode, defaultMode, "TiUP playground mode: 'tidb', 'tikv-slim")
+	rootCmd.Flags().Bool(withMonitor, false, "Start prometheus and grafana component")
 
-	rootCmd.Flags().StringVarP(&opt.Host, "host", "", opt.Host, "Playground cluster host")
-	rootCmd.Flags().StringVarP(&opt.TiDB.Host, "db.Host", "", opt.TiDB.Host, "Playground TiDB host. If not provided, TiDB will still use `host` flag as its host")
-	rootCmd.Flags().StringVarP(&opt.PD.Host, "pd.Host", "", opt.PD.Host, "Playground PD host. If not provided, PD will still use `host` flag as its host")
-	rootCmd.Flags().BoolVar(&opt.Monitor, "monitor", opt.Monitor, "Start prometheus and grafana component")
-	rootCmd.Flags().BoolVar(&opt.KVOnly, "kv-only", opt.KVOnly, "If start a TiKV cluster only")
+	rootCmd.Flags().Int(db, defaultOptions.TiDB.Num, "TiDB instance number")
+	rootCmd.Flags().Int(kv, defaultOptions.TiKV.Num, "TiKV instance number")
+	rootCmd.Flags().Int(pd, defaultOptions.PD.Num, "PD instance number")
+	rootCmd.Flags().Int(tiflash, defaultOptions.TiFlash.Num, "TiFlash instance number")
+	rootCmd.Flags().Int(ticdc, defaultOptions.TiCDC.Num, "TiCDC instance number")
+	rootCmd.Flags().Int(pump, defaultOptions.Pump.Num, "Pump instance number")
+	rootCmd.Flags().Int(drainer, defaultOptions.Drainer.Num, "Drainer instance number")
 
-	rootCmd.Flags().StringVarP(&opt.TiDB.ConfigPath, "db.config", "", opt.TiDB.ConfigPath, "TiDB instance configuration file")
-	rootCmd.Flags().StringVarP(&opt.TiKV.ConfigPath, "kv.config", "", opt.TiKV.ConfigPath, "TiKV instance configuration file")
-	rootCmd.Flags().StringVarP(&opt.PD.ConfigPath, "pd.config", "", opt.PD.ConfigPath, "PD instance configuration file")
-	rootCmd.Flags().StringVarP(&opt.TiDB.ConfigPath, "tiflash.config", "", opt.TiDB.ConfigPath, "TiFlash instance configuration file")
-	rootCmd.Flags().StringVarP(&opt.Pump.ConfigPath, "pump.config", "", opt.Pump.ConfigPath, "Pump instance configuration file")
-	rootCmd.Flags().StringVarP(&opt.Drainer.ConfigPath, "drainer.config", "", opt.Drainer.ConfigPath, "Drainer instance configuration file")
-	rootCmd.Flags().StringVarP(&opt.TiCDC.ConfigPath, "ticdc.config", "", opt.TiCDC.ConfigPath, "TiCDC instance configuration file")
+	rootCmd.Flags().Int(dbTimeout, defaultOptions.TiDB.UpTimeout, "TiDB max wait time in seconds for starting, 0 means no limit")
+	rootCmd.Flags().Int(tiflashTimeout, defaultOptions.TiFlash.UpTimeout, "TiFlash max wait time in seconds for starting, 0 means no limit")
 
-	rootCmd.Flags().StringVarP(&opt.TiDB.BinPath, "db.binpath", "", opt.TiDB.BinPath, "TiDB instance binary path")
-	rootCmd.Flags().StringVarP(&opt.TiKV.BinPath, "kv.binpath", "", opt.TiKV.BinPath, "TiKV instance binary path")
-	rootCmd.Flags().StringVarP(&opt.PD.BinPath, "pd.binpath", "", opt.PD.BinPath, "PD instance binary path")
-	rootCmd.Flags().StringVarP(&opt.TiFlash.BinPath, "tiflash.binpath", "", opt.TiFlash.BinPath, "TiFlash instance binary path")
-	rootCmd.Flags().StringVarP(&opt.TiCDC.BinPath, "ticdc.binpath", "", opt.TiCDC.BinPath, "TiCDC instance binary path")
-	rootCmd.Flags().StringVarP(&opt.Pump.BinPath, "pump.binpath", "", opt.Pump.BinPath, "Pump instance binary path")
-	rootCmd.Flags().StringVarP(&opt.Drainer.BinPath, "drainer.binpath", "", opt.Drainer.BinPath, "Drainer instance binary path")
+	rootCmd.Flags().String(clusterHost, defaultOptions.Host, "Playground cluster host")
+	rootCmd.Flags().String(dbHost, defaultOptions.TiDB.Host, "Playground TiDB host. If not provided, TiDB will still use `host` flag as its host")
+	rootCmd.Flags().String(pdHost, defaultOptions.PD.Host, "Playground PD host. If not provided, PD will still use `host` flag as its host")
+
+	rootCmd.Flags().String(dbConfig, defaultOptions.TiDB.ConfigPath, "TiDB instance configuration file")
+	rootCmd.Flags().String(kvConfig, defaultOptions.TiKV.ConfigPath, "TiKV instance configuration file")
+	rootCmd.Flags().String(pdConfig, defaultOptions.PD.ConfigPath, "PD instance configuration file")
+	rootCmd.Flags().String(tiflashConfig, defaultOptions.TiDB.ConfigPath, "TiFlash instance configuration file")
+	rootCmd.Flags().String(pumpConfig, defaultOptions.Pump.ConfigPath, "Pump instance configuration file")
+	rootCmd.Flags().String(drainerConfig, defaultOptions.Drainer.ConfigPath, "Drainer instance configuration file")
+	rootCmd.Flags().String(ticdcConfig, defaultOptions.TiCDC.ConfigPath, "TiCDC instance configuration file")
+
+	rootCmd.Flags().String(dbBinpath, defaultOptions.TiDB.BinPath, "TiDB instance binary path")
+	rootCmd.Flags().String(kvBinpath, defaultOptions.TiKV.BinPath, "TiKV instance binary path")
+	rootCmd.Flags().String(pdBinpath, defaultOptions.PD.BinPath, "PD instance binary path")
+	rootCmd.Flags().String(tiflashBinpath, defaultOptions.TiFlash.BinPath, "TiFlash instance binary path")
+	rootCmd.Flags().String(ticdcBinpath, defaultOptions.TiCDC.BinPath, "TiCDC instance binary path")
+	rootCmd.Flags().String(pumpBinpath, defaultOptions.Pump.BinPath, "Pump instance binary path")
+	rootCmd.Flags().String(drainerBinpath, defaultOptions.Drainer.BinPath, "Drainer instance binary path")
 
 	rootCmd.AddCommand(newDisplay())
 	rootCmd.AddCommand(newScaleOut())
 	rootCmd.AddCommand(newScaleIn())
 
 	return rootCmd.Execute()
+}
+
+func populateOpt(flagSet *pflag.FlagSet) (err error) {
+	var modeVal string
+	if modeVal, err = flagSet.GetString(mode); err != nil {
+		return
+	}
+
+	switch modeVal {
+	case "tidb":
+		options.TiDB.Num = 1
+		options.TiDB.UpTimeout = 60
+		options.TiKV.Num = 1
+		options.PD.Num = 1
+		options.TiFlash.Num = 1
+		options.TiFlash.UpTimeout = 120
+		options.Host = "127.0.0.1"
+		options.Monitor = true
+	case "tikv-slim":
+		options.TiKV.Num = 1
+		options.PD.Num = 1
+		options.Host = "127.0.0.1"
+		options.Monitor = true
+	default:
+		err = errors.Errorf("unknown playground mode: %s", modeVal)
+		return
+	}
+
+	flagSet.Visit(func(flag *pflag.Flag) {
+		switch flag.Name {
+		case withMonitor:
+			options.Monitor, err = strconv.ParseBool(flag.Value.String())
+			if err != nil {
+				return
+			}
+
+		case db:
+			options.TiDB.Num, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+		case kv:
+			options.TiKV.Num, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+		case pd:
+			options.PD.Num, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+		case tiflash:
+			options.TiFlash.Num, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+		case ticdc:
+			options.TiCDC.Num, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+		case pump:
+			options.Pump.Num, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+		case drainer:
+			options.Drainer.Num, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+
+		case dbConfig:
+			options.TiDB.ConfigPath = flag.Value.String()
+		case kvConfig:
+			options.TiKV.ConfigPath = flag.Value.String()
+		case pdConfig:
+			options.PD.ConfigPath = flag.Value.String()
+		case tiflashConfig:
+			options.TiFlash.ConfigPath = flag.Value.String()
+		case ticdcConfig:
+			options.TiCDC.ConfigPath = flag.Value.String()
+		case pumpConfig:
+			options.Pump.ConfigPath = flag.Value.String()
+		case drainerConfig:
+			options.Drainer.ConfigPath = flag.Value.String()
+
+		case dbBinpath:
+			options.TiDB.BinPath = flag.Value.String()
+		case kvBinpath:
+			options.TiKV.BinPath = flag.Value.String()
+		case pdBinpath:
+			options.PD.BinPath = flag.Value.String()
+		case tiflashBinpath:
+			options.TiFlash.BinPath = flag.Value.String()
+		case ticdcBinpath:
+			options.TiCDC.BinPath = flag.Value.String()
+		case pumpBinpath:
+			options.Pump.BinPath = flag.Value.String()
+		case drainerBinpath:
+			options.Drainer.BinPath = flag.Value.String()
+
+		case dbTimeout:
+			options.TiDB.UpTimeout, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+		case tiflashTimeout:
+			options.TiFlash.UpTimeout, err = strconv.Atoi(flag.Value.String())
+			if err != nil {
+				return
+			}
+
+		case clusterHost:
+			options.Host = flag.Value.String()
+		case dbHost:
+			options.TiDB.Host = flag.Value.String()
+		case pdHost:
+			options.PD.Host = flag.Value.String()
+		}
+	})
+
+	return
 }
 
 func tryConnect(dsn string) error {
@@ -421,7 +576,7 @@ func main() {
 			}()
 
 			playgroundReport.ExitCode = int32(code)
-			if optBytes, err := yaml.Marshal(opt); err == nil && len(optBytes) > 0 {
+			if optBytes, err := yaml.Marshal(options); err == nil && len(optBytes) > 0 {
 				if data, err := telemetry.ScrubYaml(
 					optBytes,
 					map[string]struct{}{
