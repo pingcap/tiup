@@ -1,5 +1,5 @@
 # Based on the deprecated `https://github.com/tutumcloud/tutum-debian`
-FROM debian:latest
+FROM golang:1.16
 
 # Use mirrors for poor network...
 #RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list && \
