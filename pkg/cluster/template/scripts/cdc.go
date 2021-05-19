@@ -28,6 +28,7 @@ type CDCScript struct {
 	Port              int
 	DeployDir         string
 	LogDir            string
+	DataDir           string
 	NumaNode          string
 	GCTTL             int64
 	TZ                string
@@ -37,12 +38,13 @@ type CDCScript struct {
 }
 
 // NewCDCScript returns a CDCScript with given arguments
-func NewCDCScript(ip, deployDir, logDir string, enableTLS bool, gcTTL int64, tz string) *CDCScript {
+func NewCDCScript(ip, deployDir, dataDir, logDir string, enableTLS bool, gcTTL int64, tz string) *CDCScript {
 	return &CDCScript{
 		IP:         ip,
 		Port:       8300,
 		DeployDir:  deployDir,
 		LogDir:     logDir,
+		DataDir:    dataDir,
 		TLSEnabled: enableTLS,
 		GCTTL:      gcTTL,
 		TZ:         tz,

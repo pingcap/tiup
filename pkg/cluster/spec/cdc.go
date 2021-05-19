@@ -163,6 +163,7 @@ func (i *CDCInstance) InitConfig(
 	cfg := scripts.NewCDCScript(
 		i.GetHost(),
 		paths.Deploy,
+		paths.Data[0],
 		paths.Log,
 		enableTLS,
 		spec.GCTTL,
