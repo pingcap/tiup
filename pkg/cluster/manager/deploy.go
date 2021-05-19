@@ -245,6 +245,10 @@ func (m *Manager) Deploy(
 		deployDir := spec.Abs(globalOptions.User, inst.DeployDir())
 		// data dir would be empty for components which don't need it
 		dataDirs := spec.MultiDirAbs(globalOptions.User, inst.DataDir())
+
+		log.Debugf("inst.ComponentName=%+v, inst.DataDir=%+v, dataDirs=%+v\n",
+			inst.ComponentName(), inst.DataDir(), dataDirs)
+
 		// log dir will always be with values, but might not used by the component
 		logDir := spec.Abs(globalOptions.User, inst.LogDir())
 		// Deploy component

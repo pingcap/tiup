@@ -30,6 +30,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	system "github.com/pingcap/tiup/pkg/cluster/template/systemd"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"go.uber.org/zap"
 )
@@ -334,6 +335,7 @@ func (i *BaseInstance) DeployDir() string {
 func (i *BaseInstance) DataDir() string {
 	dataDir := reflect.Indirect(reflect.ValueOf(i.InstanceSpec)).FieldByName("DataDir")
 	if !dataDir.IsValid() {
+		log.Debugf("i.ComponentName=%+v, dataDir is invalid")
 		return ""
 	}
 
