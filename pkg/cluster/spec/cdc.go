@@ -35,6 +35,7 @@ type CDCSpec struct {
 	Patched         bool                   `yaml:"patched,omitempty"`
 	Port            int                    `yaml:"port" default:"8300"`
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
+	DataDir         string                 `yaml:"data_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	Offline         bool                   `yaml:"offline,omitempty"`
 	GCTTL           int64                  `yaml:"gc-ttl,omitempty"`
@@ -96,6 +97,7 @@ func (c *CDCComponent) Instances() []Instance {
 			},
 			Dirs: []string{
 				s.DeployDir,
+				s.DataDir,
 			},
 			StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
 				return statusByHost(s.Host, s.Port, "/status", tlsCfg)
