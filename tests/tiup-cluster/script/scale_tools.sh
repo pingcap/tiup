@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eu
+
 function scale_tools() {
     mkdir -p ~/.tiup/bin/
 
