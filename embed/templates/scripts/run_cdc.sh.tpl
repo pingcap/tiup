@@ -24,7 +24,7 @@ exec bin/cdc server \
     --addr "0.0.0.0:{{.Port}}" \
     --advertise-addr "{{.IP}}:{{.Port}}" \
     --pd "{{template "PDList" .Endpoints}}" \
-    --sort-dir="{{.DataDir}}" \
+    --sort-dir="{{.DataDir}}/sort" \
 {{- if .TLSEnabled}}
     --ca tls/ca.crt \
     --cert tls/cdc.crt \

@@ -37,6 +37,7 @@ func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 	// Test with without global DataDir.
 	topo := new(Specification)
 	topo.TiKVServers = append(topo.TiKVServers, &TiKVSpec{Host: "1.1.1.1", Port: 22})
+	topo.CDCServers = append(topo.CDCServers, &CDCSpec{Host: "2.3.3.3", Port: 22})
 	data, err := yaml.Marshal(topo)
 	c.Assert(err, IsNil)
 
@@ -46,6 +47,7 @@ func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.DataDir, Equals, "data")
 	c.Assert(topo.TiKVServers[0].DataDir, Equals, "data")
+	c.Assert(topo.CDCServers[0].DataDir, Equals, "data")
 
 	// Can keep the default value.
 	data, err = yaml.Marshal(topo)
@@ -55,21 +57,27 @@ func (s *metaSuiteTopo) TestDefaultDataDir(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.DataDir, Equals, "data")
 	c.Assert(topo.TiKVServers[0].DataDir, Equals, "data")
+	c.Assert(topo.CDCServers[0].DataDir, Equals, "data")
 
 	// Test with global DataDir.
 	topo = new(Specification)
-	topo.GlobalOptions.DataDir = "/gloable_data"
+	topo.GlobalOptions.DataDir = "/global_data"
 	topo.TiKVServers = append(topo.TiKVServers, &TiKVSpec{Host: "1.1.1.1", Port: 22})
 	topo.TiKVServers = append(topo.TiKVServers, &TiKVSpec{Host: "1.1.1.2", Port: 33, DataDir: "/my_data"})
+	topo.CDCServers = append(topo.CDCServers, &CDCSpec{Host: "2.3.3.3", Port: 22})
+	topo.CDCServers = append(topo.CDCServers, &CDCSpec{Host: "2.3.3.4", Port: 22, DataDir: "/cdc_data"})
 	data, err = yaml.Marshal(topo)
 	c.Assert(err, IsNil)
 
 	topo = new(Specification)
 	err = yaml.Unmarshal(data, topo)
 	c.Assert(err, IsNil)
-	c.Assert(topo.GlobalOptions.DataDir, Equals, "/gloable_data")
-	c.Assert(topo.TiKVServers[0].DataDir, Equals, "/gloable_data/tikv-22")
+	c.Assert(topo.GlobalOptions.DataDir, Equals, "/global_data")
+	c.Assert(topo.TiKVServers[0].DataDir, Equals, "/global_data/tikv-22")
 	c.Assert(topo.TiKVServers[1].DataDir, Equals, "/my_data")
+
+	c.Assert(topo.CDCServers[0].DataDir, Equals, "/global_data/cdc-22")
+	c.Assert(topo.CDCServers[1].DataDir, Equals, "/cdc_data")
 }
 
 func (s *metaSuiteTopo) TestGlobalOptions(c *C) {
@@ -86,6 +94,9 @@ tidb_servers:
 pd_servers:
   - host: 172.16.5.53
     data_dir: "pd-data"
+cdc_servers:
+  - host: 172.16.5.233
+    data_dir: "cdc-data"
 `), &topo)
 	c.Assert(err, IsNil)
 	c.Assert(topo.GlobalOptions.User, Equals, "test1")
@@ -96,6 +107,10 @@ pd_servers:
 	c.Assert(topo.PDServers[0].SSHPort, Equals, 220)
 	c.Assert(topo.PDServers[0].DeployDir, Equals, "test-deploy/pd-2379")
 	c.Assert(topo.PDServers[0].DataDir, Equals, "pd-data")
+
+	c.Assert(topo.CDCServers[0].SSHPort, Equals, 220)
+	c.Assert(topo.CDCServers[0].DeployDir, Equals, "test-deploy/cdc-8300")
+	c.Assert(topo.CDCServers[0].DataDir, Equals, "cdc-data")
 }
 
 func (s *metaSuiteTopo) TestDataDirAbsolute(c *C) {
@@ -109,11 +124,19 @@ pd_servers:
     data_dir: "pd-data"
   - host: 172.16.5.54
     client_port: 12379
+cdc_servers:
+  - host: 172.16.5.233
+    data_dir: "cdc-data"
+  - host: 172.16.5.234
+    port: 23333
 `), &topo)
 	c.Assert(err, IsNil)
 
 	c.Assert(topo.PDServers[0].DataDir, Equals, "pd-data")
 	c.Assert(topo.PDServers[1].DataDir, Equals, "/test-data/pd-12379")
+
+	c.Assert(topo.CDCServers[0].DataDir, Equals, "cdc-data")
+	c.Assert(topo.CDCServers[1].DataDir, Equals, "/test-data/cdc-23333")
 }
 
 func (s *metaSuiteTopo) TestGlobalConfig(c *C) {
