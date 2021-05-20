@@ -534,7 +534,34 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 		case "DeployDir":
 			setDefaultDir(globalOptions.DeployDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
 		case "LogDir":
-			if field.Field(j).String() == "" && defaults.CanUpdate(field.Field(j).Interface()) {
+			if reflect.Indirect(field).FieldByName("Imported").Interface().(bool) {
+				setDefaultDir(globalOptions.LogDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
+			}
+
+			logDir := field.Field(j).String()
+
+			// If the per-instance log_dir already have a value, skip filling default values
+			// and ignore any value in global log_dir, the default values are filled only
+			// when the pre-instance log_dir is empty
+			if logDir != "" {
+				continue
+			}
+			// If the log dir in global options is an absolute path, append current
+			// value to the global and has a comp-port sub directory
+			if strings.HasPrefix(globalOptions.LogDir, "/") {
+				field.Field(j).Set(reflect.ValueOf(filepath.Join(
+					globalOptions.LogDir,
+					fmt.Sprintf("%s-%s", field.Addr().Interface().(InstanceSpec).Role(), getPort(field)),
+				)))
+				continue
+			}
+			// If the log dir in global options is empty or a relative path, keep it be relative
+			// Our run_*.sh start scripts are run inside deploy_path, so the final location
+			// will be deploy_path/global.log_dir
+			// (the default value of global.log_dir is "log")
+			if globalOptions.LogDir == "" {
+				field.Field(j).Set(reflect.ValueOf("log"))
+			} else {
 				field.Field(j).Set(reflect.ValueOf(globalOptions.LogDir))
 			}
 		case "Arch":
