@@ -88,12 +88,14 @@ func (m *Manager) ScaleOut(
 			return err
 		}
 		pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
-		lbs, err := pdClient.GetLocationLabels()
+		lbs, placementRule, err := pdClient.GetLocationLabels()
 		if err != nil {
 			return err
 		}
-		if err := spec.CheckTiKVLabels(lbs, mergedTopo.(*spec.Specification)); err != nil {
-			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+		if !placementRule {
+			if err := spec.CheckTiKVLabels(lbs, mergedTopo.(*spec.Specification)); err != nil {
+				return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+			}
 		}
 	}
 
