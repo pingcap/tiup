@@ -38,13 +38,12 @@ type CDCScript struct {
 }
 
 // NewCDCScript returns a CDCScript with given arguments
-func NewCDCScript(ip, deployDir, dataDir, logDir string, enableTLS bool, gcTTL int64, tz string) *CDCScript {
+func NewCDCScript(ip, deployDir, logDir string, enableTLS bool, gcTTL int64, tz string) *CDCScript {
 	return &CDCScript{
 		IP:         ip,
 		Port:       8300,
 		DeployDir:  deployDir,
 		LogDir:     logDir,
-		DataDir:    dataDir,
 		TLSEnabled: enableTLS,
 		GCTTL:      gcTTL,
 		TZ:         tz,
@@ -66,6 +65,11 @@ func (c *CDCScript) WithNumaNode(numa string) *CDCScript {
 // WithConfigFileEnabled enables config file
 func (c *CDCScript) WithConfigFileEnabled() *CDCScript {
 	c.ConfigFileEnabled = true
+	return c
+}
+
+func (c *CDCScript) WithDataDir(dataDir string) *CDCScript {
+	c.DataDir = dataDir
 	return c
 }
 
