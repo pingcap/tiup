@@ -68,6 +68,7 @@ func (c *CDCScript) WithConfigFileEnabled() *CDCScript {
 	return c
 }
 
+// WithDataDir set DataDir field of TiCDCScript
 func (c *CDCScript) WithDataDir(dataDir string) *CDCScript {
 	c.DataDir = dataDir
 	return c
