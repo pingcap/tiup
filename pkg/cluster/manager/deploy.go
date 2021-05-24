@@ -112,17 +112,19 @@ func (m *Manager) Deploy(
 		base.GlobalOptions.SSHType = sshType
 	}
 
-	if topo, ok := topo.(*spec.Specification); ok && !opt.NoLabels {
-		// Check if TiKV's label set correctly
-		lbs, err := topo.LocationLabels()
-		if err != nil {
-			return err
-		}
-		if err := spec.CheckTiKVLabels(lbs, topo); err != nil {
-			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
-		}
-
+	if topo, ok := topo.(*spec.Specification); ok {
 		topo.AdjustByVersion(clusterVersion)
+
+		if !opt.NoLabels {
+			// Check if TiKV's label set correctly
+			lbs, err := topo.LocationLabels()
+			if err != nil {
+				return err
+			}
+			if err := spec.CheckTiKVLabels(lbs, topo); err != nil {
+				return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+			}
+		}
 	}
 
 	clusterList, err := m.specManager.GetAllClusters()
