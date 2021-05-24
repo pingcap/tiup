@@ -197,18 +197,7 @@ func (e *EasySSHExecutor) Transfer(ctx context.Context, src string, dst string, 
 	defer client.Close()
 	defer session.Close()
 
-	targetPath := filepath.Dir(dst)
-	if err = utils.CreateDir(targetPath); err != nil {
-		return err
-	}
-	targetFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-
-	session.Stdout = targetFile
-
-	return session.Run(fmt.Sprintf("cat %s", src))
+	return ScpDownload(session, client, src, dst)
 }
 
 func (e *NativeSSHExecutor) prompt(def string) string {
