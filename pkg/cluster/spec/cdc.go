@@ -155,11 +155,16 @@ func (i *CDCInstance) InitConfig(
 
 	configFileSupported := false
 	dataDirSupported := false
-	if semver.Compare(clusterVersion, "v4.0.13") >= 0 && clusterVersion != "v5.0.0-rc" {
+	if semver.Compare(clusterVersion, "v4.0.13") == -1 {
+		if len(globalConfig)+len(instanceConfig) > 0 {
+			return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
+		}
+		if len(paths.Data[0]) > 0 {
+			return perrs.New("data_dir is only supported with TiCDC version v4.0.13 or later")
+		}
+	} else if clusterVersion != "v5.0.0-rc" {
 		configFileSupported = true
 		dataDirSupported = true
-	} else if len(globalConfig)+len(instanceConfig) > 0 {
-		return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
 	}
 
 	cfg := scripts.NewCDCScript(

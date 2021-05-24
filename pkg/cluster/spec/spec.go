@@ -29,6 +29,7 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"golang.org/x/mod/semver"
 )
 
 const (
@@ -374,6 +375,17 @@ func (s *Specification) GetPDList() []string {
 	}
 
 	return pdList
+}
+
+// AdjustByVersion modify the spec by cluster version.
+func (s *Specification) AdjustByVersion(clusterVersion string) {
+	if semver.Compare(clusterVersion, "v4.0.13") == -1 {
+		for _, server := range s.CDCServers {
+			if server.DataDir != "" {
+				server.DataDir = ""
+			}
+		}
+	}
 }
 
 // GetDashboardAddress returns the cluster's dashboard addr
