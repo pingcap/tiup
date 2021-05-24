@@ -114,7 +114,6 @@ func (m *Manager) Deploy(
 
 	if topo, ok := topo.(*spec.Specification); ok {
 		topo.AdjustByVersion(clusterVersion)
-
 		if !opt.NoLabels {
 			// Check if TiKV's label set correctly
 			lbs, err := topo.LocationLabels()
