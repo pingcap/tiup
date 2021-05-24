@@ -85,7 +85,7 @@ func (c *CDCComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.CDCServers))
 	for _, s := range c.Topology.CDCServers {
 		s := s
-		ins = append(ins, &CDCInstance{BaseInstance{
+		instance := &CDCInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
@@ -97,7 +97,6 @@ func (c *CDCComponent) Instances() []Instance {
 			},
 			Dirs: []string{
 				s.DeployDir,
-				s.DataDir,
 			},
 			StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
 				return statusByHost(s.Host, s.Port, "/status", tlsCfg)
@@ -105,7 +104,13 @@ func (c *CDCComponent) Instances() []Instance {
 			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.Host, s.Port, tlsCfg)
 			},
-		}, c.Topology})
+		}, c.Topology}
+
+		if s.DataDir != "" {
+			instance.Dirs = append(instance.Dirs, s.DataDir)
+		}
+
+		ins = append(ins, instance)
 	}
 	return ins
 }
