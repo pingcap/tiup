@@ -85,7 +85,7 @@ func (c *CDCComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.CDCServers))
 	for _, s := range c.Topology.CDCServers {
 		s := s
-		instance := &CDCInstance{BaseInstance{
+		ins = append(ins, &CDCInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
@@ -97,6 +97,7 @@ func (c *CDCComponent) Instances() []Instance {
 			},
 			Dirs: []string{
 				s.DeployDir,
+				s.DataDir,
 			},
 			StatusFn: func(tlsCfg *tls.Config, _ ...string) string {
 				return statusByHost(s.Host, s.Port, "/status", tlsCfg)
@@ -104,13 +105,7 @@ func (c *CDCComponent) Instances() []Instance {
 			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.Host, s.Port, tlsCfg)
 			},
-		}, c.Topology}
-
-		if s.DataDir != "" {
-			instance.Dirs = append(instance.Dirs, s.DataDir)
-		}
-
-		ins = append(ins, instance)
+		}, c.Topology})
 	}
 	return ins
 }
@@ -160,16 +155,11 @@ func (i *CDCInstance) InitConfig(
 
 	configFileSupported := false
 	dataDirSupported := false
-	if semver.Compare(clusterVersion, "v4.0.13") == -1 {
-		if len(globalConfig)+len(instanceConfig) > 0 {
-			return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
-		}
-		if len(paths.Data) != 0 {
-			return perrs.New(fmt.Sprintf("data_dir is only supported with TiCDC version v4.0.13 or later, paths=%+v", paths))
-		}
-	} else if clusterVersion != "v5.0.0-rc" {
+	if semver.Compare(clusterVersion, "v4.0.13") >= 0 && clusterVersion != "v5.0.0-rc" {
 		configFileSupported = true
 		dataDirSupported = true
+	} else if len(globalConfig)+len(instanceConfig) > 0 {
+		return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
 	}
 
 	cfg := scripts.NewCDCScript(
