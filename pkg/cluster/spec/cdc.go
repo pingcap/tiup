@@ -160,7 +160,7 @@ func (i *CDCInstance) InitConfig(
 			return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
 		}
 		if len(paths.Data) != 0 {
-			return perrs.New("data_dir is only supported with TiCDC version v4.0.13 or later")
+			return perrs.New(fmt.Sprintf("data_dir is only supported with TiCDC version v4.0.13 or later, paths=%+v", paths))
 		}
 	} else if clusterVersion != "v5.0.0-rc" {
 		configFileSupported = true
