@@ -692,18 +692,18 @@ func (pc *PDClient) GetReplicateConfig() ([]byte, error) {
 }
 
 // GetLocationLabels gets the replication.location-labels config from pd server
-func (pc *PDClient) GetLocationLabels() ([]string, error) {
+func (pc *PDClient) GetLocationLabels() ([]string, bool, error) {
 	config, err := pc.GetReplicateConfig()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	rc := PDReplicationConfig{}
 	if err := json.Unmarshal(config, &rc); err != nil {
-		return nil, perrs.Annotatef(err, "unmarshal replication config: %s", string(config))
+		return nil, false, perrs.Annotatef(err, "unmarshal replication config: %s", string(config))
 	}
 
-	return rc.LocationLabels, nil
+	return rc.LocationLabels, rc.EnablePlacementRules, nil
 }
 
 // GetTiKVLabels implements TiKVLabelProvider

@@ -89,20 +89,20 @@ func (m *Manager) ScaleOut(
 	}
 	spec.ExpandRelativeDir(mergedTopo)
 
-	if topo, ok := topo.(*spec.Specification); ok {
+	if topo, ok := topo.(*spec.Specification); ok && !opt.NoLabels {
 		topo.AdjustByVersion(base.Version)
-		if !opt.NoLabels {
-			// Check if TiKV's label set correctly
-			pdList := topo.BaseTopo().MasterList
-			tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
-			if err != nil {
-				return err
-			}
-			pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
-			lbs, err := pdClient.GetLocationLabels()
-			if err != nil {
-				return err
-			}
+		// Check if TiKV's label set correctly
+		pdList := topo.BaseTopo().MasterList
+		tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
+		if err != nil {
+			return err
+		}
+		pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
+		lbs, placementRule, err := pdClient.GetLocationLabels()
+		if err != nil {
+			return err
+		}
+		if !placementRule {
 			if err := spec.CheckTiKVLabels(lbs, mergedTopo.(*spec.Specification)); err != nil {
 				return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
 			}

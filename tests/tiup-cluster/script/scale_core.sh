@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eu
+
 function scale_core() {
     mkdir -p ~/.tiup/bin/
 

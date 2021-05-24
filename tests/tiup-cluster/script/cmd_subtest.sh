@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eu
+
 function cmd_subtest() {
     mkdir -p ~/.tiup/bin/
 
