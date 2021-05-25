@@ -382,7 +382,11 @@ func (s *Specification) AdjustByVersion(clusterVersion string) {
 	// CDC does not support data dir for version below v4.0.13, and also v5.0.0-rc, set it to empty.
 	if semver.Compare(clusterVersion, "v4.0.13") == -1 || clusterVersion == "v5.0.0-rc" {
 		for _, server := range s.CDCServers {
-			server.DataDir = ""
+			if server.DataDir != "" {
+				log.Warnf("data_dir is only supported with TiCDC version v4.0.13 or later, current will not take effect. version: %+v", clusterVersion)
+				server.DataDir = ""
+			}
+
 		}
 	}
 }
