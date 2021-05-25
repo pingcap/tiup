@@ -65,7 +65,6 @@ func (m *Manager) ScaleOut(
 
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
-
 	// Inherit existing global configuration. We must assign the inherited values before unmarshalling
 	// because some default value rely on the global options and monitored options.
 	newPart := topo.NewPart()
@@ -76,6 +75,9 @@ func (m *Manager) ScaleOut(
 	if err := spec.ParseTopologyYaml(topoFile, newPart); err != nil &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return err
+	}
+	if newPartTopo, ok := newPart.(*spec.Specification); ok {
+		newPartTopo.AdjustByVersion(base.Version)
 	}
 
 	if err := validateNewTopo(newPart); err != nil {
