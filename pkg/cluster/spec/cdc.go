@@ -24,6 +24,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/meta"
+	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
 )
 
@@ -160,6 +161,11 @@ func (i *CDCInstance) InitConfig(
 	if semver.Compare(clusterVersion, "v4.0.13") == -1 {
 		if len(globalConfig)+len(instanceConfig) > 0 {
 			return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
+		}
+
+		if len(paths.Data) != 0 {
+			zap.L().Warn(fmt.Sprintf("data_dir is only supported with TiCDC version v4.0.13 or later, current clusterVersion is %+v, will not take effect", clusterVersion),
+				zap.String("clusterVersion", clusterVersion))
 		}
 	}
 
