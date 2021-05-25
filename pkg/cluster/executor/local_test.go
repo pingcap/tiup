@@ -54,7 +54,7 @@ func TestLocal(t *testing.T) {
 	defer os.Remove(dst.Name())
 
 	// Transfer src to dst and check it.
-	err = local.Transfer(ctx, src.Name(), dst.Name(), false)
+	err = local.Transfer(ctx, src.Name(), dst.Name(), false, 0)
 	assert.Nil(err)
 
 	data, err := os.ReadFile(dst.Name())
