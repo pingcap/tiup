@@ -161,9 +161,6 @@ func (i *CDCInstance) InitConfig(
 		if len(globalConfig)+len(instanceConfig) > 0 {
 			return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
 		}
-		if len(paths.Data) != 0 {
-			return perrs.New(fmt.Sprintf("data_dir is only supported with TiCDC version v4.0.13 or later, data_dir=%+v", paths))
-		}
 	}
 
 	cfg := scripts.NewCDCScript(

@@ -29,6 +29,7 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
 )
 
@@ -382,7 +383,11 @@ func (s *Specification) AdjustByVersion(clusterVersion string) {
 	// CDC does not support data dir for version below v4.0.13, and also v5.0.0-rc, set it to empty.
 	if semver.Compare(clusterVersion, "v4.0.13") == -1 || clusterVersion == "v5.0.0-rc" {
 		for _, server := range s.CDCServers {
-			server.DataDir = ""
+			if server.DataDir != "" {
+				server.DataDir = ""
+				zap.L().Warn(fmt.Sprintf("data_dir is only supported with TiCDC version v4.0.13 or later, current clusterVersion is %+v, will not take effect", clusterVersion),
+					zap.String("clusterVersion", clusterVersion))
+			}
 		}
 	}
 }
