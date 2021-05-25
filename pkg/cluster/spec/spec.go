@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/creasty/defaults"
+	"github.com/fatih/color"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -383,8 +384,8 @@ func (s *Specification) AdjustByVersion(clusterVersion string) {
 	if semver.Compare(clusterVersion, "v4.0.13") == -1 || clusterVersion == "v5.0.0-rc" {
 		for _, server := range s.CDCServers {
 			if server.DataDir != "" {
-				log.Warnf("data_dir is only supported with TiCDC version v4.0.13 or later, "+
-					"current will not take effect. version: %+v", clusterVersion)
+				log.Warnf(color.RedString("[WARN] data_dir is only supported with TiCDC version v4.0.13 or later, "+
+					"current will not take effect. version: %+v", clusterVersion))
 				server.DataDir = ""
 			}
 
