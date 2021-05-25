@@ -54,7 +54,8 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout uint64, ssh
 								inst.GetHost(),
 								inst.GetPort())),
 						inst.GetHost(),
-						true).
+						true,
+						0).
 					Build()
 				copyFileTasks = append(copyFileTasks, t)
 			case spec.ComponentTiFlash:
@@ -71,7 +72,8 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout uint64, ssh
 								inst.GetHost(),
 								inst.GetPort())),
 						inst.GetHost(),
-						true).
+						true,
+						0).
 					CopyFile(filepath.Join(inst.DeployDir(), "conf", inst.ComponentName()+"-learner.toml"),
 						spec.ClusterPath(name,
 							spec.AnsibleImportedConfigPath,
@@ -80,7 +82,8 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout uint64, ssh
 								inst.GetHost(),
 								inst.GetPort())),
 						inst.GetHost(),
-						true).
+						true,
+						0).
 					Build()
 				copyFileTasks = append(copyFileTasks, t)
 			default:
