@@ -91,8 +91,7 @@ func (m *Manager) ScaleOut(
 	}
 	spec.ExpandRelativeDir(mergedTopo)
 
-	if topo, ok := topo.(*spec.Specification); ok {
-		topo.AdjustByVersion(base.Version)
+	if topo, ok := mergedTopo.(*spec.Specification); ok {
 		// Check if TiKV's label set correctly
 		if !opt.NoLabels {
 			pdList := topo.BaseTopo().MasterList

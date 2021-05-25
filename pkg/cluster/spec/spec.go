@@ -383,7 +383,8 @@ func (s *Specification) AdjustByVersion(clusterVersion string) {
 	if semver.Compare(clusterVersion, "v4.0.13") == -1 || clusterVersion == "v5.0.0-rc" {
 		for _, server := range s.CDCServers {
 			if server.DataDir != "" {
-				log.Warnf("data_dir is only supported with TiCDC version v4.0.13 or later, current will not take effect. version: %+v", clusterVersion)
+				log.Warnf("data_dir is only supported with TiCDC version v4.0.13 or later, "+
+					"current will not take effect. version: %+v", clusterVersion)
 				server.DataDir = ""
 			}
 

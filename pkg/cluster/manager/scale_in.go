@@ -80,10 +80,6 @@ func (m *Manager) ScaleIn(
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	if topo, ok := topo.(*spec.Specification); ok {
-		topo.AdjustByVersion(base.Version)
-	}
-
 	// Regenerate configuration
 	regenConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, nodes, true)
 

@@ -58,10 +58,6 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart, skipCon
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	if topo, ok := topo.(*spec.Specification); ok {
-		topo.AdjustByVersion(base.Version)
-	}
-
 	uniqueHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
 	topo.IterInstance(func(inst spec.Instance) {
 		if _, found := uniqueHosts[inst.GetHost()]; !found {
