@@ -164,7 +164,7 @@ func (i *CDCInstance) InitConfig(
 		}
 
 		if len(paths.Data) != 0 {
-			zap.L().Warn(fmt.Sprintf("data_dir is only supported with TiCDC version v4.0.13 or later, current clusterVersion is %+v, will not take effect", clusterVersion),
+			zap.L().Warn("data_dir is only supported with TiCDC version v4.0.13 or later, current version will not take effect",
 				zap.String("clusterVersion", clusterVersion))
 		}
 	}
