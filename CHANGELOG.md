@@ -1,5 +1,22 @@
 TiUP Changelog
 
+## [1.4.4] 2021.05.26
+
+### Fixes
+
+- Fix the issue that upgrade process may fail if the PD node is not available for longer than normal after restart ([#1359](https://github.com/pingcap/tiup/pull/1359), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix incorrect `MALLOC_CONF` value for TiKV node, set `prof_active` to `false` ([#1361](https://github.com/pingcap/tiup/pull/1361) [#1369](https://github.com/pingcap/tiup/pull/1369), [@YangKeao](https://github.com/YangKeao))
+  - Risk of this issue: Generating prof data for TiKV node with `prof_active=true` may cause high CPU systime usage in some circumstances, users need to regenerate startup scripts for TiKV nodes with `tiup cluster reload <cluster-name> -R tikv` to make the update applied
+- Fix the issue that the global `log_dir` not generated correctly for absolute paths ([#1376](https://github.com/pingcap/tiup/pull/1376), [@lucklove](https://github.com/lucklove))
+- Fix the issue that `display` command may report label mismatch warning if `placement-rule` is enabled ([#1378](https://github.com/pingcap/tiup/pull/1378), [@lucklove](https://github.com/lucklove))
+- Fix the issue that SELinux setting is incorrect when `tiup-cluster` tries to disable it with `check --apply` ([#1383](https://github.com/pingcap/tiup/pull/1383), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix the issue that when scaling out instance on a host imported from `tidb-ansible`, the process may report error about monitor directory conflict ([#1386](https://github.com/pingcap/tiup/pull/1386), [@lucklove](https://github.com/lucklove))
+
+### Improvements
+
+- Allow scale in cluster when there is no TiSpark master node but have worker node in the topology ([#1363](https://github.com/pingcap/tiup/pull/1363), [@AstroProfundis](https://github.com/AstroProfundis))
+- Make port check error message more clear to users ([#1367](https://github.com/pingcap/tiup/pull/1367), [@JinLingChristopher](https://github.com/JinLingChristopher))
+
 ## [1.4.3] 2021.05.13
 
 ### Fixes
