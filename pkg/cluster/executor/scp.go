@@ -30,16 +30,6 @@ import (
 // ScpDownload downloads a file from remote with SCP
 // The implementation is partially inspired by github.com/dtylman/scp
 func ScpDownload(session *ssh.Session, client *ssh.Client, src, dst string, limit int) error {
-	// prepare dst file
-	targetPath := filepath.Dir(dst)
-	if err := utils.CreateDir(targetPath); err != nil {
-		return err
-	}
-	targetFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-
 	r, err := session.StdoutPipe()
 	if err != nil {
 		return err
@@ -65,9 +55,17 @@ func ScpDownload(session *ssh.Session, client *ssh.Client, src, dst string, limi
 		if err != nil {
 			return fmt.Errorf("error parsing file mode; %s", err)
 		}
-		if err := targetFile.Chmod(fs.FileMode(mode)); err != nil {
-			return fmt.Errorf("error setting file mode; %s", err)
+
+		// prepare dst file
+		targetPath := filepath.Dir(dst)
+		if err := utils.CreateDir(targetPath); err != nil {
+			return err
 		}
+		targetFile, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, fs.FileMode(mode))
+		if err != nil {
+			return err
+		}
+		defer targetFile.Close()
 
 		size, err := strconv.Atoi(strings.Fields(string(line))[1])
 		if err != nil {
@@ -96,7 +94,6 @@ func ScpDownload(session *ssh.Session, client *ssh.Client, src, dst string, limi
 	copyErrC := make(chan error, 1)
 	go func() {
 		defer w.Close()
-		defer targetFile.Close()
 		copyErrC <- copyF()
 	}()
 

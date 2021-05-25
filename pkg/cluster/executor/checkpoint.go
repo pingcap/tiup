@@ -46,7 +46,6 @@ var (
 		checkpoint.Field("src", reflect.DeepEqual),
 		checkpoint.Field("dst", reflect.DeepEqual),
 		checkpoint.Field("download", reflect.DeepEqual),
-		checkpoint.Field("limit", reflect.DeepEqual),
 	)
 )
 
