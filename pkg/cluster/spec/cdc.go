@@ -157,13 +157,26 @@ func (i *CDCInstance) InitConfig(
 	globalConfig := topo.ServerConfigs.CDC
 	instanceConfig := spec.Config
 
+	// if semver.Compare(clusterVersion, "v4.0.13") >= 0 && clusterVersion != "v5.0.0-rc" {
+	// 	configFileSupported = true
+	// 	dataDirSupported = true
+	// } else if len(globalConfig)+len(instanceConfig) > 0 {
+	// 	return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
+	// }
+	if semver.Compare(clusterVersion, "v4.0.13") == -1 {
+		if len(globalConfig)+len(instanceConfig) > 0 {
+			return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
+		}
+		if len(paths.Data) != 0 {
+			return perrs.New(fmt.Sprintf("data_dir is only supported with TiCDC version v4.0.13 or later, data_dir=%+v", paths))
+		}
+	}
+
 	configFileSupported := false
 	dataDirSupported := false
 	if semver.Compare(clusterVersion, "v4.0.13") >= 0 && clusterVersion != "v5.0.0-rc" {
 		configFileSupported = true
 		dataDirSupported = true
-	} else if len(globalConfig)+len(instanceConfig) > 0 {
-		return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
 	}
 
 	cfg := scripts.NewCDCScript(
