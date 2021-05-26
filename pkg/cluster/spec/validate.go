@@ -204,8 +204,9 @@ Please change to use another directory or another host.
 	return CheckClusterDirOverlap(currentEntries)
 }
 
-// CheckClusterDirOverlap checks cluster dir overlaps with data or log
-// we don't allow to deploy log under data, and vise versa
+// CheckClusterDirOverlap checks cluster dir overlaps with data or log.
+// this should only be used across clusters.
+// we don't allow to deploy log under data, and vise versa.
 // ref https://github.com/pingcap/tiup/issues/1047#issuecomment-761711508
 func CheckClusterDirOverlap(entries []DirEntry) error {
 	ignore := func(d1, d2 DirEntry) bool {
@@ -223,9 +224,18 @@ func CheckClusterDirOverlap(entries []DirEntry) error {
 			}
 
 			if utils.IsSubDir(d1.dir, d2.dir) || utils.IsSubDir(d2.dir, d1.dir) {
+				// overlap is allowed in the case both sides are imported
 				if d1.instance.IsImported() && d2.instance.IsImported() {
 					continue
 				}
+				// overlap is alloed in the case one side is imported and the other is monitor,
+				// we assume that the monitor is deployed with the first instance in that host,
+				// it implies that the monitor is imported too.
+				if (strings.HasPrefix(d1.dirKind, "monitor") && d2.instance.IsImported()) ||
+					(d1.instance.IsImported() && strings.HasPrefix(d2.dirKind, "monitor")) {
+					continue
+				}
+
 				properties := map[string]string{
 					"ThisDirKind":   d1.dirKind,
 					"ThisDir":       d1.dir,
