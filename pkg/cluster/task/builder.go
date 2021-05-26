@@ -130,12 +130,13 @@ func (b *Builder) UpdateTopology(cluster, profile string, metadata *spec.Cluster
 }
 
 // CopyFile appends a CopyFile task to the current task collection
-func (b *Builder) CopyFile(src, dst, server string, download bool) *Builder {
+func (b *Builder) CopyFile(src, dst, server string, download bool, limit int) *Builder {
 	b.tasks = append(b.tasks, &CopyFile{
 		src:      src,
 		dst:      dst,
 		remote:   server,
 		download: download,
+		limit:    limit,
 	})
 	return b
 }

@@ -145,7 +145,7 @@ func (i *TiDBInstance) InitConfig(
 	}
 
 	dst := filepath.Join(paths.Deploy, "scripts", "run_tidb.sh")
-	if err := e.Transfer(ctx, fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
 		return err
 	}
 	if _, _, err := e.Execute(ctx, "chmod +x "+dst, false); err != nil {
