@@ -180,7 +180,7 @@ func (e *EasySSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, ti
 // This function depends on `scp` (a tool from OpenSSH or other SSH implementation)
 // This function is based on easyssh.MakeConfig.Scp() but with support of copying
 // file from remote to local.
-func (e *EasySSHExecutor) Transfer(ctx context.Context, src string, dst string, download bool) error {
+func (e *EasySSHExecutor) Transfer(ctx context.Context, src, dst string, download bool, limit int) error {
 	if !download {
 		err := e.Config.Scp(src, dst)
 		if err != nil {
@@ -197,18 +197,7 @@ func (e *EasySSHExecutor) Transfer(ctx context.Context, src string, dst string, 
 	defer client.Close()
 	defer session.Close()
 
-	targetPath := filepath.Dir(dst)
-	if err = utils.CreateDir(targetPath); err != nil {
-		return err
-	}
-	targetFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-
-	session.Stdout = targetFile
-
-	return session.Run(fmt.Sprintf("cat %s", src))
+	return ScpDownload(session, client, src, dst, limit)
 }
 
 func (e *NativeSSHExecutor) prompt(def string) string {
@@ -319,7 +308,7 @@ func (e *NativeSSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, 
 
 // Transfer copies files via SCP
 // This function depends on `scp` (a tool from OpenSSH or other SSH implementation)
-func (e *NativeSSHExecutor) Transfer(ctx context.Context, src string, dst string, download bool) error {
+func (e *NativeSSHExecutor) Transfer(ctx context.Context, src, dst string, download bool, limit int) error {
 	if e.ConnectionTestResult != nil {
 		return e.ConnectionTestResult
 	}
@@ -334,6 +323,9 @@ func (e *NativeSSHExecutor) Transfer(ctx context.Context, src string, dst string
 	}
 
 	args := []string{scp, "-r", "-o", "StrictHostKeyChecking=no"}
+	if limit > 0 {
+		args = append(args, "-l", fmt.Sprint(limit))
+	}
 	args = e.configArgs(args) // prefix and postfix args
 
 	if download {

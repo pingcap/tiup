@@ -45,7 +45,7 @@ type (
 		Execute(ctx context.Context, cmd string, sudo bool, timeout ...time.Duration) (stdout []byte, stderr []byte, err error)
 
 		// Transfer copies files from or to a target
-		Transfer(ctx context.Context, src string, dst string, download bool) error
+		Transfer(ctx context.Context, src, dst string, download bool, limit int) error
 	}
 
 	// ExecutorGetter get the executor by host.
