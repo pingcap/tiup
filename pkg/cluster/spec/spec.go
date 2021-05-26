@@ -382,12 +382,16 @@ func (s *Specification) GetPDList() []string {
 func (s *Specification) AdjustByVersion(clusterVersion string) {
 	// CDC does not support data dir for version below v4.0.13, and also v5.0.0-rc, set it to empty.
 	if semver.Compare(clusterVersion, "v4.0.13") == -1 || clusterVersion == "v5.0.0-rc" {
-		log.Warnf(color.RedString("[WARN] data_dir is only supported with TiCDC version v4.0.13 or later, "+
-			"current will not take effect. version: %+v", clusterVersion))
+		flag := false
 		for _, server := range s.CDCServers {
 			if server.DataDir != "" {
 				server.DataDir = ""
+				flag = true
 			}
+		}
+		if flag {
+			log.Warnf(color.RedString("[WARN] data_dir is only supported with TiCDC version v4.0.13 or later, "+
+				"current will not take effect. version: %+v", clusterVersion))
 		}
 	}
 }
