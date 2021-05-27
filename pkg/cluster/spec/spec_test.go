@@ -727,18 +727,15 @@ cdc_servers:
 			PatchByVersion(version, ins.DataDir())
 
 		// DataDir support since v4.0.13
+		checker := Equals
 		if semver.Compare(version, "v4.0.13") >= 0 && version != "v5.0.0-rc" {
-			c.Assert(len(cfg.DataDir), Not(Equals), 0)
+			checker = Not(checker)
+			c.Assert(len(cfg.DataDir), checker, 0)
 
-			if semver.Compare(version, "v4.0.14") >= 0 || semver.Compare(version, "v5.0.3") >= 0 {
-				c.Assert(cfg.DataDirEnabled, Equals, true)
-			} else {
-				c.Assert(cfg.DataDirEnabled, Equals, false)
-			}
-		} else {
-			c.Assert(len(cfg.DataDir), Equals, 0)
+			// TiCDC support --data-dir since v4.0.14 and v5.0.3
+			expected := semver.Compare(version, "v4.0.14") >= 0 || semver.Compare(version, "v5.0.3") >= 0
+			c.Assert(cfg.DataDirEnabled, Equals, expected)
 		}
-
 	}
 
 	checkByVersion("v4.0.12")
