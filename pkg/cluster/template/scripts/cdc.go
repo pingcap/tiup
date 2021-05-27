@@ -20,6 +20,7 @@ import (
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"golang.org/x/mod/semver"
 )
 
 // CDCScript represent the data to generate cdc config
@@ -118,5 +119,17 @@ func (c *CDCScript) ConfigWithTemplate(tpl string) ([]byte, error) {
 // AppendEndpoints add new PDScript to Endpoints field
 func (c *CDCScript) AppendEndpoints(ends ...*PDScript) *CDCScript {
 	c.Endpoints = append(c.Endpoints, ends...)
+	return c
+}
+
+func (c *CDCScript) PatchByVersion(clusterVersion, dataDir string) *CDCScript {
+	if semver.Compare(clusterVersion, "v4.0.13") >= 0 && clusterVersion != "v5.0.0-rc" {
+		c = c.WithConfigFileEnabled().WithDataDir(dataDir)
+
+		if semver.Compare(clusterVersion, "v4.0.14") >= 0 || semver.Compare(clusterVersion, "v5.0.3") >= 0 {
+			c = c.WithDataDirEnabled()
+		}
+	}
+
 	return c
 }

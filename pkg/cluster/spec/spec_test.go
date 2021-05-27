@@ -21,6 +21,7 @@ import (
 	"github.com/BurntSushi/toml"
 	. "github.com/pingcap/check"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
+	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v2"
 )
 
@@ -705,6 +706,46 @@ tiflash_servers:
 		err := yaml.Unmarshal(testCase, spec)
 		c.Check(err, NotNil)
 	}
+}
+
+func (s *metaSuiteTopo) TestTiCDCDataDir(c *C) {
+	spec := &Specification{}
+	err := yaml.Unmarshal([]byte(`
+cdc_servers:
+  - host: 172.16.6.191
+    data_dir: /tidb-data/cdc-8300
+`), spec)
+	c.Assert(err, IsNil)
+
+	cdcComp := FindComponent(spec, ComponentCDC)
+	instances := cdcComp.Instances()
+	c.Assert(len(instances), Equals, 1)
+
+	checkByVersion := func(version string) {
+		ins := instances[0].(*CDCInstance)
+		cfg := scripts.NewCDCScript(ins.GetHost(), "", "", false, 0, "").
+			PatchByVersion(version, ins.DataDir())
+
+		// DataDir support since v4.0.13
+		if semver.Compare(version, "v4.0.13") >= 0 && version != "v5.0.0-rc" {
+			c.Assert(len(cfg.DataDir), Not(Equals), 0)
+
+			if semver.Compare(version, "v4.0.14") >= 0 || semver.Compare(version, "v5.0.3") >= 0 {
+				c.Assert(cfg.DataDirEnabled, Equals, true)
+			} else {
+				c.Assert(cfg.DataDirEnabled, Equals, false)
+			}
+		} else {
+			c.Assert(len(cfg.DataDir), Equals, 0)
+		}
+
+	}
+
+	checkByVersion("v4.0.12")
+	checkByVersion("v4.0.13")
+	checkByVersion("v5.0.0-rc")
+	checkByVersion("v4.0.14")
+	checkByVersion("v5.0.3")
 }
 
 func (s *metaSuiteTopo) TestTiFlashUsersSettings(c *C) {
