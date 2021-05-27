@@ -175,6 +175,10 @@ func (i *CDCInstance) InitConfig(
 	if semver.Compare(clusterVersion, "v4.0.13") >= 0 && clusterVersion != "v5.0.0-rc" {
 		cfg = cfg.WithConfigFileEnabled()
 		cfg = cfg.WithDataDir(paths.Data[0])
+
+		if semver.Compare(clusterVersion, "v4.0.14") >= 0 || semver.Compare(clusterVersion, "v5.0.3") >= 0 {
+			cfg = cfg.WithDataDirEnabled()
+		}
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_cdc_%s_%d.sh", i.GetHost(), i.GetPort()))

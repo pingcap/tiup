@@ -35,6 +35,7 @@ type CDCScript struct {
 	TLSEnabled        bool
 	Endpoints         []*PDScript
 	ConfigFileEnabled bool
+	DataDirEnabled    bool
 }
 
 // NewCDCScript returns a CDCScript with given arguments
@@ -71,6 +72,12 @@ func (c *CDCScript) WithConfigFileEnabled() *CDCScript {
 // WithDataDir set DataDir field of TiCDCScript
 func (c *CDCScript) WithDataDir(dataDir string) *CDCScript {
 	c.DataDir = dataDir
+	return c
+}
+
+// WithDataDirEnabled enables CDC data-dir
+func (c *CDCScript) WithDataDirEnabled() *CDCScript {
+	c.DataDirEnabled = true
 	return c
 }
 
