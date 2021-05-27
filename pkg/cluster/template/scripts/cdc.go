@@ -122,6 +122,7 @@ func (c *CDCScript) AppendEndpoints(ends ...*PDScript) *CDCScript {
 	return c
 }
 
+// PatchByVersion update fields by cluster version
 func (c *CDCScript) PatchByVersion(clusterVersion, dataDir string) *CDCScript {
 	if semver.Compare(clusterVersion, "v4.0.13") >= 0 && clusterVersion != "v5.0.0-rc" {
 		c = c.WithConfigFileEnabled().WithDataDir(dataDir)

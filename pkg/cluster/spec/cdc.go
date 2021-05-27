@@ -170,7 +170,11 @@ func (i *CDCInstance) InitConfig(
 		enableTLS,
 		spec.GCTTL,
 		spec.TZ,
-	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...).PatchByVersion(clusterVersion, paths.Data[0])
+	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...)
+
+	if len(paths.Data) != 0 {
+		cfg = cfg.PatchByVersion(clusterVersion, paths.Data[0])
+	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_cdc_%s_%d.sh", i.GetHost(), i.GetPort()))
 
