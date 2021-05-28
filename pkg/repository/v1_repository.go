@@ -452,7 +452,7 @@ func (r *V1Repository) updateComponentManifest(id string, withYanked bool) (*v1m
 		// We're up to date, load the old manifest from disk.
 		comp, err := r.local.LoadComponentManifest(&item, filename)
 		if comp == nil && err == nil {
-			err = fmt.Errorf("component %s not exist", id)
+			err = fmt.Errorf("component %s does not exist", id)
 		}
 		return comp, err
 	}
