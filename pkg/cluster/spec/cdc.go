@@ -35,6 +35,7 @@ type CDCSpec struct {
 	Patched         bool                   `yaml:"patched,omitempty"`
 	Port            int                    `yaml:"port" default:"8300"`
 	DeployDir       string                 `yaml:"deploy_dir,omitempty"`
+	DataDir         string                 `yaml:"data_dir,omitempty"`
 	LogDir          string                 `yaml:"log_dir,omitempty"`
 	Offline         bool                   `yaml:"offline,omitempty"`
 	GCTTL           int64                  `yaml:"gc-ttl,omitempty" validate:"gc-ttl:editable"`
@@ -84,7 +85,7 @@ func (c *CDCComponent) Instances() []Instance {
 	ins := make([]Instance, 0, len(c.Topology.CDCServers))
 	for _, s := range c.Topology.CDCServers {
 		s := s
-		ins = append(ins, &CDCInstance{BaseInstance{
+		instance := &CDCInstance{BaseInstance{
 			InstanceSpec: s,
 			Name:         c.Name(),
 			Host:         s.Host,
@@ -103,7 +104,12 @@ func (c *CDCComponent) Instances() []Instance {
 			UptimeFn: func(tlsCfg *tls.Config) time.Duration {
 				return UptimeByHost(s.Host, s.Port, tlsCfg)
 			},
-		}, c.Topology})
+		}, c.Topology}
+		if s.DataDir != "" {
+			instance.Dirs = append(instance.Dirs, s.DataDir)
+		}
+
+		ins = append(ins, instance)
 	}
 	return ins
 }
@@ -151,11 +157,10 @@ func (i *CDCInstance) InitConfig(
 	globalConfig := topo.ServerConfigs.CDC
 	instanceConfig := spec.Config
 
-	configFileSupported := false
-	if semver.Compare(clusterVersion, "v4.0.13") >= 0 && clusterVersion != "v5.0.0-rc" {
-		configFileSupported = true
-	} else if len(globalConfig)+len(instanceConfig) > 0 {
-		return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
+	if semver.Compare(clusterVersion, "v4.0.13") == -1 {
+		if len(globalConfig)+len(instanceConfig) > 0 {
+			return perrs.New("server_config is only supported with TiCDC version v4.0.13 or later")
+		}
 	}
 
 	cfg := scripts.NewCDCScript(
@@ -167,8 +172,8 @@ func (i *CDCInstance) InitConfig(
 		spec.TZ,
 	).WithPort(spec.Port).WithNumaNode(spec.NumaNode).AppendEndpoints(topo.Endpoints(deployUser)...)
 
-	if configFileSupported {
-		cfg = cfg.WithConfigFileEnabled()
+	if len(paths.Data) != 0 {
+		cfg = cfg.PatchByVersion(clusterVersion, paths.Data[0])
 	}
 
 	fp := filepath.Join(paths.Cache, fmt.Sprintf("run_cdc_%s_%d.sh", i.GetHost(), i.GetPort()))
