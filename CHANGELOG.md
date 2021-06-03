@@ -1,5 +1,13 @@
 TiUP Changelog
 
+## [1.4.5] 2021.06.03
+
+### Fixes
+
+- Fix the issue that tikv not upgraded on error increasing schedule limit  ([#1401](https://github.com/pingcap/tiup/pull/1401), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix the issue that it may panic when user try to list expired component ([#1391](https://github.com/pingcap/tiup/pull/1391), [@lucklove](https://github.com/lucklove))
+- Fix wrong indent in display ([#1390](https://github.com/pingcap/tiup/pull/1390), [@lucklove](https://github.com/lucklove))
+
 ## [1.4.4] 2021.05.26
 
 ### Fixes
