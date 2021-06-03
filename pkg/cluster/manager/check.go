@@ -67,6 +67,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 		opt.IdentityFile = m.specManager.Path(clusterName, "ssh", "id_rsa")
 
 		topo = *metadata.Topology
+		topo.AdjustByVersion(metadata.Version)
 	} else { // check before cluster is deployed
 		topoFileName := clusterOrTopoName
 

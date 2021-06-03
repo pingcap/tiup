@@ -20,6 +20,7 @@ import (
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"golang.org/x/mod/semver"
 )
 
 // CDCScript represent the data to generate cdc config
@@ -28,12 +29,14 @@ type CDCScript struct {
 	Port              int
 	DeployDir         string
 	LogDir            string
+	DataDir           string
 	NumaNode          string
 	GCTTL             int64
 	TZ                string
 	TLSEnabled        bool
 	Endpoints         []*PDScript
 	ConfigFileEnabled bool
+	DataDirEnabled    bool
 }
 
 // NewCDCScript returns a CDCScript with given arguments
@@ -64,6 +67,18 @@ func (c *CDCScript) WithNumaNode(numa string) *CDCScript {
 // WithConfigFileEnabled enables config file
 func (c *CDCScript) WithConfigFileEnabled() *CDCScript {
 	c.ConfigFileEnabled = true
+	return c
+}
+
+// WithDataDir set DataDir field of TiCDCScript
+func (c *CDCScript) WithDataDir(dataDir string) *CDCScript {
+	c.DataDir = dataDir
+	return c
+}
+
+// WithDataDirEnabled enables CDC data-dir
+func (c *CDCScript) WithDataDirEnabled() *CDCScript {
+	c.DataDirEnabled = true
 	return c
 }
 
@@ -104,5 +119,23 @@ func (c *CDCScript) ConfigWithTemplate(tpl string) ([]byte, error) {
 // AppendEndpoints add new PDScript to Endpoints field
 func (c *CDCScript) AppendEndpoints(ends ...*PDScript) *CDCScript {
 	c.Endpoints = append(c.Endpoints, ends...)
+	return c
+}
+
+// PatchByVersion update fields by cluster version
+func (c *CDCScript) PatchByVersion(clusterVersion, dataDir string) *CDCScript {
+	ignore := map[string]struct{}{
+		"v5.0.0-rc":    {},
+		"v5.1.0-alpha": {},
+	}
+
+	if _, ok := ignore[clusterVersion]; !ok && semver.Compare(clusterVersion, "v4.0.13") >= 0 {
+		c = c.WithConfigFileEnabled().WithDataDir(dataDir)
+
+		if semver.Compare(clusterVersion, "v4.0.14") >= 0 || semver.Compare(clusterVersion, "v5.0.3") >= 0 {
+			c = c.WithDataDirEnabled()
+		}
+	}
+
 	return c
 }

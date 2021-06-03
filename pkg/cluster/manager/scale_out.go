@@ -65,7 +65,6 @@ func (m *Manager) ScaleOut(
 
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
-
 	// Inherit existing global configuration. We must assign the inherited values before unmarshalling
 	// because some default value rely on the global options and monitored options.
 	newPart := topo.NewPart()
@@ -76,6 +75,9 @@ func (m *Manager) ScaleOut(
 	if err := spec.ParseTopologyYaml(topoFile, newPart); err != nil &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return err
+	}
+	if newPartTopo, ok := newPart.(*spec.Specification); ok {
+		newPartTopo.AdjustByVersion(base.Version)
 	}
 
 	if err := validateNewTopo(newPart); err != nil {
@@ -89,21 +91,23 @@ func (m *Manager) ScaleOut(
 	}
 	spec.ExpandRelativeDir(mergedTopo)
 
-	if topo, ok := topo.(*spec.Specification); ok && !opt.NoLabels {
+	if topo, ok := mergedTopo.(*spec.Specification); ok {
 		// Check if TiKV's label set correctly
-		pdList := topo.BaseTopo().MasterList
-		tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
-		if err != nil {
-			return err
-		}
-		pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
-		lbs, placementRule, err := pdClient.GetLocationLabels()
-		if err != nil {
-			return err
-		}
-		if !placementRule {
-			if err := spec.CheckTiKVLabels(lbs, mergedTopo.(*spec.Specification)); err != nil {
-				return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+		if !opt.NoLabels {
+			pdList := topo.BaseTopo().MasterList
+			tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
+			if err != nil {
+				return err
+			}
+			pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
+			lbs, placementRule, err := pdClient.GetLocationLabels()
+			if err != nil {
+				return err
+			}
+			if !placementRule {
+				if err := spec.CheckTiKVLabels(lbs, mergedTopo.(*spec.Specification)); err != nil {
+					return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+				}
 			}
 		}
 	}

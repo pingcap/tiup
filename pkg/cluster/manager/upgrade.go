@@ -96,6 +96,11 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 
 			// Deploy component
 			tb := task.NewBuilder()
+
+			// for some component, dataDirs might need to be created due to upgrade
+			// eg: TiCDC support DataDir since v4.0.13
+			tb = tb.Mkdir(topo.BaseTopo().GlobalOptions.User, inst.GetHost(), dataDirs...)
+
 			if inst.IsImported() {
 				switch inst.ComponentName() {
 				case spec.ComponentPrometheus, spec.ComponentGrafana, spec.ComponentAlertmanager:
