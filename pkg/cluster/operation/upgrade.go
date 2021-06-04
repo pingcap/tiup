@@ -67,19 +67,19 @@ func Upgrade(
 				// the config modifing error should be able to be safely ignored, as it will
 				// be processed with current settings anyway.
 				log.Warnf("failed increasing schedule limit: %s, ignore", err)
-				continue
+			} else {
+				defer func() {
+					upgErr := decreaseScheduleLimit(pdClient, origLeaderScheduleLimit, origRegionScheduleLimit)
+					if upgErr != nil {
+						log.Warnf(
+							"failed decreasing schedule limit (original values should be: %s, %s), please check if their current values are reasonable: %s",
+							fmt.Sprintf("leader-schedule-limit=%d", origLeaderScheduleLimit),
+							fmt.Sprintf("region-schedule-limit=%d", origRegionScheduleLimit),
+							upgErr,
+						)
+					}
+				}()
 			}
-			defer func() {
-				upgErr := decreaseScheduleLimit(pdClient, origLeaderScheduleLimit, origRegionScheduleLimit)
-				if upgErr != nil {
-					log.Warnf(
-						"failed decreasing schedule limit (original values should be: %s, %s), please check if their current values are reasonable: %s",
-						fmt.Sprintf("leader-schedule-limit=%d", origLeaderScheduleLimit),
-						fmt.Sprintf("region-schedule-limit=%d", origRegionScheduleLimit),
-						upgErr,
-					)
-				}
-			}()
 		default:
 			// do nothing, kept for future usage with other components
 		}
