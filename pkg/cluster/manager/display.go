@@ -119,7 +119,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 
 		// display TLS info
 		if topo.BaseTopo().GlobalOptions.TLSEnabled {
-			fmt.Printf("TLS encryption:  	%s\n", cyan.Sprint("enabled"))
+			fmt.Printf("TLS encryption:     %s\n", cyan.Sprint("enabled"))
 			fmt.Printf("CA certificate:     %s\n", cyan.Sprint(
 				m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
 			))
