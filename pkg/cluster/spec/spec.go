@@ -29,6 +29,7 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"golang.org/x/mod/semver"
 )
 
 const (
@@ -374,6 +375,16 @@ func (s *Specification) GetPDList() []string {
 	}
 
 	return pdList
+}
+
+// AdjustByVersion modify the spec by cluster version.
+func (s *Specification) AdjustByVersion(clusterVersion string) {
+	// CDC does not support data dir for version below v4.0.13, and also v5.0.0-rc, set it to empty.
+	if semver.Compare(clusterVersion, "v4.0.13") == -1 || clusterVersion == "v5.0.0-rc" {
+		for _, server := range s.CDCServers {
+			server.DataDir = ""
+		}
+	}
 }
 
 // GetDashboardAddress returns the cluster's dashboard addr
