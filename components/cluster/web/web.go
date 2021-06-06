@@ -84,6 +84,8 @@ func Run(_tidbSpec *spec.SpecManager, _manager *manager.Manager, _gOpt operator.
 	api := router.Group("/api")
 	backup.RegisterRouter(api, backupSrv)
 	{
+		api.POST("/login", loginHandler)
+
 		api.GET("/status", statusHandler)
 
 		api.POST("/deploy", deployHandler)
@@ -132,6 +134,28 @@ type DeployReq struct {
 	TiDBVersion        string             `json:"tidb_version"`
 	TopoYaml           string             `json:"topo_yaml"`
 	GlobalLoginOptions GlobalLoginOptions `json:"global_login_options"`
+}
+
+type loginReq struct {
+	UserName string `json:"username"`
+	Password string `json:"password"`
+}
+
+func loginHandler(c *gin.Context) {
+	var req loginReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		_ = c.Error(err)
+		return
+	}
+	if req.UserName != "admin" && req.Password != "admin" {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"message": "user and password doesn't match",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"token": "test",
+	})
 }
 
 func statusHandler(c *gin.Context) {

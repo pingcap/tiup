@@ -14,6 +14,7 @@ import ClusterUpgradePage from '_pages/Clusters/ClusterUpgrade'
 import ClusterDowngradePage from '_pages/Clusters/ClusterDowngrade'
 import ClusterBackupPage from '_pages/Clusters/ClusterBackup'
 import AuditPage from '_pages/Audit'
+import LoginPage from '_pages/Login'
 
 import './App.less'
 
@@ -21,6 +22,7 @@ function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/status" element={<StatusPage />} />
 
         <Route path="/" element={<HomePage />}>

@@ -121,3 +121,10 @@ export function updateBackupSetting(
 export function deleteBackup(clusterName: string, id: string) {
   return request(fullUrl(`backup/${clusterName}/backup?id=${id}`), 'DELETE')
 }
+
+export function login(username: string, password: string) {
+  return request(fullUrl(`login`), 'POST', {
+    username,
+    password,
+  })
+}
