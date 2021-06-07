@@ -59,6 +59,7 @@ type DashboardInfo struct {
 	ClusterType    string `json:"cluster_type"`
 	ClusterName    string `json:"cluster_name"`
 	ClusterVersion string `json:"cluster_version"`
+	DeployUser     string `json:"deploy_user"`
 	SSHType        string `json:"ssh_type"`
 	TLSEnabled     bool   `json:"tls_enabled"`
 	TLSCACert      string `json:"tls_ca_cert"`
@@ -96,6 +97,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 				m.sysName,
 				name,
 				base.Version,
+				topo.BaseTopo().GlobalOptions.User,
 				string(topo.BaseTopo().GlobalOptions.SSHType),
 				topo.BaseTopo().GlobalOptions.TLSEnabled,
 				"", // CA Cert
@@ -115,6 +117,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 		fmt.Printf("Cluster type:       %s\n", cyan.Sprint(m.sysName))
 		fmt.Printf("Cluster name:       %s\n", cyan.Sprint(name))
 		fmt.Printf("Cluster version:    %s\n", cyan.Sprint(base.Version))
+		fmt.Printf("Deploy user:        %s\n", cyan.Sprint(topo.BaseTopo().GlobalOptions.User))
 		fmt.Printf("SSH type:           %s\n", cyan.Sprint(topo.BaseTopo().GlobalOptions.SSHType))
 
 		// display TLS info
