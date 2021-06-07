@@ -28,7 +28,7 @@ var (
 )
 
 var (
-	clusterNameRegexp = regexp.MustCompile(`^[a-zA-Z0-9\-_]+$`)
+	clusterNameRegexp = regexp.MustCompile(`^[a-zA-Z0-9\-_\.]+$`)
 )
 
 // ValidateClusterNameOrError validates a cluster name and returns error if the name is invalid.
@@ -40,7 +40,7 @@ func ValidateClusterNameOrError(n string) error {
 	if !clusterNameRegexp.MatchString(n) {
 		return ErrInvalidClusterName.
 			New("Cluster name '%s' is invalid", n).
-			WithProperty(cliutil.SuggestionFromString("The cluster name should only contains alphabets, numbers, hyphen (-) and underscore (_)."))
+			WithProperty(cliutil.SuggestionFromString("The cluster name should only contain alphabets, numbers, hyphen (-), underscore (_), and dot (.)."))
 	}
 	return nil
 }
