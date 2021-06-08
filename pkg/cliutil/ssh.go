@@ -22,8 +22,8 @@ import (
 )
 
 var (
-	// ErrIdentityFileReadFiled is ErrIdentityFileReadFiled
-	ErrIdentityFileReadFiled = errNS.NewType("id_read_failed", errutil.ErrTraitPreCheck)
+	// ErrIdentityFileReadFailed is ErrIdentityFileReadFailed
+	ErrIdentityFileReadFailed = errNS.NewType("id_read_failed", errutil.ErrTraitPreCheck)
 )
 
 // SSHConnectionProps is SSHConnectionProps
@@ -48,7 +48,7 @@ func ReadIdentityFileOrPassword(identityFilePath string, usePass bool) (*SSHConn
 	// Identity file is specified, check identity file
 	buf, err := os.ReadFile(identityFilePath)
 	if err != nil {
-		return nil, ErrIdentityFileReadFiled.
+		return nil, ErrIdentityFileReadFailed.
 			Wrap(err, "Failed to read SSH identity file '%s'", identityFilePath).
 			WithProperty(SuggestionFromTemplate(`
 Please check whether your SSH identity file {{ColorKeyword}}{{.File}}{{ColorReset}} exists and have access permission.
@@ -67,7 +67,7 @@ Please check whether your SSH identity file {{ColorKeyword}}{{.File}}{{ColorRese
 
 	// Other kind of error.. e.g. not a valid SSH key
 	if _, ok := err.(*ssh.PassphraseMissingError); !ok {
-		return nil, ErrIdentityFileReadFiled.
+		return nil, ErrIdentityFileReadFailed.
 			Wrap(err, "Failed to read SSH identity file '%s'", identityFilePath).
 			WithProperty(SuggestionFromTemplate(`
 Looks like your SSH private key {{ColorKeyword}}{{.File}}{{ColorReset}} is invalid.
@@ -79,7 +79,7 @@ Looks like your SSH private key {{ColorKeyword}}{{.File}}{{ColorReset}} is inval
 	// SSH key is passphrase protected
 	passphrase := PromptForPassword("The SSH identity key is encrypted. Input its passphrase: ")
 	if _, err := sshkeys.ParseEncryptedPrivateKey(buf, []byte(passphrase)); err != nil {
-		return nil, ErrIdentityFileReadFiled.
+		return nil, ErrIdentityFileReadFailed.
 			Wrap(err, "Failed to decrypt SSH identity file '%s'", identityFilePath)
 	}
 
