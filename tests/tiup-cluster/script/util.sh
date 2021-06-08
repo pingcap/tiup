@@ -13,7 +13,7 @@ function instance_num() {
 
     client=""
     if [ $native_ssh == true ]; then
-        client="--native-ssh"
+        client="--ssh=system"
     fi
 
     count=$(tiup-cluster $client display $name | grep "Total nodes" | awk -F ' ' '{print $3}')
@@ -31,7 +31,7 @@ function wait_instance_num_reach() {
 
     client=""
     if [ $native_ssh == true ]; then
-        client="--native-ssh"
+        client="--ssh=system"
     fi
 
     for ((i=0;i<120;i++))
