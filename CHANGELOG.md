@@ -1,5 +1,40 @@
 TiUP Changelog
 
+## [1.5.0] 2021-06-10
+
+### New Features
+
+- Show more information in `display` subcommand of `tiup-cluster`
+  - Add an `--uptime` argument to show time since the last state change of process ([#1231](https://github.com/pingcap/tiup/pull/1231), [@9547](https://github.com/9547))
+  - Show deploy user in `display` output and adjust formats ([#1390](https://github.com/pingcap/tiup/pull/1390) [#1409](https://github.com/pingcap/tiup/pull/1409), [@AstroProfundis](https://github.com/AstroProfundis))
+- Add JSON output for `display` subcommand of `tiup-cluster` ([#1358](https://github.com/pingcap/tiup/pull/1358), [@dveeden](https://github.com/dveeden))
+- Add double confirmation for `scale-out` subcommand in `tiup-cluster` to let users be aware of global configs being used ([#1309](https://github.com/pingcap/tiup/pull/1309), [@AstroProfundis](https://github.com/AstroProfundis))
+- Support deploying pure TiKV cluster with `--mode tikv-slim` in `playground` ([#1333](https://github.com/pingcap/tiup/pull/1333), [@iosmanthus](https://github.com/iosmanthus); [#1365](https://github.com/pingcap/tiup/pull/1365), [@tisonkun](https://github.com/tisonkun))
+- Support data dir settings for TiCDC in `tiup-cluster` ([#1372](https://github.com/pingcap/tiup/pull/1372), [@JinLingChristopher](https://github.com/JinLingChristopher))
+- Support change of `GCTTL` and `TZ` configs for TiCDC in `tiup-cluster` ([#1380](https://github.com/pingcap/tiup/pull/1380), [@amyangfei](https://github.com/amyangfei))
+- Add a local deployment template for `tiup-cluster` ([#1404](https://github.com/pingcap/tiup/pull/1404), [@kolbe](https://github.com/kolbe))
+- Support using dot (`.`) in cluster name ([#1412](https://github.com/pingcap/tiup/pull/1412), [@9547](https://github.com/9547))
+
+### Fixes
+
+- Fix a variety of typos ([#1306](https://github.com/pingcap/tiup/pull/1306), [@kolbe](https://github.com/kolbe))
+- Fix non-common speed units shown in downloading progress ([#1312](https://github.com/pingcap/tiup/pull/1312), [@dveeden](https://github.com/dveeden))
+- Fix wrong indent in display ([#1390](https://github.com/pingcap/tiup/pull/1390), [@lucklove](https://github.com/lucklove))
+- Fix the issue that it may panic when user try to list expired component ([#1391](https://github.com/pingcap/tiup/pull/1391), [@lucklove](https://github.com/lucklove))
+- Fix the issue that tikv not upgraded on error increasing schedule limit  ([#1401](https://github.com/pingcap/tiup/pull/1401), [@AstroProfundis](https://github.com/AstroProfundis))
+
+### Improvements
+
+- Support specifying node conts in tests ([#1251](https://github.com/pingcap/tiup/pull/1251), [@9547](https://github.com/9547))
+- Add double confirmation for `reload`, `patch` and `rename` subcommands in `tiup-cluster` ([#1263](https://github.com/pingcap/tiup/pull/1263), [@9547](https://github.com/9547))
+- Add ability to list available make targets for developers ([#1277](https://github.com/pingcap/tiup/pull/1277), [@rkazak](https://github.com/rkazak))
+- Update links in doc/dev/README.md file ([#1296](https://github.com/pingcap/tiup/pull/1296), [@mjonss](https://github.com/mjonss))
+- Improve handling of latest versions in `mirror clone` subcommand ([#1313](https://github.com/pingcap/tiup/pull/1313), [@dveeden](https://github.com/dveeden))
+- Add check for dependencies before downloading package in installation script ([#1348](https://github.com/pingcap/tiup/pull/1348), [@AstroProfundis](https://github.com/AstroProfundis))
+- Simplified the handling of configs imported from TiDB-Ansible ([#1350](https://github.com/pingcap/tiup/pull/1350), [@lucklove](https://github.com/lucklove))
+- Implement native SCP downloading ([#1382](https://github.com/pingcap/tiup/pull/1382), [@AstroProfundis](https://github.com/AstroProfundis))
+- Update and fix dependencies ([#1362](https://github.com/pingcap/tiup/pull/1362), [@AstroProfundis](https://github.com/AstroProfundis); [#1407](https://github.com/pingcap/tiup/pull/1407), [@dveeden](https://github.com/dveeden))
+
 ## [1.4.4] 2021.05.26
 
 ### Fixes
