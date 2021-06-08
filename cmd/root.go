@@ -249,7 +249,7 @@ func Execute() {
 				if err != nil {
 					log.Infof("report failed: %v", err)
 				}
-				fmt.Printf("report: %s\n", teleReport.String())
+				fmt.Fprintf(os.Stderr, "report: %s\n", teleReport.String())
 				if data, err := json.Marshal(teleReport); err == nil {
 					log.Debugf("report: %s\n", string(data))
 				}
