@@ -54,23 +54,24 @@ type InstInfo struct {
 	Port          int
 }
 
-// DashboardInfo hold the structure for the JSON output of the dashboard info
-type DashboardInfo struct {
+// ClusterMetaInfo hold the structure for the JSON output of the dashboard info
+type ClusterMetaInfo struct {
 	ClusterType    string `json:"cluster_type"`
 	ClusterName    string `json:"cluster_name"`
 	ClusterVersion string `json:"cluster_version"`
+	DeployUser     string `json:"deploy_user"`
 	SSHType        string `json:"ssh_type"`
 	TLSEnabled     bool   `json:"tls_enabled"`
-	TLSCACert      string `json:"tls_ca_cert"`
-	TLSClientCert  string `json:"tls_client_cert"`
-	TLSClientKey   string `json:"tls_client_key"`
-	DashboardURL   string `json:"dashboard_url"`
+	TLSCACert      string `json:"tls_ca_cert,omitempty"`
+	TLSClientCert  string `json:"tls_client_cert,omitempty"`
+	TLSClientKey   string `json:"tls_client_key,omitempty"`
+	DashboardURL   string `json:"dashboard_url,omitempty"`
 }
 
 // JSONOutput holds the structure for the JSON output of `tiup cluster display --json`
 type JSONOutput struct {
-	DashboardInfo DashboardInfo `json:"dashboard"`
-	InstanceInfos []InstInfo    `json:"instances"`
+	ClusterMetaInfo ClusterMetaInfo `json:"cluster_meta"`
+	InstanceInfos   []InstInfo      `json:"instances"`
 }
 
 // Display cluster meta and topology.
@@ -92,10 +93,11 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	var j *JSONOutput
 	if opt.JSON {
 		j = &JSONOutput{
-			DashboardInfo: DashboardInfo{
+			ClusterMetaInfo: ClusterMetaInfo{
 				m.sysName,
 				name,
 				base.Version,
+				topo.BaseTopo().GlobalOptions.User,
 				string(topo.BaseTopo().GlobalOptions.SSHType),
 				topo.BaseTopo().GlobalOptions.TLSEnabled,
 				"", // CA Cert
@@ -107,14 +109,15 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 		}
 
 		if topo.BaseTopo().GlobalOptions.TLSEnabled {
-			j.DashboardInfo.TLSCACert = m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert)
-			j.DashboardInfo.TLSClientKey = m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientKey)
-			j.DashboardInfo.TLSClientCert = m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientCert)
+			j.ClusterMetaInfo.TLSCACert = m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert)
+			j.ClusterMetaInfo.TLSClientKey = m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientKey)
+			j.ClusterMetaInfo.TLSClientCert = m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientCert)
 		}
 	} else {
 		fmt.Printf("Cluster type:       %s\n", cyan.Sprint(m.sysName))
 		fmt.Printf("Cluster name:       %s\n", cyan.Sprint(name))
 		fmt.Printf("Cluster version:    %s\n", cyan.Sprint(base.Version))
+		fmt.Printf("Deploy user:        %s\n", cyan.Sprint(topo.BaseTopo().GlobalOptions.User))
 		fmt.Printf("SSH type:           %s\n", cyan.Sprint(topo.BaseTopo().GlobalOptions.SSHType))
 
 		// display TLS info
@@ -180,7 +183,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 				scheme = "https"
 			}
 			if opt.JSON {
-				j.DashboardInfo.DashboardURL = fmt.Sprintf("%s://%s/dashboard", scheme, dashboardAddr)
+				j.ClusterMetaInfo.DashboardURL = fmt.Sprintf("%s://%s/dashboard", scheme, dashboardAddr)
 			} else {
 				fmt.Printf("Dashboard URL:      %s\n", cyan.Sprintf("%s://%s/dashboard", scheme, dashboardAddr))
 			}
