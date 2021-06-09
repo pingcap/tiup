@@ -86,6 +86,8 @@ func init() {
 	}
 
 	var runUI bool
+	var uiUser string
+	var uiPwd string
 	rootCmd = &cobra.Command{
 		Use:           cliutil.OsArgs0(),
 		Short:         "Deploy a TiDB cluster for production",
@@ -127,7 +129,7 @@ func init() {
 		Run: func(cmd *cobra.Command, args []string) {
 			if runUI {
 				fmt.Println("Start to run cluster web ui")
-				web.Run(tidbSpec, cm, gOpt)
+				web.Run(tidbSpec, cm, gOpt, uiUser, uiPwd)
 				return
 			}
 			_ = cmd.Help()
@@ -149,6 +151,8 @@ func init() {
 	_ = rootCmd.PersistentFlags().MarkHidden("native-ssh")
 
 	rootCmd.Flags().BoolVar(&runUI, "ui", false, "Run web ui for cluster")
+	rootCmd.Flags().StringVar(&uiUser, "ui-user", "admin", "Username to login tiup ui")
+	rootCmd.Flags().StringVar(&uiPwd, "ui-pwd", "admin", "Password to login tiup ui")
 
 	rootCmd.AddCommand(
 		newCheckCmd(),

@@ -1,3 +1,7 @@
+import { message, notification } from 'antd'
+
+import { clearAuthToken, getAuthTokenAsBearer } from '_utils/auth'
+
 export type ResError = Error & {
   response?: any
 }
@@ -15,6 +19,7 @@ export default function request(
       ...options?.headers,
       Accept: 'application/json',
       'Content-Type': 'application/json',
+      Authorization: getAuthTokenAsBearer() || '',
     },
   }
   if (body) {
@@ -43,6 +48,15 @@ function parseResponse(response: Response) {
         errMsg = resData.msg || resData.message || response.statusText
       })
       .finally(() => {
+        if (response.status === 401) {
+          message.error({ content: errMsg, key: '401' })
+          clearAuthToken()
+
+          window.location.hash = '/login'
+        } else {
+          notification.error({ message: errMsg })
+        }
+
         const error: ResError = new Error(errMsg)
         error.response = response
         throw error

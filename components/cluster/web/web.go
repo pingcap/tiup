@@ -15,6 +15,7 @@ import (
 	"github.com/pingcap/tiup/cmd"
 	"github.com/pingcap/tiup/components/cluster/web/backup"
 	"github.com/pingcap/tiup/components/cluster/web/uiserver"
+	"github.com/pingcap/tiup/components/cluster/web/utils"
 
 	"github.com/pingcap/tiup/pkg/cluster/audit"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
@@ -36,6 +37,12 @@ var (
 	cm          *manager.Manager
 	gOpt        operator.Options
 	skipConfirm = true
+	uiUser      string
+	uiPwd       string
+)
+
+const (
+	loginSecret = "tiup_ui_login"
 )
 
 // MWHandleErrors creates a middleware that turns (last) error in the context into an APIError json response.
@@ -63,11 +70,41 @@ func MWHandleErrors() gin.HandlerFunc {
 	}
 }
 
+func authMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		header := c.Request.Header.Get("Authorization")
+		var t string
+		fmt.Sscanf(header, "Bearer %s", &t)
+		user, err := utils.ParseJWTString(loginSecret, t)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"message": err.Error(),
+			})
+			return
+		}
+		if user != uiUser {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"message": "Token is invalid",
+			})
+			return
+		}
+
+		c.Next()
+	}
+}
+
 // Run starts web ui for cluster
-func Run(_tidbSpec *spec.SpecManager, _manager *manager.Manager, _gOpt operator.Options) {
+func Run(
+	_tidbSpec *spec.SpecManager,
+	_manager *manager.Manager,
+	_gOpt operator.Options,
+	_uiUser string,
+	_uiPwd string) {
 	tidbSpec = _tidbSpec
 	cm = _manager
 	gOpt = _gOpt
+	uiUser = _uiUser
+	uiPwd = _uiPwd
 
 	// sqlite db
 	db, err := gorm.Open(sqlite.Open("tiup-ui.db"), &gorm.Config{})
@@ -85,28 +122,30 @@ func Run(_tidbSpec *spec.SpecManager, _manager *manager.Manager, _gOpt operator.
 	backup.RegisterRouter(api, backupSrv)
 	{
 		api.POST("/login", loginHandler)
-
-		api.GET("/status", statusHandler)
-
-		api.POST("/deploy", deployHandler)
-		api.GET("/clusters", clustersHandler)
-		api.GET("/clusters/:clusterName", clusterHandler)
-		api.DELETE("/clusters/:clusterName", destroyClusterHandler)
-		api.POST("/clusters/:clusterName/start", startClusterHandler)
-		api.POST("/clusters/:clusterName/stop", stopClusterHandler)
-		api.POST("/clusters/:clusterName/scale_in", scaleInClusterHandler)
-		api.POST("/clusters/:clusterName/scale_out", scaleOutClusterHandler)
-		api.POST("/clusters/:clusterName/check", checkClusterHandler)
-		api.GET("/clusters/:clusterName/check_result", checkResultHandler)
-		api.POST("/clusters/:clusterName/upgrade", upgradeClusterHandler)
-		api.POST("/clusters/:clusterName/downgrade", downgradeClusterHandler)
-
-		api.GET("/mirror", mirrorHandler)
-		api.POST("/mirror", setMirrorHandler)
-
 		api.GET("/tidb_versions", tidbVersionsHandler)
 
-		api.GET("/audit", auditLogListHandler)
+		api.Use(authMiddleware())
+		{
+			api.GET("/status", statusHandler)
+
+			api.POST("/deploy", deployHandler)
+			api.GET("/clusters", clustersHandler)
+			api.GET("/clusters/:clusterName", clusterHandler)
+			api.DELETE("/clusters/:clusterName", destroyClusterHandler)
+			api.POST("/clusters/:clusterName/start", startClusterHandler)
+			api.POST("/clusters/:clusterName/stop", stopClusterHandler)
+			api.POST("/clusters/:clusterName/scale_in", scaleInClusterHandler)
+			api.POST("/clusters/:clusterName/scale_out", scaleOutClusterHandler)
+			api.POST("/clusters/:clusterName/check", checkClusterHandler)
+			api.GET("/clusters/:clusterName/check_result", checkResultHandler)
+			api.POST("/clusters/:clusterName/upgrade", upgradeClusterHandler)
+			api.POST("/clusters/:clusterName/downgrade", downgradeClusterHandler)
+
+			api.GET("/mirror", mirrorHandler)
+			api.POST("/mirror", setMirrorHandler)
+
+			api.GET("/audit", auditLogListHandler)
+		}
 	}
 	// Frontend assets
 	router.StaticFS("/tiup", uiserver.Assets)
@@ -147,14 +186,19 @@ func loginHandler(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	if req.UserName != "admin" && req.Password != "admin" {
+	if req.UserName != uiUser || req.Password != uiPwd {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"message": "user and password doesn't match",
 		})
 		return
 	}
+	token, err := utils.NewJWTString(loginSecret, uiUser)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
-		"token": "test",
+		"token": token,
 	})
 }
 

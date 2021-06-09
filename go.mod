@@ -16,6 +16,7 @@ require (
 	github.com/cheggaaa/pb/v3 v3.0.6
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f // indirect
 	github.com/creasty/defaults v1.5.1
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/go-units v0.4.0
 	github.com/fatih/color v1.10.0
 	github.com/gibson042/canonicaljson-go v1.0.3
@@ -29,6 +30,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.14.3
+	github.com/gtank/cryptopasta v0.0.0-20170601214702-1f550f6f2f69
 	github.com/jeremywohl/flatten v1.0.1
 	github.com/jinzhu/now v1.1.2 // indirect
 	github.com/joomcode/errorx v1.0.3

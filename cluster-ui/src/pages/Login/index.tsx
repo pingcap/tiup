@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 
 import { Root } from '_components'
 import { login } from '_apis'
+import { setAuthToken } from '_utils/auth'
 
 const layout = {
   // labelCol: { span: 8 },
@@ -19,7 +20,12 @@ export default function LoginPage() {
   async function onFinish(values: any) {
     const { username, password } = values
     const { data, err } = await login(username, password)
+    // console.log('data:', data)
+    // console.log('err:', err)
+
     if (err === undefined) {
+      const { token } = data
+      setAuthToken(token)
       navigate('/')
     }
   }
@@ -29,7 +35,7 @@ export default function LoginPage() {
   return (
     <Root>
       <div style={{ maxWidth: 400, margin: '0 auto' }}>
-        <h1>欢迎使用 TiUP UI</h1>
+        <h1 style={{ marginTop: 50 }}>欢迎使用 TiUP UI</h1>
         <Form
           {...layout}
           layout="vertical"
