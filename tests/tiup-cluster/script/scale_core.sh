@@ -11,7 +11,7 @@ function scale_core() {
 
     client=""
     if [ $native_ssh == true ]; then
-        client="--native-ssh"
+        client="--ssh=system"
     fi
 
     name="test_scale_core_$RANDOM"
