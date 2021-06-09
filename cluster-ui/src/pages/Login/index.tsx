@@ -1,6 +1,6 @@
 import React from 'react'
-import { Form, Input, Button, Checkbox } from 'antd'
-import { useParams, useNavigate } from 'react-router-dom'
+import { Form, Input, Button } from 'antd'
+import { useNavigate } from 'react-router-dom'
 
 import { Root } from '_components'
 import { login } from '_apis'

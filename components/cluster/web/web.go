@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"crypto/md5"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -186,7 +187,12 @@ func loginHandler(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	if req.UserName != uiUser || req.Password != uiPwd {
+	// md5
+	pwdData := []byte(req.Password)
+	md5Des := md5.Sum(pwdData)
+	md5Str := fmt.Sprintf("%x", md5Des)
+
+	if req.UserName != uiUser || md5Str != uiPwd {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"message": "user and password doesn't match",
 		})

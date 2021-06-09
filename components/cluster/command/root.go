@@ -152,7 +152,10 @@ func init() {
 
 	rootCmd.Flags().BoolVar(&runUI, "ui", false, "Run web ui for cluster")
 	rootCmd.Flags().StringVar(&uiUser, "ui-user", "admin", "Username to login tiup ui")
-	rootCmd.Flags().StringVar(&uiPwd, "ui-pwd", "admin", "Password to login tiup ui")
+	// 21232f297a57a5a743894a0e4a801fc3 is the md5 of "admin"
+	// > md5 -s "admin"
+	// MD5 ("admin") = 21232f297a57a5a743894a0e4a801fc3
+	rootCmd.Flags().StringVar(&uiPwd, "ui-pwd", "21232f297a57a5a743894a0e4a801fc3", "Password to login tiup ui")
 
 	rootCmd.AddCommand(
 		newCheckCmd(),
