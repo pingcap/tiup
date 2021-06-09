@@ -1,11 +1,14 @@
 import { Button, Form, Input, message } from 'antd'
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router'
 import { getMirrorAddress, setMirrorAddress } from '_apis'
 import { Root } from '_components'
+import { clearAuthToken } from '_utils/auth'
 
 export default function SettingPage() {
   const [curMirrorAddress, setCurMirrorAddress] = useState('')
   const [refresh, setRefresh] = useState(0)
+  const navigate = useNavigate()
 
   useEffect(() => {
     getMirrorAddress().then(({ data, err }) => {
@@ -27,6 +30,11 @@ export default function SettingPage() {
     })
   }
 
+  function logOut() {
+    clearAuthToken()
+    navigate('/login')
+  }
+
   return (
     <Root>
       <Form layout="vertical" onFinish={handleFinish}>
@@ -39,6 +47,9 @@ export default function SettingPage() {
           </Button>
         </Form.Item>
       </Form>
+      <Button type="primary" htmlType="submit" onClick={logOut}>
+        退出登录
+      </Button>
     </Root>
   )
 }

@@ -20,8 +20,6 @@ export default function LoginPage() {
   async function onFinish(values: any) {
     const { username, password } = values
     const { data, err } = await login(username, password)
-    // console.log('data:', data)
-    // console.log('err:', err)
 
     if (err === undefined) {
       const { token } = data
