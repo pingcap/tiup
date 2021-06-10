@@ -77,15 +77,9 @@ func authMiddleware() gin.HandlerFunc {
 		var t string
 		fmt.Sscanf(header, "Bearer %s", &t)
 		user, err := utils.ParseJWTString(loginSecret, t)
-		if err != nil {
+		if err != nil || user != uiUser {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"message": err.Error(),
-			})
-			return
-		}
-		if user != uiUser {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"message": "Token is invalid",
+				"message": "Invalid token",
 			})
 			return
 		}
