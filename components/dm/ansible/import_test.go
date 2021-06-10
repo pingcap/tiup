@@ -142,7 +142,7 @@ func TestImportFromAnsible(t *testing.T) {
 	im, err := NewImporter(dir, "inventory.ini", executor.SSHTypeBuiltin, 0)
 	assert.Nil(err)
 	im.testExecutorGetter = &executorGetter{}
-	clusterName, meta, err := im.ImportFromAnsibleDir(ctxt.New(context.Background()))
+	clusterName, meta, err := im.ImportFromAnsibleDir(ctxt.New(context.Background(), 0))
 	assert.Nil(err, "verbose: %+v", err)
 	assert.Equal("test-cluster", clusterName)
 

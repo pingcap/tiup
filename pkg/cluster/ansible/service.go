@@ -36,7 +36,7 @@ var (
 // parseDirs sets values of directories of component
 func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType executor.SSHType) (spec.InstanceSpec, error) {
 	hostName, sshPort := ins.SSH()
-	ctx := ctxt.New(context.Background())
+	ctx := ctxt.New(context.Background(), 0)
 
 	e, err := executor.New(sshType, false, executor.SSHConfig{
 		Host:    hostName,

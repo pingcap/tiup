@@ -72,7 +72,7 @@ func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt 
 		}).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background())); err != nil {
+	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -119,7 +119,7 @@ func (m *Manager) DestroyTombstone(
 
 	b := m.sshTaskBuilder(name, topo, base.User, gOpt)
 
-	ctx := ctxt.New(context.Background())
+	ctx := ctxt.New(context.Background(), gOpt.Concurrency)
 	nodes, err := operator.DestroyTombstone(ctx, cluster, true /* returnNodesOnly */, gOpt, tlsCfg)
 	if err != nil {
 		return err

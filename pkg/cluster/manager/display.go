@@ -202,7 +202,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	cliutil.PrintTable(clusterTable, true)
 	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
 
-	ctx := ctxt.New(context.Background())
+	ctx := ctxt.New(context.Background(), opt.Concurrency)
 	if t, ok := topo.(*spec.Specification); ok {
 		// Check if TiKV's label set correctly
 		pdClient := api.NewPDClient(masterActive, 10*time.Second, tlsCfg)
@@ -227,7 +227,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 
 // GetClusterTopology get the topology of the cluster.
 func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstInfo, error) {
-	ctx := ctxt.New(context.Background())
+	ctx := ctxt.New(context.Background(), opt.Concurrency)
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) &&
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {

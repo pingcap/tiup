@@ -25,7 +25,7 @@ import (
 )
 
 func TestLocal(t *testing.T) {
-	ctx := ctxt.New(context.Background())
+	ctx := ctxt.New(context.Background(), 0)
 
 	assert := require.New(t)
 	user, err := user.Current()
@@ -72,7 +72,7 @@ func TestWrongIP(t *testing.T) {
 }
 
 func TestLocalExecuteWithQuotes(t *testing.T) {
-	ctx := ctxt.New(context.Background())
+	ctx := ctxt.New(context.Background(), 0)
 
 	assert := require.New(t)
 	user, err := user.Current()

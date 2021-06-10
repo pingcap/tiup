@@ -154,7 +154,7 @@ func (m *Manager) ScaleOut(
 		return err
 	}
 
-	ctx := ctxt.New(context.Background())
+	ctx := ctxt.New(context.Background(), gOpt.Concurrency)
 	ctx = context.WithValue(ctx, ctxt.CtxBaseTopo, topo)
 	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
