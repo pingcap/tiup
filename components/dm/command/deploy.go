@@ -19,7 +19,6 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -45,11 +44,6 @@ func newDeployCmd() *cobra.Command {
 			}
 			if !shouldContinue {
 				return nil
-			}
-
-			// natvie ssh has it's own logic to find the default identity_file
-			if gOpt.SSHType == executor.SSHTypeSystem && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
-				opt.IdentityFile = ""
 			}
 
 			clusterName := args[0]
