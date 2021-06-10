@@ -92,7 +92,7 @@ Looks like your SSH private key {{ColorKeyword}}{{.File}}{{ColorReset}} is inval
 	// No password, nor identity file were specified, check ssh-agent via the env SSH_AUTH_SOCK
 	sshAuthSock := os.Getenv("SSH_AUTH_SOCK")
 	if len(sshAuthSock) == 0 {
-		return nil, ErrIdentityFileReadFailed.New("ssh password, identity file, SSH_AUTH_SOCK were not specified")
+		return nil, ErrIdentityFileReadFailed.New("none of ssh password, identity file, SSH_AUTH_SOCK specified")
 	}
 	stat, err := os.Stat(sshAuthSock)
 	if err != nil {
