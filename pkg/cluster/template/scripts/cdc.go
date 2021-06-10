@@ -128,6 +128,7 @@ func (c *CDCScript) PatchByVersion(clusterVersion, dataDir string) *CDCScript {
 	ignore := map[string]struct{}{
 		"v5.0.0-rc":    {},
 		"v5.1.0-alpha": {},
+		"v5.2.0-alpha": {},
 	}
 
 	// config support since v4.0.13, ignore v5.0.0-rc

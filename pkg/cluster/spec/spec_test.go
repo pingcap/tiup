@@ -21,7 +21,6 @@ import (
 	"github.com/BurntSushi/toml"
 	. "github.com/pingcap/check"
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
-	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v2"
 )
 
@@ -721,28 +720,42 @@ cdc_servers:
 	instances := cdcComp.Instances()
 	c.Assert(len(instances), Equals, 1)
 
+	var expected = map[string]struct {
+		configSupported  bool
+		dataDir          bool // data-dir is set
+		dataDirSupported bool
+	}{
+		"v4.0.12": {false, false, false},
+		"v4.0.13": {true, true, false},
+		"v4.0.14": {true, true, true},
+
+		"v5.0.0": {true, true, false},
+		"v5.0.1": {true, true, false},
+		"v5.0.2": {true, true, false},
+
+		"v5.0.3": {true, true, true},
+		"v5.1.0": {true, true, true},
+
+		"v5.0.0-rc":    {false, false, false},
+		"v5.1.0-alpha": {true, true, false},
+		"v5.2.0-alpha": {true, true, false},
+	}
+
 	checkByVersion := func(version string) {
 		ins := instances[0].(*CDCInstance)
 		cfg := scripts.NewCDCScript(ins.GetHost(), "", "", false, 0, "").
 			PatchByVersion(version, ins.DataDir())
 
-		// DataDir support since v4.0.13
-		checker := Equals
-		if semver.Compare(version, "v4.0.13") >= 0 && version != "v5.0.0-rc" {
-			checker = Not(checker)
-			c.Assert(len(cfg.DataDir), checker, 0)
+		wanted := expected[version]
 
-			// TiCDC support --data-dir since v4.0.14 and v5.0.3
-			expected := semver.Compare(version, "v4.0.14") >= 0 || semver.Compare(version, "v5.0.3") >= 0
-			c.Assert(cfg.DataDirEnabled, Equals, expected)
-		}
+		c.Assert(cfg.ConfigFileEnabled, Equals, wanted.configSupported)
+		c.Assert(cfg.DataDirEnabled, Equals, wanted.dataDirSupported)
+		c.Assert(len(cfg.DataDir) != 0, Equals, wanted.dataDir)
 	}
 
-	checkByVersion("v4.0.12")
-	checkByVersion("v4.0.13")
-	checkByVersion("v5.0.0-rc")
-	checkByVersion("v4.0.14")
-	checkByVersion("v5.0.3")
+	for k := range expected {
+		checkByVersion(k)
+	}
 }
 
 func (s *metaSuiteTopo) TestTiFlashUsersSettings(c *C) {
