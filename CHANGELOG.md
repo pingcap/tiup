@@ -1,6 +1,12 @@
 TiUP Changelog
 
-## [1.5.0] 2021-06-10
+## [1.5.1] 2021-06-11
+
+### Fix
+
+- Fix the issue that some versions of TiCDC node may fail to start in `tiup-cluster` ([#1421](https://github.com/pingcap/tiup/pull/1421), [@JinLingChristopher](https://github.com/JinLingChristopher))
+
+## [1.5.0] 2021-06-09
 
 ### New Features
 
@@ -19,20 +25,19 @@ TiUP Changelog
 
 - Fix a variety of typos ([#1306](https://github.com/pingcap/tiup/pull/1306), [@kolbe](https://github.com/kolbe))
 - Fix non-common speed units shown in downloading progress ([#1312](https://github.com/pingcap/tiup/pull/1312), [@dveeden](https://github.com/dveeden))
-- Fix wrong indent in display ([#1390](https://github.com/pingcap/tiup/pull/1390), [@lucklove](https://github.com/lucklove))
 - Fix the issue that it may panic when user try to list expired component ([#1391](https://github.com/pingcap/tiup/pull/1391), [@lucklove](https://github.com/lucklove))
 - Fix the issue that tikv not upgraded on error increasing schedule limit  ([#1401](https://github.com/pingcap/tiup/pull/1401), [@AstroProfundis](https://github.com/AstroProfundis))
 
 ### Improvements
 
-- Support specifying node conts in tests ([#1251](https://github.com/pingcap/tiup/pull/1251), [@9547](https://github.com/9547))
+- Support specifying node counts in tests ([#1251](https://github.com/pingcap/tiup/pull/1251), [@9547](https://github.com/9547))
 - Add double confirmation for `reload`, `patch` and `rename` subcommands in `tiup-cluster` ([#1263](https://github.com/pingcap/tiup/pull/1263), [@9547](https://github.com/9547))
 - Add ability to list available make targets for developers ([#1277](https://github.com/pingcap/tiup/pull/1277), [@rkazak](https://github.com/rkazak))
 - Update links in doc/dev/README.md file ([#1296](https://github.com/pingcap/tiup/pull/1296), [@mjonss](https://github.com/mjonss))
 - Improve handling of latest versions in `mirror clone` subcommand ([#1313](https://github.com/pingcap/tiup/pull/1313), [@dveeden](https://github.com/dveeden))
 - Add check for dependencies before downloading package in installation script ([#1348](https://github.com/pingcap/tiup/pull/1348), [@AstroProfundis](https://github.com/AstroProfundis))
 - Simplified the handling of configs imported from TiDB-Ansible ([#1350](https://github.com/pingcap/tiup/pull/1350), [@lucklove](https://github.com/lucklove))
-- Implement native SCP downloading ([#1382](https://github.com/pingcap/tiup/pull/1382), [@AstroProfundis](https://github.com/AstroProfundis))
+- Implement native scp downloading ([#1382](https://github.com/pingcap/tiup/pull/1382), [@AstroProfundis](https://github.com/AstroProfundis))
 - Update and fix dependencies ([#1362](https://github.com/pingcap/tiup/pull/1362), [@AstroProfundis](https://github.com/AstroProfundis); [#1407](https://github.com/pingcap/tiup/pull/1407), [@dveeden](https://github.com/dveeden))
 
 ## [1.4.4] 2021.05.26
