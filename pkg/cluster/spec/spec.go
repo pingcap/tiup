@@ -71,7 +71,7 @@ type (
 		LogDir          string               `yaml:"log_dir,omitempty"`
 		ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 		OS              string               `yaml:"os,omitempty" default:"linux"`
-		Arch            string               `yaml:"arch,omitempty" default:"amd64"`
+		Arch            string               `yaml:"arch,omitempty" default:""`
 		Custom          interface{}          `yaml:"custom,omitempty" validate:"custom:ignore"`
 	}
 
@@ -147,6 +147,7 @@ type Topology interface {
 	CountDir(host string, dir string) int
 	TLSConfig(dir string) (*tls.Config, error)
 	Merge(that Topology) Topology
+	FillHostArch(hostArchmap map[string]string) error
 
 	ScaleOutTopology
 }
@@ -576,12 +577,6 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 				field.Field(j).Set(reflect.ValueOf(globalOptions.LogDir))
 			}
 		case "Arch":
-			// default values of globalOptions are set before fillCustomDefaults in Unmarshal
-			// so the globalOptions.Arch already has its default value set, no need to check again
-			if field.Field(j).String() == "" {
-				field.Field(j).Set(reflect.ValueOf(globalOptions.Arch))
-			}
-
 			switch strings.ToLower(field.Field(j).String()) {
 			// replace "x86_64" with amd64, they are the same in our repo
 			case "x86_64":
@@ -771,4 +766,63 @@ func AlertManagerEndpoints(alertmanager []*AlertmanagerSpec, user string, enable
 		ends = append(ends, script)
 	}
 	return ends
+}
+
+// FillHostArch fills the topology with the given host->arch
+func (s *Specification) FillHostArch(hostArch map[string]string) error {
+	return FillHostArch(s, hostArch)
+}
+
+// FillHostArch fills the topology with the given host->arch
+func FillHostArch(s interface{}, hostArch map[string]string) error {
+	for host, arch := range hostArch {
+		switch arch {
+		case "x86_64":
+			hostArch[host] = "amd64"
+		case "aarch64":
+			hostArch[host] = "arm64"
+		default:
+			hostArch[host] = strings.ToLower(arch)
+		}
+	}
+
+	v := reflect.ValueOf(s).Elem()
+	t := v.Type()
+
+	for i := 0; i < t.NumField(); i++ {
+		field := v.Field(i)
+		if field.Kind() != reflect.Slice {
+			continue
+		}
+		for j := 0; j < field.Len(); j++ {
+			if err := setHostArch(field.Index(j), hostArch); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func setHostArch(field reflect.Value, hostArch map[string]string) error {
+	if !field.CanSet() || isSkipField(field) {
+		return nil
+	}
+
+	if field.Kind() == reflect.Ptr {
+		return setHostArch(field.Elem(), hostArch)
+	}
+
+	if field.Kind() != reflect.Struct {
+		return nil
+	}
+
+	host := field.FieldByName("Host")
+	arch := field.FieldByName("Arch")
+
+	// set arch only if not set before
+	if !host.IsZero() && arch.CanSet() && len(arch.String()) == 0 {
+		arch.Set(reflect.ValueOf(hostArch[host.String()]))
+	}
+
+	return nil
 }
