@@ -97,6 +97,10 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 		}
 	}
 
+	if err := m.fillHostArch(sshConnProps, &topo, &gOpt, opt.User); err != nil {
+		return err
+	}
+
 	if err := checkSystemInfo(sshConnProps, &topo, &gOpt, &opt); err != nil {
 		return err
 	}

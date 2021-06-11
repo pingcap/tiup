@@ -146,6 +146,10 @@ func (m *Manager) ScaleOut(
 		}
 	}
 
+	if err := m.fillHostArch(sshConnProps, newPart, &gOpt, opt.User); err != nil {
+		return err
+	}
+
 	// Build the scale out tasks
 	t, err := buildScaleOutTask(
 		m, name, metadata, mergedTopo, opt, sshConnProps, newPart,
