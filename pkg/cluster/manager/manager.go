@@ -14,12 +14,14 @@
 package manager
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -132,4 +134,52 @@ func (m *Manager) sshTaskBuilder(name string, topo spec.Topology, user string, o
 			m.specManager.Path(name, "ssh", "id_rsa.pub"),
 		).
 		ClusterSSH(topo, user, opts.SSHTimeout, opts.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
+}
+
+func (m *Manager) fillHostArch(s *uti.SSHConnectionProps, topo spec.Topology, gOpt *operator.Options, user string) error {
+	hostArch := map[string]string{}
+	var detectTasks []*task.StepDisplay
+	topo.IterInstance(func(inst spec.Instance) {
+		if _, ok := hostArch[inst.GetHost()]; ok {
+			return
+		}
+		hostArch[inst.GetHost()] = ""
+		if inst.Arch() != "" {
+			return
+		}
+
+		tf := task.NewBuilder().
+			RootSSH(
+				inst.GetHost(),
+				inst.GetSSHPort(),
+				user,
+				s.Password,
+				s.IdentityFile,
+				s.IdentityFilePassphrase,
+				gOpt.SSHTimeout,
+				gOpt.SSHType,
+				topo.BaseTopo().GlobalOptions.SSHType,
+			).
+			Shell(inst.GetHost(), "uname -m", "", false).
+			BuildAsStep(fmt.Sprintf("  - Detecting node %s", inst.GetHost()))
+		detectTasks = append(detectTasks, tf)
+	})
+
+	ctx := ctxt.New(context.Background())
+	t := task.NewBuilder().
+		ParallelStep("+ Detect CPU Arch", false, detectTasks...).
+		Build()
+
+	if err := t.Execute(ctx); err != nil {
+		return perrs.Annotate(err, "failed to fetch cpu arch")
+	}
+
+	for host := range hostArch {
+		stdout, _, ok := ctxt.GetInner(ctx).GetOutputs(host)
+		if !ok {
+			return fmt.Errorf("no check results found for %s", host)
+		}
+		hostArch[host] = strings.Trim(string(stdout), "\n")
+	}
+	return topo.FillHostArch(hostArch)
 }
