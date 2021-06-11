@@ -164,6 +164,9 @@ func (m *Manager) fillHostArch(s *uti.SSHConnectionProps, topo spec.Topology, gO
 			BuildAsStep(fmt.Sprintf("  - Detecting node %s", inst.GetHost()))
 		detectTasks = append(detectTasks, tf)
 	})
+	if len(detectTasks) == 0 {
+		return nil
+	}
 
 	ctx := ctxt.New(context.Background())
 	t := task.NewBuilder().
