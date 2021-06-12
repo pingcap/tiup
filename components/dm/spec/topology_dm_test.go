@@ -181,6 +181,7 @@ master_servers:
     arch: "aarch64"
 worker_servers:
   - host: 172.16.5.138
+    arch: "amd64"
 `), &topo)
 	assert.NotNil(t, err)
 	assert.Equal(t, "platform mismatch for '172.16.5.138' between 'master_servers:linux/arm64' and 'worker_servers:linux/amd64'", err.Error())

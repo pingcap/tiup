@@ -48,6 +48,10 @@ func (t *TestTopology) Merge(topo Topology) Topology {
 	panic("not support")
 }
 
+func (t *TestTopology) FillHostArch(hostArch map[string]string) error {
+	panic("not support")
+}
+
 func (m *TestMetadata) SetTopology(topo Topology) {
 	testTopo, ok := topo.(*TestTopology)
 	if !ok {
