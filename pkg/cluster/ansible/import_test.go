@@ -113,6 +113,7 @@ func (s *ansSuite) TestParseInventoryFile(c *C) {
 	expected := []byte(`global:
     user: tiops
     deploy_dir: /home/tiopsimport/ansible-deploy
+    arch: amd64
 monitored:
     deploy_dir: /home/tiopsimport/ansible-deploy
     data_dir: /home/tiopsimport/ansible-deploy/data
