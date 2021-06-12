@@ -77,6 +77,8 @@ jobs:
         id: test
         working-directory: ${{ env.working-directory }}
         run: |
+          # ensuere docker ssh is ready
+          sleep 4
           # should not use -it
           # ref: https://stackoverflow.com/questions/43099116/error-the-input-device-is-not-a-tty
           docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-dm/run.sh ${{ matrix.cases }}
@@ -86,8 +88,6 @@ jobs:
         # if: ${{ failure() }}
         if: always()
         run: |
-          # ensuere docker ssh is ready
-          sleep 4
           docker exec tiup-cluster-control bash -c 'mkdir -p /tiup-cluster/logs; [[ -d ~/.tiup/logs ]] && find ~/.tiup/logs -type f -name "*.log" -exec cp {} /tiup-cluster/logs \; || true'
           ls ${{ env.working-directory }}
           tar czvf ${{ env.working-directory }}/dm.logs.tar.gz ${{ env.working-directory }}/logs/
