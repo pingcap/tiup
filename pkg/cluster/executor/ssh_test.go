@@ -36,7 +36,7 @@ func TestNativeSSHConfigArgs(t *testing.T) {
 		},
 		{
 			&SSHConfig{
-				Timeout: time.Duration(60 * time.Second),
+				Timeout: 60 * time.Second,
 				Port:    23,
 				KeyFile: "id_rsa",
 			},
@@ -45,7 +45,7 @@ func TestNativeSSHConfigArgs(t *testing.T) {
 		},
 		{
 			&SSHConfig{
-				Timeout: time.Duration(60 * time.Second),
+				Timeout: 60 * time.Second,
 				Port:    23,
 				KeyFile: "id_rsa",
 			},
@@ -54,7 +54,7 @@ func TestNativeSSHConfigArgs(t *testing.T) {
 		},
 		{
 			&SSHConfig{
-				Timeout:    time.Duration(60 * time.Second),
+				Timeout:    60 * time.Second,
 				KeyFile:    "id_rsa",
 				Port:       23,
 				Passphrase: "tidb",
@@ -64,7 +64,7 @@ func TestNativeSSHConfigArgs(t *testing.T) {
 		},
 		{
 			&SSHConfig{
-				Timeout:    time.Duration(60 * time.Second),
+				Timeout:    60 * time.Second,
 				KeyFile:    "id_rsa",
 				Port:       23,
 				Passphrase: "tidb",
@@ -74,7 +74,7 @@ func TestNativeSSHConfigArgs(t *testing.T) {
 		},
 		{
 			&SSHConfig{
-				Timeout:  time.Duration(60 * time.Second),
+				Timeout:  60 * time.Second,
 				Password: "tidb",
 			},
 			true,
