@@ -21,7 +21,6 @@ import (
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/file"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
@@ -109,7 +108,7 @@ func (s *SpecManager) SaveMeta(clusterName string, meta Metadata) error {
 		*opsVer = version.NewTiUPVersion().String()
 	}
 
-	err = file.SaveFileWithBackup(metaFile, data, backupDir)
+	err = utils.SaveFileWithBackup(metaFile, data, backupDir)
 	if err != nil {
 		return wrapError(err)
 	}
