@@ -21,7 +21,13 @@ function cmd_subtest() {
         client="--ssh=system"
     fi
 
+    # identify SSH via ssh-agent
+    eval $(ssh-agent) &> /dev/null
+    ssh-add /root/.ssh/id_rsa &> /dev/null
+
+    mv /root/.ssh/id_rsa{,.bak}
     tiup-cluster $client check $topo -i ~/.ssh/id_rsa --enable-mem --enable-cpu --apply
+    mv /root/.ssh/id_rsa{.bak,}
 
     check_result=`tiup-cluster $client --yes check $topo -i ~/.ssh/id_rsa`
 

@@ -89,11 +89,6 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 		}
 	}
 
-	// natvie ssh has it's own logic to find the default identity_file
-	// if gOpt.SSHType == executor.SSHTypeSystem && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
-	// 	opt.identityFile = ""
-	// }
-
 	var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error

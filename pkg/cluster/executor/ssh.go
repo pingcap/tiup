@@ -96,7 +96,7 @@ type (
 var _ ctxt.Executor = &EasySSHExecutor{}
 var _ ctxt.Executor = &NativeSSHExecutor{}
 
-// Initialize builds and initializes a EasySSHExecutor
+// initialize builds and initializes a EasySSHExecutor
 func (e *EasySSHExecutor) initialize(config SSHConfig) {
 	// build easyssh config
 	e.Config = &easyssh.MakeConfig{
@@ -207,7 +207,14 @@ func (e *NativeSSHExecutor) prompt(def string) string {
 	return def
 }
 
-func (e *NativeSSHExecutor) configArgs(args []string) []string {
+func (e *NativeSSHExecutor) configArgs(args []string, isScp bool) []string {
+	if e.Config.Port != 0 && e.Config.Port != 22 {
+		if isScp {
+			args = append(args, "-P", strconv.Itoa(e.Config.Port))
+		} else {
+			args = append(args, "-p", strconv.Itoa(e.Config.Port))
+		}
+	}
 	if e.Config.Timeout != 0 {
 		args = append(args, "-o", fmt.Sprintf("ConnectTimeout=%d", int64(e.Config.Timeout.Seconds())))
 	}
@@ -263,7 +270,7 @@ func (e *NativeSSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, 
 
 	args := []string{ssh, "-o", "StrictHostKeyChecking=no"}
 
-	args = e.configArgs(args) // prefix and postfix args
+	args = e.configArgs(args, false) // prefix and postfix args
 	args = append(args, fmt.Sprintf("%s@%s", e.Config.User, e.Config.Host), cmd)
 
 	command := exec.CommandContext(ctx, args[0], args[1:]...)
@@ -326,7 +333,7 @@ func (e *NativeSSHExecutor) Transfer(ctx context.Context, src, dst string, downl
 	if limit > 0 {
 		args = append(args, "-l", fmt.Sprint(limit))
 	}
-	args = e.configArgs(args) // prefix and postfix args
+	args = e.configArgs(args, true) // prefix and postfix args
 
 	if download {
 		targetPath := filepath.Dir(dst)
