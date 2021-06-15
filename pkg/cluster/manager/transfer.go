@@ -106,7 +106,7 @@ func (m *Manager) Transfer(name string, opt TransferOptions, gOpt operator.Optio
 		Parallel(false, shellTasks...).
 		Build()
 
-	execCtx := ctxt.New(context.Background())
+	execCtx := ctxt.New(context.Background(), gOpt.Concurrency)
 	if err := t.Execute(execCtx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.

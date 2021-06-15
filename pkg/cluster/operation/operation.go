@@ -32,6 +32,7 @@ type Options struct {
 	IgnoreConfigCheck bool             // should we ignore the config check result after init config
 	NativeSSH         bool             // should use native ssh client or builtin easy ssh (deprecated, shoule use SSHType)
 	SSHType           executor.SSHType // the ssh type: 'builtin', 'system', 'none'
+	Concurrency       int              // max number of parallel tasks to run
 
 	// What type of things should we cleanup in clean command
 	CleanupData bool // should we cleanup data

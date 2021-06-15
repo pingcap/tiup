@@ -15,6 +15,7 @@ package ctxt
 
 import (
 	"context"
+	"runtime"
 	"sync"
 	"time"
 
@@ -59,10 +60,11 @@ type (
 	// We should use mutex to prevent concurrent R/W for some fields
 	// because of the same context can be shared in parallel tasks.
 	Context struct {
+		mutex sync.RWMutex
+
 		Ev EventBus
 
 		exec struct {
-			sync.RWMutex
 			executors    map[string]Executor
 			stdouts      map[string][]byte
 			stderrs      map[string][]byte
@@ -72,16 +74,23 @@ type (
 		// The private/public key is used to access remote server via the user `tidb`
 		PrivateKeyPath string
 		PublicKeyPath  string
+
+		Concurrency int // max number of parallel tasks running at the same time
 	}
 )
 
 // New create a context instance.
-func New(ctx context.Context) context.Context {
+func New(ctx context.Context, limit int) context.Context {
+	concurrency := runtime.NumCPU()
+	if limit > 0 {
+		concurrency = limit
+	}
+
 	ctx = checkpoint.NewContext(ctx)
 	return context.WithValue(ctx, ctxKey, &Context{
-		Ev: NewEventBus(),
+		mutex: sync.RWMutex{},
+		Ev:    NewEventBus(),
 		exec: struct {
-			sync.RWMutex
 			executors    map[string]Executor
 			stdouts      map[string][]byte
 			stderrs      map[string][]byte
@@ -92,6 +101,7 @@ func New(ctx context.Context) context.Context {
 			stderrs:      make(map[string][]byte),
 			checkResults: make(map[string][]interface{}),
 		},
+		Concurrency: concurrency, // default to CPU count
 	})
 }
 
@@ -102,9 +112,9 @@ func GetInner(ctx context.Context) *Context {
 
 // Get implements the operation.ExecutorGetter interface.
 func (ctx *Context) Get(host string) (e Executor) {
-	ctx.exec.Lock()
+	ctx.mutex.Lock()
 	e, ok := ctx.exec.executors[host]
-	ctx.exec.Unlock()
+	ctx.mutex.Unlock()
 
 	if !ok {
 		panic("no init executor for " + host)
@@ -124,55 +134,55 @@ func (ctx *Context) GetExecutor(host string) (e Executor, ok bool) {
 		return e.(Executor), true
 	}
 
-	ctx.exec.RLock()
+	ctx.mutex.RLock()
 	e, ok = ctx.exec.executors[host]
-	ctx.exec.RUnlock()
+	ctx.mutex.RUnlock()
 	return
 }
 
 // SetExecutor set the executor.
 func (ctx *Context) SetExecutor(host string, e Executor) {
-	ctx.exec.Lock()
+	ctx.mutex.Lock()
 	if e != nil {
 		ctx.exec.executors[host] = e
 	} else {
 		delete(ctx.exec.executors, host)
 	}
-	ctx.exec.Unlock()
+	ctx.mutex.Unlock()
 }
 
 // GetOutputs get the outputs of a host (if has any)
 func (ctx *Context) GetOutputs(hostID string) ([]byte, []byte, bool) {
-	ctx.exec.RLock()
+	ctx.mutex.RLock()
 	stdout, ok1 := ctx.exec.stderrs[hostID]
 	stderr, ok2 := ctx.exec.stdouts[hostID]
-	ctx.exec.RUnlock()
+	ctx.mutex.RUnlock()
 	return stdout, stderr, ok1 && ok2
 }
 
 // SetOutputs set the outputs of a host
 func (ctx *Context) SetOutputs(hostID string, stdout []byte, stderr []byte) {
-	ctx.exec.Lock()
+	ctx.mutex.Lock()
 	ctx.exec.stderrs[hostID] = stdout
 	ctx.exec.stdouts[hostID] = stderr
-	ctx.exec.Unlock()
+	ctx.mutex.Unlock()
 }
 
 // GetCheckResults get the the check result of a host (if has any)
 func (ctx *Context) GetCheckResults(host string) (results []interface{}, ok bool) {
-	ctx.exec.RLock()
+	ctx.mutex.RLock()
 	results, ok = ctx.exec.checkResults[host]
-	ctx.exec.RUnlock()
+	ctx.mutex.RUnlock()
 	return
 }
 
 // SetCheckResults append the check result of a host to the list
 func (ctx *Context) SetCheckResults(host string, results []interface{}) {
-	ctx.exec.Lock()
+	ctx.mutex.Lock()
 	if currResult, ok := ctx.exec.checkResults[host]; ok {
 		ctx.exec.checkResults[host] = append(currResult, results...)
 	} else {
 		ctx.exec.checkResults[host] = results
 	}
-	ctx.exec.Unlock()
+	ctx.mutex.Unlock()
 }

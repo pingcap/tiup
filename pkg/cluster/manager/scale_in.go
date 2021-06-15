@@ -104,7 +104,7 @@ func (m *Manager) ScaleIn(
 		Parallel(force, buildReloadPromTasks(metadata.GetTopology(), nodes...)...).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background())); err != nil {
+	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err

@@ -26,6 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/file"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 // TLSCert generates a certificate for instance
@@ -53,6 +54,11 @@ func (c *TLSCert) Execute(ctx context.Context) error {
 	}
 	cert, err := c.ca.Sign(csr)
 	if err != nil {
+		return err
+	}
+
+	// make sure the cache dir exist
+	if err := utils.CreateDir(c.paths.Cache); err != nil {
 		return err
 	}
 

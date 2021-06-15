@@ -95,7 +95,7 @@ func ImportConfig(name string, clsMeta *spec.ClusterMeta, sshTimeout uint64, ssh
 		Parallel(false, copyFileTasks...).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background())); err != nil {
+	if err := t.Execute(ctxt.New(context.Background(), 0)); err != nil {
 		return errors.Trace(err)
 	}
 	log.Infof("Finished copying configs.")
