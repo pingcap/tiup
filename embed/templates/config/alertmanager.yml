@@ -58,7 +58,7 @@ receivers:
   #    title:   '{{ .CommonLabels.alertname }}'
   #    text:    '{{ .CommonAnnotations.summary }}  {{ .CommonAnnotations.description }}  expr: {{ .CommonLabels.expr }}  http://172.0.0.1:9093/#/alerts'
 
-  - name: "db-alert-email"
-    email_configs:
-      - send_resolved: true
-        to: "xxx@xxx.com"
+  # - name: "db-alert-email"
+  #   email_configs:
+  #     - send_resolved: true
+  #       to: "example@example.com"
