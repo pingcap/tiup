@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
@@ -91,7 +91,7 @@ func (l *Local) Execute(ctx context.Context, cmd string, sudo bool, timeout ...t
 		if len(stdout.Bytes()) > 0 || len(stderr.Bytes()) > 0 {
 			output := strings.TrimSpace(strings.Join([]string{stdout.String(), stderr.String()}, "\n"))
 			baseErr = baseErr.
-				WithProperty(cliutil.SuggestionFromFormat("Command output:\n%s\n", color.YellowString(output)))
+				WithProperty(tui.SuggestionFromFormat("Command output:\n%s\n", color.YellowString(output)))
 		}
 		return stdout.Bytes(), stderr.Bytes(), baseErr
 	}
@@ -140,7 +140,7 @@ func (l *Local) Transfer(ctx context.Context, src, dst string, download bool, li
 		if len(stdout.Bytes()) > 0 || len(stderr.Bytes()) > 0 {
 			output := strings.TrimSpace(strings.Join([]string{stdout.String(), stderr.String()}, "\n"))
 			baseErr = baseErr.
-				WithProperty(cliutil.SuggestionFromFormat("Command output:\n%s\n", color.YellowString(output)))
+				WithProperty(tui.SuggestionFromFormat("Command output:\n%s\n", color.YellowString(output)))
 		}
 		return baseErr
 	}

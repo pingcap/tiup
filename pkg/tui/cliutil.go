@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cliutil
+package tui
 
 import (
 	"bytes"
@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	errNS             = errorx.NewNamespace("cliutil")
+	errNS             = errorx.NewNamespace("tui")
 	errMismatchArgs   = errNS.NewType("mismatch_args", errutil.ErrTraitPreCheck)
 	errOperationAbort = errNS.NewType("operation_aborted", errutil.ErrTraitPreCheck)
 )

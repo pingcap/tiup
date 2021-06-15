@@ -24,7 +24,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -38,6 +37,7 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -92,7 +92,7 @@ func init() {
 	}
 
 	rootCmd = &cobra.Command{
-		Use:           cliutil.OsArgs0(),
+		Use:           tui.OsArgs0(),
 		Short:         "Deploy a TiDB cluster for production",
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -134,7 +134,7 @@ func init() {
 		},
 	}
 
-	cliutil.BeautifyCobraUsageAndHelp(rootCmd)
+	tui.BeautifyCobraUsageAndHelp(rootCmd)
 
 	rootCmd.PersistentFlags().Uint64Var(&gOpt.SSHTimeout, "ssh-timeout", 5, "Timeout in seconds to connect host via SSH, ignored for operations that don't need an SSH connection.")
 	// the value of wait-timeout is also used for `systemctl` commands, as the default timeout of systemd for
@@ -235,7 +235,7 @@ func extractSuggestionFromErrorX(err *errorx.Error) string {
 
 // Execute executes the root command
 func Execute() {
-	zap.L().Info("Execute command", zap.String("command", cliutil.OsArgs()))
+	zap.L().Info("Execute command", zap.String("command", tui.OsArgs()))
 	zap.L().Debug("Environment variables", zap.Strings("env", os.Environ()))
 
 	// Switch current work directory if running in TiUP component mode

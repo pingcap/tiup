@@ -23,7 +23,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -32,6 +31,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tui"
 )
 
 // CheckOptions contains the options for check command
@@ -89,10 +89,10 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 		}
 	}
 
-	var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
+	var sshConnProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
-		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
+		if sshConnProps, err = tui.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
 			return err
 		}
 	}
@@ -111,7 +111,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 }
 
 // checkSystemInfo performs series of checks and tests of the deploy server
-func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gOpt *operator.Options, opt *CheckOptions) error {
+func checkSystemInfo(s *tui.SSHConnectionProps, topo *spec.Specification, gOpt *operator.Options, opt *CheckOptions) error {
 	var (
 		collectTasks  []*task.StepDisplay
 		checkSysTasks []*task.StepDisplay
@@ -367,7 +367,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 
 	// print check results *before* trying to applying checks
 	// FIXME: add fix result to output, and display the table after fixing
-	cliutil.PrintTable(checkResultTable, true)
+	tui.PrintTable(checkResultTable, true)
 
 	if opt.ApplyFix {
 		tc := task.NewBuilder().

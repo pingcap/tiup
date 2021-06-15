@@ -21,7 +21,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/tiup/components/dm/spec"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -32,6 +31,7 @@ import (
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/repository"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -61,7 +61,7 @@ func init() {
 	}
 
 	rootCmd = &cobra.Command{
-		Use:   cliutil.OsArgs0(),
+		Use:   tui.OsArgs0(),
 		Short: "(EXPERIMENTAL) Deploy a DM cluster",
 		Long: `EXPERIMENTAL: This is an experimental feature, things may or may not work,
 please backup your data before process.`,
@@ -103,7 +103,7 @@ please backup your data before process.`,
 		},
 	}
 
-	cliutil.BeautifyCobraUsageAndHelp(rootCmd)
+	tui.BeautifyCobraUsageAndHelp(rootCmd)
 
 	rootCmd.PersistentFlags().Uint64Var(&gOpt.SSHTimeout, "ssh-timeout", 5, "Timeout in seconds to connect host via SSH, ignored for operations that don't need an SSH connection.")
 	rootCmd.PersistentFlags().Uint64Var(&gOpt.OptTimeout, "wait-timeout", 60, "Timeout in seconds to wait for an operation to complete, ignored for operations that don't fit.")
@@ -195,7 +195,7 @@ func extractSuggestionFromErrorX(err *errorx.Error) string {
 
 // Execute executes the root command
 func Execute() {
-	zap.L().Info("Execute command", zap.String("command", cliutil.OsArgs()))
+	zap.L().Info("Execute command", zap.String("command", tui.OsArgs()))
 	zap.L().Debug("Environment variables", zap.Strings("env", os.Environ()))
 
 	// Switch current work directory if running in TiUP component mode
