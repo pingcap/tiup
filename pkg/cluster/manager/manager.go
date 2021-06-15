@@ -23,7 +23,6 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
@@ -32,11 +31,11 @@ import (
 
 var (
 	errNSDeploy            = errorx.NewNamespace("deploy")
-	errDeployNameDuplicate = errNSDeploy.NewType("name_dup", errutil.ErrTraitPreCheck)
+	errDeployNameDuplicate = errNSDeploy.NewType("name_dup", utils.ErrTraitPreCheck)
 
 	errNSRename              = errorx.NewNamespace("rename")
-	errorRenameNameNotExist  = errNSRename.NewType("name_not_exist", errutil.ErrTraitPreCheck)
-	errorRenameNameDuplicate = errNSRename.NewType("name_dup", errutil.ErrTraitPreCheck)
+	errorRenameNameNotExist  = errNSRename.NewType("name_not_exist", utils.ErrTraitPreCheck)
+	errorRenameNameDuplicate = errNSRename.NewType("name_dup", utils.ErrTraitPreCheck)
 )
 
 // Manager to deploy a cluster.

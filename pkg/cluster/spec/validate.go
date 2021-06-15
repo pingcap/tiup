@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
@@ -34,9 +33,9 @@ import (
 // pre defined error types
 var (
 	errNSDeploy              = errNS.NewSubNamespace("deploy")
-	errDeployDirConflict     = errNSDeploy.NewType("dir_conflict", errutil.ErrTraitPreCheck)
-	errDeployDirOverlap      = errNSDeploy.NewType("dir_overlap", errutil.ErrTraitPreCheck)
-	errDeployPortConflict    = errNSDeploy.NewType("port_conflict", errutil.ErrTraitPreCheck)
+	errDeployDirConflict     = errNSDeploy.NewType("dir_conflict", utils.ErrTraitPreCheck)
+	errDeployDirOverlap      = errNSDeploy.NewType("dir_overlap", utils.ErrTraitPreCheck)
+	errDeployPortConflict    = errNSDeploy.NewType("port_conflict", utils.ErrTraitPreCheck)
 	ErrNoTiSparkMaster       = errors.New("there must be a Spark master node if you want to use the TiSpark component")
 	ErrMultipleTiSparkMaster = errors.New("a TiSpark enabled cluster with more than 1 Spark master node is not supported")
 	ErrMultipleTisparkWorker = errors.New("multiple TiSpark workers on the same host is not supported by Spark")

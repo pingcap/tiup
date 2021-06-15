@@ -17,14 +17,13 @@ import (
 	"os"
 
 	"github.com/ScaleFT/sshkeys"
-	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/crypto/ssh"
 )
 
 var (
 	// ErrIdentityFileReadFailed is ErrIdentityFileReadFailed
-	ErrIdentityFileReadFailed = errNS.NewType("id_read_failed", errutil.ErrTraitPreCheck)
+	ErrIdentityFileReadFailed = errNS.NewType("id_read_failed", utils.ErrTraitPreCheck)
 )
 
 // SSHConnectionProps is SSHConnectionProps

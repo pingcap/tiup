@@ -20,8 +20,8 @@ import (
 	"strings"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/tui"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
@@ -30,9 +30,9 @@ var (
 	defaultDeployUser = "tidb"
 	errNSTopolohy     = errorx.NewNamespace("topology")
 	// ErrTopologyReadFailed is ErrTopologyReadFailed
-	ErrTopologyReadFailed = errNSTopolohy.NewType("read_failed", errutil.ErrTraitPreCheck)
+	ErrTopologyReadFailed = errNSTopolohy.NewType("read_failed", utils.ErrTraitPreCheck)
 	// ErrTopologyParseFailed is ErrTopologyParseFailed
-	ErrTopologyParseFailed = errNSTopolohy.NewType("parse_failed", errutil.ErrTraitPreCheck)
+	ErrTopologyParseFailed = errNSTopolohy.NewType("parse_failed", utils.ErrTraitPreCheck)
 )
 
 // ReadYamlFile read yaml content from file`

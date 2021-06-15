@@ -30,7 +30,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/colorutil"
 	tiupmeta "github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/flags"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
@@ -38,6 +37,7 @@ import (
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/tui"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -221,7 +221,7 @@ func printErrorMessageForErrorX(err *errorx.Error) {
 func extractSuggestionFromErrorX(err *errorx.Error) string {
 	cause := err
 	for cause != nil {
-		v, ok := cause.Property(errutil.ErrPropSuggestion)
+		v, ok := cause.Property(utils.ErrPropSuggestion)
 		if ok {
 			if s, ok := v.(string); ok {
 				return s
@@ -329,7 +329,7 @@ func Execute() {
 			printErrorMessageForNormalError(err)
 		}
 
-		if !errorx.HasTrait(err, errutil.ErrTraitPreCheck) {
+		if !errorx.HasTrait(err, utils.ErrTraitPreCheck) {
 			logger.OutputDebugLog("tiup-cluster")
 		}
 

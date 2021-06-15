@@ -23,15 +23,15 @@ import (
 
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/tiup/pkg/colorutil"
-	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 var (
 	errNS             = errorx.NewNamespace("tui")
-	errMismatchArgs   = errNS.NewType("mismatch_args", errutil.ErrTraitPreCheck)
-	errOperationAbort = errNS.NewType("operation_aborted", errutil.ErrTraitPreCheck)
+	errMismatchArgs   = errNS.NewType("mismatch_args", utils.ErrTraitPreCheck)
+	errOperationAbort = errNS.NewType("operation_aborted", utils.ErrTraitPreCheck)
 )
 
 var templateFuncs = template.FuncMap{
@@ -104,7 +104,7 @@ func formatSuggestion(templateStr string, data interface{}) string {
 // SuggestionFromString creates a suggestion from string.
 // Usage: SomeErrorX.WithProperty(SuggestionFromString(..))
 func SuggestionFromString(str string) (errorx.Property, string) {
-	return errutil.ErrPropSuggestion, strings.TrimSpace(str)
+	return utils.ErrPropSuggestion, strings.TrimSpace(str)
 }
 
 // SuggestionFromTemplate creates a suggestion from go template. Colorize function and some other utilities
