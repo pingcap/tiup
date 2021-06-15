@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package verbose
+package log
 
 import (
 	"fmt"
@@ -26,8 +26,8 @@ func init() {
 	verbose = v == "1" || v == "enable"
 }
 
-// Log logs verbose messages
-func Log(format string, args ...interface{}) {
+// Verbose logs verbose messages
+func Verbose(format string, args ...interface{}) {
 	if !verbose {
 		return
 	}
