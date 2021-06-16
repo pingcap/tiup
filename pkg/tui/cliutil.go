@@ -22,7 +22,6 @@ import (
 	"text/template"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/tiup/pkg/colorutil"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
@@ -68,7 +67,7 @@ func OsArgs0() string {
 }
 
 func init() {
-	colorutil.AddColorFunctions(func(name string, f interface{}) {
+	utils.AddColorFunctions(func(name string, f interface{}) {
 		templateFuncs[name] = f
 	})
 }

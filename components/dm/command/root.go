@@ -25,7 +25,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	cspec "github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/colorutil"
 	tiupmeta "github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
@@ -51,7 +50,7 @@ var cm *manager.Manager
 func init() {
 	logger.InitGlobalLogger()
 
-	colorutil.AddColorFunctionsForCobra()
+	utils.AddColorFunctionsForCobra()
 
 	cobra.EnableCommandSorting = false
 
@@ -139,7 +138,7 @@ please backup your data before process.`,
 }
 
 func printErrorMessageForNormalError(err error) {
-	_, _ = colorutil.ColorErrorMsg.Fprintf(os.Stderr, "\nError: %s\n", err.Error())
+	_, _ = utils.ColorErrorMsg.Fprintf(os.Stderr, "\nError: %s\n", err.Error())
 }
 
 func printErrorMessageForErrorX(err *errorx.Error) {
@@ -175,7 +174,7 @@ func printErrorMessageForErrorX(err *errorx.Error) {
 			break
 		}
 	}
-	_, _ = colorutil.ColorErrorMsg.Fprintf(os.Stderr, "\nError: %s", msg)
+	_, _ = utils.ColorErrorMsg.Fprintf(os.Stderr, "\nError: %s", msg)
 }
 
 func extractSuggestionFromErrorX(err *errorx.Error) string {

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package colorutil
+package utils
 
 // A set of predefined color palettes. You should only reference a color in this palette so that a color
 // change can take effect globally.
