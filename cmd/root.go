@@ -233,7 +233,7 @@ func Execute() {
 		f := func() {
 			defer func() {
 				if r := recover(); r != nil {
-					if localdata.DebugMode {
+					if environment.DebugMode {
 						log.Debugf("Recovered in telemetry report: %v", r)
 					}
 				}
@@ -244,7 +244,7 @@ func Execute() {
 			tele := telemetry.NewTelemetry()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 			err := tele.Report(ctx, teleReport)
-			if localdata.DebugMode {
+			if environment.DebugMode {
 				if err != nil {
 					log.Infof("report failed: %v", err)
 				}
