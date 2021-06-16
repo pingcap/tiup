@@ -11,14 +11,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package errutil
+package environment
 
-import "github.com/joomcode/errorx"
+import (
+	"os"
 
-var (
-	// ErrPropSuggestion is a property of an Error that will be printed as the suggestion.
-	ErrPropSuggestion = errorx.RegisterProperty("suggestion")
-
-	// ErrTraitPreCheck means that the Error is a pre-check error so that no error logs will be outputted directly.
-	ErrTraitPreCheck = errorx.RegisterTrait("pre_check")
+	"github.com/pingcap/tiup/pkg/localdata"
 )
+
+// Global flags
+var (
+	DebugMode = false
+)
+
+func init() {
+	val := os.Getenv(localdata.EnvNameDebug)
+	DebugMode = (val == "enable" || val == "enabled" || val == "true")
+}

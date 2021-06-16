@@ -13,7 +13,19 @@
 
 package utils
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/joomcode/errorx"
+)
+
+var (
+	// ErrPropSuggestion is a property of an Error that will be printed as the suggestion.
+	ErrPropSuggestion = errorx.RegisterProperty("suggestion")
+
+	// ErrTraitPreCheck means that the Error is a pre-check error so that no error logs will be outputted directly.
+	ErrTraitPreCheck = errorx.RegisterTrait("pre_check")
+)
 
 var (
 	// ErrValidateChecksum is an empty HashValidationErr object, useful for type checking

@@ -11,20 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cliutil
+package tui
 
 import (
 	"os"
 
 	"github.com/ScaleFT/sshkeys"
-	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/utils"
 	"golang.org/x/crypto/ssh"
 )
 
 var (
 	// ErrIdentityFileReadFailed is ErrIdentityFileReadFailed
-	ErrIdentityFileReadFailed = errNS.NewType("id_read_failed", errutil.ErrTraitPreCheck)
+	ErrIdentityFileReadFailed = errNS.NewType("id_read_failed", utils.ErrTraitPreCheck)
 )
 
 // SSHConnectionProps is SSHConnectionProps

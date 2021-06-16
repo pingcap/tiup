@@ -37,7 +37,6 @@ import (
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/flags"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/repository"
@@ -569,7 +568,7 @@ func main() {
 		f := func() {
 			defer func() {
 				if r := recover(); r != nil {
-					if flags.DebugMode {
+					if environment.DebugMode {
 						log.Debugf("Recovered in telemetry report: %v", r)
 					}
 				}
@@ -594,7 +593,7 @@ func main() {
 			tele := telemetry.NewTelemetry()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 			err := tele.Report(ctx, teleReport)
-			if flags.DebugMode {
+			if environment.DebugMode {
 				if err != nil {
 					log.Infof("report failed: %v", err)
 				}

@@ -1,10 +1,17 @@
 package utils
 
 import (
+	"bytes"
+	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	. "github.com/pingcap/check"
@@ -105,5 +112,104 @@ func (s *TestIOUtilSuite) TestIsSubDir(c *C) {
 	}
 	for _, p := range paths {
 		c.Assert(IsSubDir(p[0], p[1]), IsFalse)
+	}
+}
+
+func (s *TestIOUtilSuite) TestSaveFileWithBackup(c *C) {
+	dir := c.MkDir()
+	name := "meta.yaml"
+
+	for i := 0; i < 10; i++ {
+		err := SaveFileWithBackup(filepath.Join(dir, name), []byte(strconv.Itoa(i)), "")
+		c.Assert(err, IsNil)
+	}
+
+	// Verify the saved files.
+	var paths []string
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		// simply filter the not relate files.
+		if strings.Contains(path, "meta") {
+			paths = append(paths, path)
+		}
+		return nil
+	})
+
+	c.Assert(err, IsNil)
+	c.Assert(len(paths), Equals, 10)
+
+	sort.Strings(paths)
+	for i, path := range paths {
+		data, err := os.ReadFile(path)
+		c.Assert(err, IsNil)
+		c.Assert(string(data), Equals, strconv.Itoa(i))
+	}
+
+	// test with specify backup dir
+	dir = c.MkDir()
+	backupDir := c.MkDir()
+	for i := 0; i < 10; i++ {
+		err := SaveFileWithBackup(filepath.Join(dir, name), []byte(strconv.Itoa(i)), backupDir)
+		c.Assert(err, IsNil)
+	}
+	// Verify the saved files in backupDir.
+	paths = nil
+	err = filepath.Walk(backupDir, func(path string, info os.FileInfo, err error) error {
+		// simply filter the not relate files.
+		if strings.Contains(path, "meta") {
+			paths = append(paths, path)
+		}
+		return nil
+	})
+	c.Assert(err, IsNil)
+	c.Assert(len(paths), Equals, 9)
+
+	sort.Strings(paths)
+	for i, path := range paths {
+		data, err := os.ReadFile(path)
+		c.Assert(err, IsNil)
+		c.Assert(string(data), Equals, strconv.Itoa(i))
+	}
+
+	// Verify the latest saved file.
+	data, err := os.ReadFile(filepath.Join(dir, name))
+	c.Assert(err, IsNil)
+	c.Assert(string(data), Equals, "9")
+}
+
+func (s *TestIOUtilSuite) TestConcurrentSaveFileWithBackup(c *C) {
+	dir := c.MkDir()
+	name := "meta.yaml"
+	data := []byte("concurrent-save-file-with-backup")
+
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			time.Sleep(time.Duration(rand.Intn(100)+4) * time.Millisecond)
+			err := SaveFileWithBackup(filepath.Join(dir, name), data, "")
+			c.Assert(err, IsNil)
+		}()
+	}
+
+	wg.Wait()
+
+	// Verify the saved files.
+	var paths []string
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		// simply filter the not relate files.
+		if strings.Contains(path, "meta") {
+			paths = append(paths, path)
+		}
+		return nil
+	})
+
+	c.Assert(err, IsNil)
+	c.Assert(len(paths), Equals, 10)
+	for _, path := range paths {
+		body, err := os.ReadFile(path)
+		c.Assert(err, IsNil)
+		c.Assert(len(body), Equals, len(data))
+		c.Assert(bytes.Equal(body, data), IsTrue)
 	}
 }

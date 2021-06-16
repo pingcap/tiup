@@ -11,20 +11,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package flags
+package log
 
 import (
+	"fmt"
 	"os"
-
-	"github.com/pingcap/tiup/pkg/localdata"
+	"strings"
 )
 
-// Global flags
-var (
-	DebugMode = false
-)
+var verbose bool
 
 func init() {
-	val := os.Getenv(localdata.EnvNameDebug)
-	DebugMode = (val == "enable" || val == "enabled" || val == "true")
+	v := strings.ToLower(os.Getenv("TIUP_VERBOSE"))
+	verbose = v == "1" || v == "enable"
+}
+
+// Verbose logs verbose messages
+func Verbose(format string, args ...interface{}) {
+	if !verbose {
+		return
+	}
+	fmt.Println("Verbose:", fmt.Sprintf(format, args...))
 }

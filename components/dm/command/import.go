@@ -21,10 +21,10 @@ import (
 	"github.com/fatih/color"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/dm/ansible"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	cansible "github.com/pingcap/tiup/pkg/cluster/ansible"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
+	"github.com/pingcap/tiup/pkg/tui"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -83,7 +83,7 @@ func newImportCmd() *cobra.Command {
 			fmt.Println(string(data))
 
 			if !skipConfirm {
-				err = cliutil.PromptForConfirmOrAbortError(
+				err = tui.PromptForConfirmOrAbortError(
 					color.HiYellowString("Using the Topology to deploy DM %s cluster %s, Please Stop the DM cluster from ansible side first.\nDo you want to continue? [y/N]: ",
 						clusterVersion,
 						clusterName,
