@@ -895,7 +895,7 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 	for _, pd := range p.pds {
 		pdAddrs = append(pdAddrs, pd.Addr())
 	}
-	fmt.Println(color.GreenString("PD API Endpoint: %v", pdAddrs))
+	fmt.Println(color.GreenString("PD client endpoints: %v", pdAddrs))
 
 	if monitorInfo != nil {
 		p.updateMonitorTopology(spec.ComponentPrometheus, *monitorInfo)
