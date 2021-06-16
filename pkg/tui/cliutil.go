@@ -67,7 +67,7 @@ func OsArgs0() string {
 }
 
 func init() {
-	utils.AddColorFunctions(func(name string, f interface{}) {
+	AddColorFunctions(func(name string, f interface{}) {
 		templateFuncs[name] = f
 	})
 }

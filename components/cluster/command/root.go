@@ -81,7 +81,7 @@ func getParentNames(cmd *cobra.Command) []string {
 func init() {
 	logger.InitGlobalLogger()
 
-	utils.AddColorFunctionsForCobra()
+	tui.AddColorFunctionsForCobra()
 
 	cobra.EnableCommandSorting = false
 
@@ -178,7 +178,7 @@ func init() {
 }
 
 func printErrorMessageForNormalError(err error) {
-	_, _ = utils.ColorErrorMsg.Fprintf(os.Stderr, "\nError: %s\n", err.Error())
+	_, _ = tui.ColorErrorMsg.Fprintf(os.Stderr, "\nError: %s\n", err.Error())
 }
 
 func printErrorMessageForErrorX(err *errorx.Error) {
@@ -214,7 +214,7 @@ func printErrorMessageForErrorX(err *errorx.Error) {
 			break
 		}
 	}
-	_, _ = utils.ColorErrorMsg.Fprintf(os.Stderr, "\nError: %s", msg)
+	_, _ = tui.ColorErrorMsg.Fprintf(os.Stderr, "\nError: %s", msg)
 }
 
 func extractSuggestionFromErrorX(err *errorx.Error) string {

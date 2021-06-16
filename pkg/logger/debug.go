@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/pingcap/tiup/pkg/localdata"
-	"github.com/pingcap/tiup/pkg/utils"
+	"github.com/pingcap/tiup/pkg/tui"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -52,9 +52,9 @@ func OutputDebugLog(prefix string) {
 
 	err := os.WriteFile(filePath, debugBuffer.Bytes(), 0644)
 	if err != nil {
-		_, _ = utils.ColorWarningMsg.Fprint(os.Stderr, "\nWarn: Failed to write error debug log.\n")
+		_, _ = tui.ColorWarningMsg.Fprint(os.Stderr, "\nWarn: Failed to write error debug log.\n")
 	} else {
-		_, _ = fmt.Fprintf(os.Stderr, "\nVerbose debug logs has been written to %s.\n", utils.ColorKeyword.Sprint(filePath))
+		_, _ = fmt.Fprintf(os.Stderr, "\nVerbose debug logs has been written to %s.\n", tui.ColorKeyword.Sprint(filePath))
 	}
 	debugBuffer.Reset()
 }
