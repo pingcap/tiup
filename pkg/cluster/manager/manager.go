@@ -168,7 +168,7 @@ func (m *Manager) fillHostArch(s *tui.SSHConnectionProps, topo spec.Topology, gO
 		return nil
 	}
 
-	ctx := ctxt.New(context.Background())
+	ctx := ctxt.New(context.Background(), gOpt.Concurrency)
 	t := task.NewBuilder().
 		ParallelStep("+ Detect CPU Arch", false, detectTasks...).
 		Build()
