@@ -770,7 +770,11 @@ func AlertManagerEndpoints(alertmanager []*AlertmanagerSpec, user string, enable
 
 // FillHostArch fills the topology with the given host->arch
 func (s *Specification) FillHostArch(hostArch map[string]string) error {
-	return FillHostArch(s, hostArch)
+	if err := FillHostArch(s, hostArch); err != nil {
+		return err
+	}
+
+	return s.platformConflictsDetect()
 }
 
 // FillHostArch fills the topology with the given host->arch
