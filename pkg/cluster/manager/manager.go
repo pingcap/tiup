@@ -136,7 +136,7 @@ func (m *Manager) sshTaskBuilder(name string, topo spec.Topology, user string, o
 		ClusterSSH(topo, user, opts.SSHTimeout, opts.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
 }
 
-func (m *Manager) fillHostArch(s *uti.SSHConnectionProps, topo spec.Topology, gOpt *operator.Options, user string) error {
+func (m *Manager) fillHostArch(s *tui.SSHConnectionProps, topo spec.Topology, gOpt *operator.Options, user string) error {
 	hostArch := map[string]string{}
 	var detectTasks []*task.StepDisplay
 	topo.IterInstance(func(inst spec.Instance) {
