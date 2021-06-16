@@ -887,9 +887,15 @@ If you'd like to use a TiDB version other than %s, cancel and retry with the fol
 		}
 	}
 
-	if pdAddr := p.pds[0].Addr(); hasDashboard(pdAddr) {
+	if pdAddr := p.pds[0].Addr(); len(p.tidbs) > 0 && hasDashboard(pdAddr) {
 		fmt.Println(color.GreenString("To view the dashboard: http://%s/dashboard", pdAddr))
 	}
+
+	var pdAddrs []string
+	for _, pd := range p.pds {
+		pdAddrs = append(pdAddrs, pd.Addr())
+	}
+	fmt.Println(color.GreenString("PD API Endpoint: %v", pdAddrs))
 
 	if monitorInfo != nil {
 		p.updateMonitorTopology(spec.ComponentPrometheus, *monitorInfo)
