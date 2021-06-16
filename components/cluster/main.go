@@ -15,10 +15,10 @@ package main
 
 import (
 	"github.com/pingcap/tiup/components/cluster/command"
-	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/tui"
 )
 
 func main() {
-	cliutil.RegisterArg0("tiup cluster")
+	tui.RegisterArg0("tiup cluster")
 	command.Execute()
 }

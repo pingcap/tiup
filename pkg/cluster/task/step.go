@@ -17,8 +17,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/pingcap/tiup/pkg/cliutil/progress"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/tui/progress"
 )
 
 // StepDisplay is a task that will display a progress bar for inner task.

@@ -20,23 +20,22 @@ import (
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
 var (
 	errNSDeploy            = errorx.NewNamespace("deploy")
-	errDeployNameDuplicate = errNSDeploy.NewType("name_dup", errutil.ErrTraitPreCheck)
+	errDeployNameDuplicate = errNSDeploy.NewType("name_dup", utils.ErrTraitPreCheck)
 
 	errNSRename              = errorx.NewNamespace("rename")
-	errorRenameNameNotExist  = errNSRename.NewType("name_not_exist", errutil.ErrTraitPreCheck)
-	errorRenameNameDuplicate = errNSRename.NewType("name_dup", errutil.ErrTraitPreCheck)
+	errorRenameNameNotExist  = errNSRename.NewType("name_not_exist", utils.ErrTraitPreCheck)
+	errorRenameNameDuplicate = errNSRename.NewType("name_dup", utils.ErrTraitPreCheck)
 )
 
 // Manager to deploy a cluster.
@@ -99,12 +98,12 @@ func (m *Manager) confirmTopology(name, version string, topo spec.Topology, patc
 			comp,
 			instance.GetHost(),
 			utils.JoinInt(instance.UsedPorts(), "/"),
-			cliutil.OsArch(instance.OS(), instance.Arch()),
+			tui.OsArch(instance.OS(), instance.Arch()),
 			strings.Join(instance.UsedDirs(), ","),
 		})
 	})
 
-	cliutil.PrintTable(clusterTable, true)
+	tui.PrintTable(clusterTable, true)
 
 	log.Warnf("Attention:")
 	log.Warnf("    1. If the topology is not what you expected, check your yaml file.")
@@ -123,7 +122,7 @@ You may read the OpenJDK doc for a reference: https://openjdk.java.net/install/
 		}
 	}
 
-	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
+	return tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 }
 
 func (m *Manager) sshTaskBuilder(name string, topo spec.Topology, user string, opts operator.Options) *task.Builder {

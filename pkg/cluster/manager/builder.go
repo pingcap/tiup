@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
@@ -28,6 +27,7 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -61,7 +61,7 @@ func buildScaleOutTask(
 	metadata spec.Metadata,
 	mergedTopo spec.Topology,
 	opt DeployOptions,
-	sshConnProps *cliutil.SSHConnectionProps,
+	sshConnProps *tui.SSHConnectionProps,
 	newPart spec.Topology,
 	patchedComponents set.StringSet,
 	gOpt operator.Options,

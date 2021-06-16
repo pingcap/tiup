@@ -22,7 +22,7 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/crypto"
-	"github.com/pingcap/tiup/pkg/file"
+	"github.com/pingcap/tiup/pkg/utils"
 )
 
 func genAndSaveClusterCA(name, tlsPath string) (*crypto.CertificateAuthority, error) {
@@ -32,12 +32,12 @@ func genAndSaveClusterCA(name, tlsPath string) (*crypto.CertificateAuthority, er
 	}
 
 	// save CA private key
-	if err := file.SaveFileWithBackup(filepath.Join(tlsPath, spec.TLSCAKey), ca.Key.Pem(), ""); err != nil {
+	if err := utils.SaveFileWithBackup(filepath.Join(tlsPath, spec.TLSCAKey), ca.Key.Pem(), ""); err != nil {
 		return nil, perrs.Annotatef(err, "cannot save CA private key for %s", name)
 	}
 
 	// save CA certificate
-	if err := file.SaveFileWithBackup(
+	if err := utils.SaveFileWithBackup(
 		filepath.Join(tlsPath, spec.TLSCACert),
 		pem.EncodeToMemory(&pem.Block{
 			Type:  "CERTIFICATE",
@@ -56,7 +56,7 @@ func genAndSaveClientCert(ca *crypto.CertificateAuthority, name, tlsPath string)
 	}
 
 	// save client private key
-	if err := file.SaveFileWithBackup(filepath.Join(tlsPath, spec.TLSClientKey), privKey.Pem(), ""); err != nil {
+	if err := utils.SaveFileWithBackup(filepath.Join(tlsPath, spec.TLSClientKey), privKey.Pem(), ""); err != nil {
 		return perrs.Annotatef(err, "cannot save client private key for %s", name)
 	}
 
@@ -74,7 +74,7 @@ func genAndSaveClientCert(ca *crypto.CertificateAuthority, name, tlsPath string)
 	}
 
 	// save client certificate
-	if err := file.SaveFileWithBackup(
+	if err := utils.SaveFileWithBackup(
 		filepath.Join(tlsPath, spec.TLSClientCert),
 		pem.EncodeToMemory(&pem.Block{
 			Type:  "CERTIFICATE",
@@ -92,7 +92,7 @@ func genAndSaveClientCert(ca *crypto.CertificateAuthority, name, tlsPath string)
 	if err != nil {
 		return perrs.Annotatef(err, "cannot encode client certificate to PKCS#12 format for %s", name)
 	}
-	if err := file.SaveFileWithBackup(
+	if err := utils.SaveFileWithBackup(
 		filepath.Join(tlsPath, spec.PFXClientCert),
 		pfxData,
 		""); err != nil {

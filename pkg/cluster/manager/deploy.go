@@ -24,7 +24,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -37,6 +36,7 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -78,7 +78,7 @@ func (m *Manager) Deploy(
 		// FIXME: When change to use args, the suggestion text need to be updatem.
 		return errDeployNameDuplicate.
 			New("Cluster name '%s' is duplicated", name).
-			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
+			WithProperty(tui.SuggestionFromFormat("Please specify another cluster name"))
 	}
 
 	metadata := m.specManager.NewMetadata()
@@ -143,10 +143,10 @@ func (m *Manager) Deploy(
 		}
 	}
 
-	var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
+	var sshConnProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
-		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
+		if sshConnProps, err = tui.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
 			return err
 		}
 	}
@@ -154,7 +154,7 @@ func (m *Manager) Deploy(
 	if err := os.MkdirAll(m.specManager.Path(name), 0755); err != nil {
 		return errorx.InitializationFailed.
 			Wrap(err, "Failed to create cluster metadata directory '%s'", m.specManager.Path(name)).
-			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
+			WithProperty(tui.SuggestionFromString("Please check file system permissions and try again."))
 	}
 
 	var (
@@ -370,7 +370,7 @@ func (m *Manager) Deploy(
 		return err
 	}
 
-	hint := color.New(color.Bold).Sprintf("%s start %s", cliutil.OsArgs0(), name)
+	hint := color.New(color.Bold).Sprintf("%s start %s", tui.OsArgs0(), name)
 	log.Infof("Cluster `%s` deployed successfully, you can start it with command: `%s`", name, hint)
 	return nil
 }
