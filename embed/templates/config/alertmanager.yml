@@ -11,7 +11,7 @@ global:
 
 route:
   # A default receiver
-  receiver: "db-alert-email"
+  receiver: "blackhole"
 
   # The labels by which incoming alerts are grouped together. For example,
   # multiple alerts coming in for cluster=A and alertname=LatencyHigh would
@@ -62,3 +62,6 @@ receivers:
   #   email_configs:
   #     - send_resolved: true
   #       to: "example@example.com"
+
+  # This doesn't alert anything, please configure your own receiver
+  - name: "blackhole"
