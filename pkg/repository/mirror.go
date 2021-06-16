@@ -38,7 +38,6 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/utils/mock"
 	"github.com/pingcap/tiup/pkg/utils/rand"
-	"github.com/pingcap/tiup/pkg/verbose"
 	"github.com/pingcap/tiup/pkg/version"
 )
 
@@ -290,7 +289,7 @@ func (l *httpMirror) Open() error {
 
 func (l *httpMirror) download(url string, to string, maxSize int64) (io.ReadCloser, error) {
 	defer func(start time.Time) {
-		verbose.Log("Download resource %s in %s", url, time.Since(start))
+		log.Verbose("Download resource %s in %s", url, time.Since(start))
 	}(time.Now())
 
 	client := grab.NewClient()

@@ -25,7 +25,6 @@ import (
 
 	"github.com/fatih/color"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -35,6 +34,7 @@ import (
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -199,7 +199,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 		return nil
 	}
 
-	cliutil.PrintTable(clusterTable, true)
+	tui.PrintTable(clusterTable, true)
 	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
 
 	ctx := ctxt.New(context.Background(), opt.Concurrency)
@@ -343,7 +343,7 @@ func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstI
 			Role:          roleName,
 			Host:          ins.GetHost(),
 			Ports:         utils.JoinInt(ins.UsedPorts(), "/"),
-			OsArch:        cliutil.OsArch(ins.OS(), ins.Arch()),
+			OsArch:        tui.OsArch(ins.OS(), ins.Arch()),
 			Status:        status,
 			DataDir:       dataDir,
 			DeployDir:     deployDir,

@@ -21,7 +21,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -31,6 +30,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"gopkg.in/yaml.v3"
 )
@@ -138,10 +138,10 @@ func (m *Manager) ScaleOut(
 		}
 	}
 
-	var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
+	var sshConnProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
-		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
+		if sshConnProps, err = tui.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
 			return err
 		}
 	}
@@ -207,7 +207,7 @@ func checkForGlobalConfigs(topoFile string) error {
 the scale out topology, but they will be ignored during the scaling out process.
 If you want to use configs different from the existing cluster, cancel now and
 set them in the specification fileds for each host.`))
-			if err := cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
+			if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
 				return err
 			}
 			return nil // user confirmed, skip further checks

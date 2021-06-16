@@ -21,7 +21,7 @@ import (
 	"github.com/joomcode/errorx"
 	. "github.com/pingcap/check"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/errutil"
+	"github.com/pingcap/tiup/pkg/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -454,7 +454,7 @@ tidb_servers:
 	err = CheckClusterPortConflict(clsList, "topo", &topo3)
 	c.Assert(err, NotNil)
 	c.Assert(errors.Cause(err).Error(), Equals, "spec.deploy.port_conflict: Deploy port conflicts to an existing cluster")
-	suggestion, ok := errorx.ExtractProperty(err, errutil.ErrPropSuggestion)
+	suggestion, ok := errorx.ExtractProperty(err, utils.ErrPropSuggestion)
 	c.Assert(ok, IsTrue)
 	c.Assert(suggestion, Equals, `The port you specified in the topology file is:
   Port:      9100
@@ -481,7 +481,7 @@ pump_servers:
 	err = CheckClusterPortConflict(clsList, "topo", &topo4)
 	c.Assert(err, NotNil)
 	c.Assert(errors.Cause(err).Error(), Equals, "spec.deploy.port_conflict: Deploy port conflicts to an existing cluster")
-	suggestion, ok = errorx.ExtractProperty(err, errutil.ErrPropSuggestion)
+	suggestion, ok = errorx.ExtractProperty(err, utils.ErrPropSuggestion)
 	c.Assert(ok, IsTrue)
 	c.Assert(suggestion, Equals, `The port you specified in the topology file is:
   Port:      2235
@@ -542,7 +542,7 @@ tidb_servers:
 	err = CheckClusterDirConflict(clsList, "topo", &topo3)
 	c.Assert(err, NotNil)
 	c.Assert(errors.Cause(err).Error(), Equals, "spec.deploy.dir_conflict: Deploy directory conflicts to an existing cluster")
-	suggestion, ok := errorx.ExtractProperty(err, errutil.ErrPropSuggestion)
+	suggestion, ok := errorx.ExtractProperty(err, utils.ErrPropSuggestion)
 	c.Assert(ok, IsTrue)
 	c.Assert(suggestion, Equals, `The directory you specified in the topology file is:
   Directory: monitor deploy directory /home/tidb/deploy/monitor-9100
@@ -597,7 +597,7 @@ pump_servers:
 	err = CheckClusterDirConflict(clsList, "topo", &topo4)
 	c.Assert(err, NotNil)
 	c.Assert(errors.Cause(err).Error(), Equals, "spec.deploy.dir_conflict: Deploy directory conflicts to an existing cluster")
-	suggestion, ok = errorx.ExtractProperty(err, errutil.ErrPropSuggestion)
+	suggestion, ok = errorx.ExtractProperty(err, utils.ErrPropSuggestion)
 	c.Assert(ok, IsTrue)
 	c.Assert(suggestion, Equals, `The directory you specified in the topology file is:
   Directory: data directory /home/tidb/deploy/pd-2234
@@ -1014,7 +1014,7 @@ tikv_servers:
 	err = CheckClusterDirConflict(clsList, "topo", &topo)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "spec.deploy.dir_overlap: Deploy directory overlaps to another instance")
-	suggestion, ok := errorx.ExtractProperty(err, errutil.ErrPropSuggestion)
+	suggestion, ok := errorx.ExtractProperty(err, utils.ErrPropSuggestion)
 	c.Assert(ok, IsTrue)
 	c.Assert(suggestion, Equals, `The directory you specified in the topology file is:
   Directory: data directory /home/tidb6wu/tidb1-data/tikv-32160

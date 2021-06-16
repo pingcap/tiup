@@ -28,9 +28,9 @@ import (
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
@@ -158,7 +158,7 @@ func (e *EasySSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, ti
 		if len(stdout) > 0 || len(stderr) > 0 {
 			output := strings.TrimSpace(strings.Join([]string{stdout, stderr}, "\n"))
 			baseErr = baseErr.
-				WithProperty(cliutil.SuggestionFromFormat("Command output on remote host %s:\n%s\n",
+				WithProperty(tui.SuggestionFromFormat("Command output on remote host %s:\n%s\n",
 					e.Config.Server,
 					color.YellowString(output)))
 		}
@@ -303,7 +303,7 @@ func (e *NativeSSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, 
 		if len(stdout.Bytes()) > 0 || len(stderr.Bytes()) > 0 {
 			output := strings.TrimSpace(strings.Join([]string{stdout.String(), stderr.String()}, "\n"))
 			baseErr = baseErr.
-				WithProperty(cliutil.SuggestionFromFormat("Command output on remote host %s:\n%s\n",
+				WithProperty(tui.SuggestionFromFormat("Command output on remote host %s:\n%s\n",
 					e.Config.Host,
 					color.YellowString(output)))
 		}
@@ -374,7 +374,7 @@ func (e *NativeSSHExecutor) Transfer(ctx context.Context, src, dst string, downl
 		if len(stdout.Bytes()) > 0 || len(stderr.Bytes()) > 0 {
 			output := strings.TrimSpace(strings.Join([]string{stdout.String(), stderr.String()}, "\n"))
 			baseErr = baseErr.
-				WithProperty(cliutil.SuggestionFromFormat("Command output on remote host %s:\n%s\n",
+				WithProperty(tui.SuggestionFromFormat("Command output on remote host %s:\n%s\n",
 					e.Config.Host,
 					color.YellowString(output)))
 		}

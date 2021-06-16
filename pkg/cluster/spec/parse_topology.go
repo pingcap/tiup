@@ -20,8 +20,8 @@ import (
 	"strings"
 
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/errutil"
+	"github.com/pingcap/tiup/pkg/tui"
+	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
@@ -30,9 +30,9 @@ var (
 	defaultDeployUser = "tidb"
 	errNSTopolohy     = errorx.NewNamespace("topology")
 	// ErrTopologyReadFailed is ErrTopologyReadFailed
-	ErrTopologyReadFailed = errNSTopolohy.NewType("read_failed", errutil.ErrTraitPreCheck)
+	ErrTopologyReadFailed = errNSTopolohy.NewType("read_failed", utils.ErrTraitPreCheck)
 	// ErrTopologyParseFailed is ErrTopologyParseFailed
-	ErrTopologyParseFailed = errNSTopolohy.NewType("parse_failed", errutil.ErrTraitPreCheck)
+	ErrTopologyParseFailed = errNSTopolohy.NewType("parse_failed", utils.ErrTraitPreCheck)
 )
 
 // ReadYamlFile read yaml content from file`
@@ -45,7 +45,7 @@ func ReadYamlFile(file string) ([]byte, error) {
 	if err != nil {
 		return nil, ErrTopologyReadFailed.
 			Wrap(err, "Failed to read topology file %s", file).
-			WithProperty(cliutil.SuggestionFromTemplate(`
+			WithProperty(tui.SuggestionFromTemplate(`
 Please check whether your topology file {{ColorKeyword}}{{.File}}{{ColorReset}} exists and try again.
 
 To generate a sample topology file:
@@ -71,7 +71,7 @@ func ParseTopologyYaml(file string, out Topology) error {
 	if err = yaml.UnmarshalStrict(yamlFile, out); err != nil {
 		return ErrTopologyParseFailed.
 			Wrap(err, "Failed to parse topology file %s", file).
-			WithProperty(cliutil.SuggestionFromTemplate(`
+			WithProperty(tui.SuggestionFromTemplate(`
 Please check the syntax of your topology file {{ColorKeyword}}{{.File}}{{ColorReset}} and try again.
 `, suggestionProps))
 	}

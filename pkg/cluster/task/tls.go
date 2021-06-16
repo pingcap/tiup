@@ -24,7 +24,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/crypto"
-	"github.com/pingcap/tiup/pkg/file"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -74,16 +73,16 @@ func (c *TLSCert) Execute(ctx context.Context) error {
 		certFileName,
 	)
 	caFile := filepath.Join(c.paths.Cache, spec.TLSCACert)
-	if err := file.SaveFileWithBackup(keyFile, privKey.Pem(), ""); err != nil {
+	if err := utils.SaveFileWithBackup(keyFile, privKey.Pem(), ""); err != nil {
 		return err
 	}
-	if err := file.SaveFileWithBackup(certFile, pem.EncodeToMemory(&pem.Block{
+	if err := utils.SaveFileWithBackup(certFile, pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: cert,
 	}), ""); err != nil {
 		return err
 	}
-	if err := file.SaveFileWithBackup(caFile, pem.EncodeToMemory(&pem.Block{
+	if err := utils.SaveFileWithBackup(caFile, pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: c.ca.Cert.Raw,
 	}), ""); err != nil {
