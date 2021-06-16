@@ -71,7 +71,7 @@ type (
 		LogDir          string               `yaml:"log_dir,omitempty"`
 		ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 		OS              string               `yaml:"os,omitempty" default:"linux"`
-		Arch            string               `yaml:"arch,omitempty" default:""`
+		Arch            string               `yaml:"arch,omitempty"`
 		Custom          interface{}          `yaml:"custom,omitempty" validate:"custom:ignore"`
 	}
 
