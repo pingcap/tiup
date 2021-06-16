@@ -30,7 +30,6 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/colorutil"
 	tiupmeta "github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/flags"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -273,7 +272,7 @@ func Execute() {
 		f := func() {
 			defer func() {
 				if r := recover(); r != nil {
-					if flags.DebugMode {
+					if localdata.DebugMode {
 						log.Debugf("Recovered in telemetry report: %v", r)
 					}
 				}
@@ -307,7 +306,7 @@ func Execute() {
 			tele := telemetry.NewTelemetry()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 			err := tele.Report(ctx, teleReport)
-			if flags.DebugMode {
+			if localdata.DebugMode {
 				if err != nil {
 					log.Infof("report failed: %v", err)
 				}

@@ -11,12 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package flags
+package localdata
 
 import (
 	"os"
-
-	"github.com/pingcap/tiup/pkg/localdata"
 )
 
 // Global flags
@@ -25,6 +23,6 @@ var (
 )
 
 func init() {
-	val := os.Getenv(localdata.EnvNameDebug)
+	val := os.Getenv(EnvNameDebug)
 	DebugMode = (val == "enable" || val == "enabled" || val == "true")
 }
