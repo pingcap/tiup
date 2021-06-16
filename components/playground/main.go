@@ -257,7 +257,7 @@ Examples:
 	defaultMode := "tidb"
 	defaultOptions := &BootOptions{}
 
-	rootCmd.Flags().String(mode, defaultMode, "TiUP playground mode: 'tidb', 'tikv-slim")
+	rootCmd.Flags().String(mode, defaultMode, "TiUP playground mode: 'tidb', 'tikv-slim'")
 	rootCmd.Flags().Bool(withMonitor, false, "Start prometheus and grafana component")
 
 	rootCmd.Flags().Int(db, defaultOptions.TiDB.Num, "TiDB instance number")
