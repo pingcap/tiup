@@ -54,7 +54,8 @@ do
             ;;
         --dev)
             if [ ! "$TIUP_CLUSTER_ROOT" ]; then
-                export TIUP_CLUSTER_ROOT="$(cd ../ && pwd)"
+                TIUP_CLUSTER_ROOT="$(cd ../ && pwd)"
+                export TIUP_CLUSTER_ROOT
                 INFO "TIUP_CLUSTER_ROOT is not set, defaulting to: $TIUP_CLUSTER_ROOT"
             fi
             INFO "Running docker-compose with dev config"
@@ -144,14 +145,14 @@ if [ -z "${DEV}" ]; then
     )
 else
     INFO "Build tiup-cluster in $TIUP_CLUSTER_ROOT"
-    (cd $TIUP_CLUSTER_ROOT;make failpoint-enable;GOOS=linux GOARCH=amd64 make cluster dm;make failpoint-disable)
+    (cd "${TIUP_CLUSTER_ROOT}";make failpoint-enable;GOOS=linux GOARCH=amd64 make cluster dm;make failpoint-disable)
 fi
 
 if [ "${INIT_ONLY}" -eq 1 ]; then
     exit 0
 fi
 
-if [ ${SUBNET##*/} -ne 24 ]; then
+if [ "${SUBNET##*/}" -ne 24 ]; then
     ERROR "Only subnet mask of 24 bits are currently supported"
     exit 1
 fi
@@ -185,7 +186,7 @@ if [[ "$exist_network" == "" ]]; then
 else
     echo "Skip create tiup-cluster network"
     SUBNET=$(docker network inspect -f "{{range .IPAM.Config}}{{.Subnet}}{{end}}" tiops)
-    if [ ${SUBNET##*/} -ne 24 ]; then
+    if [ "${SUBNET##*/}" -ne 24 ]; then
         ERROR "Only subnet mask of 24 bits are currently supported"
         exit 1
     fi
