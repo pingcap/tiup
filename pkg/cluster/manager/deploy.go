@@ -137,16 +137,20 @@ func (m *Manager) Deploy(
 		return err
 	}
 
-	if !skipConfirm {
-		if err := m.confirmTopology(name, clusterVersion, topo, set.NewStringSet()); err != nil {
-			return err
-		}
-	}
-
 	var sshConnProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
 		if sshConnProps, err = tui.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
+			return err
+		}
+	}
+
+	if err := m.fillHostArch(sshConnProps, topo, &gOpt, opt.User); err != nil {
+		return err
+	}
+
+	if !skipConfirm {
+		if err := m.confirmTopology(name, clusterVersion, topo, set.NewStringSet()); err != nil {
 			return err
 		}
 	}

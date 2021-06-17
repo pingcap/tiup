@@ -84,6 +84,18 @@ func (m *Manager) ScaleOut(
 		return err
 	}
 
+	var sshConnProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	if gOpt.SSHType != executor.SSHTypeNone {
+		var err error
+		if sshConnProps, err = tui.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
+			return err
+		}
+	}
+
+	if err := m.fillHostArch(sshConnProps, newPart, &gOpt, opt.User); err != nil {
+		return err
+	}
+
 	// Abort scale out operation if the merged topology is invalid
 	mergedTopo := topo.MergeTopo(newPart)
 	if err := mergedTopo.Validate(); err != nil {
@@ -134,14 +146,6 @@ func (m *Manager) ScaleOut(
 	if !skipConfirm {
 		// patchedComponents are components that have been patched and overwrited
 		if err := m.confirmTopology(name, base.Version, newPart, patchedComponents); err != nil {
-			return err
-		}
-	}
-
-	var sshConnProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
-	if gOpt.SSHType != executor.SSHTypeNone {
-		var err error
-		if sshConnProps, err = tui.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
 			return err
 		}
 	}

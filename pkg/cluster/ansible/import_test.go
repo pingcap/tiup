@@ -56,7 +56,7 @@ process_supervision = systemd
 172.16.10.1
 172.16.10.2
 172.16.10.3
-	
+
 [all:vars]
 deploy_dir = /data1/deploy
 process_supervision = systemd
@@ -71,7 +71,7 @@ process_supervision = systemd
 172.16.10.1 deploy_dir=/data/deploy
 172.16.10.2 deploy_dir=/data/deploy
 172.16.10.3 deploy_dir=/data/deploy
-	
+
 [all:vars]
 deploy_dir = /data1/deploy
 process_supervision = systemd
@@ -86,7 +86,7 @@ process_supervision = systemd
 172.16.10.1 deploy_dir=/data/deploy1
 172.16.10.2 deploy_dir=/data/deploy2
 172.16.10.3 deploy_dir=/data/deploy3
-	
+
 [all:vars]
 deploy_dir = /data1/deploy
 process_supervision = systemd
@@ -113,6 +113,7 @@ func (s *ansSuite) TestParseInventoryFile(c *C) {
 	expected := []byte(`global:
     user: tiops
     deploy_dir: /home/tiopsimport/ansible-deploy
+    arch: amd64
 monitored:
     deploy_dir: /home/tiopsimport/ansible-deploy
     data_dir: /home/tiopsimport/ansible-deploy/data

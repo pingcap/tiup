@@ -61,7 +61,9 @@ func parseInventoryFile(invFile io.Reader) (string, *spec.ClusterMeta, *aini.Inv
 
 	clsMeta := &spec.ClusterMeta{
 		Topology: &spec.Specification{
-			GlobalOptions:    spec.GlobalOptions{},
+			GlobalOptions: spec.GlobalOptions{
+				Arch: "amd64",
+			},
 			MonitoredOptions: spec.MonitoredOptions{},
 			TiDBServers:      make([]*spec.TiDBSpec, 0),
 			TiKVServers:      make([]*spec.TiKVSpec, 0),
