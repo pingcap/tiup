@@ -153,7 +153,7 @@ func (m *Manager) Deploy(
 		}
 	}
 
-	if err := m.fillHostArch(sshConnProps, topo, &gOpt, opt.User); err != nil {
+	if err := m.fillHostArch(sshConnProps, sshProxyProps, topo, &gOpt, opt.User); err != nil {
 		return err
 	}
 

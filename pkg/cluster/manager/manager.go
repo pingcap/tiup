@@ -143,7 +143,8 @@ func (m *Manager) sshTaskBuilder(name string, topo spec.Topology, user string, o
 		)
 }
 
-func (m *Manager) fillHostArch(s *tui.SSHConnectionProps, topo spec.Topology, gOpt *operator.Options, user string) error {
+func (m *Manager) fillHostArch(s, p *tui.SSHConnectionProps, topo spec.Topology, gOpt *operator.Options, user string) error {
+	globalSSHType := topo.BaseTopo().GlobalOptions.SSHType
 	hostArch := map[string]string{}
 	var detectTasks []*task.StepDisplay
 	topo.IterInstance(func(inst spec.Instance) {
@@ -165,8 +166,15 @@ func (m *Manager) fillHostArch(s *tui.SSHConnectionProps, topo spec.Topology, gO
 				s.IdentityFilePassphrase,
 				gOpt.SSHTimeout,
 				gOpt.OptTimeout,
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				p.Password,
+				p.IdentityFile,
+				p.IdentityFilePassphrase,
+				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
-				topo.BaseTopo().GlobalOptions.SSHType,
+				globalSSHType,
 			).
 			Shell(inst.GetHost(), "uname -m", "", false).
 			BuildAsStep(fmt.Sprintf("  - Detecting node %s", inst.GetHost()))

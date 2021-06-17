@@ -100,7 +100,7 @@ func (m *Manager) ScaleOut(
 		}
 	}
 
-	if err := m.fillHostArch(sshConnProps, newPart, &gOpt, opt.User); err != nil {
+	if err := m.fillHostArch(sshConnProps, sshProxyProps, newPart, &gOpt, opt.User); err != nil {
 		return err
 	}
 
