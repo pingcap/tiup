@@ -99,19 +99,22 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 		}
 	}
 
-	tb := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
 	if topo.Type() == spec.TopoTypeTiDB {
-		tb = tb.UpdateTopology(
+		b.UpdateTopology(
 			name,
 			m.specManager.Path(name),
 			metadata.(*spec.ClusterMeta),
 			nil, /* deleteNodeIds */
 		)
 	}
-	tb = tb.ParallelStep("+ Refresh instance configs", gOpt.Force, refreshConfigTasks...)
+	b.ParallelStep("+ Refresh instance configs", gOpt.Force, refreshConfigTasks...)
 
 	if len(monitorConfigTasks) > 0 {
-		tb = tb.ParallelStep("+ Refresh monitor configs", gOpt.Force, monitorConfigTasks...)
+		b.ParallelStep("+ Refresh monitor configs", gOpt.Force, monitorConfigTasks...)
 	}
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
@@ -119,12 +122,12 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 		return err
 	}
 	if !skipRestart {
-		tb = tb.Func("UpgradeCluster", func(ctx context.Context) error {
+		b.Func("UpgradeCluster", func(ctx context.Context) error {
 			return operator.Upgrade(ctx, topo, gOpt, tlsCfg)
 		})
 	}
 
-	t := tb.Build()
+	t := b.Build()
 
 	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
 		if errorx.Cast(err) != nil {

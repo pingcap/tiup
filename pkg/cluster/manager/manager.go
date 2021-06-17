@@ -22,6 +22,7 @@ import (
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -127,7 +128,16 @@ You may read the OpenJDK doc for a reference: https://openjdk.java.net/install/
 	return tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 }
 
-func (m *Manager) sshTaskBuilder(name string, topo spec.Topology, user string, opts operator.Options) *task.Builder {
+func (m *Manager) sshTaskBuilder(name string, topo spec.Topology, user string, gOpt operator.Options) (*task.Builder, error) {
+
+	var p *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	if gOpt.SSHType != executor.SSHTypeNone && len(gOpt.SSHProxyHost) != 0 {
+		var err error
+		if p, err = tui.ReadIdentityFileOrPassword(gOpt.SSHProxyIdentity, gOpt.SSHProxyUsePassword); err != nil {
+			return nil, err
+		}
+	}
+
 	return task.NewBuilder().
 		SSHKeySet(
 			m.specManager.Path(name, "ssh", "id_rsa"),
@@ -136,11 +146,18 @@ func (m *Manager) sshTaskBuilder(name string, topo spec.Topology, user string, o
 		ClusterSSH(
 			topo,
 			user,
-			opts.SSHTimeout,
-			opts.OptTimeout,
-			opts.SSHType,
+			gOpt.SSHTimeout,
+			gOpt.OptTimeout,
+			gOpt.SSHProxyHost,
+			gOpt.SSHProxyPort,
+			gOpt.SSHProxyUser,
+			p.Password,
+			p.IdentityFile,
+			p.IdentityFilePassphrase,
+			gOpt.SSHProxyTimeout,
+			gOpt.SSHType,
 			topo.BaseTopo().GlobalOptions.SSHType,
-		)
+		), nil
 }
 
 func (m *Manager) fillHostArch(s, p *tui.SSHConnectionProps, topo spec.Topology, gOpt *operator.Options, user string) error {

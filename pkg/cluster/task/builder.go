@@ -103,23 +103,33 @@ func (b *Builder) Func(name string, fn func(ctx context.Context) error) *Builder
 }
 
 // ClusterSSH init all UserSSH need for the cluster.
-func (b *Builder) ClusterSSH(spec spec.Topology, deployUser string, sshTimeout, exeTimeout uint64, sshType, defaultSSHType executor.SSHType) *Builder {
+func (b *Builder) ClusterSSH(
+	topo spec.Topology,
+	deployUser string, sshTimeout, exeTimeout uint64,
+	proxyHost string, proxyPort int, proxyUser, proxyPassword, proxyKeyFile, proxyPassphrase string, proxySshTimeout uint64,
+	sshType, defaultSSHType executor.SSHType,
+) *Builder {
 	if sshType == "" {
 		sshType = defaultSSHType
 	}
 	var tasks []Task
-	for _, com := range spec.ComponentsByStartOrder() {
-		for _, in := range com.Instances() {
-			tasks = append(tasks, &UserSSH{
-				host:       in.GetHost(),
-				port:       in.GetSSHPort(),
-				deployUser: deployUser,
-				timeout:    sshTimeout,
-				exeTimeout: exeTimeout,
-				sshType:    sshType,
-			})
-		}
-	}
+	topo.IterInstance(func(inst spec.Instance) {
+		tasks = append(tasks, &UserSSH{
+			host:            inst.GetHost(),
+			port:            inst.GetSSHPort(),
+			deployUser:      deployUser,
+			timeout:         sshTimeout,
+			exeTimeout:      exeTimeout,
+			proxyHost:       proxyHost,
+			proxyPort:       proxyPort,
+			proxyUser:       proxyUser,
+			proxyPassword:   proxyPassword,
+			proxyKeyFile:    proxyKeyFile,
+			proxyPassphrase: proxyPassphrase,
+			proxyTimeout:    proxySshTimeout,
+			sshType:         sshType,
+		})
+	})
 
 	b.tasks = append(b.tasks, &Parallel{inner: tasks})
 

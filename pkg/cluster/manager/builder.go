@@ -322,20 +322,13 @@ func buildScaleOutTask(
 	downloadCompTasks = append(downloadCompTasks, convertStepDisplaysToTasks(dlTasks)...)
 	deployCompTasks = append(deployCompTasks, convertStepDisplaysToTasks(dpTasks)...)
 
-	builder := task.NewBuilder().
-		SSHKeySet(
-			specManager.Path(name, "ssh", "id_rsa"),
-			specManager.Path(name, "ssh", "id_rsa.pub")).
+	builder, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return nil, err
+	}
+	builder.
 		Parallel(false, downloadCompTasks...).
 		Parallel(false, envInitTasks...).
-		ClusterSSH(
-			topo,
-			base.User,
-			gOpt.SSHTimeout,
-			gOpt.OptTimeout,
-			gOpt.SSHType,
-			topo.BaseTopo().GlobalOptions.SSHType,
-		).
 		Parallel(false, deployCompTasks...)
 
 	if afterDeploy != nil {
@@ -343,14 +336,6 @@ func buildScaleOutTask(
 	}
 
 	builder.
-		ClusterSSH(
-			newPart,
-			base.User,
-			gOpt.SSHTimeout,
-			gOpt.OptTimeout,
-			gOpt.SSHType,
-			topo.BaseTopo().GlobalOptions.SSHType,
-		).
 		Func("Save meta", func(_ context.Context) error {
 			metadata.SetTopology(mergedTopo)
 			return m.specManager.SaveMeta(name, metadata)

@@ -63,7 +63,11 @@ func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt 
 		log.Infof("Destroying cluster...")
 	}
 
-	t := m.sshTaskBuilder(name, topo, base.User, gOpt).
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
+	t := b.
 		Func("StopCluster", func(ctx context.Context) error {
 			return operator.Stop(ctx, topo, operator.Options{Force: destroyOpt.Force}, tlsCfg)
 		}).
@@ -117,7 +121,10 @@ func (m *Manager) DestroyTombstone(
 		return err
 	}
 
-	b := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
 
 	ctx := ctxt.New(context.Background(), gOpt.Concurrency)
 	nodes, err := operator.DestroyTombstone(ctx, cluster, true /* returnNodesOnly */, gOpt, tlsCfg)

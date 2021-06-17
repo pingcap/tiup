@@ -122,7 +122,11 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 		log.Infof("Cleanup cluster...")
 	}
 
-	t := m.sshTaskBuilder(name, topo, base.User, gOpt).
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
+	t := b.
 		Func("StopCluster", func(ctx context.Context) error {
 			return operator.Stop(ctx, topo, operator.Options{}, tlsCfg)
 		}).
