@@ -129,9 +129,11 @@ func renderInstanceSpec(t string, inst spec.Instance) ([]string, error) {
 			}
 			tfs.DataDir = d
 			key := inst.ID() + d + uuid.New().String()
-			if s, err := renderSpec(t, tfs, key); err == nil {
-				result = append(result, s)
+			s, err := renderSpec(t, inst.(*spec.TiFlashInstance), key)
+			if err != nil {
+				log.Debugf("error rendering tiflash spec: %s", err)
 			}
+			result = append(result, s)
 		}
 	default:
 		s, err := renderSpec(t, inst, inst.ID())
