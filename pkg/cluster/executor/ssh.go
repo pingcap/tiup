@@ -82,16 +82,15 @@ type (
 
 	// SSHConfig is the configuration needed to establish SSH connection.
 	SSHConfig struct {
-		Host       string // hostname of the SSH server
-		Port       int    // port of the SSH server
-		User       string // username to login to the SSH server
-		Password   string // password of the user
-		KeyFile    string // path to the private key file
-		Passphrase string // passphrase of the private key file
-		// Timeout is the maximum amount of time for the TCP connection to establish.
-		Timeout time.Duration
-		// ExeTimeout is the maximum abount of time for the command to finish
-		ExeTimeout time.Duration
+		Host       string        // hostname of the SSH server
+		Port       int           // port of the SSH server
+		User       string        // username to login to the SSH server
+		Password   string        // password of the user
+		KeyFile    string        // path to the private key file
+		Passphrase string        // passphrase of the private key file
+		Timeout    time.Duration // Timeout is the maximum amount of time for the TCP connection to establish.
+		ExeTimeout time.Duration // ExeTimeout is the maximum amount of time for the command to finish
+		Proxy      *SSHConfig    // ssh proxy config
 	}
 )
 
@@ -118,6 +117,21 @@ func (e *EasySSHExecutor) initialize(config SSHConfig) {
 		e.Config.Passphrase = config.Passphrase
 	} else if len(config.Password) > 0 {
 		e.Config.Password = config.Password
+	}
+
+	if proxy := config.Proxy; proxy != nil {
+		e.Config.Proxy = easyssh.DefaultConfig{
+			Server:  proxy.Host,
+			Port:    strconv.Itoa(proxy.Port),
+			User:    proxy.User,
+			Timeout: proxy.Timeout, // timeout when connecting to remote
+		}
+		if len(proxy.KeyFile) > 0 {
+			e.Config.Proxy.KeyPath = proxy.KeyFile
+			e.Config.Proxy.Passphrase = proxy.Passphrase
+		} else if len(proxy.Password) > 0 {
+			e.Config.Proxy.Password = proxy.Password
+		}
 	}
 }
 
@@ -231,6 +245,23 @@ func (e *NativeSSHExecutor) configArgs(args []string, isScp bool) []string {
 		if e.Config.Passphrase != "" {
 			args = append([]string{"sshpass", "-p", e.Config.Passphrase, "-P", e.prompt("passphrase")}, args...)
 		}
+	}
+
+	proxy := e.Config.Proxy
+	if proxy != nil {
+		proxyArgs := []string{"ssh"}
+		if proxy.Timeout != 0 {
+			proxyArgs = append(proxyArgs, "-o", fmt.Sprintf("ConnectTimeout=%d", int64(proxy.Timeout.Seconds())))
+		}
+		if proxy.Password != "" {
+			proxyArgs = append([]string{"sshpass", "-p", proxy.Password, "-P", e.prompt("password")}, proxyArgs...)
+		} else if proxy.KeyFile != "" {
+			proxyArgs = append(proxyArgs, "-i", proxy.KeyFile)
+			if proxy.Passphrase != "" {
+				proxyArgs = append([]string{"sshpass", "-p", proxy.Passphrase, "-P", e.prompt("passphrase")}, proxyArgs...)
+			}
+		}
+		args = append(args, []string{"-o", fmt.Sprintf(`ProxyCommand="%s %s@%s -p %d -W %%h:%%p"`, strings.Join(proxyArgs, " "), proxy.User, proxy.Host, proxy.Port)}...)
 	}
 	return args
 }

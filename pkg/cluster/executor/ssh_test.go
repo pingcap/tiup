@@ -80,6 +80,51 @@ func TestNativeSSHConfigArgs(t *testing.T) {
 			true,
 			"sshpass -p tidb -P password -o ConnectTimeout=60",
 		},
+		{
+			&SSHConfig{
+				Timeout: time.Duration(60 * time.Second),
+				KeyFile: "id_rsa",
+				Proxy: &SSHConfig{
+					User:    "root",
+					Host:    "proxy1",
+					Port:    222,
+					KeyFile: "b.id_rsa",
+				},
+			},
+			false,
+			`-o ConnectTimeout=60 -i id_rsa -o ProxyCommand="ssh -i b.id_rsa root@proxy1 -p 222 -W %h:%p"`,
+		},
+		{
+			&SSHConfig{
+				Timeout: time.Duration(60 * time.Second),
+				Port:    1203,
+				KeyFile: "id_rsa",
+				Proxy: &SSHConfig{
+					User:    "root",
+					Host:    "proxy1",
+					Port:    222,
+					KeyFile: "b.id_rsa",
+					Timeout: time.Duration(10 * time.Second),
+				},
+			},
+			false,
+			`-p 1203 -o ConnectTimeout=60 -i id_rsa -o ProxyCommand="ssh -o ConnectTimeout=10 -i b.id_rsa root@proxy1 -p 222 -W %h:%p"`,
+		},
+		{
+			&SSHConfig{
+				Timeout:  time.Duration(60 * time.Second),
+				Password: "pass",
+				Proxy: &SSHConfig{
+					User:     "root",
+					Host:     "proxy1",
+					Port:     222,
+					Password: "word",
+					Timeout:  time.Duration(10 * time.Second),
+				},
+			},
+			false,
+			`sshpass -p pass -P password -o ConnectTimeout=60 -o ProxyCommand="sshpass -p word -P password ssh -o ConnectTimeout=10 root@proxy1 -p 222 -W %h:%p"`,
+		},
 	}
 
 	e := &NativeSSHExecutor{}
