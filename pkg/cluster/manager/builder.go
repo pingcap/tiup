@@ -61,7 +61,7 @@ func buildScaleOutTask(
 	metadata spec.Metadata,
 	mergedTopo spec.Topology,
 	opt DeployOptions,
-	sshConnProps *tui.SSHConnectionProps,
+	s, p *tui.SSHConnectionProps,
 	newPart spec.Topology,
 	patchedComponents set.StringSet,
 	gOpt operator.Options,
@@ -121,11 +121,18 @@ func buildScaleOutTask(
 				instance.GetHost(),
 				instance.GetSSHPort(),
 				opt.User,
-				sshConnProps.Password,
-				sshConnProps.IdentityFile,
-				sshConnProps.IdentityFilePassphrase,
+				s.Password,
+				s.IdentityFile,
+				s.IdentityFilePassphrase,
 				gOpt.SSHTimeout,
 				gOpt.OptTimeout,
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				p.Password,
+				p.IdentityFile,
+				p.IdentityFilePassphrase,
+				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				globalOptions.SSHType,
 			).
@@ -137,6 +144,8 @@ func buildScaleOutTask(
 
 	// Download missing component
 	downloadCompTasks = convertStepDisplaysToTasks(buildDownloadCompTasks(base.Version, newPart, m.bindVersion))
+
+	sshType := topo.BaseTopo().GlobalOptions.SSHType
 
 	var iterErr error
 	// Deploy the new topology and refresh the configuration
@@ -167,6 +176,15 @@ func buildScaleOutTask(
 				gOpt.OptTimeout,
 				gOpt.SSHType,
 				topo.BaseTopo().GlobalOptions.SSHType,
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				p.Password,
+				p.IdentityFile,
+				p.IdentityFilePassphrase,
+				gOpt.SSHProxyTimeout,
+				gOpt.SSHType,
+				sshType,
 			).
 			Mkdir(base.User, inst.GetHost(), deployDirs...).
 			Mkdir(base.User, inst.GetHost(), dataDirs...).
@@ -296,6 +314,7 @@ func buildScaleOutTask(
 		topo.BaseTopo().MonitoredOptions,
 		base.Version,
 		gOpt,
+		p,
 	)
 	if err != nil {
 		return nil, err
@@ -373,6 +392,7 @@ func buildMonitoredDeployTask(
 	monitoredOptions *spec.MonitoredOptions,
 	version string,
 	gOpt operator.Options,
+	p *tui.SSHConnectionProps,
 ) (downloadCompTasks []*task.StepDisplay, deployCompTasks []*task.StepDisplay, err error) {
 	if monitoredOptions == nil {
 		return
@@ -423,6 +443,13 @@ func buildMonitoredDeployTask(
 					globalOptions.User,
 					gOpt.SSHTimeout,
 					gOpt.OptTimeout,
+					gOpt.SSHProxyHost,
+					gOpt.SSHProxyPort,
+					gOpt.SSHProxyUser,
+					p.Password,
+					p.IdentityFile,
+					p.IdentityFilePassphrase,
+					gOpt.SSHProxyTimeout,
 					gOpt.SSHType,
 					globalOptions.SSHType,
 				).
@@ -488,6 +515,8 @@ func buildRefreshMonitoredConfigTasks(
 	monitoredOptions *spec.MonitoredOptions,
 	sshTimeout, exeTimeout uint64,
 	sshType executor.SSHType,
+	gOpt operator.Options,
+	p *tui.SSHConnectionProps,
 ) []*task.StepDisplay {
 	if monitoredOptions == nil {
 		return nil
@@ -515,6 +544,14 @@ func buildRefreshMonitoredConfigTasks(
 					sshTimeout,
 					exeTimeout,
 					sshType,
+					gOpt.SSHProxyHost,
+					gOpt.SSHProxyPort,
+					gOpt.SSHProxyUser,
+					p.Password,
+					p.IdentityFile,
+					p.IdentityFilePassphrase,
+					gOpt.SSHProxyTimeout,
+					gOpt.SSHType,
 					globalOptions.SSHType,
 				).
 				MonitoredConfig(

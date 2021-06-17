@@ -89,11 +89,19 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 		}
 	}
 
-	var sshConnProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	var (
+		sshConnProps  *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+		sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	)
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
 		if sshConnProps, err = tui.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
 			return err
+		}
+		if len(gOpt.SSHProxyHost) != 0 {
+			if sshProxyProps, err = tui.ReadIdentityFileOrPassword(gOpt.SSHProxyIdentity, gOpt.SSHProxyUsePassword); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -101,7 +109,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 		return err
 	}
 
-	if err := checkSystemInfo(sshConnProps, &topo, &gOpt, &opt); err != nil {
+	if err := checkSystemInfo(sshConnProps, sshProxyProps, &topo, &gOpt, &opt); err != nil {
 		return err
 	}
 
@@ -115,7 +123,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 }
 
 // checkSystemInfo performs series of checks and tests of the deploy server
-func checkSystemInfo(s *tui.SSHConnectionProps, topo *spec.Specification, gOpt *operator.Options, opt *CheckOptions) error {
+func checkSystemInfo(s, p *tui.SSHConnectionProps, topo *spec.Specification, gOpt *operator.Options, opt *CheckOptions) error {
 	var (
 		collectTasks  []*task.StepDisplay
 		checkSysTasks []*task.StepDisplay
@@ -203,6 +211,13 @@ func checkSystemInfo(s *tui.SSHConnectionProps, topo *spec.Specification, gOpt *
 						s.IdentityFilePassphrase,
 						gOpt.SSHTimeout,
 						gOpt.OptTimeout,
+						gOpt.SSHProxyHost,
+						gOpt.SSHProxyPort,
+						gOpt.SSHProxyUser,
+						p.Password,
+						p.IdentityFile,
+						p.IdentityFilePassphrase,
+						gOpt.SSHProxyTimeout,
 						gOpt.SSHType,
 						topo.GlobalOptions.SSHType,
 					).
@@ -317,6 +332,13 @@ func checkSystemInfo(s *tui.SSHConnectionProps, topo *spec.Specification, gOpt *
 					s.IdentityFilePassphrase,
 					gOpt.SSHTimeout,
 					gOpt.OptTimeout,
+					gOpt.SSHProxyHost,
+					gOpt.SSHProxyPort,
+					gOpt.SSHProxyUser,
+					p.Password,
+					p.IdentityFile,
+					p.IdentityFilePassphrase,
+					gOpt.SSHProxyTimeout,
 					gOpt.SSHType,
 					topo.GlobalOptions.SSHType,
 				).
@@ -359,6 +381,13 @@ func checkSystemInfo(s *tui.SSHConnectionProps, topo *spec.Specification, gOpt *
 				s.IdentityFilePassphrase,
 				gOpt.SSHTimeout,
 				gOpt.OptTimeout,
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				p.Password,
+				p.IdentityFile,
+				p.IdentityFilePassphrase,
+				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				topo.GlobalOptions.SSHType,
 			)

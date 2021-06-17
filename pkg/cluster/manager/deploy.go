@@ -137,11 +137,19 @@ func (m *Manager) Deploy(
 		return err
 	}
 
-	var sshConnProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	var (
+		sshConnProps  *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+		sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	)
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
 		if sshConnProps, err = tui.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
 			return err
+		}
+		if len(gOpt.SSHProxyHost) != 0 {
+			if sshProxyProps, err = tui.ReadIdentityFileOrPassword(gOpt.SSHProxyIdentity, gOpt.SSHProxyUsePassword); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -230,6 +238,13 @@ func (m *Manager) Deploy(
 					sshConnProps.IdentityFilePassphrase,
 					gOpt.SSHTimeout,
 					gOpt.OptTimeout,
+					gOpt.SSHProxyHost,
+					gOpt.SSHProxyPort,
+					gOpt.SSHProxyUser,
+					sshProxyProps.Password,
+					sshProxyProps.IdentityFile,
+					sshProxyProps.IdentityFilePassphrase,
+					gOpt.SSHProxyTimeout,
 					gOpt.SSHType,
 					globalOptions.SSHType,
 				).
@@ -273,6 +288,13 @@ func (m *Manager) Deploy(
 				globalOptions.User,
 				gOpt.SSHTimeout,
 				gOpt.OptTimeout,
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				sshProxyProps.Password,
+				sshProxyProps.IdentityFile,
+				sshProxyProps.IdentityFilePassphrase,
+				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				globalOptions.SSHType,
 			).
@@ -355,6 +377,7 @@ func (m *Manager) Deploy(
 		topo.GetMonitoredOptions(),
 		clusterVersion,
 		gOpt,
+		sshProxyProps,
 	)
 	if err != nil {
 		return err
