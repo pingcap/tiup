@@ -35,8 +35,10 @@ INIT_ONLY=0
 DEV=""
 COMPOSE=${COMPOSE:-""}
 SUBNET=${SUBNET:-"172.19.0.0/24"}
+PROXY_SUBNET=${PROXY_SUBNET:-"172.19.1.0/24"}
 NODES=${NODES:-5}
 RUN_AS_DAEMON=0
+INCLUDE_PROXY_NODES=0
 POSITIONAL=()
 
 while [[ $# -gt 0 ]]
@@ -82,6 +84,16 @@ do
             RUN_AS_DAEMON=1
             shift # past argument
             ;;
+        --ssh-proxy)
+            INFO "Include SSH proxy nodes"
+            INCLUDE_PROXY_NODES=1
+            shift # past argument
+            ;;
+        --proxy-subnet)
+            PROXY_SUBNET="$2"
+            shift # past argument
+            shift # past value
+            ;;
         *)
             POSITIONAL+=("$1")
             ERROR "unknown option $1"
@@ -103,6 +115,8 @@ if [ "${HELP}" -eq 1 ]; then
     echo "  --compose PATH                                        Path to an additional docker-compose yml config."
     echo "  --subnet SUBNET                                       Subnet in 24 bit netmask"
     echo "  --nodes NODES                                         Start how much nodes"
+    echo "  --ssh-proxy                                           Start with ssh proxy nodes"
+    echo "  --proxy-subnet PROXY_SUBNET                           Proxy subnet in 24 bit netmask"
     echo "To provide multiple additional docker-compose args, set the COMPOSE var directly, with the -f flag. Ex: COMPOSE=\"-f FILE_PATH_HERE -f ANOTHER_PATH\" ./up.sh --dev"
     exit 0
 fi
@@ -181,19 +195,38 @@ pip install -U jinja2
 
 exist_network=$(docker network ls | awk '{if($2 == "tiops") print $1}')
 if [[ "$exist_network" == "" ]]; then
-    ipprefix=${SUBNET%.*}
-    docker network create --gateway "${ipprefix}.1" --subnet "${SUBNET}" tiops
+    docker network create --gateway "${SUBNET%.*}.1" --subnet "${SUBNET}" tiops
 else
     echo "Skip create tiup-cluster network"
     SUBNET=$(docker network inspect -f "{{range .IPAM.Config}}{{.Subnet}}{{end}}" tiops)
-    if [ "${SUBNET##*/}" -ne 24 ]; then
-        ERROR "Only subnet mask of 24 bits are currently supported"
-        exit 1
-    fi
-    ipprefix=${SUBNET%.*}
 fi
 
-python -c "from jinja2 import Template; print(Template(open('docker-compose.yml.tpl').read()).render(nodes=$NODES, ipprefix='$ipprefix'))" > docker-compose.yml
+if [[ "${SUBNET##*/}" -ne 24 ]]; then
+    ERROR "Only subnet mask of 24 bits are currently supported"
+    exit 1
+fi
+ipprefix=${SUBNET%.*}
+
+ssh_proxy="False"
+proxy_prefix=""
+if [[ "${INCLUDE_PROXY_NODES}" -eq 1 ]]; then
+    ssh_proxy="True"
+
+    exist_network=$(docker network ls | awk '{if($2 == "tiproxy") print $1}')
+    if [[ "$exist_network" == "" ]]; then
+        docker network create --gateway "${PROXY_SUBNET%.*}.1" --subnet "${PROXY_SUBNET}" tiproxy
+    else
+        echo "Skip create tiup-cluster proxy network"
+        SUBNET=$(docker network inspect -f "{{range .IPAM.Config}}{{.Subnet}}{{end}}" tiproxy)
+    fi
+    if [[ "${PROXY_SUBNET##*/}" -ne 24 ]]; then
+        ERROR "Only proxy-subnet mask of 24 bits are currently supported"
+        exit 1
+    fi
+    proxy_prefix=${PROXY_SUBNET%.*}
+fi
+
+python -c "from jinja2 import Template; print(Template(open('docker-compose.yml.tpl').read()).render(nodes=$NODES, ipprefix='$ipprefix', ssh_proxy=$ssh_proxy, proxy_prefix='$proxy_prefix'))" > docker-compose.yml
 sed "s/__IPPREFIX__/$ipprefix/g" docker-compose.dm.yml.tpl > docker-compose.dm.yml
 sed -i '/TIUP_TEST_IP_PREFIX/d' ./secret/control.env
 echo "TIUP_TEST_IP_PREFIX=$ipprefix" >> ./secret/control.env
