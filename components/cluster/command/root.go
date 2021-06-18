@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -25,12 +26,14 @@ import (
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
 	tiupmeta "github.com/pingcap/tiup/pkg/environment"
+	"github.com/pingcap/tiup/pkg/httproxy"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -54,6 +57,7 @@ var (
 	teleNodeInfos []*telemetry.NodeInfo
 	teleTopology  string
 	teleCommand   []string
+	httpProxy     *http.Server
 )
 
 var tidbSpec *spec.SpecManager
@@ -127,9 +131,18 @@ func init() {
 				fmt.Println("The --native-ssh flag has been deprecated, please use --ssh=system")
 			}
 
+			httpProxy, err = httproxy.MaybeStartHTTPProxy(gOpt)
+			if err != nil {
+				return perrs.Annotate(err, "start http-proxy")
+			}
+
 			return nil
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+			if httpProxy != nil {
+				httpProxy.Shutdown(context.Background())
+				os.Unsetenv("TIUP_INNER_HTTP_PROXY")
+			}
 			return tiupmeta.GlobalEnv().V1Repository().Mirror().Close()
 		},
 	}
