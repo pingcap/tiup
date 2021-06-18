@@ -11,23 +11,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package httproxy
+package proxy
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/appleboy/easyssh-proxy"
 	perrs "github.com/pingcap/errors"
-	operator "github.com/pingcap/tiup/pkg/cluster/operation"
-	"github.com/pingcap/tiup/pkg/tui"
-	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
@@ -38,41 +33,6 @@ type HTTPProxy struct {
 	config *easyssh.MakeConfig
 	l      sync.RWMutex
 	tr     *http.Transport
-}
-
-// MaybeMaybeStartHTTPProxy maybe starts an inner http proxy
-func MaybeStartHTTPProxy(gOpt operator.Options) (*http.Server, error) {
-	if len(gOpt.SSHProxyHost) == 0 {
-		return nil, nil
-	}
-
-	sshProps, err := tui.ReadIdentityFileOrPassword(gOpt.SSHProxyIdentity, gOpt.SSHProxyUsePassword)
-	if err != nil {
-		return nil, err
-	}
-
-	port, err := utils.GetFreePort("127.0.0.1", 12345)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: Using environment variables to share data may not be a good idea
-	os.Setenv("TIUP_INNER_HTTP_PROXY", fmt.Sprintf("http://127.0.0.1:%d", port))
-	server := &http.Server{
-		Addr: fmt.Sprintf("127.0.0.1:%d", port),
-		Handler: NewHTTPProxy(
-			gOpt.SSHProxyHost,
-			gOpt.SSHProxyPort,
-			gOpt.SSHProxyUser,
-			sshProps.Password,
-			sshProps.IdentityFile,
-			sshProps.IdentityFilePassphrase,
-		),
-	}
-
-	go server.ListenAndServe()
-
-	return server, nil
 }
 
 // NewHTTPProxy creates and initializes a new http proxy

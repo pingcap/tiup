@@ -30,9 +30,9 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	cspec "github.com/pingcap/tiup/pkg/cluster/spec"
 	tiupmeta "github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/httproxy"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
+	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -101,7 +101,7 @@ please backup your data before process.`,
 				fmt.Println("The --native-ssh flag has been deprecated, please use --ssh=system")
 			}
 
-			httpProxy, err = httproxy.MaybeStartHTTPProxy(gOpt)
+			httpProxy, err = proxy.MaybeStartProxy(gOpt)
 			if err != nil {
 				return perrs.Annotate(err, "start http-proxy")
 			}
