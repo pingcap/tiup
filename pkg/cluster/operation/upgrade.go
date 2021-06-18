@@ -55,6 +55,7 @@ func Upgrade(
 		}
 
 		log.Infof("Upgrading component %s", component.Name())
+
 		// perform pre-upgrade actions of component
 		var origLeaderScheduleLimit int
 		var origRegionScheduleLimit int
