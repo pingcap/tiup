@@ -19,6 +19,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
+	"os"
 	"time"
 )
 
@@ -32,13 +34,24 @@ func NewHTTPClient(timeout time.Duration, tlsConfig *tls.Config) *HTTPClient {
 	if timeout < time.Second {
 		timeout = 10 * time.Second // default timeout is 10s
 	}
+	tr := &http.Transport{
+		TLSClientConfig: tlsConfig,
+		Dial:            (&net.Dialer{Timeout: 5 * time.Second}).Dial,
+	}
+	// prefer to use the inner http proxy
+	httpProxy := os.Getenv("TIUP_INNER_HTTP_PROXY")
+	if len(httpProxy) == 0 {
+		httpProxy = os.Getenv("HTTP_PROXY")
+	}
+	if len(httpProxy) > 0 {
+		if proxyUrl, err := url.Parse(httpProxy); err == nil {
+			tr.Proxy = http.ProxyURL(proxyUrl)
+		}
+	}
 	return &HTTPClient{
 		client: &http.Client{
-			Timeout: timeout,
-			Transport: &http.Transport{
-				TLSClientConfig: tlsConfig,
-				Dial:            (&net.Dialer{Timeout: 5 * time.Second}).Dial,
-			},
+			Timeout:   timeout,
+			Transport: tr,
 		},
 	}
 }
