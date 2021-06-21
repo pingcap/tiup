@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/utils"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
@@ -45,12 +46,8 @@ func NewBinlogClient(pdEndpoints []string, tlsConfig *tls.Config) (*BinlogClient
 	}
 
 	return &BinlogClient{
-		tls: tlsConfig,
-		httpClient: &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsConfig,
-			},
-		},
+		tls:        tlsConfig,
+		httpClient: utils.NewHTTPClient(5*time.Second, tlsConfig).Client(),
 		etcdClient: etcdClient,
 	}, nil
 }

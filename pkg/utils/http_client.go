@@ -96,6 +96,11 @@ func (c *HTTPClient) Delete(url string, body io.Reader) ([]byte, int, error) {
 	return b, statusCode, err
 }
 
+// Client returns the http.Client
+func (c *HTTPClient) Client() *http.Client {
+	return c.client
+}
+
 // WithClient uses the specified HTTP client
 func (c *HTTPClient) WithClient(client *http.Client) *HTTPClient {
 	c.client = client
