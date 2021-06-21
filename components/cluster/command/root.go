@@ -159,6 +159,12 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&gOpt.SSHProxyUsePassword, "ssh-proxy-use-password", false, "Use password to login the proxy host.")
 	rootCmd.PersistentFlags().Uint64Var(&gOpt.SSHProxyTimeout, "ssh-proxy-timeout", 5, "Timeout in seconds to connect the proxy host via SSH, ignored for operations that don't need an SSH connection.")
 	_ = rootCmd.PersistentFlags().MarkHidden("native-ssh")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-host")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-user")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-port")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-identity-file")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-use-password")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-timeout")
 
 	rootCmd.AddCommand(
 		newCheckCmd(),
