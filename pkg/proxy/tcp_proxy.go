@@ -16,7 +16,6 @@ package proxy
 import (
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strconv"
 	"sync"
@@ -24,20 +23,24 @@ import (
 
 	"github.com/appleboy/easyssh-proxy"
 	perrs "github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
 
+// TCPProxy represents a simple TCP proxy
+// unlike HTTP proxies, TCP proxies are point-to-point
 type TCPProxy struct {
-	l         sync.RWMutex
-	cli       *ssh.Client
-	config    *easyssh.MakeConfig
-	endpoints []string
-	closeC    chan struct{}
+	l        sync.RWMutex
+	listener net.Listener
+	cli      *ssh.Client
+	config   *easyssh.MakeConfig
+	endpoint string
 }
 
-func NewTCPProxy(host string, port int, user, password, keyFile, passphrase string, endpoints []string) *TCPProxy {
+// NewNewTCPProxy starts a 1to1 TCP proxy
+func NewTCPProxy(host string, port int, user, password, keyFile, passphrase string) *TCPProxy {
 	p := &TCPProxy{
 		config: &easyssh.MakeConfig{
 			Server:  host,
@@ -45,7 +48,6 @@ func NewTCPProxy(host string, port int, user, password, keyFile, passphrase stri
 			User:    user,
 			Timeout: 10 * time.Second,
 		},
-		endpoints: endpoints,
 	}
 
 	if len(keyFile) > 0 {
@@ -57,30 +59,54 @@ func NewTCPProxy(host string, port int, user, password, keyFile, passphrase stri
 
 	port, err := utils.GetFreePort("127.0.0.1", 22345)
 	if err != nil {
+		log.Errorf("get free port error: %v", err)
 		return nil
 	}
+	p.endpoint = fmt.Sprintf("127.0.0.1:%d", port)
 
-	localListener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	listener, err := net.Listen("tcp", p.endpoint)
 	if err != nil {
-		log.Fatalf("net.Listen failed: %v", err)
+		log.Errorf("net.Listen error: %v", err)
+		return nil
 	}
+	p.listener = listener
 
+	return p
+}
+
+// GetGetEndpoints returns the endpoint list
+func (p *TCPProxy) GetEndpoints() []string {
+	return []string{p.endpoint}
+}
+
+// Stop stops the tcp proxy
+func (p *TCPProxy) Stop() error {
+	return p.listener.Close()
+}
+
+func (p *TCPProxy) Run(upstream []string) chan struct{} {
+	closeC := make(chan struct{})
 	go func() {
+	FOR_LOOP:
 		for {
 			select {
-			case <-p.closeC:
+			case <-closeC:
 				return
 			default:
-				localConn, err := localListener.Accept()
+				localConn, err := p.listener.Accept()
 				if err != nil {
-					log.Fatalf("listen.Accept failed: %v", err)
+					log.Errorf("tcp proxy accept error: %v", err)
+					continue FOR_LOOP
 				}
-				go p.forward(localConn)
+				go p.forward(localConn, upstream)
 			}
 		}
 	}()
+	return closeC
+}
 
-	return p
+func (p *TCPProxy) Close(c chan struct{}) {
+	close(c)
 }
 
 func (p *TCPProxy) getConn() (*ssh.Client, error) {
@@ -89,7 +115,7 @@ func (p *TCPProxy) getConn() (*ssh.Client, error) {
 	p.l.RUnlock()
 
 	// reuse the old client if dial success
-	if cli == nil {
+	if cli != nil {
 		return cli, nil
 	}
 
@@ -106,7 +132,7 @@ func (p *TCPProxy) getConn() (*ssh.Client, error) {
 	return cli, nil
 }
 
-func (p *TCPProxy) forward(localConn net.Conn) {
+func (p *TCPProxy) forward(localConn net.Conn, endpoints []string) {
 	cli, err := p.getConn()
 	if err != nil {
 		zap.L().Error("Failed to get ssh client", zap.String("error", err.Error()))
@@ -115,7 +141,7 @@ func (p *TCPProxy) forward(localConn net.Conn) {
 
 	var remoteConn net.Conn
 OUTER_LOOP:
-	for _, endpoint := range p.endpoints {
+	for _, endpoint := range endpoints {
 		endpoint := endpoint
 		errC := make(chan error, 1)
 		go func() {

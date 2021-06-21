@@ -18,14 +18,17 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync/atomic"
 
+	"github.com/fatih/color"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
 var (
 	httpProxy *http.Server
-	tcpProxy  *TCPProxy
+	tcpProxy  atomic.Value
 )
 
 // MaybeStartProxy maybe starts an inner http/tcp proxies
@@ -39,15 +42,17 @@ func MaybeStartProxy(host string, port int, user string, usePass bool, identity 
 		return err
 	}
 
-	listenPort, err := utils.GetFreePort("127.0.0.1", 12345)
+	httpPort, err := utils.GetFreePort("127.0.0.1", 12345)
 	if err != nil {
 		return err
 	}
 
+	addr := fmt.Sprintf("127.0.0.1:%d", httpPort)
+
 	// TODO: Using environment variables to share data may not be a good idea
-	os.Setenv("TIUP_INNER_HTTP_PROXY", fmt.Sprintf("http://127.0.0.1:%d", listenPort))
+	os.Setenv("TIUP_INNER_HTTP_PROXY", "http://"+addr)
 	httpProxy = &http.Server{
-		Addr: fmt.Sprintf("127.0.0.1:%d", port),
+		Addr: addr,
 		Handler: NewHTTPProxy(
 			host, port, user,
 			sshProps.Password,
@@ -56,17 +61,38 @@ func MaybeStartProxy(host string, port int, user string, usePass bool, identity 
 		),
 	}
 
+	log.Infof(color.HiGreenString("Start HTTP inner proxy %s", httpProxy.Addr))
 	go httpProxy.ListenAndServe()
+
+	p := NewTCPProxy(
+		host, port, user,
+		sshProps.Password,
+		sshProps.IdentityFile,
+		sshProps.IdentityFilePassphrase)
+	tcpProxy.Store(p)
+
+	log.Infof(color.HiGreenString("Start TCP inner proxy %s", p.endpoint))
 
 	return nil
 }
 
-// MaMaybeStopProxy stops the http/tcp proxies if it has been started before
+// MaybeStopProxy stops the http/tcp proxies if it has been started before
 func MaybeStopProxy() {
-	if httpProxy == nil {
-		return
+	fmt.Println("stop the proxy")
+	if httpProxy != nil {
+		httpProxy.Shutdown(context.Background())
+		os.Unsetenv("TIUP_INNER_HTTP_PROXY")
 	}
-	httpProxy.Shutdown(context.Background())
-	os.Unsetenv("TIUP_INNER_HTTP_PROXY")
-	httpProxy = nil
+	if p := tcpProxy.Load(); p != nil {
+		p.(*TCPProxy).Stop()
+	}
+}
+
+// GetTCPProxy returns the tcp proxy
+func GetTCPProxy() *TCPProxy {
+	p := tcpProxy.Load()
+	if p != nil {
+		return p.(*TCPProxy)
+	}
+	return nil
 }
