@@ -63,7 +63,7 @@ func MaybeStartProxy(host string, port int, user string, usePass bool, identity 
 
 	log.Infof(color.HiGreenString("Start HTTP inner proxy %s", httpProxy.Addr))
 	go func() {
-		if err := httpProxy.ListenAndServe(); err != nil {
+		if err := httpProxy.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Errorf("Failed to listen HTTP proxy: %v", err)
 		}
 	}()
