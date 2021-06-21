@@ -41,7 +41,7 @@ type TCPProxy struct {
 	endpoint string
 }
 
-// NewNewTCPProxy starts a 1to1 TCP proxy
+// NewTCPProxy starts a 1to1 TCP proxy
 func NewTCPProxy(host string, port int, user, password, keyFile, passphrase string) *TCPProxy {
 	p := &TCPProxy{
 		config: &easyssh.MakeConfig{
@@ -76,7 +76,7 @@ func NewTCPProxy(host string, port int, user, password, keyFile, passphrase stri
 	return p
 }
 
-// GetGetEndpoints returns the endpoint list
+// GetEndpoints returns the endpoint list
 func (p *TCPProxy) GetEndpoints() []string {
 	return []string{p.endpoint}
 }
@@ -87,6 +87,7 @@ func (p *TCPProxy) Stop() error {
 	return p.listener.Close()
 }
 
+// Run runs proxy all traffic to upstream
 func (p *TCPProxy) Run(upstream []string) chan struct{} {
 	closeC := make(chan struct{})
 	go func() {
@@ -111,6 +112,7 @@ func (p *TCPProxy) Run(upstream []string) chan struct{} {
 	return closeC
 }
 
+// Close closes a proxy
 func (p *TCPProxy) Close(c chan struct{}) {
 	close(c)
 }
@@ -138,7 +140,7 @@ func (p *TCPProxy) getConn() (*ssh.Client, error) {
 	return cli, nil
 }
 
-func (p *TCPProxy) forward(localConn net.Conn, endpoints []string) {
+func (p *TCPProxy) forward(localConn io.ReadWriter, endpoints []string) {
 	cli, err := p.getConn()
 	if err != nil {
 		zap.L().Error("Failed to get ssh client", zap.String("error", err.Error()))

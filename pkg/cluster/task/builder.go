@@ -40,7 +40,7 @@ func NewBuilder() *Builder {
 // RootSSH appends a RootSSH task to the current task collection
 func (b *Builder) RootSSH(
 	host string, port int, user, password, keyFile, passphrase string, sshTimeout, exeTimeout uint64,
-	proxyHost string, proxyPort int, proxyUser, proxyPassword, proxyKeyFile, proxyPassphrase string, proxySshTimeout uint64,
+	proxyHost string, proxyPort int, proxyUser, proxyPassword, proxyKeyFile, proxyPassphrase string, proxySSHTimeout uint64,
 	sshType, defaultSSHType executor.SSHType,
 ) *Builder {
 	if sshType == "" {
@@ -61,7 +61,7 @@ func (b *Builder) RootSSH(
 		proxyPassword:   proxyPassword,
 		proxyKeyFile:    proxyKeyFile,
 		proxyPassphrase: proxyPassphrase,
-		proxyTimeout:    proxySshTimeout,
+		proxyTimeout:    proxySSHTimeout,
 		sshType:         sshType,
 	})
 	return b
@@ -70,7 +70,7 @@ func (b *Builder) RootSSH(
 // UserSSH append a UserSSH task to the current task collection
 func (b *Builder) UserSSH(
 	host string, port int, deployUser string, sshTimeout, exeTimeout uint64,
-	proxyHost string, proxyPort int, proxyUser, proxyPassword, proxyKeyFile, proxyPassphrase string, proxySshTimeout uint64,
+	proxyHost string, proxyPort int, proxyUser, proxyPassword, proxyKeyFile, proxyPassphrase string, proxySSHTimeout uint64,
 	sshType, defaultSSHType executor.SSHType,
 ) *Builder {
 	if sshType == "" {
@@ -88,7 +88,7 @@ func (b *Builder) UserSSH(
 		proxyPassword:   proxyPassword,
 		proxyKeyFile:    proxyKeyFile,
 		proxyPassphrase: proxyPassphrase,
-		proxyTimeout:    proxySshTimeout,
+		proxyTimeout:    proxySSHTimeout,
 		sshType:         sshType,
 	})
 	return b
@@ -107,7 +107,7 @@ func (b *Builder) Func(name string, fn func(ctx context.Context) error) *Builder
 func (b *Builder) ClusterSSH(
 	topo spec.Topology,
 	deployUser string, sshTimeout, exeTimeout uint64,
-	proxyHost string, proxyPort int, proxyUser, proxyPassword, proxyKeyFile, proxyPassphrase string, proxySshTimeout uint64,
+	proxyHost string, proxyPort int, proxyUser, proxyPassword, proxyKeyFile, proxyPassphrase string, proxySSHTimeout uint64,
 	sshType, defaultSSHType executor.SSHType,
 ) *Builder {
 	if sshType == "" {
@@ -127,7 +127,7 @@ func (b *Builder) ClusterSSH(
 			proxyPassword:   proxyPassword,
 			proxyKeyFile:    proxyKeyFile,
 			proxyPassphrase: proxyPassphrase,
-			proxyTimeout:    proxySshTimeout,
+			proxyTimeout:    proxySSHTimeout,
 			sshType:         sshType,
 		})
 	})

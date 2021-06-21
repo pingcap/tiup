@@ -62,7 +62,11 @@ func MaybeStartProxy(host string, port int, user string, usePass bool, identity 
 	}
 
 	log.Infof(color.HiGreenString("Start HTTP inner proxy %s", httpProxy.Addr))
-	go httpProxy.ListenAndServe()
+	go func() {
+		if err := httpProxy.ListenAndServe(); err != nil {
+			log.Errorf("Failed to listen HTTP proxy: %v", err)
+		}
+	}()
 
 	p := NewTCPProxy(
 		host, port, user,
@@ -79,11 +83,11 @@ func MaybeStartProxy(host string, port int, user string, usePass bool, identity 
 // MaybeStopProxy stops the http/tcp proxies if it has been started before
 func MaybeStopProxy() {
 	if httpProxy != nil {
-		httpProxy.Shutdown(context.Background())
+		_ = httpProxy.Shutdown(context.Background())
 		os.Unsetenv("TIUP_INNER_HTTP_PROXY")
 	}
 	if p := tcpProxy.Load(); p != nil {
-		p.(*TCPProxy).Stop()
+		_ = p.(*TCPProxy).Stop()
 	}
 }
 

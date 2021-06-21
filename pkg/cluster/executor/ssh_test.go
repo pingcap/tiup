@@ -82,7 +82,7 @@ func TestNativeSSHConfigArgs(t *testing.T) {
 		},
 		{
 			&SSHConfig{
-				Timeout: time.Duration(60 * time.Second),
+				Timeout: 60 * time.Second,
 				KeyFile: "id_rsa",
 				Proxy: &SSHConfig{
 					User:    "root",
@@ -96,7 +96,7 @@ func TestNativeSSHConfigArgs(t *testing.T) {
 		},
 		{
 			&SSHConfig{
-				Timeout: time.Duration(60 * time.Second),
+				Timeout: 60 * time.Second,
 				Port:    1203,
 				KeyFile: "id_rsa",
 				Proxy: &SSHConfig{
@@ -104,7 +104,7 @@ func TestNativeSSHConfigArgs(t *testing.T) {
 					Host:    "proxy1",
 					Port:    222,
 					KeyFile: "b.id_rsa",
-					Timeout: time.Duration(10 * time.Second),
+					Timeout: 10 * time.Second,
 				},
 			},
 			false,
@@ -112,14 +112,14 @@ func TestNativeSSHConfigArgs(t *testing.T) {
 		},
 		{
 			&SSHConfig{
-				Timeout:  time.Duration(60 * time.Second),
+				Timeout:  60 * time.Second,
 				Password: "pass",
 				Proxy: &SSHConfig{
 					User:     "root",
 					Host:     "proxy1",
 					Port:     222,
 					Password: "word",
-					Timeout:  time.Duration(10 * time.Second),
+					Timeout:  10 * time.Second,
 				},
 			},
 			false,

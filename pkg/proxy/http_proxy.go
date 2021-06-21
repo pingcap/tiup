@@ -14,6 +14,7 @@
 package proxy
 
 import (
+	"context"
 	"io"
 	"net"
 	"net/http"
@@ -109,8 +110,11 @@ func (s *HTTPProxy) connect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	// connect the remote client directly
-	dst, err := s.tr.Dial("tcp", r.URL.Host)
+	dst, err := s.tr.DialContext(ctx, "tcp", r.URL.Host)
 	if err != nil {
 		if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
 			zap.L().Debug("CONNECT roundtrip proxy timeout")
@@ -131,7 +135,7 @@ func (s *HTTPProxy) connect(w http.ResponseWriter, r *http.Request) {
 	defer src.Close()
 
 	// Once connected successfully, return OK
-	src.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+	_, _ = src.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 
 	// Proxy is no need to know anything, just exchange data between the client
 	// the the remote server.
@@ -143,7 +147,7 @@ func (s *HTTPProxy) connect(w http.ResponseWriter, r *http.Request) {
 			zap.L().Error("CONNECT copy response", zap.Any("src", src), zap.Any("dst", dst))
 		}
 		if tcpConn, ok := dst.(interface{ CloseWrite() error }); ok {
-			tcpConn.CloseWrite()
+			_ = tcpConn.CloseWrite()
 		}
 	}
 
@@ -151,8 +155,6 @@ func (s *HTTPProxy) connect(w http.ResponseWriter, r *http.Request) {
 	go copyAndWait(dst, src) // client to remote
 	go copyAndWait(src, dst) // remote to client
 	wg.Wait()
-
-	return
 }
 
 // serveHTTP handles the original http request
@@ -186,7 +188,6 @@ func (s *HTTPProxy) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		zap.L().Error("PROXY copy response", zap.String("error", err.Error()))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	return
 }
 
 // Hop-by-hop headers. These are removed when sent to the backend.
