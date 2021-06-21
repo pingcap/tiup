@@ -34,9 +34,9 @@ type BinlogClient struct {
 }
 
 // NewBinlogClient create a BinlogClient.
-func NewBinlogClient(pdEndpoint []string, tlsConfig *tls.Config) (*BinlogClient, error) {
+func NewBinlogClient(pdEndpoints []string, tlsConfig *tls.Config) (*BinlogClient, error) {
 	etcdClient, err := clientv3.New(clientv3.Config{
-		Endpoints:   pdEndpoint,
+		Endpoints:   pdEndpoints,
 		DialTimeout: time.Second * 5,
 		TLS:         tlsConfig,
 	})
