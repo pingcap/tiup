@@ -95,7 +95,8 @@ server:
 
 embed_cluster_ui:
 	cd cluster-ui && yarn && yarn build
-	tools/embed_assets/embed_cluster_ui_assets.sh
+	rm -rf components/cluster/web/uiserver/ui-build
+	mv cluster-ui/build components/cluster/web/uiserver/ui-build
 
 check: fmt lint tidy check-static vet
 	@# Target: run all checkers. (fmt, lint, tidy, check-static and vet)

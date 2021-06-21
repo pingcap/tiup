@@ -58,9 +58,6 @@ require (
 	github.com/rs/cors v1.7.0
 	github.com/sergi/go-diff v1.1.0
 	github.com/shirou/gopsutil v3.21.1+incompatible
-	github.com/shurcooL/httpfs v0.0.0-20190707220628-8d4bc4ba7749 // indirect
-	github.com/shurcooL/httpgzip v0.0.0-20190720172056-320755c1c1b0
-	github.com/shurcooL/vfsgen v0.0.0-20181202132449-6a9ea43bcacd
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5

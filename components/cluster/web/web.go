@@ -143,7 +143,7 @@ func Run(
 		}
 	}
 	// Frontend assets
-	router.StaticFS("/tiup", uiserver.Assets)
+	router.StaticFS("/tiup", uiserver.Assets())
 	router.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusMovedPermanently, "/tiup")
 		c.Abort()
