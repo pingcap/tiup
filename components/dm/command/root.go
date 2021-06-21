@@ -14,9 +14,7 @@
 package command
 
 import (
-	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -47,7 +45,6 @@ var (
 	rootCmd     *cobra.Command
 	gOpt        operator.Options
 	skipConfirm bool
-	httpProxy   *http.Server
 )
 
 var dmspec *cspec.SpecManager
@@ -101,7 +98,7 @@ please backup your data before process.`,
 				fmt.Println("The --native-ssh flag has been deprecated, please use --ssh=system")
 			}
 
-			httpProxy, err = proxy.MaybeStartProxy(gOpt)
+			err = proxy.MaybeStartProxy(gOpt.SSHProxyHost, gOpt.SSHProxyPort, gOpt.SSHProxyUser, gOpt.SSHProxyUsePassword, gOpt.SSHProxyIdentity)
 			if err != nil {
 				return perrs.Annotate(err, "start http-proxy")
 			}
@@ -109,10 +106,7 @@ please backup your data before process.`,
 			return nil
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			if httpProxy != nil {
-				httpProxy.Shutdown(context.Background())
-				os.Unsetenv("TIUP_INNER_HTTP_PROXY")
-			}
+			proxy.MaybeStopProxy()
 			return tiupmeta.GlobalEnv().V1Repository().Mirror().Close()
 		},
 	}

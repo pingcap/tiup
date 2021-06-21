@@ -17,7 +17,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -57,7 +56,6 @@ var (
 	teleNodeInfos []*telemetry.NodeInfo
 	teleTopology  string
 	teleCommand   []string
-	httpProxy     *http.Server
 )
 
 var tidbSpec *spec.SpecManager
@@ -131,7 +129,7 @@ func init() {
 				fmt.Println("The --native-ssh flag has been deprecated, please use --ssh=system")
 			}
 
-			httpProxy, err = proxy.MaybeStartProxy(gOpt)
+			err = proxy.MaybeStartProxy(gOpt.SSHProxyHost, gOpt.SSHProxyPort, gOpt.SSHProxyUser, gOpt.SSHProxyUsePassword, gOpt.SSHProxyIdentity)
 			if err != nil {
 				return perrs.Annotate(err, "start http-proxy")
 			}
@@ -139,10 +137,7 @@ func init() {
 			return nil
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			if httpProxy != nil {
-				httpProxy.Shutdown(context.Background())
-				os.Unsetenv("TIUP_INNER_HTTP_PROXY")
-			}
+			proxy.MaybeStopProxy()
 			return tiupmeta.GlobalEnv().V1Repository().Mirror().Close()
 		},
 	}
