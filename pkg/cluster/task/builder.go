@@ -24,6 +24,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/crypto"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/proxy"
 )
 
 // Builder is used to build TiUP task
@@ -153,6 +154,7 @@ func (b *Builder) UpdateTopology(cluster, profile string, metadata *spec.Cluster
 		cluster:        cluster,
 		profileDir:     profile,
 		deletedNodeIDs: deletedNodeIds,
+		tcpProxy:       proxy.GetTCPProxy(),
 	})
 	return b
 }
