@@ -19,6 +19,7 @@ import (
 	"net"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/appleboy/easyssh-proxy"
@@ -36,6 +37,7 @@ type TCPProxy struct {
 	listener net.Listener
 	cli      *ssh.Client
 	config   *easyssh.MakeConfig
+	closed   int32
 	endpoint string
 }
 
@@ -81,6 +83,7 @@ func (p *TCPProxy) GetEndpoints() []string {
 
 // Stop stops the tcp proxy
 func (p *TCPProxy) Stop() error {
+	atomic.StoreInt32(&p.closed, 1)
 	return p.listener.Close()
 }
 
@@ -95,6 +98,9 @@ func (p *TCPProxy) Run(upstream []string) chan struct{} {
 			default:
 				localConn, err := p.listener.Accept()
 				if err != nil {
+					if atomic.LoadInt32(&p.closed) == 1 {
+						break FOR_LOOP
+					}
 					log.Errorf("tcp proxy accept error: %v", err)
 					continue FOR_LOOP
 				}

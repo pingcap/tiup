@@ -78,7 +78,6 @@ func MaybeStartProxy(host string, port int, user string, usePass bool, identity 
 
 // MaybeStopProxy stops the http/tcp proxies if it has been started before
 func MaybeStopProxy() {
-	fmt.Println("stop the proxy")
 	if httpProxy != nil {
 		httpProxy.Shutdown(context.Background())
 		os.Unsetenv("TIUP_INNER_HTTP_PROXY")
