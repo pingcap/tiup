@@ -21,11 +21,17 @@ import (
 )
 
 // BlackboxConfig represent the data to generate AlertManager config
-type BlackboxConfig struct{}
+type BlackboxConfig struct {
+	DeployDir  string
+	TLSEnabled bool
+}
 
 // NewBlackboxConfig returns a BlackboxConfig
-func NewBlackboxConfig() *BlackboxConfig {
-	return &BlackboxConfig{}
+func NewBlackboxConfig(deployDir string, tlsEnabled bool) *BlackboxConfig {
+	return &BlackboxConfig{
+		DeployDir:  deployDir,
+		TLSEnabled: tlsEnabled,
+	}
 }
 
 // Config generate the config file data.

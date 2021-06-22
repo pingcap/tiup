@@ -212,10 +212,16 @@ func buildScaleOutTask(
 				iterErr = err
 				return
 			}
-			tb = tb.TLSCert(inst, ca, meta.DirPaths{
-				Deploy: deployDir,
-				Cache:  m.specManager.Path(name, spec.TempConfigPath),
-			})
+			tb = tb.TLSCert(
+				inst.GetHost(),
+				inst.ComponentName(),
+				inst.Role(),
+				inst.GetMainPort(),
+				ca,
+				meta.DirPaths{
+					Deploy: deployDir,
+					Cache:  m.specManager.Path(name, spec.TempConfigPath),
+				})
 		}
 
 		t := tb.ScaleConfig(name,
@@ -282,9 +288,8 @@ func buildScaleOutTask(
 	}
 
 	// Deploy monitor relevant components to remote
-	dlTasks, dpTasks := buildMonitoredDeployTask(
-		m.bindVersion,
-		specManager,
+	dlTasks, dpTasks, err := buildMonitoredDeployTask(
+		m,
 		name,
 		uninitializedHosts,
 		topo.BaseTopo().GlobalOptions,
@@ -292,6 +297,9 @@ func buildScaleOutTask(
 		base.Version,
 		gOpt,
 	)
+	if err != nil {
+		return nil, err
+	}
 	downloadCompTasks = append(downloadCompTasks, convertStepDisplaysToTasks(dlTasks)...)
 	deployCompTasks = append(deployCompTasks, convertStepDisplaysToTasks(dpTasks)...)
 
@@ -358,15 +366,14 @@ func convertStepDisplaysToTasks(t []*task.StepDisplay) []task.Task {
 }
 
 func buildMonitoredDeployTask(
-	bindVersion spec.BindVersion,
-	specManager *spec.SpecManager,
+	m *Manager,
 	name string,
 	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
 	globalOptions *spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
 	version string,
 	gOpt operator.Options,
-) (downloadCompTasks []*task.StepDisplay, deployCompTasks []*task.StepDisplay) {
+) (downloadCompTasks []*task.StepDisplay, deployCompTasks []*task.StepDisplay, err error) {
 	if monitoredOptions == nil {
 		return
 	}
@@ -374,7 +381,7 @@ func buildMonitoredDeployTask(
 	uniqueCompOSArch := set.NewStringSet()
 	// monitoring agents
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
-		version := bindVersion(comp, version)
+		version := m.bindVersion(comp, version)
 
 		for host, info := range uniqueHosts {
 			// populate unique comp-os-arch set
@@ -395,8 +402,21 @@ func buildMonitoredDeployTask(
 			}
 			// log dir will always be with values, but might not used by the component
 			logDir := spec.Abs(globalOptions.User, monitoredOptions.LogDir)
+
+			deployDirs := []string{
+				deployDir,
+				dataDir,
+				logDir,
+				filepath.Join(deployDir, "bin"),
+				filepath.Join(deployDir, "conf"),
+				filepath.Join(deployDir, "scripts"),
+			}
+			if globalOptions.TLSEnabled {
+				deployDirs = append(deployDirs, filepath.Join(deployDir, "tls"))
+			}
+
 			// Deploy component
-			t := task.NewBuilder().
+			tb := task.NewBuilder().
 				UserSSH(
 					host,
 					info.ssh,
@@ -406,11 +426,7 @@ func buildMonitoredDeployTask(
 					gOpt.SSHType,
 					globalOptions.SSHType,
 				).
-				Mkdir(globalOptions.User, host,
-					deployDir, dataDir, logDir,
-					filepath.Join(deployDir, "bin"),
-					filepath.Join(deployDir, "conf"),
-					filepath.Join(deployDir, "scripts")).
+				Mkdir(globalOptions.User, host, deployDirs...).
 				CopyComponent(
 					comp,
 					info.os,
@@ -427,15 +443,38 @@ func buildMonitoredDeployTask(
 					globalOptions.ResourceControl,
 					monitoredOptions,
 					globalOptions.User,
+					globalOptions.TLSEnabled,
 					meta.DirPaths{
 						Deploy: deployDir,
 						Data:   []string{dataDir},
 						Log:    logDir,
-						Cache:  specManager.Path(name, spec.TempConfigPath),
+						Cache:  m.specManager.Path(name, spec.TempConfigPath),
 					},
-				).
-				BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", comp, host))
-			deployCompTasks = append(deployCompTasks, t)
+				)
+
+			if globalOptions.TLSEnabled && comp == spec.ComponentBlackboxExporter {
+				ca, innerr := crypto.ReadCA(
+					name,
+					m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
+					m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCAKey),
+				)
+				if innerr != nil {
+					err = innerr
+					return
+				}
+				tb = tb.TLSCert(
+					host,
+					spec.ComponentBlackboxExporter,
+					spec.ComponentBlackboxExporter,
+					monitoredOptions.BlackboxExporterPort,
+					ca,
+					meta.DirPaths{
+						Deploy: deployDir,
+						Cache:  m.specManager.Path(name, spec.TempConfigPath),
+					})
+			}
+
+			deployCompTasks = append(deployCompTasks, tb.BuildAsStep(fmt.Sprintf("  - Copy %s -> %s", comp, host)))
 		}
 	}
 	return
@@ -485,6 +524,7 @@ func buildRefreshMonitoredConfigTasks(
 					globalOptions.ResourceControl,
 					monitoredOptions,
 					globalOptions.User,
+					globalOptions.TLSEnabled,
 					meta.DirPaths{
 						Deploy: deployDir,
 						Data:   []string{dataDir},
