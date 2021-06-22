@@ -107,7 +107,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	cyan := color.New(color.FgCyan, color.Bold)
 	// display cluster meta
 	var j *JSONOutput
-	if opt.JSON {
+	if strings.ToLower(opt.DisplayMode) == "json" {
 		j = &JSONOutput{
 			ClusterMetaInfo: ClusterMetaInfo{
 				m.sysName,
@@ -198,7 +198,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 			if tlsCfg != nil {
 				scheme = "https"
 			}
-			if opt.JSON {
+			if strings.ToLower(opt.DisplayMode) == "json" {
 				j.ClusterMetaInfo.DashboardURL = fmt.Sprintf("%s://%s/dashboard", scheme, dashboardAddr)
 			} else {
 				fmt.Printf("Dashboard URL:      %s\n", cyan.Sprintf("%s://%s/dashboard", scheme, dashboardAddr))
@@ -206,7 +206,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 		}
 	}
 
-	if opt.JSON {
+	if strings.ToLower(opt.DisplayMode) == "json" {
 		d, err := json.MarshalIndent(j, "", "  ")
 		if err != nil {
 			return err
@@ -259,7 +259,7 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 	cyan := color.New(color.FgCyan, color.Bold)
 
 	var j *JSONOutput
-	if opt.JSON {
+	if strings.ToLower(opt.DisplayMode) == "json" {
 		j = &JSONOutput{
 			ClusterMetaInfo: ClusterMetaInfo{
 				m.sysName,
@@ -383,7 +383,7 @@ func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
 		}
 	}
 
-	if opt.JSON {
+	if strings.ToLower(opt.DisplayMode) == "json" {
 		j.LocationLabel = strings.Join(locationLabel, ",")
 		j.LabelInfos = labelInfoArr
 		d, err := json.MarshalIndent(j, "", "  ")

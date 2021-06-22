@@ -86,7 +86,7 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 		}
 	})
 
-	refreshConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, nil, gOpt.IgnoreConfigCheck)
+	refreshConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, gOpt, nil, gOpt.IgnoreConfigCheck)
 	monitorConfigTasks := buildRefreshMonitoredConfigTasks(
 		m.specManager,
 		name,

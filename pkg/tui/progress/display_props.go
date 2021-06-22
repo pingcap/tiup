@@ -29,7 +29,7 @@ const (
 
 // DisplayProps controls the display of the progress bar.
 type DisplayProps struct {
-	Prefix string
-	Suffix string // If `Mode == Done / Error`, Suffix is not printed
-	Mode   Mode
+	Prefix string `json:"prefix,omitempty"`
+	Suffix string `json:"suffix,omitempty"` // If `Mode == Done / Error`, Suffix is not printed
+	Mode   Mode   `json:"mode,omitempty"`
 }

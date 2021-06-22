@@ -62,7 +62,7 @@ func (m *Manager) Deploy(
 	clusterVersion string,
 	topoFile string,
 	opt DeployOptions,
-	afterDeploy func(b *task.Builder, newPart spec.Topology),
+	afterDeploy func(b *task.Builder, newPart spec.Topology, gOpt operator.Options),
 	skipConfirm bool,
 	gOpt operator.Options,
 ) error {
@@ -165,7 +165,7 @@ func (m *Manager) Deploy(
 		return err
 	}
 
-	if !skipConfirm {
+	if !skipConfirm && strings.ToLower(gOpt.DisplayMode) != "json" {
 		if err := m.confirmTopology(name, clusterVersion, topo, set.NewStringSet()); err != nil {
 			return err
 		}
@@ -242,7 +242,7 @@ func (m *Manager) Deploy(
 			if strings.HasPrefix(globalOptions.DataDir, "/") {
 				dirs = append(dirs, globalOptions.DataDir)
 			}
-			t := task.NewBuilder().
+			t := task.NewBuilder(gOpt.DisplayMode).
 				RootSSH(
 					inst.GetHost(),
 					inst.GetSSHPort(),
@@ -274,7 +274,7 @@ func (m *Manager) Deploy(
 	}
 
 	// Download missing component
-	downloadCompTasks = buildDownloadCompTasks(clusterVersion, topo, m.bindVersion)
+	downloadCompTasks = buildDownloadCompTasks(clusterVersion, topo, gOpt, m.bindVersion)
 
 	// Deploy components to remote
 	topo.IterInstance(func(inst spec.Instance) {
@@ -295,7 +295,7 @@ func (m *Manager) Deploy(
 		if globalOptions.TLSEnabled {
 			deployDirs = append(deployDirs, filepath.Join(deployDir, "tls"))
 		}
-		t := task.NewBuilder().
+		t := task.NewBuilder(gOpt.DisplayMode).
 			UserSSH(
 				inst.GetHost(),
 				inst.GetSSHPort(),
@@ -400,15 +400,15 @@ func (m *Manager) Deploy(
 	downloadCompTasks = append(downloadCompTasks, dlTasks...)
 	deployCompTasks = append(deployCompTasks, dpTasks...)
 
-	builder := task.NewBuilder().
+	builder := task.NewBuilder(gOpt.DisplayMode).
 		Step("+ Generate SSH keys",
-			task.NewBuilder().SSHKeyGen(m.specManager.Path(name, "ssh", "id_rsa")).Build()).
+			task.NewBuilder(gOpt.DisplayMode).SSHKeyGen(m.specManager.Path(name, "ssh", "id_rsa")).Build()).
 		ParallelStep("+ Download TiDB components", false, downloadCompTasks...).
 		ParallelStep("+ Initialize target host environments", false, envInitTasks...).
 		ParallelStep("+ Copy files", false, deployCompTasks...)
 
 	if afterDeploy != nil {
-		afterDeploy(builder, topo)
+		afterDeploy(builder, topo, gOpt)
 	}
 
 	t := builder.Build()

@@ -79,8 +79,8 @@ func newDeploy() *cobra.Command {
 	return cmd
 }
 
-func postDeployHook(builder *task.Builder, topo spec.Topology) {
-	nodeInfoTask := task.NewBuilder().Func("Check status", func(ctx context.Context) error {
+func postDeployHook(builder *task.Builder, topo spec.Topology, gOpt operator.Options) {
+	nodeInfoTask := task.NewBuilder(gOpt.DisplayMode).Func("Check status", func(ctx context.Context) error {
 		var err error
 		teleNodeInfos, err = operator.GetNodeInfo(ctx, topo)
 		_ = err
@@ -92,7 +92,7 @@ func postDeployHook(builder *task.Builder, topo spec.Topology) {
 		builder.ParallelStep("+ Check status", false, nodeInfoTask)
 	}
 
-	enableTask := task.NewBuilder().Func("Setting service auto start on boot", func(ctx context.Context) error {
+	enableTask := task.NewBuilder(gOpt.DisplayMode).Func("Setting service auto start on boot", func(ctx context.Context) error {
 		return operator.Enable(ctx, topo, operator.Options{}, true)
 	}).BuildAsStep("Enable service").SetHidden(true)
 

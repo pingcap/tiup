@@ -92,7 +92,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 			key := fmt.Sprintf("%s-%s-%s-%s", compName, version, inst.OS(), inst.Arch())
 			if _, found := uniqueComps[key]; !found {
 				uniqueComps[key] = struct{}{}
-				t := task.NewBuilder().
+				t := task.NewBuilder(opt.DisplayMode).
 					Download(inst.ComponentName(), inst.OS(), inst.Arch(), version).
 					Build()
 				downloadCompTasks = append(downloadCompTasks, t)
@@ -105,7 +105,7 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 			logDir := spec.Abs(base.User, inst.LogDir())
 
 			// Deploy component
-			tb := task.NewBuilder()
+			tb := task.NewBuilder(opt.DisplayMode)
 
 			// for some component, dataDirs might need to be created due to upgrade
 			// eg: TiCDC support DataDir since v4.0.13

@@ -84,7 +84,7 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 		host := strings.Split(hostKey, "-")[0]
 		for _, cmd := range i.Slice() {
 			shellTasks = append(shellTasks,
-				task.NewBuilder().
+				task.NewBuilder(gOpt.DisplayMode).
 					Shell(host, cmd, hostKey+cmd, opt.Sudo).
 					Build())
 		}

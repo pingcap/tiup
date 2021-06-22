@@ -18,6 +18,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -29,12 +30,22 @@ import (
 
 // Builder is used to build TiUP task
 type Builder struct {
-	tasks []Task
+	tasks       []Task
+	displayMode DisplayMode
 }
 
 // NewBuilder returns a *Builder instance
-func NewBuilder() *Builder {
-	return &Builder{}
+func NewBuilder(mode string) *Builder {
+	var dp DisplayMode
+	switch strings.ToLower(mode) {
+	case "json":
+		dp = DisplayModeJSON
+	case "plain", "text":
+		dp = DisplayModePlain
+	default:
+		dp = DisplayModeDefault
+	}
+	return &Builder{displayMode: dp}
 }
 
 // RootSSH appends a RootSSH task to the current task collection
@@ -460,19 +471,19 @@ func (b *Builder) Build() Task {
 
 // Step appends a new StepDisplay task, which will print single line progress for inner tasks.
 func (b *Builder) Step(prefix string, inner Task) *Builder {
-	b.Serial(newStepDisplay(prefix, inner))
+	b.Serial(newStepDisplay(prefix, inner, b.displayMode))
 	return b
 }
 
 // ParallelStep appends a new ParallelStepDisplay task, which will print multi line progress in parallel
 // for inner tasks. Inner tasks must be a StepDisplay task.
 func (b *Builder) ParallelStep(prefix string, ignoreError bool, tasks ...*StepDisplay) *Builder {
-	b.tasks = append(b.tasks, newParallelStepDisplay(prefix, ignoreError, tasks...))
+	b.tasks = append(b.tasks, newParallelStepDisplay(prefix, ignoreError, tasks...).SetDisplayMode(b.displayMode))
 	return b
 }
 
 // BuildAsStep returns a task that is wrapped by a StepDisplay. The task will print single line progress.
 func (b *Builder) BuildAsStep(prefix string) *StepDisplay {
 	inner := b.Build()
-	return newStepDisplay(prefix, inner)
+	return newStepDisplay(prefix, inner, b.displayMode)
 }

@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 
 	"github.com/pingcap/tiup/pkg/cluster/manager"
+	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/utils"
@@ -67,7 +68,7 @@ func newScaleOutCmd() *cobra.Command {
 	return cmd
 }
 
-func final(builder *task.Builder, name string, meta spec.Metadata) {
+func final(builder *task.Builder, name string, meta spec.Metadata, gOpt operator.Options) {
 	builder.UpdateTopology(name,
 		tidbSpec.Path(name),
 		meta.(*spec.ClusterMeta),
@@ -75,6 +76,6 @@ func final(builder *task.Builder, name string, meta spec.Metadata) {
 	)
 }
 
-func postScaleOutHook(builder *task.Builder, newPart spec.Topology) {
-	postDeployHook(builder, newPart)
+func postScaleOutHook(builder *task.Builder, newPart spec.Topology, gOpt operator.Options) {
+	postDeployHook(builder, newPart, gOpt)
 }
