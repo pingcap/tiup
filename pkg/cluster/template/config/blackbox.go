@@ -14,8 +14,10 @@
 package config
 
 import (
+	"bytes"
 	"os"
 	"path"
+	"text/template"
 
 	"github.com/pingcap/tiup/embed"
 )
@@ -55,5 +57,15 @@ func (c *BlackboxConfig) ConfigToFile(file string) error {
 
 // ConfigWithTemplate generate the AlertManager config content by tpl
 func (c *BlackboxConfig) ConfigWithTemplate(tpl string) ([]byte, error) {
-	return []byte(tpl), nil
+	tmpl, err := template.New("Blackbox").Parse(tpl)
+	if err != nil {
+		return nil, err
+	}
+
+	content := bytes.NewBufferString("")
+	if err := tmpl.Execute(content, c); err != nil {
+		return nil, err
+	}
+
+	return content.Bytes(), nil
 }
