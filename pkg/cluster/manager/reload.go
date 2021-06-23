@@ -36,6 +36,7 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart, skipCon
 	}
 
 	sshTimeout := opt.SSHTimeout
+	exeTimeout := opt.OptTimeout
 
 	metadata, err := m.meta(name)
 	if err != nil {
@@ -77,6 +78,7 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart, skipCon
 		*topo.BaseTopo().GlobalOptions,
 		topo.GetMonitoredOptions(),
 		sshTimeout,
+		exeTimeout,
 		opt.SSHType)
 
 	// handle dir scheme changes

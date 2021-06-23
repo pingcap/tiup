@@ -125,6 +125,7 @@ func buildScaleOutTask(
 				sshConnProps.IdentityFile,
 				sshConnProps.IdentityFilePassphrase,
 				gOpt.SSHTimeout,
+				gOpt.OptTimeout,
 				gOpt.SSHType,
 				globalOptions.SSHType,
 			).
@@ -158,7 +159,15 @@ func buildScaleOutTask(
 		}
 		// Deploy component
 		tb := task.NewBuilder().
-			UserSSH(inst.GetHost(), inst.GetSSHPort(), base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
+			UserSSH(
+				inst.GetHost(),
+				inst.GetSSHPort(),
+				base.User,
+				gOpt.SSHTimeout,
+				gOpt.OptTimeout,
+				gOpt.SSHType,
+				topo.BaseTopo().GlobalOptions.SSHType,
+			).
 			Mkdir(base.User, inst.GetHost(), deployDirs...).
 			Mkdir(base.User, inst.GetHost(), dataDirs...).
 			Mkdir(base.User, inst.GetHost(), logDir)
@@ -292,7 +301,14 @@ func buildScaleOutTask(
 			specManager.Path(name, "ssh", "id_rsa.pub")).
 		Parallel(false, downloadCompTasks...).
 		Parallel(false, envInitTasks...).
-		ClusterSSH(topo, base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
+		ClusterSSH(
+			topo,
+			base.User,
+			gOpt.SSHTimeout,
+			gOpt.OptTimeout,
+			gOpt.SSHType,
+			topo.BaseTopo().GlobalOptions.SSHType,
+		).
 		Parallel(false, deployCompTasks...)
 
 	if afterDeploy != nil {
@@ -300,7 +316,14 @@ func buildScaleOutTask(
 	}
 
 	builder.
-		ClusterSSH(newPart, base.User, gOpt.SSHTimeout, gOpt.SSHType, topo.BaseTopo().GlobalOptions.SSHType).
+		ClusterSSH(
+			newPart,
+			base.User,
+			gOpt.SSHTimeout,
+			gOpt.OptTimeout,
+			gOpt.SSHType,
+			topo.BaseTopo().GlobalOptions.SSHType,
+		).
 		Func("Save meta", func(_ context.Context) error {
 			metadata.SetTopology(mergedTopo)
 			return m.specManager.SaveMeta(name, metadata)
@@ -374,7 +397,15 @@ func buildMonitoredDeployTask(
 			logDir := spec.Abs(globalOptions.User, monitoredOptions.LogDir)
 			// Deploy component
 			t := task.NewBuilder().
-				UserSSH(host, info.ssh, globalOptions.User, gOpt.SSHTimeout, gOpt.SSHType, globalOptions.SSHType).
+				UserSSH(
+					host,
+					info.ssh,
+					globalOptions.User,
+					gOpt.SSHTimeout,
+					gOpt.OptTimeout,
+					gOpt.SSHType,
+					globalOptions.SSHType,
+				).
 				Mkdir(globalOptions.User, host,
 					deployDir, dataDir, logDir,
 					filepath.Join(deployDir, "bin"),
@@ -416,7 +447,7 @@ func buildRefreshMonitoredConfigTasks(
 	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
 	globalOptions spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
-	sshTimeout uint64,
+	sshTimeout, exeTimeout uint64,
 	sshType executor.SSHType,
 ) []*task.StepDisplay {
 	if monitoredOptions == nil {
@@ -438,7 +469,15 @@ func buildRefreshMonitoredConfigTasks(
 			logDir := spec.Abs(globalOptions.User, monitoredOptions.LogDir)
 			// Generate configs
 			t := task.NewBuilder().
-				UserSSH(host, info.ssh, globalOptions.User, sshTimeout, sshType, globalOptions.SSHType).
+				UserSSH(
+					host,
+					info.ssh,
+					globalOptions.User,
+					sshTimeout,
+					exeTimeout,
+					sshType,
+					globalOptions.SSHType,
+				).
 				MonitoredConfig(
 					name,
 					comp,

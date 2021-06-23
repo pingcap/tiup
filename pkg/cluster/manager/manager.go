@@ -133,7 +133,14 @@ func (m *Manager) sshTaskBuilder(name string, topo spec.Topology, user string, o
 			m.specManager.Path(name, "ssh", "id_rsa"),
 			m.specManager.Path(name, "ssh", "id_rsa.pub"),
 		).
-		ClusterSSH(topo, user, opts.SSHTimeout, opts.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
+		ClusterSSH(
+			topo,
+			user,
+			opts.SSHTimeout,
+			opts.OptTimeout,
+			opts.SSHType,
+			topo.BaseTopo().GlobalOptions.SSHType,
+		)
 }
 
 func (m *Manager) fillHostArch(s *tui.SSHConnectionProps, topo spec.Topology, gOpt *operator.Options, user string) error {
@@ -157,6 +164,7 @@ func (m *Manager) fillHostArch(s *tui.SSHConnectionProps, topo spec.Topology, gO
 				s.IdentityFile,
 				s.IdentityFilePassphrase,
 				gOpt.SSHTimeout,
+				gOpt.OptTimeout,
 				gOpt.SSHType,
 				topo.BaseTopo().GlobalOptions.SSHType,
 			).

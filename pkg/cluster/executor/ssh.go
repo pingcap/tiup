@@ -90,6 +90,8 @@ type (
 		Passphrase string // passphrase of the private key file
 		// Timeout is the maximum amount of time for the TCP connection to establish.
 		Timeout time.Duration
+		// ExeTimeout is the maximum abount of time for the command to finish
+		ExeTimeout time.Duration
 	}
 )
 
@@ -104,6 +106,10 @@ func (e *EasySSHExecutor) initialize(config SSHConfig) {
 		Port:    strconv.Itoa(config.Port),
 		User:    config.User,
 		Timeout: config.Timeout, // timeout when connecting to remote
+	}
+
+	if config.ExeTimeout > 0 {
+		executeDefaultTimeout = config.ExeTimeout
 	}
 
 	// prefer private key authentication

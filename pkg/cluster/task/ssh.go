@@ -36,6 +36,7 @@ type RootSSH struct {
 	keyFile    string           // path to the private key file
 	passphrase string           // passphrase of the private key file
 	timeout    uint64           // timeout in seconds when connecting via SSH
+	exeTimeout uint64           // timeout in seconds waiting command to finish
 	sshType    executor.SSHType // the type of SSH chanel
 }
 
@@ -49,6 +50,7 @@ func (s *RootSSH) Execute(ctx context.Context) error {
 		KeyFile:    s.keyFile,
 		Passphrase: s.passphrase,
 		Timeout:    time.Second * time.Duration(s.timeout),
+		ExeTimeout: time.Second * time.Duration(s.exeTimeout),
 	})
 	if err != nil {
 		return err
@@ -77,18 +79,20 @@ type UserSSH struct {
 	host       string
 	port       int
 	deployUser string
-	timeout    uint64
+	timeout    uint64 // timeout in seconds when connecting via SSH
+	exeTimeout uint64 // timeout in seconds waiting command to finish
 	sshType    executor.SSHType
 }
 
 // Execute implements the Task interface
 func (s *UserSSH) Execute(ctx context.Context) error {
 	e, err := executor.New(s.sshType, false, executor.SSHConfig{
-		Host:    s.host,
-		Port:    s.port,
-		KeyFile: ctxt.GetInner(ctx).PrivateKeyPath,
-		User:    s.deployUser,
-		Timeout: time.Second * time.Duration(s.timeout),
+		Host:       s.host,
+		Port:       s.port,
+		KeyFile:    ctxt.GetInner(ctx).PrivateKeyPath,
+		User:       s.deployUser,
+		Timeout:    time.Second * time.Duration(s.timeout),
+		ExeTimeout: time.Second * time.Duration(s.exeTimeout),
 	})
 	if err != nil {
 		return err

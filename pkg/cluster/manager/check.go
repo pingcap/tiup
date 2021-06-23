@@ -202,6 +202,7 @@ func checkSystemInfo(s *tui.SSHConnectionProps, topo *spec.Specification, gOpt *
 						s.IdentityFile,
 						s.IdentityFilePassphrase,
 						gOpt.SSHTimeout,
+						gOpt.OptTimeout,
 						gOpt.SSHType,
 						topo.GlobalOptions.SSHType,
 					).
@@ -315,6 +316,7 @@ func checkSystemInfo(s *tui.SSHConnectionProps, topo *spec.Specification, gOpt *
 					s.IdentityFile,
 					s.IdentityFilePassphrase,
 					gOpt.SSHTimeout,
+					gOpt.OptTimeout,
 					gOpt.SSHType,
 					topo.GlobalOptions.SSHType,
 				).
@@ -356,6 +358,7 @@ func checkSystemInfo(s *tui.SSHConnectionProps, topo *spec.Specification, gOpt *
 				s.IdentityFile,
 				s.IdentityFilePassphrase,
 				gOpt.SSHTimeout,
+				gOpt.OptTimeout,
 				gOpt.SSHType,
 				topo.GlobalOptions.SSHType,
 			)
