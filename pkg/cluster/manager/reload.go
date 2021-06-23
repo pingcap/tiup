@@ -36,8 +36,8 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 		return err
 	}
 
-	sshTimeout := opt.SSHTimeout
-	exeTimeout := opt.OptTimeout
+	sshTimeout := gOpt.SSHTimeout
+	exeTimeout := gOpt.OptTimeout
 
 	metadata, err := m.meta(name)
 	if err != nil {

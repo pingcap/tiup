@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -174,8 +173,6 @@ func buildScaleOutTask(
 				base.User,
 				gOpt.SSHTimeout,
 				gOpt.OptTimeout,
-				gOpt.SSHType,
-				topo.BaseTopo().GlobalOptions.SSHType,
 				gOpt.SSHProxyHost,
 				gOpt.SSHProxyPort,
 				gOpt.SSHProxyUser,
@@ -499,7 +496,6 @@ func buildRefreshMonitoredConfigTasks(
 	globalOptions spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
 	sshTimeout, exeTimeout uint64,
-	sshType executor.SSHType,
 	gOpt operator.Options,
 	p *tui.SSHConnectionProps,
 ) []*task.StepDisplay {
@@ -528,7 +524,6 @@ func buildRefreshMonitoredConfigTasks(
 					globalOptions.User,
 					sshTimeout,
 					exeTimeout,
-					sshType,
 					gOpt.SSHProxyHost,
 					gOpt.SSHProxyPort,
 					gOpt.SSHProxyUser,
