@@ -229,6 +229,7 @@ func (m *Manager) Deploy(
 					sshConnProps.IdentityFile,
 					sshConnProps.IdentityFilePassphrase,
 					gOpt.SSHTimeout,
+					gOpt.OptTimeout,
 					gOpt.SSHType,
 					globalOptions.SSHType,
 				).
@@ -266,7 +267,15 @@ func (m *Manager) Deploy(
 			deployDirs = append(deployDirs, filepath.Join(deployDir, "tls"))
 		}
 		t := task.NewBuilder().
-			UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, gOpt.SSHTimeout, gOpt.SSHType, globalOptions.SSHType).
+			UserSSH(
+				inst.GetHost(),
+				inst.GetSSHPort(),
+				globalOptions.User,
+				gOpt.SSHTimeout,
+				gOpt.OptTimeout,
+				gOpt.SSHType,
+				globalOptions.SSHType,
+			).
 			Mkdir(globalOptions.User, inst.GetHost(), deployDirs...).
 			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
 

@@ -42,6 +42,7 @@ func (b *Builder) RootSSH(
 	port int,
 	user, password, keyFile, passphrase string,
 	sshTimeout uint64,
+	exeTimeout uint64,
 	sshType executor.SSHType,
 	defaultSSHType executor.SSHType,
 ) *Builder {
@@ -56,13 +57,21 @@ func (b *Builder) RootSSH(
 		keyFile:    keyFile,
 		passphrase: passphrase,
 		timeout:    sshTimeout,
+		exeTimeout: exeTimeout,
 		sshType:    sshType,
 	})
 	return b
 }
 
 // UserSSH append a UserSSH task to the current task collection
-func (b *Builder) UserSSH(host string, port int, deployUser string, sshTimeout uint64, sshType, defaultSSHType executor.SSHType) *Builder {
+func (b *Builder) UserSSH(
+	host string,
+	port int,
+	deployUser string,
+	sshTimeout uint64,
+	exeTimeout uint64,
+	sshType, defaultSSHType executor.SSHType,
+) *Builder {
 	if sshType == "" {
 		sshType = defaultSSHType
 	}
@@ -71,6 +80,7 @@ func (b *Builder) UserSSH(host string, port int, deployUser string, sshTimeout u
 		port:       port,
 		deployUser: deployUser,
 		timeout:    sshTimeout,
+		exeTimeout: exeTimeout,
 		sshType:    sshType,
 	})
 	return b
@@ -86,7 +96,7 @@ func (b *Builder) Func(name string, fn func(ctx context.Context) error) *Builder
 }
 
 // ClusterSSH init all UserSSH need for the cluster.
-func (b *Builder) ClusterSSH(spec spec.Topology, deployUser string, sshTimeout uint64, sshType, defaultSSHType executor.SSHType) *Builder {
+func (b *Builder) ClusterSSH(spec spec.Topology, deployUser string, sshTimeout, exeTimeout uint64, sshType, defaultSSHType executor.SSHType) *Builder {
 	if sshType == "" {
 		sshType = defaultSSHType
 	}
@@ -98,6 +108,7 @@ func (b *Builder) ClusterSSH(spec spec.Topology, deployUser string, sshTimeout u
 				port:       in.GetSSHPort(),
 				deployUser: deployUser,
 				timeout:    sshTimeout,
+				exeTimeout: exeTimeout,
 				sshType:    sshType,
 			})
 		}
