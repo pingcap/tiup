@@ -40,6 +40,7 @@ type MonitoredConfig struct {
 	globResCtl meta.ResourceControl
 	options    *spec.MonitoredOptions
 	deployUser string
+	tlsEnabled bool
 	paths      meta.DirPaths
 }
 
@@ -66,19 +67,17 @@ func (m *MonitoredConfig) Execute(ctx context.Context) error {
 	var cfg template.ConfigGenerator
 	switch m.component {
 	case spec.ComponentNodeExporter:
-		if err := m.syncBlackboxConfig(ctx, exec, config.NewBlackboxConfig()); err != nil {
+		if err := m.syncBlackboxConfig(ctx, exec, config.NewBlackboxConfig(m.paths.Deploy, m.tlsEnabled)); err != nil {
 			return err
 		}
-		cfg = scripts.NewNodeExporterScript(
-			m.paths.Deploy,
-			m.paths.Log,
-		).WithPort(uint64(m.options.NodeExporterPort)).
+		cfg = scripts.
+			NewNodeExporterScript(m.paths.Deploy, m.paths.Log).
+			WithPort(uint64(m.options.NodeExporterPort)).
 			WithNumaNode(m.options.NumaNode)
 	case spec.ComponentBlackboxExporter:
-		cfg = scripts.NewBlackboxExporterScript(
-			m.paths.Deploy,
-			m.paths.Log,
-		).WithPort(uint64(m.options.BlackboxExporterPort))
+		cfg = scripts.
+			NewBlackboxExporterScript(m.paths.Deploy, m.paths.Log).
+			WithPort(uint64(m.options.BlackboxExporterPort))
 	default:
 		return fmt.Errorf("unknown monitored component %s", m.component)
 	}

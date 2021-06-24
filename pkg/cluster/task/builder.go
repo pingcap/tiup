@@ -225,7 +225,7 @@ func (b *Builder) ScaleConfig(clusterName, clusterVersion string, specManager *s
 }
 
 // MonitoredConfig appends a CopyComponent task to the current task collection
-func (b *Builder) MonitoredConfig(name, comp, host string, globResCtl meta.ResourceControl, options *spec.MonitoredOptions, deployUser string, paths meta.DirPaths) *Builder {
+func (b *Builder) MonitoredConfig(name, comp, host string, globResCtl meta.ResourceControl, options *spec.MonitoredOptions, deployUser string, tlsEnabled bool, paths meta.DirPaths) *Builder {
 	b.tasks = append(b.tasks, &MonitoredConfig{
 		name:       name,
 		component:  comp,
@@ -233,6 +233,7 @@ func (b *Builder) MonitoredConfig(name, comp, host string, globResCtl meta.Resou
 		globResCtl: globResCtl,
 		options:    options,
 		deployUser: deployUser,
+		tlsEnabled: tlsEnabled,
 		paths:      paths,
 	})
 	return b
@@ -401,10 +402,13 @@ func (b *Builder) DeploySpark(inst spec.Instance, sparkVersion, srcPath, deployD
 }
 
 // TLSCert generates certificate for instance and transfers it to the server
-func (b *Builder) TLSCert(inst spec.Instance, ca *crypto.CertificateAuthority, paths meta.DirPaths) *Builder {
+func (b *Builder) TLSCert(host, comp, role string, port int, ca *crypto.CertificateAuthority, paths meta.DirPaths) *Builder {
 	b.tasks = append(b.tasks, &TLSCert{
+		host:  host,
+		comp:  comp,
+		role:  role,
+		port:  port,
 		ca:    ca,
-		inst:  inst,
 		paths: paths,
 	})
 	return b
