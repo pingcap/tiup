@@ -309,10 +309,16 @@ func (m *Manager) Deploy(
 
 		// generate and transfer tls cert for instance
 		if globalOptions.TLSEnabled {
-			t = t.TLSCert(inst, ca, meta.DirPaths{
-				Deploy: deployDir,
-				Cache:  m.specManager.Path(name, spec.TempConfigPath),
-			})
+			t = t.TLSCert(
+				inst.GetHost(),
+				inst.ComponentName(),
+				inst.Role(),
+				inst.GetMainPort(),
+				ca,
+				meta.DirPaths{
+					Deploy: deployDir,
+					Cache:  m.specManager.Path(name, spec.TempConfigPath),
+				})
 		}
 
 		// generate configs for the component
@@ -341,9 +347,8 @@ func (m *Manager) Deploy(
 	}
 
 	// Deploy monitor relevant components to remote
-	dlTasks, dpTasks := buildMonitoredDeployTask(
-		m.bindVersion,
-		m.specManager,
+	dlTasks, dpTasks, err := buildMonitoredDeployTask(
+		m,
 		name,
 		uniqueHosts,
 		globalOptions,
@@ -351,6 +356,9 @@ func (m *Manager) Deploy(
 		clusterVersion,
 		gOpt,
 	)
+	if err != nil {
+		return err
+	}
 	downloadCompTasks = append(downloadCompTasks, dlTasks...)
 	deployCompTasks = append(deployCompTasks, dpTasks...)
 
