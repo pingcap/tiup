@@ -107,7 +107,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	cyan := color.New(color.FgCyan, color.Bold)
 	// display cluster meta
 	var j *JSONOutput
-	if strings.ToLower(opt.DisplayMode) == "json" {
+	if log.GetDisplayMode() == log.DisplayModeJSON {
 		j = &JSONOutput{
 			ClusterMetaInfo: ClusterMetaInfo{
 				m.sysName,
@@ -198,7 +198,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 			if tlsCfg != nil {
 				scheme = "https"
 			}
-			if strings.ToLower(opt.DisplayMode) == "json" {
+			if log.GetDisplayMode() == log.DisplayModeJSON {
 				j.ClusterMetaInfo.DashboardURL = fmt.Sprintf("%s://%s/dashboard", scheme, dashboardAddr)
 			} else {
 				fmt.Printf("Dashboard URL:      %s\n", cyan.Sprintf("%s://%s/dashboard", scheme, dashboardAddr))
@@ -206,7 +206,7 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 		}
 	}
 
-	if strings.ToLower(opt.DisplayMode) == "json" {
+	if log.GetDisplayMode() == log.DisplayModeJSON {
 		d, err := json.MarshalIndent(j, "", "  ")
 		if err != nil {
 			return err

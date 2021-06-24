@@ -24,6 +24,7 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/crypto"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/proxy"
 )
@@ -31,21 +32,21 @@ import (
 // Builder is used to build TiUP task
 type Builder struct {
 	tasks       []Task
-	displayMode DisplayMode
+	DisplayMode log.DisplayMode
 }
 
 // NewBuilder returns a *Builder instance
 func NewBuilder(mode string) *Builder {
-	var dp DisplayMode
+	var dp log.DisplayMode
 	switch strings.ToLower(mode) {
 	case "json":
-		dp = DisplayModeJSON
+		dp = log.DisplayModeJSON
 	case "plain", "text":
-		dp = DisplayModePlain
+		dp = log.DisplayModePlain
 	default:
-		dp = DisplayModeDefault
+		dp = log.DisplayModeDefault
 	}
-	return &Builder{displayMode: dp}
+	return &Builder{DisplayMode: dp}
 }
 
 // RootSSH appends a RootSSH task to the current task collection
@@ -471,19 +472,19 @@ func (b *Builder) Build() Task {
 
 // Step appends a new StepDisplay task, which will print single line progress for inner tasks.
 func (b *Builder) Step(prefix string, inner Task) *Builder {
-	b.Serial(newStepDisplay(prefix, inner, b.displayMode))
+	b.Serial(newStepDisplay(prefix, inner, b.DisplayMode))
 	return b
 }
 
 // ParallelStep appends a new ParallelStepDisplay task, which will print multi line progress in parallel
 // for inner tasks. Inner tasks must be a StepDisplay task.
 func (b *Builder) ParallelStep(prefix string, ignoreError bool, tasks ...*StepDisplay) *Builder {
-	b.tasks = append(b.tasks, newParallelStepDisplay(prefix, ignoreError, tasks...).SetDisplayMode(b.displayMode))
+	b.tasks = append(b.tasks, newParallelStepDisplay(prefix, ignoreError, tasks...).SetDisplayMode(b.DisplayMode))
 	return b
 }
 
 // BuildAsStep returns a task that is wrapped by a StepDisplay. The task will print single line progress.
 func (b *Builder) BuildAsStep(prefix string) *StepDisplay {
 	inner := b.Build()
-	return newStepDisplay(prefix, inner, b.displayMode)
+	return newStepDisplay(prefix, inner, b.DisplayMode)
 }

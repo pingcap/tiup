@@ -100,6 +100,15 @@ func init() {
 		SilenceErrors: true,
 		Version:       version.NewTiUPVersion().String(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			switch strings.ToLower(gOpt.DisplayMode) {
+			case "json":
+				log.SetDisplayMode(log.DisplayModeJSON)
+			case "plain", "text":
+				log.SetDisplayMode(log.DisplayModePlain)
+			default:
+				log.SetDisplayMode(log.DisplayModeDefault)
+			}
+
 			var err error
 			var env *tiupmeta.Environment
 			if err = spec.Initialize("cluster"); err != nil {
@@ -124,9 +133,11 @@ func init() {
 
 			if gOpt.NativeSSH {
 				gOpt.SSHType = executor.SSHTypeSystem
-				zap.L().Info("System ssh client will be used",
-					zap.String(localdata.EnvNameNativeSSHClient, os.Getenv(localdata.EnvNameNativeSSHClient)))
-				fmt.Println("The --native-ssh flag has been deprecated, please use --ssh=system")
+				log.Infof(
+					"System ssh client will be used (%s=%s)",
+					localdata.EnvNameNativeSSHClient,
+					os.Getenv(localdata.EnvNameNativeSSHClient))
+				log.Infof("The --native-ssh flag has been deprecated, please use --ssh=system")
 			}
 
 			err = proxy.MaybeStartProxy(gOpt.SSHProxyHost, gOpt.SSHProxyPort, gOpt.SSHProxyUser, gOpt.SSHProxyUsePassword, gOpt.SSHProxyIdentity)

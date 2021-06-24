@@ -20,17 +20,8 @@ import (
 	"strings"
 
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/tui/progress"
-)
-
-// DisplayMode control the output format
-type DisplayMode int
-
-// display modes
-const (
-	DisplayModeDefault DisplayMode = iota // default is the interactive output
-	DisplayModePlain                      // plain text
-	DisplayModeJSON                       // JSON
 )
 
 // StepDisplay is a task that will display a progress bar for inner task.
@@ -39,7 +30,7 @@ type StepDisplay struct {
 	inner       Task
 	prefix      string
 	children    map[Task]struct{}
-	displayMode DisplayMode
+	DisplayMode log.DisplayMode
 	progressBar progress.Bar
 }
 
@@ -65,14 +56,14 @@ func addChildren(m map[Task]struct{}, task Task) {
 	}
 }
 
-func newStepDisplay(prefix string, inner Task, m DisplayMode) *StepDisplay {
+func newStepDisplay(prefix string, inner Task, m log.DisplayMode) *StepDisplay {
 	children := make(map[Task]struct{})
 	addChildren(children, inner)
 	return &StepDisplay{
 		inner:       inner,
 		prefix:      prefix,
 		children:    children,
-		displayMode: m,
+		DisplayMode: m,
 		progressBar: progress.NewSingleBar(prefix),
 	}
 }
@@ -83,9 +74,9 @@ func (s *StepDisplay) SetHidden(h bool) *StepDisplay {
 	return s
 }
 
-// SetDisplayMode set the value of displayMode flag
-func (s *StepDisplay) SetDisplayMode(m DisplayMode) *StepDisplay {
-	s.displayMode = m
+// SetDisplayMode set the value of log.DisplayMode flag
+func (s *StepDisplay) SetDisplayMode(m log.DisplayMode) *StepDisplay {
+	s.DisplayMode = m
 	return s
 }
 
@@ -104,8 +95,8 @@ func (s *StepDisplay) Execute(ctx context.Context) error {
 		return err
 	}
 
-	switch s.displayMode {
-	case DisplayModeJSON:
+	switch s.DisplayMode {
+	case log.DisplayModeJSON:
 		break
 	default:
 		if singleBar, ok := s.progressBar.(*progress.SingleBar); ok {
@@ -133,8 +124,8 @@ func (s *StepDisplay) Execute(ctx context.Context) error {
 		}
 	}
 
-	switch s.displayMode {
-	case DisplayModeJSON:
+	switch s.DisplayMode {
+	case log.DisplayModeJSON:
 		return printDp(dp)
 	default:
 		s.progressBar.UpdateDisplay(dp)
@@ -160,8 +151,8 @@ func (s *StepDisplay) handleTaskBegin(task Task) {
 		Prefix: s.prefix,
 		Suffix: strings.Split(task.String(), "\n")[0],
 	}
-	switch s.displayMode {
-	case DisplayModeJSON:
+	switch s.DisplayMode {
+	case log.DisplayModeJSON:
 		_ = printDp(dp)
 	default:
 		s.progressBar.UpdateDisplay(dp)
@@ -176,8 +167,8 @@ func (s *StepDisplay) handleTaskProgress(task Task, p string) {
 		Prefix: s.prefix,
 		Suffix: strings.Split(p, "\n")[0],
 	}
-	switch s.displayMode {
-	case DisplayModeJSON:
+	switch s.DisplayMode {
+	case log.DisplayModeJSON:
 		_ = printDp(dp)
 	default:
 		s.progressBar.UpdateDisplay(dp)
@@ -189,7 +180,7 @@ func (s *StepDisplay) handleTaskProgress(task Task, p string) {
 type ParallelStepDisplay struct {
 	inner       *Parallel
 	prefix      string
-	displayMode DisplayMode
+	DisplayMode log.DisplayMode
 	progressBar *progress.MultiBar
 }
 
@@ -209,16 +200,16 @@ func newParallelStepDisplay(prefix string, ignoreError bool, sdTasks ...*StepDis
 	}
 }
 
-// SetDisplayMode set the value of displayMode flag
-func (ps *ParallelStepDisplay) SetDisplayMode(m DisplayMode) *ParallelStepDisplay {
-	ps.displayMode = m
+// SetDisplayMode set the value of log.DisplayMode flag
+func (ps *ParallelStepDisplay) SetDisplayMode(m log.DisplayMode) *ParallelStepDisplay {
+	ps.DisplayMode = m
 	return ps
 }
 
 // Execute implements the Task interface
 func (ps *ParallelStepDisplay) Execute(ctx context.Context) error {
-	switch ps.displayMode {
-	case DisplayModeJSON:
+	switch ps.DisplayMode {
+	case log.DisplayModeJSON:
 		break
 	default:
 		ps.progressBar.StartRenderLoop()
