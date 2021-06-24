@@ -30,7 +30,10 @@ import (
 
 // TLSCert generates a certificate for instance
 type TLSCert struct {
-	inst  spec.Instance
+	comp  string
+	role  string
+	host  string
+	port  int
 	ca    *crypto.CertificateAuthority
 	paths meta.DirPaths
 }
@@ -42,12 +45,12 @@ func (c *TLSCert) Execute(ctx context.Context) error {
 		return err
 	}
 
-	hosts := []string{c.inst.GetHost()}
+	hosts := []string{c.host}
 	ips := []string{}
-	if net.ParseIP(c.inst.GetHost()) != nil {
+	if net.ParseIP(c.host) != nil {
 		hosts, ips = ips, hosts
 	}
-	csr, err := privKey.CSR(c.inst.Role(), c.inst.ComponentName(), hosts, ips)
+	csr, err := privKey.CSR(c.role, c.comp, hosts, ips)
 	if err != nil {
 		return err
 	}
@@ -62,8 +65,8 @@ func (c *TLSCert) Execute(ctx context.Context) error {
 	}
 
 	// save cert to cache dir
-	keyFileName := fmt.Sprintf("%s-%s-%d.pem", c.inst.Role(), c.inst.GetHost(), c.inst.GetMainPort())
-	certFileName := fmt.Sprintf("%s-%s-%d.crt", c.inst.Role(), c.inst.GetHost(), c.inst.GetMainPort())
+	keyFileName := fmt.Sprintf("%s-%s-%d.pem", c.role, c.host, c.port)
+	certFileName := fmt.Sprintf("%s-%s-%d.crt", c.role, c.host, c.port)
 	keyFile := filepath.Join(
 		c.paths.Cache,
 		keyFileName,
@@ -90,7 +93,7 @@ func (c *TLSCert) Execute(ctx context.Context) error {
 	}
 
 	// transfer file to remote
-	e, ok := ctxt.GetInner(ctx).GetExecutor(c.inst.GetHost())
+	e, ok := ctxt.GetInner(ctx).GetExecutor(c.host)
 	if !ok {
 		return ErrNoExecutor
 	}
@@ -101,13 +104,13 @@ func (c *TLSCert) Execute(ctx context.Context) error {
 		return errors.Annotate(err, "failed to transfer CA cert to server")
 	}
 	if err := e.Transfer(ctx, keyFile,
-		filepath.Join(c.paths.Deploy, "tls", fmt.Sprintf("%s.pem", c.inst.Role())),
+		filepath.Join(c.paths.Deploy, "tls", fmt.Sprintf("%s.pem", c.role)),
 		false, /* download */
 		0 /* limit */); err != nil {
 		return errors.Annotate(err, "failed to transfer TLS private key to server")
 	}
 	if err := e.Transfer(ctx, certFile,
-		filepath.Join(c.paths.Deploy, "tls", fmt.Sprintf("%s.crt", c.inst.Role())),
+		filepath.Join(c.paths.Deploy, "tls", fmt.Sprintf("%s.crt", c.role)),
 		false, /* download */
 		0 /* limit */); err != nil {
 		return errors.Annotate(err, "failed to transfer TLS cert to server")
@@ -123,6 +126,5 @@ func (c *TLSCert) Rollback(ctx context.Context) error {
 
 // String implements the fmt.Stringer interface
 func (c *TLSCert) String() string {
-	return fmt.Sprintf("TLSCert: host=%s role=%s cn=%s",
-		c.inst.GetHost(), c.inst.Role(), c.inst.ComponentName())
+	return fmt.Sprintf("TLSCert: host=%s role=%s cn=%s", c.host, c.role, c.comp)
 }
