@@ -45,10 +45,14 @@ func (c *TLSCert) Execute(ctx context.Context) error {
 		return err
 	}
 
-	hosts := []string{c.host}
-	ips := []string{}
-	if net.ParseIP(c.host) != nil {
-		hosts, ips = ips, hosts
+	// Add localhost and 127.0.0.1 to the trust list,
+	// then it is easy for some scripts to request a local interface directly
+	hosts := []string{"localhost"}
+	ips := []string{"127.0.0.1"}
+	if host := c.host; net.ParseIP(host) != nil && host != "127.0.0.1" {
+		ips = append(ips, host)
+	} else if host != "localhost" {
+		hosts = append(hosts, host)
 	}
 	csr, err := privKey.CSR(c.role, c.comp, hosts, ips)
 	if err != nil {
