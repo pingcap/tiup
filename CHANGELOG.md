@@ -1,5 +1,22 @@
 TiUP Changelog
 
+## [1.5.2] 2021-06-24
+
+### Fixes
+
+- Fix native SSH not working with custom SSH port ([#1424](https://github.com/pingcap/tiup/pull/1424), [@9547](https://github.com/9547))
+- Fix dashboard address displaying issue for `tikv-slim` clusters ([#1428](https://github.com/pingcap/tiup/pull/1428), [@iosmanthus](https://github.com/iosmanthus))
+- Fix a typo in help message of `tiup-playground` ([#1429](https://github.com/pingcap/tiup/pull/1429), [@ekexium](https://github.com/ekexium))
+- Fix TiFlash nodes not handled correctly in some commands ([#1431](https://github.com/pingcap/tiup/pull/1431), [@lucklove](https://github.com/lucklove))
+- Fix jemalloc config for TiKV nodes ([#1435](https://github.com/pingcap/tiup/pull/1435), [@9547](https://github.com/9547))
+- Fix the issue that slow log is not placed under `log_dir` ([#1441](https://github.com/pingcap/tiup/pull/1441), [@lucklove](https://github.com/lucklove))
+
+### Improvements
+
+- Update default alertmanager config template to avoid confusing ([#1425](https://github.com/pingcap/tiup/pull/1425) [#1426](https://github.com/pingcap/tiup/pull/1426), [@lucklove](https://github.com/lucklove))
+- Increase default timeout of transferring leader in upgrade progress ([#1434](https://github.com/pingcap/tiup/pull/1434), [@AstroProfundis](https://github.com/AstroProfundis))
+- Update dependencies ([#1433](https://github.com/pingcap/tiup/pull/1433), [@AstroProfundis](https://github.com/AstroProfundis))
+
 ## [1.5.1] 2021-06-11
 
 ### Fix
