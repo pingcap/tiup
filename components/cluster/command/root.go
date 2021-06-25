@@ -336,7 +336,7 @@ func Execute() {
 				if err != nil {
 					log.Infof("report failed: %v", err)
 				}
-				fmt.Fprintf(os.Stderr, "report: %s\n", teleReport.String())
+				log.Errorf("report: %s\n", teleReport.String())
 				if data, err := json.Marshal(teleReport); err == nil {
 					log.Debugf("report: %s\n", string(data))
 				}
@@ -347,24 +347,41 @@ func Execute() {
 		f()
 	}
 
-	if err != nil {
-		if errx := errorx.Cast(err); errx != nil {
-			printErrorMessageForErrorX(errx)
-		} else {
-			printErrorMessageForNormalError(err)
+	switch log.GetDisplayMode() {
+	case log.DisplayModeJSON:
+		obj := struct {
+			Code int    `json:"exit_code"`
+			Err  string `json:"error,omitempty"`
+		}{
+			Code: code,
 		}
-
-		if !errorx.HasTrait(err, utils.ErrTraitPreCheck) {
-			logger.OutputDebugLog("tiup-cluster")
+		if err != nil {
+			obj.Err = err.Error()
 		}
+		data, err := json.Marshal(obj)
+		if err != nil {
+			fmt.Printf("{\"exit_code\":%d, \"error\":\"%s\"}", code, err)
+		}
+		fmt.Println(string(data))
+	default:
+		if err != nil {
+			if errx := errorx.Cast(err); errx != nil {
+				printErrorMessageForErrorX(errx)
+			} else {
+				printErrorMessageForNormalError(err)
+			}
 
-		if errx := errorx.Cast(err); errx != nil {
-			if suggestion := extractSuggestionFromErrorX(errx); len(suggestion) > 0 {
-				_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", suggestion)
+			if !errorx.HasTrait(err, utils.ErrTraitPreCheck) {
+				logger.OutputDebugLog("tiup-cluster")
+			}
+
+			if errx := errorx.Cast(err); errx != nil {
+				if suggestion := extractSuggestionFromErrorX(errx); len(suggestion) > 0 {
+					log.Errorf("\n%s\n", suggestion)
+				}
 			}
 		}
 	}
-
 	err = logger.OutputAuditLogIfEnabled()
 	if err != nil {
 		zap.L().Warn("Write audit log file failed", zap.Error(err))
