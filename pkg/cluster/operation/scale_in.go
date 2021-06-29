@@ -26,6 +26,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/utils"
 )
@@ -136,21 +137,27 @@ func ScaleInCluster(
 		}
 	}
 
-	var pdEndpoint []string
+	var pdEndpoints []string
 	for _, instance := range (&spec.PDComponent{Topology: cluster}).Instances() {
 		if !deletedNodes.Exist(instance.ID()) {
-			pdEndpoint = append(pdEndpoint, Addr(instance))
+			pdEndpoints = append(pdEndpoints, Addr(instance))
 		}
 	}
 
 	// At least a PD server exists
-	if len(pdEndpoint) == 0 {
+	if len(pdEndpoints) == 0 {
 		return errors.New("cannot find available PD instance")
 	}
 
-	pdClient := api.NewPDClient(pdEndpoint, 10*time.Second, tlsCfg)
+	pdClient := api.NewPDClient(pdEndpoints, 10*time.Second, tlsCfg)
 
-	binlogClient, err := api.NewBinlogClient(pdEndpoint, tlsCfg)
+	tcpProxy := proxy.GetTCPProxy()
+	if tcpProxy != nil {
+		closeC := tcpProxy.Run(pdEndpoints)
+		defer tcpProxy.Close(closeC)
+		pdEndpoints = tcpProxy.GetEndpoints()
+	}
+	binlogClient, err := api.NewBinlogClient(pdEndpoints, tlsCfg)
 	if err != nil {
 		return err
 	}

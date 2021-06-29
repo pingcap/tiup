@@ -90,7 +90,12 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 		}
 	}
 
-	t := m.sshTaskBuilder(name, topo, base.User, gOpt).
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
+
+	t := b.
 		Parallel(false, shellTasks...).
 		Build()
 

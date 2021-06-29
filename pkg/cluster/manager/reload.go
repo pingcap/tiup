@@ -23,6 +23,7 @@ import (
 	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -30,17 +31,25 @@ import (
 )
 
 // Reload the cluster.
-func (m *Manager) Reload(name string, opt operator.Options, skipRestart, skipConfirm bool) error {
+func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipConfirm bool) error {
 	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
 		return err
 	}
 
-	sshTimeout := opt.SSHTimeout
-	exeTimeout := opt.OptTimeout
+	sshTimeout := gOpt.SSHTimeout
+	exeTimeout := gOpt.OptTimeout
 
 	metadata, err := m.meta(name)
 	if err != nil {
 		return err
+	}
+
+	var sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	if gOpt.SSHType != executor.SSHTypeNone && len(gOpt.SSHProxyHost) != 0 {
+		var err error
+		if sshProxyProps, err = tui.ReadIdentityFileOrPassword(gOpt.SSHProxyIdentity, gOpt.SSHProxyUsePassword); err != nil {
+			return err
+		}
 	}
 
 	if !skipConfirm {
@@ -48,8 +57,8 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart, skipCon
 			fmt.Sprintf("Will reload the cluster %s with restart policy is %s, nodes: %s, roles: %s.\nDo you want to continue? [y/N]:",
 				color.HiYellowString(name),
 				color.HiRedString(fmt.Sprintf("%v", !skipRestart)),
-				color.HiRedString(strings.Join(opt.Nodes, ",")),
-				color.HiRedString(strings.Join(opt.Roles, ",")),
+				color.HiRedString(strings.Join(gOpt.Nodes, ",")),
+				color.HiRedString(strings.Join(gOpt.Roles, ",")),
 			),
 		); err != nil {
 			return err
@@ -70,7 +79,7 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart, skipCon
 		}
 	})
 
-	refreshConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, nil, opt.IgnoreConfigCheck)
+	refreshConfigTasks, hasImported := buildRegenConfigTasks(m, name, topo, base, nil, gOpt.IgnoreConfigCheck)
 	monitorConfigTasks := buildRefreshMonitoredConfigTasks(
 		m.specManager,
 		name,
@@ -79,7 +88,9 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart, skipCon
 		topo.GetMonitoredOptions(),
 		sshTimeout,
 		exeTimeout,
-		opt.SSHType)
+		gOpt,
+		sshProxyProps,
+	)
 
 	// handle dir scheme changes
 	if hasImported {
@@ -88,19 +99,22 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart, skipCon
 		}
 	}
 
-	tb := m.sshTaskBuilder(name, topo, base.User, opt)
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
 	if topo.Type() == spec.TopoTypeTiDB {
-		tb = tb.UpdateTopology(
+		b.UpdateTopology(
 			name,
 			m.specManager.Path(name),
 			metadata.(*spec.ClusterMeta),
 			nil, /* deleteNodeIds */
 		)
 	}
-	tb = tb.ParallelStep("+ Refresh instance configs", opt.Force, refreshConfigTasks...)
+	b.ParallelStep("+ Refresh instance configs", gOpt.Force, refreshConfigTasks...)
 
 	if len(monitorConfigTasks) > 0 {
-		tb = tb.ParallelStep("+ Refresh monitor configs", opt.Force, monitorConfigTasks...)
+		b.ParallelStep("+ Refresh monitor configs", gOpt.Force, monitorConfigTasks...)
 	}
 
 	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
@@ -108,14 +122,14 @@ func (m *Manager) Reload(name string, opt operator.Options, skipRestart, skipCon
 		return err
 	}
 	if !skipRestart {
-		tb = tb.Func("UpgradeCluster", func(ctx context.Context) error {
-			return operator.Upgrade(ctx, topo, opt, tlsCfg)
+		b.Func("UpgradeCluster", func(ctx context.Context) error {
+			return operator.Upgrade(ctx, topo, gOpt, tlsCfg)
 		})
 	}
 
-	t := tb.Build()
+	t := b.Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), opt.Concurrency)); err != nil {
+	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err

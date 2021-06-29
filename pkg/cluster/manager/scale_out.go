@@ -84,15 +84,23 @@ func (m *Manager) ScaleOut(
 		return err
 	}
 
-	var sshConnProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	var (
+		sshConnProps  *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+		sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	)
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
 		if sshConnProps, err = tui.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
 			return err
 		}
+		if len(gOpt.SSHProxyHost) != 0 {
+			if sshProxyProps, err = tui.ReadIdentityFileOrPassword(gOpt.SSHProxyIdentity, gOpt.SSHProxyUsePassword); err != nil {
+				return err
+			}
+		}
 	}
 
-	if err := m.fillHostArch(sshConnProps, newPart, &gOpt, opt.User); err != nil {
+	if err := m.fillHostArch(sshConnProps, sshProxyProps, newPart, &gOpt, opt.User); err != nil {
 		return err
 	}
 
@@ -152,7 +160,7 @@ func (m *Manager) ScaleOut(
 
 	// Build the scale out tasks
 	t, err := buildScaleOutTask(
-		m, name, metadata, mergedTopo, opt, sshConnProps, newPart,
+		m, name, metadata, mergedTopo, opt, sshConnProps, sshProxyProps, newPart,
 		patchedComponents, gOpt, afterDeploy, final)
 	if err != nil {
 		return err

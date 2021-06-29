@@ -87,8 +87,11 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 	if err != nil {
 		return err
 	}
-	t := m.sshTaskBuilder(name, topo, base.User, opt).
-		Parallel(false, replacePackageTasks...).
+	b, err := m.sshTaskBuilder(name, topo, base.User, opt)
+	if err != nil {
+		return err
+	}
+	t := b.Parallel(false, replacePackageTasks...).
 		Func("UpgradeCluster", func(ctx context.Context) error {
 			if offline {
 				return nil
