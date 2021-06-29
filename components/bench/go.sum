@@ -386,7 +386,7 @@ github.com/pingcap/check v0.0.0-20190102082844-67f458068fc8 h1:USx2/E1bX46VG32FI
 github.com/pingcap/check v0.0.0-20190102082844-67f458068fc8/go.mod h1:B1+S9LNcuMyLH/4HMTViQOJevkGiik3wW2AN9zb2fNQ=
 github.com/pingcap/errors v0.11.1 h1:BXFZ6MdDd2U1uJUa2sRAWTmm+nieEzuyYM0R4aUTcC8=
 github.com/pingcap/errors v0.11.1/go.mod h1:Oi8TUi2kEtXXLMJk9l1cGmz20kV3TaQ0usTwv5KuLY8=
-github.com/pingcap/go-tpc v1.0.7 h1:BoSej0OgaCnNj8d/0ZgIAfwp4KCN+bPuC3exrlrR3XM=
+github.com/pingcap/go-tpc v1.0.7 h1:su+ZPXu4X3jf8GZOkP/iH0HBfyWmBqhhmL+TGyn1fl4=
 github.com/pingcap/go-tpc v1.0.7/go.mod h1:KU/Cs2kFYOr5/hQoRN1w20VccYHThipZiZfbPRPvL2s=
 github.com/pingcap/go-ycsb v0.0.0-20210422030059-021df3b60d69 h1:n7XqbClJAxtfh7jV/+PW0yQWIUNrA+YmA3olH3IafIA=
 github.com/pingcap/go-ycsb v0.0.0-20210422030059-021df3b60d69/go.mod h1:DXZ5YBiq7h+i/pdKunJE14sNWq01W5ZRowKUwZ/zSqE=
