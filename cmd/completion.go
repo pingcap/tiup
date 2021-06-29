@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"path"
 
 	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
@@ -53,18 +54,19 @@ func newCompletionCmd() *cobra.Command {
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			teleCommand = cmd.CommandPath()
+			shell := os.Getenv("SHELL")
 			if len(args) == 1 {
-				switch args[0] {
-				case "bash":
-					return cmd.Parent().GenBashCompletion(os.Stdout)
-				case "zsh":
-					return genCompletionZsh(os.Stdout, cmd.Parent())
-				default:
-					return errors.New("unsupported shell type " + args[0])
-				}
+				shell = args[0]
 			}
-
-			return cmd.Help()
+			shell = path.Base(shell)
+			switch shell {
+			case "bash":
+				return cmd.Parent().GenBashCompletion(os.Stdout)
+			case "zsh":
+				return genCompletionZsh(os.Stdout, cmd.Parent())
+			default:
+				return errors.New("unsupported shell type " + shell)
+			}
 		},
 	}
 
