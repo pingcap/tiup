@@ -95,7 +95,10 @@ func (m *Manager) ScaleIn(
 		return err
 	}
 
-	b := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
 
 	scale(b, metadata, tlsCfg)
 

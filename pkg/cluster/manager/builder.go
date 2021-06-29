@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
@@ -61,7 +60,7 @@ func buildScaleOutTask(
 	metadata spec.Metadata,
 	mergedTopo spec.Topology,
 	opt DeployOptions,
-	sshConnProps *tui.SSHConnectionProps,
+	s, p *tui.SSHConnectionProps,
 	newPart spec.Topology,
 	patchedComponents set.StringSet,
 	gOpt operator.Options,
@@ -121,11 +120,18 @@ func buildScaleOutTask(
 				instance.GetHost(),
 				instance.GetSSHPort(),
 				opt.User,
-				sshConnProps.Password,
-				sshConnProps.IdentityFile,
-				sshConnProps.IdentityFilePassphrase,
+				s.Password,
+				s.IdentityFile,
+				s.IdentityFilePassphrase,
 				gOpt.SSHTimeout,
 				gOpt.OptTimeout,
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				p.Password,
+				p.IdentityFile,
+				p.IdentityFilePassphrase,
+				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				globalOptions.SSHType,
 			).
@@ -137,6 +143,8 @@ func buildScaleOutTask(
 
 	// Download missing component
 	downloadCompTasks = convertStepDisplaysToTasks(buildDownloadCompTasks(base.Version, newPart, m.bindVersion))
+
+	sshType := topo.BaseTopo().GlobalOptions.SSHType
 
 	var iterErr error
 	// Deploy the new topology and refresh the configuration
@@ -165,8 +173,15 @@ func buildScaleOutTask(
 				base.User,
 				gOpt.SSHTimeout,
 				gOpt.OptTimeout,
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				p.Password,
+				p.IdentityFile,
+				p.IdentityFilePassphrase,
+				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
-				topo.BaseTopo().GlobalOptions.SSHType,
+				sshType,
 			).
 			Mkdir(base.User, inst.GetHost(), deployDirs...).
 			Mkdir(base.User, inst.GetHost(), dataDirs...).
@@ -296,6 +311,7 @@ func buildScaleOutTask(
 		topo.BaseTopo().MonitoredOptions,
 		base.Version,
 		gOpt,
+		p,
 	)
 	if err != nil {
 		return nil, err
@@ -303,20 +319,13 @@ func buildScaleOutTask(
 	downloadCompTasks = append(downloadCompTasks, convertStepDisplaysToTasks(dlTasks)...)
 	deployCompTasks = append(deployCompTasks, convertStepDisplaysToTasks(dpTasks)...)
 
-	builder := task.NewBuilder().
-		SSHKeySet(
-			specManager.Path(name, "ssh", "id_rsa"),
-			specManager.Path(name, "ssh", "id_rsa.pub")).
+	builder, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return nil, err
+	}
+	builder.
 		Parallel(false, downloadCompTasks...).
 		Parallel(false, envInitTasks...).
-		ClusterSSH(
-			topo,
-			base.User,
-			gOpt.SSHTimeout,
-			gOpt.OptTimeout,
-			gOpt.SSHType,
-			topo.BaseTopo().GlobalOptions.SSHType,
-		).
 		Parallel(false, deployCompTasks...)
 
 	if afterDeploy != nil {
@@ -324,14 +333,6 @@ func buildScaleOutTask(
 	}
 
 	builder.
-		ClusterSSH(
-			newPart,
-			base.User,
-			gOpt.SSHTimeout,
-			gOpt.OptTimeout,
-			gOpt.SSHType,
-			topo.BaseTopo().GlobalOptions.SSHType,
-		).
 		Func("Save meta", func(_ context.Context) error {
 			metadata.SetTopology(mergedTopo)
 			return m.specManager.SaveMeta(name, metadata)
@@ -373,6 +374,7 @@ func buildMonitoredDeployTask(
 	monitoredOptions *spec.MonitoredOptions,
 	version string,
 	gOpt operator.Options,
+	p *tui.SSHConnectionProps,
 ) (downloadCompTasks []*task.StepDisplay, deployCompTasks []*task.StepDisplay, err error) {
 	if monitoredOptions == nil {
 		return
@@ -423,6 +425,13 @@ func buildMonitoredDeployTask(
 					globalOptions.User,
 					gOpt.SSHTimeout,
 					gOpt.OptTimeout,
+					gOpt.SSHProxyHost,
+					gOpt.SSHProxyPort,
+					gOpt.SSHProxyUser,
+					p.Password,
+					p.IdentityFile,
+					p.IdentityFilePassphrase,
+					gOpt.SSHProxyTimeout,
 					gOpt.SSHType,
 					globalOptions.SSHType,
 				).
@@ -487,7 +496,8 @@ func buildRefreshMonitoredConfigTasks(
 	globalOptions spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
 	sshTimeout, exeTimeout uint64,
-	sshType executor.SSHType,
+	gOpt operator.Options,
+	p *tui.SSHConnectionProps,
 ) []*task.StepDisplay {
 	if monitoredOptions == nil {
 		return nil
@@ -514,7 +524,14 @@ func buildRefreshMonitoredConfigTasks(
 					globalOptions.User,
 					sshTimeout,
 					exeTimeout,
-					sshType,
+					gOpt.SSHProxyHost,
+					gOpt.SSHProxyPort,
+					gOpt.SSHProxyUser,
+					p.Password,
+					p.IdentityFile,
+					p.IdentityFilePassphrase,
+					gOpt.SSHProxyTimeout,
+					gOpt.SSHType,
 					globalOptions.SSHType,
 				).
 				MonitoredConfig(

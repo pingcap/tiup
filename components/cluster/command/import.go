@@ -123,7 +123,7 @@ func newImportCmd() *cobra.Command {
 			}
 
 			// copy config files form deployment servers
-			if err = ansible.ImportConfig(clsName, clsMeta, gOpt.SSHTimeout, gOpt.OptTimeout, gOpt.SSHType); err != nil {
+			if err = ansible.ImportConfig(clsName, clsMeta, gOpt); err != nil {
 				return err
 			}
 

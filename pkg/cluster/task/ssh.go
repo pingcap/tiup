@@ -29,20 +29,27 @@ var (
 
 // RootSSH is used to establish a SSH connection to the target host with specific key
 type RootSSH struct {
-	host       string           // hostname of the SSH server
-	port       int              // port of the SSH server
-	user       string           // username to login to the SSH server
-	password   string           // password of the user
-	keyFile    string           // path to the private key file
-	passphrase string           // passphrase of the private key file
-	timeout    uint64           // timeout in seconds when connecting via SSH
-	exeTimeout uint64           // timeout in seconds waiting command to finish
-	sshType    executor.SSHType // the type of SSH chanel
+	host            string           // hostname of the SSH server
+	port            int              // port of the SSH server
+	user            string           // username to login to the SSH server
+	password        string           // password of the user
+	keyFile         string           // path to the private key file
+	passphrase      string           // passphrase of the private key file
+	timeout         uint64           // timeout in seconds when connecting via SSH
+	exeTimeout      uint64           // timeout in seconds waiting command to finish
+	proxyHost       string           // hostname of the proxy SSH server
+	proxyPort       int              // port of the proxy SSH server
+	proxyUser       string           // username to login to the proxy SSH server
+	proxyPassword   string           // password of the proxy user
+	proxyKeyFile    string           // path to the private key file
+	proxyPassphrase string           // passphrase of the private key file
+	proxyTimeout    uint64           // timeout in seconds when connecting via SSH
+	sshType         executor.SSHType // the type of SSH chanel
 }
 
 // Execute implements the Task interface
 func (s *RootSSH) Execute(ctx context.Context) error {
-	e, err := executor.New(s.sshType, s.user != "root", executor.SSHConfig{
+	sc := executor.SSHConfig{
 		Host:       s.host,
 		Port:       s.port,
 		User:       s.user,
@@ -51,7 +58,19 @@ func (s *RootSSH) Execute(ctx context.Context) error {
 		Passphrase: s.passphrase,
 		Timeout:    time.Second * time.Duration(s.timeout),
 		ExeTimeout: time.Second * time.Duration(s.exeTimeout),
-	})
+	}
+	if len(s.proxyHost) > 0 {
+		sc.Proxy = &executor.SSHConfig{
+			Host:       s.proxyHost,
+			Port:       s.proxyPort,
+			User:       s.proxyUser,
+			Password:   s.proxyPassword,
+			KeyFile:    s.proxyKeyFile,
+			Passphrase: s.proxyPassphrase,
+			Timeout:    time.Second * time.Duration(s.proxyTimeout),
+		}
+	}
+	e, err := executor.New(s.sshType, s.user != "root", sc)
 	if err != nil {
 		return err
 	}
@@ -76,24 +95,44 @@ func (s RootSSH) String() string {
 
 // UserSSH is used to establish a SSH connection to the target host with generated key
 type UserSSH struct {
-	host       string
-	port       int
-	deployUser string
-	timeout    uint64 // timeout in seconds when connecting via SSH
-	exeTimeout uint64 // timeout in seconds waiting command to finish
-	sshType    executor.SSHType
+	host            string
+	port            int
+	deployUser      string
+	timeout         uint64
+	exeTimeout      uint64 // timeout in seconds waiting command to finish
+	proxyHost       string // hostname of the proxy SSH server
+	proxyPort       int    // port of the proxy SSH server
+	proxyUser       string // username to login to the proxy SSH server
+	proxyPassword   string // password of the proxy user
+	proxyKeyFile    string // path to the private key file
+	proxyPassphrase string // passphrase of the private key file
+	proxyTimeout    uint64 // timeout in seconds when connecting via SSH
+	sshType         executor.SSHType
 }
 
 // Execute implements the Task interface
 func (s *UserSSH) Execute(ctx context.Context) error {
-	e, err := executor.New(s.sshType, false, executor.SSHConfig{
+	sc := executor.SSHConfig{
 		Host:       s.host,
 		Port:       s.port,
 		KeyFile:    ctxt.GetInner(ctx).PrivateKeyPath,
 		User:       s.deployUser,
 		Timeout:    time.Second * time.Duration(s.timeout),
 		ExeTimeout: time.Second * time.Duration(s.exeTimeout),
-	})
+	}
+
+	if len(s.proxyHost) > 0 {
+		sc.Proxy = &executor.SSHConfig{
+			Host:       s.proxyHost,
+			Port:       s.proxyPort,
+			User:       s.proxyUser,
+			Password:   s.proxyPassword,
+			KeyFile:    s.proxyKeyFile,
+			Passphrase: s.proxyPassphrase,
+			Timeout:    time.Second * time.Duration(s.proxyTimeout),
+		}
+	}
+	e, err := executor.New(s.sshType, false, sc)
 	if err != nil {
 		return err
 	}

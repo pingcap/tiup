@@ -32,7 +32,7 @@ import (
 )
 
 // EnableCluster enable/disable the service in a cluster
-func (m *Manager) EnableCluster(name string, options operator.Options, isEnable bool) error {
+func (m *Manager) EnableCluster(name string, gOpt operator.Options, isEnable bool) error {
 	if isEnable {
 		log.Infof("Enabling cluster %s...", name)
 	} else {
@@ -47,21 +47,24 @@ func (m *Manager) EnableCluster(name string, options operator.Options, isEnable 
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	b := m.sshTaskBuilder(name, topo, base.User, options)
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
 
 	if isEnable {
 		b = b.Func("EnableCluster", func(ctx context.Context) error {
-			return operator.Enable(ctx, topo, options, isEnable)
+			return operator.Enable(ctx, topo, gOpt, isEnable)
 		})
 	} else {
 		b = b.Func("DisableCluster", func(ctx context.Context) error {
-			return operator.Enable(ctx, topo, options, isEnable)
+			return operator.Enable(ctx, topo, gOpt, isEnable)
 		})
 	}
 
 	t := b.Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), options.Concurrency)); err != nil {
+	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -79,7 +82,7 @@ func (m *Manager) EnableCluster(name string, options operator.Options, isEnable 
 }
 
 // StartCluster start the cluster with specified name.
-func (m *Manager) StartCluster(name string, options operator.Options, fn ...func(b *task.Builder, metadata spec.Metadata)) error {
+func (m *Manager) StartCluster(name string, gOpt operator.Options, fn ...func(b *task.Builder, metadata spec.Metadata)) error {
 	log.Infof("Starting cluster %s...", name)
 
 	metadata, err := m.meta(name)
@@ -95,10 +98,14 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 		return err
 	}
 
-	b := m.sshTaskBuilder(name, topo, base.User, options).
-		Func("StartCluster", func(ctx context.Context) error {
-			return operator.Start(ctx, topo, options, tlsCfg)
-		})
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
+
+	b.Func("StartCluster", func(ctx context.Context) error {
+		return operator.Start(ctx, topo, gOpt, tlsCfg)
+	})
 
 	for _, f := range fn {
 		f(b, metadata)
@@ -106,7 +113,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 
 	t := b.Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), options.Concurrency)); err != nil {
+	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -119,7 +126,7 @@ func (m *Manager) StartCluster(name string, options operator.Options, fn ...func
 }
 
 // StopCluster stop the cluster.
-func (m *Manager) StopCluster(name string, options operator.Options, skipConfirm bool) error {
+func (m *Manager) StopCluster(name string, gOpt operator.Options, skipConfirm bool) error {
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
@@ -137,21 +144,26 @@ func (m *Manager) StopCluster(name string, options operator.Options, skipConfirm
 		if err := tui.PromptForConfirmOrAbortError(
 			fmt.Sprintf("Will stop the cluster %s with nodes: %s, roles: %s.\nDo you want to continue? [y/N]:",
 				color.HiYellowString(name),
-				color.HiRedString(strings.Join(options.Nodes, ",")),
-				color.HiRedString(strings.Join(options.Roles, ",")),
+				color.HiRedString(strings.Join(gOpt.Nodes, ",")),
+				color.HiRedString(strings.Join(gOpt.Roles, ",")),
 			),
 		); err != nil {
 			return err
 		}
 	}
 
-	t := m.sshTaskBuilder(name, topo, base.User, options).
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
+
+	t := b.
 		Func("StopCluster", func(ctx context.Context) error {
-			return operator.Stop(ctx, topo, options, tlsCfg)
+			return operator.Stop(ctx, topo, gOpt, tlsCfg)
 		}).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), options.Concurrency)); err != nil {
+	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -164,7 +176,7 @@ func (m *Manager) StopCluster(name string, options operator.Options, skipConfirm
 }
 
 // RestartCluster restart the cluster.
-func (m *Manager) RestartCluster(name string, options operator.Options, skipConfirm bool) error {
+func (m *Manager) RestartCluster(name string, gOpt operator.Options, skipConfirm bool) error {
 	metadata, err := m.meta(name)
 	if err != nil && !errors.Is(perrs.Cause(err), meta.ErrValidate) {
 		return err
@@ -182,21 +194,25 @@ func (m *Manager) RestartCluster(name string, options operator.Options, skipConf
 		if err := tui.PromptForConfirmOrAbortError(
 			fmt.Sprintf("Will restart the cluster %s with nodes: %s roles: %s.\nDo you want to continue? [y/N]:",
 				color.HiYellowString(name),
-				color.HiYellowString(strings.Join(options.Nodes, ",")),
-				color.HiYellowString(strings.Join(options.Roles, ",")),
+				color.HiYellowString(strings.Join(gOpt.Nodes, ",")),
+				color.HiYellowString(strings.Join(gOpt.Roles, ",")),
 			),
 		); err != nil {
 			return err
 		}
 	}
 
-	t := m.sshTaskBuilder(name, topo, base.User, options).
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
+	t := b.
 		Func("RestartCluster", func(ctx context.Context) error {
-			return operator.Restart(ctx, topo, options, tlsCfg)
+			return operator.Restart(ctx, topo, gOpt, tlsCfg)
 		}).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background(), options.Concurrency)); err != nil {
+	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err

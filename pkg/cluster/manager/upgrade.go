@@ -177,7 +177,11 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 	if err != nil {
 		return err
 	}
-	t := m.sshTaskBuilder(name, topo, base.User, opt).
+	b, err := m.sshTaskBuilder(name, topo, base.User, opt)
+	if err != nil {
+		return err
+	}
+	t := b.
 		Parallel(false, downloadCompTasks...).
 		Parallel(opt.Force, copyCompTasks...).
 		Func("UpgradeCluster", func(ctx context.Context) error {
