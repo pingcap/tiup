@@ -37,14 +37,11 @@ drainer_servers:
     data_dir: /home/tidb/data/drainer-8249/data
     commit_ts: -1
     config:
-      syncer.db-type: 'file'
+      syncer.db-type: "file"
 
 monitoring_servers:
   - host: n1
-    rule_dir: /tmp/local/prometheus
 grafana_servers:
   - host: n1
-    dashboard_dir: /tmp/local/grafana
 alertmanager_servers:
   - host: n1
-    config_file: /tmp/local/alertmanager/alertmanager.yml
