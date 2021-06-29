@@ -28,6 +28,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/proxy"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"golang.org/x/mod/semver"
 )
@@ -402,12 +403,22 @@ func (s *Specification) GetDashboardAddress(tlsCfg *tls.Config, pdList ...string
 	return dashboardAddr, nil
 }
 
-// GetEtcdClient load EtcdClient of current cluster
+// GetEtcdClient loads EtcdClient of current cluster
 func (s *Specification) GetEtcdClient(tlsCfg *tls.Config) (*clientv3.Client, error) {
 	return clientv3.New(clientv3.Config{
 		Endpoints: s.GetPDList(),
 		TLS:       tlsCfg,
 	})
+}
+
+// GetEtcdProxyClient loads EtcdClient of current cluster with TCP proxy
+func (s *Specification) GetEtcdProxyClient(tlsCfg *tls.Config, tcpProxy *proxy.TCPProxy) (*clientv3.Client, chan struct{}, error) {
+	closeC := tcpProxy.Run(s.GetPDList())
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints: tcpProxy.GetEndpoints(),
+		TLS:       tlsCfg,
+	})
+	return cli, closeC, err
 }
 
 // Merge returns a new Specification which sum old ones

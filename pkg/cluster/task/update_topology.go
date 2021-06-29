@@ -9,6 +9,7 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
+	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/set"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
@@ -19,6 +20,7 @@ type UpdateTopology struct {
 	profileDir     string
 	metadata       *spec.ClusterMeta
 	deletedNodeIDs []string
+	tcpProxy       *proxy.TCPProxy
 }
 
 // String implements the fmt.Stringer interface
@@ -34,7 +36,14 @@ func (u *UpdateTopology) Execute(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	client, err := u.metadata.Topology.GetEtcdClient(tlsCfg)
+	var client *clientv3.Client
+	if u.tcpProxy == nil {
+		client, err = u.metadata.Topology.GetEtcdClient(tlsCfg)
+	} else {
+		var closeC chan struct{}
+		client, closeC, err = u.metadata.Topology.GetEtcdProxyClient(tlsCfg, u.tcpProxy)
+		defer u.tcpProxy.Close(closeC)
+	}
 	if err != nil {
 		return err
 	}

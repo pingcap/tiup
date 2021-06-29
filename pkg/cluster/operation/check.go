@@ -747,8 +747,8 @@ func CheckTHP(ctx context.Context, e ctxt.Executor) *CheckResult {
 	}
 
 	m := module.NewShellModule(module.ShellModuleConfig{
-		Command: "cat /sys/kernel/mm/transparent_hugepage/{enabled,defrag}",
-		Sudo:    false,
+		Command: fmt.Sprintf(`if [ -d %[1]s ]; then cat %[1]s/{enabled,defrag}; fi`, "/sys/kernel/mm/transparent_hugepage"),
+		Sudo:    true,
 	})
 	stdout, stderr, err := m.Execute(ctx, e)
 	if err != nil {
@@ -757,7 +757,7 @@ func CheckTHP(ctx context.Context, e ctxt.Executor) *CheckResult {
 	}
 
 	for _, line := range strings.Split(strings.Trim(string(stdout), "\n"), "\n") {
-		if !strings.Contains(line, "[never]") {
+		if len(line) > 0 && !strings.Contains(line, "[never]") {
 			result.Err = fmt.Errorf("THP is enabled, please disable it for best performance")
 			return result
 		}

@@ -18,12 +18,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
@@ -33,6 +35,7 @@ import (
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/telemetry"
 	"github.com/pingcap/tiup/pkg/tui"
@@ -126,9 +129,15 @@ func init() {
 				fmt.Println("The --native-ssh flag has been deprecated, please use --ssh=system")
 			}
 
+			err = proxy.MaybeStartProxy(gOpt.SSHProxyHost, gOpt.SSHProxyPort, gOpt.SSHProxyUser, gOpt.SSHProxyUsePassword, gOpt.SSHProxyIdentity)
+			if err != nil {
+				return perrs.Annotate(err, "start http-proxy")
+			}
+
 			return nil
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+			proxy.MaybeStopProxy()
 			return tiupmeta.GlobalEnv().V1Repository().Mirror().Close()
 		},
 	}
@@ -143,7 +152,19 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "(EXPERIMENTAL) Use the native SSH client installed on local system instead of the build-in one.")
 	rootCmd.PersistentFlags().StringVar((*string)(&gOpt.SSHType), "ssh", "", "(EXPERIMENTAL) The executor type: 'builtin', 'system', 'none'.")
 	rootCmd.PersistentFlags().IntVarP(&gOpt.Concurrency, "concurrency", "c", 5, "max number of parallel tasks allowed")
+	rootCmd.PersistentFlags().StringVar(&gOpt.SSHProxyHost, "ssh-proxy-host", "", "The SSH proxy host used to connect to remote host.")
+	rootCmd.PersistentFlags().StringVar(&gOpt.SSHProxyUser, "ssh-proxy-user", utils.CurrentUser(), "The user name used to login the proxy host.")
+	rootCmd.PersistentFlags().IntVar(&gOpt.SSHProxyPort, "ssh-proxy-port", 22, "The port used to login the proxy host.")
+	rootCmd.PersistentFlags().StringVar(&gOpt.SSHProxyIdentity, "ssh-proxy-identity-file", path.Join(utils.UserHome(), ".ssh", "id_rsa"), "The identity file used to login the proxy host.")
+	rootCmd.PersistentFlags().BoolVar(&gOpt.SSHProxyUsePassword, "ssh-proxy-use-password", false, "Use password to login the proxy host.")
+	rootCmd.PersistentFlags().Uint64Var(&gOpt.SSHProxyTimeout, "ssh-proxy-timeout", 5, "Timeout in seconds to connect the proxy host via SSH, ignored for operations that don't need an SSH connection.")
 	_ = rootCmd.PersistentFlags().MarkHidden("native-ssh")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-host")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-user")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-port")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-identity-file")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-use-password")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-timeout")
 
 	rootCmd.AddCommand(
 		newCheckCmd(),

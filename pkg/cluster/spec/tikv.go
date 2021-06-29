@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -429,6 +430,17 @@ func makeTransport(tlsCfg *tls.Config) *http.Transport {
 	// We should clone a tlsCfg because we use it across goroutine
 	if tlsCfg != nil {
 		transport.TLSClientConfig = tlsCfg.Clone()
+	}
+
+	// prefer to use the inner http proxy
+	httpProxy := os.Getenv("TIUP_INNER_HTTP_PROXY")
+	if len(httpProxy) == 0 {
+		httpProxy = os.Getenv("HTTP_PROXY")
+	}
+	if len(httpProxy) > 0 {
+		if proxyURL, err := url.Parse(httpProxy); err == nil {
+			transport.Proxy = http.ProxyURL(proxyURL)
+		}
 	}
 	return transport
 }

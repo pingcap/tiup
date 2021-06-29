@@ -32,6 +32,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/module"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/set"
 )
 
@@ -450,9 +451,16 @@ func DestroyClusterTombstone(
 		}
 	}
 
-	var pdClient = api.NewPDClient(cluster.GetPDList(), 10*time.Second, tlsCfg)
+	pdEndpoints := cluster.GetPDList()
+	var pdClient = api.NewPDClient(pdEndpoints, 10*time.Second, tlsCfg)
 
-	binlogClient, err := api.NewBinlogClient(cluster.GetPDList(), tlsCfg)
+	tcpProxy := proxy.GetTCPProxy()
+	if tcpProxy != nil {
+		closeC := tcpProxy.Run(pdEndpoints)
+		defer tcpProxy.Close(closeC)
+		pdEndpoints = tcpProxy.GetEndpoints()
+	}
+	binlogClient, err := api.NewBinlogClient(pdEndpoints, tlsCfg)
 	if err != nil {
 		return nil, err
 	}
