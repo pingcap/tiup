@@ -534,7 +534,7 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder) (s
 		msg = fmt.Sprintf("will try to %s, reboot might be needed", color.HiBlueString("disable SELinux"))
 	case operator.CheckNameTHP:
 		t.Shell(host,
-			"echo never > /sys/kernel/mm/transparent_hugepage/enabled && echo never > /sys/kernel/mm/transparent_hugepage/defrag",
+			fmt.Sprintf(`if [ -d %[1]s ]; then echo never > %[1]s/defrag && echo never > %[1]s/enabled; fi`, "/sys/kernel/mm/transparent_hugepage"),
 			"",
 			true)
 		msg = fmt.Sprintf("will try to %s, please check again after reboot", color.HiBlueString("disable THP"))
