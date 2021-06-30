@@ -118,6 +118,7 @@ function scale_tools() {
     fi
 
     tiup-cluster $client _test $name writable
+    tiup-cluster $client --yes destroy $name
 
     # test cluster log dir
     tiup-cluster notfound-command 2>&1 | grep $HOME/.tiup/logs/tiup-cluster-debug
