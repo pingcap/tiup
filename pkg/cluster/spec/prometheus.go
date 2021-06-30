@@ -179,7 +179,7 @@ func (i *MonitorInstance) InitConfig(
 
 	// transfer config
 	fp = filepath.Join(paths.Cache, fmt.Sprintf("prometheus_%s_%d.yml", i.GetHost(), i.GetPort()))
-	cfig := config.NewPrometheusConfig(clusterName, enableTLS)
+	cfig := config.NewPrometheusConfig(clusterName, clusterVersion, enableTLS)
 	if monitoredOptions != nil {
 		cfig.AddBlackbox(i.GetHost(), uint64(monitoredOptions.BlackboxExporterPort))
 	}

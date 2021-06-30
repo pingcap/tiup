@@ -21,6 +21,7 @@ import (
 	"text/template"
 
 	"github.com/pingcap/tiup/embed"
+	"golang.org/x/mod/semver"
 )
 
 // PrometheusConfig represent the data to generate Prometheus config
@@ -46,6 +47,7 @@ type PrometheusConfig struct {
 	BlackboxAddr              string
 	KafkaExporterAddr         string
 	GrafanaAddr               string
+	HasTiKVAccelerateRules    bool
 
 	DMMasterAddrs []string
 	DMWorkerAddrs []string
@@ -55,11 +57,17 @@ type PrometheusConfig struct {
 }
 
 // NewPrometheusConfig returns a PrometheusConfig
-func NewPrometheusConfig(cluster string, enableTLS bool) *PrometheusConfig {
-	return &PrometheusConfig{
-		ClusterName: cluster,
+func NewPrometheusConfig(clusterName, clusterVersion string, enableTLS bool) *PrometheusConfig {
+	cfg := &PrometheusConfig{
+		ClusterName: clusterName,
 		TLSEnabled:  enableTLS,
 	}
+
+	// tikv.accelerate.rules.yml was first introduced in v4.0.0
+	if semver.Compare(clusterVersion, "v4.0.0") >= 0 {
+		cfg.HasTiKVAccelerateRules = true
+	}
+	return cfg
 }
 
 // AddKafka add a kafka address
