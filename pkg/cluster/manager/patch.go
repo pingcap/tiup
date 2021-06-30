@@ -49,8 +49,8 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	if exist := utils.IsExist(packagePath); !exist {
-		return perrs.New("specified package not exists")
+	if !utils.IsExist(packagePath) {
+		return perrs.Errorf("specified package(%s) not exists", packagePath)
 	}
 
 	if !skipConfirm {
