@@ -27,7 +27,9 @@ rule_files:
 {{- end}}
 {{- if .TiKVStatusAddrs}}
   - 'tikv.rules.yml'
+{{- if .HasTiKVAccelerateRules}}
   - 'tikv.accelerate.rules.yml'
+{{- end}}
 {{- end}}
 {{- if .TiFlashStatusAddrs}}
   - 'tiflash.rules.yml'
