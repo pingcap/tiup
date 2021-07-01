@@ -108,4 +108,5 @@ function scale_core() {
     tiup-cluster $client exec $name -N n2 --command "ps aux | grep blackbox_exporter | grep -qv grep"
 
     tiup-cluster $client _test $name writable
+    tiup-cluster $client --yes destroy $name
 }

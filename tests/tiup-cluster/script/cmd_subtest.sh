@@ -22,8 +22,8 @@ function cmd_subtest() {
     fi
 
     # identify SSH via ssh-agent
-    eval $(ssh-agent) &> /dev/null
-    ssh-add /root/.ssh/id_rsa &> /dev/null
+    eval $(ssh-agent)
+    ssh-add /root/.ssh/id_rsa
 
     mv /root/.ssh/id_rsa{,.bak}
     tiup-cluster $client check $topo -i ~/.ssh/id_rsa --enable-mem --enable-cpu --apply
@@ -39,6 +39,7 @@ function cmd_subtest() {
     echo $check_result | grep "service"
     echo $check_result | grep "thp"
 
+    for i in {1..5}; do ssh -o "StrictHostKeyChecking=no" -o "PasswordAuthentication=no" n"$i" "grep -q tidb /etc/passwd && (killall -u tidb; userdel -f -r tidb) || true"; done
     # This should fail because there is no such user: tidb
     ! tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa --skip-create-user
     # This is a normal deploy
