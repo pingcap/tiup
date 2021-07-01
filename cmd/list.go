@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -92,7 +93,7 @@ func (lr *listResult) print() {
 func showComponentList(env *environment.Environment, opt listOptions) (*listResult, error) {
 	err := env.V1Repository().UpdateComponentManifests()
 	if err != nil {
-		return nil, err
+		tui.ColorWarningMsg.Fprint(os.Stderr, "Warn: Update component manifest failed, err_msg=[", err.Error(), "]\n")
 	}
 
 	installed, err := env.Profile().InstalledComponents()
