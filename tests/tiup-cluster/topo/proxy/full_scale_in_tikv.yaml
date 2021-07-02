@@ -1,0 +1,2 @@
+tikv_servers:
+  - host: p3
