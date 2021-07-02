@@ -54,7 +54,7 @@ func NewHTTPProxy(host string, port int, user, password, keyFile, passphrase str
 		p.config.Password = password
 	}
 
-	dial := func(network, addr string) (net.Conn, error) {
+	dial := func(ctx context.Context, network, addr string) (net.Conn, error) {
 		p.l.RLock()
 		cli := p.cli
 		p.l.RUnlock()
@@ -68,6 +68,7 @@ func NewHTTPProxy(host string, port int, user, password, keyFile, passphrase str
 		}
 
 		// create a new ssh client
+		// timeout is implemented inside easyssh, don't need to repeat the implementation
 		_, cli, err := p.config.Connect()
 		if err != nil {
 			return nil, perrs.Annotate(err, "connect to ssh proxy")
@@ -80,7 +81,7 @@ func NewHTTPProxy(host string, port int, user, password, keyFile, passphrase str
 		return cli.Dial(network, addr)
 	}
 
-	p.tr = &http.Transport{Dial: dial}
+	p.tr = &http.Transport{DialContext: dial}
 	return p
 }
 
@@ -110,11 +111,8 @@ func (s *HTTPProxy) connect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	// connect the remote client directly
-	dst, err := s.tr.DialContext(ctx, "tcp", r.URL.Host)
+	dst, err := s.tr.DialContext(context.Background(), "tcp", r.URL.Host)
 	if err != nil {
 		if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
 			zap.L().Debug("CONNECT roundtrip proxy timeout")
