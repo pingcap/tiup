@@ -300,7 +300,7 @@ func checkConfig(ctx context.Context, e ctxt.Executor, componentName, clusterVer
 		if componentName == ComponentTiKV {
 			extra = `--pd=""`
 		}
-		cmd = fmt.Sprintf("%s --config-check --config=%s %s", binPath, configPath, extra)
+		cmd = fmt.Sprintf("%s --config-check --config=%s --data-dir %s %s", binPath, paths.Data, dataPath, extra)
 	}
 
 	_, _, err := e.Execute(ctx, cmd, false)
