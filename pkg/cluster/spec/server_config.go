@@ -298,7 +298,7 @@ func checkConfig(ctx context.Context, e ctxt.Executor, componentName, clusterVer
 		extra := ""
 		if componentName == ComponentTiKV {
 			// Pass in an empty pd address and the correct data dir
-			extra = fmt.Sprintf(`--pd="" --data-dir="%s"`, paths.Data[0])
+			extra = fmt.Sprintf(`--pd "" --data-dir "%s"`, paths.Data[0])
 		}
 		cmd = fmt.Sprintf("%s --config-check --config=%s %s", binPath, configPath, extra)
 	}
