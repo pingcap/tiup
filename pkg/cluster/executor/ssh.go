@@ -261,7 +261,9 @@ func (e *NativeSSHExecutor) configArgs(args []string, isScp bool) []string {
 				proxyArgs = append([]string{"sshpass", "-p", proxy.Passphrase, "-P", e.prompt("passphrase")}, proxyArgs...)
 			}
 		}
-		args = append(args, []string{"-o", fmt.Sprintf(`ProxyCommand="%s %s@%s -p %d -W %%h:%%p"`, strings.Join(proxyArgs, " "), proxy.User, proxy.Host, proxy.Port)}...)
+		// Don't need to extra quote it, exec.Command will handle it right
+		// ref https://stackoverflow.com/a/26473771/2298986
+		args = append(args, []string{"-o", fmt.Sprintf(`ProxyCommand=%s %s@%s -p %d -W %%h:%%p`, strings.Join(proxyArgs, " "), proxy.User, proxy.Host, proxy.Port)}...)
 	}
 	return args
 }
