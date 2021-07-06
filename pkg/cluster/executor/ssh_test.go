@@ -92,7 +92,7 @@ func TestNativeSSHConfigArgs(t *testing.T) {
 				},
 			},
 			false,
-			`-o ConnectTimeout=60 -i id_rsa -o ProxyCommand="ssh -i b.id_rsa root@proxy1 -p 222 -W %h:%p"`,
+			"-o ConnectTimeout=60 -i id_rsa -o ProxyCommand=ssh -i b.id_rsa root@proxy1 -p 222 -W %h:%p",
 		},
 		{
 			&SSHConfig{
@@ -108,7 +108,7 @@ func TestNativeSSHConfigArgs(t *testing.T) {
 				},
 			},
 			false,
-			`-p 1203 -o ConnectTimeout=60 -i id_rsa -o ProxyCommand="ssh -o ConnectTimeout=10 -i b.id_rsa root@proxy1 -p 222 -W %h:%p"`,
+			"-p 1203 -o ConnectTimeout=60 -i id_rsa -o ProxyCommand=ssh -o ConnectTimeout=10 -i b.id_rsa root@proxy1 -p 222 -W %h:%p",
 		},
 		{
 			&SSHConfig{
@@ -123,7 +123,7 @@ func TestNativeSSHConfigArgs(t *testing.T) {
 				},
 			},
 			false,
-			`sshpass -p pass -P password -o ConnectTimeout=60 -o ProxyCommand="sshpass -p word -P password ssh -o ConnectTimeout=10 root@proxy1 -p 222 -W %h:%p"`,
+			"sshpass -p pass -P password -o ConnectTimeout=60 -o ProxyCommand=sshpass -p word -P password ssh -o ConnectTimeout=10 root@proxy1 -p 222 -W %h:%p",
 		},
 	}
 
