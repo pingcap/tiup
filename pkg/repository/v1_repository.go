@@ -458,9 +458,14 @@ func (r *V1Repository) updateComponentManifest(id string, withYanked bool) (*v1m
 	}
 
 	var component v1manifest.Component
-	manifest, err := r.fetchComponentManifest(&item, url, &component, fileVersion.Length)
-	if err != nil {
-		return nil, err
+	manifest, fetchErr := r.fetchComponentManifest(&item, url, &component, fileVersion.Length)
+	if fetchErr != nil {
+		// ignore manifest expiration error here and continue building component object,
+		// the manifest expiration error should be handled by caller, so try to return it
+		// with a valid component object.
+		if !v1manifest.IsExpirationError(errors.Cause(fetchErr)) {
+			return nil, fetchErr
+		}
 	}
 
 	if oldVersion != 0 && component.Version < oldVersion {
@@ -472,7 +477,7 @@ func (r *V1Repository) updateComponentManifest(id string, withYanked bool) (*v1m
 		return nil, err
 	}
 
-	return &component, nil
+	return &component, fetchErr
 }
 
 // DownloadComponent downloads the component specified by item into local file,
@@ -601,7 +606,7 @@ func (r *V1Repository) fetchBase(url string, maxSize uint, f func(reader io.Read
 
 	m, err := f(reader)
 	if err != nil {
-		return nil, errors.Annotatef(err, "read manifest from mirror(%s) failed", r.mirror.Source())
+		return m, errors.Annotatef(err, "read manifest from mirror(%s) failed", r.mirror.Source())
 	}
 	return m, nil
 }

@@ -415,14 +415,18 @@ func ReadManifest(input io.Reader, role ValidManifest, keys *KeyStore) (*Manifes
 }
 
 // RenewManifest resets and extends the expire time of manifest
-func RenewManifest(m ValidManifest, startTime time.Time) {
+func RenewManifest(m ValidManifest, startTime time.Time, extend ...time.Duration) {
 	// manifest with 0 version means it's unversioned
 	if m.Base().Version > 0 {
 		m.Base().Version++
 	}
 
-	// only update expire field when it's old than target expire time
-	targetExpire := startTime.Add(ManifestsConfig[m.Base().Ty].Expire)
+	// only update expire field when it's older than target expire time
+	duration := ManifestsConfig[m.Base().Ty].Expire
+	if len(extend) > 0 {
+		duration = extend[0]
+	}
+	targetExpire := startTime.Add(duration)
 	currentExpire, err := time.Parse(time.RFC3339, m.Base().Expires)
 	if err != nil {
 		m.Base().Expires = targetExpire.Format(time.RFC3339)
