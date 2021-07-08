@@ -48,19 +48,22 @@ func (m *Manager) ScaleIn(
 		nodes []string = gOpt.Nodes
 	)
 	if !skipConfirm {
+		if force {
+			if err := tui.PromptForConfirmOrAbortError(
+				color.HiRedString("Forcing scale in is unsafe and may result in data loss for stateful components.\n"+
+					"The process is irreversible and could NOT be cancelled.\n") +
+					"Only use `--force` when some of the servers are already permanently offline.\n" +
+					"Are you sure to continue? [y/N]:",
+			); err != nil {
+				return err
+			}
+		}
+
 		if err := tui.PromptForConfirmOrAbortError(
 			"This operation will delete the %s nodes in `%s` and all their data.\nDo you want to continue? [y/N]:",
 			strings.Join(nodes, ","),
 			color.HiYellowString(name)); err != nil {
 			return err
-		}
-
-		if force {
-			if err := tui.PromptForConfirmOrAbortError(
-				"Forcing scale in is unsafe and may result in data lost for stateful components.\nDo you want to continue? [y/N]:",
-			); err != nil {
-				return err
-			}
 		}
 
 		log.Infof("Scale-in nodes...")
