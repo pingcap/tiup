@@ -34,6 +34,7 @@ func newDisplayCmd() *cobra.Command {
 		clusterName       string
 		showDashboardOnly bool
 		showVersionOnly   bool
+		showTiKVLables    bool
 	)
 	cmd := &cobra.Command{
 		Use:   "display <cluster-name>",
@@ -75,6 +76,10 @@ func newDisplayCmd() *cobra.Command {
 				return displayDashboardInfo(clusterName, tlsCfg)
 			}
 
+			if showTiKVLables {
+				return cm.DisplayTiKVLabels(clusterName, gOpt)
+			}
+
 			return cm.Display(clusterName, gOpt)
 		},
 	}
@@ -85,6 +90,7 @@ func newDisplayCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&showDashboardOnly, "dashboard", false, "Only display TiDB Dashboard information")
 	cmd.Flags().BoolVar(&showVersionOnly, "version", false, "Only display TiDB cluster version")
 	cmd.Flags().BoolVar(&gOpt.JSON, "json", false, "Output in JSON format when applicable")
+	cmd.Flags().BoolVar(&showTiKVLables, "labels", false, "Only display specified tikv role or nodes lables")
 
 	return cmd
 }

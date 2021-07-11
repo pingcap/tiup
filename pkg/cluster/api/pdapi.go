@@ -23,6 +23,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/jeremywohl/flatten"
@@ -751,6 +752,42 @@ func (pc *PDClient) GetTiKVLabels() (map[string]map[string]string, error) {
 		locationLabels[s.Store.GetAddress()] = labels
 	}
 	return locationLabels, nil
+}
+
+// GetTiKVStoreStateAndLabels implements TiKVLabelProvider
+func (pc *PDClient) GetTiKVStoreStateAndLabels() ([]map[string]string, error) {
+	r, err := pc.GetStores()
+	if err != nil {
+		return nil, err
+	}
+
+	var storeState []map[string]string
+	for _, s := range r.Stores {
+		if s.Store.State == metapb.StoreState_Up || s.Store.State == metapb.StoreState_Offline {
+			lbs := s.Store.GetLabels()
+			var labels []string
+			for _, lb := range lbs {
+				// Skip tiflash
+				if lb.GetKey() != "tiflash" {
+					labels = append(labels, fmt.Sprintf("%s: %s", lb.GetKey(), lb.GetValue()))
+				}
+			}
+
+			label := fmt.Sprintf("%s%s%s", "{", strings.Join(labels, ","), "}")
+			storeState = append(storeState, map[string]string{
+				strings.Split(s.Store.GetAddress(), ":")[0]: fmt.Sprintf("%s|%d|%s|%d|%d|%v|%v|%s",
+					strings.Split(s.Store.GetAddress(), ":")[1],
+					s.Store.GetId(),
+					s.Store.State.String(),
+					s.Status.LeaderCount,
+					s.Status.RegionCount,
+					s.Status.Capacity.MarshalString(),
+					s.Status.Available.MarshalString(),
+					label),
+			})
+		}
+	}
+	return storeState, nil
 }
 
 // UpdateScheduleConfig updates the PD schedule config

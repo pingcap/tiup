@@ -225,6 +225,123 @@ func (m *Manager) Display(name string, opt operator.Options) error {
 	return nil
 }
 
+// DisplayTiKVLabels display cluster tikv labels
+func (m *Manager) DisplayTiKVLabels(name string, opt operator.Options) error {
+	if err := clusterutil.ValidateClusterNameOrError(name); err != nil {
+		return err
+	}
+
+	clusterInstInfos, err := m.GetClusterTopology(name, opt)
+	if err != nil {
+		return err
+	}
+
+	metadata, _ := m.meta(name)
+	topo := metadata.GetTopology()
+	base := metadata.GetBaseMeta()
+	// display cluster meta
+	cyan := color.New(color.FgCyan, color.Bold)
+	fmt.Printf("Cluster type:       %s\n", cyan.Sprint(m.sysName))
+	fmt.Printf("Cluster name:       %s\n", cyan.Sprint(name))
+	fmt.Printf("Cluster version:    %s\n", cyan.Sprint(base.Version))
+	fmt.Printf("SSH type:           %s\n", cyan.Sprint(topo.BaseTopo().GlobalOptions.SSHType))
+	fmt.Printf("Component name:     %s\n", cyan.Sprint("TiKV"))
+
+	// display TLS info
+	if topo.BaseTopo().GlobalOptions.TLSEnabled {
+		fmt.Printf("TLS encryption:  	%s\n", cyan.Sprint("enabled"))
+		fmt.Printf("CA certificate:     %s\n", cyan.Sprint(
+			m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSCACert),
+		))
+		fmt.Printf("Client private key: %s\n", cyan.Sprint(
+			m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientKey),
+		))
+		fmt.Printf("Client certificate: %s\n", cyan.Sprint(
+			m.specManager.Path(name, spec.TLSCertKeyDir, spec.TLSClientCert),
+		))
+	}
+
+	// display topology
+	var clusterTable [][]string
+	clusterTable = append(clusterTable, []string{"Machine", "Port", "Store", "Status", "Leaders", "Regions", "Capacity", "Available", "Labels"})
+
+	masterActive := make([]string, 0)
+	tikvStoreIP := make(map[string]struct{})
+	for _, v := range clusterInstInfos {
+		if v.ComponentName == spec.ComponentTiKV {
+			tikvStoreIP[v.Host] = struct{}{}
+		}
+	}
+
+	masterList := topo.BaseTopo().MasterList
+	tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
+	if err != nil {
+		return err
+	}
+	topo.IterInstance(func(ins spec.Instance) {
+		if ins.ComponentName() == spec.ComponentPD {
+			status := ins.Status(tlsCfg, masterList...)
+			if strings.HasPrefix(status, "Up") || strings.HasPrefix(status, "Healthy") {
+				instAddr := fmt.Sprintf("%s:%d", ins.GetHost(), ins.GetPort())
+				masterActive = append(masterActive, instAddr)
+			}
+		}
+	})
+
+	if _, ok := topo.(*spec.Specification); ok {
+		// Check if TiKV's label set correctly
+		pdClient := api.NewPDClient(masterActive, 10*time.Second, tlsCfg)
+		lbs, err := pdClient.GetLocationLabels()
+		if err != nil {
+			log.Debugf("get location labels from pd failed: %v", err)
+		}
+		fmt.Printf("Location labels:    %s\n", cyan.Sprint(strings.Join(lbs, ",")))
+
+		storeStates, err := pdClient.GetTiKVStoreStateAndLabels()
+		if err != nil {
+			log.Debugf("get tikv state and labels from pd failed: %v", err)
+		}
+
+		for storeIP := range tikvStoreIP {
+			row := []string{
+				color.CyanString(storeIP),
+				"",
+				"",
+				"",
+				"",
+				"",
+				"",
+				"",
+				"",
+			}
+			clusterTable = append(clusterTable, row)
+
+			for _, val := range storeStates {
+				if _, ok := val[storeIP]; ok {
+					storeInfo := strings.Split(val[storeIP], "|")
+					row := []string{
+						"",
+						storeInfo[0],
+						storeInfo[1],
+						color.CyanString(storeInfo[2]),
+						storeInfo[3],
+						storeInfo[4],
+						storeInfo[5],
+						storeInfo[6],
+						storeInfo[7],
+					}
+					clusterTable = append(clusterTable, row)
+				}
+			}
+		}
+	}
+
+	cliutil.PrintTable(clusterTable, true)
+	fmt.Printf("Total nodes: %d\n", len(clusterTable)-1)
+
+	return nil
+}
+
 // GetClusterTopology get the topology of the cluster.
 func (m *Manager) GetClusterTopology(name string, opt operator.Options) ([]InstInfo, error) {
 	ctx := ctxt.New(context.Background(), opt.Concurrency)
