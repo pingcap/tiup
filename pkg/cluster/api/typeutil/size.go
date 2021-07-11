@@ -51,3 +51,8 @@ func (b *ByteSize) UnmarshalText(text []byte) error {
 	*b = ByteSize(v)
 	return nil
 }
+
+// MarshalString returns the size as a string.
+func (b ByteSize) MarshalString() string {
+	return units.BytesSize(float64(b))
+}
