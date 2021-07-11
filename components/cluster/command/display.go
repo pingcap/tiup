@@ -34,7 +34,6 @@ func newDisplayCmd() *cobra.Command {
 		clusterName       string
 		showDashboardOnly bool
 		showVersionOnly   bool
-		showTiKVLables    bool
 	)
 	cmd := &cobra.Command{
 		Use:   "display <cluster-name>",
@@ -74,10 +73,6 @@ func newDisplayCmd() *cobra.Command {
 					return err
 				}
 				return displayDashboardInfo(clusterName, tlsCfg)
-			}
-
-			if showTiKVLables {
-				return cm.DisplayTiKVLabels(clusterName, gOpt)
 			}
 
 			return cm.Display(clusterName, gOpt)

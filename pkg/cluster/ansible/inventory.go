@@ -501,7 +501,7 @@ func parseGroupVars(dir, ansCfgFile string, clsMeta *spec.ClusterMeta, inv *aini
 
 			clsMeta.Topology.Grafanas = append(clsMeta.Topology.Grafanas, tmpIns)
 		}
-		log.Infof("Imported %d Grafana node(s).", len(clsMeta.Topology.Grafanas))
+		log.Infof("Imported %d Grafana node(s).", len(clsMeta.Topology.Alertmanagers))
 	}
 
 	// kafka_exporter_servers
