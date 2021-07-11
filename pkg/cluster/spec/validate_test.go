@@ -21,7 +21,7 @@ import (
 	"github.com/joomcode/errorx"
 	. "github.com/pingcap/check"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/errutil"
+	"github.com/pingcap/tiup/pkg/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -157,6 +157,7 @@ tidb_servers:
     arch: "arm64"
 tikv_servers:
   - host: 172.16.5.138
+    arch: "arm64"
 `), &topo)
 	c.Assert(err, IsNil)
 
@@ -170,6 +171,7 @@ tidb_servers:
     arch: "aarch64"
 tikv_servers:
   - host: 172.16.5.138
+    arch: "amd64"
 `), &topo)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' between 'tidb_servers:linux/arm64' and 'tikv_servers:linux/amd64'")
@@ -183,8 +185,10 @@ global:
 tidb_servers:
   - host: 172.16.5.138
     os: "darwin"
+    arch: "arm64"
 tikv_servers:
   - host: 172.16.5.138
+    arch: "arm64"
 `), &topo)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "platform mismatch for '172.16.5.138' between 'tidb_servers:darwin/arm64' and 'tikv_servers:linux/arm64'")
@@ -454,7 +458,7 @@ tidb_servers:
 	err = CheckClusterPortConflict(clsList, "topo", &topo3)
 	c.Assert(err, NotNil)
 	c.Assert(errors.Cause(err).Error(), Equals, "spec.deploy.port_conflict: Deploy port conflicts to an existing cluster")
-	suggestion, ok := errorx.ExtractProperty(err, errutil.ErrPropSuggestion)
+	suggestion, ok := errorx.ExtractProperty(err, utils.ErrPropSuggestion)
 	c.Assert(ok, IsTrue)
 	c.Assert(suggestion, Equals, `The port you specified in the topology file is:
   Port:      9100
@@ -481,7 +485,7 @@ pump_servers:
 	err = CheckClusterPortConflict(clsList, "topo", &topo4)
 	c.Assert(err, NotNil)
 	c.Assert(errors.Cause(err).Error(), Equals, "spec.deploy.port_conflict: Deploy port conflicts to an existing cluster")
-	suggestion, ok = errorx.ExtractProperty(err, errutil.ErrPropSuggestion)
+	suggestion, ok = errorx.ExtractProperty(err, utils.ErrPropSuggestion)
 	c.Assert(ok, IsTrue)
 	c.Assert(suggestion, Equals, `The port you specified in the topology file is:
   Port:      2235
@@ -542,7 +546,7 @@ tidb_servers:
 	err = CheckClusterDirConflict(clsList, "topo", &topo3)
 	c.Assert(err, NotNil)
 	c.Assert(errors.Cause(err).Error(), Equals, "spec.deploy.dir_conflict: Deploy directory conflicts to an existing cluster")
-	suggestion, ok := errorx.ExtractProperty(err, errutil.ErrPropSuggestion)
+	suggestion, ok := errorx.ExtractProperty(err, utils.ErrPropSuggestion)
 	c.Assert(ok, IsTrue)
 	c.Assert(suggestion, Equals, `The directory you specified in the topology file is:
   Directory: monitor deploy directory /home/tidb/deploy/monitor-9100
@@ -597,7 +601,7 @@ pump_servers:
 	err = CheckClusterDirConflict(clsList, "topo", &topo4)
 	c.Assert(err, NotNil)
 	c.Assert(errors.Cause(err).Error(), Equals, "spec.deploy.dir_conflict: Deploy directory conflicts to an existing cluster")
-	suggestion, ok = errorx.ExtractProperty(err, errutil.ErrPropSuggestion)
+	suggestion, ok = errorx.ExtractProperty(err, utils.ErrPropSuggestion)
 	c.Assert(ok, IsTrue)
 	c.Assert(suggestion, Equals, `The directory you specified in the topology file is:
   Directory: data directory /home/tidb/deploy/pd-2234
@@ -929,7 +933,7 @@ global:
   ssh_port: 65536
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "`global` of ssh_port=65536 is invalid")
+	c.Assert(err.Error(), Equals, "`global` of ssh_port=65536 is invalid, port should be in the range [0, 65535]")
 
 	err = yaml.Unmarshal([]byte(`
 global:
@@ -939,14 +943,14 @@ tidb_servers:
     port: -1
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "`tidb_servers` of port=-1 is invalid")
+	c.Assert(err.Error(), Equals, "`tidb_servers` of port=-1 is invalid, port should be in the range [0, 65535]")
 
 	err = yaml.Unmarshal([]byte(`
 monitored:
     node_exporter_port: 102400
 `), &topo)
 	c.Assert(err, NotNil)
-	c.Assert(err.Error(), Equals, "`monitored` of node_exporter_port=102400 is invalid")
+	c.Assert(err.Error(), Equals, "`monitored` of node_exporter_port=102400 is invalid, port should be in the range [0, 65535]")
 }
 
 func (s *metaSuiteTopo) TestInvalidUserGroup(c *C) {
@@ -1014,7 +1018,7 @@ tikv_servers:
 	err = CheckClusterDirConflict(clsList, "topo", &topo)
 	c.Assert(err, NotNil)
 	c.Assert(err.Error(), Equals, "spec.deploy.dir_overlap: Deploy directory overlaps to another instance")
-	suggestion, ok := errorx.ExtractProperty(err, errutil.ErrPropSuggestion)
+	suggestion, ok := errorx.ExtractProperty(err, utils.ErrPropSuggestion)
 	c.Assert(ok, IsTrue)
 	c.Assert(suggestion, Equals, `The directory you specified in the topology file is:
   Directory: data directory /home/tidb6wu/tidb1-data/tikv-32160

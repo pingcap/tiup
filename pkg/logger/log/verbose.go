@@ -11,14 +11,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package errutil
+package log
 
-import "github.com/joomcode/errorx"
-
-var (
-	// ErrPropSuggestion is a property of an Error that will be printed as the suggestion.
-	ErrPropSuggestion = errorx.RegisterProperty("suggestion")
-
-	// ErrTraitPreCheck means that the Error is a pre-check error so that no error logs will be outputted directly.
-	ErrTraitPreCheck = errorx.RegisterTrait("pre_check")
+import (
+	"fmt"
+	"os"
+	"strings"
 )
+
+var verbose bool
+
+func init() {
+	v := strings.ToLower(os.Getenv("TIUP_VERBOSE"))
+	verbose = v == "1" || v == "enable"
+}
+
+// Verbose logs verbose messages
+func Verbose(format string, args ...interface{}) {
+	if !verbose {
+		return
+	}
+	fmt.Println("Verbose:", fmt.Sprintf(format, args...))
+}

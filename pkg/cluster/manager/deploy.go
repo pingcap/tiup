@@ -24,7 +24,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -37,6 +36,7 @@ import (
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -78,7 +78,7 @@ func (m *Manager) Deploy(
 		// FIXME: When change to use args, the suggestion text need to be updatem.
 		return errDeployNameDuplicate.
 			New("Cluster name '%s' is duplicated", name).
-			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
+			WithProperty(tui.SuggestionFromFormat("Please specify another cluster name"))
 	}
 
 	metadata := m.specManager.NewMetadata()
@@ -112,14 +112,17 @@ func (m *Manager) Deploy(
 		base.GlobalOptions.SSHType = sshType
 	}
 
-	if topo, ok := topo.(*spec.Specification); ok && !opt.NoLabels {
-		// Check if TiKV's label set correctly
-		lbs, err := topo.LocationLabels()
-		if err != nil {
-			return err
-		}
-		if err := spec.CheckTiKVLabels(lbs, topo); err != nil {
-			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+	if topo, ok := topo.(*spec.Specification); ok {
+		topo.AdjustByVersion(clusterVersion)
+		if !opt.NoLabels {
+			// Check if TiKV's label set correctly
+			lbs, err := topo.LocationLabels()
+			if err != nil {
+				return err
+			}
+			if err := spec.CheckTiKVLabels(lbs, topo); err != nil {
+				return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+			}
 		}
 	}
 
@@ -134,16 +137,28 @@ func (m *Manager) Deploy(
 		return err
 	}
 
-	if !skipConfirm {
-		if err := m.confirmTopology(name, clusterVersion, topo, set.NewStringSet()); err != nil {
+	var (
+		sshConnProps  *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+		sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	)
+	if gOpt.SSHType != executor.SSHTypeNone {
+		var err error
+		if sshConnProps, err = tui.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
 			return err
+		}
+		if len(gOpt.SSHProxyHost) != 0 {
+			if sshProxyProps, err = tui.ReadIdentityFileOrPassword(gOpt.SSHProxyIdentity, gOpt.SSHProxyUsePassword); err != nil {
+				return err
+			}
 		}
 	}
 
-	var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
-	if gOpt.SSHType != executor.SSHTypeNone {
-		var err error
-		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
+	if err := m.fillHostArch(sshConnProps, sshProxyProps, topo, &gOpt, opt.User); err != nil {
+		return err
+	}
+
+	if !skipConfirm {
+		if err := m.confirmTopology(name, clusterVersion, topo, set.NewStringSet()); err != nil {
 			return err
 		}
 	}
@@ -151,7 +166,7 @@ func (m *Manager) Deploy(
 	if err := os.MkdirAll(m.specManager.Path(name), 0755); err != nil {
 		return errorx.InitializationFailed.
 			Wrap(err, "Failed to create cluster metadata directory '%s'", m.specManager.Path(name)).
-			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
+			WithProperty(tui.SuggestionFromString("Please check file system permissions and try again."))
 	}
 
 	var (
@@ -222,6 +237,14 @@ func (m *Manager) Deploy(
 					sshConnProps.IdentityFile,
 					sshConnProps.IdentityFilePassphrase,
 					gOpt.SSHTimeout,
+					gOpt.OptTimeout,
+					gOpt.SSHProxyHost,
+					gOpt.SSHProxyPort,
+					gOpt.SSHProxyUser,
+					sshProxyProps.Password,
+					sshProxyProps.IdentityFile,
+					sshProxyProps.IdentityFilePassphrase,
+					gOpt.SSHProxyTimeout,
 					gOpt.SSHType,
 					globalOptions.SSHType,
 				).
@@ -259,7 +282,22 @@ func (m *Manager) Deploy(
 			deployDirs = append(deployDirs, filepath.Join(deployDir, "tls"))
 		}
 		t := task.NewBuilder().
-			UserSSH(inst.GetHost(), inst.GetSSHPort(), globalOptions.User, gOpt.SSHTimeout, gOpt.SSHType, globalOptions.SSHType).
+			UserSSH(
+				inst.GetHost(),
+				inst.GetSSHPort(),
+				globalOptions.User,
+				gOpt.SSHTimeout,
+				gOpt.OptTimeout,
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				sshProxyProps.Password,
+				sshProxyProps.IdentityFile,
+				sshProxyProps.IdentityFilePassphrase,
+				gOpt.SSHProxyTimeout,
+				gOpt.SSHType,
+				globalOptions.SSHType,
+			).
 			Mkdir(globalOptions.User, inst.GetHost(), deployDirs...).
 			Mkdir(globalOptions.User, inst.GetHost(), dataDirs...)
 
@@ -293,10 +331,16 @@ func (m *Manager) Deploy(
 
 		// generate and transfer tls cert for instance
 		if globalOptions.TLSEnabled {
-			t = t.TLSCert(inst, ca, meta.DirPaths{
-				Deploy: deployDir,
-				Cache:  m.specManager.Path(name, spec.TempConfigPath),
-			})
+			t = t.TLSCert(
+				inst.GetHost(),
+				inst.ComponentName(),
+				inst.Role(),
+				inst.GetMainPort(),
+				ca,
+				meta.DirPaths{
+					Deploy: deployDir,
+					Cache:  m.specManager.Path(name, spec.TempConfigPath),
+				})
 		}
 
 		// generate configs for the component
@@ -325,16 +369,19 @@ func (m *Manager) Deploy(
 	}
 
 	// Deploy monitor relevant components to remote
-	dlTasks, dpTasks := buildMonitoredDeployTask(
-		m.bindVersion,
-		m.specManager,
+	dlTasks, dpTasks, err := buildMonitoredDeployTask(
+		m,
 		name,
 		uniqueHosts,
 		globalOptions,
 		topo.GetMonitoredOptions(),
 		clusterVersion,
 		gOpt,
+		sshProxyProps,
 	)
+	if err != nil {
+		return err
+	}
 	downloadCompTasks = append(downloadCompTasks, dlTasks...)
 	deployCompTasks = append(deployCompTasks, dpTasks...)
 
@@ -351,7 +398,7 @@ func (m *Manager) Deploy(
 
 	t := builder.Build()
 
-	if err := t.Execute(ctxt.New(context.Background())); err != nil {
+	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -367,7 +414,7 @@ func (m *Manager) Deploy(
 		return err
 	}
 
-	hint := color.New(color.Bold).Sprintf("%s start %s", cliutil.OsArgs0(), name)
+	hint := color.New(color.Bold).Sprintf("%s start %s", tui.OsArgs0(), name)
 	log.Infof("Cluster `%s` deployed successfully, you can start it with command: `%s`", name, hint)
 	return nil
 }

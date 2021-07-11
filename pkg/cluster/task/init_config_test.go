@@ -37,7 +37,7 @@ func (e *fakeExecutor) Execute(ctx context.Context, cmd string, sudo bool, timeo
 	return []byte{}, []byte{}, nil
 }
 
-func (e *fakeExecutor) Transfer(ctx context.Context, src string, dst string, download bool) error {
+func (e *fakeExecutor) Transfer(ctx context.Context, src, dst string, download bool, limit int) error {
 	return nil
 }
 
@@ -73,7 +73,7 @@ func Test(t *testing.T) { check.TestingT(t) }
 var _ = check.Suite(&initConfigSuite{})
 
 func (s *initConfigSuite) TestCheckConfig(c *check.C) {
-	ctx := ctxt.New(context.Background())
+	ctx := ctxt.New(context.Background(), 0)
 	defer mock.With("FakeExecutor", &fakeExecutor{})()
 
 	t := &InitConfig{

@@ -117,14 +117,22 @@ func (pt *Parallel) Execute(ctx context.Context) error {
 	var firstError error
 	var mu sync.Mutex
 	wg := sync.WaitGroup{}
+
+	maxWorkers := ctxt.GetInner(ctx).Concurrency
+	workerPool := make(chan struct{}, maxWorkers)
+
 	for _, t := range pt.inner {
 		wg.Add(1)
+		workerPool <- struct{}{}
 
 		// the checkpoint part of context can't be shared between goroutines
 		// since it's used to trace the stack, so we must create a new layer
 		// of checkpoint context every time put it into a new goroutine.
 		go func(ctx context.Context, t Task) {
-			defer wg.Done()
+			defer func() {
+				<-workerPool
+				wg.Done()
+			}()
 			if !isDisplayTask(t) {
 				if !pt.hideDetailDisplay {
 					log.Infof("+ [Parallel] - %s", t.String())

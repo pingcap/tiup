@@ -21,13 +21,13 @@ import (
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/tui"
 )
 
 // DestroyCluster destroy the cluster.
@@ -53,7 +53,7 @@ func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt 
 	}
 
 	if !skipConfirm {
-		if err := cliutil.PromptForConfirmOrAbortError(
+		if err := tui.PromptForConfirmOrAbortError(
 			"This operation will destroy %s %s cluster %s and its data.\nDo you want to continue? [y/N]:",
 			m.sysName,
 			color.HiYellowString(base.Version),
@@ -63,7 +63,11 @@ func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt 
 		log.Infof("Destroying cluster...")
 	}
 
-	t := m.sshTaskBuilder(name, topo, base.User, gOpt).
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
+	t := b.
 		Func("StopCluster", func(ctx context.Context) error {
 			return operator.Stop(ctx, topo, operator.Options{Force: destroyOpt.Force}, tlsCfg)
 		}).
@@ -72,7 +76,7 @@ func (m *Manager) DestroyCluster(name string, gOpt operator.Options, destroyOpt 
 		}).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background())); err != nil {
+	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err
@@ -117,9 +121,12 @@ func (m *Manager) DestroyTombstone(
 		return err
 	}
 
-	b := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
 
-	ctx := ctxt.New(context.Background())
+	ctx := ctxt.New(context.Background(), gOpt.Concurrency)
 	nodes, err := operator.DestroyTombstone(ctx, cluster, true /* returnNodesOnly */, gOpt, tlsCfg)
 	if err != nil {
 		return err
@@ -129,7 +136,7 @@ func (m *Manager) DestroyTombstone(
 	t := b.
 		Func("FindTomestoneNodes", func(ctx context.Context) (err error) {
 			if !skipConfirm {
-				err = cliutil.PromptForConfirmOrAbortError(
+				err = tui.PromptForConfirmOrAbortError(
 					color.HiYellowString(fmt.Sprintf("Will destroy these nodes: %v\nDo you confirm this action? [y/N]:", nodes)),
 				)
 				if err != nil {

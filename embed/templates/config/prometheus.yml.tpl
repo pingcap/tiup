@@ -27,7 +27,9 @@ rule_files:
 {{- end}}
 {{- if .TiKVStatusAddrs}}
   - 'tikv.rules.yml'
+{{- if .HasTiKVAccelerateRules}}
   - 'tikv.accelerate.rules.yml'
+{{- end}}
 {{- end}}
 {{- if .TiFlashStatusAddrs}}
   - 'tiflash.rules.yml'
@@ -210,7 +212,11 @@ scrape_configs:
     scrape_interval: 30s
     metrics_path: /probe
     params:
+{{- if .TLSEnabled}}
+      module: [tls_connect]
+{{- else}}
       module: [tcp_connect]
+{{- end}}
     static_configs:
 {{- if .KafkaAddrs}}
     - targets:
@@ -275,7 +281,11 @@ scrape_configs:
     scrape_interval: 30s
     metrics_path: /probe
     params:
+{{- if .TLSEnabled}}
+      module: [tls_connect]
+{{- else}}
       module: [tcp_connect]
+{{- end}}
     static_configs:
     - targets:
     {{- range .TiDBStatusAddrs}}

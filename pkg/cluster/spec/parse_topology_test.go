@@ -175,7 +175,7 @@ tikv_servers:
 
 		c.Assert(topo.TiKVServers[1].DeployDir, check.Equals, "/home/tidb/my-deploy/tikv-20161")
 		c.Assert(topo.TiKVServers[1].DataDir, check.Equals, "/home/tidb/my-deploy/tikv-20161/data")
-		c.Assert(topo.TiKVServers[1].LogDir, check.Equals, "")
+		c.Assert(topo.TiKVServers[1].LogDir, check.Equals, "/home/tidb/my-deploy/tikv-20161/log")
 	})
 
 	// test global options, case 4
@@ -228,7 +228,7 @@ tiflash_servers:
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
 		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/path/to/my-first-data,/home/tidb/deploy/tiflash-9000/my-second-data")
-		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
+		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "/home/tidb/deploy/tiflash-9000/log")
 	})
 
 	// test global options, case 6
@@ -317,7 +317,7 @@ tiflash_servers:
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
 		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash")
-		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
+		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "/home/tidb/deploy/tiflash-9000/log")
 	})
 
 	// test tiflash storage section defined data dir
@@ -336,7 +336,7 @@ tiflash_servers:
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
 		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash")
-		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
+		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "/home/tidb/deploy/tiflash-9000/log")
 	})
 
 	// test tiflash storage section defined data dir, "data_dir" will be ignored
@@ -355,7 +355,7 @@ tiflash_servers:
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
 		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash,/ssd1/tiflash,/ssd2/tiflash")
-		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
+		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "/home/tidb/deploy/tiflash-9000/log")
 	})
 
 	// test tiflash storage section defined data dir
@@ -377,7 +377,7 @@ tiflash_servers:
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
 		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash,/hdd0/tiflash,/hdd1/tiflash,/hdd2/tiflash,/ssd1/tiflash,/ssd2/tiflash")
-		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
+		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "/home/tidb/deploy/tiflash-9000/log")
 	})
 
 	// test if there is only one path in storage.main.dir
@@ -395,7 +395,7 @@ tiflash_servers:
 
 		c.Assert(topo.TiFlashServers[0].DeployDir, check.Equals, "/home/tidb/deploy/tiflash-9000")
 		c.Assert(topo.TiFlashServers[0].DataDir, check.Equals, "/ssd0/tiflash")
-		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "")
+		c.Assert(topo.TiFlashServers[0].LogDir, check.Equals, "/home/tidb/deploy/tiflash-9000/log")
 	})
 
 	// test tiflash storage section defined data dir

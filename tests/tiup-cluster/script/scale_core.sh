@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eu
+
 function scale_core() {
     mkdir -p ~/.tiup/bin/
 
@@ -9,7 +11,7 @@ function scale_core() {
 
     client=""
     if [ $native_ssh == true ]; then
-        client="--native-ssh"
+        client="--ssh=system"
     fi
 
     name="test_scale_core_$RANDOM"
@@ -106,4 +108,5 @@ function scale_core() {
     tiup-cluster $client exec $name -N n2 --command "ps aux | grep blackbox_exporter | grep -qv grep"
 
     tiup-cluster $client _test $name writable
+    tiup-cluster $client --yes destroy $name
 }

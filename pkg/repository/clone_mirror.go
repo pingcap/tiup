@@ -52,7 +52,10 @@ func CloneMirror(repo *V1Repository,
 	targetDir string,
 	selectedVersions []string,
 	options CloneOptions) error {
-	fmt.Printf("Start to clone mirror, targetDir is %s, selectedVersions are [%s]\n", targetDir, strings.Join(selectedVersions, ","))
+	if strings.TrimRight(targetDir, "/") == strings.TrimRight(repo.Mirror().Source(), "/") {
+		return errors.Errorf("Refusing to clone from %s to %s", targetDir, repo.Mirror().Source())
+	}
+	fmt.Printf("Start to clone mirror, targetDir is %s, source mirror is %s, selectedVersions are [%s]\n", targetDir, repo.Mirror().Source(), strings.Join(selectedVersions, ","))
 	fmt.Println("If this does not meet expectations, please abort this process, read `tiup mirror clone --help` and run again")
 
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
@@ -341,7 +344,7 @@ func cloneComponents(repo *V1Repository,
 
 			if err := repo.Mirror().Download(url, tmpDir); err != nil {
 				if errors.Cause(err) == ErrNotFound {
-					fmt.Printf("TiUP donesn't have %s/%s, skipped\n", goos, goarch)
+					fmt.Printf("TiUP doesn't have %s/%s, skipped\n", goos, goarch)
 					continue
 				}
 				return nil, err

@@ -25,13 +25,13 @@ import (
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -49,12 +49,12 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
 
-	if exist := utils.IsExist(packagePath); !exist {
-		return perrs.New("specified package not exists")
+	if !utils.IsExist(packagePath) {
+		return perrs.Errorf("specified package(%s) not exists", packagePath)
 	}
 
 	if !skipConfirm {
-		if err := cliutil.PromptForConfirmOrAbortError(
+		if err := tui.PromptForConfirmOrAbortError(
 			fmt.Sprintf("Will patch the cluster %s with package path is %s, nodes: %s, roles: %s.\nDo you want to continue? [y/N]:",
 				color.HiYellowString(name),
 				color.HiYellowString(packagePath),
@@ -87,8 +87,11 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 	if err != nil {
 		return err
 	}
-	t := m.sshTaskBuilder(name, topo, base.User, opt).
-		Parallel(false, replacePackageTasks...).
+	b, err := m.sshTaskBuilder(name, topo, base.User, opt)
+	if err != nil {
+		return err
+	}
+	t := b.Parallel(false, replacePackageTasks...).
 		Func("UpgradeCluster", func(ctx context.Context) error {
 			if offline {
 				return nil
@@ -97,7 +100,7 @@ func (m *Manager) Patch(name string, packagePath string, opt operator.Options, o
 		}).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background())); err != nil {
+	if err := t.Execute(ctxt.New(context.Background(), opt.Concurrency)); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err

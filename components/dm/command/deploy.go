@@ -18,12 +18,11 @@ import (
 	"path"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
@@ -39,17 +38,12 @@ func newDeployCmd() *cobra.Command {
 		Long:         "Deploy a DM cluster for production. SSH connection will be used to deploy files, as well as creating system users for running the service.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			shouldContinue, err := cliutil.CheckCommandArgsAndMayPrintHelp(cmd, args, 3)
+			shouldContinue, err := tui.CheckCommandArgsAndMayPrintHelp(cmd, args, 3)
 			if err != nil {
 				return err
 			}
 			if !shouldContinue {
 				return nil
-			}
-
-			// natvie ssh has it's own logic to find the default identity_file
-			if gOpt.SSHType == executor.SSHTypeSystem && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
-				opt.IdentityFile = ""
 			}
 
 			clusterName := args[0]

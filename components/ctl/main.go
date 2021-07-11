@@ -53,7 +53,9 @@ func execute() error {
 				}
 			} else if os.Getenv(localdata.EnvNameUserInputVersion) == "" {
 				// if user not set component version explicitly
-				return errors.New("ctl need an explicit version, please run with `tiup ctl:<cluster-version>`")
+				return errors.New(
+					"ctl needs an explicit version, please run with `tiup ctl:<cluster-version>`, if you continue seeing this error, please upgrade your TiUP with `tiup update --self`",
+				)
 			}
 
 			bin, err := binaryPath(home, componentSpec)

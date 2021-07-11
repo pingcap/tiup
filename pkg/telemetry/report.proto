@@ -8,10 +8,20 @@ message Report {
 	string eventUUID = 2;
 	int64 event_unix_timestamp = 3; // unix time second
 	
+	TiUPInfo version = 4;
 	oneof event_detail {
-		ClusterReport cluster = 4;
+		TiUPReport tiup = 5;
+		ClusterReport cluster = 6;
+		PlaygroundReport playground = 7;
 	}
-	TiUPInfo tiup = 5;
+}
+
+message TiUPReport {
+	string command = 1;
+	string tag = 2;
+	uint64 take_milliseconds = 3;
+	int32 exit_code = 4;
+	bool custom_mirror = 5;
 }
 
 message ClusterReport {
@@ -25,12 +35,21 @@ message ClusterReport {
 	repeated NodeInfo nodes = 6;
 }
 
+message PlaygroundReport {
+	string topology = 1;
+	uint64 take_milliseconds = 2;
+	int32 exit_code = 3;
+}
+
 message TiUPInfo {
 	string TiUPVersion = 1;
 	string ComponentVersion = 2;
-	string GitCommit = 3;
-	string os = 4;
-	string arch = 5;
+	string GitRef = 3;
+	string GitCommit = 4;
+	string VerName = 5;
+	string os = 6;
+	string arch = 7;
+	string go = 8;
 }
 
 message NodeInfo {

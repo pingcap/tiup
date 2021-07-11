@@ -90,11 +90,16 @@ func (m *Manager) Exec(name string, opt ExecOptions, gOpt operator.Options) erro
 		}
 	}
 
-	t := m.sshTaskBuilder(name, topo, base.User, gOpt).
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
+
+	t := b.
 		Parallel(false, shellTasks...).
 		Build()
 
-	execCtx := ctxt.New(context.Background())
+	execCtx := ctxt.New(context.Background(), gOpt.Concurrency)
 	if err := t.Execute(execCtx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.

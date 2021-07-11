@@ -673,6 +673,11 @@ func (s *Specification) GetMasterList() []string {
 	return masterList
 }
 
+// FillHostArch fills the topology with the given host->arch
+func (s *Specification) FillHostArch(hostArch map[string]string) error {
+	return spec.FillHostArch(s, hostArch)
+}
+
 // Merge returns a new Topology which sum old ones
 func (s *Specification) Merge(that spec.Topology) spec.Topology {
 	spec := that.(*Specification)

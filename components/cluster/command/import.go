@@ -19,10 +19,10 @@ import (
 	"path/filepath"
 
 	"github.com/fatih/color"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/ansible"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/tui"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -71,8 +71,8 @@ func newImportCmd() *cobra.Command {
 			if exist {
 				return errDeployNameDuplicate.
 					New("Cluster name '%s' is duplicated", clsName).
-					WithProperty(cliutil.SuggestionFromFormat(
-						fmt.Sprintf("Please use --rename `NAME` to specify another name (You can use `%s list` to see all clusters)", cliutil.OsArgs0())))
+					WithProperty(tui.SuggestionFromFormat(
+						fmt.Sprintf("Please use --rename `NAME` to specify another name (You can use `%s list` to see all clusters)", tui.OsArgs0())))
 			}
 
 			// prompt for backups
@@ -86,14 +86,14 @@ func newImportCmd() *cobra.Command {
 			log.Warnf("TiDB-Ansible and TiUP Cluster can NOT be used together, please DO NOT try to use ansible to manage the imported cluster anymore to avoid metadata conflict.")
 			log.Infof(prompt)
 			if !skipConfirm {
-				err = cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
+				err = tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 				if err != nil {
 					return err
 				}
 			}
 
 			if !skipConfirm {
-				err = cliutil.PromptForConfirmOrAbortError(
+				err = tui.PromptForConfirmOrAbortError(
 					"Prepared to import TiDB %s cluster %s.\nDo you want to continue? [y/N]:",
 					clsMeta.Version,
 					clsName)
@@ -123,7 +123,7 @@ func newImportCmd() *cobra.Command {
 			}
 
 			// copy config files form deployment servers
-			if err = ansible.ImportConfig(clsName, clsMeta, gOpt.SSHTimeout, gOpt.SSHType); err != nil {
+			if err = ansible.ImportConfig(clsName, clsMeta, gOpt); err != nil {
 				return err
 			}
 
@@ -133,6 +133,11 @@ func newImportCmd() *cobra.Command {
 			}
 
 			if err = spec.SaveClusterMeta(clsName, clsMeta); err != nil {
+				return err
+			}
+
+			// comment config to avoid duplicated copy
+			if err = ansible.CommentConfig(clsName); err != nil {
 				return err
 			}
 
@@ -153,7 +158,7 @@ func newImportCmd() *cobra.Command {
 
 			log.Infof("Cluster %s imported.", clsName)
 			fmt.Printf("Try `%s` to show node list and status of the cluster.\n",
-				color.HiYellowString("%s display %s", cliutil.OsArgs0(), clsName))
+				color.HiYellowString("%s display %s", tui.OsArgs0(), clsName))
 			return nil
 		},
 	}

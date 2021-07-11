@@ -14,29 +14,31 @@
 package manager
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/cluster/executor"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
 var (
 	errNSDeploy            = errorx.NewNamespace("deploy")
-	errDeployNameDuplicate = errNSDeploy.NewType("name_dup", errutil.ErrTraitPreCheck)
+	errDeployNameDuplicate = errNSDeploy.NewType("name_dup", utils.ErrTraitPreCheck)
 
 	errNSRename              = errorx.NewNamespace("rename")
-	errorRenameNameNotExist  = errNSRename.NewType("name_not_exist", errutil.ErrTraitPreCheck)
-	errorRenameNameDuplicate = errNSRename.NewType("name_dup", errutil.ErrTraitPreCheck)
+	errorRenameNameNotExist  = errNSRename.NewType("name_not_exist", utils.ErrTraitPreCheck)
+	errorRenameNameDuplicate = errNSRename.NewType("name_dup", utils.ErrTraitPreCheck)
 )
 
 // Manager to deploy a cluster.
@@ -99,12 +101,12 @@ func (m *Manager) confirmTopology(name, version string, topo spec.Topology, patc
 			comp,
 			instance.GetHost(),
 			utils.JoinInt(instance.UsedPorts(), "/"),
-			cliutil.OsArch(instance.OS(), instance.Arch()),
+			tui.OsArch(instance.OS(), instance.Arch()),
 			strings.Join(instance.UsedDirs(), ","),
 		})
 	})
 
-	cliutil.PrintTable(clusterTable, true)
+	tui.PrintTable(clusterTable, true)
 
 	log.Warnf("Attention:")
 	log.Warnf("    1. If the topology is not what you expected, check your yaml file.")
@@ -123,14 +125,96 @@ You may read the OpenJDK doc for a reference: https://openjdk.java.net/install/
 		}
 	}
 
-	return cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
+	return tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: ")
 }
 
-func (m *Manager) sshTaskBuilder(name string, topo spec.Topology, user string, opts operator.Options) *task.Builder {
+func (m *Manager) sshTaskBuilder(name string, topo spec.Topology, user string, gOpt operator.Options) (*task.Builder, error) {
+	var p *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	if gOpt.SSHType != executor.SSHTypeNone && len(gOpt.SSHProxyHost) != 0 {
+		var err error
+		if p, err = tui.ReadIdentityFileOrPassword(gOpt.SSHProxyIdentity, gOpt.SSHProxyUsePassword); err != nil {
+			return nil, err
+		}
+	}
+
 	return task.NewBuilder().
 		SSHKeySet(
 			m.specManager.Path(name, "ssh", "id_rsa"),
 			m.specManager.Path(name, "ssh", "id_rsa.pub"),
 		).
-		ClusterSSH(topo, user, opts.SSHTimeout, opts.SSHType, topo.BaseTopo().GlobalOptions.SSHType)
+		ClusterSSH(
+			topo,
+			user,
+			gOpt.SSHTimeout,
+			gOpt.OptTimeout,
+			gOpt.SSHProxyHost,
+			gOpt.SSHProxyPort,
+			gOpt.SSHProxyUser,
+			p.Password,
+			p.IdentityFile,
+			p.IdentityFilePassphrase,
+			gOpt.SSHProxyTimeout,
+			gOpt.SSHType,
+			topo.BaseTopo().GlobalOptions.SSHType,
+		), nil
+}
+
+func (m *Manager) fillHostArch(s, p *tui.SSHConnectionProps, topo spec.Topology, gOpt *operator.Options, user string) error {
+	globalSSHType := topo.BaseTopo().GlobalOptions.SSHType
+	hostArch := map[string]string{}
+	var detectTasks []*task.StepDisplay
+	topo.IterInstance(func(inst spec.Instance) {
+		if _, ok := hostArch[inst.GetHost()]; ok {
+			return
+		}
+		hostArch[inst.GetHost()] = ""
+		if inst.Arch() != "" {
+			return
+		}
+
+		tf := task.NewBuilder().
+			RootSSH(
+				inst.GetHost(),
+				inst.GetSSHPort(),
+				user,
+				s.Password,
+				s.IdentityFile,
+				s.IdentityFilePassphrase,
+				gOpt.SSHTimeout,
+				gOpt.OptTimeout,
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				p.Password,
+				p.IdentityFile,
+				p.IdentityFilePassphrase,
+				gOpt.SSHProxyTimeout,
+				gOpt.SSHType,
+				globalSSHType,
+			).
+			Shell(inst.GetHost(), "uname -m", "", false).
+			BuildAsStep(fmt.Sprintf("  - Detecting node %s", inst.GetHost()))
+		detectTasks = append(detectTasks, tf)
+	})
+	if len(detectTasks) == 0 {
+		return nil
+	}
+
+	ctx := ctxt.New(context.Background(), gOpt.Concurrency)
+	t := task.NewBuilder().
+		ParallelStep("+ Detect CPU Arch", false, detectTasks...).
+		Build()
+
+	if err := t.Execute(ctx); err != nil {
+		return perrs.Annotate(err, "failed to fetch cpu arch")
+	}
+
+	for host := range hostArch {
+		stdout, _, ok := ctxt.GetInner(ctx).GetOutputs(host)
+		if !ok {
+			return fmt.Errorf("no check results found for %s", host)
+		}
+		hostArch[host] = strings.Trim(string(stdout), "\n")
+	}
+	return topo.FillHostArch(hostArch)
 }

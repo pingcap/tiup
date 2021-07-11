@@ -89,7 +89,9 @@ jobs:
           fi
           echo ::set-output name=REL_VER::$REL_VER
 
-          BUILD_FLAGS='-trimpath -buildmode=pie' make build ctl && echo "Build success."
+          BUILD_FLAGS='-trimpath -buildmode=pie' make build && \
+          BUILD_FLAGS='-trimpath -buildmode=pie' make ctl && \
+          echo "Build success."
 
           checksum_file=checksum.${{ matrix.os }}-${{ matrix.arch }}.txt
           checksum_header="TiUP $REL_VER (${actor}@${event}) ${{ github.run_id }}"
@@ -116,7 +118,6 @@ jobs:
           wget -O $TMP_DIR/tiup-linux-amd64.tar.gz -q https://tiup-mirrors.pingcap.com/tiup-linux-amd64.tar.gz
           tar -zxf $TMP_DIR/tiup-linux-amd64.tar.gz -C $TIUP_HOME/bin && chmod 755 $TIUP_HOME/bin/tiup
           curl -s https://tiup-mirrors.pingcap.com/root.json -o $TIUP_HOME/bin/root.json
-          $TIUP_HOME/bin/tiup update --self
 
           mkdir -p package
           cp $TIUP_HOME/bin/root.json bin/root.json

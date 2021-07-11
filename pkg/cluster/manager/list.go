@@ -17,9 +17,9 @@ import (
 	"errors"
 
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/tui"
 )
 
 // Cluster represents a clsuter
@@ -52,7 +52,7 @@ func (m *Manager) ListCluster() error {
 		})
 	}
 
-	cliutil.PrintTable(clusterTable, true)
+	tui.PrintTable(clusterTable, true)
 	return nil
 }
 

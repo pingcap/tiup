@@ -36,6 +36,7 @@ type SystemdModuleConfig struct {
 	ReloadDaemon bool          // run daemon-reload before other actions
 	Scope        string        // user, system or global
 	Force        bool          // add the `--force` arg to systemctl command
+	Signal       string        // specify the signal to send to process
 	Timeout      time.Duration // timeout to execute the command
 }
 
@@ -54,6 +55,10 @@ func NewSystemdModule(config SystemdModuleConfig) *SystemdModule {
 
 	if config.Force {
 		systemctl = fmt.Sprintf("%s --force", systemctl)
+	}
+
+	if config.Signal != "" {
+		systemctl = fmt.Sprintf("%s --signal %s", systemctl, config.Signal)
 	}
 
 	switch config.Scope {

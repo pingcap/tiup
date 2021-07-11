@@ -23,7 +23,8 @@ import (
 	"time"
 
 	"github.com/pingcap/errors"
-	"go.etcd.io/etcd/clientv3"
+	"github.com/pingcap/tiup/pkg/utils"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 // BinlogClient is the client of binlog.
@@ -34,9 +35,9 @@ type BinlogClient struct {
 }
 
 // NewBinlogClient create a BinlogClient.
-func NewBinlogClient(pdEndpoint []string, tlsConfig *tls.Config) (*BinlogClient, error) {
+func NewBinlogClient(pdEndpoints []string, tlsConfig *tls.Config) (*BinlogClient, error) {
 	etcdClient, err := clientv3.New(clientv3.Config{
-		Endpoints:   pdEndpoint,
+		Endpoints:   pdEndpoints,
 		DialTimeout: time.Second * 5,
 		TLS:         tlsConfig,
 	})
@@ -45,12 +46,8 @@ func NewBinlogClient(pdEndpoint []string, tlsConfig *tls.Config) (*BinlogClient,
 	}
 
 	return &BinlogClient{
-		tls: tlsConfig,
-		httpClient: &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsConfig,
-			},
-		},
+		tls:        tlsConfig,
+		httpClient: utils.NewHTTPClient(5*time.Second, tlsConfig).Client(),
 		etcdClient: etcdClient,
 	}, nil
 }

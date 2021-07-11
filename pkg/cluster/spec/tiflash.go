@@ -544,7 +544,7 @@ func (i *TiFlashInstance) InitConfig(
 	}
 	dst := filepath.Join(paths.Deploy, "scripts", "run_tiflash.sh")
 
-	if err := e.Transfer(ctx, fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
 		return err
 	}
 

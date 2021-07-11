@@ -25,7 +25,7 @@ import (
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/prometheus/common/expfmt"
-	"go.etcd.io/etcd/pkg/transport"
+	"go.etcd.io/etcd/client/pkg/v3/transport"
 )
 
 var tidbSpec *SpecManager

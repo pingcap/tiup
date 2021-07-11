@@ -29,8 +29,32 @@ services:
       tiops:
         ipv4_address: {{ipprefix}}.{{id+100}}
 {% endfor %}
+{% if ssh_proxy %}
+  bastion:
+    <<: *default-node
+    container_name: tiup-cluster-bastion
+    hostname: bastion
+    networks:
+      tiops:
+        ipv4_address: {{ipprefix}}.250
+      tiproxy:
+        ipv4_address: {{proxy_prefix}}.250
 
-# docker network create --gateway {{ipprefix}}.1 --subnet {{ipprefix}}.0/24 tiup-cluster
+{% for id in range(1, nodes+1) %}
+  p{{id}}:
+    <<: *default-node
+    container_name: tiup-cluster-p{{id}}
+    hostname: p{{id}}
+    networks:
+      tiproxy:
+        ipv4_address: {{proxy_prefix}}.{{id+100}}
+{% endfor %}
+{% endif %}
+
 networks:
   tiops:
     external: true
+{% if ssh_proxy %}
+  tiproxy:
+    external: true
+{% endif %}

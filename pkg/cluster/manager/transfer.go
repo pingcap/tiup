@@ -38,6 +38,7 @@ type TransferOptions struct {
 	Local  string
 	Remote string
 	Pull   bool // default to push
+	Limit  int  // rate limit in Kbit/s
 }
 
 // Transfer copies files from or to host in the tidb cluster.
@@ -93,19 +94,24 @@ func (m *Manager) Transfer(name string, opt TransferOptions, gOpt operator.Optio
 		for _, p := range i.Slice() {
 			t := task.NewBuilder()
 			if opt.Pull {
-				t.CopyFile(p, srcPath, host, opt.Pull)
+				t.CopyFile(p, srcPath, host, opt.Pull, opt.Limit)
 			} else {
-				t.CopyFile(srcPath, p, host, opt.Pull)
+				t.CopyFile(srcPath, p, host, opt.Pull, opt.Limit)
 			}
 			shellTasks = append(shellTasks, t.Build())
 		}
 	}
 
-	t := m.sshTaskBuilder(name, topo, base.User, gOpt).
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
+
+	t := b.
 		Parallel(false, shellTasks...).
 		Build()
 
-	execCtx := ctxt.New(context.Background())
+	execCtx := ctxt.New(context.Background(), gOpt.Concurrency)
 	if err := t.Execute(execCtx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
@@ -128,9 +134,11 @@ func renderInstanceSpec(t string, inst spec.Instance) ([]string, error) {
 			}
 			tfs.DataDir = d
 			key := inst.ID() + d + uuid.New().String()
-			if s, err := renderSpec(t, tfs, key); err == nil {
-				result = append(result, s)
+			s, err := renderSpec(t, inst.(*spec.TiFlashInstance), key)
+			if err != nil {
+				log.Debugf("error rendering tiflash spec: %s", err)
 			}
+			result = append(result, s)
 		}
 	default:
 		s, err := renderSpec(t, inst, inst.ID())

@@ -26,7 +26,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/base52"
-	"github.com/pingcap/tiup/pkg/cliutil"
+	"github.com/pingcap/tiup/pkg/tui"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/utils/rand"
 )
@@ -92,7 +92,7 @@ func ShowAuditList(dir string) error {
 		})
 	}
 
-	cliutil.PrintTable(clusterTable, true)
+	tui.PrintTable(clusterTable, true)
 	return nil
 }
 

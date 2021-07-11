@@ -23,11 +23,11 @@ import (
 
 // Config of the instance.
 type Config struct {
-	ConfigPath string
-	BinPath    string
-	Num        int
-	Host       string
-	UpTimeout  int
+	ConfigPath string `yaml:"config_path"`
+	BinPath    string `yaml:"bin_path"`
+	Num        int    `yaml:"num"`
+	Host       string `yaml:"host"`
+	UpTimeout  int    `yaml:"up_timeout"`
 }
 
 type instance struct {

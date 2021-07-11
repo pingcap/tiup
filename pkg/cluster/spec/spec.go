@@ -28,7 +28,9 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/template/scripts"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
-	"go.etcd.io/etcd/clientv3"
+	"github.com/pingcap/tiup/pkg/proxy"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"golang.org/x/mod/semver"
 )
 
 const (
@@ -70,7 +72,7 @@ type (
 		LogDir          string               `yaml:"log_dir,omitempty"`
 		ResourceControl meta.ResourceControl `yaml:"resource_control,omitempty" validate:"resource_control:editable"`
 		OS              string               `yaml:"os,omitempty" default:"linux"`
-		Arch            string               `yaml:"arch,omitempty" default:"amd64"`
+		Arch            string               `yaml:"arch,omitempty"`
 		Custom          interface{}          `yaml:"custom,omitempty" validate:"custom:ignore"`
 	}
 
@@ -146,6 +148,7 @@ type Topology interface {
 	CountDir(host string, dir string) int
 	TLSConfig(dir string) (*tls.Config, error)
 	Merge(that Topology) Topology
+	FillHostArch(hostArchmap map[string]string) error
 
 	ScaleOutTopology
 }
@@ -376,6 +379,16 @@ func (s *Specification) GetPDList() []string {
 	return pdList
 }
 
+// AdjustByVersion modify the spec by cluster version.
+func (s *Specification) AdjustByVersion(clusterVersion string) {
+	// CDC does not support data dir for version below v4.0.13, and also v5.0.0-rc, set it to empty.
+	if semver.Compare(clusterVersion, "v4.0.13") == -1 || clusterVersion == "v5.0.0-rc" {
+		for _, server := range s.CDCServers {
+			server.DataDir = ""
+		}
+	}
+}
+
 // GetDashboardAddress returns the cluster's dashboard addr
 func (s *Specification) GetDashboardAddress(tlsCfg *tls.Config, pdList ...string) (string, error) {
 	pc := api.NewPDClient(pdList, statusQueryTimeout, tlsCfg)
@@ -390,12 +403,22 @@ func (s *Specification) GetDashboardAddress(tlsCfg *tls.Config, pdList ...string
 	return dashboardAddr, nil
 }
 
-// GetEtcdClient load EtcdClient of current cluster
+// GetEtcdClient loads EtcdClient of current cluster
 func (s *Specification) GetEtcdClient(tlsCfg *tls.Config) (*clientv3.Client, error) {
 	return clientv3.New(clientv3.Config{
 		Endpoints: s.GetPDList(),
 		TLS:       tlsCfg,
 	})
+}
+
+// GetEtcdProxyClient loads EtcdClient of current cluster with TCP proxy
+func (s *Specification) GetEtcdProxyClient(tlsCfg *tls.Config, tcpProxy *proxy.TCPProxy) (*clientv3.Client, chan struct{}, error) {
+	closeC := tcpProxy.Run(s.GetPDList())
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints: tcpProxy.GetEndpoints(),
+		TLS:       tlsCfg,
+	})
+	return cli, closeC, err
 }
 
 // Merge returns a new Specification which sum old ones
@@ -534,16 +557,37 @@ func setCustomDefaults(globalOptions *GlobalOptions, field reflect.Value) error 
 		case "DeployDir":
 			setDefaultDir(globalOptions.DeployDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
 		case "LogDir":
-			if field.Field(j).String() == "" && defaults.CanUpdate(field.Field(j).Interface()) {
+			if reflect.Indirect(field).FieldByName("Imported").Interface().(bool) {
+				setDefaultDir(globalOptions.LogDir, field.Addr().Interface().(InstanceSpec).Role(), getPort(field), field.Field(j))
+			}
+
+			logDir := field.Field(j).String()
+
+			// If the per-instance log_dir already have a value, skip filling default values
+			// and ignore any value in global log_dir, the default values are filled only
+			// when the pre-instance log_dir is empty
+			if logDir != "" {
+				continue
+			}
+			// If the log dir in global options is an absolute path, append current
+			// value to the global and has a comp-port sub directory
+			if strings.HasPrefix(globalOptions.LogDir, "/") {
+				field.Field(j).Set(reflect.ValueOf(filepath.Join(
+					globalOptions.LogDir,
+					fmt.Sprintf("%s-%s", field.Addr().Interface().(InstanceSpec).Role(), getPort(field)),
+				)))
+				continue
+			}
+			// If the log dir in global options is empty or a relative path, keep it be relative
+			// Our run_*.sh start scripts are run inside deploy_path, so the final location
+			// will be deploy_path/global.log_dir
+			// (the default value of global.log_dir is "log")
+			if globalOptions.LogDir == "" {
+				field.Field(j).Set(reflect.ValueOf("log"))
+			} else {
 				field.Field(j).Set(reflect.ValueOf(globalOptions.LogDir))
 			}
 		case "Arch":
-			// default values of globalOptions are set before fillCustomDefaults in Unmarshal
-			// so the globalOptions.Arch already has its default value set, no need to check again
-			if field.Field(j).String() == "" {
-				field.Field(j).Set(reflect.ValueOf(globalOptions.Arch))
-			}
-
 			switch strings.ToLower(field.Field(j).String()) {
 			// replace "x86_64" with amd64, they are the same in our repo
 			case "x86_64":
@@ -733,4 +777,67 @@ func AlertManagerEndpoints(alertmanager []*AlertmanagerSpec, user string, enable
 		ends = append(ends, script)
 	}
 	return ends
+}
+
+// FillHostArch fills the topology with the given host->arch
+func (s *Specification) FillHostArch(hostArch map[string]string) error {
+	if err := FillHostArch(s, hostArch); err != nil {
+		return err
+	}
+
+	return s.platformConflictsDetect()
+}
+
+// FillHostArch fills the topology with the given host->arch
+func FillHostArch(s interface{}, hostArch map[string]string) error {
+	for host, arch := range hostArch {
+		switch arch {
+		case "x86_64":
+			hostArch[host] = "amd64"
+		case "aarch64":
+			hostArch[host] = "arm64"
+		default:
+			hostArch[host] = strings.ToLower(arch)
+		}
+	}
+
+	v := reflect.ValueOf(s).Elem()
+	t := v.Type()
+
+	for i := 0; i < t.NumField(); i++ {
+		field := v.Field(i)
+		if field.Kind() != reflect.Slice {
+			continue
+		}
+		for j := 0; j < field.Len(); j++ {
+			if err := setHostArch(field.Index(j), hostArch); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func setHostArch(field reflect.Value, hostArch map[string]string) error {
+	if !field.CanSet() || isSkipField(field) {
+		return nil
+	}
+
+	if field.Kind() == reflect.Ptr {
+		return setHostArch(field.Elem(), hostArch)
+	}
+
+	if field.Kind() != reflect.Struct {
+		return nil
+	}
+
+	host := field.FieldByName("Host")
+	arch := field.FieldByName("Arch")
+
+	// set arch only if not set before
+	if !host.IsZero() && arch.CanSet() && len(arch.String()) == 0 {
+		arch.Set(reflect.ValueOf(hostArch[host.String()]))
+	}
+
+	return nil
 }

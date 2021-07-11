@@ -18,27 +18,28 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/joomcode/errorx"
-	"github.com/pingcap/tiup/pkg/cliutil"
+	perrs "github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
-	"github.com/pingcap/tiup/pkg/cluster/flags"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
-	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
-	"github.com/pingcap/tiup/pkg/colorutil"
+	"github.com/pingcap/tiup/pkg/environment"
 	tiupmeta "github.com/pingcap/tiup/pkg/environment"
-	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/proxy"
 	"github.com/pingcap/tiup/pkg/repository"
 	"github.com/pingcap/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/tui"
+	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -50,6 +51,11 @@ var (
 	gOpt          operator.Options
 	skipConfirm   bool
 	reportEnabled bool // is telemetry report enabled
+	teleReport    *telemetry.Report
+	clusterReport *telemetry.ClusterReport
+	teleNodeInfos []*telemetry.NodeInfo
+	teleTopology  string
+	teleCommand   []string
 )
 
 var tidbSpec *spec.SpecManager
@@ -58,8 +64,7 @@ var cm *manager.Manager
 func scrubClusterName(n string) string {
 	// prepend the telemetry secret to cluster name, so that two installations
 	// of tiup with the same cluster name produce different hashes
-	cls := report.TelemetrySecret() + ":" + n
-	return "cluster_" + telemetry.HashReport(cls)
+	return "cluster_" + telemetry.SaltedHash(n)
 }
 
 func getParentNames(cmd *cobra.Command) []string {
@@ -79,7 +84,7 @@ func getParentNames(cmd *cobra.Command) []string {
 func init() {
 	logger.InitGlobalLogger()
 
-	colorutil.AddColorFunctionsForCobra()
+	tui.AddColorFunctionsForCobra()
 
 	cobra.EnableCommandSorting = false
 
@@ -89,7 +94,7 @@ func init() {
 	}
 
 	rootCmd = &cobra.Command{
-		Use:           cliutil.OsArgs0(),
+		Use:           tui.OsArgs0(),
 		Short:         "Deploy a TiDB cluster for production",
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -124,14 +129,20 @@ func init() {
 				fmt.Println("The --native-ssh flag has been deprecated, please use --ssh=system")
 			}
 
+			err = proxy.MaybeStartProxy(gOpt.SSHProxyHost, gOpt.SSHProxyPort, gOpt.SSHProxyUser, gOpt.SSHProxyUsePassword, gOpt.SSHProxyIdentity)
+			if err != nil {
+				return perrs.Annotate(err, "start http-proxy")
+			}
+
 			return nil
 		},
 		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+			proxy.MaybeStopProxy()
 			return tiupmeta.GlobalEnv().V1Repository().Mirror().Close()
 		},
 	}
 
-	cliutil.BeautifyCobraUsageAndHelp(rootCmd)
+	tui.BeautifyCobraUsageAndHelp(rootCmd)
 
 	rootCmd.PersistentFlags().Uint64Var(&gOpt.SSHTimeout, "ssh-timeout", 5, "Timeout in seconds to connect host via SSH, ignored for operations that don't need an SSH connection.")
 	// the value of wait-timeout is also used for `systemctl` commands, as the default timeout of systemd for
@@ -140,7 +151,20 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&skipConfirm, "yes", "y", false, "Skip all confirmations and assumes 'yes'")
 	rootCmd.PersistentFlags().BoolVar(&gOpt.NativeSSH, "native-ssh", gOpt.NativeSSH, "(EXPERIMENTAL) Use the native SSH client installed on local system instead of the build-in one.")
 	rootCmd.PersistentFlags().StringVar((*string)(&gOpt.SSHType), "ssh", "", "(EXPERIMENTAL) The executor type: 'builtin', 'system', 'none'.")
+	rootCmd.PersistentFlags().IntVarP(&gOpt.Concurrency, "concurrency", "c", 5, "max number of parallel tasks allowed")
+	rootCmd.PersistentFlags().StringVar(&gOpt.SSHProxyHost, "ssh-proxy-host", "", "The SSH proxy host used to connect to remote host.")
+	rootCmd.PersistentFlags().StringVar(&gOpt.SSHProxyUser, "ssh-proxy-user", utils.CurrentUser(), "The user name used to login the proxy host.")
+	rootCmd.PersistentFlags().IntVar(&gOpt.SSHProxyPort, "ssh-proxy-port", 22, "The port used to login the proxy host.")
+	rootCmd.PersistentFlags().StringVar(&gOpt.SSHProxyIdentity, "ssh-proxy-identity-file", path.Join(utils.UserHome(), ".ssh", "id_rsa"), "The identity file used to login the proxy host.")
+	rootCmd.PersistentFlags().BoolVar(&gOpt.SSHProxyUsePassword, "ssh-proxy-use-password", false, "Use password to login the proxy host.")
+	rootCmd.PersistentFlags().Uint64Var(&gOpt.SSHProxyTimeout, "ssh-proxy-timeout", 5, "Timeout in seconds to connect the proxy host via SSH, ignored for operations that don't need an SSH connection.")
 	_ = rootCmd.PersistentFlags().MarkHidden("native-ssh")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-host")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-user")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-port")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-identity-file")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-use-password")
+	_ = rootCmd.PersistentFlags().MarkHidden("ssh-proxy-timeout")
 
 	rootCmd.AddCommand(
 		newCheckCmd(),
@@ -175,7 +199,7 @@ func init() {
 }
 
 func printErrorMessageForNormalError(err error) {
-	_, _ = colorutil.ColorErrorMsg.Fprintf(os.Stderr, "\nError: %s\n", err.Error())
+	_, _ = tui.ColorErrorMsg.Fprintf(os.Stderr, "\nError: %s\n", err.Error())
 }
 
 func printErrorMessageForErrorX(err *errorx.Error) {
@@ -211,13 +235,13 @@ func printErrorMessageForErrorX(err *errorx.Error) {
 			break
 		}
 	}
-	_, _ = colorutil.ColorErrorMsg.Fprintf(os.Stderr, "\nError: %s", msg)
+	_, _ = tui.ColorErrorMsg.Fprintf(os.Stderr, "\nError: %s", msg)
 }
 
 func extractSuggestionFromErrorX(err *errorx.Error) string {
 	cause := err
 	for cause != nil {
-		v, ok := cause.Property(errutil.ErrPropSuggestion)
+		v, ok := cause.Property(utils.ErrPropSuggestion)
 		if ok {
 			if s, ok := v.(string); ok {
 				return s
@@ -231,7 +255,7 @@ func extractSuggestionFromErrorX(err *errorx.Error) string {
 
 // Execute executes the root command
 func Execute() {
-	zap.L().Info("Execute command", zap.String("command", cliutil.OsArgs()))
+	zap.L().Info("Execute command", zap.String("command", tui.OsArgs()))
 	zap.L().Debug("Environment variables", zap.Strings("env", os.Environ()))
 
 	// Switch current work directory if running in TiUP component mode
@@ -244,12 +268,16 @@ func Execute() {
 	teleReport = new(telemetry.Report)
 	clusterReport = new(telemetry.ClusterReport)
 	teleReport.EventDetail = &telemetry.Report_Cluster{Cluster: clusterReport}
-	reportEnabled = report.Enabled()
+	reportEnabled = telemetry.Enabled()
 	if reportEnabled {
-		teleReport.InstallationUUID = report.TelemetryUUID()
-		teleReport.EventUUID = uuid.New().String()
+		eventUUID := os.Getenv(localdata.EnvNameTelemetryEventUUID)
+		if eventUUID == "" {
+			eventUUID = uuid.New().String()
+		}
+		teleReport.InstallationUUID = telemetry.GetUUID()
+		teleReport.EventUUID = eventUUID
 		teleReport.EventUnixTimestamp = time.Now().Unix()
-		teleReport.Tiup = report.TiUPMeta()
+		teleReport.Version = telemetry.TiUPMeta()
 	}
 
 	start := time.Now()
@@ -265,7 +293,7 @@ func Execute() {
 		f := func() {
 			defer func() {
 				if r := recover(); r != nil {
-					if flags.DebugMode {
+					if environment.DebugMode {
 						log.Debugf("Recovered in telemetry report: %v", r)
 					}
 				}
@@ -289,7 +317,7 @@ func Execute() {
 						"config":         {},
 						"server_configs": {},
 					}, // fields to omit
-					report.TelemetrySecret(),
+					telemetry.GetSecret(),
 				); err == nil {
 					clusterReport.Topology = (string(data))
 				}
@@ -299,11 +327,11 @@ func Execute() {
 			tele := telemetry.NewTelemetry()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 			err := tele.Report(ctx, teleReport)
-			if flags.DebugMode {
+			if environment.DebugMode {
 				if err != nil {
 					log.Infof("report failed: %v", err)
 				}
-				fmt.Printf("report: %s\n", teleReport.String())
+				fmt.Fprintf(os.Stderr, "report: %s\n", teleReport.String())
 				if data, err := json.Marshal(teleReport); err == nil {
 					log.Debugf("report: %s\n", string(data))
 				}
@@ -321,7 +349,7 @@ func Execute() {
 			printErrorMessageForNormalError(err)
 		}
 
-		if !errorx.HasTrait(err, errutil.ErrTraitPreCheck) {
+		if !errorx.HasTrait(err, utils.ErrTraitPreCheck) {
 			logger.OutputDebugLog("tiup-cluster")
 		}
 

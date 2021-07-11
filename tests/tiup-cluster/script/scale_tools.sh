@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eu
+
 function scale_tools() {
     mkdir -p ~/.tiup/bin/
 
@@ -9,7 +11,7 @@ function scale_tools() {
 
     client=""
     if [ $native_ssh == true ]; then
-        client="--native-ssh"
+        client="--ssh=system"
     fi
 
     name="test_scale_tools_$RANDOM"
@@ -116,6 +118,7 @@ function scale_tools() {
     fi
 
     tiup-cluster $client _test $name writable
+    tiup-cluster $client --yes destroy $name
 
     # test cluster log dir
     tiup-cluster notfound-command 2>&1 | grep $HOME/.tiup/logs/tiup-cluster-debug

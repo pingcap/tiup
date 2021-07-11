@@ -72,6 +72,9 @@ const (
 	// EnvNameTelemetryUUID represents the environment name of tiup telemetry uuid
 	EnvNameTelemetryUUID = "TIUP_TELEMETRY_UUID"
 
+	// EnvNameTelemetryEventUUID represents the environment name of tiup telemetry event uuid
+	EnvNameTelemetryEventUUID = "TIUP_TELEMETRY_EVENT_UUID"
+
 	// EnvNameTelemetrySecret represents the environment name of tiup telemetry secret
 	EnvNameTelemetrySecret = "TIUP_TELEMETRY_SECRET"
 

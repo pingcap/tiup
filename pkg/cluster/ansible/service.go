@@ -36,7 +36,7 @@ var (
 // parseDirs sets values of directories of component
 func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType executor.SSHType) (spec.InstanceSpec, error) {
 	hostName, sshPort := ins.SSH()
-	ctx := ctxt.New(context.Background())
+	ctx := ctxt.New(context.Background(), 0)
 
 	e, err := executor.New(sshType, false, executor.SSHConfig{
 		Host:    hostName,
@@ -178,6 +178,12 @@ func parseDirs(user string, ins spec.InstanceSpec, sshTimeout uint64, sshType ex
 		for _, line := range strings.Split(stdout, "\n") {
 			if strings.HasPrefix(line, "DEPLOY_DIR=") {
 				newIns.DeployDir = strings.TrimPrefix(line, "DEPLOY_DIR=")
+				continue
+			}
+			if strings.Contains(line, "--data-dir") {
+				dataArg := strings.Split(line, " ")[4] // 4 whitespaces ahead
+				dataDir := strings.TrimPrefix(dataArg, "--data-dir=")
+				newIns.DataDir = strings.Trim(dataDir, "\"")
 				continue
 			}
 			if strings.Contains(line, "--log-file=") {

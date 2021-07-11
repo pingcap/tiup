@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -52,6 +53,7 @@ components or versions which have not been installed.
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			teleCommand = cmd.CommandPath()
 			env := environment.GlobalEnv()
 			switch len(args) {
 			case 0:
@@ -91,7 +93,7 @@ func (lr *listResult) print() {
 func showComponentList(env *environment.Environment, opt listOptions) (*listResult, error) {
 	err := env.V1Repository().UpdateComponentManifests()
 	if err != nil {
-		return nil, err
+		tui.ColorWarningMsg.Fprint(os.Stderr, "Warn: Update component manifest failed, err_msg=[", err.Error(), "]\n")
 	}
 
 	installed, err := env.Profile().InstalledComponents()

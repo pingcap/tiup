@@ -40,6 +40,23 @@ install_binary() {
     return 0
 }
 
+check_depends() {
+    pass=0
+    command -v curl >/dev/null || {
+        echo "Dependency check failed: please install 'curl' before proceeding."
+        pass=1
+    }
+    command -v tar >/dev/null || {
+        echo "Dependency check failed: please install 'tar' before proceeding."
+        pass=1
+    }
+    return $pass
+}
+
+if ! check_depends; then
+    exit 1
+fi
+
 if ! install_binary; then
     echo "Failed to download and/or extract tiup archive."
     exit 1

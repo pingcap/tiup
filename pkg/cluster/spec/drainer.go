@@ -171,7 +171,7 @@ func (i *DrainerInstance) InitConfig(
 		return err
 	}
 	dst := filepath.Join(paths.Deploy, "scripts", "run_drainer.sh")
-	if err := e.Transfer(ctx, fp, dst, false); err != nil {
+	if err := e.Transfer(ctx, fp, dst, false, 0); err != nil {
 		return err
 	}
 

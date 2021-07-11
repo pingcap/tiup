@@ -11,20 +11,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package flags
+package telemetry
 
 import (
-	"os"
+	"context"
+	"testing"
 
-	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/check"
 )
 
-// Global flags
-var (
-	DebugMode = false
-)
+type reportSuite struct{}
 
-func init() {
-	val := os.Getenv(localdata.EnvNameDebug)
-	DebugMode = (val == "enable" || val == "enabled" || val == "true")
+var _ = check.Suite(&reportSuite{})
+
+func TestT(t *testing.T) { check.TestingT(t) }
+
+func (s *reportSuite) TestNodeInfo(c *check.C) {
+	info := new(NodeInfo)
+	err := FillNodeInfo(context.Background(), info)
+	c.Assert(err, check.IsNil)
+
+	text, err := NodeInfoToText(info)
+	c.Assert(err, check.IsNil)
+
+	info2, err := NodeInfoFromText(text)
+	c.Assert(err, check.IsNil)
+	c.Assert(info2, check.DeepEquals, info)
 }

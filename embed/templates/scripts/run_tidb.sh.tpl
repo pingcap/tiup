@@ -28,6 +28,6 @@ exec env GODEBUG=madvdontneed=1 bin/tidb-server \
     --advertise-address="{{.AdvertiseAddr}}" \
     --store="tikv" \
     --path="{{template "PDList" .Endpoints}}" \
-    --log-slow-query="log/tidb_slow_query.log" \
+    --log-slow-query="{{.LogDir}}/tidb_slow_query.log" \
     --config=conf/tidb.toml \
     --log-file="{{.LogDir}}/tidb.log" 2>> "{{.LogDir}}/tidb_stderr.log"

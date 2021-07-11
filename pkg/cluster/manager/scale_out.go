@@ -21,7 +21,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
@@ -31,6 +30,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"gopkg.in/yaml.v3"
 )
@@ -65,7 +65,6 @@ func (m *Manager) ScaleOut(
 
 	topo := metadata.GetTopology()
 	base := metadata.GetBaseMeta()
-
 	// Inherit existing global configuration. We must assign the inherited values before unmarshalling
 	// because some default value rely on the global options and monitored options.
 	newPart := topo.NewPart()
@@ -77,8 +76,31 @@ func (m *Manager) ScaleOut(
 		!errors.Is(perrs.Cause(err), spec.ErrNoTiSparkMaster) {
 		return err
 	}
+	if newPartTopo, ok := newPart.(*spec.Specification); ok {
+		newPartTopo.AdjustByVersion(base.Version)
+	}
 
 	if err := validateNewTopo(newPart); err != nil {
+		return err
+	}
+
+	var (
+		sshConnProps  *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+		sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	)
+	if gOpt.SSHType != executor.SSHTypeNone {
+		var err error
+		if sshConnProps, err = tui.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
+			return err
+		}
+		if len(gOpt.SSHProxyHost) != 0 {
+			if sshProxyProps, err = tui.ReadIdentityFileOrPassword(gOpt.SSHProxyIdentity, gOpt.SSHProxyUsePassword); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := m.fillHostArch(sshConnProps, sshProxyProps, newPart, &gOpt, opt.User); err != nil {
 		return err
 	}
 
@@ -89,20 +111,24 @@ func (m *Manager) ScaleOut(
 	}
 	spec.ExpandRelativeDir(mergedTopo)
 
-	if topo, ok := topo.(*spec.Specification); ok && !opt.NoLabels {
+	if topo, ok := mergedTopo.(*spec.Specification); ok {
 		// Check if TiKV's label set correctly
-		pdList := topo.BaseTopo().MasterList
-		tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
-		if err != nil {
-			return err
-		}
-		pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
-		lbs, err := pdClient.GetLocationLabels()
-		if err != nil {
-			return err
-		}
-		if err := spec.CheckTiKVLabels(lbs, mergedTopo.(*spec.Specification)); err != nil {
-			return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+		if !opt.NoLabels {
+			pdList := topo.BaseTopo().MasterList
+			tlsCfg, err := topo.TLSConfig(m.specManager.Path(name, spec.TLSCertKeyDir))
+			if err != nil {
+				return err
+			}
+			pdClient := api.NewPDClient(pdList, 10*time.Second, tlsCfg)
+			lbs, placementRule, err := pdClient.GetLocationLabels()
+			if err != nil {
+				return err
+			}
+			if !placementRule {
+				if err := spec.CheckTiKVLabels(lbs, mergedTopo.(*spec.Specification)); err != nil {
+					return perrs.Errorf("check TiKV label failed, please fix that before continue:\n%s", err)
+				}
+			}
 		}
 	}
 
@@ -132,23 +158,15 @@ func (m *Manager) ScaleOut(
 		}
 	}
 
-	var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
-	if gOpt.SSHType != executor.SSHTypeNone {
-		var err error
-		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
-			return err
-		}
-	}
-
 	// Build the scale out tasks
 	t, err := buildScaleOutTask(
-		m, name, metadata, mergedTopo, opt, sshConnProps, newPart,
+		m, name, metadata, mergedTopo, opt, sshConnProps, sshProxyProps, newPart,
 		patchedComponents, gOpt, afterDeploy, final)
 	if err != nil {
 		return err
 	}
 
-	ctx := ctxt.New(context.Background())
+	ctx := ctxt.New(context.Background(), gOpt.Concurrency)
 	ctx = context.WithValue(ctx, ctxt.CtxBaseTopo, topo)
 	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
@@ -201,7 +219,7 @@ func checkForGlobalConfigs(topoFile string) error {
 the scale out topology, but they will be ignored during the scaling out process.
 If you want to use configs different from the existing cluster, cancel now and
 set them in the specification fileds for each host.`))
-			if err := cliutil.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
+			if err := tui.PromptForConfirmOrAbortError("Do you want to continue? [y/N]: "); err != nil {
 				return err
 			}
 			return nil // user confirmed, skip further checks

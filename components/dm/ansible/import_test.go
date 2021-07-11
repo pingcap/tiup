@@ -48,13 +48,13 @@ func (g *executorGetter) Get(host string) ctxt.Executor {
 
 // Transfer implements executor interface.
 // Replace the deploy directory as the local one in testdata, so we can fetch it.
-func (l *localExecutor) Transfer(ctx context.Context, src string, target string, download bool) error {
+func (l *localExecutor) Transfer(ctx context.Context, src, target string, download bool, limit int) error {
 	mydeploy, err := filepath.Abs("./testdata/deploy_dir/" + l.host)
 	if err != nil {
 		return errors.AddStack(err)
 	}
 	src = strings.Replace(src, "/home/tidb/deploy", mydeploy, 1)
-	return l.Local.Transfer(ctx, src, target, download)
+	return l.Local.Transfer(ctx, src, target, download, 0)
 }
 
 func TestParseRunScript(t *testing.T) {
@@ -142,7 +142,7 @@ func TestImportFromAnsible(t *testing.T) {
 	im, err := NewImporter(dir, "inventory.ini", executor.SSHTypeBuiltin, 0)
 	assert.Nil(err)
 	im.testExecutorGetter = &executorGetter{}
-	clusterName, meta, err := im.ImportFromAnsibleDir(ctxt.New(context.Background()))
+	clusterName, meta, err := im.ImportFromAnsibleDir(ctxt.New(context.Background(), 0))
 	assert.Nil(err, "verbose: %+v", err)
 	assert.Equal("test-cluster", clusterName)
 

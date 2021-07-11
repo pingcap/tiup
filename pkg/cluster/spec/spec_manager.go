@@ -20,9 +20,8 @@ import (
 
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/file"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/pingcap/tiup/pkg/version"
 	"gopkg.in/yaml.v2"
@@ -109,7 +108,7 @@ func (s *SpecManager) SaveMeta(clusterName string, meta Metadata) error {
 		*opsVer = version.NewTiUPVersion().String()
 	}
 
-	err = file.SaveFileWithBackup(metaFile, data, backupDir)
+	err = utils.SaveFileWithBackup(metaFile, data, backupDir)
 	if err != nil {
 		return wrapError(err)
 	}
@@ -199,7 +198,7 @@ func (s *SpecManager) ensureDir(clusterName string) error {
 	if err := utils.CreateDir(s.Path(clusterName)); err != nil {
 		return ErrCreateDirFailed.
 			Wrap(err, "Failed to create cluster metadata directory '%s'", s.Path(clusterName)).
-			WithProperty(cliutil.SuggestionFromString("Please check file system permissions and try again."))
+			WithProperty(tui.SuggestionFromString("Please check file system permissions and try again."))
 	}
 	return nil
 }

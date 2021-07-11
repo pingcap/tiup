@@ -59,7 +59,7 @@ playground:
 
 client:
 	@# Target: build the tiup-client component
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-client ./components/client
+	$(MAKE) -C components/client $(MAKECMDGOALS)
 
 cluster:
 	@# Target: build the tiup-cluster component
@@ -71,7 +71,7 @@ dm:
 
 bench:
 	@# Target: build the tiup-bench component
-	$(GOBUILD) -ldflags '$(LDFLAGS)' -o bin/tiup-bench ./components/bench
+	$(MAKE) -C components/bench $(MAKECMDGOALS)
 
 doc:
 	@# Target: build the tiup-doc component

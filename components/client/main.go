@@ -15,6 +15,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -25,14 +26,23 @@ import (
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
-	"github.com/pingcap/tiup/pkg/localdata"
-	"github.com/pingcap/tiup/pkg/utils"
 	gops "github.com/shirou/gopsutil/process"
 	"github.com/spf13/cobra"
 	_ "github.com/xo/usql/drivers/mysql"
 	"github.com/xo/usql/env"
 	"github.com/xo/usql/handler"
 	"github.com/xo/usql/rline"
+)
+
+const (
+	// EnvNameHome represents the environment name of tiup home directory
+	EnvNameHome = "TIUP_HOME"
+	// EnvNameInstanceDataDir represents the working directory of specific instance
+	EnvNameInstanceDataDir = "TIUP_INSTANCE_DATA_DIR"
+	// DataParentDir represent the parent directory of all running instances
+	DataParentDir = "data"
+	// MetaFilename represents the process meta file name
+	MetaFilename = "tiup_process_meta"
 )
 
 func main() {
@@ -59,9 +69,9 @@ func execute() error {
 }
 
 func connect(target string) error {
-	tiupHome := os.Getenv(localdata.EnvNameHome)
+	tiupHome := os.Getenv(EnvNameHome)
 	if tiupHome == "" {
-		return fmt.Errorf("env variable %s not set, are you running client out of tiup?", localdata.EnvNameHome)
+		return fmt.Errorf("env variable %s not set, are you running client out of tiup?", EnvNameHome)
 	}
 	endpoints, err := scanEndpoint(tiupHome)
 	if err != nil {
@@ -93,8 +103,8 @@ func connect(target string) error {
 	if err != nil {
 		return fmt.Errorf("can't open history file: %s", err.Error())
 	}
-	h := handler.New(l, u, os.Getenv(localdata.EnvNameInstanceDataDir), true)
-	if err = h.Open(ep.dsn); err != nil {
+	h := handler.New(l, u, os.Getenv(EnvNameInstanceDataDir), true)
+	if err = h.Open(context.TODO(), ep.dsn); err != nil {
 		return fmt.Errorf("can't open connection to %s: %s", ep.dsn, err.Error())
 	}
 	if err = h.Run(); err != io.EOF {
@@ -106,7 +116,7 @@ func connect(target string) error {
 func scanEndpoint(tiupHome string) ([]*endpoint, error) {
 	endpoints := []*endpoint{}
 
-	files, err := os.ReadDir(path.Join(tiupHome, localdata.DataParentDir))
+	files, err := os.ReadDir(path.Join(tiupHome, DataParentDir))
 	if err != nil {
 		return nil, err
 	}
@@ -115,16 +125,17 @@ func scanEndpoint(tiupHome string) ([]*endpoint, error) {
 		if !isInstanceAlive(tiupHome, file.Name()) {
 			continue
 		}
-		endpoints = append(endpoints, readDsn(path.Join(tiupHome, localdata.DataParentDir, file.Name()), file.Name())...)
+		endpoints = append(endpoints, readDsn(path.Join(tiupHome, DataParentDir, file.Name()), file.Name())...)
 	}
 	return endpoints, nil
 }
 
 func isInstanceAlive(tiupHome, instance string) bool {
-	metaFile := path.Join(tiupHome, localdata.DataParentDir, instance, localdata.MetaFilename)
+	metaFile := path.Join(tiupHome, DataParentDir, instance, MetaFilename)
 
 	// If the path doesn't contain the meta file, which means startup interrupted
-	if utils.IsNotExist(metaFile) {
+	_, err := os.Stat(metaFile)
+	if os.IsNotExist(err) {
 		return false
 	}
 

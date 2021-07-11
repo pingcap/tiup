@@ -28,9 +28,9 @@ import (
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/localdata"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
@@ -82,21 +82,22 @@ type (
 
 	// SSHConfig is the configuration needed to establish SSH connection.
 	SSHConfig struct {
-		Host       string // hostname of the SSH server
-		Port       int    // port of the SSH server
-		User       string // username to login to the SSH server
-		Password   string // password of the user
-		KeyFile    string // path to the private key file
-		Passphrase string // passphrase of the private key file
-		// Timeout is the maximum amount of time for the TCP connection to establish.
-		Timeout time.Duration
+		Host       string        // hostname of the SSH server
+		Port       int           // port of the SSH server
+		User       string        // username to login to the SSH server
+		Password   string        // password of the user
+		KeyFile    string        // path to the private key file
+		Passphrase string        // passphrase of the private key file
+		Timeout    time.Duration // Timeout is the maximum amount of time for the TCP connection to establish.
+		ExeTimeout time.Duration // ExeTimeout is the maximum amount of time for the command to finish
+		Proxy      *SSHConfig    // ssh proxy config
 	}
 )
 
 var _ ctxt.Executor = &EasySSHExecutor{}
 var _ ctxt.Executor = &NativeSSHExecutor{}
 
-// Initialize builds and initializes a EasySSHExecutor
+// initialize builds and initializes a EasySSHExecutor
 func (e *EasySSHExecutor) initialize(config SSHConfig) {
 	// build easyssh config
 	e.Config = &easyssh.MakeConfig{
@@ -106,12 +107,31 @@ func (e *EasySSHExecutor) initialize(config SSHConfig) {
 		Timeout: config.Timeout, // timeout when connecting to remote
 	}
 
+	if config.ExeTimeout > 0 {
+		executeDefaultTimeout = config.ExeTimeout
+	}
+
 	// prefer private key authentication
 	if len(config.KeyFile) > 0 {
 		e.Config.KeyPath = config.KeyFile
 		e.Config.Passphrase = config.Passphrase
 	} else if len(config.Password) > 0 {
 		e.Config.Password = config.Password
+	}
+
+	if proxy := config.Proxy; proxy != nil {
+		e.Config.Proxy = easyssh.DefaultConfig{
+			Server:  proxy.Host,
+			Port:    strconv.Itoa(proxy.Port),
+			User:    proxy.User,
+			Timeout: proxy.Timeout, // timeout when connecting to remote
+		}
+		if len(proxy.KeyFile) > 0 {
+			e.Config.Proxy.KeyPath = proxy.KeyFile
+			e.Config.Proxy.Passphrase = proxy.Passphrase
+		} else if len(proxy.Password) > 0 {
+			e.Config.Proxy.Password = proxy.Password
+		}
 	}
 }
 
@@ -158,7 +178,7 @@ func (e *EasySSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, ti
 		if len(stdout) > 0 || len(stderr) > 0 {
 			output := strings.TrimSpace(strings.Join([]string{stdout, stderr}, "\n"))
 			baseErr = baseErr.
-				WithProperty(cliutil.SuggestionFromFormat("Command output on remote host %s:\n%s\n",
+				WithProperty(tui.SuggestionFromFormat("Command output on remote host %s:\n%s\n",
 					e.Config.Server,
 					color.YellowString(output)))
 		}
@@ -180,7 +200,7 @@ func (e *EasySSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, ti
 // This function depends on `scp` (a tool from OpenSSH or other SSH implementation)
 // This function is based on easyssh.MakeConfig.Scp() but with support of copying
 // file from remote to local.
-func (e *EasySSHExecutor) Transfer(ctx context.Context, src string, dst string, download bool) error {
+func (e *EasySSHExecutor) Transfer(ctx context.Context, src, dst string, download bool, limit int) error {
 	if !download {
 		err := e.Config.Scp(src, dst)
 		if err != nil {
@@ -197,18 +217,7 @@ func (e *EasySSHExecutor) Transfer(ctx context.Context, src string, dst string, 
 	defer client.Close()
 	defer session.Close()
 
-	targetPath := filepath.Dir(dst)
-	if err = utils.CreateDir(targetPath); err != nil {
-		return err
-	}
-	targetFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-
-	session.Stdout = targetFile
-
-	return session.Run(fmt.Sprintf("cat %s", src))
+	return ScpDownload(session, client, src, dst, limit)
 }
 
 func (e *NativeSSHExecutor) prompt(def string) string {
@@ -218,7 +227,14 @@ func (e *NativeSSHExecutor) prompt(def string) string {
 	return def
 }
 
-func (e *NativeSSHExecutor) configArgs(args []string) []string {
+func (e *NativeSSHExecutor) configArgs(args []string, isScp bool) []string {
+	if e.Config.Port != 0 && e.Config.Port != 22 {
+		if isScp {
+			args = append(args, "-P", strconv.Itoa(e.Config.Port))
+		} else {
+			args = append(args, "-p", strconv.Itoa(e.Config.Port))
+		}
+	}
 	if e.Config.Timeout != 0 {
 		args = append(args, "-o", fmt.Sprintf("ConnectTimeout=%d", int64(e.Config.Timeout.Seconds())))
 	}
@@ -229,6 +245,25 @@ func (e *NativeSSHExecutor) configArgs(args []string) []string {
 		if e.Config.Passphrase != "" {
 			args = append([]string{"sshpass", "-p", e.Config.Passphrase, "-P", e.prompt("passphrase")}, args...)
 		}
+	}
+
+	proxy := e.Config.Proxy
+	if proxy != nil {
+		proxyArgs := []string{"ssh"}
+		if proxy.Timeout != 0 {
+			proxyArgs = append(proxyArgs, "-o", fmt.Sprintf("ConnectTimeout=%d", int64(proxy.Timeout.Seconds())))
+		}
+		if proxy.Password != "" {
+			proxyArgs = append([]string{"sshpass", "-p", proxy.Password, "-P", e.prompt("password")}, proxyArgs...)
+		} else if proxy.KeyFile != "" {
+			proxyArgs = append(proxyArgs, "-i", proxy.KeyFile)
+			if proxy.Passphrase != "" {
+				proxyArgs = append([]string{"sshpass", "-p", proxy.Passphrase, "-P", e.prompt("passphrase")}, proxyArgs...)
+			}
+		}
+		// Don't need to extra quote it, exec.Command will handle it right
+		// ref https://stackoverflow.com/a/26473771/2298986
+		args = append(args, []string{"-o", fmt.Sprintf(`ProxyCommand=%s %s@%s -p %d -W %%h:%%p`, strings.Join(proxyArgs, " "), proxy.User, proxy.Host, proxy.Port)}...)
 	}
 	return args
 }
@@ -274,7 +309,7 @@ func (e *NativeSSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, 
 
 	args := []string{ssh, "-o", "StrictHostKeyChecking=no"}
 
-	args = e.configArgs(args) // prefix and postfix args
+	args = e.configArgs(args, false) // prefix and postfix args
 	args = append(args, fmt.Sprintf("%s@%s", e.Config.User, e.Config.Host), cmd)
 
 	command := exec.CommandContext(ctx, args[0], args[1:]...)
@@ -307,7 +342,7 @@ func (e *NativeSSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, 
 		if len(stdout.Bytes()) > 0 || len(stderr.Bytes()) > 0 {
 			output := strings.TrimSpace(strings.Join([]string{stdout.String(), stderr.String()}, "\n"))
 			baseErr = baseErr.
-				WithProperty(cliutil.SuggestionFromFormat("Command output on remote host %s:\n%s\n",
+				WithProperty(tui.SuggestionFromFormat("Command output on remote host %s:\n%s\n",
 					e.Config.Host,
 					color.YellowString(output)))
 		}
@@ -319,7 +354,7 @@ func (e *NativeSSHExecutor) Execute(ctx context.Context, cmd string, sudo bool, 
 
 // Transfer copies files via SCP
 // This function depends on `scp` (a tool from OpenSSH or other SSH implementation)
-func (e *NativeSSHExecutor) Transfer(ctx context.Context, src string, dst string, download bool) error {
+func (e *NativeSSHExecutor) Transfer(ctx context.Context, src, dst string, download bool, limit int) error {
 	if e.ConnectionTestResult != nil {
 		return e.ConnectionTestResult
 	}
@@ -334,7 +369,10 @@ func (e *NativeSSHExecutor) Transfer(ctx context.Context, src string, dst string
 	}
 
 	args := []string{scp, "-r", "-o", "StrictHostKeyChecking=no"}
-	args = e.configArgs(args) // prefix and postfix args
+	if limit > 0 {
+		args = append(args, "-l", fmt.Sprint(limit))
+	}
+	args = e.configArgs(args, true) // prefix and postfix args
 
 	if download {
 		targetPath := filepath.Dir(dst)
@@ -375,7 +413,7 @@ func (e *NativeSSHExecutor) Transfer(ctx context.Context, src string, dst string
 		if len(stdout.Bytes()) > 0 || len(stderr.Bytes()) > 0 {
 			output := strings.TrimSpace(strings.Join([]string{stdout.String(), stderr.String()}, "\n"))
 			baseErr = baseErr.
-				WithProperty(cliutil.SuggestionFromFormat("Command output on remote host %s:\n%s\n",
+				WithProperty(tui.SuggestionFromFormat("Command output on remote host %s:\n%s\n",
 					e.Config.Host,
 					color.YellowString(output)))
 		}

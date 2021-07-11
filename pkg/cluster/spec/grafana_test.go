@@ -29,7 +29,7 @@ import (
 )
 
 func TestLocalDashboards(t *testing.T) {
-	ctx := ctxt.New(context.Background())
+	ctx := ctxt.New(context.Background(), 0)
 
 	deployDir, err := os.MkdirTemp("", "tiup-*")
 	assert.Nil(t, err)

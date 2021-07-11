@@ -23,7 +23,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/api"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	"github.com/pingcap/tiup/pkg/cluster/executor"
@@ -32,6 +31,7 @@ import (
 	"github.com/pingcap/tiup/pkg/cluster/task"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tui"
 )
 
 // CheckOptions contains the options for check command
@@ -67,6 +67,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 		opt.IdentityFile = m.specManager.Path(clusterName, "ssh", "id_rsa")
 
 		topo = *metadata.Topology
+		topo.AdjustByVersion(metadata.Version)
 	} else { // check before cluster is deployed
 		topoFileName := clusterOrTopoName
 
@@ -88,20 +89,27 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 		}
 	}
 
-	// natvie ssh has it's own logic to find the default identity_file
-	// if gOpt.SSHType == executor.SSHTypeSystem && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
-	// 	opt.identityFile = ""
-	// }
-
-	var sshConnProps *cliutil.SSHConnectionProps = &cliutil.SSHConnectionProps{}
+	var (
+		sshConnProps  *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+		sshProxyProps *tui.SSHConnectionProps = &tui.SSHConnectionProps{}
+	)
 	if gOpt.SSHType != executor.SSHTypeNone {
 		var err error
-		if sshConnProps, err = cliutil.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
+		if sshConnProps, err = tui.ReadIdentityFileOrPassword(opt.IdentityFile, opt.UsePassword); err != nil {
 			return err
+		}
+		if len(gOpt.SSHProxyHost) != 0 {
+			if sshProxyProps, err = tui.ReadIdentityFileOrPassword(gOpt.SSHProxyIdentity, gOpt.SSHProxyUsePassword); err != nil {
+				return err
+			}
 		}
 	}
 
-	if err := checkSystemInfo(sshConnProps, &topo, &gOpt, &opt); err != nil {
+	if err := m.fillHostArch(sshConnProps, sshProxyProps, &topo, &gOpt, opt.User); err != nil {
+		return err
+	}
+
+	if err := checkSystemInfo(sshConnProps, sshProxyProps, &topo, &gOpt, &opt); err != nil {
 		return err
 	}
 
@@ -115,7 +123,7 @@ func (m *Manager) CheckCluster(clusterOrTopoName string, opt CheckOptions, gOpt 
 }
 
 // checkSystemInfo performs series of checks and tests of the deploy server
-func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gOpt *operator.Options, opt *CheckOptions) error {
+func checkSystemInfo(s, p *tui.SSHConnectionProps, topo *spec.Specification, gOpt *operator.Options, opt *CheckOptions) error {
 	var (
 		collectTasks  []*task.StepDisplay
 		checkSysTasks []*task.StepDisplay
@@ -202,6 +210,14 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 						s.IdentityFile,
 						s.IdentityFilePassphrase,
 						gOpt.SSHTimeout,
+						gOpt.OptTimeout,
+						gOpt.SSHProxyHost,
+						gOpt.SSHProxyPort,
+						gOpt.SSHProxyUser,
+						p.Password,
+						p.IdentityFile,
+						p.IdentityFilePassphrase,
+						gOpt.SSHProxyTimeout,
 						gOpt.SSHType,
 						topo.GlobalOptions.SSHType,
 					).
@@ -315,6 +331,14 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 					s.IdentityFile,
 					s.IdentityFilePassphrase,
 					gOpt.SSHTimeout,
+					gOpt.OptTimeout,
+					gOpt.SSHProxyHost,
+					gOpt.SSHProxyPort,
+					gOpt.SSHProxyUser,
+					p.Password,
+					p.IdentityFile,
+					p.IdentityFilePassphrase,
+					gOpt.SSHProxyTimeout,
 					gOpt.SSHType,
 					topo.GlobalOptions.SSHType,
 				).
@@ -331,7 +355,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 		ParallelStep("+ Cleanup check files", false, cleanTasks...).
 		Build()
 
-	ctx := ctxt.New(context.Background())
+	ctx := ctxt.New(context.Background(), gOpt.Concurrency)
 	if err := t.Execute(ctx); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
@@ -356,6 +380,14 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 				s.IdentityFile,
 				s.IdentityFilePassphrase,
 				gOpt.SSHTimeout,
+				gOpt.OptTimeout,
+				gOpt.SSHProxyHost,
+				gOpt.SSHProxyPort,
+				gOpt.SSHProxyUser,
+				p.Password,
+				p.IdentityFile,
+				p.IdentityFilePassphrase,
+				gOpt.SSHProxyTimeout,
 				gOpt.SSHType,
 				topo.GlobalOptions.SSHType,
 			)
@@ -371,7 +403,7 @@ func checkSystemInfo(s *cliutil.SSHConnectionProps, topo *spec.Specification, gO
 
 	// print check results *before* trying to applying checks
 	// FIXME: add fix result to output, and display the table after fixing
-	cliutil.PrintTable(checkResultTable, true)
+	tui.PrintTable(checkResultTable, true)
 
 	if opt.ApplyFix {
 		tc := task.NewBuilder().
@@ -493,7 +525,7 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder) (s
 	case operator.CheckNameSELinux:
 		t.Shell(host,
 			fmt.Sprintf(
-				"sed -i 's/^[[:blank:]]*SELINUX=enforcing/SELINUX=no/g' %s && %s",
+				"sed -i 's/^[[:blank:]]*SELINUX=enforcing/SELINUX=disabled/g' %s && %s",
 				"/etc/selinux/config",
 				"setenforce 0",
 			),
@@ -502,7 +534,7 @@ func fixFailedChecks(host string, res *operator.CheckResult, t *task.Builder) (s
 		msg = fmt.Sprintf("will try to %s, reboot might be needed", color.HiBlueString("disable SELinux"))
 	case operator.CheckNameTHP:
 		t.Shell(host,
-			"echo never > /sys/kernel/mm/transparent_hugepage/enabled && echo never > /sys/kernel/mm/transparent_hugepage/defrag",
+			fmt.Sprintf(`if [ -d %[1]s ]; then echo never > %[1]s/defrag && echo never > %[1]s/enabled; fi`, "/sys/kernel/mm/transparent_hugepage"),
 			"",
 			true)
 		msg = fmt.Sprintf("will try to %s, please check again after reboot", color.HiBlueString("disable THP"))

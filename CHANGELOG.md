@@ -1,5 +1,94 @@
 TiUP Changelog
 
+## [1.5.2] 2021-06-24
+
+### Fixes
+
+- Fix native SSH not working with custom SSH port ([#1424](https://github.com/pingcap/tiup/pull/1424), [@9547](https://github.com/9547))
+- Fix dashboard address displaying issue for `tikv-slim` clusters ([#1428](https://github.com/pingcap/tiup/pull/1428), [@iosmanthus](https://github.com/iosmanthus))
+- Fix a typo in help message of `tiup-playground` ([#1429](https://github.com/pingcap/tiup/pull/1429), [@ekexium](https://github.com/ekexium))
+- Fix TiFlash nodes not handled correctly in some commands ([#1431](https://github.com/pingcap/tiup/pull/1431), [@lucklove](https://github.com/lucklove))
+- Fix jemalloc config for TiKV nodes ([#1435](https://github.com/pingcap/tiup/pull/1435), [@9547](https://github.com/9547))
+- Fix the issue that slow log is not placed under `log_dir` ([#1441](https://github.com/pingcap/tiup/pull/1441), [@lucklove](https://github.com/lucklove))
+
+### Improvements
+
+- Update default alertmanager config template to avoid confusing ([#1425](https://github.com/pingcap/tiup/pull/1425) [#1426](https://github.com/pingcap/tiup/pull/1426), [@lucklove](https://github.com/lucklove))
+- Increase default timeout of transferring leader in upgrade progress ([#1434](https://github.com/pingcap/tiup/pull/1434), [@AstroProfundis](https://github.com/AstroProfundis))
+- Update dependencies ([#1433](https://github.com/pingcap/tiup/pull/1433), [@AstroProfundis](https://github.com/AstroProfundis))
+
+## [1.5.1] 2021-06-11
+
+### Fix
+
+- Fix the issue that some versions of TiCDC node may fail to start in `tiup-cluster` ([#1421](https://github.com/pingcap/tiup/pull/1421), [@JinLingChristopher](https://github.com/JinLingChristopher))
+
+## [1.5.0] 2021-06-09
+
+### New Features
+
+- Show more information in `display` subcommand of `tiup-cluster`
+  - Add an `--uptime` argument to show time since the last state change of process ([#1231](https://github.com/pingcap/tiup/pull/1231), [@9547](https://github.com/9547))
+  - Show deploy user in `display` output and adjust formats ([#1390](https://github.com/pingcap/tiup/pull/1390) [#1409](https://github.com/pingcap/tiup/pull/1409), [@AstroProfundis](https://github.com/AstroProfundis))
+- Add JSON output for `display` subcommand of `tiup-cluster` ([#1358](https://github.com/pingcap/tiup/pull/1358), [@dveeden](https://github.com/dveeden))
+- Add double confirmation for `scale-out` subcommand in `tiup-cluster` to let users be aware of global configs being used ([#1309](https://github.com/pingcap/tiup/pull/1309), [@AstroProfundis](https://github.com/AstroProfundis))
+- Support deploying pure TiKV cluster with `--mode tikv-slim` in `playground` ([#1333](https://github.com/pingcap/tiup/pull/1333), [@iosmanthus](https://github.com/iosmanthus); [#1365](https://github.com/pingcap/tiup/pull/1365), [@tisonkun](https://github.com/tisonkun))
+- Support data dir settings for TiCDC in `tiup-cluster` ([#1372](https://github.com/pingcap/tiup/pull/1372), [@JinLingChristopher](https://github.com/JinLingChristopher))
+- Support change of `GCTTL` and `TZ` configs for TiCDC in `tiup-cluster` ([#1380](https://github.com/pingcap/tiup/pull/1380), [@amyangfei](https://github.com/amyangfei))
+- Add a local deployment template for `tiup-cluster` ([#1404](https://github.com/pingcap/tiup/pull/1404), [@kolbe](https://github.com/kolbe))
+- Support using dot (`.`) in cluster name ([#1412](https://github.com/pingcap/tiup/pull/1412), [@9547](https://github.com/9547))
+
+### Fixes
+
+- Fix a variety of typos ([#1306](https://github.com/pingcap/tiup/pull/1306), [@kolbe](https://github.com/kolbe))
+- Fix non-common speed units shown in downloading progress ([#1312](https://github.com/pingcap/tiup/pull/1312), [@dveeden](https://github.com/dveeden))
+- Fix the issue that it may panic when user try to list expired component ([#1391](https://github.com/pingcap/tiup/pull/1391), [@lucklove](https://github.com/lucklove))
+- Fix the issue that tikv not upgraded on error increasing schedule limit  ([#1401](https://github.com/pingcap/tiup/pull/1401), [@AstroProfundis](https://github.com/AstroProfundis))
+
+### Improvements
+
+- Support specifying node counts in tests ([#1251](https://github.com/pingcap/tiup/pull/1251), [@9547](https://github.com/9547))
+- Add double confirmation for `reload`, `patch` and `rename` subcommands in `tiup-cluster` ([#1263](https://github.com/pingcap/tiup/pull/1263), [@9547](https://github.com/9547))
+- Add ability to list available make targets for developers ([#1277](https://github.com/pingcap/tiup/pull/1277), [@rkazak](https://github.com/rkazak))
+- Update links in doc/dev/README.md file ([#1296](https://github.com/pingcap/tiup/pull/1296), [@mjonss](https://github.com/mjonss))
+- Improve handling of latest versions in `mirror clone` subcommand ([#1313](https://github.com/pingcap/tiup/pull/1313), [@dveeden](https://github.com/dveeden))
+- Add check for dependencies before downloading package in installation script ([#1348](https://github.com/pingcap/tiup/pull/1348), [@AstroProfundis](https://github.com/AstroProfundis))
+- Simplified the handling of configs imported from TiDB-Ansible ([#1350](https://github.com/pingcap/tiup/pull/1350), [@lucklove](https://github.com/lucklove))
+- Implement native scp downloading ([#1382](https://github.com/pingcap/tiup/pull/1382), [@AstroProfundis](https://github.com/AstroProfundis))
+- Update and fix dependencies ([#1362](https://github.com/pingcap/tiup/pull/1362), [@AstroProfundis](https://github.com/AstroProfundis); [#1407](https://github.com/pingcap/tiup/pull/1407), [@dveeden](https://github.com/dveeden))
+
+## [1.4.4] 2021.05.26
+
+### Fixes
+
+- Fix the issue that upgrade process may fail if the PD node is not available for longer than normal after restart ([#1359](https://github.com/pingcap/tiup/pull/1359), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix incorrect `MALLOC_CONF` value for TiKV node, set `prof_active` to `false` ([#1361](https://github.com/pingcap/tiup/pull/1361) [#1369](https://github.com/pingcap/tiup/pull/1369), [@YangKeao](https://github.com/YangKeao))
+  - Risk of this issue: Generating prof data for TiKV node with `prof_active=true` may cause high CPU systime usage in some circumstances, users need to regenerate startup scripts for TiKV nodes with `tiup cluster reload <cluster-name> -R tikv` to make the update applied
+- Fix the issue that the global `log_dir` not generated correctly for absolute paths ([#1376](https://github.com/pingcap/tiup/pull/1376), [@lucklove](https://github.com/lucklove))
+- Fix the issue that `display` command may report label mismatch warning if `placement-rule` is enabled ([#1378](https://github.com/pingcap/tiup/pull/1378), [@lucklove](https://github.com/lucklove))
+- Fix the issue that SELinux setting is incorrect when `tiup-cluster` tries to disable it with `check --apply` ([#1383](https://github.com/pingcap/tiup/pull/1383), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix the issue that when scaling out instance on a host imported from `tidb-ansible`, the process may report error about monitor directory conflict ([#1386](https://github.com/pingcap/tiup/pull/1386), [@lucklove](https://github.com/lucklove))
+
+### Improvements
+
+- Allow scale in cluster when there is no TiSpark master node but have worker node in the topology ([#1363](https://github.com/pingcap/tiup/pull/1363), [@AstroProfundis](https://github.com/AstroProfundis))
+- Make port check error message more clear to users ([#1367](https://github.com/pingcap/tiup/pull/1367), [@JinLingChristopher](https://github.com/JinLingChristopher))
+
+## [1.4.3] 2021.05.13
+
+### Fixes
+
+- Fix OS check for RHEL in `tiup-cluster` ([#1336](https://github.com/pingcap/tiup/pull/1336), [@AstroProfundis](https://github.com/AstroProfundis))
+- Check for command depends before downloading packages in install script ([#1348](https://github.com/pingcap/tiup/pull/1348), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix the issue that install script downloads an old TiUP package ([#1349](https://github.com/pingcap/tiup/pull/1349), [@lucklove](https://github.com/lucklove))
+- Fix the issue that drainer node imported from TiDB-Ansible may have incorrect `data_dir` ([#1346](https://github.com/pingcap/tiup/pull/1346), [@AstroProfundis](https://github.com/AstroProfundis))
+
+### Improvements
+
+- Optimize some subcommands of `tiup mirror` ([#1331](https://github.com/pingcap/tiup/pull/1331), [@AstroProfundis](https://github.com/AstroProfundis))
+- Set proper User-Agent for requests downloading manifests and files from remote ([#1342](https://github.com/pingcap/tiup/pull/1342), [@AstroProfundis](https://github.com/AstroProfundis))
+- Add basic telemetry report for `tiup` and `playground` ([#1341](https://github.com/pingcap/tiup/pull/1341) [#1353](https://github.com/pingcap/tiup/pull/1353), [@AstroProfundis](https://github.com/AstroProfundis))
+
 ## [1.4.2] 2021.04.26
 
 ### Fixes

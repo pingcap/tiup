@@ -18,11 +18,11 @@ import (
 	"os"
 
 	"github.com/fatih/color"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 )
 
@@ -34,7 +34,7 @@ func (m *Manager) Rename(name string, opt operator.Options, newName string, skip
 	if !utils.IsExist(m.specManager.Path(name)) {
 		return errorRenameNameNotExist.
 			New("Cluster name '%s' not exist", name).
-			WithProperty(cliutil.SuggestionFromFormat("Please double check your cluster name"))
+			WithProperty(tui.SuggestionFromFormat("Please double check your cluster name"))
 	}
 
 	if err := clusterutil.ValidateClusterNameOrError(newName); err != nil {
@@ -43,11 +43,11 @@ func (m *Manager) Rename(name string, opt operator.Options, newName string, skip
 	if utils.IsExist(m.specManager.Path(newName)) {
 		return errorRenameNameDuplicate.
 			New("Cluster name '%s' is duplicated", newName).
-			WithProperty(cliutil.SuggestionFromFormat("Please specify another cluster name"))
+			WithProperty(tui.SuggestionFromFormat("Please specify another cluster name"))
 	}
 
 	if !skipConfirm {
-		if err := cliutil.PromptForConfirmOrAbortError(
+		if err := tui.PromptForConfirmOrAbortError(
 			fmt.Sprintf("Will rename the cluster name from %s to %s.\nDo you confirm this action? [y/N]:", color.HiYellowString(name), color.HiYellowString(newName)),
 		); err != nil {
 			return err

@@ -22,13 +22,13 @@ import (
 	"github.com/fatih/color"
 	"github.com/joomcode/errorx"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tui"
 )
 
 // CleanCluster cleans the cluster without destroying it
@@ -108,7 +108,7 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 			}
 		}
 
-		if err := cliutil.PromptForConfirmOrAbortError(
+		if err := tui.PromptForConfirmOrAbortError(
 			"This operation will stop %s %s cluster %s and clean its' %s.\nNodes will be ignored: %s\nRoles will be ignored: %s\nFiles to be deleted are: %s\nDo you want to continue? [y/N]:",
 			m.sysName,
 			color.HiYellowString(base.Version),
@@ -122,7 +122,11 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 		log.Infof("Cleanup cluster...")
 	}
 
-	t := m.sshTaskBuilder(name, topo, base.User, gOpt).
+	b, err := m.sshTaskBuilder(name, topo, base.User, gOpt)
+	if err != nil {
+		return err
+	}
+	t := b.
 		Func("StopCluster", func(ctx context.Context) error {
 			return operator.Stop(ctx, topo, operator.Options{}, tlsCfg)
 		}).
@@ -131,7 +135,7 @@ func (m *Manager) CleanCluster(name string, gOpt operator.Options, cleanOpt oper
 		}).
 		Build()
 
-	if err := t.Execute(ctxt.New(context.Background())); err != nil {
+	if err := t.Execute(ctxt.New(context.Background(), gOpt.Concurrency)); err != nil {
 		if errorx.Cast(err) != nil {
 			// FIXME: Map possible task errors and give suggestions.
 			return err

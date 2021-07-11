@@ -18,10 +18,6 @@
 - [English](https://pingcap.com/blog/)
 - [简体中文](https://pingcap.com/blog-cn/)
 
-## TiDB Monthly
-
-[TiDB Monthly](https://pingcap.com/weekly/)
-
 ## Installation
 
 ```sh

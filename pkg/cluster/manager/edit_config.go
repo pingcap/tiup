@@ -22,11 +22,11 @@ import (
 
 	"github.com/fatih/color"
 	perrs "github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
 	"github.com/pingcap/tiup/pkg/cluster/clusterutil"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
 	"github.com/pingcap/tiup/pkg/meta"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"gopkg.in/yaml.v2"
 )
@@ -65,7 +65,7 @@ func (m *Manager) EditConfig(name string, skipConfirm bool) error {
 		return perrs.Annotate(err, "failed to save meta")
 	}
 
-	log.Infof("Applied successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", cliutil.OsArgs0(), name)
+	log.Infof("Applied successfully, please use `%s reload %s [-N <nodes>] [-R <roles>]` to reload config.", tui.OsArgs0(), name)
 	return nil
 }
 
@@ -107,7 +107,7 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool
 	if err != nil {
 		fmt.Print(color.RedString("New topology could not be saved: "))
 		log.Infof("Failed to parse topology file: %v", err)
-		if pass, _ := cliutil.PromptForConfirmNo("Do you want to continue editing? [Y/n]: "); !pass {
+		if pass, _ := tui.PromptForConfirmNo("Do you want to continue editing? [Y/n]: "); !pass {
 			return m.editTopo(origTopo, newData, skipConfirm)
 		}
 		log.Infof("Nothing changed.")
@@ -118,7 +118,7 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool
 	if err := utils.ValidateSpecDiff(origTopo, newTopo); err != nil {
 		fmt.Print(color.RedString("New topology could not be saved: "))
 		log.Errorf("%s", err)
-		if pass, _ := cliutil.PromptForConfirmNo("Do you want to continue editing? [Y/n]: "); !pass {
+		if pass, _ := tui.PromptForConfirmNo("Do you want to continue editing? [Y/n]: "); !pass {
 			return m.editTopo(origTopo, newData, skipConfirm)
 		}
 		log.Infof("Nothing changed.")
@@ -138,7 +138,7 @@ func (m *Manager) editTopo(origTopo spec.Topology, data []byte, skipConfirm bool
 	utils.ShowDiff(string(origData), string(newData), os.Stdout)
 
 	if !skipConfirm {
-		if err := cliutil.PromptForConfirmOrAbortError(
+		if err := tui.PromptForConfirmOrAbortError(
 			color.HiYellowString("Please check change highlight above, do you want to apply the change? [y/N]:"),
 		); err != nil {
 			return nil, err

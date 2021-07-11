@@ -33,10 +33,10 @@ jobs:
       fail-fast: true
       matrix:
         cases:
-          - "test_scale_core"
-          - "test_scale_tools"
-          - "test_scale_core_tls"
-          - "test_scale_tools_tls"
+          - 'test_scale_core'
+          - 'test_scale_tools'
+          - 'test_scale_core_tls'
+          - 'test_scale_tools_tls'
     env:
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
     steps:
@@ -73,6 +73,8 @@ jobs:
         id: test
         working-directory: ${{ env.working-directory }}
         run: |
+          # ensuere docker ssh is ready
+          sleep 5
           # should not use -it
           # ref: https://stackoverflow.com/questions/43099116/error-the-input-device-is-not-a-tty
           docker exec tiup-cluster-control bash /tiup-cluster/tests/tiup-cluster/run.sh ${{ matrix.cases }}

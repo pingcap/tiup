@@ -40,6 +40,7 @@ type MonitoredConfig struct {
 	globResCtl meta.ResourceControl
 	options    *spec.MonitoredOptions
 	deployUser string
+	tlsEnabled bool
 	paths      meta.DirPaths
 }
 
@@ -66,19 +67,17 @@ func (m *MonitoredConfig) Execute(ctx context.Context) error {
 	var cfg template.ConfigGenerator
 	switch m.component {
 	case spec.ComponentNodeExporter:
-		if err := m.syncBlackboxConfig(ctx, exec, config.NewBlackboxConfig()); err != nil {
+		if err := m.syncBlackboxConfig(ctx, exec, config.NewBlackboxConfig(m.paths.Deploy, m.tlsEnabled)); err != nil {
 			return err
 		}
-		cfg = scripts.NewNodeExporterScript(
-			m.paths.Deploy,
-			m.paths.Log,
-		).WithPort(uint64(m.options.NodeExporterPort)).
+		cfg = scripts.
+			NewNodeExporterScript(m.paths.Deploy, m.paths.Log).
+			WithPort(uint64(m.options.NodeExporterPort)).
 			WithNumaNode(m.options.NumaNode)
 	case spec.ComponentBlackboxExporter:
-		cfg = scripts.NewBlackboxExporterScript(
-			m.paths.Deploy,
-			m.paths.Log,
-		).WithPort(uint64(m.options.BlackboxExporterPort))
+		cfg = scripts.
+			NewBlackboxExporterScript(m.paths.Deploy, m.paths.Log).
+			WithPort(uint64(m.options.BlackboxExporterPort))
 	default:
 		return fmt.Errorf("unknown monitored component %s", m.component)
 	}
@@ -114,7 +113,7 @@ func (m *MonitoredConfig) syncMonitoredSystemConfig(ctx context.Context, exec ct
 		return err
 	}
 	tgt := filepath.Join("/tmp", comp+"_"+uuid.New().String()+".service")
-	if err := exec.Transfer(ctx, sysCfg, tgt, false); err != nil {
+	if err := exec.Transfer(ctx, sysCfg, tgt, false, 0); err != nil {
 		return err
 	}
 	if outp, errp, err := exec.Execute(ctx, fmt.Sprintf("mv %s /etc/systemd/system/%s-%d.service", tgt, comp, port), true); err != nil {
@@ -135,7 +134,7 @@ func (m *MonitoredConfig) syncMonitoredScript(ctx context.Context, exec ctxt.Exe
 		return err
 	}
 	dst := filepath.Join(m.paths.Deploy, "scripts", fmt.Sprintf("run_%s.sh", comp))
-	if err := exec.Transfer(ctx, fp, dst, false); err != nil {
+	if err := exec.Transfer(ctx, fp, dst, false, 0); err != nil {
 		return err
 	}
 	if _, _, err := exec.Execute(ctx, "chmod +x "+dst, false); err != nil {
@@ -151,7 +150,7 @@ func (m *MonitoredConfig) syncBlackboxConfig(ctx context.Context, exec ctxt.Exec
 		return err
 	}
 	dst := filepath.Join(m.paths.Deploy, "conf", "blackbox.yml")
-	return exec.Transfer(ctx, fp, dst, false)
+	return exec.Transfer(ctx, fp, dst, false, 0)
 }
 
 // Rollback implements the Task interface

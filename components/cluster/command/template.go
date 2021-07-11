@@ -26,6 +26,19 @@ import (
 type TemplateOptions struct {
 	Full    bool // print full template
 	MultiDC bool // print template for deploying to multiple data center
+	Local   bool // print local template
+}
+
+// This is used to identify how many bool type options are set, so that an
+// error can be throw if more than one is given.
+func sumBool(b ...bool) int {
+	n := 0
+	for _, v := range b {
+		if v {
+			n++
+		}
+	}
+	return n
 }
 
 func newTemplateCmd() *cobra.Command {
@@ -35,14 +48,17 @@ func newTemplateCmd() *cobra.Command {
 		Use:   "template",
 		Short: "Print topology template",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if opt.Full && opt.MultiDC {
-				return errors.New("at most one of 'full' and 'multi-dc' can be specified")
+			if sumBool(opt.Full, opt.MultiDC, opt.Local) > 1 {
+				return errors.New("at most one of 'full', 'multi-dc', or 'local' can be specified")
 			}
 			name := "minimal.yaml"
-			if opt.Full {
+			switch {
+			case opt.Full:
 				name = "topology.example.yaml"
-			} else if opt.MultiDC {
+			case opt.MultiDC:
 				name = "multi-dc.yaml"
+			case opt.Local:
+				name = "local.yaml"
 			}
 
 			fp := path.Join("templates", "examples", name)
@@ -58,6 +74,7 @@ func newTemplateCmd() *cobra.Command {
 
 	cmd.Flags().BoolVar(&opt.Full, "full", false, "Print the full topology template for TiDB cluster.")
 	cmd.Flags().BoolVar(&opt.MultiDC, "multi-dc", false, "Print template for deploying to multiple data center.")
+	cmd.Flags().BoolVar(&opt.Local, "local", false, "Print template for deploying a simple cluster locally.")
 
 	return cmd
 }

@@ -23,10 +23,9 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
-	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/errutil"
 	"github.com/pingcap/tiup/pkg/meta"
 	"github.com/pingcap/tiup/pkg/set"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"go.uber.org/zap"
 )
@@ -34,9 +33,9 @@ import (
 // pre defined error types
 var (
 	errNSDeploy              = errNS.NewSubNamespace("deploy")
-	errDeployDirConflict     = errNSDeploy.NewType("dir_conflict", errutil.ErrTraitPreCheck)
-	errDeployDirOverlap      = errNSDeploy.NewType("dir_overlap", errutil.ErrTraitPreCheck)
-	errDeployPortConflict    = errNSDeploy.NewType("port_conflict", errutil.ErrTraitPreCheck)
+	errDeployDirConflict     = errNSDeploy.NewType("dir_conflict", utils.ErrTraitPreCheck)
+	errDeployDirOverlap      = errNSDeploy.NewType("dir_overlap", utils.ErrTraitPreCheck)
+	errDeployPortConflict    = errNSDeploy.NewType("port_conflict", utils.ErrTraitPreCheck)
 	ErrNoTiSparkMaster       = errors.New("there must be a Spark master node if you want to use the TiSpark component")
 	ErrMultipleTiSparkMaster = errors.New("a TiSpark enabled cluster with more than 1 Spark master node is not supported")
 	ErrMultipleTisparkWorker = errors.New("multiple TiSpark workers on the same host is not supported by Spark")
@@ -185,7 +184,7 @@ func CheckClusterDirConflict(clusterList map[string]Metadata, clusterName string
 					"ExistHost":      d2.instance.GetHost(),
 				}
 				zap.L().Info("Meet deploy directory conflict", zap.Any("info", properties))
-				return errDeployDirConflict.New("Deploy directory conflicts to an existing cluster").WithProperty(cliutil.SuggestionFromTemplate(`
+				return errDeployDirConflict.New("Deploy directory conflicts to an existing cluster").WithProperty(tui.SuggestionFromTemplate(`
 The directory you specified in the topology file is:
   Directory: {{ColorKeyword}}{{.ThisDirKind}} {{.ThisDir}}{{ColorReset}}
   Component: {{ColorKeyword}}{{.ThisComponent}} {{.ThisHost}}{{ColorReset}}
@@ -204,8 +203,9 @@ Please change to use another directory or another host.
 	return CheckClusterDirOverlap(currentEntries)
 }
 
-// CheckClusterDirOverlap checks cluster dir overlaps with data or log
-// we don't allow to deploy log under data, and vise versa
+// CheckClusterDirOverlap checks cluster dir overlaps with data or log.
+// this should only be used across clusters.
+// we don't allow to deploy log under data, and vise versa.
 // ref https://github.com/pingcap/tiup/issues/1047#issuecomment-761711508
 func CheckClusterDirOverlap(entries []DirEntry) error {
 	ignore := func(d1, d2 DirEntry) bool {
@@ -223,9 +223,18 @@ func CheckClusterDirOverlap(entries []DirEntry) error {
 			}
 
 			if utils.IsSubDir(d1.dir, d2.dir) || utils.IsSubDir(d2.dir, d1.dir) {
+				// overlap is allowed in the case both sides are imported
 				if d1.instance.IsImported() && d2.instance.IsImported() {
 					continue
 				}
+				// overlap is alloed in the case one side is imported and the other is monitor,
+				// we assume that the monitor is deployed with the first instance in that host,
+				// it implies that the monitor is imported too.
+				if (strings.HasPrefix(d1.dirKind, "monitor") && d2.instance.IsImported()) ||
+					(d1.instance.IsImported() && strings.HasPrefix(d2.dirKind, "monitor")) {
+					continue
+				}
+
 				properties := map[string]string{
 					"ThisDirKind":   d1.dirKind,
 					"ThisDir":       d1.dir,
@@ -237,7 +246,7 @@ func CheckClusterDirOverlap(entries []DirEntry) error {
 					"ThatHost":      d2.instance.GetHost(),
 				}
 				zap.L().Info("Meet deploy directory overlap", zap.Any("info", properties))
-				return errDeployDirOverlap.New("Deploy directory overlaps to another instance").WithProperty(cliutil.SuggestionFromTemplate(`
+				return errDeployDirOverlap.New("Deploy directory overlaps to another instance").WithProperty(tui.SuggestionFromTemplate(`
 The directory you specified in the topology file is:
   Directory: {{ColorKeyword}}{{.ThisDirKind}} {{.ThisDir}}{{ColorReset}}
   Component: {{ColorKeyword}}{{.ThisComponent}} {{.ThisHost}}{{ColorReset}}
@@ -354,7 +363,7 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 					"ExistHost":      p2.instance.GetHost(),
 				}
 				zap.L().Info("Meet deploy port conflict", zap.Any("info", properties))
-				return errDeployPortConflict.New("Deploy port conflicts to an existing cluster").WithProperty(cliutil.SuggestionFromTemplate(`
+				return errDeployPortConflict.New("Deploy port conflicts to an existing cluster").WithProperty(tui.SuggestionFromTemplate(`
 The port you specified in the topology file is:
   Port:      {{ColorKeyword}}{{.ThisPort}}{{ColorReset}}
   Component: {{ColorKeyword}}{{.ThisComponent}} {{.ThisHost}}{{ColorReset}}
@@ -532,7 +541,7 @@ func (s *Specification) portInvalidDetect() error {
 				port := int(compSpec.Field(i).Int())
 				if port <= 0 || port >= 65535 {
 					portField := strings.Split(compSpec.Type().Field(i).Tag.Get("yaml"), ",")[0]
-					return errors.Errorf("`%s` of %s=%d is invalid", cfg, portField, port)
+					return errors.Errorf("`%s` of %s=%d is invalid, port should be in the range [0, 65535]", cfg, portField, port)
 				}
 			}
 		}

@@ -18,30 +18,19 @@ import (
 	"os"
 	"path"
 
-	"github.com/pingcap/tiup/pkg/cliutil"
-	"github.com/pingcap/tiup/pkg/cluster/executor"
 	"github.com/pingcap/tiup/pkg/cluster/manager"
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
-	"github.com/pingcap/tiup/pkg/cluster/report"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/cluster/task"
-	"github.com/pingcap/tiup/pkg/errutil"
-	telemetry2 "github.com/pingcap/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/telemetry"
+	"github.com/pingcap/tiup/pkg/tui"
 	"github.com/pingcap/tiup/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 var (
-	teleReport    *telemetry2.Report
-	clusterReport *telemetry2.ClusterReport
-	teleNodeInfos []*telemetry2.NodeInfo
-	teleTopology  string
-	teleCommand   []string
-)
-
-var (
 	errNSDeploy            = errNS.NewSubNamespace("deploy")
-	errDeployNameDuplicate = errNSDeploy.NewType("name_dup", errutil.ErrTraitPreCheck)
+	errDeployNameDuplicate = errNSDeploy.NewType("name_dup", utils.ErrTraitPreCheck)
 )
 
 func newDeploy() *cobra.Command {
@@ -54,17 +43,12 @@ func newDeploy() *cobra.Command {
 		Long:         "Deploy a cluster for production. SSH connection will be used to deploy files, as well as creating system users for running the service.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			shouldContinue, err := cliutil.CheckCommandArgsAndMayPrintHelp(cmd, args, 3)
+			shouldContinue, err := tui.CheckCommandArgsAndMayPrintHelp(cmd, args, 3)
 			if err != nil {
 				return err
 			}
 			if !shouldContinue {
 				return nil
-			}
-
-			// natvie ssh has it's own logic to find the default identity_file
-			if gOpt.SSHType == executor.SSHTypeSystem && !utils.IsFlagSetByUser(cmd.Flags(), "identity_file") {
-				opt.IdentityFile = ""
 			}
 
 			clusterName := args[0]
@@ -104,7 +88,7 @@ func postDeployHook(builder *task.Builder, topo spec.Topology) {
 		return nil
 	}).BuildAsStep("Check status").SetHidden(true)
 
-	if report.Enabled() {
+	if telemetry.Enabled() {
 		builder.ParallelStep("+ Check status", false, nodeInfoTask)
 	}
 

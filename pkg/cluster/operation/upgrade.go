@@ -55,6 +55,7 @@ func Upgrade(
 		}
 
 		log.Infof("Upgrading component %s", component.Name())
+
 		// perform pre-upgrade actions of component
 		var origLeaderScheduleLimit int
 		var origRegionScheduleLimit int
@@ -64,19 +65,22 @@ func Upgrade(
 			pdClient := api.NewPDClient(topo.(*spec.Specification).GetPDList(), 10*time.Second, tlsCfg)
 			origLeaderScheduleLimit, origRegionScheduleLimit, err = increaseScheduleLimit(ctx, pdClient)
 			if err != nil {
-				return err
+				// the config modifing error should be able to be safely ignored, as it will
+				// be processed with current settings anyway.
+				log.Warnf("failed increasing schedule limit: %s, ignore", err)
+			} else {
+				defer func() {
+					upgErr := decreaseScheduleLimit(pdClient, origLeaderScheduleLimit, origRegionScheduleLimit)
+					if upgErr != nil {
+						log.Warnf(
+							"failed decreasing schedule limit (original values should be: %s, %s), please check if their current values are reasonable: %s",
+							fmt.Sprintf("leader-schedule-limit=%d", origLeaderScheduleLimit),
+							fmt.Sprintf("region-schedule-limit=%d", origRegionScheduleLimit),
+							upgErr,
+						)
+					}
+				}()
 			}
-			defer func() {
-				upgErr := decreaseScheduleLimit(pdClient, origLeaderScheduleLimit, origRegionScheduleLimit)
-				if upgErr != nil {
-					log.Warnf(
-						"failed decreasing schedule limit (original values should be: %s, %s), please check if their current values are reasonable: %s",
-						fmt.Sprintf("leader-schedule-limit=%d", origLeaderScheduleLimit),
-						fmt.Sprintf("region-schedule-limit=%d", origRegionScheduleLimit),
-						upgErr,
-					)
-				}
-			}()
 		default:
 			// do nothing, kept for future usage with other components
 		}

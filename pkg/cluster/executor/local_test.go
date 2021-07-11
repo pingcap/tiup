@@ -25,7 +25,7 @@ import (
 )
 
 func TestLocal(t *testing.T) {
-	ctx := ctxt.New(context.Background())
+	ctx := ctxt.New(context.Background(), 0)
 
 	assert := require.New(t)
 	user, err := user.Current()
@@ -54,7 +54,7 @@ func TestLocal(t *testing.T) {
 	defer os.Remove(dst.Name())
 
 	// Transfer src to dst and check it.
-	err = local.Transfer(ctx, src.Name(), dst.Name(), false)
+	err = local.Transfer(ctx, src.Name(), dst.Name(), false, 0)
 	assert.Nil(err)
 
 	data, err := os.ReadFile(dst.Name())
@@ -72,7 +72,7 @@ func TestWrongIP(t *testing.T) {
 }
 
 func TestLocalExecuteWithQuotes(t *testing.T) {
-	ctx := ctxt.New(context.Background())
+	ctx := ctxt.New(context.Background(), 0)
 
 	assert := require.New(t)
 	user, err := user.Current()

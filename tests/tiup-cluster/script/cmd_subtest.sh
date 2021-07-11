@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eu
+
 function cmd_subtest() {
     mkdir -p ~/.tiup/bin/
 
@@ -16,10 +18,16 @@ function cmd_subtest() {
 
     client=""
     if [ $native_ssh == true ]; then
-        client="--native-ssh"
+        client="--ssh=system"
     fi
 
+    # identify SSH via ssh-agent
+    eval $(ssh-agent)
+    ssh-add /root/.ssh/id_rsa
+
+    mv /root/.ssh/id_rsa{,.bak}
     tiup-cluster $client check $topo -i ~/.ssh/id_rsa --enable-mem --enable-cpu --apply
+    mv /root/.ssh/id_rsa{.bak,}
 
     check_result=`tiup-cluster $client --yes check $topo -i ~/.ssh/id_rsa`
 
@@ -31,6 +39,7 @@ function cmd_subtest() {
     echo $check_result | grep "service"
     echo $check_result | grep "thp"
 
+    for i in {1..5}; do ssh -o "StrictHostKeyChecking=no" -o "PasswordAuthentication=no" n"$i" "grep -q tidb /etc/passwd && (killall -u tidb; userdel -f -r tidb) || true"; done
     # This should fail because there is no such user: tidb
     ! tiup-cluster $client --yes deploy $name $version $topo -i ~/.ssh/id_rsa --skip-create-user
     # This is a normal deploy
