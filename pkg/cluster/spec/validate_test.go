@@ -430,6 +430,10 @@ pd_servers:
   - host: 172.16.5.138
     client_port: 2234
     peer_port: 2235
+  - host: 172.16.5.139
+    client_port: 2236
+    peer_port: 2237
+    ignore_exporter: true
 `), &topo2)
 	c.Assert(err, IsNil)
 
@@ -470,6 +474,30 @@ It conflicts to a port in the existing cluster:
   Existing Component:    monitor 172.16.5.138
 
 Please change to use another port or another host.`)
+
+	// monitoring agent port conflict but the instance marked as ignore_exporter
+	topo3 = Specification{}
+	err = yaml.Unmarshal([]byte(`
+tidb_servers:
+- host: 172.16.5.138
+  ignore_exporter: true
+`), &topo3)
+	c.Assert(err, IsNil)
+	err = CheckClusterPortConflict(clsList, "topo", &topo3)
+	c.Assert(err, IsNil)
+
+	// monitoring agent port conflict but the existing instance marked as ignore_exporter
+	topo3 = Specification{}
+	err = yaml.Unmarshal([]byte(`
+monitored:
+  node_exporter_port: 9102
+  blackbox_exporter_port: 9116
+tidb_servers:
+- host: 172.16.5.139
+`), &topo3)
+	c.Assert(err, IsNil)
+	err = CheckClusterPortConflict(clsList, "topo", &topo3)
+	c.Assert(err, IsNil)
 
 	// component port conflict
 	topo4 := Specification{}

@@ -264,7 +264,7 @@ Please modify the topology file and try again.
 	return nil
 }
 
-// CheckClusterPortConflict checks cluster dir conflict
+// CheckClusterPortConflict checks cluster port conflict
 func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName string, topo Topology) error {
 	type Entry struct {
 		clusterName   string
@@ -353,6 +353,7 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 			}
 
 			if p1.port == p2.port {
+				// build the conflict info
 				properties := map[string]string{
 					"ThisPort":       strconv.Itoa(p1.port),
 					"ThisComponent":  p1.componentName,
@@ -362,6 +363,15 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 					"ExistComponent": p2.componentName,
 					"ExistHost":      p2.instance.GetHost(),
 				}
+				// if one of the instances marks itself as ignore_exporter, do not report
+				// the monitoring agent ports conflict and just skip
+				if (p1.componentName == RoleMonitor && p1.instance.IgnoreMonitorAgent()) ||
+					(p2.componentName == RoleMonitor && p2.instance.IgnoreMonitorAgent()) {
+					zap.L().Debug("Ignored deploy port conflict", zap.Any("info", properties))
+					continue
+				}
+
+				// build error message
 				zap.L().Info("Meet deploy port conflict", zap.Any("info", properties))
 				return errDeployPortConflict.New("Deploy port conflicts to an existing cluster").WithProperty(tui.SuggestionFromTemplate(`
 The port you specified in the topology file is:
