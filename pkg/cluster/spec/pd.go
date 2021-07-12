@@ -39,6 +39,7 @@ type PDSpec struct {
 	SSHPort             int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported            bool   `yaml:"imported,omitempty"`
 	Patched             bool   `yaml:"patched,omitempty"`
+	IgnoreExporter      bool   `yaml:"ignore_exporter,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
 	Name            string                 `yaml:"name"`
 	ClientPort      int                    `yaml:"client_port" default:"2379"`
@@ -94,6 +95,11 @@ func (s *PDSpec) GetMainPort() int {
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s *PDSpec) IsImported() bool {
 	return s.Imported
+}
+
+// IgnoreMonitorAgent returns if the node does not have monitor agents available
+func (s *PDSpec) IgnoreMonitorAgent() bool {
+	return s.IgnoreExporter
 }
 
 // PDComponent represents PD component.

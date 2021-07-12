@@ -32,6 +32,7 @@ type AlertmanagerSpec struct {
 	SSHPort         int                  `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported        bool                 `yaml:"imported,omitempty"`
 	Patched         bool                 `yaml:"patched,omitempty"`
+	IgnoreExporter  bool                 `yaml:"ignore_exporter,omitempty"`
 	WebPort         int                  `yaml:"web_port" default:"9093"`
 	ClusterPort     int                  `yaml:"cluster_port" default:"9094"`
 	DeployDir       string               `yaml:"deploy_dir,omitempty"`
@@ -62,6 +63,11 @@ func (s *AlertmanagerSpec) GetMainPort() int {
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s *AlertmanagerSpec) IsImported() bool {
 	return s.Imported
+}
+
+// IgnoreMonitorAgent returns if the node does not have monitor agents available
+func (s *AlertmanagerSpec) IgnoreMonitorAgent() bool {
+	return s.IgnoreExporter
 }
 
 // AlertManagerComponent represents Alertmanager component.

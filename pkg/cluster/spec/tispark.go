@@ -36,19 +36,20 @@ import (
 
 // TiSparkMasterSpec is the topology specification for TiSpark master node
 type TiSparkMasterSpec struct {
-	Host         string                 `yaml:"host"`
-	ListenHost   string                 `yaml:"listen_host,omitempty"`
-	SSHPort      int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported     bool                   `yaml:"imported,omitempty"`
-	Patched      bool                   `yaml:"patched,omitempty"`
-	Port         int                    `yaml:"port" default:"7077"`
-	WebPort      int                    `yaml:"web_port" default:"8080"`
-	DeployDir    string                 `yaml:"deploy_dir,omitempty"`
-	JavaHome     string                 `yaml:"java_home,omitempty" validate:"java_home:editable"`
-	SparkConfigs map[string]interface{} `yaml:"spark_config,omitempty" validate:"spark_config:ignore"`
-	SparkEnvs    map[string]string      `yaml:"spark_env,omitempty" validate:"spark_env:ignore"`
-	Arch         string                 `yaml:"arch,omitempty"`
-	OS           string                 `yaml:"os,omitempty"`
+	Host           string                 `yaml:"host"`
+	ListenHost     string                 `yaml:"listen_host,omitempty"`
+	SSHPort        int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported       bool                   `yaml:"imported,omitempty"`
+	Patched        bool                   `yaml:"patched,omitempty"`
+	IgnoreExporter bool                   `yaml:"ignore_exporter,omitempty"`
+	Port           int                    `yaml:"port" default:"7077"`
+	WebPort        int                    `yaml:"web_port" default:"8080"`
+	DeployDir      string                 `yaml:"deploy_dir,omitempty"`
+	JavaHome       string                 `yaml:"java_home,omitempty" validate:"java_home:editable"`
+	SparkConfigs   map[string]interface{} `yaml:"spark_config,omitempty" validate:"spark_config:ignore"`
+	SparkEnvs      map[string]string      `yaml:"spark_env,omitempty" validate:"spark_env:ignore"`
+	Arch           string                 `yaml:"arch,omitempty"`
+	OS             string                 `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -71,19 +72,25 @@ func (s *TiSparkMasterSpec) IsImported() bool {
 	return s.Imported
 }
 
+// IgnoreMonitorAgent returns if the node does not have monitor agents available
+func (s *TiSparkMasterSpec) IgnoreMonitorAgent() bool {
+	return s.IgnoreExporter
+}
+
 // TiSparkWorkerSpec is the topology specification for TiSpark slave nodes
 type TiSparkWorkerSpec struct {
-	Host       string `yaml:"host"`
-	ListenHost string `yaml:"listen_host,omitempty"`
-	SSHPort    int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
-	Imported   bool   `yaml:"imported,omitempty"`
-	Patched    bool   `yaml:"patched,omitempty"`
-	Port       int    `yaml:"port" default:"7078"`
-	WebPort    int    `yaml:"web_port" default:"8081"`
-	DeployDir  string `yaml:"deploy_dir,omitempty"`
-	JavaHome   string `yaml:"java_home,omitempty" validate:"java_home:editable"`
-	Arch       string `yaml:"arch,omitempty"`
-	OS         string `yaml:"os,omitempty"`
+	Host           string `yaml:"host"`
+	ListenHost     string `yaml:"listen_host,omitempty"`
+	SSHPort        int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
+	Imported       bool   `yaml:"imported,omitempty"`
+	Patched        bool   `yaml:"patched,omitempty"`
+	IgnoreExporter bool   `yaml:"ignore_exporter,omitempty"`
+	Port           int    `yaml:"port" default:"7078"`
+	WebPort        int    `yaml:"web_port" default:"8081"`
+	DeployDir      string `yaml:"deploy_dir,omitempty"`
+	JavaHome       string `yaml:"java_home,omitempty" validate:"java_home:editable"`
+	Arch           string `yaml:"arch,omitempty"`
+	OS             string `yaml:"os,omitempty"`
 }
 
 // Role returns the component role of the instance
@@ -104,6 +111,11 @@ func (s *TiSparkWorkerSpec) GetMainPort() int {
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s *TiSparkWorkerSpec) IsImported() bool {
 	return s.Imported
+}
+
+// IgnoreMonitorAgent returns if the node does not have monitor agents available
+func (s *TiSparkWorkerSpec) IgnoreMonitorAgent() bool {
+	return s.IgnoreExporter
 }
 
 // TiSparkMasterComponent represents TiSpark master component.
