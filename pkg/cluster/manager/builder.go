@@ -258,6 +258,7 @@ func buildScaleOutTask(
 	}
 
 	hasImported := false
+	noAgentHosts := set.NewStringSet()
 
 	mergedTopo.IterInstance(func(inst spec.Instance) {
 		deployDir := spec.Abs(base.User, inst.DeployDir())
@@ -276,6 +277,11 @@ func buildScaleOutTask(
 					CopyComponent(compName, inst.OS(), inst.Arch(), version, "", inst.GetHost(), deployDir)
 			}
 			hasImported = true
+		}
+
+		// log the instance if it marks itself as ignore_exporter
+		if inst.IgnoreMonitorAgent() {
+			noAgentHosts.Insert(inst.GetHost())
 		}
 
 		// Refresh all configuration
@@ -307,6 +313,7 @@ func buildScaleOutTask(
 		m,
 		name,
 		uninitializedHosts,
+		noAgentHosts,
 		topo.BaseTopo().GlobalOptions,
 		topo.BaseTopo().MonitoredOptions,
 		base.Version,
@@ -370,6 +377,7 @@ func buildMonitoredDeployTask(
 	m *Manager,
 	name string,
 	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
+	noAgentHosts set.StringSet, // hosts that do not deploy monitor agents
 	globalOptions *spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
 	version string,
@@ -386,6 +394,11 @@ func buildMonitoredDeployTask(
 		version := m.bindVersion(comp, version)
 
 		for host, info := range uniqueHosts {
+			// skip deploying monitoring agents if the instance is marked so
+			if noAgentHosts.Exist(host) {
+				continue
+			}
+
 			// populate unique comp-os-arch set
 			key := fmt.Sprintf("%s-%s-%s", comp, info.os, info.arch)
 			if found := uniqueCompOSArch.Exist(key); !found {
