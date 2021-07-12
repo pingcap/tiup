@@ -177,6 +177,7 @@ func (m *Manager) Deploy(
 
 	// Initialize environment
 	uniqueHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
+	noAgentHosts := set.NewStringSet()
 	globalOptions := base.GlobalOptions
 
 	// generate CA and client cert for TLS enabled cluster
@@ -210,6 +211,11 @@ func (m *Manager) Deploy(
 						"for instances imported from tidb-ansible and make no sense when " +
 						"deploying new instances, please delete the line or set it to 'false' for new instances")
 				return // skip the host to avoid issues
+			}
+
+			// log the instance if it marks itself as ignore_exporter
+			if inst.IgnoreMonitorAgent() {
+				noAgentHosts.Insert(inst.GetHost())
 			}
 
 			uniqueHosts[inst.GetHost()] = hostInfo{
@@ -373,6 +379,7 @@ func (m *Manager) Deploy(
 		m,
 		name,
 		uniqueHosts,
+		noAgentHosts,
 		globalOptions,
 		topo.GetMonitoredOptions(),
 		clusterVersion,
