@@ -365,8 +365,8 @@ func CheckClusterPortConflict(clusterList map[string]Metadata, clusterName strin
 				}
 				// if one of the instances marks itself as ignore_exporter, do not report
 				// the monitoring agent ports conflict and just skip
-				if (p1.componentName == RoleMonitor && p1.instance.IgnoreMonitorAgent()) ||
-					(p2.componentName == RoleMonitor && p2.instance.IgnoreMonitorAgent()) {
+				if (p1.componentName == RoleMonitor || p2.componentName == RoleMonitor) &&
+					(p1.instance.IgnoreMonitorAgent() || p2.instance.IgnoreMonitorAgent()) {
 					zap.L().Debug("Ignored deploy port conflict", zap.Any("info", properties))
 					continue
 				}
