@@ -1,5 +1,20 @@
 TiUP Changelog
 
+## [1.5.3] 2021-07-15
+
+### Fixes
+
+- Fix incorrect alert rules for TiDB version 3.x ([#1463](https://github.com/pingcap/tiup/pull/1463), [@9547](https://github.com/9547))
+- Fix TiKV config check to correctly handle the `data_dir` value ([#1471](https://github.com/pingcap/tiup/pull/1471), [@tabokie](https://github.com/tabokie))
+
+### Improvements
+
+- Update dependencies and adjust error message of `ctl` ([#1459](https://github.com/pingcap/tiup/pull/1459), [@AstroProfundis](https://github.com/AstroProfundis))
+- Use `$SHELL` environment variable for completion ([#1455](https://github.com/pingcap/tiup/pull/1455), [@dveeden](https://github.com/dveeden))
+- Allow listing components from local cached manifests without network access ([#1466](https://github.com/pingcap/tiup/pull/1466), [@c4pt0r](https://github.com/c4pt0r))
+- Adjust error message of SELinux check failure ([#1476](https://github.com/pingcap/tiup/pull/1476), [@AstroProfundis](https://github.com/AstroProfundis))
+- Adjust warning message when `scale-in` with `--force` argument to make it more clear of potential risks ([#1477](https://github.com/pingcap/tiup/pull/1477), [@AstroProfundis](https://github.com/AstroProfundis))
+
 ## [1.5.2] 2021-06-24
 
 ### Fixes
