@@ -487,8 +487,15 @@ func CheckSELinux(ctx context.Context, e ctxt.Executor) *CheckResult {
 		return result
 	}
 	out := strings.Trim(string(stdout), "\n")
-	if lines, err := strconv.Atoi(out); err != nil || lines > 0 {
-		result.Err = fmt.Errorf("SELinux is not disabled, %d %s", lines, err)
+	lines, err := strconv.Atoi(out)
+	if err != nil {
+		result.Err = fmt.Errorf("can not check SELinux status, please validate manually, %s", err)
+		result.Warn = true
+		return result
+	}
+
+	if lines > 0 {
+		result.Err = fmt.Errorf("SELinux is not disabled")
 	} else {
 		result.Msg = "SELinux is disabled"
 	}
