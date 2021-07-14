@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/pingcap/errors"
+	"github.com/pingcap/tiup/pkg/colorutil"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/repository/v1manifest"
 	"github.com/pingcap/tiup/pkg/set"
@@ -93,7 +94,7 @@ func (lr *listResult) print() {
 func showComponentList(env *environment.Environment, opt listOptions) (*listResult, error) {
 	err := env.V1Repository().UpdateComponentManifests()
 	if err != nil {
-		tui.ColorWarningMsg.Fprint(os.Stderr, "Warn: Update component manifest failed, err_msg=[", err.Error(), "]\n")
+		colorutil.ColorWarningMsg.Fprint(os.Stderr, "Warn: Update component manifest failed, err_msg=[", err.Error(), "]\n")
 	}
 
 	installed, err := env.Profile().InstalledComponents()
