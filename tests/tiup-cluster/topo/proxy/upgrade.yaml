@@ -1,0 +1,54 @@
+server_configs:
+  tidb:
+    binlog.enable: true
+    binlog.ignore-error: false
+  tikv:
+    storage.reserve-space: 1K
+  pump:
+    storage.stop-write-at-available-space: 1 mib
+
+tidb_servers:
+  - host: p1
+  - host: p2
+
+pd_servers:
+  - host: p3
+  - host: p4
+  - host: p5
+
+# Note if only 3 instance, when scale-in one of it.
+# It may not be tombstone.
+tikv_servers:
+  - host: p2
+  - host: p3
+  - host: p4
+  - host: p5
+
+# tiflash eat too much memory
+# and binary is more than 1G..
+# tiflash_servers:
+#   - host: p3
+#   - host: p4
+#   - host: p5
+
+pump_servers:
+  - host: p3
+  - host: p4
+  - host: p5
+
+drainer_servers:
+  - host: p1
+    data_dir: /home/tidb/data/drainer-8249/data
+    commit_ts: -1
+    config:
+      syncer.db-type: "file"
+
+monitoring_servers:
+  - host: p1
+    rule_dir: /tmp/local/prometheus
+grafana_servers:
+  - host: p1
+    dashboard_dir: /tmp/local/grafana
+alertmanager_servers:
+  - host: p1
+    config_file: /tmp/local/alertmanager/alertmanager.yml

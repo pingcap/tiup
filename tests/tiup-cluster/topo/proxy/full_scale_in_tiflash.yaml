@@ -1,0 +1,3 @@
+tiflash_servers:
+  - host: p3
+    data_dir: "data1,/data/tiflash-data"

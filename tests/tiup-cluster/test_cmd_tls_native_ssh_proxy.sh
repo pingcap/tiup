@@ -6,6 +6,6 @@ source script/cmd_subtest.sh
 export GO_FAILPOINTS='github.com/pingcap/tiup/pkg/cluster/executor/assertNativeSSH=return(true)'
 
 echo "test cluster for version v4.0.12 w/ TLS, via native ssh"
-cmd_subtest 4.0.12 true true false
+cmd_subtest 4.0.12 true true true
 
 unset GO_FAILPOINTS
