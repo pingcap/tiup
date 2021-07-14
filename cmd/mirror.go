@@ -373,10 +373,6 @@ func newMirrorRenewCmd() *cobra.Command {
 			} else {
 				v1manifest.RenewManifest(m, time.Now())
 			}
-			flagSet := set.NewStringSet()
-			cmd.Flags().Visit(func(f *pflag.Flag) {
-				flagSet.Insert(f.Name)
-			})
 
 			manifest, err := sign(privPath, m)
 			if err != nil {
