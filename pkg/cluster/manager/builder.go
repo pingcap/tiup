@@ -279,7 +279,7 @@ func buildScaleOutTask(
 			hasImported = true
 		}
 
-		// log the instance if it marks itself as ignore_exporter
+		// add the instance to ignore list if it marks itself as ignore_exporter
 		if inst.IgnoreMonitorAgent() {
 			noAgentHosts.Insert(inst.GetHost())
 		}
@@ -506,6 +506,7 @@ func buildRefreshMonitoredConfigTasks(
 	specManager *spec.SpecManager,
 	name string,
 	uniqueHosts map[string]hostInfo, // host -> ssh-port, os, arch
+	noAgentHosts set.StringSet,
 	globalOptions spec.GlobalOptions,
 	monitoredOptions *spec.MonitoredOptions,
 	sshTimeout, exeTimeout uint64,
@@ -520,6 +521,10 @@ func buildRefreshMonitoredConfigTasks(
 	// monitoring agents
 	for _, comp := range []string{spec.ComponentNodeExporter, spec.ComponentBlackboxExporter} {
 		for host, info := range uniqueHosts {
+			if noAgentHosts.Exist(host) {
+				continue
+			}
+
 			deployDir := spec.Abs(globalOptions.User, monitoredOptions.DeployDir)
 			// data dir would be empty for components which don't need it
 			dataDir := monitoredOptions.DataDir

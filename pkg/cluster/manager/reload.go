@@ -27,6 +27,7 @@ import (
 	operator "github.com/pingcap/tiup/pkg/cluster/operation"
 	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/logger/log"
+	"github.com/pingcap/tiup/pkg/set"
 	"github.com/pingcap/tiup/pkg/tui"
 )
 
@@ -69,7 +70,13 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 	base := metadata.GetBaseMeta()
 
 	uniqueHosts := make(map[string]hostInfo) // host -> ssh-port, os, arch
+	noAgentHosts := set.NewStringSet()
 	topo.IterInstance(func(inst spec.Instance) {
+		// add the instance to ignore list if it marks itself as ignore_exporter
+		if inst.IgnoreMonitorAgent() {
+			noAgentHosts.Insert(inst.GetHost())
+		}
+
 		if _, found := uniqueHosts[inst.GetHost()]; !found {
 			uniqueHosts[inst.GetHost()] = hostInfo{
 				ssh:  inst.GetSSHPort(),
@@ -84,6 +91,7 @@ func (m *Manager) Reload(name string, gOpt operator.Options, skipRestart, skipCo
 		m.specManager,
 		name,
 		uniqueHosts,
+		noAgentHosts,
 		*topo.BaseTopo().GlobalOptions,
 		topo.GetMonitoredOptions(),
 		sshTimeout,

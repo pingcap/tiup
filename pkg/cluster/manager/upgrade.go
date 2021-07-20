@@ -76,6 +76,16 @@ func (m *Manager) Upgrade(name string, clusterVersion string, opt operator.Optio
 	for _, comp := range topo.ComponentsByUpdateOrder() {
 		for _, inst := range comp.Instances() {
 			compName := inst.ComponentName()
+
+			// ignore monitor agents for instances marked as ignore_exporter
+			switch compName {
+			case spec.ComponentNodeExporter,
+				spec.ComponentBlackboxExporter:
+				if inst.IgnoreMonitorAgent() {
+					continue
+				}
+			}
+
 			version := m.bindVersion(inst.ComponentName(), clusterVersion)
 
 			// Download component from repository
