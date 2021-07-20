@@ -213,7 +213,7 @@ func (m *Manager) Deploy(
 				return // skip the host to avoid issues
 			}
 
-			// log the instance if it marks itself as ignore_exporter
+			// add the instance to ignore list if it marks itself as ignore_exporter
 			if inst.IgnoreMonitorAgent() {
 				noAgentHosts.Insert(inst.GetHost())
 			}
