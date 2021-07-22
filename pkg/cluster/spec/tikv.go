@@ -50,6 +50,7 @@ type TiKVSpec struct {
 	SSHPort             int                    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported            bool                   `yaml:"imported,omitempty"`
 	Patched             bool                   `yaml:"patched,omitempty"`
+	IgnoreExporter      bool                   `yaml:"ignore_exporter,omitempty"`
 	Port                int                    `yaml:"port" default:"20160"`
 	StatusPort          int                    `yaml:"status_port" default:"20180"`
 	AdvertiseStatusAddr string                 `yaml:"advertise_status_addr,omitempty"`
@@ -109,6 +110,11 @@ func (s *TiKVSpec) GetMainPort() int {
 // IsImported returns if the node is imported from TiDB-Ansible
 func (s *TiKVSpec) IsImported() bool {
 	return s.Imported
+}
+
+// IgnoreMonitorAgent returns if the node does not have monitor agents available
+func (s *TiKVSpec) IgnoreMonitorAgent() bool {
+	return s.IgnoreExporter
 }
 
 // Labels returns the labels of TiKV

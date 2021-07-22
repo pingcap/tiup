@@ -88,7 +88,7 @@ func Destroy(
 
 // StopAndDestroyInstance stop and destroy the instance,
 // if this instance is the host's last one, and the host has monitor deployed,
-// we need to destroy the monitor, either
+// we need to destroy the monitor, too
 func StopAndDestroyInstance(ctx context.Context, cluster spec.Topology, instance spec.Instance, options Options, destroyNode bool) error {
 	ignoreErr := options.Force
 	compName := instance.ComponentName()
@@ -111,7 +111,7 @@ func StopAndDestroyInstance(ctx context.Context, cluster spec.Topology, instance
 		// monitoredOptions for dm cluster is nil
 		monitoredOptions := cluster.GetMonitoredOptions()
 
-		if monitoredOptions != nil {
+		if monitoredOptions != nil && !instance.IgnoreMonitorAgent() {
 			if err := StopMonitored(ctx, []string{instance.GetHost()}, monitoredOptions, options.OptTimeout); err != nil {
 				if !ignoreErr {
 					return errors.Annotatef(err, "failed to stop monitor")

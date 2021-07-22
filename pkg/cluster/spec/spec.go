@@ -57,6 +57,7 @@ type (
 		SSH() (string, int)
 		GetMainPort() int
 		IsImported() bool
+		IgnoreMonitorAgent() bool
 	}
 
 	// GlobalOptions represents the global options for all groups in topology
