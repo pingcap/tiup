@@ -36,6 +36,7 @@ import (
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/components/playground/instance"
 	"github.com/pingcap/tiup/pkg/cluster/api"
+	"github.com/pingcap/tiup/pkg/cluster/spec"
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/localdata"
 	"github.com/pingcap/tiup/pkg/logger/log"
@@ -47,6 +48,7 @@ import (
 	"github.com/spf13/pflag"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
+	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 )
 
@@ -232,6 +234,43 @@ Examples:
 					p.terminate(syscall.SIGKILL)
 				}
 			}()
+
+			// expand version string
+			if !semver.IsValid(options.Version) {
+				var version utils.Version
+				var err error
+				// If any of the binpath arguments is set (which indicates the user is
+				// using a self build binary) and version number is not set, we assume
+				// it is a developer and use the latest release version by default.
+				// The platform string used to resolve the full version number is set
+				// to "linux-amd64" as this is the platform that every released version
+				// is available.
+				// For platforms lacks of support for some versions, e.g., darwin-amd64,
+				// specifically set a valid version for it, or use custom binpath for
+				// all components used.
+				// If none of the binpath arguments is set, use the platform of the
+				// playground binary itself.
+				if options.TiDB.BinPath != "" || options.TiKV.BinPath != "" ||
+					options.PD.BinPath != "" || options.TiFlash.BinPath != "" ||
+					options.TiCDC.BinPath != "" || options.Pump.BinPath != "" ||
+					options.Drainer.BinPath != "" && options.Version == "" {
+					version, err = env.V1Repository().ResolveComponentVersionWithPlatform(spec.ComponentTiDB, options.Version, "linux-amd64")
+				} else {
+					version, err = env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, options.Version)
+				}
+				if err != nil {
+					return errors.Annotate(err, fmt.Sprintf("can not expand version %s to a valid semver string", options.Version))
+				}
+				fmt.Println(color.YellowString(`Using the version %s for version constraint "%s".
+		
+If you'd like to use a TiDB version other than %s, cancel and retry with the following arguments:
+	Specify version manually:   tiup playground <version>
+	Specify version range:      tiup playground ^5
+	The nightly version:        tiup playground nightly
+`, version, options.Version, version))
+
+				options.Version = version.String()
+			}
 
 			bootErr := p.bootCluster(ctx, env, options)
 			if bootErr != nil {

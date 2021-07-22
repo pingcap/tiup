@@ -678,22 +678,6 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		return fmt.Errorf("all components count must be great than 0 (tikv=%v, pd=%v)", options.TiKV.Num, options.PD.Num)
 	}
 
-	{
-		version, err := env.V1Repository().ResolveComponentVersion(spec.ComponentTiDB, options.Version)
-		if err != nil {
-			return err
-		}
-		fmt.Println(color.YellowString(`Using the version %s for version constraint "%s".
-
-If you'd like to use a TiDB version other than %s, cancel and retry with the following arguments:
-    Specify version manually:   tiup playground <version>
-    Specify version range:      tiup playground ^5
-    The nightly version:        tiup playground nightly
-`, version, options.Version, version))
-
-		options.Version = version.String()
-	}
-
 	if !utils.Version(options.Version).IsNightly() {
 		if semver.Compare(options.Version, "v3.1.0") < 0 && options.TiFlash.Num != 0 {
 			fmt.Println(color.YellowString("Warning: current version %s doesn't support TiFlash", options.Version))
