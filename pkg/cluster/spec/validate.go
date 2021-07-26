@@ -960,6 +960,64 @@ func (s *Specification) validateTiFlashConfigs() error {
 	return nil
 }
 
+// validateMonitorAgent checks for conflicts in topology for different ignore_exporter
+// settings for multiple instances on the same host / IP
+func (s *Specification) validateMonitorAgent() error {
+	type (
+		conflict struct {
+			ignore bool
+			cfg    string
+		}
+	)
+	agentStats := map[string]conflict{}
+	topoSpec := reflect.ValueOf(s).Elem()
+	topoType := reflect.TypeOf(s).Elem()
+
+	for i := 0; i < topoSpec.NumField(); i++ {
+		if isSkipField(topoSpec.Field(i)) {
+			continue
+		}
+
+		compSpecs := topoSpec.Field(i)
+		for index := 0; index < compSpecs.Len(); index++ {
+			compSpec := reflect.Indirect(compSpecs.Index(index))
+			// skip nodes imported from TiDB-Ansible
+			if compSpec.Addr().Interface().(InstanceSpec).IsImported() {
+				continue
+			}
+
+			// check hostname
+			host := compSpec.FieldByName("Host").String()
+			cfg := strings.Split(topoType.Field(i).Tag.Get("yaml"), ",")[0] // without meta
+			if host == "" {
+				return errors.Errorf("`%s` contains empty host field", cfg)
+			}
+
+			// agent conflicts
+			stat := conflict{}
+			if j, found := findField(compSpec, "IgnoreExporter"); found {
+				stat.ignore = compSpec.Field(j).Bool()
+				stat.cfg = cfg
+			}
+
+			prev, exist := agentStats[host]
+			if exist {
+				if prev.ignore != stat.ignore {
+					return &meta.ValidateErr{
+						Type:   meta.TypeMismatch,
+						Target: "ignore_exporter",
+						LHS:    fmt.Sprintf("%s:%v", prev.cfg, prev.ignore),
+						RHS:    fmt.Sprintf("%s:%v", stat.cfg, stat.ignore),
+						Value:  host,
+					}
+				}
+			}
+			agentStats[host] = stat
+		}
+	}
+	return nil
+}
+
 // Validate validates the topology specification and produce error if the
 // specification invalid (e.g: port conflicts or directory conflicts)
 func (s *Specification) Validate() error {
@@ -973,6 +1031,7 @@ func (s *Specification) Validate() error {
 		s.validatePDNames,
 		s.validateTiSparkSpec,
 		s.validateTiFlashConfigs,
+		s.validateMonitorAgent,
 	}
 
 	for _, v := range validators {

@@ -411,6 +411,30 @@ tispark_masters:
 	c.Assert(err.Error(), Equals, "component tispark is not supported in TLS enabled cluster")
 }
 
+func (s *metaSuiteTopo) TestMonitorAgentValidation(c *C) {
+	topo := Specification{}
+	err := yaml.Unmarshal([]byte(`
+pd_servers:
+  - host: 172.16.5.138
+    port: 1234
+  - host: 172.16.5.139
+    ignore_exporter: true
+`), &topo)
+	c.Assert(err, IsNil)
+
+	topo = Specification{}
+	err = yaml.Unmarshal([]byte(`
+pd_servers:
+  - host: 172.16.5.138
+    port: 1234
+tikv_servers:
+  - host: 172.16.5.138
+    ignore_exporter: true
+`), &topo)
+	c.Assert(err, NotNil)
+	c.Assert(err.Error(), Equals, "ignore_exporter mismatch for '172.16.5.138' between 'tikv_servers:true' and 'pd_servers:false'")
+}
+
 func (s *metaSuiteTopo) TestCrossClusterPortConflicts(c *C) {
 	topo1 := Specification{}
 	err := yaml.Unmarshal([]byte(`
