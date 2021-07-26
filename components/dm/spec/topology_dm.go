@@ -122,7 +122,7 @@ type MasterSpec struct {
 	SSHPort        int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported       bool   `yaml:"imported,omitempty"`
 	Patched        bool   `yaml:"patched,omitempty"`
-	IgnoreExporter bool   `yaml:"ignore_exporter,omitempty" default:"true"`
+	IgnoreExporter bool   `yaml:"ignore_exporter,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
 	Name            string                 `yaml:"name,omitempty"`
 	Port            int                    `yaml:"port,omitempty" default:"8261"`
@@ -190,7 +190,7 @@ type WorkerSpec struct {
 	SSHPort        int    `yaml:"ssh_port,omitempty" validate:"ssh_port:editable"`
 	Imported       bool   `yaml:"imported,omitempty"`
 	Patched        bool   `yaml:"patched,omitempty"`
-	IgnoreExporter bool   `yaml:"ignore_exporter,omitempty" default:"true"`
+	IgnoreExporter bool   `yaml:"ignore_exporter,omitempty"`
 	// Use Name to get the name with a default value if it's empty.
 	Name            string                 `yaml:"name,omitempty"`
 	Port            int                    `yaml:"port,omitempty" default:"8262"`
