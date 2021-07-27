@@ -15,6 +15,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -51,7 +52,7 @@ func NewPDClient(addrs []string, timeout time.Duration, tlsConfig *tls.Config) *
 	cli := &PDClient{
 		addrs:      addrs,
 		tlsEnabled: enableTLS,
-		httpClient: utils.NewHTTPClient(timeout, tlsConfig),
+		httpClient: utils.NewHTTPClient(context.TODO(), timeout, tlsConfig),
 	}
 
 	cli.tryIdentifyVersion()

@@ -47,7 +47,7 @@ func NewBinlogClient(pdEndpoints []string, tlsConfig *tls.Config) (*BinlogClient
 
 	return &BinlogClient{
 		tls:        tlsConfig,
-		httpClient: utils.NewHTTPClient(5*time.Second, tlsConfig).Client(),
+		httpClient: utils.NewHTTPClient(context.TODO(), 5*time.Second, tlsConfig).Client(),
 		etcdClient: etcdClient,
 	}, nil
 }

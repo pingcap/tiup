@@ -55,17 +55,17 @@ func (s *TelemetrySuite) TestReport(c *check.C) {
 
 	defer ts.Close()
 
-	tele := NewTelemetry()
+	tele := NewTelemetry(context.TODO())
 	tele.cli = &utils.HTTPClient{}
 	tele.cli.WithClient(ts.Client())
 	tele.url = ts.URL
 
 	msg := new(Report)
 
-	err := tele.Report(context.Background(), msg)
+	err := tele.Report(msg)
 	c.Assert(err, check.NotNil)
 
 	msg.EventUUID = "dfdfdf"
-	err = tele.Report(context.Background(), msg)
+	err = tele.Report(msg)
 	c.Assert(err, check.IsNil)
 }

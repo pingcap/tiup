@@ -15,6 +15,7 @@ package spec
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"path/filepath"
@@ -124,7 +125,7 @@ func LoadClientCert(dir string) (*tls.Config, error) {
 
 // statusByHost queries current status of the instance by http status api.
 func statusByHost(host string, port int, path string, tlsCfg *tls.Config) string {
-	client := utils.NewHTTPClient(statusQueryTimeout, tlsCfg)
+	client := utils.NewHTTPClient(context.TODO(), statusQueryTimeout, tlsCfg)
 
 	scheme := "http"
 	if tlsCfg != nil {
@@ -151,7 +152,7 @@ func UptimeByHost(host string, port int, tlsCfg *tls.Config) time.Duration {
 	}
 	url := fmt.Sprintf("%s://%s:%d/metrics", scheme, host, port)
 
-	client := utils.NewHTTPClient(statusQueryTimeout, tlsCfg)
+	client := utils.NewHTTPClient(context.TODO(), statusQueryTimeout, tlsCfg)
 
 	body, err := client.Get(url)
 	if err != nil || body == nil {

@@ -15,6 +15,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"strings"
@@ -53,7 +54,7 @@ func NewDMMasterClient(addrs []string, timeout time.Duration, tlsConfig *tls.Con
 	return &DMMasterClient{
 		addrs:      addrs,
 		tlsEnabled: enableTLS,
-		httpClient: utils.NewHTTPClient(timeout, tlsConfig),
+		httpClient: utils.NewHTTPClient(context.TODO(), timeout, tlsConfig),
 	}
 }
 

@@ -324,9 +324,9 @@ func Execute() {
 			}
 			clusterReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
 			clusterReport.Command = strings.Join(teleCommand, " ")
-			tele := telemetry.NewTelemetry()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
-			err := tele.Report(ctx, teleReport)
+			tele := telemetry.NewTelemetry(ctx)
+			err := tele.Report(teleReport)
 			if environment.DebugMode {
 				if err != nil {
 					log.Infof("report failed: %v", err)

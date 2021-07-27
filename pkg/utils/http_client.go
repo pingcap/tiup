@@ -14,6 +14,7 @@
 package utils
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -27,16 +28,17 @@ import (
 // HTTPClient is a wrap of http.Client
 type HTTPClient struct {
 	client *http.Client
+	ctx    context.Context
 }
 
 // NewHTTPClient returns a new HTTP client with timeout and HTTPS support
-func NewHTTPClient(timeout time.Duration, tlsConfig *tls.Config) *HTTPClient {
+func NewHTTPClient(ctx context.Context, timeout time.Duration, tlsConfig *tls.Config) *HTTPClient {
 	if timeout < time.Second {
 		timeout = 10 * time.Second // default timeout is 10s
 	}
 	tr := &http.Transport{
 		TLSClientConfig: tlsConfig,
-		Dial:            (&net.Dialer{Timeout: 5 * time.Second}).Dial,
+		Dial:            (&net.Dialer{Timeout: 3 * time.Second}).Dial,
 	}
 	// prefer to use the inner http proxy
 	httpProxy := os.Getenv("TIUP_INNER_HTTP_PROXY")
@@ -53,12 +55,21 @@ func NewHTTPClient(timeout time.Duration, tlsConfig *tls.Config) *HTTPClient {
 			Timeout:   timeout,
 			Transport: tr,
 		},
+		ctx: ctx,
 	}
 }
 
 // Get fetch an URL with GET method and returns the response
 func (c *HTTPClient) Get(url string) ([]byte, error) {
-	res, err := c.client.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if c.ctx != nil {
+		req = req.WithContext(c.ctx)
+	}
+	res, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +80,16 @@ func (c *HTTPClient) Get(url string) ([]byte, error) {
 
 // Post send a POST request to the url and returns the response
 func (c *HTTPClient) Post(url string, body io.Reader) ([]byte, error) {
-	res, err := c.client.Post(url, "application/json", body)
+	req, err := http.NewRequest("POST", url, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	if c.ctx != nil {
+		req = req.WithContext(c.ctx)
+	}
+	res, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +106,9 @@ func (c *HTTPClient) Delete(url string, body io.Reader) ([]byte, int, error) {
 		return nil, statusCode, err
 	}
 
+	if c.ctx != nil {
+		req = req.WithContext(c.ctx)
+	}
 	res, err := c.client.Do(req)
 	if err != nil {
 		return nil, statusCode, err
