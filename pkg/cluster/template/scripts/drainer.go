@@ -75,7 +75,7 @@ func (c *DrainerScript) AppendEndpoints(ends ...*PDScript) *DrainerScript {
 // Config generate the config file data.
 func (c *DrainerScript) Config() ([]byte, error) {
 	fp := path.Join("templates", "scripts", "run_drainer.sh.tpl")
-	tpl, err := embed.ReadFile(fp)
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return nil, err
 	}

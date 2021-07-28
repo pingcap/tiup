@@ -22,5 +22,5 @@ import (
 // GetScript returns a raw config file from embed templates
 func GetScript(filename string) ([]byte, error) {
 	fp := filepath.Join("templates", "scripts", filename)
-	return embed.ReadFile(fp)
+	return embed.ReadTemplate(fp)
 }

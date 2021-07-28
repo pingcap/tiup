@@ -54,7 +54,7 @@ func (c *BlackboxExporterScript) WithNumaNode(numa string) *BlackboxExporterScri
 // Config generate the config file data.
 func (c *BlackboxExporterScript) Config() ([]byte, error) {
 	fp := path.Join("templates", "scripts", "run_blackbox_exporter.sh.tpl")
-	tpl, err := embed.ReadFile(fp)
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return nil, err
 	}

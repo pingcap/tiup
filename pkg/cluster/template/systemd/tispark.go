@@ -61,7 +61,7 @@ func (c *TiSparkConfig) ConfigToFile(file string) error {
 // Config generate the config file data.
 func (c *TiSparkConfig) Config() ([]byte, error) {
 	fp := path.Join("templates", "systemd", "tispark.service.tpl")
-	tpl, err := embed.ReadFile(fp)
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return nil, err
 	}

@@ -47,7 +47,26 @@ func (s *embedSuite) TestCanReadTemplates(c *check.C) {
 		data, err := os.ReadFile(path)
 		c.Assert(err, check.IsNil)
 
-		embedData, err := ReadFile(path)
+		embedData, err := ReadTemplate(path)
+		c.Assert(err, check.IsNil)
+
+		c.Assert(embedData, check.BytesEquals, data)
+	}
+}
+
+// Test can read all file in /examples
+func (s *embedSuite) TestCanReadExamples(c *check.C) {
+	paths, err := getAllFilePaths("examples")
+	c.Assert(err, check.IsNil)
+	c.Assert(len(paths), check.Greater, 0)
+
+	for _, path := range paths {
+		c.Log("check file: ", path)
+
+		data, err := os.ReadFile(path)
+		c.Assert(err, check.IsNil)
+
+		embedData, err := ReadExample(path)
 		c.Assert(err, check.IsNil)
 
 		c.Assert(embedData, check.BytesEquals, data)

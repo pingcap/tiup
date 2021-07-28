@@ -68,7 +68,7 @@ func (c *PumpScript) AppendEndpoints(ends ...*PDScript) *PumpScript {
 // Config generate the config file data.
 func (c *PumpScript) Config() ([]byte, error) {
 	fp := path.Join("templates", "scripts", "run_pump.sh.tpl")
-	tpl, err := embed.ReadFile(fp)
+	tpl, err := embed.ReadTemplate(fp)
 	if err != nil {
 		return nil, err
 	}
