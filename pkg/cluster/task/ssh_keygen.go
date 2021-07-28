@@ -24,8 +24,8 @@ import (
 
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tiup/pkg/cluster/ctxt"
+	"github.com/pingcap/tiup/pkg/crypto/rand"
 	"github.com/pingcap/tiup/pkg/utils"
-	"github.com/pingcap/tiup/pkg/utils/rand"
 	"golang.org/x/crypto/ssh"
 )
 
