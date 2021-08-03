@@ -28,11 +28,10 @@ import (
 // HTTPClient is a wrap of http.Client
 type HTTPClient struct {
 	client *http.Client
-	ctx    context.Context
 }
 
 // NewHTTPClient returns a new HTTP client with timeout and HTTPS support
-func NewHTTPClient(ctx context.Context, timeout time.Duration, tlsConfig *tls.Config) *HTTPClient {
+func NewHTTPClient(timeout time.Duration, tlsConfig *tls.Config) *HTTPClient {
 	if timeout < time.Second {
 		timeout = 10 * time.Second // default timeout is 10s
 	}
@@ -55,19 +54,18 @@ func NewHTTPClient(ctx context.Context, timeout time.Duration, tlsConfig *tls.Co
 			Timeout:   timeout,
 			Transport: tr,
 		},
-		ctx: ctx,
 	}
 }
 
 // Get fetch an URL with GET method and returns the response
-func (c *HTTPClient) Get(url string) ([]byte, error) {
+func (c *HTTPClient) Get(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	if c.ctx != nil {
-		req = req.WithContext(c.ctx)
+	if ctx != nil {
+		req = req.WithContext(ctx)
 	}
 	res, err := c.client.Do(req)
 	if err != nil {
@@ -79,15 +77,15 @@ func (c *HTTPClient) Get(url string) ([]byte, error) {
 }
 
 // Post send a POST request to the url and returns the response
-func (c *HTTPClient) Post(url string, body io.Reader) ([]byte, error) {
+func (c *HTTPClient) Post(ctx context.Context, url string, body io.Reader) ([]byte, error) {
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	if c.ctx != nil {
-		req = req.WithContext(c.ctx)
+	if ctx != nil {
+		req = req.WithContext(ctx)
 	}
 	res, err := c.client.Do(req)
 	if err != nil {
@@ -99,15 +97,15 @@ func (c *HTTPClient) Post(url string, body io.Reader) ([]byte, error) {
 }
 
 // Delete send a DELETE request to the url and returns the response and status code.
-func (c *HTTPClient) Delete(url string, body io.Reader) ([]byte, int, error) {
+func (c *HTTPClient) Delete(ctx context.Context, url string, body io.Reader) ([]byte, int, error) {
 	var statusCode int
 	req, err := http.NewRequest("DELETE", url, body)
 	if err != nil {
 		return nil, statusCode, err
 	}
 
-	if c.ctx != nil {
-		req = req.WithContext(c.ctx)
+	if ctx != nil {
+		req = req.WithContext(ctx)
 	}
 	res, err := c.client.Do(req)
 	if err != nil {

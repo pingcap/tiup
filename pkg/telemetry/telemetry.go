@@ -32,8 +32,8 @@ type Telemetry struct {
 }
 
 // NewTelemetry return a new Telemetry instance.
-func NewTelemetry(ctx context.Context) *Telemetry {
-	cli := utils.NewHTTPClient(ctx, time.Second*10, nil)
+func NewTelemetry() *Telemetry {
+	cli := utils.NewHTTPClient(time.Second*10, nil)
 
 	return &Telemetry{
 		url: defaultURL,
@@ -42,13 +42,13 @@ func NewTelemetry(ctx context.Context) *Telemetry {
 }
 
 // Report report the msg right away.
-func (t *Telemetry) Report(msg *Report) error {
+func (t *Telemetry) Report(ctx context.Context, msg *Report) error {
 	dst, err := json.Marshal(msg)
 	if err != nil {
 		return errors.AddStack(err)
 	}
 
-	if _, err = t.cli.Post(t.url, bytes.NewReader(dst)); err != nil {
+	if _, err = t.cli.Post(ctx, t.url, bytes.NewReader(dst)); err != nil {
 		return errors.AddStack(err)
 	}
 

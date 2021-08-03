@@ -633,8 +633,8 @@ func main() {
 			}
 			playgroundReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
-			tele := telemetry.NewTelemetry(ctx)
-			err := tele.Report(teleReport)
+			tele := telemetry.NewTelemetry()
+			err := tele.Report(ctx, teleReport)
 			if environment.DebugMode {
 				if err != nil {
 					log.Infof("report failed: %v", err)

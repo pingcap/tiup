@@ -54,7 +54,7 @@ func NewDMMasterClient(addrs []string, timeout time.Duration, tlsConfig *tls.Con
 	return &DMMasterClient{
 		addrs:      addrs,
 		tlsEnabled: enableTLS,
-		httpClient: utils.NewHTTPClient(context.TODO(), timeout, tlsConfig),
+		httpClient: utils.NewHTTPClient(timeout, tlsConfig),
 	}
 }
 
@@ -79,7 +79,7 @@ func (dm *DMMasterClient) getEndpoints(cmd string) (endpoints []string) {
 func (dm *DMMasterClient) getMember(endpoints []string) (*dmpb.ListMemberResponse, error) {
 	resp := &dmpb.ListMemberResponse{}
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, err := dm.httpClient.Get(endpoint)
+		body, err := dm.httpClient.Get(context.TODO(), endpoint)
 		if err != nil {
 			return body, err
 		}
@@ -102,7 +102,7 @@ func (dm *DMMasterClient) getMember(endpoints []string) (*dmpb.ListMemberRespons
 func (dm *DMMasterClient) deleteMember(endpoints []string) (*dmpb.OfflineMemberResponse, error) {
 	resp := &dmpb.OfflineMemberResponse{}
 	_, err := tryURLs(endpoints, func(endpoint string) ([]byte, error) {
-		body, statusCode, err := dm.httpClient.Delete(endpoint, nil)
+		body, statusCode, err := dm.httpClient.Delete(context.TODO(), endpoint, nil)
 
 		if statusCode == 404 || bytes.Contains(body, []byte("not exists")) {
 			zap.L().Debug("member to offline does not exist, ignore.")

@@ -125,7 +125,7 @@ func LoadClientCert(dir string) (*tls.Config, error) {
 
 // statusByHost queries current status of the instance by http status api.
 func statusByHost(host string, port int, path string, tlsCfg *tls.Config) string {
-	client := utils.NewHTTPClient(context.TODO(), statusQueryTimeout, tlsCfg)
+	client := utils.NewHTTPClient(statusQueryTimeout, tlsCfg)
 
 	scheme := "http"
 	if tlsCfg != nil {
@@ -137,7 +137,7 @@ func statusByHost(host string, port int, path string, tlsCfg *tls.Config) string
 	url := fmt.Sprintf("%s://%s:%d%s", scheme, host, port, path)
 
 	// body doesn't have any status section needed
-	body, err := client.Get(url)
+	body, err := client.Get(context.TODO(), url)
 	if err != nil || body == nil {
 		return "Down"
 	}
@@ -152,9 +152,9 @@ func UptimeByHost(host string, port int, tlsCfg *tls.Config) time.Duration {
 	}
 	url := fmt.Sprintf("%s://%s:%d/metrics", scheme, host, port)
 
-	client := utils.NewHTTPClient(context.TODO(), statusQueryTimeout, tlsCfg)
+	client := utils.NewHTTPClient(statusQueryTimeout, tlsCfg)
 
-	body, err := client.Get(url)
+	body, err := client.Get(context.TODO(), url)
 	if err != nil || body == nil {
 		return 0
 	}

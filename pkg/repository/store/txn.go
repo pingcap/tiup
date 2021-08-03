@@ -161,8 +161,8 @@ func (t *localTxn) ReadManifest(filename string, role v1manifest.ValidManifest) 
 		defer file.Close()
 	case os.IsNotExist(err) && t.store.upstream != "":
 		url := fmt.Sprintf("%s/%s", t.store.upstream, filename)
-		client := utils.NewHTTPClient(context.TODO(), time.Minute, nil)
-		body, err := client.Get(url)
+		client := utils.NewHTTPClient(time.Minute, nil)
+		body, err := client.Get(context.TODO(), url)
 		if err != nil {
 			return nil, errors.Annotatef(err, "fetch %s", url)
 		}
