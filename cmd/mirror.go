@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -106,7 +107,7 @@ func newMirrorSignCmd() *cobra.Command {
 
 			if strings.HasPrefix(args[0], "http") {
 				client := utils.NewHTTPClient(time.Duration(timeout)*time.Second, nil)
-				data, err := client.Get(args[0])
+				data, err := client.Get(context.TODO(), args[0])
 				if err != nil {
 					return err
 				}
@@ -115,7 +116,7 @@ func newMirrorSignCmd() *cobra.Command {
 					return err
 				}
 
-				if _, err = client.Post(args[0], bytes.NewBuffer(data)); err != nil {
+				if _, err = client.Post(context.TODO(), args[0], bytes.NewBuffer(data)); err != nil {
 					return err
 				}
 
