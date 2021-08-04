@@ -48,7 +48,7 @@ func (t *Telemetry) Report(ctx context.Context, msg *Report) error {
 		return errors.AddStack(err)
 	}
 
-	if _, err = t.cli.Post(t.url, bytes.NewReader(dst)); err != nil {
+	if _, err = t.cli.Post(ctx, t.url, bytes.NewReader(dst)); err != nil {
 		return errors.AddStack(err)
 	}
 

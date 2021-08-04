@@ -83,6 +83,10 @@ fi
 
 chmod 755 "$bin_dir/tiup"
 
+# telemetry is not needed for offline installations
+"$bin_dir/tiup" telemetry disable
+
+# set mirror to the local path
 "$bin_dir/tiup" mirror set ${script_dir}
 
 bold=$(tput bold 2>/dev/null)

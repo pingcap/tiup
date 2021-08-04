@@ -591,8 +591,8 @@ func main() {
 				}
 			}
 			playgroundReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
-			tele := telemetry.NewTelemetry()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+			tele := telemetry.NewTelemetry()
 			err := tele.Report(ctx, teleReport)
 			if flags.DebugMode {
 				if err != nil {

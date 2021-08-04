@@ -303,8 +303,8 @@ func Execute() {
 			}
 			clusterReport.TakeMilliseconds = uint64(time.Since(start).Milliseconds())
 			clusterReport.Command = strings.Join(teleCommand, " ")
-			tele := telemetry.NewTelemetry()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+			tele := telemetry.NewTelemetry()
 			err := tele.Report(ctx, teleReport)
 			if flags.DebugMode {
 				if err != nil {
