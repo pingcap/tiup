@@ -14,6 +14,7 @@
 package utils
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -36,7 +37,7 @@ func NewHTTPClient(timeout time.Duration, tlsConfig *tls.Config) *HTTPClient {
 	}
 	tr := &http.Transport{
 		TLSClientConfig: tlsConfig,
-		Dial:            (&net.Dialer{Timeout: 5 * time.Second}).Dial,
+		Dial:            (&net.Dialer{Timeout: 3 * time.Second}).Dial,
 	}
 	// prefer to use the inner http proxy
 	httpProxy := os.Getenv("TIUP_INNER_HTTP_PROXY")
@@ -57,8 +58,16 @@ func NewHTTPClient(timeout time.Duration, tlsConfig *tls.Config) *HTTPClient {
 }
 
 // Get fetch an URL with GET method and returns the response
-func (c *HTTPClient) Get(url string) ([]byte, error) {
-	res, err := c.client.Get(url)
+func (c *HTTPClient) Get(ctx context.Context, url string) ([]byte, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+	res, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -68,8 +77,17 @@ func (c *HTTPClient) Get(url string) ([]byte, error) {
 }
 
 // Post send a POST request to the url and returns the response
-func (c *HTTPClient) Post(url string, body io.Reader) ([]byte, error) {
-	res, err := c.client.Post(url, "application/json", body)
+func (c *HTTPClient) Post(ctx context.Context, url string, body io.Reader) ([]byte, error) {
+	req, err := http.NewRequest("POST", url, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+	res, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -79,13 +97,16 @@ func (c *HTTPClient) Post(url string, body io.Reader) ([]byte, error) {
 }
 
 // Delete send a DELETE request to the url and returns the response and status code.
-func (c *HTTPClient) Delete(url string, body io.Reader) ([]byte, int, error) {
+func (c *HTTPClient) Delete(ctx context.Context, url string, body io.Reader) ([]byte, int, error) {
 	var statusCode int
 	req, err := http.NewRequest("DELETE", url, body)
 	if err != nil {
 		return nil, statusCode, err
 	}
 
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
 	res, err := c.client.Do(req)
 	if err != nil {
 		return nil, statusCode, err
