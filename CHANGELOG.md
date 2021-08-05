@@ -1,5 +1,17 @@
 TiUP Changelog
 
+## [1.5.4] 2021-08-05
+
+### Fixes
+
+- Allow editing of `lerner_config` field in TiFlash spec ([#1494](https://github.com/pingcap/tiup/pull/1494), [@AstroProfundis](https://github.com/AstroProfundis))
+- Fix incorrect timeout for telemetry requests ([#1500](https://github.com/pingcap/tiup/pull/1500), [@AstroProfundis](https://github.com/AstroProfundis))
+- Ingore `data_dir` of monitor agents when checking for directory overlaps ([#1510](https://github.com/pingcap/tiup/pull/1510), [@AstroProfundis](https://github.com/AstroProfundis))
+
+### Improvements
+
+- Distinguish cookie names of multiple grafana instances on the same host ([#1491](https://github.com/pingcap/tiup/pull/1491), [@AstroProfundis](https://github.com/AstroProfundis))
+
 ## [1.5.3] 2021-07-15
 
 ### Fixes
