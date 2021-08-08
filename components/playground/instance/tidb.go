@@ -39,7 +39,7 @@ func NewTiDBInstance(binPath string, dir, host, configPath string, id int, pds [
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, 4000),
+			Port:       utils.MustGetFreePort(host, GetTiDBPort(configPath)),
 			StatusPort: utils.MustGetFreePort("0.0.0.0", 10080),
 			ConfigPath: configPath,
 		},
